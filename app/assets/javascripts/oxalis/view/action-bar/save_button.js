@@ -2,6 +2,8 @@
 import React from "react";
 import Model from "oxalis/model";
 import ButtonComponent from "oxalis/view/components/button_component";
+import { Spin } from "antd";
+import Store from "oxalis/store";
 
 type Props = {
   onClick: (SyntheticInputEvent<HTMLButtonElement>) => Promise<*>,

@@ -111,9 +111,31 @@ export function sendRequestWithToken(
   return doWithToken(token => Request.sendJSONReceiveJSON(`${urlWithoutToken}${token}`, data));
 }
 
+// This function returns the first n batches of the provided array, so that the count of
+// all actions in these n batches does not exceed maximumActionCount
+function sliceApproriateBatchCount(batches: Array<SaveQueueEntryType>): Array<SaveQueueEntryType> {
+  const maximumActionCount = 25000;
+
+  const slicedBatches = [];
+  let actionCount = 0;
+
+  for (const batch of batches) {
+    if (actionCount + batch.actions.length <= maximumActionCount) {
+      actionCount += batch.actions.length;
+      slicedBatches.push(batch);
+    } else {
+      break;
+    }
+  }
+
+  return slicedBatches;
+}
+
 export function* sendRequestToServer(timestamp: number = Date.now()): Generator<*, *, *> {
-  const saveQueue = yield select(state => state.save.queue);
-  let compactedSaveQueue = compactUpdateActions(saveQueue);
+  const fullSaveQueue = yield select(state => state.save.queue);
+  const saveQueue = sliceApproriateBatchCount(fullSaveQueue);
+
+  let compactedSaveQueue = compactUpdateActionBatches(saveQueue);
   const { version, type, tracingId } = yield select(state => state.tracing);
   const dataStoreUrl = yield select(state => state.dataset.dataStore.url);
   compactedSaveQueue = addVersionNumbers(compactedSaveQueue, version);
@@ -306,20 +328,18 @@ function compactDeletedTrees(updateActions: Array<UpdateAction>) {
       ),
   );
 }
+function compactUpdateActions(updateActions: Array<UpdateAction>): Array<UpdateAction> {
+  return removeUnrelevantUpdateActions(
+    compactMovedNodesAndEdges(compactDeletedTrees(updateActions)),
+  );
+}
 
-export function compactUpdateActions(
+export function compactUpdateActionBatches(
   updateActionsBatches: Array<SaveQueueEntryType>,
 ): Array<SaveQueueEntryType> {
-  const result = updateActionsBatches
-    .map(updateActionsBatch =>
-      _.chain(updateActionsBatch)
-        .cloneDeep()
-        .update("actions", removeUnrelevantUpdateActions)
-        .update("actions", compactMovedNodesAndEdges)
-        .update("actions", compactDeletedTrees)
-        .value(),
-    )
-    .filter(updateActionsBatch => updateActionsBatch.actions.length > 0);
+  const result = updateActionsBatches.filter(
+    updateActionsBatch => updateActionsBatch.actions.length > 0,
+  );
 
   // This part of the code removes all entries from the save queue that consist only of
   // an updateTracing update action, except for the last one
@@ -371,9 +391,15 @@ export function* saveTracingAsync(): Generator<any, any, any> {
     }
     const tracing = yield select(state => state.tracing);
     const flycam = yield select(state => state.flycam);
-    const items = Array.from(yield call(performDiffTracing, prevTracing, tracing, flycam));
+    const items = compactUpdateActions(
+      Array.from(yield call(performDiffTracing, prevTracing, tracing, flycam)),
+    );
     if (items.length > 0) {
-      yield put(pushSaveQueueAction(items));
+      const updateActionChunks = _.chunk(items, 5000);
+
+      for (const updateActionChunk of updateActionChunks) {
+        yield put(pushSaveQueueAction(updateActionChunk));
+      }
     }
     prevTracing = tracing;
   }

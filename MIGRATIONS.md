@@ -12,6 +12,7 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 - To clean up half-deleted tasks as caused by [this bug](https://github.com/scalableminds/webknossos/issues/2873), run `update webknossos.annotations set isDeleted = true where _id in (select a._id from webknossos.annotations_ a join webknossos.tasks t on a._task = t._id where t.isDeleted and a.typ == 'Task')`
 - [016-add-schema-version.sql](conf/evolutions/016-add-schema-version.sql)
 - [017-add-organization-email.sql](conf/evolutions/017-add-organization-email.sql)
+- Add email addresses for notifications about new users and about task overtime to the webknossos.organizations entries in the DB (previously in application.conf > braintracing.newuserlist and braintracing.overTimeList)
 
 ## [18.07.0](https://github.com/scalableminds/webknossos/releases/tag/18.07.0) - 2018-07-05
 First release

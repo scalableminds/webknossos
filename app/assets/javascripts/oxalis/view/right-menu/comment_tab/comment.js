@@ -1,6 +1,7 @@
 // @flow
 import * as React from "react";
 import _ from "lodash";
+import { Popover } from "antd";
 import classNames from "classnames";
 import Store from "oxalis/store";
 import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";
@@ -32,26 +33,45 @@ function Comment({ comment, isActive, style }: CommentProps) {
     Store.dispatch(setActiveNodeAction(comment.nodeId));
   };
 
-  const liClassName = classNames("markdown", {
+  const liClassName = classNames("markdown", "markdown-small", {
     bold: isActive,
-    "markdown-small": !isActive,
   });
   const iClassName = classNames("fa", "fa-fw", {
     "fa-angle-right": isActive,
   });
+  const isMultiLine = comment.content.indexOf("\n") > 0;
 
-  return (
+  const markdownElement = (
+    <Markdown
+      source={linkify(comment.content)}
+      options={{ html: false, breaks: true, linkify: true }}
+    />
+  );
+
+  const commentElement = (
     <li className={liClassName} style={_.extend({}, style, { width: "inherit" })}>
-      <i className={iClassName} />
-      <a onClick={handleClick}>{comment.nodeId}</a>
-      {" - "}
-      <div style={{ display: "inline-block" }}>
-        <Markdown
-          source={linkify(comment.content)}
-          options={{ html: false, breaks: true, linkify: true }}
-        />
+      <div className="comment-node-id">
+        <i className={iClassName} />
+        <a onClick={handleClick}>{comment.nodeId}</a>
+        {" - "}
       </div>
+      <div style={{ display: "inline-block" }}>{markdownElement}</div>
+      {isMultiLine ? <div className="comment-node-id"> ...</div> : null}
     </li>
+  );
+
+  return isActive && isMultiLine ? (
+    <Popover
+      content={markdownElement}
+      defaultVisible
+      visible
+      placement="right"
+      getPopupContainer={() => document.getElementById("comment-list")}
+    >
+      {commentElement}
+    </Popover>
+  ) : (
+    commentElement
   );
 }
 

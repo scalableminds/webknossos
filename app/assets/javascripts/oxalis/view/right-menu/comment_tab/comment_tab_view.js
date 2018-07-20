@@ -10,7 +10,6 @@ import Utils from "libs/utils";
 import update from "immutability-helper";
 import { connect } from "react-redux";
 import { Icon, Input } from "antd";
-import InputComponent from "oxalis/view/components/input_component";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { InputKeyboardNoLoop } from "libs/input";
 import { getActiveTree, getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -21,14 +20,16 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import TreeWithComments from "oxalis/view/right-menu/comment_tab/tree_with_comments";
 import Comment from "oxalis/view/right-menu/comment_tab/comment";
-import { AutoSizer, List, CellMeasurer, CellMeasurerCache } from "react-virtualized";
+import { AutoSizer, List } from "react-virtualized";
 import type { Dispatch } from "redux";
 import type { OxalisState, SkeletonTracingType, TreeType, CommentType } from "oxalis/store";
 import { makeSkeletonTracingGuard } from "oxalis/view/guards";
 
 const InputGroup = Input.Group;
+const { TextArea } = Input;
 
-const treeTypeHint = ([]: TreeType[]);
+const treeTypeHint = ([]: Array<TreeType>);
+const commentTypeHint = ([]: Array<CommentType>);
 
 type SortOptionsType = {
   isSortedByName: boolean,
@@ -36,14 +37,18 @@ type SortOptionsType = {
 };
 function getTreeSorter({ isSortedByName, isSortedAscending }: SortOptionsType): Function {
   return isSortedByName
-    ? Utils.localeCompareBy(treeTypeHint, "name", isSortedAscending)
-    : Utils.compareBy(treeTypeHint, "treeId");
+    ? Utils.localeCompareBy(treeTypeHint, tree => `${tree.name}_${tree.treeId}`, isSortedAscending)
+    : Utils.compareBy(treeTypeHint, "treeId", isSortedAscending);
 }
 
 function getCommentSorter({ isSortedByName, isSortedAscending }: SortOptionsType): Function {
   return isSortedByName
-    ? Utils.localeCompareBy(([]: Array<CommentType>), "content", isSortedAscending)
-    : Utils.compareBy(([]: Array<CommentType>), "nodeId");
+    ? Utils.localeCompareBy(
+        commentTypeHint,
+        comment => `${comment.content}_${comment.nodeId}`,
+        isSortedAscending,
+      )
+    : Utils.compareBy(([]: Array<CommentType>), "nodeId", isSortedAscending);
 }
 
 type Props = {
@@ -91,37 +96,9 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
     collapsedTreeIds: {},
   };
 
-  componentDidUpdate(prevProps) {
-    if (prevProps.skeletonTracing.activeNodeId !== this.props.skeletonTracing.activeNodeId) {
-      this.cache.clear(prevProps.skeletonTracing.activeNodeId, 0);
-      this.cache.clear(this.props.skeletonTracing.activeNodeId, 0);
-      this.forceUpdate();
-    } else if (prevProps.skeletonTracing.trees !== this.props.skeletonTracing.trees) {
-      this.cache.clear(this.props.skeletonTracing.activeNodeId, 0);
-      this.forceUpdate();
-    }
-  }
-
   componentWillUnmount() {
     this.keyboard.destroy();
   }
-
-  cache = new CellMeasurerCache({
-    defaultHeight: 21,
-    fixedWidth: true,
-    keyMapper: (rowIndex: number) => {
-      const commentOrTree = this.state.data[rowIndex];
-      if (commentOrTree != null) {
-        if (commentOrTree.treeId != null) {
-          return "default";
-        } else if (commentOrTree.nodeId != null && commentOrTree.content != null) {
-          const isActive = commentOrTree.nodeId === this.props.skeletonTracing.activeNodeId;
-          return isActive ? commentOrTree.content : "default";
-        }
-      }
-      return "none";
-    },
-  });
 
   keyboard = new InputKeyboardNoLoop({
     n: () => this.nextComment(),
@@ -130,28 +107,21 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
 
   nextComment = (forward = true) => {
     getActiveNode(this.props.skeletonTracing).map(activeNode => {
-      const sortAscending = forward ? this.state.isSortedAscending : !this.state.isSortedAscending;
+      const { isSortedAscending, isSortedByName } = this.state;
+      const sortAscending = forward ? isSortedAscending : !isSortedAscending;
       const { trees } = this.props.skeletonTracing;
 
       // Create a sorted, flat array of all comments across all trees
       const sortedTrees = _.values(trees)
         .slice(0)
-        .sort(getTreeSorter(this.state));
+        .sort(getTreeSorter({ isSortedByName, isSortedAscending: sortAscending }));
 
       const sortedComments = _.flatMap(
         sortedTrees,
         (tree: TreeType): Array<CommentType> =>
           tree.comments
             .slice(0)
-            .sort(
-              Utils.localeCompareBy(
-                ([]: CommentType[]),
-                this.state.isSortedByName
-                  ? comment => `${comment.content}_${comment.nodeId}`
-                  : comment => `${comment.nodeId}`,
-                sortAscending,
-              ),
-            ),
+            .sort(getCommentSorter({ isSortedByName, isSortedAscending: sortAscending })),
       );
 
       const currentCommentIndex = _.findIndex(sortedComments, { nodeId: activeNode.id });
@@ -160,8 +130,6 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
       if (nextCommentIndex >= 0 && nextCommentIndex < sortedComments.length) {
         this.props.setActiveNode(sortedComments[nextCommentIndex].nodeId);
       }
-
-      return null; // satisfy linter
     });
   };
 
@@ -237,11 +205,10 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
       : "fa fa-sort-alpha-desc";
 
     const rowCount = this.state.data.length;
-    const rowRenderer = ({ index, key, style, parent }) => {
-      let element;
+    const rowRenderer = ({ index, key, style }) => {
       if (this.state.data[index].treeId != null) {
         const tree = this.state.data[index];
-        element = (
+        return (
           <TreeWithComments
             key={key}
             style={style}
@@ -254,14 +221,8 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
       } else {
         const comment = this.state.data[index];
         const isActive = comment.nodeId === this.props.skeletonTracing.activeNodeId;
-        element = <Comment key={key} style={style} comment={comment} isActive={isActive} />;
+        return <Comment key={key} style={style} comment={comment} isActive={isActive} />;
       }
-
-      return (
-        <CellMeasurer cache={this.cache} columnIndex={0} key={key} parent={parent} rowIndex={index}>
-          {element}
-        </CellMeasurer>
-      );
     };
 
     return (
@@ -270,11 +231,12 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
           <ButtonComponent onClick={this.previousComment}>
             <i className="fa fa-arrow-left" />
           </ButtonComponent>
-          <InputComponent
+          <TextArea
             value={activeComment}
             onChange={this.handleChangeInput}
             placeholder="Add comment"
-            style={{ width: "60%" }}
+            style={{ width: "60%", resize: "none", overflowY: "auto" }}
+            rows={1}
           />
           <ButtonComponent onClick={this.nextComment}>
             <i className="fa fa-arrow-right" />
@@ -286,15 +248,16 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
         <div style={{ flex: "1 1 auto", marginTop: 20 }}>
           <AutoSizer>
             {({ height, width }) => (
-              <div id="comment-list" style={{ height, width }} className="flex-overflow">
+              <div style={{ height, width }} className="flex-overflow">
                 <List
+                  id="comment-list"
                   height={height}
                   width={width}
                   rowCount={rowCount}
-                  deferredMeasurementCache={this.cache}
-                  rowHeight={this.cache.rowHeight}
+                  rowHeight={21}
                   rowRenderer={rowRenderer}
                   scrollToIndex={scrollIndex > -1 ? scrollIndex : undefined}
+                  tabIndex={null}
                 />
               </div>
             )}

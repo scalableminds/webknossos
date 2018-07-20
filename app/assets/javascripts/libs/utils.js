@@ -158,7 +158,6 @@ const Utils = {
       const valueA = typeof selector === "function" ? selector(a) : a[selector];
       const valueB = typeof selector === "function" ? selector(b) : b[selector];
       if (typeof valueA !== "string" || typeof valueB !== "string") {
-        console.log("not a string");
         return 0;
       }
       return naturalSort(valueA, valueB) * sortingOrder;

@@ -1,11 +1,17 @@
 // @flow
 import React from "react";
+import { connect } from "react-redux";
 import Model from "oxalis/model";
 import ButtonComponent from "oxalis/view/components/button_component";
-import { Spin } from "antd";
-import Store from "oxalis/store";
+import type { OxalisState, ProgressInfoType } from "oxalis/store";
+
+type StateProps = {|
+  progressInfo: ProgressInfoType,
+  isBusy: boolean,
+|};
 
 type Props = {
+  ...StateProps,
   onClick: (SyntheticInputEvent<HTMLButtonElement>) => Promise<*>,
 };
 
@@ -31,7 +37,10 @@ class SaveButton extends React.PureComponent<Props, State> {
 
   savedPollingInterval: number = 0;
   _forceUpdate = () => {
-    this.setState({ isStateSaved: Model.stateSaved() });
+    const isStateSaved = Model.stateSaved();
+    this.setState({
+      isStateSaved,
+    });
   };
 
   getSaveButtonIcon() {
@@ -43,6 +52,8 @@ class SaveButton extends React.PureComponent<Props, State> {
   }
 
   render() {
+    const { progressInfo } = this.props;
+    console.log("progressInfo", progressInfo);
     return (
       <ButtonComponent
         key="save-button"
@@ -50,10 +61,25 @@ class SaveButton extends React.PureComponent<Props, State> {
         onClick={this.props.onClick}
         icon={this.getSaveButtonIcon()}
       >
-        Save
+        {this.props.isBusy && progressInfo.totalActionCount > 5000 ? (
+          <React.Fragment>
+            {Math.floor((progressInfo.processedActionCount / progressInfo.totalActionCount) * 100)}{" "}
+            %
+          </React.Fragment>
+        ) : (
+          <React.Fragment>Save</React.Fragment>
+        )}
       </ButtonComponent>
     );
   }
 }
 
-export default SaveButton;
+function mapStateToProps(state: OxalisState): StateProps {
+  const { progressInfo, isBusy } = state.save;
+  return {
+    progressInfo,
+    isBusy,
+  };
+}
+
+export default connect(mapStateToProps)(SaveButton);

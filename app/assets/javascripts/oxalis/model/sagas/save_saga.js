@@ -99,8 +99,9 @@ export function* pushAnnotationAsync(): Generator<*, *, *> {
     saveQueue = yield select(state => state.save.queue);
     if (saveQueue.length > 0) {
       yield call(sendRequestToServer);
+    } else {
+      yield put(setSaveBusyAction(false));
     }
-    yield put(setSaveBusyAction(false));
   }
 }
 
@@ -114,7 +115,7 @@ export function sendRequestWithToken(
 // This function returns the first n batches of the provided array, so that the count of
 // all actions in these n batches does not exceed maximumActionCount
 function sliceApproriateBatchCount(batches: Array<SaveQueueEntryType>): Array<SaveQueueEntryType> {
-  const maximumActionCount = 25000;
+  const maximumActionCount = 15000;
 
   const slicedBatches = [];
   let actionCount = 0;

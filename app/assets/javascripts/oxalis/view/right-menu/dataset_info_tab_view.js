@@ -16,6 +16,7 @@ import {
 } from "oxalis/model/actions/annotation_actions";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import { Table } from "antd";
+import Markdown from "react-remarkable";
 import type { APIDatasetType } from "admin/api_flow_types";
 import type { OxalisState, TracingType, TaskType, FlycamType } from "oxalis/store";
 
@@ -155,7 +156,9 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
       return (
         <div>
           <p>Dataset: {displayName || datasetName}</p>
-          {description ? <p>{description}</p> : null}
+          {description ? (
+            <Markdown source={description} options={{ html: false, breaks: true, linkify: true }} />
+          ) : null}
         </div>
       );
     }
@@ -249,4 +252,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect(mapStateToProps, mapDispatchToProps)(DatasetInfoTabView);
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps,
+)(DatasetInfoTabView);

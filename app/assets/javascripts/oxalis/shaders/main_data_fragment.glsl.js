@@ -1,11 +1,11 @@
 // @flow
 import _ from "lodash";
-import type { OrthoViewType, Vector3 } from "oxalis/constants";
 import Dimensions from "oxalis/model/dimensions";
 import {
   MAPPING_TEXTURE_WIDTH,
   MAPPING_COLOR_TEXTURE_WIDTH,
 } from "oxalis/model/bucket_data_handling/mappings";
+import type { Vector3 } from "oxalis/constants";
 import { floatsPerLookUpEntry } from "oxalis/model/bucket_data_handling/texture_bucket_manager";
 import constants, {
   OrthoViews,
@@ -17,7 +17,7 @@ import constants, {
 
 import compileShader from "./shader_module_system";
 import { convertCellIdToRGB, getBrushOverlay, getSegmentationId } from "./segmentation.glsl";
-import { inverse, round, div, isNan, transDim, isArbitrary, isFlightMode } from "./utils.glsl";
+import { inverse, round, div, isNan, transDim, isFlightMode } from "./utils.glsl";
 import { getRelativeCoords, getWorldCoordUVW } from "./coords.glsl";
 import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
 
@@ -27,11 +27,11 @@ type ParamsType = {|
   segmentationName: string,
   segmentationPackingDegree: number,
   isRgb: boolean,
-  planeID: OrthoViewType,
   isMappingSupported: boolean,
   dataTextureCountPerLayer: number,
   resolutions: Array<Vector3>,
   datasetScale: Vector3,
+  isOrthogonal: boolean,
 |};
 
 function formatNumberAsGLSLFloat(aNumber: number): string {
@@ -51,7 +51,7 @@ export default function getMainFragmentShader(params: ParamsType) {
 precision highp float;
 const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
 
-<% _.each(layers, function(name) { %>
+<% _.each(colorLayerNames, function(name) { %>
   uniform sampler2D <%= name %>_textures[dataTextureCountPerLayer];
   uniform float <%= name %>_data_texture_width;
   uniform sampler2D <%= name %>_lookup_texture;
@@ -119,7 +119,6 @@ ${compileShader(
       div,
       round,
       isNan,
-      isArbitrary,
       isFlightMode,
       transDim,
       getRelativeCoords,
@@ -139,7 +138,7 @@ void main() {
   vec3 bucketPosition = div(floor(coords), bucketWidth);
   vec3 offsetInBucket = mod(floor(coords), bucketWidth);
 
-  float fallbackZoomStep = min(<%= layers[0]%>_maxZoomStep, zoomStep + 1.0);
+  float fallbackZoomStep = min(<%= colorLayerNames[0]%>_maxZoomStep, zoomStep + 1.0);
   bool hasFallback = fallbackZoomStep > zoomStep;
   vec3 fallbackCoords = floor(getRelativeCoords(worldCoordUVW, fallbackZoomStep));
 
@@ -156,9 +155,9 @@ void main() {
   <% if (isRgb) { %>
     vec3 data_color =
       getMaybeFilteredColorOrFallback(
-        <%= layers[0] %>_lookup_texture,
+        <%= colorLayerNames[0] %>_lookup_texture,
         0.0, // layerIndex
-        <%= layers[0] %>_data_texture_width,
+        <%= colorLayerNames[0] %>_data_texture_width,
         <%= segmentationPackingDegree %>,
         coords,
         fallbackCoords,
@@ -167,10 +166,10 @@ void main() {
         fallbackGray
       ).xyz;
 
-    data_color = (data_color + <%= layers[0] %>_brightness - 0.5) * <%= layers[0] %>_contrast + 0.5;
+    data_color = (data_color + <%= colorLayerNames[0] %>_brightness - 0.5) * <%= colorLayerNames[0] %>_contrast + 0.5;
   <% } else { %>
     vec3 data_color = vec3(0.0, 0.0, 0.0);
-    <% _.each(layers, function(name, layerIndex){ %>
+    <% _.each(colorLayerNames, function(name, layerIndex){ %>
       // Get grayscale value for <%= name %>
       color_value =
         getMaybeFilteredColorOrFallback(
@@ -217,7 +216,7 @@ void main() {
   `,
   )({
     ...params,
-    layers: params.colorLayerNames,
+    colorLayerNames: params.colorLayerNames,
     layerNamesWithSegmentation: params.colorLayerNames.concat(
       params.hasSegmentation ? [params.segmentationName] : [],
     ),
@@ -233,7 +232,6 @@ void main() {
     l_texture_width: formatNumberAsGLSLFloat(constants.LOOK_UP_TEXTURE_WIDTH),
     mappingTextureWidth: formatNumberAsGLSLFloat(MAPPING_TEXTURE_WIDTH),
     mappingColorTextureWidth: formatNumberAsGLSLFloat(MAPPING_COLOR_TEXTURE_WIDTH),
-    uvw: Dimensions.getIndices(params.planeID),
     formatNumberAsGLSLFloat,
     formatVector3AsVec3: vector3 => `vec3(${vector3.map(formatNumberAsGLSLFloat).join(", ")})`,
     brushToolIndex: formatNumberAsGLSLFloat(volumeToolEnumToIndex(VolumeToolEnum.BRUSH)),

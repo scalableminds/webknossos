@@ -290,7 +290,7 @@ class VolumeLayer {
     const state = Store.getState();
     const zoomFactor = getPlaneScalingFactor(state.flycam);
     const viewportScale = state.userConfiguration.scale;
-    return pixels / viewportScale * zoomFactor;
+    return (pixels / viewportScale) * zoomFactor;
   }
 }
 

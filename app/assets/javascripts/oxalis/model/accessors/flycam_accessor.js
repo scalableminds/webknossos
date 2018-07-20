@@ -41,13 +41,13 @@ export function getRotation(flycam: FlycamType): Vector3 {
 
   // Fix JS modulo bug
   // http://javascript.about.com/od/problemsolving/a/modulobug.htm
-  const mod = (x, n) => (x % n + n) % n;
+  const mod = (x, n) => ((x % n) + n) % n;
 
   const rotation: Vector3 = [object.rotation.x, object.rotation.y, object.rotation.z - Math.PI];
   return [
-    mod(180 / Math.PI * rotation[0], 360),
-    mod(180 / Math.PI * rotation[1], 360),
-    mod(180 / Math.PI * rotation[2], 360),
+    mod((180 / Math.PI) * rotation[0], 360),
+    mod((180 / Math.PI) * rotation[1], 360),
+    mod((180 / Math.PI) * rotation[2], 360),
   ];
 }
 
@@ -103,7 +103,7 @@ export function getArea(state: OxalisState, planeId: OrthoViewType): AreaType {
   const [u, v] = Dimensions.getIndices(planeId);
 
   const position = getPosition(state.flycam);
-  const viewportWidthHalf = getPlaneScalingFactor(state.flycam) * constants.PLANE_WIDTH / 2;
+  const viewportWidthHalf = (getPlaneScalingFactor(state.flycam) * constants.PLANE_WIDTH) / 2;
   const baseVoxelFactors = scaleInfo.getBaseVoxelFactors(state.dataset.dataSource.scale);
 
   const uWidthHalf = viewportWidthHalf * baseVoxelFactors[u];

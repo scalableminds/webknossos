@@ -2,7 +2,7 @@ package controllers
 
 import javax.inject.Inject
 import akka.util.Timeout
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import models.annotation._
@@ -41,12 +41,12 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       restrictions <- restrictionsFor(typ, id) ?~> "restrictions.notFound"
       _ <- restrictions.allowAccess(request.identity) ?~> "notAllowed" ~> BAD_REQUEST
       js <- annotation.publicWrites(request.identity, Some(restrictions), Some(readOnly)) ?~> "could not convert annotation to json"
-    } yield {
-      request.identity.foreach { user =>
+      _ <- Fox.runOptional(request.identity) { user =>
         if (typ == AnnotationTypeSQL.Task || typ == AnnotationTypeSQL.Explorational) {
           TimeSpanService.logUserInteraction(user, annotation) // log time when a user starts working
-        }
+        } else Fox.successful(())
       }
+    } yield {
       Ok(js)
     }
   }
@@ -73,7 +73,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
         annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
         restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
         _ <- restrictions.allowAccess(request.identity) ?~> Messages("notAllowed") ~> BAD_REQUEST
-        loggedTimeAsMap <- TimeSpanService.loggedTimeOfAnnotation(id, TimeSpan.groupByMonth)
+        loggedTimeAsMap <- TimeSpanService.loggedTimeOfAnnotation(annotation._id, TimeSpanSQL.groupByMonth)
       } yield {
         Ok(Json.arr(
           loggedTimeAsMap.map {
@@ -151,8 +151,8 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
       message <- annotation.muta.finish(user, restrictions)
       updated <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
+      _ <- TimeSpanService.logUserInteraction(user, annotation) // log time on tracing end
     } yield {
-      TimeSpanService.logUserInteraction(user, annotation) // log time on tracing end
       (updated, message)
     }
   }

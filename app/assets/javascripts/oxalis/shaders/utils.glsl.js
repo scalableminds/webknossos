@@ -162,14 +162,6 @@ export const getW: ShaderModuleType = {
   `,
 };
 
-export const isArbitrary: ShaderModuleType = {
-  code: `
-    bool isArbitrary() {
-      return viewMode == <%= ModeValuesIndices.Flight %> || viewMode == <%= ModeValuesIndices.Oblique %>;
-    }
-  `,
-};
-
 export const isFlightMode: ShaderModuleType = {
   code: `
     bool isFlightMode() {

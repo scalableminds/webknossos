@@ -1,5 +1,5 @@
 // @flow
-/* eslint-disable jsx-a11y/href-no-hash, react/prefer-stateless-function */
+/* eslint-disable jsx-a11y/href-no-hash, react/prefer-stateless-function, react/no-unused-state */
 
 import * as React from "react";
 import TemplateHelpers from "libs/template_helpers";
@@ -9,6 +9,8 @@ import DatasetActionView from "dashboard/advanced_dataset/dataset_action_view";
 import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
 import type { DatasetType } from "dashboard/dataset_view";
 import type { APITeamType } from "admin/api_flow_types";
+import dice from "dice-coefficient";
+import _ from "lodash";
 
 const { Column } = Table;
 
@@ -17,29 +19,92 @@ const typeHint: DatasetType[] = [];
 type Props = {
   datasets: Array<DatasetType>,
   searchQuery: string,
+  isUserAdmin: boolean,
 };
 
-class AdvancedDatasetView extends React.PureComponent<Props> {
+type State = {
+  prevSearchQuery: string,
+  sortedInfo: Object,
+};
+
+class AdvancedDatasetView extends React.PureComponent<Props, State> {
+  static getDerivedStateFromProps(nextProps: Props, prevState: State): $Shape<State> {
+    const maybeSortedInfo =
+      // Clear the sorting exactly when the search box is initially filled
+      // (searchQuery changes from empty string to non-empty string)
+      nextProps.searchQuery !== "" && prevState.prevSearchQuery === ""
+        ? {
+            sortedInfo: { columnKey: null, order: "ascend" },
+          }
+        : {};
+
+    return {
+      prevSearchQuery: nextProps.searchQuery,
+      ...maybeSortedInfo,
+    };
+  }
+
+  constructor() {
+    super();
+    this.state = {
+      sortedInfo: {
+        columnKey: "created",
+        order: "descend",
+      },
+      prevSearchQuery: "",
+    };
+  }
+
+  handleChange = (pagination: Object, filters: Object, sorter: Object) => {
+    this.setState({
+      sortedInfo: sorter,
+    });
+  };
+
   render() {
+    const { isUserAdmin } = this.props;
+    const isImported = dataset => dataset.dataSource.dataLayers != null;
+    const filteredDataSource = Utils.filterWithSearchQueryOR(
+      isUserAdmin ? this.props.datasets : this.props.datasets.filter(isImported),
+      ["name", "description"],
+      this.props.searchQuery,
+    );
+
+    const { sortedInfo } = this.state;
+    const sortedDataSource =
+      // Sort using the dice coefficient if the table is not sorted otherwise
+      // and if the query is longer then 3 characters to avoid sorting *all* datasets
+      this.props.searchQuery.length > 3 && sortedInfo.columnKey == null
+        ? _.chain(filteredDataSource)
+            .map(row => ({
+              row,
+              diceCoefficient: dice(row.name, this.props.searchQuery),
+            }))
+            .sortBy("diceCoefficient")
+            .map(({ row }) => row)
+            .reverse()
+            .value()
+        : filteredDataSource;
+
     return (
       <div className="TestAdvancedDatasetView">
         <Table
-          dataSource={Utils.filterWithSearchQueryOR(
-            this.props.datasets,
-            ["name", "description"],
-            this.props.searchQuery,
-          )}
+          dataSource={sortedDataSource}
           rowKey="name"
           pagination={{
             defaultPageSize: 50,
           }}
-          expandedRowRender={dataset => <DatasetAccessListView dataset={dataset} />}
+          expandedRowRender={
+            isUserAdmin ? dataset => <DatasetAccessListView dataset={dataset} /> : null
+          }
+          onChange={this.handleChange}
         >
           <Column
             title="Name"
             dataIndex="name"
             key="name"
             sorter={Utils.localeCompareBy(typeHint, "name")}
+            sortOrder={sortedInfo.columnKey === "name" && sortedInfo.order}
             render={(name: string, dataset: DatasetType) => (
               <div>
                 {dataset.name}
@@ -55,8 +120,8 @@ class AdvancedDatasetView extends React.PureComponent<Props> {
             title="Creation Date"
             dataIndex="created"
             key="created"
-            defaultSortOrder="descend"
             sorter={Utils.localeCompareBy(typeHint, "formattedCreated")}
+            sortOrder={sortedInfo.columnKey === "created" && sortedInfo.order}
             render={(__, dataset: DatasetType) => dataset.formattedCreated}
           />
           <Column
@@ -91,6 +156,7 @@ class AdvancedDatasetView extends React.PureComponent<Props> {
             key="isActive"
             width={100}
             sorter={(a, b) => a.isActive - b.isActive}
+            sortOrder={sortedInfo.columnKey === "isActive" && sortedInfo.order}
             render={(isActive: boolean) => {
               const icon = isActive ? "check-circle-o" : "close-circle-o";
               return <Icon type={icon} style={{ fontSize: 20 }} />;
@@ -102,6 +168,7 @@ class AdvancedDatasetView extends React.PureComponent<Props> {
             key="isPublic"
             width={100}
             sorter={(a, b) => a.isPublic - b.isPublic}
+            sortOrder={sortedInfo.columnKey === "isPublic" && sortedInfo.order}
             render={(isPublic: boolean) => {
               const icon = isPublic ? "check-circle-o" : "close-circle-o";
               return <Icon type={icon} style={{ fontSize: 20 }} />;
@@ -123,7 +190,9 @@ class AdvancedDatasetView extends React.PureComponent<Props> {
             width={200}
             title="Actions"
             key="actions"
-            render={(__, dataset: DatasetType) => <DatasetActionView dataset={dataset} />}
+            render={(__, dataset: DatasetType) => (
+              <DatasetActionView isUserAdmin={isUserAdmin} dataset={dataset} />
+            )}
           />
         </Table>
       </div>

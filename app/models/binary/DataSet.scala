@@ -2,7 +2,7 @@ package models.binary
 
 
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableDataSource, InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayer, AbstractSegmentationLayer, Category, DataSourceId, ElementClass, GenericDataSource, DataLayerLike => DataLayer}
@@ -460,7 +460,7 @@ object DataSet extends FoxImplicits {
   private def getLogoUrl(dataSet: DataSet) =
     dataSet.logoUrl match {
       case Some(url) => Fox.successful(url)
-      case None => OrganizationDAO.findOneByName(dataSet.owningOrganization)(GlobalAccessContext).map(_.logoUrl)
+      case None => OrganizationSQLDAO.findOneByName(dataSet.owningOrganization)(GlobalAccessContext).map(_.logoUrl)
     }
 
   def fromDataSetSQL(s: DataSetSQL)(implicit ctx: DBAccessContext) = {

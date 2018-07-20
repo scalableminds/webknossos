@@ -145,9 +145,14 @@ export function deleteNode(
     const { allowUpdate } = skeletonTracing.restrictions;
 
     if (allowUpdate) {
-      // Delete Node
+      // Delete node and possible branchpoints/comments
       const activeTree = update(tree, {
         nodes: { $apply: nodes => nodes.delete(node.id) },
+        comments: { $apply: comments => comments.filter(comment => comment.nodeId !== node.id) },
+        branchPoints: {
+          $apply: branchPoints =>
+            branchPoints.filter(branchPoint => branchPoint.nodeId !== node.id),
+        },
       });
 
       // Do we need to split trees? Are there edges leading to/from it?
@@ -155,10 +160,6 @@ export function deleteNode(
       const deletedEdges = activeTree.edges.getEdgesForNode(node.id);
       for (const edge of deletedEdges) {
         neighborIds.push(edge.target === node.id ? edge.source : edge.target);
-      }
-
-      if (neighborIds.length === 0) {
-        return deleteTree(state, activeTree, timestamp);
       }
 
       const newTrees = splitTreeByNodes(
@@ -176,8 +177,10 @@ export function deleteNode(
         newMaxNodeId = getMaximumNodeId(newTrees);
       }
 
-      const newActiveNodeId = neighborIds[0];
-      const newActiveTree = findTreeByNodeId(newTrees, newActiveNodeId).get();
+      const newActiveNodeId = neighborIds.length > 0 ? neighborIds[0] : null;
+      const newActiveTree = newActiveNodeId
+        ? findTreeByNodeId(newTrees, newActiveNodeId).get()
+        : activeTree;
       const newActiveTreeId = newActiveTree.treeId;
 
       return Maybe.Just([newTrees, newActiveTreeId, newActiveNodeId, newMaxNodeId]);
@@ -246,6 +249,12 @@ function splitTreeByNodes(
   // Not every node id is guaranteed to be a new tree root as there may be cyclic trees.
 
   let newTrees = skeletonTracing.trees;
+
+  if (newTreeRootIds.length === 0) {
+    // As there are no new tree root ids, we are deleting the last node from a tree.
+    // It suffices to simply update that tree within the tree collection
+    return update(newTrees, { [activeTree.treeId]: { $set: activeTree } });
+  }
 
   // Traverse from each possible new root node in all directions (i.e., use each edge) and
   // remember which edges were already visited.

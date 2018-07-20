@@ -53,6 +53,7 @@ class Plane {
 
     const textureMaterial = new PlaneMaterialFactory(
       this.planeID,
+      true,
       OrthoViewValues.indexOf(this.planeID),
     )
       .setup()
@@ -66,12 +67,12 @@ class Plane {
     for (let i = 0; i <= 1; i++) {
       crosshairGeometries[i] = new THREE.Geometry();
       crosshairGeometries[i].vertices.push(
-        new THREE.Vector3(-pWidth / 2 * i, -pWidth / 2 * (1 - i), 0),
+        new THREE.Vector3((-pWidth / 2) * i, (-pWidth / 2) * (1 - i), 0),
       );
       crosshairGeometries[i].vertices.push(new THREE.Vector3(-25 * i, -25 * (1 - i), 0));
       crosshairGeometries[i].vertices.push(new THREE.Vector3(25 * i, 25 * (1 - i), 0));
       crosshairGeometries[i].vertices.push(
-        new THREE.Vector3(pWidth / 2 * i, pWidth / 2 * (1 - i), 0),
+        new THREE.Vector3((pWidth / 2) * i, (pWidth / 2) * (1 - i), 0),
       );
       this.crosshair[i] = new THREE.LineSegments(
         crosshairGeometries[i],

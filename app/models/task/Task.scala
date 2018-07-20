@@ -2,7 +2,7 @@ package models.task
 
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.mvc.Formatter
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.webknossos.schema.Tables._
@@ -48,10 +48,7 @@ case class TaskSQL(
     AnnotationService.baseFor(_id)
 
   def taskType(implicit ctx: DBAccessContext) =
-    for {
-      taskTypeIdBson <- _taskType.toBSONObjectId.toFox
-      taskType <- TaskTypeDAO.findOneById(taskTypeIdBson)(GlobalAccessContext)
-    } yield taskType
+    TaskTypeSQLDAO.findOne(_taskType)(GlobalAccessContext)
 
   def project(implicit ctx: DBAccessContext) =
     ProjectSQLDAO.findOne(_project)
@@ -81,9 +78,10 @@ case class TaskSQL(
       annotationBase <- annotationBase
       dataSet <- DataSetDAO.findOneById(annotationBase._dataSet)
       status <- status.getOrElse(CompletionStatus(-1, -1, -1))
-      taskType <- taskType.map(TaskType.transformToJson) getOrElse JsNull
-      scriptInfo <- _script.map(_.toBSONObjectId).flatten.toFox.flatMap(sid => ScriptDAO.findOneById(sid)).futureBox
-      scriptJs <- scriptInfo.toFox.flatMap(s => Script.scriptPublicWrites(s)).futureBox
+      taskType <- taskType
+      taskTypeJs <- taskType.publicWrites
+      scriptInfo <- _script.toFox.flatMap(sid => ScriptSQLDAO.findOne(sid)).futureBox
+      scriptJs <- scriptInfo.toFox.flatMap(s => s.publicWrites).futureBox
       project <- project
       team <- project.team
     } yield {
@@ -92,7 +90,7 @@ case class TaskSQL(
         "formattedHash" -> Formatter.formatHash(_id.toString),
         "projectName" -> project.name,
         "team" -> team.name,
-        "type" -> taskType,
+        "type" -> taskTypeJs,
         "dataSet" -> dataSet.name,
         "neededExperience" -> neededExperience,
         "created" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(created),
@@ -243,11 +241,16 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
                                         projectNameOpt: Option[String],
                                         taskTypeIdOpt: Option[ObjectId],
                                         taskIdsOpt: Option[List[ObjectId]],
-                                        userIdOpt: Option[ObjectId]
+                                        userIdOpt: Option[ObjectId],
+                                        randomizeOpt: Option[Boolean]
                                       )(implicit ctx: DBAccessContext): Fox[List[TaskSQL]] = {
 
     /* WARNING: This code composes an sql query with #${} without sanitize(). Change with care. */
 
+    val orderRandom = randomizeOpt match{
+      case Some(true) => s"ORDER BY random()"
+      case _ => ""
+    }
     val projectFilterFox = projectNameOpt match {
       case Some(pName) => for {project <- ProjectSQLDAO.findOneByName(pName)} yield s"(t._project = '${project._id}')"
       case _ => Fox.successful("true")
@@ -268,6 +271,7 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
                 and #${taskIdsFilter}
                 and #${userFilter}
                 and #${accessQuery}
+                #${orderRandom}
                 limit 1000"""
       r <- run(q.as[TasksRow])
       parsed <- Fox.combined(r.toList.map(parse))

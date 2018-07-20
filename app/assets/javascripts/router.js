@@ -44,6 +44,8 @@ import TaskCreateFormView from "admin/task/task_create_form_view";
 import TaskTypeCreateView from "admin/tasktype/task_type_create_view";
 import ScriptCreateView from "admin/scripts/script_create_view";
 import TimeLineView from "admin/time/time_line_view";
+import Onboarding from "admin/onboarding";
+import Utils from "libs/utils";
 
 import type { OxalisState } from "oxalis/store";
 import type { APIUserType } from "admin/api_flow_types";
@@ -240,7 +242,14 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/datasets/upload"
-                component={DatasetUploadView}
+                render={() => (
+                  <DatasetUploadView
+                    onUploaded={datasetName => {
+                      const url = `/datasets/${datasetName}/import`;
+                      browserHistory.push(url);
+                    }}
+                  />
+                )}
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
@@ -249,6 +258,8 @@ class ReactRouter extends React.Component<Props> {
                   <DatasetImportView
                     isEditingMode={false}
                     datasetName={match.params.datasetName || ""}
+                    onComplete={() => window.history.back()}
+                    onCancel={() => window.history.back()}
                   />
                 )}
               />
@@ -256,7 +267,12 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/datasets/:datasetName/edit"
                 render={({ match }: ContextRouter) => (
-                  <DatasetImportView isEditingMode datasetName={match.params.datasetName || ""} />
+                  <DatasetImportView
+                    isEditingMode
+                    datasetName={match.params.datasetName || ""}
+                    onComplete={() => window.history.back()}
+                    onCancel={() => window.history.back()}
+                  />
                 )}
               />
               <SecuredRoute
@@ -330,13 +346,25 @@ class ReactRouter extends React.Component<Props> {
               <Route path="/login" render={() => <Redirect to="/auth/login" />} />
               <Route path="/register" render={() => <Redirect to="/auth/register" />} />
               <Route path="/auth/login" render={() => <LoginView layout="horizontal" />} />
-              <Route path="/auth/register" component={RegistrationView} />
+              <Route
+                path="/auth/register"
+                render={({ location }: ContextRouter) => {
+                  const params = Utils.getUrlParamsObjectFromString(location.search);
+                  const organizationName =
+                    typeof params.organizationName === "string"
+                      ? decodeURI(params.organizationName)
+                      : "";
+                  return <RegistrationView organizationName={organizationName} />;
+                }}
+              />
+
               <Route path="/auth/resetPassword" component={StartResetPasswordView} />
               <Route path="/auth/finishResetPassword" component={FinishResetPasswordView} />
               <Route path="/spotlight" component={SpotlightView} />
               <Route path="/datasets/:id/view" render={this.tracingViewMode} />
               <Route path="/imprint" component={Imprint} />
               <Route path="/privacy" component={Privacy} />
+              <Route path="/onboarding" component={Onboarding} />
               <Route component={PageNotFoundView} />
             </Switch>
           </Content>

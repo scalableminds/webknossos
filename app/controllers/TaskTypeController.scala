@@ -1,8 +1,7 @@
 package controllers
 
 import javax.inject.Inject
-import com.scalableminds.util.reactivemongo.JsonFormatHelper
-import com.scalableminds.util.tools.FoxImplicits
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.AnnotationSettings
 import models.task._
 import oxalis.security.WebknossosSilhouette.SecuredAction
@@ -18,57 +17,58 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
   val taskTypePublicReads =
     ((__ \ 'summary).read[String](minLength[String](2) or maxLength[String](50)) and
       (__ \ 'description).read[String] and
-      (__ \ 'team).read[String] (JsonFormatHelper.StringObjectIdReads("team")) and
-      (__ \ 'settings).read[AnnotationSettings]) (TaskType.fromForm _)
+      (__ \ 'team).read[String] (ObjectId.stringObjectIdReads("team")) and
+      (__ \ 'settings).read[AnnotationSettings]) (TaskTypeSQL.fromForm _)
 
   def create = SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(taskTypePublicReads) { taskType =>
       for {
         _ <- ensureTeamAdministration(request.identity, taskType._team)
-        _ <- TaskTypeDAO.insert(taskType)
-      } yield {
-        JsonOk(TaskType.transformToJson(taskType))
-      }
+        _ <- TaskTypeSQLDAO.insertOne(taskType)
+        js <- taskType.publicWrites
+      } yield Ok(js)
     }
   }
 
   def get(taskTypeId: String) = SecuredAction.async { implicit request =>
     for {
-      taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
+      taskTypeIdValidated <- ObjectId.parse(taskTypeId)
+      taskType <- TaskTypeSQLDAO.findOne(taskTypeIdValidated) ?~> Messages("taskType.notFound")
       _ <- ensureTeamAdministration(request.identity, taskType._team)
-    } yield {
-      JsonOk(TaskType.transformToJson(taskType))
-    }
+      js <- taskType.publicWrites
+    } yield Ok(js)
   }
 
   def list = SecuredAction.async { implicit request =>
     for {
-      taskTypes <- TaskTypeDAO.findAll
-    } yield {
-      Ok(Json.toJson(taskTypes.map(TaskType.transformToJson)))
-    }
+      taskTypes <- TaskTypeSQLDAO.findAll
+      js <- Fox.serialCombined(taskTypes)(t => t.publicWrites)
+    } yield Ok(Json.toJson(js))
   }
 
   def update(taskTypeId: String) = SecuredAction.async(parse.json) { implicit request =>
-    withJsonBodyUsing(taskTypePublicReads) { tt =>
+    withJsonBodyUsing(taskTypePublicReads) { taskTypeFromForm =>
       for {
-        taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-        updatedTaskType = tt.copy(_id = taskType._id)
+        taskTypeIdValidated <- ObjectId.parse(taskTypeId)
+        taskType <- TaskTypeSQLDAO.findOne(taskTypeIdValidated) ?~> Messages("taskType.notFound")
+        updatedTaskType = taskTypeFromForm.copy(_id = taskType._id)
         _ <- ensureTeamAdministration(request.identity, taskType._team)
         _ <- ensureTeamAdministration(request.identity, updatedTaskType._team)
-        _ <- TaskTypeDAO.update(taskType._id, updatedTaskType)
+        _ <- TaskTypeSQLDAO.updateOne(updatedTaskType)
+        js <- updatedTaskType.publicWrites
       } yield {
-        JsonOk(TaskType.transformToJson(updatedTaskType), Messages("taskType.editSuccess"))
+        JsonOk(js, Messages("taskType.editSuccess"))
       }
     }
   }
 
   def delete(taskTypeId: String) = SecuredAction.async { implicit request =>
     for {
-      taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
+      taskTypeIdValidated <- ObjectId.parse(taskTypeId)
+      taskType <- TaskTypeSQLDAO.findOne(taskTypeIdValidated) ?~> Messages("taskType.notFound")
       _ <- ensureTeamAdministration(request.identity, taskType._team)
-      _ <- TaskTypeDAO.removeById(taskType._id) ?~> Messages("taskType.deleteFailure")
-      _ <- TaskSQLDAO.removeAllWithTaskTypeAndItsAnnotations(ObjectId.fromBsonId(taskType._id)) ?~> Messages("taskType.deleteFailure")
+      _ <- TaskTypeSQLDAO.deleteOne(taskTypeIdValidated) ?~> Messages("taskType.deleteFailure")
+      _ <- TaskSQLDAO.removeAllWithTaskTypeAndItsAnnotations(taskTypeIdValidated) ?~> Messages("taskType.deleteFailure")
     } yield {
       JsonOk(Messages("taskType.deleteSuccess", taskType.summary))
     }

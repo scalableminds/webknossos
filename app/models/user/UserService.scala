@@ -5,7 +5,7 @@ import com.mohiva.play.silhouette.api.services.IdentityService
 import com.mohiva.play.silhouette.api.util.PasswordInfo
 import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
 import com.scalableminds.util.mail.Send
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.security.SCrypt._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -60,14 +60,17 @@ object UserService extends FoxImplicits with IdentityService[User] {
   }
 
   def insert(organization: String, email: String, firstName: String,
-             lastName: String, password: String, isActive: Boolean, teamRole: Boolean = false, loginInfo: LoginInfo, passwordInfo: PasswordInfo): Fox[User] =
+             lastName: String, password: String, isActive: Boolean, teamRole: Boolean = false, loginInfo: LoginInfo, passwordInfo: PasswordInfo, isAdmin: Boolean = false): Fox[User] = {
+    implicit val ctx = GlobalAccessContext
     for {
-      organizationTeamId <- OrganizationDAO.findOneByName(organization)(GlobalAccessContext).map(_._organizationTeam)
-      orgTeam <- TeamDAO.findOneById(organizationTeamId)(GlobalAccessContext)
+      organizationTeamId <- OrganizationSQLDAO.findOneByName(organization).flatMap(_.organizationTeamId).toFox
+      orgTeamIdBson <- organizationTeamId.toBSONObjectId.toFox
+      orgTeam <- TeamDAO.findOneById(orgTeamIdBson)
       teamMemberships = List(TeamMembership(orgTeam._id, orgTeam.name, teamRole))
-      user = User(email, firstName, lastName, isActive = isActive, md5(password), organization, teamMemberships, loginInfo = loginInfo, passwordInfo = passwordInfo)
-      _ <- UserDAO.insert(user)(GlobalAccessContext)
+      user = User(email, firstName, lastName, isActive = isActive, md5(password), organization, teamMemberships, loginInfo = loginInfo, passwordInfo = passwordInfo, isAdmin = isAdmin)
+      _ <- UserDAO.insert(user)
     } yield user
+  }
 
   def update(
               user: User,

@@ -2,7 +2,7 @@ package controllers
 
 import javax.inject.Inject
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
-import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.tracings.{TracingReference, TracingType}
@@ -198,16 +198,17 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
   }
 
   def downloadTaskType(taskTypeId: String, user: User)(implicit ctx: DBAccessContext) = {
-    def createTaskTypeZip(taskType: TaskType) =
+    def createTaskTypeZip(taskType: TaskTypeSQL) =
       for {
-        tasks <- TaskSQLDAO.findAllByTaskType(ObjectId.fromBsonId(taskType._id))
+        tasks <- TaskSQLDAO.findAllByTaskType(taskType._id)
         annotations <- Fox.serialCombined(tasks)(_.annotations).map(_.flatten).toFox
         finishedAnnotations = annotations.filter(_.state == Finished)
         zip <- AnnotationService.zipAnnotations(finishedAnnotations, taskType.summary + "_nmls.zip")
       } yield zip
 
     for {
-      tasktype <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
+      taskTypeIdValidated <- ObjectId.parse(taskTypeId)
+      tasktype <- TaskTypeSQLDAO.findOne(taskTypeIdValidated) ?~> Messages("taskType.notFound")
       _ <- ensureTeamAdministration(user, tasktype._team) ?~> Messages("notAllowed")
       zip <- createTaskTypeZip(tasktype)
     } yield Ok.sendFile(zip.file)

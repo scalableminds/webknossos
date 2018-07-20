@@ -16,6 +16,7 @@ import createBrowserHistory from "history/createBrowserHistory";
 mockRequire("libs/hammerjs_wrapper", {});
 mockRequire("libs/keyboardjs_wrapper", {});
 mockRequire("libs/window", global.window);
+mockRequire("libs/datasource.schema.json", {});
 
 // The following components cannot be rendered by enzyme. Let's mock them
 mockRequire("antd/lib/upload", () => <div />);

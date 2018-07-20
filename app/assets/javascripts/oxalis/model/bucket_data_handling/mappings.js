@@ -200,7 +200,8 @@ class Mappings {
     const uint8Keys = new Uint8Array(keys.buffer);
     const uint8Values = new Uint8Array(values.buffer);
     // The typed arrays need to be padded with 0s so that their length is a multiple of MAPPING_TEXTURE_WIDTH
-    const paddedLength = keys.length + MAPPING_TEXTURE_WIDTH - keys.length % MAPPING_TEXTURE_WIDTH;
+    const paddedLength =
+      keys.length + MAPPING_TEXTURE_WIDTH - (keys.length % MAPPING_TEXTURE_WIDTH);
     // The length of typed arrays cannot be changed, so we need to create new ones with the correct length
     const uint8KeysPadded = new Uint8Array(paddedLength * 4);
     uint8KeysPadded.set(uint8Keys);

@@ -7,7 +7,9 @@
     var f;
     "undefined" != typeof window
       ? (f = window)
-      : "undefined" != typeof global ? (f = global) : "undefined" != typeof self && (f = self),
+      : "undefined" != typeof global
+        ? (f = global)
+        : "undefined" != typeof self && (f = self),
       (f.keyboardJS = e());
   }
 })(function() {
@@ -647,7 +649,11 @@
             this,
             typeof global !== "undefined"
               ? global
-              : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},
+              : typeof self !== "undefined"
+                ? self
+                : typeof window !== "undefined"
+                  ? window
+                  : {},
           ));
         },
         { "./key-combo": 2, "./locale": 4 },

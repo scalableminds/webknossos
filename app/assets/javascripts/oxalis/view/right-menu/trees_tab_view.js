@@ -15,7 +15,7 @@ import {
   setTreeNameAction,
   createTreeAction,
   addTreesAndGroupsAction,
-  deleteTreeWithConfirmAction,
+  deleteTreeAsUserAction,
   shuffleTreeColorAction,
   shuffleAllTreeColorsAction,
   selectNextTreeAction,
@@ -156,8 +156,8 @@ class TreesTabView extends React.PureComponent<Props, State> {
           </div>
         </Menu.Item>
         <Menu.Item key="handleNmlDownload">
-          <div onClick={this.handleNmlDownload} title="Download visible trees as NML">
-            <Icon type="download" /> Download as NML
+          <div onClick={this.handleNmlDownload} title="Download selected trees as NML">
+            <Icon type="download" /> Download Selected Trees
           </div>
         </Menu.Item>
         <Menu.Item key="importNml">
@@ -285,7 +285,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
     dispatch(createTreeAction());
   },
   onDeleteTree() {
-    dispatch(deleteTreeWithConfirmAction());
+    dispatch(deleteTreeAsUserAction());
   },
   onChangeTreeName(name) {
     dispatch(setTreeNameAction(name));
@@ -295,4 +295,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect(mapStateToProps, mapDispatchToProps)(TreesTabView);
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps,
+)(TreesTabView);

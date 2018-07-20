@@ -1,6 +1,6 @@
 package models.task
 
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.webknossos.schema.Tables._
@@ -22,22 +22,35 @@ case class TaskTypeSQL(
                          _team: ObjectId,
                          summary: String,
                          description: String,
-                         settings: AnnotationSettings,
+                         settings: AnnotationSettings = AnnotationSettings.defaultFor(TracingType.skeleton),
                          created: Long = System.currentTimeMillis(),
                          isDeleted: Boolean = false
-                         )
+                         ) extends FoxImplicits {
+
+  def publicWrites(implicit ctx: DBAccessContext) = {
+    Fox.successful(Json.obj(
+      "id" -> _id.toString,
+      "summary" -> summary,
+      "description" -> description,
+      "team" -> _team.toString,
+      "settings" -> Json.toJson(settings)
+    ))
+  }
+}
 
 object TaskTypeSQL {
-  def fromTaskType(t: TaskType)(implicit ctx: DBAccessContext) =
-    Fox.successful(TaskTypeSQL(
-        ObjectId.fromBsonId(t._id),
-        ObjectId.fromBsonId(t._team),
-        t.summary,
-        t.description,
-        t.settings,
-        System.currentTimeMillis(),
-        !t.isActive
-      ))
+  def fromForm(
+                summary: String,
+                description: String,
+                team: String,
+                settings: AnnotationSettings) = {
+    TaskTypeSQL(
+      ObjectId.generate,
+      ObjectId(team),
+      summary,
+      description,
+      settings)
+  }
 }
 
 object TaskTypeSQLDAO extends SQLDAO[TaskTypeSQL, TasktypesRow, Tasktypes] with SecuredSQLDAO {
@@ -114,110 +127,5 @@ object TaskTypeSQLDAO extends SQLDAO[TaskTypeSQL, TasktypesRow, Tasktypes] with 
                            isDeleted = ${t.isDeleted}
                           where _id = ${t._id.id}""")
     } yield ()
-
-}
-
-
-
-
-
-
-case class TaskType(
-                     summary: String,
-                     description: String,
-                     _team: BSONObjectID,
-                     settings: AnnotationSettings = AnnotationSettings.defaultFor(TracingType.skeleton),
-                     isActive: Boolean = true,
-                     _id: BSONObjectID = BSONObjectID.generate) {
-
-  val id = _id.stringify
-  val team = _team.stringify
-}
-
-object TaskType extends FoxImplicits {
-
-  implicit val taskTypeFormat = Json.format[TaskType]
-
-  def fromForm(
-    summary: String,
-    description: String,
-    team: String,
-    settings: AnnotationSettings) = {
-
-    TaskType(
-      summary,
-      description,
-      BSONObjectID(team),
-      settings)
-  }
-
-  def toForm(tt: TaskType) =
-    Some((
-      tt.summary,
-      tt.description,
-      tt.team,
-      tt.settings.allowedModes,
-      tt.settings.preferredMode,
-      tt.settings.branchPointsAllowed,
-      tt.settings.somaClickingAllowed))
-
-  def transformToJson(tt: TaskType)(implicit ctx: DBAccessContext) = {
-    Json.obj(
-      "id" -> tt.id,
-      "summary" -> tt.summary,
-      "description" -> tt.description,
-      "team" -> tt.team,
-      "settings" -> Json.toJson(tt.settings)
-    )
-  }
-
-  def fromTaskTypeSQL(s: TaskTypeSQL)(implicit ctx: DBAccessContext): Fox[TaskType] =
-    for {
-      idBson <- s._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id.toString)
-      teamIdBson <- s._team.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id.toString)
-    } yield {
-      TaskType(
-        s.summary,
-        s.description,
-        teamIdBson,
-        s.settings,
-        !s.isDeleted,
-        idBson
-      )
-    }
-}
-
-object TaskTypeDAO {
-
-  def findOneById(id: BSONObjectID)(implicit ctx: DBAccessContext): Fox[TaskType] = findOneById(id.stringify)
-
-  def findOneById(id: String)(implicit ctx: DBAccessContext): Fox[TaskType] =
-    for {
-      taskTypeSQL <- TaskTypeSQLDAO.findOne(ObjectId(id))
-      taskType <- TaskType.fromTaskTypeSQL(taskTypeSQL)
-    } yield taskType
-
-  def insert(taskType: TaskType)(implicit ctx: DBAccessContext): Fox[TaskType] =
-    for {
-      taskTypeSQL <- TaskTypeSQL.fromTaskType(taskType)
-      _ <- TaskTypeSQLDAO.insertOne(taskTypeSQL)
-    } yield taskType
-
-  def findAll(implicit ctx: DBAccessContext): Fox[List[TaskType]] =
-    for {
-      taskTypesSQL <- TaskTypeSQLDAO.findAll
-      taskTypes <- Fox.combined(taskTypesSQL.map(TaskType.fromTaskTypeSQL(_)))
-    } yield taskTypes
-
-
-  def update(_id: BSONObjectID, taskType: TaskType)(implicit ctx: DBAccessContext) =
-    for {
-      taskTypeSQL <- TaskTypeSQL.fromTaskType(taskType.copy(_id = _id))
-      _ <- TaskTypeSQLDAO.updateOne(taskTypeSQL)
-      updated <- findOneById(_id)
-    } yield updated
-
-  def removeById(_id: BSONObjectID)(implicit ctx: DBAccessContext) =
-    TaskTypeSQLDAO.deleteOne(ObjectId.fromBsonId(_id))
 
 }

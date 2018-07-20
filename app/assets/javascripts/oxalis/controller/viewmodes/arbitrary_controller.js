@@ -20,7 +20,7 @@ import {
 } from "oxalis/model/actions/settings_actions";
 import {
   setActiveNodeAction,
-  deleteNodeWithConfirmAction,
+  deleteNodeAsUserAction,
   createNodeAction,
   createBranchPointAction,
   requestDeleteBranchPointAction,
@@ -221,7 +221,7 @@ class ArbitraryController extends React.PureComponent<Props> {
 
       // Delete active node and recenter last node
       "shift + space": () => {
-        Store.dispatch(deleteNodeWithConfirmAction());
+        Store.dispatch(deleteNodeAsUserAction());
       },
     });
   }
@@ -249,7 +249,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     const state = Store.getState();
     const { moveValue3d } = state.userConfiguration;
     const baseVoxel = getBaseVoxel(state.dataset.dataSource.scale);
-    return moveValue3d * timeFactor / baseVoxel / constants.FPS;
+    return (moveValue3d * timeFactor) / baseVoxel / constants.FPS;
   }
 
   move(timeFactor: number): void {
@@ -349,6 +349,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     }
 
     this.arbitraryView.stop();
+    this.plane.destroy();
 
     this.isStarted = false;
   }

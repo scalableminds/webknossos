@@ -9,7 +9,7 @@ import Maybe from "data.maybe";
 import Utils from "libs/utils";
 import update from "immutability-helper";
 import { connect } from "react-redux";
-import { Icon, Input } from "antd";
+import { Input, Menu, Dropdown, Tooltip, Icon } from "antd";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { InputKeyboardNoLoop } from "libs/input";
 import { getActiveTree, getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -21,6 +21,8 @@ import {
 import TreeWithComments from "oxalis/view/right-menu/comment_tab/tree_with_comments";
 import Comment from "oxalis/view/right-menu/comment_tab/comment";
 import { AutoSizer, List } from "react-virtualized";
+import Enum from "Enumjs";
+import messages from "messages";
 import type { Dispatch } from "redux";
 import type { OxalisState, SkeletonTracingType, TreeType, CommentType } from "oxalis/store";
 import { makeSkeletonTracingGuard } from "oxalis/view/guards";
@@ -31,24 +33,37 @@ const { TextArea } = Input;
 const treeTypeHint = ([]: Array<TreeType>);
 const commentTypeHint = ([]: Array<CommentType>);
 
+const SortByEnum = Enum.make({
+  NAME: "NAME",
+  ID: "ID",
+  NATURAL: "NATURAL",
+});
+type SortByEnumType = $Keys<typeof SortByEnum>;
+
 type SortOptionsType = {
-  isSortedByName: boolean,
+  sortBy: SortByEnumType,
   isSortedAscending: boolean,
 };
-function getTreeSorter({ isSortedByName, isSortedAscending }: SortOptionsType): Function {
-  return isSortedByName
-    ? Utils.localeCompareBy(treeTypeHint, tree => `${tree.name}_${tree.treeId}`, isSortedAscending)
-    : Utils.compareBy(treeTypeHint, "treeId", isSortedAscending);
+function getTreeSorter({ sortBy, isSortedAscending }: SortOptionsType): Function {
+  return sortBy === SortByEnum.ID
+    ? Utils.compareBy(treeTypeHint, "treeId", isSortedAscending)
+    : Utils.localeCompareBy(
+        treeTypeHint,
+        tree => `${tree.name}_${tree.treeId}`,
+        isSortedAscending,
+        sortBy === SortByEnum.NATURAL,
+      );
 }
 
-function getCommentSorter({ isSortedByName, isSortedAscending }: SortOptionsType): Function {
-  return isSortedByName
-    ? Utils.localeCompareBy(
+function getCommentSorter({ sortBy, isSortedAscending }: SortOptionsType): Function {
+  return sortBy === SortByEnum.ID
+    ? Utils.compareBy(([]: Array<CommentType>), "nodeId", isSortedAscending)
+    : Utils.localeCompareBy(
         commentTypeHint,
         comment => `${comment.content}_${comment.nodeId}`,
         isSortedAscending,
-      )
-    : Utils.compareBy(([]: Array<CommentType>), "nodeId", isSortedAscending);
+        sortBy === SortByEnum.NATURAL,
+      );
 }
 
 type Props = {
@@ -60,7 +75,7 @@ type Props = {
 
 type CommentTabStateType = {
   isSortedAscending: boolean,
-  isSortedByName: boolean,
+  sortBy: SortByEnumType,
   data: Array<TreeType | CommentType>,
   collapsedTreeIds: { [number]: boolean },
 };
@@ -89,7 +104,7 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
 
   state = {
     isSortedAscending: true,
-    isSortedByName: true,
+    sortBy: SortByEnum.NAME,
     data: [],
     // TODO: Remove once https://github.com/yannickcr/eslint-plugin-react/issues/1751 is merged
     // eslint-disable-next-line react/no-unused-state
@@ -107,21 +122,21 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
 
   nextComment = (forward = true) => {
     getActiveNode(this.props.skeletonTracing).map(activeNode => {
-      const { isSortedAscending, isSortedByName } = this.state;
+      const { isSortedAscending, sortBy } = this.state;
       const sortAscending = forward ? isSortedAscending : !isSortedAscending;
       const { trees } = this.props.skeletonTracing;
 
       // Create a sorted, flat array of all comments across all trees
       const sortedTrees = _.values(trees)
         .slice(0)
-        .sort(getTreeSorter({ isSortedByName, isSortedAscending: sortAscending }));
+        .sort(getTreeSorter({ sortBy, isSortedAscending: sortAscending }));
 
       const sortedComments = _.flatMap(
         sortedTrees,
         (tree: TreeType): Array<CommentType> =>
           tree.comments
             .slice(0)
-            .sort(getCommentSorter({ isSortedByName, isSortedAscending: sortAscending })),
+            .sort(getCommentSorter({ sortBy, isSortedAscending: sortAscending })),
       );
 
       const currentCommentIndex = _.findIndex(sortedComments, { nodeId: activeNode.id });
@@ -147,32 +162,65 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
     }
   };
 
-  handleChangeSorting = () => {
-    // Cycle between isSortedAscending, !isSortedAscending and !isSortedByName
-    if (!this.state.isSortedByName) {
-      this.setState({
-        isSortedAscending: true,
-        isSortedByName: true,
-      });
-      return;
-    }
-    if (!this.state.isSortedAscending) {
-      this.setState({
-        isSortedAscending: true,
-        isSortedByName: false,
-      });
-    } else {
-      this.setState({
-        isSortedAscending: false,
-        isSortedByName: true,
-      });
-    }
+  handleChangeSorting = ({ key }) => {
+    this.setState({ sortBy: key });
+  };
+
+  toggleSortingDirection = () => {
+    this.setState(prevState => ({
+      isSortedAscending: !prevState.isSortedAscending,
+    }));
   };
 
   onExpand = (treeId: number) => {
     this.setState(prevState => ({
       collapsedTreeIds: update(prevState.collapsedTreeIds, { $toggle: [treeId] }),
     }));
+  };
+
+  getSortIcon() {
+    const sortAsc = this.state.isSortedAscending;
+    const sortNumeric = this.state.sortBy === SortByEnum.ID;
+    const iconClass = `fa fa-sort-${sortNumeric ? "numeric" : "alpha"}-${sortAsc ? "asc" : "desc"}`;
+    return <i className={iconClass} />;
+  }
+
+  getSortDropdown() {
+    return (
+      <Menu selectedKeys={[this.state.sortBy]} onClick={this.handleChangeSorting}>
+        <Menu.Item key={SortByEnum.NAME}>by name</Menu.Item>
+        <Menu.Item key={SortByEnum.ID}>by creation time</Menu.Item>
+        <Menu.Item key={SortByEnum.NATURAL}>
+          by name (natural sort)<Tooltip
+            title={messages["tracing.natural_sorting"]}
+            placement="bottomLeft"
+          >
+            {" "}
+            <Icon type="info-circle" />
+          </Tooltip>
+        </Menu.Item>
+      </Menu>
+    );
+  }
+
+  rowRenderer = ({ index, key, style }) => {
+    if (this.state.data[index].treeId != null) {
+      const tree = this.state.data[index];
+      return (
+        <TreeWithComments
+          key={key}
+          style={style}
+          tree={tree}
+          collapsed={this.state.collapsedTreeIds[tree.treeId]}
+          onExpand={this.onExpand}
+          isActive={tree.treeId === this.props.skeletonTracing.activeTreeId}
+        />
+      );
+    } else {
+      const comment = this.state.data[index];
+      const isActive = comment.nodeId === this.props.skeletonTracing.activeNodeId;
+      return <Comment key={key} style={style} comment={comment} isActive={isActive} />;
+    }
   };
 
   render() {
@@ -200,31 +248,6 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
       activeComment !== "" ? findCommentIndexFn : findTreeIndexFn,
     );
 
-    const sortingIconClass = this.state.isSortedAscending
-      ? "fa fa-sort-alpha-asc"
-      : "fa fa-sort-alpha-desc";
-
-    const rowCount = this.state.data.length;
-    const rowRenderer = ({ index, key, style }) => {
-      if (this.state.data[index].treeId != null) {
-        const tree = this.state.data[index];
-        return (
-          <TreeWithComments
-            key={key}
-            style={style}
-            tree={tree}
-            collapsed={this.state.collapsedTreeIds[tree.treeId]}
-            onExpand={this.onExpand}
-            isActive={tree.treeId === this.props.skeletonTracing.activeTreeId}
-          />
-        );
-      } else {
-        const comment = this.state.data[index];
-        const isActive = comment.nodeId === this.props.skeletonTracing.activeNodeId;
-        return <Comment key={key} style={style} comment={comment} isActive={isActive} />;
-      }
-    };
-
     return (
       <div className="flex-column">
         <InputGroup compact>
@@ -241,9 +264,11 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
           <ButtonComponent onClick={this.nextComment}>
             <i className="fa fa-arrow-right" />
           </ButtonComponent>
-          <ButtonComponent onClick={this.handleChangeSorting} title="sort">
-            {this.state.isSortedByName ? <i className={sortingIconClass} /> : <Icon type="minus" />}
-          </ButtonComponent>
+          <Dropdown overlay={this.getSortDropdown()}>
+            <ButtonComponent title="Sort" onClick={this.toggleSortingDirection}>
+              {this.getSortIcon()}
+            </ButtonComponent>
+          </Dropdown>
         </InputGroup>
         <div style={{ flex: "1 1 auto", marginTop: 20 }}>
           <AutoSizer>
@@ -253,9 +278,9 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
                   id="comment-list"
                   height={height}
                   width={width}
-                  rowCount={rowCount}
+                  rowCount={this.state.data.length}
                   rowHeight={21}
-                  rowRenderer={rowRenderer}
+                  rowRenderer={this.rowRenderer}
                   scrollToIndex={scrollIndex > -1 ? scrollIndex : undefined}
                   tabIndex={null}
                 />

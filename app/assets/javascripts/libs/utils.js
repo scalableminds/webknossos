@@ -39,6 +39,14 @@ function getRecursiveValuesUnflat(obj: Object | Array<*> | string): Array<*> {
   }
 }
 
+function cheapSort<T: string | number>(valueA: T, valueB: T) {
+  // $FlowFixMe It is not possible to express that valueA and valueB have the very same type
+  if (valueA < valueB) return -1;
+  // $FlowFixMe It is not possible to express that valueA and valueB have the very same type
+  if (valueA > valueB) return 1;
+  return 0;
+}
+
 const Utils = {
   clamp(a: number, x: number, b: number): number {
     return Math.max(a, Math.min(b, x));
@@ -137,13 +145,7 @@ const Utils = {
       if (typeof valueA !== "number" || typeof valueB !== "number") {
         return 0;
       }
-      if (valueA < valueB) {
-        return -1;
-      }
-      if (valueA > valueB) {
-        return 1;
-      }
-      return 0;
+      return cheapSort(valueA, valueB);
     };
   },
 
@@ -151,6 +153,7 @@ const Utils = {
     collectionForTypeInference: Array<T>, // this parameter is only used let flow infer the used type
     selector: $Keys<T> | (T => string),
     isSortedAscending: boolean = true,
+    sortNatural: boolean = true,
   ): (T, T) => number {
     const sortingOrder = isSortedAscending ? 1 : -1;
 
@@ -160,7 +163,8 @@ const Utils = {
       if (typeof valueA !== "string" || typeof valueB !== "string") {
         return 0;
       }
-      return naturalSort(valueA, valueB) * sortingOrder;
+      // localeCompare is really slow, therefore, we use the naturalSort lib and a cheap sorting otherwise
+      return (sortNatural ? naturalSort(valueA, valueB) : cheapSort(valueA, valueB)) * sortingOrder;
     };
   },
 

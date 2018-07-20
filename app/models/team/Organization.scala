@@ -17,6 +17,8 @@ case class OrganizationSQL(
                             additionalInformation: String,
                             logoUrl: String,
                             displayName: String,
+                            newUserMailingList: String = "",
+                            overTimeMailingList: String = "",
                             created: Long = System.currentTimeMillis(),
                             isDeleted: Boolean = false
                           ) {
@@ -53,6 +55,8 @@ object OrganizationSQLDAO extends SQLDAO[OrganizationSQL, OrganizationsRow, Orga
         r.additionalinformation,
         r.logourl,
         r.displayname,
+        r.newusermailinglist,
+        r.overtimemailinglist,
         r.created.getTime,
         r.isdeleted)
     )
@@ -74,8 +78,8 @@ object OrganizationSQLDAO extends SQLDAO[OrganizationSQL, OrganizationsRow, Orga
     for {
       r <- run(
 
-        sqlu"""insert into webknossos.organizations(_id, name, additionalInformation, logoUrl, displayName, created, isDeleted)
-                  values(${o._id.id}, ${o.name}, ${o.additionalInformation}, ${o.logoUrl}, ${o.displayName}, ${new java.sql.Timestamp(o.created)}, ${o.isDeleted})
+        sqlu"""insert into webknossos.organizations(_id, name, additionalInformation, logoUrl, displayName, newUserMailingList, overTimeMailingList, created, isDeleted)
+                  values(${o._id.id}, ${o.name}, ${o.additionalInformation}, ${o.logoUrl}, ${o.displayName}, ${o.newUserMailingList}, ${o.overTimeMailingList}, ${new java.sql.Timestamp(o.created)}, ${o.isDeleted})
             """)
     } yield ()
 

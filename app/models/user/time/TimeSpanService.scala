@@ -170,13 +170,15 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
       project <- task.project
       annotationTime <- annotation.tracingTime ?~> "no annotation.tracingTime"
       timeLimit <- project.expectedTime ?~> "no project.expectedTime"
+      organization <- user.organization
     } yield {
       if (annotationTime >= timeLimit && annotationTime - time < timeLimit) {
         Mailer ! Send(DefaultMails.overLimitMail(
           user,
           project.name,
           task._id.toString,
-          annotation.id))
+          annotation.id,
+          organization))
       }
     }
   }

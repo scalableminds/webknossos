@@ -11,6 +11,7 @@ import update from "immutability-helper";
 import { connect } from "react-redux";
 import { Input, Menu, Dropdown, Tooltip, Icon } from "antd";
 import ButtonComponent from "oxalis/view/components/button_component";
+import InputComponent from "oxalis/view/components/input_component";
 import { InputKeyboardNoLoop } from "libs/input";
 import { getActiveTree, getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
@@ -32,6 +33,8 @@ const { TextArea } = Input;
 
 const treeTypeHint = ([]: Array<TreeType>);
 const commentTypeHint = ([]: Array<CommentType>);
+
+const TextAreaStyle = { width: "60%", resize: "none", overflowY: "auto" };
 
 const SortByEnum = Enum.make({
   NAME: "NAME",
@@ -254,12 +257,13 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
           <ButtonComponent onClick={this.previousComment}>
             <i className="fa fa-arrow-left" />
           </ButtonComponent>
-          <TextArea
+          <InputComponent
             value={activeComment}
             onChange={this.handleChangeInput}
             placeholder="Add comment"
-            style={{ width: "60%", resize: "none", overflowY: "auto" }}
+            style={TextAreaStyle}
             rows={1}
+            isTextArea
           />
           <ButtonComponent onClick={this.nextComment}>
             <i className="fa fa-arrow-right" />

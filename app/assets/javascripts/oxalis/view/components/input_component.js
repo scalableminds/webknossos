@@ -11,6 +11,7 @@ type InputComponentPropType = {
   placeholder?: string,
   value: string,
   style?: any,
+  isTextArea?: boolean,
 };
 
 type InputComponentStateType = {
@@ -36,6 +37,7 @@ class InputComponent extends React.PureComponent<InputComponentPropType, InputCo
     placeholder: "",
     value: "",
     style: {},
+    isTextArea: false,
   };
 
   state = {
@@ -71,8 +73,9 @@ class InputComponent extends React.PureComponent<InputComponentPropType, InputCo
   };
 
   render() {
+    const InputClass = this.props.isTextArea ? Input.TextArea : Input;
     return (
-      <Input
+      <InputClass
         {...this.props}
         onChange={this.handleChange}
         onFocus={this.handleFocus}

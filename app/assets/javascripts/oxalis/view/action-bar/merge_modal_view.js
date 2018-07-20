@@ -43,7 +43,6 @@ type MergeModalViewState = {
   selectedProject: ?string,
   selectedExplorativeAnnotation: string,
   isUploading: boolean,
-  mergeExplorativeLocally: boolean,
 };
 
 type UploadInfoType<T> = {
@@ -57,13 +56,47 @@ type UploadInfoType<T> = {
       },
 };
 
+type ButtonWithCheckboxProps = {
+  checkboxContent: React$Element<*>,
+  button: React$Element<*>,
+  onButtonClick: (SyntheticInputEvent<>, boolean) => Promise<void> | void,
+};
+
+type ButtonWithCheckboxState = {
+  isChecked: boolean,
+};
+
+class ButtonWithCheckbox extends PureComponent<ButtonWithCheckboxProps, ButtonWithCheckboxState> {
+  state = {
+    isChecked: true,
+  };
+  render() {
+    return (
+      <React.Fragment>
+        <Form.Item>
+          <Checkbox
+            onChange={event => this.setState({ isChecked: event.target.checked })}
+            checked={this.state.isChecked}
+          >
+            {this.props.checkboxContent}
+          </Checkbox>
+        </Form.Item>
+        <Form.Item>
+          {React.cloneElement(this.props.button, {
+            onClick: evt => this.props.onButtonClick(evt, this.state.isChecked),
+          })}
+        </Form.Item>
+      </React.Fragment>
+    );
+  }
+}
+
 class MergeModalView extends PureComponent<Props, MergeModalViewState> {
   state = {
     projects: [],
     selectedProject: null,
     selectedExplorativeAnnotation: "",
     isUploading: false,
-    mergeExplorativeLocally: true,
   };
 
   componentWillMount() {
@@ -95,11 +128,11 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     this.setState({ isUploading: true });
   };
 
-  handleMergeProject = async (event: SyntheticInputEvent<>) => {
+  handleMergeProject = async (event: SyntheticInputEvent<>, isLocalMerge: boolean) => {
     event.preventDefault();
     const { selectedProject } = this.state;
     if (selectedProject != null) {
-      if (this.state.mergeExplorativeLocally) {
+      if (isLocalMerge) {
         const annotation = await getAnnotationInformation(selectedProject, "CompoundProject");
         this.mergeAnnotationIntoActiveTracing(annotation);
       } else {
@@ -111,12 +144,15 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     }
   };
 
-  handleMergeExplorativeAnnotation = async (event: SyntheticInputEvent<>) => {
+  handleMergeExplorativeAnnotation = async (
+    event: SyntheticInputEvent<>,
+    isLocalMerge: boolean,
+  ) => {
     event.preventDefault();
     const { selectedExplorativeAnnotation } = this.state;
 
     if (selectedExplorativeAnnotation != null) {
-      if (this.state.mergeExplorativeLocally) {
+      if (isLocalMerge) {
         const annotation = await getAnnotationInformation(
           selectedExplorativeAnnotation,
           "Explorational",
@@ -148,6 +184,19 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
   }
 
   render() {
+    const mergeIntoActiveTracingCheckbox = (
+      <React.Fragment>
+        Merge into active tracing{" "}
+        <Tooltip
+          title={
+            "If this option is enabled, trees and tree groups will be imported directly into the currently opened tracing. If not, a new explorative annotation will be created in your account."
+          }
+        >
+          <Icon type="info-circle-o" style={{ color: "gray" }} />
+        </Tooltip>
+      </React.Fragment>
+    );
+
     return (
       <Modal
         title="Merge"
@@ -165,7 +214,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
             message="The merged tracing will be saved as a new explorative tracing. If you would like to
             import NML files, please simply drag and drop them into the tracing view."
           />
-          <Form layout="inline" onSubmit={this.handleMergeProject}>
+          <Form layout="inline">
             <Form.Item label="Project">
               <Select
                 value={this.state.selectedProject}
@@ -179,19 +228,19 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
                 ))}
               </Select>
             </Form.Item>
-            <Form.Item>
-              <Button
-                type="primary"
-                htmlType="submit"
-                size="default"
-                disabled={this.state.selectedProject == null}
-              >
-                Merge
-              </Button>
-            </Form.Item>
+
+            <ButtonWithCheckbox
+              checkboxContent={mergeIntoActiveTracingCheckbox}
+              button={
+                <Button type="primary" size="default" disabled={this.state.selectedProject == null}>
+                  Merge
+                </Button>
+              }
+              onButtonClick={this.handleMergeProject}
+            />
           </Form>
 
-          <Form layout="inline" onSubmit={this.handleMergeExplorativeAnnotation}>
+          <Form layout="inline">
             <Form.Item label="Explorative Annotation">
               <InputComponent
                 value={this.state.selectedExplorativeAnnotation}
@@ -199,31 +248,19 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
                 onChange={this.handleChangeMergeExplorativeAnnotation}
               />
             </Form.Item>
-            <Form.Item>
-              <Checkbox
-                onChange={event => this.setState({ mergeExplorativeLocally: event.target.checked })}
-                checked={this.state.mergeExplorativeLocally}
-              >
-                Merge into active tracing{" "}
-                <Tooltip
-                  title={
-                    "If this option is enabled, trees and tree groups will be imported directly into the currently opened tracing. If not, a new explorative annotation will be created in your account."
-                  }
+            <ButtonWithCheckbox
+              checkboxContent={mergeIntoActiveTracingCheckbox}
+              button={
+                <Button
+                  type="primary"
+                  size="default"
+                  disabled={this.state.selectedExplorativeAnnotation.length !== 24}
                 >
-                  <Icon type="info-circle-o" style={{ color: "gray" }} />
-                </Tooltip>
-              </Checkbox>
-            </Form.Item>
-            <Form.Item>
-              <Button
-                type="primary"
-                htmlType="submit"
-                size="default"
-                disabled={this.state.selectedExplorativeAnnotation.length !== 24}
-              >
-                Merge
-              </Button>
-            </Form.Item>
+                  Merge
+                </Button>
+              }
+              onButtonClick={this.handleMergeExplorativeAnnotation}
+            />
           </Form>
         </Spin>
       </Modal>

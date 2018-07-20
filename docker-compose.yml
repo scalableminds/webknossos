@@ -9,7 +9,6 @@ services:
     links:
       - fossildb
       - postgres
-    entrypoint: bin/webknossos
     command:
       - -Djava.io.tmpdir=disk
       - -Dconfig.file=conf/application.conf

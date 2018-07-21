@@ -146,12 +146,6 @@ case class Team(name: String,
     for {
       organization <- user.organization
     } yield organization.name == this.organization
-
-  def assertCouldBeAdministratedBy(user: UserSQL) =
-    for {
-      asBoolean <- couldBeAdministratedBy(user)
-      _ <- asBoolean ?~> Messages("notAllowed")
-    } yield ()
 }
 
 object Team extends FoxImplicits {

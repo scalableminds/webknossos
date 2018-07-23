@@ -7,6 +7,7 @@ import com.typesafe.scalalogging.LazyLogging
 import models.annotation._
 import models.task.TaskSQLDAO
 import models.user.UserSQL
+import models.team.OrganizationSQLDAO
 import net.liftweb.common.Full
 import oxalis.mail.DefaultMails
 import oxalis.thirdparty.BrainTracing.Mailer
@@ -169,13 +170,15 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
       project <- task.project
       annotationTime <- annotation.tracingTime ?~> "no annotation.tracingTime"
       timeLimit <- project.expectedTime ?~> "no project.expectedTime"
+      organization <- user.organization
     } yield {
       if (annotationTime >= timeLimit && annotationTime - time < timeLimit) {
         Mailer ! Send(DefaultMails.overLimitMail(
           user,
           project.name,
           task._id.toString,
-          annotation.id))
+          annotation.id,
+          organization))
       }
     }
   }

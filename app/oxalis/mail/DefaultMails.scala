@@ -2,6 +2,7 @@ package oxalis.mail
 
 import com.scalableminds.util.mail.Mail
 import models.user.UserSQL
+import models.team.OrganizationSQL
 import play.api.i18n.Messages
 import views._
 
@@ -24,20 +25,20 @@ object DefaultMails {
 
   val workloadMail = conf.getString("workload.mail").getOrElse("")
 
-  def registerAdminNotifyerMail(user: UserSQL, email: String, brainDBResult: String) =
+  def registerAdminNotifyerMail(user: UserSQL, email: String, brainDBResult: String, organization: OrganizationSQL) =
     Mail(
       from = email,
       headers = Map("Sender" -> defaultFrom),
       subject = s"A new user (${user.name}) registered on $uri",
       bodyText = html.mail.registerAdminNotify(user, brainDBResult, uri).body,
-      recipients = List(newUserMailingList))
+      recipients = List(organization.newUserMailingList))
 
-  def overLimitMail(user: UserSQL, projectName: String, taskId: String, annotationId: String) =
+  def overLimitMail(user: UserSQL, projectName: String, taskId: String, annotationId: String, organization: OrganizationSQL) =
     Mail(
       from = defaultFrom,
       subject = s"Time limit reached. ${user.abreviatedName} in $projectName",
       bodyText = html.mail.timeLimit(user.name, projectName, taskId, annotationId, uri).body,
-      recipients = List(overTimeMailingList))
+      recipients = List(organization.overTimeMailingList))
 
   /**
     * Creates a registration mail which should allow the user to verify his

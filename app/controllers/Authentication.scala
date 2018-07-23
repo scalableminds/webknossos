@@ -394,7 +394,7 @@ class Authentication @Inject()(
                       loginInfo, passwordHasher.hash(signUpData.password), isAdmin = true)
                     _ <- createOrganizationFolder(organization.name, loginInfo)
                   } yield {
-                    Mailer ! Send(DefaultMails.newOrganizationMail(organization.name, email.toLowerCase, request.headers.get("Host").headOption.getOrElse("")))
+                    Mailer ! Send(DefaultMails.newOrganizationMail(organization.displayName, email.toLowerCase, request.headers.get("Host").headOption.getOrElse("")))
                     Ok
                   }
                 }

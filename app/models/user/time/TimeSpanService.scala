@@ -6,6 +6,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation._
 import models.task.TaskSQLDAO
+import models.team.OrganizationSQLDAO
 import models.user.User
 import net.liftweb.common.Full
 import oxalis.mail.DefaultMails
@@ -170,13 +171,15 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
       project <- task.project
       annotationTime <- annotation.tracingTime ?~> "no annotation.tracingTime"
       timeLimit <- project.expectedTime ?~> "no project.expectedTime"
+      organization <- OrganizationSQLDAO.findOneByName(user.organization)
     } yield {
       if (annotationTime >= timeLimit && annotationTime - time < timeLimit) {
         Mailer ! Send(DefaultMails.overLimitMail(
           user,
           project.name,
           task._id.toString,
-          annotation.id))
+          annotation.id,
+          organization))
       }
     }
   }

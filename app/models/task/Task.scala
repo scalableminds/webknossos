@@ -93,7 +93,7 @@ case class TaskSQL(
         "type" -> taskTypeJs,
         "dataSet" -> dataSet.name,
         "neededExperience" -> neededExperience,
-        "created" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(created),
+        "created" -> created,
         "status" -> status,
         "script" -> scriptJs.toOption,
         "tracingTime" -> tracingTime,

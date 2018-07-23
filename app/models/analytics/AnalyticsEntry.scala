@@ -20,18 +20,6 @@ case class AnalyticsEntrySQL(
                               isDeleted: Boolean = false
                              )
 
-object AnalyticsEntrySQL {
-  def fromAnalyticsEntry(a: AnalyticsEntry) =
-    Fox.successful(AnalyticsEntrySQL(
-      ObjectId.fromBsonId(BSONObjectID.generate),
-      a.user.map(ObjectId.fromBsonId(_)),
-      a.namespace,
-      a.value,
-      a.timestamp,
-      true
-    ))
-}
-
 object AnalyticsSQLDAO extends SQLDAO[AnalyticsEntrySQL, AnalyticsRow, Analytics] {
   val collection = Analytics
 
@@ -48,7 +36,6 @@ object AnalyticsSQLDAO extends SQLDAO[AnalyticsEntrySQL, AnalyticsRow, Analytics
         r.isdeleted
       ))
 
-
   def insertOne(a: AnalyticsEntrySQL): Fox[Unit] = {
     for {
       _ <- run(sqlu"""insert into webknossos.analytics(_id, _user, namespace, value, created, isDeleted)
@@ -56,38 +43,4 @@ object AnalyticsSQLDAO extends SQLDAO[AnalyticsEntrySQL, AnalyticsRow, Analytics
                                 ${new java.sql.Timestamp(a.created)}, ${a.isDeleted})""")
     } yield ()
   }
-}
-
-
-
-
-
-case class AnalyticsEntry(
-                           user: Option[BSONObjectID],
-                           namespace: String,
-                           value: JsValue,
-                           timestamp: Long = System.currentTimeMillis()
-                         )
-
-object AnalyticsEntry {
-  implicit val analyticsEntryFormat = Json.format[AnalyticsEntry]
-
-  def fromAnalyticsEntrySQL(s: AnalyticsEntrySQL)(implicit ctx: DBAccessContext): Fox[AnalyticsEntry] =
-    Fox.successful(AnalyticsEntry(
-      s._user.map(_.toBSONObjectId).flatten,
-      s.namespace,
-      s.value,
-      s.created
-    ))
-}
-
-object AnalyticsDAO {
-
-  def insert(analyticsEntry: AnalyticsEntry) = {
-    for {
-      analyticsEntrySQL <- AnalyticsEntrySQL.fromAnalyticsEntry(analyticsEntry)
-      _ <- AnalyticsSQLDAO.insertOne(analyticsEntrySQL)
-    } yield ()
-  }
-
 }

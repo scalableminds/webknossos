@@ -17,6 +17,13 @@ CREATE TYPE webknossos.BOUNDING_BOX AS (
   depth DOUBLE PRECISION
 );
 
+START TRANSACTION;
+CREATE TABLE webknossos.releaseInformation (
+  schemaVersion BIGINT NOT NULL
+);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(16);
+COMMIT TRANSACTION;
+
 CREATE TABLE webknossos.analytics(
   _id CHAR(24) PRIMARY KEY NOT NULL DEFAULT '',
   _user CHAR(24),

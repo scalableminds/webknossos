@@ -13,9 +13,9 @@ function linkify(comment: string) {
   return (
     comment
       // Replace linked nodes (#<nodeid>) with a proper link
-      .replace(NODE_ID_REF_REGEX, (match, p1) => `[#${p1}](#activeNode=${p1})`)
+      .replace(NODE_ID_REF_REGEX, (__, p1) => `[#${p1}](#activeNode=${p1})`)
       // Replace linked positions (#(<x,y,z>)) with a proper link
-      .replace(POSITION_REF_REGEX, (match, p1) => `[#(${p1})](#position=${p1})`)
+      .replace(POSITION_REF_REGEX, (__, p1) => `[#(${p1})](#position=${p1})`)
   );
 }
 

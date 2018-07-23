@@ -12,14 +12,13 @@ import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import ColorGenerator from "libs/color_generator";
 import update from "immutability-helper";
 import Utils from "libs/utils";
-import Constants from "oxalis/constants";
+import Constants, { NODE_ID_REF_REGEX } from "oxalis/constants";
 import {
   getSkeletonTracing,
   getActiveNodeFromTree,
   getActiveTree,
   findTreeByNodeId,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import { NODE_ID_REF_REGEX } from "oxalis/constants";
 import type { Vector3 } from "oxalis/constants";
 import type {
   OxalisState,
@@ -505,7 +504,7 @@ export function addTreesAndGroups(
               $apply: oldContent =>
                 oldContent.replace(
                   NODE_ID_REF_REGEX,
-                  (match, p1) => `#${idMap[Number(p1)] != null ? idMap[Number(p1)] : p1}`,
+                  (__, p1) => `#${idMap[Number(p1)] != null ? idMap[Number(p1)] : p1}`,
                 ),
             },
           }),

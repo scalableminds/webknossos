@@ -87,7 +87,7 @@ export const ContourModeEnum = {
 };
 export type ContourModeType = $Keys<typeof ContourModeEnum>;
 
-export const NODE_ID_REF_REGEX = /#([0-9.]+)/g;
+export const NODE_ID_REF_REGEX = /#([0-9]+)/g;
 export const POSITION_REF_REGEX = /#\(([0-9.]+,[0-9.]+,[0-9.]+)\)/g;
 
 const Constants = {

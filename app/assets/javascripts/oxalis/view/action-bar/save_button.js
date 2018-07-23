@@ -4,6 +4,7 @@ import { connect } from "react-redux";
 import Model from "oxalis/model";
 import ButtonComponent from "oxalis/view/components/button_component";
 import type { OxalisState, ProgressInfoType } from "oxalis/store";
+import { Icon } from "antd";
 
 type StateProps = {|
   progressInfo: ProgressInfoType,
@@ -46,9 +47,16 @@ class SaveButton extends React.PureComponent<Props, State> {
   getSaveButtonIcon() {
     if (this.state.isStateSaved) {
       return "check";
+    } else if (this.props.isBusy) {
+      return "loading";
     } else {
       return "hourglass";
     }
+  }
+
+  showProgress(): boolean {
+    // For a low action count, the progress info would show only for a very short amount of time
+    return this.props.isBusy && this.props.progressInfo.totalActionCount > 5000;
   }
 
   render() {
@@ -61,7 +69,7 @@ class SaveButton extends React.PureComponent<Props, State> {
         onClick={this.props.onClick}
         icon={this.getSaveButtonIcon()}
       >
-        {this.props.isBusy && progressInfo.totalActionCount > 5000 ? (
+        {this.showProgress() ? (
           <React.Fragment>
             {Math.floor((progressInfo.processedActionCount / progressInfo.totalActionCount) * 100)}{" "}
             %

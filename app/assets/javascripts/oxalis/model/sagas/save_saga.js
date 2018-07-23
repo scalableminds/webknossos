@@ -136,7 +136,7 @@ export function* sendRequestToServer(timestamp: number = Date.now()): Generator<
   const fullSaveQueue = yield select(state => state.save.queue);
   const saveQueue = sliceAppropriateBatchCount(fullSaveQueue);
 
-  let compactedSaveQueue = compactUpdateActionBatches(saveQueue);
+  let compactedSaveQueue = compactSaveQueue(saveQueue);
   const { version, type, tracingId } = yield select(state => state.tracing);
   const dataStoreUrl = yield select(state => state.dataset.dataStore.url);
   compactedSaveQueue = addVersionNumbers(compactedSaveQueue, version);
@@ -329,13 +329,14 @@ function compactDeletedTrees(updateActions: Array<UpdateAction>) {
       ),
   );
 }
-function compactUpdateActions(updateActions: Array<UpdateAction>): Array<UpdateAction> {
-  return removeUnrelevantUpdateActions(
-    compactMovedNodesAndEdges(compactDeletedTrees(updateActions)),
+
+export function compactUpdateActions(updateActions: Array<UpdateAction>): Array<UpdateAction> {
+  return compactDeletedTrees(
+    compactMovedNodesAndEdges(removeUnrelevantUpdateActions(updateActions)),
   );
 }
 
-export function compactUpdateActionBatches(
+export function compactSaveQueue(
   updateActionsBatches: Array<SaveQueueEntryType>,
 ): Array<SaveQueueEntryType> {
   const result = updateActionsBatches.filter(

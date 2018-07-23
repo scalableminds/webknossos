@@ -73,16 +73,15 @@ class InputComponent extends React.PureComponent<InputComponentPropType, InputCo
   };
 
   render() {
-    const InputClass = this.props.isTextArea ? Input.TextArea : Input;
+    const { isTextArea, ...inputProps } = this.props;
+    const InputClass = isTextArea ? Input.TextArea : Input;
     return (
       <InputClass
-        {...this.props}
+        {...inputProps}
         onChange={this.handleChange}
         onFocus={this.handleFocus}
         onBlur={this.handleBlur}
         value={this.state.currentValue}
-        style={this.props.style}
-        placeholder={this.props.placeholder}
       />
     );
   }

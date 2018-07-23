@@ -9,7 +9,7 @@ import Maybe from "data.maybe";
 import Utils from "libs/utils";
 import update from "immutability-helper";
 import { connect } from "react-redux";
-import { Input, Menu, Dropdown, Tooltip, Icon } from "antd";
+import { Input, Menu, Dropdown, Tooltip, Icon, Modal, Button, Row, Col } from "antd";
 import ButtonComponent from "oxalis/view/components/button_component";
 import InputComponent from "oxalis/view/components/input_component";
 import { InputKeyboardNoLoop } from "libs/input";
@@ -20,7 +20,7 @@ import {
   deleteCommentAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import TreeWithComments from "oxalis/view/right-menu/comment_tab/tree_with_comments";
-import Comment from "oxalis/view/right-menu/comment_tab/comment";
+import { Comment, MarkdownComment } from "oxalis/view/right-menu/comment_tab/comment";
 import { AutoSizer, List } from "react-virtualized";
 import Enum from "Enumjs";
 import messages from "messages";
@@ -80,6 +80,7 @@ type CommentTabStateType = {
   sortBy: SortByEnumType,
   data: Array<TreeType | CommentType>,
   collapsedTreeIds: { [number]: boolean },
+  isMarkdownModalVisible: boolean,
 };
 
 class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
@@ -89,7 +90,6 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
     props: Props,
     state: CommentTabStateType,
   ): $Shape<CommentTabStateType> {
-    console.time("derive");
     const sortedTrees = _.values(props.skeletonTracing.trees)
       .filter(tree => tree.comments.length > 0)
       .sort(getTreeSorter(state));
@@ -101,7 +101,6 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
         ? result
         : result.concat(tree.comments.slice(0).sort(getCommentSorter(state)));
     }, []);
-    console.timeEnd("derive");
 
     return { data };
   }
@@ -113,6 +112,7 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
     // TODO: Remove once https://github.com/yannickcr/eslint-plugin-react/issues/1751 is merged
     // eslint-disable-next-line react/no-unused-state
     collapsedTreeIds: {},
+    isMarkdownModalVisible: false,
   };
 
   componentDidUpdate(prevProps) {
@@ -120,7 +120,8 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
       this.listRef != null &&
       prevProps.skeletonTracing.trees !== this.props.skeletonTracing.trees
     ) {
-      // Force the list to update if a comment was changed
+      // Force the virtualized list to update if a comment was changed
+      // as it only rerenders if the rowCount changed otherwise
       this.listRef.forceUpdateGrid();
     }
   }
@@ -186,20 +187,88 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
     }));
   };
 
-  onExpand = (treeId: number) => {
+  toggleExpand = (treeId: number) => {
     this.setState(prevState => ({
       collapsedTreeIds: update(prevState.collapsedTreeIds, { $toggle: [treeId] }),
     }));
   };
 
-  getSortIcon() {
+  getActiveComment() {
+    return Utils.zipMaybe(
+      getActiveTree(this.props.skeletonTracing),
+      getActiveNode(this.props.skeletonTracing),
+    ).chain(([tree, activeNode]) =>
+      Maybe.fromNullable(tree.comments.find(comment => comment.nodeId === activeNode.id)),
+    );
+  }
+
+  setMarkdownModalVisibility = (visible: boolean) => {
+    this.setState({ isMarkdownModalVisible: visible });
+  };
+
+  renderMarkdownModal() {
+    const activeCommentMaybe = this.getActiveComment();
+    const activeNodeMaybe = getActiveNode(this.props.skeletonTracing);
+    const commentMaybe = activeNodeMaybe.map(({ id }) => ({
+      nodeId: id,
+      content: activeCommentMaybe.map(({ content }) => content).getOrElse(""),
+    }));
+
+    const onOk = () => this.setMarkdownModalVisibility(false);
+
+    return commentMaybe
+      .map(comment => (
+        <Modal
+          key="comment-markdown-modal"
+          title={
+            <span>
+              Edit Comment (
+              <a href="https://markdown-it.github.io/" target="_blank" rel="noopener noreferrer">
+                Markdown enabled
+              </a>
+              )
+            </span>
+          }
+          visible={this.state.isMarkdownModalVisible}
+          onOk={onOk}
+          onCancel={onOk}
+          closable={false}
+          width={700}
+          footer={[
+            <Button key="back" onClick={onOk}>
+              Ok
+            </Button>,
+            null,
+          ]}
+        >
+          <Row gutter={16}>
+            <Col span={12}>
+              <InputComponent
+                value={comment.content}
+                onChange={this.handleChangeInput}
+                placeholder="Add comment"
+                rows={5}
+                autosize={{ minRows: 5, maxRows: 20 }}
+                isTextArea
+              />
+            </Col>
+            <Col span={12} style={{ maxHeight: 430, overflowY: "auto" }}>
+              <MarkdownComment comment={comment} />
+            </Col>
+          </Row>
+        </Modal>
+      ))
+      .getOrElse(null);
+  }
+
+  renderSortIcon() {
     const sortAsc = this.state.isSortedAscending;
     const sortNumeric = this.state.sortBy === SortByEnum.ID;
     const iconClass = `fa fa-sort-${sortNumeric ? "numeric" : "alpha"}-${sortAsc ? "asc" : "desc"}`;
     return <i className={iconClass} />;
   }
 
-  getSortDropdown() {
+  renderSortDropdown() {
     return (
       <Menu selectedKeys={[this.state.sortBy]} onClick={this.handleChangeSorting}>
         <Menu.Item key={SortByEnum.NAME}>by name</Menu.Item>
@@ -217,7 +286,7 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
     );
   }
 
-  rowRenderer = ({ index, key, style }) => {
+  renderRow = ({ index, key, style }) => {
     if (this.state.data[index].treeId != null) {
       const tree = this.state.data[index];
       return (
@@ -226,7 +295,7 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
           style={style}
           tree={tree}
           collapsed={this.state.collapsedTreeIds[tree.treeId]}
-          onExpand={this.onExpand}
+          onExpand={this.toggleExpand}
           isActive={tree.treeId === this.props.skeletonTracing.activeTreeId}
         />
       );
@@ -238,15 +307,8 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
   };
 
   render() {
-    const activeComment = Utils.zipMaybe(
-      getActiveTree(this.props.skeletonTracing),
-      getActiveNode(this.props.skeletonTracing),
-    )
-      .chain(([tree, activeNode]) =>
-        Maybe.fromNullable(tree.comments.find(comment => comment.nodeId === activeNode.id)),
-      )
-      .map(comment => comment.content)
-      .getOrElse("");
+    const activeCommentMaybe = this.getActiveComment();
+    const activeNodeMaybe = getActiveNode(this.props.skeletonTracing);
 
     const findCommentIndexFn = commentOrTree =>
       commentOrTree.nodeId != null &&
@@ -259,32 +321,37 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
     // otherwise scroll to the activeTree
     const scrollIndex = _.findIndex(
       this.state.data,
-      activeComment !== "" ? findCommentIndexFn : findTreeIndexFn,
+      activeCommentMaybe.isJust ? findCommentIndexFn : findTreeIndexFn,
     );
 
     return (
       <div className="flex-column">
+        {this.renderMarkdownModal()}
         <InputGroup compact>
           <ButtonComponent onClick={this.previousComment}>
             <i className="fa fa-arrow-left" />
           </ButtonComponent>
           <InputComponent
-            value={activeComment}
+            value={activeCommentMaybe.map(comment => comment.content).getOrElse("")}
+            disabled={activeNodeMaybe.isNothing}
             onChange={this.handleChangeInput}
             placeholder="Add comment"
             style={TextAreaStyle}
             rows={1}
             isTextArea
           />
-          <ButtonComponent>
+          <ButtonComponent
+            onClick={() => this.setMarkdownModalVisibility(true)}
+            disabled={activeNodeMaybe.isNothing}
+          >
             <Icon type="edit" />Markdown
           </ButtonComponent>
           <ButtonComponent onClick={this.nextComment}>
             <i className="fa fa-arrow-right" />
           </ButtonComponent>
-          <Dropdown overlay={this.getSortDropdown()}>
+          <Dropdown overlay={this.renderSortDropdown()}>
             <ButtonComponent title="Sort" onClick={this.toggleSortingDirection}>
-              {this.getSortIcon()}
+              {this.renderSortIcon()}
             </ButtonComponent>
           </Dropdown>
         </InputGroup>
@@ -298,7 +365,7 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
                   width={width}
                   rowCount={this.state.data.length}
                   rowHeight={21}
-                  rowRenderer={this.rowRenderer}
+                  rowRenderer={this.renderRow}
                   scrollToIndex={scrollIndex > -1 ? scrollIndex : undefined}
                   tabIndex={null}
                   ref={listEl => {

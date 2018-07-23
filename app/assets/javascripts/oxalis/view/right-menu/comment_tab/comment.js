@@ -11,7 +11,7 @@ import type { CommentType } from "oxalis/store";
 function linkify(comment: string) {
   return (
     comment
-      // Replace linkes nodes (#<nodeid>) with a proper link
+      // Replace linked nodes (#<nodeid>) with a proper link
       // (?!...) is a negative lookahead to ignore linked positions (#<x,y,z>)
       .replace(
         /#(?![0-9.]+,[0-9.]+,[0-9.]+)([0-9.]+)/g,
@@ -28,7 +28,16 @@ type CommentProps = {
   style: Object,
 };
 
-function Comment({ comment, isActive, style }: CommentProps) {
+export function MarkdownComment({ comment }: { comment: CommentType }) {
+  return (
+    <Markdown
+      source={linkify(comment.content)}
+      options={{ html: false, breaks: true, linkify: true }}
+    />
+  );
+}
+
+export function Comment({ comment, isActive, style }: CommentProps) {
   const handleClick = () => {
     Store.dispatch(setActiveNodeAction(comment.nodeId));
   };
@@ -41,32 +50,26 @@ function Comment({ comment, isActive, style }: CommentProps) {
   });
   const isMultiLine = comment.content.indexOf("\n") > 0;
 
-  const markdownElement = (
-    <Markdown
-      source={linkify(comment.content)}
-      options={{ html: false, breaks: true, linkify: true }}
-    />
-  );
-
   const commentElement = (
     <li className={liClassName} style={_.extend({}, style, { width: "inherit" })}>
-      <div className="comment-node-id">
+      <span className="comment-node-id">
         <i className={iClassName} />
         <a onClick={handleClick}>{comment.nodeId}</a>
         {" - "}
-      </div>
-      <div style={{ display: "inline-block" }}>{markdownElement}</div>
-      {isMultiLine ? <div className="comment-node-id"> ...</div> : null}
+      </span>
+      <span style={{ display: "inline-block" }}>{<MarkdownComment comment={comment} />}</span>
+      {isMultiLine ? <span className="comment-node-id"> ...</span> : null}
     </li>
   );
 
   return isActive && isMultiLine ? (
     <Popover
-      content={markdownElement}
+      content={<MarkdownComment comment={comment} />}
       defaultVisible
       visible
       placement="right"
       getPopupContainer={() => document.getElementById("comment-list")}
+      style={{ maxHeight: 200, overflowY: "auto" }}
     >
       {commentElement}
     </Popover>

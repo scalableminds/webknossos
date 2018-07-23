@@ -178,7 +178,7 @@ class Navbar extends React.PureComponent<Props, State> {
       <Header style={navbarStyle}>
         <Menu
           mode="horizontal"
-          defaultSelectedkeys={[this.props.history.location.pathname]}
+          defaultSelectedKeys={[this.props.history.location.pathname]}
           style={{ lineHeight: "48px", flex: isAuthenticated ? "1" : undefined }}
           theme="dark"
         >

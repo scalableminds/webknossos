@@ -9,7 +9,6 @@ import { AsyncButton } from "components/async_clickables";
 import { Button, Modal, Tag, Icon, Card, Row, Col, List } from "antd";
 import Markdown from "react-remarkable";
 import Utils from "libs/utils";
-import moment from "moment";
 import Toast from "libs/toast";
 import messages from "messages";
 import TransferTaskModal from "dashboard/transfer_task_modal";
@@ -32,6 +31,7 @@ import type {
 } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import type { RouterHistory } from "react-router-dom";
+import FormattedDate from "components/formatted_date";
 
 const typeHint: APITaskWithAnnotationType[] = [];
 
@@ -322,9 +322,9 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 
     const TaskCardTitle = ({ task }) => (
       <React.Fragment>
-        <span style={{ marginRight: 8 }}>{`${task.type.summary} (${moment(task.created).format(
-          "YYYY-MM-DD HH:mm",
-        )}) `}</span>
+        <span style={{ marginRight: 8 }}>
+          {task.type.summary} (<FormattedDate timestamp={task.created} />)
+        </span>
         {task.type.settings.allowedModes.map(mode => <Tag key={mode}>{mode}</Tag>)}
       </React.Fragment>
     );

@@ -5,7 +5,7 @@ import java.util.Calendar
 
 import javax.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.user.time.{TimeSpan, TimeSpanSQLDAO}
+import models.user.time.TimeSpanSQLDAO
 import models.user.{User, UserDAO, UserService}
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
 import play.api.i18n.{Messages, MessagesApi}

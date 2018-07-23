@@ -88,6 +88,7 @@ export function* pushAnnotationAsync(): Generator<*, *, *> {
     // could have been triggered during the call to sendRequestToServer
     saveQueue = yield select(state => state.save.queue);
     if (saveQueue.length === 0) {
+      yield put(setSaveBusyAction(false));
       // Save queue is empty, wait for push event
       yield take("PUSH_SAVE_QUEUE");
     }
@@ -99,8 +100,6 @@ export function* pushAnnotationAsync(): Generator<*, *, *> {
     saveQueue = yield select(state => state.save.queue);
     if (saveQueue.length > 0) {
       yield call(sendRequestToServer);
-    } else {
-      yield put(setSaveBusyAction(false));
     }
   }
 }
@@ -114,15 +113,16 @@ export function sendRequestWithToken(
 
 // This function returns the first n batches of the provided array, so that the count of
 // all actions in these n batches does not exceed maximumActionCount
-function sliceApproriateBatchCount(batches: Array<SaveQueueEntryType>): Array<SaveQueueEntryType> {
+function sliceAppropriateBatchCount(batches: Array<SaveQueueEntryType>): Array<SaveQueueEntryType> {
   const maximumActionCount = 15000;
 
   const slicedBatches = [];
   let actionCount = 0;
 
   for (const batch of batches) {
-    if (actionCount + batch.actions.length <= maximumActionCount) {
-      actionCount += batch.actions.length;
+    const newActionCount = actionCount + batch.actions.length;
+    if (newActionCount <= maximumActionCount) {
+      actionCount = newActionCount;
       slicedBatches.push(batch);
     } else {
       break;
@@ -134,7 +134,7 @@ function sliceApproriateBatchCount(batches: Array<SaveQueueEntryType>): Array<Sa
 
 export function* sendRequestToServer(timestamp: number = Date.now()): Generator<*, *, *> {
   const fullSaveQueue = yield select(state => state.save.queue);
-  const saveQueue = sliceApproriateBatchCount(fullSaveQueue);
+  const saveQueue = sliceAppropriateBatchCount(fullSaveQueue);
 
   let compactedSaveQueue = compactUpdateActionBatches(saveQueue);
   const { version, type, tracingId } = yield select(state => state.tracing);

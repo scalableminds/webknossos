@@ -19,6 +19,7 @@ import {
   getActiveTree,
   findTreeByNodeId,
 } from "oxalis/model/accessors/skeletontracing_accessor";
+import { NODE_ID_REF_REGEX } from "oxalis/constants";
 import type { Vector3 } from "oxalis/constants";
 import type {
   OxalisState,
@@ -471,16 +472,22 @@ export function addTreesAndGroups(
       // Assign new ids for all nodes and trees to avoid duplicates
       let newTreeId = getMaximumTreeId(skeletonTracing.trees) + 1;
       let newNodeId = skeletonTracing.cachedMaxNodeId + 1;
+
+      // Create a map from old node ids to new node ids
+      // This needs to be done in advance to replace nodeId references in comments
+      const idMap = {};
+      for (const tree of _.values(trees)) {
+        for (const node of tree.nodes.values()) {
+          idMap[node.id] = newNodeId++;
+        }
+      }
+
       for (const treeId of Object.keys(trees)) {
         const tree = trees[Number(treeId)];
 
-        // Create a map from old node ids to new node ids
-        const idMap = {};
         const newNodes = new DiffableMap();
         for (const node of tree.nodes.values()) {
-          idMap[node.id] = newNodeId;
-          newNodes.mutableSet(newNodeId, update(node, { id: { $set: newNodeId } }));
-          newNodeId++;
+          newNodes.mutableSet(idMap[node.id], update(node, { id: { $set: idMap[node.id] } }));
         }
 
         const newEdges = EdgeCollection.loadFromArray(
@@ -491,7 +498,17 @@ export function addTreesAndGroups(
         );
 
         const newComments = tree.comments.map(comment =>
-          update(comment, { nodeId: { $set: idMap[comment.nodeId] } }),
+          // Comments can reference other nodes, rewrite those references if the referenced id changed
+          update(comment, {
+            nodeId: { $set: idMap[comment.nodeId] },
+            content: {
+              $apply: oldContent =>
+                oldContent.replace(
+                  NODE_ID_REF_REGEX,
+                  (match, p1) => `#${idMap[Number(p1)] != null ? idMap[Number(p1)] : p1}`,
+                ),
+            },
+          }),
         );
 
         const newBranchPoints = tree.branchPoints.map(bp =>

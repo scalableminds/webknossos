@@ -6,19 +6,16 @@ import classNames from "classnames";
 import Store from "oxalis/store";
 import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 import Markdown from "react-remarkable";
+import { NODE_ID_REF_REGEX, POSITION_REF_REGEX } from "oxalis/constants";
 import type { CommentType } from "oxalis/store";
 
 function linkify(comment: string) {
   return (
     comment
       // Replace linked nodes (#<nodeid>) with a proper link
-      // (?!...) is a negative lookahead to ignore linked positions (#<x,y,z>)
-      .replace(
-        /#(?![0-9.]+,[0-9.]+,[0-9.]+)([0-9.]+)/g,
-        (match, p1) => `[#${p1}](#activeNode=${p1})`,
-      )
-      // Replace linked positions (#<x,y,z>) with a proper link
-      .replace(/#([0-9.]+,[0-9.]+,[0-9.]+)/g, (match, p1) => `[#${p1}](#position=${p1})`)
+      .replace(NODE_ID_REF_REGEX, (match, p1) => `[#${p1}](#activeNode=${p1})`)
+      // Replace linked positions (#(<x,y,z>)) with a proper link
+      .replace(POSITION_REF_REGEX, (match, p1) => `[#(${p1})](#position=${p1})`)
   );
 }
 

@@ -12,6 +12,7 @@ import Toast from "libs/toast";
 import Store from "oxalis/store";
 import type { OxalisState } from "oxalis/store";
 import { connect } from "react-redux";
+import FormattedDate from "components/formatted_date";
 
 type State = {
   files: Array<*>,
@@ -117,9 +118,11 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
                   <span className="ant-list-item-meta-description">({prettyBytes(file.size)})</span>
                 </span>
               }
-              description={`Last modification date: ${moment(file.lastModifiedDate).format(
-                "YYYY-MM-DD HH:mm",
-              )}`}
+              description={
+                <span>
+                  Last modification date: <FormattedDate timestamp={file.lastModifiedDate} />
+                </span>
+              }
             />
           </List.Item>
         )}
@@ -135,21 +138,29 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
       const importActions = await Promise.all(
         this.state.files.map(async file => {
           const nmlString = await readFileAsText(file);
-          const { trees, treeGroups } = await parseNml(
-            nmlString,
-            this.state.createGroupForEachFile ? file.name : null,
-          );
-
-          return addTreesAndGroupsAction(trees, treeGroups);
+          try {
+            const { trees, treeGroups } = await parseNml(
+              nmlString,
+              this.state.createGroupForEachFile ? file.name : null,
+            );
+            return addTreesAndGroupsAction(trees, treeGroups);
+          } catch (e) {
+            return new Error(`"${file.name}" could not be parsed. ${e.message}`);
+          }
         }),
       );
+
+      const errors = importActions.filter(action => action instanceof Error);
+      if (errors.length > 0) {
+        throw errors;
+      }
 
       // Dispatch the actual actions as the very last step, so that
       // not a single store mutation happens if something above throws
       // an error
       importActions.forEach(action => Store.dispatch(action));
     } catch (e) {
-      Toast.error(e.message);
+      (Array.isArray(e) ? e : [e]).forEach(e => Toast.error(e.message));
     } finally {
       this.setState({ isImporting: false, files: [] });
     }
@@ -159,7 +170,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
     return (
       <Modal visible footer={null} onCancel={this.props.hideDropzoneModal}>
         <Alert
-          message="Did you know that you do can just drop NML files directly into the tracing view? You don't have to explicitly open this dialog first."
+          message="Did you know that you do can just drag-and-drop NML files directly into the tracing view? You don't have to explicitly open this dialog first."
           style={{ marginBottom: 12 }}
         />
         <Dropzone
@@ -185,7 +196,6 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
       <Modal
         title={`Import ${this.state.files.length} NML file(s)`}
         visible={this.state.files.length > 0}
-        onOk={this.importNmls}
         onCancel={() => this.setState({ files: [] })}
         footer={
           <React.Fragment>

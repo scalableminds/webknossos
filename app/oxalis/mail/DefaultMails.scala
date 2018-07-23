@@ -19,11 +19,9 @@ object DefaultMails {
 
   val defaultFrom = "no-reply@webknossos.org"
 
-  val newUserMailingList = conf.getString("braintracing.newuserlist").getOrElse("")
-
-  val overTimeMailingList = conf.getString("braintracing.overTimeList").getOrElse("")
-
   val workloadMail = conf.getString("workload.mail").getOrElse("")
+
+  val newOrganizationMailingList = conf.getString("oxalis.newOrganizationMailingList").getOrElse("")
 
   def registerAdminNotifyerMail(user: User, email: String, brainDBResult: String, organization: OrganizationSQL) =
     Mail(
@@ -40,10 +38,6 @@ object DefaultMails {
       bodyText = html.mail.timeLimit(user.name, projectName, taskId, annotationId, uri).body,
       recipients = List(organization.overTimeMailingList))
 
-  /**
-    * Creates a registration mail which should allow the user to verify his
-    * account
-    */
   def registerMail(name: String, receiver: String, brainDBresult: String)(implicit messages: Messages) =
     Mail(
       from = defaultFrom,
@@ -80,5 +74,14 @@ object DefaultMails {
       subject = "Available Tasks Overview",
       bodyHtml = html.mail.availableTaskCounts(tableRows).body,
       recipients = List(workloadMail))
+  }
+
+  def newOrganizationMail(organizationName: String, creatorEmail: String, domain: String) = {
+    Mail(
+      from = defaultFrom,
+      subject = "New webKnossos Organization created on " + domain,
+      bodyHtml = html.mail.newOrganization(organizationName, creatorEmail, domain).body,
+      recipients = List(newOrganizationMailingList)
+    )
   }
 }

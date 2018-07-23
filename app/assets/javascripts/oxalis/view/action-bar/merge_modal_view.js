@@ -15,6 +15,7 @@ import { addTreesAndGroupsAction } from "oxalis/model/actions/skeletontracing_ac
 import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import Utils from "libs/utils";
 import type { APIAnnotationType } from "admin/api_flow_types";
+import Store from "oxalis/store";
 
 type ProjectInfoType = {
   id: string,
@@ -152,18 +153,22 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
   };
 
   async mergeAnnotationIntoActiveTracing(annotation: APIAnnotationType): Promise<void> {
-    const tracing = await getTracingForAnnotation(annotation);
-    if (tracing.trees) {
-      const { trees, treeGroups } = tracing;
-      this.setState({ isUploading: true });
-      // Wait for an animation frame so that the loading animation is kicked off
-      await Utils.animationFrame();
-      this.props.addTreesAndGroupsAction(createTreeMapFromTreeArray(trees), treeGroups || []);
-      this.setState({ isUploading: false });
-      Toast.success(messages["tracing.merged"]);
-    } else {
-      Toast.error("Merging is not supported for volume tracings.");
+    if (annotation.dataSetName !== Store.getState().dataset.name) {
+      Toast.error(messages["merge.different_dataset"]);
+      return;
     }
+    const tracing = await getTracingForAnnotation(annotation);
+    if (!tracing.trees) {
+      Toast.error(messages["merge.volume_unsupported"]);
+      return;
+    }
+    const { trees, treeGroups } = tracing;
+    this.setState({ isUploading: true });
+    // Wait for an animation frame so that the loading animation is kicked off
+    await Utils.animationFrame();
+    this.props.addTreesAndGroupsAction(createTreeMapFromTreeArray(trees), treeGroups || []);
+    this.setState({ isUploading: false });
+    Toast.success(messages["tracing.merged"]);
   }
 
   render() {

@@ -13,6 +13,7 @@ import Store from "oxalis/store";
 import type { OxalisState } from "oxalis/store";
 import { connect } from "react-redux";
 import FormattedDate from "components/formatted_date";
+import Utils from "libs/utils";
 
 type State = {
   files: Array<*>,
@@ -134,8 +135,9 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
     this.setState({
       isImporting: true,
     });
+
     try {
-      const importActions = await Promise.all(
+      const { successes: importActions, errors } = await Utils.promiseAllWithErrors(
         this.state.files.map(async file => {
           const nmlString = await readFileAsText(file);
           try {
@@ -145,12 +147,11 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
             );
             return addTreesAndGroupsAction(trees, treeGroups);
           } catch (e) {
-            return new Error(`"${file.name}" could not be parsed. ${e.message}`);
+            throw new Error(`"${file.name}" could not be parsed. ${e.message}`);
           }
         }),
       );
 
-      const errors = importActions.filter(action => action instanceof Error);
       if (errors.length > 0) {
         throw errors;
       }
@@ -158,7 +159,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
       // Dispatch the actual actions as the very last step, so that
       // not a single store mutation happens if something above throws
       // an error
-      importActions.forEach(action => Store.dispatch(action));
+      importActions.forEach(actionOrError => Store.dispatch(actionOrError));
     } catch (e) {
       (Array.isArray(e) ? e : [e]).forEach(e => Toast.error(e.message));
     } finally {

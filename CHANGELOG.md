@@ -31,6 +31,13 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 ## [18.08.0](https://github.com/scalableminds/webknossos/releases/tag/18.08.0) - 2018-07-23
 [Commits](https://github.com/scalableminds/webknossos/compare/18.07.0...18.08.0)
 
+### Highlights
+- Performance improvements for the tracing views. #2709 #2724 #2821
+- Added onboarding flow for initial setup of WebKnossos. #2859
+- The dataset gallery got a redesign with mobile support. #2761
+- Improved the import dialog for datasets. Important fields can now be edited via form inputs instead of having to change the JSON. The JSON is still changeable when enabling an "Advanced" mode. #2881
+- Added possibility to share a special link to invite users to join your organization. Following that link, the sign-up form will automatically register the user for the correct organization. #2898
+
 ### Added
 
 - Added release version to navbar [#2888](https://github.com/scalableminds/webknossos/pull/2888)

@@ -162,13 +162,13 @@ class Authentication @Inject()(
               Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
             } else {
               for {
-                organization <- OrganizationDAO.findOneByName(signUpData.organization)(GlobalAccessContext) //TODO
+                organization <- OrganizationSQLDAO.findOneByName(signUpData.organization)(GlobalAccessContext)
                 user <- UserService.insert(organization.name, email, firstName, lastName, signUpData.password, automaticUserActivation, roleOnRegistration,
                   loginInfo, passwordHasher.hash(signUpData.password))
                 brainDBResult <- BrainTracing.register(user).toFox
               } yield {
                 Mailer ! Send(DefaultMails.registerMail(user.name, user.email, brainDBResult))
-                Mailer ! Send(DefaultMails.registerAdminNotifyerMail(user, user.email, brainDBResult))
+                Mailer ! Send(DefaultMails.registerAdminNotifyerMail(user, user.email, brainDBResult, organization))
                 Ok
               }
             }

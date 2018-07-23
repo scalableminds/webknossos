@@ -109,7 +109,7 @@ function SimpleDatasetForm({ form, dataSource }) {
                   ),
                 },
               ],
-            })(<Vector3Input style={{ width: 400 }} />)}
+            })(<Vector3Input style={{ width: 400 }} allowDecimals />)}
           </FormItemWithInfo>
         </List.Item>
       </List>

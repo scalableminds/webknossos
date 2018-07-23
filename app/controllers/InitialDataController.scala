@@ -6,9 +6,9 @@ import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
-import models.binary.{DataStore, DataStoreDAO, WebKnossosStore}
+import models.binary._
 import models.project.{ProjectSQL, ProjectSQLDAO}
-import models.task.{TaskType, TaskTypeDAO}
+import models.task.{TaskTypeSQL, TaskTypeSQLDAO}
 import models.team._
 import models.user.{User, UserDAO, UserService}
 import net.liftweb.common.Full
@@ -46,9 +46,8 @@ Sampletown
 Samplecountry
 """
   val organizationTeamId = BSONObjectID.generate
-  val defaultOrganization = Organization("MPI for Brain Research", "/assets/images/mpi-logos.svg", additionalInformation, "Connectomics department", List(), organizationTeamId)
-  val organizationTeam = Team(defaultOrganization.name, defaultOrganization.name, organizationTeamId)
-  val organizationTeamSQL = TeamSQL(ObjectId.fromBsonId(organizationTeamId), ObjectId.fromBsonId(defaultOrganization._id), defaultOrganization.name, isOrganizationTeam = true)
+  val defaultOrganization = OrganizationSQL(ObjectId.generate, "Connectomics department", additionalInformation, "/assets/images/mpi-logos.svg", "MPI for Brain Research")
+  val organizationTeam = Team(defaultOrganization.name, defaultOrganization.name, true, organizationTeamId)
 
   def insert: Fox[Unit] =
     for {
@@ -70,7 +69,7 @@ Samplecountry
 
   def assertNoOrganizationsPresent =
     for {
-      organizations <- OrganizationDAO.findAll
+      organizations <- OrganizationSQLDAO.findAll
       _ <- organizations.isEmpty ?~> "initialData.organizationsNotEmpty"
     } yield ()
 
@@ -117,10 +116,10 @@ Samplecountry
   }
 
   def insertOrganization = {
-    OrganizationDAO.findOneByName(defaultOrganization.name).futureBox.flatMap {
+    OrganizationSQLDAO.findOneByName(defaultOrganization.name).futureBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
-        OrganizationDAO.insert(defaultOrganization)
+        OrganizationSQLDAO.insertOne(defaultOrganization)
     }.toFox
   }
 
@@ -128,21 +127,23 @@ Samplecountry
     TeamDAO.findAll.flatMap {
       teams =>
         if (teams.isEmpty)
-          TeamSQLDAO.insertOne(organizationTeamSQL)
+          TeamDAO.insert(organizationTeam)
         else
           Fox.successful(())
     }.toFox
   }
 
   def insertTaskType = {
-    TaskTypeDAO.findAll.flatMap {
+    TaskTypeSQLDAO.findAll.flatMap {
       types =>
         if (types.isEmpty) {
-          val taskType = TaskType(
+          val taskType = TaskTypeSQL(
+            ObjectId.generate,
+            ObjectId.fromBsonId(organizationTeam._id),
             "sampleTaskType",
-            "Check those cells out!",
-            organizationTeam._id)
-          for {_ <- TaskTypeDAO.insert(taskType)} yield ()
+            "Check those cells out!"
+            )
+          for {_ <- TaskTypeSQLDAO.insertOne(taskType)} yield ()
         }
         else Fox.successful(())
     }.toFox
@@ -162,11 +163,11 @@ Samplecountry
 
   def insertLocalDataStoreIfEnabled: Fox[Any] = {
     if (Play.configuration.getBoolean("datastore.enabled").getOrElse(true)) {
-      DataStoreDAO.findOneByName("localhost").futureBox.map { maybeStore =>
+      DataStoreSQLDAO.findOneByName("localhost").futureBox.map { maybeStore =>
         if (maybeStore.isEmpty) {
           val url = Play.configuration.getString("http.uri").getOrElse("http://localhost:9000")
           val key = Play.configuration.getString("datastore.key").getOrElse("something-secure")
-          DataStoreDAO.insert(DataStore("localhost", url, WebKnossosStore, key))
+          DataStoreSQLDAO.insertOne(DataStoreSQL("localhost", url, WebKnossosStore, key))
         }
       }
     } else Fox.successful(())

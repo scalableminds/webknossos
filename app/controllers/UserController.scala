@@ -63,7 +63,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
     for {
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
       _ <- user.isEditableBy(request.identity) ?~> Messages("notAllowed")
-      loggedTimeAsMap <- TimeSpanService.loggedTimeOfUser(user, TimeSpan.groupByMonth)
+      loggedTimeAsMap <- TimeSpanService.loggedTimeOfUser(user, TimeSpanSQL.groupByMonth)
     } yield {
       JsonOk(Json.obj("loggedTime" ->
         loggedTimeAsMap.map { case (paymentInterval, duration) =>
@@ -73,8 +73,8 @@ class UserController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  private def groupByAnnotationAndDay(timeSpan: TimeSpan) = {
-    (timeSpan.annotation.getOrElse("<none>"), TimeSpan.groupByDay(timeSpan))
+  private def groupByAnnotationAndDay(timeSpan: TimeSpanSQL) = {
+    (timeSpan._annotation.map(_.toString).getOrElse("<none>"), TimeSpanSQL.groupByDay(timeSpan))
   }
 
   def usersLoggedTime = SecuredAction.async(parse.json) { implicit request =>
@@ -136,7 +136,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
 
   def loggedTime = SecuredAction.async { implicit request =>
     for {
-      loggedTimeAsMap <- TimeSpanService.loggedTimeOfUser(request.identity, TimeSpan.groupByMonth)
+      loggedTimeAsMap <- TimeSpanService.loggedTimeOfUser(request.identity, TimeSpanSQL.groupByMonth)
     } yield {
       JsonOk(Json.obj("loggedTime" ->
         loggedTimeAsMap.map { case (paymentInterval, duration) =>

@@ -6,6 +6,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation._
 import models.task.TaskSQLDAO
+import models.team.OrganizationSQLDAO
 import models.user.User
 import net.liftweb.common.Full
 import oxalis.mail.DefaultMails
@@ -33,12 +34,12 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
 
   def loggedTimeOfUser[T](
     user: User,
-    groupingF: TimeSpan => T,
+    groupingF: TimeSpanSQL => T,
     start: Option[Long] = None,
     end: Option[Long] = None)(implicit ctx: DBAccessContext): Fox[Map[T, Duration]] =
 
     for {
-      timeTrackingOpt <- TimeSpanDAO.findByUser(user, start, end).futureBox
+      timeTrackingOpt <- TimeSpanSQLDAO.findAllByUser(ObjectId.fromBsonId(user._id), start, end).futureBox
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>
@@ -49,13 +50,13 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
     }
 
   def loggedTimeOfAnnotation[T](
-    annotation: String,
-    groupingF: TimeSpan => T,
+    annotationId: ObjectId,
+    groupingF: TimeSpanSQL => T,
     start: Option[Long] = None,
     end: Option[Long] = None)(implicit ctx: DBAccessContext): Fox[Map[T, Duration]] =
 
     for {
-      timeTrackingOpt <- TimeSpanDAO.findByAnnotation(annotation, start, end).futureBox
+      timeTrackingOpt <- TimeSpanSQLDAO.findAllByAnnotation(annotationId, start, end).futureBox
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>
@@ -67,7 +68,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
 
   def totalTimeOfUser[T](user: User, start: Option[Long], end: Option[Long])(implicit ctx: DBAccessContext): Fox[Duration] =
     for {
-      timeTrackingOpt <- TimeSpanDAO.findByUser(user, start, end).futureBox
+      timeTrackingOpt <- TimeSpanSQLDAO.findAllByUser(ObjectId.fromBsonId(user._id), start, end).futureBox
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>
@@ -77,9 +78,9 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
       }
     }
 
-  def loggedTimePerInterval[T](groupingF: TimeSpan => T, start: Option[Long] = None, end: Option[Long] = None): Fox[Map[T, Duration]] =
+  def loggedTimePerInterval[T](groupingF: TimeSpanSQL => T, start: Option[Long] = None, end: Option[Long] = None): Fox[Map[T, Duration]] =
     for {
-      timeTrackingOpt <- TimeSpanDAO.findAllBetween(start, end)(GlobalAccessContext).futureBox
+      timeTrackingOpt <- TimeSpanSQLDAO.findAll(start, end).futureBox
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>
@@ -91,23 +92,23 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
 
 
 
-  private val lastUserActivities = mutable.HashMap.empty[BSONObjectID, TimeSpan]
+  private val lastUserActivities = mutable.HashMap.empty[BSONObjectID, TimeSpanSQL]
 
   private def trackTime(timestamps: Seq[Long], _user: BSONObjectID, _annotation: AnnotationSQL)(implicit ctx: DBAccessContext) = {
     // Only if the annotation belongs to the user, we are going to log the time on the annotation
     val annotation = if (_annotation._user == ObjectId.fromBsonId(_user)) Some(_annotation) else None
     val start = timestamps.head
 
-    var timeSpansToInsert: List[TimeSpan] = List()
-    var timeSpansToUpdate: List[(TimeSpan, Long)] = List()
+    var timeSpansToInsert: List[TimeSpanSQL] = List()
+    var timeSpansToUpdate: List[(TimeSpanSQL, Long)] = List()
 
     def createNewTimeSpan(timestamp: Long, _user: BSONObjectID, annotation: Option[AnnotationSQL]) = {
-      val timeSpan = TimeSpan.create(timestamp, timestamp, _user, annotation)
+      val timeSpan = TimeSpanSQL.createFrom(timestamp, timestamp, ObjectId.fromBsonId(_user), annotation.map(_._id))
       timeSpansToInsert = timeSpan :: timeSpansToInsert
       timeSpan
     }
 
-    def updateTimeSpan(timeSpan: TimeSpan, timestamp: Long) = {
+    def updateTimeSpan(timeSpan: TimeSpanSQL, timestamp: Long) = {
       timeSpansToUpdate = (timeSpan, timestamp) :: timeSpansToUpdate
 
       val duration = timestamp - timeSpan.lastUpdate
@@ -141,13 +142,13 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
     flushToDb(timeSpansToInsert, timeSpansToUpdate)(ctx)
   }
 
-  private def isNotInterrupted(current: Long, last: TimeSpan) = {
+  private def isNotInterrupted(current: Long, last: TimeSpanSQL) = {
     val duration = current - last.lastUpdate
     duration >= 0 && duration < MaxTracingPause
   }
 
-  private def belongsToSameTracing( last: TimeSpan, annotation: Option[AnnotationSQL]) =
-    last.annotationEquals(annotation.map(_.id))
+  private def belongsToSameTracing( last: TimeSpanSQL, annotation: Option[AnnotationSQL]) =
+    last._annotation == annotation.map(_.id)
 
   private def logTimeToAnnotation(
     duration: Long,
@@ -170,13 +171,15 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
       project <- task.project
       annotationTime <- annotation.tracingTime ?~> "no annotation.tracingTime"
       timeLimit <- project.expectedTime ?~> "no project.expectedTime"
+      organization <- OrganizationSQLDAO.findOneByName(user.organization)
     } yield {
       if (annotationTime >= timeLimit && annotationTime - time < timeLimit) {
         Mailer ! Send(DefaultMails.overLimitMail(
           user,
           project.name,
           task._id.toString,
-          annotation.id))
+          annotation.id,
+          organization))
       }
     }
   }
@@ -207,9 +210,9 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
     }
   }
 
-  private def flushToDb(timespansToInsert: List[TimeSpan], timespansToUpdate: List[(TimeSpan, Long)])(implicit ctx: DBAccessContext) = {
+  private def flushToDb(timespansToInsert: List[TimeSpanSQL], timespansToUpdate: List[(TimeSpanSQL, Long)])(implicit ctx: DBAccessContext) = {
     val updateResult = for {
-      _ <- Fox.serialCombined(timespansToInsert)(t => TimeSpanDAO.insert(t))
+      _ <- Fox.serialCombined(timespansToInsert)(t => TimeSpanSQLDAO.insertOne(t))
       _ <- Fox.serialCombined(timespansToUpdate)(t => updateTimeSpanInDb(t._1, t._2))
     } yield ()
 
@@ -221,14 +224,14 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
     updateResult
   }
 
-  private def updateTimeSpanInDb(timeSpan: TimeSpan, timestamp: Long)(implicit ctx: DBAccessContext) = {
+  private def updateTimeSpanInDb(timeSpan: TimeSpanSQL, timestamp: Long)(implicit ctx: DBAccessContext) = {
     val duration = timestamp - timeSpan.lastUpdate
     val updated = timeSpan.addTime(duration, timestamp)
 
     for {
-      _ <- TimeSpanDAO.update(updated)(ctx) ?~> "FAILED: TimeSpanDAO.update"
-      _ <- logTimeToAnnotation(duration, updated.annotation.map(ObjectId(_))) ?~> "FAILED: TimeSpanService.logTimeToAnnotation"
-      annotation <- getAnnotation(updated.annotation.map(ObjectId(_)))
+      _ <- TimeSpanSQLDAO.updateOne(updated)(ctx) ?~> "FAILED: TimeSpanDAO.update"
+      _ <- logTimeToAnnotation(duration, updated._annotation) ?~> "FAILED: TimeSpanService.logTimeToAnnotation"
+      annotation <- getAnnotation(updated._annotation)
       _ <- logTimeToTask(duration, annotation) ?~> "FAILED: TimeSpanService.logTimeToTask"
     } yield {}
   }

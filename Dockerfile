@@ -15,4 +15,4 @@ RUN addgroup --system --gid 999 webknossos \
 
 USER webknossos
 
-ENTRYPOINT [ "bin/oxalis" ]
+ENTRYPOINT [ "bin/webknossos" ]

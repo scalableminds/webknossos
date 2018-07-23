@@ -368,7 +368,7 @@ test("addTreesAndGroups reducer should assign new group ids", t => {
 
 test("addTreesAndGroups reducer should replace nodeId references in comments when changing nodeIds", t => {
   const commentWithoutValidReferences =
-    "Reference to non-existing id #42 and position reference #4,5,6";
+    "Reference to non-existing id #42 and position reference #(4,5,6)";
   const newTrees = _.cloneDeep(initialState.tracing.trees);
   newTrees[1].comments.push({ nodeId: 1, content: "Reference to existing id in another tree #4" });
   newTrees[1].comments.push({

@@ -29,7 +29,6 @@ import type { OxalisState, SkeletonTracingType, TreeType, CommentType } from "ox
 import { makeSkeletonTracingGuard } from "oxalis/view/guards";
 
 const InputGroup = Input.Group;
-const { TextArea } = Input;
 
 const treeTypeHint = ([]: Array<TreeType>);
 const commentTypeHint = ([]: Array<CommentType>);
@@ -84,6 +83,8 @@ type CommentTabStateType = {
 };
 
 class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
+  listRef: ?List;
+
   static getDerivedStateFromProps(
     props: Props,
     state: CommentTabStateType,
@@ -113,6 +114,16 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
     // eslint-disable-next-line react/no-unused-state
     collapsedTreeIds: {},
   };
+
+  componentDidUpdate(prevProps) {
+    if (
+      this.listRef != null &&
+      prevProps.skeletonTracing.trees !== this.props.skeletonTracing.trees
+    ) {
+      // Force the list to update if a comment was changed
+      this.listRef.forceUpdateGrid();
+    }
+  }
 
   componentWillUnmount() {
     this.keyboard.destroy();
@@ -265,6 +276,9 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
             rows={1}
             isTextArea
           />
+          <ButtonComponent>
+            <Icon type="edit" />Markdown
+          </ButtonComponent>
           <ButtonComponent onClick={this.nextComment}>
             <i className="fa fa-arrow-right" />
           </ButtonComponent>
@@ -287,6 +301,9 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
                   rowRenderer={this.rowRenderer}
                   scrollToIndex={scrollIndex > -1 ? scrollIndex : undefined}
                   tabIndex={null}
+                  ref={listEl => {
+                    this.listRef = listEl;
+                  }}
                 />
               </div>
             )}

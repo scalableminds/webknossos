@@ -1,7 +1,6 @@
 // @flow
 import * as React from "react";
 import Dropzone from "react-dropzone";
-import moment from "moment";
 import prettyBytes from "pretty-bytes";
 import { Button, Icon, Modal, Avatar, List, Spin, Checkbox, Alert } from "antd";
 import { readFileAsText } from "components/file_upload";
@@ -161,7 +160,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
       // an error
       importActions.forEach(actionOrError => Store.dispatch(actionOrError));
     } catch (e) {
-      (Array.isArray(e) ? e : [e]).forEach(e => Toast.error(e.message));
+      (Array.isArray(e) ? e : [e]).forEach(err => Toast.error(err.message));
     } finally {
       this.setState({ isImporting: false, files: [] });
     }

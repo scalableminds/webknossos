@@ -504,7 +504,7 @@ const Utils = {
     return [a, b, g, r];
   },
 
-  promiseAllWithErrors: async function<T>(
+  async promiseAllWithErrors<T>(
     promises: Array<Promise<T>>,
   ): Promise<{ successes: Array<T>, errors: Array<Error> }> {
     const successOrErrorObjects = await Promise.all(promises.map(p => p.catch(error => error)));

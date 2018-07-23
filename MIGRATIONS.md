@@ -4,7 +4,11 @@ All migrations of webknossos are documented in this file.
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.md).
 
-## [Unreleased]
+## Unreleased
+### Postgres Evolutions:
+- 
+
+## [18.08.0](https://github.com/scalableminds/webknossos/releases/tag/18.08.0) - 2018-07-23
 ### Postgres Evolutions:
 - [013-add-logoUrl.sql](conf/evolutions/013-add-logoUrl.sql)
 - [014-equalize-schema-and-evolutions.sql](conf/evolutions/014-equalize-schema-and-evolutions.sql)

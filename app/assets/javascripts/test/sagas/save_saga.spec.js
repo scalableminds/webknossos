@@ -5,9 +5,9 @@ import test from "ava";
 import mockRequire from "mock-require";
 import DiffableMap from "libs/diffable_map";
 import { alert } from "libs/window";
-import { expectValueDeepEqual } from "../helpers/sagaHelpers";
-import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 import { setSaveBusyAction } from "oxalis/model/actions/save_actions";
+import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
+import { expectValueDeepEqual } from "../helpers/sagaHelpers";
 
 mockRequire.stopAll();
 

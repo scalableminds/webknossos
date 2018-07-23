@@ -60,7 +60,7 @@ function SaveReducer(state: OxalisState, action: ActionType): OxalisState {
                 remainingQueue.length > 0
                   ? { $apply: oldCount => oldCount + processedQueueActions }
                   : { $set: 0 },
-              totalActionCount: remainingQueue.length > 0 ? { $apply: _ => _ } : { $set: 0 },
+              totalActionCount: { $apply: oldCount => (remainingQueue.length > 0 ? oldCount : 0) },
             },
           },
         });

@@ -4,7 +4,6 @@ import { connect } from "react-redux";
 import Model from "oxalis/model";
 import ButtonComponent from "oxalis/view/components/button_component";
 import type { OxalisState, ProgressInfoType } from "oxalis/store";
-import { Icon } from "antd";
 
 type StateProps = {|
   progressInfo: ProgressInfoType,

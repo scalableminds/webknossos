@@ -27,6 +27,7 @@ import {
 } from "admin/admin_rest_api";
 import type { RouterHistory } from "react-router-dom";
 import { handleGenericError } from "libs/error_handling";
+import FormattedDate from "components/formatted_date";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -417,6 +418,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           title="Modification Date"
           dataIndex="modified"
           sorter={Utils.localeCompareBy(typeHint, "modified")}
+          render={modified => <FormattedDate timestamp={modified} />}
         />
         <Column
           title="Actions"

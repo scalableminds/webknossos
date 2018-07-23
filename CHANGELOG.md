@@ -11,21 +11,21 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Added
 
-- 
+- All dates in webknossos will be shown in the browser's timezone. On hover, a tooltip will show the date in UTC. [#2916](https://github.com/scalableminds/webknossos/pull/2916) ![image](https://user-images.githubusercontent.com/2486553/42888385-74c82bc0-8aa8-11e8-9c3e-7cfc90ce93bc.png)
 
 ### Changed
 
-- 
+-
 
 
 ### Fixed
 
-- 
+-
 
 
 ### Removed
 
-- 
+-
 
 
 ## [18.08.0](https://github.com/scalableminds/webknossos/releases/tag/18.08.0) - 2018-07-23

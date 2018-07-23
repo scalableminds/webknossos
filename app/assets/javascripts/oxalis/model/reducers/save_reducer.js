@@ -50,17 +50,17 @@ function SaveReducer(state: OxalisState, action: ActionType): OxalisState {
           batch => batch.actions.length,
         );
         const remainingQueue = state.save.queue.slice(count);
+        const resetCounter = remainingQueue.length === 0;
         return update(state, {
           save: {
             queue: { $set: remainingQueue },
             progressInfo: {
-              // Reset progress counter if the queue is empty. Otherwise,
-              // increase processedActionCount
-              processedActionCount:
-                remainingQueue.length > 0
-                  ? { $apply: oldCount => oldCount + processedQueueActions }
-                  : { $set: 0 },
-              totalActionCount: { $apply: oldCount => (remainingQueue.length > 0 ? oldCount : 0) },
+              // Reset progress counters if the queue is empty. Otherwise,
+              // increase processedActionCount and leave totalActionCount as is
+              processedActionCount: {
+                $apply: oldCount => (resetCounter ? 0 : oldCount + processedQueueActions),
+              },
+              totalActionCount: { $apply: oldCount => (resetCounter ? 0 : oldCount) },
             },
           },
         });

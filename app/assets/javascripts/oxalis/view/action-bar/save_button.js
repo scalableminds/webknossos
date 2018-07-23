@@ -60,7 +60,6 @@ class SaveButton extends React.PureComponent<Props, State> {
 
   render() {
     const { progressInfo } = this.props;
-    console.log("progressInfo", progressInfo);
     return (
       <ButtonComponent
         key="save-button"

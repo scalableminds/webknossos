@@ -37,6 +37,9 @@ const PUSH_THROTTLE_TIME = 30000; // 30s
 const SAVE_RETRY_WAITING_TIME = 5000;
 const UNDO_HISTORY_SIZE = 100;
 
+const maximumActionCountPerBatch = 5000;
+const maximumActionCountPerSave = 15000;
+
 export function* collectUndoStates(): Generator<*, *, *> {
   const undoStack = [];
   const redoStack = [];
@@ -112,16 +115,14 @@ export function sendRequestWithToken(
 }
 
 // This function returns the first n batches of the provided array, so that the count of
-// all actions in these n batches does not exceed maximumActionCount
+// all actions in these n batches does not exceed maximumActionCountPerSave
 function sliceAppropriateBatchCount(batches: Array<SaveQueueEntryType>): Array<SaveQueueEntryType> {
-  const maximumActionCount = 15000;
-
   const slicedBatches = [];
   let actionCount = 0;
 
   for (const batch of batches) {
     const newActionCount = actionCount + batch.actions.length;
-    if (newActionCount <= maximumActionCount) {
+    if (newActionCount <= maximumActionCountPerSave) {
       actionCount = newActionCount;
       slicedBatches.push(batch);
     } else {
@@ -397,7 +398,7 @@ export function* saveTracingAsync(): Generator<any, any, any> {
       Array.from(yield call(performDiffTracing, prevTracing, tracing, flycam)),
     );
     if (items.length > 0) {
-      const updateActionChunks = _.chunk(items, 5000);
+      const updateActionChunks = _.chunk(items, maximumActionCountPerBatch);
 
       for (const updateActionChunk of updateActionChunks) {
         yield put(pushSaveQueueAction(updateActionChunk));

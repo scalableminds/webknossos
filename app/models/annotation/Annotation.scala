@@ -98,7 +98,7 @@ case class AnnotationSQL(
       annotationRestrictions <- AnnotationRestrictions.writeAsJson(composeRestrictions(restrictions, readOnly), requestingUser)
     } yield {
       Json.obj(
-        "modified" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(modified),
+        "modified" -> modified,
         "state" -> state,
         "id" -> id,
         "name" -> name,

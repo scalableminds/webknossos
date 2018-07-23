@@ -37,7 +37,7 @@ const PUSH_THROTTLE_TIME = 30000; // 30s
 const SAVE_RETRY_WAITING_TIME = 5000;
 const UNDO_HISTORY_SIZE = 100;
 
-const maximumActionCountPerBatch = 5000;
+export const maximumActionCountPerBatch = 5000;
 const maximumActionCountPerSave = 15000;
 
 export function* collectUndoStates(): Generator<*, *, *> {

@@ -168,7 +168,7 @@ class Authentication @Inject()(
                 brainDBResult <- BrainTracing.register(user).toFox
               } yield {
                 Mailer ! Send(DefaultMails.registerMail(user.name, user.email, brainDBResult))
-                Mailer ! Send(DefaultMails.registerAdminNotifyerMail(user, user.email, brainDBResult))
+                Mailer ! Send(DefaultMails.registerAdminNotifyerMail(user, user.email, brainDBResult, organization))
                 Ok
               }
             }

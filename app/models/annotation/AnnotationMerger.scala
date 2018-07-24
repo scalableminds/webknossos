@@ -32,7 +32,7 @@ object AnnotationMerger extends FoxImplicits with LazyLogging {
     mergeN(
       ObjectId.generate,
       persistTracing,
-      ObjectId.fromBsonId(request.identity._id),
+      request.identity._id,
       annotationB._dataSet,
       annotationB._team,
       AnnotationTypeSQL.Explorational,

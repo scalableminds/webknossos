@@ -505,6 +505,28 @@ const Utils = {
     // Big endian
     return [a, b, g, r];
   },
+
+  async promiseAllWithErrors<T>(
+    promises: Array<Promise<T>>,
+  ): Promise<{ successes: Array<T>, errors: Array<Error> }> {
+    const successOrErrorObjects = await Promise.all(promises.map(p => p.catch(error => error)));
+    return successOrErrorObjects.reduce(
+      ({ successes, errors }, successOrError) => {
+        if (successOrError instanceof Error) {
+          return {
+            successes,
+            errors: errors.concat([successOrError]),
+          };
+        } else {
+          return {
+            successes: successes.concat([successOrError]),
+            errors,
+          };
+        }
+      },
+      { successes: [], errors: [] },
+    );
+  },
 };
 
 export default Utils;

@@ -6,13 +6,13 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation._
 import models.task.TaskSQLDAO
-import models.user.User
+import models.user.UserSQL
+import models.team.OrganizationSQLDAO
 import net.liftweb.common.Full
 import oxalis.mail.DefaultMails
 import oxalis.thirdparty.BrainTracing.Mailer
 import play.api.Play
 import play.api.libs.concurrent.Execution.Implicits._
-import reactivemongo.bson.BSONObjectID
 import utils.ObjectId
 
 import scala.collection.mutable
@@ -23,22 +23,22 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
   private val MaxTracingPause =
     Play.current.configuration.getInt("oxalis.user.time.tracingPauseInSeconds").getOrElse(60).seconds.toMillis
 
-  def logUserInteraction(user: User, annotation: AnnotationSQL)(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def logUserInteraction(user: UserSQL, annotation: AnnotationSQL)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val timestamp = System.currentTimeMillis
     logUserInteraction(Seq(timestamp), user, annotation)
   }
 
-  def logUserInteraction(timestamps: Seq[Long], user: User, annotation: AnnotationSQL)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def logUserInteraction(timestamps: Seq[Long], user: UserSQL, annotation: AnnotationSQL)(implicit ctx: DBAccessContext): Fox[Unit] =
     trackTime(timestamps, user._id, annotation)
 
   def loggedTimeOfUser[T](
-    user: User,
+    user: UserSQL,
     groupingF: TimeSpanSQL => T,
     start: Option[Long] = None,
     end: Option[Long] = None)(implicit ctx: DBAccessContext): Fox[Map[T, Duration]] =
 
     for {
-      timeTrackingOpt <- TimeSpanSQLDAO.findAllByUser(ObjectId.fromBsonId(user._id), start, end).futureBox
+      timeTrackingOpt <- TimeSpanSQLDAO.findAllByUser(user._id, start, end).futureBox
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>
@@ -65,9 +65,9 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
       }
     }
 
-  def totalTimeOfUser[T](user: User, start: Option[Long], end: Option[Long])(implicit ctx: DBAccessContext): Fox[Duration] =
+  def totalTimeOfUser[T](user: UserSQL, start: Option[Long], end: Option[Long])(implicit ctx: DBAccessContext): Fox[Duration] =
     for {
-      timeTrackingOpt <- TimeSpanSQLDAO.findAllByUser(ObjectId.fromBsonId(user._id), start, end).futureBox
+      timeTrackingOpt <- TimeSpanSQLDAO.findAllByUser(user._id, start, end).futureBox
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>
@@ -91,18 +91,18 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
 
 
 
-  private val lastUserActivities = mutable.HashMap.empty[BSONObjectID, TimeSpanSQL]
+  private val lastUserActivities = mutable.HashMap.empty[ObjectId, TimeSpanSQL]
 
-  private def trackTime(timestamps: Seq[Long], _user: BSONObjectID, _annotation: AnnotationSQL)(implicit ctx: DBAccessContext) = {
+  private def trackTime(timestamps: Seq[Long], _user: ObjectId, _annotation: AnnotationSQL)(implicit ctx: DBAccessContext) = {
     // Only if the annotation belongs to the user, we are going to log the time on the annotation
-    val annotation = if (_annotation._user == ObjectId.fromBsonId(_user)) Some(_annotation) else None
+    val annotation = if (_annotation._user == _user) Some(_annotation) else None
     val start = timestamps.head
 
     var timeSpansToInsert: List[TimeSpanSQL] = List()
     var timeSpansToUpdate: List[(TimeSpanSQL, Long)] = List()
 
-    def createNewTimeSpan(timestamp: Long, _user: BSONObjectID, annotation: Option[AnnotationSQL]) = {
-      val timeSpan = TimeSpanSQL.createFrom(timestamp, timestamp, ObjectId.fromBsonId(_user), annotation.map(_._id))
+    def createNewTimeSpan(timestamp: Long, _user: ObjectId, annotation: Option[AnnotationSQL]) = {
+      val timeSpan = TimeSpanSQL.createFrom(timestamp, timestamp, _user, annotation.map(_._id))
       timeSpansToInsert = timeSpan :: timeSpansToInsert
       timeSpan
     }
@@ -170,13 +170,15 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
       project <- task.project
       annotationTime <- annotation.tracingTime ?~> "no annotation.tracingTime"
       timeLimit <- project.expectedTime ?~> "no project.expectedTime"
+      organization <- user.organization
     } yield {
       if (annotationTime >= timeLimit && annotationTime - time < timeLimit) {
         Mailer ! Send(DefaultMails.overLimitMail(
           user,
           project.name,
           task._id.toString,
-          annotation.id))
+          annotation.id,
+          organization))
       }
     }
   }

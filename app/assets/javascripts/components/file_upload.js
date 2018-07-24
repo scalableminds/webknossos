@@ -14,6 +14,15 @@ type Props = {
   onUploading?: Function,
 };
 
+export function readFileAsText(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => resolve(reader.result.toString());
+    reader.readAsText(file);
+  });
+}
+
 class FileUpload extends React.PureComponent<Props> {
   fileInput: ?HTMLInputElement;
 
@@ -32,10 +41,7 @@ class FileUpload extends React.PureComponent<Props> {
         data: { [this.props.name]: files },
       }).then(successCallback, errorCallback);
     } else {
-      const reader = new FileReader();
-      reader.onerror = errorCallback;
-      reader.onload = () => successCallback(reader.result);
-      reader.readAsText(files[0]);
+      readFileAsText(files[0]).then(successCallback, errorCallback);
     }
   };
 

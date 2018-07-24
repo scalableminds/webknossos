@@ -1,5 +1,6 @@
 declare module "antd" {
   declare class Alert<P> extends React$Component<P> {}
+  declare class Avatar<P> extends React$Component<P> {}
   declare class Button<P> extends React$Component<P> {
     static Group: React$ComponentType<P>;
   }
@@ -35,7 +36,7 @@ declare module "antd" {
     static Sider: React$ComponentType<P>;
   }
   declare class List<P> extends React$Component<P> {
-    static Item: React$ComponentType<P>;
+    static Item: React$ComponentType<P> & { Meta: React$ComponentType<P> };
   }
   declare class Menu<P> extends React$Component<P> {
     static Item: React$ComponentType<P>;

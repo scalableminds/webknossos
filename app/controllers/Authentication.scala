@@ -393,7 +393,10 @@ class Authentication @Inject()(
                     user <- UserService.insert(organization._id, email, firstName, lastName, signUpData.password, isActive = true, teamRole = true,
                       loginInfo, passwordHasher.hash(signUpData.password), isAdmin = true)
                     _ <- createOrganizationFolder(organization.name, loginInfo)
-                  } yield Ok
+                  } yield {
+                    Mailer ! Send(DefaultMails.newOrganizationMail(organization.displayName, email.toLowerCase, request.headers.get("Host").headOption.getOrElse("")))
+                    Ok
+                  }
                 }
               case f: Failure => Fox.failure(f.msg)
             }
@@ -419,7 +422,9 @@ class Authentication @Inject()(
       _ <- OrganizationSQLDAO.insertOne(organization)(GlobalAccessContext)
       _ <- TeamSQLDAO.insertOne(organizationTeam)(GlobalAccessContext)
       _ <- InitialDataService.insertLocalDataStoreIfEnabled
-    } yield organization
+    } yield {
+      organization
+    }
 
 
   private def createOrganizationFolder(organizationName: String, loginInfo: LoginInfo)(implicit request: RequestHeader) = {

@@ -6,9 +6,9 @@ import Loop from "components/loop";
 import { getProjectProgressReport } from "admin/admin_rest_api";
 import type { APIProjectProgressReportType, APITeamType } from "admin/api_flow_types";
 import FormattedDate from "components/formatted_date";
-import TeamSelectionForm from "./team_selection_form";
 import Toast from "libs/toast";
 import messages from "messages";
+import TeamSelectionForm from "./team_selection_form";
 
 const { Column, ColumnGroup } = Table;
 

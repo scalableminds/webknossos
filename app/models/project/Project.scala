@@ -70,11 +70,11 @@ object ProjectSQL {
 
   val projectPublicReads: Reads[ProjectSQL] =
     ((__ \ 'name).read[String](Reads.minLength[String](3) keepAnd validateProjectName) and
-      (__ \ 'team).read[String](ObjectId.stringBSONObjectIdReads("team")) and
+      (__ \ 'team).read[String](ObjectId.stringObjectIdReads("team")) and
       (__ \ 'priority).read[Int] and
       (__ \ 'paused).readNullable[Boolean] and
       (__ \ 'expectedTime).readNullable[Long] and
-      (__ \ 'owner).read[String](ObjectId.stringBSONObjectIdReads("owner"))) (
+      (__ \ 'owner).read[String](ObjectId.stringObjectIdReads("owner"))) (
       (name, team, priority, paused, expectedTime, owner) =>
         ProjectSQL(ObjectId.generate, ObjectId(team), ObjectId(owner), name, priority, paused getOrElse false, expectedTime))
 

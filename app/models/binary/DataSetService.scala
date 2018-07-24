@@ -14,7 +14,6 @@ import oxalis.security.{URLSharing, WebknossosSilhouette}
 import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.WSResponse
-import reactivemongo.bson.BSONObjectID
 import utils.ObjectId
 
 object DataSetService extends FoxImplicits with LazyLogging {

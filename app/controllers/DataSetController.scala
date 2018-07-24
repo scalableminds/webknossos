@@ -16,8 +16,6 @@ import play.api.cache.Cache
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats._
 import com.scalableminds.util.tools.Math
 import utils.ObjectId
 
@@ -171,16 +169,16 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
       (__ \ 'name).read[String] and
       (__ \ 'token).read[String] and
       (__ \ 'team).read[String]) (
-    (server, name, token, team) => (server, name, token, BSONObjectID(team)))
+    (server, name, token, team) => (server, name, token, ObjectId(team)))
 
   private def createNDStoreDataSet(implicit request: SecuredRequest[JsValue]) =
     withJsonBodyUsing(externalDataSetFormReads){
       case (server, name, token, team) =>
         for {
           _ <- DataSetService.checkIfNewDataSetName(name) ?~> Messages("dataSet.name.alreadyTaken")
-          _ <- ensureTeamAdministration(request.identity, ObjectId.fromBsonId(team)) ?~> Messages("team.admin.notAllowed")
+          _ <- ensureTeamAdministration(request.identity, team) ?~> Messages("team.admin.notAllowed")
           ndProject <- NDServerConnection.requestProjectInformationFromNDStore(server, name, token)
-          dataSet <- ND2WK.dataSetFromNDProject(ndProject, ObjectId.fromBsonId(team))
+          dataSet <- ND2WK.dataSetFromNDProject(ndProject, team)
           _ <-  DataSetDAO.insert(dataSet)(GlobalAccessContext)
         } yield JsonOk(Messages("dataSet.create.success"))
     }

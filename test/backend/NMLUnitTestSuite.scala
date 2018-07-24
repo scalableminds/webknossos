@@ -9,7 +9,6 @@ import models.annotation.nml.NmlParser
 import net.liftweb.common.{Box, Full}
 import org.scalatest.FlatSpec
 import play.api.libs.iteratee.Iteratee
-import reactivemongo.bson.BSONObjectID
 import utils.ObjectId
 
 import scala.concurrent.Await
@@ -19,7 +18,7 @@ import scala.concurrent.duration.Duration
 class NMLUnitTestSuite extends FlatSpec {
   val timestamp = 123456789
 
-  def getObjectId = ObjectId.fromBsonId(BSONObjectID.generate)
+  def getObjectId = ObjectId.generate
 
   def writeAndParseTracing(tracing: SkeletonTracing): Box[(Either[SkeletonTracing, (VolumeTracing, String)], String)] = {
     val nmlEnumarator = NMLWriterTestStub.toNmlStream(tracing, None)

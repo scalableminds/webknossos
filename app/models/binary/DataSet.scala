@@ -9,24 +9,18 @@ import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLay
 import com.scalableminds.webknossos.schema.Tables._
 import models.configuration.DataSetConfiguration
 import models.team._
-import models.user.{UserSQL, UserSQLDAO}
+import models.user.UserSQL
 import net.liftweb.common.Full
 import play.api.Play.current
 import play.api.i18n.Messages
 import play.api.i18n.Messages.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.utils.UriEncoding
-import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats._
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO, SimpleSQLDAO}
-
-import scala.concurrent.Future
-import scala.util.parsing.json.JSONObject
 
 
 case class DataSetSQL(
@@ -358,12 +352,12 @@ object DataSetDataLayerSQLDAO extends SimpleSQLDAO {
 
 object DataSetAllowedTeamsSQLDAO extends SimpleSQLDAO {
 
-  def findAllForDataSet(dataSetId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[String]] = {
+  def findAllForDataSet(dataSetId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
     val query = for {
       (allowedteam, team) <- DatasetAllowedteams.filter(_._Dataset === dataSetId.id) join Teams on (_._Team === _._Id)
     } yield team._Id
 
-    run(query.result).map(_.toList)
+    run(query.result).flatMap(rows => Fox.serialCombined(rows.toList)(ObjectId.parse(_)))
   }
 
   def updateAllowedTeamsForDataSetByName(dataSetName: String, allowedTeams: List[ObjectId])(implicit ctx: DBAccessContext): Fox[Unit] = {
@@ -390,7 +384,7 @@ case class DataSet(
                     dataStoreInfo: DataStoreInfo,
                     dataSource: InboxDataSource,
                     owningOrganization: String,
-                    allowedTeams: List[BSONObjectID],
+                    allowedTeams: List[ObjectId],
                     isActive: Boolean = false,
                     isPublic: Boolean = false,
                     description: Option[String] = None,
@@ -409,9 +403,8 @@ case class DataSet(
       case Some(user) =>
         for {
           organization <- OrganizationSQLDAO.findOneByName(owningOrganization)
-          isAdmin <- user.isAdminOf(organization._id)
           isTeamManagerInOrg <- user.isTeamManagerInOrg(organization._id)
-        } yield (isAdmin || isTeamManagerInOrg)
+        } yield (user.isAdminOf(organization._id) || isTeamManagerInOrg)
       case _ => Fox.successful(false)
     }
   }
@@ -423,10 +416,11 @@ case class DataSet(
 object DataSet extends FoxImplicits {
   implicit val dataSetFormat = Json.format[DataSet]
 
-  def dataSetPublicWrites(d: DataSet, user: Option[UserSQL])(implicit ctx: DBAccessContext): Fox[JsObject] =
+  def dataSetPublicWrites(d: DataSet, user: Option[UserSQL]): Fox[JsObject] = {
+    implicit val ctx = GlobalAccessContext
     for {
-      teams <- Fox.combined(d.allowedTeams.map(teamIdBson => TeamSQLDAO.findOne(ObjectId.fromBsonId(teamIdBson))(GlobalAccessContext)))
-      teamsJs <- Fox.serialCombined(teams)(_.publicWrites(GlobalAccessContext))
+      teams <- Fox.combined(d.allowedTeams.map(teamId => TeamSQLDAO.findOne(teamId)))
+      teamsJs <- Fox.serialCombined(teams)(_.publicWrites)
       logoUrl <- getLogoUrl(d)
       isEditable <- d.isEditableBy(user)
     } yield {
@@ -443,6 +437,7 @@ object DataSet extends FoxImplicits {
         "isEditable" -> isEditable,
         "logoUrl" -> logoUrl)
     }
+  }
 
   private def parseDefaultConfiguration(jsValueOpt: Option[JsValue]): Fox[Option[DataSetConfiguration]] = jsValueOpt match {
     case Some(jsValue) => for {
@@ -477,7 +472,6 @@ object DataSet extends FoxImplicits {
     for {
       datastore <- DataStoreSQLDAO.findOneByName(s._dataStore.trim)(GlobalAccessContext) ?~> Messages("datastore.notFound")
       allowedTeams <- DataSetAllowedTeamsSQLDAO.findAllForDataSet(s._id)(GlobalAccessContext) ?~> Messages("allowedTeams.notFound")
-      allowedTeamsBson <- Fox.combined(allowedTeams.map(ObjectId(_).toBSONObjectId.toFox))
       defaultConfiguration <- parseDefaultConfiguration(s.defaultConfiguration)
       organization <- OrganizationSQLDAO.findOne(s._organization)(GlobalAccessContext) ?~> Messages("team.notFound")
       dataSource <- constructDataSource(s, organization)(GlobalAccessContext) ?~> "could not construct datasource"
@@ -487,7 +481,7 @@ object DataSet extends FoxImplicits {
         DataStoreInfo(datastore.name, datastore.url, datastore.typ),
         dataSource,
         organization.name,
-        allowedTeamsBson,
+        allowedTeams,
         s.isUsable,
         s.isPublic,
         s.description,
@@ -530,7 +524,7 @@ object DataSetDAO {
     DataSetSQLDAO.updateDataSourceByName(name, dataStoreInfo.name, source, isActive)
 
   def updateTeams(name: String, teams: List[ObjectId])(implicit ctx: DBAccessContext) =
-    DataSetAllowedTeamsSQLDAO.updateAllowedTeamsForDataSetByName(name, teams).distinct)
+    DataSetAllowedTeamsSQLDAO.updateAllowedTeamsForDataSetByName(name, teams.distinct)
 
   def update(name: String, description: Option[String], displayName: Option[String], isPublic: Boolean)(implicit ctx: DBAccessContext): Fox[DataSet] = {
     for {
@@ -545,7 +539,7 @@ object DataSetDAO {
       dataSetSQL <- DataSetSQL.fromDataSetWithId(dataSet, newId)
       _ <- DataSetSQLDAO.insertOne(dataSetSQL)
       _ <- DataSetDataLayerSQLDAO.updateLayers(newId, dataSet.dataSource)
-      _ <- DataSetAllowedTeamsSQLDAO.updateAllowedTeamsForDataSetByName(dataSet.name, dataSet.allowedTeams.map(ObjectId.fromBsonId(_)))
+      _ <- DataSetAllowedTeamsSQLDAO.updateAllowedTeamsForDataSetByName(dataSet.name, dataSet.allowedTeams)
     } yield ()
   }
 

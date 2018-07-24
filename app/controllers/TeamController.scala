@@ -9,12 +9,14 @@ import models.user.UserTeamRolesSQLDAO
 import oxalis.security.WebknossosSilhouette.SecuredAction
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.Json
+import play.api.libs.json._
 import play.api.mvc.Action
 import utils.ObjectId
 
 class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller {
 
+  private def teamNameReads: Reads[String] =
+    (__ \ "name").read[String]
 
   def list = SecuredAction.async { implicit request =>
     for {
@@ -28,7 +30,7 @@ class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller 
   def listAllTeams = Action.async { implicit request =>
     for {
       allTeams <- TeamSQLDAO.findAll(GlobalAccessContext)
-      js <- Fox.serialCombined(allTeams)(_.publicWrites)
+      js <- Fox.serialCombined(allTeams)(_.publicWrites(GlobalAccessContext))
     } yield {
       Ok(Json.toJson(js))
     }
@@ -46,7 +48,7 @@ class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller 
   }
 
   def create = SecuredAction.async(parse.json) { implicit request =>
-    withJsonBodyUsing(Team.teamReadsName) { teamName =>
+    withJsonBodyUsing(teamNameReads) { teamName =>
       for {
         _ <- bool2Fox(request.identity.isAdmin) ?~> Messages("user.noAdmin")
         team = TeamSQL(ObjectId.generate, request.identity._organization, teamName)

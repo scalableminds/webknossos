@@ -57,9 +57,8 @@ object UserService extends FoxImplicits with IdentityService[UserSQL] {
     implicit val ctx = GlobalAccessContext
     for {
       organizationTeamId <- OrganizationSQLDAO.findOne(_organization).flatMap(_.organizationTeamId).toFox
-      orgTeamIdBson <- organizationTeamId.toBSONObjectId.toFox
-      orgTeam <- TeamDAO.findOneById(orgTeamIdBson)
-      teamMemberships = List(TeamMembershipSQL(ObjectId.fromBsonId(orgTeam._id), teamRole))
+      orgTeam <- TeamSQLDAO.findOne(organizationTeamId)
+      teamMemberships = List(TeamMembershipSQL(orgTeam._id, teamRole))
       user = UserSQL(
         ObjectId.generate,
         _organization,

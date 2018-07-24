@@ -6,7 +6,7 @@ import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import models.binary._
-import models.team.{TeamDAO, TeamSQLDAO}
+import models.team.TeamSQLDAO
 import models.user.UserService
 import oxalis.ndstore.{ND2WK, NDServerConnection}
 import oxalis.security.URLSharing
@@ -97,7 +97,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
   def accessList(dataSetName: String) = SecuredAction.async { implicit request =>
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
-      users <- UserService.findByTeams(dataSet.allowedTeams.map(ObjectId.fromBsonId(_)))
+      users <- UserService.findByTeams(dataSet.allowedTeams)
       usersJs <- Fox.serialCombined(users.distinct)(_.compactWrites)
     } yield {
       Ok(Json.toJson(usersJs))
@@ -150,7 +150,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
         teamsWithUpdate = teamIdsValidated.filter(t => userTeams.exists(_._id == t))
         _ <- DataSetService.updateTeams(dataSet, teamsWithUpdate ++ teamsWithoutUpdate)
       } yield
-      Ok(Json.toJson((teamsWithUpdate ++ teamsWithoutUpdate).map(_.stringify)))
+      Ok(Json.toJson((teamsWithUpdate ++ teamsWithoutUpdate).map(_.toString)))
     }
   }
 
@@ -180,7 +180,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
           _ <- DataSetService.checkIfNewDataSetName(name) ?~> Messages("dataSet.name.alreadyTaken")
           _ <- ensureTeamAdministration(request.identity, ObjectId.fromBsonId(team)) ?~> Messages("team.admin.notAllowed")
           ndProject <- NDServerConnection.requestProjectInformationFromNDStore(server, name, token)
-          dataSet <- ND2WK.dataSetFromNDProject(ndProject, team)
+          dataSet <- ND2WK.dataSetFromNDProject(ndProject, ObjectId.fromBsonId(team))
           _ <-  DataSetDAO.insert(dataSet)(GlobalAccessContext)
         } yield JsonOk(Messages("dataSet.create.success"))
     }

@@ -4,12 +4,11 @@
 package controllers
 
 import javax.inject.Inject
-
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{AnnotationSQLDAO, AnnotationTypeSQL}
 import models.team.TeamDAO
-import models.user.{User, UserDAO}
+import models.user.{UserSQL, UserSQLDAO}
 import oxalis.security.WebknossosSilhouette.SecuredAction
 import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits._
@@ -128,18 +127,18 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
   def openTasksOverview(id: String) = SecuredAction.async { implicit request =>
     for {
       team <- TeamDAO.findOneById(id)(GlobalAccessContext)
-      users <- UserDAO.findByTeams(List(team._id), includeInactive = false)(GlobalAccessContext)
-      nonAdminUsers <- Fox.filterNot(users)(_.isTeamManagerOrAdminOf(team._id))
+      users <- UserSQLDAO.findAllByTeams(List(ObjectId.fromBsonId(team._id)), includeDeactivated = false)(GlobalAccessContext)
+      nonAdminUsers <- Fox.filterNot(users)(_.isTeamManagerOrAdminOf(ObjectId.fromBsonId(team._id)))
       entries: List[OpenTasksEntry] <- getAllAvailableTaskCountsAndProjects(nonAdminUsers)(GlobalAccessContext)
     } yield Ok(Json.toJson(entries))
   }
 
-  private def getAllAvailableTaskCountsAndProjects(users: Seq[User])(implicit ctx: DBAccessContext): Fox[List[OpenTasksEntry]] = {
+  private def getAllAvailableTaskCountsAndProjects(users: Seq[UserSQL])(implicit ctx: DBAccessContext): Fox[List[OpenTasksEntry]] = {
     val foxes = users.map { user =>
       for {
-        assignmentCountsByProject <- ReportSQLDAO.getAssignmentsByProjectsFor(ObjectId(user.id))
+        assignmentCountsByProject <- ReportSQLDAO.getAssignmentsByProjectsFor(user._id)
       } yield {
-        OpenTasksEntry(user.id, user.name, assignmentCountsByProject.values.sum, assignmentCountsByProject)
+        OpenTasksEntry(user._id.toString, user.name, assignmentCountsByProject.values.sum, assignmentCountsByProject)
       }
     }
     Fox.combined(foxes.toList)

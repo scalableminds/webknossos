@@ -12,7 +12,7 @@ import models.annotation.AnnotationState._
 import models.annotation.AnnotationTypeSQL.AnnotationTypeSQL
 import models.binary.{DataSet, DataSetDAO}
 import models.task.{TaskSQLDAO, TaskTypeSQLDAO, _}
-import models.user.{User, UserService}
+import models.user.{UserSQL, UserService}
 import org.joda.time.format.DateTimeFormat
 import play.api.Play.current
 import play.api.i18n.Messages
@@ -51,8 +51,8 @@ case class AnnotationSQL(
   lazy val id = _id.toString
   lazy val team = _team.toString
 
-  def user: Fox[User] =
-    UserService.findOneById(_user.toString, useCache = true)(GlobalAccessContext)
+  def user: Fox[UserSQL] =
+    UserService.findOneById(_user, useCache = true)(GlobalAccessContext)
 
   def task: Fox[TaskSQL] =
     _task.toFox.flatMap(taskId => TaskSQLDAO.findOne(taskId)(GlobalAccessContext))
@@ -89,11 +89,12 @@ case class AnnotationSQL(
       restrictions.getOrElse(AnnotationRestrictions.defaultAnnotationRestrictions(this))
   }
 
-  def publicWrites(requestingUser: Option[User] = None, restrictions: Option[AnnotationRestrictions] = None, readOnly: Option[Boolean] = None)(implicit ctx: DBAccessContext): Fox[JsObject] = {
+  def publicWrites(requestingUser: Option[UserSQL] = None, restrictions: Option[AnnotationRestrictions] = None, readOnly: Option[Boolean] = None)(implicit ctx: DBAccessContext): Fox[JsObject] = {
     for {
       taskJson <- task.flatMap(_.publicWrites).getOrElse(JsNull)
       dataSet <- dataSet
-      userJson <- user.map(u => User.userCompactWrites.writes(u)).getOrElse(JsNull)
+      user <- user
+      userJson <- user.compactWrites
       settings <- findSettings
       annotationRestrictions <- AnnotationRestrictions.writeAsJson(composeRestrictions(restrictions, readOnly), requestingUser)
     } yield {

@@ -16,6 +16,7 @@ import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracin
 import Utils from "libs/utils";
 import type { APIAnnotationType } from "admin/api_flow_types";
 import Store from "oxalis/store";
+import { location } from "libs/window";
 
 type ProjectInfoType = {
   id: string,
@@ -96,9 +97,10 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
   async merge(url: string) {
     await api.tracing.save();
     const annotation = await Request.receiveJSON(url);
-    Toast.success(messages["tracing.merged"]);
+    Toast.success(messages["tracing.merged_with_redirect"]);
     const redirectUrl = `/annotations/${annotation.typ}/${annotation.id}`;
-    this.props.history.push(redirectUrl);
+    await Utils.sleep(1500);
+    location.href = redirectUrl;
   }
 
   handleChangeMergeProject = (project: string) => {

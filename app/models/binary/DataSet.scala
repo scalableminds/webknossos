@@ -409,9 +409,8 @@ case class DataSet(
       case Some(user) =>
         for {
           organization <- OrganizationSQLDAO.findOneByName(owningOrganization)
-          isAdmin <- user.isAdminOf(organization._id)
           isTeamManagerInOrg <- user.isTeamManagerInOrg(organization._id)
-        } yield (isAdmin || isTeamManagerInOrg)
+        } yield (user.isAdminOf(organization._id) || isTeamManagerInOrg)
       case _ => Fox.successful(false)
     }
   }

@@ -163,9 +163,9 @@ class Authentication @Inject()(
             } else {
               for {
                 organization <- OrganizationSQLDAO.findOneByName(signUpData.organization)(GlobalAccessContext)
-                user <- UserService.insert(organization.name, email, firstName, lastName, signUpData.password, automaticUserActivation, roleOnRegistration,
+                user <- UserService.insert(organization._id, email, firstName, lastName, signUpData.password, automaticUserActivation, roleOnRegistration,
                   loginInfo, passwordHasher.hash(signUpData.password))
-                brainDBResult <- BrainTracing.register(user).toFox
+                brainDBResult <- BrainTracing.registerIfNeeded(user).toFox
               } yield {
                 Mailer ! Send(DefaultMails.registerMail(user.name, user.email, brainDBResult))
                 Mailer ! Send(DefaultMails.registerAdminNotifyerMail(user, user.email, brainDBResult, organization))
@@ -188,7 +188,7 @@ class Authentication @Inject()(
           UserService.retrieve(loginInfo).flatMap {
             case None =>
               Future.successful(BadRequest(Messages("error.noUser")))
-            case Some(user) if (user.isActive) => for {
+            case Some(user) if (!user.isDeactivated) => for {
               authenticator <- env.authenticatorService.create(loginInfo)
               value <- env.authenticatorService.init(authenticator)
               result <- env.authenticatorService.embed(value, Ok)
@@ -213,7 +213,7 @@ class Authentication @Inject()(
   }
 
   def switchTo(email: String) = SecuredAction.async { implicit request =>
-    if (request.identity._isSuperUser.openOr(false)) {
+    if (request.identity.isSuperUser) {
       val loginInfo = LoginInfo(CredentialsProvider.ID, email)
       for {
         _ <- findOneByEmail(email) ?~> Messages("user.notFound")
@@ -254,7 +254,7 @@ class Authentication @Inject()(
         bearerTokenAuthenticatorService.userForToken(passwords.token.trim)(GlobalAccessContext).futureBox.flatMap {
           case Full(user) =>
             for {
-              _ <- UserDAO.changePasswordInfo(user._id, passwordHasher.hash(passwords.password1))(GlobalAccessContext)
+              _ <- UserSQLDAO.updatePasswordInfo(user._id, passwordHasher.hash(passwords.password1))(GlobalAccessContext)
               _ <- bearerTokenAuthenticatorService.remove(passwords.token.trim)
             } yield Ok
           case _ =>
@@ -346,7 +346,7 @@ class Authentication @Inject()(
           val returnPayload =
             s"nonce=$nonce&" +
               s"email=${URLEncoder.encode(user.email, "UTF-8")}&" +
-              s"external_id=${URLEncoder.encode(user.id, "UTF-8")}&" +
+              s"external_id=${URLEncoder.encode(user._id.toString, "UTF-8")}&" +
               s"username=${URLEncoder.encode(user.abreviatedName, "UTF-8")}&" +
               s"name=${URLEncoder.encode(user.name, "UTF-8")}"
           val encodedReturnPayload = Base64.encodeBase64String(returnPayload.getBytes("UTF-8"))
@@ -390,7 +390,7 @@ class Authentication @Inject()(
                 } else {
                   for {
                     organization <- createOrganization(signUpData.organization) ?~> Messages("organization.create.failed")
-                    user <- UserService.insert(organization.name, email, firstName, lastName, signUpData.password, isActive = true, teamRole = true,
+                    user <- UserService.insert(organization._id, email, firstName, lastName, signUpData.password, isActive = true, teamRole = true,
                       loginInfo, passwordHasher.hash(signUpData.password), isAdmin = true)
                     _ <- createOrganizationFolder(organization.name, loginInfo)
                   } yield {
@@ -406,7 +406,7 @@ class Authentication @Inject()(
     )
   }
 
-  private def creatingOrganizationsIsAllowed(requestingUser: Option[User]) = {
+  private def creatingOrganizationsIsAllowed(requestingUser: Option[UserSQL]) = {
     val noOrganizationPresent = InitialDataService.assertNoOrganizationsPresent
     val configurationFlagSet = Play.configuration.getBoolean("application.allowOrganzationCreation").getOrElse(false) ?~> "allowOrganzationCreation.notEnabled"
     val userIsSuperUser = requestingUser.exists(_.isSuperUser).toFox

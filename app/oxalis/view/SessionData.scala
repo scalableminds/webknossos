@@ -1,6 +1,6 @@
 package oxalis.view
 
-import models.user.User
+import models.user.UserSQL
 import play.api.mvc.Flash
 
 trait FlashMessages{
@@ -21,19 +21,19 @@ trait FlashMessages{
 }
 
 trait SessionData{
-  def userOpt: Option[User]
+  def userOpt: Option[UserSQL]
   def flash: Flash
 }
 
 case class UnAuthedSessionData(flash: Flash) extends SessionData {
   val userOpt = None
 }
-case class AuthedSessionData(user: User, flash: Flash) extends SessionData {
+case class AuthedSessionData(user: UserSQL, flash: Flash) extends SessionData {
   val userOpt = Some(user)
 }
 
 object SessionData{
-  def apply(user: Option[User], flash: Flash) = {
+  def apply(user: Option[UserSQL], flash: Flash) = {
     user match{
       case Some(u) =>
         AuthedSessionData(u, flash)

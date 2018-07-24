@@ -6,6 +6,8 @@ import Loop from "components/loop";
 import { getProjectProgressReport } from "admin/admin_rest_api";
 import type { APIProjectProgressReportType, APITeamType } from "admin/api_flow_types";
 import FormattedDate from "components/formatted_date";
+import Toast from "libs/toast";
+import messages from "messages";
 import TeamSelectionForm from "./team_selection_form";
 
 const { Column, ColumnGroup } = Table;
@@ -36,11 +38,16 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
     if (team == null) {
       this.setState({ data: [] });
     } else if (suppressLoadingState) {
+      const errorToastKey = "progress-report-failed-to-refresh";
       try {
         const progessData = await getProjectProgressReport(team.id);
         this.setState({ data: progessData, updatedAt: Date.now() });
+        Toast.close(errorToastKey);
       } catch (err) {
-        // Fail silently
+        Toast.error(messages["project.report.failed_to_refresh"], {
+          sticky: true,
+          key: errorToastKey,
+        });
       }
     } else {
       this.setState({ isLoading: true });

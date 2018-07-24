@@ -422,10 +422,11 @@ case class DataSet(
 object DataSet extends FoxImplicits {
   implicit val dataSetFormat = Json.format[DataSet]
 
-  def dataSetPublicWrites(d: DataSet, user: Option[UserSQL])(implicit ctx: DBAccessContext): Fox[JsObject] =
+  def dataSetPublicWrites(d: DataSet, user: Option[UserSQL]): Fox[JsObject] = {
+    implicit val ctx = GlobalAccessContext
     for {
-      teams <- Fox.combined(d.allowedTeams.map(TeamDAO.findOneById(_)(GlobalAccessContext)))
-      teamsJs <- Future.traverse(teams)(Team.teamPublicWrites(_)(GlobalAccessContext))
+      teams <- Fox.combined(d.allowedTeams.map(TeamDAO.findOneById(_)))
+      teamsJs <- Future.traverse(teams)(Team.teamPublicWrites(_))
       logoUrl <- getLogoUrl(d)
       isEditable <- d.isEditableBy(user)
     } yield {
@@ -442,6 +443,7 @@ object DataSet extends FoxImplicits {
         "isEditable" -> isEditable,
         "logoUrl" -> logoUrl)
     }
+  }
 
   private def parseDefaultConfiguration(jsValueOpt: Option[JsValue]): Fox[Option[DataSetConfiguration]] = jsValueOpt match {
     case Some(jsValue) => for {

@@ -160,11 +160,21 @@ class DataCube {
       : null;
   }
 
+  shouldHideUnmappedIds(): boolean {
+    return this.isSegmentation
+      ? Store.getState().temporaryConfiguration.activeMapping.hideUnmappedIds
+      : false;
+  }
+
   mapId(idToMap: number): number {
     let mappedId = null;
     const mapping = this.getMapping();
     if (mapping != null && this.isMappingEnabled()) {
       mappedId = mapping[idToMap];
+    }
+    const hideUnmappedIds = this.shouldHideUnmappedIds();
+    if (hideUnmappedIds && mappedId == null) {
+      mappedId = 0;
     }
     return mappedId != null ? mappedId : idToMap;
   }

@@ -15,7 +15,7 @@ import UpdatableTexture from "libs/UpdatableTexture";
 import { getRenderer } from "oxalis/controller/renderer";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import messages from "messages";
-import { getMappings } from "oxalis/model/accessors/dataset_accessor";
+import { getMappings, getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import type { MappingType } from "oxalis/store";
 import type { APIMappingType } from "admin/api_flow_types";
 import type DataLayer from "oxalis/model/data_layer";
@@ -42,7 +42,7 @@ export function setupGlobalMappingsObject(segmentationLayer: DataLayer) {
 
 class Mappings {
   baseUrl: string;
-  availableMappings: Array<string>;
+  layerName: string;
   mappingTexture: UpdatableTexture;
   mappingLookupTexture: UpdatableTexture;
   mappingColorTexture: UpdatableTexture;
@@ -51,12 +51,12 @@ class Mappings {
     const { dataset } = Store.getState();
     const datasetName = dataset.name;
     const dataStoreUrl = dataset.dataStore.url;
+    this.layerName = layerName;
     this.baseUrl = `${dataStoreUrl}/data/datasets/${datasetName}/layers/${layerName}/mappings/`;
-    this.availableMappings = getMappings(dataset, layerName);
   }
 
   getMappingNames(): Array<string> {
-    return this.availableMappings;
+    return getMappings(Store.getState().dataset, this.layerName);
   }
 
   async activateMapping(mappingName: ?string) {
@@ -65,8 +65,12 @@ class Mappings {
     } else {
       const fetchedMappings = {};
       await this.fetchMappings(mappingName, fetchedMappings);
-      const [mappingObject, mappingColors] = this.buildMappingObject(mappingName, fetchedMappings);
-      Store.dispatch(setMappingAction(mappingObject, mappingColors));
+      const { hideUnmappedIds, colors: mappingColors } = fetchedMappings[mappingName];
+      // If custom colors are specified for a mapping, assign the mapped ids specifically, so that the first equivalence
+      // class will get the first color, and so on
+      const assignNewIds = mappingColors != null && mappingColors.length > 0;
+      const mappingObject = this.buildMappingObject(mappingName, fetchedMappings, assignNewIds);
+      Store.dispatch(setMappingAction(mappingObject, mappingColors, hideUnmappedIds));
     }
   }
 
@@ -94,30 +98,40 @@ class Mappings {
     });
   }
 
+  getLargestSegmentId(): number {
+    const segmentationLayer = getLayerByName(Store.getState().dataset, this.layerName);
+    if (segmentationLayer.category !== "segmentation") {
+      throw new Error("Mappings class must be instantiated with a segmenation layer.");
+    }
+    return segmentationLayer.largestSegmentId;
+  }
+
   buildMappingObject(
     mappingName: string,
     fetchedMappings: APIMappingsType,
-  ): [MappingType, ?Array<number>] {
+    assignNewIds: boolean,
+  ): MappingType {
     const mappingObject: MappingType = {};
-    let mappingColors;
 
+    const maxId = this.getLargestSegmentId() + 1;
+    // Initialize to the next multiple of 256 that is larger than maxId
+    let newMappedId = Math.ceil(maxId / 256) * 256;
     for (const currentMappingName of this.getMappingChain(mappingName, fetchedMappings)) {
       const mapping = fetchedMappings[currentMappingName];
       ErrorHandling.assertExists(mapping.classes, "Mappings must have been fetched at this point");
+
       if (mapping.classes) {
         for (const mappingClass of mapping.classes) {
-          const minId = _.min(mappingClass);
+          const minId = assignNewIds ? newMappedId : _.min(mappingClass);
           const mappedId = mappingObject[minId] || minId;
           for (const id of mappingClass) {
             mappingObject[id] = mappedId;
           }
+          newMappedId++;
         }
       }
-      if (mapping.colors != null && mapping.colors.length > 0) {
-        mappingColors = mapping.colors;
-      }
     }
-    return [mappingObject, mappingColors];
+    return mappingObject;
   }
 
   getMappingChain(mappingName: string, fetchedMappings: APIMappingsType): Array<string> {
@@ -147,8 +161,7 @@ class Mappings {
       THREE.UnsignedByteType,
       renderer,
     );
-    // The first byte indicates whether mappingColors are specified by the user or not
-    // Then up to 255 (16*16 - 1) custom colors can be specified for mappings
+    // Up to 256 (16*16) custom colors can be specified for mappings
     this.mappingColorTexture = createUpdatableTexture(
       MAPPING_COLOR_TEXTURE_WIDTH,
       1,
@@ -172,10 +185,10 @@ class Mappings {
     const float32Colors = new Float32Array(
       MAPPING_COLOR_TEXTURE_WIDTH * MAPPING_COLOR_TEXTURE_WIDTH,
     );
-    const maxNumberOfColors = MAPPING_COLOR_TEXTURE_WIDTH ** 2 - 1;
-    // Set the first byte to indicate whether custom mapping colors are specified or not
-    float32Colors.set([mappingColors.length > 0 ? 1 : 0]);
-    float32Colors.set(mappingColors.slice(0, maxNumberOfColors), 1);
+    const maxNumberOfColors = MAPPING_COLOR_TEXTURE_WIDTH ** 2;
+    // Initialize the array with -1
+    float32Colors.fill(-1);
+    float32Colors.set(mappingColors.slice(0, maxNumberOfColors));
     this.mappingColorTexture.update(
       float32Colors,
       0,

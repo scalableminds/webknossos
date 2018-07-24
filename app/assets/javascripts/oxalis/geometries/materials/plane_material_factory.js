@@ -99,6 +99,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         type: "f",
         value: 0,
       },
+      hideUnmappedIds: {
+        type: "b",
+        value: false,
+      },
       globalMousePosition: {
         type: "v3",
         value: new THREE.Vector3(0, 0, 0),
@@ -270,6 +274,16 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         storeState => storeState.temporaryConfiguration.activeMapping.mappingSize,
         mappingSize => {
           this.uniforms.mappingSize.value = mappingSize;
+        },
+        true,
+      ),
+    );
+
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        storeState => storeState.temporaryConfiguration.activeMapping.hideUnmappedIds,
+        hideUnmappedIds => {
+          this.uniforms.hideUnmappedIds.value = hideUnmappedIds;
         },
         true,
       ),

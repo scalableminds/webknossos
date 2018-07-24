@@ -7,18 +7,19 @@ import { getRgbaAtIndex } from "./texture_access.glsl";
 export const convertCellIdToRGB: ShaderModuleType = {
   requirements: [hsvToRgb, getRgbaAtIndex],
   code: `
-    vec3 convertCellIdToRGB(vec4 id) {
+    vec4 convertCellIdToRGB(vec4 id) {
       float golden_ratio = 0.618033988749895;
       float lastEightBits = id.r;
       float value = mod( lastEightBits * golden_ratio, 1.0);
 
       <% if (isMappingSupported) { %>
-        // The first element of the texture indicates whether custom colors are specified or not
+        // If the first element of the mapping colors texture is still the initialized
+        // value of -1, no mapping colors have been specified
         bool hasCustomMappingColors = getRgbaAtIndex(
           <%= segmentationName %>_mapping_color_texture,
           <%= mappingColorTextureWidth %>,
           0.0
-        ).r > 0.5;
+        ).r != -1.0;
         if (isMappingEnabled && hasCustomMappingColors) {
           value = getRgbaAtIndex(
             <%= segmentationName %>_mapping_color_texture,
@@ -29,7 +30,8 @@ export const convertCellIdToRGB: ShaderModuleType = {
       <% } %>
 
       vec4 HSV = vec4( value, 1.0, 1.0, 1.0 );
-      return hsvToRgb(HSV);
+      // If the value was not specified it should be transparent
+      return vec4(hsvToRgb(HSV), value == -1.0 ? 0.0 : 1.0);
     }
   `,
 };
@@ -90,6 +92,8 @@ export const getSegmentationId: ShaderModuleType = {
               <%= mappingTextureWidth %>,
               index
             );
+          } else if (hideUnmappedIds) {
+            volume_color = vec4(0.0);
           }
         }
       <% } %>

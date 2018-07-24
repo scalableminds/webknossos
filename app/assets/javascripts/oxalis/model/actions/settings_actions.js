@@ -53,6 +53,7 @@ type SetMappingActionType = {
   type: "SET_MAPPING",
   mapping: ?MappingType,
   mappingColors: ?Array<number>,
+  hideUnmappedIds: ?boolean,
 };
 export type SettingActionType =
   | UpdateUserSettingActionType
@@ -152,8 +153,10 @@ export const setMappingEnabledAction = (
 export const setMappingAction = (
   mapping: ?MappingType,
   mappingColors: ?Array<number>,
+  hideUnmappedIds: ?boolean,
 ): SetMappingActionType => ({
   type: "SET_MAPPING",
   mapping,
   mappingColors,
+  hideUnmappedIds,
 });

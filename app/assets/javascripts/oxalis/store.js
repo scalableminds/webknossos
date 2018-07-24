@@ -113,9 +113,6 @@ export type VolumeCellType = {
 
 export type VolumeCellMapType = { [number]: VolumeCellType };
 
-export type CategoryType = "color" | "segmentation";
-export type ElementClassType = "uint8" | "uint16" | "uint32";
-
 export type DataLayerType = APIDataLayerType;
 
 export type RestrictionsType = APIRestrictionsType;
@@ -230,6 +227,7 @@ export type TemporaryConfigurationType = {
   +activeMapping: {
     +mapping: ?MappingType,
     +mappingColors: ?Array<number>,
+    +hideUnmappedIds: boolean,
     +isMappingEnabled: boolean,
     +mappingSize: number,
   },
@@ -355,6 +353,7 @@ export const defaultState: OxalisState = {
     activeMapping: {
       mapping: null,
       mappingColors: null,
+      hideUnmappedIds: false,
       isMappingEnabled: false,
       mappingSize: 0,
     },

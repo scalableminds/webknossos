@@ -1,10 +1,10 @@
 package models.team
 
 
-import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
-import models.user.{UserSQLDAO, UserSQL}
+import models.user.{UserSQL, UserSQLDAO}
 import play.api.Play.current
 import play.api.i18n.Messages
 import play.api.i18n.Messages.Implicits._
@@ -26,7 +26,22 @@ case class TeamSQL(
                   isOrganizationTeam: Boolean = false,
                   created: Long = System.currentTimeMillis(),
                   isDeleted: Boolean = false
-                  )
+                  ) extends FoxImplicits {
+
+  def organization: Fox[OrganizationSQL] =
+    OrganizationSQLDAO.findOne(_organization)(GlobalAccessContext)
+
+  def publicWrites(implicit ctx: DBAccessContext): Fox[JsObject] =
+    for {
+      organization <- organization
+    } yield {
+      Json.obj(
+        "id" -> _id.toString,
+        "name" -> name,
+        "organization" -> organization.name
+      )
+    }
+}
 
 object TeamSQL extends FoxImplicits {
   def fromTeam(t: Team)(implicit ctx: DBAccessContext): Fox[TeamSQL] = {
@@ -180,16 +195,6 @@ object Team extends FoxImplicits {
       )
     }
   }
-}
-
-object TeamService {
-  def create(team: Team, user: UserSQL)(implicit ctx: DBAccessContext) =
-    for {
-      _ <- TeamDAO.insert(team)
-    } yield ()
-
-  def remove(team: Team)(implicit ctx: DBAccessContext) =
-    TeamDAO.removeById(team._id)
 }
 
 object TeamDAO {

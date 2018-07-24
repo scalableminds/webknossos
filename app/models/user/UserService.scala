@@ -37,10 +37,6 @@ object UserService extends FoxImplicits with IdentityService[UserSQL] {
     UserSQLDAO.findOneByEmail(defaultUserEmail)(GlobalAccessContext)
   }
 
-  def removeTeamFromUsers(team: Team)(implicit ctx: DBAccessContext) = {
-    UserTeamRolesSQLDAO.removeTeamFromAllUsers(ObjectId.fromBsonId(team._id))
-  }
-
   def findByTeams(teams: List[ObjectId])(implicit ctx: DBAccessContext) = {
     UserSQLDAO.findAllByTeams(teams)
   }

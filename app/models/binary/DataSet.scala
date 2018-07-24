@@ -425,8 +425,8 @@ object DataSet extends FoxImplicits {
 
   def dataSetPublicWrites(d: DataSet, user: Option[UserSQL])(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
-      teams <- Fox.combined(d.allowedTeams.map(TeamDAO.findOneById(_)(GlobalAccessContext)))
-      teamsJs <- Future.traverse(teams)(Team.teamPublicWrites(_)(GlobalAccessContext))
+      teams <- Fox.combined(d.allowedTeams.map(teamIdBson => TeamSQLDAO.findOne(ObjectId.fromBsonId(teamIdBson))(GlobalAccessContext)))
+      teamsJs <- Fox.serialCombined(teams)(_.publicWrites(GlobalAccessContext))
       logoUrl <- getLogoUrl(d)
       isEditable <- d.isEditableBy(user)
     } yield {
@@ -529,8 +529,8 @@ object DataSetDAO {
                         isActive: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
     DataSetSQLDAO.updateDataSourceByName(name, dataStoreInfo.name, source, isActive)
 
-  def updateTeams(name: String, teams: List[BSONObjectID])(implicit ctx: DBAccessContext) =
-    DataSetAllowedTeamsSQLDAO.updateAllowedTeamsForDataSetByName(name, teams.map(ObjectId.fromBsonId(_)).distinct)
+  def updateTeams(name: String, teams: List[ObjectId])(implicit ctx: DBAccessContext) =
+    DataSetAllowedTeamsSQLDAO.updateAllowedTeamsForDataSetByName(name, teams).distinct)
 
   def update(name: String, description: Option[String], displayName: Option[String], isPublic: Boolean)(implicit ctx: DBAccessContext): Fox[DataSet] = {
     for {

@@ -6,7 +6,7 @@ import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import models.binary._
-import models.team.TeamDAO
+import models.team.{TeamDAO, TeamSQLDAO}
 import models.user.UserService
 import oxalis.ndstore.{ND2WK, NDServerConnection}
 import oxalis.security.URLSharing
@@ -144,10 +144,10 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
       for {
         dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
         _ <- allowedToAdministrate(request.identity, dataSet)
-        teamsBson <- Fox.serialCombined(teams)(t => BSONObjectID.parse(t))
-        userTeams <- TeamDAO.findAllEditable
+        teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.parse(_))
+        userTeams <- TeamSQLDAO.findAllEditable
         teamsWithoutUpdate = dataSet.allowedTeams.filterNot(t => userTeams.exists(_._id == t))
-        teamsWithUpdate = teamsBson.filter(t => userTeams.exists(_._id == t))
+        teamsWithUpdate = teamIdsValidated.filter(t => userTeams.exists(_._id == t))
         _ <- DataSetService.updateTeams(dataSet, teamsWithUpdate ++ teamsWithoutUpdate)
       } yield
       Ok(Json.toJson((teamsWithUpdate ++ teamsWithoutUpdate).map(_.stringify)))

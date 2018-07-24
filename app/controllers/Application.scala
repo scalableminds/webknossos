@@ -36,7 +36,7 @@ class Application @Inject()(val messagesApi: MessagesApi) extends Controller {
     AnalyticsSQLDAO.insertOne(
       AnalyticsEntrySQL(
         ObjectId.generate,
-        request.identity.map(user => ObjectId.fromBsonId(user._id)),
+        request.identity.map(_._id),
         namespace,
         request.body))
     Ok

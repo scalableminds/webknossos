@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.AnnotationTypeSQL.AnnotationTypeSQL
 import models.annotation._
-import models.user.User
+import models.user.UserSQL
 import play.api.libs.concurrent.Execution.Implicits._
 import utils.ObjectId
 
@@ -20,7 +20,7 @@ trait AnnotationInformationHandler extends FoxImplicits {
 
   def cache: Boolean = true
 
-  def provideAnnotation(identifier: ObjectId, user: Option[User])(implicit ctx: DBAccessContext): Fox[AnnotationSQL]
+  def provideAnnotation(identifier: ObjectId, user: Option[UserSQL])(implicit ctx: DBAccessContext): Fox[AnnotationSQL]
 
   def nameForAnnotation(t: AnnotationSQL)(implicit ctx: DBAccessContext): Fox[String] = {
     Fox.successful(t.id)

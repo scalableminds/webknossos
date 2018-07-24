@@ -20,6 +20,7 @@ import type {
 } from "oxalis/store";
 import type { BoundingBoxType } from "oxalis/constants";
 import type { APIBuildInfoType } from "admin/api_flow_types";
+import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 
 // NML Defaults
 const DEFAULT_COLOR = [1, 0, 0];
@@ -363,8 +364,35 @@ function getEdgeHash(source: number, target: number) {
   return source < target ? `${source}-${target}` : `${target}-${source}`;
 }
 
+function wrapInNewGroup(
+  originalTrees: TreeMapType,
+  originalTreeGroups: Array<TreeGroupType>,
+  wrappingGroupName: string,
+): [TreeMapType, Array<TreeGroupType>] {
+  // It does not matter whether the group id is used in the active tracing, since
+  // this case will be handled during import, anyway. The group id just shouldn't clash
+  // with the nml itself.
+  const unusedGroupId = getMaximumGroupId(originalTreeGroups) + 1;
+  const trees = _.mapValues(originalTrees, tree => ({
+    ...tree,
+    // Give parentless trees the new treeGroup as parent
+    groupId: tree.groupId || unusedGroupId,
+  }));
+  const treeGroups = [
+    // Create a new tree group which holds the old ones
+    {
+      name: wrappingGroupName,
+      groupId: unusedGroupId,
+      children: originalTreeGroups,
+    },
+  ];
+
+  return [trees, treeGroups];
+}
+
 export function parseNml(
   nmlString: string,
+  wrappingGroupName?: ?string,
 ): Promise<{ trees: TreeMapType, treeGroups: Array<TreeGroupType> }> {
   return new Promise((resolve, reject) => {
     const parser = new Saxophone();
@@ -547,7 +575,19 @@ export function parseNml(
         }
       })
       .on("end", () => {
-        resolve({ trees, treeGroups });
+        if (wrappingGroupName != null) {
+          const [wrappedTrees, wrappedTreeGroups] = wrapInNewGroup(
+            trees,
+            treeGroups,
+            wrappingGroupName,
+          );
+          resolve({
+            trees: wrappedTrees,
+            treeGroups: wrappedTreeGroups,
+          });
+        } else {
+          resolve({ trees, treeGroups });
+        }
       })
       .on("error", reject);
 

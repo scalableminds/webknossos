@@ -4,7 +4,7 @@ package models.team
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
-import models.user.{User, UserDAO}
+import models.user.{UserSQLDAO, UserSQL}
 import play.api.Play.current
 import play.api.i18n.Messages
 import play.api.i18n.Messages.Implicits._
@@ -138,15 +138,14 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
 case class Team(name: String,
                 organization: String,
                 isOrganizationTeam: Boolean = false,
-                _id: BSONObjectID = BSONObjectID.generate) {
+                _id: BSONObjectID = BSONObjectID.generate) extends FoxImplicits {
 
   lazy val id = _id.stringify
 
-  def couldBeAdministratedBy(user: User) =
-    user.organization == organization
-
-  def isAdminOfOrganization(user: User) =
-    user.organization == organization && user.isAdmin
+  def couldBeAdministratedBy(user: UserSQL) =
+    for {
+      organization <- user.organization
+    } yield organization.name == this.organization
 }
 
 object Team extends FoxImplicits {
@@ -160,7 +159,7 @@ object Team extends FoxImplicits {
       )
     )
 
-  def teamPublicReads(requestingUser: User): Reads[Team] =
+  def teamPublicReads(requestingUser: UserSQL): Reads[Team] =
     ((__ \ "name").read[String](Reads.minLength[String](3)) and
       (__ \ "organization").read[String](Reads.minLength[String](3))
       ) ((name, organization) => Team(name, organization))
@@ -184,7 +183,7 @@ object Team extends FoxImplicits {
 }
 
 object TeamService {
-  def create(team: Team, user: User)(implicit ctx: DBAccessContext) =
+  def create(team: Team, user: UserSQL)(implicit ctx: DBAccessContext) =
     for {
       _ <- TeamDAO.insert(team)
     } yield ()

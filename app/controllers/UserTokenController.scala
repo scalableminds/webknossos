@@ -4,16 +4,16 @@
 package controllers
 
 import javax.inject.Inject
-
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.services.{AccessMode, AccessResourceType, UserAccessAnswer, UserAccessRequest}
 import models.annotation._
 import models.binary.{DataSetDAO, DataStoreHandlingStrategy}
-import models.user.User
+import models.team.OrganizationSQLDAO
+import models.user.UserSQL
 import net.liftweb.common.{Box, Full}
 import oxalis.security.WebknossosSilhouette.UserAwareAction
-import oxalis.security.{URLSharing, TokenType, WebknossosSilhouette}
+import oxalis.security.{TokenType, URLSharing, WebknossosSilhouette}
 import play.api.i18n.MessagesApi
 import play.api.libs.json.Json
 
@@ -64,7 +64,7 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
   }
 
 
-  private def handleDataSourceAccess(dataSourceName: String, mode: AccessMode.Value, userBox: Box[User])(implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
+  private def handleDataSourceAccess(dataSourceName: String, mode: AccessMode.Value, userBox: Box[UserSQL])(implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
     //Note: reading access is ensured in findOneBySourceName, depending on the implicit DBAccessContext
 
     def tryRead: Fox[UserAccessAnswer] = {
@@ -78,16 +78,19 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
       for {
         dataset <- DataSetDAO.findOneBySourceName(dataSourceName) ?~> "datasource.notFound"
         user <- userBox.toFox
-        owningOrg = dataset.owningOrganization
-        isAllowed <- (user.isAdminOf(owningOrg) || user.isTeamManagerInOrg(owningOrg)).futureBox
+        organization <- OrganizationSQLDAO.findOneByName(dataset.owningOrganization)
+        isAllowed <- user.isTeamManagerOrAdminOfOrg(organization._id)
       } yield {
-        Full(UserAccessAnswer(isAllowed.isDefined))
+        UserAccessAnswer(isAllowed)
       }
     }
 
     def tryAdministrate: Fox[UserAccessAnswer] = {
       userBox match {
-        case Full(user) => Fox.successful(UserAccessAnswer(user.isAdmin || user.teamManagerTeams.nonEmpty))
+        case Full(user) =>
+          for {
+            isAllowed <- user.isTeamManagerOrAdminOfOrg(user._organization)
+          } yield UserAccessAnswer(isAllowed)
         case _ => Fox.successful(UserAccessAnswer(false, Some("invalid access token")))
       }
     }
@@ -100,7 +103,7 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  private def handleTracingAccess(tracingId: String, mode: AccessMode.Value, userBox: Box[User])(implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
+  private def handleTracingAccess(tracingId: String, mode: AccessMode.Value, userBox: Box[UserSQL])(implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
 
     def findAnnotationForTracing(tracingId: String): Fox[AnnotationSQL] = {
       val annotationFox = AnnotationSQLDAO.findOneByTracingId(tracingId)

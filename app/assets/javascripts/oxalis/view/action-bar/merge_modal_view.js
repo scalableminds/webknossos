@@ -168,6 +168,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     this.props.addTreesAndGroupsAction(createTreeMapFromTreeArray(trees), treeGroups || []);
     this.setState({ isUploading: false });
     Toast.success(messages["tracing.merged"]);
+    this.props.onOk();
   }
 
   render() {
@@ -184,7 +185,6 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
       <Modal
         title="Merge"
         visible={this.props.isVisible}
-        onOk={this.props.onOk}
         onCancel={this.props.onOk}
         className="merge-modal"
         width={800}

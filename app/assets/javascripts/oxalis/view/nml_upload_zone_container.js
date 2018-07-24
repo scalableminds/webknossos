@@ -158,7 +158,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
       // Dispatch the actual actions as the very last step, so that
       // not a single store mutation happens if something above throws
       // an error
-      importActions.forEach(actionOrError => Store.dispatch(actionOrError));
+      importActions.forEach(action => Store.dispatch(action));
     } catch (e) {
       (Array.isArray(e) ? e : [e]).forEach(err => Toast.error(err.message));
     } finally {

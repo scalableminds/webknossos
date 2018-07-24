@@ -144,7 +144,6 @@ class UserController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  // REST API
   def list = SecuredAction.async { implicit request =>
     UsingFilters(
       Filter("isEditable", (value: Boolean, el: UserSQL) => for {isEditable <- el.isEditableBy(request.identity)} yield isEditable == value),

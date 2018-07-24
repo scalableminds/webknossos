@@ -172,7 +172,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
     Fox.combined(teams.map {
       case (TeamMembershipSQL(_, true), team) => {
         for {
-          _ <- Fox.assertTrue(team.couldBeAdministratedBy(user)) ?~> Messages("team.admin.notPossibleBy", team.name, user.name)
+          _ <- bool2Fox(team.couldBeAdministratedBy(user)) ?~> Messages("team.admin.notPossibleBy", team.name, user.name)
         }
         yield ()
       }

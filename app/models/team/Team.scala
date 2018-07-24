@@ -27,10 +27,8 @@ case class TeamSQL(
   def organization: Fox[OrganizationSQL] =
     OrganizationSQLDAO.findOne(_organization)(GlobalAccessContext)
 
-  def couldBeAdministratedBy(user: UserSQL) =
-    for {
-      organization <- user.organization
-    } yield organization.name == this.organization
+  def couldBeAdministratedBy(user: UserSQL): Boolean =
+    user._organization == this._organization
 
   def publicWrites(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {

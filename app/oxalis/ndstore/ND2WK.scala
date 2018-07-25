@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package oxalis.ndstore
 
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataSourceId, AbstractDataLayer => NDDataLayer, DataLayerLike => DataLayer, DataSourceLike => DataSource, GenericDataSource => NDDataSource}
@@ -8,10 +5,10 @@ import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.binary.{DataSet, DataStoreInfo, NDStore}
-import models.team.{OrganizationSQLDAO, TeamDAO, TeamService}
+import models.team.{OrganizationSQL, OrganizationSQLDAO, TeamSQLDAO}
 import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits._
-import reactivemongo.bson.BSONObjectID
+import utils.ObjectId
 
 object ND2WK extends FoxImplicits {
 
@@ -20,24 +17,23 @@ object ND2WK extends FoxImplicits {
     "image" -> Category.color
   )
 
-  def dataSetFromNDProject(ndp: NDProject, team: BSONObjectID)(implicit messages: Messages) = {
+  def dataSetFromNDProject(ndp: NDProject, teamId: ObjectId)(implicit messages: Messages) = {
     implicit val ctx = GlobalAccessContext
     val dataStoreInfo = DataStoreInfo(ndp.server, ndp.server, NDStore, Some(ndp.token))
 
     for {
       dataLayers <- dataLayersFromNDChannels(ndp.dataset, ndp.channels)
-      dataSource <- dataSourceFromNDDataSet(ndp.name, ndp.dataset, dataLayers, team)
-      orgName <- TeamDAO.findOneById(team).map(_.organization)
-      organization <- OrganizationSQLDAO.findOneByName(orgName)
+      team <- TeamSQLDAO.findOne(teamId)
+      organization <- OrganizationSQLDAO.findOne(team._organization)
+      dataSource <- dataSourceFromNDDataSet(ndp.name, ndp.dataset, dataLayers, organization)
       organizationTeamId <- organization.organizationTeamId
-      organizationTeamIdBson <- organizationTeamId.toBSONObjectId
     } yield {
       DataSet(
         None,
         dataStoreInfo,
         dataSource,
-        orgName,
-        List(organizationTeamIdBson),
+        organization.name,
+        List(organizationTeamId),
         isActive = true,
         isPublic = false)
     }
@@ -47,14 +43,13 @@ object ND2WK extends FoxImplicits {
     name: String,
     nd: NDDataSet,
     dataLayers: List[DataLayer],
-    team: BSONObjectID)(implicit messages: Messages): Fox[DataSource] = {
+    organization: OrganizationSQL)(implicit messages: Messages): Fox[DataSource] = {
 
     for {
       vr <- nd.voxelRes.get("0").filter(_.length >= 3) ?~> Messages("ndstore.invalid.voxelres.zero")
-      organization <- TeamDAO.findOneById(team)(GlobalAccessContext).map(_.organization) ?~> Messages("Organization not found")
       scale = Scale(vr(0), vr(1), vr(2))
     } yield {
-      val id = DataSourceId(name, organization)
+      val id = DataSourceId(name, organization.name)
       NDDataSource(id, dataLayers, scale)
     }
   }

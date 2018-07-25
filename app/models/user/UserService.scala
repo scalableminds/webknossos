@@ -37,10 +37,6 @@ object UserService extends FoxImplicits with IdentityService[UserSQL] {
     UserSQLDAO.findOneByEmail(defaultUserEmail)(GlobalAccessContext)
   }
 
-  def removeTeamFromUsers(team: Team)(implicit ctx: DBAccessContext) = {
-    UserTeamRolesSQLDAO.removeTeamFromAllUsers(ObjectId.fromBsonId(team._id))
-  }
-
   def findByTeams(teams: List[ObjectId])(implicit ctx: DBAccessContext) = {
     UserSQLDAO.findAllByTeams(teams)
   }
@@ -61,9 +57,8 @@ object UserService extends FoxImplicits with IdentityService[UserSQL] {
     implicit val ctx = GlobalAccessContext
     for {
       organizationTeamId <- OrganizationSQLDAO.findOne(_organization).flatMap(_.organizationTeamId).toFox
-      orgTeamIdBson <- organizationTeamId.toBSONObjectId.toFox
-      orgTeam <- TeamDAO.findOneById(orgTeamIdBson)
-      teamMemberships = List(TeamMembershipSQL(ObjectId.fromBsonId(orgTeam._id), teamRole))
+      orgTeam <- TeamSQLDAO.findOne(organizationTeamId)
+      teamMemberships = List(TeamMembershipSQL(orgTeam._id, teamRole))
       user = UserSQL(
         ObjectId.generate,
         _organization,

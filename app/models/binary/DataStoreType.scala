@@ -1,11 +1,7 @@
-/*
- * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package models.binary
 
 import play.api.data.validation.ValidationError
 import play.api.libs.json._
-import reactivemongo.bson.{BSONHandler, BSONString}
 
 sealed trait DataStoreType {
   val name: String
@@ -43,10 +39,5 @@ object DataStoreType {
     override def writes(o: DataStoreType): JsValue = JsString(o.name)
   }
 
-  implicit object DataStoreTypeFormatter extends BSONHandler[BSONString, DataStoreType] {
-    override def write(t: DataStoreType): BSONString = BSONString(t.name)
-
-    override def read(bson: BSONString): DataStoreType = stringToType(bson.value)
-  }
 
 }

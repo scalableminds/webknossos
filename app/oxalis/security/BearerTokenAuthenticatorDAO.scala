@@ -9,7 +9,6 @@ import com.scalableminds.webknossos.schema.Tables._
 import org.joda.time.DateTime
 import oxalis.security.TokenType.TokenType
 import play.api.libs.concurrent.Execution.Implicits._
-import reactivemongo.bson.BSONObjectID
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import play.api.i18n.{Messages, MessagesApi}
@@ -42,7 +41,7 @@ case class TokenSQL(_id: ObjectId,
 object TokenSQL {
   def fromBearerTokenAuthenticator(b: BearerTokenAuthenticator, tokenType: TokenType): Fox[TokenSQL] = {
     Fox.successful(TokenSQL(
-      ObjectId.fromBsonId(BSONObjectID.generate),
+      ObjectId.generate,
       b.id,
       b.loginInfo,
       b.lastUsedDateTime,

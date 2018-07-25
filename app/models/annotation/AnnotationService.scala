@@ -42,8 +42,9 @@ object AnnotationService
   private def selectSuitableTeam(user: UserSQL, dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[ObjectId] = {
     (for {
       userTeamIds <- user.teamIds
+      userTeamIdsBson <- Fox.serialCombined(userTeamIds)(_.toBSONObjectId.toFox)
     } yield {
-      val selectedTeamOpt = dataSet.allowedTeams.intersect(userTeamIds).headOption
+      val selectedTeamOpt = dataSet.allowedTeams.intersect(userTeamIdsBson).headOption
       selectedTeamOpt match {
         case Some(selectedTeam) => Fox.successful(ObjectId.fromBsonId(selectedTeam))
         case None =>

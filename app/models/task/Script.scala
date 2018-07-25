@@ -1,6 +1,6 @@
 package models.task
 
-import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import models.user.UserSQLDAO
@@ -20,7 +20,8 @@ case class ScriptSQL(
                     isDeleted: Boolean = false
                     ) extends FoxImplicits {
 
-  def publicWrites(implicit ctx: DBAccessContext): Fox[JsObject] = {
+  def publicWrites: Fox[JsObject] = {
+    implicit val ctx = GlobalAccessContext
     for {
       owner <- UserSQLDAO.findOne(_owner)
       ownerJs <- owner.compactWrites

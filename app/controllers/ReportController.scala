@@ -7,7 +7,7 @@ import javax.inject.Inject
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{AnnotationSQLDAO, AnnotationTypeSQL}
-import models.team.TeamDAO
+import models.team.TeamSQLDAO
 import models.user.{UserSQL, UserSQLDAO}
 import oxalis.security.WebknossosSilhouette.SecuredAction
 import play.api.i18n.MessagesApi
@@ -124,11 +124,12 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
     } yield Ok(Json.toJson(entries))
   }
 
-  def openTasksOverview(id: String) = SecuredAction.async { implicit request =>
+  def openTasksOverview(teamId: String) = SecuredAction.async { implicit request =>
     for {
-      team <- TeamDAO.findOneById(id)(GlobalAccessContext)
-      users <- UserSQLDAO.findAllByTeams(List(ObjectId.fromBsonId(team._id)), includeDeactivated = false)(GlobalAccessContext)
-      nonAdminUsers <- Fox.filterNot(users)(_.isTeamManagerOrAdminOf(ObjectId.fromBsonId(team._id)))
+      teamIdValidated <- ObjectId.parse(teamId)
+      team <- TeamSQLDAO.findOne(teamIdValidated)(GlobalAccessContext) ?~> "team.notFound"
+      users <- UserSQLDAO.findAllByTeams(List(team._id), includeDeactivated = false)(GlobalAccessContext)
+      nonAdminUsers <- Fox.filterNot(users)(_.isTeamManagerOrAdminOf(teamIdValidated))
       entries: List[OpenTasksEntry] <- getAllAvailableTaskCountsAndProjects(nonAdminUsers)(GlobalAccessContext)
     } yield Ok(Json.toJson(entries))
   }

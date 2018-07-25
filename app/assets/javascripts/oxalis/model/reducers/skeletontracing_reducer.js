@@ -24,7 +24,10 @@ import {
   toggleTreeGroupReducer,
   addTreesAndGroups,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import { convertServerBoundingBoxToFrontend } from "oxalis/model/reducers/reducer_helpers";
+import {
+  convertServerAnnotationToFrontendAnnotation,
+  convertServerBoundingBoxToFrontend,
+} from "oxalis/model/reducers/reducer_helpers";
 import {
   getSkeletonTracing,
   findTreeByNodeId,
@@ -38,6 +41,7 @@ import type {
   NodeType,
   BranchPointType,
   TreeType,
+  AnnotationType,
 } from "oxalis/store";
 import DiffableMap from "libs/diffable_map";
 import type { ActionType } from "oxalis/model/actions/actions";
@@ -69,12 +73,6 @@ function serverBranchPointToBranchPoint(b: ServerBranchPointType): BranchPointTy
 function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisState {
   switch (action.type) {
     case "INITIALIZE_SKELETONTRACING": {
-      const restrictions = Object.assign(
-        {},
-        action.annotation.restrictions,
-        action.annotation.settings,
-      );
-
       const trees = _.keyBy(
         action.tracing.trees.map(
           (tree): TreeType => ({
@@ -130,29 +128,32 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
           });
         });
       const activeTreeId = Utils.toNullable(activeTreeIdMaybe);
+      const annotationInfo = convertServerAnnotationToFrontendAnnotation(action.annotation);
 
       const skeletonTracing: SkeletonTracingType = {
-        annotationId: action.annotation.id,
+        ...annotationInfo,
         createdTimestamp: action.tracing.createdTimestamp,
         type: "skeleton",
         activeNodeId,
         cachedMaxNodeId,
         activeTreeId,
-        restrictions,
         trees,
         treeGroups: action.tracing.treeGroups || [],
-        name: action.annotation.name,
-        tracingType: action.annotation.typ,
         tracingId: action.annotation.content.id,
         version: action.tracing.version,
         boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
         userBoundingBox: convertServerBoundingBoxToFrontend(action.tracing.userBoundingBox),
-        isPublic: action.annotation.isPublic,
-        tags: action.annotation.tags,
-        description: action.annotation.description,
       };
 
-      return update(state, { tracing: { $set: skeletonTracing } });
+      const oldTracing = state.tracing;
+      const newTracing = {
+        // todo: do this spread more elegantly?
+        ...oldTracing,
+        ...annotationInfo,
+        skeleton: skeletonTracing,
+      };
+
+      return update(state, { tracing: { $set: newTracing } });
     }
     default:
     // pass
@@ -180,15 +181,17 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
                 const newDiffableMap = diffableNodeMap.set(node.id, node);
                 return update(state, {
                   tracing: {
-                    trees: {
-                      [tree.treeId]: {
-                        nodes: { $set: newDiffableMap },
-                        edges: { $set: edges },
+                    skeleton: {
+                      trees: {
+                        [tree.treeId]: {
+                          nodes: { $set: newDiffableMap },
+                          edges: { $set: edges },
+                        },
                       },
+                      activeNodeId: { $set: node.id },
+                      cachedMaxNodeId: { $set: node.id },
+                      activeTreeId: { $set: tree.treeId },
                     },
-                    activeNodeId: { $set: node.id },
-                    cachedMaxNodeId: { $set: node.id },
-                    activeTreeId: { $set: tree.treeId },
                   },
                 });
               }),
@@ -203,10 +206,12 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
             .map(([trees, newActiveTreeId, newActiveNodeId, newMaxNodeId]) =>
               update(state, {
                 tracing: {
-                  trees: { $set: trees },
-                  activeNodeId: { $set: newActiveNodeId },
-                  activeTreeId: { $set: newActiveTreeId },
-                  cachedMaxNodeId: { $set: newMaxNodeId },
+                  skeleton: {
+                    trees: { $set: trees },
+                    activeNodeId: { $set: newActiveNodeId },
+                    activeTreeId: { $set: newActiveTreeId },
+                    cachedMaxNodeId: { $set: newMaxNodeId },
+                  },
                 },
               }),
             )
@@ -231,7 +236,9 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
             .map(trees =>
               update(state, {
                 tracing: {
-                  trees: { $set: trees },
+                  skeleton: {
+                    trees: { $set: trees },
+                  },
                 },
               }),
             )
@@ -244,8 +251,10 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
             .map(tree =>
               update(state, {
                 tracing: {
-                  activeNodeId: { $set: nodeId },
-                  activeTreeId: { $set: tree.treeId },
+                  skeleton: {
+                    activeNodeId: { $set: nodeId },
+                    activeTreeId: { $set: tree.treeId },
+                  },
                 },
               }),
             )
@@ -268,8 +277,10 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
               );
               return update(state, {
                 tracing: {
-                  trees: {
-                    [tree.treeId]: { nodes: { $set: newDiffableMap } },
+                  skeleton: {
+                    trees: {
+                      [tree.treeId]: { nodes: { $set: newDiffableMap } },
+                    },
                   },
                 },
               });
@@ -284,7 +295,9 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
               createBranchPoint(skeletonTracing, tree, node, timestamp).map(branchPoint =>
                 update(state, {
                   tracing: {
-                    trees: { [tree.treeId]: { branchPoints: { $push: [branchPoint] } } },
+                    skeleton: {
+                      trees: { [tree.treeId]: { branchPoints: { $push: [branchPoint] } } },
+                    },
                   },
                 }),
               ),
@@ -297,9 +310,11 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
             .map(([branchPoints, treeId, newActiveNodeId]) =>
               update(state, {
                 tracing: {
-                  trees: { [treeId]: { branchPoints: { $set: branchPoints } } },
-                  activeNodeId: { $set: newActiveNodeId },
-                  activeTreeId: { $set: treeId },
+                  skeleton: {
+                    trees: { [treeId]: { branchPoints: { $set: branchPoints } } },
+                    activeNodeId: { $set: newActiveNodeId },
+                    activeTreeId: { $set: treeId },
+                  },
                 },
               }),
             )
@@ -312,9 +327,11 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
             .map(tree =>
               update(state, {
                 tracing: {
-                  trees: { [tree.treeId]: { $set: tree } },
-                  activeNodeId: { $set: null },
-                  activeTreeId: { $set: tree.treeId },
+                  skeleton: {
+                    trees: { [tree.treeId]: { $set: tree } },
+                    activeNodeId: { $set: null },
+                    activeTreeId: { $set: tree.treeId },
+                  },
                 },
               }),
             )
@@ -327,9 +344,11 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
             .map(([updatedTrees, updatedTreeGroups, newMaxNodeId]) =>
               update(state, {
                 tracing: {
-                  treeGroups: { $push: updatedTreeGroups },
-                  trees: { $merge: updatedTrees },
-                  cachedMaxNodeId: { $set: newMaxNodeId },
+                  skeleton: {
+                    treeGroups: { $push: updatedTreeGroups },
+                    trees: { $merge: updatedTrees },
+                    cachedMaxNodeId: { $set: newMaxNodeId },
+                  },
                 },
               }),
             )
@@ -343,10 +362,12 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
             .map(([trees, newActiveTreeId, newActiveNodeId, newMaxNodeId]) =>
               update(state, {
                 tracing: {
-                  trees: { $set: trees },
-                  activeTreeId: { $set: newActiveTreeId },
-                  activeNodeId: { $set: newActiveNodeId },
-                  cachedMaxNodeId: { $set: newMaxNodeId },
+                  skeleton: {
+                    trees: { $set: trees },
+                    activeTreeId: { $set: newActiveTreeId },
+                    activeNodeId: { $set: newActiveNodeId },
+                    cachedMaxNodeId: { $set: newMaxNodeId },
+                  },
                 },
               }),
             )
@@ -362,8 +383,10 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
 
               return update(state, {
                 tracing: {
-                  activeNodeId: { $set: newActiveNodeId },
-                  activeTreeId: { $set: tree.treeId },
+                  skeleton: {
+                    activeNodeId: { $set: newActiveNodeId },
+                    activeTreeId: { $set: tree.treeId },
+                  },
                 },
               });
             })
@@ -376,9 +399,11 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
             .map(([trees, newActiveTreeId, newActiveNodeId]) =>
               update(state, {
                 tracing: {
-                  trees: { $set: trees },
-                  activeNodeId: { $set: newActiveNodeId },
-                  activeTreeId: { $set: newActiveTreeId },
+                  skeleton: {
+                    trees: { $set: trees },
+                    activeNodeId: { $set: newActiveNodeId },
+                    activeTreeId: { $set: newActiveTreeId },
+                  },
                 },
               }),
             )
@@ -391,7 +416,9 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
               const defaultName = `Tree${Utils.zeroPad(tree.treeId, 3)}`;
               const newName = action.name || defaultName;
               return update(state, {
-                tracing: { trees: { [tree.treeId]: { name: { $set: newName } } } },
+                tracing: {
+                  skeleton: { trees: { [tree.treeId]: { name: { $set: newName } } } },
+                },
               });
             })
             .getOrElse(state);
@@ -418,8 +445,10 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
 
           return update(state, {
             tracing: {
-              activeTreeId: { $set: newActiveTreeId },
-              activeNodeId: { $set: newActiveNodeId },
+              skeleton: {
+                activeTreeId: { $set: newActiveTreeId },
+                activeNodeId: { $set: newActiveNodeId },
+              },
             },
           });
         }
@@ -428,7 +457,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
           return getTree(skeletonTracing, action.treeId)
             .chain(tree => shuffleTreeColor(skeletonTracing, tree))
             .map(([tree, treeId]) =>
-              update(state, { tracing: { trees: { [treeId]: { $set: tree } } } }),
+              update(state, { tracing: { skeleton: { trees: { [treeId]: { $set: tree } } } } }),
             )
             .getOrElse(state);
         }
@@ -437,13 +466,15 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
           const newColors = ColorGenerator.getNRandomColors(_.size(skeletonTracing.trees));
           return update(state, {
             tracing: {
-              trees: {
-                $apply: oldTrees =>
-                  _.mapValues(oldTrees, tree =>
-                    update(tree, {
-                      color: { $set: newColors.shift() },
-                    }),
-                  ),
+              skeleton: {
+                trees: {
+                  $apply: oldTrees =>
+                    _.mapValues(oldTrees, tree =>
+                      update(tree, {
+                        color: { $set: newColors.shift() },
+                      }),
+                    ),
+                },
               },
             },
           });
@@ -456,7 +487,9 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
               createComment(skeletonTracing, tree, node, commentText).map(comments =>
                 update(state, {
                   tracing: {
-                    trees: { [tree.treeId]: { comments: { $set: comments } } },
+                    skeleton: {
+                      trees: { [tree.treeId]: { comments: { $set: comments } } },
+                    },
                   },
                 }),
               ),
@@ -470,7 +503,9 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
               deleteComment(skeletonTracing, tree, node).map(comments =>
                 update(state, {
                   tracing: {
-                    trees: { [tree.treeId]: { comments: { $set: comments } } },
+                    skeleton: {
+                      trees: { [tree.treeId]: { comments: { $set: comments } } },
+                    },
                   },
                 }),
               ),
@@ -481,7 +516,9 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         case "SET_TRACING": {
           return update(state, {
             tracing: {
-              $set: update(action.tracing, { version: { $set: skeletonTracing.version } }),
+              skeleton: {
+                $set: update(action.tracing, { version: { $set: skeletonTracing.version } }),
+              },
             },
           });
         }
@@ -492,10 +529,12 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
             .map(tree =>
               update(state, {
                 tracing: {
-                  trees: {
-                    [tree.treeId]: {
-                      isVisible: {
-                        $apply: bool => !bool,
+                  skeleton: {
+                    trees: {
+                      [tree.treeId]: {
+                        isVisible: {
+                          $apply: bool => !bool,
+                        },
                       },
                     },
                   },
@@ -514,9 +553,11 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
             .map(activeTree =>
               update(toggleAllTreesReducer(state, skeletonTracing), {
                 tracing: {
-                  trees: {
-                    [activeTree.treeId]: {
-                      isVisible: { $set: true },
+                  skeleton: {
+                    trees: {
+                      [activeTree.treeId]: {
+                        isVisible: { $set: true },
+                      },
                     },
                   },
                 },
@@ -532,8 +573,10 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         case "SET_TREE_GROUPS": {
           return update(state, {
             tracing: {
-              treeGroups: {
-                $set: action.treeGroups,
+              skeleton: {
+                treeGroups: {
+                  $set: action.treeGroups,
+                },
               },
             },
           });
@@ -541,7 +584,9 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
 
         case "SET_TREE_GROUP": {
           return update(state, {
-            tracing: { trees: { [action.treeId]: { groupId: { $set: action.groupId } } } },
+            tracing: {
+              skeleton: { trees: { [action.treeId]: { groupId: { $set: action.groupId } } } },
+            },
           });
         }
 

@@ -112,21 +112,21 @@ export type APIUserLoggedTimeType = {
   loggedTime: Array<APITimeIntervalType>,
 };
 
-export type APIRestrictionsType = {
+export type APIRestrictionsType = {|
   +allowAccess: boolean,
   +allowUpdate: boolean,
   +allowFinish: boolean,
   +allowDownload: boolean,
-};
+|};
 
 export type APIAllowedModeType = "orthogonal" | "oblique" | "flight" | "volume";
 
-export type APISettingsType = {
+export type APISettingsType = {|
   +allowedModes: Array<APIAllowedModeType>,
   +preferredMode?: APIAllowedModeType,
   +branchPointsAllowed: boolean,
   +somaClickingAllowed: boolean,
-};
+|};
 
 export const APITracingTypeEnum = Enum.make({
   Explorational: "Explorational",
@@ -144,7 +144,7 @@ export type APITaskTypeType = {
   +summary: string,
   +description: string,
   +team: string,
-  +settings: SettingsType,
+  +settings: APISettingsType,
 };
 
 export type TaskStatusType = { +open: number, +active: number, +finished: number };

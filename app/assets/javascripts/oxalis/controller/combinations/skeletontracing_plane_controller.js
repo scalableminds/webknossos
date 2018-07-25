@@ -22,6 +22,7 @@ import {
   toggleInactiveTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setDirectionAction } from "oxalis/model/actions/flycam_actions";
+import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import {
   getPosition,
   getRotationOrtho,
@@ -59,14 +60,22 @@ export function getPlaneMouseControls(planeView: PlaneView): Object {
     leftClick: (pos: Point2, plane: OrthoViewType, event: MouseEvent, isTouch: boolean) =>
       onClick(planeView, pos, event.shiftKey, event.altKey, event.ctrlKey, plane, isTouch),
     rightClick: (pos: Point2, plane: OrthoViewType, event: MouseEvent) =>
-      setWaypoint(this.calculateGlobalPos(pos), event.ctrlKey),
+      setWaypoint(calculateGlobalPos(pos), event.ctrlKey),
   };
 }
 
 export function getTDViewMouseControls(planeView: PlaneView): Object {
   return {
     leftClick: (pos: Point2, plane: OrthoViewType, event: MouseEvent, isTouch: boolean) =>
-      onClick(planeView, pos, event.shiftKey, event.altKey, event.ctrlKey, OrthoViews.TDView, isTouch),
+      onClick(
+        planeView,
+        pos,
+        event.shiftKey,
+        event.altKey,
+        event.ctrlKey,
+        OrthoViews.TDView,
+        isTouch,
+      ),
   };
 }
 

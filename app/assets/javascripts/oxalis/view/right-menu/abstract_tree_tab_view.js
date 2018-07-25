@@ -79,7 +79,7 @@ class AbstractTreeView extends Component<Props> {
 }
 
 function mapStateToProps(state: OxalisState): UnguardedStateProps {
-  return { skeletonTracing: state.tracing };
+  return { skeletonTracing: state.tracing.skeleton };
 }
 
 export default connect(mapStateToProps)(makeSkeletonTracingGuard(AbstractTreeView));

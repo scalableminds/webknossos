@@ -131,9 +131,11 @@ export type TemporaryMutableTreeMapType = { [number]: TreeType };
 
 export type TracingTypeTracingType = APITracingType;
 
-type AnnotationType = {|
+export type RestrictionsAndSettingsType = {| ...RestrictionsType, ...SettingsType |};
+
+export type AnnotationType = {|
   +annotationId: string,
-  +restrictions: RestrictionsType & SettingsType,
+  +restrictions: RestrictionsAndSettingsType,
   +isPublic: boolean,
   +tags: Array<string>,
   +description: string,
@@ -331,6 +333,24 @@ export type OxalisState = {
   +uiInformation: UiInformationType,
 };
 
+const initialAnnotationInfo = {
+  annotationId: "",
+  restrictions: {
+    branchPointsAllowed: false,
+    allowUpdate: false,
+    allowFinish: false,
+    allowAccess: true,
+    allowDownload: false,
+    somaClickingAllowed: false,
+    allowedModes: ["orthogonal", "oblique", "flight"],
+  },
+  isPublic: false,
+  tags: [],
+  description: "",
+  name: "",
+  tracingType: "View",
+};
+
 export const defaultState: OxalisState = {
   datasetConfiguration: {
     fourBit: true,
@@ -403,28 +423,15 @@ export const defaultState: OxalisState = {
     logoUrl: null,
   },
   tracing: {
+    ...initialAnnotationInfo,
     skeleton: {
-      annotationId: "",
+      ...initialAnnotationInfo,
       boundingBox: null,
       createdTimestamp: 0,
       userBoundingBox: null,
       type: "readonly",
-      name: "",
       version: 0,
-      isPublic: false,
       tracingId: "",
-      tracingType: "View",
-      restrictions: {
-        branchPointsAllowed: false,
-        allowUpdate: false,
-        allowFinish: false,
-        allowAccess: true,
-        allowDownload: false,
-        somaClickingAllowed: false,
-        allowedModes: ["orthogonal", "oblique", "flight"],
-      },
-      tags: [],
-      description: "",
     },
     volume: {},
   },

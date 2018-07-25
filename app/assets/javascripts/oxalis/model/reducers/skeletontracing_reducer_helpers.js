@@ -327,7 +327,7 @@ function splitTreeByNodes(
         // in this reducer for performance reasons.
         newTree = ((immutableNewTree: any): TreeType);
         intermediateState = update(intermediateState, {
-          tracing: { trees: { [newTree.treeId]: { $set: newTree } } },
+          tracing: { skeleton: { trees: { [newTree.treeId]: { $set: newTree } } } },
         });
       }
 
@@ -663,7 +663,9 @@ export function toggleAllTreesReducer(
 
   return update(state, {
     tracing: {
-      trees: updateTreeObject,
+      skeleton: {
+        trees: updateTreeObject,
+      },
     },
   });
 }
@@ -699,7 +701,7 @@ export function toggleTreeGroupReducer(
 
   return update(state, {
     tracing: {
-      trees: updateTreeObject,
+      skeleton: { trees: updateTreeObject },
     },
   });
 }

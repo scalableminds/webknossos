@@ -114,7 +114,8 @@ export function sendRequestWithToken(
 export function* sendRequestToServer(timestamp: number = Date.now()): Generator<*, *, *> {
   const saveQueue = yield select(state => state.save.queue);
   let compactedSaveQueue = compactUpdateActions(saveQueue);
-  const { version, type, tracingId } = yield select(state => state.tracing);
+  // todo: handle volume here as well
+  const { version, type, tracingId } = yield select(state => state.tracing.skeleton);
   const dataStoreUrl = yield select(state => state.dataset.dataStore.url);
   compactedSaveQueue = addVersionNumbers(compactedSaveQueue, version);
 
@@ -340,11 +341,15 @@ export function performDiffTracing(
 ): Array<UpdateAction> {
   let actions = [];
   if (tracing.skeleton != null && prevTracing.skeleton != null) {
-    actions = actions.concat(Array.from(diffSkeletonTracing(prevTracing.skeleton, tracing.skeleton, flycam)));
+    actions = actions.concat(
+      Array.from(diffSkeletonTracing(prevTracing.skeleton, tracing.skeleton, flycam)),
+    );
   }
 
   if (tracing.volume != null && prevTracing.volume != null) {
-    actions = actions.concat(Array.from(diffVolumeTracing(prevTracing.volume, tracing.volume, flycam)));
+    actions = actions.concat(
+      Array.from(diffVolumeTracing(prevTracing.volume, tracing.volume, flycam)),
+    );
   }
 
   return actions;

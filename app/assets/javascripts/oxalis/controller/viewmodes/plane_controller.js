@@ -49,7 +49,10 @@ import {
   moveTDViewByVectorAction,
 } from "oxalis/model/actions/view_mode_actions";
 import messages from "messages";
-import { setBrushSizeAction, setMousePositionAction } from "oxalis/model/actions/volumetracing_actions";
+import {
+  setBrushSizeAction,
+  setMousePositionAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import { getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Clipboard from "clipboard-js";
@@ -160,7 +163,6 @@ class PlaneController extends React.PureComponent<Props> {
     const baseControls = {
       leftDownMove: (delta: Point2) => {
         const viewportScale = Store.getState().userConfiguration.scale;
-
         return this.movePlane([(delta.x * -1) / viewportScale, (delta.y * -1) / viewportScale, 0]);
       },
 
@@ -495,7 +497,7 @@ class PlaneController extends React.PureComponent<Props> {
     const { activeViewport } = Store.getState().viewModeData.plane;
     const pos = this.input.mouseControllers[activeViewport].position;
     if (pos != null) {
-      return this.calculateGlobalPos(pos);
+      return calculateGlobalPos(pos);
     }
     return [0, 0, 0];
   }
@@ -559,8 +561,6 @@ class PlaneController extends React.PureComponent<Props> {
     Utils.__guard__(this.input.keyboardLoopDelayed, x2 => x2.destroy());
     this.unsubscribeStoreListeners();
   }
-
-  calculateGlobalPos = (clickPos: Point2): Vector3 => calculateGlobalPos(clickPos);
 
   updateControls = () => this.controls.update(true);
 

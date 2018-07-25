@@ -338,9 +338,9 @@ function applyUrlState(urlState: UrlManagerState, tracing: ?ServerTracingType) {
   // no default position, compute the center of the dataset
   const { dataset, datasetConfiguration } = Store.getState();
   if (urlState.activeNode != null) {
-    // Set active node before setting the position, since the position should take
-    // precedence
-    Store.dispatch(setActiveNodeAction(urlState.activeNode));
+    // Set the active node (without animating to its position) before setting the
+    // position, since the position should take precedence.
+    Store.dispatch(setActiveNodeAction(urlState.activeNode, true));
   }
 
   const defaultPosition = datasetConfiguration.position;

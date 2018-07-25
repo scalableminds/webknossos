@@ -125,11 +125,11 @@ export const getMaybeFilteredColorOrFallback: ShaderModuleType = {
       vec4 color = getMaybeFilteredColor(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, suppressBilinearFiltering, 0.0);
 
       if (color.a < 0.0 && hasFallback) {
-        color = getMaybeFilteredColor(lookUpTexture, layerIndex, d_texture_width, packingDegree, fallbackCoords, suppressBilinearFiltering, 1.0).rgba;
-        if (color.a < 0.0) {
-          // Render gray for not-yet-existing data
-          color = fallbackColor;
-        }
+        color = getMaybeFilteredColor(lookUpTexture, layerIndex, d_texture_width, packingDegree, fallbackCoords, suppressBilinearFiltering, 1.0);
+      }
+      if (color.a < 0.0) {
+        // Render gray for not-yet-existing data
+        color = fallbackColor;
       }
 
       return color;

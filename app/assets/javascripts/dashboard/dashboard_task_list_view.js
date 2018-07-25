@@ -212,7 +212,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
             </a>
             <br />
             <a href="#" onClick={() => this.cancelAnnotation(annotation)}>
-              <Icon type="delete" />Cancel
+              <Icon type="delete" />Reset and Cancel
             </a>
             <br />
           </div>

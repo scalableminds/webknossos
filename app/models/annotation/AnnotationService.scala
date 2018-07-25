@@ -45,7 +45,7 @@ object AnnotationService
     } yield {
       val selectedTeamOpt = dataSet.allowedTeams.intersect(userTeamIds).headOption
       selectedTeamOpt match {
-        case Some(selectedTeam) => Fox.successful(ObjectId.fromBsonId(selectedTeam))
+        case Some(selectedTeam) => Fox.successful(selectedTeam)
         case None =>
           for {
             _ <- Fox.assertTrue(user.isTeamManagerOrAdminOfOrg(user._organization))

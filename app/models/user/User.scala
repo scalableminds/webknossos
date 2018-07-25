@@ -99,7 +99,8 @@ case class UserSQL(
   def isAdminOf(otherUser: UserSQL): Boolean =
     isAdminOf(otherUser._organization)
 
-  def publicWrites(requestingUser: UserSQL)(implicit ctx: DBAccessContext): Fox[JsObject] =
+  def publicWrites(requestingUser: UserSQL): Fox[JsObject] = {
+    implicit val ctx = GlobalAccessContext
     for {
       isEditable <- isEditableBy(requestingUser)
       organization <- organization
@@ -122,8 +123,10 @@ case class UserSQL(
         "organization" -> organization.name
       )
     }
+  }
 
-  def compactWrites(implicit ctx: DBAccessContext): Fox[JsObject] =
+  def compactWrites: Fox[JsObject] = {
+    implicit val ctx = GlobalAccessContext
     for {
       teamMemberships <- teamMemberships
       teamMembershipsJs <- Fox.serialCombined(teamMemberships)(_.publicWrites)
@@ -137,6 +140,7 @@ case class UserSQL(
         "teams" -> teamMembershipsJs
       )
     }
+  }
 
 }
 

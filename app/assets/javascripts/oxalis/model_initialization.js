@@ -372,6 +372,11 @@ function determineDefaultState(
 }
 
 export function applyState(state: $Shape<UrlManagerState>) {
+  if (state.activeNode != null) {
+    // Set the active node (without animating to its position) before setting the
+    // position, since the position should take precedence.
+    Store.dispatch(setActiveNodeAction(state.activeNode, true));
+  }
   if (state.position != null) {
     Store.dispatch(setPositionAction(state.position));
   }
@@ -380,8 +385,5 @@ export function applyState(state: $Shape<UrlManagerState>) {
   }
   if (state.rotation != null) {
     Store.dispatch(setRotationAction(state.rotation));
-  }
-  if (state.activeNode != null) {
-    Store.dispatch(setActiveNodeAction(state.activeNode));
   }
 }

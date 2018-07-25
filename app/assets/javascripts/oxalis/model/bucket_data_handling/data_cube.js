@@ -172,8 +172,7 @@ class DataCube {
     if (mapping != null && this.isMappingEnabled()) {
       mappedId = mapping[idToMap];
     }
-    const hideUnmappedIds = this.shouldHideUnmappedIds();
-    if (hideUnmappedIds && mappedId == null) {
+    if (this.shouldHideUnmappedIds() && mappedId == null) {
       mappedId = 0;
     }
     return mappedId != null ? mappedId : idToMap;

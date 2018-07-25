@@ -32,14 +32,14 @@ type Props = {
 
 // This function mirrors convertCellIdToRGB in the fragment shader of the rendering plane
 const convertCellIdToHSV = (id: number, customColors: ?Array<number>) => {
-  if (id === 0) {
-    return "white";
-  }
+  if (id === 0) return "white";
 
   const goldenRatio = 0.618033988749895;
   const lastEightBits = id & (2 ** 8 - 1);
   const computedColor = (lastEightBits * goldenRatio) % 1.0;
-  const value = customColors != null ? customColors[lastEightBits] || 0 : computedColor;
+  const value = customColors != null ? customColors[lastEightBits] || -1 : computedColor;
+  // If the value was not specified, although custom colors are present, the segment should be transparent
+  if (value === -1) return "white";
 
   return `hsla(${value * 360}, 100%, 50%, 0.15)`;
 };

@@ -30,7 +30,7 @@ export const convertCellIdToRGB: ShaderModuleType = {
       <% } %>
 
       vec4 HSV = vec4( value, 1.0, 1.0, 1.0 );
-      // If the value was not specified it should be transparent
+      // If the value was not specified, although custom colors are present, the segment should be transparent
       return vec4(hsvToRgb(HSV), value == -1.0 ? 0.0 : 1.0);
     }
   `,

@@ -1,6 +1,5 @@
 // @flow
 import * as React from "react";
-import _ from "lodash";
 import classNames from "classnames";
 import type { TreeType } from "oxalis/store";
 
@@ -24,7 +23,7 @@ function TreeWithComments(props: Props) {
   });
 
   return (
-    <li style={_.extend({}, props.style, { width: "inherit" })} className={liClassName}>
+    <li style={{ ...props.style, width: "inherit" }} className={liClassName}>
       <a onClick={handleToggleComment}>
         <i className={iClassName} />
       </a>

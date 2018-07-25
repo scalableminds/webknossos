@@ -1,6 +1,5 @@
 // @flow
 import * as React from "react";
-import _ from "lodash";
 import { Popover } from "antd";
 import classNames from "classnames";
 import Store from "oxalis/store";
@@ -45,17 +44,25 @@ export function Comment({ comment, isActive, style }: CommentProps) {
   const iClassName = classNames("fa", "fa-fw", {
     "fa-angle-right": isActive,
   });
-  const isMultiLine = comment.content.indexOf("\n") > 0;
+  const isMultiLine = comment.content.indexOf("\n") !== -1;
 
   const commentElement = (
-    <li className={liClassName} style={_.extend({}, style, { width: "inherit" })}>
+    <li className={liClassName} style={{ ...style, width: "inherit" }}>
       <span className="comment-node-id">
         <i className={iClassName} />
         <a onClick={handleClick}>{comment.nodeId}</a>
         {" - "}
       </span>
-      <span style={{ display: "inline-block" }}>{<MarkdownComment comment={comment} />}</span>
-      {isMultiLine ? <span className="comment-node-id"> ...</span> : null}
+      <span style={{ display: "inline-block" }}>
+        <MarkdownComment comment={comment} />
+      </span>
+      {isMultiLine && !isActive ? (
+        <span className="comment-node-id">
+          <a onClick={handleClick}>
+            <i className="fa fa-commenting-o" aria-hidden="true" />
+          </a>
+        </span>
+      ) : null}
     </li>
   );
 
@@ -64,6 +71,7 @@ export function Comment({ comment, isActive, style }: CommentProps) {
       content={<MarkdownComment comment={comment} />}
       defaultVisible
       visible
+      autoAdjustOverflow={false}
       placement="right"
       getPopupContainer={() => document.getElementById("comment-list")}
       style={{ maxHeight: 200, overflowY: "auto" }}

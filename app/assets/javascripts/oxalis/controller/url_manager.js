@@ -97,9 +97,8 @@ class UrlManager {
     window.onhashchange = () => this.onHashChange();
   }
 
-  buildHash(tracing: TracingType, options?: $Shape<UrlManagerState> = {}) {
-    const position =
-      options.position != null ? options.position : V3.floor(getPosition(Store.getState().flycam));
+  buildHash(tracing: TracingType) {
+    const position = V3.floor(getPosition(Store.getState().flycam));
     const { viewMode } = Store.getState().temporaryConfiguration;
     const viewModeIndex = ModeValues.indexOf(viewMode);
     const zoomStep = Store.getState().flycam.zoomStep.toFixed(2);
@@ -107,8 +106,9 @@ class UrlManager {
       ? getRotation(Store.getState().flycam).map(e => e.toFixed(2))
       : [];
 
-    const activeNodeId = [];
-    getActiveNode(tracing).map(node => activeNodeId.push(node.id));
+    const activeNodeId = getActiveNode(tracing)
+      .map(node => [node.id])
+      .getOrElse([]);
 
     return [...position, viewModeIndex, zoomStep, ...rotation, ...activeNodeId].join(",");
   }

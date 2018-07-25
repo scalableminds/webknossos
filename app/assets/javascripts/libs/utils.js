@@ -11,7 +11,7 @@ import pako from "pako";
 import naturalSort from "javascript-natural-sort";
 import type { APIUserType } from "admin/api_flow_types";
 
-type Comparator<T> = (T, T) => -1 | 0 | 1;
+export type Comparator<T> = (T, T) => -1 | 0 | 1;
 type UrlParamsType = { [key: string]: string | boolean };
 
 function swap(arr, a, b) {
@@ -39,7 +39,7 @@ function getRecursiveValuesUnflat(obj: Object | Array<*> | string): Array<*> {
   }
 }
 
-function cheapSort<T: string | number>(valueA: T, valueB: T) {
+function cheapSort<T: string | number>(valueA: T, valueB: T): -1 | 0 | 1 {
   // $FlowFixMe It is not possible to express that valueA and valueB have the very same type
   if (valueA < valueB) return -1;
   // $FlowFixMe It is not possible to express that valueA and valueB have the very same type
@@ -154,17 +154,18 @@ const Utils = {
     selector: $Keys<T> | (T => string),
     isSortedAscending: boolean = true,
     sortNatural: boolean = true,
-  ): (T, T) => number {
-    const sortingOrder = isSortedAscending ? 1 : -1;
-
-    return (a: T, b: T): number => {
+  ): Comparator<T> {
+    return (a: T, b: T) => {
+      if (!isSortedAscending) {
+        [a, b] = [b, a];
+      }
       const valueA = typeof selector === "function" ? selector(a) : a[selector];
       const valueB = typeof selector === "function" ? selector(b) : b[selector];
       if (typeof valueA !== "string" || typeof valueB !== "string") {
         return 0;
       }
       // localeCompare is really slow, therefore, we use the naturalSort lib and a cheap sorting otherwise
-      return (sortNatural ? naturalSort(valueA, valueB) : cheapSort(valueA, valueB)) * sortingOrder;
+      return sortNatural ? naturalSort(valueA, valueB) : cheapSort(valueA, valueB);
     };
   },
 

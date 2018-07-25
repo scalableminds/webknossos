@@ -26,14 +26,13 @@ import Enum from "Enumjs";
 import messages from "messages";
 import type { Dispatch } from "redux";
 import type { OxalisState, SkeletonTracingType, TreeType, CommentType } from "oxalis/store";
+import type { Comparator } from "libs/utils";
 import { makeSkeletonTracingGuard } from "oxalis/view/guards";
 
 const InputGroup = Input.Group;
 
 const treeTypeHint = ([]: Array<TreeType>);
 const commentTypeHint = ([]: Array<CommentType>);
-
-const TextAreaStyle = { width: "60%", resize: "none", overflowY: "auto" };
 
 const SortByEnum = Enum.make({
   NAME: "NAME",
@@ -46,7 +45,7 @@ type SortOptionsType = {
   sortBy: SortByEnumType,
   isSortedAscending: boolean,
 };
-function getTreeSorter({ sortBy, isSortedAscending }: SortOptionsType): Function {
+function getTreeSorter({ sortBy, isSortedAscending }: SortOptionsType): Comparator<TreeType> {
   return sortBy === SortByEnum.ID
     ? Utils.compareBy(treeTypeHint, "treeId", isSortedAscending)
     : Utils.localeCompareBy(
@@ -57,7 +56,7 @@ function getTreeSorter({ sortBy, isSortedAscending }: SortOptionsType): Function
       );
 }
 
-function getCommentSorter({ sortBy, isSortedAscending }: SortOptionsType): Function {
+function getCommentSorter({ sortBy, isSortedAscending }: SortOptionsType): Comparator<CommentType> {
   return sortBy === SortByEnum.ID
     ? Utils.compareBy(([]: Array<CommentType>), "nodeId", isSortedAscending)
     : Utils.localeCompareBy(
@@ -99,7 +98,7 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
       const isCollapsed = state.collapsedTreeIds[tree.treeId];
       return isCollapsed
         ? result
-        : result.concat(tree.comments.slice(0).sort(getCommentSorter(state)));
+        : result.concat(tree.comments.slice().sort(getCommentSorter(state)));
     }, []);
 
     return { data };
@@ -135,7 +134,7 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
     p: () => this.previousComment(),
   });
 
-  nextComment = (forward = true) => {
+  nextComment = (forward: boolean = true) => {
     getActiveNode(this.props.skeletonTracing).map(activeNode => {
       const { isSortedAscending, sortBy } = this.state;
       const sortAscending = forward ? isSortedAscending : !isSortedAscending;
@@ -143,14 +142,14 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
 
       // Create a sorted, flat array of all comments across all trees
       const sortedTrees = _.values(trees)
-        .slice(0)
+        .slice()
         .sort(getTreeSorter({ sortBy, isSortedAscending: sortAscending }));
 
       const sortedComments = _.flatMap(
         sortedTrees,
         (tree: TreeType): Array<CommentType> =>
           tree.comments
-            .slice(0)
+            .slice()
             .sort(getCommentSorter({ sortBy, isSortedAscending: sortAscending })),
       );
 
@@ -167,11 +166,11 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
     this.nextComment(false);
   };
 
-  handleChangeInput = evt => {
+  handleChangeInput = (evt: SyntheticInputEvent<>, insertLineBreaks: boolean = false) => {
     const commentText = evt.target.value;
 
     if (commentText) {
-      this.props.createComment(commentText);
+      this.props.createComment(insertLineBreaks ? commentText.replace(/\\n/g, "\n") : commentText);
     } else {
       this.props.deleteComment();
     }
@@ -193,12 +192,23 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
     }));
   };
 
-  getActiveComment() {
+  getActiveComment(createIfNotExisting: boolean = false) {
     return Utils.zipMaybe(
       getActiveTree(this.props.skeletonTracing),
       getActiveNode(this.props.skeletonTracing),
     ).chain(([tree, activeNode]) =>
-      Maybe.fromNullable(tree.comments.find(comment => comment.nodeId === activeNode.id)),
+      Maybe.fromNullable(tree.comments.find(comment => comment.nodeId === activeNode.id)).orElse(
+        () =>
+          // If there is no active comment and createIfNotExisting is set, create an empty comment
+          Maybe.fromNullable(
+            createIfNotExisting
+              ? {
+                  nodeId: activeNode.id,
+                  content: "",
+                }
+              : null,
+          ),
+      ),
     );
   }
 
@@ -207,16 +217,10 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
   };
 
   renderMarkdownModal() {
-    const activeCommentMaybe = this.getActiveComment();
-    const activeNodeMaybe = getActiveNode(this.props.skeletonTracing);
-    const commentMaybe = activeNodeMaybe.map(({ id }) => ({
-      nodeId: id,
-      content: activeCommentMaybe.map(({ content }) => content).getOrElse(""),
-    }));
-
+    const activeCommentMaybe = this.getActiveComment(true);
     const onOk = () => this.setMarkdownModalVisibility(false);
 
-    return commentMaybe
+    return activeCommentMaybe
       .map(comment => (
         <Modal
           key="comment-markdown-modal"
@@ -230,7 +234,6 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
             </span>
           }
           visible={this.state.isMarkdownModalVisible}
-          onOk={onOk}
           onCancel={onOk}
           closable={false}
           width={700}
@@ -238,7 +241,6 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
             <Button key="back" onClick={onOk}>
               Ok
             </Button>,
-            null,
           ]}
         >
           <Row gutter={16}>
@@ -308,6 +310,12 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
 
   render() {
     const activeCommentMaybe = this.getActiveComment();
+    // Replace line breaks as they will otherwise be stripped when shown in an input field
+    const activeCommentContent = activeCommentMaybe
+      .map(comment => comment.content)
+      .getOrElse("")
+      .replace(/\r?\n/g, "\\n");
+    const isMultilineComment = activeCommentContent.indexOf("\\n") !== -1;
     const activeNodeMaybe = getActiveNode(this.props.skeletonTracing);
 
     const findCommentIndexFn = commentOrTree =>
@@ -332,17 +340,16 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
             <i className="fa fa-arrow-left" />
           </ButtonComponent>
           <InputComponent
-            value={activeCommentMaybe.map(comment => comment.content).getOrElse("")}
+            value={activeCommentContent}
             disabled={activeNodeMaybe.isNothing}
-            onChange={this.handleChangeInput}
+            onChange={evt => this.handleChangeInput(evt, true)}
             placeholder="Add comment"
-            style={TextAreaStyle}
-            rows={1}
-            isTextArea
+            style={{ width: "60%" }}
           />
           <ButtonComponent
             onClick={() => this.setMarkdownModalVisibility(true)}
             disabled={activeNodeMaybe.isNothing}
+            type={isMultilineComment ? "primary" : "button"}
           >
             <Icon type="edit" />Markdown
           </ButtonComponent>

@@ -5,7 +5,11 @@
  * @flow
  */
 import Store from "oxalis/store";
-import { getActiveNode, getTree } from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  enforceSkeletonTracing,
+  getActiveNode,
+  getTree,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import messages from "messages";
 import { Modal } from "antd";
 import type { Vector3 } from "oxalis/constants";
@@ -354,8 +358,9 @@ export const deleteNodeAsUserAction = (
   treeId?: number,
 ): DeleteNodeActionType | NoActionType | DeleteTreeActionType => {
   const state = Store.getState();
+  const skeletonTracing = enforceSkeletonTracing(state.tracing);
   return (
-    getActiveNode(state.tracing)
+    getActiveNode(skeletonTracing)
       .map(activeNode => {
         nodeId = nodeId != null ? nodeId : activeNode.id;
         if (state.task != null && nodeId === 1) {
@@ -379,7 +384,8 @@ export const deleteNodeAsUserAction = (
 
 export const deleteTreeAsUserAction = (treeId?: number): NoActionType => {
   const state = Store.getState();
-  getTree(state.tracing, treeId).map(tree => {
+  const skeletonTracing = enforceSkeletonTracing(state.tracing);
+  getTree(skeletonTracing, treeId).map(tree => {
     if (state.task != null && tree.nodes.has(1)) {
       // Let the user confirm the deletion of the initial node (node with id 1) of a task
       Modal.confirm({

@@ -37,8 +37,8 @@ const volumeTracing = {
 };
 
 function getVolumeTracing(tracing: TracingType): Maybe<VolumeTracingType> {
-  if (tracing.type === "volume") {
-    return Maybe.Just(tracing);
+  if (tracing.volume != null) {
+    return Maybe.Just(tracing.volume);
   }
   throw new Error("Tracing is not of type volume!");
 }

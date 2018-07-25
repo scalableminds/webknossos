@@ -338,14 +338,16 @@ export function performDiffTracing(
   tracing: TracingType,
   flycam: FlycamType,
 ): Array<UpdateAction> {
-  if (tracing.type === "skeleton" && prevTracing.type === "skeleton") {
-    const result = Array.from(diffSkeletonTracing(prevTracing, tracing, flycam));
-    return result;
-  } else if (tracing.type === "volume" && prevTracing.type === "volume") {
-    return Array.from(diffVolumeTracing(prevTracing, tracing, flycam));
-  } else {
-    return [];
+  let actions = [];
+  if (tracing.skeleton != null && prevTracing.skeleton != null) {
+    actions = actions.concat(Array.from(diffSkeletonTracing(prevTracing.skeleton, tracing.skeleton, flycam)));
   }
+
+  if (tracing.volume != null && prevTracing.volume != null) {
+    actions = actions.concat(Array.from(diffVolumeTracing(prevTracing.volume, tracing.volume, flycam)));
+  }
+
+  return actions;
 }
 
 export function* saveTracingAsync(): Generator<any, any, any> {

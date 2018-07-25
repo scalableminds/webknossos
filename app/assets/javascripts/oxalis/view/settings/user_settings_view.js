@@ -26,7 +26,9 @@ import {
 } from "oxalis/view/settings/setting_input_views";
 import { setUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { getMaxZoomStep } from "oxalis/model/accessors/flycam_accessor";
-import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
+import { enforceSkeletonTracing, getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
+import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import {getSomeTracing}  from "oxalis/model/accessors/tracing_accessor";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import Utils from "libs/utils";
 import type { UserConfigurationType, OxalisState, TracingType } from "oxalis/store";
@@ -196,16 +198,21 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
     const mode = this.props.viewMode;
     const isPublicViewMode = this.props.controlMode === ControlModeEnum.VIEW;
 
+    if (isPublicViewMode) {
+      return null;
+    }
+
+    // todo: display both options, potentially
     if (
       Constants.MODES_SKELETON.includes(mode) &&
-      !isPublicViewMode &&
       this.props.tracing.type === "skeleton"
     ) {
+      const skeletonTracing = enforceSkeletonTracing(this.props.tracing);
       const activeNodeId =
-        this.props.tracing.activeNodeId != null ? this.props.tracing.activeNodeId : "";
+        skeletonTracing.activeNodeId != null ? skeletonTracing.activeNodeId : "";
       const activeTreeId =
-        this.props.tracing.activeTreeId != null ? this.props.tracing.activeTreeId : "";
-      const activeNodeRadius = getActiveNode(this.props.tracing)
+        skeletonTracing.activeTreeId != null ? skeletonTracing.activeTreeId : "";
+      const activeNodeRadius = getActiveNode(skeletonTracing)
         .map(activeNode => activeNode.radius)
         .getOrElse(0);
       return (
@@ -261,14 +268,14 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
       );
     } else if (
       mode === Constants.MODE_VOLUME &&
-      !isPublicViewMode &&
       this.props.tracing.type === "volume"
     ) {
+      const volumeTracing = enforceVolumeTracing(this.props.tracing);
       return (
         <Panel header="Volume Options" key="3">
           <NumberInputSetting
             label="Active Cell ID"
-            value={this.props.tracing.activeCellId}
+            value={volumeTracing.activeCellId}
             onChange={this.props.onChangeActiveCellId}
           />
         </Panel>
@@ -321,7 +328,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
           <Vector6InputSetting
             label="Bounding Box"
             tooltipTitle="Format: minX, minY, minZ, width, height, depth"
-            value={Utils.computeArrayFromBoundingBox(this.props.tracing.userBoundingBox)}
+            value={Utils.computeArrayFromBoundingBox(getSomeTracing(this.props.tracing).userBoundingBox)}
             onChange={this.props.onChangeBoundingBox}
           />
           <SwitchSetting

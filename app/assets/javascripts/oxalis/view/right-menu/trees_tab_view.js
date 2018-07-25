@@ -11,7 +11,10 @@ import InputComponent from "oxalis/view/components/input_component";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
-import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  enforceSkeletonTracing,
+  getActiveTree,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   setTreeNameAction,
   createTreeAction,
@@ -241,7 +244,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
 }
 
 const mapStateToProps = (state: OxalisState) => ({
-  skeletonTracing: state.tracing,
+  skeletonTracing: enforceSkeletonTracing(state.tracing),
   userConfiguration: state.userConfiguration,
 });
 

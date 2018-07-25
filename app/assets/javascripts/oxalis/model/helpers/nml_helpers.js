@@ -2,6 +2,7 @@
 
 import _ from "lodash";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import messages from "messages";
 import Saxophone from "@scalableminds/saxophone";
 import Store from "oxalis/store";
@@ -111,6 +112,8 @@ export function serializeToNml(
 }
 
 function serializeMetaInformation(state: OxalisState, buildInfo: APIBuildInfoType): Array<string> {
+  // todo: handle volume case
+  const skeletonTracing = enforceSkeletonTracing(state.tracing);
   return _.compact([
     serializeTag("meta", {
       name: "writer",
@@ -126,7 +129,7 @@ function serializeMetaInformation(state: OxalisState, buildInfo: APIBuildInfoTyp
     }),
     serializeTag("meta", {
       name: "annotationId",
-      content: state.tracing.annotationId,
+      content: skeletonTracing.annotationId,
     }),
     state.activeUser != null
       ? serializeTag("meta", {
@@ -156,15 +159,17 @@ function serializeBoundingBox(bb: ?BoundingBoxType, name: string): string {
 function serializeParameters(state: OxalisState): Array<string> {
   const editPosition = getPosition(state.flycam).map(Math.round);
   const editRotation = getRotation(state.flycam);
-  const userBB = state.tracing.userBoundingBox;
-  const taskBB = state.tracing.boundingBox;
+  // todo: handle volume case
+  const skeletonTracing = enforceSkeletonTracing(state.tracing);
+  const userBB = skeletonTracing.userBoundingBox;
+  const taskBB = skeletonTracing.boundingBox;
   return [
     "<parameters>",
     ...indent(
       _.compact([
         serializeTag("experiment", {
           name: state.dataset.name,
-          description: state.tracing.description,
+          description: skeletonTracing.description,
         }),
         serializeTag("scale", {
           x: state.dataset.dataSource.scale[0],
@@ -176,7 +181,7 @@ function serializeParameters(state: OxalisState): Array<string> {
           y: 0,
           z: 0,
         }),
-        serializeTag("time", { ms: state.tracing.createdTimestamp }),
+        serializeTag("time", { ms: skeletonTracing.createdTimestamp }),
         serializeTag("editPosition", {
           x: editPosition[0],
           y: editPosition[1],

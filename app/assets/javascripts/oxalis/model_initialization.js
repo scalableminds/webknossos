@@ -30,7 +30,7 @@ import Toast from "libs/toast";
 import ErrorHandling from "libs/error_handling";
 import UrlManager from "oxalis/controller/url_manager";
 import {
-  getTracingForAnnotation,
+  getTracingForAnnotations,
   getAnnotationInformation,
   getDataset,
   getSharingToken,
@@ -42,7 +42,7 @@ import type {
   APIAnnotationType,
   APIDatasetType,
   APIDataLayerType,
-  ServerTracingType,
+  CombinedServerTracingType,
   ServerVolumeTracingType,
 } from "admin/api_flow_types";
 import {
@@ -78,23 +78,29 @@ export async function initialize(
 }> {
   Store.dispatch(setControlModeAction(controlMode));
 
-  let annotation: ?APIAnnotationType;
+  let skeletonAnnotation: ?APIAnnotationType;
+  let volumeAnnotation: ?APIAnnotationType;
   let datasetName;
   if (controlMode === ControlModeEnum.TRACE) {
     const annotationId = annotationIdOrDatasetName;
-    annotation = await getAnnotationInformation(annotationId, tracingType);
-    datasetName = annotation.dataSetName;
+    skeletonAnnotation = await getAnnotationInformation(
+      "5b574bdb960000eb039f662c",
+      "Explorational",
+    );
+    volumeAnnotation = await getAnnotationInformation("5b574c3b9600002b049f6631", "Explorational");
+    datasetName = skeletonAnnotation.dataSetName;
 
-    if (!annotation.restrictions.allowAccess) {
+    if (!skeletonAnnotation.restrictions.allowAccess) {
       Toast.error(messages["tracing.no_access"]);
       throw HANDLED_ERROR;
     }
 
     ErrorHandling.assertExtendContext({
-      task: annotation.id,
+      task: skeletonAnnotation.id,
     });
 
-    Store.dispatch(setTaskAction(annotation.task));
+    // todo: reactivate tasks
+    // Store.dispatch(setTaskAction(annotation.task));
   } else {
     // In View mode, the annotationId is actually the datasetName
     // as there is no annotation and no tracing!
@@ -102,7 +108,8 @@ export async function initialize(
   }
 
   const [dataset, initialUserSettings, initialDatasetSettings, tracing] = await fetchParallel(
-    annotation,
+    skeletonAnnotation,
+    volumeAnnotation,
     datasetName,
   );
 
@@ -113,10 +120,12 @@ export async function initialize(
   // There is no need to reinstantiate the DataLayers if the dataset didn't change.
   if (initialFetch) {
     initializationInformation = initializeDataLayerInstances();
-    if (tracing != null) Store.dispatch(setZoomStepAction(tracing.zoomLevel));
+    if (tracing != null) Store.dispatch(setZoomStepAction(tracing.skeleton.zoomLevel));
   }
 
   // There is no need to initialize the tracing if there is no tracing (View mode).
+  // todo: annotation has to be combined
+  const annotation = skeletonAnnotation;
   if (annotation != null && tracing != null) {
     initializeTracing(annotation, tracing);
   }
@@ -127,17 +136,18 @@ export async function initialize(
 }
 
 async function fetchParallel(
-  annotation: ?APIAnnotationType,
+  skeletonAnnotation: ?APIAnnotationType,
+  volumeAnnotation: ?APIAnnotationType,
   datasetName: string,
-): Promise<[APIDatasetType, *, *, ?ServerTracingType]> {
+): Promise<[APIDatasetType, *, *, ?CombinedServerTracingType]> {
   return Promise.all([
     getDataset(datasetName, getSharingToken()),
     getUserConfiguration(),
     getDatasetConfiguration(datasetName),
-    // Fetch the actual tracing from the datastore, if there is an annotation
+    // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
     // (Also see https://github.com/facebook/flow/issues/4936)
     // $FlowFixMe: Type inference with Promise.all seems to be a bit broken in flow
-    annotation ? getTracingForAnnotation(annotation) : null,
+    skeletonAnnotation ? getTracingForAnnotations(skeletonAnnotation, volumeAnnotation) : null,
   ]);
 }
 
@@ -176,7 +186,7 @@ function validateSpecsForLayers(
   return { isMappingSupported, textureInformationPerLayer };
 }
 
-function initializeTracing(annotation: APIAnnotationType, tracing: ServerTracingType) {
+function initializeTracing(annotation: APIAnnotationType, tracing: CombinedServerTracingType) {
   // This method is not called for the View mode
   const { dataset } = Store.getState();
   const { allowedModes, preferredMode } = determineAllowedModes(dataset, annotation.settings);
@@ -212,7 +222,7 @@ function initializeTracing(annotation: APIAnnotationType, tracing: ServerTracing
 function initializeDataset(
   initialFetch: boolean,
   dataset: APIDatasetType,
-  tracing: ?ServerTracingType,
+  tracing: ?CombinedServerTracingType,
 ): void {
   let error;
   if (!dataset) {
@@ -333,7 +343,7 @@ function setupLayerForVolumeTracing(
   return layers;
 }
 
-function applyUrlState(urlState: UrlManagerState, tracing: ?ServerTracingType) {
+function applyUrlState(urlState: UrlManagerState, tracing: ?CombinedServerTracingType) {
   // If there is no editPosition (e.g. when viewing a dataset) and
   // no default position, compute the center of the dataset
   const { dataset, datasetConfiguration } = Store.getState();
@@ -342,8 +352,9 @@ function applyUrlState(urlState: UrlManagerState, tracing: ?ServerTracingType) {
   if (defaultPosition != null) {
     position = defaultPosition;
   }
+  // todo: use tracing.base for properties (maybe only pass that property in the first place)
   if (tracing != null) {
-    position = Utils.point3ToVector3(tracing.editPosition);
+    position = Utils.point3ToVector3(tracing.skeleton.editPosition);
   }
   if (urlState.position != null) {
     position = urlState.position;
@@ -362,8 +373,8 @@ function applyUrlState(urlState: UrlManagerState, tracing: ?ServerTracingType) {
   if (defaultRotation != null) {
     rotation = defaultRotation;
   }
-  if (tracing != null) {
-    rotation = Utils.point3ToVector3(tracing.editRotation);
+  if (tracing && tracing.skeleton != null) {
+    rotation = Utils.point3ToVector3(tracing.skeleton.editRotation);
   }
   if (urlState.rotation != null) {
     rotation = urlState.rotation;

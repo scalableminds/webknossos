@@ -380,4 +380,12 @@ export type ServerVolumeTracingType = {|
 
 export type ServerTracingType = ServerSkeletonTracingType | ServerVolumeTracingType;
 
+export type CombinedServerTracingType = {
+  // todo: move propertes to base
+  // base: ServerTracingBaseType,
+  // todo: make skeleton and volume optional
+  skeleton: ServerSkeletonTracingType,
+  volume: ServerVolumeTracingType,
+};
+
 export default {};

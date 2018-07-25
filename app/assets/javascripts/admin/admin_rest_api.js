@@ -33,6 +33,9 @@ import type {
   APIFeatureToggles,
   APIOrganizationType,
   ServerTracingType,
+  CombinedServerTracingType,
+  ServerSkeletonTracingType,
+  ServerVolumeTracingType,
 } from "admin/api_flow_types";
 import { APITracingTypeEnum } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/task/task_search_form";
@@ -492,7 +495,25 @@ export function createExplorational(
   return Request.sendJSONReceiveJSON(url, { data: { typ, withFallback } });
 }
 
-export async function getTracingForAnnotation(
+export async function getTracingForAnnotations(
+  skeletonAnnotation: APIAnnotationType,
+  volumeAnnotation: APIAnnotationType,
+): Promise<CombinedServerTracingType> {
+  const [_skeleton, _volume] = await Promise.all([
+    getTracingForAnnotationType(skeletonAnnotation),
+    getTracingForAnnotationType(volumeAnnotation),
+  ]);
+
+  const skeleton = ((_skeleton: any): ServerSkeletonTracingType);
+  const volume = ((_volume: any): ServerVolumeTracingType);
+
+  return {
+    skeleton,
+    volume,
+  };
+}
+
+export async function getTracingForAnnotationType(
   annotation: APIAnnotationType,
 ): Promise<ServerTracingType> {
   const annotationType = annotation.content.typ;

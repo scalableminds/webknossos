@@ -131,33 +131,41 @@ export type TemporaryMutableTreeMapType = { [number]: TreeType };
 
 export type TracingTypeTracingType = APITracingType;
 
-type TracingBaseType = {
+type AnnotationType = {|
   +annotationId: string,
-  +createdTimestamp: number,
-  +name: string,
-  +version: number,
-  +tracingId: string,
-  +boundingBox: ?BoundingBoxType,
-  +userBoundingBox: ?BoundingBoxType,
   +restrictions: RestrictionsType & SettingsType,
   +isPublic: boolean,
   +tags: Array<string>,
   +description: string,
-};
-
-export type SkeletonTracingType = TracingBaseType & {
-  +type: "skeleton",
+  +name: string,
   +tracingType: TracingTypeTracingType,
+|};
+
+type TracingBaseType = {|
+  +createdTimestamp: number,
+  +version: number,
+  +tracingId: string,
+  +boundingBox: ?BoundingBoxType,
+  +userBoundingBox: ?BoundingBoxType,
+|};
+
+export type SkeletonTracingType = {|
+  ...TracingBaseType,
+  // todo: let's pretend the annotation is there also,
+  ...AnnotationType,
+  +type: "skeleton",
   +trees: TreeMapType,
   +treeGroups: Array<TreeGroupType>,
   +activeTreeId: ?number,
   +activeNodeId: ?number,
   +cachedMaxNodeId: number,
-};
+|};
 
-export type VolumeTracingType = TracingBaseType & {
+export type VolumeTracingType = {|
+  ...TracingBaseType,
+  // todo: let's pretend the annotation is there also,
+  ...AnnotationType,
   +type: "volume",
-  +tracingType: TracingTypeTracingType,
   +maxCellId: number,
   +activeTool: VolumeToolType,
   +activeCellId: number,
@@ -165,14 +173,25 @@ export type VolumeTracingType = TracingBaseType & {
   +contourTracingMode: ContourModeType,
   +contourList: Array<Vector3>,
   +cells: VolumeCellMapType,
-};
+|};
 
-export type ReadOnlyTracingType = TracingBaseType & {
+export type ReadOnlyTracingType = {|
+  ...TracingBaseType,
+  ...AnnotationType,
   +type: "readonly",
   +tracingType: "View",
-};
+  +skeleton: null,
+  +volume: null,
+|};
 
-export type TracingType = SkeletonTracingType | VolumeTracingType | ReadOnlyTracingType;
+export type HybridTracingType = {|
+  ...AnnotationType,
+  // todo: make optional
+  skeleton: SkeletonTracingType,
+  volume: VolumeTracingType,
+|};
+
+export type TracingType = HybridTracingType | ReadOnlyTracingType;
 
 export type DatasetLayerConfigurationType = {
   +color: Vector3,
@@ -384,27 +403,30 @@ export const defaultState: OxalisState = {
     logoUrl: null,
   },
   tracing: {
-    annotationId: "",
-    boundingBox: null,
-    createdTimestamp: 0,
-    userBoundingBox: null,
-    type: "readonly",
-    name: "",
-    version: 0,
-    isPublic: false,
-    tracingId: "",
-    tracingType: "View",
-    restrictions: {
-      branchPointsAllowed: false,
-      allowUpdate: false,
-      allowFinish: false,
-      allowAccess: true,
-      allowDownload: false,
-      somaClickingAllowed: false,
-      allowedModes: ["orthogonal", "oblique", "flight"],
+    skeleton: {
+      annotationId: "",
+      boundingBox: null,
+      createdTimestamp: 0,
+      userBoundingBox: null,
+      type: "readonly",
+      name: "",
+      version: 0,
+      isPublic: false,
+      tracingId: "",
+      tracingType: "View",
+      restrictions: {
+        branchPointsAllowed: false,
+        allowUpdate: false,
+        allowFinish: false,
+        allowAccess: true,
+        allowDownload: false,
+        somaClickingAllowed: false,
+        allowedModes: ["orthogonal", "oblique", "flight"],
+      },
+      tags: [],
+      description: "",
     },
-    tags: [],
-    description: "",
+    volume: {},
   },
   save: {
     queue: [],

@@ -5,7 +5,7 @@
 
 import _ from "lodash";
 import * as THREE from "three";
-import Utils from "libs/utils";
+import Utils, { maybe } from "libs/utils";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import AbstractPlaneMaterialFactory, {
@@ -347,7 +347,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
-          storeState => getActiveCellId(storeState.tracing).getOrElse(0),
+          storeState => maybe(getActiveCellId)(storeState.tracing.volume).getOrElse(0),
           () => this.updateActiveCellId(),
           true,
         ),
@@ -369,7 +369,8 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
-          storeState => volumeToolEnumToIndex(Utils.toNullable(getVolumeTool(storeState.tracing))),
+          storeState =>
+            volumeToolEnumToIndex(Utils.toNullable(maybe(getVolumeTool)(storeState.tracing.volume))),
           volumeTool => {
             this.uniforms.activeVolumeToolIndex.value = volumeTool;
           },
@@ -380,7 +381,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   }
 
   updateActiveCellId() {
-    const activeCellId = getActiveCellId(Store.getState().tracing).getOrElse(0);
+    const activeCellId = maybe(getActiveCellId)(Store.getState().tracing.volume).getOrElse(0);
     const mappedActiveCellId = Model.getSegmentationLayer().cube.mapId(activeCellId);
     // Convert the id into 4 bytes (little endian)
     const [a, b, g, r] = Utils.convertDecToBase256(mappedActiveCellId);

@@ -1,13 +1,14 @@
-/*
- * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.webknossos.datastore.tracings.skeleton
 
 import com.scalableminds.webknossos.datastore.SkeletonTracing.Tree
 
+import scala.util.matching.Regex
+
 
 object TreeUtils {
   type FunctionalNodeMapping = Function[Int, Int]
+
+  val nodeIdReferenceRegex: Regex = "#([0-9]+)"r
 
   def minNodeId(trees: Seq[Tree]) = {
     val nodes = trees.flatMap(_.nodes)
@@ -45,8 +46,12 @@ object TreeUtils {
     tree
       .withNodes(tree.nodes.map(node => node.withId(f(node.id))))
       .withEdges(tree.edges.map(edge => edge.withSource(f(edge.source)).withTarget(f(edge.target))))
-      .withComments(tree.comments.map(comment => comment.withNodeId(f(comment.nodeId))))
+      .withComments(tree.comments.map(comment => comment.withNodeId(f(comment.nodeId)).withContent(updateNodeReferences(comment.content, f))))
       .withBranchPoints(tree.branchPoints.map(bp => bp.withNodeId(f(bp.nodeId))))
+  }
+
+  def updateNodeReferences(comment: String, f: Int => Int) = {
+    nodeIdReferenceRegex.replaceAllIn(comment, m => "#" + f(m.toString.substring(1).toInt))
   }
 
   def calculateNodeMapping(sourceTrees: Seq[Tree], targetTrees: Seq[Tree]) = {

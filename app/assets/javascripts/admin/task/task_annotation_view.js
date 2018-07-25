@@ -129,7 +129,7 @@ class TaskAnnotationView extends React.PureComponent<Props & StateProps, State> 
         </Item>
         <Item key={`${annotation.id}-delete`}>
           <span onClick={() => this.deleteAnnotation(annotation)}>
-            <Icon type="delete" />Cancel
+            <Icon type="delete" />Reset and Cancel
           </span>
         </Item>
         {annotation.state === "Finished" ? (

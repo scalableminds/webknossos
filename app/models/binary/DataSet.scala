@@ -163,7 +163,7 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
     } yield {
       DataSetSQL(
         ObjectId(r._Id),
-        r._Datastore,
+        r._Datastore.trim,
         ObjectId(r._Organization),
         defaultConfigurationOpt,
         r.description,

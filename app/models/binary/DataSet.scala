@@ -140,31 +140,6 @@ case class DataSetSQL(
   }
 }
 
-object DataSetSQL {
-  def fromDataSetWithId(d: DataSet, newId: ObjectId)(implicit ctx: DBAccessContext) =
-    for {
-      organization <- OrganizationSQLDAO.findOneByName(d.dataSource.id.team)
-    } yield {
-      DataSetSQL(
-        newId,
-        d.dataStoreInfo.name,
-        organization._id,
-        d.defaultConfiguration,
-        d.description,
-        d.displayName,
-        d.isPublic,
-        d.isActive,
-        d.dataSource.id.name,
-        d.dataSource.scaleOpt,
-        d.sharingToken,
-        d.dataSource.statusOpt.getOrElse(""),
-        d.logoUrl,
-        d.created,
-        false
-      )
-    }
-}
-
 object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
   val collection = Datasets
 
@@ -488,38 +463,4 @@ object DataSetAllowedTeamsSQLDAO extends SimpleSQLDAO {
       _ <- run(composedQuery.transactionally.withTransactionIsolation(Serializable), retryCount = 50, retryIfErrorContains = List(transactionSerializationError))
     } yield ()
   }
-}
-
-case class DataSet(
-                    logoUrl: Option[String],
-                    dataStoreInfo: DataStoreInfo,
-                    dataSource: InboxDataSource,
-                    owningOrganization: String,
-                    allowedTeams: List[ObjectId],
-                    isActive: Boolean = false,
-                    isPublic: Boolean = false,
-                    description: Option[String] = None,
-                    displayName: Option[String] = None,
-                    defaultConfiguration: Option[DataSetConfiguration] = None,
-                    sharingToken: Option[String] = None,
-                    created: Long = System.currentTimeMillis()) extends FoxImplicits {
-
-  def name = dataSource.id.name
-
-  def urlEncodedName: String =
-    UriEncoding.encodePathSegment(name, "UTF-8")
-
-  def isEditableBy(userOpt: Option[UserSQL])(implicit ctx: DBAccessContext) = {
-    userOpt match {
-      case Some(user) =>
-        for {
-          organization <- OrganizationSQLDAO.findOneByName(owningOrganization)
-          isTeamManagerInOrg <- user.isTeamManagerInOrg(organization._id)
-        } yield (user.isAdminOf(organization._id) || isTeamManagerInOrg)
-      case _ => Fox.successful(false)
-    }
-  }
-
-  lazy val dataStore: DataStoreHandlingStrategy =
-    DataStoreHandlingStrategy(this)
 }

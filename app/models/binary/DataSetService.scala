@@ -28,25 +28,28 @@ object DataSetService extends FoxImplicits with LazyLogging {
                      owningOrganization: String,
                      dataSource: InboxDataSource,
                      isActive: Boolean = false
-                     )(implicit ctx: DBAccessContext) = {
+                     ) = {
+    implicit val ctx = GlobalAccessContext
+    val newId = ObjectId.generate
     OrganizationSQLDAO.findOneByName(owningOrganization).futureBox.flatMap {
-      case Full(_) =>
-      DataSetSQLDAO.insertOne(DataSetSQL(
-        ObjectId.generate,
-        /*TODO
-
-        dataSetSQL <- DataSetSQL.fromDataSetWithId(dataSet, newId)
-      _ <- DataSetSQLDAO.insertOne(dataSetSQL)
-      _ <- DataSetDataLayerSQLDAO.updateLayers(newId, dataSet.dataSource)
-      //TODO: _ <- DataSetAllowedTeamsSQLDAO.updateAllowedTeamsForDataSet(dataSet._id, dataSet.allowedTeams)
-         */
-        None,
-        dataStore,
-        dataSource,
-        owningOrganization,
-        List(),
-        isActive = isActive,
-        isPublic = false))(GlobalAccessContext)
+      case Full(organization) => for {
+        _ <- DataSetSQLDAO.insertOne(DataSetSQL(
+                newId,
+                dataStore.name,
+                organization._id,
+                None,
+                None,
+                None,
+                false,
+                dataSource.toUsable.isDefined,
+                dataSource.id.name,
+                dataSource.scaleOpt,
+                None,
+                dataSource.statusOpt.getOrElse(""),
+                None))
+        _ <- DataSetDataLayerSQLDAO.updateLayers(newId, dataSource)
+        _ <- DataSetAllowedTeamsSQLDAO.updateAllowedTeamsForDataSet(newId, List())
+      } yield ()
       case _ => Fox.failure("org.notExist")
     }
   }

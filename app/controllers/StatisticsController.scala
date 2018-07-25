@@ -3,6 +3,7 @@ package controllers
 import javax.inject.Inject
 import com.scalableminds.util.tools.Fox
 import models.annotation.AnnotationSQLDAO
+import models.binary.DataSetSQLDAO
 import models.task.TaskSQLDAO
 import models.user.time.{TimeSpanSQL, TimeSpanService}
 import models.user.UserSQLDAO

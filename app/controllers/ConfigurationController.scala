@@ -2,7 +2,7 @@ package controllers
 
 import com.scalableminds.util.tools.Fox
 import javax.inject.Inject
-import models.binary.DataSetSQLDAO
+import models.binary.{DataSetSQL, DataSetSQLDAO}
 import models.configuration.{DataSetConfiguration, UserConfiguration}
 import models.user.{UserDataSetConfigurationSQLDAO, UserService}
 import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareAction}
@@ -10,6 +10,7 @@ import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsObject, JsValue}
 import play.api.libs.json.Json._
+import play.api.mvc.Result
 
 
 class ConfigurationController @Inject()(val messagesApi: MessagesApi) extends Controller {
@@ -56,15 +57,17 @@ class ConfigurationController @Inject()(val messagesApi: MessagesApi) extends Co
   }
 
   def readDataSetDefault(dataSetName: String) = SecuredAction.async { implicit request =>
-    (for {
-      dataSet <- DataSetSQLDAO.findOneByName(dataSetName) ?~> Messages("dataset.notFound")
-    } yield {
+    DataSetSQLDAO.findOneByName(dataSetName).flatMap { dataSet: DataSetSQL =>
       dataSet.defaultConfiguration match {
         case Some(c) => Fox.successful(Ok(toJson(c.configurationOrDefaults)))
         case _ => DataSetConfiguration.constructInitialDefault(dataSet).map(c => Ok(toJson(c.configurationOrDefaults)))
       }
-    }).flatten
+    }
   }
+
+  //dataSet.defaultConfiguration match {
+  //        case Some(c) => Fox.successful(Ok(toJson(c.configurationOrDefaults)))
+  //        case _ =>
 
   def updateDataSetDefault(dataSetName: String) = SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
     for {

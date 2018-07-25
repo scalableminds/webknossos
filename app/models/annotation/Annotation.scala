@@ -96,6 +96,7 @@ case class AnnotationSQL(
       userJson <- user.compactWrites
       settings <- findSettings
       annotationRestrictions <- AnnotationRestrictions.writeAsJson(composeRestrictions(restrictions, readOnly), requestingUser)
+      dataStoreInfo <- dataSet.dataStoreInfo
     } yield {
       Json.obj(
         "modified" -> modified,
@@ -110,7 +111,7 @@ case class AnnotationSQL(
         "formattedHash" -> Formatter.formatHash(id),
         "content" -> tracing,
         "dataSetName" -> dataSet.name,
-        "dataStore" -> dataSet.dataStoreInfo,
+        "dataStore" -> dataStoreInfo,
         "isPublic" -> isPublic,
         "settings" -> settings,
         "tracingTime" -> tracingTime,

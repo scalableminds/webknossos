@@ -20,7 +20,6 @@ import play.api.Play.current
 import oxalis.security.WebknossosSilhouette.UserAwareAction
 import play.api.Play
 import play.api.libs.json.Json
-import reactivemongo.bson.BSONObjectID
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -47,9 +46,9 @@ Sample Street 123
 Sampletown
 Samplecountry
 """
-  val organizationTeamId = BSONObjectID.generate
+  val organizationTeamId = ObjectId.generate
   val defaultOrganization = OrganizationSQL(ObjectId.generate, "Connectomics department", additionalInformation, "/assets/images/mpi-logos.svg", "MPI for Brain Research")
-  val organizationTeam = Team(defaultOrganization.name, defaultOrganization.name, true, organizationTeamId)
+  val organizationTeam = TeamSQL(organizationTeamId, defaultOrganization._id, defaultOrganization.name, true)
   val defaultUser = UserSQL(
     ObjectId.generate,
     defaultOrganization._id,
@@ -97,7 +96,7 @@ Samplecountry
         for {
           _ <- UserSQLDAO.insertOne(defaultUser)
           _ <- UserExperiencesSQLDAO.updateExperiencesForUser(defaultUser._id, Map("sampleExp" -> 10))
-          _ <- UserTeamRolesSQLDAO.insertTeamMembership(defaultUser._id, TeamMembershipSQL(ObjectId.fromBsonId(organizationTeam._id), true))
+          _ <- UserTeamRolesSQLDAO.insertTeamMembership(defaultUser._id, TeamMembershipSQL(organizationTeam._id, true))
           _ = logger.info("Inserted default user scmboy")
         } yield ()
     }.toFox
@@ -130,10 +129,10 @@ Samplecountry
   }
 
   def insertTeams = {
-    TeamDAO.findAll.flatMap {
+    TeamSQLDAO.findAll.flatMap {
       teams =>
         if (teams.isEmpty)
-          TeamDAO.insert(organizationTeam)
+          TeamSQLDAO.insertOne(organizationTeam)
         else
           Fox.successful(())
     }.toFox
@@ -145,7 +144,7 @@ Samplecountry
         if (types.isEmpty) {
           val taskType = TaskTypeSQL(
             ObjectId.generate,
-            ObjectId.fromBsonId(organizationTeam._id),
+            organizationTeam._id,
             "sampleTaskType",
             "Check those cells out!"
             )
@@ -160,7 +159,7 @@ Samplecountry
       projects =>
         if (projects.isEmpty) {
           UserService.defaultUser.flatMap { user =>
-            val project = ProjectSQL(ObjectId.generate, ObjectId.fromBsonId(organizationTeam._id), user._id, "sampleProject", 100, false, Some(5400000))
+            val project = ProjectSQL(ObjectId.generate, organizationTeam._id, user._id, "sampleProject", 100, false, Some(5400000))
             for {_ <- ProjectSQLDAO.insertOne(project)} yield ()
           }
         } else Fox.successful(())

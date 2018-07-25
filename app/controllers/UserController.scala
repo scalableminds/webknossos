@@ -168,11 +168,11 @@ class UserController @Inject()(val messagesApi: MessagesApi)
       (__ \ "teams").read[List[TeamMembershipSQL]](Reads.list(TeamMembershipSQL.publicReads)) and
       (__ \ "experiences").read[Map[String, Int]]).tupled
 
-  def ensureProperTeamAdministration(user: UserSQL, teams: List[(TeamMembershipSQL, Team)]) = {
+  def ensureProperTeamAdministration(user: UserSQL, teams: List[(TeamMembershipSQL, TeamSQL)]) = {
     Fox.combined(teams.map {
       case (TeamMembershipSQL(_, true), team) => {
         for {
-          _ <- Fox.assertTrue(team.couldBeAdministratedBy(user)) ?~> Messages("team.admin.notPossibleBy", team.name, user.name)
+          _ <- bool2Fox(team.couldBeAdministratedBy(user)) ?~> Messages("team.admin.notPossibleBy", team.name, user.name)
         }
         yield ()
       }
@@ -195,7 +195,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
           user <- UserSQLDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
           _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
           _ <- checkAdminOnlyUpdates(user, isActive, isAdmin, email)(issuingUser) ?~> Messages("notAllowed")
-          teams <- Fox.combined(assignedMemberships.map(t => TeamDAO.findOneById(t.teamId.toString)(GlobalAccessContext) ?~> Messages("team.notFound")))
+          teams <- Fox.combined(assignedMemberships.map(t => TeamSQLDAO.findOne(t.teamId)(GlobalAccessContext) ?~> Messages("team.notFound")))
           oldTeamMemberships <- user.teamMemberships
           teamsWithoutUpdate <- Fox.filterNot(oldTeamMemberships)(t => issuingUser.isTeamManagerOrAdminOf(t.teamId))
           assignedMembershipWTeams = assignedMemberships.zip(teams)

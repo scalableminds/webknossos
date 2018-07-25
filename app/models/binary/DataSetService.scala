@@ -14,13 +14,13 @@ import oxalis.security.{URLSharing, WebknossosSilhouette}
 import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.WSResponse
-import reactivemongo.bson.BSONObjectID
+import utils.ObjectId
 
 object DataSetService extends FoxImplicits with LazyLogging {
 
   val system = Akka.system(play.api.Play.current)
 
-  def updateTeams(dataSet: DataSet, teams: List[BSONObjectID])(implicit ctx: DBAccessContext) =
+  def updateTeams(dataSet: DataSet, teams: List[ObjectId])(implicit ctx: DBAccessContext) =
     DataSetDAO.updateTeams(dataSet.name, teams)
 
   def update(dataSet: DataSet, description: Option[String], displayName: Option[String], isPublic: Boolean)(implicit ctx: DBAccessContext) =

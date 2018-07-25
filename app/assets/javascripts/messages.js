@@ -88,7 +88,7 @@ In order to restore the current window, a reload is necessary.`,
   "annotation.finish": "Are you sure you want to permanently finish this tracing?",
   "annotation.was_finished": "Annotation was archived",
   "annotation.was_re_opened": "Annotation was reopened",
-  "annotation.delete": "Do you really want to cancel this annotation?",
+  "annotation.delete": "Do you really want to reset and cancel this annotation?",
   "annotation.dataset_no_public":
     "Public tracings require the respective dataset to be public too. Please, make sure to add public access rights to the dataset as well.",
   "annotation.was_edited": "Successfully updated annotation",
@@ -164,4 +164,6 @@ In order to restore the current window, a reload is necessary.`,
   "mapping.too_few_textures":
     "Not enough textures available to support mappings. Mappings are disabled.",
   "mapping.unsupported_layer": "Mappings can only be enabled for segmentation layers.",
+  "project.report.failed_to_refresh":
+    "The project report page could not be refreshed. Please try to reload the page.",
 };

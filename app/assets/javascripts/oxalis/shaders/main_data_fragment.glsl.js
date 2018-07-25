@@ -189,7 +189,7 @@ void main() {
 
       // Multiply with color and weight for <%= name %>
       data_color += color_value * <%= name %>_weight * <%= name %>_color;
-    <% }) %> ;
+    <% }) %>
     data_color = clamp(data_color, 0.0, 1.0);
   <% } %>
 

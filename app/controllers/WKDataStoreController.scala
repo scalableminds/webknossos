@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package controllers
 
 import javax.inject.Inject
@@ -33,7 +30,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
     for {
       uploadInfo <- request.body.validate[DataSourceId].asOpt.toFox ?~> Messages("dataStore.upload.invalid")
       _ <- DataSetService.isProperDataSetName(uploadInfo.name) ?~> Messages("dataSet.name.invalid")
-      _ <- DataSetService.checkIfNewDataSetName(uploadInfo.name)(GlobalAccessContext) ?~> Messages("dataSet.name.alreadyTaken")
+      _ <- DataSetService.assertNewDataSetName(uploadInfo.name)(GlobalAccessContext) ?~> Messages("dataSet.name.alreadyTaken")
       _ <- uploadInfo.team.nonEmpty ?~> Messages("team.invalid")
     } yield Ok
   }
@@ -50,7 +47,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
   }
 
   def updateAll(name: String) = DataStoreAction(name).async(parse.json) { implicit request =>
-request.body.validate[List[InboxDataSource]] match {
+    request.body.validate[List[InboxDataSource]] match {
       case JsSuccess(dataSources, _) =>
         for {
           _ <- DataSetService.deactivateUnreportedDataSources(request.dataStore.name, dataSources)(GlobalAccessContext)

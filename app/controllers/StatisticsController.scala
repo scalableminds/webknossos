@@ -1,12 +1,8 @@
-/*
- * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package controllers
 
 import javax.inject.Inject
 import com.scalableminds.util.tools.Fox
 import models.annotation.AnnotationSQLDAO
-import models.binary.DataSetDAO
 import models.task.TaskSQLDAO
 import models.user.time.{TimeSpanSQL, TimeSpanService}
 import models.user.UserSQLDAO
@@ -40,7 +36,7 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
         for {
           times <- TimeSpanService.loggedTimePerInterval(handler, start, end)
           numberOfUsers <- UserSQLDAO.countAll
-          numberOfDatasets <- DataSetDAO.countAll
+          numberOfDatasets <- DataSetSQLDAO.countAll
           numberOfAnnotations <- AnnotationSQLDAO.countAll
           numberOfAssignments <- TaskSQLDAO.countAllOpenInstances
         } yield {

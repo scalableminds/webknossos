@@ -10,10 +10,9 @@ import com.scalableminds.webknossos.datastore.tracings.{TracingReference, Tracin
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationTypeSQL.AnnotationTypeSQL
-import models.binary.{DataSet, DataSetDAO}
+import models.binary.{DataSetSQL, DataSetSQLDAO}
 import models.task.{TaskSQLDAO, TaskTypeSQLDAO, _}
 import models.user.{UserSQL, UserService}
-import org.joda.time.format.DateTimeFormat
 import play.api.Play.current
 import play.api.i18n.Messages
 import play.api.i18n.Messages.Implicits._
@@ -57,8 +56,8 @@ case class AnnotationSQL(
   def task: Fox[TaskSQL] =
     _task.toFox.flatMap(taskId => TaskSQLDAO.findOne(taskId)(GlobalAccessContext))
 
-  def dataSet: Fox[DataSet] =
-    DataSetDAO.findOneById(_dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
+  def dataSet: Fox[DataSetSQL] =
+    DataSetSQLDAO.findOne(_dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
 
   val tracingType = tracing.typ
 

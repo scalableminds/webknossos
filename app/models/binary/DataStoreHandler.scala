@@ -1,12 +1,10 @@
-/*
- * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package models.binary
 
 import java.io.File
 import java.math.BigInteger
 import java.security.SecureRandom
 
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -65,15 +63,9 @@ object DataStoreHandlingStrategy {
 
   lazy val webKnossosToken = new BigInteger(130, new SecureRandom()).toString(32)
 
-  def apply(dataSet: DataSet): DataStoreHandlingStrategy = dataSet.dataStoreInfo.typ match {
-    case WebKnossosStore =>
-      new WKStoreHandlingStrategy(dataSet.dataStoreInfo, dataSet)
-    case NDStore =>
-      new NDStoreHandlingStrategy(dataSet.dataStoreInfo, dataSet)
-  }
 }
 
-class WKStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSet) extends DataStoreHandlingStrategy with LazyLogging {
+class WKStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSetSQL) extends DataStoreHandlingStrategy with LazyLogging {
 
   override def getSkeletonTracing(reference: TracingReference): Fox[SkeletonTracing] = {
     logger.debug("Called to get SkeletonTracing. Base: " + dataSet.name + " Datastore: " + dataStoreInfo)
@@ -180,7 +172,7 @@ class WKStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSet) ex
   }
 }
 
-class NDStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSet) extends DataStoreHandlingStrategy with FoxImplicits with LazyLogging {
+class NDStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSetSQL) extends DataStoreHandlingStrategy with FoxImplicits with LazyLogging {
 
   override def requestDataLayerThumbnail(
     dataLayerName: String,
@@ -188,6 +180,7 @@ class NDStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSet) ex
     height: Int,
     zoom: Option[Int],
     center: Option[Point3D]): Fox[Array[Byte]] = {
+    implicit val ctx = GlobalAccessContext
 
     logger.debug("Thumbnail called for: " + dataSet.name + " Layer: " + dataLayerName)
 
@@ -201,7 +194,7 @@ class NDStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSet) ex
     }
 
     for {
-      dataLayer <- dataSet.dataSource.toUsable.flatMap(ds => ds.getDataLayer(dataLayerName)).toFox
+      dataLayer <- dataSet.getDataLayerByName(dataLayerName)
       accessToken <- dataStoreInfo.accessToken ?~> "ndstore.accesstoken.missing"
       thumbnail = ImageThumbnail.goodThumbnailParameters(dataLayer, width, height)
       resolution = (math.log(thumbnail.resolution.maxDim) / math.log(2)).toInt

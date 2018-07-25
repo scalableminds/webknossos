@@ -6,8 +6,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import models.annotation._
-import models.binary.{DataSetDAO, DataSetSQLDAO}
-import models.binary.DataSetDAO
+import models.binary.{DataSetSQL, DataSetSQLDAO}
 import models.task.TaskSQLDAO
 import models.user.time._
 import models.user.{UserSQL, UserSQLDAO}
@@ -90,8 +89,9 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
       _ <- restrictions.allowUpdate(request.identity) ?~> Messages("notAllowed")
       _ <- annotation.isRevertPossible ?~> Messages("annotation.revert.toOld")
-      dataSet <- DataSetDAO.findOneById(annotation._dataSet).toFox ?~> Messages("dataSet.notFound", annotation._dataSet)
-      newTracingReference <- dataSet.dataStore.duplicateSkeletonTracing(annotation.tracing, Some(version.toString))
+      dataSet <- annotation.dataSet
+      dataStoreHandler <- dataSet.dataStoreHandler
+      newTracingReference <- dataStoreHandler.duplicateSkeletonTracing(annotation.tracing, Some(version.toString))
       _ <- AnnotationSQLDAO.updateTracingReference(annotation._id, newTracingReference)
     } yield {
       logger.info(s"REVERTED [$typ - $id, $version]")
@@ -253,12 +253,13 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
   private def duplicateAnnotation(annotation: AnnotationSQL, user: UserSQL)(implicit ctx: DBAccessContext): Fox[AnnotationSQL] = {
     for {
-      dataSet <- DataSetDAO.findOneById(annotation._dataSet).toFox ?~> Messages("dataSet.notFound", annotation._dataSet)
+      dataSet: DataSetSQL <- annotation.dataSet
       oldTracingReference = annotation.tracing
-      dataSource <- dataSet.dataSource.toUsable ?~> "DataSet is not imported."
-      newTracingReference <- dataSet.dataStore.duplicateSkeletonTracing(oldTracingReference) ?~> "Failed to create skeleton tracing."
+      _ <- bool2Fox(dataSet.isUsable) ?~> "DataSet is not imported."
+      dataStoreHandler <- dataSet.dataStoreHandler
+      newTracingReference <- dataStoreHandler.duplicateSkeletonTracing(oldTracingReference) ?~> "Failed to create skeleton tracing."
       clonedAnnotation <- AnnotationService.createFrom(
-        user, annotation._dataSet, dataSet, newTracingReference, AnnotationTypeSQL.Explorational, None, annotation.description) ?~> Messages("annotation.create.failed")
+        user, dataSet, newTracingReference, AnnotationTypeSQL.Explorational, None, annotation.description) ?~> Messages("annotation.create.failed")
     } yield clonedAnnotation
   }
 }

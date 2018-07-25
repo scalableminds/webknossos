@@ -65,10 +65,6 @@ class ConfigurationController @Inject()(val messagesApi: MessagesApi) extends Co
     }
   }
 
-  //dataSet.defaultConfiguration match {
-  //        case Some(c) => Fox.successful(Ok(toJson(c.configurationOrDefaults)))
-  //        case _ =>
-
   def updateDataSetDefault(dataSetName: String) = SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
     for {
       dataset <- DataSetSQLDAO.findOneByName(dataSetName) ?~> Messages("dataset.notFound")

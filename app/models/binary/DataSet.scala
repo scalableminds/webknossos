@@ -67,7 +67,6 @@ case class DataSetSQL(
     } yield {
       dataStoreInfo.typ match {
         case WebKnossosStore => new WKStoreHandlingStrategy(dataStoreInfo, this)
-        case NDStore => new NDStoreHandlingStrategy(dataStoreInfo, this)
       }
     }
 
@@ -455,7 +454,7 @@ object DataSetAllowedTeamsSQLDAO extends SimpleSQLDAO {
 
     val insertQueries = allowedTeams.map(teamId =>
       sqlu"""insert into webknossos.dataSet_allowedTeams(_dataSet, _team)
-                                                              values((select _id from webknossos.dataSets where name = ${_id}),
+                                                              values((select _id from webknossos.dataSets where _id = ${_id}),
                                                                      ${teamId.id})""")
 
     val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)

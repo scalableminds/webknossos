@@ -171,38 +171,3 @@ class WKStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSetSQL)
       .post()
   }
 }
-
-class NDStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSetSQL) extends DataStoreHandlingStrategy with FoxImplicits with LazyLogging {
-
-  override def requestDataLayerThumbnail(
-    dataLayerName: String,
-    width: Int,
-    height: Int,
-    zoom: Option[Int],
-    center: Option[Point3D]): Fox[Array[Byte]] = {
-    implicit val ctx = GlobalAccessContext
-
-    logger.debug("Thumbnail called for: " + dataSet.name + " Layer: " + dataLayerName)
-
-    def extractImage(response: WSResponse)(implicit codec: Codec): Fox[Array[Byte]] = {
-      logger.error(response.toString)
-      if (response.status == Status.OK) {
-        Fox.successful(response.bodyAsBytes)
-      } else {
-        Fox.failure("ndstore.thumbnail.failed")
-      }
-    }
-
-    for {
-      dataLayer <- dataSet.getDataLayerByName(dataLayerName)
-      accessToken <- dataStoreInfo.accessToken ?~> "ndstore.accesstoken.missing"
-      thumbnail = ImageThumbnail.goodThumbnailParameters(dataLayer, width, height)
-      resolution = (math.log(thumbnail.resolution.maxDim) / math.log(2)).toInt
-      imageParams = s"${resolution}/${thumbnail.x},${thumbnail.x + width}/${thumbnail.y},${thumbnail.y + height}/${thumbnail.z},${thumbnail.z + 1}"
-      baseUrl = s"${dataStoreInfo.url}/nd/ca"
-      _ = logger.error(s"$baseUrl/$accessToken/$dataLayerName/jpeg/$imageParams")
-      response <- WS.url(s"$baseUrl/$accessToken/$dataLayerName/jpeg/$imageParams").get().toFox
-      image <- extractImage(response)
-    } yield image
-  }
-}

@@ -55,6 +55,7 @@ class TimeLineView extends React.PureComponent<*, State> {
 
   async fetchTimeTrackingData() {
     if (this.state.user != null) {
+      /* eslint-disable react/no-access-state-in-setstate */
       const timeTrackingData = await getTimeTrackingForUser(
         this.state.user.id,
         this.state.dateRange[0],
@@ -62,6 +63,7 @@ class TimeLineView extends React.PureComponent<*, State> {
       );
 
       this.setState({ timeTrackingData }, this.calculateStats);
+      /* eslint-enable react/no-access-state-in-setstate */
     }
   }
 

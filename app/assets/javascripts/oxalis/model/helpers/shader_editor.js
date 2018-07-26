@@ -14,6 +14,8 @@ window._setupShaderEditor = viewport => {
   const outer = document.createElement("div");
   const input = document.createElement("textarea");
   input.value = window.materials[viewport].fragmentShader;
+  // TODO: Remove once https://github.com/yannickcr/eslint-plugin-react/pull/1851 was released
+  // eslint-disable-next-line react/button-has-type
   const button = document.createElement("button");
   const buttonContainer = document.createElement("div");
   function overrideShader() {

@@ -90,37 +90,28 @@ class BinaryDataService @Inject()(config: Configuration) extends FoxImplicits wi
         request.dataLayer,
         bucket)
 
-      loadWithRetry(request, readInstruction)
+      loadWithRetry(request, readInstruction, emptyBucket)
     } else {
       Fox.successful(emptyBucket)
     }
   }
 
-  def loadWithRetry(request: DataServiceDataRequest, readInstruction: DataReadInstruction, remainingTries: Int = 5): Fox[Array[Byte]] = {
-
-    def emptyBucket: Array[Byte] = {
-      new Array[Byte](DataLayer.bucketLength *
-        DataLayer.bucketLength *
-        DataLayer.bucketLength *
-        request.dataLayer.bytesPerElement)
-    }
-
-    val futureFox = request.dataLayer.bucketProvider.load(readInstruction, cache, loadTimeout).futureBox.map {
-        case Full(data) =>
-          Fox.successful(data)
-        case Empty =>
-          Fox.successful(emptyBucket)
-        case f: Failure =>
-          if (remainingTries > 0) {
-            Thread.sleep(20)
-            logger.debug("BinaryDataService: retrying to load bucket, remaining tries: " + remainingTries)
-            loadWithRetry(request, readInstruction, remainingTries - 1)
-          } else {
-            logger.error(s"BinaryDataService failure: ${f.msg}")
-            Fox.failure("nope")
-          }
-      }
-    futureFox.toFox.flatten
+  private def loadWithRetry(request: DataServiceDataRequest, readInstruction: DataReadInstruction, emptyBucket: Array[Byte], remainingTries: Int = 5): Fox[Array[Byte]] = {
+    (request.dataLayer.bucketProvider.load(readInstruction, cache, loadTimeout).futureBox.map {
+      case Full(data) =>
+        Fox.successful(data)
+      case Empty =>
+        Fox.successful(emptyBucket)
+      case f: Failure =>
+        if (remainingTries > 0) {
+          Thread.sleep(20)
+          logger.debug("BinaryDataService: retrying to load bucket, remaining tries: " + remainingTries + " error: " + f.msg)
+          loadWithRetry(request, readInstruction, emptyBucket, remainingTries - 1)
+        } else {
+          logger.error(s"BinaryDataService failure: ${f.msg}")
+          f.toFox
+        }
+    }).toFox.flatten
   }
 
   /**

@@ -189,14 +189,15 @@ class PlaneController extends React.PureComponent<Props> {
         Store.dispatch(setMousePositionAction([position.x, position.y]));
       },
     };
-
+    // TODO: Find a nicer way to express this, while satisfying flow
+    const emptyDefaultHandler = {leftClick: null};
     const { leftClick: skeletonLeftClick, ...skeletonControls } =
       this.props.tracing.skeleton != null
         ? skeletonController.getPlaneMouseControls(this.planeView)
-        : {};
+        : emptyDefaultHandler;
 
     const { leftClick: volumeLeftClick, ...volumeControls } =
-      this.props.tracing.volume != null ? volumeController.getPlaneMouseControls() : {};
+      this.props.tracing.volume != null ? volumeController.getPlaneMouseControls() : emptyDefaultHandler;
 
     ensureNonConflictingHandlers(skeletonControls, volumeControls);
 
@@ -358,11 +359,13 @@ class PlaneController extends React.PureComponent<Props> {
       },
     };
 
+    // TODO: Find a nicer way to express this, while satisfying flow
+    const emptyDefaultHandler = {c: null, "1": null};
     const { c: skeletonCHandler, "1": skeletonOneHandler, ...skeletonControls } =
-      this.props.tracing.skeleton != null ? skeletonController.getKeyboardControls() : {};
+      this.props.tracing.skeleton != null ? skeletonController.getKeyboardControls() : emptyDefaultHandler;
 
     const { c: volumeCHandler, "1": volumeOneHandler, ...volumeControls } =
-      this.props.tracing.volume != null ? volumeController.getKeyboardControls() : {};
+      this.props.tracing.volume != null ? volumeController.getKeyboardControls() : emptyDefaultHandler;
 
     ensureNonConflictingHandlers(skeletonControls, volumeControls);
 

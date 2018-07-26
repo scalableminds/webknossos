@@ -182,18 +182,16 @@ export type ReadOnlyTracingType = {|
   ...AnnotationType,
   +type: "readonly",
   +tracingType: "View",
-  +skeleton: null,
-  +volume: null,
 |};
 
 export type HybridTracingType = {|
   ...AnnotationType,
-  // todo: make optional
-  skeleton: SkeletonTracingType,
-  volume: VolumeTracingType,
+  skeleton: ?SkeletonTracingType,
+  volume: ?VolumeTracingType,
+  readOnly: ?ReadOnlyTracingType,
 |};
 
-export type TracingType = HybridTracingType | ReadOnlyTracingType;
+export type TracingType = HybridTracingType;
 
 export type DatasetLayerConfigurationType = {
   +color: Vector3,
@@ -424,7 +422,7 @@ export const defaultState: OxalisState = {
   },
   tracing: {
     ...initialAnnotationInfo,
-    skeleton: {
+    readOnly: {
       ...initialAnnotationInfo,
       boundingBox: null,
       createdTimestamp: 0,
@@ -433,7 +431,8 @@ export const defaultState: OxalisState = {
       version: 0,
       tracingId: "",
     },
-    volume: {},
+    volume: null,
+    skeleton: null,
   },
   save: {
     queue: [],

@@ -39,15 +39,16 @@ const simulateTracing = async (): Promise<void> => {
   const controls = getPlaneMouseControls();
   let pos = (x, y) => ({ x, y });
 
-  controls.leftMouseDown(pos(100, 100), OrthoViews.PLANE_XY, {});
+  controls.leftMouseDown(pos(100, 100), OrthoViews.PLANE_XY, ({}: any));
   await Utils.sleep(100);
-  controls.leftDownMove(null, pos(200, 100));
+  const nullDelta = {x: 0, y: 0};
+  controls.leftDownMove(nullDelta, pos(200, 100));
   await Utils.sleep(100);
-  controls.leftDownMove(null, pos(200, 200));
+  controls.leftDownMove(nullDelta, pos(200, 200));
   await Utils.sleep(100);
-  controls.leftDownMove(null, pos(100, 200));
+  controls.leftDownMove(nullDelta, pos(100, 200));
   await Utils.sleep(100);
-  controls.leftDownMove(null, pos(100, 100));
+  controls.leftDownMove(nullDelta, pos(100, 100));
   controls.leftMouseUp();
   await Utils.sleep(100);
   pos = _.clone(getPosition(Store.getState().flycam));
@@ -57,7 +58,7 @@ const simulateTracing = async (): Promise<void> => {
   await simulateTracing();
 };
 
-export function getPlaneMouseControls(): Object {
+export function getPlaneMouseControls(): * {
   return {
     leftDownMove: (delta: Point2, pos: Point2) => {
       const { tracing } = Store.getState();
@@ -161,7 +162,7 @@ export function getPlaneMouseControls(): Object {
   };
 }
 
-export function getKeyboardControls(): Object {
+export function getKeyboardControls() {
   return {
     c: () => Store.dispatch(createCellAction()),
     w: () => {

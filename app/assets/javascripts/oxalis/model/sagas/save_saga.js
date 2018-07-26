@@ -32,6 +32,7 @@ import type { OxalisState, TracingType, FlycamType, SaveQueueEntryType } from "o
 import type { RequestOptionsWithData } from "libs/request";
 import { moveTreeComponent } from "oxalis/model/sagas/update_actions";
 import { doWithToken } from "admin/admin_rest_api";
+import {enforceSkeletonTracing} from "../accessors/skeletontracing_accessor";
 
 const PUSH_THROTTLE_TIME = 30000; // 30s
 const SAVE_RETRY_WAITING_TIME = 5000;
@@ -365,7 +366,7 @@ export function* saveTracingAsync(): Generator<any, any, any> {
   });
   let prevTracing = yield select((state: OxalisState) => state.tracing);
   if (initSkeleton) {
-    if (yield select((state: OxalisState) => state.tracing.activeTreeId == null)) {
+    if (yield select((state: OxalisState) => enforceSkeletonTracing(state.tracing).activeTreeId == null)) {
       yield put(createTreeAction());
     }
   }

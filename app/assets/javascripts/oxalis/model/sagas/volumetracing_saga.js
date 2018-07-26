@@ -11,7 +11,10 @@ import type { CopySegmentationLayerActionType } from "oxalis/model/actions/volum
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import Dimensions from "oxalis/model/dimensions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
-import { isVolumeTracingDisallowed } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  enforceVolumeTracing,
+  isVolumeTracingDisallowed,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import { updateVolumeTracing } from "oxalis/model/sagas/update_actions";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
@@ -51,7 +54,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
   while (allowUpdate) {
     const startEditingAction = yield take("START_EDITING");
     const contourTracingMode = yield select(
-      (state: OxalisState) => state.tracing.volume.contourTracingMode,
+      (state: OxalisState) => enforceVolumeTracing(state.tracing).contourTracingMode,
     );
 
     // Volume tracing for higher zoomsteps is currently not allowed
@@ -59,7 +62,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
       continue;
     }
     const currentLayer = yield call(createVolumeLayer, startEditingAction.planeId);
-    const activeTool = yield select((state: OxalisState) => state.tracing.volume.activeTool);
+    const activeTool = yield select((state: OxalisState) => enforceVolumeTracing(state.tracing).activeTool);
 
     if (activeTool === VolumeToolEnum.BRUSH) {
       yield labelWithIterator(
@@ -99,7 +102,7 @@ function* createVolumeLayer(planeId: OrthoViewType): Generator<*, *, *> {
 }
 
 function* labelWithIterator(iterator, contourTracingMode): Generator<*, *, *> {
-  const activeCellId = yield select((state: OxalisState) => state.tracing.volume.activeCellId);
+  const activeCellId = yield select((state: OxalisState) => enforceVolumeTracing(state.tracing).activeCellId);
   const segmentationLayer = yield call([Model, Model.getSegmentationLayer]);
   const { cube } = segmentationLayer;
   switch (contourTracingMode) {
@@ -135,7 +138,7 @@ function* copySegmentationLayer(action: CopySegmentationLayerActionType): Genera
   );
   const zoom = yield select((state: OxalisState) => state.flycam.zoomStep);
   const halfViewportWidth = Math.round((Constants.PLANE_WIDTH / 2) * zoom);
-  const activeCellId = yield select((state: OxalisState) => state.tracing.volume.activeCellId);
+  const activeCellId = yield select((state: OxalisState) => enforceVolumeTracing(state.tracing).activeCellId);
 
   function copyVoxelLabel(voxelTemplateAddress, voxelTargetAddress) {
     const templateLabelValue = segmentationLayer.cube.getDataValue(voxelTemplateAddress);

@@ -56,7 +56,7 @@ function simulateTracing(nodesPerTree: number = -1, nodesAlreadySet: number = 0)
   _.defer(() => simulateTracing(nodesPerTree, nodesAlreadySet + 1));
 }
 
-export function getPlaneMouseControls(planeView: PlaneView): Object {
+export function getPlaneMouseControls(planeView: PlaneView) {
   return {
     leftClick: (pos: Point2, plane: OrthoViewType, event: MouseEvent, isTouch: boolean) =>
       onClick(planeView, pos, event.shiftKey, event.altKey, event.ctrlKey, plane, isTouch),
@@ -80,7 +80,7 @@ export function getTDViewMouseControls(planeView: PlaneView): Object {
   };
 }
 
-export function getKeyboardControls(): Object {
+export function getKeyboardControls() {
   return {
     "1": () => Store.dispatch(toggleAllTreesAction()),
     "2": () => Store.dispatch(toggleInactiveTreesAction()),

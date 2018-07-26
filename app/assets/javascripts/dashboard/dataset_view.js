@@ -128,29 +128,38 @@ class DatasetView extends React.PureComponent<Props, State> {
   };
 
   renderPlaceholder() {
+    const isUserAdmin = Utils.isUserAdmin(this.props.user);
+    const noDatasetsPlaceholder =
+      "There are no datasets available yet. Please ask an admin to upload a dataset or to add permissions for you to see an available dataset.";
+    const uploadPlaceholder = (
+      <React.Fragment>
+        <Icon type="cloud-upload" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />
+        <p style={{ fontSize: 24, margin: "14px 0 0" }}>
+          Upload the first dataset into your organization.
+        </p>
+        <p
+          style={{
+            fontSize: 14,
+            margin: "14px 0",
+            color: "gray",
+            display: "inline-block",
+            width: 500,
+          }}
+        >
+          <Link to="/datasets/upload">Upload your dataset</Link> or copy it directly onto the
+          hosting server.{" "}
+          <a href="https://github.com/scalableminds/webknossos/wiki/Datasets">
+            Learn more about supported data formats.
+          </a>
+        </p>
+      </React.Fragment>
+    );
+
     return (
       <Row type="flex" justify="center" style={{ padding: "20px 50px 70px" }} align="middle">
         <Col span={18}>
           <div style={{ paddingBottom: 32, textAlign: "center" }}>
-            <Icon type="cloud-upload" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />
-            <p style={{ fontSize: 24, margin: "14px 0 0" }}>
-              Upload the first dataset into your organization.
-            </p>
-            <p
-              style={{
-                fontSize: 14,
-                margin: "14px 0",
-                color: "gray",
-                display: "inline-block",
-                width: 500,
-              }}
-            >
-              <Link to="/datasets/upload">Upload your dataset</Link> or copy it directly onto the
-              hosting server.{" "}
-              <a href="https://github.com/scalableminds/webknossos/wiki/Datasets">
-                Learn more about supported data formats.
-              </a>
-            </p>
+            {isUserAdmin ? uploadPlaceholder : noDatasetsPlaceholder}
           </div>
         </Col>
       </Row>

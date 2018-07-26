@@ -37,6 +37,7 @@ import type {
   TreeMapType,
   NodeMapType,
   FlycamType,
+  OxalisState,
 } from "oxalis/store";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import api from "oxalis/api/internal_api";
@@ -44,7 +45,7 @@ import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import EdgeCollection, { diffEdgeCollections } from "oxalis/model/edge_collection";
 
 function* centerActiveNode() {
-  getActiveNode(yield select(state => state.tracing)).map(activeNode => {
+  getActiveNode(yield select((state: OxalisState) => state.tracing)).map(activeNode => {
     api.tracing.centerPositionAnimated(activeNode.position, false, activeNode.rotation);
   });
 }
@@ -59,7 +60,7 @@ function* watchBranchPointDeletion(): Generator<*, *, *> {
 
     if (deleteBranchpointAction) {
       const hasBranchPoints = yield select(
-        state => getBranchPoints(state.tracing).getOrElse([]).length > 0,
+        (state: OxalisState) => getBranchPoints(state.tracing).getOrElse([]).length > 0,
       );
       if (hasBranchPoints) {
         if (lastActionCreatedNode === true) {

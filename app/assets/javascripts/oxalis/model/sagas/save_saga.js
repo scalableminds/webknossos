@@ -28,7 +28,7 @@ import { alert, location } from "libs/window";
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
 import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import type { OxalisState, TracingType, FlycamType, SaveQueueEntryType } from "oxalis/store";
+import type { TracingType, FlycamType, SaveQueueEntryType } from "oxalis/store";
 import type { RequestOptionsWithData } from "libs/request";
 import { moveTreeComponent } from "oxalis/model/sagas/update_actions";
 import { doWithToken } from "admin/admin_rest_api";
@@ -42,7 +42,7 @@ export function* collectUndoStates(): Generator<*, *, *> {
   const redoStack = [];
 
   yield take("INITIALIZE_SKELETONTRACING");
-  let prevTracing = yield select((state: OxalisState) => state.tracing);
+  let prevTracing = yield select(state => state.tracing);
   while (true) {
     const { userAction, undo, redo } = yield race({
       userAction: take(SkeletonTracingSaveRelevantActions),
@@ -120,16 +120,17 @@ export function* sendRequestToServer(timestamp: number = Date.now()): Generator<
   compactedSaveQueue = addVersionNumbers(compactedSaveQueue, version);
 
   try {
-    yield call(
-      sendRequestWithToken,
-      `${dataStoreUrl}/data/tracings/${type}/${tracingId}/update?token=`,
-      {
-        method: "POST",
-        headers: { "X-Date": `${timestamp}` },
-        data: compactedSaveQueue,
-        compress: true,
-      },
-    );
+    // todo: reactivate saving
+    // yield call(
+    //   sendRequestWithToken,
+    //   `${dataStoreUrl}/data/tracings/${type}/${tracingId}/update?token=`,
+    //   {
+    //     method: "POST",
+    //     headers: { "X-Date": `${timestamp}` },
+    //     data: compactedSaveQueue,
+    //     compress: true,
+    //   },
+    // );
     yield put(setVersionNumberAction(version + compactedSaveQueue.length));
     yield put(setLastSaveTimestampAction());
     yield put(shiftSaveQueueAction(saveQueue.length));

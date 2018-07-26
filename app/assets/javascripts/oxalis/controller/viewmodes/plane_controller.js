@@ -7,7 +7,7 @@ import * as React from "react";
 import { connect } from "react-redux";
 import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
-import Utils, { maybe } from "libs/utils";
+import Utils, { maybe, enforce } from "libs/utils";
 import Toast from "libs/toast";
 import { document } from "libs/window";
 import { InputMouse, InputKeyboard, InputKeyboardNoLoop } from "libs/input";
@@ -60,6 +60,20 @@ import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import * as skeletonController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import * as volumeController from "oxalis/controller/combinations/volumetracing_plane_controller";
 import api from "oxalis/api/internal_api";
+
+function ensureNonConflictingHandlers(skeletonControls: Object, volumeControls: Object): void {
+  const conflictingHandlers = _.intersection(
+    Object.keys(skeletonControls),
+    Object.keys(volumeControls),
+  );
+  if (conflictingHandlers.length > 0) {
+    throw new Error(
+      `There are unsolved conflicts between skeleton and volume controller: ${conflictingHandlers.join(
+        ", ",
+      )}`,
+    );
+  }
+}
 
 type OwnProps = {
   onRender: () => void,
@@ -176,18 +190,21 @@ class PlaneController extends React.PureComponent<Props> {
       },
     };
 
-    const skeletonControls =
+    const { leftClick: skeletonLeftClick, ...skeletonControls } =
       this.props.tracing.skeleton != null
         ? skeletonController.getPlaneMouseControls(this.planeView)
         : {};
 
-    const volumeControls =
+    const { leftClick: volumeLeftClick, ...volumeControls } =
       this.props.tracing.volume != null ? volumeController.getPlaneMouseControls() : {};
+
+    ensureNonConflictingHandlers(skeletonControls, volumeControls);
 
     return {
       ...baseControls,
       ...skeletonControls,
       ...volumeControls,
+      leftClick: this.createToolDependentHandler(skeletonLeftClick, volumeLeftClick),
     };
   }
 
@@ -341,18 +358,20 @@ class PlaneController extends React.PureComponent<Props> {
       },
     };
 
-    const skeletonControls =
-      this.props.tracing.skeleton != null
-        ? skeletonController.getPlaneMouseControls(this.planeView)
-        : {};
+    const { c: skeletonCHandler, "1": skeletonOneHandler, ...skeletonControls } =
+      this.props.tracing.skeleton != null ? skeletonController.getKeyboardControls() : {};
 
-    const volumeControls =
-      this.props.tracing.volume != null ? volumeController.getPlaneMouseControls() : {};
+    const { c: volumeCHandler, "1": volumeOneHandler, ...volumeControls } =
+      this.props.tracing.volume != null ? volumeController.getKeyboardControls() : {};
+
+    ensureNonConflictingHandlers(skeletonControls, volumeControls);
 
     return {
       ...baseControls,
       ...skeletonControls,
       ...volumeControls,
+      c: this.createToolDependentHandler(skeletonCHandler, volumeCHandler),
+      "1": this.createToolDependentHandler(skeletonOneHandler, volumeOneHandler),
     };
   }
 
@@ -563,6 +582,24 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   updateControls = () => this.controls.update(true);
+
+  createToolDependentHandler(skeletonHandler: ?Function, volumeHandler: ?Function): Function {
+    return (...args) => {
+      if (skeletonHandler && volumeHandler) {
+        // Deal with both modes
+        const tool = enforce(getVolumeTool)(this.props.tracing.volume);
+        // todo: maybe introduce a new tool for skeleton-only ? but less modes is better...
+        if (tool === VolumeToolEnum.MOVE) {
+          skeletonHandler(...args);
+        } else {
+          volumeHandler(...args);
+        }
+        return;
+      }
+      if (skeletonHandler) skeletonHandler(...args);
+      if (volumeHandler) volumeHandler(...args);
+    };
+  }
 
   render() {
     if (!this.controls) {

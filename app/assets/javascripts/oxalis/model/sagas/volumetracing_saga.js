@@ -19,7 +19,7 @@ import Model from "oxalis/model";
 import Constants, { VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import type { OrthoViewType, VolumeToolType, ContourModeType } from "oxalis/constants";
-import type { VolumeTracingType, FlycamType } from "oxalis/store";
+import type { OxalisState, VolumeTracingType, FlycamType } from "oxalis/store";
 import api from "oxalis/api/internal_api";
 
 export function* watchVolumeTracingAsync(): Generator<*, *, *> {
@@ -30,12 +30,12 @@ export function* watchVolumeTracingAsync(): Generator<*, *, *> {
 
 function* warnOfTooLowOpacity(): Generator<*, *, *> {
   yield take("INITIALIZE_SETTINGS");
-  if (yield select(state => state.tracing.volume == null)) {
+  if (yield select((state: OxalisState) => state.tracing.volume == null)) {
     return;
   }
 
   const isOpacityTooLow = yield select(
-    state => state.datasetConfiguration.segmentationOpacity < 10,
+    (state: OxalisState) => state.datasetConfiguration.segmentationOpacity < 10,
   );
   if (isOpacityTooLow) {
     Toast.warning(
@@ -46,18 +46,20 @@ function* warnOfTooLowOpacity(): Generator<*, *, *> {
 
 export function* editVolumeLayerAsync(): Generator<any, any, any> {
   yield take("INITIALIZE_VOLUMETRACING");
-  const allowUpdate = yield select(state => state.tracing.restrictions.allowUpdate);
+  const allowUpdate = yield select((state: OxalisState) => state.tracing.restrictions.allowUpdate);
 
   while (allowUpdate) {
     const startEditingAction = yield take("START_EDITING");
-    const contourTracingMode = yield select(state => state.tracing.contourTracingMode);
+    const contourTracingMode = yield select(
+      (state: OxalisState) => state.tracing.volume.contourTracingMode,
+    );
 
     // Volume tracing for higher zoomsteps is currently not allowed
-    if (yield select(state => isVolumeTracingDisallowed(state))) {
+    if (yield select((state: OxalisState) => isVolumeTracingDisallowed(state))) {
       continue;
     }
     const currentLayer = yield call(createVolumeLayer, startEditingAction.planeId);
-    const activeTool = yield select(state => state.tracing.activeTool);
+    const activeTool = yield select((state: OxalisState) => state.tracing.volume.activeTool);
 
     if (activeTool === VolumeToolEnum.BRUSH) {
       yield labelWithIterator(
@@ -89,13 +91,15 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
 }
 
 function* createVolumeLayer(planeId: OrthoViewType): Generator<*, *, *> {
-  const position = Dimensions.roundCoordinate(yield select(state => getPosition(state.flycam)));
+  const position = Dimensions.roundCoordinate(
+    yield select((state: OxalisState) => getPosition(state.flycam)),
+  );
   const thirdDimValue = position[Dimensions.thirdDimensionForPlane(planeId)];
   return new VolumeLayer(planeId, thirdDimValue);
 }
 
 function* labelWithIterator(iterator, contourTracingMode): Generator<*, *, *> {
-  const activeCellId = yield select(state => state.tracing.activeCellId);
+  const activeCellId = yield select((state: OxalisState) => state.tracing.volume.activeCellId);
   const segmentationLayer = yield call([Model, Model.getSegmentationLayer]);
   const { cube } = segmentationLayer;
   switch (contourTracingMode) {
@@ -117,17 +121,21 @@ function* labelWithIterator(iterator, contourTracingMode): Generator<*, *, *> {
 }
 
 function* copySegmentationLayer(action: CopySegmentationLayerActionType): Generator<*, *, *> {
-  const activeViewport = yield select(state => state.viewModeData.plane.activeViewport);
+  const activeViewport = yield select(
+    (state: OxalisState) => state.viewModeData.plane.activeViewport,
+  );
   if (activeViewport === "TDView") {
     // Cannot copy labels from 3D view
     return;
   }
 
   const segmentationLayer = yield call([Model, Model.getSegmentationLayer]);
-  const position = Dimensions.roundCoordinate(yield select(state => getPosition(state.flycam)));
-  const zoom = yield select(state => state.flycam.zoomStep);
+  const position = Dimensions.roundCoordinate(
+    yield select((state: OxalisState) => getPosition(state.flycam)),
+  );
+  const zoom = yield select((state: OxalisState) => state.flycam.zoomStep);
   const halfViewportWidth = Math.round((Constants.PLANE_WIDTH / 2) * zoom);
-  const activeCellId = yield select(state => state.tracing.activeCellId);
+  const activeCellId = yield select((state: OxalisState) => state.tracing.volume.activeCellId);
 
   function copyVoxelLabel(voxelTemplateAddress, voxelTargetAddress) {
     const templateLabelValue = segmentationLayer.cube.getDataValue(voxelTemplateAddress);
@@ -144,7 +152,9 @@ function* copySegmentationLayer(action: CopySegmentationLayerActionType): Genera
   }
 
   const directionInverter = action.source === "nextLayer" ? 1 : -1;
-  const spaceDirectionOrtho = yield select(state => state.flycam.spaceDirectionOrtho);
+  const spaceDirectionOrtho = yield select(
+    (state: OxalisState) => state.flycam.spaceDirectionOrtho,
+  );
   const dim = Dimensions.getIndices(activeViewport)[2];
   const direction = spaceDirectionOrtho[dim];
 
@@ -185,7 +195,7 @@ export function* finishLayer(
 export function* disallowVolumeTracingWarning(): Generator<*, *, *> {
   while (true) {
     yield take(["SET_TOOL", "CYCLE_TOOL"]);
-    if (yield select(state => isVolumeTracingDisallowed(state))) {
+    if (yield select((state: OxalisState) => isVolumeTracingDisallowed(state))) {
       Toast.warning("Volume tracing is not possible at this zoom level. Please zoom in further.");
     }
   }

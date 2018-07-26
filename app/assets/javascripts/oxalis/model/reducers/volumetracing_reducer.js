@@ -47,7 +47,13 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
         userBoundingBox: convertServerBoundingBoxToFrontend(action.tracing.userBoundingBox),
       };
 
-      const newState = update(state, { tracing: { volume: { $set: volumeTracing } } });
+      const oldTracing = state.tracing;
+      const newTracing = {
+        ...oldTracing,
+        ...annotationInfo,
+        volume: volumeTracing,
+      };
+      const newState = update(state, { tracing: { $set: newTracing } });
       return createCellReducer(newState, volumeTracing, action.tracing.activeSegmentId);
     }
     default:

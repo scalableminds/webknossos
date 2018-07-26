@@ -23,6 +23,7 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setDirectionAction } from "oxalis/model/actions/flycam_actions";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
+import { enforce } from "libs/utils";
 import {
   getPosition,
   getRotationOrtho,
@@ -182,8 +183,7 @@ function setWaypoint(position: Vector3, ctrlPressed: boolean): void {
 function addNode(position: Vector3, rotation: Vector3, centered: boolean): void {
   const state = Store.getState();
   const { newNodeNewTree } = state.userConfiguration;
-  const skeletonTracing = enforceSkeletonTracing(state.tracing);
-  const activeNodeMaybe = getActiveNode(skeletonTracing);
+  const activeNodeMaybe = enforce(getActiveNode)(state.tracing.skeleton);
 
   if (state.tracing.restrictions.somaClickingAllowed && newNodeNewTree) {
     Store.dispatch(createTreeAction());
@@ -204,8 +204,9 @@ function addNode(position: Vector3, rotation: Vector3, centered: boolean): void 
   );
 
   if (centered) {
-    // we created a new node, so get a new reference
-    getActiveNode(skeletonTracing).map(newActiveNode =>
+    // we created a new node, so get a new reference from the current store state
+    const newState = Store.getState();
+    enforce(getActiveNode)(newState.tracing.skeleton).map(newActiveNode =>
       // Center the position of the active node without modifying the "third" dimension (see centerPositionAnimated)
       // This is important because otherwise the user cannot continue to trace until the animation is over
       api.tracing.centerPositionAnimated(newActiveNode.position, true),

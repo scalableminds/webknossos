@@ -64,7 +64,6 @@ test.serial("Save actions should not be chunked below the chunk limit (1/3)", t 
 
   const trees = generateDummyTrees(1000, 1);
   Store.dispatch(addTreesAndGroupsAction(createTreeMapFromTreeArray(trees), []));
-  // t.true(true);
   t.is(Store.getState().save.queue.length, 1);
   t.true(Store.getState().save.queue[0].actions.length < maximumActionCountPerBatch);
 });
@@ -82,7 +81,7 @@ test.serial("Save actions should be chunked above the chunk limit (2/3)", t => {
   t.is(state.save.queue[0].actions.length, maximumActionCountPerBatch);
 });
 
-test.serial("Save actions should be chunked after compacting (2/3)", t => {
+test.serial("Save actions should be chunked after compacting (3/3)", t => {
   const nodeCount = 20000;
   // Test that a tree split is detected even when the involved node count is above the chunk limit
   const trees = generateDummyTrees(1, nodeCount);

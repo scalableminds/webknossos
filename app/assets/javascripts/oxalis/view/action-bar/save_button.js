@@ -53,7 +53,7 @@ class SaveButton extends React.PureComponent<Props, State> {
     }
   }
 
-  showProgress(): boolean {
+  shouldShowProgress(): boolean {
     // For a low action count, the progress info would show only for a very short amount of time
     return this.props.isBusy && this.props.progressInfo.totalActionCount > 5000;
   }
@@ -67,7 +67,7 @@ class SaveButton extends React.PureComponent<Props, State> {
         onClick={this.props.onClick}
         icon={this.getSaveButtonIcon()}
       >
-        {this.showProgress() ? (
+        {this.shouldShowProgress() ? (
           <React.Fragment>
             {Math.floor((progressInfo.processedActionCount / progressInfo.totalActionCount) * 100)}{" "}
             %

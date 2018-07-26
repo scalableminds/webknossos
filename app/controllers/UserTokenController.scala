@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package controllers
 
 import javax.inject.Inject
@@ -8,8 +5,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.services.{AccessMode, AccessResourceType, UserAccessAnswer, UserAccessRequest}
 import models.annotation._
-import models.binary.{DataSetDAO, DataStoreHandlingStrategy}
-import models.team.OrganizationSQLDAO
+import models.binary.{DataSetSQLDAO, DataStoreHandlingStrategy}
 import models.user.UserSQL
 import net.liftweb.common.{Box, Full}
 import oxalis.security.WebknossosSilhouette.UserAwareAction
@@ -68,7 +64,7 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
     //Note: reading access is ensured in findOneBySourceName, depending on the implicit DBAccessContext
 
     def tryRead: Fox[UserAccessAnswer] = {
-      DataSetDAO.findOneBySourceName(dataSourceName).futureBox map {
+      DataSetSQLDAO.findOneByName(dataSourceName).futureBox map {
         case Full(_) => UserAccessAnswer(true)
         case _ => UserAccessAnswer(false, Some("No read access on dataset"))
       }
@@ -76,10 +72,9 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
 
     def tryWrite: Fox[UserAccessAnswer] = {
       for {
-        dataset <- DataSetDAO.findOneBySourceName(dataSourceName) ?~> "datasource.notFound"
+        dataset <- DataSetSQLDAO.findOneByName(dataSourceName) ?~> "datasource.notFound"
         user <- userBox.toFox
-        organization <- OrganizationSQLDAO.findOneByName(dataset.owningOrganization)
-        isAllowed <- user.isTeamManagerOrAdminOfOrg(organization._id)
+        isAllowed <- user.isTeamManagerOrAdminOfOrg(dataset._organization)
       } yield {
         UserAccessAnswer(isAllowed)
       }

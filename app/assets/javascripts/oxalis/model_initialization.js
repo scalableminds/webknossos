@@ -13,6 +13,7 @@ import {
   setActiveNodeAction,
   initializeSkeletonTracingAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
 import { initializeVolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
 import { setTaskAction } from "oxalis/model/actions/task_actions";
 import {
@@ -42,7 +43,7 @@ import type {
   APIAnnotationType,
   APIDatasetType,
   APIDataLayerType,
-  CombinedServerTracingType,
+  HybridServerTracingType,
   ServerVolumeTracingType,
 } from "admin/api_flow_types";
 import {
@@ -120,7 +121,7 @@ export async function initialize(
   // There is no need to reinstantiate the DataLayers if the dataset didn't change.
   if (initialFetch) {
     initializationInformation = initializeDataLayerInstances();
-    if (tracing != null) Store.dispatch(setZoomStepAction(tracing.skeleton.zoomLevel));
+    if (tracing != null) Store.dispatch(setZoomStepAction(getSomeServerTracing(tracing).zoomLevel));
   }
 
   // There is no need to initialize the tracing if there is no tracing (View mode).
@@ -139,7 +140,7 @@ async function fetchParallel(
   skeletonAnnotation: ?APIAnnotationType,
   volumeAnnotation: ?APIAnnotationType,
   datasetName: string,
-): Promise<[APIDatasetType, *, *, ?CombinedServerTracingType]> {
+): Promise<[APIDatasetType, *, *, ?HybridServerTracingType]> {
   return Promise.all([
     getDataset(datasetName, getSharingToken()),
     getUserConfiguration(),
@@ -186,7 +187,7 @@ function validateSpecsForLayers(
   return { isMappingSupported, textureInformationPerLayer };
 }
 
-function initializeTracing(annotation: APIAnnotationType, tracing: CombinedServerTracingType) {
+function initializeTracing(annotation: APIAnnotationType, tracing: HybridServerTracingType) {
   // This method is not called for the View mode
   const { dataset } = Store.getState();
   const { allowedModes, preferredMode } = determineAllowedModes(dataset, annotation.settings);
@@ -222,7 +223,7 @@ function initializeTracing(annotation: APIAnnotationType, tracing: CombinedServe
 function initializeDataset(
   initialFetch: boolean,
   dataset: APIDatasetType,
-  tracing: ?CombinedServerTracingType,
+  tracing: ?HybridServerTracingType,
 ): void {
   let error;
   if (!dataset) {
@@ -343,7 +344,7 @@ function setupLayerForVolumeTracing(
   return layers;
 }
 
-function applyUrlState(urlState: UrlManagerState, tracing: ?CombinedServerTracingType) {
+function applyUrlState(urlState: UrlManagerState, tracing: ?HybridServerTracingType) {
   // If there is no editPosition (e.g. when viewing a dataset) and
   // no default position, compute the center of the dataset
   const { dataset, datasetConfiguration } = Store.getState();
@@ -354,7 +355,7 @@ function applyUrlState(urlState: UrlManagerState, tracing: ?CombinedServerTracin
   }
   // todo: use tracing.base for properties (maybe only pass that property in the first place)
   if (tracing != null) {
-    position = Utils.point3ToVector3(tracing.skeleton.editPosition);
+    position = Utils.point3ToVector3(getSomeServerTracing(tracing).editPosition);
   }
   if (urlState.position != null) {
     position = urlState.position;
@@ -373,8 +374,8 @@ function applyUrlState(urlState: UrlManagerState, tracing: ?CombinedServerTracin
   if (defaultRotation != null) {
     rotation = defaultRotation;
   }
-  if (tracing && tracing.skeleton != null) {
-    rotation = Utils.point3ToVector3(tracing.skeleton.editRotation);
+  if (tracing) {
+    rotation = Utils.point3ToVector3(getSomeServerTracing(tracing).editRotation);
   }
   if (urlState.rotation != null) {
     rotation = urlState.rotation;

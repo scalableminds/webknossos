@@ -33,7 +33,7 @@ import type {
   APIFeatureToggles,
   APIOrganizationType,
   ServerTracingType,
-  CombinedServerTracingType,
+  HybridServerTracingType,
   ServerSkeletonTracingType,
   ServerVolumeTracingType,
 } from "admin/api_flow_types";
@@ -498,7 +498,7 @@ export function createExplorational(
 export async function getTracingForAnnotations(
   skeletonAnnotation: APIAnnotationType,
   volumeAnnotation: APIAnnotationType,
-): Promise<CombinedServerTracingType> {
+): Promise<HybridServerTracingType> {
   const [_skeleton, _volume] = await Promise.all([
     getTracingForAnnotationType(skeletonAnnotation),
     getTracingForAnnotationType(volumeAnnotation),

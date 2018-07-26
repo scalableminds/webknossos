@@ -8,7 +8,7 @@ import type {
   TreeMapType,
   BranchPointType,
 } from "oxalis/store";
-import type { CombinedServerTracingType, ServerSkeletonTracingType } from "admin/api_flow_types";
+import type { HybridServerTracingType, ServerSkeletonTracingType } from "admin/api_flow_types";
 
 export type SkeletonTracingStatsType = {|
   treeCount: number,
@@ -25,7 +25,7 @@ export function getSkeletonTracing(tracing: TracingType): Maybe<SkeletonTracingT
 }
 
 export function serverTracingAsSkeletonTracingMaybe(
-  tracing: ?CombinedServerTracingType,
+  tracing: ?HybridServerTracingType,
 ): Maybe<ServerSkeletonTracingType> {
   if (tracing && tracing.skeleton) {
     return Maybe.Just(tracing.skeleton);

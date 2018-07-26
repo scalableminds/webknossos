@@ -44,6 +44,7 @@ function* restartableSaga(): Generator<*, *, *> {
       watchDataRelevantChanges(),
     ];
   } catch (err) {
+    console.error(err);
     alert(`\
 Internal error.
 Please reload the page to avoid losing data.

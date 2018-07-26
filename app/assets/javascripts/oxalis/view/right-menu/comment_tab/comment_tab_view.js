@@ -343,6 +343,7 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
             value={activeCommentContent}
             disabled={activeNodeMaybe.isNothing}
             onChange={evt => this.handleChangeInput(evt, true)}
+            onPressEnter={evt => evt.target.blur()}
             placeholder="Add comment"
             style={{ width: "60%" }}
           />

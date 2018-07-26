@@ -18,18 +18,53 @@ function linkify(comment: string) {
   );
 }
 
+function getFirstLine(comment: string) {
+  const newLineIndex = comment.indexOf("\n");
+  return comment.slice(0, newLineIndex !== -1 ? newLineIndex : undefined);
+}
+
 type CommentProps = {
   isActive: boolean,
   comment: CommentType,
   style: Object,
 };
 
-export function MarkdownComment({ comment }: { comment: CommentType }) {
+export function MarkdownComment({
+  comment,
+  singleLine,
+}: {
+  comment: CommentType,
+  singleLine?: boolean,
+}) {
+  const content = singleLine ? getFirstLine(comment.content) : comment.content;
   return (
-    <Markdown
-      source={linkify(comment.content)}
-      options={{ html: false, breaks: true, linkify: true }}
-    />
+    <Markdown source={linkify(content)} options={{ html: false, breaks: true, linkify: true }} />
+  );
+}
+
+function ActiveCommentPopover({
+  comment,
+  children,
+  isActive,
+}: {
+  comment: CommentType,
+  children: React.Node,
+  isActive: boolean,
+}) {
+  return isActive ? (
+    <Popover
+      content={<MarkdownComment comment={comment} />}
+      defaultVisible
+      visible
+      autoAdjustOverflow={false}
+      placement="rightTop"
+      getPopupContainer={() => document.getElementById("comment-list")}
+      style={{ maxHeight: 200, overflowY: "auto" }}
+    >
+      {children}
+    </Popover>
+  ) : (
+    children
   );
 }
 
@@ -46,40 +81,26 @@ export function Comment({ comment, isActive, style }: CommentProps) {
   });
   const isMultiLine = comment.content.indexOf("\n") !== -1;
 
-  const commentElement = (
-    <li className={liClassName} style={{ ...style, width: "inherit" }}>
-      <span className="comment-node-id">
+  return (
+    <li className={liClassName} style={style}>
+      <span>
         <i className={iClassName} />
         <a onClick={handleClick}>{comment.nodeId}</a>
         {" - "}
       </span>
       <span style={{ display: "inline-block" }}>
-        <MarkdownComment comment={comment} />
+        <MarkdownComment comment={comment} singleLine />
       </span>
-      {isMultiLine && !isActive ? (
-        <span className="comment-node-id">
-          <a onClick={handleClick}>
-            <i className="fa fa-commenting-o" aria-hidden="true" />
-          </a>
-        </span>
+      {isMultiLine ? (
+        <ActiveCommentPopover comment={comment} isActive={isActive}>
+          <span style={{ marginLeft: 5 }}>
+            <a onClick={handleClick}>
+              <i className="fa fa-commenting-o" />
+            </a>
+          </span>
+        </ActiveCommentPopover>
       ) : null}
     </li>
-  );
-
-  return isActive && isMultiLine ? (
-    <Popover
-      content={<MarkdownComment comment={comment} />}
-      defaultVisible
-      visible
-      autoAdjustOverflow={false}
-      placement="right"
-      getPopupContainer={() => document.getElementById("comment-list")}
-      style={{ maxHeight: 200, overflowY: "auto" }}
-    >
-      {commentElement}
-    </Popover>
-  ) : (
-    commentElement
   );
 }
 

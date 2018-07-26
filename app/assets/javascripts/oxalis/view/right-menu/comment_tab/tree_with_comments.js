@@ -23,7 +23,7 @@ function TreeWithComments(props: Props) {
   });
 
   return (
-    <li style={{ ...props.style, width: "inherit" }} className={liClassName}>
+    <li style={props.style} className={liClassName}>
       <a onClick={handleToggleComment}>
         <i className={iClassName} />
       </a>

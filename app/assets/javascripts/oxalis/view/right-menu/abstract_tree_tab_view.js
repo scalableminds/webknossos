@@ -9,7 +9,7 @@ import type { Dispatch } from "redux";
 import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 import AbstractTreeRenderer from "oxalis/view/right-menu/abstract_tree_renderer";
 import type { NodeListItemType } from "oxalis/view/right-menu/abstract_tree_renderer";
-import type { OxalisState, SkeletonTracingType, TracingType } from "oxalis/store";
+import type { OxalisState, SkeletonTracingType } from "oxalis/store";
 import { makeSkeletonTracingGuard } from "oxalis/view/guards";
 
 // The refinement that we're dealing with a SkeletonTracing doesn't happen in mapStateToProps,

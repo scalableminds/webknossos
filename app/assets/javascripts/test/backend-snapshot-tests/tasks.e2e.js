@@ -2,7 +2,7 @@
 // @flow
 import test from "ava";
 import _ from "lodash";
-import { resetDatabase } from "test/enzyme/e2e-setup";
+import { resetDatabase, replaceVolatileValues } from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 
 test.before("Reset database", async () => {
@@ -13,10 +13,6 @@ test("getTasks()", async t => {
   const allTasks = (await api.getTasks({})).filter(
     task => task.projectName !== "Test_Project3(for_annotation_mutations)",
   );
-  allTasks.forEach(task => {
-    // $FlowFixMe: Make tracingTime deterministic
-    task.tracingTime = 100;
-  });
   t.snapshot(allTasks, { id: "tasks-getTasks" });
 
   const complexQueriedTasks = await api.getTasks({
@@ -24,10 +20,6 @@ test("getTasks()", async t => {
   });
 
   t.is(complexQueriedTasks.length, 2);
-  complexQueriedTasks.forEach(task => {
-    // $FlowFixMe: Make tracingTime deterministic
-    task.tracingTime = 100;
-  });
   t.deepEqual(
     complexQueriedTasks.map(task => task.id).sort(),
     ["58135c192faeb34c0081c058", "581367a82faeb37a008a5352"].sort(),
@@ -86,35 +78,55 @@ test.serial("transferTask()", async t => {
   t.is(revertedTask.user && revertedTask.user.id, userId);
 });
 
-// Tests which require a working dataStore during tests and therefore don't work yet:
-//
-// test.serial("createTasks() and deleteTask()", async t => {
-//   const newTask = {
-//     boundingBox: null,
-//     dataSet: "confocal-multi_knossos",
-//     editPosition: [0, 0, 0],
-//     editRotation: [0, 0, 0],
-//     neededExperience: {
-//       domain: "abc",
-//       value: 1,
-//     },
-//     projectName: "Test_Project",
-//     scriptId: null,
-//     openInstances: 3,
-//     teamName: "570b9f4b2a7c0e3b008da6ec",
-//     taskTypeId: "570b9f4c2a7c0e4c008da6ee",
-//   };
-//   const createdTasks = await api.createTasks([newTask]);
-//   // console.log("createdTasks", createdTasks);
-//   t.snapshot(createdTasks, { id: "task-createTasks" });
-//
-//   await api.deleteTask(createdTasks[0].id);
-//   t.true(true);
-// });
-//
-// test.serial("requestTask()", async t => {
-//   const newTaskAnnotation = await api.requestTask();
-//   t.snapshot(newTaskAnnotation, { id: "task-requestTask" });
-// });
-//
+const newTask = {
+  boundingBox: null,
+  dataSet: "confocal-multi_knossos",
+  editPosition: [1, 2, 3],
+  editRotation: [4, 5, 6],
+  neededExperience: {
+    domain: "abc",
+    value: 1,
+  },
+  projectName: "Test_Project",
+  scriptId: null,
+  openInstances: 3,
+  teamName: "570b9f4b2a7c0e3b008da6ec",
+  taskTypeId: "570b9f4c2a7c0e4c008da6ee",
+};
+
+test.serial("createTasks() and deleteTask()", async t => {
+  const createdTaskWrappers = await api.createTasks([newTask]);
+  t.is(createdTaskWrappers.length, 1);
+  const createdTaskWrapper = createdTaskWrappers[0];
+
+  if (createdTaskWrapper.success != null) {
+    const createdTask = createdTaskWrapper.success;
+
+    t.snapshot(replaceVolatileValues(createdTask), { id: "task-createTasks" });
+
+    await api.deleteTask(createdTask.id);
+  } else {
+    t.fail("Task creation failed.");
+  }
+
+  t.true(true);
+});
+
+test.serial("requestTask()", async t => {
+  const createdTaskWrappers = await api.createTasks([newTask]);
+  t.is(createdTaskWrappers.length, 1);
+  const createdTaskWrapper = createdTaskWrappers[0];
+  const newTaskAnnotation = await api.requestTask();
+
+  t.snapshot(replaceVolatileValues(newTaskAnnotation), { id: "task-requestTask" });
+
+  if (createdTaskWrapper.success != null) {
+    await api.deleteTask(createdTaskWrapper.success.id);
+  } else {
+    t.fail("Task creation failed.");
+  }
+
+  t.true(true);
+});
+
 // test.serial("createTaskFromNML")

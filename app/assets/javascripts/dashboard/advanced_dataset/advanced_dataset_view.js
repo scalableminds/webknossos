@@ -11,6 +11,7 @@ import type { DatasetType } from "dashboard/dataset_view";
 import type { APITeamType } from "admin/api_flow_types";
 import dice from "dice-coefficient";
 import _ from "lodash";
+import FormattedDate from "components/formatted_date";
 
 const { Column } = Table;
 
@@ -19,6 +20,7 @@ const typeHint: DatasetType[] = [];
 type Props = {
   datasets: Array<DatasetType>,
   searchQuery: string,
+  isUserAdmin: boolean,
 };
 
 type State = {
@@ -61,8 +63,10 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
   };
 
   render() {
+    const { isUserAdmin } = this.props;
+    const isImported = dataset => dataset.dataSource.dataLayers != null;
     const filteredDataSource = Utils.filterWithSearchQueryOR(
-      this.props.datasets,
+      isUserAdmin ? this.props.datasets : this.props.datasets.filter(isImported),
       ["name", "description"],
       this.props.searchQuery,
     );
@@ -91,7 +95,9 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
           pagination={{
             defaultPageSize: 50,
           }}
-          expandedRowRender={dataset => <DatasetAccessListView dataset={dataset} />}
+          expandedRowRender={
+            isUserAdmin ? dataset => <DatasetAccessListView dataset={dataset} /> : null
+          }
           onChange={this.handleChange}
         >
           <Column
@@ -115,9 +121,9 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             title="Creation Date"
             dataIndex="created"
             key="created"
-            sorter={Utils.localeCompareBy(typeHint, "formattedCreated")}
+            sorter={Utils.compareBy(typeHint, "created")}
             sortOrder={sortedInfo.columnKey === "created" && sortedInfo.order}
-            render={(__, dataset: DatasetType) => dataset.formattedCreated}
+            render={created => <FormattedDate timestamp={created} />}
           />
           <Column
             title="Scale"
@@ -185,7 +191,9 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             width={200}
             title="Actions"
             key="actions"
-            render={(__, dataset: DatasetType) => <DatasetActionView dataset={dataset} />}
+            render={(__, dataset: DatasetType) => (
+              <DatasetActionView isUserAdmin={isUserAdmin} dataset={dataset} />
+            )}
           />
         </Table>
       </div>

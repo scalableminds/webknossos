@@ -9,7 +9,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.security.SCrypt._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.AnnotationService
+import models.binary.DataSetSQLDAO
 import models.configuration.{DataSetConfiguration, UserConfiguration}
 import models.team._
 import oxalis.mail.DefaultMails
@@ -18,13 +18,13 @@ import play.api.Play
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
-import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats._
 import oxalis.security.WebknossosSilhouette
+import play.api.libs.json._
+import utils.ObjectId
 
 import scala.concurrent.Future
 
-object UserService extends FoxImplicits with IdentityService[User] {
+object UserService extends FoxImplicits with IdentityService[UserSQL] {
 
   lazy val Mailer =
     Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
@@ -34,94 +34,104 @@ object UserService extends FoxImplicits with IdentityService[User] {
   val tokenDAO = WebknossosSilhouette.environment.tokenDAO
 
   def defaultUser = {
-    UserDAO.findOneByEmail(defaultUserEmail)(GlobalAccessContext)
+    UserSQLDAO.findOneByEmail(defaultUserEmail)(GlobalAccessContext)
   }
 
-  def removeTeamFromUsers(team: Team)(implicit ctx: DBAccessContext) = {
-    UserDAO.removeTeamFromUsers(team._id)
+  def findByTeams(teams: List[ObjectId])(implicit ctx: DBAccessContext) = {
+    UserSQLDAO.findAllByTeams(teams)
   }
 
-  def findAll()(implicit ctx: DBAccessContext) =
-    UserDAO.findAll
-
-  def findByTeams(teams: List[BSONObjectID])(implicit ctx: DBAccessContext) = {
-    UserDAO.findByTeams(teams)
-  }
-
-  def findOneById(id: String, useCache: Boolean)(implicit ctx: DBAccessContext): Fox[User] = {
+  def findOneById(userId: ObjectId, useCache: Boolean)(implicit ctx: DBAccessContext): Fox[UserSQL] = {
     if (useCache)
-      UserCache.findUser(id)
+      UserCache.findUser(userId)
     else
-      UserCache.store(id, UserDAO.findOneById(id))
+      UserCache.store(userId, UserSQLDAO.findOne(userId))
   }
 
-  def logActivity(_user: BSONObjectID, lastActivity: Long) = {
-    UserDAO.logActivity(_user, lastActivity)(GlobalAccessContext)
+  def logActivity(_user: ObjectId, lastActivity: Long) = {
+    UserSQLDAO.updateLastActivity(_user, lastActivity)(GlobalAccessContext)
   }
 
-  def insert(organization: String, email: String, firstName: String,
-             lastName: String, password: String, isActive: Boolean, teamRole: Boolean = false, loginInfo: LoginInfo, passwordInfo: PasswordInfo, isAdmin: Boolean = false): Fox[User] =
+  def insert(_organization: ObjectId, email: String, firstName: String,
+             lastName: String, password: String, isActive: Boolean, teamRole: Boolean = false, loginInfo: LoginInfo, passwordInfo: PasswordInfo, isAdmin: Boolean = false): Fox[UserSQL] = {
+    implicit val ctx = GlobalAccessContext
     for {
-      organizationTeamId <- OrganizationDAO.findOneByName(organization)(GlobalAccessContext).map(_._organizationTeam)
-      orgTeam <- TeamDAO.findOneById(organizationTeamId)(GlobalAccessContext)
-      teamMemberships = List(TeamMembership(orgTeam._id, orgTeam.name, teamRole))
-      user = User(email, firstName, lastName, isActive = isActive, md5(password), organization, teamMemberships, loginInfo = loginInfo, passwordInfo = passwordInfo, isAdmin = isAdmin)
-      _ <- UserDAO.insert(user)(GlobalAccessContext)
+      organizationTeamId <- OrganizationSQLDAO.findOne(_organization).flatMap(_.organizationTeamId).toFox
+      orgTeam <- TeamSQLDAO.findOne(organizationTeamId)
+      teamMemberships = List(TeamMembershipSQL(orgTeam._id, teamRole))
+      user = UserSQL(
+        ObjectId.generate,
+        _organization,
+        email,
+        firstName,
+        lastName,
+        System.currentTimeMillis(),
+        Json.toJson(UserConfiguration.default),
+        md5(password),
+        loginInfo,
+        passwordInfo,
+        isAdmin,
+        isSuperUser = false,
+        isDeactivated = !isActive
+      )
+      _ <- UserSQLDAO.insertOne(user)
+      _ <- Fox.combined(teamMemberships.map(UserTeamRolesSQLDAO.insertTeamMembership(user._id, _)))
     } yield user
+  }
 
   def update(
-              user: User,
+              user: UserSQL,
               firstName: String,
               lastName: String,
               email: String,
               activated: Boolean,
               isAdmin: Boolean,
-              teams: List[TeamMembership],
-              experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[User] = {
+              teamMemberships: List[TeamMembershipSQL],
+              experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[UserSQL] = {
 
-    if (!user.isActive && activated) {
+    if (user.isDeactivated && activated) {
       Mailer ! Send(DefaultMails.activatedMail(user.name, user.email))
     }
-    UserDAO.update(user._id, firstName, lastName, email, activated, isAdmin, teams, experiences).map {
-      result =>
-        UserCache.invalidateUser(user.id)
-        if(user.email != email)
-          WebknossosSilhouette.environment.tokenDAO.updateEmail(user.email, email)
-        result
-    }
+    for {
+      _ <- UserSQLDAO.updateValues(user._id, firstName, lastName, email, isAdmin, isDeactivated = !activated)
+      _ <- UserTeamRolesSQLDAO.updateTeamMembershipsForUser(user._id, teamMemberships)
+      _ <- UserExperiencesSQLDAO.updateExperiencesForUser(user._id, experiences)
+      _ = UserCache.invalidateUser(user._id)
+      _ <- if (user.email == email) Fox.successful(()) else WebknossosSilhouette.environment.tokenDAO.updateEmail(user.email, email)
+      updated <- UserSQLDAO.findOne(user._id)
+    } yield updated
   }
 
   def changePasswordInfo(loginInfo: LoginInfo, passwordInfo: PasswordInfo) = {
     for {
       user <- findOneByEmail(loginInfo.providerKey)
-      _ <- UserDAO.changePasswordInfo(user._id, passwordInfo)(GlobalAccessContext)
+      _ <- UserSQLDAO.updatePasswordInfo(user._id, passwordInfo)(GlobalAccessContext)
     } yield {
       passwordInfo
     }
   }
 
-  def findOneByEmail(email: String): Fox[User] = {
-    UserDAO.findOneByEmail(email)(GlobalAccessContext)
+  def findOneByEmail(email: String): Fox[UserSQL] = {
+    UserSQLDAO.findOneByEmail(email)(GlobalAccessContext)
   }
 
-  def updateUserConfiguration(user: User, configuration: UserConfiguration)(implicit ctx: DBAccessContext) = {
-    UserDAO.updateUserConfiguration(user, configuration).map {
+  def updateUserConfiguration(user: UserSQL, configuration: UserConfiguration)(implicit ctx: DBAccessContext) = {
+    UserSQLDAO.updateUserConfiguration(user._id, configuration).map {
       result =>
-        UserCache.invalidateUser(user.id)
+        UserCache.invalidateUser(user._id)
         result
     }
   }
 
-  def updateDataSetConfiguration(user: User, dataSetName: String, configuration: DataSetConfiguration)(implicit ctx: DBAccessContext) = {
-    UserDAO.updateDataSetConfiguration(user, dataSetName, configuration).map {
-      result =>
-        UserCache.invalidateUser(user.id)
-        result
-    }
-  }
+  def updateDataSetConfiguration(user: UserSQL, dataSetName: String, configuration: DataSetConfiguration)(implicit ctx: DBAccessContext) =
+    for {
+      dataSet <- DataSetSQLDAO.findOneByName(dataSetName)
+      _ <- UserDataSetConfigurationSQLDAO.updateDatasetConfigurationForUserAndDataset(user._id, dataSet._id, configuration.configuration)
+      _ = UserCache.invalidateUser(user._id)
+    } yield ()
 
-  def retrieve(loginInfo: LoginInfo): Future[Option[User]] =
-    UserDAO.findOneByEmail(loginInfo.providerKey)(GlobalAccessContext).futureBox.map(_.toOption)
+  def retrieve(loginInfo: LoginInfo): Future[Option[UserSQL]] =
+    UserSQLDAO.findOneByEmail(loginInfo.providerKey)(GlobalAccessContext).futureBox.map(_.toOption)
 
   def createLoginInfo(email: String): LoginInfo = {
     LoginInfo(CredentialsProvider.ID, email)

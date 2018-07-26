@@ -21,6 +21,7 @@ import type { RouterHistory } from "react-router-dom";
 import type { OxalisState } from "oxalis/store";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import Toast from "libs/toast";
+import { InviteUsersPopover } from "admin/onboarding";
 import Store from "../../oxalis/store";
 import { logoutUserAction } from "../../oxalis/model/actions/user_actions";
 
@@ -227,6 +228,11 @@ class UserListView extends React.PureComponent<Props, State> {
             Grant Admin Rights
           </Button>
         ) : null}
+        <InviteUsersPopover organizationName={this.props.activeUser.organization}>
+          <Button icon="user-add" style={marginRight}>
+            Invite Users
+          </Button>
+        </InviteUsersPopover>
         {activationFilterWarning}
         <Search
           style={{ width: 200, float: "right" }}

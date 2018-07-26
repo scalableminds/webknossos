@@ -1,37 +1,26 @@
-/*
- * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package models.binary
 
-import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike => DataLayer, DataSourceLike => DataSource}
 import com.typesafe.scalalogging.LazyLogging
-import models.team.OrganizationDAO
+import models.team.OrganizationSQLDAO
 import net.liftweb.common.Full
 import oxalis.security.{URLSharing, WebknossosSilhouette}
 import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.WSResponse
-import reactivemongo.bson.BSONObjectID
+import utils.ObjectId
 
 object DataSetService extends FoxImplicits with LazyLogging {
 
   val system = Akka.system(play.api.Play.current)
 
-  def updateTeams(dataSet: DataSet, teams: List[BSONObjectID])(implicit ctx: DBAccessContext) =
-    DataSetDAO.updateTeams(dataSet.name, teams)
-
-  def update(dataSet: DataSet, description: Option[String], displayName: Option[String], isPublic: Boolean)(implicit ctx: DBAccessContext) =
-    DataSetDAO.update(dataSet.name, description, displayName, isPublic)
-
   def isProperDataSetName(name: String): Boolean =
     name.matches("[A-Za-z0-9_\\-]*")
 
-  def checkIfNewDataSetName(name: String)(implicit ctx: DBAccessContext): Fox[Boolean] =
-    findDataSource(name)(GlobalAccessContext).reverse
+  def assertNewDataSetName(name: String)(implicit ctx: DBAccessContext): Fox[Boolean] =
+    DataSetSQLDAO.findOneByName(name)(GlobalAccessContext).reverse
 
   def createDataSet(
                      name: String,
@@ -39,17 +28,28 @@ object DataSetService extends FoxImplicits with LazyLogging {
                      owningOrganization: String,
                      dataSource: InboxDataSource,
                      isActive: Boolean = false
-                     )(implicit ctx: DBAccessContext) = {
-    OrganizationDAO.findOneByName(owningOrganization).futureBox.flatMap {
-      case Full(_) =>
-      DataSetDAO.insert(DataSet(
-        None,
-        dataStore,
-        dataSource,
-        owningOrganization,
-        List(),
-        isActive = isActive,
-        isPublic = false))(GlobalAccessContext)
+                     ) = {
+    implicit val ctx = GlobalAccessContext
+    val newId = ObjectId.generate
+    OrganizationSQLDAO.findOneByName(owningOrganization).futureBox.flatMap {
+      case Full(organization) => for {
+        _ <- DataSetSQLDAO.insertOne(DataSetSQL(
+                newId,
+                dataStore.name,
+                organization._id,
+                None,
+                None,
+                None,
+                false,
+                dataSource.toUsable.isDefined,
+                dataSource.id.name,
+                dataSource.scaleOpt,
+                None,
+                dataSource.statusOpt.getOrElse(""),
+                None))
+        _ <- DataSetDataLayerSQLDAO.updateLayers(newId, dataSource)
+        _ <- DataSetAllowedTeamsSQLDAO.updateAllowedTeamsForDataSet(newId, List())
+      } yield ()
       case _ => Fox.failure("org.notExist")
     }
   }
@@ -59,13 +59,13 @@ object DataSetService extends FoxImplicits with LazyLogging {
                         dataSource: InboxDataSource
                       )(implicit ctx: DBAccessContext): Fox[Unit] = {
 
-    DataSetDAO.findOneBySourceName(dataSource.id.name)(GlobalAccessContext).futureBox.flatMap {
-      case Full(dataSet) if dataSet.dataStoreInfo.name == dataStoreInfo.name =>
-        DataSetDAO.updateDataSource(
+    DataSetSQLDAO.findOneByName(dataSource.id.name)(GlobalAccessContext).futureBox.flatMap {
+      case Full(dataSet) if dataSet._dataStore == dataStoreInfo.name =>
+        DataSetSQLDAO.updateDataSourceByName(
           dataSource.id.name,
-          dataStoreInfo,
+          dataStoreInfo.name,
           dataSource,
-          isActive = dataSource.isUsable)(GlobalAccessContext).futureBox
+          dataSource.isUsable)(GlobalAccessContext).futureBox
       case Full(_) =>
         // TODO: There is a problem: The dataset name is already in use by some (potentially different) team.
         // We are not going to update that datasource.
@@ -82,23 +82,17 @@ object DataSetService extends FoxImplicits with LazyLogging {
   }
 
   def deactivateUnreportedDataSources(dataStoreName: String, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext) =
-    DataSetDAO.deactivateUnreportedDataSources(dataStoreName, dataSources)
+    DataSetSQLDAO.deactivateUnreported(dataSources.map(_.id.name), dataStoreName)
 
-  def importDataSet(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[WSResponse] = {
-    dataSet.dataStore.importDataSource
-  }
+  def importDataSet(dataSet: DataSetSQL)(implicit ctx: DBAccessContext): Fox[WSResponse] =
+    for {
+      dataStoreHandler <- dataSet.dataStoreHandler
+      result <- dataStoreHandler.importDataSource
+    } yield result
 
-  def getDataLayer(dataSet: DataSet, dataLayerName: String)(implicit ctx: DBAccessContext): Fox[DataLayer] = {
-    dataSet.dataSource.toUsable.flatMap(_.getDataLayer(dataLayerName)).toFox
-  }
-
-  def findDataSource(name: String)(implicit ctx: DBAccessContext): Fox[InboxDataSource] =
-    DataSetDAO.findOneBySourceName(name).map(_.dataSource)
-
-  def updateDataSources(dataStore: DataStore, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext) = {
+  def updateDataSources(dataStore: DataStoreSQL, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext) = {
     logger.info(s"[${dataStore.name}] Available datasets: " +
       s"${dataSources.count(_.isUsable)} (usable), ${dataSources.count(!_.isUsable)} (unusable)")
-    //logger.debug(s"Found datasets: " + dataSources.map(_.id).mkString(", "))
     val dataStoreInfo = DataStoreInfo(dataStore.name, dataStore.url, dataStore.typ)
     Fox.serialSequence(dataSources) { dataSource =>
       DataSetService.updateDataSource(dataStoreInfo, dataSource)

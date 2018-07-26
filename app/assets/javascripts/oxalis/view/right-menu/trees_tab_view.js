@@ -10,11 +10,11 @@ import TreeHierarchyView from "oxalis/view/right-menu/tree_hierarchy_view";
 import InputComponent from "oxalis/view/components/input_component";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   setTreeNameAction,
   createTreeAction,
-  addTreesAndGroupsAction,
   deleteTreeAsUserAction,
   shuffleTreeColorAction,
   shuffleAllTreeColorsAction,
@@ -24,11 +24,9 @@ import {
   setActiveTreeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import Store from "oxalis/store";
-import { serializeToNml, getNmlName, parseNml } from "oxalis/model/helpers/nml_helpers";
+import { serializeToNml, getNmlName } from "oxalis/model/helpers/nml_helpers";
 import Utils from "libs/utils";
-import FileUpload from "components/file_upload";
 import { saveAs } from "file-saver";
-import Toast from "libs/toast";
 import { getBuildInfo } from "admin/admin_rest_api";
 import type { Dispatch } from "redux";
 import type { OxalisState, SkeletonTracingType, UserConfigurationType } from "oxalis/store";
@@ -49,6 +47,7 @@ type Props = {
   skeletonTracing: SkeletonTracingType,
   userConfiguration: UserConfigurationType,
   onSetActiveTree: number => void,
+  showDropzoneModal: () => void,
 };
 
 type State = {
@@ -100,17 +99,6 @@ class TreesTabView extends React.PureComponent<Props, State> {
     saveAs(blob, getNmlName(state));
   };
 
-  handleNmlUpload = async (nmlString: string) => {
-    try {
-      const { trees, treeGroups } = await parseNml(nmlString);
-      Store.dispatch(addTreesAndGroupsAction(trees, treeGroups));
-    } catch (e) {
-      Toast.error(e.message);
-    } finally {
-      this.setState({ isUploading: false });
-    }
-  };
-
   getTreesComponents() {
     const orderAttribute = this.props.userConfiguration.sortTreesByName ? "name" : "timestamp";
 
@@ -156,22 +144,14 @@ class TreesTabView extends React.PureComponent<Props, State> {
           </div>
         </Menu.Item>
         <Menu.Item key="handleNmlDownload">
-          <div onClick={this.handleNmlDownload} title="Download visible trees as NML">
-            <Icon type="download" /> Download as NML
+          <div onClick={this.handleNmlDownload} title="Download selected trees as NML">
+            <Icon type="download" /> Download Selected Trees
           </div>
         </Menu.Item>
         <Menu.Item key="importNml">
-          <FileUpload
-            accept=".nml"
-            multiple={false}
-            name="nmlFile"
-            showUploadList={false}
-            onSuccess={this.handleNmlUpload}
-            onUploading={() => this.setState({ isUploading: true })}
-            onError={() => this.setState({ isUploading: false })}
-          >
+          <div onClick={this.props.showDropzoneModal} title="Import NML files">
             <Icon type="upload" /> Import NML
-          </FileUpload>
+          </div>
         </Menu.Item>
       </Menu>
     );
@@ -293,6 +273,12 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onSetActiveTree(treeId) {
     dispatch(setActiveTreeAction(treeId));
   },
+  showDropzoneModal() {
+    dispatch(setDropzoneModalVisibilityAction(true));
+  },
 });
 
-export default connect(mapStateToProps, mapDispatchToProps)(TreesTabView);
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps,
+)(TreesTabView);

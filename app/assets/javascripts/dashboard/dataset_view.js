@@ -4,7 +4,6 @@ import _ from "lodash";
 import * as React from "react";
 import { Link, withRouter } from "react-router-dom";
 import Utils from "libs/utils";
-import moment from "moment";
 import { Spin, Input, Button } from "antd";
 import AdvancedDatasetView from "dashboard/advanced_dataset/advanced_dataset_view";
 import GalleryDatasetView from "dashboard/gallery_dataset_view";
@@ -26,7 +25,6 @@ type Props = {
 export type DatasetType = APIDatasetType & {
   hasSegmentation: boolean,
   thumbnailURL: string,
-  formattedCreated: string,
 };
 
 type State = {
@@ -57,7 +55,6 @@ export function transformDatasets(datasets: Array<APIDatasetType>): Array<Datase
           layer => layer.category === "segmentation",
         ),
         thumbnailURL: createThumbnailURL(dataset.name, dataset.dataSource.dataLayers),
-        formattedCreated: moment(dataset.created).format("YYYY-MM-DD HH:mm"),
       }),
     ),
     "created",
@@ -144,6 +141,7 @@ class DatasetView extends React.PureComponent<Props, State> {
         datasets={this.state.datasets}
         searchQuery={this.state.searchQuery}
         updateDataset={this.updateDataset}
+        isUserAdmin={Utils.isUserAdmin(this.props.user)}
       />
     );
   }
@@ -180,13 +178,7 @@ class DatasetView extends React.PureComponent<Props, State> {
       search
     );
 
-    const content = (() => {
-      if (isGallery) {
-        return this.renderGallery();
-      }
-
-      return this.renderAdvanced();
-    })();
+    const content = isGallery ? this.renderGallery() : this.renderAdvanced();
 
     return (
       <div>

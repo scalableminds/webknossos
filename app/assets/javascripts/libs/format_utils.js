@@ -36,13 +36,6 @@ class FormatUtils {
     }
     return text;
   }
-
-  /**
-   * Return current date and time
-   */
-  static formatDate(date?: number = Date.now()): string {
-    return moment(date).format("YYYY-MM-DD HH:mm");
-  }
 }
 
 export default FormatUtils;

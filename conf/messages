@@ -97,6 +97,7 @@ dataSet.name.alreadyTaken=This dataset name is already in use.
 dataSet.source.notFound=The data source for the data source couldn''t be found
 dataSet.import.success=The import of the dataset was successful
 dataSet.import.failed=Failed to import the dataset
+dataSet.import.fileAccessDenied=Access denied when creating dataset directory. Please check file system permissions.
 dataSet.type.invalid=External data set of type ''{0}'' is not supported
 dataSet.import.inProgress=Dataset import is in progress
 dataSet.import.notStarted=Dataset import couldn''t be started
@@ -216,7 +217,7 @@ task.create.success=Task successfully created
 task.create.failed=Failed to create Task
 task.bulk.processed=Tasks successfully processed
 task.finished=Task is finished
-task.assigned=You was a new task
+task.assigned=You got a new task
 task.tooManyOpenOnes=You already have too many open tasks
 task.requestAnother=Do you really want another task?
 task.unavailable=There is currently no task available
@@ -245,6 +246,7 @@ point.invalidFormat=Invalid format. Use something like: 4, 63, 24
 
 mail.welcome.subject = Welcome to ScalableMinds
 script.notFound=Script couldn''t be found
+script.removalFailed=Failed to remove script
 
 sql.invalidBSONObjectId=Invalid BSONObjectID in SQL DB: {0}
 

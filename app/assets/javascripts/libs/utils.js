@@ -11,6 +11,7 @@ import pako from "pako";
 import type { APIUserType } from "admin/api_flow_types";
 
 type Comparator<T> = (T, T) => -1 | 0 | 1;
+type UrlParamsType = { [key: string]: string | boolean };
 
 function swap(arr, a, b) {
   let tmp;
@@ -226,12 +227,16 @@ const Utils = {
     return user.isAdmin || this.isUserTeamManager(user);
   },
 
-  getUrlParamsObject(): { [key: string]: string | boolean } {
+  getUrlParamsObject(): UrlParamsType {
+    return this.getUrlParamsObjectFromString(location.search);
+  },
+
+  getUrlParamsObjectFromString(str: string): UrlParamsType {
     // Parse the URL parameters as objects and return it or just a single param
-    return location.search
+    return str
       .substring(1)
       .split("&")
-      .reduce((result, value): void => {
+      .reduce((result: UrlParamsType, value: string): UrlParamsType => {
         const parts = value.split("=");
         if (parts[0]) {
           const key = decodeURIComponent(parts[0]);
@@ -497,6 +502,28 @@ const Utils = {
 
     // Big endian
     return [a, b, g, r];
+  },
+
+  async promiseAllWithErrors<T>(
+    promises: Array<Promise<T>>,
+  ): Promise<{ successes: Array<T>, errors: Array<Error> }> {
+    const successOrErrorObjects = await Promise.all(promises.map(p => p.catch(error => error)));
+    return successOrErrorObjects.reduce(
+      ({ successes, errors }, successOrError) => {
+        if (successOrError instanceof Error) {
+          return {
+            successes,
+            errors: errors.concat([successOrError]),
+          };
+        } else {
+          return {
+            successes: successes.concat([successOrError]),
+            errors,
+          };
+        }
+      },
+      { successes: [], errors: [] },
+    );
   },
 };
 

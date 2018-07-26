@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.util.tools
 
 import net.liftweb.common.{Box, Empty, Failure, Full}
@@ -47,7 +44,7 @@ trait FoxImplicits {
     f.futureBox
 }
 
-object Fox{
+object Fox extends FoxImplicits {
   def apply[A](future: Future[Box[A]])(implicit ec: ExecutionContext): Fox[A]  =
     new Fox(future)
 
@@ -150,6 +147,13 @@ object Fox{
         } yield Some(result)
       case None =>
         Fox.successful(None)}
+  }
+
+  def assertTrue(fox: Fox[Boolean])(implicit ec: ExecutionContext): Fox[Unit] = {
+    for {
+      asBoolean <- fox
+      _ <- bool2Fox(asBoolean)
+    } yield ()
   }
 
 }

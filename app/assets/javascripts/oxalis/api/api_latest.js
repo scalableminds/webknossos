@@ -17,6 +17,7 @@ import {
   setActiveNodeAction,
   createCommentAction,
   deleteNodeAction,
+  deleteTreeAction,
   setNodeRadiusAction,
   setTreeNameAction,
 } from "oxalis/model/actions/skeletontracing_actions";
@@ -159,6 +160,11 @@ class TracingApi {
   deleteNode(nodeId: number, treeId: number) {
     assertSkeleton(Store.getState().tracing);
     Store.dispatch(deleteNodeAction(nodeId, treeId));
+  }
+
+  deleteTree(treeId: number) {
+    assertSkeleton(Store.getState().tracing);
+    Store.dispatch(deleteTreeAction(treeId));
   }
 
   /**
@@ -567,7 +573,7 @@ class DataApi {
     if (layerName !== segmentationLayerName) {
       throw new Error(messages["mapping.unsupported_layer"]);
     }
-    Store.dispatch(setMappingAction(mapping));
+    Store.dispatch(setMappingAction(_.clone(mapping)));
   }
 
   /**

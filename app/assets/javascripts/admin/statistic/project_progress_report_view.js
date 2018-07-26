@@ -2,10 +2,12 @@
 import * as React from "react";
 import { Icon, Spin, Table, Card } from "antd";
 import Utils from "libs/utils";
-import FormatUtils from "libs/format_utils";
 import Loop from "components/loop";
 import { getProjectProgressReport } from "admin/admin_rest_api";
 import type { APIProjectProgressReportType, APITeamType } from "admin/api_flow_types";
+import FormattedDate from "components/formatted_date";
+import Toast from "libs/toast";
+import messages from "messages";
 import TeamSelectionForm from "./team_selection_form";
 
 const { Column, ColumnGroup } = Table;
@@ -36,11 +38,16 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
     if (team == null) {
       this.setState({ data: [] });
     } else if (suppressLoadingState) {
+      const errorToastKey = "progress-report-failed-to-refresh";
       try {
         const progessData = await getProjectProgressReport(team.id);
         this.setState({ data: progessData, updatedAt: Date.now() });
+        Toast.close(errorToastKey);
       } catch (err) {
-        // Fail silently
+        Toast.error(messages["project.report.failed_to_refresh"], {
+          sticky: true,
+          key: errorToastKey,
+        });
       }
     } else {
       this.setState({ isLoading: true });
@@ -72,7 +79,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
       <div className="container">
         <Loop onTick={this.handleAutoReload} interval={RELOAD_INTERVAL} />
         <div className="pull-right">
-          {this.state.updatedAt != null ? FormatUtils.formatDate(this.state.updatedAt) : null}{" "}
+          {this.state.updatedAt != null ? <FormattedDate timestamp={this.state.updatedAt} /> : null}{" "}
           <Icon type="setting" onClick={this.handleOpenSettings} />
           <Icon type="reload" onClick={this.handleReload} />
         </div>
@@ -121,7 +128,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
                 sorter={Utils.compareBy(typeHint, "openInstances")}
                 render={(text, item) =>
                   `${item.openInstances} (${Math.round(
-                    item.openInstances / item.totalInstances * 100,
+                    (item.openInstances / item.totalInstances) * 100,
                   )} %)`
                 }
               />
@@ -131,7 +138,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
                 sorter={Utils.compareBy(typeHint, "activeInstances")}
                 render={(text, item) =>
                   `${item.activeInstances} (${Math.round(
-                    item.activeInstances / item.totalInstances * 100,
+                    (item.activeInstances / item.totalInstances) * 100,
                   )} %)`
                 }
               />
@@ -141,7 +148,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
                 sorter={Utils.compareBy(typeHint, "finishedInstances")}
                 render={(text, item) =>
                   `${item.finishedInstances} (${Math.round(
-                    item.finishedInstances / item.totalInstances * 100,
+                    (item.finishedInstances / item.totalInstances) * 100,
                   )} %)`
                 }
               />

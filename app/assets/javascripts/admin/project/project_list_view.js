@@ -138,6 +138,16 @@ class ProjectListView extends React.PureComponent<Props, State> {
     });
   };
 
+  renderPlaceholder() {
+    return (
+      <React.Fragment>
+        {"There are no projects. You can "}
+        <Link to="/projects/create">add a project</Link>
+        {" which can be used to track task progress."}
+      </React.Fragment>
+    );
+  }
+
   render() {
     const marginRight = { marginRight: 20 };
     const typeHint: Array<APIProjectType> = [];
@@ -173,6 +183,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
                 defaultPageSize: 50,
               }}
               style={{ marginTop: 30, marginBotton: 30 }}
+              locale={{ emptyText: this.renderPlaceholder() }}
             >
               <Column
                 title="Name"

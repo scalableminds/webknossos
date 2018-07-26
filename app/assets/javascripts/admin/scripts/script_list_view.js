@@ -88,6 +88,24 @@ class ScriptListView extends React.PureComponent<Props, State> {
     });
   };
 
+  renderPlaceholder() {
+    return (
+      <React.Fragment>
+        {"There are no scripts. You can "}
+        <Link to="/scripts/create">add a script</Link>
+        {
+          " which can be automatically executed in tasks. Scripts can, for example, be used to add custom keyboard shortcuts."
+        }
+        <br />
+        {"See the "}
+        <Link to="/assets/docs/frontend-api/index.html" target="_blank">
+          Frontend API Documentation
+        </Link>
+        {" for more information."}
+      </React.Fragment>
+    );
+  }
+
   render() {
     const marginRight = { marginRight: 20 };
 
@@ -122,6 +140,7 @@ class ScriptListView extends React.PureComponent<Props, State> {
                 defaultPageSize: 50,
               }}
               style={{ marginTop: 30, marginBotton: 30 }}
+              locale={{ emptyText: this.renderPlaceholder() }}
             >
               <Column
                 title="ID"

@@ -93,6 +93,18 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
     });
   };
 
+  renderPlaceholder() {
+    return (
+      <React.Fragment>
+        {"There are no task types. You can "}
+        <Link to="/taskTypes/create">add a task type</Link>
+        {
+          " which can be used to configure certain properties for classes of tasks, for example, a description."
+        }
+      </React.Fragment>
+    );
+  }
+
   render() {
     const marginRight = { marginRight: 20 };
     const typeHint: Array<APITaskTypeType> = [];
@@ -103,7 +115,7 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
           <div className="pull-right">
             <Link to="/taskTypes/create">
               <Button icon="plus" style={marginRight} type="primary">
-                Add TaskType
+                Add Task Type
               </Button>
             </Link>
             <Search
@@ -128,6 +140,7 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                 defaultPageSize: 50,
               }}
               style={{ marginTop: 30, marginBotton: 30 }}
+              locale={{ emptyText: this.renderPlaceholder() }}
             >
               <Column
                 title="ID"

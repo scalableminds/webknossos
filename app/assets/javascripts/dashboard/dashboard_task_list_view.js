@@ -314,6 +314,10 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     return this.state.showFinishedTasks ? this.state.finishedTasks : this.state.unfinishedTasks;
   }
 
+  renderPlaceholder() {
+    return 'You have no assigned tasks. Request a new task by clicking on the "Get a New Task" button.';
+  }
+
   renderTaskList() {
     const tasks = this.getCurrentTasks().sort(Utils.localeCompareBy(typeHint, "created"));
     const descriptionClassName = classNames("task-type-description", {
@@ -360,6 +364,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         }}
         loading={this.state.isLoading}
         renderItem={TaskCard}
+        locale={{ emptyText: this.renderPlaceholder() }}
       />
     );
   }

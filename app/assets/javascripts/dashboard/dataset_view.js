@@ -4,7 +4,7 @@ import _ from "lodash";
 import * as React from "react";
 import { Link, withRouter } from "react-router-dom";
 import Utils from "libs/utils";
-import { Spin, Input, Button } from "antd";
+import { Spin, Input, Button, Icon, Row, Col } from "antd";
 import AdvancedDatasetView from "dashboard/advanced_dataset/advanced_dataset_view";
 import GalleryDatasetView from "dashboard/gallery_dataset_view";
 import Persistence from "libs/persistence";
@@ -127,6 +127,36 @@ class DatasetView extends React.PureComponent<Props, State> {
     });
   };
 
+  renderPlaceholder() {
+    return (
+      <Row type="flex" justify="center" style={{ padding: "20px 50px 70px" }} align="middle">
+        <Col span={18}>
+          <div style={{ paddingBottom: 32, textAlign: "center" }}>
+            <Icon type="cloud-upload" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />
+            <p style={{ fontSize: 24, margin: "14px 0 0" }}>
+              Upload the first dataset into your organization.
+            </p>
+            <p
+              style={{
+                fontSize: 14,
+                margin: "14px 0",
+                color: "gray",
+                display: "inline-block",
+                width: 500,
+              }}
+            >
+              <Link to="/datasets/upload">Upload your dataset</Link> or copy it directly onto the
+              hosting server.{" "}
+              <a href="https://github.com/scalableminds/webknossos/wiki/Datasets">
+                Learn more about supported data formats.
+              </a>
+            </p>
+          </div>
+        </Col>
+      </Row>
+    );
+  }
+
   renderGallery() {
     return (
       <GalleryDatasetView datasets={this.state.datasets} searchQuery={this.state.searchQuery} />
@@ -176,7 +206,13 @@ class DatasetView extends React.PureComponent<Props, State> {
       search
     );
 
-    const content = isGallery ? this.renderGallery() : this.renderAdvanced();
+    const isEmpty = this.state.datasets.length === 0;
+    let content;
+    if (isEmpty) {
+      content = this.renderPlaceholder();
+    } else {
+      content = isGallery ? this.renderGallery() : this.renderAdvanced();
+    }
 
     return (
       <div>

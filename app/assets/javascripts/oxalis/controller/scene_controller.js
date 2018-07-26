@@ -28,7 +28,7 @@ import type { Vector3, OrthoViewType, OrthoViewMapType, BoundingBoxType } from "
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { getRenderer } from "oxalis/controller/renderer";
 import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
-import {getSomeTracing}  from "oxalis/model/accessors/tracing_accessor";
+import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 
 const CUBE_COLOR = 0x999999;
 
@@ -104,12 +104,12 @@ class SceneController {
     const taskBoundingBox = getSomeTracing(Store.getState().tracing).boundingBox;
     this.buildTaskingBoundingBox(taskBoundingBox);
 
-    if (Store.getState().tracing.type === "volume") {
+    if (Store.getState().tracing.volume != null) {
       this.contour = new ContourGeometry();
       this.contour.getMeshes().forEach(mesh => this.rootNode.add(mesh));
     }
 
-    if (Store.getState().tracing.type === "skeleton") {
+    if (Store.getState().tracing.skeleton != null) {
       this.skeleton = new Skeleton();
       this.rootNode.add(this.skeleton.getRootNode());
     }

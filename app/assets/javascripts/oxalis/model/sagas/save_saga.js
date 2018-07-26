@@ -28,7 +28,7 @@ import { alert, location } from "libs/window";
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
 import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import type { TracingType, FlycamType, SaveQueueEntryType } from "oxalis/store";
+import type { OxalisState, TracingType, FlycamType, SaveQueueEntryType } from "oxalis/store";
 import type { RequestOptionsWithData } from "libs/request";
 import { moveTreeComponent } from "oxalis/model/sagas/update_actions";
 import { doWithToken } from "admin/admin_rest_api";
@@ -42,7 +42,7 @@ export function* collectUndoStates(): Generator<*, *, *> {
   const redoStack = [];
 
   yield take("INITIALIZE_SKELETONTRACING");
-  let prevTracing = yield select(state => state.tracing);
+  let prevTracing = yield select((state: OxalisState) => state.tracing);
   while (true) {
     const { userAction, undo, redo } = yield race({
       userAction: take(SkeletonTracingSaveRelevantActions),

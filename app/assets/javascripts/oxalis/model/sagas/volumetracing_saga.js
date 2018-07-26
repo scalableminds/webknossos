@@ -30,7 +30,7 @@ export function* watchVolumeTracingAsync(): Generator<*, *, *> {
 
 function* warnOfTooLowOpacity(): Generator<*, *, *> {
   yield take("INITIALIZE_SETTINGS");
-  if (yield select(state => state.tracing.type !== "volume")) {
+  if (yield select(state => state.tracing.volume == null)) {
     return;
   }
 

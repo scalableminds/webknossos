@@ -20,7 +20,7 @@ import {
   getResolutions,
   getColorLayers,
 } from "oxalis/model/accessors/dataset_accessor";
-import type { DataLayerType } from "oxalis/store";
+import type { OxalisState, DataLayerType } from "oxalis/store";
 
 const PREFETCH_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
@@ -81,6 +81,13 @@ function getTraceDirection(
   return direction;
 }
 
+function getTracingTypes(state: OxalisState) {
+  return {
+    skeleton: state.tracing.skeleton != null,
+    volume: state.tracing.volume != null,
+  };
+}
+
 export function* prefetchForPlaneMode(
   layer: DataLayer,
   previousProperties: Object,
@@ -88,7 +95,7 @@ export function* prefetchForPlaneMode(
   const position = yield select(state => getPosition(state.flycam));
   const zoomStep = yield select(state => getRequestLogZoomStep(state));
   const activePlane = yield select(state => state.viewModeData.plane.activeViewport);
-  const tracingType = yield select(state => state.tracing.type);
+  const tracingTypes = yield select(getTracingTypes);
   const { lastPosition, lastDirection, lastZoomStep } = previousProperties;
   const direction = getTraceDirection(position, lastPosition, lastDirection);
   const resolutions = yield select(state => getResolutions(state.dataset));
@@ -97,7 +104,7 @@ export function* prefetchForPlaneMode(
     const areas = yield select(state => getAreas(state));
     for (const strategy of prefetchStrategiesPlane) {
       if (
-        strategy.forContentType(tracingType) &&
+        strategy.forContentType(tracingTypes) &&
         strategy.inVelocityRange(layer.connectionInfo.bandwidth) &&
         strategy.inRoundTripTimeRange(layer.connectionInfo.roundTripTime)
       ) {
@@ -129,14 +136,14 @@ export function* prefetchForArbitraryMode(
 ): Generator<*, *, *> {
   const matrix = yield select(state => state.flycam.currentMatrix);
   const zoomStep = yield select(state => getRequestLogZoomStep(state));
-  const tracingType = yield select(state => state.tracing.type);
+  const tracingTypes = yield select(getTracingTypes);
   const { lastMatrix, lastZoomStep } = previousProperties;
   const { connectionInfo, pullQueue } = Model.dataLayers[layer.name];
 
   if (matrix !== lastMatrix || zoomStep !== lastZoomStep) {
     for (const strategy of prefetchStrategiesArbitrary) {
       if (
-        strategy.forContentType(tracingType) &&
+        strategy.forContentType(tracingTypes) &&
         strategy.inVelocityRange(connectionInfo.bandwidth) &&
         strategy.inRoundTripTimeRange(connectionInfo.roundTripTime)
       ) {

@@ -15,7 +15,7 @@ import { makeSkeletonTracingGuard } from "oxalis/view/guards";
 // The refinement that we're dealing with a SkeletonTracing doesn't happen in mapStateToProps,
 // but in makeSkeletonTracingGuard
 type UnguardedStateProps = {
-  skeletonTracing: TracingType,
+  skeletonTracing: ?SkeletonTracingType,
 };
 type Props = {
   dispatch: Dispatch<*>,
@@ -78,7 +78,7 @@ class AbstractTreeView extends Component<Props> {
   }
 }
 
-function mapStateToProps(state: OxalisState): UnguardedStateProps {
+function mapStateToProps(state: OxalisState) {
   return { skeletonTracing: state.tracing.skeleton };
 }
 

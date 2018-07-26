@@ -10,7 +10,7 @@ import CreateTeamModal from "admin/team/create_team_modal_view";
 import { getEditableTeams, deleteTeam } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
-import { withRouter, Link } from "react-router-dom";
+import { withRouter } from "react-router-dom";
 import type { APITeamType } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
 import { handleGenericError } from "libs/error_handling";

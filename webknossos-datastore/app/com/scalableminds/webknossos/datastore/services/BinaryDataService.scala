@@ -13,10 +13,11 @@ import com.scalableminds.webknossos.datastore.storage.DataCubeCache
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Empty, Failure, Full}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.Configuration
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class BinaryDataService @Inject()(config: Configuration) extends FoxImplicits with LazyLogging {
@@ -89,18 +90,37 @@ class BinaryDataService @Inject()(config: Configuration) extends FoxImplicits wi
         request.dataLayer,
         bucket)
 
-      request.dataLayer.bucketProvider.load(readInstruction, cache, loadTimeout).futureBox.map {
-        case Full(data) =>
-          Full(data)
-        case Empty =>
-          Full(emptyBucket)
-        case f: Failure =>
-          logger.error(s"BinaryDataService failure: ${f.msg}")
-          f
-        }
+      loadWithRetry(request, readInstruction)
     } else {
       Fox.successful(emptyBucket)
     }
+  }
+
+  def loadWithRetry(request: DataServiceDataRequest, readInstruction: DataReadInstruction, remainingTries: Int = 5): Fox[Array[Byte]] = {
+
+    def emptyBucket: Array[Byte] = {
+      new Array[Byte](DataLayer.bucketLength *
+        DataLayer.bucketLength *
+        DataLayer.bucketLength *
+        request.dataLayer.bytesPerElement)
+    }
+
+    val futureFox = request.dataLayer.bucketProvider.load(readInstruction, cache, loadTimeout).futureBox.map {
+        case Full(data) =>
+          Fox.successful(data)
+        case Empty =>
+          Fox.successful(emptyBucket)
+        case f: Failure =>
+          if (remainingTries > 0) {
+            Thread.sleep(20)
+            logger.debug("BinaryDataService: retrying to load bucket, remaining tries: " + remainingTries)
+            loadWithRetry(request, readInstruction, remainingTries - 1)
+          } else {
+            logger.error(s"BinaryDataService failure: ${f.msg}")
+            Fox.failure("nope")
+          }
+      }
+    futureFox.toFox.flatten
   }
 
   /**

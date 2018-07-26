@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, 
 import com.scalableminds.webknossos.datastore.tracings.{ProtoGeometryImplicits, TracingReference}
 import models.annotation.nml.NmlService
 import models.annotation.AnnotationService
-import models.binary.{DataSetDAO, DataSetSQLDAO}
+import models.binary.DataSetSQLDAO
 import models.project.ProjectSQLDAO
 import models.task._
 import models.team.OrganizationSQLDAO
@@ -117,7 +117,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
   }
 
   def createTasks(requestedTasks: List[(TaskParameters, SkeletonTracing)])(implicit request: SecuredRequest[_]): Fox[Result] = {
-    def assertAllOnSameDataset(): Fox[String] = {
+    def assertAllOnSameDataset: Fox[String] = {
       def allOnSameDatasetIter(requestedTasksRest: List[(TaskParameters, SkeletonTracing)], dataSetName: String): Boolean = {
         requestedTasksRest match {
           case List() => true
@@ -141,10 +141,10 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
     }
 
     for {
-      dataSetName <- assertAllOnSameDataset()
-      dataSet <- DataSetDAO.findOneBySourceName(requestedTasks.head._1.dataSet) ?~> Messages("dataSet.notFound", dataSetName)
-      dataSetId <- DataSetSQLDAO.getIdByName(requestedTasks.head._1.dataSet)
-      tracingReferences: List[Box[TracingReference]] <- dataSet.dataStore.saveSkeletonTracings(SkeletonTracings(requestedTasks.map(_._2)))
+      dataSetName <- assertAllOnSameDataset
+      dataSet <- DataSetSQLDAO.findOneByName(requestedTasks.head._1.dataSet) ?~> Messages("dataSet.notFound", dataSetName)
+      dataStoreHandler <- dataSet.dataStoreHandler
+      tracingReferences: List[Box[TracingReference]] <- dataStoreHandler.saveSkeletonTracings(SkeletonTracings(requestedTasks.map(_._2)))
       requestedTasksWithTracingReferences = requestedTasks zip tracingReferences
       taskObjects: List[Fox[TaskSQL]] = requestedTasksWithTracingReferences.map(r => createTaskWithoutAnnotationBase(r._1._1, r._2))
       zipped = (requestedTasks, tracingReferences, taskObjects).zipped.toList
@@ -152,7 +152,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
         taskFox = tuple._3,
         request.identity._id,
         tracingReferenceBox = tuple._2,
-        dataSetId,
+        dataSet._id,
         description = tuple._1._1.description
       ))
       zippedTasksAndAnnotations = taskObjects zip annotationBases

@@ -101,7 +101,7 @@ class Mappings {
   getLargestSegmentId(): number {
     const segmentationLayer = getLayerByName(Store.getState().dataset, this.layerName);
     if (segmentationLayer.category !== "segmentation") {
-      throw new Error("Mappings class must be instantiated with a segmenation layer.");
+      throw new Error("Mappings class must be instantiated with a segmentation layer.");
     }
     return segmentationLayer.largestSegmentId;
   }
@@ -182,10 +182,8 @@ class Mappings {
 
   updateMappingColorTexture(mappingColors: ?Array<number>) {
     mappingColors = mappingColors || [];
-    const float32Colors = new Float32Array(
-      MAPPING_COLOR_TEXTURE_WIDTH * MAPPING_COLOR_TEXTURE_WIDTH,
-    );
     const maxNumberOfColors = MAPPING_COLOR_TEXTURE_WIDTH ** 2;
+    const float32Colors = new Float32Array(maxNumberOfColors);
     // Initialize the array with -1
     float32Colors.fill(-1);
     float32Colors.set(mappingColors.slice(0, maxNumberOfColors));

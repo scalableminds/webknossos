@@ -7,7 +7,7 @@ import { getRgbaAtIndex } from "./texture_access.glsl";
 export const convertCellIdToRGB: ShaderModuleType = {
   requirements: [hsvToRgb, getRgbaAtIndex],
   code: `
-    vec4 convertCellIdToRGB(vec4 id) {
+    vec3 convertCellIdToRGB(vec4 id) {
       float golden_ratio = 0.618033988749895;
       float lastEightBits = id.r;
       float value = mod( lastEightBits * golden_ratio, 1.0);
@@ -30,8 +30,7 @@ export const convertCellIdToRGB: ShaderModuleType = {
       <% } %>
 
       vec4 HSV = vec4( value, 1.0, 1.0, 1.0 );
-      // If the value was not specified, although custom colors are present, the segment should be transparent
-      return vec4(hsvToRgb(HSV), value == -1.0 ? 0.0 : 1.0);
+      return hsvToRgb(HSV);
     }
   `,
 };

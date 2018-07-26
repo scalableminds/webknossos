@@ -204,16 +204,12 @@ void main() {
         // and if segmentation opacity is not zero
         cellIdUnderMouse == id && highlightHoveredCellId && alpha > 0.0
           ? 0.2 : 0.0;
-      vec4 segmentColor = convertCellIdToRGB(id);
-      // If the segmentColor has an alpha value of 0, the segmentColor should be ignored
-      gl_FragColor = vec4(mix( data_color, segmentColor.rgb, segmentColor.a * (alpha + hoverAlphaIncrement) ), 1.0);
+      gl_FragColor = vec4(mix(data_color, convertCellIdToRGB(id), alpha + hoverAlphaIncrement ), 1.0);
     }
 
     vec4 brushOverlayColor = getBrushOverlay(worldCoordUVW);
-    vec4 segmentColor = convertCellIdToRGB(activeCellId);
-    brushOverlayColor.xyz = segmentColor.xyz;
-    // If the segmentColor has an alpha value of 0, the brushOverlayColor should be ignored
-    gl_FragColor = mix(gl_FragColor, brushOverlayColor, brushOverlayColor.a * segmentColor.a);
+    brushOverlayColor.xyz = convertCellIdToRGB(activeCellId);
+    gl_FragColor = mix(gl_FragColor, brushOverlayColor, brushOverlayColor.a);
   <% } %>
 }
 

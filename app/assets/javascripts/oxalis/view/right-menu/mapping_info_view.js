@@ -37,9 +37,7 @@ const convertCellIdToHSV = (id: number, customColors: ?Array<number>) => {
   const goldenRatio = 0.618033988749895;
   const lastEightBits = id & (2 ** 8 - 1);
   const computedColor = (lastEightBits * goldenRatio) % 1.0;
-  const value = customColors != null ? customColors[lastEightBits] || -1 : computedColor;
-  // If the value was not specified, although custom colors are present, the segment should be transparent
-  if (value === -1) return "white";
+  const value = customColors != null ? customColors[lastEightBits] || 0 : computedColor;
 
   return `hsla(${value * 360}, 100%, 50%, 0.15)`;
 };

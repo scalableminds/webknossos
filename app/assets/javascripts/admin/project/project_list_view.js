@@ -139,11 +139,11 @@ class ProjectListView extends React.PureComponent<Props, State> {
   };
 
   renderPlaceholder() {
-    return (
+    return this.state.isLoading ? null : (
       <React.Fragment>
         {"There are no projects. You can "}
         <Link to="/projects/create">add a project</Link>
-        {" which can be used to track task progress."}
+        {" which can be used to track the progress of tasks."}
       </React.Fragment>
     );
   }

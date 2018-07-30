@@ -172,17 +172,17 @@ class UserListView extends React.PureComponent<Props, State> {
     const noUsersMessage = (
       <React.Fragment>
         {"You can "}
-        <a onClick={() => this.setState({ isInvitePopoverVisible: true })}>invite other users</a>
-        {" to join your organization. After users joined, you'll have to activate them manually."}
+        <a onClick={() => this.setState({ isInvitePopoverVisible: true })}>invite more users</a>
+        {" to join your organization. After the users joined, you need to activate them manually."}
       </React.Fragment>
     );
     const inactiveUsersMessage =
       'There are users that have not been activated yet. Make sure the "Show Active Users Only" tag is removed to show those users and activate them.';
     const inactiveUsersPresent = this.state.users.filter(user => !user.isActive).length > 0;
 
-    return (
+    return this.state.isLoading ? null : (
       <Alert
-        message={inactiveUsersPresent ? "Activate users" : "Invite other users"}
+        message={inactiveUsersPresent ? "Activate users" : "Invite more users"}
         description={inactiveUsersPresent ? inactiveUsersMessage : noUsersMessage}
         type="info"
         showIcon

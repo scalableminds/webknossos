@@ -3,7 +3,7 @@
 
 import _ from "lodash";
 import * as React from "react";
-import { Table, Icon, Spin, Button, Input, Modal } from "antd";
+import { Table, Icon, Spin, Button, Input, Modal, Alert } from "antd";
 import Utils from "libs/utils";
 import messages from "messages";
 import CreateTeamModal from "admin/team/create_team_modal_view";
@@ -96,12 +96,16 @@ class TeamListView extends React.PureComponent<Props, State> {
   };
 
   renderPlaceholder() {
-    return (
+    const teamMessage = (
       <React.Fragment>
-        {"There are no teams. You can "}
+        {"You can "}
         <a onClick={() => this.setState({ isTeamCreationModalVisible: true })}>add a team</a>
-        {" which can be used to allow or disallow access to specific datasets."}
+        {" to control access to specific datasets and manage which users can be assigned to tasks."}
       </React.Fragment>
+    );
+
+    return this.state.isLoading ? null : (
+      <Alert message="Add more teams" description={teamMessage} type="info" showIcon />
     );
   }
 
@@ -131,6 +135,7 @@ class TeamListView extends React.PureComponent<Props, State> {
           <div className="clearfix" style={{ margin: "20px 0px" }} />
 
           <Spin spinning={this.state.isLoading} size="large">
+            {this.state.teams.length <= 1 ? this.renderPlaceholder() : null}
             <Table
               dataSource={Utils.filterWithSearchQueryOR(
                 this.state.teams,
@@ -142,7 +147,6 @@ class TeamListView extends React.PureComponent<Props, State> {
                 defaultPageSize: 50,
               }}
               style={{ marginTop: 30, marginBotton: 30 }}
-              locale={{ emptyText: this.renderPlaceholder() }}
             >
               <Column
                 title="Name"

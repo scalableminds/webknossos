@@ -315,7 +315,9 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   }
 
   renderPlaceholder() {
-    return 'You have no assigned tasks. Request a new task by clicking on the "Get a New Task" button.';
+    return this.state.isLoading
+      ? null
+      : 'You have no assigned tasks. Request a new task by clicking on the "Get a New Task" button.';
   }
 
   renderTaskList() {

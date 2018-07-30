@@ -89,7 +89,7 @@ class ScriptListView extends React.PureComponent<Props, State> {
   };
 
   renderPlaceholder() {
-    return (
+    return this.state.isLoading ? null : (
       <React.Fragment>
         {"There are no scripts. You can "}
         <Link to="/scripts/create">add a script</Link>

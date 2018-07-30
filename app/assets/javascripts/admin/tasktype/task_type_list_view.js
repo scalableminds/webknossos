@@ -94,13 +94,11 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
   };
 
   renderPlaceholder() {
-    return (
+    return this.state.isLoading ? null : (
       <React.Fragment>
         {"There are no task types. You can "}
         <Link to="/taskTypes/create">add a task type</Link>
-        {
-          " which can be used to configure certain properties for classes of tasks, for example, a description."
-        }
+        {" in order to configure certain properties, such as a description, for classes of tasks."}
       </React.Fragment>
     );
   }

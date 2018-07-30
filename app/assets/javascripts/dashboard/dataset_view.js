@@ -130,13 +130,11 @@ class DatasetView extends React.PureComponent<Props, State> {
   renderPlaceholder() {
     const isUserAdmin = Utils.isUserAdmin(this.props.user);
     const noDatasetsPlaceholder =
-      "There are no datasets available yet. Please ask an admin to upload a dataset or to add permissions for you to see an available dataset.";
+      "There are no datasets available yet. Please ask an admin to upload a dataset or to grant you permission to add a dataset.";
     const uploadPlaceholder = (
       <React.Fragment>
         <Icon type="cloud-upload" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />
-        <p style={{ fontSize: 24, margin: "14px 0 0" }}>
-          Upload the first dataset into your organization.
-        </p>
+        <p style={{ fontSize: 24, margin: "14px 0 0" }}>Upload the first dataset.</p>
         <p
           style={{
             fontSize: 14,
@@ -155,7 +153,7 @@ class DatasetView extends React.PureComponent<Props, State> {
       </React.Fragment>
     );
 
-    return (
+    return this.state.isLoading ? null : (
       <Row type="flex" justify="center" style={{ padding: "20px 50px 70px" }} align="middle">
         <Col span={18}>
           <div style={{ paddingBottom: 32, textAlign: "center" }}>

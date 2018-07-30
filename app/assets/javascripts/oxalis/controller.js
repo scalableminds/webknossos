@@ -322,7 +322,6 @@ class Controller extends React.PureComponent<Props, State> {
     if (isArbitrary) {
       return <ArbitraryController onRender={this.updateStats} viewMode={mode} />;
     } else if (isPlane) {
-      // todo: enable two active controllers somehow
       return <PlaneController onRender={this.updateStats} />;
     } else {
       // At the moment, all possible view modes consist of the union of MODES_ARBITRARY and MODES_PLANE

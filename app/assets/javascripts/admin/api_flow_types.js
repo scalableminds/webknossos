@@ -383,7 +383,6 @@ export type ServerTracingType = ServerSkeletonTracingType | ServerVolumeTracingT
 export type HybridServerTracingType = {
   // todo: move propertes to base
   // base: ServerTracingBaseType,
-  // todo: make skeleton and volume optional
   skeleton: ?ServerSkeletonTracingType,
   volume: ?ServerVolumeTracingType,
 };

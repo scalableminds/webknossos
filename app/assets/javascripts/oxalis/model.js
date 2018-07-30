@@ -89,7 +89,8 @@ export class OxalisModel {
 
   stateSaved() {
     const state = Store.getState();
-    const storeStateSaved = !state.save.isBusy && (state.save.queue.skeleton.length + state.save.queue.volume.length) === 0;
+    const storeStateSaved =
+      !state.save.isBusy && state.save.queue.skeleton.length + state.save.queue.volume.length === 0;
     const pushQueuesSaved = _.reduce(
       this.dataLayers,
       (saved, dataLayer) => saved && dataLayer.pushQueue.stateSaved(),

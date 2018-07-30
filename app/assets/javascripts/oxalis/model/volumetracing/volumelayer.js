@@ -11,7 +11,7 @@ import { Vector3Indicies } from "oxalis/constants";
 import Store from "oxalis/store";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
-import {enforceVolumeTracing} from  "oxalis/model/accessors/volumetracing_accessor";
+import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import type { OrthoViewType, Vector2, Vector3 } from "oxalis/constants";
 
 export class VoxelIterator {

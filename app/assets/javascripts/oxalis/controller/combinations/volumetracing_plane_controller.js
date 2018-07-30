@@ -41,7 +41,7 @@ const simulateTracing = async (): Promise<void> => {
 
   controls.leftMouseDown(pos(100, 100), OrthoViews.PLANE_XY, ({}: any));
   await Utils.sleep(100);
-  const nullDelta = {x: 0, y: 0};
+  const nullDelta = { x: 0, y: 0 };
   controls.leftDownMove(nullDelta, pos(200, 100));
   await Utils.sleep(100);
   controls.leftDownMove(nullDelta, pos(200, 200));

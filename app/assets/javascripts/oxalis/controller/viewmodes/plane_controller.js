@@ -190,14 +190,16 @@ class PlaneController extends React.PureComponent<Props> {
       },
     };
     // TODO: Find a nicer way to express this, while satisfying flow
-    const emptyDefaultHandler = {leftClick: null};
+    const emptyDefaultHandler = { leftClick: null };
     const { leftClick: skeletonLeftClick, ...skeletonControls } =
       this.props.tracing.skeleton != null
         ? skeletonController.getPlaneMouseControls(this.planeView)
         : emptyDefaultHandler;
 
     const { leftClick: volumeLeftClick, ...volumeControls } =
-      this.props.tracing.volume != null ? volumeController.getPlaneMouseControls() : emptyDefaultHandler;
+      this.props.tracing.volume != null
+        ? volumeController.getPlaneMouseControls()
+        : emptyDefaultHandler;
 
     ensureNonConflictingHandlers(skeletonControls, volumeControls);
 
@@ -360,12 +362,16 @@ class PlaneController extends React.PureComponent<Props> {
     };
 
     // TODO: Find a nicer way to express this, while satisfying flow
-    const emptyDefaultHandler = {c: null, "1": null};
+    const emptyDefaultHandler = { c: null, "1": null };
     const { c: skeletonCHandler, "1": skeletonOneHandler, ...skeletonControls } =
-      this.props.tracing.skeleton != null ? skeletonController.getKeyboardControls() : emptyDefaultHandler;
+      this.props.tracing.skeleton != null
+        ? skeletonController.getKeyboardControls()
+        : emptyDefaultHandler;
 
     const { c: volumeCHandler, "1": volumeOneHandler, ...volumeControls } =
-      this.props.tracing.volume != null ? volumeController.getKeyboardControls() : emptyDefaultHandler;
+      this.props.tracing.volume != null
+        ? volumeController.getKeyboardControls()
+        : emptyDefaultHandler;
 
     ensureNonConflictingHandlers(skeletonControls, volumeControls);
 
@@ -591,7 +597,6 @@ class PlaneController extends React.PureComponent<Props> {
       if (skeletonHandler && volumeHandler) {
         // Deal with both modes
         const tool = enforce(getVolumeTool)(this.props.tracing.volume);
-        // todo: maybe introduce a new tool for skeleton-only ? but less modes is better...
         if (tool === VolumeToolEnum.MOVE) {
           skeletonHandler(...args);
         } else {

@@ -370,7 +370,9 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           storeState =>
-            volumeToolEnumToIndex(Utils.toNullable(maybe(getVolumeTool)(storeState.tracing.volume))),
+            volumeToolEnumToIndex(
+              Utils.toNullable(maybe(getVolumeTool)(storeState.tracing.volume)),
+            ),
           volumeTool => {
             this.uniforms.activeVolumeToolIndex.value = volumeTool;
           },

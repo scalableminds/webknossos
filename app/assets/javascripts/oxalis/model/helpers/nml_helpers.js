@@ -97,8 +97,8 @@ export function serializeToNml(
     "<things>",
     ...indent(
       _.concat(
-        serializeMetaInformation(state, buildInfo),
-        serializeParameters(state),
+        serializeMetaInformation(state, tracing, buildInfo),
+        serializeParameters(state, tracing),
         serializeTrees(visibleTrees),
         serializeBranchPoints(visibleTrees),
         serializeComments(visibleTrees),
@@ -111,9 +111,11 @@ export function serializeToNml(
   ].join("\n");
 }
 
-function serializeMetaInformation(state: OxalisState, buildInfo: APIBuildInfoType): Array<string> {
-  // todo: handle volume case
-  const skeletonTracing = enforceSkeletonTracing(state.tracing);
+function serializeMetaInformation(
+  state: OxalisState,
+  tracing: SkeletonTracingType,
+  buildInfo: APIBuildInfoType,
+): Array<string> {
   return _.compact([
     serializeTag("meta", {
       name: "writer",
@@ -129,7 +131,7 @@ function serializeMetaInformation(state: OxalisState, buildInfo: APIBuildInfoTyp
     }),
     serializeTag("meta", {
       name: "annotationId",
-      content: skeletonTracing.annotationId,
+      content: tracing.annotationId,
     }),
     state.activeUser != null
       ? serializeTag("meta", {
@@ -156,11 +158,12 @@ function serializeBoundingBox(bb: ?BoundingBoxType, name: string): string {
   return "";
 }
 
-function serializeParameters(state: OxalisState): Array<string> {
+function serializeParameters(
+  state: OxalisState,
+  skeletonTracing: SkeletonTracingType,
+): Array<string> {
   const editPosition = getPosition(state.flycam).map(Math.round);
   const editRotation = getRotation(state.flycam);
-  // todo: handle volume case
-  const skeletonTracing = enforceSkeletonTracing(state.tracing);
   const userBB = skeletonTracing.userBoundingBox;
   const taskBB = skeletonTracing.boundingBox;
   return [

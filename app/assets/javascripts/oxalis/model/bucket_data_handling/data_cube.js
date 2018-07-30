@@ -26,7 +26,7 @@ import type { VoxelIterator } from "oxalis/model/volumetracing/volumelayer";
 import type { Bucket } from "oxalis/model/bucket_data_handling/bucket";
 import type { MappingType } from "oxalis/store";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
-import {getSomeTracing}  from "oxalis/model/accessors/tracing_accessor";
+import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 
 class CubeEntry {
   data: Map<number, Bucket>;

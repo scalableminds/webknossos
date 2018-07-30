@@ -31,7 +31,7 @@ object BuildInfoSettings {
 
 
   lazy val webknossosBuildInfoSettings = Seq(
-    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion,
+    buildInfoKeys := Seq[BuildInfoKey](name, scalaVersion, sbtVersion,
       "commitHash" -> commitHash,
       "commitDate" -> commitDate,
       "ciBuild" -> ciBuild,
@@ -42,7 +42,7 @@ object BuildInfoSettings {
   )
 
   lazy val webknossosDatastoreBuildInfoSettings = Seq(
-    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion,
+    buildInfoKeys := Seq[BuildInfoKey](name, scalaVersion, sbtVersion,
       "commitHash" -> commitHash,
       "commitDate" -> commitDate,
       "ciBuild" -> ciBuild,

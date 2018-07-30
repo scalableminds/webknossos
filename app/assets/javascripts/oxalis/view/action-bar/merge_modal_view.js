@@ -1,7 +1,6 @@
 // @flow
 import React, { PureComponent } from "react";
 import { connect } from "react-redux";
-import { withRouter } from "react-router-dom";
 import Toast from "libs/toast";
 import Request from "libs/request";
 import { Icon, Alert, Modal, Button, Select, Form, Spin, Checkbox, Tooltip } from "antd";
@@ -9,12 +8,13 @@ import messages from "messages";
 import InputComponent from "oxalis/view/components/input_component";
 import api from "oxalis/api/internal_api";
 import type { OxalisState, TreeMapType, TreeGroupType } from "oxalis/store";
-import type { RouterHistory } from "react-router-dom";
 import { getAnnotationInformation, getTracingForAnnotation } from "admin/admin_rest_api";
 import { addTreesAndGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
 import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import Utils from "libs/utils";
 import type { APIAnnotationType } from "admin/api_flow_types";
+import Store from "oxalis/store";
+import { location } from "libs/window";
 
 type ProjectInfoType = {
   id: string,
@@ -29,7 +29,6 @@ type StateProps = {
 type Props = {
   isVisible: boolean,
   onOk: () => void,
-  history: RouterHistory,
   addTreesAndGroupsAction: (TreeMapType, Array<TreeGroupType>) => void,
 } & StateProps;
 
@@ -95,9 +94,10 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
   async merge(url: string) {
     await api.tracing.save();
     const annotation = await Request.receiveJSON(url);
-    Toast.success(messages["tracing.merged"]);
+    Toast.success(messages["tracing.merged_with_redirect"]);
     const redirectUrl = `/annotations/${annotation.typ}/${annotation.id}`;
-    this.props.history.push(redirectUrl);
+    await Utils.sleep(1500);
+    location.href = redirectUrl;
   }
 
   handleChangeMergeProject = (project: string) => {
@@ -152,18 +152,23 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
   };
 
   async mergeAnnotationIntoActiveTracing(annotation: APIAnnotationType): Promise<void> {
-    const tracing = await getTracingForAnnotation(annotation);
-    if (tracing.trees) {
-      const { trees, treeGroups } = tracing;
-      this.setState({ isUploading: true });
-      // Wait for an animation frame so that the loading animation is kicked off
-      await Utils.animationFrame();
-      this.props.addTreesAndGroupsAction(createTreeMapFromTreeArray(trees), treeGroups || []);
-      this.setState({ isUploading: false });
-      Toast.success(messages["tracing.merged"]);
-    } else {
-      Toast.error("Merging is not supported for volume tracings.");
+    if (annotation.dataSetName !== Store.getState().dataset.name) {
+      Toast.error(messages["merge.different_dataset"]);
+      return;
     }
+    const tracing = await getTracingForAnnotation(annotation);
+    if (!tracing.trees) {
+      Toast.error(messages["merge.volume_unsupported"]);
+      return;
+    }
+    const { trees, treeGroups } = tracing;
+    this.setState({ isUploading: true });
+    // Wait for an animation frame so that the loading animation is kicked off
+    await Utils.animationFrame();
+    this.props.addTreesAndGroupsAction(createTreeMapFromTreeArray(trees), treeGroups || []);
+    this.setState({ isUploading: false });
+    Toast.success(messages["tracing.merged"]);
+    this.props.onOk();
   }
 
   render() {
@@ -180,7 +185,6 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
       <Modal
         title="Merge"
         visible={this.props.isVisible}
-        onOk={this.props.onOk}
         onCancel={this.props.onOk}
         className="merge-modal"
         width={800}
@@ -190,8 +194,9 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
           <Alert
             type="info"
             style={{ marginBottom: 12 }}
-            message="If you would like to import NML files, please simply drag and drop them into the tracing view."
+            message="If you would like to import NML files, please drag and drop them into the tracing view."
           />
+
           <Form layout="inline">
             <Form.Item label="Project">
               <Select
@@ -262,4 +267,4 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
 export default connect(
   mapStateToProps,
   mapDispatchToProps,
-)(withRouter(MergeModalView));
+)(MergeModalView);

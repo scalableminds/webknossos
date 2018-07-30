@@ -32,6 +32,10 @@ const initialState = {
     isBusy: false,
     queue: [],
     lastSaveTimestamp: 0,
+    progressInfo: {
+      processedActionCount: 0,
+      totalActionCount: 0,
+    },
   },
 };
 

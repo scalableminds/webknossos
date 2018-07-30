@@ -2,11 +2,11 @@ package controllers
 
 import javax.inject.Inject
 import com.scalableminds.util.tools.Fox
-import models.annotation.AnnotationSQLDAO
-import models.binary.DataSetSQLDAO
-import models.task.TaskSQLDAO
-import models.user.time.{TimeSpanSQL, TimeSpanService}
-import models.user.UserSQLDAO
+import models.annotation.AnnotationDAO
+import models.binary.DataSetDAO
+import models.task.TaskDAO
+import models.user.time.{TimeSpan, TimeSpanService}
+import models.user.UserDAO
 import oxalis.security.WebknossosSilhouette.SecuredAction
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
@@ -19,8 +19,8 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
   extends Controller {
 
   val intervalHandler = Map(
-    "month" -> TimeSpanSQL.groupByMonth _,
-    "week" -> TimeSpanSQL.groupByWeek _
+    "month" -> TimeSpan.groupByMonth _,
+    "week" -> TimeSpan.groupByWeek _
   )
 
   def intervalTracingTimeJson[T <: models.user.time.Interval](times: Map[T, Duration]) = times.map {
@@ -36,10 +36,10 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
       case Some(handler) =>
         for {
           times <- TimeSpanService.loggedTimePerInterval(handler, start, end)
-          numberOfUsers <- UserSQLDAO.countAll
-          numberOfDatasets <- DataSetSQLDAO.countAll
-          numberOfAnnotations <- AnnotationSQLDAO.countAll
-          numberOfAssignments <- TaskSQLDAO.countAllOpenInstances
+          numberOfUsers <- UserDAO.countAll
+          numberOfDatasets <- DataSetDAO.countAll
+          numberOfAnnotations <- AnnotationDAO.countAll
+          numberOfAssignments <- TaskDAO.countAllOpenInstances
         } yield {
           Ok(Json.obj(
             "name" -> "oxalis",
@@ -59,7 +59,7 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
   def users(interval: String, start: Option[Long], end: Option[Long], limit: Int) = SecuredAction.async { implicit request =>
     for {
       handler <- intervalHandler.get(interval) ?~> Messages("statistics.interval.invalid")
-      users <- UserSQLDAO.findAll
+      users <- UserDAO.findAll
       usersWithTimes <- Fox.serialCombined(users)(user => TimeSpanService.loggedTimeOfUser(user, handler, start, end).map(user -> _))
       data = usersWithTimes.sortBy(-_._2.map(_._2.toMillis).sum).take(limit)
       json <- Fox.combined(data.map {

@@ -15,7 +15,7 @@ class OrganizationController @Inject()(val messagesApi: MessagesApi) extends Con
 
   def listAllOrganizations = Action.async { implicit request =>
     for {
-      allOrgs <- OrganizationSQLDAO.findAll(GlobalAccessContext)
+      allOrgs <- OrganizationDAO.findAll(GlobalAccessContext)
       js <- Fox.serialCombined(allOrgs)(o => o.publicWrites(GlobalAccessContext))
     } yield {
       Ok(Json.toJson(js))

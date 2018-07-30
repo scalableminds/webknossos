@@ -65,7 +65,7 @@ object DataStoreHandlingStrategy {
 
 }
 
-class WKStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSetSQL) extends DataStoreHandlingStrategy with LazyLogging {
+class WKStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSet) extends DataStoreHandlingStrategy with LazyLogging {
 
   override def getSkeletonTracing(reference: TracingReference): Fox[SkeletonTracing] = {
     logger.debug("Called to get SkeletonTracing. Base: " + dataSet.name + " Datastore: " + dataStoreInfo)

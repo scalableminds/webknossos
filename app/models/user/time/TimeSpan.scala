@@ -3,7 +3,7 @@ package models.user.time
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
-import models.annotation.AnnotationSQL
+import models.annotation.Annotation
 import org.joda.time.DateTime
 import play.api.Play.current
 import play.api.i18n.Messages
@@ -21,7 +21,7 @@ case class TimeSpanRequest(users: List[String], start: Long, end: Long)
 object TimeSpanRequest { implicit val timeSpanRequest = Json.format[TimeSpanRequest] }
 
 
-case class TimeSpanSQL(
+case class TimeSpan(
                       _id: ObjectId,
                       _user: ObjectId,
                       _annotation: Option[ObjectId],
@@ -41,34 +41,34 @@ case class TimeSpanSQL(
   }
 }
 
-object TimeSpanSQL {
+object TimeSpan {
 
-  def groupByMonth(timeSpan: TimeSpanSQL) = {
+  def groupByMonth(timeSpan: TimeSpan) = {
     Month(timeSpan.createdAsDateTime.getMonthOfYear, timeSpan.createdAsDateTime.getYear)
   }
 
-  def groupByWeek(timeSpan: TimeSpanSQL) = {
+  def groupByWeek(timeSpan: TimeSpan) = {
     Week(timeSpan.createdAsDateTime.getWeekOfWeekyear, timeSpan.createdAsDateTime.getWeekyear)
   }
 
-  def groupByDay(timeSpan: TimeSpanSQL) = {
+  def groupByDay(timeSpan: TimeSpan) = {
     Day(timeSpan.createdAsDateTime.getDayOfMonth, timeSpan.createdAsDateTime.getMonthOfYear, timeSpan.createdAsDateTime.getYear)
   }
 
   def createFrom(start: Long, end: Long, _user: ObjectId, _annotation: Option[ObjectId]) =
-    TimeSpanSQL(ObjectId.generate, _user, _annotation, time = end - start, lastUpdate = end, created = start)
+    TimeSpan(ObjectId.generate, _user, _annotation, time = end - start, lastUpdate = end, created = start)
 
 }
 
-object TimeSpanSQLDAO extends SQLDAO[TimeSpanSQL, TimespansRow, Timespans] {
+object TimeSpanDAO extends SQLDAO[TimeSpan, TimespansRow, Timespans] {
   val collection = Timespans
   val MAX_TIMESTAMP = 253370761200000L
 
   def idColumn(x: Timespans): Rep[String] = x._Id
   def isDeletedColumn(x: Timespans): Rep[Boolean] = x.isdeleted
 
-  def parse(r: TimespansRow): Fox[TimeSpanSQL] =
-    Fox.successful(TimeSpanSQL(
+  def parse(r: TimespansRow): Fox[TimeSpan] =
+    Fox.successful(TimeSpan(
       ObjectId(r._Id),
       ObjectId(r._User),
       r._Annotation.map(ObjectId(_)),
@@ -79,7 +79,7 @@ object TimeSpanSQLDAO extends SQLDAO[TimeSpanSQL, TimespansRow, Timespans] {
       r.isdeleted
     ))
 
-  def findAllByUser(userId: ObjectId, start: Option[Long], end: Option[Long]): Fox[List[TimeSpanSQL]] =
+  def findAllByUser(userId: ObjectId, start: Option[Long], end: Option[Long]): Fox[List[TimeSpan]] =
     for {
       r <- run(Timespans.filter(r => notdel(r) && r._User === userId.id && (r.created >= new java.sql.Timestamp(start.getOrElse(0))) && r.created <= new java.sql.Timestamp(end.getOrElse(MAX_TIMESTAMP))).result)
       parsed <- Fox.combined(r.toList.map(parse))
@@ -129,26 +129,26 @@ object TimeSpanSQLDAO extends SQLDAO[TimeSpanSQL, TimespansRow, Timespans] {
     Json.toJson(tuples.map(formatTimespanTuple))
   }
 
-  def findAllByAnnotation(annotationId: ObjectId, start: Option[Long], end: Option[Long]): Fox[List[TimeSpanSQL]] =
+  def findAllByAnnotation(annotationId: ObjectId, start: Option[Long], end: Option[Long]): Fox[List[TimeSpan]] =
     for {
       r <- run(Timespans.filter(r => notdel(r) && r._Annotation === annotationId.id && (r.created >= new java.sql.Timestamp(start.getOrElse(0))) && r.created <= new java.sql.Timestamp(end.getOrElse(MAX_TIMESTAMP))).result)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def findAll(start: Option[Long], end: Option[Long]): Fox[List[TimeSpanSQL]] =
+  def findAll(start: Option[Long], end: Option[Long]): Fox[List[TimeSpan]] =
     for {
       r <- run(Timespans.filter(r => notdel(r) && (r.created >= new java.sql.Timestamp(start.getOrElse(0))) && r.created <= new java.sql.Timestamp(end.getOrElse(MAX_TIMESTAMP))).result)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def insertOne(t: TimeSpanSQL)(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def insertOne(t: TimeSpan)(implicit ctx: DBAccessContext): Fox[Unit] = {
     for {
       r <- run(sqlu"""insert into webknossos.timespans(_id, _user, _annotation, time, lastUpdate, numberOfUpdates, created, isDeleted)
                 values(${t._id.id}, ${t._user.id}, ${t._annotation.map(_.id)}, ${t.time}, ${new java.sql.Timestamp(t.lastUpdate)}, ${t.numberOfUpdates}, ${new java.sql.Timestamp(t.created)}, ${t.isDeleted})""")
     } yield ()
   }
 
-  def updateOne(t: TimeSpanSQL)(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def updateOne(t: TimeSpan)(implicit ctx: DBAccessContext): Fox[Unit] = {
     for { //note that t.created is skipped
       _ <- assertUpdateAccess(t._id) ?~> "FAILED: TimeSpanSQLDAO.assertUpdateAccess"
       r <- run(sqlu"""update webknossos.timespans

@@ -11,7 +11,7 @@ import com.scalableminds.util.mail._
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.rpc.RPC
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.binary.{DataStoreSQL, DataStoreSQLDAO}
+import models.binary.{DataStore, DataStoreDAO}
 import models.team._
 import models.user.UserService.{Mailer => _, _}
 import models.user._
@@ -162,7 +162,7 @@ class Authentication @Inject()(
               Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
             } else {
               for {
-                organization <- OrganizationSQLDAO.findOneByName(signUpData.organization)(GlobalAccessContext)
+                organization <- OrganizationDAO.findOneByName(signUpData.organization)(GlobalAccessContext)
                 user <- UserService.insert(organization._id, email, firstName, lastName, signUpData.password, automaticUserActivation, roleOnRegistration,
                   loginInfo, passwordHasher.hash(signUpData.password))
                 brainDBResult <- BrainTracing.registerIfNeeded(user).toFox
@@ -254,7 +254,7 @@ class Authentication @Inject()(
         bearerTokenAuthenticatorService.userForToken(passwords.token.trim)(GlobalAccessContext).futureBox.flatMap {
           case Full(user) =>
             for {
-              _ <- UserSQLDAO.updatePasswordInfo(user._id, passwordHasher.hash(passwords.password1))(GlobalAccessContext)
+              _ <- UserDAO.updatePasswordInfo(user._id, passwordHasher.hash(passwords.password1))(GlobalAccessContext)
               _ <- bearerTokenAuthenticatorService.remove(passwords.token.trim)
             } yield Ok
           case _ =>
@@ -406,7 +406,7 @@ class Authentication @Inject()(
     )
   }
 
-  private def creatingOrganizationsIsAllowed(requestingUser: Option[UserSQL]) = {
+  private def creatingOrganizationsIsAllowed(requestingUser: Option[User]) = {
     val noOrganizationPresent = InitialDataService.assertNoOrganizationsPresent
     val configurationFlagSet = Play.configuration.getBoolean("application.allowOrganzationCreation").getOrElse(false) ?~> "allowOrganzationCreation.notEnabled"
     val userIsSuperUser = requestingUser.exists(_.isSuperUser).toFox
@@ -417,10 +417,10 @@ class Authentication @Inject()(
   private def createOrganization(organizationDisplayName: String) =
     for {
       organizationName <- normalizeName(organizationDisplayName).toFox ?~> "invalid organization name"
-      organization = OrganizationSQL(ObjectId.generate, organizationName.replaceAll(" ", "_"), "", "", organizationDisplayName)
-      organizationTeam = TeamSQL(ObjectId.generate, organization._id, organization.name, isOrganizationTeam = true)
-      _ <- OrganizationSQLDAO.insertOne(organization)(GlobalAccessContext)
-      _ <- TeamSQLDAO.insertOne(organizationTeam)(GlobalAccessContext)
+      organization = Organization(ObjectId.generate, organizationName.replaceAll(" ", "_"), "", "", organizationDisplayName)
+      organizationTeam = Team(ObjectId.generate, organization._id, organization.name, isOrganizationTeam = true)
+      _ <- OrganizationDAO.insertOne(organization)(GlobalAccessContext)
+      _ <- TeamDAO.insertOne(organizationTeam)(GlobalAccessContext)
       _ <- InitialDataService.insertLocalDataStoreIfEnabled
     } yield {
       organization
@@ -428,7 +428,7 @@ class Authentication @Inject()(
 
 
   private def createOrganizationFolder(organizationName: String, loginInfo: LoginInfo)(implicit request: RequestHeader) = {
-    def sendRPCToDataStore(dataStore: DataStoreSQL, token: String) = {
+    def sendRPCToDataStore(dataStore: DataStore, token: String) = {
       RPC(s"${dataStore.url}/data/triggers/newOrganizationFolder")
         .withQueryString("token" -> token, "organizationName" -> organizationName)
         .get
@@ -436,7 +436,7 @@ class Authentication @Inject()(
 
     for {
       token <- env.combinedAuthenticatorService.tokenAuthenticatorService.createAndInit(loginInfo, TokenType.DataStore, deleteOld = false).toFox
-      datastores <- DataStoreSQLDAO.findAll(GlobalAccessContext)
+      datastores <- DataStoreDAO.findAll(GlobalAccessContext)
       _ <- Fox.combined(datastores.map(sendRPCToDataStore(_, token)))
     } yield Full(())
 

@@ -1,12 +1,10 @@
-/*
- * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package models.binary
 
 import java.io.File
 import java.math.BigInteger
 import java.security.SecureRandom
 
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -65,12 +63,6 @@ object DataStoreHandlingStrategy {
 
   lazy val webKnossosToken = new BigInteger(130, new SecureRandom()).toString(32)
 
-  def apply(dataSet: DataSet): DataStoreHandlingStrategy = dataSet.dataStoreInfo.typ match {
-    case WebKnossosStore =>
-      new WKStoreHandlingStrategy(dataSet.dataStoreInfo, dataSet)
-    case NDStore =>
-      new NDStoreHandlingStrategy(dataSet.dataStoreInfo, dataSet)
-  }
 }
 
 class WKStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSet) extends DataStoreHandlingStrategy with LazyLogging {
@@ -177,39 +169,5 @@ class WKStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSet) ex
     RPC(s"${dataStoreInfo.url}/data/datasets/${dataSet.urlEncodedName}/import")
       .withQueryString("token" -> DataStoreHandlingStrategy.webKnossosToken)
       .post()
-  }
-}
-
-class NDStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSet) extends DataStoreHandlingStrategy with FoxImplicits with LazyLogging {
-
-  override def requestDataLayerThumbnail(
-    dataLayerName: String,
-    width: Int,
-    height: Int,
-    zoom: Option[Int],
-    center: Option[Point3D]): Fox[Array[Byte]] = {
-
-    logger.debug("Thumbnail called for: " + dataSet.name + " Layer: " + dataLayerName)
-
-    def extractImage(response: WSResponse)(implicit codec: Codec): Fox[Array[Byte]] = {
-      logger.error(response.toString)
-      if (response.status == Status.OK) {
-        Fox.successful(response.bodyAsBytes)
-      } else {
-        Fox.failure("ndstore.thumbnail.failed")
-      }
-    }
-
-    for {
-      dataLayer <- dataSet.dataSource.toUsable.flatMap(ds => ds.getDataLayer(dataLayerName)).toFox
-      accessToken <- dataStoreInfo.accessToken ?~> "ndstore.accesstoken.missing"
-      thumbnail = ImageThumbnail.goodThumbnailParameters(dataLayer, width, height)
-      resolution = (math.log(thumbnail.resolution.maxDim) / math.log(2)).toInt
-      imageParams = s"${resolution}/${thumbnail.x},${thumbnail.x + width}/${thumbnail.y},${thumbnail.y + height}/${thumbnail.z},${thumbnail.z + 1}"
-      baseUrl = s"${dataStoreInfo.url}/nd/ca"
-      _ = logger.error(s"$baseUrl/$accessToken/$dataLayerName/jpeg/$imageParams")
-      response <- WS.url(s"$baseUrl/$accessToken/$dataLayerName/jpeg/$imageParams").get().toFox
-      image <- extractImage(response)
-    } yield image
   }
 }

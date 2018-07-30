@@ -48,6 +48,8 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.delete_tree_with_initial_node":
     "This tree contains the initial node. Do you really want to delete the whole tree?",
   "tracing.merged": "Merging successfully done",
+  "tracing.merged_with_redirect":
+    "Merging successfully done. You will be redirected to the new annotation.",
   "tracing.tree_viewer_no_cyclic_trees":
     "Cyclic trees are not supported by the abstract tree viewer.",
   "tracing.changed_move_value": "The move value was changed to: ",
@@ -66,9 +68,14 @@ In order to restore the current window, a reload is necessary.`,
   "task.reset_success": "Annotation was successfully reset.",
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
+  "dataset.clear_cache_success": "The dataset was reloaded successfully",
   "dataset.upload_success": "The dataset was uploaded successfully",
   "dataset.invalid_datasource_json":
-    "The datasource-properties.json on disk is invalid. The values below are guessed by webKnossos.",
+    "The datasource-properties.json on disk is invalid. The values below are guessed by webKnossos. Please review all properties before importing the dataset. You can always go back and change the values later.",
+  "dataset.missing_datasource_json":
+    "The datasource-properties.json was not found. The values below are guessed by webKnossos. Please review all properties before importing the dataset. You can always go back and change the values later.",
+  "dataset.import_complete":
+    "A valid datasource-properties.json was found. The dataset is imported and ready to use. You may still change the properties below.",
   "dataset.confirm_signup":
     "For dataset annotation, please log in or create an account. For dataset viewing, no account is required. Do you wish to sign up now?",
   "dataset.does_not_exist": "Selected dataset doesn't exist!",
@@ -79,11 +86,12 @@ In order to restore the current window, a reload is necessary.`,
   "dataset.import.required.name": "Please provide a name for the dataset",
   "dataset.import.required.datastore": "Please select a datastore for the dataset",
   "dataset.import.required.zipFile": "Please select a file to upload.",
+  "dataset.import.invalid_fields": "Please check that all form fields are valid.",
   "dataset.unique_layer_names": "The layer names provided by the dataset are not unique.",
   "annotation.finish": "Are you sure you want to permanently finish this tracing?",
   "annotation.was_finished": "Annotation was archived",
   "annotation.was_re_opened": "Annotation was reopened",
-  "annotation.delete": "Do you really want to cancel this annotation?",
+  "annotation.delete": "Do you really want to reset and cancel this annotation?",
   "annotation.dataset_no_public":
     "Public tracings require the respective dataset to be public too. Please, make sure to add public access rights to the dataset as well.",
   "annotation.was_edited": "Successfully updated annotation",
@@ -97,7 +105,7 @@ In order to restore the current window, a reload is necessary.`,
     "An error occured while trying to transfer the tasks. Please check your permissions and the server logs",
   "script.delete": "Do you really want to delete this script?",
   "team.delete": "Do you really want to delete this team?",
-  "taskType.delete": "Do you really want to delete this task type?",
+  "taskType.delete": "Do you really want to delete this task type and all its associated tasks?",
   "auth.registration_email_input": "Please input your E-mail!",
   "auth.registration_email_invalid": "The input is not valid E-mail!",
   "auth.registration_password_input": "Please input your password!",
@@ -121,6 +129,8 @@ In order to restore the current window, a reload is necessary.`,
     "Your account has been created. An administrator is going to unlock you soon.",
   "auth.automatic_user_activation": "User was activated automatically",
   "auth.error_no_user": "No active user is logged in.",
+  "auth.invalid_organization_name":
+    "The link is not valid, since the specified organization does not exist. You are being redirected to the general registration form.",
   "request.max_item_count_alert":
     "Your request returned more than 1000 results. More results might be available on the server but were omitted for technical reasons.",
   "timetracking.date_range_too_long": "Please specify a date range of 31 days or less.",
@@ -146,6 +156,9 @@ In order to restore the current window, a reload is necessary.`,
     "NML contains <edge ...> with same source and target id: Edge",
   "nml.tree_not_connected": "NML contains tree that is not fully connected: Tree with id",
   "nml.different_dataset": "Imported NML was originally for a different dataset.",
+  "merge.different_dataset":
+    "The merge cannot be executed, because the underlying datasets are not the same.",
+  "merge.volume_unsupported": "Merging is not supported for volume tracings.",
   "users.is_admin":
     "At least one of the selected users is an admin of this organization and already has access to all teams. No team assignments are necessary for this user.",
   "users.grant_admin_rights_title": "Do you really want to grant admin rights?",
@@ -162,4 +175,6 @@ In order to restore the current window, a reload is necessary.`,
   "mapping.too_few_textures":
     "Not enough textures available to support mappings. Mappings are disabled.",
   "mapping.unsupported_layer": "Mappings can only be enabled for segmentation layers.",
+  "project.report.failed_to_refresh":
+    "The project report page could not be refreshed. Please try to reload the page.",
 };

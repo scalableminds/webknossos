@@ -1,24 +1,29 @@
 // @flow
 
 import * as React from "react";
-import { Form, Input, Button, Row, Col, Steps, Icon, Card } from "antd";
-import { withRouter } from "react-router-dom";
+import { Form, Popover, Modal, Input, Button, Row, Col, Steps, Icon, Card } from "antd";
+import Toast from "libs/toast";
+import Clipboard from "clipboard-js";
+import { connect } from "react-redux";
+import type { OxalisState } from "oxalis/store";
+import type { APIUserType } from "admin/api_flow_types";
+import { location } from "libs/window";
 
 import RegistrationForm from "admin/auth/registration_form";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
-
-import type { RouterHistory } from "react-router-dom";
+import DatasetImportView from "dashboard/dataset/dataset_import_view";
 
 const Step = Steps.Step;
 const FormItem = Form.Item;
 
-type Props = {
-  history: RouterHistory,
+type StateProps = {
+  activeUser: ?APIUserType,
 };
 
 type State = {
   currentStep: number,
   organizationName: string,
+  datasetNameToImport: ?string,
 };
 
 function StepHeader({ header, subheader, icon, children }) {
@@ -56,6 +61,44 @@ function FeatureCard({ icon, header, children }) {
       </Card>
     </Col>
   );
+}
+
+export class InviteUsersPopover extends React.Component<{
+  organizationName: string,
+  children: React.Node,
+}> {
+  getRegistrationHotLink(): string {
+    return `${location.origin}/auth/register?organizationName=${encodeURI(
+      this.props.organizationName,
+    )}`;
+  }
+
+  copyRegistrationCopyLink = async () => {
+    await Clipboard.copy(this.getRegistrationHotLink());
+    Toast.success("Registration link copied to clipboard.");
+  };
+
+  getContent() {
+    return (
+      <React.Fragment>
+        <div style={{ marginBottom: 8 }}>
+          Share the following link to let users join your organization:
+        </div>
+        <Input.Group compact>
+          <Input style={{ width: "85%" }} value={this.getRegistrationHotLink()} readOnly />
+          <Button style={{ width: "15%" }} onClick={this.copyRegistrationCopyLink} icon="copy" />
+        </Input.Group>
+      </React.Fragment>
+    );
+  }
+
+  render() {
+    return (
+      <Popover trigger="click" title="Invite Users" content={this.getContent()}>
+        {this.props.children}
+      </Popover>
+    );
+  }
 }
 
 const OrganizationForm = Form.create()(({ form, onComplete }) => {
@@ -113,17 +156,21 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
   );
 });
 
-class OnboardingView extends React.PureComponent<Props, State> {
+class OnboardingView extends React.PureComponent<StateProps, State> {
   constructor() {
     super();
     this.state = {
       currentStep: 0,
       organizationName: "",
+      datasetNameToImport: null,
     };
   }
 
   advanceStep = () => {
-    this.setState({ currentStep: this.state.currentStep + 1 });
+    this.setState({
+      currentStep: this.state.currentStep + 1,
+      datasetNameToImport: null,
+    });
   };
 
   renderCreateOrganization() {
@@ -166,6 +213,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
       >
         <RegistrationForm
           hidePrivacyStatement
+          createOrganization
           organizationName={this.state.organizationName}
           onRegistered={this.advanceStep}
           confirmLabel="Create account"
@@ -190,7 +238,23 @@ class OnboardingView extends React.PureComponent<Props, State> {
         }
         icon={<Icon type="cloud-upload" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />}
       >
-        <DatasetUploadView history={this.props.history} withoutCard />
+        {this.state.datasetNameToImport == null ? (
+          <DatasetUploadView
+            onUploaded={datasetName => {
+              this.setState({ datasetNameToImport: datasetName });
+            }}
+            withoutCard
+          />
+        ) : (
+          <Modal visible width="85%" footer={null} maskClosable={false} onCancel={this.advanceStep}>
+            <DatasetImportView
+              isEditingMode={false}
+              datasetName={this.state.datasetNameToImport || ""}
+              onComplete={this.advanceStep}
+              onCancel={this.advanceStep}
+            />
+          </Modal>
+        )}
         <div style={{ textAlign: "center" }}>
           <a
             href="#"
@@ -232,8 +296,15 @@ class OnboardingView extends React.PureComponent<Props, State> {
             the formats and upload processes webKnossos supports.
           </FeatureCard>
           <FeatureCard header="User & Team Management" icon={<Icon type="team" />}>
-            Invite <a href="/users">users</a> and assign them to <a href="/teams">teams</a>. Teams
-            can be used to define dataset permissions and task assignments.
+            <InviteUsersPopover
+              organizationName={
+                this.props.activeUser != null ? this.props.activeUser.organization : ""
+              }
+            >
+              <a href="#">Invite users</a>{" "}
+            </InviteUsersPopover>
+            and assign them to <a href="/teams">teams</a>. Teams can be used to define dataset
+            permissions and task assignments.
           </FeatureCard>
           <FeatureCard header="Project Management" icon={<Icon type="paper-clip" />}>
             Create <a href="/tasks">tasks</a> and <a href="/projects">projects</a> to efficiently
@@ -303,4 +374,8 @@ class OnboardingView extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter(OnboardingView);
+const mapStateToProps = (state: OxalisState): StateProps => ({
+  activeUser: state.activeUser,
+});
+
+export default connect(mapStateToProps)(OnboardingView);

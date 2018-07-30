@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package controllers
 
 import javax.inject.Inject
@@ -10,7 +7,7 @@ import com.scalableminds.webknossos.datastore.services.DataStoreStatus
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import models.annotation.{AnnotationSQL, AnnotationSQLDAO}
+import models.annotation.{Annotation, AnnotationDAO}
 import models.binary._
 import models.user.time.TimeSpanService
 import play.api.i18n.{I18nSupport, Messages, MessagesApi}
@@ -33,7 +30,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
     for {
       uploadInfo <- request.body.validate[DataSourceId].asOpt.toFox ?~> Messages("dataStore.upload.invalid")
       _ <- DataSetService.isProperDataSetName(uploadInfo.name) ?~> Messages("dataSet.name.invalid")
-      _ <- DataSetService.checkIfNewDataSetName(uploadInfo.name)(GlobalAccessContext) ?~> Messages("dataSet.name.alreadyTaken")
+      _ <- DataSetService.assertNewDataSetName(uploadInfo.name)(GlobalAccessContext) ?~> Messages("dataSet.name.alreadyTaken")
       _ <- uploadInfo.team.nonEmpty ?~> Messages("team.invalid")
     } yield Ok
   }
@@ -42,7 +39,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
     request.body.validate[DataStoreStatus] match {
       case JsSuccess(status, _) =>
         logger.debug(s"Status update from data store '$name'. Status: " + status.ok)
-        DataStoreDAO.updateUrl(name, status.url)(GlobalAccessContext).map(_ => Ok)
+        DataStoreDAO.updateUrlByName(name, status.url)(GlobalAccessContext).map(_ => Ok)
       case e: JsError =>
         logger.error("Data store '$name' sent invalid update. Error: " + e)
         Future.successful(JsonBadRequest(JsError.toFlatJson(e)))
@@ -50,7 +47,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
   }
 
   def updateAll(name: String) = DataStoreAction(name).async(parse.json) { implicit request =>
-request.body.validate[List[InboxDataSource]] match {
+    request.body.validate[List[InboxDataSource]] match {
       case JsSuccess(dataSources, _) =>
         for {
           _ <- DataSetService.deactivateUnreportedDataSources(request.dataStore.name, dataSources)(GlobalAccessContext)
@@ -82,24 +79,24 @@ request.body.validate[List[InboxDataSource]] match {
   def handleTracingUpdateReport(name: String) = DataStoreAction(name).async(parse.json) { implicit request =>
     for {
       tracingId <- (request.body \ "tracingId").asOpt[String].toFox
-      annotation <- AnnotationSQLDAO.findOneByTracingId(tracingId)(GlobalAccessContext)
+      annotation <- AnnotationDAO.findOneByTracingId(tracingId)(GlobalAccessContext)
       _ <- ensureAnnotationNotFinished(annotation)
       timestamps <- (request.body \ "timestamps").asOpt[List[Long]].toFox
       statisticsOpt = (request.body \ "statistics").asOpt[JsObject]
       userTokenOpt = (request.body \ "userToken").asOpt[String]
       _ <- statisticsOpt match {
-        case Some(statistics) => AnnotationSQLDAO.updateStatistics(annotation._id, statistics)(GlobalAccessContext)
+        case Some(statistics) => AnnotationDAO.updateStatistics(annotation._id, statistics)(GlobalAccessContext)
         case None => Fox.successful(())
       }
-      _ <- AnnotationSQLDAO.updateModified(annotation._id, System.currentTimeMillis)(GlobalAccessContext)
+      _ <- AnnotationDAO.updateModified(annotation._id, System.currentTimeMillis)(GlobalAccessContext)
       userBox <- bearerTokenService.userForTokenOpt(userTokenOpt)(GlobalAccessContext).futureBox
+      _ <- Fox.runOptional(userBox)(user => TimeSpanService.logUserInteraction(timestamps, user, annotation)(GlobalAccessContext))
     } yield {
-      userBox.map(user => TimeSpanService.logUserInteraction(timestamps, user, annotation)(GlobalAccessContext))
       Ok
     }
   }
 
-  private def ensureAnnotationNotFinished(annotation: AnnotationSQL) = {
+  private def ensureAnnotationNotFinished(annotation: Annotation) = {
     if (annotation.state == Finished) Fox.failure("annotation already finshed")
     else Fox.successful(())
   }

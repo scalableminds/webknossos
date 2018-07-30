@@ -5,13 +5,17 @@ import { connect } from "react-redux";
 import { Modal } from "antd";
 import Utils from "libs/utils";
 import messages from "messages";
-import { createExplorational } from "admin/admin_rest_api";
+import { createExplorational, getOrganizations } from "admin/admin_rest_api";
 import DatasetPanel from "dashboard/dataset_panel";
 import _ from "lodash";
 
 import type { DatasetType } from "dashboard/dataset_view";
 import type { OxalisState } from "oxalis/store";
 import type { APIUserType } from "admin/api_flow_types";
+
+type State = {
+  organizationNameMap: { [key: string]: string },
+};
 
 type StateProps = {
   activeUser: ?APIUserType,
@@ -24,7 +28,23 @@ type Props = {
 
 const croppedDatasetCount = 6;
 
-class GalleryDatasetView extends React.PureComponent<Props> {
+class GalleryDatasetView extends React.PureComponent<Props, State> {
+  state = {
+    organizationNameMap: {},
+  };
+
+  componentDidMount() {
+    this.fetch();
+  }
+
+  async fetch() {
+    const organizations = await getOrganizations();
+
+    this.setState({
+      organizationNameMap: _.mapValues(_.keyBy(organizations, "name"), org => org.displayName),
+    });
+  }
+
   createTracing = async (
     dataset: DatasetType,
     typ: "volume" | "skeleton",
@@ -55,17 +75,14 @@ class GalleryDatasetView extends React.PureComponent<Props> {
       .entries()
       .map(([organization, datasets]) =>
         // Sort each group of datasets
-        [
-          organization,
-          datasets.sort(Utils.localeCompareBy(([]: DatasetType[]), "formattedCreated", false)),
-        ],
+        [organization, datasets.sort(Utils.localeCompareBy(([]: DatasetType[]), "created", false))],
       )
       .value()
       .sort(
         // Sort groups by creation date of first dataset
         Utils.localeCompareBy(
           ([]: DatasetType[]),
-          ([_organization, datasets]) => datasets[0].formattedCreated,
+          ([_organization, datasets]) => datasets[0].created,
           false,
         ),
       );
@@ -79,7 +96,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
             croppedDatasetCount={hasMultipleOrganizations ? croppedDatasetCount : null}
             className="dataset-panel"
             key={organization}
-            owningOrganization={organization}
+            organizationName={this.state.organizationNameMap[organization] || organization}
             datasets={datasets}
           />
         ))}

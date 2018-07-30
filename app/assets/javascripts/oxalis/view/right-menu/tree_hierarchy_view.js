@@ -383,4 +383,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect(null, mapDispatchToProps)(TreeHierarchyView);
+export default connect(
+  null,
+  mapDispatchToProps,
+)(TreeHierarchyView);

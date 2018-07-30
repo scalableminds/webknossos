@@ -24,8 +24,8 @@ export default function generateDummyTrees(
       nodes.push({
         id: currentNewNodeId++,
         position: {
-          x: 5120 + 5000 * counter / nodeCount,
-          y: 3725 + (currentTreeId - 1) * treeCount / 10,
+          x: 5120 + (5000 * counter) / nodeCount,
+          y: 3725 + ((currentTreeId - 1) * treeCount) / 10,
           z: 1545,
         },
         rotation: { x: 0, y: 270, z: 0 },
@@ -47,7 +47,7 @@ export default function generateDummyTrees(
       treeId: currentTreeId++,
       nodes,
       edges,
-      color: { r: Math.random(), g: Math.random(), b: Math.random() },
+      color: { r: 0, g: 0, b: 0 },
       branchPoints: [],
       comments: [],
       name: "explorative_2017-10-09_SCM_Boy_023",

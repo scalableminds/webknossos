@@ -7,17 +7,10 @@ import models.user.User
 import play.api.libs.json._
 import models.annotation.AnnotationState._
 import utils.ObjectId
+
 import scala.concurrent._
 import ExecutionContext.Implicits.global
 
-import scala.concurrent.Future
-
-/**
- * Company: scalableminds
- * User: tmbo
- * Date: 02.06.13
- * Time: 02:02
- */
 
 class AnnotationRestrictions {
   def allowAccess(user: Option[User]): Fox[Boolean] = Fox.successful(false)
@@ -55,34 +48,32 @@ object AnnotationRestrictions extends FoxImplicits{
   def restrictEverything =
     new AnnotationRestrictions()
 
-  def defaultAnnotationRestrictions(annotation: AnnotationSQL): AnnotationRestrictions =
+  def defaultAnnotationRestrictions(annotation: Annotation): AnnotationRestrictions =
     new AnnotationRestrictions {
       override def allowAccess(userOption: Option[User]) = {
         if(annotation.isPublic) Fox.successful(true)
         else
           (for {
             user <- option2Fox(userOption)
-            teamBSONObjectId <- option2Fox(annotation._team.toBSONObjectId)
-            isTeamManagerOrAdminOf <- user.isTeamManagerOrAdminOf(teamBSONObjectId)
+            isTeamManagerOrAdminOfTeam <- user.isTeamManagerOrAdminOf(annotation._team)
           } yield {
-            annotation._user == ObjectId.fromBsonId(user._id) || isTeamManagerOrAdminOf
+            annotation._user == user._id || isTeamManagerOrAdminOfTeam
           }).orElse(Fox.successful(false))
       }
 
       override def allowUpdate(user: Option[User]) = {
         Fox.successful(user.exists {
           user =>
-            annotation._user == ObjectId.fromBsonId(user._id) && !(annotation.state == Finished)
+            annotation._user == user._id && !(annotation.state == Finished)
         })
       }
 
       override def allowFinish(user: Option[User]) = {
         (for {
           u <- option2Fox(user)
-          teamBSONObjectId <- option2Fox(annotation._team.toBSONObjectId)
-          isTeamManagerOrAdminOf <- u.isTeamManagerOrAdminOf(teamBSONObjectId)
+          isTeamManagerOrAdminOfTeam <- u.isTeamManagerOrAdminOf(annotation._team)
         } yield {
-          (annotation._user == ObjectId.fromBsonId(u._id) || isTeamManagerOrAdminOf) && !(annotation.state == Finished)
+          (annotation._user == u._id || isTeamManagerOrAdminOfTeam) && !(annotation.state == Finished)
         }).orElse(Fox.successful(false))
       }
     }

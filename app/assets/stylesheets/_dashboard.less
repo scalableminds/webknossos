@@ -163,8 +163,11 @@
 
 .task-type-description {
   word-break: break-word;
-  max-height: 150px;
-  overflow-y: auto;
+
+  &.short {
+    max-height: 150px;
+    overflow-y: auto;
+  }
 
   ul {
     list-style: disc;

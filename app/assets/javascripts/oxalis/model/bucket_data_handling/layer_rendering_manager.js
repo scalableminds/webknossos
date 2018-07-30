@@ -240,7 +240,7 @@ export default class LayerRenderingManager {
   calculateUnzoomedAnchorPoint(position: Vector3, logZoomStep: number): Vector3 {
     const resolution = getResolutions(Store.getState().dataset)[logZoomStep];
     const maximumRenderedBucketsHalf =
-      (constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION - 1) * constants.BUCKET_WIDTH / 2;
+      ((constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION - 1) * constants.BUCKET_WIDTH) / 2;
 
     // Hit texture top-left coordinate
     const anchorPoint = [

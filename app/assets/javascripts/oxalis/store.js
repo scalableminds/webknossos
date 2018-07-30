@@ -16,6 +16,7 @@ import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
 import ViewModeReducer from "oxalis/model/reducers/view_mode_reducer";
 import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
 import UserReducer from "oxalis/model/reducers/user_reducer";
+import UiReducer from "oxalis/model/reducers/ui_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
 import googleAnalyticsMiddleware from "oxalis/model/helpers/google_analytics_middleware";
@@ -243,10 +244,16 @@ export type SaveQueueEntryType = {
   actions: Array<UpdateAction>,
 };
 
+export type ProgressInfoType = {
+  +processedActionCount: number,
+  +totalActionCount: number,
+};
+
 export type SaveStateType = {
   +isBusy: boolean,
   +queue: Array<SaveQueueEntryType>,
   +lastSaveTimestamp: number,
+  +progressInfo: ProgressInfoType,
 };
 
 export type FlycamType = {
@@ -293,6 +300,10 @@ export type ViewModeData = {
   +flight: ?FlightModeData,
 };
 
+type UiInformationType = {
+  +showDropzoneModal: boolean,
+};
+
 export type OxalisState = {
   +datasetConfiguration: DatasetConfigurationType,
   +userConfiguration: UserConfigurationType,
@@ -304,6 +315,7 @@ export type OxalisState = {
   +flycam: FlycamType,
   +viewModeData: ViewModeData,
   +activeUser: ?APIUserType,
+  +uiInformation: UiInformationType,
 };
 
 export const defaultState: OxalisState = {
@@ -404,6 +416,10 @@ export const defaultState: OxalisState = {
     queue: [],
     isBusy: false,
     lastSaveTimestamp: 0,
+    progressInfo: {
+      processedActionCount: 0,
+      totalActionCount: 0,
+    },
   },
   flycam: {
     zoomStep: 1.3,
@@ -429,6 +445,9 @@ export const defaultState: OxalisState = {
     flight: null,
   },
   activeUser: null,
+  uiInformation: {
+    showDropzoneModal: false,
+  },
 };
 
 const sagaMiddleware = createSagaMiddleware();
@@ -445,6 +464,7 @@ const combinedReducers = reduceReducers(
   ViewModeReducer,
   AnnotationReducer,
   UserReducer,
+  UiReducer,
 );
 
 const store = createStore(

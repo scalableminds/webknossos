@@ -282,6 +282,7 @@ export type APIOrganizationType = {
   +id: string,
   +name: string,
   +additionalInformation: string,
+  +displayName: string,
 };
 
 export type APIBuildInfoType = {
@@ -292,6 +293,8 @@ export type APIBuildInfoType = {
     version: string,
     sbtVersion: string,
     commitDate: string,
+    ciTag: string,
+    ciBuild: string,
   },
   "webknossos-wrap": {
     builtAtMillis: string,
@@ -328,6 +331,13 @@ export type ServerBranchPointType = {
 
 export type ServerBoundingBoxType = {
   topLeft: Point3,
+  width: number,
+  height: number,
+  depth: number,
+};
+
+export type ServerBoundingBoxTypeTuple = {
+  topLeft: Vector3,
   width: number,
   height: number,
   depth: number,

@@ -20,16 +20,16 @@ trait AnnotationInformationHandler extends FoxImplicits {
 
   def cache: Boolean = true
 
-  def provideAnnotation(identifier: ObjectId, user: Option[User])(implicit ctx: DBAccessContext): Fox[AnnotationSQL]
+  def provideAnnotation(identifier: ObjectId, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation]
 
-  def nameForAnnotation(t: AnnotationSQL)(implicit ctx: DBAccessContext): Fox[String] = {
+  def nameForAnnotation(t: Annotation)(implicit ctx: DBAccessContext): Fox[String] = {
     Fox.successful(t.id)
   }
 
   def restrictionsFor(identifier: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions]
 
-  def assertAllOnSameDataset(annotations: List[AnnotationSQL]): Fox[Boolean] = {
-    def allOnSameDatasetIter(annotations: List[AnnotationSQL], _dataSet: ObjectId): Boolean =
+  def assertAllOnSameDataset(annotations: List[Annotation]): Fox[Boolean] = {
+    def allOnSameDatasetIter(annotations: List[Annotation], _dataSet: ObjectId): Boolean =
       annotations match {
         case List() => true
         case head :: tail => head._dataSet == _dataSet && allOnSameDatasetIter(tail, _dataSet)

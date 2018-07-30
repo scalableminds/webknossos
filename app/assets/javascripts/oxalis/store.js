@@ -265,7 +265,8 @@ export type SaveQueueEntryType = {
 
 export type SaveStateType = {
   +isBusy: boolean,
-  +queue: Array<SaveQueueEntryType>,
+  +skeletonQueue: Array<SaveQueueEntryType>,
+  +volumeQueue: Array<SaveQueueEntryType>,
   +lastSaveTimestamp: number,
 };
 
@@ -435,7 +436,8 @@ export const defaultState: OxalisState = {
     skeleton: null,
   },
   save: {
-    queue: [],
+    skeletonQueue: [],
+    volumeQueue: [],
     isBusy: false,
     lastSaveTimestamp: 0,
   },

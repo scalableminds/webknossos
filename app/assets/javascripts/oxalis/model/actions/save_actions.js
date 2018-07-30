@@ -7,16 +7,27 @@
 import Date from "libs/date";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 
+type TracingType = "skeleton" | "volume";
+
 type PushSaveQueueActionType = {
   type: "PUSH_SAVE_QUEUE",
   items: Array<UpdateAction>,
+  tracingType: TracingType,
 };
 type SaveNowActionType = { type: "SAVE_NOW" };
-type ShiftSaveQueueActionType = { type: "SHIFT_SAVE_QUEUE", count: number };
-type DiscardSaveQueueActionType = { type: "DISCARD_SAVE_QUEUE" };
+type ShiftSaveQueueActionType = {
+  type: "SHIFT_SAVE_QUEUE",
+  count: number,
+  tracingType: TracingType,
+};
+type DiscardSaveQueueActionType = { type: "DISCARD_SAVE_QUEUE", tracingType: TracingType };
 type SetSaveBusyActionType = { type: "SET_SAVE_BUSY", isBusy: boolean };
 type SetLastSaveTimestampActionType = { type: "SET_LAST_SAVE_TIMESTAMP", timestamp: number };
-type SetVersionNumberActionType = { type: "SET_VERSION_NUMBER", version: number };
+type SetVersionNumberActionType = {
+  type: "SET_VERSION_NUMBER",
+  version: number,
+  tracingType: TracingType,
+};
 type UndoActionType = { type: "UNDO" };
 type RedoActionType = { type: "REDO" };
 export type SaveActionType =
@@ -30,22 +41,31 @@ export type SaveActionType =
   | UndoActionType
   | RedoActionType;
 
-export const pushSaveQueueAction = (items: Array<UpdateAction>): PushSaveQueueActionType => ({
+export const pushSaveQueueAction = (
+  items: Array<UpdateAction>,
+  tracingType: TracingType,
+): PushSaveQueueActionType => ({
   type: "PUSH_SAVE_QUEUE",
   items,
+  tracingType,
 });
 
 export const saveNowAction = (): SaveNowActionType => ({
   type: "SAVE_NOW",
 });
 
-export const shiftSaveQueueAction = (count: number): ShiftSaveQueueActionType => ({
+export const shiftSaveQueueAction = (
+  count: number,
+  tracingType: TracingType,
+): ShiftSaveQueueActionType => ({
   type: "SHIFT_SAVE_QUEUE",
   count,
+  tracingType,
 });
 
-export const discardSaveQueueAction = (): DiscardSaveQueueActionType => ({
+export const discardSaveQueueAction = (tracingType: TracingType): DiscardSaveQueueActionType => ({
   type: "DISCARD_SAVE_QUEUE",
+  tracingType,
 });
 
 export const setSaveBusyAction = (isBusy: boolean): SetSaveBusyActionType => ({
@@ -56,13 +76,18 @@ export const setSaveBusyAction = (isBusy: boolean): SetSaveBusyActionType => ({
 export const setLastSaveTimestampAction = (
   timestamp: number = Date.now(),
 ): SetLastSaveTimestampActionType => ({
+  // todo: this should depend on the tracingType, as well
   type: "SET_LAST_SAVE_TIMESTAMP",
   timestamp,
 });
 
-export const setVersionNumberAction = (version: number): SetVersionNumberActionType => ({
+export const setVersionNumberAction = (
+  version: number,
+  tracingType: TracingType,
+): SetVersionNumberActionType => ({
   type: "SET_VERSION_NUMBER",
   version,
+  tracingType,
 });
 
 export const undoAction = (): UndoActionType => ({

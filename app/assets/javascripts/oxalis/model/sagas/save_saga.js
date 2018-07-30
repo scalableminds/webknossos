@@ -87,7 +87,8 @@ export function* pushAnnotationAsync(): Generator<*, *, *> {
     let saveQueue;
     // Check whether the save queue is actually empty, the PUSH_SAVE_QUEUE action
     // could have been triggered during the call to sendRequestToServer
-    saveQueue = yield select((state: OxalisState) => state.save.queue);
+    // TODO: Make this work for volume as well
+    saveQueue = yield select((state: OxalisState) => state.save.queue.skeleton);
     if (saveQueue.length === 0) {
       // Save queue is empty, wait for push event
       yield take("PUSH_SAVE_QUEUE");
@@ -97,7 +98,7 @@ export function* pushAnnotationAsync(): Generator<*, *, *> {
       forcePush: take("SAVE_NOW"),
     });
     yield put(setSaveBusyAction(true));
-    saveQueue = yield select((state: OxalisState) => state.save.queue);
+    saveQueue = yield select((state: OxalisState) => state.save.queue.skeleton);
     if (saveQueue.length > 0) {
       yield call(sendRequestToServer);
     }
@@ -113,7 +114,7 @@ export function sendRequestWithToken(
 }
 
 export function* sendRequestToServer(timestamp: number = Date.now()): Generator<*, *, *> {
-  const saveQueue = yield select((state: OxalisState) => state.save.queue);
+  const saveQueue = yield select((state: OxalisState) => state.save.queue.skeleton);
   let compactedSaveQueue = compactUpdateActions(saveQueue);
   // todo: handle volume here as well
   const { version, type, tracingId } = yield select((state: OxalisState) => state.tracing.skeleton);
@@ -122,19 +123,19 @@ export function* sendRequestToServer(timestamp: number = Date.now()): Generator<
 
   try {
     // todo: reactivate saving
-    // yield call(
-    //   sendRequestWithToken,
-    //   `${dataStoreUrl}/data/tracings/${type}/${tracingId}/update?token=`,
-    //   {
-    //     method: "POST",
-    //     headers: { "X-Date": `${timestamp}` },
-    //     data: compactedSaveQueue,
-    //     compress: true,
-    //   },
-    // );
-    yield put(setVersionNumberAction(version + compactedSaveQueue.length));
+    yield call(
+      sendRequestWithToken,
+      `${dataStoreUrl}/data/tracings/${type}/${tracingId}/update?token=`,
+      {
+        method: "POST",
+        headers: { "X-Date": `${timestamp}` },
+        data: compactedSaveQueue,
+        compress: true,
+      },
+    );
+    yield put(setVersionNumberAction(version + compactedSaveQueue.length, "skeleton"));
     yield put(setLastSaveTimestampAction());
-    yield put(shiftSaveQueueAction(saveQueue.length));
+    yield put(shiftSaveQueueAction(saveQueue.length, "skeleton"));
     yield call(toggleErrorHighlighting, false);
   } catch (error) {
     yield call(toggleErrorHighlighting, true);

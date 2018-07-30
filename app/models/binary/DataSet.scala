@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLay
 import com.scalableminds.webknossos.schema.Tables._
 import models.configuration.DataSetConfiguration
 import models.team._
-import models.user.UserSQL
+import models.user.User
 import net.liftweb.common.Full
 import play.api.Play.current
 import play.api.i18n.Messages
@@ -23,7 +23,7 @@ import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO, SimpleSQLDAO}
 
 
-case class DataSetSQL(
+case class DataSet(
                        _id: ObjectId,
                        _dataStore: String,
                        _organization: ObjectId,
@@ -42,19 +42,19 @@ case class DataSetSQL(
                      ) extends FoxImplicits {
 
   def getDataLayerByName(dataLayerName: String)(implicit ctx: DBAccessContext): Fox[DataLayer] =
-    DataSetDataLayerSQLDAO.findOneByNameForDataSet(dataLayerName, _id)
+    DataSetDataLayerDAO.findOneByNameForDataSet(dataLayerName, _id)
 
   def getLogoUrl: Fox[String] =
     logoUrl match {
       case Some(url) => Fox.successful(url)
-      case None => OrganizationSQLDAO.findOne(_organization)(GlobalAccessContext).map(_.logoUrl)
+      case None => OrganizationDAO.findOne(_organization)(GlobalAccessContext).map(_.logoUrl)
     }
 
-  def organization: Fox[OrganizationSQL] =
-    OrganizationSQLDAO.findOne(_organization)(GlobalAccessContext) ?~> Messages("organization.notFound")
+  def organization: Fox[Organization] =
+    OrganizationDAO.findOne(_organization)(GlobalAccessContext) ?~> Messages("organization.notFound")
 
-  def dataStore: Fox[DataStoreSQL] =
-    DataStoreSQLDAO.findOneByName(_dataStore.trim)(GlobalAccessContext) ?~> Messages("datastore.notFound")
+  def dataStore: Fox[DataStore] =
+    DataStoreDAO.findOneByName(_dataStore.trim)(GlobalAccessContext) ?~> Messages("datastore.notFound")
 
   def dataStoreInfo: Fox[DataStoreInfo] =
     for {
@@ -73,7 +73,7 @@ case class DataSetSQL(
   def urlEncodedName: String =
     UriEncoding.encodePathSegment(name, "UTF-8")
 
-  def isEditableBy(userOpt: Option[UserSQL])(implicit ctx: DBAccessContext): Fox[Boolean] = {
+  def isEditableBy(userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Boolean] = {
     userOpt match {
       case Some(user) =>
         for {
@@ -83,22 +83,22 @@ case class DataSetSQL(
     }
   }
 
-  def isEditableBy(user: UserSQL)(implicit ctx: DBAccessContext): Fox[Boolean] =
+  def isEditableBy(user: User)(implicit ctx: DBAccessContext): Fox[Boolean] =
     isEditableBy(Some(user))
 
   def allowedTeamIds =
-    DataSetAllowedTeamsSQLDAO.findAllForDataSet(_id)(GlobalAccessContext) ?~> Messages("allowedTeams.notFound")
+    DataSetAllowedTeamsDAO.findAllForDataSet(_id)(GlobalAccessContext) ?~> Messages("allowedTeams.notFound")
 
   def allowedTeams =
     for {
       allowedTeamIds <- allowedTeamIds
-      allowedTeams <- Fox.combined(allowedTeamIds.map(TeamSQLDAO.findOne(_)(GlobalAccessContext)))
+      allowedTeams <- Fox.combined(allowedTeamIds.map(TeamDAO.findOne(_)(GlobalAccessContext)))
     } yield allowedTeams
 
   def constructDataSource(implicit ctx: DBAccessContext): Fox[InboxDataSource] = {
     for {
       organization <- organization
-      dataLayersBox <- (DataSetDataLayerSQLDAO.findAllForDataSet(_id) ?~> "could not find data layers").futureBox
+      dataLayersBox <- (DataSetDataLayerDAO.findAllForDataSet(_id) ?~> "could not find data layers").futureBox
       dataSourceId = DataSourceId(name, organization.name)
     } yield {
       dataLayersBox match {
@@ -112,7 +112,7 @@ case class DataSetSQL(
     }
   }
 
-  def publicWrites(user: Option[UserSQL]): Fox[JsObject] = {
+  def publicWrites(user: Option[User]): Fox[JsObject] = {
     implicit val ctx = GlobalAccessContext
     for {
       teams <- allowedTeams
@@ -139,7 +139,7 @@ case class DataSetSQL(
   }
 }
 
-object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
+object DataSetDAO extends SQLDAO[DataSet, DatasetsRow, Datasets] {
   val collection = Datasets
 
   def idColumn(x: Datasets): Rep[String] = x._Id
@@ -156,12 +156,12 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
   private def writeScaleLiteral(scale: Scale): String =
     writeStructTuple(List(scale.x, scale.y, scale.z).map(_.toString))
 
-  def parse(r: DatasetsRow): Fox[DataSetSQL] = {
+  def parse(r: DatasetsRow): Fox[DataSet] = {
     for {
       scale <- parseScaleOpt(r.scale)
       defaultConfigurationOpt <- Fox.runOptional(r.defaultconfiguration)(JsonHelper.parseJsonToFox[DataSetConfiguration](_))
     } yield {
-      DataSetSQL(
+      DataSet(
         ObjectId(r._Id),
         r._Datastore.trim,
         ObjectId(r._Organization),
@@ -191,7 +191,7 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
         or ('${requestingUserId.id}' in (select _user from webknossos.user_team_roles where isTeammanager)
             and _organization in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}'))"""
 
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[DataSetSQL] =
+  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[DataSet] =
     for {
       accessQuery <- readAccessQuery
       rList <- run(sql"select #${columns} from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[DatasetsRow])
@@ -199,7 +199,7 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
       parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
     } yield parsed
 
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[DataSetSQL]] = {
+  override def findAll(implicit ctx: DBAccessContext): Fox[List[DataSet]] = {
     for {
       accessQuery <- readAccessQuery
       r <- run(sql"select #${columns} from #${existingCollectionName} where #${accessQuery}".as[DatasetsRow])
@@ -207,7 +207,7 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
     } yield parsed
   }
 
-  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataSetSQL] =
+  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataSet] =
     for {
       accessQuery <- readAccessQuery
       rList <- run(sql"select #${columns} from #${existingCollectionName} where name = ${name} and #${accessQuery}".as[DatasetsRow])
@@ -263,7 +263,7 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
     } yield ()
   }
 
-  def insertOne(d: DataSetSQL)(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def insertOne(d: DataSet)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val defaultConfiguration: Option[String] = d.defaultConfiguration.map(c => Json.toJson(c.configuration).toString)
     for {
       _ <- run(
@@ -278,7 +278,7 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
 
     for {
       old <- findOneByName(name)
-      organization <- OrganizationSQLDAO.findOneByName(source.id.team)
+      organization <- OrganizationDAO.findOneByName(source.id.team)
       q =
       sqlu"""update webknossos.dataSets
                     set _dataStore = ${dataStoreName},
@@ -288,7 +288,7 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
                         status = ${source.statusOpt.getOrElse("")}
                    where _id = ${old._id.id}"""
       _ <- run(q)
-      _ <- DataSetDataLayerSQLDAO.updateLayers(old._id, source)
+      _ <- DataSetDataLayerDAO.updateLayers(old._id, source)
     } yield ()
   }
 
@@ -315,7 +315,7 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
 }
 
 
-object DataSetResolutionsSQLDAO extends SimpleSQLDAO {
+object DataSetResolutionsDAO extends SimpleSQLDAO {
 
   def parseRow(row: DatasetResolutionsRow): Fox[Point3D] = {
     for {
@@ -354,14 +354,14 @@ object DataSetResolutionsSQLDAO extends SimpleSQLDAO {
 }
 
 
-object DataSetDataLayerSQLDAO extends SimpleSQLDAO {
+object DataSetDataLayerDAO extends SimpleSQLDAO {
 
   def parseRow(row: DatasetLayersRow, dataSetId: ObjectId): Fox[DataLayer] = {
     val result: Fox[Fox[DataLayer]] = for {
       category <- Category.fromString(row.category).toFox ?~> "Could not parse Layer Category"
       boundingBox <- BoundingBox.fromSQL(parseArrayTuple(row.boundingbox).map(_.toInt)).toFox ?~> "Could not parse boundingbox"
       elementClass <- ElementClass.fromString(row.elementclass).toFox ?~> "Could not parse Layer ElementClass"
-      resolutions <- DataSetResolutionsSQLDAO.findDataResolutionForLayer(dataSetId, row.name) ?~> "Could not find resolution for layer"
+      resolutions <- DataSetResolutionsDAO.findDataResolutionForLayer(dataSetId, row.name) ?~> "Could not find resolution for layer"
     } yield {
       (row.largestsegmentid, row.mappings) match {
         case (Some(segmentId), Some(mappings)) =>
@@ -429,13 +429,13 @@ object DataSetDataLayerSQLDAO extends SimpleSQLDAO {
     }
     for {
       _ <- run(DBIO.sequence(List(clearQuery) ++ insertQueries))
-      _ <- DataSetResolutionsSQLDAO.updateResolutions(_dataSet, source.toUsable.map(_.dataLayers))
+      _ <- DataSetResolutionsDAO.updateResolutions(_dataSet, source.toUsable.map(_.dataLayers))
     } yield ()
   }
 }
 
 
-object DataSetAllowedTeamsSQLDAO extends SimpleSQLDAO {
+object DataSetAllowedTeamsDAO extends SimpleSQLDAO {
 
   def findAllForDataSet(dataSetId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
     val query = for {

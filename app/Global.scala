@@ -5,7 +5,7 @@ import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService
-import models.annotation.AnnotationSQLDAO
+import models.annotation.AnnotationDAO
 import net.liftweb.common.{Failure, Full}
 import oxalis.cleanup.CleanUpService
 import oxalis.security.WebknossosSilhouette
@@ -45,7 +45,7 @@ object Global extends GlobalSettings with LazyLogging{
     }
 
     CleanUpService.register("deletion of old annotations in initializing state", 1 day) {
-      AnnotationSQLDAO.deleteOldInitializingAnnotations
+      AnnotationDAO.deleteOldInitializingAnnotations
     }
 
     super.onStart(app)

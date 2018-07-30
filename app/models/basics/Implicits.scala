@@ -1,7 +1,7 @@
 package models.basics
 
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext}
-import models.user.UserSQL
+import models.user.User
 import oxalis.security.WebknossosSilhouette.{SecuredRequest, UserAwareAction, UserAwareRequest}
 
 import scala.language.implicitConversions
@@ -25,7 +25,7 @@ trait Implicits {
     UserAwareRequest[B](Some(user), Some(authenticator), initialRequest)
   }
 
-  implicit def userToDBAccess(user: UserSQL): DBAccessContext = {
+  implicit def userToDBAccess(user: User): DBAccessContext = {
     AuthorizedAccessContext(user)
   }
 }

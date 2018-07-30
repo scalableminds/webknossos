@@ -9,7 +9,7 @@ import com.google.inject.Inject
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest, DataServiceMappingRequest, MappingReadInstruction}
-import com.scalableminds.webknossos.datastore.storage.DataCubeCache
+import com.scalableminds.webknossos.datastore.storage.{CachedCube, DataCubeCache}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -156,5 +156,13 @@ class BinaryDataService @Inject()(config: Configuration) extends FoxImplicits wi
       i += 1
     }
     compressed
+  }
+
+  def clearCache(dataSetName: String) = {
+    def matchingPredicate(cubeKey: CachedCube) = {
+      cubeKey.dataSourceName == dataSetName
+    }
+
+    cache.clear(matchingPredicate)
   }
 }

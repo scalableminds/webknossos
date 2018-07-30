@@ -66,6 +66,7 @@ In order to restore the current window, a reload is necessary.`,
   "task.reset_success": "Annotation was successfully reset.",
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
+  "dataset.clear_cache_success": "The dataset was reloaded successfully",
   "dataset.upload_success": "The dataset was uploaded successfully",
   "dataset.invalid_datasource_json":
     "The datasource-properties.json on disk is invalid. The values below are guessed by webKnossos. Please review all properties before importing the dataset. You can always go back and change the values later.",

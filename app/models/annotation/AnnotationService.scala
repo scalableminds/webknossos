@@ -227,7 +227,8 @@ object AnnotationService
   def createFrom(
                   user: User,
                   dataSet: DataSet,
-                  tracingReference: TracingReference,
+                  skeletonTracingId: Option[String],
+                  volumeTracingId: Option[String],
                   annotationType: AnnotationTypeSQL,
                   name: Option[String],
                   description: String)(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
@@ -239,7 +240,8 @@ object AnnotationService
         None,
         teamId,
         user._id,
-        tracingReference,
+        skeletonTracingId,
+        volumeTracingId,
         description,
         name = name.getOrElse(""),
         typ = annotationType)

@@ -37,7 +37,7 @@ trait DataStoreHandlingStrategy {
   def saveSkeletonTracings(tracings: SkeletonTracings): Fox[List[Box[TracingReference]]] =
     Fox.failure("DataStore doesn't support saving SkeletonTracings.")
 
-  def duplicateSkeletonTracing(tracingReference: TracingReference, versionString: Option[String] = None): Fox[TracingReference] =
+  def duplicateSkeletonTracing(skeletonTracingId: String, versionString: Option[String] = None): Fox[TracingReference] =
     Fox.failure("DatStore doesn't support duplication of SkeletonTracings.")
 
   def mergeSkeletonTracingsByIds(tracingSelectors: List[TracingReference], persistTracing: Boolean): Fox[TracingReference] =
@@ -95,9 +95,9 @@ class WKStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSet) ex
       .postProtoWithJsonResponse[SkeletonTracings, List[Box[TracingReference]]](tracings)
   }
 
-  override def duplicateSkeletonTracing(tracingReference: TracingReference, versionString: Option[String] = None): Fox[TracingReference] = {
+  override def duplicateSkeletonTracing(skeletonTracingId: String, versionString: Option[String] = None): Fox[TracingReference] = {
     logger.debug("Called to duplicate SkeletonTracing. Base: " + dataSet.name + " Datastore: " + dataStoreInfo)
-    RPC(s"${dataStoreInfo.url}/data/tracings/skeleton/${tracingReference.id}/duplicate")
+    RPC(s"${dataStoreInfo.url}/data/tracings/skeleton/${skeletonTracingId}/duplicate")
       .withQueryString("token" -> DataStoreHandlingStrategy.webKnossosToken)
       .withQueryStringOptional("version", versionString)
       .getWithJsonResponse[TracingReference]

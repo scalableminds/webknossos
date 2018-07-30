@@ -57,7 +57,7 @@ import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import dimensions from "oxalis/model/dimensions";
 import { requestTask, finishAnnotation, doWithToken } from "admin/admin_rest_api";
-import { discardSaveQueueAction } from "oxalis/model/actions/save_actions";
+import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import messages from "messages";
 import type { ToastStyleType } from "libs/toast";
 
@@ -320,7 +320,7 @@ class TracingApi {
     Store.dispatch(restartSagaAction());
     UrlManager.reset();
     await Model.fetch(newTracingType, newAnnotationId, newControlMode, false);
-    Store.dispatch(discardSaveQueueAction());
+    Store.dispatch(discardSaveQueuesAction());
     Store.dispatch(wkReadyAction());
     UrlManager.updateUnthrottled(true);
   }

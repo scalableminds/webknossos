@@ -79,6 +79,7 @@ export async function initialize(
 }> {
   Store.dispatch(setControlModeAction(controlMode));
 
+  let annotation: APIAnnotationType;
   let skeletonAnnotation: ?APIAnnotationType;
   let volumeAnnotation: ?APIAnnotationType;
   let datasetName;
@@ -88,6 +89,7 @@ export async function initialize(
       "5b574bdb960000eb039f662c",
       "Explorational",
     );
+    annotation = skeletonAnnotation;
     volumeAnnotation = await getAnnotationInformation("5b574c3b9600002b049f6631", "Explorational");
     datasetName = skeletonAnnotation.dataSetName;
 
@@ -100,8 +102,7 @@ export async function initialize(
       task: skeletonAnnotation.id,
     });
 
-    // todo: reactivate tasks
-    // Store.dispatch(setTaskAction(annotation.task));
+    Store.dispatch(setTaskAction(annotation.task));
   } else {
     // In View mode, the annotationId is actually the datasetName
     // as there is no annotation and no tracing!
@@ -125,10 +126,8 @@ export async function initialize(
   }
 
   // There is no need to initialize the tracing if there is no tracing (View mode).
-  // todo: annotation has to be combined
-  const annotation = skeletonAnnotation;
   if (annotation != null && tracing != null) {
-    initializeTracing(annotation, tracing);
+    initializeTracing(skeletonAnnotation, volumeAnnotation, tracing);
   }
 
   applyUrlState(UrlManager.initialState, tracing);
@@ -187,9 +186,18 @@ function validateSpecsForLayers(
   return { isMappingSupported, textureInformationPerLayer };
 }
 
-function initializeTracing(annotation: APIAnnotationType, tracing: HybridServerTracingType) {
+function initializeTracing(
+  skeletonAnnotation: ?APIAnnotationType,
+  volumeAnnotation: ?APIAnnotationType,
+  tracing: HybridServerTracingType,
+) {
+  // TODO Hybrid: This function should only receive one (non-optional) annotation. However, the back-end currently does not support hybrid annotations.
   // This method is not called for the View mode
   const { dataset } = Store.getState();
+  if (!skeletonAnnotation) {
+    throw new Error("Skeleton annotation has to be defined");
+  }
+  const annotation = skeletonAnnotation;
   const { allowedModes, preferredMode } = determineAllowedModes(dataset, annotation.settings);
   _.extend(annotation.settings, { allowedModes, preferredMode });
 
@@ -200,14 +208,14 @@ function initializeTracing(annotation: APIAnnotationType, tracing: HybridServerT
         getSegmentationLayer(dataset) != null,
         messages["tracing.volume_missing_segmentation"],
       );
-      Store.dispatch(initializeVolumeTracingAction(annotation, volumeTracing));
+      Store.dispatch(initializeVolumeTracingAction(volumeAnnotation, volumeTracing));
     });
 
     serverTracingAsSkeletonTracingMaybe(tracing).map(skeletonTracing => {
       // To generate a huge amount of dummy trees, use:
       // import generateDummyTrees from "./model/helpers/generate_dummy_trees";
       // tracing.trees = generateDummyTrees(1, 200000);
-      Store.dispatch(initializeSkeletonTracingAction(annotation, skeletonTracing));
+      Store.dispatch(initializeSkeletonTracingAction(skeletonAnnotation, skeletonTracing));
     });
   }
 

@@ -32,7 +32,7 @@ import type { OxalisState, TracingType, FlycamType, SaveQueueEntryType } from "o
 import type { RequestOptionsWithData } from "libs/request";
 import { moveTreeComponent } from "oxalis/model/sagas/update_actions";
 import { doWithToken } from "admin/admin_rest_api";
-import {enforceSkeletonTracing} from "../accessors/skeletontracing_accessor";
+import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
 
 const PUSH_THROTTLE_TIME = 30000; // 30s
 const SAVE_RETRY_WAITING_TIME = 5000;
@@ -81,14 +81,20 @@ export function* collectUndoStates(): Generator<*, *, *> {
 }
 
 export function* pushAnnotationAsync(): Generator<*, *, *> {
-  yield take(["INITIALIZE_SKELETONTRACING", "INITIALIZE_VOLUMETRACING"]);
+  yield [pushTracingTypeAsync("skeleton"), pushTracingTypeAsync("volume")];
+}
+
+export function* pushTracingTypeAsync(tracingType: "skeleton" | "volume"): Generator<*, *, *> {
+  yield take(
+    tracingType === "skeleton" ? "INITIALIZE_SKELETONTRACING" : "INITIALIZE_VOLUMETRACING",
+  );
   yield put(setLastSaveTimestampAction());
   while (true) {
     let saveQueue;
     // Check whether the save queue is actually empty, the PUSH_SAVE_QUEUE action
     // could have been triggered during the call to sendRequestToServer
-    // TODO: Make this work for volume as well
-    saveQueue = yield select((state: OxalisState) => state.save.queue.skeleton);
+
+    saveQueue = yield select((state: OxalisState) => state.save.queue[tracingType]);
     if (saveQueue.length === 0) {
       // Save queue is empty, wait for push event
       yield take("PUSH_SAVE_QUEUE");
@@ -98,9 +104,9 @@ export function* pushAnnotationAsync(): Generator<*, *, *> {
       forcePush: take("SAVE_NOW"),
     });
     yield put(setSaveBusyAction(true));
-    saveQueue = yield select((state: OxalisState) => state.save.queue.skeleton);
+    saveQueue = yield select((state: OxalisState) => state.save.queue[tracingType]);
     if (saveQueue.length > 0) {
-      yield call(sendRequestToServer);
+      yield call(sendRequestToServer, tracingType);
     }
     yield put(setSaveBusyAction(false));
   }
@@ -113,16 +119,19 @@ export function sendRequestWithToken(
   return doWithToken(token => Request.sendJSONReceiveJSON(`${urlWithoutToken}${token}`, data));
 }
 
-export function* sendRequestToServer(timestamp: number = Date.now()): Generator<*, *, *> {
-  const saveQueue = yield select((state: OxalisState) => state.save.queue.skeleton);
+export function* sendRequestToServer(
+  tracingType: "skeleton" | "volume",
+  timestamp: number = Date.now(),
+): Generator<*, *, *> {
+  const saveQueue = yield select((state: OxalisState) => state.save.queue[tracingType]);
   let compactedSaveQueue = compactUpdateActions(saveQueue);
-  // todo: handle volume here as well
-  const { version, type, tracingId } = yield select((state: OxalisState) => state.tracing.skeleton);
+  const { version, type, tracingId } = yield select(
+    (state: OxalisState) => state.tracing[tracingType],
+  );
   const dataStoreUrl = yield select((state: OxalisState) => state.dataset.dataStore.url);
   compactedSaveQueue = addVersionNumbers(compactedSaveQueue, version);
 
   try {
-    // todo: reactivate saving
     yield call(
       sendRequestWithToken,
       `${dataStoreUrl}/data/tracings/${type}/${tracingId}/update?token=`,
@@ -133,9 +142,9 @@ export function* sendRequestToServer(timestamp: number = Date.now()): Generator<
         compress: true,
       },
     );
-    yield put(setVersionNumberAction(version + compactedSaveQueue.length, "skeleton"));
+    yield put(setVersionNumberAction(version + compactedSaveQueue.length, tracingType));
     yield put(setLastSaveTimestampAction());
-    yield put(shiftSaveQueueAction(saveQueue.length, "skeleton"));
+    yield put(shiftSaveQueueAction(saveQueue.length, tracingType));
     yield call(toggleErrorHighlighting, false);
   } catch (error) {
     yield call(toggleErrorHighlighting, true);
@@ -338,18 +347,19 @@ export function compactUpdateActions(
 }
 
 export function performDiffTracing(
+  tracingType: "skeleton" | "volume",
   prevTracing: TracingType,
   tracing: TracingType,
   flycam: FlycamType,
 ): Array<UpdateAction> {
   let actions = [];
-  if (tracing.skeleton != null && prevTracing.skeleton != null) {
+  if (tracingType === "skeleton" && tracing.skeleton != null && prevTracing.skeleton != null) {
     actions = actions.concat(
       Array.from(diffSkeletonTracing(prevTracing.skeleton, tracing.skeleton, flycam)),
     );
   }
 
-  if (tracing.volume != null && prevTracing.volume != null) {
+  if (tracingType === "volume" && tracing.volume != null && prevTracing.volume != null) {
     actions = actions.concat(
       Array.from(diffVolumeTracing(prevTracing.volume, tracing.volume, flycam)),
     );
@@ -359,33 +369,46 @@ export function performDiffTracing(
 }
 
 export function* saveTracingAsync(): Generator<any, any, any> {
-  const { initSkeleton } = yield race({
-    initSkeleton: take("INITIALIZE_SKELETONTRACING"),
+  // yield fork(() => saveTracingTypeAsync("skeleton"));
+  // yield fork(() => saveTracingTypeAsync("volume"));
+  yield [saveTracingTypeAsync("skeleton"), saveTracingTypeAsync("volume")];
+}
 
-    // todo: reactivate and replace race by something which supports both
-    // initVolume: take("INITIALIZE_VOLUMETRACING"),
-  });
+function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Generator<*, *, *> {
+  yield take(
+    tracingType === "skeleton" ? "INITIALIZE_SKELETONTRACING" : "INITIALIZE_VOLUMETRACING",
+  );
+
   let prevTracing = yield select((state: OxalisState) => state.tracing);
-  if (initSkeleton) {
-    if (yield select((state: OxalisState) => enforceSkeletonTracing(state.tracing).activeTreeId == null)) {
+  if (tracingType === "skeleton") {
+    if (
+      yield select(
+        (state: OxalisState) => enforceSkeletonTracing(state.tracing).activeTreeId == null,
+      )
+    ) {
       yield put(createTreeAction());
     }
   }
   yield take("WK_READY");
-  const allowUpdate = yield select((state: OxalisState) => state.tracing.restrictions.allowUpdate);
+  const allowUpdate = yield select(
+    (state: OxalisState) =>
+      state.tracing[tracingType] && state.tracing[tracingType].restrictions.allowUpdate,
+  );
   if (!allowUpdate) return;
 
   while (true) {
-    if (initSkeleton) {
+    if (tracingType === "skeleton") {
       yield take([...SkeletonTracingSaveRelevantActions, ...FlycamActions, "UNDO", "REDO"]);
     } else {
       yield take([...VolumeTracingSaveRelevantActions, ...FlycamActions]);
     }
     const tracing = yield select((state: OxalisState) => state.tracing);
     const flycam = yield select((state: OxalisState) => state.flycam);
-    const items = Array.from(yield call(performDiffTracing, prevTracing, tracing, flycam));
+    const items = Array.from(
+      yield call(performDiffTracing, tracingType, prevTracing, tracing, flycam),
+    );
     if (items.length > 0) {
-      yield put(pushSaveQueueAction(items));
+      yield put(pushSaveQueueAction(items, tracingType));
     }
     prevTracing = tracing;
   }

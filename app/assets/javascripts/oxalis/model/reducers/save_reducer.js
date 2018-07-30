@@ -22,15 +22,17 @@ function SaveReducer(state: OxalisState, action: ActionType): OxalisState {
         return update(state, {
           save: {
             queue: {
-              $push: [
-                {
-                  // Placeholder, the version number will be updated before sending to the server
-                  version: -1,
-                  timestamp: Date.now(),
-                  actions: action.items,
-                  stats,
-                },
-              ],
+              [action.tracingType]: {
+                $push: [
+                  {
+                    // Placeholder, the version number will be updated before sending to the server
+                    version: -1,
+                    timestamp: Date.now(),
+                    actions: action.items,
+                    stats,
+                  },
+                ],
+              },
             },
           },
         });
@@ -41,15 +43,21 @@ function SaveReducer(state: OxalisState, action: ActionType): OxalisState {
     case "SHIFT_SAVE_QUEUE": {
       if (action.count > 0) {
         return update(state, {
-          save: { queue: { $set: state.save.queue.slice(action.count) } },
+          save: {
+            queue: {
+              [action.tracingType]: {
+                $set: state.save.queue[action.tracingType].slice(action.count),
+              },
+            },
+          },
         });
       }
       return state;
     }
 
-    case "DISCARD_SAVE_QUEUE": {
+    case "DISCARD_SAVE_QUEUES": {
       return update(state, {
-        save: { queue: { $set: [] } },
+        save: { queue: { $set: { skeleton: [], volume: [] } } },
       });
     }
 
@@ -66,7 +74,9 @@ function SaveReducer(state: OxalisState, action: ActionType): OxalisState {
     }
 
     case "SET_VERSION_NUMBER": {
-      return update(state, { tracing: { version: { $set: action.version } } });
+      return update(state, {
+        tracing: { [action.tracingType]: { version: { $set: action.version } } },
+      });
     }
 
     default:

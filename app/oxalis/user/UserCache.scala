@@ -2,7 +2,7 @@ package oxalis.user
 
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
-import models.user.{UserSQL, UserSQLDAO}
+import models.user.{User, UserDAO}
 import play.api.Play.current
 import play.api.cache.Cache
 import utils.ObjectId
@@ -16,11 +16,11 @@ object UserCache {
 
   def findUser(id: ObjectId) = {
     Cache.getOrElse(cacheKeyForUser(id), userCacheTimeout) {
-      UserSQLDAO.findOne(id)(GlobalAccessContext)
+      UserDAO.findOne(id)(GlobalAccessContext)
     }
   }
 
-  def store(id: ObjectId, user: Fox[UserSQL]) = {
+  def store(id: ObjectId, user: Fox[User]) = {
     Cache.set(cacheKeyForUser(id), user)
     user
   }

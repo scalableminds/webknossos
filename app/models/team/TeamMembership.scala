@@ -10,7 +10,7 @@ import utils.ObjectId
 case class TeamMembershipSQL(teamId: ObjectId, isTeamManager: Boolean) {
   def publicWrites(implicit ctx: DBAccessContext): Fox[JsObject] = {
     for {
-      team <- TeamSQLDAO.findOne(teamId)
+      team <- TeamDAO.findOne(teamId)
     } yield {
       Json.obj(
         "id" -> teamId.toString,

@@ -1,9 +1,17 @@
 // @flow
 import React from "react";
+import { connect } from "react-redux";
 import Model from "oxalis/model";
 import ButtonComponent from "oxalis/view/components/button_component";
+import type { OxalisState, ProgressInfoType } from "oxalis/store";
+
+type StateProps = {|
+  progressInfo: ProgressInfoType,
+  isBusy: boolean,
+|};
 
 type Props = {
+  ...StateProps,
   onClick: (SyntheticInputEvent<HTMLButtonElement>) => Promise<*>,
 };
 
@@ -29,18 +37,29 @@ class SaveButton extends React.PureComponent<Props, State> {
 
   savedPollingInterval: number = 0;
   _forceUpdate = () => {
-    this.setState({ isStateSaved: Model.stateSaved() });
+    const isStateSaved = Model.stateSaved();
+    this.setState({
+      isStateSaved,
+    });
   };
 
   getSaveButtonIcon() {
     if (this.state.isStateSaved) {
       return "check";
+    } else if (this.props.isBusy) {
+      return "loading";
     } else {
       return "hourglass";
     }
   }
 
+  shouldShowProgress(): boolean {
+    // For a low action count, the progress info would show only for a very short amount of time
+    return this.props.isBusy && this.props.progressInfo.totalActionCount > 5000;
+  }
+
   render() {
+    const { progressInfo } = this.props;
     return (
       <ButtonComponent
         key="save-button"
@@ -48,10 +67,25 @@ class SaveButton extends React.PureComponent<Props, State> {
         onClick={this.props.onClick}
         icon={this.getSaveButtonIcon()}
       >
-        Save
+        {this.shouldShowProgress() ? (
+          <React.Fragment>
+            {Math.floor((progressInfo.processedActionCount / progressInfo.totalActionCount) * 100)}{" "}
+            %
+          </React.Fragment>
+        ) : (
+          <React.Fragment>Save</React.Fragment>
+        )}
       </ButtonComponent>
     );
   }
 }
 
-export default SaveButton;
+function mapStateToProps(state: OxalisState): StateProps {
+  const { progressInfo, isBusy } = state.save;
+  return {
+    progressInfo,
+    isBusy,
+  };
+}
+
+export default connect(mapStateToProps)(SaveButton);

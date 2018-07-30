@@ -243,10 +243,16 @@ export type SaveQueueEntryType = {
   actions: Array<UpdateAction>,
 };
 
+export type ProgressInfoType = {
+  +processedActionCount: number,
+  +totalActionCount: number,
+};
+
 export type SaveStateType = {
   +isBusy: boolean,
   +queue: Array<SaveQueueEntryType>,
   +lastSaveTimestamp: number,
+  +progressInfo: ProgressInfoType,
 };
 
 export type FlycamType = {
@@ -411,6 +417,10 @@ export const defaultState: OxalisState = {
     queue: [],
     isBusy: false,
     lastSaveTimestamp: 0,
+    progressInfo: {
+      processedActionCount: 0,
+      totalActionCount: 0,
+    },
   },
   flycam: {
     zoomStep: 1.3,

@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.TextUtils._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation._
-import models.user.UserSQL
+import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
 import utils.ObjectId
 
@@ -12,7 +12,7 @@ object SavedTracingInformationHandler extends AnnotationInformationHandler with 
 
   override val cache = false
 
-  override def nameForAnnotation(annotation: AnnotationSQL)(implicit ctx: DBAccessContext): Fox[String] =
+  override def nameForAnnotation(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[String] =
     for {
       userName <- annotation.user.map(_.abreviatedName).getOrElse("")
       dataSetName <- annotation.dataSet.map(_.name)
@@ -22,8 +22,8 @@ object SavedTracingInformationHandler extends AnnotationInformationHandler with 
       normalize(s"${dataSetName}__${task}__${userName}__${id}")
     }
 
-  def provideAnnotation(annotationId: ObjectId, userOpt: Option[UserSQL])(implicit ctx: DBAccessContext): Fox[AnnotationSQL] =
-    AnnotationSQLDAO.findOne(annotationId) ?~> "annotation.notFound"
+  def provideAnnotation(annotationId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
+    AnnotationDAO.findOne(annotationId) ?~> "annotation.notFound"
 
   def restrictionsFor(identifier: ObjectId)(implicit ctx: DBAccessContext) = {
     for {

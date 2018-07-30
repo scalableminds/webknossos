@@ -11,7 +11,7 @@ import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO}
 
-case class OrganizationSQL(
+case class Organization(
                             _id: ObjectId,
                             name: String,
                             additionalInformation: String,
@@ -24,10 +24,10 @@ case class OrganizationSQL(
                           ) {
 
   def organizationTeamId(implicit ctx: DBAccessContext): Fox[ObjectId] =
-    OrganizationSQLDAO.findOrganizationTeamId(_id)
+    OrganizationDAO.findOrganizationTeamId(_id)
 
   def teamIds(implicit ctx: DBAccessContext): Fox[List[ObjectId]] =
-    TeamSQLDAO.findAllIdsByOrganization(_id)
+    TeamDAO.findAllIdsByOrganization(_id)
 
   def publicWrites(implicit ctx: DBAccessContext): Fox[JsObject] = {
     Fox.successful(Json.obj(
@@ -39,7 +39,7 @@ case class OrganizationSQL(
   }
 }
 
-object OrganizationSQLDAO extends SQLDAO[OrganizationSQL, OrganizationsRow, Organizations] {
+object OrganizationDAO extends SQLDAO[Organization, OrganizationsRow, Organizations] {
   val collection = Organizations
 
   def idColumn(x: Organizations): Rep[String] = x._Id
@@ -47,9 +47,9 @@ object OrganizationSQLDAO extends SQLDAO[OrganizationSQL, OrganizationsRow, Orga
   def isDeletedColumn(x: Organizations): Rep[Boolean] = x.isdeleted
 
 
-  def parse(r: OrganizationsRow): Fox[OrganizationSQL] =
+  def parse(r: OrganizationsRow): Fox[Organization] =
     Fox.successful(
-      OrganizationSQL(
+      Organization(
         ObjectId(r._Id),
         r.name,
         r.additionalinformation,
@@ -64,7 +64,7 @@ object OrganizationSQLDAO extends SQLDAO[OrganizationSQL, OrganizationsRow, Orga
   override def readAccessQ(requestingUserId: ObjectId) =
     s"(_id in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}'))"
 
-  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[OrganizationSQL] =
+  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[Organization] =
     for {
       accessQuery <- readAccessQuery
       rList <- run(sql"select #${columns} from #${existingCollectionName} where name = ${name} and #${accessQuery}".as[OrganizationsRow])
@@ -74,7 +74,7 @@ object OrganizationSQLDAO extends SQLDAO[OrganizationSQL, OrganizationsRow, Orga
       parsed
     }
 
-  def insertOne(o: OrganizationSQL)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def insertOne(o: Organization)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       r <- run(
 

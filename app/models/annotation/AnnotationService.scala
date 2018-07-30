@@ -18,9 +18,9 @@ import models.annotation.AnnotationTypeSQL.AnnotationTypeSQL
 import models.annotation.handler.SavedTracingInformationHandler
 import models.annotation.nml.NmlWriter
 import models.binary._
-import models.task.TaskSQL
-import models.team.OrganizationSQLDAO
-import models.user.UserSQL
+import models.task.Task
+import models.team.OrganizationDAO
+import models.user.User
 import utils.ObjectId
 import play.api.i18n.Messages
 import play.api.Play.current
@@ -39,7 +39,7 @@ object AnnotationService
   with ProtoGeometryImplicits
   with LazyLogging {
 
-  private def selectSuitableTeam(user: UserSQL, dataSet: DataSetSQL)(implicit ctx: DBAccessContext): Fox[ObjectId] = {
+  private def selectSuitableTeam(user: User, dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[ObjectId] = {
     (for {
       userTeamIds <- user.teamIds
       datasetAllowedTeamIds <- dataSet.allowedTeamIds
@@ -50,7 +50,7 @@ object AnnotationService
         case None =>
           for {
             _ <- Fox.assertTrue(user.isTeamManagerOrAdminOfOrg(user._organization))
-            organizationTeamId <- OrganizationSQLDAO.findOrganizationTeamId(user._organization)
+            organizationTeamId <- OrganizationDAO.findOrganizationTeamId(user._organization)
           } yield organizationTeamId
       }
     }).flatten
@@ -80,24 +80,24 @@ object AnnotationService
   }
 
   def createExplorationalFor(
-    user: UserSQL,
-    _dataSet: ObjectId,
-    tracingType: TracingType.Value,
-    withFallback: Boolean)(implicit ctx: DBAccessContext): Fox[AnnotationSQL] = {
+                              user: User,
+                              _dataSet: ObjectId,
+                              tracingType: TracingType.Value,
+                              withFallback: Boolean)(implicit ctx: DBAccessContext): Fox[Annotation] = {
 
-    def createTracing(dataSet: DataSetSQL, dataSource: DataSource) = tracingType match {
+    def createTracing(dataSet: DataSet, dataSource: DataSource) = tracingType match {
       case TracingType.skeleton =>
         dataSet.dataStoreHandler.flatMap(_.saveSkeletonTracing(SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name, editPosition = dataSource.center)))
       case TracingType.volume =>
         dataSet.dataStoreHandler.flatMap(_.saveVolumeTracing(createVolumeTracing(dataSource, withFallback)))
     }
     for {
-      dataSet <- DataSetSQLDAO.findOne(_dataSet)
+      dataSet <- DataSetDAO.findOne(_dataSet)
       dataSource <- dataSet.constructDataSource
       usableDataSource <- dataSource.toUsable ?~> "DataSet is not imported."
       tracing <- createTracing(dataSet, usableDataSource)
       teamId <- selectSuitableTeam(user, dataSet)
-      annotation = AnnotationSQL(
+      annotation = Annotation(
         ObjectId.generate,
         _dataSet,
         None,
@@ -105,35 +105,35 @@ object AnnotationService
         user._id,
         tracing
       )
-      _ <- AnnotationSQLDAO.insertOne(annotation)
+      _ <- AnnotationDAO.insertOne(annotation)
     } yield {
       annotation
     }
   }
 
-  def finish(annotation: AnnotationSQL)(implicit ctx: DBAccessContext) = {
+  def finish(annotation: Annotation)(implicit ctx: DBAccessContext) = {
     // WARNING: needs to be repeatable, might be called multiple times for an annotation
-    AnnotationSQLDAO.updateState(annotation._id, AnnotationState.Finished)
+    AnnotationDAO.updateState(annotation._id, AnnotationState.Finished)
   }
 
-  def baseFor(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationSQL] =
+  def baseFor(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[Annotation] =
     (for {
-      list <- AnnotationSQLDAO.findAllByTaskIdAndType(taskId, AnnotationTypeSQL.TracingBase)
+      list <- AnnotationDAO.findAllByTaskIdAndType(taskId, AnnotationTypeSQL.TracingBase)
     } yield list.headOption.toFox).flatten
 
   def annotationsFor(taskId: ObjectId)(implicit ctx: DBAccessContext) =
-      AnnotationSQLDAO.findAllByTaskIdAndType(taskId, AnnotationTypeSQL.Task)
+      AnnotationDAO.findAllByTaskIdAndType(taskId, AnnotationTypeSQL.Task)
 
   def countActiveAnnotationsFor(taskId: ObjectId)(implicit ctx: DBAccessContext) =
-    AnnotationSQLDAO.countActiveByTask(taskId, AnnotationTypeSQL.Task)
+    AnnotationDAO.countActiveByTask(taskId, AnnotationTypeSQL.Task)
 
-  def countOpenNonAdminTasks(user: UserSQL)(implicit ctx: DBAccessContext) =
+  def countOpenNonAdminTasks(user: User)(implicit ctx: DBAccessContext) =
     for {
       teamManagerTeamIds <- user.teamManagerTeamIds
-      result <- AnnotationSQLDAO.countActiveAnnotationsFor(user._id, AnnotationTypeSQL.Task, teamManagerTeamIds)
+      result <- AnnotationDAO.countActiveAnnotationsFor(user._id, AnnotationTypeSQL.Task, teamManagerTeamIds)
     } yield result
 
-  def tracingFromBase(annotationBase: AnnotationSQL, dataSet: DataSetSQL)(implicit ctx: DBAccessContext): Fox[TracingReference] = {
+  def tracingFromBase(annotationBase: Annotation, dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[TracingReference] = {
     for {
       dataSource <- bool2Fox(dataSet.isUsable) ?~> Messages("dataSet.notImported", dataSet.name)
       dataStoreHandler <- dataSet.dataStoreHandler
@@ -141,10 +141,10 @@ object AnnotationService
     } yield newTracingReference
   }
 
-  def createAnnotationFor(user: UserSQL, task: TaskSQL, initializingAnnotationId: ObjectId)(implicit messages: Messages, ctx: DBAccessContext): Fox[AnnotationSQL] = {
-    def useAsTemplateAndInsert(annotation: AnnotationSQL) = {
+  def createAnnotationFor(user: User, task: Task, initializingAnnotationId: ObjectId)(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
+    def useAsTemplateAndInsert(annotation: Annotation) = {
       for {
-        dataSetName <- DataSetSQLDAO.getNameById(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
+        dataSetName <- DataSetDAO.getNameById(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
         dataSet <- annotation.dataSet ?~> ("Could not access DataSet " + dataSetName + ". Does your team have access?")
         newTracing <- tracingFromBase(annotation, dataSet) ?~> "Failed to use annotation base as template."
         newAnnotation = annotation.copy(
@@ -155,7 +155,7 @@ object AnnotationService
           typ = AnnotationTypeSQL.Task,
           created = System.currentTimeMillis,
           modified = System.currentTimeMillis)
-        _ <- AnnotationSQLDAO.updateInitialized(newAnnotation)
+        _ <- AnnotationDAO.updateInitialized(newAnnotation)
       } yield {
         newAnnotation
       }
@@ -190,19 +190,19 @@ object AnnotationService
       trees = Seq(initialTree))
   }
 
-  def abortInitializedAnnotationOnFailure(initializingAnnotationId: ObjectId, insertedAnnotationBox: Box[AnnotationSQL]) = {
+  def abortInitializedAnnotationOnFailure(initializingAnnotationId: ObjectId, insertedAnnotationBox: Box[Annotation]) = {
     insertedAnnotationBox match {
       case Full(_) => Fox.successful(())
-      case _ => AnnotationSQLDAO.abortInitializingAnnotation(initializingAnnotationId)
+      case _ => AnnotationDAO.abortInitializingAnnotation(initializingAnnotationId)
     }
   }
 
   def createAnnotationBase(
-    taskFox: Fox[TaskSQL],
-    userId: ObjectId,
-    tracingReferenceBox: Box[TracingReference],
-    dataSetId: ObjectId,
-    description: Option[String]
+                            taskFox: Fox[Task],
+                            userId: ObjectId,
+                            tracingReferenceBox: Box[TracingReference],
+                            dataSetId: ObjectId,
+                            description: Option[String]
     )(implicit ctx: DBAccessContext) = {
 
     for {
@@ -210,7 +210,7 @@ object AnnotationService
       taskType <- task.taskType
       tracingReference <- tracingReferenceBox.toFox
       project <- task.project
-      annotationBase = AnnotationSQL(
+      annotationBase = Annotation(
         ObjectId.generate,
         dataSetId,
         Some(task._id),
@@ -219,21 +219,21 @@ object AnnotationService
         tracingReference,
         description.getOrElse(""),
         typ = AnnotationTypeSQL.TracingBase)
-      _ <- AnnotationSQLDAO.insertOne(annotationBase)
+      _ <- AnnotationDAO.insertOne(annotationBase)
     } yield true
   }
 
 
   def createFrom(
-                user: UserSQL,
-                dataSet: DataSetSQL,
-                tracingReference: TracingReference,
-                annotationType: AnnotationTypeSQL,
-                name: Option[String],
-                description: String)(implicit messages: Messages, ctx: DBAccessContext): Fox[AnnotationSQL] = {
+                  user: User,
+                  dataSet: DataSet,
+                  tracingReference: TracingReference,
+                  annotationType: AnnotationTypeSQL,
+                  name: Option[String],
+                  description: String)(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
     for {
       teamId <- selectSuitableTeam(user, dataSet)
-      annotation = AnnotationSQL(
+      annotation = Annotation(
         ObjectId.generate,
         dataSet._id,
         None,
@@ -243,11 +243,11 @@ object AnnotationService
         description,
         name = name.getOrElse(""),
         typ = annotationType)
-      _ <- AnnotationSQLDAO.insertOne(annotation)
+      _ <- AnnotationDAO.insertOne(annotation)
     } yield annotation
   }
 
-  def zipAnnotations(annotations: List[AnnotationSQL], zipFileName: String)(implicit messages: Messages, ctx: DBAccessContext): Fox[TemporaryFile] = {
+  def zipAnnotations(annotations: List[Annotation], zipFileName: String)(implicit messages: Messages, ctx: DBAccessContext): Fox[TemporaryFile] = {
     for {
       tracingsNamesAndScalesAsTuples <- getTracingsScalesAndNamesFor(annotations)
       tracingsAndNamesFlattened = flattenTupledLists(tracingsNamesAndScalesAsTuples)
@@ -264,11 +264,11 @@ object AnnotationService
     ((l1, l2, l3).zipped.toList, l4).zipped.toList.map( tuple => (tuple._1._1, tuple._1._2, tuple._1._3, tuple._2))
   }
 
-  private def getTracingsScalesAndNamesFor(annotations: List[AnnotationSQL])(implicit ctx: DBAccessContext): Fox[List[(List[SkeletonTracing], List[String], List[Option[Scale]], List[AnnotationSQL])]] = {
+  private def getTracingsScalesAndNamesFor(annotations: List[Annotation])(implicit ctx: DBAccessContext): Fox[List[(List[SkeletonTracing], List[String], List[Option[Scale]], List[Annotation])]] = {
 
     def getTracings(dataSetId: ObjectId, tracingReferences: List[TracingReference]) = {
       for {
-        dataSet <- DataSetSQLDAO.findOne(dataSetId)
+        dataSet <- DataSetDAO.findOne(dataSetId)
         dataStoreHandler <- dataSet.dataStoreHandler
         tracingContainers <- Fox.serialCombined(tracingReferences.grouped(1000).toList)(dataStoreHandler.getSkeletonTracings)
       } yield tracingContainers.flatMap(_.tracings)
@@ -276,13 +276,13 @@ object AnnotationService
 
     def getDatasetScale(dataSetId: ObjectId) = {
       for {
-        dataSet <- DataSetSQLDAO.findOne(dataSetId)
+        dataSet <- DataSetDAO.findOne(dataSetId)
       } yield dataSet.scale
     }
 
-    def getNames(annotations: List[AnnotationSQL]) = Fox.combined(annotations.map(a => SavedTracingInformationHandler.nameForAnnotation(a).toFox))
+    def getNames(annotations: List[Annotation]) = Fox.combined(annotations.map(a => SavedTracingInformationHandler.nameForAnnotation(a).toFox))
 
-    val annotationsGrouped: Map[ObjectId, List[AnnotationSQL]] = annotations.groupBy(_._dataSet)
+    val annotationsGrouped: Map[ObjectId, List[Annotation]] = annotations.groupBy(_._dataSet)
     val tracings = annotationsGrouped.map {
       case (dataSetId, annotations) => {
         for {

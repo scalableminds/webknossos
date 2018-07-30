@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.typesafe.scalalogging.LazyLogging
-import models.team.OrganizationSQLDAO
+import models.team.OrganizationDAO
 import net.liftweb.common.Full
 import oxalis.security.{URLSharing, WebknossosSilhouette}
 import play.api.libs.concurrent.Akka
@@ -20,7 +20,7 @@ object DataSetService extends FoxImplicits with LazyLogging {
     name.matches("[A-Za-z0-9_\\-]*")
 
   def assertNewDataSetName(name: String)(implicit ctx: DBAccessContext): Fox[Boolean] =
-    DataSetSQLDAO.findOneByName(name)(GlobalAccessContext).reverse
+    DataSetDAO.findOneByName(name)(GlobalAccessContext).reverse
 
   def createDataSet(
                      name: String,
@@ -31,9 +31,9 @@ object DataSetService extends FoxImplicits with LazyLogging {
                      ) = {
     implicit val ctx = GlobalAccessContext
     val newId = ObjectId.generate
-    OrganizationSQLDAO.findOneByName(owningOrganization).futureBox.flatMap {
+    OrganizationDAO.findOneByName(owningOrganization).futureBox.flatMap {
       case Full(organization) => for {
-        _ <- DataSetSQLDAO.insertOne(DataSetSQL(
+        _ <- DataSetDAO.insertOne(DataSet(
                 newId,
                 dataStore.name,
                 organization._id,
@@ -47,8 +47,8 @@ object DataSetService extends FoxImplicits with LazyLogging {
                 None,
                 dataSource.statusOpt.getOrElse(""),
                 None))
-        _ <- DataSetDataLayerSQLDAO.updateLayers(newId, dataSource)
-        _ <- DataSetAllowedTeamsSQLDAO.updateAllowedTeamsForDataSet(newId, List())
+        _ <- DataSetDataLayerDAO.updateLayers(newId, dataSource)
+        _ <- DataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(newId, List())
       } yield ()
       case _ => Fox.failure("org.notExist")
     }
@@ -59,9 +59,9 @@ object DataSetService extends FoxImplicits with LazyLogging {
                         dataSource: InboxDataSource
                       )(implicit ctx: DBAccessContext): Fox[Unit] = {
 
-    DataSetSQLDAO.findOneByName(dataSource.id.name)(GlobalAccessContext).futureBox.flatMap {
+    DataSetDAO.findOneByName(dataSource.id.name)(GlobalAccessContext).futureBox.flatMap {
       case Full(dataSet) if dataSet._dataStore == dataStoreInfo.name =>
-        DataSetSQLDAO.updateDataSourceByName(
+        DataSetDAO.updateDataSourceByName(
           dataSource.id.name,
           dataStoreInfo.name,
           dataSource,
@@ -82,15 +82,15 @@ object DataSetService extends FoxImplicits with LazyLogging {
   }
 
   def deactivateUnreportedDataSources(dataStoreName: String, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext) =
-    DataSetSQLDAO.deactivateUnreported(dataSources.map(_.id.name), dataStoreName)
+    DataSetDAO.deactivateUnreported(dataSources.map(_.id.name), dataStoreName)
 
-  def importDataSet(dataSet: DataSetSQL)(implicit ctx: DBAccessContext): Fox[WSResponse] =
+  def importDataSet(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[WSResponse] =
     for {
       dataStoreHandler <- dataSet.dataStoreHandler
       result <- dataStoreHandler.importDataSource
     } yield result
 
-  def updateDataSources(dataStore: DataStoreSQL, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext) = {
+  def updateDataSources(dataStore: DataStore, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext) = {
     logger.info(s"[${dataStore.name}] Available datasets: " +
       s"${dataSources.count(_.isUsable)} (usable), ${dataSources.count(!_.isUsable)} (unusable)")
     val dataStoreInfo = DataStoreInfo(dataStore.name, dataStore.url, dataStore.typ)
@@ -104,11 +104,11 @@ object DataSetService extends FoxImplicits with LazyLogging {
     def createSharingToken(dataSetName: String)(implicit ctx: DBAccessContext) = {
       val tokenValue = URLSharing.generateToken
       for {
-        _ <- DataSetSQLDAO.updateSharingTokenByName(dataSetName, Some(tokenValue))
+        _ <- DataSetDAO.updateSharingTokenByName(dataSetName, Some(tokenValue))
       } yield tokenValue
     }
 
-    val tokenFoxOfFox: Fox[Fox[String]] = DataSetSQLDAO.getSharingTokenByName(dataSetName).map {
+    val tokenFoxOfFox: Fox[Fox[String]] = DataSetDAO.getSharingTokenByName(dataSetName).map {
       oldTokenOpt => {
         if (oldTokenOpt.isDefined) Fox.successful(oldTokenOpt.get)
         else createSharingToken(dataSetName)

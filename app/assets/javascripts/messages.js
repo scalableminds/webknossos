@@ -48,6 +48,8 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.delete_tree_with_initial_node":
     "This tree contains the initial node. Do you really want to delete the whole tree?",
   "tracing.merged": "Merging successfully done",
+  "tracing.merged_with_redirect":
+    "Merging successfully done. You will be redirected to the new annotation.",
   "tracing.tree_viewer_no_cyclic_trees":
     "Cyclic trees are not supported by the abstract tree viewer.",
   "tracing.changed_move_value": "The move value was changed to: ",
@@ -148,6 +150,9 @@ In order to restore the current window, a reload is necessary.`,
     "NML contains <edge ...> with same source and target id: Edge",
   "nml.tree_not_connected": "NML contains tree that is not fully connected: Tree with id",
   "nml.different_dataset": "Imported NML was originally for a different dataset.",
+  "merge.different_dataset":
+    "The merge cannot be executed, because the underlying datasets are not the same.",
+  "merge.volume_unsupported": "Merging is not supported for volume tracings.",
   "users.is_admin":
     "At least one of the selected users is an admin of this organization and already has access to all teams. No team assignments are necessary for this user.",
   "users.grant_admin_rights_title": "Do you really want to grant admin rights?",

@@ -609,6 +609,17 @@ export async function triggerDatasetCheck(datastoreHost: string): Promise<void> 
   );
 }
 
+export async function triggerDatasetClearCache(
+  datastoreHost: string,
+  datasetName: string,
+): Promise<void> {
+  await doWithToken(token =>
+    Request.triggerRequest(`/data/triggers/clearCache/${datasetName}?token=${token}`, {
+      host: datastoreHost,
+    }),
+  );
+}
+
 export async function getDatasetSharingToken(datasetName: string): Promise<string> {
   const { sharingToken } = await Request.receiveJSON(`/api/datasets/${datasetName}/sharingToken`);
   return sharingToken;

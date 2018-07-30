@@ -62,7 +62,7 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
   def resetToBase(implicit ctx: DBAccessContext) = annotation.typ match {
     case AnnotationTypeSQL.Explorational =>
       Fox.failure("annotation.revert.skeletonOnly")
-    case AnnotationTypeSQL.Task if annotation.tracingType == TracingType.skeleton =>
+    case AnnotationTypeSQL.Task if annotation.skeletonTracing.isDefined =>
       for {
         task <- annotation.task.toFox
         annotationBase <- task.annotationBase
@@ -70,7 +70,7 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
         newTracingReference <- AnnotationService.tracingFromBase(annotationBase, dataSet)
         _ <- AnnotationDAO.updateTracingReference(annotation._id, newTracingReference)
       } yield ()
-    case _ if annotation.tracingType != TracingType.skeleton =>
+    case _ if !annotation.skeletonTracing.isDefined =>
       Fox.failure("annotation.revert.skeletonOnly")
   }
 }

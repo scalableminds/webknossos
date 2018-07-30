@@ -31,7 +31,8 @@ case class Annotation(
                           _task: Option[ObjectId] = None,
                           _team: ObjectId,
                           _user: ObjectId,
-                          tracing: TracingReference,
+                          skeletonTracingId: Option[String],
+                          volumeTracingId: Option[String],
                           description: String = "",
                           isPublic: Boolean = false,
                           name: String = "",
@@ -50,6 +51,12 @@ case class Annotation(
   lazy val id = _id.toString
   lazy val team = _team.toString
 
+  def tracingType = {
+    if (skeletonTracingId.isDefined && volumeTracingId.isDefined) TracingType.hybrid
+    else if (skeletonTracingId.isDefined) TracingType.skeleton
+    else TracingType.volume
+  }
+
   def user: Fox[User] =
     UserService.findOneById(_user, useCache = true)(GlobalAccessContext)
 
@@ -58,8 +65,6 @@ case class Annotation(
 
   def dataSet: Fox[DataSet] =
     DataSetDAO.findOne(_dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
-
-  val tracingType = tracing.typ
 
   def isRevertPossible: Boolean = {
     // Unfortunately, we can not revert all tracings, because we do not have the history for all of them
@@ -78,7 +83,7 @@ case class Annotation(
         taskType.settings
       }
     else
-      Fox.successful(AnnotationSettings.defaultFor(tracing.typ))
+      Fox.successful(AnnotationSettings.defaultFor(tracingType))
   }
 
   private def composeRestrictions(restrictions: Option[AnnotationRestrictions], readOnly: Option[Boolean]) = {
@@ -109,13 +114,14 @@ case class Annotation(
         "stats" -> statistics,
         "restrictions" -> annotationRestrictions,
         "formattedHash" -> Formatter.formatHash(id),
-        "content" -> tracing,
+        "skeletonTracingId" -> skeletonTracingId,
+        "volumeTracingId" -> volumeTracingId,
         "dataSetName" -> dataSet.name,
         "dataStore" -> dataStoreInfo,
         "isPublic" -> isPublic,
         "settings" -> settings,
         "tracingTime" -> tracingTime,
-        "tags" -> (tags ++ Set(dataSet.name, tracing.typ.toString)),
+        "tags" -> (tags ++ Set(dataSet.name, tracingType.toString)),
         "user" -> userJson
       )
     }
@@ -141,7 +147,8 @@ object AnnotationDAO extends SQLDAO[Annotation, AnnotationsRow, Annotations] {
         r._Task.map(ObjectId(_)),
         ObjectId(r._Team),
         ObjectId(r._User),
-        TracingReference(r.tracingId, tracingTyp),
+        r.skeletonTracingId,
+        r.volumeTracingId,
         r.description,
         r.ispublic,
         r.name,
@@ -250,9 +257,9 @@ object AnnotationDAO extends SQLDAO[Annotation, AnnotationsRow, Annotations] {
     for {
       _ <- run(
         sqlu"""
-               insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, tracing_id, tracing_typ, description, isPublic, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
-               values(${a._id.id}, ${a._dataSet.id}, ${a._task.map(_.id)}, ${a._team.id}, ${a._user.id}, ${a.tracing.id},
-                   '#${a.tracing.typ.toString}', ${a.description}, ${a.isPublic}, ${a.name}, '#${a.state.toString}', '#${sanitize(a.statistics.toString)}',
+               insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, skeletonTracingId, volumeTracingId, description, isPublic, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
+               values(${a._id.id}, ${a._dataSet.id}, ${a._task.map(_.id)}, ${a._team.id}, ${a._user.id}, ${a.skeletonTracingId},
+                   ${a.volumeTracingId}, ${a.description}, ${a.isPublic}, ${a.name}, '#${a.state.toString}', '#${sanitize(a.statistics.toString)}',
                    '#${writeArrayTuple(a.tags.toList.map(sanitize(_)))}', ${a.tracingTime}, '#${a.typ.toString}', ${new java.sql.Timestamp(a.created)},
                    ${new java.sql.Timestamp(a.modified)}, ${a.isDeleted})
                """)
@@ -268,8 +275,8 @@ object AnnotationDAO extends SQLDAO[Annotation, AnnotationsRow, Annotations] {
                _dataSet = ${a._dataSet.id},
                _team = ${a._team.id},
                _user = ${a._user.id},
-               tracing_id = ${a.tracing.id},
-               tracing_typ = '#${a.tracing.typ.toString}',
+               skeletonTracingId = ${a.skeletonTracingId},
+               volumeTracingId = ${a.skeletonTracingId},
                description = ${a.description},
                isPublic = ${a.isPublic},
                name = ${a.name},

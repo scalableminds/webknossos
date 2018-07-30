@@ -33,7 +33,6 @@ CREATE TABLE webknossos.analytics(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
-CREATE TYPE webknossos.ANNOTATION_TRACING_TYPE AS ENUM ('skeleton', 'volume');
 CREATE TYPE webknossos.ANNOTATION_TYPE AS ENUM ('Task', 'Explorational', 'TracingBase', 'Orphan');
 CREATE TYPE webknossos.ANNOTATION_STATE AS ENUM ('Active', 'Finished', 'Cancelled', 'Initializing');
 CREATE TABLE webknossos.annotations(
@@ -42,8 +41,8 @@ CREATE TABLE webknossos.annotations(
   _task CHAR(24),
   _team CHAR(24) NOT NULL,
   _user CHAR(24) NOT NULL,
-  tracing_id CHAR(36) NOT NULL UNIQUE,
-  tracing_typ webknossos.ANNOTATION_TRACING_TYPE NOT NULL,
+  skeletonTracingId CHAR(36) NOT NULL UNIQUE,
+  volumeTracingId CHAR(36) NOT NULL UNIQUE,
   description TEXT NOT NULL DEFAULT '',
   isPublic BOOLEAN NOT NULL DEFAULT false,
   name VARCHAR(256) NOT NULL DEFAULT '',
@@ -55,7 +54,8 @@ CREATE TABLE webknossos.annotations(
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   modified TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  CHECK ((typ IN ('TracingBase', 'Task')) = (_task IS NOT NULL))
+  CHECK ((typ IN ('TracingBase', 'Task')) = (_task IS NOT NULL)),
+  CHECK (COALESCE(skeletonTracingId,volumeTracingId) IS NOT NULL)
 );
 
 CREATE TABLE webknossos.dataSets(

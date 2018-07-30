@@ -47,7 +47,7 @@ export default function generateDummyTrees(
       treeId: currentTreeId++,
       nodes,
       edges,
-      color: { r: Math.random(), g: Math.random(), b: Math.random() },
+      color: { r: 0, g: 0, b: 0 },
       branchPoints: [],
       comments: [],
       name: "explorative_2017-10-09_SCM_Boy_023",

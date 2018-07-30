@@ -6,7 +6,7 @@ package models.annotation
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.tracings.{TracingReference, TracingType}
+import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationTypeSQL.AnnotationTypeSQL
@@ -138,7 +138,6 @@ object AnnotationDAO extends SQLDAO[Annotation, AnnotationsRow, Annotations] {
   def parse(r: AnnotationsRow): Fox[Annotation] =
     for {
       state <- AnnotationState.fromString(r.state).toFox
-      tracingTyp <- TracingType.fromString(r.tracingTyp).toFox
       typ <- AnnotationTypeSQL.fromString(r.typ).toFox
     } yield {
       Annotation(
@@ -147,8 +146,8 @@ object AnnotationDAO extends SQLDAO[Annotation, AnnotationsRow, Annotations] {
         r._Task.map(ObjectId(_)),
         ObjectId(r._Team),
         ObjectId(r._User),
-        r.skeletonTracingId,
-        r.volumeTracingId,
+        r.skeletontracingid,
+        r.volumetracingid,
         r.description,
         r.ispublic,
         r.name,
@@ -219,7 +218,7 @@ object AnnotationDAO extends SQLDAO[Annotation, AnnotationsRow, Annotations] {
 
   def findOneByTracingId(tracingId: String)(implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
-      rList <- run(Annotations.filter(r => notdel(r) && r.tracingId === tracingId).result.headOption)
+      rList <- run(Annotations.filter(r => notdel(r) && (r.skeletontracingid === tracingId || r.volumetracingid === tracingId)).result.headOption)
       accessQuery <- readAccessQuery
       rList <- run(sql"select #${columns} from #${existingCollectionName} where tracing_id = ${tracingId} and #${accessQuery}".as[AnnotationsRow])
       r <- rList.headOption.toFox
@@ -340,10 +339,10 @@ object AnnotationDAO extends SQLDAO[Annotation, AnnotationsRow, Annotations] {
       _ <- run(sqlu"update webknossos.annotations set modified = ${new java.sql.Timestamp(modified)} where _id = ${id.id}")
     } yield ()
 
-  def updateTracingReference(id: ObjectId, tracing: TracingReference)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateSkeletonTracingId(id: ObjectId, newSkeletonTracingId: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(sqlu"update webknossos.annotations set tracing_id = ${tracing.id}, tracing_typ = '#${tracing.typ.toString}' where _id = ${id.id}")
+      _ <- run(sqlu"update webknossos.annotations set skeletonTracingId = ${newSkeletonTracingId} where _id = ${id.id}")
     } yield ()
 
   def updateStatistics(id: ObjectId, statistics: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =

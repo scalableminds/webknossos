@@ -91,8 +91,9 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       _ <- annotation.isRevertPossible ?~> Messages("annotation.revert.toOld")
       dataSet <- annotation.dataSet
       dataStoreHandler <- dataSet.dataStoreHandler
-      newTracingReference <- dataStoreHandler.duplicateSkeletonTracing(annotation.tracing, Some(version.toString))
-      _ <- AnnotationDAO.updateTracingReference(annotation._id, newTracingReference)
+      skeletonTracingId <- annotation.skeletonTracingId.toFox
+      newSkeletonTracingId <- dataStoreHandler.duplicateSkeletonTracing(skeletonTracingId, Some(version.toString))
+      _ <- AnnotationDAO.updateSkeletonTracingId(annotation._id, newSkeletonTracingId)
     } yield {
       logger.info(s"REVERTED [$typ - $id, $version]")
       JsonOk("annotation.reverted")

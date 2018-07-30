@@ -55,7 +55,7 @@ class ScriptController @Inject()(val messagesApi: MessagesApi) extends Controlle
       for {
         scriptIdValidated <- ObjectId.parse(scriptId)
         oldScript <- ScriptSQLDAO.findOne(scriptIdValidated) ?~> Messages("script.notFound")
-        _ <- (oldScript._owner == ObjectId.fromBsonId(request.identity._id)) ?~> Messages("script.notOwner")
+        _ <- (oldScript._owner == request.identity._id) ?~> Messages("script.notOwner")
         updatedScript = scriptFromForm.copy(_id = oldScript._id)
         _ <- ScriptSQLDAO.updateOne(updatedScript)
         js <- updatedScript.publicWrites
@@ -69,7 +69,7 @@ class ScriptController @Inject()(val messagesApi: MessagesApi) extends Controlle
     for {
       scriptIdValidated <- ObjectId.parse(scriptId)
       oldScript <- ScriptSQLDAO.findOne(scriptIdValidated) ?~> Messages("script.notFound")
-      _ <- (oldScript._owner == ObjectId.fromBsonId(request.identity._id)) ?~> Messages("script.notOwner")
+      _ <- (oldScript._owner == request.identity._id) ?~> Messages("script.notOwner")
       _ <- ScriptSQLDAO.deleteOne(scriptIdValidated) ?~> Messages("script.removalFailed")
       _ <- TaskSQLDAO.removeScriptFromAllTasks(scriptIdValidated) ?~> Messages("script.removalFailed")
     } yield {

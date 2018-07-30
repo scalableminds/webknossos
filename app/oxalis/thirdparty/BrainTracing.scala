@@ -1,16 +1,8 @@
 package oxalis.thirdparty
 
-import com.newrelic.api.agent.NewRelic
-import com.scalableminds.util.mail.Send
-import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.tools.FoxImplicits
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import models.annotation.AnnotationSQL
-import models.project.ProjectSQL
-import models.task.TaskSQL
-import models.user.User
-import net.liftweb.common.Box
-import oxalis.mail.DefaultMails
+import models.user.UserSQL
 import play.api.Play
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
@@ -34,41 +26,42 @@ object BrainTracing extends LazyLogging with FoxImplicits {
   lazy val Mailer =
     Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
 
-  def register(user: User): Future[String] = {
-    // TODO: organization shouldn't be hard-coded here
-    if (isActive && user.organization == "Connectomics department") {
-      val result = Promise[String]()
-      val brainTracingRequest = WS
-        .url(CREATE_URL)
-        .withAuth(USER, PW, WSAuthScheme.BASIC)
-        .withQueryString(
-          "license" -> LICENSE,
-          "firstname" -> user.firstName,
-          "lastname" -> user.lastName,
-          "email" -> user.email,
-          "pword" -> user.md5hash)
-        .get()
-        .map { response =>
-          result complete (response.status match {
-            case 200 if isSilentFailure(response.body) =>
-              Success("braintracing.error")
-            case 200 =>
-              Success("braintracing.new")
-            case 304 =>
-              Success("braintracing.exists")
-            case _ =>
-              Success("braintracing.error")
-          })
-          logger.trace(s"Creation of account ${user.email} returned Status: ${response.status} Body: ${response.body}")
-        }
-      brainTracingRequest.onFailure{
-        case e: Exception =>
-          logger.error(s"Failed to register user '${user.email}' in brain tracing db. Exception: ${e.getMessage}")
+  def registerIfNeeded(user: UserSQL): Fox[String] =
+    for {
+      organization <- user.organization
+      result <- (if (organization.name == "Connectomics department" && isActive) register(user).toFox else Fox.successful("braintracing.none"))
+    } yield result
+
+  private def register(user: UserSQL): Future[String] = {
+    val result = Promise[String]()
+    val brainTracingRequest = WS
+      .url(CREATE_URL)
+      .withAuth(USER, PW, WSAuthScheme.BASIC)
+      .withQueryString(
+        "license" -> LICENSE,
+        "firstname" -> user.firstName,
+        "lastname" -> user.lastName,
+        "email" -> user.email,
+        "pword" -> user.md5hash)
+      .get()
+      .map { response =>
+        result complete (response.status match {
+          case 200 if isSilentFailure(response.body) =>
+            Success("braintracing.error")
+          case 200 =>
+            Success("braintracing.new")
+          case 304 =>
+            Success("braintracing.exists")
+          case _ =>
+            Success("braintracing.error")
+        })
+        logger.trace(s"Creation of account ${user.email} returned Status: ${response.status} Body: ${response.body}")
       }
-      result.future
-    } else {
-      Future.successful("braintracing.none")
+    brainTracingRequest.onFailure{
+      case e: Exception =>
+        logger.error(s"Failed to register user '${user.email}' in brain tracing db. Exception: ${e.getMessage}")
     }
+    result.future
   }
 
   private def isSilentFailure(result: String) =

@@ -6,8 +6,8 @@ import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{AnnotationState, AnnotationTypeSQL}
 import models.task.TaskSQLDAO
-import models.team.{Team, TeamDAO, TeamSQLDAO}
-import models.user.{User, UserService}
+import models.team.TeamSQLDAO
+import models.user.{UserSQL, UserService}
 import net.liftweb.common.Full
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
@@ -31,17 +31,17 @@ case class ProjectSQL(
                      isDeleted: Boolean = false
                      ) extends FoxImplicits {
 
-  def owner = UserService.findOneById(_owner.toString, useCache = true)(GlobalAccessContext)
+  def owner = UserService.findOneById(_owner, useCache = true)(GlobalAccessContext)
 
-  def isDeletableBy(user: User) = ObjectId.fromBsonId(user._id) == _owner || user.isAdmin
+  def isDeletableBy(user: UserSQL) = user._id == _owner || user.isAdmin
 
-  def team(implicit ctx: DBAccessContext) = _team.toBSONObjectId.toFox.flatMap(TeamDAO.findOneById(_))
+  def team(implicit ctx: DBAccessContext) =
+    TeamSQLDAO.findOne(_team)(GlobalAccessContext)
 
-  def publicWrites: Fox[JsObject] =
+  def publicWrites(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
-      owner <- owner.map(User.userCompactWrites.writes).futureBox
-      teamIdBSON <- _team.toBSONObjectId.toFox
-      teamNameOpt <- TeamDAO.findOneById(teamIdBSON)(GlobalAccessContext).map(_.name).toFutureOption
+      owner <- owner.flatMap(_.compactWrites).futureBox
+      teamNameOpt <- TeamSQLDAO.findOne(_team)(GlobalAccessContext).map(_.name).toFutureOption
     } yield {
       Json.obj(
         "name" -> name,
@@ -70,11 +70,11 @@ object ProjectSQL {
 
   val projectPublicReads: Reads[ProjectSQL] =
     ((__ \ 'name).read[String](Reads.minLength[String](3) keepAnd validateProjectName) and
-      (__ \ 'team).read[String](ObjectId.stringBSONObjectIdReads("team")) and
+      (__ \ 'team).read[String](ObjectId.stringObjectIdReads("team")) and
       (__ \ 'priority).read[Int] and
       (__ \ 'paused).readNullable[Boolean] and
       (__ \ 'expectedTime).readNullable[Long] and
-      (__ \ 'owner).read[String](ObjectId.stringBSONObjectIdReads("owner"))) (
+      (__ \ 'owner).read[String](ObjectId.stringObjectIdReads("owner"))) (
       (name, team, priority, paused, expectedTime, owner) =>
         ProjectSQL(ObjectId.generate, ObjectId(team), ObjectId(owner), name, priority, paused getOrElse false, expectedTime))
 

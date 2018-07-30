@@ -7,10 +7,10 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation._
-import models.binary.DataSetDAO
+import models.binary.DataSetSQLDAO
 import models.project.ProjectSQLDAO
 import models.team.TeamSQLDAO
-import models.user.{Experience, User}
+import models.user.{Experience, UserSQL}
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import play.api.Play.current
@@ -68,15 +68,11 @@ case class TaskSQL(
     } yield CompletionStatus(openInstances, active, totalInstances - (active + openInstances))
   }
 
-  def hasEnoughExperience(user: User) =
-    neededExperience.isEmpty || user.experiences.get(neededExperience.domain).exists(_ >= neededExperience.value)
-
-
 
   def publicWrites(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
       annotationBase <- annotationBase
-      dataSet <- DataSetDAO.findOneById(annotationBase._dataSet)
+      dataSet <- DataSetSQLDAO.findOne(annotationBase._dataSet)
       status <- status.getOrElse(CompletionStatus(-1, -1, -1))
       taskType <- taskType
       taskTypeJs <- taskType.publicWrites

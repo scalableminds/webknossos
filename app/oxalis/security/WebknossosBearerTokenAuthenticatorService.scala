@@ -8,7 +8,7 @@ import com.mohiva.play.silhouette.impl.authenticators.BearerTokenAuthenticatorSe
 import com.mohiva.play.silhouette.impl.authenticators.{BearerTokenAuthenticator, BearerTokenAuthenticatorService, BearerTokenAuthenticatorSettings}
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.user.{User, UserService}
+import models.user.{UserSQL, UserService}
 import oxalis.security.TokenType.TokenType
 import play.api.Play.current
 import play.api.i18n.Messages
@@ -65,14 +65,14 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
       tokenId
     }
 
-  def userForToken(tokenValue: String)(implicit ctx: DBAccessContext): Fox[User] =
+  def userForToken(tokenValue: String)(implicit ctx: DBAccessContext): Fox[UserSQL] =
     for {
       tokenAuthenticator <- dao.findOneByValue(tokenValue) ?~> Messages("auth.invalidToken")
       _ <- (tokenAuthenticator.isValid) ?~> Messages("auth.invalidToken")
       user <- UserService.findOneByEmail(tokenAuthenticator.loginInfo.providerKey)
     } yield user
 
-  def userForTokenOpt(tokenOpt: Option[String])(implicit ctx: DBAccessContext): Fox[User] = tokenOpt match {
+  def userForTokenOpt(tokenOpt: Option[String])(implicit ctx: DBAccessContext): Fox[UserSQL] = tokenOpt match {
     case Some(token) => userForToken(token)
     case _ => Fox.empty
   }

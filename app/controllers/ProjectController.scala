@@ -7,7 +7,6 @@ import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.project._
 import models.task._
-import models.user.UserDAO
 import net.liftweb.common.Empty
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
 import play.api.i18n.{Messages, MessagesApi}
@@ -70,8 +69,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
       ProjectSQLDAO.findOneByName(project.name)(GlobalAccessContext).futureBox.flatMap {
         case Empty =>
           for {
-            teamIdBson <- project._team.toBSONObjectId.toFox
-            _ <- request.identity.assertTeamManagerOrAdminOf(teamIdBson) ?~> "team.notAllowed"
+            _ <- ensureTeamAdministration(request.identity, project._team)
             _ <- ProjectSQLDAO.insertOne(project)
             js <- project.publicWrites
           } yield Ok(js)
@@ -85,8 +83,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
     withJsonBodyUsing(ProjectSQL.projectPublicReads) { updateRequest =>
       for{
         project <- ProjectSQLDAO.findOneByName(projectName)(GlobalAccessContext) ?~> Messages("project.notFound", projectName)
-        teamIdBson <- project._team.toBSONObjectId.toFox
-        _ <- request.identity.assertTeamManagerOrAdminOf(teamIdBson) ?~> Messages("team.notAllowed")
+        _ <- ensureTeamAdministration(request.identity, project._team)
         _ <- ProjectSQLDAO.updateOne(updateRequest.copy(_id = project._id, paused = project.paused)) ?~> Messages("project.update.failed", projectName)
         updated <- ProjectSQLDAO.findOneByName(projectName)
         js <- updated.publicWrites
@@ -119,8 +116,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
     implicit request =>
       for {
         project <- ProjectSQLDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
-        teamIdBson <- project._team.toBSONObjectId.toFox
-        _ <- request.identity.assertTeamManagerOrAdminOf(teamIdBson) ?~> Messages("notAllowed")
+        _ <- ensureTeamAdministration(request.identity, project._team) ?~> Messages("notAllowed")
         tasks <- TaskSQLDAO.findAllByProject(project._id)(GlobalAccessContext)
         js <- Fox.serialCombined(tasks)(_.publicWrites)
       } yield {

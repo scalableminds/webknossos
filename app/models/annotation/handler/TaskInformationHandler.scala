@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation._
 import models.task.TaskSQLDAO
-import models.user.User
+import models.user.UserSQL
 import play.api.libs.concurrent.Execution.Implicits._
 import models.annotation.AnnotationState._
 import models.project.ProjectSQLDAO
@@ -12,7 +12,7 @@ import utils.ObjectId
 
 object TaskInformationHandler extends AnnotationInformationHandler with FoxImplicits {
 
-  override def provideAnnotation(taskId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[AnnotationSQL] =
+  override def provideAnnotation(taskId: ObjectId, userOpt: Option[UserSQL])(implicit ctx: DBAccessContext): Fox[AnnotationSQL] =
     for {
       task <- TaskSQLDAO.findOne(taskId) ?~> "task.notFound"
       annotations <- task.annotations
@@ -22,7 +22,7 @@ object TaskInformationHandler extends AnnotationInformationHandler with FoxImpli
       user <- userOpt ?~> "user.notAuthorised"
       project <- ProjectSQLDAO.findOne(task._project)
       _dataSet = finishedAnnotations.head._dataSet
-      mergedAnnotation <- AnnotationMerger.mergeN(task._id, persistTracing=false, ObjectId.fromBsonId(user._id),
+      mergedAnnotation <- AnnotationMerger.mergeN(task._id, persistTracing=false, user._id,
         _dataSet, project._team, AnnotationTypeSQL.CompoundTask, finishedAnnotations) ?~> "annotation.merge.failed.compound"
     } yield mergedAnnotation
 
@@ -30,13 +30,12 @@ object TaskInformationHandler extends AnnotationInformationHandler with FoxImpli
     for {
       task <- TaskSQLDAO.findOne(taskId) ?~> "task.notFound"
       project <- ProjectSQLDAO.findOne(task._project)
-      teamIdBson <- project._team.toBSONObjectId.toFox
     } yield {
       new AnnotationRestrictions {
-        override def allowAccess(userOption: Option[User]): Fox[Boolean] =
+        override def allowAccess(userOption: Option[UserSQL]): Fox[Boolean] =
           (for {
             user <- userOption.toFox
-            allowed <- user.isTeamManagerOrAdminOf(teamIdBson)
+            allowed <- user.isTeamManagerOrAdminOf(project._team)
           } yield allowed).orElse(Fox.successful(false))
       }
     }

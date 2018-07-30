@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, 
 import com.scalableminds.webknossos.datastore.tracings.{ProtoGeometryImplicits, TracingReference}
 import models.annotation.nml.NmlService
 import models.annotation.AnnotationService
-import models.binary.{DataSetDAO, DataSetSQLDAO}
+import models.binary.DataSetSQLDAO
 import models.project.ProjectSQLDAO
 import models.task._
 import models.team.OrganizationSQLDAO
@@ -117,7 +117,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
   }
 
   def createTasks(requestedTasks: List[(TaskParameters, SkeletonTracing)])(implicit request: SecuredRequest[_]): Fox[Result] = {
-    def assertAllOnSameDataset(): Fox[String] = {
+    def assertAllOnSameDataset: Fox[String] = {
       def allOnSameDatasetIter(requestedTasksRest: List[(TaskParameters, SkeletonTracing)], dataSetName: String): Boolean = {
         requestedTasksRest match {
           case List() => true
@@ -141,10 +141,10 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
     }
 
     for {
-      dataSetName <- assertAllOnSameDataset()
-      dataSet <- DataSetDAO.findOneBySourceName(requestedTasks.head._1.dataSet) ?~> Messages("dataSet.notFound", dataSetName)
-      dataSetId <- DataSetSQLDAO.getIdByName(requestedTasks.head._1.dataSet)
-      tracingReferences: List[Box[TracingReference]] <- dataSet.dataStore.saveSkeletonTracings(SkeletonTracings(requestedTasks.map(_._2)))
+      dataSetName <- assertAllOnSameDataset
+      dataSet <- DataSetSQLDAO.findOneByName(requestedTasks.head._1.dataSet) ?~> Messages("dataSet.notFound", dataSetName)
+      dataStoreHandler <- dataSet.dataStoreHandler
+      tracingReferences: List[Box[TracingReference]] <- dataStoreHandler.saveSkeletonTracings(SkeletonTracings(requestedTasks.map(_._2)))
       requestedTasksWithTracingReferences = requestedTasks zip tracingReferences
       taskObjects: List[Fox[TaskSQL]] = requestedTasksWithTracingReferences.map(r => createTaskWithoutAnnotationBase(r._1._1, r._2))
       zipped = (requestedTasks, tracingReferences, taskObjects).zipped.toList
@@ -152,7 +152,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
         taskFox = tuple._3,
         request.identity._id,
         tracingReferenceBox = tuple._2,
-        dataSetId,
+        dataSet._id,
         description = tuple._1._1.description
       ))
       zippedTasksAndAnnotations = taskObjects zip annotationBases
@@ -261,8 +261,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
     val user = request.identity
     for {
       teams <- getAllowedTeamsForNextTask(user)
-      _ <- !user.isAnonymous ?~> Messages("user.anonymous.notAllowed")
-      (task, initializingAnnotationId) <-  TaskSQLDAO.assignNext(ObjectId.fromBsonId(user._id), teams) ?~> Messages("task.unavailable")
+      (task, initializingAnnotationId) <-  TaskSQLDAO.assignNext(user._id, teams) ?~> Messages("task.unavailable")
       insertedAnnotationBox <- AnnotationService.createAnnotationFor(user, task, initializingAnnotationId).futureBox
       _ <- AnnotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
       annotation <- insertedAnnotationBox.toFox
@@ -273,24 +272,33 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
   }
 
 
-  private def getAllowedTeamsForNextTask(user: User)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
-    AnnotationService.countOpenNonAdminTasks(user).flatMap { numberOfOpen =>
+  private def getAllowedTeamsForNextTask(user: UserSQL)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
+    (for {
+      numberOfOpen <- AnnotationService.countOpenNonAdminTasks(user)
+    } yield {
       if (user.isAdmin) {
-        OrganizationSQLDAO.findOneByName(user.organization).flatMap(_.teamIds)
+        OrganizationSQLDAO.findOne(user._organization).flatMap(_.teamIds)
       } else if (numberOfOpen < MAX_OPEN_TASKS) {
-        Fox.successful(user.teamIds.map(ObjectId.fromBsonId))
-      } else if (user.teamManagerTeamIds.nonEmpty) {
-        Fox.successful(user.teamManagerTeamIds.map(ObjectId.fromBsonId))
+        user.teamIds
       } else {
-        Fox.failure(Messages("task.tooManyOpenOnes"))
+        (for {
+          teamManagerTeamIds <- user.teamManagerTeamIds
+        } yield {
+          if (teamManagerTeamIds.nonEmpty) {
+            Fox.successful(teamManagerTeamIds)
+          } else {
+            Fox.failure(Messages("task.tooManyOpenOnes"))
+          }
+        }).flatten
       }
-    }
+    }).flatten
   }
 
   def peekNext = SecuredAction.async { implicit request =>
     val user = request.identity
     for {
-      task <- TaskSQLDAO.peekNextAssignment(ObjectId.fromBsonId(user._id), user.teamIds.map(ObjectId.fromBsonId)) ?~> Messages("task.unavailable")
+      teamIds <- user.teamIds
+      task <- TaskSQLDAO.peekNextAssignment(user._id, teamIds) ?~> Messages("task.unavailable")
       taskJson <- task.publicWrites(GlobalAccessContext)
     } yield Ok(taskJson)
   }

@@ -1,9 +1,9 @@
 package models.task
 
-import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
-import models.user.{User, UserDAO}
+import models.user.UserSQLDAO
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
@@ -20,16 +20,17 @@ case class ScriptSQL(
                     isDeleted: Boolean = false
                     ) extends FoxImplicits {
 
-  def publicWrites(implicit ctx: DBAccessContext): Fox[JsObject] = {
+  def publicWrites: Fox[JsObject] = {
+    implicit val ctx = GlobalAccessContext
     for {
-      ownerIdBson <- _owner.toBSONObjectId.toFox
-      owner <- UserDAO.findOneById(ownerIdBson).map(User.userCompactWrites.writes)
+      owner <- UserSQLDAO.findOne(_owner)
+      ownerJs <- owner.compactWrites
     } yield {
       Json.obj(
         "id" -> _id.toString,
         "name" -> name,
         "gist" -> gist,
-        "owner" -> owner
+        "owner" -> ownerJs
       )
     }
   }

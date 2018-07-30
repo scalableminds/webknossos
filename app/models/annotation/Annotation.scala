@@ -218,9 +218,8 @@ object AnnotationDAO extends SQLDAO[Annotation, AnnotationsRow, Annotations] {
 
   def findOneByTracingId(tracingId: String)(implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
-      rList <- run(Annotations.filter(r => notdel(r) && (r.skeletontracingid === tracingId || r.volumetracingid === tracingId)).result.headOption)
       accessQuery <- readAccessQuery
-      rList <- run(sql"select #${columns} from #${existingCollectionName} where tracing_id = ${tracingId} and #${accessQuery}".as[AnnotationsRow])
+      rList <- run(sql"select #${columns} from #${existingCollectionName} where (skeletonTracingId = ${tracingId} or volumeTracingId = ${tracingId}) and #${accessQuery}".as[AnnotationsRow])
       r <- rList.headOption.toFox
       parsed <- parse(r)
     } yield {

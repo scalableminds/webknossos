@@ -6,17 +6,20 @@ package com.scalableminds.webknossos.datastore.services
 import java.nio.file.Paths
 
 import com.google.inject.Inject
+import com.newrelic.api.agent.NewRelic
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest, DataServiceMappingRequest, MappingReadInstruction}
 import com.scalableminds.webknossos.datastore.storage.{CachedCube, DataCubeCache}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.dataformats.BucketProvider
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Empty, Failure, Full}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.Configuration
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class BinaryDataService @Inject()(config: Configuration) extends FoxImplicits with LazyLogging {
@@ -89,18 +92,32 @@ class BinaryDataService @Inject()(config: Configuration) extends FoxImplicits wi
         request.dataLayer,
         bucket)
 
-      request.dataLayer.bucketProvider.load(readInstruction, cache, loadTimeout).futureBox.map {
-        case Full(data) =>
-          Full(data)
-        case Empty =>
-          Full(emptyBucket)
-        case f: Failure =>
-          logger.error(s"BinaryDataService failure: ${f.msg}")
-          f
-        }
+      loadWithRetry(request.dataLayer.bucketProvider, readInstruction, emptyBucket)
     } else {
       Fox.successful(emptyBucket)
     }
+  }
+
+  private def loadWithRetry(bucketProvider: BucketProvider, readInstruction: DataReadInstruction, emptyBucket: Array[Byte], remainingTries: Int = 5): Fox[Array[Byte]] = {
+    bucketProvider.load(readInstruction, cache, loadTimeout).futureBox.map {
+      case Full(data) =>
+        Fox.successful(data)
+      case Empty =>
+        Fox.successful(emptyBucket)
+      case f: Failure =>
+        if (remainingTries > 0) {
+          Thread.sleep(20)
+          val msg = s"BinaryDataService: retrying bucket loading, remaining tries: $remainingTries, error: ${f.msg}"
+          logger.debug(msg)
+          NewRelic.noticeError(msg)
+          loadWithRetry(bucketProvider, readInstruction, emptyBucket, remainingTries - 1)
+        } else {
+          val msg = s"BinaryDataService failure after all retries: ${f.msg}"
+          logger.error(msg)
+          NewRelic.noticeError(msg)
+          f.toFox
+        }
+    }.toFox.flatten
   }
 
   /**

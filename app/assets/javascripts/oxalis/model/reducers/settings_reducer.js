@@ -117,6 +117,8 @@ function SettingsReducer(state: OxalisState, action: ActionType): OxalisState {
           activeMapping: {
             mappingSize: { $set: action.mapping != null ? _.size(action.mapping) : 0 },
             mapping: { $set: action.mapping },
+            mappingColors: { $set: action.mappingColors },
+            hideUnmappedIds: { $set: action.hideUnmappedIds },
           },
         },
       });

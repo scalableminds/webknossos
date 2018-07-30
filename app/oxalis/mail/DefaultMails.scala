@@ -1,8 +1,8 @@
 package oxalis.mail
 
 import com.scalableminds.util.mail.Mail
-import models.user.UserSQL
-import models.team.OrganizationSQL
+import models.user.User
+import models.team.Organization
 import play.api.i18n.Messages
 import views._
 
@@ -23,7 +23,7 @@ object DefaultMails {
 
   val newOrganizationMailingList = conf.getString("oxalis.newOrganizationMailingList").getOrElse("")
 
-  def registerAdminNotifyerMail(user: UserSQL, email: String, brainDBResult: String, organization: OrganizationSQL) =
+  def registerAdminNotifyerMail(user: User, email: String, brainDBResult: String, organization: Organization) =
     Mail(
       from = email,
       headers = Map("Sender" -> defaultFrom),
@@ -31,7 +31,7 @@ object DefaultMails {
       bodyText = html.mail.registerAdminNotify(user, brainDBResult, uri).body,
       recipients = List(organization.newUserMailingList))
 
-  def overLimitMail(user: UserSQL, projectName: String, taskId: String, annotationId: String, organization: OrganizationSQL) =
+  def overLimitMail(user: User, projectName: String, taskId: String, annotationId: String, organization: Organization) =
     Mail(
       from = defaultFrom,
       subject = s"Time limit reached. ${user.abreviatedName} in $projectName",

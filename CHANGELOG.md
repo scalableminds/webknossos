@@ -33,8 +33,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Removed
 
--
-
+- Removed the warning when deleting a tree. An accidentally deleted tree can easily be restored using the Undo functionality. [#2995](https://github.com/scalableminds/webknossos/pull/2995)
 
 ## [18.08.0](https://github.com/scalableminds/webknossos/releases/tag/18.08.0) - 2018-07-23
 [Commits](https://github.com/scalableminds/webknossos/compare/18.07.0...18.08.0)

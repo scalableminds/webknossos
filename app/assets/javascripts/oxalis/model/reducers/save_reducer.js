@@ -48,7 +48,7 @@ function SaveReducer(state: OxalisState, action: ActionType): OxalisState {
       const { count } = action;
       if (count > 0) {
         const processedQueueActions = _.sumBy(
-          state.save.queue.slice(0, count),
+          state.save.queue[action.tracingType].slice(0, count),
           batch => batch.actions.length,
         );
         const remainingQueue = state.save.queue[action.tracingType].slice(count);

@@ -83,10 +83,7 @@ export async function initialize(
   let datasetName;
   if (controlMode === ControlModeEnum.TRACE) {
     const annotationId = annotationIdOrDatasetName;
-    annotation = await getAnnotationInformation(
-      annotationId,
-      "Explorational",
-    );
+    annotation = await getAnnotationInformation(annotationId, "Explorational");
     datasetName = annotation.dataSetName;
 
     if (!annotation.restrictions.allowAccess) {
@@ -180,10 +177,7 @@ function validateSpecsForLayers(
   return { isMappingSupported, textureInformationPerLayer };
 }
 
-function initializeTracing(
-  annotation: APIAnnotationType,
-  tracing: HybridServerTracingType,
-) {
+function initializeTracing(annotation: APIAnnotationType, tracing: HybridServerTracingType) {
   // TODO Hybrid: This function should only receive one (non-optional) annotation. However, the back-end currently does not support hybrid annotations.
   // This method is not called for the View mode
   const { dataset } = Store.getState();

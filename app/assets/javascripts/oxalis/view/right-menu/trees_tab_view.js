@@ -32,7 +32,12 @@ import Utils from "libs/utils";
 import { saveAs } from "file-saver";
 import { getBuildInfo } from "admin/admin_rest_api";
 import type { Dispatch } from "redux";
-import type { OxalisState, TracingType, SkeletonTracingType, UserConfigurationType } from "oxalis/store";
+import type {
+  OxalisState,
+  TracingType,
+  SkeletonTracingType,
+  UserConfigurationType,
+} from "oxalis/store";
 import TreeSearchPopover from "./tree_search_popover";
 
 const ButtonGroup = Button.Group;

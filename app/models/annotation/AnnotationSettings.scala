@@ -27,6 +27,8 @@ object AnnotationSettings {
       AnnotationSettings(allowedModes = SKELETON_MODES)
     case TracingType.volume =>
       AnnotationSettings(allowedModes = VOLUME_MODES)
+    case TracingType.hybrid =>
+      AnnotationSettings(allowedModes = VOLUME_MODES)
   }
 
   implicit val annotationSettingsWrites = Json.writes[AnnotationSettings]

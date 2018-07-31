@@ -6,7 +6,7 @@ import com.scalableminds.util.mvc.ResultBox
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
-import com.scalableminds.webknossos.datastore.tracings.{ProtoGeometryImplicits, TracingReference}
+import com.scalableminds.webknossos.datastore.tracings.{ProtoGeometryImplicits}
 import models.annotation.nml.NmlService
 import models.annotation.AnnotationService
 import models.binary.DataSetDAO
@@ -144,14 +144,14 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
       dataSetName <- assertAllOnSameDataset
       dataSet <- DataSetDAO.findOneByName(requestedTasks.head._1.dataSet) ?~> Messages("dataSet.notFound", dataSetName)
       dataStoreHandler <- dataSet.dataStoreHandler
-      tracingReferences: List[Box[TracingReference]] <- dataStoreHandler.saveSkeletonTracings(SkeletonTracings(requestedTasks.map(_._2)))
-      requestedTasksWithTracingReferences = requestedTasks zip tracingReferences
-      taskObjects: List[Fox[Task]] = requestedTasksWithTracingReferences.map(r => createTaskWithoutAnnotationBase(r._1._1, r._2))
-      zipped = (requestedTasks, tracingReferences, taskObjects).zipped.toList
+      skeletonTracingIds: List[Box[String]] <- dataStoreHandler.saveSkeletonTracings(SkeletonTracings(requestedTasks.map(_._2)))
+      requestedTasksWithTracingIds = requestedTasks zip skeletonTracingIds
+      taskObjects: List[Fox[Task]] = requestedTasksWithTracingIds.map(r => createTaskWithoutAnnotationBase(r._1._1, r._2))
+      zipped = (requestedTasks, skeletonTracingIds, taskObjects).zipped.toList
       annotationBases = zipped.map(tuple => AnnotationService.createAnnotationBase(
         taskFox = tuple._3,
         request.identity._id,
-        tracingReferenceBox = tuple._2,
+        skeletonTracingIdBox = tuple._2,
         dataSet._id,
         description = tuple._1._1.description
       ))
@@ -177,9 +177,9 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
     }
   }
 
-  private def createTaskWithoutAnnotationBase(params: TaskParameters, tracingReferenceBox: Box[TracingReference])(implicit request: SecuredRequest[_]): Fox[Task] = {
+  private def createTaskWithoutAnnotationBase(params: TaskParameters, skeletonTracingIdBox: Box[String])(implicit request: SecuredRequest[_]): Fox[Task] = {
     for {
-      _ <- tracingReferenceBox.toFox
+      _ <- skeletonTracingIdBox.toFox
       taskTypeIdValidated <- ObjectId.parse(params.taskTypeId)
       taskType <- TaskTypeDAO.findOne(taskTypeIdValidated) ?~> Messages("taskType.notFound")
       project <- ProjectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)

@@ -1,7 +1,6 @@
 package models.annotation
 
 import oxalis.security.WebknossosSilhouette.SecuredRequest
-import com.scalableminds.webknossos.datastore.tracings.{TracingReference, TracingType}
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -61,18 +60,20 @@ object AnnotationMerger extends FoxImplicits with LazyLogging {
           None,
           _team,
           _user,
-          mergedTracingReference,
+          Some(mergedTracingReference),
+          None,
           typ = typ
         )
       }
     }
   }
 
-  private def mergeTracingsOfAnnotations(annotations: List[Annotation], dataSetId: ObjectId, persistTracing: Boolean)(implicit ctx: DBAccessContext): Fox[TracingReference] = {
+  private def mergeTracingsOfAnnotations(annotations: List[Annotation], dataSetId: ObjectId, persistTracing: Boolean)(implicit ctx: DBAccessContext): Fox[String] = {
     for {
       dataSet <- DataSetDAO.findOne(dataSetId)
       dataStoreHandler <- dataSet.dataStoreHandler
-      tracingReference <- dataStoreHandler.mergeSkeletonTracingsByIds(annotations.map(_.tracing), persistTracing) ?~> "Failed to merge skeleton tracings."
+      skeletonTracingIds <- Fox.combined(annotations.map(_.skeletonTracingId.toFox))
+      tracingReference <- dataStoreHandler.mergeSkeletonTracingsByIds(skeletonTracingIds, persistTracing) ?~> "Failed to merge skeleton tracings."
     } yield {
       tracingReference
     }

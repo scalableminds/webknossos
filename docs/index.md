@@ -1,21 +1,27 @@
+# Summary
+
+* [Getting Started](./getting_started.md)
+​
+## Guides
+* [Dashboard](./dashboard.md)
+* [Tracing View](./tracing_ui.md)
+* [Managing Datasets](./datasets.md)
+* [Managing Users and Access Rights](./users.md)
+* [Sharing](./sharing.md)
+
+## Documentation
+* [Supported Data Formats](./faq.md)
+* [FAQ](./faq.md)
+
+
 # webKnossos Documentation
 
 ## Features
 
 ## Where to Get Help
-- Discussion Board support.webknossos.org
-- email@scalablemoinds
-- commercial support is avaliable
-
-1. Getting Started
-2. First Steps
-3. Dashboard
-3. Tracing UI
-4. Managing Datasets
-5. Managing Users & Access Rights
-6. Sharing
-6. Supported Data Formats
-7. FAQ
+- Community Support: https://support.webknossos.org
+- hello@scalableminds.com
+- Commercial Support is avaliable by [scalable minds](https://scalableminds.com)
 
 Later:
 Projects

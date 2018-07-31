@@ -80,26 +80,22 @@ export async function initialize(
   Store.dispatch(setControlModeAction(controlMode));
 
   let annotation: APIAnnotationType;
-  let skeletonAnnotation: ?APIAnnotationType;
-  let volumeAnnotation: ?APIAnnotationType;
   let datasetName;
   if (controlMode === ControlModeEnum.TRACE) {
     const annotationId = annotationIdOrDatasetName;
-    skeletonAnnotation = await getAnnotationInformation(
-      "5b574bdb960000eb039f662c",
+    annotation = await getAnnotationInformation(
+      annotationId,
       "Explorational",
     );
-    annotation = skeletonAnnotation;
-    volumeAnnotation = await getAnnotationInformation("5b574c3b9600002b049f6631", "Explorational");
-    datasetName = skeletonAnnotation.dataSetName;
+    datasetName = annotation.dataSetName;
 
-    if (!skeletonAnnotation.restrictions.allowAccess) {
+    if (!annotation.restrictions.allowAccess) {
       Toast.error(messages["tracing.no_access"]);
       throw HANDLED_ERROR;
     }
 
     ErrorHandling.assertExtendContext({
-      task: skeletonAnnotation.id,
+      task: annotation.id,
     });
 
     Store.dispatch(setTaskAction(annotation.task));
@@ -110,8 +106,7 @@ export async function initialize(
   }
 
   const [dataset, initialUserSettings, initialDatasetSettings, tracing] = await fetchParallel(
-    skeletonAnnotation,
-    volumeAnnotation,
+    annotation,
     datasetName,
   );
 
@@ -127,7 +122,7 @@ export async function initialize(
 
   // There is no need to initialize the tracing if there is no tracing (View mode).
   if (annotation != null && tracing != null) {
-    initializeTracing(skeletonAnnotation, volumeAnnotation, tracing);
+    initializeTracing(annotation, tracing);
   }
 
   applyUrlState(UrlManager.initialState, tracing);
@@ -136,8 +131,7 @@ export async function initialize(
 }
 
 async function fetchParallel(
-  skeletonAnnotation: ?APIAnnotationType,
-  volumeAnnotation: ?APIAnnotationType,
+  annotation: ?APIAnnotationType,
   datasetName: string,
 ): Promise<[APIDatasetType, *, *, ?HybridServerTracingType]> {
   return Promise.all([
@@ -147,7 +141,7 @@ async function fetchParallel(
     // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
     // (Also see https://github.com/facebook/flow/issues/4936)
     // $FlowFixMe: Type inference with Promise.all seems to be a bit broken in flow
-    skeletonAnnotation ? getTracingForAnnotations(skeletonAnnotation, volumeAnnotation) : null,
+    annotation ? getTracingForAnnotations(annotation) : null,
   ]);
 }
 
@@ -187,17 +181,13 @@ function validateSpecsForLayers(
 }
 
 function initializeTracing(
-  skeletonAnnotation: ?APIAnnotationType,
-  volumeAnnotation: ?APIAnnotationType,
+  annotation: APIAnnotationType,
   tracing: HybridServerTracingType,
 ) {
   // TODO Hybrid: This function should only receive one (non-optional) annotation. However, the back-end currently does not support hybrid annotations.
   // This method is not called for the View mode
   const { dataset } = Store.getState();
-  if (!skeletonAnnotation) {
-    throw new Error("Skeleton annotation has to be defined");
-  }
-  const annotation = skeletonAnnotation;
+
   const { allowedModes, preferredMode } = determineAllowedModes(dataset, annotation.settings);
   _.extend(annotation.settings, { allowedModes, preferredMode });
 
@@ -208,14 +198,14 @@ function initializeTracing(
         getSegmentationLayer(dataset) != null,
         messages["tracing.volume_missing_segmentation"],
       );
-      Store.dispatch(initializeVolumeTracingAction(volumeAnnotation, volumeTracing));
+      Store.dispatch(initializeVolumeTracingAction(annotation, volumeTracing));
     });
 
     serverTracingAsSkeletonTracingMaybe(tracing).map(skeletonTracing => {
       // To generate a huge amount of dummy trees, use:
       // import generateDummyTrees from "./model/helpers/generate_dummy_trees";
       // tracing.trees = generateDummyTrees(1, 200000);
-      Store.dispatch(initializeSkeletonTracingAction(skeletonAnnotation, skeletonTracing));
+      Store.dispatch(initializeSkeletonTracingAction(annotation, skeletonTracing));
     });
   }
 

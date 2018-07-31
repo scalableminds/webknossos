@@ -83,7 +83,6 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
       const annotationInfo = convertServerAnnotationToFrontendAnnotation(action.annotation);
 
       const skeletonTracing: SkeletonTracingType = {
-        // ...annotationInfo, // todo: remove completely
         createdTimestamp: action.tracing.createdTimestamp,
         type: "skeleton",
         activeNodeId,
@@ -91,7 +90,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         activeTreeId,
         trees,
         treeGroups: action.tracing.treeGroups || [],
-        tracingId: action.annotation.content.id,
+        tracingId: action.tracing.id,
         version: action.tracing.version,
         boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
         userBoundingBox: convertServerBoundingBoxToFrontend(action.tracing.userBoundingBox),

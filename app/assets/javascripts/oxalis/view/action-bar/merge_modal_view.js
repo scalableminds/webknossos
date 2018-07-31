@@ -156,8 +156,8 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
       Toast.error(messages["merge.different_dataset"]);
       return;
     }
-    const tracing = await getTracingForAnnotationType(annotation);
-    if (!tracing.trees) {
+    const tracing = await getTracingForAnnotationType(annotation, "skeleton");
+    if (!tracing || !tracing.trees) {
       Toast.error(messages["merge.volume_unsupported"]);
       return;
     }

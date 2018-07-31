@@ -365,7 +365,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Column
           title="Stats"
           render={(__, tracing: APIAnnotationType) =>
-            tracing.stats.treeCount && tracing.content.typ === "skeleton" ? (
+            tracing.stats.treeCount && tracing.tracing.skeleton != null ? (
               <div>
                 <span title="Trees">
                   <i className="fa fa-sitemap" />
@@ -398,7 +398,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
                   onClick={_.partial(this.addTagToSearch, tag)}
                   onClose={_.partial(this.editTagFromAnnotation, tracing, false, tag)}
                   closable={
-                    !(tag === tracing.dataSetName || tag === tracing.content.typ) &&
+                    !(tag === tracing.dataSetName || tracing.tracing[tag] != null) &&
                     !this.state.shouldShowArchivedTracings
                   }
                 >

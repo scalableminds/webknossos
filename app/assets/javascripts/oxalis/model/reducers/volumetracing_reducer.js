@@ -40,7 +40,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
         maxCellId,
         cells: {},
         activeTool: VolumeToolEnum.MOVE,
-        tracingId: action.annotation.content.id,
+        tracingId: action.tracing.id,
         version: action.tracing.version,
         boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
         userBoundingBox: convertServerBoundingBoxToFrontend(action.tracing.userBoundingBox),

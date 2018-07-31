@@ -487,25 +487,27 @@ export function getAnnotationInformation(
 
 export function createExplorational(
   datasetName: string,
-  typ: "volume" | "skeleton",
+  typ: "volume" | "skeleton" | "hybrid",
   withFallback: boolean,
 ): Promise<APIAnnotationType> {
   const url = `/api/datasets/${datasetName}/createExplorational`;
+
+  // todo hybrid:
+  typ = "hybrid";
 
   return Request.sendJSONReceiveJSON(url, { data: { typ, withFallback } });
 }
 
 export async function getTracingForAnnotations(
-  skeletonAnnotation: APIAnnotationType,
-  volumeAnnotation: APIAnnotationType,
+  annotation: APIAnnotationType,
 ): Promise<HybridServerTracingType> {
   const [_skeleton, _volume] = await Promise.all([
-    getTracingForAnnotationType(skeletonAnnotation),
-    getTracingForAnnotationType(volumeAnnotation),
+    getTracingForAnnotationType(annotation, "skeleton"),
+    getTracingForAnnotationType(annotation, "volume"),
   ]);
 
-  const skeleton = ((_skeleton: any): ServerSkeletonTracingType);
-  const volume = ((_volume: any): ServerVolumeTracingType);
+  const skeleton = ((_skeleton: any): ?ServerSkeletonTracingType);
+  const volume = ((_volume: any): ?ServerVolumeTracingType);
 
   return {
     skeleton,
@@ -515,20 +517,22 @@ export async function getTracingForAnnotations(
 
 export async function getTracingForAnnotationType(
   annotation: APIAnnotationType,
-): Promise<ServerTracingType> {
-  const annotationType = annotation.content.typ;
+  tracingType: "skeleton" | "volume",
+): Promise<?ServerTracingType> {
+  const tracingId = annotation.tracing[tracingType];
+  if (!tracingId) {
+    return null;
+  }
   const tracingArrayBuffer = await doWithToken(token =>
     Request.receiveArraybuffer(
-      `${annotation.dataStore.url}/data/tracings/${annotationType}/${
-        annotation.content.id
-      }?token=${token}`,
+      `${annotation.dataStore.url}/data/tracings/${tracingType}/${tracingId}?token=${token}`,
       { headers: { Accept: "application/x-protobuf" } },
     ),
   );
 
-  const tracing = parseProtoTracing(tracingArrayBuffer, annotationType);
+  const tracing = parseProtoTracing(tracingArrayBuffer, tracingType);
   // The tracing id is not contained in the server tracing, but in the annotation content
-  tracing.id = annotation.content.id;
+  tracing.id = tracingId;
   return tracing;
 }
 

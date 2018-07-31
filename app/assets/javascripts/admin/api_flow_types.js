@@ -4,13 +4,7 @@
  */
 import type { SkeletonTracingStatsType } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3, Vector6, Point3 } from "oxalis/constants";
-import type {
-  SettingsType,
-  BoundingBoxObjectType,
-  EdgeType,
-  CommentType,
-  TreeGroupType,
-} from "oxalis/store";
+import type { BoundingBoxObjectType, EdgeType, CommentType, TreeGroupType } from "oxalis/store";
 import Enum from "Enumjs";
 
 export type APIMessageType = { ["info" | "warning" | "error"]: string };
@@ -217,9 +211,9 @@ export type APITaskType = {
 };
 
 type APIAnnotationTypeBase = {
-  +content: {
-    +id: string,
-    +typ: string,
+  +tracing: {
+    +skeleton: ?string,
+    +volume: ?string,
   },
   +dataSetName: string,
   +dataStore: APIDataStoreType,
@@ -395,8 +389,6 @@ export type ServerVolumeTracingType = {|
 export type ServerTracingType = ServerSkeletonTracingType | ServerVolumeTracingType;
 
 export type HybridServerTracingType = {
-  // todo: move propertes to base
-  // base: ServerTracingBaseType,
   skeleton: ?ServerSkeletonTracingType,
   volume: ?ServerVolumeTracingType,
 };

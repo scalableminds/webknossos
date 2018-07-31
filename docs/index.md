@@ -1,27 +1,23 @@
 # Summary
 
-* [Getting Started](./getting_started.md)
-​
+* [Getting Started](docs/getting_started.md)
+
 ## Guides
-* [Dashboard](./dashboard.md)
-* [Tracing View](./tracing_ui.md)
-* [Managing Datasets](./datasets.md)
-* [Managing Users and Access Rights](./users.md)
-* [Sharing](./sharing.md)
+* [Dashboard](docs/dashboard.md)
+* [Tracing View](docs/tracing_ui.md)
+* [Managing Datasets](docs/datasets.md)
+* [Managing Users and Access Rights](docs/users.md)
+* [Sharing](docs/sharing.md)
 
 ## Documentation
-* [Supported Data Formats](./faq.md)
-* [FAQ](./faq.md)
+* [Supported Data Formats](docs/faq.md)
+* [FAQ](docs/faq.md)
+* [Changelog](CHANGELOG.md)
+* [Migration Guide](MIGRATIONS.md)
 
-
-# webKnossos Documentation
-
-## Features
-
-## Where to Get Help
-- Community Support: https://support.webknossos.org
-- hello@scalableminds.com
-- Commercial Support is avaliable by [scalable minds](https://scalableminds.com)
+## Getting Help
+* [Community Support](https://support.webknossos.org)
+* [Commercial Support](https://scalableminds.com)
 
 Later:
 Projects

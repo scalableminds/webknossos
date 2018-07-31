@@ -2,6 +2,7 @@ package com.scalableminds.util.mvc
 
 import com.scalableminds.util.tools.{Converter, Fox}
 import play.api.mvc.Request
+import play.api.libs.concurrent.Execution.Implicits._
 
 
 case class Filter[A, T](name: String, predicate: (A, T) => Fox[Boolean], default: Option[String] = None)(implicit converter: Converter[String, A]) {

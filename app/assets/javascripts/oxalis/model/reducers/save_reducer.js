@@ -18,7 +18,8 @@ function SaveReducer(state: OxalisState, action: ActionType): OxalisState {
       const stats = _.some(action.items, ua => ua.name !== "updateTracing")
         ? Utils.toNullable(getStats(state.tracing))
         : null;
-      if (action.items.length > 0) {
+      const { items } = action;
+      if (items.length > 0) {
         return update(state, {
           save: {
             queue: {
@@ -28,11 +29,14 @@ function SaveReducer(state: OxalisState, action: ActionType): OxalisState {
                     // Placeholder, the version number will be updated before sending to the server
                     version: -1,
                     timestamp: Date.now(),
-                    actions: action.items,
+                    actions: items,
                     stats,
                   },
                 ],
               },
+            },
+            progressInfo: {
+              totalActionCount: { $apply: count => count + items.length },
             },
           },
         });
@@ -41,13 +45,24 @@ function SaveReducer(state: OxalisState, action: ActionType): OxalisState {
     }
 
     case "SHIFT_SAVE_QUEUE": {
-      if (action.count > 0) {
+      const { count } = action;
+      if (count > 0) {
+        const processedQueueActions = _.sumBy(
+          state.save.queue.slice(0, count),
+          batch => batch.actions.length,
+        );
+        const remainingQueue = state.save.queue[action.tracingType].slice(count);
+        const resetCounter = remainingQueue.length === 0;
         return update(state, {
           save: {
-            queue: {
-              [action.tracingType]: {
-                $set: state.save.queue[action.tracingType].slice(action.count),
+            queue: { [action.tracingType]: { $set: remainingQueue } },
+            progressInfo: {
+              // Reset progress counters if the queue is empty. Otherwise,
+              // increase processedActionCount and leave totalActionCount as is
+              processedActionCount: {
+                $apply: oldCount => (resetCounter ? 0 : oldCount + processedQueueActions),
               },
+              totalActionCount: { $apply: oldCount => (resetCounter ? 0 : oldCount) },
             },
           },
         });
@@ -57,7 +72,13 @@ function SaveReducer(state: OxalisState, action: ActionType): OxalisState {
 
     case "DISCARD_SAVE_QUEUES": {
       return update(state, {
-        save: { queue: { $set: { skeleton: [], volume: [] } } },
+        save: {
+          queue: { $set: { skeleton: [], volume: [] } },
+          progressInfo: {
+            processedActionCount: { $set: 0 },
+            totalActionCount: { $set: 0 },
+          },
+        },
       });
     }
 

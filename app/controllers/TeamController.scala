@@ -2,27 +2,26 @@ package controllers
 
 
 import javax.inject.Inject
-
 import com.scalableminds.util.accesscontext.GlobalAccessContext
-import com.scalableminds.util.tools.DefaultConverters._
+import com.scalableminds.util.tools.Fox
 import models.team._
-import models.user.UserService
-import net.liftweb.common.{Empty, Full}
+import models.user.UserTeamRolesDAO
 import oxalis.security.WebknossosSilhouette.SecuredAction
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.Json
+import play.api.libs.json._
 import play.api.mvc.Action
-
-import scala.concurrent.Future
+import utils.ObjectId
 
 class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller {
 
+  private def teamNameReads: Reads[String] =
+    (__ \ "name").read[String]
 
   def list = SecuredAction.async { implicit request =>
     for {
       allTeams <- TeamDAO.findAllEditable
-      js <- Future.traverse(allTeams)(Team.teamPublicWrites(_))
+      js <- Fox.serialCombined(allTeams)(_.publicWrites)
     } yield {
       Ok(Json.toJson(js))
     }
@@ -31,7 +30,7 @@ class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller 
   def listAllTeams = Action.async { implicit request =>
     for {
       allTeams <- TeamDAO.findAll(GlobalAccessContext)
-      js <- Future.traverse(allTeams)(Team.teamPublicWrites(_)(GlobalAccessContext))
+      js <- Fox.serialCombined(allTeams)(_.publicWrites(GlobalAccessContext))
     } yield {
       Ok(Json.toJson(js))
     }
@@ -39,22 +38,22 @@ class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller 
 
   def delete(id: String) = SecuredAction.async { implicit request =>
     for {
-      team <- TeamDAO.findOneById(id)
-      _ <- TeamService.remove(team)
-      _ <- UserService.removeTeamFromUsers(team)
+      teamIdValidated <- ObjectId.parse(id)
+      team <- TeamDAO.findOne(teamIdValidated)
+      _ <- TeamDAO.deleteOne(teamIdValidated)
+      _ <- UserTeamRolesDAO.removeTeamFromAllUsers(teamIdValidated)
     } yield {
       JsonOk(Messages("team.deleted"))
     }
   }
 
   def create = SecuredAction.async(parse.json) { implicit request =>
-    withJsonBodyUsing(Team.teamReadsName) { teamName =>
+    withJsonBodyUsing(teamNameReads) { teamName =>
       for {
-        organization <- request.identity.organization
-        team = Team(teamName, organization.name)
         _ <- bool2Fox(request.identity.isAdmin) ?~> Messages("user.noAdmin")
-        _ <- TeamService.create(team, request.identity)
-        js <- Team.teamPublicWrites(team)
+        team = Team(ObjectId.generate, request.identity._organization, teamName)
+        _ <- TeamDAO.insertOne(team)
+        js <- team.publicWrites
       } yield {
         JsonOk(js, Messages("team.created"))
       }

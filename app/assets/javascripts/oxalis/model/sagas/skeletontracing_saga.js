@@ -26,6 +26,8 @@ import {
   updateSkeletonTracing,
   updateTreeGroups,
 } from "oxalis/model/sagas/update_actions";
+import type { ActionType } from "oxalis/model/actions/actions";
+import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import { getActiveNode, getBranchPoints } from "oxalis/model/accessors/skeletontracing_accessor";
 import { V3 } from "libs/mjs";
@@ -43,11 +45,19 @@ import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import api from "oxalis/api/internal_api";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import EdgeCollection, { diffEdgeCollections } from "oxalis/model/edge_collection";
+import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
 
-function* centerActiveNode() {
-  getActiveNode(yield select((state: OxalisState) => state.tracing)).map(activeNode => {
-    api.tracing.centerPositionAnimated(activeNode.position, false, activeNode.rotation);
-  });
+function* centerActiveNode(action: ActionType) {
+  getActiveNode(yield select((state: OxalisState) => enforceSkeletonTracing(state.tracing))).map(
+    activeNode => {
+      if (action.suppressAnimation) {
+        Store.dispatch(setPositionAction(activeNode.position));
+        Store.dispatch(setRotationAction(activeNode.rotation));
+      } else {
+        api.tracing.centerPositionAnimated(activeNode.position, false, activeNode.rotation);
+      }
+    },
+  );
 }
 
 function* watchBranchPointDeletion(): Generator<*, *, *> {

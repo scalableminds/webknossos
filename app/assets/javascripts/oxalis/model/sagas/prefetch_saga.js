@@ -32,6 +32,8 @@ export function* watchDataRelevantChanges(): Generator<*, *, *> {
   yield take("WK_READY");
 
   const previousProperties = {};
+  // Initiate the prefetching once and then only for data relevant changes
+  yield call(triggerDataPrefetching, previousProperties);
   yield throttle(PREFETCH_THROTTLE_TIME, FlycamActions, triggerDataPrefetching, previousProperties);
 }
 

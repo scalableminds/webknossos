@@ -1,58 +1,55 @@
 package models.team
 
 
-import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
-import models.user.{UserSQLDAO, UserSQL}
+import models.user.User
 import play.api.Play.current
 import play.api.i18n.Messages
 import play.api.i18n.Messages.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import reactivemongo.bson.BSONObjectID
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO}
 
-import scala.concurrent.Future
 
-
-case class TeamSQL(
+case class Team(
                   _id: ObjectId,
                   _organization: ObjectId,
                   name: String,
                   isOrganizationTeam: Boolean = false,
                   created: Long = System.currentTimeMillis(),
                   isDeleted: Boolean = false
-                  )
+                  ) extends FoxImplicits {
 
-object TeamSQL extends FoxImplicits {
-  def fromTeam(t: Team)(implicit ctx: DBAccessContext): Fox[TeamSQL] = {
+  def organization: Fox[Organization] =
+    OrganizationDAO.findOne(_organization)(GlobalAccessContext)
+
+  def couldBeAdministratedBy(user: User): Boolean =
+    user._organization == this._organization
+
+  def publicWrites(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
-      organization <- OrganizationSQLDAO.findOneByName(t.organization)
+      organization <- organization
     } yield {
-      TeamSQL(
-        ObjectId.fromBsonId(t._id),
-        organization._id,
-        t.name,
-        t.isOrganizationTeam,
-        System.currentTimeMillis(),
-        false
+      Json.obj(
+        "id" -> _id.toString,
+        "name" -> name,
+        "organization" -> organization.name
       )
     }
-  }
 }
 
-object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
+object TeamDAO extends SQLDAO[Team, TeamsRow, Teams] {
   val collection = Teams
 
   def idColumn(x: Teams): Rep[String] = x._Id
   def isDeletedColumn(x: Teams): Rep[Boolean] = x.isdeleted
 
-  def parse(r: TeamsRow): Fox[TeamSQL] = {
-    Fox.successful(TeamSQL(
+  def parse(r: TeamsRow): Fox[Team] = {
+    Fox.successful(Team(
       ObjectId(r._Id),
       ObjectId(r._Organization),
       r.name,
@@ -70,7 +67,7 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
     s"""(not isorganizationteam
           and _organization in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
 
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[TeamSQL] =
+  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Team] =
     for {
       accessQuery <- readAccessQuery
       rList <- run(sql"select #${columns} from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[TeamsRow])
@@ -78,7 +75,7 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
       parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
     } yield parsed
 
-  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[TeamSQL] =
+  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[Team] =
     for {
       accessQuery <- readAccessQuery
       rList <- run(sql"select #${columns} from #${existingCollectionName} where name = ${name} and #${accessQuery}".as[TeamsRow])
@@ -86,7 +83,7 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
       parsed <- parse(r)
     } yield parsed
 
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[TeamSQL]] = {
+  override def findAll(implicit ctx: DBAccessContext): Fox[List[Team]] = {
     for {
       accessQuery <- readAccessQuery
       r <- run(sql"select #${columns} from #${existingCollectionName} where #${accessQuery}".as[TeamsRow])
@@ -94,7 +91,7 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
     } yield parsed
   }
 
-  def findAllEditable(implicit ctx: DBAccessContext): Fox[List[TeamSQL]] = {
+  def findAllEditable(implicit ctx: DBAccessContext): Fox[List[Team]] = {
     for {
       requestingUserId <- userIdFromCtx
       accessQuery <- readAccessQuery
@@ -106,7 +103,7 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
     } yield parsed
   }
 
-  def findAllByOrganization(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[TeamSQL]] = {
+  def findAllByOrganization(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[Team]] = {
     for {
       accessQuery <- readAccessQuery
       r <- run(sql"select #${columns} from #${existingCollectionName} where _organization = ${organizationId.id} and #${accessQuery}".as[TeamsRow])
@@ -122,7 +119,7 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
     } yield parsed
   }
 
-  def insertOne(t: TeamSQL)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def insertOne(t: Team)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       r <- run(
         sqlu"""insert into webknossos.teams(_id, _organization, name, created, isOrganizationTeam, isDeleted)
@@ -130,103 +127,4 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
             """)
     } yield ()
 
-}
-
-
-
-
-case class Team(name: String,
-                organization: String,
-                isOrganizationTeam: Boolean = false,
-                _id: BSONObjectID = BSONObjectID.generate) extends FoxImplicits {
-
-  lazy val id = _id.stringify
-
-  def couldBeAdministratedBy(user: UserSQL) =
-    for {
-      organization <- user.organization
-    } yield organization.name == this.organization
-}
-
-object Team extends FoxImplicits {
-
-  def teamPublicWrites(team: Team)(implicit ctx: DBAccessContext): Future[JsObject] =
-    Future.successful(
-      Json.obj(
-        "id" -> team.id,
-        "name" -> team.name,
-        "organization" -> team.organization
-      )
-    )
-
-  def teamPublicReads(requestingUser: UserSQL): Reads[Team] =
-    ((__ \ "name").read[String](Reads.minLength[String](3)) and
-      (__ \ "organization").read[String](Reads.minLength[String](3))
-      ) ((name, organization) => Team(name, organization))
-
-  def teamReadsName(): Reads[String] =
-    (__ \ "name").read[String]
-
-  def fromTeamSQL(t: TeamSQL)(implicit ctx: DBAccessContext) = {
-    for {
-      idBson <- t._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId")
-      organization <- OrganizationSQLDAO.findOne(t._organization)
-    } yield {
-      Team(
-        t.name,
-        organization.name,
-        t.isOrganizationTeam,
-        idBson
-      )
-    }
-  }
-}
-
-object TeamService {
-  def create(team: Team, user: UserSQL)(implicit ctx: DBAccessContext) =
-    for {
-      _ <- TeamDAO.insert(team)
-    } yield ()
-
-  def remove(team: Team)(implicit ctx: DBAccessContext) =
-    TeamDAO.removeById(team._id)
-}
-
-object TeamDAO {
-
-  def findOneById(id: String)(implicit ctx: DBAccessContext): Fox[Team] =
-    for {
-      teamSQL <- TeamSQLDAO.findOne(ObjectId(id))
-      team <- Team.fromTeamSQL(teamSQL)
-    } yield team
-
-  def findOneById(id: BSONObjectID)(implicit ctx: DBAccessContext): Fox[Team] =
-    findOneById(id.stringify)
-
-  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[Team] =
-    for {
-      teamSQL <- TeamSQLDAO.findOneByName(name: String)
-      team <- Team.fromTeamSQL(teamSQL)
-    } yield team
-
-  def insert(team: Team)(implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      teamSQL <- TeamSQL.fromTeam(team)
-      _ <- TeamSQLDAO.insertOne(teamSQL)
-    } yield ()
-
-  def findAll(implicit ctx: DBAccessContext): Fox[List[Team]] =
-    for {
-      teamsSQL <- TeamSQLDAO.findAll
-      teams <- Fox.combined(teamsSQL.map(Team.fromTeamSQL(_)))
-    } yield teams
-
-  def findAllEditable(implicit ctx: DBAccessContext): Fox[List[Team]] =
-    for {
-      teamsSQL <- TeamSQLDAO.findAllEditable
-      teams <- Fox.combined(teamsSQL.map(Team.fromTeamSQL(_)))
-    } yield teams
-
-  def removeById(id: BSONObjectID)(implicit ctx: DBAccessContext): Fox[Unit] =
-    TeamSQLDAO.deleteOne(ObjectId.fromBsonId(id))
 }

@@ -38,6 +38,9 @@ const PUSH_THROTTLE_TIME = 30000; // 30s
 const SAVE_RETRY_WAITING_TIME = 5000;
 const UNDO_HISTORY_SIZE = 100;
 
+export const maximumActionCountPerBatch = 5000;
+const maximumActionCountPerSave = 15000;
+
 export function* collectUndoStates(): Generator<*, *, *> {
   const undoStack = [];
   const redoStack = [];
@@ -96,6 +99,7 @@ export function* pushTracingTypeAsync(tracingType: "skeleton" | "volume"): Gener
 
     saveQueue = yield select((state: OxalisState) => state.save.queue[tracingType]);
     if (saveQueue.length === 0) {
+      yield put(setSaveBusyAction(false));
       // Save queue is empty, wait for push event
       yield take("PUSH_SAVE_QUEUE");
     }
@@ -108,7 +112,6 @@ export function* pushTracingTypeAsync(tracingType: "skeleton" | "volume"): Gener
     if (saveQueue.length > 0) {
       yield call(sendRequestToServer, tracingType);
     }
-    yield put(setSaveBusyAction(false));
   }
 }
 
@@ -119,12 +122,33 @@ export function sendRequestWithToken(
   return doWithToken(token => Request.sendJSONReceiveJSON(`${urlWithoutToken}${token}`, data));
 }
 
+// This function returns the first n batches of the provided array, so that the count of
+// all actions in these n batches does not exceed maximumActionCountPerSave
+function sliceAppropriateBatchCount(batches: Array<SaveQueueEntryType>): Array<SaveQueueEntryType> {
+  const slicedBatches = [];
+  let actionCount = 0;
+
+  for (const batch of batches) {
+    const newActionCount = actionCount + batch.actions.length;
+    if (newActionCount <= maximumActionCountPerSave) {
+      actionCount = newActionCount;
+      slicedBatches.push(batch);
+    } else {
+      break;
+    }
+  }
+
+  return slicedBatches;
+}
+
 export function* sendRequestToServer(
   tracingType: "skeleton" | "volume",
   timestamp: number = Date.now(),
 ): Generator<*, *, *> {
-  const saveQueue = yield select((state: OxalisState) => state.save.queue[tracingType]);
-  let compactedSaveQueue = compactUpdateActions(saveQueue);
+  const fullSaveQueue = yield select((state: OxalisState) => state.save.queue[tracingType]);
+  const saveQueue = sliceAppropriateBatchCount(fullSaveQueue);
+
+  let compactedSaveQueue = compactSaveQueue(saveQueue);
   const { version, type, tracingId } = yield select(
     (state: OxalisState) => state.tracing[tracingType],
   );
@@ -320,19 +344,18 @@ function compactDeletedTrees(updateActions: Array<UpdateAction>) {
   );
 }
 
-export function compactUpdateActions(
+export function compactUpdateActions(updateActions: Array<UpdateAction>): Array<UpdateAction> {
+  return compactDeletedTrees(
+    compactMovedNodesAndEdges(removeUnrelevantUpdateActions(updateActions)),
+  );
+}
+
+export function compactSaveQueue(
   updateActionsBatches: Array<SaveQueueEntryType>,
 ): Array<SaveQueueEntryType> {
-  const result = updateActionsBatches
-    .map(updateActionsBatch =>
-      _.chain(updateActionsBatch)
-        .cloneDeep()
-        .update("actions", removeUnrelevantUpdateActions)
-        .update("actions", compactMovedNodesAndEdges)
-        .update("actions", compactDeletedTrees)
-        .value(),
-    )
-    .filter(updateActionsBatch => updateActionsBatch.actions.length > 0);
+  const result = updateActionsBatches.filter(
+    updateActionsBatch => updateActionsBatch.actions.length > 0,
+  );
 
   // This part of the code removes all entries from the save queue that consist only of
   // an updateTracing update action, except for the last one
@@ -391,8 +414,7 @@ function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Generator<*,
   }
   yield take("WK_READY");
   const allowUpdate = yield select(
-    (state: OxalisState) =>
-      state.tracing[tracingType] && state.tracing.restrictions.allowUpdate,
+    (state: OxalisState) => state.tracing[tracingType] && state.tracing.restrictions.allowUpdate,
   );
   if (!allowUpdate) return;
 
@@ -404,11 +426,15 @@ function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Generator<*,
     }
     const tracing = yield select((state: OxalisState) => state.tracing);
     const flycam = yield select((state: OxalisState) => state.flycam);
-    const items = Array.from(
-      yield call(performDiffTracing, tracingType, prevTracing, tracing, flycam),
+    const items = compactUpdateActions(
+      Array.from(yield call(performDiffTracing, tracingType, prevTracing, tracing, flycam)),
     );
     if (items.length > 0) {
-      yield put(pushSaveQueueAction(items, tracingType));
+      const updateActionChunks = _.chunk(items, maximumActionCountPerBatch);
+
+      for (const updateActionChunk of updateActionChunks) {
+        yield put(pushSaveQueueAction(updateActionChunk, tracingType));
+      }
     }
     prevTracing = tracing;
   }

@@ -42,7 +42,11 @@ type DeleteEdgeActionType = {
   targetNodeId: number,
   timestamp: number,
 };
-type SetActiveNodeActionType = { type: "SET_ACTIVE_NODE", nodeId: number };
+type SetActiveNodeActionType = {
+  type: "SET_ACTIVE_NODE",
+  nodeId: number,
+  suppressAnimation: boolean,
+};
 type SetNodeRadiusActionType = {
   type: "SET_NODE_RADIUS",
   radius: number,
@@ -194,9 +198,13 @@ export const deleteEdgeAction = (
   timestamp,
 });
 
-export const setActiveNodeAction = (nodeId: number): SetActiveNodeActionType => ({
+export const setActiveNodeAction = (
+  nodeId: number,
+  suppressAnimation: boolean = false,
+): SetActiveNodeActionType => ({
   type: "SET_ACTIVE_NODE",
   nodeId,
+  suppressAnimation,
 });
 
 export const setNodeRadiusAction = (

@@ -5,7 +5,7 @@ import _ from "lodash";
 import * as React from "react";
 import { connect } from "react-redux";
 import { Link, withRouter } from "react-router-dom";
-import { Table, Tag, Icon, Spin, Button, Input, Modal } from "antd";
+import { Table, Tag, Icon, Spin, Button, Input, Modal, Alert } from "antd";
 import TeamRoleModalView from "admin/user/team_role_modal_view";
 import ExperienceModalView from "admin/user/experience_modal_view";
 import TemplateHelpers from "libs/template_helpers";
@@ -44,6 +44,7 @@ type State = {
   selectedUserIds: Array<string>,
   isExperienceModalVisible: boolean,
   isTeamRoleModalVisible: boolean,
+  isInvitePopoverVisible: boolean,
   activationFilter: Array<"true" | "false">,
   searchQuery: string,
 };
@@ -63,6 +64,7 @@ class UserListView extends React.PureComponent<Props, State> {
     selectedUserIds: [],
     isExperienceModalVisible: false,
     isTeamRoleModalVisible: false,
+    isInvitePopoverVisible: false,
     activationFilter: ["true"],
     searchQuery: "",
   };
@@ -166,6 +168,29 @@ class UserListView extends React.PureComponent<Props, State> {
     }
   };
 
+  renderPlaceholder() {
+    const noUsersMessage = (
+      <React.Fragment>
+        {"You can "}
+        <a onClick={() => this.setState({ isInvitePopoverVisible: true })}>invite more users</a>
+        {" to join your organization. After the users joined, you need to activate them manually."}
+      </React.Fragment>
+    );
+    const inactiveUsersMessage =
+      'There are users that have not been activated yet. Make sure the "Show Active Users Only" tag is removed to show those users and activate them.';
+    const inactiveUsersPresent = this.state.users.filter(user => !user.isActive).length > 0;
+
+    return this.state.isLoading ? null : (
+      <Alert
+        message={inactiveUsersPresent ? "Activate users" : "Invite more users"}
+        description={inactiveUsersPresent ? inactiveUsersMessage : noUsersMessage}
+        type="info"
+        showIcon
+        style={{ marginTop: 20 }}
+      />
+    );
+  }
+
   render() {
     const hasRowsSelected = this.state.selectedUserIds.length > 0;
     const rowSelection = {
@@ -179,11 +204,12 @@ class UserListView extends React.PureComponent<Props, State> {
 
     const activationFilterWarning = this.state.activationFilter.includes("true") ? (
       <Tag closable onClose={this.handleDismissActivationFilter} color="blue">
-        Show Active User Only
+        Show Active Users Only
       </Tag>
     ) : null;
 
     const marginRight = { marginRight: 20 };
+    const lessThanOneActiveUser = this.state.users.filter(user => user.isActive).length < 2;
 
     return (
       <div className="container test-UserListView">
@@ -226,7 +252,13 @@ class UserListView extends React.PureComponent<Props, State> {
             Grant Admin Rights
           </Button>
         ) : null}
-        <InviteUsersPopover organizationName={this.props.activeUser.organization}>
+        <InviteUsersPopover
+          organizationName={this.props.activeUser.organization}
+          visible={this.state.isInvitePopoverVisible}
+          handleVisibleChange={visible => {
+            this.setState({ isInvitePopoverVisible: visible });
+          }}
+        >
           <Button icon="user-add" style={marginRight}>
             Invite Users
           </Button>
@@ -238,6 +270,8 @@ class UserListView extends React.PureComponent<Props, State> {
           onChange={this.handleSearch}
           value={this.state.searchQuery}
         />
+
+        {lessThanOneActiveUser ? this.renderPlaceholder() : null}
 
         <Spin size="large" spinning={this.state.isLoading}>
           <Table

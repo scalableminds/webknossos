@@ -10,7 +10,7 @@
 * [Sharing](./sharing.md)
 
 ## Documentation
-* [Supported Data Formats](./faq.md)
+* [Supported Data Formats](./data_formats.md)
 * [FAQ](./faq.md)
 * [Changelog](../CHANGELOG.md)
 * [Migration Guide](../MIGRATIONS.md)

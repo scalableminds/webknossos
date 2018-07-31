@@ -13,11 +13,15 @@ UPDATE webknossos.annotations SET tracing_id = skeletonTracingId WHERE skeletonT
 UPDATE webknossos.annotations SET tracing_id = volumeTracingId WHERE volumeTracingId IS NOT NULL;
 UPDATE webknossos.annotations SET tracing_typ = 'skeleton' WHERE skeletonTracingId IS NOT NULL;
 UPDATE webknossos.annotations SET tracing_typ = 'volume' WHERE volumeTracingId IS NOT NULL;
-ALTER TABLE webknossos.annotations DROP COLUMN skeletonTracingId;
-ALTER TABLE webknossos.annotations DROP COLUMN volumeTracingId;
+ALTER TABLE webknossos.annotations DROP COLUMN skeletonTracingId; --cascades to index
+ALTER TABLE webknossos.annotations DROP COLUMN volumeTracingId; --cascades to index
 ALTER TABLE webknossos.annotations ALTER COLUMN tracing_id SET NOT NULL;
 ALTER TABLE webknossos.annotations ALTER COLUMN tracing_typ SET NOT NULL;
 CREATE VIEW webknossos.annotations_ AS SELECT * FROM webknossos.annotations WHERE NOT isDeleted;
+
+CREATE INDEX ON webknossos.annotations(tracing_id);
+
+SET session_replication_role = DEFAULT;
 
 UPDATE webknossos.releaseInformation SET schemaVersion = 17;
 

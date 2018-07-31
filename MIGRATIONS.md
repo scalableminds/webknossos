@@ -6,7 +6,7 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 
 ## Unreleased
 ### Postgres Evolutions:
-- 
+-
 
 ## [18.08.0](https://github.com/scalableminds/webknossos/releases/tag/18.08.0) - 2018-07-23
 ### Postgres Evolutions:
@@ -17,6 +17,7 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 - [016-add-schema-version.sql](conf/evolutions/016-add-schema-version.sql)
 - [017-add-organization-email.sql](conf/evolutions/017-add-organization-email.sql)
 - Add email addresses for notifications about new users and about task overtime to the `webknossos.organizations` entries in the Postgres database (previously in `application.conf` > `braintracing.newuserlist` and `braintracing.overTimeList`)
+- [018-hybrid-annotations.sql](conf/evolutions/018-hybrid-annotations.sql)
 
 ## [18.07.0](https://github.com/scalableminds/webknossos/releases/tag/18.07.0) - 2018-07-05
 First release

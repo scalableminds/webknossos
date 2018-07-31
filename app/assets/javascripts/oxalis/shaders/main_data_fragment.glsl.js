@@ -138,21 +138,25 @@ void main() {
   vec3 bucketPosition = div(floor(coords), bucketWidth);
   vec3 offsetInBucket = mod(floor(coords), bucketWidth);
 
-  float fallbackZoomStep = min(<%= colorLayerNames[0]%>_maxZoomStep, zoomStep + 1.0);
-  bool hasFallback = fallbackZoomStep > zoomStep;
-  vec3 fallbackCoords = floor(getRelativeCoords(worldCoordUVW, fallbackZoomStep));
-
   <% if (hasSegmentation) { %>
-    vec4 id = getSegmentationId(coords, fallbackCoords, hasFallback);
+    float segmentationFallbackZoomStep = min(<%= segmentationName %>_maxZoomStep, zoomStep + 1.0);
+    bool segmentationHasFallback = segmentationFallbackZoomStep > zoomStep;
+    vec3 segmentationFallbackCoords = floor(getRelativeCoords(worldCoordUVW, segmentationFallbackZoomStep));
+
+    vec4 id = getSegmentationId(coords, segmentationFallbackCoords, segmentationHasFallback);
 
     vec3 flooredMousePosUVW = transDim(floor(globalMousePosition));
     vec3 mousePosCoords = getRelativeCoords(flooredMousePosUVW, zoomStep);
 
-    vec4 cellIdUnderMouse = getSegmentationId(mousePosCoords, fallbackCoords, false);
+    vec4 cellIdUnderMouse = getSegmentationId(mousePosCoords, segmentationFallbackCoords, false);
   <% } %>
 
   // Get Color Value(s)
   <% if (isRgb) { %>
+
+    float fallbackZoomStep = min(<%= colorLayerNames[0]%>_maxZoomStep, zoomStep + 1.0);
+    bool hasFallback = fallbackZoomStep > zoomStep;
+    vec3 fallbackCoords = floor(getRelativeCoords(worldCoordUVW, fallbackZoomStep));
     vec3 data_color =
       getMaybeFilteredColorOrFallback(
         <%= colorLayerNames[0] %>_lookup_texture,
@@ -169,7 +173,14 @@ void main() {
     data_color = (data_color + <%= colorLayerNames[0] %>_brightness - 0.5) * <%= colorLayerNames[0] %>_contrast + 0.5;
   <% } else { %>
     vec3 data_color = vec3(0.0, 0.0, 0.0);
+    float fallbackZoomStep;
+    bool hasFallback;
+    vec3 fallbackCoords;
     <% _.each(colorLayerNames, function(name, layerIndex){ %>
+
+      fallbackZoomStep = min(<%= name %>_maxZoomStep, zoomStep + 1.0);
+      hasFallback = fallbackZoomStep > zoomStep;
+      fallbackCoords = floor(getRelativeCoords(worldCoordUVW, fallbackZoomStep));
       // Get grayscale value for <%= name %>
       color_value =
         getMaybeFilteredColorOrFallback(

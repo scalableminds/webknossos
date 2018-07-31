@@ -30,6 +30,7 @@ import type {
   TreeMapType,
   CommentType,
   TreeGroupType,
+  RestrictionsAndSettingsType,
 } from "oxalis/store";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
@@ -94,8 +95,9 @@ export function createNode(
   viewport: number,
   resolution: number,
   timestamp: number,
+  restrictions: RestrictionsAndSettingsType,
 ): Maybe<[NodeType, EdgeCollection]> {
-  const { allowUpdate } = skeletonTracing.restrictions;
+  const { allowUpdate } = restrictions;
   const activeNodeMaybe = getActiveNodeFromTree(skeletonTracing, tree);
 
   if (allowUpdate) {
@@ -140,9 +142,10 @@ export function deleteNode(
   tree: TreeType,
   node: NodeType,
   timestamp: number,
+  restrictions: RestrictionsAndSettingsType,
 ): Maybe<[TreeMapType, number, ?number, number]> {
   return getSkeletonTracing(state.tracing).chain(skeletonTracing => {
-    const { allowUpdate } = skeletonTracing.restrictions;
+    const { allowUpdate } = restrictions;
 
     if (allowUpdate) {
       // Delete node and possible branchpoints/comments
@@ -197,9 +200,10 @@ export function deleteEdge(
   targetTree: TreeType,
   targetNode: NodeType,
   timestamp: number,
+  restrictions: RestrictionsAndSettingsType,
 ): Maybe<TreeMapType> {
   return getSkeletonTracing(state.tracing).chain(skeletonTracing => {
-    const { allowUpdate } = skeletonTracing.restrictions;
+    const { allowUpdate } = restrictions;
 
     if (allowUpdate) {
       if (sourceTree.treeId !== targetTree.treeId) {
@@ -367,8 +371,9 @@ export function createBranchPoint(
   tree: TreeType,
   node: NodeType,
   timestamp: number,
+  restrictions: RestrictionsAndSettingsType,
 ): Maybe<BranchPointType> {
-  const { branchPointsAllowed, allowUpdate } = skeletonTracing.restrictions;
+  const { branchPointsAllowed, allowUpdate } = restrictions;
 
   if (branchPointsAllowed && allowUpdate) {
     const doesBranchPointExistAlready = _.some(
@@ -389,8 +394,9 @@ export function createBranchPoint(
 
 export function deleteBranchPoint(
   skeletonTracing: SkeletonTracingType,
+  restrictions: RestrictionsAndSettingsType,
 ): Maybe<[Array<BranchPointType>, number, number]> {
-  const { branchPointsAllowed, allowUpdate } = skeletonTracing.restrictions;
+  const { branchPointsAllowed, allowUpdate } = restrictions;
   const { trees } = skeletonTracing;
   const hasBranchPoints = _.some(_.map(trees, __ => !_.isEmpty(__.branchPoints)));
 
@@ -446,9 +452,10 @@ export function addTreesAndGroups(
   state: OxalisState,
   trees: TreeMapType,
   treeGroups: Array<TreeGroupType>,
+  restrictions: RestrictionsAndSettingsType,
 ): Maybe<[TreeMapType, Array<TreeGroupType>, number]> {
   return getSkeletonTracing(state.tracing).chain(skeletonTracing => {
-    const { allowUpdate } = skeletonTracing.restrictions;
+    const { allowUpdate } = restrictions;
 
     if (allowUpdate) {
       // Check whether any group ids collide and assign new ids when neccessary
@@ -524,9 +531,10 @@ export function deleteTree(
   state: OxalisState,
   tree: TreeType,
   timestamp: number,
+  restrictions: RestrictionsAndSettingsType,
 ): Maybe<[TreeMapType, number, ?number, number]> {
   return getSkeletonTracing(state.tracing).chain(skeletonTracing => {
-    const { allowUpdate } = skeletonTracing.restrictions;
+    const { allowUpdate } = restrictions;
 
     if (allowUpdate) {
       // Delete tree
@@ -561,8 +569,9 @@ export function mergeTrees(
   skeletonTracing: SkeletonTracingType,
   sourceNodeId: number,
   targetNodeId: number,
+  restrictions: RestrictionsAndSettingsType,
 ): Maybe<[TreeType, number, number]> {
-  const { allowUpdate } = skeletonTracing.restrictions;
+  const { allowUpdate } = restrictions;
   const { trees } = skeletonTracing;
   const sourceTree = findTreeByNodeId(trees, sourceNodeId).get();
   const targetTree = findTreeByNodeId(trees, targetNodeId).get(); // should be activeTree
@@ -610,8 +619,9 @@ export function createComment(
   tree: TreeType,
   node: NodeType,
   commentText: string,
+  restrictions: RestrictionsAndSettingsType,
 ): Maybe<Array<CommentType>> {
-  const { allowUpdate } = skeletonTracing.restrictions;
+  const { allowUpdate } = restrictions;
 
   if (allowUpdate) {
     // Gather all comments other than the activeNode's comments
@@ -634,8 +644,9 @@ export function deleteComment(
   skeletonTracing: SkeletonTracingType,
   tree: TreeType,
   node: NodeType,
+  restrictions: RestrictionsAndSettingsType,
 ): Maybe<Array<CommentType>> {
-  const { allowUpdate } = skeletonTracing.restrictions;
+  const { allowUpdate } = restrictions;
 
   if (allowUpdate) {
     const comments = tree.comments;

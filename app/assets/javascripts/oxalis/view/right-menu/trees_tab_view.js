@@ -32,7 +32,7 @@ import Utils from "libs/utils";
 import { saveAs } from "file-saver";
 import { getBuildInfo } from "admin/admin_rest_api";
 import type { Dispatch } from "redux";
-import type { OxalisState, SkeletonTracingType, UserConfigurationType } from "oxalis/store";
+import type { OxalisState, TracingType, SkeletonTracingType, UserConfigurationType } from "oxalis/store";
 import TreeSearchPopover from "./tree_search_popover";
 
 const ButtonGroup = Button.Group;
@@ -47,6 +47,7 @@ type Props = {
   onCreateTree: () => void,
   onDeleteTree: () => void,
   onChangeTreeName: string => void,
+  annotation: TracingType,
   skeletonTracing: SkeletonTracingType,
   userConfiguration: UserConfigurationType,
   onSetActiveTree: number => void,
@@ -95,7 +96,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     // Wait 1 second for the Modal to render
     const [buildInfo] = await Promise.all([getBuildInfo(), Utils.sleep(1000)]);
     const state = Store.getState();
-    const nml = serializeToNml(state, this.props.skeletonTracing, buildInfo);
+    const nml = serializeToNml(state, this.props.annotation, this.props.skeletonTracing, buildInfo);
     this.setState({ isDownloading: false });
 
     const blob = new Blob([nml], { type: "text/plain;charset=utf-8" });
@@ -244,6 +245,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
 }
 
 const mapStateToProps = (state: OxalisState) => ({
+  annotation: state.tracing,
   skeletonTracing: enforceSkeletonTracing(state.tracing),
   userConfiguration: state.userConfiguration,
 });

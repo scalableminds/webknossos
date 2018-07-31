@@ -31,7 +31,6 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
       // and cannot compute it
       const maxCellId = action.tracing.largestSegmentId;
       const volumeTracing: VolumeTracingType = {
-        ...annotationInfo,
         createdTimestamp: action.tracing.createdTimestamp,
         type: "volume",
         activeCellId: 0,

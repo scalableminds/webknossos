@@ -392,7 +392,7 @@ function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Generator<*,
   yield take("WK_READY");
   const allowUpdate = yield select(
     (state: OxalisState) =>
-      state.tracing[tracingType] && state.tracing[tracingType].restrictions.allowUpdate,
+      state.tracing[tracingType] && state.tracing.restrictions.allowUpdate,
   );
   if (!allowUpdate) return;
 

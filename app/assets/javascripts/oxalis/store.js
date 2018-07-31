@@ -153,8 +153,6 @@ type TracingBaseType = {|
 
 export type SkeletonTracingType = {|
   ...TracingBaseType,
-  // todo: let's pretend the annotation is there also,
-  ...AnnotationType,
   +type: "skeleton",
   +trees: TreeMapType,
   +treeGroups: Array<TreeGroupType>,
@@ -165,8 +163,6 @@ export type SkeletonTracingType = {|
 
 export type VolumeTracingType = {|
   ...TracingBaseType,
-  // todo: let's pretend the annotation is there also,
-  ...AnnotationType,
   +type: "volume",
   +maxCellId: number,
   +activeTool: VolumeToolType,

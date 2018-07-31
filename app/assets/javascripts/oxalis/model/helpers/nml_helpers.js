@@ -2,7 +2,6 @@
 
 import _ from "lodash";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
-import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import messages from "messages";
 import Saxophone from "@scalableminds/saxophone";
 import Store from "oxalis/store";
@@ -13,6 +12,7 @@ import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reduce
 import type {
   OxalisState,
   SkeletonTracingType,
+  TracingType,
   NodeMapType,
   TreeType,
   TreeMapType,
@@ -85,6 +85,7 @@ export function getNmlName(state: OxalisState): string {
 
 export function serializeToNml(
   state: OxalisState,
+  annotation: TracingType,
   tracing: SkeletonTracingType,
   buildInfo: APIBuildInfoType,
 ): string {
@@ -97,8 +98,8 @@ export function serializeToNml(
     "<things>",
     ...indent(
       _.concat(
-        serializeMetaInformation(state, tracing, buildInfo),
-        serializeParameters(state, tracing),
+        serializeMetaInformation(state, annotation, tracing, buildInfo),
+        serializeParameters(state, annotation, tracing),
         serializeTrees(visibleTrees),
         serializeBranchPoints(visibleTrees),
         serializeComments(visibleTrees),
@@ -113,6 +114,7 @@ export function serializeToNml(
 
 function serializeMetaInformation(
   state: OxalisState,
+  annotation: TracingType,
   tracing: SkeletonTracingType,
   buildInfo: APIBuildInfoType,
 ): Array<string> {
@@ -131,7 +133,7 @@ function serializeMetaInformation(
     }),
     serializeTag("meta", {
       name: "annotationId",
-      content: tracing.annotationId,
+      content: annotation.annotationId,
     }),
     state.activeUser != null
       ? serializeTag("meta", {
@@ -160,6 +162,7 @@ function serializeBoundingBox(bb: ?BoundingBoxType, name: string): string {
 
 function serializeParameters(
   state: OxalisState,
+  annotation: TracingType,
   skeletonTracing: SkeletonTracingType,
 ): Array<string> {
   const editPosition = getPosition(state.flycam).map(Math.round);
@@ -172,7 +175,7 @@ function serializeParameters(
       _.compact([
         serializeTag("experiment", {
           name: state.dataset.name,
-          description: skeletonTracing.description,
+          description: annotation.description,
         }),
         serializeTag("scale", {
           x: state.dataset.dataSource.scale[0],

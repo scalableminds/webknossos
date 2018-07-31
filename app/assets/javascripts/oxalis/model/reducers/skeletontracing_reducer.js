@@ -41,7 +41,6 @@ import type {
   NodeType,
   BranchPointType,
   TreeType,
-  AnnotationType,
 } from "oxalis/store";
 import DiffableMap from "libs/diffable_map";
 import type { ActionType } from "oxalis/model/actions/actions";
@@ -71,6 +70,7 @@ function serverBranchPointToBranchPoint(b: ServerBranchPointType): BranchPointTy
 }
 
 function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisState {
+  const {restrictions} = state.tracing;
   switch (action.type) {
     case "INITIALIZE_SKELETONTRACING": {
       const trees = _.keyBy(
@@ -131,7 +131,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
       const annotationInfo = convertServerAnnotationToFrontendAnnotation(action.annotation);
 
       const skeletonTracing: SkeletonTracingType = {
-        ...annotationInfo,
+        // ...annotationInfo, // todo: remove completely
         createdTimestamp: action.tracing.createdTimestamp,
         type: "skeleton",
         activeNodeId,
@@ -176,6 +176,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
                 viewport,
                 resolution,
                 timestamp,
+                restrictions
               ).map(([node, edges]) => {
                 const diffableNodeMap = skeletonTracing.trees[tree.treeId].nodes;
                 const newDiffableMap = diffableNodeMap.set(node.id, node);
@@ -202,7 +203,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         case "DELETE_NODE": {
           const { timestamp, nodeId, treeId } = action;
           return getNodeAndTree(skeletonTracing, nodeId, treeId)
-            .chain(([tree, node]) => deleteNode(state, tree, node, timestamp))
+            .chain(([tree, node]) => deleteNode(state, tree, node, timestamp, restrictions))
             .map(([trees, newActiveTreeId, newActiveNodeId, newMaxNodeId]) =>
               update(state, {
                 tracing: {
@@ -230,7 +231,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
           return sourceTreeMaybe
             .chain(([sourceTree, sourceNode]) =>
               targetTreeMaybe.chain(([targetTree, targetNode]) =>
-                deleteEdge(state, sourceTree, sourceNode, targetTree, targetNode, timestamp),
+                deleteEdge(state, sourceTree, sourceNode, targetTree, targetNode, timestamp, restrictions),
               ),
             )
             .map(trees =>
@@ -292,7 +293,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
           const { timestamp, nodeId, treeId } = action;
           return getNodeAndTree(skeletonTracing, nodeId, treeId)
             .chain(([tree, node]) =>
-              createBranchPoint(skeletonTracing, tree, node, timestamp).map(branchPoint =>
+              createBranchPoint(skeletonTracing, tree, node, timestamp, restrictions).map(branchPoint =>
                 update(state, {
                   tracing: {
                     skeleton: {
@@ -306,7 +307,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         }
 
         case "DELETE_BRANCHPOINT": {
-          return deleteBranchPoint(skeletonTracing)
+          return deleteBranchPoint(skeletonTracing, restrictions)
             .map(([branchPoints, treeId, newActiveNodeId]) =>
               update(state, {
                 tracing: {
@@ -340,7 +341,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
 
         case "ADD_TREES_AND_GROUPS": {
           const { trees, treeGroups } = action;
-          return addTreesAndGroups(state, trees, treeGroups)
+          return addTreesAndGroups(state, trees, treeGroups, restrictions)
             .map(([updatedTrees, updatedTreeGroups, newMaxNodeId]) =>
               update(state, {
                 tracing: {
@@ -358,7 +359,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         case "DELETE_TREE": {
           const { timestamp, treeId } = action;
           return getTree(skeletonTracing, treeId)
-            .chain(tree => deleteTree(state, tree, timestamp))
+            .chain(tree => deleteTree(state, tree, timestamp, restrictions))
             .map(([trees, newActiveTreeId, newActiveNodeId, newMaxNodeId]) =>
               update(state, {
                 tracing: {
@@ -395,7 +396,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
 
         case "MERGE_TREES": {
           const { sourceNodeId, targetNodeId } = action;
-          return mergeTrees(skeletonTracing, sourceNodeId, targetNodeId)
+          return mergeTrees(skeletonTracing, sourceNodeId, targetNodeId, restrictions)
             .map(([trees, newActiveTreeId, newActiveNodeId]) =>
               update(state, {
                 tracing: {
@@ -484,7 +485,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
           const { commentText, nodeId, treeId } = action;
           return getNodeAndTree(skeletonTracing, nodeId, treeId)
             .chain(([tree, node]) =>
-              createComment(skeletonTracing, tree, node, commentText).map(comments =>
+              createComment(skeletonTracing, tree, node, commentText, restrictions).map(comments =>
                 update(state, {
                   tracing: {
                     skeleton: {
@@ -500,7 +501,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         case "DELETE_COMMENT": {
           return getNodeAndTree(skeletonTracing, action.nodeId, action.treeId)
             .chain(([tree, node]) =>
-              deleteComment(skeletonTracing, tree, node).map(comments =>
+              deleteComment(skeletonTracing, tree, node, restrictions).map(comments =>
                 update(state, {
                   tracing: {
                     skeleton: {

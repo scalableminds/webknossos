@@ -41,7 +41,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       _ <- restrictions.allowAccess(request.identity) ?~> "notAllowed" ~> BAD_REQUEST
       js <- annotation.publicWrites(request.identity, Some(restrictions), Some(readOnly)) ?~> "could not convert annotation to json"
       _ <- Fox.runOptional(request.identity) { user =>
-        if (typ == AnnotationTypeSQL.Task || typ == AnnotationTypeSQL.Explorational) {
+        if (typ == AnnotationType.Task || typ == AnnotationType.Explorational) {
           TimeSpanService.logUserInteraction(user, annotation) // log time when a user starts working
         } else Fox.successful(())
       }
@@ -208,7 +208,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   def cancel(typ: String, id: String) = SecuredAction.async { implicit request =>
     def tryToCancel(annotation: Annotation) = {
       annotation match {
-        case t if t.typ == AnnotationTypeSQL.Task =>
+        case t if t.typ == AnnotationType.Task =>
           annotation.muta.cancel.map { _ =>
             JsonOk(Messages("task.finished"))
           }
@@ -259,7 +259,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       dataStoreHandler <- dataSet.dataStoreHandler
       newTracingReference <- dataStoreHandler.duplicateSkeletonTracing(oldTracingReference) ?~> "Failed to create skeleton tracing."
       clonedAnnotation <- AnnotationService.createFrom(
-        user, dataSet, newTracingReference, AnnotationTypeSQL.Explorational, None, annotation.description) ?~> Messages("annotation.create.failed")
+        user, dataSet, newTracingReference, AnnotationType.Explorational, None, annotation.description) ?~> Messages("annotation.create.failed")
     } yield clonedAnnotation
   }
 }

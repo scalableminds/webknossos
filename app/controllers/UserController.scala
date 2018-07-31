@@ -4,7 +4,7 @@ import javax.inject.Inject
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.{AnnotationDAO, AnnotationTypeSQL}
+import models.annotation.{AnnotationDAO, AnnotationType}
 import models.team._
 import models.user._
 import models.user.time._
@@ -45,7 +45,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
 
   def annotations(isFinished: Option[Boolean], limit: Option[Int]) = SecuredAction.async { implicit request =>
     for {
-      annotations <- AnnotationDAO.findAllFor(request.identity._id, isFinished, AnnotationTypeSQL.Explorational, limit.getOrElse(defaultAnnotationLimit))
+      annotations <- AnnotationDAO.findAllFor(request.identity._id, isFinished, AnnotationType.Explorational, limit.getOrElse(defaultAnnotationLimit))
       jsonList <- Fox.serialCombined(annotations)(_.publicWrites(Some(request.identity)))
     } yield {
       Ok(Json.toJson(jsonList))
@@ -54,7 +54,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
 
   def tasks(isFinished: Option[Boolean], limit: Option[Int]) = SecuredAction.async { implicit request =>
     for {
-      annotations <- AnnotationDAO.findAllFor(request.identity._id, isFinished, AnnotationTypeSQL.Task, limit.getOrElse(defaultAnnotationLimit))
+      annotations <- AnnotationDAO.findAllFor(request.identity._id, isFinished, AnnotationType.Task, limit.getOrElse(defaultAnnotationLimit))
       jsonList <- Fox.serialCombined(annotations)(_.publicWrites(Some(request.identity)))
     } yield {
       Ok(Json.toJson(jsonList))
@@ -113,7 +113,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
       userIdValidated <- ObjectId.parse(userId)
       user <- UserDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
       _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
-      annotations <- AnnotationDAO.findAllFor(userIdValidated, isFinished, AnnotationTypeSQL.Explorational, limit.getOrElse(defaultAnnotationLimit))
+      annotations <- AnnotationDAO.findAllFor(userIdValidated, isFinished, AnnotationType.Explorational, limit.getOrElse(defaultAnnotationLimit))
       jsonList <- Fox.serialCombined(annotations)(_.publicWrites(Some(request.identity)))
     } yield {
       Ok(Json.toJson(jsonList))
@@ -125,7 +125,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
       userIdValidated <- ObjectId.parse(userId)
       user <- UserDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
       _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
-      annotations <- AnnotationDAO.findAllFor(userIdValidated, isFinished, AnnotationTypeSQL.Task, limit.getOrElse(defaultAnnotationLimit))
+      annotations <- AnnotationDAO.findAllFor(userIdValidated, isFinished, AnnotationType.Task, limit.getOrElse(defaultAnnotationLimit))
       jsonList <- Fox.serialCombined(annotations)(_.publicWrites(Some(request.identity)))
     } yield {
       Ok(Json.toJson(jsonList))

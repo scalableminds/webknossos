@@ -85,6 +85,7 @@ export const annotation: APIAnnotationType = {
   tracingTime: null,
   tags: ["ROI2017_wkw", "skeleton"],
   user: {
+    created: 12345678,
     id: "5b1e45faa00000a900abc2c5",
     email: "scmboy@scalableminds.com",
     firstName: "SCM",

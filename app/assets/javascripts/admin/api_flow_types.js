@@ -98,6 +98,7 @@ export type APITeamMembershipType = {
 export type ExperienceMapType = { +[string]: number };
 
 export type APIUserBaseType = {
+  +created: number,
   +email: string,
   +firstName: string,
   +lastName: string,

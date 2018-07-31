@@ -263,8 +263,13 @@ export type ProgressInfoType = {
   +totalActionCount: number,
 };
 
+export type IsBusyInfoType = {
+  +skeleton: boolean,
+  +volume: boolean,
+};
+
 export type SaveStateType = {
-  +isBusy: boolean,
+  +isBusyInfo: IsBusyInfoType,
   +queue: {
     +skeleton: Array<SaveQueueEntryType>,
     +volume: Array<SaveQueueEntryType>,
@@ -445,7 +450,10 @@ export const defaultState: OxalisState = {
       skeleton: [],
       volume: [],
     },
-    isBusy: false,
+    isBusyInfo: {
+      skeleton: false,
+      volume: false,
+    },
     lastSaveTimestamp: 0,
     progressInfo: {
       processedActionCount: 0,

@@ -21,8 +21,12 @@ type ShiftSaveQueueActionType = {
   tracingType: TracingType,
 };
 type DiscardSaveQueuesActionType = { type: "DISCARD_SAVE_QUEUES" };
-type SetSaveBusyActionType = { type: "SET_SAVE_BUSY", isBusy: boolean };
-type SetLastSaveTimestampActionType = { type: "SET_LAST_SAVE_TIMESTAMP", timestamp: number };
+type SetSaveBusyActionType = { type: "SET_SAVE_BUSY", isBusy: boolean, tracingType: TracingType };
+type SetLastSaveTimestampActionType = {
+  type: "SET_LAST_SAVE_TIMESTAMP",
+  timestamp: number,
+  tracingType: TracingType,
+};
 type SetVersionNumberActionType = {
   type: "SET_VERSION_NUMBER",
   version: number,
@@ -67,17 +71,23 @@ export const discardSaveQueuesAction = (): DiscardSaveQueuesActionType => ({
   type: "DISCARD_SAVE_QUEUES",
 });
 
-export const setSaveBusyAction = (isBusy: boolean): SetSaveBusyActionType => ({
+export const setSaveBusyAction = (
+  isBusy: boolean,
+  tracingType: TracingType,
+): SetSaveBusyActionType => ({
   type: "SET_SAVE_BUSY",
   isBusy,
+  tracingType,
 });
 
 export const setLastSaveTimestampAction = (
   timestamp: number = Date.now(),
+  tracingType: TracingType,
 ): SetLastSaveTimestampActionType => ({
   // todo: this should depend on the tracingType, as well
   type: "SET_LAST_SAVE_TIMESTAMP",
   timestamp,
+  tracingType,
 });
 
 export const setVersionNumberAction = (

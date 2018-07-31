@@ -91,7 +91,7 @@ export function* pushTracingTypeAsync(tracingType: "skeleton" | "volume"): Gener
   yield take(
     tracingType === "skeleton" ? "INITIALIZE_SKELETONTRACING" : "INITIALIZE_VOLUMETRACING",
   );
-  yield put(setLastSaveTimestampAction());
+  yield put(setLastSaveTimestampAction(undefined, tracingType));
   while (true) {
     let saveQueue;
     // Check whether the save queue is actually empty, the PUSH_SAVE_QUEUE action
@@ -99,7 +99,7 @@ export function* pushTracingTypeAsync(tracingType: "skeleton" | "volume"): Gener
 
     saveQueue = yield select((state: OxalisState) => state.save.queue[tracingType]);
     if (saveQueue.length === 0) {
-      yield put(setSaveBusyAction(false));
+      yield put(setSaveBusyAction(false, tracingType));
       // Save queue is empty, wait for push event
       yield take("PUSH_SAVE_QUEUE");
     }
@@ -107,7 +107,7 @@ export function* pushTracingTypeAsync(tracingType: "skeleton" | "volume"): Gener
       timeout: call(delay, PUSH_THROTTLE_TIME),
       forcePush: take("SAVE_NOW"),
     });
-    yield put(setSaveBusyAction(true));
+    yield put(setSaveBusyAction(true, tracingType));
     saveQueue = yield select((state: OxalisState) => state.save.queue[tracingType]);
     if (saveQueue.length > 0) {
       yield call(sendRequestToServer, tracingType);
@@ -167,7 +167,7 @@ export function* sendRequestToServer(
       },
     );
     yield put(setVersionNumberAction(version + compactedSaveQueue.length, tracingType));
-    yield put(setLastSaveTimestampAction());
+    yield put(setLastSaveTimestampAction(undefined, tracingType));
     yield put(shiftSaveQueueAction(saveQueue.length, tracingType));
     yield call(toggleErrorHighlighting, false);
   } catch (error) {

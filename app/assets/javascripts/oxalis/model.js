@@ -14,6 +14,7 @@ import type { ControlModeType } from "oxalis/constants";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
+import { isBusy } from "oxalis/model/accessors/save_accessor";
 import { initialize } from "./model_initialization";
 
 // TODO: Non-reactive
@@ -90,7 +91,8 @@ export class OxalisModel {
   stateSaved() {
     const state = Store.getState();
     const storeStateSaved =
-      !state.save.isBusy && state.save.queue.skeleton.length + state.save.queue.volume.length === 0;
+      !isBusy(state.save.isBusyInfo) &&
+      state.save.queue.skeleton.length + state.save.queue.volume.length === 0;
     const pushQueuesSaved = _.reduce(
       this.dataLayers,
       (saved, dataLayer) => saved && dataLayer.pushQueue.stateSaved(),

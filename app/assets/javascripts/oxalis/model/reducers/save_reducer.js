@@ -84,13 +84,13 @@ function SaveReducer(state: OxalisState, action: ActionType): OxalisState {
 
     case "SET_SAVE_BUSY": {
       return update(state, {
-        save: { isBusy: { $set: action.isBusy } },
+        save: { isBusyInfo: { [action.tracingType]: { $set: action.isBusy } } },
       });
     }
 
     case "SET_LAST_SAVE_TIMESTAMP": {
       return update(state, {
-        save: { lastSaveTimestamp: { $set: action.timestamp } },
+        save: { lastSaveTimestamp: { [action.tracingType]: { $set: action.timestamp } } },
       });
     }
 

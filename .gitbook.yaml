@@ -1,8 +1,5 @@
 root: ./docs/
 structure:
-  readme: ../README.md
-
-redirects:
-  changelog: ../CHANGELOG.md
-  migrations: ../MIGRATIONS.md
+  readme: README.md
+  summary: index.md
 

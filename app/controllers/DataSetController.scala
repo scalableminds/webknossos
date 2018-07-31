@@ -126,7 +126,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
 
   def importDataSet(dataSetName: String) = SecuredAction.async { implicit request =>
     for {
-      _ <- DataSetService.isProperDataSetName(dataSetName) ?~> Messages("dataSet.import.impossible.name")
+      _ <- bool2Fox(DataSetService.isProperDataSetName(dataSetName)) ?~> Messages("dataSet.import.impossible.name")
       dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
       result <- DataSetService.importDataSet(dataSet)
     } yield {

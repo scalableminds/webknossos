@@ -88,7 +88,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
       _ <- restrictions.allowUpdate(request.identity) ?~> Messages("notAllowed")
-      _ <- annotation.isRevertPossible ?~> Messages("annotation.revert.toOld")
+      _ <- bool2Fox(annotation.isRevertPossible) ?~> Messages("annotation.revert.toOld")
       dataSet <- annotation.dataSet
       dataStoreHandler <- dataSet.dataStoreHandler
       newTracingReference <- dataStoreHandler.duplicateSkeletonTracing(annotation.tracing, Some(version.toString))
@@ -118,8 +118,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
     for {
       annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
-      isAllowed <- isReopenAllowed(request.identity, annotation)
-      _ <- isAllowed.toFox ?~> "reopen.notAllowed"
+      _ <- Fox.assertTrue(isReopenAllowed(request.identity, annotation)) ?~> "reopen.notAllowed"
       _ <- annotation.muta.reopen ?~> "annotation.invalid"
       updatedAnnotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       json <- updatedAnnotation.publicWrites(Some(request.identity))

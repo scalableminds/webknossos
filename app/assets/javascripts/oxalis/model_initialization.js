@@ -178,7 +178,6 @@ function validateSpecsForLayers(
 }
 
 function initializeTracing(annotation: APIAnnotationType, tracing: HybridServerTracingType) {
-  // TODO Hybrid: This function should only receive one (non-optional) annotation. However, the back-end currently does not support hybrid annotations.
   // This method is not called for the View mode
   const { dataset } = Store.getState();
 
@@ -351,7 +350,6 @@ function applyUrlState(urlState: UrlManagerState, tracing: ?HybridServerTracingT
   if (defaultPosition != null) {
     position = defaultPosition;
   }
-  // todo: use tracing.base for properties (maybe only pass that property in the first place)
   if (tracing != null) {
     position = Utils.point3ToVector3(getSomeServerTracing(tracing).editPosition);
   }

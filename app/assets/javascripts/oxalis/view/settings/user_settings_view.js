@@ -198,7 +198,6 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
   };
 
   getSkeletonOrVolumeOptions = () => {
-    const mode = this.props.viewMode;
     const isPublicViewMode = this.props.controlMode === ControlModeEnum.VIEW;
 
     if (isPublicViewMode) {

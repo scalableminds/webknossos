@@ -8,7 +8,7 @@ import Utils from "libs/utils";
 import Toast from "libs/toast";
 import messages from "messages";
 import Store from "oxalis/store";
-import { all, put, take, takeEvery, select, race } from "redux-saga/effects";
+import { fork, put, take, takeEvery, select, race } from "redux-saga/effects";
 import {
   deleteBranchPointAction,
   setTreeNameAction,
@@ -127,7 +127,7 @@ export function* watchSkeletonTracingAsync(): Generator<*, *, *> {
     ],
     centerActiveNode,
   );
-  yield all([watchBranchPointDeletion()]);
+  yield fork(watchBranchPointDeletion);
 }
 
 function* diffNodes(

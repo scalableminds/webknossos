@@ -1,7 +1,14 @@
 // @flow
 
-import type { Channel, Task } from 'redux-saga'
+import type { Channel, Task, Effect } from 'redux-saga'
+import {
+  all as typedAll,
+  race as typedRace,
+  take as typedTake,
+  call as typedCall,
+} from 'redux-saga/effects';
 import type { OxalisState } from "oxalis/store";
+import type { ActionType } from "oxalis/model/actions/actions";
 
 declare type Context = Object;
 
@@ -59,17 +66,6 @@ declare type CallFn =
   & (<T1, T2, T3, T4, T5, T6, R, Fn: Fn6<T1, T2, T3, T4, T5, T6, R>>(fn: Fn, t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6) => Generator<*, R, *>)
   & (<T, R, Fn: FnSpread<T, R>>(fn: Fn, ...args: Array<T>) => Generator<*, R, *>);
 
-  declare type _CallFn =
-    & ContextCallFn
-    & (<R, Fn: Fn0<R>>(fn: Fn) => Object)
-    & (<T1, R, Fn: Fn1<T1, R>>(fn: Fn, t1: T1) => Object)
-    & (<T1, T2, R, Fn: Fn2<T1, T2, R>>(fn: Fn, t1: T1, t2: T2) => Object)
-    & (<T1, T2, T3, R, Fn: Fn3<T1, T2, T3, R>>(fn: Fn, t1: T1, t2: T2, t3: T3) => Object)
-    & (<T1, T2, T3, T4, R, Fn: Fn4<T1, T2, T3, T4, R>>(fn: Fn, t1: T1, t2: T2, t3: T3, t4: T4) => Object)
-    & (<T1, T2, T3, T4, T5, R, Fn: Fn5<T1, T2, T3, T4, T5, R>>(fn: Fn, t1: T1, t2: T2, t3: T3, t4: T4, t5: T5) => Object)
-    & (<T1, T2, T3, T4, T5, T6, R, Fn: Fn6<T1, T2, T3, T4, T5, T6, R>>(fn: Fn, t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6) => Object)
-    & (<T, R, Fn: FnSpread<T, R>>(fn: Fn, ...args: Array<T>) => Generator<*, R, *>);
-
   /* ------------------ CPS Stuff ------------------ */
 
   declare type CallbackFn<R> = (error: any, ret: R) => void;
@@ -109,46 +105,53 @@ declare type CallFn =
   /* ------------------ FORK Stuff ------------------ */
 
   declare type ContextForkFn =
-    & (<R, C: Context, Fn: Fn0<R>>(cfn: [C, Fn], ...rest: Array<void>) => Generator<*, Task, *>)
-    & (<T1, R, C: Context, Fn: Fn1<T1, R>>(cfn: [C, Fn], t1: T1, ...rest: Array<void>) => Generator<*, Task, *>)
-    & (<T1, T2, R, C: Context, Fn: Fn2<T1, T2, R>>(cfn: [C, Fn], t1: T1, t2: T2, ...rest: Array<void>) => Generator<*, Task, *>)
-    & (<T1, T2, T3, R, C: Context, Fn: Fn3<T1, T2, T3, R>>(cfn: [C, Fn], t1: T1, t2: T2, t3: T3, ...rest: Array<void>) => Generator<*, Task, *>)
-    & (<T1, T2, T3, T4, R, C: Context, Fn: Fn4<T1, T2, T3, T4, R>>(cfn: [C, Fn], t1: T1, t2: T2, t3: T3, t4: T4, ...rest: Array<void>) => Generator<*, Task, *>)
-    & (<T1, T2, T3, T4, T5, R, C: Context, Fn: Fn5<T1, T2, T3, T4, T5, R>>(cfn: [C, Fn], t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, ...rest: Array<void>) => Generator<*, Task, *>)
-    & (<T1, T2, T3, T4, T5, T6, R, C: Context, Fn: Fn6<T1, T2, T3, T4, T5, T6, R>>(cfn: [C, Fn], t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6, ...rest: Array<void>) => Generator<*, Task, *>)
-    & (<T, R, C: Context, Fn: FnSpread<T, R>>(cfn: [C, Fn], t1: T, t2: T, t3: T, t4: T, t5: T, t6: T, ...args: Array<T>) => Generator<*, Task, *>);
+    & (<R, C: Context, Fn: Fn0<R>>(cfn: [C, Fn], ...rest: Array<void>) => Generator<*, Task<>, *>)
+    & (<T1, R, C: Context, Fn: Fn1<T1, R>>(cfn: [C, Fn], t1: T1, ...rest: Array<void>) => Generator<*, Task<>, *>)
+    & (<T1, T2, R, C: Context, Fn: Fn2<T1, T2, R>>(cfn: [C, Fn], t1: T1, t2: T2, ...rest: Array<void>) => Generator<*, Task<>, *>)
+    & (<T1, T2, T3, R, C: Context, Fn: Fn3<T1, T2, T3, R>>(cfn: [C, Fn], t1: T1, t2: T2, t3: T3, ...rest: Array<void>) => Generator<*, Task<>, *>)
+    & (<T1, T2, T3, T4, R, C: Context, Fn: Fn4<T1, T2, T3, T4, R>>(cfn: [C, Fn], t1: T1, t2: T2, t3: T3, t4: T4, ...rest: Array<void>) => Generator<*, Task<>, *>)
+    & (<T1, T2, T3, T4, T5, R, C: Context, Fn: Fn5<T1, T2, T3, T4, T5, R>>(cfn: [C, Fn], t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, ...rest: Array<void>) => Generator<*, Task<>, *>)
+    & (<T1, T2, T3, T4, T5, T6, R, C: Context, Fn: Fn6<T1, T2, T3, T4, T5, T6, R>>(cfn: [C, Fn], t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6, ...rest: Array<void>) => Generator<*, Task<>, *>)
+    & (<T, R, C: Context, Fn: FnSpread<T, R>>(cfn: [C, Fn], t1: T, t2: T, t3: T, t4: T, t5: T, t6: T, ...args: Array<T>) => Generator<*, Task<>, *>);
 
   declare type ForkFn =
     & ContextForkFn
-    & (<R, Fn: Fn0<R>>(fn: Fn) => Generator<*, Task, *>)
-    & (<T1, R, Fn: Fn1<T1, R>>(fn: Fn, t1: T1) => Generator<*, Task, *>)
-    & (<T1, T2, R, Fn: Fn2<T1, T2, R>>(fn: Fn, t1: T1, t2: T2) => Generator<*, Task, *>)
-    & (<T1, T2, T3, R, Fn: Fn3<T1, T2, T3, R>>(fn: Fn, t1: T1, t2: T2, t3: T3) => Generator<*, Task, *>)
-    & (<T1, T2, T3, T4, R, Fn: Fn4<T1, T2, T3, T4, R>>(fn: Fn, t1: T1, t2: T2, t3: T3, t4: T4) => Generator<*, Task, *>)
-    & (<T1, T2, T3, T4, T5, R, Fn: Fn5<T1, T2, T3, T4, T5, R>>(fn: Fn, t1: T1, t2: T2, t3: T3, t4: T4, t5: T5) => Generator<*, Task, *>)
-    & (<T1, T2, T3, T4, T5, T6, R, Fn: Fn6<T1, T2, T3, T4, T5, T6, R>>(fn: Fn, t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6) => Generator<*, Task, *>)
+    & (<R, Fn: Fn0<R>>(fn: Fn) => Generator<*, Task<>, *>)
+    & (<T1, R, Fn: Fn1<T1, R>>(fn: Fn, t1: T1) => Generator<*, Task<>, *>)
+    & (<T1, T2, R, Fn: Fn2<T1, T2, R>>(fn: Fn, t1: T1, t2: T2) => Generator<*, Task<>, *>)
+    & (<T1, T2, T3, R, Fn: Fn3<T1, T2, T3, R>>(fn: Fn, t1: T1, t2: T2, t3: T3) => Generator<*, Task<>, *>)
+    & (<T1, T2, T3, T4, R, Fn: Fn4<T1, T2, T3, T4, R>>(fn: Fn, t1: T1, t2: T2, t3: T3, t4: T4) => Generator<*, Task<>, *>)
+    & (<T1, T2, T3, T4, T5, R, Fn: Fn5<T1, T2, T3, T4, T5, R>>(fn: Fn, t1: T1, t2: T2, t3: T3, t4: T4, t5: T5) => Generator<*, Task<>, *>)
+    & (<T1, T2, T3, T4, T5, T6, R, Fn: Fn6<T1, T2, T3, T4, T5, T6, R>>(fn: Fn, t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6) => Generator<*, Task<>, *>)
     & (<T, R, Fn: FnSpread<T, R>>(fn: Fn, ...args: Array<T>) => Generator<*, R, *>);
 
 /* ------------------ Effects without return types ------------------ */
 
 declare type PutFn = {
-  <T: Object>(action: T): Generator<*, void, *>;
-  <T: Object>(channel: Channel, action: T): Generator<*, void, *>;
+  <T: ActionType>(action: T): Generator<*, void, *>;
+  <T: ActionType>(channel: Channel, action: T): Generator<*, void, *>;
 }
 
+type ExtractReturnType = <R>((...args: any) => R) => R;
+type ReturnType<Fn> = $Call<ExtractReturnType, Fn>
+
 declare type CancelledFn = () => Generator<*, bool, *>;
-declare type TakeDescriptor = any;
-declare type RaceDescriptor = any;
-declare type TakeFn = (...args: any) => Generator<*, TakeDescriptor, *>;
-declare type RaceFn = (...args: any) => Generator<*, RaceDescriptor, *>;
+declare type TakeFn = (...args: any) => Generator<*, ActionType, *>;
+declare type RaceFnTest = (...args: any) => Generator<*, ReturnType<typeof typedRace>, *>;
+
+declare type RaceFn = <R: { +[name: string]: Effect }>(effects: R) => Generator<*, {+[name: $Keys<R>]: ?ActionType}, *>;
+
 
 declare export var select : SelectFn;
 declare export var call : CallFn;
-declare export var _call : _CallFn;
 declare export var put : PutFn;
 declare export var cps : CpsFn;
 declare export var fork : ForkFn;
 declare export var cancelled : CancelledFn;
 declare export var take : TakeFn;
-declare export var _take : (...args: any) => TakeDescriptor;
 declare export var race : RaceFn;
+
+// untouched
+declare export var all : typeof typedAll;
+declare export var _take : typeof typedTake;
+declare export var _call : typeof typedCall;

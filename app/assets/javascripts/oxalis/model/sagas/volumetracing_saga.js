@@ -3,6 +3,7 @@
  * @flow
  */
 import { call, select, put, take, race, takeEvery, fork } from "redux-saga/effects";
+import type { Saga } from "redux-saga";
 import {
   updateDirectionAction,
   resetContourAction,
@@ -201,7 +202,7 @@ export function* finishLayer(
   yield put(resetContourAction());
 }
 
-export function* disallowVolumeTracingWarning(): Generator<*, *, *> {
+export function* disallowVolumeTracingWarning(): Saga<*> {
   while (true) {
     yield take(["SET_TOOL", "CYCLE_TOOL"]);
     if (yield select((state: OxalisState) => isVolumeTracingDisallowed(state))) {

@@ -2,7 +2,7 @@
 import { all, throttle, call, select, take } from "redux-saga/effects";
 import Request from "libs/request";
 
-function* pushUserSettingsAsync() {
+function* pushUserSettingsAsync(): Generator<*, *, *> {
   const activeUser = yield select(state => state.activeUser);
   if (activeUser == null) return;
 
@@ -10,7 +10,7 @@ function* pushUserSettingsAsync() {
   yield call(Request.sendJSONReceiveJSON, "/api/user/userConfiguration", { data: payload });
 }
 
-function* pushDatasetSettingsAsync() {
+function* pushDatasetSettingsAsync(): Generator<*, *, *> {
   const activeUser = yield select(state => state.activeUser);
   if (activeUser == null) return;
 

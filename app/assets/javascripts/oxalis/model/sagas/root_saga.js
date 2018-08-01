@@ -18,7 +18,7 @@ import {
   watchAnnotationAsync,
 } from "oxalis/model/sagas/annotation_saga";
 import { alert } from "libs/window";
-import { all, fork, take, cancel } from "redux-saga/effects";
+import { all, call, fork, take, cancel } from "redux-saga/effects";
 
 export default function* rootSaga(): Generator<*, *, *> {
   while (true) {
@@ -31,17 +31,17 @@ export default function* rootSaga(): Generator<*, *, *> {
 function* restartableSaga(): Generator<*, *, *> {
   try {
     yield all([
-      warnAboutSegmentationOpacity(),
-      watchPushSettingsAsync(),
-      watchSkeletonTracingAsync(),
-      collectUndoStates(),
-      saveTracingAsync(),
-      pushAnnotationAsync(),
-      editVolumeLayerAsync(),
-      disallowVolumeTracingWarning(),
-      watchVolumeTracingAsync(),
-      watchAnnotationAsync(),
-      watchDataRelevantChanges(),
+      call(warnAboutSegmentationOpacity),
+      call(watchPushSettingsAsync),
+      call(watchSkeletonTracingAsync),
+      call(collectUndoStates),
+      call(saveTracingAsync),
+      call(pushAnnotationAsync),
+      call(editVolumeLayerAsync),
+      call(disallowVolumeTracingWarning),
+      call(watchVolumeTracingAsync),
+      call(watchAnnotationAsync),
+      call(watchDataRelevantChanges),
     ]);
   } catch (err) {
     console.error(err);

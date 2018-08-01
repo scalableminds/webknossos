@@ -20,6 +20,7 @@ import {
   select,
 } from "oxalis/model/sagas/effect-generators";
 import { delay } from "redux-saga";
+import type { Saga } from "redux-saga";
 import {
   shiftSaveQueueAction,
   setSaveBusyAction,
@@ -51,7 +52,7 @@ const UNDO_HISTORY_SIZE = 100;
 export const maximumActionCountPerBatch = 5000;
 const maximumActionCountPerSave = 15000;
 
-export function* collectUndoStates(): Generator<*, *, *> {
+export function* collectUndoStates(): Saga<void> {
   const undoStack = [];
   const redoStack = [];
 
@@ -93,11 +94,11 @@ export function* collectUndoStates(): Generator<*, *, *> {
   }
 }
 
-export function* pushAnnotationAsync(): Generator<*, *, *> {
-  yield all([pushTracingTypeAsync("skeleton"), pushTracingTypeAsync("volume")]);
+export function* pushAnnotationAsync(): Saga<void> {
+  yield all([_call(pushTracingTypeAsync, "skeleton"), _call(pushTracingTypeAsync, "volume")]);
 }
 
-export function* pushTracingTypeAsync(tracingType: "skeleton" | "volume"): Generator<*, *, *> {
+export function* pushTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<void> {
   yield* take(
     tracingType === "skeleton" ? "INITIALIZE_SKELETONTRACING" : "INITIALIZE_VOLUMETRACING",
   );
@@ -154,7 +155,7 @@ function sliceAppropriateBatchCount(batches: Array<SaveQueueEntryType>): Array<S
 export function* sendRequestToServer(
   tracingType: "skeleton" | "volume",
   timestamp: number = Date.now(),
-): Generator<*, *, *> {
+): Saga<void> {
   const fullSaveQueue = yield* select(state => state.save.queue[tracingType]);
   const saveQueue = sliceAppropriateBatchCount(fullSaveQueue);
 
@@ -193,7 +194,7 @@ export function* sendRequestToServer(
       location.reload();
       return;
     }
-    yield delay(SAVE_RETRY_WAITING_TIME);
+    yield* call(delay, SAVE_RETRY_WAITING_TIME);
     yield* call(sendRequestToServer);
   }
 }
@@ -401,11 +402,11 @@ export function performDiffTracing(
   return actions;
 }
 
-export function* saveTracingAsync(): Generator<any, any, any> {
-  yield all([saveTracingTypeAsync("skeleton"), saveTracingTypeAsync("volume")]);
+export function* saveTracingAsync(): Saga<void> {
+  yield all([_call(saveTracingTypeAsync, "skeleton"), _call(saveTracingTypeAsync, "volume")]);
 }
 
-export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Generator<*, *, *> {
+export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<void> {
   yield* take(
     tracingType === "skeleton" ? "INITIALIZE_SKELETONTRACING" : "INITIALIZE_VOLUMETRACING",
   );

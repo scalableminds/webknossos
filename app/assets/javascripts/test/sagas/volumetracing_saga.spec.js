@@ -10,7 +10,7 @@ import mockRequire from "mock-require";
 import _ from "lodash";
 import { OrthoViews, VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
 import update from "immutability-helper";
-import { take, put, race, call } from "redux-saga/effects";
+import { take, put, call } from "redux-saga/effects";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
 import { pushSaveQueueAction } from "oxalis/model/actions/save_actions";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";

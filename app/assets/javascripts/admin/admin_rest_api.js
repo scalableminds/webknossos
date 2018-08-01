@@ -491,10 +491,6 @@ export function createExplorational(
   withFallback: boolean,
 ): Promise<APIAnnotationType> {
   const url = `/api/datasets/${datasetName}/createExplorational`;
-
-  // todo hybrid:
-  typ = "hybrid";
-
   return Request.sendJSONReceiveJSON(url, { data: { typ, withFallback } });
 }
 

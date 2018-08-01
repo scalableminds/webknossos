@@ -11,6 +11,7 @@ import React from "react";
 import { Provider } from "react-redux";
 import { Router } from "react-router-dom";
 import createBrowserHistory from "history/createBrowserHistory";
+import { load as loadFeatureToggles } from "features";
 
 // Those wrappers interfere with global.window and global.document otherwise
 mockRequire("libs/hammerjs_wrapper", {});
@@ -41,8 +42,10 @@ const { getActiveUser } = mockRequire.reRequire("../../admin/admin_rest_api");
 
 const browserHistory = createBrowserHistory();
 
-test.before(() => {
+test.before(async () => {
+  const featureTogglePromise = loadFeatureToggles();
   resetDatabase();
+  await featureTogglePromise;
 });
 
 test.beforeEach(async _ => {

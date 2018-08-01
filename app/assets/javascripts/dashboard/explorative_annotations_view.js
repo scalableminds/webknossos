@@ -28,6 +28,7 @@ import {
 import type { RouterHistory } from "react-router-dom";
 import { handleGenericError } from "libs/error_handling";
 import FormattedDate from "components/formatted_date";
+import { AnnotationContentTypes } from "oxalis/constants";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -398,7 +399,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
                   onClick={_.partial(this.addTagToSearch, tag)}
                   onClose={_.partial(this.editTagFromAnnotation, tracing, false, tag)}
                   closable={
-                    !(tag === tracing.dataSetName || tracing.tracing[tag] != null) &&
+                    !(tag === tracing.dataSetName || AnnotationContentTypes.includes(tag)) &&
                     !this.state.shouldShowArchivedTracings
                   }
                 >

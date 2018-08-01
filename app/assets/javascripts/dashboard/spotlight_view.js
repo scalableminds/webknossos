@@ -73,6 +73,7 @@ const WelcomeHeader = ({ history }) => (
               href="https://docs.webknossos.org/"
               style={{ marginRight: 50, color: "white" }}
               target="_blank"
+              rel="noopener noreferrer"
             >
               Read the Documentation
             </a>
@@ -80,6 +81,7 @@ const WelcomeHeader = ({ history }) => (
               href="https://support.webknossos.org/"
               target="_blank"
               style={{ marginRight: 50, color: "white" }}
+              rel="noopener noreferrer"
             >
               Join the Community
             </a>
@@ -87,6 +89,7 @@ const WelcomeHeader = ({ history }) => (
               href="https://github.com/scalableminds/webknossos/"
               target="_blank"
               style={{ color: "white" }}
+              rel="noopener noreferrer"
             >
               Get the Code
             </a>

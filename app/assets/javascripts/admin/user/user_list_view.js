@@ -6,7 +6,7 @@ import * as React from "react";
 import moment from "moment";
 import { connect } from "react-redux";
 import { Link, withRouter } from "react-router-dom";
-import { Table, Tag, Icon, Spin, Button, Input, Modal, Alert, Row, Col } from "antd";
+import { Table, Tag, Icon, Spin, Button, Input, Modal, Alert, Row, Col, Tooltip } from "antd";
 import TeamRoleModalView from "admin/user/team_role_modal_view";
 import ExperienceModalView from "admin/user/experience_modal_view";
 import TemplateHelpers from "libs/template_helpers";
@@ -175,6 +175,17 @@ class UserListView extends React.PureComponent<Props, State> {
       user => !user.isActive && moment.duration(now.diff(user.created)).asDays() <= 14,
     );
 
+    const newInactiveUsersHeader = (
+      <React.Fragment>
+        There are new inactive users{" "}
+        <Tooltip
+          title="The displayed users are inactive and were created in the past 14 days."
+          placement="right"
+        >
+          <Icon type="info-circle" />
+        </Tooltip>
+      </React.Fragment>
+    );
     const newInactiveUsersList = (
       <React.Fragment>
         {newInactiveUsers.map(user => (
@@ -192,7 +203,7 @@ class UserListView extends React.PureComponent<Props, State> {
 
     return newInactiveUsers.length ? (
       <Alert
-        message="There are new inactive users"
+        message={newInactiveUsersHeader}
         description={newInactiveUsersList}
         type="info"
         iconType="user"

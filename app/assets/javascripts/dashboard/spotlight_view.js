@@ -1,21 +1,104 @@
 // @flow
 import * as React from "react";
 import { Link, withRouter } from "react-router-dom";
-import { Spin, Layout, message } from "antd";
+import { Spin, Layout, message, Button, Row, Col } from "antd";
+import { connect } from "react-redux";
 import { transformDatasets } from "dashboard/dataset_view";
 import GalleryDatasetView from "dashboard/gallery_dataset_view";
-import type { DatasetType } from "dashboard/dataset_view";
 import { getOrganizations, getDatasets } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
-import type { RouterHistory } from "react-router-dom";
 import messages from "messages";
 import Utils from "libs/utils";
+import type { DatasetType } from "dashboard/dataset_view";
+import type { RouterHistory } from "react-router-dom";
+import type { OxalisState } from "oxalis/store";
+import type { APIUserType } from "admin/api_flow_types";
 
-const { Header, Content, Footer } = Layout;
+const { Content, Footer } = Layout;
+
+const SimpleHeader = () => (
+  <div id="oxalis-header">
+    <img
+      src="/assets/images/oxalis.svg"
+      alt="webKnossos Logo"
+      style={{ verticalAlign: "middle" }}
+    />webKnossos
+  </div>
+);
+
+const WelcomeHeader = ({ history }) => (
+  <div
+    style={{
+      backgroundImage: "url(https://webknossos.org/images/nature-cover-compressed.jpg)",
+    }}
+  >
+    <div style={{ backgroundColor: "rgba(88, 88, 88, 0.6)" }}>
+      <div
+        style={{
+          width: 1000,
+          textAlign: "center",
+          margin: "auto",
+          padding: 50,
+        }}
+      >
+        <Row type="flex" align="middle" style={{ color: "white" }}>
+          <Col span={4}>
+            <img
+              src="https://webknossos.brain.mpg.de/assets/images/oxalis.svg"
+              alt="webKnossos Logo"
+              style={{ filter: "invert(1)" }}
+            />
+          </Col>
+          <Col span={20}>
+            <p style={{ fontSize: 58 }}>Welcome to webKnossos</p>
+            <p style={{ fontSize: 22 }}>
+              webKnossos is an in-browser annotation tool for 3D electron microscopic data that
+              facilitates user interaction with 3D image data. Together with ever better automated
+              neuron segmentations, webKnossos can push connectomics to efficient large-scale
+              reconstructions. <br />Try webKnossos now!
+            </p>
+          </Col>
+        </Row>
+        <Row>
+          <Col offset={4} span={20} style={{ marginTop: 20 }}>
+            <Button
+              type="primary"
+              style={{ marginRight: 50, height: 48, fontSize: 24 }}
+              onClick={() => history.push("/onboarding")}
+            >
+              Get Started
+            </Button>
+            <Button
+              href="https://support.webknossos.org"
+              target="_blank"
+              size="large"
+              style={{ marginRight: 50 }}
+              ghost
+            >
+              Get Support
+            </Button>
+            <Button
+              href="https://github.com/scalableminds/webknossos"
+              target="_blank"
+              size="large"
+              ghost
+            >
+              Docs
+            </Button>
+          </Col>
+        </Row>
+      </div>
+    </div>
+  </div>
+);
+
+type StateProps = {
+  activeUser: ?APIUserType,
+};
 
 type Props = {
   history: RouterHistory,
-};
+} & StateProps;
 
 type State = {
   datasets: Array<DatasetType>,
@@ -61,15 +144,11 @@ class SpotlightView extends React.PureComponent<Props, State> {
   render() {
     return (
       <Layout>
-        <Header id="oxalis-header">
-          <div>
-            <img
-              src="/assets/images/oxalis.svg"
-              alt="webKnossos Logo"
-              style={{ verticalAlign: "middle" }}
-            />webKnossos
-          </div>
-        </Header>
+        {this.props.activeUser == null ? (
+          <WelcomeHeader history={this.props.history} />
+        ) : (
+          <SimpleHeader />
+        )}
         <Content style={{ padding: 50 }}>
           <Spin size="large" spinning={this.state.isLoading}>
             <div style={{ minHeight: "100px" }}>
@@ -150,4 +229,8 @@ class SpotlightView extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter(SpotlightView);
+const mapStateToProps = (state: OxalisState): StateProps => ({
+  activeUser: state.activeUser,
+});
+
+export default connect(mapStateToProps)(withRouter(SpotlightView));

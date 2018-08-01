@@ -226,7 +226,7 @@ class ArbitraryController extends React.PureComponent<Props> {
 
       // Delete active node and recenter last node
       "shift + space": () => {
-        Store.dispatch(deleteNodeAsUserAction());
+        Store.dispatch(deleteNodeAsUserAction(undefined, undefined, Store.getState()));
       },
     });
   }

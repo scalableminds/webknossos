@@ -86,7 +86,7 @@ export function getKeyboardControls() {
     "2": () => Store.dispatch(toggleInactiveTreesAction()),
 
     // Delete active node
-    delete: () => Store.dispatch(deleteNodeAsUserAction()),
+    delete: () => Store.dispatch(deleteNodeAsUserAction(undefined, undefined, Store.getState())),
     c: () => Store.dispatch(createTreeAction()),
 
     // Branches

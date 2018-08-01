@@ -29,7 +29,11 @@ import {
 import type { ActionType } from "oxalis/model/actions/actions";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
-import { getActiveNode, getBranchPoints, enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  getActiveNode,
+  getBranchPoints,
+  enforceSkeletonTracing,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import { V3 } from "libs/mjs";
 import { generateTreeName } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import type {
@@ -98,8 +102,9 @@ export function* watchTreeNames(): Generator<*, *, *> {
   const state = yield select(_state => _state);
 
   // rename trees with an empty/default tree name
-  for (const tree: TreeType of _.values(state.tracing.trees)) {
+  for (const tree: TreeType of _.values(state.tracing.skeleton.trees)) {
     if (tree.name === "") {
+      console.log("tree.name === ''");
       const newName = generateTreeName(state, tree.timestamp, tree.treeId);
       yield put(setTreeNameAction(newName, tree.treeId));
     }

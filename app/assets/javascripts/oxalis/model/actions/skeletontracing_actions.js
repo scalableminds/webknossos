@@ -14,7 +14,7 @@ import messages from "messages";
 import { Modal } from "antd";
 import type { Vector3 } from "oxalis/constants";
 import type { APIAnnotationType, ServerSkeletonTracingType } from "admin/api_flow_types";
-import type { SkeletonTracingType, TreeMapType, TreeGroupType } from "oxalis/store";
+import type { OxalisState, SkeletonTracingType, TreeMapType, TreeGroupType } from "oxalis/store";
 
 type InitializeSkeletonTracingActionType = {
   type: "INITIALIZE_SKELETONTRACING",
@@ -364,8 +364,8 @@ export const setTreeGroupAction = (groupId: ?string, treeId: number): SetTreeGro
 export const deleteNodeAsUserAction = (
   nodeId?: number,
   treeId?: number,
+  state: OxalisState,
 ): DeleteNodeActionType | NoActionType | DeleteTreeActionType => {
-  const state = Store.getState();
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
   return (
     getActiveNode(skeletonTracing)

@@ -27,7 +27,7 @@ const { take, call, put } = mockRequire.reRequire("redux-saga/effects");
 
 const {
   compactSaveQueue,
-  pushAnnotationAsync,
+  pushTracingTypeAsync,
   sendRequestToServer,
   toggleErrorHighlighting,
   addVersionNumbers,
@@ -91,8 +91,8 @@ test("SaveSaga should send update actions", t => {
   const updateActions = [UpdateActions.createEdge(1, 0, 1), UpdateActions.createEdge(1, 1, 2)];
   const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
 
-  const saga = pushAnnotationAsync();
-  expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS));
+  const saga = pushTracingTypeAsync("skeleton");
+  expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS[0]));
   saga.next(); // setLastSaveTimestampAction
   saga.next(); // select state
   expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false, "skeleton")));
@@ -100,7 +100,7 @@ test("SaveSaga should send update actions", t => {
   saga.next(); // race
   saga.next(SaveActions.pushSaveQueueAction(updateActions));
   saga.next();
-  expectValueDeepEqual(t, saga.next(saveQueue), call(sendRequestToServer));
+  expectValueDeepEqual(t, saga.next(saveQueue), call(sendRequestToServer, "skeleton"));
 
   // Test that loop repeats
   saga.next(); // select state
@@ -192,8 +192,8 @@ test("SaveSaga should send update actions right away", t => {
   const updateActions = [UpdateActions.createEdge(1, 0, 1), UpdateActions.createEdge(1, 1, 2)];
   const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
 
-  const saga = pushAnnotationAsync();
-  expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS));
+  const saga = pushTracingTypeAsync("skeleton");
+  expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS[0]));
   saga.next();
   saga.next(); // select state
   expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false, "skeleton")));

@@ -21,7 +21,7 @@ mockRequire("oxalis/model/sagas/root_saga", function*() {
 });
 
 const { diffSkeletonTracing } = mockRequire.reRequire("oxalis/model/sagas/skeletontracing_saga");
-const { saveTracingAsync, compactUpdateActions, compactSaveQueue } = mockRequire.reRequire(
+const { saveTracingTypeAsync, compactUpdateActions, compactSaveQueue } = mockRequire.reRequire(
   "oxalis/model/sagas/save_saga",
 );
 const SkeletonTracingActions = mockRequire.reRequire(
@@ -35,7 +35,9 @@ const { take, put, race } = mockRequire.reRequire("redux-saga/effects");
 const { M4x4 } = mockRequire.reRequire("libs/mjs");
 
 function testDiffing(prevTracing, nextTracing, flycam) {
-  return withoutUpdateTracing(Array.from(diffSkeletonTracing(prevTracing, nextTracing, flycam)));
+  return withoutUpdateTracing(
+    Array.from(diffSkeletonTracing(prevTracing.skeleton, nextTracing.skeleton, flycam)),
+  );
 }
 
 function compactSaveQueueWithUpdateActions(
@@ -63,24 +65,6 @@ const initialState = {
     interpolation: false,
   },
   tracing: {
-    type: "skeleton",
-    trees: {
-      "1": {
-        treeId: 1,
-        name: "TestTree",
-        nodes: new DiffableMap(),
-        timestamp: 12345678,
-        branchPoints: [],
-        edges: new EdgeCollection(),
-        comments: [],
-        color: [23, 23, 23],
-      },
-    },
-    tracingType: "Explorational",
-    name: "",
-    activeTreeId: 1,
-    activeNodeId: null,
-    cachedMaxNodeId: 0,
     restrictions: {
       branchPointsAllowed: true,
       allowUpdate: true,
@@ -88,6 +72,27 @@ const initialState = {
       allowAccess: true,
       allowDownload: true,
     },
+    tracingType: "Explorational",
+    name: "",
+    skeleton: {
+      type: "skeleton",
+      trees: {
+        "1": {
+          treeId: 1,
+          name: "TestTree",
+          nodes: new DiffableMap(),
+          timestamp: 12345678,
+          branchPoints: [],
+          edges: new EdgeCollection(),
+          comments: [],
+          color: [23, 23, 23],
+        },
+      },
+      activeTreeId: 1,
+      activeNodeId: null,
+      cachedMaxNodeId: 0,
+    },
+    volume: null,
   },
   flycam: {
     zoomStep: 2,
@@ -107,22 +112,17 @@ const createBranchPointAction = SkeletonTracingActions.createBranchPointAction(
   12345678,
 );
 
-const INIT_RACE_ACTION_OBJECT = {
-  initSkeleton: take("INITIALIZE_SKELETONTRACING"),
-  initVolume: take("INITIALIZE_VOLUMETRACING"),
-};
-
 test("SkeletonTracingSaga should create a tree if there is none (saga test)", t => {
-  const saga = saveTracingAsync();
-  expectValueDeepEqual(t, saga.next(), race(INIT_RACE_ACTION_OBJECT));
+  const saga = saveTracingTypeAsync("skeleton");
+  expectValueDeepEqual(t, saga.next(), take("INITIALIZE_SKELETONTRACING"));
   saga.next({ initSkeleton: true });
   saga.next({ tracing: { trees: {} } });
   t.is(saga.next(true).value.PUT.action.type, "CREATE_TREE");
 });
 
 test("SkeletonTracingSaga shouldn't do anything if unchanged (saga test)", t => {
-  const saga = saveTracingAsync();
-  expectValueDeepEqual(t, saga.next(), race(INIT_RACE_ACTION_OBJECT));
+  const saga = saveTracingTypeAsync("skeleton");
+  expectValueDeepEqual(t, saga.next(), take("INITIALIZE_SKELETONTRACING"));
   saga.next({ initSkeleton: true });
   saga.next(initialState.tracing);
   saga.next(false);
@@ -138,8 +138,8 @@ test("SkeletonTracingSaga shouldn't do anything if unchanged (saga test)", t => 
 test("SkeletonTracingSaga should do something if changed (saga test)", t => {
   const newState = SkeletonTracingReducer(initialState, createNodeAction);
 
-  const saga = saveTracingAsync();
-  expectValueDeepEqual(t, saga.next(), race(INIT_RACE_ACTION_OBJECT));
+  const saga = saveTracingTypeAsync("skeleton");
+  expectValueDeepEqual(t, saga.next(), take("INITIALIZE_SKELETONTRACING"));
   saga.next({ initSkeleton: true });
   saga.next(initialState.tracing);
   saga.next(false);
@@ -149,7 +149,7 @@ test("SkeletonTracingSaga should do something if changed (saga test)", t => {
   saga.next(newState.tracing);
   const items = execCall(t, saga.next(newState.flycam));
   t.true(withoutUpdateTracing(items).length > 0);
-  expectValueDeepEqual(t, saga.next(items), put(pushSaveQueueAction(items)));
+  expectValueDeepEqual(t, saga.next(items), put(pushSaveQueueAction(items, "skeleton")));
 });
 
 test("SkeletonTracingSaga should emit createNode update actions", t => {

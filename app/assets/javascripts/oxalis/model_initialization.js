@@ -83,7 +83,7 @@ export async function initialize(
   let datasetName;
   if (controlMode === ControlModeEnum.TRACE) {
     const annotationId = annotationIdOrDatasetName;
-    annotation = await getAnnotationInformation(annotationId, "Explorational");
+    annotation = await getAnnotationInformation(annotationId, tracingType);
     datasetName = annotation.dataSetName;
 
     if (!annotation.restrictions.allowAccess) {

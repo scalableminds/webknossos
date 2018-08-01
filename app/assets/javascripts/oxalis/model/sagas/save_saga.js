@@ -392,12 +392,10 @@ export function performDiffTracing(
 }
 
 export function* saveTracingAsync(): Generator<any, any, any> {
-  // yield fork(() => saveTracingTypeAsync("skeleton"));
-  // yield fork(() => saveTracingTypeAsync("volume"));
   yield [saveTracingTypeAsync("skeleton"), saveTracingTypeAsync("volume")];
 }
 
-function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Generator<*, *, *> {
+export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Generator<*, *, *> {
   yield take(
     tracingType === "skeleton" ? "INITIALIZE_SKELETONTRACING" : "INITIALIZE_VOLUMETRACING",
   );
@@ -427,6 +425,7 @@ function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Generator<*,
     const tracing = yield select((state: OxalisState) => state.tracing);
     const flycam = yield select((state: OxalisState) => state.flycam);
     const items = compactUpdateActions(
+      // $FlowFixMe: Should be resolved when we improve the typing of sagas in general
       Array.from(yield call(performDiffTracing, tracingType, prevTracing, tracing, flycam)),
     );
     if (items.length > 0) {

@@ -84,7 +84,6 @@ export const setLastSaveTimestampAction = (
   timestamp: number = Date.now(),
   tracingType: TracingType,
 ): SetLastSaveTimestampActionType => ({
-  // todo: this should depend on the tracingType, as well
   type: "SET_LAST_SAVE_TIMESTAMP",
   timestamp,
   tracingType,

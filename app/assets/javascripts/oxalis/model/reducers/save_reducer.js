@@ -52,7 +52,9 @@ function SaveReducer(state: OxalisState, action: ActionType): OxalisState {
           batch => batch.actions.length,
         );
         const remainingQueue = state.save.queue[action.tracingType].slice(count);
-        const resetCounter = remainingQueue.length === 0;
+        const otherQueue =
+          state.save.queue[action.tracingType === "skeleton" ? "skeleton" : "volume"];
+        const resetCounter = remainingQueue.length === 0 && otherQueue.length === 0;
         return update(state, {
           save: {
             queue: { [action.tracingType]: { $set: remainingQueue } },

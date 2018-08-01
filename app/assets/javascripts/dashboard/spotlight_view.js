@@ -38,7 +38,7 @@ const WelcomeHeader = ({ history }) => (
           width: 1000,
           textAlign: "center",
           margin: "auto",
-          padding: 50,
+          padding: "80 0",
         }}
       >
         <Row type="flex" align="middle" style={{ color: "white" }}>
@@ -46,16 +46,16 @@ const WelcomeHeader = ({ history }) => (
             <img
               src="https://webknossos.brain.mpg.de/assets/images/oxalis.svg"
               alt="webKnossos Logo"
-              style={{ filter: "invert(1)" }}
+              style={{ filter: "invert(1)", width: "100%" }}
             />
           </Col>
           <Col span={20}>
             <p style={{ fontSize: 58 }}>Welcome to webKnossos</p>
-            <p style={{ fontSize: 22 }}>
+            <p style={{ fontSize: 20, color: "#cccccc", padding: "40px 60px" }}>
               webKnossos is an in-browser annotation tool for 3D electron microscopic data that
               facilitates user interaction with 3D image data. Together with ever better automated
               neuron segmentations, webKnossos can push connectomics to efficient large-scale
-              reconstructions. <br />Try webKnossos now!
+              reconstructions.
             </p>
           </Col>
         </Row>
@@ -63,28 +63,33 @@ const WelcomeHeader = ({ history }) => (
           <Col offset={4} span={20} style={{ marginTop: 20 }}>
             <Button
               type="primary"
-              style={{ marginRight: 50, height: 48, fontSize: 24 }}
-              onClick={() => history.push("/onboarding")}
-            >
-              Get Started
-            </Button>
-            <Button
-              href="https://support.webknossos.org"
-              target="_blank"
               size="large"
               style={{ marginRight: 50 }}
-              ghost
+              onClick={() => history.push("/onboarding")}
             >
-              Get Support
+              Try it out now
             </Button>
-            <Button
-              href="https://github.com/scalableminds/webknossos"
+            <a
+              href="https://docs.webknossos.org/"
+              style={{ marginRight: 50, color: "white" }}
               target="_blank"
-              size="large"
-              ghost
             >
-              Docs
-            </Button>
+              Read the Documentation
+            </a>
+            <a
+              href="https://support.webknossos.org/"
+              target="_blank"
+              style={{ marginRight: 50, color: "white" }}
+            >
+              Join the Community
+            </a>
+            <a
+              href="https://github.com/scalableminds/webknossos/"
+              target="_blank"
+              style={{ color: "white" }}
+            >
+              Get the Code
+            </a>
           </Col>
         </Row>
       </div>

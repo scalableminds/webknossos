@@ -9,7 +9,16 @@ import Maybe from "data.maybe";
 import Date from "libs/date";
 import messages from "messages";
 import Toast from "libs/toast";
-import { take, _take, _call, race, call, put, select} from "oxalis/model/sagas/effect-generators";
+import {
+  all,
+  take,
+  _take,
+  _call,
+  race,
+  call,
+  put,
+  select,
+} from "oxalis/model/sagas/effect-generators";
 import { delay } from "redux-saga";
 import {
   shiftSaveQueueAction,
@@ -85,7 +94,7 @@ export function* collectUndoStates(): Generator<*, *, *> {
 }
 
 export function* pushAnnotationAsync(): Generator<*, *, *> {
-  yield [pushTracingTypeAsync("skeleton"), pushTracingTypeAsync("volume")];
+  yield all([pushTracingTypeAsync("skeleton"), pushTracingTypeAsync("volume")]);
 }
 
 export function* pushTracingTypeAsync(tracingType: "skeleton" | "volume"): Generator<*, *, *> {
@@ -150,8 +159,8 @@ export function* sendRequestToServer(
   const saveQueue = sliceAppropriateBatchCount(fullSaveQueue);
 
   let compactedSaveQueue = compactSaveQueue(saveQueue);
-  const { version, type, tracingId } = yield* select(
-    state => Maybe.fromNullable(state.tracing[tracingType]).get(),
+  const { version, type, tracingId } = yield* select(state =>
+    Maybe.fromNullable(state.tracing[tracingType]).get(),
   );
   const dataStoreUrl = yield* select(state => state.dataset.dataStore.url);
   compactedSaveQueue = addVersionNumbers(compactedSaveQueue, version);
@@ -393,7 +402,7 @@ export function performDiffTracing(
 }
 
 export function* saveTracingAsync(): Generator<any, any, any> {
-  yield [saveTracingTypeAsync("skeleton"), saveTracingTypeAsync("volume")];
+  yield all([saveTracingTypeAsync("skeleton"), saveTracingTypeAsync("volume")]);
 }
 
 export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Generator<*, *, *> {
@@ -403,11 +412,7 @@ export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Gener
 
   let prevTracing = yield* select(state => state.tracing);
   if (tracingType === "skeleton") {
-    if (
-      yield* select(
-        state => enforceSkeletonTracing(state.tracing).activeTreeId == null,
-      )
-    ) {
+    if (yield* select(state => enforceSkeletonTracing(state.tracing).activeTreeId == null)) {
       yield* put(createTreeAction());
     }
   }

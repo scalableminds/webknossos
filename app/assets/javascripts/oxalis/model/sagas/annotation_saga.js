@@ -1,6 +1,6 @@
 // @flow
 import Model from "oxalis/model";
-import { take, takeEvery, call, select } from "redux-saga/effects";
+import { all, take, takeEvery, call, select } from "redux-saga/effects";
 import { editAnnotation } from "admin/admin_rest_api";
 import messages from "messages";
 import Toast from "libs/toast";
@@ -14,13 +14,13 @@ import Store from "oxalis/store";
 
 export function* pushAnnotationUpdateAsync(): Generator<*, *, *> {
   const tracing = yield select(state => state.tracing);
-  yield [
+  yield all([
     call(editAnnotation, tracing.annotationId, tracing.tracingType, {
       name: tracing.name,
       isPublic: tracing.isPublic,
       description: tracing.description,
     }),
-  ];
+  ]);
 }
 
 function shouldDisplaySegmentationData(): boolean {

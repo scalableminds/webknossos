@@ -1,5 +1,5 @@
 // @flow
-import { throttle, call, select, take } from "redux-saga/effects";
+import { all, throttle, call, select, take } from "redux-saga/effects";
 import Request from "libs/request";
 
 function* pushUserSettingsAsync() {
@@ -23,9 +23,9 @@ function* pushDatasetSettingsAsync() {
 
 export default function* watchPushSettingsAsync(): Generator<*, *, *> {
   yield take("INITIALIZE_SETTINGS");
-  yield [
+  yield all([
     throttle(500, "UPDATE_USER_SETTING", pushUserSettingsAsync),
     throttle(500, "UPDATE_DATASET_SETTING", pushDatasetSettingsAsync),
     throttle(500, "UPDATE_LAYER_SETTING", pushDatasetSettingsAsync),
-  ];
+  ]);
 }

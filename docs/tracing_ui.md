@@ -2,6 +2,7 @@
 
 ## Overview
 The main webKnossos user interface for viewing and annotating datasets is divided into four sections.
+
 1. A toolbar for general purposes features such as Saving your work and displaying the current position within the dataset spans along the full width on top of the screen. More below.
 2. On the left-hand side, a settings menu gives the user control of several parameters of webKossso. For instance, one can fine-tune a dataset's contrast & segmentation opacity, as well as adjust movement speed of the mouse and keyboard. More below.
 3. The center of the screen is occupied by the tracing interface. Your dataset is displayed here and users can add annotations or add/edit the segmentation. Most interactions we take place here. More below.
@@ -76,18 +77,22 @@ The `Dataset` settings include options to manipulate the rendering of the datase
 Not all settings are present in every tracing mode.
 
 ### Tracing Settings
-Controls:
+Controls
 - `Keyboard delay (ms)`: The initial delay before an operation will be executed when pressing a keyboard shortcut. A low value will immediately execute a keyboard's associated operation, whereas a high value will delay the execution of an operation. This is useful for preventing an operation being called multiple times when rapidly pressing a key in short succession, e.g. for movement.
 
-- `Move Value (nm/s)`:  A high value will speed up movement through the dataset, e.g. when holding down the spacebar. Vice-versa, a low value will slow down the movement allowing for more precision. This setting is especially useful in `flight mode
+- `Move Value (nm/s)`:  A high value will speed up movement through the dataset, e.g. when holding down the spacebar. Vice-versa, a low value will slow down the movement allowing for more precision. This setting is especially useful in `flight mode`.
 
 - `d/f-Switching`: ¯\_(ツ)_/¯
 
-Viewport Options
+Viewport Options / Flight Options
 - `Zoom`: The zoom factor for viewing the dataset. A low value moves the camera really close to the data, showing many details. A high value, will you show more of the dataset but with fewer details and is great for getting an overview or moving around quickly.
 - `Viewport Scale`: Increases / Decreases the size of dataset viewports in the center of the screen.
 - `Clipping Distance`: The distance between 3D structures and the camera used for hiding ("clipping") structures. Use it to reduce the number of visible nodes in the viewports and declutter your screen.
 - `Show Crosshairs`: Shows / Hides the crosshair overlay over the viewports.
+- `Mouse Rotation`: 
+- `Keyboard Rotation`: 
+- `Crosshair Size`: 
+- `Sphere Radius`: 
 
 Nodes & Trees
 - `Active Node ID`: Contains the active node's ID. Enter a valid node ID to quickly navigate to it within the dataset and set it active for future operations.

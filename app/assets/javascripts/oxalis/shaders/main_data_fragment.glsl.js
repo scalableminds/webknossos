@@ -199,7 +199,7 @@ void main() {
       color_value = (color_value + <%= name %>_brightness - 0.5) * <%= name %>_contrast + 0.5;
 
       // Multiply with color and weight for <%= name %>
-      data_color += color_value * <%= name %>_weight * <%= name %>_color;
+      data_color += color_value * <%= name %>_color;
     <% }) %>
     data_color = clamp(data_color, 0.0, 1.0);
   <% } %>

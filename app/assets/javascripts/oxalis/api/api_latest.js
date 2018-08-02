@@ -264,7 +264,7 @@ class TracingApi {
    * @example
    * api.tracing.setTreeColorIndex(3, 10);
    */
-  setTreeColorIndex(treeId?: number, colorIndex: number) {
+  setTreeColorIndex(treeId: ?number, colorIndex: number) {
     const tracing = Store.getState().tracing;
     assertSkeleton(tracing);
     Store.dispatch(setTreeColorIndexAction(treeId, colorIndex));

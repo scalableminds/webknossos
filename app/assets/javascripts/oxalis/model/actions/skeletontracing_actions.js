@@ -74,7 +74,7 @@ type SetTreeNameActionType = { type: "SET_TREE_NAME", name: ?string, treeId: ?nu
 type SelectNextTreeActionType = { type: "SELECT_NEXT_TREE", forward: ?boolean };
 type SetTreeColorIndexActionType = {
   type: "SET_TREE_COLOR_INDEX",
-  treeId?: number,
+  treeId: ?number,
   colorIndex: number,
 };
 type ShuffleTreeColorActionType = { type: "SHUFFLE_TREE_COLOR", treeId?: number };
@@ -317,7 +317,7 @@ export const selectNextTreeAction = (forward: ?boolean = true): SelectNextTreeAc
 });
 
 export const setTreeColorIndexAction = (
-  treeId?: number,
+  treeId: ?number,
   colorIndex: number,
 ): SetTreeColorIndexActionType => ({
   type: "SET_TREE_COLOR_INDEX",

@@ -27,9 +27,16 @@ A user can directly jump to positions within their datasets by entering them in 
 TODO Add image
 
 ## Skeleton Tracing
-- what are skeleton tracings?
+The goal for skeleton tracing is to reconstruct structures in a dataset that span across many data slices as graph of connected nodes. A typical example for a skeleton tracing is to follow a blood vessel for a few centimeters, placing a node every few slices. (See image below)
+
+A typical skeleton tracing contains the reconstruction of one or more structures often with many thousand nodes. All connected nodes form a tree or more generally speaking a graph.
+
+Skeleton tracings can be downloaded, modified, imported using a human-readable XML-based file format called NML.
+
+This articles outline the available features and operations for viewing, editing, or creating new skeleton tracings in webKnossos.
 
 ### Tracing Modes
+webKnossos supports several 
 - Orthogonal Mode
 - Flight
 - Arbitrary
@@ -74,7 +81,7 @@ The settings menu allows users to fine-tune some parameters of webKnossos. All s
 The `Tracing` settings include options related to interacting with a dataset while annotating, e.g. mouse movement speed. Tracing settings only affect the currently open tracing and will be restored when reopening the tracing in the future.
 The `Dataset` settings include options to manipulate the rendering of the dataset, e.g. brightness & contrast. Dataset settings effect all of the user's tracing referencing this particular dataset so that tracing can be created using the same conditions.
 
-Not all settings are present in every tracing mode.
+Not all settings are available in every tracing mode.
 
 ### Tracing Settings
 Controls

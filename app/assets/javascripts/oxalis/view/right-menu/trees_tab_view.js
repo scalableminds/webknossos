@@ -22,12 +22,14 @@ import {
   toggleAllTreesAction,
   toggleInactiveTreesAction,
   setActiveTreeAction,
+  addTreesAndGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import Store from "oxalis/store";
-import { serializeToNml, getNmlName } from "oxalis/model/helpers/nml_helpers";
+import { serializeToNml, getNmlName, parseNml } from "oxalis/model/helpers/nml_helpers";
 import Utils from "libs/utils";
 import { saveAs } from "file-saver";
 import { getBuildInfo } from "admin/admin_rest_api";
+import Toast from "libs/toast";
 import type { Dispatch } from "redux";
 import type { OxalisState, SkeletonTracingType, UserConfigurationType } from "oxalis/store";
 import TreeSearchPopover from "./tree_search_popover";
@@ -54,6 +56,45 @@ type State = {
   isUploading: boolean,
   isDownloading: boolean,
 };
+
+function readFileAsText(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => resolve(reader.result.toString());
+    reader.readAsText(file);
+  });
+}
+
+export async function importNmls(files: Array<*>, createGroupForEachFile: boolean) {
+  try {
+    const { successes: importActions, errors } = await Utils.promiseAllWithErrors(
+      files.map(async file => {
+        const nmlString = await readFileAsText(file);
+        try {
+          const { trees, treeGroups } = await parseNml(
+            nmlString,
+            createGroupForEachFile ? file.name : null,
+          );
+          return addTreesAndGroupsAction(trees, treeGroups);
+        } catch (e) {
+          throw new Error(`"${file.name}" could not be parsed. ${e.message}`);
+        }
+      }),
+    );
+
+    if (errors.length > 0) {
+      throw errors;
+    }
+
+    // Dispatch the actual actions as the very last step, so that
+    // not a single store mutation happens if something above throws
+    // an error
+    importActions.forEach(action => Store.dispatch(action));
+  } catch (e) {
+    (Array.isArray(e) ? e : [e]).forEach(err => Toast.error(err.message));
+  }
+}
 
 class TreesTabView extends React.PureComponent<Props, State> {
   state = {

@@ -3,16 +3,10 @@ import * as React from "react";
 import Dropzone from "react-dropzone";
 import prettyBytes from "pretty-bytes";
 import { Button, Icon, Modal, Avatar, List, Spin, Checkbox, Alert } from "antd";
-import { readFileAsText } from "components/file_upload";
-import { parseNml } from "oxalis/model/helpers/nml_helpers";
-import { addTreesAndGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
 import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
-import Toast from "libs/toast";
-import Store from "oxalis/store";
 import type { OxalisState } from "oxalis/store";
 import { connect } from "react-redux";
 import FormattedDate from "components/formatted_date";
-import Utils from "libs/utils";
 
 type State = {
   files: Array<*>,
@@ -28,6 +22,7 @@ type StateProps = {
 
 type Props = StateProps & {
   children: React.Node,
+  onImport: (files: Array<*>, createGroupForEachFile: boolean) => Promise<void>,
 };
 
 function OverlayDropZone({ children }) {
@@ -131,36 +126,9 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
   }
 
   importNmls = async () => {
-    this.setState({
-      isImporting: true,
-    });
-
+    this.setState({ isImporting: true });
     try {
-      const { successes: importActions, errors } = await Utils.promiseAllWithErrors(
-        this.state.files.map(async file => {
-          const nmlString = await readFileAsText(file);
-          try {
-            const { trees, treeGroups } = await parseNml(
-              nmlString,
-              this.state.createGroupForEachFile ? file.name : null,
-            );
-            return addTreesAndGroupsAction(trees, treeGroups);
-          } catch (e) {
-            throw new Error(`"${file.name}" could not be parsed. ${e.message}`);
-          }
-        }),
-      );
-
-      if (errors.length > 0) {
-        throw errors;
-      }
-
-      // Dispatch the actual actions as the very last step, so that
-      // not a single store mutation happens if something above throws
-      // an error
-      importActions.forEach(action => Store.dispatch(action));
-    } catch (e) {
-      (Array.isArray(e) ? e : [e]).forEach(err => Toast.error(err.message));
+      await this.props.onImport(this.state.files, this.state.createGroupForEachFile);
     } finally {
       this.setState({ isImporting: false, files: [] });
     }
@@ -170,7 +138,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
     return (
       <Modal visible footer={null} onCancel={this.props.hideDropzoneModal}>
         <Alert
-          message="Did you know that you do can just drag-and-drop NML files directly into the tracing view? You don't have to explicitly open this dialog first."
+          message="Did you know that you do can just drag-and-drop NML files directly into this view? You don't have to explicitly open this dialog first."
           style={{ marginBottom: 12 }}
         />
         <Dropzone

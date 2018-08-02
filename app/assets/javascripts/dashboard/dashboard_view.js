@@ -9,8 +9,12 @@ import DashboardTaskListView from "dashboard/dashboard_task_list_view";
 import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import { getUser } from "admin/admin_rest_api";
+import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
+import Request from "libs/request";
+import { withRouter } from "react-router-dom";
 import type { APIUserType } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
+import type { RouterHistory } from "react-router-dom";
 
 const TabPane = Tabs.TabPane;
 
@@ -19,6 +23,7 @@ const validTabKeys = ["datasets", "advanced-datasets", "tasks", "explorativeAnno
 type OwnProps = {
   userId: ?string,
   isAdminView: boolean,
+  history: RouterHistory,
 };
 
 type StateProps = {
@@ -56,6 +61,13 @@ class DashboardView extends React.PureComponent<Props, State> {
     this.setState({ user });
   }
 
+  uploadNmls = async (files: Array<*>, createGroupForEachFile: boolean): Promise<void> => {
+    const response = await Request.sendMultipartFormReceiveJSON("/api/annotations/upload", {
+      data: { nmlFile: files, createGroupForEachFile },
+    });
+    this.props.history.push(`/annotations/${response.annotation.typ}/${response.annotation.id}`);
+  };
+
   getTabs(user: APIUserType) {
     if (this.props.activeUser) {
       const isAdminView = this.props.isAdminView;
@@ -87,7 +99,7 @@ class DashboardView extends React.PureComponent<Props, State> {
   }
 
   render() {
-    const user = this.state.user;
+    const { user } = this.state;
     if (!user) {
       return (
         <div className="text-center" style={{ marginTop: 50, width: "100vw" }}>
@@ -110,12 +122,18 @@ class DashboardView extends React.PureComponent<Props, State> {
     ) : null;
 
     return (
-      <div className="container">
-        {userHeader}
-        <Tabs activeKey={this.state.activeTabKey} onChange={onTabChange} style={{ marginTop: 20 }}>
-          {this.getTabs(user)}
-        </Tabs>
-      </div>
+      <NmlUploadZoneContainer onImport={this.uploadNmls}>
+        <div className="container">
+          {userHeader}
+          <Tabs
+            activeKey={this.state.activeTabKey}
+            onChange={onTabChange}
+            style={{ marginTop: 20 }}
+          >
+            {this.getTabs(user)}
+          </Tabs>
+        </div>
+      </NmlUploadZoneContainer>
     );
   }
 }
@@ -124,4 +142,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
 });
 
-export default connect(mapStateToProps)(DashboardView);
+export default connect(mapStateToProps)(withRouter(DashboardView));

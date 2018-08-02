@@ -1,0 +1,111 @@
+# Tracing UI
+
+## Overview
+The main webKnossos user interface for viewing and annotating datasets is divided into four sections.
+
+1. A toolbar for general purposes features such as Saving your work and displaying the current position within the dataset spans along the full width on top of the screen. More below.
+2. On the left-hand side, a settings menu gives the user control of several parameters of webKossso. For instance, one can fine-tune a dataset's contrast & segmentation opacity, as well as adjust movement speed of the mouse and keyboard. More below.
+3. The center of the screen is occupied by the tracing interface. Your dataset is displayed here and users can add annotations or add/edit the segmentation. Most interactions we take place here. More below.
+4. The right-hand side of the screen is occupied by several tabs providing more information on your current dataset or tracing. Depending on your editing mode these tabs might change. More below.
+
+TODO Add image
+
+## The Tool Bar
+The toolbar contains frequently used commands, your current position within the dataset and the ability to switch between various modes for viewing and interaction with the dataset or tools depending on your tracing mode.
+
+The most common buttons are:
+- `Settings`: Toggles the visibility of the setting menu on the left-hand side to make more space for your data.
+- `Undo` / `Redo`: Undoes the last operation or redoes it if now changes have been made in the meantime.
+- `Save`: Saves your annotation work. wK automatically saves every 30 seconds.
+- `Archive`: Only available for explorative tracings. Closes the tracing and archives it, removing it from a user's dashboard. Archived tracings can be found on a user's dashboard under "Explorative Tracings" and by clicking on "Show Archived Annotations". Use this to declutter your dashboard. 
+- `Download`: Starts the download of the current annotation. Skeletontracings are downloaded as NML files. Volumetracing downloads contain the raw segmentation data as wkw files.
+- `Share`: Create a shareable link to your dataset containing the current position, rotation, zoom level etc. Use this to collaboratively work with colleagues. Read more about this feature in the [Sharing guide](./sharing.md).  
+- `Add Script`: Using the [wK frontend API](https://demo.webknossos.org/assets/docs/frontend-api/index.html) user can interact with wK programmatically. User script can be executed from here. Admins can add often used scripts to wK to make them available to all users for easy access.
+
+A user can directly jump to positions within their datasets by entering them in the position input field. The same is true for the rotation in some tracing modes. Clicking on the position or rotation labels copies the values to the clipboard.
+
+TODO Add image
+
+## Skeleton Tracing
+- what are skeleton tracings?
+
+### Tracing Modes
+- Orthogonal Mode
+- Flight
+- Arbitrary
+
+### Nodes and Trees
+- Skeletons are trees
+- Adding / Deleting / Merge / Split Nodes / Trees
+- Active Node
+- keyboard shortcuts
+- abstract tree viewer
+- renaming
+
+### Tree Groups
+- Rename, adding, delete
+- drag & drop
+- hiding trees
+
+### Comments
+
+
+### Importing & Exporting NML Files
+- drag and drop
+- buttons
+- download
+
+### Merging Tracings
+- drag and drop
+- dialogs
+
+
+## Volume Tracing
+- what are volume tracings
+- tools
+  - brush, move, selection
+- adding / deleting segmentation
+- keyboard shortcuts
+- segementation tab
+
+
+## Tracing UI Settings
+The settings menu allows users to fine-tune some parameters of webKnossos. All settings are automatically saved as part of a user's profile. 
+The `Tracing` settings include options related to interacting with a dataset while annotating, e.g. mouse movement speed. Tracing settings only affect the currently open tracing and will be restored when reopening the tracing in the future.
+The `Dataset` settings include options to manipulate the rendering of the dataset, e.g. brightness & contrast. Dataset settings effect all of the user's tracing referencing this particular dataset so that tracing can be created using the same conditions.
+
+Not all settings are present in every tracing mode.
+
+### Tracing Settings
+Controls
+- `Keyboard delay (ms)`: The initial delay before an operation will be executed when pressing a keyboard shortcut. A low value will immediately execute a keyboard's associated operation, whereas a high value will delay the execution of an operation. This is useful for preventing an operation being called multiple times when rapidly pressing a key in short succession, e.g. for movement.
+
+- `Move Value (nm/s)`:  A high value will speed up movement through the dataset, e.g. when holding down the spacebar. Vice-versa, a low value will slow down the movement allowing for more precision. This setting is especially useful in `flight mode`.
+
+- `d/f-Switching`: ¯\_(ツ)_/¯
+
+Viewport Options / Flight Options
+- `Zoom`: The zoom factor for viewing the dataset. A low value moves the camera really close to the data, showing many details. A high value, will you show more of the dataset but with fewer details and is great for getting an overview or moving around quickly.
+- `Viewport Scale`: Increases / Decreases the size of dataset viewports in the center of the screen.
+- `Clipping Distance`: The distance between 3D structures and the camera used for hiding ("clipping") structures. Use it to reduce the number of visible nodes in the viewports and declutter your screen.
+- `Show Crosshairs`: Shows / Hides the crosshair overlay over the viewports.
+- `Mouse Rotation`: Increases / Decreases the movement speed when using the mouse to rotate within the datasets. A low value rotates the camera slower for more precisie movements. A high value rotates the camera quicker for greater agility. 
+- `Keyboard Rotation`: Increases / Decreases the movement speed when using the arrow keys on the keyboard to rotate within the datasets. A low value rotates the camera slower for more precisie movements. A high value rotates the camera quicker for greater agility. 
+- `Crosshair Size`: Controls the size of the crosshair in flight mode.
+- `Sphere Radius`: In flight mode, the data is projected on the inside of a sphere with the camera located at the center of the sphere. This option influences the radius of said sphere flattening / rounding the projected viewport. A low value will cause less curvature showing the detail with more detail and less distortion. A high value will show more data along the edges of the viewport. 
+
+Nodes & Trees
+- `Active Node ID`: Contains the active node's ID. Enter a valid node ID to quickly navigate to it within the dataset and set it active for future operations.
+- `Active Tree ID`: Contains the active tree's ID. Enter a valid tree ID to quickly navigate to the last node of the tree and set it active for future operations.
+- `Node Radius`: Controls the size of each individual node. Large values will create big nodes, small values create tiny nodes. Each node can have a different size. This is useful for annotations where node sizes have a meaning.
+- `Particle Size`: Controls the minimum node size for all nodes. This will override nodes with a too small node radius.
+- `Override Node Radius`: When toggled, overrides all individual node sizes. This allows to uniformly adjust the size of all nodes simultaneously.
+- `Soma Clicking`: When active every mouse click (left mouse button), will create a new tree. Use this for annotations were highlighting/marking structures is more important than labeling connected structures, e.g. for marking all Somas in a dataset.
+- `Highlight Commented Nodes`: When active, nodes that have a comment associated with them will be rendered with a slight board around them. This is useful for quickly identifying (important) nodes.
+
+Other
+- `Bounding Box`: Users can set a custom bounding box that will be displayed in all viewports. Useful for orientation when working in a specific area of a dataset. Format: minX, minY, minZ, width, height, depth
+- `Display Planes in 3D View`: Toggles the visibility of the data layers in the 3D viewport. This is useful if you want to view your nodes or a large skeleton in the 3D view without them being covered by the data layers.
+
+
+### Dataset Settings

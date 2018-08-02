@@ -1,21 +1,24 @@
-# webKnossos Documentation
+# Summary
 
-## Features
+* [Welcome to webKnossos](../README.md)
+* [Getting Started](./getting_started.md)
 
-## Where to Get Help
-- Discussion Board support.webknossos.org
-- email@scalablemoinds
-- commercial support is avaliable
+## Guides
+* [Dashboard](./dashboard.md)
+* [Tracing View](./tracing_ui.md)
+* [Managing Datasets](./datasets.md)
+* [Managing Users and Access Rights](./users.md)
+* [Sharing](./sharing.md)
 
-1. Getting Started
-2. First Steps
-3. Dashboard
-3. Tracing UI
-4. Managing Datasets
-5. Managing Users & Access Rights
-6. Sharing
-6. Supported Data Formats
-7. FAQ
+## Documentation
+* [Supported Data Formats](./data_formats.md)
+* [FAQ](./faq.md)
+* [Changelog](../CHANGELOG.md)
+* [Migration Guide](../MIGRATIONS.md)
+
+## Getting Help
+* [Community Support](https://support.webknossos.org)
+* [Commercial Support](https://scalableminds.com)
 
 Later:
 Projects

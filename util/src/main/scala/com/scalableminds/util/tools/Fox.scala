@@ -8,10 +8,6 @@ import scala.reflect.ClassTag
 import scala.util.{Success, Try}
 
 trait FoxImplicits {
-  implicit def bool2Fox(b: Boolean)(implicit ec: ExecutionContext): Fox[Boolean] =
-    if(b) Fox.successful(b)
-    else  Fox.empty
-
   implicit def futureBox2Fox[T](f: Future[Box[T]])(implicit ec: ExecutionContext): Fox[T] =
     new Fox(f)
 
@@ -42,6 +38,11 @@ trait FoxImplicits {
 
   implicit def fox2FutureBox[T](f: Fox[T])(implicit ec: ExecutionContext): Future[Box[T]] =
     f.futureBox
+
+  // This one is no longer implicit since that has lead to confusion. Should always be used explicitly.
+  def bool2Fox(b: Boolean)(implicit ec: ExecutionContext): Fox[Boolean] =
+    if(b) Fox.successful(b)
+    else  Fox.empty
 }
 
 object Fox extends FoxImplicits {

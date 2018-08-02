@@ -21,7 +21,7 @@ export function* pushAnnotationUpdateAsync(): Saga<void> {
   // The extra type annotaton is needed here for flow
   const editObject: $Shape<EditableAnnotationType> = {
     name: tracing.name,
-    // isPublic: tracing.isPublic,
+    isPublic: tracing.isPublic,
     description: tracing.description,
   };
   yield* _call(editAnnotation, tracing.annotationId, tracing.tracingType, editObject);

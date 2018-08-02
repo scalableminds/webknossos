@@ -29,7 +29,7 @@ import {
   getResolutions,
   isRgb,
   getByteCount,
-} from "oxalis/model/accessors/dataset_accessor.js";
+} from "oxalis/model/accessors/dataset_accessor";
 
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
 

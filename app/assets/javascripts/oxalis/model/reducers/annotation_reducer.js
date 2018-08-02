@@ -4,9 +4,18 @@ import update from "immutability-helper";
 
 import type { OxalisState } from "oxalis/store";
 import type { ActionType } from "oxalis/model/actions/actions";
+import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reducers/reducer_helpers";
 
 function AnnotationReducer(state: OxalisState, action: ActionType): OxalisState {
   switch (action.type) {
+    case "INITIALIZE_ANNOTATION": {
+      const annotationInfo = convertServerAnnotationToFrontendAnnotation(action.annotation);
+      return update(state, {
+        tracing: {
+          $merge: annotationInfo,
+        },
+      });
+    }
     case "SET_ANNOTATION_NAME": {
       return update(state, {
         tracing: {

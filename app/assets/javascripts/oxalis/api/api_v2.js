@@ -220,7 +220,7 @@ class TracingApi {
    */
   setTreeName(name: string, _treeId?: number) {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
-    let treeId = _treeId != null ? _treeId : skeletonTracing.activeTreeId;
+    const treeId = _treeId != null ? _treeId : skeletonTracing.activeTreeId;
     Store.dispatch(setTreeNameAction(name, treeId));
   }
 

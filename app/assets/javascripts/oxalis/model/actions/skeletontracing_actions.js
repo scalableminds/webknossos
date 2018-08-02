@@ -13,12 +13,11 @@ import {
 import messages from "messages";
 import { Modal } from "antd";
 import type { Vector3 } from "oxalis/constants";
-import type { APIAnnotationType, ServerSkeletonTracingType } from "admin/api_flow_types";
+import type { ServerSkeletonTracingType } from "admin/api_flow_types";
 import type { OxalisState, SkeletonTracingType, TreeMapType, TreeGroupType } from "oxalis/store";
 
 type InitializeSkeletonTracingActionType = {
   type: "INITIALIZE_SKELETONTRACING",
-  annotation: APIAnnotationType,
   tracing: ServerSkeletonTracingType,
 };
 type CreateNodeActionType = {
@@ -150,11 +149,9 @@ const noAction = (): NoActionType => ({
 });
 
 export const initializeSkeletonTracingAction = (
-  annotation: APIAnnotationType,
   tracing: ServerSkeletonTracingType,
 ): InitializeSkeletonTracingActionType => ({
   type: "INITIALIZE_SKELETONTRACING",
-  annotation,
   tracing,
 });
 

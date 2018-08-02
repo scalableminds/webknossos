@@ -7,10 +7,7 @@ import _ from "lodash";
 import Store from "oxalis/store";
 import Utils, { enforce } from "libs/utils";
 import { OrthoViews, VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
-import {
-  // PlaneControllerClass,
-  calculateGlobalPos,
-} from "oxalis/controller/viewmodes/plane_controller";
+import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import Model from "oxalis/model";
 import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { movePlaneFlycamOrthoAction, setPositionAction } from "oxalis/model/actions/flycam_actions";

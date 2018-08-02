@@ -180,12 +180,10 @@ test("SkeletonTracing shouldn't delete the tree if 'delete node' is initiated fo
 });
 
 test("SkeletonTracing should delete the tree if 'delete node as user' is initiated for an empty tree", t => {
-  const { createTreeAction, deleteNodeAsUserAction } = SkeletonTracingActions;
+  const { createTreeAction, deleteActiveNodeAsUserAction } = SkeletonTracingActions;
   const newState = ChainReducer(initialState)
     .apply(SkeletonTracingReducer, createTreeAction())
-    .apply(SkeletonTracingReducer, currentState =>
-      deleteNodeAsUserAction(undefined, undefined, currentState),
-    )
+    .apply(SkeletonTracingReducer, currentState => deleteActiveNodeAsUserAction(currentState))
     .unpack();
 
   t.deepEqual(newState, initialState);

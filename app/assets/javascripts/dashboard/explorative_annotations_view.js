@@ -365,22 +365,22 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         />
         <Column
           title="Stats"
-          render={(__, tracing: APIAnnotationType) =>
-            tracing.stats.treeCount && tracing.tracing.skeleton != null ? (
+          render={(__, annotation: APIAnnotationType) =>
+            annotation.stats.treeCount && annotation.tracing.skeleton != null ? (
               <div>
                 <span title="Trees">
                   <i className="fa fa-sitemap" />
-                  {tracing.stats.treeCount}
+                  {annotation.stats.treeCount}
                 </span>
                 <br />
                 <span title="Nodes">
                   <i className="fa fa-bull" />
-                  {tracing.stats.nodeCount}
+                  {annotation.stats.nodeCount}
                 </span>
                 <br />
                 <span title="Edges">
                   <i className="fa fa-arrows-h" />
-                  {tracing.stats.edgeCount}
+                  {annotation.stats.edgeCount}
                 </span>
               </div>
             ) : null
@@ -390,16 +390,16 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           title="Tags"
           dataIndex="tags"
           width={500}
-          render={(tags: Array<string>, tracing: APIAnnotationType) => (
+          render={(tags: Array<string>, annotation: APIAnnotationType) => (
             <div>
               {tags.map(tag => (
                 <Tag
                   key={tag}
                   color={TemplateHelpers.stringToColor(tag)}
                   onClick={_.partial(this.addTagToSearch, tag)}
-                  onClose={_.partial(this.editTagFromAnnotation, tracing, false, tag)}
+                  onClose={_.partial(this.editTagFromAnnotation, annotation, false, tag)}
                   closable={
-                    !(tag === tracing.dataSetName || AnnotationContentTypes.includes(tag)) &&
+                    !(tag === annotation.dataSetName || AnnotationContentTypes.includes(tag)) &&
                     !this.state.shouldShowArchivedTracings
                   }
                 >
@@ -409,7 +409,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
               {this.state.shouldShowArchivedTracings ? null : (
                 <EditableTextIcon
                   icon="plus"
-                  onChange={_.partial(this.editTagFromAnnotation, tracing, true)}
+                  onChange={_.partial(this.editTagFromAnnotation, annotation, true)}
                 />
               )}
             </div>

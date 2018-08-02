@@ -408,7 +408,7 @@ class Authentication @Inject()(
 
   private def creatingOrganizationsIsAllowed(requestingUser: Option[User]) = {
     val noOrganizationPresent = InitialDataService.assertNoOrganizationsPresent
-    val configurationFlagSet = Play.configuration.getBoolean("application.allowOrganzationCreation").getOrElse(false) ?~> "allowOrganzationCreation.notEnabled"
+    val configurationFlagSet = Play.configuration.getBoolean("features.allowOrganzationCreation").getOrElse(false) ?~> "allowOrganzationCreation.notEnabled"
     val userIsSuperUser = requestingUser.exists(_.isSuperUser).toFox
 
     Fox.sequenceOfFulls(List(noOrganizationPresent, configurationFlagSet, userIsSuperUser)).map(_.headOption).toFox

@@ -34,4 +34,4 @@ export function* race(...args) {
 
 export const _take = IOEffects.take;
 export const _call = IOEffects.call;
-export const {all} = IOEffects;
+export const { all } = IOEffects;

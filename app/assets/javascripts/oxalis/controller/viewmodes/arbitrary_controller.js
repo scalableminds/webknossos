@@ -20,7 +20,7 @@ import {
 } from "oxalis/model/actions/settings_actions";
 import {
   setActiveNodeAction,
-  deleteNodeAsUserAction,
+  deleteActiveNodeAsUserAction,
   createNodeAction,
   createBranchPointAction,
   requestDeleteBranchPointAction,
@@ -226,7 +226,7 @@ class ArbitraryController extends React.PureComponent<Props> {
 
       // Delete active node and recenter last node
       "shift + space": () => {
-        Store.dispatch(deleteNodeAsUserAction(undefined, undefined, Store.getState()));
+        Store.dispatch(deleteActiveNodeAsUserAction(Store.getState()));
       },
     });
   }

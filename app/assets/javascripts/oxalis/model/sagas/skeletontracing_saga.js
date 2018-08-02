@@ -104,7 +104,6 @@ export function* watchTreeNames(): Generator<*, *, *> {
   // rename trees with an empty/default tree name
   for (const tree: TreeType of _.values(state.tracing.skeleton.trees)) {
     if (tree.name === "") {
-      console.log("tree.name === ''");
       const newName = generateTreeName(state, tree.timestamp, tree.treeId);
       yield put(setTreeNameAction(newName, tree.treeId));
     }

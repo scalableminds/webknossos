@@ -11,7 +11,7 @@ import SceneController from "oxalis/controller/scene_controller";
 import { OrthoViews } from "oxalis/constants";
 import {
   setActiveNodeAction,
-  deleteNodeAsUserAction,
+  deleteActiveNodeAsUserAction,
   deleteEdgeAction,
   createTreeAction,
   createNodeAction,
@@ -86,7 +86,7 @@ export function getKeyboardControls() {
     "2": () => Store.dispatch(toggleInactiveTreesAction()),
 
     // Delete active node
-    delete: () => Store.dispatch(deleteNodeAsUserAction(undefined, undefined, Store.getState())),
+    delete: () => Store.dispatch(deleteActiveNodeAsUserAction(Store.getState())),
     c: () => Store.dispatch(createTreeAction()),
 
     // Branches

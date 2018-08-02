@@ -68,7 +68,7 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
   def userForToken(tokenValue: String)(implicit ctx: DBAccessContext): Fox[User] =
     for {
       tokenAuthenticator <- dao.findOneByValue(tokenValue) ?~> Messages("auth.invalidToken")
-      _ <- (tokenAuthenticator.isValid) ?~> Messages("auth.invalidToken")
+      _ <- bool2Fox(tokenAuthenticator.isValid) ?~> Messages("auth.invalidToken")
       user <- UserService.findOneByEmail(tokenAuthenticator.loginInfo.providerKey)
     } yield user
 

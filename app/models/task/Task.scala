@@ -183,7 +183,7 @@ object TaskDAO extends SQLDAO[Task, TasksRow, Tasks] {
                 where _user = '${userId.id}')
                as user_experiences on webknossos.tasks_.neededExperience_domain = user_experiences.domain and webknossos.tasks_.neededExperience_value <= user_experiences.value
              join webknossos.projects_ on webknossos.tasks_._project = webknossos.projects_._id
-             left join (select _task from webknossos.annotations_ where _user = '${userId.id}' and typ = '${AnnotationTypeSQL.Task}') as userAnnotations ON webknossos.tasks_._id = userAnnotations._task
+             left join (select _task from webknossos.annotations_ where _user = '${userId.id}' and typ = '${AnnotationType.Task}') as userAnnotations ON webknossos.tasks_._id = userAnnotations._task
            where webknossos.tasks_.openInstances > 0
                  and webknossos.projects_._team in ${writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))}
                  and userAnnotations._task is null
@@ -254,7 +254,7 @@ object TaskDAO extends SQLDAO[Task, TasksRow, Tasks] {
     val taskTypeFilter = taskTypeIdOpt.map(ttId => s"(t._taskType = '${ttId}')").getOrElse("true")
     val taskIdsFilter = taskIdsOpt.map(tIds => if (tIds.isEmpty) "false" else s"(t._id in ${writeStructTupleWithQuotes(tIds.map(_.toString))})").getOrElse("true")
     val userJoin = userIdOpt.map(_ => "join webknossos.annotations_ a on a._task = t._id join webknossos.users_ u on a._user = u._id").getOrElse("")
-    val userFilter = userIdOpt.map(uId => s"(u._id = '${uId}' and a.typ = '${AnnotationTypeSQL.Task}' and a.state != '${AnnotationState.Cancelled}')").getOrElse("true")
+    val userFilter = userIdOpt.map(uId => s"(u._id = '${uId}' and a.typ = '${AnnotationType.Task}' and a.state != '${AnnotationState.Cancelled}')").getOrElse("true")
 
     for {
       projectFilter <- projectFilterFox

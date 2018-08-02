@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.datastore.tracings.skeleton.{NodeDefaults, S
 import com.scalableminds.webknossos.datastore.tracings.volume.VolumeTracingDefaults
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationState._
-import models.annotation.AnnotationTypeSQL.AnnotationTypeSQL
+import models.annotation.AnnotationType.AnnotationType
 import models.annotation.handler.SavedTracingInformationHandler
 import models.annotation.nml.NmlWriter
 import models.binary._
@@ -131,19 +131,19 @@ object AnnotationService
 
   def baseFor(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[Annotation] =
     (for {
-      list <- AnnotationDAO.findAllByTaskIdAndType(taskId, AnnotationTypeSQL.TracingBase)
+      list <- AnnotationDAO.findAllByTaskIdAndType(taskId, AnnotationType.TracingBase)
     } yield list.headOption.toFox).flatten
 
   def annotationsFor(taskId: ObjectId)(implicit ctx: DBAccessContext) =
-      AnnotationDAO.findAllByTaskIdAndType(taskId, AnnotationTypeSQL.Task)
+      AnnotationDAO.findAllByTaskIdAndType(taskId, AnnotationType.Task)
 
   def countActiveAnnotationsFor(taskId: ObjectId)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.countActiveByTask(taskId, AnnotationTypeSQL.Task)
+    AnnotationDAO.countActiveByTask(taskId, AnnotationType.Task)
 
   def countOpenNonAdminTasks(user: User)(implicit ctx: DBAccessContext) =
     for {
       teamManagerTeamIds <- user.teamManagerTeamIds
-      result <- AnnotationDAO.countActiveAnnotationsFor(user._id, AnnotationTypeSQL.Task, teamManagerTeamIds)
+      result <- AnnotationDAO.countActiveAnnotationsFor(user._id, AnnotationType.Task, teamManagerTeamIds)
     } yield result
 
   def tracingFromBase(annotationBase: Annotation, dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[String] = {
@@ -166,7 +166,7 @@ object AnnotationService
           _user = user._id,
           skeletonTracingId = Some(newTracingId),
           state = Active,
-          typ = AnnotationTypeSQL.Task,
+          typ = AnnotationType.Task,
           created = System.currentTimeMillis,
           modified = System.currentTimeMillis)
         _ <- AnnotationDAO.updateInitialized(newAnnotation)
@@ -233,7 +233,7 @@ object AnnotationService
         Some(skeletonTracingId),
         None,
         description.getOrElse(""),
-        typ = AnnotationTypeSQL.TracingBase)
+        typ = AnnotationType.TracingBase)
       _ <- AnnotationDAO.insertOne(annotationBase)
     } yield true
   }
@@ -244,7 +244,7 @@ object AnnotationService
                   dataSet: DataSet,
                   skeletonTracingId: Option[String],
                   volumeTracingId: Option[String],
-                  annotationType: AnnotationTypeSQL,
+                  annotationType: AnnotationType,
                   name: Option[String],
                   description: String)(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
     for {

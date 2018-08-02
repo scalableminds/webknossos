@@ -38,7 +38,7 @@ const WelcomeHeader = ({ history }) => (
           width: 1000,
           textAlign: "center",
           margin: "auto",
-          padding: "80 0",
+          padding: "80px 0px",
         }}
       >
         <Row type="flex" align="middle" style={{ color: "white" }}>

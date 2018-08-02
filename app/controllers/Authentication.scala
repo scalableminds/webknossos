@@ -204,7 +204,7 @@ class Authentication @Inject()(
 
   def autoLogin = Action.async { implicit request =>
     for {
-      _ <- Play.configuration.getBoolean("application.authentication.enableDevAutoLogin").get ?~> Messages("error.notInDev")
+      _ <- bool2Fox(Play.configuration.getBoolean("application.authentication.enableDevAutoLogin").get) ?~> Messages("error.notInDev")
       user <- UserService.defaultUser
       authenticator <- env.authenticatorService.create(user.loginInfo)
       value <- env.authenticatorService.init(authenticator)
@@ -408,8 +408,8 @@ class Authentication @Inject()(
 
   private def creatingOrganizationsIsAllowed(requestingUser: Option[User]) = {
     val noOrganizationPresent = InitialDataService.assertNoOrganizationsPresent
-    val configurationFlagSet = Play.configuration.getBoolean("application.allowOrganzationCreation").getOrElse(false) ?~> "allowOrganzationCreation.notEnabled"
-    val userIsSuperUser = requestingUser.exists(_.isSuperUser).toFox
+    val configurationFlagSet = bool2Fox(Play.configuration.getBoolean("application.allowOrganzationCreation").getOrElse(false)) ?~> "allowOrganzationCreation.notEnabled"
+    val userIsSuperUser = bool2Fox(requestingUser.exists(_.isSuperUser))
 
     Fox.sequenceOfFulls(List(noOrganizationPresent, configurationFlagSet, userIsSuperUser)).map(_.headOption).toFox
   }

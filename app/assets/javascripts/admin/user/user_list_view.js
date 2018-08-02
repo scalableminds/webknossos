@@ -3,9 +3,10 @@
 
 import _ from "lodash";
 import * as React from "react";
+import moment from "moment";
 import { connect } from "react-redux";
 import { Link, withRouter } from "react-router-dom";
-import { Table, Tag, Icon, Spin, Button, Input, Modal, Alert } from "antd";
+import { Table, Tag, Icon, Spin, Button, Input, Modal, Alert, Row, Col, Tooltip } from "antd";
 import TeamRoleModalView from "admin/user/team_role_modal_view";
 import ExperienceModalView from "admin/user/experience_modal_view";
 import TemplateHelpers from "libs/template_helpers";
@@ -168,6 +169,50 @@ class UserListView extends React.PureComponent<Props, State> {
     }
   };
 
+  renderNewUsersAlert() {
+    const now = moment();
+    const newInactiveUsers = this.state.users.filter(
+      user => !user.isActive && moment.duration(now.diff(user.created)).asDays() <= 14,
+    );
+
+    const newInactiveUsersHeader = (
+      <React.Fragment>
+        There are new inactive users{" "}
+        <Tooltip
+          title="The displayed users are inactive and were created in the past 14 days."
+          placement="right"
+        >
+          <Icon type="info-circle" />
+        </Tooltip>
+      </React.Fragment>
+    );
+    const newInactiveUsersList = (
+      <React.Fragment>
+        {newInactiveUsers.map(user => (
+          <Row key={user.id} gutter={16}>
+            <Col span={6}>{`${user.firstName} ${user.lastName} (${user.email}) `}</Col>
+            <Col span={4}>
+              <a href="#" onClick={() => this.activateUser(user)}>
+                <Icon type="user-add" />Activate User
+              </a>
+            </Col>
+          </Row>
+        ))}
+      </React.Fragment>
+    );
+
+    return newInactiveUsers.length ? (
+      <Alert
+        message={newInactiveUsersHeader}
+        description={newInactiveUsersList}
+        type="info"
+        iconType="user"
+        showIcon
+        style={{ marginTop: 20 }}
+      />
+    ) : null;
+  }
+
   renderPlaceholder() {
     const noUsersMessage = (
       <React.Fragment>
@@ -176,14 +221,11 @@ class UserListView extends React.PureComponent<Props, State> {
         {" to join your organization. After the users joined, you need to activate them manually."}
       </React.Fragment>
     );
-    const inactiveUsersMessage =
-      'There are users that have not been activated yet. Make sure the "Show Active Users Only" tag is removed to show those users and activate them.';
-    const inactiveUsersPresent = this.state.users.filter(user => !user.isActive).length > 0;
 
     return this.state.isLoading ? null : (
       <Alert
-        message={inactiveUsersPresent ? "Activate users" : "Invite more users"}
-        description={inactiveUsersPresent ? inactiveUsersMessage : noUsersMessage}
+        message="Invite more users"
+        description={noUsersMessage}
         type="info"
         showIcon
         style={{ marginTop: 20 }}
@@ -209,7 +251,7 @@ class UserListView extends React.PureComponent<Props, State> {
     ) : null;
 
     const marginRight = { marginRight: 20 };
-    const lessThanOneActiveUser = this.state.users.filter(user => user.isActive).length < 2;
+    const noOtherUsers = this.state.users.length < 2;
 
     return (
       <div className="container test-UserListView">
@@ -271,7 +313,8 @@ class UserListView extends React.PureComponent<Props, State> {
           value={this.state.searchQuery}
         />
 
-        {lessThanOneActiveUser ? this.renderPlaceholder() : null}
+        {noOtherUsers ? this.renderPlaceholder() : null}
+        {this.renderNewUsersAlert()}
 
         <Spin size="large" spinning={this.state.isLoading}>
           <Table

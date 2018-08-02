@@ -416,7 +416,7 @@ export function reOpenAnnotation(
   return Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/reopen`);
 }
 
-type EditableAnnotationType = {
+export type EditableAnnotationType = {
   name: string,
   description: string,
   isPublic: boolean,

@@ -2,7 +2,9 @@
 import Model from "oxalis/model";
 import { select as _select, call as _call } from "oxalis/model/sagas/effect-generators";
 import { take, takeEvery, select } from "redux-saga/effects";
+import type { Saga } from "redux-saga";
 import { editAnnotation } from "admin/admin_rest_api";
+import type { EditableAnnotationType } from "admin/admin_rest_api";
 import messages from "messages";
 import Toast from "libs/toast";
 import {
@@ -13,14 +15,16 @@ import {
 import constants from "oxalis/constants";
 import Store from "oxalis/store";
 
-export function* pushAnnotationUpdateAsync(): Generator<*, *, *> {
+export function* pushAnnotationUpdateAsync(): Saga<void> {
   const tracing = yield* _select(state => state.tracing);
 
-  yield* _call(editAnnotation, tracing.annotationId, tracing.tracingType, {
+  // The extra type annotaton is needed here for flow
+  const editObject: $Shape<EditableAnnotationType> = {
     name: tracing.name,
-    isPublic: tracing.isPublic,
+    // isPublic: tracing.isPublic,
     description: tracing.description,
-  });
+  };
+  yield* _call(editAnnotation, tracing.annotationId, tracing.tracingType, editObject);
 }
 
 function shouldDisplaySegmentationData(): boolean {

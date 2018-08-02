@@ -80,13 +80,13 @@ Samplecountry
 
   def assertInitialDataEnabled =
     for {
-      _ <- Play.configuration.getBoolean("application.insertInitialData").getOrElse(false) ?~> "initialData.notEnabled"
+      _ <- bool2Fox(Play.configuration.getBoolean("application.insertInitialData").getOrElse(false)) ?~> "initialData.notEnabled"
     } yield ()
 
   def assertNoOrganizationsPresent =
     for {
       organizations <- OrganizationDAO.findAll
-      _ <- organizations.isEmpty ?~> "initialData.organizationsNotEmpty"
+      _ <- bool2Fox(organizations.isEmpty) ?~> "initialData.organizationsNotEmpty"
     } yield ()
 
   def insertDefaultUser =  {

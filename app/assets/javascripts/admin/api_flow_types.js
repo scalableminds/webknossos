@@ -318,7 +318,7 @@ export type APIBuildInfoType = {
 };
 
 export type APIFeatureToggles = {
-  +discussionBoard: boolean,
+  +discussionBoard: string | false,
 };
 
 // Tracing related datatypes

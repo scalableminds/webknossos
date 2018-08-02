@@ -36,6 +36,19 @@ function getRecursiveValuesUnflat(obj: Object | Array<*> | string): Array<*> {
   }
 }
 
+export function enforce<A, B>(fn: A => B): (?A) => B {
+  return (nullableA: ?A) => {
+    if (nullableA == null) {
+      throw new Error("Could not enforce while unwrapping maybe");
+    }
+    return fn(nullableA);
+  };
+}
+
+export function maybe<A, B>(fn: A => B): (?A) => Maybe<B> {
+  return (nullableA: ?A) => Maybe.fromNullable(nullableA).map(fn);
+}
+
 const Utils = {
   clamp(a: number, x: number, b: number): number {
     return Math.max(a, Math.min(b, x));
@@ -528,16 +541,3 @@ const Utils = {
 };
 
 export default Utils;
-
-export function enforce<A, B>(fn: A => B): (?A) => B {
-  return (nullableA: ?A) => {
-    if (nullableA == null) {
-      throw new Error("Could not enforce while unwrapping maybe");
-    }
-    return fn(nullableA);
-  };
-}
-
-export function maybe<A, B>(fn: A => B): (?A) => Maybe<B> {
-  return (nullableA: ?A) => Maybe.fromNullable(nullableA).map(fn);
-}

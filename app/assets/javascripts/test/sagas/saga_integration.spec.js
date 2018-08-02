@@ -60,7 +60,6 @@ test.serial(
 
     // Once the updateTree update action is in the save queue, we're good.
     // This means the setTreeName action was dispatched, the diffing ran, and the change will be persisted.
-    console.log("state.save.queue.skeleton", state.save.queue);
     t.deepEqual(expectedSaveQueue, state.save.queue.skeleton);
   },
 );

@@ -42,7 +42,7 @@ CREATE TABLE webknossos.annotations(
   _team CHAR(24) NOT NULL,
   _user CHAR(24) NOT NULL,
   skeletonTracingId CHAR(36) UNIQUE,
-  volumeTracingId CHAR(36) UNIQUE,
+  volumeTracingId CHAR(36) UNIQUE, -- has to be unique even over both skeletonTracingId and volumeTracingId. Enforced by datastore.
   description TEXT NOT NULL DEFAULT '',
   isPublic BOOLEAN NOT NULL DEFAULT false,
   name VARCHAR(256) NOT NULL DEFAULT '',

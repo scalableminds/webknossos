@@ -6,7 +6,7 @@ package controllers
 import javax.inject.Inject
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.{AnnotationDAO, AnnotationTypeSQL}
+import models.annotation.{AnnotationDAO, AnnotationType}
 import models.team.TeamDAO
 import models.user.{User, UserDAO}
 import oxalis.security.WebknossosSilhouette.SecuredAction
@@ -102,7 +102,7 @@ object ReportDAO extends SimpleSQLDAO {
         where _user = ${userId.id})
         as ue on t.neededExperience_domain = ue.domain and t.neededExperience_value <= ue.value
         join webknossos.projects_ p on t._project = p._id
-        left join (select _task from webknossos.annotations_ where _user = ${userId.id} and typ = '#${AnnotationTypeSQL.Task}') as userAnnotations ON t._id = userAnnotations._task
+        left join (select _task from webknossos.annotations_ where _user = ${userId.id} and typ = '#${AnnotationType.Task}') as userAnnotations ON t._id = userAnnotations._task
         where t.openInstances > 0
         and userAnnotations._task is null
         and not p.paused

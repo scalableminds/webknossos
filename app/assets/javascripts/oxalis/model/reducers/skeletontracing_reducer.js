@@ -24,10 +24,7 @@ import {
   addTreesAndGroups,
   createTreeMapFromTreeArray,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import {
-  convertServerAnnotationToFrontendAnnotation,
-  convertServerBoundingBoxToFrontend,
-} from "oxalis/model/reducers/reducer_helpers";
+import { convertServerBoundingBoxToFrontend } from "oxalis/model/reducers/reducer_helpers";
 import {
   getSkeletonTracing,
   findTreeByNodeId,
@@ -80,7 +77,6 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
           });
         });
       const activeTreeId = Utils.toNullable(activeTreeIdMaybe);
-      const annotationInfo = convertServerAnnotationToFrontendAnnotation(action.annotation);
 
       const skeletonTracing: SkeletonTracingType = {
         createdTimestamp: action.tracing.createdTimestamp,
@@ -96,15 +92,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         userBoundingBox: convertServerBoundingBoxToFrontend(action.tracing.userBoundingBox),
       };
 
-      const oldTracing = state.tracing;
-      const newTracing = {
-        // todo: do this spread more elegantly?
-        ...oldTracing,
-        ...annotationInfo,
-        skeleton: skeletonTracing,
-      };
-
-      return update(state, { tracing: { $set: newTracing } });
+      return update(state, { tracing: { skeleton: { $set: skeletonTracing } } });
     }
     default:
     // pass

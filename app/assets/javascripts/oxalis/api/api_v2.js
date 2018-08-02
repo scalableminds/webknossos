@@ -218,12 +218,9 @@ class TracingApi {
    * @example
    * api.tracing.setTreeName("Special tree", 1);
    */
-  setTreeName(name: string, treeId: ?number) {
+  setTreeName(name: string, _treeId?: number) {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
-
-    if (treeId == null) {
-      treeId = skeletonTracing.activeTreeId;
-    }
+    const treeId = _treeId != null ? _treeId : skeletonTracing.activeTreeId;
     Store.dispatch(setTreeNameAction(name, treeId));
   }
 

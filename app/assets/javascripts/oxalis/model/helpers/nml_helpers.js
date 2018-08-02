@@ -98,7 +98,7 @@ export function serializeToNml(
     "<things>",
     ...indent(
       _.concat(
-        serializeMetaInformation(state, annotation, tracing, buildInfo),
+        serializeMetaInformation(state, annotation, buildInfo),
         serializeParameters(state, annotation, tracing),
         serializeTrees(visibleTrees),
         serializeBranchPoints(visibleTrees),
@@ -115,7 +115,6 @@ export function serializeToNml(
 function serializeMetaInformation(
   state: OxalisState,
   annotation: TracingType,
-  tracing: SkeletonTracingType,
   buildInfo: APIBuildInfoType,
 ): Array<string> {
   return _.compact([

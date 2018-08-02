@@ -172,9 +172,7 @@ export type VolumeTracingType = {|
 
 export type ReadOnlyTracingType = {|
   ...TracingBaseType,
-  ...AnnotationType,
   +type: "readonly",
-  +tracingType: "View",
 |};
 
 export type HybridTracingType = {|
@@ -434,7 +432,6 @@ export const defaultState: OxalisState = {
   tracing: {
     ...initialAnnotationInfo,
     readOnly: {
-      ...initialAnnotationInfo,
       boundingBox: null,
       createdTimestamp: 0,
       userBoundingBox: null,

@@ -9,6 +9,7 @@ import {
   setControlModeAction,
   initializeSettingsAction,
 } from "oxalis/model/actions/settings_actions";
+import { initializeAnnotationAction } from "oxalis/model/actions/annotation_actions";
 import {
   setActiveNodeAction,
   initializeSkeletonTracingAction,
@@ -186,19 +187,21 @@ function initializeTracing(annotation: APIAnnotationType, tracing: HybridServerT
 
   const { controlMode } = Store.getState().temporaryConfiguration;
   if (controlMode === ControlModeEnum.TRACE) {
+    Store.dispatch(initializeAnnotationAction(annotation));
+
     serverTracingAsVolumeTracingMaybe(tracing).map(volumeTracing => {
       ErrorHandling.assert(
         getSegmentationLayer(dataset) != null,
         messages["tracing.volume_missing_segmentation"],
       );
-      Store.dispatch(initializeVolumeTracingAction(annotation, volumeTracing));
+      Store.dispatch(initializeVolumeTracingAction(volumeTracing));
     });
 
     serverTracingAsSkeletonTracingMaybe(tracing).map(skeletonTracing => {
       // To generate a huge amount of dummy trees, use:
       // import generateDummyTrees from "./model/helpers/generate_dummy_trees";
       // tracing.trees = generateDummyTrees(1, 200000);
-      Store.dispatch(initializeSkeletonTracingAction(annotation, skeletonTracing));
+      Store.dispatch(initializeSkeletonTracingAction(skeletonTracing));
     });
   }
 

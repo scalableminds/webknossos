@@ -16,17 +16,12 @@ import {
   hideBrushReducer,
   setContourTracingModeReducer,
 } from "oxalis/model/reducers/volumetracing_reducer_helpers";
-import {
-  convertServerAnnotationToFrontendAnnotation,
-  convertServerBoundingBoxToFrontend,
-} from "oxalis/model/reducers/reducer_helpers";
+import { convertServerBoundingBoxToFrontend } from "oxalis/model/reducers/reducer_helpers";
 import { VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
 
 function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionType): OxalisState {
   switch (action.type) {
     case "INITIALIZE_VOLUMETRACING": {
-      const annotationInfo = convertServerAnnotationToFrontendAnnotation(action.annotation);
-
       // As the frontend doesn't know all cells, we have to keep track of the highest id
       // and cannot compute it
       const maxCellId = action.tracing.largestSegmentId;
@@ -46,13 +41,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
         userBoundingBox: convertServerBoundingBoxToFrontend(action.tracing.userBoundingBox),
       };
 
-      const oldTracing = state.tracing;
-      const newTracing = {
-        ...oldTracing,
-        ...annotationInfo,
-        volume: volumeTracing,
-      };
-      const newState = update(state, { tracing: { $set: newTracing } });
+      const newState = update(state, { tracing: { volume: { $set: volumeTracing } } });
       return createCellReducer(newState, volumeTracing, action.tracing.activeSegmentId);
     }
     default:

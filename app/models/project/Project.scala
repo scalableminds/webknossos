@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
-import models.annotation.{AnnotationState, AnnotationTypeSQL}
+import models.annotation.{AnnotationState, AnnotationType}
 import models.task.TaskDAO
 import models.team.TeamDAO
 import models.user.{User, UserService}
@@ -141,7 +141,7 @@ object ProjectDAO extends SQLDAO[Project, ProjectsRow, Projects] {
                          join webknossos.users_ u on a._user = u._id
                          where p.name = ${name}
                          and a.state = '#${AnnotationState.Active.toString}'
-                         and a.typ = '#${AnnotationTypeSQL.Task}'
+                         and a.typ = '#${AnnotationType.Task}'
                          group by u.email
                      """.as[String])
     } yield rSeq.toList

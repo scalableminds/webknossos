@@ -21,7 +21,6 @@ object AnnotationSettings {
   val SKELETON_MODES = List(ORTHOGONAL, OBLIQUE, FLIGHT)
   val VOLUME_MODES = List(VOLUME)
   val ALL_MODES = SKELETON_MODES ::: VOLUME_MODES
-  val ALL_MODES_SET = ALL_MODES.toSet
 
   def defaultFor(tracingType: TracingType.Value) = tracingType match {
     case TracingType.skeleton =>
@@ -38,7 +37,7 @@ object AnnotationSettings {
     Json
       .reads[AnnotationSettings]
       .filter(ValidationError("annotation.preferedMode.invalid")) { a =>
-        a.preferredMode.forall(ALL_MODES_SET.contains) }
+        a.preferredMode.forall(ALL_MODES.contains) }
       .filter(ValidationError("annotation.mode.invalid")) { a =>
-        a.allowedModes.forall(ALL_MODES_SET.contains) }
+        a.allowedModes.forall(ALL_MODES.contains) }
 }

@@ -120,7 +120,8 @@ case class User(
         "lastActivity" -> lastActivity,
         "isAnonymous" -> false,
         "isEditable" -> isEditable,
-        "organization" -> organization.name
+        "organization" -> organization.name,
+        "created" -> created
       )
     }
   }

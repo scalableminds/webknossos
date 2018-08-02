@@ -5,7 +5,7 @@ import com.scalableminds.webknossos.datastore.tracings.{TracingReference, Tracin
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import models.annotation.AnnotationTypeSQL.AnnotationTypeSQL
+import models.annotation.AnnotationType.AnnotationType
 import models.binary.DataSetDAO
 import play.api.libs.concurrent.Execution.Implicits._
 import utils.ObjectId
@@ -35,19 +35,19 @@ object AnnotationMerger extends FoxImplicits with LazyLogging {
       request.identity._id,
       annotationB._dataSet,
       annotationB._team,
-      AnnotationTypeSQL.Explorational,
+      AnnotationType.Explorational,
       List(annotationA, annotationB)
     )
   }
 
   def mergeN(
-    newId: ObjectId,
-    persistTracing: Boolean,
-    _user: ObjectId,
-    _dataSet: ObjectId,
-    _team: ObjectId,
-    typ: AnnotationTypeSQL,
-    annotations: List[Annotation]
+              newId: ObjectId,
+              persistTracing: Boolean,
+              _user: ObjectId,
+              _dataSet: ObjectId,
+              _team: ObjectId,
+              typ: AnnotationType,
+              annotations: List[Annotation]
     )(implicit ctx: DBAccessContext): Fox[Annotation] = {
     if (annotations.isEmpty)
       Fox.empty

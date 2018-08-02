@@ -84,7 +84,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
           dataStoreHandler <- dataSet.dataStoreHandler
           tracingReference <- dataStoreHandler.saveVolumeTracing(volumeTracings.head._1, parsedFiles.otherFiles.get(volumeTracings.head._2).map(_.file))
           annotation <- AnnotationService.createFrom(
-            request.identity, dataSet, tracingReference, AnnotationTypeSQL.Explorational, name, description)
+            request.identity, dataSet, tracingReference, AnnotationType.Explorational, name, description)
         } yield JsonOk(
           Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
           Messages("nml.file.uploadSuccess")
@@ -94,7 +94,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
           dataSet <- DataSetDAO.findOneByName(skeletonTracings.head.dataSetName).toFox ?~> Messages("dataSet.notFound", skeletonTracings.head.dataSetName)
           mergedTracingReference <- storeMergedSkeletonTracing(skeletonTracings, dataSet)
           annotation <- AnnotationService.createFrom(
-            request.identity, dataSet, mergedTracingReference, AnnotationTypeSQL.Explorational, name, description)
+            request.identity, dataSet, mergedTracingReference, AnnotationType.Explorational, name, description)
         } yield JsonOk(
           Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
           Messages("nml.file.uploadSuccess")
@@ -112,10 +112,10 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     for {
       identifier <- AnnotationIdentifier.parse(typ, id)
       result <- identifier.annotationType match {
-        case AnnotationTypeSQL.View => Fox.failure("Cannot download View annotation")
-        case AnnotationTypeSQL.CompoundProject => downloadProject(id, request.identity)
-        case AnnotationTypeSQL.CompoundTask => downloadTask(id, request.identity)
-        case AnnotationTypeSQL.CompoundTaskType => downloadTaskType(id, request.identity)
+        case AnnotationType.View => Fox.failure("Cannot download View annotation")
+        case AnnotationType.CompoundProject => downloadProject(id, request.identity)
+        case AnnotationType.CompoundTask => downloadTask(id, request.identity)
+        case AnnotationType.CompoundTaskType => downloadTaskType(id, request.identity)
         case _ => downloadExplorational(id, typ, request.identity)(securedRequestToUserAwareRequest)
       }
     } yield result

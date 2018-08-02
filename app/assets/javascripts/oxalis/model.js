@@ -65,8 +65,8 @@ export class OxalisModel {
     );
   }
 
-  // todo: add ?DataLayer as return type
-  getSegmentationLayer() {
+  // Todo: Make return type optional
+  getSegmentationLayer(): DataLayer {
     return _.find(
       this.dataLayers,
       dataLayer =>

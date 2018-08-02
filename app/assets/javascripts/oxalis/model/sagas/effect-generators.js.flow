@@ -1,11 +1,12 @@
 // @flow
 
-import type { Channel, Task, Effect } from 'redux-saga'
+import type { Saga as _Saga, Channel, Task, Effect, Pattern } from 'redux-saga'
 import {
   all as typedAll,
   race as typedRace,
   take as typedTake,
   call as typedCall,
+  takeEvery as typedTakeEvery,
 } from 'redux-saga/effects';
 import type { OxalisState } from "oxalis/store";
 import type { ActionType } from "oxalis/model/actions/actions";
@@ -136,7 +137,7 @@ type ExtractReturnType = <R>((...args: any) => R) => R;
 type ReturnType<Fn> = $Call<ExtractReturnType, Fn>
 
 declare type CancelledFn = () => Generator<*, bool, *>;
-declare type TakeFn = (...args: any) => Generator<*, ActionType, *>;
+declare type TakeFn = <P: Pattern>(pattern: P) => Generator<*, ActionType, *>;
 declare type RaceFnTest = (...args: any) => Generator<*, ReturnType<typeof typedRace>, *>;
 
 declare type RaceFn = <R: { +[name: string]: Effect }>(effects: R) => Generator<*, {+[name: $Keys<R>]: ?ActionType}, *>;
@@ -155,3 +156,5 @@ declare export var race : RaceFn;
 declare export var all : typeof typedAll;
 declare export var _take : typeof typedTake;
 declare export var _call : typeof typedCall;
+declare export var _takeEvery : typeof typedTakeEvery;
+export type Saga<T> = _Saga<T>;

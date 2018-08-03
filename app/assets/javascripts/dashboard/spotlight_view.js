@@ -33,10 +33,10 @@ const WelcomeHeader = ({ history }) => (
       backgroundImage: "url(https://webknossos.org/images/nature-cover-compressed.jpg)",
     }}
   >
-    <div style={{ backgroundColor: "rgba(88, 88, 88, 0.6)" }}>
+    <div style={{ backgroundColor: "rgba(88, 88, 88, 0.5)" }}>
       <div
         style={{
-          width: 1000,
+          maxWidth: 1300,
           textAlign: "center",
           margin: "auto",
           padding: "80px 0px",
@@ -50,50 +50,58 @@ const WelcomeHeader = ({ history }) => (
               style={{ filter: "invert(1)", width: "100%" }}
             />
           </Col>
-          <Col span={20}>
-            <p style={{ fontSize: 58 }}>Welcome to webKnossos</p>
-            <p style={{ fontSize: 20, color: "#cccccc", padding: "40px 60px" }}>
+          <Col span={16}>
+            <p style={{ fontSize: 58, textShadow: "0px 1px 6px #00000061" }}>
+              Welcome to webKnossos
+            </p>
+            <p
+              style={{
+                fontSize: 20,
+                textShadow: "0px 1px 6px #00000061",
+                color: "rgb(245, 245, 245)",
+                padding: "40px 60px",
+              }}
+            >
               webKnossos is an in-browser annotation tool for 3D electron microscopic data that
               facilitates user interaction with 3D image data. Together with ever better automated
               neuron segmentations, webKnossos can push connectomics to efficient large-scale
               reconstructions.
             </p>
-          </Col>
-        </Row>
-        <Row>
-          <Col offset={4} span={20} style={{ marginTop: 20 }}>
-            <Button
-              type="primary"
-              size="large"
-              style={{ marginRight: 50 }}
-              onClick={() => history.push("/onboarding")}
-            >
-              Try it out now
-            </Button>
-            <a
-              href="https://docs.webknossos.org/"
-              style={{ marginRight: 50, color: "white" }}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Read the Documentation
-            </a>
-            <a
-              href="https://support.webknossos.org/"
-              target="_blank"
-              style={{ marginRight: 50, color: "white" }}
-              rel="noopener noreferrer"
-            >
-              Join the Community
-            </a>
-            <a
-              href="https://github.com/scalableminds/webknossos/"
-              target="_blank"
-              style={{ color: "white" }}
-              rel="noopener noreferrer"
-            >
-              Get the Code
-            </a>
+
+            <div style={{ marginTop: 20 }}>
+              <Button
+                type="primary"
+                size="large"
+                style={{ marginRight: 50 }}
+                onClick={() => history.push("/onboarding")}
+              >
+                Try it out now
+              </Button>
+              <a
+                href="https://docs.webknossos.org/"
+                style={{ marginRight: 50, color: "white" }}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Read the Documentation
+              </a>
+              <a
+                href="https://support.webknossos.org/"
+                target="_blank"
+                style={{ marginRight: 50, color: "white" }}
+                rel="noopener noreferrer"
+              >
+                Join the Community
+              </a>
+              <a
+                href="https://github.com/scalableminds/webknossos/"
+                target="_blank"
+                style={{ color: "white" }}
+                rel="noopener noreferrer"
+              >
+                Get the Code
+              </a>
+            </div>
           </Col>
         </Row>
       </div>

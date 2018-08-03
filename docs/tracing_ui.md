@@ -27,19 +27,36 @@ A user can directly jump to positions within their datasets by entering them in 
 TODO Add image
 
 ## Skeleton Tracing
-The goal for skeleton tracing is to reconstruct structures in a dataset that span across many data slices as graph of connected nodes. A typical example for a skeleton tracing is to follow a blood vessel for a few centimeters, placing a node every few slices. (See image below)
+The goal for skeleton tracing is to reconstruct structures in a dataset that span across many data slices as a graph of connected nodes. A typical example of a skeleton tracing is to follow a blood vessel for a few centimeters, placing a node every few slices. (See image below)
 
 A typical skeleton tracing contains the reconstruction of one or more structures often with many thousand nodes. All connected nodes form a tree or more generally speaking a graph.
 
 Skeleton tracings can be downloaded, modified, imported using a human-readable XML-based file format called NML.
 
-This articles outline the available features and operations for viewing, editing, or creating new skeleton tracings in webKnossos.
+This article outlines the available features and operations for viewing, editing, or creating new skeleton tracings in webKnossos.
+
+TODO Add image of skeleton tracing
 
 ### Tracing Modes
-webKnossos supports several 
-- Orthogonal Mode
-- Flight
-- Arbitrary
+webKnossos supports several modes for displaying your dataset & interacting with skeleton tracings.
+
+#### Orthogonal Mode
+Orthogonal mode displays a dataset orthogonally to each of the three main axis x, y, z. Additionally, a fourth viewport shows the data and skeleton from a 3D perspective. All camera movement happen along the main axis. This view is especially useful for viewing your data in the highest possible quality alongside its main imaging axis, typically XY. Every single slice of raw data can be viewed.
+
+Most skeleton tracing operations and keyboard shortcuts are tailored for the Orthogonal Mode.
+
+#### Flight Mode
+Flight mode allows an arbitrary view through the data. In contrast to orthogonal mode, any arbitrary slice through the dataset at any rotational angle of the camera is possible. In Flight mode, the data is projected on the inside of a sphere with the camera located at the center of the sphere. 
+
+Spherical projection is especially useful when rotating the camera, as pixels close to the center of the screen move in a predictable manner. Interaction and movements in flight mode feel similar to First-Person (FPV) games.
+
+Flight mode is best used for annotating structures very quickly. Skill tracers can follow "tube"-like structure as though they were "flying" through them. Nodes are placed automatically along the flight path, creating skeleton very efficiently.
+
+#### Oblique Mode
+Oblique Mode is similar to Flight mode, but arbitrary cuts through the data are not projected on a sphere but are straight instead.
+
+
+TODO Add image of mode selection
 
 ### Nodes and Trees
 - Skeletons are trees
@@ -112,7 +129,7 @@ Nodes & Trees
 
 Other
 - `Bounding Box`: Users can set a custom bounding box that will be displayed in all viewports. Useful for orientation when working in a specific area of a dataset. Format: minX, minY, minZ, width, height, depth
-- `Display Planes in 3D View`: Toggles the visibility of the data layers in the 3D viewport. This is useful if you want to view your nodes or a large skeleton in the 3D view without them being covered by the data layers.
+- `Display Planes in 3D View`: fToggles the visibility of the data layers in the 3D viewport. This is useful if you want to view your nodes or a large skeleton in the 3D view without them being covered by the data layers.
 
 
 ### Dataset Settings

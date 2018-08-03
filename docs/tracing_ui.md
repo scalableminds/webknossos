@@ -8,7 +8,7 @@ The main webKnossos user interface for viewing and annotating datasets is divide
 3. The center of the screen is occupied by the tracing interface. Your dataset is displayed here and users can add annotations or add/edit the segmentation. Most interactions we take place here. More below.
 4. The right-hand side of the screen is occupied by several tabs providing more information on your current dataset or tracing. Depending on your editing mode these tabs might change. More below.
 
-TODO Add image
+![An overview of the webKnossos tracing UI](images/tracing_ui_overview.jpg)
 
 ## The Tool Bar
 The toolbar contains frequently used commands, your current position within the dataset and the ability to switch between various modes for viewing and interaction with the dataset or tools depending on your tracing mode.
@@ -35,7 +35,7 @@ Skeleton tracings can be downloaded, modified, imported using a human-readable X
 
 This article outlines the available features and operations for viewing, editing, or creating new skeleton tracings in webKnossos.
 
-TODO Add image of skeleton tracing
+![An example of a complex webKnossos skeleton tracing](images/tracing_ui_skeletontracing.jpg)
 
 ### Tracing Modes
 webKnossos supports several modes for displaying your dataset & interacting with skeleton tracings.
@@ -44,6 +44,8 @@ webKnossos supports several modes for displaying your dataset & interacting with
 Orthogonal mode displays a dataset orthogonally to each of the three main axis x, y, z. Additionally, a fourth viewport shows the data and skeleton from a 3D perspective. All camera movement happen along the main axis. This view is especially useful for viewing your data in the highest possible quality alongside its main imaging axis, typically XY. Every single slice of raw data can be viewed.
 
 Most skeleton tracing operations and keyboard shortcuts are tailored for the Orthogonal Mode.
+
+![The webKnossos tracing mode selectors](images/tracing_ui_modes.jpg)
 
 #### Flight Mode
 Flight mode allows an arbitrary view through the data. In contrast to orthogonal mode, any arbitrary slice through the dataset at any rotational angle of the camera is possible. In Flight mode, the data is projected on the inside of a sphere with the camera located at the center of the sphere. 
@@ -65,6 +67,8 @@ TODO Add image of mode selection
 - keyboard shortcuts
 - abstract tree viewer
 - renaming
+
+![A skeleton tracing's trees can be organized, renamed and help identifying important structures.](images/tracing_ui_trees.jpg)
 
 ### Tree Groups
 - Rename, adding, delete

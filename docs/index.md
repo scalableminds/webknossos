@@ -12,6 +12,7 @@
 
 ## Documentation
 * [Supported Data Formats](./data_formats.md)
+* [Keyboard Shortcuts](./keyboard_shortcuts.md)
 * [FAQ](./faq.md)
 * [Changelog](../CHANGELOG.md)
 * [Migration Guide](../MIGRATIONS.md)

@@ -79,7 +79,7 @@ const WelcomeHeader = ({ history }) => (
               </Button>
               <a
                 href="https://docs.webknossos.org/"
-                style={{ marginRight: 50, color: "white" }}
+                className="spotlight-hero-button"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -88,7 +88,7 @@ const WelcomeHeader = ({ history }) => (
               <a
                 href="https://support.webknossos.org/"
                 target="_blank"
-                style={{ marginRight: 50, color: "white" }}
+                className="spotlight-hero-button"
                 rel="noopener noreferrer"
               >
                 Join the Community
@@ -96,7 +96,7 @@ const WelcomeHeader = ({ history }) => (
               <a
                 href="https://github.com/scalableminds/webknossos/"
                 target="_blank"
-                style={{ color: "white" }}
+                className="spotlight-hero-button"
                 rel="noopener noreferrer"
               >
                 Get the Code

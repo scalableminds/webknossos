@@ -326,7 +326,7 @@ export function requestTask(): Promise<APIAnnotationWithTaskType> {
   return Request.receiveJSON("/api/user/tasks/request");
 }
 
-export function getAnnotationsForTask(taskId: string): Promise<APIAnnotationType[]> {
+export function getAnnotationsForTask(taskId: string): Promise<Array<APIAnnotationType>> {
   return Request.receiveJSON(`/api/tasks/${taskId}/annotations`);
 }
 
@@ -416,7 +416,7 @@ export function reOpenAnnotation(
   return Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/reopen`);
 }
 
-type EditableAnnotationType = {
+export type EditableAnnotationType = {
   name: string,
   description: string,
   isPublic: boolean,

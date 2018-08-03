@@ -61,7 +61,11 @@ class MappingInfoView extends Component<Props> {
   }, 100);
 
   getSegmentationCube(): Cube {
-    return Model.getSegmentationLayer().cube;
+    const layer = Model.getSegmentationLayer();
+    if (!layer) {
+      throw new Error("No segmentation layer found");
+    }
+    return layer.cube;
   }
 
   renderIdTable() {

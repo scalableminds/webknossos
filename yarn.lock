@@ -8999,9 +8999,9 @@ redux-mock-store@^1.2.2:
   dependencies:
     lodash.isplainobject "^4.0.6"
 
-redux-saga@^0.14.3:
-  version "0.14.8"
-  resolved "https://registry.yarnpkg.com/redux-saga/-/redux-saga-0.14.8.tgz#ad01afabe02ec41a17df54e2e09aa236b30a7732"
+redux-saga@^0.16.0:
+  version "0.16.0"
+  resolved "https://registry.yarnpkg.com/redux-saga/-/redux-saga-0.16.0.tgz#0a231db0a1489301dd980f6f2f88d8ced418f724"
 
 redux@^3.6.0, redux@^3.7.1:
   version "3.7.2"

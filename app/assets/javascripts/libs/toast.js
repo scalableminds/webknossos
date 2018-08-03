@@ -92,19 +92,19 @@ const Toast = {
     notification[type](toastConfig);
   },
 
-  info(message: string, config: ToastConfigType = {}) {
+  info(message: string, config: ToastConfigType = {}): void {
     return this.message("info", message, config);
   },
 
-  warning(message: string, config: ToastConfigType = {}) {
+  warning(message: string, config: ToastConfigType = {}): void {
     return this.message("warning", message, config);
   },
 
-  success(message: string = "Success :-)", config: ToastConfigType = {}) {
+  success(message: string = "Success :-)", config: ToastConfigType = {}): void {
     return this.message("success", message, config);
   },
 
-  error(message: string | React$Element<any> = "Error :-/", config: ToastConfigType = {}) {
+  error(message: string | React$Element<any> = "Error :-/", config: ToastConfigType = {}): void {
     return this.message("error", message, config);
   },
 

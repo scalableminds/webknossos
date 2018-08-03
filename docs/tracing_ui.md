@@ -10,7 +10,7 @@ The main webKnossos user interface for viewing and annotating datasets is divide
 
 ![An overview of the webKnossos tracing UI highlighting the 4 main ](images/tracing_ui_overview.jpg)
 
-## The Tool Bar
+## The Toolbar
 The toolbar contains frequently used commands, your current position within the dataset and the ability to switch between various modes for viewing and interaction with the dataset or tools depending on your tracing mode.
 
 The most common buttons are:
@@ -45,7 +45,7 @@ Orthogonal mode displays a dataset orthogonally to each of the three main axis x
 
 Most skeleton tracing operations and keyboard shortcuts are tailored for the Orthogonal Mode.
 
-![Switch between different tracing modes using the buttons in the tool bar](images/tracing_ui_modes.jpg)
+![Switch between different tracing modes using the buttons in the toolbar](images/tracing_ui_modes.jpg)
 
 #### Flight Mode
 Flight mode allows an arbitrary view through the data. In contrast to orthogonal mode, any arbitrary slice through the dataset at any rotational angle of the camera is possible. In Flight mode, the data is projected on the inside of a sphere with the camera located at the center of the sphere. 
@@ -105,8 +105,14 @@ Importing a skeleton tracing can be achieved using two approaches as well:
 ![Skeletons can be imported by drag and drop in the tracing view or from the dashboard](images/tracing_ui_import.jpg)
 
 ### Merging Tracings
-- drag and drop
-- dialogs
+There are two ways for merging tracings:
+
+1. While in the tracing UI, drag and drop an NML file onto your browser window to import a skeleton. The imported skeleton will be merged with currently open tracing.
+
+2. If you would like to merge your current tracing with another existing tracing, select the `Merge` operation from the overflow menu next to the `Save` button. (see image) Either enter the ID of an existing explorative tracing or select a whole project and proceed to merge the selection with your currently open tracing. The resulting annotation can either be created as a new explorative tracing. Otherwise, the merge will happen in your current tracing. 
+
+![1. Select the Merge operation from the menu](images/tracing_ui_merge_1.jpg)
+![2. Merging can be done with a whole wK project or using the ID of an existing explorative tracing](images/tracing_ui_merge_2.jpg)
 
 
 ## Volume Tracing

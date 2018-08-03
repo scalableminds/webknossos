@@ -9,6 +9,7 @@ import { getOrganizations, getDatasets } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import messages from "messages";
 import Utils from "libs/utils";
+import features from "features";
 import type { DatasetType } from "dashboard/dataset_view";
 import type { RouterHistory } from "react-router-dom";
 import type { OxalisState } from "oxalis/store";
@@ -152,7 +153,7 @@ class SpotlightView extends React.PureComponent<Props, State> {
   render() {
     return (
       <Layout>
-        {this.props.activeUser == null ? (
+        {this.props.activeUser == null && features().allowOrganzationCreation ? (
           <WelcomeHeader history={this.props.history} />
         ) : (
           <SimpleHeader />

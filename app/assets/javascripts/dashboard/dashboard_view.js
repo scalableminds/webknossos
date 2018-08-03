@@ -61,7 +61,7 @@ class DashboardView extends React.PureComponent<Props, State> {
     this.setState({ user });
   }
 
-  uploadNmls = async (files: Array<*>, createGroupForEachFile: boolean): Promise<void> => {
+  uploadNmls = async (files: Array<File>, createGroupForEachFile: boolean): Promise<void> => {
     const response = await Request.sendMultipartFormReceiveJSON("/api/annotations/upload", {
       data: { nmlFile: files, createGroupForEachFile },
     });

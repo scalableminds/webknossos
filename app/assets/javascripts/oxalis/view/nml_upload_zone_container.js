@@ -9,7 +9,7 @@ import { connect } from "react-redux";
 import FormattedDate from "components/formatted_date";
 
 type State = {
-  files: Array<*>,
+  files: Array<File>,
   dropzoneActive: boolean,
   isImporting: boolean,
   createGroupForEachFile: boolean,
@@ -22,7 +22,7 @@ type StateProps = {
 
 type Props = StateProps & {
   children: React.Node,
-  onImport: (files: Array<*>, createGroupForEachFile: boolean) => Promise<void>,
+  onImport: (files: Array<File>, createGroupForEachFile: boolean) => Promise<void>,
 };
 
 function OverlayDropZone({ children }) {
@@ -87,7 +87,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
     this.setState({ dropzoneActive: false });
   };
 
-  onDrop = (files: Array<*>) => {
+  onDrop = (files: Array<File>) => {
     this.setState({
       files,
       dropzoneActive: false,

@@ -66,7 +66,7 @@ function readFileAsText(file: File): Promise<string> {
   });
 }
 
-export async function importNmls(files: Array<*>, createGroupForEachFile: boolean) {
+export async function importNmls(files: Array<File>, createGroupForEachFile: boolean) {
   try {
     const { successes: importActions, errors } = await Utils.promiseAllWithErrors(
       files.map(async file => {

@@ -9,7 +9,7 @@ import type {
   VolumeToolType,
   ContourModeType,
 } from "oxalis/constants";
-import type { APIAnnotationType, ServerVolumeTracingType } from "admin/api_flow_types";
+import type { ServerVolumeTracingType } from "admin/api_flow_types";
 
 type InitializeVolumeTracingActionType = {
   type: "INITIALIZE_VOLUMETRACING",

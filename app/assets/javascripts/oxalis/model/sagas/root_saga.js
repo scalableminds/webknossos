@@ -29,7 +29,6 @@ export default function* rootSaga(): Saga<void> {
 }
 
 function* restartableSaga(): Saga<void> {
-  debugger;
   try {
     yield _all([
       _call(warnAboutSegmentationOpacity),

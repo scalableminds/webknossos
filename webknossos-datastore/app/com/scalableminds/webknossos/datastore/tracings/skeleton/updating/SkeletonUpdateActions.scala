@@ -43,6 +43,9 @@ case class UpdateTreeSkeletonAction(id: Int, updatedId: Option[Int], color: Opti
 }
 
 case class MergeTreeSkeletonAction(sourceId: Int, targetId: Int, actionTimestamp: Option[Long] = None) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper {
+  // only nodes and edges are merged here,
+  // other properties are managed explicitly
+  // by the frontend with extra actions
   override def applyOn(tracing: SkeletonTracing) = {
     def treeTransform(targetTree: Tree) = {
       val sourceTree = treeById(tracing, sourceId)
@@ -58,6 +61,8 @@ case class MergeTreeSkeletonAction(sourceId: Int, targetId: Int, actionTimestamp
 }
 
 case class MoveTreeComponentSkeletonAction(nodeIds: List[Int], sourceId: Int, targetId: Int, actionTimestamp: Option[Long] = None) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper {
+  // this should only move a whole component,
+  // that is disjoint from the rest of the tree
   override def applyOn(tracing: SkeletonTracing) = {
     val sourceTree = treeById(tracing, sourceId)
     val targetTree = treeById(tracing, targetId)

@@ -61,8 +61,8 @@ Find all available keyboard shortcuts for webKnossos listed below.
 | B                             | Mark Node as New Branchpoint                |
 | J                             | Jump To Last Branchpoint                    |
 | S                             | Center Active Node                          |
-| D                             | Forward Without Recording Waypoints         |
-| F                             | Backward Without Recording Waypoints        |
+| F                             | Forward Without Recording Waypoints         |
+| D                             | Backward Without Recording Waypoints        |
 | SHIFT + SPACE                 | Delete Active Node, Recenter Previous Node  |
 
 

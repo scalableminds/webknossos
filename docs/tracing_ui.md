@@ -82,16 +82,27 @@ All further keyboard shortcuts are [available here](./keyboard_shortcuts.md).
 -  split / merge
 - drag & drop
 - hiding trees
+- colors shuffeling
 
 ![Organize your skeleton tracing's trees to remember important structures for later reference](images/tracing_ui_trees.jpg)
 
-### Comments
-
 
 ### Importing & Exporting NML Files
-- drag and drop
-- buttons
-- download
+webKnossos makes it easy to import or export skeleton tracings as NML files. There are two ways for downloading your tracings:
+
+1. There is a `Download` button in the overflow menu next to the prominent `Save` button in the toolbar at the top of the screen. 
+
+2. If you need more fine-grained control over which trees to download use the `Download Selected Trees` option. Form the `Tree Tab` click on `More` and select `Download Selected Trees` from the menu. All visible trees (checkmark in front of the name) will be downloaded in as an NML file. This is especially useful if you need to only download a single tree of an otherwise much larger tracing.
+
+![Skeletons can be exported and downloaded as NML files from the tracing view. Either download all or only selected trees. ](images/tracing_ui_download.jpg)
+
+Importing a skeleton tracing can be achieved using two approaches as well:
+
+1. If you already have a tracing open you can easily add more skeletons to it by drag and dropping an NML file onto your browser window. Otherwise, use the `Import NML` option next to `Download Selected Trees`. This will merge the NML files content with the already open tracing. 
+
+2. To import a skeleton tracing as a completely new wK annotation, navigate to your user dashboard. Under "Explorative Tracings" use the `Upload Annotation` button.
+
+![Skeletons can be imported by drag and drop in the tracing view or from the dashboard](images/tracing_ui_import.jpg)
 
 ### Merging Tracings
 - drag and drop

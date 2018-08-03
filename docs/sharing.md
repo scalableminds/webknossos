@@ -16,5 +16,6 @@
 - from within the tracing view
 - public vs private
 - requires the dataset to be publicly shared
+- copy to my account
 
 

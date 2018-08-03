@@ -94,7 +94,7 @@ webKnossos makes it easy to import or export skeleton tracings as NML files. The
 
 2. If you need more fine-grained control over which trees to download use the `Download Selected Trees` option. Form the `Tree Tab` click on `More` and select `Download Selected Trees` from the menu. All visible trees (checkmark in front of the name) will be downloaded in as an NML file. This is especially useful if you need to only download a single tree of an otherwise much larger tracing.
 
-![Skeletons can be exported and downloaded as NML files from the tracing view. Either download all or only selected trees. ](images/tracing_ui_download.jpg)
+![Skeletons can be exported and downloaded as NML files from the tracing view. Either download all or only selected trees. ](images/tracing_ui_download.png)
 
 Importing a skeleton tracing can be achieved using two approaches as well:
 
@@ -102,7 +102,7 @@ Importing a skeleton tracing can be achieved using two approaches as well:
 
 2. To import a skeleton tracing as a completely new wK annotation, navigate to your user dashboard. Under "Explorative Tracings" use the `Upload Annotation` button.
 
-![Skeletons can be imported by drag and drop in the tracing view or from the dashboard](images/tracing_ui_import.jpg)
+![Skeletons can be imported by drag and drop in the tracing view or from the dashboard](images/tracing_ui_import.png)
 
 ### Merging Tracings
 There are two ways for merging tracings:
@@ -111,8 +111,8 @@ There are two ways for merging tracings:
 
 2. If you would like to merge your current tracing with another existing tracing, select the `Merge` operation from the overflow menu next to the `Save` button. (see image) Either enter the ID of an existing explorative tracing or select a whole project and proceed to merge the selection with your currently open tracing. The resulting annotation can either be created as a new explorative tracing. Otherwise, the merge will happen in your current tracing. 
 
-![1. Select the Merge operation from the menu](images/tracing_ui_merge_1.jpg)
-![2. Merging can be done with a whole wK project or using the ID of an existing explorative tracing](images/tracing_ui_merge_2.jpg)
+![1. Select the Merge operation from the menu](images/tracing_ui_merge_1.png)
+![2. Merging can be done with a whole wK project or using the ID of an existing explorative tracing](images/tracing_ui_merge_2.png)
 
 
 ## Volume Tracing

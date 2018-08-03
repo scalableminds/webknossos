@@ -13,6 +13,7 @@ import ChainReducer from "test/helpers/chainReducer";
 import update from "immutability-helper";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
+import { rgbs as colors } from "libs/color_generator";
 
 mock.stopAll();
 mock("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
@@ -1375,4 +1376,15 @@ test("SkeletonTracing should delete a comment for a specified node (1/2)", t => 
   t.deepEqual(newState.tracing.skeleton.trees[1].comments.length, 2);
   t.deepEqual(newState.tracing.skeleton.trees[1].comments[0].nodeId, 1);
   t.deepEqual(newState.tracing.skeleton.trees[1].comments[1].nodeId, 3);
+});
+
+test("SkeletonTracing should change the color of a specified tree", t => {
+  const colorIndex = 10;
+  const newState = SkeletonTracingReducer(
+    initialState,
+    SkeletonTracingActions.setTreeColorIndexAction(1, colorIndex),
+  );
+
+  t.not(newState, initialState);
+  t.is(newState.tracing.trees[1].color, colors[colorIndex - 1]);
 });

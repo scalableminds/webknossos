@@ -614,8 +614,15 @@ export function shuffleTreeColor(
   tree: TreeType,
 ): Maybe<[TreeType, number]> {
   const randomId = _.random(0, 10000, false);
-  // ColorGenerator fails to produce distinct color for huge ids (Infinity)
-  const newTree = update(tree, { color: { $set: ColorGenerator.distinctColorForId(randomId) } });
+  return setTreeColorIndex(skeletonTracing, tree, randomId);
+}
+
+export function setTreeColorIndex(
+  skeletonTracing: SkeletonTracingType,
+  tree: TreeType,
+  colorIndex: number,
+): Maybe<[TreeType, number]> {
+  const newTree = update(tree, { color: { $set: ColorGenerator.distinctColorForId(colorIndex) } });
   return Maybe.Just([newTree, tree.treeId]);
 }
 

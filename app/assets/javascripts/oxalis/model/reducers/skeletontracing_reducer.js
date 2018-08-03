@@ -16,6 +16,7 @@ import {
   deleteNode,
   deleteEdge,
   shuffleTreeColor,
+  setTreeColorIndex,
   createComment,
   deleteComment,
   mergeTrees,
@@ -400,6 +401,16 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
               },
             },
           });
+        }
+
+        case "SET_TREE_COLOR_INDEX": {
+          const { colorIndex } = action;
+          return getTree(skeletonTracing, action.treeId)
+            .chain(tree => setTreeColorIndex(skeletonTracing, tree, colorIndex))
+            .map(([tree, treeId]) =>
+              update(state, { tracing: { trees: { [treeId]: { $set: tree } } } }),
+            )
+            .getOrElse(state);
         }
 
         case "SHUFFLE_TREE_COLOR": {

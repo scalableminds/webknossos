@@ -8,7 +8,7 @@ The main webKnossos user interface for viewing and annotating datasets is divide
 3. The center of the screen is occupied by the tracing interface. Your dataset is displayed here and users can add annotations or add/edit the segmentation. Most interactions we take place here. More below.
 4. The right-hand side of the screen is occupied by several tabs providing more information on your current dataset or tracing. Depending on your editing mode these tabs might change. More below.
 
-![An overview of the webKnossos tracing UI](images/tracing_ui_overview.jpg)
+![An overview of the webKnossos tracing UI highlighting the 4 main ](images/tracing_ui_overview.jpg)
 
 ## The Tool Bar
 The toolbar contains frequently used commands, your current position within the dataset and the ability to switch between various modes for viewing and interaction with the dataset or tools depending on your tracing mode.
@@ -45,7 +45,7 @@ Orthogonal mode displays a dataset orthogonally to each of the three main axis x
 
 Most skeleton tracing operations and keyboard shortcuts are tailored for the Orthogonal Mode.
 
-![The webKnossos tracing mode selectors](images/tracing_ui_modes.jpg)
+![Switch between different tracing modes using the buttons in the tool bar](images/tracing_ui_modes.jpg)
 
 #### Flight Mode
 Flight mode allows an arbitrary view through the data. In contrast to orthogonal mode, any arbitrary slice through the dataset at any rotational angle of the camera is possible. In Flight mode, the data is projected on the inside of a sphere with the camera located at the center of the sphere. 
@@ -58,22 +58,27 @@ Flight mode is best used for annotating structures very quickly. Skill tracers c
 Oblique Mode is similar to Flight mode, but arbitrary cuts through the data are not projected on a sphere but are straight instead.
 
 
-TODO Add image of mode selection
-
 ### Nodes and Trees
-- Skeletons are trees
-- Adding / Deleting / Merge / Split Nodes / Trees
-- Active Node
-- keyboard shortcuts
-- abstract tree viewer
-- renaming
+Skeleton tracings consist of connected nodes forming a graph. Nodes are connected through edges and are organized a trees. 
 
-![A skeleton tracing's trees can be organized, renamed and help identifying important structures.](images/tracing_ui_trees.jpg)
+Nodes can be placed by right clicking in orthogonal mode or by automatically when moving in flight or oblique mode. webKnossos uses the concept of always having an active node and an active tree. All (global) operations are executed on the current active node, e.g. adding a comment or node deletion. Most keyboard shortcuts take the active node into context. Operations on whole trees, e.g. splitting or merging trees, follow the same pattern.
+
+Skeleton tracing can contain one or many trees consiting of several nodes all the way to millions of nodes. Users can add comments to each node to mark important positions or easily select them from a list of comments for later usage. The `Tree Viewer` tab on the right-hand side menu displays a 2D simplified tree representation of the currently active tree.
+
+Many organic structures do not follow a single, linear path but split into several individual branches instead. webKnossos natively supports branch points. Any node can be marked as a branch point using the keyboard shortcut "B". Branch points are highlighted using a slightly different color. All branch points are saved as a stack for each tree and can be accessed first-in, first-out (FIFO). Press the "J" to jump to the latest branch point to continue working from their and remove it from the stack.
+
+| Keyboard Shortcut | Operation     |  
+| ----------------- | ------------- |  
+| B         | second cell   |  
+| J        | fourth cell   |  
 
 ### Tree Groups
 - Rename, adding, delete
+-  split / merge
 - drag & drop
 - hiding trees
+
+![Organize your skeleton tracing's trees to remember important structures for later reference](images/tracing_ui_trees.jpg)
 
 ### Comments
 

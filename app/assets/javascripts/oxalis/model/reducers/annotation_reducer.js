@@ -41,11 +41,17 @@ function AnnotationReducer(state: OxalisState, action: ActionType): OxalisState 
     }
 
     case "SET_USER_BOUNDING_BOX": {
+      const updaterObject = {
+        userBoundingBox: {
+          $set: action.userBoundingBox,
+        },
+      };
+      const maybeSkeletonUpdater = state.tracing.skeleton ? { skeleton: updaterObject } : {};
+      const maybeVolumeUpdater = state.tracing.volume ? { volume: updaterObject } : {};
       return update(state, {
         tracing: {
-          userBoundingBox: {
-            $set: action.userBoundingBox,
-          },
+          ...maybeSkeletonUpdater,
+          ...maybeVolumeUpdater,
         },
       });
     }

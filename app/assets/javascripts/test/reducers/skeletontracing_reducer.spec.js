@@ -1386,5 +1386,5 @@ test("SkeletonTracing should change the color of a specified tree", t => {
   );
 
   t.not(newState, initialState);
-  t.is(newState.tracing.trees[1].color, colors[colorIndex - 1]);
+  t.is(newState.tracing.skeleton.trees[1].color, colors[colorIndex - 1]);
 });

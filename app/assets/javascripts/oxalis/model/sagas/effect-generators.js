@@ -36,4 +36,5 @@ export const _take = IOEffects.take;
 export const _call = IOEffects.call;
 export const _takeEvery = IOEffects.takeEvery;
 export const _throttle = IOEffects.throttle;
+export const _cancel = IOEffects.cancel;
 export const _all = IOEffects.all;

@@ -20,7 +20,7 @@ The most common buttons are:
 - `Archive`: Only available for explorative tracings. Closes the tracing and archives it, removing it from a user's dashboard. Archived tracings can be found on a user's dashboard under "Explorative Tracings" and by clicking on "Show Archived Annotations". Use this to declutter your dashboard. 
 - `Download`: Starts the download of the current annotation. Skeletontracings are downloaded as NML files. Volumetracing downloads contain the raw segmentation data as wkw files.
 - `Share`: Create a shareable link to your dataset containing the current position, rotation, zoom level etc. Use this to collaboratively work with colleagues. Read more about this feature in the [Sharing guide](./sharing.md).  
-- `Add Script`: Using the [wK frontend API](https://demo.webknossos.org/assets/docs/frontend-api/index.html) user can interact with wK programmatically. User script can be executed from here. Admins can add often used scripts to wK to make them available to all users for easy access.
+- `Add Script`: Using the [wK frontend API](https://demo.webknossos.org/assets/docs/frontend-api/index.html) users can interact with wK programmatically. User script can be executed from here. Admins can add often used scripts to wK to make them available to all users for easy access.
 
 A user can directly jump to positions within their datasets by entering them in the position input field. The same is true for the rotation in some tracing modes. Clicking on the position or rotation labels copies the values to the clipboard.
 
@@ -67,10 +67,15 @@ Skeleton tracing can contain one or many trees consiting of several nodes all th
 
 Many organic structures do not follow a single, linear path but split into several individual branches instead. webKnossos natively supports branch points. Any node can be marked as a branch point using the keyboard shortcut "B". Branch points are highlighted using a slightly different color. All branch points are saved as a stack for each tree and can be accessed first-in, first-out (FIFO). Press the "J" to jump to the latest branch point to continue working from their and remove it from the stack.
 
-| Keyboard Shortcut | Operation     |  
-| ----------------- | ------------- |  
-| B         | second cell   |  
-| J        | fourth cell   |  
+| Keyboard Shortcut | Operation                 |
+| ----------------- | -------------             |
+| Right Click       | Create New Node           |
+| S                 | Center Active Node        |
+| DEL               | Delete Active Node        |
+| B                 | Create Branch Point       |
+| J                 | Jump to Last Branch Point |
+
+All further keyboard shortcuts are [available here](./keyboard_shortcuts.md). 
 
 ### Tree Groups
 - Rename, adding, delete

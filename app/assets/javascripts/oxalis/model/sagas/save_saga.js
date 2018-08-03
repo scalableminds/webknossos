@@ -10,7 +10,7 @@ import Date from "libs/date";
 import messages from "messages";
 import Toast from "libs/toast";
 import {
-  all,
+  _all,
   take,
   _take,
   _call,
@@ -95,7 +95,7 @@ export function* collectUndoStates(): Saga<void> {
 }
 
 export function* pushAnnotationAsync(): Saga<void> {
-  yield all([_call(pushTracingTypeAsync, "skeleton"), _call(pushTracingTypeAsync, "volume")]);
+  yield _all([_call(pushTracingTypeAsync, "skeleton"), _call(pushTracingTypeAsync, "volume")]);
 }
 
 export function* pushTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<void> {
@@ -403,7 +403,7 @@ export function performDiffTracing(
 }
 
 export function* saveTracingAsync(): Saga<void> {
-  yield all([_call(saveTracingTypeAsync, "skeleton"), _call(saveTracingTypeAsync, "volume")]);
+  yield _all([_call(saveTracingTypeAsync, "skeleton"), _call(saveTracingTypeAsync, "volume")]);
 }
 
 export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<void> {

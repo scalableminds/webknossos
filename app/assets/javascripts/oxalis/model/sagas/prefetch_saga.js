@@ -34,11 +34,18 @@ export function* watchDataRelevantChanges(): Saga<void> {
   const previousProperties = {};
   // Initiate the prefetching once and then only for data relevant changes
   yield* call(triggerDataPrefetching, previousProperties);
-  yield _throttle(PREFETCH_THROTTLE_TIME, FlycamActions, triggerDataPrefetching, previousProperties);
+  yield _throttle(
+    PREFETCH_THROTTLE_TIME,
+    FlycamActions,
+    triggerDataPrefetching,
+    previousProperties,
+  );
 }
 
 function* shouldPrefetchForDataLayer(dataLayer: DataLayer): Saga<boolean> {
-  const segmentationOpacity = yield* select(state => state.datasetConfiguration.segmentationOpacity);
+  const segmentationOpacity = yield* select(
+    state => state.datasetConfiguration.segmentationOpacity,
+  );
   const isSegmentationVisible = segmentationOpacity !== 0;
   const isSegmentation = yield* select(state => isSegmentationLayer(state.dataset, dataLayer.name));
   // There is no need to prefetch data for segmentation layers that are not visible
@@ -90,10 +97,7 @@ function getTracingTypes(state: OxalisState) {
   };
 }
 
-export function* prefetchForPlaneMode(
-  layer: DataLayer,
-  previousProperties: Object,
-): Saga<void> {
+export function* prefetchForPlaneMode(layer: DataLayer, previousProperties: Object): Saga<void> {
   const position = yield* select(state => getPosition(state.flycam));
   const zoomStep = yield* select(state => getRequestLogZoomStep(state));
   const activePlane = yield* select(state => state.viewModeData.plane.activeViewport);

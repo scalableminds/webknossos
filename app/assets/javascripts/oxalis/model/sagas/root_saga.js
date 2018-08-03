@@ -18,7 +18,7 @@ import {
   watchAnnotationAsync,
 } from "oxalis/model/sagas/annotation_saga";
 import { alert } from "libs/window";
-import { all, _call, fork, take, _cancel, type Saga } from "oxalis/model/sagas/effect-generators";
+import { _all, _call, fork, take, _cancel, type Saga } from "oxalis/model/sagas/effect-generators";
 
 export default function* rootSaga(): Saga<void> {
   while (true) {
@@ -29,8 +29,9 @@ export default function* rootSaga(): Saga<void> {
 }
 
 function* restartableSaga(): Saga<void> {
+  debugger;
   try {
-    yield all([
+    yield _all([
       _call(warnAboutSegmentationOpacity),
       _call(watchPushSettingsAsync),
       _call(watchSkeletonTracingAsync),

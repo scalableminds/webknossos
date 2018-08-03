@@ -2,7 +2,17 @@
  * volumetracing_saga.js
  * @flow
  */
-import { call, select, put, take, _take, race, _takeEvery, fork, type Saga } from "oxalis/model/sagas/effect-generators";
+import {
+  call,
+  select,
+  put,
+  take,
+  _take,
+  race,
+  _takeEvery,
+  fork,
+  type Saga,
+} from "oxalis/model/sagas/effect-generators";
 import {
   updateDirectionAction,
   resetContourAction,
@@ -64,13 +74,12 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     if (yield* select(state => isVolumeTracingDisallowed(state))) {
       continue;
     }
-    const currentLayer = yield* createVolumeLayer(startEditingAction.planeId);
-    const activeTool = yield* select(
-      state => enforceVolumeTracing(state.tracing).activeTool,
-    );
+    const currentLayer = yield* call(createVolumeLayer, startEditingAction.planeId);
+    const activeTool = yield* select(state => enforceVolumeTracing(state.tracing).activeTool);
 
     if (activeTool === VolumeToolEnum.BRUSH) {
-      yield* call(labelWithIterator,
+      yield* call(
+        labelWithIterator,
         currentLayer.getCircleVoxelIterator(startEditingAction.position),
         contourTracingMode,
       );
@@ -90,7 +99,8 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
       if (activeTool === VolumeToolEnum.TRACE) {
         currentLayer.addContour(addToLayerAction.position);
       } else if (activeTool === VolumeToolEnum.BRUSH) {
-        yield* call(labelWithIterator,
+        yield* call(
+          labelWithIterator,
           currentLayer.getCircleVoxelIterator(addToLayerAction.position),
           contourTracingMode,
         );
@@ -102,17 +112,13 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
 }
 
 function* createVolumeLayer(planeId: OrthoViewType): Saga<VolumeLayer> {
-  const position = Dimensions.roundCoordinate(
-    yield* select(state => getPosition(state.flycam)),
-  );
+  const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
   const thirdDimValue = position[Dimensions.thirdDimensionForPlane(planeId)];
   return new VolumeLayer(planeId, thirdDimValue);
 }
 
 function* labelWithIterator(iterator, contourTracingMode): Saga<void> {
-  const activeCellId = yield* select(
-    state => enforceVolumeTracing(state.tracing).activeCellId,
-  );
+  const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
   const segmentationLayer = yield* call([Model, Model.getSegmentationLayer]);
   const { cube } = segmentationLayer;
   switch (contourTracingMode) {
@@ -134,23 +140,17 @@ function* labelWithIterator(iterator, contourTracingMode): Saga<void> {
 }
 
 function* copySegmentationLayer(action: CopySegmentationLayerActionType): Saga<void> {
-  const activeViewport = yield* select(
-    state => state.viewModeData.plane.activeViewport,
-  );
+  const activeViewport = yield* select(state => state.viewModeData.plane.activeViewport);
   if (activeViewport === "TDView") {
     // Cannot copy labels from 3D view
     return;
   }
 
   const segmentationLayer = yield* call([Model, Model.getSegmentationLayer]);
-  const position = Dimensions.roundCoordinate(
-    yield* select(state => getPosition(state.flycam)),
-  );
+  const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
   const zoom = yield* select(state => state.flycam.zoomStep);
   const halfViewportWidth = Math.round((Constants.PLANE_WIDTH / 2) * zoom);
-  const activeCellId = yield* select(
-    state => enforceVolumeTracing(state.tracing).activeCellId,
-  );
+  const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
 
   function copyVoxelLabel(voxelTemplateAddress, voxelTargetAddress) {
     const templateLabelValue = segmentationLayer.cube.getDataValue(voxelTemplateAddress);
@@ -167,9 +167,7 @@ function* copySegmentationLayer(action: CopySegmentationLayerActionType): Saga<v
   }
 
   const directionInverter = action.source === "nextLayer" ? 1 : -1;
-  const spaceDirectionOrtho = yield* select(
-    state => state.flycam.spaceDirectionOrtho,
-  );
+  const spaceDirectionOrtho = yield* select(state => state.flycam.spaceDirectionOrtho);
   const dim = Dimensions.getIndices(activeViewport)[2];
   const direction = spaceDirectionOrtho[dim];
 

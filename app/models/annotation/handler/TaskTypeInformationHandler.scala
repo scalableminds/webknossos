@@ -23,7 +23,7 @@ object TaskTypeInformationHandler extends AnnotationInformationHandler with FoxI
       user <- userOpt ?~> "user.notAuthorised"
       _dataSet = finishedAnnotations.head._dataSet
       mergedAnnotation <- AnnotationMerger.mergeN(taskTypeId, persistTracing=false, user._id,
-        _dataSet, taskType._team, AnnotationTypeSQL.CompoundTaskType, finishedAnnotations) ?~> "annotation.merge.failed.compound"
+        _dataSet, taskType._team, AnnotationType.CompoundTaskType, finishedAnnotations) ?~> "annotation.merge.failed.compound"
     } yield mergedAnnotation
 
   override def restrictionsFor(taskTypeId: ObjectId)(implicit ctx: DBAccessContext) =

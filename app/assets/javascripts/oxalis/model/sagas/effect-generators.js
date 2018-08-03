@@ -35,4 +35,5 @@ export function* race(...args) {
 export const _take = IOEffects.take;
 export const _call = IOEffects.call;
 export const _takeEvery = IOEffects.takeEvery;
-export const { all } = IOEffects;
+export const _throttle = IOEffects.throttle;
+export const all = IOEffects.all;

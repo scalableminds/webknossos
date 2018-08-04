@@ -5,8 +5,9 @@ import test from "ava";
 import mockRequire from "mock-require";
 import DiffableMap from "libs/diffable_map";
 import { alert } from "libs/window";
-import { expectValueDeepEqual } from "../helpers/sagaHelpers";
+import { setSaveBusyAction } from "oxalis/model/actions/save_actions";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
+import { expectValueDeepEqual } from "../helpers/sagaHelpers";
 
 mockRequire.stopAll();
 
@@ -25,7 +26,7 @@ const SaveActions = mockRequire.reRequire("oxalis/model/actions/save_actions");
 const { take, call, put } = mockRequire.reRequire("redux-saga/effects");
 
 const {
-  compactUpdateActions,
+  compactSaveQueue,
   pushAnnotationAsync,
   sendRequestToServer,
   toggleErrorHighlighting,
@@ -83,7 +84,7 @@ test("SaveSaga should compact multiple updateTracing update actions", t => {
     TIMESTAMP,
   );
 
-  t.deepEqual(compactUpdateActions(saveQueue), [saveQueue[1]]);
+  t.deepEqual(compactSaveQueue(saveQueue), [saveQueue[1]]);
 });
 
 test("SaveSaga should send update actions", t => {
@@ -94,16 +95,17 @@ test("SaveSaga should send update actions", t => {
   expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS));
   saga.next(); // setLastSaveTimestampAction
   saga.next(); // select state
-  expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE"));
+  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false)));
+  expectValueDeepEqual(t, saga.next(), take("PUSH_SAVE_QUEUE"));
   saga.next(); // race
   saga.next(SaveActions.pushSaveQueueAction(updateActions));
   saga.next();
   expectValueDeepEqual(t, saga.next(saveQueue), call(sendRequestToServer));
-  saga.next(); // SET_SAVE_BUSY
 
   // Test that loop repeats
   saga.next(); // select state
-  expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE"));
+  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false)));
+  expectValueDeepEqual(t, saga.next(), take("PUSH_SAVE_QUEUE"));
 });
 
 test("SaveSaga should send request to server", t => {
@@ -194,7 +196,8 @@ test("SaveSaga should send update actions right away", t => {
   expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS));
   saga.next();
   saga.next(); // select state
-  expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE"));
+  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false)));
+  expectValueDeepEqual(t, saga.next(), take("PUSH_SAVE_QUEUE"));
   saga.next(); // race
   saga.next(SaveActions.pushSaveQueueAction(updateActions));
   saga.next(SaveActions.saveNowAction());
@@ -256,7 +259,7 @@ test("SaveSaga should set the correct version numbers if the save queue was comp
   saga.next(saveQueue);
   saga.next({ version: LAST_VERSION, type: "skeleton", tracingId: "1234567890" });
   saga.next(DATASTORE_URL);
-  // two of the updateTracing update actions are removed by compactUpdateActions
+  // two of the updateTracing update actions are removed by compactSaveQueue
   expectValueDeepEqual(t, saga.next(), put(SaveActions.setVersionNumberAction(LAST_VERSION + 1)));
   expectValueDeepEqual(t, saga.next(), put(SaveActions.setLastSaveTimestampAction()));
   expectValueDeepEqual(t, saga.next(), put(SaveActions.shiftSaveQueueAction(3)));

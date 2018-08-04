@@ -113,9 +113,6 @@ export type VolumeCellType = {
 
 export type VolumeCellMapType = { [number]: VolumeCellType };
 
-export type CategoryType = "color" | "segmentation";
-export type ElementClassType = "uint8" | "uint16" | "uint32";
-
 export type DataLayerType = APIDataLayerType;
 
 export type RestrictionsType = APIRestrictionsType;
@@ -229,6 +226,8 @@ export type TemporaryConfigurationType = {
   +brushSize: number,
   +activeMapping: {
     +mapping: ?MappingType,
+    +mappingColors: ?Array<number>,
+    +hideUnmappedIds: boolean,
     +isMappingEnabled: boolean,
     +mappingSize: number,
   },
@@ -244,10 +243,16 @@ export type SaveQueueEntryType = {
   actions: Array<UpdateAction>,
 };
 
+export type ProgressInfoType = {
+  +processedActionCount: number,
+  +totalActionCount: number,
+};
+
 export type SaveStateType = {
   +isBusy: boolean,
   +queue: Array<SaveQueueEntryType>,
   +lastSaveTimestamp: number,
+  +progressInfo: ProgressInfoType,
 };
 
 export type FlycamType = {
@@ -353,6 +358,8 @@ export const defaultState: OxalisState = {
     brushSize: 50,
     activeMapping: {
       mapping: null,
+      mappingColors: null,
+      hideUnmappedIds: false,
       isMappingEnabled: false,
       mappingSize: 0,
     },
@@ -410,6 +417,10 @@ export const defaultState: OxalisState = {
     queue: [],
     isBusy: false,
     lastSaveTimestamp: 0,
+    progressInfo: {
+      processedActionCount: 0,
+      totalActionCount: 0,
+    },
   },
   flycam: {
     zoomStep: 1.3,

@@ -3,7 +3,7 @@ package models.annotation
 import oxalis.security.WebknossosSilhouette.UserAwareRequest
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.AnnotationTypeSQL.AnnotationTypeSQL
+import models.annotation.AnnotationType.AnnotationType
 import models.annotation.handler.AnnotationInformationHandler
 import play.api.libs.concurrent.Execution.Implicits._
 
@@ -12,17 +12,17 @@ trait AnnotationInformationProvider
     with FoxImplicits
     with models.basics.Implicits {
 
-  def provideAnnotation(typ: String, id: String)(implicit request: UserAwareRequest[_]): Fox[AnnotationSQL] =
+  def provideAnnotation(typ: String, id: String)(implicit request: UserAwareRequest[_]): Fox[Annotation] =
     for {
       annotationIdentifier <- AnnotationIdentifier.parse(typ, id)
       annotation <- provideAnnotation(annotationIdentifier) ?~> "annotation.notFound"
     } yield annotation
 
-  def provideAnnotation(annotationIdentifier: AnnotationIdentifier)(implicit request: UserAwareRequest[_]): Fox[AnnotationSQL] = {
+  def provideAnnotation(annotationIdentifier: AnnotationIdentifier)(implicit request: UserAwareRequest[_]): Fox[Annotation] = {
     AnnotationStore.requestAnnotation(annotationIdentifier, request.identity)
   }
 
-  def nameFor(annotation: AnnotationSQL)(implicit request: UserAwareRequest[_]): Fox[String] = {
+  def nameFor(annotation: Annotation)(implicit request: UserAwareRequest[_]): Fox[String] = {
     if (annotation.name == "") {
       handlerForTyp(annotation.typ).nameForAnnotation(annotation)
     } else
@@ -39,7 +39,7 @@ trait AnnotationInformationProvider
     handlerForTyp(annotationId.annotationType).restrictionsFor(annotationId.identifier)
   }
 
-  private def handlerForTyp(typ: AnnotationTypeSQL) =
+  private def handlerForTyp(typ: AnnotationType) =
     AnnotationInformationHandler.informationHandlers(typ)
 
 }

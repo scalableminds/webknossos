@@ -8,9 +8,10 @@ import play.api.libs.json._
 
 
 case class CreateTreeSkeletonAction(id: Int, color: Option[com.scalableminds.util.image.Color], name: String,
-                                    branchPoints: List[UpdateActionBranchPoint], timestamp: Long, comments: List[UpdateActionComment], actionTimestamp: Option[Long] = None) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper {
+                                    branchPoints: List[UpdateActionBranchPoint], timestamp: Long, comments: List[UpdateActionComment], actionTimestamp: Option[Long] = None,
+                                    groupId: Option[Int]) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing) = {
-    val newTree = Tree(id, Nil, Nil, convertColorOpt(color), branchPoints.map(convertBranchPoint), comments.map(convertComment), name, timestamp)
+    val newTree = Tree(id, Nil, Nil, convertColorOpt(color), branchPoints.map(convertBranchPoint), comments.map(convertComment), name, timestamp, groupId)
     tracing.withTrees(newTree +: tracing.trees)
   }
 

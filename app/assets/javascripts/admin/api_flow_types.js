@@ -7,8 +7,6 @@ import type { Vector3, Vector6, Point3 } from "oxalis/constants";
 import type {
   SettingsType,
   BoundingBoxObjectType,
-  CategoryType,
-  ElementClassType,
   EdgeType,
   CommentType,
   TreeGroupType,
@@ -17,20 +15,36 @@ import Enum from "Enumjs";
 
 export type APIMessageType = { ["info" | "warning" | "error"]: string };
 
+type ElementClassType = "uint8" | "uint16" | "uint32";
+
 export type APIMappingType = {
   +parent?: string,
   +name: string,
   +classes?: Array<Array<number>>,
+  +colors?: Array<number>,
+  +hideUnmappedIds?: boolean,
 };
 
-export type APIDataLayerType = {
+type APIDataLayerBaseType = {|
   +name: string,
-  +category: CategoryType,
   +boundingBox: BoundingBoxObjectType,
   +resolutions: Array<Vector3>,
   +elementClass: ElementClassType,
   +mappings?: Array<string>,
-};
+|};
+
+type APIColorLayerType = {|
+  ...APIDataLayerBaseType,
+  category: "color",
+|};
+
+type APISegmentationLayerType = {|
+  ...APIDataLayerBaseType,
+  category: "segmentation",
+  largestSegmentId: number,
+|};
+
+export type APIDataLayerType = APIColorLayerType | APISegmentationLayerType;
 
 export type APIDataSourceType = {
   +id: {
@@ -84,6 +98,7 @@ export type APITeamMembershipType = {
 export type ExperienceMapType = { +[string]: number };
 
 export type APIUserBaseType = {
+  +created: number,
   +email: string,
   +firstName: string,
   +lastName: string,

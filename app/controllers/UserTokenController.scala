@@ -5,8 +5,8 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.services.{AccessMode, AccessResourceType, UserAccessAnswer, UserAccessRequest}
 import models.annotation._
-import models.binary.{DataSetSQLDAO, DataStoreHandlingStrategy}
-import models.user.UserSQL
+import models.binary.{DataSetDAO, DataStoreHandlingStrategy}
+import models.user.User
 import net.liftweb.common.{Box, Full}
 import oxalis.security.WebknossosSilhouette.UserAwareAction
 import oxalis.security.{TokenType, URLSharing, WebknossosSilhouette}
@@ -60,11 +60,11 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
   }
 
 
-  private def handleDataSourceAccess(dataSourceName: String, mode: AccessMode.Value, userBox: Box[UserSQL])(implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
+  private def handleDataSourceAccess(dataSourceName: String, mode: AccessMode.Value, userBox: Box[User])(implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
     //Note: reading access is ensured in findOneBySourceName, depending on the implicit DBAccessContext
 
     def tryRead: Fox[UserAccessAnswer] = {
-      DataSetSQLDAO.findOneByName(dataSourceName).futureBox map {
+      DataSetDAO.findOneByName(dataSourceName).futureBox map {
         case Full(_) => UserAccessAnswer(true)
         case _ => UserAccessAnswer(false, Some("No read access on dataset"))
       }
@@ -72,7 +72,7 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
 
     def tryWrite: Fox[UserAccessAnswer] = {
       for {
-        dataset <- DataSetSQLDAO.findOneByName(dataSourceName) ?~> "datasource.notFound"
+        dataset <- DataSetDAO.findOneByName(dataSourceName) ?~> "datasource.notFound"
         user <- userBox.toFox
         isAllowed <- user.isTeamManagerOrAdminOfOrg(dataset._organization)
       } yield {
@@ -98,10 +98,10 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  private def handleTracingAccess(tracingId: String, mode: AccessMode.Value, userBox: Box[UserSQL])(implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
+  private def handleTracingAccess(tracingId: String, mode: AccessMode.Value, userBox: Box[User])(implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
 
-    def findAnnotationForTracing(tracingId: String): Fox[AnnotationSQL] = {
-      val annotationFox = AnnotationSQLDAO.findOneByTracingId(tracingId)
+    def findAnnotationForTracing(tracingId: String): Fox[Annotation] = {
+      val annotationFox = AnnotationDAO.findOneByTracingId(tracingId)
       for {
         annotationBox <- annotationFox.futureBox
       } yield {

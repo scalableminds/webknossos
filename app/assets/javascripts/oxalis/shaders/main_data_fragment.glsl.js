@@ -1,7 +1,10 @@
 // @flow
 import _ from "lodash";
+import {
+  MAPPING_TEXTURE_WIDTH,
+  MAPPING_COLOR_TEXTURE_WIDTH,
+} from "oxalis/model/bucket_data_handling/mappings";
 import type { Vector3 } from "oxalis/constants";
-import { MAPPING_TEXTURE_WIDTH } from "oxalis/model/bucket_data_handling/mappings";
 import { floatsPerLookUpEntry } from "oxalis/model/bucket_data_handling/texture_bucket_manager";
 import constants, {
   OrthoViews,
@@ -70,8 +73,10 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
   <% if (isMappingSupported) { %>
     uniform bool isMappingEnabled;
     uniform float mappingSize;
+    uniform bool hideUnmappedIds;
     uniform sampler2D <%= segmentationName %>_mapping_texture;
     uniform sampler2D <%= segmentationName %>_mapping_lookup_texture;
+    uniform sampler2D <%= segmentationName %>_mapping_color_texture;
   <% } %>
 <% } %>
 
@@ -119,7 +124,7 @@ ${compileShader(
       getRelativeCoords,
       getWorldCoordUVW,
       getMaybeFilteredColorOrFallback,
-      convertCellIdToRGB,
+      hasSegmentation ? convertCellIdToRGB : null,
       hasSegmentation ? getBrushOverlay : null,
       hasSegmentation ? getSegmentationId : null,
     )}
@@ -133,24 +138,25 @@ void main() {
   vec3 bucketPosition = div(floor(coords), bucketWidth);
   vec3 offsetInBucket = mod(floor(coords), bucketWidth);
 
-  float fallbackZoomStep = min(<%= colorLayerNames[0]%>_maxZoomStep, zoomStep + 1.0);
-  bool hasFallback = fallbackZoomStep > zoomStep;
-  vec3 fallbackCoords = floor(getRelativeCoords(worldCoordUVW, fallbackZoomStep));
-
   <% if (hasSegmentation) { %>
-    vec4 id = getSegmentationId(coords, fallbackCoords, hasFallback);
+    float segmentationFallbackZoomStep = min(<%= segmentationName %>_maxZoomStep, zoomStep + 1.0);
+    bool segmentationHasFallback = segmentationFallbackZoomStep > zoomStep;
+    vec3 segmentationFallbackCoords = floor(getRelativeCoords(worldCoordUVW, segmentationFallbackZoomStep));
+
+    vec4 id = getSegmentationId(coords, segmentationFallbackCoords, segmentationHasFallback);
 
     vec3 flooredMousePosUVW = transDim(floor(globalMousePosition));
     vec3 mousePosCoords = getRelativeCoords(flooredMousePosUVW, zoomStep);
 
-    vec4 cellIdUnderMouse = getSegmentationId(mousePosCoords, fallbackCoords, false);
-  <% } else { %>
-    vec4 id = vec4(0.0);
-    vec4 cellIdUnderMouse = vec4(0.0);
+    vec4 cellIdUnderMouse = getSegmentationId(mousePosCoords, segmentationFallbackCoords, false);
   <% } %>
 
   // Get Color Value(s)
   <% if (isRgb) { %>
+
+    float fallbackZoomStep = min(<%= colorLayerNames[0]%>_maxZoomStep, zoomStep + 1.0);
+    bool hasFallback = fallbackZoomStep > zoomStep;
+    vec3 fallbackCoords = floor(getRelativeCoords(worldCoordUVW, fallbackZoomStep));
     vec3 data_color =
       getMaybeFilteredColorOrFallback(
         <%= colorLayerNames[0] %>_lookup_texture,
@@ -167,7 +173,14 @@ void main() {
     data_color = (data_color + <%= colorLayerNames[0] %>_brightness - 0.5) * <%= colorLayerNames[0] %>_contrast + 0.5;
   <% } else { %>
     vec3 data_color = vec3(0.0, 0.0, 0.0);
+    float fallbackZoomStep;
+    bool hasFallback;
+    vec3 fallbackCoords;
     <% _.each(colorLayerNames, function(name, layerIndex){ %>
+
+      fallbackZoomStep = min(<%= name %>_maxZoomStep, zoomStep + 1.0);
+      hasFallback = fallbackZoomStep > zoomStep;
+      fallbackCoords = floor(getRelativeCoords(worldCoordUVW, fallbackZoomStep));
       // Get grayscale value for <%= name %>
       color_value =
         getMaybeFilteredColorOrFallback(
@@ -186,25 +199,25 @@ void main() {
       color_value = (color_value + <%= name %>_brightness - 0.5) * <%= name %>_contrast + 0.5;
 
       // Multiply with color and weight for <%= name %>
-      data_color += color_value * <%= name %>_weight * <%= name %>_color;
+      data_color += color_value * <%= name %>_color;
     <% }) %>
     data_color = clamp(data_color, 0.0, 1.0);
   <% } %>
 
-  // Color map (<= to fight rounding mistakes)
-  if ( length(id) > 0.1 ) {
-    // Increase cell opacity when cell is hovered
-    float hoverAlphaIncrement =
-      // Hover cell only if it's the active one, if the feature is enabled
-      // and if segmentation opacity is not zero
-      cellIdUnderMouse == id && highlightHoveredCellId && alpha > 0.0
-        ? 0.2 : 0.0;
-    gl_FragColor = vec4(mix( data_color, convertCellIdToRGB(id), alpha + hoverAlphaIncrement ), 1.0);
-  } else {
-    gl_FragColor = vec4(data_color, 1.0);
-  }
+  gl_FragColor = vec4(data_color, 1.0);
 
   <% if (hasSegmentation) { %>
+    // Color map (<= to fight rounding mistakes)
+    if ( length(id) > 0.1 ) {
+      // Increase cell opacity when cell is hovered
+      float hoverAlphaIncrement =
+        // Hover cell only if it's the active one, if the feature is enabled
+        // and if segmentation opacity is not zero
+        cellIdUnderMouse == id && highlightHoveredCellId && alpha > 0.0
+          ? 0.2 : 0.0;
+      gl_FragColor = vec4(mix(data_color, convertCellIdToRGB(id), alpha + hoverAlphaIncrement ), 1.0);
+    }
+
     vec4 brushOverlayColor = getBrushOverlay(worldCoordUVW);
     brushOverlayColor.xyz = convertCellIdToRGB(activeCellId);
     gl_FragColor = mix(gl_FragColor, brushOverlayColor, brushOverlayColor.a);
@@ -229,6 +242,7 @@ void main() {
     bucketsPerDim: formatNumberAsGLSLFloat(constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION),
     l_texture_width: formatNumberAsGLSLFloat(constants.LOOK_UP_TEXTURE_WIDTH),
     mappingTextureWidth: formatNumberAsGLSLFloat(MAPPING_TEXTURE_WIDTH),
+    mappingColorTextureWidth: formatNumberAsGLSLFloat(MAPPING_COLOR_TEXTURE_WIDTH),
     formatNumberAsGLSLFloat,
     formatVector3AsVec3: vector3 => `vec3(${vector3.map(formatNumberAsGLSLFloat).join(", ")})`,
     brushToolIndex: formatNumberAsGLSLFloat(volumeToolEnumToIndex(VolumeToolEnum.BRUSH)),

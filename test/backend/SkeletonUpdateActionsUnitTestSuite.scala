@@ -1,5 +1,6 @@
 package backend
 
+import com.scalableminds.util.geometry.{Point3D, Vector3D}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.tracings._
 import com.scalableminds.webknossos.datastore.tracings.skeleton.updating._
@@ -104,8 +105,8 @@ class SkeletonUpdateActionsUnitTestSuite extends FlatSpec {
   }
 
   "CreateEdgeSkeletonAction" should "create a new edge in the right tree" in {
-    val createEdgeSkeleton = new CreateEdgeSkeletonAction(source = 1, target = 7, treeId = 1)
-    val result = applyUpdateAction(createEdgeSkeleton)
+    val createEdgeSkeletonAction = new CreateEdgeSkeletonAction(source = 1, target = 7, treeId = 1)
+    val result = applyUpdateAction(createEdgeSkeletonAction)
 
     assert(result.trees.length == Dummies.tracing.trees.length)
     val tree = result.trees.find(_.treeId == 1).get
@@ -115,9 +116,114 @@ class SkeletonUpdateActionsUnitTestSuite extends FlatSpec {
   }
 
   "DeleteEdgeSkeletonAction" should "undo CreateEdgeSkeletonAction" in {
-    val createEdgeSkeleton = new CreateEdgeSkeletonAction(source = 0, target = 7, treeId = 1)
-    val deleteEdgeSkeleton = new DeleteEdgeSkeletonAction(source = 0, target = 7, treeId = 1)
-    val result = deleteEdgeSkeleton.applyOn(createEdgeSkeleton.applyOn(Dummies.tracing))
+    val createEdgeSkeletonAction = new CreateEdgeSkeletonAction(source = 0, target = 7, treeId = 1)
+    val deleteEdgeSkeletonAction = new DeleteEdgeSkeletonAction(source = 0, target = 7, treeId = 1)
+    val result = deleteEdgeSkeletonAction.applyOn(createEdgeSkeletonAction.applyOn(Dummies.tracing))
     assert(result == Dummies.tracing)
+  }
+
+  "CreateNodeSkeletonAction" should "create the specified node" in {
+    val newNode = Dummies.createDummyNode(100)
+    val createNodeSkeletonAction = new CreateNodeSkeletonAction(
+      newNode.id,
+      Point3D(newNode.position.x, newNode.position.y, newNode.position.z),
+      Option(Vector3D(newNode.rotation.x, newNode.rotation.y, newNode.rotation.z)),
+      Option(newNode.radius), Option(newNode.viewport), Option(newNode.resolution), Option(newNode.bitDepth),
+      Option(newNode.interpolation),
+      treeId = 1,
+      Dummies.timestamp
+    )
+    val result = applyUpdateAction(createNodeSkeletonAction)
+    assert(result.trees.length == Dummies.tracing.trees.length)
+    val tree = result.trees.find(_.treeId == 1).get
+    assert(tree.name == Dummies.tree1.name)
+    assert(tree.nodes.length == Dummies.tree1.nodes.length + 1)
+    assert(tree.nodes.contains(newNode))
+  }
+
+  "UpdateNodeSkeletonAction" should "update the specified node" in {
+    val newNode = Dummies.createDummyNode(1)
+    val updateNodeSkeletonAction = new UpdateNodeSkeletonAction(
+      newNode.id,
+      Point3D(newNode.position.x, newNode.position.y, newNode.position.z),
+      Option(Vector3D(newNode.rotation.x, newNode.rotation.y, newNode.rotation.z)),
+      Option(newNode.radius), Option(newNode.viewport), Option(newNode.resolution), Option(newNode.bitDepth),
+      Option(newNode.interpolation),
+      treeId = 1,
+      Dummies.timestamp
+    )
+    val result = applyUpdateAction(updateNodeSkeletonAction)
+    assert(result.trees.length == Dummies.tracing.trees.length)
+    val tree = result.trees.find(_.treeId == 1).get
+    assert(tree.name == Dummies.tree1.name)
+    assert(tree.nodes.length == Dummies.tree1.nodes.length)
+    assert(tree.nodes.contains(newNode))
+  }
+
+  "DeleteNodeSkeletonAction" should "undo CreateNodeSkeletonAction" in {
+    val newNode = Dummies.createDummyNode(100)
+    val createNodeSkeletonAction = new CreateNodeSkeletonAction(
+      newNode.id,
+      Point3D(newNode.position.x, newNode.position.y, newNode.position.z),
+      Option(Vector3D(newNode.rotation.x, newNode.rotation.y, newNode.rotation.z)),
+      Option(newNode.radius), Option(newNode.viewport), Option(newNode.resolution), Option(newNode.bitDepth),
+      Option(newNode.interpolation),
+      treeId = 1,
+      Dummies.timestamp
+    )
+    val deleteNodeSkeletonAction = new DeleteNodeSkeletonAction(newNode.id, treeId = 1)
+    val result = deleteNodeSkeletonAction.applyOn(createNodeSkeletonAction.applyOn(Dummies.tracing))
+    assert(result == Dummies.tracing)
+  }
+
+  "UpdateTreeGroupsSkeletonAction" should "update a top level tree group" in {
+    val updatedName = "Axon 2 updated"
+    val updateTreeGroupsSkeletonAction = new UpdateTreeGroupsSkeletonAction(
+      List(UpdateActionTreeGroup(updatedName, 2, List()))
+    )
+    val result = applyUpdateAction(updateTreeGroupsSkeletonAction)
+    assert(result.trees == Dummies.tracing.trees)
+    val treeGroup = result.treeGroups.find(_.groupId == 2).get
+    assert(treeGroup.name == updatedName)
+  }
+
+  it should "update a nested tree group" in {
+    val updatedNameTop = "Axon 1 updated"
+    val updatedNameNested = "Axon 3 updated"
+    val updateTreeGroupsSkeletonAction = new UpdateTreeGroupsSkeletonAction(
+      List(UpdateActionTreeGroup(updatedNameTop, 1, List(UpdateActionTreeGroup(updatedNameNested, 3, List()))))
+    )
+    val result = applyUpdateAction(updateTreeGroupsSkeletonAction)
+    assert(result.trees == Dummies.tracing.trees)
+    val treeGroupTop = result.treeGroups.find(_.groupId == 1).get
+    assert(treeGroupTop.name == updatedNameTop)
+    val treeGroupNested = treeGroupTop.children.find(_.groupId == 3).get
+    assert(treeGroupNested.name == updatedNameNested)
+  }
+
+  "UpdateTracingSkeletonAction" should "update a top level tree group" in {
+    val activeNode = Some(1)
+    val editPosition = Point3D(11, 12, 13)
+    val editRotation = Vector3D(21, 22, 23)
+    val zoomLevel = 99
+    val userBoundingBox = None
+    val updateTreeGroupsSkeletonAction = new UpdateTracingSkeletonAction(
+      activeNode,
+      editPosition,
+      editRotation,
+      zoomLevel,
+      userBoundingBox
+    )
+    val result = applyUpdateAction(updateTreeGroupsSkeletonAction)
+    assert(result.trees == Dummies.tracing.trees)
+    assert(result.activeNodeId == activeNode)
+    assert(result.editPosition.x == editPosition.x)
+    assert(result.editPosition.y == editPosition.y)
+    assert(result.editPosition.z == editPosition.z)
+    assert(result.editRotation.x == editRotation.x)
+    assert(result.editRotation.y == editRotation.y)
+    assert(result.editRotation.z == editRotation.z)
+    assert(result.zoomLevel == zoomLevel)
+    assert(result.userBoundingBox == userBoundingBox)
   }
 }

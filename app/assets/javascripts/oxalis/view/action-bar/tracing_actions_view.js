@@ -145,10 +145,9 @@ class TracingActionsView extends PureComponent<StateProps, State> {
           <ButtonComponent key="read-only-button" type="primary" disabled>
             Read only
           </ButtonComponent>,
-            <ButtonComponent key="copy-button" icon="file-add" onClick={this.handleCopyToAccount}>
-              Copy To My Account
-            </ButtonComponent>
-          ,
+          <ButtonComponent key="copy-button" icon="file-add" onClick={this.handleCopyToAccount}>
+            Copy To My Account
+          </ButtonComponent>,
         ];
 
     const finishAndNextTaskButton =

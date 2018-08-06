@@ -30,6 +30,11 @@ const KeyboardShortcutView = () => {
       action: "Move Along Z-axis",
     },
     {
+      keybinding: "E or R",
+      action:
+        "Move along the current direction (determined by the vector between the last two created nodes). R reversed the direction.",
+    },
+    {
       keybinding: "Right Click",
       action: "Set Node",
     },

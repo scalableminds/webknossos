@@ -273,7 +273,7 @@ object AnnotationDAO extends SQLDAO[Annotation, AnnotationsRow, Annotations] {
                _team = ${a._team.id},
                _user = ${a._user.id},
                skeletonTracingId = ${a.skeletonTracingId},
-               volumeTracingId = ${a.skeletonTracingId},
+               volumeTracingId = ${a.volumeTracingId},
                description = ${a.description},
                isPublic = ${a.isPublic},
                name = ${a.name},

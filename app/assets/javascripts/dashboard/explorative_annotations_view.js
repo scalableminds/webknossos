@@ -366,7 +366,11 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Column
           title="Stats"
           render={(__, annotation: APIAnnotationType) =>
-            annotation.stats.treeCount && annotation.tracing.skeleton != null ? (
+            // Flow doesn't recognize that stats must contain the nodeCount if the treeCount is != null
+            annotation.stats.treeCount != null &&
+            annotation.stats.nodeCount != null &&
+            annotation.stats.edgeCount != null &&
+            annotation.tracing.skeleton != null ? (
               <div>
                 <span title="Trees">
                   <i className="fa fa-sitemap" />

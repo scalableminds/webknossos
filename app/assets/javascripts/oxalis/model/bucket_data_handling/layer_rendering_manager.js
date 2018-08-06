@@ -11,6 +11,8 @@ import determineBucketsForOrthogonal from "oxalis/model/bucket_data_handling/buc
 import determineBucketsForOblique from "oxalis/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
 import determineBucketsForFlight from "oxalis/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
 import { getAreas, getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
+import * as THREE from "three";
+import UpdatableTexture from "libs/UpdatableTexture";
 import type { Vector3, Vector4, OrthoViewMapType, ModeType } from "oxalis/constants";
 import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
 import { getResolutions, getByteCount } from "oxalis/model/accessors/dataset_accessor";
@@ -104,7 +106,7 @@ export default class LayerRenderingManager {
     shaderEditor.addBucketManagers(this.textureBucketManager);
   }
 
-  getDataTextures(): Array<*> {
+  getDataTextures(): Array<THREE.DataTexture | UpdatableTexture> {
     if (!this.textureBucketManager) {
       // Initialize lazily since SceneController.renderer is not available earlier
       this.setupDataTextures();

@@ -214,16 +214,6 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
       centered = true;
     }
 
-    const width = getPlaneScalingFactor(this.props.flycam) * constants.VIEWPORT_WIDTH;
-    // const scaleFactors = getBaseVoxelFactors(this.props.scale).map(f => width / f);
-
-    const viewPositionOffset = activeNodeMaybe
-      .map(activeNode => {
-        const newPosition = V3.sub(getPosition(this.props.flycam), activeNode.position);
-        return newPosition.map(el => Utils.clamp(-width / 2.5, el, width / 2.5));
-      })
-      .getOrElse([0, 0, 0]);
-
     Store.dispatch(
       createNodeAction(
         position,
@@ -235,19 +225,9 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
 
     if (centered) {
       // we created a new node, so get a new reference
-      getActiveNode(Store.getState().tracing).map(newActiveNode => {
-        // Center the position of the active node without modifying the "third" dimension (see centerPositionAnimated)
-        // This is important because otherwise the user cannot continue to trace until the animation is over
-        // per dimension: width * datasetScale[i] ?
-
-        // const direction = V3.length(this.props.flycam.direction)
-        // ? V3.normalize(this.props.flycam.direction)
-        // : this.props.flycam.direction;
-        // const decenteredPosition = V3.sub(newActiveNode.position, direction);
-        const offsetPosition = V3.add(newActiveNode.position, viewPositionOffset);
-
-        api.tracing.centerPositionAnimated(offsetPosition, true);
-      });
+      getActiveNode(Store.getState().tracing).map(newActiveNode =>
+        api.tracing.centerPositionAnimated(newActiveNode.position, true),
+      );
     }
   };
 }

@@ -11,7 +11,7 @@ import {
   mapStateToProps,
 } from "oxalis/controller/viewmodes/plane_controller";
 import SceneController from "oxalis/controller/scene_controller";
-import constants, { OrthoViews } from "oxalis/constants";
+import { OrthoViews } from "oxalis/constants";
 import {
   setActiveNodeAction,
   deleteNodeAsUserAction,
@@ -29,16 +29,13 @@ import {
   getPosition,
   getRotationOrtho,
   getRequestLogZoomStep,
-  getPlaneScalingFactor,
 } from "oxalis/model/accessors/flycam_accessor";
 import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { ModifierKeys } from "libs/input";
 import api from "oxalis/api/internal_api";
 import { connect } from "react-redux";
-// import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { V3 } from "libs/mjs";
-import Utils from "libs/utils";
 
 const OrthoViewToNumber: OrthoViewMapType<number> = {
   [OrthoViews.PLANE_XY]: 0,
@@ -226,6 +223,8 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
     if (centered) {
       // we created a new node, so get a new reference
       getActiveNode(Store.getState().tracing).map(newActiveNode =>
+        // Center the position of the active node without modifying the "third" dimension (see centerPositionAnimated)
+        // This is important because otherwise the user cannot continue to trace until the animation is over
         api.tracing.centerPositionAnimated(newActiveNode.position, true),
       );
     }

@@ -314,6 +314,7 @@ export type APIBuildInfoType = {
 export type APIFeatureToggles = {
   +discussionBoard: boolean,
   +hybridTracings: boolean,
+  +allowOrganzationCreation: boolean,
 };
 
 // Tracing related datatypes

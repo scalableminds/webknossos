@@ -4,7 +4,7 @@ import com.scalableminds.webknossos.datastore.controllers.ValidationHelpers
 import com.scalableminds.util.mvc.ExtendedController
 import com.scalableminds.util.tools.{Converter, Fox}
 import com.typesafe.scalalogging.LazyLogging
-import models.user.UserSQL
+import models.user.User
 import net.liftweb.common.{Box, Failure, Full, ParamFailure}
 import oxalis.view.ProvidesSessionData
 import play.api.i18n.{I18nSupport, Messages, MessagesApi}
@@ -26,29 +26,8 @@ trait Controller extends PlayController
   implicit def AuthenticatedRequest2Request[T](r: SecuredRequest[T]): Request[T] =
     r.request
 
-  def ensureTeamAdministration(user: UserSQL, teamId: ObjectId): Fox[Unit] =
+  def ensureTeamAdministration(user: User, teamId: ObjectId): Fox[Unit] =
     Fox.assertTrue(user.isTeamManagerOrAdminOf(teamId)) ?~> Messages("team.admin.notAllowed")
-
-  case class Filter[A, T](name: String, predicate: (A, T) => Fox[Boolean], default: Option[String] = None)(implicit converter: Converter[String, A]) {
-    def applyOn(list: List[T])(implicit request: Request[_]): Fox[List[T]] = {
-      request.getQueryString(name).orElse(default).flatMap(converter.convert) match {
-        case Some(attr) => Fox.filter(list)(predicate(attr, _))
-        case _          => Fox.successful(list)
-      }
-    }
-  }
-
-  case class FilterColl[T](filters: Seq[Filter[_, T]]) {
-    def applyOn(list: List[T])(implicit request: Request[_]): Fox[List[T]] = {
-      filters.foldLeft(Fox.successful(list)) {
-        case (l, filter) => l.flatMap(filter.applyOn(_))
-      }
-    }
-  }
-
-  def UsingFilters[T, R](filters: Filter[_, T]*)(block: FilterColl[T] => R): R = {
-    block(FilterColl(filters))
-  }
 
   def jsonErrorWrites(errors: JsError): JsObject =
     Json.obj(

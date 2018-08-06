@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.handler.AnnotationInformationHandler
-import models.user.UserSQL
+import models.user.User
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.concurrent.Execution.Implicits._
 
@@ -14,9 +14,9 @@ object AnnotationStore extends LazyLogging {
 
   private val cacheTimeout = 5 minutes
 
-  case class StoredResult(result: Fox[AnnotationSQL], timestamp: Long = System.currentTimeMillis)
+  case class StoredResult(result: Fox[Annotation], timestamp: Long = System.currentTimeMillis)
 
-  def requestAnnotation(id: AnnotationIdentifier, user: Option[UserSQL])(implicit ctx: DBAccessContext) = {
+  def requestAnnotation(id: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext) = {
     requestFromCache(id)
     .getOrElse(requestFromHandler(id, user))
     .futureBox
@@ -28,7 +28,7 @@ object AnnotationStore extends LazyLogging {
     }
   }
 
-  private def requestFromCache(id: AnnotationIdentifier): Option[Fox[AnnotationSQL]] = {
+  private def requestFromCache(id: AnnotationIdentifier): Option[Fox[Annotation]] = {
     val handler = AnnotationInformationHandler.informationHandlers(id.annotationType)
     if (handler.cache) {
       val cached = getFromCache(id)
@@ -37,7 +37,7 @@ object AnnotationStore extends LazyLogging {
       None
   }
 
-  private def requestFromHandler(id: AnnotationIdentifier, user: Option[UserSQL])(implicit ctx: DBAccessContext) = {
+  private def requestFromHandler(id: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext) = {
     val handler = AnnotationInformationHandler.informationHandlers(id.annotationType)
     for {
       annotation <- handler.provideAnnotation(id.identifier, user)
@@ -49,15 +49,15 @@ object AnnotationStore extends LazyLogging {
     }
   }
 
-  private def storeInCache(id: AnnotationIdentifier, annotation: AnnotationSQL) = {
+  private def storeInCache(id: AnnotationIdentifier, annotation: Annotation) = {
     TemporaryAnnotationStore.insert(id.toUniqueString, annotation, Some(cacheTimeout))
   }
 
-  private def getFromCache(annotationId: AnnotationIdentifier): Option[Fox[AnnotationSQL]] = {
+  private def getFromCache(annotationId: AnnotationIdentifier): Option[Fox[Annotation]] = {
     TemporaryAnnotationStore.find(annotationId.toUniqueString).map(Fox.successful(_))
   }
 
-  def findCachedByTracingId(tracingId: String): Box[AnnotationSQL] = {
+  def findCachedByTracingId(tracingId: String): Box[Annotation] = {
     val annotationOpt = TemporaryAnnotationStore.findAll.find(a => a.tracing.id == tracingId)
     annotationOpt match {
       case Some(annotation) => Full(annotation)

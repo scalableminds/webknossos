@@ -20,6 +20,8 @@ import {
   deleteTreeAction,
   setNodeRadiusAction,
   setTreeNameAction,
+  setActiveTreeAction,
+  setTreeColorIndexAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   findTreeByNodeId,
@@ -241,6 +243,31 @@ class TracingApi {
       }
       Store.dispatch(setTreeNameAction(name, treeId));
     });
+  }
+
+  /**
+   * Makes the specified tree active. Within the tree, the node with the highest ID will be activated.
+   *
+   * @example
+   * api.tracing.setActiveTree(3);
+   */
+  setActiveTree(treeId: number) {
+    const tracing = Store.getState().tracing;
+    assertSkeleton(tracing);
+    Store.dispatch(setActiveTreeAction(treeId));
+  }
+
+  /**
+   * Changes the color of the referenced tree. Internally, a pre-defined array of colors is used which is
+   * why this function uses a colorIndex (between 0 and 500) instead of a proper color.
+   *
+   * @example
+   * api.tracing.setTreeColorIndex(3, 10);
+   */
+  setTreeColorIndex(treeId: ?number, colorIndex: number) {
+    const tracing = Store.getState().tracing;
+    assertSkeleton(tracing);
+    Store.dispatch(setTreeColorIndexAction(treeId, colorIndex));
   }
 
   /**
@@ -542,10 +569,9 @@ class DataApi {
 
   /**
    * Returns the name of the volume tracing layer.
-   * _Volume tracing only!_
    */
   getVolumeTracingLayerName(): string {
-    assertVolume(Store.getState().tracing);
+    // TODO: Rename method to getSegmentationLayerName() and increase api version
     const segmentationLayer = this.model.getSegmentationLayer();
     assertExists(segmentationLayer, "Segmentation layer not found!");
     return segmentationLayer.name;
@@ -562,7 +588,11 @@ class DataApi {
    *
    * api.setMapping("segmentation", mapping);
    */
-  setMapping(layerName: string, mapping: MappingType) {
+  setMapping(
+    layerName: string,
+    mapping: MappingType,
+    options?: { colors?: Array<number>, hideUnmappedIds?: boolean } = {},
+  ) {
     if (!Model.isMappingSupported) {
       throw new Error(messages["mapping.too_few_textures"]);
     }
@@ -573,7 +603,7 @@ class DataApi {
     if (layerName !== segmentationLayerName) {
       throw new Error(messages["mapping.unsupported_layer"]);
     }
-    Store.dispatch(setMappingAction(_.clone(mapping)));
+    Store.dispatch(setMappingAction(_.clone(mapping), options.colors, options.hideUnmappedIds));
   }
 
   /**

@@ -3,7 +3,7 @@ package models.configuration
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.Category
-import models.binary.DataSetSQL
+import models.binary.DataSet
 import play.api.libs.json._
 
 case class DataSetConfiguration(configuration: Map[String, JsValue]) {
@@ -18,7 +18,7 @@ object DataSetConfiguration {
 
   implicit val dataSetConfigurationFormat = Json.format[DataSetConfiguration]
 
-  def constructInitialDefault(dataSet: DataSetSQL)(implicit ctx: DBAccessContext): Fox[DataSetConfiguration] =
+  def constructInitialDefault(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[DataSetConfiguration] =
     for {
       dataSource <- dataSet.constructDataSource
     } yield constructInitialDefault(dataSource.toUsable.map(d => d.dataLayers.filter(_.category != Category.segmentation).map(_.name)).getOrElse(List()))

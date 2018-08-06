@@ -323,4 +323,13 @@ class BinaryDataController @Inject()(
       image
     }
   }
+
+  def clearCache(dataSetName: String) = TokenSecuredAction(UserAccessRequest.administrateDataSources) {
+    implicit request =>
+      AllowRemoteOrigin {
+        val count = binaryDataService.clearCache(dataSetName)
+        Ok("Closed " + count + " file handles")
+      }
+  }
+
 }

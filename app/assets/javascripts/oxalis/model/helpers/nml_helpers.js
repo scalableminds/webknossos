@@ -8,6 +8,7 @@ import Store from "oxalis/store";
 import Date from "libs/date";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
+import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reducer_helpers";
 import type {
   OxalisState,
   SkeletonTracingType,
@@ -17,7 +18,9 @@ import type {
   TemporaryMutableTreeMapType,
   TreeGroupType,
 } from "oxalis/store";
+import type { BoundingBoxType } from "oxalis/constants";
 import type { APIBuildInfoType } from "admin/api_flow_types";
+import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 
 // NML Defaults
 const DEFAULT_COLOR = [1, 0, 0];
@@ -140,10 +143,21 @@ function serializeMetaInformation(state: OxalisState, buildInfo: APIBuildInfoTyp
   ]);
 }
 
+function serializeBoundingBox(bb: ?BoundingBoxType, name: string): string {
+  const serverBoundingBox = convertFrontendBoundingBoxToServer(bb);
+  if (serverBoundingBox != null) {
+    const { topLeft, width, height, depth } = serverBoundingBox;
+    const [topLeftX, topLeftY, topLeftZ] = topLeft;
+    return serializeTag(name, { topLeftX, topLeftY, topLeftZ, width, height, depth });
+  }
+  return "";
+}
+
 function serializeParameters(state: OxalisState): Array<string> {
   const editPosition = getPosition(state.flycam).map(Math.round);
   const editRotation = getRotation(state.flycam);
   const userBB = state.tracing.userBoundingBox;
+  const taskBB = state.tracing.boundingBox;
   return [
     "<parameters>",
     ...indent(
@@ -174,16 +188,8 @@ function serializeParameters(state: OxalisState): Array<string> {
           zRot: editRotation[2],
         }),
         serializeTag("zoomLevel", { zoom: state.flycam.zoomStep }),
-        userBB != null
-          ? serializeTag("userBoundingBox", {
-              topLeftX: userBB.min[0],
-              topLeftY: userBB.min[1],
-              topLeftZ: userBB.min[2],
-              width: userBB.max[0] - userBB.min[0],
-              height: userBB.max[1] - userBB.min[1],
-              depth: userBB.max[2] - userBB.min[2],
-            })
-          : "",
+        serializeBoundingBox(userBB, "userBoundingBox"),
+        serializeBoundingBox(taskBB, "taskBoundingBox"),
       ]),
     ),
     "</parameters>",
@@ -358,8 +364,35 @@ function getEdgeHash(source: number, target: number) {
   return source < target ? `${source}-${target}` : `${target}-${source}`;
 }
 
+function wrapInNewGroup(
+  originalTrees: TreeMapType,
+  originalTreeGroups: Array<TreeGroupType>,
+  wrappingGroupName: string,
+): [TreeMapType, Array<TreeGroupType>] {
+  // It does not matter whether the group id is used in the active tracing, since
+  // this case will be handled during import, anyway. The group id just shouldn't clash
+  // with the nml itself.
+  const unusedGroupId = getMaximumGroupId(originalTreeGroups) + 1;
+  const trees = _.mapValues(originalTrees, tree => ({
+    ...tree,
+    // Give parentless trees the new treeGroup as parent
+    groupId: tree.groupId || unusedGroupId,
+  }));
+  const treeGroups = [
+    // Create a new tree group which holds the old ones
+    {
+      name: wrappingGroupName,
+      groupId: unusedGroupId,
+      children: originalTreeGroups,
+    },
+  ];
+
+  return [trees, treeGroups];
+}
+
 export function parseNml(
   nmlString: string,
+  wrappingGroupName?: ?string,
 ): Promise<{ trees: TreeMapType, treeGroups: Array<TreeGroupType> }> {
   return new Promise((resolve, reject) => {
     const parser = new Saxophone();
@@ -542,7 +575,19 @@ export function parseNml(
         }
       })
       .on("end", () => {
-        resolve({ trees, treeGroups });
+        if (wrappingGroupName != null) {
+          const [wrappedTrees, wrappedTreeGroups] = wrapInNewGroup(
+            trees,
+            treeGroups,
+            wrappingGroupName,
+          );
+          resolve({
+            trees: wrappedTrees,
+            treeGroups: wrappedTreeGroups,
+          });
+        } else {
+          resolve({ trees, treeGroups });
+        }
       })
       .on("error", reject);
 

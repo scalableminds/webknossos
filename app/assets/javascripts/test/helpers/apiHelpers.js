@@ -70,8 +70,9 @@ const UrlManager = mockRequire.reRequire("oxalis/controller/url_manager").defaul
 const wkstoreAdapter = mockRequire.reRequire("oxalis/model/bucket_data_handling/wkstore_adapter");
 wkstoreAdapter.requestFromStore = () => new Uint8Array();
 mockRequire("oxalis/model/bucket_data_handling/wkstore_adapter", wkstoreAdapter);
+// Do not reRequire the model here as this would create a separate instance
+const Model = require("oxalis/model").default;
 
-const Model = mockRequire.reRequire("oxalis/model").OxalisModel;
 const OxalisApi = mockRequire.reRequire("oxalis/api/api_loader").default;
 
 const TOKEN = "secure-token";
@@ -96,12 +97,11 @@ const ANNOTATION_ID = "annotationIdValue";
 
 let counter = 0;
 
-export function setupOxalis(t, mode, apiVersion = 2) {
+export function setupOxalis(t, mode, apiVersion) {
   UrlManager.initialState = { position: [1, 2, 3] };
-  const model = new Model();
-  t.context.model = model;
+  t.context.model = Model;
 
-  const webknossos = new OxalisApi(model);
+  const webknossos = new OxalisApi(Model);
 
   const ANNOTATION = modelData[mode].annotation;
   Request.receiveJSON
@@ -123,8 +123,7 @@ export function setupOxalis(t, mode, apiVersion = 2) {
     .returns(Promise.resolve({ token: TOKEN }));
   Request.receiveJSON.returns(Promise.resolve({}));
 
-  return model
-    .fetch(TRACING_TYPE, ANNOTATION_ID, ControlModeEnum.TRACE, true)
+  return Model.fetch(TRACING_TYPE, ANNOTATION_ID, ControlModeEnum.TRACE, true)
     .then(() => {
       // Trigger the event ourselves, as the OxalisController is not instantiated
       app.vent.trigger("webknossos:ready");

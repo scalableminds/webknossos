@@ -1,27 +1,25 @@
 package controllers
 
+import com.scalableminds.util.tools.Fox
 import javax.inject.Inject
-
-import models.binary.{DataSet, DataSetDAO, DataSetSQLDAO}
+import models.binary.{DataSet, DataSetDAO}
 import models.configuration.{DataSetConfiguration, UserConfiguration}
-import models.user.UserService
-import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest, UserAwareAction, UserAwareRequest}
+import models.user.{UserDataSetConfigurationDAO, UserService}
+import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareAction}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.JsObject
+import play.api.libs.json.{JsObject, JsValue}
 import play.api.libs.json.Json._
-import play.api.mvc.Action
-import play.libs.Json
+import play.api.mvc.Result
 
-/**
- * Controller that handles the CRUD api for configurations (mostly settings for the tracing view)
- */
+
 class ConfigurationController @Inject()(val messagesApi: MessagesApi) extends Controller {
 
   def read = UserAwareAction.async { implicit request =>
     request.identity.toFox.flatMap { user =>
-      UserService.findOneById(user.id, useCache = false)
-      .map(_.userConfiguration.configurationOrDefaults)
+      for {
+        userConfig <- user.userConfigurationStructured
+      } yield userConfig.configurationOrDefaults
     }
     .getOrElse(UserConfiguration.default.configuration)
     .map(configuration => Ok(toJson(configuration)))
@@ -39,10 +37,11 @@ class ConfigurationController @Inject()(val messagesApi: MessagesApi) extends Co
 
   def readDataSet(dataSetName: String) = UserAwareAction.async { implicit request =>
     request.identity.toFox.flatMap { user =>
-      UserService.findOneById(user.id, useCache = false)
-      .flatMap(_.dataSetConfigurations.get(dataSetName))
+      for {
+        configurationJson: JsValue <- UserDataSetConfigurationDAO.findOneForUserAndDataset(user._id, dataSetName)
+      } yield DataSetConfiguration(configurationJson.validate[Map[String, JsValue]].getOrElse(Map.empty))
     }
-    .orElse(DataSetDAO.findOneBySourceName(dataSetName).flatMap(_.defaultConfiguration))
+    .orElse(DataSetDAO.findOneByName(dataSetName).flatMap(_.defaultConfiguration))
     .getOrElse(DataSetConfiguration.constructInitialDefault(List()))
     .map(configuration => Ok(toJson(configuration.configurationOrDefaults)))
   }
@@ -58,20 +57,21 @@ class ConfigurationController @Inject()(val messagesApi: MessagesApi) extends Co
   }
 
   def readDataSetDefault(dataSetName: String) = SecuredAction.async { implicit request =>
-    for {
-      dataset: DataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataset.notFound")
-    } yield {
-      Ok(toJson(dataset.defaultConfiguration.getOrElse(DataSetConfiguration.constructInitialDefault(dataset)).configurationOrDefaults))
+    DataSetDAO.findOneByName(dataSetName).flatMap { dataSet: DataSet =>
+      dataSet.defaultConfiguration match {
+        case Some(c) => Fox.successful(Ok(toJson(c.configurationOrDefaults)))
+        case _ => DataSetConfiguration.constructInitialDefault(dataSet).map(c => Ok(toJson(c.configurationOrDefaults)))
+      }
     }
   }
 
   def updateDataSetDefault(dataSetName: String) = SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
     for {
-      dataset <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataset.notFound")
-      _ <- (request.identity.isAdminOf(dataset.owningOrganization) || request.identity.isTeamManagerInOrg(dataset.owningOrganization)) ?~> Messages("notAllowed")
+      dataset <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataset.notFound")
+      _ <- Fox.assertTrue(request.identity.isTeamManagerOrAdminOfOrg(dataset._organization)) ?~> Messages("notAllowed")
       jsConfiguration <- request.body.asOpt[JsObject] ?~> Messages("user.configuration.dataset.invalid")
       conf = jsConfiguration.fields.toMap
-      _ <- DataSetSQLDAO.updateDefaultConfigurationByName(dataSetName, DataSetConfiguration(conf))
+      _ <- DataSetDAO.updateDefaultConfigurationByName(dataSetName, DataSetConfiguration(conf))
     } yield {
       JsonOk(Messages("user.configuration.dataset.updated"))
     }

@@ -6,17 +6,12 @@
           "targets": {
             "node": "current"
           },
-          "exclude": [
-            "transform-regenerator"
-          ],
         }],
         "react",
       ],
       plugins: [
-        "transform-async-to-generator",
         "transform-class-properties",
         "transform-flow-strip-types",
-        ["import", { libraryName: "antd" }],
         "syntax-dynamic-import",
         ["transform-object-rest-spread", { "useBuiltIns": true }],
         [
@@ -26,7 +21,8 @@
             "outputPath": "/public/test-bundle",
             "publicPath": "",
           }
-        ]
+        ],
+        "istanbul"
       ],
     }
   },
@@ -41,16 +37,12 @@
           "last 1 iOS versions"
         ]
       },
-      "exclude": [
-        "transform-regenerator"
-      ],
       "modules": false,
     }],
     "react",
     /*"react-optimize",*/
   ],
   plugins: [
-    "transform-async-to-generator",
     "transform-class-properties",
     "transform-flow-strip-types",
     ["import", { libraryName: "antd" }],

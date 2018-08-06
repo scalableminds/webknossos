@@ -24,21 +24,22 @@ type Props = {
   mousePosition: ?Vector2,
   isMappingEnabled: boolean,
   mapping: ?MappingType,
+  mappingColors: ?Array<number>,
   setMappingEnabled: boolean => void,
   activeViewport: OrthoViewType,
   activeCellId: number,
 };
 
 // This function mirrors convertCellIdToRGB in the fragment shader of the rendering plane
-const convertCellIdToHSV = id => {
-  if (id === 0) {
-    return "white";
-  }
+const convertCellIdToHSV = (id: number, customColors: ?Array<number>) => {
+  if (id === 0) return "white";
+
   const goldenRatio = 0.618033988749895;
   const lastEightBits = id & (2 ** 8 - 1);
-  const value = ((lastEightBits * goldenRatio) % 1.0) * 360;
+  const computedColor = (lastEightBits * goldenRatio) % 1.0;
+  const value = customColors != null ? customColors[lastEightBits] || 0 : computedColor;
 
-  return `hsla(${value}, 100%, 50%, 0.15)`;
+  return `hsla(${value * 360}, 100%, 50%, 0.15)`;
 };
 
 class MappingInfoView extends Component<Props> {
@@ -65,6 +66,7 @@ class MappingInfoView extends Component<Props> {
   renderIdTable() {
     const cube = this.getSegmentationCube();
     const hasMapping = this.props.mapping != null;
+    const customColors = this.props.isMappingEnabled ? this.props.mappingColors : null;
 
     let globalMousePosition;
     if (this.props.mousePosition && this.props.activeViewport !== OrthoViews.TDView) {
@@ -109,7 +111,9 @@ class MappingInfoView extends Component<Props> {
           <span style={{ background: convertCellIdToHSV(idInfo.unmapped) }}>{idInfo.unmapped}</span>
         ),
         mapped: (
-          <span style={{ background: convertCellIdToHSV(idInfo.mapped) }}>{idInfo.mapped}</span>
+          <span style={{ background: convertCellIdToHSV(idInfo.mapped, customColors) }}>
+            {idInfo.mapped}
+          </span>
         ),
       }));
 
@@ -165,6 +169,7 @@ function mapStateToProps(state: OxalisState) {
     zoomStep: getRequestLogZoomStep(state),
     isMappingEnabled: state.temporaryConfiguration.activeMapping.isMappingEnabled,
     mapping: state.temporaryConfiguration.activeMapping.mapping,
+    mappingColors: state.temporaryConfiguration.activeMapping.mappingColors,
     mousePosition: state.temporaryConfiguration.mousePosition,
     activeViewport: state.viewModeData.plane.activeViewport,
     activeCellId: state.tracing.type === "volume" ? state.tracing.activeCellId : 0,
@@ -172,6 +177,7 @@ function mapStateToProps(state: OxalisState) {
 }
 
 const debounceTime = 100;
-export default connect(mapStateToProps, mapDispatchToProps)(
-  debounceRender(MappingInfoView, debounceTime),
-);
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps,
+)(debounceRender(MappingInfoView, debounceTime));

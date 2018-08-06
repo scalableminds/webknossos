@@ -1,17 +1,12 @@
 package models.basics
 
-import com.scalableminds.util.reactivemongo.{AuthorizedAccessContext, DBAccessContext}
-import oxalis.security.WebknossosSilhouette.{UserAwareAction, UserAwareRequest, SecuredRequest}
+import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext}
 import models.user.User
+import oxalis.security.WebknossosSilhouette.{SecuredRequest, UserAwareAction, UserAwareRequest}
 
 import scala.language.implicitConversions
 
-/**
- * Company: scalableminds
- * User: tmbo
- * Date: 10.06.13
- * Time: 01:11
- */
+
 object Implicits extends Implicits
 
 trait Implicits {

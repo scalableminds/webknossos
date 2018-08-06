@@ -17,6 +17,13 @@ CREATE TYPE webknossos.BOUNDING_BOX AS (
   depth DOUBLE PRECISION
 );
 
+START TRANSACTION;
+CREATE TABLE webknossos.releaseInformation (
+  schemaVersion BIGINT NOT NULL
+);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(17);
+COMMIT TRANSACTION;
+
 CREATE TABLE webknossos.analytics(
   _id CHAR(24) PRIMARY KEY NOT NULL DEFAULT '',
   _user CHAR(24),
@@ -187,6 +194,9 @@ CREATE TABLE webknossos.organizations(
   name VARCHAR(256) NOT NULL,
   additionalInformation VARCHAR(2048) NOT NULL DEFAULT '',
   logoUrl VARCHAR(2048) NOT NULL DEFAULT '',
+  displayName VARCHAR(1024) NOT NULL DEFAULT '',
+  newUserMailingList VARCHAR(512) NOT NULL DEFAULT '',
+  overTimeMailingList VARCHAR(512) NOT NULL DEFAULT '',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );

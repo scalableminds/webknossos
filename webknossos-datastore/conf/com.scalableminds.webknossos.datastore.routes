@@ -51,6 +51,8 @@ GET         /tracings/skeleton/:tracingId/duplicate                             
 # Actions
 GET         /triggers/checkInbox                                                               @com.scalableminds.webknossos.datastore.controllers.DataSourceController.triggerInboxCheck()
 GET         /triggers/checkInboxBlocking                                                       @com.scalableminds.webknossos.datastore.controllers.DataSourceController.triggerInboxCheckBlocking()
+GET         /triggers/newOrganizationFolder                                                    @com.scalableminds.webknossos.datastore.controllers.DataSourceController.createOrganizationDirectory(organizationName: String)
+GET         /triggers/clearCache/:dataSetName                                                  @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.clearCache(dataSetName: String)
 
 # Debugging
 

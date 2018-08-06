@@ -10,8 +10,10 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Pull sbt docker image
-          command: docker-compose pull base
+          name: Build webknossos-dev docker image
+          command: |
+            docker pull scalableminds/webknossos-dev:$CIRCLE_BRANCH || true
+            DEV_CACHE=$CIRCLE_BRANCH docker-compose build base
       - run:
           name: Prepare dependency folders
           command: mkdir -p project/target target ~/.m2 ~/.ivy2 ~/.sbt ~/.yarn-cache
@@ -75,6 +77,9 @@ jobs:
           name: Run frontend tests
           command: docker-compose run base yarn test-verbose
       - run:
+          name: Run backend tests
+          command: docker-compose run backend-tests
+      - run:
           name: Run end-to-end tests
           command: |
             for i in {1..3}; do # retry
@@ -112,20 +117,42 @@ jobs:
           name: Push docker images
           command: |
             echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-            docker tag \
-              scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} \
-              scalableminds/webknossos:${CIRCLE_BRANCH}
-            docker tag \
-              scalableminds/webknossos-datastore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} \
-              scalableminds/webknossos-datastore:${CIRCLE_BRANCH}
-            docker push scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM}
-            docker push scalableminds/webknossos:${CIRCLE_BRANCH}
-            docker push scalableminds/webknossos-datastore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM}
-            docker push scalableminds/webknossos-datastore:${CIRCLE_BRANCH}
+            if [ -n "$CIRCLE_TAG" ]; then
+              docker tag \
+                scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} \
+                scalableminds/webknossos:$CIRCLE_TAG
+              docker push scalableminds/webknossos:$CIRCLE_TAG
+              docker tag \
+                scalableminds/webknossos-datastore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} \
+                scalableminds/webknossos-datastore:$CIRCLE_TAG
+              docker push scalableminds/webknossos-datastore:$CIRCLE_TAG
+            fi
+            if [ -n "$CIRCLE_BRANCH" ]; then
+              docker tag \
+                scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} \
+                scalableminds/webknossos:${CIRCLE_BRANCH}
+              docker push scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM}
+              docker push scalableminds/webknossos:${CIRCLE_BRANCH}
+              docker tag \
+                scalableminds/webknossos-datastore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} \
+                scalableminds/webknossos-datastore:${CIRCLE_BRANCH}
+              docker push scalableminds/webknossos-datastore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM}
+              docker push scalableminds/webknossos-datastore:${CIRCLE_BRANCH}
+              docker tag \
+                scalableminds/webknossos-dev \
+                scalableminds/webknossos-dev:$CIRCLE_BRANCH
+              docker push scalableminds/webknossos-dev:$CIRCLE_BRANCH
+            fi
             docker logout
 
+      - run:
+          name: Report coverage
+          command: docker-compose run base yarn coverage
 workflows:
   version: 2
   default:
     jobs:
-      - build_test_deploy
+      - build_test_deploy:
+          filters:
+            tags:
+              only: /.*/

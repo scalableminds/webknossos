@@ -10,7 +10,7 @@ import com.scalableminds.util.xml.Xml
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.sun.xml.txw2.output.IndentingXMLStreamWriter
-import models.annotation.AnnotationSQL
+import models.annotation.Annotation
 import net.liftweb.common.Full
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits._
@@ -21,7 +21,7 @@ import scala.concurrent.Future
 object NmlWriter extends FoxImplicits {
   private lazy val outputService = XMLOutputFactory.newInstance()
 
-  def toNmlStream(tracing: Either[SkeletonTracing, VolumeTracing], annotation: AnnotationSQL, scale: Option[Scale]) = Enumerator.outputStream { os =>
+  def toNmlStream(tracing: Either[SkeletonTracing, VolumeTracing], annotation: Annotation, scale: Option[Scale]) = Enumerator.outputStream { os =>
     implicit val writer = new IndentingXMLStreamWriter(outputService.createXMLStreamWriter(os))
 
     for {
@@ -32,7 +32,7 @@ object NmlWriter extends FoxImplicits {
     }
   }
 
-  def toNml(tracing: Either[SkeletonTracing, VolumeTracing], annotation: AnnotationSQL, scale: Option[Scale])(implicit writer: XMLStreamWriter): Fox[Unit] = {
+  def toNml(tracing: Either[SkeletonTracing, VolumeTracing], annotation: Annotation, scale: Option[Scale])(implicit writer: XMLStreamWriter): Fox[Unit] = {
     tracing match {
       case Right(volumeTracing) => {
         for {
@@ -51,7 +51,7 @@ object NmlWriter extends FoxImplicits {
     }
   }
 
-  def writeVolumeThings(annotation: AnnotationSQL, volumeTracing: VolumeTracing, scale: Option[Scale])(implicit writer: XMLStreamWriter): Fox[Unit] = {
+  def writeVolumeThings(annotation: Annotation, volumeTracing: VolumeTracing, scale: Option[Scale])(implicit writer: XMLStreamWriter): Fox[Unit] = {
     for {
       _ <- writeMetaData(annotation)
       _ = Xml.withinElementSync("parameters")(writeParametersAsXml(volumeTracing, annotation.description, scale))
@@ -61,7 +61,7 @@ object NmlWriter extends FoxImplicits {
     } yield ()
   }
 
-  def writeSkeletonThings(annotation: AnnotationSQL, skeletonTracing: SkeletonTracing, scale: Option[Scale])(implicit writer: XMLStreamWriter): Fox[Unit] = {
+  def writeSkeletonThings(annotation: Annotation, skeletonTracing: SkeletonTracing, scale: Option[Scale])(implicit writer: XMLStreamWriter): Fox[Unit] = {
     for {
       _ <- writeMetaData(annotation)
       _ = Xml.withinElementSync("parameters")(writeParametersAsXml(skeletonTracing, annotation.description, scale))
@@ -110,6 +110,16 @@ object NmlWriter extends FoxImplicits {
     }
     tracing.userBoundingBox.map { b =>
       Xml.withinElementSync("userBoundingBox") {
+        writer.writeAttribute("topLeftX", b.topLeft.x.toString)
+        writer.writeAttribute("topLeftY", b.topLeft.y.toString)
+        writer.writeAttribute("topLeftZ", b.topLeft.z.toString)
+        writer.writeAttribute("width", b.width.toString)
+        writer.writeAttribute("height", b.height.toString)
+        writer.writeAttribute("depth", b.depth.toString)
+      }
+    }
+    tracing.boundingBox.map { b =>
+      Xml.withinElementSync("taskBoundingBox") {
         writer.writeAttribute("topLeftX", b.topLeft.x.toString)
         writer.writeAttribute("topLeftY", b.topLeft.y.toString)
         writer.writeAttribute("topLeftZ", b.topLeft.z.toString)
@@ -226,7 +236,7 @@ object NmlWriter extends FoxImplicits {
     }
   }
 
-  def writeMetaData(annotation: AnnotationSQL)(implicit writer: XMLStreamWriter): Fox[Unit] = {
+  def writeMetaData(annotation: Annotation)(implicit writer: XMLStreamWriter): Fox[Unit] = {
     Xml.withinElementSync("meta") {
       writer.writeAttribute("name", "writer")
       writer.writeAttribute("content", "NmlWriter.scala")
@@ -249,7 +259,7 @@ object NmlWriter extends FoxImplicits {
     } yield ()
   }
 
-  def writeUser(annotation: AnnotationSQL)(implicit writer: XMLStreamWriter): Future[Unit] = {
+  def writeUser(annotation: Annotation)(implicit writer: XMLStreamWriter): Future[Unit] = {
     for {
       userBox <- annotation.user.futureBox
     } yield {
@@ -263,7 +273,7 @@ object NmlWriter extends FoxImplicits {
     }
   }
 
-  def writeTask(annotation: AnnotationSQL)(implicit writer: XMLStreamWriter): Future[Unit] = {
+  def writeTask(annotation: Annotation)(implicit writer: XMLStreamWriter): Future[Unit] = {
     for {
       taskBox <- annotation.task.futureBox
     } yield {

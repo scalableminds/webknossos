@@ -7,8 +7,6 @@ object Dependencies {
   val log4jVersion = "2.0-beta9"
   val newrelicVersion = "3.44.1"
   val playVersion = "2.4.6"
-  val reactivePlayVersion = "0.11.13-play24"
-  val reactiveVersion = "0.11.13"
   val webknossosWrapVersion = "1.1.4"
 
   val airbrake = "com.scalableminds" %% "play-airbrake" % "0.5.0"
@@ -32,10 +30,10 @@ object Dependencies {
   val newrelic = "com.newrelic.agent.java" % "newrelic-agent" % newrelicVersion
   val newrelicApi = "com.newrelic.agent.java" % "newrelic-api" % newrelicVersion
   val playFramework = "com.typesafe.play" %% "play" % playVersion
-  val reactiveBson = "org.reactivemongo" %% "reactivemongo-bson-macros" % reactiveVersion
-  val reactivePlay = "org.reactivemongo" %% "play2-reactivemongo" % reactivePlayVersion
+  val reactiveBson = "org.reactivemongo" %% "reactivemongo-bson" % "0.11.13"
   val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.2"
   val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.4.0"
+  val scalaTest = "org.scalatest" %% "scalatest" % "3.0.5" % "test"
   val silhouette = "com.mohiva" %% "play-silhouette" % "3.0.5"
   val silhouetteTestkit = "com.mohiva" %% "play-silhouette-testkit" % "3.0.5" % "test"
   val urlHelper = "com.netaporter" %% "scala-uri" % "0.4.14"
@@ -62,7 +60,6 @@ object Dependencies {
     log4jCore,
     playFramework,
     reactiveBson,
-    reactivePlay,
     scalapbRuntime,
     scalaLogging,
     ws
@@ -86,6 +83,7 @@ object Dependencies {
     ceedubs,
     commonsCodec,
     scalaAsync,
+    scalaTest,
     silhouette,
     silhouetteTestkit,
     specs2 % Test,

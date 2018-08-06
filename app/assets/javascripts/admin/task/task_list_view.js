@@ -20,6 +20,7 @@ import type { APITaskType, APITaskTypeType } from "admin/api_flow_types";
 import type { QueryObjectType, TaskFormFieldValuesType } from "admin/task/task_search_form";
 import type { RouterHistory } from "react-router-dom";
 import { handleGenericError } from "libs/error_handling";
+import FormattedDate from "components/formatted_date";
 
 const { Column } = Table;
 const { Search, TextArea } = Input;
@@ -244,6 +245,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               key="created"
               width={150}
               sorter={Utils.localeCompareBy(typeHint, "created")}
+              render={created => <FormattedDate timestamp={created} />}
             />
             <Column
               title="Stats"

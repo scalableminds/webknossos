@@ -5,25 +5,26 @@ import com.scalableminds.util.tools.Fox
 import models.user.{User, UserDAO}
 import play.api.Play.current
 import play.api.cache.Cache
+import utils.ObjectId
 
 object UserCache {
   val userCacheTimeout = current.configuration.getInt("user.cacheTimeout") getOrElse 3
   val userCacheKeyPrefix = current.configuration.getString("user.cacheKey") getOrElse "user"
 
-  def cacheKeyForUser(id: String) =
-    s"${userCacheKeyPrefix}.${id}"
+  def cacheKeyForUser(id: ObjectId) =
+    s"${userCacheKeyPrefix}.${id.toString}"
 
-  def findUser(id: String) = {
+  def findUser(id: ObjectId) = {
     Cache.getOrElse(cacheKeyForUser(id), userCacheTimeout) {
-      UserDAO.findOneById(id)(GlobalAccessContext)
+      UserDAO.findOne(id)(GlobalAccessContext)
     }
   }
 
-  def store(id: String, user: Fox[User]) = {
+  def store(id: ObjectId, user: Fox[User]) = {
     Cache.set(cacheKeyForUser(id), user)
     user
   }
 
-  def invalidateUser(id: String) =
+  def invalidateUser(id: ObjectId) =
     Cache.remove(cacheKeyForUser(id))
 }

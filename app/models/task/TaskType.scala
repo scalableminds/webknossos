@@ -1,23 +1,20 @@
 package models.task
 
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.{DBAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation.AnnotationSettings
-import models.team.TeamSQLDAO
 import play.api.Play.current
 import play.api.i18n.Messages
 import play.api.i18n.Messages.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
-import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO, SecuredSQLDAO}
 
-case class TaskTypeSQL(
+case class TaskType(
                          _id: ObjectId,
                          _team: ObjectId,
                          summary: String,
@@ -38,13 +35,13 @@ case class TaskTypeSQL(
   }
 }
 
-object TaskTypeSQL {
+object TaskType {
   def fromForm(
                 summary: String,
                 description: String,
                 team: String,
                 settings: AnnotationSettings) = {
-    TaskTypeSQL(
+    TaskType(
       ObjectId.generate,
       ObjectId(team),
       summary,
@@ -53,14 +50,14 @@ object TaskTypeSQL {
   }
 }
 
-object TaskTypeSQLDAO extends SQLDAO[TaskTypeSQL, TasktypesRow, Tasktypes] with SecuredSQLDAO {
+object TaskTypeDAO extends SQLDAO[TaskType, TasktypesRow, Tasktypes] with SecuredSQLDAO {
   val collection = Tasktypes
 
   def idColumn(x: Tasktypes): Rep[String] = x._Id
   def isDeletedColumn(x: Tasktypes): Rep[Boolean] = x.isdeleted
 
-  def parse(r: TasktypesRow): Fox[TaskTypeSQL] =
-    Some(TaskTypeSQL(
+  def parse(r: TasktypesRow): Fox[TaskType] =
+    Some(TaskType(
       ObjectId(r._Id),
       ObjectId(r._Team),
       r.summary,
@@ -85,7 +82,7 @@ object TaskTypeSQLDAO extends SQLDAO[TaskTypeSQL, TasktypesRow, Tasktypes] with 
       or (select _organization from webknossos.teams where webknossos.teams._id = _team)
         in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
 
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[TaskTypeSQL] =
+  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[TaskType] =
     for {
       accessQuery <- readAccessQuery
       rList <- run(sql"select #${columns} from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[TasktypesRow])
@@ -93,7 +90,7 @@ object TaskTypeSQLDAO extends SQLDAO[TaskTypeSQL, TasktypesRow, Tasktypes] with 
       parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
     } yield parsed
 
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[TaskTypeSQL]] =
+  override def findAll(implicit ctx: DBAccessContext): Fox[List[TaskType]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(sql"select #${columns} from #${existingCollectionName} where #${accessQuery}".as[TasktypesRow])
@@ -101,7 +98,7 @@ object TaskTypeSQLDAO extends SQLDAO[TaskTypeSQL, TasktypesRow, Tasktypes] with 
     } yield parsed
 
 
-  def insertOne(t: TaskTypeSQL)(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def insertOne(t: TaskType)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val allowedModes = writeArrayTuple(t.settings.allowedModes)
     for {
       _ <- run(sqlu"""insert into webknossos.taskTypes(_id, _team, summary, description, settings_allowedModes, settings_preferredMode,
@@ -112,7 +109,7 @@ object TaskTypeSQLDAO extends SQLDAO[TaskTypeSQL, TasktypesRow, Tasktypes] with 
   }
 
 
-  def updateOne(t: TaskTypeSQL)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateOne(t: TaskType)(implicit ctx: DBAccessContext): Fox[Unit] =
     for { //note that t.created is skipped
       _ <- assertUpdateAccess(t._id)
       _ <- run(sqlu"""update webknossos.taskTypes

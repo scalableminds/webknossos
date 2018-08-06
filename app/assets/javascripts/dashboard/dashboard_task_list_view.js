@@ -9,7 +9,6 @@ import { AsyncButton } from "components/async_clickables";
 import { Button, Modal, Tag, Icon, Card, Row, Col, List } from "antd";
 import Markdown from "react-remarkable";
 import Utils from "libs/utils";
-import moment from "moment";
 import Toast from "libs/toast";
 import messages from "messages";
 import TransferTaskModal from "dashboard/transfer_task_modal";
@@ -32,6 +31,7 @@ import type {
 } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import type { RouterHistory } from "react-router-dom";
+import FormattedDate from "components/formatted_date";
 
 const typeHint: APITaskWithAnnotationType[] = [];
 
@@ -212,7 +212,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
             </a>
             <br />
             <a href="#" onClick={() => this.cancelAnnotation(annotation)}>
-              <Icon type="delete" />Cancel
+              <Icon type="delete" />Reset and Cancel
             </a>
             <br />
           </div>
@@ -314,6 +314,12 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     return this.state.showFinishedTasks ? this.state.finishedTasks : this.state.unfinishedTasks;
   }
 
+  renderPlaceholder() {
+    return this.state.isLoading
+      ? null
+      : 'You have no assigned tasks. Request a new task by clicking on the "Get a New Task" button.';
+  }
+
   renderTaskList() {
     const tasks = this.getCurrentTasks().sort(Utils.localeCompareBy(typeHint, "created"));
     const descriptionClassName = classNames("task-type-description", {
@@ -322,9 +328,9 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 
     const TaskCardTitle = ({ task }) => (
       <React.Fragment>
-        <span style={{ marginRight: 8 }}>{`${task.type.summary} (${moment(task.created).format(
-          "YYYY-MM-DD HH:mm",
-        )}) `}</span>
+        <span style={{ marginRight: 8 }}>
+          {task.type.summary} (<FormattedDate timestamp={task.created} />)
+        </span>
         {task.type.settings.allowedModes.map(mode => <Tag key={mode}>{mode}</Tag>)}
       </React.Fragment>
     );
@@ -360,6 +366,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         }}
         loading={this.state.isLoading}
         renderItem={TaskCard}
+        locale={{ emptyText: this.renderPlaceholder() }}
       />
     );
   }

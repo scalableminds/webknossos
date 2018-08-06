@@ -30,7 +30,7 @@ import {
   getResolutions,
   isRgb,
   getByteCount,
-} from "oxalis/model/accessors/dataset_accessor.js";
+} from "oxalis/model/accessors/dataset_accessor";
 
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
 
@@ -99,6 +99,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       mappingSize: {
         type: "f",
         value: 0,
+      },
+      hideUnmappedIds: {
+        type: "b",
+        value: false,
       },
       globalMousePosition: {
         type: "v3",
@@ -178,6 +182,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       const [
         mappingTexture,
         mappingLookupTexture,
+        mappingColorTexture,
       ] = segmentationLayer.mappings.getMappingTextures();
       this.uniforms[sanitizeName(`${segmentationLayer.name}_mapping_texture`)] = {
         type: "t",
@@ -186,6 +191,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       this.uniforms[sanitizeName(`${segmentationLayer.name}_mapping_lookup_texture`)] = {
         type: "t",
         value: mappingLookupTexture,
+      };
+      this.uniforms[sanitizeName(`${segmentationLayer.name}_mapping_color_texture`)] = {
+        type: "t",
+        value: mappingColorTexture,
       };
     }
 
@@ -266,6 +275,16 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         storeState => storeState.temporaryConfiguration.activeMapping.mappingSize,
         mappingSize => {
           this.uniforms.mappingSize.value = mappingSize;
+        },
+        true,
+      ),
+    );
+
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        storeState => storeState.temporaryConfiguration.activeMapping.hideUnmappedIds,
+        hideUnmappedIds => {
+          this.uniforms.hideUnmappedIds.value = hideUnmappedIds;
         },
         true,
       ),

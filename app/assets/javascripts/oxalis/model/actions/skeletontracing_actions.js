@@ -38,7 +38,11 @@ type DeleteEdgeActionType = {
   targetNodeId: number,
   timestamp: number,
 };
-type SetActiveNodeActionType = { type: "SET_ACTIVE_NODE", nodeId: number };
+type SetActiveNodeActionType = {
+  type: "SET_ACTIVE_NODE",
+  nodeId: number,
+  suppressAnimation: boolean,
+};
 type SetNodeRadiusActionType = {
   type: "SET_NODE_RADIUS",
   radius: number,
@@ -68,6 +72,11 @@ type SetActiveTreeActionType = { type: "SET_ACTIVE_TREE", treeId: number };
 type MergeTreesActionType = { type: "MERGE_TREES", sourceNodeId: number, targetNodeId: number };
 type SetTreeNameActionType = { type: "SET_TREE_NAME", name: ?string, treeId: ?number };
 type SelectNextTreeActionType = { type: "SELECT_NEXT_TREE", forward: ?boolean };
+type SetTreeColorIndexActionType = {
+  type: "SET_TREE_COLOR_INDEX",
+  treeId: ?number,
+  colorIndex: number,
+};
 type ShuffleTreeColorActionType = { type: "SHUFFLE_TREE_COLOR", treeId?: number };
 type ShuffleAllTreeColorsActionType = { type: "SHUFFLE_ALL_TREE_COLORS", treeId?: number };
 type CreateCommentActionType = {
@@ -102,6 +111,7 @@ export type SkeletonTracingActionType =
   | SelectNextTreeActionType
   | ShuffleTreeColorActionType
   | ShuffleAllTreeColorsActionType
+  | SetTreeColorIndexActionType
   | CreateCommentActionType
   | DeleteCommentActionType
   | ToggleTreeActionType
@@ -190,9 +200,13 @@ export const deleteEdgeAction = (
   timestamp,
 });
 
-export const setActiveNodeAction = (nodeId: number): SetActiveNodeActionType => ({
+export const setActiveNodeAction = (
+  nodeId: number,
+  suppressAnimation: boolean = false,
+): SetActiveNodeActionType => ({
   type: "SET_ACTIVE_NODE",
   nodeId,
+  suppressAnimation,
 });
 
 export const setNodeRadiusAction = (
@@ -300,6 +314,15 @@ export const setTreeNameAction = (
 export const selectNextTreeAction = (forward: ?boolean = true): SelectNextTreeActionType => ({
   type: "SELECT_NEXT_TREE",
   forward,
+});
+
+export const setTreeColorIndexAction = (
+  treeId: ?number,
+  colorIndex: number,
+): SetTreeColorIndexActionType => ({
+  type: "SET_TREE_COLOR_INDEX",
+  treeId,
+  colorIndex,
 });
 
 export const shuffleTreeColorAction = (treeId: number): ShuffleTreeColorActionType => ({

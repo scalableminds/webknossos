@@ -337,6 +337,12 @@ function applyUrlState(urlState: UrlManagerState, tracing: ?ServerTracingType) {
   // If there is no editPosition (e.g. when viewing a dataset) and
   // no default position, compute the center of the dataset
   const { dataset, datasetConfiguration } = Store.getState();
+  if (urlState.activeNode != null) {
+    // Set the active node (without animating to its position) before setting the
+    // position, since the position should take precedence.
+    Store.dispatch(setActiveNodeAction(urlState.activeNode, true));
+  }
+
   const defaultPosition = datasetConfiguration.position;
   let position = getDatasetCenter(dataset);
   if (defaultPosition != null) {
@@ -370,9 +376,5 @@ function applyUrlState(urlState: UrlManagerState, tracing: ?ServerTracingType) {
   }
   if (rotation != null) {
     Store.dispatch(setRotationAction(rotation));
-  }
-
-  if (urlState.activeNode != null) {
-    Store.dispatch(setActiveNodeAction(urlState.activeNode));
   }
 }

@@ -3,7 +3,6 @@
 import { Dropdown, Menu, Icon, Modal } from "antd";
 import React from "react";
 import { connect } from "react-redux";
-import moment from "moment";
 import FormatUtils from "libs/format_utils";
 import {
   getAnnotationsForTask,
@@ -16,6 +15,7 @@ import messages from "messages";
 import TransferTaskModal from "dashboard/transfer_task_modal";
 import type { APIUserType, APITaskType, APIAnnotationType } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
+import FormattedDate from "components/formatted_date";
 
 const { Item } = Menu;
 const { confirm } = Modal;
@@ -129,7 +129,7 @@ class TaskAnnotationView extends React.PureComponent<Props & StateProps, State> 
         </Item>
         <Item key={`${annotation.id}-delete`}>
           <span onClick={() => this.deleteAnnotation(annotation)}>
-            <Icon type="delete" />Cancel
+            <Icon type="delete" />Reset and Cancel
           </span>
         </Item>
         {annotation.state === "Finished" ? (
@@ -163,7 +163,9 @@ class TaskAnnotationView extends React.PureComponent<Props & StateProps, State> 
               return (
                 <tr key={`${annotation.id}-tr`}>
                   <td>{userString}</td>
-                  <td>{moment(annotation.modified).format("YYYY-MM-DD HH:mm")}</td>
+                  <td>
+                    <FormattedDate timestamp={annotation.modified} />
+                  </td>
                   <td>
                     <span>
                       <Icon type="check-circle-o" />

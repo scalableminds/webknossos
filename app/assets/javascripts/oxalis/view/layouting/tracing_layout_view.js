@@ -30,6 +30,7 @@ import TDViewControls from "oxalis/view/td_view_controls";
 import { GoldenLayoutAdapter } from "./golden_layout_adapter";
 import { getLayoutConfig, storeLayoutConfig } from "./layout_persistence";
 import { determineLayout } from "./default_layout_configs";
+import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 
 const { Header, Sider } = Layout;
 
@@ -95,7 +96,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     const layoutType = determineLayout(this.props.initialControlmode, this.props.viewMode);
 
     return (
-      <div>
+      <NmlUploadZoneContainer>
         <OxalisController
           initialTracingType={this.props.initialTracingType}
           initialAnnotationId={this.props.initialAnnotationId}
@@ -167,7 +168,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
             </div>
           </Layout>
         </Layout>
-      </div>
+      </NmlUploadZoneContainer>
     );
   }
 }

@@ -7,18 +7,19 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.binary._
-import models.project.{ProjectSQL, ProjectSQLDAO}
-import models.task.{TaskTypeSQL, TaskTypeSQLDAO}
+import models.configuration.UserConfiguration
+import models.project.{Project, ProjectDAO}
+import models.task.{TaskType, TaskTypeDAO}
 import models.team._
-import models.user.{User, UserDAO, UserService}
+import models.user._
 import net.liftweb.common.Full
 import org.joda.time.DateTime
-import oxalis.security.{TokenSQL, TokenSQLDAO, TokenType}
+import oxalis.security.{Token, TokenDAO, TokenType}
 import play.api.i18n.MessagesApi
 import play.api.Play.current
 import oxalis.security.WebknossosSilhouette.UserAwareAction
 import play.api.Play
-import reactivemongo.bson.BSONObjectID
+import play.api.libs.json.Json
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -45,9 +46,24 @@ Sample Street 123
 Sampletown
 Samplecountry
 """
-  val organizationTeamId = BSONObjectID.generate
-  val defaultOrganization = OrganizationSQL(ObjectId.generate, "Connectomics department", additionalInformation, "/assets/images/mpi-logos.svg", "MPI for Brain Research")
-  val organizationTeam = Team(defaultOrganization.name, defaultOrganization.name, true, organizationTeamId)
+  val organizationTeamId = ObjectId.generate
+  val defaultOrganization = Organization(ObjectId.generate, "Connectomics department", additionalInformation, "/assets/images/mpi-logos.svg", "MPI for Brain Research")
+  val organizationTeam = Team(organizationTeamId, defaultOrganization._id, defaultOrganization.name, true)
+  val defaultUser = User(
+    ObjectId.generate,
+    defaultOrganization._id,
+    defaultUserEmail,
+    "SCM",
+    "Boy",
+    System.currentTimeMillis(),
+    Json.toJson(UserConfiguration.default),
+    SCrypt.md5(defaultUserPassword),
+    UserService.createLoginInfo(defaultUserEmail),
+    UserService.createPasswordInfo(defaultUserPassword),
+    isAdmin = true,
+    isSuperUser = Play.configuration.getBoolean("application.authentication.defaultUser.isSuperUser").getOrElse(false),
+    isDeactivated = false
+  )
 
   def insert: Fox[Unit] =
     for {
@@ -64,45 +80,34 @@ Samplecountry
 
   def assertInitialDataEnabled =
     for {
-      _ <- Play.configuration.getBoolean("application.insertInitialData").getOrElse(false) ?~> "initialData.notEnabled"
+      _ <- bool2Fox(Play.configuration.getBoolean("application.insertInitialData").getOrElse(false)) ?~> "initialData.notEnabled"
     } yield ()
 
   def assertNoOrganizationsPresent =
     for {
-      organizations <- OrganizationSQLDAO.findAll
-      _ <- organizations.isEmpty ?~> "initialData.organizationsNotEmpty"
+      organizations <- OrganizationDAO.findAll
+      _ <- bool2Fox(organizations.isEmpty) ?~> "initialData.organizationsNotEmpty"
     } yield ()
 
   def insertDefaultUser =  {
     UserService.defaultUser.futureBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
-        val email = defaultUserEmail
-        val password = defaultUserPassword
-        logger.info("Inserted default user scmboy")
-        UserDAO.insert(User(
-          email,
-          "SCM",
-          "Boy",
-          true,
-          SCrypt.md5(password),
-          defaultOrganization.name,
-          List(TeamMembership(organizationTeam._id, organizationTeam.name, true)),
-          isAdmin = true,
-          loginInfo = UserService.createLoginInfo(email),
-          passwordInfo = UserService.createPasswordInfo(password),
-          experiences = Map("sampleExp" -> 10),
-          _isSuperUser = Play.configuration.getBoolean("application.authentication.defaultUser.isSuperUser"))
-        )
+        for {
+          _ <- UserDAO.insertOne(defaultUser)
+          _ <- UserExperiencesDAO.updateExperiencesForUser(defaultUser._id, Map("sampleExp" -> 10))
+          _ <- UserTeamRolesDAO.insertTeamMembership(defaultUser._id, TeamMembershipSQL(organizationTeam._id, true))
+          _ = logger.info("Inserted default user scmboy")
+        } yield ()
     }.toFox
   }
 
   def insertToken = {
     val expiryTime = Play.configuration.underlying.getDuration("silhouette.tokenAuthenticator.authenticatorExpiry").toMillis
-    TokenSQLDAO.findOneByLoginInfo("credentials", defaultUserEmail, TokenType.Authentication).futureBox.flatMap {
+    TokenDAO.findOneByLoginInfo("credentials", defaultUserEmail, TokenType.Authentication).futureBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
-        val newToken = TokenSQL(
+        val newToken = Token(
           ObjectId.generate,
           "secretScmBoyToken",
           LoginInfo("credentials", defaultUserEmail),
@@ -111,15 +116,15 @@ Samplecountry
           None,
           TokenType.Authentication
         )
-      TokenSQLDAO.insertOne(newToken)
+      TokenDAO.insertOne(newToken)
     }
   }
 
   def insertOrganization = {
-    OrganizationSQLDAO.findOneByName(defaultOrganization.name).futureBox.flatMap {
+    OrganizationDAO.findOneByName(defaultOrganization.name).futureBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
-        OrganizationSQLDAO.insertOne(defaultOrganization)
+        OrganizationDAO.insertOne(defaultOrganization)
     }.toFox
   }
 
@@ -127,35 +132,35 @@ Samplecountry
     TeamDAO.findAll.flatMap {
       teams =>
         if (teams.isEmpty)
-          TeamDAO.insert(organizationTeam)
+          TeamDAO.insertOne(organizationTeam)
         else
           Fox.successful(())
     }.toFox
   }
 
   def insertTaskType = {
-    TaskTypeSQLDAO.findAll.flatMap {
+    TaskTypeDAO.findAll.flatMap {
       types =>
         if (types.isEmpty) {
-          val taskType = TaskTypeSQL(
+          val taskType = TaskType(
             ObjectId.generate,
-            ObjectId.fromBsonId(organizationTeam._id),
+            organizationTeam._id,
             "sampleTaskType",
             "Check those cells out!"
             )
-          for {_ <- TaskTypeSQLDAO.insertOne(taskType)} yield ()
+          for {_ <- TaskTypeDAO.insertOne(taskType)} yield ()
         }
         else Fox.successful(())
     }.toFox
   }
 
   def insertProject = {
-    ProjectSQLDAO.findAll.flatMap {
+    ProjectDAO.findAll.flatMap {
       projects =>
         if (projects.isEmpty) {
           UserService.defaultUser.flatMap { user =>
-            val project = ProjectSQL(ObjectId.generate, ObjectId.fromBsonId(organizationTeam._id), ObjectId.fromBsonId(user._id), "sampleProject", 100, false, Some(5400000))
-            for {_ <- ProjectSQLDAO.insertOne(project)} yield ()
+            val project = Project(ObjectId.generate, organizationTeam._id, user._id, "sampleProject", 100, false, Some(5400000))
+            for {_ <- ProjectDAO.insertOne(project)} yield ()
           }
         } else Fox.successful(())
     }.toFox
@@ -163,11 +168,11 @@ Samplecountry
 
   def insertLocalDataStoreIfEnabled: Fox[Any] = {
     if (Play.configuration.getBoolean("datastore.enabled").getOrElse(true)) {
-      DataStoreSQLDAO.findOneByName("localhost").futureBox.map { maybeStore =>
+      DataStoreDAO.findOneByName("localhost").futureBox.map { maybeStore =>
         if (maybeStore.isEmpty) {
           val url = Play.configuration.getString("http.uri").getOrElse("http://localhost:9000")
           val key = Play.configuration.getString("datastore.key").getOrElse("something-secure")
-          DataStoreSQLDAO.insertOne(DataStoreSQL("localhost", url, WebKnossosStore, key))
+          DataStoreDAO.insertOne(DataStore("localhost", url, WebKnossosStore, key))
         }
       }
     } else Fox.successful(())

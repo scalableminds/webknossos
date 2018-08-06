@@ -11,7 +11,7 @@ import com.scalableminds.util.mail._
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.rpc.RPC
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.binary.{DataStoreSQL, DataStoreSQLDAO}
+import models.binary.{DataStore, DataStoreDAO}
 import models.team._
 import models.user.UserService.{Mailer => _, _}
 import models.user._
@@ -162,13 +162,13 @@ class Authentication @Inject()(
               Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
             } else {
               for {
-                organization <- OrganizationSQLDAO.findOneByName(signUpData.organization)(GlobalAccessContext)
-                user <- UserService.insert(organization.name, email, firstName, lastName, signUpData.password, automaticUserActivation, roleOnRegistration,
+                organization <- OrganizationDAO.findOneByName(signUpData.organization)(GlobalAccessContext)
+                user <- UserService.insert(organization._id, email, firstName, lastName, signUpData.password, automaticUserActivation, roleOnRegistration,
                   loginInfo, passwordHasher.hash(signUpData.password))
-                brainDBResult <- BrainTracing.register(user).toFox
+                brainDBResult <- BrainTracing.registerIfNeeded(user).toFox
               } yield {
                 Mailer ! Send(DefaultMails.registerMail(user.name, user.email, brainDBResult))
-                Mailer ! Send(DefaultMails.registerAdminNotifyerMail(user, user.email, brainDBResult))
+                Mailer ! Send(DefaultMails.registerAdminNotifyerMail(user, user.email, brainDBResult, organization))
                 Ok
               }
             }
@@ -188,7 +188,7 @@ class Authentication @Inject()(
           UserService.retrieve(loginInfo).flatMap {
             case None =>
               Future.successful(BadRequest(Messages("error.noUser")))
-            case Some(user) if (user.isActive) => for {
+            case Some(user) if (!user.isDeactivated) => for {
               authenticator <- env.authenticatorService.create(loginInfo)
               value <- env.authenticatorService.init(authenticator)
               result <- env.authenticatorService.embed(value, Ok)
@@ -204,7 +204,7 @@ class Authentication @Inject()(
 
   def autoLogin = Action.async { implicit request =>
     for {
-      _ <- Play.configuration.getBoolean("application.authentication.enableDevAutoLogin").get ?~> Messages("error.notInDev")
+      _ <- bool2Fox(Play.configuration.getBoolean("application.authentication.enableDevAutoLogin").get) ?~> Messages("error.notInDev")
       user <- UserService.defaultUser
       authenticator <- env.authenticatorService.create(user.loginInfo)
       value <- env.authenticatorService.init(authenticator)
@@ -213,7 +213,7 @@ class Authentication @Inject()(
   }
 
   def switchTo(email: String) = SecuredAction.async { implicit request =>
-    if (request.identity._isSuperUser.openOr(false)) {
+    if (request.identity.isSuperUser) {
       val loginInfo = LoginInfo(CredentialsProvider.ID, email)
       for {
         _ <- findOneByEmail(email) ?~> Messages("user.notFound")
@@ -254,7 +254,7 @@ class Authentication @Inject()(
         bearerTokenAuthenticatorService.userForToken(passwords.token.trim)(GlobalAccessContext).futureBox.flatMap {
           case Full(user) =>
             for {
-              _ <- UserDAO.changePasswordInfo(user._id, passwordHasher.hash(passwords.password1))(GlobalAccessContext)
+              _ <- UserDAO.updatePasswordInfo(user._id, passwordHasher.hash(passwords.password1))(GlobalAccessContext)
               _ <- bearerTokenAuthenticatorService.remove(passwords.token.trim)
             } yield Ok
           case _ =>
@@ -346,7 +346,7 @@ class Authentication @Inject()(
           val returnPayload =
             s"nonce=$nonce&" +
               s"email=${URLEncoder.encode(user.email, "UTF-8")}&" +
-              s"external_id=${URLEncoder.encode(user.id, "UTF-8")}&" +
+              s"external_id=${URLEncoder.encode(user._id.toString, "UTF-8")}&" +
               s"username=${URLEncoder.encode(user.abreviatedName, "UTF-8")}&" +
               s"name=${URLEncoder.encode(user.name, "UTF-8")}"
           val encodedReturnPayload = Base64.encodeBase64String(returnPayload.getBytes("UTF-8"))
@@ -390,10 +390,13 @@ class Authentication @Inject()(
                 } else {
                   for {
                     organization <- createOrganization(signUpData.organization) ?~> Messages("organization.create.failed")
-                    user <- UserService.insert(organization.name, email, firstName, lastName, signUpData.password, isActive = true, teamRole = true,
+                    user <- UserService.insert(organization._id, email, firstName, lastName, signUpData.password, isActive = true, teamRole = true,
                       loginInfo, passwordHasher.hash(signUpData.password), isAdmin = true)
                     _ <- createOrganizationFolder(organization.name, loginInfo)
-                  } yield Ok
+                  } yield {
+                    Mailer ! Send(DefaultMails.newOrganizationMail(organization.displayName, email.toLowerCase, request.headers.get("Host").headOption.getOrElse("")))
+                    Ok
+                  }
                 }
               case f: Failure => Fox.failure(f.msg)
             }
@@ -405,8 +408,8 @@ class Authentication @Inject()(
 
   private def creatingOrganizationsIsAllowed(requestingUser: Option[User]) = {
     val noOrganizationPresent = InitialDataService.assertNoOrganizationsPresent
-    val configurationFlagSet = Play.configuration.getBoolean("application.allowOrganzationCreation").getOrElse(false) ?~> "allowOrganzationCreation.notEnabled"
-    val userIsSuperUser = requestingUser.exists(_.isSuperUser).toFox
+    val configurationFlagSet = bool2Fox(Play.configuration.getBoolean("features.allowOrganzationCreation").getOrElse(false)) ?~> "allowOrganzationCreation.notEnabled"
+    val userIsSuperUser = bool2Fox(requestingUser.exists(_.isSuperUser))
 
     Fox.sequenceOfFulls(List(noOrganizationPresent, configurationFlagSet, userIsSuperUser)).map(_.headOption).toFox
   }
@@ -414,16 +417,18 @@ class Authentication @Inject()(
   private def createOrganization(organizationDisplayName: String) =
     for {
       organizationName <- normalizeName(organizationDisplayName).toFox ?~> "invalid organization name"
-      organization = OrganizationSQL(ObjectId.generate, organizationName.replaceAll(" ", "_"), "", "", organizationDisplayName)
-      organizationTeam = TeamSQL(ObjectId.generate, organization._id, organization.name, isOrganizationTeam = true)
-      _ <- OrganizationSQLDAO.insertOne(organization)(GlobalAccessContext)
-      _ <- TeamSQLDAO.insertOne(organizationTeam)(GlobalAccessContext)
+      organization = Organization(ObjectId.generate, organizationName.replaceAll(" ", "_"), "", "", organizationDisplayName)
+      organizationTeam = Team(ObjectId.generate, organization._id, organization.name, isOrganizationTeam = true)
+      _ <- OrganizationDAO.insertOne(organization)(GlobalAccessContext)
+      _ <- TeamDAO.insertOne(organizationTeam)(GlobalAccessContext)
       _ <- InitialDataService.insertLocalDataStoreIfEnabled
-    } yield organization
+    } yield {
+      organization
+    }
 
 
   private def createOrganizationFolder(organizationName: String, loginInfo: LoginInfo)(implicit request: RequestHeader) = {
-    def sendRPCToDataStore(dataStore: DataStoreSQL, token: String) = {
+    def sendRPCToDataStore(dataStore: DataStore, token: String) = {
       RPC(s"${dataStore.url}/data/triggers/newOrganizationFolder")
         .withQueryString("token" -> token, "organizationName" -> organizationName)
         .get
@@ -431,7 +436,7 @@ class Authentication @Inject()(
 
     for {
       token <- env.combinedAuthenticatorService.tokenAuthenticatorService.createAndInit(loginInfo, TokenType.DataStore, deleteOld = false).toFox
-      datastores <- DataStoreSQLDAO.findAll(GlobalAccessContext)
+      datastores <- DataStoreDAO.findAll(GlobalAccessContext)
       _ <- Fox.combined(datastores.map(sendRPCToDataStore(_, token)))
     } yield Full(())
 

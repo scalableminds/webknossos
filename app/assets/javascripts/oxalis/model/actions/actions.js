@@ -10,6 +10,7 @@ import type { ViewModeActionType } from "oxalis/model/actions/view_mode_actions"
 import type { AnnotationActionTypes } from "oxalis/model/actions/annotation_actions";
 import type { FlycamActionType } from "oxalis/model/actions/flycam_actions";
 import type { UserActionType } from "oxalis/model/actions/user_actions";
+import type { UiActionType } from "oxalis/model/actions/ui_actions";
 
 export type ActionType =
   | SkeletonTracingActionType
@@ -20,7 +21,8 @@ export type ActionType =
   | ViewModeActionType
   | AnnotationActionTypes
   | FlycamActionType
-  | UserActionType;
+  | UserActionType
+  | UiActionType;
 
 export const wkReadyAction = () => ({
   type: "WK_READY",

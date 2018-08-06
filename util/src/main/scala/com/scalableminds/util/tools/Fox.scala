@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.util.tools
 
 import net.liftweb.common.{Box, Empty, Failure, Full}
@@ -11,10 +8,6 @@ import scala.reflect.ClassTag
 import scala.util.{Success, Try}
 
 trait FoxImplicits {
-  implicit def bool2Fox(b: Boolean)(implicit ec: ExecutionContext): Fox[Boolean] =
-    if(b) Fox.successful(b)
-    else  Fox.empty
-
   implicit def futureBox2Fox[T](f: Future[Box[T]])(implicit ec: ExecutionContext): Fox[T] =
     new Fox(f)
 
@@ -45,9 +38,14 @@ trait FoxImplicits {
 
   implicit def fox2FutureBox[T](f: Fox[T])(implicit ec: ExecutionContext): Future[Box[T]] =
     f.futureBox
+
+  // This one is no longer implicit since that has lead to confusion. Should always be used explicitly.
+  def bool2Fox(b: Boolean)(implicit ec: ExecutionContext): Fox[Boolean] =
+    if(b) Fox.successful(b)
+    else  Fox.empty
 }
 
-object Fox{
+object Fox extends FoxImplicits {
   def apply[A](future: Future[Box[A]])(implicit ec: ExecutionContext): Fox[A]  =
     new Fox(future)
 
@@ -150,6 +148,13 @@ object Fox{
         } yield Some(result)
       case None =>
         Fox.successful(None)}
+  }
+
+  def assertTrue(fox: Fox[Boolean])(implicit ec: ExecutionContext): Fox[Unit] = {
+    for {
+      asBoolean <- fox
+      _ <- bool2Fox(asBoolean)
+    } yield ()
   }
 
 }

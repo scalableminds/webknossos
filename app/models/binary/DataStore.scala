@@ -10,7 +10,7 @@ import slick.lifted.Rep
 import utils.SQLDAO
 
 
-case class DataStoreSQL(
+case class DataStore(
                        name: String,
                        url: String,
                        typ: DataStoreType,
@@ -39,14 +39,14 @@ object DataStoreInfo {
 }
 
 
-object DataStoreSQLDAO extends SQLDAO[DataStoreSQL, DatastoresRow, Datastores] {
+object DataStoreDAO extends SQLDAO[DataStore, DatastoresRow, Datastores] {
   val collection = Datastores
 
   def idColumn(x: Datastores): Rep[String] = x.name
   def isDeletedColumn(x: Datastores): Rep[Boolean] = x.isdeleted
 
-  def parse(r: DatastoresRow): Fox[DataStoreSQL] =
-    Fox.successful(DataStoreSQL(
+  def parse(r: DatastoresRow): Fox[DataStore] =
+    Fox.successful(DataStore(
       r.name,
       r.url,
       DataStoreType.stringToType(r.typ),
@@ -54,7 +54,7 @@ object DataStoreSQLDAO extends SQLDAO[DataStoreSQL, DatastoresRow, Datastores] {
       r.isdeleted
     ))
 
-  def findOneByKey(key: String)(implicit ctx: DBAccessContext): Fox[DataStoreSQL] =
+  def findOneByKey(key: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
     for {
       rOpt <- run(Datastores.filter(r => notdel(r) && r.key === key).result.headOption)
       r <- rOpt.toFox
@@ -63,7 +63,7 @@ object DataStoreSQLDAO extends SQLDAO[DataStoreSQL, DatastoresRow, Datastores] {
       parsed
     }
 
-  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataStoreSQL] =
+  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
     for {
       rOpt <- run(Datastores.filter(r => notdel(r) && r.name === name).result.headOption)
       r <- rOpt.toFox
@@ -77,7 +77,7 @@ object DataStoreSQLDAO extends SQLDAO[DataStoreSQL, DatastoresRow, Datastores] {
     for {_ <- run(q.update(url))} yield ()
   }
 
-  def insertOne(d: DataStoreSQL): Fox[Unit] = {
+  def insertOne(d: DataStore): Fox[Unit] = {
     for {
       _ <- run(sqlu"""insert into webknossos.dataStores(name, url, key, typ, isDeleted)
                          values(${d.name}, ${d.url}, ${d.key}, '#${d.typ.name}', ${d.isDeleted})""")

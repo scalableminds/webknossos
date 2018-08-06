@@ -33,22 +33,18 @@ object SQLClient {
 }
 
 case class ObjectId(id: String) {
-  def toBSONObjectId = BSONObjectID.parse(id).toOption
   override def toString = id
 }
 
 object ObjectId extends FoxImplicits {
   implicit val jsonFormat = Json.format[ObjectId]
-  def fromBsonId(bson: BSONObjectID) = ObjectId(bson.stringify)
   def generate = fromBsonId(BSONObjectID.generate)
   def parse(input: String) = parseSync(input).toFox ?~> Messages("bsonid.invalid", input)
+  private def fromBsonId(bson: BSONObjectID) = ObjectId(bson.stringify)
   private def parseSync(input: String) = BSONObjectID.parse(input).map(fromBsonId).toOption
 
   def stringObjectIdReads(key: String) =
     Reads.filter[String](ValidationError("bsonid.invalid", key))(parseSync(_).isDefined)
-
-  def stringBSONObjectIdReads(key: String) =
-    Reads.filter[String](ValidationError("bsonid.invalid", key))(BSONObjectID.parse(_).isSuccess)
 }
 
 trait SQLTypeImplicits {
@@ -172,10 +168,9 @@ trait SecuredSQLDAO extends SimpleSQLDAO {
     }
   }
 
-  //note that this needs to be guaranteed to be sanitized (currently so because it converts from BSONObjectID)
   def userIdFromCtx(implicit ctx: DBAccessContext): Fox[ObjectId] = {
     ctx.data match {
-      case Some(user: User) => Fox.successful(ObjectId.fromBsonId(user._id))
+      case Some(user: User) => Fox.successful(user._id)
       case _ => Fox.failure("Access denied.")
     }
   }

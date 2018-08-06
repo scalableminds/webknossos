@@ -41,7 +41,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       _ <- restrictions.allowAccess(request.identity) ?~> "notAllowed" ~> BAD_REQUEST
       js <- annotation.publicWrites(request.identity, Some(restrictions), Some(readOnly)) ?~> "could not convert annotation to json"
       _ <- Fox.runOptional(request.identity) { user =>
-        if (typ == AnnotationTypeSQL.Task || typ == AnnotationTypeSQL.Explorational) {
+        if (typ == AnnotationType.Task || typ == AnnotationType.Explorational) {
           TimeSpanService.logUserInteraction(user, annotation) // log time when a user starts working
         } else Fox.successful(())
       }
@@ -88,7 +88,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
       _ <- restrictions.allowUpdate(request.identity) ?~> Messages("notAllowed")
-      _ <- annotation.isRevertPossible ?~> Messages("annotation.revert.toOld")
+      _ <- bool2Fox(annotation.isRevertPossible) ?~> Messages("annotation.revert.toOld")
       dataSet <- annotation.dataSet
       dataStoreHandler <- dataSet.dataStoreHandler
       newTracingReference <- dataStoreHandler.duplicateSkeletonTracing(annotation.tracing, Some(version.toString))
@@ -118,8 +118,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
     for {
       annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
-      isAllowed <- isReopenAllowed(request.identity, annotation)
-      _ <- isAllowed.toFox ?~> "reopen.notAllowed"
+      _ <- Fox.assertTrue(isReopenAllowed(request.identity, annotation)) ?~> "reopen.notAllowed"
       _ <- annotation.muta.reopen ?~> "annotation.invalid"
       updatedAnnotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       json <- updatedAnnotation.publicWrites(Some(request.identity))
@@ -208,7 +207,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   def cancel(typ: String, id: String) = SecuredAction.async { implicit request =>
     def tryToCancel(annotation: Annotation) = {
       annotation match {
-        case t if t.typ == AnnotationTypeSQL.Task =>
+        case t if t.typ == AnnotationType.Task =>
           annotation.muta.cancel.map { _ =>
             JsonOk(Messages("task.finished"))
           }
@@ -259,7 +258,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       dataStoreHandler <- dataSet.dataStoreHandler
       newTracingReference <- dataStoreHandler.duplicateSkeletonTracing(oldTracingReference) ?~> "Failed to create skeleton tracing."
       clonedAnnotation <- AnnotationService.createFrom(
-        user, dataSet, newTracingReference, AnnotationTypeSQL.Explorational, None, annotation.description) ?~> Messages("annotation.create.failed")
+        user, dataSet, newTracingReference, AnnotationType.Explorational, None, annotation.description) ?~> Messages("annotation.create.failed")
     } yield clonedAnnotation
   }
 }

@@ -137,7 +137,7 @@ test("SaveSaga should retry update actions", t => {
     TIMESTAMP,
   );
 
-  const saga = sendRequestToServer(TIMESTAMP);
+  const saga = sendRequestToServer("skeleton", TIMESTAMP);
   saga.next();
   saga.next(saveQueue);
   saga.next({ version: LAST_VERSION, type: "skeleton", tracingId: "1234567890" });
@@ -157,7 +157,7 @@ test("SaveSaga should retry update actions", t => {
   // wait for retry
   saga.next();
   // should retry
-  expectValueDeepEqual(t, saga.next(), call(sendRequestToServer));
+  expectValueDeepEqual(t, saga.next(), call(sendRequestToServer, "skeleton"));
 });
 
 test("SaveSaga should escalate on permanent client error update actions", t => {

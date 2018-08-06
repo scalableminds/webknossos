@@ -195,7 +195,7 @@ export function* sendRequestToServer(
       return;
     }
     yield* call(delay, SAVE_RETRY_WAITING_TIME);
-    yield* call(sendRequestToServer);
+    yield* call(sendRequestToServer, tracingType);
   }
 }
 

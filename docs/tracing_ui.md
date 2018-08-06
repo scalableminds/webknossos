@@ -67,24 +67,48 @@ Skeleton tracing can contain one or many trees consiting of several nodes all th
 
 Many organic structures do not follow a single, linear path but split into several individual branches instead. webKnossos natively supports branch points. Any node can be marked as a branch point using the keyboard shortcut "B". Branch points are highlighted using a slightly different color. All branch points are saved as a stack for each tree and can be accessed first-in, first-out (FIFO). Press the "J" to jump to the latest branch point to continue working from their and remove it from the stack.
 
-| Keyboard Shortcut | Operation                 |
-| ----------------- | -------------             |
-| Right Click       | Create New Node           |
-| S                 | Center Active Node        |
-| DEL               | Delete Active Node        |
-| B                 | Create Branch Point       |
-| J                 | Jump to Last Branch Point |
+| Key Binding       | Operation                           |
+| ----------------- | -------------                       |
+| Right Click       | Create New Node                     |
+| SHIFT + Left Click| Select Node (Mark as Active Node)   |
+| S                 | Center Active Node                  |
+| DEL               | Delete Active Node                  |
+| B                 | Create Branch Point                 |
+| J                 | Jump to Last Branch Point           |
 
 All further keyboard shortcuts are [available here](./keyboard_shortcuts.md). 
 
-### Tree Groups
-- Rename, adding, delete
--  split / merge
-- drag & drop
-- hiding trees
-- colors shuffeling
+### Tree Operations & Tree Groups
+All operations and information regarding trees are organized under a tab called `Trees` on the right-hand side of the browser.
+
+A typical skeleton tracing consists of one or more trees. Trees can be nested and organized in so-called `Tree Groups`. Tree groups can have a name and are used to structure and label your annotation even further. Trees can be dragged and dropped between tree groups. However over existing tree groups the bring up a little menu for creating new groups, renaming, and deletion.
 
 ![Organize your skeleton tracing's trees to remember important structures for later reference](images/tracing_ui_trees.jpg)
+
+Common tree operations include splitting and merging trees. 
+
+- `Tree splitting` can be done in two ways: 
+  1. Select a node at which to split (SHIFT + Left Click) and delete (DEL) it.
+  2. Delete an edge between two nodes. Select the first node (SHIFT + Left Click), then SHIFT + CTRL + Left Click on the second node of the edge to delete this connection.
+- `Tree merging` works similarly to edge deletion but will create a new edge between two previously unconnected trees. Select the first node and SHIFT + ALT + Left Click the second node to create an edge between the two.
+
+![Tree can split by deleting the edge between two node or deleting a node. Two trees can be merge again by creating a new edge between them.](images/tracing_ui_tree_merge_split.gif)
+
+Each tree gets assigned a random color. Colors can be shuffled for a single tree or for all trees in a skeleton. Use the overflow menu under `More in the tree tab and select `Change Color` or `Shuffle All Colors` to assign new randomly chosen colors. 
+All node have the same color as their parent tree and can not be changed individually. The active node, branch points, and node that have comments assigned to them are highlighted with a slight variation of the tree's color.
+
+![Randomly assign a new color to a single tree or all trees at once.](images/tracing_ui_tree_color.png)
+
+The visibility of individual trees can be toggled to hide some trees for a better overview. Toggle the checkbox before each tree name or tree group to hide/show it. Alternatively, the visibility of all trees can be toggled all at once using the `Toggle All` button under the `Tree Tab`.  There are also a few keyboard shortcuts to quickly toggle the visibility:
+
+| Key Binding                 | Operation                             |
+| ----------------------------| -------------                         |
+| 1                           | Toggle Visibility of all Trees        |
+| 2                           | Toggle Visibility of Inactive Trees   |
+| SHIFT + ALT + Left Click    | Merge Two Nodes and Combine Trees     |
+| SHIFT + CTRL + Left Click   | Delete Edge / Split Trees             |
+
+![Trees can be hidden for a better overview over the data. Toggle the visibility of individual tree using the checkbox in front of the tree's name or use the button to toggle all (inactive) trees at once.](images/tracing_ui_tree_visibility.png)
 
 
 ### Importing & Exporting NML Files
@@ -100,7 +124,7 @@ Importing a skeleton tracing can be achieved using two approaches as well:
 
 1. If you already have a tracing open you can easily add more skeletons to it by drag and dropping an NML file onto your browser window. Otherwise, use the `Import NML` option next to `Download Selected Trees`. This will merge the NML files content with the already open tracing. 
 
-2. To import a skeleton tracing as a completely new wK annotation, navigate to your user dashboard. Under "Explorative Tracings" use the `Upload Annotation` button.
+2. To import a skeleton tracing as a completely new wK annotation, just drag and drop the NML file anywhere on your dashboard. Alternately, navigate to your user dashboard and use the `Upload Annotation` button within the "Explorative Tracings" section. 
 
 ![Skeletons can be imported by drag and drop in the tracing view or from the dashboard](images/tracing_ui_import.png)
 

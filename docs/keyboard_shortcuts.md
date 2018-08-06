@@ -12,8 +12,8 @@ Find all available keyboard shortcuts for webKnossos listed below.
 | N                             | Select Next Comment                         |
 | K                             | Scale Up Viewport Size                      |
 | L                             | Scale Down Viewport Size                    |
-| I or Alt + Mousewheel         | Zoom In                                     |
-| O or Alt + Mousewheel         | Zoom Out                                    |
+| I or ALT + Mousewheel         | Zoom In                                     |
+| O or ALT + Mousewheel         | Zoom Out                                    |
 | 3                             | Toggle Segmentation Opacity                 |
 | H                             | Increase the Move Value                     |
 | G                             | Decrease the Move Value                     |
@@ -23,8 +23,8 @@ Find all available keyboard shortcuts for webKnossos listed below.
 | Key Binding                   | Operation                                   |
 | ----------------------------- | ------------------------------------------- |
 | M                             | Toggle Mode (Orthogonal, Flight, Oblique)   |
-| 1                             | Toggle Skeleton Visibility                  |
-| 2                             | Toggle Inactive Tree Visibility             |
+| 1                             | Toggle Visibility of all Trees              |
+| 2                             | Toggle Visibility of Inactive Trees         |
 | SHIFT + Mousewheel            | Change Node Radius                          |
 | CTRL + SHIFT + F              | Open Tree Search (if Tree List is visible)  |
 | F or Mousewheel               | Move Forward by a Single Slice              |
@@ -41,7 +41,7 @@ Find all available keyboard shortcuts for webKnossos listed below.
 | Right Click                   | Create New Node                             |
 | C                             | Create New Tree                             |
 | SHIFT + Left Click            | Select Node (Mark as Active Node)           |
-| SHIFT + Alt + Left Click      | Merge Two Nodes and Combine Trees           |
+| SHIFT + ALT + Left Click      | Merge Two Nodes and Combine Trees           |
 | SHIFT + CTRL + Left Click     | Delete Edge / Split Trees                   |
 | Del                           | Delete Node / Split Trees                   |
 | B                             | Mark Node as New Branchpoint                |

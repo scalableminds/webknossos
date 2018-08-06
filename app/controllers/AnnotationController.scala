@@ -4,9 +4,9 @@ import javax.inject.Inject
 import akka.util.Timeout
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.tracings.TracingType
+import com.scalableminds.webknossos.datastore.tracings.{TracingReference, TracingType}
 import models.annotation._
-import models.binary.{DataSet, DataSetDAO}
+import models.binary.{DataSet, DataSetDAO, DataStoreHandlingStrategy}
 import models.task.TaskDAO
 import models.user.time._
 import models.user.{User, UserDAO}
@@ -251,12 +251,19 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   }
 
   private def duplicateAnnotation(annotation: Annotation, user: User)(implicit ctx: DBAccessContext): Fox[Annotation] = {
+    def duplicateTracing(dataStoreHandler: DataStoreHandlingStrategy, oldTracingReference: TracingReference) = {
+      oldTracingReference.typ match {
+        case TracingType.skeleton => dataStoreHandler.duplicateSkeletonTracing(oldTracingReference) ?~> "Failed to create skeleton tracing."
+        case TracingType.volume => dataStoreHandler.duplicateVolumeTracing(oldTracingReference) ?~> "Failed to create volume tracing."
+      }
+    }
+
     for {
       dataSet: DataSet <- annotation.dataSet
       oldTracingReference = annotation.tracing
       _ <- bool2Fox(dataSet.isUsable) ?~> "DataSet is not imported."
       dataStoreHandler <- dataSet.dataStoreHandler
-      newTracingReference <- dataStoreHandler.duplicateSkeletonTracing(oldTracingReference) ?~> "Failed to create skeleton tracing."
+      newTracingReference <- duplicateTracing(dataStoreHandler, oldTracingReference)
       clonedAnnotation <- AnnotationService.createFrom(
         user, dataSet, newTracingReference, AnnotationType.Explorational, None, annotation.description) ?~> Messages("annotation.create.failed")
     } yield clonedAnnotation

@@ -108,7 +108,7 @@ class MappingInfoView extends Component<Props> {
     ]
       .map(idInfo => ({
         ...idInfo,
-        mapped: idInfo.unmapped && cube.mapId(idInfo.unmapped),
+        mapped: idInfo.unmapped != null ? cube.mapId(idInfo.unmapped) : undefined,
       }))
       .map(idInfo => ({
         ...idInfo,

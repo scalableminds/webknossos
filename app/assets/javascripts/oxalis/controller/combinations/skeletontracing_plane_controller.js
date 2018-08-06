@@ -104,9 +104,9 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
 
   moveAlongDirection = (reverse: boolean = false) => {
     const directionInverter = reverse ? -1 : 1;
-    const newPosition = V3.scale(
-      V3.add(getPosition(this.props.flycam), this.props.flycam.direction),
-      directionInverter,
+    const newPosition = V3.add(
+      getPosition(this.props.flycam),
+      V3.scale(this.props.flycam.direction, directionInverter),
     );
     api.tracing.centerPositionAnimated(newPosition, false);
   };

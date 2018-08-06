@@ -43,14 +43,23 @@ To share a dataset publicly, follow these steps:
 To obtain a link to a particular dataset, navigate to a dataset either from the spotlight gallery or your user dashboard by clicking `View`. After wK has finished loading the data, you can copy the URL from your browser window for sharing.
 
 {% hint style='info' %}
-We recommend giving your datasets a meaningful description and display name. Both are featured next to a preview of the dataset in the gallery of featured public datasets. 
+We recommend giving your datasets a meaningful description and display name. Both are featured next to a preview of the dataset in the gallery of promoted public datasets. 
 {% endhint %}
 
 
-## Tracing Sharing
-- from within the tracing view
-- public vs private
-- requires the dataset to be publicly shared
-- copy to my account
+## Annotation Sharing
+Besides sharing just the data layers for viewing, wK can also share complete annotation, e.g. a large reconstruction of a skeleton. Annotation sharing works for both skeletons and volume tracings.
 
+Annotation can be shared publicly and privately. Public tracings do not require any user authentication and are a great option for sharing a link to your annotation from social media or your website. Unlike with datasets, publicly shared annotations are not yet featured in a gallery.
 
+Private sharing required the recipient of a link to log in with his wK accounts. This is primarily used for sharing annotations with your co-workers, e.g. for highlighting interesting positions in your work. Since your position, rotation, zoom, etc is encoded in the URL, it is a great way for working collaboratively. Just send an URL to your co-worker in an email or blog post and he jumps right into the annotation at your location.
+
+Since every annotation is tied to an individual wK user, co-workers cannot just modify your annotation if you share it with them. Instead, the shared annotation will be read-only. If your co-worker wants to make modifications to the annotation, he/she can click the `Copy to my Account` button in the toolbar. This will make a copy of the annotation, link it to the co-worker's account and enable modifications again. Think of this feature like GitHub forks. Changes made to the copy are not automatically synced with the original.
+
+To share an annotation, follow these steps:
+1. Open your annotation in the regular tracing view. 
+2. From the [toolbar](./tracing_ui.md/#the-toolbar) select `Share` from the overflow menu next to the `Save` button.
+3. Copy the sharing URL for private access.
+4. Enable public sharing with the checkbox, if required.
+
+For public annotations to work properly, the underlying dataset must also be shared publicly. Otherwise, the annotation and data cannot be loaded by wK and an error will occur. [Learn how to share dataset publicly above.](#public-sharing)

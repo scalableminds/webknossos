@@ -28,6 +28,7 @@ import type { Dispatch } from "redux";
 import type { OxalisState, SkeletonTracingType, TreeType, CommentType } from "oxalis/store";
 import type { Comparator } from "libs/utils";
 import { makeSkeletonTracingGuard } from "oxalis/view/guards";
+import SearchPopover from "../search_popover";
 
 const InputGroup = Input.Group;
 
@@ -336,6 +337,19 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
       <div className="flex-column">
         {this.renderMarkdownModal()}
         <InputGroup compact>
+          <SearchPopover
+            onSelect={nodeIdString => this.props.setActiveNode(parseInt(nodeIdString, 10))}
+            data={_.flatMap(this.props.skeletonTracing.trees, tree => tree.comments)}
+            idKey="nodeId"
+            searchKey="content"
+            maxSearchResults={10}
+          >
+            <Tooltip title="Open the search via CTRL + Shift + F">
+              <ButtonComponent>
+                <Icon type="search" />
+              </ButtonComponent>
+            </Tooltip>
+          </SearchPopover>
           <ButtonComponent onClick={this.previousComment}>
             <i className="fa fa-arrow-left" />
           </ButtonComponent>

@@ -91,7 +91,9 @@ export function getNodeAndTree(tracing: TracingType, nodeId: ?number, treeId: ?n
     if (treeId != null) {
       tree = skeletonTracing.trees[treeId];
     } else if (nodeId != null) {
-      tree = _.values(skeletonTracing.trees).find(__ => __.nodes.has(nodeId));
+      // Flow doesn't understand that nodeId is not null, otherwise ¯\_(ツ)_/¯
+      const nonNullNodeId = nodeId;
+      tree = _.values(skeletonTracing.trees).find(__ => __.nodes.has(nonNullNodeId));
     } else {
       const { activeTreeId } = skeletonTracing;
       if (activeTreeId != null) {

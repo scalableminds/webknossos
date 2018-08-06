@@ -1,6 +1,16 @@
 @import "../../../node_modules/antd/lib/style/v2-compatible-reset.less";
-@import "../../../node_modules/antd/dist/antd.css";
+@import "../../../node_modules/antd/dist/antd.less";
 @import "../../../node_modules/font-awesome/less/font-awesome.less";
+@import "../../../node_modules/react-sortable-tree/style.css";
+
+// To update the antd iconfont:
+// * Go to https://ant.design/
+// * Find the iconfont in the network tab (host: at.alicdn.com)
+// * Download .eot,.woff,.ttf,.svg to ./iconfont
+// * Rename to iconfont.*
+
+// Path is relative to the node_modules/antd/lib/style/themes/
+@icon-url: "../../../../../app/assets/stylesheets/iconfont/iconfont";
 
 @import "_variables.less";
 @import "_general.less";
@@ -10,11 +20,14 @@
 @import "trace_view/_right_menu.less";
 @import "_help.less";
 @import "antd_overwrites.less";
+@import "react_sortable_tree_overwrites.less";
 
 // ----------------------- MAIN STYLES
 body {
   color: @mainColor;
-  font-family: "Source Sans Pro", sans-serif;
+  font-family: "Monospaced Number", "Chinese Quote", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
   font-weight: 400;
   font-size: 16px;
   -webkit-font-smoothing: antialised;
@@ -79,16 +92,11 @@ td.nowrap * {
 }
 
 #credits {
-  margin-top: 50px;
-  border-radius: 0;
-  color: #888;
-
-  section {
-    margin-top: 4em;
-  }
-
+  max-width: 600px;
   img {
-    margin-bottom: 15px;
+    margin-right: 10px;
+    width: 25%;
+    max-width: 100px;
   }
 }
 
@@ -96,26 +104,23 @@ td.nowrap * {
   margin-bottom: 20px;
   margin-top: 20px;
   text-align: center;
-  height: 150px;
+  height: 100px;
+  vertical-align: middle;
+  display: inline-block;
+  font-size: 80px;
+  line-height: normal;
+  color: #000;
+  margin-left: 30px;
 
   img {
-    height: 150px;
-    width: 150px;
-  }
-
-  div {
-    vertical-align: middle;
-    font-weight: 200;
-    display: inline-block;
-    font-size: 120px;
-    line-height: normal;
-    color: #000;
-    margin-left: 17px;
+    height: 100px;
+    width: 100px;
   }
 }
 
 #spotlight-footnote {
   text-align: center;
+  margin: 30px 0;
 }
 
 #impressum {
@@ -145,7 +150,8 @@ i {
   margin-right: 5px;
 }
 
-.ant-spin-dot i {
+.ant-spin-dot,
+.ant-avatar i {
   margin-right: 0;
 }
 
@@ -208,4 +214,19 @@ img.img-50 {
   width: auto;
   padding-left: 15px;
   padding-right: 15px;
+}
+
+.text {
+  padding: 2em 0;
+  ul {
+    padding: 1.5em;
+    list-style: square;
+    li {
+      padding-bottom: 10px;
+    }
+  }
+}
+
+.errorChainCollapse .ant-collapse-header {
+  padding: 12px 0 0 32px !important;
 }

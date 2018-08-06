@@ -18,7 +18,6 @@ import {
 import {
   getActiveDatasets,
   getProjects,
-  getEditableTeams,
   getScripts,
   getTaskTypes,
   getTask,
@@ -33,7 +32,6 @@ import type {
   APITaskTypeType,
   APIProjectType,
   APIScriptType,
-  APITeamType,
 } from "admin/api_flow_types";
 import type { BoundingBoxObjectType } from "oxalis/store";
 import type { Vector6 } from "oxalis/constants";
@@ -55,7 +53,6 @@ type State = {
   taskTypes: Array<APITaskTypeType>,
   projects: Array<APIProjectType>,
   scripts: Array<APIScriptType>,
-  teams: Array<APITeamType>,
   isNMLSpecification: boolean,
   isUploading: boolean,
 };
@@ -108,7 +105,6 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     taskTypes: [],
     projects: [],
     scripts: [],
-    teams: [],
     isNMLSpecification: false,
     isUploading: false,
   };
@@ -118,15 +114,14 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
   }
 
   async fetchData() {
-    const [datasets, projects, teams, scripts, taskTypes] = await Promise.all([
+    const [datasets, projects, scripts, taskTypes] = await Promise.all([
       getActiveDatasets(),
       getProjects(),
-      getEditableTeams(),
       getScripts(),
       getTaskTypes(),
     ]);
 
-    this.setState({ datasets, projects, teams, scripts, taskTypes });
+    this.setState({ datasets, projects, scripts, taskTypes });
   }
 
   async applyDefaults() {
@@ -171,6 +166,11 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
           let response;
           try {
             if (this.state.isNMLSpecification) {
+              // Workaround: Antd replaces file objects in the formValues with a wrapper file
+              // The original file object is contained in the originFileObj property
+              // This is most likely not intentional and may change in a future Antd version
+              formValues.nmlFile = formValues.nmlFile.map(wrapperFile => wrapperFile.originFileObj);
+
               response = await createTaskFromNML(formValues);
             } else {
               response = await createTasks([formValues]);
@@ -243,27 +243,6 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                 {getFieldDecorator("openInstances", {
                   rules: [{ required: true }, { type: "number" }],
                 })(<InputNumber style={fullWidth} min={0} />)}
-              </FormItem>
-
-              <FormItem label="Team" hasFeedback>
-                {getFieldDecorator("teamName", {
-                  rules: [{ required: true }],
-                })(
-                  <Select
-                    showSearch
-                    placeholder="Select a Team"
-                    optionFilterProp="children"
-                    style={fullWidth}
-                    autoFocus
-                    disabled={isEditingMode}
-                  >
-                    {this.state.teams.map((team: APITeamType) => (
-                      <Option key={team.name} value={team.name}>
-                        {team.name}
-                      </Option>
-                    ))}
-                  </Select>,
-                )}
               </FormItem>
 
               <FormItem label="Project" hasFeedback>

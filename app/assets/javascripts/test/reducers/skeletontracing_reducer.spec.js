@@ -13,6 +13,7 @@ import ChainReducer from "test/helpers/chainReducer";
 import update from "immutability-helper";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
+import { rgbs as colors } from "libs/color_generator";
 
 mock.stopAll();
 mock("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
@@ -56,6 +57,7 @@ const initialState = {
         comments: [],
         color: [23, 23, 23],
         isVisible: true,
+        groupId: null,
       },
     },
     tracingType: "Explorational",
@@ -163,11 +165,24 @@ test("SkeletonTracing should add nodes to a different tree", t => {
   t.deepEqual(newState.tracing.trees[2].edges.asArray(), [{ source: 2, target: 3 }]);
 });
 
-test("SkeletonTracing shouldn't delete a node from an empty tree", t => {
-  const action = SkeletonTracingActions.deleteNodeAction();
-  const newState = SkeletonTracingReducer(initialState, action);
+test("SkeletonTracing shouldn't delete the tree if 'delete node' is initiated for an empty tree", t => {
+  const createTreeAction = SkeletonTracingActions.createTreeAction();
+  const deleteNodeAction = SkeletonTracingActions.deleteNodeAction();
 
-  t.is(newState, initialState);
+  const newStateA = SkeletonTracingReducer(initialState, createTreeAction);
+  const newStateB = SkeletonTracingReducer(newStateA, deleteNodeAction);
+
+  t.deepEqual(newStateA, newStateB);
+});
+
+test("SkeletonTracing should delete the tree if 'delete node as user' is initiated for an empty tree", t => {
+  const createTreeAction = SkeletonTracingActions.createTreeAction();
+  const deleteNodeAsUserAction = SkeletonTracingActions.deleteNodeAsUserAction();
+  const newState = ChainReducer(initialState)
+    .apply(SkeletonTracingReducer, createTreeAction)
+    .apply(SkeletonTracingReducer, deleteNodeAsUserAction)
+    .unpack();
+
   t.deepEqual(newState, initialState);
 });
 
@@ -191,7 +206,32 @@ test("SkeletonTracing should delete a node from a tree", t => {
   t.deepEqual(newStateB, newState);
 });
 
-test("SkeletonTracing should delete several nodes from a tree", t => {
+test("SkeletonTracing should delete respective comments and branchpoints when deleting a node from a tree", t => {
+  const createNodeAction = SkeletonTracingActions.createNodeAction(
+    position,
+    rotation,
+    viewport,
+    resolution,
+  );
+  const deleteNodeAction = SkeletonTracingActions.deleteNodeAction();
+  const createCommentAction = SkeletonTracingActions.createCommentAction("foo");
+  const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
+
+  // Add a node, comment, and branchpoint, then delete the node again
+  const newState = SkeletonTracingReducer(initialState, createNodeAction);
+  const newStateA = SkeletonTracingReducer(newState, createCommentAction);
+  const newStateB = SkeletonTracingReducer(newStateA, createBranchPointAction);
+  const newStateC = SkeletonTracingReducer(newStateB, deleteNodeAction);
+
+  // Workaround, because the diffable map creates a new chunk but doesn't delete it again
+  const nodes = newStateC.tracing.trees[1].nodes;
+  t.is(nodes.chunks.length, 1);
+  t.is(nodes.chunks[0].size, 0);
+  nodes.chunks = [];
+  t.deepEqual(newStateC, initialState);
+});
+
+test("SkeletonTracing should not delete tree when last node is deleted from the tree", t => {
   const createNodeAction = SkeletonTracingActions.createNodeAction(
     position,
     rotation,
@@ -200,14 +240,23 @@ test("SkeletonTracing should delete several nodes from a tree", t => {
   );
   const deleteNodeAction = SkeletonTracingActions.deleteNodeAction();
 
-  // Add one node, then delete two times
-  const newState = SkeletonTracingReducer(initialState, createNodeAction);
-  const newStateA = SkeletonTracingReducer(newState, deleteNodeAction);
-  const newStateB = SkeletonTracingReducer(newStateA, deleteNodeAction);
+  // Create tree, add two nodes, then delete them again so that the tree is removed, as well
+  const emptyTreeState = SkeletonTracingReducer(
+    initialState,
+    SkeletonTracingActions.createTreeAction(),
+  );
 
-  t.not(newStateB, newState);
-  t.not(newStateA, newState);
-  t.is(newStateB, newStateA);
+  const newState = ChainReducer(emptyTreeState)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .apply(SkeletonTracingReducer, deleteNodeAction)
+    .apply(SkeletonTracingReducer, deleteNodeAction)
+    .unpack();
+
+  t.deepEqual(
+    _.map(emptyTreeState.tracing.trees, tree => tree.nodes.size()),
+    _.map(newState.tracing.trees, tree => tree.nodes.size()),
+  );
 });
 
 test("SkeletonTracing should delete nodes and split the tree", t => {
@@ -1319,4 +1368,15 @@ test("SkeletonTracing should delete a comment for a specified node (1/2)", t => 
   t.deepEqual(newState.tracing.trees[1].comments.length, 2);
   t.deepEqual(newState.tracing.trees[1].comments[0].nodeId, 1);
   t.deepEqual(newState.tracing.trees[1].comments[1].nodeId, 3);
+});
+
+test("SkeletonTracing should change the color of a specified tree", t => {
+  const colorIndex = 10;
+  const newState = SkeletonTracingReducer(
+    initialState,
+    SkeletonTracingActions.setTreeColorIndexAction(1, colorIndex),
+  );
+
+  t.not(newState, initialState);
+  t.is(newState.tracing.trees[1].color, colors[colorIndex - 1]);
 });

@@ -3,35 +3,34 @@
  * @flow
  */
 
-import _ from "lodash";
 import * as React from "react";
 import { connect } from "react-redux";
-import { Button, Dropdown, Input, Menu, Icon, Spin, Modal } from "antd";
-import TreesTabItemView from "oxalis/view/right-menu/trees_tab_item_view";
+import { Button, Dropdown, Input, Menu, Icon, Spin, Modal, Tooltip } from "antd";
+import TreeHierarchyView from "oxalis/view/right-menu/tree_hierarchy_view";
 import InputComponent from "oxalis/view/components/input_component";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   setTreeNameAction,
   createTreeAction,
-  addTreesAction,
-  deleteTreeWithConfirmAction,
+  deleteTreeAsUserAction,
   shuffleTreeColorAction,
   shuffleAllTreeColorsAction,
   selectNextTreeAction,
   toggleAllTreesAction,
   toggleInactiveTreesAction,
+  setActiveTreeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import Store from "oxalis/store";
-import { serializeToNml, getNmlName, parseNml } from "oxalis/model/helpers/nml_helpers";
+import { serializeToNml, getNmlName } from "oxalis/model/helpers/nml_helpers";
 import Utils from "libs/utils";
-import FileUpload from "components/file_upload";
 import { saveAs } from "file-saver";
-import Toast from "libs/toast";
 import { getBuildInfo } from "admin/admin_rest_api";
 import type { Dispatch } from "redux";
 import type { OxalisState, SkeletonTracingType, UserConfigurationType } from "oxalis/store";
+import TreeSearchPopover from "./tree_search_popover";
 
 const ButtonGroup = Button.Group;
 const InputGroup = Input.Group;
@@ -47,6 +46,8 @@ type Props = {
   onChangeTreeName: string => void,
   skeletonTracing: SkeletonTracingType,
   userConfiguration: UserConfigurationType,
+  onSetActiveTree: number => void,
+  showDropzoneModal: () => void,
 };
 
 type State = {
@@ -98,28 +99,17 @@ class TreesTabView extends React.PureComponent<Props, State> {
     saveAs(blob, getNmlName(state));
   };
 
-  handleNmlUpload = async (nmlString: string) => {
-    let trees;
-    try {
-      trees = await parseNml(nmlString);
-      Store.dispatch(addTreesAction(trees));
-    } catch (e) {
-      Toast.error(e.message);
-    } finally {
-      this.setState({ isUploading: false });
-    }
-  };
-
   getTreesComponents() {
     const orderAttribute = this.props.userConfiguration.sortTreesByName ? "name" : "timestamp";
 
-    return _.orderBy(this.props.skeletonTracing.trees, [orderAttribute], ["asc"]).map(tree => (
-      <TreesTabItemView
-        key={tree.treeId}
-        tree={tree}
+    return (
+      <TreeHierarchyView
+        trees={this.props.skeletonTracing.trees}
+        treeGroups={this.props.skeletonTracing.treeGroups}
         activeTreeId={this.props.skeletonTracing.activeTreeId}
+        sortBy={orderAttribute}
       />
-    ));
+    );
   }
 
   handleDropdownClick = ({ key }) => {
@@ -154,22 +144,14 @@ class TreesTabView extends React.PureComponent<Props, State> {
           </div>
         </Menu.Item>
         <Menu.Item key="handleNmlDownload">
-          <div onClick={this.handleNmlDownload} title="Download visible trees as NML">
-            <Icon type="download" /> Download as NML
+          <div onClick={this.handleNmlDownload} title="Download selected trees as NML">
+            <Icon type="download" /> Download Selected Trees
           </div>
         </Menu.Item>
         <Menu.Item key="importNml">
-          <FileUpload
-            accept=".nml"
-            multiple={false}
-            name="nmlFile"
-            showUploadList={false}
-            onSuccess={this.handleNmlUpload}
-            onUploading={() => this.setState({ isUploading: true })}
-            onError={() => this.setState({ isUploading: false })}
-          >
+          <div onClick={this.props.showDropzoneModal} title="Import NML files">
             <Icon type="upload" /> Import NML
-          </FileUpload>
+          </div>
         </Menu.Item>
       </Menu>
     );
@@ -201,6 +183,17 @@ class TreesTabView extends React.PureComponent<Props, State> {
           <Spin />
         </Modal>
         <ButtonGroup>
+          <TreeSearchPopover
+            onSelect={this.props.onSetActiveTree}
+            trees={this.props.skeletonTracing.trees}
+            maxSearchResults={10}
+          >
+            <Tooltip title="Open the search via CTRL + Shift + F">
+              <ButtonComponent>
+                <Icon type="search" />
+              </ButtonComponent>
+            </Tooltip>
+          </TreeSearchPopover>
           <ButtonComponent onClick={this.props.onCreateTree} title="Create Tree">
             <i className="fa fa-plus" /> Create
           </ButtonComponent>
@@ -272,11 +265,20 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
     dispatch(createTreeAction());
   },
   onDeleteTree() {
-    dispatch(deleteTreeWithConfirmAction());
+    dispatch(deleteTreeAsUserAction());
   },
   onChangeTreeName(name) {
     dispatch(setTreeNameAction(name));
   },
+  onSetActiveTree(treeId) {
+    dispatch(setActiveTreeAction(treeId));
+  },
+  showDropzoneModal() {
+    dispatch(setDropzoneModalVisibilityAction(true));
+  },
 });
 
-export default connect(mapStateToProps, mapDispatchToProps)(TreesTabView);
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps,
+)(TreesTabView);

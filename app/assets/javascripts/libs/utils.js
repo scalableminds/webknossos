@@ -11,6 +11,7 @@ import pako from "pako";
 import type { APIUserType } from "admin/api_flow_types";
 
 type Comparator<T> = (T, T) => -1 | 0 | 1;
+type UrlParamsType = { [key: string]: string | boolean };
 
 function swap(arr, a, b) {
   let tmp;
@@ -18,6 +19,20 @@ function swap(arr, a, b) {
     tmp = arr[b];
     arr[b] = arr[a];
     arr[a] = tmp;
+  }
+}
+
+function getRecursiveValues(obj: Object | Array<*> | string): Array<*> {
+  return _.flattenDeep(getRecursiveValuesUnflat(obj));
+}
+
+function getRecursiveValuesUnflat(obj: Object | Array<*> | string): Array<*> {
+  if (Array.isArray(obj)) {
+    return obj.map(getRecursiveValuesUnflat);
+  } else if (obj instanceof Object) {
+    return Object.keys(obj).map(key => getRecursiveValuesUnflat(obj[key]));
+  } else {
+    return [obj];
   }
 }
 
@@ -104,8 +119,9 @@ const Utils = {
       : null;
   },
 
-  compareBy<T: Object>(
-    selector: string | (T => number),
+  compareBy<T: { +[string]: mixed }>(
+    collectionForTypeInference: Array<T>, // this parameter is only used let flow infer the used type
+    selector: $Keys<T> | (T => number),
     isSortedAscending: boolean = true,
   ): Comparator<T> {
     // generic key comparator for array.prototype.sort
@@ -115,6 +131,9 @@ const Utils = {
       }
       const valueA = typeof selector === "function" ? selector(a) : a[selector];
       const valueB = typeof selector === "function" ? selector(b) : b[selector];
+      if (typeof valueA !== "number" || typeof valueB !== "number") {
+        return 0;
+      }
       if (valueA < valueB) {
         return -1;
       }
@@ -125,15 +144,19 @@ const Utils = {
     };
   },
 
-  localeCompareBy<T: Object>(
-    selector: string | (T => string),
+  localeCompareBy<T: { +[string]: mixed }>(
+    collectionForTypeInference: Array<T>, // this parameter is only used let flow infer the used type
+    selector: $Keys<T> | (T => string),
     isSortedAscending: boolean = true,
   ): (T, T) => number {
     const sortingOrder = isSortedAscending ? 1 : -1;
 
     return (a: T, b: T): number => {
-      const valueA: string = typeof selector === "function" ? selector(a) : a[selector];
-      const valueB: string = typeof selector === "function" ? selector(b) : b[selector];
+      const valueA = typeof selector === "function" ? selector(a) : a[selector];
+      const valueB = typeof selector === "function" ? selector(b) : b[selector];
+      if (typeof valueA !== "string" || typeof valueB !== "string") {
+        return 0;
+      }
       return (
         valueA.localeCompare(valueB, "en", {
           numeric: true,
@@ -181,6 +204,10 @@ const Utils = {
     return output;
   },
 
+  point3ToVector3({ x, y, z }: { x: number, y: number, z: number }): Vector3 {
+    return [x, y, z];
+  },
+
   isElementInViewport(el: Element): boolean {
     const rect = el.getBoundingClientRect();
     return (
@@ -200,12 +227,16 @@ const Utils = {
     return user.isAdmin || this.isUserTeamManager(user);
   },
 
-  getUrlParamsObject(): { [key: string]: string | boolean } {
+  getUrlParamsObject(): UrlParamsType {
+    return this.getUrlParamsObjectFromString(location.search);
+  },
+
+  getUrlParamsObjectFromString(str: string): UrlParamsType {
     // Parse the URL parameters as objects and return it or just a single param
-    return location.search
+    return str
       .substring(1)
       .split("&")
-      .reduce((result, value): void => {
+      .reduce((result: UrlParamsType, value: string): UrlParamsType => {
         const parts = value.split("=");
         if (parts[0]) {
           const key = decodeURIComponent(parts[0]);
@@ -292,25 +323,11 @@ const Utils = {
     return maybe.isJust ? maybe.get() : null;
   },
 
-  getRecursiveKeysAndValues(obj: Object): Array<any> {
-    return _.flattenDeep(Utils.getRecursiveKeysAndValuesUnflat(obj));
-  },
-
-  getRecursiveKeysAndValuesUnflat(obj: Object): Array<any> {
-    if (_.isArray(obj)) {
-      return obj.map(Utils.getRecursiveKeysAndValuesUnflat);
-    } else if (_.isObject(obj)) {
-      return Object.keys(obj).map(key => [key, Utils.getRecursiveKeysAndValuesUnflat(obj[key])]);
-    } else {
-      return [obj];
-    }
-  },
-
   // Filters an array given a search string. Supports searching for several words as OR query.
   // Supports nested properties
-  filterWithSearchQueryOR<T: Object>(
+  filterWithSearchQueryOR<T: { +[string]: mixed }, P: $Keys<T>>(
     collection: Array<T>,
-    properties: Array<string>,
+    properties: Array<P | (T => Object | Array<*> | string)>,
     searchQuery: string,
   ): Array<T> {
     if (searchQuery === "") {
@@ -325,9 +342,9 @@ const Utils = {
 
       return collection.filter(model =>
         _.some(properties, fieldName => {
-          const value = model[fieldName];
-          if (value !== null) {
-            const values = Utils.getRecursiveKeysAndValues(value);
+          const value = typeof fieldName === "function" ? fieldName(model) : model[fieldName];
+          if (value != null && (typeof value === "string" || value instanceof Object)) {
+            const values = getRecursiveValues(value);
             return _.some(values, v => v.toString().match(regexp));
           } else {
             return false;
@@ -339,9 +356,9 @@ const Utils = {
 
   // Filters an array given a search string. Supports searching for several words as AND query.
   // Supports nested properties
-  filterWithSearchQueryAND<T: Object>(
+  filterWithSearchQueryAND<T: { +[string]: mixed }, P: $Keys<T>>(
     collection: Array<T>,
-    properties: Array<string>,
+    properties: Array<P | (T => Object | Array<*> | string)>,
     searchQuery: string,
   ): Array<T> {
     if (searchQuery === "") {
@@ -356,9 +373,9 @@ const Utils = {
       return collection.filter(model =>
         _.every(patterns, pattern =>
           _.some(properties, fieldName => {
-            const value = model[fieldName];
-            if (value !== null) {
-              const values = Utils.getRecursiveKeysAndValues(value);
+            const value = typeof fieldName === "function" ? fieldName(model) : model[fieldName];
+            if (value !== null && (typeof value === "string" || value instanceof Object)) {
+              const values = getRecursiveValues(value);
               return _.some(values, v => v.toString().match(pattern));
             } else {
               return false;
@@ -484,7 +501,29 @@ const Utils = {
     [tmp, a] = divMod(tmp); // eslint-disable-line
 
     // Big endian
-    return [r, g, b, a];
+    return [a, b, g, r];
+  },
+
+  async promiseAllWithErrors<T>(
+    promises: Array<Promise<T>>,
+  ): Promise<{ successes: Array<T>, errors: Array<Error> }> {
+    const successOrErrorObjects = await Promise.all(promises.map(p => p.catch(error => error)));
+    return successOrErrorObjects.reduce(
+      ({ successes, errors }, successOrError) => {
+        if (successOrError instanceof Error) {
+          return {
+            successes,
+            errors: errors.concat([successOrError]),
+          };
+        } else {
+          return {
+            successes: successes.concat([successOrError]),
+            errors,
+          };
+        }
+      },
+      { successes: [], errors: [] },
+    );
   },
 };
 

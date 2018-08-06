@@ -12,9 +12,8 @@ import {
   PlaneControllerClass,
   mapStateToProps,
 } from "oxalis/controller/viewmodes/plane_controller";
-import SceneController from "oxalis/controller/scene_controller";
 import Model from "oxalis/model";
-import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import {
   createCellAction,
@@ -30,7 +29,6 @@ import {
   setActiveCellAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
-  getActiveCellId,
   getVolumeTool,
   getContourTracingMode,
 } from "oxalis/model/accessors/volumetracing_accessor";
@@ -50,21 +48,6 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
 
   componentDidMount() {
     super.componentDidMount();
-
-    let lastActiveCellId = getActiveCellId(Store.getState().tracing).get();
-    Store.subscribe(() => {
-      getActiveCellId(Store.getState().tracing).map(cellId => {
-        if (lastActiveCellId !== cellId) {
-          SceneController.renderVolumeIsosurface(cellId);
-          lastActiveCellId = cellId;
-        }
-      });
-    });
-
-    // If a new mapping is activated the 3D cell has to be updated, although the activeCellId did not change
-    this.listenTo(Model.getSegmentationBinary().cube, "newMapping", () =>
-      SceneController.renderVolumeIsosurface(lastActiveCellId),
-    );
 
     this.keyboardNoLoop = new InputKeyboardNoLoop({
       w: () => {
@@ -120,7 +103,7 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
 
         if (tool === VolumeToolEnum.MOVE) {
           const viewportScale = Store.getState().userConfiguration.scale;
-          this.movePlane([delta.x * -1 / viewportScale, delta.y * -1 / viewportScale, 0]);
+          this.movePlane([(delta.x * -1) / viewportScale, (delta.y * -1) / viewportScale, 0]);
         }
 
         if (
@@ -195,8 +178,10 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
 
       leftClick: (pos: Point2, plane: OrthoViewType, event: MouseEvent) => {
         if (event.shiftKey) {
-          const cellId = Model.getSegmentationBinary().cube.getDataValue(
+          const cellId = Model.getSegmentationLayer().cube.getDataValue(
             this.calculateGlobalPos(pos),
+            null,
+            getRequestLogZoomStep(Store.getState()),
           );
           this.handleCellSelection(cellId);
         }

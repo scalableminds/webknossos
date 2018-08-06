@@ -4,19 +4,15 @@ import com.scalableminds.webknossos.datastore.controllers.ValidationHelpers
 import com.scalableminds.util.mvc.ExtendedController
 import com.scalableminds.util.tools.{Converter, Fox}
 import com.typesafe.scalalogging.LazyLogging
-import models.basics.Implicits
-import models.binary.DataSet
 import models.user.User
 import net.liftweb.common.{Box, Failure, Full, ParamFailure}
-import oxalis.security._
 import oxalis.view.ProvidesSessionData
 import play.api.i18n.{I18nSupport, Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import play.api.mvc.{Request, Result, Controller => PlayController}
-import play.twirl.api.Html
-import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest, UserAwareAction, UserAwareRequest}
-import reactivemongo.bson.BSONObjectID
+import oxalis.security.WebknossosSilhouette.SecuredRequest
+import utils.ObjectId
 
 
 trait Controller extends PlayController
@@ -30,32 +26,8 @@ trait Controller extends PlayController
   implicit def AuthenticatedRequest2Request[T](r: SecuredRequest[T]): Request[T] =
     r.request
 
-  def ensureTeamAdministration(user: User, team: BSONObjectID) =
-    user.assertTeamManagerOrAdminOf(team) ?~> Messages("team.admin.notAllowed")
-
-  def allowedToAdministrate(admin: User, dataSet: DataSet) =
-    dataSet.isEditableBy(Some(admin)) ?~> Messages("notAllowed")
-
-  case class Filter[A, T](name: String, predicate: (A, T) => Boolean, default: Option[String] = None)(implicit converter: Converter[String, A]) {
-    def applyOn(list: List[T])(implicit request: Request[_]): List[T] = {
-      request.getQueryString(name).orElse(default).flatMap(converter.convert) match {
-        case Some(attr) => list.filter(predicate(attr, _))
-        case _          => list
-      }
-    }
-  }
-
-  case class FilterColl[T](filters: Seq[Filter[_, T]]) {
-    def applyOn(list: List[T])(implicit request: Request[_]): List[T] = {
-      filters.foldLeft(list) {
-        case (l, filter) => filter.applyOn(l)
-      }
-    }
-  }
-
-  def UsingFilters[T, R](filters: Filter[_, T]*)(block: FilterColl[T] => R): R = {
-    block(FilterColl(filters))
-  }
+  def ensureTeamAdministration(user: User, teamId: ObjectId): Fox[Unit] =
+    Fox.assertTrue(user.isTeamManagerOrAdminOf(teamId)) ?~> Messages("team.admin.notAllowed")
 
   def jsonErrorWrites(errors: JsError): JsObject =
     Json.obj(

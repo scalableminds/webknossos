@@ -3,17 +3,16 @@
  * @flow
  */
 
-import _ from "lodash";
-import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
-import { M4x4, V3 } from "libs/mjs";
-import constants from "oxalis/constants";
-import type { ModeType } from "oxalis/constants";
-import Model from "oxalis/model";
+import constants, { OrthoViews } from "oxalis/constants";
+import type { Vector4 } from "oxalis/constants";
+// Importing throttled_store, would result in flickering when zooming out,
+// since the plane is not updated fast enough
 import Store from "oxalis/store";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
+import SceneController from "oxalis/controller/scene_controller";
 
-import ArbitraryPlaneMaterialFactory from "oxalis/geometries/materials/arbitrary_plane_material_factory";
+import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
 
 // Let's set up our trianglesplane.
 // It serves as a "canvas" where the brain images
@@ -31,57 +30,35 @@ import ArbitraryPlaneMaterialFactory from "oxalis/geometries/materials/arbitrary
 class ArbitraryPlane {
   mesh: THREE.Mesh;
   isDirty: boolean;
-  queryVertices: ?Float32Array;
-  width: number;
-  // TODO: Probably unused? Recheck when flow coverage is higher
-  height: number;
-  x: number;
-  textureMaterial: THREE.RawShaderMaterial;
-
-  // Copied from backbone events (TODO: handle this better)
-  listenTo: Function;
+  stopStoreListening: () => void;
+  materialFactory: PlaneMaterialFactory;
 
   constructor() {
     this.isDirty = true;
-    this.height = 0;
-    this.width = constants.VIEWPORT_WIDTH;
-    _.extend(this, BackboneEvents);
-
     this.mesh = this.createMesh();
 
-    for (const name of Object.keys(Model.binary)) {
-      const binary = Model.binary[name];
-      binary.cube.on("bucketLoaded", () => {
-        this.isDirty = true;
-      });
-    }
-
-    if ((Math.log(this.width) / Math.LN2) % 1 === 1) {
-      throw new Error("width needs to be a power of 2");
-    }
-
-    Store.subscribe(() => {
+    this.stopStoreListening = Store.subscribe(() => {
       this.isDirty = true;
     });
   }
 
-  setMode(mode: ModeType) {
-    switch (mode) {
-      case constants.MODE_ARBITRARY:
-        this.queryVertices = this.calculateSphereVertices(
-          Store.getState().userConfiguration.sphericalCapRadius,
-        );
-        break;
-      case constants.MODE_ARBITRARY_PLANE:
-        this.queryVertices = this.calculatePlaneVertices();
-        break;
-      default:
-        this.queryVertices = null;
-        break;
-    }
-
-    this.isDirty = true;
+  destroy() {
+    this.stopStoreListening();
+    this.materialFactory.stopListening();
   }
+
+  updateAnchorPoints(anchorPoint: ?Vector4, fallbackAnchorPoint: ?Vector4): void {
+    if (anchorPoint) {
+      this.mesh.material.setAnchorPoint(anchorPoint);
+    }
+    if (fallbackAnchorPoint) {
+      this.mesh.material.setFallbackAnchorPoint(fallbackAnchorPoint);
+    }
+  }
+
+  setPosition = ({ x, y, z }: THREE.Vector3) => {
+    this.mesh.material.setGlobalPosition([x, y, z]);
+  };
 
   addToScene(scene: THREE.Scene) {
     scene.add(this.mesh);
@@ -92,13 +69,6 @@ class ArbitraryPlane {
       const { mesh } = this;
 
       const matrix = getZoomedMatrix(Store.getState().flycam);
-
-      const queryMatrix = M4x4.scale1(1, matrix);
-      const newVertices = M4x4.transformPointsAffine(queryMatrix, this.queryVertices);
-      const colorBinary = Model.getColorBinaries()[0];
-      const newColors = colorBinary.getByVerticesSync(newVertices);
-      this.textureMaterial.setData(colorBinary.name, newColors);
-
       mesh.matrix.set(
         matrix[0],
         matrix[4],
@@ -122,75 +92,20 @@ class ArbitraryPlane {
       mesh.matrixWorldNeedsUpdate = true;
 
       this.isDirty = false;
-    }
-  }
 
-  calculateSphereVertices = _.memoize(sphericalCapRadius => {
-    const queryVertices = new Float32Array(this.width * this.width * 3);
-
-    // so we have Point [0, 0, 0] centered
-    let currentIndex = 0;
-
-    const vertex = [0, 0, 0];
-    let vector = [0, 0, 0];
-    const centerVertex = [0, 0, -sphericalCapRadius];
-
-    // Transforming those normalVertices to become a spherical cap
-    // which is better more smooth for querying.
-    // http://en.wikipedia.org/wiki/Spherical_cap
-    for (let y = 0; y < this.width; y++) {
-      for (let x = 0; x < this.width; x++) {
-        vertex[0] = x - Math.floor(this.width / 2);
-        vertex[1] = y - Math.floor(this.width / 2);
-        vertex[2] = 0;
-
-        vector = V3.sub(vertex, centerVertex, vector);
-        const length = V3.length(vector);
-        vector = V3.scale(vector, sphericalCapRadius / length, vector);
-
-        queryVertices[currentIndex++] = centerVertex[0] + vector[0];
-        queryVertices[currentIndex++] = centerVertex[1] + vector[1];
-        queryVertices[currentIndex++] = centerVertex[2] + vector[2];
-      }
-    }
-
-    return queryVertices;
-  });
-
-  calculatePlaneVertices = _.memoize(() => {
-    const queryVertices = new Float32Array(this.width * this.width * 3);
-
-    // so we have Point [0, 0, 0] centered
-    let currentIndex = 0;
-
-    for (let y = 0; y < this.width; y++) {
-      for (let x = 0; x < this.width; x++) {
-        queryVertices[currentIndex++] = x - Math.floor(this.width / 2);
-        queryVertices[currentIndex++] = y - Math.floor(this.width / 2);
-        queryVertices[currentIndex++] = 0;
-      }
-    }
-
-    return queryVertices;
-  });
-
-  setSphericalCapRadius(sphericalCapRadius: number) {
-    if (Store.getState().temporaryConfiguration.viewMode === constants.MODE_ARBITRARY) {
-      this.queryVertices = this.calculateSphereVertices(sphericalCapRadius);
-      this.isDirty = true;
+      SceneController.update(this);
     }
   }
 
   createMesh() {
-    this.textureMaterial = new ArbitraryPlaneMaterialFactory(this.width, {}).setup().getMaterial();
+    this.materialFactory = new PlaneMaterialFactory(OrthoViews.PLANE_XY, false, 4);
+    const textureMaterial = this.materialFactory.setup().getMaterial();
 
-    // create mesh
     const plane = new THREE.Mesh(
-      new THREE.PlaneGeometry(this.width, this.width, 1, 1),
-      this.textureMaterial,
+      new THREE.PlaneGeometry(constants.VIEWPORT_WIDTH, constants.VIEWPORT_WIDTH, 1, 1),
+      textureMaterial,
     );
     plane.rotation.x = Math.PI;
-    this.x = 1;
 
     plane.matrixAutoUpdate = false;
     plane.doubleSided = true;

@@ -16,6 +16,7 @@ import {
 } from "oxalis/model/actions/annotation_actions";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import { Table } from "antd";
+import Markdown from "react-remarkable";
 import type { APIDatasetType } from "admin/api_flow_types";
 import type { OxalisState, TracingType, TaskType, FlycamType } from "oxalis/store";
 
@@ -135,19 +136,16 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
   }
 
   getOrganisationLogo(isPublicViewMode: boolean) {
+    if (!this.props.dataset.logoUrl) {
+      return null;
+    }
+
     return isPublicViewMode ? (
-      <div>
-        <img
-          className="img-50"
-          src="/assets/images/Max-Planck-Gesellschaft.svg"
-          alt="Max Plank Geselleschaft Logo"
-        />
-        <img
-          className="img-50"
-          src="/assets/images/MPI-brain-research.svg"
-          alt="Max Plank Institute of Brain Research Logo"
-        />
-      </div>
+      <img
+        style={{ maxHeight: 250 }}
+        src={this.props.dataset.logoUrl}
+        alt={`${this.props.dataset.owningOrganization} Logo`}
+      />
     ) : null;
   }
 
@@ -158,7 +156,9 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
       return (
         <div>
           <p>Dataset: {displayName || datasetName}</p>
-          {description ? <p>{description}</p> : null}
+          {description ? (
+            <Markdown source={description} options={{ html: false, breaks: true, linkify: true }} />
+          ) : null}
         </div>
       );
     }
@@ -252,4 +252,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect(mapStateToProps, mapDispatchToProps)(DatasetInfoTabView);
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps,
+)(DatasetInfoTabView);

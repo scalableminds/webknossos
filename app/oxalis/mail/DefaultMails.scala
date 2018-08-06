@@ -2,6 +2,7 @@ package oxalis.mail
 
 import com.scalableminds.util.mail.Mail
 import models.user.User
+import models.team.Organization
 import play.api.i18n.Messages
 import views._
 
@@ -18,31 +19,25 @@ object DefaultMails {
 
   val defaultFrom = "no-reply@webknossos.org"
 
-  val newUserMailingList = conf.getString("braintracing.newuserlist").getOrElse("")
-
-  val overTimeMailingList = conf.getString("braintracing.overTimeList").getOrElse("")
-
   val workloadMail = conf.getString("workload.mail").getOrElse("")
 
-  def registerAdminNotifyerMail(user: User, email: String, brainDBResult: String) =
+  val newOrganizationMailingList = conf.getString("oxalis.newOrganizationMailingList").getOrElse("")
+
+  def registerAdminNotifyerMail(user: User, email: String, brainDBResult: String, organization: Organization) =
     Mail(
       from = email,
       headers = Map("Sender" -> defaultFrom),
       subject = s"A new user (${user.name}) registered on $uri",
       bodyText = html.mail.registerAdminNotify(user, brainDBResult, uri).body,
-      recipients = List(newUserMailingList))
+      recipients = List(organization.newUserMailingList))
 
-  def overLimitMail(user: User, projectName: String, taskId: String, annotationId: String) =
+  def overLimitMail(user: User, projectName: String, taskId: String, annotationId: String, organization: Organization) =
     Mail(
       from = defaultFrom,
       subject = s"Time limit reached. ${user.abreviatedName} in $projectName",
       bodyText = html.mail.timeLimit(user.name, projectName, taskId, annotationId, uri).body,
-      recipients = List(overTimeMailingList))
+      recipients = List(organization.overTimeMailingList))
 
-  /**
-    * Creates a registration mail which should allow the user to verify his
-    * account
-    */
   def registerMail(name: String, receiver: String, brainDBresult: String)(implicit messages: Messages) =
     Mail(
       from = defaultFrom,
@@ -68,7 +63,7 @@ object DefaultMails {
   def resetPasswordMail(name: String, receiver: String, token: String) = {
     Mail(
       from = defaultFrom,
-      subject = "Your webKnossos password was reset",
+      subject = "Confirm resetting your webKnossos password",
       bodyText = html.mail.resetPassword(name, uri, token).body,
       recipients = List(receiver))
   }
@@ -79,5 +74,14 @@ object DefaultMails {
       subject = "Available Tasks Overview",
       bodyHtml = html.mail.availableTaskCounts(tableRows).body,
       recipients = List(workloadMail))
+  }
+
+  def newOrganizationMail(organizationName: String, creatorEmail: String, domain: String) = {
+    Mail(
+      from = defaultFrom,
+      subject = "New webKnossos Organization created on " + domain,
+      bodyHtml = html.mail.newOrganization(organizationName, creatorEmail, domain).body,
+      recipients = List(newOrganizationMailingList)
+    )
   }
 }

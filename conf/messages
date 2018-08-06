@@ -28,7 +28,7 @@ gain=Gain
 lose=Loss
 task=Task
 
-bsonid.invalid=The passed resource id is invalid.
+bsonid.invalid=The passed resource id ''{0}'' is invalid
 query.type.invalid=Invalid query type argument
 
 format.json.invalid=Invalid Json format
@@ -46,6 +46,9 @@ team.admin.notPossibleBy=User {1} can''t be assigned administrative rights in te
 team.noOwner=This action is restricted to the creator of the team.
 team.admin.notAllowed=You are not authorized to administrate this team.
 team.notFound=Team could not be found.
+
+organization.create.forbidden=You are not allowed to create a new organization
+organization.create.failed=Failed to create a new organization
 
 user.automaticUserActivation=User was activated automatically
 user.accountCreated=Your account has been created. An administrator is going to unlock you soon.
@@ -94,6 +97,7 @@ dataSet.name.alreadyTaken=This dataset name is already in use.
 dataSet.source.notFound=The data source for the data source couldn''t be found
 dataSet.import.success=The import of the dataset was successful
 dataSet.import.failed=Failed to import the dataset
+dataSet.import.fileAccessDenied=Access denied when creating dataset directory. Please check file system permissions.
 dataSet.type.invalid=External data set of type ''{0}'' is not supported
 dataSet.import.inProgress=Dataset import is in progress
 dataSet.import.notStarted=Dataset import couldn''t be started
@@ -151,6 +155,7 @@ nml.file.createFailed=Failed to create annotation from file
 nml.file.notFound=Couldn''t extract NML file
 nml.file.invalid=Couldn''t parse file: {0}. {1}
 nml.file.noFile=No file or file with empty content uploaded
+nml.scaleNotFound=Couldn''t find dataset scale to write NML. Is the dataset still imported?
 
 owner=Owner
 isForAnonymous=Create anonymous users
@@ -212,7 +217,7 @@ task.create.success=Task successfully created
 task.create.failed=Failed to create Task
 task.bulk.processed=Tasks successfully processed
 task.finished=Task is finished
-task.assigned=You was a new task
+task.assigned=You got a new task
 task.tooManyOpenOnes=You already have too many open tasks
 task.requestAnother=Do you really want another task?
 task.unavailable=There is currently no task available
@@ -241,5 +246,9 @@ point.invalidFormat=Invalid format. Use something like: 4, 63, 24
 
 mail.welcome.subject = Welcome to ScalableMinds
 script.notFound=Script couldn''t be found
+script.removalFailed=Failed to remove script
 
 sql.invalidBSONObjectId=Invalid BSONObjectID in SQL DB: {0}
+
+initialData.notEnabled=Initial Data Insertion is not enabled in the configuration of this wK instance
+initialData.organizationsNotEmpty=There are already organizations present in the database. Please refresh the db schema and try again

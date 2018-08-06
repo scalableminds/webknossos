@@ -1,16 +1,12 @@
-/*
- * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package controllers
 
 import javax.inject.Inject
-
 import com.scalableminds.util.tools.Fox
 import models.annotation.AnnotationDAO
 import models.binary.DataSetDAO
 import models.task.TaskDAO
 import models.user.time.{TimeSpan, TimeSpanService}
-import models.user.{User, UserDAO, UserService}
+import models.user.UserDAO
 import oxalis.security.WebknossosSilhouette.SecuredAction
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
@@ -59,19 +55,23 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
+
   def users(interval: String, start: Option[Long], end: Option[Long], limit: Int) = SecuredAction.async { implicit request =>
     for {
       handler <- intervalHandler.get(interval) ?~> Messages("statistics.interval.invalid")
       users <- UserDAO.findAll
       usersWithTimes <- Fox.serialCombined(users)(user => TimeSpanService.loggedTimeOfUser(user, handler, start, end).map(user -> _))
-    } yield {
-      val data = usersWithTimes.sortBy(-_._2.map(_._2.toMillis).sum).take(limit)
-      val json = data.map {
-        case (user, times) => Json.obj(
-          "user" -> User.userCompactWrites.writes(user),
+      data = usersWithTimes.sortBy(-_._2.map(_._2.toMillis).sum).take(limit)
+      json <- Fox.combined(data.map {
+        case (user, times) => for {
+          userJs <- user.compactWrites
+        } yield {Json.obj(
+          "user" -> userJs,
           "tracingTimes" -> intervalTracingTimeJson(times)
-        )
-      }
+        )}
+        case _ => Fox.failure("serialization.failed")
+      })
+    } yield {
       Ok(Json.toJson(json))
     }
   }

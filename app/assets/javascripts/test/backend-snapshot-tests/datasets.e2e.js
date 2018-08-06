@@ -1,7 +1,7 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 /* eslint-disable import/first */
 // @flow
-import { tokenUserA, setCurrToken } from "../enzyme/e2e-setup";
+import { tokenUserA, setCurrToken, resetDatabase } from "../enzyme/e2e-setup";
 import test from "ava";
 import _ from "lodash";
 import * as api from "admin/admin_rest_api";
@@ -14,7 +14,8 @@ async function getFirstDataset(): Promise<APIDatasetType> {
   return dataset;
 }
 
-test.before("Change token", async () => {
+test.before("Reset database and change token", async () => {
+  resetDatabase();
   setCurrToken(tokenUserA);
 });
 
@@ -41,16 +42,15 @@ test("getActiveDatasets", async t => {
 
 test("getDatasetAccessList", async t => {
   const dataset = await getFirstDataset();
-  const accessList = api.getDatasetAccessList(dataset.name);
+  const accessList = _.sortBy(await api.getDatasetAccessList(dataset.name), user => user.id);
 
   t.snapshot(accessList, { id: "dataset-getDatasetAccessList" });
 });
 
 test("updateDatasetTeams", async t => {
-  const dataset = await getFirstDataset();
-  const newTeams = await api.getEditableTeams();
+  const [dataset, newTeams] = await Promise.all([getFirstDataset(), api.getEditableTeams()]);
 
-  const updatedDataset = api.updateDatasetTeams(dataset.name, newTeams.map(team => team.id));
+  const updatedDataset = await api.updateDatasetTeams(dataset.name, newTeams.map(team => team.id));
   t.snapshot(updatedDataset, { id: "dataset-updateDatasetTeams" });
 
   // undo the Change

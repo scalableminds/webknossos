@@ -3,16 +3,12 @@
  */
 package com.scalableminds.webknossos.datastore.controllers
 
-import com.scalableminds.webknossos.datastore.SkeletonTracing.Color
-import com.scalableminds.webknossos.datastore.geometry.{Point3D, Vector3D}
 import com.scalableminds.webknossos.datastore.services.{DataSourceRepository, UserAccessRequest, WebKnossosServer}
 import com.scalableminds.webknossos.datastore.tracings.{TracingSelector, _}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.JsonHelper.boxFormat
-import com.trueaccord.scalapb.json.{JsonFormat, Printer}
-import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
+import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import net.liftweb.common.Failure
-import org.json4s.JsonAST._
 import play.api.i18n.Messages
 import play.api.libs.json.{Json, Reads}
 
@@ -35,14 +31,6 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
   implicit def packMultiple(tracings: List[T]): Ts
 
   implicit val updateActionReads: Reads[UpdateAction[T]] = tracingService.updateActionReads
-
-  lazy val protoJsonPrinter = new Printer(
-    formattingLongAsNumber = true,
-    includingEmptySeqFields = true,
-    formatRegistry = JsonFormat.DefaultRegistry
-      .registerWriter[Point3D](p => JArray(List(JInt(p.x), JInt(p.y), JInt(p.z))), json => Point3D(0, 0, 0))
-      .registerWriter[Vector3D](v => JArray(List(JDouble(v.x), JDouble(v.y), JDouble(v.z))), json => Vector3D(0.0, 0.0, 0.0))
-      .registerWriter[Color](c => JArray(List(JDouble(c.r), JDouble(c.g), JDouble(c.b))), json => Color(0.0, 0.0, 0.0, 1.0)))
 
   def save = TokenSecuredAction(UserAccessRequest.webknossos).async(validateProto[T]) {
     implicit request =>
@@ -73,7 +61,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
         for {
           tracing <- tracingService.find(tracingId, version, applyUpdates = true) ?~> Messages("tracing.notFound")
         } yield {
-          Ok(protoJsonPrinter.print(tracing))
+          Ok(tracing.toByteArray).as("application/x-protobuf")
         }
       }
     }
@@ -85,19 +73,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
         for {
           tracings <- tracingService.findMultiple(request.body, applyUpdates = true)
         } yield {
-          Ok(tracings.toByteArray)
-        }
-      }
-    }
-  }
-
-  def getProto(tracingId: String, version: Option[Long]) = TokenSecuredAction(UserAccessRequest.webknossos).async {
-    implicit request => {
-      AllowRemoteOrigin {
-        for {
-          tracing <- tracingService.find(tracingId, version, applyUpdates = true) ?~> Messages("tracing.notFound")
-        } yield {
-          Ok(tracing.toByteArray)
+          Ok(tracings.toByteArray).as("application/x-protobuf")
         }
       }
     }

@@ -6,10 +6,13 @@ import javax.inject.Inject
 import com.mohiva.play.silhouette.api.LoginInfo
 import com.mohiva.play.silhouette.api.exceptions.ProviderException
 import com.mohiva.play.silhouette.api.util.Credentials
+import com.mohiva.play.silhouette.impl.authenticators.BearerTokenAuthenticator
 import com.scalableminds.util.mail._
-import com.scalableminds.util.reactivemongo.GlobalAccessContext
+import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.rpc.RPC
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.team.{OrganizationDAO, TeamDAO, TeamService}
+import models.binary.{DataStore, DataStoreDAO}
+import models.team._
 import models.user.UserService.{Mailer => _, _}
 import models.user._
 import net.liftweb.common.{Empty, Failure, Full}
@@ -23,16 +26,16 @@ import oxalis.view.ProvidesUnauthorizedSessionData
 import play.api.Play.current
 import play.api._
 import play.api.data.Form
-import play.api.data.Forms._
+import play.api.data.Forms.{email, _}
 import play.api.data.validation.Constraints._
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Akka
 import play.api.libs.json._
 import play.api.mvc.{Action, _}
-import play.twirl.api.Html
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import utils.ObjectId
 
 
 object AuthForms {
@@ -143,10 +146,12 @@ class Authentication @Inject()(
         val loginInfo = LoginInfo(CredentialsProvider.ID, email)
         var errors = List[String]()
         val firstName = normalizeName(signUpData.firstName).getOrElse {
-          errors ::= Messages("user.firstName.invalid"); ""
+          errors ::= Messages("user.firstName.invalid");
+          ""
         }
         val lastName = normalizeName(signUpData.lastName).getOrElse {
-          errors ::= Messages("user.lastName.invalid"); ""
+          errors ::= Messages("user.lastName.invalid");
+          ""
         }
         UserService.retrieve(loginInfo).toFox.futureBox.flatMap {
           case Full(_) =>
@@ -157,13 +162,13 @@ class Authentication @Inject()(
               Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
             } else {
               for {
-                organization <- OrganizationDAO.findOneByName(signUpData.organization)(GlobalAccessContext) //TODO
-                user <- UserService.insert(organization.name, email, firstName, lastName, signUpData.password, automaticUserActivation, roleOnRegistration,
+                organization <- OrganizationDAO.findOneByName(signUpData.organization)(GlobalAccessContext)
+                user <- UserService.insert(organization._id, email, firstName, lastName, signUpData.password, automaticUserActivation, roleOnRegistration,
                   loginInfo, passwordHasher.hash(signUpData.password))
-                brainDBResult <- BrainTracing.register(user).toFox
+                brainDBResult <- BrainTracing.registerIfNeeded(user).toFox
               } yield {
                 Mailer ! Send(DefaultMails.registerMail(user.name, user.email, brainDBResult))
-                Mailer ! Send(DefaultMails.registerAdminNotifyerMail(user, user.email, brainDBResult))
+                Mailer ! Send(DefaultMails.registerAdminNotifyerMail(user, user.email, brainDBResult, organization))
                 Ok
               }
             }
@@ -183,7 +188,7 @@ class Authentication @Inject()(
           UserService.retrieve(loginInfo).flatMap {
             case None =>
               Future.successful(BadRequest(Messages("error.noUser")))
-            case Some(user) if (user.isActive) => for {
+            case Some(user) if (!user.isDeactivated) => for {
               authenticator <- env.authenticatorService.create(loginInfo)
               value <- env.authenticatorService.init(authenticator)
               result <- env.authenticatorService.embed(value, Ok)
@@ -199,7 +204,7 @@ class Authentication @Inject()(
 
   def autoLogin = Action.async { implicit request =>
     for {
-      _ <- Play.configuration.getBoolean("application.authentication.enableDevAutoLogin").get ?~> Messages("error.notInDev")
+      _ <- bool2Fox(Play.configuration.getBoolean("application.authentication.enableDevAutoLogin").get) ?~> Messages("error.notInDev")
       user <- UserService.defaultUser
       authenticator <- env.authenticatorService.create(user.loginInfo)
       value <- env.authenticatorService.init(authenticator)
@@ -208,7 +213,7 @@ class Authentication @Inject()(
   }
 
   def switchTo(email: String) = SecuredAction.async { implicit request =>
-    if (request.identity._isSuperUser.openOr(false)) {
+    if (request.identity.isSuperUser) {
       val loginInfo = LoginInfo(CredentialsProvider.ID, email)
       for {
         _ <- findOneByEmail(email) ?~> Messages("user.notFound")
@@ -249,7 +254,7 @@ class Authentication @Inject()(
         bearerTokenAuthenticatorService.userForToken(passwords.token.trim)(GlobalAccessContext).futureBox.flatMap {
           case Full(user) =>
             for {
-              _ <- UserDAO.changePasswordInfo(user._id, passwordHasher.hash(passwords.password1))(GlobalAccessContext)
+              _ <- UserDAO.updatePasswordInfo(user._id, passwordHasher.hash(passwords.password1))(GlobalAccessContext)
               _ <- bearerTokenAuthenticatorService.remove(passwords.token.trim)
             } yield Ok
           case _ =>
@@ -341,7 +346,7 @@ class Authentication @Inject()(
           val returnPayload =
             s"nonce=$nonce&" +
               s"email=${URLEncoder.encode(user.email, "UTF-8")}&" +
-              s"external_id=${URLEncoder.encode(user.id, "UTF-8")}&" +
+              s"external_id=${URLEncoder.encode(user._id.toString, "UTF-8")}&" +
               s"username=${URLEncoder.encode(user.abreviatedName, "UTF-8")}&" +
               s"name=${URLEncoder.encode(user.name, "UTF-8")}"
           val encodedReturnPayload = Base64.encodeBase64String(returnPayload.getBytes("UTF-8"))
@@ -357,6 +362,86 @@ class Authentication @Inject()(
       Fox.successful(Redirect("/auth/login?redirectPage=http://discuss.webknossos.org"))
     }
   }
+
+  def createOrganizationWithAdmin = UserAwareAction.async { implicit request =>
+    signUpForm.bindFromRequest.fold(
+      bogusForm => Future.successful(BadRequest(bogusForm.toString)),
+      signUpData => {
+        creatingOrganizationsIsAllowed(request.identity).futureBox.flatMap {
+          case Full(_) =>
+            val email = signUpData.email.toLowerCase
+            val loginInfo = LoginInfo(CredentialsProvider.ID, email)
+            var errors = List[String]()
+            val firstName = normalizeName(signUpData.firstName).getOrElse {
+              errors ::= Messages("user.firstName.invalid");
+              ""
+            }
+            val lastName = normalizeName(signUpData.lastName).getOrElse {
+              errors ::= Messages("user.lastName.invalid");
+              ""
+            }
+            UserService.retrieve(loginInfo).toFox.futureBox.flatMap {
+              case Full(_) =>
+                errors ::= Messages("user.email.alreadyInUse")
+                Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
+              case Empty =>
+                if (errors.nonEmpty) {
+                  Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
+                } else {
+                  for {
+                    organization <- createOrganization(signUpData.organization) ?~> Messages("organization.create.failed")
+                    user <- UserService.insert(organization._id, email, firstName, lastName, signUpData.password, isActive = true, teamRole = true,
+                      loginInfo, passwordHasher.hash(signUpData.password), isAdmin = true)
+                    _ <- createOrganizationFolder(organization.name, loginInfo)
+                  } yield {
+                    Mailer ! Send(DefaultMails.newOrganizationMail(organization.displayName, email.toLowerCase, request.headers.get("Host").headOption.getOrElse("")))
+                    Ok
+                  }
+                }
+              case f: Failure => Fox.failure(f.msg)
+            }
+          case _ => Fox.failure(Messages("organization.create.forbidden"))
+        }
+      }
+    )
+  }
+
+  private def creatingOrganizationsIsAllowed(requestingUser: Option[User]) = {
+    val noOrganizationPresent = InitialDataService.assertNoOrganizationsPresent
+    val configurationFlagSet = bool2Fox(Play.configuration.getBoolean("features.allowOrganzationCreation").getOrElse(false)) ?~> "allowOrganzationCreation.notEnabled"
+    val userIsSuperUser = bool2Fox(requestingUser.exists(_.isSuperUser))
+
+    Fox.sequenceOfFulls(List(noOrganizationPresent, configurationFlagSet, userIsSuperUser)).map(_.headOption).toFox
+  }
+
+  private def createOrganization(organizationDisplayName: String) =
+    for {
+      organizationName <- normalizeName(organizationDisplayName).toFox ?~> "invalid organization name"
+      organization = Organization(ObjectId.generate, organizationName.replaceAll(" ", "_"), "", "", organizationDisplayName)
+      organizationTeam = Team(ObjectId.generate, organization._id, organization.name, isOrganizationTeam = true)
+      _ <- OrganizationDAO.insertOne(organization)(GlobalAccessContext)
+      _ <- TeamDAO.insertOne(organizationTeam)(GlobalAccessContext)
+      _ <- InitialDataService.insertLocalDataStoreIfEnabled
+    } yield {
+      organization
+    }
+
+
+  private def createOrganizationFolder(organizationName: String, loginInfo: LoginInfo)(implicit request: RequestHeader) = {
+    def sendRPCToDataStore(dataStore: DataStore, token: String) = {
+      RPC(s"${dataStore.url}/data/triggers/newOrganizationFolder")
+        .withQueryString("token" -> token, "organizationName" -> organizationName)
+        .get
+    }
+
+    for {
+      token <- env.combinedAuthenticatorService.tokenAuthenticatorService.createAndInit(loginInfo, TokenType.DataStore, deleteOld = false).toFox
+      datastores <- DataStoreDAO.findAll(GlobalAccessContext)
+      _ <- Fox.combined(datastores.map(sendRPCToDataStore(_, token)))
+    } yield Full(())
+
+  }
+
 
 }
 

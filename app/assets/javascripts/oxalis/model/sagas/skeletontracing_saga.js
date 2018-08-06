@@ -24,7 +24,10 @@ import {
   createEdge,
   deleteEdge,
   updateSkeletonTracing,
+  updateTreeGroups,
 } from "oxalis/model/sagas/update_actions";
+import type { ActionType } from "oxalis/model/actions/actions";
+import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import { getActiveNode, getBranchPoints } from "oxalis/model/accessors/skeletontracing_accessor";
 import { V3 } from "libs/mjs";
@@ -42,9 +45,14 @@ import api from "oxalis/api/internal_api";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import EdgeCollection, { diffEdgeCollections } from "oxalis/model/edge_collection";
 
-function* centerActiveNode() {
+function* centerActiveNode(action: ActionType) {
   getActiveNode(yield select(state => state.tracing)).map(activeNode => {
-    api.tracing.centerPositionAnimated(activeNode.position, false, activeNode.rotation);
+    if (action.suppressAnimation) {
+      Store.dispatch(setPositionAction(activeNode.position));
+      Store.dispatch(setRotationAction(activeNode.rotation));
+    } else {
+      api.tracing.centerPositionAnimated(activeNode.position, false, activeNode.rotation);
+    }
   });
 }
 
@@ -96,8 +104,8 @@ export function* watchTreeNames(): Generator<*, *, *> {
 }
 
 export function* watchSkeletonTracingAsync(): Generator<*, *, *> {
-  yield takeEvery(["INITIALIZE_SKELETONTRACING"], watchTreeNames);
-  yield take("WK_READY");
+  yield take("INITIALIZE_SKELETONTRACING");
+  yield takeEvery("WK_READY", watchTreeNames);
   yield takeEvery(
     [
       "SET_ACTIVE_TREE",
@@ -105,6 +113,7 @@ export function* watchSkeletonTracingAsync(): Generator<*, *, *> {
       "DELETE_NODE",
       "DELETE_BRANCHPOINT",
       "SELECT_NEXT_TREE",
+      "DELETE_TREE",
       "UNDO",
       "REDO",
     ],
@@ -168,7 +177,8 @@ function updateTreePredicate(prevTree: TreeType, tree: TreeType): boolean {
     prevTree.color !== tree.color ||
     prevTree.name !== tree.name ||
     !_.isEqual(prevTree.comments, tree.comments) ||
-    !_.isEqual(prevTree.timestamp, tree.timestamp)
+    !_.isEqual(prevTree.timestamp, tree.timestamp) ||
+    prevTree.groupId !== tree.groupId
   );
 }
 
@@ -229,6 +239,9 @@ export function* diffSkeletonTracing(
 ): Generator<UpdateAction, *, *> {
   if (prevSkeletonTracing !== skeletonTracing) {
     yield* cachedDiffTrees(prevSkeletonTracing.trees, skeletonTracing.trees);
+    if (prevSkeletonTracing.treeGroups !== skeletonTracing.treeGroups) {
+      yield updateTreeGroups(skeletonTracing.treeGroups);
+    }
   }
   yield updateSkeletonTracing(
     skeletonTracing,

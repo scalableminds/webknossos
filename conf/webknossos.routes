@@ -5,6 +5,7 @@
 GET           /api/buildinfo                                                    controllers.Application.buildInfo
 GET           /api/features                                                     controllers.Application.features
 POST          /api/analytics/:namespace                                         controllers.Application.analytics(namespace)
+GET           /api/triggers/initialData                                         controllers.InitialDataController.triggerInsert
 
 # Authentication
 GET           /api/auth/autoLogin                                               controllers.Authentication.autoLogin
@@ -18,6 +19,7 @@ POST          /api/auth/changePassword                                          
 POST          /api/auth/resetPassword                                           controllers.Authentication.handleResetPassword
 GET           /api/auth/logout                                                  controllers.Authentication.logout
 GET           /api/auth/sso                                                     controllers.Authentication.singleSignOn(sso: String, sig: String)
+POST          /api/auth/createOrganizationWithAdmin                             controllers.Authentication.createOrganizationWithAdmin
 
 # Configurations
 GET           /api/user/userConfiguration                                       controllers.ConfigurationController.read
@@ -61,7 +63,7 @@ GET           /api/datasets/:dataSetName/accessList                             
 GET           /api/datasets/:dataSetName/sharingToken                           controllers.DataSetController.getSharingToken(dataSetName: String)
 DELETE        /api/datasets/:dataSetName/sharingToken                           controllers.DataSetController.deleteSharingToken(dataSetName: String)
 POST          /api/datasets/:dataSetName/teams                                  controllers.DataSetController.updateTeams(dataSetName: String)
-GET           /api/datasets/:dataSetName/layers/:layer/thumbnail                controllers.DataSetController.thumbnail(dataSetName: String, layer: String)
+GET           /api/datasets/:dataSetName/layers/:layer/thumbnail                controllers.DataSetController.thumbnail(dataSetName: String, layer: String, w: Option[Int], h: Option[Int])
 
 # Datastores
 GET           /api/datastores                                                   controllers.DataStoreController.list
@@ -115,11 +117,11 @@ GET           /api/taskTypes/:id                                                
 PUT           /api/taskTypes/:id                                                controllers.TaskTypeController.update(id: String)
 
 # Scripts
-GET           /api/scripts                                                      controllers.ScriptsController.list
-POST          /api/scripts                                                      controllers.ScriptsController.create
-GET           /api/scripts/:id                                                  controllers.ScriptsController.get(id: String)
-PUT           /api/scripts/:id                                                  controllers.ScriptsController.update(id: String)
-DELETE        /api/scripts/:id                                                  controllers.ScriptsController.delete(id: String)
+GET           /api/scripts                                                      controllers.ScriptController.list
+POST          /api/scripts                                                      controllers.ScriptController.create
+GET           /api/scripts/:id                                                  controllers.ScriptController.get(id: String)
+PUT           /api/scripts/:id                                                  controllers.ScriptController.update(id: String)
+DELETE        /api/scripts/:id                                                  controllers.ScriptController.delete(id: String)
 
 # Projects
 GET           /api/projects                                                     controllers.ProjectController.list
@@ -143,6 +145,7 @@ GET           /assets/*file                                                     
 
 #Organizations
 GET           /api/organizations                                                controllers.OrganizationController.listAllOrganizations
+GET           /api/operatorData                                                 controllers.OrganizationController.getOperatorData
 
 #Timelogging
 GET           /api/time/allusers/:year/:month                                   controllers.TimeController.getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])

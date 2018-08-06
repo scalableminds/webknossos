@@ -1,5 +1,5 @@
 // @flow
-import type { Vector3, OrthoViewType, BoundingBoxType, OrthoViewMapType } from "oxalis/constants";
+import type { Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { FlycamType, OxalisState } from "oxalis/store";
 import constants, { OrthoViews } from "oxalis/constants";
 import Maybe from "data.maybe";
@@ -9,6 +9,7 @@ import Utils from "libs/utils";
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4 } from "libs/mjs";
 import * as THREE from "three";
+import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 
 // All methods in this file should use constants.PLANE_WIDTH instead of constants.VIEWPORT_WIDTH
 // as the area that is rendered is only of size PLANE_WIDTH.
@@ -40,13 +41,13 @@ export function getRotation(flycam: FlycamType): Vector3 {
 
   // Fix JS modulo bug
   // http://javascript.about.com/od/problemsolving/a/modulobug.htm
-  const mod = (x, n) => (x % n + n) % n;
+  const mod = (x, n) => ((x % n) + n) % n;
 
   const rotation: Vector3 = [object.rotation.x, object.rotation.y, object.rotation.z - Math.PI];
   return [
-    mod(180 / Math.PI * rotation[0], 360),
-    mod(180 / Math.PI * rotation[1], 360),
-    mod(180 / Math.PI * rotation[2], 360),
+    mod((180 / Math.PI) * rotation[0], 360),
+    mod((180 / Math.PI) * rotation[1], 360),
+    mod((180 / Math.PI) * rotation[2], 360),
   ];
 }
 
@@ -60,9 +61,7 @@ export function getMaxZoomStep(state: OxalisState): number {
     .map(dataset =>
       Math.max(
         minimumZoomStepCount,
-        ...dataset.dataSource.dataLayers.map(layer =>
-          Math.max(0, ...layer.resolutions.map(r => Math.max(r[0], r[1], r[2]))),
-        ),
+        Math.max(0, ...getResolutions(dataset).map(r => Math.max(r[0], r[1], r[2]))),
       ),
     )
     .getOrElse(2 ** (minimumZoomStepCount + constants.DOWNSAMPLED_ZOOM_STEP_COUNT - 1));
@@ -98,28 +97,13 @@ export function getRotationOrtho(planeId: OrthoViewType): Vector3 {
   }
 }
 
-export function getViewportBoundingBox(state: OxalisState): BoundingBoxType {
-  const position = getPosition(state.flycam);
-  const offset = getPlaneScalingFactor(state.flycam) * constants.PLANE_WIDTH / 2;
-  const baseVoxelFactors = scaleInfo.getBaseVoxelFactors(state.dataset.dataSource.scale);
-  const min = [0, 0, 0];
-  const max = [0, 0, 0];
-
-  for (let i = 0; i <= 2; i++) {
-    min[i] = position[i] - offset * baseVoxelFactors[i];
-    max[i] = position[i] + offset * baseVoxelFactors[i];
-  }
-
-  return { min, max };
-}
-
 export type AreaType = { left: number, top: number, right: number, bottom: number };
 
 export function getArea(state: OxalisState, planeId: OrthoViewType): AreaType {
   const [u, v] = Dimensions.getIndices(planeId);
 
   const position = getPosition(state.flycam);
-  const viewportWidthHalf = getPlaneScalingFactor(state.flycam) * constants.PLANE_WIDTH / 2;
+  const viewportWidthHalf = (getPlaneScalingFactor(state.flycam) * constants.PLANE_WIDTH) / 2;
   const baseVoxelFactors = scaleInfo.getBaseVoxelFactors(state.dataset.dataSource.scale);
 
   const uWidthHalf = viewportWidthHalf * baseVoxelFactors[u];

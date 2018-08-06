@@ -9,7 +9,7 @@ const initialState = {
       scale: [1, 1, 2],
       dataLayers: [
         {
-          resolutions: [[1, 1, 1], [2, 2, 2], [4, 4, 4], [8, 8, 8], [16, 16, 16]],
+          resolutions: [[1, 1, 1], [2, 2, 2], [4, 4, 4], [8, 8, 8]],
         },
         {
           resolutions: [[1, 1, 1]],
@@ -64,10 +64,4 @@ test("Flycam Accessors should calculate the texture scaling factor (2/2)", t => 
 
   const texturePosition = accessors.getTextureScalingFactor(state);
   t.deepEqual(texturePosition, 0.5375);
-});
-
-test("Flycam Accessors should calculate the viewport bounding box", t => {
-  const viewportBoundingBox = accessors.getViewportBoundingBox(initialState);
-  t.deepEqual(viewportBoundingBox.min, [978.6, 2973.6, 395.8]);
-  t.deepEqual(viewportBoundingBox.max, [1467.4, 3462.4, 640.2]);
 });

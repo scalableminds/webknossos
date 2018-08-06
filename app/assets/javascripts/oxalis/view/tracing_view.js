@@ -14,6 +14,8 @@ import { isVolumeTracingDisallowed } from "oxalis/model/accessors/volumetracing_
 import type { OxalisState } from "oxalis/store";
 import type { ModeType } from "oxalis/constants";
 import type { Dispatch } from "redux";
+import Toast from "libs/toast";
+import messages from "messages";
 
 type Props = {
   flightmodeRecording: boolean,
@@ -21,6 +23,20 @@ type Props = {
   viewMode: ModeType,
   scale: number,
   isVolumeTracingDisallowed: boolean,
+};
+
+const registerWebGlCrashHandler = canvas => {
+  if (!canvas) {
+    return;
+  }
+  canvas.addEventListener(
+    "webglcontextlost",
+    e => {
+      Toast.error(messages["webgl.context_loss"], { sticky: true });
+      console.error("Webgl context lost", e);
+    },
+    false,
+  );
 };
 
 class TracingView extends React.PureComponent<Props> {
@@ -57,7 +73,7 @@ class TracingView extends React.PureComponent<Props> {
       <div id="tracing" className={divClassName} onContextMenu={this.handleContextMenu}>
         {inputCatchers}
         {flightModeRecordingSwitch}
-        <canvas id="render-canvas" style={canvasStyle} />
+        <canvas ref={registerWebGlCrashHandler} id="render-canvas" style={canvasStyle} />
       </div>
     );
   }
@@ -76,4 +92,7 @@ const mapStateToProps = (state: OxalisState) => ({
   isVolumeTracingDisallowed: state.tracing.type === "volume" && isVolumeTracingDisallowed(state),
 });
 
-export default connect(mapStateToProps, mapDispatchToProps)(TracingView);
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps,
+)(TracingView);

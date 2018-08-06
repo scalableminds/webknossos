@@ -16,6 +16,7 @@ import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
 import ViewModeReducer from "oxalis/model/reducers/view_mode_reducer";
 import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
 import UserReducer from "oxalis/model/reducers/user_reducer";
+import UiReducer from "oxalis/model/reducers/ui_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
 import googleAnalyticsMiddleware from "oxalis/model/helpers/google_analytics_middleware";
@@ -44,8 +45,8 @@ import type {
   APIScriptType,
   APITaskType,
   APIUserType,
-  APIMappingType,
   APIDatasetType,
+  APIDataLayerType,
 } from "admin/api_flow_types";
 
 export type CommentType = {
@@ -86,6 +87,7 @@ export type BoundingBoxObjectType = {
 
 type TreeTypeBase = {
   +treeId: number,
+  +groupId: ?number,
   +color: Vector3,
   +name: string,
   +timestamp: number,
@@ -99,28 +101,19 @@ export type TreeType = TreeTypeBase & {
   +nodes: NodeMapType,
 };
 
+export type TreeGroupType = {
+  name: string,
+  groupId: number,
+  children: Array<TreeGroupType>,
+};
+
 export type VolumeCellType = {
   +id: number,
 };
 
 export type VolumeCellMapType = { [number]: VolumeCellType };
 
-export type CategoryType = "color" | "segmentation";
-export type ElementClassType = "uint8" | "uint16" | "uint32";
-
-export type DataLayerType = {
-  +name: string,
-  +category: CategoryType,
-  +boundingBox: BoundingBoxObjectType,
-  +resolutions: Array<Vector3>,
-  +maxZoomStep: number, // denotes for which maximum zoomStep data exists
-  +elementClass: ElementClassType,
-  +mappings?: Array<APIMappingType>,
-};
-
-export type SegmentationDataLayerType = DataLayerType & {
-  +largestSegmentId: number,
-};
+export type DataLayerType = APIDataLayerType;
 
 export type RestrictionsType = APIRestrictionsType;
 
@@ -135,18 +128,12 @@ export type TemporaryMutableTreeMapType = { [number]: TreeType };
 
 export type TracingTypeTracingType = APITracingType;
 
-export type SkeletonTracingType = {
+type TracingBaseType = {
   +annotationId: string,
   +createdTimestamp: number,
-  +type: "skeleton",
-  +trees: TreeMapType,
   +name: string,
   +version: number,
   +tracingId: string,
-  +tracingType: TracingTypeTracingType,
-  +activeTreeId: ?number,
-  +activeNodeId: ?number,
-  +cachedMaxNodeId: number,
   +boundingBox: ?BoundingBoxType,
   +userBoundingBox: ?BoundingBoxType,
   +restrictions: RestrictionsType & SettingsType,
@@ -155,12 +142,19 @@ export type SkeletonTracingType = {
   +description: string,
 };
 
-export type VolumeTracingType = {
-  +annotationId: string,
-  +createdTimestamp: number,
+export type SkeletonTracingType = TracingBaseType & {
+  +type: "skeleton",
+  +tracingType: TracingTypeTracingType,
+  +trees: TreeMapType,
+  +treeGroups: Array<TreeGroupType>,
+  +activeTreeId: ?number,
+  +activeNodeId: ?number,
+  +cachedMaxNodeId: number,
+};
+
+export type VolumeTracingType = TracingBaseType & {
   +type: "volume",
-  +name: string,
-  +version: number,
+  +tracingType: TracingTypeTracingType,
   +maxCellId: number,
   +activeTool: VolumeToolType,
   +activeCellId: number,
@@ -168,30 +162,11 @@ export type VolumeTracingType = {
   +contourTracingMode: ContourModeType,
   +contourList: Array<Vector3>,
   +cells: VolumeCellMapType,
-  +tracingId: string,
-  +tracingType: TracingTypeTracingType,
-  +boundingBox: ?BoundingBoxType,
-  +userBoundingBox: ?BoundingBoxType,
-  +restrictions: RestrictionsType & SettingsType,
-  +isPublic: boolean,
-  +tags: Array<string>,
-  +description: string,
 };
 
-export type ReadOnlyTracingType = {
-  +annotationId: string,
-  +createdTimestamp: number,
+export type ReadOnlyTracingType = TracingBaseType & {
   +type: "readonly",
-  +name: string,
-  +version: number,
-  +tracingId: string,
   +tracingType: "View",
-  +boundingBox: ?BoundingBoxType,
-  +userBoundingBox: ?BoundingBoxType,
-  +restrictions: RestrictionsType & SettingsType,
-  +isPublic: boolean,
-  +tags: Array<string>,
-  +description: string,
 };
 
 export type TracingType = SkeletonTracingType | VolumeTracingType | ReadOnlyTracingType;
@@ -223,14 +198,12 @@ export type UserConfigurationType = {
   +crosshairSize: number,
   +displayCrosshair: boolean,
   +dynamicSpaceDirection: boolean,
-  +isosurfaceBBsize: number,
-  +isosurfaceDisplay: boolean,
-  +isosurfaceResolution: number,
   +keyboardDelay: number,
   +mouseRotateValue: number,
   +moveValue: number,
   +moveValue3d: number,
   +newNodeNewTree: boolean,
+  +highlightCommentedNodes: boolean,
   +overrideNodeRadius: boolean,
   +particleSize: number,
   +radius: number,
@@ -243,14 +216,21 @@ export type UserConfigurationType = {
   +tdViewDisplayPlanes: boolean,
 };
 
+export type MappingType = { [key: number]: number };
+
 export type TemporaryConfigurationType = {
   +viewMode: ModeType,
   +flightmodeRecording: boolean,
   +controlMode: ControlModeType,
   +mousePosition: ?Vector2,
   +brushSize: number,
-  +isMappingEnabled: boolean,
-  +mappingSize: number,
+  +activeMapping: {
+    +mapping: ?MappingType,
+    +mappingColors: ?Array<number>,
+    +hideUnmappedIds: boolean,
+    +isMappingEnabled: boolean,
+    +mappingSize: number,
+  },
 };
 
 export type ScriptType = APIScriptType;
@@ -263,10 +243,16 @@ export type SaveQueueEntryType = {
   actions: Array<UpdateAction>,
 };
 
+export type ProgressInfoType = {
+  +processedActionCount: number,
+  +totalActionCount: number,
+};
+
 export type SaveStateType = {
   +isBusy: boolean,
   +queue: Array<SaveQueueEntryType>,
   +lastSaveTimestamp: number,
+  +progressInfo: ProgressInfoType,
 };
 
 export type FlycamType = {
@@ -313,6 +299,10 @@ export type ViewModeData = {
   +flight: ?FlightModeData,
 };
 
+type UiInformationType = {
+  +showDropzoneModal: boolean,
+};
+
 export type OxalisState = {
   +datasetConfiguration: DatasetConfigurationType,
   +userConfiguration: UserConfigurationType,
@@ -324,6 +314,7 @@ export type OxalisState = {
   +flycam: FlycamType,
   +viewModeData: ViewModeData,
   +activeUser: ?APIUserType,
+  +uiInformation: UiInformationType,
 };
 
 export const defaultState: OxalisState = {
@@ -342,14 +333,12 @@ export const defaultState: OxalisState = {
     crosshairSize: 0.1,
     displayCrosshair: true,
     dynamicSpaceDirection: true,
-    isosurfaceBBsize: 1,
-    isosurfaceDisplay: false,
-    isosurfaceResolution: 80,
     keyboardDelay: 200,
     mouseRotateValue: 0.004,
     moveValue: 300,
     moveValue3d: 300,
     newNodeNewTree: false,
+    highlightCommentedNodes: false,
     overrideNodeRadius: true,
     particleSize: 5,
     radius: 5,
@@ -367,8 +356,13 @@ export const defaultState: OxalisState = {
     controlMode: ControlModeEnum.VIEW,
     mousePosition: null,
     brushSize: 50,
-    isMappingEnabled: false,
-    mappingSize: 0,
+    activeMapping: {
+      mapping: null,
+      mappingColors: null,
+      hideUnmappedIds: false,
+      isMappingEnabled: false,
+      mappingSize: 0,
+    },
   },
   task: null,
   dataset: {
@@ -394,6 +388,7 @@ export const defaultState: OxalisState = {
     description: null,
     displayName: "Awesome Test Dataset",
     allowedTeams: [],
+    logoUrl: null,
   },
   tracing: {
     annotationId: "",
@@ -422,6 +417,10 @@ export const defaultState: OxalisState = {
     queue: [],
     isBusy: false,
     lastSaveTimestamp: 0,
+    progressInfo: {
+      processedActionCount: 0,
+      totalActionCount: 0,
+    },
   },
   flycam: {
     zoomStep: 1.3,
@@ -447,6 +446,9 @@ export const defaultState: OxalisState = {
     flight: null,
   },
   activeUser: null,
+  uiInformation: {
+    showDropzoneModal: false,
+  },
 };
 
 const sagaMiddleware = createSagaMiddleware();
@@ -463,6 +465,7 @@ const combinedReducers = reduceReducers(
   ViewModeReducer,
   AnnotationReducer,
   UserReducer,
+  UiReducer,
 );
 
 const store = createStore(

@@ -4,7 +4,6 @@
 package models.annotation.nml
 
 import javax.xml.stream.{XMLOutputFactory, XMLStreamWriter}
-
 import com.scalableminds.util.geometry.Scale
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.xml.Xml
@@ -22,7 +21,7 @@ import scala.concurrent.Future
 object NmlWriter extends FoxImplicits {
   private lazy val outputService = XMLOutputFactory.newInstance()
 
-  def toNmlStream(tracing: Either[SkeletonTracing, VolumeTracing], annotation: Annotation, scale: Scale) = Enumerator.outputStream { os =>
+  def toNmlStream(tracing: Either[SkeletonTracing, VolumeTracing], annotation: Annotation, scale: Option[Scale]) = Enumerator.outputStream { os =>
     implicit val writer = new IndentingXMLStreamWriter(outputService.createXMLStreamWriter(os))
 
     for {
@@ -33,7 +32,7 @@ object NmlWriter extends FoxImplicits {
     }
   }
 
-  def toNml(tracing: Either[SkeletonTracing, VolumeTracing], annotation: Annotation, scale: Scale)(implicit writer: XMLStreamWriter): Fox[Unit] = {
+  def toNml(tracing: Either[SkeletonTracing, VolumeTracing], annotation: Annotation, scale: Option[Scale])(implicit writer: XMLStreamWriter): Fox[Unit] = {
     tracing match {
       case Right(volumeTracing) => {
         for {
@@ -52,7 +51,7 @@ object NmlWriter extends FoxImplicits {
     }
   }
 
-  def writeVolumeThings(annotation: Annotation, volumeTracing: VolumeTracing, scale: Scale)(implicit writer: XMLStreamWriter): Fox[Unit] = {
+  def writeVolumeThings(annotation: Annotation, volumeTracing: VolumeTracing, scale: Option[Scale])(implicit writer: XMLStreamWriter): Fox[Unit] = {
     for {
       _ <- writeMetaData(annotation)
       _ = Xml.withinElementSync("parameters")(writeParametersAsXml(volumeTracing, annotation.description, scale))
@@ -62,25 +61,26 @@ object NmlWriter extends FoxImplicits {
     } yield ()
   }
 
-  def writeSkeletonThings(annotation: Annotation, skeletonTracing: SkeletonTracing, scale: Scale)(implicit writer: XMLStreamWriter): Fox[Unit] = {
+  def writeSkeletonThings(annotation: Annotation, skeletonTracing: SkeletonTracing, scale: Option[Scale])(implicit writer: XMLStreamWriter): Fox[Unit] = {
     for {
       _ <- writeMetaData(annotation)
       _ = Xml.withinElementSync("parameters")(writeParametersAsXml(skeletonTracing, annotation.description, scale))
       _ = writeTreesAsXml(skeletonTracing.trees.filterNot(_.nodes.isEmpty))
       _ = Xml.withinElementSync("branchpoints")(writeBranchPointsAsXml(skeletonTracing.trees.flatMap(_.branchPoints).sortBy(-_.createdTimestamp)))
       _ = Xml.withinElementSync("comments")(writeCommentsAsXml(skeletonTracing.trees.flatMap(_.comments)))
+      _ = Xml.withinElementSync("groups")(writeTreeGroupsAsXml(skeletonTracing.treeGroups))
     } yield ()
   }
 
-  def writeParametersAsXml(tracing: SkeletonTracing, description: String, scale: Scale)(implicit writer: XMLStreamWriter) = {
+  def writeParametersAsXml(tracing: SkeletonTracing, description: String, scale: Option[Scale])(implicit writer: XMLStreamWriter) = {
     Xml.withinElementSync("experiment") {
       writer.writeAttribute("name", tracing.dataSetName)
       writer.writeAttribute("description", description)
     }
     Xml.withinElementSync("scale") {
-      writer.writeAttribute("x", scale.x.toString)
-      writer.writeAttribute("y", scale.y.toString)
-      writer.writeAttribute("z", scale.z.toString)
+      writer.writeAttribute("x", scale.map(_.x).getOrElse(-1).toString)
+      writer.writeAttribute("y", scale.map(_.y).getOrElse(-1).toString)
+      writer.writeAttribute("z", scale.map(_.z).getOrElse(-1).toString)
     }
     Xml.withinElementSync("offset") {
       writer.writeAttribute("x", "0")
@@ -118,17 +118,27 @@ object NmlWriter extends FoxImplicits {
         writer.writeAttribute("depth", b.depth.toString)
       }
     }
+    tracing.boundingBox.map { b =>
+      Xml.withinElementSync("taskBoundingBox") {
+        writer.writeAttribute("topLeftX", b.topLeft.x.toString)
+        writer.writeAttribute("topLeftY", b.topLeft.y.toString)
+        writer.writeAttribute("topLeftZ", b.topLeft.z.toString)
+        writer.writeAttribute("width", b.width.toString)
+        writer.writeAttribute("height", b.height.toString)
+        writer.writeAttribute("depth", b.depth.toString)
+      }
+    }
   }
 
-  def writeParametersAsXml(tracing: VolumeTracing, description: String, scale: Scale)(implicit writer: XMLStreamWriter) = {
+  def writeParametersAsXml(tracing: VolumeTracing, description: String, scale: Option[Scale])(implicit writer: XMLStreamWriter) = {
     Xml.withinElementSync("experiment") {
       writer.writeAttribute("name", tracing.dataSetName)
       writer.writeAttribute("description", description)
     }
     Xml.withinElementSync("scale") {
-      writer.writeAttribute("x", scale.x.toString)
-      writer.writeAttribute("y", scale.y.toString)
-      writer.writeAttribute("z", scale.z.toString)
+      writer.writeAttribute("x", scale.map(_.x).getOrElse(-1).toString)
+      writer.writeAttribute("y", scale.map(_.y).getOrElse(-1).toString)
+      writer.writeAttribute("z", scale.map(_.z).getOrElse(-1).toString)
     }
     Xml.withinElementSync("offset") {
       writer.writeAttribute("x", "0")
@@ -162,6 +172,7 @@ object NmlWriter extends FoxImplicits {
         writer.writeAttribute("color.b", t.color.map(_.b.toString).getOrElse(""))
         writer.writeAttribute("color.a", t.color.map(_.a.toString).getOrElse(""))
         writer.writeAttribute("name", t.name)
+        t.groupId.map(groupId => writer.writeAttribute("groupId", groupId.toString))
         Xml.withinElementSync("nodes")(writeNodesAsXml(t.nodes.sortBy(_.id)))
         Xml.withinElementSync("edges")(writeEdgesAsXml(t.edges))
       }
@@ -211,6 +222,16 @@ object NmlWriter extends FoxImplicits {
       Xml.withinElementSync("comment") {
         writer.writeAttribute("node", c.nodeId.toString)
         writer.writeAttribute("content", c.content)
+      }
+    }
+  }
+
+  def writeTreeGroupsAsXml(treeGroups: Seq[TreeGroup])(implicit writer: XMLStreamWriter): Unit = {
+    treeGroups.foreach { t =>
+      Xml.withinElementSync("group") {
+        writer.writeAttribute("name", t.name)
+        writer.writeAttribute("id", t.groupId.toString)
+        writeTreeGroupsAsXml(t.children)
       }
     }
   }

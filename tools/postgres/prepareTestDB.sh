@@ -9,10 +9,10 @@ scriptdir="$(dirname "$0")"
 dbName="$("$scriptdir"/db_name.sh)"
 dbHost="$("$scriptdir"/db_host.sh)"
 
-for file in $(find "$scriptdir"/../../test/db_postgres -name "*.csv")
+for file in $(find "$scriptdir"/../../test/db -name "*.csv")
 do
-  echo $file
-  PGPASSWORD=postgres psql -U postgres -h $dbHost --dbname=$dbName -c "COPY webknossos.$(basename $file .csv) FROM STDOUT WITH CSV HEADER QUOTE ''''" < $file
+  echo $file 
+  PGPASSWORD=postgres psql -U postgres -h $dbHost --dbname=$dbName -c "SET session_replication_role = replica;COPY webknossos.$(basename $file .csv) FROM STDOUT WITH CSV HEADER QUOTE ''''" < $file
 done;
 
 echo "Done preparing test db (host=$dbHost, name=$dbName)"

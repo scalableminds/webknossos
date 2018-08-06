@@ -5,6 +5,9 @@ import himalaya from "himalaya";
 import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
 import { configure } from "enzyme";
 import Adapter from "enzyme-adapter-react-16";
+import shell from "shelljs";
+import _ from "lodash";
+import deepForEach from "deep-for-each";
 
 const requests = [];
 const minimumWait = 100; // ms
@@ -47,6 +50,21 @@ function wait(milliseconds: number): Promise<void> {
 
 function setCurrToken(token: string) {
   currToken = token;
+}
+
+// The values of these keys change if objects are newly created by the backend
+// They have to be omitted from some snapshots
+const volatileKeys = ["id", "formattedHash", "modified", "created"];
+
+export function replaceVolatileValues(obj: Object) {
+  // Replace volatile properties with deterministic values
+  const newObj = _.cloneDeep(obj);
+  deepForEach(newObj, (value, key, arrOrObj) => {
+    if (volatileKeys.includes(key)) {
+      arrOrObj[key] = key;
+    }
+  });
+  return newObj;
 }
 
 global.fetch = function fetchWrapper(url, options) {
@@ -110,6 +128,11 @@ function debugWrapper(wrapper: any, name: string) {
 }
 
 configure({ adapter: new Adapter() });
+
+export function resetDatabase() {
+  console.log("Resetting test database...");
+  shell.exec("tools/postgres/prepareTestDB.sh > /dev/null 2> /dev/null");
+}
 
 export {
   waitForAllRequests,

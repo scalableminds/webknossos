@@ -17,6 +17,13 @@ CREATE TYPE webknossos.BOUNDING_BOX AS (
   depth DOUBLE PRECISION
 );
 
+START TRANSACTION;
+CREATE TABLE webknossos.releaseInformation (
+  schemaVersion BIGINT NOT NULL
+);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(17);
+COMMIT TRANSACTION;
+
 CREATE TABLE webknossos.analytics(
   _id CHAR(24) PRIMARY KEY NOT NULL DEFAULT '',
   _user CHAR(24),
@@ -25,10 +32,6 @@ CREATE TABLE webknossos.analytics(
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
-
-
-
-
 
 CREATE TYPE webknossos.ANNOTATION_TRACING_TYPE AS ENUM ('skeleton', 'volume');
 CREATE TYPE webknossos.ANNOTATION_TYPE AS ENUM ('Task', 'Explorational', 'TracingBase', 'Orphan');
@@ -57,7 +60,7 @@ CREATE TABLE webknossos.annotations(
 
 CREATE TABLE webknossos.dataSets(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
-  _dataStore CHAR(256) NOT NULL ,
+  _dataStore CHAR(256) NOT NULL,
   _organization CHAR(24) NOT NULL,
   defaultConfiguration JSONB,
   description TEXT,
@@ -68,6 +71,7 @@ CREATE TABLE webknossos.dataSets(
   scale webknossos.VECTOR3,
   status VARCHAR(1024) NOT NULL DEFAULT '',
   sharingToken CHAR(256),
+  logoUrl VARCHAR(2048),
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   UNIQUE (name, _organization)
@@ -149,50 +153,27 @@ CREATE TABLE webknossos.tasks(
   _project CHAR(24) NOT NULL,
   _script CHAR(24),
   _taskType CHAR(24) NOT NULL,
-  _team CHAR(24) NOT NULL,
   neededExperience_domain VARCHAR(256) NOT NULL CHECK (neededExperience_domain ~* '^.{2,}$'),
   neededExperience_value INT NOT NULL,
   totalInstances BIGINT NOT NULL,
+  openInstances BIGINT NOT NULL,
   tracingTime BIGINT,
   boundingBox webknossos.BOUNDING_BOX,
   editPosition webknossos.VECTOR3 NOT NULL,
   editRotation webknossos.VECTOR3 NOT NULL,
   creationInfo VARCHAR(512),
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false
+  isDeleted BOOLEAN NOT NULL DEFAULT false,
+  CONSTRAINT openInstancesSmallEnoughCheck CHECK (openInstances <= totalInstances),
+  CONSTRAINT openInstancesLargeEnoughCheck CHECK (openInstances >= 0)
 );
-
-CREATE VIEW webknossos.task_instances AS
-  SELECT t._id, COUNT(annotations._id) assignedInstances, t.totalinstances - COUNT(annotations._id) openInstances
-  FROM webknossos.tasks t
-  left join (select * from webknossos.annotations a where typ = 'Task' and a.state != 'Cancelled' AND a.isDeleted = false) as annotations ON t._id = annotations._task
-  GROUP BY t._id, t.totalinstances;
-
-CREATE FUNCTION webknossos.checkOpenAssignments() RETURNS trigger AS $$
-  DECLARE
-    cur CURSOR for SELECT openInstances FROM webknossos.task_instances where NEW.typ = 'Task' and _id = NEW._task;
-  BEGIN
-    IF NEW.typ = 'Task' THEN
-      FOR rec IN cur LOOP
-        IF rec.openInstances < 0 THEN
-          RAISE EXCEPTION 'Negative openInstances for Task (%)', NEW._task;
-        END IF;
-      END LOOP;
-    END IF;
-    RETURN NULL;
-  END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER checkOpenAssignmentsTrigger
-AFTER INSERT ON webknossos.annotations
-FOR EACH ROW EXECUTE PROCEDURE webknossos.checkOpenAssignments();
-
 
 CREATE TABLE webknossos.teams(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   _organization CHAR(24) NOT NULL,
   name VARCHAR(256) NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\. ß]+$'),
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  isOrganizationTeam BOOLEAN NOT NULL DEFAULT false,
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   UNIQUE (name, _organization)
 );
@@ -210,8 +191,12 @@ CREATE TABLE webknossos.timespans(
 
 CREATE TABLE webknossos.organizations(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
-  _organizationTeam CHAR(24) NOT NULL UNIQUE,
   name VARCHAR(256) NOT NULL,
+  additionalInformation VARCHAR(2048) NOT NULL DEFAULT '',
+  logoUrl VARCHAR(2048) NOT NULL DEFAULT '',
+  displayName VARCHAR(1024) NOT NULL DEFAULT '',
+  newUserMailingList VARCHAR(512) NOT NULL DEFAULT '',
+  overTimeMailingList VARCHAR(512) NOT NULL DEFAULT '',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
@@ -288,6 +273,7 @@ CREATE VIEW webknossos.timespans_ AS SELECT * FROM webknossos.timespans WHERE NO
 CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations WHERE NOT isDeleted;
 CREATE VIEW webknossos.users_ AS SELECT * FROM webknossos.users WHERE NOT isDeleted;
 CREATE VIEW webknossos.tokens_ AS SELECT * FROM webknossos.tokens WHERE NOT isDeleted;
+CREATE VIEW webknossos.organizationTeams AS SELECT * FROM webknossos.teams WHERE isOrganizationTeam AND NOT isDeleted;
 
 
 
@@ -302,7 +288,7 @@ CREATE INDEX ON webknossos.dataSets(name);
 CREATE INDEX ON webknossos.tasks(_project);
 CREATE INDEX ON webknossos.tasks(isDeleted);
 CREATE INDEX ON webknossos.tasks(_project, isDeleted);
-CREATE INDEX ON webknossos.tasks(_team, neededExperience_domain, neededExperience_value);
+CREATE INDEX ON webknossos.tasks(neededExperience_domain, neededExperience_value);
 CREATE INDEX ON webknossos.tasks(_taskType);
 CREATE INDEX ON webknossos.timespans(_user);
 CREATE INDEX ON webknossos.timespans(_annotation);
@@ -312,40 +298,115 @@ CREATE INDEX ON webknossos.projects(_team);
 CREATE INDEX ON webknossos.projects(name, isDeleted);
 CREATE INDEX ON webknossos.projects(_team, isDeleted);
 
+ALTER TABLE webknossos.analytics
+  ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id);
+ALTER TABLE webknossos.annotations
+  ADD CONSTRAINT task_ref FOREIGN KEY(_task) REFERENCES webknossos.tasks(_id) ON DELETE SET NULL,
+  ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id),
+  ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id);
+ALTER TABLE webknossos.dataSets
+  ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id),
+  ADD CONSTRAINT dataStore_ref FOREIGN KEY(_dataStore) REFERENCES webknossos.dataStores(name);
+ALTER TABLE webknossos.dataSet_layers
+  ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) ON DELETE CASCADE;
+ALTER TABLE webknossos.dataSet_allowedTeams
+  ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) ON DELETE CASCADE,
+  ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE;
+ALTER TABLE webknossos.dataSet_resolutions
+  ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) ON DELETE CASCADE;
+ALTER TABLE webknossos.projects
+  ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id),
+  ADD CONSTRAINT user_ref FOREIGN KEY(_owner) REFERENCES webknossos.users(_id);
+ALTER TABLE webknossos.scripts
+  ADD CONSTRAINT user_ref FOREIGN KEY(_owner) REFERENCES webknossos.users(_id);
+ALTER TABLE webknossos.taskTypes
+  ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE;
+ALTER TABLE webknossos.tasks
+  ADD CONSTRAINT project_ref FOREIGN KEY(_project) REFERENCES webknossos.projects(_id),
+  ADD CONSTRAINT script_ref FOREIGN KEY(_script) REFERENCES webknossos.scripts(_id) ON DELETE SET NULL;
+ALTER TABLE webknossos.teams
+  ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id);
+ALTER TABLE webknossos.timespans
+  ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE,
+  ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE SET NULL;
+ALTER TABLE webknossos.users
+  ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id);
+ALTER TABLE webknossos.user_team_roles
+  ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE,
+  ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE;
+ALTER TABLE webknossos.user_experiences
+  ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE;
+ALTER TABLE webknossos.user_dataSetConfigurations
+  ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE,
+  ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) ON DELETE CASCADE;
 
--- ALTER TABLE webknossos.analytics
---   ADD FOREIGN KEY(_user) REFERENCES webknossos.users(_id);
--- ALTER TABLE webknossos.annotations
---   ADD FOREIGN KEY(_task) REFERENCES webknossos.tasks(_id) ON DELETE SET NULL,
---   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id),
---   ADD FOREIGN KEY(_user) REFERENCES webknossos.users(_id);
--- ALTER TABLE webknossos.dataSets
---   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id),
---   ADD FOREIGN KEY(_dataStore) REFERENCES webknossos.dataStores(name);
--- ALTER TABLE webknossos.dataSet_layers
---   ADD FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) ON DELETE CASCADE;
--- ALTER TABLE webknossos.dataSet_allowedTeams
---   ADD FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) ON DELETE CASCADE,
---   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE;
--- ALTER TABLE webknossos.projects
---   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id),
---   ADD FOREIGN KEY(_owner) REFERENCES webknossos.users(_id);
--- ALTER TABLE webknossos.scripts
---   ADD FOREIGN KEY(_owner) REFERENCES webknossos.users(_id);
--- ALTER TABLE webknossos.taskTypes
---   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE;
--- ALTER TABLE webknossos.tasks
---   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id),
---   ADD FOREIGN KEY(_project) REFERENCES webknossos.projects(_id),
---   ADD FOREIGN KEY(_script) REFERENCES webknossos.scripts(_id) ON DELETE SET NULL;
--- ALTER TABLE webknossos.teams
---   ADD FOREIGN KEY(_owner) REFERENCES webknossos.users(_id),
---   ADD FOREIGN KEY(_parent) REFERENCES webknossos.teams(_id) ON DELETE SET NULL;
--- ALTER TABLE webknossos.timespans
---   ADD FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE,
---   ADD FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE SET NULL;
--- ALTER TABLE webknossos.user_team_roles
---   ADD FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE,
---   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE;
--- ALTER TABLE webknossos.user_experiences
---   ADD FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE;
+CREATE FUNCTION webknossos.countsAsTaskInstance(a webknossos.annotations) RETURNS BOOLEAN AS $$
+  BEGIN
+    RETURN (a.state != 'Cancelled' AND a.isDeleted = false AND a.typ = 'Task');
+  END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE FUNCTION webknossos.onUpdateTask() RETURNS trigger AS $$
+  BEGIN
+    IF NEW.totalInstances > OLD.totalInstances THEN
+      UPDATE webknossos.tasks SET openInstances = openInstances + (NEW.totalInstances - OLD.totalInstances) WHERE _id = NEW._id;
+    END IF;
+    RETURN NULL;
+  END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER onUpdateTaskTrigger
+AFTER UPDATE ON webknossos.tasks
+FOR EACH ROW EXECUTE PROCEDURE webknossos.onUpdateTask();
+
+
+CREATE FUNCTION webknossos.onInsertAnnotation() RETURNS trigger AS $$
+  BEGIN
+    IF (NEW.typ = 'Task') AND (NEW.isDeleted = false) AND (NEW.state != 'Cancelled') THEN
+      UPDATE webknossos.tasks SET openInstances = openInstances - 1 WHERE _id = NEW._task;
+    END IF;
+    RETURN NULL;
+  END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER onInsertAnnotationTrigger
+AFTER INSERT ON webknossos.annotations
+FOR EACH ROW EXECUTE PROCEDURE webknossos.onInsertAnnotation();
+
+
+
+CREATE OR REPLACE FUNCTION webknossos.onUpdateAnnotation() RETURNS trigger AS $$
+  BEGIN
+    IF (NEW._task != OLD._task) OR (NEW.typ != OLD.typ) THEN
+        RAISE EXCEPTION 'annotation columns _task and typ are immutable';
+    END IF;
+    IF (webknossos.countsAsTaskInstance(OLD) AND NOT webknossos.countsAsTaskInstance(NEW))
+    THEN
+      UPDATE webknossos.tasks SET openInstances = openInstances + 1 WHERE _id = NEW._task;
+    END IF;
+    IF (NOT webknossos.countsAsTaskInstance(OLD) AND webknossos.countsAsTaskInstance(NEW))
+    THEN
+      UPDATE webknossos.tasks SET openInstances = openInstances - 1 WHERE _id = NEW._task;
+    END IF;
+    RETURN NULL;
+  END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER onUpdateAnnotationTrigger
+AFTER UPDATE ON webknossos.annotations
+FOR EACH ROW EXECUTE PROCEDURE webknossos.onUpdateAnnotation();
+
+
+CREATE FUNCTION webknossos.onDeleteAnnotation() RETURNS trigger AS $$
+  BEGIN
+    IF (OLD.typ = 'Task') AND (OLD.isDeleted = false) AND (OLD.state != 'Cancelled') THEN
+      UPDATE webknossos.tasks SET openInstances = openInstances + 1 WHERE _id = OLD._task;
+    END IF;
+    RETURN NULL;
+  END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER onDeleteAnnotationTrigger
+AFTER DELETE ON webknossos.annotations
+FOR EACH ROW EXECUTE PROCEDURE webknossos.onDeleteAnnotation();

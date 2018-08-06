@@ -20,7 +20,7 @@ import {
 } from "oxalis/model/actions/settings_actions";
 import {
   setActiveNodeAction,
-  deleteNodeWithConfirmAction,
+  deleteNodeAsUserAction,
   createNodeAction,
   createBranchPointAction,
   requestDeleteBranchPointAction,
@@ -67,6 +67,7 @@ class ArbitraryController extends React.PureComponent<Props> {
   input: {
     mouse?: InputMouse,
     keyboard?: InputKeyboard,
+    keyboardLoopDelayed?: InputKeyboard,
     keyboardNoLoop?: InputKeyboardNoLoop,
   };
   storePropertyUnsubscribers: Array<Function>;
@@ -82,21 +83,8 @@ class ArbitraryController extends React.PureComponent<Props> {
     this.start();
   }
 
-  componentDidUpdate(prevProps: Props) {
-    if (prevProps.viewMode !== this.props.viewMode) {
-      this.plane.setMode(this.props.viewMode);
-    }
-  }
-
   componentWillUnmount() {
     this.stop();
-  }
-
-  pingBinaries(): void {
-    const matrix = Store.getState().flycam.currentMatrix;
-    Model.getColorBinaries().forEach(binary =>
-      binary.arbitraryPing(matrix, Store.getState().datasetConfiguration.quality),
-    );
   }
 
   initMouse(): void {
@@ -191,11 +179,16 @@ class ArbitraryController extends React.PureComponent<Props> {
       o: () => {
         Store.dispatch(zoomOutAction());
       },
-
-      // Change move value
-      h: () => this.changeMoveValue(25),
-      g: () => this.changeMoveValue(-25),
     });
+
+    // Own InputKeyboard with delay for changing the Move Value, because otherwise the values changes to drastically
+    this.input.keyboardLoopDelayed = new InputKeyboard(
+      {
+        h: () => this.changeMoveValue(25),
+        g: () => this.changeMoveValue(-25),
+      },
+      { delay: Store.getState().userConfiguration.keyboardDelay },
+    );
 
     this.input.keyboardNoLoop = new InputKeyboardNoLoop({
       "1": () => {
@@ -228,7 +221,7 @@ class ArbitraryController extends React.PureComponent<Props> {
 
       // Delete active node and recenter last node
       "shift + space": () => {
-        Store.dispatch(deleteNodeWithConfirmAction());
+        Store.dispatch(deleteNodeAsUserAction());
       },
     });
   }
@@ -254,9 +247,9 @@ class ArbitraryController extends React.PureComponent<Props> {
 
   getVoxelOffset(timeFactor: number): number {
     const state = Store.getState();
-    const moveValue3d = state.userConfiguration.moveValue3d;
+    const { moveValue3d } = state.userConfiguration;
     const baseVoxel = getBaseVoxel(state.dataset.dataSource.scale);
-    return moveValue3d * timeFactor / baseVoxel / constants.FPS;
+    return (moveValue3d * timeFactor) / baseVoxel / constants.FPS;
   }
 
   move(timeFactor: number): void {
@@ -268,12 +261,11 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   init(): void {
-    const clippingDistanceArbitrary = Store.getState().userConfiguration.clippingDistanceArbitrary;
+    const { clippingDistanceArbitrary } = Store.getState().userConfiguration;
     this.setClippingDistance(clippingDistanceArbitrary);
   }
 
   bindToEvents(): void {
-    this.listenTo(this.arbitraryView, "render", this.pingBinaries);
     this.listenTo(this.arbitraryView, "render", this.props.onRender);
 
     const onBucketLoaded = () => {
@@ -281,22 +273,15 @@ class ArbitraryController extends React.PureComponent<Props> {
       app.vent.trigger("rerender");
     };
 
-    for (const name of Object.keys(Model.binary)) {
-      const binary = Model.binary[name];
-      this.listenTo(binary.cube, "bucketLoaded", onBucketLoaded);
+    for (const dataLayer of Model.getAllLayers()) {
+      this.listenTo(dataLayer.cube, "bucketLoaded", onBucketLoaded);
     }
 
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         state => state.userConfiguration,
         userConfiguration => {
-          const {
-            sphericalCapRadius,
-            clippingDistanceArbitrary,
-            displayCrosshair,
-            crosshairSize,
-          } = userConfiguration;
-          this.plane.setSphericalCapRadius(sphericalCapRadius);
+          const { clippingDistanceArbitrary, displayCrosshair, crosshairSize } = userConfiguration;
           this.setClippingDistance(clippingDistanceArbitrary);
           this.crosshair.setScale(crosshairSize);
           this.crosshair.setVisibility(displayCrosshair);
@@ -313,6 +298,15 @@ class ArbitraryController extends React.PureComponent<Props> {
           }
         },
       ),
+      listenToStoreProperty(
+        state => state.userConfiguration.keyboardDelay,
+        keyboardDelay => {
+          const { keyboardLoopDelayed } = this.input;
+          if (keyboardLoopDelayed != null) {
+            keyboardLoopDelayed.delay = keyboardDelay;
+          }
+        },
+      ),
     );
   }
 
@@ -321,7 +315,6 @@ class ArbitraryController extends React.PureComponent<Props> {
     this.arbitraryView.start();
 
     this.plane = new ArbitraryPlane();
-    this.plane.setMode(this.props.viewMode);
     this.crosshair = new Crosshair(Store.getState().userConfiguration.crosshairSize);
     this.crosshair.setVisibility(Store.getState().userConfiguration.displayCrosshair);
 
@@ -334,7 +327,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     this.initMouse();
     this.init();
 
-    const clippingDistance = Store.getState().userConfiguration.clippingDistance;
+    const { clippingDistance } = Store.getState().userConfiguration;
     SceneController.setClippingDistance(clippingDistance);
 
     this.arbitraryView.draw();
@@ -356,6 +349,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     }
 
     this.arbitraryView.stop();
+    this.plane.destroy();
 
     this.isStarted = false;
   }
@@ -369,6 +363,7 @@ class ArbitraryController extends React.PureComponent<Props> {
   destroyInput() {
     Utils.__guard__(this.input.mouse, x => x.destroy());
     Utils.__guard__(this.input.keyboard, x => x.destroy());
+    Utils.__guard__(this.input.keyboardLoopDelayed, x => x.destroy());
     Utils.__guard__(this.input.keyboardNoLoop, x => x.destroy());
   }
 
@@ -388,6 +383,9 @@ class ArbitraryController extends React.PureComponent<Props> {
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue);
 
     Store.dispatch(updateUserSettingAction("moveValue3d", moveValue));
+
+    const moveValueMessage = messages["tracing.changed_move_value"] + moveValue;
+    Toast.success(moveValueMessage, { key: "CHANGED_MOVE_VALUE" });
   }
 
   setParticleSize(delta: number): void {

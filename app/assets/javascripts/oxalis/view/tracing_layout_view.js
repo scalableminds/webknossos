@@ -1,7 +1,4 @@
-/**
- * tracing_layout_view.js
- * @flow
- */
+// @flow
 
 import * as React from "react";
 import OxalisController from "oxalis/controller";
@@ -14,6 +11,9 @@ import { location } from "libs/window";
 import ButtonComponent from "oxalis/view/components/button_component";
 import type { TracingTypeTracingType } from "oxalis/store";
 import type { ControlModeType } from "oxalis/constants";
+import Toast from "libs/toast";
+import messages from "messages";
+import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 
 const { Header, Sider } = Layout;
 
@@ -44,9 +44,13 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     });
   };
 
+  componentDidCatch() {
+    Toast.error(messages["react.rendering_error"]);
+  }
+
   render() {
     return (
-      <div>
+      <NmlUploadZoneContainer>
         <OxalisController
           initialTracingType={this.props.initialTracingType}
           initialAnnotationId={this.props.initialAnnotationId}
@@ -54,14 +58,21 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
         />
 
         <Layout className="tracing-layout">
-          <Header style={{ position: "fixed", width: "100%", zIndex: 210, minHeight: 48 }}>
+          <Header
+            style={{
+              position: "fixed",
+              width: "100%",
+              zIndex: 210,
+              minHeight: 48,
+            }}
+          >
             <ButtonComponent onClick={this.handleSettingsCollapse}>
               <Icon type={this.state.isSettingsCollapsed ? "menu-unfold" : "menu-fold"} />
               Settings
             </ButtonComponent>
             <ActionBarView />
           </Header>
-          <Layout style={{ marginTop: 64 }}>
+          <Layout style={{ marginTop: 64, height: "calc(100% - 64px)" }}>
             <Sider
               collapsible
               trigger={null}
@@ -82,7 +93,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
             </div>
           </Layout>
         </Layout>
-      </div>
+      </NmlUploadZoneContainer>
     );
   }
 }

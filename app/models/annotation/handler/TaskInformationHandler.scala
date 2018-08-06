@@ -1,36 +1,42 @@
 package models.annotation.handler
 
-import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation._
 import models.task.TaskDAO
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
-import reactivemongo.bson.BSONObjectID
 import models.annotation.AnnotationState._
+import models.project.ProjectDAO
+import utils.ObjectId
 
 object TaskInformationHandler extends AnnotationInformationHandler with FoxImplicits {
 
-  def provideAnnotation(taskId: String, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
+  override def provideAnnotation(taskId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
-      task <- TaskDAO.findOneById(taskId) ?~> "task.notFound"
+      task <- TaskDAO.findOne(taskId) ?~> "task.notFound"
       annotations <- task.annotations
       finishedAnnotations = annotations.filter(_.state == Finished)
       _ <- assertAllOnSameDataset(finishedAnnotations)
       _ <- assertNonEmpty(finishedAnnotations) ?~> "task.noAnnotations"
       user <- userOpt ?~> "user.notAuthorised"
-      dataSetName = finishedAnnotations.head.dataSetName
-      mergedAnnotation <- AnnotationMerger.mergeN(BSONObjectID(task.id), persistTracing=false, user._id,
-        dataSetName, task._team, AnnotationType.CompoundTask, finishedAnnotations) ?~> "annotation.merge.failed.compound"
+      project <- ProjectDAO.findOne(task._project)
+      _dataSet = finishedAnnotations.head._dataSet
+      mergedAnnotation <- AnnotationMerger.mergeN(task._id, persistTracing=false, user._id,
+        _dataSet, project._team, AnnotationType.CompoundTask, finishedAnnotations) ?~> "annotation.merge.failed.compound"
     } yield mergedAnnotation
 
-  def restrictionsFor(taskId: String)(implicit ctx: DBAccessContext) =
+  def restrictionsFor(taskId: ObjectId)(implicit ctx: DBAccessContext) =
     for {
-      task <- TaskDAO.findOneById(taskId) ?~> "task.notFound"
+      task <- TaskDAO.findOne(taskId) ?~> "task.notFound"
+      project <- ProjectDAO.findOne(task._project)
     } yield {
       new AnnotationRestrictions {
-        override def allowAccess(user: Option[User]) =
-          user.exists(_.isTeamManagerOfBLOCKING(task._team))
+        override def allowAccess(userOption: Option[User]): Fox[Boolean] =
+          (for {
+            user <- userOption.toFox
+            allowed <- user.isTeamManagerOrAdminOf(project._team)
+          } yield allowed).orElse(Fox.successful(false))
       }
     }
 }

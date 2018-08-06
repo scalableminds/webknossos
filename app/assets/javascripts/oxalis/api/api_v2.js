@@ -8,10 +8,10 @@ import { InputKeyboardNoLoop } from "libs/input";
 import Model from "oxalis/model";
 import type { OxalisModel } from "oxalis/model";
 import Store from "oxalis/store";
-import Binary from "oxalis/model/binary";
 import {
   updateUserSettingAction,
   updateDatasetSettingAction,
+  setMappingAction,
 } from "oxalis/model/actions/settings_actions";
 import {
   setActiveNodeAction,
@@ -28,10 +28,10 @@ import {
   getTree,
   getSkeletonTracing,
 } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getLayerBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import { setActiveCellAction, setToolAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 import type { Vector3, VolumeToolType, ControlModeType } from "oxalis/constants";
-import type { MappingType } from "oxalis/model/binary/mappings";
 import type {
   NodeType,
   UserConfigurationType,
@@ -39,6 +39,7 @@ import type {
   TreeMapType,
   TracingType,
   TracingTypeTracingType,
+  MappingType,
 } from "oxalis/store";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import Toast from "libs/toast";
@@ -525,17 +526,11 @@ class DataApi {
     this.model = model;
   }
 
-  __getLayer(layerName: string): Binary {
-    const layer = this.model.getBinaryByName(layerName);
-    if (layer === undefined) throw new Error(`Layer with name ${layerName} was not found.`);
-    return layer;
-  }
-
   /**
    * Returns the names of all available layers of the current tracing.
    */
   getLayerNames(): Array<string> {
-    return _.map(this.model.binary, "name");
+    return _.map(this.model.dataLayers, "name");
   }
 
   /**
@@ -544,9 +539,9 @@ class DataApi {
    */
   getVolumeTracingLayerName(): string {
     assertVolume(Store.getState().tracing);
-    const layer = this.model.getSegmentationBinary();
-    assertExists(layer, "Segmentation layer not found!");
-    return layer.name;
+    const segmentationLayer = this.model.getSegmentationLayer();
+    assertExists(segmentationLayer, "Segmentation layer not found!");
+    return segmentationLayer.name;
   }
 
   /**
@@ -565,17 +560,23 @@ class DataApi {
       throw new Error(messages["mapping.too_few_textures"]);
     }
 
-    const layer = this.__getLayer(layerName);
-    layer.cube.setMapping(mapping);
+    const segmentationLayerName = this.model.getSegmentationLayer().name;
+    if (layerName !== segmentationLayerName) {
+      throw new Error(messages["mapping.unsupported_layer"]);
+    }
+    Store.dispatch(setMappingAction(_.clone(mapping)));
   }
 
   /**
    * Returns the bounding box for a given layer name.
    */
   getBoundingBox(layerName: string): [Vector3, Vector3] {
-    const layer = this.__getLayer(layerName);
+    const { lowerBoundary, upperBoundary } = getLayerBoundaries(
+      Store.getState().dataset,
+      layerName,
+    );
 
-    return [layer.lowerBoundary, layer.upperBoundary];
+    return [lowerBoundary, upperBoundary];
   }
 
   /**
@@ -592,9 +593,10 @@ class DataApi {
    * const segmentId = await api.data.getDataValue("segmentation", position);
    */
   async getDataValue(layerName: string, position: Vector3, zoomStep: number = 0): Promise<number> {
-    const layer = this.__getLayer(layerName);
-    const bucketAddress = layer.cube.positionToZoomedAddress(position, zoomStep);
-    const bucket = layer.cube.getOrCreateBucket(bucketAddress);
+    const cube = this.model.getCubeByLayerName(layerName);
+    const pullQueue = this.model.getPullQueueByLayerName(layerName);
+    const bucketAddress = cube.positionToZoomedAddress(position, zoomStep);
+    const bucket = cube.getOrCreateBucket(bucketAddress);
 
     if (bucket.type === "null") return 0;
 
@@ -602,8 +604,8 @@ class DataApi {
     if (bucket.isRequested()) {
       needsToAwaitBucket = true;
     } else if (bucket.needsRequest()) {
-      layer.pullQueue.add({ bucket: bucketAddress, priority: -1 });
-      layer.pullQueue.pull();
+      pullQueue.add({ bucket: bucketAddress, priority: -1 });
+      pullQueue.pull();
       needsToAwaitBucket = true;
     }
     if (needsToAwaitBucket) {
@@ -612,7 +614,7 @@ class DataApi {
       });
     }
     // Bucket has been loaded by now or was loaded already
-    return layer.cube.getDataValue(position);
+    return cube.getDataValue(position, null, zoomStep);
   }
 
   /**
@@ -624,13 +626,12 @@ class DataApi {
    */
   downloadRawDataCuboid(layerName: string, topLeft: Vector3, bottomRight: Vector3): Promise<void> {
     const dataset = Store.getState().dataset;
-    const layer = this.__getLayer(layerName);
 
     return doWithToken(token => {
       const downloadUrl =
-        `${dataset.dataStore.url}/data/datasets/${dataset.name}/layers/${
-          layer.name
-        }/data?resolution=0&` +
+        `${dataset.dataStore.url}/data/datasets/${
+          dataset.name
+        }/layers/${layerName}/data?resolution=0&` +
         `token=${token}&` +
         `x=${topLeft[0]}&` +
         `y=${topLeft[1]}&` +
@@ -654,15 +655,15 @@ class DataApi {
    */
   labelVoxels(voxels: Array<Vector3>, label: number): void {
     assertVolume(Store.getState().tracing);
-    const layer = this.model.getSegmentationBinary();
-    assertExists(layer, "Segmentation layer not found!");
+    const segmentationLayer = this.model.getSegmentationLayer();
+    assertExists(segmentationLayer, "Segmentation layer not found!");
 
     for (const voxel of voxels) {
-      layer.cube.labelVoxel(voxel, label);
+      segmentationLayer.cube.labelVoxel(voxel, label);
     }
 
-    layer.cube.pushQueue.push();
-    layer.cube.trigger("volumeLabeled");
+    segmentationLayer.cube.pushQueue.push();
+    segmentationLayer.cube.trigger("volumeLabeled");
   }
 
   /**
@@ -720,10 +721,8 @@ class UserApi {
     - displayCrosshair
     - scale
     - tdViewDisplayPlanes
-    - isosurfaceDisplay
-    - isosurfaceBBsize
-    - isosurfaceResolution
     - newNodeNewTree
+    - highlightCommentedNodes
     - keyboardDelay
     - particleSize
     - overrideNodeRadius
@@ -786,7 +785,7 @@ class UtilsApi {
    * // removeToast();
    */
   showToast(type: ToastStyleType, message: string, timeout: number): ?Function {
-    Toast.message(type, message, timeout === 0, timeout);
+    Toast.message(type, message, { sticky: timeout === 0, timeout });
     return () => Toast.close(message);
   }
 

@@ -6,6 +6,7 @@
 import _ from "lodash";
 import Toast from "libs/toast";
 import Utils from "libs/utils";
+import { pingDataStoreIfAppropriate, pingMentionedDataStores } from "admin/datastore_health_check";
 
 type methodType = "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH";
 
@@ -203,7 +204,7 @@ class Request {
     }
 
     if (!options.doNotCatch) {
-      fetchPromise = fetchPromise.catch(this.handleError);
+      fetchPromise = fetchPromise.catch(this.handleError.bind(this, url));
     }
 
     if (options.timeout != null) {
@@ -231,7 +232,10 @@ class Request {
     return Promise.reject(response);
   };
 
-  handleError = (error: Response | Error): Promise<void> => {
+  handleError = (requestedUrl: string, error: Response | Error): Promise<void> => {
+    // Check whether this request failed due to a problematic
+    // datastore
+    pingDataStoreIfAppropriate(requestedUrl);
     if (error instanceof Response) {
       return error.text().then(
         text => {
@@ -244,6 +248,11 @@ class Request {
             }
 
             Toast.messages(json.messages);
+
+            // Check whether the error chain mentions an url which belongs
+            // to a datastore. Then, ping the datastore
+            pingMentionedDataStores(text);
+
             return Promise.reject(json);
           } catch (jsonError) {
             Toast.error(text);

@@ -5,6 +5,7 @@ import { Router, Route, Switch, Redirect } from "react-router-dom";
 import createBrowserHistory from "history/createBrowserHistory";
 import { connect } from "react-redux";
 import { Layout, Alert } from "antd";
+import Enum from "Enumjs";
 
 import window from "libs/window";
 import { ControlModeEnum } from "oxalis/constants";
@@ -12,7 +13,7 @@ import { APITracingTypeEnum } from "admin/api_flow_types";
 import { getAnnotationInformation } from "admin/admin_rest_api";
 import SecuredRoute from "components/secured_route";
 import Navbar from "navbar";
-import Imprint from "components/imprint";
+import { Imprint, Privacy } from "components/legal";
 
 import TracingLayoutView from "oxalis/view/tracing_layout_view";
 import DashboardView from "dashboard/dashboard_view";
@@ -27,7 +28,7 @@ import DatasetImportView from "dashboard/dataset/dataset_import_view";
 
 // admin
 import KeyboardShortcutView from "admin/help/keyboardshortcut_view";
-import DatasetAddView from "admin/dataset/dataset_add_view";
+import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import UserListView from "admin/user/user_list_view";
 import TeamListView from "admin/team/team_list_view";
 import TaskListView from "admin/task/task_list_view";
@@ -43,9 +44,11 @@ import TaskCreateFormView from "admin/task/task_create_form_view";
 import TaskTypeCreateView from "admin/tasktype/task_type_create_view";
 import ScriptCreateView from "admin/scripts/script_create_view";
 import TimeLineView from "admin/time/time_line_view";
+import Onboarding from "admin/onboarding";
+import Utils from "libs/utils";
 
 import type { OxalisState } from "oxalis/store";
-import type { APITracingType, APIUserType } from "admin/api_flow_types";
+import type { APIUserType } from "admin/api_flow_types";
 import type { ContextRouter } from "react-router-dom";
 
 const { Content } = Layout;
@@ -79,14 +82,12 @@ function PageNotFoundView() {
 
 class ReactRouter extends React.Component<Props> {
   tracingView = ({ match }: ContextRouter) => {
-    const tracingType = match.params.type;
-    const isValidTracingType = Object.keys(APITracingTypeEnum).includes(tracingType);
+    const tracingType = Enum.coalesce(APITracingTypeEnum, match.params.type);
 
-    if (isValidTracingType) {
-      const saveTracingType = ((tracingType: any): APITracingType);
+    if (tracingType != null) {
       return (
         <TracingLayoutView
-          initialTracingType={saveTracingType}
+          initialTracingType={tracingType}
           initialAnnotationId={match.params.id || ""}
           initialControlmode={ControlModeEnum.TRACE}
         />
@@ -194,7 +195,10 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/projects"
-                component={ProjectListView}
+                render={({ location }: ContextRouter) => (
+                  // Strip the leading # away. If there is no hash, "".slice(1) will evaluate to "", too.
+                  <ProjectListView initialSearchValue={location.hash.slice(1)} />
+                )}
                 exact
               />
               <SecuredRoute
@@ -227,7 +231,8 @@ class ReactRouter extends React.Component<Props> {
                   if (isReadOnly) {
                     const annotationInformation = await getAnnotationInformation(
                       match.params.id || "",
-                      match.params.type || "",
+                      Enum.coalesce(APITracingTypeEnum, match.params.type) ||
+                        APITracingTypeEnum.Explorational,
                     );
                     return annotationInformation.isPublic;
                   }
@@ -237,7 +242,14 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/datasets/upload"
-                component={DatasetAddView}
+                render={() => (
+                  <DatasetUploadView
+                    onUploaded={datasetName => {
+                      const url = `/datasets/${datasetName}/import`;
+                      browserHistory.push(url);
+                    }}
+                  />
+                )}
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
@@ -246,6 +258,8 @@ class ReactRouter extends React.Component<Props> {
                   <DatasetImportView
                     isEditingMode={false}
                     datasetName={match.params.datasetName || ""}
+                    onComplete={() => window.history.back()}
+                    onCancel={() => window.history.back()}
                   />
                 )}
               />
@@ -253,13 +267,21 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/datasets/:datasetName/edit"
                 render={({ match }: ContextRouter) => (
-                  <DatasetImportView isEditingMode datasetName={match.params.datasetName || ""} />
+                  <DatasetImportView
+                    isEditingMode
+                    datasetName={match.params.datasetName || ""}
+                    onComplete={() => window.history.back()}
+                    onCancel={() => window.history.back()}
+                  />
                 )}
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes"
-                component={TaskTypeListView}
+                render={({ location }: ContextRouter) => (
+                  // Strip the leading # away. If there is no hash, "".slice(1) will evaluate to "", too.
+                  <TaskTypeListView initialSearchValue={location.hash.slice(1)} />
+                )}
                 exact
               />
               <SecuredRoute
@@ -324,12 +346,25 @@ class ReactRouter extends React.Component<Props> {
               <Route path="/login" render={() => <Redirect to="/auth/login" />} />
               <Route path="/register" render={() => <Redirect to="/auth/register" />} />
               <Route path="/auth/login" render={() => <LoginView layout="horizontal" />} />
-              <Route path="/auth/register" component={RegistrationView} />
+              <Route
+                path="/auth/register"
+                render={({ location }: ContextRouter) => {
+                  const params = Utils.getUrlParamsObjectFromString(location.search);
+                  const organizationName =
+                    typeof params.organizationName === "string"
+                      ? decodeURI(params.organizationName)
+                      : "";
+                  return <RegistrationView organizationName={organizationName} />;
+                }}
+              />
+
               <Route path="/auth/resetPassword" component={StartResetPasswordView} />
               <Route path="/auth/finishResetPassword" component={FinishResetPasswordView} />
               <Route path="/spotlight" component={SpotlightView} />
               <Route path="/datasets/:id/view" render={this.tracingViewMode} />
-              <Route path="/impressum" component={Imprint} />
+              <Route path="/imprint" component={Imprint} />
+              <Route path="/privacy" component={Privacy} />
+              <Route path="/onboarding" component={Onboarding} />
               <Route component={PageNotFoundView} />
             </Switch>
           </Content>

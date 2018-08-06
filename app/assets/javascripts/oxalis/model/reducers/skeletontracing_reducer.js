@@ -7,7 +7,6 @@ import _ from "lodash";
 import update from "immutability-helper";
 import Utils from "libs/utils";
 import ColorGenerator from "libs/color_generator";
-import EdgeCollection from "oxalis/model/edge_collection";
 import {
   createBranchPoint,
   deleteBranchPoint,
@@ -17,11 +16,14 @@ import {
   deleteNode,
   deleteEdge,
   shuffleTreeColor,
+  setTreeColorIndex,
   createComment,
   deleteComment,
   mergeTrees,
   toggleAllTreesReducer,
-  addTrees,
+  toggleTreeGroupReducer,
+  addTreesAndGroups,
+  createTreeMapFromTreeArray,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { convertServerBoundingBoxToFrontend } from "oxalis/model/reducers/reducer_helpers";
 import {
@@ -31,39 +33,10 @@ import {
   getNodeAndTree,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import Constants from "oxalis/constants";
-import type {
-  OxalisState,
-  SkeletonTracingType,
-  NodeType,
-  BranchPointType,
-  TreeType,
-} from "oxalis/store";
-import DiffableMap from "libs/diffable_map";
-import type { ServerNodeType, ServerBranchPointType } from "oxalis/model";
+import type { OxalisState, SkeletonTracingType } from "oxalis/store";
 import type { ActionType } from "oxalis/model/actions/actions";
 import Maybe from "data.maybe";
-import ErrorHandling from "libs/error_handling";
-
-function serverNodeToNode(n: ServerNodeType): NodeType {
-  return {
-    id: n.id,
-    position: n.position,
-    rotation: n.rotation,
-    bitDepth: n.bitDepth,
-    viewport: n.viewport,
-    resolution: n.resolution,
-    radius: n.radius,
-    timestamp: n.createdTimestamp,
-    interpolation: n.interpolation,
-  };
-}
-
-function serverBranchPointToBranchPoint(b: ServerBranchPointType): BranchPointType {
-  return {
-    timestamp: b.createdTimestamp,
-    nodeId: b.nodeId,
-  };
-}
+import Toast from "libs/toast";
 
 function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisState {
   switch (action.type) {
@@ -74,20 +47,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         action.annotation.settings,
       );
 
-      const trees = _.keyBy(
-        action.tracing.trees.map((tree): TreeType => ({
-          comments: tree.comments,
-          edges: EdgeCollection.loadFromArray(tree.edges),
-          name: tree.name,
-          treeId: tree.treeId,
-          nodes: new DiffableMap(tree.nodes.map(serverNodeToNode).map(node => [node.id, node])),
-          color: tree.color || ColorGenerator.distinctColorForId(tree.treeId),
-          branchPoints: _.map(tree.branchPoints, serverBranchPointToBranchPoint),
-          isVisible: true,
-          timestamp: tree.createdTimestamp,
-        })),
-        "treeId",
-      );
+      const trees = createTreeMapFromTreeArray(action.tracing.trees);
 
       const activeNodeIdMaybe = Maybe.fromNullable(action.tracing.activeNodeId);
       let cachedMaxNodeId = _.max(_.flatMap(trees, __ => __.nodes.map(node => node.id)));
@@ -100,15 +60,13 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
           const treeIdMaybe = findTreeByNodeId(trees, nodeId).map(tree => tree.treeId);
           if (treeIdMaybe.isNothing) {
             // There is an activeNodeId without a corresponding tree.
-            // Log this, since this shouldn't happen, but clear the activeNodeId
+            // Warn the user, since this shouldn't happen, but clear the activeNodeId
             // so that wk is usable.
-            ErrorHandling.assert(
-              false,
+            Toast.warning(
               `This tracing was initialized with an active node ID, which does not
               belong to any tracing (nodeId: ${nodeId}). WebKnossos will fall back to
               the last tree instead.`,
-              undefined,
-              true,
+              { timeout: 10000 },
             );
             activeNodeId = null;
           }
@@ -135,6 +93,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         activeTreeId,
         restrictions,
         trees,
+        treeGroups: action.tracing.treeGroups || [],
         name: action.annotation.name,
         tracingType: action.annotation.typ,
         tracingId: action.annotation.content.id,
@@ -315,12 +274,13 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
             .getOrElse(state);
         }
 
-        case "ADD_TREES": {
-          const { trees } = action;
-          return addTrees(state, trees)
-            .map(([updatedTrees, newMaxNodeId]) =>
+        case "ADD_TREES_AND_GROUPS": {
+          const { trees, treeGroups } = action;
+          return addTreesAndGroups(state, trees, treeGroups)
+            .map(([updatedTrees, updatedTreeGroups, newMaxNodeId]) =>
               update(state, {
                 tracing: {
+                  treeGroups: { $push: updatedTreeGroups },
                   trees: { $merge: updatedTrees },
                   cachedMaxNodeId: { $set: newMaxNodeId },
                 },
@@ -415,6 +375,16 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
               activeNodeId: { $set: newActiveNodeId },
             },
           });
+        }
+
+        case "SET_TREE_COLOR_INDEX": {
+          const { colorIndex } = action;
+          return getTree(skeletonTracing, action.treeId)
+            .chain(tree => setTreeColorIndex(skeletonTracing, tree, colorIndex))
+            .map(([tree, treeId]) =>
+              update(state, { tracing: { trees: { [treeId]: { $set: tree } } } }),
+            )
+            .getOrElse(state);
         }
 
         case "SHUFFLE_TREE_COLOR": {
@@ -516,6 +486,26 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
               }),
             )
             .getOrElse(state);
+        }
+
+        case "TOGGLE_TREE_GROUP": {
+          return toggleTreeGroupReducer(state, skeletonTracing, action.groupId);
+        }
+
+        case "SET_TREE_GROUPS": {
+          return update(state, {
+            tracing: {
+              treeGroups: {
+                $set: action.treeGroups,
+              },
+            },
+          });
+        }
+
+        case "SET_TREE_GROUP": {
+          return update(state, {
+            tracing: { trees: { [action.treeId]: { groupId: { $set: action.groupId } } } },
+          });
         }
 
         default:

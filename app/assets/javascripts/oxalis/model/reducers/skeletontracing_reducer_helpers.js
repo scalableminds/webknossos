@@ -16,6 +16,7 @@ import Constants from "oxalis/constants";
 import {
   getSkeletonTracing,
   getActiveNodeFromTree,
+  getActiveTree,
   findTreeByNodeId,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3 } from "oxalis/constants";
@@ -28,9 +29,15 @@ import type {
   BranchPointType,
   TreeMapType,
   CommentType,
+  TreeGroupType,
 } from "oxalis/store";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
+import type {
+  ServerSkeletonTracingTreeType,
+  ServerNodeType,
+  ServerBranchPointType,
+} from "admin/api_flow_types";
 
 export function generateTreeName(state: OxalisState, timestamp: number, treeId: number) {
   let user = "";
@@ -58,6 +65,29 @@ function getMaximumNodeId(trees: TreeMapType): number {
 
 function getMaximumTreeId(trees: TreeMapType): number {
   return _.max(_.map(trees, "treeId"));
+}
+
+function* mapGroups(groups: Array<TreeGroupType>, callback: TreeGroupType => *) {
+  for (const group of groups) {
+    yield callback(group);
+    if (group.children) {
+      yield* mapGroups(group.children, callback);
+    }
+  }
+}
+
+export function getMaximumGroupId(groups: Array<TreeGroupType>): number {
+  const maxGroupId = _.max(Array.from(mapGroups(groups, group => group.groupId)));
+  return maxGroupId >= 0 ? maxGroupId : 0;
+}
+
+function forEachGroups(groups: Array<TreeGroupType>, callback: TreeGroupType => *) {
+  for (const group of groups) {
+    callback(group);
+    if (group.children) {
+      forEachGroups(group.children, callback);
+    }
+  }
 }
 
 export function createNode(
@@ -120,9 +150,14 @@ export function deleteNode(
     const { allowUpdate } = skeletonTracing.restrictions;
 
     if (allowUpdate) {
-      // Delete Node
+      // Delete node and possible branchpoints/comments
       const activeTree = update(tree, {
         nodes: { $apply: nodes => nodes.delete(node.id) },
+        comments: { $apply: comments => comments.filter(comment => comment.nodeId !== node.id) },
+        branchPoints: {
+          $apply: branchPoints =>
+            branchPoints.filter(branchPoint => branchPoint.nodeId !== node.id),
+        },
       });
 
       // Do we need to split trees? Are there edges leading to/from it?
@@ -130,10 +165,6 @@ export function deleteNode(
       const deletedEdges = activeTree.edges.getEdgesForNode(node.id);
       for (const edge of deletedEdges) {
         neighborIds.push(edge.target === node.id ? edge.source : edge.target);
-      }
-
-      if (neighborIds.length === 0) {
-        return deleteTree(state, activeTree, timestamp);
       }
 
       const newTrees = splitTreeByNodes(
@@ -151,8 +182,10 @@ export function deleteNode(
         newMaxNodeId = getMaximumNodeId(newTrees);
       }
 
-      const newActiveNodeId = neighborIds[0];
-      const newActiveTree = findTreeByNodeId(newTrees, newActiveNodeId).get();
+      const newActiveNodeId = neighborIds.length > 0 ? neighborIds[0] : null;
+      const newActiveTree = newActiveNodeId
+        ? findTreeByNodeId(newTrees, newActiveNodeId).get()
+        : activeTree;
       const newActiveTreeId = newActiveTree.treeId;
 
       return Maybe.Just([newTrees, newActiveTreeId, newActiveNodeId, newMaxNodeId]);
@@ -177,7 +210,7 @@ export function deleteEdge(
       if (sourceTree.treeId !== targetTree.treeId) {
         // The two selected nodes are in different trees
         console.error(
-          "Tried two delete an edge that was not there, the two nodes are in different trees.",
+          "Tried to delete an edge that was not there, the two nodes are in different trees.",
         );
         return Maybe.Nothing();
       }
@@ -188,7 +221,7 @@ export function deleteEdge(
 
       if (deletedEdge == null) {
         // The two selected nodes do not share an edge
-        console.error("Tried two delete an edge that was not there.");
+        console.error("Tried to delete an edge that was not there.");
         return Maybe.Nothing();
       }
 
@@ -221,6 +254,12 @@ function splitTreeByNodes(
   // Not every node id is guaranteed to be a new tree root as there may be cyclic trees.
 
   let newTrees = skeletonTracing.trees;
+
+  if (newTreeRootIds.length === 0) {
+    // As there are no new tree root ids, we are deleting the last node from a tree.
+    // It suffices to simply update that tree within the tree collection
+    return update(newTrees, { [activeTree.treeId]: { $set: activeTree } });
+  }
 
   // Traverse from each possible new root node in all directions (i.e., use each edge) and
   // remember which edges were already visited.
@@ -285,6 +324,7 @@ function splitTreeByNodes(
           timestamp: activeTree.timestamp,
           treeId: activeTree.treeId,
           isVisible: true,
+          groupId: activeTree.groupId,
         };
       } else {
         const immutableNewTree = createTree(intermediateState, timestamp).get();
@@ -386,6 +426,7 @@ export function createTree(state: OxalisState, timestamp: number): Maybe<TreeTyp
       const newTreeId = _.isNumber(maxTreeId) ? maxTreeId + 1 : Constants.MIN_TREE_ID;
 
       const name = generateTreeName(state, timestamp, newTreeId);
+      const groupId = Utils.toNullable(getActiveTree(skeletonTracing).map(tree => tree.groupId));
 
       // Create the new tree
       const tree: TreeType = {
@@ -398,6 +439,7 @@ export function createTree(state: OxalisState, timestamp: number): Maybe<TreeTyp
         edges: new EdgeCollection(),
         comments: [],
         isVisible: true,
+        groupId,
       };
       return Maybe.Just(tree);
     }
@@ -405,11 +447,31 @@ export function createTree(state: OxalisState, timestamp: number): Maybe<TreeTyp
   });
 }
 
-export function addTrees(state: OxalisState, trees: TreeMapType): Maybe<[TreeMapType, number]> {
+export function addTreesAndGroups(
+  state: OxalisState,
+  trees: TreeMapType,
+  treeGroups: Array<TreeGroupType>,
+): Maybe<[TreeMapType, Array<TreeGroupType>, number]> {
   return getSkeletonTracing(state.tracing).chain(skeletonTracing => {
     const { allowUpdate } = skeletonTracing.restrictions;
 
     if (allowUpdate) {
+      // Check whether any group ids collide and assign new ids when neccessary
+      const groupIdMap = {};
+      const existingGroupIds = new Set(
+        mapGroups(skeletonTracing.treeGroups, group => group.groupId),
+      );
+      let nextGroupId = getMaximumGroupId(skeletonTracing.treeGroups) + 1;
+
+      forEachGroups(treeGroups, (group: TreeGroupType) => {
+        // Assign a new group id to groups whose id already exists
+        if (existingGroupIds.has(group.groupId)) {
+          groupIdMap[group.groupId] = nextGroupId;
+          group.groupId = nextGroupId;
+          nextGroupId++;
+        }
+      });
+
       const newTrees = {};
       // Assign new ids for all nodes and trees to avoid duplicates
       let newTreeId = getMaximumTreeId(skeletonTracing.trees) + 1;
@@ -441,16 +503,23 @@ export function addTrees(state: OxalisState, trees: TreeMapType): Maybe<[TreeMap
           update(bp, { nodeId: { $set: idMap[bp.nodeId] } }),
         );
 
+        // If the tree's group was assigned a new group id, change it
+        const newGroupId =
+          tree.groupId != null && groupIdMap[tree.groupId] != null
+            ? groupIdMap[tree.groupId]
+            : tree.groupId;
+
         newTrees[newTreeId] = update(tree, {
           treeId: { $set: newTreeId },
           nodes: { $set: newNodes },
           edges: { $set: newEdges },
           comments: { $set: newComments },
           branchPoints: { $set: newBranchPoints },
+          groupId: { $set: newGroupId },
         });
         newTreeId++;
       }
-      return Maybe.Just([newTrees, newNodeId - 1]);
+      return Maybe.Just([newTrees, treeGroups, newNodeId - 1]);
     }
     return Maybe.Nothing();
   });
@@ -536,8 +605,15 @@ export function shuffleTreeColor(
   tree: TreeType,
 ): Maybe<[TreeType, number]> {
   const randomId = _.random(0, 10000, false);
-  // ColorGenerator fails to produce distinct color for huge ids (Infinity)
-  const newTree = update(tree, { color: { $set: ColorGenerator.distinctColorForId(randomId) } });
+  return setTreeColorIndex(skeletonTracing, tree, randomId);
+}
+
+export function setTreeColorIndex(
+  skeletonTracing: SkeletonTracingType,
+  tree: TreeType,
+  colorIndex: number,
+): Maybe<[TreeType, number]> {
+  const newTree = update(tree, { color: { $set: ColorGenerator.distinctColorForId(colorIndex) } });
   return Maybe.Just([newTree, tree.treeId]);
 }
 
@@ -602,4 +678,86 @@ export function toggleAllTreesReducer(
       trees: updateTreeObject,
     },
   });
+}
+
+export function toggleTreeGroupReducer(
+  state: OxalisState,
+  skeletonTracing: SkeletonTracingType,
+  groupId: string,
+): OxalisState {
+  let toggledGroup;
+  forEachGroups(skeletonTracing.treeGroups, group => {
+    if (group.groupId === groupId) toggledGroup = group;
+  });
+  if (toggledGroup == null) return state;
+
+  // Assemble a list that contains the toggled groupId and the groupIds of all child groups
+  const affectedGroupIds = new Set(mapGroups([toggledGroup], group => group.groupId));
+
+  // Let's make all trees visible if there is one invisible tree in one of the affected groups
+  const shouldBecomeVisible = _.values(skeletonTracing.trees).some(
+    tree => affectedGroupIds.has(tree.groupId) && !tree.isVisible,
+  );
+
+  const updateTreeObject = {};
+  const isVisibleUpdater = {
+    isVisible: { $set: shouldBecomeVisible },
+  };
+  _.values(skeletonTracing.trees).forEach(tree => {
+    if (affectedGroupIds.has(tree.groupId)) {
+      updateTreeObject[tree.treeId] = isVisibleUpdater;
+    }
+  });
+
+  return update(state, {
+    tracing: {
+      trees: updateTreeObject,
+    },
+  });
+}
+
+function serverNodeToNode(n: ServerNodeType): NodeType {
+  return {
+    id: n.id,
+    position: Utils.point3ToVector3(n.position),
+    rotation: Utils.point3ToVector3(n.rotation),
+    bitDepth: n.bitDepth,
+    viewport: n.viewport,
+    resolution: n.resolution,
+    radius: n.radius,
+    timestamp: n.createdTimestamp,
+    interpolation: n.interpolation,
+  };
+}
+
+function serverBranchPointToBranchPoint(b: ServerBranchPointType): BranchPointType {
+  return {
+    timestamp: b.createdTimestamp,
+    nodeId: b.nodeId,
+  };
+}
+
+export function createTreeMapFromTreeArray(
+  trees: Array<ServerSkeletonTracingTreeType>,
+): TreeMapType {
+  return _.keyBy(
+    trees.map(
+      (tree): TreeType => ({
+        comments: tree.comments,
+        edges: EdgeCollection.loadFromArray(tree.edges),
+        name: tree.name,
+        treeId: tree.treeId,
+        nodes: new DiffableMap(tree.nodes.map(serverNodeToNode).map(node => [node.id, node])),
+        color:
+          tree.color != null
+            ? [tree.color.r, tree.color.g, tree.color.b]
+            : ColorGenerator.distinctColorForId(tree.treeId),
+        branchPoints: _.map(tree.branchPoints, serverBranchPointToBranchPoint),
+        isVisible: true,
+        timestamp: tree.createdTimestamp,
+        groupId: tree.groupId,
+      }),
+    ),
+    "treeId",
+  );
 }

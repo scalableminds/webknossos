@@ -5,41 +5,55 @@ package utils
 
 
 import com.newrelic.api.agent.NewRelic
-import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.user.User
 import net.liftweb.common.Full
 import oxalis.security.SharingTokenContainer
-import play.api.Play.current
+import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import slick.dbio.DBIOAction
-import slick.jdbc.PostgresProfile
+import slick.jdbc.{PositionedParameters, PostgresProfile, SetParameter}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.{AbstractTable, Rep, TableQuery}
+import play.api.Play.current
+import play.api.i18n.Messages.Implicits._
+
 import scala.collection.JavaConverters._
-
 import scala.util.{Failure, Success, Try}
+import play.api.data.validation.ValidationError
+import play.api.libs.json.Reads
 
-
-case class ObjectId(id: String) {
-  def toBSONObjectId = BSONObjectID.parse(id).toOption
-  override def toString = id
-}
-
-object ObjectId {
-  implicit val jsonFormat = Json.format[ObjectId]
-  def fromBsonId(bson: BSONObjectID) = ObjectId(bson.stringify)
-  def generate = fromBsonId(BSONObjectID.generate)
-}
 
 object SQLClient {
   lazy val db: PostgresProfile.backend.Database = Database.forConfig("postgres", play.api.Play.configuration.underlying)
 }
 
-trait SimpleSQLDAO extends FoxImplicits with LazyLogging {
+case class ObjectId(id: String) {
+  override def toString = id
+}
+
+object ObjectId extends FoxImplicits {
+  implicit val jsonFormat = Json.format[ObjectId]
+  def generate = fromBsonId(BSONObjectID.generate)
+  def parse(input: String) = parseSync(input).toFox ?~> Messages("bsonid.invalid", input)
+  private def fromBsonId(bson: BSONObjectID) = ObjectId(bson.stringify)
+  private def parseSync(input: String) = BSONObjectID.parse(input).map(fromBsonId).toOption
+
+  def stringObjectIdReads(key: String) =
+    Reads.filter[String](ValidationError("bsonid.invalid", key))(parseSync(_).isDefined)
+}
+
+trait SQLTypeImplicits {
+  implicit object SetObjectId extends SetParameter[ObjectId] {
+    def apply(v: ObjectId, pp: PositionedParameters) { pp.setString(v.id) }
+  }
+}
+
+trait SimpleSQLDAO extends FoxImplicits with LazyLogging with SQLTypeImplicits {
 
   lazy val transactionSerializationError = "could not serialize access"
 
@@ -136,7 +150,7 @@ trait SecuredSQLDAO extends SimpleSQLDAO {
     if (ctx.globalAccess) Fox.successful(())
     else {
       for {
-        userId <- userIdFromCtx
+        userId <- userIdFromCtx ?~> "FAILED: userIdFromCtx"
         resultList <- run(sql"select _id from #${existingCollectionName} where _id = ${id.id} and #${updateAccessQ(userId)}".as[String]) ?~> "Failed to check write access. Does the object exist?"
         _ <- resultList.headOption.toFox ?~> "Access denied."
       } yield ()
@@ -154,10 +168,9 @@ trait SecuredSQLDAO extends SimpleSQLDAO {
     }
   }
 
-  //note that this needs to be guaranteed to be sanitized (currently so because it converts from BSONObjectID)
-  private def userIdFromCtx(implicit ctx: DBAccessContext): Fox[ObjectId] = {
+  def userIdFromCtx(implicit ctx: DBAccessContext): Fox[ObjectId] = {
     ctx.data match {
-      case Some(user: User) => Fox.successful(ObjectId.fromBsonId(user._id))
+      case Some(user: User) => Fox.successful(user._id)
       case _ => Fox.failure("Access denied.")
     }
   }
@@ -178,7 +191,7 @@ trait SQLDAO[C, R, X <: AbstractTable[R]] extends SecuredSQLDAO {
   def columnsList = collection.baseTableRow.create_*.map(_.name).toList
   def columns = columnsList.mkString(", ")
   def columnsWithPrefix(prefix: String) = columnsList.map(prefix + _).mkString(", ")
-  
+
   def idColumn(x: X): Rep[String]
   def isDeletedColumn(x: X): Rep[Boolean]
 

@@ -83,7 +83,7 @@ function rotateReducer(
   });
 }
 
-function getMatrixScale(dataSetScale: Vector3): Vector3 {
+export function getMatrixScale(dataSetScale: Vector3): Vector3 {
   const scale = [1 / dataSetScale[0], 1 / dataSetScale[1], 1 / dataSetScale[2]];
   const maxScale = Math.max(scale[0], scale[1], scale[2]);
   const multi = 1 / maxScale;
@@ -133,9 +133,9 @@ export function setRotationReducer(state: OxalisState, rotation: Vector3) {
   if (state.dataset != null) {
     const [x, y, z] = rotation;
     let matrix = resetMatrix(state.flycam.currentMatrix, state.dataset.dataSource.scale);
-    matrix = rotateOnAxis(matrix, -z * Math.PI / 180, [0, 0, 1]);
-    matrix = rotateOnAxis(matrix, -y * Math.PI / 180, [0, 1, 0]);
-    matrix = rotateOnAxis(matrix, -x * Math.PI / 180, [1, 0, 0]);
+    matrix = rotateOnAxis(matrix, (-z * Math.PI) / 180, [0, 0, 1]);
+    matrix = rotateOnAxis(matrix, (-y * Math.PI) / 180, [0, 1, 0]);
+    matrix = rotateOnAxis(matrix, (-x * Math.PI) / 180, [1, 0, 0]);
     return update(state, { flycam: { currentMatrix: { $set: matrix } } });
   }
   return state;

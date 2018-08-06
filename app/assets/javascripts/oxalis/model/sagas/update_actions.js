@@ -7,9 +7,10 @@ import type {
   TreeType,
   NodeType,
   BoundingBoxObjectType,
+  TreeGroupType,
 } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
-import type { BucketInfo } from "oxalis/model/binary/layers/bucket_builder";
+import type { SendBucketInfo } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reducer_helpers";
 
 export type NodeWithTreeIdType = { treeId: number } & NodeType;
@@ -23,6 +24,7 @@ type UpdateTreeUpdateAction = {
     name: string,
     comments: Array<CommentType>,
     branchPoints: Array<BranchPointType>,
+    groupId: ?number,
   },
 };
 type DeleteTreeUpdateAction = {
@@ -104,8 +106,14 @@ type UpdateVolumeTracingUpdateAction = {
 };
 type UpdateBucketUpdateAction = {
   name: "updateBucket",
-  value: BucketInfo & {
+  value: SendBucketInfo & {
     base64Data: string,
+  },
+};
+type UpdateTreeGroupsUpdateAction = {
+  name: "updateTreeGroups",
+  value: {
+    treeGroups: Array<TreeGroupType>,
   },
 };
 type UpdateTracingUpdateAction =
@@ -124,7 +132,8 @@ export type UpdateAction =
   | DeleteEdgeUpdateAction
   | UpdateTracingUpdateAction
   | UpdateBucketUpdateAction
-  | ToggleTreeUpdateAction;
+  | ToggleTreeUpdateAction
+  | UpdateTreeGroupsUpdateAction;
 
 export function createTree(tree: TreeType): UpdateTreeUpdateAction {
   return {
@@ -137,6 +146,7 @@ export function createTree(tree: TreeType): UpdateTreeUpdateAction {
       timestamp: tree.timestamp,
       comments: tree.comments,
       branchPoints: tree.branchPoints,
+      groupId: tree.groupId,
     },
   };
 }
@@ -159,6 +169,7 @@ export function updateTree(tree: TreeType): UpdateTreeUpdateAction {
       timestamp: tree.timestamp,
       comments: tree.comments,
       branchPoints: tree.branchPoints,
+      groupId: tree.groupId,
     },
   };
 }
@@ -274,11 +285,19 @@ export function updateVolumeTracing(
     },
   };
 }
-export function updateBucket(bucketInfo: BucketInfo, base64Data: string) {
+export function updateBucket(bucketInfo: SendBucketInfo, base64Data: string) {
   return {
     name: "updateBucket",
     value: Object.assign({}, bucketInfo, {
       base64Data,
     }),
+  };
+}
+export function updateTreeGroups(treeGroups: Array<TreeGroupType>): UpdateTreeGroupsUpdateAction {
+  return {
+    name: "updateTreeGroups",
+    value: {
+      treeGroups,
+    },
   };
 }

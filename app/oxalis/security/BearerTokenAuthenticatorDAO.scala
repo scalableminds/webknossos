@@ -3,29 +3,29 @@ package oxalis.security
 import com.mohiva.play.silhouette.api.LoginInfo
 import com.mohiva.play.silhouette.impl.authenticators.BearerTokenAuthenticator
 import com.mohiva.play.silhouette.impl.daos.AuthenticatorDAO
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import org.joda.time.DateTime
 import oxalis.security.TokenType.TokenType
 import play.api.libs.concurrent.Execution.Implicits._
-import reactivemongo.bson.BSONObjectID
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
+import play.api.i18n.{Messages, MessagesApi}
 import utils.{ObjectId, SQLDAO}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-case class TokenSQL(_id: ObjectId,
-                    value: String,
-                    loginInfo: LoginInfo,
-                    lastUsedDateTime: DateTime,
-                    expirationDateTime: DateTime,
-                    idleTimeout: Option[FiniteDuration],
-                    tokenType: TokenType,
-                    created: Long = System.currentTimeMillis(),
-                    isDeleted: Boolean = false) {
+case class Token(_id: ObjectId,
+                 value: String,
+                 loginInfo: LoginInfo,
+                 lastUsedDateTime: DateTime,
+                 expirationDateTime: DateTime,
+                 idleTimeout: Option[FiniteDuration],
+                 tokenType: TokenType,
+                 created: Long = System.currentTimeMillis(),
+                 isDeleted: Boolean = false) {
 
   def toBearerTokenAuthenticator: Fox[BearerTokenAuthenticator] = {
     Fox.successful(BearerTokenAuthenticator(
@@ -38,10 +38,10 @@ case class TokenSQL(_id: ObjectId,
   }
 }
 
-object TokenSQL {
-  def fromBearerTokenAuthenticator(b: BearerTokenAuthenticator, tokenType: TokenType): Fox[TokenSQL] = {
-    Fox.successful(TokenSQL(
-      ObjectId.fromBsonId(BSONObjectID.generate),
+object Token {
+  def fromBearerTokenAuthenticator(b: BearerTokenAuthenticator, tokenType: TokenType): Fox[Token] = {
+    Fox.successful(Token(
+      ObjectId.generate,
       b.id,
       b.loginInfo,
       b.lastUsedDateTime,
@@ -54,17 +54,17 @@ object TokenSQL {
   }
 }
 
-object TokenSQLDAO extends SQLDAO[TokenSQL, TokensRow, Tokens] {
+object TokenDAO extends SQLDAO[Token, TokensRow, Tokens] {
   val collection = Tokens
 
   def idColumn(x: Tokens): Rep[String] = x._Id
   def isDeletedColumn(x: Tokens): Rep[Boolean] = x.isdeleted
 
-  def parse(r: TokensRow): Fox[TokenSQL] =
+  def parse(r: TokensRow): Fox[Token] =
     for {
       tokenType <- TokenType.fromString(r.tokentype).toFox
     } yield {
-      TokenSQL(
+      Token(
         ObjectId(r._Id),
         r.value,
         LoginInfo(r.logininfoProviderid, r.logininfoProviderkey),
@@ -77,14 +77,14 @@ object TokenSQLDAO extends SQLDAO[TokenSQL, TokensRow, Tokens] {
       )
     }
 
-  def findOneByValue(value: String)(implicit ctx: DBAccessContext): Fox[TokenSQL] =
+  def findOneByValue(value: String)(implicit ctx: DBAccessContext): Fox[Token] =
     for {
       rOpt <- run(Tokens.filter(r => notdel(r) && r.value === value).result.headOption)
       r <- rOpt.toFox
       parsed <- parse(r)
     } yield parsed
 
-  def findOneByLoginInfo(providerID: String, providerKey: String, tokenType: TokenType)(implicit ctx: DBAccessContext): Fox[TokenSQL] =
+  def findOneByLoginInfo(providerID: String, providerKey: String, tokenType: TokenType)(implicit ctx: DBAccessContext): Fox[Token] =
     for {
       rOpt <- run(Tokens.filter(r => notdel(r) && r.logininfoProviderid === providerID && r.logininfoProviderkey === providerKey && r.tokentype === tokenType.toString).result.headOption)
       r <- rOpt.toFox
@@ -92,7 +92,7 @@ object TokenSQLDAO extends SQLDAO[TokenSQL, TokensRow, Tokens] {
     } yield parsed
 
 
-  def insertOne(t: TokenSQL)(implicit ctx: DBAccessContext) =
+  def insertOne(t: Token)(implicit ctx: DBAccessContext) =
     for {
       _ <- run(sqlu"""insert into webknossos.tokens(_id, value, loginInfo_providerID, loginInfo_providerKey, lastUsedDateTime, expirationDateTime, idleTimeout, tokenType, created, isDeleted)
                     values(${t._id.id}, ${t.value}, '#${t.loginInfo.providerID}', ${t.loginInfo.providerKey}, ${new java.sql.Timestamp(t.lastUsedDateTime.getMillis)},
@@ -120,6 +120,14 @@ object TokenSQLDAO extends SQLDAO[TokenSQL, TokensRow, Tokens] {
     val q = for {row <- collection if (notdel(row) && row.expirationdatetime <= new java.sql.Timestamp(System.currentTimeMillis))} yield isDeletedColumn(row)
     for {_ <- run(q.update(true))} yield ()
   }
+
+  def updateEmail(oldEmail: String, newEmail: String)(implicit ctx: DBAccessContext) = {
+    for {
+      _ <- run(sqlu"""update webknossos.tokens set
+        logininfo_providerkey = ${newEmail}
+        where logininfo_providerkey = ${oldEmail}""")
+    } yield ()
+  }
 }
 
 class BearerTokenAuthenticatorDAO extends AuthenticatorDAO[BearerTokenAuthenticator] {
@@ -134,29 +142,29 @@ class BearerTokenAuthenticatorDAO extends AuthenticatorDAO[BearerTokenAuthentica
   override def update(newAuthenticator: BearerTokenAuthenticator): Future[BearerTokenAuthenticator] = {
     implicit val ctx = GlobalAccessContext
     (for {
-      oldAuthenticatorSQL <- TokenSQLDAO.findOneByLoginInfo(newAuthenticator.loginInfo.providerID, newAuthenticator.loginInfo.providerKey, TokenType.Authentication)
-      _ <- TokenSQLDAO.updateValues(oldAuthenticatorSQL._id, newAuthenticator.id, newAuthenticator.lastUsedDateTime, newAuthenticator.expirationDateTime, newAuthenticator.idleTimeout)
+      oldAuthenticatorSQL <- TokenDAO.findOneByLoginInfo(newAuthenticator.loginInfo.providerID, newAuthenticator.loginInfo.providerKey, TokenType.Authentication)
+      _ <- TokenDAO.updateValues(oldAuthenticatorSQL._id, newAuthenticator.id, newAuthenticator.lastUsedDateTime, newAuthenticator.expirationDateTime, newAuthenticator.idleTimeout)
       updated <- findOneByValue(newAuthenticator.id)
     } yield updated).toFutureOrThrowException("Could not update Token. Throwing exception because update cannot return a box, as defined by Silhouette trait AuthenticatorDAO")
   }
 
   override def remove(value: String): Future[Unit] =
     for {
-    _ <- TokenSQLDAO.deleteOneByValue(value)(GlobalAccessContext).futureBox
+    _ <- TokenDAO.deleteOneByValue(value)(GlobalAccessContext).futureBox
     } yield ()
 
   /* custom functions */
 
   def findOneByValue(value: String)(implicit ctx: DBAccessContext): Fox[BearerTokenAuthenticator] = {
     for {
-      tokenSQL <- TokenSQLDAO.findOneByValue(value)
+      tokenSQL <- TokenDAO.findOneByValue(value)
       tokenAuthenticator <- tokenSQL.toBearerTokenAuthenticator
     } yield tokenAuthenticator
   }
 
   def findOneByLoginInfo(loginInfo: LoginInfo, tokenType: TokenType)(implicit ctx: DBAccessContext): Future[Option[BearerTokenAuthenticator]] =
     (for {
-      tokenSQL <- TokenSQLDAO.findOneByLoginInfo(loginInfo.providerID, loginInfo.providerKey, tokenType)
+      tokenSQL <- TokenDAO.findOneByLoginInfo(loginInfo.providerID, loginInfo.providerKey, tokenType)
       tokenAuthenticator <- tokenSQL.toBearerTokenAuthenticator
     } yield tokenAuthenticator).toFutureOption
 
@@ -172,11 +180,17 @@ class BearerTokenAuthenticatorDAO extends AuthenticatorDAO[BearerTokenAuthentica
 
   private def insert(authenticator: BearerTokenAuthenticator, tokenType: TokenType)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      tokenSQL <- TokenSQL.fromBearerTokenAuthenticator(authenticator, tokenType)
-      _ <- TokenSQLDAO.insertOne(tokenSQL)
+      tokenSQL <- Token.fromBearerTokenAuthenticator(authenticator, tokenType)
+      _ <- TokenDAO.insertOne(tokenSQL)
     } yield ()
 
   def deleteAllExpired(implicit ctx: DBAccessContext): Fox[Unit] =
-    TokenSQLDAO.deleteAllExpired
+    TokenDAO.deleteAllExpired
+
+  def updateEmail(oldEmail: String, newEmail: String)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    for {
+      _ <- TokenDAO.updateEmail(oldEmail, newEmail)
+    } yield ()
+  }
 }
 

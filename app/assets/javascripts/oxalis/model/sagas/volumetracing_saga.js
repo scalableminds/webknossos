@@ -11,10 +11,7 @@ import type { CopySegmentationLayerActionType } from "oxalis/model/actions/volum
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import Dimensions from "oxalis/model/dimensions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
-import {
-  isVolumeTracingDisallowed,
-  getActiveCellId,
-} from "oxalis/model/accessors/volumetracing_accessor";
+import { isVolumeTracingDisallowed } from "oxalis/model/accessors/volumetracing_accessor";
 import { updateVolumeTracing } from "oxalis/model/sagas/update_actions";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
@@ -25,24 +22,8 @@ import type { OrthoViewType, VolumeToolType, ContourModeType } from "oxalis/cons
 import type { VolumeTracingType, FlycamType } from "oxalis/store";
 import api from "oxalis/api/internal_api";
 
-export function* updateIsosurface(): Generator<*, *, *> {
-  const shouldDisplayIsosurface = yield select(state => state.userConfiguration.isosurfaceDisplay);
-  const activeCellIdMaybe = yield select(state => getActiveCellId(state.tracing));
-
-  if (shouldDisplayIsosurface) {
-    activeCellIdMaybe.map(
-      activeCellId =>
-        // importing SceneController breaks webpack (circular dependency)
-        // TODO fix later
-        // SceneController.renderVolumeIsosurface(activeCellId),
-        activeCellId,
-    );
-  }
-}
-
 export function* watchVolumeTracingAsync(): Generator<*, *, *> {
   yield take("WK_READY");
-  yield takeEvery(["FINISH_EDITING"], updateIsosurface);
   yield takeEvery("COPY_SEGMENTATION_LAYER", copySegmentationLayer);
   yield fork(warnOfTooLowOpacity);
 }
@@ -115,19 +96,20 @@ function* createVolumeLayer(planeId: OrthoViewType): Generator<*, *, *> {
 
 function* labelWithIterator(iterator, contourTracingMode): Generator<*, *, *> {
   const activeCellId = yield select(state => state.tracing.activeCellId);
-  const binary = yield call([Model, Model.getSegmentationBinary]);
+  const segmentationLayer = yield call([Model, Model.getSegmentationLayer]);
+  const { cube } = segmentationLayer;
   switch (contourTracingMode) {
     case ContourModeEnum.DRAW_OVERWRITE:
-      yield call([binary.cube, binary.cube.labelVoxels], iterator, activeCellId);
+      yield call([cube, cube.labelVoxels], iterator, activeCellId);
       break;
     case ContourModeEnum.DRAW:
-      yield call([binary.cube, binary.cube.labelVoxels], iterator, activeCellId, 0);
+      yield call([cube, cube.labelVoxels], iterator, activeCellId, 0);
       break;
     case ContourModeEnum.DELETE_FROM_ACTIVE_CELL:
-      yield call([binary.cube, binary.cube.labelVoxels], iterator, 0, activeCellId);
+      yield call([cube, cube.labelVoxels], iterator, 0, activeCellId);
       break;
     case ContourModeEnum.DELETE_FROM_ANY_CELL:
-      yield call([binary.cube, binary.cube.labelVoxels], iterator, 0);
+      yield call([cube, cube.labelVoxels], iterator, 0);
       break;
     default:
       throw new Error("Invalid volume tracing mode.");
@@ -141,18 +123,18 @@ function* copySegmentationLayer(action: CopySegmentationLayerActionType): Genera
     return;
   }
 
-  const binary = yield call([Model, Model.getSegmentationBinary]);
+  const segmentationLayer = yield call([Model, Model.getSegmentationLayer]);
   const position = Dimensions.roundCoordinate(yield select(state => getPosition(state.flycam)));
   const zoom = yield select(state => state.flycam.zoomStep);
-  const halfViewportWidth = Math.round(Constants.PLANE_WIDTH / 2 * zoom);
+  const halfViewportWidth = Math.round((Constants.PLANE_WIDTH / 2) * zoom);
   const activeCellId = yield select(state => state.tracing.activeCellId);
 
   function copyVoxelLabel(voxelTemplateAddress, voxelTargetAddress) {
-    const templateLabelValue = binary.cube.getDataValue(voxelTemplateAddress);
+    const templateLabelValue = segmentationLayer.cube.getDataValue(voxelTemplateAddress);
 
     // Only copy voxels from the previous layer which belong to the current cell
     if (templateLabelValue === activeCellId) {
-      const currentLabelValue = binary.cube.getDataValue(voxelTargetAddress);
+      const currentLabelValue = segmentationLayer.cube.getDataValue(voxelTargetAddress);
 
       // Do not overwrite already labelled voxels
       if (currentLabelValue === 0) {

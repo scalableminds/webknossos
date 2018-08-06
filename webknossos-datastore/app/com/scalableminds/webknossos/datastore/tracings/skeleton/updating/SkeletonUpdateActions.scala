@@ -11,9 +11,10 @@ import play.api.libs.json._
 
 
 case class CreateTreeSkeletonAction(id: Int, color: Option[com.scalableminds.util.image.Color], name: String,
-                                    branchPoints: List[UpdateActionBranchPoint], timestamp: Long, comments: List[UpdateActionComment], actionTimestamp: Option[Long] = None) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper {
+                                    branchPoints: List[UpdateActionBranchPoint], timestamp: Long, comments: List[UpdateActionComment], actionTimestamp: Option[Long] = None,
+                                    groupId: Option[Int]) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing) = {
-    val newTree = Tree(id, Nil, Nil, convertColorOpt(color), branchPoints.map(convertBranchPoint), comments.map(convertComment), name, timestamp)
+    val newTree = Tree(id, Nil, Nil, convertColorOpt(color), branchPoints.map(convertBranchPoint), comments.map(convertComment), name, timestamp, groupId)
     tracing.withTrees(newTree +: tracing.trees)
   }
 
@@ -27,15 +28,17 @@ case class DeleteTreeSkeletonAction(id: Int, actionTimestamp: Option[Long] = Non
 }
 
 case class UpdateTreeSkeletonAction(id: Int, updatedId: Option[Int], color: Option[com.scalableminds.util.image.Color], name: String,
-                                    branchPoints: List[UpdateActionBranchPoint], comments: List[UpdateActionComment], actionTimestamp: Option[Long] = None) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper {
+                                    branchPoints: List[UpdateActionBranchPoint], comments: List[UpdateActionComment],
+                                    groupId: Option[Int], actionTimestamp: Option[Long] = None) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing) = {
     def treeTransform(tree: Tree) =
-      tree
-        .withColor(convertColorOpt(color) getOrElse tree.getColor)
-        .withTreeId(updatedId.getOrElse(tree.treeId))
-        .withBranchPoints(branchPoints.map(convertBranchPoint))
-        .withComments(comments.map(convertComment))
-        .withName(name)
+      tree.copy(
+        color = if (color.isDefined) convertColorOpt(color) else tree.color,
+        treeId = updatedId.getOrElse(tree.treeId),
+        branchPoints = branchPoints.map(convertBranchPoint),
+        comments = comments.map(convertComment),
+        name = name,
+        groupId = groupId)
 
     tracing.withTrees(mapTrees(tracing, id, treeTransform))
   }
@@ -167,6 +170,14 @@ case class DeleteNodeSkeletonAction(nodeId: Int, treeId: Int, actionTimestamp: O
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] = this.copy(actionTimestamp = Some(timestamp))
 }
 
+case class UpdateTreeGroupsSkeletonAction(treeGroups: List[UpdateActionTreeGroup], actionTimestamp: Option[Long] = None) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper {
+  override def applyOn(tracing: SkeletonTracing) = {
+    tracing.withTreeGroups(treeGroups.map(convertTreeGroup))
+  }
+
+  override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] = this.copy(actionTimestamp = Some(timestamp))
+}
+
 case class UpdateTracingSkeletonAction(activeNode: Option[Int], editPosition: com.scalableminds.util.geometry.Point3D,
                                        editRotation: com.scalableminds.util.geometry.Vector3D, zoomLevel: Double,
                                        userBoundingBox: Option[com.scalableminds.util.geometry.BoundingBox], actionTimestamp: Option[Long] = None) extends UpdateAction.SkeletonUpdateAction with ProtoGeometryImplicits {
@@ -201,6 +212,7 @@ object DeleteEdgeSkeletonAction {implicit val jsonFormat = Json.format[DeleteEdg
 object CreateNodeSkeletonAction {implicit val jsonFormat = Json.format[CreateNodeSkeletonAction]}
 object DeleteNodeSkeletonAction {implicit val jsonFormat = Json.format[DeleteNodeSkeletonAction]}
 object UpdateNodeSkeletonAction {implicit val jsonFormat = Json.format[UpdateNodeSkeletonAction]}
+object UpdateTreeGroupsSkeletonAction {implicit val jsonFormat = Json.format[UpdateTreeGroupsSkeletonAction]}
 object UpdateTracingSkeletonAction {implicit val jsonFormat = Json.format[UpdateTracingSkeletonAction]}
 object RevertToVersionAction {implicit val jsonFormat = Json.format[RevertToVersionAction]}
 
@@ -222,6 +234,7 @@ object SkeletonUpdateAction {
         case "updateNode" => deserialize[UpdateNodeSkeletonAction](jsonValue, shouldTransformPositions = true)
         case "createEdge" => deserialize[CreateEdgeSkeletonAction](jsonValue)
         case "deleteEdge" => deserialize[DeleteEdgeSkeletonAction](jsonValue)
+        case "updateTreeGroups" => deserialize[UpdateTreeGroupsSkeletonAction](jsonValue)
         case "updateTracing" => deserialize[UpdateTracingSkeletonAction](jsonValue)
         case "revertToVersion" => deserialize[RevertToVersionAction](jsonValue)
       }
@@ -248,6 +261,7 @@ object SkeletonUpdateAction {
       case s: UpdateNodeSkeletonAction => Json.obj("name" -> "updateNode", "value" -> Json.toJson(s)(UpdateNodeSkeletonAction.jsonFormat))
       case s: CreateEdgeSkeletonAction => Json.obj("name" -> "createEdge", "value" -> Json.toJson(s)(CreateEdgeSkeletonAction.jsonFormat))
       case s: DeleteEdgeSkeletonAction => Json.obj("name" -> "deleteEdge", "value" -> Json.toJson(s)(DeleteEdgeSkeletonAction.jsonFormat))
+      case s: UpdateTreeGroupsSkeletonAction => Json.obj("name" -> "updateTreeGroups", "value" -> Json.toJson(s)(UpdateTreeGroupsSkeletonAction.jsonFormat))
       case s: UpdateTracingSkeletonAction => Json.obj("name" -> "updateTracing", "value" -> Json.toJson(s)(UpdateTracingSkeletonAction.jsonFormat))
       case s: RevertToVersionAction => Json.obj("name" -> "revertToVersion", "value" -> Json.toJson(s)(RevertToVersionAction.jsonFormat))
     }

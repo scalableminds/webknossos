@@ -7,7 +7,6 @@
 import app from "app";
 import type { OxalisModel } from "oxalis/model";
 import createApiLatest from "./api_latest";
-import createApiV1 from "./api_v1";
 import createApiV2 from "./api_v2";
 
 const latestVersion = 3;
@@ -41,7 +40,7 @@ class Api {
    *   ...
    * });
    */
-  apiReady(version: number = 1): Promise<Object> {
+  apiReady(version: number = latestVersion): Promise<Object> {
     if (process.env.BABEL_ENV !== "test") {
       if (version !== latestVersion) {
         console.warn(`
@@ -54,9 +53,7 @@ class Api {
       }
     }
     return this.readyPromise.then(() => {
-      if (version === 1) {
-        this.apiInterface = createApiV1(this.model);
-      } else if (version === 2) {
+      if (version === 2) {
         this.apiInterface = createApiV2(this.model);
       } else if (version === latestVersion) {
         this.apiInterface = createApiLatest(this.model);

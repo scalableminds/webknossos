@@ -8,6 +8,7 @@ import { connect } from "react-redux";
 import Request from "libs/request";
 import Utils from "libs/utils";
 import LoginView from "admin/auth/login_view";
+import { getBuildInfo } from "admin/admin_rest_api";
 import { logoutUserAction } from "oxalis/model/actions/user_actions";
 import Store from "oxalis/store";
 import features from "features";
@@ -28,7 +29,25 @@ type Props = {
   history: RouterHistory,
 } & StateProps;
 
-class Navbar extends React.PureComponent<Props> {
+type State = {
+  version: ?string,
+};
+
+class Navbar extends React.PureComponent<Props, State> {
+  state = {
+    version: null,
+  };
+
+  async componentWillMount() {
+    const buildInfo = await getBuildInfo();
+    this.setState({
+      version:
+        buildInfo.webknossos.ciTag !== ""
+          ? buildInfo.webknossos.ciTag
+          : buildInfo.webknossos.ciBuild,
+    });
+  }
+
   handleLogout = async () => {
     await Request.receiveJSON("/api/auth/logout");
     Store.dispatch(logoutUserAction());
@@ -44,7 +63,7 @@ class Navbar extends React.PureComponent<Props> {
       display: "flex",
       alignItems: "center",
       color: "rgba(255, 255, 255, 0.67)",
-      background: "#404040",
+      background: "#001529",
     };
 
     const isAuthenticated = this.props.isAuthenticated && this.props.activeUser != null;
@@ -133,6 +152,14 @@ class Navbar extends React.PureComponent<Props> {
             Keyboard Shortcuts
           </a>
         </Menu.Item>
+        <Menu.Item key="/help/credits">
+          <a target="_blank" href="https://webknossos.org" rel="noopener noreferrer">
+            About & Credits
+          </a>
+        </Menu.Item>
+        {this.state.version !== "" ? (
+          <Menu.Item disabled>Version: {this.state.version}</Menu.Item>
+        ) : null}
       </SubMenu>,
     );
 

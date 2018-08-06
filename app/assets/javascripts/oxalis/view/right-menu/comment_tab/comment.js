@@ -1,6 +1,6 @@
 // @flow
 import * as React from "react";
-import { scrollIntoViewIfNeeded } from "scroll-into-view-if-needed";
+import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
 import classNames from "classnames";
 import Store from "oxalis/store";
 import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";
@@ -25,7 +25,11 @@ class Comment extends React.PureComponent<Props> {
   ensureVisible() {
     if (this.props.isActive) {
       // use polyfill as so far only chrome supports this functionality
-      scrollIntoViewIfNeeded(this.comment, { centerIfNeeded: true });
+      scrollIntoViewIfNeeded(this.comment, {
+        block: "center",
+        scrollMode: "if-needed",
+        boundary: document.body,
+      });
     }
   }
 

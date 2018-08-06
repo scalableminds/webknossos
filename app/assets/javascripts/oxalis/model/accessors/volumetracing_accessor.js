@@ -6,12 +6,23 @@ import Maybe from "data.maybe";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import type { TracingType, VolumeTracingType, OxalisState } from "oxalis/store";
 import type { VolumeToolType, ContourModeType } from "oxalis/constants";
+import type { ServerTracingType, ServerVolumeTracingType } from "admin/api_flow_types";
 
 export function getVolumeTracing(tracing: TracingType): Maybe<VolumeTracingType> {
   if (tracing.type === "volume") {
     return Maybe.Just(tracing);
   }
   return Maybe.Nothing();
+}
+
+export function serverTracingAsVolumeTracingMaybe(
+  tracing: ?ServerTracingType,
+): Maybe<ServerVolumeTracingType> {
+  if (tracing && tracing.elementClass) {
+    return Maybe.Just(tracing);
+  } else {
+    return Maybe.Nothing();
+  }
 }
 
 export function enforceVolumeTracing(tracing: TracingType): VolumeTracingType {
@@ -40,9 +51,21 @@ export function getContourTracingMode(tracing: TracingType): Maybe<ContourModeTy
 }
 
 export function isVolumeTracingDisallowed(state: OxalisState) {
-  return getRequestLogZoomStep(state) > 1;
+  const isVolumeTracing = state.tracing.type === "volume";
+  const isWrongZoomStep = getRequestLogZoomStep(state) > 1;
+  return isVolumeTracing && isWrongZoomStep;
 }
 
-export function displaysUnsampledVolumeData(state: OxalisState): boolean {
-  return getRequestLogZoomStep(state) === 1;
+export function isSegmentationMissingForZoomstep(
+  state: OxalisState,
+  maxZoomStepForSegmentation: number,
+): boolean {
+  return getRequestLogZoomStep(state) > maxZoomStepForSegmentation;
+}
+
+export function displaysDownsampledVolumeData(
+  state: OxalisState,
+  maxUnsampledZoomStepForSegmentation: number,
+): boolean {
+  return getRequestLogZoomStep(state) === maxUnsampledZoomStepForSegmentation + 1;
 }

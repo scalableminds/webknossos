@@ -6,7 +6,7 @@ import test from "ava";
 import {
   calculateTextureSizeAndCountForLayer,
   computeDataTexturesSetup,
-} from "oxalis/model/binary/data_rendering_logic";
+} from "oxalis/model/bucket_data_handling/data_rendering_logic";
 
 const minSpecs = {
   supportedTextureSize: 4096,
@@ -121,7 +121,12 @@ test("Basic support (no segmentation): all specs", t => {
 test("Basic support + volume: min specs", t => {
   const computeDataTexturesSetupPartial = computeDataTexturesSetupCurried(minSpecs, true);
 
-  testSupportFlags(t, computeDataTexturesSetupPartial([grayscaleLayer1, volumeLayer1]), true, true);
+  testSupportFlags(
+    t,
+    computeDataTexturesSetupPartial([grayscaleLayer1, volumeLayer1]),
+    true,
+    false,
+  );
 
   testSupportFlags(
     t,

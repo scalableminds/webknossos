@@ -14,6 +14,7 @@ import type { ControlModeType, ModeType } from "oxalis/constants";
 import Constants, { ControlModeEnum } from "oxalis/constants";
 import type { OxalisState } from "oxalis/store";
 import { connect } from "react-redux";
+import Model from "oxalis/model";
 
 const TabPane = Tabs.TabPane;
 
@@ -22,11 +23,12 @@ type Props = {
   viewMode: ModeType,
 };
 
-class RightMenuView extends React.PureComponent<Props> {
+class RightMenuView extends React.Component<Props> {
   getTabs() {
+    const tabs = [];
     if (this.props.controlMode !== ControlModeEnum.VIEW) {
       if (Constants.MODES_SKELETON.includes(this.props.viewMode)) {
-        return [
+        tabs.push(
           <TabPane tab="Trees" key="3" className="flex-column">
             <TreesTabView />
           </TabPane>,
@@ -36,17 +38,20 @@ class RightMenuView extends React.PureComponent<Props> {
           <TabPane tab="Tree Viewer" key="2" className="flex-column">
             <AbstractTreeTabView />
           </TabPane>,
-        ];
-      } else {
-        return (
-          <TabPane tab="Mappings" key="5">
-            <MappingInfoView />
-          </TabPane>
         );
       }
     }
 
-    return null;
+    const hasSegmentation = Model.getSegmentationLayer() != null;
+    if (hasSegmentation) {
+      tabs.push(
+        <TabPane tab="Segmentation" key="5" className="flex-column">
+          <MappingInfoView />
+        </TabPane>,
+      );
+    }
+
+    return tabs;
   }
 
   render() {
@@ -72,4 +77,9 @@ function mapStateToProps(state: OxalisState): Props {
   };
 }
 
-export default connect(mapStateToProps)(RightMenuView);
+export default connect(
+  mapStateToProps,
+  null,
+  null,
+  { pure: false },
+)(RightMenuView);

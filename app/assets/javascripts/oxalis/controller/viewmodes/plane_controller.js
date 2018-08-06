@@ -8,6 +8,7 @@ import { connect } from "react-redux";
 import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 import Utils from "libs/utils";
+import Toast from "libs/toast";
 import { document } from "libs/window";
 import { InputMouse, InputKeyboard, InputKeyboardNoLoop } from "libs/input";
 import * as THREE from "three";
@@ -46,7 +47,11 @@ import {
   moveTDViewYAction,
   moveTDViewByVectorAction,
 } from "oxalis/model/actions/view_mode_actions";
+import messages from "messages";
 import { setMousePositionAction } from "oxalis/model/actions/volumetracing_actions";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import Clipboard from "clipboard-js";
+import { getResolutions } from "oxalis/model/accessors/dataset_accessor.js";
 
 type OwnProps = {
   onRender: () => void,
@@ -68,6 +73,7 @@ class PlaneController extends React.PureComponent<Props> {
     keyboardNoLoop?: InputKeyboardNoLoop,
     keyboardLoopDelayed?: InputKeyboard,
   };
+  storePropertyUnsubscribers: Array<Function>;
   isStarted: boolean;
   oldNmPos: Vector3;
   zoomPos: Vector3;
@@ -79,6 +85,7 @@ class PlaneController extends React.PureComponent<Props> {
   constructor(...args: any) {
     super(...args);
     _.extend(this, BackboneEvents);
+    this.storePropertyUnsubscribers = [];
   }
 
   componentDidMount() {
@@ -138,7 +145,7 @@ class PlaneController extends React.PureComponent<Props> {
       leftDownMove: (delta: Point2) => {
         const viewportScale = Store.getState().userConfiguration.scale;
 
-        return this.movePlane([delta.x * -1 / viewportScale, delta.y * -1 / viewportScale, 0]);
+        return this.movePlane([(delta.x * -1) / viewportScale, (delta.y * -1) / viewportScale, 0]);
       },
 
       scroll: this.scrollPlanes.bind(this),
@@ -224,8 +231,7 @@ class PlaneController extends React.PureComponent<Props> {
     const getMoveValue = timeFactor => {
       const state = Store.getState();
       return (
-        state.userConfiguration.moveValue *
-        timeFactor /
+        (state.userConfiguration.moveValue * timeFactor) /
         getBaseVoxel(state.dataset.dataSource.scale) /
         constants.FPS
       );
@@ -254,30 +260,58 @@ class PlaneController extends React.PureComponent<Props> {
         // Zoom in/out
         i: () => this.zoom(1, false),
         o: () => this.zoom(-1, false),
+
+        h: () => this.changeMoveValue(25),
+        g: () => this.changeMoveValue(-25),
       },
-      Store.getState().userConfiguration.keyboardDelay,
+      { delay: Store.getState().userConfiguration.keyboardDelay },
     );
 
     this.input.keyboardNoLoop = new InputKeyboardNoLoop(this.getKeyboardControls());
 
-    Store.subscribe(() => {
-      const keyboardLoopDelayed = this.input.keyboardLoopDelayed;
-      if (keyboardLoopDelayed != null) {
-        keyboardLoopDelayed.delay = Store.getState().userConfiguration.keyboardDelay;
-      }
-    });
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        state => state.userConfiguration.keyboardDelay,
+        keyboardDelay => {
+          const { keyboardLoopDelayed } = this.input;
+          if (keyboardLoopDelayed != null) {
+            keyboardLoopDelayed.delay = keyboardDelay;
+          }
+        },
+      ),
+    );
   }
 
   getKeyboardControls(): Object {
     return {
-      // Change move value
-      h: () => this.changeMoveValue(25),
-      g: () => this.changeMoveValue(-25),
+      "ctrl + i": event => {
+        const segmentationLayer = Model.getSegmentationLayer();
+        if (!segmentationLayer) {
+          return;
+        }
+        const { mousePosition } = Store.getState().temporaryConfiguration;
+        if (mousePosition) {
+          const [x, y] = mousePosition;
+          const globalMousePosition = calculateGlobalPos({ x, y });
+          const { cube } = segmentationLayer;
+          const mapping = event.altKey ? cube.mapping : null;
+          const hoveredId = cube.getDataValue(
+            globalMousePosition,
+            mapping,
+            getRequestLogZoomStep(Store.getState()),
+          );
+          Clipboard.copy(String(hoveredId)).then(() =>
+            Toast.success(`Cell id ${hoveredId} copied to clipboard.`),
+          );
+        } else {
+          Toast.warning("No cell under cursor.");
+        }
+      },
     };
   }
 
   init(): void {
-    const clippingDistance = Store.getState().userConfiguration.clippingDistance;
+    const { clippingDistance } = Store.getState().userConfiguration;
     SceneController.setClippingDistance(clippingDistance);
   }
 
@@ -323,23 +357,12 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   onPlaneViewRender(): void {
-    const state = Store.getState();
-    const activeViewport = state.viewModeData.plane.activeViewport;
-    for (const dataLayerName of Object.keys(Model.binary)) {
-      if (SceneController.pingDataLayer(dataLayerName)) {
-        Model.binary[dataLayerName].ping(getPosition(state.flycam), {
-          zoomStep: getRequestLogZoomStep(state),
-          activePlane: activeViewport,
-        });
-      }
-    }
-
     SceneController.update();
     this.props.onRender();
   }
 
   movePlane = (v: Vector3, increaseSpeedWithZoom: boolean = true) => {
-    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
+    const { activeViewport } = Store.getState().viewModeData.plane;
     Store.dispatch(movePlaneFlycamOrthoAction(v, activeViewport, increaseSpeedWithZoom));
   };
 
@@ -352,7 +375,7 @@ class PlaneController extends React.PureComponent<Props> {
   };
 
   moveZ = (z: number, oneSlide: boolean): void => {
-    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
+    const { activeViewport } = Store.getState().viewModeData.plane;
     if (activeViewport === OrthoViews.TDView) {
       return;
     }
@@ -360,7 +383,7 @@ class PlaneController extends React.PureComponent<Props> {
     if (oneSlide) {
       const logZoomStep = getRequestLogZoomStep(Store.getState());
       const w = Dimensions.getIndices(activeViewport)[2];
-      const zStep = Model.getResolutions()[logZoomStep][w];
+      const zStep = getResolutions(Store.getState().dataset)[logZoomStep][w];
 
       Store.dispatch(
         moveFlycamOrthoAction(
@@ -374,7 +397,7 @@ class PlaneController extends React.PureComponent<Props> {
   };
 
   zoom(value: number, zoomToMouse: boolean): void {
-    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
+    const { activeViewport } = Store.getState().viewModeData.plane;
     if (OrthoViewValuesWithoutTDView.includes(activeViewport)) {
       this.zoomPlanes(value, zoomToMouse);
     } else {
@@ -404,15 +427,15 @@ class PlaneController extends React.PureComponent<Props> {
 
   moveTDView(delta: Point2): void {
     const state = Store.getState();
-    const scale = state.userConfiguration.scale;
-    Store.dispatch(moveTDViewXAction(delta.x / scale * -1));
-    Store.dispatch(moveTDViewYAction(delta.y / scale * -1));
+    const { scale } = state.userConfiguration;
+    Store.dispatch(moveTDViewXAction((delta.x / scale) * -1));
+    Store.dispatch(moveTDViewYAction((delta.y / scale) * -1));
   }
 
   finishZoom = (): void => {
     // Move the plane so that the mouse is at the same position as
     // before the zoom
-    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
+    const { activeViewport } = Store.getState().viewModeData.plane;
     if (this.isMouseOver() && activeViewport !== OrthoViews.TDView) {
       const mousePos = this.getMousePosition();
       const moveVector = [
@@ -425,7 +448,7 @@ class PlaneController extends React.PureComponent<Props> {
   };
 
   getMousePosition(): Vector3 {
-    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
+    const { activeViewport } = Store.getState().viewModeData.plane;
     const pos = this.input.mouseControllers[activeViewport].position;
     if (pos != null) {
       return this.calculateGlobalPos(pos);
@@ -444,6 +467,9 @@ class PlaneController extends React.PureComponent<Props> {
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue);
 
     Store.dispatch(updateUserSettingAction("moveValue", moveValue));
+
+    const moveValueMessage = messages["tracing.changed_move_value"] + moveValue;
+    Toast.success(moveValueMessage, { key: "CHANGED_MOVE_VALUE" });
   }
 
   scrollPlanes(delta: number, type: ?ModifierKeys): void {
@@ -458,6 +484,11 @@ class PlaneController extends React.PureComponent<Props> {
     }
   }
 
+  unsubscribeStoreListeners() {
+    this.storePropertyUnsubscribers.forEach(unsubscribe => unsubscribe());
+    this.storePropertyUnsubscribers = [];
+  }
+
   destroyInput() {
     for (const mouse of _.values(this.input.mouseControllers)) {
       mouse.destroy();
@@ -466,6 +497,7 @@ class PlaneController extends React.PureComponent<Props> {
     Utils.__guard__(this.input.keyboard, x => x.destroy());
     Utils.__guard__(this.input.keyboardNoLoop, x1 => x1.destroy());
     Utils.__guard__(this.input.keyboardLoopDelayed, x2 => x2.destroy());
+    this.unsubscribeStoreListeners();
   }
 
   calculateGlobalPos = (clickPos: Point2): Vector3 => calculateGlobalPos(clickPos);
@@ -505,16 +537,16 @@ function threeCameraToCameraData(camera: THREE.OrthographicCamera): CameraData {
 export function calculateGlobalPos(clickPos: Point2): Vector3 {
   let position;
   const state = Store.getState();
-  const activeViewport = state.viewModeData.plane.activeViewport;
+  const { activeViewport } = state.viewModeData.plane;
   const curGlobalPos = getPosition(state.flycam);
   const zoomFactor = getPlaneScalingFactor(state.flycam);
   const viewportScale = state.userConfiguration.scale;
   const planeRatio = getBaseVoxelFactors(state.dataset.dataSource.scale);
 
   const diffX =
-    (constants.VIEWPORT_WIDTH * viewportScale / 2 - clickPos.x) / viewportScale * zoomFactor;
+    (((constants.VIEWPORT_WIDTH * viewportScale) / 2 - clickPos.x) / viewportScale) * zoomFactor;
   const diffY =
-    (constants.VIEWPORT_WIDTH * viewportScale / 2 - clickPos.y) / viewportScale * zoomFactor;
+    (((constants.VIEWPORT_WIDTH * viewportScale) / 2 - clickPos.y) / viewportScale) * zoomFactor;
 
   switch (activeViewport) {
     case OrthoViews.PLANE_XY:

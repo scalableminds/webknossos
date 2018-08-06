@@ -4,9 +4,12 @@ import { Spin, Table, Card } from "antd";
 import Utils from "libs/utils";
 import { getOpenTasksReport } from "admin/admin_rest_api";
 import type { APIOpenTasksReportType } from "admin/api_flow_types";
+import { handleGenericError } from "libs/error_handling";
 import TeamSelectionForm from "./team_selection_form";
 
 const { Column } = Table;
+
+const typeHint: APIOpenTasksReportType[] = [];
 
 type State = {
   data: Array<APIOpenTasksReportType>,
@@ -23,9 +26,15 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
     if (teamId == null) {
       this.setState({ data: [] });
     } else {
-      this.setState({ isLoading: true });
-      const progessData = await getOpenTasksReport(teamId);
-      this.setState({ data: progessData, isLoading: false });
+      try {
+        this.setState({ isLoading: true });
+        const progressData = await getOpenTasksReport(teamId);
+        this.setState({ data: progressData });
+      } catch (error) {
+        handleGenericError(error);
+      } finally {
+        this.setState({ isLoading: false });
+      }
     }
   }
 
@@ -35,7 +44,7 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
         <h3>Open Tasks</h3>
 
         <Card>
-          <TeamSelectionForm onChange={teamId => this.fetchData(teamId)} />
+          <TeamSelectionForm onChange={team => this.fetchData(team.id)} />
         </Card>
 
         <Spin spinning={this.state.isLoading}>
@@ -51,15 +60,15 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
             <Column
               title="User"
               dataIndex="user"
-              sorter={Utils.localeCompareBy("user")}
+              sorter={Utils.localeCompareBy(typeHint, "user")}
               width={200}
             />
             <Column
               title="# Assignments"
               dataIndex="totalAssignments"
               defaultSortOrder="ascend"
-              sorter={Utils.compareBy("totalAssignments")}
-              width={100}
+              sorter={Utils.compareBy(typeHint, "totalAssignments")}
+              width={150}
             />
             <Column
               title=""

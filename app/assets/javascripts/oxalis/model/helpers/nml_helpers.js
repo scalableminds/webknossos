@@ -8,6 +8,7 @@ import Store from "oxalis/store";
 import Date from "libs/date";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
+import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reducer_helpers";
 import type {
   OxalisState,
   SkeletonTracingType,
@@ -15,8 +16,11 @@ import type {
   TreeType,
   TreeMapType,
   TemporaryMutableTreeMapType,
+  TreeGroupType,
 } from "oxalis/store";
+import type { BoundingBoxType } from "oxalis/constants";
 import type { APIBuildInfoType } from "admin/api_flow_types";
+import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 
 // NML Defaults
 const DEFAULT_COLOR = [1, 0, 0];
@@ -26,6 +30,7 @@ const DEFAULT_BITDEPTH = 0;
 const DEFAULT_INTERPOLATION = false;
 const DEFAULT_TIMESTAMP = 0;
 const DEFAULT_ROTATION = [0, 0, 0];
+const DEFAULT_GROUP_ID = null;
 
 // SERIALIZE NML
 
@@ -35,6 +40,19 @@ function indent(array: Array<string>): Array<string> {
     array[index] = `  ${line}`;
   });
   return array;
+}
+
+function serializeTagWithChildren(
+  name: string,
+  properties: { [string]: ?(string | number | boolean) },
+  children: Array<string>,
+): Array<string> {
+  // If there are no children, the tag will be self-closing
+  return _.compact([
+    serializeTag(name, properties, children.length === 0),
+    ...indent(children),
+    children.length === 0 ? null : `</${name}>`,
+  ]);
 }
 
 function serializeTag(
@@ -83,6 +101,9 @@ export function serializeToNml(
         serializeTrees(visibleTrees),
         serializeBranchPoints(visibleTrees),
         serializeComments(visibleTrees),
+        "<groups>",
+        indent(serializeTreeGroups(tracing.treeGroups)),
+        "</groups>",
       ),
     ),
     "</things>",
@@ -122,10 +143,21 @@ function serializeMetaInformation(state: OxalisState, buildInfo: APIBuildInfoTyp
   ]);
 }
 
+function serializeBoundingBox(bb: ?BoundingBoxType, name: string): string {
+  const serverBoundingBox = convertFrontendBoundingBoxToServer(bb);
+  if (serverBoundingBox != null) {
+    const { topLeft, width, height, depth } = serverBoundingBox;
+    const [topLeftX, topLeftY, topLeftZ] = topLeft;
+    return serializeTag(name, { topLeftX, topLeftY, topLeftZ, width, height, depth });
+  }
+  return "";
+}
+
 function serializeParameters(state: OxalisState): Array<string> {
   const editPosition = getPosition(state.flycam).map(Math.round);
   const editRotation = getRotation(state.flycam);
   const userBB = state.tracing.userBoundingBox;
+  const taskBB = state.tracing.boundingBox;
   return [
     "<parameters>",
     ...indent(
@@ -156,16 +188,8 @@ function serializeParameters(state: OxalisState): Array<string> {
           zRot: editRotation[2],
         }),
         serializeTag("zoomLevel", { zoom: state.flycam.zoomStep }),
-        userBB != null
-          ? serializeTag("userBoundingBox", {
-              topLeftX: userBB.min[0],
-              topLeftY: userBB.min[1],
-              topLeftZ: userBB.min[2],
-              width: userBB.max[0] - userBB.min[0],
-              height: userBB.max[1] - userBB.min[1],
-              depth: userBB.max[2] - userBB.min[2],
-            })
-          : "",
+        serializeBoundingBox(userBB, "userBoundingBox"),
+        serializeBoundingBox(taskBB, "taskBoundingBox"),
       ]),
     ),
     "</parameters>",
@@ -174,8 +198,8 @@ function serializeParameters(state: OxalisState): Array<string> {
 
 function serializeTrees(trees: Array<TreeType>): Array<string> {
   return _.flatten(
-    trees.map(tree => [
-      serializeTag(
+    trees.map(tree =>
+      serializeTagWithChildren(
         "thing",
         {
           id: tree.treeId,
@@ -184,19 +208,18 @@ function serializeTrees(trees: Array<TreeType>): Array<string> {
           "color.b": tree.color[2],
           "color.a": 1.0,
           name: tree.name,
+          groupId: tree.groupId,
         },
-        false,
+        [
+          "<nodes>",
+          ...indent(serializeNodes(tree.nodes)),
+          "</nodes>",
+          "<edges>",
+          ...indent(serializeEdges(tree.edges)),
+          "</edges>",
+        ],
       ),
-      ...indent([
-        "<nodes>",
-        ...indent(serializeNodes(tree.nodes)),
-        "</nodes>",
-        "<edges>",
-        ...indent(serializeEdges(tree.edges)),
-        "</edges>",
-      ]),
-      "</thing>",
-    ]),
+    ),
   );
 }
 
@@ -251,6 +274,18 @@ function serializeComments(trees: Array<TreeType>): Array<string> {
   ];
 }
 
+function serializeTreeGroups(treeGroups: Array<TreeGroupType>): Array<string> {
+  return _.flatten(
+    treeGroups.map(treeGroup =>
+      serializeTagWithChildren(
+        "group",
+        { id: treeGroup.groupId, name: treeGroup.name },
+        serializeTreeGroups(treeGroup.children),
+      ),
+    ),
+  );
+}
+
 // PARSE NML
 
 class NmlParseError extends Error {
@@ -261,7 +296,7 @@ class NmlParseError extends Error {
 }
 
 function _parseInt(obj: Object, key: string, defaultValue?: number): number {
-  if (obj[key] == null) {
+  if (obj[key] == null || obj[key].length === 0) {
     if (defaultValue == null) {
       throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
     } else {
@@ -272,7 +307,7 @@ function _parseInt(obj: Object, key: string, defaultValue?: number): number {
 }
 
 function _parseFloat(obj: Object, key: string, defaultValue?: number): number {
-  if (obj[key] == null) {
+  if (obj[key] == null || obj[key].length === 0) {
     if (defaultValue == null) {
       throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
     } else {
@@ -283,7 +318,7 @@ function _parseFloat(obj: Object, key: string, defaultValue?: number): number {
 }
 
 function _parseBool(obj: Object, key: string, defaultValue?: boolean): boolean {
-  if (obj[key] == null) {
+  if (obj[key] == null || obj[key].length === 0) {
     if (defaultValue == null) {
       throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
     } else {
@@ -329,14 +364,47 @@ function getEdgeHash(source: number, target: number) {
   return source < target ? `${source}-${target}` : `${target}-${source}`;
 }
 
-export function parseNml(nmlString: string): Promise<TreeMapType> {
+function wrapInNewGroup(
+  originalTrees: TreeMapType,
+  originalTreeGroups: Array<TreeGroupType>,
+  wrappingGroupName: string,
+): [TreeMapType, Array<TreeGroupType>] {
+  // It does not matter whether the group id is used in the active tracing, since
+  // this case will be handled during import, anyway. The group id just shouldn't clash
+  // with the nml itself.
+  const unusedGroupId = getMaximumGroupId(originalTreeGroups) + 1;
+  const trees = _.mapValues(originalTrees, tree => ({
+    ...tree,
+    // Give parentless trees the new treeGroup as parent
+    groupId: tree.groupId || unusedGroupId,
+  }));
+  const treeGroups = [
+    // Create a new tree group which holds the old ones
+    {
+      name: wrappingGroupName,
+      groupId: unusedGroupId,
+      children: originalTreeGroups,
+    },
+  ];
+
+  return [trees, treeGroups];
+}
+
+export function parseNml(
+  nmlString: string,
+  wrappingGroupName?: ?string,
+): Promise<{ trees: TreeMapType, treeGroups: Array<TreeGroupType> }> {
   return new Promise((resolve, reject) => {
     const parser = new Saxophone();
 
     const trees: TemporaryMutableTreeMapType = {};
+    const treeGroups: Array<TreeGroupType> = [];
     const existingNodeIds = new Set();
+    const existingGroupIds = new Set();
     const existingEdges = new Set();
     let currentTree: ?TreeType = null;
+    let currentGroup: ?TreeGroupType = null;
+    const groupIdToParent: { [number]: ?TreeGroupType } = {};
     parser
       .on("tagopen", node => {
         const attr = Saxophone.parseAttrs(node.attrs);
@@ -348,6 +416,7 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
             break;
           }
           case "thing": {
+            const groupId = _parseInt(attr, "groupId", -1);
             currentTree = {
               treeId: _parseInt(attr, "id"),
               color: [
@@ -362,6 +431,7 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
               timestamp: Date.now(),
               edges: new EdgeCollection(),
               isVisible: _parseFloat(attr, "color.a") !== 0,
+              groupId: groupId >= 0 ? groupId : DEFAULT_GROUP_ID,
             };
             if (trees[currentTree.treeId] != null)
               throw new NmlParseError(`${messages["nml.duplicate_tree_id"]} ${currentTree.treeId}`);
@@ -449,19 +519,75 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
             tree.branchPoints.push(currentBranchpoint);
             break;
           }
+          case "group": {
+            const newGroup = {
+              groupId: _parseInt(attr, "id"),
+              name: attr.name,
+              children: [],
+            };
+            if (existingGroupIds.has(newGroup.groupId))
+              throw new NmlParseError(`${messages["nml.duplicate_group_id"]} ${newGroup.groupId}`);
+            if (currentGroup != null) {
+              currentGroup.children.push(newGroup);
+            } else {
+              treeGroups.push(newGroup);
+            }
+            existingGroupIds.add(newGroup.groupId);
+            if (!node.isSelfClosing) {
+              // If the xml tag is self-closing, there won't be a separate tagclose event!
+              groupIdToParent[newGroup.groupId] = currentGroup;
+              currentGroup = newGroup;
+            }
+            break;
+          }
           default:
             break;
         }
       })
       .on("tagclose", node => {
-        if (node.name === "thing" && currentTree != null) {
-          if (!isTreeConnected(currentTree))
-            throw new NmlParseError(`${messages["nml.tree_not_connected"]} ${currentTree.treeId}`);
-          currentTree = null;
+        switch (node.name) {
+          case "thing": {
+            if (currentTree != null && !isTreeConnected(currentTree))
+              throw new NmlParseError(
+                `${messages["nml.tree_not_connected"]} ${currentTree.treeId}`,
+              );
+            currentTree = null;
+            break;
+          }
+          case "group": {
+            if (currentGroup != null) {
+              currentGroup = groupIdToParent[currentGroup.groupId];
+            }
+            break;
+          }
+          case "groups": {
+            _.forEach(trees, tree => {
+              if (tree.groupId != null && !existingGroupIds.has(tree.groupId)) {
+                throw new NmlParseError(
+                  `${messages["nml.tree_with_missing_group_id"]} ${tree.groupId}`,
+                );
+              }
+            });
+            break;
+          }
+          default:
+            break;
         }
       })
       .on("end", () => {
-        resolve(trees);
+        if (wrappingGroupName != null) {
+          const [wrappedTrees, wrappedTreeGroups] = wrapInNewGroup(
+            trees,
+            treeGroups,
+            wrappingGroupName,
+          );
+          resolve({
+            trees: wrappedTrees,
+            treeGroups: wrappedTreeGroups,
+          });
+        } else {
+          resolve({ trees, treeGroups });
+        }
       })
       .on("error", reject);
 

@@ -18,7 +18,6 @@ import "es6-promise";
 
 import { getActiveUser } from "admin/admin_rest_api";
 
-// $FlowFixMe: CSS/LESS imports are a special WebPack feature
 import "../stylesheets/main.less";
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -26,8 +25,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // try retreive the currently active user if logged in
   try {
-    await loadFeatureToggles();
-    const user = await getActiveUser({ doNotCatch: true });
+    // eslint-disable-next-line no-unused-vars
+    const [_, user] = await Promise.all([
+      loadFeatureToggles(),
+      getActiveUser({ doNotCatch: true }),
+    ]);
     Store.dispatch(setActiveUserAction(user));
     ErrorHandling.setCurrentUser(user);
   } catch (e) {

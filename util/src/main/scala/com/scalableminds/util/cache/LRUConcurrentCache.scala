@@ -1,7 +1,6 @@
-/*
- * Copyright (C) Tom Bocklisch <https://github.com/tmbo>
- */
 package com.scalableminds.util.cache
+
+import scala.collection.JavaConverters._
 
 trait LRUConcurrentCache[K, V] {
   def maxEntries: Int
@@ -43,6 +42,17 @@ trait LRUConcurrentCache[K, V] {
 
   def size(): Int = {
     cache.size()
+  }
+
+  def clear(predicate: K => Boolean): Int = {
+    cache.synchronized {
+      val matching = cache.keySet.asScala.filter(predicate)
+      val size = matching.size
+      matching.map { key =>
+        remove(key)
+      }
+      size
+    }
   }
 
   def clear(): Unit = {

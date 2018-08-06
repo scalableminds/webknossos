@@ -1,80 +1,92 @@
 package models.annotation
 
+import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.management.relation.Role
-
 import models.user.User
 import play.api.libs.json._
 import models.annotation.AnnotationState._
+import utils.ObjectId
 
-/**
- * Company: scalableminds
- * User: tmbo
- * Date: 02.06.13
- * Time: 02:02
- */
+import scala.concurrent._
+import ExecutionContext.Implicits.global
+
 
 class AnnotationRestrictions {
-  def allowAccess(user: Option[User]): Boolean = false
+  def allowAccess(user: Option[User]): Fox[Boolean] = Fox.successful(false)
 
-  def allowUpdate(user: Option[User]): Boolean = false
+  def allowUpdate(user: Option[User]): Fox[Boolean] = Fox.successful(false)
 
-  def allowFinish(user: Option[User]): Boolean = false
+  def allowFinish(user: Option[User]): Fox[Boolean] = Fox.successful(false)
 
-  def allowDownload(user: Option[User]): Boolean = allowAccess(user)
+  def allowDownload(user: Option[User]): Fox[Boolean] = allowAccess(user)
 
-  def allowAccess(user: User): Boolean = allowAccess(Some(user))
+  def allowAccess(user: User): Fox[Boolean] = allowAccess(Some(user))
 
-  def allowUpdate(user: User): Boolean = allowUpdate(Some(user))
+  def allowUpdate(user: User): Fox[Boolean] = allowUpdate(Some(user))
 
-  def allowFinish(user: User): Boolean = allowFinish(Some(user))
+  def allowFinish(user: User): Fox[Boolean] = allowFinish(Some(user))
 
-  def allowDownload(user: User): Boolean = allowDownload(Some(user))
+  def allowDownload(user: User): Fox[Boolean] = allowDownload(Some(user))
 }
 
-object AnnotationRestrictions {
-  def writeAsJson(ar: AnnotationRestrictions, u: Option[User]) : JsObject =
-    Json.obj(
-      "allowAccess" -> ar.allowAccess(u),
-      "allowUpdate" -> ar.allowUpdate(u),
-      "allowFinish" -> ar.allowFinish(u),
-      "allowDownload" -> ar.allowDownload(u))
+object AnnotationRestrictions extends FoxImplicits{
+  def writeAsJson(ar: AnnotationRestrictions, u: Option[User]) : Fox[JsObject] =
+    for {
+      allowAccess <- ar.allowAccess(u)
+      allowUpdate <- ar.allowUpdate(u)
+      allowFinish <- ar.allowFinish(u)
+      allowDownload <- ar.allowDownload(u)
+    } yield {
+      Json.obj(
+        "allowAccess" -> allowAccess,
+        "allowUpdate" -> allowUpdate,
+        "allowFinish" -> allowFinish,
+        "allowDownload" -> allowDownload)
+    }
 
   def restrictEverything =
     new AnnotationRestrictions()
 
-  def defaultAnnotationRestrictions(annotation: Annotation) =
+  def defaultAnnotationRestrictions(annotation: Annotation): AnnotationRestrictions =
     new AnnotationRestrictions {
-      override def allowAccess(user: Option[User]) = {
-        annotation.isPublic || user.exists {
-          user =>
-            annotation._user == user._id || user.isTeamManagerOfBLOCKING(annotation._team)
-        }
+      override def allowAccess(userOption: Option[User]) = {
+        if(annotation.isPublic) Fox.successful(true)
+        else
+          (for {
+            user <- option2Fox(userOption)
+            isTeamManagerOrAdminOfTeam <- user.isTeamManagerOrAdminOf(annotation._team)
+          } yield {
+            annotation._user == user._id || isTeamManagerOrAdminOfTeam
+          }).orElse(Fox.successful(false))
       }
 
       override def allowUpdate(user: Option[User]) = {
-        user.exists {
+        Fox.successful(user.exists {
           user =>
             annotation._user == user._id && !(annotation.state == Finished)
-        }
+        })
       }
 
       override def allowFinish(user: Option[User]) = {
-        user.exists {
-          user =>
-            (annotation._user == user._id || user.isTeamManagerOfBLOCKING(annotation._team)) && !(annotation.state == Finished)
-        }
+        (for {
+          u <- option2Fox(user)
+          isTeamManagerOrAdminOfTeam <- u.isTeamManagerOrAdminOf(annotation._team)
+        } yield {
+          (annotation._user == u._id || isTeamManagerOrAdminOfTeam) && !(annotation.state == Finished)
+        }).orElse(Fox.successful(false))
       }
     }
 
   def readonlyAnnotation() =
     new AnnotationRestrictions {
-      override def allowAccess(user: Option[User]) = true
+      override def allowAccess(user: Option[User]) = Fox.successful(true)
     }
 
   def updateableAnnotation() =
     new AnnotationRestrictions {
-      override def allowAccess(user: Option[User]) = true
-      override def allowUpdate(user: Option[User]) = true
-      override def allowFinish(user: Option[User]) = true
+      override def allowAccess(user: Option[User]) = Fox.successful(true)
+      override def allowUpdate(user: Option[User]) = Fox.successful(true)
+      override def allowFinish(user: Option[User]) = Fox.successful(true)
     }
 }

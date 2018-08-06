@@ -4,8 +4,9 @@ export default {
     window.managers.push(textureBucketManager);
   },
 
-  addMaterial(material) {
-    window.materials = (window.materials || []).concat(material);
+  addMaterial(viewMode, material) {
+    window.materials = window.materials || [];
+    window.materials[viewMode] = material;
   },
 };
 
@@ -30,7 +31,7 @@ window._setupShaderEditor = viewport => {
     "style",
     `position: absolute;
         top: 0;
-        left: 500px;
+        right: 0px;
         z-index: 10000;
         background: white;`,
   );

@@ -3,7 +3,6 @@
  * @flow
  */
 
-import app from "app";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import * as THREE from "three";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
@@ -12,6 +11,7 @@ import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_fac
 import Dimensions from "oxalis/model/dimensions";
 import constants, {
   OrthoViews,
+  OrthoViewValues,
   OrthoViewColors,
   OrthoViewCrosshairColors,
   OrthoViewGrayCrosshairColor,
@@ -51,7 +51,13 @@ class Plane {
     // create plane
     const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1);
 
-    const textureMaterial = new PlaneMaterialFactory(0, {}, this.planeID).setup().getMaterial();
+    const textureMaterial = new PlaneMaterialFactory(
+      this.planeID,
+      true,
+      OrthoViewValues.indexOf(this.planeID),
+    )
+      .setup()
+      .getMaterial();
 
     this.plane = new THREE.Mesh(planeGeo, textureMaterial);
 
@@ -61,12 +67,12 @@ class Plane {
     for (let i = 0; i <= 1; i++) {
       crosshairGeometries[i] = new THREE.Geometry();
       crosshairGeometries[i].vertices.push(
-        new THREE.Vector3(-pWidth / 2 * i, -pWidth / 2 * (1 - i), 0),
+        new THREE.Vector3((-pWidth / 2) * i, (-pWidth / 2) * (1 - i), 0),
       );
       crosshairGeometries[i].vertices.push(new THREE.Vector3(-25 * i, -25 * (1 - i), 0));
       crosshairGeometries[i].vertices.push(new THREE.Vector3(25 * i, 25 * (1 - i), 0));
       crosshairGeometries[i].vertices.push(
-        new THREE.Vector3(pWidth / 2 * i, pWidth / 2 * (1 - i), 0),
+        new THREE.Vector3((pWidth / 2) * i, (pWidth / 2) * (1 - i), 0),
       );
       this.crosshair[i] = new THREE.LineSegments(
         crosshairGeometries[i],
@@ -137,7 +143,7 @@ class Plane {
     );
   };
 
-  setPosition = (posVec: Vector3): void => {
+  setPosition = (posVec: THREE.Vector3): void => {
     this.TDViewBorders.position.copy(posVec);
     this.crosshair[0].position.copy(posVec);
     this.crosshair[1].position.copy(posVec);
@@ -165,7 +171,6 @@ class Plane {
 
   setSegmentationAlpha(alpha: number): void {
     this.plane.material.setSegmentationAlpha(alpha);
-    app.vent.trigger("rerender");
   }
 
   getMeshes = () => [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]];

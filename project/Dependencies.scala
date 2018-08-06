@@ -7,8 +7,6 @@ object Dependencies {
   val log4jVersion = "2.0-beta9"
   val newrelicVersion = "3.44.1"
   val playVersion = "2.4.6"
-  val reactivePlayVersion = "0.11.13-play24"
-  val reactiveVersion = "0.11.13"
   val webknossosWrapVersion = "1.1.4"
 
   val airbrake = "com.scalableminds" %% "play-airbrake" % "0.5.0"
@@ -21,8 +19,10 @@ object Dependencies {
   val commonsEmail = "org.apache.commons" % "commons-email" % "1.3.1"
   val commonsIo = "commons-io" % "commons-io" % "2.4"
   val commonsLang = "org.apache.commons" % "commons-lang3" % "3.1"
-  val grpc = "io.grpc" % "grpc-netty" % com.trueaccord.scalapb.compiler.Version.grpcJavaVersion
-  val grpcRuntime = "com.trueaccord.scalapb" %% "scalapb-runtime-grpc" % com.trueaccord.scalapb.compiler.Version.scalapbVersion
+  val grpc = "io.grpc" % "grpc-netty" % scalapb.compiler.Version.grpcJavaVersion
+  val grpcServices = "io.grpc" % "grpc-services" % scalapb.compiler.Version.grpcJavaVersion
+  val scalapbRuntime = "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion
+  val scalapbRuntimeGrpc = "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion
   val liftCommon = "net.liftweb" % "lift-common_2.10" % "2.6-M3"
   val liftUtil = "net.liftweb" % "lift-util_2.10" % "3.0-M1"
   val log4jApi = "org.apache.logging.log4j" % "log4j-core" % log4jVersion
@@ -30,11 +30,10 @@ object Dependencies {
   val newrelic = "com.newrelic.agent.java" % "newrelic-agent" % newrelicVersion
   val newrelicApi = "com.newrelic.agent.java" % "newrelic-api" % newrelicVersion
   val playFramework = "com.typesafe.play" %% "play" % playVersion
-  val reactiveBson = "org.reactivemongo" %% "reactivemongo-bson-macros" % reactiveVersion
-  val reactivePlay = "org.reactivemongo" %% "play2-reactivemongo" % reactivePlayVersion
+  val reactiveBson = "org.reactivemongo" %% "reactivemongo-bson" % "0.11.13"
   val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.2"
   val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.4.0"
-  val scalapbJson = "com.scalableminds" %% "scalapb-json4s" % "0.3.2.0-scm"
+  val scalaTest = "org.scalatest" %% "scalatest" % "3.0.5" % "test"
   val silhouette = "com.mohiva" %% "play-silhouette" % "3.0.5"
   val silhouetteTestkit = "com.mohiva" %% "play-silhouette-testkit" % "3.0.5" % "test"
   val urlHelper = "com.netaporter" %% "scala-uri" % "0.4.14"
@@ -61,9 +60,8 @@ object Dependencies {
     log4jCore,
     playFramework,
     reactiveBson,
-    reactivePlay,
+    scalapbRuntime,
     scalaLogging,
-    scalapbJson,
     ws
   )
 
@@ -74,7 +72,8 @@ object Dependencies {
     newrelicApi,
     webknossosWrap,
     grpc,
-    grpcRuntime,
+    grpcServices,
+    scalapbRuntimeGrpc,
     component("play-test")
   )
 
@@ -84,6 +83,7 @@ object Dependencies {
     ceedubs,
     commonsCodec,
     scalaAsync,
+    scalaTest,
     silhouette,
     silhouetteTestkit,
     specs2 % Test,

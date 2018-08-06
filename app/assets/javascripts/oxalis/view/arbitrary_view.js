@@ -16,8 +16,6 @@ import window from "libs/window";
 class ArbitraryView {
   // Copied form backbone events (TODO: handle this better)
   trigger: Function;
-  on: Function;
-  listenTo: Function;
 
   animate: () => void;
   resize: () => void;
@@ -47,7 +45,7 @@ class ArbitraryView {
     // camDistance has to be calculated such that with cam
     // angle 45°, the plane of width Constants.VIEWPORT_WIDTH fits exactly in the
     // viewport.
-    this.camDistance = Constants.VIEWPORT_WIDTH / 2 / Math.tan(Math.PI / 180 * 45 / 2);
+    this.camDistance = Constants.VIEWPORT_WIDTH / 2 / Math.tan(((Math.PI / 180) * 45) / 2);
 
     // Initialize main THREE.js components
     this.camera = new THREE.PerspectiveCamera(45, 1, 50, 1000);
@@ -106,7 +104,7 @@ class ArbitraryView {
 
     TWEEN.update();
 
-    if (this.needsRerender) {
+    if (this.needsRerender || window.needsRerender) {
       this.trigger("render");
 
       const { camera, geometries } = this;
@@ -151,6 +149,7 @@ class ArbitraryView {
       renderer.render(scene, camera);
 
       this.needsRerender = false;
+      window.needsRerender = false;
     }
 
     this.animationRequestId = window.requestAnimationFrame(this.animate);

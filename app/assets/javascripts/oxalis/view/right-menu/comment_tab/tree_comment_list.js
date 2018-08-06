@@ -9,17 +9,19 @@ import classNames from "classnames";
 import Comment from "oxalis/view/right-menu/comment_tab/comment";
 import Utils from "libs/utils";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
-import { scrollIntoViewIfNeeded } from "scroll-into-view-if-needed";
-import type { OxalisState, TreeType, SkeletonTracingType } from "oxalis/store";
+import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
+import type { OxalisState, TreeType, SkeletonTracingType, CommentType } from "oxalis/store";
 
-type OwnProps = {
+type OwnProps = {|
   tree: TreeType,
   isSortedAscending: boolean,
-};
+  isSortedByName: boolean,
+|};
 
-type TreeCommentListProps = {
+type TreeCommentListProps = {|
+  ...OwnProps,
   skeletonTracing: SkeletonTracingType,
-} & OwnProps;
+|};
 
 type State = {
   collapsed: boolean,
@@ -47,7 +49,11 @@ class TreeCommentList extends React.PureComponent<TreeCommentListProps, State> {
       this.props.tree.treeId === this.props.skeletonTracing.activeTreeId &&
       !this.activeNodeHasComment()
     ) {
-      scrollIntoViewIfNeeded(this.treeDomElement, { centerIfNeeded: true });
+      scrollIntoViewIfNeeded(this.treeDomElement, {
+        block: "center",
+        scrollMode: "if-needed",
+        boundary: document.body,
+      });
     }
   }
 
@@ -62,7 +68,13 @@ class TreeCommentList extends React.PureComponent<TreeCommentListProps, State> {
     const commentNodes = !this.state.collapsed
       ? this.props.tree.comments
           .slice(0)
-          .sort(Utils.localeCompareBy("content", this.props.isSortedAscending))
+          .sort(
+            Utils.localeCompareBy(
+              ([]: Array<CommentType>),
+              this.props.isSortedByName ? "content" : "nodeId",
+              this.props.isSortedAscending,
+            ),
+          )
           .map(comment => (
             <Comment
               key={comment.nodeId}
@@ -102,8 +114,7 @@ class TreeCommentList extends React.PureComponent<TreeCommentListProps, State> {
 function mapStateToProps(state: OxalisState, ownProps: OwnProps): TreeCommentListProps {
   return {
     skeletonTracing: enforceSkeletonTracing(state.tracing),
-    tree: ownProps.tree,
-    isSortedAscending: ownProps.isSortedAscending,
+    ...ownProps,
   };
 }
 

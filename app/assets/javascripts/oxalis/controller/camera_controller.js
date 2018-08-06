@@ -9,12 +9,12 @@ import _ from "lodash";
 import api from "oxalis/api/internal_api";
 import constants, { OrthoViews, OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import Dimensions from "oxalis/model/dimensions";
-import Model from "oxalis/model";
 import Store from "oxalis/store";
 import TWEEN from "tween.js";
 import type { CameraData } from "oxalis/store";
 import type { Vector3, OrthoViewMapType, OrthoViewType } from "oxalis/constants";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { setTDCameraAction } from "oxalis/model/actions/view_mode_actions";
 import { voxelToNm, getBaseVoxel } from "oxalis/model/scaleinfo";
@@ -55,7 +55,7 @@ class CameraController extends React.PureComponent<Props> {
     const clippingDistance = state.userConfiguration.clippingDistance;
     const scaleFactor = getBaseVoxel(state.dataset.dataSource.scale);
     const zoom = state.flycam.zoomStep;
-    const halfBoundary = constants.VIEWPORT_WIDTH / 2 * zoom;
+    const halfBoundary = (constants.VIEWPORT_WIDTH / 2) * zoom;
     for (const planeId of OrthoViewValuesWithoutTDView) {
       this.props.cameras[planeId].near = -clippingDistance;
       const scaledBoundary = halfBoundary * scaleFactor;
@@ -140,8 +140,9 @@ type TweenState = {
 
 export function rotate3DViewTo(id: OrthoViewType, animate: boolean = true): void {
   const state = Store.getState();
-  const b = voxelToNm(state.dataset.dataSource.scale, Model.upperBoundary);
-  const pos = voxelToNm(state.dataset.dataSource.scale, getPosition(state.flycam));
+  const { dataset } = state;
+  const b = voxelToNm(dataset.dataSource.scale, getBoundaries(dataset).upperBoundary);
+  const pos = voxelToNm(dataset.dataSource.scale, getPosition(state.flycam));
 
   let to: TweenState;
   if (id === OrthoViews.TDView) {
@@ -156,9 +157,9 @@ export function rotate3DViewTo(id: OrthoViewType, animate: boolean = true): void
     const x2 = pos[0];
     const y2 = pos[1];
 
-    const b2 = 1 / Math.sqrt(b1 * b1 / a1 / a1 + 1);
-    const a2 = -b2 * b1 / a1;
-    const d2 = (a1 / b1 * (y1 - y2) - x1 + x2) / (-a2 + a1 * b2 / b1);
+    const b2 = 1 / Math.sqrt((b1 * b1) / a1 / a1 + 1);
+    const a2 = (-b2 * b1) / a1;
+    const d2 = ((a1 / b1) * (y1 - y2) - x1 + x2) / (-a2 + (a1 * b2) / b1);
 
     const intersect = [x2 + d2 * a2, y2 + d2 * b2];
     const distance = Dimensions.distance([x1, y1], intersect);
@@ -185,7 +186,7 @@ export function rotate3DViewTo(id: OrthoViewType, animate: boolean = true): void
     const ind = Dimensions.getIndices(id);
     const width = Math.max(b[ind[0]], b[ind[1]] * 1.12) * 1.1;
     const paddingTop = width * 0.12;
-    const padding = width / 1.1 * 0.1 / 2;
+    const padding = ((width / 1.1) * 0.1) / 2;
     const offsetX = pos[ind[0]] + padding + (width - b[ind[0]]) / 2;
     const offsetY = pos[ind[1]] + paddingTop + padding;
 

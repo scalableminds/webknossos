@@ -1,14 +1,17 @@
-export const tracing = {
+// @flow
+import type { ServerSkeletonTracingType, APIAnnotationType } from "admin/api_flow_types";
+
+export const tracing: ServerSkeletonTracingType = {
   id: "47e37793-d0be-4240-a371-87ce68561a13",
-  dataSetName: "ROI2017_wkw",
   trees: [
     {
       treeId: 2,
+      createdTimestamp: 1528981227174,
       nodes: [
         {
           id: 3,
-          position: [138, 22, 0],
-          rotation: [0, 0, 0],
+          position: { x: 138, y: 22, z: 0 },
+          rotation: { x: 0, y: 0, z: 0 },
           radius: 112.39999389648438,
           viewport: 0,
           resolution: 1,
@@ -18,18 +21,19 @@ export const tracing = {
         },
       ],
       edges: [],
-      color: [0, 0, 1],
+      color: { r: 0, g: 0, b: 1, a: 1 },
       branchPoints: [{ nodeId: 3, createdTimestamp: 1502302770510 }],
       comments: [{ nodeId: 3, content: "Test" }],
       name: "explorative_2017-08-09_SCM_Boy_002",
     },
     {
       treeId: 1,
+      createdTimestamp: 1528981227574,
       nodes: [
         {
           id: 1,
-          position: [24, 32, 0],
-          rotation: [0, 0, 0],
+          position: { x: 24, y: 32, z: 0 },
+          rotation: { x: 0, y: 0, z: 0 },
           radius: 112.39999389648438,
           viewport: 0,
           resolution: 1,
@@ -39,8 +43,8 @@ export const tracing = {
         },
         {
           id: 2,
-          position: [104, 106, 0],
-          rotation: [0, 0, 0],
+          position: { x: 104, y: 106, z: 0 },
+          rotation: { x: 0, y: 0, z: 0 },
           radius: 112.39999389648438,
           viewport: 0,
           resolution: 1,
@@ -50,28 +54,32 @@ export const tracing = {
         },
       ],
       edges: [{ source: 1, target: 2 }],
-      color: [0.6784313917160034, 0.1411764770746231, 0.05098039284348488],
+      color: { r: 0.6784313917160034, g: 0.1411764770746231, b: 0.05098039284348488, a: 1.0 },
       branchPoints: [{ nodeId: 1, createdTimestamp: 1502302774534 }],
       comments: [],
       name: "explorative_2017-08-09_SCM_Boy_001",
     },
   ],
+  treeGroups: [],
   createdTimestamp: 1502302761387,
   activeNodeId: 3,
-  editPosition: [24, 32, 0],
-  editRotation: [79.99999570976581, 73.99999869555745, 4.908922051072295e-7],
+  editPosition: { x: 24, y: 32, z: 0 },
+  editRotation: { x: 79.99999570976581, y: 73.99999869555745, z: 4.908922051072295e-7 },
   zoomLevel: 2,
   version: 7,
 };
 
-export const annotation = {
+export const annotation: APIAnnotationType = {
   created: "2017-08-09 20:19",
+  description: "",
   state: "Active",
   id: "598b52293c00009906f043e7",
+  isPublic: false,
+  modified: "2018-06-12 15:59",
   name: "",
   typ: "Explorational",
   task: null,
-  stats: null,
+  stats: {},
   restrictions: { allowAccess: true, allowUpdate: true, allowFinish: true, allowDownload: true },
   formattedHash: "f043e7",
   content: { id: "47e37793-d0be-4240-a371-87ce68561a13", typ: "skeleton" },
@@ -82,5 +90,6 @@ export const annotation = {
     branchPointsAllowed: true,
     somaClickingAllowed: true,
   },
+  tags: ["ROI2017_wkw", "skeleton"],
   tracingTime: 0,
 };

@@ -13,12 +13,14 @@ import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
 import type { APITaskTypeType } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
+import { handleGenericError } from "libs/error_handling";
 
 const { Column } = Table;
 const { Search } = Input;
 
 type Props = {
   history: RouterHistory,
+  initialSearchValue?: string,
 };
 
 type State = {
@@ -41,6 +43,11 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
 
   componentWillMount() {
     this.setState(persistence.load(this.props.history));
+    if (this.props.initialSearchValue && this.props.initialSearchValue !== "") {
+      this.setState({
+        searchQuery: this.props.initialSearchValue,
+      });
+    }
   }
 
   componentDidMount() {
@@ -68,21 +75,37 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
     Modal.confirm({
       title: messages["taskType.delete"],
       onOk: async () => {
-        this.setState({
-          isLoading: true,
-        });
+        try {
+          this.setState({
+            isLoading: true,
+          });
 
-        await deleteTaskType(taskType.id);
-        this.setState({
-          isLoading: false,
-          tasktypes: this.state.tasktypes.filter(p => p.id !== taskType.id),
-        });
+          await deleteTaskType(taskType.id);
+          this.setState({
+            tasktypes: this.state.tasktypes.filter(p => p.id !== taskType.id),
+          });
+        } catch (error) {
+          handleGenericError(error);
+        } finally {
+          this.setState({ isLoading: false });
+        }
       },
     });
   };
 
+  renderPlaceholder() {
+    return this.state.isLoading ? null : (
+      <React.Fragment>
+        {"There are no task types. You can "}
+        <Link to="/taskTypes/create">add a task type</Link>
+        {" in order to configure certain properties, such as a description, for classes of tasks."}
+      </React.Fragment>
+    );
+  }
+
   render() {
     const marginRight = { marginRight: 20 };
+    const typeHint: Array<APITaskTypeType> = [];
 
     return (
       <div className="container">
@@ -90,7 +113,7 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
           <div className="pull-right">
             <Link to="/taskTypes/create">
               <Button icon="plus" style={marginRight} type="primary">
-                Add TaskType
+                Add Task Type
               </Button>
             </Link>
             <Search
@@ -115,13 +138,14 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                 defaultPageSize: 50,
               }}
               style={{ marginTop: 30, marginBotton: 30 }}
+              locale={{ emptyText: this.renderPlaceholder() }}
             >
               <Column
                 title="ID"
                 dataIndex="id"
                 key="id"
                 width={100}
-                sorter={Utils.localeCompareBy("id")}
+                sorter={Utils.localeCompareBy(typeHint, "id")}
                 className="monospace-id"
               />
               <Column
@@ -129,22 +153,22 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                 dataIndex="team.name"
                 key="team"
                 width={130}
-                sorter={Utils.localeCompareBy("team")}
+                sorter={Utils.localeCompareBy(typeHint, "team")}
               />
               <Column
                 title="Summary"
                 dataIndex="summary"
                 key="summary"
                 width={130}
-                sorter={Utils.localeCompareBy("summary")}
+                sorter={Utils.localeCompareBy(typeHint, "summary")}
               />
               <Column
                 title="Description"
                 dataIndex="description"
                 key="description"
-                sorter={Utils.localeCompareBy("description")}
+                sorter={Utils.localeCompareBy(typeHint, "description")}
                 render={description => (
-                  <div className="task-type-description">
+                  <div className="task-type-description short">
                     <Markdown
                       source={description}
                       options={{ html: false, breaks: true, linkify: true }}

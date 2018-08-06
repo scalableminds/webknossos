@@ -4,6 +4,7 @@
  */
 
 export const ModeValues = ["orthogonal", "flight", "oblique", "volume"]; //   MODE_PLANE_TRACING | MODE_ARBITRARY | MODE_ARBITRARY_PLANE | MODE_VOLUME
+export const ModeValuesIndices = { Orthogonal: 0, Flight: 1, Oblique: 2, Volume: 3 };
 export type ModeType = "orthogonal" | "oblique" | "flight" | "volume";
 export type Vector2 = [number, number];
 export type Vector3 = [number, number, number];
@@ -32,6 +33,12 @@ export const OrthoViews = {
 export type OrthoViewType = $Keys<typeof OrthoViews>;
 export type OrthoViewMapType<T> = { [key: OrthoViewType]: T };
 export const OrthoViewValues: Array<OrthoViewType> = Object.keys(OrthoViews);
+export const OrthoViewIndices = {
+  PLANE_XY: OrthoViewValues.indexOf("PLANE_XY"),
+  PLANE_YZ: OrthoViewValues.indexOf("PLANE_YZ"),
+  PLANE_XZ: OrthoViewValues.indexOf("PLANE_XZ"),
+  TDView: OrthoViewValues.indexOf("TDView"),
+};
 export const OrthoViewValuesWithoutTDView = [
   OrthoViews.PLANE_XY,
   OrthoViews.PLANE_YZ,

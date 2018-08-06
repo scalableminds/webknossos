@@ -214,6 +214,7 @@ export type UserConfigurationType = {
   +sortTreesByName: boolean,
   +sphericalCapRadius: number,
   +tdViewDisplayPlanes: boolean,
+  +hideTreeRemovalWarning: boolean,
 };
 
 export type MappingType = { [key: number]: number };
@@ -349,6 +350,7 @@ export const defaultState: OxalisState = {
     sortTreesByName: false,
     sphericalCapRadius: 140,
     tdViewDisplayPlanes: true,
+    hideTreeRemovalWarning: false,
   },
   temporaryConfiguration: {
     viewMode: Constants.MODE_PLANE_TRACING,

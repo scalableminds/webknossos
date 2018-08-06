@@ -44,6 +44,7 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.no_allowed_mode": "There was no valid allowed tracing mode specified.",
   "tracing.volume_missing_segmentation": "Volume is allowed, but segmentation does not exist.",
   "tracing.delete_initial_node": "Do you really want to delete the initial node?",
+  "tracing.delete_tree": "Do you really want to delete the whole tree?",
   "tracing.delete_tree_with_initial_node":
     "This tree contains the initial node. Do you really want to delete the whole tree?",
   "tracing.merged": "Merging successfully done",

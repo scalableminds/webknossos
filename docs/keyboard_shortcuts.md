@@ -8,6 +8,7 @@ Find all available keyboard shortcuts for webKnossos listed below.
 | ----------------------------- | ------------------------------------------- |
 | CTRL / CMD + Z                | Undo                                        |
 | CTRL / CMD + Y                | Redo                                        |
+| CTRL / CMD + S                | Save                                        |
 | P                             | Select Previous Comment                     |
 | N                             | Select Next Comment                         |
 | K                             | Scale Up Viewport Size                      |

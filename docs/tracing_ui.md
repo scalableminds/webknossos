@@ -8,7 +8,7 @@ The main webKnossos user interface for viewing and annotating datasets is divide
 3. The center of the screen is occupied by the tracing interface. Your dataset is displayed here and users can add annotations or add/edit the segmentation. Most interactions we take place here. More below.
 4. The right-hand side of the screen is occupied by several tabs providing more information on your current dataset or tracing. Depending on your editing mode these tabs might change. More below.
 
-![An overview of the webKnossos tracing UI highlighting the 4 main ](images/tracing_ui_overview.jpg)
+![An overview of the webKnossos tracing UI highlighting the 4 main sections of the interface.](images/tracing_ui_overview.png)
 
 ## The Toolbar
 The toolbar contains frequently used commands, your current position within the dataset and the ability to switch between various modes for viewing and interaction with the dataset or tools depending on your tracing mode.
@@ -24,7 +24,7 @@ The most common buttons are:
 
 A user can directly jump to positions within their datasets by entering them in the position input field. The same is true for the rotation in some tracing modes. Clicking on the position or rotation labels copies the values to the clipboard.
 
-TODO Add image
+![The webKnosos toolbar contains many useful features for quick access such as Saving und Undo/Redo](images/tracing_ui_toolbar.png)
 
 ## Skeleton Tracing
 The goal for skeleton tracing is to reconstruct structures in a dataset that span across many data slices as a graph of connected nodes. A typical example of a skeleton tracing is to follow a blood vessel for a few centimeters, placing a node every few slices. (See image below)
@@ -45,7 +45,7 @@ Orthogonal mode displays a dataset orthogonally to each of the three main axis x
 
 Most skeleton tracing operations and keyboard shortcuts are tailored for the Orthogonal Mode.
 
-![Switch between different tracing modes using the buttons in the toolbar](images/tracing_ui_modes.jpg)
+![Switch between different tracing modes using the buttons in the toolbar](images/tracing_ui_modes.png)
 
 #### Flight Mode
 Flight mode allows an arbitrary view through the data. In contrast to orthogonal mode, any arbitrary slice through the dataset at any rotational angle of the camera is possible. In Flight mode, the data is projected on the inside of a sphere with the camera located at the center of the sphere. 
@@ -92,12 +92,12 @@ Common tree operations include splitting and merging trees.
   2. Delete an edge between two nodes. Select the first node (SHIFT + Left Click), then SHIFT + CTRL + Left Click on the second node of the edge to delete this connection.
 - `Tree merging` works similarly to edge deletion but will create a new edge between two previously unconnected trees. Select the first node and SHIFT + ALT + Left Click the second node to create an edge between the two.
 
-![Tree can split by deleting the edge between two node or deleting a node. Two trees can be merge again by creating a new edge between them.](images/tracing_ui_tree_merge_split.gif)
+![Trees can split by deleting the edge between two node or deleting a node. Two trees can be merge again by creating a new edge between them.](images/tracing_ui_tree_merge_split.gif)
 
-Each tree gets assigned a random color. Colors can be shuffled for a single tree or for all trees in a skeleton. Use the overflow menu under `More in the tree tab and select `Change Color` or `Shuffle All Colors` to assign new randomly chosen colors. 
+A random color is assigned to each tree upon creation. Colors can be shuffled for a single tree or for all trees in a skeleton. Use the overflow menu under `More in the tree tab and select `Change Color` or `Shuffle All Colors` to assign new randomly chosen colors. 
 All node have the same color as their parent tree and can not be changed individually. The active node, branch points, and node that have comments assigned to them are highlighted with a slight variation of the tree's color.
 
-![Randomly assign a new color to a single tree or all trees at once.](images/tracing_ui_tree_color.png)
+![Trees are randomly assigned colors upon creation. Users can assign new random colors to a single tree or all trees at once.](images/tracing_ui_tree_color.png)
 
 The visibility of individual trees can be toggled to hide some trees for a better overview. Toggle the checkbox before each tree name or tree group to hide/show it. Alternatively, the visibility of all trees can be toggled all at once using the `Toggle All` button under the `Tree Tab`.  There are also a few keyboard shortcuts to quickly toggle the visibility:
 

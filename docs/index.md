@@ -5,7 +5,7 @@
 
 ## Guides
 * [Dashboard](./dashboard.md)
-* [Tracing View](./tracing_ui.md)
+* [Tracing View UI](./tracing_ui.md)
 * [Managing Datasets](./datasets.md)
 * [Managing Users and Access Rights](./users.md)
 * [Sharing](./sharing.md)

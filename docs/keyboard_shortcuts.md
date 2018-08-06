@@ -47,7 +47,7 @@ Find all available keyboard shortcuts for webKnossos listed below.
 | Del                           | Delete Node / Split Trees                   |
 | B                             | Mark Node as New Branchpoint                |
 | J                             | Jump To Last Branchpoint                    |
-| S                             | Center Active Node                          |
+| S                             | Center Camera on Active Node                |
 
 ### Flight / Oblique Mode
 

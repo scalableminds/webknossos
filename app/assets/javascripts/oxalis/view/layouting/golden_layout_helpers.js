@@ -1,11 +1,10 @@
 // @flow
 
 function createLayoutHelper(type) {
-  return function(content: Array<*>, optProps: Object = {}) {
+  return function(...content: Array<*>) {
     return {
       type,
       content,
-      ...optProps,
     };
   };
 }

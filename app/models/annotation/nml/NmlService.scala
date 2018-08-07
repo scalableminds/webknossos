@@ -97,6 +97,10 @@ object NmlService extends LazyLogging {
     ZipParseResult(parseResults, otherFiles)
   }
 
+  def wrapTreesInGroups(parseResults: List[NmlParseResult]): List[NmlParseResult] = parseResults //TODO
+
+
+  //TODO: remove?
   def addPrefixesToTreeNames(parseResults: List[NmlParseResult]): List[NmlParseResult] = {
     def renameTrees(name: String, tracing: SkeletonTracing): SkeletonTracing = {
       val prefix = name.replaceAll("\\.[^.]*$", "") + "_"

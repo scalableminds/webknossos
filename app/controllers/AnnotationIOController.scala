@@ -63,13 +63,16 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
       } yield newTracingId
     }
 
+    val shouldCreateGroupForEachFile: Boolean = request.body.dataParts("createGroupForEachFile")(0) == "true"
+
     val parsedFiles = request.body.files.foldLeft(NmlService.ZipParseResult()) {
       case (acc, next) => acc.combineWith(NmlService.extractFromFile(next.ref.file, next.filename))
     }
 
-    val parseResultsPrefixed = NmlService.addPrefixesToTreeNames(parsedFiles.parseResults)
+    //TODO remove? val parseResultsPrefixed = NmlService.addPrefixesToTreeNames(parsedFiles.parseResults)
+    val tracingsProcessed = if (shouldCreateGroupForEachFile) NmlService.wrapTreesInGroups(parsedFiles.parseResults) else parsedFiles.parseResults
 
-    val parseSuccess = parseResultsPrefixed.filter(_.succeeded)
+    val parseSuccess = tracingsProcessed.filter(_.succeeded)
 
     if (!parsedFiles.isEmpty) {
       val tracings = parseSuccess.flatMap(_.tracing)

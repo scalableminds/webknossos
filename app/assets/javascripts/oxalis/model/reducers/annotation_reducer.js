@@ -4,9 +4,18 @@ import update from "immutability-helper";
 
 import type { OxalisState } from "oxalis/store";
 import type { ActionType } from "oxalis/model/actions/actions";
+import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reducers/reducer_helpers";
 
 function AnnotationReducer(state: OxalisState, action: ActionType): OxalisState {
   switch (action.type) {
+    case "INITIALIZE_ANNOTATION": {
+      const annotationInfo = convertServerAnnotationToFrontendAnnotation(action.annotation);
+      return update(state, {
+        tracing: {
+          $merge: annotationInfo,
+        },
+      });
+    }
     case "SET_ANNOTATION_NAME": {
       return update(state, {
         tracing: {
@@ -32,11 +41,17 @@ function AnnotationReducer(state: OxalisState, action: ActionType): OxalisState 
     }
 
     case "SET_USER_BOUNDING_BOX": {
+      const updaterObject = {
+        userBoundingBox: {
+          $set: action.userBoundingBox,
+        },
+      };
+      const maybeSkeletonUpdater = state.tracing.skeleton ? { skeleton: updaterObject } : {};
+      const maybeVolumeUpdater = state.tracing.volume ? { volume: updaterObject } : {};
       return update(state, {
         tracing: {
-          userBoundingBox: {
-            $set: action.userBoundingBox,
-          },
+          ...maybeSkeletonUpdater,
+          ...maybeVolumeUpdater,
         },
       });
     }

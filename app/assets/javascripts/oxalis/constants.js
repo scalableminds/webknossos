@@ -18,6 +18,7 @@ export type BoundingBoxType = {
   max: Vector3,
 };
 
+export const AnnotationContentTypes = ["skeleton", "volume", "hybrid"];
 export const Vector2Indicies = [0, 1];
 export const Vector3Indicies = [0, 1, 2];
 export const Vector4Indicies = [0, 1, 2, 3];

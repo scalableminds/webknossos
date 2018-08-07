@@ -36,7 +36,7 @@ class VolumeTracingController @Inject()(
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
           dataSource <- dataSourceRepository.findUsableByName(tracing.dataSetName) ?~> Messages("dataSet.notFound")
           _ <- tracingService.initializeWithData(tracingId, tracing, dataSource, initialData)
-        } yield Ok(Json.toJson(TracingReference(tracingId, TracingType.volume)))
+        } yield Ok(Json.toJson(tracingId))
       }
   }
 

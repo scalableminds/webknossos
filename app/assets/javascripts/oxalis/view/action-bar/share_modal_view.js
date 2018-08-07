@@ -7,7 +7,7 @@ import Toast from "libs/toast";
 import InputComponent from "oxalis/view/components/input_component";
 import { setAnnotationPublicAction } from "oxalis/model/actions/annotation_actions";
 import messages from "messages";
-import type { OxalisState, RestrictionsType, SettingsType } from "oxalis/store";
+import type { OxalisState, RestrictionsAndSettingsType } from "oxalis/store";
 
 type ShareModalPropType = {
   // eslint-disable-next-line react/no-unused-prop-types
@@ -15,7 +15,7 @@ type ShareModalPropType = {
   isDatasetPublic: boolean,
   isVisible: boolean,
   onOk: () => void,
-  restrictions: RestrictionsType & SettingsType,
+  restrictions: RestrictionsAndSettingsType,
   setAnnotationPublic: Function,
 };
 

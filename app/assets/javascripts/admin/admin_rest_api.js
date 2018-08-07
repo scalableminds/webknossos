@@ -33,6 +33,9 @@ import type {
   APIFeatureToggles,
   APIOrganizationType,
   ServerTracingType,
+  HybridServerTracingType,
+  ServerSkeletonTracingType,
+  ServerVolumeTracingType,
 } from "admin/api_flow_types";
 import { APITracingTypeEnum } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/task/task_search_form";
@@ -323,7 +326,7 @@ export function requestTask(): Promise<APIAnnotationWithTaskType> {
   return Request.receiveJSON("/api/user/tasks/request");
 }
 
-export function getAnnotationsForTask(taskId: string): Promise<APIAnnotationType[]> {
+export function getAnnotationsForTask(taskId: string): Promise<Array<APIAnnotationType>> {
   return Request.receiveJSON(`/api/tasks/${taskId}/annotations`);
 }
 
@@ -413,7 +416,7 @@ export function reOpenAnnotation(
   return Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/reopen`);
 }
 
-type EditableAnnotationType = {
+export type EditableAnnotationType = {
   name: string,
   description: string,
   isPublic: boolean,
@@ -484,30 +487,48 @@ export function getAnnotationInformation(
 
 export function createExplorational(
   datasetName: string,
-  typ: "volume" | "skeleton",
+  typ: "volume" | "skeleton" | "hybrid",
   withFallback: boolean,
 ): Promise<APIAnnotationType> {
   const url = `/api/datasets/${datasetName}/createExplorational`;
-
   return Request.sendJSONReceiveJSON(url, { data: { typ, withFallback } });
 }
 
-export async function getTracingForAnnotation(
+export async function getTracingForAnnotations(
   annotation: APIAnnotationType,
-): Promise<ServerTracingType> {
-  const annotationType = annotation.content.typ;
+): Promise<HybridServerTracingType> {
+  const [_skeleton, _volume] = await Promise.all([
+    getTracingForAnnotationType(annotation, "skeleton"),
+    getTracingForAnnotationType(annotation, "volume"),
+  ]);
+
+  const skeleton = ((_skeleton: any): ?ServerSkeletonTracingType);
+  const volume = ((_volume: any): ?ServerVolumeTracingType);
+
+  return {
+    skeleton,
+    volume,
+  };
+}
+
+export async function getTracingForAnnotationType(
+  annotation: APIAnnotationType,
+  tracingType: "skeleton" | "volume",
+): Promise<?ServerTracingType> {
+  const tracingId = annotation.tracing[tracingType];
+  if (!tracingId) {
+    return null;
+  }
   const tracingArrayBuffer = await doWithToken(token =>
     Request.receiveArraybuffer(
-      `${annotation.dataStore.url}/data/tracings/${annotationType}/${
-        annotation.content.id
-      }?token=${token}`,
+      `${annotation.dataStore.url}/data/tracings/${tracingType}/${tracingId}?token=${token}`,
       { headers: { Accept: "application/x-protobuf" } },
     ),
   );
 
-  const tracing = parseProtoTracing(tracingArrayBuffer, annotationType);
+  const tracing = parseProtoTracing(tracingArrayBuffer, tracingType);
   // The tracing id is not contained in the server tracing, but in the annotation content
-  tracing.id = annotation.content.id;
+  tracing.id = tracingId;
   return tracing;
 }
 

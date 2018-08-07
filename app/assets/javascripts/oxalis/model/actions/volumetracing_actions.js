@@ -9,11 +9,10 @@ import type {
   VolumeToolType,
   ContourModeType,
 } from "oxalis/constants";
-import type { APIAnnotationType, ServerVolumeTracingType } from "admin/api_flow_types";
+import type { ServerVolumeTracingType } from "admin/api_flow_types";
 
 type InitializeVolumeTracingActionType = {
   type: "INITIALIZE_VOLUMETRACING",
-  annotation: APIAnnotationType,
   tracing: ServerVolumeTracingType,
 };
 type CreateCellActionType = { type: "CREATE_CELL", cellId: ?number };
@@ -58,11 +57,9 @@ export const VolumeTracingSaveRelevantActions = [
 ];
 
 export const initializeVolumeTracingAction = (
-  annotation: APIAnnotationType,
   tracing: ServerVolumeTracingType,
 ): InitializeVolumeTracingActionType => ({
   type: "INITIALIZE_VOLUMETRACING",
-  annotation,
   tracing,
 });
 

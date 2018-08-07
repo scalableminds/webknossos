@@ -404,7 +404,7 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
 }
 
 const mapStateToProps = (state: OxalisState) => ({
-  skeletonTracing: state.tracing,
+  skeletonTracing: state.tracing.skeleton,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({

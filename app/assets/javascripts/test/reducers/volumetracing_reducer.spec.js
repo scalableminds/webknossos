@@ -19,33 +19,35 @@ const { defaultState } = require("oxalis/store");
 
 const volumeTracing = {
   type: "volume",
-  tracingType: "Explorational",
-  name: "",
   activeCellId: 0,
   cells: [],
   activeTool: VolumeToolEnum.MOVE,
   maxCellId: 0,
   contourList: [],
   lastCentroid: null,
-  restrictions: {
-    branchPointsAllowed: true,
-    allowUpdate: true,
-    allowFinish: true,
-    allowAccess: true,
-    allowDownload: true,
-  },
 };
 
 function getVolumeTracing(tracing: TracingType): Maybe<VolumeTracingType> {
-  if (tracing.type === "volume") {
-    return Maybe.Just(tracing);
+  if (tracing.volume != null) {
+    return Maybe.Just(tracing.volume);
   }
   throw new Error("Tracing is not of type volume!");
 }
 
 const initialState = update(defaultState, {
   tracing: {
-    $set: volumeTracing,
+    tracingType: { $set: "Explorational" },
+    name: { $set: "" },
+    restrictions: {
+      $set: {
+        branchPointsAllowed: true,
+        allowUpdate: true,
+        allowFinish: true,
+        allowAccess: true,
+        allowDownload: true,
+      },
+    },
+    volume: { $set: volumeTracing },
   },
   dataset: {
     dataSource: {
@@ -151,7 +153,7 @@ test("VolumeTracing should create an existing cell and not update the maxCellId"
   const createCellAction = VolumeTracingActions.createCellAction(2);
   const alteredState = update(initialState, {
     tracing: {
-      maxCellId: { $set: 5 },
+      volume: { maxCellId: { $set: 5 } },
     },
   });
 
@@ -166,7 +168,9 @@ test("VolumeTracing should create cells and update the maxCellId", t => {
   const createCellAction = VolumeTracingActions.createCellAction();
   const alteredState = update(initialState, {
     tracing: {
-      maxCellId: { $set: 5 },
+      volume: {
+        maxCellId: { $set: 5 },
+      },
     },
   });
 

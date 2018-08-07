@@ -60,12 +60,13 @@ test.beforeEach(t => {
   Request.receiveJSON
     .withArgs(`/api/datasets/${ANNOTATION.dataSetName}`)
     .returns(Promise.resolve(_.cloneDeep(DATASET)));
+
+  // The following code assumes non-hybrid tracings
+  const contentType = ANNOTATION.tracing.skeleton != null ? "skeleton" : "volume";
+  const tracingId = ANNOTATION.tracing[contentType];
+
   Request.receiveJSON
-    .withArgs(
-      `${ANNOTATION.dataStore.url}/data/tracings/${ANNOTATION.content.typ}/${
-        ANNOTATION.content.id
-      }`,
-    )
+    .withArgs(`${ANNOTATION.dataStore.url}/data/tracings/${contentType}/${tracingId}`)
     .returns(Promise.resolve(_.cloneDeep(TRACING)));
   User.prototype.fetch.returns(Promise.resolve());
 });

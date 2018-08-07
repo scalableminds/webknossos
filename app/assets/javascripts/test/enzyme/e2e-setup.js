@@ -54,7 +54,7 @@ function setCurrToken(token: string) {
 
 // The values of these keys change if objects are newly created by the backend
 // They have to be omitted from some snapshots
-const volatileKeys = ["id", "formattedHash", "modified", "created"];
+const volatileKeys = ["id", "skeleton", "formattedHash", "modified", "created"];
 
 export function replaceVolatileValues(obj: Object) {
   // Replace volatile properties with deterministic values

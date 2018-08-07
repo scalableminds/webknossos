@@ -89,7 +89,7 @@ const mapStateToProps = (state: OxalisState) => ({
   viewMode: state.temporaryConfiguration.viewMode,
   flightmodeRecording: state.temporaryConfiguration.flightmodeRecording,
   scale: state.userConfiguration.scale,
-  isVolumeTracingDisallowed: state.tracing.type === "volume" && isVolumeTracingDisallowed(state),
+  isVolumeTracingDisallowed: state.tracing.volume != null && isVolumeTracingDisallowed(state),
 });
 
 export default connect(

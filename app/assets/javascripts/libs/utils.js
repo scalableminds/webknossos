@@ -36,6 +36,19 @@ function getRecursiveValuesUnflat(obj: Object | Array<*> | string): Array<*> {
   }
 }
 
+export function enforce<A, B>(fn: A => B): (?A) => B {
+  return (nullableA: ?A) => {
+    if (nullableA == null) {
+      throw new Error("Could not enforce while unwrapping maybe");
+    }
+    return fn(nullableA);
+  };
+}
+
+export function maybe<A, B>(fn: A => B): (?A) => Maybe<B> {
+  return (nullableA: ?A) => Maybe.fromNullable(nullableA).map(fn);
+}
+
 const Utils = {
   clamp(a: number, x: number, b: number): number {
     return Math.max(a, Math.min(b, x));
@@ -319,8 +332,8 @@ const Utils = {
 
   // Maybes getOrElse is defined as getOrElse(defaultValue: T): T, which is why
   // you can't do getOrElse(null) without flow complaining
-  toNullable<T>(maybe: Maybe<T>): ?T {
-    return maybe.isJust ? maybe.get() : null;
+  toNullable<T>(_maybe: Maybe<T>): ?T {
+    return _maybe.isJust ? _maybe.get() : null;
   },
 
   // Filters an array given a search string. Supports searching for several words as OR query.

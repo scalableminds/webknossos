@@ -46,8 +46,8 @@ export default class TreeRemovalModal extends React.Component<Props, State> {
         visible={this.state.visible}
       >
         <Checkbox onChange={this.handleCheckboxChange} checked={this.state.shouldNotWarnAgain}>
-          Do not warn me again. Remember, accidentally deleted trees can always be restored using
-          the Undo functionality (Ctrl/Cmd + Z).
+          Do not warn me again. (Remember, accidentally deleted trees can always be restored using
+          the Undo functionality (Ctrl/Cmd + Z)).
         </Checkbox>
       </Modal>
     );

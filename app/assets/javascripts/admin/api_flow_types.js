@@ -76,6 +76,7 @@ export type APIDatasetType = {
   +displayName: string,
   +owningOrganization: string,
   +logoUrl: ?string,
+  +lastUsedByUser: number,
 };
 
 export type APIDataSourceWithMessagesType = {

@@ -32,7 +32,7 @@ const KeyboardShortcutView = () => {
     {
       keybinding: "E or R",
       action:
-        "Move along the current direction (determined by the vector between the last two created nodes). R reversed the direction.",
+        "Move along the current direction (determined by the vector between the last two created nodes). Use R to move in the opposite direction.",
     },
     {
       keybinding: "Right Click",

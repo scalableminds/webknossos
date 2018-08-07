@@ -12,6 +12,7 @@ import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reduce
 import type {
   OxalisState,
   SkeletonTracingType,
+  TracingType,
   NodeMapType,
   TreeType,
   TreeMapType,
@@ -84,6 +85,7 @@ export function getNmlName(state: OxalisState): string {
 
 export function serializeToNml(
   state: OxalisState,
+  annotation: TracingType,
   tracing: SkeletonTracingType,
   buildInfo: APIBuildInfoType,
 ): string {
@@ -96,8 +98,8 @@ export function serializeToNml(
     "<things>",
     ...indent(
       _.concat(
-        serializeMetaInformation(state, buildInfo),
-        serializeParameters(state),
+        serializeMetaInformation(state, annotation, buildInfo),
+        serializeParameters(state, annotation, tracing),
         serializeTrees(visibleTrees),
         serializeBranchPoints(visibleTrees),
         serializeComments(visibleTrees),
@@ -110,7 +112,11 @@ export function serializeToNml(
   ].join("\n");
 }
 
-function serializeMetaInformation(state: OxalisState, buildInfo: APIBuildInfoType): Array<string> {
+function serializeMetaInformation(
+  state: OxalisState,
+  annotation: TracingType,
+  buildInfo: APIBuildInfoType,
+): Array<string> {
   return _.compact([
     serializeTag("meta", {
       name: "writer",
@@ -126,7 +132,7 @@ function serializeMetaInformation(state: OxalisState, buildInfo: APIBuildInfoTyp
     }),
     serializeTag("meta", {
       name: "annotationId",
-      content: state.tracing.annotationId,
+      content: annotation.annotationId,
     }),
     state.activeUser != null
       ? serializeTag("meta", {
@@ -153,18 +159,22 @@ function serializeBoundingBox(bb: ?BoundingBoxType, name: string): string {
   return "";
 }
 
-function serializeParameters(state: OxalisState): Array<string> {
+function serializeParameters(
+  state: OxalisState,
+  annotation: TracingType,
+  skeletonTracing: SkeletonTracingType,
+): Array<string> {
   const editPosition = getPosition(state.flycam).map(Math.round);
   const editRotation = getRotation(state.flycam);
-  const userBB = state.tracing.userBoundingBox;
-  const taskBB = state.tracing.boundingBox;
+  const userBB = skeletonTracing.userBoundingBox;
+  const taskBB = skeletonTracing.boundingBox;
   return [
     "<parameters>",
     ...indent(
       _.compact([
         serializeTag("experiment", {
           name: state.dataset.name,
-          description: state.tracing.description,
+          description: annotation.description,
         }),
         serializeTag("scale", {
           x: state.dataset.dataSource.scale[0],
@@ -176,7 +186,7 @@ function serializeParameters(state: OxalisState): Array<string> {
           y: 0,
           z: 0,
         }),
-        serializeTag("time", { ms: state.tracing.createdTimestamp }),
+        serializeTag("time", { ms: skeletonTracing.createdTimestamp }),
         serializeTag("editPosition", {
           x: editPosition[0],
           y: editPosition[1],

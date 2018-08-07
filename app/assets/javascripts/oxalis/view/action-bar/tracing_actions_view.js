@@ -15,13 +15,13 @@ import api from "oxalis/api/internal_api";
 import { undoAction, redoAction } from "oxalis/model/actions/save_actions";
 import { copyAnnotationToUserAccount, finishAnnotation } from "admin/admin_rest_api";
 import { location } from "libs/window";
-import type { OxalisState, RestrictionsType, SettingsType, TaskType } from "oxalis/store";
+import type { OxalisState, RestrictionsAndSettingsType, TaskType } from "oxalis/store";
 import type { APIUserType, APITracingType } from "admin/api_flow_types";
 
 type StateProps = {
   tracingType: APITracingType,
   annotationId: string,
-  restrictions: RestrictionsType & SettingsType,
+  restrictions: RestrictionsAndSettingsType,
   task: ?TaskType,
   activeUser: ?APIUserType,
 };

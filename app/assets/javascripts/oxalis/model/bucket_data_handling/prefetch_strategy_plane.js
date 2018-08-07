@@ -21,8 +21,20 @@ export class AbstractPrefetchStrategy {
   u: number;
   v: number;
 
-  forContentType(contentType: string): boolean {
-    return _.isEmpty(this.contentTypes) || this.contentTypes.includes(contentType);
+  forContentType(contentTypes: { skeleton: boolean, volume: boolean }): boolean {
+    if (_.isEmpty(this.contentTypes)) {
+      return true;
+    }
+
+    if (contentTypes.skeleton && this.contentTypes.includes("skeleton")) {
+      return true;
+    }
+
+    if (contentTypes.volume && this.contentTypes.includes("volume")) {
+      return true;
+    }
+
+    return false;
   }
 
   inVelocityRange(value: number): boolean {

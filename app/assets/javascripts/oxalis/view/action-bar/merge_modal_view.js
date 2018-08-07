@@ -8,7 +8,7 @@ import messages from "messages";
 import InputComponent from "oxalis/view/components/input_component";
 import api from "oxalis/api/internal_api";
 import type { OxalisState, TreeMapType, TreeGroupType } from "oxalis/store";
-import { getAnnotationInformation, getTracingForAnnotation } from "admin/admin_rest_api";
+import { getAnnotationInformation, getTracingForAnnotationType } from "admin/admin_rest_api";
 import { addTreesAndGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
 import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import Utils from "libs/utils";
@@ -156,8 +156,8 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
       Toast.error(messages["merge.different_dataset"]);
       return;
     }
-    const tracing = await getTracingForAnnotation(annotation);
-    if (!tracing.trees) {
+    const tracing = await getTracingForAnnotationType(annotation, "skeleton");
+    if (!tracing || !tracing.trees) {
       Toast.error(messages["merge.volume_unsupported"]);
       return;
     }

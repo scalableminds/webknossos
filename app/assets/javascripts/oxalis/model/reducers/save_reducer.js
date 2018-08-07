@@ -23,15 +23,17 @@ function SaveReducer(state: OxalisState, action: ActionType): OxalisState {
         return update(state, {
           save: {
             queue: {
-              $push: [
-                {
-                  // Placeholder, the version number will be updated before sending to the server
-                  version: -1,
-                  timestamp: Date.now(),
-                  actions: items,
-                  stats,
-                },
-              ],
+              [action.tracingType]: {
+                $push: [
+                  {
+                    // Placeholder, the version number will be updated before sending to the server
+                    version: -1,
+                    timestamp: Date.now(),
+                    actions: items,
+                    stats,
+                  },
+                ],
+              },
             },
             progressInfo: {
               totalActionCount: { $apply: count => count + items.length },
@@ -46,14 +48,16 @@ function SaveReducer(state: OxalisState, action: ActionType): OxalisState {
       const { count } = action;
       if (count > 0) {
         const processedQueueActions = _.sumBy(
-          state.save.queue.slice(0, count),
+          state.save.queue[action.tracingType].slice(0, count),
           batch => batch.actions.length,
         );
-        const remainingQueue = state.save.queue.slice(count);
-        const resetCounter = remainingQueue.length === 0;
+        const remainingQueue = state.save.queue[action.tracingType].slice(count);
+        const otherQueue =
+          state.save.queue[action.tracingType === "skeleton" ? "skeleton" : "volume"];
+        const resetCounter = remainingQueue.length === 0 && otherQueue.length === 0;
         return update(state, {
           save: {
-            queue: { $set: remainingQueue },
+            queue: { [action.tracingType]: { $set: remainingQueue } },
             progressInfo: {
               // Reset progress counters if the queue is empty. Otherwise,
               // increase processedActionCount and leave totalActionCount as is
@@ -68,10 +72,10 @@ function SaveReducer(state: OxalisState, action: ActionType): OxalisState {
       return state;
     }
 
-    case "DISCARD_SAVE_QUEUE": {
+    case "DISCARD_SAVE_QUEUES": {
       return update(state, {
         save: {
-          queue: { $set: [] },
+          queue: { $set: { skeleton: [], volume: [] } },
           progressInfo: {
             processedActionCount: { $set: 0 },
             totalActionCount: { $set: 0 },
@@ -82,18 +86,20 @@ function SaveReducer(state: OxalisState, action: ActionType): OxalisState {
 
     case "SET_SAVE_BUSY": {
       return update(state, {
-        save: { isBusy: { $set: action.isBusy } },
+        save: { isBusyInfo: { [action.tracingType]: { $set: action.isBusy } } },
       });
     }
 
     case "SET_LAST_SAVE_TIMESTAMP": {
       return update(state, {
-        save: { lastSaveTimestamp: { $set: action.timestamp } },
+        save: { lastSaveTimestamp: { [action.tracingType]: { $set: action.timestamp } } },
       });
     }
 
     case "SET_VERSION_NUMBER": {
-      return update(state, { tracing: { version: { $set: action.version } } });
+      return update(state, {
+        tracing: { [action.tracingType]: { version: { $set: action.version } } },
+      });
     }
 
     default:

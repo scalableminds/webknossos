@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(17);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(18);
 COMMIT TRANSACTION;
 
 CREATE TABLE webknossos.analytics(
@@ -33,7 +33,6 @@ CREATE TABLE webknossos.analytics(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
-CREATE TYPE webknossos.ANNOTATION_TRACING_TYPE AS ENUM ('skeleton', 'volume');
 CREATE TYPE webknossos.ANNOTATION_TYPE AS ENUM ('Task', 'Explorational', 'TracingBase', 'Orphan');
 CREATE TYPE webknossos.ANNOTATION_STATE AS ENUM ('Active', 'Finished', 'Cancelled', 'Initializing');
 CREATE TABLE webknossos.annotations(
@@ -42,8 +41,8 @@ CREATE TABLE webknossos.annotations(
   _task CHAR(24),
   _team CHAR(24) NOT NULL,
   _user CHAR(24) NOT NULL,
-  tracing_id CHAR(36) NOT NULL UNIQUE,
-  tracing_typ webknossos.ANNOTATION_TRACING_TYPE NOT NULL,
+  skeletonTracingId CHAR(36) UNIQUE,
+  volumeTracingId CHAR(36) UNIQUE, -- has to be unique even over both skeletonTracingId and volumeTracingId. Enforced by datastore.
   description TEXT NOT NULL DEFAULT '',
   isPublic BOOLEAN NOT NULL DEFAULT false,
   name VARCHAR(256) NOT NULL DEFAULT '',
@@ -55,7 +54,8 @@ CREATE TABLE webknossos.annotations(
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   modified TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  CHECK ((typ IN ('TracingBase', 'Task')) = (_task IS NOT NULL))
+  CHECK ((typ IN ('TracingBase', 'Task')) = (_task IS NOT NULL)),
+  CHECK (COALESCE(skeletonTracingId,volumeTracingId) IS NOT NULL)
 );
 
 CREATE TABLE webknossos.dataSets(
@@ -281,7 +281,8 @@ CREATE INDEX ON webknossos.annotations(_user, isDeleted);
 CREATE INDEX ON webknossos.annotations(_task, isDeleted);
 CREATE INDEX ON webknossos.annotations(typ, state, isDeleted);
 CREATE INDEX ON webknossos.annotations(_user, _task, isDeleted);
-CREATE INDEX ON webknossos.annotations(tracing_id);
+CREATE INDEX ON webknossos.annotations(skeletonTracingId);
+CREATE INDEX ON webknossos.annotations(volumeTracingId);
 CREATE INDEX ON webknossos.annotations(_task, typ, isDeleted);
 CREATE INDEX ON webknossos.annotations(typ, isDeleted);
 CREATE INDEX ON webknossos.dataSets(name);

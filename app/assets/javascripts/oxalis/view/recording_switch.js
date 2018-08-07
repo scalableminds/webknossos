@@ -32,4 +32,7 @@ const mapStateToProps = (state: OxalisState) => ({
   flightmodeRecording: state.temporaryConfiguration.flightmodeRecording,
 });
 
-export default connect(mapStateToProps, mapDispatchToProps)(RecordingSwitch);
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps,
+)(RecordingSwitch);

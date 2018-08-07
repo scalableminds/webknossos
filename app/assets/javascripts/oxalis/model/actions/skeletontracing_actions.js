@@ -1,9 +1,5 @@
-/* eslint-disable import/prefer-default-export */
-
-/**
- * skeletontracing_actions.js
- * @flow
- */
+// @flow
+import React from "react";
 import Store from "oxalis/store";
 import {
   enforceSkeletonTracing,
@@ -12,6 +8,8 @@ import {
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import messages from "messages";
 import { Modal } from "antd";
+import renderIndependently from "libs/render_independently";
+import RemoveTreeModal from "oxalis/view/remove_tree_modal";
 import type { Vector3 } from "oxalis/constants";
 import type { ServerSkeletonTracingType } from "admin/api_flow_types";
 import type { OxalisState, SkeletonTracingType, TreeMapType, TreeGroupType } from "oxalis/store";
@@ -411,13 +409,12 @@ export const deleteTreeAsUserAction = (treeId?: number): NoActionType => {
           Store.dispatch(deleteTreeAction(treeId));
         },
       });
+    } else if (state.userConfiguration.hideTreeRemovalWarning) {
+      Store.dispatch(deleteTreeAction(treeId));
     } else {
-      Modal.confirm({
-        title: messages["tracing.delete_tree"],
-        onOk: () => {
-          Store.dispatch(deleteTreeAction(treeId));
-        },
-      });
+      renderIndependently(destroy => (
+        <RemoveTreeModal onOk={() => Store.dispatch(deleteTreeAction(treeId))} destroy={destroy} />
+      ));
     }
   });
   // As Modal.confirm is async, return noAction() and the modal will dispatch the real action

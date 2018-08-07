@@ -711,6 +711,7 @@ class UserApi {
     - sortTreesByName
     - sortCommentsAsc
     - sphericalCapRadius
+    - hideTreeRemovalWarning
   *
   * @example
   * const keyboardDelay = api.user.getConfiguration("keyboardDelay");

@@ -6,7 +6,7 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 
 ## Unreleased
 ### Postgres Evolutions:
-- 
+- [018-hybrid-annotations.sql](conf/evolutions/018-hybrid-annotations.sql)
 
 ## [18.08.0](https://github.com/scalableminds/webknossos/releases/tag/18.08.0) - 2018-07-23
 ### Postgres Evolutions:

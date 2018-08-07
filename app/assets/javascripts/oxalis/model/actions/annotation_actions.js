@@ -1,5 +1,11 @@
 // @flow
 import type { BoundingBoxType } from "oxalis/constants";
+import type { APIAnnotationType } from "admin/api_flow_types";
+
+type InitializeAnnotationType = {
+  type: "INITIALIZE_ANNOTATION",
+  annotation: APIAnnotationType,
+};
 
 type SetAnnotationNameActionType = {
   type: "SET_ANNOTATION_NAME",
@@ -22,10 +28,18 @@ type SetUserBoundingBoxType = {
 };
 
 export type AnnotationActionTypes =
+  | InitializeAnnotationType
   | SetAnnotationNameActionType
   | SetAnnotationPubliceActionType
   | SetAnnotationDescriptionActionType
   | SetUserBoundingBoxType;
+
+export const initializeAnnotationAction = (
+  annotation: APIAnnotationType,
+): InitializeAnnotationType => ({
+  type: "INITIALIZE_ANNOTATION",
+  annotation,
+});
 
 export const setAnnotationNameAction = (name: string): SetAnnotationNameActionType => ({
   type: "SET_ANNOTATION_NAME",

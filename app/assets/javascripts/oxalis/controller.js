@@ -17,8 +17,6 @@ import { InputKeyboardNoLoop, InputKeyboard } from "libs/input";
 import Toast from "libs/toast";
 import Store from "oxalis/store";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
-import SkeletonTracingPlaneController from "oxalis/controller/combinations/skeletontracing_plane_controller";
-import VolumeTracingPlaneController from "oxalis/controller/combinations/volumetracing_plane_controller";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import SceneController from "oxalis/controller/scene_controller";
 import UrlManager from "oxalis/controller/url_manager";
@@ -308,7 +306,6 @@ class Controller extends React.PureComponent<Props, State> {
         />
       );
     }
-    const state = Store.getState();
     const allowedModes = Store.getState().tracing.restrictions.allowedModes;
     const mode = this.props.viewMode;
 
@@ -325,17 +322,7 @@ class Controller extends React.PureComponent<Props, State> {
     if (isArbitrary) {
       return <ArbitraryController onRender={this.updateStats} viewMode={mode} />;
     } else if (isPlane) {
-      switch (state.tracing.type) {
-        case "volume": {
-          return <VolumeTracingPlaneController onRender={this.updateStats} />;
-        }
-        case "skeleton": {
-          return <SkeletonTracingPlaneController onRender={this.updateStats} />;
-        }
-        default: {
-          return <PlaneController onRender={this.updateStats} />;
-        }
-      }
+      return <PlaneController onRender={this.updateStats} />;
     } else {
       // At the moment, all possible view modes consist of the union of MODES_ARBITRARY and MODES_PLANE
       // In case we add new viewmodes, the following error will be thrown.

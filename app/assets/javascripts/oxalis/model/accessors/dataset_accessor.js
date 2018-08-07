@@ -98,7 +98,7 @@ export function getDatasetCenter(dataset: APIDatasetType): Vector3 {
   ];
 }
 
-export function determineAllowedModes(dataset: APIDatasetType, settings: SettingsType): * {
+export function determineAllowedModes(dataset: APIDatasetType, settings: SettingsType) {
   // The order of allowedModes should be independent from the server and instead be similar to ModeValues
   let allowedModes = _.intersection(ModeValues, settings.allowedModes);
 

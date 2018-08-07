@@ -150,14 +150,17 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
   }
 
   getDatasetName(isPublicViewMode: boolean) {
-    const { name: datasetName, displayName, description } = this.props.dataset;
+    const { name: datasetName, displayName, description: datasetDescription } = this.props.dataset;
 
     if (isPublicViewMode) {
       return (
         <div>
           <p>Dataset: {displayName || datasetName}</p>
-          {description ? (
-            <Markdown source={description} options={{ html: false, breaks: true, linkify: true }} />
+          {datasetDescription ? (
+            <Markdown
+              source={datasetDescription}
+              options={{ html: false, breaks: true, linkify: true }}
+            />
           ) : null}
         </div>
       );
@@ -205,6 +208,7 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
               value={tracingDescription}
               onChange={this.setAnnotationDescription}
               rows={4}
+              markdown
             />
           </span>
         </p>

@@ -32,7 +32,7 @@ import FormattedDate from "components/formatted_date";
 const { Column } = Table;
 const { Search } = Input;
 
-const typeHint: APIAnnotationType[] = [];
+const typeHint: Array<APIAnnotationType> = [];
 
 type Props = {
   userId: ?string,

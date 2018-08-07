@@ -35,6 +35,7 @@ import {
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import api from "oxalis/api/internal_api";
+import { V3 } from "libs/mjs";
 
 const OrthoViewToNumber: OrthoViewMapType<number> = {
   [OrthoViews.PLANE_XY]: 0,
@@ -80,6 +81,13 @@ export function getTDViewMouseControls(planeView: PlaneView): Object {
   };
 }
 
+function moveAlongDirection(reverse: boolean = false): void {
+  const directionInverter = reverse ? -1 : 1;
+  const flycam = Store.getState().flycam;
+  const newPosition = V3.add(getPosition(flycam), V3.scale(flycam.direction, directionInverter));
+  api.tracing.centerPositionAnimated(newPosition, false);
+}
+
 export function getKeyboardControls() {
   return {
     "1": () => Store.dispatch(toggleAllTreesAction()),
@@ -88,6 +96,9 @@ export function getKeyboardControls() {
     // Delete active node
     delete: () => Store.dispatch(deleteActiveNodeAsUserAction(Store.getState())),
     c: () => Store.dispatch(createTreeAction()),
+
+    e: () => moveAlongDirection(),
+    r: () => moveAlongDirection(true),
 
     // Branches
     b: () => Store.dispatch(createBranchPointAction()),

@@ -463,20 +463,15 @@ export function addTreesAndGroups(
     const { allowUpdate } = restrictions;
 
     if (allowUpdate) {
-      // Check whether any group ids collide and assign new ids when neccessary
+      // Check whether any group ids collide and assign new ids
       const groupIdMap = {};
-      const existingGroupIds = new Set(
-        mapGroups(skeletonTracing.treeGroups, group => group.groupId),
-      );
       let nextGroupId = getMaximumGroupId(skeletonTracing.treeGroups) + 1;
 
       forEachGroups(treeGroups, (group: TreeGroupType) => {
-        // Assign a new group id to groups whose id already exists
-        if (existingGroupIds.has(group.groupId)) {
-          groupIdMap[group.groupId] = nextGroupId;
-          group.groupId = nextGroupId;
-          nextGroupId++;
-        }
+        // Assign new group ids for all groups
+        groupIdMap[group.groupId] = nextGroupId;
+        group.groupId = nextGroupId;
+        nextGroupId++;
       });
 
       const newTrees = {};
@@ -526,11 +521,8 @@ export function addTreesAndGroups(
           update(bp, { nodeId: { $set: idMap[bp.nodeId] } }),
         );
 
-        // If the tree's group was assigned a new group id, change it
-        const newGroupId =
-          tree.groupId != null && groupIdMap[tree.groupId] != null
-            ? groupIdMap[tree.groupId]
-            : tree.groupId;
+        // Assign the new group id to the tree if the tree belongs to a group
+        const newGroupId = tree.groupId != null ? groupIdMap[tree.groupId] : tree.groupId;
 
         newTrees[newTreeId] = update(tree, {
           treeId: { $set: newTreeId },

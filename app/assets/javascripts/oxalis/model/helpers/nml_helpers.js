@@ -43,6 +43,15 @@ function indent(array: Array<string>): Array<string> {
   return array;
 }
 
+function escape(string: string): string {
+  return string
+    .replace(/&/g, "&amp;")
+    .replace(/>/g, "&gt;")
+    .replace(/</g, "&lt;")
+    .replace(/'/g, "&apos;")
+    .replace(/"/g, "&quot;");
+}
+
 function serializeTagWithChildren(
   name: string,
   properties: { [string]: ?(string | number | boolean) },
@@ -62,7 +71,7 @@ function serializeTag(
   closed: boolean = true,
 ): string {
   return `<${name} ${Object.keys(properties)
-    .map(key => `${key}="${properties[key] != null ? properties[key].toString() : ""}"`)
+    .map(key => `${key}="${properties[key] != null ? escape(properties[key].toString()) : ""}"`)
     .join(" ")}${closed ? " /" : ""}>`;
 }
 

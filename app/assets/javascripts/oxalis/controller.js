@@ -34,6 +34,7 @@ import messages from "messages";
 import { fetchGistContent } from "libs/gist";
 import { document } from "libs/window";
 import NewTaskDescriptionModal from "oxalis/view/new_task_description_modal";
+import { layoutEmitter } from "oxalis/view/layouting/layout_persistence";
 
 import type { ModeType, ControlModeType } from "oxalis/constants";
 import type { OxalisState, TracingTypeTracingType } from "oxalis/store";
@@ -266,11 +267,18 @@ class Controller extends React.PureComponent<Props, State> {
 
     this.keyboard = new InputKeyboard({
       l: () => {
-        Toast.warning(messages["tracing.no_viewport_scaling_setting"]);
+        window.scale = window.scale || 1;
+        window.scale -= 0.05;
+        window.scale = Math.max(window.scale, 1);
+        layoutEmitter.emit("changedScale");
+        // Toast.warning(messages["tracing.no_viewport_scaling_setting"]);
       },
 
       k: () => {
-        Toast.warning(messages["tracing.no_viewport_scaling_setting"]);
+        window.scale = window.scale || 1;
+        window.scale += 0.05;
+        layoutEmitter.emit("changedScale");
+        // Toast.warning(messages["tracing.no_viewport_scaling_setting"]);
       },
     });
   }

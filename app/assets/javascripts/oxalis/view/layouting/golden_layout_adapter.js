@@ -5,8 +5,9 @@ import GoldenLayout from "golden-layout/dist/goldenlayout.js";
 import _ from "lodash";
 import Constants from "oxalis/constants";
 import Toast from "libs/toast";
+import window from "libs/window";
 import { PortalTarget, RenderToPortal } from "./portal_utils.js";
-import { resetLayoutEmitter } from "./layout_persistence";
+import { layoutEmitter } from "./layout_persistence";
 
 type Props<KeyType> = {
   id: string,
@@ -23,14 +24,77 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
 
   componentDidMount() {
     this.setupLayout();
+    window.scale = window.scale || 1;
 
-    const updateSizeDebounced = _.debounce(
-      () => this.gl.updateSize(),
-      Constants.RESIZE_THROTTLE_TIME,
-    );
-    window.addEventListener("resize", updateSizeDebounced);
+    const getGroundTruthRect = () => {
+      const mainContainer = document.querySelector(".ant-layout .ant-layout-has-sider");
+      if (!mainContainer) {
+        return { width: 1000, height: 1000 };
+      }
+      const { clientWidth: width, clientHeight: height } = mainContainer;
+      return { width, height };
+    };
 
-    this.unbindListener = resetLayoutEmitter.on("resetLayout", () => {
+    setTimeout(() => {
+      const _oldWidth = this.gl.container.width;
+      this.gl.container.width = value => {
+        if (value) {
+          console.log("set width: value", value);
+          return _oldWidth.call(this.gl, value);
+        } else {
+          const { width } = getGroundTruthRect();
+          console.log("got width", width * window.scale);
+          return width * window.scale;
+        }
+      };
+      const _oldHeight = this.gl.container.height;
+      this.gl.container.height = value => {
+        if (value) {
+          return _oldHeight.call(this.gl, value);
+        } else {
+          const { height } = getGroundTruthRect();
+          return height * window.scale;
+        }
+      };
+    }, 10);
+    const updateSize = () => {
+      const container = document.querySelector("#layoutContainer");
+      if (!container) {
+        return;
+      }
+      const { width, height } = getGroundTruthRect();
+
+      container.style.width = `${Math.floor(width * window.scale)}px`;
+      container.style.height = `${Math.floor(height * window.scale)}px`;
+
+      this.gl.updateSize(width * window.scale, height * window.scale);
+      console.log("updateSize", width * window.scale, height * window.scale);
+    };
+    const updateSizeDebounced = _.debounce(updateSize, Constants.RESIZE_THROTTLE_TIME);
+    window.addEventListener("resize", updateSize);
+    layoutEmitter.on("changedScale", updateSizeDebounced);
+
+    const setDummySize = () => {
+      const container = document.querySelector("#layoutContainer");
+      if (!container) {
+        return;
+      }
+      const width = 1000;
+      const height = 1000;
+
+      container.style.width = `${Math.floor(width * window.scale)}px`;
+      container.style.height = `${Math.floor(height * window.scale)}px`;
+
+      this.gl.updateSize(width * window.scale, height * window.scale);
+      console.log("setDummySize", width * window.scale, height * window.scale);
+    };
+
+    setDummySize();
+
+    setTimeout(updateSize, 100);
+
+    this.unbindListener = layoutEmitter.on("resetLayout", () => {
+      window.scale = 1;
       this.rebuildLayout();
     });
   }
@@ -54,6 +118,7 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
     const onLayoutChange = this.props.onLayoutChange;
     if (onLayoutChange != null) {
       onLayoutChange(this.gl.toConfig(), this.props.layoutKey);
+      // layoutEmitter.emit("changedScale");
     }
   }
 
@@ -73,7 +138,7 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
         // This might happen when the serialized layout config is not compatible with the newest version.
         // However, this should be mitigated by currentLayoutVersion in default_layout_configs.js
         Toast.error("Layout couldn't be restored. The default layout is used instead.");
-        resetLayoutEmitter.emit("resetLayout");
+        layoutEmitter.emit("resetLayout");
         console.error(exception);
         return;
       }

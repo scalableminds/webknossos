@@ -5,7 +5,7 @@ import NanoEvents from "nanoevents";
 import defaultLayouts, { currentLayoutVersion } from "./default_layout_configs";
 import type { LayoutKeysType } from "./default_layout_configs";
 
-export const resetLayoutEmitter = new NanoEvents();
+export const layoutEmitter = new NanoEvents();
 
 // For debugging purposes:
 const disableLayoutPersistance = false;
@@ -38,6 +38,7 @@ function readStoredLayoutConfigs() {
 let storedLayouts = readStoredLayoutConfigs();
 
 function persistLayoutConfigs() {
+  console.log("persisting layout");
   localStorage.setItem(localStorageKeys.goldenWkLayouts, JSON.stringify(storedLayouts));
   localStorage.setItem(localStorageKeys.currentLayoutVersion, JSON.stringify(currentLayoutVersion));
 }
@@ -47,7 +48,7 @@ function clearStoredLayouts() {
   storedLayouts = readStoredLayoutConfigs();
 }
 
-resetLayoutEmitter.on("resetLayout", () => {
+layoutEmitter.on("resetLayout", () => {
   clearStoredLayouts();
 });
 

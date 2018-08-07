@@ -14,14 +14,15 @@ import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import { getDesiredCanvasSize } from "oxalis/view/layouting/tracing_layout_view";
 import window from "libs/window";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
+import { layoutEmitter } from "oxalis/view/layouting/layout_persistence";
 import { clearCanvas, setupRenderArea } from "./plane_view";
 
 class ArbitraryView {
   // Copied form backbone events (TODO: handle this better)
   trigger: Function;
+  unbindChangedScaleListener: () => void;
 
   animate: () => void;
-  resize: () => void;
   setClippingDistance: (value: number) => void;
 
   needsRerender: boolean;
@@ -39,7 +40,6 @@ class ArbitraryView {
 
   constructor() {
     this.animate = this.animateImpl.bind(this);
-    this.resize = this.resizeImpl.bind(this);
     this.setClippingDistance = this.setClippingDistanceImpl.bind(this);
     _.extend(this, BackboneEvents);
 
@@ -74,12 +74,13 @@ class ArbitraryView {
       this.group.add(this.camera);
       SceneController.rootGroup.add(this.group);
 
-      this.resize();
+      this.resizeImpl();
 
       // start the rendering loop
       this.animationRequestId = window.requestAnimationFrame(this.animate);
       // Dont forget to handle window resizing!
-      window.addEventListener("resize", this.resize);
+      window.addEventListener("resize", this.resizeThrottled);
+      this.unbindChangedScaleListener = layoutEmitter.on("changedScale", this.resizeThrottled);
     }
   }
 
@@ -93,7 +94,8 @@ class ArbitraryView {
 
       SceneController.rootGroup.remove(this.group);
 
-      window.removeEventListener("resize", this.resize);
+      window.removeEventListener("resize", this.resizeThrottled);
+      this.unbindChangedScaleListener();
     }
   }
 
@@ -169,18 +171,17 @@ class ArbitraryView {
     geometry.addToScene(this.group);
   }
 
-  // throttle resize to avoid annoying flickering
-  resizeThrottled = _.throttle(() => this.resize(), Constants.RESIZE_THROTTLE_TIME);
-
-  resizeImpl(): void {
+  resizeImpl = (): void => {
     // Call this after the canvas was resized to fix the viewport
-
     getDesiredCanvasSize().map(([width, height]) =>
       SceneController.renderer.setSize(width, height),
     );
 
     this.draw();
-  }
+  };
+
+  // throttle resize to avoid annoying flickering
+  resizeThrottled = _.throttle(this.resizeImpl, Constants.RESIZE_THROTTLE_TIME);
 
   setClippingDistanceImpl(value: number): void {
     this.camera.near = this.camDistance - value;

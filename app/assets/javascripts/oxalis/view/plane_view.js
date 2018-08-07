@@ -13,6 +13,7 @@ import type { OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import SceneController from "oxalis/controller/scene_controller";
 import { getDesiredCanvasSize } from "oxalis/view/layouting/tracing_layout_view";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
+import { layoutEmitter } from "oxalis/view/layouting/layout_persistence";
 
 export const setupRenderArea = (
   renderer: THREE.WebGLRenderer,
@@ -47,6 +48,7 @@ class PlaneView {
   // Copied form backbone events (TODO: handle this better)
   trigger: Function;
   listenTo: Function;
+  unbindChangedScaleListener: () => void;
 
   cameras: OrthoViewMapType<THREE.OrthographicCamera>;
 
@@ -205,7 +207,8 @@ class PlaneView {
     for (const plane of OrthoViewValues) {
       SceneController.scene.remove(this.cameras[plane]);
     }
-    window.removeEventListener("resize", this.resize);
+    window.removeEventListener("resize", this.resizeThrottled);
+    this.unbindChangedScaleListener();
   }
 
   start(): void {
@@ -213,7 +216,8 @@ class PlaneView {
     this.resize();
     this.animate();
 
-    window.addEventListener("resize", this.resize);
+    window.addEventListener("resize", this.resizeThrottled);
+    this.unbindChangedScaleListener = layoutEmitter.on("changedScale", this.resizeThrottled);
   }
 }
 

@@ -27,10 +27,10 @@ import type { OxalisState, TracingTypeTracingType } from "oxalis/store";
 import type { ControlModeType, ModeType } from "oxalis/constants";
 import RecordingSwitch from "oxalis/view/recording_switch";
 import TDViewControls from "oxalis/view/td_view_controls";
+import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import { GoldenLayoutAdapter } from "./golden_layout_adapter";
 import { getLayoutConfig, storeLayoutConfig } from "./layout_persistence";
 import { determineLayout } from "./default_layout_configs";
-import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 
 const { Header, Sider } = Layout;
 
@@ -50,10 +50,15 @@ type State = {
 
 const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
 export function getDesiredCanvasSize(): Maybe<[number, number]> {
-  const canvasAndLayoutContainer = document.getElementById(canvasAndLayoutContainerID);
+  // const canvasAndLayoutContainer = document.getElementById(canvasAndLayoutContainerID);
+  const canvasAndLayoutContainer = document.querySelector("#layoutContainer");
+
   if (canvasAndLayoutContainer) {
-    const { width, height } = canvasAndLayoutContainer.getBoundingClientRect();
-    return Maybe.Just([width, height]);
+    const { scrollWidth, scrollHeight } = canvasAndLayoutContainer;
+    // const { width, height } = canvasAndLayoutContainer.getBoundingClientRect();
+    // return Maybe.Just([width, height]);
+    console.log("scrollWidth, scrollHeight", scrollWidth, scrollHeight);
+    return Maybe.Just([scrollWidth, scrollHeight]);
   }
   return Maybe.Nothing();
 }
@@ -126,9 +131,11 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
             <div
               id={canvasAndLayoutContainerID}
               style={{
-                display: "flex",
-                flexDirection: "column",
-                flex: "1 1 auto",
+                // height: "100%",
+                // width: "100%",
+                // display: "flex",
+                // flexDirection: "column",
+                // flex: "1 1 auto",
                 position: "relative",
               }}
             >

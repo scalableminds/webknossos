@@ -5,11 +5,22 @@
 
 import _ from "lodash";
 import Request from "libs/request";
+import Maybe from "data.maybe";
 import Date from "libs/date";
 import messages from "messages";
 import Toast from "libs/toast";
-import { call, put, take, select, race } from "redux-saga/effects";
+import {
+  _all,
+  take,
+  _take,
+  _call,
+  race,
+  call,
+  put,
+  select,
+} from "oxalis/model/sagas/effect-generators";
 import { delay } from "redux-saga";
+import type { Saga } from "redux-saga";
 import {
   shiftSaveQueueAction,
   setSaveBusyAction,
@@ -32,6 +43,7 @@ import type { TracingType, FlycamType, SaveQueueEntryType } from "oxalis/store";
 import type { RequestOptionsWithData } from "libs/request";
 import { moveTreeComponent } from "oxalis/model/sagas/update_actions";
 import { doWithToken } from "admin/admin_rest_api";
+import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
 
 const PUSH_THROTTLE_TIME = 30000; // 30s
 const SAVE_RETRY_WAITING_TIME = 5000;
@@ -40,19 +52,19 @@ const UNDO_HISTORY_SIZE = 100;
 export const maximumActionCountPerBatch = 5000;
 const maximumActionCountPerSave = 15000;
 
-export function* collectUndoStates(): Generator<*, *, *> {
+export function* collectUndoStates(): Saga<void> {
   const undoStack = [];
   const redoStack = [];
 
-  yield take("INITIALIZE_SKELETONTRACING");
-  let prevTracing = yield select(state => state.tracing);
+  yield* take("INITIALIZE_SKELETONTRACING");
+  let prevTracing = yield* select(state => enforceSkeletonTracing(state.tracing));
   while (true) {
-    const { userAction, undo, redo } = yield race({
-      userAction: take(SkeletonTracingSaveRelevantActions),
-      undo: take("UNDO"),
-      redo: take("REDO"),
+    const { userAction, undo, redo } = yield* race({
+      userAction: _take(SkeletonTracingSaveRelevantActions),
+      undo: _take("UNDO"),
+      redo: _take("REDO"),
     });
-    const curTracing = yield select(state => state.tracing);
+    const curTracing = yield* select(state => enforceSkeletonTracing(state.tracing));
     if (userAction) {
       if (curTracing !== prevTracing) {
         // Clear the redo stack when a new action is executed
@@ -64,7 +76,7 @@ export function* collectUndoStates(): Generator<*, *, *> {
       if (undoStack.length) {
         redoStack.push(prevTracing);
         const newTracing = undoStack.pop();
-        yield put(setTracingAction(newTracing));
+        yield* put(setTracingAction(newTracing));
       } else {
         Toast.info(messages["undo.no_undo"]);
       }
@@ -72,37 +84,44 @@ export function* collectUndoStates(): Generator<*, *, *> {
       if (redoStack.length) {
         undoStack.push(prevTracing);
         const newTracing = redoStack.pop();
-        yield put(setTracingAction(newTracing));
+        yield* put(setTracingAction(newTracing));
       } else {
         Toast.info(messages["undo.no_redo"]);
       }
     }
     // We need the updated tracing here
-    prevTracing = yield select(state => state.tracing);
+    prevTracing = yield* select(state => enforceSkeletonTracing(state.tracing));
   }
 }
 
-export function* pushAnnotationAsync(): Generator<*, *, *> {
-  yield take(["INITIALIZE_SKELETONTRACING", "INITIALIZE_VOLUMETRACING"]);
-  yield put(setLastSaveTimestampAction());
+export function* pushAnnotationAsync(): Saga<void> {
+  yield _all([_call(pushTracingTypeAsync, "skeleton"), _call(pushTracingTypeAsync, "volume")]);
+}
+
+export function* pushTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<void> {
+  yield* take(
+    tracingType === "skeleton" ? "INITIALIZE_SKELETONTRACING" : "INITIALIZE_VOLUMETRACING",
+  );
+  yield* put(setLastSaveTimestampAction(undefined, tracingType));
   while (true) {
     let saveQueue;
     // Check whether the save queue is actually empty, the PUSH_SAVE_QUEUE action
     // could have been triggered during the call to sendRequestToServer
-    saveQueue = yield select(state => state.save.queue);
+
+    saveQueue = yield* select(state => state.save.queue[tracingType]);
     if (saveQueue.length === 0) {
-      yield put(setSaveBusyAction(false));
+      yield* put(setSaveBusyAction(false, tracingType));
       // Save queue is empty, wait for push event
-      yield take("PUSH_SAVE_QUEUE");
+      yield* take("PUSH_SAVE_QUEUE");
     }
-    yield race({
-      timeout: call(delay, PUSH_THROTTLE_TIME),
-      forcePush: take("SAVE_NOW"),
+    yield* race({
+      timeout: _call(delay, PUSH_THROTTLE_TIME),
+      forcePush: _take("SAVE_NOW"),
     });
-    yield put(setSaveBusyAction(true));
-    saveQueue = yield select(state => state.save.queue);
+    yield* put(setSaveBusyAction(true, tracingType));
+    saveQueue = yield* select(state => state.save.queue[tracingType]);
     if (saveQueue.length > 0) {
-      yield call(sendRequestToServer);
+      yield* call(sendRequestToServer, tracingType);
     }
   }
 }
@@ -110,7 +129,7 @@ export function* pushAnnotationAsync(): Generator<*, *, *> {
 export function sendRequestWithToken(
   urlWithoutToken: string,
   data: RequestOptionsWithData<Array<SaveQueueEntryType>>,
-) {
+): Promise<*> {
   return doWithToken(token => Request.sendJSONReceiveJSON(`${urlWithoutToken}${token}`, data));
 }
 
@@ -133,17 +152,22 @@ function sliceAppropriateBatchCount(batches: Array<SaveQueueEntryType>): Array<S
   return slicedBatches;
 }
 
-export function* sendRequestToServer(timestamp: number = Date.now()): Generator<*, *, *> {
-  const fullSaveQueue = yield select(state => state.save.queue);
+export function* sendRequestToServer(
+  tracingType: "skeleton" | "volume",
+  timestamp: number = Date.now(),
+): Saga<void> {
+  const fullSaveQueue = yield* select(state => state.save.queue[tracingType]);
   const saveQueue = sliceAppropriateBatchCount(fullSaveQueue);
 
   let compactedSaveQueue = compactSaveQueue(saveQueue);
-  const { version, type, tracingId } = yield select(state => state.tracing);
-  const dataStoreUrl = yield select(state => state.dataset.dataStore.url);
+  const { version, type, tracingId } = yield* select(state =>
+    Maybe.fromNullable(state.tracing[tracingType]).get(),
+  );
+  const dataStoreUrl = yield* select(state => state.dataset.dataStore.url);
   compactedSaveQueue = addVersionNumbers(compactedSaveQueue, version);
 
   try {
-    yield call(
+    yield* call(
       sendRequestWithToken,
       `${dataStoreUrl}/data/tracings/${type}/${tracingId}/update?token=`,
       {
@@ -153,29 +177,29 @@ export function* sendRequestToServer(timestamp: number = Date.now()): Generator<
         compress: true,
       },
     );
-    yield put(setVersionNumberAction(version + compactedSaveQueue.length));
-    yield put(setLastSaveTimestampAction());
-    yield put(shiftSaveQueueAction(saveQueue.length));
-    yield call(toggleErrorHighlighting, false);
+    yield* put(setVersionNumberAction(version + compactedSaveQueue.length, tracingType));
+    yield* put(setLastSaveTimestampAction(undefined, tracingType));
+    yield* put(shiftSaveQueueAction(saveQueue.length, tracingType));
+    yield* call(toggleErrorHighlighting, false);
   } catch (error) {
-    yield call(toggleErrorHighlighting, true);
+    yield* call(toggleErrorHighlighting, true);
     if (error.status >= 400 && error.status < 500) {
       // HTTP Code 409 'conflict' for dirty state
       window.onbeforeunload = null;
       if (error.status === 409) {
-        yield call(alert, messages["save.failed_simultaneous_tracing"]);
+        yield* call(alert, messages["save.failed_simultaneous_tracing"]);
       } else {
-        yield call(alert, messages["save.failed_client_error"]);
+        yield* call(alert, messages["save.failed_client_error"]);
       }
       location.reload();
       return;
     }
-    yield delay(SAVE_RETRY_WAITING_TIME);
-    yield call(sendRequestToServer);
+    yield* call(delay, SAVE_RETRY_WAITING_TIME);
+    yield* call(sendRequestToServer, tracingType);
   }
 }
 
-export function toggleErrorHighlighting(state: boolean) {
+export function toggleErrorHighlighting(state: boolean): void {
   if (document.body != null) {
     document.body.classList.toggle("save-error", state);
   }
@@ -357,51 +381,65 @@ export function compactSaveQueue(
 }
 
 export function performDiffTracing(
+  tracingType: "skeleton" | "volume",
   prevTracing: TracingType,
   tracing: TracingType,
   flycam: FlycamType,
 ): Array<UpdateAction> {
-  if (tracing.type === "skeleton" && prevTracing.type === "skeleton") {
-    const result = Array.from(diffSkeletonTracing(prevTracing, tracing, flycam));
-    return result;
-  } else if (tracing.type === "volume" && prevTracing.type === "volume") {
-    return Array.from(diffVolumeTracing(prevTracing, tracing, flycam));
-  } else {
-    return [];
+  let actions = [];
+  if (tracingType === "skeleton" && tracing.skeleton != null && prevTracing.skeleton != null) {
+    actions = actions.concat(
+      Array.from(diffSkeletonTracing(prevTracing.skeleton, tracing.skeleton, flycam)),
+    );
   }
+
+  if (tracingType === "volume" && tracing.volume != null && prevTracing.volume != null) {
+    actions = actions.concat(
+      Array.from(diffVolumeTracing(prevTracing.volume, tracing.volume, flycam)),
+    );
+  }
+
+  return actions;
 }
 
-export function* saveTracingAsync(): Generator<any, any, any> {
-  const { initSkeleton } = yield race({
-    initSkeleton: take("INITIALIZE_SKELETONTRACING"),
-    initVolume: take("INITIALIZE_VOLUMETRACING"),
-  });
-  let prevTracing = yield select(state => state.tracing);
-  if (initSkeleton) {
-    if (yield select(state => state.tracing.activeTreeId == null)) {
-      yield put(createTreeAction());
+export function* saveTracingAsync(): Saga<void> {
+  yield _all([_call(saveTracingTypeAsync, "skeleton"), _call(saveTracingTypeAsync, "volume")]);
+}
+
+export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<void> {
+  yield* take(
+    tracingType === "skeleton" ? "INITIALIZE_SKELETONTRACING" : "INITIALIZE_VOLUMETRACING",
+  );
+
+  let prevTracing = yield* select(state => state.tracing);
+  if (tracingType === "skeleton") {
+    if (yield* select(state => enforceSkeletonTracing(state.tracing).activeTreeId == null)) {
+      yield* put(createTreeAction());
     }
   }
-  yield take("WK_READY");
-  const allowUpdate = yield select(state => state.tracing.restrictions.allowUpdate);
+  yield* take("WK_READY");
+  const allowUpdate = yield* select(
+    state => state.tracing[tracingType] && state.tracing.restrictions.allowUpdate,
+  );
   if (!allowUpdate) return;
 
   while (true) {
-    if (initSkeleton) {
-      yield take([...SkeletonTracingSaveRelevantActions, ...FlycamActions, "UNDO", "REDO"]);
+    if (tracingType === "skeleton") {
+      yield* take([...SkeletonTracingSaveRelevantActions, ...FlycamActions, "UNDO", "REDO"]);
     } else {
-      yield take([...VolumeTracingSaveRelevantActions, ...FlycamActions]);
+      yield* take([...VolumeTracingSaveRelevantActions, ...FlycamActions]);
     }
-    const tracing = yield select(state => state.tracing);
-    const flycam = yield select(state => state.flycam);
+    const tracing = yield* select(state => state.tracing);
+    const flycam = yield* select(state => state.flycam);
     const items = compactUpdateActions(
-      Array.from(yield call(performDiffTracing, prevTracing, tracing, flycam)),
+      // $FlowFixMe: Should be resolved when we improve the typing of sagas in general
+      Array.from(yield* call(performDiffTracing, tracingType, prevTracing, tracing, flycam)),
     );
     if (items.length > 0) {
       const updateActionChunks = _.chunk(items, maximumActionCountPerBatch);
 
       for (const updateActionChunk of updateActionChunks) {
-        yield put(pushSaveQueueAction(updateActionChunk));
+        yield* put(pushSaveQueueAction(updateActionChunk, tracingType));
       }
     }
     prevTracing = tracing;

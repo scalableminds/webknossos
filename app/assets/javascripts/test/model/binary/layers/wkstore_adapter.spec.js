@@ -206,6 +206,7 @@ test.serial("sendToStore: Request Handling should send the correct request param
         },
       },
     ],
+    tracingType: "volume",
   };
 
   return sendToStore(batch).then(() => {

@@ -1,7 +1,8 @@
 // @flow
 import Model from "oxalis/model";
-import { take, takeEvery, call, select } from "redux-saga/effects";
+import { take, _takeEvery, select, call, type Saga } from "oxalis/model/sagas/effect-generators";
 import { editAnnotation } from "admin/admin_rest_api";
+import type { EditableAnnotationType } from "admin/admin_rest_api";
 import messages from "messages";
 import Toast from "libs/toast";
 import {
@@ -12,15 +13,16 @@ import {
 import constants from "oxalis/constants";
 import Store from "oxalis/store";
 
-export function* pushAnnotationUpdateAsync(): Generator<*, *, *> {
-  const tracing = yield select(state => state.tracing);
-  yield [
-    call(editAnnotation, tracing.annotationId, tracing.tracingType, {
-      name: tracing.name,
-      isPublic: tracing.isPublic,
-      description: tracing.description,
-    }),
-  ];
+export function* pushAnnotationUpdateAsync(): Saga<void> {
+  const tracing = yield* select(state => state.tracing);
+
+  // The extra type annotaton is needed here for flow
+  const editObject: $Shape<EditableAnnotationType> = {
+    name: tracing.name,
+    isPublic: tracing.isPublic,
+    description: tracing.description,
+  };
+  yield* call(editAnnotation, tracing.annotationId, tracing.tracingType, editObject);
 }
 
 function shouldDisplaySegmentationData(): boolean {
@@ -35,14 +37,14 @@ function shouldDisplaySegmentationData(): boolean {
   return Model.getSegmentationLayer() != null && canModeDisplaySegmentationData;
 }
 
-export function* warnAboutSegmentationOpacity(): Generator<*, *, *> {
-  function* warnMaybe() {
+export function* warnAboutSegmentationOpacity(): Saga<void> {
+  function* warnMaybe(): Saga<void> {
     const segmentationLayer = Model.getSegmentationLayer();
     if (!segmentationLayer) {
       return;
     }
-    const isDisallowed = yield select(isVolumeTracingDisallowed);
-    const isSegmentationMissing = yield select(state =>
+    const isDisallowed = yield* select(isVolumeTracingDisallowed);
+    const isSegmentationMissing = yield* select(state =>
       isSegmentationMissingForZoomstep(state, segmentationLayer.cube.MAX_ZOOM_STEP),
     );
 
@@ -51,7 +53,7 @@ export function* warnAboutSegmentationOpacity(): Generator<*, *, *> {
     } else {
       Toast.close(messages["tracing.segmentation_zoom_warning"]);
     }
-    const displaysDownsampled = yield select(state =>
+    const displaysDownsampled = yield* select(state =>
       displaysDownsampledVolumeData(state, segmentationLayer.cube.MAX_UNSAMPLED_ZOOM_STEP),
     );
     if (shouldDisplaySegmentationData() && displaysDownsampled) {
@@ -61,11 +63,11 @@ export function* warnAboutSegmentationOpacity(): Generator<*, *, *> {
     }
   }
 
-  yield take("INITIALIZE_SETTINGS");
+  yield* take("INITIALIZE_SETTINGS");
   yield* warnMaybe();
 
   while (true) {
-    yield take([
+    yield* take([
       "ZOOM_IN",
       "ZOOM_OUT",
       "ZOOM_BY_DELTA",
@@ -77,8 +79,8 @@ export function* warnAboutSegmentationOpacity(): Generator<*, *, *> {
   }
 }
 
-export function* watchAnnotationAsync(): Generator<*, *, *> {
-  yield takeEvery("SET_ANNOTATION_NAME", pushAnnotationUpdateAsync);
-  yield takeEvery("SET_ANNOTATION_PUBLIC", pushAnnotationUpdateAsync);
-  yield takeEvery("SET_ANNOTATION_DESCRIPTION", pushAnnotationUpdateAsync);
+export function* watchAnnotationAsync(): Saga<void> {
+  yield _takeEvery("SET_ANNOTATION_NAME", pushAnnotationUpdateAsync);
+  yield _takeEvery("SET_ANNOTATION_PUBLIC", pushAnnotationUpdateAsync);
+  yield _takeEvery("SET_ANNOTATION_DESCRIPTION", pushAnnotationUpdateAsync);
 }

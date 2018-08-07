@@ -74,7 +74,7 @@ class Mappings {
     }
   }
 
-  async fetchMappings(mappingName: string, fetchedMappings: APIMappingsType): Promise<*> {
+  async fetchMappings(mappingName: string, fetchedMappings: APIMappingsType): Promise<void> {
     const mapping = await this.fetchMapping(mappingName);
     if (mapping == null) return Promise.reject();
     fetchedMappings[mappingName] = mapping;

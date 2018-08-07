@@ -10,7 +10,12 @@ type Props = {
   title: string,
 };
 
-export default class NewTaskDescriptionModal extends React.Component<Props, *> {
+type State = {
+  mayClose: boolean,
+  visible: boolean,
+};
+
+export default class NewTaskDescriptionModal extends React.Component<Props, State> {
   timeoutId: TimeoutID;
   state = {
     mayClose: false,

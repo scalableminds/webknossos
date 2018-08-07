@@ -9,10 +9,12 @@ import {
   setControlModeAction,
   initializeSettingsAction,
 } from "oxalis/model/actions/settings_actions";
+import { initializeAnnotationAction } from "oxalis/model/actions/annotation_actions";
 import {
   setActiveNodeAction,
   initializeSkeletonTracingAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
 import { initializeVolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
 import { setTaskAction } from "oxalis/model/actions/task_actions";
 import {
@@ -30,7 +32,7 @@ import Toast from "libs/toast";
 import ErrorHandling from "libs/error_handling";
 import UrlManager from "oxalis/controller/url_manager";
 import {
-  getTracingForAnnotation,
+  getTracingForAnnotations,
   getAnnotationInformation,
   getDataset,
   getSharingToken,
@@ -42,7 +44,7 @@ import type {
   APIAnnotationType,
   APIDatasetType,
   APIDataLayerType,
-  ServerTracingType,
+  HybridServerTracingType,
   ServerVolumeTracingType,
 } from "admin/api_flow_types";
 import {
@@ -78,7 +80,7 @@ export async function initialize(
 }> {
   Store.dispatch(setControlModeAction(controlMode));
 
-  let annotation: ?APIAnnotationType;
+  let annotation: APIAnnotationType;
   let datasetName;
   if (controlMode === ControlModeEnum.TRACE) {
     const annotationId = annotationIdOrDatasetName;
@@ -113,7 +115,7 @@ export async function initialize(
   // There is no need to reinstantiate the DataLayers if the dataset didn't change.
   if (initialFetch) {
     initializationInformation = initializeDataLayerInstances();
-    if (tracing != null) Store.dispatch(setZoomStepAction(tracing.zoomLevel));
+    if (tracing != null) Store.dispatch(setZoomStepAction(getSomeServerTracing(tracing).zoomLevel));
   }
 
   // There is no need to initialize the tracing if there is no tracing (View mode).
@@ -129,15 +131,15 @@ export async function initialize(
 async function fetchParallel(
   annotation: ?APIAnnotationType,
   datasetName: string,
-): Promise<[APIDatasetType, *, *, ?ServerTracingType]> {
+): Promise<[APIDatasetType, *, *, ?HybridServerTracingType]> {
   return Promise.all([
     getDataset(datasetName, getSharingToken()),
     getUserConfiguration(),
     getDatasetConfiguration(datasetName),
-    // Fetch the actual tracing from the datastore, if there is an annotation
+    // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
     // (Also see https://github.com/facebook/flow/issues/4936)
     // $FlowFixMe: Type inference with Promise.all seems to be a bit broken in flow
-    annotation ? getTracingForAnnotation(annotation) : null,
+    annotation ? getTracingForAnnotations(annotation) : null,
   ]);
 }
 
@@ -176,27 +178,30 @@ function validateSpecsForLayers(
   return { isMappingSupported, textureInformationPerLayer };
 }
 
-function initializeTracing(annotation: APIAnnotationType, tracing: ServerTracingType) {
+function initializeTracing(annotation: APIAnnotationType, tracing: HybridServerTracingType) {
   // This method is not called for the View mode
   const { dataset } = Store.getState();
+
   const { allowedModes, preferredMode } = determineAllowedModes(dataset, annotation.settings);
   _.extend(annotation.settings, { allowedModes, preferredMode });
 
   const { controlMode } = Store.getState().temporaryConfiguration;
   if (controlMode === ControlModeEnum.TRACE) {
+    Store.dispatch(initializeAnnotationAction(annotation));
+
     serverTracingAsVolumeTracingMaybe(tracing).map(volumeTracing => {
       ErrorHandling.assert(
         getSegmentationLayer(dataset) != null,
         messages["tracing.volume_missing_segmentation"],
       );
-      Store.dispatch(initializeVolumeTracingAction(annotation, volumeTracing));
+      Store.dispatch(initializeVolumeTracingAction(volumeTracing));
     });
 
     serverTracingAsSkeletonTracingMaybe(tracing).map(skeletonTracing => {
       // To generate a huge amount of dummy trees, use:
       // import generateDummyTrees from "./model/helpers/generate_dummy_trees";
       // tracing.trees = generateDummyTrees(1, 200000);
-      Store.dispatch(initializeSkeletonTracingAction(annotation, skeletonTracing));
+      Store.dispatch(initializeSkeletonTracingAction(skeletonTracing));
     });
   }
 
@@ -212,7 +217,7 @@ function initializeTracing(annotation: APIAnnotationType, tracing: ServerTracing
 function initializeDataset(
   initialFetch: boolean,
   dataset: APIDatasetType,
-  tracing: ?ServerTracingType,
+  tracing: ?HybridServerTracingType,
 ): void {
   let error;
   if (!dataset) {
@@ -333,7 +338,7 @@ function setupLayerForVolumeTracing(
   return layers;
 }
 
-function applyUrlState(urlState: UrlManagerState, tracing: ?ServerTracingType) {
+function applyUrlState(urlState: UrlManagerState, tracing: ?HybridServerTracingType) {
   // If there is no editPosition (e.g. when viewing a dataset) and
   // no default position, compute the center of the dataset
   const { dataset, datasetConfiguration } = Store.getState();
@@ -349,7 +354,7 @@ function applyUrlState(urlState: UrlManagerState, tracing: ?ServerTracingType) {
     position = defaultPosition;
   }
   if (tracing != null) {
-    position = Utils.point3ToVector3(tracing.editPosition);
+    position = Utils.point3ToVector3(getSomeServerTracing(tracing).editPosition);
   }
   if (urlState.position != null) {
     position = urlState.position;
@@ -368,8 +373,8 @@ function applyUrlState(urlState: UrlManagerState, tracing: ?ServerTracingType) {
   if (defaultRotation != null) {
     rotation = defaultRotation;
   }
-  if (tracing != null) {
-    rotation = Utils.point3ToVector3(tracing.editRotation);
+  if (tracing) {
+    rotation = Utils.point3ToVector3(getSomeServerTracing(tracing).editRotation);
   }
   if (urlState.rotation != null) {
     rotation = urlState.rotation;

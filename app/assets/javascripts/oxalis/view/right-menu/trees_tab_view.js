@@ -40,7 +40,7 @@ import type {
   SkeletonTracingType,
   UserConfigurationType,
 } from "oxalis/store";
-import TreeSearchPopover from "./tree_search_popover";
+import SearchPopover from "./search_popover";
 
 const ButtonGroup = Button.Group;
 const InputGroup = Input.Group;
@@ -233,9 +233,11 @@ class TreesTabView extends React.PureComponent<Props, State> {
           <Spin />
         </Modal>
         <ButtonGroup>
-          <TreeSearchPopover
+          <SearchPopover
             onSelect={this.props.onSetActiveTree}
-            trees={this.props.skeletonTracing.trees}
+            data={this.props.skeletonTracing.trees}
+            idKey="treeId"
+            searchKey="name"
             maxSearchResults={10}
           >
             <Tooltip title="Open the search via CTRL + Shift + F">
@@ -243,7 +245,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
                 <Icon type="search" />
               </ButtonComponent>
             </Tooltip>
-          </TreeSearchPopover>
+          </SearchPopover>
           <ButtonComponent onClick={this.props.onCreateTree} title="Create Tree">
             <i className="fa fa-plus" /> Create
           </ButtonComponent>

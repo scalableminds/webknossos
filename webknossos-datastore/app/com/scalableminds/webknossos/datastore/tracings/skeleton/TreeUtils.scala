@@ -1,14 +1,16 @@
-/*
- * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.webknossos.datastore.tracings.skeleton
 
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Tree, TreeGroup}
+
+import scala.util.matching.Regex
+import scala.util.matching.Regex.Match
 
 
 object TreeUtils {
   type FunctionalNodeMapping = Function[Int, Int]
   type FunctionalGroupMapping = Function[Int, Int]
+
+  val nodeIdReferenceRegex: Regex = "#([0-9]+)"r
 
   def minNodeId(trees: Seq[Tree]) = {
     val nodes = trees.flatMap(_.nodes)
@@ -36,18 +38,29 @@ object TreeUtils {
   def mergeTrees(sourceTrees: Seq[Tree], targetTrees: Seq[Tree], nodeMapping: FunctionalNodeMapping, groupMapping: FunctionalGroupMapping) = {
     val treeMaxId = maxTreeId(targetTrees)
 
+    val sourceNodeIds: Set[Int] = sourceTrees.flatMap(_.nodes.map(_.id)).toSet
+
     val mappedSourceTrees = sourceTrees.map(tree =>
-      applyNodeMapping(tree.withTreeId(tree.treeId + treeMaxId), nodeMapping).copy(groupId = tree.groupId.map(groupMapping(_))))
+      applyNodeMapping(tree.withTreeId(tree.treeId + treeMaxId), nodeMapping, sourceNodeIds).copy(groupId = tree.groupId.map(groupMapping(_))))
 
     targetTrees ++ mappedSourceTrees
   }
 
-  def applyNodeMapping(tree: Tree, f: Int => Int) = {
+  def applyNodeMapping(tree: Tree, f: Int => Int, sourceNodeIds: Set[Int]) = {
     tree
       .withNodes(tree.nodes.map(node => node.withId(f(node.id))))
       .withEdges(tree.edges.map(edge => edge.withSource(f(edge.source)).withTarget(f(edge.target))))
-      .withComments(tree.comments.map(comment => comment.withNodeId(f(comment.nodeId))))
+      .withComments(tree.comments.map(comment => comment.withNodeId(f(comment.nodeId)).withContent(updateNodeReferences(comment.content, f, sourceNodeIds))))
       .withBranchPoints(tree.branchPoints.map(bp => bp.withNodeId(f(bp.nodeId))))
+  }
+
+  def updateNodeReferences(comment: String, f: Int => Int, sourceNodeIds: Set[Int]) = {
+    def replacer(m: Match) = {
+      val oldId = m.toString.substring(1).toInt
+      val newId = if (sourceNodeIds.contains(oldId)) f(oldId) else oldId
+      "#" + newId
+    }
+    nodeIdReferenceRegex.replaceAllIn(comment, m => replacer(m))
   }
 
   def calculateNodeMapping(sourceTrees: Seq[Tree], targetTrees: Seq[Tree]) = {

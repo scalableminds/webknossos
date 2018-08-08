@@ -123,7 +123,8 @@ export async function initialize(
     initializeTracing(annotation, tracing);
   }
 
-  applyUrlState(UrlManager.initialState, tracing);
+  const defaultState = determineDefaultState(UrlManager.initialState, tracing);
+  applyState(defaultState);
 
   return initializationInformation;
 }
@@ -338,16 +339,13 @@ function setupLayerForVolumeTracing(
   return layers;
 }
 
-function applyUrlState(urlState: UrlManagerState, tracing: ?HybridServerTracingType) {
+function determineDefaultState(
+  urlState: UrlManagerState,
+  tracing: ?HybridServerTracingType,
+): $Shape<UrlManagerState> {
   // If there is no editPosition (e.g. when viewing a dataset) and
   // no default position, compute the center of the dataset
   const { dataset, datasetConfiguration } = Store.getState();
-  if (urlState.activeNode != null) {
-    // Set the active node (without animating to its position) before setting the
-    // position, since the position should take precedence.
-    Store.dispatch(setActiveNodeAction(urlState.activeNode, true));
-  }
-
   const defaultPosition = datasetConfiguration.position;
   let position = getDatasetCenter(dataset);
   if (defaultPosition != null) {
@@ -357,29 +355,40 @@ function applyUrlState(urlState: UrlManagerState, tracing: ?HybridServerTracingT
     position = Utils.point3ToVector3(getSomeServerTracing(tracing).editPosition);
   }
   if (urlState.position != null) {
-    position = urlState.position;
+    ({ position } = urlState);
   }
-  Store.dispatch(setPositionAction(position));
 
-  const defaultZoomStep = datasetConfiguration.zoom;
+  let zoomStep = datasetConfiguration.zoom;
   if (urlState.zoomStep != null) {
-    Store.dispatch(setZoomStepAction(urlState.zoomStep));
-  } else if (defaultZoomStep != null) {
-    Store.dispatch(setZoomStepAction(defaultZoomStep));
+    ({ zoomStep } = urlState);
   }
 
-  const defaultRotation = datasetConfiguration.rotation;
-  let rotation = null;
-  if (defaultRotation != null) {
-    rotation = defaultRotation;
-  }
+  let { rotation } = datasetConfiguration;
   if (tracing) {
     rotation = Utils.point3ToVector3(getSomeServerTracing(tracing).editRotation);
   }
   if (urlState.rotation != null) {
-    rotation = urlState.rotation;
+    ({ rotation } = urlState);
   }
-  if (rotation != null) {
-    Store.dispatch(setRotationAction(rotation));
+
+  const { activeNode } = urlState;
+
+  return { position, zoomStep, rotation, activeNode };
+}
+
+export function applyState(state: $Shape<UrlManagerState>) {
+  if (state.activeNode != null) {
+    // Set the active node (without animating to its position) before setting the
+    // position, since the position should take precedence.
+    Store.dispatch(setActiveNodeAction(state.activeNode, true));
+  }
+  if (state.position != null) {
+    Store.dispatch(setPositionAction(state.position));
+  }
+  if (state.zoomStep != null) {
+    Store.dispatch(setZoomStepAction(state.zoomStep));
+  }
+  if (state.rotation != null) {
+    Store.dispatch(setRotationAction(state.rotation));
   }
 }

@@ -2,19 +2,25 @@
 import _ from "lodash";
 import * as React from "react";
 import { AutoComplete, Popover } from "antd";
-import type { TreeMapType } from "oxalis/store";
 import Shortcut from "libs/shortcut_component";
 
-const Option = AutoComplete.Option;
+const { Option } = AutoComplete;
 
-type Props = {
+type Props<S> = {
   maxSearchResults: number,
-  trees: TreeMapType,
+  data: { +[number]: S } | Array<S>,
+  searchKey: $Keys<S>,
+  idKey: $Keys<S>,
   onSelect: number => void,
   children: *,
 };
 
-export default class TreeSearchPopover extends React.PureComponent<Props, *> {
+type State = {
+  isVisible: boolean,
+  searchQuery: string,
+};
+
+export default class SearchPopover<S: Object> extends React.PureComponent<Props<S>, State> {
   constructor() {
     super();
     this.state = {
@@ -25,7 +31,7 @@ export default class TreeSearchPopover extends React.PureComponent<Props, *> {
 
   render() {
     const filterOption = (inputValue, option) => option.props.text.indexOf(inputValue) > -1;
-    const filterTree = tree => tree.name.indexOf(this.state.searchQuery) > -1;
+    const filterData = datum => datum[this.props.searchKey].indexOf(this.state.searchQuery) > -1;
 
     return (
       <React.Fragment>
@@ -37,7 +43,7 @@ export default class TreeSearchPopover extends React.PureComponent<Props, *> {
           }}
         />
         <Popover
-          title="Search Trees"
+          title="Search"
           trigger="click"
           placement="rightTop"
           visible={this.state.isVisible}
@@ -64,12 +70,12 @@ export default class TreeSearchPopover extends React.PureComponent<Props, *> {
                 <AutoComplete
                   autoFocus
                   onSearch={searchQuery => this.setState({ searchQuery })}
-                  dataSource={_.values(this.props.trees)
-                    .filter(filterTree)
+                  dataSource={_.values(this.props.data)
+                    .filter(filterData)
                     .slice(0, this.props.maxSearchResults)
-                    .map(tree => (
-                      <Option key={tree.treeId} text={tree.name}>
-                        {tree.name}
+                    .map(datum => (
+                      <Option key={datum[this.props.idKey]} text={datum[this.props.searchKey]}>
+                        {datum[this.props.searchKey]}
                       </Option>
                     ))}
                   style={{ width: "500px" }}
@@ -77,7 +83,7 @@ export default class TreeSearchPopover extends React.PureComponent<Props, *> {
                     this.props.onSelect(option.key);
                     this.setState({ isVisible: false });
                   }}
-                  placeholder="Input here to search trees"
+                  placeholder="Input here to search"
                   filterOption={filterOption}
                 />
               </React.Fragment>

@@ -286,7 +286,7 @@ class ArbitraryController extends React.PureComponent<Props> {
           this.setClippingDistance(clippingDistanceArbitrary);
           this.crosshair.setScale(crosshairSize);
           this.crosshair.setVisibility(displayCrosshair);
-          this.arbitraryView.resize();
+          this.arbitraryView.resizeThrottled();
         },
       ),
       listenToStoreProperty(

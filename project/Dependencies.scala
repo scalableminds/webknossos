@@ -39,7 +39,7 @@ object Dependencies {
   val urlHelper = "com.netaporter" %% "scala-uri" % "0.4.14"
   val webknossosWrap = "com.scalableminds" %% "webknossos-wrap" % webknossosWrapVersion
   val xmlWriter = "org.glassfish.jaxb" % "txw2" % "2.2.11"
-  val woodstoxXml = "org.codehaus.woodstox" % "wstx-asl" % "3.2.3"
+  val woodstoxXml = "com.scalableminds" % "woodstox-core" % "5.2.0-SCM"
 
   val sql = Seq(
     "com.typesafe.slick" %% "slick" % "3.2.3",

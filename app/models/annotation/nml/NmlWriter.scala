@@ -30,7 +30,7 @@ object NmlWriter extends FoxImplicits {
      var writerConfig = WriterConfig.createFullDefaults()
      writerConfig.setAttrValueEscaperFactory(new MyEscapingWriterFactory)
 
-     val bufferingWriter = new BufferingXmlWriter(new OutputStreamWriter(os), writerConfig, "utf-8", true, os)
+     val bufferingWriter = new BufferingXmlWriter(new OutputStreamWriter(os), writerConfig, "utf-8", true, os, 0)
      val streamWriter = new SimpleNsStreamWriter(bufferingWriter, "utf-8", writerConfig)
 
      implicit val writer = new IndentingXMLStreamWriter(streamWriter)

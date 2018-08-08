@@ -103,9 +103,8 @@ object NmlService extends LazyLogging {
 
     def wrapTreesInGroup(name: String, tracing: SkeletonTracing): SkeletonTracing = {
       val unusedGroupId = getMaximumGroupId(tracing.treeGroups) + 1
-      val groupName = name.replaceAll("\\.[^.]*$", "")
       val newTrees = tracing.trees.map(tree => tree.copy(groupId = Some(tree.groupId.getOrElse(unusedGroupId))))
-      val newTreeGroups = Seq(TreeGroup(groupName, unusedGroupId, tracing.treeGroups))
+      val newTreeGroups = Seq(TreeGroup(name, unusedGroupId, tracing.treeGroups))
       tracing.copy(trees = newTrees, treeGroups = newTreeGroups)
     }
 

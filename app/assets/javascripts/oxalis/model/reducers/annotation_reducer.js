@@ -48,10 +48,12 @@ function AnnotationReducer(state: OxalisState, action: ActionType): OxalisState 
       };
       const maybeSkeletonUpdater = state.tracing.skeleton ? { skeleton: updaterObject } : {};
       const maybeVolumeUpdater = state.tracing.volume ? { volume: updaterObject } : {};
+      const maybeReadOnlyUpdater = state.tracing.readOnly ? { readOnly: updaterObject } : {};
       return update(state, {
         tracing: {
           ...maybeSkeletonUpdater,
           ...maybeVolumeUpdater,
+          ...maybeReadOnlyUpdater,
         },
       });
     }

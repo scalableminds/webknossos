@@ -1,7 +1,6 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 // @flow
 import fs from "fs";
-import himalaya from "himalaya";
 import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
 import { configure } from "enzyme";
 import Adapter from "enzyme-adapter-react-16";
@@ -113,10 +112,14 @@ global.navigator = {
 };
 copyProps(window, global);
 
+function trim(string) {
+  return string.replace(/^\s+/gm, "");
+}
+
 function createSnapshotable(wrapper: any) {
-  // debug() returns a html string, which we convert to JSON so that it can be compared
-  // easily by ava snapshots
-  return himalaya.parse(wrapper.debug());
+  // debug() returns a multi-line html string
+  // We remove leading whitespace to avoid large diffs caused by changes in indentation
+  return trim(wrapper.debug());
 }
 
 function debugWrapper(wrapper: any, name: string) {

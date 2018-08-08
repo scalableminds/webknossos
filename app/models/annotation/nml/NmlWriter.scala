@@ -3,10 +3,14 @@
  */
 package models.annotation.nml
 
+import java.io.OutputStreamWriter
+
+import com.ctc.wstx.api.WriterConfig
+import com.ctc.wstx.sw.{BufferingXmlWriter, SimpleNsStreamWriter}
 import javax.xml.stream.{XMLOutputFactory, XMLStreamWriter}
 import com.scalableminds.util.geometry.Scale
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.util.xml.Xml
+import com.scalableminds.util.xml.{MyEscapingWriterFactory, Xml}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.sun.xml.txw2.output.IndentingXMLStreamWriter
@@ -22,7 +26,14 @@ object NmlWriter extends FoxImplicits {
   private lazy val outputService = XMLOutputFactory.newInstance()
 
   def toNmlStream(tracing: Either[SkeletonTracing, VolumeTracing], annotation: Annotation, scale: Option[Scale]) = Enumerator.outputStream { os =>
-    implicit val writer = new IndentingXMLStreamWriter(outputService.createXMLStreamWriter(os))
+
+     var writerConfig = WriterConfig.createFullDefaults()
+     writerConfig.setAttrValueEscaperFactory(new MyEscapingWriterFactory)
+
+     val bufferingWriter = new BufferingXmlWriter(new OutputStreamWriter(os), writerConfig, "utf-8", true, os)
+     val streamWriter = new SimpleNsStreamWriter(bufferingWriter, "utf-8", writerConfig)
+
+     implicit val writer = new IndentingXMLStreamWriter(streamWriter)
 
     for {
       nml <- toNml(tracing, annotation, scale)

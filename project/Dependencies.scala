@@ -62,7 +62,9 @@ object Dependencies {
     reactiveBson,
     scalapbRuntime,
     scalaLogging,
-    ws
+    ws,
+    xmlWriter,
+    woodstoxXml
   )
 
   val webknossosDatastoreDependencies = Seq(
@@ -87,8 +89,6 @@ object Dependencies {
     silhouette,
     silhouetteTestkit,
     specs2 % Test,
-    urlHelper,
-    xmlWriter,
-    woodstoxXml) ++ sql
+    urlHelper) ++ sql
 
 }

@@ -170,6 +170,23 @@ test("NML serializing and parsing should yield the same state", async t => {
   t.deepEqual(initialState.tracing.skeleton.treeGroups, treeGroups);
 });
 
+test("NML serializing and parsing should yield the same state even when using special characters", async t => {
+  const state = update(initialState, {
+    tracing: {
+      skeleton: {
+        trees: {
+          "1": { comments: { $push: [{ nodeId: 1, content: "Hello\"a'b<c>d&e\"f'g<h>i&j" }] } },
+        },
+      },
+    },
+  });
+  const serializedNml = serializeToNml(state, state.tracing, state.tracing.skeleton, buildInfo);
+  const { trees, treeGroups } = await parseNml(serializedNml);
+
+  t.deepEqual(state.tracing.skeleton.trees, trees);
+  t.deepEqual(state.tracing.skeleton.treeGroups, treeGroups);
+});
+
 test("NML Serializer should only serialize visible trees", async t => {
   const state = update(initialState, {
     tracing: {
@@ -413,4 +430,27 @@ test("addTreesAndGroups reducer should assign new group ids", t => {
   );
   t.is(newState.tracing.skeleton.trees[3].groupId, null);
   t.is(newState.tracing.skeleton.trees[4].groupId, newState.tracing.skeleton.treeGroups[2].groupId);
+});
+
+test("addTreesAndGroups reducer should replace nodeId references in comments when changing nodeIds", t => {
+  const commentWithoutValidReferences =
+    "Reference to non-existing id #42 and position reference #(4,5,6)";
+  const newTrees = _.cloneDeep(initialState.tracing.skeleton.trees);
+  newTrees[1].comments.push({ nodeId: 1, content: "Reference to existing id in another tree #4" });
+  newTrees[1].comments.push({
+    nodeId: 2,
+    content: commentWithoutValidReferences,
+  });
+
+  const action = SkeletonTracingActions.addTreesAndGroupsAction(newTrees, []);
+  const newState = SkeletonTracingReducer(initialState, action);
+
+  // Comments should have been rewritten if appropriate
+  t.is(_.size(newState.tracing.skeleton.trees), 4);
+  t.is(newState.tracing.skeleton.trees[3].comments.length, 3);
+  t.is(
+    newState.tracing.skeleton.trees[3].comments[1].content,
+    "Reference to existing id in another tree #12",
+  );
+  t.is(newState.tracing.skeleton.trees[3].comments[2].content, commentWithoutValidReferences);
 });

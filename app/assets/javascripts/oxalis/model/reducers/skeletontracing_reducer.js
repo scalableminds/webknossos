@@ -72,7 +72,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
           const lastTree = Maybe.fromNullable(_.maxBy(_.values(trees), tree => tree.treeId));
           return lastTree.map(t => {
             // use last node for active node
-            const lastNode = _.maxBy(_.values(t.nodes), node => node.id);
+            const lastNode = _.maxBy(Array.from(t.nodes.values()), node => node.id);
             activeNodeId = lastNode != null ? lastNode.id : null;
             return t.treeId;
           });

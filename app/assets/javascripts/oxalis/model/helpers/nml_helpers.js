@@ -43,6 +43,15 @@ function indent(array: Array<string>): Array<string> {
   return array;
 }
 
+function escape(string: string): string {
+  return string
+    .replace(/&/g, "&amp;")
+    .replace(/>/g, "&gt;")
+    .replace(/</g, "&lt;")
+    .replace(/'/g, "&apos;")
+    .replace(/"/g, "&quot;");
+}
+
 function serializeTagWithChildren(
   name: string,
   properties: { [string]: ?(string | number | boolean) },
@@ -62,7 +71,7 @@ function serializeTag(
   closed: boolean = true,
 ): string {
   return `<${name} ${Object.keys(properties)
-    .map(key => `${key}="${properties[key] != null ? properties[key].toString() : ""}"`)
+    .map(key => `${key}="${properties[key] != null ? escape(properties[key].toString()) : ""}"`)
     .join(" ")}${closed ? " /" : ""}>`;
 }
 
@@ -434,7 +443,7 @@ export function parseNml(
                 _parseFloat(attr, "color.g", DEFAULT_COLOR[1]),
                 _parseFloat(attr, "color.b", DEFAULT_COLOR[2]),
               ],
-              name: attr.name,
+              name: Saxophone.parseEntities(attr.name),
               comments: [],
               nodes: new DiffableMap(),
               branchPoints: [],
@@ -506,7 +515,7 @@ export function parseNml(
           case "comment": {
             const currentComment = {
               nodeId: _parseInt(attr, "node"),
-              content: attr.content,
+              content: Saxophone.parseEntities(attr.content),
             };
             const tree = findTreeByNodeId(trees, currentComment.nodeId);
             if (tree == null)
@@ -532,7 +541,7 @@ export function parseNml(
           case "group": {
             const newGroup = {
               groupId: _parseInt(attr, "id"),
-              name: attr.name,
+              name: Saxophone.parseEntities(attr.name),
               children: [],
             };
             if (existingGroupIds.has(newGroup.groupId))

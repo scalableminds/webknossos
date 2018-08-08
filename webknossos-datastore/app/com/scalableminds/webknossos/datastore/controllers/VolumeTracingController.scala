@@ -51,4 +51,18 @@ class VolumeTracingController @Inject()(
       }
     }
   }
+
+
+  def duplicate(tracingId: String, version: Option[Long]) = TokenSecuredAction(UserAccessRequest.webknossos).async {
+    implicit request => {
+      AllowRemoteOrigin {
+        for {
+          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+          newId <- tracingService.duplicate(tracingId, tracing)
+        } yield {
+          Ok(Json.toJson(newId))
+        }
+      }
+    }
+  }
 }

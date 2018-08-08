@@ -39,6 +39,9 @@ trait DataStoreHandlingStrategy {
   def duplicateSkeletonTracing(skeletonTracingId: String, versionString: Option[String] = None): Fox[String] =
     Fox.failure("DatStore doesn't support duplication of SkeletonTracings.")
 
+  def duplicateVolumeTracing(volumeTracingId: String): Fox[String] =
+    Fox.failure("DatStore doesn't support duplication of VolumeTracings.")
+
   def mergeSkeletonTracingsByIds(tracingIds: List[String], persistTracing: Boolean): Fox[String] =
     Fox.failure("DataStore does't support merging of SkeletonTracings by ids.")
 
@@ -99,6 +102,13 @@ class WKStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSet) ex
     RPC(s"${dataStoreInfo.url}/data/tracings/skeleton/${skeletonTracingId}/duplicate")
       .withQueryString("token" -> DataStoreHandlingStrategy.webKnossosToken)
       .withQueryStringOptional("version", versionString)
+      .getWithJsonResponse[String]
+  }
+
+  override def duplicateVolumeTracing(volumeTracingId: String): Fox[String] = {
+    logger.debug("Called to duplicate VolumeTracing. Base: " + dataSet.name + " Datastore: " + dataStoreInfo)
+    RPC(s"${dataStoreInfo.url}/data/tracings/volume/${volumeTracingId}/duplicate")
+      .withQueryString("token" -> DataStoreHandlingStrategy.webKnossosToken)
       .getWithJsonResponse[String]
   }
 

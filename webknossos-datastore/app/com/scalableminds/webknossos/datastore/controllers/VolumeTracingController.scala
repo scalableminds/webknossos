@@ -60,7 +60,7 @@ class VolumeTracingController @Inject()(
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
           newId <- tracingService.duplicate(tracingId, tracing)
         } yield {
-          Ok(Json.toJson(TracingReference(newId, TracingType.volume)))
+          Ok(Json.toJson(newId))
         }
       }
     }

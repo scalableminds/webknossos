@@ -16,7 +16,7 @@ import FormattedDate from "components/formatted_date";
 const { Column } = Table;
 
 const typeHint: DatasetType[] = [];
-const useLruRank = true;
+const useLruRank = false;
 
 type Props = {
   datasets: Array<DatasetType>,
@@ -51,7 +51,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
     this.state = {
       sortedInfo: {
         columnKey: useLruRank ? "" : "created",
-        order: "ascend",
+        order: "descend",
       },
       prevSearchQuery: "",
     };

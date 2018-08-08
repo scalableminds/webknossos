@@ -53,6 +53,7 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.tree_viewer_no_cyclic_trees":
     "Cyclic trees are not supported by the abstract tree viewer.",
   "tracing.changed_move_value": "The move value was changed to: ",
+  "tracing.natural_sorting": "Correctly sort numbers in text (word2 < word10). This may be slow!",
   "datastore.unknown_type": "Unknown datastore type:",
   "webgl.disabled": "Couldn't initialise WebGL, please make sure WebGL is enabled.",
   "webgl.context_loss":

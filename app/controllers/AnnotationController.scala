@@ -6,7 +6,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import models.annotation._
-import models.binary.{DataSet, DataSetDAO}
+import models.binary.{DataSet, DataSetDAO, DataStoreHandlingStrategy}
 import models.task.TaskDAO
 import models.user.time._
 import models.user.{User, UserDAO}
@@ -256,9 +256,10 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       dataSet: DataSet <- annotation.dataSet
       _ <- bool2Fox(dataSet.isUsable) ?~> "DataSet is not imported."
       dataStoreHandler <- dataSet.dataStoreHandler
-      newSkeletonTracingReference <- Fox.runOptional(annotation.skeletonTracingId)(id => dataStoreHandler.duplicateSkeletonTracing(id)) ?~> "Failed to create skeleton tracing."
+      newSkeletonTracingReference <- Fox.runOptional(annotation.skeletonTracingId)(id => dataStoreHandler.duplicateSkeletonTracing(id)) ?~> "Failed to duplicate skeleton tracing."
+      newVolumeTracingReference <- Fox.runOptional(annotation.volumeTracingId)(id => dataStoreHandler.duplicateVolumeTracing(id)) ?~> "Failed to duplicate volume tracing."
       clonedAnnotation <- AnnotationService.createFrom(
-        user, dataSet, newSkeletonTracingReference, None, AnnotationType.Explorational, None, annotation.description) ?~> Messages("annotation.create.failed")
+        user, dataSet, newSkeletonTracingReference, newVolumeTracingReference, AnnotationType.Explorational, None, annotation.description) ?~> Messages("annotation.create.failed")
     } yield clonedAnnotation
   }
 }

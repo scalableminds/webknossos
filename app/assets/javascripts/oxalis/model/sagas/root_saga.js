@@ -18,32 +18,33 @@ import {
   watchAnnotationAsync,
 } from "oxalis/model/sagas/annotation_saga";
 import { alert } from "libs/window";
-import { fork, take, cancel } from "redux-saga/effects";
+import { _all, _call, fork, take, _cancel, type Saga } from "oxalis/model/sagas/effect-generators";
 
-export default function* rootSaga(): Generator<*, *, *> {
+export default function* rootSaga(): Saga<void> {
   while (true) {
-    const task = yield fork(restartableSaga);
-    yield take("RESTART_SAGA");
-    yield cancel(task);
+    const task = yield* fork(restartableSaga);
+    yield* take("RESTART_SAGA");
+    yield _cancel(task);
   }
 }
 
-function* restartableSaga(): Generator<*, *, *> {
+function* restartableSaga(): Saga<void> {
   try {
-    yield [
-      warnAboutSegmentationOpacity(),
-      watchPushSettingsAsync(),
-      watchSkeletonTracingAsync(),
-      collectUndoStates(),
-      saveTracingAsync(),
-      pushAnnotationAsync(),
-      editVolumeLayerAsync(),
-      disallowVolumeTracingWarning(),
-      watchVolumeTracingAsync(),
-      watchAnnotationAsync(),
-      watchDataRelevantChanges(),
-    ];
+    yield _all([
+      _call(warnAboutSegmentationOpacity),
+      _call(watchPushSettingsAsync),
+      _call(watchSkeletonTracingAsync),
+      _call(collectUndoStates),
+      _call(saveTracingAsync),
+      _call(pushAnnotationAsync),
+      _call(editVolumeLayerAsync),
+      _call(disallowVolumeTracingWarning),
+      _call(watchVolumeTracingAsync),
+      _call(watchAnnotationAsync),
+      _call(watchDataRelevantChanges),
+    ]);
   } catch (err) {
+    console.error(err);
     alert(`\
 Internal error.
 Please reload the page to avoid losing data.

@@ -91,8 +91,9 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       _ <- bool2Fox(annotation.isRevertPossible) ?~> Messages("annotation.revert.toOld")
       dataSet <- annotation.dataSet
       dataStoreHandler <- dataSet.dataStoreHandler
-      newTracingReference <- dataStoreHandler.duplicateSkeletonTracing(annotation.tracing, Some(version.toString))
-      _ <- AnnotationDAO.updateTracingReference(annotation._id, newTracingReference)
+      skeletonTracingId <- annotation.skeletonTracingId.toFox
+      newSkeletonTracingId <- dataStoreHandler.duplicateSkeletonTracing(skeletonTracingId, Some(version.toString))
+      _ <- AnnotationDAO.updateSkeletonTracingId(annotation._id, newSkeletonTracingId)
     } yield {
       logger.info(s"REVERTED [$typ - $id, $version]")
       JsonOk("annotation.reverted")
@@ -251,21 +252,14 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   }
 
   private def duplicateAnnotation(annotation: Annotation, user: User)(implicit ctx: DBAccessContext): Fox[Annotation] = {
-    def duplicateTracing(dataStoreHandler: DataStoreHandlingStrategy, oldTracingReference: TracingReference) = {
-      oldTracingReference.typ match {
-        case TracingType.skeleton => dataStoreHandler.duplicateSkeletonTracing(oldTracingReference) ?~> "Failed to create skeleton tracing."
-        case TracingType.volume => dataStoreHandler.duplicateVolumeTracing(oldTracingReference) ?~> "Failed to create volume tracing."
-      }
-    }
-
     for {
       dataSet: DataSet <- annotation.dataSet
-      oldTracingReference = annotation.tracing
       _ <- bool2Fox(dataSet.isUsable) ?~> "DataSet is not imported."
       dataStoreHandler <- dataSet.dataStoreHandler
-      newTracingReference <- duplicateTracing(dataStoreHandler, oldTracingReference)
+      newSkeletonTracingReference <- Fox.runOptional(annotation.skeletonTracingId)(id => dataStoreHandler.duplicateSkeletonTracing(id)) ?~> "Failed to duplicate skeleton tracing."
+      newVolumeTracingReference <- Fox.runOptional(annotation.volumeTracingId)(id => dataStoreHandler.duplicateVolumeTracing(id)) ?~> "Failed to duplicate volume tracing."
       clonedAnnotation <- AnnotationService.createFrom(
-        user, dataSet, newTracingReference, AnnotationType.Explorational, None, annotation.description) ?~> Messages("annotation.create.failed")
+        user, dataSet, newSkeletonTracingReference, newVolumeTracingReference, AnnotationType.Explorational, None, annotation.description) ?~> Messages("annotation.create.failed")
     } yield clonedAnnotation
   }
 }

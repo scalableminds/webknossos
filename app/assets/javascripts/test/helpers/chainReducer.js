@@ -7,7 +7,8 @@ class ChainReducerClass<S, A> {
     this.state = state;
   }
 
-  apply(reducer: (S, A) => S, action: A): ChainReducerClass<S, A> {
+  apply(reducer: (S, A) => S, actionGetter: A | (S => A)): ChainReducerClass<S, A> {
+    const action = typeof actionGetter === "function" ? actionGetter(this.state) : actionGetter;
     return new ChainReducerClass(reducer(this.state, action));
   }
 

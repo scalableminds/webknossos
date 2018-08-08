@@ -40,7 +40,7 @@ import type {
 import { APITracingTypeEnum } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/task/task_search_form";
 import type { NewTaskType, TaskCreationResponseType } from "admin/task/task_create_bulk_view";
-import type { DatasetConfigurationType } from "oxalis/store";
+import type { DatasetConfigurationType, UserConfigurationType } from "oxalis/store";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -585,6 +585,12 @@ export function getDatasetConfiguration(datasetName: string): Promise<Object> {
   return Request.receiveJSON(`/api/dataSetConfigurations/${datasetName}`);
 }
 
+export function updateDatasetSettings(datasetName: string, payload: any): Promise<void> {
+  return Request.sendJSONReceiveJSON(`/api/dataSetConfigurations/${datasetName}`, {
+    data: payload,
+  });
+}
+
 export function getDatasetDefaultConfiguration(
   datasetName: string,
 ): Promise<DatasetConfigurationType> {
@@ -664,8 +670,12 @@ export function getActiveUser(options: Object = {}) {
   return Request.receiveJSON("/api/user", options);
 }
 
-export function getUserConfiguration(): Object {
+export function getUserConfiguration(): Promise<UserConfigurationType> {
   return Request.receiveJSON("/api/user/userConfiguration");
+}
+
+export function updateUserConfiguration(payload: UserConfigurationType): Promise<void> {
+  return Request.sendJSONReceiveJSON("/api/user/userConfiguration", { data: payload });
 }
 
 // ### TimeTracking

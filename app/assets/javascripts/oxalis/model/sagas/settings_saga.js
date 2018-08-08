@@ -8,13 +8,14 @@ import {
   type Saga,
 } from "oxalis/model/sagas/effect-generators";
 import Request from "libs/request";
+import { updateUserConfiguration, updateDatasetSettings } from "admin/admin_rest_api";
 
 function* pushUserSettingsAsync(): Saga<void> {
   const activeUser = yield* select(state => state.activeUser);
   if (activeUser == null) return;
 
   const payload = yield* select(state => state.userConfiguration);
-  yield* call(Request.sendJSONReceiveJSON, "/api/user/userConfiguration", { data: payload });
+  yield* call(updateUserConfiguration, payload);
 }
 
 function* pushDatasetSettingsAsync(): Saga<void> {
@@ -23,9 +24,7 @@ function* pushDatasetSettingsAsync(): Saga<void> {
 
   const datasetName = yield* select(state => state.dataset.name);
   const payload = yield* select(state => state.datasetConfiguration);
-  yield* call(Request.sendJSONReceiveJSON, `/api/dataSetConfigurations/${datasetName}`, {
-    data: payload,
-  });
+  yield* call(updateDatasetSettings, datasetName, payload);
 }
 
 export default function* watchPushSettingsAsync(): Saga<void> {

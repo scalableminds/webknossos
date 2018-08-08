@@ -71,7 +71,7 @@ class UserScriptsModalView extends React.PureComponent<UserScriptsModalViewProps
   loadScript = async (script: ScriptType) => {
     try {
       this.setState({ isLoading: true });
-      const content = await fetchGistContent(script.gist, script.name);
+      const content = await fetchGistContent(script);
       this.setState({
         selectedScript: script.id,
         code: content,

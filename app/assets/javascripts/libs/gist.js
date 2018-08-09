@@ -37,7 +37,9 @@ export async function fetchGistContent({
 
   let gistObject;
   try {
-    gistObject = (await Request.receiveJSON(`https://api.github.com/gists/${gistId}`): GithubGistType);
+    gistObject = (await Request.receiveJSON(
+      `https://api.github.com/gists/${gistId}`,
+    ): GithubGistType);
   } catch (e) {
     handleError(name);
     return "";

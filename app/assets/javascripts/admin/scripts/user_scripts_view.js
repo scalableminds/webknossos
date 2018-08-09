@@ -2,13 +2,9 @@
 
 import * as React from "react";
 import { Link } from "react-router-dom";
-import {
-  getScripts,
-  getUserConfiguration,
-  updateUserConfiguration,
-} from "admin/admin_rest_api";
+import { getScripts, getUserConfiguration, updateUserConfiguration } from "admin/admin_rest_api";
 import type { APIScriptType } from "admin/api_flow_types";
-import type {UserConfigurationType} from "oxalis/store";
+import type { UserConfigurationType } from "oxalis/store";
 import { Alert, Select, Row, Col, Spin } from "antd";
 import { AsyncButton } from "components/async_clickables";
 
@@ -17,7 +13,7 @@ const { Option } = Select;
 type State = {
   isLoading: boolean,
   scripts: Array<APIScriptType>,
-  userConfig: ?UserConfigurationType
+  userConfig: ?UserConfigurationType,
 };
 
 class UserScriptsView extends React.PureComponent<{}, State> {
@@ -60,7 +56,7 @@ class UserScriptsView extends React.PureComponent<{}, State> {
 
   onSave = async () => {
     if (this.state.userConfig != null) {
-      await updateUserConfiguration(this.state.userConfig)
+      await updateUserConfiguration(this.state.userConfig);
     }
   };
 
@@ -76,9 +72,9 @@ class UserScriptsView extends React.PureComponent<{}, State> {
             message="Add and define scripts"
             description={
               <span>
-                You can run custom scripts to tweak webKnossos&#39; behavior for your needs (e.g., for
-                custom shortcuts). If you add a script, the corresponding code will be executed when
-                opening an annotation or dataset.
+                You can run custom scripts to tweak webKnossos&#39; behavior for your needs (e.g.,
+                for custom shortcuts). If you add a script, the corresponding code will be executed
+                when opening an annotation or dataset.
               </span>
             }
             type="info"

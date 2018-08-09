@@ -47,7 +47,7 @@ object NmlWriter extends FoxImplicits {
       _ <- Xml.withinElement("things") {
         for {
           _ <- writeMetaData(annotation)
-          parameters <- extractTracingParameters(skeletonTracingOpt, volumeTracingOpt, annotation.description, scale)
+          parameters <- extractTracingParameters(skeletonTracingOpt, volumeTracingOpt, annotation.description, scale).toFox
           _ = writeParameters(parameters)
           _ = skeletonTracingOpt.map(writeSkeletonThings(_))
           _ = volumeTracingOpt.map(writeVolumeThings(_))
@@ -58,11 +58,11 @@ object NmlWriter extends FoxImplicits {
     } yield ()
   }
 
-  private def extractTracingParameters(skeletonTracingOpt: Option[SkeletonTracing],
+  def extractTracingParameters(skeletonTracingOpt: Option[SkeletonTracing],
                                        volumeTracingOpt: Option[VolumeTracing],
                                        description: String,
                                        scale: Option[Scale]
-                                      ): Fox[NmlParameters] = {
+                                      ): Option[NmlParameters] = {
     // in hybrid case, use data from skeletonTracing (should be identical)
     skeletonTracingOpt.map { s =>
       NmlParameters(
@@ -92,10 +92,10 @@ object NmlWriter extends FoxImplicits {
           None
         )
       }
-    }.toFox
+    }
   }
 
-  private def writeParameters(parameters: NmlParameters)(implicit writer: XMLStreamWriter) = {
+  def writeParameters(parameters: NmlParameters)(implicit writer: XMLStreamWriter) = {
     Xml.withinElementSync("parameters") {
       Xml.withinElementSync("experiment") {
         writer.writeAttribute("name", parameters.dataSetName)

@@ -98,7 +98,7 @@ In order to restore the current window, a reload is necessary.`,
   "project.delete": "Do you really want to delete this project?",
   "project.increase_instances":
     "Do you really want to add one additional instance to all tasks of this project?",
-  "project.none_selected": "No currently selected project found",
+  "project.none_selected": "No currently selected project found.",
   "project.successful_active_tasks_transfer":
     "All active tasks were transfered to the selected user",
   "project.unsuccessful_active_tasks_transfer":

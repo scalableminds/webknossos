@@ -150,7 +150,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
     });
   };
 
-  transferCommited = () => {
+  onTaskTransferComplete = () => {
     this.setState({ isTransferTasksVisible: false });
     this.fetchData();
   };
@@ -304,9 +304,9 @@ class ProjectListView extends React.PureComponent<Props, State> {
           </Spin>
           {this.state.isTransferTasksVisible ? (
             <TransferAllTasksModal
-              visible={this.state.isTransferTasksVisible}
               project={this.state.selectedProject}
-              onCancel={() => this.setState({ isTransferTasksVisible: false })}
+              onCancel={this.onTaskTransferComplete}
+              onComplete={this.onTaskTransferComplete}
             />
           ) : null}
         </div>

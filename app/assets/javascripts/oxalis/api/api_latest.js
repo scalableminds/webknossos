@@ -32,6 +32,7 @@ import {
   getActiveTree,
   getTree,
   getFlatTreeGroups,
+  getTreeGroupsMap,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getLayerBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import { setActiveCellAction, setToolAction } from "oxalis/model/actions/volumetracing_actions";
@@ -291,7 +292,12 @@ class TracingApi {
    */
   setTreeGroup(treeId: number, groupId?: number) {
     const { tracing } = Store.getState();
-    assertSkeleton(tracing);
+    const skeletonTracing = assertSkeleton(tracing);
+    const treeGroupMap = getTreeGroupsMap(skeletonTracing);
+    if (groupId != null && treeGroupMap[groupId] == null) {
+      throw new Error("Provided group ID does not exist");
+    }
+
     Store.dispatch(setTreeGroupAction(groupId, treeId));
   }
 

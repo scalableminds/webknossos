@@ -1,6 +1,7 @@
 import sbt._
 
 object DependencyResolvers {
+  val localMaven = "Local Maven" at Path.userHome.asFile.toURI.toURL + ".m2/repository"
   val novusRel = "repo.novus rels" at "http://repo.novus.com/releases/"
   val novuesSnaps = "repo.novus snaps" at "http://repo.novus.com/snapshots/"
   val sonaRels = "sonatype rels" at "https://oss.sonatype.org/content/repositories/releases/"
@@ -15,6 +16,7 @@ object DependencyResolvers {
   val atlassian = "Atlassian Releases" at "https://maven.atlassian.com/public/"
 
   val dependencyResolvers = Seq(
+    localMaven,
     novusRel,
     novuesSnaps,
     sonaRels,

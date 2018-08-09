@@ -5,6 +5,7 @@ package models.annotation.nml
 
 import java.io.InputStream
 
+import com.ctc.wstx.sax.{SAXFeature, WstxSAXParserFactory}
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -14,10 +15,14 @@ import com.scalableminds.webknossos.datastore.tracings.volume.Volume
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.typesafe.scalalogging.LazyLogging
+import javax.xml.parsers.SAXParser
 import net.liftweb.common.Box._
 import net.liftweb.common.{Box, Empty, Failure, Full}
+import org.apache.xerces.jaxp.SAXParserFactoryImpl
+import org.xml.sax.InputSource
 
-import scala.xml.{NodeSeq, XML, Node => XMLNode}
+import scala.xml.parsing.NoBindingFactoryAdapter
+import scala.xml.{NodeSeq, TopScope, XML, Node => XMLNode}
 
 object NmlParser extends LazyLogging with ProtoGeometryImplicits {
 
@@ -39,7 +44,17 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
 
   def parse(name: String, nmlInputStream: InputStream): Box[(Either[SkeletonTracing, (VolumeTracing, String)], String)] = {
     try {
-      val data = XML.load(nmlInputStream)
+      val inputSource = new InputSource(nmlInputStream)
+      var parser: SAXParser = new WstxSAXParserFactory().newSAXParser()
+
+      var adapter = new NoBindingFactoryAdapter()
+
+      adapter.scopeStack push TopScope
+      parser.parse(inputSource, adapter)
+      adapter.scopeStack.pop()
+
+      val data = adapter.rootElem
+
       for {
         parameters <- (data \ "parameters").headOption ?~ "No parameters section found"
         scale <- parseScale(parameters \ "scale") ?~ "Couldn't parse scale"

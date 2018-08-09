@@ -300,7 +300,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
                     </a>
                     <br />
                     <a onClick={_.partial(this.showActiveUsersModal, project)}>
-                      <Icon type="info-circle-o" />Show active users
+                      <Icon type="team" />Show active users
                     </a>
                     <br />
                     {project.owner.email === this.props.activeUser.email ? (

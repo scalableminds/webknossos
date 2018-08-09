@@ -5,7 +5,7 @@ package controllers
 import javax.inject.Inject
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.{AnnotationDAO, AnnotationService, AnnotationTypeSQL}
+import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.project._
 import models.task._
 import net.liftweb.common.Empty
@@ -154,7 +154,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
       newUserIdValidated <- ObjectId.parse(newUserId)
       activeAnnotations <- AnnotationDAO.findAllActiveForProject(project._id)
       updated <- Fox.serialCombined(activeAnnotations){ id =>
-        AnnotationService.transferAnnotationToUser(AnnotationTypeSQL.Task.toString, id.toString, newUserIdValidated)(securedRequestToUserAwareRequest)
+        AnnotationService.transferAnnotationToUser(AnnotationType.Task.toString, id.toString, newUserIdValidated)(securedRequestToUserAwareRequest)
       }
     } yield Ok
 

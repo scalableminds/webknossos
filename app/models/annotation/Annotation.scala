@@ -217,7 +217,7 @@ object AnnotationDAO extends SQLDAO[Annotation, AnnotationsRow, Annotations] {
                         join webknossos.users_ u on a._user = u._id
                         where p._id = ${projectId}
                         and a.state = '#${AnnotationState.Active.toString}'
-                        and a.typ = '#${AnnotationTypeSQL.Task}' """.as[String])
+                        and a.typ = '#${AnnotationType.Task}' """.as[String])
     } yield r.map(ObjectId(_)).toList
 
   def findAllByTaskIdAndType(taskId: ObjectId, typ: AnnotationType)(implicit ctx: DBAccessContext): Fox[List[Annotation]] =

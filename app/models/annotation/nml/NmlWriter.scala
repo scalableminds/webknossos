@@ -21,34 +21,40 @@ import scala.concurrent.Future
 object NmlWriter extends FoxImplicits {
   private lazy val outputService = XMLOutputFactory.newInstance()
 
-  def toNmlStream(tracing: Either[SkeletonTracing, VolumeTracing], annotation: Annotation, scale: Option[Scale]) = Enumerator.outputStream { os =>
+  def toNmlStream(skeletonTracing: Option[SkeletonTracing], volumeTracing: Option[VolumeTracing], annotation: Annotation, scale: Option[Scale]) = Enumerator.outputStream { os =>
     implicit val writer = new IndentingXMLStreamWriter(outputService.createXMLStreamWriter(os))
 
     for {
-      nml <- toNml(tracing, annotation, scale)
+      nml <- toNml(skeletonTracing, volumeTracing, annotation, scale)
       _ = os.close
     } yield {
       nml
     }
   }
 
-  def toNml(tracing: Either[SkeletonTracing, VolumeTracing], annotation: Annotation, scale: Option[Scale])(implicit writer: XMLStreamWriter): Fox[Unit] = {
-    tracing match {
-      case Right(volumeTracing) => {
-        for {
-          _ <- Xml.withinElement("things") { writeVolumeThings(annotation, volumeTracing, scale)}
-          _ = writer.writeEndDocument()
-          _ = writer.close()
-        } yield ()
-      }
-      case Left(skeletonTracing) => {
-        for {
-          _ <- Xml.withinElement("things") { writeSkeletonThings(annotation, skeletonTracing, scale)}
-          _ = writer.writeEndDocument()
-          _ = writer.close()
-        } yield ()
-      }
-    }
+  def toNml(skeletonTracingOpt: Option[SkeletonTracing], volumeTracingOpt: Option[VolumeTracing], annotation: Annotation, scale: Option[Scale])(implicit writer: XMLStreamWriter): Fox[Unit] = {
+    for {
+      _ <- Fox.runOptional(volumeTracingOpt) {
+          volumeTracing =>
+            for {
+              _ <- Xml.withinElement("things") {
+                writeVolumeThings(annotation, volumeTracing, scale)
+              }
+              _ = writer.writeEndDocument()
+              _ = writer.close()
+            } yield ()
+        }
+      _ <- Fox.runOptional(skeletonTracingOpt) {
+          skeletonTracing =>
+            for {
+              _ <- Xml.withinElement("things") {
+                writeSkeletonThings(annotation, skeletonTracing, scale)
+              }
+              _ = writer.writeEndDocument()
+              _ = writer.close()
+            } yield ()
+        }
+    } yield ()
   }
 
   def writeVolumeThings(annotation: Annotation, volumeTracing: VolumeTracing, scale: Option[Scale])(implicit writer: XMLStreamWriter): Fox[Unit] = {

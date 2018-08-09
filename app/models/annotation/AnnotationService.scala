@@ -268,7 +268,7 @@ object AnnotationService
     for {
       tracingsNamesAndScalesAsTuples <- getTracingsScalesAndNamesFor(annotations)
       tracingsAndNamesFlattened = flattenTupledLists(tracingsNamesAndScalesAsTuples)
-      nmlsAndNames = tracingsAndNamesFlattened.map(tuple => (NmlWriter.toNmlStream(Left(tuple._1), tuple._4, tuple._3), tuple._2))
+      nmlsAndNames = tracingsAndNamesFlattened.map(tuple => (NmlWriter.toNmlStream(Some(tuple._1), None, tuple._4, tuple._3), tuple._2))
       zip <- createZip(nmlsAndNames, zipFileName)
     } yield zip
   }

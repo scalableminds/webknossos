@@ -31,6 +31,7 @@ import {
   findTreeByNodeId,
   getTree,
   getNodeAndTree,
+  getTreeGroupsMap,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import Constants from "oxalis/constants";
 import type { OxalisState, SkeletonTracingType } from "oxalis/store";
@@ -504,6 +505,27 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
             .getOrElse(state);
         }
 
+        case "SET_TREE_VISIBILITY": {
+          const { treeId, isVisible } = action;
+          return getTree(skeletonTracing, treeId)
+            .map(tree =>
+              update(state, {
+                tracing: {
+                  skeleton: {
+                    trees: {
+                      [tree.treeId]: {
+                        isVisible: {
+                          $set: isVisible,
+                        },
+                      },
+                    },
+                  },
+                },
+              }),
+            )
+            .getOrElse(state);
+        }
+
         case "TOGGLE_ALL_TREES": {
           return toggleAllTreesReducer(state, skeletonTracing);
         }
@@ -543,11 +565,16 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         }
 
         case "SET_TREE_GROUP": {
-          return update(state, {
-            tracing: {
-              skeleton: { trees: { [action.treeId]: { groupId: { $set: action.groupId } } } },
-            },
-          });
+          const treeGroupMap = getTreeGroupsMap(skeletonTracing);
+          if (action.groupId == null || treeGroupMap[action.groupId]) {
+            return update(state, {
+              tracing: {
+                skeleton: { trees: { [action.treeId]: { groupId: { $set: action.groupId } } } },
+              },
+            });
+          } else {
+            return state;
+          }
         }
 
         default:

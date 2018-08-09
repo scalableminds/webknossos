@@ -22,6 +22,8 @@ import {
   setTreeNameAction,
   setActiveTreeAction,
   setTreeColorIndexAction,
+  setTreeVisibilityAction,
+  setTreeGroupAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   findTreeByNodeId,
@@ -29,6 +31,7 @@ import {
   getActiveNode,
   getActiveTree,
   getTree,
+  getFlatTreeGroups,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getLayerBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import { setActiveCellAction, setToolAction } from "oxalis/model/actions/volumetracing_actions";
@@ -252,6 +255,44 @@ class TracingApi {
     const tracing = Store.getState().tracing;
     assertSkeleton(tracing);
     Store.dispatch(setTreeColorIndexAction(treeId, colorIndex));
+  }
+
+  /**
+   * Changes the visibility of the referenced tree.
+   *
+   * @example
+   * api.tracing.setTreeVisibility(3, false);
+   */
+  setTreeVisibility(treeId?: number, isVisible: boolean) {
+    const { tracing } = Store.getState();
+    assertSkeleton(tracing);
+    Store.dispatch(setTreeVisibilityAction(treeId, isVisible));
+  }
+
+  /**
+   * Gets a list of tree groups
+   *
+   * @example
+   * api.tracing.getTreeGroups();
+   */
+  getTreeGroups() {
+    const { tracing } = Store.getState();
+    return getFlatTreeGroups(assertSkeleton(tracing));
+  }
+
+  /**
+   * Sets the parent group of the referenced tree.
+   *
+   * @example
+   * api.tracing.setTreeGroup(
+   *   3,
+   *   api.tracing.getTreeGroups.find(({ name }) => name === "My Tree Group").id,
+   * );
+   */
+  setTreeGroup(treeId: number, groupId?: number) {
+    const { tracing } = Store.getState();
+    assertSkeleton(tracing);
+    Store.dispatch(setTreeGroupAction(groupId, treeId));
   }
 
   /**

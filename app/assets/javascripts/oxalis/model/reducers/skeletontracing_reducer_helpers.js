@@ -704,7 +704,7 @@ export function toggleAllTreesReducer(
 export function toggleTreeGroupReducer(
   state: OxalisState,
   skeletonTracing: SkeletonTracingType,
-  groupId: string,
+  groupId: number,
 ): OxalisState {
   let toggledGroup;
   forEachGroups(skeletonTracing.treeGroups, group => {

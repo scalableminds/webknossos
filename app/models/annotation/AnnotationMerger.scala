@@ -1,11 +1,10 @@
 package models.annotation
 
 import oxalis.security.WebknossosSilhouette.SecuredRequest
-import com.scalableminds.webknossos.datastore.tracings.{TracingReference, TracingType}
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import models.annotation.AnnotationTypeSQL.AnnotationTypeSQL
+import models.annotation.AnnotationType.AnnotationType
 import models.binary.DataSetDAO
 import play.api.libs.concurrent.Execution.Implicits._
 import utils.ObjectId
@@ -35,19 +34,19 @@ object AnnotationMerger extends FoxImplicits with LazyLogging {
       request.identity._id,
       annotationB._dataSet,
       annotationB._team,
-      AnnotationTypeSQL.Explorational,
+      AnnotationType.Explorational,
       List(annotationA, annotationB)
     )
   }
 
   def mergeN(
-    newId: ObjectId,
-    persistTracing: Boolean,
-    _user: ObjectId,
-    _dataSet: ObjectId,
-    _team: ObjectId,
-    typ: AnnotationTypeSQL,
-    annotations: List[Annotation]
+              newId: ObjectId,
+              persistTracing: Boolean,
+              _user: ObjectId,
+              _dataSet: ObjectId,
+              _team: ObjectId,
+              typ: AnnotationType,
+              annotations: List[Annotation]
     )(implicit ctx: DBAccessContext): Fox[Annotation] = {
     if (annotations.isEmpty)
       Fox.empty
@@ -61,18 +60,20 @@ object AnnotationMerger extends FoxImplicits with LazyLogging {
           None,
           _team,
           _user,
-          mergedTracingReference,
+          Some(mergedTracingReference),
+          None,
           typ = typ
         )
       }
     }
   }
 
-  private def mergeTracingsOfAnnotations(annotations: List[Annotation], dataSetId: ObjectId, persistTracing: Boolean)(implicit ctx: DBAccessContext): Fox[TracingReference] = {
+  private def mergeTracingsOfAnnotations(annotations: List[Annotation], dataSetId: ObjectId, persistTracing: Boolean)(implicit ctx: DBAccessContext): Fox[String] = {
     for {
       dataSet <- DataSetDAO.findOne(dataSetId)
       dataStoreHandler <- dataSet.dataStoreHandler
-      tracingReference <- dataStoreHandler.mergeSkeletonTracingsByIds(annotations.map(_.tracing), persistTracing) ?~> "Failed to merge skeleton tracings."
+      skeletonTracingIds <- Fox.combined(annotations.map(_.skeletonTracingId.toFox))
+      tracingReference <- dataStoreHandler.mergeSkeletonTracingsByIds(skeletonTracingIds, persistTracing) ?~> "Failed to merge skeleton tracings."
     } yield {
       tracingReference
     }

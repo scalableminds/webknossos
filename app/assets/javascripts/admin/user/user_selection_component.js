@@ -1,0 +1,86 @@
+// @flow
+
+import _ from "lodash";
+import * as React from "react";
+import { Spin, Select } from "antd";
+import { getUsers } from "admin/admin_rest_api";
+import type { APIUserType } from "admin/api_flow_types";
+import { handleGenericError } from "libs/error_handling";
+
+const { Option } = Select;
+
+type Props = {
+  handleSelection: () => void,
+  loggedInUserListed: boolean,
+  userId: string,
+};
+
+type State = {
+  isLoading: boolean,
+  users: Array<APIUserType>,
+  currentUserIdValue: string,
+};
+
+class UserSelectionComponent extends React.PureComponent<Props, State> {
+  state = {
+    isLoading: false,
+    users: [],
+    currentUserIdValue: "",
+  };
+
+  componentDidMount() {
+    this.fetchData();
+  }
+
+  async fetchData() {
+    try {
+      this.setState({ isLoading: true });
+      const users = await getUsers();
+      const activeUsers = users.filter(u => u.isActive);
+      const sortedUsers = _.sortBy(activeUsers, "lastName");
+      this.setState({
+        users: sortedUsers,
+      });
+    } catch (error) {
+      handleGenericError(error);
+    } finally {
+      this.setState({ isLoading: false });
+    }
+  }
+
+  handleSelectChange = (userId: string) => {
+    this.setState({ currentUserIdValue: userId });
+    this.props.handleSelection(userId);
+  };
+
+  render() {
+    return this.state.isLoading ? (
+      <div className="text-center">
+        <Spin size="large" />
+      </div>
+    ) : (
+      <Select
+        showSearch
+        placeholder="Select a New User"
+        value={this.state.currentUserIdValue}
+        onChange={this.handleSelectChange}
+        optionFilterProp="children"
+        style={{ width: "100%" }}
+        filterOption={(input, option) =>
+          option.props.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+        }
+      >
+        {(this.props.loggedInUserListed
+          ? this.state.users
+          : this.state.users.filter(u => u.id !== this.props.userId)
+        ).map(user => (
+          <Option key={user.id} value={user.id}>
+            {`${user.lastName}, ${user.firstName} ${user.email}`}
+          </Option>
+        ))}
+      </Select>
+    );
+  }
+}
+
+export default UserSelectionComponent;

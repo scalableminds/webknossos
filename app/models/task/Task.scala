@@ -183,7 +183,7 @@ object TaskDAO extends SQLDAO[Task, TasksRow, Tasks] {
                 where _user = '${userId.id}')
                as user_experiences on webknossos.tasks_.neededExperience_domain = user_experiences.domain and webknossos.tasks_.neededExperience_value <= user_experiences.value
              join webknossos.projects_ on webknossos.tasks_._project = webknossos.projects_._id
-             left join (select _task from webknossos.annotations_ where _user = '${userId.id}' and typ = '${AnnotationTypeSQL.Task}') as userAnnotations ON webknossos.tasks_._id = userAnnotations._task
+             left join (select _task from webknossos.annotations_ where _user = '${userId.id}' and typ = '${AnnotationType.Task}') as userAnnotations ON webknossos.tasks_._id = userAnnotations._task
            where webknossos.tasks_.openInstances > 0
                  and webknossos.projects_._team in ${writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))}
                  and userAnnotations._task is null
@@ -200,9 +200,9 @@ object TaskDAO extends SQLDAO[Task, TasksRow, Tasks] {
     val insertAnnotationQ = sqlu"""
            with task as (#${findNextTaskQ(userId, teamIds)}),
            dataset as (select _id from webknossos.datasets_ limit 1)
-           insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, tracing_id, tracing_typ, description, isPublic, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
+           insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, skeletonTracingId, volumeTracingId, description, isPublic, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
            select ${annotationId.id}, dataset._id, task._id, ${teamIds.headOption.map(_.id).getOrElse("")}, ${userId.id}, ${dummyTracingId},
-                    'skeleton', '', false, '', '#${AnnotationState.Initializing.toString}', '{}',
+                    null, '', false, '', '#${AnnotationState.Initializing.toString}', '{}',
                     '{}', 0, 'Task', ${new java.sql.Timestamp(System.currentTimeMillis)},
                      ${new java.sql.Timestamp(System.currentTimeMillis)}, false
            from task, dataset
@@ -254,7 +254,7 @@ object TaskDAO extends SQLDAO[Task, TasksRow, Tasks] {
     val taskTypeFilter = taskTypeIdOpt.map(ttId => s"(t._taskType = '${ttId}')").getOrElse("true")
     val taskIdsFilter = taskIdsOpt.map(tIds => if (tIds.isEmpty) "false" else s"(t._id in ${writeStructTupleWithQuotes(tIds.map(_.toString))})").getOrElse("true")
     val userJoin = userIdOpt.map(_ => "join webknossos.annotations_ a on a._task = t._id join webknossos.users_ u on a._user = u._id").getOrElse("")
-    val userFilter = userIdOpt.map(uId => s"(u._id = '${uId}' and a.typ = '${AnnotationTypeSQL.Task}' and a.state != '${AnnotationState.Cancelled}')").getOrElse("true")
+    val userFilter = userIdOpt.map(uId => s"(u._id = '${uId}' and a.typ = '${AnnotationType.Task}' and a.state != '${AnnotationState.Cancelled}')").getOrElse("true")
 
     for {
       projectFilter <- projectFilterFox

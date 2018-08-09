@@ -4,33 +4,41 @@
  */
 import type { SkeletonTracingStatsType } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3, Vector6, Point3 } from "oxalis/constants";
-import type {
-  SettingsType,
-  BoundingBoxObjectType,
-  CategoryType,
-  ElementClassType,
-  EdgeType,
-  CommentType,
-  TreeGroupType,
-} from "oxalis/store";
+import type { BoundingBoxObjectType, EdgeType, CommentType, TreeGroupType } from "oxalis/store";
 import Enum from "Enumjs";
 
 export type APIMessageType = { ["info" | "warning" | "error"]: string };
+
+type ElementClassType = "uint8" | "uint16" | "uint32";
 
 export type APIMappingType = {
   +parent?: string,
   +name: string,
   +classes?: Array<Array<number>>,
+  +colors?: Array<number>,
+  +hideUnmappedIds?: boolean,
 };
 
-export type APIDataLayerType = {
+type APIDataLayerBaseType = {|
   +name: string,
-  +category: CategoryType,
   +boundingBox: BoundingBoxObjectType,
   +resolutions: Array<Vector3>,
   +elementClass: ElementClassType,
   +mappings?: Array<string>,
-};
+|};
+
+type APIColorLayerType = {|
+  ...APIDataLayerBaseType,
+  category: "color",
+|};
+
+type APISegmentationLayerType = {|
+  ...APIDataLayerBaseType,
+  category: "segmentation",
+  largestSegmentId: number,
+|};
+
+export type APIDataLayerType = APIColorLayerType | APISegmentationLayerType;
 
 export type APIDataSourceType = {
   +id: {
@@ -84,6 +92,7 @@ export type APITeamMembershipType = {
 export type ExperienceMapType = { +[string]: number };
 
 export type APIUserBaseType = {
+  +created: number,
   +email: string,
   +firstName: string,
   +lastName: string,
@@ -117,21 +126,21 @@ export type APIActiveUserType = {
   activeTasks: number,
 };
 
-export type APIRestrictionsType = {
+export type APIRestrictionsType = {|
   +allowAccess: boolean,
   +allowUpdate: boolean,
   +allowFinish: boolean,
   +allowDownload: boolean,
-};
+|};
 
 export type APIAllowedModeType = "orthogonal" | "oblique" | "flight" | "volume";
 
-export type APISettingsType = {
+export type APISettingsType = {|
   +allowedModes: Array<APIAllowedModeType>,
   +preferredMode?: APIAllowedModeType,
   +branchPointsAllowed: boolean,
   +somaClickingAllowed: boolean,
-};
+|};
 
 export const APITracingTypeEnum = Enum.make({
   Explorational: "Explorational",
@@ -149,7 +158,7 @@ export type APITaskTypeType = {
   +summary: string,
   +description: string,
   +team: string,
-  +settings: SettingsType,
+  +settings: APISettingsType,
 };
 
 export type TaskStatusType = { +open: number, +active: number, +finished: number };
@@ -208,9 +217,9 @@ export type APITaskType = {
 };
 
 type APIAnnotationTypeBase = {
-  +content: {
-    +id: string,
-    +typ: string,
+  +tracing: {
+    +skeleton: ?string,
+    +volume: ?string,
   },
   +dataSetName: string,
   +dataStore: APIDataStoreType,
@@ -309,6 +318,8 @@ export type APIBuildInfoType = {
 
 export type APIFeatureToggles = {
   +discussionBoard: boolean,
+  +hybridTracings: boolean,
+  +allowOrganzationCreation: boolean,
 };
 
 // Tracing related datatypes
@@ -384,5 +395,10 @@ export type ServerVolumeTracingType = {|
 |};
 
 export type ServerTracingType = ServerSkeletonTracingType | ServerVolumeTracingType;
+
+export type HybridServerTracingType = {
+  skeleton: ?ServerSkeletonTracingType,
+  volume: ?ServerVolumeTracingType,
+};
 
 export default {};

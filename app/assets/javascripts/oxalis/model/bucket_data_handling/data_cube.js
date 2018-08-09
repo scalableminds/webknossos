@@ -26,6 +26,7 @@ import type { VoxelIterator } from "oxalis/model/volumetracing/volumelayer";
 import type { Bucket } from "oxalis/model/bucket_data_handling/bucket";
 import type { MappingType } from "oxalis/store";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 
 class CubeEntry {
   data: Map<number, Bucket>;
@@ -120,10 +121,10 @@ class DataCube {
       this.cubes[i] = new CubeEntry(zoomedCubeBoundary);
     }
 
-    this.boundingBox = new BoundingBox(Store.getState().tracing.boundingBox, this);
+    this.boundingBox = new BoundingBox(getSomeTracing(Store.getState().tracing).boundingBox, this);
 
     listenToStoreProperty(
-      state => state.tracing.boundingBox,
+      state => getSomeTracing(state.tracing).boundingBox,
       boundingBox => {
         this.boundingBox = new BoundingBox(boundingBox, this);
         this.forgetOutOfBoundaryBuckets();
@@ -160,11 +161,20 @@ class DataCube {
       : null;
   }
 
+  shouldHideUnmappedIds(): boolean {
+    return this.isSegmentation
+      ? Store.getState().temporaryConfiguration.activeMapping.hideUnmappedIds
+      : false;
+  }
+
   mapId(idToMap: number): number {
     let mappedId = null;
     const mapping = this.getMapping();
     if (mapping != null && this.isMappingEnabled()) {
       mappedId = mapping[idToMap];
+    }
+    if (this.shouldHideUnmappedIds() && mappedId == null) {
+      mappedId = 0;
     }
     return mappedId != null ? mappedId : idToMap;
   }

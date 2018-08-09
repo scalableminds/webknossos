@@ -43,6 +43,7 @@ class CreateTeamModalView extends React.PureComponent<Props, State> {
       <Modal
         title="Add a New Team"
         visible={this.props.isVisible}
+        onCancel={this.props.onCancel}
         footer={
           <div>
             <Button onClick={this.props.onCancel}>Cancel</Button>

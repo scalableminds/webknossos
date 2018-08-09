@@ -37,75 +37,8 @@ const createDummyNode = (id: number): NodeType => ({
 });
 
 const tracing = {
-  type: "skeleton",
-  trees: {
-    "1": {
-      treeId: 1,
-      name: "TestTree-0",
-      nodes: new DiffableMap([
-        [0, createDummyNode(0)],
-        [1, createDummyNode(1)],
-        [2, createDummyNode(2)],
-        [7, createDummyNode(7)],
-      ]),
-      timestamp: TIMESTAMP,
-      branchPoints: [{ nodeId: 1, timestamp: 0 }, { nodeId: 7, timestamp: 0 }],
-      edges: EdgeCollection.loadFromArray([
-        { source: 0, target: 1 },
-        { source: 2, target: 1 },
-        { source: 1, target: 7 },
-      ]),
-      comments: [{ content: "comment", nodeId: 0 }],
-      color: [23, 23, 23],
-      isVisible: true,
-      groupId: null,
-    },
-    "2": {
-      treeId: 2,
-      name: "TestTree-1",
-      nodes: new DiffableMap([
-        [4, createDummyNode(4)],
-        [5, createDummyNode(5)],
-        [6, createDummyNode(6)],
-      ]),
-      timestamp: TIMESTAMP,
-      branchPoints: [],
-      edges: EdgeCollection.loadFromArray([{ source: 4, target: 5 }, { source: 5, target: 6 }]),
-      comments: [],
-      color: [30, 30, 30],
-      isVisible: true,
-      groupId: 1,
-    },
-  },
-  tracingType: "Explorational",
-  treeGroups: [
-    {
-      groupId: 1,
-      name: "Axon 1",
-      children: [
-        {
-          groupId: 3,
-          name: "Blah",
-          children: [],
-        },
-        {
-          groupId: 4,
-          name: "Blah 2",
-          children: [],
-        },
-      ],
-    },
-    {
-      groupId: 2,
-      name: "Axon 2",
-      children: [],
-    },
-  ],
-  name: "",
-  activeTreeId: 1,
-  activeNodeId: 1,
   annotationId: "annotationId",
-  cachedMaxNodeId: 7,
+  name: "",
   restrictions: {
     branchPointsAllowed: true,
     allowUpdate: true,
@@ -113,13 +46,82 @@ const tracing = {
     allowAccess: true,
     allowDownload: true,
   },
-  boundingBox: {
-    min: [0, 0, 0],
-    max: [500, 500, 500],
-  },
-  userBoundingBox: {
-    min: [5, 5, 5],
-    max: [250, 250, 250],
+  skeleton: {
+    type: "skeleton",
+    cachedMaxNodeId: 7,
+    trees: {
+      "1": {
+        treeId: 1,
+        name: "TestTree-0",
+        nodes: new DiffableMap([
+          [0, createDummyNode(0)],
+          [1, createDummyNode(1)],
+          [2, createDummyNode(2)],
+          [7, createDummyNode(7)],
+        ]),
+        timestamp: TIMESTAMP,
+        branchPoints: [{ nodeId: 1, timestamp: 0 }, { nodeId: 7, timestamp: 0 }],
+        edges: EdgeCollection.loadFromArray([
+          { source: 0, target: 1 },
+          { source: 2, target: 1 },
+          { source: 1, target: 7 },
+        ]),
+        comments: [{ content: "comment", nodeId: 0 }],
+        color: [23, 23, 23],
+        isVisible: true,
+        groupId: null,
+      },
+      "2": {
+        treeId: 2,
+        name: "TestTree-1",
+        nodes: new DiffableMap([
+          [4, createDummyNode(4)],
+          [5, createDummyNode(5)],
+          [6, createDummyNode(6)],
+        ]),
+        timestamp: TIMESTAMP,
+        branchPoints: [],
+        edges: EdgeCollection.loadFromArray([{ source: 4, target: 5 }, { source: 5, target: 6 }]),
+        comments: [],
+        color: [30, 30, 30],
+        isVisible: true,
+        groupId: 1,
+      },
+    },
+    tracingType: "Explorational",
+    treeGroups: [
+      {
+        groupId: 1,
+        name: "Axon 1",
+        children: [
+          {
+            groupId: 3,
+            name: "Blah",
+            children: [],
+          },
+          {
+            groupId: 4,
+            name: "Blah 2",
+            children: [],
+          },
+        ],
+      },
+      {
+        groupId: 2,
+        name: "Axon 2",
+        children: [],
+      },
+    ],
+    activeTreeId: 1,
+    activeNodeId: 1,
+    boundingBox: {
+      min: [0, 0, 0],
+      max: [500, 500, 500],
+    },
+    userBoundingBox: {
+      min: [5, 5, 5],
+      max: [250, 250, 250],
+    },
   },
 };
 
@@ -133,7 +135,12 @@ const initialState = _.extend({}, defaultState, {
 
 async function testThatParserThrowsWithState(t, invalidState, key) {
   // Serialize the NML using the invalidState, then parse it again, which should throw an NMLParseError
-  const nmlWithInvalidContent = serializeToNml(invalidState, invalidState.tracing, buildInfo);
+  const nmlWithInvalidContent = serializeToNml(
+    invalidState,
+    invalidState.tracing,
+    invalidState.tracing.skeleton,
+    buildInfo,
+  );
   await throwsAsyncParseError(t, () => parseNml(nmlWithInvalidContent), key);
 }
 
@@ -151,28 +158,57 @@ async function throwsAsyncParseError(t, fn, key) {
 }
 
 test("NML serializing and parsing should yield the same state", async t => {
-  const serializedNml = serializeToNml(initialState, initialState.tracing, buildInfo);
+  const serializedNml = serializeToNml(
+    initialState,
+    initialState.tracing,
+    initialState.tracing.skeleton,
+    buildInfo,
+  );
   const { trees, treeGroups } = await parseNml(serializedNml);
 
-  t.deepEqual(initialState.tracing.trees, trees);
-  t.deepEqual(initialState.tracing.treeGroups, treeGroups);
+  t.deepEqual(initialState.tracing.skeleton.trees, trees);
+  t.deepEqual(initialState.tracing.skeleton.treeGroups, treeGroups);
+});
+
+test("NML serializing and parsing should yield the same state even when using special characters", async t => {
+  const state = update(initialState, {
+    tracing: {
+      skeleton: {
+        trees: {
+          "1": { comments: { $push: [{ nodeId: 1, content: "Hello\"a'b<c>d&e\"f'g<h>i&j" }] } },
+        },
+      },
+    },
+  });
+  const serializedNml = serializeToNml(state, state.tracing, state.tracing.skeleton, buildInfo);
+  const { trees, treeGroups } = await parseNml(serializedNml);
+
+  t.deepEqual(state.tracing.skeleton.trees, trees);
+  t.deepEqual(state.tracing.skeleton.treeGroups, treeGroups);
 });
 
 test("NML Serializer should only serialize visible trees", async t => {
   const state = update(initialState, {
-    tracing: { trees: { "1": { isVisible: { $set: false } } } },
+    tracing: {
+      skeleton: { trees: { "1": { isVisible: { $set: false } } } },
+    },
   });
-  const serializedNml = serializeToNml(state, state.tracing, buildInfo);
+  const serializedNml = serializeToNml(state, state.tracing, state.tracing.skeleton, buildInfo);
   const { trees } = await parseNml(serializedNml);
 
   // Tree 1 should not be exported as it is not visible
-  delete state.tracing.trees["1"];
-  t.deepEqual(Object.keys(state.tracing.trees), Object.keys(trees));
-  t.deepEqual(state.tracing.trees, trees);
+  delete state.tracing.skeleton.trees["1"];
+  t.deepEqual(Object.keys(state.tracing.skeleton.trees), Object.keys(trees));
+  t.deepEqual(state.tracing.skeleton.trees, trees);
 });
 
 test("NML serializer should produce correct NMLs", t => {
-  const serializedNml = serializeToNml(initialState, initialState.tracing, buildInfo);
+  const serializedNml = serializeToNml(
+    initialState,
+    initialState.tracing,
+    initialState.tracing.skeleton,
+    buildInfo,
+  );
 
   t.snapshot(serializedNml, { id: "nml" });
 });
@@ -185,28 +221,36 @@ test("Serialized nml should be correctly named", async t => {
 
 test("NML Parser should throw errors for invalid nmls", async t => {
   const invalidCommentState = update(initialState, {
-    tracing: { trees: { "2": { comments: { $set: [{ content: "test", nodeId: 99 }] } } } },
+    tracing: {
+      skeleton: { trees: { "2": { comments: { $set: [{ content: "test", nodeId: 99 }] } } } },
+    },
   });
   const invalidBranchPointState = update(initialState, {
-    tracing: { trees: { "2": { branchPoints: { $set: [{ timestamp: 0, nodeId: 99 }] } } } },
+    tracing: {
+      skeleton: { trees: { "2": { branchPoints: { $set: [{ timestamp: 0, nodeId: 99 }] } } } },
+    },
   });
   const invalidEdgeState = update(initialState, {
     tracing: {
-      trees: {
-        "2": { edges: { $set: EdgeCollection.loadFromArray([{ source: 99, target: 5 }]) } },
+      skeleton: {
+        trees: {
+          "2": { edges: { $set: EdgeCollection.loadFromArray([{ source: 99, target: 5 }]) } },
+        },
       },
     },
   });
   const invalidSelfEdgeState = update(initialState, {
     tracing: {
-      trees: {
-        "2": {
-          edges: {
-            $set: EdgeCollection.loadFromArray([
-              { source: 4, target: 5 },
-              { source: 5, target: 6 },
-              { source: 6, target: 6 },
-            ]),
+      skeleton: {
+        trees: {
+          "2": {
+            edges: {
+              $set: EdgeCollection.loadFromArray([
+                { source: 4, target: 5 },
+                { source: 5, target: 6 },
+                { source: 6, target: 6 },
+              ]),
+            },
           },
         },
       },
@@ -214,14 +258,16 @@ test("NML Parser should throw errors for invalid nmls", async t => {
   });
   const duplicateEdgeState = update(initialState, {
     tracing: {
-      trees: {
-        "2": {
-          edges: {
-            $set: EdgeCollection.loadFromArray([
-              { source: 4, target: 5 },
-              { source: 4, target: 5 },
-              { source: 5, target: 6 },
-            ]),
+      skeleton: {
+        trees: {
+          "2": {
+            edges: {
+              $set: EdgeCollection.loadFromArray([
+                { source: 4, target: 5 },
+                { source: 4, target: 5 },
+                { source: 5, target: 6 },
+              ]),
+            },
           },
         },
       },
@@ -229,25 +275,27 @@ test("NML Parser should throw errors for invalid nmls", async t => {
   });
   const duplicateNodeState = update(initialState, {
     tracing: {
-      trees: {
-        "1": {
-          nodes: {
-            $set: new DiffableMap([
-              [0, createDummyNode(0)],
-              [1, createDummyNode(1)],
-              [2, createDummyNode(2)],
-              [4, createDummyNode(4)],
-              [7, createDummyNode(7)],
-            ]),
+      skeleton: {
+        trees: {
+          "1": {
+            nodes: {
+              $set: new DiffableMap([
+                [0, createDummyNode(0)],
+                [1, createDummyNode(1)],
+                [2, createDummyNode(2)],
+                [4, createDummyNode(4)],
+                [7, createDummyNode(7)],
+              ]),
+            },
           },
-        },
-        "2": {
-          nodes: {
-            $set: new DiffableMap([
-              [4, createDummyNode(4)],
-              [5, createDummyNode(5)],
-              [6, createDummyNode(6)],
-            ]),
+          "2": {
+            nodes: {
+              $set: new DiffableMap([
+                [4, createDummyNode(4)],
+                [5, createDummyNode(5)],
+                [6, createDummyNode(6)],
+              ]),
+            },
           },
         },
       },
@@ -255,10 +303,12 @@ test("NML Parser should throw errors for invalid nmls", async t => {
   });
   const duplicateTreeState = update(initialState, {
     tracing: {
-      trees: {
-        "2": {
-          treeId: {
-            $set: 1,
+      skeleton: {
+        trees: {
+          "2": {
+            treeId: {
+              $set: 1,
+            },
           },
         },
       },
@@ -266,28 +316,36 @@ test("NML Parser should throw errors for invalid nmls", async t => {
   });
   const disconnectedTreeState = update(initialState, {
     tracing: {
-      trees: { "2": { edges: { $set: EdgeCollection.loadFromArray([{ source: 4, target: 5 }]) } } },
+      skeleton: {
+        trees: {
+          "2": { edges: { $set: EdgeCollection.loadFromArray([{ source: 4, target: 5 }]) } },
+        },
+      },
     },
   });
   const missingGroupIdState = update(initialState, {
     tracing: {
-      trees: {
-        "2": {
-          groupId: { $set: 9999 },
+      skeleton: {
+        trees: {
+          "2": {
+            groupId: { $set: 9999 },
+          },
         },
       },
     },
   });
   const duplicateGroupIdState = update(initialState, {
     tracing: {
-      treeGroups: {
-        $push: [
-          {
-            groupId: 3,
-            name: "Group",
-            children: [],
-          },
-        ],
+      skeleton: {
+        treeGroups: {
+          $push: [
+            {
+              groupId: 3,
+              name: "Group",
+              children: [],
+            },
+          ],
+        },
       },
     },
   });
@@ -305,7 +363,10 @@ test("NML Parser should throw errors for invalid nmls", async t => {
 });
 
 test("addTreesAndGroups reducer should assign new node and tree ids", t => {
-  const action = SkeletonTracingActions.addTreesAndGroupsAction(initialState.tracing.trees, []);
+  const action = SkeletonTracingActions.addTreesAndGroupsAction(
+    initialState.tracing.skeleton.trees,
+    [],
+  );
   const newState = SkeletonTracingReducer(initialState, action);
 
   t.not(newState, initialState);
@@ -313,42 +374,41 @@ test("addTreesAndGroups reducer should assign new node and tree ids", t => {
   // This should be unchanged / sanity check
   t.is(newState.tracing.name, initialState.tracing.name);
   t.is(newState.tracing.activeTreeId, initialState.tracing.activeTreeId);
-
   // New node and tree ids should have been assigned
-  t.is(_.size(newState.tracing.trees), 4);
-  t.is(newState.tracing.trees[3].treeId, 3);
-  t.is(newState.tracing.trees[4].treeId, 4);
-  t.is(newState.tracing.trees[3].nodes.size(), 4);
-  t.is(newState.tracing.trees[3].nodes.get(8).id, 8);
-  t.is(newState.tracing.trees[3].nodes.get(9).id, 9);
-  t.is(newState.tracing.trees[4].nodes.size(), 3);
-  t.is(newState.tracing.trees[4].nodes.get(12).id, 12);
+  t.is(_.size(newState.tracing.skeleton.trees), 4);
+  t.is(newState.tracing.skeleton.trees[3].treeId, 3);
+  t.is(newState.tracing.skeleton.trees[4].treeId, 4);
+  t.is(newState.tracing.skeleton.trees[3].nodes.size(), 4);
+  t.is(newState.tracing.skeleton.trees[3].nodes.get(8).id, 8);
+  t.is(newState.tracing.skeleton.trees[3].nodes.get(9).id, 9);
+  t.is(newState.tracing.skeleton.trees[4].nodes.size(), 3);
+  t.is(newState.tracing.skeleton.trees[4].nodes.get(12).id, 12);
 
   const getSortedEdges = edges => _.sortBy(edges.asArray(), "source");
 
   // And node ids in edges, branchpoints and comments should have been replaced
-  t.deepEqual(getSortedEdges(newState.tracing.trees[3].edges), [
+  t.deepEqual(getSortedEdges(newState.tracing.skeleton.trees[3].edges), [
     { source: 8, target: 9 },
     { source: 9, target: 11 },
     { source: 10, target: 9 },
   ]);
-  t.deepEqual(newState.tracing.trees[3].branchPoints, [
+  t.deepEqual(newState.tracing.skeleton.trees[3].branchPoints, [
     { nodeId: 9, timestamp: 0 },
     { nodeId: 11, timestamp: 0 },
   ]);
-  t.deepEqual(newState.tracing.trees[3].comments, [{ content: "comment", nodeId: 8 }]);
-  t.deepEqual(getSortedEdges(newState.tracing.trees[4].edges), [
+  t.deepEqual(newState.tracing.skeleton.trees[3].comments, [{ content: "comment", nodeId: 8 }]);
+  t.deepEqual(getSortedEdges(newState.tracing.skeleton.trees[4].edges), [
     { source: 12, target: 13 },
     { source: 13, target: 14 },
   ]);
   // The cachedMaxNodeId should be correct afterwards as well
-  t.is(newState.tracing.cachedMaxNodeId, 14);
+  t.is(newState.tracing.skeleton.cachedMaxNodeId, 14);
 });
 
 test("addTreesAndGroups reducer should assign new group ids", t => {
   const action = SkeletonTracingActions.addTreesAndGroupsAction(
-    initialState.tracing.trees,
-    _.cloneDeep(initialState.tracing.treeGroups),
+    initialState.tracing.skeleton.trees,
+    _.cloneDeep(initialState.tracing.skeleton.treeGroups),
   );
   const newState = SkeletonTracingReducer(initialState, action);
 
@@ -359,9 +419,38 @@ test("addTreesAndGroups reducer should assign new group ids", t => {
   t.is(newState.tracing.activeTreeId, initialState.tracing.activeTreeId);
 
   // New node and tree ids should have been assigned
-  t.is(_.size(newState.tracing.treeGroups), 4);
-  t.not(newState.tracing.treeGroups[2].groupId, newState.tracing.treeGroups[0].groupId);
-  t.not(newState.tracing.treeGroups[3].groupId, newState.tracing.treeGroups[1].groupId);
-  t.is(newState.tracing.trees[3].groupId, null);
-  t.is(newState.tracing.trees[4].groupId, newState.tracing.treeGroups[2].groupId);
+  t.is(_.size(newState.tracing.skeleton.treeGroups), 4);
+  t.not(
+    newState.tracing.skeleton.treeGroups[2].groupId,
+    newState.tracing.skeleton.treeGroups[0].groupId,
+  );
+  t.not(
+    newState.tracing.skeleton.treeGroups[3].groupId,
+    newState.tracing.skeleton.treeGroups[1].groupId,
+  );
+  t.is(newState.tracing.skeleton.trees[3].groupId, null);
+  t.is(newState.tracing.skeleton.trees[4].groupId, newState.tracing.skeleton.treeGroups[2].groupId);
+});
+
+test("addTreesAndGroups reducer should replace nodeId references in comments when changing nodeIds", t => {
+  const commentWithoutValidReferences =
+    "Reference to non-existing id #42 and position reference #(4,5,6)";
+  const newTrees = _.cloneDeep(initialState.tracing.skeleton.trees);
+  newTrees[1].comments.push({ nodeId: 1, content: "Reference to existing id in another tree #4" });
+  newTrees[1].comments.push({
+    nodeId: 2,
+    content: commentWithoutValidReferences,
+  });
+
+  const action = SkeletonTracingActions.addTreesAndGroupsAction(newTrees, []);
+  const newState = SkeletonTracingReducer(initialState, action);
+
+  // Comments should have been rewritten if appropriate
+  t.is(_.size(newState.tracing.skeleton.trees), 4);
+  t.is(newState.tracing.skeleton.trees[3].comments.length, 3);
+  t.is(
+    newState.tracing.skeleton.trees[3].comments[1].content,
+    "Reference to existing id in another tree #12",
+  );
+  t.is(newState.tracing.skeleton.trees[3].comments[2].content, commentWithoutValidReferences);
 });

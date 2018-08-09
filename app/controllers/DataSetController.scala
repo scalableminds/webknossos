@@ -2,6 +2,7 @@ package controllers
 
 import javax.inject.Inject
 import com.scalableminds.util.geometry.Point3D
+import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import models.binary._
@@ -126,7 +127,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
 
   def importDataSet(dataSetName: String) = SecuredAction.async { implicit request =>
     for {
-      _ <- DataSetService.isProperDataSetName(dataSetName) ?~> Messages("dataSet.import.impossible.name")
+      _ <- bool2Fox(DataSetService.isProperDataSetName(dataSetName)) ?~> Messages("dataSet.import.impossible.name")
       dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
       result <- DataSetService.importDataSet(dataSet)
     } yield {

@@ -27,7 +27,7 @@ const { take, call, put } = mockRequire.reRequire("redux-saga/effects");
 
 const {
   compactSaveQueue,
-  pushAnnotationAsync,
+  pushTracingTypeAsync,
   sendRequestToServer,
   toggleErrorHighlighting,
   addVersionNumbers,
@@ -91,20 +91,20 @@ test("SaveSaga should send update actions", t => {
   const updateActions = [UpdateActions.createEdge(1, 0, 1), UpdateActions.createEdge(1, 1, 2)];
   const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
 
-  const saga = pushAnnotationAsync();
-  expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS));
+  const saga = pushTracingTypeAsync("skeleton");
+  expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS[0]));
   saga.next(); // setLastSaveTimestampAction
   saga.next(); // select state
-  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false)));
+  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false, "skeleton")));
   expectValueDeepEqual(t, saga.next(), take("PUSH_SAVE_QUEUE"));
   saga.next(); // race
   saga.next(SaveActions.pushSaveQueueAction(updateActions));
   saga.next();
-  expectValueDeepEqual(t, saga.next(saveQueue), call(sendRequestToServer));
+  expectValueDeepEqual(t, saga.next(saveQueue), call(sendRequestToServer, "skeleton"));
 
   // Test that loop repeats
   saga.next(); // select state
-  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false)));
+  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false, "skeleton")));
   expectValueDeepEqual(t, saga.next(), take("PUSH_SAVE_QUEUE"));
 });
 
@@ -137,7 +137,7 @@ test("SaveSaga should retry update actions", t => {
     TIMESTAMP,
   );
 
-  const saga = sendRequestToServer(TIMESTAMP);
+  const saga = sendRequestToServer("skeleton", TIMESTAMP);
   saga.next();
   saga.next(saveQueue);
   saga.next({ version: LAST_VERSION, type: "skeleton", tracingId: "1234567890" });
@@ -157,7 +157,7 @@ test("SaveSaga should retry update actions", t => {
   // wait for retry
   saga.next();
   // should retry
-  expectValueDeepEqual(t, saga.next(), call(sendRequestToServer));
+  expectValueDeepEqual(t, saga.next(), call(sendRequestToServer, "skeleton"));
 });
 
 test("SaveSaga should escalate on permanent client error update actions", t => {
@@ -192,11 +192,11 @@ test("SaveSaga should send update actions right away", t => {
   const updateActions = [UpdateActions.createEdge(1, 0, 1), UpdateActions.createEdge(1, 1, 2)];
   const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
 
-  const saga = pushAnnotationAsync();
-  expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS));
+  const saga = pushTracingTypeAsync("skeleton");
+  expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS[0]));
   saga.next();
   saga.next(); // select state
-  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false)));
+  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false, "skeleton")));
   expectValueDeepEqual(t, saga.next(), take("PUSH_SAVE_QUEUE"));
   saga.next(); // race
   saga.next(SaveActions.pushSaveQueueAction(updateActions));

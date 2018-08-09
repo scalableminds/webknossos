@@ -60,17 +60,17 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
     AnnotationDAO.updateUser(annotation._id, user._id)
 
   def resetToBase(implicit ctx: DBAccessContext) = annotation.typ match {
-    case AnnotationTypeSQL.Explorational =>
+    case AnnotationType.Explorational =>
       Fox.failure("annotation.revert.skeletonOnly")
-    case AnnotationTypeSQL.Task if annotation.tracingType == TracingType.skeleton =>
+    case AnnotationType.Task if annotation.skeletonTracingId.isDefined =>
       for {
         task <- annotation.task.toFox
         annotationBase <- task.annotationBase
         dataSet <- annotationBase.dataSet
-        newTracingReference <- AnnotationService.tracingFromBase(annotationBase, dataSet)
-        _ <- AnnotationDAO.updateTracingReference(annotation._id, newTracingReference)
+        newTracingId <- AnnotationService.tracingFromBase(annotationBase, dataSet)
+        _ <- AnnotationDAO.updateSkeletonTracingId(annotation._id, newTracingId)
       } yield ()
-    case _ if annotation.tracingType != TracingType.skeleton =>
+    case _ if !annotation.skeletonTracingId.isDefined =>
       Fox.failure("annotation.revert.skeletonOnly")
   }
 }

@@ -121,7 +121,12 @@ test("Basic support (no segmentation): all specs", t => {
 test("Basic support + volume: min specs", t => {
   const computeDataTexturesSetupPartial = computeDataTexturesSetupCurried(minSpecs, true);
 
-  testSupportFlags(t, computeDataTexturesSetupPartial([grayscaleLayer1, volumeLayer1]), true, true);
+  testSupportFlags(
+    t,
+    computeDataTexturesSetupPartial([grayscaleLayer1, volumeLayer1]),
+    true,
+    false,
+  );
 
   testSupportFlags(
     t,

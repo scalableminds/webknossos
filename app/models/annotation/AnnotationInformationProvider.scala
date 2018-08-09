@@ -3,7 +3,7 @@ package models.annotation
 import oxalis.security.WebknossosSilhouette.UserAwareRequest
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.AnnotationTypeSQL.AnnotationTypeSQL
+import models.annotation.AnnotationType.AnnotationType
 import models.annotation.handler.AnnotationInformationHandler
 import play.api.libs.concurrent.Execution.Implicits._
 
@@ -39,7 +39,7 @@ trait AnnotationInformationProvider
     handlerForTyp(annotationId.annotationType).restrictionsFor(annotationId.identifier)
   }
 
-  private def handlerForTyp(typ: AnnotationTypeSQL) =
+  private def handlerForTyp(typ: AnnotationType) =
     AnnotationInformationHandler.informationHandlers(typ)
 
 }

@@ -45,7 +45,7 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
         userBox <- bearerTokenService.userForToken(token)(GlobalAccessContext).futureBox
         ctxFromUserBox = DBAccessContext(userBox)
         ctx = URLSharing.fallbackTokenAccessContext(Some(token))(ctxFromUserBox)
-        answer <- accessRequest.resourceType match {
+        answerHasAccess <- accessRequest.resourceType match {
           case AccessResourceType.datasource =>
             handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, userBox)(ctx)
           case AccessResourceType.tracing =>
@@ -53,7 +53,14 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
           case _ =>
             Fox.successful(UserAccessAnswer(false, Some("Invalid access token.")))
         }
+        dataSetBox <- DataSetDAO.findOneByName(accessRequest.resourceId)(ctx).futureBox
+        answerIsPublic <- dataSetBox match {
+          case Full(dataset) if(dataset.isPublic) => Fox.successful(UserAccessAnswer(true, Some("DataSet is public.")))
+          case _ => Fox.successful(UserAccessAnswer(false, Some("DataSet is not public.")))
+        }
       } yield {
+        println(answerIsPublic)
+        val answer = if (answerIsPublic.granted) answerIsPublic else answerHasAccess;
         Ok(Json.toJson(answer))
       }
     }

@@ -7,6 +7,7 @@ import java.io.File
 
 import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.services._
 import play.api.data.Form
@@ -28,6 +29,15 @@ class DataSourceController @Inject()(
     implicit request => {
       AllowRemoteOrigin {
         val ds = dataSourceRepository.findAll
+        Ok(Json.toJson(ds))
+      }
+    }
+  }
+
+  def read(dataSetName: String) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)) {
+    implicit request => {
+      AllowRemoteOrigin {
+        val ds = dataSourceRepository.findByName(dataSetName)
         Ok(Json.toJson(ds))
       }
     }

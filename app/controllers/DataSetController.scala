@@ -2,6 +2,7 @@ package controllers
 
 import javax.inject.Inject
 import com.scalableminds.util.geometry.Point3D
+import com.scalableminds.util.rpc.RPC
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import models.binary._
@@ -69,6 +70,46 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
         CONTENT_TYPE -> play.api.libs.MimeTypes.forExtension("jpeg").getOrElse(play.api.http.ContentTypes.BINARY)
       )
     }
+  }
+
+  def addForeignDataSet(datastore: String, organizationId: String, dataSetName: String) = SecuredAction.async { implicit request =>
+    /*
+
+                       _id: ObjectId,
+                       _dataStore: String,
+                       _organization: ObjectId,
+                       defaultConfiguration: Option[DataSetConfiguration] = None,
+                       description: Option[String] = None,
+                       displayName: Option[String] = None,
+                       isPublic: Boolean,
+                       isUsable: Boolean,
+                       name: String,
+                       scale: Option[Scale],
+                       sharingToken: Option[String],
+                       status: String,
+                       logoUrl: Option[String],
+                       created: Long = System.currentTimeMillis(),
+                       isDeleted: Boolean = false
+     */
+    val id = ObjectId.generate;
+    val dataSet = DataSet(id, datastore, ObjectId(organizationId), isPublic = true, isUsable = true, scale = None, name = dataSetName, status = "", sharingToken = None, logoUrl = None)
+    // change scale
+    for {
+      dataStore <- DataStoreDAO.findOneByName(datastore) ?~> Messages("dataStore.notFound")
+
+      foreignDataset <- getForeignDataSet(dataStore.url, dataSetName)// http://localhost:9090/data/datasets/ROI2017_wkw/read?token=abd
+      _ <- DataSetService.isProperDataSetName(dataSetName) ?~> Messages("dataSet.import.impossible.name")
+      _ <- DataSetDAO.findOneByName(dataSetName).reverse ?~> Messages("dataSet.name.exists") // add this to messages
+    } yield {
+      println("foreignDataset", foreignDataset)
+      Ok
+    }
+  }
+
+  def getForeignDataSet(dataStoreUrl: String, dataSetName: String) = {
+    RPC(s"${dataStoreUrl}/data/datasets/${dataSetName}/read")
+      .withQueryString("token" -> "abc") //change this later
+      .get
   }
 
   def list = UserAwareAction.async { implicit request =>

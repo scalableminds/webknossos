@@ -11,7 +11,7 @@ import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
 import type { APIUserType, APIDatasetType, APIDataLayerType } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
-import { getDatastores, triggerDatasetCheck, getDatasets } from "admin/admin_rest_api";
+import { getDatastores, triggerDatasetCheck, getDatasets, getDataset, debuggingDataSetInfo2, debuggingDataSetInfo1 } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 
 const { Search } = Input;
@@ -105,7 +105,7 @@ class DatasetView extends React.PureComponent<Props, State> {
     try {
       this.setState({ isLoading: true });
       const datastores = await getDatastores();
-      await Promise.all(datastores.map(datastore => triggerDatasetCheck(datastore.url)));
+      await Promise.all(datastores.filter(ds => !ds.isForeign).map(datastore => triggerDatasetCheck(datastore.url)));
       await this.fetchData();
     } catch (error) {
       handleGenericError(error);

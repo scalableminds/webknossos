@@ -7,7 +7,6 @@ import {
   take,
   type Saga,
 } from "oxalis/model/sagas/effect-generators";
-import Request from "libs/request";
 import { updateUserConfiguration, updateDatasetSettings } from "admin/admin_rest_api";
 
 function* pushUserSettingsAsync(): Saga<void> {

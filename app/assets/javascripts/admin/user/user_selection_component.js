@@ -10,9 +10,7 @@ import { handleGenericError } from "libs/error_handling";
 const { Option } = Select;
 
 type Props = {
-  handleSelection: () => void,
-  loggedInUserListed: boolean,
-  userId: string,
+  handleSelection: string => void,
 };
 
 type State = {
@@ -70,10 +68,7 @@ class UserSelectionComponent extends React.PureComponent<Props, State> {
           option.props.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
         }
       >
-        {(this.props.loggedInUserListed
-          ? this.state.users
-          : this.state.users.filter(u => u.id !== this.props.userId)
-        ).map(user => (
+        {this.state.users.map(user => (
           <Option key={user.id} value={user.id}>
             {`${user.lastName}, ${user.firstName} ${user.email}`}
           </Option>

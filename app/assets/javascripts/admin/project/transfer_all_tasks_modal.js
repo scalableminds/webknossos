@@ -145,11 +145,7 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
           Select a user to transfer the tasks to:
           <div className="control-group">
             <div className="form-group">
-              <UserSelectionComponent
-                loggedInUserListed="true"
-                handleSelection={this.handleSelectChange}
-                userId={this.props.userId}
-              />
+              <UserSelectionComponent handleSelection={this.handleSelectChange} />
             </div>
           </div>
         </Modal>

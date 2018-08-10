@@ -28,7 +28,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 ### Changed
 
 - Added a checkbox to disable the warning when deleting a tree. An accidentally deleted tree can easily be restored using the Undo functionality. [#2995](https://github.com/scalableminds/webknossos/pull/2995)
-
+- Improved the UI for sharing datasets and tracings. [#3029](https://github.com/scalableminds/webknossos/pull/3029)
 
 ### Fixed
 

@@ -12,7 +12,7 @@ import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import ColorGenerator from "libs/color_generator";
 import update from "immutability-helper";
 import Utils from "libs/utils";
-import Constants from "oxalis/constants";
+import Constants, { NODE_ID_REF_REGEX } from "oxalis/constants";
 import {
   getSkeletonTracing,
   getActiveNodeFromTree,
@@ -463,36 +463,37 @@ export function addTreesAndGroups(
     const { allowUpdate } = restrictions;
 
     if (allowUpdate) {
-      // Check whether any group ids collide and assign new ids when neccessary
+      // Check whether any group ids collide and assign new ids
       const groupIdMap = {};
-      const existingGroupIds = new Set(
-        mapGroups(skeletonTracing.treeGroups, group => group.groupId),
-      );
       let nextGroupId = getMaximumGroupId(skeletonTracing.treeGroups) + 1;
 
       forEachGroups(treeGroups, (group: TreeGroupType) => {
-        // Assign a new group id to groups whose id already exists
-        if (existingGroupIds.has(group.groupId)) {
-          groupIdMap[group.groupId] = nextGroupId;
-          group.groupId = nextGroupId;
-          nextGroupId++;
-        }
+        // Assign new group ids for all groups
+        groupIdMap[group.groupId] = nextGroupId;
+        group.groupId = nextGroupId;
+        nextGroupId++;
       });
 
       const newTrees = {};
       // Assign new ids for all nodes and trees to avoid duplicates
       let newTreeId = getMaximumTreeId(skeletonTracing.trees) + 1;
       let newNodeId = skeletonTracing.cachedMaxNodeId + 1;
+
+      // Create a map from old node ids to new node ids
+      // This needs to be done in advance to replace nodeId references in comments
+      const idMap = {};
+      for (const tree of _.values(trees)) {
+        for (const node of tree.nodes.values()) {
+          idMap[node.id] = newNodeId++;
+        }
+      }
+
       for (const treeId of Object.keys(trees)) {
         const tree = trees[Number(treeId)];
 
-        // Create a map from old node ids to new node ids
-        const idMap = {};
         const newNodes = new DiffableMap();
         for (const node of tree.nodes.values()) {
-          idMap[node.id] = newNodeId;
-          newNodes.mutableSet(newNodeId, update(node, { id: { $set: newNodeId } }));
-          newNodeId++;
+          newNodes.mutableSet(idMap[node.id], update(node, { id: { $set: idMap[node.id] } }));
         }
 
         const newEdges = EdgeCollection.loadFromArray(
@@ -503,18 +504,25 @@ export function addTreesAndGroups(
         );
 
         const newComments = tree.comments.map(comment =>
-          update(comment, { nodeId: { $set: idMap[comment.nodeId] } }),
+          // Comments can reference other nodes, rewrite those references if the referenced id changed
+          update(comment, {
+            nodeId: { $set: idMap[comment.nodeId] },
+            content: {
+              $apply: oldContent =>
+                oldContent.replace(
+                  NODE_ID_REF_REGEX,
+                  (__, p1) => `#${idMap[Number(p1)] != null ? idMap[Number(p1)] : p1}`,
+                ),
+            },
+          }),
         );
 
         const newBranchPoints = tree.branchPoints.map(bp =>
           update(bp, { nodeId: { $set: idMap[bp.nodeId] } }),
         );
 
-        // If the tree's group was assigned a new group id, change it
-        const newGroupId =
-          tree.groupId != null && groupIdMap[tree.groupId] != null
-            ? groupIdMap[tree.groupId]
-            : tree.groupId;
+        // Assign the new group id to the tree if the tree belongs to a group
+        const newGroupId = tree.groupId != null ? groupIdMap[tree.groupId] : tree.groupId;
 
         newTrees[newTreeId] = update(tree, {
           treeId: { $set: newTreeId },

@@ -12,7 +12,6 @@ type Props = {
   annotationId: ?string,
   onCancel: Function,
   visible: boolean,
-  userId: ?string,
 };
 
 type State = {

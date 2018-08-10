@@ -2,7 +2,7 @@
 
 import _ from "lodash";
 import * as React from "react";
-import { Modal, Button, Table } from "antd";
+import { Modal, Button, Table, Spin } from "antd";
 import {
   getUsers,
   getUsersWithActiveTasks,
@@ -24,6 +24,7 @@ type State = {
   users: Array<APIUserType>,
   selectedUser: ?APIUserType,
   usersWithActiveTasks: Array<APIActiveUserType>,
+  isLoading: boolean,
 };
 
 class TransferAllTasksModal extends React.PureComponent<Props, State> {
@@ -31,6 +32,7 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
     users: [],
     selectedUser: null,
     usersWithActiveTasks: [],
+    isLoading: false,
   };
 
   componentDidMount() {
@@ -39,6 +41,7 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
 
   async fetchData() {
     try {
+      this.setState({ isLoading: true });
       const users = await getUsers();
       const activeUsers = users.filter(u => u.isActive);
       const usersWithActiveTasks = this.props.project
@@ -51,6 +54,8 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
       });
     } catch (error) {
       handleGenericError(error);
+    } finally {
+      this.setState({ isLoading: false });
     }
   }
 
@@ -138,7 +143,7 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
           }
         >
           <div>
-            {this.renderTableContent()}
+            {this.state.isLoading ? <Spin size="large" /> : this.renderTableContent()}
             <br />
             <br />
           </div>

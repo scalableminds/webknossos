@@ -1,15 +1,13 @@
 // @flow
 
 import * as React from "react";
-import { Button, Icon, Input, Checkbox, Form, Col, Row, Tooltip } from "antd";
+import { Button, Input, Checkbox, Form, Col, Row, Tooltip } from "antd";
 import Clipboard from "clipboard-js";
 import Toast from "libs/toast";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import { AsyncButton } from "components/async_clickables";
 import { getDatasetSharingToken, revokeDatasetSharingToken } from "admin/admin_rest_api";
 import { FormItemWithInfo } from "./helper_components";
-
-const FormItem = Form.Item;
 
 type Props = {
   form: Object,
@@ -54,8 +52,10 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
   };
 
   getSharingLink() {
-    return `${window.location.origin}/datasets/${this.props.datasetName}/view?token=${
-      this.state.sharingToken
+    const doesNeedToken = !this.props.form.getFieldValue("dataset.isPublic");
+    const tokenSuffix = `?token=${this.state.sharingToken}`;
+    return `${window.location.origin}/datasets/${this.props.datasetName}/view${
+      doesNeedToken ? tokenSuffix : ""
     }`;
   }
 
@@ -101,8 +101,22 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
         </Row>
         {allowedTeamsComponent}
         <FormItemWithInfo
+          label="Visibility"
+          info="If checked, the dataset will be listed when unregistered users visit webKnossos."
+        >
+          {getFieldDecorator("dataset.isPublic", { valuePropName: "checked" })(
+            <Checkbox>Make dataset publicly accessible </Checkbox>,
+          )}
+        </FormItemWithInfo>
+        <FormItemWithInfo
           label="Sharing Link"
-          info="The sharing link can be used to allow unregistered users to view this dataset."
+          info={
+            <span>
+              The sharing link can be used to allow unregistered users to view this dataset. If the
+              dataset itself is not public, the link contains a secret token which ensures that the
+              dataset can be opened if you know the special link.
+            </span>
+          }
         >
           <Input.Group compact>
             <Input
@@ -111,22 +125,29 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
               style={{ width: "80%" }}
               readOnly
             />
-            <Button onClick={this.handleCopySharingLink} style={{ width: "10%" }} icon="copy" />
-            <AsyncButton onClick={this.handleRevokeSharingLink} style={{ width: "10%" }}>
-              Revoke
-            </AsyncButton>
+            <Button onClick={this.handleCopySharingLink} style={{ width: "10%" }} icon="copy">
+              Copy
+            </Button>
+            {form.getFieldValue("dataset.isPublic") ? null : (
+              <Tooltip
+                title={
+                  <span>
+                    The URL contains a secret token which enables anybody with this link to view the
+                    dataset. Renew the token to make the old link invalid.
+                  </span>
+                }
+              >
+                <AsyncButton
+                  onClick={this.handleRevokeSharingLink}
+                  style={{ width: "10%" }}
+                  icon="retweet"
+                >
+                  Renew
+                </AsyncButton>
+              </Tooltip>
+            )}
           </Input.Group>
         </FormItemWithInfo>
-        <FormItem>
-          {getFieldDecorator("dataset.isPublic", { valuePropName: "checked" })(
-            <Checkbox>
-              Make dataset publicly accessible{" "}
-              <Tooltip title="If checked, the dataset will be listed when unregistered users visit webKnossos.">
-                <Icon type="info-circle-o" style={{ color: "gray" }} />
-              </Tooltip>
-            </Checkbox>,
-          )}
-        </FormItem>
       </div>
     );
 

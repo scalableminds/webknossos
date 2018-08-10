@@ -4,14 +4,15 @@ import { Row, Col, Card, Popover } from "antd";
 import Markdown from "react-remarkable";
 import TemplateHelpers from "libs/template_helpers";
 import _ from "lodash";
+import { getThumbnailURL, hasSegmentation } from "oxalis/model/accessors/dataset_accessor";
 
-import type { DatasetType } from "dashboard/dataset_view";
+import type { APIDatasetType } from "admin/api_flow_types";
 
 const columnSpan = { xs: 24, sm: 24, md: 24, lg: 12, xl: 12, xxl: 8 };
 const thumbnailDimension = 500;
 
 type Props = {
-  datasets: Array<DatasetType>,
+  datasets: Array<APIDatasetType>,
   organizationName: string,
   showOrganizationHeader: boolean,
   croppedDatasetCount: ?number,
@@ -21,13 +22,13 @@ type State = {
   showLessContent: boolean,
 };
 
-function getDisplayName(dataset: DatasetType): string {
+function getDisplayName(dataset: APIDatasetType): string {
   return dataset.displayName != null && dataset.displayName !== ""
     ? dataset.displayName
     : dataset.name;
 }
 
-function getDescription(dataset: DatasetType) {
+function getDescription(dataset: APIDatasetType) {
   let freeTextDescription = null;
   if (dataset.description) {
     freeTextDescription = (
@@ -37,7 +38,7 @@ function getDescription(dataset: DatasetType) {
       />
     );
   } else {
-    freeTextDescription = dataset.hasSegmentation ? (
+    freeTextDescription = hasSegmentation(dataset) ? (
       <p>Original data and segmentation</p>
     ) : (
       <p>Original data</p>
@@ -84,10 +85,10 @@ function ThumbnailAndDescription({
   );
 }
 
-function ThumbnailAndDescriptionFromDataset({ dataset }: { dataset: DatasetType }) {
+function ThumbnailAndDescriptionFromDataset({ dataset }: { dataset: APIDatasetType }) {
   return (
     <ThumbnailAndDescription
-      thumbnailURL={dataset.thumbnailURL}
+      thumbnailURL={getThumbnailURL(dataset)}
       name={getDisplayName(dataset)}
       description={getDescription(dataset)}
     />
@@ -106,7 +107,7 @@ class DatasetPanel extends React.PureComponent<Props, State> {
     this.setState({ showLessContent: !this.state.showLessContent });
   };
 
-  renderCard = (dataset: DatasetType) => (
+  renderCard = (dataset: APIDatasetType) => (
     <a href={`/datasets/${dataset.name}/view`} title="View Dataset">
       <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card">
         <ThumbnailAndDescriptionFromDataset dataset={dataset} />
@@ -114,7 +115,7 @@ class DatasetPanel extends React.PureComponent<Props, State> {
     </a>
   );
 
-  renderMultiDatasetCard = (groupName: string, datasets: DatasetType[]) => {
+  renderMultiDatasetCard = (groupName: string, datasets: APIDatasetType[]) => {
     const multiDescription = (
       <div>
         This collection consists of multiple datasets:
@@ -145,7 +146,7 @@ class DatasetPanel extends React.PureComponent<Props, State> {
     return (
       <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card">
         <ThumbnailAndDescription
-          thumbnailURL={datasets[0].thumbnailURL}
+          thumbnailURL={getThumbnailURL(datasets[0])}
           name={groupName}
           description={multiDescription}
         />

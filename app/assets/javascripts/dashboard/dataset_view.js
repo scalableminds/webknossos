@@ -22,13 +22,8 @@ type Props = {
   history: RouterHistory,
 };
 
-export type DatasetType = APIDatasetType & {
-  hasSegmentation: boolean,
-  thumbnailURL: string,
-};
-
 type State = {
-  datasets: Array<DatasetType>,
+  datasets: Array<APIDatasetType>,
   searchQuery: string,
   isLoading: boolean,
 };
@@ -37,29 +32,6 @@ const persistence: Persistence<State> = new Persistence(
   { searchQuery: PropTypes.string },
   "datasetList",
 );
-
-function createThumbnailURL(datasetName: string, layers: Array<APIDataLayerType>): string {
-  const colorLayer = _.find(layers, { category: "color" });
-  if (colorLayer) {
-    return `/api/datasets/${datasetName}/layers/${colorLayer.name}/thumbnail`;
-  }
-  return "";
-}
-
-export function transformDatasets(datasets: Array<APIDatasetType>): Array<DatasetType> {
-  return _.sortBy(
-    datasets.map(dataset =>
-      Object.assign({}, dataset, {
-        hasSegmentation: _.some(
-          dataset.dataSource.dataLayers,
-          layer => layer.category === "segmentation",
-        ),
-        thumbnailURL: createThumbnailURL(dataset.name, dataset.dataSource.dataLayers),
-      }),
-    ),
-    "created",
-  );
-}
 
 class DatasetView extends React.PureComponent<Props, State> {
   state = {
@@ -84,9 +56,8 @@ class DatasetView extends React.PureComponent<Props, State> {
     try {
       this.setState({ isLoading: true });
       const datasets = await getDatasets();
-      const transformedDatasets = transformDatasets(datasets);
       this.setState({
-        datasets: transformedDatasets,
+        datasets,
       });
     } catch (error) {
       handleGenericError(error);
@@ -114,8 +85,8 @@ class DatasetView extends React.PureComponent<Props, State> {
     }
   };
 
-  updateDataset = (newDataset: DatasetType) => {
-    const newDatasets = this.state.datasets.map((dataset: DatasetType) => {
+  updateDataset = (newDataset: APIDatasetType) => {
+    const newDatasets = this.state.datasets.map((dataset: APIDatasetType) => {
       if (dataset.name === newDataset.name) {
         return newDataset;
       }

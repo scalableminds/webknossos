@@ -128,7 +128,7 @@ class ShareModalView extends PureComponent<ShareModalPropType, State> {
 
     return (
       <Modal
-        title="Share this tracing"
+        title="Share this Tracing"
         visible={this.props.isVisible}
         width={800}
         okText={this.props.restrictions.allowUpdate ? "Save" : "Ok"}

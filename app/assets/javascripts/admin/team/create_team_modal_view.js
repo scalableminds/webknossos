@@ -9,13 +9,10 @@ type Props = {
   onOk: Function,
   onCancel: Function,
   isVisible: boolean,
+  form: Object,
 };
 
-class CreateTeamModalForm extends React.PureComponent<Props, State> {
-  state = {
-    newTeamName: "",
-  };
-
+class CreateTeamModalForm extends React.PureComponent<Props> {
   onOk = async () => {
     this.props.form.validateFields(async (err, values) => {
       if (err) {
@@ -27,17 +24,10 @@ class CreateTeamModalForm extends React.PureComponent<Props, State> {
       };
 
       const team = await createTeam(newTeam);
-      this.setState({
-        newTeamName: "",
-      });
 
       this.props.onOk(team);
     });
   };
-
-  isInputValid(): boolean {
-    return this.state.newTeamName !== "";
-  }
 
   render() {
     const { getFieldDecorator } = this.props.form;

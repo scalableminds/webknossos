@@ -9,8 +9,10 @@ import DashboardTaskListView from "dashboard/dashboard_task_list_view";
 import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import { getUser } from "admin/admin_rest_api";
-import type { APIUserType } from "admin/api_flow_types";
+import type { APIUserType, APIDatasetType } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
+import { handleGenericError } from "libs/error_handling";
+import { getDatastores, triggerDatasetCheck, getDatasets } from "admin/admin_rest_api";
 
 const TabPane = Tabs.TabPane;
 
@@ -30,6 +32,8 @@ type Props = OwnProps & StateProps;
 type State = {
   activeTabKey: string,
   user: ?APIUserType,
+  datasets: Array<APIDatasetType>,
+  isLoadingDatasets: boolean,
 };
 
 class DashboardView extends React.PureComponent<Props, State> {
@@ -42,33 +46,72 @@ class DashboardView extends React.PureComponent<Props, State> {
     this.state = {
       activeTabKey: lastUsedTabKey && isValid ? lastUsedTabKey : defaultTab,
       user: null,
+      isLoadingDatasets: false,
+      datasets: [],
     };
   }
 
   componentDidMount() {
-    this.fetchData();
+    this.fetchUser();
+    this.fetchDatasets();
   }
 
-  async fetchData(): Promise<void> {
+  handleCheckDatasets = async (): Promise<void> => {
+    if (this.state.isLoadingDatasets) return;
+
+    try {
+      this.setState({ isLoadingDatasets: true });
+      const datastores = await getDatastores();
+      await Promise.all(datastores.map(datastore => triggerDatasetCheck(datastore.url)));
+      await this.fetchDatasets();
+    } catch (error) {
+      handleGenericError(error);
+    } finally {
+      this.setState({ isLoadingDatasets: false });
+    }
+  };
+
+  async fetchUser(): Promise<void> {
     const user =
       this.props.userId != null ? await getUser(this.props.userId) : this.props.activeUser;
 
     this.setState({ user });
   }
 
+  async fetchDatasets(): Promise<void> {
+    try {
+      this.setState({ isLoadingDatasets: true });
+      const datasets = await getDatasets();
+      this.setState({
+        datasets,
+      });
+    } catch (error) {
+      handleGenericError(error);
+    } finally {
+      this.setState({ isLoadingDatasets: false });
+    }
+  }
+
   getTabs(user: APIUserType) {
     if (this.props.activeUser) {
       const isAdminView = this.props.isAdminView;
 
+      const datasetViewProps = {
+        user,
+        onCheckDatasets: this.handleCheckDatasets,
+        datasets: this.state.datasets,
+        isLoading: this.state.isLoadingDatasets,
+      };
+
       return [
         !isAdminView ? (
           <TabPane tab="Dataset Gallery" key="datasets">
-            <DatasetView user={user} dataViewType="gallery" />
+            <DatasetView {...datasetViewProps} dataViewType="gallery" />
           </TabPane>
         ) : null,
         !isAdminView ? (
           <TabPane tab="Datasets" key="advanced-datasets">
-            <DatasetView user={user} dataViewType="advanced" />
+            <DatasetView {...datasetViewProps} dataViewType="advanced" />
           </TabPane>
         ) : null,
         <TabPane tab="Tasks" key="tasks">

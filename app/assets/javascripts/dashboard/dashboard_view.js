@@ -13,6 +13,7 @@ import type { APIUserType, APIDatasetType } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { handleGenericError } from "libs/error_handling";
 import { getDatastores, triggerDatasetCheck, getDatasets } from "admin/admin_rest_api";
+import { parseAsMaybe } from "libs/utils";
 
 const TabPane = Tabs.TabPane;
 
@@ -36,6 +37,19 @@ type State = {
   isLoadingDatasets: boolean,
 };
 
+export const wkDatasetsCacheKey = "wk.datasets";
+export const datasetCache = {
+  set(datasets: APIDatasetType[]): void {
+    localStorage.setItem("wk.datasets", JSON.stringify(datasets));
+  },
+  get(): APIDatasetType[] {
+    return parseAsMaybe(localStorage.getItem(wkDatasetsCacheKey)).getOrElse([]);
+  },
+  clear(): void {
+    localStorage.removeItem(wkDatasetsCacheKey);
+  },
+};
+
 class DashboardView extends React.PureComponent<Props, State> {
   constructor(props: Props) {
     super(props);
@@ -43,12 +57,23 @@ class DashboardView extends React.PureComponent<Props, State> {
     const lastUsedTabKey = localStorage.getItem("lastUsedDashboardTab");
     const isValid = lastUsedTabKey && validTabKeys.indexOf(lastUsedTabKey) > -1;
     const defaultTab = this.props.isAdminView ? "tasks" : "datasets";
+
+    const cachedDatasets = datasetCache.get();
+
     this.state = {
       activeTabKey: lastUsedTabKey && isValid ? lastUsedTabKey : defaultTab,
       user: null,
       isLoadingDatasets: false,
-      datasets: [],
+      datasets: cachedDatasets,
     };
+  }
+
+  componentDidCatch(error: Error) {
+    // An unknown error was thrown. To avoid any problems with the caching of datasets,
+    // we simply clear the cache for the datasets and re-fetch.
+    this.setState({ datasets: [] });
+    datasetCache.clear();
+    this.fetchDatasets();
   }
 
   componentDidMount() {
@@ -82,6 +107,13 @@ class DashboardView extends React.PureComponent<Props, State> {
     try {
       this.setState({ isLoadingDatasets: true });
       const datasets = await getDatasets();
+      datasetCache.set(datasets);
+
+      // todo: before setting datasets here, replace the LRU counts by the old ones
+      // datasets.forEach(dataset => {
+
+      // })
+
       this.setState({
         datasets,
       });

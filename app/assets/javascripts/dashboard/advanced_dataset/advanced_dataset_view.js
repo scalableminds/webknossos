@@ -90,7 +90,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             .map(dataset => {
               const diceCoefficient = dice(dataset.name, this.props.searchQuery);
               const rank = useLruRank ? datasetToRankMap.get(dataset) || 0 : 0;
-              const rankCoefficient = rank / filteredDataSource.length;
+              const rankCoefficient = 1 - rank / filteredDataSource.length;
               const coefficient = (diceCoefficient + rankCoefficient) / 2;
               return {
                 dataset,

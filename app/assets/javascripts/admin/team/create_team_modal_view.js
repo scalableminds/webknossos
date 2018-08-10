@@ -1,7 +1,9 @@
 // @flow
 import * as React from "react";
-import { Modal, Input, Button } from "antd";
+import { Modal, Input, Form } from "antd";
 import { createTeam } from "admin/admin_rest_api";
+
+const FormItem = Form.Item;
 
 type Props = {
   onOk: Function,
@@ -9,19 +11,18 @@ type Props = {
   isVisible: boolean,
 };
 
-type State = {
-  newTeamName: string,
-};
-
-class CreateTeamModalView extends React.PureComponent<Props, State> {
+class CreateTeamModalForm extends React.PureComponent<Props, State> {
   state = {
     newTeamName: "",
   };
 
   onOk = async () => {
-    if (this.state.newTeamName !== "") {
+    this.props.form.validateFields(async (err, values) => {
+      if (err) {
+        return;
+      }
       const newTeam = {
-        name: this.state.newTeamName,
+        name: values["Team Name"],
         roles: [{ name: "admin" }, { name: "user" }],
       };
 
@@ -31,7 +32,7 @@ class CreateTeamModalView extends React.PureComponent<Props, State> {
       });
 
       this.props.onOk(team);
-    }
+    });
   };
 
   isInputValid(): boolean {
@@ -39,31 +40,31 @@ class CreateTeamModalView extends React.PureComponent<Props, State> {
   }
 
   render() {
+    const { getFieldDecorator } = this.props.form;
     return (
       <Modal
-        title="Add a New Team"
         visible={this.props.isVisible}
+        title="Add a New Team"
+        okText="Ok"
         onCancel={this.props.onCancel}
-        footer={
-          <div>
-            <Button onClick={this.props.onCancel}>Cancel</Button>
-            <Button type="primary" onClick={this.onOk} disabled={!this.isInputValid()}>
-              Ok
-            </Button>
-          </div>
-        }
+        onOk={this.onOk}
       >
-        <Input
-          value={this.state.newTeamName}
-          onChange={(event: SyntheticInputEvent<*>) =>
-            this.setState({ newTeamName: event.target.value })
-          }
-          icon="tag-o"
-          placeholder="Team Name"
-          autoFocus
-        />
+        <Form layout="vertical">
+          <FormItem label="Team Name">
+            {getFieldDecorator("Team Name", {
+              rules: [
+                {
+                  required: true,
+                  pattern: "^[A-Za-z0-9\\-_\\. ß]+$",
+                  message: "Please enter a valide team name.",
+                },
+              ],
+            })(<Input icon="tag-o" placeholder="Team Name" autoFocus />)}
+          </FormItem>
+        </Form>
       </Modal>
     );
   }
 }
+const CreateTeamModalView = Form.create()(CreateTeamModalForm);
 export default CreateTeamModalView;

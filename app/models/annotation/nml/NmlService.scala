@@ -74,7 +74,7 @@ object NmlService extends LazyLogging {
 
   def extractFromNml(inputStream: InputStream, name: String): NmlParseResult = {
     NmlParser.parse(name, inputStream) match {
-      case Full((skeletonTracing, volumeTracingWithDataLocation, description)) => NmlParseSuccess(name, volumeTracingWithDataLocation, description)
+      case Full((skeletonTracing, volumeTracingWithDataLocation, description)) => NmlParseSuccess(name, skeletonTracing, volumeTracingWithDataLocation, description)
       case Failure(msg, _, _) => NmlParseFailure(name, msg)
       case Empty => NmlParseEmpty(name)
     }
@@ -127,8 +127,9 @@ object NmlService extends LazyLogging {
     }
   }
 
-  def splitVolumeAndSkeletonTracings(tracings: List[Either[SkeletonTracing, (VolumeTracing, String)]]): (List[SkeletonTracing], List[(VolumeTracing, String)]) = {
-    val (skeletons, volumes) = tracings.partition(_.isLeft)
-    (skeletons.map(_.left.get), volumes.map(_.right.get))
+  def splitVolumeAndSkeletonTracings(tracings: List[(Option[SkeletonTracing], Option[(VolumeTracing, String)])]): (List[SkeletonTracing], List[(VolumeTracing, String)]) = {
+    val skeletons = tracings.flatMap(_._1)
+    val volumes = tracings.flatMap(_._2)
+    (skeletons, volumes)
   }
 }

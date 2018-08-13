@@ -23,6 +23,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Added the possibility to copy volume tracings to own account
 - During the import of multiple NML files, the user can select an option to automatically create a group per file so that the imported trees are organized in a hierarchy. [#2908](https://github.com/scalableminds/webknossos/pull/2908)
 - Added functions to the front-end API to activate a tree and to change the color of a tree. [#2997](https://github.com/scalableminds/webknossos/pull/2997)
+- Added functions to the front-end API to get the tree groups of a tracing, to move a tree to another tree group and to set the visibility of a tree. [#3021](https://github.com/scalableminds/webknossos/pull/3021)
 - Comments can now contain references to nodes (`#<nodeid>`) or positions (`#(<x,y,z>)`). Clicking on such a reference activates the respective node or position and centers it. [#2950](https://github.com/scalableminds/webknossos/pull/2950)
 
 ### Changed

@@ -10,4 +10,5 @@
 ------
 - [ ] Updated [changelog](../blob/master/CHANGELOG.md#unreleased)
 - [ ] Updated [migration guide](../blob/master/MIGRATIONS.md#unreleased) if applicable
+- [ ] Needs datastore update after deployment
 - [ ] Ready for review

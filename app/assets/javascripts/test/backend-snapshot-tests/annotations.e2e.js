@@ -2,12 +2,28 @@
 /* eslint-disable import/first */
 // @flow
 import test from "ava";
-import { resetDatabase, replaceVolatileValues } from "../enzyme/e2e-setup";
+import {
+  resetDatabase,
+  replaceVolatileValues,
+  setCurrToken,
+  tokenUserA,
+} from "../enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import { APITracingTypeEnum } from "admin/api_flow_types";
+import { sendRequestWithToken, addVersionNumbers } from "oxalis/model/sagas/save_saga";
+import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
+import * as UpdateActions from "oxalis/model/sagas/update_actions";
+import generateDummyTrees from "oxalis/model/helpers/generate_dummy_trees";
+import { diffTrees } from "oxalis/model/sagas/skeletontracing_saga";
+import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+
+process.on("unhandledRejection", (err, promise) => {
+  console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");
+});
 
 test.before("Reset database", async () => {
   resetDatabase();
+  setCurrToken(tokenUserA);
 });
 
 test("getAnnotationInformation()", async t => {
@@ -116,4 +132,92 @@ test.serial("createExplorational() and finishAnnotation()", async t => {
     APITracingTypeEnum.Explorational,
   );
   t.is(finishedAnnotation.state, "Finished");
+});
+
+test("getTracingForAnnotations()", async t => {
+  const dataSetName = "confocal-multi_knossos";
+  const createdExplorational = await api.createExplorational(dataSetName, "skeleton", false);
+
+  const tracing = await api.getTracingForAnnotations(createdExplorational);
+  t.snapshot(replaceVolatileValues(tracing.skeleton), {
+    id: "annotations-tracing",
+  });
+});
+
+async function sendUpdateActions(explorational, queue) {
+  const skeletonTracingId = explorational.tracing.skeleton;
+  if (skeletonTracingId == null) throw new Error("No skeleton tracing present.");
+  return sendRequestWithToken(
+    `${explorational.dataStore.url}/data/tracings/skeleton/${skeletonTracingId}/update?token=`,
+    {
+      method: "POST",
+      headers: { "X-Date": "123456789" },
+      data: queue,
+      compress: false,
+    },
+  );
+}
+
+test("Send update actions and compare resulting tracing", async t => {
+  const dataSetName = "confocal-multi_knossos";
+  const createdExplorational = await api.createExplorational(dataSetName, "skeleton", false);
+
+  const initialSkeleton = { activeNodeId: undefined, userBoundingBox: undefined };
+  const saveQueue = addVersionNumbers(
+    createSaveQueueFromUpdateActions(
+      [
+        UpdateActions.updateSkeletonTracing(initialSkeleton, [1, 2, 3], [0, 1, 2], 1),
+        UpdateActions.updateSkeletonTracing(initialSkeleton, [2, 3, 4], [1, 2, 3], 2),
+      ],
+      123456789,
+    ),
+    0,
+  );
+  await sendUpdateActions(createdExplorational, saveQueue);
+  const tracing = await api.getTracingForAnnotations(createdExplorational);
+  t.snapshot(replaceVolatileValues(tracing.skeleton), {
+    id: "annotations-updateActions",
+  });
+});
+
+test("Send complex update actions and compare resulting tracing", async t => {
+  const dataSetName = "confocal-multi_knossos";
+  const createdExplorational = await api.createExplorational(dataSetName, "skeleton", false);
+
+  const trees = createTreeMapFromTreeArray(generateDummyTrees(5, 5));
+  const treeGroups = [
+    {
+      groupId: 1,
+      name: "Axon 1",
+      children: [
+        {
+          groupId: 3,
+          name: "Blah",
+          children: [],
+        },
+        {
+          groupId: 4,
+          name: "Blah 2",
+          children: [],
+        },
+      ],
+    },
+  ];
+
+  const createTreesUpdateActions = Array.from(diffTrees({}, trees));
+  const updateTreeGroupsUpdateAction = UpdateActions.updateTreeGroups(treeGroups);
+
+  const saveQueue = addVersionNumbers(
+    createSaveQueueFromUpdateActions(
+      [createTreesUpdateActions, updateTreeGroupsUpdateAction],
+      123456789,
+    ),
+    0,
+  );
+
+  await sendUpdateActions(createdExplorational, saveQueue);
+  const tracing = await api.getTracingForAnnotations(createdExplorational);
+  t.snapshot(replaceVolatileValues(tracing.skeleton), {
+    id: "annotations-complexUpdateActions",
+  });
 });

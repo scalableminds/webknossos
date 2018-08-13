@@ -1,7 +1,7 @@
 // @flow
 
 import * as React from "react";
-import { Button, Input, Checkbox, Form, Col, Row, Tooltip } from "antd";
+import { Button, Input, Checkbox, Col, Row, Tooltip } from "antd";
 import Clipboard from "clipboard-js";
 import Toast from "libs/toast";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";

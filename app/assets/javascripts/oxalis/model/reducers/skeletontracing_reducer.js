@@ -566,11 +566,13 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         case "SET_TREE_GROUP": {
           const { treeId, groupId } = action;
           return getTree(skeletonTracing, treeId)
-            .map(tree => update(state, {
+            .map(tree =>
+              update(state, {
                 tracing: {
                   skeleton: { trees: { [tree.treeId]: { groupId: { $set: groupId } } } },
                 },
-              }))
+              }),
+            )
             .getOrElse(state);
         }
 

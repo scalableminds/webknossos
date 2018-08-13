@@ -336,7 +336,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     );
   }
 
-  renderNameWithDescription(tracing: APIAnnotationType) {
+  renderNameWithDescription(tracing: APIAnnotationTypeCompact) {
     return (
       <React.Fragment>
         <EditableTextLabel
@@ -383,7 +383,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           title="Name"
           dataIndex="name"
           sorter={Utils.localeCompareBy(typeHint, "name")}
-          render={(name: string, tracing: APIAnnotationType) =>
+          render={(name: string, tracing: APIAnnotationTypeCompact) =>
             this.renderNameWithDescription(tracing)
           }
         />

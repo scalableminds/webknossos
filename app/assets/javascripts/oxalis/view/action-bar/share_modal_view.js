@@ -147,7 +147,7 @@ class ShareModalView extends PureComponent<ShareModalPropType, State> {
               </Button>
             </Input.Group>
             <Hint style={{ margin: "6px 12px" }}>
-              This link points directly to the current position, zoom value and tree node. Consider
+              This link includes the current position, zoom value and active tree node. Consider
               fine-tuning your current view before copying the URL.
             </Hint>
           </Col>

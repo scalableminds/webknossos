@@ -387,15 +387,13 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
             placeholder="Add comment"
             style={{ width: "60%" }}
           />
-          {"Disable until the backend supports multiline comments" && false ? (
-            <ButtonComponent
-              onClick={() => this.setMarkdownModalVisibility(true)}
-              disabled={activeNodeMaybe.isNothing}
-              type={isMultilineComment ? "primary" : "button"}
-            >
-              <Icon type="edit" />Markdown
-            </ButtonComponent>
-          ) : null}
+          <ButtonComponent
+            onClick={() => this.setMarkdownModalVisibility(true)}
+            disabled={activeNodeMaybe.isNothing}
+            type={isMultilineComment ? "primary" : "button"}
+          >
+            <Icon type="edit" />Markdown
+          </ButtonComponent>
           <ButtonComponent onClick={this.nextComment}>
             <i className="fa fa-arrow-right" />
           </ButtonComponent>

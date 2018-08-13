@@ -187,6 +187,23 @@ test("NML serializing and parsing should yield the same state even when using sp
   t.deepEqual(state.tracing.skeleton.treeGroups, treeGroups);
 });
 
+test("NML serializing and parsing should yield the same state even when using multiline attributes", async t => {
+  const state = update(initialState, {
+    tracing: {
+      skeleton: {
+        trees: {
+          "1": { comments: { $push: [{ nodeId: 1, content: "Hello\nfrom\nthe\nother\nside." }] } },
+        },
+      },
+    },
+  });
+  const serializedNml = serializeToNml(state, state.tracing, state.tracing.skeleton, buildInfo);
+  const { trees, treeGroups } = await parseNml(serializedNml);
+
+  t.deepEqual(state.tracing.skeleton.trees, trees);
+  t.deepEqual(state.tracing.skeleton.treeGroups, treeGroups);
+});
+
 test("NML Serializer should only serialize visible trees", async t => {
   const state = update(initialState, {
     tracing: {
@@ -211,6 +228,27 @@ test("NML serializer should produce correct NMLs", t => {
   );
 
   t.snapshot(serializedNml, { id: "nml" });
+});
+
+test("NML serializer should escape special characters and multilines", t => {
+  const state = update(initialState, {
+    tracing: {
+      description: { $set: "Multiline dataset\ndescription\nwith special &'<>\" chars." },
+      skeleton: {
+        trees: {
+          "1": {
+            comments: {
+              $push: [{ nodeId: 1, content: "Hello\"a'b<c>d&e\"f'g<h>i&j\nwith\nnew\nlines" }],
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const serializedNml = serializeToNml(state, state.tracing, state.tracing.skeleton, buildInfo);
+
+  t.snapshot(serializedNml, { id: "nml-special-chars" });
 });
 
 test("Serialized nml should be correctly named", async t => {

@@ -211,26 +211,29 @@ export type APITaskType = {
   +directLinks?: Array<string>,
 };
 
-type APIAnnotationTypeBase = {
+type APIAnnotationTypeCompact = {
   +tracing: {
     +skeleton: ?string,
     +volume: ?string,
   },
   +dataSetName: string,
-  +dataStore: APIDataStoreType,
   +description: string,
   +formattedHash: string,
   +modified: string,
   +id: string,
   +isPublic: boolean,
   +name: string,
-  +restrictions: APIRestrictionsType,
-  +settings: APISettingsType,
   +state: string,
   +stats: SkeletonTracingStatsType | {||},
   +tags: Array<string>,
   +tracingTime: ?number,
   +typ: APITracingType,
+}
+
+type APIAnnotationTypeBase = APIAnnotationTypeCompact & {
+  +dataStore: APIDataStoreType,
+  +restrictions: APIRestrictionsType,
+  +settings: APISettingsType,
   +user?: APIUserBaseType,
 };
 

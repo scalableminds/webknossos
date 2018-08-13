@@ -125,6 +125,29 @@ case class Annotation(
       )
     }
   }
+
+  //for Explorative Annotations list
+  def compactWrites(implicit ctx: DBAccessContext): Fox[JsObject] = {
+    for {
+      dataSet <- dataSet
+    } yield {
+      Json.obj(
+        "modified" -> modified,
+        "state" -> state,
+        "id" -> id,
+        "name" -> name,
+        "description" -> description,
+        "typ" -> typ,
+        "stats" -> statistics,
+        "formattedHash" -> Formatter.formatHash(id),
+        "tracing" -> Json.obj("skeleton" -> skeletonTracingId, "volume" -> volumeTracingId),
+        "dataSetName" -> dataSet.name,
+        "isPublic" -> isPublic,
+        "tracingTime" -> tracingTime,
+        "tags" -> (tags ++ Set(dataSet.name, tracingType.toString))
+      )
+    }
+  }
 }
 
 

@@ -24,6 +24,8 @@ import {
   editAnnotation,
   finishAnnotation,
   reOpenAnnotation,
+  getCompactAnnotations,
+  getCompactAnnotationsForUser,
 } from "admin/admin_rest_api";
 import type { RouterHistory } from "react-router-dom";
 import { handleGenericError } from "libs/error_handling";
@@ -119,16 +121,15 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     if (!this.isFetchNecessary()) {
       return;
     }
-    // Cache shouldShowArchivedTracings, otherwise it could have another value later
+    // Cache shouldShowArchivedTracings, otherwise it could have another value after fetching
     const showArchivedTracings = this.state.shouldShowArchivedTracings;
-    const isFinishedString = showArchivedTracings.toString();
-    const url = this.props.userId
-      ? `/api/users/${this.props.userId}/annotations?isFinished=${isFinishedString}`
-      : `/api/user/annotations?isFinished=${isFinishedString}`;
 
     try {
       this.setState({ isLoading: true });
-      const tracings = await Request.receiveJSON(url);
+      const tracings =
+        this.props.userId != null
+          ? await getCompactAnnotationsForUser(this.props.userId, showArchivedTracings)
+          : await getCompactAnnotations(showArchivedTracings);
       if (showArchivedTracings) {
         this.setState(
           update(this.state, {

@@ -37,6 +37,7 @@ import type {
   HybridServerTracingType,
   ServerSkeletonTracingType,
   ServerVolumeTracingType,
+  APIAnnotationTypeCompact,
 } from "admin/api_flow_types";
 import { APITracingTypeEnum } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/task/task_search_form";
@@ -428,6 +429,21 @@ export async function getUsersWithActiveTasks(
 }
 
 // ### Annotations
+export function getCompactAnnotations(
+  isFinished: boolean,
+): Promise<Array<APIAnnotationTypeCompact>> {
+  return Request.receiveJSON(`/api/user/annotations?isFinished=${isFinished.toString()}`);
+}
+
+export function getCompactAnnotationsForUser(
+  userId: string,
+  isFinished: boolean,
+): Promise<Array<APIAnnotationTypeCompact>> {
+  return Request.receiveJSON(
+    `/api/users/${userId}/annotations?isFinished=${isFinished.toString()}`,
+  );
+}
+
 export function reOpenAnnotation(
   annotationId: string,
   annotationType: APITracingType,

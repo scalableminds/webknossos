@@ -48,6 +48,7 @@ import type {
   VolumeTracingType,
   TracingTypeTracingType,
   MappingType,
+  TreeGroupTypeFlat,
 } from "oxalis/store";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import Toast from "libs/toast";
@@ -264,7 +265,7 @@ class TracingApi {
    * @example
    * api.tracing.setTreeVisibility(3, false);
    */
-  setTreeVisibility(treeId?: number, isVisible: boolean) {
+  setTreeVisibility(treeId: ?number, isVisible: boolean) {
     const { tracing } = Store.getState();
     assertSkeleton(tracing);
     Store.dispatch(setTreeVisibilityAction(treeId, isVisible));
@@ -276,7 +277,7 @@ class TracingApi {
    * @example
    * api.tracing.getTreeGroups();
    */
-  getTreeGroups() {
+  getTreeGroups(): Array<TreeGroupTypeFlat> {
     const { tracing } = Store.getState();
     return getFlatTreeGroups(assertSkeleton(tracing));
   }

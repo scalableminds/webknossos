@@ -4,6 +4,8 @@ import sinon from "sinon";
 import { setupOxalis, KeyboardJS } from "test/helpers/apiHelpers";
 import Store from "oxalis/store";
 import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
+import { setTreeGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
+import { makeBasicGroupObject } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 
 // All the mocking is done in the helpers file, so it can be reused for both skeleton and volume API
 test.beforeEach(t => setupOxalis(t, "skeleton"));
@@ -205,4 +207,31 @@ test("setTreeName should set the name of the active tree if no treeId is specifi
   api.tracing.setTreeName(NAME);
   const name = api.tracing.getTreeName(1);
   t.is(name, NAME);
+});
+
+test.serial("getTreeGroups should get all tree groups and set a tree group", t => {
+  const api = t.context.api;
+  Store.dispatch(
+    setTreeGroupsAction([makeBasicGroupObject(3, "group 3"), makeBasicGroupObject(7, "group 7")]),
+  );
+
+  t.deepEqual(api.tracing.getTreeGroups(), [
+    { name: "group 3", groupId: 3 },
+    { name: "group 7", groupId: 7 },
+  ]);
+
+  api.tracing.setTreeGroup(2, 3);
+  api.tracing.setTreeGroup(1, 7);
+
+  const state = Store.getState();
+  t.is(state.tracing.skeleton.trees[2].groupId, 3);
+  t.is(state.tracing.skeleton.trees[1].groupId, 7);
+});
+
+test("SkeletonTracing should ", t => {
+  const api = t.context.api;
+  api.tracing.setTreeVisibility(2, false);
+  t.false(Store.getState().tracing.skeleton.trees[2].isVisible);
+  api.tracing.setTreeVisibility(2, true);
+  t.true(Store.getState().tracing.skeleton.trees[2].isVisible);
 });

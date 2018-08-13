@@ -7,7 +7,7 @@ import type {
   TreeType,
   TreeMapType,
   BranchPointType,
-  TreeGroupType,
+  TreeGroupTypeFlat,
 } from "oxalis/store";
 import type { HybridServerTracingType, ServerSkeletonTracingType } from "admin/api_flow_types";
 
@@ -148,10 +148,8 @@ export function getStats(tracing: TracingType): Maybe<SkeletonTracingStatsType> 
     }));
 }
 
-export function getFlatTreeGroups(skeletonTracing: SkeletonTracingType) {
-  function flattenChildren(
-    treeGroups: Array<TreeGroupType>,
-  ): Array<{ name: string, groupId: number }> {
+export function getFlatTreeGroups(skeletonTracing: SkeletonTracingType): Array<TreeGroupTypeFlat> {
+  function flattenChildren(treeGroups: Array<TreeGroupType>): Array<TreeGroupTypeFlat> {
     return _.flatten(
       treeGroups.map(treeGroup => {
         const { children, ...bareTreeGroup } = treeGroup;
@@ -163,6 +161,8 @@ export function getFlatTreeGroups(skeletonTracing: SkeletonTracingType) {
   return flattenChildren(skeletonTracing.treeGroups);
 }
 
-export function getTreeGroupsMap(skeletonTracing: SkeletonTracingType) {
+export function getTreeGroupsMap(
+  skeletonTracing: SkeletonTracingType,
+): { [key: string]: TreeGroupTypeFlat } {
   return _.keyBy(getFlatTreeGroups(skeletonTracing), "groupId");
 }

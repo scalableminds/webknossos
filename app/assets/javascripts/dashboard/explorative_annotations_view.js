@@ -4,7 +4,6 @@
 import _ from "lodash";
 import * as React from "react";
 import { Link, withRouter } from "react-router-dom";
-import Request from "libs/request";
 import { AsyncLink } from "components/async_clickables";
 import { Spin, Input, Table, Button, Modal, Tag, Icon } from "antd";
 import FormatUtils from "libs/format_utils";

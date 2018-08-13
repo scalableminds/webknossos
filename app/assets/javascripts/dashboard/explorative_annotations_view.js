@@ -6,7 +6,7 @@ import * as React from "react";
 import { Link, withRouter } from "react-router-dom";
 import Request from "libs/request";
 import { AsyncLink } from "components/async_clickables";
-import { Spin, Input, Table, Button, Modal, Tag, Icon, Popover } from "antd";
+import { Spin, Input, Table, Button, Modal, Tag, Icon, Popover, Tooltip } from "antd";
 import FormatUtils from "libs/format_utils";
 import Toast from "libs/toast";
 import Utils from "libs/utils";
@@ -338,25 +338,28 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
 
   renderNameWithDescription(tracing: APIAnnotationType) {
     return (
-      <Popover
-        title="Description"
-        trigger="hover"
-        content={
-          <div style={{ maxWidth: 400 }}>
-            {tracing.description && tracing.description !== ""
-              ? tracing.description
-              : "<no description>"}
-          </div>
-        }
-        placement="topLeft"
-      >
-        <div>
-          <EditableTextLabel
-            value={tracing.name}
-            onChange={newName => this.renameTracing(tracing, newName)}
-          />
-        </div>
-      </Popover>
+      <React.Fragment>
+        <EditableTextLabel
+          value={tracing.name}
+          onChange={newName => this.renameTracing(tracing, newName)}
+        />
+        <Tooltip title={<span> Show description </span>} placement="bottom">
+          <Popover
+            title="Description"
+            trigger="click"
+            content={
+              <div style={{ maxWidth: 400 }}>
+                {tracing.description && tracing.description !== ""
+                  ? tracing.description
+                  : "No description"}
+              </div>
+            }
+          >
+            <i className="fa fa-align-justify" />
+            <div />
+          </Popover>
+        </Tooltip>
+      </React.Fragment>
     );
   }
 

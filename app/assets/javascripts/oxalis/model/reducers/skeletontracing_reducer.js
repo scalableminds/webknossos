@@ -31,7 +31,6 @@ import {
   findTreeByNodeId,
   getTree,
   getNodeAndTree,
-  getTreeGroupsMap,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import Constants from "oxalis/constants";
 import type { OxalisState, SkeletonTracingType } from "oxalis/store";
@@ -567,13 +566,11 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         case "SET_TREE_GROUP": {
           const { treeId, groupId } = action;
           return getTree(skeletonTracing, treeId)
-            .map(tree => {
-              return update(state, {
+            .map(tree => update(state, {
                 tracing: {
                   skeleton: { trees: { [tree.treeId]: { groupId: { $set: groupId } } } },
                 },
-              });
-            })
+              }))
             .getOrElse(state);
         }
 

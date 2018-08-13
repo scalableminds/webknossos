@@ -152,10 +152,6 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
     this.unsubscribeStoreListeners();
   }
 
-  // here!!!!!
-  // subscribe to property
-  // array for all unssubscribe methods
-  // call all methods when unmoutet
   keyboard = new InputKeyboard(
     {
       n: () => this.nextComment(),

@@ -16,7 +16,6 @@
     "babel-eslint": "^8.0.3",
     "babel-loader": "^7.1.4",
     "babel-plugin-dynamic-import-webpack": "^1.0.1",
-    "babel-plugin-file-loader": "^1.0.0",
     "babel-plugin-import": "^1.1.0",
     "babel-plugin-istanbul": "^4.1.6",
     "babel-plugin-transform-class-properties": "^6.24.1",

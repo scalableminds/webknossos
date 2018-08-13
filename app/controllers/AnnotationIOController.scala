@@ -72,10 +72,11 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     val parseSuccess = parseResultsPrefixed.filter(_.succeeded)
 
     if (!parsedFiles.isEmpty) {
-      val tracings = parseSuccess.flatMap(_.tracing)
-      val (skeletonTracings, volumeTracings) = NmlService.splitVolumeAndSkeletonTracings(tracings)
+      val tracings = parseSuccess.flatMap(_.bothTracingOpts)
+      //val (skeletonTracings, volumeTracings) = NmlService.splitVolumeAndSkeletonTracings(tracings)
       val name = nameForNmls(parseSuccess.map(_.fileName))
       val description = descriptionForNMLs(parseSuccess.map(_.description))
+      //TODO
       if (volumeTracings.nonEmpty) {
         for {
           dataSet <- DataSetDAO.findOneByName(volumeTracings.head._1.dataSetName).toFox ?~> Messages("dataSet.notFound", volumeTracings.head._1.dataSetName)

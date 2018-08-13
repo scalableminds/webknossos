@@ -151,7 +151,7 @@ export function getStats(tracing: TracingType): Maybe<SkeletonTracingStatsType> 
 
 export function getFlatTreeGroups(skeletonTracing: SkeletonTracingType): Array<TreeGroupTypeFlat> {
   return Array.from(
-    mapGroups(skeletonTracing.treeGroups, ({ ...bareTreeGroup }) => ({
+    mapGroups(skeletonTracing.treeGroups, ({ children: _children, ...bareTreeGroup }) => ({
       ...bareTreeGroup,
     })),
   );
@@ -159,6 +159,6 @@ export function getFlatTreeGroups(skeletonTracing: SkeletonTracingType): Array<T
 
 export function getTreeGroupsMap(
   skeletonTracing: SkeletonTracingType,
-): { [key: string]: TreeGroupTypeFlat } {
+): { [key: number]: TreeGroupTypeFlat } {
   return _.keyBy(getFlatTreeGroups(skeletonTracing), "groupId");
 }

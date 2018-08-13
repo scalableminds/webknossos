@@ -57,10 +57,10 @@ type CreateBranchPointActionType = {
   timestamp: number,
 };
 type DeleteBranchPointActionType = { type: "DELETE_BRANCHPOINT" };
-type ToggleTreeActionType = { type: "TOGGLE_TREE", treeId?: number, timestamp: number };
+type ToggleTreeActionType = { type: "TOGGLE_TREE", treeId: ?number, timestamp: number };
 type SetTreeVisibilityActionType = {
   type: "SET_TREE_VISIBILITY",
-  treeId?: number,
+  treeId: ?number,
   isVisible: boolean,
 };
 type ToggleAllTreesActionType = { type: "TOGGLE_ALL_TREES", timestamp: number };
@@ -267,7 +267,7 @@ export const deleteTreeAction = (
 });
 
 export const toggleTreeAction = (
-  treeId?: number,
+  treeId: ?number,
   timestamp: number = Date.now(),
 ): ToggleTreeActionType => ({
   type: "TOGGLE_TREE",
@@ -276,7 +276,7 @@ export const toggleTreeAction = (
 });
 
 export const setTreeVisibilityAction = (
-  treeId?: number,
+  treeId: ?number,
   isVisible: boolean,
 ): SetTreeVisibilityActionType => ({
   type: "SET_TREE_VISIBILITY",

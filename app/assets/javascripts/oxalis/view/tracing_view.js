@@ -59,7 +59,7 @@ class TracingView extends React.PureComponent<Props> {
   }
 }
 const mapStateToProps = (state: OxalisState): Props => ({
-  isVolumeTracingDisallowed: state.tracing.type === "volume" && isVolumeTracingDisallowed(state),
+  isVolumeTracingDisallowed: state.tracing.volume != null && isVolumeTracingDisallowed(state),
 });
 
 export default connect(mapStateToProps)(TracingView);

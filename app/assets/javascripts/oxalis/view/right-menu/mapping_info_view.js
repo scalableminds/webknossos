@@ -9,6 +9,7 @@ import Cube from "oxalis/model/bucket_data_handling/data_cube";
 import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import Model from "oxalis/model";
 import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { getVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { SwitchSetting } from "oxalis/view/settings/setting_input_views";
 import type { OrthoViewType, Vector2, Vector3 } from "oxalis/constants";
 import type { OxalisState, MappingType } from "oxalis/store";
@@ -68,7 +69,11 @@ class MappingInfoView extends React.Component<Props> {
   }, 100);
 
   getSegmentationCube(): Cube {
-    return Model.getSegmentationLayer().cube;
+    const layer = Model.getSegmentationLayer();
+    if (!layer) {
+      throw new Error("No segmentation layer found");
+    }
+    return layer.cube;
   }
 
   renderIdTable() {
@@ -111,7 +116,7 @@ class MappingInfoView extends React.Component<Props> {
     ]
       .map(idInfo => ({
         ...idInfo,
-        mapped: idInfo.unmapped && cube.mapId(idInfo.unmapped),
+        mapped: idInfo.unmapped != null ? cube.mapId(idInfo.unmapped) : undefined,
       }))
       .map(idInfo => ({
         ...idInfo,
@@ -183,7 +188,9 @@ function mapStateToProps(state: OxalisState) {
     mappingColors: state.temporaryConfiguration.activeMapping.mappingColors,
     mousePosition: state.temporaryConfiguration.mousePosition,
     activeViewport: state.viewModeData.plane.activeViewport,
-    activeCellId: state.tracing.type === "volume" ? state.tracing.activeCellId : 0,
+    activeCellId: getVolumeTracing(state.tracing)
+      .map(tracing => tracing.activeCellId)
+      .getOrElse(0),
   };
 }
 

@@ -3,11 +3,12 @@ import React from "react";
 import { connect } from "react-redux";
 import Model from "oxalis/model";
 import ButtonComponent from "oxalis/view/components/button_component";
-import type { OxalisState, ProgressInfoType } from "oxalis/store";
+import { isBusy } from "oxalis/model/accessors/save_accessor";
+import type { OxalisState, ProgressInfoType, IsBusyInfoType } from "oxalis/store";
 
 type StateProps = {|
   progressInfo: ProgressInfoType,
-  isBusy: boolean,
+  isBusyInfo: IsBusyInfoType,
 |};
 
 type Props = {
@@ -46,7 +47,7 @@ class SaveButton extends React.PureComponent<Props, State> {
   getSaveButtonIcon() {
     if (this.state.isStateSaved) {
       return "check";
-    } else if (this.props.isBusy) {
+    } else if (isBusy(this.props.isBusyInfo)) {
       return "loading";
     } else {
       return "hourglass";
@@ -55,7 +56,7 @@ class SaveButton extends React.PureComponent<Props, State> {
 
   shouldShowProgress(): boolean {
     // For a low action count, the progress info would show only for a very short amount of time
-    return this.props.isBusy && this.props.progressInfo.totalActionCount > 5000;
+    return isBusy(this.props.isBusyInfo) && this.props.progressInfo.totalActionCount > 5000;
   }
 
   render() {
@@ -81,10 +82,10 @@ class SaveButton extends React.PureComponent<Props, State> {
 }
 
 function mapStateToProps(state: OxalisState): StateProps {
-  const { progressInfo, isBusy } = state.save;
+  const { progressInfo, isBusyInfo } = state.save;
   return {
     progressInfo,
-    isBusy,
+    isBusyInfo,
   };
 }
 

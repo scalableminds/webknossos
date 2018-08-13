@@ -55,6 +55,7 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.changed_move_value": "The move value was changed to: ",
   "tracing.no_viewport_scaling_setting":
     "Scaling the viewports via k/l is not supported anymore. Instead you can increase the viewport size by dragging the borders between the panes. You can also rearrange the panes by dragging the tabs.",
+  "tracing.natural_sorting": "Correctly sort numbers in text (word2 < word10). This may be slow!",
   "datastore.unknown_type": "Unknown datastore type:",
   "webgl.disabled": "Couldn't initialise WebGL, please make sure WebGL is enabled.",
   "webgl.context_loss":
@@ -100,6 +101,11 @@ In order to restore the current window, a reload is necessary.`,
   "project.delete": "Do you really want to delete this project?",
   "project.increase_instances":
     "Do you really want to add one additional instance to all tasks of this project?",
+  "project.none_selected": "No currently selected project found.",
+  "project.successful_active_tasks_transfer":
+    "All active tasks were transfered to the selected user",
+  "project.unsuccessful_active_tasks_transfer":
+    "An error occured while trying to transfer the tasks. Please check your permissions and the server logs",
   "script.delete": "Do you really want to delete this script?",
   "team.delete": "Do you really want to delete this team?",
   "taskType.delete": "Do you really want to delete this task type and all its associated tasks?",

@@ -8,7 +8,7 @@ import { connect } from "react-redux";
 import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
-import Utils from "libs/utils";
+import Utils, { maybe, enforce } from "libs/utils";
 import Toast from "libs/toast";
 import { document } from "libs/window";
 import { InputMouse, InputKeyboard, InputKeyboardNoLoop } from "libs/input";
@@ -16,7 +16,7 @@ import * as THREE from "three";
 import TrackballControls from "libs/trackball_controls";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
-import type { CameraData, OxalisState, FlycamType } from "oxalis/store";
+import type { TracingType, CameraData, OxalisState, FlycamType } from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import SceneController from "oxalis/controller/scene_controller";
 import {
@@ -37,6 +37,7 @@ import constants, {
   OrthoViews,
   OrthoViewValues,
   OrthoViewValuesWithoutTDView,
+  VolumeToolEnum,
 } from "oxalis/constants";
 import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { ModifierKeys } from "libs/input";
@@ -49,10 +50,31 @@ import {
   moveTDViewByVectorAction,
 } from "oxalis/model/actions/view_mode_actions";
 import messages from "messages";
-import { setMousePositionAction } from "oxalis/model/actions/volumetracing_actions";
+import {
+  setBrushSizeAction,
+  setMousePositionAction,
+} from "oxalis/model/actions/volumetracing_actions";
+import { getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Clipboard from "clipboard-js";
-import { getResolutions } from "oxalis/model/accessors/dataset_accessor.js";
+import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import * as skeletonController from "oxalis/controller/combinations/skeletontracing_plane_controller";
+import * as volumeController from "oxalis/controller/combinations/volumetracing_plane_controller";
+import api from "oxalis/api/internal_api";
+
+function ensureNonConflictingHandlers(skeletonControls: Object, volumeControls: Object): void {
+  const conflictingHandlers = _.intersection(
+    Object.keys(skeletonControls),
+    Object.keys(volumeControls),
+  );
+  if (conflictingHandlers.length > 0) {
+    throw new Error(
+      `There are unsolved conflicts between skeleton and volume controller: ${conflictingHandlers.join(
+        ", ",
+      )}`,
+    );
+  }
+}
 
 type OwnProps = {
   onRender: () => void,
@@ -61,6 +83,7 @@ type OwnProps = {
 type Props = OwnProps & {
   flycam: FlycamType,
   scale: Vector3,
+  tracing: TracingType,
 };
 
 class PlaneController extends React.PureComponent<Props> {
@@ -124,7 +147,7 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   getTDViewMouseControls(): Object {
-    return {
+    const baseControls = {
       leftDownMove: (delta: Point2) => this.moveTDView(delta),
       scroll: (value: number) => this.zoomTDView(Utils.clamp(-1, value, 1), true),
       over: () => {
@@ -134,13 +157,22 @@ class PlaneController extends React.PureComponent<Props> {
       },
       pinch: delta => this.zoomTDView(delta, true),
     };
+
+    const skeletonControls =
+      this.props.tracing.skeleton != null
+        ? skeletonController.getTDViewMouseControls(this.planeView)
+        : {};
+
+    return {
+      ...baseControls,
+      ...skeletonControls,
+    };
   }
 
   getPlaneMouseControls(planeId: OrthoViewType): Object {
-    return {
+    const baseControls = {
       leftDownMove: (delta: Point2) => {
         const viewportScale = getViewportScale(planeId);
-
         return this.movePlane([(delta.x * -1) / viewportScale, (delta.y * -1) / viewportScale, 0]);
       },
 
@@ -152,6 +184,26 @@ class PlaneController extends React.PureComponent<Props> {
       mouseMove: (delta: Point2, position: Point2) => {
         Store.dispatch(setMousePositionAction([position.x, position.y]));
       },
+    };
+    // TODO: Find a nicer way to express this, while satisfying flow
+    const emptyDefaultHandler = { leftClick: null };
+    const { leftClick: skeletonLeftClick, ...skeletonControls } =
+      this.props.tracing.skeleton != null
+        ? skeletonController.getPlaneMouseControls(this.planeView)
+        : emptyDefaultHandler;
+
+    const { leftClick: volumeLeftClick, ...volumeControls } =
+      this.props.tracing.volume != null
+        ? volumeController.getPlaneMouseControls(planeId)
+        : emptyDefaultHandler;
+
+    ensureNonConflictingHandlers(skeletonControls, volumeControls);
+
+    return {
+      ...baseControls,
+      ...skeletonControls,
+      ...volumeControls,
+      leftClick: this.createToolDependentHandler(skeletonLeftClick, volumeLeftClick),
     };
   }
 
@@ -280,7 +332,7 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   getKeyboardControls(): Object {
-    return {
+    const baseControls = {
       "ctrl + i": event => {
         const segmentationLayer = Model.getSegmentationLayer();
         if (!segmentationLayer) {
@@ -291,7 +343,7 @@ class PlaneController extends React.PureComponent<Props> {
           const [x, y] = mousePosition;
           const globalMousePosition = calculateGlobalPos({ x, y });
           const { cube } = segmentationLayer;
-          const mapping = event.altKey ? cube.mapping : null;
+          const mapping = event.altKey ? cube.getMapping() : null;
           const hoveredId = cube.getDataValue(
             globalMousePosition,
             mapping,
@@ -304,6 +356,28 @@ class PlaneController extends React.PureComponent<Props> {
           Toast.warning("No cell under cursor.");
         }
       },
+    };
+
+    // TODO: Find a nicer way to express this, while satisfying flow
+    const emptyDefaultHandler = { c: null, "1": null };
+    const { c: skeletonCHandler, "1": skeletonOneHandler, ...skeletonControls } =
+      this.props.tracing.skeleton != null
+        ? skeletonController.getKeyboardControls()
+        : emptyDefaultHandler;
+
+    const { c: volumeCHandler, "1": volumeOneHandler, ...volumeControls } =
+      this.props.tracing.volume != null
+        ? volumeController.getKeyboardControls()
+        : emptyDefaultHandler;
+
+    ensureNonConflictingHandlers(skeletonControls, volumeControls);
+
+    return {
+      ...baseControls,
+      ...skeletonControls,
+      ...volumeControls,
+      c: this.createToolDependentHandler(skeletonCHandler, volumeCHandler),
+      "1": this.createToolDependentHandler(skeletonOneHandler, volumeOneHandler),
     };
   }
 
@@ -446,7 +520,7 @@ class PlaneController extends React.PureComponent<Props> {
     const { activeViewport } = Store.getState().viewModeData.plane;
     const pos = this.input.mouseControllers[activeViewport].position;
     if (pos != null) {
-      return this.calculateGlobalPos(pos);
+      return calculateGlobalPos(pos);
     }
     return [0, 0, 0];
   }
@@ -469,12 +543,28 @@ class PlaneController extends React.PureComponent<Props> {
 
   scrollPlanes(delta: number, type: ?ModifierKeys): void {
     switch (type) {
-      case null:
+      case null: {
         this.moveZ(delta, true);
         break;
-      case "alt":
+      }
+      case "alt": {
         this.zoomPlanes(Utils.clamp(-1, delta, 1), true);
         break;
+      }
+      case "shift": {
+        const isBrushActive = maybe(getVolumeTool)(this.props.tracing.volume)
+          .map(tool => tool === VolumeToolEnum.BRUSH)
+          .getOrElse(false);
+        if (isBrushActive) {
+          const currentSize = Store.getState().temporaryConfiguration.brushSize;
+          // Different browsers send different deltas, this way the behavior is comparable
+          Store.dispatch(setBrushSizeAction(currentSize + (delta > 0 ? 5 : -5)));
+        } else if (this.props.tracing.skeleton) {
+          // Different browsers send different deltas, this way the behavior is comparable
+          api.tracing.setNodeRadius(delta > 0 ? 5 : -5);
+        }
+        break;
+      }
       default: // ignore other cases
     }
   }
@@ -495,9 +585,24 @@ class PlaneController extends React.PureComponent<Props> {
     this.unsubscribeStoreListeners();
   }
 
-  calculateGlobalPos = (clickPos: Point2): Vector3 => calculateGlobalPos(clickPos);
-
   updateControls = () => this.controls.update(true);
+
+  createToolDependentHandler(skeletonHandler: ?Function, volumeHandler: ?Function): Function {
+    return (...args) => {
+      if (skeletonHandler && volumeHandler) {
+        // Deal with both modes
+        const tool = enforce(getVolumeTool)(this.props.tracing.volume);
+        if (tool === VolumeToolEnum.MOVE) {
+          skeletonHandler(...args);
+        } else {
+          volumeHandler(...args);
+        }
+        return;
+      }
+      if (skeletonHandler) skeletonHandler(...args);
+      if (volumeHandler) volumeHandler(...args);
+    };
+  }
 
   render() {
     if (!this.controls) {
@@ -580,6 +685,7 @@ export function mapStateToProps(state: OxalisState, ownProps: OwnProps): Props {
     flycam: state.flycam,
     scale: state.dataset.dataSource.scale,
     onRender: ownProps.onRender,
+    tracing: state.tracing,
   };
 }
 

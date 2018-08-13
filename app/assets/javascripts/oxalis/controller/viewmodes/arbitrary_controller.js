@@ -21,7 +21,7 @@ import {
 } from "oxalis/model/actions/settings_actions";
 import {
   setActiveNodeAction,
-  deleteNodeAsUserAction,
+  deleteActiveNodeAsUserAction,
   createNodeAction,
   createBranchPointAction,
   requestDeleteBranchPointAction,
@@ -43,7 +43,11 @@ import {
   moveFlycamAction,
 } from "oxalis/model/actions/flycam_actions";
 import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
-import { getActiveNode, getMaxNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  enforceSkeletonTracing,
+  getActiveNode,
+  getMaxNodeId,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import messages from "messages";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import SceneController from "oxalis/controller/scene_controller";
@@ -207,7 +211,8 @@ class ArbitraryController extends React.PureComponent<Props> {
 
       // Recenter active node
       s: () => {
-        getActiveNode(Store.getState().tracing).map(activeNode =>
+        const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
+        getActiveNode(skeletonTracing).map(activeNode =>
           api.tracing.centerPositionAnimated(activeNode.position, false, activeNode.rotation),
         );
       },
@@ -222,7 +227,7 @@ class ArbitraryController extends React.PureComponent<Props> {
 
       // Delete active node and recenter last node
       "shift + space": () => {
-        Store.dispatch(deleteNodeAsUserAction());
+        Store.dispatch(deleteActiveNodeAsUserAction(Store.getState()));
       },
     });
   }
@@ -235,15 +240,15 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   nextNode(nextOne: boolean): void {
-    Utils.zipMaybe(
-      getActiveNode(Store.getState().tracing),
-      getMaxNodeId(Store.getState().tracing),
-    ).map(([activeNode, maxNodeId]) => {
-      if ((nextOne && activeNode.id === maxNodeId) || (!nextOne && activeNode.id === 1)) {
-        return;
-      }
-      Store.dispatch(setActiveNodeAction(activeNode.id + 2 * Number(nextOne) - 1)); // implicit cast from boolean to int
-    });
+    const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
+    Utils.zipMaybe(getActiveNode(skeletonTracing), getMaxNodeId(skeletonTracing)).map(
+      ([activeNode, maxNodeId]) => {
+        if ((nextOne && activeNode.id === maxNodeId) || (!nextOne && activeNode.id === 1)) {
+          return;
+        }
+        Store.dispatch(setActiveNodeAction(activeNode.id + 2 * Number(nextOne) - 1)); // implicit cast from boolean to int
+      },
+    );
   }
 
   getVoxelOffset(timeFactor: number): number {

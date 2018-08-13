@@ -24,6 +24,7 @@ export type Rect = {
   height: number,
 };
 
+export const AnnotationContentTypes = ["skeleton", "volume", "hybrid"];
 export const Vector2Indicies = [0, 1];
 export const Vector3Indicies = [0, 1, 2];
 export const Vector4Indicies = [0, 1, 2, 3];
@@ -94,6 +95,9 @@ export const ContourModeEnum = {
   DELETE_FROM_ANY_CELL: "DELETE_FROM_ANY_CELL",
 };
 export type ContourModeType = $Keys<typeof ContourModeEnum>;
+
+export const NODE_ID_REF_REGEX = /#([0-9]+)/g;
+export const POSITION_REF_REGEX = /#\(([0-9]+,[0-9]+,[0-9]+)\)/g;
 
 const Constants = {
   ARBITRARY_VIEW: 4,

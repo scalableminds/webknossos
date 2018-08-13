@@ -16,7 +16,7 @@ mockRequire.stopAll();
 const StoreMock = {
   getState: () => ({
     dataset: datasetServerObject,
-    tracing: skeletontracingServerObject,
+    tracing: { skeleton: skeletontracingServerObject },
     datasetConfiguration: { fourBit: false },
   }),
   dispatch: sinon.stub(),

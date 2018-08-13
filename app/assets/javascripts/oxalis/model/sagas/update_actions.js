@@ -1,6 +1,5 @@
 // @flow
 import type {
-  SkeletonTracingType,
   VolumeTracingType,
   BranchPointType,
   CommentType,
@@ -9,7 +8,7 @@ import type {
   BoundingBoxObjectType,
   TreeGroupType,
 } from "oxalis/store";
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3, BoundingBoxType } from "oxalis/constants";
 import type { SendBucketInfo } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reducer_helpers";
 
@@ -237,7 +236,7 @@ export function deleteNode(treeId: number, nodeId: number): DeleteNodeUpdateActi
   };
 }
 export function updateSkeletonTracing(
-  tracing: SkeletonTracingType,
+  tracing: { activeNodeId: ?number, userBoundingBox: ?BoundingBoxType },
   position: Vector3,
   rotation: Vector3,
   zoomLevel: number,

@@ -26,7 +26,12 @@ import {
 } from "oxalis/view/settings/setting_input_views";
 import { setUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { getMaxZoomStep } from "oxalis/model/accessors/flycam_accessor";
-import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  enforceSkeletonTracing,
+  getActiveNode,
+} from "oxalis/model/accessors/skeletontracing_accessor";
+import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import Utils from "libs/utils";
 import type { UserConfigurationType, OxalisState, TracingType } from "oxalis/store";
@@ -166,23 +171,23 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
   };
 
   getSkeletonOrVolumeOptions = () => {
-    const mode = this.props.viewMode;
     const isPublicViewMode = this.props.controlMode === ControlModeEnum.VIEW;
 
-    if (
-      Constants.MODES_SKELETON.includes(mode) &&
-      !isPublicViewMode &&
-      this.props.tracing.type === "skeleton"
-    ) {
-      const activeNodeId =
-        this.props.tracing.activeNodeId != null ? this.props.tracing.activeNodeId : "";
-      const activeTreeId =
-        this.props.tracing.activeTreeId != null ? this.props.tracing.activeTreeId : "";
-      const activeNodeRadius = getActiveNode(this.props.tracing)
+    if (isPublicViewMode) {
+      return null;
+    }
+
+    const panels = [];
+
+    if (this.props.tracing.skeleton != null) {
+      const skeletonTracing = enforceSkeletonTracing(this.props.tracing);
+      const activeNodeId = skeletonTracing.activeNodeId != null ? skeletonTracing.activeNodeId : "";
+      const activeTreeId = skeletonTracing.activeTreeId != null ? skeletonTracing.activeTreeId : "";
+      const activeNodeRadius = getActiveNode(skeletonTracing)
         .map(activeNode => activeNode.radius)
         .getOrElse(0);
-      return (
-        <Panel header="Nodes & Trees" key="3">
+      panels.push(
+        <Panel header="Nodes & Trees" key="3a">
           <NumberInputSetting
             label="Active Node ID"
             value={activeNodeId}
@@ -230,24 +235,23 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
             value={this.props.userConfiguration.highlightCommentedNodes}
             onChange={this.onChangeUser.highlightCommentedNodes}
           />
-        </Panel>
-      );
-    } else if (
-      mode === Constants.MODE_VOLUME &&
-      !isPublicViewMode &&
-      this.props.tracing.type === "volume"
-    ) {
-      return (
-        <Panel header="Volume Options" key="3">
-          <NumberInputSetting
-            label="Active Cell ID"
-            value={this.props.tracing.activeCellId}
-            onChange={this.props.onChangeActiveCellId}
-          />
-        </Panel>
+        </Panel>,
       );
     }
-    return null;
+
+    if (this.props.tracing.volume != null) {
+      const volumeTracing = enforceVolumeTracing(this.props.tracing);
+      panels.push(
+        <Panel header="Volume Options" key="3b">
+          <NumberInputSetting
+            label="Active Cell ID"
+            value={volumeTracing.activeCellId}
+            onChange={this.props.onChangeActiveCellId}
+          />
+        </Panel>,
+      );
+    }
+    return panels;
   };
 
   render() {
@@ -272,7 +276,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
     );
 
     return (
-      <Collapse defaultActiveKey={["1", "2", "3", "4"]}>
+      <Collapse defaultActiveKey={["1", "2", "3a", "3b", "4"]}>
         <Panel header="Controls" key="1">
           <NumberSliderSetting
             label="Keyboard delay (ms)"
@@ -294,7 +298,9 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
           <Vector6InputSetting
             label="Bounding Box"
             tooltipTitle="Format: minX, minY, minZ, width, height, depth"
-            value={Utils.computeArrayFromBoundingBox(this.props.tracing.userBoundingBox)}
+            value={Utils.computeArrayFromBoundingBox(
+              getSomeTracing(this.props.tracing).userBoundingBox,
+            )}
             onChange={this.props.onChangeBoundingBox}
           />
           <SwitchSetting

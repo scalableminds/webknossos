@@ -111,7 +111,7 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
   getTracingStatistics() {
     const statsMaybe = getStats(this.props.tracing);
 
-    return this.props.tracing.type === "skeleton" ? (
+    return this.props.tracing.skeleton != null ? (
       <div>
         <p>Number of Trees: {statsMaybe.map(stats => stats.treeCount).getOrElse(null)}</p>
         <p>Number of Nodes: {statsMaybe.map(stats => stats.nodeCount).getOrElse(null)}</p>

@@ -14,6 +14,9 @@ additionalParams=$@
 
 function prepare {
   rm -rf "$testBundlePath" && BABEL_ENV=test babel "$jsPath" --out-dir "$testBundlePath" $additionalParams
+  # Webpack with the proto loader isn't used when running the tests, so the proto files need to be prepared manually
+  pbjs -t json "webknossos-datastore/proto/SkeletonTracing.proto" > "$testBundlePath/SkeletonTracing.proto.json"
+  pbjs -t json "webknossos-datastore/proto/VolumeTracing.proto" > "$testBundlePath/VolumeTracing.proto.json"
 }
 
 function ensureUpToDateTests {

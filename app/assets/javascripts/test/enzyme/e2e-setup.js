@@ -54,9 +54,18 @@ function setCurrToken(token: string) {
 
 // The values of these keys change if objects are newly created by the backend
 // They have to be omitted from some snapshots
-const volatileKeys = ["id", "skeleton", "formattedHash", "modified", "created"];
+const volatileKeys = [
+  "id",
+  "skeleton",
+  "volume",
+  "formattedHash",
+  "modified",
+  "created",
+  "createdTimestamp",
+];
 
-export function replaceVolatileValues(obj: Object) {
+export function replaceVolatileValues(obj: ?Object) {
+  if (obj == null) return obj;
   // Replace volatile properties with deterministic values
   const newObj = _.cloneDeep(obj);
   deepForEach(newObj, (value, key, arrOrObj) => {

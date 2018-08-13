@@ -3,7 +3,6 @@
  * @flow
  */
 
-/* eslint-disable no-useless-computed-key */
 import { createStore, applyMiddleware } from "redux";
 import createSagaMiddleware from "redux-saga";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";

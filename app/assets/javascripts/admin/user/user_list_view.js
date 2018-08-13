@@ -3,9 +3,10 @@
 
 import _ from "lodash";
 import * as React from "react";
+import moment from "moment";
 import { connect } from "react-redux";
 import { Link, withRouter } from "react-router-dom";
-import { Table, Tag, Icon, Spin, Button, Input, Modal } from "antd";
+import { Table, Tag, Icon, Spin, Button, Input, Modal, Alert, Row, Col, Tooltip } from "antd";
 import TeamRoleModalView from "admin/user/team_role_modal_view";
 import ExperienceModalView from "admin/user/experience_modal_view";
 import TemplateHelpers from "libs/template_helpers";
@@ -44,6 +45,7 @@ type State = {
   selectedUserIds: Array<string>,
   isExperienceModalVisible: boolean,
   isTeamRoleModalVisible: boolean,
+  isInvitePopoverVisible: boolean,
   activationFilter: Array<"true" | "false">,
   searchQuery: string,
 };
@@ -63,6 +65,7 @@ class UserListView extends React.PureComponent<Props, State> {
     selectedUserIds: [],
     isExperienceModalVisible: false,
     isTeamRoleModalVisible: false,
+    isInvitePopoverVisible: false,
     activationFilter: ["true"],
     searchQuery: "",
   };
@@ -168,6 +171,70 @@ class UserListView extends React.PureComponent<Props, State> {
     }
   };
 
+  renderNewUsersAlert() {
+    const now = moment();
+    const newInactiveUsers = this.state.users.filter(
+      user => !user.isActive && moment.duration(now.diff(user.created)).asDays() <= 14,
+    );
+
+    const newInactiveUsersHeader = (
+      <React.Fragment>
+        There are new inactive users{" "}
+        <Tooltip
+          title="The displayed users are inactive and were created in the past 14 days."
+          placement="right"
+        >
+          <Icon type="info-circle" />
+        </Tooltip>
+      </React.Fragment>
+    );
+    const newInactiveUsersList = (
+      <React.Fragment>
+        {newInactiveUsers.map(user => (
+          <Row key={user.id} gutter={16}>
+            <Col span={6}>{`${user.firstName} ${user.lastName} (${user.email}) `}</Col>
+            <Col span={4}>
+              <a href="#" onClick={() => this.activateUser(user)}>
+                <Icon type="user-add" />Activate User
+              </a>
+            </Col>
+          </Row>
+        ))}
+      </React.Fragment>
+    );
+
+    return newInactiveUsers.length ? (
+      <Alert
+        message={newInactiveUsersHeader}
+        description={newInactiveUsersList}
+        type="info"
+        iconType="user"
+        showIcon
+        style={{ marginTop: 20 }}
+      />
+    ) : null;
+  }
+
+  renderPlaceholder() {
+    const noUsersMessage = (
+      <React.Fragment>
+        {"You can "}
+        <a onClick={() => this.setState({ isInvitePopoverVisible: true })}>invite more users</a>
+        {" to join your organization. After the users joined, you need to activate them manually."}
+      </React.Fragment>
+    );
+
+    return this.state.isLoading ? null : (
+      <Alert
+        message="Invite more users"
+        description={noUsersMessage}
+        type="info"
+        showIcon
+        style={{ marginTop: 20 }}
+      />
+    );
+  }
+
   render() {
     const hasRowsSelected = this.state.selectedUserIds.length > 0;
     const rowSelection = {
@@ -181,11 +248,12 @@ class UserListView extends React.PureComponent<Props, State> {
 
     const activationFilterWarning = this.state.activationFilter.includes("true") ? (
       <Tag closable onClose={this.handleDismissActivationFilter} color="blue">
-        Show Active User Only
+        Show Active Users Only
       </Tag>
     ) : null;
 
     const marginRight = { marginRight: 20 };
+    const noOtherUsers = this.state.users.length < 2;
 
     return (
       <div className="container test-UserListView">
@@ -228,7 +296,13 @@ class UserListView extends React.PureComponent<Props, State> {
             Grant Admin Rights
           </Button>
         ) : null}
-        <InviteUsersPopover organizationName={this.props.activeUser.organization}>
+        <InviteUsersPopover
+          organizationName={this.props.activeUser.organization}
+          visible={this.state.isInvitePopoverVisible}
+          handleVisibleChange={visible => {
+            this.setState({ isInvitePopoverVisible: visible });
+          }}
+        >
           <Button icon="user-add" style={marginRight}>
             Invite Users
           </Button>
@@ -240,6 +314,9 @@ class UserListView extends React.PureComponent<Props, State> {
           onChange={this.handleSearch}
           value={this.state.searchQuery}
         />
+
+        {noOtherUsers ? this.renderPlaceholder() : null}
+        {this.renderNewUsersAlert()}
 
         <Spin size="large" spinning={this.state.isLoading}>
           <Table

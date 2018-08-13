@@ -17,13 +17,13 @@ class ScriptController @Inject()(val messagesApi: MessagesApi) extends Controlle
   val scriptPublicReads =
     ((__ \ 'name).read[String](minLength[String](2) or maxLength[String](50)) and
       (__ \ 'gist).read[String] and
-      (__ \ 'owner).read[String] (ObjectId.stringObjectIdReads("owner"))) (ScriptSQL.fromForm _)
+      (__ \ 'owner).read[String] (ObjectId.stringObjectIdReads("owner"))) (Script.fromForm _)
 
   def create = SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(scriptPublicReads) { script =>
       for {
-        _ <- request.identity.isAdmin ?~> Messages("notAllowed")
-        _ <- ScriptSQLDAO.insertOne(script)
+        _ <- bool2Fox(request.identity.isAdmin) ?~> Messages("notAllowed")
+        _ <- ScriptDAO.insertOne(script)
         js <- script.publicWrites
       } yield {
         Ok(js)
@@ -34,7 +34,7 @@ class ScriptController @Inject()(val messagesApi: MessagesApi) extends Controlle
   def get(scriptId: String) = SecuredAction.async { implicit request =>
     for {
       scriptIdValidated <- ObjectId.parse(scriptId)
-      script <- ScriptSQLDAO.findOne(scriptIdValidated) ?~> Messages("script.notFound")
+      script <- ScriptDAO.findOne(scriptIdValidated) ?~> Messages("script.notFound")
       js <- script.publicWrites
     } yield {
       Ok(js)
@@ -43,7 +43,7 @@ class ScriptController @Inject()(val messagesApi: MessagesApi) extends Controlle
 
   def list = SecuredAction.async { implicit request =>
     for {
-      scripts <- ScriptSQLDAO.findAll
+      scripts <- ScriptDAO.findAll
       js <- Fox.serialCombined(scripts)(s => s.publicWrites)
     } yield {
       Ok(Json.toJson(js))
@@ -54,10 +54,10 @@ class ScriptController @Inject()(val messagesApi: MessagesApi) extends Controlle
     withJsonBodyUsing(scriptPublicReads) { scriptFromForm =>
       for {
         scriptIdValidated <- ObjectId.parse(scriptId)
-        oldScript <- ScriptSQLDAO.findOne(scriptIdValidated) ?~> Messages("script.notFound")
-        _ <- (oldScript._owner == request.identity._id) ?~> Messages("script.notOwner")
+        oldScript <- ScriptDAO.findOne(scriptIdValidated) ?~> Messages("script.notFound")
+        _ <- bool2Fox(oldScript._owner == request.identity._id) ?~> Messages("script.notOwner")
         updatedScript = scriptFromForm.copy(_id = oldScript._id)
-        _ <- ScriptSQLDAO.updateOne(updatedScript)
+        _ <- ScriptDAO.updateOne(updatedScript)
         js <- updatedScript.publicWrites
       } yield {
         Ok(js)
@@ -68,10 +68,10 @@ class ScriptController @Inject()(val messagesApi: MessagesApi) extends Controlle
   def delete(scriptId: String) = SecuredAction.async { implicit request =>
     for {
       scriptIdValidated <- ObjectId.parse(scriptId)
-      oldScript <- ScriptSQLDAO.findOne(scriptIdValidated) ?~> Messages("script.notFound")
-      _ <- (oldScript._owner == request.identity._id) ?~> Messages("script.notOwner")
-      _ <- ScriptSQLDAO.deleteOne(scriptIdValidated) ?~> Messages("script.removalFailed")
-      _ <- TaskSQLDAO.removeScriptFromAllTasks(scriptIdValidated) ?~> Messages("script.removalFailed")
+      oldScript <- ScriptDAO.findOne(scriptIdValidated) ?~> Messages("script.notFound")
+      _ <- bool2Fox(oldScript._owner == request.identity._id) ?~> Messages("script.notOwner")
+      _ <- ScriptDAO.deleteOne(scriptIdValidated) ?~> Messages("script.removalFailed")
+      _ <- TaskDAO.removeScriptFromAllTasks(scriptIdValidated) ?~> Messages("script.removalFailed")
     } yield {
       Ok
     }

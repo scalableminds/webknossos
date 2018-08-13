@@ -16,6 +16,7 @@ import FormattedDate from "components/formatted_date";
 const { Column } = Table;
 
 const typeHint: DatasetType[] = [];
+const useLruRank = false;
 
 type Props = {
   datasets: Array<DatasetType>,
@@ -33,7 +34,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
     super();
     this.state = {
       sortedInfo: {
-        columnKey: "created",
+        columnKey: useLruRank ? "" : "created",
         order: "descend",
       },
       prevSearchQuery: "",
@@ -72,20 +73,35 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
     );
 
     const { sortedInfo } = this.state;
+    const dataSourceSortedByRank = useLruRank
+      ? _.sortBy(filteredDataSource, ["lastUsedByUser", "created"]).reverse()
+      : filteredDataSource;
+
+    // Create a map from dataset to its rank
+    const datasetToRankMap: Map<DatasetType, number> = new Map(
+      dataSourceSortedByRank.map((dataset, rank) => [dataset, rank]),
+    );
+
     const sortedDataSource =
       // Sort using the dice coefficient if the table is not sorted otherwise
       // and if the query is longer then 3 characters to avoid sorting *all* datasets
       this.props.searchQuery.length > 3 && sortedInfo.columnKey == null
         ? _.chain(filteredDataSource)
-            .map(row => ({
-              row,
-              diceCoefficient: dice(row.name, this.props.searchQuery),
-            }))
-            .sortBy("diceCoefficient")
-            .map(({ row }) => row)
+            .map(dataset => {
+              const diceCoefficient = dice(dataset.name, this.props.searchQuery);
+              const rank = useLruRank ? datasetToRankMap.get(dataset) || 0 : 0;
+              const rankCoefficient = 1 - rank / filteredDataSource.length;
+              const coefficient = (diceCoefficient + rankCoefficient) / 2;
+              return {
+                dataset,
+                coefficient,
+              };
+            })
+            .sortBy("coefficient")
+            .map(({ dataset }) => dataset)
             .reverse()
             .value()
-        : filteredDataSource;
+        : dataSourceSortedByRank;
 
     return (
       <div className="TestAdvancedDatasetView">

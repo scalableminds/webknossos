@@ -20,6 +20,8 @@ import {
   deleteTreeAction,
   setNodeRadiusAction,
   setTreeNameAction,
+  setActiveTreeAction,
+  setTreeColorIndexAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   findTreeByNodeId,
@@ -27,7 +29,6 @@ import {
   getActiveNode,
   getActiveTree,
   getTree,
-  getSkeletonTracing,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getLayerBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import { setActiveCellAction, setToolAction } from "oxalis/model/actions/volumetracing_actions";
@@ -39,6 +40,8 @@ import type {
   DatasetConfigurationType,
   TreeMapType,
   TracingType,
+  SkeletonTracingType,
+  VolumeTracingType,
   TracingTypeTracingType,
   MappingType,
 } from "oxalis/store";
@@ -56,7 +59,7 @@ import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import dimensions from "oxalis/model/dimensions";
 import { requestTask, finishAnnotation, doWithToken } from "admin/admin_rest_api";
-import { discardSaveQueueAction } from "oxalis/model/actions/save_actions";
+import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import messages from "messages";
 import type { ToastStyleType } from "libs/toast";
 
@@ -66,16 +69,18 @@ function assertExists(value: any, message: string) {
   }
 }
 
-function assertSkeleton(tracing: TracingType) {
-  if (tracing.type !== "skeleton") {
+function assertSkeleton(tracing: TracingType): SkeletonTracingType {
+  if (tracing.skeleton == null) {
     throw new Error("This api function should only be called in a skeleton tracing.");
   }
+  return tracing.skeleton;
 }
 
-function assertVolume(tracing: TracingType) {
-  if (tracing.type !== "volume") {
+function assertVolume(tracing: TracingType): VolumeTracingType {
+  if (tracing.volume == null) {
     throw new Error("This api function should only be called in a volume tracing.");
   }
+  return tracing.volume;
 }
 /**
  * All tracing related API methods. This is the newest version of the API (version 3).
@@ -102,8 +107,7 @@ class TracingApi {
    * Returns the id of the current active node.
    */
   getActiveNodeId(): ?number {
-    const tracing = Store.getState().tracing;
-    assertSkeleton(tracing);
+    const tracing = assertSkeleton(Store.getState().tracing);
     return getActiveNode(tracing)
       .map(node => node.id)
       .getOrElse(null);
@@ -113,8 +117,7 @@ class TracingApi {
    * Returns the id of the current active tree.
    */
   getActiveTreeId(): ?number {
-    const tracing = Store.getState().tracing;
-    assertSkeleton(tracing);
+    const tracing = assertSkeleton(Store.getState().tracing);
     return getActiveTree(tracing)
       .map(tree => tree.treeId)
       .getOrElse(null);
@@ -133,25 +136,16 @@ class TracingApi {
    * Returns all nodes belonging to a tracing.
    */
   getAllNodes(): Array<NodeType> {
-    const tracing = Store.getState().tracing;
-    assertSkeleton(tracing);
-    return getSkeletonTracing(tracing)
-      .map(skeletonTracing => {
-        const { trees } = skeletonTracing;
-        return _.flatMap(trees, tree => Array.from(tree.nodes.values()));
-      })
-      .getOrElse([]);
+    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    return _.flatMap(skeletonTracing.trees, tree => Array.from(tree.nodes.values()));
   }
 
   /**
    * Returns all trees belonging to a tracing.
    */
   getAllTrees(): TreeMapType {
-    const tracing = Store.getState().tracing;
-    assertSkeleton(tracing);
-    return getSkeletonTracing(tracing)
-      .map(skeletonTracing => skeletonTracing.trees)
-      .getOrElse({});
+    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    return skeletonTracing.trees;
   }
 
   /**
@@ -175,22 +169,20 @@ class TracingApi {
    * api.tracing.setCommentForNode("This is a branch point", activeNodeId);
    */
   setCommentForNode(commentText: string, nodeId: number, treeId?: number): void {
-    const tracing = Store.getState().tracing;
-    assertSkeleton(tracing);
+    const skeletonTracing = assertSkeleton(Store.getState().tracing);
     assertExists(commentText, "Comment text is missing.");
-    getSkeletonTracing(tracing).map(skeletonTracing => {
-      // Convert nodeId to node
-      if (_.isNumber(nodeId)) {
-        const tree =
-          treeId != null
-            ? skeletonTracing.trees[treeId]
-            : findTreeByNodeId(skeletonTracing.trees, nodeId).get();
-        assertExists(tree, `Couldn't find node ${nodeId}.`);
-        Store.dispatch(createCommentAction(commentText, nodeId, tree.treeId));
-      } else {
-        throw new Error("Node id is missing.");
-      }
-    });
+
+    // Convert nodeId to node
+    if (_.isNumber(nodeId)) {
+      const tree =
+        treeId != null
+          ? skeletonTracing.trees[treeId]
+          : findTreeByNodeId(skeletonTracing.trees, nodeId).get();
+      assertExists(tree, `Couldn't find node ${nodeId}.`);
+      Store.dispatch(createCommentAction(commentText, nodeId, tree.treeId));
+    } else {
+      throw new Error("Node id is missing.");
+    }
   }
 
   /**
@@ -204,26 +196,22 @@ class TracingApi {
    * const comment = api.tracing.getCommentForNode(23, api.getActiveTreeid());
    */
   getCommentForNode(nodeId: number, treeId?: number): ?string {
-    const tracing = Store.getState().tracing;
-    assertSkeleton(tracing);
+    const skeletonTracing = assertSkeleton(Store.getState().tracing);
     assertExists(nodeId, "Node id is missing.");
-    return getSkeletonTracing(tracing)
-      .map(skeletonTracing => {
-        // Convert treeId to tree
-        let tree = null;
-        if (treeId != null) {
-          tree = skeletonTracing.trees[treeId];
-          assertExists(tree, `Couldn't find tree ${treeId}.`);
-          assertExists(tree.nodes.get(nodeId), `Couldn't find node ${nodeId} in tree ${treeId}.`);
-        } else {
-          tree = _.values(skeletonTracing.trees).find(__ => __.nodes.has(nodeId));
-          assertExists(tree, `Couldn't find node ${nodeId}.`);
-        }
-        // $FlowFixMe TODO remove once https://github.com/facebook/flow/issues/34 is closed
-        const comment = tree.comments.find(__ => __.nodeId === nodeId);
-        return comment != null ? comment.content : null;
-      })
-      .getOrElse(null);
+
+    // Convert treeId to tree
+    let tree = null;
+    if (treeId != null) {
+      tree = skeletonTracing.trees[treeId];
+      assertExists(tree, `Couldn't find tree ${treeId}.`);
+      assertExists(tree.nodes.get(nodeId), `Couldn't find node ${nodeId} in tree ${treeId}.`);
+    } else {
+      tree = _.values(skeletonTracing.trees).find(__ => __.nodes.has(nodeId));
+      assertExists(tree, `Couldn't find node ${nodeId}.`);
+    }
+    // $FlowFixMe TODO remove once https://github.com/facebook/flow/issues/34 is closed
+    const comment = tree.comments.find(__ => __.nodeId === nodeId);
+    return comment != null ? comment.content : null;
   }
 
   /**
@@ -233,14 +221,37 @@ class TracingApi {
    * api.tracing.setTreeName("Special tree", 1);
    */
   setTreeName(name: string, treeId: ?number) {
+    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+
+    if (treeId == null) {
+      treeId = skeletonTracing.activeTreeId;
+    }
+    Store.dispatch(setTreeNameAction(name, treeId));
+  }
+
+  /**
+   * Makes the specified tree active. Within the tree, the node with the highest ID will be activated.
+   *
+   * @example
+   * api.tracing.setActiveTree(3);
+   */
+  setActiveTree(treeId: number) {
     const tracing = Store.getState().tracing;
     assertSkeleton(tracing);
-    getSkeletonTracing(tracing).map(skeletonTracing => {
-      if (treeId == null) {
-        treeId = skeletonTracing.activeTreeId;
-      }
-      Store.dispatch(setTreeNameAction(name, treeId));
-    });
+    Store.dispatch(setActiveTreeAction(treeId));
+  }
+
+  /**
+   * Changes the color of the referenced tree. Internally, a pre-defined array of colors is used which is
+   * why this function uses a colorIndex (between 0 and 500) instead of a proper color.
+   *
+   * @example
+   * api.tracing.setTreeColorIndex(3, 10);
+   */
+  setTreeColorIndex(treeId: ?number, colorIndex: number) {
+    const tracing = Store.getState().tracing;
+    assertSkeleton(tracing);
+    Store.dispatch(setTreeColorIndexAction(treeId, colorIndex));
   }
 
   /**
@@ -250,8 +261,7 @@ class TracingApi {
    * api.tracing.getTreeName();
    */
   getTreeName(treeId?: number) {
-    const tracing = Store.getState().tracing;
-    assertSkeleton(tracing);
+    const tracing = assertSkeleton(Store.getState().tracing);
     return getTree(tracing, treeId)
       .map(activeTree => activeTree.name)
       .get();
@@ -337,9 +347,9 @@ class TracingApi {
     Store.dispatch(restartSagaAction());
     UrlManager.reset();
     await Model.fetch(newTracingType, newAnnotationId, newControlMode, false);
-    Store.dispatch(discardSaveQueueAction());
+    Store.dispatch(discardSaveQueuesAction());
     Store.dispatch(wkReadyAction());
-    UrlManager.updateUnthrottled(true);
+    UrlManager.updateUnthrottled();
   }
 
   //  SKELETONTRACING API
@@ -352,7 +362,8 @@ class TracingApi {
    * api.tracing.setNodeRadius(1)
    */
   setNodeRadius(delta: number, nodeId?: number, treeId?: number): void {
-    getNodeAndTree(Store.getState().tracing, nodeId, treeId).map(([, node]) =>
+    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    getNodeAndTree(skeletonTracing, nodeId, treeId).map(([, node]) =>
       Store.dispatch(setNodeRadiusAction(node.radius * Math.pow(1.05, delta), nodeId, treeId)),
     );
   }
@@ -364,7 +375,8 @@ class TracingApi {
    * api.tracing.centerNode()
    */
   centerNode = (nodeId?: number): void => {
-    getNodeAndTree(Store.getState().tracing, nodeId).map(([, node]) =>
+    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    getNodeAndTree(skeletonTracing, nodeId).map(([, node]) =>
       Store.dispatch(setPositionAction(node.position)),
     );
   };
@@ -479,9 +491,8 @@ class TracingApi {
    * _Volume tracing only!_
    */
   getActiveCellId(): ?number {
-    const tracing = Store.getState().tracing;
-    assertVolume(tracing);
-    return Utils.toNullable(getActiveCellId(tracing));
+    const tracing = assertVolume(Store.getState().tracing);
+    return getActiveCellId(tracing);
   }
 
   /**
@@ -501,9 +512,8 @@ class TracingApi {
    * _Volume tracing only!_
    */
   getVolumeTool(): ?VolumeToolType {
-    const tracing = Store.getState().tracing;
-    assertVolume(tracing);
-    return Utils.toNullable(getVolumeTool(tracing));
+    const tracing = assertVolume(Store.getState().tracing);
+    return getVolumeTool(tracing);
   }
 
   /**
@@ -542,10 +552,9 @@ class DataApi {
 
   /**
    * Returns the name of the volume tracing layer.
-   * _Volume tracing only!_
    */
   getVolumeTracingLayerName(): string {
-    assertVolume(Store.getState().tracing);
+    // TODO: Rename method to getSegmentationLayerName() and increase api version
     const segmentationLayer = this.model.getSegmentationLayer();
     assertExists(segmentationLayer, "Segmentation layer not found!");
     return segmentationLayer.name;
@@ -562,7 +571,11 @@ class DataApi {
    *
    * api.setMapping("segmentation", mapping);
    */
-  setMapping(layerName: string, mapping: MappingType) {
+  setMapping(
+    layerName: string,
+    mapping: MappingType,
+    options?: { colors?: Array<number>, hideUnmappedIds?: boolean } = {},
+  ) {
     if (!Model.isMappingSupported) {
       throw new Error(messages["mapping.too_few_textures"]);
     }
@@ -573,7 +586,7 @@ class DataApi {
     if (layerName !== segmentationLayerName) {
       throw new Error(messages["mapping.unsupported_layer"]);
     }
-    Store.dispatch(setMappingAction(_.clone(mapping)));
+    Store.dispatch(setMappingAction(_.clone(mapping), options.colors, options.hideUnmappedIds));
   }
 
   /**
@@ -738,6 +751,7 @@ class UserApi {
     - sortTreesByName
     - sortCommentsAsc
     - sphericalCapRadius
+    - hideTreeRemovalWarning
   *
   * @example
   * const keyboardDelay = api.user.getConfiguration("keyboardDelay");
@@ -751,7 +765,7 @@ class UserApi {
    * @param key - Same keys as for getConfiguration()
    *
    * @example
-   * api.data.setConfiguration("keyboardDelay", 20);
+   * api.user.setConfiguration("keyboardDelay", 20);
    */
   setConfiguration(key: $Keys<UserConfigurationType>, value) {
     Store.dispatch(updateUserSettingAction(key, value));

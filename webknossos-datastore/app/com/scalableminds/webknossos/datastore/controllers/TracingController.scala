@@ -37,7 +37,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
       AllowRemoteOrigin {
         val tracing = request.body
         tracingService.save(tracing, None, 0).map { newId =>
-          Ok(Json.toJson(TracingReference(newId, tracingService.tracingType)))
+          Ok(Json.toJson(newId))
         }
       }
   }
@@ -45,12 +45,10 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
   def saveMultiple = TokenSecuredAction(UserAccessRequest.webknossos).async(validateProto[Ts]) {
     implicit request => {
       AllowRemoteOrigin {
-        val references = Fox.sequence(request.body.map { tracing =>
-          tracingService.save(tracing, None, 0, toCache = false).map { newId =>
-            TracingReference(newId, TracingType.skeleton)
-          }
+        val savedIds = Fox.sequence(request.body.map { tracing =>
+          tracingService.save(tracing, None, 0, toCache = false)
         })
-        references.map(x => Ok(Json.toJson(x)))
+        savedIds.map(id => Ok(Json.toJson(id)))
       }
     }
   }

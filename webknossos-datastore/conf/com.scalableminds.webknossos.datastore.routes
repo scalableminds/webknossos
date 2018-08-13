@@ -32,6 +32,7 @@ POST        /tracings/volume/:tracingId/initialData                             
 GET         /tracings/volume/:tracingId                                                        @com.scalableminds.webknossos.datastore.controllers.VolumeTracingController.get(tracingId: String, version: Option[Long])
 POST        /tracings/volume/:tracingId/update                                                 @com.scalableminds.webknossos.datastore.controllers.VolumeTracingController.update(tracingId: String)
 GET         /tracings/volume/:tracingId/data                                                   @com.scalableminds.webknossos.datastore.controllers.VolumeTracingController.getData(tracingId: String, version: Option[Long])
+GET         /tracings/volume/:tracingId/duplicate                                            @com.scalableminds.webknossos.datastore.controllers.VolumeTracingController.duplicate(tracingId: String, version: Option[Long])
 
 # Skeleton tracings
 POST        /tracings/skeleton/save                                                            @com.scalableminds.webknossos.datastore.controllers.SkeletonTracingController.save
@@ -52,6 +53,7 @@ GET         /tracings/skeleton/:tracingId/duplicate                             
 GET         /triggers/checkInbox                                                               @com.scalableminds.webknossos.datastore.controllers.DataSourceController.triggerInboxCheck()
 GET         /triggers/checkInboxBlocking                                                       @com.scalableminds.webknossos.datastore.controllers.DataSourceController.triggerInboxCheckBlocking()
 GET         /triggers/newOrganizationFolder                                                    @com.scalableminds.webknossos.datastore.controllers.DataSourceController.createOrganizationDirectory(organizationName: String)
+GET         /triggers/clearCache/:dataSetName                                                  @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.clearCache(dataSetName: String)
 
 # Debugging
 

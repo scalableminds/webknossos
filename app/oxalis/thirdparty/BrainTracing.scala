@@ -2,7 +2,7 @@ package oxalis.thirdparty
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import models.user.UserSQL
+import models.user.User
 import play.api.Play
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
@@ -26,13 +26,13 @@ object BrainTracing extends LazyLogging with FoxImplicits {
   lazy val Mailer =
     Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
 
-  def registerIfNeeded(user: UserSQL): Fox[String] =
+  def registerIfNeeded(user: User): Fox[String] =
     for {
       organization <- user.organization
       result <- (if (organization.name == "Connectomics department" && isActive) register(user).toFox else Fox.successful("braintracing.none"))
     } yield result
 
-  private def register(user: UserSQL): Future[String] = {
+  private def register(user: User): Future[String] = {
     val result = Promise[String]()
     val brainTracingRequest = WS
       .url(CREATE_URL)

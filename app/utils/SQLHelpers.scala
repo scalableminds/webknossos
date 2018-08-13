@@ -8,7 +8,7 @@ import com.newrelic.api.agent.NewRelic
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import models.user.UserSQL
+import models.user.User
 import net.liftweb.common.Full
 import oxalis.security.SharingTokenContainer
 import play.api.i18n.Messages
@@ -170,7 +170,7 @@ trait SecuredSQLDAO extends SimpleSQLDAO {
 
   def userIdFromCtx(implicit ctx: DBAccessContext): Fox[ObjectId] = {
     ctx.data match {
-      case Some(user: UserSQL) => Fox.successful(user._id)
+      case Some(user: User) => Fox.successful(user._id)
       case _ => Fox.failure("Access denied.")
     }
   }

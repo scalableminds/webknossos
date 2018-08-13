@@ -5,7 +5,7 @@ import java.util.Calendar
 
 import javax.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.user.time.TimeSpanSQLDAO
+import models.user.time.TimeSpanDAO
 import models.user._
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
 import play.api.i18n.{Messages, MessagesApi}
@@ -19,7 +19,7 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
   //all users with working hours > 0
   def getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]) = SecuredAction.async { implicit request =>
     for {
-      users <- UserSQLDAO.findAll
+      users <- UserDAO.findAll
       filteredUsers <- Fox.filter(users)(user => request.identity.isTeamManagerOrAdminOf(user)) //rather Admin than TeamManager
       js <- loggedTimeForUserListByMonth(filteredUsers, year, month, startDay, endDay)
     } yield {
@@ -51,7 +51,7 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
 
   //helper methods
 
-  def loggedTimeForUserListByMonth(users: List[UserSQL], year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]) (implicit request: SecuredRequest[AnyContent]): Fox[JsValue] =  {
+  def loggedTimeForUserListByMonth(users: List[User], year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])(implicit request: SecuredRequest[AnyContent]): Fox[JsValue] =  {
     lazy val startDate = Calendar.getInstance()
     lazy val endDate = Calendar.getInstance()
 
@@ -76,7 +76,7 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     Fox.combined(futureJsObjects).map(jsObjectList => Json.toJson(jsObjectList))
   }
 
-  def loggedTimeForUserListByTimestamp(user: UserSQL, startDate: Long, endDate: Long) (implicit request: SecuredRequest[AnyContent]): Fox[JsValue] =  {
+  def loggedTimeForUserListByTimestamp(user: User, startDate: Long, endDate: Long)(implicit request: SecuredRequest[AnyContent]): Fox[JsValue] =  {
     lazy val sDate = Calendar.getInstance()
     lazy val eDate = Calendar.getInstance()
 
@@ -86,10 +86,10 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     getUserHours(user, sDate, eDate)
   }
 
-  def getUserHours(user: UserSQL, startDate: Calendar, endDate: Calendar)(implicit request: SecuredRequest[AnyContent]): Fox[JsObject] = {
+  def getUserHours(user: User, startDate: Calendar, endDate: Calendar)(implicit request: SecuredRequest[AnyContent]): Fox[JsObject] = {
     for {
       userJs <- user.compactWrites
-      timeJs <- TimeSpanSQLDAO.findAllByUserWithTask(user._id,  Some(startDate.getTimeInMillis), Some(endDate.getTimeInMillis))
+      timeJs <- TimeSpanDAO.findAllByUserWithTask(user._id,  Some(startDate.getTimeInMillis), Some(endDate.getTimeInMillis))
     } yield {
       Json.obj(
         "user" -> userJs,

@@ -20,13 +20,15 @@ object AnnotationSettings {
 
   val SKELETON_MODES = List(ORTHOGONAL, OBLIQUE, FLIGHT)
   val VOLUME_MODES = List(VOLUME)
-  val ALL_MODES = (SKELETON_MODES ::: VOLUME_MODES).toSet
+  val ALL_MODES = SKELETON_MODES ::: VOLUME_MODES
 
   def defaultFor(tracingType: TracingType.Value) = tracingType match {
     case TracingType.skeleton =>
       AnnotationSettings(allowedModes = SKELETON_MODES)
     case TracingType.volume =>
       AnnotationSettings(allowedModes = VOLUME_MODES)
+    case TracingType.hybrid =>
+      AnnotationSettings(allowedModes = ALL_MODES)
   }
 
   implicit val annotationSettingsWrites = Json.writes[AnnotationSettings]

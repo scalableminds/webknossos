@@ -18,22 +18,28 @@ trait Cube {
   def cutOutBucket(dataLayer: DataLayer, bucket: BucketPosition): Box[Array[Byte]]
 
   def startAccess(): Unit = {
-    accessCounter.incrementAndGet()
+    this.synchronized {
+      accessCounter.incrementAndGet()
+    }
   }
 
   def finishAccess(): Unit = {
     // Check if we are the last one to use this cube, if that is the case and the cube needs to be removed -> remove it
-    val currentUsers = accessCounter.decrementAndGet()
-    if(currentUsers == 0 && scheduledForRemoval.get()) {
-      onFinalize()
+    this.synchronized {
+      val currentUsers = accessCounter.decrementAndGet()
+      if (currentUsers == 0 && scheduledForRemoval.get()) {
+        onFinalize()
+      }
     }
   }
 
   def scheduleForRemoval(): Unit = {
-    scheduledForRemoval.set(true)
-    // Check if we can directly remove this cube (only possible if it is currently unused)
-    if(accessCounter.get() == 0) {
-      onFinalize()
+    this.synchronized {
+      scheduledForRemoval.set(true)
+      // Check if we can directly remove this cube (only possible if it is currently unused)
+      if(accessCounter.get() == 0) {
+        onFinalize()
+      }
     }
   }
 

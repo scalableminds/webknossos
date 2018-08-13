@@ -8,7 +8,7 @@ import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO}
 
-case class AnalyticsEntrySQL(
+case class AnalyticsEntry(
                               _id: ObjectId,
                               _user: Option[ObjectId],
                               namespace: String,
@@ -17,14 +17,14 @@ case class AnalyticsEntrySQL(
                               isDeleted: Boolean = false
                              )
 
-object AnalyticsSQLDAO extends SQLDAO[AnalyticsEntrySQL, AnalyticsRow, Analytics] {
+object AnalyticsSQL extends SQLDAO[AnalyticsEntry, AnalyticsRow, Analytics] {
   val collection = Analytics
 
   def idColumn(x: Analytics): Rep[String] = x._Id
   def isDeletedColumn(x: Analytics): Rep[Boolean] = x.isdeleted
 
-  def parse(r: AnalyticsRow): Fox[AnalyticsEntrySQL] =
-    Fox.successful(AnalyticsEntrySQL(
+  def parse(r: AnalyticsRow): Fox[AnalyticsEntry] =
+    Fox.successful(AnalyticsEntry(
         ObjectId(r._Id),
         r._User.map(ObjectId(_)),
         r.namespace,
@@ -33,7 +33,7 @@ object AnalyticsSQLDAO extends SQLDAO[AnalyticsEntrySQL, AnalyticsRow, Analytics
         r.isdeleted
       ))
 
-  def insertOne(a: AnalyticsEntrySQL): Fox[Unit] = {
+  def insertOne(a: AnalyticsEntry): Fox[Unit] = {
     for {
       _ <- run(sqlu"""insert into webknossos.analytics(_id, _user, namespace, value, created, isDeleted)
                          values(${a._id.toString}, ${a._user.map(_.id)}, ${a.namespace}, #${sanitize(a.value.toString)},

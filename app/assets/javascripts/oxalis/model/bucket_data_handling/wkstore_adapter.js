@@ -111,5 +111,5 @@ export async function sendToStore(batch: Array<DataBucket>): Promise<void> {
     );
     items.push(updateBucket(bucketInfo, Base64.fromByteArray(bucketData)));
   }
-  Store.dispatch(pushSaveQueueAction(items));
+  Store.dispatch(pushSaveQueueAction(items, "volume"));
 }

@@ -2,10 +2,13 @@
 /* eslint-disable jsx-a11y/href-no-hash */
 
 import * as React from "react";
+import Toast from "libs/toast";
+import messages from "messages";
 import { Link } from "react-router-dom";
 import { Dropdown, Menu, Icon } from "antd";
 import type { APIDatasetType } from "admin/api_flow_types";
-import { createExplorational } from "admin/admin_rest_api";
+import { createExplorational, triggerDatasetClearCache } from "admin/admin_rest_api";
+import features from "features";
 
 type Props = {
   dataset: APIDatasetType,
@@ -17,11 +20,16 @@ type State = {};
 export default class DatasetActionView extends React.PureComponent<Props, State> {
   createTracing = async (
     dataset: APIDatasetType,
-    typ: "volume" | "skeleton",
+    typ: "skeleton" | "volume" | "hybrid",
     withFallback: boolean,
   ) => {
     const annotation = await createExplorational(dataset.name, typ, withFallback);
     window.location.href = `/annotations/${annotation.typ}/${annotation.id}`;
+  };
+
+  clearCache = async (dataset: APIDatasetType) => {
+    await triggerDatasetClearCache(dataset.dataStore.url, dataset.name);
+    Toast.success(messages["dataset.clear_cache_success"]);
   };
 
   render() {
@@ -80,9 +88,14 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
         {dataset.isActive ? (
           <div className="dataset-actions nowrap">
             {this.props.isUserAdmin && dataset.isEditable ? (
-              <Link to={`/datasets/${dataset.name}/edit`} title="Edit Dataset">
-                <Icon type="edit" />Edit
-              </Link>
+              <React.Fragment>
+                <Link to={`/datasets/${dataset.name}/edit`} title="Edit Dataset">
+                  <Icon type="edit" />Edit
+                </Link>
+                <a href="#" onClick={() => this.clearCache(dataset)} title="Reload Dataset">
+                  <Icon type="retweet" />Reload
+                </a>
+              </React.Fragment>
             ) : null}
             <a href={`/datasets/${dataset.name}/view`} title="View Dataset">
               <Icon type="eye-o" />View
@@ -100,6 +113,16 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
               Start Skeleton Tracing
             </a>
             {volumeTracingMenu}
+            {features().hybridTracings ? (
+              <a
+                href="#"
+                onClick={() => this.createTracing(dataset, "hybrid", true)}
+                title="Create Hybrid Tracing"
+              >
+                <Icon type="swap" />
+                Start Hybrid Tracing
+              </a>
+            ) : null}
           </div>
         ) : null}
       </div>

@@ -65,6 +65,8 @@ function FeatureCard({ icon, header, children }) {
 
 export class InviteUsersPopover extends React.Component<{
   organizationName: string,
+  visible?: boolean,
+  handleVisibleChange?: Function,
   children: React.Node,
 }> {
   getRegistrationHotLink(): string {
@@ -94,7 +96,13 @@ export class InviteUsersPopover extends React.Component<{
 
   render() {
     return (
-      <Popover trigger="click" title="Invite Users" content={this.getContent()}>
+      <Popover
+        trigger="click"
+        visible={this.props.visible}
+        onVisibleChange={this.props.handleVisibleChange}
+        title="Invite Users"
+        content={this.getContent()}
+      >
         {this.props.children}
       </Popover>
     );

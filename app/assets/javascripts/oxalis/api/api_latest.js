@@ -290,7 +290,7 @@ class TracingApi {
    *   api.tracing.getTreeGroups.find(({ name }) => name === "My Tree Group").id,
    * );
    */
-  setTreeGroup(treeId: number, groupId?: number) {
+  setTreeGroup(treeId?: number, groupId?: number) {
     const { tracing } = Store.getState();
     const skeletonTracing = assertSkeleton(tracing);
     const treeGroupMap = getTreeGroupsMap(skeletonTracing);

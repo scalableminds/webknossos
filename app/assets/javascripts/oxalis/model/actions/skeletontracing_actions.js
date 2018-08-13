@@ -94,7 +94,7 @@ type CreateCommentActionType = {
 type DeleteCommentActionType = { type: "DELETE_COMMENT", nodeId: ?number, treeId?: number };
 type SetTracingActionType = { type: "SET_TRACING", tracing: SkeletonTracingType };
 type SetTreeGroupsActionType = { type: "SET_TREE_GROUPS", treeGroups: Array<TreeGroupType> };
-type SetTreeGroupActionType = { type: "SET_TREE_GROUP", groupId: ?number, treeId: number };
+type SetTreeGroupActionType = { type: "SET_TREE_GROUP", groupId: ?number, treeId?: number };
 type NoActionType = { type: "NONE" };
 
 export type SkeletonTracingActionType =
@@ -374,7 +374,7 @@ export const setTreeGroupsAction = (treeGroups: Array<TreeGroupType>): SetTreeGr
   treeGroups,
 });
 
-export const setTreeGroupAction = (groupId: ?number, treeId: number): SetTreeGroupActionType => ({
+export const setTreeGroupAction = (groupId: ?number, treeId?: number): SetTreeGroupActionType => ({
   type: "SET_TREE_GROUP",
   groupId,
   treeId,

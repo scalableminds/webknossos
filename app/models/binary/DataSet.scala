@@ -73,6 +73,19 @@ case class DataSet(
   def urlEncodedName: String =
     UriEncoding.encodePathSegment(name, "UTF-8")
 
+  def lastUsedByUser(userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Long] = {
+    userOpt match {
+      case Some(user) =>
+        (for {
+          lastUsedTime <- DataSetLastUsedTimesDAO.findForDataSetAndUser(this._id, user._id).futureBox
+        } yield lastUsedTime.toOption.getOrElse(0L)).toFox
+      case _ => Fox.successful(0L)
+    }
+  }
+
+  def lastUsedByUser(user: User)(implicit ctx: DBAccessContext): Fox[Long] =
+    lastUsedByUser(Some(user))
+
   def isEditableBy(userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Boolean] = {
     userOpt match {
       case Some(user) =>
@@ -119,6 +132,7 @@ case class DataSet(
       teamsJs <- Fox.serialCombined(teams)(_.publicWrites)
       logoUrl <- getLogoUrl
       isEditable <- isEditableBy(user)
+      lastUsedByUser <- lastUsedByUser(user)
       dataStoreInfo <- dataStoreInfo
       organization <- organization
       dataSource <- constructDataSource
@@ -134,6 +148,7 @@ case class DataSet(
         "displayName" -> displayName,
         "created" -> created,
         "isEditable" -> isEditable,
+        "lastUsedByUser" -> lastUsedByUser,
         "logoUrl" -> logoUrl)
     }
   }
@@ -458,6 +473,25 @@ object DataSetAllowedTeamsDAO extends SimpleSQLDAO {
                                                                      ${teamId.id})""")
 
     val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)
+    for {
+      _ <- run(composedQuery.transactionally.withTransactionIsolation(Serializable), retryCount = 50, retryIfErrorContains = List(transactionSerializationError))
+    } yield ()
+  }
+}
+
+
+object DataSetLastUsedTimesDAO extends SimpleSQLDAO {
+  def findForDataSetAndUser(dataSetId: ObjectId, userId: ObjectId): Fox[Long] = {
+    for {
+      rList <- run(sql"select lastUsedTime from webknossos.dataSet_lastUsedTimes where _dataSet = ${dataSetId} and _user = ${userId}".as[java.sql.Timestamp])
+      r <- rList.headOption.toFox
+    } yield (r.getTime)
+  }
+
+  def updateForDataSetAndUser(dataSetId: ObjectId, userId: ObjectId): Fox[Unit] = {
+    val clearQuery = sqlu"delete from webknossos.dataSet_lastUsedTimes where _dataSet = ${dataSetId} and _user = ${userId}"
+    val insertQuery = sqlu"insert into webknossos.dataSet_lastUsedTimes(_dataSet, _user, lastUsedTime) values(${dataSetId}, ${userId}, NOW())"
+    val composedQuery = DBIO.sequence(List(clearQuery, insertQuery))
     for {
       _ <- run(composedQuery.transactionally.withTransactionIsolation(Serializable), retryCount = 50, retryIfErrorContains = List(transactionSerializationError))
     } yield ()

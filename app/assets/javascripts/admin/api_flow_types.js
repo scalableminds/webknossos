@@ -76,6 +76,7 @@ export type APIDatasetType = {
   +displayName: string,
   +owningOrganization: string,
   +logoUrl: ?string,
+  +lastUsedByUser: number,
 };
 
 export type APIDataSourceWithMessagesType = {
@@ -119,6 +120,11 @@ export type APITimeIntervalType = {
 };
 export type APIUserLoggedTimeType = {
   loggedTime: Array<APITimeIntervalType>,
+};
+
+export type APIActiveUserType = {
+  email: string,
+  activeTasks: number,
 };
 
 export type APIRestrictionsType = {|

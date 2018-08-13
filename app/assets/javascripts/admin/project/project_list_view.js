@@ -15,6 +15,7 @@ import {
   pauseProject,
   resumeProject,
 } from "admin/admin_rest_api";
+import TransferAllTasksModal from "admin/project/transfer_all_tasks_modal";
 import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
 import type { APIProjectType, APIUserType } from "admin/api_flow_types";
@@ -38,6 +39,8 @@ type State = {
   isLoading: boolean,
   projects: Array<APIProjectType>,
   searchQuery: string,
+  isTransferTasksVisible: boolean,
+  selectedProject: ?APIProjectType,
 };
 
 const persistence: Persistence<State> = new Persistence(
@@ -50,6 +53,8 @@ class ProjectListView extends React.PureComponent<Props, State> {
     isLoading: true,
     projects: [],
     searchQuery: "",
+    isTransferTasksVisible: false,
+    selectedProject: null,
   };
 
   componentWillMount() {
@@ -138,6 +143,18 @@ class ProjectListView extends React.PureComponent<Props, State> {
     });
   };
 
+  showActiveUsersModal = async (project: APIProjectType) => {
+    this.setState({
+      selectedProject: project,
+      isTransferTasksVisible: true,
+    });
+  };
+
+  onTaskTransferComplete = () => {
+    this.setState({ isTransferTasksVisible: false });
+    this.fetchData();
+  };
+
   renderPlaceholder() {
     return this.state.isLoading ? null : (
       <React.Fragment>
@@ -170,7 +187,6 @@ class ProjectListView extends React.PureComponent<Props, State> {
           </div>
           <h3>Projects</h3>
           <div className="clearfix" style={{ margin: "20px 0px" }} />
-
           <Spin spinning={this.state.isLoading} size="large">
             <Table
               dataSource={Utils.filterWithSearchQueryOR(
@@ -283,7 +299,10 @@ class ProjectListView extends React.PureComponent<Props, State> {
                       <Icon type="download" />Download
                     </a>
                     <br />
-
+                    <a onClick={_.partial(this.showActiveUsersModal, project)}>
+                      <Icon type="team" />Show active users
+                    </a>
+                    <br />
                     {project.owner.email === this.props.activeUser.email ? (
                       <a onClick={_.partial(this.deleteProject, project)}>
                         <Icon type="delete" />Delete
@@ -294,6 +313,13 @@ class ProjectListView extends React.PureComponent<Props, State> {
               />
             </Table>
           </Spin>
+          {this.state.isTransferTasksVisible ? (
+            <TransferAllTasksModal
+              project={this.state.selectedProject}
+              onCancel={this.onTaskTransferComplete}
+              onComplete={this.onTaskTransferComplete}
+            />
+          ) : null}
         </div>
       </div>
     );

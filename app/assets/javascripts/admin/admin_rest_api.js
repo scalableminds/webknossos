@@ -33,6 +33,7 @@ import type {
   APIFeatureToggles,
   APIOrganizationType,
   ServerTracingType,
+  APIActiveUserType,
   HybridServerTracingType,
   ServerSkeletonTracingType,
   ServerVolumeTracingType,
@@ -407,6 +408,24 @@ export function transferTask(annotationId: string, userId: string): Promise<APIA
       userId,
     },
   });
+}
+
+export async function transferActiveTasksOfProject(
+  projectName: string,
+  userId: string,
+): Promise<APIAnnotationType> {
+  return Request.sendJSONReceiveJSON(`/api/projects/${projectName}/transferActiveTasks`, {
+    data: {
+      userId,
+    },
+    method: "POST",
+  });
+}
+
+export async function getUsersWithActiveTasks(
+  projectName: string,
+): Promise<Array<APIActiveUserType>> {
+  return Request.receiveJSON(`/api/projects/${projectName}/usersWithActiveTasks`);
 }
 
 // ### Annotations

@@ -156,6 +156,10 @@ const Utils = {
       const valueA = typeof selector === "function" ? selector(a) : a[selector];
       const valueB = typeof selector === "function" ? selector(b) : b[selector];
       if (typeof valueA !== "number" || typeof valueB !== "number") {
+        console.error(
+          "Wrong compare method called (compareBy should only be called for numbers). Selector:",
+          selector,
+        );
         return 0;
       }
       return cheapSort(valueA, valueB);
@@ -175,6 +179,10 @@ const Utils = {
       const valueA = typeof selector === "function" ? selector(a) : a[selector];
       const valueB = typeof selector === "function" ? selector(b) : b[selector];
       if (typeof valueA !== "string" || typeof valueB !== "string") {
+        console.error(
+          "Wrong compare method called (localeCompareBy should only be called for strings). Selector:",
+          selector,
+        );
         return 0;
       }
       // localeCompare is really slow, therefore, we use the naturalSort lib and a cheap sorting otherwise

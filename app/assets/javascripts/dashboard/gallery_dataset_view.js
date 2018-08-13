@@ -75,12 +75,12 @@ class GalleryDatasetView extends React.PureComponent<Props, State> {
       .entries()
       .map(([organization, datasets]) =>
         // Sort each group of datasets
-        [organization, datasets.sort(Utils.localeCompareBy(([]: DatasetType[]), "created", false))],
+        [organization, datasets.sort(Utils.compareBy(([]: DatasetType[]), "created", false))],
       )
       .value()
       .sort(
         // Sort groups by creation date of first dataset
-        Utils.localeCompareBy(
+        Utils.compareBy(
           ([]: DatasetType[]),
           ([_organization, datasets]) => datasets[0].created,
           false,

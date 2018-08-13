@@ -422,7 +422,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Column
           title="Modification Date"
           dataIndex="modified"
-          sorter={Utils.localeCompareBy(typeHint, "modified")}
+          sorter={Utils.compareBy(typeHint, "modified")}
           render={modified => <FormattedDate timestamp={modified} />}
         />
         <Column

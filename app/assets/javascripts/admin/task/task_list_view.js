@@ -244,7 +244,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               dataIndex="created"
               key="created"
               width={150}
-              sorter={Utils.localeCompareBy(typeHint, "created")}
+              sorter={Utils.compareBy(typeHint, "created")}
               render={created => <FormattedDate timestamp={created} />}
             />
             <Column

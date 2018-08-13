@@ -100,12 +100,12 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
                   {
                     required: true,
                     pattern: "^[a-zA-Z0-9_-]*$",
-                    message: "invalide project name, there are no whitespaces allowed",
+                    message: "The project name must not contain whitespace.",
                   },
                   {
                     min: 3,
                     required: true,
-                    message: "project name must be at least 3 characters long",
+                    message: "The project name must be at least 3 characters long.",
                   },
                 ],
               })(<Input autoFocus disabled={isEditMode} />)}

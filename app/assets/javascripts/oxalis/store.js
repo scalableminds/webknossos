@@ -427,6 +427,7 @@ export const defaultState: OxalisState = {
     displayName: "Awesome Test Dataset",
     allowedTeams: [],
     logoUrl: null,
+    lastUsedByUser: 0,
   },
   tracing: {
     ...initialAnnotationInfo,

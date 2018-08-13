@@ -104,6 +104,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
     val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
     for {
       dataSet <- DataSetDAO.findOneByName(dataSetName)(ctx) ?~> Messages("dataSet.notFound", dataSetName)
+      _ <- Fox.runOptional(request.identity)(user => DataSetLastUsedTimesDAO.updateForDataSetAndUser(dataSet._id, user._id))
       js <- dataSet.publicWrites(request.identity)
     } yield {
       Ok(Json.toJson(js))

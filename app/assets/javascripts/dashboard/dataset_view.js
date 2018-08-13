@@ -114,19 +114,6 @@ class DatasetView extends React.PureComponent<Props, State> {
     }
   };
 
-  updateDataset = (newDataset: DatasetType) => {
-    const newDatasets = this.state.datasets.map((dataset: DatasetType) => {
-      if (dataset.name === newDataset.name) {
-        return newDataset;
-      }
-      return dataset;
-    });
-
-    this.setState({
-      datasets: newDatasets,
-    });
-  };
-
   renderPlaceholder() {
     const isUserAdmin = Utils.isUserAdmin(this.props.user);
     const noDatasetsPlaceholder =
@@ -175,7 +162,6 @@ class DatasetView extends React.PureComponent<Props, State> {
       <AdvancedDatasetView
         datasets={this.state.datasets}
         searchQuery={this.state.searchQuery}
-        updateDataset={this.updateDataset}
         isUserAdmin={Utils.isUserAdmin(this.props.user)}
       />
     );

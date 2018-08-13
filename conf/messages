@@ -205,6 +205,7 @@ annotation.update.impossible=This annotation can''t be updated (read only)
 annotation.revert.toOld=Reverting the tracing to a previous version is not possible due to the tracing beeing to old.
 annotation.preferedMode.invalid=Prefered mode is invalid
 annotation.mode.invalid=Invalid annotation mode
+annotation.transferee.noDataSetAccess=Cannot transfer annotation to a user who has no access to the dataset
 
 issue.summary.notSupplied=No summary supplied
 issue.description.notSupplied=No description supplied

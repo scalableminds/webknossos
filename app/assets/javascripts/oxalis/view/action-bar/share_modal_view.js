@@ -1,27 +1,47 @@
 // @flow
 import React, { PureComponent } from "react";
 import Clipboard from "clipboard-js";
-import { Modal, Input, Button, Checkbox } from "antd";
+import { Popconfirm, Alert, Divider, Radio, Modal, Input, Button, Row, Col } from "antd";
 import { connect } from "react-redux";
 import Toast from "libs/toast";
-import InputComponent from "oxalis/view/components/input_component";
 import { setAnnotationPublicAction } from "oxalis/model/actions/annotation_actions";
-import messages from "messages";
 import type { OxalisState, RestrictionsAndSettingsType } from "oxalis/store";
+import type { APIDatasetType } from "admin/api_flow_types";
+import { updateDataset } from "admin/admin_rest_api";
+import { setDatasetAction } from "oxalis/model/actions/settings_actions";
+
+const RadioGroup = Radio.Group;
 
 type ShareModalPropType = {
   // eslint-disable-next-line react/no-unused-prop-types
   isPublic: boolean,
-  isDatasetPublic: boolean,
+  dataset: APIDatasetType,
   isVisible: boolean,
+  isCurrentUserAdmin: boolean,
   onOk: () => void,
   restrictions: RestrictionsAndSettingsType,
   setAnnotationPublic: Function,
+  makeDatasetPublic: APIDatasetType => Promise<void>,
 };
 
 type State = {
   isPublic: boolean,
 };
+
+function Hint({ children, style }) {
+  return (
+    <div
+      style={{
+        ...style,
+        marginBottom: 12,
+        fontSize: 12,
+        color: "rgb(118, 118, 118)",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
 
 class ShareModalView extends PureComponent<ShareModalPropType, State> {
   state = {
@@ -45,63 +65,150 @@ class ShareModalView extends PureComponent<ShareModalPropType, State> {
   copyToClipboard = async () => {
     const url = this.getUrl();
     await Clipboard.copy(url);
-    Toast.success("Position copied to clipboard");
+    Toast.success("URL copied to clipboard");
   };
 
   handleCheckboxChange = (event: SyntheticInputEvent<>) => {
-    this.setState({ isPublic: event.target.checked });
+    this.setState({ isPublic: Boolean(event.target.value) });
   };
 
   handleOk = () => {
-    // public tracings only work if the dataset is public too
-    const isPublic = this.state.isPublic;
-    if (!this.props.isDatasetPublic && isPublic) {
-      Toast.warning(messages["annotation.dataset_no_public"], { sticky: true });
-    }
-    this.props.setAnnotationPublic(isPublic);
+    this.props.setAnnotationPublic(this.state.isPublic);
     this.props.onOk();
   };
 
-  render() {
-    const publicCheckbox = this.props.restrictions.allowUpdate ? (
-      <Checkbox
-        onChange={this.handleCheckboxChange}
-        checked={this.state.isPublic}
-        style={{ marginTop: 10, marginLeft: 1 }}
-      >
-        Share the tracing publicly. Everyone with this link can access the tracing without the need
-        for a user login.
-      </Checkbox>
+  maybeShowWarning() {
+    let message;
+    if (!this.props.restrictions.allowUpdate) {
+      message = "You don't have the permission to edit the visibility of this tracing.";
+    } else if (!this.props.dataset.isPublic) {
+      message = (
+        <span>
+          The tracing cannot be made public, since the underlying dataset is not public.{" "}
+          {this.props.isCurrentUserAdmin ? (
+            <span>
+              Click{" "}
+              <Popconfirm
+                title={
+                  <div>
+                    Are you sure you want to make the dataset &ldquo;{this.props.dataset.name}&rdquo;
+                    public?<br /> It will be publicly listed when unregistered users visit
+                    webKnossos.
+                  </div>
+                }
+                onConfirm={() => this.props.makeDatasetPublic(this.props.dataset)}
+                okText="Yes"
+                cancelText="No"
+                style={{ maxWidth: 400 }}
+              >
+                <a href="#">here</a>
+              </Popconfirm>{" "}
+              to make the dataset public.
+            </span>
+          ) : (
+            <span>
+              Please ask an administrator to make the dataset {this.props.dataset.name} public.
+            </span>
+          )}
+        </span>
+      );
+    }
+
+    return message != null ? (
+      <Alert style={{ marginBottom: 18 }} message={message} type="warning" showIcon />
     ) : null;
+  }
+
+  render() {
+    const radioStyle = {
+      display: "block",
+      height: "30px",
+      lineHeight: "30px",
+    };
 
     return (
       <Modal
-        title="Share"
+        title="Share this Tracing"
         visible={this.props.isVisible}
+        width={800}
+        okText={this.props.restrictions.allowUpdate ? "Save" : "Ok"}
         onOk={this.handleOk}
         onCancel={this.props.onOk}
       >
-        <Input.Group compact>
-          <Button style={{ width: "15%" }} onClick={this.copyToClipboard}>
-            Copy
-          </Button>
-          <InputComponent style={{ width: "85%" }} value={this.getUrl()} />
-        </Input.Group>
-        {publicCheckbox}
+        <Row>
+          <Col span={6} style={{ lineHeight: "30px" }}>
+            Link to tracing
+          </Col>
+          <Col span={18}>
+            <Input.Group compact>
+              <Input style={{ width: "85%" }} value={this.getUrl()} />
+              <Button style={{ width: "15%" }} onClick={this.copyToClipboard} icon="copy">
+                Copy
+              </Button>
+            </Input.Group>
+            <Hint style={{ margin: "6px 12px" }}>
+              This link includes the current position, zoom value and active tree node. Consider
+              fine-tuning your current view before copying the URL.
+            </Hint>
+          </Col>
+        </Row>
+        <Divider style={{ margin: "18px 0", color: "rgba(0, 0, 0, 0.65)" }}>
+          {<i className={`fa fa-${this.state.isPublic ? "globe" : "lock"}`} />}
+          Visibility
+        </Divider>
+        {this.maybeShowWarning()}
+        <Row>
+          <Col span={6} style={{ lineHeight: "28px" }}>
+            Who can view this tracing?
+          </Col>
+          <Col span={18}>
+            <RadioGroup onChange={this.handleCheckboxChange} value={this.state.isPublic}>
+              <Radio
+                style={radioStyle}
+                value={false}
+                disabled={!this.props.restrictions.allowUpdate}
+              >
+                Non-public
+              </Radio>
+              <Hint style={{ marginLeft: 24 }}>
+                All users in your organization{" "}
+                {this.props.dataset.isPublic ? "" : "who have access to this dataset"} can view this
+                tracing and copy it to their accounts to edit it.
+              </Hint>
+
+              <Radio
+                style={radioStyle}
+                value
+                disabled={!this.props.restrictions.allowUpdate || !this.props.dataset.isPublic}
+              >
+                Public
+              </Radio>
+              <Hint style={{ marginLeft: 24 }}>
+                Anyone with the link can see this tracing without having to log in.
+              </Hint>
+            </RadioGroup>
+          </Col>
+        </Row>
       </Modal>
     );
   }
 }
 
 const mapStateToProps = (state: OxalisState) => ({
-  isPublic: state.tracing.isPublic,
-  isDatasetPublic: state.dataset.isPublic,
+  isPublic: state.tracing.isPublic && state.dataset.isPublic,
+  dataset: state.dataset,
   restrictions: state.tracing.restrictions,
+  isCurrentUserAdmin: state.activeUser != null ? state.activeUser.isAdmin : false,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   setAnnotationPublic(isPublic: boolean) {
     dispatch(setAnnotationPublicAction(isPublic));
+  },
+  async makeDatasetPublic(dataset: APIDatasetType) {
+    const newDataset = { ...dataset, isPublic: true };
+    await updateDataset(dataset.name, newDataset);
+    dispatch(setDatasetAction(newDataset));
   },
 });
 

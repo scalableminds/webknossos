@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(18);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(19);
 COMMIT TRANSACTION;
 
 CREATE TABLE webknossos.analytics(
@@ -101,6 +101,12 @@ CREATE TABLE webknossos.dataSet_resolutions(
   dataLayerName VARCHAR(256),
   resolution webknossos.VECTOR3 NOT NULL,
   PRIMARY KEY (_dataSet, dataLayerName, resolution)
+);
+
+CREATE TABLE webknossos.dataSet_lastUsedTimes(
+  _dataSet CHAR(24) NOT NULL,
+  _user CHAR(24) NOT NULL,
+  lastUsedTime TIMESTAMPTZ NOT NULL
 );
 
 CREATE TYPE webknossos.DATASTORE_TYPE AS ENUM ('webknossos-store');

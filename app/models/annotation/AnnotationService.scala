@@ -4,7 +4,7 @@ import java.io.{BufferedOutputStream, FileOutputStream}
 
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -161,7 +161,7 @@ object AnnotationService
     def useAsTemplateAndInsert(annotation: Annotation) = {
       for {
         dataSetName <- DataSetDAO.getNameById(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
-        dataSet <- annotation.dataSet ?~> ("Could not access DataSet " + dataSetName + ". Does your team have access?")
+        dataSet <- DataSetDAO.findOne(annotation._dataSet) ?~> ("Could not access DataSet " + dataSetName + ". Does your team have access?")
         newTracingId <- tracingFromBase(annotation, dataSet) ?~> "Failed to use annotation base as template."
         newAnnotation = annotation.copy(
           _id = initializingAnnotationId,
@@ -337,6 +337,7 @@ object AnnotationService
     for {
       annotation <- provideAnnotation(typ, id)
       newUser <- UserDAO.findOne(userId) ?~> Messages("user.notFound")
+      _ <- DataSetDAO.findOne(annotation._dataSet)(AuthorizedAccessContext(newUser)) ?~> Messages("annotation.transferee.noDataSetAccess")
       _ <- annotation.muta.transferToUser(newUser)
       updated <- provideAnnotation(typ, id)
     } yield updated

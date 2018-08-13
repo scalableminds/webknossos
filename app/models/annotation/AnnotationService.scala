@@ -4,7 +4,7 @@ import java.io.{BufferedOutputStream, FileOutputStream}
 
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -20,7 +20,7 @@ import models.annotation.nml.NmlWriter
 import models.binary._
 import models.task.Task
 import models.team.OrganizationDAO
-import models.user.User
+import models.user.{User, UserDAO}
 import utils.ObjectId
 import play.api.i18n.Messages
 import play.api.Play.current
@@ -31,10 +31,12 @@ import net.liftweb.common.{Box, Full}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
+import oxalis.security.WebknossosSilhouette.UserAwareRequest
 
 object AnnotationService
   extends BoxImplicits
   with FoxImplicits
+  with AnnotationInformationProvider
   with TextUtils
   with ProtoGeometryImplicits
   with LazyLogging {
@@ -159,7 +161,7 @@ object AnnotationService
     def useAsTemplateAndInsert(annotation: Annotation) = {
       for {
         dataSetName <- DataSetDAO.getNameById(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
-        dataSet <- annotation.dataSet ?~> ("Could not access DataSet " + dataSetName + ". Does your team have access?")
+        dataSet <- DataSetDAO.findOne(annotation._dataSet) ?~> ("Could not access DataSet " + dataSetName + ". Does your team have access?")
         newTracingId <- tracingFromBase(annotation, dataSet) ?~> "Failed to use annotation base as template."
         newAnnotation = annotation.copy(
           _id = initializingAnnotationId,
@@ -329,5 +331,15 @@ object AnnotationService
       zipper.close()
       zipped
     }
+  }
+
+  def transferAnnotationToUser(typ: String, id: String, userId: ObjectId)(implicit request: UserAwareRequest[_]) = {
+    for {
+      annotation <- provideAnnotation(typ, id)
+      newUser <- UserDAO.findOne(userId) ?~> Messages("user.notFound")
+      _ <- DataSetDAO.findOne(annotation._dataSet)(AuthorizedAccessContext(newUser)) ?~> Messages("annotation.transferee.noDataSetAccess")
+      _ <- annotation.muta.transferToUser(newUser)
+      updated <- provideAnnotation(typ, id)
+    } yield updated
   }
 }

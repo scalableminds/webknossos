@@ -228,7 +228,7 @@ test.serial("getTreeGroups should get all tree groups and set a tree group", t =
   t.is(state.tracing.skeleton.trees[1].groupId, 7);
 });
 
-test("SkeletonTracing should ", t => {
+test("setTreeGroup should set the visibility of a tree", t => {
   const api = t.context.api;
   api.tracing.setTreeVisibility(2, false);
   t.false(Store.getState().tracing.skeleton.trees[2].isVisible);

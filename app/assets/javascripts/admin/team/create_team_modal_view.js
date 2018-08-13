@@ -19,7 +19,7 @@ class CreateTeamModalForm extends React.PureComponent<Props> {
         return;
       }
       const newTeam = {
-        name: values["Team Name"],
+        name: values.teamName,
         roles: [{ name: "admin" }, { name: "user" }],
       };
 
@@ -41,7 +41,7 @@ class CreateTeamModalForm extends React.PureComponent<Props> {
       >
         <Form layout="vertical">
           <FormItem label="Team Name">
-            {getFieldDecorator("Team Name", {
+            {getFieldDecorator("teamName", {
               rules: [
                 {
                   required: true,

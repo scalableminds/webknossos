@@ -211,7 +211,7 @@ export type APITaskType = {
   +directLinks?: Array<string>,
 };
 
-type APIAnnotationTypeCompact = {
+export type APIAnnotationTypeCompact = {
   +tracing: {
     +skeleton: ?string,
     +volume: ?string,
@@ -228,7 +228,7 @@ type APIAnnotationTypeCompact = {
   +tags: Array<string>,
   +tracingTime: ?number,
   +typ: APITracingType,
-}
+};
 
 type APIAnnotationTypeBase = APIAnnotationTypeCompact & {
   +dataStore: APIDataStoreType,

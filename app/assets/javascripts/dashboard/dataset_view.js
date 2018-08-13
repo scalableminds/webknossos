@@ -1,6 +1,5 @@
 // @flow
 
-import _ from "lodash";
 import * as React from "react";
 import { Link, withRouter } from "react-router-dom";
 import Utils from "libs/utils";
@@ -9,7 +8,7 @@ import AdvancedDatasetView from "dashboard/advanced_dataset/advanced_dataset_vie
 import GalleryDatasetView from "dashboard/gallery_dataset_view";
 import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
-import type { APIUserType, APIDatasetType, APIDataLayerType } from "admin/api_flow_types";
+import type { APIUserType, APIDatasetType } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
 
 const { Search } = Input;

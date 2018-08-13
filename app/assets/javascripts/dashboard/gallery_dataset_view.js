@@ -9,9 +9,8 @@ import { createExplorational, getOrganizations } from "admin/admin_rest_api";
 import DatasetPanel from "dashboard/dataset_panel";
 import _ from "lodash";
 
-import type { APIDatasetType } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
-import type { APIUserType } from "admin/api_flow_types";
+import type { APIDatasetType, APIUserType } from "admin/api_flow_types";
 
 type State = {
   organizationNameMap: { [key: string]: string },

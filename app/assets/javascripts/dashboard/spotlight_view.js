@@ -9,10 +9,9 @@ import { handleGenericError } from "libs/error_handling";
 import messages from "messages";
 import Utils from "libs/utils";
 import features from "features";
-import type { APIDatasetType } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
 import type { OxalisState } from "oxalis/store";
-import type { APIUserType } from "admin/api_flow_types";
+import type { APIDatasetType, APIUserType } from "admin/api_flow_types";
 
 const { Content, Footer } = Layout;
 
@@ -147,7 +146,7 @@ class SpotlightView extends React.PureComponent<Props, State> {
     try {
       this.setState({ isLoading: true });
       const datasets = await getDatasets();
-      this.setState({ datasets: datasets });
+      this.setState({ datasets });
     } catch (error) {
       handleGenericError(error);
     } finally {

@@ -8,11 +8,10 @@ import DatasetView from "dashboard/dataset_view";
 import DashboardTaskListView from "dashboard/dashboard_task_list_view";
 import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import { getUser } from "admin/admin_rest_api";
 import type { APIUserType, APIDatasetType } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { handleGenericError } from "libs/error_handling";
-import { getDatastores, triggerDatasetCheck, getDatasets } from "admin/admin_rest_api";
+import { getUser, getDatastores, triggerDatasetCheck, getDatasets } from "admin/admin_rest_api";
 import { parseAsMaybe } from "libs/utils";
 
 const TabPane = Tabs.TabPane;
@@ -68,16 +67,17 @@ class DashboardView extends React.PureComponent<Props, State> {
     };
   }
 
+  componentDidMount() {
+    this.fetchUser();
+    this.fetchDatasets();
+  }
+
   componentDidCatch(error: Error) {
+    console.error(error);
     // An unknown error was thrown. To avoid any problems with the caching of datasets,
     // we simply clear the cache for the datasets and re-fetch.
     this.setState({ datasets: [] });
     datasetCache.clear();
-    this.fetchDatasets();
-  }
-
-  componentDidMount() {
-    this.fetchUser();
     this.fetchDatasets();
   }
 

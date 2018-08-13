@@ -46,7 +46,7 @@ class CreateTeamModalForm extends React.PureComponent<Props> {
                 {
                   required: true,
                   pattern: "^[A-Za-z0-9\\-_\\. ß]+$",
-                  message: "Please enter a valide team name.",
+                  message: "Please enter a valid team name.",
                 },
               ],
             })(<Input icon="tag-o" placeholder="Team Name" autoFocus />)}

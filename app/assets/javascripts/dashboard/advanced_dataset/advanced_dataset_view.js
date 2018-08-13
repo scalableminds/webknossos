@@ -77,7 +77,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
       : filteredDataSource;
 
     // Create a map from dataset to its rank
-    const datasetToRankMap: Map<DatasetType, number> = new Map(
+    const datasetToRankMap: Map<APIDatasetType, number> = new Map(
       dataSourceSortedByRank.map((dataset, rank) => [dataset, rank]),
     );
 

@@ -121,6 +121,11 @@ export type APIUserLoggedTimeType = {
   loggedTime: Array<APITimeIntervalType>,
 };
 
+export type APIActiveUserType = {
+  email: string,
+  activeTasks: number,
+};
+
 export type APIRestrictionsType = {|
   +allowAccess: boolean,
   +allowUpdate: boolean,

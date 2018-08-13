@@ -206,6 +206,20 @@ object AnnotationDAO extends SQLDAO[Annotation, AnnotationsRow, Annotations] {
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
+  // hint: does not use access query (because they dont support prefixes yet). use only after separate access check
+  def findAllActiveForProject(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(sql""" select a._id from
+                        webknossos.annotations_ a
+                        join webknossos.tasks_ t on a._task = t._id
+                        join webknossos.projects_ p on t._project = p._id
+                        join webknossos.users_ u on a._user = u._id
+                        where p._id = ${projectId}
+                        and a.state = '#${AnnotationState.Active.toString}'
+                        and a.typ = '#${AnnotationType.Task}' """.as[String])
+    } yield r.map(ObjectId(_)).toList
+
   def findAllByTaskIdAndType(taskId: ObjectId, typ: AnnotationType)(implicit ctx: DBAccessContext): Fox[List[Annotation]] =
     for {
       r <- run(Annotations.filter(r => notdel(r) && r._Task === taskId.id && r.typ === typ.toString && r.state =!= AnnotationState.Cancelled.toString).result)

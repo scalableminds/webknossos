@@ -87,7 +87,6 @@ type CommentTabStateType = {
 
 class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
   listRef: ?List;
-  storePropertyUnsubscribers: Array<Function>;
 
   static getDerivedStateFromProps(
     props: Props,
@@ -106,11 +105,6 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
     }, []);
 
     return { data };
-  }
-
-  constructor(...args: any) {
-    super(...args);
-    this.storePropertyUnsubscribers = [];
   }
 
   state = {
@@ -151,6 +145,8 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
     this.keyboard.destroy();
     this.unsubscribeStoreListeners();
   }
+
+  storePropertyUnsubscribers: Array<() => void> = [];
 
   keyboard = new InputKeyboard(
     {

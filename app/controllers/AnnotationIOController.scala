@@ -69,8 +69,12 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
       case (acc, next) => acc.combineWith(NmlService.extractFromFile(next.ref.file, next.filename))
     }
 
-    //TODO remove? val parseResultsPrefixed = NmlService.addPrefixesToTreeNames(parsedFiles.parseResults)
-    val tracingsProcessed = if (shouldCreateGroupForEachFile) NmlService.wrapTreesInGroups(parsedFiles.parseResults) else parsedFiles.parseResults
+
+    val tracingsProcessed =
+      if (shouldCreateGroupForEachFile)
+        NmlService.wrapTreesInGroups(parsedFiles.parseResults)
+      else
+        NmlService.addPrefixesToTreeNames(parsedFiles.parseResults)
 
     val parseSuccess = tracingsProcessed.filter(_.succeeded)
 

@@ -28,8 +28,7 @@ test("createTaskType and deleteTaskType", async t => {
     id: null,
     summary: "summary",
     description: "description",
-    teamId: aTeam.id,
-    teamName: aTeam.name,
+    team: aTeam.id,
     settings: {
       somaClickingAllowed: true,
       branchPointsAllowed: true,
@@ -50,6 +49,7 @@ test("createTaskType and deleteTaskType", async t => {
 test("updateTaskType()", async t => {
   const taskTypes = await api.getTaskTypes();
   const taskType = await api.getTaskType(taskTypes[0].id);
+  taskType.team = taskType.teamId;
 
   const updatedTaskType = await api.updateTaskType(
     taskType.id,

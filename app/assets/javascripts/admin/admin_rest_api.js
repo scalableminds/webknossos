@@ -11,6 +11,7 @@ import type {
   APIUserType,
   APIScriptType,
   APITaskTypeType,
+  APICreateTaskType,
   APITeamType,
   APIProjectType,
   APIProjectCreatorType,
@@ -202,7 +203,7 @@ export function getTaskType(taskTypeId: string): Promise<APITaskTypeType> {
 }
 
 export function createTaskType(
-  taskType: $Diff<APITaskTypeType, { id: string }>,
+  taskType: $Diff<APICreateTaskType, { id: string }>,
 ): Promise<APITaskTypeType> {
   return Request.sendJSONReceiveJSON("/api/taskTypes", {
     data: taskType,

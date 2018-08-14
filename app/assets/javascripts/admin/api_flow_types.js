@@ -163,6 +163,14 @@ export type APITaskTypeType = {
   +settings: APISettingsType,
 };
 
+export type APICreateTaskType = {
+  +id: string,
+  +summary: string,
+  +description: string,
+  +team: string,
+  +settings: APISettingsType,
+};
+
 export type TaskStatusType = { +open: number, +active: number, +finished: number };
 
 export type APIScriptType = {

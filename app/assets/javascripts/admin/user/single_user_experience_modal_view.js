@@ -12,7 +12,7 @@ type Props = {
   onCancel: Function,
   visible: boolean,
   selectedUserIds: Array<string>,
-  users: Array<APIUserType>,
+  selectedUser: APIUserType,
 };
 
 type State = {
@@ -109,7 +109,9 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
 
     return (
       <Modal
-        title="Change Experiences"
+        title={`Change Experiences of user ${this.props.selectedUser.lastName}, ${
+          this.props.selectedUser.firstName
+        }`}
         visible={this.props.visible}
         onCancel={this.props.onCancel}
         width={600}

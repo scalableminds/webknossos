@@ -3,7 +3,7 @@
  * @flow
  */
 /* globals Class:false $TypedArray:false */
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 
 const GROW_MULTIPLIER = 1.3;
 

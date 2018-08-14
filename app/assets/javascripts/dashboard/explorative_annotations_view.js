@@ -9,7 +9,7 @@ import { AsyncLink } from "components/async_clickables";
 import { Spin, Input, Table, Button, Modal, Tag, Icon, Popover, Tooltip } from "antd";
 import { formatHash, stringToColor } from "libs/format_utils";
 import Toast from "libs/toast";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import update from "immutability-helper";
 import messages from "messages";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";

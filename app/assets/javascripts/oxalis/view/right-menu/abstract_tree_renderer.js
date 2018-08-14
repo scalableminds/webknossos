@@ -5,7 +5,7 @@
 
 import _ from "lodash";
 import BackboneEvents from "backbone-events-standalone";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import messages from "messages";
 import type { Vector2 } from "oxalis/constants";
 import type { TreeType } from "oxalis/store";

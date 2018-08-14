@@ -3,7 +3,7 @@
 
 import * as React from "react";
 import { stringToColor, formatTuple } from "libs/format_utils";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import { Table, Icon, Tag } from "antd";
 import DatasetActionView from "dashboard/advanced_dataset/dataset_action_view";
 import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";

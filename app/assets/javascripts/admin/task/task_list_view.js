@@ -5,7 +5,7 @@ import _ from "lodash";
 import React from "react";
 import { Link, withRouter } from "react-router-dom";
 import { Table, Tag, Spin, Button, Input, Modal, Icon, Card } from "antd";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import Clipboard from "clipboard-js";
 import Toast from "libs/toast";
 import messages from "messages";

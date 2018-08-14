@@ -3,7 +3,7 @@ import _ from "lodash";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import type { MessageType } from "libs/toast";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import { location } from "libs/window";
 import messages from "messages";
 import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
@@ -75,7 +75,7 @@ export function getSharingToken(): ?string {
   if (location != null) {
     const params = Utils.getUrlParamsObject();
     if (params != null && params.token != null) {
-      return ((params.token: any): string);
+      return params.token;
     }
   }
   return null;

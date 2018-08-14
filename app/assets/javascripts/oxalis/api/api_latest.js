@@ -741,6 +741,7 @@ class UserApi {
     - clippingDistanceArbitrary
     - dynamicSpaceDirection
     - displayCrosshair
+    - displayScalebars
     - scale
     - tdViewDisplayPlanes
     - newNodeNewTree

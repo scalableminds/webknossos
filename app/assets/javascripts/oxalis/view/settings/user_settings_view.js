@@ -100,6 +100,11 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
               value={this.props.userConfiguration.displayCrosshair}
               onChange={this.onChangeUser.displayCrosshair}
             />
+            <SwitchSetting
+              label="Show Scalebars"
+              value={this.props.userConfiguration.displayScalebars}
+              onChange={this.onChangeUser.displayScalebars}
+            />
           </Panel>
         );
       case Constants.MODE_VOLUME:
@@ -126,6 +131,11 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
               label="Show Crosshairs"
               value={this.props.userConfiguration.displayCrosshair}
               onChange={this.onChangeUser.displayCrosshair}
+            />
+            <SwitchSetting
+              label="Show Scalebars"
+              value={this.props.userConfiguration.displayScalebars}
+              onChange={this.onChangeUser.displayScalebars}
             />
           </Panel>
         );
@@ -191,6 +201,11 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
               label="Show Crosshair"
               value={this.props.userConfiguration.displayCrosshair}
               onChange={this.onChangeUser.displayCrosshair}
+            />
+            <SwitchSetting
+              label="Show Scalebars"
+              value={this.props.userConfiguration.displayScalebars}
+              onChange={this.onChangeUser.displayScalebars}
             />
           </Panel>
         );

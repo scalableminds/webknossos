@@ -128,7 +128,10 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
   importNmls = async () => {
     this.setState({ isImporting: true });
     try {
-      await this.props.onImport(this.state.files, this.state.createGroupForEachFile);
+      await this.props.onImport(
+        this.state.files,
+        this.state.files.length > 1 ? this.state.createGroupForEachFile : false,
+      );
     } finally {
       this.setState({ isImporting: false, files: [] });
     }
@@ -160,6 +163,15 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
   }
 
   renderImportModal() {
+    const createGroupsCheckbox = (
+      <Checkbox
+        style={{ float: "left" }}
+        onChange={e => this.setState({ createGroupForEachFile: e.target.checked })}
+        checked={this.state.createGroupForEachFile}
+      >
+        Create a new tree group for each file.
+      </Checkbox>
+    );
     return (
       <Modal
         title={`Import ${this.state.files.length} NML file(s)`}
@@ -167,13 +179,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
         onCancel={() => this.setState({ files: [] })}
         footer={
           <React.Fragment>
-            <Checkbox
-              style={{ float: "left" }}
-              onChange={e => this.setState({ createGroupForEachFile: e.target.checked })}
-              checked={this.state.createGroupForEachFile}
-            >
-              Create a new tree group for each file.
-            </Checkbox>
+            {this.state.files.length > 1 ? createGroupsCheckbox : null}
             <Button key="submit" type="primary" onClick={this.importNmls}>
               Import
             </Button>

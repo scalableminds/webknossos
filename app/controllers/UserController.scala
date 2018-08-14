@@ -182,8 +182,8 @@ class UserController @Inject()(val messagesApi: MessagesApi)
     })
   }
 
-  private def checkAdminOnlyUpdates(user: User, isAdmin: Boolean, email: String)(issuingUser: User): Boolean = {
-    if (user.isAdmin == isAdmin && user.email == email) true
+  private def checkAdminOnlyUpdates(user: User, isActive: Boolean, isAdmin: Boolean, email: String)(issuingUser: User): Boolean = {
+    if (isActive && user.isAdmin == isAdmin && user.email == email) true
     else issuingUser.isAdminOf(user)
   }
 
@@ -195,7 +195,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
           userIdValidated <- ObjectId.parse(userId)
           user <- UserDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
           _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
-          _ <- bool2Fox(checkAdminOnlyUpdates(user, isAdmin, email)(issuingUser)) ?~> Messages("notAllowed")
+          _ <- bool2Fox(checkAdminOnlyUpdates(user, isActive, isAdmin, email)(issuingUser)) ?~> Messages("notAllowed")
           teams <- Fox.combined(assignedMemberships.map(t => TeamDAO.findOne(t.teamId)(GlobalAccessContext) ?~> Messages("team.notFound")))
           oldTeamMemberships <- user.teamMemberships
           teamsWithoutUpdate <- Fox.filterNot(oldTeamMemberships)(t => issuingUser.isTeamManagerOrAdminOf(t.teamId))

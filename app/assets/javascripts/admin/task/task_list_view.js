@@ -183,7 +183,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               title="ID"
               dataIndex="id"
               key="id"
-              sorter={Utils.localeCompareBy(typeHint, "id")}
+              sorter={Utils.localeCompareBy(typeHint, task => task.id)}
               className="monospace-id"
             />
             <Column
@@ -191,7 +191,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               dataIndex="projectName"
               key="projectName"
               width={130}
-              sorter={Utils.localeCompareBy(typeHint, "projectName")}
+              sorter={Utils.localeCompareBy(typeHint, task => task.projectName)}
               render={(projectName: string) => (
                 <a href={`/projects#${projectName}`}>{projectName}</a>
               )}
@@ -211,7 +211,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               dataIndex="dataSet"
               key="dataSet"
               width={130}
-              sorter={Utils.localeCompareBy(typeHint, "dataSet")}
+              sorter={Utils.localeCompareBy(typeHint, task => task.dataSet)}
             />
             <Column
               title="Edit Position / Bounding Box"
@@ -244,7 +244,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               dataIndex="created"
               key="created"
               width={150}
-              sorter={Utils.compareBy(typeHint, "created")}
+              sorter={Utils.compareBy(typeHint, task => task.created)}
               render={created => <FormattedDate timestamp={created} />}
             />
             <Column

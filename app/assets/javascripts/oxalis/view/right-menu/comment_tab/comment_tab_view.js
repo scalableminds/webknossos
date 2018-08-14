@@ -50,7 +50,7 @@ type SortOptionsType = {
 };
 function getTreeSorter({ sortBy, isSortedAscending }: SortOptionsType): Comparator<TreeType> {
   return sortBy === SortByEnum.ID
-    ? Utils.compareBy(treeTypeHint, "treeId", isSortedAscending)
+    ? Utils.compareBy(treeTypeHint, tree => tree.treeId, isSortedAscending)
     : Utils.localeCompareBy(
         treeTypeHint,
         tree => `${tree.name}_${tree.treeId}`,
@@ -61,7 +61,7 @@ function getTreeSorter({ sortBy, isSortedAscending }: SortOptionsType): Comparat
 
 function getCommentSorter({ sortBy, isSortedAscending }: SortOptionsType): Comparator<CommentType> {
   return sortBy === SortByEnum.ID
-    ? Utils.compareBy(([]: Array<CommentType>), "nodeId", isSortedAscending)
+    ? Utils.compareBy(([]: Array<CommentType>), comment => comment.nodeId, isSortedAscending)
     : Utils.localeCompareBy(
         commentTypeHint,
         comment => `${comment.content}_${comment.nodeId}`,

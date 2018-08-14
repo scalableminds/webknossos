@@ -70,12 +70,11 @@ export const tracing: ServerSkeletonTracingType = {
 };
 
 export const annotation: APIAnnotationType = {
-  created: "2017-08-09 20:19",
   description: "",
   state: "Active",
   id: "598b52293c00009906f043e7",
   isPublic: false,
-  modified: "2018-06-12 15:59",
+  modified: 1529066010230,
   name: "",
   typ: "Explorational",
   task: null,

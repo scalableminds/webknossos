@@ -156,18 +156,17 @@ const Utils = {
       : null;
   },
 
-  compareBy<T: { +[string]: mixed }>(
+  compareBy<T>(
     collectionForTypeInference: Array<T>, // this parameter is only used let flow infer the used type
-    selector: $Keys<T> | (T => number),
+    selector: T => number,
     isSortedAscending: boolean = true,
   ): Comparator<T> {
-    // generic key comparator for array.prototype.sort
     return (a: T, b: T) => {
       if (!isSortedAscending) {
         [a, b] = [b, a];
       }
-      const valueA = typeof selector === "function" ? selector(a) : a[selector];
-      const valueB = typeof selector === "function" ? selector(b) : b[selector];
+      const valueA = selector(a);
+      const valueB = selector(b);
       if (typeof valueA !== "number" || typeof valueB !== "number") {
         console.error(
           "Wrong compare method called (compareBy should only be called for numbers). Selector:",
@@ -179,9 +178,9 @@ const Utils = {
     };
   },
 
-  localeCompareBy<T: { +[string]: mixed }>(
+  localeCompareBy<T>(
     collectionForTypeInference: Array<T>, // this parameter is only used let flow infer the used type
-    selector: $Keys<T> | (T => string),
+    selector: T => string,
     isSortedAscending: boolean = true,
     sortNatural: boolean = true,
   ): Comparator<T> {
@@ -189,8 +188,8 @@ const Utils = {
       if (!isSortedAscending) {
         [a, b] = [b, a];
       }
-      const valueA = typeof selector === "function" ? selector(a) : a[selector];
-      const valueB = typeof selector === "function" ? selector(b) : b[selector];
+      const valueA = selector(a);
+      const valueB = selector(b);
       if (typeof valueA !== "string" || typeof valueB !== "string") {
         console.error(
           "Wrong compare method called (localeCompareBy should only be called for strings). Selector:",

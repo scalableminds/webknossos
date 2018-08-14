@@ -371,13 +371,13 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           title="ID"
           dataIndex="id"
           render={(__, tracing: APIAnnotationTypeCompact) => FormatUtils.formatHash(tracing.id)}
-          sorter={Utils.localeCompareBy(typeHint, "id")}
+          sorter={Utils.localeCompareBy(typeHint, annotation => annotation.id)}
           className="monospace-id"
         />
         <Column
           title="Name"
           dataIndex="name"
-          sorter={Utils.localeCompareBy(typeHint, "name")}
+          sorter={Utils.localeCompareBy(typeHint, annotation => annotation.name)}
           render={(name: string, tracing: APIAnnotationTypeCompact) =>
             this.renderNameWithDescription(tracing)
           }
@@ -441,7 +441,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Column
           title="Modification Date"
           dataIndex="modified"
-          sorter={Utils.compareBy(typeHint, "modified")}
+          sorter={Utils.compareBy(typeHint, annotation => annotation.modified)}
           render={modified => <FormattedDate timestamp={modified} />}
         />
         <Column

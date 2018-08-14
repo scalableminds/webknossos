@@ -9,7 +9,7 @@ import constants, { ControlModeEnum } from "oxalis/constants";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
-import TemplateHelpers from "libs/template_helpers";
+import { formatScale } from "libs/template_helpers";
 import {
   setAnnotationNameAction,
   setAnnotationDescriptionAction,
@@ -224,9 +224,7 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
         {this.getDatasetName(isPublicViewMode)}
 
         <p>Viewport Width: {formatZoomLevel(zoomLevel)}</p>
-        <p>
-          Dataset Resolution: {TemplateHelpers.formatScale(this.props.dataset.dataSource.scale)}
-        </p>
+        <p>Dataset Resolution: {formatScale(this.props.dataset.dataSource.scale)}</p>
 
         {this.getTracingStatistics()}
         {this.getKeyboardShortcuts(isPublicViewMode)}

@@ -2,7 +2,7 @@
 /* eslint-disable jsx-a11y/href-no-hash, react/prefer-stateless-function, react/no-unused-state */
 
 import * as React from "react";
-import TemplateHelpers from "libs/template_helpers";
+import { stringToColor, formatTuple } from "libs/template_helpers";
 import Utils from "libs/utils";
 import { Table, Icon, Tag } from "antd";
 import DatasetActionView from "dashboard/advanced_dataset/dataset_action_view";
@@ -125,9 +125,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
               <div>
                 {dataset.name}
                 <br />
-                <Tag color={TemplateHelpers.stringToColor(dataset.dataStore.name)}>
-                  {dataset.dataStore.name}
-                </Tag>
+                <Tag color={stringToColor(dataset.dataStore.name)}>{dataset.dataStore.name}</Tag>
               </div>
             )}
           />
@@ -145,9 +143,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             dataIndex="scale"
             key="scale"
             width={120}
-            render={(__, dataset: APIDatasetType) =>
-              TemplateHelpers.formatTuple(dataset.dataSource.scale)
-            }
+            render={(__, dataset: APIDatasetType) => formatTuple(dataset.dataSource.scale)}
           />
 
           <Column
@@ -158,7 +154,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             render={(teams: Array<APITeamType>, dataset: APIDatasetType) =>
               teams.map(team => (
                 <Tag
-                  color={TemplateHelpers.stringToColor(team.name)}
+                  color={stringToColor(team.name)}
                   key={`allowed_teams_${dataset.name}_${team.name}`}
                 >
                   {team.name}

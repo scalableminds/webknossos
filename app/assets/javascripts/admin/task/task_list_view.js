@@ -11,7 +11,7 @@ import Toast from "libs/toast";
 import messages from "messages";
 import TaskSearchForm from "admin/task/task_search_form";
 import { deleteTask, getTasks } from "admin/admin_rest_api";
-import TemplateHelpers from "libs/template_helpers";
+import { formatTuple } from "libs/template_helpers";
 import FormatUtils from "libs/format_utils";
 import TaskAnnotationView from "admin/task/task_annotation_view";
 import Persistence from "libs/persistence";
@@ -220,8 +220,8 @@ class TaskListView extends React.PureComponent<Props, State> {
               width={130}
               render={(__, task: APITaskType) => (
                 <div className="nowrap">
-                  {TemplateHelpers.formatTuple(task.editPosition)} <br />
-                  <span>{TemplateHelpers.formatTuple(task.boundingBoxVec6)}</span>
+                  {formatTuple(task.editPosition)} <br />
+                  <span>{formatTuple(task.boundingBoxVec6)}</span>
                 </div>
               )}
             />

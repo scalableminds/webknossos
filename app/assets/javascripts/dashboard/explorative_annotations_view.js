@@ -4,6 +4,7 @@
 import _ from "lodash";
 import * as React from "react";
 import { Link, withRouter } from "react-router-dom";
+import Store from "oxalis/store";
 import { AsyncLink } from "components/async_clickables";
 import { Spin, Input, Table, Button, Modal, Tag, Icon, Popover, Tooltip } from "antd";
 import FormatUtils from "libs/format_utils";
@@ -14,10 +15,9 @@ import TemplateHelpers from "libs/template_helpers";
 import messages from "messages";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import EditableTextIcon from "oxalis/view/components/editable_text_icon";
-import FileUpload from "components/file_upload";
 import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
-import type { APIAnnotationTypeCompact } from "admin/api_flow_types";
+import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import {
   finishAllAnnotations,
   editAnnotation,
@@ -26,9 +26,10 @@ import {
   getCompactAnnotations,
   getCompactAnnotationsForUser,
 } from "admin/admin_rest_api";
-import type { RouterHistory } from "react-router-dom";
 import { handleGenericError } from "libs/error_handling";
 import FormattedDate from "components/formatted_date";
+import type { APIAnnotationTypeCompact } from "admin/api_flow_types";
+import type { RouterHistory } from "react-router-dom";
 import { AnnotationContentTypes } from "oxalis/constants";
 
 const { Column } = Table;
@@ -51,7 +52,6 @@ type State = {
     isUnarchived: boolean,
   },
   searchQuery: string,
-  isUploadingNML: boolean,
   tags: Array<string>,
   isLoading: boolean,
 };
@@ -74,7 +74,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       isUnarchived: false,
     },
     searchQuery: "",
-    isUploadingNML: false,
     tags: [],
     isLoading: false,
   };
@@ -184,10 +183,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         unarchivedTracings: [newTracing].concat(this.state.unarchivedTracings),
       });
     }
-  };
-
-  handleNMLUpload = (response: Object) => {
-    this.props.history.push(`/annotations/${response.annotation.typ}/${response.annotation.id}`);
   };
 
   renderActions = (tracing: APIAnnotationTypeCompact) => {
@@ -489,20 +484,13 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           search
         ) : (
           <div className="pull-right">
-            <FileUpload
-              url="/api/annotations/upload"
-              accept=".nml, .zip"
-              name="nmlFile"
-              multiple
-              showUploadList={false}
-              onSuccess={this.handleNMLUpload}
-              onUploading={() => this.setState({ isUploadingNML: true })}
-              onError={() => this.setState({ isUploadingNML: false })}
+            <Button
+              icon="upload"
+              style={marginRight}
+              onClick={() => Store.dispatch(setDropzoneModalVisibilityAction(true))}
             >
-              <Button icon="upload" loading={this.state.isUploadingNML} style={marginRight}>
-                Upload Annotation
-              </Button>
-            </FileUpload>
+              Upload Annotation(s)
+            </Button>
             <Button onClick={this.toggleShowArchived} style={marginRight}>
               Show {this.state.shouldShowArchivedTracings ? "Open" : "Archived"} Annotations
             </Button>

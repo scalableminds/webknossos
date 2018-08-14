@@ -138,6 +138,12 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
           </div>
         }
       >
+        {_.map(this.props.selectedUser.experiences, (value, domain) => (
+          // here -> edit to the suggested design so every existing domain's value can be changed or completely deleted
+          <Tag key={`experience_${user.id}_${domain}`}>
+            {domain} : {value}
+          </Tag>
+        ))}
         <Input
           value={this.state.domain}
           onChange={event => this.setState({ domain: event.target.value })}

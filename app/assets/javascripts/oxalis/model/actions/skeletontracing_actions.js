@@ -57,10 +57,15 @@ type CreateBranchPointActionType = {
   timestamp: number,
 };
 type DeleteBranchPointActionType = { type: "DELETE_BRANCHPOINT" };
-type ToggleTreeActionType = { type: "TOGGLE_TREE", treeId?: number, timestamp: number };
+type ToggleTreeActionType = { type: "TOGGLE_TREE", treeId: ?number, timestamp: number };
+type SetTreeVisibilityActionType = {
+  type: "SET_TREE_VISIBILITY",
+  treeId: ?number,
+  isVisible: boolean,
+};
 type ToggleAllTreesActionType = { type: "TOGGLE_ALL_TREES", timestamp: number };
 type ToggleInactiveTreesActionType = { type: "TOGGLE_INACTIVE_TREES", timestamp: number };
-type ToggleTreeGroupActionType = { type: "TOGGLE_TREE_GROUP", groupId: string };
+type ToggleTreeGroupActionType = { type: "TOGGLE_TREE_GROUP", groupId: number };
 type RequestDeleteBranchPointActionType = { type: "REQUEST_DELETE_BRANCHPOINT" };
 type CreateTreeActionType = { type: "CREATE_TREE", timestamp: number };
 type AddTreesAndGroupsActionType = {
@@ -89,7 +94,7 @@ type CreateCommentActionType = {
 type DeleteCommentActionType = { type: "DELETE_COMMENT", nodeId: ?number, treeId?: number };
 type SetTracingActionType = { type: "SET_TRACING", tracing: SkeletonTracingType };
 type SetTreeGroupsActionType = { type: "SET_TREE_GROUPS", treeGroups: Array<TreeGroupType> };
-type SetTreeGroupActionType = { type: "SET_TREE_GROUP", groupId: ?string, treeId: number };
+type SetTreeGroupActionType = { type: "SET_TREE_GROUP", groupId: ?number, treeId?: number };
 type NoActionType = { type: "NONE" };
 
 export type SkeletonTracingActionType =
@@ -116,6 +121,7 @@ export type SkeletonTracingActionType =
   | DeleteCommentActionType
   | ToggleTreeActionType
   | ToggleAllTreesActionType
+  | SetTreeVisibilityActionType
   | ToggleInactiveTreesActionType
   | ToggleTreeGroupActionType
   | NoActionType
@@ -261,12 +267,21 @@ export const deleteTreeAction = (
 });
 
 export const toggleTreeAction = (
-  treeId?: number,
+  treeId: ?number,
   timestamp: number = Date.now(),
 ): ToggleTreeActionType => ({
   type: "TOGGLE_TREE",
   treeId,
   timestamp,
+});
+
+export const setTreeVisibilityAction = (
+  treeId: ?number,
+  isVisible: boolean,
+): SetTreeVisibilityActionType => ({
+  type: "SET_TREE_VISIBILITY",
+  treeId,
+  isVisible,
 });
 
 export const toggleAllTreesAction = (timestamp: number = Date.now()): ToggleAllTreesActionType => ({
@@ -281,7 +296,7 @@ export const toggleInactiveTreesAction = (
   timestamp,
 });
 
-export const toggleTreeGroupAction = (groupId: string): ToggleTreeGroupActionType => ({
+export const toggleTreeGroupAction = (groupId: number): ToggleTreeGroupActionType => ({
   type: "TOGGLE_TREE_GROUP",
   groupId,
 });
@@ -359,7 +374,7 @@ export const setTreeGroupsAction = (treeGroups: Array<TreeGroupType>): SetTreeGr
   treeGroups,
 });
 
-export const setTreeGroupAction = (groupId: ?string, treeId: number): SetTreeGroupActionType => ({
+export const setTreeGroupAction = (groupId: ?number, treeId?: number): SetTreeGroupActionType => ({
   type: "SET_TREE_GROUP",
   groupId,
   treeId,

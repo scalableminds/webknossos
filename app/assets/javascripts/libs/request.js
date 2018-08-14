@@ -105,6 +105,8 @@ class Request {
           formData.append(`${formKey}[]`, value, value.name);
         } else if (typeof value === "string" || value === null) {
           formData.append(formKey, value);
+        } else if (typeof value === "number" || typeof value === "boolean") {
+          formData.append(formKey, `${value}`);
         } else {
           // nested object
           toFormData(value, formData, key);

@@ -60,6 +60,19 @@ export function maybe<A, B>(fn: A => B): (?A) => Maybe<B> {
   return (nullableA: ?A) => Maybe.fromNullable(nullableA).map(fn);
 }
 
+export function parseAsMaybe(str: ?string): Maybe<any> {
+  try {
+    const parsedJSON = JSON.parse(str || "");
+    if (parsedJSON != null) {
+      return Maybe.Just(parsedJSON);
+    } else {
+      return Maybe.Nothing();
+    }
+  } catch (exception) {
+    return Maybe.Nothing();
+  }
+}
+
 const Utils = {
   clamp(a: number, x: number, b: number): number {
     return Math.max(a, Math.min(b, x));

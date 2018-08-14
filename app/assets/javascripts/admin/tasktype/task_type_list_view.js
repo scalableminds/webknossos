@@ -145,7 +145,7 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                 dataIndex="id"
                 key="id"
                 width={100}
-                sorter={Utils.localeCompareBy(typeHint, "id")}
+                sorter={Utils.localeCompareBy(typeHint, taskType => taskType.id)}
                 className="monospace-id"
               />
               <Column
@@ -153,20 +153,20 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                 dataIndex="teamName"
                 key="team"
                 width={130}
-                sorter={Utils.localeCompareBy(typeHint, "teamName")}
+                sorter={Utils.localeCompareBy(typeHint, taskType => taskType.teamName)}
               />
               <Column
                 title="Summary"
                 dataIndex="summary"
                 key="summary"
                 width={130}
-                sorter={Utils.localeCompareBy(typeHint, "summary")}
+                sorter={Utils.localeCompareBy(typeHint, taskType => taskType.summary)}
               />
               <Column
                 title="Description"
                 dataIndex="description"
                 key="description"
-                sorter={Utils.localeCompareBy(typeHint, "description")}
+                sorter={Utils.localeCompareBy(typeHint, taskType => taskType.description)}
                 render={description => (
                   <div className="task-type-description short">
                     <Markdown

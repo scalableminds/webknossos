@@ -21,6 +21,7 @@ import type {
   APIDataSourceWithMessagesType,
 } from "admin/api_flow_types";
 import { handleGenericError } from "libs/error_handling";
+import { datasetCache } from "dashboard/dashboard_view";
 import { Hideable, confirmAsync, hasFormError } from "./helper_components";
 import SimpleAdvancedDataForm from "./simple_advanced_data_form";
 import DefaultConfigComponent from "./default_config_component";
@@ -224,6 +225,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
 
       const verb = this.props.isEditingMode ? "updated" : "imported";
       Toast.success(`Successfully ${verb} ${this.props.datasetName}`);
+      datasetCache.clear();
       this.props.onComplete();
     });
   };

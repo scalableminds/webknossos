@@ -7,12 +7,14 @@ import Constants, { OrthoViews } from "oxalis/constants";
 import api from "oxalis/api/internal_api";
 import type { OrthoViewType } from "oxalis/constants";
 import type { OxalisState } from "oxalis/store";
+import Scalebar from "oxalis/view/scalebar";
 
 const ButtonGroup = Button.Group;
 
 type Props = {
   scale: number,
   activeViewport: OrthoViewType,
+  displayScalebars: boolean,
 };
 
 type State = {};
@@ -33,31 +35,40 @@ class InputCatchers extends React.PureComponent<Props, State> {
           data-value={OrthoViews.PLANE_XY}
           className="inputcatcher"
           style={{
+            position: "relative",
             width,
             height: width,
             borderColor: activeInputCatcher === OrthoViews.PLANE_XY ? "#ff0" : "white",
           }}
-        />
+        >
+          {this.props.displayScalebars ? <Scalebar /> : null}
+        </div>
         <div
           id="inputcatcher_PLANE_YZ"
           data-value={OrthoViews.PLANE_YZ}
           className="inputcatcher"
           style={{
+            position: "relative",
             width,
             height: width,
             borderColor: activeInputCatcher === OrthoViews.PLANE_YZ ? "#ff0" : "white",
           }}
-        />
+        >
+          {this.props.displayScalebars ? <Scalebar /> : null}
+        </div>
         <div
           id="inputcatcher_PLANE_XZ"
           data-value={OrthoViews.PLANE_XZ}
           className="inputcatcher"
           style={{
+            position: "relative",
             width,
             height: width,
             borderColor: activeInputCatcher === OrthoViews.PLANE_XZ ? "#ff0" : "white",
           }}
-        />
+        >
+          {this.props.displayScalebars ? <Scalebar /> : null}
+        </div>
         <div
           id="inputcatcher_TDView"
           data-value={OrthoViews.TDView}
@@ -91,6 +102,7 @@ class InputCatchers extends React.PureComponent<Props, State> {
 const mapStateToProps = (state: OxalisState): Props => ({
   scale: state.userConfiguration.scale,
   activeViewport: state.viewModeData.plane.activeViewport,
+  displayScalebars: state.userConfiguration.displayScalebars,
 });
 
 export default connect(mapStateToProps)(InputCatchers);

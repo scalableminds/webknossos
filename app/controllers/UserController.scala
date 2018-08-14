@@ -183,7 +183,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   }
 
   private def checkAdminOnlyUpdates(user: User, isActive: Boolean, isAdmin: Boolean, email: String)(issuingUser: User): Boolean = {
-    if (user.isDeactivated == !isActive && user.isAdmin == isAdmin && user.email == email) true
+    if (isActive && user.isAdmin == isAdmin && user.email == email) true
     else issuingUser.isAdminOf(user)
   }
 

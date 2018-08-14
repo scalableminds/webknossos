@@ -202,11 +202,6 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
               value={this.props.userConfiguration.displayCrosshair}
               onChange={this.onChangeUser.displayCrosshair}
             />
-            <SwitchSetting
-              label="Show Scalebars"
-              value={this.props.userConfiguration.displayScalebars}
-              onChange={this.onChangeUser.displayScalebars}
-            />
           </Panel>
         );
     }

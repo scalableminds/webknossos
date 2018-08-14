@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { connect } from "react-redux";
-import { OUTER_BORDER_ORTHO } from "oxalis/constants";
+import constants, { OUTER_BORDER_ORTHO } from "oxalis/constants";
 import type { OxalisState, FlycamType } from "oxalis/store";
 import { calculateZoomLevel, formatZoomLevel } from "oxalis/view/right-menu/dataset_info_tab_view";
 import type { APIDatasetType } from "admin/api_flow_types";
@@ -19,10 +19,13 @@ function Scalebar({ flycam, dataset }: Props) {
     <div
       style={{
         position: "absolute",
-        bottom: 4,
-        right: 4,
-        width: `calc(${100 * scalebarWidthPercentage}% - ${2 * OUTER_BORDER_ORTHO}px)`,
-        height: 25,
+        bottom: "1%",
+        right: "1%",
+        // The scalebar should have a width of 25% from the actual viewport (without the borders)
+        width: `calc(25% - ${Math.round(
+          ((2 * OUTER_BORDER_ORTHO) / constants.VIEWPORT_WIDTH) * 100,
+        )}%)`,
+        height: 14,
         background: "rgba(0, 0, 0, .3)",
         color: "white",
         textAlign: "center",
@@ -32,8 +35,15 @@ function Scalebar({ flycam, dataset }: Props) {
         padding: 4,
       }}
     >
-      <div>{formatZoomLevel(calculateZoomLevel(flycam, dataset) * scalebarWidthPercentage)}</div>
-      <div style={{ width: "100%", height: 10, padding: 4, background: "white" }} />
+      <div
+        style={{
+          borderBottom: "1px solid",
+          borderLeft: "1px solid",
+          borderRight: "1px solid",
+        }}
+      >
+        {formatZoomLevel(calculateZoomLevel(flycam, dataset) * scalebarWidthPercentage)}
+      </div>
     </div>
   );
 }

@@ -92,11 +92,10 @@ export const NODE_ID_REF_REGEX = /#([0-9]+)/g;
 export const POSITION_REF_REGEX = /#\(([0-9]+,[0-9]+,[0-9]+)\)/g;
 
 // The plane in orthogonal mode is a little smaller than the viewport
-// as there are two borders with width 2px each => 8px
-// TODO: Wouldn't 2px on each side only result in 4px additional width instead of 8px?
-export const OUTER_BORDER_ORTHO = 2;
+// as there are two borders (e.g., yellow and red) with width 2px each => 8px
+export const OUTER_BORDER_ORTHO = 4;
 const PLANE_WIDTH = 376;
-const VIEWPORT_WIDTH = 384;
+const VIEWPORT_WIDTH = PLANE_WIDTH + OUTER_BORDER_ORTHO * 2;
 
 const Constants = {
   ARBITRARY_VIEW: 4,

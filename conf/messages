@@ -114,6 +114,7 @@ dataSource.notFound=Datasource not found on datastore server
 dataStore.notAvailable=Datastore not available. Please try again in a few minutes.
 dataStore.list.failed=Failed to retrieve list of data stores.
 dataStore.notFound=DataStore not found.
+dataStore.name.alreadyTaken=There already exists a DataStore with this name. Choose a different name, please.
 
 ndstore.invalid.response=Received invalid response from NDStore: ''{0}''
 ndstore.response.parseFailure=Received invalid json from NDStore

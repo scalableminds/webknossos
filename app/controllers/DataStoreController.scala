@@ -17,16 +17,4 @@ class DataStoreController @Inject()(val messagesApi: MessagesApi) extends Contro
       Ok(Json.toJson(js))
     }
   }
-
-  def addForeignDataStore(name: String, url: String, key: String) = UserAwareAction.async { implicit request =>
-    // we could also add the parameter 'isForeign' to the arguments
-    val dataStore = DataStore(name, url, WebKnossosStore, key, isForeign = true) // change the key
-    for {
-      _ <- DataStoreDAO.findOneByName(name).reverse ?~> Messages("dataStore.name.exists") // add this to messages
-      _ <- DataStoreDAO.findOneByKey(key).reverse ?~> Messages("dataStore.key.exists") // add this to messages
-      _ <- DataStoreDAO.insertOne(dataStore) //?~> Messages("dataStore.list.failed")
-    } yield {
-      Ok
-    }
-  }
 }

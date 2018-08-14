@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.accesscontext.DBAccessContext
 import javax.inject.Inject
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.rpc.RPC
@@ -18,6 +19,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import utils.ObjectId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
+import net.liftweb.common.Full
 
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.Future
@@ -73,26 +75,19 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
     }
   }
 
-  def addForeignDataSet(datastore: String, organizationId: String, dataSetName: String) = SecuredAction.async { implicit request =>
-    val id = ObjectId.generate;
-    val dataSet = DataSet(id, datastore, ObjectId(organizationId), isPublic = true, isUsable = true, scale = None, name = dataSetName, status = "", sharingToken = None, logoUrl = None)
-    // change scale
+  def addForeignDataStoreAndDataSet(url: String, dataStoreName: String, dataSetName: String) = SecuredAction.async { implicit request =>
     for {
-      dataStore <- DataStoreDAO.findOneByName(datastore) ?~> Messages("dataStore.notFound")
-      foreignDataset <- getForeignDataSet(dataStore.url, dataSetName)// http://localhost:9090/data/datasets/ROI2017_wkw/read?token=abd
+      dataStoreBox <- DataStoreDAO.findOneByName(dataStoreName).reverse.futureBox
+      _ <- dataStoreBox match {
+        case Full(_) => DataSetService.addForeignDataStore(dataStoreName, url)
+      }
       _ <- DataSetService.isProperDataSetName(dataSetName) ?~> Messages("dataSet.import.impossible.name")
-      _ <- DataSetDAO.findOneByName(dataSetName).reverse ?~> Messages("dataSet.name.exists") // add this to messages
-      dataStoreInfo = DataStoreInfo(dataStore.name, dataStore.url, dataStore.typ)
-      _ <- DataSetService.createDataSet(dataSetName, dataStoreInfo,"Connectomics department", foreignDataset)
+      _ <- DataSetDAO.findOneByName(dataSetName).reverse ?~> Messages("dataSet.name.alreadyTaken")
+      organizationName <- request.identity.organization.map(_.name)
+      _ <- DataSetService.addForeignDataSet(dataStoreName, dataSetName, organizationName)
     } yield {
       Ok
     }
-  }
-
-  def getForeignDataSet(dataStoreUrl: String, dataSetName: String): Fox[InboxDataSource] = {
-    RPC(s"${dataStoreUrl}/data/datasets/${dataSetName}/read")
-      .withQueryString("token" -> "abc") //change this later
-      .getWithJsonResponse[InboxDataSource]
   }
 
   def list = UserAwareAction.async { implicit request =>

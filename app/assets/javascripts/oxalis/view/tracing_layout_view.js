@@ -10,7 +10,7 @@ import TracingView from "oxalis/view/tracing_view";
 import { Layout, Icon } from "antd";
 import { location } from "libs/window";
 import ButtonComponent from "oxalis/view/components/button_component";
-import type { TracingTypeTracingType } from "oxalis/store";
+import type { TracingTypeTracingType, OxalisState } from "oxalis/store";
 import type { ControlModeType } from "oxalis/constants";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -19,7 +19,11 @@ import { importNmls } from "oxalis/view/right-menu/trees_tab_view";
 
 const { Header, Sider } = Layout;
 
-type Props = {
+type StateProps = {
+  isUpdateTracingAllowed: boolean,
+};
+
+type Props = StateProps & {
   initialTracingType: TracingTypeTracingType,
   initialAnnotationId: string,
   initialControlmode: ControlModeType,

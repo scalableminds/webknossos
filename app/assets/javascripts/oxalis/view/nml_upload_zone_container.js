@@ -155,9 +155,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
             message="Did you know that you do can just drag-and-drop NML files directly into this view? You don't have to explicitly open this dialog first."
             style={{ marginBottom: 12 }}
           />
-        ) : (
-          <Alert message="You are not allowed to import NMLs." style={{ marginBottom: 12 }} />
-        )}
+        ) : null}
         <Dropzone
           multiple
           disablePreview

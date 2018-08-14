@@ -9,7 +9,7 @@ import constants, { ControlModeEnum } from "oxalis/constants";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
-import { formatScale } from "libs/template_helpers";
+import { formatScale } from "libs/format_utils";
 import {
   setAnnotationNameAction,
   setAnnotationDescriptionAction,

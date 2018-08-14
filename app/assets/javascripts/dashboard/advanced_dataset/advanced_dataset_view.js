@@ -2,7 +2,7 @@
 /* eslint-disable jsx-a11y/href-no-hash, react/prefer-stateless-function, react/no-unused-state */
 
 import * as React from "react";
-import { stringToColor, formatTuple } from "libs/template_helpers";
+import { stringToColor, formatTuple } from "libs/format_utils";
 import Utils from "libs/utils";
 import { Table, Icon, Tag } from "antd";
 import DatasetActionView from "dashboard/advanced_dataset/dataset_action_view";

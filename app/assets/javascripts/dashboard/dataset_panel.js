@@ -2,7 +2,7 @@
 import * as React from "react";
 import { Row, Col, Card, Popover } from "antd";
 import Markdown from "react-remarkable";
-import { formatScale } from "libs/template_helpers";
+import { formatScale } from "libs/format_utils";
 import _ from "lodash";
 import { getThumbnailURL, hasSegmentation } from "oxalis/model/accessors/dataset_accessor";
 

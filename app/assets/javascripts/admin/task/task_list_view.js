@@ -11,8 +11,7 @@ import Toast from "libs/toast";
 import messages from "messages";
 import TaskSearchForm from "admin/task/task_search_form";
 import { deleteTask, getTasks } from "admin/admin_rest_api";
-import { formatTuple } from "libs/template_helpers";
-import FormatUtils from "libs/format_utils";
+import { formatTuple, formatSeconds } from "libs/format_utils";
 import TaskAnnotationView from "admin/task/task_annotation_view";
 import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
@@ -271,7 +270,7 @@ class TaskListView extends React.PureComponent<Props, State> {
                   <br />
                   <span title="Tracing Time">
                     <Icon type="clock-circle-o" />
-                    {FormatUtils.formatSeconds((task.tracingTime || 0) / 1000)}
+                    {formatSeconds((task.tracingTime || 0) / 1000)}
                   </span>
                 </div>
               )}

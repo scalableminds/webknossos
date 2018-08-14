@@ -130,7 +130,7 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
             <Table
               dataSource={Utils.filterWithSearchQueryOR(
                 this.state.tasktypes,
-                ["id", "team", "summary", "description", "settings"],
+                ["id", "teamName", "summary", "description", "settings"],
                 this.state.searchQuery,
               )}
               rowKey="id"
@@ -150,10 +150,10 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
               />
               <Column
                 title="Team"
-                dataIndex="team.name"
+                dataIndex="teamName"
                 key="team"
                 width={130}
-                sorter={Utils.localeCompareBy(typeHint, "team")}
+                sorter={Utils.localeCompareBy(typeHint, "teamName")}
               />
               <Column
                 title="Summary"

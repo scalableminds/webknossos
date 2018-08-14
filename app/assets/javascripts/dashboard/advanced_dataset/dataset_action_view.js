@@ -8,6 +8,7 @@ import { Link } from "react-router-dom";
 import { Dropdown, Menu, Icon } from "antd";
 import type { APIDatasetType } from "admin/api_flow_types";
 import { createExplorational, triggerDatasetClearCache } from "admin/admin_rest_api";
+import features from "features";
 
 type Props = {
   dataset: APIDatasetType,
@@ -19,7 +20,7 @@ type State = {};
 export default class DatasetActionView extends React.PureComponent<Props, State> {
   createTracing = async (
     dataset: APIDatasetType,
-    typ: "volume" | "skeleton",
+    typ: "skeleton" | "volume" | "hybrid",
     withFallback: boolean,
   ) => {
     const annotation = await createExplorational(dataset.name, typ, withFallback);
@@ -112,6 +113,16 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
               Start Skeleton Tracing
             </a>
             {volumeTracingMenu}
+            {features().hybridTracings ? (
+              <a
+                href="#"
+                onClick={() => this.createTracing(dataset, "hybrid", true)}
+                title="Create Hybrid Tracing"
+              >
+                <Icon type="swap" />
+                Start Hybrid Tracing
+              </a>
+            ) : null}
           </div>
         ) : null}
       </div>

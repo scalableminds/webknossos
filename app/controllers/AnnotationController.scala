@@ -6,7 +6,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import models.annotation._
-import models.binary.{DataSet, DataSetDAO}
+import models.binary.{DataSet, DataSetDAO, DataStoreHandlingStrategy}
 import models.task.TaskDAO
 import models.user.time._
 import models.user.{User, UserDAO}
@@ -41,7 +41,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       _ <- restrictions.allowAccess(request.identity) ?~> "notAllowed" ~> BAD_REQUEST
       js <- annotation.publicWrites(request.identity, Some(restrictions), Some(readOnly)) ?~> "could not convert annotation to json"
       _ <- Fox.runOptional(request.identity) { user =>
-        if (typ == AnnotationTypeSQL.Task || typ == AnnotationTypeSQL.Explorational) {
+        if (typ == AnnotationType.Task || typ == AnnotationType.Explorational) {
           TimeSpanService.logUserInteraction(user, annotation) // log time when a user starts working
         } else Fox.successful(())
       }
@@ -88,11 +88,12 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
       _ <- restrictions.allowUpdate(request.identity) ?~> Messages("notAllowed")
-      _ <- annotation.isRevertPossible ?~> Messages("annotation.revert.toOld")
+      _ <- bool2Fox(annotation.isRevertPossible) ?~> Messages("annotation.revert.toOld")
       dataSet <- annotation.dataSet
       dataStoreHandler <- dataSet.dataStoreHandler
-      newTracingReference <- dataStoreHandler.duplicateSkeletonTracing(annotation.tracing, Some(version.toString))
-      _ <- AnnotationDAO.updateTracingReference(annotation._id, newTracingReference)
+      skeletonTracingId <- annotation.skeletonTracingId.toFox
+      newSkeletonTracingId <- dataStoreHandler.duplicateSkeletonTracing(skeletonTracingId, Some(version.toString))
+      _ <- AnnotationDAO.updateSkeletonTracingId(annotation._id, newSkeletonTracingId)
     } yield {
       logger.info(s"REVERTED [$typ - $id, $version]")
       JsonOk("annotation.reverted")
@@ -118,8 +119,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
     for {
       annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
-      isAllowed <- isReopenAllowed(request.identity, annotation)
-      _ <- isAllowed.toFox ?~> "reopen.notAllowed"
+      _ <- Fox.assertTrue(isReopenAllowed(request.identity, annotation)) ?~> "reopen.notAllowed"
       _ <- annotation.muta.reopen ?~> "annotation.invalid"
       updatedAnnotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       json <- updatedAnnotation.publicWrites(Some(request.identity))
@@ -208,7 +208,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   def cancel(typ: String, id: String) = SecuredAction.async { implicit request =>
     def tryToCancel(annotation: Annotation) = {
       annotation match {
-        case t if t.typ == AnnotationTypeSQL.Task =>
+        case t if t.typ == AnnotationType.Task =>
           annotation.muta.cancel.map { _ =>
             JsonOk(Messages("task.finished"))
           }
@@ -226,14 +226,11 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
   def transfer(typ: String, id: String) = SecuredAction.async(parse.json) { implicit request =>
     for {
-      annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
       _ <- restrictions.allowFinish(request.identity) ?~> Messages("notAllowed")
       newUserId <- (request.body \ "userId").asOpt[String].toFox
       newUserIdValidated <- ObjectId.parse(newUserId)
-      newUser <- UserDAO.findOne(newUserIdValidated) ?~> Messages("user.notFound")
-      _ <- annotation.muta.transferToUser(newUser)
-      updated <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
+      updated <- AnnotationService.transferAnnotationToUser(typ, id, newUserIdValidated)(securedRequestToUserAwareRequest)
       json <- updated.publicWrites(Some(request.identity), Some(restrictions))
     } yield {
       JsonOk(json)
@@ -254,12 +251,12 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   private def duplicateAnnotation(annotation: Annotation, user: User)(implicit ctx: DBAccessContext): Fox[Annotation] = {
     for {
       dataSet: DataSet <- annotation.dataSet
-      oldTracingReference = annotation.tracing
       _ <- bool2Fox(dataSet.isUsable) ?~> "DataSet is not imported."
       dataStoreHandler <- dataSet.dataStoreHandler
-      newTracingReference <- dataStoreHandler.duplicateSkeletonTracing(oldTracingReference) ?~> "Failed to create skeleton tracing."
+      newSkeletonTracingReference <- Fox.runOptional(annotation.skeletonTracingId)(id => dataStoreHandler.duplicateSkeletonTracing(id)) ?~> "Failed to duplicate skeleton tracing."
+      newVolumeTracingReference <- Fox.runOptional(annotation.volumeTracingId)(id => dataStoreHandler.duplicateVolumeTracing(id)) ?~> "Failed to duplicate volume tracing."
       clonedAnnotation <- AnnotationService.createFrom(
-        user, dataSet, newTracingReference, AnnotationTypeSQL.Explorational, None, annotation.description) ?~> Messages("annotation.create.failed")
+        user, dataSet, newSkeletonTracingReference, newVolumeTracingReference, AnnotationType.Explorational, None, annotation.description) ?~> Messages("annotation.create.failed")
     } yield clonedAnnotation
   }
 }

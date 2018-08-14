@@ -5,6 +5,7 @@ package controllers
 import javax.inject.Inject
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.project._
 import models.task._
 import net.liftweb.common.Empty
@@ -12,6 +13,7 @@ import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
+import utils.ObjectId
 
 import scala.concurrent.Future
 
@@ -57,7 +59,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
     implicit request =>
       for {
         project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
-        _ <- project.isDeletableBy(request.identity) ?~> Messages("project.remove.notAllowed")
+        _ <- bool2Fox(project.isDeletableBy(request.identity)) ?~> Messages("project.remove.notAllowed")
         _ <- ProjectService.deleteOne(project._id) ?~> Messages("project.remove.failure")
       } yield {
         JsonOk(Messages("project.remove.success"))
@@ -127,7 +129,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
   def incrementEachTasksInstances(projectName: String, delta: Option[Long]) = SecuredAction.async {
     implicit request =>
       for {
-        _ <- (delta.getOrElse(1L) >= 0) ?~> Messages("project.increaseTaskInstances.negative")
+        _ <- bool2Fox(delta.getOrElse(1L) >= 0) ?~> Messages("project.increaseTaskInstances.negative")
         project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
         _ <- TaskDAO.incrementTotalInstancesOfAllWithProject(project._id, delta.getOrElse(1L))
         openInstanceCount <- TaskDAO.countOpenInstancesForProject(project._id)
@@ -135,12 +137,26 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
       } yield Ok(js)
   }
 
-  def usersWithOpenTasks(projectName: String) = SecuredAction.async {
+  def usersWithActiveTasks(projectName: String) = SecuredAction.async {
     implicit request =>
       for {
-        emails <- ProjectDAO.findUsersWithOpenTasks(projectName)
+        usersWithActiveTasks <- ProjectDAO.findUsersWithActiveTasks(projectName)
       } yield {
-        Ok(Json.toJson(emails))
+        Ok(Json.toJson(usersWithActiveTasks.map(tuple  => Json.obj("email" -> tuple._1, "activeTasks" -> tuple._2))))
       }
+  }
+
+  def transferActiveTasks(projectName: String) = SecuredAction.async(parse.json) { implicit request =>
+    for {
+      project <- ProjectDAO.findOneByName(projectName)
+      _ <- Fox.assertTrue(request.identity.isTeamManagerOrAdminOf(project._team))
+      newUserId <- (request.body \ "userId").asOpt[String].toFox
+      newUserIdValidated <- ObjectId.parse(newUserId)
+      activeAnnotations <- AnnotationDAO.findAllActiveForProject(project._id)
+      updated <- Fox.serialCombined(activeAnnotations){ id =>
+        AnnotationService.transferAnnotationToUser(AnnotationType.Task.toString, id.toString, newUserIdValidated)(securedRequestToUserAwareRequest)
+      }
+    } yield Ok
+
   }
 }

@@ -8,9 +8,10 @@ import type { Vector3, Vector4, Vector6, BoundingBoxType } from "oxalis/constant
 import Maybe from "data.maybe";
 import window, { document, location } from "libs/window";
 import pako from "pako";
+import naturalSort from "javascript-natural-sort";
 import type { APIUserType } from "admin/api_flow_types";
 
-type Comparator<T> = (T, T) => -1 | 0 | 1;
+export type Comparator<T> = (T, T) => -1 | 0 | 1;
 type UrlParamsType = { [key: string]: string | boolean };
 
 function swap(arr, a, b) {
@@ -21,6 +22,8 @@ function swap(arr, a, b) {
     arr[a] = tmp;
   }
 }
+
+naturalSort.insensitive = true;
 
 function getRecursiveValues(obj: Object | Array<*> | string): Array<*> {
   return _.flattenDeep(getRecursiveValuesUnflat(obj));
@@ -33,6 +36,40 @@ function getRecursiveValuesUnflat(obj: Object | Array<*> | string): Array<*> {
     return Object.keys(obj).map(key => getRecursiveValuesUnflat(obj[key]));
   } else {
     return [obj];
+  }
+}
+
+function cheapSort<T: string | number>(valueA: T, valueB: T): -1 | 0 | 1 {
+  // $FlowFixMe It is not possible to express that valueA and valueB have the very same type
+  if (valueA < valueB) return -1;
+  // $FlowFixMe It is not possible to express that valueA and valueB have the very same type
+  if (valueA > valueB) return 1;
+  return 0;
+}
+
+export function enforce<A, B>(fn: A => B): (?A) => B {
+  return (nullableA: ?A) => {
+    if (nullableA == null) {
+      throw new Error("Could not enforce while unwrapping maybe");
+    }
+    return fn(nullableA);
+  };
+}
+
+export function maybe<A, B>(fn: A => B): (?A) => Maybe<B> {
+  return (nullableA: ?A) => Maybe.fromNullable(nullableA).map(fn);
+}
+
+export function parseAsMaybe(str: ?string): Maybe<any> {
+  try {
+    const parsedJSON = JSON.parse(str || "");
+    if (parsedJSON != null) {
+      return Maybe.Just(parsedJSON);
+    } else {
+      return Maybe.Nothing();
+    }
+  } catch (exception) {
+    return Maybe.Nothing();
   }
 }
 
@@ -119,50 +156,49 @@ const Utils = {
       : null;
   },
 
-  compareBy<T: { +[string]: mixed }>(
+  compareBy<T>(
     collectionForTypeInference: Array<T>, // this parameter is only used let flow infer the used type
-    selector: $Keys<T> | (T => number),
+    selector: T => number,
     isSortedAscending: boolean = true,
   ): Comparator<T> {
-    // generic key comparator for array.prototype.sort
     return (a: T, b: T) => {
       if (!isSortedAscending) {
         [a, b] = [b, a];
       }
-      const valueA = typeof selector === "function" ? selector(a) : a[selector];
-      const valueB = typeof selector === "function" ? selector(b) : b[selector];
+      const valueA = selector(a);
+      const valueB = selector(b);
       if (typeof valueA !== "number" || typeof valueB !== "number") {
+        console.error(
+          "Wrong compare method called (compareBy should only be called for numbers). Selector:",
+          selector,
+        );
         return 0;
       }
-      if (valueA < valueB) {
-        return -1;
-      }
-      if (valueA > valueB) {
-        return 1;
-      }
-      return 0;
+      return cheapSort(valueA, valueB);
     };
   },
 
-  localeCompareBy<T: { +[string]: mixed }>(
+  localeCompareBy<T>(
     collectionForTypeInference: Array<T>, // this parameter is only used let flow infer the used type
-    selector: $Keys<T> | (T => string),
+    selector: T => string,
     isSortedAscending: boolean = true,
-  ): (T, T) => number {
-    const sortingOrder = isSortedAscending ? 1 : -1;
-
-    return (a: T, b: T): number => {
-      const valueA = typeof selector === "function" ? selector(a) : a[selector];
-      const valueB = typeof selector === "function" ? selector(b) : b[selector];
+    sortNatural: boolean = true,
+  ): Comparator<T> {
+    return (a: T, b: T) => {
+      if (!isSortedAscending) {
+        [a, b] = [b, a];
+      }
+      const valueA = selector(a);
+      const valueB = selector(b);
       if (typeof valueA !== "string" || typeof valueB !== "string") {
+        console.error(
+          "Wrong compare method called (localeCompareBy should only be called for strings). Selector:",
+          selector,
+        );
         return 0;
       }
-      return (
-        valueA.localeCompare(valueB, "en", {
-          numeric: true,
-          usage: "search",
-        }) * sortingOrder
-      );
+      // localeCompare is really slow, therefore, we use the naturalSort lib and a cheap sorting otherwise
+      return sortNatural ? naturalSort(valueA, valueB) : cheapSort(valueA, valueB);
     };
   },
 
@@ -319,8 +355,8 @@ const Utils = {
 
   // Maybes getOrElse is defined as getOrElse(defaultValue: T): T, which is why
   // you can't do getOrElse(null) without flow complaining
-  toNullable<T>(maybe: Maybe<T>): ?T {
-    return maybe.isJust ? maybe.get() : null;
+  toNullable<T>(_maybe: Maybe<T>): ?T {
+    return _maybe.isJust ? _maybe.get() : null;
   },
 
   // Filters an array given a search string. Supports searching for several words as OR query.

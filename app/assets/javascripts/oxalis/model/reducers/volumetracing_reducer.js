@@ -22,17 +22,10 @@ import { VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
 function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionType): OxalisState {
   switch (action.type) {
     case "INITIALIZE_VOLUMETRACING": {
-      const restrictions = Object.assign(
-        {},
-        action.annotation.restrictions,
-        action.annotation.settings,
-      );
-
       // As the frontend doesn't know all cells, we have to keep track of the highest id
       // and cannot compute it
       const maxCellId = action.tracing.largestSegmentId;
       const volumeTracing: VolumeTracingType = {
-        annotationId: action.annotation.id,
         createdTimestamp: action.tracing.createdTimestamp,
         type: "volume",
         activeCellId: 0,
@@ -41,20 +34,14 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
         contourList: [],
         maxCellId,
         cells: {},
-        restrictions,
         activeTool: VolumeToolEnum.MOVE,
-        name: action.annotation.name,
-        tracingType: action.annotation.typ,
-        tracingId: action.annotation.content.id,
+        tracingId: action.tracing.id,
         version: action.tracing.version,
         boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
         userBoundingBox: convertServerBoundingBoxToFrontend(action.tracing.userBoundingBox),
-        isPublic: action.annotation.isPublic,
-        tags: action.annotation.tags,
-        description: action.annotation.description,
       };
 
-      const newState = update(state, { tracing: { $set: volumeTracing } });
+      const newState = update(state, { tracing: { volume: { $set: volumeTracing } } });
       return createCellReducer(newState, volumeTracing, action.tracing.activeSegmentId);
     }
     default:

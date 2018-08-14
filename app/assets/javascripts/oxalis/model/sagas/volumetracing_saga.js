@@ -2,7 +2,17 @@
  * volumetracing_saga.js
  * @flow
  */
-import { call, select, put, take, race, takeEvery, fork } from "redux-saga/effects";
+import {
+  call,
+  select,
+  put,
+  take,
+  _take,
+  race,
+  _takeEvery,
+  fork,
+  type Saga,
+} from "oxalis/model/sagas/effect-generators";
 import {
   updateDirectionAction,
   resetContourAction,
@@ -11,7 +21,10 @@ import type { CopySegmentationLayerActionType } from "oxalis/model/actions/volum
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import Dimensions from "oxalis/model/dimensions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
-import { isVolumeTracingDisallowed } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  enforceVolumeTracing,
+  isVolumeTracingDisallowed,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import { updateVolumeTracing } from "oxalis/model/sagas/update_actions";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
@@ -22,19 +35,19 @@ import type { OrthoViewType, VolumeToolType, ContourModeType } from "oxalis/cons
 import type { VolumeTracingType, FlycamType } from "oxalis/store";
 import api from "oxalis/api/internal_api";
 
-export function* watchVolumeTracingAsync(): Generator<*, *, *> {
-  yield take("WK_READY");
-  yield takeEvery("COPY_SEGMENTATION_LAYER", copySegmentationLayer);
-  yield fork(warnOfTooLowOpacity);
+export function* watchVolumeTracingAsync(): Saga<void> {
+  yield* take("WK_READY");
+  yield _takeEvery("COPY_SEGMENTATION_LAYER", copySegmentationLayer);
+  yield* fork(warnOfTooLowOpacity);
 }
 
-function* warnOfTooLowOpacity(): Generator<*, *, *> {
-  yield take("INITIALIZE_SETTINGS");
-  if (yield select(state => state.tracing.type !== "volume")) {
+function* warnOfTooLowOpacity(): Saga<void> {
+  yield* take("INITIALIZE_SETTINGS");
+  if (yield* select(state => state.tracing.volume == null)) {
     return;
   }
 
-  const isOpacityTooLow = yield select(
+  const isOpacityTooLow = yield* select(
     state => state.datasetConfiguration.segmentationOpacity < 10,
   );
   if (isOpacityTooLow) {
@@ -45,89 +58,99 @@ function* warnOfTooLowOpacity(): Generator<*, *, *> {
 }
 
 export function* editVolumeLayerAsync(): Generator<any, any, any> {
-  yield take("INITIALIZE_VOLUMETRACING");
-  const allowUpdate = yield select(state => state.tracing.restrictions.allowUpdate);
+  yield* take("INITIALIZE_VOLUMETRACING");
+  const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
 
   while (allowUpdate) {
-    const startEditingAction = yield take("START_EDITING");
-    const contourTracingMode = yield select(state => state.tracing.contourTracingMode);
+    const startEditingAction = yield* take("START_EDITING");
+    if (startEditingAction.type !== "START_EDITING") {
+      throw new Error("Unexpected action. Satisfy flow.");
+    }
+    const contourTracingMode = yield* select(
+      state => enforceVolumeTracing(state.tracing).contourTracingMode,
+    );
 
     // Volume tracing for higher zoomsteps is currently not allowed
-    if (yield select(state => isVolumeTracingDisallowed(state))) {
+    if (yield* select(state => isVolumeTracingDisallowed(state))) {
       continue;
     }
-    const currentLayer = yield call(createVolumeLayer, startEditingAction.planeId);
-    const activeTool = yield select(state => state.tracing.activeTool);
+    const currentLayer = yield* call(createVolumeLayer, startEditingAction.planeId);
+    const activeTool = yield* select(state => enforceVolumeTracing(state.tracing).activeTool);
 
     if (activeTool === VolumeToolEnum.BRUSH) {
-      yield labelWithIterator(
+      yield* call(
+        labelWithIterator,
         currentLayer.getCircleVoxelIterator(startEditingAction.position),
         contourTracingMode,
       );
     }
 
     while (true) {
-      const { addToLayerAction, finishEditingAction } = yield race({
-        addToLayerAction: take("ADD_TO_LAYER"),
-        finishEditingAction: take("FINISH_EDITING"),
+      const { addToLayerAction, finishEditingAction } = yield* race({
+        addToLayerAction: _take("ADD_TO_LAYER"),
+        finishEditingAction: _take("FINISH_EDITING"),
       });
 
       if (finishEditingAction) break;
+      if (!addToLayerAction || addToLayerAction.type !== "ADD_TO_LAYER") {
+        throw new Error("Unexpected action. Satisfy flow.");
+      }
 
       if (activeTool === VolumeToolEnum.TRACE) {
         currentLayer.addContour(addToLayerAction.position);
       } else if (activeTool === VolumeToolEnum.BRUSH) {
-        yield labelWithIterator(
+        yield* call(
+          labelWithIterator,
           currentLayer.getCircleVoxelIterator(addToLayerAction.position),
           contourTracingMode,
         );
       }
     }
 
-    yield call(finishLayer, currentLayer, activeTool, contourTracingMode);
+    yield* call(finishLayer, currentLayer, activeTool, contourTracingMode);
   }
 }
 
-function* createVolumeLayer(planeId: OrthoViewType): Generator<*, *, *> {
-  const position = Dimensions.roundCoordinate(yield select(state => getPosition(state.flycam)));
+function* createVolumeLayer(planeId: OrthoViewType): Saga<VolumeLayer> {
+  const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
   const thirdDimValue = position[Dimensions.thirdDimensionForPlane(planeId)];
   return new VolumeLayer(planeId, thirdDimValue);
 }
 
-function* labelWithIterator(iterator, contourTracingMode): Generator<*, *, *> {
-  const activeCellId = yield select(state => state.tracing.activeCellId);
-  const segmentationLayer = yield call([Model, Model.getSegmentationLayer]);
+function* labelWithIterator(iterator, contourTracingMode): Saga<void> {
+  const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
+  const segmentationLayer = yield* call([Model, Model.getSegmentationLayer]);
   const { cube } = segmentationLayer;
   switch (contourTracingMode) {
     case ContourModeEnum.DRAW_OVERWRITE:
-      yield call([cube, cube.labelVoxels], iterator, activeCellId);
+      yield* call([cube, cube.labelVoxels], iterator, activeCellId);
       break;
     case ContourModeEnum.DRAW:
-      yield call([cube, cube.labelVoxels], iterator, activeCellId, 0);
+      yield* call([cube, cube.labelVoxels], iterator, activeCellId, 0);
       break;
     case ContourModeEnum.DELETE_FROM_ACTIVE_CELL:
-      yield call([cube, cube.labelVoxels], iterator, 0, activeCellId);
+      yield* call([cube, cube.labelVoxels], iterator, 0, activeCellId);
       break;
     case ContourModeEnum.DELETE_FROM_ANY_CELL:
-      yield call([cube, cube.labelVoxels], iterator, 0);
+      yield* call([cube, cube.labelVoxels], iterator, 0);
       break;
     default:
       throw new Error("Invalid volume tracing mode.");
   }
 }
 
-function* copySegmentationLayer(action: CopySegmentationLayerActionType): Generator<*, *, *> {
-  const activeViewport = yield select(state => state.viewModeData.plane.activeViewport);
+function* copySegmentationLayer(action: CopySegmentationLayerActionType): Saga<void> {
+  const activeViewport = yield* select(state => state.viewModeData.plane.activeViewport);
   if (activeViewport === "TDView") {
     // Cannot copy labels from 3D view
     return;
   }
 
-  const segmentationLayer = yield call([Model, Model.getSegmentationLayer]);
-  const position = Dimensions.roundCoordinate(yield select(state => getPosition(state.flycam)));
-  const zoom = yield select(state => state.flycam.zoomStep);
+  const segmentationLayer = yield* call([Model, Model.getSegmentationLayer]);
+  const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
+  const zoom = yield* select(state => state.flycam.zoomStep);
   const halfViewportWidth = Math.round((Constants.PLANE_WIDTH / 2) * zoom);
-  const activeCellId = yield select(state => state.tracing.activeCellId);
+  const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
 
   function copyVoxelLabel(voxelTemplateAddress, voxelTargetAddress) {
     const templateLabelValue = segmentationLayer.cube.getDataValue(voxelTemplateAddress);
@@ -144,7 +167,7 @@ function* copySegmentationLayer(action: CopySegmentationLayerActionType): Genera
   }
 
   const directionInverter = action.source === "nextLayer" ? 1 : -1;
-  const spaceDirectionOrtho = yield select(state => state.flycam.spaceDirectionOrtho);
+  const spaceDirectionOrtho = yield* select(state => state.flycam.spaceDirectionOrtho);
   const dim = Dimensions.getIndices(activeViewport)[2];
   const direction = spaceDirectionOrtho[dim];
 
@@ -164,7 +187,7 @@ export function* finishLayer(
   layer: VolumeLayer,
   activeTool: VolumeToolType,
   contourTracingMode: ContourModeType,
-): Generator<*, *, *> {
+): Saga<void> {
   if (layer == null || layer.isEmpty()) {
     return;
   }
@@ -173,19 +196,19 @@ export function* finishLayer(
     const start = Date.now();
 
     layer.finish();
-    yield labelWithIterator(layer.getVoxelIterator(), contourTracingMode);
+    yield* call(labelWithIterator, layer.getVoxelIterator(), contourTracingMode);
 
     console.log("Labeling time:", Date.now() - start);
   }
 
-  yield put(updateDirectionAction(layer.getCentroid()));
-  yield put(resetContourAction());
+  yield* put(updateDirectionAction(layer.getCentroid()));
+  yield* put(resetContourAction());
 }
 
-export function* disallowVolumeTracingWarning(): Generator<*, *, *> {
+export function* disallowVolumeTracingWarning(): Saga<*> {
   while (true) {
-    yield take(["SET_TOOL", "CYCLE_TOOL"]);
-    if (yield select(state => isVolumeTracingDisallowed(state))) {
+    yield* take(["SET_TOOL", "CYCLE_TOOL"]);
+    if (yield* select(state => isVolumeTracingDisallowed(state))) {
       Toast.warning("Volume tracing is not possible at this zoom level. Please zoom in further.");
     }
   }
@@ -195,7 +218,7 @@ export function* diffVolumeTracing(
   prevVolumeTracing: VolumeTracingType,
   volumeTracing: VolumeTracingType,
   flycam: FlycamType,
-): Generator<UpdateAction, *, *> {
+): Generator<UpdateAction, void, void> {
   // no diffing happening here (yet) as for volume tracings there are only updateTracing actions so far
   yield updateVolumeTracing(
     volumeTracing,

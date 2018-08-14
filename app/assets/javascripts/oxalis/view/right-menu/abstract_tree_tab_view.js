@@ -9,17 +9,11 @@ import type { Dispatch } from "redux";
 import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 import AbstractTreeRenderer from "oxalis/view/right-menu/abstract_tree_renderer";
 import type { NodeListItemType } from "oxalis/view/right-menu/abstract_tree_renderer";
-import type { OxalisState, SkeletonTracingType, TracingType } from "oxalis/store";
-import { makeSkeletonTracingGuard } from "oxalis/view/guards";
+import type { OxalisState, SkeletonTracingType } from "oxalis/store";
 
-// The refinement that we're dealing with a SkeletonTracing doesn't happen in mapStateToProps,
-// but in makeSkeletonTracingGuard
-type UnguardedStateProps = {
-  skeletonTracing: TracingType,
-};
 type Props = {
   dispatch: Dispatch<*>,
-  skeletonTracing: SkeletonTracingType,
+  skeletonTracing: ?SkeletonTracingType,
 };
 
 class AbstractTreeView extends Component<Props> {
@@ -40,6 +34,9 @@ class AbstractTreeView extends Component<Props> {
 
   nodeList: Array<NodeListItemType> = [];
   drawTree = _.throttle(() => {
+    if (!this.props.skeletonTracing) {
+      return;
+    }
     const { activeTreeId, activeNodeId, trees } = this.props.skeletonTracing;
     const { canvas } = this;
     if (canvas != null) {
@@ -78,8 +75,8 @@ class AbstractTreeView extends Component<Props> {
   }
 }
 
-function mapStateToProps(state: OxalisState): UnguardedStateProps {
-  return { skeletonTracing: state.tracing };
+function mapStateToProps(state: OxalisState): $Shape<Props> {
+  return { skeletonTracing: state.tracing.skeleton };
 }
 
-export default connect(mapStateToProps)(makeSkeletonTracingGuard(AbstractTreeView));
+export default connect(mapStateToProps)(AbstractTreeView);

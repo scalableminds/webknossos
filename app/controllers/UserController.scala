@@ -2,9 +2,10 @@ package controllers
 
 import javax.inject.Inject
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.{AnnotationDAO, AnnotationTypeSQL}
+import models.annotation.{AnnotationDAO, AnnotationType}
 import models.team._
 import models.user._
 import models.user.time._
@@ -45,8 +46,8 @@ class UserController @Inject()(val messagesApi: MessagesApi)
 
   def annotations(isFinished: Option[Boolean], limit: Option[Int]) = SecuredAction.async { implicit request =>
     for {
-      annotations <- AnnotationDAO.findAllFor(request.identity._id, isFinished, AnnotationTypeSQL.Explorational, limit.getOrElse(defaultAnnotationLimit))
-      jsonList <- Fox.serialCombined(annotations)(_.publicWrites(Some(request.identity)))
+      annotations <- AnnotationDAO.findAllFor(request.identity._id, isFinished, AnnotationType.Explorational, limit.getOrElse(defaultAnnotationLimit))
+      jsonList <- Fox.serialCombined(annotations)(_.compactWrites)
     } yield {
       Ok(Json.toJson(jsonList))
     }
@@ -54,7 +55,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
 
   def tasks(isFinished: Option[Boolean], limit: Option[Int]) = SecuredAction.async { implicit request =>
     for {
-      annotations <- AnnotationDAO.findAllFor(request.identity._id, isFinished, AnnotationTypeSQL.Task, limit.getOrElse(defaultAnnotationLimit))
+      annotations <- AnnotationDAO.findAllFor(request.identity._id, isFinished, AnnotationType.Task, limit.getOrElse(defaultAnnotationLimit))
       jsonList <- Fox.serialCombined(annotations)(_.publicWrites(Some(request.identity)))
     } yield {
       Ok(Json.toJson(jsonList))
@@ -113,8 +114,8 @@ class UserController @Inject()(val messagesApi: MessagesApi)
       userIdValidated <- ObjectId.parse(userId)
       user <- UserDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
       _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
-      annotations <- AnnotationDAO.findAllFor(userIdValidated, isFinished, AnnotationTypeSQL.Explorational, limit.getOrElse(defaultAnnotationLimit))
-      jsonList <- Fox.serialCombined(annotations)(_.publicWrites(Some(request.identity)))
+      annotations <- AnnotationDAO.findAllFor(userIdValidated, isFinished, AnnotationType.Explorational, limit.getOrElse(defaultAnnotationLimit))
+      jsonList <- Fox.serialCombined(annotations)(_.compactWrites)
     } yield {
       Ok(Json.toJson(jsonList))
     }
@@ -125,7 +126,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
       userIdValidated <- ObjectId.parse(userId)
       user <- UserDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
       _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
-      annotations <- AnnotationDAO.findAllFor(userIdValidated, isFinished, AnnotationTypeSQL.Task, limit.getOrElse(defaultAnnotationLimit))
+      annotations <- AnnotationDAO.findAllFor(userIdValidated, isFinished, AnnotationType.Task, limit.getOrElse(defaultAnnotationLimit))
       jsonList <- Fox.serialCombined(annotations)(_.publicWrites(Some(request.identity)))
     } yield {
       Ok(Json.toJson(jsonList))
@@ -182,7 +183,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   }
 
   private def checkAdminOnlyUpdates(user: User, isActive: Boolean, isAdmin: Boolean, email: String)(issuingUser: User): Boolean = {
-    if (user.isDeactivated == !isActive && user.isAdmin == isAdmin && user.email == email) true
+    if (isActive && user.isAdmin == isAdmin && user.email == email) true
     else issuingUser.isAdminOf(user)
   }
 
@@ -194,7 +195,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
           userIdValidated <- ObjectId.parse(userId)
           user <- UserDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
           _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
-          _ <- checkAdminOnlyUpdates(user, isActive, isAdmin, email)(issuingUser) ?~> Messages("notAllowed")
+          _ <- bool2Fox(checkAdminOnlyUpdates(user, isActive, isAdmin, email)(issuingUser)) ?~> Messages("notAllowed")
           teams <- Fox.combined(assignedMemberships.map(t => TeamDAO.findOne(t.teamId)(GlobalAccessContext) ?~> Messages("team.notFound")))
           oldTeamMemberships <- user.teamMemberships
           teamsWithoutUpdate <- Fox.filterNot(oldTeamMemberships)(t => issuingUser.isTeamManagerOrAdminOf(t.teamId))

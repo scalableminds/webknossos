@@ -3,7 +3,7 @@ package controllers
 import com.scalableminds.util.accesscontext.DBAccessContext
 import javax.inject.Inject
 import com.scalableminds.util.geometry.Point3D
-import com.scalableminds.util.rpc.RPC
+import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import models.binary._
@@ -81,7 +81,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
       _ <- dataStoreBox match {
         case Full(_) => DataSetService.addForeignDataStore(dataStoreName, url)
       }
-      _ <- DataSetService.isProperDataSetName(dataSetName) ?~> Messages("dataSet.import.impossible.name")
+      _ <- bool2Fox(DataSetService.isProperDataSetName(dataSetName)) ?~> Messages("dataSet.import.impossible.name")
       _ <- DataSetDAO.findOneByName(dataSetName).reverse ?~> Messages("dataSet.name.alreadyTaken")
       organizationName <- request.identity.organization.map(_.name)
       _ <- DataSetService.addForeignDataSet(dataStoreName, dataSetName, organizationName)
@@ -122,6 +122,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
     val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
     for {
       dataSet <- DataSetDAO.findOneByName(dataSetName)(ctx) ?~> Messages("dataSet.notFound", dataSetName)
+      _ <- Fox.runOptional(request.identity)(user => DataSetLastUsedTimesDAO.updateForDataSetAndUser(dataSet._id, user._id))
       js <- dataSet.publicWrites(request.identity)
     } yield {
       Ok(Json.toJson(js))
@@ -145,7 +146,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
 
   def importDataSet(dataSetName: String) = SecuredAction.async { implicit request =>
     for {
-      _ <- DataSetService.isProperDataSetName(dataSetName) ?~> Messages("dataSet.import.impossible.name")
+      _ <- bool2Fox(DataSetService.isProperDataSetName(dataSetName)) ?~> Messages("dataSet.import.impossible.name")
       dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
       result <- DataSetService.importDataSet(dataSet)
     } yield {

@@ -11,7 +11,10 @@ import InputComponent from "oxalis/view/components/input_component";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
-import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  enforceSkeletonTracing,
+  getActiveTree,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   setTreeNameAction,
   createTreeAction,
@@ -22,15 +25,22 @@ import {
   toggleAllTreesAction,
   toggleInactiveTreesAction,
   setActiveTreeAction,
+  addTreesAndGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import Store from "oxalis/store";
-import { serializeToNml, getNmlName } from "oxalis/model/helpers/nml_helpers";
+import { serializeToNml, getNmlName, parseNml } from "oxalis/model/helpers/nml_helpers";
 import Utils from "libs/utils";
 import { saveAs } from "file-saver";
 import { getBuildInfo } from "admin/admin_rest_api";
+import Toast from "libs/toast";
 import type { Dispatch } from "redux";
-import type { OxalisState, SkeletonTracingType, UserConfigurationType } from "oxalis/store";
-import TreeSearchPopover from "./tree_search_popover";
+import type {
+  OxalisState,
+  TracingType,
+  SkeletonTracingType,
+  UserConfigurationType,
+} from "oxalis/store";
+import SearchPopover from "./search_popover";
 
 const ButtonGroup = Button.Group;
 const InputGroup = Input.Group;
@@ -44,6 +54,7 @@ type Props = {
   onCreateTree: () => void,
   onDeleteTree: () => void,
   onChangeTreeName: string => void,
+  annotation: TracingType,
   skeletonTracing: SkeletonTracingType,
   userConfiguration: UserConfigurationType,
   onSetActiveTree: number => void,
@@ -54,6 +65,45 @@ type State = {
   isUploading: boolean,
   isDownloading: boolean,
 };
+
+function readFileAsText(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => resolve(reader.result.toString());
+    reader.readAsText(file);
+  });
+}
+
+export async function importNmls(files: Array<File>, createGroupForEachFile: boolean) {
+  try {
+    const { successes: importActions, errors } = await Utils.promiseAllWithErrors(
+      files.map(async file => {
+        const nmlString = await readFileAsText(file);
+        try {
+          const { trees, treeGroups } = await parseNml(
+            nmlString,
+            createGroupForEachFile ? file.name : null,
+          );
+          return addTreesAndGroupsAction(trees, treeGroups);
+        } catch (e) {
+          throw new Error(`"${file.name}" could not be parsed. ${e.message}`);
+        }
+      }),
+    );
+
+    if (errors.length > 0) {
+      throw errors;
+    }
+
+    // Dispatch the actual actions as the very last step, so that
+    // not a single store mutation happens if something above throws
+    // an error
+    importActions.forEach(action => Store.dispatch(action));
+  } catch (e) {
+    (Array.isArray(e) ? e : [e]).forEach(err => Toast.error(err.message));
+  }
+}
 
 class TreesTabView extends React.PureComponent<Props, State> {
   state = {
@@ -92,7 +142,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     // Wait 1 second for the Modal to render
     const [buildInfo] = await Promise.all([getBuildInfo(), Utils.sleep(1000)]);
     const state = Store.getState();
-    const nml = serializeToNml(state, this.props.skeletonTracing, buildInfo);
+    const nml = serializeToNml(state, this.props.annotation, this.props.skeletonTracing, buildInfo);
     this.setState({ isDownloading: false });
 
     const blob = new Blob([nml], { type: "text/plain;charset=utf-8" });
@@ -183,9 +233,11 @@ class TreesTabView extends React.PureComponent<Props, State> {
           <Spin />
         </Modal>
         <ButtonGroup>
-          <TreeSearchPopover
+          <SearchPopover
             onSelect={this.props.onSetActiveTree}
-            trees={this.props.skeletonTracing.trees}
+            data={this.props.skeletonTracing.trees}
+            idKey="treeId"
+            searchKey="name"
             maxSearchResults={10}
           >
             <Tooltip title="Open the search via CTRL + Shift + F">
@@ -193,7 +245,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
                 <Icon type="search" />
               </ButtonComponent>
             </Tooltip>
-          </TreeSearchPopover>
+          </SearchPopover>
           <ButtonComponent onClick={this.props.onCreateTree} title="Create Tree">
             <i className="fa fa-plus" /> Create
           </ButtonComponent>
@@ -241,7 +293,8 @@ class TreesTabView extends React.PureComponent<Props, State> {
 }
 
 const mapStateToProps = (state: OxalisState) => ({
-  skeletonTracing: state.tracing,
+  annotation: state.tracing,
+  skeletonTracing: enforceSkeletonTracing(state.tracing),
   userConfiguration: state.userConfiguration,
 });
 

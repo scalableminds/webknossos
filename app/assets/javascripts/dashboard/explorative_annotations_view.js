@@ -4,9 +4,9 @@
 import _ from "lodash";
 import * as React from "react";
 import { Link, withRouter } from "react-router-dom";
-import Request from "libs/request";
+import Store from "oxalis/store";
 import { AsyncLink } from "components/async_clickables";
-import { Spin, Input, Table, Button, Modal, Tag, Icon } from "antd";
+import { Spin, Input, Table, Button, Modal, Tag, Icon, Popover, Tooltip } from "antd";
 import FormatUtils from "libs/format_utils";
 import Toast from "libs/toast";
 import Utils from "libs/utils";
@@ -15,24 +15,27 @@ import TemplateHelpers from "libs/template_helpers";
 import messages from "messages";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import EditableTextIcon from "oxalis/view/components/editable_text_icon";
-import FileUpload from "components/file_upload";
 import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
-import type { APIAnnotationType } from "admin/api_flow_types";
+import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import {
   finishAllAnnotations,
   editAnnotation,
   finishAnnotation,
   reOpenAnnotation,
+  getCompactAnnotations,
+  getCompactAnnotationsForUser,
 } from "admin/admin_rest_api";
-import type { RouterHistory } from "react-router-dom";
 import { handleGenericError } from "libs/error_handling";
 import FormattedDate from "components/formatted_date";
+import type { APIAnnotationTypeCompact } from "admin/api_flow_types";
+import type { RouterHistory } from "react-router-dom";
+import { AnnotationContentTypes } from "oxalis/constants";
 
 const { Column } = Table;
 const { Search } = Input;
 
-const typeHint: APIAnnotationType[] = [];
+const typeHint: APIAnnotationTypeCompact[] = [];
 
 type Props = {
   userId: ?string,
@@ -42,14 +45,13 @@ type Props = {
 
 type State = {
   shouldShowArchivedTracings: boolean,
-  archivedTracings: Array<APIAnnotationType>,
-  unarchivedTracings: Array<APIAnnotationType>,
+  archivedTracings: Array<APIAnnotationTypeCompact>,
+  unarchivedTracings: Array<APIAnnotationTypeCompact>,
   didAlreadyFetchMetaInfo: {
     isArchived: boolean,
     isUnarchived: boolean,
   },
   searchQuery: string,
-  isUploadingNML: boolean,
   tags: Array<string>,
   isLoading: boolean,
 };
@@ -72,7 +74,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       isUnarchived: false,
     },
     searchQuery: "",
-    isUploadingNML: false,
     tags: [],
     isLoading: false,
   };
@@ -118,16 +119,15 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     if (!this.isFetchNecessary()) {
       return;
     }
-    // Cache shouldShowArchivedTracings, otherwise it could have another value later
+    // Cache shouldShowArchivedTracings, otherwise it could have another value after fetching
     const showArchivedTracings = this.state.shouldShowArchivedTracings;
-    const isFinishedString = showArchivedTracings.toString();
-    const url = this.props.userId
-      ? `/api/users/${this.props.userId}/annotations?isFinished=${isFinishedString}`
-      : `/api/user/annotations?isFinished=${isFinishedString}`;
 
     try {
       this.setState({ isLoading: true });
-      const tracings = await Request.receiveJSON(url);
+      const tracings =
+        this.props.userId != null
+          ? await getCompactAnnotationsForUser(this.props.userId, showArchivedTracings)
+          : await getCompactAnnotations(showArchivedTracings);
       if (showArchivedTracings) {
         this.setState(
           update(this.state, {
@@ -158,7 +158,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     this.setState({ shouldShowArchivedTracings: !this.state.shouldShowArchivedTracings });
   };
 
-  finishOrReopenTracing = async (type: "finish" | "reopen", tracing: APIAnnotationType) => {
+  finishOrReopenTracing = async (type: "finish" | "reopen", tracing: APIAnnotationTypeCompact) => {
     const newTracing =
       type === "finish"
         ? await finishAnnotation(tracing.id, tracing.typ)
@@ -185,11 +185,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     }
   };
 
-  handleNMLUpload = (response: Object) => {
-    this.props.history.push(`/annotations/${response.annotation.typ}/${response.annotation.id}`);
-  };
-
-  renderActions = (tracing: APIAnnotationType) => {
+  renderActions = (tracing: APIAnnotationTypeCompact) => {
     if (tracing.typ !== "Explorational") {
       return null;
     }
@@ -224,7 +220,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     }
   };
 
-  getCurrentTracings(): Array<APIAnnotationType> {
+  getCurrentTracings(): Array<APIAnnotationTypeCompact> {
     return this.state.shouldShowArchivedTracings
       ? this.state.archivedTracings
       : this.state.unarchivedTracings;
@@ -234,7 +230,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     this.setState({ searchQuery: event.target.value });
   };
 
-  renameTracing(tracing: APIAnnotationType, name: string) {
+  renameTracing(tracing: APIAnnotationTypeCompact, name: string) {
     const tracings = this.getCurrentTracings();
 
     const newTracings = tracings.map(currentTracing => {
@@ -290,7 +286,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   editTagFromAnnotation = (
-    annotation: APIAnnotationType,
+    annotation: APIAnnotationTypeCompact,
     shouldAddTag: boolean,
     tag: string,
     event: SyntheticInputEvent<>,
@@ -335,6 +331,33 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     );
   }
 
+  renderNameWithDescription(tracing: APIAnnotationTypeCompact) {
+    return (
+      <React.Fragment>
+        <EditableTextLabel
+          value={tracing.name}
+          onChange={newName => this.renameTracing(tracing, newName)}
+        />
+        <Tooltip title={<span> Show description </span>} placement="bottom">
+          <Popover
+            title="Description"
+            trigger="click"
+            content={
+              <div style={{ maxWidth: 400 }}>
+                {tracing.description && tracing.description !== ""
+                  ? tracing.description
+                  : "No description"}
+              </div>
+            }
+          >
+            <i className="fa fa-align-justify" />
+            <div />
+          </Popover>
+        </Tooltip>
+      </React.Fragment>
+    );
+  }
+
   renderTable() {
     return (
       <Table
@@ -347,39 +370,40 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Column
           title="ID"
           dataIndex="id"
-          render={(__, tracing: APIAnnotationType) => FormatUtils.formatHash(tracing.id)}
-          sorter={Utils.localeCompareBy(typeHint, "id")}
+          render={(__, tracing: APIAnnotationTypeCompact) => FormatUtils.formatHash(tracing.id)}
+          sorter={Utils.localeCompareBy(typeHint, annotation => annotation.id)}
           className="monospace-id"
         />
         <Column
           title="Name"
           dataIndex="name"
-          sorter={Utils.localeCompareBy(typeHint, "name")}
-          render={(name: string, tracing: APIAnnotationType) => (
-            <EditableTextLabel
-              value={name}
-              onChange={newName => this.renameTracing(tracing, newName)}
-            />
-          )}
+          sorter={Utils.localeCompareBy(typeHint, annotation => annotation.name)}
+          render={(name: string, tracing: APIAnnotationTypeCompact) =>
+            this.renderNameWithDescription(tracing)
+          }
         />
         <Column
           title="Stats"
-          render={(__, tracing: APIAnnotationType) =>
-            tracing.stats.treeCount && tracing.content.typ === "skeleton" ? (
+          render={(__, annotation: APIAnnotationTypeCompact) =>
+            // Flow doesn't recognize that stats must contain the nodeCount if the treeCount is != null
+            annotation.stats.treeCount != null &&
+            annotation.stats.nodeCount != null &&
+            annotation.stats.edgeCount != null &&
+            annotation.tracing.skeleton != null ? (
               <div>
                 <span title="Trees">
                   <i className="fa fa-sitemap" />
-                  {tracing.stats.treeCount}
+                  {annotation.stats.treeCount}
                 </span>
                 <br />
                 <span title="Nodes">
                   <i className="fa fa-bull" />
-                  {tracing.stats.nodeCount}
+                  {annotation.stats.nodeCount}
                 </span>
                 <br />
                 <span title="Edges">
                   <i className="fa fa-arrows-h" />
-                  {tracing.stats.edgeCount}
+                  {annotation.stats.edgeCount}
                 </span>
               </div>
             ) : null
@@ -389,16 +413,16 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           title="Tags"
           dataIndex="tags"
           width={500}
-          render={(tags: Array<string>, tracing: APIAnnotationType) => (
+          render={(tags: Array<string>, annotation: APIAnnotationTypeCompact) => (
             <div>
               {tags.map(tag => (
                 <Tag
                   key={tag}
                   color={TemplateHelpers.stringToColor(tag)}
                   onClick={_.partial(this.addTagToSearch, tag)}
-                  onClose={_.partial(this.editTagFromAnnotation, tracing, false, tag)}
+                  onClose={_.partial(this.editTagFromAnnotation, annotation, false, tag)}
                   closable={
-                    !(tag === tracing.dataSetName || tag === tracing.content.typ) &&
+                    !(tag === annotation.dataSetName || AnnotationContentTypes.includes(tag)) &&
                     !this.state.shouldShowArchivedTracings
                   }
                 >
@@ -408,7 +432,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
               {this.state.shouldShowArchivedTracings ? null : (
                 <EditableTextIcon
                   icon="plus"
-                  onChange={_.partial(this.editTagFromAnnotation, tracing, true)}
+                  onChange={_.partial(this.editTagFromAnnotation, annotation, true)}
                 />
               )}
             </div>
@@ -417,14 +441,14 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Column
           title="Modification Date"
           dataIndex="modified"
-          sorter={Utils.localeCompareBy(typeHint, "modified")}
+          sorter={Utils.compareBy(typeHint, annotation => annotation.modified)}
           render={modified => <FormattedDate timestamp={modified} />}
         />
         <Column
           title="Actions"
           className="nowrap"
           key="action"
-          render={(__, tracing: APIAnnotationType) => this.renderActions(tracing)}
+          render={(__, tracing: APIAnnotationTypeCompact) => this.renderActions(tracing)}
         />
       </Table>
     );
@@ -460,20 +484,13 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           search
         ) : (
           <div className="pull-right">
-            <FileUpload
-              url="/api/annotations/upload"
-              accept=".nml, .zip"
-              name="nmlFile"
-              multiple
-              showUploadList={false}
-              onSuccess={this.handleNMLUpload}
-              onUploading={() => this.setState({ isUploadingNML: true })}
-              onError={() => this.setState({ isUploadingNML: false })}
+            <Button
+              icon="upload"
+              style={marginRight}
+              onClick={() => Store.dispatch(setDropzoneModalVisibilityAction(true))}
             >
-              <Button icon="upload" loading={this.state.isUploadingNML} style={marginRight}>
-                Upload Annotation
-              </Button>
-            </FileUpload>
+              Upload Annotation(s)
+            </Button>
             <Button onClick={this.toggleShowArchived} style={marginRight}>
               Show {this.state.shouldShowArchivedTracings ? "Open" : "Archived"} Annotations
             </Button>

@@ -248,6 +248,13 @@ test("NML serializer should escape special characters and multilines", t => {
 
   const serializedNml = serializeToNml(state, state.tracing, state.tracing.skeleton, buildInfo);
 
+  // Explicitly check for the encoded characters
+  t.true(
+    serializedNml.indexOf(
+      "Hello&quot;a&apos;b&lt;c&gt;d&amp;e&quot;f&apos;g&lt;h&gt;i&amp;j&#xa;with&#xa;new&#xa;lines",
+    ) > -1,
+  );
+
   t.snapshot(serializedNml, { id: "nml-special-chars" });
 });
 

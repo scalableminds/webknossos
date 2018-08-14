@@ -28,6 +28,7 @@ type StateProps = {
 
 type Props = StateProps & {
   children: React.Node,
+  isAllowed: boolean,
 };
 
 function OverlayDropZone({ children }) {
@@ -60,13 +61,19 @@ function OverlayDropZone({ children }) {
   );
 }
 
-function NmlDropArea({ showClickHint }) {
+function NmlDropArea({ showClickHint, isAllowed }) {
   return (
     <React.Fragment>
       <div>
         <Icon type="inbox" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />
       </div>
-      <h5>Drop NML files here{showClickHint ? " or click to select files" : null}...</h5>
+      {isAllowed ? (
+        <h5>Drop NML files here{showClickHint ? " or click to select files" : null}...</h5>
+      ) : (
+        <h5 style={{ color: "rgb(247,80,61)" }}>
+          Upload of NML files is not allowed. Please check your permissions.
+        </h5>
+      )}
     </React.Fragment>
   );
 }
@@ -93,11 +100,15 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
   };
 
   onDrop = (files: Array<*>) => {
-    this.setState({
-      files,
-      dropzoneActive: false,
-    });
-
+    if (this.props.isAllowed) {
+      this.setState({
+        files,
+        dropzoneActive: false,
+      });
+    } else {
+      console.log("invis");
+      this.setState({ dropzoneActive: false });
+    }
     this.props.hideDropzoneModal();
   };
 
@@ -169,10 +180,14 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
   renderDropzoneModal() {
     return (
       <Modal visible footer={null} onCancel={this.props.hideDropzoneModal}>
-        <Alert
-          message="Did you know that you do can just drag-and-drop NML files directly into the tracing view? You don't have to explicitly open this dialog first."
-          style={{ marginBottom: 12 }}
-        />
+        {this.props.isAllowed ? (
+          <Alert
+            message="Did you know that you do can just drag-and-drop NML files directly into the tracing view? You don't have to explicitly open this dialog first."
+            style={{ marginBottom: 12 }}
+          />
+        ) : (
+          <Alert message="You are not allowed to import NMLs." style={{ marginBottom: 12 }} />
+        )}
         <Dropzone
           multiple
           disablePreview
@@ -185,7 +200,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
           }}
           onDrop={this.onDrop}
         >
-          <NmlDropArea showClickHint />
+          <NmlDropArea showClickHint isAllowed={this.props.isAllowed} />
         </Dropzone>
       </Modal>
     );
@@ -237,7 +252,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
         }
         {this.state.dropzoneActive && !this.props.showDropzoneModal ? (
           <OverlayDropZone>
-            <NmlDropArea showClickHint={false} />
+            <NmlDropArea showClickHint={false} isAllowed={this.props.isAllowed} />
           </OverlayDropZone>
         ) : null}
         {

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import OxalisController from "oxalis/controller";
+import { connect } from "react-redux";
 import SettingsView from "oxalis/view/settings/settings_view";
 import ActionBarView from "oxalis/view/action_bar_view";
 import RightMenuView from "oxalis/view/right_menu_view";
@@ -50,7 +51,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
 
   render() {
     return (
-      <NmlUploadZoneContainer>
+      <NmlUploadZoneContainer isAllowed={this.props.isUpdateTracingAllowed}>
         <OxalisController
           initialTracingType={this.props.initialTracingType}
           initialAnnotationId={this.props.initialAnnotationId}
@@ -97,5 +98,8 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     );
   }
 }
+const mapStateToProps = (state: OxalisState): StateProps => ({
+  isUpdateTracingAllowed: state.tracing.restrictions.allowUpdate,
+});
 
-export default TracingLayoutView;
+export default connect(mapStateToProps)(TracingLayoutView);

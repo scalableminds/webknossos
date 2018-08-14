@@ -68,7 +68,10 @@ function getMaximumTreeId(trees: TreeMapType): number {
   return _.max(_.map(trees, "treeId"));
 }
 
-function* mapGroups(groups: Array<TreeGroupType>, callback: TreeGroupType => *) {
+export function* mapGroups<R>(
+  groups: Array<TreeGroupType>,
+  callback: TreeGroupType => R,
+): Generator<R, void, void> {
   for (const group of groups) {
     yield callback(group);
     if (group.children) {
@@ -704,7 +707,7 @@ export function toggleAllTreesReducer(
 export function toggleTreeGroupReducer(
   state: OxalisState,
   skeletonTracing: SkeletonTracingType,
-  groupId: string,
+  groupId: number,
 ): OxalisState {
   let toggledGroup;
   forEachGroups(skeletonTracing.treeGroups, group => {

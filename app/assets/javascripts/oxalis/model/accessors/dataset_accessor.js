@@ -143,8 +143,22 @@ export function getSegmentationLayer(dataset: APIDatasetType): ?DataLayerType {
   return segmentationLayers[0];
 }
 
+export function hasSegmentation(dataset: APIDatasetType): boolean {
+  return getSegmentationLayer(dataset) != null;
+}
+
 export function getColorLayers(dataset: APIDatasetType): Array<DataLayerType> {
   return dataset.dataSource.dataLayers.filter(dataLayer => isColorLayer(dataset, dataLayer.name));
+}
+
+export function getThumbnailURL(dataset: APIDatasetType): string {
+  const datasetName = dataset.name;
+  const layers = dataset.dataSource.dataLayers;
+  const colorLayer = _.find(layers, { category: "color" });
+  if (colorLayer) {
+    return `/api/datasets/${datasetName}/layers/${colorLayer.name}/thumbnail`;
+  }
+  return "";
 }
 
 export default {};

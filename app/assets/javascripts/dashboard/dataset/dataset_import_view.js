@@ -174,7 +174,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     }
   }
 
-  async doesUserWantToChangeAllowedTeams(teamIds: Array<*>): Promise<boolean> {
+  async doesUserWantToChangeAllowedTeams(teamIds: Array<string>): Promise<boolean> {
     if (teamIds.length > 0) {
       return false;
     }

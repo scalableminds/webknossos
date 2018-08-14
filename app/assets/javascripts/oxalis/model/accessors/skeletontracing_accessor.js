@@ -7,8 +7,10 @@ import type {
   TreeType,
   TreeMapType,
   BranchPointType,
+  TreeGroupTypeFlat,
 } from "oxalis/store";
 import type { HybridServerTracingType, ServerSkeletonTracingType } from "admin/api_flow_types";
+import { mapGroups } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 
 export type SkeletonTracingStatsType = {|
   treeCount: number,
@@ -145,4 +147,18 @@ export function getStats(tracing: TracingType): Maybe<SkeletonTracingStatsType> 
       edgeCount: _.reduce(trees, (sum, tree) => sum + tree.edges.size(), 0),
       branchPointCount: _.reduce(trees, (sum, tree) => sum + _.size(tree.branchPoints), 0),
     }));
+}
+
+export function getFlatTreeGroups(skeletonTracing: SkeletonTracingType): Array<TreeGroupTypeFlat> {
+  return Array.from(
+    mapGroups(skeletonTracing.treeGroups, ({ children: _children, ...bareTreeGroup }) => ({
+      ...bareTreeGroup,
+    })),
+  );
+}
+
+export function getTreeGroupsMap(
+  skeletonTracing: SkeletonTracingType,
+): { [key: number]: TreeGroupTypeFlat } {
+  return _.keyBy(getFlatTreeGroups(skeletonTracing), "groupId");
 }

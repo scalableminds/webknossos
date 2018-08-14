@@ -97,10 +97,14 @@ export type TreeType = {|
   +nodes: NodeMapType,
 |};
 
+export type TreeGroupTypeFlat = {|
+  +name: string,
+  +groupId: number,
+|};
+
 export type TreeGroupType = {
-  name: string,
-  groupId: number,
-  children: Array<TreeGroupType>,
+  ...TreeGroupTypeFlat,
+  +children: Array<TreeGroupType>,
 };
 
 export type VolumeCellType = {

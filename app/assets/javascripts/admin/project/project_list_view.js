@@ -205,13 +205,13 @@ class ProjectListView extends React.PureComponent<Props, State> {
                 title="Name"
                 dataIndex="name"
                 key="name"
-                sorter={Utils.localeCompareBy(typeHint, "name")}
+                sorter={Utils.localeCompareBy(typeHint, project => project.name)}
               />
               <Column
                 title="Team"
                 dataIndex="teamName"
                 key="teamName"
-                sorter={Utils.localeCompareBy(typeHint, "team")}
+                sorter={Utils.localeCompareBy(typeHint, project => project.team)}
               />
               <Column
                 title="Priority"

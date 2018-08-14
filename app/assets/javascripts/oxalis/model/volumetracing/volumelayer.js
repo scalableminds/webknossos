@@ -5,7 +5,6 @@
 
 import _ from "lodash";
 import Drawing from "libs/drawing";
-import * as Utils from "libs/utils";
 import Dimensions from "oxalis/model/dimensions";
 import { Vector3Indicies } from "oxalis/constants";
 import Store from "oxalis/store";

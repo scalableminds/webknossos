@@ -152,7 +152,7 @@ class TeamListView extends React.PureComponent<Props, State> {
                 title="Name"
                 dataIndex="name"
                 key="name"
-                sorter={Utils.localeCompareBy(typeHint, "name")}
+                sorter={Utils.localeCompareBy(typeHint, team => team.name)}
               />
               <Column
                 title="Action"

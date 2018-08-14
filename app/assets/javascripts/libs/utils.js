@@ -130,28 +130,31 @@ export function computeArrayFromBoundingBox(bb: ?BoundingBoxType): ?Vector6 {
     : null;
 }
 
-export function compareBy<T: { +[string]: mixed }>(
+export function compareBy<T>(
   collectionForTypeInference: Array<T>, // this parameter is only used let flow infer the used type
-  selector: $Keys<T> | (T => number),
+  selector: T => number,
   isSortedAscending: boolean = true,
 ): Comparator<T> {
-  // generic key comparator for array.prototype.sort
   return (a: T, b: T) => {
     if (!isSortedAscending) {
       [a, b] = [b, a];
     }
-    const valueA = typeof selector === "function" ? selector(a) : a[selector];
-    const valueB = typeof selector === "function" ? selector(b) : b[selector];
+    const valueA = selector(a);
+    const valueB = selector(b);
     if (typeof valueA !== "number" || typeof valueB !== "number") {
+      console.error(
+        "Wrong compare method called (compareBy should only be called for numbers). Selector:",
+        selector,
+      );
       return 0;
     }
     return cheapSort(valueA, valueB);
   };
 }
 
-export function localeCompareBy<T: { +[string]: mixed }>(
+export function localeCompareBy<T>(
   collectionForTypeInference: Array<T>, // this parameter is only used let flow infer the used type
-  selector: $Keys<T> | (T => string),
+  selector: T => string,
   isSortedAscending: boolean = true,
   sortNatural: boolean = true,
 ): Comparator<T> {
@@ -159,9 +162,13 @@ export function localeCompareBy<T: { +[string]: mixed }>(
     if (!isSortedAscending) {
       [a, b] = [b, a];
     }
-    const valueA = typeof selector === "function" ? selector(a) : a[selector];
-    const valueB = typeof selector === "function" ? selector(b) : b[selector];
+    const valueA = selector(a);
+    const valueB = selector(b);
     if (typeof valueA !== "string" || typeof valueB !== "string") {
+      console.error(
+        "Wrong compare method called (localeCompareBy should only be called for strings). Selector:",
+        selector,
+      );
       return 0;
     }
     // localeCompare is really slow, therefore, we use the naturalSort lib and a cheap sorting otherwise

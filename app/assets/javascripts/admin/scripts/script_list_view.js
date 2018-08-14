@@ -147,27 +147,27 @@ class ScriptListView extends React.PureComponent<Props, State> {
                 dataIndex="id"
                 key="id"
                 className="monospace-id"
-                sorter={Utils.localeCompareBy(typeHint, "id")}
+                sorter={Utils.localeCompareBy(typeHint, script => script.id)}
               />
               <Column
                 title="Name"
                 dataIndex="name"
                 key="name"
-                sorter={Utils.localeCompareBy(typeHint, "name")}
+                sorter={Utils.localeCompareBy(typeHint, script => script.name)}
               />
 
               <Column
                 title="Owner"
                 dataIndex="owner"
                 key="owner"
-                sorter={Utils.localeCompareBy(typeHint, scripts => scripts.owner.lastName)}
+                sorter={Utils.localeCompareBy(typeHint, script => script.owner.lastName)}
                 render={(owner: APIUserType) => `${owner.firstName} ${owner.lastName}`}
               />
               <Column
                 title="Gist URL"
                 dataIndex="gist"
                 key="gist"
-                sorter={Utils.localeCompareBy(typeHint, "gist")}
+                sorter={Utils.localeCompareBy(typeHint, script => script.gist)}
                 render={(gist: string) => (
                   <a href={gist} target="_blank" rel="noopener noreferrer">
                     {gist}

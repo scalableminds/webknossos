@@ -37,7 +37,7 @@ export const tracing: ServerSkeletonTracingType = {
 };
 
 export const annotation: APIAnnotationType = {
-  modified: "2018-06-12 15:59",
+  modified: 1529066010230,
   state: "Active",
   id: "5b1fd1cf97000027049c67ee",
   name: "",
@@ -61,7 +61,7 @@ export const annotation: APIAnnotationType = {
     },
     dataSet: "ROI2017_wkw",
     neededExperience: { domain: "oxalis", value: 1 },
-    created: "2018-06-12 15:59",
+    created: 1529066010230,
     status: { open: 0, active: 1, finished: 0 },
     script: null,
     tracingTime: null,

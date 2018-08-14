@@ -340,20 +340,20 @@ class UserListView extends React.PureComponent<Props, State> {
               dataIndex="lastName"
               key="lastName"
               width={130}
-              sorter={Utils.localeCompareBy(typeHint, "lastName")}
+              sorter={Utils.localeCompareBy(typeHint, user => user.lastName)}
             />
             <Column
               title="First Name"
               dataIndex="firstName"
               key="firstName"
               width={130}
-              sorter={Utils.localeCompareBy(typeHint, "firstName")}
+              sorter={Utils.localeCompareBy(typeHint, user => user.firstName)}
             />
             <Column
               title="Email"
               dataIndex="email"
               key="email"
-              sorter={Utils.localeCompareBy(typeHint, "email")}
+              sorter={Utils.localeCompareBy(typeHint, user => user.email)}
               render={(__, user: APIUserType) =>
                 this.props.activeUser.isAdmin ? (
                   <EditableTextLabel

@@ -1,6 +1,5 @@
 START TRANSACTION;
-DROP VIEW webknossos.organizations_;
-ALTER TABLE webknossos.organizations DROP COLUMN newUserMailingList;
-ALTER TABLE webknossos.organizations DROP COLUMN overTimeMailingList;
-CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations WHERE NOT isDeleted;
+DROP VIEW webknossos.datastores_;
+ALTER TABLE webknossos.datastores DROP COLUMN isForeign;
+CREATE VIEW webknossos.dataStores_ AS SELECT * FROM webknossos.dataStores WHERE NOT isDeleted;
 COMMIT TRANSACTION;

@@ -8,11 +8,13 @@ import * as React from "react";
 import Maybe from "data.maybe";
 import Utils from "libs/utils";
 import update from "immutability-helper";
+import Store from "oxalis/store";
 import { connect } from "react-redux";
 import { Input, Menu, Dropdown, Tooltip, Icon, Modal, Button, Row, Col } from "antd";
 import ButtonComponent from "oxalis/view/components/button_component";
 import InputComponent from "oxalis/view/components/input_component";
-import { InputKeyboardNoLoop } from "libs/input";
+import { InputKeyboard } from "libs/input";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { getActiveTree, getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   setActiveNodeAction,
@@ -115,6 +117,19 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
     isMarkdownModalVisible: false,
   };
 
+  componentDidMount() {
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        state => state.userConfiguration.keyboardDelay,
+        keyboardDelay => {
+          if (this.keyboard != null) {
+            this.keyboard.delay = keyboardDelay;
+          }
+        },
+      ),
+    );
+  }
+
   componentDidUpdate(prevProps) {
     if (
       this.listRef != null &&
@@ -128,12 +143,18 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
 
   componentWillUnmount() {
     this.keyboard.destroy();
+    this.unsubscribeStoreListeners();
   }
 
-  keyboard = new InputKeyboardNoLoop({
-    n: () => this.nextComment(),
-    p: () => this.previousComment(),
-  });
+  storePropertyUnsubscribers: Array<() => void> = [];
+
+  keyboard = new InputKeyboard(
+    {
+      n: () => this.nextComment(),
+      p: () => this.previousComment(),
+    },
+    { delay: Store.getState().userConfiguration.keyboardDelay },
+  );
 
   nextComment = (forward: boolean = true) => {
     getActiveNode(this.props.skeletonTracing).map(activeNode => {
@@ -192,6 +213,11 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
       collapsedTreeIds: update(prevState.collapsedTreeIds, { $toggle: [treeId] }),
     }));
   };
+
+  unsubscribeStoreListeners() {
+    this.storePropertyUnsubscribers.forEach(unsubscribe => unsubscribe());
+    this.storePropertyUnsubscribers = [];
+  }
 
   getActiveComment(createIfNotExisting: boolean = false) {
     return Utils.zipMaybe(

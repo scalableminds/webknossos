@@ -14,6 +14,8 @@ import play.api.data.Form
 import play.api.data.Forms.{nonEmptyText, tuple}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, InboxDataSourceLike}
+
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -37,8 +39,14 @@ class DataSourceController @Inject()(
   def read(dataSetName: String) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)) {
     implicit request => {
       AllowRemoteOrigin {
-        val ds = dataSourceRepository.findByName(dataSetName)
-        Ok(Json.toJson(ds))
+        val dsOption: Option[InboxDataSource] = dataSourceRepository.findByName(dataSetName)
+        dsOption match {
+          case Some(ds) => {
+            val dslike: InboxDataSourceLike = ds
+            Ok(Json.toJson(dslike))
+          }
+          case _ => Ok
+        }
       }
     }
   }

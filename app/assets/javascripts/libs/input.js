@@ -238,6 +238,8 @@ export class InputKeyboard {
 // The mouse module.
 // Events: over, out, leftClick, rightClick, leftDownMove
 class InputMouseButton {
+  // Remove once https://github.com/babel/babel-eslint/pull/584 is merged
+  // eslint-disable-next-line no-use-before-define
   mouse: InputMouse;
   name: MouseButtonStringType;
   which: MouseButtonWhichType;

@@ -254,7 +254,6 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
     } yield {
       Ok(Json.toJson(jsResult))
     }
-
   }
 
   def request = SecuredAction.async { implicit request =>
@@ -303,4 +302,10 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
     } yield Ok(taskJson)
   }
 
+
+  def listExperienceDomains = SecuredAction.async { implicit request =>
+    for {
+      experienceDomains <- TaskDAO.listExperienceDomains
+    } yield Ok(Json.toJson(experienceDomains))
+  }
 }

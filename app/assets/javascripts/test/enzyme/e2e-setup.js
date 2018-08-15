@@ -139,6 +139,23 @@ function debugWrapper(wrapper: any, name: string) {
   );
 }
 
+export async function writeFlowCheckingFile(
+  object: Array<any> | Object,
+  name: string,
+  flowTypeString: string,
+  options?: { isArray?: boolean } = {},
+) {
+  const fullFlowType = options.isArray ? `Array<${flowTypeString}>` : flowTypeString;
+  fs.writeFileSync(
+    `app/assets/javascripts/test/snapshots/flow-check/test-flow-checking-${name}.js`,
+    `// @flow
+import type { ${flowTypeString} } from "admin/api_flow_types";
+
+const a: ${fullFlowType} = ${JSON.stringify(object)}
+export default a;`,
+  );
+}
+
 configure({ adapter: new Adapter() });
 
 export function resetDatabase() {

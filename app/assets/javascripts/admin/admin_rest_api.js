@@ -10,6 +10,8 @@ import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
 import type {
   APIUserType,
   APIScriptType,
+  APIScriptCreatorType,
+  APIScriptUpdaterType,
   APITaskTypeType,
   APITeamType,
   APIProjectType,
@@ -21,6 +23,7 @@ import type {
   APIDataStoreType,
   DatasetConfigType,
   APIDatasetType,
+  APIMaybeUnimportedDatasetType,
   APIDataSourceType,
   APIDataSourceWithMessagesType,
   APITimeIntervalType,
@@ -170,13 +173,16 @@ export function deleteScript(scriptId: string): Promise<void> {
   });
 }
 
-export function createScript(script: APIScriptType): Promise<APIScriptType> {
+export function createScript(script: APIScriptCreatorType): Promise<APIScriptType> {
   return Request.sendJSONReceiveJSON("/api/scripts", {
     data: script,
   });
 }
 
-export function updateScript(scriptId: string, script: APIScriptType): Promise<APIScriptType> {
+export function updateScript(
+  scriptId: string,
+  script: APIScriptUpdaterType,
+): Promise<APIScriptType> {
   return Request.sendJSONReceiveJSON(`/api/scripts/${scriptId}`, {
     method: "PUT",
     data: script,
@@ -337,25 +343,17 @@ export function deleteTask(taskId: string): Promise<void> {
     method: "DELETE",
   });
 }
-function transformTask(response): APITaskType {
-  // apply some defaults
-  response.type = {
-    summary: Utils.__guard__(response.type, x => x.summary) || "<deleted>",
-    id: Utils.__guard__(response.type, x1 => x1.id) || "",
-  };
+function transformTask(task: APITaskType): APITaskType {
+  const tracingTime = task.tracingTime == null ? 0 : task.tracingTime;
 
-  if (response.tracingTime == null) {
-    response.tracingTime = 0;
-  }
   // convert bounding box
-  if (response.boundingBox != null) {
-    const { topLeft, width, height, depth } = response.boundingBox;
-    response.boundingBoxVec6 = topLeft.concat([width, height, depth]);
-  } else {
-    response.boundingBoxVec6 = [];
+  let boundingBoxVec6;
+  if (task.boundingBox != null) {
+    const { topLeft, width, height, depth } = task.boundingBox;
+    boundingBoxVec6 = Utils.numberArrayToVector6(topLeft.concat([width, height, depth]));
   }
 
-  return response;
+  return { ...task, tracingTime, boundingBoxVec6 };
 }
 
 export async function getTasks(queryObject: QueryObjectType): Promise<Array<APITaskType>> {
@@ -568,7 +566,7 @@ export async function getTracingForAnnotationType(
 }
 
 // ### Datasets
-export async function getDatasets(): Promise<Array<APIDatasetType>> {
+export async function getDatasets(): Promise<Array<APIMaybeUnimportedDatasetType>> {
   const datasets = await Request.receiveJSON("/api/datasets");
   assertResponseLimit(datasets);
 
@@ -576,7 +574,7 @@ export async function getDatasets(): Promise<Array<APIDatasetType>> {
 }
 
 export function getDatasetDatasource(
-  dataset: APIDatasetType,
+  dataset: APIMaybeUnimportedDatasetType,
 ): Promise<APIDataSourceWithMessagesType> {
   return doWithToken(token =>
     Request.receiveJSON(`${dataset.dataStore.url}/data/datasets/${dataset.name}?token=${token}`),
@@ -695,7 +693,7 @@ export async function getDatastores(): Promise<Array<APIDataStoreType>> {
 export const getDataStoresCached = _.memoize(getDatastores);
 
 // ### Active User
-export function getActiveUser(options: Object = {}) {
+export function getActiveUser(options: Object = {}): Promise<APIUserType> {
   return Request.receiveJSON("/api/user", options);
 }
 

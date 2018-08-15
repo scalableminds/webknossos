@@ -1,7 +1,12 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 /* eslint-disable import/first */
 // @flow
-import { tokenUserA, setCurrToken, resetDatabase } from "../enzyme/e2e-setup";
+import {
+  tokenUserA,
+  setCurrToken,
+  resetDatabase,
+  writeFlowCheckingFile,
+} from "../enzyme/e2e-setup";
 import test from "ava";
 import _ from "lodash";
 import * as api from "admin/admin_rest_api";
@@ -29,7 +34,7 @@ test.serial("getDatasets", async t => {
     retry++;
   }
   datasets = _.sortBy(datasets, d => d.name);
-
+  writeFlowCheckingFile(datasets, "dataset", "APIMaybeUnimportedDatasetType", { isArray: true });
   t.snapshot(datasets, { id: "datasets-getDatasets" });
 });
 

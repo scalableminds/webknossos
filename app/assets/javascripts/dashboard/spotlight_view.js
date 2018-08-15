@@ -11,7 +11,7 @@ import Utils from "libs/utils";
 import features from "features";
 import type { RouterHistory } from "react-router-dom";
 import type { OxalisState } from "oxalis/store";
-import type { APIDatasetType, APIUserType } from "admin/api_flow_types";
+import type { APIMaybeUnimportedDatasetType, APIUserType } from "admin/api_flow_types";
 
 const { Content, Footer } = Layout;
 
@@ -116,7 +116,7 @@ type Props = {
 } & StateProps;
 
 type State = {
-  datasets: Array<APIDatasetType>,
+  datasets: Array<APIMaybeUnimportedDatasetType>,
   isLoading: boolean,
 };
 

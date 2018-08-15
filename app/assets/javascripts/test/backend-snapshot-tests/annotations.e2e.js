@@ -7,6 +7,7 @@ import {
   replaceVolatileValues,
   setCurrToken,
   tokenUserA,
+  writeFlowCheckingFile,
 } from "../enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import { APITracingTypeEnum } from "admin/api_flow_types";
@@ -33,6 +34,7 @@ test("getAnnotationInformation()", async t => {
     APITracingTypeEnum.Explorational,
   );
   t.is(annotation.id, annotationId);
+  writeFlowCheckingFile(annotation, "annotation", "APIAnnotationType");
   t.snapshot(annotation, { id: "annotations-getAnnotationInformation" });
 });
 
@@ -139,6 +141,7 @@ test("getTracingForAnnotations()", async t => {
   const createdExplorational = await api.createExplorational(dataSetName, "skeleton", false);
 
   const tracing = await api.getTracingForAnnotations(createdExplorational);
+  writeFlowCheckingFile(tracing, "tracing", "HybridServerTracingType");
   t.snapshot(replaceVolatileValues(tracing.skeleton), {
     id: "annotations-tracing",
   });

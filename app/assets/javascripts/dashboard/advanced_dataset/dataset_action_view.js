@@ -6,12 +6,12 @@ import Toast from "libs/toast";
 import messages from "messages";
 import { Link } from "react-router-dom";
 import { Dropdown, Menu, Icon } from "antd";
-import type { APIDatasetType } from "admin/api_flow_types";
+import type { APIMaybeUnimportedDatasetType } from "admin/api_flow_types";
 import { createExplorational, triggerDatasetClearCache } from "admin/admin_rest_api";
 import features from "features";
 
 type Props = {
-  dataset: APIDatasetType,
+  dataset: APIMaybeUnimportedDatasetType,
   isUserAdmin: boolean,
 };
 
@@ -19,7 +19,7 @@ type State = {};
 
 export default class DatasetActionView extends React.PureComponent<Props, State> {
   createTracing = async (
-    dataset: APIDatasetType,
+    dataset: APIMaybeUnimportedDatasetType,
     typ: "skeleton" | "volume" | "hybrid",
     withFallback: boolean,
   ) => {
@@ -27,7 +27,7 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
     window.location.href = `/annotations/${annotation.typ}/${annotation.id}`;
   };
 
-  clearCache = async (dataset: APIDatasetType) => {
+  clearCache = async (dataset: APIMaybeUnimportedDatasetType) => {
     await triggerDatasetClearCache(dataset.dataStore.url, dataset.name);
     Toast.success(messages["dataset.clear_cache_success"]);
   };

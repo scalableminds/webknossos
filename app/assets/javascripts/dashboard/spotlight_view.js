@@ -7,7 +7,7 @@ import GalleryDatasetView from "dashboard/gallery_dataset_view";
 import { getOrganizations, getDatasets } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import messages from "messages";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import features from "features";
 import type { RouterHistory } from "react-router-dom";
 import type { OxalisState } from "oxalis/store";

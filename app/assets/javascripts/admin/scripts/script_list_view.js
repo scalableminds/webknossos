@@ -5,7 +5,7 @@ import _ from "lodash";
 import * as React from "react";
 import { Link, withRouter } from "react-router-dom";
 import { Table, Icon, Spin, Button, Input, Modal } from "antd";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import messages from "messages";
 import { getScripts, deleteScript } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";

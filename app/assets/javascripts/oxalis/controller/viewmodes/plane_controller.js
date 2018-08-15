@@ -7,7 +7,7 @@ import * as React from "react";
 import { connect } from "react-redux";
 import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
-import Utils, { maybe, enforce } from "libs/utils";
+import * as Utils from "libs/utils";
 import Toast from "libs/toast";
 import { document } from "libs/window";
 import { InputMouse, InputKeyboard, InputKeyboardNoLoop } from "libs/input";
@@ -557,7 +557,7 @@ class PlaneController extends React.PureComponent<Props> {
         break;
       }
       case "shift": {
-        const isBrushActive = maybe(getVolumeTool)(this.props.tracing.volume)
+        const isBrushActive = Utils.maybe(getVolumeTool)(this.props.tracing.volume)
           .map(tool => tool === VolumeToolEnum.BRUSH)
           .getOrElse(false);
         if (isBrushActive) {
@@ -596,7 +596,7 @@ class PlaneController extends React.PureComponent<Props> {
     return (...args) => {
       if (skeletonHandler && volumeHandler) {
         // Deal with both modes
-        const tool = enforce(getVolumeTool)(this.props.tracing.volume);
+        const tool = Utils.enforce(getVolumeTool)(this.props.tracing.volume);
         if (tool === VolumeToolEnum.MOVE) {
           skeletonHandler(...args);
         } else {

@@ -37,7 +37,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
 
   val DEFAULT_TIMESTAMP = 0L
 
-  def parse(name: String, nmlInputStream: InputStream): Box[(Either[SkeletonTracing, (VolumeTracing, String)], String)] = {
+  def parse(name: String, nmlInputStream: InputStream): Box[(Option[SkeletonTracing], Option[(VolumeTracing, String)], String)] = {
     try {
       val data = XML.load(nmlInputStream)
       for {
@@ -65,12 +65,16 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
 
         logger.debug(s"Parsed NML file. Trees: ${trees.size}, Volumes: ${volumes.size}")
 
-        if (volumes.size >= 1) {
-          (Right(VolumeTracing(None, BoundingBox.empty, time, dataSetName, editPosition, editRotation, ElementClass.uint32, None, 0, 0, zoomLevel), volumes.head.location), description)
-        } else {
-          (Left(SkeletonTracing(dataSetName, trees, time, taskBoundingBox, activeNodeId,
-            editPosition, editRotation, zoomLevel, version = 0, userBoundingBox, treeGroups)), description)
-        }
+        val volumeTracingWithDataLocation = if (volumes.isEmpty) None else Some(
+          (VolumeTracing(None, BoundingBox.empty, time, dataSetName, editPosition, editRotation, ElementClass.uint32, None, 0, 0, zoomLevel),
+            volumes.head.location)
+        )
+
+        val skeletonTracing = if (trees.isEmpty) None else Some(
+          SkeletonTracing(dataSetName, trees, time, taskBoundingBox, activeNodeId, editPosition, editRotation, zoomLevel, version = 0, userBoundingBox, treeGroups)
+        )
+
+        (skeletonTracing, volumeTracingWithDataLocation, description)
       }
     } catch {
       case e: org.xml.sax.SAXParseException if e.getMessage.startsWith("Premature end of file") =>

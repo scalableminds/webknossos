@@ -5,7 +5,7 @@ import { withRouter } from "react-router-dom";
 import { Form, Input, Select, Button, Card, Spin, Upload, Icon, Col, Row } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import { getDatastores, addDataset, isDatasetNameValid } from "admin/admin_rest_api";
 
 import type { APIDataStoreType, APIUserType, DatasetConfigType } from "admin/api_flow_types";

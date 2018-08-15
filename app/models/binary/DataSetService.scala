@@ -55,9 +55,9 @@ object DataSetService extends FoxImplicits with LazyLogging {
     }
   }
 
-  def addForeignDataSet(datastore: String, dataSetName: String, organizationName: String)(implicit ctx: DBAccessContext) = {
+  def addForeignDataSet(dataStoreName: String, dataSetName: String, organizationName: String)(implicit ctx: DBAccessContext) = {
     for {
-      dataStore <- DataStoreDAO.findOneByName(datastore)
+      dataStore <- DataStoreDAO.findOneByName(dataStoreName)
       foreignDataset <- getForeignDataSet(dataStore.url, dataSetName)
       dataStoreInfo = DataStoreInfo(dataStore.name, dataStore.url, dataStore.typ)
       _ <- DataSetService.createDataSet(dataSetName, dataStoreInfo, organizationName, foreignDataset)

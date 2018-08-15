@@ -8,6 +8,7 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 ### Postgres Evolutions:
 - [018-hybrid-annotations.sql](conf/evolutions/018-hybrid-annotations.sql)
 - [019-dataset-lastusedtime.sql](conf/evolutions/019-dataset-lastusedtime.sql)
+- [020-add-foreign-datastore.sqll](conf/evolutions/020-add-foreign-datastore.sql)
 
 ## [18.08.0](https://github.com/scalableminds/webknossos/releases/tag/18.08.0) - 2018-07-23
 ### Postgres Evolutions:

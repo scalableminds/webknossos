@@ -203,7 +203,7 @@ export function getTaskType(taskTypeId: string): Promise<APITaskTypeType> {
 }
 
 export function createTaskType(
-  taskType: $Diff<APICreateTaskType, { id: string }>,
+  taskType: $Diff<APITaskTypeType, { id: string, teamName: string }>,
 ): Promise<APITaskTypeType> {
   return Request.sendJSONReceiveJSON("/api/taskTypes", {
     data: taskType,

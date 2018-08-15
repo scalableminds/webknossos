@@ -11,7 +11,6 @@ import type {
   APIUserType,
   APIScriptType,
   APITaskTypeType,
-  APICreateTaskType,
   APITeamType,
   APIProjectType,
   APIProjectCreatorType,

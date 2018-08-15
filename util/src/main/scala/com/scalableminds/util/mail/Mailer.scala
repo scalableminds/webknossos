@@ -63,7 +63,7 @@ class Mailer(conf: Config) extends Actor {
       // do the work to prepare sending on SMTP
       multiPartMail.setHostName(smtpHost)
       multiPartMail.setSmtpPort(smtpPort)
-      multiPartMail.setTLS(smtpTls)
+      multiPartMail.setStartTLSEnabled(smtpTls)
       multiPartMail.setAuthenticator(new DefaultAuthenticator(smtpUser, smtpPass))
       multiPartMail.setDebug(false)
       multiPartMail.send

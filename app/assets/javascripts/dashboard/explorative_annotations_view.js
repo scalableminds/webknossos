@@ -7,11 +7,10 @@ import { Link, withRouter } from "react-router-dom";
 import Store from "oxalis/store";
 import { AsyncLink } from "components/async_clickables";
 import { Spin, Input, Table, Button, Modal, Tag, Icon, Popover, Tooltip } from "antd";
-import FormatUtils from "libs/format_utils";
+import { formatHash, stringToColor } from "libs/format_utils";
 import Toast from "libs/toast";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import update from "immutability-helper";
-import TemplateHelpers from "libs/template_helpers";
 import messages from "messages";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import EditableTextIcon from "oxalis/view/components/editable_text_icon";
@@ -370,7 +369,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Column
           title="ID"
           dataIndex="id"
-          render={(__, tracing: APIAnnotationTypeCompact) => FormatUtils.formatHash(tracing.id)}
+          render={(__, tracing: APIAnnotationTypeCompact) => formatHash(tracing.id)}
           sorter={Utils.localeCompareBy(typeHint, annotation => annotation.id)}
           className="monospace-id"
         />
@@ -418,7 +417,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
               {tags.map(tag => (
                 <Tag
                   key={tag}
-                  color={TemplateHelpers.stringToColor(tag)}
+                  color={stringToColor(tag)}
                   onClick={_.partial(this.addTagToSearch, tag)}
                   onClose={_.partial(this.editTagFromAnnotation, annotation, false, tag)}
                   closable={
@@ -458,7 +457,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     return this.state.tags.map(tag => (
       <Tag
         key={tag}
-        color={TemplateHelpers.stringToColor(tag)}
+        color={stringToColor(tag)}
         afterClose={_.partial(this.removeTagFromSearch, tag)}
         closable
       >

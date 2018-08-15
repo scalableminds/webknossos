@@ -45,7 +45,7 @@ import TaskTypeCreateView from "admin/tasktype/task_type_create_view";
 import ScriptCreateView from "admin/scripts/script_create_view";
 import TimeLineView from "admin/time/time_line_view";
 import Onboarding from "admin/onboarding";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 
 import type { OxalisState } from "oxalis/store";
 import type { APIUserType } from "admin/api_flow_types";

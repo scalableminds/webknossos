@@ -5,7 +5,7 @@
 
 import _ from "lodash";
 import Store from "oxalis/store";
-import Utils, { enforce } from "libs/utils";
+import * as Utils from "libs/utils";
 import { OrthoViews, VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import Model from "oxalis/model";
@@ -81,7 +81,7 @@ export function getPlaneMouseControls(): * {
     },
 
     leftMouseDown: (pos: Point2, plane: OrthoViewType, event: MouseEvent) => {
-      const tool = enforce(getVolumeTool)(Store.getState().tracing.volume);
+      const tool = Utils.enforce(getVolumeTool)(Store.getState().tracing.volume);
 
       if (!event.shiftKey && (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH)) {
         if (event.ctrlKey) {
@@ -94,7 +94,7 @@ export function getPlaneMouseControls(): * {
     },
 
     leftMouseUp: () => {
-      const tool = enforce(getVolumeTool)(Store.getState().tracing.volume);
+      const tool = Utils.enforce(getVolumeTool)(Store.getState().tracing.volume);
 
       Store.dispatch(setContourTracingMode(ContourModeEnum.IDLE));
 
@@ -119,7 +119,7 @@ export function getPlaneMouseControls(): * {
     },
 
     rightMouseDown: (pos: Point2, plane: OrthoViewType, event: MouseEvent) => {
-      const tool = enforce(getVolumeTool)(Store.getState().tracing.volume);
+      const tool = Utils.enforce(getVolumeTool)(Store.getState().tracing.volume);
 
       if (!event.shiftKey && (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH)) {
         if (event.ctrlKey) {
@@ -132,7 +132,7 @@ export function getPlaneMouseControls(): * {
     },
 
     rightMouseUp: () => {
-      const tool = enforce(getVolumeTool)(Store.getState().tracing.volume);
+      const tool = Utils.enforce(getVolumeTool)(Store.getState().tracing.volume);
 
       Store.dispatch(setContourTracingMode(ContourModeEnum.IDLE));
 

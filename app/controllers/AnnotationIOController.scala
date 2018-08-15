@@ -73,18 +73,22 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
 
     if (!parsedFiles.isEmpty) {
       val tracings = parseSuccess.flatMap(_.bothTracingOpts)
-      val (skeletonTracings, volumeTracings) = NmlService.splitVolumeAndSkeletonTracings(tracings)
+      val (skeletonTracings, volumeTracingsWithDataLocations) = NmlService.splitVolumeAndSkeletonTracings(tracings)
       val name = nameForNmls(parseSuccess.map(_.fileName))
       val description = descriptionForNMLs(parseSuccess.map(_.description))
 
       for {
-        _ <- bool2Fox(skeletonTracings.nonEmpty || volumeTracings.nonEmpty) ?~> "nml.file.noFile"
-        _ <- bool2Fox(volumeTracings.size <= 1) ?~> "nml.file.multipleVolumes"
-        dataSetName <- assertAllOnSameDataSet(skeletonTracings, volumeTracings.headOption.map(_._1)) ?~> "nml.file.differentDatasets"
+        _ <- bool2Fox(skeletonTracings.nonEmpty || volumeTracingsWithDataLocations.nonEmpty) ?~> "nml.file.noFile"
+        _ <- bool2Fox(volumeTracingsWithDataLocations.size <= 1) ?~> "nml.file.multipleVolumes"
+        dataSetName <- assertAllOnSameDataSet(skeletonTracings, volumeTracingsWithDataLocations.headOption.map(_._1)) ?~> "nml.file.differentDatasets"
         dataSet <- DataSetDAO.findOneByName(dataSetName)
         dataStoreHandler <- dataSet.dataStoreHandler
-        volumeTracingIdOpt <- Fox.runOptional(volumeTracings.headOption)(v => dataStoreHandler.saveVolumeTracing(v._1, parsedFiles.otherFiles.get(v._2).map(_.file)))
-        mergedSkeletonTracingIdOpt <- Fox.runOptional(skeletonTracings.headOption)(s => dataStoreHandler.mergeSkeletonTracingsByContents(SkeletonTracings(skeletonTracings), persistTracing=true))
+        volumeTracingIdOpt <- Fox.runOptional(volumeTracingsWithDataLocations.headOption){ v =>
+          dataStoreHandler.saveVolumeTracing(v._1, parsedFiles.otherFiles.get(v._2).map(_.file))
+        }
+        mergedSkeletonTracingIdOpt <- Fox.runOptional(skeletonTracings.headOption){ s =>
+          dataStoreHandler.mergeSkeletonTracingsByContents(SkeletonTracings(skeletonTracings), persistTracing=true)
+        }
         annotation <- AnnotationService.createFrom(
           request.identity, dataSet, mergedSkeletonTracingIdOpt, volumeTracingIdOpt, AnnotationType.Explorational, name, description)
       } yield JsonOk(

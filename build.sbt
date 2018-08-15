@@ -29,8 +29,7 @@ lazy val webknossosSettings = Seq(
     val subs = (libs ** "*") filter { _.isDirectory }
     val targets = ( (subs / "target") ** "*" ) filter {f => f.name.startsWith("scala-") && f.isDirectory}
     ((libs +++ subs +++ targets) ** "*.jar").classpath
-  },
-  logLevel in Compile := Level.Error
+  }
 )
 
 

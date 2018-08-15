@@ -77,10 +77,9 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
 
   def addForeignDataStoreAndDataSet(url: String, dataStoreName: String, dataSetName: String) = SecuredAction.async { implicit request =>
     for {
-      dataStoreBox <- DataStoreDAO.findOneByName(dataStoreName).reverse.futureBox
-      _ <- dataStoreBox match {
-        case Full(_) => DataSetService.addForeignDataStore(dataStoreName, url)
-      }
+      _ <- bool2Fox(request.identity.isAdmin) ?~> Messages("user.noAdmin")
+      noDataStoreBox <- DataStoreDAO.findOneByName(dataStoreName).reverse.futureBox
+      _ <- Fox.runOptional(noDataStoreBox)(_ => DataSetService.addForeignDataStore(dataStoreName, url))
       _ <- bool2Fox(DataSetService.isProperDataSetName(dataSetName)) ?~> Messages("dataSet.import.impossible.name")
       _ <- DataSetDAO.findOneByName(dataSetName).reverse ?~> Messages("dataSet.name.alreadyTaken")
       organizationName <- request.identity.organization.map(_.name)

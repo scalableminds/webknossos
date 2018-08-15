@@ -21,6 +21,7 @@
   <logger name="play" level="WARN" />
   <logger name="application" level="INFO" />
   <logger name="oxalis" level="INFO" />
+  <logger name="slick" level="Error"/>
 
   <root level="INFO">
     <appender-ref ref="STDOUT" />

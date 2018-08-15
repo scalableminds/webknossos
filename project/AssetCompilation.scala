@@ -99,9 +99,10 @@ object AssetCompilation {
         s.log.info("Updating Slick SQL schema from local database...")
 
         runner.run("slick.codegen.SourceCodeGenerator", dc.files,
-          Array((base / "conf" / "application.conf").toString + "#slick", (sourceManaged / "schema").toString),
+          Array("file://" + (base / "conf" / "application.conf").toString + "#slick", (sourceManaged / "schema").toString),
           s.log
         )
+
       } else {
         s.log.info("Slick SQL schema already up to date.")
       }

@@ -23,6 +23,7 @@ import RegistrationView from "admin/auth/registration_view";
 import StartResetPasswordView from "admin/auth/start_reset_password_view";
 import FinishResetPasswordView from "admin/auth/finish_reset_password_view";
 import ChangePasswordView from "admin/auth/change_password_view";
+import UserScriptsView from "admin/scripts/user_scripts_view";
 import AuthTokenView from "admin/auth/auth_token_view";
 import DatasetImportView from "dashboard/dataset/dataset_import_view";
 
@@ -342,6 +343,11 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/auth/changePassword"
                 component={ChangePasswordView}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/auth/manageUserScripts"
+                component={UserScriptsView}
               />
               <Route path="/login" render={() => <Redirect to="/auth/login" />} />
               <Route path="/register" render={() => <Redirect to="/auth/register" />} />

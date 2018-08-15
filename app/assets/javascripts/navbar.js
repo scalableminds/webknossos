@@ -203,6 +203,9 @@ class Navbar extends React.PureComponent<Props, State> {
                   <Menu.Item key="resetpassword">
                     <Link to="/auth/changePassword">Change Password</Link>
                   </Menu.Item>
+                  <Menu.Item key="UserScriptsView">
+                    <Link to="/auth/manageUserScripts">Manage User Scripts</Link>
+                  </Menu.Item>
                   <Menu.Item key="token">
                     <Link to="/auth/token">Auth Token</Link>
                   </Menu.Item>

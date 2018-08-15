@@ -40,6 +40,9 @@ object UserConfiguration {
       "sortTreesByName" -> JsBoolean(false),
       "sortCommentsAsc" -> JsBoolean(true),
       "sphericalCapRadius" -> JsNumber(140),
-      "renderComments" -> JsBoolean(false)))
+      "renderComments" -> JsBoolean(false),
+      "activeUserScriptIds" -> JsArray()
+    )
+  )
 
 }

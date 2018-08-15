@@ -32,6 +32,7 @@ import messages from "messages";
 import { fetchGistContent } from "libs/gist";
 import { document } from "libs/window";
 import NewTaskDescriptionModal from "oxalis/view/new_task_description_modal";
+import { getScripts } from "admin/admin_rest_api";
 
 import type { ModeType, ControlModeType } from "oxalis/constants";
 import type { OxalisState, TracingTypeTracingType } from "oxalis/store";
@@ -129,6 +130,7 @@ class Controller extends React.PureComponent<Props, State> {
     document.body.append(this.stats.domElement);
 
     this.initKeyboard();
+    this.initUserScripts();
     this.initTaskScript();
     this.maybeShowNewTaskTypeModal();
 
@@ -139,22 +141,53 @@ class Controller extends React.PureComponent<Props, State> {
     this.setState({ ready: true });
   }
 
+  async initUserScripts() {
+    const taskIds = Store.getState().userConfiguration.activeUserScriptIds;
+    const scripts = _.keyBy(await getScripts(), "id");
+
+    const scriptsWithContent = await Promise.all(
+      taskIds.map(async taskId => {
+        const script = scripts[taskId];
+        const content = await fetchGistContent(script);
+        return {
+          ...script,
+          content,
+        };
+      }),
+    );
+
+    for (const scriptWithContent of scriptsWithContent) {
+      const { content, name } = scriptWithContent;
+      const didSucceed = this.executeScriptContent(content, name);
+      if (!didSucceed) {
+        // Didn't run other scripts, if an error was thrown
+        return;
+      }
+    }
+  }
+
   async initTaskScript() {
     // Loads a Gist from GitHub with a user script if there is a
     // script assigned to the task
     const task = Store.getState().task;
     if (task != null && task.script != null) {
       const script = task.script;
-      const content = await fetchGistContent(script.gist, script.name);
-      try {
-        // eslint-disable-next-line no-eval
-        eval(content);
-      } catch (error) {
-        console.error(error);
-        Toast.error(
-          `Error executing the task script "${script.name}". See console for more information.`,
-        );
-      }
+      const content = await fetchGistContent(script);
+      this.executeScriptContent(content, script.name);
+    }
+  }
+
+  executeScriptContent(content: string, scriptName: string): boolean {
+    try {
+      // eslint-disable-next-line no-eval
+      eval(content);
+      return true;
+    } catch (error) {
+      console.error(error);
+      Toast.error(
+        `Error executing the task script "${scriptName}". See console for more information.`,
+      );
+      return false;
     }
   }
 

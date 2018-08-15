@@ -26,18 +26,26 @@ function handleError(name: string) {
   Toast.error(`${messages["task.user_script_retrieval_error"]} ${name}`);
 }
 
-export async function fetchGistContent(url: string, name: string): Promise<string> {
-  const gistId = _.last(url.split("/"));
+export async function fetchGistContent({
+  gist,
+  name,
+}: {
+  +gist: string,
+  +name: string,
+}): Promise<string> {
+  const gistId = _.last(gist.split("/"));
 
-  let gist;
+  let gistObject;
   try {
-    gist = (await Request.receiveJSON(`https://api.github.com/gists/${gistId}`): GithubGistType);
+    gistObject = (await Request.receiveJSON(
+      `https://api.github.com/gists/${gistId}`,
+    ): GithubGistType);
   } catch (e) {
     handleError(name);
     return "";
   }
 
-  const firstFile = gist.files[Object.keys(gist.files)[0]];
+  const firstFile = gistObject.files[Object.keys(gistObject.files)[0]];
   if (firstFile && firstFile.content) {
     return firstFile.content;
   } else {

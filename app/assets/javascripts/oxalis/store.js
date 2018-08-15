@@ -229,6 +229,7 @@ export type UserConfigurationType = {
   +sphericalCapRadius: number,
   +tdViewDisplayPlanes: boolean,
   +hideTreeRemovalWarning: boolean,
+  +activeUserScriptIds: Array<string>,
 };
 
 export type MappingType = { [key: number]: number };
@@ -393,6 +394,7 @@ export const defaultState: OxalisState = {
     sphericalCapRadius: 140,
     tdViewDisplayPlanes: true,
     hideTreeRemovalWarning: false,
+    activeUserScriptIds: [],
   },
   temporaryConfiguration: {
     viewMode: Constants.MODE_PLANE_TRACING,

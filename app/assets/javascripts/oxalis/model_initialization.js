@@ -1,6 +1,6 @@
 // @flow
 import _ from "lodash";
-import Store from "oxalis/store";
+import Store, { type UserConfigurationType, type DatasetConfigurationType } from "oxalis/store";
 import type { TracingTypeTracingType } from "oxalis/store";
 import type { UrlManagerState } from "oxalis/controller/url_manager";
 import {
@@ -132,7 +132,9 @@ export async function initialize(
 async function fetchParallel(
   annotation: ?APIAnnotationType,
   datasetName: string,
-): Promise<[APIDatasetType, *, *, ?HybridServerTracingType]> {
+): Promise<
+  [APIDatasetType, UserConfigurationType, DatasetConfigurationType, ?HybridServerTracingType],
+> {
   return Promise.all([
     getDataset(datasetName, getSharingToken()),
     getUserConfiguration(),

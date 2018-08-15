@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Link, withRouter } from "react-router-dom";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import { Spin, Input, Button, Icon, Row, Col } from "antd";
 import AdvancedDatasetView from "dashboard/advanced_dataset/advanced_dataset_view";
 import GalleryDatasetView from "dashboard/gallery_dataset_view";

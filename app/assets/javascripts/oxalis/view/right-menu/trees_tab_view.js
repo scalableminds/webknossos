@@ -29,7 +29,7 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import Store from "oxalis/store";
 import { serializeToNml, getNmlName, parseNml } from "oxalis/model/helpers/nml_helpers";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import { saveAs } from "file-saver";
 import { getBuildInfo } from "admin/admin_rest_api";
 import Toast from "libs/toast";

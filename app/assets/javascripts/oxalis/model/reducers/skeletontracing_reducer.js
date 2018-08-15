@@ -5,7 +5,7 @@
 
 import _ from "lodash";
 import update from "immutability-helper";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import ColorGenerator from "libs/color_generator";
 import {
   createBranchPoint,

@@ -5,12 +5,12 @@
 import test from "ava";
 import mockRequire from "mock-require";
 import _ from "lodash";
+import * as Utils from "libs/utils";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { tracing, annotation } from "../fixtures/skeletontracing_server_objects";
 
 mockRequire.stopAll();
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
-const Utils = mockRequire.reRequire("libs/utils").default;
 const NodeShader = mockRequire.reRequire("oxalis/geometries/materials/node_shader");
 const Store = mockRequire.reRequire("oxalis/store").default;
 const Skeleton = mockRequire.reRequire("oxalis/geometries/skeleton").default;

@@ -4,7 +4,7 @@
 import _ from "lodash";
 import * as React from "react";
 import { Table, Icon, Spin, Button, Input, Modal, Alert } from "antd";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import messages from "messages";
 import CreateTeamModal from "admin/team/create_team_modal_view";
 import { getEditableTeams, deleteTeam } from "admin/admin_rest_api";

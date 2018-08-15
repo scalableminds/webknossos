@@ -6,7 +6,7 @@
 import _ from "lodash";
 import * as THREE from "three";
 import TWEEN from "tween.js";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import Store from "oxalis/throttled_store";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import NodeShader, {

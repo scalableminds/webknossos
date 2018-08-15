@@ -9,8 +9,8 @@ import { Link, withRouter } from "react-router-dom";
 import { Table, Tag, Icon, Spin, Button, Input, Modal, Alert, Row, Col, Tooltip } from "antd";
 import TeamRoleModalView from "admin/user/team_role_modal_view";
 import ExperienceModalView from "admin/user/experience_modal_view";
-import TemplateHelpers from "libs/template_helpers";
-import Utils from "libs/utils";
+import { stringToColor } from "libs/format_utils";
+import * as Utils from "libs/utils";
 import { getEditableUsers, updateUser } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
@@ -408,10 +408,7 @@ class UserListView extends React.PureComponent<Props, State> {
                   return teams.map(team => {
                     const roleName = team.isTeamManager ? "Team Manager" : "User";
                     return (
-                      <Tag
-                        key={`team_role_${user.id}_${team.id}`}
-                        color={TemplateHelpers.stringToColor(roleName)}
-                      >
+                      <Tag key={`team_role_${user.id}_${team.id}`} color={stringToColor(roleName)}>
                         {team.name}: {roleName}
                       </Tag>
                     );

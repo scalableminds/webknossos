@@ -4,7 +4,7 @@
  */
 import _ from "lodash";
 import { Modal } from "antd";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import Toast from "libs/toast";
 import messages from "messages";
 import Store from "oxalis/store";

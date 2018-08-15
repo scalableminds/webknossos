@@ -1,42 +1,44 @@
 // @flow
 
 import update from "immutability-helper";
-
+import {
+  updateKey,
+  updateKey2,
+  updateKey3,
+  type StateShape1,
+  type StateShape2,
+} from "oxalis/model/helpers/deep_update";
 import type { OxalisState } from "oxalis/store";
 import type { ActionType } from "oxalis/model/actions/actions";
 import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reducers/reducer_helpers";
+
+const updateTracing = (state: OxalisState, shape: StateShape1<"tracing">): OxalisState =>
+  updateKey(state, "tracing", shape);
 
 function AnnotationReducer(state: OxalisState, action: ActionType): OxalisState {
   switch (action.type) {
     case "INITIALIZE_ANNOTATION": {
       const annotationInfo = convertServerAnnotationToFrontendAnnotation(action.annotation);
-      return update(state, {
-        tracing: {
-          $merge: annotationInfo,
-        },
-      });
+      return updateTracing(state, annotationInfo);
     }
     case "SET_ANNOTATION_NAME": {
-      return update(state, {
-        tracing: {
-          name: { $set: action.name },
-        },
+      const { name } = action;
+      return updateTracing(state, {
+        name,
       });
     }
 
     case "SET_ANNOTATION_PUBLIC": {
-      return update(state, {
-        tracing: {
-          isPublic: { $set: action.isPublic },
-        },
+      const { isPublic } = action;
+      return updateTracing(state, {
+        isPublic,
       });
     }
 
     case "SET_ANNOTATION_DESCRIPTION": {
-      return update(state, {
-        tracing: {
-          description: { $set: action.description },
-        },
+      const { description } = action;
+      return updateTracing(state, {
+        description,
       });
     }
 

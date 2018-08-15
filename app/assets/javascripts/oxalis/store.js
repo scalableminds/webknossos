@@ -3,7 +3,6 @@
  * @flow
  */
 
-/* eslint-disable no-useless-computed-key */
 import { createStore, applyMiddleware } from "redux";
 import createSagaMiddleware from "redux-saga";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
@@ -98,10 +97,14 @@ export type TreeType = {|
   +nodes: NodeMapType,
 |};
 
+export type TreeGroupTypeFlat = {|
+  +name: string,
+  +groupId: number,
+|};
+
 export type TreeGroupType = {
-  name: string,
-  groupId: number,
-  children: Array<TreeGroupType>,
+  ...TreeGroupTypeFlat,
+  +children: Array<TreeGroupType>,
 };
 
 export type VolumeCellType = {
@@ -207,6 +210,7 @@ export type UserConfigurationType = {
   +clippingDistanceArbitrary: number,
   +crosshairSize: number,
   +displayCrosshair: boolean,
+  +displayScalebars: boolean,
   +dynamicSpaceDirection: boolean,
   +keyboardDelay: number,
   +mouseRotateValue: number,
@@ -370,6 +374,7 @@ export const defaultState: OxalisState = {
     clippingDistanceArbitrary: 64,
     crosshairSize: 0.1,
     displayCrosshair: true,
+    displayScalebars: false,
     dynamicSpaceDirection: true,
     keyboardDelay: 200,
     mouseRotateValue: 0.004,
@@ -428,6 +433,7 @@ export const defaultState: OxalisState = {
     displayName: "Awesome Test Dataset",
     allowedTeams: [],
     logoUrl: null,
+    lastUsedByUser: 0,
   },
   tracing: {
     ...initialAnnotationInfo,

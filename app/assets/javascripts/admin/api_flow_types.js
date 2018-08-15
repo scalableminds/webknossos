@@ -76,6 +76,7 @@ export type APIDatasetType = {
   +displayName: string,
   +owningOrganization: string,
   +logoUrl: ?string,
+  +lastUsedByUser: number,
 };
 
 export type APIDataSourceWithMessagesType = {
@@ -121,6 +122,11 @@ export type APIUserLoggedTimeType = {
   loggedTime: Array<APITimeIntervalType>,
 };
 
+export type APIActiveUserType = {
+  email: string,
+  activeTasks: number,
+};
+
 export type APIRestrictionsType = {|
   +allowAccess: boolean,
   +allowUpdate: boolean,
@@ -152,7 +158,8 @@ export type APITaskTypeType = {
   +id: string,
   +summary: string,
   +description: string,
-  +team: string,
+  +teamId: string,
+  +teamName: string,
   +settings: APISettingsType,
 };
 
@@ -191,7 +198,7 @@ export type APIProjectCreatorType = APIProjectTypeBase & {
 export type APITaskType = {
   +boundingBox: ?BoundingBoxObjectType,
   +boundingBoxVec6?: Vector6,
-  +created: string,
+  +created: number,
   +creationInfo: ?string,
   +dataSet: string,
   +editPosition: Vector3,
@@ -211,26 +218,29 @@ export type APITaskType = {
   +directLinks?: Array<string>,
 };
 
-type APIAnnotationTypeBase = {
+export type APIAnnotationTypeCompact = {
   +tracing: {
     +skeleton: ?string,
     +volume: ?string,
   },
   +dataSetName: string,
-  +dataStore: APIDataStoreType,
   +description: string,
   +formattedHash: string,
-  +modified: string,
+  +modified: number,
   +id: string,
   +isPublic: boolean,
   +name: string,
-  +restrictions: APIRestrictionsType,
-  +settings: APISettingsType,
   +state: string,
   +stats: SkeletonTracingStatsType | {||},
   +tags: Array<string>,
   +tracingTime: ?number,
   +typ: APITracingType,
+};
+
+type APIAnnotationTypeBase = APIAnnotationTypeCompact & {
+  +dataStore: APIDataStoreType,
+  +restrictions: APIRestrictionsType,
+  +settings: APISettingsType,
   +user?: APIUserBaseType,
 };
 

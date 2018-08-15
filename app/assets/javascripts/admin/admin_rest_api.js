@@ -33,9 +33,11 @@ import type {
   APIFeatureToggles,
   APIOrganizationType,
   ServerTracingType,
+  APIActiveUserType,
   HybridServerTracingType,
   ServerSkeletonTracingType,
   ServerVolumeTracingType,
+  APIAnnotationTypeCompact,
 } from "admin/api_flow_types";
 import { APITracingTypeEnum } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/task/task_search_form";
@@ -200,7 +202,7 @@ export function getTaskType(taskTypeId: string): Promise<APITaskTypeType> {
 }
 
 export function createTaskType(
-  taskType: $Diff<APITaskTypeType, { id: string }>,
+  taskType: $Diff<APITaskTypeType, { id: string, teamName: string }>,
 ): Promise<APITaskTypeType> {
   return Request.sendJSONReceiveJSON("/api/taskTypes", {
     data: taskType,
@@ -408,7 +410,40 @@ export function transferTask(annotationId: string, userId: string): Promise<APIA
   });
 }
 
+export async function transferActiveTasksOfProject(
+  projectName: string,
+  userId: string,
+): Promise<APIAnnotationType> {
+  return Request.sendJSONReceiveJSON(`/api/projects/${projectName}/transferActiveTasks`, {
+    data: {
+      userId,
+    },
+    method: "POST",
+  });
+}
+
+export async function getUsersWithActiveTasks(
+  projectName: string,
+): Promise<Array<APIActiveUserType>> {
+  return Request.receiveJSON(`/api/projects/${projectName}/usersWithActiveTasks`);
+}
+
 // ### Annotations
+export function getCompactAnnotations(
+  isFinished: boolean,
+): Promise<Array<APIAnnotationTypeCompact>> {
+  return Request.receiveJSON(`/api/user/annotations?isFinished=${isFinished.toString()}`);
+}
+
+export function getCompactAnnotationsForUser(
+  userId: string,
+  isFinished: boolean,
+): Promise<Array<APIAnnotationTypeCompact>> {
+  return Request.receiveJSON(
+    `/api/users/${userId}/annotations?isFinished=${isFinished.toString()}`,
+  );
+}
+
 export function reOpenAnnotation(
   annotationId: string,
   annotationType: APITracingType,

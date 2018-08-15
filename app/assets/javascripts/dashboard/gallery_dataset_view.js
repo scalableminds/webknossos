@@ -9,9 +9,8 @@ import { createExplorational, getOrganizations } from "admin/admin_rest_api";
 import DatasetPanel from "dashboard/dataset_panel";
 import _ from "lodash";
 
-import type { DatasetType } from "dashboard/dataset_view";
 import type { OxalisState } from "oxalis/store";
-import type { APIUserType } from "admin/api_flow_types";
+import type { APIDatasetType, APIUserType } from "admin/api_flow_types";
 
 type State = {
   organizationNameMap: { [key: string]: string },
@@ -22,7 +21,7 @@ type StateProps = {
 };
 
 type Props = {
-  datasets: Array<DatasetType>,
+  datasets: Array<APIDatasetType>,
   searchQuery: string,
 } & StateProps;
 
@@ -46,7 +45,7 @@ class GalleryDatasetView extends React.PureComponent<Props, State> {
   }
 
   createTracing = async (
-    dataset: DatasetType,
+    dataset: APIDatasetType,
     typ: "volume" | "skeleton",
     withFallback: boolean,
   ) => {
@@ -75,13 +74,16 @@ class GalleryDatasetView extends React.PureComponent<Props, State> {
       .entries()
       .map(([organization, datasets]) =>
         // Sort each group of datasets
-        [organization, datasets.sort(Utils.localeCompareBy(([]: DatasetType[]), "created", false))],
+        [
+          organization,
+          datasets.sort(Utils.compareBy(([]: APIDatasetType[]), dataset => dataset.created, false)),
+        ],
       )
       .value()
       .sort(
         // Sort groups by creation date of first dataset
-        Utils.localeCompareBy(
-          ([]: DatasetType[]),
+        Utils.compareBy(
+          ([]: Array<[string, Array<APIDatasetType>]>),
           ([_organization, datasets]) => datasets[0].created,
           false,
         ),

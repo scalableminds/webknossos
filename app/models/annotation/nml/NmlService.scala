@@ -130,7 +130,8 @@ object NmlService extends LazyLogging {
     if (parseResults.length > 1) {
       parseResults.map(r =>
         r match {
-          case NmlParseSuccess(name, Left(skeletonTracing), description) => NmlParseSuccess(name, Left(wrapTreesInGroup(name, skeletonTracing)), description)
+          case NmlParseSuccess(name, Some(skeletonTracing), volumeTracingOpt, description) =>
+            NmlParseSuccess(name, Some(wrapTreesInGroup(name, skeletonTracing)), volumeTracingOpt, description)
           case _ => r
         }
       )

@@ -97,10 +97,14 @@ export type TreeType = {|
   +nodes: NodeMapType,
 |};
 
+export type TreeGroupTypeFlat = {|
+  +name: string,
+  +groupId: number,
+|};
+
 export type TreeGroupType = {
-  name: string,
-  groupId: number,
-  children: Array<TreeGroupType>,
+  ...TreeGroupTypeFlat,
+  +children: Array<TreeGroupType>,
 };
 
 export type VolumeCellType = {
@@ -206,6 +210,7 @@ export type UserConfigurationType = {
   +clippingDistanceArbitrary: number,
   +crosshairSize: number,
   +displayCrosshair: boolean,
+  +displayScalebars: boolean,
   +dynamicSpaceDirection: boolean,
   +keyboardDelay: number,
   +mouseRotateValue: number,
@@ -369,6 +374,7 @@ export const defaultState: OxalisState = {
     clippingDistanceArbitrary: 64,
     crosshairSize: 0.1,
     displayCrosshair: true,
+    displayScalebars: false,
     dynamicSpaceDirection: true,
     keyboardDelay: 200,
     mouseRotateValue: 0.004,

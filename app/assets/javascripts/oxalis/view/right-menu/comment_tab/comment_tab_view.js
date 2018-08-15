@@ -50,7 +50,7 @@ type SortOptionsType = {
 };
 function getTreeSorter({ sortBy, isSortedAscending }: SortOptionsType): Comparator<TreeType> {
   return sortBy === SortByEnum.ID
-    ? Utils.compareBy(treeTypeHint, "treeId", isSortedAscending)
+    ? Utils.compareBy(treeTypeHint, tree => tree.treeId, isSortedAscending)
     : Utils.localeCompareBy(
         treeTypeHint,
         tree => `${tree.name}_${tree.treeId}`,
@@ -61,7 +61,7 @@ function getTreeSorter({ sortBy, isSortedAscending }: SortOptionsType): Comparat
 
 function getCommentSorter({ sortBy, isSortedAscending }: SortOptionsType): Comparator<CommentType> {
   return sortBy === SortByEnum.ID
-    ? Utils.compareBy(([]: Array<CommentType>), "nodeId", isSortedAscending)
+    ? Utils.compareBy(([]: Array<CommentType>), comment => comment.nodeId, isSortedAscending)
     : Utils.localeCompareBy(
         commentTypeHint,
         comment => `${comment.content}_${comment.nodeId}`,
@@ -387,15 +387,13 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
             placeholder="Add comment"
             style={{ width: "60%" }}
           />
-          {"Disable until the backend supports multiline comments" && false ? (
-            <ButtonComponent
-              onClick={() => this.setMarkdownModalVisibility(true)}
-              disabled={activeNodeMaybe.isNothing}
-              type={isMultilineComment ? "primary" : "button"}
-            >
-              <Icon type="edit" />Markdown
-            </ButtonComponent>
-          ) : null}
+          <ButtonComponent
+            onClick={() => this.setMarkdownModalVisibility(true)}
+            disabled={activeNodeMaybe.isNothing}
+            type={isMultilineComment ? "primary" : "button"}
+          >
+            <Icon type="edit" />Markdown
+          </ButtonComponent>
           <ButtonComponent onClick={this.nextComment}>
             <i className="fa fa-arrow-right" />
           </ButtonComponent>

@@ -3,17 +3,15 @@ import * as React from "react";
 import { Link, withRouter } from "react-router-dom";
 import { Spin, Layout, message, Button, Row, Col } from "antd";
 import { connect } from "react-redux";
-import { transformDatasets } from "dashboard/dataset_view";
 import GalleryDatasetView from "dashboard/gallery_dataset_view";
 import { getOrganizations, getDatasets } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import messages from "messages";
 import Utils from "libs/utils";
 import features from "features";
-import type { DatasetType } from "dashboard/dataset_view";
 import type { RouterHistory } from "react-router-dom";
 import type { OxalisState } from "oxalis/store";
-import type { APIUserType } from "admin/api_flow_types";
+import type { APIDatasetType, APIUserType } from "admin/api_flow_types";
 
 const { Content, Footer } = Layout;
 
@@ -118,7 +116,7 @@ type Props = {
 } & StateProps;
 
 type State = {
-  datasets: Array<DatasetType>,
+  datasets: Array<APIDatasetType>,
   isLoading: boolean,
 };
 
@@ -148,9 +146,7 @@ class SpotlightView extends React.PureComponent<Props, State> {
     try {
       this.setState({ isLoading: true });
       const datasets = await getDatasets();
-
-      const transformedDatasets = transformDatasets(datasets);
-      this.setState({ datasets: transformedDatasets });
+      this.setState({ datasets });
     } catch (error) {
       handleGenericError(error);
     } finally {

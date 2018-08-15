@@ -44,12 +44,16 @@ function indent(array: Array<string>): Array<string> {
 }
 
 function escape(string: string): string {
-  return string
-    .replace(/&/g, "&amp;")
-    .replace(/>/g, "&gt;")
-    .replace(/</g, "&lt;")
-    .replace(/'/g, "&apos;")
-    .replace(/"/g, "&quot;");
+  return (
+    string
+      // the & character NEEDS to be escaped first, otherwise the escaped sequences will be escaped again
+      .replace(/&/g, "&amp;")
+      .replace(/>/g, "&gt;")
+      .replace(/</g, "&lt;")
+      .replace(/'/g, "&apos;")
+      .replace(/"/g, "&quot;")
+      .replace(/\n/g, "&#xa;")
+  );
 }
 
 function serializeTagWithChildren(

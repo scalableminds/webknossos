@@ -150,6 +150,9 @@ class TaskAnnotationView extends React.PureComponent<Props & StateProps, State> 
   }
 
   render() {
+    if (!this.state.annotations || this.state.annotations.length <= 0) {
+      return <p> No users are assigned to this task, yet.</p>;
+    }
     return (
       <div>
         <table>

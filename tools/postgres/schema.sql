@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(20);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(22);
 COMMIT TRANSACTION;
 
 CREATE TABLE webknossos.analytics(
@@ -173,6 +173,10 @@ CREATE TABLE webknossos.tasks(
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   CONSTRAINT openInstancesSmallEnoughCheck CHECK (openInstances <= totalInstances),
   CONSTRAINT openInstancesLargeEnoughCheck CHECK (openInstances >= 0)
+);
+
+CREATE TABLE webknossos.experienceDomains(
+  domain VARCHAR(256) PRIMARY KEY
 );
 
 CREATE TABLE webknossos.teams(
@@ -418,3 +422,27 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER onDeleteAnnotationTrigger
 AFTER DELETE ON webknossos.annotations
 FOR EACH ROW EXECUTE PROCEDURE webknossos.onDeleteAnnotation();
+
+
+CREATE FUNCTION webknossos.onInsertTask() RETURNS trigger AS $$
+  BEGIN
+    INSERT INTO webknossos.experienceDomains(domain) values(NEW.neededExperience_domain) ON CONFLICT DO NOTHING;
+    RETURN NULL;
+  END;
+$$ LANGUAGE plpgsql;
+
+CREATE FUNCTION webknossos.onInsertUserExperience() RETURNS trigger AS $$
+  BEGIN
+    INSERT INTO webknossos.experienceDomains(domain) values(NEW.domain) ON CONFLICT DO NOTHING;
+    RETURN NULL;
+  END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER onDeleteAnnotationTrigger
+AFTER INSERT ON webknossos.tasks
+FOR EACH ROW EXECUTE PROCEDURE webknossos.onInsertTask();
+
+CREATE TRIGGER onInsertUserExperienceTrigger
+AFTER INSERT ON webknossos.user_experiences
+FOR EACH ROW EXECUTE PROCEDURE webknossos.onInsertUserExperience();

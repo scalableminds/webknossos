@@ -1,10 +1,11 @@
 package models.task
 
-import com.scalableminds.util.accesscontext.{DBAccessContext}
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation.AnnotationSettings
+import models.team.TeamDAO
 import play.api.Play.current
 import play.api.i18n.Messages
 import play.api.i18n.Messages.Implicits._
@@ -25,13 +26,16 @@ case class TaskType(
                          ) extends FoxImplicits {
 
   def publicWrites(implicit ctx: DBAccessContext) = {
-    Fox.successful(Json.obj(
+    for {
+      team <- TeamDAO.findOne(_team)(GlobalAccessContext) ?~> "team.notFound"
+    } yield Json.obj(
       "id" -> _id.toString,
       "summary" -> summary,
       "description" -> description,
-      "team" -> _team.toString,
+      "teamId" -> team._id.toString,
+      "teamName" -> team.name,
       "settings" -> Json.toJson(settings)
-    ))
+    )
   }
 }
 

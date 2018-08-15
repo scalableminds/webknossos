@@ -17,7 +17,7 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
   val taskTypePublicReads =
     ((__ \ 'summary).read[String](minLength[String](2) or maxLength[String](50)) and
       (__ \ 'description).read[String] and
-      (__ \ 'team).read[String] (ObjectId.stringObjectIdReads("team")) and
+      (__ \ 'teamId).read[String] (ObjectId.stringObjectIdReads("teamId")) and
       (__ \ 'settings).read[AnnotationSettings]) (TaskType.fromForm _)
 
   def create = SecuredAction.async(parse.json) { implicit request =>

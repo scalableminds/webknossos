@@ -5,6 +5,7 @@ import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationState._
@@ -56,12 +57,11 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
       }
     }
 
-    def storeMergedSkeletonTracing(tracings: List[SkeletonTracing], dataSet: DataSet): Fox[String] = {
+    def assertAllOnSameDataSet(skeletons: List[SkeletonTracing], volume: Option[VolumeTracing]): Fox[String] =
       for {
-        dataStoreHandler <- dataSet.dataStoreHandler
-        newTracingId <- dataStoreHandler.mergeSkeletonTracingsByContents(SkeletonTracings(tracings), persistTracing=true)
-      } yield newTracingId
-    }
+        dataSetName <- volume.map(_.dataSetName).orElse(skeletons.headOption.map(_.dataSetName)).toFox
+        _ <- bool2Fox(skeletons.forall(_.dataSetName == dataSetName))
+      } yield dataSetName
 
     val shouldCreateGroupForEachFile: Boolean = request.body.dataParts("createGroupForEachFile")(0) == "true"
 
@@ -79,34 +79,29 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     val parseSuccess = tracingsProcessed.filter(_.succeeded)
 
     if (!parsedFiles.isEmpty) {
-      val tracings = parseSuccess.flatMap(_.tracing)
-      val (skeletonTracings, volumeTracings) = NmlService.splitVolumeAndSkeletonTracings(tracings)
+      val tracings = parseSuccess.flatMap(_.bothTracingOpts)
+      val (skeletonTracings, volumeTracingsWithDataLocations) = NmlService.splitVolumeAndSkeletonTracings(tracings)
       val name = nameForNmls(parseSuccess.map(_.fileName))
       val description = descriptionForNMLs(parseSuccess.map(_.description))
-      if (volumeTracings.nonEmpty) {
-        for {
-          dataSet <- DataSetDAO.findOneByName(volumeTracings.head._1.dataSetName).toFox ?~> Messages("dataSet.notFound", volumeTracings.head._1.dataSetName)
-          dataStoreHandler <- dataSet.dataStoreHandler
-          volumeTracingId <- dataStoreHandler.saveVolumeTracing(volumeTracings.head._1, parsedFiles.otherFiles.get(volumeTracings.head._2).map(_.file))
-          annotation <- AnnotationService.createFrom(
-            request.identity, dataSet, None, Some(volumeTracingId), AnnotationType.Explorational, name, description)
-        } yield JsonOk(
-          Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
-          Messages("nml.file.uploadSuccess")
-        )
-      } else if (skeletonTracings.nonEmpty) {
-        for {
-          dataSet <- DataSetDAO.findOneByName(skeletonTracings.head.dataSetName).toFox ?~> Messages("dataSet.notFound", skeletonTracings.head.dataSetName)
-          mergedSkeltonTracingReference <- storeMergedSkeletonTracing(skeletonTracings, dataSet)
-          annotation <- AnnotationService.createFrom(
-            request.identity, dataSet, Some(mergedSkeltonTracingReference), None, AnnotationType.Explorational, name, description)
-        } yield JsonOk(
-          Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
-          Messages("nml.file.uploadSuccess")
-        )
-      } else {
-        returnError(parsedFiles)
-      }
+
+      for {
+        _ <- bool2Fox(skeletonTracings.nonEmpty || volumeTracingsWithDataLocations.nonEmpty) ?~> "nml.file.noFile"
+        _ <- bool2Fox(volumeTracingsWithDataLocations.size <= 1) ?~> "nml.file.multipleVolumes"
+        dataSetName <- assertAllOnSameDataSet(skeletonTracings, volumeTracingsWithDataLocations.headOption.map(_._1)) ?~> "nml.file.differentDatasets"
+        dataSet <- DataSetDAO.findOneByName(dataSetName)
+        dataStoreHandler <- dataSet.dataStoreHandler
+        volumeTracingIdOpt <- Fox.runOptional(volumeTracingsWithDataLocations.headOption){ v =>
+          dataStoreHandler.saveVolumeTracing(v._1, parsedFiles.otherFiles.get(v._2).map(_.file))
+        }
+        mergedSkeletonTracingIdOpt <- Fox.runOptional(skeletonTracings.headOption){ s =>
+          dataStoreHandler.mergeSkeletonTracingsByContents(SkeletonTracings(skeletonTracings), persistTracing=true)
+        }
+        annotation <- AnnotationService.createFrom(
+          request.identity, dataSet, mergedSkeletonTracingIdOpt, volumeTracingIdOpt, AnnotationType.Explorational, name, description)
+      } yield JsonOk(
+        Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
+        Messages("nml.file.uploadSuccess")
+      )
     } else {
       returnError(parsedFiles)
     }

@@ -92,7 +92,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
       _ <- ensureTeamAdministration(request.identity, project._team)
       parseResults: List[NmlService.NmlParseResult] = NmlService.extractFromFile(inputFile.ref.file, inputFile.filename).parseResults
       skeletonSuccesses <- Fox.serialCombined(parseResults)(_.toSkeletonSuccessFox) ?~> Messages("task.create.failed")
-      result <- createTasks(skeletonSuccesses.map(s => (buildFullParams(params, s.tracing.get.left.get, s.fileName, s.description), s.tracing.get.left.get)))
+      result <- createTasks(skeletonSuccesses.map(s => (buildFullParams(params, s.skeletonTracing.get, s.fileName, s.description), s.skeletonTracing.get)))
     } yield {
       result
     }
@@ -254,7 +254,6 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
     } yield {
       Ok(Json.toJson(jsResult))
     }
-
   }
 
   def request = SecuredAction.async { implicit request =>
@@ -303,4 +302,10 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
     } yield Ok(taskJson)
   }
 
+
+  def listExperienceDomains = SecuredAction.async { implicit request =>
+    for {
+      experienceDomains <- TaskDAO.listExperienceDomains
+    } yield Ok(Json.toJson(experienceDomains))
+  }
 }

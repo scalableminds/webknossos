@@ -6,7 +6,7 @@ import { Select, Card, Form, Row, Col, DatePicker } from "antd";
 import { Chart } from "react-google-charts";
 import Toast from "libs/toast";
 import messages from "messages";
-import FormatUtils from "libs/format_utils";
+import { formatMilliseconds } from "libs/format_utils";
 import { getEditableUsers, getTimeTrackingForUser } from "admin/admin_rest_api";
 
 import type { APIUserType, APITimeTrackingType } from "admin/api_flow_types";
@@ -178,9 +178,9 @@ class TimeLineView extends React.PureComponent<*, State> {
                 </Col>
                 <Col span={16}>
                   <ul>
-                    <li>{FormatUtils.formatMilliseconds(this.state.stats.totalTime)}</li>
+                    <li>{formatMilliseconds(this.state.stats.totalTime)}</li>
                     <li style={paddingBottom}>{this.state.stats.numberTasks}</li>
-                    <li>{FormatUtils.formatMilliseconds(this.state.stats.averageTimePerTask)}</li>
+                    <li>{formatMilliseconds(this.state.stats.averageTimePerTask)}</li>
                   </ul>
                 </Col>
               </Row>

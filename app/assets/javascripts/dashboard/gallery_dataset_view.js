@@ -3,7 +3,7 @@
 import * as React from "react";
 import { connect } from "react-redux";
 import { Modal } from "antd";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import messages from "messages";
 import { createExplorational, getOrganizations } from "admin/admin_rest_api";
 import DatasetPanel from "dashboard/dataset_panel";

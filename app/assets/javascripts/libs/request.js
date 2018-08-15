@@ -245,7 +245,7 @@ class Request {
             const json = JSON.parse(text);
 
             // Propagate HTTP status code for further processing down the road
-            if (error.status) {
+            if (error.status != null) {
               json.status = error.status;
             }
 

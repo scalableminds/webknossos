@@ -134,7 +134,7 @@ export class InputKeyboard {
     options?: { delay?: number, supportInputElements?: boolean },
   ) {
     if (options) {
-      this.delay = options.delay || this.delay;
+      this.delay = options.delay != null ? options.delay : this.delay;
       this.supportInputElements = options.supportInputElements || this.supportInputElements;
     }
 

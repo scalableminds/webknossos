@@ -1,13 +1,7 @@
 // @flow
 
 import update from "immutability-helper";
-import {
-  updateKey,
-  updateKey2,
-  updateKey3,
-  type StateShape1,
-  type StateShape2,
-} from "oxalis/model/helpers/deep_update";
+import { updateKey, type StateShape1 } from "oxalis/model/helpers/deep_update";
 import type { OxalisState } from "oxalis/store";
 import type { ActionType } from "oxalis/model/actions/actions";
 import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reducers/reducer_helpers";

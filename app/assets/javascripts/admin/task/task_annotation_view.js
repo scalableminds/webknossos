@@ -177,7 +177,7 @@ class TaskAnnotationView extends React.PureComponent<Props & StateProps, State> 
                     <br />
                     <span>
                       <Icon type="clock-circle-o" />
-                      {annotation.tracingTime
+                      {annotation.tracingTime != null
                         ? FormatUtils.formatSeconds(annotation.tracingTime / 1000)
                         : 0}
                     </span>

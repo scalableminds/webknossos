@@ -1,7 +1,12 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 /* eslint-disable import/first */
 // @flow
-import { tokenUserA, setCurrToken, resetDatabase } from "../enzyme/e2e-setup";
+import {
+  tokenUserA,
+  setCurrToken,
+  resetDatabase,
+  writeFlowCheckingFile,
+} from "../enzyme/e2e-setup";
 import test from "ava";
 import * as api from "admin/admin_rest_api";
 
@@ -12,6 +17,7 @@ test.before("Reset database and change token", async () => {
 
 test("getUsers()", async t => {
   const users = await api.getUsers();
+  writeFlowCheckingFile(users, "user", "APIUserType", { isArray: true });
   t.snapshot(users, { id: "users-getUsers" });
 });
 
@@ -46,6 +52,7 @@ test("updateUser()", async t => {
 test("getLoggedTimes()", async t => {
   const activeUser = await api.getActiveUser();
   const loggedTimes = await api.getLoggedTimes(activeUser.id);
+  writeFlowCheckingFile(loggedTimes, "logged-times", "APITimeIntervalType", { isArray: true });
   t.snapshot(loggedTimes, { id: "users-loggedTimes" });
 });
 

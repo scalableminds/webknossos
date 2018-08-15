@@ -15,6 +15,7 @@ import type {
   APITaskTypeType,
   APITeamType,
   APIProjectType,
+  APIProjectWithAssignmentsType,
   APIProjectCreatorType,
   APIProjectUpdaterType,
   APITaskType,
@@ -250,8 +251,8 @@ export function deleteTeam(teamId: string): Promise<void> {
 }
 
 // ### Projects
-function transformProject(response): APIProjectType {
-  return Object.assign(response, {
+function transformProject<T: APIProjectType | APIProjectWithAssignmentsType>(response: T): T {
+  return Object.assign({}, response, {
     expectedTime: Utils.millisecondsToMinutes(response.expectedTime),
   });
 }
@@ -263,7 +264,9 @@ export async function getProjects(): Promise<Array<APIProjectType>> {
   return responses.map(transformProject);
 }
 
-export async function getProjectsWithOpenAssignments(): Promise<Array<APIProjectType>> {
+export async function getProjectsWithOpenAssignments(): Promise<
+  Array<APIProjectWithAssignmentsType>,
+> {
   const responses = await Request.receiveJSON("/api/projects/assignments");
   assertResponseLimit(responses);
 
@@ -278,7 +281,7 @@ export async function getProject(projectName: string): Promise<APIProjectType> {
 export async function increaseProjectTaskInstances(
   projectName: string,
   delta?: number = 1,
-): Promise<APIProjectType> {
+): Promise<APIProjectWithAssignmentsType> {
   const project = await Request.receiveJSON(
     `/api/projects/${projectName}/incrementEachTasksInstances?delta=${delta}`,
   );

@@ -206,7 +206,6 @@ type APIProjectTypeBase = {
   +priority: number,
   +paused: boolean,
   +expectedTime: number,
-  +numberOfOpenAssignments: number,
 };
 
 export type APIProjectType = APIProjectTypeBase & {
@@ -221,6 +220,10 @@ export type APIProjectUpdaterType = APIProjectTypeBase & {
 
 export type APIProjectCreatorType = APIProjectTypeBase & {
   +owner: string,
+};
+
+export type APIProjectWithAssignmentsType = APIProjectType & {
+  +numberOfOpenAssignments: number,
 };
 
 export type APITaskType = {
@@ -310,7 +313,6 @@ export type APIProjectProgressReportType = {
   +openInstances: number,
   +activeInstances: number,
   +finishedInstances: number,
-  +inProgressInstances: number,
 };
 
 export type APIOpenTasksReportType = {

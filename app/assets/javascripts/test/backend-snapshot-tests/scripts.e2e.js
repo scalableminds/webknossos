@@ -3,7 +3,12 @@
 // @flow
 import test from "ava";
 import * as api from "admin/admin_rest_api";
-import { tokenUserA, setCurrToken, resetDatabase } from "../enzyme/e2e-setup";
+import {
+  tokenUserA,
+  setCurrToken,
+  resetDatabase,
+  writeFlowCheckingFile,
+} from "../enzyme/e2e-setup";
 
 test.before("Reset database", async () => {
   resetDatabase();
@@ -23,6 +28,7 @@ test("getScript()", async t => {
   const firstScript = scripts[0];
 
   const script = await api.getScript(firstScript.id);
+  writeFlowCheckingFile(script, "script", "APIScriptType");
   t.snapshot(script, { id: "scripts-getScript" });
 });
 

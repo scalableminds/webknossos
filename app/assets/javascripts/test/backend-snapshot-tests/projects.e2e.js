@@ -1,7 +1,13 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 /* eslint-disable import/first */
 // @flow
-import { tokenUserA, tokenUserD, setCurrToken, resetDatabase } from "../enzyme/e2e-setup";
+import {
+  tokenUserA,
+  tokenUserD,
+  setCurrToken,
+  resetDatabase,
+  writeFlowCheckingFile,
+} from "../enzyme/e2e-setup";
 import test from "ava";
 import _ from "lodash";
 import * as api from "admin/admin_rest_api";
@@ -17,6 +23,7 @@ test.beforeEach("Change token", async () => {
 
 test.serial("getProjects()", async t => {
   const projects = _.sortBy(await api.getProjects(), p => p.name);
+  writeFlowCheckingFile(projects, "project", "APIProjectType", { isArray: true });
   t.snapshot(projects, { id: "projects-getProjects()" });
 });
 

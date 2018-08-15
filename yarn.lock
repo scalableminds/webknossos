@@ -4831,12 +4831,6 @@ highlight.js@^9.12.0:
   version "9.12.0"
   resolved "https://registry.yarnpkg.com/highlight.js/-/highlight.js-9.12.0.tgz#e6d9dbe57cbefe60751f02af336195870c90c01e"
 
-himalaya@^0.2.12:
-  version "0.2.13"
-  resolved "https://registry.yarnpkg.com/himalaya/-/himalaya-0.2.13.tgz#a5ec6a576303eecef53f51996a29088683a90bc2"
-  dependencies:
-    paul "0.0.3"
-
 history@^4.7.2:
   version "4.7.2"
   resolved "https://registry.yarnpkg.com/history/-/history-4.7.2.tgz#22b5c7f31633c5b8021c7f4a8a954ac139ee8d5b"
@@ -7597,10 +7591,6 @@ path-type@^3.0.0:
   resolved "https://registry.yarnpkg.com/path-type/-/path-type-3.0.0.tgz#cef31dc8e0a1a3bb0d105c0cd97cf3bf47f4e36f"
   dependencies:
     pify "^3.0.0"
-
-paul@0.0.3:
-  version "0.0.3"
-  resolved "https://registry.yarnpkg.com/paul/-/paul-0.0.3.tgz#7fbef33df6936c050cb7e9c00c22cbd110b7bb4f"
 
 pbkdf2@^3.0.3:
   version "3.0.14"

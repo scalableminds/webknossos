@@ -130,7 +130,7 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
             <Table
               dataSource={Utils.filterWithSearchQueryOR(
                 this.state.tasktypes,
-                ["id", "team", "summary", "description", "settings"],
+                ["id", "teamName", "summary", "description", "settings"],
                 this.state.searchQuery,
               )}
               rowKey="id"
@@ -145,28 +145,28 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                 dataIndex="id"
                 key="id"
                 width={100}
-                sorter={Utils.localeCompareBy(typeHint, "id")}
+                sorter={Utils.localeCompareBy(typeHint, taskType => taskType.id)}
                 className="monospace-id"
               />
               <Column
                 title="Team"
-                dataIndex="team.name"
+                dataIndex="teamName"
                 key="team"
                 width={130}
-                sorter={Utils.localeCompareBy(typeHint, "team")}
+                sorter={Utils.localeCompareBy(typeHint, taskType => taskType.teamName)}
               />
               <Column
                 title="Summary"
                 dataIndex="summary"
                 key="summary"
                 width={130}
-                sorter={Utils.localeCompareBy(typeHint, "summary")}
+                sorter={Utils.localeCompareBy(typeHint, taskType => taskType.summary)}
               />
               <Column
                 title="Description"
                 dataIndex="description"
                 key="description"
-                sorter={Utils.localeCompareBy(typeHint, "description")}
+                sorter={Utils.localeCompareBy(typeHint, taskType => taskType.description)}
                 render={description => (
                   <div className="task-type-description short">
                     <Markdown

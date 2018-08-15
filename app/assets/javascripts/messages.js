@@ -93,8 +93,6 @@ In order to restore the current window, a reload is necessary.`,
   "annotation.was_finished": "Annotation was archived",
   "annotation.was_re_opened": "Annotation was reopened",
   "annotation.delete": "Do you really want to reset and cancel this annotation?",
-  "annotation.dataset_no_public":
-    "Public tracings require the respective dataset to be public too. Please, make sure to add public access rights to the dataset as well.",
   "annotation.was_edited": "Successfully updated annotation",
   "project.delete": "Do you really want to delete this project?",
   "project.increase_instances":

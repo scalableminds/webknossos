@@ -3,7 +3,7 @@ package models.annotation.nml
 import java.io.{File, FileInputStream, InputStream}
 import java.nio.file.{Files, StandardCopyOption}
 
-import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, TreeGroup}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.Fox
@@ -13,6 +13,7 @@ import play.api.i18n.Messages
 import play.api.Play.current
 import play.api.i18n.Messages.Implicits._
 import play.api.libs.Files.TemporaryFile
+
 import scala.concurrent.ExecutionContext.Implicits.global
 
 
@@ -108,6 +109,28 @@ object NmlService extends LazyLogging {
         r match {
           case NmlParseSuccess(name, Some(skeletonTracing), volumeTracingOpt, description) =>
             NmlParseSuccess(name, Some(renameTrees(name, skeletonTracing)), volumeTracingOpt, description)
+          case _ => r
+        }
+      )
+    } else {
+      parseResults
+    }
+  }
+
+  def wrapTreesInGroups(parseResults: List[NmlParseResult]): List[NmlParseResult] = {
+    def getMaximumGroupId(treeGroups: Seq[TreeGroup]) = if (treeGroups.isEmpty) 0 else treeGroups.map(_.groupId).max
+
+    def wrapTreesInGroup(name: String, tracing: SkeletonTracing): SkeletonTracing = {
+      val unusedGroupId = getMaximumGroupId(tracing.treeGroups) + 1
+      val newTrees = tracing.trees.map(tree => tree.copy(groupId = Some(tree.groupId.getOrElse(unusedGroupId))))
+      val newTreeGroups = Seq(TreeGroup(name, unusedGroupId, tracing.treeGroups))
+      tracing.copy(trees = newTrees, treeGroups = newTreeGroups)
+    }
+
+    if (parseResults.length > 1) {
+      parseResults.map(r =>
+        r match {
+          case NmlParseSuccess(name, Left(skeletonTracing), description) => NmlParseSuccess(name, Left(wrapTreesInGroup(name, skeletonTracing)), description)
           case _ => r
         }
       )

@@ -158,7 +158,8 @@ export type APITaskTypeType = {
   +id: string,
   +summary: string,
   +description: string,
-  +team: string,
+  +teamId: string,
+  +teamName: string,
   +settings: APISettingsType,
 };
 
@@ -197,7 +198,7 @@ export type APIProjectCreatorType = APIProjectTypeBase & {
 export type APITaskType = {
   +boundingBox: ?BoundingBoxObjectType,
   +boundingBoxVec6?: Vector6,
-  +created: string,
+  +created: number,
   +creationInfo: ?string,
   +dataSet: string,
   +editPosition: Vector3,
@@ -225,7 +226,7 @@ export type APIAnnotationTypeCompact = {
   +dataSetName: string,
   +description: string,
   +formattedHash: string,
-  +modified: string,
+  +modified: number,
   +id: string,
   +isPublic: boolean,
   +name: string,

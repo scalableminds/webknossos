@@ -9,6 +9,7 @@ import { Link, withRouter } from "react-router-dom";
 import { Table, Tag, Icon, Spin, Button, Input, Modal, Alert, Row, Col, Tooltip } from "antd";
 import TeamRoleModalView from "admin/user/team_role_modal_view";
 import ExperienceModalView from "admin/user/experience_modal_view";
+import SingleUserExperienceModalView from "admin/user/single_user_experience_modal_view";
 import TemplateHelpers from "libs/template_helpers";
 import Utils from "libs/utils";
 import { getEditableUsers, updateUser } from "admin/admin_rest_api";
@@ -46,6 +47,7 @@ type State = {
   isExperienceModalVisible: boolean,
   isTeamRoleModalVisible: boolean,
   isInvitePopoverVisible: boolean,
+  isSingleUserExperienceModalVisible: boolean,
   activationFilter: Array<"true" | "false">,
   searchQuery: string,
 };
@@ -68,6 +70,7 @@ class UserListView extends React.PureComponent<Props, State> {
     isInvitePopoverVisible: false,
     activationFilter: ["true"],
     searchQuery: "",
+    isSingleUserExperienceModalVisible: false,
   };
 
   componentWillMount() {
@@ -233,6 +236,12 @@ class UserListView extends React.PureComponent<Props, State> {
     );
   }
 
+  getSelectedUser() {
+    if (this.state.hasRowsSelected)
+      return this.state.selectedUserIds.find(user => user.id === this.state.selectedUserIds[0]);
+    else return null;
+  }
+
   render() {
     const hasRowsSelected = this.state.selectedUserIds.length > 0;
     const rowSelection = {
@@ -269,7 +278,11 @@ class UserListView extends React.PureComponent<Props, State> {
           Edit Teams
         </Button>
         <Button
-          onClick={() => this.setState({ isExperienceModalVisible: true })}
+          onClick={() => {
+            if (this.state.selectedUserIds.length > 1)
+              this.setState({ isExperienceModalVisible: true });
+            else this.setState({ isSingleUserExperienceModalVisible: true });
+          }}
           icon="trophy"
           disabled={!hasRowsSelected}
           style={marginRight}
@@ -470,6 +483,14 @@ class UserListView extends React.PureComponent<Props, State> {
           onChange={this.handleUsersChange}
           onCancel={() => this.setState({ isExperienceModalVisible: false })}
         />
+        {hasRowsSelected ? (
+          <SingleUserExperienceModalView
+            visible={this.state.isSingleUserExperienceModalVisible}
+            selectedUser={this.state.users.find(user => user.id === this.state.selectedUserIds[0])}
+            onChange={this.handleUsersChange}
+            onCancel={() => this.setState({ isSingleUserExperienceModalVisible: false })}
+          />
+        ) : null}
         <TeamRoleModalView
           visible={this.state.isTeamRoleModalVisible}
           selectedUserIds={this.state.selectedUserIds}

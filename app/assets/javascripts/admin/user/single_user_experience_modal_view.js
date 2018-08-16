@@ -2,35 +2,36 @@
 
 import _ from "lodash";
 import * as React from "react";
-import { Modal, Button, Input, Icon } from "antd";
+import { Modal, Button, Input, Icon, Tag, Table } from "antd";
+import CustomValueInput from "components/custom_value_input";
 import update from "immutability-helper";
 import { updateUser } from "admin/admin_rest_api";
-import type { APIUserType } from "admin/api_flow_types";
+import type { APIUserType, ExperienceMapType } from "admin/api_flow_types";
+
+const { Column } = Table;
 
 type Props = {
   onChange: Function,
   onCancel: Function,
   visible: boolean,
-  selectedUserIds: Array<string>,
   selectedUser: APIUserType,
 };
 
 type State = {
-  domain: ?string,
-  level: ?string,
+  experiences: ExperienceMapType,
+  // use an array to save change stuff and before commit change ask with another modal
 };
 
-class ExperienceModalView extends React.PureComponent<Props, State> {
+class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
   state = {
-    domain: null,
-    level: null,
+    experiences: this.props.selectedUser.experiences,
   };
 
   increaseExperience = (): void => {
     this.setExperience(null, true);
   };
 
-  setExperience = (event: ?SyntheticInputEvent<>, shouldAddValue: boolean = false): void => {
+  /* setExperience = (event: ?SyntheticInputEvent<>, shouldAddValue: boolean = false): void => {
     const { domain, level } = this.state;
     if (domain && level !== null) {
       const newUserPromises = this.props.users.map(user => {
@@ -52,9 +53,9 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
 
       this.closeModal(newUserPromises);
     }
-  };
+  }; */
 
-  deleteExperience = () => {
+  /* deleteExperience = () => {
     if (this.state.domain) {
       const { domain } = this.state;
       const newUserPromises = this.props.users.map(user => {
@@ -71,7 +72,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
 
       this.closeModal(newUserPromises);
     }
-  };
+  }; */
 
   /**
    * Save a user object to the server using an API call.
@@ -87,8 +88,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     Promise.all(usersPromises).then(
       newUsers => {
         this.setState({
-          domain: null,
-          level: null,
+          experiences: null,
         });
         this.props.onChange(newUsers);
       },
@@ -98,15 +98,31 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     );
   }
 
+  /* renderExperienceComponent(experienceDomain: string, experienceValue: int){
+    return(<span>)
+
+  } */
+
+  validateDomainAndValues(tableData: []) {
+    let isValid = true;
+    tableData.forEach(entry => {
+      if (isValid && (entry.domain.length < 3 || entry.value < 1)) isValid = false;
+    });
+    return isValid;
+  }
+
   render() {
     if (!this.props.visible) {
       return null;
     }
 
-    const { domain, level } = this.state;
-    const isDomainValid = _.isString(domain) && domain !== "";
-    const isLevelValid = !Number.isNaN(parseInt(level));
-
+    const experiences = this.state.experiences;
+    const tableData = [];
+    _.map(experiences, (value, domain) => {
+      tableData.push({ domain, value });
+    });
+    const isValid = this.validateDomainAndValues(tableData);
+    const pagination = tableData > 10 ? { pageSize: 10 } : false;
     return (
       <Modal
         title={`Change Experiences of user ${this.props.selectedUser.lastName}, ${
@@ -117,49 +133,60 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
         width={600}
         footer={
           <div>
-            <Button
-              type="primary"
-              onClick={this.increaseExperience}
-              disabled={!(isDomainValid && isLevelValid)}
-            >
-              Increase Experience
-            </Button>
-            <Button
-              type="primary"
-              onClick={this.setExperience}
-              disabled={!(isDomainValid && isLevelValid)}
-            >
-              Set Experience
-            </Button>
-            <Button type="primary" onClick={this.deleteExperience} disabled={!isDomainValid}>
-              Delete Experience
+            <Button type="primary" onClick={this.increaseExperience} disabled={!isValid}>
+              Update Experience
             </Button>
             <Button onClick={() => this.props.onCancel()}>Cancel</Button>
           </div>
         }
       >
-        {_.map(this.props.selectedUser.experiences, (value, domain) => (
+        {/* _.map(this.props.selectedUser.experiences, (value, domain) => (
           // here -> edit to the suggested design so every existing domain's value can be changed or completely deleted
           <Tag key={`experience_${user.id}_${domain}`}>
             {domain} : {value}
           </Tag>
-        ))}
-        <Input
-          value={this.state.domain}
-          onChange={event => this.setState({ domain: event.target.value })}
-          prefix={<Icon type="tags" style={{ fontSize: 13 }} />}
-          style={{ marginBottom: 10 }}
-          placeholder="Domain"
-        />
-        <Input
-          value={this.state.level}
-          onChange={event => this.setState({ level: event.target.value })}
-          prefix={<Icon type="filter" style={{ fontSize: 13 }} />}
-          placeholder="Level"
-        />
+        )) */}
+        <Table dataSource={tableData} rowKey="domain" pagination={pagination}>
+          <Column title="Experience Domain" dataIndex="domain" key="domain" />
+          <Column
+            title="Experience Value"
+            key="value"
+            render={record => (
+              <CustomValueInput
+                increase={() => {
+                  const exp = this.state.experiences;
+                  exp[record.domain]++;
+                  this.setState({ experiences: exp });
+                }}
+                decrease={() => {
+                  const exp = this.state.experiences;
+                  exp[record.domain]--;
+                  this.setState({ experiences: exp });
+                }}
+                onChange={value => {
+                  const exp = this.state.experiences;
+                  exp[record.domain] = value;
+                  this.setState({ experiences: exp });
+                }}
+                min={1}
+                max={100}
+                initialValue={this.state.experiences[record.domain]}
+              />
+            )}
+          />
+          <Column
+            title="Delete Entry"
+            key={record => record.domain.concat(record.value)}
+            render={(record, index) => (
+              <span>
+                <Button>Trash</Button>
+              </span>
+            )}
+          />
+        </Table>
       </Modal>
     );
   }
 }
 
-export default ExperienceModalView;
+export default SingleUserExperienceModalView;

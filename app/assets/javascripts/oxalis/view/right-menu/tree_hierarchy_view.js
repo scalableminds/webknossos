@@ -36,7 +36,7 @@ type Props = {
   activeTreeId: number,
   activeGroupId: number,
   treeGroups: Array<TreeGroupType>,
-  // TODO: Remove once https://github.com/yannickcr/eslint-plugin-react/issues/1751 is merged
+  // TODO: eslint doesn't recognize, that sortBy is indeed used in the getDerivedStateFromProps function
   // eslint-disable-next-line react/no-unused-prop-types
   sortBy: string,
   trees: TreeMapType,
@@ -57,6 +57,13 @@ type State = {
 };
 
 class TreeHierarchyView extends React.PureComponent<Props, State> {
+  state = {
+    expandedGroupIds: {},
+    groupTree: [],
+    prevProps: null,
+    searchFocusOffset: 0,
+  };
+
   static getDerivedStateFromProps(nextProps: Props, prevState: State) {
     if (
       prevState.prevProps == null ||
@@ -90,15 +97,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       };
     }
   }
-
-  state = {
-    expandedGroupIds: {},
-    groupTree: [],
-    // TODO: Remove once https://github.com/yannickcr/eslint-plugin-react/issues/1751 is merged
-    // eslint-disable-next-line react/no-unused-state
-    prevProps: null,
-    searchFocusOffset: 0,
-  };
 
   async componentDidUpdate(prevProps) {
     // TODO: Workaround, remove after https://github.com/frontend-collective/react-sortable-tree/issues/305 is fixed
@@ -143,9 +141,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     // Cannot use object destructuring in the parameters here, because the linter will complain
     // about the Flow types
     const { node, expanded } = params;
-    this.setState({
-      expandedGroupIds: update(this.state.expandedGroupIds, { [node.id]: { $set: expanded } }),
-    });
+    this.setState(prevState => ({
+      expandedGroupIds: update(prevState.expandedGroupIds, { [node.id]: { $set: expanded } }),
+    }));
   };
 
   onMoveNode = (params: {

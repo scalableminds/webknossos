@@ -12,6 +12,7 @@ import { Provider } from "react-redux";
 import { load as loadFeatureToggles } from "features";
 import Store from "oxalis/throttled_store";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
+import { googleAnalyticsLogClicks } from "oxalis/model/helpers/google_analytics_middleware";
 
 import "whatwg-fetch";
 import "es6-promise";
@@ -22,6 +23,8 @@ import "../stylesheets/main.less";
 
 document.addEventListener("DOMContentLoaded", async () => {
   ErrorHandling.initialize({ throwAssertions: false, sendLocalErrors: false });
+
+  document.addEventListener("click", googleAnalyticsLogClicks);
 
   // try retreive the currently active user if logged in
   try {

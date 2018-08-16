@@ -16,8 +16,8 @@ import {
   _takeEvery,
   select,
   race,
-  type Saga,
 } from "oxalis/model/sagas/effect-generators";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
 import {
   deleteBranchPointAction,
   setTreeNameAction,

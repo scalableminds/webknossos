@@ -76,9 +76,9 @@ class TeamListView extends React.PureComponent<Props, State> {
         try {
           this.setState({ isLoading: true });
           await deleteTeam(team.id);
-          this.setState({
-            teams: this.state.teams.filter(t => t.id !== team.id),
-          });
+          this.setState(prevState => ({
+            teams: prevState.teams.filter(t => t.id !== team.id),
+          }));
         } catch (error) {
           handleGenericError(error);
         } finally {
@@ -89,10 +89,10 @@ class TeamListView extends React.PureComponent<Props, State> {
   };
 
   createTeam = (newTeam: APITeamType) => {
-    this.setState({
+    this.setState(prevState => ({
       isTeamCreationModalVisible: false,
-      teams: this.state.teams.concat([newTeam]),
-    });
+      teams: prevState.teams.concat([newTeam]),
+    }));
   };
 
   renderPlaceholder() {

@@ -28,6 +28,7 @@ test("getTimeTrackingForUserByMonth", async t => {
     activeUser.email,
     moment("20180801", "YYYYMMDD"),
   );
+  t.true(timeTrackingForUserByMonth.length > 0);
   writeFlowCheckingFile(timeTrackingForUserByMonth, "time-tracking", "APITimeTrackingType", {
     isArray: true,
   });
@@ -40,6 +41,7 @@ test("getTimeTrackingForUser", async t => {
     moment("20180101", "YYYYMMDD"),
     moment("20181001", "YYYYMMDD"),
   );
+  t.true(timeTrackingForUser.length > 0);
   t.snapshot(timeTrackingForUser, { id: "timetracking-timeTrackingForUser" });
 });
 

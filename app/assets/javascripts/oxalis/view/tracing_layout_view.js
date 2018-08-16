@@ -14,6 +14,7 @@ import type { ControlModeType } from "oxalis/constants";
 import Toast from "libs/toast";
 import messages from "messages";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
+import { importNmls } from "oxalis/view/right-menu/trees_tab_view";
 
 const { Header, Sider } = Layout;
 
@@ -32,6 +33,10 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     isSettingsCollapsed: true,
   };
 
+  componentDidCatch() {
+    Toast.error(messages["react.rendering_error"]);
+  }
+
   componentWillUnmount() {
     // do a complete page refresh to make sure all tracing data is garbage
     // collected and all events are canceled, etc.
@@ -39,18 +44,14 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
   }
 
   handleSettingsCollapse = () => {
-    this.setState({
-      isSettingsCollapsed: !this.state.isSettingsCollapsed,
-    });
+    this.setState(prevState => ({
+      isSettingsCollapsed: !prevState.isSettingsCollapsed,
+    }));
   };
-
-  componentDidCatch() {
-    Toast.error(messages["react.rendering_error"]);
-  }
 
   render() {
     return (
-      <NmlUploadZoneContainer>
+      <NmlUploadZoneContainer onImport={importNmls}>
         <OxalisController
           initialTracingType={this.props.initialTracingType}
           initialAnnotationId={this.props.initialAnnotationId}

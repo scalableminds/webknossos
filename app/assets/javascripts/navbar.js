@@ -6,7 +6,7 @@ import { Link, withRouter } from "react-router-dom";
 import { Layout, Menu, Icon } from "antd";
 import { connect } from "react-redux";
 import Request from "libs/request";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import LoginView from "admin/auth/login_view";
 import { getBuildInfo } from "admin/admin_rest_api";
 import { logoutUserAction } from "oxalis/model/actions/user_actions";
@@ -178,7 +178,7 @@ class Navbar extends React.PureComponent<Props, State> {
       <Header style={navbarStyle}>
         <Menu
           mode="horizontal"
-          defaultSelectedkeys={[this.props.history.location.pathname]}
+          defaultSelectedKeys={[this.props.history.location.pathname]}
           style={{ lineHeight: "48px", flex: isAuthenticated ? "1" : undefined }}
           theme="dark"
         >

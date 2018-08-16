@@ -5,7 +5,7 @@ import Request from "libs/request";
 import Store from "oxalis/store";
 import { pushSaveQueueAction } from "oxalis/model/actions/save_actions";
 import { updateBucket } from "oxalis/model/sagas/update_actions";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import { doWithToken } from "admin/admin_rest_api";
 import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import type { Vector3, Vector4 } from "oxalis/constants";
@@ -111,5 +111,5 @@ export async function sendToStore(batch: Array<DataBucket>): Promise<void> {
     );
     items.push(updateBucket(bucketInfo, Base64.fromByteArray(bucketData)));
   }
-  Store.dispatch(pushSaveQueueAction(items));
+  Store.dispatch(pushSaveQueueAction(items, "volume"));
 }

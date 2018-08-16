@@ -7,7 +7,7 @@ import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { M4x4 } from "libs/mjs";
 import type { Matrix4x4 } from "libs/mjs";
 import type { Vector3 } from "oxalis/constants";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import Dimensions from "oxalis/model/dimensions";
 import _ from "lodash";
 
@@ -120,13 +120,13 @@ export function zoomReducer(state: OxalisState, zoomStep: number): OxalisState {
 }
 
 export function setDirectionReducer(state: OxalisState, direction: Vector3) {
-  if (state.userConfiguration.dynamicSpaceDirection) {
-    const spaceDirectionOrtho = [0, 1, 2].map(index => (direction[index] < 0 ? -1 : 1));
-    return update(state, {
-      flycam: { spaceDirectionOrtho: { $set: spaceDirectionOrtho } },
-    });
-  }
-  return state;
+  const spaceDirectionOrtho = direction.map(el => (el < 0 ? -1 : 1));
+  return update(state, {
+    flycam: {
+      direction: { $set: direction },
+      spaceDirectionOrtho: { $set: spaceDirectionOrtho },
+    },
+  });
 }
 
 export function setRotationReducer(state: OxalisState, rotation: Vector3) {

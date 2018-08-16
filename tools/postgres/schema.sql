@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(17);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(21);
 COMMIT TRANSACTION;
 
 CREATE TABLE webknossos.analytics(
@@ -33,7 +33,6 @@ CREATE TABLE webknossos.analytics(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
-CREATE TYPE webknossos.ANNOTATION_TRACING_TYPE AS ENUM ('skeleton', 'volume');
 CREATE TYPE webknossos.ANNOTATION_TYPE AS ENUM ('Task', 'Explorational', 'TracingBase', 'Orphan');
 CREATE TYPE webknossos.ANNOTATION_STATE AS ENUM ('Active', 'Finished', 'Cancelled', 'Initializing');
 CREATE TABLE webknossos.annotations(
@@ -42,8 +41,8 @@ CREATE TABLE webknossos.annotations(
   _task CHAR(24),
   _team CHAR(24) NOT NULL,
   _user CHAR(24) NOT NULL,
-  tracing_id CHAR(36) NOT NULL UNIQUE,
-  tracing_typ webknossos.ANNOTATION_TRACING_TYPE NOT NULL,
+  skeletonTracingId CHAR(36) UNIQUE,
+  volumeTracingId CHAR(36) UNIQUE, -- has to be unique even over both skeletonTracingId and volumeTracingId. Enforced by datastore.
   description TEXT NOT NULL DEFAULT '',
   isPublic BOOLEAN NOT NULL DEFAULT false,
   name VARCHAR(256) NOT NULL DEFAULT '',
@@ -55,7 +54,8 @@ CREATE TABLE webknossos.annotations(
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   modified TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  CHECK ((typ IN ('TracingBase', 'Task')) = (_task IS NOT NULL))
+  CHECK ((typ IN ('TracingBase', 'Task')) = (_task IS NOT NULL)),
+  CHECK (COALESCE(skeletonTracingId,volumeTracingId) IS NOT NULL)
 );
 
 CREATE TABLE webknossos.dataSets(
@@ -101,6 +101,12 @@ CREATE TABLE webknossos.dataSet_resolutions(
   dataLayerName VARCHAR(256),
   resolution webknossos.VECTOR3 NOT NULL,
   PRIMARY KEY (_dataSet, dataLayerName, resolution)
+);
+
+CREATE TABLE webknossos.dataSet_lastUsedTimes(
+  _dataSet CHAR(24) NOT NULL,
+  _user CHAR(24) NOT NULL,
+  lastUsedTime TIMESTAMPTZ NOT NULL
 );
 
 CREATE TYPE webknossos.DATASTORE_TYPE AS ENUM ('webknossos-store');
@@ -166,6 +172,10 @@ CREATE TABLE webknossos.tasks(
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   CONSTRAINT openInstancesSmallEnoughCheck CHECK (openInstances <= totalInstances),
   CONSTRAINT openInstancesLargeEnoughCheck CHECK (openInstances >= 0)
+);
+
+CREATE TABLE webknossos.experienceDomains(
+  domain VARCHAR(256) PRIMARY KEY
 );
 
 CREATE TABLE webknossos.teams(
@@ -281,7 +291,8 @@ CREATE INDEX ON webknossos.annotations(_user, isDeleted);
 CREATE INDEX ON webknossos.annotations(_task, isDeleted);
 CREATE INDEX ON webknossos.annotations(typ, state, isDeleted);
 CREATE INDEX ON webknossos.annotations(_user, _task, isDeleted);
-CREATE INDEX ON webknossos.annotations(tracing_id);
+CREATE INDEX ON webknossos.annotations(skeletonTracingId);
+CREATE INDEX ON webknossos.annotations(volumeTracingId);
 CREATE INDEX ON webknossos.annotations(_task, typ, isDeleted);
 CREATE INDEX ON webknossos.annotations(typ, isDeleted);
 CREATE INDEX ON webknossos.dataSets(name);
@@ -410,3 +421,27 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER onDeleteAnnotationTrigger
 AFTER DELETE ON webknossos.annotations
 FOR EACH ROW EXECUTE PROCEDURE webknossos.onDeleteAnnotation();
+
+
+CREATE FUNCTION webknossos.onInsertTask() RETURNS trigger AS $$
+  BEGIN
+    INSERT INTO webknossos.experienceDomains(domain) values(NEW.neededExperience_domain) ON CONFLICT DO NOTHING;
+    RETURN NULL;
+  END;
+$$ LANGUAGE plpgsql;
+
+CREATE FUNCTION webknossos.onInsertUserExperience() RETURNS trigger AS $$
+  BEGIN
+    INSERT INTO webknossos.experienceDomains(domain) values(NEW.domain) ON CONFLICT DO NOTHING;
+    RETURN NULL;
+  END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER onDeleteAnnotationTrigger
+AFTER INSERT ON webknossos.tasks
+FOR EACH ROW EXECUTE PROCEDURE webknossos.onInsertTask();
+
+CREATE TRIGGER onInsertUserExperienceTrigger
+AFTER INSERT ON webknossos.user_experiences
+FOR EACH ROW EXECUTE PROCEDURE webknossos.onInsertUserExperience();

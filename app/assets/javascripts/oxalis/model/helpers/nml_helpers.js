@@ -12,6 +12,7 @@ import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reduce
 import type {
   OxalisState,
   SkeletonTracingType,
+  TracingType,
   NodeMapType,
   TreeType,
   TreeMapType,
@@ -42,6 +43,19 @@ function indent(array: Array<string>): Array<string> {
   return array;
 }
 
+function escape(string: string): string {
+  return (
+    string
+      // the & character NEEDS to be escaped first, otherwise the escaped sequences will be escaped again
+      .replace(/&/g, "&amp;")
+      .replace(/>/g, "&gt;")
+      .replace(/</g, "&lt;")
+      .replace(/'/g, "&apos;")
+      .replace(/"/g, "&quot;")
+      .replace(/\n/g, "&#xa;")
+  );
+}
+
 function serializeTagWithChildren(
   name: string,
   properties: { [string]: ?(string | number | boolean) },
@@ -61,7 +75,7 @@ function serializeTag(
   closed: boolean = true,
 ): string {
   return `<${name} ${Object.keys(properties)
-    .map(key => `${key}="${properties[key] != null ? properties[key].toString() : ""}"`)
+    .map(key => `${key}="${properties[key] != null ? escape(properties[key].toString()) : ""}"`)
     .join(" ")}${closed ? " /" : ""}>`;
 }
 
@@ -84,6 +98,7 @@ export function getNmlName(state: OxalisState): string {
 
 export function serializeToNml(
   state: OxalisState,
+  annotation: TracingType,
   tracing: SkeletonTracingType,
   buildInfo: APIBuildInfoType,
 ): string {
@@ -96,8 +111,8 @@ export function serializeToNml(
     "<things>",
     ...indent(
       _.concat(
-        serializeMetaInformation(state, buildInfo),
-        serializeParameters(state),
+        serializeMetaInformation(state, annotation, buildInfo),
+        serializeParameters(state, annotation, tracing),
         serializeTrees(visibleTrees),
         serializeBranchPoints(visibleTrees),
         serializeComments(visibleTrees),
@@ -110,7 +125,11 @@ export function serializeToNml(
   ].join("\n");
 }
 
-function serializeMetaInformation(state: OxalisState, buildInfo: APIBuildInfoType): Array<string> {
+function serializeMetaInformation(
+  state: OxalisState,
+  annotation: TracingType,
+  buildInfo: APIBuildInfoType,
+): Array<string> {
   return _.compact([
     serializeTag("meta", {
       name: "writer",
@@ -126,7 +145,7 @@ function serializeMetaInformation(state: OxalisState, buildInfo: APIBuildInfoTyp
     }),
     serializeTag("meta", {
       name: "annotationId",
-      content: state.tracing.annotationId,
+      content: annotation.annotationId,
     }),
     state.activeUser != null
       ? serializeTag("meta", {
@@ -153,18 +172,22 @@ function serializeBoundingBox(bb: ?BoundingBoxType, name: string): string {
   return "";
 }
 
-function serializeParameters(state: OxalisState): Array<string> {
+function serializeParameters(
+  state: OxalisState,
+  annotation: TracingType,
+  skeletonTracing: SkeletonTracingType,
+): Array<string> {
   const editPosition = getPosition(state.flycam).map(Math.round);
   const editRotation = getRotation(state.flycam);
-  const userBB = state.tracing.userBoundingBox;
-  const taskBB = state.tracing.boundingBox;
+  const userBB = skeletonTracing.userBoundingBox;
+  const taskBB = skeletonTracing.boundingBox;
   return [
     "<parameters>",
     ...indent(
       _.compact([
         serializeTag("experiment", {
           name: state.dataset.name,
-          description: state.tracing.description,
+          description: annotation.description,
         }),
         serializeTag("scale", {
           x: state.dataset.dataSource.scale[0],
@@ -176,7 +199,7 @@ function serializeParameters(state: OxalisState): Array<string> {
           y: 0,
           z: 0,
         }),
-        serializeTag("time", { ms: state.tracing.createdTimestamp }),
+        serializeTag("time", { ms: skeletonTracing.createdTimestamp }),
         serializeTag("editPosition", {
           x: editPosition[0],
           y: editPosition[1],
@@ -424,7 +447,7 @@ export function parseNml(
                 _parseFloat(attr, "color.g", DEFAULT_COLOR[1]),
                 _parseFloat(attr, "color.b", DEFAULT_COLOR[2]),
               ],
-              name: attr.name,
+              name: Saxophone.parseEntities(attr.name),
               comments: [],
               nodes: new DiffableMap(),
               branchPoints: [],
@@ -496,7 +519,7 @@ export function parseNml(
           case "comment": {
             const currentComment = {
               nodeId: _parseInt(attr, "node"),
-              content: attr.content,
+              content: Saxophone.parseEntities(attr.content),
             };
             const tree = findTreeByNodeId(trees, currentComment.nodeId);
             if (tree == null)
@@ -522,7 +545,7 @@ export function parseNml(
           case "group": {
             const newGroup = {
               groupId: _parseInt(attr, "id"),
-              name: attr.name,
+              name: Saxophone.parseEntities(attr.name),
               children: [],
             };
             if (existingGroupIds.has(newGroup.groupId))

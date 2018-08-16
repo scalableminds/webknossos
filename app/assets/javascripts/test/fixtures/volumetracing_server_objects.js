@@ -26,7 +26,7 @@ export const annotation: APIAnnotationType = {
   stats: {},
   restrictions: { allowAccess: true, allowUpdate: true, allowFinish: true, allowDownload: true },
   formattedHash: "f043e7",
-  content: { id: "segmentation", typ: "volume" },
+  tracing: { skeleton: null, volume: "segmentation" },
   dataSetName: "ROI2017_wkw",
   dataStore: { name: "localhost", url: "http://localhost:9000", typ: "webknossos-store" },
   settings: {

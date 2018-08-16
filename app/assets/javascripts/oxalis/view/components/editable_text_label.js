@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Input, Icon } from "antd";
 import Markdown from "react-remarkable";
+import { MarkdownModal } from "oxalis/view/components/markdown_modal";
 import Toast from "libs/toast";
 
 type Rule = {
@@ -52,10 +53,6 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelPropType, S
     }
   };
 
-  handleOnPressEnter = (evt: KeyboardEvent) => {
-    if (!evt.shiftKey) this.handleOnChange();
-  };
-
   validateFields() {
     if (this.props.rules && this.props.rules.type === "email") {
       const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
@@ -69,12 +66,12 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelPropType, S
   }
 
   render() {
-    const iconStyle = { cursor: "pointer" };
+    const iconStyle = { cursor: "pointer", verticalAlign: "top" };
 
     const inputComponentProps = {
       value: this.state.value,
       onChange: this.handleInputChange,
-      onPressEnter: this.handleOnPressEnter,
+      onPressEnter: this.handleOnChange,
       style: { width: "60%", margin: "0 10px" },
       size: "small",
       autoFocus: true,
@@ -85,25 +82,35 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelPropType, S
       return (
         <span>
           {this.props.rows === 1 ? (
-            <Input {...inputComponentProps} />
+            <React.Fragment>
+              <Input {...inputComponentProps} />
+              <Icon type="check" style={iconStyle} onClick={this.handleOnChange} />
+            </React.Fragment>
           ) : (
-            <Input.TextArea {...inputComponentProps} />
+            <MarkdownModal
+              source={this.state.value}
+              visible={this.state.isEditing}
+              onChange={this.handleInputChange}
+              onOk={this.handleOnChange}
+              label="Description"
+            />
           )}
-          <Icon type="check" style={iconStyle} onClick={this.handleOnChange} />
         </span>
       );
     } else {
       return (
         <div style={{ display: "inline-block" }}>
-          {this.props.markdown ? (
-            <Markdown
-              source={this.props.value}
-              options={{ html: false, breaks: true, linkify: true }}
-              container="span"
-            />
-          ) : (
-            <span style={{ margin: "0 10px" }}>{this.props.value}</span>
-          )}
+          <span style={{ margin: "0 10px", display: "inline-block" }}>
+            {this.props.markdown ? (
+              <Markdown
+                source={this.props.value}
+                options={{ html: false, breaks: true, linkify: true }}
+                container="span"
+              />
+            ) : (
+              this.props.value
+            )}
+          </span>
           <Icon type="edit" style={iconStyle} onClick={() => this.setState({ isEditing: true })} />
         </div>
       );

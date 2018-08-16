@@ -74,7 +74,7 @@ export const annotation: APIAnnotationType = {
   state: "Active",
   id: "598b52293c00009906f043e7",
   isPublic: false,
-  modified: 1529064010230,
+  modified: 1529066010230,
   name: "",
   typ: "Explorational",
   task: null,

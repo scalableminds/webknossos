@@ -202,7 +202,7 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
       <div>
         <p>{annotationTypeLabel}</p>
         <p>
-          <span>
+          <span style={{ verticalAlign: "top" }}>
             Description:
             <EditableTextLabel
               value={tracingDescription}

@@ -124,7 +124,7 @@ class DatasetView extends React.PureComponent<Props, State> {
         </Button>
         <Link to="/datasets/upload" style={margin}>
           <Button type="primary" icon="plus">
-            Upload Dataset
+            Add Dataset
           </Button>
         </Link>
         {search}

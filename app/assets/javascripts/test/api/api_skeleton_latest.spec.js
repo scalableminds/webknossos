@@ -228,6 +228,16 @@ test.serial("getTreeGroups should get all tree groups and set a tree group", t =
   t.is(state.tracing.skeleton.trees[1].groupId, 7);
 });
 
+test.serial("getTreeGroups should get all tree groups and set a tree group", t => {
+  const api = t.context.api;
+  Store.dispatch(
+    setTreeGroupsAction([makeBasicGroupObject(3, "group 3"), makeBasicGroupObject(7, "group 7")]),
+  );
+  api.tracing.renameGroup(7, "renamed");
+  const state = Store.getState();
+  t.is(state.tracing.skeleton.treeGroups[1].name, "renamed");
+});
+
 test("setTreeGroup should set the visibility of a tree", t => {
   const api = t.context.api;
   api.tracing.setTreeVisibility(2, false);

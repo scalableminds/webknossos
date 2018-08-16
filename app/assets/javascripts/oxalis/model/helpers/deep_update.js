@@ -1,3 +1,11 @@
+// Do not add a flow header to this file, typings exist in deep_update.js.flow
+// This module provides multiple methods to update deeply nested fields in StoreState.
+// In contrast to immutability-helper, flow will be able to completely type such calls.
+
+// Example:
+// updateKey2(state, "viewModeData", "plane", { activeViewport: "PLANE_XY" });
+// The last parameter can hold multiple key-value pairs. Only the used keys will be updated.
+
 export function updateKey(state, key, shape) {
   return {
     ...state,

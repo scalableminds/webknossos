@@ -1,6 +1,6 @@
 // @flow
 import * as React from "react";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import { getOrganizations } from "admin/admin_rest_api";
 import DatasetPanel from "dashboard/dataset_panel";
 import _ from "lodash";

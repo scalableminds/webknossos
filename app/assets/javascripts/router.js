@@ -45,7 +45,7 @@ import TaskTypeCreateView from "admin/tasktype/task_type_create_view";
 import ScriptCreateView from "admin/scripts/script_create_view";
 import TimeLineView from "admin/time/time_line_view";
 import Onboarding from "admin/onboarding";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 
 import type { OxalisState } from "oxalis/store";
 import type { APIUserType } from "admin/api_flow_types";
@@ -62,7 +62,9 @@ type Props = StateProps;
 const browserHistory = createBrowserHistory();
 browserHistory.listen(location => {
   if (typeof window.ga !== "undefined" && window.ga !== null) {
-    window.ga("send", "pageview", location.pathname);
+    // Update the tracker state first, so that subsequent pageviews AND events use the correct page
+    window.ga("set", "page", location.pathname);
+    window.ga("send", "pageview");
   }
 });
 

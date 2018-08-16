@@ -18,7 +18,9 @@ mock(
     update(src, x, y, _width, _height) {
       this.texture.set(src, y * this.width + x);
     }
+
     setRenderer() {}
+
     setSize(width, height) {
       this.texture = new Uint8Array(width * height);
       this.width = width;

@@ -52,7 +52,8 @@ export const annotation: APIAnnotationType = {
       id: "5b1e45faa000009d00abc2c6",
       summary: "sampleTaskType",
       description: "Description",
-      team: "5b1e45f9a00000a000abc2c3",
+      teamId: "5b1e45f9a00000a000abc2c3",
+      teamName: "Connectomics department",
       settings: {
         allowedModes: ["orthogonal", "oblique", "flight"],
         branchPointsAllowed: true,

@@ -7,7 +7,7 @@ import Store from "oxalis/store";
 import type { TracingTypeTracingType } from "oxalis/store";
 import {} from "oxalis/model/actions/settings_actions";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import DataLayer from "oxalis/model/data_layer";
 import ConnectionInfo from "oxalis/model/data_connection_info";
 import type { ControlModeType } from "oxalis/constants";

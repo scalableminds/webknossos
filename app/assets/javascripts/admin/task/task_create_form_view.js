@@ -108,6 +108,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     isNMLSpecification: false,
     isUploading: false,
   };
+
   componentDidMount() {
     this.fetchData();
     this.applyDefaults();

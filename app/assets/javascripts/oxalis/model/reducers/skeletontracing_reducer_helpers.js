@@ -11,7 +11,7 @@ import Maybe from "data.maybe";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import ColorGenerator from "libs/color_generator";
 import update from "immutability-helper";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import Constants, { NODE_ID_REF_REGEX } from "oxalis/constants";
 import {
   getSkeletonTracing,

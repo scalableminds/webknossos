@@ -5,7 +5,7 @@ import _ from "lodash";
 import * as React from "react";
 import { Link, withRouter } from "react-router-dom";
 import { Table, Icon, Spin, Button, Input, Modal } from "antd";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import messages from "messages";
 import { getScripts, deleteScript } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
@@ -76,9 +76,9 @@ class ScriptListView extends React.PureComponent<Props, State> {
           });
 
           await deleteScript(script.id);
-          this.setState({
-            scripts: this.state.scripts.filter(s => s.id !== script.id),
-          });
+          this.setState(prevState => ({
+            scripts: prevState.scripts.filter(s => s.id !== script.id),
+          }));
         } catch (error) {
           handleGenericError(error);
         } finally {

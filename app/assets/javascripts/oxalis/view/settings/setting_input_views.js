@@ -8,7 +8,7 @@
 /* eslint-disable jsx-a11y/label-has-for */
 
 import * as React from "react";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Select } from "antd";
 import type { Vector3, Vector6 } from "oxalis/constants";
 

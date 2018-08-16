@@ -7,7 +7,7 @@ import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { M4x4 } from "libs/mjs";
 import type { Matrix4x4 } from "libs/mjs";
 import type { Vector3 } from "oxalis/constants";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import Dimensions from "oxalis/model/dimensions";
 import _ from "lodash";
 

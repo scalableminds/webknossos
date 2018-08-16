@@ -23,7 +23,7 @@ import {
   setRotationAction,
 } from "oxalis/model/actions/flycam_actions";
 import window from "libs/window";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import DataLayer from "oxalis/model/data_layer";
 import ConnectionInfo from "oxalis/model/data_connection_info";
 import { ControlModeEnum } from "oxalis/constants";

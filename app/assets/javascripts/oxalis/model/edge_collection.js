@@ -3,7 +3,7 @@
 import _ from "lodash";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import type { EdgeType } from "oxalis/store";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 
 type EdgeMap = DiffableMap<number, Array<EdgeType>>;
 

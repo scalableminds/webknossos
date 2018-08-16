@@ -3,7 +3,7 @@
 import { Dropdown, Menu, Icon, Modal } from "antd";
 import React from "react";
 import { connect } from "react-redux";
-import FormatUtils from "libs/format_utils";
+import { formatSeconds } from "libs/format_utils";
 import {
   getAnnotationsForTask,
   reOpenAnnotation,
@@ -177,9 +177,7 @@ class TaskAnnotationView extends React.PureComponent<Props & StateProps, State> 
                     <br />
                     <span>
                       <Icon type="clock-circle-o" />
-                      {annotation.tracingTime
-                        ? FormatUtils.formatSeconds(annotation.tracingTime / 1000)
-                        : 0}
+                      {annotation.tracingTime ? formatSeconds(annotation.tracingTime / 1000) : 0}
                     </span>
                   </td>
                   <td className="nowrap">

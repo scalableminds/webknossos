@@ -2,7 +2,7 @@
 /* eslint-disable prefer-default-export */
 import type { Vector3, Vector6 } from "oxalis/constants";
 import * as React from "react";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import _ from "lodash";
 import { Input } from "antd";
 import type { ServerBoundingBoxTypeTuple } from "admin/api_flow_types";

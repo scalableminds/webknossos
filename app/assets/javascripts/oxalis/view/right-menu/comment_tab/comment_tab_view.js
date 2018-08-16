@@ -6,7 +6,7 @@
 import _ from "lodash";
 import * as React from "react";
 import Maybe from "data.maybe";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import update from "immutability-helper";
 import Store from "oxalis/store";
 import { connect } from "react-redux";

@@ -8,7 +8,7 @@ import BackboneEvents from "backbone-events-standalone";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import window from "libs/window";
 import Toast from "libs/toast";
 

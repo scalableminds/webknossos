@@ -11,7 +11,7 @@ import type { OxalisState, TreeMapType, TreeGroupType } from "oxalis/store";
 import { getAnnotationInformation, getTracingForAnnotationType } from "admin/admin_rest_api";
 import { addTreesAndGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
 import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import type { APIAnnotationType } from "admin/api_flow_types";
 import Store from "oxalis/store";
 import { location } from "libs/window";

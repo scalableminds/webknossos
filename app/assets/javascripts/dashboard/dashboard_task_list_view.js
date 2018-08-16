@@ -8,7 +8,7 @@ import Request from "libs/request";
 import { AsyncButton } from "components/async_clickables";
 import { Button, Modal, Tag, Icon, Card, Row, Col, List } from "antd";
 import Markdown from "react-remarkable";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import Toast from "libs/toast";
 import messages from "messages";
 import TransferTaskModal from "dashboard/transfer_task_modal";

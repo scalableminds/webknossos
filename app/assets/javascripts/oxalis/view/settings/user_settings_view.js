@@ -33,7 +33,7 @@ import {
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import type { UserConfigurationType, OxalisState, TracingType } from "oxalis/store";
 import type { Dispatch } from "redux";
 

@@ -5,7 +5,7 @@ import * as React from "react";
 import { connect } from "react-redux";
 import { Link, withRouter } from "react-router-dom";
 import { Table, Icon, Spin, Button, Input, Modal } from "antd";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import messages from "messages";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import {

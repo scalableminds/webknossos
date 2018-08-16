@@ -6,7 +6,7 @@ import * as React from "react";
 import { Link, withRouter } from "react-router-dom";
 import { Table, Tag, Icon, Spin, Button, Input, Modal } from "antd";
 import Markdown from "react-remarkable";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import messages from "messages";
 import { getTaskTypes, deleteTaskType } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";

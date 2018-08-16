@@ -150,9 +150,7 @@ export async function writeFlowCheckingFile(
     `app/assets/javascripts/test/snapshots/flow-check/test-flow-checking-${name}.js`,
     `// @flow
 import type { ${flowTypeString} } from "admin/api_flow_types";
-
-const a: ${fullFlowType} = ${JSON.stringify(object)}
-export default a;`,
+const a: ${fullFlowType} = ${JSON.stringify(object)}`,
   );
 }
 

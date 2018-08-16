@@ -44,7 +44,7 @@ class ChangePasswordView extends React.PureComponent<Props, State> {
 
   handleConfirmBlur = (e: SyntheticInputEvent<>) => {
     const value = e.target.value;
-    this.setState({ confirmDirty: this.state.confirmDirty || !!value });
+    this.setState(prevState => ({ confirmDirty: prevState.confirmDirty || !!value }));
   };
 
   checkConfirm = (rule, value, callback) => {

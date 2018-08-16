@@ -1,9 +1,8 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-/* eslint-disable import/first */
 // @flow
 import test from "ava";
+import { tokenUserA, setCurrToken, resetDatabase } from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
-import { tokenUserA, setCurrToken, resetDatabase } from "../enzyme/e2e-setup";
 
 test.before("Reset database", async () => {
   resetDatabase();

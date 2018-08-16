@@ -91,9 +91,9 @@ class TaskListView extends React.PureComponent<Props, State> {
             isLoading: true,
           });
           await deleteTask(task.id);
-          this.setState({
-            tasks: this.state.tasks.filter(t => t.id !== task.id),
-          });
+          this.setState(prevState => ({
+            tasks: prevState.tasks.filter(t => t.id !== task.id),
+          }));
         } catch (error) {
           handleGenericError(error);
         } finally {

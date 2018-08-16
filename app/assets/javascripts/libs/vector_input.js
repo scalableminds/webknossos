@@ -68,11 +68,13 @@ class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>,
         });
       }
     } else {
-      const fallbackValue = this.makeInvalidValueValid(this.state.text);
-      this.props.onChange(fallbackValue);
-      this.setState({
-        isValid: true,
-        text: fallbackValue.join(", "),
+      this.setState(prevState => {
+        const fallbackValue = this.makeInvalidValueValid(prevState.text);
+        this.props.onChange(fallbackValue);
+        return {
+          isValid: true,
+          text: fallbackValue.join(", "),
+        };
       });
     }
   };

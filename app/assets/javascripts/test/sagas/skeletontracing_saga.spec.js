@@ -1,12 +1,12 @@
-/* eslint-disable import/no-extraneous-dependencies, import/first */
+/* eslint-disable import/no-extraneous-dependencies */
 import test from "ava";
-import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import mockRequire from "mock-require";
 import ChainReducer from "test/helpers/chainReducer";
-import { createSaveQueueFromUpdateActions, withoutUpdateTracing } from "../helpers/saveHelpers";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
 import type { SaveQueueEntryType } from "oxalis/store";
+import { createSaveQueueFromUpdateActions, withoutUpdateTracing } from "../helpers/saveHelpers";
+import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 
 const TIMESTAMP = 1494347146379;
 

@@ -30,6 +30,7 @@ class Request {
       _.defaultsDeep(options, { headers: { Accept: "application/json" } }),
       this.handleEmptyJsonResponse,
     );
+
   prepareJSON = async (
     url: string,
     options: RequestOptionsWithData<any>,

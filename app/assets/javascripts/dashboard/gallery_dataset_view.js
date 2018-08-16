@@ -1,33 +1,19 @@
 // @flow
-/* eslint-disable jsx-a11y/href-no-hash */
 import * as React from "react";
-import { connect } from "react-redux";
-import { Modal } from "antd";
 import * as Utils from "libs/utils";
-import messages from "messages";
-import { createExplorational, getOrganizations } from "admin/admin_rest_api";
+import { getOrganizations } from "admin/admin_rest_api";
 import DatasetPanel from "dashboard/dataset_panel";
 import _ from "lodash";
-
-import type { OxalisState } from "oxalis/store";
-import type {
-  APIDatasetType,
-  APIMaybeUnimportedDatasetType,
-  APIUserType,
-} from "admin/api_flow_types";
+import type { APIDatasetType, APIMaybeUnimportedDatasetType } from "admin/api_flow_types";
 
 type State = {
   organizationNameMap: { [key: string]: string },
 };
 
-type StateProps = {
-  activeUser: ?APIUserType,
-};
-
 type Props = {
   datasets: Array<APIMaybeUnimportedDatasetType>,
   searchQuery: string,
-} & StateProps;
+};
 
 const croppedDatasetCount = 6;
 
@@ -47,24 +33,6 @@ class GalleryDatasetView extends React.PureComponent<Props, State> {
       organizationNameMap: _.mapValues(_.keyBy(organizations, "name"), org => org.displayName),
     });
   }
-
-  createTracing = async (
-    dataset: APIDatasetType,
-    typ: "volume" | "skeleton",
-    withFallback: boolean,
-  ) => {
-    if (this.props.activeUser == null) {
-      Modal.confirm({
-        content: messages["dataset.confirm_signup"],
-        onOk: () => {
-          window.location.href = "/auth/register";
-        },
-      });
-    } else {
-      const annotation = await createExplorational(dataset.name, typ, withFallback);
-      window.location.href = `/annotations/${annotation.typ}/${annotation.id}`;
-    }
-  };
 
   render() {
     // $FlowFixMe flow doesn't check that after filtering there are only imported datasets left
@@ -113,8 +81,4 @@ class GalleryDatasetView extends React.PureComponent<Props, State> {
   }
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
-  activeUser: state.activeUser,
-});
-
-export default connect(mapStateToProps)(GalleryDatasetView);
+export default GalleryDatasetView;

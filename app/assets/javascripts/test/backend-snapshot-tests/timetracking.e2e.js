@@ -1,16 +1,15 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-/* eslint-disable import/first */
 // @flow
+import test from "ava";
+import _ from "lodash";
+import moment from "moment";
 import {
   tokenUserA,
   setCurrToken,
   resetDatabase,
   writeFlowCheckingFile,
-} from "../enzyme/e2e-setup";
-import test from "ava";
-import _ from "lodash";
+} from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
-import moment from "moment";
 
 let activeUser;
 let firstTeam;

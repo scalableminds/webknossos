@@ -109,8 +109,10 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
   }
 
   handleSelectChange = (userId: string) => {
-    const selectedUser = this.state.users.find(user => user.id === userId);
-    this.setState({ selectedUser });
+    this.setState(prevState => {
+      const selectedUser = prevState.users.find(user => user.id === userId);
+      return { selectedUser };
+    });
   };
 
   render() {

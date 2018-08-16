@@ -55,6 +55,7 @@ class TimeLineView extends React.PureComponent<*, State> {
 
   async fetchTimeTrackingData() {
     if (this.state.user != null) {
+      /* eslint-disable react/no-access-state-in-setstate */
       const timeTrackingData = await getTimeTrackingForUser(
         this.state.user.id,
         this.state.dateRange[0],
@@ -62,31 +63,33 @@ class TimeLineView extends React.PureComponent<*, State> {
       );
 
       this.setState({ timeTrackingData }, this.calculateStats);
+      /* eslint-enable react/no-access-state-in-setstate */
     }
   }
 
   calculateStats() {
-    const totalTime = _.sumBy(this.state.timeTrackingData, timeSpan =>
-      moment.duration(timeSpan.time).asMilliseconds(),
-    );
-    const numberTasks = _.uniq(this.state.timeTrackingData.map(timeSpan => timeSpan.annotation))
-      .length;
+    this.setState(prevState => {
+      const totalTime = _.sumBy(prevState.timeTrackingData, timeSpan =>
+        moment.duration(timeSpan.time).asMilliseconds(),
+      );
+      const numberTasks = _.uniq(prevState.timeTrackingData.map(timeSpan => timeSpan.annotation))
+        .length;
 
-    // prevent devision by zero
-    const averageTimePerTask = numberTasks === 0 ? 0 : totalTime / numberTasks;
+      // prevent devision by zero
+      const averageTimePerTask = numberTasks === 0 ? 0 : totalTime / numberTasks;
 
-    this.setState({
-      stats: {
-        totalTime,
-        numberTasks,
-        averageTimePerTask,
-      },
+      return {
+        stats: {
+          totalTime,
+          numberTasks,
+          averageTimePerTask,
+        },
+      };
     });
   }
 
   handleUserChange = async (userId: number) => {
-    const user = this.state.users.find(u => u.id === userId);
-    await this.setState({ user });
+    await this.setState(prevState => ({ user: prevState.users.find(u => u.id === userId) }));
     this.fetchTimeTrackingData();
   };
 

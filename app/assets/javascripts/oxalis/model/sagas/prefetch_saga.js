@@ -1,7 +1,8 @@
 // @flow
 import Model from "oxalis/model";
 import constants from "oxalis/constants";
-import { _throttle, select, take, call, type Saga } from "oxalis/model/sagas/effect-generators";
+import { _throttle, select, take, call } from "oxalis/model/sagas/effect-generators";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
 import {
   getPosition,
   getRequestLogZoomStep,

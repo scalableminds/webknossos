@@ -45,7 +45,7 @@ import type {
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import Toast from "libs/toast";
 import window, { location } from "libs/window";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import { ControlModeEnum, OrthoViews, VolumeToolEnum } from "oxalis/constants";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
@@ -701,6 +701,7 @@ class UserApi {
     - clippingDistanceArbitrary
     - dynamicSpaceDirection
     - displayCrosshair
+    - displayScalebars
     - scale
     - tdViewDisplayPlanes
     - newNodeNewTree

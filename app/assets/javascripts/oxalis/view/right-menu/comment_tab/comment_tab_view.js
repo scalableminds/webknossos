@@ -6,7 +6,7 @@
 import _ from "lodash";
 import * as React from "react";
 import Maybe from "data.maybe";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import update from "immutability-helper";
 import Store from "oxalis/store";
 import { connect } from "react-redux";
@@ -50,7 +50,7 @@ type SortOptionsType = {
 };
 function getTreeSorter({ sortBy, isSortedAscending }: SortOptionsType): Comparator<TreeType> {
   return sortBy === SortByEnum.ID
-    ? Utils.compareBy(treeTypeHint, "treeId", isSortedAscending)
+    ? Utils.compareBy(treeTypeHint, tree => tree.treeId, isSortedAscending)
     : Utils.localeCompareBy(
         treeTypeHint,
         tree => `${tree.name}_${tree.treeId}`,
@@ -61,7 +61,7 @@ function getTreeSorter({ sortBy, isSortedAscending }: SortOptionsType): Comparat
 
 function getCommentSorter({ sortBy, isSortedAscending }: SortOptionsType): Comparator<CommentType> {
   return sortBy === SortByEnum.ID
-    ? Utils.compareBy(([]: Array<CommentType>), "nodeId", isSortedAscending)
+    ? Utils.compareBy(([]: Array<CommentType>), comment => comment.nodeId, isSortedAscending)
     : Utils.localeCompareBy(
         commentTypeHint,
         comment => `${comment.content}_${comment.nodeId}`,
@@ -88,6 +88,16 @@ type CommentTabStateType = {
 class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
   listRef: ?List;
 
+  state = {
+    isSortedAscending: true,
+    sortBy: SortByEnum.NAME,
+    data: [],
+    // TODO: Remove once https://github.com/yannickcr/eslint-plugin-react/issues/1751 is merged
+    // eslint-disable-next-line react/no-unused-state
+    collapsedTreeIds: {},
+    isMarkdownModalVisible: false,
+  };
+
   static getDerivedStateFromProps(
     props: Props,
     state: CommentTabStateType,
@@ -106,16 +116,6 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
 
     return { data };
   }
-
-  state = {
-    isSortedAscending: true,
-    sortBy: SortByEnum.NAME,
-    data: [],
-    // TODO: Remove once https://github.com/yannickcr/eslint-plugin-react/issues/1751 is merged
-    // eslint-disable-next-line react/no-unused-state
-    collapsedTreeIds: {},
-    isMarkdownModalVisible: false,
-  };
 
   componentDidMount() {
     this.storePropertyUnsubscribers.push(
@@ -387,15 +387,13 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
             placeholder="Add comment"
             style={{ width: "60%" }}
           />
-          {"Disable until the backend supports multiline comments" && false ? (
-            <ButtonComponent
-              onClick={() => this.setMarkdownModalVisibility(true)}
-              disabled={activeNodeMaybe.isNothing}
-              type={isMultilineComment ? "primary" : "button"}
-            >
-              <Icon type="edit" />Markdown
-            </ButtonComponent>
-          ) : null}
+          <ButtonComponent
+            onClick={() => this.setMarkdownModalVisibility(true)}
+            disabled={activeNodeMaybe.isNothing}
+            type={isMultilineComment ? "primary" : "button"}
+          >
+            <Icon type="edit" />Markdown
+          </ButtonComponent>
           <ButtonComponent onClick={this.nextComment}>
             <i className="fa fa-arrow-right" />
           </ButtonComponent>

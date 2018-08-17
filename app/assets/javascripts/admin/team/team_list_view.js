@@ -4,7 +4,7 @@
 import _ from "lodash";
 import * as React from "react";
 import { Table, Icon, Spin, Button, Input, Modal, Alert } from "antd";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import messages from "messages";
 import CreateTeamModal from "admin/team/create_team_modal_view";
 import { getEditableTeams, deleteTeam } from "admin/admin_rest_api";
@@ -76,9 +76,9 @@ class TeamListView extends React.PureComponent<Props, State> {
         try {
           this.setState({ isLoading: true });
           await deleteTeam(team.id);
-          this.setState({
-            teams: this.state.teams.filter(t => t.id !== team.id),
-          });
+          this.setState(prevState => ({
+            teams: prevState.teams.filter(t => t.id !== team.id),
+          }));
         } catch (error) {
           handleGenericError(error);
         } finally {
@@ -89,10 +89,10 @@ class TeamListView extends React.PureComponent<Props, State> {
   };
 
   createTeam = (newTeam: APITeamType) => {
-    this.setState({
+    this.setState(prevState => ({
       isTeamCreationModalVisible: false,
-      teams: this.state.teams.concat([newTeam]),
-    });
+      teams: prevState.teams.concat([newTeam]),
+    }));
   };
 
   renderPlaceholder() {
@@ -152,7 +152,7 @@ class TeamListView extends React.PureComponent<Props, State> {
                 title="Name"
                 dataIndex="name"
                 key="name"
-                sorter={Utils.localeCompareBy(typeHint, "name")}
+                sorter={Utils.localeCompareBy(typeHint, team => team.name)}
               />
               <Column
                 title="Action"

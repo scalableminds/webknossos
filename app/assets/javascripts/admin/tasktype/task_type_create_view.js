@@ -88,7 +88,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
             </FormItem>
 
             <FormItem label="Team" hasFeedback>
-              {getFieldDecorator("team", {
+              {getFieldDecorator("teamId", {
                 rules: [{ required: true }],
               })(
                 <Select

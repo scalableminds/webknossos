@@ -7,7 +7,7 @@ import {
 import type { Vector3 } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import PriorityQueue from "js-priority-queue";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import { M4x4, V3 } from "libs/mjs";
 import { getMatrixScale } from "oxalis/model/reducers/flycam_reducer";
 import constants from "oxalis/constants";

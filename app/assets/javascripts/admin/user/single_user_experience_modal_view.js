@@ -2,201 +2,295 @@
 
 import _ from "lodash";
 import * as React from "react";
-import { Modal, Button, Input, Icon, Table, InputNumber } from "antd";
+import { Modal, Button, Tooltip, Input, Icon, Table, InputNumber } from "antd";
 import update from "immutability-helper";
 import { updateUser } from "admin/admin_rest_api";
-import type { APIUserType, ExperienceMapType } from "admin/api_flow_types";
+import type { APIUserType } from "admin/api_flow_types";
+import { handleGenericError } from "libs/error_handling";
 
 const { Column } = Table;
 
+type TableEntry = {
+  domain: string,
+  value: int,
+  removed: boolean,
+};
+
 type Props = {
-  onChange: Function,
+  onClose: Function,
   onCancel: Function,
   visible: boolean,
   selectedUser: APIUserType,
 };
 
 type State = {
-  experiences: ExperienceMapType,
+  experienceEntries: Array<TableEntry>,
   // use an array to save change stuff and before commit change ask with another modal
 };
 
 class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
-  state = {
-    experiences: this.props.selectedUser.experiences,
+  constructor(props: Props) {
+    super(props);
+    const experiences = this.props.selectedUser.experiences;
+    const tableData = [];
+    _.map(experiences, (value, domain) => {
+      tableData.push({ domain, value, removed: false });
+    });
+    this.state = { experienceEntries: tableData };
+  }
+
+  updateUsersExperiences = async () => {
+    const notRemovedExperiences = this.state.experienceEntries.filter(entry => !entry.removed);
+    const formatedExperiences = {};
+    notRemovedExperiences.forEach(experience => {
+      formatedExperiences[experience.domain] = experience.value;
+    });
+    const updatedUser = { ...this.props.selectedUser, experiences: formatedExperiences };
+    try {
+      await updateUser(updatedUser);
+    } catch (error) {
+      handleGenericError(error);
+    } finally {
+      this.props.onClose();
+    }
   };
 
-  increaseExperience = (): void => {
-    this.setExperience(null, true);
-  };
-
-  /* setExperience = (event: ?SyntheticInputEvent<>, shouldAddValue: boolean = false): void => {
-    const { domain, level } = this.state;
-    if (domain && level !== null) {
-      const newUserPromises = this.props.users.map(user => {
-        if (this.props.selectedUserIds.includes(user.id)) {
-          let newExperienceLevel = parseInt(level);
-
-          if (shouldAddValue && user.experiences[domain]) {
-            newExperienceLevel = user.experiences[domain] + parseInt(level);
-          }
-
-          const newUser = update(user, {
-            experiences: { [domain]: { $set: newExperienceLevel } },
-          });
-
-          return this.sendUserToServer(newUser, user);
-        }
-        return Promise.resolve(user);
-      });
-
-      this.closeModal(newUserPromises);
-    }
-  }; */
-
-  /* deleteExperience = () => {
-    if (this.state.domain) {
-      const { domain } = this.state;
-      const newUserPromises = this.props.users.map(user => {
-        if (this.props.selectedUserIds.includes(user.id)) {
-          const newExperiences = _.omit(user.experiences, domain);
-          const newUser = update(user, {
-            experiences: { $set: newExperiences },
-          });
-
-          return this.sendUserToServer(newUser, user);
-        }
-        return Promise.resolve(user);
-      });
-
-      this.closeModal(newUserPromises);
-    }
-  }; */
-
-  /**
-   * Save a user object to the server using an API call.
-   * @param newUser - A modified user object intended to be saved.
-   * @param oldUser - The original user object of `newUser`. Returned in case API call fails
-   *
-   */
   sendUserToServer(newUser: APIUserType, oldUser: APIUserType): Promise<APIUserType> {
     return updateUser(newUser).then(() => Promise.resolve(newUser), () => Promise.reject(oldUser));
   }
 
-  closeModal(usersPromises: Array<Promise<APIUserType>>): void {
-    Promise.all(usersPromises).then(
-      newUsers => {
-        this.setState({
-          experiences: null,
-        });
-        this.props.onChange(newUsers);
-      },
-      () => {
-        // do nothing and keep modal open
-      },
-    );
+  validateEntry(entry: TableEntry): boolean {
+    return entry.removed || (entry.domain.length > 2 && entry.value > 0);
   }
-
-  /* renderExperienceComponent(experienceDomain: string, experienceValue: int){
-    return(<span>)
-
-  } */
 
   validateDomainAndValues(tableData: []) {
     let isValid = true;
     tableData.forEach(entry => {
-      if (isValid && (entry.domain.length < 3 || entry.value < 1)) isValid = false;
+      if (isValid) isValid = this.validateEntry(entry);
     });
     return isValid;
   }
+
+  recordModified = (record): boolean =>
+    record.value === this.props.selectedUser.experiences[record.domain];
 
   render() {
     if (!this.props.visible) {
       return null;
     }
-
-    const experiences = this.state.experiences;
-    const tableData = [];
-    _.map(experiences, (value, domain) => {
-      tableData.push({ domain, value, removed: false });
-    });
+    const tableData = this.state.experienceEntries;
     const isValid = this.validateDomainAndValues(tableData);
     const pagination = tableData > 10 ? { pageSize: 10 } : false;
     return (
       <Modal
+        className="experience-change-modal"
         title={`Change Experiences of user ${this.props.selectedUser.lastName}, ${
           this.props.selectedUser.firstName
         }`}
         visible={this.props.visible}
         onCancel={this.props.onCancel}
-        width={600}
+        width={800}
         footer={
           <div>
-            <Button type="primary" onClick={this.increaseExperience} disabled={!isValid}>
+            <Button type="primary" onClick={this.updateUsersExperiences} disabled={!isValid}>
               Update Experience
             </Button>
             <Button onClick={() => this.props.onCancel()}>Cancel</Button>
           </div>
         }
       >
-        <Table dataSource={tableData} rowKey="domain" pagination={pagination}>
-          <Column title="Experience Domain" dataIndex="domain" key="domain" />
+        <Table
+          dataSource={tableData}
+          rowKey="domain"
+          pagination={pagination}
+          className="user-experience-table"
+        >
+          <Column
+            title="Experience Domain"
+            key="domain"
+            render={record =>
+              record.removed ? <div className="disabled">{record.domain}</div> : record.domain
+            }
+          />
           <Column
             title="Experience Value"
             key="value"
-            render={record => (
-              <span>
-                <Icon
-                  type="minus"
-                  style={{
-                    padding: 3,
-                    borderRadius: 5,
-                    backgroundColor: "rgba(196, 195, 194,0.5)",
-                    ":hover": { cursor: "pointer", backgroundColor: "rgba(196, 195, 194,1)" },
-                  }}
-                  onClick={() => {
-                    const exp = this.state.experiences;
-                    exp[record.domain]--;
-                    this.setState({ experiences: exp });
-                  }}
-                />
-                <InputNumber
-                  min={1}
-                  defaultValue={record.experience}
-                  onChange={value => {
-                    const exp = this.state.experiences;
-                    exp[record.domain] = value;
-                    this.setState({ experiences: exp });
-                  }}
-                />
-                <Icon
-                  type="plus"
-                  style={{
-                    padding: 3,
-                    borderRadius: 5,
-                    backgroundColor: "rgba(196, 195, 194,0.5)",
-                    ":hover": { cursor: "pointer", backgroundColor: "rgba(196, 195, 194,1)" },
-                  }}
-                  onClick={() => {
-                    const exp = this.state.experiences;
-                    exp[record.domain]++;
-                    this.setState({ experiences: exp });
-                  }}
-                />
-              </span>
-            )}
+            render={record => {
+              const index = this.state.experienceEntries.findIndex(
+                entry => entry.domain === record.domain,
+              );
+              return (
+                <span>
+                  <Icon
+                    type="minus"
+                    className={
+                      record.removed
+                        ? "clickable-icon disabled-icon"
+                        : "clickable-icon active-icon hoverable-icon"
+                    }
+                    onClick={
+                      record.removed
+                        ? null
+                        : () => {
+                            const alteredEntries = this.state.experienceEntries.map(
+                              (entry, currentIndex) => {
+                                if (currentIndex === index && entry.value > 1) {
+                                  return {
+                                    ...entry,
+                                    value: entry.value - 1,
+                                  };
+                                } else {
+                                  return entry;
+                                }
+                              },
+                            );
+                            this.setState({ experienceEntries: alteredEntries });
+                          }
+                    }
+                  />
+                  <InputNumber
+                    min={1}
+                    disabled={record.removed}
+                    value={this.state.experienceEntries[index].value}
+                    onChange={value => {
+                      if (value > 0) {
+                        const alteredEntries = this.state.experienceEntries.map(
+                          (entry, currentIndex) => {
+                            if (currentIndex === index) {
+                              return {
+                                ...entry,
+                                value,
+                              };
+                            } else {
+                              return entry;
+                            }
+                          },
+                        );
+                        this.setState({ experienceEntries: alteredEntries });
+                      }
+                    }}
+                  />
+                  <Icon
+                    type="plus"
+                    className={
+                      record.removed
+                        ? "clickable-icon disabled-icon"
+                        : "clickable-icon active-icon hoverable-icon"
+                    }
+                    style={{ marginLeft: 5 }}
+                    onClick={
+                      record.removed
+                        ? null
+                        : () => {
+                            const alteredEntries = this.state.experienceEntries.map(
+                              (entry, currentIndex) => {
+                                if (currentIndex === index && entry.value > 1) {
+                                  return {
+                                    ...entry,
+                                    value: entry.value + 1,
+                                  };
+                                } else {
+                                  return entry;
+                                }
+                              },
+                            );
+                            this.setState({ experienceEntries: alteredEntries });
+                          }
+                    }
+                  />
+                  {this.recordModified(record) ? (
+                    <Icon style={{ marginLeft: 21, color: "rgba(0, 0, 0, 0)" }} type="rollback" />
+                  ) : (
+                    <Tooltip placement="top" title="Revert Changes">
+                      <Icon
+                        style={
+                          record.removed
+                            ? { marginLeft: 15, color: "rgba(0, 0, 0, 0.25)" }
+                            : { marginLeft: 15 }
+                        }
+                        className="hoverable-icon clickable-icon"
+                        type="rollback"
+                        onClick={
+                          record.removed
+                            ? null
+                            : () => {
+                                const alteredEntries = this.state.experienceEntries.map(
+                                  (entry, currentIndex) => {
+                                    if (currentIndex === index) {
+                                      return {
+                                        ...entry,
+                                        value: this.props.selectedUser.experiences[record.domain],
+                                      };
+                                    } else {
+                                      return entry;
+                                    }
+                                  },
+                                );
+                                this.setState({ experienceEntries: alteredEntries });
+                              }
+                        }
+                      />
+                    </Tooltip>
+                  )}
+                </span>
+              );
+            }}
           />
           <Column
             title="Delete Entry"
-            key={removed}
-            render={record => (
-              <span>
-                <Button>Trash</Button>{" "}
-                {
-                  // TODO find fitting icon
-                }
-              </span>
-            )}
+            key="removed"
+            render={record => {
+              const index = this.state.experienceEntries.findIndex(
+                entry => entry.domain === record.domain,
+              );
+              return (
+                <span>
+                  {record.removed ? (
+                    <Tooltip placement="top" title="Undo">
+                      <Icon
+                        type="close-circle-o"
+                        onClick={() => {
+                          const alteredEntries = this.state.experienceEntries.map(
+                            (entry, currentIndex) => {
+                              if (currentIndex === index && entry.value > 1) {
+                                return {
+                                  ...entry,
+                                  removed: false,
+                                };
+                              } else {
+                                return entry;
+                              }
+                            },
+                          );
+                          this.setState({ experienceEntries: alteredEntries });
+                        }}
+                      />
+                    </Tooltip>
+                  ) : (
+                    <Tooltip placement="top" title="Delete this Domain">
+                      <Icon
+                        type="delete"
+                        onClick={() => {
+                          const alteredEntries = this.state.experienceEntries.map(
+                            (entry, currentIndex) => {
+                              if (currentIndex === index && entry.value > 1) {
+                                return {
+                                  ...entry,
+                                  removed: true,
+                                };
+                              } else {
+                                return entry;
+                              }
+                            },
+                          );
+                          this.setState({ experienceEntries: alteredEntries });
+                        }}
+                      />
+                    </Tooltip>
+                  )}
+                </span>
+              );
+            }}
           />
         </Table>
       </Modal>

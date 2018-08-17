@@ -86,6 +86,9 @@ class UserListView extends React.PureComponent<Props, State> {
   }
 
   async fetchData(): Promise<void> {
+    this.setState({
+      isLoading: true,
+    });
     const users = await getEditableUsers();
 
     this.setState({
@@ -141,7 +144,13 @@ class UserListView extends React.PureComponent<Props, State> {
       users: updatedUsers,
       isExperienceModalVisible: false,
       isTeamRoleModalVisible: false,
+      isSingleUserExperienceModalVisible: false,
     });
+  };
+
+  closeSingleUserExperienceModal = (): void => {
+    this.setState({ isSingleUserExperienceModalVisible: false });
+    this.fetchData();
   };
 
   handleSearch = (event: SyntheticInputEvent<>): void => {
@@ -487,7 +496,7 @@ class UserListView extends React.PureComponent<Props, State> {
           <SingleUserExperienceModalView
             visible={this.state.isSingleUserExperienceModalVisible}
             selectedUser={this.state.users.find(user => user.id === this.state.selectedUserIds[0])}
-            onChange={this.handleUsersChange}
+            onClose={this.closeSingleUserExperienceModal}
             onCancel={() => this.setState({ isSingleUserExperienceModalVisible: false })}
           />
         ) : null}

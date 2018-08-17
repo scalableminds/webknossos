@@ -86,7 +86,7 @@ function createWorker() {
   const worker = new Worker(URL.createObjectURL(blob));
   return worker;
 }
-const worker = Blob != null ? createWorker() : {};
+const worker = typeof Blob !== "undefined" ? createWorker() : {};
 const resolverMap = {};
 let newestResolverId = 0;
 worker.onmessage = e => {

@@ -3,6 +3,7 @@ import React from "react";
 import { Tabs, Icon } from "antd";
 import DatasetUploadView from "admin/dataset/dataset_upload_view"
 import DatasetAddForeignView from "admin/dataset/dataset_add_foreign_view"
+import features from "features";
 
 const { TabPane } = Tabs;
 
@@ -18,6 +19,7 @@ const DatasetAddView = () => (
     >
       <DatasetUploadView />
     </TabPane>
+    {features().addForeignDataset ? (
     <TabPane
       tab={
         <span>
@@ -28,6 +30,7 @@ const DatasetAddView = () => (
     >
       <DatasetAddForeignView />
     </TabPane>
+    ) : null}
   </Tabs>
 );
 

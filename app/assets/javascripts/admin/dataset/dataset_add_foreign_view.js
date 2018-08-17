@@ -2,7 +2,7 @@
 import _ from "lodash";
 import React from "react";
 import { Form, Input, Button, Card, Upload, Icon, Spin, Progress, Divider } from "antd";
-import { addDataSet } from "admin/admin_rest_api";
+import { addForeignDataSet } from "admin/admin_rest_api";
 import Messages from "messages";
 import Toast from "libs/toast";
 
@@ -17,8 +17,6 @@ import {withRouter} from "react-router-dom";
 const FormItem = Form.Item;
 const TextArea = Input.TextArea;
 
-const NUM_TASKS_PER_BATCH = 100;
-
 type StateProps = {
   activeUser: ?APIUserType,
 };
@@ -28,12 +26,13 @@ type Props = StateProps & {
   withoutCard?: boolean,
   onUploaded: string => void
 };
+
 type State = {
   datastores: Array<APIDataStoreType>,
   isUploading: boolean,
 };
 
-export type NewDataStoreType = {
+export type ForeignDataSetSpecification = {
   +dataStoreName: string,
   +url: string,
   +dataSetName: string,
@@ -45,20 +44,16 @@ class DatasetAddForeignView extends React.PureComponent<Props, State> {
     isUploading: false,
   };
 
-  isValidData(text): boolean { // TODO
-    return true
-  }
-
-  isValidDataSet(dataStore: NewDataStoreType): boolean { // what would be a better name than dataStore
+  isValidDataSet(specification: ForeignDataSetSpecification): boolean {
     if (
-      !_.isString(dataStore.dataStoreName) ||
-      !_.isString(dataStore.url) ||
-      !_.isString(dataStore.dataSetName)
-      // catch invalid dataSetName (regex) and invalid url
+      !_.isString(specification.dataStoreName) ||
+      !_.isString(specification.url) ||
+      !_.isString(specification.dataSetName) ||
+      !/^[A-Za-z0-9_\-]*$/.test(specification.dataSetName) ||
+      !/^https?:\/\/[a-z0-9\.]+.*$/.test(specification.url)
     ) {
       return false;
     }
-
     return true;
   }
 
@@ -69,8 +64,8 @@ class DatasetAddForeignView extends React.PureComponent<Props, State> {
       .filter(word => word !== "");
   }
 
-  parseLine(line: string): NewDataStoreType {
-    const words = this.splitToWords(line);
+  parseLine(specification: string): ForeignDataSetSpecification {
+    const words = this.splitToWords(specification);
     const dataStoreName = words[0];
     const url = words[1];
     const dataSetName = words[2];
@@ -87,12 +82,10 @@ handleSubmit = async e => {
 
   let dataSet;
   const formValues = this.props.form.getFieldsValue();
-  console.log(formValues);
-  dataSet = this.parseLine(formValues.foreignDatasetText);
+  specification = this.parseLine(formValues.foreignDatasetText);
 
-  if (this.isValidDataSet(dataSet)) {
-    console.log("valid dataset")
-    await addDataSet(dataSet.dataStoreName, dataSet.url, dataSet.dataSetName);
+  if (this.isValidDataSet(specification)) {
+    await addForeignDataSet(specification.dataStoreName, specification.url, specification.dataSetName);
     window.location.replace("/dashboard")
   } else {
     Toast.error(

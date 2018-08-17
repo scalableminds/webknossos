@@ -648,6 +648,11 @@ export async function addDataset(datatsetConfig: DatasetConfigType): Promise<voi
   );
 }
 
+export async function addForeignDataSet(dataStoreName: string, url: string, dataSetName: string): Promise<string> {
+  const { sharingToken } = await Request.receiveJSON(`/api/datasets/addForeign?dataStoreName=${dataStoreName}&url=${url}&dataSetName=${dataSetName}`);
+  return sharingToken;
+}
+
 export function updateDatasetTeams(
   datasetName: string,
   newTeams: Array<string>,

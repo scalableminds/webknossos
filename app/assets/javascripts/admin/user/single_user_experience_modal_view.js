@@ -2,8 +2,7 @@
 
 import _ from "lodash";
 import * as React from "react";
-import { Modal, Button, Input, Icon, Tag, Table } from "antd";
-import CustomValueInput from "components/custom_value_input";
+import { Modal, Button, Input, Icon, Table, InputNumber } from "antd";
 import update from "immutability-helper";
 import { updateUser } from "admin/admin_rest_api";
 import type { APIUserType, ExperienceMapType } from "admin/api_flow_types";
@@ -119,7 +118,7 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
     const experiences = this.state.experiences;
     const tableData = [];
     _.map(experiences, (value, domain) => {
-      tableData.push({ domain, value });
+      tableData.push({ domain, value, removed: false });
     });
     const isValid = this.validateDomainAndValues(tableData);
     const pagination = tableData > 10 ? { pageSize: 10 } : false;
@@ -140,46 +139,62 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
           </div>
         }
       >
-        {/* _.map(this.props.selectedUser.experiences, (value, domain) => (
-          // here -> edit to the suggested design so every existing domain's value can be changed or completely deleted
-          <Tag key={`experience_${user.id}_${domain}`}>
-            {domain} : {value}
-          </Tag>
-        )) */}
         <Table dataSource={tableData} rowKey="domain" pagination={pagination}>
           <Column title="Experience Domain" dataIndex="domain" key="domain" />
           <Column
             title="Experience Value"
             key="value"
             render={record => (
-              <CustomValueInput
-                increase={() => {
-                  const exp = this.state.experiences;
-                  exp[record.domain]++;
-                  this.setState({ experiences: exp });
-                }}
-                decrease={() => {
-                  const exp = this.state.experiences;
-                  exp[record.domain]--;
-                  this.setState({ experiences: exp });
-                }}
-                onChange={value => {
-                  const exp = this.state.experiences;
-                  exp[record.domain] = value;
-                  this.setState({ experiences: exp });
-                }}
-                min={1}
-                max={100}
-                initialValue={this.state.experiences[record.domain]}
-              />
+              <span>
+                <Icon
+                  type="minus"
+                  style={{
+                    padding: 3,
+                    borderRadius: 5,
+                    backgroundColor: "rgba(196, 195, 194,0.5)",
+                    ":hover": { cursor: "pointer", backgroundColor: "rgba(196, 195, 194,1)" },
+                  }}
+                  onClick={() => {
+                    const exp = this.state.experiences;
+                    exp[record.domain]--;
+                    this.setState({ experiences: exp });
+                  }}
+                />
+                <InputNumber
+                  min={1}
+                  defaultValue={record.experience}
+                  onChange={value => {
+                    const exp = this.state.experiences;
+                    exp[record.domain] = value;
+                    this.setState({ experiences: exp });
+                  }}
+                />
+                <Icon
+                  type="plus"
+                  style={{
+                    padding: 3,
+                    borderRadius: 5,
+                    backgroundColor: "rgba(196, 195, 194,0.5)",
+                    ":hover": { cursor: "pointer", backgroundColor: "rgba(196, 195, 194,1)" },
+                  }}
+                  onClick={() => {
+                    const exp = this.state.experiences;
+                    exp[record.domain]++;
+                    this.setState({ experiences: exp });
+                  }}
+                />
+              </span>
             )}
           />
           <Column
             title="Delete Entry"
-            key={record => record.domain.concat(record.value)}
-            render={(record, index) => (
+            key={removed}
+            render={record => (
               <span>
-                <Button>Trash</Button>
+                <Button>Trash</Button>{" "}
+                {
+                  // TODO find fitting icon
+                }
               </span>
             )}
           />

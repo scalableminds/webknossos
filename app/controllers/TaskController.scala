@@ -6,7 +6,7 @@ import com.scalableminds.util.mvc.ResultBox
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
-import com.scalableminds.webknossos.datastore.tracings.{ProtoGeometryImplicits}
+import com.scalableminds.webknossos.datastore.tracings.ProtoGeometryImplicits
 import models.annotation.nml.NmlService
 import models.annotation.AnnotationService
 import models.binary.DataSetDAO
@@ -21,7 +21,7 @@ import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import play.api.mvc.Result
-import utils.ObjectId
+import utils.{ObjectId, WkConf}
 
 import scala.concurrent.Future
 
@@ -61,7 +61,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
     with ProtoGeometryImplicits
     with FoxImplicits {
 
-  val MAX_OPEN_TASKS = current.configuration.getInt("oxalis.tasks.maxOpenPerUser") getOrElse 2
+  val MAX_OPEN_TASKS = WkConf.Oxalis.Tasks.maxOpenPerUser
 
   def read(taskId: String) = SecuredAction.async { implicit request =>
     for {

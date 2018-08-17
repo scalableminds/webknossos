@@ -1,5 +1,7 @@
 package com.scalableminds.util.tools
 
+import java.time.Duration
+
 import play.api.Configuration
 
 trait ConfigReader {
@@ -13,6 +15,9 @@ trait ConfigReader {
 
   def getBoolean(path: String): Boolean =
     openOrThrowException(path, raw.getBoolean(path), "Boolean")
+
+  def getDuration(path: String): Duration =
+    openOrThrowException(path, Some(raw.underlying.getDuration(path)), "Duration")
 
   def openOrThrowException[T](path: String, value: Option[T], typ: String) = {
     value match {

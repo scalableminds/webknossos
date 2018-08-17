@@ -16,6 +16,10 @@ object WkConf extends ConfigReader {
         val password = getString("application.authentication.defaultUser.password")
         val isSuperUser = getBoolean("application.authentication.defaultUser.isSuperUser")
       }
+      val ssoKey = getString("application.authentication.ssoKey")
+      val enableDevAutoVerify = getBoolean("application.authentication.enableDevAutoVerify")
+      val enableDevAutoAdmin = getBoolean("application.authentication.enableDevAutoAdmin")
+      val enableDevAutoLogin = getBoolean("application.authentication.enableDevAutoLogin")
     }
   }
 
@@ -54,11 +58,35 @@ object WkConf extends ConfigReader {
         val tracingPauseInSeconds = getInt("oxalis.user.time.tracingPauseInSeconds") seconds
       }
     }
+    object Tasks {
+      val maxOpenPerUser = getInt("oxalis.tasks.maxOpenPerUser")
+    }
   }
 
   object DataStore {
     val enabled = getBoolean("datastore.enabled")
     val key = getString("datastore.key")
+  }
+
+  object User {
+    val cacheTimeoutInMinutes = getInt("user.cacheTimeoutInMinutes") minutes
+  }
+
+  object BrainTracing {
+    val active = getBoolean("braintracing.active")
+  }
+
+  object Features {
+    val allowOrganizationCreation = getBoolean("features.allowOrganizationCreation")
+  }
+
+  val operatorData = getString("operatorData")
+
+  object Silhouette {
+    object TokenAuthenticator {
+      val resetPasswordExpiry = getDuration("silhouette.tokenAuthenticator.resetPasswordExpiry")
+      val dataStoreExpiry = getDuration("silhouette.tokenAuthenticator.dataStoreExpiry")
+    }
   }
 
 }

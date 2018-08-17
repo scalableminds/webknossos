@@ -8,6 +8,7 @@ import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.{WS, WSAuthScheme}
+import utils.WkConf
 
 import scala.concurrent.{Future, Promise}
 import scala.util._
@@ -20,16 +21,13 @@ object BrainTracing extends LazyLogging with FoxImplicits {
   val PW = "trace"
   val LICENSE = "hu39rxpv7m"
 
-  val isActive = Play.configuration.getBoolean("braintracing.active") getOrElse false
-  val logTimeForExplorative = Play.configuration.getBoolean("braintracing.logTimeForExplorative") getOrElse false
-
   lazy val Mailer =
     Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
 
   def registerIfNeeded(user: User): Fox[String] =
     for {
       organization <- user.organization
-      result <- (if (organization.name == "Connectomics department" && isActive) register(user).toFox else Fox.successful("braintracing.none"))
+      result <- (if (organization.name == "Connectomics department" && WkConf.BrainTracing.active) register(user).toFox else Fox.successful("braintracing.none"))
     } yield result
 
   private def register(user: User): Future[String] = {

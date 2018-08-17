@@ -6,8 +6,9 @@ import Clipboard from "clipboard-js";
 import Toast from "libs/toast";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import { AsyncButton } from "components/async_clickables";
-import { getDatasetSharingToken, revokeDatasetSharingToken } from "admin/admin_rest_api";
+import { getDatasetSharingToken, getDataset, revokeDatasetSharingToken } from "admin/admin_rest_api";
 import { FormItemWithInfo } from "./helper_components";
+import { APIDatasetType } from "admin/api_flow_types";
 
 type Props = {
   form: Object,
@@ -17,6 +18,7 @@ type Props = {
 
 type State = {
   sharingToken: string,
+  dataSet: APIDatasetType,
 };
 
 export default class ImportGeneralComponent extends React.PureComponent<Props, State> {
@@ -24,6 +26,7 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
     super();
     this.state = {
       sharingToken: "",
+      dataSet: null,
     };
   }
   componentDidMount() {
@@ -32,6 +35,8 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
 
   async fetch() {
     const sharingToken = await getDatasetSharingToken(this.props.datasetName);
+    const dataSet = await getDataset(this.props.datasetName, "");
+    this.setState({ dataSet });
     this.setState({ sharingToken });
   }
 
@@ -56,7 +61,15 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
     const tokenSuffix = `?token=${this.state.sharingToken}`;
     return `${window.location.origin}/datasets/${this.props.datasetName}/view${
       doesNeedToken ? tokenSuffix : ""
-    }`;
+      }`;
+  }
+
+  getAllowUsageText() {
+    if(this.state.dataSet != null) {
+      const dataStoreName = this.state.dataSet.dataStore.name;
+      const dataStoreURL = this.state.dataSet.dataStore.url;
+      return dataStoreName + ", " + dataStoreURL + ", " + this.props.datasetName;
+    } else return ""
   }
 
   render() {
@@ -148,6 +161,21 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
             )}
           </Input.Group>
         </FormItemWithInfo>
+        {getFieldDecorator("dataset.isPublic") ? (
+          <div>
+            <FormItemWithInfo
+              label="Allow usage in other webknossos-instances using this text"
+              info="Give this text to users with other webknossos-instances so that they can add this dataset"
+            >
+              <Input
+                value={this.getAllowUsageText()}
+                onClick={this.handleSelectText}
+                style={{ width: "80%" }}
+                readOnly
+              />
+            </FormItemWithInfo>
+          </div>
+        ) : null }
       </div>
     );
 

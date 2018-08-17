@@ -46,6 +46,55 @@ function createSendBucketInfo(zoomedAddress: Vector4, resolutions: Array<Vector3
   };
 }
 
+window.URL = window.URL || window.webkitURL;
+
+function createWorker() {
+  // "Server response", used in all examples
+  const response = `
+  self.onmessage = function(evt) {
+    const {url, options, isFourBit, resolverId} = evt.data;
+    const headers = new Headers();
+    for (const name of Object.keys(options.headers)) {
+      headers.set(name, options.headers[name]);
+    }
+    options.headers = headers;
+    fetch(url, options).then(response => response.arrayBuffer()).then((arrayBuffer) => {
+      const transform = isFourBit ? decodeFourBit : e => e;
+      const decoded = transform(new Uint8Array(arrayBuffer));
+      postMessage({resolverId, buffer: decoded.buffer}, [decoded.buffer]);
+    })
+  }
+
+  function decodeFourBit(bufferArray) {
+    // Expand 4-bit data
+    const newColors = new Uint8Array(bufferArray.length << 1);
+
+    let index = 0;
+    while (index < newColors.length) {
+      const value = bufferArray[index >> 1];
+      newColors[index] = value & 0b11110000;
+      index++;
+      newColors[index] = value << 4;
+      index++;
+    }
+
+    return newColors;
+  }
+  `;
+
+  const blob = new Blob([response], { type: "application/javascript" });
+  const worker = new Worker(URL.createObjectURL(blob));
+  return worker;
+}
+const worker = createWorker();
+const resolverMap = {};
+let newestResolverId = 0;
+worker.onmessage = e => {
+  const { resolverId, buffer } = (e.data: any);
+  resolverMap[resolverId](new Uint8Array(buffer));
+  resolverMap[resolverId] = undefined;
+};
+
 export async function requestFromStore(
   layerInfo: DataLayerType,
   batch: Array<Vector4>,
@@ -63,19 +112,46 @@ export async function requestFromStore(
     const datasetName = state.dataset.name;
     const dataStoreUrl = state.dataset.dataStore.url;
 
-    const responseBuffer = await Request.sendJSONReceiveArraybuffer(
-      `${dataStoreUrl}/data/datasets/${datasetName}/layers/${layerInfo.name}/data?token=${token}`,
-      {
+    const url = `${dataStoreUrl}/data/datasets/${datasetName}/layers/${
+      layerInfo.name
+    }/data?token=${token}`;
+
+    if (window.useWebWorker) {
+      const options = {
         data: bucketInfo,
         timeout: REQUEST_TIMEOUT,
-      },
-    );
+        method: "POST",
+        body: JSON.stringify(bucketInfo),
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/octet-stream",
+        },
+        host: "",
+        credentials: "same-origin",
+        doNotCatch: false,
+        params: null,
+      };
 
-    let result = new Uint8Array(responseBuffer);
-    if (fourBit) {
-      result = decodeFourBit(result);
+      return _request(url, options, fourBit);
+    } else {
+      const responseBuffer = await Request.sendJSONReceiveArraybuffer(url, {
+        data: bucketInfo,
+        timeout: REQUEST_TIMEOUT,
+      });
+      let result = new Uint8Array(responseBuffer);
+      if (fourBit) {
+        result = decodeFourBit(result);
+      }
+      return result;
     }
-    return result;
+  });
+}
+
+function _request(url: string, options: Object, isFourBit: boolean): Promise<Uint8Array> {
+  return new Promise((resolve, _reject) => {
+    newestResolverId = (newestResolverId + 1) % 2 ** 24;
+    resolverMap[newestResolverId] = resolve;
+    worker.postMessage({ url, options, isFourBit, resolverId: newestResolverId });
   });
 }
 

@@ -32,6 +32,7 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
       this.props.onChange(_value);
     }
   };
+
   render() {
     const { value, label, max, min, step, onChange } = this.props;
 

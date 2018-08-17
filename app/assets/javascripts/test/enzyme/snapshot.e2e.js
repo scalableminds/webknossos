@@ -1,9 +1,12 @@
 // @flow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-/* eslint-disable import/first */
-
 // This needs to be the very first import
-import { createSnapshotable, debugWrapper, waitForAllRequests, resetDatabase } from "./e2e-setup";
+import {
+  createSnapshotable,
+  debugWrapper,
+  waitForAllRequests,
+  resetDatabase,
+} from "test/enzyme/e2e-setup";
 import { mount } from "enzyme";
 import test from "ava";
 import mockRequire from "mock-require";

@@ -175,10 +175,10 @@ class OnboardingView extends React.PureComponent<StateProps, State> {
   }
 
   advanceStep = () => {
-    this.setState({
-      currentStep: this.state.currentStep + 1,
+    this.setState(prevState => ({
+      currentStep: prevState.currentStep + 1,
       datasetNameToImport: null,
-    });
+    }));
   };
 
   renderCreateOrganization() {

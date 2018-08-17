@@ -100,19 +100,23 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
             <a href={`/datasets/${dataset.name}/view`} title="View Dataset">
               <Icon type="eye-o" />View
             </a>
-            <a
-              href="#"
-              onClick={() => this.createTracing(dataset, "skeleton", false)}
-              title="Create Skeleton Tracing"
-            >
-              <img
-                src="/assets/images/skeleton.svg"
-                alt="skeleton icon"
-                style={centerBackgroundImageStyle}
-              />{" "}
-              Start Skeleton Tracing
-            </a>
-            {volumeTracingMenu}
+            {!dataset.isForeign ? (
+              <div>
+                <a
+                  href="#"
+                  onClick={() => this.createTracing(dataset, "skeleton", false)}
+                  title="Create Skeleton Tracing"
+                >
+                  <img
+                    src="/assets/images/skeleton.svg"
+                    alt="skeleton icon"
+                    style={centerBackgroundImageStyle}
+                  />{" "}
+                  Start Skeleton Tracing
+                </a>
+                {volumeTracingMenu}
+               </div>
+            ) : null}
             {features().hybridTracings ? (
               <a
                 href="#"

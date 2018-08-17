@@ -78,6 +78,7 @@ export type APIDatasetType = {
   +owningOrganization: string,
   +logoUrl: ?string,
   +lastUsedByUser: number,
+  +isForeign: boolean,
 };
 
 export type APIDataSourceWithMessagesType = {

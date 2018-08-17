@@ -66,7 +66,7 @@ function NmlDropArea({ showClickHint, isAllowed }) {
         <h5>Drop NML files here{showClickHint ? " or click to select files" : null}...</h5>
       ) : (
         <h5 style={{ color: "rgb(247,80,61)" }}>
-          Upload of NML files is not allowed. Please check your permissions.
+          You cannot upload NML files into a read-only tracing.
         </h5>
       )}
     </React.Fragment>

@@ -31,23 +31,21 @@ type State = {
 class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.loadTableEntries();
+    this.state = { experienceEntries: this.loadTableEntries(), enteredExperience: [] };
   }
 
   componentWillReceiveProps(nextProps) {
     if (nextProps.visible && !this.props.visible) {
-      this.loadTableEntries();
+      this.setState({ experienceEntries: this.loadTableEntries(), enteredExperience: [] });
     }
   }
 
-  loadTableEntries = () => {
-    const tableData = _.map(this.props.selectedUser.experiences, (value, domain) => ({
+  loadTableEntries = (): Array<TableEntry> =>
+    _.map(this.props.selectedUser.experiences, (value, domain) => ({
       domain,
       value,
       removed: false,
     }));
-    this.setState({ experienceEntries: tableData, enteredExperience: [] });
-  };
 
   updateUsersExperiences = async () => {
     const notRemovedExperiences = this.state.experienceEntries.filter(entry => !entry.removed);
@@ -148,15 +146,19 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
   };
 
   handleExperienceSelected = (domain: string) => {
-    this.setState(prevState => ({
-      enteredExperience: _.concat(prevState.enteredExperience, domain),
-    }));
+    if (!this.state.experienceEntries.find(entry => entry.domain === domain)) {
+      this.setState(prevState => ({
+        enteredExperience: _.concat(prevState.enteredExperience, domain),
+      }));
+    }
   };
 
   handleExperienceDeselected = (domain: string) => {
-    this.setState(prevState =>
-      _.filter(prevState.enteredExperience, currentDomain => domain !== currentDomain),
-    );
+    this.setState(prevState => ({
+      enteredExperience: prevState.enteredExperience.filter(
+        currentDomain => currentDomain !== domain,
+      ),
+    }));
   };
 
   addEnteredExperiences = () => {
@@ -169,6 +171,8 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
       enteredExperience: [],
     }));
   };
+
+  getDomainsOfTable = (): Array<string> => this.state.experienceEntries.map(entry => entry.domain);
 
   render() {
     if (!this.props.visible) {
@@ -263,7 +267,7 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
                       />
                     </Tooltip>
                   ) : (
-                    <Icon style={{ marginLeft: 21, color: "rgba(0, 0, 0, 0)" }} type="rollback" />
+                    <Icon style={{ marginLeft: 21 }} className="invisible-icon" type="rollback" />
                   )}
                 </span>
               );
@@ -301,7 +305,19 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
             value={this.state.enteredExperience}
             onSelect={this.handleExperienceSelected}
             onDeselect={this.handleExperienceDeselected}
+            alreadyUsedDomains={this.getDomainsOfTable()}
           />
+          {this.state.enteredExperience.length > 0 ? (
+            <Tooltip placement="top" title="Clear Input">
+              <Icon
+                type="close-circle"
+                className="clear-input-icon hoverable-icon clickable-icon"
+                onClick={() => this.setState({ enteredExperience: [] })}
+              />
+            </Tooltip>
+          ) : (
+            <Icon type="close-circle" className="clear-input-icon invisible-icon" />
+          )}
           <Button
             disabled={!this.state.enteredExperience || this.state.enteredExperience.length <= 0}
             onClick={this.addEnteredExperiences}

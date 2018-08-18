@@ -2,11 +2,11 @@
 
 import _ from "lodash";
 import * as React from "react";
-import { Modal, Button, Tooltip, Input, Icon, Table, InputNumber } from "antd";
-import update from "immutability-helper";
+import { Modal, Button, Tooltip, Icon, Table, InputNumber } from "antd";
 import { updateUser } from "admin/admin_rest_api";
 import type { APIUserType } from "admin/api_flow_types";
 import { handleGenericError } from "libs/error_handling";
+import SelectExperienceDomainView from "components/select_experience_domain_view";
 
 const { Column } = Table;
 
@@ -25,7 +25,7 @@ type Props = {
 
 type State = {
   experienceEntries: Array<TableEntry>,
-  // use an array to save change stuff and before commit change ask with another modal
+  enteredExperience: Array<string>,
 };
 
 class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
@@ -36,7 +36,7 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
     _.map(experiences, (value, domain) => {
       tableData.push({ domain, value, removed: false });
     });
-    this.state = { experienceEntries: tableData };
+    this.state = { experienceEntries: tableData, enteredExperience: null };
   }
 
   updateUsersExperiences = async () => {
@@ -73,6 +73,22 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
 
   recordModified = (record): boolean =>
     record.value !== this.props.selectedUser.experiences[record.domain];
+  enteredExperience;
+
+  handleExperienceSelected = (domain: string) => {
+    const newExperiences = _.concat(this.state.enteredExperience, domain);
+    console.log(newExperiences);
+    this.setState({ enteredExperience: newExperiences });
+  };
+
+  handleExperienceDeselected = (domain: string) => {
+    const newExperiences = _.filter(
+      this.state.enteredExperience,
+      currentDomain => domain !== currentDomain,
+    );
+    console.log(newExperiences);
+    this.setState({ enteredExperience: newExperiences });
+  };
 
   render() {
     if (!this.props.visible) {
@@ -100,6 +116,7 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
         }
       >
         <Table
+          size="small"
           dataSource={tableData}
           rowKey="domain"
           pagination={pagination}
@@ -300,7 +317,21 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
             }}
           />
         </Table>
-        <span> Add a Domain </span>
+        <span>
+          <SelectExperienceDomainView
+            disabled={false}
+            value={this.state.enteredExperience}
+            onSelect={this.handleExperienceSelected}
+            onDeselect={this.handleExperienceDeselected}
+          />
+          <Button
+            onClick={() => {
+              console.log(this.state.enteredExperience);
+            }}
+          >
+            Add Experience
+          </Button>
+        </span>
       </Modal>
     );
   }

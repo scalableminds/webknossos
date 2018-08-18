@@ -31,13 +31,23 @@ type State = {
 class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
   constructor(props: Props) {
     super(props);
-    const experiences = this.props.selectedUser.experiences;
-    const tableData = [];
-    _.map(experiences, (value, domain) => {
-      tableData.push({ domain, value, removed: false });
-    });
-    this.state = { experienceEntries: tableData, enteredExperience: [] };
+    this.loadTableEntries();
   }
+
+  componentWillReceiveProps(nextProps) {
+    if (nextProps.visible && !this.props.visible) {
+      this.loadTableEntries();
+    }
+  }
+
+  loadTableEntries = () => {
+    const tableData = _.map(this.props.selectedUser.experiences, (value, domain) => ({
+      domain,
+      value,
+      removed: false,
+    }));
+    this.setState({ experienceEntries: tableData, enteredExperience: [] });
+  };
 
   updateUsersExperiences = async () => {
     const notRemovedExperiences = this.state.experienceEntries.filter(entry => !entry.removed);
@@ -75,6 +85,68 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
     record.value !== this.props.selectedUser.experiences[record.domain] &&
     this.props.selectedUser.experiences[record.domain];
 
+  increaseEntrysValueBy = (index: int, val: int) => {
+    this.setState(prevState => ({
+      experienceEntries: prevState.experienceEntries.map((entry, currentIndex) => {
+        if (currentIndex === index && entry.value + val > 0) {
+          return {
+            ...entry,
+            value: entry.value + val,
+          };
+        } else {
+          return entry;
+        }
+      }),
+    }));
+  };
+
+  setEntrysValue = (index: int, value: int) => {
+    if (value > 0) {
+      this.setState(prevState => ({
+        experienceEntries: prevState.experienceEntries.map((entry, currentIndex) => {
+          if (currentIndex === index) {
+            return {
+              ...entry,
+              value,
+            };
+          } else {
+            return entry;
+          }
+        }),
+      }));
+    }
+  };
+
+  revertChangesOfEntry = index => {
+    this.setState(prevState => ({
+      experienceEntries: prevState.experienceEntries.map((entry, currentIndex) => {
+        if (currentIndex === index) {
+          return {
+            ...entry,
+            value: this.props.selectedUser.experiences[entry.domain],
+          };
+        } else {
+          return entry;
+        }
+      }),
+    }));
+  };
+
+  setRemoveOfEntryTo = (index: int, removed: boolean) => {
+    this.setState(prevState => ({
+      experienceEntries: prevState.experienceEntries.map((entry, currentIndex) => {
+        if (currentIndex === index && entry.value > 1) {
+          return {
+            ...entry,
+            removed,
+          };
+        } else {
+          return entry;
+        }
+      }),
+    }));
+  };
+
   handleExperienceSelected = (domain: string) => {
     this.setState(prevState => ({
       enteredExperience: _.concat(prevState.enteredExperience, domain),
@@ -88,28 +160,13 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
   };
 
   addEnteredExperiences = () => {
-    console.log(this.state.enteredExperience);
     const newExperiences = this.state.enteredExperience.map(entry => {
       if (entry.length < 3) return null;
       else return { domain: entry, value: 1, removed: false };
     });
     this.setState(prevState => ({
       experienceEntries: _.concat(prevState.experienceEntries, newExperiences),
-    }));
-  };
-
-  removeEntry = (index: int) => {
-    this.setState(prevState => ({
-      experienceEntries: prevState.experienceEntries.map((entry, currentIndex) => {
-        if (currentIndex === index && entry.value > 1) {
-          return {
-            ...entry,
-            removed: true,
-          };
-        } else {
-          return entry;
-        }
-      }),
+      enteredExperience: [],
     }));
   };
 
@@ -168,49 +225,12 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
                         ? "clickable-icon disabled-icon disabled-clickable-icon"
                         : "clickable-icon active-icon hoverable-icon"
                     }
-                    onClick={
-                      record.removed
-                        ? null
-                        : () => {
-                            this.setState(prevState => ({
-                              experienceEntries: prevState.experienceEntries.map(
-                                (entry, currentIndex) => {
-                                  if (currentIndex === index && entry.value > 1) {
-                                    return {
-                                      ...entry,
-                                      value: entry.value - 1,
-                                    };
-                                  } else {
-                                    return entry;
-                                  }
-                                },
-                              ),
-                            }));
-                          }
-                    }
+                    onClick={record.removed ? null : () => this.increaseEntrysValueBy(index, -1)}
                   />
                   <InputNumber
-                    min={1}
                     disabled={record.removed}
                     value={this.state.experienceEntries[index].value}
-                    onChange={value => {
-                      if (value > 0) {
-                        this.setState(prevState => ({
-                          experienceEntries: prevState.experienceEntries.map(
-                            (entry, currentIndex) => {
-                              if (currentIndex === index) {
-                                return {
-                                  ...entry,
-                                  value,
-                                };
-                              } else {
-                                return entry;
-                              }
-                            },
-                          ),
-                        }));
-                      }
-                    }}
+                    onChange={value => this.setEntrysValue(index, value)}
                   />
                   <Icon
                     type="plus"
@@ -220,26 +240,7 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
                         : "clickable-icon active-icon hoverable-icon"
                     }
                     style={{ marginLeft: 5 }}
-                    onClick={
-                      record.removed
-                        ? null
-                        : () => {
-                            this.setState(prevState => ({
-                              experienceEntries: prevState.experienceEntries.map(
-                                (entry, currentIndex) => {
-                                  if (currentIndex === index) {
-                                    return {
-                                      ...entry,
-                                      value: entry.value + 1,
-                                    };
-                                  } else {
-                                    return entry;
-                                  }
-                                },
-                              ),
-                            }));
-                          }
-                    }
+                    onClick={record.removed ? null : () => this.increaseEntrysValueBy(index, 1)}
                   />
                   {this.recordModifiedAndExistedBefore(record) ? (
                     <Tooltip placement="top" title="Revert Changes">
@@ -258,25 +259,7 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
                             : "hoverable-icon clickable-icon"
                         }
                         type="rollback"
-                        onClick={
-                          record.removed
-                            ? null
-                            : () => {
-                                const alteredEntries = this.state.experienceEntries.map(
-                                  (entry, currentIndex) => {
-                                    if (currentIndex === index) {
-                                      return {
-                                        ...entry,
-                                        value: this.props.selectedUser.experiences[record.domain],
-                                      };
-                                    } else {
-                                      return entry;
-                                    }
-                                  },
-                                );
-                                this.setState({ experienceEntries: alteredEntries });
-                              }
-                        }
+                        onClick={record.removed ? null : () => this.revertChangesOfEntry(index)}
                       />
                     </Tooltip>
                   ) : (
@@ -299,26 +282,12 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
                     <Tooltip placement="top" title="Undo">
                       <Icon
                         type="close-circle-o"
-                        onClick={() => {
-                          const alteredEntries = this.state.experienceEntries.map(
-                            (entry, currentIndex) => {
-                              if (currentIndex === index && entry.value > 1) {
-                                return {
-                                  ...entry,
-                                  removed: false,
-                                };
-                              } else {
-                                return entry;
-                              }
-                            },
-                          );
-                          this.setState({ experienceEntries: alteredEntries });
-                        }}
+                        onClick={() => this.setRemoveOfEntryTo(index, false)}
                       />
                     </Tooltip>
                   ) : (
                     <Tooltip placement="top" title="Delete this Domain">
-                      <Icon type="delete" onClick={this.removeEntry(index)} />
+                      <Icon type="delete" onClick={() => this.setRemoveOfEntryTo(index, true)} />
                     </Tooltip>
                   )}
                 </span>

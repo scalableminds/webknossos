@@ -12,7 +12,7 @@ const { Column } = Table;
 
 type TableEntry = {
   domain: string,
-  value: int,
+  value: number,
   removed: boolean,
 };
 
@@ -34,7 +34,7 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
     this.state = { experienceEntries: this.loadTableEntries(), enteredExperience: [] };
   }
 
-  componentWillReceiveProps(nextProps) {
+  componentWillReceiveProps(nextProps: Props) {
     if (nextProps.visible && !this.props.visible) {
       this.setState({ experienceEntries: this.loadTableEntries(), enteredExperience: [] });
     }
@@ -71,7 +71,7 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
     return entry.removed || (entry.domain.length > 2 && entry.value > 0);
   }
 
-  validateDomainAndValues(tableData: []) {
+  validateDomainAndValues(tableData: Array<TableEntry>) {
     let isValid = true;
     tableData.forEach(entry => {
       if (isValid) isValid = this.validateEntry(entry);
@@ -79,11 +79,11 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
     return isValid;
   }
 
-  recordModifiedAndExistedBefore = (record): boolean =>
+  recordModifiedAndExistedBefore = (record: TableEntry): boolean =>
     record.value !== this.props.selectedUser.experiences[record.domain] &&
-    this.props.selectedUser.experiences[record.domain];
+    record.domain in this.props.selectedUser.experiences;
 
-  increaseEntrysValueBy = (index: int, val: int) => {
+  increaseEntrysValueBy = (index: number, val: number) => {
     this.setState(prevState => ({
       experienceEntries: prevState.experienceEntries.map((entry, currentIndex) => {
         if (currentIndex === index && entry.value + val > 0) {
@@ -98,7 +98,7 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
     }));
   };
 
-  setEntrysValue = (index: int, value: int) => {
+  setEntrysValue = (index: number, value: number) => {
     if (value > 0) {
       this.setState(prevState => ({
         experienceEntries: prevState.experienceEntries.map((entry, currentIndex) => {
@@ -115,7 +115,7 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
     }
   };
 
-  revertChangesOfEntry = index => {
+  revertChangesOfEntry = (index: number) => {
     this.setState(prevState => ({
       experienceEntries: prevState.experienceEntries.map((entry, currentIndex) => {
         if (currentIndex === index) {
@@ -130,7 +130,7 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
     }));
   };
 
-  setRemoveOfEntryTo = (index: int, removed: boolean) => {
+  setRemoveOfEntryTo = (index: number, removed: boolean) => {
     this.setState(prevState => ({
       experienceEntries: prevState.experienceEntries.map((entry, currentIndex) => {
         if (currentIndex === index && entry.value > 1) {
@@ -180,7 +180,6 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
     }
     const tableData = this.state.experienceEntries;
     const isValid = this.validateDomainAndValues(tableData);
-    const pagination = tableData > 10 ? { pageSize: 10 } : false;
     return (
       <Modal
         className="experience-change-modal"
@@ -203,7 +202,8 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
           size="small"
           dataSource={tableData}
           rowKey="domain"
-          pagination={pagination}
+          pagination={false}
+          scroll={{ y: 300 }}
           className="user-experience-table"
         >
           <Column

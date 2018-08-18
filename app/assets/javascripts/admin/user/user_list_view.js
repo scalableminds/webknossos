@@ -247,13 +247,14 @@ class UserListView extends React.PureComponent<Props, State> {
     );
   }
 
-  getSelectedUser() {
-    if (this.state.hasRowsSelected)
-      return this.state.selectedUserIds.find(user => user.id === this.state.selectedUserIds[0]);
-    else return null;
+  getOnliestSelectedUser() {
+    if (this.state.selectedUserIds.length === 1) {
+      return this.state.users.find(user => user.id === this.state.selectedUserIds[0]);
+    } else return null;
   }
 
   render() {
+    const selectedUser = this.getOnliestSelectedUser();
     const hasRowsSelected = this.state.selectedUserIds.length > 0;
     const rowSelection = {
       onChange: selectedUserIds => {
@@ -491,10 +492,10 @@ class UserListView extends React.PureComponent<Props, State> {
           onChange={this.handleUsersChange}
           onCancel={() => this.setState({ isExperienceModalVisible: false })}
         />
-        {hasRowsSelected ? (
+        {selectedUser ? (
           <SingleUserExperienceModalView
             visible={this.state.isSingleUserExperienceModalVisible}
-            selectedUser={this.state.users.find(user => user.id === this.state.selectedUserIds[0])}
+            selectedUser={selectedUser}
             onClose={this.closeSingleUserExperienceModal}
             onCancel={() => this.setState({ isSingleUserExperienceModalVisible: false })}
           />

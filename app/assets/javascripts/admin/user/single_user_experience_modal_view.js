@@ -3,6 +3,7 @@
 import _ from "lodash";
 import * as React from "react";
 import { Modal, Button, Tooltip, Icon, Table, InputNumber } from "antd";
+import Toast from "libs/toast";
 import { updateUser } from "admin/admin_rest_api";
 import type { APIUserType } from "admin/api_flow_types";
 import { handleGenericError } from "libs/error_handling";
@@ -41,11 +42,14 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
   }
 
   loadTableEntries = (): Array<TableEntry> =>
-    _.map(this.props.selectedUser.experiences, (value, domain) => ({
-      domain,
-      value,
-      removed: false,
-    }));
+    _.sortBy(
+      _.map(this.props.selectedUser.experiences, (value, domain) => ({
+        domain,
+        value,
+        removed: false,
+      })),
+      entry => entry.domain,
+    );
 
   updateUsersExperiences = async () => {
     const notRemovedExperiences = this.state.experienceEntries.filter(entry => !entry.removed);
@@ -133,7 +137,7 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
   setRemoveOfEntryTo = (index: number, removed: boolean) => {
     this.setState(prevState => ({
       experienceEntries: prevState.experienceEntries.map((entry, currentIndex) => {
-        if (currentIndex === index && entry.value > 1) {
+        if (currentIndex === index) {
           return {
             ...entry,
             removed,
@@ -146,6 +150,10 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
   };
 
   handleExperienceSelected = (domain: string) => {
+    if (domain.length < 3) {
+      Toast.warning("Experience Domains need at least 3 characters.");
+      return;
+    }
     if (!this.state.experienceEntries.find(entry => entry.domain === domain)) {
       this.setState(prevState => ({
         enteredExperience: _.concat(prevState.enteredExperience, domain),
@@ -162,12 +170,16 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
   };
 
   addEnteredExperiences = () => {
-    const newExperiences = this.state.enteredExperience.map(entry => {
-      if (entry.length < 3) return null;
-      else return { domain: entry, value: 1, removed: false };
-    });
+    const newExperiences = this.state.enteredExperience.map(entry => ({
+      domain: entry,
+      value: 1,
+      removed: false,
+    }));
     this.setState(prevState => ({
-      experienceEntries: _.concat(prevState.experienceEntries, newExperiences),
+      experienceEntries: _.sortBy(
+        _.concat(prevState.experienceEntries, newExperiences),
+        entry => entry.domain,
+      ),
       enteredExperience: [],
     }));
   };

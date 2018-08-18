@@ -2,7 +2,7 @@
 import * as React from "react";
 import { Row, Col, Card, Popover } from "antd";
 import Markdown from "react-remarkable";
-import TemplateHelpers from "libs/template_helpers";
+import { formatScale } from "libs/format_utils";
 import _ from "lodash";
 import { getThumbnailURL, hasSegmentation } from "oxalis/model/accessors/dataset_accessor";
 
@@ -47,7 +47,7 @@ function getDescription(dataset: APIDatasetType) {
 
   return (
     <div>
-      <p>Scale: {TemplateHelpers.formatScale(dataset.dataSource.scale)}</p>
+      <p>Scale: {formatScale(dataset.dataSource.scale)}</p>
       {freeTextDescription}
     </div>
   );
@@ -104,7 +104,7 @@ class DatasetPanel extends React.PureComponent<Props, State> {
   }
 
   handleClick = () => {
-    this.setState({ showLessContent: !this.state.showLessContent });
+    this.setState(prevState => ({ showLessContent: !prevState.showLessContent }));
   };
 
   renderCard = (dataset: APIDatasetType) => (

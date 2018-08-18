@@ -4,7 +4,7 @@ import * as React from "react";
 import { Row, Col, Spin, Table, Card } from "antd";
 import moment from "moment";
 import Request from "libs/request";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import { Chart } from "react-google-charts";
 
 const { Column } = Table;

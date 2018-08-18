@@ -1,6 +1,7 @@
 // @flow
 import Model from "oxalis/model";
-import { take, _takeEvery, select, call, type Saga } from "oxalis/model/sagas/effect-generators";
+import { take, _takeEvery, select, call } from "oxalis/model/sagas/effect-generators";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { editAnnotation } from "admin/admin_rest_api";
 import type { EditableAnnotationType } from "admin/admin_rest_api";
 import messages from "messages";

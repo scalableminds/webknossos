@@ -158,7 +158,8 @@ export type APITaskTypeType = {
   +id: string,
   +summary: string,
   +description: string,
-  +team: string,
+  +teamId: string,
+  +teamName: string,
   +settings: APISettingsType,
 };
 

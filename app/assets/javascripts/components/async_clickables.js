@@ -42,6 +42,7 @@ export class AsyncLink extends React.PureComponent<Props & { children: React.Nod
   static defaultProps = {
     children: [],
   };
+
   state = { isLoading: false };
 
   componentDidMount() {

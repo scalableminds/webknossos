@@ -72,7 +72,7 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
   }
 
   recordModified = (record): boolean =>
-    record.value === this.props.selectedUser.experiences[record.domain];
+    record.value !== this.props.selectedUser.experiences[record.domain];
 
   render() {
     if (!this.props.visible) {
@@ -125,7 +125,7 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
                     type="minus"
                     className={
                       record.removed
-                        ? "clickable-icon disabled-icon"
+                        ? "clickable-icon disabled-icon disabled-clickable-icon"
                         : "clickable-icon active-icon hoverable-icon"
                     }
                     onClick={
@@ -174,7 +174,7 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
                     type="plus"
                     className={
                       record.removed
-                        ? "clickable-icon disabled-icon"
+                        ? "clickable-icon disabled-icon disabled-clickable-icon"
                         : "clickable-icon active-icon hoverable-icon"
                     }
                     style={{ marginLeft: 5 }}
@@ -199,16 +199,21 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
                     }
                   />
                   {this.recordModified(record) ? (
-                    <Icon style={{ marginLeft: 21, color: "rgba(0, 0, 0, 0)" }} type="rollback" />
-                  ) : (
                     <Tooltip placement="top" title="Revert Changes">
                       <Icon
                         style={
                           record.removed
-                            ? { marginLeft: 15, color: "rgba(0, 0, 0, 0.25)" }
+                            ? {
+                                marginLeft: 15,
+                                color: "rgba(0, 0, 0, 0.25)",
+                              }
                             : { marginLeft: 15 }
                         }
-                        className="hoverable-icon clickable-icon"
+                        className={
+                          record.removed
+                            ? "disabled-clickable-icon"
+                            : "hoverable-icon clickable-icon"
+                        }
                         type="rollback"
                         onClick={
                           record.removed
@@ -231,6 +236,8 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
                         }
                       />
                     </Tooltip>
+                  ) : (
+                    <Icon style={{ marginLeft: 21, color: "rgba(0, 0, 0, 0)" }} type="rollback" />
                   )}
                 </span>
               );
@@ -293,6 +300,7 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
             }}
           />
         </Table>
+        <span> Add a Domain </span>
       </Modal>
     );
   }

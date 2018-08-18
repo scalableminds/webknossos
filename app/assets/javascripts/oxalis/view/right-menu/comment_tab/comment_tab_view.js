@@ -6,7 +6,7 @@
 import _ from "lodash";
 import * as React from "react";
 import Maybe from "data.maybe";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import update from "immutability-helper";
 import Store from "oxalis/store";
 import { connect } from "react-redux";
@@ -88,6 +88,16 @@ type CommentTabStateType = {
 class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
   listRef: ?List;
 
+  state = {
+    isSortedAscending: true,
+    sortBy: SortByEnum.NAME,
+    data: [],
+    // TODO: Remove once https://github.com/yannickcr/eslint-plugin-react/issues/1751 is merged
+    // eslint-disable-next-line react/no-unused-state
+    collapsedTreeIds: {},
+    isMarkdownModalVisible: false,
+  };
+
   static getDerivedStateFromProps(
     props: Props,
     state: CommentTabStateType,
@@ -106,16 +116,6 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
 
     return { data };
   }
-
-  state = {
-    isSortedAscending: true,
-    sortBy: SortByEnum.NAME,
-    data: [],
-    // TODO: Remove once https://github.com/yannickcr/eslint-plugin-react/issues/1751 is merged
-    // eslint-disable-next-line react/no-unused-state
-    collapsedTreeIds: {},
-    isMarkdownModalVisible: false,
-  };
 
   componentDidMount() {
     this.storePropertyUnsubscribers.push(

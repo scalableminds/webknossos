@@ -1,10 +1,9 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-/* eslint-disable import/first */
 // @flow
-import { resetDatabase, replaceVolatileValues } from "../enzyme/e2e-setup";
 import test from "ava";
-import * as api from "admin/admin_rest_api";
 import _ from "lodash";
+import { resetDatabase, replaceVolatileValues } from "test/enzyme/e2e-setup";
+import * as api from "admin/admin_rest_api";
 
 test.before("Reset database", async () => {
   resetDatabase();

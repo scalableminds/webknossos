@@ -2,7 +2,7 @@
 /* eslint-disable prefer-default-export */
 import type { Vector3, Vector6 } from "oxalis/constants";
 import * as React from "react";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import _ from "lodash";
 import { Input } from "antd";
 import type { ServerBoundingBoxTypeTuple } from "admin/api_flow_types";
@@ -68,11 +68,13 @@ class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>,
         });
       }
     } else {
-      const fallbackValue = this.makeInvalidValueValid(this.state.text);
-      this.props.onChange(fallbackValue);
-      this.setState({
-        isValid: true,
-        text: fallbackValue.join(", "),
+      this.setState(prevState => {
+        const fallbackValue = this.makeInvalidValueValid(prevState.text);
+        this.props.onChange(fallbackValue);
+        return {
+          isValid: true,
+          text: fallbackValue.join(", "),
+        };
       });
     }
   };

@@ -5,7 +5,7 @@
 
 import _ from "lodash";
 import app from "app";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 import { V3 } from "libs/mjs";

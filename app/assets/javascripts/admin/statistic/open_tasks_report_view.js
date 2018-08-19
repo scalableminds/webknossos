@@ -1,7 +1,7 @@
 // @flow
 import * as React from "react";
 import { Spin, Table, Card } from "antd";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import { getOpenTasksReport } from "admin/admin_rest_api";
 import type { APIOpenTasksReportType } from "admin/api_flow_types";
 import { handleGenericError } from "libs/error_handling";

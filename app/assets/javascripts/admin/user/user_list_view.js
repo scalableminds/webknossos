@@ -9,8 +9,8 @@ import { Link, withRouter } from "react-router-dom";
 import { Table, Tag, Icon, Spin, Button, Input, Modal, Alert, Row, Col, Tooltip } from "antd";
 import TeamRoleModalView from "admin/user/team_role_modal_view";
 import ExperienceModalView from "admin/user/experience_modal_view";
-import TemplateHelpers from "libs/template_helpers";
-import Utils from "libs/utils";
+import { stringToColor } from "libs/format_utils";
+import * as Utils from "libs/utils";
 import { getEditableUsers, updateUser } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
@@ -92,21 +92,21 @@ class UserListView extends React.PureComponent<Props, State> {
   }
 
   activateUser = (selectedUser: APIUserType, isActive: boolean = true): void => {
-    const newUsers = this.state.users.map(user => {
-      if (selectedUser.id === user.id) {
-        const newUser = Object.assign({}, user, { isActive });
+    this.setState(prevState => {
+      const newUsers = prevState.users.map(user => {
+        if (selectedUser.id === user.id) {
+          const newUser = Object.assign({}, user, { isActive });
+          updateUser(newUser);
+          return newUser;
+        }
+        return user;
+      });
 
-        updateUser(newUser);
-        return newUser;
-      }
-
-      return user;
-    });
-
-    this.setState({
-      users: newUsers,
-      selectedUserIds: [selectedUser.id],
-      isTeamRoleModalVisible: isActive,
+      return {
+        users: newUsers,
+        selectedUserIds: [selectedUser.id],
+        isTeamRoleModalVisible: isActive,
+      };
     });
   };
 
@@ -115,18 +115,20 @@ class UserListView extends React.PureComponent<Props, State> {
   };
 
   changeEmail = (selectedUser: APIUserType, newEmail: string): void => {
-    const newUsers = this.state.users.map(user => {
-      if (selectedUser.id === user.id) {
-        const newUser = Object.assign({}, user, { email: newEmail });
-        updateUser(newUser);
-        return newUser;
-      }
-      return user;
-    });
+    this.setState(prevState => {
+      const newUsers = prevState.users.map(user => {
+        if (selectedUser.id === user.id) {
+          const newUser = Object.assign({}, user, { email: newEmail });
+          updateUser(newUser);
+          return newUser;
+        }
+        return user;
+      });
 
-    this.setState({
-      users: newUsers,
-      selectedUserIds: [selectedUser.id],
+      return {
+        users: newUsers,
+        selectedUserIds: [selectedUser.id],
+      };
     });
     Toast.success(messages["users.change_email_confirmation"]);
 
@@ -408,10 +410,7 @@ class UserListView extends React.PureComponent<Props, State> {
                   return teams.map(team => {
                     const roleName = team.isTeamManager ? "Team Manager" : "User";
                     return (
-                      <Tag
-                        key={`team_role_${user.id}_${team.id}`}
-                        color={TemplateHelpers.stringToColor(roleName)}
-                      >
+                      <Tag key={`team_role_${user.id}_${team.id}`} color={stringToColor(roleName)}>
                         {team.name}: {roleName}
                       </Tag>
                     );

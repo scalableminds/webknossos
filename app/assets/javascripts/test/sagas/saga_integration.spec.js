@@ -8,7 +8,7 @@ import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
 import { generateTreeName } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { enforceSkeletonTracing, getStats } from "oxalis/model/accessors/skeletontracing_accessor";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import generateDummyTrees from "oxalis/model/helpers/generate_dummy_trees";
 import { maximumActionCountPerBatch } from "oxalis/model/sagas/save_saga";
 

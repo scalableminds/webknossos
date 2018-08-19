@@ -1,7 +1,7 @@
 // @flow
 import * as React from "react";
 import { Icon, Spin, Table, Card } from "antd";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import Loop from "components/loop";
 import { getProjectProgressReport } from "admin/admin_rest_api";
 import type { APIProjectProgressReportType, APITeamType } from "admin/api_flow_types";
@@ -61,12 +61,15 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
       this.fetchData();
     });
   };
+
   handleOpenSettings = () => {
     this.setState({ areSettingsVisible: true });
   };
+
   handleReload = () => {
     this.fetchData();
   };
+
   handleAutoReload = () => {
     this.fetchData(true);
   };

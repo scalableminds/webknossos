@@ -8,7 +8,7 @@ import Request from "libs/request";
 import { AsyncButton } from "components/async_clickables";
 import { Button, Modal, Tag, Icon, Card, Row, Col, List } from "antd";
 import Markdown from "react-remarkable";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import Toast from "libs/toast";
 import messages from "messages";
 import TransferTaskModal from "dashboard/transfer_task_modal";
@@ -115,18 +115,20 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     Modal.confirm({
       content: messages["annotation.finish"],
       onOk: async () => {
-        const annotation = task.annotation;
+        const { annotation } = task;
 
         const changedAnnotationWithTask = await finishTask(annotation.id);
 
         const changedTask = convertAnnotationToTaskWithAnnotationType(changedAnnotationWithTask);
 
-        const newUnfinishedTasks = this.state.unfinishedTasks.filter(t => t.id !== task.id);
-        const newFinishedTasks = [changedTask].concat(this.state.finishedTasks);
+        this.setState(prevState => {
+          const newUnfinishedTasks = prevState.unfinishedTasks.filter(t => t.id !== task.id);
+          const newFinishedTasks = [changedTask].concat(prevState.finishedTasks);
 
-        this.setState({
-          unfinishedTasks: newUnfinishedTasks,
-          finishedTasks: newFinishedTasks,
+          return {
+            unfinishedTasks: newUnfinishedTasks,
+            finishedTasks: newFinishedTasks,
+          };
         });
       },
     });
@@ -154,7 +156,10 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   }
 
   toggleShowFinished = () => {
-    this.setState({ showFinishedTasks: !this.state.showFinishedTasks }, () => this.fetchData());
+    this.setState(
+      prevState => ({ showFinishedTasks: !prevState.showFinishedTasks }),
+      () => this.fetchData(),
+    );
   };
 
   openTransferModal(annotationId: string) {
@@ -165,7 +170,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   }
 
   renderActions = (task: APITaskWithAnnotationType) => {
-    const annotation = task.annotation;
+    const { annotation } = task;
     const isAdmin =
       this.props.activeUser.isAdmin ||
       this.props.activeUser.teams
@@ -242,15 +247,15 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
       onOk: async () => {
         await deleteAnnotation(annotationId, annotation.typ);
         if (wasFinished) {
-          this.setState({
-            finishedTasks: this.state.finishedTasks.filter(t => t.annotation.id !== annotationId),
-          });
+          this.setState(prevState => ({
+            finishedTasks: prevState.finishedTasks.filter(t => t.annotation.id !== annotationId),
+          }));
         } else {
-          this.setState({
-            unfinishedTasks: this.state.unfinishedTasks.filter(
+          this.setState(prevState => ({
+            unfinishedTasks: prevState.unfinishedTasks.filter(
               t => t.annotation.id !== annotationId,
             ),
-          });
+          }));
         }
       },
     });
@@ -281,11 +286,11 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     try {
       const newTaskAnnotation = await requestTask();
 
-      this.setState({
-        unfinishedTasks: this.state.unfinishedTasks.concat([
+      this.setState(prevState => ({
+        unfinishedTasks: prevState.unfinishedTasks.concat([
           convertAnnotationToTaskWithAnnotationType(newTaskAnnotation),
         ]),
-      });
+      }));
     } catch (ex) {
       // catch exception so that promise does not fail and the modal will close
     } finally {
@@ -296,17 +301,23 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   handleTransferredTask() {
     this.setState({ isTransferModalVisible: false });
 
-    const removeTransferredTask = tasks =>
-      tasks.filter(t => t.annotation.id !== this.state.currentAnnotationId);
+    const removeTransferredTask = (tasks, currentAnnotationId) =>
+      tasks.filter(t => t.annotation.id !== currentAnnotationId);
 
     if (this.state.showFinishedTasks) {
-      this.setState({
-        finishedTasks: removeTransferredTask(this.state.finishedTasks),
-      });
+      this.setState(prevState => ({
+        finishedTasks: removeTransferredTask(
+          prevState.finishedTasks,
+          prevState.currentAnnotationId,
+        ),
+      }));
     } else {
-      this.setState({
-        unfinishedTasks: removeTransferredTask(this.state.unfinishedTasks),
-      });
+      this.setState(prevState => ({
+        unfinishedTasks: removeTransferredTask(
+          prevState.unfinishedTasks,
+          prevState.currentAnnotationId,
+        ),
+      }));
     }
   }
 

@@ -5,7 +5,7 @@ import constants, { OrthoViews } from "oxalis/constants";
 import Maybe from "data.maybe";
 import Dimensions from "oxalis/model/dimensions";
 import * as scaleInfo from "oxalis/model/scaleinfo";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4 } from "libs/mjs";
 import * as THREE from "three";

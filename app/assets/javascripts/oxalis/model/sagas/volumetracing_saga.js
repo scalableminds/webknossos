@@ -11,8 +11,8 @@ import {
   race,
   _takeEvery,
   fork,
-  type Saga,
 } from "oxalis/model/sagas/effect-generators";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
 import {
   updateDirectionAction,
   resetContourAction,

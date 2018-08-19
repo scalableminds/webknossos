@@ -49,7 +49,11 @@ class ExperienceModalView2 extends React.PureComponent<Props, State> {
 
   componentWillReceiveProps(nextProps: Props) {
     if (nextProps.visible && !this.props.visible) {
-      this.setState({ sharedExperiencesEntries: this.loadTableEntries(), enteredExperience: [] });
+      this.setState({
+        sharedExperiencesEntries: this.loadTableEntries(),
+        enteredExperience: [],
+        changeEntries: [],
+      });
     }
   }
 

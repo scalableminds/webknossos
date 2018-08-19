@@ -8,7 +8,7 @@ import { connect } from "react-redux";
 import { Link, withRouter } from "react-router-dom";
 import { Table, Tag, Icon, Spin, Button, Input, Modal, Alert, Row, Col, Tooltip } from "antd";
 import TeamRoleModalView from "admin/user/team_role_modal_view";
-import ExperienceModalView from "admin/user/experience_modal_view";
+import ExperienceModalView2 from "admin/user/experience_modal_view_2";
 import SingleUserExperienceModalView from "admin/user/single_user_experience_modal_view";
 import { stringToColor } from "libs/format_utils";
 import * as Utils from "libs/utils";
@@ -155,6 +155,11 @@ class UserListView extends React.PureComponent<Props, State> {
     this.fetchData();
   };
 
+  closeExperienceModal = (): void => {
+    this.setState({ isExperienceModalVisible: false });
+    this.fetchData();
+  };
+
   handleSearch = (event: SyntheticInputEvent<>): void => {
     this.setState({ searchQuery: event.target.value });
   };
@@ -250,6 +255,12 @@ class UserListView extends React.PureComponent<Props, State> {
   getOnliestSelectedUser() {
     if (this.state.selectedUserIds.length === 1) {
       return this.state.users.find(user => user.id === this.state.selectedUserIds[0]);
+    } else return null;
+  }
+
+  getAllSelectedUsers(): Array<APIUserType> {
+    if (this.state.selectedUserIds.length > 0) {
+      return this.state.users.filter(user => this.state.selectedUserIds.includes(user.id));
     } else return null;
   }
 
@@ -485,13 +496,14 @@ class UserListView extends React.PureComponent<Props, State> {
             />
           </Table>
         </Spin>
-        <ExperienceModalView
-          visible={this.state.isExperienceModalVisible}
-          selectedUserIds={this.state.selectedUserIds}
-          users={this.state.users}
-          onChange={this.handleUsersChange}
-          onCancel={() => this.setState({ isExperienceModalVisible: false })}
-        />
+        {hasRowsSelected ? (
+          <ExperienceModalView2
+            visible={this.state.isExperienceModalVisible}
+            selectedUsers={this.getAllSelectedUsers()}
+            onClose={this.closeExperienceModal}
+            onCancel={() => this.setState({ isExperienceModalVisible: false })}
+          />
+        ) : null}
         {selectedUser ? (
           <SingleUserExperienceModalView
             visible={this.state.isSingleUserExperienceModalVisible}

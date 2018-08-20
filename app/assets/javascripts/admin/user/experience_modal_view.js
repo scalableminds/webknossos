@@ -252,11 +252,22 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
   };
 
   addEnteredExperiences = (removed: boolean) => {
-    const newExperiences = this.state.enteredExperience.map(entry => ({
-      domain: entry,
-      value: 1,
-      removed,
-    }));
+    const newExperiences = this.state.enteredExperience.map(entry => {
+      if (
+        this.state.sharedExperiencesEntries.filter(experience => experience.domain === entry)
+          .length <= 0
+      ) {
+        Toast.warning(
+          "The experience domain you selected is not owned by all of the selected users. Changing, increasing or deleting the domain will affect all selected users.",
+          { timeout: 8000 },
+        );
+      }
+      return {
+        domain: entry,
+        value: 1,
+        removed,
+      };
+    });
     this.setState(prevState => ({
       changeEntries: _.sortBy(
         _.concat(prevState.changeEntries, newExperiences),

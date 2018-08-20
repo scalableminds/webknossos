@@ -5,7 +5,7 @@ import * as React from "react";
 import { Modal, Button, Tooltip, Icon, Table, InputNumber } from "antd";
 import Toast from "libs/toast";
 import { updateUser } from "admin/admin_rest_api";
-import type { APIUserType } from "admin/api_flow_types";
+import type { APIUserType, ExperienceDomainListType } from "admin/api_flow_types";
 import SelectExperienceDomainView from "components/select_experience_domain_view";
 
 const { Column } = Table;
@@ -104,19 +104,21 @@ class ExperienceModalView2 extends React.PureComponent<Props, State> {
       const newUser = { ...user };
       this.state.changeEntries.forEach(entry => {
         if (entry.removed) return;
-        if (entry.domain in newUser.experiences) {
-          newUser.experiences[entry.domain] += entry.value;
+        const newExperiences = { ...newUser.experiences };
+        if (entry.domain in newExperiences) {
+          newExperiences[entry.domain] += entry.value;
         } else {
-          newUser.experiences[entry.domain] = entry.value;
+          newExperiences[entry.domain] = entry.value;
         }
-        if (newUser.experiences[entry.domain] < 1) {
+        if (newExperiences[entry.domain] < 1) {
           Toast.warning(
             `User ${user.lastName}, ${user.firstName} would have a negative Experience at ${
               entry.domain
             }. Fallback to value 1 is executed.`,
           );
-          newUser.experiences[entry.domain] = 1;
+          newExperiences[entry.domain] = 1;
         }
+        newUser.experiences = newExperiences;
       });
       return this.sendUserToServer(newUser, user);
     });
@@ -128,7 +130,9 @@ class ExperienceModalView2 extends React.PureComponent<Props, State> {
       const newUser = { ...user };
       this.state.changeEntries.forEach(entry => {
         if (entry.removed) return;
-        newUser.experiences[entry.domain] = entry.value;
+        const newExperiences = { ...newUser.experiences };
+        newExperiences[entry.domain] = entry.value;
+        newUser.experiences = newExperiences;
       });
       return this.sendUserToServer(newUser, user);
     });

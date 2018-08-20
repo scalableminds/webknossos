@@ -261,7 +261,7 @@ class UserListView extends React.PureComponent<Props, State> {
   getAllSelectedUsers(): Array<APIUserType> {
     if (this.state.selectedUserIds.length > 0) {
       return this.state.users.filter(user => this.state.selectedUserIds.includes(user.id));
-    } else return null;
+    } else return [];
   }
 
   render() {

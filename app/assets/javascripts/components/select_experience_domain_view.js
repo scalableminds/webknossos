@@ -1,4 +1,3 @@
-import _ from "lodash";
 import * as React from "react";
 import { Select } from "antd";
 import type { ExperienceDomainListType } from "admin/api_flow_types";

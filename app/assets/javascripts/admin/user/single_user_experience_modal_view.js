@@ -5,7 +5,7 @@ import * as React from "react";
 import { Modal, Button, Tooltip, Icon, Table, InputNumber } from "antd";
 import Toast from "libs/toast";
 import { updateUser } from "admin/admin_rest_api";
-import type { APIUserType } from "admin/api_flow_types";
+import type { APIUserType, ExperienceDomainListType } from "admin/api_flow_types";
 import { handleGenericError } from "libs/error_handling";
 import SelectExperienceDomainView from "components/select_experience_domain_view";
 

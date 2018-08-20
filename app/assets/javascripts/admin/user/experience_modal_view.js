@@ -2,11 +2,12 @@
 
 import _ from "lodash";
 import * as React from "react";
-import { Modal, Button, Tooltip, Icon, Table, InputNumber } from "antd";
+import { Modal, Button, Tooltip, Icon, Table } from "antd";
 import Toast from "libs/toast";
 import { updateUser } from "admin/admin_rest_api";
 import type { APIUserType, ExperienceDomainListType } from "admin/api_flow_types";
-import SelectExperienceDomainView from "components/select_experience_domain_view";
+import SelectExperienceDomain from "components/select_experience_domain";
+import ExperienceEditingTable, { ExperienceTableEntry } from "admin/user/experience_editing_table";
 
 const { Column } = Table;
 
@@ -15,12 +16,6 @@ type SharedTableEntry = {
   value: number,
   lowestValue: number,
   highestValue: number,
-};
-
-type ChangingTableEntry = {
-  domain: string,
-  value: number,
-  removed: boolean,
 };
 
 type Props = {
@@ -32,7 +27,7 @@ type Props = {
 
 type State = {
   sharedExperiencesEntries: Array<SharedTableEntry>,
-  changeEntries: Array<ChangingTableEntry>,
+  changeEntries: Array<ExperienceTableEntry>,
   enteredExperience: Array<string>,
 };
 
@@ -173,11 +168,11 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     );
   }
 
-  validateEntry(entry: ChangingTableEntry): boolean {
+  validateEntry(entry: ExperienceTableEntry): boolean {
     return entry.removed || entry.domain.length > 2;
   }
 
-  validateDomainAndValues(tableData: Array<ChangingTableEntry>) {
+  validateDomainAndValues(tableData: Array<ExperienceTableEntry>) {
     if (tableData.length <= 0) return false;
     let isValid = true;
     tableData.forEach(entry => {
@@ -187,18 +182,20 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
   }
 
   setValueOfEntry = (index: number, value: number) => {
-    this.setState(prevState => ({
-      changeEntries: prevState.changeEntries.map((entry, currentIndex) => {
-        if (currentIndex === index) {
-          return {
-            ...entry,
-            value,
-          };
-        } else {
-          return entry;
-        }
-      }),
-    }));
+    if (value > 0) {
+      this.setState(prevState => ({
+        changeEntries: prevState.changeEntries.map((entry, currentIndex) => {
+          if (currentIndex === index) {
+            return {
+              ...entry,
+              value,
+            };
+          } else {
+            return entry;
+          }
+        }),
+      }));
+    }
   };
 
   setRemoveOfEntryTo = (index: number, removed: boolean) => {
@@ -214,6 +211,20 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
         }
       }),
     }));
+  };
+
+  removeEntryFromTable = index => {
+    console.log(index);
+    this.setState(prevState => ({
+      changeEntries: prevState.changeEntries.filter(entry => {
+        console.log(
+          `${entry.domain} !== ${prevState.changeEntries[index].domain} => ${entry.index !==
+            prevState.changeEntries[index].domain}`,
+        );
+        return entry.domain !== prevState.changeEntries[index].domain;
+      }),
+    }));
+    console.log(this.state.changeEntries);
   };
 
   handleExperienceSelected = (domain: string) => {
@@ -275,7 +286,6 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     const sharedExperiencesEntries = this.state.sharedExperiencesEntries;
     const changeEntries = this.state.changeEntries;
     const isValid = this.validateDomainAndValues(changeEntries);
-    const hasNegativeEntries = this.hasEntriesWithNegativeValue();
     return (
       <Modal
         className="experience-change-modal"
@@ -285,26 +295,8 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
         width={800}
         footer={
           <div>
-            <Button
-              className="confirm-button"
-              onClick={this.increaseUsersExperiences}
-              disabled={!isValid}
-            >
-              {"Increase Users' Experiences"}
-            </Button>
-            <Button
-              className="confirm-button"
-              onClick={this.setUsersExperiences}
-              disabled={!isValid || hasNegativeEntries}
-            >
-              {"Set Users' Experiences"}
-            </Button>
-            <Button
-              className="confirm-button"
-              onClick={this.removeUsersExperiences}
-              disabled={!isValid || hasNegativeEntries}
-            >
-              {"Remove Users' Experiences"}
+            <Button type="primary" onClick={this.updateUsersExperiences} disabled={!isValid}>
+              Submit Changes
             </Button>
             <Button onClick={() => this.props.onCancel()}>Cancel</Button>
           </div>
@@ -331,64 +323,17 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
             }
           />
         </Table>
-        <Table
-          title={() => "Changes"}
-          size="small"
-          dataSource={changeEntries}
-          rowKey="domain"
-          pagination={false}
-          scroll={changeEntries.length > 0 ? { y: 200 } : {}}
-          className="user-experience-table"
-        >
-          <Column
-            title="Experience Domain"
-            key="domain"
-            width="35%"
-            render={record =>
-              record.removed ? <div className="disabled">{record.domain}</div> : record.domain
-            }
-          />
-          <Column
-            title="Experience Value"
-            key="value"
-            width="45%"
-            render={record => {
-              const index = changeEntries.findIndex(entry => entry.domain === record.domain);
-              return (
-                <span>
-                  <InputNumber
-                    disabled={record.removed}
-                    value={changeEntries[index].value}
-                    onChange={value => this.setValueOfEntry(index, value)}
-                  />
-                </span>
-              );
-            }}
-          />
-          <Column
-            title="Delete Entry"
-            key="removed"
-            width="20%"
-            render={record => {
-              const index = changeEntries.findIndex(entry => entry.domain === record.domain);
-              return (
-                <span>
-                  {record.removed ? (
-                    <Tooltip placement="top" title="Undo">
-                      <Icon type="rollback" onClick={() => this.setRemoveOfEntryTo(index, false)} />
-                    </Tooltip>
-                  ) : (
-                    <Tooltip placement="top" title="Delete this Domain">
-                      <Icon type="delete" onClick={() => this.setRemoveOfEntryTo(index, true)} />
-                    </Tooltip>
-                  )}
-                </span>
-              );
-            }}
-          />
-        </Table>
+        <ExperienceEditingTable
+          tableData={changeEntries}
+          isMultipleUsersEditing
+          setValueOfEntry={this.setValueOfEntry}
+          recordModifiedAndExistedBefore={() => false}
+          revertChangesOfEntry={() => {}}
+          setRemoveOfEntryTo={this.setRemoveOfEntryTo}
+          removeEntryFromTable={this.removeEntryFromTable}
+        />
         <span>
-          <SelectExperienceDomainView
+          <SelectExperienceDomain
             disabled={false}
             value={this.state.enteredExperience}
             onSelect={this.handleExperienceSelected}

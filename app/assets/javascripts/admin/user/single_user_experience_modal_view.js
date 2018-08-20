@@ -2,20 +2,13 @@
 
 import _ from "lodash";
 import * as React from "react";
-import { Modal, Button, Tooltip, Icon, Table, InputNumber } from "antd";
+import { Modal, Button, Tooltip, Icon } from "antd";
 import Toast from "libs/toast";
 import { updateUser } from "admin/admin_rest_api";
 import type { APIUserType, ExperienceDomainListType } from "admin/api_flow_types";
 import { handleGenericError } from "libs/error_handling";
-import SelectExperienceDomainView from "components/select_experience_domain_view";
-
-const { Column } = Table;
-
-type TableEntry = {
-  domain: string,
-  value: number,
-  removed: boolean,
-};
+import SelectExperienceDomain from "components/select_experience_domain";
+import ExperienceEditingTable, { ExperienceTableEntry } from "admin/user/experience_editing_table";
 
 type Props = {
   onClose: Function,
@@ -25,7 +18,7 @@ type Props = {
 };
 
 type State = {
-  experienceEntries: Array<TableEntry>,
+  experienceEntries: Array<ExperienceTableEntry>,
   enteredExperience: Array<string>,
 };
 
@@ -41,7 +34,7 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
     }
   }
 
-  loadTableEntries = (): Array<TableEntry> =>
+  loadTableEntries = (): Array<ExperienceTableEntry> =>
     _.sortBy(
       _.map(this.props.selectedUser.experiences, (value, domain) => ({
         domain,
@@ -67,11 +60,11 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
     }
   };
 
-  validateEntry(entry: TableEntry): boolean {
+  validateEntry(entry: ExperienceTableEntry): boolean {
     return entry.removed || (entry.domain.length > 2 && entry.value > 0);
   }
 
-  validateDomainAndValues(tableData: Array<TableEntry>) {
+  validateDomainAndValues(tableData: Array<ExperienceTableEntry>) {
     let isValid = true;
     tableData.forEach(entry => {
       if (isValid) isValid = this.validateEntry(entry);
@@ -79,7 +72,7 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
     return isValid;
   }
 
-  recordModifiedAndExistedBefore = (record: TableEntry): boolean =>
+  recordModifiedAndExistedBefore = (record: ExperienceTableEntry): boolean =>
     record.value !== this.props.selectedUser.experiences[record.domain] &&
     record.domain in this.props.selectedUser.experiences;
 
@@ -183,95 +176,27 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
         visible={this.props.visible}
         onCancel={this.props.onCancel}
         width={800}
+        maskClosable={false}
         footer={
           <div>
             <Button type="primary" onClick={this.updateUsersExperiences} disabled={!isValid}>
-              Update Experience
+              Submit Changes
             </Button>
             <Button onClick={() => this.props.onCancel()}>Cancel</Button>
           </div>
         }
       >
-        <Table
-          size="small"
-          dataSource={tableData}
-          rowKey="domain"
-          pagination={false}
-          scroll={{ y: 300 }}
-          className="user-experience-table"
-        >
-          <Column
-            title="Experience Domain"
-            key="domain"
-            width="35%"
-            render={record =>
-              record.removed ? <div className="disabled">{record.domain}</div> : record.domain
-            }
-          />
-          <Column
-            title="Experience Value"
-            key="value"
-            width="45%"
-            render={record => {
-              const index = tableData.findIndex(entry => entry.domain === record.domain);
-              return (
-                <span>
-                  <InputNumber
-                    disabled={record.removed}
-                    value={tableData[index].value}
-                    onChange={value => this.setValueOfEntry(index, value)}
-                  />
-                  {this.recordModifiedAndExistedBefore(record) ? (
-                    <Tooltip placement="top" title="Revert Changes">
-                      <Icon
-                        style={
-                          record.removed
-                            ? {
-                                marginLeft: 15,
-                                color: "rgba(0, 0, 0, 0.25)",
-                              }
-                            : { marginLeft: 15 }
-                        }
-                        className={
-                          record.removed
-                            ? "disabled-clickable-icon"
-                            : "hoverable-icon clickable-icon"
-                        }
-                        type="rollback"
-                        onClick={record.removed ? null : () => this.revertChangesOfEntry(index)}
-                      />
-                    </Tooltip>
-                  ) : (
-                    <Icon style={{ marginLeft: 21 }} className="invisible-icon" type="rollback" />
-                  )}
-                </span>
-              );
-            }}
-          />
-          <Column
-            title="Delete Entry"
-            key="removed"
-            width="20%"
-            render={record => {
-              const index = tableData.findIndex(entry => entry.domain === record.domain);
-              return (
-                <span>
-                  {record.removed ? (
-                    <Tooltip placement="top" title="Undo">
-                      <Icon type="rollback" onClick={() => this.setRemoveOfEntryTo(index, false)} />
-                    </Tooltip>
-                  ) : (
-                    <Tooltip placement="top" title="Delete this Domain">
-                      <Icon type="delete" onClick={() => this.setRemoveOfEntryTo(index, true)} />
-                    </Tooltip>
-                  )}
-                </span>
-              );
-            }}
-          />
-        </Table>
+        <ExperienceEditingTable
+          tableData={tableData}
+          isMultipleUsersEditing={false}
+          setValueOfEntry={this.setValueOfEntry}
+          recordModifiedAndExistedBefore={this.recordModifiedAndExistedBefore}
+          revertChangesOfEntry={this.revertChangesOfEntry}
+          setRemoveOfEntryTo={this.setRemoveOfEntryTo}
+          removeEntryFromTable={() => {}}
+        />
         <span>
-          <SelectExperienceDomainView
+          <SelectExperienceDomain
             disabled={false}
             value={this.state.enteredExperience}
             onSelect={this.handleExperienceSelected}

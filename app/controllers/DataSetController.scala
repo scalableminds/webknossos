@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import javax.inject.Inject
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.mvc.Filter
@@ -104,6 +105,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
     val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
     for {
       dataSet <- DataSetDAO.findOneByName(dataSetName)(ctx) ?~> Messages("dataSet.notFound", dataSetName)
+      _ <- Fox.runOptional(request.identity)(user => DataSetLastUsedTimesDAO.updateForDataSetAndUser(dataSet._id, user._id))
       js <- dataSet.publicWrites(request.identity)
     } yield {
       Ok(Json.toJson(js))
@@ -165,6 +167,13 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
 
   def create(typ: String) = SecuredAction.async(parse.json) { implicit request =>
     Future.successful(JsonBadRequest(Messages("dataSet.type.invalid", typ)))
+  }
+
+  def isValidNewName(dataSetName: String) = SecuredAction.async { implicit request =>
+    for {
+      _ <- bool2Fox(DataSetService.isProperDataSetName(dataSetName)) ?~> Messages("dataSet.name.invalid")
+      _ <- DataSetService.assertNewDataSetName(dataSetName)(GlobalAccessContext) ?~> Messages("dataSet.name.alreadyTaken")
+    } yield Ok
   }
 
 }

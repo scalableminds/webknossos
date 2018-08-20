@@ -3,17 +3,17 @@
  * @flow
  */
 
-/* eslint-disable import/no-extraneous-dependencies, import/first */
+/* eslint-disable import/no-extraneous-dependencies */
 import test from "ava";
-import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import mockRequire from "mock-require";
 import _ from "lodash";
 import { OrthoViews, VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
 import update from "immutability-helper";
-import { take, put, race, call } from "redux-saga/effects";
+import { take, put, call } from "redux-saga/effects";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
 import { pushSaveQueueAction } from "oxalis/model/actions/save_actions";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
+import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import { withoutUpdateTracing } from "../helpers/saveHelpers";
 
 const mockedVolumeLayer = {
@@ -28,7 +28,7 @@ mockRequire("oxalis/model/sagas/root_saga", function*() {
   yield;
 });
 
-const { saveTracingAsync } = require("oxalis/model/sagas/save_saga");
+const { saveTracingTypeAsync } = require("oxalis/model/sagas/save_saga");
 const { editVolumeLayerAsync, finishLayer } = require("oxalis/model/sagas/volumetracing_saga");
 const VolumeLayer = require("oxalis/model/volumetracing/volumelayer").default;
 const { defaultState } = require("oxalis/store");
@@ -54,7 +54,7 @@ const volumeTracing = {
 
 const initialState = update(defaultState, {
   tracing: {
-    $set: volumeTracing,
+    volume: { $set: volumeTracing },
   },
 });
 
@@ -66,14 +66,9 @@ const addToLayerActionFn = VolumeTracingActions.addToLayerAction;
 const finishEditingAction = VolumeTracingActions.finishEditingAction();
 const resetContourAction = VolumeTracingActions.resetContourAction();
 
-const INIT_RACE_ACTION_OBJECT = {
-  initSkeleton: take("INITIALIZE_SKELETONTRACING"),
-  initVolume: take("INITIALIZE_VOLUMETRACING"),
-};
-
 test("VolumeTracingSaga shouldn't do anything if unchanged (saga test)", t => {
-  const saga = saveTracingAsync();
-  expectValueDeepEqual(t, saga.next(), race(INIT_RACE_ACTION_OBJECT));
+  const saga = saveTracingTypeAsync("volume");
+  expectValueDeepEqual(t, saga.next(), take("INITIALIZE_VOLUMETRACING"));
   saga.next({ initVolume: true });
   saga.next(initialState.tracing);
   saga.next();
@@ -88,8 +83,8 @@ test("VolumeTracingSaga shouldn't do anything if unchanged (saga test)", t => {
 test("VolumeTracingSaga should do something if changed (saga test)", t => {
   const newState = VolumeTracingReducer(initialState, setActiveCellAction);
 
-  const saga = saveTracingAsync();
-  expectValueDeepEqual(t, saga.next(), race(INIT_RACE_ACTION_OBJECT));
+  const saga = saveTracingTypeAsync("volume");
+  expectValueDeepEqual(t, saga.next(), take("INITIALIZE_VOLUMETRACING"));
   saga.next({ initVolume: true });
   saga.next(initialState.tracing);
   saga.next();
@@ -99,7 +94,7 @@ test("VolumeTracingSaga should do something if changed (saga test)", t => {
   const items = execCall(t, saga.next(newState.flycam));
   t.is(withoutUpdateTracing(items).length, 0);
   t.true(items[0].value.activeSegmentId === ACTIVE_CELL_ID);
-  expectValueDeepEqual(t, saga.next(items), put(pushSaveQueueAction(items)));
+  expectValueDeepEqual(t, saga.next(items), put(pushSaveQueueAction(items, "volume")));
 });
 
 test("VolumeTracingSaga should create a volume layer (saga test)", t => {

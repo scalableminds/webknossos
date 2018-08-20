@@ -31,6 +31,7 @@ class ScriptCreateView extends React.PureComponent<Props, State> {
   state = {
     users: [],
   };
+
   componentDidMount() {
     this.fetchData();
     this.applyDefaults();

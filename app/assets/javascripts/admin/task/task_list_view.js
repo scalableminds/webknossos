@@ -5,14 +5,13 @@ import _ from "lodash";
 import React from "react";
 import { Link, withRouter } from "react-router-dom";
 import { Table, Tag, Spin, Button, Input, Modal, Icon, Card } from "antd";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import Clipboard from "clipboard-js";
 import Toast from "libs/toast";
 import messages from "messages";
 import TaskSearchForm from "admin/task/task_search_form";
 import { deleteTask, getTasks } from "admin/admin_rest_api";
-import TemplateHelpers from "libs/template_helpers";
-import FormatUtils from "libs/format_utils";
+import { formatTuple, formatSeconds } from "libs/format_utils";
 import TaskAnnotationView from "admin/task/task_annotation_view";
 import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
@@ -92,9 +91,9 @@ class TaskListView extends React.PureComponent<Props, State> {
             isLoading: true,
           });
           await deleteTask(task.id);
-          this.setState({
-            tasks: this.state.tasks.filter(t => t.id !== task.id),
-          });
+          this.setState(prevState => ({
+            tasks: prevState.tasks.filter(t => t.id !== task.id),
+          }));
         } catch (error) {
           handleGenericError(error);
         } finally {
@@ -183,7 +182,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               title="ID"
               dataIndex="id"
               key="id"
-              sorter={Utils.localeCompareBy(typeHint, "id")}
+              sorter={Utils.localeCompareBy(typeHint, task => task.id)}
               className="monospace-id"
             />
             <Column
@@ -191,7 +190,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               dataIndex="projectName"
               key="projectName"
               width={130}
-              sorter={Utils.localeCompareBy(typeHint, "projectName")}
+              sorter={Utils.localeCompareBy(typeHint, task => task.projectName)}
               render={(projectName: string) => (
                 <a href={`/projects#${projectName}`}>{projectName}</a>
               )}
@@ -211,7 +210,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               dataIndex="dataSet"
               key="dataSet"
               width={130}
-              sorter={Utils.localeCompareBy(typeHint, "dataSet")}
+              sorter={Utils.localeCompareBy(typeHint, task => task.dataSet)}
             />
             <Column
               title="Edit Position / Bounding Box"
@@ -220,8 +219,8 @@ class TaskListView extends React.PureComponent<Props, State> {
               width={130}
               render={(__, task: APITaskType) => (
                 <div className="nowrap">
-                  {TemplateHelpers.formatTuple(task.editPosition)} <br />
-                  <span>{TemplateHelpers.formatTuple(task.boundingBoxVec6)}</span>
+                  {formatTuple(task.editPosition)} <br />
+                  <span>{formatTuple(task.boundingBoxVec6)}</span>
                 </div>
               )}
             />
@@ -244,7 +243,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               dataIndex="created"
               key="created"
               width={150}
-              sorter={Utils.localeCompareBy(typeHint, "created")}
+              sorter={Utils.compareBy(typeHint, task => task.created)}
               render={created => <FormattedDate timestamp={created} />}
             />
             <Column
@@ -271,7 +270,7 @@ class TaskListView extends React.PureComponent<Props, State> {
                   <br />
                   <span title="Tracing Time">
                     <Icon type="clock-circle-o" />
-                    {FormatUtils.formatSeconds((task.tracingTime || 0) / 1000)}
+                    {formatSeconds((task.tracingTime || 0) / 1000)}
                   </span>
                 </div>
               )}

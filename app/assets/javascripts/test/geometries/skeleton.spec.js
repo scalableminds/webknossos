@@ -5,12 +5,12 @@
 import test from "ava";
 import mockRequire from "mock-require";
 import _ from "lodash";
+import * as Utils from "libs/utils";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { tracing, annotation } from "../fixtures/skeletontracing_server_objects";
 
 mockRequire.stopAll();
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
-const Utils = mockRequire.reRequire("libs/utils").default;
 const NodeShader = mockRequire.reRequire("oxalis/geometries/materials/node_shader");
 const Store = mockRequire.reRequire("oxalis/store").default;
 const Skeleton = mockRequire.reRequire("oxalis/geometries/skeleton").default;
@@ -22,6 +22,9 @@ const {
   setNodeRadiusAction,
   initializeSkeletonTracingAction,
 } = mockRequire.reRequire("oxalis/model/actions/skeletontracing_actions");
+const { initializeAnnotationAction } = mockRequire.reRequire(
+  "oxalis/model/actions/annotation_actions",
+);
 
 test.before(t => {
   const rotation = [0.5, 0.5, 0.5];
@@ -30,7 +33,8 @@ test.before(t => {
 
   tracing.trees = [];
   delete tracing.activeNodeId;
-  Store.dispatch(initializeSkeletonTracingAction(annotation, tracing));
+  Store.dispatch(initializeAnnotationAction(annotation));
+  Store.dispatch(initializeSkeletonTracingAction(tracing));
 
   // create 20 trees with 100 nodes each
   for (let i = 0; i < 2000; i++) {

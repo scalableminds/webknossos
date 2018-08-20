@@ -5,7 +5,7 @@ import * as React from "react";
 import { connect } from "react-redux";
 import { Link, withRouter } from "react-router-dom";
 import { Table, Icon, Spin, Button, Input, Modal } from "antd";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import messages from "messages";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import {
@@ -15,9 +15,10 @@ import {
   pauseProject,
   resumeProject,
 } from "admin/admin_rest_api";
+import TransferAllTasksModal from "admin/project/transfer_all_tasks_modal";
 import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
-import type { APIProjectType, APIUserType } from "admin/api_flow_types";
+import type { APIProjectWithAssignmentsType, APIUserType } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import type { RouterHistory } from "react-router-dom";
 import { handleGenericError } from "libs/error_handling";
@@ -36,8 +37,10 @@ type Props = {
 
 type State = {
   isLoading: boolean,
-  projects: Array<APIProjectType>,
+  projects: Array<APIProjectWithAssignmentsType>,
   searchQuery: string,
+  isTransferTasksVisible: boolean,
+  selectedProject: ?APIProjectWithAssignmentsType,
 };
 
 const persistence: Persistence<State> = new Persistence(
@@ -50,6 +53,8 @@ class ProjectListView extends React.PureComponent<Props, State> {
     isLoading: true,
     projects: [],
     searchQuery: "",
+    isTransferTasksVisible: false,
+    selectedProject: null,
   };
 
   componentWillMount() {
@@ -85,7 +90,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
     this.setState({ searchQuery: event.target.value });
   };
 
-  deleteProject = (project: APIProjectType) => {
+  deleteProject = (project: APIProjectWithAssignmentsType) => {
     Modal.confirm({
       title: messages["project.delete"],
       onOk: async () => {
@@ -95,9 +100,9 @@ class ProjectListView extends React.PureComponent<Props, State> {
 
         try {
           await deleteProject(project.name);
-          this.setState({
-            projects: this.state.projects.filter(p => p.id !== project.id),
-          });
+          this.setState(prevState => ({
+            projects: prevState.projects.filter(p => p.id !== project.id),
+          }));
         } catch (error) {
           handleGenericError(error);
         } finally {
@@ -108,16 +113,16 @@ class ProjectListView extends React.PureComponent<Props, State> {
   };
 
   pauseResumeProject = async (
-    project: APIProjectType,
-    APICall: string => Promise<APIProjectType>,
+    project: APIProjectWithAssignmentsType,
+    APICall: string => Promise<APIProjectWithAssignmentsType>,
   ) => {
     const updatedProject = await APICall(project.name);
-    this.setState({
-      projects: this.state.projects.map(p => (p.id === project.id ? updatedProject : p)),
-    });
+    this.setState(prevState => ({
+      projects: prevState.projects.map(p => (p.id === project.id ? updatedProject : p)),
+    }));
   };
 
-  increaseProjectTaskInstances = async (project: APIProjectType) => {
+  increaseProjectTaskInstances = async (project: APIProjectWithAssignmentsType) => {
     Modal.confirm({
       title: messages["project.increase_instances"],
       onOk: async () => {
@@ -126,9 +131,9 @@ class ProjectListView extends React.PureComponent<Props, State> {
             isLoading: true,
           });
           const updatedProject = await increaseProjectTaskInstances(project.name);
-          this.setState({
-            projects: this.state.projects.map(p => (p.id === project.id ? updatedProject : p)),
-          });
+          this.setState(prevState => ({
+            projects: prevState.projects.map(p => (p.id === project.id ? updatedProject : p)),
+          }));
         } catch (error) {
           handleGenericError(error);
         } finally {
@@ -136,6 +141,18 @@ class ProjectListView extends React.PureComponent<Props, State> {
         }
       },
     });
+  };
+
+  showActiveUsersModal = async (project: APIProjectWithAssignmentsType) => {
+    this.setState({
+      selectedProject: project,
+      isTransferTasksVisible: true,
+    });
+  };
+
+  onTaskTransferComplete = () => {
+    this.setState({ isTransferTasksVisible: false });
+    this.fetchData();
   };
 
   renderPlaceholder() {
@@ -150,7 +167,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
 
   render() {
     const marginRight = { marginRight: 20 };
-    const typeHint: Array<APIProjectType> = [];
+    const typeHint: Array<APIProjectWithAssignmentsType> = [];
 
     return (
       <div className="container TestProjectListView">
@@ -170,7 +187,6 @@ class ProjectListView extends React.PureComponent<Props, State> {
           </div>
           <h3>Projects</h3>
           <div className="clearfix" style={{ margin: "20px 0px" }} />
-
           <Spin spinning={this.state.isLoading} size="large">
             <Table
               dataSource={Utils.filterWithSearchQueryOR(
@@ -189,20 +205,20 @@ class ProjectListView extends React.PureComponent<Props, State> {
                 title="Name"
                 dataIndex="name"
                 key="name"
-                sorter={Utils.localeCompareBy(typeHint, "name")}
+                sorter={Utils.localeCompareBy(typeHint, project => project.name)}
               />
               <Column
                 title="Team"
                 dataIndex="teamName"
                 key="teamName"
-                sorter={Utils.localeCompareBy(typeHint, "team")}
+                sorter={Utils.localeCompareBy(typeHint, project => project.team)}
               />
               <Column
                 title="Priority"
                 dataIndex="priority"
                 key="priority"
                 sorter={Utils.compareBy(typeHint, project => project.priority)}
-                render={(priority, project: APIProjectType) =>
+                render={(priority, project: APIProjectWithAssignmentsType) =>
                   `${priority} ${project.paused ? "(paused)" : ""}`
                 }
               />
@@ -231,7 +247,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
               <Column
                 title="Action"
                 key="actions"
-                render={(__, project: APIProjectType) => (
+                render={(__, project: APIProjectWithAssignmentsType) => (
                   <span>
                     <Link
                       to={`/annotations/CompoundProject/${project.id}`}
@@ -283,7 +299,10 @@ class ProjectListView extends React.PureComponent<Props, State> {
                       <Icon type="download" />Download
                     </a>
                     <br />
-
+                    <a onClick={_.partial(this.showActiveUsersModal, project)}>
+                      <Icon type="team" />Show active users
+                    </a>
+                    <br />
                     {project.owner.email === this.props.activeUser.email ? (
                       <a onClick={_.partial(this.deleteProject, project)}>
                         <Icon type="delete" />Delete
@@ -294,6 +313,13 @@ class ProjectListView extends React.PureComponent<Props, State> {
               />
             </Table>
           </Spin>
+          {this.state.isTransferTasksVisible ? (
+            <TransferAllTasksModal
+              project={this.state.selectedProject}
+              onCancel={this.onTaskTransferComplete}
+              onComplete={this.onTaskTransferComplete}
+            />
+          ) : null}
         </div>
       </div>
     );

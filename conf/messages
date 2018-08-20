@@ -155,6 +155,8 @@ nml.file.createFailed=Failed to create annotation from file
 nml.file.notFound=Couldn''t extract NML file
 nml.file.invalid=Couldn''t parse file: {0}. {1}
 nml.file.noFile=No file or file with empty content uploaded
+nml.file.multipleVolumes=Cannot upload multiple volume tracings at once
+nml.file.differentDatasets=Cannot upload tracings that belong to different datasets at once
 nml.scaleNotFound=Couldn''t find dataset scale to write NML. Is the dataset still imported?
 
 owner=Owner
@@ -205,6 +207,7 @@ annotation.update.impossible=This annotation can''t be updated (read only)
 annotation.revert.toOld=Reverting the tracing to a previous version is not possible due to the tracing beeing to old.
 annotation.preferedMode.invalid=Prefered mode is invalid
 annotation.mode.invalid=Invalid annotation mode
+annotation.transferee.noDataSetAccess=Cannot transfer annotation to a user who has no access to the dataset
 
 issue.summary.notSupplied=No summary supplied
 issue.description.notSupplied=No description supplied

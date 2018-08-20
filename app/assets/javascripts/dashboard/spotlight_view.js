@@ -1,24 +1,122 @@
 // @flow
 import * as React from "react";
 import { Link, withRouter } from "react-router-dom";
-import { Spin, Layout, message } from "antd";
-import { transformDatasets } from "dashboard/dataset_view";
+import { Spin, Layout, message, Button, Row, Col } from "antd";
+import { connect } from "react-redux";
 import GalleryDatasetView from "dashboard/gallery_dataset_view";
-import type { DatasetType } from "dashboard/dataset_view";
 import { getOrganizations, getDatasets } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
-import type { RouterHistory } from "react-router-dom";
 import messages from "messages";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
+import features from "features";
+import type { RouterHistory } from "react-router-dom";
+import type { OxalisState } from "oxalis/store";
+import type { APIMaybeUnimportedDatasetType, APIUserType } from "admin/api_flow_types";
 
-const { Header, Content, Footer } = Layout;
+const { Content, Footer } = Layout;
+
+const SimpleHeader = () => (
+  <div id="oxalis-header">
+    <img
+      src="/assets/images/oxalis.svg"
+      alt="webKnossos Logo"
+      style={{ verticalAlign: "middle" }}
+    />webKnossos
+  </div>
+);
+
+const WelcomeHeader = ({ history }) => (
+  <div
+    style={{
+      backgroundImage: "url(https://webknossos.org/images/nature-cover-compressed.jpg)",
+    }}
+  >
+    <div style={{ backgroundColor: "rgba(88, 88, 88, 0.5)" }}>
+      <div
+        style={{
+          maxWidth: 1300,
+          textAlign: "center",
+          margin: "auto",
+          padding: "80px 0px",
+        }}
+      >
+        <Row type="flex" align="middle" style={{ color: "white" }}>
+          <Col span={4}>
+            <img
+              src="https://webknossos.brain.mpg.de/assets/images/oxalis.svg"
+              alt="webKnossos Logo"
+              style={{ filter: "invert(1)", width: "100%" }}
+            />
+          </Col>
+          <Col span={16}>
+            <p style={{ fontSize: 58, textShadow: "0px 1px 6px #00000061" }}>
+              Welcome to webKnossos
+            </p>
+            <p
+              style={{
+                fontSize: 20,
+                textShadow: "0px 1px 6px #00000061",
+                color: "rgb(245, 245, 245)",
+                padding: "40px 60px",
+              }}
+            >
+              webKnossos is an in-browser annotation tool for 3D electron microscopic data that
+              facilitates user interaction with 3D image data. Together with ever better automated
+              neuron segmentations, webKnossos can push connectomics to efficient large-scale
+              reconstructions.
+            </p>
+
+            <div style={{ marginTop: 20 }}>
+              <Button
+                type="primary"
+                size="large"
+                style={{ marginRight: 50 }}
+                onClick={() => history.push("/onboarding")}
+              >
+                Try it out now
+              </Button>
+              <a
+                href="https://docs.webknossos.org/"
+                className="spotlight-hero-button"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Read the Documentation
+              </a>
+              <a
+                href="https://support.webknossos.org/"
+                target="_blank"
+                className="spotlight-hero-button"
+                rel="noopener noreferrer"
+              >
+                Join the Community
+              </a>
+              <a
+                href="https://github.com/scalableminds/webknossos/"
+                target="_blank"
+                className="spotlight-hero-button"
+                rel="noopener noreferrer"
+              >
+                Get the Code
+              </a>
+            </div>
+          </Col>
+        </Row>
+      </div>
+    </div>
+  </div>
+);
+
+type StateProps = {
+  activeUser: ?APIUserType,
+};
 
 type Props = {
   history: RouterHistory,
-};
+} & StateProps;
 
 type State = {
-  datasets: Array<DatasetType>,
+  datasets: Array<APIMaybeUnimportedDatasetType>,
   isLoading: boolean,
 };
 
@@ -48,9 +146,7 @@ class SpotlightView extends React.PureComponent<Props, State> {
     try {
       this.setState({ isLoading: true });
       const datasets = await getDatasets();
-
-      const transformedDatasets = transformDatasets(datasets);
-      this.setState({ datasets: transformedDatasets });
+      this.setState({ datasets });
     } catch (error) {
       handleGenericError(error);
     } finally {
@@ -61,15 +157,11 @@ class SpotlightView extends React.PureComponent<Props, State> {
   render() {
     return (
       <Layout>
-        <Header id="oxalis-header">
-          <div>
-            <img
-              src="/assets/images/oxalis.svg"
-              alt="webKnossos Logo"
-              style={{ verticalAlign: "middle" }}
-            />webKnossos
-          </div>
-        </Header>
+        {this.props.activeUser == null && features().allowOrganzationCreation ? (
+          <WelcomeHeader history={this.props.history} />
+        ) : (
+          <SimpleHeader />
+        )}
         <Content style={{ padding: 50 }}>
           <Spin size="large" spinning={this.state.isLoading}>
             <div style={{ minHeight: "100px" }}>
@@ -150,4 +242,8 @@ class SpotlightView extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter(SpotlightView);
+const mapStateToProps = (state: OxalisState): StateProps => ({
+  activeUser: state.activeUser,
+});
+
+export default connect(mapStateToProps)(withRouter(SpotlightView));

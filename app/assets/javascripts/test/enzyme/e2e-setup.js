@@ -1,7 +1,6 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 // @flow
 import fs from "fs";
-import himalaya from "himalaya";
 import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
 import { configure } from "enzyme";
 import Adapter from "enzyme-adapter-react-16";
@@ -54,9 +53,18 @@ function setCurrToken(token: string) {
 
 // The values of these keys change if objects are newly created by the backend
 // They have to be omitted from some snapshots
-const volatileKeys = ["id", "formattedHash", "modified", "created"];
+const volatileKeys = [
+  "id",
+  "skeleton",
+  "volume",
+  "formattedHash",
+  "modified",
+  "created",
+  "createdTimestamp",
+];
 
-export function replaceVolatileValues(obj: Object) {
+export function replaceVolatileValues(obj: ?Object) {
+  if (obj == null) return obj;
   // Replace volatile properties with deterministic values
   const newObj = _.cloneDeep(obj);
   deepForEach(newObj, (value, key, arrOrObj) => {
@@ -113,10 +121,14 @@ global.navigator = {
 };
 copyProps(window, global);
 
+function trim(string) {
+  return string.replace(/^\s+/gm, "");
+}
+
 function createSnapshotable(wrapper: any) {
-  // debug() returns a html string, which we convert to JSON so that it can be compared
-  // easily by ava snapshots
-  return himalaya.parse(wrapper.debug());
+  // debug() returns a multi-line html string
+  // We remove leading whitespace to avoid large diffs caused by changes in indentation
+  return trim(wrapper.debug());
 }
 
 function debugWrapper(wrapper: any, name: string) {
@@ -124,6 +136,21 @@ function debugWrapper(wrapper: any, name: string) {
     `app/assets/javascripts/test/snapshots/debug-htmls/test-wk-snapshots-${name}.html`,
     wrapper.debug(),
     () => {},
+  );
+}
+
+export async function writeFlowCheckingFile(
+  object: Array<any> | Object,
+  name: string,
+  flowTypeString: string,
+  options?: { isArray?: boolean } = {},
+) {
+  const fullFlowType = options.isArray ? `Array<${flowTypeString}>` : flowTypeString;
+  fs.writeFileSync(
+    `app/assets/javascripts/test/snapshots/flow-check/test-flow-checking-${name}.js`,
+    `// @flow
+import type { ${flowTypeString} } from "admin/api_flow_types";
+const a: ${fullFlowType} = ${JSON.stringify(object)}`,
   );
 }
 

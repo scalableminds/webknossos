@@ -99,8 +99,14 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
                 rules: [
                   {
                     required: true,
+                    pattern: "^[a-zA-Z0-9_-]*$",
+                    message: "The project name must not contain whitespace or special characters.",
                   },
-                  { min: 3 },
+                  {
+                    min: 3,
+                    required: true,
+                    message: "The project name must be at least 3 characters long.",
+                  },
                 ],
               })(<Input autoFocus disabled={isEditMode} />)}
             </FormItem>

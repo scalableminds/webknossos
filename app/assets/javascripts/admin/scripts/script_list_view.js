@@ -5,7 +5,7 @@ import _ from "lodash";
 import * as React from "react";
 import { Link, withRouter } from "react-router-dom";
 import { Table, Icon, Spin, Button, Input, Modal } from "antd";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import messages from "messages";
 import { getScripts, deleteScript } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
@@ -76,9 +76,9 @@ class ScriptListView extends React.PureComponent<Props, State> {
           });
 
           await deleteScript(script.id);
-          this.setState({
-            scripts: this.state.scripts.filter(s => s.id !== script.id),
-          });
+          this.setState(prevState => ({
+            scripts: prevState.scripts.filter(s => s.id !== script.id),
+          }));
         } catch (error) {
           handleGenericError(error);
         } finally {
@@ -147,27 +147,27 @@ class ScriptListView extends React.PureComponent<Props, State> {
                 dataIndex="id"
                 key="id"
                 className="monospace-id"
-                sorter={Utils.localeCompareBy(typeHint, "id")}
+                sorter={Utils.localeCompareBy(typeHint, script => script.id)}
               />
               <Column
                 title="Name"
                 dataIndex="name"
                 key="name"
-                sorter={Utils.localeCompareBy(typeHint, "name")}
+                sorter={Utils.localeCompareBy(typeHint, script => script.name)}
               />
 
               <Column
                 title="Owner"
                 dataIndex="owner"
                 key="owner"
-                sorter={Utils.localeCompareBy(typeHint, scripts => scripts.owner.lastName)}
+                sorter={Utils.localeCompareBy(typeHint, script => script.owner.lastName)}
                 render={(owner: APIUserType) => `${owner.firstName} ${owner.lastName}`}
               />
               <Column
                 title="Gist URL"
                 dataIndex="gist"
                 key="gist"
-                sorter={Utils.localeCompareBy(typeHint, "gist")}
+                sorter={Utils.localeCompareBy(typeHint, script => script.gist)}
                 render={(gist: string) => (
                   <a href={gist} target="_blank" rel="noopener noreferrer">
                     {gist}

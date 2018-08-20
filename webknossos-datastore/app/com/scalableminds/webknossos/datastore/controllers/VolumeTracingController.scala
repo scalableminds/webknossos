@@ -36,7 +36,7 @@ class VolumeTracingController @Inject()(
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
           dataSource <- dataSourceRepository.findUsableByName(tracing.dataSetName) ?~> Messages("dataSet.notFound")
           _ <- tracingService.initializeWithData(tracingId, tracing, dataSource, initialData)
-        } yield Ok(Json.toJson(TracingReference(tracingId, TracingType.volume)))
+        } yield Ok(Json.toJson(tracingId))
       }
   }
 
@@ -47,6 +47,20 @@ class VolumeTracingController @Inject()(
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
         } yield {
           Ok.chunked(tracingService.data(tracingId, tracing))
+        }
+      }
+    }
+  }
+
+
+  def duplicate(tracingId: String, version: Option[Long]) = TokenSecuredAction(UserAccessRequest.webknossos).async {
+    implicit request => {
+      AllowRemoteOrigin {
+        for {
+          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+          newId <- tracingService.duplicate(tracingId, tracing)
+        } yield {
+          Ok(Json.toJson(newId))
         }
       }
     }

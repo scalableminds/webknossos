@@ -200,9 +200,9 @@ object TaskDAO extends SQLDAO[Task, TasksRow, Tasks] {
     val insertAnnotationQ = sqlu"""
            with task as (#${findNextTaskQ(userId, teamIds)}),
            dataset as (select _id from webknossos.datasets_ limit 1)
-           insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, tracing_id, tracing_typ, description, isPublic, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
+           insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, skeletonTracingId, volumeTracingId, description, isPublic, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
            select ${annotationId.id}, dataset._id, task._id, ${teamIds.headOption.map(_.id).getOrElse("")}, ${userId.id}, ${dummyTracingId},
-                    'skeleton', '', false, '', '#${AnnotationState.Initializing.toString}', '{}',
+                    null, '', false, '', '#${AnnotationState.Initializing.toString}', '{}',
                     '{}', 0, 'Task', ${new java.sql.Timestamp(System.currentTimeMillis)},
                      ${new java.sql.Timestamp(System.currentTimeMillis)}, false
            from task, dataset
@@ -308,6 +308,12 @@ object TaskDAO extends SQLDAO[Task, TasksRow, Tasks] {
     } yield {
       rowsRaw.toList.map(r => (ObjectId(r._1), r._2)).toMap
     }
+  }
+
+  def listExperienceDomains(implicit ctx: DBAccessContext): Fox[List[String]] = {
+    for {
+      rowsRaw <- run(sql"select domain from webknossos.experienceDomains".as[String])
+    } yield rowsRaw.toList
   }
 
   def insertOne(t: Task): Fox[Unit] = {

@@ -61,6 +61,7 @@ export const tracing: ServerSkeletonTracingType = {
     },
   ],
   treeGroups: [],
+  dataSetName: "ROI2017_wkw",
   createdTimestamp: 1502302761387,
   activeNodeId: 3,
   editPosition: { x: 24, y: 32, z: 0 },
@@ -70,19 +71,18 @@ export const tracing: ServerSkeletonTracingType = {
 };
 
 export const annotation: APIAnnotationType = {
-  created: "2017-08-09 20:19",
   description: "",
   state: "Active",
   id: "598b52293c00009906f043e7",
   isPublic: false,
-  modified: "2018-06-12 15:59",
+  modified: 1529066010230,
   name: "",
   typ: "Explorational",
   task: null,
   stats: {},
   restrictions: { allowAccess: true, allowUpdate: true, allowFinish: true, allowDownload: true },
   formattedHash: "f043e7",
-  content: { id: "47e37793-d0be-4240-a371-87ce68561a13", typ: "skeleton" },
+  tracing: { skeleton: "47e37793-d0be-4240-a371-87ce68561a13", volume: null },
   dataSetName: "ROI2017_wkw",
   dataStore: { name: "localhost", url: "http://localhost:9000", typ: "webknossos-store" },
   settings: {

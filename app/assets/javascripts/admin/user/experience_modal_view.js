@@ -94,55 +94,17 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     return _.sortBy(entries, entry => entry.domain);
   };
 
-  increaseUsersExperiences = async () => {
+  updateUsersExperiences = async () => {
     const newUserPromises = this.props.selectedUsers.map(user => {
-      const newUser = { ...user };
+      const newExperiences = { ...user.experiences };
       this.state.changeEntries.forEach(entry => {
-        if (entry.removed) return;
-        const newExperiences = { ...newUser.experiences };
-        if (entry.domain in newExperiences) {
-          newExperiences[entry.domain] += entry.value;
+        if (entry.removed) {
+          delete newExperiences[entry.domain];
         } else {
           newExperiences[entry.domain] = entry.value;
         }
-        if (newExperiences[entry.domain] < 1) {
-          Toast.warning(
-            `User ${user.lastName}, ${user.firstName} would have a negative Experience at ${
-              entry.domain
-            }. Fallback to value 1 is executed.`,
-          );
-          newExperiences[entry.domain] = 1;
-        }
-        newUser.experiences = newExperiences;
       });
-      return this.sendUserToServer(newUser, user);
-    });
-    this.closeModal(newUserPromises);
-  };
-
-  setUsersExperiences = async () => {
-    const newUserPromises = this.props.selectedUsers.map(user => {
-      const newUser = { ...user };
-      this.state.changeEntries.forEach(entry => {
-        if (entry.removed) return;
-        const newExperiences = { ...newUser.experiences };
-        newExperiences[entry.domain] = entry.value;
-        newUser.experiences = newExperiences;
-      });
-      return this.sendUserToServer(newUser, user);
-    });
-    this.closeModal(newUserPromises);
-  };
-
-  removeUsersExperiences = async () => {
-    const newUserPromises = this.props.selectedUsers.map(user => {
-      const newUser = { ...user };
-      this.state.changeEntries.forEach(entry => {
-        if (entry.removed) return;
-        if (entry.domain in newUser.experiences) {
-          delete user.experiences[entry.domain];
-        }
-      });
+      const newUser = { ...user, experiences: newExperiences };
       return this.sendUserToServer(newUser, user);
     });
     this.closeModal(newUserPromises);
@@ -163,7 +125,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
         this.props.onChange(newUsers);
       },
       () => {
-        Toast.error("At least one update could not be performed");
+        Toast.error("At least one update could not be performed.");
       },
     );
   }
@@ -214,17 +176,11 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
   };
 
   removeEntryFromTable = index => {
-    console.log(index);
     this.setState(prevState => ({
-      changeEntries: prevState.changeEntries.filter(entry => {
-        console.log(
-          `${entry.domain} !== ${prevState.changeEntries[index].domain} => ${entry.index !==
-            prevState.changeEntries[index].domain}`,
-        );
-        return entry.domain !== prevState.changeEntries[index].domain;
-      }),
+      changeEntries: prevState.changeEntries.filter(
+        entry => entry.domain !== prevState.changeEntries[index].domain,
+      ),
     }));
-    console.log(this.state.changeEntries);
   };
 
   handleExperienceSelected = (domain: string) => {
@@ -324,6 +280,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
           />
         </Table>
         <ExperienceEditingTable
+          title="Changes"
           tableData={changeEntries}
           isMultipleUsersEditing
           setValueOfEntry={this.setValueOfEntry}

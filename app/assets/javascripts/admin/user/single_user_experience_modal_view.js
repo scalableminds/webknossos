@@ -197,6 +197,7 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
         />
         <span>
           <SelectExperienceDomain
+            title={null}
             disabled={false}
             value={this.state.enteredExperience}
             onSelect={this.handleExperienceSelected}

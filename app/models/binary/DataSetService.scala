@@ -67,7 +67,7 @@ object DataSetService extends FoxImplicits with LazyLogging {
   }
 
   def getForeignDataSet(dataStoreUrl: String, dataSetName: String): Fox[InboxDataSource] = {
-    RPC(s"${dataStoreUrl}/data/datasets/${dataSetName}/read")
+    RPC(s"${dataStoreUrl}/data/datasets/${dataSetName}/readInboxDataSourceLike")
       .withQueryString("token" -> "") // we don't need a valid token because the DataSet is public, but we have to add the parameter token because it is a TokenSecuredAction
       .getWithJsonResponse[InboxDataSource]
   }

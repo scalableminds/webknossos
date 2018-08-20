@@ -36,13 +36,15 @@ class DataSourceController @Inject()(
     }
   }
 
-  def read(dataSetName: String) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)) {
+  def read(dataSetName: String, returnFormatLike: Boolean) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)) {
     implicit request => {
       AllowRemoteOrigin {
         val dsOption: Option[InboxDataSource] = dataSourceRepository.findByName(dataSetName)
         dsOption match {
           case Some(ds) => {
             val dslike: InboxDataSourceLike = ds
+            if(returnFormatLike) Ok(Json.toJson(dslike))
+            else Ok(Json.toJson(ds))
             Ok(Json.toJson(dslike))
           }
           case _ => Ok

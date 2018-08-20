@@ -9,6 +9,7 @@ import {
   updateDataset,
   getDatasetDefaultConfiguration,
   updateDatasetDefaultConfiguration,
+  readDatasetDatasource,
   getDatasetDatasource,
   updateDatasetDatasource,
   updateDatasetTeams,
@@ -83,7 +84,15 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     try {
       this.setState({ isLoading: true });
       const dataset = await getDataset(this.props.datasetName);
-      const { dataSource, messages: dataSourceMessages } = await getDatasetDatasource(dataset);
+      let dataSource;
+      let dataSourceMessages = [];
+      if (dataset.isForeign) {
+        dataSource = await readDatasetDatasource(dataset);
+      } else {
+        const dataSourceWithMessages = await getDatasetDatasource(dataset);
+        dataSource = dataSourceWithMessages.dataSource;
+        dataSourceMessages = dataSourceWithMessages.messages;
+      }
       if (dataSource == null) {
         throw new Error("No datasource received from server.");
       }
@@ -223,7 +232,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       }
 
       const dataSource = JSON.parse(formValues.dataSourceJson);
-      await updateDatasetDatasource(this.props.datasetName, dataset.dataStore.url, dataSource);
+      if (this.state.isForeign) await updateDatasetDatasource(this.props.datasetName, dataset.dataStore.url, dataSource);
 
       await updateDatasetTeams(dataset.name, teamIds);
 

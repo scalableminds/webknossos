@@ -583,9 +583,7 @@ export function getDatasetDatasource(
   );
 }
 
-export function readDatasetDatasource(
-  dataset: APIDatasetType,
-): Promise<APIDataSourceType> {
+export function readDatasetDatasource(dataset: APIDatasetType): Promise<APIDataSourceType> {
   return doWithToken(token =>
     Request.receiveJSON(
       `${dataset.dataStore.url}/data/datasets/${dataset.name}/readInboxDataSource?token=${token}`,

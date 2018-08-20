@@ -13,7 +13,7 @@ type Props = {
   history: RouterHistory,
 };
 
-const DatasetAddView = ({history}: Props) => (
+const DatasetAddView = ({ history }: Props) => (
   <Tabs defaultActiveKey="1" className="container task-edit-administration">
     <TabPane
       tab={
@@ -23,10 +23,12 @@ const DatasetAddView = ({history}: Props) => (
       }
       key="1"
     >
-      <DatasetUploadView onUploaded={datasetName => {
-        const url = `/datasets/${datasetName}/import`;
-        history.push(url);
-      }}/>
+      <DatasetUploadView
+        onUploaded={datasetName => {
+          const url = `/datasets/${datasetName}/import`;
+          history.push(url);
+        }}
+      />
     </TabPane>
     {features().addForeignDataset ? (
       <TabPane

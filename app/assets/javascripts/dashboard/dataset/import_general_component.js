@@ -77,7 +77,7 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
     if (this.state.dataSet != null) {
       const dataStoreName = this.state.dataSet.dataStore.name;
       const dataStoreURL = this.state.dataSet.dataStore.url;
-      return `${dataStoreName  }, ${  dataStoreURL  }, ${  this.props.datasetName}`;
+      return `${dataStoreName}, ${dataStoreURL}, ${this.props.datasetName}`;
     } else return "";
   }
 

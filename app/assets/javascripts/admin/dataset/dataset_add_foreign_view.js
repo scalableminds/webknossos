@@ -1,34 +1,22 @@
 // @flow
 import _ from "lodash";
 import React from "react";
-import { Form, Input, Button, Card, Upload, Icon, Spin, Progress, Divider } from "antd";
+import { Form, Input, Button, Card, Spin } from "antd";
 import { addForeignDataSet } from "admin/admin_rest_api";
 import Messages from "messages";
 import Toast from "libs/toast";
-
-import type { APITaskType } from "admin/api_flow_types";
-import type { Vector3 } from "oxalis/constants";
-import type { BoundingBoxObjectType } from "oxalis/store";
-import { APIDataStoreType, APIUserType } from "../api_flow_types";
-import { OxalisState } from "../../oxalis/store";
 import { connect } from "react-redux";
 import { withRouter } from "react-router-dom";
+import { OxalisState } from "../../oxalis/store";
 
 const FormItem = Form.Item;
 const TextArea = Input.TextArea;
 
-type StateProps = {
-  activeUser: ?APIUserType,
-};
-
-type Props = StateProps & {
+type Props = {
   form: Object,
-  withoutCard?: boolean,
-  onUploaded: string => void,
 };
 
 type State = {
-  datastores: Array<APIDataStoreType>,
   isUploading: boolean,
 };
 
@@ -40,7 +28,6 @@ export type ForeignDataSetSpecification = {
 
 class DatasetAddForeignView extends React.PureComponent<Props, State> {
   state = {
-    datastores: [],
     isUploading: false,
   };
 
@@ -49,8 +36,8 @@ class DatasetAddForeignView extends React.PureComponent<Props, State> {
       !_.isString(specification.dataStoreName) ||
       !_.isString(specification.url) ||
       !_.isString(specification.dataSetName) ||
-      !/^[A-Za-z0-9_\-]*$/.test(specification.dataSetName) ||
-      !/^https?:\/\/[a-z0-9\.]+.*$/.test(specification.url)
+      !/^[A-Za-z0-9_-]*$/.test(specification.dataSetName) ||
+      !/^https?:\/\/[a-z0-9.]+.*$/.test(specification.url)
     ) {
       return false;
     }
@@ -80,9 +67,8 @@ class DatasetAddForeignView extends React.PureComponent<Props, State> {
   handleSubmit = async e => {
     e.preventDefault();
 
-    let dataSet;
     const formValues = this.props.form.getFieldsValue();
-    specification = this.parseLine(formValues.foreignDatasetText);
+    const specification = this.parseLine(formValues.foreignDatasetText);
 
     if (this.isValidDataSet(specification)) {
       await addForeignDataSet(

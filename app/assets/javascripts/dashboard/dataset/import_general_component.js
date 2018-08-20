@@ -11,8 +11,8 @@ import {
   getDataset,
   revokeDatasetSharingToken,
 } from "admin/admin_rest_api";
-import { FormItemWithInfo } from "./helper_components";
 import { APIDatasetType } from "admin/api_flow_types";
+import { FormItemWithInfo } from "./helper_components";
 
 type Props = {
   form: Object,
@@ -77,7 +77,7 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
     if (this.state.dataSet != null) {
       const dataStoreName = this.state.dataSet.dataStore.name;
       const dataStoreURL = this.state.dataSet.dataStore.url;
-      return dataStoreName + ", " + dataStoreURL + ", " + this.props.datasetName;
+      return `${dataStoreName  }, ${  dataStoreURL  }, ${  this.props.datasetName}`;
     } else return "";
   }
 

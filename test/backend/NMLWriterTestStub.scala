@@ -16,15 +16,18 @@ object NMLWriterTestStub {
   def toNmlStream(tracing: SkeletonTracing, scale: Option[Scale]) = Enumerator.outputStream { os =>
     implicit val writer = new IndentingXMLStreamWriter(outputService.createXMLStreamWriter(os))
 
-      val nml = Xml.withinElementSync("things") { writeTestSkeletonThings(tracing, scale)}
+      val nml = Xml.withinElementSync("things") {
+        val parameters = extractTracingParameters(Some(tracing), None, "", scale)
+        parameters.map(writeParameters(_))
+        writeTestSkeletonThings(tracing)
+      }
       writer.writeEndDocument()
       writer.close()
       os.close
     nml
   }
 
-  def writeTestSkeletonThings(tracing: SkeletonTracing, maybeScale: Option[Scale])(implicit writer: XMLStreamWriter): Unit = {
-      Xml.withinElementSync("parameters")(writeParametersAsXml(tracing, "", maybeScale))
+  def writeTestSkeletonThings(tracing: SkeletonTracing)(implicit writer: XMLStreamWriter): Unit = {
       writeTreesAsXml(tracing.trees.filterNot(_.nodes.isEmpty))
       Xml.withinElementSync("branchpoints")(writeBranchPointsAsXml(tracing.trees.flatMap(_.branchPoints).sortBy(-_.createdTimestamp)))
       Xml.withinElementSync("comments")(writeCommentsAsXml(tracing.trees.flatMap(_.comments)))

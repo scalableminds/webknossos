@@ -1,7 +1,12 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 // @flow
 import test from "ava";
-import { tokenUserA, setCurrToken, resetDatabase } from "test/enzyme/e2e-setup";
+import {
+  tokenUserA,
+  setCurrToken,
+  resetDatabase,
+  writeFlowCheckingFile,
+} from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 
 test.before("Reset database", async () => {
@@ -22,6 +27,7 @@ test("getScript()", async t => {
   const firstScript = scripts[0];
 
   const script = await api.getScript(firstScript.id);
+  writeFlowCheckingFile(script, "script", "APIScriptType");
   t.snapshot(script, { id: "scripts-getScript" });
 });
 
@@ -45,6 +51,7 @@ test("createScript(), updateScript(), and deleteScript()", async t => {
 
   // Update Script
   const newData = Object.assign({}, createdScript, { name: "MegaScript", owner: activeUser.id });
+  // $FlowFixMe Flow doesn't check that owner was replaced with a string
   const updatedScript = await api.updateScript(createdScript.id, newData);
 
   const updatedScriptWithFixedId = Object.assign({}, updatedScript, { id: "fixed-script-id" });

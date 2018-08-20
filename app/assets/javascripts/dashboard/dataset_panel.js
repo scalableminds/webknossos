@@ -104,7 +104,7 @@ class DatasetPanel extends React.PureComponent<Props, State> {
   }
 
   handleClick = () => {
-    this.setState({ showLessContent: !this.state.showLessContent });
+    this.setState(prevState => ({ showLessContent: !prevState.showLessContent }));
   };
 
   renderCard = (dataset: APIDatasetType) => (

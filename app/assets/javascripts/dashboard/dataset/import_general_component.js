@@ -56,6 +56,11 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
     this.setState({ sharingToken });
   };
 
+  handleCopyAllowUsageText = async (): Promise<void> => {
+    await Clipboard.copy(this.getAllowUsageText());
+    Toast.success("Text copied to clipboard");
+  };
+
   getSharingLink() {
     const doesNeedToken = !this.props.form.getFieldValue("dataset.isPublic");
     const tokenSuffix = `?token=${this.state.sharingToken}`;
@@ -161,18 +166,23 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
             )}
           </Input.Group>
         </FormItemWithInfo>
-        {getFieldDecorator("dataset.isPublic") ? (
+        {form.getFieldValue("dataset.isPublic") ? (
           <div>
             <FormItemWithInfo
               label="Allow usage in other webknossos-instances using this text"
               info="Give this text to users with other webknossos-instances so that they can add this dataset"
             >
-              <Input
-                value={this.getAllowUsageText()}
-                onClick={this.handleSelectText}
-                style={{ width: "80%" }}
-                readOnly
-              />
+              <Input.Group compact>
+                <Input
+                  value={this.getAllowUsageText()}
+                  onClick={this.handleSelectText}
+                  style={{ width: "80%" }}
+                  readOnly
+                />
+                <Button onClick={this.handleCopyAllowUsageText} style={{ width: "10%" }} icon="copy">
+                  Copy
+                </Button>
+              </Input.Group>
             </FormItemWithInfo>
           </div>
         ) : null }

@@ -27,7 +27,8 @@ class SkeletonUpdateActionsUnitTestSuite extends FlatSpec {
       name = "new tree",
       branchPoints = List(UpdateActionBranchPoint(0, Dummies.timestamp)),
       timestamp = Dummies.timestamp,
-      comments = List[UpdateActionComment]()
+      comments = List[UpdateActionComment](),
+      groupId = None
     )
     val result = applyUpdateAction(createTreeAction)
 

@@ -36,7 +36,7 @@ class NMLUnitTestSuite extends FlatSpec {
     }
   }
 
-  var dummyTracing = Dummies.tracing
+  val dummyTracing = Dummies.tracing
 
   "NML writing and parsing" should "yield the same state" in {
     writeAndParseTracing(dummyTracing) match {

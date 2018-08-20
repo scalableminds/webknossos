@@ -26,7 +26,7 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
     }
   }
 
-  object DataStore {
+  object Datastore {
     val key = getString("datastore.key")
     val name = getString("datastore.name")
     object Oxalis {
@@ -34,7 +34,7 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
       val secured = getBoolean("datastore.oxalis.secured")
       val pingIntervalMinutes = getInt("datastore.oxalis.pingIntervalMinutes") minutes
     }
-    object FossilDB {
+    object Fossildb {
       val address = getString("datastore.fossildb.address")
       val port = getInt("datastore.fossildb.port")
     }

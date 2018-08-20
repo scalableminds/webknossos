@@ -32,19 +32,19 @@ class WebKnossosServer @Inject()(
                                   val messagesApi: MessagesApi
                                 ) extends IntervalScheduler with LazyLogging {
 
-  private val dataStoreKey: String = config.DataStore.key
-  private val dataStoreName: String = config.DataStore.name
+  private val dataStoreKey: String = config.Datastore.key
+  private val dataStoreName: String = config.Datastore.name
   private val dataStoreUrl: String = config.Http.uri
 
   private val webKnossosUrl = {
-    val url = config.DataStore.Oxalis.uri
-    if (config.DataStore.Oxalis.secured)
+    val url = config.Datastore.Oxalis.uri
+    if (config.Datastore.Oxalis.secured)
       s"https://$url"
     else
       s"http://$url"
   }
 
-  protected lazy val tickerInterval: FiniteDuration = config.DataStore.Oxalis.pingIntervalMinutes
+  protected lazy val tickerInterval: FiniteDuration = config.Datastore.Oxalis.pingIntervalMinutes
 
   def tick: Unit = reportStatus(ok = true)
 

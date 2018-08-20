@@ -167,10 +167,10 @@ Samplecountry
   }
 
   def insertLocalDataStoreIfEnabled: Fox[Any] = {
-    if (WkConf.DataStore.enabled) {
+    if (WkConf.Datastore.enabled) {
       DataStoreDAO.findOneByName("localhost").futureBox.map { maybeStore =>
         if (maybeStore.isEmpty) {
-          DataStoreDAO.insertOne(DataStore("localhost", WkConf.Http.uri, WebKnossosStore, WkConf.DataStore.key))
+          DataStoreDAO.insertOne(DataStore("localhost", WkConf.Http.uri, WebKnossosStore, WkConf.Datastore.key))
         }
       }
     } else Fox.successful(())

@@ -27,7 +27,7 @@ object BrainTracing extends LazyLogging with FoxImplicits {
   def registerIfNeeded(user: User): Fox[String] =
     for {
       organization <- user.organization
-      result <- (if (organization.name == "Connectomics department" && WkConf.BrainTracing.active) register(user).toFox else Fox.successful("braintracing.none"))
+      result <- (if (organization.name == "Connectomics department" && WkConf.Braintracing.active) register(user).toFox else Fox.successful("braintracing.none"))
     } yield result
 
   private def register(user: User): Future[String] = {

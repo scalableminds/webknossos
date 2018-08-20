@@ -49,8 +49,8 @@ case class VersionedKeyValuePair[T](versionedKey: VersionedKey, value: T) {
 
 
 class FossilDBClient(collection: String, config: DataStoreConfig) extends FoxImplicits with LazyLogging {
-  val address = config.DataStore.FossilDB.address
-  val port = config.DataStore.FossilDB.port
+  val address = config.Datastore.Fossildb.address
+  val port = config.Datastore.Fossildb.port
   val channel = NettyChannelBuilder.forAddress(address, port).maxInboundMessageSize(Int.MaxValue).usePlaintext.build
   val blockingStub = FossilDBGrpc.blockingStub(channel)
   val blockingStubHealth = HealthGrpc.newBlockingStub(channel)

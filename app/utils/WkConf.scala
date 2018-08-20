@@ -51,9 +51,10 @@ object WkConf extends ConfigReader {
     object Tasks {
       val maxOpenPerUser = getInt("oxalis.tasks.maxOpenPerUser")
     }
+    val newOrganizationMailingList = getString("oxalis.newOrganizationMailingList")
   }
 
-  object DataStore {
+  object Datastore {
     val enabled = getBoolean("datastore.enabled")
     val key = getString("datastore.key")
   }
@@ -62,7 +63,7 @@ object WkConf extends ConfigReader {
     val cacheTimeoutInMinutes = getInt("user.cacheTimeoutInMinutes") minutes
   }
 
-  object BrainTracing {
+  object Braintracing {
     val active = getBoolean("braintracing.active")
   }
 
@@ -78,5 +79,18 @@ object WkConf extends ConfigReader {
       val dataStoreExpiry = getDuration("silhouette.tokenAuthenticator.dataStoreExpiry")
     }
   }
+
+  object Airbrake {
+    val projectID = getString("airbrake.projectID")
+    val projectKey = getString("airbrake.projectKey")
+    val environment = getString("airbrake.environment")
+  }
+
+  object Google {
+    object Analytics {
+      val trackingID = getString("google.analytics.trackingID")
+    }
+  }
+
 
 }

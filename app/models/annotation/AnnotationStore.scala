@@ -58,7 +58,7 @@ object AnnotationStore extends LazyLogging {
   }
 
   def findCachedByTracingId(tracingId: String): Box[Annotation] = {
-    val annotationOpt = TemporaryAnnotationStore.findAll.find(a => a.tracing.id == tracingId)
+    val annotationOpt = TemporaryAnnotationStore.findAll.find(a => a.skeletonTracingId == Some(tracingId) || a.volumeTracingId == Some(tracingId))
     annotationOpt match {
       case Some(annotation) => Full(annotation)
       case None => Empty

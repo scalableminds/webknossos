@@ -37,7 +37,7 @@ export const tracing: ServerSkeletonTracingType = {
 };
 
 export const annotation: APIAnnotationType = {
-  modified: "2018-06-12 15:59",
+  modified: 1529066010230,
   state: "Active",
   id: "5b1fd1cf97000027049c67ee",
   name: "",
@@ -52,7 +52,8 @@ export const annotation: APIAnnotationType = {
       id: "5b1e45faa000009d00abc2c6",
       summary: "sampleTaskType",
       description: "Description",
-      team: "5b1e45f9a00000a000abc2c3",
+      teamId: "5b1e45f9a00000a000abc2c3",
+      teamName: "Connectomics department",
       settings: {
         allowedModes: ["orthogonal", "oblique", "flight"],
         branchPointsAllowed: true,
@@ -61,7 +62,7 @@ export const annotation: APIAnnotationType = {
     },
     dataSet: "ROI2017_wkw",
     neededExperience: { domain: "oxalis", value: 1 },
-    created: "2018-06-12 15:59",
+    created: 1529066010230,
     status: { open: 0, active: 1, finished: 0 },
     script: null,
     tracingTime: null,
@@ -73,7 +74,7 @@ export const annotation: APIAnnotationType = {
   stats: {},
   restrictions: { allowAccess: true, allowUpdate: true, allowFinish: true, allowDownload: true },
   formattedHash: "9c67ee",
-  content: { id: "e90133de-b2db-4912-8261-8b6f84f7edab", typ: "skeleton" },
+  tracing: { skeleton: "e90133de-b2db-4912-8261-8b6f84f7edab", volume: null },
   dataSetName: "ROI2017_wkw",
   dataStore: { name: "localhost", url: "http://localhost:9000", typ: "webknossos-store" },
   isPublic: false,

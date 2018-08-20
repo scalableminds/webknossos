@@ -23,7 +23,7 @@ import {
   DropdownSetting,
   ColorSetting,
 } from "oxalis/view/settings/setting_input_views";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import constants from "oxalis/constants";
 import type { ModeType } from "oxalis/constants";
 

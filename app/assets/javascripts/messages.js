@@ -53,6 +53,7 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.tree_viewer_no_cyclic_trees":
     "Cyclic trees are not supported by the abstract tree viewer.",
   "tracing.changed_move_value": "The move value was changed to: ",
+  "tracing.natural_sorting": "Correctly sort numbers in text (word2 < word10). This may be slow!",
   "datastore.unknown_type": "Unknown datastore type:",
   "webgl.disabled": "Couldn't initialise WebGL, please make sure WebGL is enabled.",
   "webgl.context_loss":
@@ -92,12 +93,15 @@ In order to restore the current window, a reload is necessary.`,
   "annotation.was_finished": "Annotation was archived",
   "annotation.was_re_opened": "Annotation was reopened",
   "annotation.delete": "Do you really want to reset and cancel this annotation?",
-  "annotation.dataset_no_public":
-    "Public tracings require the respective dataset to be public too. Please, make sure to add public access rights to the dataset as well.",
   "annotation.was_edited": "Successfully updated annotation",
   "project.delete": "Do you really want to delete this project?",
   "project.increase_instances":
     "Do you really want to add one additional instance to all tasks of this project?",
+  "project.none_selected": "No currently selected project found.",
+  "project.successful_active_tasks_transfer":
+    "All active tasks were transfered to the selected user",
+  "project.unsuccessful_active_tasks_transfer":
+    "An error occured while trying to transfer the tasks. Please check your permissions and the server logs",
   "script.delete": "Do you really want to delete this script?",
   "team.delete": "Do you really want to delete this team?",
   "taskType.delete": "Do you really want to delete this task type and all its associated tasks?",

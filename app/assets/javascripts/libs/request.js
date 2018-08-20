@@ -5,7 +5,7 @@
 
 import _ from "lodash";
 import Toast from "libs/toast";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import { pingDataStoreIfAppropriate, pingMentionedDataStores } from "admin/datastore_health_check";
 
 type methodType = "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH";
@@ -30,6 +30,7 @@ class Request {
       _.defaultsDeep(options, { headers: { Accept: "application/json" } }),
       this.handleEmptyJsonResponse,
     );
+
   prepareJSON = async (
     url: string,
     options: RequestOptionsWithData<any>,
@@ -105,6 +106,8 @@ class Request {
           formData.append(`${formKey}[]`, value, value.name);
         } else if (typeof value === "string" || value === null) {
           formData.append(formKey, value);
+        } else if (typeof value === "number" || typeof value === "boolean") {
+          formData.append(formKey, `${value}`);
         } else {
           // nested object
           toFormData(value, formData, key);

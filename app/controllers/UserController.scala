@@ -47,7 +47,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   def annotations(isFinished: Option[Boolean], limit: Option[Int]) = SecuredAction.async { implicit request =>
     for {
       annotations <- AnnotationDAO.findAllFor(request.identity._id, isFinished, AnnotationType.Explorational, limit.getOrElse(defaultAnnotationLimit))
-      jsonList <- Fox.serialCombined(annotations)(_.publicWrites(Some(request.identity)))
+      jsonList <- Fox.serialCombined(annotations)(_.compactWrites)
     } yield {
       Ok(Json.toJson(jsonList))
     }
@@ -115,7 +115,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
       user <- UserDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
       _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
       annotations <- AnnotationDAO.findAllFor(userIdValidated, isFinished, AnnotationType.Explorational, limit.getOrElse(defaultAnnotationLimit))
-      jsonList <- Fox.serialCombined(annotations)(_.publicWrites(Some(request.identity)))
+      jsonList <- Fox.serialCombined(annotations)(_.compactWrites)
     } yield {
       Ok(Json.toJson(jsonList))
     }
@@ -183,7 +183,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   }
 
   private def checkAdminOnlyUpdates(user: User, isActive: Boolean, isAdmin: Boolean, email: String)(issuingUser: User): Boolean = {
-    if (user.isDeactivated == !isActive && user.isAdmin == isAdmin && user.email == email) true
+    if (isActive && user.isAdmin == isAdmin && user.email == email) true
     else issuingUser.isAdminOf(user)
   }
 

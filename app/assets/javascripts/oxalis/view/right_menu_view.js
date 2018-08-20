@@ -60,6 +60,11 @@ class RightMenuView extends React.Component<Props> {
         destroyInactiveTabPane
         defaultActiveKey="1"
         className="tracing-right-menu flex-column flex-column-for-ant-tabs-container"
+        onTabClick={() => {
+          if (document.activeElement) {
+            document.activeElement.blur();
+          }
+        }}
       >
         <TabPane tab="Info" key="1" className="flex-column">
           <DatasetInfoTabView />

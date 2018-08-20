@@ -98,7 +98,7 @@ export function getDatasetCenter(dataset: APIDatasetType): Vector3 {
   ];
 }
 
-export function determineAllowedModes(dataset: APIDatasetType, settings: SettingsType): * {
+export function determineAllowedModes(dataset: APIDatasetType, settings: SettingsType) {
   // The order of allowedModes should be independent from the server and instead be similar to ModeValues
   let allowedModes = _.intersection(ModeValues, settings.allowedModes);
 
@@ -143,8 +143,22 @@ export function getSegmentationLayer(dataset: APIDatasetType): ?DataLayerType {
   return segmentationLayers[0];
 }
 
+export function hasSegmentation(dataset: APIDatasetType): boolean {
+  return getSegmentationLayer(dataset) != null;
+}
+
 export function getColorLayers(dataset: APIDatasetType): Array<DataLayerType> {
   return dataset.dataSource.dataLayers.filter(dataLayer => isColorLayer(dataset, dataLayer.name));
+}
+
+export function getThumbnailURL(dataset: APIDatasetType): string {
+  const datasetName = dataset.name;
+  const layers = dataset.dataSource.dataLayers;
+  const colorLayer = _.find(layers, { category: "color" });
+  if (colorLayer) {
+    return `/api/datasets/${datasetName}/layers/${colorLayer.name}/thumbnail`;
+  }
+  return "";
 }
 
 export default {};

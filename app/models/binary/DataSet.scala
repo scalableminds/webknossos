@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLay
 import com.scalableminds.webknossos.schema.Tables._
 import models.configuration.DataSetConfiguration
 import models.team._
-import models.user.UserSQL
+import models.user.User
 import net.liftweb.common.Full
 import play.api.Play.current
 import play.api.i18n.Messages
@@ -23,11 +23,11 @@ import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO, SimpleSQLDAO}
 
 
-case class DataSetSQL(
+case class DataSet(
                        _id: ObjectId,
                        _dataStore: String,
                        _organization: ObjectId,
-                       defaultConfiguration: Option[JsValue] = None,
+                       defaultConfiguration: Option[DataSetConfiguration] = None,
                        description: Option[String] = None,
                        displayName: Option[String] = None,
                        isPublic: Boolean,
@@ -39,34 +39,122 @@ case class DataSetSQL(
                        logoUrl: Option[String],
                        created: Long = System.currentTimeMillis(),
                        isDeleted: Boolean = false
-                     )
+                     ) extends FoxImplicits {
 
-object DataSetSQL {
-  def fromDataSetWithId(d: DataSet, newId: ObjectId)(implicit ctx: DBAccessContext) =
-    for {
-      organization <- OrganizationSQLDAO.findOneByName(d.dataSource.id.team)
-    } yield {
-      DataSetSQL(
-        newId,
-        d.dataStoreInfo.name,
-        organization._id,
-        d.defaultConfiguration.map(Json.toJson(_)),
-        d.description,
-        d.displayName,
-        d.isPublic,
-        d.isActive,
-        d.dataSource.id.name,
-        d.dataSource.scaleOpt,
-        d.sharingToken,
-        d.dataSource.statusOpt.getOrElse(""),
-        d.logoUrl,
-        d.created,
-        false
-      )
+  def getDataLayerByName(dataLayerName: String)(implicit ctx: DBAccessContext): Fox[DataLayer] =
+    DataSetDataLayerDAO.findOneByNameForDataSet(dataLayerName, _id)
+
+  def getLogoUrl: Fox[String] =
+    logoUrl match {
+      case Some(url) => Fox.successful(url)
+      case None => OrganizationDAO.findOne(_organization)(GlobalAccessContext).map(_.logoUrl)
     }
+
+  def organization: Fox[Organization] =
+    OrganizationDAO.findOne(_organization)(GlobalAccessContext) ?~> Messages("organization.notFound")
+
+  def dataStore: Fox[DataStore] =
+    DataStoreDAO.findOneByName(_dataStore.trim)(GlobalAccessContext) ?~> Messages("datastore.notFound")
+
+  def dataStoreInfo: Fox[DataStoreInfo] =
+    for {
+      dataStore <- dataStore
+    } yield DataStoreInfo(dataStore.name, dataStore.url, dataStore.typ)
+
+  def dataStoreHandler(implicit ctx: DBAccessContext): Fox[DataStoreHandlingStrategy] =
+    for {
+      dataStoreInfo <- dataStoreInfo
+    } yield {
+      dataStoreInfo.typ match {
+        case WebKnossosStore => new WKStoreHandlingStrategy(dataStoreInfo, this)
+      }
+    }
+
+  def urlEncodedName: String =
+    UriEncoding.encodePathSegment(name, "UTF-8")
+
+  def lastUsedByUser(userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Long] = {
+    userOpt match {
+      case Some(user) =>
+        (for {
+          lastUsedTime <- DataSetLastUsedTimesDAO.findForDataSetAndUser(this._id, user._id).futureBox
+        } yield lastUsedTime.toOption.getOrElse(0L)).toFox
+      case _ => Fox.successful(0L)
+    }
+  }
+
+  def lastUsedByUser(user: User)(implicit ctx: DBAccessContext): Fox[Long] =
+    lastUsedByUser(Some(user))
+
+  def isEditableBy(userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Boolean] = {
+    userOpt match {
+      case Some(user) =>
+        for {
+          isTeamManagerInOrg <- user.isTeamManagerInOrg(_organization)
+        } yield (user.isAdminOf(_organization) || isTeamManagerInOrg)
+      case _ => Fox.successful(false)
+    }
+  }
+
+  def isEditableBy(user: User)(implicit ctx: DBAccessContext): Fox[Boolean] =
+    isEditableBy(Some(user))
+
+  def allowedTeamIds =
+    DataSetAllowedTeamsDAO.findAllForDataSet(_id)(GlobalAccessContext) ?~> Messages("allowedTeams.notFound")
+
+  def allowedTeams =
+    for {
+      allowedTeamIds <- allowedTeamIds
+      allowedTeams <- Fox.combined(allowedTeamIds.map(TeamDAO.findOne(_)(GlobalAccessContext)))
+    } yield allowedTeams
+
+  def constructDataSource(implicit ctx: DBAccessContext): Fox[InboxDataSource] = {
+    for {
+      organization <- organization
+      dataLayersBox <- (DataSetDataLayerDAO.findAllForDataSet(_id) ?~> "could not find data layers").futureBox
+      dataSourceId = DataSourceId(name, organization.name)
+    } yield {
+      dataLayersBox match {
+        case Full(dataLayers) if (dataLayers.length > 0) =>
+          for {
+            scale <- scale
+          } yield GenericDataSource[DataLayer](dataSourceId, dataLayers, scale)
+        case _ =>
+          Some(UnusableDataSource[DataLayer](dataSourceId, status, scale))
+      }
+    }
+  }
+
+  def publicWrites(user: Option[User]): Fox[JsObject] = {
+    implicit val ctx = GlobalAccessContext
+    for {
+      teams <- allowedTeams
+      teamsJs <- Fox.serialCombined(teams)(_.publicWrites)
+      logoUrl <- getLogoUrl
+      isEditable <- isEditableBy(user)
+      lastUsedByUser <- lastUsedByUser(user)
+      dataStoreInfo <- dataStoreInfo
+      organization <- organization
+      dataSource <- constructDataSource
+    } yield {
+      Json.obj("name" -> name,
+        "dataSource" -> dataSource,
+        "dataStore" -> dataStoreInfo,
+        "owningOrganization" -> organization.name,
+        "allowedTeams" -> teamsJs,
+        "isActive" -> isUsable,
+        "isPublic" -> isPublic,
+        "description" -> description,
+        "displayName" -> displayName,
+        "created" -> created,
+        "isEditable" -> isEditable,
+        "lastUsedByUser" -> lastUsedByUser,
+        "logoUrl" -> logoUrl)
+    }
+  }
 }
 
-object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
+object DataSetDAO extends SQLDAO[DataSet, DatasetsRow, Datasets] {
   val collection = Datasets
 
   def idColumn(x: Datasets): Rep[String] = x._Id
@@ -83,15 +171,16 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
   private def writeScaleLiteral(scale: Scale): String =
     writeStructTuple(List(scale.x, scale.y, scale.z).map(_.toString))
 
-  def parse(r: DatasetsRow): Fox[DataSetSQL] = {
+  def parse(r: DatasetsRow): Fox[DataSet] = {
     for {
       scale <- parseScaleOpt(r.scale)
+      defaultConfigurationOpt <- Fox.runOptional(r.defaultconfiguration)(JsonHelper.parseJsonToFox[DataSetConfiguration](_))
     } yield {
-      DataSetSQL(
+      DataSet(
         ObjectId(r._Id),
-        r._Datastore,
+        r._Datastore.trim,
         ObjectId(r._Organization),
-        r.defaultconfiguration.map(Json.parse(_).as[JsObject]),
+        defaultConfigurationOpt,
         r.description,
         r.displayname,
         r.ispublic,
@@ -117,7 +206,7 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
         or ('${requestingUserId.id}' in (select _user from webknossos.user_team_roles where isTeammanager)
             and _organization in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}'))"""
 
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[DataSetSQL] =
+  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[DataSet] =
     for {
       accessQuery <- readAccessQuery
       rList <- run(sql"select #${columns} from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[DatasetsRow])
@@ -125,7 +214,7 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
       parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
     } yield parsed
 
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[DataSetSQL]] = {
+  override def findAll(implicit ctx: DBAccessContext): Fox[List[DataSet]] = {
     for {
       accessQuery <- readAccessQuery
       r <- run(sql"select #${columns} from #${existingCollectionName} where #${accessQuery}".as[DatasetsRow])
@@ -133,7 +222,7 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
     } yield parsed
   }
 
-  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataSetSQL] =
+  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataSet] =
     for {
       accessQuery <- readAccessQuery
       rList <- run(sql"select #${columns} from #${existingCollectionName} where name = ${name} and #${accessQuery}".as[DatasetsRow])
@@ -174,8 +263,8 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
     } yield ()
   }
 
-  def updateFieldsByName(name: String, description: Option[String], displayName: Option[String], isPublic: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val q = for {row <- Datasets if (notdel(row) && row.name === name)} yield (row.description, row.displayname, row.ispublic)
+  def updateFields(_id: ObjectId, description: Option[String], displayName: Option[String], isPublic: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val q = for {row <- Datasets if (notdel(row) && row._Id === _id.id)} yield (row.description, row.displayname, row.ispublic)
     for {
       _ <- run(q.update(description, displayName, isPublic))
     } yield ()
@@ -189,11 +278,12 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
     } yield ()
   }
 
-  def insertOne(d: DataSetSQL)(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def insertOne(d: DataSet)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val defaultConfiguration: Option[String] = d.defaultConfiguration.map(c => Json.toJson(c.configuration).toString)
     for {
       _ <- run(
         sqlu"""insert into webknossos.dataSets(_id, _dataStore, _organization, defaultConfiguration, description, displayName, isPublic, isUsable, name, scale, status, sharingToken, created, isDeleted)
-               values(${d._id.id}, ${d._dataStore}, ${d._organization.id}, #${optionLiteral(d.defaultConfiguration.map(_.toString).map(sanitize))}, ${d.description}, ${d.displayName}, ${d.isPublic}, ${d.isUsable},
+               values(${d._id.id}, ${d._dataStore}, ${d._organization.id}, #${optionLiteral(defaultConfiguration.map(sanitize))}, ${d.description}, ${d.displayName}, ${d.isPublic}, ${d.isUsable},
                       ${d.name}, #${optionLiteral(d.scale.map(s => writeScaleLiteral(s)))}, ${d.status.take(1024)}, ${d.sharingToken}, ${new java.sql.Timestamp(d.created)}, ${d.isDeleted})
             """)
     } yield ()
@@ -203,7 +293,7 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
 
     for {
       old <- findOneByName(name)
-      organization <- OrganizationSQLDAO.findOneByName(source.id.team)
+      organization <- OrganizationDAO.findOneByName(source.id.team)
       q =
       sqlu"""update webknossos.dataSets
                     set _dataStore = ${dataStoreName},
@@ -213,7 +303,7 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
                         status = ${source.statusOpt.getOrElse("")}
                    where _id = ${old._id.id}"""
       _ <- run(q)
-      _ <- DataSetDataLayerSQLDAO.updateLayers(old._id, source)
+      _ <- DataSetDataLayerDAO.updateLayers(old._id, source)
     } yield ()
   }
 
@@ -240,7 +330,7 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
 }
 
 
-object DataSetResolutionsSQLDAO extends SimpleSQLDAO {
+object DataSetResolutionsDAO extends SimpleSQLDAO {
 
   def parseRow(row: DatasetResolutionsRow): Fox[Point3D] = {
     for {
@@ -279,14 +369,14 @@ object DataSetResolutionsSQLDAO extends SimpleSQLDAO {
 }
 
 
-object DataSetDataLayerSQLDAO extends SimpleSQLDAO {
+object DataSetDataLayerDAO extends SimpleSQLDAO {
 
   def parseRow(row: DatasetLayersRow, dataSetId: ObjectId): Fox[DataLayer] = {
     val result: Fox[Fox[DataLayer]] = for {
       category <- Category.fromString(row.category).toFox ?~> "Could not parse Layer Category"
       boundingBox <- BoundingBox.fromSQL(parseArrayTuple(row.boundingbox).map(_.toInt)).toFox ?~> "Could not parse boundingbox"
       elementClass <- ElementClass.fromString(row.elementclass).toFox ?~> "Could not parse Layer ElementClass"
-      resolutions <- DataSetResolutionsSQLDAO.findDataResolutionForLayer(dataSetId, row.name) ?~> "Could not find resolution for layer"
+      resolutions <- DataSetResolutionsDAO.findDataResolutionForLayer(dataSetId, row.name) ?~> "Could not find resolution for layer"
     } yield {
       (row.largestsegmentid, row.mappings) match {
         case (Some(segmentId), Some(mappings)) =>
@@ -312,12 +402,22 @@ object DataSetDataLayerSQLDAO extends SimpleSQLDAO {
     result.flatten
   }
 
-  def findAllDataLayersForDataSet(dataSetId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[DataLayer]] = {
+  def findAllForDataSet(dataSetId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[DataLayer]] = {
     for {
       rows <- run(DatasetLayers.filter(_._Dataset === dataSetId.id).result).map(_.toList)
       rowsParsed <- Fox.combined(rows.map(parseRow(_, dataSetId)))
     } yield {
       rowsParsed
+    }
+  }
+
+  def findOneByNameForDataSet(dataLayerName: String, dataSetId: ObjectId)(implicit ctx: DBAccessContext): Fox[DataLayer] = {
+    for {
+      rows <- run(DatasetLayers.filter(_._Dataset === dataSetId.id).filter(_.name === dataLayerName).result).map(_.toList)
+      firstRow <- rows.headOption.toFox ?~> ("Could not find data layer " + dataLayerName)
+      parsed <- parseRow(firstRow, dataSetId)
+    } yield {
+      parsed
     }
   }
 
@@ -344,13 +444,13 @@ object DataSetDataLayerSQLDAO extends SimpleSQLDAO {
     }
     for {
       _ <- run(DBIO.sequence(List(clearQuery) ++ insertQueries))
-      _ <- DataSetResolutionsSQLDAO.updateResolutions(_dataSet, source.toUsable.map(_.dataLayers))
+      _ <- DataSetResolutionsDAO.updateResolutions(_dataSet, source.toUsable.map(_.dataLayers))
     } yield ()
   }
 }
 
 
-object DataSetAllowedTeamsSQLDAO extends SimpleSQLDAO {
+object DataSetAllowedTeamsDAO extends SimpleSQLDAO {
 
   def findAllForDataSet(dataSetId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
     val query = for {
@@ -360,16 +460,16 @@ object DataSetAllowedTeamsSQLDAO extends SimpleSQLDAO {
     run(query.result).flatMap(rows => Fox.serialCombined(rows.toList)(ObjectId.parse(_)))
   }
 
-  def updateAllowedTeamsForDataSetByName(dataSetName: String, allowedTeams: List[ObjectId])(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def updateAllowedTeamsForDataSet(_id: ObjectId, allowedTeams: List[ObjectId])(implicit ctx: DBAccessContext): Fox[Unit] = {
     val clearQuery =
       sqlu"""delete from webknossos.dataSet_allowedTeams
                              where _dataSet = (
-                               select _id from webknossos.dataSets where name = ${dataSetName}
+                               select _id from webknossos.dataSets where _id = ${_id}
                              )"""
 
     val insertQueries = allowedTeams.map(teamId =>
       sqlu"""insert into webknossos.dataSet_allowedTeams(_dataSet, _team)
-                                                              values((select _id from webknossos.dataSets where name = ${dataSetName}),
+                                                              values((select _id from webknossos.dataSets where _id = ${_id}),
                                                                      ${teamId.id})""")
 
     val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)
@@ -379,172 +479,21 @@ object DataSetAllowedTeamsSQLDAO extends SimpleSQLDAO {
   }
 }
 
-case class DataSet(
-                    logoUrl: Option[String],
-                    dataStoreInfo: DataStoreInfo,
-                    dataSource: InboxDataSource,
-                    owningOrganization: String,
-                    allowedTeams: List[ObjectId],
-                    isActive: Boolean = false,
-                    isPublic: Boolean = false,
-                    description: Option[String] = None,
-                    displayName: Option[String] = None,
-                    defaultConfiguration: Option[DataSetConfiguration] = None,
-                    sharingToken: Option[String] = None,
-                    created: Long = System.currentTimeMillis()) extends FoxImplicits {
 
-  def name = dataSource.id.name
-
-  def urlEncodedName: String =
-    UriEncoding.encodePathSegment(name, "UTF-8")
-
-  def isEditableBy(userOpt: Option[UserSQL])(implicit ctx: DBAccessContext) = {
-    userOpt match {
-      case Some(user) =>
-        for {
-          organization <- OrganizationSQLDAO.findOneByName(owningOrganization)
-          isTeamManagerInOrg <- user.isTeamManagerInOrg(organization._id)
-        } yield (user.isAdminOf(organization._id) || isTeamManagerInOrg)
-      case _ => Fox.successful(false)
-    }
+object DataSetLastUsedTimesDAO extends SimpleSQLDAO {
+  def findForDataSetAndUser(dataSetId: ObjectId, userId: ObjectId): Fox[Long] = {
+    for {
+      rList <- run(sql"select lastUsedTime from webknossos.dataSet_lastUsedTimes where _dataSet = ${dataSetId} and _user = ${userId}".as[java.sql.Timestamp])
+      r <- rList.headOption.toFox
+    } yield (r.getTime)
   }
 
-  lazy val dataStore: DataStoreHandlingStrategy =
-    DataStoreHandlingStrategy(this)
-}
-
-object DataSet extends FoxImplicits {
-  implicit val dataSetFormat = Json.format[DataSet]
-
-  def dataSetPublicWrites(d: DataSet, user: Option[UserSQL]): Fox[JsObject] = {
-    implicit val ctx = GlobalAccessContext
+  def updateForDataSetAndUser(dataSetId: ObjectId, userId: ObjectId): Fox[Unit] = {
+    val clearQuery = sqlu"delete from webknossos.dataSet_lastUsedTimes where _dataSet = ${dataSetId} and _user = ${userId}"
+    val insertQuery = sqlu"insert into webknossos.dataSet_lastUsedTimes(_dataSet, _user, lastUsedTime) values(${dataSetId}, ${userId}, NOW())"
+    val composedQuery = DBIO.sequence(List(clearQuery, insertQuery))
     for {
-      teams <- Fox.combined(d.allowedTeams.map(teamId => TeamSQLDAO.findOne(teamId)))
-      teamsJs <- Fox.serialCombined(teams)(_.publicWrites)
-      logoUrl <- getLogoUrl(d)
-      isEditable <- d.isEditableBy(user)
-    } yield {
-      Json.obj("name" -> d.name,
-        "dataSource" -> d.dataSource,
-        "dataStore" -> d.dataStoreInfo,
-        "owningOrganization" -> d.owningOrganization,
-        "allowedTeams" -> teamsJs,
-        "isActive" -> d.isActive,
-        "isPublic" -> d.isPublic,
-        "description" -> d.description,
-        "displayName" -> d.displayName,
-        "created" -> d.created,
-        "isEditable" -> isEditable,
-        "logoUrl" -> logoUrl)
-    }
-  }
-
-  private def parseDefaultConfiguration(jsValueOpt: Option[JsValue]): Fox[Option[DataSetConfiguration]] = jsValueOpt match {
-    case Some(jsValue) => for {
-      conf <- JsonHelper.jsResultToFox(jsValue.validate[DataSetConfiguration])
-    } yield Some(conf)
-    case None => Fox.successful(None)
-  }
-
-  private def constructDataSource(s: DataSetSQL, organization: OrganizationSQL)(implicit ctx: DBAccessContext): Fox[InboxDataSource] = {
-    val dataSourceId = DataSourceId(s.name, organization.name)
-    for {
-      dataLayersBox <- (DataSetDataLayerSQLDAO.findAllDataLayersForDataSet(s._id) ?~> "could not find data layers").futureBox
-    } yield {
-      dataLayersBox match {
-        case Full(dataLayers) if (dataLayers.length > 0) =>
-          for {
-            scale <- s.scale
-          } yield GenericDataSource[DataLayer](dataSourceId, dataLayers, scale)
-        case _ =>
-          Some(UnusableDataSource[DataLayer](dataSourceId, s.status, s.scale))
-      }
-    }
-  }
-
-  private def getLogoUrl(dataSet: DataSet) =
-    dataSet.logoUrl match {
-      case Some(url) => Fox.successful(url)
-      case None => OrganizationSQLDAO.findOneByName(dataSet.owningOrganization)(GlobalAccessContext).map(_.logoUrl)
-    }
-
-  def fromDataSetSQL(s: DataSetSQL)(implicit ctx: DBAccessContext) = {
-    for {
-      datastore <- DataStoreSQLDAO.findOneByName(s._dataStore.trim)(GlobalAccessContext) ?~> Messages("datastore.notFound")
-      allowedTeams <- DataSetAllowedTeamsSQLDAO.findAllForDataSet(s._id)(GlobalAccessContext) ?~> Messages("allowedTeams.notFound")
-      defaultConfiguration <- parseDefaultConfiguration(s.defaultConfiguration)
-      organization <- OrganizationSQLDAO.findOne(s._organization)(GlobalAccessContext) ?~> Messages("team.notFound")
-      dataSource <- constructDataSource(s, organization)(GlobalAccessContext) ?~> "could not construct datasource"
-    } yield {
-      DataSet(
-        s.logoUrl,
-        DataStoreInfo(datastore.name, datastore.url, datastore.typ),
-        dataSource,
-        organization.name,
-        allowedTeams,
-        s.isUsable,
-        s.isPublic,
-        s.description,
-        s.displayName,
-        defaultConfiguration,
-        s.sharingToken,
-        s.created
-      )
-    }
-  }
-}
-
-object DataSetDAO {
-
-  def findOneById(id: ObjectId)(implicit ctx: DBAccessContext): Fox[DataSet] = {
-    for {
-      dataSetSQL <- DataSetSQLDAO.findOne(id)
-      dataSet <- DataSet.fromDataSetSQL(dataSetSQL)
-    } yield dataSet
-  }
-
-  def findOneBySourceName(name: String)(implicit ctx: DBAccessContext): Fox[DataSet] = {
-    for {
-      dataSetSQL <- DataSetSQLDAO.findOneByName(name)
-      dataSet <- DataSet.fromDataSetSQL(dataSetSQL)
-    } yield dataSet
-  }
-
-  def findAll(implicit ctx: DBAccessContext): Fox[List[DataSet]] =
-    for {
-      dataSetsSQL <- DataSetSQLDAO.findAll
-      dataSets <- Fox.combined(dataSetsSQL.map(DataSet.fromDataSetSQL(_)))
-    } yield dataSets
-
-  def updateDataSource(
-                        name: String,
-                        dataStoreInfo: DataStoreInfo,
-                        source: InboxDataSource,
-                        isActive: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
-    DataSetSQLDAO.updateDataSourceByName(name, dataStoreInfo.name, source, isActive)
-
-  def updateTeams(name: String, teams: List[ObjectId])(implicit ctx: DBAccessContext) =
-    DataSetAllowedTeamsSQLDAO.updateAllowedTeamsForDataSetByName(name, teams.distinct)
-
-  def update(name: String, description: Option[String], displayName: Option[String], isPublic: Boolean)(implicit ctx: DBAccessContext): Fox[DataSet] = {
-    for {
-      _ <- DataSetSQLDAO.updateFieldsByName(name, description, displayName, isPublic)
-      updated <- findOneBySourceName(name)
-    } yield updated
-  }
-
-  def insert(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val newId = ObjectId.generate
-    for {
-      dataSetSQL <- DataSetSQL.fromDataSetWithId(dataSet, newId)
-      _ <- DataSetSQLDAO.insertOne(dataSetSQL)
-      _ <- DataSetDataLayerSQLDAO.updateLayers(newId, dataSet.dataSource)
-      _ <- DataSetAllowedTeamsSQLDAO.updateAllowedTeamsForDataSetByName(dataSet.name, dataSet.allowedTeams)
+      _ <- run(composedQuery.transactionally.withTransactionIsolation(Serializable), retryCount = 50, retryIfErrorContains = List(transactionSerializationError))
     } yield ()
   }
-
-  def countAll(implicit ctx: DBAccessContext): Fox[Int] = DataSetSQLDAO.countAll
-
-  def deactivateUnreportedDataSources(dataStoreName: String, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext): Fox[Unit] =
-    DataSetSQLDAO.deactivateUnreported(dataSources.map(_.id.name), dataStoreName)
 }

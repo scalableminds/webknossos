@@ -3,13 +3,14 @@
 
 import _ from "lodash";
 import * as React from "react";
+import moment from "moment";
 import { connect } from "react-redux";
 import { Link, withRouter } from "react-router-dom";
-import { Table, Tag, Icon, Spin, Button, Input, Modal } from "antd";
+import { Table, Tag, Icon, Spin, Button, Input, Modal, Alert, Row, Col, Tooltip } from "antd";
 import TeamRoleModalView from "admin/user/team_role_modal_view";
 import ExperienceModalView from "admin/user/experience_modal_view";
-import TemplateHelpers from "libs/template_helpers";
-import Utils from "libs/utils";
+import { stringToColor } from "libs/format_utils";
+import * as Utils from "libs/utils";
 import { getEditableUsers, updateUser } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
@@ -44,6 +45,7 @@ type State = {
   selectedUserIds: Array<string>,
   isExperienceModalVisible: boolean,
   isTeamRoleModalVisible: boolean,
+  isInvitePopoverVisible: boolean,
   activationFilter: Array<"true" | "false">,
   searchQuery: string,
 };
@@ -63,6 +65,7 @@ class UserListView extends React.PureComponent<Props, State> {
     selectedUserIds: [],
     isExperienceModalVisible: false,
     isTeamRoleModalVisible: false,
+    isInvitePopoverVisible: false,
     activationFilter: ["true"],
     searchQuery: "",
   };
@@ -89,21 +92,21 @@ class UserListView extends React.PureComponent<Props, State> {
   }
 
   activateUser = (selectedUser: APIUserType, isActive: boolean = true): void => {
-    const newUsers = this.state.users.map(user => {
-      if (selectedUser.id === user.id) {
-        const newUser = Object.assign({}, user, { isActive });
+    this.setState(prevState => {
+      const newUsers = prevState.users.map(user => {
+        if (selectedUser.id === user.id) {
+          const newUser = Object.assign({}, user, { isActive });
+          updateUser(newUser);
+          return newUser;
+        }
+        return user;
+      });
 
-        updateUser(newUser);
-        return newUser;
-      }
-
-      return user;
-    });
-
-    this.setState({
-      users: newUsers,
-      selectedUserIds: [selectedUser.id],
-      isTeamRoleModalVisible: isActive,
+      return {
+        users: newUsers,
+        selectedUserIds: [selectedUser.id],
+        isTeamRoleModalVisible: isActive,
+      };
     });
   };
 
@@ -112,18 +115,20 @@ class UserListView extends React.PureComponent<Props, State> {
   };
 
   changeEmail = (selectedUser: APIUserType, newEmail: string): void => {
-    const newUsers = this.state.users.map(user => {
-      if (selectedUser.id === user.id) {
-        const newUser = Object.assign({}, user, { email: newEmail });
-        updateUser(newUser);
-        return newUser;
-      }
-      return user;
-    });
+    this.setState(prevState => {
+      const newUsers = prevState.users.map(user => {
+        if (selectedUser.id === user.id) {
+          const newUser = Object.assign({}, user, { email: newEmail });
+          updateUser(newUser);
+          return newUser;
+        }
+        return user;
+      });
 
-    this.setState({
-      users: newUsers,
-      selectedUserIds: [selectedUser.id],
+      return {
+        users: newUsers,
+        selectedUserIds: [selectedUser.id],
+      };
     });
     Toast.success(messages["users.change_email_confirmation"]);
 
@@ -166,6 +171,70 @@ class UserListView extends React.PureComponent<Props, State> {
     }
   };
 
+  renderNewUsersAlert() {
+    const now = moment();
+    const newInactiveUsers = this.state.users.filter(
+      user => !user.isActive && moment.duration(now.diff(user.created)).asDays() <= 14,
+    );
+
+    const newInactiveUsersHeader = (
+      <React.Fragment>
+        There are new inactive users{" "}
+        <Tooltip
+          title="The displayed users are inactive and were created in the past 14 days."
+          placement="right"
+        >
+          <Icon type="info-circle" />
+        </Tooltip>
+      </React.Fragment>
+    );
+    const newInactiveUsersList = (
+      <React.Fragment>
+        {newInactiveUsers.map(user => (
+          <Row key={user.id} gutter={16}>
+            <Col span={6}>{`${user.firstName} ${user.lastName} (${user.email}) `}</Col>
+            <Col span={4}>
+              <a href="#" onClick={() => this.activateUser(user)}>
+                <Icon type="user-add" />Activate User
+              </a>
+            </Col>
+          </Row>
+        ))}
+      </React.Fragment>
+    );
+
+    return newInactiveUsers.length ? (
+      <Alert
+        message={newInactiveUsersHeader}
+        description={newInactiveUsersList}
+        type="info"
+        iconType="user"
+        showIcon
+        style={{ marginTop: 20 }}
+      />
+    ) : null;
+  }
+
+  renderPlaceholder() {
+    const noUsersMessage = (
+      <React.Fragment>
+        {"You can "}
+        <a onClick={() => this.setState({ isInvitePopoverVisible: true })}>invite more users</a>
+        {" to join your organization. After the users joined, you need to activate them manually."}
+      </React.Fragment>
+    );
+
+    return this.state.isLoading ? null : (
+      <Alert
+        message="Invite more users"
+        description={noUsersMessage}
+        type="info"
+        showIcon
+        style={{ marginTop: 20 }}
+      />
+    );
+  }
+
   render() {
     const hasRowsSelected = this.state.selectedUserIds.length > 0;
     const rowSelection = {
@@ -179,11 +248,12 @@ class UserListView extends React.PureComponent<Props, State> {
 
     const activationFilterWarning = this.state.activationFilter.includes("true") ? (
       <Tag closable onClose={this.handleDismissActivationFilter} color="blue">
-        Show Active User Only
+        Show Active Users Only
       </Tag>
     ) : null;
 
     const marginRight = { marginRight: 20 };
+    const noOtherUsers = this.state.users.length < 2;
 
     return (
       <div className="container test-UserListView">
@@ -226,7 +296,13 @@ class UserListView extends React.PureComponent<Props, State> {
             Grant Admin Rights
           </Button>
         ) : null}
-        <InviteUsersPopover organizationName={this.props.activeUser.organization}>
+        <InviteUsersPopover
+          organizationName={this.props.activeUser.organization}
+          visible={this.state.isInvitePopoverVisible}
+          handleVisibleChange={visible => {
+            this.setState({ isInvitePopoverVisible: visible });
+          }}
+        >
           <Button icon="user-add" style={marginRight}>
             Invite Users
           </Button>
@@ -238,6 +314,9 @@ class UserListView extends React.PureComponent<Props, State> {
           onChange={this.handleSearch}
           value={this.state.searchQuery}
         />
+
+        {noOtherUsers ? this.renderPlaceholder() : null}
+        {this.renderNewUsersAlert()}
 
         <Spin size="large" spinning={this.state.isLoading}>
           <Table
@@ -263,20 +342,20 @@ class UserListView extends React.PureComponent<Props, State> {
               dataIndex="lastName"
               key="lastName"
               width={130}
-              sorter={Utils.localeCompareBy(typeHint, "lastName")}
+              sorter={Utils.localeCompareBy(typeHint, user => user.lastName)}
             />
             <Column
               title="First Name"
               dataIndex="firstName"
               key="firstName"
               width={130}
-              sorter={Utils.localeCompareBy(typeHint, "firstName")}
+              sorter={Utils.localeCompareBy(typeHint, user => user.firstName)}
             />
             <Column
               title="Email"
               dataIndex="email"
               key="email"
-              sorter={Utils.localeCompareBy(typeHint, "email")}
+              sorter={Utils.localeCompareBy(typeHint, user => user.email)}
               render={(__, user: APIUserType) =>
                 this.props.activeUser.isAdmin ? (
                   <EditableTextLabel
@@ -331,10 +410,7 @@ class UserListView extends React.PureComponent<Props, State> {
                   return teams.map(team => {
                     const roleName = team.isTeamManager ? "Team Manager" : "User";
                     return (
-                      <Tag
-                        key={`team_role_${user.id}_${team.id}`}
-                        color={TemplateHelpers.stringToColor(roleName)}
-                      >
+                      <Tag key={`team_role_${user.id}_${team.id}`} color={stringToColor(roleName)}>
                         {team.name}: {roleName}
                       </Tag>
                     );

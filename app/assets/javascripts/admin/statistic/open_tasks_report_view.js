@@ -1,7 +1,7 @@
 // @flow
 import * as React from "react";
 import { Spin, Table, Card } from "antd";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import { getOpenTasksReport } from "admin/admin_rest_api";
 import type { APIOpenTasksReportType } from "admin/api_flow_types";
 import { handleGenericError } from "libs/error_handling";
@@ -60,14 +60,14 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
             <Column
               title="User"
               dataIndex="user"
-              sorter={Utils.localeCompareBy(typeHint, "user")}
+              sorter={Utils.localeCompareBy(typeHint, task => task.user)}
               width={200}
             />
             <Column
               title="# Assignments"
               dataIndex="totalAssignments"
               defaultSortOrder="ascend"
-              sorter={Utils.compareBy(typeHint, "totalAssignments")}
+              sorter={Utils.compareBy(typeHint, task => task.totalAssignments)}
               width={150}
             />
             <Column

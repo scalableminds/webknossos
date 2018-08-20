@@ -11,15 +11,10 @@ case object WebKnossosStore extends DataStoreType {
   val name = "webknossos-store"
 }
 
-case object NDStore extends DataStoreType {
-  val name = "ndstore"
-}
-
 object DataStoreType {
 
   def stringToType(s: String): DataStoreType = s match {
     case WebKnossosStore.name => WebKnossosStore
-    case NDStore.name         => NDStore
     case _                    => throw new UnsupportedOperationException()
   }
 

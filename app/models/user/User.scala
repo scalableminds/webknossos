@@ -5,7 +5,7 @@ import com.mohiva.play.silhouette.api.{Identity, LoginInfo}
 import com.scalableminds.util.accesscontext._
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.schema.Tables._
-import models.binary.DataSetSQLDAO
+import models.binary.DataSetDAO
 import models.configuration.{DataSetConfiguration, UserConfiguration}
 import models.team._
 import play.api.Play.current
@@ -19,7 +19,7 @@ import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO, SimpleSQLDAO}
 
 
-case class UserSQL(
+case class User(
                   _id: ObjectId,
                   _organization: ObjectId,
                   email: String,
@@ -41,14 +41,14 @@ case class UserSQL(
   val abreviatedName =
     (firstName.take(1) + lastName).toLowerCase.replace(" ", "_")
 
-  def organization = OrganizationSQLDAO.findOne(_organization)(GlobalAccessContext)
+  def organization = OrganizationDAO.findOne(_organization)(GlobalAccessContext)
 
-  def experiences = UserExperiencesSQLDAO.findAllExperiencesForUser(_id)(GlobalAccessContext)
+  def experiences = UserExperiencesDAO.findAllExperiencesForUser(_id)(GlobalAccessContext)
 
   def userConfigurationStructured =
     JsonHelper.jsResultToFox(userConfiguration.validate[Map[String, JsValue]]).map(UserConfiguration(_))
 
-  def teamMemberships = UserTeamRolesSQLDAO.findTeamMembershipsForUser(_id)(GlobalAccessContext)
+  def teamMemberships = UserTeamRolesDAO.findTeamMembershipsForUser(_id)(GlobalAccessContext)
 
   def teamManagerMemberships =
     for {
@@ -65,7 +65,7 @@ case class UserSQL(
       teamMemberships <- teamMemberships
     } yield teamMemberships.map(_.teamId)
 
-  def isTeamManagerOrAdminOf(otherUser: UserSQL): Fox[Boolean] =
+  def isTeamManagerOrAdminOf(otherUser: User): Fox[Boolean] =
     for {
       otherUserTeamIds <- otherUser.teamIds
       teamManagerTeamIds <- teamManagerTeamIds
@@ -73,7 +73,7 @@ case class UserSQL(
 
   def isTeamManagerOrAdminOf(_team: ObjectId): Fox[Boolean] =
     for {
-      team <- TeamSQLDAO.findOne(_team)(GlobalAccessContext)
+      team <- TeamDAO.findOne(_team)(GlobalAccessContext)
       teamManagerTeamIds <- teamManagerTeamIds
     } yield (teamManagerTeamIds.contains(_team) || this.isAdminOf(team._organization))
 
@@ -82,7 +82,7 @@ case class UserSQL(
       isTeamManager <- isTeamManagerInOrg(_organization)
     } yield (isTeamManager || this.isAdminOf(_organization))
 
-  def isEditableBy(otherUser: UserSQL): Fox[Boolean] =
+  def isEditableBy(otherUser: User): Fox[Boolean] =
     for {
       otherIsTeamManagerOrAdmin <- otherUser.isTeamManagerOrAdminOf(this)
       teamMemberships <- teamMemberships
@@ -96,10 +96,10 @@ case class UserSQL(
   def isAdminOf(_organization: ObjectId): Boolean =
     isAdmin && _organization == this._organization
 
-  def isAdminOf(otherUser: UserSQL): Boolean =
+  def isAdminOf(otherUser: User): Boolean =
     isAdminOf(otherUser._organization)
 
-  def publicWrites(requestingUser: UserSQL): Fox[JsObject] = {
+  def publicWrites(requestingUser: User): Fox[JsObject] = {
     implicit val ctx = GlobalAccessContext
     for {
       isEditable <- isEditableBy(requestingUser)
@@ -120,7 +120,8 @@ case class UserSQL(
         "lastActivity" -> lastActivity,
         "isAnonymous" -> false,
         "isEditable" -> isEditable,
-        "organization" -> organization.name
+        "organization" -> organization.name,
+        "created" -> created
       )
     }
   }
@@ -144,14 +145,14 @@ case class UserSQL(
 
 }
 
-object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
+object UserDAO extends SQLDAO[User, UsersRow, Users] {
   val collection = Users
 
   def idColumn(x: Users): Rep[String] = x._Id
   def isDeletedColumn(x: Users): Rep[Boolean] = x.isdeleted
 
-  def parse(r: UsersRow): Fox[UserSQL] =
-    Fox.successful(UserSQL(
+  def parse(r: UsersRow): Fox[User] =
+    Fox.successful(User(
       ObjectId(r._Id),
       ObjectId(r._Organization),
       r.email,
@@ -176,7 +177,7 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
     s"_organization in (select _organization from webknossos.users_ where _id = '${requestingUserId}' and isAdmin)"
 
 
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[UserSQL] =
+  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
     for {
       accessQuery <- readAccessQuery
       rList <- run(sql"select #${columns} from #${existingCollectionName} where _id = ${id} and #${accessQuery}".as[UsersRow])
@@ -184,7 +185,7 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
       parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
     } yield parsed
 
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[UserSQL]] = {
+  override def findAll(implicit ctx: DBAccessContext): Fox[List[User]] = {
     for {
       accessQuery <- readAccessQuery
       r <- run(sql"select #${columns} from #${existingCollectionName} where #${accessQuery}".as[UsersRow])
@@ -192,7 +193,7 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
     } yield parsed
   }
 
-  def findOneByEmail(email: String)(implicit ctx: DBAccessContext): Fox[UserSQL] =
+  def findOneByEmail(email: String)(implicit ctx: DBAccessContext): Fox[User] =
     for {
       accessQuery <- readAccessQuery
       rList <- run(sql"select #${columns} from #${existingCollectionName} where email = ${email} and #${accessQuery}".as[UsersRow])
@@ -216,7 +217,7 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
       } yield parsed
   }
 
-  def findAllByIds(ids: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[UserSQL]] =
+  def findAllByIds(ids: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[User]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(sql"select #${columns} from #${existingCollectionName} where _id in #${writeStructTupleWithQuotes(ids.map(_.id))} and #${accessQuery}".as[UsersRow])
@@ -224,7 +225,7 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
     } yield parsed
 
 
-  def insertOne(u: UserSQL)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def insertOne(u: User)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- run(
         sqlu"""insert into webknossos.users(_id, _organization, email, firstName, lastName, lastActivity, userConfiguration, md5hash, loginInfo_providerID,
@@ -267,7 +268,7 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
   }
 }
 
-object UserTeamRolesSQLDAO extends SimpleSQLDAO {
+object UserTeamRolesDAO extends SimpleSQLDAO {
 
   def findTeamMembershipsForUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[TeamMembershipSQL]] = {
     val query = for {
@@ -289,14 +290,14 @@ object UserTeamRolesSQLDAO extends SimpleSQLDAO {
     val clearQuery = sqlu"delete from webknossos.user_team_roles where _user = ${userId}"
     val insertQueries = teamMemberships.map(insertQuery(userId, _))
     for {
-      _ <- UserSQLDAO.assertUpdateAccess(userId)
+      _ <- UserDAO.assertUpdateAccess(userId)
       _ <- run(DBIO.sequence(List(clearQuery) ++ insertQueries).transactionally)
     } yield ()
   }
 
   def insertTeamMembership(userId: ObjectId, teamMembership: TeamMembershipSQL)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- UserSQLDAO.assertUpdateAccess(userId)
+      _ <- UserDAO.assertUpdateAccess(userId)
       _ <- run(insertQuery(userId, teamMembership))
     } yield ()
 
@@ -308,7 +309,7 @@ object UserTeamRolesSQLDAO extends SimpleSQLDAO {
 
 }
 
-object UserExperiencesSQLDAO extends SimpleSQLDAO {
+object UserExperiencesDAO extends SimpleSQLDAO {
 
   def findAllExperiencesForUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Map[String, Int]] = {
     for {
@@ -322,14 +323,14 @@ object UserExperiencesSQLDAO extends SimpleSQLDAO {
     val clearQuery = sqlu"delete from webknossos.user_experiences where _user = ${userId}"
     val insertQueries = experiences.map { case (domain, value) => sqlu"insert into webknossos.user_experiences(_user, domain, value) values(${userId}, ${domain}, ${value})"}
     for {
-      _ <- UserSQLDAO.assertUpdateAccess(userId)
+      _ <- UserDAO.assertUpdateAccess(userId)
       _ <- run(DBIO.sequence(List(clearQuery) ++ insertQueries).transactionally)
     } yield ()
   }
 
 }
 
-object UserDataSetConfigurationSQLDAO extends SimpleSQLDAO {
+object UserDataSetConfigurationDAO extends SimpleSQLDAO {
 
   def findAllForUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Map[ObjectId, JsValue]] = {
     for {
@@ -355,7 +356,7 @@ object UserDataSetConfigurationSQLDAO extends SimpleSQLDAO {
 
   def updateDatasetConfigurationForUserAndDataset(userId: ObjectId, dataSetId: ObjectId, configuration: Map[String, JsValue])(implicit ctx: DBAccessContext): Fox[Unit] = {
     for {
-      _ <- UserSQLDAO.assertUpdateAccess(userId)
+      _ <- UserDAO.assertUpdateAccess(userId)
       deleteQuery = sqlu"""delete from webknossos.user_dataSetConfigurations
                where _user = ${userId} and _dataSet = ${dataSetId}"""
       insertQuery  = sqlu"""insert into webknossos.user_dataSetConfigurations(_user, _dataSet, configuration)
@@ -373,14 +374,14 @@ object UserDataSetConfigurationSQLDAO extends SimpleSQLDAO {
 
   private def insertDatasetConfiguration(userId: ObjectId, dataSetName: String, configuration: Map[String, JsValue])(implicit ctx: DBAccessContext): Fox[Unit] = {
     for {
-      dataSet <- DataSetSQLDAO.findOneByName(dataSetName)
+      dataSet <- DataSetDAO.findOneByName(dataSetName)
       _ <- insertDatasetConfiguration(userId, dataSet._id, configuration)
     } yield ()
   }
 
   private def insertDatasetConfiguration(userId: ObjectId, dataSetId: ObjectId, configuration: Map[String, JsValue])(implicit ctx: DBAccessContext): Fox[Unit] = {
     for {
-      _ <- UserSQLDAO.assertUpdateAccess(userId)
+      _ <- UserDAO.assertUpdateAccess(userId)
       _ <- run(
         sqlu"""insert into webknossos.user_dataSetConfigurations(_user, _dataSet, configuration)
                values ('#${sanitize(configuration.toString)}', ${userId} and _dataSet = ${dataSetId})""")

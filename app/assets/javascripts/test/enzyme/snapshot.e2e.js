@@ -1,9 +1,12 @@
 // @flow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-/* eslint-disable import/first */
-
 // This needs to be the very first import
-import { createSnapshotable, debugWrapper, waitForAllRequests, resetDatabase } from "./e2e-setup";
+import {
+  createSnapshotable,
+  debugWrapper,
+  waitForAllRequests,
+  resetDatabase,
+} from "test/enzyme/e2e-setup";
 import { mount } from "enzyme";
 import test from "ava";
 import mockRequire from "mock-require";
@@ -11,6 +14,7 @@ import React from "react";
 import { Provider } from "react-redux";
 import { Router } from "react-router-dom";
 import createBrowserHistory from "history/createBrowserHistory";
+import { load as loadFeatureToggles } from "features";
 
 // Those wrappers interfere with global.window and global.document otherwise
 mockRequire("libs/hammerjs_wrapper", {});
@@ -41,8 +45,10 @@ const { getActiveUser } = mockRequire.reRequire("../../admin/admin_rest_api");
 
 const browserHistory = createBrowserHistory();
 
-test.before(() => {
+test.before(async () => {
+  const featureTogglePromise = loadFeatureToggles();
   resetDatabase();
+  await featureTogglePromise;
 });
 
 test.beforeEach(async _ => {

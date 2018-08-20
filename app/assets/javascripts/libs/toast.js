@@ -56,7 +56,7 @@ const Toast = {
     message: string | React$Element<any>,
     config: ToastConfigType,
   ): void {
-    const timeout = config.timeout || 6000;
+    const timeout = config.timeout != null ? config.timeout : 6000;
     const key = config.key || (typeof message === "string" ? message : null);
     const sticky = config.sticky;
     let toastMessage;
@@ -92,19 +92,19 @@ const Toast = {
     notification[type](toastConfig);
   },
 
-  info(message: string, config: ToastConfigType = {}) {
+  info(message: string, config: ToastConfigType = {}): void {
     return this.message("info", message, config);
   },
 
-  warning(message: string, config: ToastConfigType = {}) {
+  warning(message: string, config: ToastConfigType = {}): void {
     return this.message("warning", message, config);
   },
 
-  success(message: string = "Success :-)", config: ToastConfigType = {}) {
+  success(message: string = "Success :-)", config: ToastConfigType = {}): void {
     return this.message("success", message, config);
   },
 
-  error(message: string | React$Element<any> = "Error :-/", config: ToastConfigType = {}) {
+  error(message: string | React$Element<any> = "Error :-/", config: ToastConfigType = {}): void {
     return this.message("error", message, config);
   },
 

@@ -108,6 +108,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     isNMLSpecification: false,
     isUploading: false,
   };
+
   componentDidMount() {
     this.fetchData();
     this.applyDefaults();
@@ -290,10 +291,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                 extra="topLeft.x, topLeft.y, topLeft.z, width, height, depth"
                 hasFeedback
               >
-                {getFieldDecorator("boundingBox")(
-                  // $FlowFixMe VectorComponent expects value + onChange props which will be set automatically by the form
-                  <Vector6Input disabled={isEditingMode} />,
-                )}
+                {getFieldDecorator("boundingBox")(<Vector6Input disabled={isEditingMode} />)}
               </FormItem>
 
               <FormItem label="Task Specification" hasFeedback>
@@ -365,7 +363,6 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     {getFieldDecorator("editPosition", {
                       rules: [{ required: true }],
                       initialValue: [0, 0, 0],
-                      // $FlowFixMe VectorComponent expects value + onChange props which will be set automatically by the form
                     })(<Vector3Input style={fullWidth} disabled={isEditingMode} />)}
                   </FormItem>
 
@@ -373,7 +370,6 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     {getFieldDecorator("editRotation", {
                       rules: [{ required: true }],
                       initialValue: [0, 0, 0],
-                      // $FlowFixMe VectorComponent expects value + onChange props which will be set automatically by the form
                     })(<Vector3Input style={fullWidth} disabled={isEditingMode} />)}
                   </FormItem>
                 </div>

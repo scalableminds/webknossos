@@ -21,8 +21,20 @@ export class AbstractPrefetchStrategy {
   u: number;
   v: number;
 
-  forContentType(contentType: string): boolean {
-    return _.isEmpty(this.contentTypes) || this.contentTypes.includes(contentType);
+  forContentType(contentTypes: { skeleton: boolean, volume: boolean }): boolean {
+    if (_.isEmpty(this.contentTypes)) {
+      return true;
+    }
+
+    if (contentTypes.skeleton && this.contentTypes.includes("skeleton")) {
+      return true;
+    }
+
+    if (contentTypes.volume && this.contentTypes.includes("volume")) {
+      return true;
+    }
+
+    return false;
   }
 
   inVelocityRange(value: number): boolean {
@@ -44,7 +56,6 @@ export class AbstractPrefetchStrategy {
         bucket[this.u] += u;
         bucket[this.v] += v;
         if (_.min(bucket) >= 0) {
-          // $FlowFixMe Flow does not understand that bucket will always be of length 3
           buckets.push(bucket);
         }
       }

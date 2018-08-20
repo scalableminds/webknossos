@@ -4,11 +4,20 @@
  */
 import _ from "lodash";
 import { Modal } from "antd";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import Toast from "libs/toast";
 import messages from "messages";
 import Store from "oxalis/store";
-import { put, take, takeEvery, select, race } from "redux-saga/effects";
+import {
+  fork,
+  put,
+  take,
+  _take,
+  _takeEvery,
+  select,
+  race,
+} from "oxalis/model/sagas/effect-generators";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
 import {
   deleteBranchPointAction,
   setTreeNameAction,
@@ -29,7 +38,11 @@ import {
 import type { ActionType } from "oxalis/model/actions/actions";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
-import { getActiveNode, getBranchPoints } from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  getActiveNode,
+  getBranchPoints,
+  enforceSkeletonTracing,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import { V3 } from "libs/mjs";
 import { generateTreeName } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import type {
@@ -39,38 +52,41 @@ import type {
   TreeMapType,
   NodeMapType,
   FlycamType,
+  OxalisState,
 } from "oxalis/store";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import api from "oxalis/api/internal_api";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import EdgeCollection, { diffEdgeCollections } from "oxalis/model/edge_collection";
 
-function* centerActiveNode(action: ActionType) {
-  getActiveNode(yield select(state => state.tracing)).map(activeNode => {
-    if (action.suppressAnimation) {
-      Store.dispatch(setPositionAction(activeNode.position));
-      Store.dispatch(setRotationAction(activeNode.rotation));
-    } else {
-      api.tracing.centerPositionAnimated(activeNode.position, false, activeNode.rotation);
-    }
-  });
+function* centerActiveNode(action: ActionType): Saga<void> {
+  getActiveNode(yield* select((state: OxalisState) => enforceSkeletonTracing(state.tracing))).map(
+    activeNode => {
+      if (action.suppressAnimation === true) {
+        Store.dispatch(setPositionAction(activeNode.position));
+        Store.dispatch(setRotationAction(activeNode.rotation));
+      } else {
+        api.tracing.centerPositionAnimated(activeNode.position, false, activeNode.rotation);
+      }
+    },
+  );
 }
 
-function* watchBranchPointDeletion(): Generator<*, *, *> {
+function* watchBranchPointDeletion(): Saga<void> {
   let lastActionCreatedNode = true;
   while (true) {
-    const { deleteBranchpointAction } = yield race({
-      deleteBranchpointAction: take("REQUEST_DELETE_BRANCHPOINT"),
-      createNodeAction: take("CREATE_NODE"),
+    const { deleteBranchpointAction } = yield* race({
+      deleteBranchpointAction: _take("REQUEST_DELETE_BRANCHPOINT"),
+      createNodeAction: _take("CREATE_NODE"),
     });
 
     if (deleteBranchpointAction) {
-      const hasBranchPoints = yield select(
-        state => getBranchPoints(state.tracing).getOrElse([]).length > 0,
+      const hasBranchPoints = yield* select(
+        (state: OxalisState) => getBranchPoints(state.tracing).getOrElse([]).length > 0,
       );
       if (hasBranchPoints) {
         if (lastActionCreatedNode === true) {
-          yield put(deleteBranchPointAction());
+          yield* put(deleteBranchPointAction());
         } else {
           Modal.confirm({
             title: "Jump again?",
@@ -91,22 +107,22 @@ function* watchBranchPointDeletion(): Generator<*, *, *> {
   }
 }
 
-export function* watchTreeNames(): Generator<*, *, *> {
-  const state = yield select(_state => _state);
+export function* watchTreeNames(): Saga<void> {
+  const state = yield* select(_state => _state);
 
   // rename trees with an empty/default tree name
-  for (const tree: TreeType of _.values(state.tracing.trees)) {
+  for (const tree: TreeType of _.values(enforceSkeletonTracing(state.tracing).trees)) {
     if (tree.name === "") {
       const newName = generateTreeName(state, tree.timestamp, tree.treeId);
-      yield put(setTreeNameAction(newName, tree.treeId));
+      yield* put(setTreeNameAction(newName, tree.treeId));
     }
   }
 }
 
-export function* watchSkeletonTracingAsync(): Generator<*, *, *> {
-  yield take("INITIALIZE_SKELETONTRACING");
-  yield takeEvery("WK_READY", watchTreeNames);
-  yield takeEvery(
+export function* watchSkeletonTracingAsync(): Saga<void> {
+  yield* take("INITIALIZE_SKELETONTRACING");
+  yield _takeEvery("WK_READY", watchTreeNames);
+  yield _takeEvery(
     [
       "SET_ACTIVE_TREE",
       "SET_ACTIVE_NODE",
@@ -119,7 +135,7 @@ export function* watchSkeletonTracingAsync(): Generator<*, *, *> {
     ],
     centerActiveNode,
   );
-  yield [watchBranchPointDeletion()];
+  yield* fork(watchBranchPointDeletion);
 }
 
 function* diffNodes(
@@ -236,7 +252,7 @@ export function* diffSkeletonTracing(
   prevSkeletonTracing: SkeletonTracingType,
   skeletonTracing: SkeletonTracingType,
   flycam: FlycamType,
-): Generator<UpdateAction, *, *> {
+): Generator<UpdateAction, void, void> {
   if (prevSkeletonTracing !== skeletonTracing) {
     yield* cachedDiffTrees(prevSkeletonTracing.trees, skeletonTracing.trees);
     if (prevSkeletonTracing.treeGroups !== skeletonTracing.treeGroups) {

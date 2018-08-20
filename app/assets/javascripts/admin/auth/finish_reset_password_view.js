@@ -38,7 +38,7 @@ class FinishResetPasswordView extends React.PureComponent<Props, State> {
 
   handleConfirmBlur = (e: SyntheticInputEvent<>) => {
     const value = e.target.value;
-    this.setState({ confirmDirty: this.state.confirmDirty || !!value });
+    this.setState(prevState => ({ confirmDirty: prevState.confirmDirty || !!value }));
   };
 
   checkPassword = (rule, value, callback) => {

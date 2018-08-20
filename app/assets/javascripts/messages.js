@@ -48,9 +48,12 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.delete_tree_with_initial_node":
     "This tree contains the initial node. Do you really want to delete the whole tree?",
   "tracing.merged": "Merging successfully done",
+  "tracing.merged_with_redirect":
+    "Merging successfully done. You will be redirected to the new annotation.",
   "tracing.tree_viewer_no_cyclic_trees":
     "Cyclic trees are not supported by the abstract tree viewer.",
   "tracing.changed_move_value": "The move value was changed to: ",
+  "tracing.natural_sorting": "Correctly sort numbers in text (word2 < word10). This may be slow!",
   "datastore.unknown_type": "Unknown datastore type:",
   "webgl.disabled": "Couldn't initialise WebGL, please make sure WebGL is enabled.",
   "webgl.context_loss":
@@ -66,6 +69,7 @@ In order to restore the current window, a reload is necessary.`,
   "task.reset_success": "Annotation was successfully reset.",
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
+  "dataset.clear_cache_success": "The dataset was reloaded successfully",
   "dataset.upload_success": "The dataset was uploaded successfully",
   "dataset.invalid_datasource_json":
     "The datasource-properties.json on disk is invalid. The values below are guessed by webKnossos. Please review all properties before importing the dataset. You can always go back and change the values later.",
@@ -89,12 +93,15 @@ In order to restore the current window, a reload is necessary.`,
   "annotation.was_finished": "Annotation was archived",
   "annotation.was_re_opened": "Annotation was reopened",
   "annotation.delete": "Do you really want to reset and cancel this annotation?",
-  "annotation.dataset_no_public":
-    "Public tracings require the respective dataset to be public too. Please, make sure to add public access rights to the dataset as well.",
   "annotation.was_edited": "Successfully updated annotation",
   "project.delete": "Do you really want to delete this project?",
   "project.increase_instances":
     "Do you really want to add one additional instance to all tasks of this project?",
+  "project.none_selected": "No currently selected project found.",
+  "project.successful_active_tasks_transfer":
+    "All active tasks were transfered to the selected user",
+  "project.unsuccessful_active_tasks_transfer":
+    "An error occured while trying to transfer the tasks. Please check your permissions and the server logs",
   "script.delete": "Do you really want to delete this script?",
   "team.delete": "Do you really want to delete this team?",
   "taskType.delete": "Do you really want to delete this task type and all its associated tasks?",
@@ -148,6 +155,9 @@ In order to restore the current window, a reload is necessary.`,
     "NML contains <edge ...> with same source and target id: Edge",
   "nml.tree_not_connected": "NML contains tree that is not fully connected: Tree with id",
   "nml.different_dataset": "Imported NML was originally for a different dataset.",
+  "merge.different_dataset":
+    "The merge cannot be executed, because the underlying datasets are not the same.",
+  "merge.volume_unsupported": "Merging is not supported for volume tracings.",
   "users.is_admin":
     "At least one of the selected users is an admin of this organization and already has access to all teams. No team assignments are necessary for this user.",
   "users.grant_admin_rights_title": "Do you really want to grant admin rights?",

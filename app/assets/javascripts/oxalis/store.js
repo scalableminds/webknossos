@@ -3,7 +3,6 @@
  * @flow
  */
 
-/* eslint-disable no-useless-computed-key */
 import { createStore, applyMiddleware } from "redux";
 import createSagaMiddleware from "redux-saga";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
@@ -49,10 +48,10 @@ import type {
   APIDataLayerType,
 } from "admin/api_flow_types";
 
-export type CommentType = {
+export type CommentType = {|
   +content: string,
   +nodeId: number,
-};
+|};
 
 export type EdgeType = {
   +source: number,
@@ -85,7 +84,7 @@ export type BoundingBoxObjectType = {
   +depth: number,
 };
 
-type TreeTypeBase = {
+export type TreeType = {|
   +treeId: number,
   +groupId: ?number,
   +color: Vector3,
@@ -95,16 +94,17 @@ type TreeTypeBase = {
   +branchPoints: Array<BranchPointType>,
   +edges: EdgeCollection,
   +isVisible: boolean,
-};
-
-export type TreeType = TreeTypeBase & {
   +nodes: NodeMapType,
-};
+|};
+
+export type TreeGroupTypeFlat = {|
+  +name: string,
+  +groupId: number,
+|};
 
 export type TreeGroupType = {
-  name: string,
-  groupId: number,
-  children: Array<TreeGroupType>,
+  ...TreeGroupTypeFlat,
+  +children: Array<TreeGroupType>,
 };
 
 export type VolumeCellType = {
@@ -112,9 +112,6 @@ export type VolumeCellType = {
 };
 
 export type VolumeCellMapType = { [number]: VolumeCellType };
-
-export type CategoryType = "color" | "segmentation";
-export type ElementClassType = "uint8" | "uint16" | "uint32";
 
 export type DataLayerType = APIDataLayerType;
 
@@ -131,33 +128,39 @@ export type TemporaryMutableTreeMapType = { [number]: TreeType };
 
 export type TracingTypeTracingType = APITracingType;
 
-type TracingBaseType = {
+export type RestrictionsAndSettingsType = {| ...RestrictionsType, ...SettingsType |};
+
+export type AnnotationType = {|
   +annotationId: string,
-  +createdTimestamp: number,
+  +restrictions: RestrictionsAndSettingsType,
+  +isPublic: boolean,
+  +tags: Array<string>,
+  +description: string,
   +name: string,
+  +tracingType: TracingTypeTracingType,
+|};
+
+type TracingBaseType = {|
+  +createdTimestamp: number,
   +version: number,
   +tracingId: string,
   +boundingBox: ?BoundingBoxType,
   +userBoundingBox: ?BoundingBoxType,
-  +restrictions: RestrictionsType & SettingsType,
-  +isPublic: boolean,
-  +tags: Array<string>,
-  +description: string,
-};
+|};
 
-export type SkeletonTracingType = TracingBaseType & {
+export type SkeletonTracingType = {|
+  ...TracingBaseType,
   +type: "skeleton",
-  +tracingType: TracingTypeTracingType,
   +trees: TreeMapType,
   +treeGroups: Array<TreeGroupType>,
   +activeTreeId: ?number,
   +activeNodeId: ?number,
   +cachedMaxNodeId: number,
-};
+|};
 
-export type VolumeTracingType = TracingBaseType & {
+export type VolumeTracingType = {|
+  ...TracingBaseType,
   +type: "volume",
-  +tracingType: TracingTypeTracingType,
   +maxCellId: number,
   +activeTool: VolumeToolType,
   +activeCellId: number,
@@ -165,20 +168,27 @@ export type VolumeTracingType = TracingBaseType & {
   +contourTracingMode: ContourModeType,
   +contourList: Array<Vector3>,
   +cells: VolumeCellMapType,
-};
+|};
 
-export type ReadOnlyTracingType = TracingBaseType & {
+export type ReadOnlyTracingType = {|
+  ...TracingBaseType,
   +type: "readonly",
-  +tracingType: "View",
-};
+|};
 
-export type TracingType = SkeletonTracingType | VolumeTracingType | ReadOnlyTracingType;
+export type HybridTracingType = {|
+  ...AnnotationType,
+  skeleton: ?SkeletonTracingType,
+  volume: ?VolumeTracingType,
+  readOnly: ?ReadOnlyTracingType,
+|};
 
-export type DatasetLayerConfigurationType = {
+export type TracingType = HybridTracingType;
+
+export type DatasetLayerConfigurationType = {|
   +color: Vector3,
   +brightness: number,
   +contrast: number,
-};
+|};
 
 export type DatasetConfigurationType = {
   +fourBit: boolean,
@@ -195,11 +205,12 @@ export type DatasetConfigurationType = {
   +rotation?: Vector3,
 };
 
-export type UserConfigurationType = {
+export type UserConfigurationType = {|
   +clippingDistance: number,
   +clippingDistanceArbitrary: number,
   +crosshairSize: number,
   +displayCrosshair: boolean,
+  +displayScalebars: boolean,
   +dynamicSpaceDirection: boolean,
   +keyboardDelay: number,
   +mouseRotateValue: number,
@@ -217,7 +228,8 @@ export type UserConfigurationType = {
   +sortTreesByName: boolean,
   +sphericalCapRadius: number,
   +tdViewDisplayPlanes: boolean,
-};
+  +hideTreeRemovalWarning: boolean,
+|};
 
 export type MappingType = { [key: number]: number };
 
@@ -229,6 +241,8 @@ export type TemporaryConfigurationType = {
   +brushSize: number,
   +activeMapping: {
     +mapping: ?MappingType,
+    +mappingColors: ?Array<number>,
+    +hideUnmappedIds: boolean,
     +isMappingEnabled: boolean,
     +mappingSize: number,
   },
@@ -244,16 +258,31 @@ export type SaveQueueEntryType = {
   actions: Array<UpdateAction>,
 };
 
+export type ProgressInfoType = {
+  +processedActionCount: number,
+  +totalActionCount: number,
+};
+
+export type IsBusyInfoType = {
+  +skeleton: boolean,
+  +volume: boolean,
+};
+
 export type SaveStateType = {
-  +isBusy: boolean,
-  +queue: Array<SaveQueueEntryType>,
+  +isBusyInfo: IsBusyInfoType,
+  +queue: {
+    +skeleton: Array<SaveQueueEntryType>,
+    +volume: Array<SaveQueueEntryType>,
+  },
   +lastSaveTimestamp: number,
+  +progressInfo: ProgressInfoType,
 };
 
 export type FlycamType = {
   +zoomStep: number,
   +currentMatrix: Matrix4x4,
   +spaceDirectionOrtho: [-1 | 1, -1 | 1, -1 | 1],
+  +direction: Vector3,
 };
 
 export type CameraData = {
@@ -298,7 +327,7 @@ type UiInformationType = {
   +showDropzoneModal: boolean,
 };
 
-export type OxalisState = {
+export type OxalisState = {|
   +datasetConfiguration: DatasetConfigurationType,
   +userConfiguration: UserConfigurationType,
   +temporaryConfiguration: TemporaryConfigurationType,
@@ -310,6 +339,24 @@ export type OxalisState = {
   +viewModeData: ViewModeData,
   +activeUser: ?APIUserType,
   +uiInformation: UiInformationType,
+|};
+
+const initialAnnotationInfo = {
+  annotationId: "",
+  restrictions: {
+    branchPointsAllowed: false,
+    allowUpdate: false,
+    allowFinish: false,
+    allowAccess: true,
+    allowDownload: false,
+    somaClickingAllowed: false,
+    allowedModes: ["orthogonal", "oblique", "flight"],
+  },
+  isPublic: false,
+  tags: [],
+  description: "",
+  name: "",
+  tracingType: "View",
 };
 
 export const defaultState: OxalisState = {
@@ -327,6 +374,7 @@ export const defaultState: OxalisState = {
     clippingDistanceArbitrary: 64,
     crosshairSize: 0.1,
     displayCrosshair: true,
+    displayScalebars: false,
     dynamicSpaceDirection: true,
     keyboardDelay: 200,
     mouseRotateValue: 0.004,
@@ -344,6 +392,7 @@ export const defaultState: OxalisState = {
     sortTreesByName: false,
     sphericalCapRadius: 140,
     tdViewDisplayPlanes: true,
+    hideTreeRemovalWarning: false,
   },
   temporaryConfiguration: {
     viewMode: Constants.MODE_PLANE_TRACING,
@@ -353,6 +402,8 @@ export const defaultState: OxalisState = {
     brushSize: 50,
     activeMapping: {
       mapping: null,
+      mappingColors: null,
+      hideUnmappedIds: false,
       isMappingEnabled: false,
       mappingSize: 0,
     },
@@ -382,39 +433,41 @@ export const defaultState: OxalisState = {
     displayName: "Awesome Test Dataset",
     allowedTeams: [],
     logoUrl: null,
+    lastUsedByUser: 0,
   },
   tracing: {
-    annotationId: "",
-    boundingBox: null,
-    createdTimestamp: 0,
-    userBoundingBox: null,
-    type: "readonly",
-    name: "",
-    version: 0,
-    isPublic: false,
-    tracingId: "",
-    tracingType: "View",
-    restrictions: {
-      branchPointsAllowed: false,
-      allowUpdate: false,
-      allowFinish: false,
-      allowAccess: true,
-      allowDownload: false,
-      somaClickingAllowed: false,
-      allowedModes: ["orthogonal", "oblique", "flight"],
+    ...initialAnnotationInfo,
+    readOnly: {
+      boundingBox: null,
+      createdTimestamp: 0,
+      userBoundingBox: null,
+      type: "readonly",
+      version: 0,
+      tracingId: "",
     },
-    tags: [],
-    description: "",
+    volume: null,
+    skeleton: null,
   },
   save: {
-    queue: [],
-    isBusy: false,
+    queue: {
+      skeleton: [],
+      volume: [],
+    },
+    isBusyInfo: {
+      skeleton: false,
+      volume: false,
+    },
     lastSaveTimestamp: 0,
+    progressInfo: {
+      processedActionCount: 0,
+      totalActionCount: 0,
+    },
   },
   flycam: {
     zoomStep: 1.3,
     currentMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
     spaceDirectionOrtho: [1, 1, 1],
+    direction: [0, 0, 0],
   },
   viewModeData: {
     plane: {

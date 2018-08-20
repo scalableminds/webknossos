@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package models.annotation.nml
 
 import javax.xml.stream.{XMLOutputFactory, XMLStreamWriter}
@@ -9,8 +6,9 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.xml.Xml
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.geometry.{BoundingBox, Point3D, Vector3D}
 import com.sun.xml.txw2.output.IndentingXMLStreamWriter
-import models.annotation.AnnotationSQL
+import models.annotation.Annotation
 import net.liftweb.common.Full
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits._
@@ -18,149 +16,157 @@ import play.api.libs.iteratee.Enumerator
 
 import scala.concurrent.Future
 
+
+case class NmlParameters(
+                          dataSetName: String,
+                          description: String,
+                          scale: Option[Scale],
+                          createdTimestamp: Long,
+                          editPosition: Point3D,
+                          editRotation: Vector3D,
+                          zoomLevel: Double,
+                          activeNodeId: Option[Int],
+                          userBoundingBox: Option[BoundingBox],
+                          taskBoundingBox: Option[BoundingBox]
+                        )
+
 object NmlWriter extends FoxImplicits {
   private lazy val outputService = XMLOutputFactory.newInstance()
 
-  def toNmlStream(tracing: Either[SkeletonTracing, VolumeTracing], annotation: AnnotationSQL, scale: Option[Scale]) = Enumerator.outputStream { os =>
+  def toNmlStream(skeletonTracing: Option[SkeletonTracing], volumeTracing: Option[VolumeTracing], annotation: Annotation, scale: Option[Scale]) = Enumerator.outputStream { os =>
     implicit val writer = new IndentingXMLStreamWriter(outputService.createXMLStreamWriter(os))
 
     for {
-      nml <- toNml(tracing, annotation, scale)
+      nml <- toNml(skeletonTracing, volumeTracing, annotation, scale)
       _ = os.close
-    } yield {
-      nml
-    }
+    } yield nml
   }
 
-  def toNml(tracing: Either[SkeletonTracing, VolumeTracing], annotation: AnnotationSQL, scale: Option[Scale])(implicit writer: XMLStreamWriter): Fox[Unit] = {
-    tracing match {
-      case Right(volumeTracing) => {
-        for {
-          _ <- Xml.withinElement("things") { writeVolumeThings(annotation, volumeTracing, scale)}
-          _ = writer.writeEndDocument()
-          _ = writer.close()
-        } yield ()
-      }
-      case Left(skeletonTracing) => {
-        for {
-          _ <- Xml.withinElement("things") { writeSkeletonThings(annotation, skeletonTracing, scale)}
-          _ = writer.writeEndDocument()
-          _ = writer.close()
-        } yield ()
-      }
-    }
-  }
-
-  def writeVolumeThings(annotation: AnnotationSQL, volumeTracing: VolumeTracing, scale: Option[Scale])(implicit writer: XMLStreamWriter): Fox[Unit] = {
+  def toNml(skeletonTracingOpt: Option[SkeletonTracing], volumeTracingOpt: Option[VolumeTracing], annotation: Annotation, scale: Option[Scale])(implicit writer: XMLStreamWriter): Fox[Unit] = {
     for {
-      _ <- writeMetaData(annotation)
-      _ = Xml.withinElementSync("parameters")(writeParametersAsXml(volumeTracing, annotation.description, scale))
-      _ = Xml.withinElementSync("volume") {
-        writer.writeAttribute("id", "1")
-        writer.writeAttribute("location", "data.zip")}
+      _ <- Xml.withinElement("things") {
+        for {
+          _ <- writeMetaData(annotation)
+          parameters <- extractTracingParameters(skeletonTracingOpt, volumeTracingOpt, annotation.description, scale).toFox
+          _ = writeParameters(parameters)
+          _ = skeletonTracingOpt.map(writeSkeletonThings(_))
+          _ = volumeTracingOpt.map(writeVolumeThings(_))
+        } yield ()
+      }
+      _ = writer.writeEndDocument()
+      _ = writer.close()
     } yield ()
   }
 
-  def writeSkeletonThings(annotation: AnnotationSQL, skeletonTracing: SkeletonTracing, scale: Option[Scale])(implicit writer: XMLStreamWriter): Fox[Unit] = {
-    for {
-      _ <- writeMetaData(annotation)
-      _ = Xml.withinElementSync("parameters")(writeParametersAsXml(skeletonTracing, annotation.description, scale))
-      _ = writeTreesAsXml(skeletonTracing.trees.filterNot(_.nodes.isEmpty))
-      _ = Xml.withinElementSync("branchpoints")(writeBranchPointsAsXml(skeletonTracing.trees.flatMap(_.branchPoints).sortBy(-_.createdTimestamp)))
-      _ = Xml.withinElementSync("comments")(writeCommentsAsXml(skeletonTracing.trees.flatMap(_.comments)))
-      _ = Xml.withinElementSync("groups")(writeTreeGroupsAsXml(skeletonTracing.treeGroups))
-    } yield ()
-  }
-
-  def writeParametersAsXml(tracing: SkeletonTracing, description: String, scale: Option[Scale])(implicit writer: XMLStreamWriter) = {
-    Xml.withinElementSync("experiment") {
-      writer.writeAttribute("name", tracing.dataSetName)
-      writer.writeAttribute("description", description)
-    }
-    Xml.withinElementSync("scale") {
-      writer.writeAttribute("x", scale.map(_.x).getOrElse(-1).toString)
-      writer.writeAttribute("y", scale.map(_.y).getOrElse(-1).toString)
-      writer.writeAttribute("z", scale.map(_.z).getOrElse(-1).toString)
-    }
-    Xml.withinElementSync("offset") {
-      writer.writeAttribute("x", "0")
-      writer.writeAttribute("y", "0")
-      writer.writeAttribute("z", "0")
-    }
-    Xml.withinElementSync("time") {
-      writer.writeAttribute("ms", tracing.createdTimestamp.toString)
-    }
-    Xml.withinElementSync("editPosition") {
-      writer.writeAttribute("x", tracing.editPosition.x.toString)
-      writer.writeAttribute("y", tracing.editPosition.y.toString)
-      writer.writeAttribute("z", tracing.editPosition.z.toString)
-    }
-    Xml.withinElementSync("editRotation") {
-      writer.writeAttribute("xRot", tracing.editRotation.x.toString)
-      writer.writeAttribute("yRot", tracing.editRotation.y.toString)
-      writer.writeAttribute("zRot", tracing.editRotation.z.toString)
-    }
-    Xml.withinElementSync("zoomLevel") {
-      writer.writeAttribute("zoom", tracing.zoomLevel.toString)
-    }
-    tracing.activeNodeId.map { nodeId =>
-      Xml.withinElementSync("activeNode") {
-        writer.writeAttribute("id", nodeId.toString)
-      }
-    }
-    tracing.userBoundingBox.map { b =>
-      Xml.withinElementSync("userBoundingBox") {
-        writer.writeAttribute("topLeftX", b.topLeft.x.toString)
-        writer.writeAttribute("topLeftY", b.topLeft.y.toString)
-        writer.writeAttribute("topLeftZ", b.topLeft.z.toString)
-        writer.writeAttribute("width", b.width.toString)
-        writer.writeAttribute("height", b.height.toString)
-        writer.writeAttribute("depth", b.depth.toString)
-      }
-    }
-    tracing.boundingBox.map { b =>
-      Xml.withinElementSync("taskBoundingBox") {
-        writer.writeAttribute("topLeftX", b.topLeft.x.toString)
-        writer.writeAttribute("topLeftY", b.topLeft.y.toString)
-        writer.writeAttribute("topLeftZ", b.topLeft.z.toString)
-        writer.writeAttribute("width", b.width.toString)
-        writer.writeAttribute("height", b.height.toString)
-        writer.writeAttribute("depth", b.depth.toString)
+  def extractTracingParameters(skeletonTracingOpt: Option[SkeletonTracing],
+                                       volumeTracingOpt: Option[VolumeTracing],
+                                       description: String,
+                                       scale: Option[Scale]
+                                      ): Option[NmlParameters] = {
+    // in hybrid case, use data from skeletonTracing (should be identical)
+    skeletonTracingOpt.map { s =>
+      NmlParameters(
+        s.dataSetName,
+        description,
+        scale,
+        s.createdTimestamp,
+        s.editPosition,
+        s.editRotation,
+        s.zoomLevel,
+        s.activeNodeId,
+        s.userBoundingBox,
+        s.boundingBox
+      )
+    }.orElse {
+      volumeTracingOpt.map { v: VolumeTracing =>
+      NmlParameters(
+          v.dataSetName,
+          description,
+          scale,
+          v.createdTimestamp,
+          v.editPosition,
+          v.editRotation,
+          v.zoomLevel,
+          None,
+          None,
+          None
+        )
       }
     }
   }
 
-  def writeParametersAsXml(tracing: VolumeTracing, description: String, scale: Option[Scale])(implicit writer: XMLStreamWriter) = {
-    Xml.withinElementSync("experiment") {
-      writer.writeAttribute("name", tracing.dataSetName)
-      writer.writeAttribute("description", description)
+  def writeParameters(parameters: NmlParameters)(implicit writer: XMLStreamWriter) = {
+    Xml.withinElementSync("parameters") {
+      Xml.withinElementSync("experiment") {
+        writer.writeAttribute("name", parameters.dataSetName)
+        writer.writeAttribute("description", parameters.description)
+      }
+      Xml.withinElementSync("scale") {
+        writer.writeAttribute("x", parameters.scale.map(_.x).getOrElse(-1).toString)
+        writer.writeAttribute("y", parameters.scale.map(_.y).getOrElse(-1).toString)
+        writer.writeAttribute("z", parameters.scale.map(_.z).getOrElse(-1).toString)
+      }
+      Xml.withinElementSync("offset") {
+        writer.writeAttribute("x", "0")
+        writer.writeAttribute("y", "0")
+        writer.writeAttribute("z", "0")
+      }
+      Xml.withinElementSync("time") {
+        writer.writeAttribute("ms", parameters.createdTimestamp.toString)
+      }
+      Xml.withinElementSync("editPosition") {
+        writer.writeAttribute("x", parameters.editPosition.x.toString)
+        writer.writeAttribute("y", parameters.editPosition.y.toString)
+        writer.writeAttribute("z", parameters.editPosition.z.toString)
+      }
+      Xml.withinElementSync("editRotation") {
+        writer.writeAttribute("xRot", parameters.editRotation.x.toString)
+        writer.writeAttribute("yRot", parameters.editRotation.y.toString)
+        writer.writeAttribute("zRot", parameters.editRotation.z.toString)
+      }
+      Xml.withinElementSync("zoomLevel") {
+        writer.writeAttribute("zoom", parameters.zoomLevel.toString)
+      }
+      parameters.activeNodeId.map { nodeId =>
+        Xml.withinElementSync("activeNode") {
+          writer.writeAttribute("id", nodeId.toString)
+        }
+      }
+      parameters.userBoundingBox.map { b =>
+        Xml.withinElementSync("userBoundingBox") {
+          writer.writeAttribute("topLeftX", b.topLeft.x.toString)
+          writer.writeAttribute("topLeftY", b.topLeft.y.toString)
+          writer.writeAttribute("topLeftZ", b.topLeft.z.toString)
+          writer.writeAttribute("width", b.width.toString)
+          writer.writeAttribute("height", b.height.toString)
+          writer.writeAttribute("depth", b.depth.toString)
+        }
+      }
+      parameters.taskBoundingBox.map { b =>
+        Xml.withinElementSync("taskBoundingBox") {
+          writer.writeAttribute("topLeftX", b.topLeft.x.toString)
+          writer.writeAttribute("topLeftY", b.topLeft.y.toString)
+          writer.writeAttribute("topLeftZ", b.topLeft.z.toString)
+          writer.writeAttribute("width", b.width.toString)
+          writer.writeAttribute("height", b.height.toString)
+          writer.writeAttribute("depth", b.depth.toString)
+        }
+      }
     }
-    Xml.withinElementSync("scale") {
-      writer.writeAttribute("x", scale.map(_.x).getOrElse(-1).toString)
-      writer.writeAttribute("y", scale.map(_.y).getOrElse(-1).toString)
-      writer.writeAttribute("z", scale.map(_.z).getOrElse(-1).toString)
+  }
+
+  def writeVolumeThings(volumeTracing: VolumeTracing)(implicit writer: XMLStreamWriter) = {
+    Xml.withinElementSync("volume") {
+       writer.writeAttribute("id", "1")
+       writer.writeAttribute("location", "data.zip")
     }
-    Xml.withinElementSync("offset") {
-      writer.writeAttribute("x", "0")
-      writer.writeAttribute("y", "0")
-      writer.writeAttribute("z", "0")
-    }
-    Xml.withinElementSync("time") {
-      writer.writeAttribute("ms", tracing.createdTimestamp.toString)
-    }
-    Xml.withinElementSync("editPosition") {
-      writer.writeAttribute("x", tracing.editPosition.x.toString)
-      writer.writeAttribute("y", tracing.editPosition.y.toString)
-      writer.writeAttribute("z", tracing.editPosition.z.toString)
-    }
-    Xml.withinElementSync("editRotation") {
-      writer.writeAttribute("xRot", tracing.editRotation.x.toString)
-      writer.writeAttribute("yRot", tracing.editRotation.y.toString)
-      writer.writeAttribute("zRot", tracing.editRotation.z.toString)
-    }
-    Xml.withinElementSync("zoomLevel") {
-      writer.writeAttribute("zoom", tracing.zoomLevel.toString)
-    }
+  }
+
+  def writeSkeletonThings(skeletonTracing: SkeletonTracing)(implicit writer: XMLStreamWriter) = {
+    writeTreesAsXml(skeletonTracing.trees.filterNot(_.nodes.isEmpty))
+    Xml.withinElementSync("branchpoints")(writeBranchPointsAsXml(skeletonTracing.trees.flatMap(_.branchPoints).sortBy(-_.createdTimestamp)))
+    Xml.withinElementSync("comments")(writeCommentsAsXml(skeletonTracing.trees.flatMap(_.comments)))
+    Xml.withinElementSync("groups")(writeTreeGroupsAsXml(skeletonTracing.treeGroups))
   }
 
   def writeTreesAsXml(trees: Seq[Tree])(implicit writer: XMLStreamWriter) = {
@@ -236,7 +242,7 @@ object NmlWriter extends FoxImplicits {
     }
   }
 
-  def writeMetaData(annotation: AnnotationSQL)(implicit writer: XMLStreamWriter): Fox[Unit] = {
+  def writeMetaData(annotation: Annotation)(implicit writer: XMLStreamWriter): Fox[Unit] = {
     Xml.withinElementSync("meta") {
       writer.writeAttribute("name", "writer")
       writer.writeAttribute("content", "NmlWriter.scala")
@@ -259,7 +265,7 @@ object NmlWriter extends FoxImplicits {
     } yield ()
   }
 
-  def writeUser(annotation: AnnotationSQL)(implicit writer: XMLStreamWriter): Future[Unit] = {
+  def writeUser(annotation: Annotation)(implicit writer: XMLStreamWriter): Future[Unit] = {
     for {
       userBox <- annotation.user.futureBox
     } yield {
@@ -273,7 +279,7 @@ object NmlWriter extends FoxImplicits {
     }
   }
 
-  def writeTask(annotation: AnnotationSQL)(implicit writer: XMLStreamWriter): Future[Unit] = {
+  def writeTask(annotation: Annotation)(implicit writer: XMLStreamWriter): Future[Unit] = {
     for {
       taskBox <- annotation.task.futureBox
     } yield {

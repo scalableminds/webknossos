@@ -5,7 +5,7 @@
 
 import _ from "lodash";
 import * as THREE from "three";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import AbstractPlaneMaterialFactory, {
@@ -29,7 +29,7 @@ import {
   getResolutions,
   isRgb,
   getByteCount,
-} from "oxalis/model/accessors/dataset_accessor.js";
+} from "oxalis/model/accessors/dataset_accessor";
 
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
 
@@ -98,6 +98,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       mappingSize: {
         type: "f",
         value: 0,
+      },
+      hideUnmappedIds: {
+        type: "b",
+        value: false,
       },
       globalMousePosition: {
         type: "v3",
@@ -177,6 +181,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       const [
         mappingTexture,
         mappingLookupTexture,
+        mappingColorTexture,
       ] = segmentationLayer.mappings.getMappingTextures();
       this.uniforms[sanitizeName(`${segmentationLayer.name}_mapping_texture`)] = {
         type: "t",
@@ -185,6 +190,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       this.uniforms[sanitizeName(`${segmentationLayer.name}_mapping_lookup_texture`)] = {
         type: "t",
         value: mappingLookupTexture,
+      };
+      this.uniforms[sanitizeName(`${segmentationLayer.name}_mapping_color_texture`)] = {
+        type: "t",
+        value: mappingColorTexture,
       };
     }
 
@@ -272,6 +281,16 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
+        storeState => storeState.temporaryConfiguration.activeMapping.hideUnmappedIds,
+        hideUnmappedIds => {
+          this.uniforms.hideUnmappedIds.value = hideUnmappedIds;
+        },
+        true,
+      ),
+    );
+
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
         storeState => storeState.temporaryConfiguration.viewMode,
         viewMode => {
           this.uniforms.viewMode.value = ModeValues.indexOf(viewMode);
@@ -347,7 +366,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
-          storeState => getActiveCellId(storeState.tracing).getOrElse(0),
+          storeState => Utils.maybe(getActiveCellId)(storeState.tracing.volume).getOrElse(0),
           () => this.updateActiveCellId(),
           true,
         ),
@@ -369,7 +388,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
-          storeState => volumeToolEnumToIndex(Utils.toNullable(getVolumeTool(storeState.tracing))),
+          storeState =>
+            volumeToolEnumToIndex(
+              Utils.toNullable(Utils.maybe(getVolumeTool)(storeState.tracing.volume)),
+            ),
           volumeTool => {
             this.uniforms.activeVolumeToolIndex.value = volumeTool;
           },
@@ -380,7 +402,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   }
 
   updateActiveCellId() {
-    const activeCellId = getActiveCellId(Store.getState().tracing).getOrElse(0);
+    const activeCellId = Utils.maybe(getActiveCellId)(Store.getState().tracing.volume).getOrElse(0);
     const mappedActiveCellId = Model.getSegmentationLayer().cube.mapId(activeCellId);
     // Convert the id into 4 bytes (little endian)
     const [a, b, g, r] = Utils.convertDecToBase256(mappedActiveCellId);

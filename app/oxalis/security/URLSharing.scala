@@ -6,7 +6,7 @@ package oxalis.security
 import java.security.SecureRandom
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, DBAccessContextPayload}
-import models.user.UserSQL
+import models.user.User
 
 
 case class SharingTokenContainer(sharingToken: String) extends DBAccessContextPayload
@@ -17,7 +17,7 @@ object URLSharing {
 
   def fallbackTokenAccessContext(sharingToken: Option[String])(implicit ctx: DBAccessContext) = {
     ctx.data match {
-      case Some(user: UserSQL) => ctx
+      case Some(user: User) => ctx
       case _ => DBAccessContext(sharingToken.map(SharingTokenContainer(_)))
     }
   }

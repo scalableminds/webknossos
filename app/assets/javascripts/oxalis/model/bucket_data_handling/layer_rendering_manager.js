@@ -11,6 +11,8 @@ import determineBucketsForOrthogonal from "oxalis/model/bucket_data_handling/buc
 import determineBucketsForOblique from "oxalis/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
 import determineBucketsForFlight from "oxalis/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
 import { getAreas, getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
+import * as THREE from "three";
+import UpdatableTexture from "libs/UpdatableTexture";
 import type { Vector3, Vector4, OrthoViewMapType, ModeType } from "oxalis/constants";
 import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
 import { getResolutions, getByteCount } from "oxalis/model/accessors/dataset_accessor";
@@ -62,6 +64,7 @@ export default class LayerRenderingManager {
   lastAreas: OrthoViewMapType<AreaType>;
   lastZoomedMatrix: M4x4;
   lastViewMode: ModeType;
+  lastIsInvisible: boolean;
   textureBucketManager: TextureBucketManager;
   textureWidth: number;
   cube: DataCube;
@@ -75,6 +78,7 @@ export default class LayerRenderingManager {
     fallbackAnchorPoint: [0, 0, 0, 0],
   };
   name: string;
+  isSegmentation: boolean;
 
   constructor(
     name: string,
@@ -82,12 +86,14 @@ export default class LayerRenderingManager {
     cube: DataCube,
     textureWidth: number,
     dataTextureCount: number,
+    isSegmentation: boolean,
   ) {
     this.name = name;
     this.pullQueue = pullQueue;
     this.cube = cube;
     this.textureWidth = textureWidth;
     this.dataTextureCount = dataTextureCount;
+    this.isSegmentation = isSegmentation;
   }
 
   setupDataTextures(): void {
@@ -104,7 +110,7 @@ export default class LayerRenderingManager {
     shaderEditor.addBucketManagers(this.textureBucketManager);
   }
 
-  getDataTextures(): Array<*> {
+  getDataTextures(): Array<THREE.DataTexture | UpdatableTexture> {
     if (!this.textureBucketManager) {
       // Initialize lazily since SceneController.renderer is not available earlier
       this.setupDataTextures();
@@ -148,6 +154,8 @@ export default class LayerRenderingManager {
     const { viewMode } = Store.getState().temporaryConfiguration;
     const isArbitrary = constants.MODES_ARBITRARY.includes(viewMode);
     const { sphericalCapRadius } = Store.getState().userConfiguration;
+    const isInvisible =
+      this.isSegmentation && Store.getState().datasetConfiguration.segmentationOpacity === 0;
     if (
       isAnchorPointNew ||
       isFallbackAnchorPointNew ||
@@ -155,49 +163,53 @@ export default class LayerRenderingManager {
       !_.isEqual(subBucketLocality, this.lastSubBucketLocality) ||
       (isArbitrary && !_.isEqual(this.lastZoomedMatrix, matrix)) ||
       viewMode !== this.lastViewMode ||
-      sphericalCapRadius !== this.lastSphericalCapRadius
+      sphericalCapRadius !== this.lastSphericalCapRadius ||
+      isInvisible !== this.lastIsInvisible
     ) {
       this.lastSubBucketLocality = subBucketLocality;
       this.lastAreas = areas;
       this.lastZoomedMatrix = matrix;
       this.lastViewMode = viewMode;
       this.lastSphericalCapRadius = sphericalCapRadius;
+      this.lastIsInvisible = isInvisible;
 
       const bucketQueue = new PriorityQueue({
         // small priorities take precedence
         comparator: (b, a) => b.priority - a.priority,
       });
 
-      if (viewMode === constants.MODE_ARBITRARY_PLANE) {
-        determineBucketsForOblique(
-          this.cube,
-          bucketQueue,
-          matrix,
-          logZoomStep,
-          fallbackZoomStep,
-          isFallbackAvailable,
-        );
-      } else if (viewMode === constants.MODE_ARBITRARY) {
-        determineBucketsForFlight(
-          this.cube,
-          bucketQueue,
-          matrix,
-          logZoomStep,
-          fallbackZoomStep,
-          isFallbackAvailable,
-        );
-      } else {
-        determineBucketsForOrthogonal(
-          this.cube,
-          bucketQueue,
-          logZoomStep,
-          fallbackZoomStep,
-          isFallbackAvailable,
-          this.anchorPointCache.anchorPoint,
-          this.anchorPointCache.fallbackAnchorPoint,
-          areas,
-          subBucketLocality,
-        );
+      if (!isInvisible) {
+        if (viewMode === constants.MODE_ARBITRARY_PLANE) {
+          determineBucketsForOblique(
+            this.cube,
+            bucketQueue,
+            matrix,
+            logZoomStep,
+            fallbackZoomStep,
+            isFallbackAvailable,
+          );
+        } else if (viewMode === constants.MODE_ARBITRARY) {
+          determineBucketsForFlight(
+            this.cube,
+            bucketQueue,
+            matrix,
+            logZoomStep,
+            fallbackZoomStep,
+            isFallbackAvailable,
+          );
+        } else {
+          determineBucketsForOrthogonal(
+            this.cube,
+            bucketQueue,
+            logZoomStep,
+            fallbackZoomStep,
+            isFallbackAvailable,
+            this.anchorPointCache.anchorPoint,
+            this.anchorPointCache.fallbackAnchorPoint,
+            areas,
+            subBucketLocality,
+          );
+        }
       }
 
       const bucketsWithPriorities = consumeBucketsFromPriorityQueue(

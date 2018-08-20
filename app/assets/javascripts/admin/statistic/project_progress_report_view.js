@@ -1,7 +1,7 @@
 // @flow
 import * as React from "react";
 import { Icon, Spin, Table, Card } from "antd";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import Loop from "components/loop";
 import { getProjectProgressReport } from "admin/admin_rest_api";
 import type { APIProjectProgressReportType, APITeamType } from "admin/api_flow_types";
@@ -61,12 +61,15 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
       this.fetchData();
     });
   };
+
   handleOpenSettings = () => {
     this.setState({ areSettingsVisible: true });
   };
+
   handleReload = () => {
     this.fetchData();
   };
+
   handleAutoReload = () => {
     this.fetchData(true);
   };
@@ -101,7 +104,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
               title="Project"
               dataIndex="projectName"
               defaultSortOrder="ascend"
-              sorter={Utils.localeCompareBy(typeHint, "projectName")}
+              sorter={Utils.localeCompareBy(typeHint, project => project.projectName)}
               render={(text, item) => (
                 <span>
                   {item.paused ? <Icon type="pause-circle-o" /> : null} {text}
@@ -111,18 +114,18 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
             <Column
               title="Tasks"
               dataIndex="totalTasks"
-              sorter={Utils.compareBy(typeHint, "totalTasks")}
+              sorter={Utils.compareBy(typeHint, project => project.totalTasks)}
             />
             <ColumnGroup title="Instances">
               <Column
                 title="Total"
                 dataIndex="totalInstances"
-                sorter={Utils.compareBy(typeHint, "totalInstances")}
+                sorter={Utils.compareBy(typeHint, project => project.totalInstances)}
               />
               <Column
                 title="Open"
                 dataIndex="openInstances"
-                sorter={Utils.compareBy(typeHint, "openInstances")}
+                sorter={Utils.compareBy(typeHint, project => project.openInstances)}
                 render={(text, item) =>
                   `${item.openInstances} (${Math.round(
                     (item.openInstances / item.totalInstances) * 100,
@@ -132,7 +135,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
               <Column
                 title="Active"
                 dataIndex="activeInstances"
-                sorter={Utils.compareBy(typeHint, "activeInstances")}
+                sorter={Utils.compareBy(typeHint, project => project.activeInstances)}
                 render={(text, item) =>
                   `${item.activeInstances} (${Math.round(
                     (item.activeInstances / item.totalInstances) * 100,
@@ -142,7 +145,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
               <Column
                 title="Finished"
                 dataIndex="finishedInstances"
-                sorter={Utils.compareBy(typeHint, "finishedInstances")}
+                sorter={Utils.compareBy(typeHint, project => project.finishedInstances)}
                 render={(text, item) =>
                   `${item.finishedInstances} (${Math.round(
                     (item.finishedInstances / item.totalInstances) * 100,

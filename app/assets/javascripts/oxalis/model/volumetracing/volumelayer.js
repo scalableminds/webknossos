@@ -5,12 +5,12 @@
 
 import _ from "lodash";
 import Drawing from "libs/drawing";
-import Utils from "libs/utils";
 import Dimensions from "oxalis/model/dimensions";
 import { Vector3Indicies } from "oxalis/constants";
 import Store from "oxalis/store";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
+import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import type { OrthoViewType, Vector2, Vector3 } from "oxalis/constants";
 
 export class VoxelIterator {
@@ -99,12 +99,8 @@ class VolumeLayer {
   }
 
   getContourList() {
-    const volumeTracing = Store.getState().tracing;
-    if (volumeTracing.type !== "volume") {
-      throw new Error("getContourList must only be called in a volume tracing!");
-    } else {
-      return volumeTracing.contourList;
-    }
+    const volumeTracing = enforceVolumeTracing(Store.getState().tracing);
+    return volumeTracing.contourList;
   }
 
   finish(): void {
@@ -271,7 +267,7 @@ class VolumeLayer {
     let sumArea = 0;
     let sumCx = 0;
     let sumCy = 0;
-    for (const i of Utils.__range__(0, this.getContourList().length - 1, false)) {
+    for (let i = 0; i < this.getContourList().length - 1; i++) {
       const [x, y] = this.get2DCoordinate(this.getContourList()[i]);
       const [x1, y1] = this.get2DCoordinate(this.getContourList()[i + 1]);
       sumArea += x * y1 - x1 * y;

@@ -6,8 +6,8 @@ package com.scalableminds.webknossos.datastore.controllers
 import com.google.inject.Inject
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.services.{AccessTokenService, DataSourceRepository, UserAccessRequest, WebKnossosServer}
+import com.scalableminds.webknossos.datastore.tracings.TracingSelector
 import com.scalableminds.webknossos.datastore.tracings.skeleton._
-import com.scalableminds.webknossos.datastore.tracings.{TracingReference, TracingSelector, TracingType}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
 
@@ -33,7 +33,7 @@ class SkeletonTracingController @Inject()(
         val tracings = request.body.tracings
         val mergedTracing = tracingService.merge(tracings)
         tracingService.save(mergedTracing, None, mergedTracing.version, toCache = !persist).map { newId =>
-          Ok(Json.toJson(TracingReference(newId, TracingType.skeleton)))
+          Ok(Json.toJson(newId))
         }
       }
     }
@@ -47,7 +47,7 @@ class SkeletonTracingController @Inject()(
           mergedTracing = tracingService.merge(tracings)
           newId <- tracingService.save(mergedTracing, None, mergedTracing.version, toCache = !persist)
         } yield {
-          Ok(Json.toJson(TracingReference(newId, TracingType.skeleton)))
+          Ok(Json.toJson(newId))
         }
       }
     }
@@ -60,7 +60,7 @@ class SkeletonTracingController @Inject()(
           tracing <- tracingService.find(tracingId, version, applyUpdates = true) ?~> Messages("tracing.notFound")
           newId <- tracingService.duplicate(tracing)
         } yield {
-          Ok(Json.toJson(TracingReference(newId, TracingType.skeleton)))
+          Ok(Json.toJson(newId))
         }
       }
     }

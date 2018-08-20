@@ -500,7 +500,7 @@ class UserListView extends React.PureComponent<Props, State> {
           <ExperienceModalView2
             visible={this.state.isExperienceModalVisible}
             selectedUsers={this.getAllSelectedUsers()}
-            onClose={this.closeExperienceModal}
+            onChange={this.closeExperienceModal}
             onCancel={() => this.setState({ isExperienceModalVisible: false })}
           />
         ) : null}

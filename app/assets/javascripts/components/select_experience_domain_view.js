@@ -11,7 +11,7 @@ type Props = {
   disabled: boolean,
   onSelect: () => void,
   onDeselect: () => void,
-  alreadyUsedDomains: Array<string>,
+  alreadyUsedDomains: ExperienceDomainListType,
 };
 
 type State = {
@@ -28,11 +28,11 @@ class SelectExperienceDomainView extends React.PureComponent<Props, State> {
   }
 
   async fetchData() {
-    const domains = await getExistingExperienceDomains();
-    if (this.props.alreadyUsedDomains) {
-      _.remove(domains, domain => this.props.alreadyUsedDomains.includes(domain));
-    }
-    this.setState({ domains });
+    this.setState({ domains: await getExistingExperienceDomains() });
+  }
+
+  removeAlreadyUsedDomains(): ExperienceDomainListType {
+    return this.state.domains.filter(domain => !this.props.alreadyUsedDomains.includes(domain));
   }
 
   render() {
@@ -46,7 +46,7 @@ class SelectExperienceDomainView extends React.PureComponent<Props, State> {
         onSelect={this.props.onSelect}
         onDeselect={this.props.onDeselect}
       >
-        {this.state.domains.map(domain => <Option key={domain}>{domain}</Option>)}
+        {this.removeAlreadyUsedDomains().map(domain => <Option key={domain}>{domain}</Option>)}
       </Select>
     );
   }

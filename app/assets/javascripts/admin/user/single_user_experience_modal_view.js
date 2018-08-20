@@ -180,7 +180,8 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
     }));
   };
 
-  getDomainsOfTable = (): Array<string> => this.state.experienceEntries.map(entry => entry.domain);
+  getDomainsOfTable = (): ExperienceDomainListType =>
+    this.state.experienceEntries.map(entry => entry.domain);
 
   render() {
     if (!this.props.visible) {

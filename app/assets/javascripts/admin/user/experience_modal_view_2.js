@@ -6,7 +6,6 @@ import { Modal, Button, Tooltip, Icon, Table, InputNumber } from "antd";
 import Toast from "libs/toast";
 import { updateUser } from "admin/admin_rest_api";
 import type { APIUserType } from "admin/api_flow_types";
-import { handleGenericError } from "libs/error_handling";
 import SelectExperienceDomainView from "components/select_experience_domain_view";
 
 const { Column } = Table;
@@ -25,7 +24,7 @@ type ChangingTableEntry = {
 };
 
 type Props = {
-  onClose: Function,
+  onChange: Function,
   onCancel: Function,
   visible: boolean,
   selectedUsers: Array<APIUserType>,
@@ -100,25 +99,78 @@ class ExperienceModalView2 extends React.PureComponent<Props, State> {
     return _.sortBy(entries, entry => entry.domain);
   };
 
-  updateUsersExperiences = async () => {
-    console.log("needs a complete rework");
-    /* const notRemovedExperiences = this.state.experienceEntries.filter(entry => !entry.removed);
-    const formatedExperiences = {};
-    notRemovedExperiences.forEach(experience => {
-      formatedExperiences[experience.domain] = experience.value;
+  increaseUsersExperiences = async () => {
+    const newUserPromises = this.props.selectedUsers.map(user => {
+      const newUser = { ...user };
+      this.state.changeEntries.forEach(entry => {
+        if (entry.removed) return;
+        if (entry.domain in newUser.experiences) {
+          newUser.experiences[entry.domain] += entry.value;
+        } else {
+          newUser.experiences[entry.domain] = entry.value;
+        }
+        if (newUser.experiences[entry.domain] < 1) {
+          Toast.warning(
+            `User ${user.lastName}, ${user.firstName} would have a negative Experience at ${
+              entry.domain
+            }. Fallback to value 1 is executed.`,
+          );
+          newUser.experiences[entry.domain] = 1;
+        }
+      });
+      return this.sendUserToServer(newUser, user);
     });
-    const updatedUser = { ...this.props.selectedUser, experiences: formatedExperiences };
-    try {
-      await updateUser(updatedUser);
-    } catch (error) {
-      handleGenericError(error);
-    } finally {
-      this.props.onClose();
-    } */
+    this.closeModal(newUserPromises);
   };
 
+  setUsersExperiences = async () => {
+    const newUserPromises = this.props.selectedUsers.map(user => {
+      const newUser = { ...user };
+      this.state.changeEntries.forEach(entry => {
+        if (entry.removed) return;
+        newUser.experiences[entry.domain] = entry.value;
+      });
+      return this.sendUserToServer(newUser, user);
+    });
+    this.closeModal(newUserPromises);
+  };
+
+  removeUsersExperiences = async () => {
+    const newUserPromises = this.props.selectedUsers.map(user => {
+      const newUser = { ...user };
+      this.state.changeEntries.forEach(entry => {
+        if (entry.removed) return;
+        if (entry.domain in newUser.experiences) {
+          delete user.experiences[entry.domain];
+        }
+      });
+      return this.sendUserToServer(newUser, user);
+    });
+    this.closeModal(newUserPromises);
+  };
+
+  sendUserToServer(newUser: APIUserType, oldUser: APIUserType): Promise<APIUserType> {
+    return updateUser(newUser).then(() => Promise.resolve(newUser), () => Promise.reject(oldUser));
+  }
+
+  closeModal(usersPromises: Array<Promise<APIUserType>>): void {
+    Promise.all(usersPromises).then(
+      newUsers => {
+        this.setState({
+          sharedExperiencesEntries: [],
+          changeEntries: [],
+          enteredExperience: [],
+        });
+        this.props.onChange(newUsers);
+      },
+      () => {
+        Toast.error("At least one update could not be performed");
+      },
+    );
+  }
+
   validateEntry(entry: ChangingTableEntry): boolean {
-    return entry.removed || (entry.domain.length > 2 && entry.value > 0);
+    return entry.removed || entry.domain.length > 2;
   }
 
   validateDomainAndValues(tableData: Array<ChangingTableEntry>) {
@@ -130,14 +182,10 @@ class ExperienceModalView2 extends React.PureComponent<Props, State> {
     return isValid;
   }
 
-  /* recordModifiedAndExistedBefore = (record: ChangingTableEntry): boolean =>
-    record.value !== this.props.selectedUser.experiences[record.domain] &&
-    record.domain in this.props.selectedUser.experiences; */
-
   increaseValueOfEntrysBy = (index: number, val: number) => {
     this.setState(prevState => ({
       changeEntries: prevState.changeEntries.map((entry, currentIndex) => {
-        if (currentIndex === index && entry.value + val > 0) {
+        if (currentIndex === index) {
           return {
             ...entry,
             value: entry.value + val,
@@ -150,20 +198,18 @@ class ExperienceModalView2 extends React.PureComponent<Props, State> {
   };
 
   setValueOfEntry = (index: number, value: number) => {
-    if (value > 0) {
-      this.setState(prevState => ({
-        changeEntries: prevState.changeEntries.map((entry, currentIndex) => {
-          if (currentIndex === index) {
-            return {
-              ...entry,
-              value,
-            };
-          } else {
-            return entry;
-          }
-        }),
-      }));
-    }
+    this.setState(prevState => ({
+      changeEntries: prevState.changeEntries.map((entry, currentIndex) => {
+        if (currentIndex === index) {
+          return {
+            ...entry,
+            value,
+          };
+        } else {
+          return entry;
+        }
+      }),
+    }));
   };
 
   setRemoveOfEntryTo = (index: number, removed: boolean) => {
@@ -216,7 +262,11 @@ class ExperienceModalView2 extends React.PureComponent<Props, State> {
     }));
   };
 
-  getDomainsOfTable = (): Array<string> => this.state.changeEntries.map(entry => entry.domain);
+  getDomainsOfTable = (): ExperienceDomainListType =>
+    this.state.changeEntries.map(entry => entry.domain);
+
+  hasEntriesWithNegativeValue = (): boolean =>
+    this.state.changeEntries.find(entry => entry.value < 1) !== undefined;
 
   render() {
     if (!this.props.visible) {
@@ -225,6 +275,7 @@ class ExperienceModalView2 extends React.PureComponent<Props, State> {
     const sharedExperiencesEntries = this.state.sharedExperiencesEntries;
     const changeEntries = this.state.changeEntries;
     const isValid = this.validateDomainAndValues(changeEntries);
+    const hasNegativeEntries = this.hasEntriesWithNegativeValue();
     return (
       <Modal
         className="experience-change-modal"
@@ -236,22 +287,22 @@ class ExperienceModalView2 extends React.PureComponent<Props, State> {
           <div>
             <Button
               className="confirm-button"
-              onClick={this.updateUsersExperiences}
+              onClick={this.increaseUsersExperiences}
               disabled={!isValid}
             >
               {"Increase Users' Experiences"}
             </Button>
             <Button
               className="confirm-button"
-              onClick={this.updateUsersExperiences}
-              disabled={!isValid}
+              onClick={this.setUsersExperiences}
+              disabled={!isValid || hasNegativeEntries}
             >
               {"Set Users' Experiences"}
             </Button>
             <Button
               className="confirm-button"
-              onClick={this.updateUsersExperiences}
-              disabled={!isValid}
+              onClick={this.removeUsersExperiences}
+              disabled={!isValid || hasNegativeEntries}
             >
               {"Remove Users' Experiences"}
             </Button>

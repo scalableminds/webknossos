@@ -44,6 +44,7 @@ type TabKeyType = "data" | "general" | "defaultConfig";
 
 type State = {
   dataset: ?APIDatasetType,
+  isForeign: boolean,
   datasetDefaultConfiguration: ?DatasetConfigurationType,
   messages: Array<APIMessageType>,
   isLoading: boolean,
@@ -66,6 +67,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
 
   state = {
     dataset: null,
+    isForeign: false,
     datasetDefaultConfiguration: null,
     isLoading: true,
     messages: [],
@@ -95,6 +97,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
           allowedTeams: dataset.allowedTeams || [],
         },
       });
+      this.setState({ isForeign: dataset.isForeign });
       // This call cannot be combined with the previous setFieldsValue,
       // since the layer values wouldn't be initialized correctly.
       this.props.form.setFieldsValue({
@@ -128,6 +131,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         dataset,
         messages: dataSourceMessages,
       });
+
     } catch (error) {
       handleGenericError(error);
     } finally {
@@ -371,6 +375,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                   <Hideable hidden={this.state.activeTabKey !== "data"}>
                     <SimpleAdvancedDataForm
                       key="SimpleAdvancedDataForm"
+                      isForeignDataset={this.state.isForeign}
                       form={form}
                       activeDataSourceEditMode={this.state.activeDataSourceEditMode}
                       onChange={activeEditMode => {

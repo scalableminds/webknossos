@@ -640,13 +640,29 @@ export function getDatasetAccessList(datasetName: string): Promise<Array<APIUser
   return Request.receiveJSON(`/api/datasets/${datasetName}/accessList`);
 }
 
-export async function addDataset(datatsetConfig: DatasetConfigType): Promise<void> {
+export async function addDataset(datasetConfig: DatasetConfigType): Promise<void> {
   await doWithToken(token =>
     Request.sendMultipartFormReceiveJSON(`/data/datasets?token=${token}`, {
-      data: datatsetConfig,
-      host: datatsetConfig.datastore,
+      data: datasetConfig,
+      host: datasetConfig.datastore,
     }),
   );
+}
+
+// Returns void if the name is valid. Otherwise, a string is returned which denotes the reason.
+export async function isDatasetNameValid(dataSetName: string): Promise<?string> {
+  if (dataSetName === "") {
+    return "The dataset name must not be empty.";
+  }
+  try {
+    await Request.receiveJSON(`/api/datasets/${dataSetName}/isValidNewName`, {
+      doNotCatch: true,
+    });
+    return null;
+  } catch (ex) {
+    const json = JSON.parse(await ex.text());
+    return json.messages.map(msg => Object.values(msg)[0]).join(". ");
+  }
 }
 
 export function updateDatasetTeams(

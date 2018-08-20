@@ -60,6 +60,7 @@ class DataLayer {
       this.cube,
       textureWidth,
       dataTextureCount,
+      layerInfo.category === "segmentation",
     );
   }
 

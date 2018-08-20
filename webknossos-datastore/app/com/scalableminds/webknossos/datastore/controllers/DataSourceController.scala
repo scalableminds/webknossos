@@ -45,7 +45,6 @@ class DataSourceController @Inject()(
             val dslike: InboxDataSourceLike = ds
             if(returnFormatLike) Ok(Json.toJson(dslike))
             else Ok(Json.toJson(ds))
-            Ok(Json.toJson(dslike))
           }
           case _ => Ok
         }

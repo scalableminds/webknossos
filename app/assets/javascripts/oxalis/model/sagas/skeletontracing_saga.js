@@ -4,7 +4,7 @@
  */
 import _ from "lodash";
 import { Modal } from "antd";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import Toast from "libs/toast";
 import messages from "messages";
 import Store from "oxalis/store";
@@ -16,8 +16,8 @@ import {
   _takeEvery,
   select,
   race,
-  type Saga,
 } from "oxalis/model/sagas/effect-generators";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
 import {
   deleteBranchPointAction,
   setTreeNameAction,

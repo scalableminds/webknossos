@@ -310,6 +310,12 @@ object TaskDAO extends SQLDAO[Task, TasksRow, Tasks] {
     }
   }
 
+  def listExperienceDomains(implicit ctx: DBAccessContext): Fox[List[String]] = {
+    for {
+      rowsRaw <- run(sql"select domain from webknossos.experienceDomains".as[String])
+    } yield rowsRaw.toList
+  }
+
   def insertOne(t: Task): Fox[Unit] = {
     for {
       _ <- run(

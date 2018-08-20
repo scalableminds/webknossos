@@ -4,7 +4,7 @@ import type { BoundingBoxType } from "oxalis/constants";
 import type { APIAnnotationType, ServerBoundingBoxType } from "admin/api_flow_types";
 import type { AnnotationType, BoundingBoxObjectType } from "oxalis/store";
 import Maybe from "data.maybe";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 
 export function convertServerBoundingBoxToFrontend(
   boundingBox: ?ServerBoundingBoxType,

@@ -6,7 +6,7 @@
 
 /* eslint-disable no-await-in-loop */
 
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import Deferred from "libs/deferred";
 import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";

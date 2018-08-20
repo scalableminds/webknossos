@@ -2,7 +2,12 @@
 // @flow
 import test from "ava";
 import _ from "lodash";
-import { tokenUserA, setCurrToken, resetDatabase } from "test/enzyme/e2e-setup";
+import {
+  tokenUserA,
+  setCurrToken,
+  resetDatabase,
+  writeFlowCheckingFile,
+} from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import type { APIDatasetType } from "admin/api_flow_types";
 
@@ -28,7 +33,7 @@ test.serial("getDatasets", async t => {
     retry++;
   }
   datasets = _.sortBy(datasets, d => d.name);
-
+  writeFlowCheckingFile(datasets, "dataset", "APIMaybeUnimportedDatasetType", { isArray: true });
   t.snapshot(datasets, { id: "datasets-getDatasets" });
 });
 

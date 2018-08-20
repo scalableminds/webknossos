@@ -5,9 +5,8 @@ import { Form, Input, Button, Card, Spin } from "antd";
 import { addForeignDataSet } from "admin/admin_rest_api";
 import Messages from "messages";
 import Toast from "libs/toast";
-import { connect } from "react-redux";
 import { withRouter } from "react-router-dom";
-import { OxalisState } from "../../oxalis/store";
+import type { OxalisState } from "oxalis/store";
 
 const FormItem = Form.Item;
 const TextArea = Input.TextArea;
@@ -136,8 +135,4 @@ class DatasetAddForeignView extends React.PureComponent<Props, State> {
   }
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
-  activeUser: state.activeUser,
-});
-
-export default connect(mapStateToProps)(withRouter(Form.create()(DatasetAddForeignView)));
+export default withRouter(Form.create()(DatasetAddForeignView));

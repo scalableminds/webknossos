@@ -19,6 +19,7 @@ export default function SimpleAdvancedDataForm({
   activeDataSourceEditMode,
   onChange,
 }: {
+  isForeignDataset: boolean,
   form: Object,
   activeDataSourceEditMode: "simple" | "advanced",
   onChange: ("simple" | "advanced") => void,

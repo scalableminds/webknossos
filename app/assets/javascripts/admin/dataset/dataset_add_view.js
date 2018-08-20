@@ -4,10 +4,16 @@ import { Tabs, Icon } from "antd";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import DatasetAddForeignView from "admin/dataset/dataset_add_foreign_view";
 import features from "features";
+import { withRouter } from "react-router-dom";
+import type { RouterHistory } from "react-router-dom";
 
 const { TabPane } = Tabs;
 
-const DatasetAddView = () => (
+type Props = {
+  history: RouterHistory,
+};
+
+const DatasetAddView = ({history}: Props) => (
   <Tabs defaultActiveKey="1" className="container task-edit-administration">
     <TabPane
       tab={
@@ -17,7 +23,10 @@ const DatasetAddView = () => (
       }
       key="1"
     >
-      <DatasetUploadView />
+      <DatasetUploadView onUploaded={datasetName => {
+        const url = `/datasets/${datasetName}/import`;
+        history.push(url);
+      }}/>
     </TabPane>
     {features().addForeignDataset ? (
       <TabPane
@@ -34,4 +43,4 @@ const DatasetAddView = () => (
   </Tabs>
 );
 
-export default DatasetAddView;
+export default withRouter(DatasetAddView);

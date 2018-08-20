@@ -327,6 +327,7 @@ export type APIFeatureToggles = {
   +discussionBoard: boolean,
   +hybridTracings: boolean,
   +allowOrganzationCreation: boolean,
+  +addForeignDataset: boolean,
 };
 
 // Tracing related datatypes

@@ -434,6 +434,7 @@ export const defaultState: OxalisState = {
     allowedTeams: [],
     logoUrl: null,
     lastUsedByUser: 0,
+    isForeign: false,
   },
   tracing: {
     ...initialAnnotationInfo,

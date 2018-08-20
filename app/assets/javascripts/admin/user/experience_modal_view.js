@@ -186,21 +186,6 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     return isValid;
   }
 
-  increaseValueOfEntrysBy = (index: number, val: number) => {
-    this.setState(prevState => ({
-      changeEntries: prevState.changeEntries.map((entry, currentIndex) => {
-        if (currentIndex === index) {
-          return {
-            ...entry,
-            value: entry.value + val,
-          };
-        } else {
-          return entry;
-        }
-      }),
-    }));
-  };
-
   setValueOfEntry = (index: number, value: number) => {
     this.setState(prevState => ({
       changeEntries: prevState.changeEntries.map((entry, currentIndex) => {
@@ -371,29 +356,10 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
               const index = changeEntries.findIndex(entry => entry.domain === record.domain);
               return (
                 <span>
-                  <Icon
-                    type="minus"
-                    className={
-                      record.removed
-                        ? "clickable-icon disabled-icon disabled-clickable-icon"
-                        : "clickable-icon active-icon hoverable-icon"
-                    }
-                    onClick={record.removed ? null : () => this.increaseValueOfEntrysBy(index, -1)}
-                  />
                   <InputNumber
                     disabled={record.removed}
                     value={changeEntries[index].value}
                     onChange={value => this.setValueOfEntry(index, value)}
-                  />
-                  <Icon
-                    type="plus"
-                    className={
-                      record.removed
-                        ? "clickable-icon disabled-icon disabled-clickable-icon"
-                        : "clickable-icon active-icon hoverable-icon"
-                    }
-                    style={{ marginLeft: 5 }}
-                    onClick={record.removed ? null : () => this.increaseValueOfEntrysBy(index, 1)}
                   />
                 </span>
               );
@@ -409,10 +375,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
                 <span>
                   {record.removed ? (
                     <Tooltip placement="top" title="Undo">
-                      <Icon
-                        type="close-circle-o"
-                        onClick={() => this.setRemoveOfEntryTo(index, false)}
-                      />
+                      <Icon type="rollback" onClick={() => this.setRemoveOfEntryTo(index, false)} />
                     </Tooltip>
                   ) : (
                     <Tooltip placement="top" title="Delete this Domain">

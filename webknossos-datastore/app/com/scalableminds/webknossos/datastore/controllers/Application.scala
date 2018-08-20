@@ -26,8 +26,4 @@ class Application @Inject()(tracingDataStore: TracingDataStore,
     }
   }
 
-  def readConfig = Action { implicit request =>
-    Ok(Json.toJson(dataStoreConfig.Application.insertInitialData))
-  }
-
 }

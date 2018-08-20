@@ -42,16 +42,6 @@ object WkConf extends ConfigReader {
     }
   }
 
-  // passed to slick directly, not read from here
-  object Postgres {
-    val url = getString("postgres.url")
-    val driver = getString("postgres.driver")
-    val keepAliveConnection = getBoolean("postgres.keepAliveConnection")
-    val user = getString("postgres.user")
-    val password = getString("postgres.password")
-    val queueSize = getInt("postgres.queueSize")
-  }
-
   object Oxalis {
     object User {
       object Time {

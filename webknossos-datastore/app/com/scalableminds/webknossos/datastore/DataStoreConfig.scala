@@ -10,10 +10,6 @@ import scala.concurrent.duration._
 class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigReader {
   override def raw = configuration
 
-  object Application {
-    val insertInitialData = getBoolean("application.insertInitialData")
-  }
-
   object Http {
     val uri = getString("http.uri")
   }

@@ -24,11 +24,11 @@ Compared to KNOSSOS datasets, it is more efficient because it orders the data wi
 WKW is versatile in the image formats it can hold: Grayscale, Multi-Channel, Segmentation, RGB as well as a range of data types (e.g., `uint8`,  `uint16`, `float32`).
 Additionally, WKW supports compression for disk space efficiency.
 
-### Folder structure
-A WKW dataset is represented with the following file system structure.
+### WKW Folder Structure
+A WKW dataset is represented with the following file system structure:
 
 ```
-test_dataset           # One folder per dataset
+great_dataset          # One folder per dataset
 ├─ color               # Dataset layer (e.g., color, segmentation)
 │  ├─ 1                # Magnification step (1, 2, 4, 8, 16 etc.)
 │  │  ├─ header.wkw    # Header wkw file
@@ -43,12 +43,13 @@ test_dataset           # One folder per dataset
 └─ datasource-properties.json  # Dataset metadata (will be created upon import, if non-existant)
 ```
 
+### WKW Metadata
 Metadata is stored in the `datasource-properties.json`. This is an example:
 
 ```json
 {
   "id" : {
-    "name" : "test_dataset",
+    "name" : "great_dataset",
     "team" : "<unknown>"
   },
   "dataLayers" : [ {
@@ -61,42 +62,11 @@ Metadata is stored in the `datasource-properties.json`. This is an example:
       "depth" : 1024
     },
     "wkwResolutions" : [
-        {
-          "resolution": 1,
-          "cubeLength": 1024
-        },
-        {
-          "resolution": [
-            2,
-            2,
-            1
-          ],
-          "cubeLength": 1024
-        },
-        {
-          "resolution": [
-            4,
-            4,
-            1
-          ],
-          "cubeLength": 1024
-        },
-        {
-          "resolution": [
-            8,
-            8,
-            1
-          ],
-          "cubeLength": 1024
-        },
-        {
-          "resolution": [
-            16,
-            16,
-            2
-          ],
-          "cubeLength": 1024
-        },
+        { "resolution": 1, "cubeLength": 1024 },
+        { "resolution": [ 2, 2, 1 ], "cubeLength": 1024 },
+        { "resolution": [ 4, 4, 1 ], "cubeLength": 1024 },
+        { "resolution": [ 8, 8, 1 ], "cubeLength": 1024 },
+        { "resolution": [ 16, 16, 2 ], "cubeLength": 1024 },
       ],
     "elementClass" : "uint8",
     "dataFormat" : "wkw"
@@ -112,11 +82,7 @@ Metadata is stored in the `datasource-properties.json`. This is an example:
       "resolution" : 1,
       "cubeLength" : 1024
     }, {
-      "resolution" : [
-        2,
-        2,
-        1
-      ],
+      "resolution" : [ 2, 2, 1 ],
       "cubeLength" : 1024
     } ],
     "elementClass" : "uint32",
@@ -128,7 +94,9 @@ Metadata is stored in the `datasource-properties.json`. This is an example:
 }
 ```
 
-Note that the `resolutions` attribute within the elements of `wkwResolutions` can be an array of length 3. The three components within such a resolution denote the scaling factor for x, y and z. At the moment, WebKnossos guarantees correct rendering of data with non-uniform resolution factors only if the z-component between two resolutions changes by a factor of 1 or 2.
+Note that the `resolutions` attribute within the elements of `wkwResolutions` can be an array of length 3. 
+The three components within such a resolution denote the scaling factor for x, y and z. 
+At the moment, WebKnossos guarantees correct rendering of data with non-uniform resolution factors only if the z-component between two resolutions changes by a factor of 1 or 2.
 
 ## KNOSSOS Datasets
 
@@ -143,6 +111,71 @@ Please note the following adjustments compared to using KNOSSOS cubes with the K
 * webKnossos compatible metadata needs to be created (i.e., `datasource-properties.json`). `knossos.conf` can not be used directly.
 * Make sure to put each dataset layer into its own directory structure (e.g., `color`, `segmentation`)
 * Compressed KNOSSOS cubes are not supported. Please convert to WKW for compression support.
+
+### KNOSSOS Folder Structure
+A KNOSSOS dataset is represented with the following file system structure:
+
+```
+great_dataset          # One folder per dataset
+├─ color               # Dataset layer (e.g., color, segmentation)
+│  ├─ 1                # Magnification step (1, 2, 4, 8, 16 etc.)
+│  │  ├─ x0001
+│  │  │  ├─ y0001
+│  │  │  │  ├─ z0001
+│  │  │  │  │  └─ great_dataset_mag1_x0001_y0001_z0001.raw   # Actual KNOSSOS cube file
+│  │  │  │  └─ z0002
+│  │  │  │     └─ great_dataset_mag1_x0001_y0001_z0002.raw   # Actual KNOSSOS cube file
+│  │  │  └─ y0002/...
+│  │  └─ x0002/...
+│  └─ 2/...
+├─ segmentation/...
+└─ datasource-properties.json  # Dataset metadata (will be created upon import, if non-existant)
+```
+
+### KNOSSOS Metadata
+Metadata is stored in the `datasource-properties.json`. This is an example:
+
+```json
+{
+  "id" : {
+    "name" : "great_dataset",
+    "team" : "<unknown>"
+  },
+  "dataLayers" : [ {
+    "name" : "color",
+    "category" : "color",
+    "sections" : [ {
+      "name" : "",
+      "resolutions" : [ 32, 16, 1, 8, 128, 64, 4, 2 ],
+      "boundingBox" : {
+        "topLeft" : [ 0, 0, 0 ],
+        "width" : 1024,
+        "height" : 1024,
+        "depth" : 1024
+      }
+    } ],
+    "elementClass" : "uint8",
+    "dataFormat" : "knossos"
+  }, {
+    "name" : "segmentation",
+    "sections" : [ {
+      "name" : "",
+      "resolutions" : [ 32, 16, 1, 8, 128, 64, 4, 2 ],
+      "boundingBox" : {
+        "topLeft" : [ 0, 0, 0 ],
+        "width" : 1024,
+        "height" : 1024,
+        "depth" : 1024
+      }
+    } ],
+    "elementClass" : "uint32",
+    "largestSegmentId" : 1000000000,
+    "category" : "segmentation",
+    "dataFormat" : "knossos"
+  } ],
+  "scale" : [ 11.24, 11.24, 28 ]
+}
+```
 
 ## Image Stacks
 If you have image stacks (e.g. tiff stacks), you can easily convert them with [webKnossos cuber](https://github.com/scalableminds/webknossos-cuber).

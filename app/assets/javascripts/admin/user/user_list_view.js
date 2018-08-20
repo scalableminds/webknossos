@@ -8,7 +8,7 @@ import { connect } from "react-redux";
 import { Link, withRouter } from "react-router-dom";
 import { Table, Tag, Icon, Spin, Button, Input, Modal, Alert, Row, Col, Tooltip } from "antd";
 import TeamRoleModalView from "admin/user/team_role_modal_view";
-import ExperienceModalView2 from "admin/user/experience_modal_view_2";
+import ExperienceModalView from "admin/user/experience_modal_view";
 import SingleUserExperienceModalView from "admin/user/single_user_experience_modal_view";
 import { stringToColor } from "libs/format_utils";
 import * as Utils from "libs/utils";
@@ -497,7 +497,7 @@ class UserListView extends React.PureComponent<Props, State> {
           </Table>
         </Spin>
         {hasRowsSelected ? (
-          <ExperienceModalView2
+          <ExperienceModalView
             visible={this.state.isExperienceModalVisible}
             selectedUsers={this.getAllSelectedUsers()}
             onChange={this.closeExperienceModal}

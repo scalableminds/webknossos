@@ -9,10 +9,10 @@ import Toast from "libs/toast";
 import type { APITaskType } from "admin/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
 import type { BoundingBoxObjectType } from "oxalis/store";
-import {APIDataStoreType, APIUserType} from "../api_flow_types";
-import {OxalisState} from "../../oxalis/store";
-import {connect} from "react-redux";
-import {withRouter} from "react-router-dom";
+import { APIDataStoreType, APIUserType } from "../api_flow_types";
+import { OxalisState } from "../../oxalis/store";
+import { connect } from "react-redux";
+import { withRouter } from "react-router-dom";
 
 const FormItem = Form.Item;
 const TextArea = Input.TextArea;
@@ -24,7 +24,7 @@ type StateProps = {
 type Props = StateProps & {
   form: Object,
   withoutCard?: boolean,
-  onUploaded: string => void
+  onUploaded: string => void,
 };
 
 type State = {
@@ -73,79 +73,81 @@ class DatasetAddForeignView extends React.PureComponent<Props, State> {
     return {
       dataStoreName,
       url,
-      dataSetName
+      dataSetName,
     };
   }
 
-handleSubmit = async e => {
-  e.preventDefault();
+  handleSubmit = async e => {
+    e.preventDefault();
 
-  let dataSet;
-  const formValues = this.props.form.getFieldsValue();
-  specification = this.parseLine(formValues.foreignDatasetText);
+    let dataSet;
+    const formValues = this.props.form.getFieldsValue();
+    specification = this.parseLine(formValues.foreignDatasetText);
 
-  if (this.isValidDataSet(specification)) {
-    await addForeignDataSet(specification.dataStoreName, specification.url, specification.dataSetName);
-    window.location.replace("/dashboard")
-  } else {
-    Toast.error(
-      `${Messages["dataset.import.invalid_fields"]}`, // add to messages
+    if (this.isValidDataSet(specification)) {
+      await addForeignDataSet(
+        specification.dataStoreName,
+        specification.url,
+        specification.dataSetName,
+      );
+      window.location.replace("/dashboard");
+    } else {
+      Toast.error(
+        `${Messages["dataset.import.invalid_fields"]}`, // add to messages
+      );
+    }
+  };
+
+  render() {
+    const { getFieldDecorator } = this.props.form;
+
+    return (
+      <div className="container" style={{ paddingTop: 20 }}>
+        <Spin spinning={this.state.isUploading}>
+          <Card title={<h3>Add Dataset</h3>}>
+            <p>
+              Specify the Dataset in the following format:
+              <br />
+              dataStoreName, url, dataSetName
+            </p>
+            <Form onSubmit={this.handleSubmit} layout="vertical">
+              <FormItem label="Add foreign Dataset Specification" hasFeedback>
+                {getFieldDecorator("foreignDatasetText", {
+                  rules: [
+                    {
+                      validator: (rule, value, callback) => {
+                        const dataSet = this.parseLine(
+                          this.props.form.getFieldsValue().foreignDatasetText,
+                        );
+
+                        return _.isString(value) && this.isValidDataSet(dataSet)
+                          ? callback()
+                          : callback(`${Messages["dataset.import.invalid_fields"]}`);
+                      },
+                    },
+                  ],
+                })(
+                  <TextArea
+                    className="input-monospace"
+                    placeholder="dataStoreName, url, dataSetName"
+                    autosize={{ minRows: 1 }}
+                    style={{
+                      fontFamily: 'Monaco, Consolas, "Lucida Console", "Courier New", monospace',
+                    }}
+                  />,
+                )}
+              </FormItem>
+              <FormItem>
+                <Button type="primary" htmlType="submit">
+                  Add Dataset
+                </Button>
+              </FormItem>
+            </Form>
+          </Card>
+        </Spin>
+      </div>
     );
   }
-};
-
-render() {
-  const { getFieldDecorator } = this.props.form;
-
-  return (
-    <div className="container" style={{ paddingTop: 20 }}>
-      <Spin spinning={this.state.isUploading}>
-        <Card title={<h3>Add Dataset</h3>}>
-          <p>
-            Specify the Dataset in the following format:
-            <br />
-            dataStoreName, url, dataSetName
-          </p>
-          <Form onSubmit={this.handleSubmit} layout="vertical">
-            <FormItem label="Add foreign Dataset Specification" hasFeedback>
-              {getFieldDecorator("foreignDatasetText", {
-                rules: [
-                  {
-                    validator: (rule, value, callback) => {
-                      const dataSet = this.parseLine(this.props.form.getFieldsValue().foreignDatasetText);
-
-                      return _.isString(value) && this.isValidDataSet(dataSet)
-                        ? callback()
-                        : callback(
-                          `${
-                            Messages["dataset.import.invalid_fields"]
-                            }`,
-                        );
-                    },
-                  },
-                ],
-              })(
-                <TextArea
-                  className="input-monospace"
-                  placeholder="dataStoreName, url, dataSetName"
-                  autosize={{ minRows: 1 }}
-                  style={{
-                    fontFamily: 'Monaco, Consolas, "Lucida Console", "Courier New", monospace',
-                  }}
-                />,
-              )}
-            </FormItem>
-            <FormItem>
-              <Button type="primary" htmlType="submit">
-                Add Dataset
-              </Button>
-            </FormItem>
-          </Form>
-        </Card>
-      </Spin>
-    </div>
-  );
-}
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({

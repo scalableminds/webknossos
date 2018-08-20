@@ -115,7 +115,7 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
                   Start Skeleton Tracing
                 </a>
                 {volumeTracingMenu}
-               </div>
+              </div>
             ) : null}
             {features().hybridTracings ? (
               <a

@@ -6,7 +6,11 @@ import Clipboard from "clipboard-js";
 import Toast from "libs/toast";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import { AsyncButton } from "components/async_clickables";
-import { getDatasetSharingToken, getDataset, revokeDatasetSharingToken } from "admin/admin_rest_api";
+import {
+  getDatasetSharingToken,
+  getDataset,
+  revokeDatasetSharingToken,
+} from "admin/admin_rest_api";
 import { FormItemWithInfo } from "./helper_components";
 import { APIDatasetType } from "admin/api_flow_types";
 
@@ -66,15 +70,15 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
     const tokenSuffix = `?token=${this.state.sharingToken}`;
     return `${window.location.origin}/datasets/${this.props.datasetName}/view${
       doesNeedToken ? tokenSuffix : ""
-      }`;
+    }`;
   }
 
   getAllowUsageText() {
-    if(this.state.dataSet != null) {
+    if (this.state.dataSet != null) {
       const dataStoreName = this.state.dataSet.dataStore.name;
       const dataStoreURL = this.state.dataSet.dataStore.url;
       return dataStoreName + ", " + dataStoreURL + ", " + this.props.datasetName;
-    } else return ""
+    } else return "";
   }
 
   render() {
@@ -179,13 +183,17 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
                   style={{ width: "80%" }}
                   readOnly
                 />
-                <Button onClick={this.handleCopyAllowUsageText} style={{ width: "10%" }} icon="copy">
+                <Button
+                  onClick={this.handleCopyAllowUsageText}
+                  style={{ width: "10%" }}
+                  icon="copy"
+                >
                   Copy
                 </Button>
               </Input.Group>
             </FormItemWithInfo>
           </div>
-        ) : null }
+        ) : null}
       </div>
     );
 

@@ -64,7 +64,11 @@ export default function SimpleAdvancedDataForm({
 
       <Hideable hidden={activeDataSourceEditMode !== "simple"}>
         <RetryingErrorBoundary>
-          <SimpleDatasetForm isForeignDataset={isForeignDataset} form={form} dataSource={dataSource} />
+          <SimpleDatasetForm
+            isForeignDataset={isForeignDataset}
+            form={form}
+            dataSource={dataSource}
+          />
         </RetryingErrorBoundary>
       </Hideable>
 
@@ -118,7 +122,13 @@ function SimpleDatasetForm({ isForeignDataset, form, dataSource }) {
       <List header={<div style={{ fontWeight: "bold" }}>Layers</div>}>
         {(dataSource || { dataLayers: [] }).dataLayers.map((layer, idx) => (
           <List.Item key={`layer-${layer.name}`}>
-            <SimpleLayerForm disabled={isForeignDataset} isForeignDataset={isForeignDataset} layer={layer} index={idx} form={form} />
+            <SimpleLayerForm
+              disabled={isForeignDataset}
+              isForeignDataset={isForeignDataset}
+              layer={layer}
+              index={idx}
+              form={form}
+            />
           </List.Item>
         ))}
       </List>
@@ -186,7 +196,7 @@ function SimpleLayerForm({ isForeignDataset, layer, index, form }) {
                         ),
                 },
               ],
-            })(<InputNumber disabled={isForeignDataset}/>)}
+            })(<InputNumber disabled={isForeignDataset} />)}
           </FormItemWithInfo>
         ) : null}
       </Col>

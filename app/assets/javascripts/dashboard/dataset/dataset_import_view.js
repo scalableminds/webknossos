@@ -140,7 +140,6 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         dataset,
         messages: dataSourceMessages,
       });
-
     } catch (error) {
       handleGenericError(error);
     } finally {
@@ -232,7 +231,8 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       }
 
       const dataSource = JSON.parse(formValues.dataSourceJson);
-      if (!this.state.isForeign) await updateDatasetDatasource(this.props.datasetName, dataset.dataStore.url, dataSource);
+      if (!this.state.isForeign)
+        await updateDatasetDatasource(this.props.datasetName, dataset.dataStore.url, dataSource);
 
       await updateDatasetTeams(dataset.name, teamIds);
 

@@ -6,7 +6,6 @@ import { addForeignDataSet } from "admin/admin_rest_api";
 import Messages from "messages";
 import Toast from "libs/toast";
 import { withRouter } from "react-router-dom";
-import type { OxalisState } from "oxalis/store";
 
 const FormItem = Form.Item;
 const TextArea = Input.TextArea;

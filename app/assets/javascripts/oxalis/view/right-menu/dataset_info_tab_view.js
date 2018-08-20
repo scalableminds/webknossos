@@ -192,7 +192,11 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
       annotationTypeLabel = (
         <span>
           Explorational Tracing:
-          <EditableTextLabel value={tracingName} onChange={this.setAnnotationName} />
+          <EditableTextLabel
+            value={tracingName}
+            onChange={this.setAnnotationName}
+            label="Annotation Name"
+          />
         </span>
       );
     }
@@ -209,6 +213,7 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
               onChange={this.setAnnotationDescription}
               rows={4}
               markdown
+              label="Annotation Description"
             />
           </span>
         </p>

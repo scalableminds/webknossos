@@ -1,7 +1,7 @@
 // @flow
 
 import * as React from "react";
-import { Input, Icon } from "antd";
+import { Input, Icon, Tooltip } from "antd";
 import Markdown from "react-remarkable";
 import { MarkdownModal } from "oxalis/view/components/markdown_modal";
 import Toast from "libs/toast";
@@ -17,6 +17,7 @@ type EditableTextLabelPropType = {
   rules?: Rule,
   rows?: number,
   markdown?: boolean,
+  label: string,
 };
 
 type State = {
@@ -66,7 +67,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelPropType, S
   }
 
   render() {
-    const iconStyle = { cursor: "pointer", verticalAlign: "top" };
+    const iconStyle = { cursor: "pointer" };
 
     const inputComponentProps = {
       value: this.state.value,
@@ -84,7 +85,9 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelPropType, S
           {this.props.rows === 1 ? (
             <React.Fragment>
               <Input {...inputComponentProps} />
-              <Icon type="check" style={iconStyle} onClick={this.handleOnChange} />
+              <Tooltip title={`Save ${this.props.label}`} placement="bottom">
+                <Icon type="check" style={iconStyle} onClick={this.handleOnChange} />
+              </Tooltip>
             </React.Fragment>
           ) : (
             <MarkdownModal
@@ -92,7 +95,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelPropType, S
               visible={this.state.isEditing}
               onChange={this.handleInputChange}
               onOk={this.handleOnChange}
-              label="Description"
+              label={this.props.label}
             />
           )}
         </span>
@@ -111,7 +114,13 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelPropType, S
               this.props.value
             )}
           </span>
-          <Icon type="edit" style={iconStyle} onClick={() => this.setState({ isEditing: true })} />
+          <Tooltip title={`Edit ${this.props.label}`} placement="bottom">
+            <Icon
+              type="edit"
+              style={iconStyle}
+              onClick={() => this.setState({ isEditing: true })}
+            />
+          </Tooltip>
         </div>
       );
     }

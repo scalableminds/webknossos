@@ -4,7 +4,6 @@
 
 # Health endpoint
 GET         /health                                                                            @com.scalableminds.webknossos.datastore.controllers.Application.health
-GET         /config                                                                            @com.scalableminds.webknossos.datastore.controllers.Application.readConfig
 
 # Read binary data
 POST        /datasets/:dataSetName/layers/:dataLayerName/data                                  @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestViaWebKnossos(dataSetName: String, dataLayerName: String)

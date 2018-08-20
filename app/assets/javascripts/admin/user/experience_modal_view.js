@@ -5,6 +5,7 @@ import * as React from "react";
 import { Modal, Button, Tooltip, Icon, Table } from "antd";
 import Toast from "libs/toast";
 import { updateUser } from "admin/admin_rest_api";
+import { handleGenericError } from "libs/error_handling";
 import type { APIUserType, ExperienceDomainListType } from "admin/api_flow_types";
 import SelectExperienceDomain from "components/select_experience_domain";
 import ExperienceEditingTable, { ExperienceTableEntry } from "admin/user/experience_editing_table";
@@ -19,8 +20,8 @@ type SharedTableEntry = {
 };
 
 type Props = {
-  onChange: Function,
-  onCancel: Function,
+  onChange: (Array<APIUserType>) => void,
+  onCancel: () => void,
   visible: boolean,
   selectedUsers: Array<APIUserType>,
 };
@@ -124,8 +125,8 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
         });
         this.props.onChange(newUsers);
       },
-      () => {
-        Toast.error("At least one update could not be performed.");
+      error => {
+        handleGenericError(error);
       },
     );
   }

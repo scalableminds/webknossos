@@ -11,8 +11,8 @@ import SelectExperienceDomain from "components/select_experience_domain";
 import ExperienceEditingTable, { ExperienceTableEntry } from "admin/user/experience_editing_table";
 
 type Props = {
-  onClose: Function,
-  onCancel: Function,
+  onChange: (Array<APIUserType>) => void,
+  onCancel: () => void,
   visible: boolean,
   selectedUser: APIUserType,
 };
@@ -45,20 +45,35 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
     );
 
   updateUsersExperiences = async () => {
-    const notRemovedExperiences = this.state.experienceEntries.filter(entry => !entry.removed);
-    const formatedExperiences = {};
-    notRemovedExperiences.forEach(experience => {
-      formatedExperiences[experience.domain] = experience.value;
+    const user = this.props.selectedUser;
+    const newExperiences = { ...user.experiences };
+    this.state.experienceEntries.forEach(entry => {
+      if (entry.removed) {
+        delete newExperiences[entry.domain];
+      } else {
+        newExperiences[entry.domain] = entry.value;
+      }
     });
-    const updatedUser = { ...this.props.selectedUser, experiences: formatedExperiences };
+    const newUser = { ...user, experiences: newExperiences };
+    console.log("newUser:");
+    console.log(newUser);
     try {
-      await updateUser(updatedUser);
+      const returnedUser = await this.sendUserToServer(newUser, user);
+      console.log("worked");
+      this.setState({
+        experienceEntries: [],
+        enteredExperience: [],
+      });
+      const updatedUser = [returnedUser];
+      this.props.onChange(updatedUser);
     } catch (error) {
       handleGenericError(error);
-    } finally {
-      this.props.onClose();
     }
   };
+
+  sendUserToServer(newUser: APIUserType, oldUser: APIUserType): Promise<APIUserType> {
+    return updateUser(newUser).then(() => Promise.resolve(newUser), () => Promise.reject(oldUser));
+  }
 
   validateEntry(entry: ExperienceTableEntry): boolean {
     return entry.removed || (entry.domain.length > 2 && entry.value > 0);

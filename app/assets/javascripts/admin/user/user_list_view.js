@@ -150,23 +150,22 @@ class UserListView extends React.PureComponent<Props, State> {
     });
   };
 
-  closeSingleUserExperienceModal = (): void => {
-    this.setState({ isSingleUserExperienceModalVisible: false });
-    this.fetchData();
+  closeSingleUserExperienceModal = (updatedUsers: Array<APIUserType>): void => {
+    this.setState(prevState => ({
+      isSingleUserExperienceModalVisible: false,
+      users: prevState.users.map(
+        user => updatedUsers.find(currentUser => currentUser.id === user.id) || user,
+      ),
+    }));
   };
 
-  closeExperienceModal = (updatedUsers: APIUserType): void => {
-    const res = this.state.users.map(
-      user => updatedUsers.find(currentUser => currentUser.id === user.id) || user,
-    );
-    console.log(res);
+  closeExperienceModal = (updatedUsers: Array<APIUserType>): void => {
     this.setState(prevState => ({
       isExperienceModalVisible: false,
       users: prevState.users.map(
         user => updatedUsers.find(currentUser => currentUser.id === user.id) || user,
       ),
     }));
-    this.fetchData();
   };
 
   handleSearch = (event: SyntheticInputEvent<>): void => {
@@ -517,7 +516,7 @@ class UserListView extends React.PureComponent<Props, State> {
           <SingleUserExperienceModalView
             visible={this.state.isSingleUserExperienceModalVisible}
             selectedUser={selectedUser}
-            onClose={this.closeSingleUserExperienceModal}
+            onChange={this.closeSingleUserExperienceModal}
             onCancel={() => this.setState({ isSingleUserExperienceModalVisible: false })}
           />
         ) : null}

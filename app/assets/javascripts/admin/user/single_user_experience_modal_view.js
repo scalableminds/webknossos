@@ -4,6 +4,7 @@ import _ from "lodash";
 import * as React from "react";
 import { Modal, Button, Tooltip, Icon } from "antd";
 import Toast from "libs/toast";
+import * as Utils from "libs/utils";
 import { updateUser } from "admin/admin_rest_api";
 import type { APIUserType, ExperienceDomainListType } from "admin/api_flow_types";
 import { handleGenericError } from "libs/error_handling";
@@ -35,13 +36,12 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
   }
 
   loadTableEntries = (): Array<ExperienceTableEntry> =>
-    _.sortBy(
-      _.map(this.props.selectedUser.experiences, (value, domain) => ({
-        domain,
-        value,
-        removed: false,
-      })),
-      entry => entry.domain,
+    _.map(this.props.selectedUser.experiences, (value, domain) => ({
+      domain,
+      value,
+      removed: false,
+    })).sort(
+      Utils.localeCompareBy(([]: Array<ExperienceTableEntry>), entry => entry.domain.toLowerCase()),
     );
 
   updateUsersExperiences = async () => {
@@ -55,11 +55,8 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
       }
     });
     const newUser = { ...user, experiences: newExperiences };
-    console.log("newUser:");
-    console.log(newUser);
     try {
       const returnedUser = await this.sendUserToServer(newUser, user);
-      console.log("worked");
       this.setState({
         experienceEntries: [],
         enteredExperience: [],
@@ -165,9 +162,10 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
       removed: false,
     }));
     this.setState(prevState => ({
-      experienceEntries: _.sortBy(
-        _.concat(prevState.experienceEntries, newExperiences),
-        entry => entry.domain,
+      experienceEntries: _.concat(prevState.experienceEntries, newExperiences).sort(
+        Utils.localeCompareBy(([]: Array<ExperienceTableEntry>), entry =>
+          entry.domain.toLowerCase(),
+        ),
       ),
       enteredExperience: [],
     }));

@@ -4,6 +4,7 @@ import _ from "lodash";
 import * as React from "react";
 import { Modal, Button, Tooltip, Icon, Table } from "antd";
 import Toast from "libs/toast";
+import * as Utils from "libs/utils";
 import { updateUser } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import type { APIUserType, ExperienceDomainListType } from "admin/api_flow_types";
@@ -92,7 +93,9 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
       };
     });
     // sort entries
-    return _.sortBy(entries, entry => entry.domain);
+    return entries.sort(
+      Utils.localeCompareBy(([]: Array<SharedTableEntry>), entry => entry.domain.toLowerCase()),
+    );
   };
 
   updateUsersExperiences = async () => {
@@ -222,9 +225,10 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
       };
     });
     this.setState(prevState => ({
-      changeEntries: _.sortBy(
-        _.concat(prevState.changeEntries, newExperiences),
-        entry => entry.domain,
+      changeEntries: _.concat(prevState.changeEntries, newExperiences).sort(
+        Utils.localeCompareBy(([]: Array<ExperienceTableEntry>), entry =>
+          entry.domain.toLowerCase(),
+        ),
       ),
       enteredExperience: [],
     }));
@@ -249,6 +253,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
         title="Change Experiences of Multiple Users"
         visible={this.props.visible}
         onCancel={this.props.onCancel}
+        maskClosable={false}
         width={800}
         footer={
           <div>
@@ -261,11 +266,11 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
       >
         <Table
           title={() => "Shared Experience Domains"}
-          size="small"
+          size={sharedExperiencesEntries.length > 3 ? "small" : "default"}
           dataSource={sharedExperiencesEntries}
           rowKey="domain"
           pagination={false}
-          scroll={{ y: 200 }}
+          scroll={sharedExperiencesEntries.length > 3 ? { y: 200 } : {}}
           className="user-experience-table"
         >
           <Column title="Experience Domain" key="domain" dataIndex="domain" width="50%" />

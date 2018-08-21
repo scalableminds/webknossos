@@ -13,7 +13,7 @@ export type ExperienceTableEntry = {
 
 type Props = {
   title: ?string,
-  tableData: ExperienceTableEntry,
+  tableData: Array<ExperienceTableEntry>,
   isMultipleUsersEditing: boolean,
   setValueOfEntry: (number, number) => void,
   recordModifiedAndExistedBefore: number => boolean,
@@ -34,11 +34,11 @@ const ExperienceEditingTable = ({
 }: Props) => (
   <Table
     title={() => title}
-    size="small"
+    size={tableData.length > 4 ? "small" : "default"}
     dataSource={tableData}
     rowKey="domain"
     pagination={false}
-    scroll={{ y: 300 }}
+    scroll={tableData.length > 4 ? { y: 250 } : {}}
     className="user-experience-table"
   >
     <Column
@@ -110,7 +110,6 @@ const ExperienceEditingTable = ({
     />
     {isMultipleUsersEditing ? (
       <Column
-        key={record => `${record.domain} ${record.value}`}
         width="10%"
         render={record => {
           const index = tableData.findIndex(entry => entry.domain === record.domain);

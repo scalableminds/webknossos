@@ -102,7 +102,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelPropType, S
       );
     } else {
       return (
-        <div style={{ display: "inline-block" }}>
+        <span style={{ display: "inline-block" }}>
           <span style={{ margin: "0 10px", display: "inline-block" }}>
             {this.props.markdown ? (
               <Markdown
@@ -121,7 +121,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelPropType, S
               onClick={() => this.setState({ isEditing: true })}
             />
           </Tooltip>
-        </div>
+        </span>
       );
     }
   }

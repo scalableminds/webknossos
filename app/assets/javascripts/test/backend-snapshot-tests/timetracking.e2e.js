@@ -26,7 +26,7 @@ test.before("Reset database and initialize values", async () => {
 test("getTimeTrackingForUserByMonth", async t => {
   const timeTrackingForUserByMonth = await api.getTimeTrackingForUserByMonth(
     activeUser.email,
-    moment("20180801", "YYYYMMDD"),
+    moment("20160401", "YYYYMMDD"),
   );
   t.true(timeTrackingForUserByMonth.length > 0);
   writeFlowCheckingFile(timeTrackingForUserByMonth, "time-tracking", "APITimeTrackingType", {
@@ -43,6 +43,17 @@ test("getTimeTrackingForUser", async t => {
   );
   t.true(timeTrackingForUser.length > 0);
   t.snapshot(timeTrackingForUser, { id: "timetracking-timeTrackingForUser" });
+});
+
+test("getTimeTrackingForUser for another than the active user", async t => {
+  const idUserC = "770b9f4d2a7c0e4d008da6ef";
+  const timeTrackingForUser = await api.getTimeTrackingForUser(
+    idUserC,
+    moment("20160401", "YYYYMMDD"),
+    moment("20160420", "YYYYMMDD"),
+  );
+  t.true(timeTrackingForUser.length > 0);
+  t.snapshot(timeTrackingForUser, { id: "timetracking-timeTrackingForUser-C" });
 });
 
 test("getProjectProgressReport", async t => {

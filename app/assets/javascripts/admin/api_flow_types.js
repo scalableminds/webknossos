@@ -352,7 +352,8 @@ export type APIBuildInfoType = {
 };
 
 export type APIFeatureToggles = {
-  +discussionBoard: boolean,
+  +discussionBoard: string | false,
+  +discussionBoardRequiresAdmin: boolean,
   +hybridTracings: boolean,
   +allowOrganzationCreation: boolean,
 };

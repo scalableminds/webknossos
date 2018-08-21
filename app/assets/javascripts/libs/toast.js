@@ -56,7 +56,7 @@ const Toast = {
     message: string | React$Element<any>,
     config: ToastConfigType,
   ): void {
-    const timeout = config.timeout || 6000;
+    const timeout = config.timeout != null ? config.timeout : 6000;
     const key = config.key || (typeof message === "string" ? message : null);
     const sticky = config.sticky;
     let toastMessage;

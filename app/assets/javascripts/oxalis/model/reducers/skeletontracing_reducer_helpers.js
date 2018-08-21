@@ -436,9 +436,7 @@ export function createTree(state: OxalisState, timestamp: number): Maybe<TreeTyp
 
       const name = generateTreeName(state, timestamp, newTreeId);
       const groupIdOfActiveTreeMaybe = getActiveTree(skeletonTracing).map(tree => tree.groupId);
-      const groupIdOfActiveGroupMaybe = getActiveGroup(skeletonTracing).chain(group =>
-        Maybe.fromNullable(group.groupId),
-      );
+      const groupIdOfActiveGroupMaybe = getActiveGroup(skeletonTracing).map(group => group.groupId);
       const groupId = Utils.toNullable(
         groupIdOfActiveTreeMaybe.orElse(() => groupIdOfActiveGroupMaybe),
       );

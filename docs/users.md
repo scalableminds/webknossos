@@ -1,8 +1,11 @@
 # Managing Users & Access Rights
 
+TODO
+
+<!--
 ## Organisations
 - explain default orga
-- structure: orga --> team --> user
+- structure: orga -> team -> user
 
 ## Access Rights / Roles
 - admin
@@ -17,5 +20,5 @@
 - hidden by default
 
 ## Password Reset / Change Email Address
-
+-->
 

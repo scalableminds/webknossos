@@ -36,3 +36,21 @@ Try webKnossos yourself: [https://try.webknossos.org/](https://try.webknossos.or
 
 TODO
 
+## Credits and Help
+
+webKnossos was developed by [scalable minds](https://scalableminds.com) in collaboration with the [Max Planck Institute for Brain Research](https://brain.mpg.de/connectomics).
+
+If you need help with webKnossos, there is a [Community Support forum](https://support.webknososs.org) where members of the community and scalable minds are happy to answer your questions.
+[scalable minds](https://scalableminds.com) also offers commercial support, managed hosting and feature development services.
+[Please contact us](mailto:hello@scalableminds.com) if you want to learn more.
+
+<!--
+## Labs that use webKnossos
+
+* [Helmstaedter Lab, Max Planck Institute for Brain Research](http://brain.mpg.de/research/helmstaedter-department.html)
+* [Briggman Lab, Caesar Institute](https://www.caesar.de/en/our-research/computational-neuroethology/research-focus.html)
+* [Schaefer Lab, The Francis Crick Institute](https://www.crick.ac.uk/research/labs/andreas-schaefer)
+* [Singer Lab, University of Maryland](http://biology.umd.edu/joshua-singer.html)
+
+[Please let us know](mailto:hello@scalableminds.com), if you'd like to add your lab to the list.
+-->

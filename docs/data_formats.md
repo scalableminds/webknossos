@@ -20,7 +20,7 @@ A **dataset** consists of [one or more layers](#layers).
 Since webKnossos deals with 3D imagery, the data is organized in **cubes**.
 Depending on the [container format](#container-formats), the cubes are either 1024^3 voxel (WKW) or 128^3 voxel (KNOSSOS) in size.
 Each cube contains multiple **buckets** of 32^3 voxel size.
-This is the unit in which the data is streamed to the users frontend.
+This is the unit in which the data is streamed to the users' browser.
 
 ![Datasets, Cubes and Buckets](images/cubes-and-buckets.png)
 
@@ -41,7 +41,7 @@ To improve the zooming feature in webKnossos, dataset layers usually contain mul
 `2` is downsampled by two in all dimensions and therefore only is an eighth of the file size of the original data.
 The list goes on in power-of-two steps: `1, 2, 4, 8, 16, 32, 64, ...`
 
-webKnossos also supports non-uniform downsampling. For example, `2, 2, 1` is downsampled in the `x` and `y` dimension, but not in `z`. 
+webKnossos also supports non-uniform downsampling. For example, `[2, 2, 1]` is downsampled in the `x` and `y` dimension, but not in `z`. 
 
 ![Downsampling](images/downsampling.png)
 
@@ -223,7 +223,8 @@ python -m wkcuber \
   data/source/color data/target
 ```
 
-Read the full documentation at [webKnossos cuber](https://github.com/scalableminds/webknossos-cuber). [Please contact us](mailto:hello@scalableminds.com) if you have any issues with converting your dataset.
+Read the full documentation at [webKnossos cuber](https://github.com/scalableminds/webknossos-cuber).
+[Please contact us](mailto:hello@scalableminds.com) if you have any issues with converting your dataset.
 
 ## Catmaid Datasets
 

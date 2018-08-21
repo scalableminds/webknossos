@@ -33,15 +33,56 @@ For production setups, we recommend more elaborate configurations with a public 
 [Please contact us](mailto:hello@scalableminds.com) if you require any assistance with your production setup. 
 {% endhint %}
 
-## First Time Onboarding
-- explaing onboarding wizard
+<!--
+## Onboarding
+When starting with webKnossos you'll first need to create an organization.
+An organization respresents your lab in webKnossos and handles permissions for users and datasets.
+Choose a descriptive name for your organization, e.g. "University of Springfield", "Simpsons Lab" or "Neuroscience Department".
 
-## First Dataset
-- how can i load my first dataset?
-- short excurse about permissions for users / datasets
+TODO: Image onboarding org
 
-## First Tracing
+In the onboarding flow, you'll also be asked to create a user.
+This will be the first user of your organisation which will automatically be activated and granted admin rights.
+Make sure to enter a correct email address.
+
+TODO: Image onboarding user
+
+## Your First Dataset
+Now that you've completed the onboarding, you'll need to import a dataset.
+Without any data, webKnossos isn't any fun.
+
+For small datasets (max. 1GB), you can use the upload functionality in the UI.
+For larger datasets, we recommend the file system upload.
+Read more about the import functionality in the [Datasets guide](./datasets.md).
+
+If you don't have a compatible dataset available, you can use [this small dataset (500 MB)](https://TODO) for testing purposes.
+The data was provided courtesy of the [Max Planck Institute for Brain Research](https://brain.mpg.de).
+
+By default, dataset are visible to all users in your organization.
+However, webKnossos includes fine-grained permissions to assign datasets to groups of users.
+
+## Your First Tracing
+TODO
 - how do i start my first tracing
+
+## Learn more
+Now you know the basics of webKnossos.
+Feel free to explore more features of webKnossos in this documentation.
+
+* [Dashboard](./dashboard.md)
+* [Keyboard Shortcuts](./keyboard_shortcuts.md)
+* [Tracing UI](./tracing_ui.md)
+* [Sharing](./sharing.md)
+* [Datasets](./datasets.md) and [Data Formats](./data_formats.md)
+* [User and Permission Management](./users.md)
+* [Task and Project Management](./tasks.md)
+* [FAQ](./faq.md)
+
+If you need help with webKnossos, there is a [Community Support forum](https://support.webknososs.org) where members of the community and scalable minds are happy to answer your questions.
+[scalable minds](https://scalableminds.com) also offers commercial support, managed hosting and feature development services.
+[Please contact us](mailto:hello@scalableminds.com) if you want to learn more.
+
+-->
 
 ## Advanced Setups
 
@@ -55,7 +96,4 @@ Both components need to be publicly accessible via the Internet.
 
 For example, the webKnossos main component could be hosted on commercial cloud infrastructure whereas the datastore is hosted directly in your lab's cluster hardware.
 
-scalable minds offers commercial support and managed hosting for custom deployment options.
-
-## Navigationg The Dashboard
-- see chapter dashboard
+[scalable minds](https://scalableminds.com) offers commercial support and managed hosting for custom deployment options.

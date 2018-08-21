@@ -30,6 +30,8 @@ To share a dataset privately, follow these steps:
 2. Select the dataset that you want to share and click on `Edit`.
 3. Under the `General` tab, scroll down to the `Sharing Link` and copy it. That's all you need to do.
 
+TODO: Image dataset edit
+
 To revoke a sharing link in the future, click the `Revoke` button to the right-hand side of the link.
 
 {% hint style='danger' %}
@@ -42,6 +44,8 @@ Public sharing provides access to your dataset to the general public.
 Anyone can access the shared dataset and view it on your webKnossos instance without the need for an account.
 Further, publicly shared datasets are featured in a dataset gallery on your webKnossos start page for logged-out users.
 Alternatively, navigate to `https://<webKnossos-url>/spotlight`.
+
+TODO: Image Spotlight Gallery
 
 Public datasets provide an easy and convenient way of sharing your data with outside users after you have successfully published them.
 Outside users can navigate through your data from the comfort of their own browser.
@@ -85,6 +89,8 @@ To share an annotation, follow these steps:
 2. From the [toolbar](./tracing_ui.md/#the-toolbar) select `Share` from the overflow menu next to the `Save` button.
 3. Copy the sharing URL for private access.
 4. Enable public sharing with the checkbox, if required.
+
+TODO: Image Sharing Modal
 
 For public annotations to work properly, the underlying dataset must also be shared publicly or privately (via token URL).
 Otherwise, the annotation and data cannot be loaded by webKnossos and an error will occur.

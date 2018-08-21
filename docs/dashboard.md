@@ -1,8 +1,12 @@
 # Dashboard
 
-# admin vs user 
+TODO
+
+<!--
+- admin vs user 
 - what are explorative tracings
 - archiving
 
-- dataset managemetn 
+- dataset management
 -> see chapter 
+-->

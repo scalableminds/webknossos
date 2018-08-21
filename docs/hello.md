@@ -1,4 +1,4 @@
-# webKnossos
+# Welcome to webKnossos
 Cellular-resolution connectomics is currently substantially limited by the throughput and efficiency of data analysis. 
 Current solutions require an efficient integration of automated image analysis with massive manual data annotation. 
 To scale such annotation efforts it is decisive to be able to crowd source data analysis online. 
@@ -13,8 +13,7 @@ webKnossos: efficient online 3D data annotation for connectomics.
 
 
 ## Demo
-Featured Dataset gallery: [https://demo.webknossos.org/](https://demo.webknossos.org/)
-
+Dataset gallery: [https://demo.webknossos.org/](https://demo.webknossos.org/)  
 Try webKnossos yourself: [https://try.webknossos.org/](https://try.webknossos.org/)
 
 ## Features
@@ -32,3 +31,8 @@ Try webKnossos yourself: [https://try.webknossos.org/](https://try.webknossos.or
 * [Documented frontend API for user scripts](https://demo.webknossos.org/assets/docs/frontend-api/index.html), REST API for backend access
 * Open-source development with [automated test suite](https://circleci.com/gh/scalableminds/webknossos)
 * [Docker-based deployment](https://hub.docker.com/r/scalableminds/webknossos/) for production and development
+
+## Screenshots/Walkthrough
+
+TODO
+

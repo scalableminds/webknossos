@@ -12,6 +12,39 @@ webKnossos supports two data formats (WKW and KNOSSOS) for voxel datasets and NM
 * Segmentation data (8 Bit, 16 Bit, 32 Bit)
 * Multi-channel data (multiple 8 Bit)
 
+### Concepts
+
+#### Datasets, Cubes and Buckets
+
+A **dataset** consists of [one or more layers](#layers).
+Since webKnossos deals with 3D imagery, the data is organized in **cubes**.
+Depending on the [container format](#container-formats), the cubes are either 1024^3 voxel (WKW) or 128^3 voxel (KNOSSOS) in size.
+Each cube contains multiple **buckets** of 32^3 voxel size.
+This is the unit in which the data is streamed to the users frontend.
+
+![Datasets, Cubes and Buckets](images/cubes-and-buckets.png)
+
+#### Layers
+
+A dataset consists of one or more layers.
+For electron-microscopy (EM) data, there is usually a `color` layer that holds the raw grayscale image data.
+Additionally, there may be a `segmentation` layer that holds manually or automatically generated volume annotations.
+
+For light-microscopy (LM) data, there may be multiple layers with different channels.
+
+![Color and Segmentation Layers](images/datalayers.png)
+
+#### Magnification Steps and Downsampling
+
+To improve the zooming feature in webKnossos, dataset layers usually contain multiple magnification steps.
+`1` is the magnification step with the highest resolution, i.e. the original data.
+`2` is downsampled by two in all dimensions and therefore only is an eighth of the file size of the original data.
+The list goes on in power-of-two steps: `1, 2, 4, 8, 16, 32, 64, ...`
+
+webKnossos also supports non-uniform downsampling. For example, `2, 2, 1` is downsampled in the `x` and `y` dimension, but not in `z`. 
+
+![Downsampling](images/downsampling.png)
+
 ### Tools
 Of course datasets do not need to be created manually.
 The [webKnossos cuber](https://github.com/scalableminds/webknossos-cuber) converts image stacks and KNOSSOS cubes into a WKW dataset.

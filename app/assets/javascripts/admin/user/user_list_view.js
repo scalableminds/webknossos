@@ -46,6 +46,7 @@ type State = {
   isExperienceModalVisible: boolean,
   isTeamRoleModalVisible: boolean,
   isInvitePopoverVisible: boolean,
+  singleSelectedUser: ?APIUserType,
   isSingleUserExperienceModalVisible: boolean,
   activationFilter: Array<"true" | "false">,
   searchQuery: string,
@@ -69,6 +70,7 @@ class UserListView extends React.PureComponent<Props, State> {
     isInvitePopoverVisible: false,
     activationFilter: ["true"],
     searchQuery: "",
+    singleSelectedUser: null,
     isSingleUserExperienceModalVisible: false,
   };
 
@@ -155,6 +157,7 @@ class UserListView extends React.PureComponent<Props, State> {
       users: prevState.users.map(
         user => updatedUsers.find(currentUser => currentUser.id === user.id) || user,
       ),
+      singleSelectedUser: null,
     }));
   };
 
@@ -260,9 +263,13 @@ class UserListView extends React.PureComponent<Props, State> {
   }
 
   getOnliestSelectedUser() {
+    if (this.state.singleSelectedUser) {
+      return this.state.singleSelectedUser;
+    }
     if (this.state.selectedUserIds.length === 1) {
       return this.state.users.find(user => user.id === this.state.selectedUserIds[0]);
-    } else return null;
+    }
+    return null;
   }
 
   getAllSelectedUsers(): Array<APIUserType> {
@@ -429,7 +436,15 @@ class UserListView extends React.PureComponent<Props, State> {
               width={300}
               render={(experiences: ExperienceMapType, user: APIUserType) =>
                 _.map(experiences, (value, domain) => (
-                  <Tag key={`experience_${user.id}_${domain}`}>
+                  <Tag
+                    key={`experience_${user.id}_${domain}`}
+                    onClick={() => {
+                      this.setState({
+                        singleSelectedUser: user,
+                        isSingleUserExperienceModalVisible: true,
+                      });
+                    }}
+                  >
                     {domain} : {value}
                   </Tag>
                 ))

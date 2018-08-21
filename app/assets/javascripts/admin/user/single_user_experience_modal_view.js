@@ -27,17 +27,23 @@ type State = {
 class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { experienceEntries: this.loadTableEntries(), enteredExperience: [] };
+    this.state = {
+      experienceEntries: this.loadTableEntriesFromUser(this.props.selectedUser),
+      enteredExperience: [],
+    };
   }
 
   componentWillReceiveProps(nextProps: Props) {
     if (nextProps.visible && !this.props.visible) {
-      this.setState({ experienceEntries: this.loadTableEntries(), enteredExperience: [] });
+      this.setState({
+        experienceEntries: this.loadTableEntriesFromUser(nextProps.selectedUser),
+        enteredExperience: [],
+      });
     }
   }
 
-  loadTableEntries = (): Array<ExperienceTableEntry> =>
-    _.map(this.props.selectedUser.experiences, (value, domain) => ({
+  loadTableEntriesFromUser = (user: APIUserType): Array<ExperienceTableEntry> =>
+    _.map(user.experiences, (value, domain) => ({
       domain,
       value,
       removed: false,

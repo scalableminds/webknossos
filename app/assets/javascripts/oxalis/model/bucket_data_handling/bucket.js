@@ -287,7 +287,6 @@ export class DataBucket {
 
           Utils.sortArray8(dataArray);
 
-          // $FlowFixMe Despite having ensured that this.data is initialized properly, flow is pessimistic.
           thisDataView[targetIdx] = samplingFunction(dataArray);
         }
       }

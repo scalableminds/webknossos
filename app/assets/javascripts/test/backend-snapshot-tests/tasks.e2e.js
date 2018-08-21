@@ -2,7 +2,7 @@
 // @flow
 import test from "ava";
 import _ from "lodash";
-import { resetDatabase, replaceVolatileValues } from "test/enzyme/e2e-setup";
+import { resetDatabase, replaceVolatileValues, writeFlowCheckingFile } from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 
 test.before("Reset database", async () => {
@@ -13,6 +13,7 @@ test("getTasks()", async t => {
   const allTasks = (await api.getTasks({})).filter(
     task => task.projectName !== "Test_Project3(for_annotation_mutations)",
   );
+  writeFlowCheckingFile(allTasks, "task", "APITaskType", { isArray: true });
   t.snapshot(allTasks, { id: "tasks-getTasks" });
 
   const complexQueriedTasks = await api.getTasks({
@@ -118,6 +119,7 @@ test.serial("requestTask()", async t => {
   const createdTaskWrapper = createdTaskWrappers[0];
   const newTaskAnnotation = await api.requestTask();
 
+  writeFlowCheckingFile(newTaskAnnotation, "annotation-with-task", "APIAnnotationWithTaskType");
   t.snapshot(replaceVolatileValues(newTaskAnnotation), { id: "task-requestTask" });
 
   if (createdTaskWrapper.success != null) {

@@ -17,7 +17,6 @@ import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import messages from "messages";
-
 import type { APIUserType, APITeamMembershipType, ExperienceMapType } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
 import type { OxalisState } from "oxalis/store";

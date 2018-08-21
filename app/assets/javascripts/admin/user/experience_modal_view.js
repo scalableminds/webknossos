@@ -9,7 +9,8 @@ import { updateUser } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import type { APIUserType, ExperienceDomainListType } from "admin/api_flow_types";
 import SelectExperienceDomain from "components/select_experience_domain";
-import ExperienceEditingTable, { ExperienceTableEntry } from "admin/user/experience_editing_table";
+import ExperienceEditingTable from "admin/user/experience_editing_table";
+import type { ExperienceTableEntry } from "admin/user/experience_editing_table";
 
 const { Column } = Table;
 
@@ -179,7 +180,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     }));
   };
 
-  removeEntryFromTable = index => {
+  removeEntryFromTable = (index: number) => {
     this.setState(prevState => ({
       changeEntries: prevState.changeEntries.filter(
         entry => entry.domain !== prevState.changeEntries[index].domain,

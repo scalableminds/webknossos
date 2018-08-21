@@ -16,7 +16,7 @@ type Props = {
   tableData: Array<ExperienceTableEntry>,
   isMultipleUsersEditing: boolean,
   setValueOfEntry: (number, number) => void,
-  recordModifiedAndExistedBefore: number => boolean,
+  recordModifiedAndExistedBefore: (record: ExperienceTableEntry) => boolean,
   revertChangesOfEntry: number => void,
   setRemoveOfEntryTo: (number, boolean) => void,
   removeEntryFromTable: number => void,

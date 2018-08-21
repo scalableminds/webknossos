@@ -184,11 +184,11 @@ export type HybridTracingType = {|
 
 export type TracingType = HybridTracingType;
 
-export type DatasetLayerConfigurationType = {
+export type DatasetLayerConfigurationType = {|
   +color: Vector3,
   +brightness: number,
   +contrast: number,
-};
+|};
 
 export type DatasetConfigurationType = {
   +fourBit: boolean,
@@ -205,7 +205,7 @@ export type DatasetConfigurationType = {
   +rotation?: Vector3,
 };
 
-export type UserConfigurationType = {
+export type UserConfigurationType = {|
   +clippingDistance: number,
   +clippingDistanceArbitrary: number,
   +crosshairSize: number,
@@ -229,7 +229,7 @@ export type UserConfigurationType = {
   +sphericalCapRadius: number,
   +tdViewDisplayPlanes: boolean,
   +hideTreeRemovalWarning: boolean,
-};
+|};
 
 export type MappingType = { [key: number]: number };
 
@@ -327,7 +327,7 @@ type UiInformationType = {
   +showDropzoneModal: boolean,
 };
 
-export type OxalisState = {
+export type OxalisState = {|
   +datasetConfiguration: DatasetConfigurationType,
   +userConfiguration: UserConfigurationType,
   +temporaryConfiguration: TemporaryConfigurationType,
@@ -339,7 +339,7 @@ export type OxalisState = {
   +viewModeData: ViewModeData,
   +activeUser: ?APIUserType,
   +uiInformation: UiInformationType,
-};
+|};
 
 const initialAnnotationInfo = {
   annotationId: "",

@@ -9,7 +9,8 @@ import { updateUser } from "admin/admin_rest_api";
 import type { APIUserType, ExperienceDomainListType } from "admin/api_flow_types";
 import { handleGenericError } from "libs/error_handling";
 import SelectExperienceDomain from "components/select_experience_domain";
-import ExperienceEditingTable, { ExperienceTableEntry } from "admin/user/experience_editing_table";
+import ExperienceEditingTable from "admin/user/experience_editing_table";
+import type { ExperienceTableEntry } from "admin/user/experience_editing_table";
 
 type Props = {
   onChange: (Array<APIUserType>) => void,
@@ -201,6 +202,7 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
       >
         <ExperienceEditingTable
           tableData={tableData}
+          title={null}
           isMultipleUsersEditing={false}
           setValueOfEntry={this.setValueOfEntry}
           recordModifiedAndExistedBefore={this.recordModifiedAndExistedBefore}
@@ -210,7 +212,6 @@ class SingleUserExperienceModalView extends React.PureComponent<Props, State> {
         />
         <span>
           <SelectExperienceDomain
-            title={null}
             disabled={false}
             value={this.state.enteredExperience}
             onSelect={this.handleExperienceSelected}

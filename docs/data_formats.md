@@ -43,7 +43,7 @@ The list goes on in power-of-two steps: `1, 2, 4, 8, 16, 32, 64, ...`
 
 webKnossos also supports non-uniform downsampling. For example, `[2, 2, 1]` is downsampled in the `x` and `y` dimension, but not in `z`. 
 
-![Downsampling](images/downsampling.png)
+![Downsampling the data to improve zooming](images/downsampling.png)
 
 
 #### Segmentation

@@ -1,6 +1,6 @@
 # Summary
 
-* [Welcome to webKnossos](../README.md)
+* [Welcome to webKnossos](./hello.md)
 * [Getting Started](./getting_started.md)
 
 ## Guides

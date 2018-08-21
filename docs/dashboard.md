@@ -4,5 +4,5 @@
 - what are explorative tracings
 - archiving
 
--dataset managemetn 
+- dataset managemetn 
 -> see chapter 

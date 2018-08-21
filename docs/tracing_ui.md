@@ -3,9 +3,9 @@
 ## Overview
 The main webKnossos user interface for viewing and annotating datasets is divided into four sections.
 
-1. A toolbar for general purposes features such as Saving your work and displaying the current position within the dataset. It spans along the full width of the top of your screen. [Read more below](#the-toolbar).
-2. On the left-hand side, a settings menu gives you control of several parameters of webKosssos. For instance, you can fine-tune a dataset's contrast & segmentation opacity, as well as adjust movement speed of the mouse and keyboard. [Read more below](#tracing-ui-settings).
-3. The center of the screen is occupied by the tracing interface. Your dataset is displayed here and users can add annotations or add/edit the segmentation. Most interactions will take place here. [Read more below](#skeleton-annotations).
+1. [A toolbar](#the-toolbar) for general purposes features such as Saving your work and displaying the current position within the dataset. It spans along the full width of the top of your screen.
+2. On the left-hand side, a [settings menu](#tracing-ui-settings) gives you control of several parameters of webKosssos. For instance, you can fine-tune a dataset's contrast & segmentation opacity, as well as adjust movement speed of the mouse and keyboard.
+3. The center of the screen is occupied by [the tracing interface](#skeleton-annotations). Your dataset is displayed here and users can add annotations or add/edit the segmentation. Most interactions will take place here.
 4. The right-hand side of the screen is occupied by several tabs providing more information on your current dataset or tracing. Depending on your editing mode these tabs might adapt.
 
 ![An overview of the webKnossos tracing UI highlighting the 4 main sections of the interface](images/tracing_ui_overview.png)

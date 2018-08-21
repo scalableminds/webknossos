@@ -3,7 +3,7 @@ webKnossos is built for working collaboratively and sharing your work with the c
 webKnossos can share both skeleton annotations of large structures as well as raw datasets and segmentations for showcasing the data.
 The sharing features discussed here refer to sharing scenarios with colleagues, reviewers, and publishers outside of your webKnossos organization or your lab.
 
-To manage access right to certain dataset for webKnossos users check out [the datasets guide](./datasets.md#dataset-permissions).
+To manage access rights to certain datasets for webKnossos users check out [the Datasets guide](./datasets.md#dataset-permissions).
 
 ## Dataset Sharing
 
@@ -102,4 +102,4 @@ TODO: Image Sharing Modal
 
 For public annotations to work properly, the underlying dataset must also be shared publicly or privately (via token URL).
 Otherwise, the annotation and data cannot be loaded by webKnossos and an error will occur.
-[Learn how to share dataset publicly above.](#public-sharing)
+[Learn how to share datasets publicly above.](#public-sharing)

@@ -1,6 +1,5 @@
 # Tracing View UI
 
-## Overview
 The main webKnossos user interface for viewing and annotating datasets is divided into four sections.
 
 1. [A toolbar](#the-toolbar) for general purposes features such as Saving your work and displaying the current position within the dataset. It spans along the full width of the top of your screen.
@@ -16,11 +15,11 @@ The toolbar contains frequently used commands, your current position within the 
 The most common buttons are:
 - `Settings`: Toggles the visibility of the setting menu on the left-hand side to provide more space for your data.
 - `Undo` / `Redo`: Undoes the last operation or redoes it if now changes have been made in the meantime.
-- `Save`: Saves your annotation work. wK automatically saves every 30 seconds.
+- `Save`: Saves your annotation work. webKnossos automatically saves every 30 seconds.
 - `Archive`: Only available for explorative tracings. Closes the tracing and archives it, removing it from a user's dashboard. Archived tracings can be found on a user's dashboard under "Explorative Tracings" and by clicking on "Show Archived Annotations". Use this to declutter your dashboard. 
-- `Download`: Starts the download of the current annotation. Skeleton annotations are downloaded as [NML](./data_formats.md#nml) files. Volume annotation downloads contain the raw segmentation data as [wkw](./data_formats.md#wkw) files.
+- `Download`: Starts the download of the current annotation. Skeleton annotations are downloaded as [NML](./data_formats.md#nml) files. Volume annotation downloads contain the raw segmentation data as [WKW](./data_formats.md#wkw) files.
 - `Share`: Create a shareable link to your dataset containing the current position, rotation, zoom level etc. Use this to collaboratively work with colleagues. Read more about this feature in the [Sharing guide](./sharing.md).  
-- `Add Script`: Using the [wK frontend API](https://demo.webknossos.org/assets/docs/frontend-api/index.html) users can interact with wK programmatically. User scripts can be executed from here. Admins can add often used scripts to wK to make them available to all users for easy access.
+- `Add Script`: Using the [webKnossos frontend API](https://demo.webknossos.org/assets/docs/frontend-api/index.html) users can interact with webKnossos programmatically. User scripts can be executed from here. Admins can add often used scripts to webKnossos to make them available to all users for easy access.
 
 A user can directly jump to positions within their datasets by entering them in the position input field. The same is true for the rotation in some tracing modes. Clicking on the position or rotation labels copies the values to the clipboard.
 
@@ -129,7 +128,7 @@ Importing a skeleton tracing can be achieved using two approaches as well:
 
 1. If you already have a tracing open you can easily add more skeletons to it by drag and dropping an NML file onto your browser window. Otherwise, use the `Import NML` option next to `Download Selected Trees`. This will merge the NML file's content with the already open tracing. 
 
-2. To import a skeleton tracing as a completely new wK annotation, just drag and drop the NML file anywhere on your user dashboard. Alternately, navigate to your user dashboard and use the `Upload Annotation` button within the "Explorative Tracings" section. 
+2. To import a skeleton tracing as a completely new webKnossos annotation, just drag and drop the NML file anywhere on your user dashboard. Alternately, navigate to your user dashboard and use the `Upload Annotation` button within the "Explorative Tracings" section. 
 
 ![Skeletons can be imported by drag and drop in the tracing view or from the dashboard](images/tracing_ui_import.png)
 
@@ -141,7 +140,7 @@ There are two ways for merging tracings:
 2. If you would like to merge your current tracing with another existing tracing, select the `Merge` operation from the overflow menu next to the `Save` button. (see image) Either enter the ID of an existing explorative tracing or select a whole project and proceed to merge the selection with your currently open tracing. The resulting annotation can either be created as a new explorative tracing. Otherwise, the merge will happen in your current tracing. 
 
 ![1. Select the Merge operation from the menu](images/tracing_ui_merge_1.png)
-![2. Merging can be done with a whole wK project or using the ID of an existing explorative tracing](images/tracing_ui_merge_2.png)
+![2. Merging can be done with a whole webKnossos project or using the ID of an existing explorative tracing](images/tracing_ui_merge_2.png)
 
 
 ## Volume Annotations
@@ -205,6 +204,6 @@ Segmentation
 - `Highlight Hovered Cells`: Toggles wether segmented cells will be highlighted in all viewports when hovering over them with the mouse cursor. Useful for identifiying the highlighted cell in across all viewports.
 
 Quality
-- `4 Bit`: Toggles data download form the server using only 4 Bit instead of 8 Bit for each pixel. Use this to reduce the amount of necessary internet bandwidth for wK. Useful for show casing data on the go over cellular networks, e.g 4G. 
-- `Quality`: Adjusts the quality level used for data download from the server. "High" will load the original, unmodified data. "Medium" and "Low" will load a downsampled version of the data layer to reduce network traffic. Use this to reduce the amount of necessary internet bandwidth for wK.
+- `4 Bit`: Toggles data download form the server using only 4 Bit instead of 8 Bit for each pixel. Use this to reduce the amount of necessary internet bandwidth for webKnossos. Useful for show casing data on the go over cellular networks, e.g 4G. 
+- `Quality`: Adjusts the quality level used for data download from the server. "High" will load the original, unmodified data. "Medium" and "Low" will load a downsampled version of the data layer to reduce network traffic. Use this to reduce the amount of necessary internet bandwidth for webKnossos.
 

@@ -33,6 +33,10 @@ For production setups, we recommend more elaborate configurations with a public 
 [Please contact us](mailto:hello@scalableminds.com) if you require any assistance with your production setup. 
 {% endhint %}
 
+You may also install webKnossos without Docker.
+This may be useful if you intend to develop features for webKnossos.
+Please refer to the [Code Readme](../README.md) for details.
+
 <!--
 ## Onboarding
 When starting with webKnossos you'll first need to create an organization.

@@ -45,6 +45,22 @@ webKnossos also supports non-uniform downsampling. For example, `[2, 2, 1]` is d
 
 ![Downsampling](images/downsampling.png)
 
+
+#### Segmentation
+
+Segmentations in webKnossos are represented by ID maps.
+Every segment or component has its own ID.
+These IDs are stored as the value of the corresponding voxel, just as the grayscale value in the voxels of the color layer.
+`0` is usually interpreted as missing or empty value.
+The underlying datatype limits the maximum number of IDs:
+
+| Data Type | Maximum ID                 |
+| --------- | -------------------------- |
+| `uint8`   | 255                        |
+| `uint16`  | 65,535                     |
+| `uint32`  | 4,294,967,295              |
+| `uint64`  | 18,446,744,073,709,551,615 |
+
 ### Tools
 Of course datasets do not need to be created manually.
 The [webKnossos cuber](https://github.com/scalableminds/webknossos-cuber) converts image stacks and KNOSSOS cubes into a WKW dataset.

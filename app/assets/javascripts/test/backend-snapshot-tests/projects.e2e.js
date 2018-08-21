@@ -2,7 +2,13 @@
 // @flow
 import test from "ava";
 import _ from "lodash";
-import { tokenUserA, tokenUserD, setCurrToken, resetDatabase } from "test/enzyme/e2e-setup";
+import {
+  tokenUserA,
+  tokenUserD,
+  setCurrToken,
+  resetDatabase,
+  writeFlowCheckingFile,
+} from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import type { APIProjectType, APIProjectUpdaterType } from "admin/api_flow_types";
 
@@ -16,6 +22,7 @@ test.beforeEach("Change token", async () => {
 
 test.serial("getProjects()", async t => {
   const projects = _.sortBy(await api.getProjects(), p => p.name);
+  writeFlowCheckingFile(projects, "project", "APIProjectType", { isArray: true });
   t.snapshot(projects, { id: "projects-getProjects()" });
 });
 

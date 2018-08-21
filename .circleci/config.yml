@@ -71,9 +71,6 @@ jobs:
           name: Lint frontend code
           command: docker-compose run base bash -c "yarn run lint && yarn run am-i-pretty"
       - run:
-          name: Validate frontend types with flow
-          command: docker-compose run base yarn flow
-      - run:
           name: Run frontend tests
           command: docker-compose run base yarn test-verbose
       - run:
@@ -86,6 +83,9 @@ jobs:
               docker-compose run e2e-tests && s=0 && break || s=$?
             done
             (exit $s)
+      - run:
+          name: Validate frontend types with flow
+          command: docker-compose run base yarn flow
 
       - run:
           name: Start webknossos

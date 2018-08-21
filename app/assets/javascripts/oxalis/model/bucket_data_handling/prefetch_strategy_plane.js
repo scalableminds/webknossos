@@ -56,7 +56,6 @@ export class AbstractPrefetchStrategy {
         bucket[this.u] += u;
         bucket[this.v] += v;
         if (_.min(bucket) >= 0) {
-          // $FlowFixMe Flow does not understand that bucket will always be of length 3
           buckets.push(bucket);
         }
       }

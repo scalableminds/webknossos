@@ -49,7 +49,7 @@ Most skeleton tracing operations and keyboard shortcuts are tailored for the Ort
 #### Flight Mode
 Flight mode allows an arbitrary view through the data. In contrast to orthogonal mode, any arbitrary slice through the dataset at any rotational angle of the camera is possible. In Flight mode, the data is projected on the inside of a sphere with the camera located at the center of the sphere. 
 
-Spherical projection is especially useful when rotating the camera, as pixels close to the center of the screen move in a predictable manner. Interaction and movements in flight mode feel similar to First-Person (FPV) games.
+Spherical projection is especially useful when rotating the camera, as pixels close to the center of the screen move in a predictable manner. Interaction and movements in flight mode feel similar to First-Person-View (FPV) games.
 
 Flight mode is best used for annotating structures very quickly. Skilled tracers can follow "tube"-like structure as though they are "flying" through them. Nodes are placed automatically along the flight path, creating skeleton very efficiently.
 

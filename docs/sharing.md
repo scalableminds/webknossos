@@ -8,22 +8,22 @@ To manage access rights to certain datasets for webKnossos users check out [the 
 ## Dataset Sharing
 
 Dataset sharing allows outside users to view your datasets and segmentation layers within webKnossos.
-Shared resources can be accessed the through direct URL or can be featured on a spotlight gallery for showcasing your work.
+Shared resources can be accessed through a direct URL or can be featured on a spotlight gallery for showcasing your work.
 [Please contact us](mailto:hello@scalableminds.com) to feature your dataset on https://demo.webknossos.org.
 
 Sharing a dataset is useful for multiple scenarios: 
-- You recorded a novel microscopy dataset and want to include links to it in your paper or for reviewers. Use wklink.org to shorten these URLs.
+- You recorded a novel microscopy dataset and want to include links to it in your paper or for reviewers. Use wklink.org to shorten these URLs, e.g. https://wklink.org/5386 ([contact us](mailto:hello@scalableminds.com)).
 - You created an interesting, highly-accurate segmentation layer for an existing dataset and want to share it for your publication.
-- You have worked and published several datasets over the years and want to have a single gallery for all you public datasets.
+- You have worked and published several datasets over the years and want to have a single gallery for all your public datasets.
 
 webKnossos shares datasets publicly (everyone can view them without any login) or privately (a login or special URLs are required to view the link).
 
 ### Private Sharing for Review
-A privately shared dataset can only be accessed from outside your using the correct URL.
+A privately shared dataset can only be accessed from outside users your using the correct URL.
 A unique authentification token is part of the URL so anyone with this URL has access rights for viewing the dataset.
 The dataset is NOT featured publicly anywhere else on your webKnossos instance.
 
-Private sharing is useful for giving outsider users (reviewers, editors, journalists etc.) an opportunity to look at your data without having to publish it publicly.
+Private sharing is useful for giving outside users (reviewers, editors, journalists etc.) an opportunity to look at your data without having to publish it publicly.
 
 To share a dataset privately, follow these steps:
 
@@ -56,14 +56,12 @@ Outside users can navigate through your data from the comfort of their own brows
 To share a dataset publicly, follow these steps:
 
 1. Navigate to your user dashboard and `Datasets`. 
-2. Select the dataset that you want to share and click on `Edit.
+2. Select the dataset that you want to share and click on `Edit`.
 3. Under the `General` tab, scroll down to the checkbox `Make dataset publicly accessible` and enable it.
 4. On the same screen, you can add/edit a dataset's description and give it more appropriate tile (`Display name`).
+5. On the same screen, copy the sharing link.
 
 That's all you need to do.
-
-To obtain a link to a particular dataset, navigate to a dataset either from the spotlight gallery or your user dashboard by clicking `View`.
-After webKnossos has finished loading the data, you can copy the URL from your browser window for sharing.
 
 {% hint style='info' %}
 We recommend giving your datasets a meaningful display name and description.
@@ -75,7 +73,7 @@ Both are featured next to a preview of the dataset in the gallery of promoted pu
 Besides sharing just the data layers for viewing, webKnossos can also share complete annotation, e.g. a large skeleton reconstruction.
 Annotation sharing works for both skeletons and volume tracings.
 
-Annotation can be shared publicly and privately.
+Annotations can be shared publicly and privately.
 Public tracings do not require any user authentication and are a great option for sharing a link to your annotation from social media or your website.
 Unlike with datasets, publicly shared annotations are not featured in a gallery.
 

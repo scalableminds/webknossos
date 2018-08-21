@@ -26,9 +26,12 @@ The dataset is NOT featured publicly anywhere else on your webKnossos instance.
 Private sharing is useful for giving outsider users (reviewers, editors, journalists etc.) an opportunity to look at your data without having to publish it publicly.
 
 To share a dataset privately, follow these steps:
+
 1. Navigate to your user dashboard and `Datasets`. 
 2. Select the dataset that you want to share and click on `Edit`.
-3. Under the `General` tab, scroll down to the `Sharing Link` and copy it. That's all you need to do.
+3. Under the `General` tab, scroll down to the `Sharing Link` and copy it. 
+
+That's all you need to do.
 
 TODO: Image dataset edit
 
@@ -51,9 +54,13 @@ Public datasets provide an easy and convenient way of sharing your data with out
 Outside users can navigate through your data from the comfort of their own browser.
 
 To share a dataset publicly, follow these steps:
+
 1. Navigate to your user dashboard and `Datasets`. 
 2. Select the dataset that you want to share and click on `Edit.
-3. Under the `General`tab, scroll down to the checkbox `Make dataset publicly accessible` and enable it. On the same screen, you can add/edit a dataset's description and give it more appropriate tile (`Display name`). That's all you need to do.
+3. Under the `General` tab, scroll down to the checkbox `Make dataset publicly accessible` and enable it.
+4. On the same screen, you can add/edit a dataset's description and give it more appropriate tile (`Display name`).
+
+That's all you need to do.
 
 To obtain a link to a particular dataset, navigate to a dataset either from the spotlight gallery or your user dashboard by clicking `View`.
 After webKnossos has finished loading the data, you can copy the URL from your browser window for sharing.
@@ -85,6 +92,7 @@ Think of this feature like GitHub forks.
 Changes made to the copy are not automatically synced with the original.
 
 To share an annotation, follow these steps:
+
 1. Open your annotation in the regular tracing view. 
 2. From the [toolbar](./tracing_ui.md/#the-toolbar) select `Share` from the overflow menu next to the `Save` button.
 3. Copy the sharing URL for private access.

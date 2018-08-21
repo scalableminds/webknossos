@@ -54,7 +54,7 @@ Spherical projection is especially useful when rotating the camera, as pixels cl
 
 Flight mode is best used for annotating structures very quickly. Skilled tracers can follow "tube"-like structure as though they are "flying" through them. Nodes are placed automatically along the flight path, creating skeleton very efficiently.
 
-TODO add image
+TODO: Image Flight Mode
 
 #### Oblique Mode
 Oblique Mode is similar to Flight mode, but arbitrary cuts through the data are not projected on a sphere but are straight instead.
@@ -166,7 +166,7 @@ Controls
 
 - `Move Value (nm/s)`:  A high value will speed up movement through the dataset, e.g. when holding down the spacebar. Vice-versa, a low value will slow down the movement allowing for more precision. This setting is especially useful in `Flight mode`.
 
-- `d/f-Switching`: ¯\_(ツ)_/¯
+- `d/f-Switching`: ¯\\_(ツ)_/¯
 
 Viewport Options / Flight Options
 - `Zoom`: The zoom factor for viewing the dataset. A low value moves the camera really close to the data, showing many details. A high value, will you show more of the dataset but with fewer details and is great for getting an overview or moving around quickly.

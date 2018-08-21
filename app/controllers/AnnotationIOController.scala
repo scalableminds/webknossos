@@ -129,20 +129,21 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
         skeletonTracingId <- annotation.skeletonTracingId.toFox
         tracing <- dataStoreHandler.getSkeletonTracing(skeletonTracingId)
       } yield {
-        (NmlWriter.toNmlStream(Left(tracing), annotation, dataSet.scale), name + ".nml")
+        (NmlWriter.toNmlStream(Some(tracing), None, annotation, dataSet.scale), name + ".nml")
       }
     }
 
-    def volumeToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String) = {
+    def volumeOrHybridToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String) = {
       for {
         dataStoreHandler <- dataSet.dataStoreHandler
         volumeTracingId <- annotation.volumeTracingId.toFox
-        (tracing, data) <- dataStoreHandler.getVolumeTracing(volumeTracingId)
+        (volumeTracing, data) <- dataStoreHandler.getVolumeTracing(volumeTracingId)
+        skeletonTracingOpt <- Fox.runOptional(annotation.skeletonTracingId)(dataStoreHandler.getSkeletonTracing(_))
       } yield {
         (Enumerator.outputStream { outputStream =>
           ZipIO.zip(
             List(
-              new NamedEnumeratorStream(name + ".nml", NmlWriter.toNmlStream(Right(tracing), annotation, dataSet.scale)),
+              new NamedEnumeratorStream(name + ".nml", NmlWriter.toNmlStream(skeletonTracingOpt, Some(volumeTracing), annotation, dataSet.scale)),
               new NamedEnumeratorStream("data.zip", data)
             ), outputStream)
         }, name + ".zip")
@@ -150,14 +151,10 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     }
 
     def tracingToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String) = {
-      annotation.tracingType match {
-        case TracingType.skeleton =>
-          skeletonToDownloadStream(dataSet, annotation, name)
-        case TracingType.volume =>
-          volumeToDownloadStream(dataSet, annotation, name)
-        case TracingType.hybrid =>
-          Fox.failure("Download for hybrid tracings is not yet implemented")
-      }
+      if (annotation.tracingType == TracingType.skeleton)
+        skeletonToDownloadStream(dataSet, annotation, name)
+      else
+        volumeOrHybridToDownloadStream(dataSet, annotation, name)
     }
 
     for {

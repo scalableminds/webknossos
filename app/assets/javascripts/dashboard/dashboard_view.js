@@ -11,7 +11,7 @@ import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import Request from "libs/request";
 import { withRouter } from "react-router-dom";
-import type { APIUserType, APIDatasetType } from "admin/api_flow_types";
+import type { APIUserType, APIMaybeUnimportedDatasetType } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import type { RouterHistory } from "react-router-dom";
 import { handleGenericError } from "libs/error_handling";
@@ -37,16 +37,16 @@ type Props = OwnProps & StateProps;
 type State = {
   activeTabKey: string,
   user: ?APIUserType,
-  datasets: Array<APIDatasetType>,
+  datasets: Array<APIMaybeUnimportedDatasetType>,
   isLoadingDatasets: boolean,
 };
 
 export const wkDatasetsCacheKey = "wk.datasets";
 export const datasetCache = {
-  set(datasets: APIDatasetType[]): void {
+  set(datasets: APIMaybeUnimportedDatasetType[]): void {
     localStorage.setItem("wk.datasets", JSON.stringify(datasets));
   },
-  get(): APIDatasetType[] {
+  get(): APIMaybeUnimportedDatasetType[] {
     return parseAsMaybe(localStorage.getItem(wkDatasetsCacheKey)).getOrElse([]);
   },
   clear(): void {
@@ -197,7 +197,7 @@ class DashboardView extends React.PureComponent<Props, State> {
     ) : null;
 
     return (
-      <NmlUploadZoneContainer onImport={this.uploadNmls}>
+      <NmlUploadZoneContainer onImport={this.uploadNmls} isAllowed>
         <div className="container">
           {userHeader}
           <Tabs

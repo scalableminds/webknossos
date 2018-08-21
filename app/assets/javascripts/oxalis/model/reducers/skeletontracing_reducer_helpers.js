@@ -190,9 +190,8 @@ export function deleteNode(
       }
 
       const newActiveNodeId = neighborIds.length > 0 ? neighborIds[0] : null;
-      const newActiveTree = newActiveNodeId
-        ? findTreeByNodeId(newTrees, newActiveNodeId).get()
-        : activeTree;
+      const newActiveTree =
+        newActiveNodeId != null ? findTreeByNodeId(newTrees, newActiveNodeId).get() : activeTree;
       const newActiveTreeId = newActiveTree.treeId;
 
       return Maybe.Just([newTrees, newActiveTreeId, newActiveNodeId, newMaxNodeId]);

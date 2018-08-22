@@ -74,6 +74,7 @@ object Dependencies {
     grpc,
     grpcServices,
     scalapbRuntimeGrpc,
+    filters,
     component("play-test")
   )
 

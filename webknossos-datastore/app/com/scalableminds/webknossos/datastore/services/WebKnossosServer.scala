@@ -11,8 +11,8 @@ import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSourceLike
 import com.scalableminds.util.rpc.RPC
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.typesafe.scalalogging.LazyLogging
-import play.api.Configuration
 import play.api.i18n.MessagesApi
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
@@ -26,25 +26,25 @@ object DataStoreStatus {
 }
 
 class WebKnossosServer @Inject()(
-                                  config: Configuration,
+                                  config: DataStoreConfig,
                                   val lifecycle: ApplicationLifecycle,
                                   @Named("webknossos-datastore") val system: ActorSystem,
                                   val messagesApi: MessagesApi
                                 ) extends IntervalScheduler with LazyLogging {
 
-  private val dataStoreKey: String = config.getString("datastore.key").getOrElse("something-secure")
-  private val dataStoreName: String = config.getString("datastore.name").getOrElse("local-datastore")
-  private val dataStoreUrl: String = config.getString("http.uri").getOrElse("http://localhost:9000")
+  private val dataStoreKey: String = config.Datastore.key
+  private val dataStoreName: String = config.Datastore.name
+  private val dataStoreUrl: String = config.Http.uri
 
   private val webKnossosUrl = {
-    val url = config.getString("datastore.oxalis.uri").getOrElse("localhost:9000")
-    config.getBoolean("datastore.oxalis.secured") match {
-      case Some(true) => s"https://$url"
-      case _ => s"http://$url"
-    }
+    val url = config.Datastore.Oxalis.uri
+    if (config.Datastore.Oxalis.secured)
+      s"https://$url"
+    else
+      s"http://$url"
   }
 
-  protected lazy val tickerInterval: FiniteDuration = config.getInt("datastore.oxalis.pingIntervalMinutes").getOrElse(10).minutes
+  protected lazy val tickerInterval: FiniteDuration = config.Datastore.Oxalis.pingIntervalMinutes
 
   def tick: Unit = reportStatus(ok = true)
 

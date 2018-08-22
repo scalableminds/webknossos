@@ -70,6 +70,51 @@ class Navbar extends React.PureComponent<Props, State> {
     const isAdmin =
       this.props.activeUser != null ? Utils.isUserAdmin(this.props.activeUser) : false;
 
+    const helpMenu = (
+      <SubMenu
+        key="sub3"
+        title={
+          <span>
+            <Icon type="medicine-box" />Help
+          </span>
+        }
+      >
+        <Menu.Item key="user-documentation">
+          <a target="_blank" href="https://docs.webknossos.org" rel="noopener noreferrer">
+            User Documentation
+          </a>
+        </Menu.Item>
+        {(!features().discussionBoardRequiresAdmin || isAdmin) &&
+        features().discussionBoard !== false ? (
+          <Menu.Item key="discussion-board">
+            <a href={features().discussionBoard} target="_blank" rel="noopener noreferrer">
+              Community Support
+            </a>
+          </Menu.Item>
+        ) : null}
+        <Menu.Item key="frontend-api">
+          <a target="_blank" href="/assets/docs/frontend-api/index.html">
+            Frontend API Documentation
+          </a>
+        </Menu.Item>
+        <Menu.Item key="keyboard-shortcuts">
+          <a target="_blank" href="/help/keyboardshortcuts" rel="noopener noreferrer">
+            Keyboard Shortcuts
+          </a>
+        </Menu.Item>
+        <Menu.Item key="credits">
+          <a target="_blank" href="https://webknossos.org" rel="noopener noreferrer">
+            About & Credits
+          </a>
+        </Menu.Item>
+        {this.state.version !== "" ? (
+          <Menu.Item disabled key="version">
+            Version: {this.state.version}
+          </Menu.Item>
+        ) : null}
+      </SubMenu>
+    );
+
     const menuItems = [];
     menuItems.push(
       <Menu.Item key="/dashboard">
@@ -133,46 +178,7 @@ class Navbar extends React.PureComponent<Props, State> {
       );
     }
 
-    menuItems.push(
-      <SubMenu
-        key="sub3"
-        title={
-          <span>
-            <Icon type="medicine-box" />Help
-          </span>
-        }
-      >
-        <Menu.Item key="11">
-          <a target="_blank" href="/assets/docs/frontend-api/index.html">
-            Frontend API Documentation
-          </a>
-        </Menu.Item>
-        <Menu.Item key="/help/keyboardshortcuts">
-          <a target="_blank" href="/help/keyboardshortcuts">
-            Keyboard Shortcuts
-          </a>
-        </Menu.Item>
-        <Menu.Item key="/help/credits">
-          <a target="_blank" href="https://webknossos.org" rel="noopener noreferrer">
-            About & Credits
-          </a>
-        </Menu.Item>
-        {this.state.version !== "" ? (
-          <Menu.Item disabled>Version: {this.state.version}</Menu.Item>
-        ) : null}
-      </SubMenu>,
-    );
-
-    if (isAdmin && features().discussionBoard) {
-      menuItems.push(
-        <Menu.Item key="13">
-          <a href="https://discuss.webknossos.org" target="_blank" rel="noopener noreferrer">
-            <Icon type="notification" />
-            Discussion Board
-          </a>
-        </Menu.Item>,
-      );
-    }
+    menuItems.push(helpMenu);
 
     return (
       <Header style={navbarStyle}>
@@ -213,7 +219,7 @@ class Navbar extends React.PureComponent<Props, State> {
                   </Menu.Item>
                 </SubMenu>,
               ])
-            : null}
+            : helpMenu}
         </Menu>
         {!isAuthenticated ? (
           <div style={{ flex: 1, display: "flex", justifyContent: "flex-end" }}>

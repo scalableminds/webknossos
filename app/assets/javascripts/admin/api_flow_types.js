@@ -40,12 +40,20 @@ type APISegmentationLayerType = {|
 
 export type APIDataLayerType = APIColorLayerType | APISegmentationLayerType;
 
-export type APIDataSourceType = {
+type APIDataSourceBaseType = {
   +id: {
     +name: string,
     +team: string,
   },
   +status?: string,
+};
+
+export type APIMaybeUnimportedDataSourceType = APIDataSourceBaseType & {
+  +dataLayers?: Array<APIDataLayerType>,
+  +scale: ?Vector3,
+};
+
+export type APIDataSourceType = APIDataSourceBaseType & {
   +dataLayers: Array<APIDataLayerType>,
   +scale: Vector3,
 };
@@ -64,20 +72,28 @@ export type APITeamType = {
   +organization: string,
 };
 
-export type APIDatasetType = {
+type APIDatasetBaseType = {
   +allowedTeams: Array<APITeamType>,
   +created: number,
-  +dataSource: APIDataSourceType,
   +dataStore: APIDataStoreType,
   +description: ?string,
-  +isActive: boolean,
   +isEditable: boolean,
   +isPublic: boolean,
   +name: string,
-  +displayName: string,
+  +displayName: ?string,
   +owningOrganization: string,
   +logoUrl: ?string,
   +lastUsedByUser: number,
+};
+
+export type APIMaybeUnimportedDatasetType = APIDatasetBaseType & {
+  +dataSource: APIMaybeUnimportedDataSourceType,
+  +isActive: boolean,
+};
+
+export type APIDatasetType = APIDatasetBaseType & {
+  +dataSource: APIDataSourceType,
+  +isActive: true,
 };
 
 export type APIDataSourceWithMessagesType = {
@@ -94,7 +110,6 @@ export type APITeamMembershipType = {
 export type ExperienceMapType = { +[string]: number };
 
 export type APIUserBaseType = {
-  +created: number,
   +email: string,
   +firstName: string,
   +lastName: string,
@@ -104,6 +119,7 @@ export type APIUserBaseType = {
 };
 
 export type APIUserType = APIUserBaseType & {
+  +created: number,
   +experiences: ExperienceMapType,
   +isAdmin: boolean,
   +isActive: boolean,
@@ -166,11 +182,23 @@ export type APITaskTypeType = {
 
 export type TaskStatusType = { +open: number, +active: number, +finished: number };
 
-export type APIScriptType = {
-  +id: string,
+type APIScriptTypeBase = {
   +name: string,
-  +owner: APIUserBaseType,
   +gist: string,
+};
+
+export type APIScriptType = APIScriptTypeBase & {
+  +id: string,
+  +owner: APIUserBaseType,
+};
+
+export type APIScriptUpdaterType = APIScriptTypeBase & {
+  +id: string,
+  +owner: string,
+};
+
+export type APIScriptCreatorType = APIScriptTypeBase & {
+  +owner: string,
 };
 
 type APIProjectTypeBase = {
@@ -179,7 +207,6 @@ type APIProjectTypeBase = {
   +priority: number,
   +paused: boolean,
   +expectedTime: number,
-  +numberOfOpenAssignments: number,
 };
 
 export type APIProjectType = APIProjectTypeBase & {
@@ -194,6 +221,10 @@ export type APIProjectUpdaterType = APIProjectTypeBase & {
 
 export type APIProjectCreatorType = APIProjectTypeBase & {
   +owner: string,
+};
+
+export type APIProjectWithAssignmentsType = APIProjectType & {
+  +numberOfOpenAssignments: number,
 };
 
 export type APITaskType = {
@@ -283,7 +314,6 @@ export type APIProjectProgressReportType = {
   +openInstances: number,
   +activeInstances: number,
   +finishedInstances: number,
-  +inProgressInstances: number,
 };
 
 export type APIOpenTasksReportType = {
@@ -323,7 +353,8 @@ export type APIBuildInfoType = {
 };
 
 export type APIFeatureToggles = {
-  +discussionBoard: boolean,
+  +discussionBoard: string | false,
+  +discussionBoardRequiresAdmin: boolean,
   +hybridTracings: boolean,
   +allowOrganzationCreation: boolean,
 };
@@ -376,6 +407,7 @@ export type ServerTracingBaseType = {|
   id: string,
   userBoundingBox?: ServerBoundingBoxType,
   createdTimestamp: number,
+  dataSetName: string,
   editPosition: Point3,
   editRotation: Point3,
   error?: string,

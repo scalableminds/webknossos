@@ -10,6 +10,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import play.api.mvc.Action
 import play.api.Play.current
+import utils.WkConf
 
 class OrganizationController @Inject()(val messagesApi: MessagesApi) extends Controller with FoxImplicits {
 
@@ -22,11 +23,7 @@ class OrganizationController @Inject()(val messagesApi: MessagesApi) extends Con
     }
   }
 
-  def getOperatorData = Action.async { implicit request =>
-    for {
-      data <- Play.configuration.getString("operatorData").toFox
-    } yield {
-      Ok(Json.toJson(data))
-    }
+  def getOperatorData = Action { implicit request =>
+      Ok(Json.toJson(WkConf.operatorData))
   }
 }

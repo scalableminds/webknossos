@@ -1,6 +1,3 @@
-/*
-* Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
-*/
 package com.scalableminds.util.mail
 
 import javax.mail.internet.InternetAddress
@@ -21,20 +18,17 @@ case class Send(mail: Mail)
  * "org.apache.commons" % "commons-mail" % "1.2"
  */
 
-object Mailer {
+case class MailerConfig(
+                       enabled: Boolean,
+                       smtpHost: String,
+                       smtpPort: Int,
+                       smtpTls: Boolean,
+                       smtpUser: String,
+                       smtpPass: String,
+                       subjectPrefix: String
+                       )
 
-
-}
-
-class Mailer(conf: Config) extends Actor {
-
-  val enabled = conf.getBoolean("mail.enabled")
-  val smtpHost = conf.getString("mail.smtp.host")
-  val smtpPort = conf.getInt("mail.smtp.port")
-  val smtpTls = conf.getBoolean("mail.smtp.tls")
-  val smtpUser = conf.getString("mail.smtp.user")
-  val smtpPass = conf.getString("mail.smtp.pass")
-  val subjectPrefix = conf.getString("mail.subject.prefix")
+class Mailer(conf: MailerConfig) extends Actor {
 
   def receive = {
     case Send(mail) =>
@@ -47,7 +41,7 @@ class Mailer(conf: Config) extends Actor {
    * @return
    */
   def send(mail: Mail) = {
-    if (enabled && mail.recipients.exists(_.trim != "")) {
+    if (conf.enabled && mail.recipients.exists(_.trim != "")) {
       val multiPartMail: MultiPartEmail = createEmail(mail)
 
       setAddress(mail.from)(multiPartMail.setFrom _)
@@ -57,14 +51,14 @@ class Mailer(conf: Config) extends Actor {
       mail.ccRecipients.foreach(setAddress(_)(multiPartMail.addCc _))
       mail.bccRecipients.foreach(setAddress(_)(multiPartMail.addBcc _))
 
-      multiPartMail.setSubject(subjectPrefix + mail.subject)
+      multiPartMail.setSubject(conf.subjectPrefix + mail.subject)
       mail.headers foreach { case (key, value) => multiPartMail.addHeader(key, value) }
 
       // do the work to prepare sending on SMTP
-      multiPartMail.setHostName(smtpHost)
-      multiPartMail.setSmtpPort(smtpPort)
-      multiPartMail.setTLS(smtpTls)
-      multiPartMail.setAuthenticator(new DefaultAuthenticator(smtpUser, smtpPass))
+      multiPartMail.setHostName(conf.smtpHost)
+      multiPartMail.setSmtpPort(conf.smtpPort)
+      multiPartMail.setTLS(conf.smtpTls)
+      multiPartMail.setAuthenticator(new DefaultAuthenticator(conf.smtpUser, conf.smtpPass))
       multiPartMail.setDebug(false)
       multiPartMail.send
     } else {

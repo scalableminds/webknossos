@@ -13,7 +13,7 @@ import oxalis.mail.DefaultMails
 import oxalis.thirdparty.BrainTracing.Mailer
 import play.api.Play
 import play.api.libs.concurrent.Execution.Implicits._
-import utils.ObjectId
+import utils.{ObjectId, WkConf}
 
 import scala.collection.mutable
 import scala.concurrent.duration._
@@ -21,7 +21,7 @@ import scala.concurrent.duration._
 
 object TimeSpanService extends FoxImplicits with LazyLogging {
   private val MaxTracingPause =
-    Play.current.configuration.getInt("oxalis.user.time.tracingPauseInSeconds").getOrElse(60).seconds.toMillis
+    WkConf.Oxalis.User.Time.tracingPauseInSeconds.toMillis
 
   def logUserInteraction(user: User, annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val timestamp = System.currentTimeMillis

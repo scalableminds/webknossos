@@ -1,11 +1,10 @@
 // @flow
 import _ from "lodash";
 import React from "react";
-import { Form, Input, Button, Card, Spin } from "antd";
+import { Form, Input, Button, Card } from "antd";
 import { addForeignDataSet } from "admin/admin_rest_api";
 import Messages from "messages";
 import Toast from "libs/toast";
-import { withRouter } from "react-router-dom";
 
 const FormItem = Form.Item;
 const TextArea = Input.TextArea;
@@ -21,10 +20,7 @@ export type ForeignDataSetSpecification = {
   +dataSetName: string,
 };
 
-class DatasetAddForeignView extends React.PureComponent<Props, State> {
-  state = {
-    isUploading: false,
-  };
+class DatasetAddForeignView extends React.PureComponent<Props> {
 
   isValidDataSet(specification: ForeignDataSetSpecification): boolean {
     if (

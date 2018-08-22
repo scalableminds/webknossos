@@ -663,7 +663,12 @@ export async function addForeignDataSet(
 ): Promise<string> {
   const { sharingToken } = await Request.sendJSONReceiveJSON(
     `/api/datasets/addForeign?dataStoreName=${dataStoreName}&url=${url}&dataSetName=${dataSetName}`,
-    {method: "POST"},
+    {data: {
+      dataStoreName,
+      url,
+      dataSetName
+      },
+    },
   );
   return sharingToken;
 }

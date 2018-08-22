@@ -121,7 +121,7 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
             ) : (
                 <p>
                   Start Tracing &nbsp;
-                  <Tooltip title={"Cannot create tracings for read-only datasets"}>
+                  <Tooltip title="Cannot create tracings for read-only datasets">
                     <Icon type="info-circle-o" style={{ color: "gray" }} />
                   </Tooltip>
                 </p>

@@ -271,7 +271,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
           dataSource={sharedExperiencesEntries}
           rowKey="domain"
           pagination={false}
-          scroll={sharedExperiencesEntries.length > 3 ? { y: 200 } : {}}
+          scroll={sharedExperiencesEntries.length > 3 ? { y: 150 } : {}}
           className="user-experience-table"
         >
           <Column title="Experience Domain" key="domain" dataIndex="domain" width="50%" />

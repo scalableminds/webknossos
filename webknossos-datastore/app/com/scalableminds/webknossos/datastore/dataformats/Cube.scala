@@ -3,31 +3,37 @@
  */
 package com.scalableminds.webknossos.datastore.dataformats
 
-import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
-
+import com.newrelic.api.agent.NewRelic
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import net.liftweb.common.Box
 
 trait Cube {
 
-  private val accessCounter = new AtomicInteger()
+  private var accessCounter = 0
 
-  private val scheduledForRemoval = new AtomicBoolean()
+  private var scheduledForRemoval = false
+
+  private var isRemoved = false
 
   def cutOutBucket(dataLayer: DataLayer, bucket: BucketPosition): Box[Array[Byte]]
 
-  def startAccess(): Unit = {
+  def tryAccess(): Boolean = {
     this.synchronized {
-      accessCounter.incrementAndGet()
+      if (isRemoved) {
+        NewRelic.noticeError("Tried to access cube which is already removed.")
+        return false
+      }
+      accessCounter += 1
+      return true
     }
   }
 
   def finishAccess(): Unit = {
     // Check if we are the last one to use this cube, if that is the case and the cube needs to be removed -> remove it
     this.synchronized {
-      val currentUsers = accessCounter.decrementAndGet()
-      if (currentUsers == 0 && scheduledForRemoval.get()) {
+      accessCounter -= 1
+      if (accessCounter == 0 && scheduledForRemoval) {
         onFinalize()
       }
     }
@@ -35,9 +41,10 @@ trait Cube {
 
   def scheduleForRemoval(): Unit = {
     this.synchronized {
-      scheduledForRemoval.set(true)
+      scheduledForRemoval = true
       // Check if we can directly remove this cube (only possible if it is currently unused)
       if(accessCounter.get() == 0) {
+        isRemoved = true
         onFinalize()
       }
     }

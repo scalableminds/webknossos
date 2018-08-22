@@ -150,14 +150,17 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
   }
 
   getDatasetName(isPublicViewMode: boolean) {
-    const { name: datasetName, displayName, description } = this.props.dataset;
+    const { name: datasetName, displayName, description: datasetDescription } = this.props.dataset;
 
     if (isPublicViewMode) {
       return (
         <div>
           <p>Dataset: {displayName || datasetName}</p>
-          {description ? (
-            <Markdown source={description} options={{ html: false, breaks: true, linkify: true }} />
+          {datasetDescription ? (
+            <Markdown
+              source={datasetDescription}
+              options={{ html: false, breaks: true, linkify: true }}
+            />
           ) : null}
         </div>
       );
@@ -189,7 +192,11 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
       annotationTypeLabel = (
         <span>
           Explorational Tracing:
-          <EditableTextLabel value={tracingName} onChange={this.setAnnotationName} />
+          <EditableTextLabel
+            value={tracingName}
+            onChange={this.setAnnotationName}
+            label="Annotation Name"
+          />
         </span>
       );
     }
@@ -199,12 +206,14 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
       <div>
         <p>{annotationTypeLabel}</p>
         <p>
-          <span>
+          <span style={{ verticalAlign: "top" }}>
             Description:
             <EditableTextLabel
               value={tracingDescription}
               onChange={this.setAnnotationDescription}
               rows={4}
+              markdown
+              label="Annotation Description"
             />
           </span>
         </p>

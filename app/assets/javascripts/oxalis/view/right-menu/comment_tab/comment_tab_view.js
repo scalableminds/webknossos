@@ -10,7 +10,7 @@ import * as Utils from "libs/utils";
 import update from "immutability-helper";
 import Store from "oxalis/store";
 import { connect } from "react-redux";
-import { Input, Menu, Dropdown, Tooltip, Icon, Modal, Button, Row, Col } from "antd";
+import { Input, Menu, Dropdown, Tooltip, Icon } from "antd";
 import ButtonComponent from "oxalis/view/components/button_component";
 import InputComponent from "oxalis/view/components/input_component";
 import { InputKeyboard } from "libs/input";
@@ -22,10 +22,11 @@ import {
   deleteCommentAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import TreeWithComments from "oxalis/view/right-menu/comment_tab/tree_with_comments";
-import { Comment, MarkdownComment } from "oxalis/view/right-menu/comment_tab/comment";
+import { Comment } from "oxalis/view/right-menu/comment_tab/comment";
 import { AutoSizer, List } from "react-virtualized";
 import Enum from "Enumjs";
 import messages from "messages";
+import { MarkdownModal } from "oxalis/view/components/markdown_modal";
 import type { Dispatch } from "redux";
 import type { OxalisState, SkeletonTracingType, TreeType, CommentType } from "oxalis/store";
 import type { Comparator } from "libs/utils";
@@ -249,43 +250,14 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
 
     return activeCommentMaybe
       .map(comment => (
-        <Modal
-          key="comment-markdown-modal"
-          title={
-            <span>
-              Edit Comment (
-              <a href="https://markdown-it.github.io/" target="_blank" rel="noopener noreferrer">
-                Markdown enabled
-              </a>
-              )
-            </span>
-          }
+        <MarkdownModal
+          key={comment.nodeId}
+          source={comment.content}
           visible={this.state.isMarkdownModalVisible}
-          onCancel={onOk}
-          closable={false}
-          width={700}
-          footer={[
-            <Button key="back" onClick={onOk}>
-              Ok
-            </Button>,
-          ]}
-        >
-          <Row gutter={16}>
-            <Col span={12}>
-              <InputComponent
-                value={comment.content}
-                onChange={this.handleChangeInput}
-                placeholder="Add comment"
-                rows={5}
-                autosize={{ minRows: 5, maxRows: 20 }}
-                isTextArea
-              />
-            </Col>
-            <Col span={12} style={{ maxHeight: 430, overflowY: "auto" }}>
-              <MarkdownComment comment={comment} />
-            </Col>
-          </Row>
-        </Modal>
+          onChange={this.handleChangeInput}
+          onOk={onOk}
+          label="Comment"
+        />
       ))
       .getOrElse(null);
   }

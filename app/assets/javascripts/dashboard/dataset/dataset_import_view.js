@@ -104,7 +104,6 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         },
       });
       this.setState({ dataset });
-      console.log("after setState")
       // This call cannot be combined with the previous setFieldsValue,
       // since the layer values wouldn't be initialized correctly.
       this.props.form.setFieldsValue({

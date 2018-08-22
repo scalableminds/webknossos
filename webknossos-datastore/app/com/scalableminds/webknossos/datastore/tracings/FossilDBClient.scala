@@ -61,7 +61,7 @@ class FossilDBClient(collection: String, config: DataStoreConfig) extends FoxImp
       val replyString = reply.getStatus.toString
       if (!(replyString == "SERVING")) throw new Exception(replyString)
       logger.info("Successfully tested FossilDB health at " + address + ":" + port + ". Reply: " + replyString)
-      Fox.successful(replyString)
+      Fox.successful(())
     } catch {
       case e: Exception => {
         val errorText = "Failed to connect to FossilDB at " + address + ":" + port + ": " + e

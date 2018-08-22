@@ -39,9 +39,8 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
 
   async fetch() {
     const sharingToken = await getDatasetSharingToken(this.props.datasetName);
-    const dataSet = await getDataset(this.props.datasetName, "");
-    this.setState({ dataSet });
-    this.setState({ sharingToken });
+    const dataSet = await getDataset(this.props.datasetName);
+    this.setState({ dataSet, sharingToken });
   }
 
   handleSelectText(event: SyntheticInputEvent<>): void {
@@ -171,7 +170,7 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
           </Input.Group>
         </FormItemWithInfo>
         {form.getFieldValue("dataset.isPublic") ? (
-          <div>
+          <React.Fragment>
             <FormItemWithInfo
               label="Allow usage in other webknossos-instances using this text"
               info="Give this text to users with other webknossos-instances so that they can add this dataset"
@@ -192,7 +191,7 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
                 </Button>
               </Input.Group>
             </FormItemWithInfo>
-          </div>
+          </React.Fragment>
         ) : null}
       </div>
     );

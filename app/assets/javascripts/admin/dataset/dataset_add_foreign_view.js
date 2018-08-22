@@ -12,10 +12,7 @@ const TextArea = Input.TextArea;
 
 type Props = {
   form: Object,
-};
-
-type State = {
-  isUploading: boolean,
+  onAdded: () => void,
 };
 
 export type ForeignDataSetSpecification = {
@@ -74,10 +71,10 @@ class DatasetAddForeignView extends React.PureComponent<Props, State> {
         specification.url,
         specification.dataSetName,
       );
-      window.location.replace("/dashboard");
+      this.props.onAdded();
     } else {
       Toast.error(
-        `${Messages["dataset.import.invalid_fields"]}`, // add to messages
+        `${Messages["dataset.import.invalid_fields"]}`,
       );
     }
   };
@@ -87,7 +84,6 @@ class DatasetAddForeignView extends React.PureComponent<Props, State> {
 
     return (
       <div className="container" style={{ paddingTop: 20 }}>
-        <Spin spinning={this.state.isUploading}>
           <Card title={<h3>Add Dataset</h3>}>
             <p>
               Specify the Dataset in the following format:
@@ -95,7 +91,7 @@ class DatasetAddForeignView extends React.PureComponent<Props, State> {
               dataStoreName, url, dataSetName
             </p>
             <Form onSubmit={this.handleSubmit} layout="vertical">
-              <FormItem label="Add foreign Dataset Specification" hasFeedback>
+              <FormItem label="Add Foreign Dataset Specification" hasFeedback>
                 {getFieldDecorator("foreignDatasetText", {
                   rules: [
                     {
@@ -128,10 +124,9 @@ class DatasetAddForeignView extends React.PureComponent<Props, State> {
               </FormItem>
             </Form>
           </Card>
-        </Spin>
       </div>
     );
   }
 }
 
-export default withRouter(Form.create()(DatasetAddForeignView));
+export default Form.create()(DatasetAddForeignView);

@@ -14,7 +14,7 @@ type Props = {
 };
 
 const DatasetAddView = ({ history }: Props) => (
-  <Tabs defaultActiveKey="1" className="container task-edit-administration">
+  <Tabs defaultActiveKey="1" className="container">
     <TabPane
       tab={
         <span>
@@ -39,7 +39,7 @@ const DatasetAddView = ({ history }: Props) => (
         }
         key="2"
       >
-        <DatasetAddForeignView />
+        <DatasetAddForeignView onAdded={() => history.push("/dashboard")} />
       </TabPane>
     ) : null}
   </Tabs>

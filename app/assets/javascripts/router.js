@@ -243,12 +243,7 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/datasets/upload"
                 render={() => (
-                  <DatasetAddView
-                    onUploaded={datasetName => {
-                      const url = `/datasets/${datasetName}/import`;
-                      browserHistory.push(url);
-                    }}
-                  />
+                  <DatasetAddView/>
                 )}
               />
               <SecuredRoute

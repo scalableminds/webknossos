@@ -45,7 +45,6 @@ type TabKeyType = "data" | "general" | "defaultConfig";
 
 type State = {
   dataset: ?APIDatasetType,
-  isForeign: boolean,
   datasetDefaultConfiguration: ?DatasetConfigurationType,
   messages: Array<APIMessageType>,
   isLoading: boolean,
@@ -89,9 +88,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       if (dataset.isForeign) {
         dataSource = await readDatasetDatasource(dataset);
       } else {
-        const dataSourceWithMessages = await getDatasetDatasource(dataset);
-        dataSource = dataSourceWithMessages.dataSource;
-        dataSourceMessages = dataSourceWithMessages.messages;
+        ({ dataSource, messages: dataSourceMessages } = await getDatasetDatasource(dataset));
       }
       if (dataSource == null) {
         throw new Error("No datasource received from server.");
@@ -106,7 +103,8 @@ class DatasetImportView extends React.PureComponent<Props, State> {
           allowedTeams: dataset.allowedTeams || [],
         },
       });
-      this.setState({ isForeign: dataset.isForeign });
+      this.setState({ dataset });
+      console.log("after setState")
       // This call cannot be combined with the previous setFieldsValue,
       // since the layer values wouldn't be initialized correctly.
       this.props.form.setFieldsValue({
@@ -231,8 +229,9 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       }
 
       const dataSource = JSON.parse(formValues.dataSourceJson);
-      if (!this.state.isForeign)
+      if (this.state.dataset && !this.state.dataset.isForeign) {
         await updateDatasetDatasource(this.props.datasetName, dataset.dataStore.url, dataSource);
+      }
 
       await updateDatasetTeams(dataset.name, teamIds);
 
@@ -384,7 +383,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                   <Hideable hidden={this.state.activeTabKey !== "data"}>
                     <SimpleAdvancedDataForm
                       key="SimpleAdvancedDataForm"
-                      isForeignDataset={this.state.isForeign}
+                      isForeignDataset={this.state.dataset && this.state.dataset.isForeign}
                       form={form}
                       activeDataSourceEditMode={this.state.activeDataSourceEditMode}
                       onChange={activeEditMode => {

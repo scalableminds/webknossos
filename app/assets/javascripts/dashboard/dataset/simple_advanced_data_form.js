@@ -56,12 +56,20 @@ export default function SimpleAdvancedDataForm({
         </Tooltip>
       </div>
 
-      <Alert
-        message="Please review the following properties. If you want to adjust the configuration described by
-          &ldquo;datasource-properties.json&rdquo;, please enable the &ldquo;Advanced&rdquo; mode in the top-right corner."
-        type="info"
-        showIcon
-      />
+      {isForeignDataset ? (
+        <Alert
+          message="This dataset is read-only, therefore certain options are diabled."
+          type="warning"
+          showIcon
+        />
+      ) : (
+        <Alert
+          message="Please review the following properties. If you want to adjust the configuration described by
+            &ldquo;datasource-properties.json&rdquo;, please enable the &ldquo;Advanced&rdquo; mode in the top-right corner."
+          type="info"
+          showIcon
+        />
+      )}
 
       <Hideable hidden={activeDataSourceEditMode !== "simple"}>
         <RetryingErrorBoundary>
@@ -124,7 +132,6 @@ function SimpleDatasetForm({ isForeignDataset, form, dataSource }) {
         {(dataSource || { dataLayers: [] }).dataLayers.map((layer, idx) => (
           <List.Item key={`layer-${layer.name}`}>
             <SimpleLayerForm
-              disabled={isForeignDataset}
               isForeignDataset={isForeignDataset}
               layer={layer}
               index={idx}

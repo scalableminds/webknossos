@@ -3,7 +3,6 @@ package utils
 import javax.inject.Inject
 
 import com.mohiva.play.silhouette.api.SecuredErrorHandler
-import com.scalableminds.util.mvc.JsonResult
 import play.api.http.DefaultHttpErrorHandler
 import play.api.i18n.{I18nSupport, Messages, MessagesApi}
 import play.api.mvc.Results._

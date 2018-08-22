@@ -12,8 +12,10 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 ### Added
 
 -
+- Added the possibility to write markdown in the annotation description. [#3081](https://github.com/scalableminds/webknossos/pull/3081)
 
 ### Changed
+
 - The modal used to change the experience of users by admins got a rework. [#3077](https://github.com/scalableminds/webknossos/pull/3077) 
 
 ### Fixed

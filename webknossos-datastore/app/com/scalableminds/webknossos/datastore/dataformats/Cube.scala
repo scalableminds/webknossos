@@ -43,7 +43,7 @@ trait Cube {
     this.synchronized {
       scheduledForRemoval = true
       // Check if we can directly remove this cube (only possible if it is currently unused)
-      if(accessCounter.get() == 0) {
+      if (accessCounter == 0) {
         isRemoved = true
         onFinalize()
       }

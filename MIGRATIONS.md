@@ -7,13 +7,13 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 ## Unreleased
 ### Postgres Evolutions:
 -
+- some keys in `application.conf` have changed, if you overwrite them in your setup, please adapt: `application.secret` is now `play.crypto.secret`, `postgres.*` is now `slick.db.*`
 
 ## [18.09.0](https://github.com/scalableminds/webknossos/releases/tag/18.09.0) - 2018-08-20
 ### Postgres Evolutions:
 - [018-hybrid-annotations.sql](conf/evolutions/018-hybrid-annotations.sql)
 - [019-dataset-lastusedtime.sql](conf/evolutions/019-dataset-lastusedtime.sql)
 - [021-list-experiences.sql](conf/evolutions/021-list-experiences.sql)
-- some keys in `application.conf` have changed, if you overwrite them in your setup, please adapt: `application.secret` is now `play.crypto.secret`, `postgres.*` is now `slick.db.*`
 
 ## [18.08.0](https://github.com/scalableminds/webknossos/releases/tag/18.08.0) - 2018-07-23
 ### Postgres Evolutions:

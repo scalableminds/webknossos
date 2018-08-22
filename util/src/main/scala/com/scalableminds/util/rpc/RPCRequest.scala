@@ -106,7 +106,7 @@ class RPCRequest(val id: Int, val url: String) extends FoxImplicits with LazyLog
   def getStream: Fox[(WSResponseHeaders, Enumerator[Array[Byte]])] = {
     logger.debug(s"Sending WS request to $url (ID: $id). " +
       s"RequestBody: '${requestBodyPreview}'")
-    request.withMethod("GET").stream().map(Full(_)).recover {
+    request.withMethod("GET").withRequestTimeout(-1).stream().map(Full(_)).recover {
       case e =>
         val errorMsg = s"Error sending WS request to $url (ID: $id): " +
           s"${e.getMessage}\n${e.getStackTrace.mkString("\n    ")}"

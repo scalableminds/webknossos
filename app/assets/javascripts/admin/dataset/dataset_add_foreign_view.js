@@ -21,7 +21,6 @@ export type ForeignDataSetSpecification = {
 };
 
 class DatasetAddForeignView extends React.PureComponent<Props> {
-
   isValidDataSet(specification: ForeignDataSetSpecification): boolean {
     if (
       !_.isString(specification.dataStoreName) ||
@@ -69,9 +68,7 @@ class DatasetAddForeignView extends React.PureComponent<Props> {
       );
       this.props.onAdded();
     } else {
-      Toast.error(
-        `${Messages["dataset.import.invalid_fields"]}`,
-      );
+      Toast.error(`${Messages["dataset.import.invalid_fields"]}`);
     }
   };
 
@@ -80,46 +77,46 @@ class DatasetAddForeignView extends React.PureComponent<Props> {
 
     return (
       <div className="container" style={{ paddingTop: 20 }}>
-          <Card title={<h3>Add Dataset</h3>}>
-            <p>
-              Specify the Dataset in the following format:
-              <br />
-              dataStoreName, url, dataSetName
-            </p>
-            <Form onSubmit={this.handleSubmit} layout="vertical">
-              <FormItem label="Add Foreign Dataset Specification" hasFeedback>
-                {getFieldDecorator("foreignDatasetText", {
-                  rules: [
-                    {
-                      validator: (rule, value, callback) => {
-                        const dataSet = this.parseLine(
-                          this.props.form.getFieldsValue().foreignDatasetText,
-                        );
+        <Card title={<h3>Add Dataset</h3>}>
+          <p>
+            Specify the Dataset in the following format:
+            <br />
+            dataStoreName, url, dataSetName
+          </p>
+          <Form onSubmit={this.handleSubmit} layout="vertical">
+            <FormItem label="Add Foreign Dataset Specification" hasFeedback>
+              {getFieldDecorator("foreignDatasetText", {
+                rules: [
+                  {
+                    validator: (rule, value, callback) => {
+                      const dataSet = this.parseLine(
+                        this.props.form.getFieldsValue().foreignDatasetText,
+                      );
 
-                        return _.isString(value) && this.isValidDataSet(dataSet)
-                          ? callback()
-                          : callback(`${Messages["dataset.import.invalid_fields"]}`);
-                      },
+                      return _.isString(value) && this.isValidDataSet(dataSet)
+                        ? callback()
+                        : callback(`${Messages["dataset.import.invalid_fields"]}`);
                     },
-                  ],
-                })(
-                  <TextArea
-                    className="input-monospace"
-                    placeholder="dataStoreName, url, dataSetName"
-                    autosize={{ minRows: 1 }}
-                    style={{
-                      fontFamily: 'Monaco, Consolas, "Lucida Console", "Courier New", monospace',
-                    }}
-                  />,
-                )}
-              </FormItem>
-              <FormItem>
-                <Button type="primary" htmlType="submit">
-                  Add Dataset
-                </Button>
-              </FormItem>
-            </Form>
-          </Card>
+                  },
+                ],
+              })(
+                <TextArea
+                  className="input-monospace"
+                  placeholder="dataStoreName, url, dataSetName"
+                  autosize={{ minRows: 1 }}
+                  style={{
+                    fontFamily: 'Monaco, Consolas, "Lucida Console", "Courier New", monospace',
+                  }}
+                />,
+              )}
+            </FormItem>
+            <FormItem>
+              <Button type="primary" htmlType="submit">
+                Add Dataset
+              </Button>
+            </FormItem>
+          </Form>
+        </Card>
       </div>
     );
   }

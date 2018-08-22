@@ -119,12 +119,12 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
                 {volumeTracingMenu}
               </React.Fragment>
             ) : (
-                <p>
-                  Start Tracing &nbsp;
-                  <Tooltip title="Cannot create tracings for read-only datasets">
-                    <Icon type="info-circle-o" style={{ color: "gray" }} />
-                  </Tooltip>
-                </p>
+              <p>
+                Start Tracing &nbsp;
+                <Tooltip title="Cannot create tracings for read-only datasets">
+                  <Icon type="info-circle-o" style={{ color: "gray" }} />
+                </Tooltip>
+              </p>
             )}
             {features().hybridTracings ? (
               <a

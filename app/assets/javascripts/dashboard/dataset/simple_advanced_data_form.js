@@ -58,7 +58,7 @@ export default function SimpleAdvancedDataForm({
 
       {isForeignDataset ? (
         <Alert
-          message="This dataset is read-only, therefore certain options are diabled."
+          message="This dataset is read-only, therefore certain options are disabled."
           type="warning"
           showIcon
         />

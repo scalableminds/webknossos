@@ -242,9 +242,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/datasets/upload"
-                render={() => (
-                  <DatasetAddView/>
-                )}
+                render={() => <DatasetAddView />}
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}

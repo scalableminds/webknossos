@@ -661,16 +661,14 @@ export async function addForeignDataSet(
   url: string,
   dataSetName: string,
 ): Promise<string> {
-  const { sharingToken } = await Request.sendJSONReceiveJSON(
-    `/api/datasets/addForeign?dataStoreName=${dataStoreName}&url=${url}&dataSetName=${dataSetName}`,
-    {data: {
+  const { result } = await Request.sendJSONReceiveJSON("/api/datasets/addForeign", {
+    data: {
       dataStoreName,
       url,
-      dataSetName
-      },
+      dataSetName,
     },
-  );
-  return sharingToken;
+  });
+  return result;
 }
 
 export function updateDatasetTeams(

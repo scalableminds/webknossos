@@ -20,7 +20,7 @@ import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
 import oxalis.security.WebknossosSilhouette
 import play.api.libs.json._
-import utils.ObjectId
+import utils.{ObjectId, WkConf}
 
 import scala.concurrent.Future
 
@@ -29,7 +29,7 @@ object UserService extends FoxImplicits with IdentityService[User] {
   lazy val Mailer =
     Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
 
-  val defaultUserEmail = Play.configuration.getString("application.authentication.defaultUser.email").get
+  val defaultUserEmail = WkConf.Application.Authentication.DefaultUser.email
 
   val tokenDAO = WebknossosSilhouette.environment.tokenDAO
 

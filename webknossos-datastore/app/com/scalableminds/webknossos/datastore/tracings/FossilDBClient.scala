@@ -6,6 +6,7 @@ package com.scalableminds.webknossos.datastore.tracings
 import com.google.protobuf.ByteString
 import com.scalableminds.fossildb.proto.fossildbapi._
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.DataStoreConfig
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
 import io.grpc.netty.NettyChannelBuilder
@@ -47,9 +48,9 @@ case class VersionedKeyValuePair[T](versionedKey: VersionedKey, value: T) {
 }
 
 
-class FossilDBClient(collection: String, config: Configuration) extends FoxImplicits with LazyLogging {
-  val address = config.getString("datastore.fossildb.address").getOrElse("localhost")
-  val port = config.getInt("datastore.fossildb.port").getOrElse(7155)
+class FossilDBClient(collection: String, config: DataStoreConfig) extends FoxImplicits with LazyLogging {
+  val address = config.Datastore.Fossildb.address
+  val port = config.Datastore.Fossildb.port
   val channel = NettyChannelBuilder.forAddress(address, port).maxInboundMessageSize(Int.MaxValue).usePlaintext.build
   val blockingStub = FossilDBGrpc.blockingStub(channel)
   val blockingStubHealth = HealthGrpc.newBlockingStub(channel)

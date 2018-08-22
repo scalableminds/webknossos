@@ -5,17 +5,14 @@ import com.scalableminds.util.tools.Fox
 import models.user.{User, UserDAO}
 import play.api.Play.current
 import play.api.cache.Cache
-import utils.ObjectId
+import utils.{ObjectId, WkConf}
 
 object UserCache {
-  val userCacheTimeout = current.configuration.getInt("user.cacheTimeout") getOrElse 3
-  val userCacheKeyPrefix = current.configuration.getString("user.cacheKey") getOrElse "user"
-
   def cacheKeyForUser(id: ObjectId) =
-    s"${userCacheKeyPrefix}.${id.toString}"
+    s"user.${id.toString}"
 
   def findUser(id: ObjectId) = {
-    Cache.getOrElse(cacheKeyForUser(id), userCacheTimeout) {
+    Cache.getOrElse(cacheKeyForUser(id), WkConf.User.cacheTimeoutInMinutes) {
       UserDAO.findOne(id)(GlobalAccessContext)
     }
   }

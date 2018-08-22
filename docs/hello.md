@@ -2,7 +2,7 @@
 
 webKnossos is an [open-source tool](https://github.com/scalableminds/webknossos) for [exploring](./tracing_ui.md) large 3D electron-microscopy (EM) and light-microscopy (LM) datasets as well as [collaboratively](./sharing.md) generating annotations.
 The web-based tool is powered by a specialized data-delivery backend that stores [large datasets](./datasets.md) efficiently on disk and serves many concurrent users.
-webKnossos has a GPU-accelerated viewer that includes a tools for creating and sharing annotations (skeletons and volumes).
+webKnossos has a GPU-accelerated viewer that includes tools for creating and sharing annotations (skeletons and volumes).
 Powerful [user](./users.md) and [task](./tasks.md) management features automatically distribute tasks to human annotators.
 There are a lot of productivity improvements to make the human part as efficient as possible.
 webKnossos is also a platform for [showcasing datasets](https://demo.webknossos.org) alongside a paper publication.

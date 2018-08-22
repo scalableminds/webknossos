@@ -20,7 +20,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Fixed
 
--
+- Fixed a bug where large volume downloads contained invalid data.zip archives [#3086](https://github.com/scalableminds/webknossos/pull/3086)
 
 ### Removed
 

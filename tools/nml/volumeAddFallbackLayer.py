@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import sys
 import zipfile
 import xml.etree.ElementTree as ET
@@ -38,7 +40,7 @@ def main():
 
 
 def printUsage():
-    print('usage: python3 addFallbackLayer.py myVolumeTracing.zip')
+    print('usage:', os.path.basename(__file__), 'myVolumeTracing.zip')
 
 if __name__ == '__main__':
     main()

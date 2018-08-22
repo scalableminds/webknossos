@@ -4,8 +4,8 @@ import { Popover } from "antd";
 import classNames from "classnames";
 import Store from "oxalis/store";
 import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";
-import Markdown from "react-remarkable";
 import { NODE_ID_REF_REGEX, POSITION_REF_REGEX } from "oxalis/constants";
+import { MarkdownWrapper } from "oxalis/view/components/markdown_modal";
 import type { CommentType } from "oxalis/store";
 
 function linkify(comment: string) {
@@ -18,29 +18,11 @@ function linkify(comment: string) {
   );
 }
 
-function getFirstLine(comment: string) {
-  const newLineIndex = comment.indexOf("\n");
-  return comment.slice(0, newLineIndex !== -1 ? newLineIndex : undefined);
-}
-
 type CommentProps = {
   isActive: boolean,
   comment: CommentType,
   style: Object,
 };
-
-export function MarkdownComment({
-  comment,
-  singleLine,
-}: {
-  comment: CommentType,
-  singleLine?: boolean,
-}) {
-  const content = singleLine ? getFirstLine(comment.content) : comment.content;
-  return (
-    <Markdown source={linkify(content)} options={{ html: false, breaks: true, linkify: true }} />
-  );
-}
 
 function ActiveCommentPopover({
   comment,
@@ -53,7 +35,7 @@ function ActiveCommentPopover({
 }) {
   return isActive ? (
     <Popover
-      content={<MarkdownComment comment={comment} />}
+      content={<MarkdownWrapper source={linkify(comment.content)} />}
       defaultVisible
       visible
       autoAdjustOverflow={false}
@@ -89,7 +71,7 @@ export function Comment({ comment, isActive, style }: CommentProps) {
         {" - "}
       </span>
       <span style={{ display: "inline-block" }}>
-        <MarkdownComment comment={comment} singleLine />
+        <MarkdownWrapper source={linkify(comment.content)} singleLine />
       </span>
       {isMultiLine ? (
         <ActiveCommentPopover comment={comment} isActive={isActive}>

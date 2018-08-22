@@ -27,6 +27,7 @@ import {
 } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import FormattedDate from "components/formatted_date";
+import Markdown from "react-remarkable";
 import type { APIAnnotationTypeCompact } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
 import { AnnotationContentTypes } from "oxalis/constants";
@@ -340,28 +341,29 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   }
 
   renderNameWithDescription(tracing: APIAnnotationTypeCompact) {
+    const hasDescription = tracing.description !== "";
+    const markdownDescription = (
+      <div style={{ maxWidth: 400 }}>
+        <Markdown
+          source={tracing.description}
+          options={{ html: false, breaks: true, linkify: true }}
+        />
+      </div>
+    );
     return (
       <React.Fragment>
         <EditableTextLabel
           value={tracing.name}
           onChange={newName => this.renameTracing(tracing, newName)}
+          label="Annotation Name"
         />
-        <Tooltip title={<span> Show description </span>} placement="bottom">
-          <Popover
-            title="Description"
-            trigger="click"
-            content={
-              <div style={{ maxWidth: 400 }}>
-                {tracing.description && tracing.description !== ""
-                  ? tracing.description
-                  : "No description"}
-              </div>
-            }
-          >
-            <i className="fa fa-align-justify" />
-            <div />
-          </Popover>
-        </Tooltip>
+        {hasDescription ? (
+          <Tooltip title="Show description" placement="bottom">
+            <Popover title="Description" trigger="click" content={markdownDescription}>
+              <i className="fa fa-align-justify" style={{ cursor: "pointer" }} />
+            </Popover>
+          </Tooltip>
+        ) : null}
       </React.Fragment>
     );
   }

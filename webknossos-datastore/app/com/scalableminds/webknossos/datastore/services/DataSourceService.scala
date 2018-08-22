@@ -18,6 +18,7 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
 import net.liftweb.util.Helpers.tryo
 import play.api.inject.ApplicationLifecycle
+import play.api.libs.json.Json
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -123,7 +124,7 @@ class DataSourceService @Inject()(
     if (errors.isEmpty) {
       Full(())
     } else {
-      ParamFailure("DataSource is invalid", errors.map("error" -> _))
+      ParamFailure("DataSource is invalid", Json.toJson(errors.map(e => Json.obj("error" -> e))))
     }
   }
 

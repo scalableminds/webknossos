@@ -17,6 +17,7 @@ class DataStoreModule(environment: Environment, configuration: Configuration) ex
   val system = ActorSystem("webknossos-datastore")
 
   def configure() = {
+    bind(classOf[DataStoreConfig]).asEagerSingleton()
     bind(classOf[AccessTokenService]).asEagerSingleton()
     bind(classOf[ActorSystem]).annotatedWith(Names.named("webknossos-datastore")).toInstance(system)
     bind(classOf[BinaryDataService]).asEagerSingleton()

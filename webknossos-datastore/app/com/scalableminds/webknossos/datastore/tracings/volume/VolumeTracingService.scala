@@ -72,7 +72,7 @@ class VolumeTracingService @Inject()(
     }
 
     val fallbackLayer = dataSource.dataLayers.flatMap {
-      case layer: SegmentationLayer => Some(layer)
+      case layer: SegmentationLayer if (Some(layer.name) == tracing.fallbackLayer) => Some(layer)
       case _ => None
     }.headOption
 

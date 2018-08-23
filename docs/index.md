@@ -7,7 +7,7 @@
 <!--* [Dashboard](./dashboard.md)-->
 * [Tracing View UI](./tracing_ui.md)
 * [Managing Datasets](./datasets.md)
-<!--* [Managing Users and Access Rights](./users.md)-->
+* [Managing Users and Access Rights](./users.md)
 <!--* [Managing Tasks and Projects](./tasks.md)-->
 * [Sharing](./sharing.md)
 

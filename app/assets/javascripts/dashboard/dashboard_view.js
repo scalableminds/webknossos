@@ -92,7 +92,9 @@ class DashboardView extends React.PureComponent<Props, State> {
     try {
       this.setState({ isLoadingDatasets: true });
       const datastores = await getDatastores();
-      await Promise.all(datastores.map(datastore => triggerDatasetCheck(datastore.url)));
+      await Promise.all(
+        datastores.filter(ds => !ds.isForeign).map(datastore => triggerDatasetCheck(datastore.url)),
+      );
       await this.fetchDatasets();
     } catch (error) {
       handleGenericError(error);

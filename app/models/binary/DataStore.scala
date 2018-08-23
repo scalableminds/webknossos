@@ -15,14 +15,16 @@ case class DataStore(
                        url: String,
                        typ: DataStoreType,
                        key: String,
-                       isDeleted: Boolean = false
+                       isDeleted: Boolean = false,
+                       isForeign: Boolean = false
                        ) {
 
   def publicWrites: Fox[JsObject] = {
     Fox.successful(Json.obj(
       "name" -> name,
       "url" -> url,
-      "typ" -> typ.name
+      "typ" -> typ.name,
+      "isForeign" -> isForeign
     ))
   }
 }
@@ -51,7 +53,8 @@ object DataStoreDAO extends SQLDAO[DataStore, DatastoresRow, Datastores] {
       r.url,
       DataStoreType.stringToType(r.typ),
       r.key,
-      r.isdeleted
+      r.isdeleted,
+      r.isforeign
     ))
 
   def findOneByKey(key: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
@@ -79,8 +82,8 @@ object DataStoreDAO extends SQLDAO[DataStore, DatastoresRow, Datastores] {
 
   def insertOne(d: DataStore): Fox[Unit] = {
     for {
-      _ <- run(sqlu"""insert into webknossos.dataStores(name, url, key, typ, isDeleted)
-                         values(${d.name}, ${d.url}, ${d.key}, '#${d.typ.name}', ${d.isDeleted})""")
+      _ <- run(sqlu"""insert into webknossos.dataStores(name, url, key, typ, isDeleted, isForeign)
+                         values(${d.name}, ${d.url}, ${d.key}, '#${d.typ.name}', ${d.isDeleted}, ${d.isForeign})""")
     } yield ()
   }
 

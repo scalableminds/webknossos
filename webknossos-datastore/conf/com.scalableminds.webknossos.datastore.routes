@@ -23,6 +23,8 @@ GET         /datasets/:dataSetName/layers/:dataLayerName/mappings/:mappingName  
 # DataSource management
 GET         /datasets                                                                          @com.scalableminds.webknossos.datastore.controllers.DataSourceController.list
 POST        /datasets                                                                          @com.scalableminds.webknossos.datastore.controllers.DataSourceController.upload
+GET         /datasets/:dataSetName/readInboxDataSourceLike                                     @com.scalableminds.webknossos.datastore.controllers.DataSourceController.read(dataSetName: String, returnFormatLike: Boolean ?= true)
+GET         /datasets/:dataSetName/readInboxDataSource                                         @com.scalableminds.webknossos.datastore.controllers.DataSourceController.read(dataSetName: String, returnFormatLike: Boolean ?= false)
 POST        /datasets/:dataSetName                                                             @com.scalableminds.webknossos.datastore.controllers.DataSourceController.update(dataSetName: String)
 GET         /datasets/:dataSetName                                                             @com.scalableminds.webknossos.datastore.controllers.DataSourceController.explore(dataSetName: String)
 

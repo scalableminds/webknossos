@@ -94,27 +94,40 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                 <Link to={`/datasets/${dataset.name}/edit`} title="Edit Dataset">
                   <Icon type="edit" />Edit
                 </Link>
-                <a href="#" onClick={() => this.clearCache(dataset)} title="Reload Dataset">
-                  <Icon type="retweet" />Reload
-                </a>
+                {!dataset.isForeign ? (
+                  <a href="#" onClick={() => this.clearCache(dataset)} title="Reload Dataset">
+                    <Icon type="retweet" />Reload
+                  </a>
+                ) : null}
               </React.Fragment>
             ) : null}
             <a href={`/datasets/${dataset.name}/view`} title="View Dataset">
               <Icon type="eye-o" />View
             </a>
-            <a
-              href="#"
-              onClick={() => this.createTracing(dataset, "skeleton", false)}
-              title="Create Skeleton Tracing"
-            >
-              <img
-                src="/assets/images/skeleton.svg"
-                alt="skeleton icon"
-                style={centerBackgroundImageStyle}
-              />{" "}
-              Start Skeleton Tracing
-            </a>
-            {volumeTracingMenu}
+            {!dataset.isForeign ? (
+              <React.Fragment>
+                <a
+                  href="#"
+                  onClick={() => this.createTracing(dataset, "skeleton", false)}
+                  title="Create Skeleton Tracing"
+                >
+                  <img
+                    src="/assets/images/skeleton.svg"
+                    alt="skeleton icon"
+                    style={centerBackgroundImageStyle}
+                  />{" "}
+                  Start Skeleton Tracing
+                </a>
+                {volumeTracingMenu}
+              </React.Fragment>
+            ) : (
+              <p>
+                Start Tracing &nbsp;
+                <Tooltip title="Cannot create tracings for read-only datasets">
+                  <Icon type="info-circle-o" style={{ color: "gray" }} />
+                </Tooltip>
+              </p>
+            )}
             {features().hybridTracings ? (
               <a
                 href="#"

@@ -45,7 +45,7 @@ test("getTimeTrackingForUser", async t => {
   t.snapshot(timeTrackingForUser, { id: "timetracking-timeTrackingForUser" });
 });
 
-test("getTimeTrackingForUser for another than the active user", async t => {
+test("getTimeTrackingForUser for a user other than the active user", async t => {
   const idUserC = "770b9f4d2a7c0e4d008da6ef";
   const timeTrackingForUser = await api.getTimeTrackingForUser(
     idUserC,

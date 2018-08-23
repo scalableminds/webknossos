@@ -22,10 +22,11 @@ trait Cube {
     this.synchronized {
       if (isRemoved) {
         NewRelic.noticeError("Tried to access cube which is already removed.")
-        return false
+        false
+      } else {
+        accessCounter += 1
+        true
       }
-      accessCounter += 1
-      return true
     }
   }
 

@@ -51,12 +51,11 @@ class DataCubeCache(val maxEntries: Int) extends FakeDataCubeCache with LRUConcu
   override def withCache[T](readInstruction: DataReadInstruction)(loadF: DataReadInstruction => Fox[Cube])(f: Cube => Box[T]): Fox[T] = {
     val cachedCubeInfo = CachedCube.from(readInstruction)
 
-    def getUncachedCube(): Fox[T] = {
+    def handleUncachedCube() = {
       val cubeFox = loadF(readInstruction).futureBox.map {
         case Full(cube) =>
-          if (! cube.tryAccess())
-            return getUncachedCube()
-          Full(cube)
+          if (cube.tryAccess()) Full(cube)
+          else Empty
         case f: Failure =>
           remove(cachedCubeInfo)
           f
@@ -78,14 +77,16 @@ class DataCubeCache(val maxEntries: Int) extends FakeDataCubeCache with LRUConcu
     get(cachedCubeInfo) match {
       case Some(cubeFox) =>
         cubeFox.flatMap { cube =>
-          if (! cube.tryAccess())
-            return getUncachedCube()
-          NewRelic.incrementCounter("Custom/FileDataStore/Cache/hit")
-          val result = f(cube)
-          cube.finishAccess()
-          result.toFox
+          if (cube.tryAccess()) {
+            NewRelic.incrementCounter("Custom/FileDataStore/Cache/hit")
+            val result = f(cube)
+            cube.finishAccess()
+            result.toFox
+          } else {
+            handleUncachedCube()
+          }
         }
-      case _ => getUncachedCube()
+      case _ => handleUncachedCube()
     }
   }
 

@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2011-2018 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package oxalis.security
 
 import java.security.SecureRandom

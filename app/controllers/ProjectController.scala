@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2011-2017 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package controllers
 import javax.inject.Inject
 import com.scalableminds.util.accesscontext.GlobalAccessContext

@@ -51,36 +51,42 @@ class DataCubeCache(val maxEntries: Int) extends FakeDataCubeCache with LRUConcu
   override def withCache[T](readInstruction: DataReadInstruction)(loadF: DataReadInstruction => Fox[Cube])(f: Cube => Box[T]): Fox[T] = {
     val cachedCubeInfo = CachedCube.from(readInstruction)
 
+    def handleUncachedCube() = {
+      val cubeFox = loadF(readInstruction).futureBox.map {
+        case Full(cube) =>
+          if (cube.tryAccess()) Full(cube)
+          else Empty
+        case f: Failure =>
+          remove(cachedCubeInfo)
+          f
+        case _ =>
+          Empty
+      }.toFox
+
+      put(cachedCubeInfo, cubeFox)
+      NewRelic.incrementCounter("Custom/FileDataStore/Cache/miss")
+      NewRelic.recordMetric("Custom/FileDataStore/Cache/size", size())
+
+      cubeFox.flatMap { cube =>
+        val result = f(cube)
+        cube.finishAccess()
+        result
+      }
+    }
+
     get(cachedCubeInfo) match {
       case Some(cubeFox) =>
         cubeFox.flatMap { cube =>
-          cube.startAccess()
-          NewRelic.incrementCounter("Custom/FileDataStore/Cache/hit")
-          val result = f(cube)
-          cube.finishAccess()
-          result.toFox
+          if (cube.tryAccess()) {
+            NewRelic.incrementCounter("Custom/FileDataStore/Cache/hit")
+            val result = f(cube)
+            cube.finishAccess()
+            result.toFox
+          } else {
+            handleUncachedCube()
+          }
         }
-      case _ =>
-        val cubeFox = loadF(readInstruction).futureBox.map {
-          case Full(cube) =>
-            cube.startAccess()
-            Full(cube)
-          case f: Failure =>
-            remove(cachedCubeInfo)
-            f
-          case _ =>
-            Empty
-        }.toFox
-
-        put(cachedCubeInfo, cubeFox)
-        NewRelic.incrementCounter("Custom/FileDataStore/Cache/miss")
-        NewRelic.recordMetric("Custom/FileDataStore/Cache/size", size())
-
-        cubeFox.flatMap { cube =>
-          val result = f(cube)
-          cube.finishAccess()
-          result
-        }
+      case _ => handleUncachedCube()
     }
   }
 

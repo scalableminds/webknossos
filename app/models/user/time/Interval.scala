@@ -4,12 +4,6 @@ import play.api.libs.json.Json
 import java.util.Calendar
 import org.joda.time.{DateTimeConstants, DateTime}
 
-/**
- * Company: scalableminds
- * User: tmbo
- * Date: 28.10.13
- * Time: 00:58
- */
 trait Interval {
   def start: DateTime
 

@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2011-2014 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.webknossos.datastore.services
 
 import com.google.inject.Inject

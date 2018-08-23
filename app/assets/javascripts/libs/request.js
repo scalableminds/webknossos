@@ -30,6 +30,7 @@ class Request {
       _.defaultsDeep(options, { headers: { Accept: "application/json" } }),
       this.handleEmptyJsonResponse,
     );
+
   prepareJSON = async (
     url: string,
     options: RequestOptionsWithData<any>,
@@ -245,7 +246,7 @@ class Request {
             const json = JSON.parse(text);
 
             // Propagate HTTP status code for further processing down the road
-            if (error.status) {
+            if (error.status != null) {
               json.status = error.status;
             }
 

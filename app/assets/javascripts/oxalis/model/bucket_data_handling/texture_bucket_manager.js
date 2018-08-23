@@ -257,9 +257,6 @@ export default class TextureBucketManager {
     this.lookUpBuffer.fill(-2);
     for (const [bucket, address] of this.activeBucketToIndexMap.entries()) {
       const lookUpIdx = this._getBucketIndex(bucket);
-      // Since activeBucketToIndexMap is a super set of committedBucketSet,
-      // address is always defined ($FlowFixMe).
-
       this.lookUpBuffer[floatsPerLookUpEntry * lookUpIdx] = this.committedBucketSet.has(bucket)
         ? address
         : -1;

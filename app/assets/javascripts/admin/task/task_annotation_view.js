@@ -57,9 +57,9 @@ class TaskAnnotationView extends React.PureComponent<Props & StateProps, State> 
       okText: messages.yes,
       onOk: () =>
         deleteAnnotation(annotation.id, annotation.typ).then(() =>
-          this.setState({
-            annotations: this.state.annotations.filter(a => a.id !== annotation.id),
-          }),
+          this.setState(prevState => ({
+            annotations: prevState.annotations.filter(a => a.id !== annotation.id),
+          })),
         ),
     });
   };
@@ -75,12 +75,12 @@ class TaskAnnotationView extends React.PureComponent<Props & StateProps, State> 
   };
 
   updateAnnotationState = (updatedAnnotation: APIAnnotationType) => {
-    this.setState({
+    this.setState(prevState => ({
       isTransferModalVisible: false,
-      annotations: this.state.annotations.map(
+      annotations: prevState.annotations.map(
         a => (a.id === updatedAnnotation.id ? updatedAnnotation : a),
       ),
-    });
+    }));
   };
 
   getDropdownMenu(annotation: APIAnnotationType) {
@@ -177,7 +177,9 @@ class TaskAnnotationView extends React.PureComponent<Props & StateProps, State> 
                     <br />
                     <span>
                       <Icon type="clock-circle-o" />
-                      {annotation.tracingTime ? formatSeconds(annotation.tracingTime / 1000) : 0}
+                      {annotation.tracingTime != null
+                        ? formatSeconds(annotation.tracingTime / 1000)
+                        : 0}
                     </span>
                   </td>
                   <td className="nowrap">

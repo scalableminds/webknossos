@@ -29,7 +29,7 @@ import play.api.libs.json.Reads
 
 
 object SQLClient {
-  lazy val db: PostgresProfile.backend.Database = Database.forConfig("postgres", play.api.Play.configuration.underlying)
+  lazy val db: PostgresProfile.backend.Database = Database.forConfig("slick.db", play.api.Play.configuration.underlying)
 }
 
 case class ObjectId(id: String) {

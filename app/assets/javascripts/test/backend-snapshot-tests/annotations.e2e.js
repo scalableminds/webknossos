@@ -1,5 +1,4 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-/* eslint-disable import/first */
 // @flow
 import test from "ava";
 import {
@@ -7,15 +6,16 @@ import {
   replaceVolatileValues,
   setCurrToken,
   tokenUserA,
-} from "../enzyme/e2e-setup";
+  writeFlowCheckingFile,
+} from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import { APITracingTypeEnum } from "admin/api_flow_types";
 import { sendRequestWithToken, addVersionNumbers } from "oxalis/model/sagas/save_saga";
-import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 import * as UpdateActions from "oxalis/model/sagas/update_actions";
 import generateDummyTrees from "oxalis/model/helpers/generate_dummy_trees";
 import { diffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 
 process.on("unhandledRejection", (err, promise) => {
   console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");
@@ -33,6 +33,7 @@ test("getAnnotationInformation()", async t => {
     APITracingTypeEnum.Explorational,
   );
   t.is(annotation.id, annotationId);
+  writeFlowCheckingFile(annotation, "annotation", "APIAnnotationType");
   t.snapshot(annotation, { id: "annotations-getAnnotationInformation" });
 });
 
@@ -139,6 +140,7 @@ test("getTracingForAnnotations()", async t => {
   const createdExplorational = await api.createExplorational(dataSetName, "skeleton", false);
 
   const tracing = await api.getTracingForAnnotations(createdExplorational);
+  writeFlowCheckingFile(tracing, "tracing", "HybridServerTracingType");
   t.snapshot(replaceVolatileValues(tracing.skeleton), {
     id: "annotations-tracing",
   });

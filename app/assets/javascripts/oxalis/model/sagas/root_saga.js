@@ -18,7 +18,8 @@ import {
   watchAnnotationAsync,
 } from "oxalis/model/sagas/annotation_saga";
 import { alert } from "libs/window";
-import { _all, _call, fork, take, _cancel, type Saga } from "oxalis/model/sagas/effect-generators";
+import { _all, _call, fork, take, _cancel } from "oxalis/model/sagas/effect-generators";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
 
 export default function* rootSaga(): Saga<void> {
   while (true) {

@@ -89,20 +89,20 @@ class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, State
 
     if (team) {
       const selectedTeam = { id: team.id, name: teamName, isTeamManager };
-      const newSelectedTeams = update(this.state.selectedTeams, {
-        [teamName]: { $set: selectedTeam },
-      });
-
-      this.setState({ selectedTeams: newSelectedTeams });
+      this.setState(prevState => ({
+        selectedTeams: update(prevState.selectedTeams, {
+          [teamName]: { $set: selectedTeam },
+        }),
+      }));
     }
   }
 
   handleUnselectTeam(teamName: string) {
-    const newSelectedTeams = update(this.state.selectedTeams, {
-      $unset: [teamName],
-    });
-
-    this.setState({ selectedTeams: newSelectedTeams });
+    this.setState(prevState => ({
+      selectedTeams: update(prevState.selectedTeams, {
+        $unset: [teamName],
+      }),
+    }));
   }
 
   getTeamComponent(team: APITeamType) {

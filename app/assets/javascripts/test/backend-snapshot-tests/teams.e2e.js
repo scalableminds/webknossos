@@ -1,9 +1,13 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-/* eslint-disable import/first */
 // @flow
-import { tokenUserA, setCurrToken, resetDatabase } from "../enzyme/e2e-setup";
 import test from "ava";
 import _ from "lodash";
+import {
+  tokenUserA,
+  setCurrToken,
+  resetDatabase,
+  writeFlowCheckingFile,
+} from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 
 test.before("Reset database and change token", async () => {
@@ -13,6 +17,7 @@ test.before("Reset database and change token", async () => {
 
 test("getTeams()", async t => {
   const teams = _.sortBy(await api.getTeams(), team => team.name);
+  writeFlowCheckingFile(teams, "team", "APITeamType", { isArray: true });
   t.snapshot(teams, { id: "teams-getTeams()" });
 });
 

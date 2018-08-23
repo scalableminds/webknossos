@@ -10,9 +10,12 @@ import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
 import type {
   APIUserType,
   APIScriptType,
+  APIScriptCreatorType,
+  APIScriptUpdaterType,
   APITaskTypeType,
   APITeamType,
   APIProjectType,
+  APIProjectWithAssignmentsType,
   APIProjectCreatorType,
   APIProjectUpdaterType,
   APITaskType,
@@ -21,6 +24,7 @@ import type {
   APIDataStoreType,
   DatasetConfigType,
   APIDatasetType,
+  APIMaybeUnimportedDatasetType,
   APIDataSourceType,
   APIDataSourceWithMessagesType,
   APITimeIntervalType,
@@ -170,13 +174,16 @@ export function deleteScript(scriptId: string): Promise<void> {
   });
 }
 
-export function createScript(script: APIScriptType): Promise<APIScriptType> {
+export function createScript(script: APIScriptCreatorType): Promise<APIScriptType> {
   return Request.sendJSONReceiveJSON("/api/scripts", {
     data: script,
   });
 }
 
-export function updateScript(scriptId: string, script: APIScriptType): Promise<APIScriptType> {
+export function updateScript(
+  scriptId: string,
+  script: APIScriptUpdaterType,
+): Promise<APIScriptType> {
   return Request.sendJSONReceiveJSON(`/api/scripts/${scriptId}`, {
     method: "PUT",
     data: script,
@@ -244,8 +251,8 @@ export function deleteTeam(teamId: string): Promise<void> {
 }
 
 // ### Projects
-function transformProject(response): APIProjectType {
-  return Object.assign(response, {
+function transformProject<T: APIProjectType | APIProjectWithAssignmentsType>(response: T): T {
+  return Object.assign({}, response, {
     expectedTime: Utils.millisecondsToMinutes(response.expectedTime),
   });
 }
@@ -257,7 +264,9 @@ export async function getProjects(): Promise<Array<APIProjectType>> {
   return responses.map(transformProject);
 }
 
-export async function getProjectsWithOpenAssignments(): Promise<Array<APIProjectType>> {
+export async function getProjectsWithOpenAssignments(): Promise<
+  Array<APIProjectWithAssignmentsType>,
+> {
   const responses = await Request.receiveJSON("/api/projects/assignments");
   assertResponseLimit(responses);
 
@@ -272,7 +281,7 @@ export async function getProject(projectName: string): Promise<APIProjectType> {
 export async function increaseProjectTaskInstances(
   projectName: string,
   delta?: number = 1,
-): Promise<APIProjectType> {
+): Promise<APIProjectWithAssignmentsType> {
   const project = await Request.receiveJSON(
     `/api/projects/${projectName}/incrementEachTasksInstances?delta=${delta}`,
   );
@@ -337,25 +346,17 @@ export function deleteTask(taskId: string): Promise<void> {
     method: "DELETE",
   });
 }
-function transformTask(response): APITaskType {
-  // apply some defaults
-  response.type = {
-    summary: Utils.__guard__(response.type, x => x.summary) || "<deleted>",
-    id: Utils.__guard__(response.type, x1 => x1.id) || "",
-  };
+function transformTask(task: APITaskType): APITaskType {
+  const tracingTime = task.tracingTime == null ? 0 : task.tracingTime;
 
-  if (response.tracingTime == null) {
-    response.tracingTime = 0;
-  }
   // convert bounding box
-  if (response.boundingBox != null) {
-    const { topLeft, width, height, depth } = response.boundingBox;
-    response.boundingBoxVec6 = topLeft.concat([width, height, depth]);
-  } else {
-    response.boundingBoxVec6 = [];
+  let boundingBoxVec6;
+  if (task.boundingBox != null) {
+    const { topLeft, width, height, depth } = task.boundingBox;
+    boundingBoxVec6 = Utils.numberArrayToVector6(topLeft.concat([width, height, depth]));
   }
 
-  return response;
+  return { ...task, tracingTime, boundingBoxVec6 };
 }
 
 export async function getTasks(queryObject: QueryObjectType): Promise<Array<APITaskType>> {
@@ -568,7 +569,7 @@ export async function getTracingForAnnotationType(
 }
 
 // ### Datasets
-export async function getDatasets(): Promise<Array<APIDatasetType>> {
+export async function getDatasets(): Promise<Array<APIMaybeUnimportedDatasetType>> {
   const datasets = await Request.receiveJSON("/api/datasets");
   assertResponseLimit(datasets);
 
@@ -576,7 +577,7 @@ export async function getDatasets(): Promise<Array<APIDatasetType>> {
 }
 
 export function getDatasetDatasource(
-  dataset: APIDatasetType,
+  dataset: APIMaybeUnimportedDatasetType,
 ): Promise<APIDataSourceWithMessagesType> {
   return doWithToken(token =>
     Request.receiveJSON(`${dataset.dataStore.url}/data/datasets/${dataset.name}?token=${token}`),
@@ -647,11 +648,11 @@ export function getDatasetAccessList(datasetName: string): Promise<Array<APIUser
   return Request.receiveJSON(`/api/datasets/${datasetName}/accessList`);
 }
 
-export async function addDataset(datatsetConfig: DatasetConfigType): Promise<void> {
+export async function addDataset(datasetConfig: DatasetConfigType): Promise<void> {
   await doWithToken(token =>
     Request.sendMultipartFormReceiveJSON(`/data/datasets?token=${token}`, {
-      data: datatsetConfig,
-      host: datatsetConfig.datastore,
+      data: datasetConfig,
+      host: datasetConfig.datastore,
     }),
   );
 }
@@ -669,6 +670,22 @@ export async function addForeignDataSet(
     },
   });
   return result;
+}
+
+// Returns void if the name is valid. Otherwise, a string is returned which denotes the reason.
+export async function isDatasetNameValid(dataSetName: string): Promise<?string> {
+  if (dataSetName === "") {
+    return "The dataset name must not be empty.";
+  }
+  try {
+    await Request.receiveJSON(`/api/datasets/${dataSetName}/isValidNewName`, {
+      doNotCatch: true,
+    });
+    return null;
+  } catch (ex) {
+    const json = JSON.parse(await ex.text());
+    return json.messages.map(msg => Object.values(msg)[0]).join(". ");
+  }
 }
 
 export function updateDatasetTeams(
@@ -718,7 +735,7 @@ export async function getDatastores(): Promise<Array<APIDataStoreType>> {
 export const getDataStoresCached = _.memoize(getDatastores);
 
 // ### Active User
-export function getActiveUser(options: Object = {}) {
+export function getActiveUser(options: Object = {}): Promise<APIUserType> {
   return Request.receiveJSON("/api/user", options);
 }
 

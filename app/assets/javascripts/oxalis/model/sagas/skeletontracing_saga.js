@@ -16,8 +16,8 @@ import {
   _takeEvery,
   select,
   race,
-  type Saga,
 } from "oxalis/model/sagas/effect-generators";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
 import {
   deleteBranchPointAction,
   setTreeNameAction,
@@ -62,7 +62,7 @@ import EdgeCollection, { diffEdgeCollections } from "oxalis/model/edge_collectio
 function* centerActiveNode(action: ActionType): Saga<void> {
   getActiveNode(yield* select((state: OxalisState) => enforceSkeletonTracing(state.tracing))).map(
     activeNode => {
-      if (action.suppressAnimation) {
+      if (action.suppressAnimation === true) {
         Store.dispatch(setPositionAction(activeNode.position));
         Store.dispatch(setRotationAction(activeNode.rotation));
       } else {

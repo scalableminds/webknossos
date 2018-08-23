@@ -61,6 +61,7 @@ export const tracing: ServerSkeletonTracingType = {
     },
   ],
   treeGroups: [],
+  dataSetName: "ROI2017_wkw",
   createdTimestamp: 1502302761387,
   activeNodeId: 3,
   editPosition: { x: 24, y: 32, z: 0 },

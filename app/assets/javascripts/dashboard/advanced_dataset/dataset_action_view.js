@@ -4,30 +4,32 @@
 import * as React from "react";
 import Toast from "libs/toast";
 import messages from "messages";
-import { Link } from "react-router-dom";
+import { Link, withRouter } from "react-router-dom";
 import { Dropdown, Menu, Icon, Tooltip } from "antd";
-import type { APIDatasetType } from "admin/api_flow_types";
+import type { APIMaybeUnimportedDatasetType } from "admin/api_flow_types";
+import type { RouterHistory } from "react-router-dom";
 import { createExplorational, triggerDatasetClearCache } from "admin/admin_rest_api";
 import features from "features";
 
 type Props = {
-  dataset: APIDatasetType,
+  dataset: APIMaybeUnimportedDatasetType,
   isUserAdmin: boolean,
+  history: RouterHistory,
 };
 
 type State = {};
 
-export default class DatasetActionView extends React.PureComponent<Props, State> {
+class DatasetActionView extends React.PureComponent<Props, State> {
   createTracing = async (
-    dataset: APIDatasetType,
+    dataset: APIMaybeUnimportedDatasetType,
     typ: "skeleton" | "volume" | "hybrid",
     withFallback: boolean,
   ) => {
     const annotation = await createExplorational(dataset.name, typ, withFallback);
-    window.location.href = `/annotations/${annotation.typ}/${annotation.id}`;
+    this.props.history.push(`/annotations/${annotation.typ}/${annotation.id}`);
   };
 
-  clearCache = async (dataset: APIDatasetType) => {
+  clearCache = async (dataset: APIMaybeUnimportedDatasetType) => {
     await triggerDatasetClearCache(dataset.dataStore.url, dataset.name);
     Toast.success(messages["dataset.clear_cache_success"]);
   };
@@ -133,7 +135,10 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
                 title="Create Hybrid Tracing"
               >
                 <Icon type="swap" />
-                Start Hybrid Tracing
+                {"Start Hybrid Tracing "}
+                <Tooltip title="Experimental" placement="topLeft">
+                  <Icon type="exclamation-circle-o" style={{ color: "orange" }} />
+                </Tooltip>
               </a>
             ) : null}
           </div>
@@ -142,3 +147,5 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
     );
   }
 }
+
+export default withRouter(DatasetActionView);

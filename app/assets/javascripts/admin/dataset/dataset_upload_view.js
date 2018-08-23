@@ -112,7 +112,6 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
         );
       }
     };
-
     return (
       <div className="dataset-administration" style={{ padding: 5 }}>
         <Spin spinning={this.state.isUploading} size="large">

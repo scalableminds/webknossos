@@ -136,6 +136,7 @@ case class DataSet(
       dataStoreInfo <- dataStoreInfo
       organization <- organization
       dataSource <- constructDataSource
+      isForeign <- dataStore.map(_.isForeign)
     } yield {
       Json.obj("name" -> name,
         "dataSource" -> dataSource,
@@ -149,7 +150,8 @@ case class DataSet(
         "created" -> created,
         "isEditable" -> isEditable,
         "lastUsedByUser" -> lastUsedByUser,
-        "logoUrl" -> logoUrl)
+        "logoUrl" -> logoUrl,
+        "isForeign" -> isForeign)
     }
   }
 }

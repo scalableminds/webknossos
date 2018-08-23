@@ -11,13 +11,15 @@ import models.team.TeamDAO
 import models.user.UserService
 import oxalis.security.URLSharing
 import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareAction}
+import com.scalableminds.util.tools.Math
 import play.api.Play.current
 import play.api.cache.Cache
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import com.scalableminds.util.tools.Math
 import utils.ObjectId
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
+import net.liftweb.common.Full
 
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.Future
@@ -70,6 +72,24 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
         CONTENT_LENGTH -> image.length.toString,
         CONTENT_TYPE -> play.api.libs.MimeTypes.forExtension("jpeg").getOrElse(play.api.http.ContentTypes.BINARY)
       )
+    }
+  }
+
+  def addForeignDataStoreAndDataSet() = SecuredAction.async { implicit request =>
+    for {
+      body <- request.body.asJson.toFox
+      url = (body \ "url").as[String]
+      dataStoreName = (body \ "dataStoreName").as[String]
+      dataSetName = (body \ "dataSetName").as[String]
+      _ <- bool2Fox(request.identity.isAdmin) ?~> Messages("user.noAdmin")
+      noDataStoreBox <- DataStoreDAO.findOneByName(dataStoreName).reverse.futureBox
+      _ <- Fox.runOptional(noDataStoreBox)(_ => DataSetService.addForeignDataStore(dataStoreName, url))
+      _ <- bool2Fox(DataSetService.isProperDataSetName(dataSetName)) ?~> Messages("dataSet.import.impossible.name")
+      _ <- DataSetDAO.findOneByName(dataSetName).reverse ?~> Messages("dataSet.name.alreadyTaken")
+      organizationName <- request.identity.organization.map(_.name)
+      _ <- DataSetService.addForeignDataSet(dataStoreName, dataSetName, organizationName)
+    } yield {
+      Ok
     }
   }
 

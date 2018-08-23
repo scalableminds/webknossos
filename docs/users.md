@@ -1,22 +1,30 @@
 # Managing Users & Access Rights
 
-webKnossos offers a built-in user management system with different user roles.
+webKnossos offers a built-in user management system with different user roles and permissions.
 
 
 ## Organizations
-- explain default orga
-- structure: orga -> team -> user
+
+The root entity in webKnossos is an organization, you will create one when setting up webKnossos.
+This organization will contain all your users, datasets, tracings and other data.
+You are not allowed to see data from organizations other than your own and members from other organizations will not be able to see data from your organization.
+
+When creating your organization, a default team with the same name will be created.
+Users that register for your organization will, by default, be assigned to that default team.
+You are free to create as many teams as you want and to assign users to multiple teams.
+Teams can be used to manage dataset access permissions or simply to assign users to logical groups.
 
 
 ## Access Rights / Roles
 
+Users are allowed to access and do different things, depending on their specific role.
 There are three different roles for webKnossos users:
 
-  - __Users:__ A basic user of webKnossos. Is able to work on tasks that are assigned to him and create explorational tracings.
+  - __Users:__ A basic user of webKnossos. Users are able to work on tasks that are assigned to them and create explorational tracings. They are able to access their own tracings.
 
-  - __Team Manager:__ Manages a specific team. Is able to administrate tasks/taskTypes/projects belonging to that specific team. Is also allowed to activate new users.
+  - __Team Manager:__ Manages a specific team. Team Managers are able to administrate tasks/taskTypes/projects belonging to that specific team. They are also allowed to activate new users. Team managers are able to access all tracings that belong to users of their team.
 
-  - __Admin:__ Manages the whole organization with all teams. Is able to do the same things as the team manager, but across teams. Admins can also give admin permissions to other users by using the `Grant Admin Rights` button at the top of the user list.
+  - __Admin:__ Manages the whole organization with all teams. Admins are able to do the same things as team managers, but across teams. They can also give admin permissions to other users by using the `Grant Admin Rights` button at the top of the user list. Admins are able to access all tracings that belong to their organization.
 
 
 ## Registering New Users
@@ -35,6 +43,7 @@ Users that click on this link, don't need to select an organization during signu
 Newly registered users are deactivated at first and need to be activated by an admin or a team manager.
 By default, the user list only shows active users, so make sure to deactivate the `Show Active Users Only` filter at the top of the user list to activate new users.
 However, deactivated users that registered in the last 14 days, will be shown above the user list regardlessly and can be activated quickly from there.
+
 When activating a new user, a popup is opened that allows
   - to assign that user to specific teams
   - to pick whether the user should be a team manager or not

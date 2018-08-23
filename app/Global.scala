@@ -1,8 +1,7 @@
 import akka.actor.Props
 import com.newrelic.api.agent.NewRelic
-import com.scalableminds.util.mail.Mailer
+import com.scalableminds.util.mail.{Mailer, MailerConfig}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
-import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService
 import models.annotation.AnnotationDAO
@@ -14,7 +13,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.concurrent._
 import play.api.mvc.Results.Ok
 import play.api.mvc._
-import utils.SQLClient
+import utils.{SQLClient, WkConf}
 
 import scala.concurrent.Future
 import sys.process._
@@ -23,16 +22,15 @@ import scala.concurrent.duration._
 object Global extends GlobalSettings with LazyLogging{
 
   override def onStart(app: Application) {
-    val conf = app.configuration
 
     logger.info("Executing Global START")
-    startActors(conf.underlying, app)
+    startActors(app)
 
     ensurePostgresDatabase.onComplete { _ =>
-      if (conf.getBoolean("application.insertInitialData") getOrElse false) {
+      if (WkConf.Application.insertInitialData) {
         InitialDataService.insert.futureBox.map {
           case Full(_) => ()
-          case Failure(msg, _, _) => logger.warn("No initial data inserted: " + msg)
+          case Failure(msg, _, _) => logger.info("No initial data inserted: " + msg)
           case _ => logger.warn("Error while inserting initial data")
         }
       }
@@ -60,10 +58,18 @@ object Global extends GlobalSettings with LazyLogging{
     super.onStop(app)
   }
 
-  def startActors(conf: Config, app: Application) {
-
+  def startActors(app: Application) {
+    val mailerConf = MailerConfig(
+      WkConf.Mail.enabled,
+      WkConf.Mail.Smtp.host,
+      WkConf.Mail.Smtp.port,
+      WkConf.Mail.Smtp.tls,
+      WkConf.Mail.Smtp.user,
+      WkConf.Mail.Smtp.pass,
+      WkConf.Mail.Subject.prefix
+    )
     Akka.system(app).actorOf(
-      Props(new Mailer(conf)),
+      Props(new Mailer(mailerConf)),
       name = "mailActor")
   }
 

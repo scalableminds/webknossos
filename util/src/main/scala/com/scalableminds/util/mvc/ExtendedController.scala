@@ -1,6 +1,3 @@
-/*
-* Copyright (C) 2011-2017 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
-*/
 package com.scalableminds.util.mvc
 
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
@@ -22,7 +19,7 @@ trait ResultBox extends I18nSupport{
       result
     case ParamFailure(msg, _, _, statusCode: Int) =>
       new JsonResult(statusCode)(Messages(msg))
-    case ParamFailure(msg, _, _, messages: Seq[(String, String)]) =>
+    case ParamFailure(msg, _, _, messages: JsArray) =>
       new JsonResult(BAD_REQUEST)(jsonMessages(messages))
     case Failure(msg, _, chain) =>
       new JsonResult(BAD_REQUEST)(Messages(msg), formatChainOpt(chain))
@@ -41,9 +38,9 @@ trait ResultBox extends I18nSupport{
     case _ => ""
   }
 
-  def jsonMessages(messages: Seq[(String, String)]): JsObject =
+  def jsonMessages(messages: JsArray): JsObject =
     Json.obj(
-      "messages" -> messages.map(m => Json.obj(m._1 -> m._2)))
+      "messages" -> messages)
 }
 
 trait ResultImplicits extends ResultBox with I18nSupport{
@@ -72,7 +69,6 @@ trait ResultImplicits extends ResultBox with I18nSupport{
   implicit def box2Result[T <: Result](b: Box[T]): Result =
     asResult(b)
 
-//  implicit def box2ResultBox[T <: Result](b: Box[T]) = new ResultBox(b)
 }
 
 class JsonResult(status: Int) extends Result(header = ResponseHeader(status), body = Enumerator(Array[Byte]())) with JsonResultAttribues {

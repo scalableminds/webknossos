@@ -7,7 +7,7 @@ import TaskCreateBulkView from "admin/task/task_create_bulk_view";
 const { TabPane } = Tabs;
 
 const TaskCreateView = () => (
-  <Tabs defaultActiveKey="1" className="container task-edit-administration">
+  <Tabs defaultActiveKey="1" className="container">
     <TabPane
       tab={
         <span>

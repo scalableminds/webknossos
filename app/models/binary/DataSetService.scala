@@ -1,6 +1,7 @@
 package models.binary
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.rpc.RPC
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.typesafe.scalalogging.LazyLogging
@@ -51,6 +52,33 @@ object DataSetService extends FoxImplicits with LazyLogging {
         _ <- DataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(newId, List())
       } yield ()
       case _ => Fox.failure("org.notExist")
+    }
+  }
+
+  def addForeignDataSet(dataStoreName: String, dataSetName: String, organizationName: String)(implicit ctx: DBAccessContext) = {
+    for {
+      dataStore <- DataStoreDAO.findOneByName(dataStoreName)
+      foreignDataset <- getForeignDataSet(dataStore.url, dataSetName)
+      dataStoreInfo = DataStoreInfo(dataStore.name, dataStore.url, dataStore.typ)
+      _ <- DataSetService.createDataSet(dataSetName, dataStoreInfo, organizationName, foreignDataset)
+    } yield {
+      ()
+    }
+  }
+
+  def getForeignDataSet(dataStoreUrl: String, dataSetName: String): Fox[InboxDataSource] = {
+    RPC(s"${dataStoreUrl}/data/datasets/${dataSetName}/readInboxDataSourceLike")
+      .withQueryString("token" -> "") // we don't need a valid token because the DataSet is public, but we have to add the parameter token because it is a TokenSecuredAction
+      .getWithJsonResponse[InboxDataSource]
+  }
+
+
+  def addForeignDataStore(name: String, url: String)(implicit ctx: DBAccessContext) = {
+    val dataStore = DataStore(name, url, WebKnossosStore, "", isForeign = true) // the key can be "" because keys are only important for own DataStore. Own Datastores have a key that is not ""
+    for {
+      _ <- DataStoreDAO.insertOne(dataStore)
+    } yield {
+      ()
     }
   }
 

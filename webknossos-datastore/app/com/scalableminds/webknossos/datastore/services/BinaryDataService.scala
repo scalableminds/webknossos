@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.webknossos.datastore.services
 
 import java.nio.file.Paths
@@ -13,6 +10,7 @@ import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstructi
 import com.scalableminds.webknossos.datastore.storage.{CachedCube, DataCubeCache}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.BucketProvider
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
@@ -22,13 +20,13 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class BinaryDataService @Inject()(config: Configuration) extends FoxImplicits with LazyLogging {
+class BinaryDataService @Inject()(config: DataStoreConfig) extends FoxImplicits with LazyLogging {
 
-  val dataBaseDir = Paths.get(config.getString("braingames.binary.baseFolder").getOrElse("binaryData"))
+  val dataBaseDir = Paths.get(config.Braingames.Binary.baseFolder)
 
-  val loadTimeout: FiniteDuration = config.getInt("braingames.binary.loadTimeout").getOrElse(5).seconds
+  val loadTimeout: FiniteDuration = config.Braingames.Binary.loadTimeout
 
-  val maxCacheSize: Int = config.getInt("braingames.binary.maxCacheSize").getOrElse(100)
+  val maxCacheSize: Int = config.Braingames.Binary.cacheMaxSize
 
   lazy val cache = new DataCubeCache(maxCacheSize)
 

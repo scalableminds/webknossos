@@ -360,6 +360,7 @@ class UserListView extends React.PureComponent<Props, State> {
                 this.props.activeUser.isAdmin ? (
                   <EditableTextLabel
                     value={user.email}
+                    label="Email"
                     rules={{
                       message: messages["auth.registration_email_invalid"],
                       type: "email",

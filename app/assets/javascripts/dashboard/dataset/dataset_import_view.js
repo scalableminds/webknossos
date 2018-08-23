@@ -9,6 +9,7 @@ import {
   updateDataset,
   getDatasetDefaultConfiguration,
   updateDatasetDefaultConfiguration,
+  readDatasetDatasource,
   getDatasetDatasource,
   updateDatasetDatasource,
   updateDatasetTeams,
@@ -81,7 +82,13 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     try {
       this.setState({ isLoading: true });
       const dataset = await getDataset(this.props.datasetName);
-      const { dataSource, messages: dataSourceMessages } = await getDatasetDatasource(dataset);
+      let dataSource;
+      let dataSourceMessages = [];
+      if (dataset.isForeign) {
+        dataSource = await readDatasetDatasource(dataset);
+      } else {
+        ({ dataSource, messages: dataSourceMessages } = await getDatasetDatasource(dataset));
+      }
       if (dataSource == null) {
         throw new Error("No datasource received from server.");
       }
@@ -219,7 +226,9 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       }
 
       const dataSource = JSON.parse(formValues.dataSourceJson);
-      await updateDatasetDatasource(this.props.datasetName, dataset.dataStore.url, dataSource);
+      if (this.state.dataset != null && !this.state.dataset.isForeign) {
+        await updateDatasetDatasource(this.props.datasetName, dataset.dataStore.url, dataSource);
+      }
 
       await updateDatasetTeams(dataset.name, teamIds);
 
@@ -371,6 +380,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                   <Hideable hidden={this.state.activeTabKey !== "data"}>
                     <SimpleAdvancedDataForm
                       key="SimpleAdvancedDataForm"
+                      isForeignDataset={this.state.dataset != null && this.state.dataset.isForeign}
                       form={form}
                       activeDataSourceEditMode={this.state.activeDataSourceEditMode}
                       onChange={activeEditMode => {

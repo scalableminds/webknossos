@@ -7,12 +7,15 @@ import java.io.File
 
 import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.services._
 import play.api.data.Form
 import play.api.data.Forms.{nonEmptyText, tuple}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, InboxDataSourceLike}
+
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -29,6 +32,21 @@ class DataSourceController @Inject()(
       AllowRemoteOrigin {
         val ds = dataSourceRepository.findAll
         Ok(Json.toJson(ds))
+      }
+    }
+  }
+
+  def read(dataSetName: String) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)) {
+    implicit request => {
+      AllowRemoteOrigin {
+        val dsOption: Option[InboxDataSource] = dataSourceRepository.findByName(dataSetName)
+        dsOption match {
+          case Some(ds) => {
+            val dslike: InboxDataSourceLike = ds
+            Ok(Json.toJson(dslike))
+          }
+          case _ => Ok
+        }
       }
     }
   }

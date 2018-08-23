@@ -2,7 +2,7 @@ package controllers
 
 import javax.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.binary.DataStoreDAO
+import models.binary.{DataStore, DataStoreDAO, WebKnossosStore}
 import oxalis.security.WebknossosSilhouette.UserAwareAction
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._

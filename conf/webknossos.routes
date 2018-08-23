@@ -57,6 +57,7 @@ GET           /api/teams/:id/progressOverview                                   
 POST          /api/datasets/:dataSetName/createExplorational                    controllers.AnnotationController.createExplorational(dataSetName: String)
 GET           /api/datasets                                                     controllers.DataSetController.list
 POST          /api/datasets                                                     controllers.DataSetController.create(typ: String)
+GET           /api/datasets/addForeign                                          controllers.DataSetController.addForeignDataStoreAndDataSet(url, dataStoreName, dataSetName)
 GET           /api/datasets/:dataSetName                                        controllers.DataSetController.read(dataSetName: String, sharingToken: Option[String])
 POST          /api/datasets/:dataSetName                                        controllers.DataSetController.update(dataSetName: String)
 GET           /api/datasets/:dataSetName/accessList                             controllers.DataSetController.accessList(dataSetName: String)

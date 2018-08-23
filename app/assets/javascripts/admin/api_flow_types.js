@@ -63,6 +63,7 @@ export type APIDataStoreType = {
   +url: string,
   +typ: "webknossos-store",
   +accessToken?: string,
+  +isForeign?: boolean,
 };
 
 export type APITeamType = {

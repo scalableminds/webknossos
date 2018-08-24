@@ -447,17 +447,17 @@ class UserListView extends React.PureComponent<Props, State> {
                   </Link>
                   <br />
                   {// eslint-disable-next-line no-nested-ternary
-                  this.props.activeUser.isAdmin ? (
-                    user.isActive ? (
+                  user.isActive ? (
+                    this.props.activeUser.isAdmin ? (
                       <a href="#" onClick={() => this.deactivateUser(user)}>
                         <Icon type="user-delete" />Deactivate User
                       </a>
-                    ) : (
-                      <a href="#" onClick={() => this.activateUser(user)}>
-                        <Icon type="user-add" />Activate User
-                      </a>
-                    )
-                  ) : null}
+                    ) : null
+                  ) : (
+                    <a href="#" onClick={() => this.activateUser(user)}>
+                      <Icon type="user-add" />Activate User
+                    </a>
+                  )}
                 </span>
               )}
             />

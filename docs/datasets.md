@@ -73,7 +73,7 @@ The `Advanced` view lets you edit the underlying JSON configuration directly.
 - `Interpolation`: Whether interpolation should be enabled by default.
 - `Layer Configuration`: This is an advanced feature to control the default settings (e.g. brightness, contrast, color) per layer. It needs to be configured in a JSON format.
 
-![Dataset editing: View Configuration](images/dataset_view_configuration.png)
+![Dataset editing: View Configuration](images/dataset_view_config.png)
 
 ## Dataset Sharing
 Read more in the [Sharing guide](./sharing.md#dataset-sharing)

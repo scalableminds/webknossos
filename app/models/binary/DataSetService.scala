@@ -25,7 +25,7 @@ object DataSetService extends FoxImplicits with LazyLogging {
 
   def createDataSet(
                      name: String,
-                     dataStore: DataStoreInfo,
+                     dataStore: DataStore,
                      owningOrganization: String,
                      dataSource: InboxDataSource,
                      isActive: Boolean = false
@@ -59,8 +59,7 @@ object DataSetService extends FoxImplicits with LazyLogging {
     for {
       dataStore <- DataStoreDAO.findOneByName(dataStoreName)
       foreignDataset <- getForeignDataSet(dataStore.url, dataSetName)
-      dataStoreInfo = DataStoreInfo(dataStore.name, dataStore.url, dataStore.typ)
-      _ <- DataSetService.createDataSet(dataSetName, dataStoreInfo, organizationName, foreignDataset)
+      _ <- DataSetService.createDataSet(dataSetName, dataStore, organizationName, foreignDataset)
     } yield {
       ()
     }
@@ -74,7 +73,7 @@ object DataSetService extends FoxImplicits with LazyLogging {
 
 
   def addForeignDataStore(name: String, url: String)(implicit ctx: DBAccessContext) = {
-    val dataStore = DataStore(name, url, WebKnossosStore, "", isForeign = true) // the key can be "" because keys are only important for own DataStore. Own Datastores have a key that is not ""
+    val dataStore = DataStore(name, url, "", isForeign = true) // the key can be "" because keys are only important for own DataStore. Own Datastores have a key that is not ""
     for {
       _ <- DataStoreDAO.insertOne(dataStore)
     } yield {
@@ -83,15 +82,15 @@ object DataSetService extends FoxImplicits with LazyLogging {
   }
 
   def updateDataSource(
-                        dataStoreInfo: DataStoreInfo,
+                        dataStore: DataStore,
                         dataSource: InboxDataSource
                       )(implicit ctx: DBAccessContext): Fox[Unit] = {
 
     DataSetDAO.findOneByName(dataSource.id.name)(GlobalAccessContext).futureBox.flatMap {
-      case Full(dataSet) if dataSet._dataStore == dataStoreInfo.name =>
+      case Full(dataSet) if dataSet._dataStore == dataStore.name =>
         DataSetDAO.updateDataSourceByName(
           dataSource.id.name,
-          dataStoreInfo.name,
+          dataStore.name,
           dataSource,
           dataSource.isUsable)(GlobalAccessContext).futureBox
       case Full(_) =>
@@ -102,7 +101,7 @@ object DataSetService extends FoxImplicits with LazyLogging {
       case _ =>
         createDataSet(
           dataSource.id.name,
-          dataStoreInfo,
+          dataStore,
           dataSource.id.team,
           dataSource,
           isActive = dataSource.isUsable).futureBox
@@ -121,9 +120,8 @@ object DataSetService extends FoxImplicits with LazyLogging {
   def updateDataSources(dataStore: DataStore, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext) = {
     logger.info(s"[${dataStore.name}] Available datasets: " +
       s"${dataSources.count(_.isUsable)} (usable), ${dataSources.count(!_.isUsable)} (unusable)")
-    val dataStoreInfo = DataStoreInfo(dataStore.name, dataStore.url, dataStore.typ)
     Fox.serialSequence(dataSources) { dataSource =>
-      DataSetService.updateDataSource(dataStoreInfo, dataSource)
+      DataSetService.updateDataSource(dataStore, dataSource)
     }
   }
 

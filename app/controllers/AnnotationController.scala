@@ -6,7 +6,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import models.annotation._
-import models.binary.{DataSet, DataSetDAO, DataStoreHandlingStrategy}
+import models.binary.{DataSet, DataSetDAO, DataStoreHandler}
 import models.task.TaskDAO
 import models.user.time._
 import models.user.{User, UserDAO}

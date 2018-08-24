@@ -11,7 +11,6 @@ import oxalis.security.WebknossosSilhouette
 import play.api._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.concurrent._
-import play.api.mvc.Results.Ok
 import play.api.mvc._
 import utils.{SQLClient, WkConf}
 
@@ -71,14 +70,6 @@ object Global extends GlobalSettings with LazyLogging{
     Akka.system(app).actorOf(
       Props(new Mailer(mailerConf)),
       name = "mailActor")
-  }
-
-  override def onRouteRequest(request: RequestHeader): Option[Handler] = {
-    if (request.uri.matches("^(/api/|/data/|/assets/).*$")) {
-      super.onRouteRequest(request)
-    } else {
-      Some(Action {Ok(views.html.main())})
-    }
   }
 
   override def onError(request: RequestHeader, ex: Throwable) = {

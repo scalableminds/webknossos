@@ -3,7 +3,7 @@ package oxalis.security
 import play.api.i18n._
 import play.api.Play
 import com.scalableminds.util.tools.FoxImplicits
-import models.user.{User}
+import models.user.User
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import com.mohiva.play.silhouette.api.{Environment, Silhouette}

@@ -5,7 +5,7 @@ import { Tooltip, Icon, Table, InputNumber } from "antd";
 
 const { Column } = Table;
 
-export type ExperienceTableEntry = {
+export type EditTableEntry = {
   domain: string,
   value: number,
   removed: boolean,
@@ -13,10 +13,10 @@ export type ExperienceTableEntry = {
 
 type Props = {
   title: ?string,
-  tableData: Array<ExperienceTableEntry>,
+  tableData: Array<EditTableEntry>,
   isMultipleUsersEditing: boolean,
   setValueOfEntry: (number, number) => void,
-  recordModifiedAndExistedBefore: (record: ExperienceTableEntry) => boolean,
+  recordModifiedAndExistedBefore: (record: EditTableEntry) => boolean,
   revertChangesOfEntry: number => void,
   setRemoveOfEntryTo: (number, boolean) => void,
   removeEntryFromTable: number => void,

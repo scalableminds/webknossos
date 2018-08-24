@@ -54,7 +54,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     }
   }
 
-  loadSharedTableEntries = (users: Array<APIUserType>): Array<SharedTableEntry> => {
+  loadSharedTableEntries = (users: Array<APIUserType>): ?Array<SharedTableEntry> => {
     if (users.length > 1) {
       let lowestCountOfDomains = 0;
       for (let i = 0; i < users.length; i++) {
@@ -101,16 +101,14 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     return null;
   };
 
-  loadChangeTableEntries = (users: Array<APIUserType>): Array<ExperienceTableEntry> =>
+  loadChangeTableEntries = (users: Array<APIUserType>): Array<EditTableEntry> =>
     users.length === 1
       ? _.map(users[0].experiences, (value, domain) => ({
           domain,
           value,
           removed: false,
         })).sort(
-          Utils.localeCompareBy(([]: Array<ExperienceTableEntry>), entry =>
-            entry.domain.toLowerCase(),
-          ),
+          Utils.localeCompareBy(([]: Array<EditTableEntry>), entry => entry.domain.toLowerCase()),
         )
       : [];
 

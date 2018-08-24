@@ -20,7 +20,7 @@ class CompactRandomIDGenerator(sizeInBytes: Int = 16)(implicit ec: ExecutionCont
     }
   }
 
-  def generateBlocking = {
+  def generateBlocking: String = {
     val randomValue = new Array[Byte](sizeInBytes)
     CompactRandomIDGenerator.random.nextBytes(randomValue)
     encode(randomValue)

@@ -4,7 +4,7 @@ import com.mohiva.play.silhouette.api.services.{AuthenticatorService, IdentitySe
 import com.mohiva.play.silhouette.api.util.Clock
 import com.mohiva.play.silhouette.api.{Environment, EventBus, RequestProvider}
 import com.mohiva.play.silhouette.impl.authenticators.{BearerTokenAuthenticatorSettings, CookieAuthenticatorSettings}
-import com.mohiva.play.silhouette.impl.util.{DefaultFingerprintGenerator, SecureRandomIDGenerator}
+import com.mohiva.play.silhouette.impl.util.{DefaultFingerprintGenerator}
 import models.user.{User, UserService}
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._

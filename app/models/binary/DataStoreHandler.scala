@@ -16,7 +16,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
 import org.apache.commons.codec.binary.Base64
-import oxalis.security.CompactSecureRandomIDGenerator
+import oxalis.security.CompactRandomIDGenerator
 import play.api.Play.current
 import play.api.http.Status
 import play.api.libs.concurrent.Execution.Implicits._
@@ -65,7 +65,7 @@ trait DataStoreHandlingStrategy {
 
 object DataStoreHandlingStrategy {
 
-  lazy val webKnossosToken = new CompactSecureRandomIDGenerator().generateBlocking
+  lazy val webKnossosToken = new CompactRandomIDGenerator().generateBlocking
 
 }
 

@@ -19,7 +19,7 @@ class WebknossosEnvironment @Inject()(configuration: Configuration)(implicit val
   val cookieSettings = configuration.underlying.as[CookieAuthenticatorSettings]("silhouette.cookieAuthenticator")
   val tokenSettings = configuration.underlying.as[BearerTokenAuthenticatorSettings]("silhouette.tokenAuthenticator")
   val fingerprintGenerator = new DefaultFingerprintGenerator(false)
-  val idGenerator = new CompactSecureRandomIDGenerator
+  val idGenerator = new CompactRandomIDGenerator
   val tokenDAO = new BearerTokenAuthenticatorDAO
 
   val combinedAuthenticatorService = CombinedAuthenticatorService(cookieSettings, tokenSettings, tokenDAO, fingerprintGenerator, idGenerator, Clock())

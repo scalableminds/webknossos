@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxData
 import com.typesafe.scalalogging.LazyLogging
 import models.team.OrganizationDAO
 import net.liftweb.common.Full
-import oxalis.security.{URLSharing, WebknossosSilhouette}
+import oxalis.security.{CompactSecureRandomIDGenerator, URLSharing, WebknossosSilhouette}
 import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.WSResponse
@@ -130,8 +130,8 @@ object DataSetService extends FoxImplicits with LazyLogging {
   def getSharingToken(dataSetName: String)(implicit ctx: DBAccessContext) = {
 
     def createSharingToken(dataSetName: String)(implicit ctx: DBAccessContext) = {
-      val tokenValue = URLSharing.generateToken
       for {
+        tokenValue <- new CompactSecureRandomIDGenerator().generate
         _ <- DataSetDAO.updateSharingTokenByName(dataSetName, Some(tokenValue))
       } yield tokenValue
     }

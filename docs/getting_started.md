@@ -60,7 +60,9 @@ For larger datasets, we recommend the file system upload.
 Read more about the import functionality in the [Datasets guide](./datasets.md).
 
 If you do not have a compatible dataset available, you can use [this small dataset (500 MB)](https://TODO) for testing purposes.
-The data was provided courtesy of the [Max Planck Institute for Brain Research](https://brain.mpg.de).
+The data was provided courtesy of the [Max Planck Institute for Brain Research](https://brain.mpg.de)[^1].
+
+[^1]: Helmstaedter Briggman Denk: [High-accuracy neurite reconstruction for high-throughput neuroanatomy](https://www.nature.com/articles/nn.2868). Nature Neuroscience volume 14, pages 1081–1088 (2011).
 
 By default, datasets are visible to all users in your organization.
 However, webKnossos includes fine-grained permissions to assign datasets to groups of users.

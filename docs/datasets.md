@@ -16,7 +16,7 @@ Read more in the [Data Formats documentation](./data_formats.md).
 To efficienty import large datasets, we recommend to place them directly in the file system:
 
 * Place the dataset at `<webKnossos directory>/binaryData/<Organization name>/<Dataset name>`. For example `/srv/webknossos/binaryData/Springfield_University/great_dataset`.
-* Go to the dataset view on the dashboard
+* Go to the [dataset view on the dashboard](./dashboard.md)
 * Use the refresh button on the dashboard or wait for webKnossos to detect the dataset (up to 10min)
 * Click `Import` for your new dataset
 * Complete the [Import screen](#importing-in-webknossos)

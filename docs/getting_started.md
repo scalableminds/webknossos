@@ -37,37 +37,46 @@ You may also install webKnossos without Docker.
 This may be useful if you intend to develop features for webKnossos.
 Please refer to the [Code Readme](../README.md) for details.
 
-<!--
+
 ## Onboarding
-When starting with webKnossos you'll first need to create an organization.
+When starting with webKnossos you first need to create an organization.
 An organization respresents your lab in webKnossos and handles permissions for users and datasets.
 Choose a descriptive name for your organization, e.g. "University of Springfield", "Simpsons Lab" or "Neuroscience Department".
 
 TODO: Image onboarding org
 
-In the onboarding flow, you'll also be asked to create a user.
+In the onboarding flow, you are asked to create a user account for yourself.
 This will be the first user of your organisation which will automatically be activated and granted admin rights.
 Make sure to enter a correct email address.
 
 TODO: Image onboarding user
 
 ## Your First Dataset
-Now that you've completed the onboarding, you'll need to import a dataset.
-Without any data, webKnossos isn't any fun.
+Now that you've completed the onboarding, you need to import a dataset.
+Without any data, webKnossos is not fun.
 
-For small datasets (max. 1GB), you can use the upload functionality in the UI.
+For small datasets (max. 1GB), you can use the upload functionality provide in the web interface.
 For larger datasets, we recommend the file system upload.
 Read more about the import functionality in the [Datasets guide](./datasets.md).
 
-If you don't have a compatible dataset available, you can use [this small dataset (500 MB)](https://TODO) for testing purposes.
+If you do not have a compatible dataset available, you can use [this small dataset (500 MB)](https://TODO) for testing purposes.
 The data was provided courtesy of the [Max Planck Institute for Brain Research](https://brain.mpg.de).
 
-By default, dataset are visible to all users in your organization.
+By default, datasets are visible to all users in your organization.
 However, webKnossos includes fine-grained permissions to assign datasets to groups of users.
 
-## Your First Tracing
-TODO
-- how do i start my first tracing
+## Your First Annotation
+To get started with your first annotation, navigate to the `Datasets` tab on your [dashboard](./dashboard.md). 
+Identify a dataset that your interested in and click on `Start Skeleton Tracing` to create a new skeleton annotation. 
+webKnosso will launch the main annotation screen allowing you to navigate your dataset and place markers to reconstruct skeletons. 
+
+Drag the mouse while pressing the left mouse button to navgiate the dataset. 
+Right click in the data to place markers, called nodes. 
+Basic movement in the dataset is done with mouse wheel or by pressing space bar keyboard shortcut.
+
+Learn more about skeleton, volume, and hybrid annotations as well as the interface in the [Tracing UI guide](./tracing_ui.md).
+
+TODO Image / Gif show first tracing.
 
 ## Learn more
 Now you know the basics of webKnossos.
@@ -86,7 +95,6 @@ If you need help with webKnossos, there is a [Community Support forum](https://s
 [scalable minds](https://scalableminds.com) also offers commercial support, managed hosting and feature development services.
 [Please contact us](mailto:hello@scalableminds.com) if you want to learn more.
 
--->
 
 ## Advanced Setups
 

@@ -48,7 +48,7 @@ Anyone can access the shared dataset and view it on your webKnossos instance wit
 Further, publicly shared datasets are featured in a dataset gallery on your webKnossos start page for logged-out users.
 Alternatively, navigate to `https://<webKnossos-url>/spotlight`.
 
-![Dataset Gallery view](images/spotlight.png)
+![The Dataset Gallery view provides at public showcase of all your published datasets. No wK account is required to view these.](images/spotlight.png)
 
 Public datasets provide an easy and convenient way of sharing your data with outside users after you have successfully published them.
 Outside users can navigate through your data from the comfort of their own browser.

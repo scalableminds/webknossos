@@ -32,7 +32,7 @@ There are three different roles for webKnossos users:
 
   - __Admin:__ Manages the whole organization with all teams. Admins are able to do the same things as team managers, but across all teams. They can also give admin permissions to other users by using the `Grant Admin Rights` button at the top of the user list. Admins are able to access all tracings that belong to their organization.
 
-Only *Admins* and *Team Managers* are able to see / access the `Admin` menu options in the navigation bar.
+Only *Admins* and *Team managers* are able to see / access the `Admin` menu options in the navigation bar.
 
 By default, each new dataset can only be accessed by the memebers of the organisation team. Add or remove more teams to a dataset for fine-grained access controls. For more information dataset and access rights, [see the dataset guide](./sharing.md#general)
 

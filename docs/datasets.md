@@ -45,7 +45,7 @@ If you uploaded the dataset along with a `datasource-properties.json` metadata f
 ## Edit Dataset
 You can edit the properties of a dataset at any time.
 In addition to the required properties that you need to fill in during import, there are more advanced properties that you can set.
-This screen is similar to the Import screen.
+This screen is similar to the Import screen and split into three tabs:
 
 ### Data
 - `Scale`: The physical size of a voxel in nanometers, e.g. `11, 11, 24`
@@ -54,16 +54,16 @@ This screen is similar to the Import screen.
 
 The `Advanced` view lets you edit the underlying JSON configuration directly.
 
-![Dataset editing: Data](images/dataset_data.png)
+![Dataset Editing: Data Tab](images/dataset_data.png)
 
 ### General
-- `Display Name`: Used as the name of the dataset in the Gallery view.
-- `Description`: Contains more information about your datasets including authors, paper reference, descriptions. Supports Markdown formatting.
+- `Display Name`: Used as the name of the dataset in the [Gallery view](./sharing.md#public_sharing).
+- `Description`: Contains more information about your datasets including authors, paper reference, descriptions. Supports Markdown formatting. The description will featured in the [Gallery view](./sharing.md#public_sharing) as well.
 - `Allowed Teams`: Defines which [teams of your organization](./users.md) have access to this dataset. By default only the organization team has access.
-- `Visibility`: Lets you make the dataset available to the general public and shows it in the public Gallery view. This will enable any visitor to your webKnossos instance to view the data, even unregistered users.
-- `Sharing Link`: A special URL which allows any user to view your dataset that use this link. Because of the random token, the link cannot be guessed by random visitors. You may also revoke the random token and create a new one, when you don't want previous to access your data anymore. Read more in [the Sharing guide](./sharing.md).
+- `Visibility`: Lets you make the dataset available to the general public and shows it in the public [Gallery view](./sharing.md#public_sharing). This will enable any visitor to your webKnossos instance to view the data, even unregistered users.
+- `Sharing Link`: A special URL which allows any user to view your dataset that use this link. Because of the included random token, the link cannot be guessed by random visitors. You may also revoke the random token and create a new one, when you don't want previous users to access your data anymore. Read more in [the Sharing guide](./sharing.md).
 
-![Dataset editing: General](images/dataset_general.png)
+![Dataset Editing: General Tab](images/dataset_general.png)
 
 
 ### View Configuration
@@ -73,12 +73,12 @@ The `Advanced` view lets you edit the underlying JSON configuration directly.
 - `Interpolation`: Whether interpolation should be enabled by default.
 - `Layer Configuration`: This is an advanced feature to control the default settings (e.g. brightness, contrast, color) per layer. It needs to be configured in a JSON format.
 
-![Dataset editing: View Configuration](images/dataset_view_config.png)
+![Dataset Editing: View Configuration Tab](images/dataset_view_config.png)
 
 ## Dataset Sharing
 Read more in the [Sharing guide](./sharing.md#dataset-sharing)
 
 ## Using External Datastores
-The system architecture of webKnossos allows for versatile deployment options where you can install a dedicated datastore server directly in your lab's cluster infrastructure.
+The system architecture of webKnossos allows for versatile deployment options where you can install a dedicated datastore server directly on your lab's cluster infrastructure.
 This may be useful when dealing with large datasets that should remain in your data center.
 [Please contact us](mailto:hello@scalableminds.com) if you require any assistance with your setup. 

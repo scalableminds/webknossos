@@ -7,7 +7,7 @@ import play.api.libs.json._
 import utils.ObjectId
 
 
-case class TeamMembershipSQL(teamId: ObjectId, isTeamManager: Boolean) {
+case class TeamMembership(teamId: ObjectId, isTeamManager: Boolean) {
   def publicWrites(implicit ctx: DBAccessContext): Fox[JsObject] = {
     for {
       team <- TeamDAO.findOne(teamId)
@@ -21,10 +21,10 @@ case class TeamMembershipSQL(teamId: ObjectId, isTeamManager: Boolean) {
   }
 }
 
-object TeamMembershipSQL {
-  def publicReads(): Reads[TeamMembershipSQL] =
+object TeamMembership {
+  def publicReads(): Reads[TeamMembership] =
     ((__ \ "id").read[String](ObjectId.stringObjectIdReads("id")) and
       (__ \ "isTeamManager").read[Boolean]
-      ) ((id, isTeamManager) => TeamMembershipSQL(ObjectId(id), isTeamManager))
+      ) ((id, isTeamManager) => TeamMembership(ObjectId(id), isTeamManager))
 
 }

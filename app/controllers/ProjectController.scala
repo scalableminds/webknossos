@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2011-2017 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package controllers
 import javax.inject.Inject
 import com.scalableminds.util.accesscontext.GlobalAccessContext
@@ -106,6 +103,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
   private def updatePauseStatus(projectName: String, isPaused: Boolean)(implicit request: SecuredRequest[_]) = {
     for {
       project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
+      _ <- ensureTeamAdministration(request.identity, project._team)
       _ <- ProjectDAO.updatePaused(project._id, isPaused) ?~> Messages("project.update.failed", projectName)
       updatedProject <- ProjectDAO.findOne(project._id) ?~> Messages("project.notFound", projectName)
       js <- updatedProject.publicWrites

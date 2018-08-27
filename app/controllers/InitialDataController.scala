@@ -57,7 +57,6 @@ Samplecountry
     "Boy",
     System.currentTimeMillis(),
     Json.toJson(UserConfiguration.default),
-    SCrypt.md5(defaultUserPassword),
     UserService.createLoginInfo(defaultUserEmail),
     UserService.createPasswordInfo(defaultUserPassword),
     isAdmin = true,
@@ -96,7 +95,7 @@ Samplecountry
         for {
           _ <- UserDAO.insertOne(defaultUser)
           _ <- UserExperiencesDAO.updateExperiencesForUser(defaultUser._id, Map("sampleExp" -> 10))
-          _ <- UserTeamRolesDAO.insertTeamMembership(defaultUser._id, TeamMembershipSQL(organizationTeam._id, true))
+          _ <- UserTeamRolesDAO.insertTeamMembership(defaultUser._id, TeamMembership(organizationTeam._id, true))
           _ = logger.info("Inserted default user scmboy")
         } yield ()
     }.toFox
@@ -170,7 +169,7 @@ Samplecountry
     if (WkConf.Datastore.enabled) {
       DataStoreDAO.findOneByName("localhost").futureBox.map { maybeStore =>
         if (maybeStore.isEmpty) {
-          DataStoreDAO.insertOne(DataStore("localhost", WkConf.Http.uri, WebKnossosStore, WkConf.Datastore.key))
+          DataStoreDAO.insertOne(DataStore("localhost", WkConf.Http.uri, WkConf.Datastore.key))
         }
       }
     } else Fox.successful(())

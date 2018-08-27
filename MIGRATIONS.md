@@ -6,7 +6,9 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 
 ## Unreleased
 ### Postgres Evolutions:
--
+- [022-add-foreign-datastore.sql](conf/evolutions/022-add-foreign-datastore.sql)
+- [023-drop-datastore-type.sql](conf/evolutions/023-drop-datastore-type.sql)
+- [024-drop-md5hash.sql](conf/evolutions/024-drop-md5hash.sql)
 - some keys in `application.conf` have changed, if you overwrite them in your setup, please adapt: `application.secret` is now `play.crypto.secret`, `postgres.*` is now `slick.db.*`
 - Use `tools/volumeAddFallbackLayer.py` to add a fallback segmentation layer to existing volume tracing zip files (also compare CHANGELOG.md).
 
@@ -15,7 +17,6 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 - [018-hybrid-annotations.sql](conf/evolutions/018-hybrid-annotations.sql)
 - [019-dataset-lastusedtime.sql](conf/evolutions/019-dataset-lastusedtime.sql)
 - [021-list-experiences.sql](conf/evolutions/021-list-experiences.sql)
-- [022-add-foreign-datastore.sql](conf/evolutions/022-add-foreign-datastore.sql)
 
 ## [18.08.0](https://github.com/scalableminds/webknossos/releases/tag/18.08.0) - 2018-07-23
 ### Postgres Evolutions:

@@ -11,7 +11,7 @@
 <!--* [Managing Tasks and Projects](./tasks.md)-->
 * [Sharing](./sharing.md)
 
-## Documentation
+## Reference
 * [Supported Data Formats](./data_formats.md)
 * [Keyboard Shortcuts](./keyboard_shortcuts.md)
 * [FAQ](./faq.md)

@@ -26,6 +26,7 @@ Try webKnossos yourself: [https://try.webknossos.org/](https://try.webknossos.or
 * [User](./users.md) and [task](./tasks.md) management for high-throughput crowdsourcing
 * [Sharing and collaboration](./sharing.md) features
 * Efficient [keyboard shortcuts](./keyboard_shortcuts.md)
+* Undo/Redo functionality
 * [Standalone datastore component](https://github.com/scalableminds/webknossos/tree/master/webknossos-datastore) for flexible deployments
 * [Supported dataset formats](./datasets.md): WKW (Optimized), KNOSSOS cubes
 * [Supported image formats](./data_formats.md): Grayscale, Segmentation Maps, RGB, Multi-Channel

@@ -76,7 +76,7 @@ Nodes are placed automatically along the flight path, creating skeleton very eff
 Skeleton annotations consist of connected nodes forming a graph.
 Nodes are connected through edges and are organized in trees.
 
-Nodes can be placed by right clicking in orthogonal mode or automatically when moving in flight or oblique mode.
+Nodes can be placed by right clicking (*Right Click*) in orthogonal mode or automatically when moving in flight or oblique mode.
 webKnossos uses the concept of always having an active node and an active tree.
 All (global) operations are executed on the current active node, e.g. adding a comment or node deletion.
 Most keyboard shortcuts take the active node into context.
@@ -102,6 +102,7 @@ Press the "J" to jump to the latest branch point to continue working from there 
 | DEL               | Delete Active Node                  |
 | B                 | Create Branch Point                 |
 | J                 | Jump to Last Branch Point           |
+| C                 | Create New Tree                     |
 
 All further keyboard shortcuts are [available here](./keyboard_shortcuts.md).
 
@@ -120,16 +121,16 @@ However over existing tree groups the bring up a little menu for creating new gr
 Common tree operations include splitting and merging trees.
 
 - `Tree splitting` can be done in two ways: 
-  1. Select a node at which to split (SHIFT + Left Click) and delete (DEL) it.
-  2. Delete an edge between two nodes. Select the first node (SHIFT + Left Click), then SHIFT + CTRL + Left Click on the second node of the edge to delete this connection.
-- `Tree merging` works similarly to edge deletion but will create a new edge between two previously unconnected trees. Select the first node and SHIFT + ALT + Left Click the second node to create an edge between the two.
+  1. Select a node at which to split (*SHIFT + Left Click*) and delete (*DEL*) it.
+  2. Delete an edge between two nodes. Select the first node (*SHIFT + Left Click*), then *SHIFT + CTRL + Left Click* on the second node of the edge to delete this connection.
+- `Tree merging` works similarly to edge deletion but will create a new edge between two previously unconnected trees. Select the first node and *SHIFT + ALT + Left Click* the second node to create an edge between the two.
 
 ![Trees can split by deleting the edge between two nodes or deleting a node. Two trees can be merged again by creating a new edge between them.](images/tracing_ui_tree_merge_split.gif)
 
 #### Tree Colors
 A random color is assigned to each tree upon creation.
 Colors can be shuffled for a single tree or for all trees in a skeleton.
-Use the overflow menu under `More in the tree tab and select `Change Color` or `Shuffle All Colors` to assign new randomly chosen colors.
+Use the overflow menu under `More` in the tree tab and select `Change Color` or `Shuffle All Colors` to assign new randomly chosen colors.
 All node have the same color as their parent tree and can not be changed individually.
 The active node, branch points, and node that have comments assigned to them are highlighted with a slight variation of the tree's color.
 
@@ -164,16 +165,16 @@ There are two ways for downloading your annotations:
 
 Importing a skeleton annotation can be achieved using two approaches as well:
 
-1. If you already have an annotation open you can easily add more skeletons to it by drag and dropping an NML file onto your browser window. Otherwise, use the `Import NML` option next to `Download Selected Trees`. This will merge the NML file's content with the already open annotation. 
+1. If you already have an annotation open you can easily add more skeletons to it by **drag and dropping** an NML file onto your browser window. Otherwise, use the `Import NML` option next to `Download Selected Trees`. This will merge the NML file's content with the already open annotation. 
 
 2. To import a skeleton annotation as a completely new webKnossos annotation, just drag and drop the NML file anywhere on your user dashboard. Alternately, navigate to your user dashboard and use the `Upload Annotation` button within the "Explorative Annotations" section.
 
 ![Skeletons can be imported by drag and drop in the tracing view or from the dashboard](images/tracing_ui_import.png)
 
-### Merging Skeleton Annotation
-There are two ways for merging tracings:
+### Merging Skeleton Annotations
+There are two ways for merging annotations:
 
-1. While in the tracing UI, drag and drop an NML file onto your browser window to import a skeleton. The imported skeleton will be merged with currently open annotation.
+1. While in the tracing UI, **drag and drop** an NML file onto your browser window to import a skeleton. The imported skeleton will be merged with currently open annotation.
 
 2. If you would like to merge your current annotation with another existing annotation, select the `Merge` operation from the overflow menu next to the `Save` button. (see image) Either enter the ID of an existing explorative annotation or select a whole project and proceed to merge the selection with your currently open annotation. The resulting annotation can either be created as a new explorative annotation. Otherwise, the merge will happen in your current annotation. 
 
@@ -182,15 +183,25 @@ There are two ways for merging tracings:
 
 
 ## Volume Annotations
-TODO
 
-- what are volume tracings
-- tools
-  - brush, move, selection
-- adding / deleting segmentation
-- keyboard shortcuts
-- segmentation tab
+Next to skeleton annotations, webKnossos also supports volume annotations.
+In this type of annotation you can label groups of voxels with efficient drawing tools.
 
+### Tools
+Select one of the drawing tools from the toolbar or toggle through with the keyboard shortcut *W*.
+
+- `Move`: Navigate around the dataset.
+- `Trace`: Draw outlines around the voxel you would like to label.
+- `Brush`: Draw over the voxels you would like to label. Adjust the brush size with *SHIFT + Mousewheel*.
+
+Add labels with *Left Mouse Drag*.
+Remove labels with *Right Mouse Drag*.
+
+In the `Segmentation` tab on the right-hand side you can see the cell ID which are active, below your cursor, or in the middle of the viewport.
+
+![Adding labels with the Trace tool](./images/volume_trace.gif)
+![Adding labels with the Brush tool](./images/volume_trace.gif)
+![Removing labels with the Brush tool](./images/volume_delete.gif)
 
 ## Tracing UI Settings
 The settings menu allows users to fine-tune some parameters of webKnossos.
@@ -226,8 +237,11 @@ Not all settings are available in every tracing mode.
 - `Node Radius`: Controls the size of each individual node. Large values will create big nodes, small values create tiny nodes. Each node can have a different size. This is useful for annotations where node sizes have a meaning.
 - `Particle Size`: Controls the minimum node size for all nodes. This will override nodes with a too small node radius.
 - `Override Node Radius`: When toggled, overrides all individual node sizes. This allows to uniformly adjust the size of all nodes simultaneously.
-- `Soma Clicking`: When active every mouse click (left mouse button), will create a new tree. Use this for annotations were highlighting/marking structures is more important than labeling connected structures, e.g. for marking all Somas in a dataset.
+- `Soma Clicking`: When active every mouse click (*Left Click*), will create a new tree. Use this for annotations were highlighting/marking structures is more important than labeling connected structures, e.g. for marking all Somas in a dataset.
 - `Highlight Commented Nodes`: When active, nodes that have a comment associated with them will be rendered with a slight board around them. This is useful for quickly identifying (important) nodes.
+
+#### Volume Options
+- `Active Cell ID`: Contains the active cell's ID. Enter a valid cell ID to label voxels with this cell ID.
 
 #### Other
 - `Bounding Box`: Users can set a custom bounding box that will be displayed in all viewports. Useful for orientation when working in a specific area of a dataset. Format: minX, minY, minZ, width, height, depth

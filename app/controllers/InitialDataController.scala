@@ -170,7 +170,7 @@ Samplecountry
     if (WkConf.Datastore.enabled) {
       DataStoreDAO.findOneByName("localhost").futureBox.map { maybeStore =>
         if (maybeStore.isEmpty) {
-          DataStoreDAO.insertOne(DataStore("localhost", WkConf.Http.uri, WebKnossosStore, WkConf.Datastore.key))
+          DataStoreDAO.insertOne(DataStore("localhost", WkConf.Http.uri, WkConf.Datastore.key))
         }
       }
     } else Fox.successful(())

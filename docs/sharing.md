@@ -101,3 +101,7 @@ To share an annotation, follow these steps:
 For public annotations to work properly, the underlying dataset must also be shared publicly or privately (via token URL).
 Otherwise, the annotation and data cannot be loaded by webKnossos and an error will occur.
 [Learn how to share datasets publicly above.](#public-sharing)
+
+{% hint style='info' %}
+Next to the integrated Annotation Sharing features, you can also download [NML files](./data_formats.md#nml) and send them via email to collaborators.
+{% endhint %}

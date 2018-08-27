@@ -44,6 +44,8 @@ In the registration form, they need to select an organization, specify some basi
 {% hint style='info' %}
 You can invite users to your specific organization, by clicking the `Invite Users` button at the top of the user list. This will open a popup containing a customized link that you can share to invite new users to your organization.
 Users that click on this link, don't need to select an organization during registration and are automatically assigned to your organization.
+
+![Send an invite link to new users](./images/users_invite.png)
 {% endhint %}
 
 
@@ -57,9 +59,8 @@ When activating new users, a popup opens for
   - team assignment
   - access role assignment
 
-TODO: Image user list with newly created users
-TODO: Image assignment popup
-
+![Activate new users](./images/users_activate1.png)
+![Assign roles to new users](./images/users_activate2.png)
 
 ## Password Reset / Change Email Address
 

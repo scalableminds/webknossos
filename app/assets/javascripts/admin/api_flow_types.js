@@ -61,8 +61,6 @@ export type APIDataSourceType = APIDataSourceBaseType & {
 export type APIDataStoreType = {
   +name: string,
   +url: string,
-  +typ: "webknossos-store",
-  +accessToken?: string,
   +isForeign?: boolean,
 };
 

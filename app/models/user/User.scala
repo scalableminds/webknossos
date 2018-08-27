@@ -27,7 +27,6 @@ case class User(
                   lastName: String,
                   lastActivity: Long = System.currentTimeMillis(),
                   userConfiguration: JsValue,
-                  md5hash: String,
                   loginInfo: LoginInfo,
                   passwordInfo: PasswordInfo,
                   isAdmin: Boolean,
@@ -160,7 +159,6 @@ object UserDAO extends SQLDAO[User, UsersRow, Users] {
       r.lastname,
       r.lastactivity.getTime,
       Json.parse(r.userconfiguration),
-      r.md5hash,
       LoginInfo(r.logininfoProviderid, r.logininfoProviderkey),
       PasswordInfo(r.passwordinfoHasher, r.passwordinfoPassword),
       r.isadmin,
@@ -228,10 +226,10 @@ object UserDAO extends SQLDAO[User, UsersRow, Users] {
   def insertOne(u: User)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- run(
-        sqlu"""insert into webknossos.users(_id, _organization, email, firstName, lastName, lastActivity, userConfiguration, md5hash, loginInfo_providerID,
+        sqlu"""insert into webknossos.users(_id, _organization, email, firstName, lastName, lastActivity, userConfiguration, loginInfo_providerID,
                                             loginInfo_providerKey, passwordInfo_hasher, passwordInfo_password, isDeactivated, isAdmin, isSuperUser, created, isDeleted)
                                             values(${u._id}, ${u._organization}, ${u.email}, ${u.firstName}, ${u.lastName}, ${new java.sql.Timestamp(u.lastActivity)},
-                                                   '#${sanitize(Json.toJson(u.userConfiguration).toString)}', ${u.md5hash}, '#${sanitize(u.loginInfo.providerID)}', ${u.loginInfo.providerKey},
+                                                   '#${sanitize(Json.toJson(u.userConfiguration).toString)}', '#${sanitize(u.loginInfo.providerID)}', ${u.loginInfo.providerKey},
                                                    '#${sanitize(u.passwordInfo.hasher)}', ${u.passwordInfo.password}, ${u.isDeactivated}, ${u.isAdmin}, ${u.isSuperUser},
                                                    ${new java.sql.Timestamp(u.created)}, ${u.isDeleted})
           """)

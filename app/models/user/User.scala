@@ -270,23 +270,23 @@ object UserDAO extends SQLDAO[User, UsersRow, Users] {
 
 object UserTeamRolesDAO extends SimpleSQLDAO {
 
-  def findTeamMembershipsForUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[TeamMembershipSQL]] = {
+  def findTeamMembershipsForUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[TeamMembership]] = {
     val query = for {
       (teamRoleRow, team) <- UserTeamRoles.filter(_._User === userId.id) join Teams  on (_._Team === _._Id)
     } yield (team._Id, team.name, teamRoleRow.isteammanager)
 
     for {
       rows: Seq[(String, String, Boolean)] <- run(query.result)
-      teamMemberships <- Fox.combined(rows.toList.map { case (teamId, teamName, isTeamManager) => ObjectId.parse(teamId).map(teamIdValidated => TeamMembershipSQL(teamIdValidated, isTeamManager)) })
+      teamMemberships <- Fox.combined(rows.toList.map { case (teamId, teamName, isTeamManager) => ObjectId.parse(teamId).map(teamIdValidated => TeamMembership(teamIdValidated, isTeamManager)) })
     } yield {
       teamMemberships
     }
   }
 
-  private def insertQuery(userId: ObjectId, teamMembership: TeamMembershipSQL) =
+  private def insertQuery(userId: ObjectId, teamMembership: TeamMembership) =
     sqlu"insert into webknossos.user_team_roles(_user, _team, isTeamManager) values(${userId}, ${teamMembership.teamId}, ${teamMembership.isTeamManager})"
 
-  def updateTeamMembershipsForUser(userId: ObjectId, teamMemberships: List[TeamMembershipSQL])(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def updateTeamMembershipsForUser(userId: ObjectId, teamMemberships: List[TeamMembership])(implicit ctx: DBAccessContext): Fox[Unit] = {
     val clearQuery = sqlu"delete from webknossos.user_team_roles where _user = ${userId}"
     val insertQueries = teamMemberships.map(insertQuery(userId, _))
     for {
@@ -295,7 +295,7 @@ object UserTeamRolesDAO extends SimpleSQLDAO {
     } yield ()
   }
 
-  def insertTeamMembership(userId: ObjectId, teamMembership: TeamMembershipSQL)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def insertTeamMembership(userId: ObjectId, teamMembership: TeamMembership)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- UserDAO.assertUpdateAccess(userId)
       _ <- run(insertQuery(userId, teamMembership))

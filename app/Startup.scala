@@ -8,7 +8,7 @@ import javax.inject.Inject
 import models.annotation.AnnotationDAO
 import net.liftweb.common.{Failure, Full}
 import oxalis.cleanup.CleanUpService
-import oxalis.security.WebknossosSilhouette
+import oxalis.security.WebknossosEnvironment
 import play.api._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.concurrent._
@@ -18,7 +18,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.sys.process._
 
-class Startup @Inject()  (app: Application, silhouette: WebknossosSilhouette) extends LazyLogging{
+class Startup @Inject()  (app: Application, environment: WebknossosEnvironment) extends LazyLogging{
 
   logger.info("Executing Global START")
   startActors(app)
@@ -33,7 +33,7 @@ class Startup @Inject()  (app: Application, silhouette: WebknossosSilhouette) ex
     }
   }
 
-  val tokenAuthenticatorService = silhouette.environment.combinedAuthenticatorService.tokenAuthenticatorService
+  val tokenAuthenticatorService = environment.combinedAuthenticatorService.tokenAuthenticatorService
 
   CleanUpService.register("deletion of expired tokens", tokenAuthenticatorService.dataStoreExpiry) {
     tokenAuthenticatorService.removeExpiredTokens(GlobalAccessContext)

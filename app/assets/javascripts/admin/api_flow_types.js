@@ -355,7 +355,7 @@ export type APIFeatureToggles = {
   +discussionBoard: string | false,
   +discussionBoardRequiresAdmin: boolean,
   +hybridTracings: boolean,
-  +allowOrganzationCreation: boolean,
+  +allowOrganizationCreation: boolean,
   +addForeignDataset: boolean,
 };
 

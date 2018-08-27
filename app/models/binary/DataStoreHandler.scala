@@ -4,6 +4,7 @@ import java.io.File
 import java.math.BigInteger
 import java.security.SecureRandom
 
+import com.mohiva.play.silhouette.api.util.IDGenerator
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -15,6 +16,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
 import org.apache.commons.codec.binary.Base64
+import oxalis.security.CompactRandomIDGenerator
 import play.api.Play.current
 import play.api.http.Status
 import play.api.libs.concurrent.Execution.Implicits._
@@ -23,7 +25,7 @@ import play.api.libs.ws.{WS, WSResponse}
 import play.api.mvc.Codec
 
 object DataStoreHandler {
-  lazy val webKnossosToken = new BigInteger(130, new SecureRandom()).toString(32)
+  lazy val webKnossosToken = new CompactRandomIDGenerator().generateBlocking
 }
 
 class DataStoreHandler(dataStore: DataStore, dataSet: DataSet) extends LazyLogging {

@@ -14,7 +14,7 @@ webKnossos supports two data formats (WKW and KNOSSOS) for voxel datasets and NM
 
 ### Concepts
 
-#### Datasets, Cubes and Buckets
+#### Datasets, Cubes, and Buckets
 
 A **dataset** consists of [one or more layers](#layers).
 Since webKnossos deals with 3D imagery, the data is organized in **cubes**.
@@ -22,7 +22,7 @@ Depending on the [container format](#container-formats), the cubes are either 10
 Each cube contains multiple **buckets** of 32^3 voxel size.
 This is the unit in which the data is streamed to the users' browser.
 
-![Datasets, Cubes and Buckets](images/cubes-and-buckets.png)
+![Datasets, Cubes, and Buckets](images/cubes-and-buckets.png)
 
 #### Layers
 
@@ -62,7 +62,7 @@ The underlying datatype limits the maximum number of IDs:
 | `uint64`  | 18,446,744,073,709,551,615 |
 
 ### Tools
-Of course datasets do not need to be created manually.
+Of course, datasets do not need to be created manually.
 The [webKnossos Cuber](https://github.com/scalableminds/webknossos-cuber) converts image stacks and KNOSSOS cubes into a WKW dataset.
 It also compresses datasets for efficient file storage and creates necessary metadata.
 
@@ -89,7 +89,7 @@ great_dataset          # One folder per dataset
 │  │  └─ z1/...
 │  └─ 2/...
 ├─ segmentation/...
-└─ datasource-properties.json  # Dataset metadata (will be created upon import, if non-existant)
+└─ datasource-properties.json  # Dataset metadata (will be created upon import, if non-existent)
 ```
 
 ### WKW Metadata
@@ -146,12 +146,12 @@ This is an example:
 ```
 
 Note that the `resolutions` property within the elements of `wkwResolutions` can be an array of length 3. 
-The three components within such a resolution denote the scaling factor for x, y and z. 
+The three components within such a resolution denote the scaling factor for x, y, and z. 
 At the moment, WebKnossos guarantees correct rendering of data with non-uniform resolution factors only if the z-component between two resolutions changes by a factor of 1 or 2.
 
 Most users don't create these metadata files manually. 
 webKnossos can guess most of these properties automatically except for `scale` and `largestSegmentId`.
-During the import process webKnossos will ask for the necessary properties.
+During the import process, webKnossos will ask for the necessary properties.
 When using the [webKnossos Cuber](https://github.com/scalableminds/webknossos-cuber), a metadata file is automatically generated.
 
 [See below for the full specification](#dataset-metadata-specification).
@@ -324,7 +324,7 @@ TODO: Explain format
     * `dataLayers.wkwResolutions.resolution`: Either a scalar integer (e.g. `1`, `2` or `4`) or a 3-tuple (e.g. `2, 2, 1`) for non-uniform magnifications. *Only for WKW datasets.*
     * `dataLayers.wkwResolutions.cubeLength`: The cube size of the WKW cube files. Usually is `1024`. *Only for WKW datasets.*
 
-  + `dataLayers.sections`: Holds information about the sections in the layer. Usually a dataset only has one section. *Only for KNOSSOS datasets.*
+  + `dataLayers.sections`: Holds information about the sections in the layer. Usually, a dataset only has one section. *Only for KNOSSOS datasets.*
     * `dataLayers.sections.boundingBox`: Same as `dataLayers.boundingBox` but for a section. *Only for KNOSSOS datasets.*
     * `dataLayers.sections.resolutions`: Contains an array of the available magnification steps, e.g. `[1, 2, 4, 8]`. Does not support non-uniform magnifications. *Only for KNOSSOS datasets.*
 

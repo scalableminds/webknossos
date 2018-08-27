@@ -25,7 +25,7 @@ A user can directly jump to positions within their datasets by entering them in 
 The same is true for the rotation in some tracing modes.
 Clicking on the position or rotation labels copies the values to the clipboard.
 
-![The webKnosos toolbar contains many useful features for quick access such as Saving und Undo/Redo](images/tracing_ui_toolbar.png)
+![The webKnossos toolbar contains many useful features for quick access such as Saving und Undo/Redo](images/tracing_ui_toolbar.png)
 
 ## Skeleton Annotations
 The goal of tracing skeletons is to reconstruct structures in a dataset that span across many data slices as a graph of connected nodes.
@@ -74,7 +74,7 @@ Nodes are placed automatically along the flight path, creating skeleton very eff
 
 ### Nodes and Trees
 Skeleton annotations consist of connected nodes forming a graph.
-Nodes are connected through edges and are organized a trees.
+Nodes are connected through edges and are organized in trees.
 
 Nodes can be placed by right clicking in orthogonal mode or automatically when moving in flight or oblique mode.
 webKnossos uses the concept of always having an active node and an active tree.
@@ -82,7 +82,7 @@ All (global) operations are executed on the current active node, e.g. adding a c
 Most keyboard shortcuts take the active node into context.
 Operations on whole trees, e.g. splitting or merging trees, follow the same pattern.
 
-Skeleton annotations can contain one or many trees consiting of several nodes all the way to millions of nodes.
+Skeleton annotations can contain one or many trees consisting of several nodes all the way to millions of nodes.
 Users can add comments to each node to mark important positions or easily select them from a list of comments for later usage.
 Comments are organized in the `Comments` tab on the right-hand side of the screen.
 The `Tree Viewer` tab on the right-hand side menu displays a 2D simplified tree representation of the currently active tree.
@@ -92,7 +92,7 @@ webKnossos natively supports branch points.
 Any node can be marked as a branch point using the keyboard shortcut "B".
 Branch points are highlighted using a slightly different color.
 All branch points are saved as a stack for each tree and can be accessed first-in, first-out (FIFO).
-Press the "J" to jump to the latest branch point to continue working from their and remove it from the stack.
+Press the "J" to jump to the latest branch point to continue working from there and remove it from the stack.
 
 | Key Binding       | Operation                           |
 | ----------------- | -------------                       |
@@ -114,7 +114,7 @@ Tree groups can have a name and are used to structure and label your annotation 
 Trees can be dragged and dropped between tree groups.
 However over existing tree groups the bring up a little menu for creating new groups, renaming, and deletion.
 
-![Organize your skeleton annotations's trees to remember important structures for later reference](images/tracing_ui_trees.jpg)
+![Organize your skeleton annotation's trees to remember important structures for later reference](images/tracing_ui_trees.jpg)
 
 #### Merging / Splitting Trees
 Common tree operations include splitting and merging trees.
@@ -124,7 +124,7 @@ Common tree operations include splitting and merging trees.
   2. Delete an edge between two nodes. Select the first node (SHIFT + Left Click), then SHIFT + CTRL + Left Click on the second node of the edge to delete this connection.
 - `Tree merging` works similarly to edge deletion but will create a new edge between two previously unconnected trees. Select the first node and SHIFT + ALT + Left Click the second node to create an edge between the two.
 
-![Trees can split by deleting the edge between two node or deleting a node. Two trees can be merge again by creating a new edge between them.](images/tracing_ui_tree_merge_split.gif)
+![Trees can split by deleting the edge between two nodes or deleting a node. Two trees can be merged again by creating a new edge between them.](images/tracing_ui_tree_merge_split.gif)
 
 #### Tree Colors
 A random color is assigned to each tree upon creation.
@@ -189,16 +189,16 @@ TODO
   - brush, move, selection
 - adding / deleting segmentation
 - keyboard shortcuts
-- segementation tab
+- segmentation tab
 
 
 ## Tracing UI Settings
 The settings menu allows users to fine-tune some parameters of webKnossos.
 All settings are automatically saved as part of a user's profile.
 The `Tracing` settings include options related to interacting with a dataset while annotating, e.g. mouse movement speed.
-Tracing settings only affect the currently open annotation and will be restored when reopening the respectibe annotation in the future.
+Tracing settings only affect the currently open annotation and will be restored when reopening the respective annotation in the future.
 The `Dataset` settings include options to adjust the rendering of the dataset, e.g. brightness & contrast.
-Dataset settings effect all of the user's annotations referencing this particular dataset so that tracings can be created using the same conditions.
+Dataset settings affect all of the user's annotations referencing this particular dataset so that tracings can be created using the same conditions.
 
 Not all settings are available in every tracing mode.
 
@@ -215,8 +215,8 @@ Not all settings are available in every tracing mode.
 - `Viewport Scale`: Increases / Decreases the size of dataset viewports in the center of the screen.
 - `Clipping Distance`: The distance between 3D structures and the camera used for hiding ("clipping") structures. Use it to reduce the number of visible nodes in the viewports and declutter your screen.
 - `Show Crosshairs`: Shows / Hides the crosshair overlay over the viewports.
-- `Mouse Rotation`: Increases / Decreases the movement speed when using the mouse to rotate within the datasets. A low value rotates the camera slower for more precisie movements. A high value rotates the camera quicker for greater agility. 
-- `Keyboard Rotation`: Increases / Decreases the movement speed when using the arrow keys on the keyboard to rotate within the datasets. A low value rotates the camera slower for more precisie movements. A high value rotates the camera quicker for greater agility. 
+- `Mouse Rotation`: Increases / Decreases the movement speed when using the mouse to rotate within the datasets. A low value rotates the camera slower for more precise movements. A high value rotates the camera quicker for greater agility. 
+- `Keyboard Rotation`: Increases / Decreases the movement speed when using the arrow keys on the keyboard to rotate within the datasets. A low value rotates the camera slower for more precise movements. A high value rotates the camera quicker for greater agility. 
 - `Crosshair Size`: Controls the size of the crosshair in flight mode.
 - `Sphere Radius`: In flight mode, the data is projected on the inside of a sphere with the camera located at the center of the sphere. This option influences the radius of said sphere flattening / rounding the projected viewport. A high value will cause less curvature showing the detail with more detail and less distortion. A low value will show more data along the edges of the viewport. 
 
@@ -235,7 +235,7 @@ Not all settings are available in every tracing mode.
 
 
 ### Dataset Settings
-For multi-layer datasets, each layer can be adjusted seperately. 
+For multi-layer datasets, each layer can be adjusted separately. 
 
 #### Colors
 - `Brightness`: Increase / Decrease the brightness of the data layer.
@@ -243,10 +243,10 @@ For multi-layer datasets, each layer can be adjusted seperately.
 - `Color`: Every data layer can be colored to make them easily identifiable. By default, all layers have a white overlay, showing the true, raw black & white data.
 
 #### Segmentation
-- `Segmentation Opacity`: Increases / Decreases the opacity of the segmentation layer. A low value will make the segmentation almost transparent letting you see the underlaying data layers more clearly. A high value will make the segmentation opaque which is useful for adjusting and reviewing the exact fit of the segementation layer. Only possible if your dataset has a segementation layer.
-- `Highlight Hovered Cells`: Toggles wether segmented cells will be highlighted in all viewports when hovering over them with the mouse cursor. Useful for identifiying the highlighted cell in across all viewports.
+- `Segmentation Opacity`: Increases / Decreases the opacity of the segmentation layer. A low value will make the segmentation almost transparent letting you see the underlying data layers more clearly. A high value will make the segmentation opaque which is useful for adjusting and reviewing the exact fit of the segmentation layer. Only possible if your dataset has a segmentation layer.
+- `Highlight Hovered Cells`: Toggles whether segmented cells will be highlighted in all viewports when hovering over them with the mouse cursor. Useful for identifying the highlighted cell in across all viewports.
 
 #### Quality
-- `4 Bit`: Toggles data download form the server using only 4 Bit instead of 8 Bit for each pixel. Use this to reduce the amount of necessary internet bandwidth for webKnossos. Useful for show casing data on the go over cellular networks, e.g 4G. 
+- `4 Bit`: Toggles data download from the server using only 4 Bit instead of 8 Bit for each pixel. Use this to reduce the amount of necessary internet bandwidth for webKnossos. Useful for showcasing data on the go over cellular networks, e.g 4G. 
 - `Quality`: Adjusts the quality level used for data download from the server. "High" will load the original, unmodified data. "Medium" and "Low" will load a downsampled version of the data layer to reduce network traffic. Use this to reduce the amount of necessary internet bandwidth for webKnossos.
 

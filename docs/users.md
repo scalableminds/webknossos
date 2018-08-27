@@ -14,11 +14,11 @@ You are not allowed to see data from organizations other than your own and membe
 When creating your organization, a default team with the same name will be created.
 This team is referred to as the **organization team**.
 Users that register for your organization will, by default, be assigned to that organization team.
-An organisation can contain as many teams as you like. 
+An organization can contain as many teams as you like. 
 Users can be assigned to multiple teams.
 Teams are useful for managing dataset access permissions or simply to organize users into logical groups.
 
-![All users, annotations and datasets belong to an organizations. By default, all users are assigned to the organisation team. Further teams can be created for fine-grained access permisssions.](images/teams.png)
+![All users, annotations, and datasets belong to an organization. By default, all users are assigned to the organization team. Further teams can be created for fine-grained access permissions.](images/teams.png)
 
 
 ## Access Rights / Roles
@@ -30,11 +30,11 @@ There are three different roles for webKnossos users:
 
   - __Team Manager:__ Manages a specific team. Team Managers are able to administrate [Tasks, Task Types and Projects](./tasks.md) belonging to that specific team. They are also allowed to activate newly registered users. Team managers are able to access all tracings that belong to users of their team.
 
-  - __Admin:__ Manages the whole organization with all teams. Admins are able to do the same things as team managers, but across all teams. They can also give admin permissions to other users by using the `Grant Admin Rights` button at the top of the user list. Admins are able to access all tracings that belong to their organization.
+  - __Admin:__ Manages the whole organization with all teams. Admins are able to do the same things as team managers but across all teams. They can also give admin permissions to other users by using the `Grant Admin Rights` button at the top of the user list. Admins are able to access all tracings that belong to their organization.
 
-Only *Admins* and *Team managers* are able to see / access the `Admin` menu options in the navigation bar.
+Only *Admins* and *Team managers* are able to see/access the `Admin` menu options in the navigation bar.
 
-By default, each new dataset can only be accessed by the memebers of the organisation team. Add or remove more teams to a dataset for fine-grained access controls. For more information dataset and access rights, [see the dataset guide](./sharing.md#general)
+By default, each new dataset can only be accessed by the members of the organization team. Add or remove more teams to a dataset for fine-grained access controls. For more information dataset and access rights, [see the dataset guide](./sharing.md#general)
 
 ## Registering New Users
 
@@ -68,4 +68,4 @@ Users can _change_ their password by themselves if they are logged in. Password 
 
 Logged-out users can _reset_ their password by clicking on `Forgot Password` in the navigation bar in the top-right corner of the screen. They will have to provide their registered email address and will be sent an email containing a token and instructions to reset the password.
 
-Admins can modify the email address of each user from the user administration list. Select the `Edit` icon next to a user's email address, enter the new email address and confirm the change. Remember to inform the user about the successful change of the email address, since the new email address will used for the login credentials.
+Admins can modify the email address of each user from the user administration list. Select the `Edit` icon next to a user's email address, enter the new email address and confirm the change. Remember to inform the user about the successful change of the email address, since the new email address will be used for the login credentials.

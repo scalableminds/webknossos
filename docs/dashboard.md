@@ -9,7 +9,7 @@ The presentation differs corresponding to the user role.
 Normal users can start or continue annotations and work on tasks.
 [Admins and Team Managers](./users.md#access-rights-roles) also have access to dedicated administration screens and advanced dataset properties.
 
-You can view the dataset, or create new skeleton or volume annotations from this screen.
+You can view the dataset, or create a new skeleton or volume annotations from this screen.
 Search for your dataset by using the search bar or by sorting any of the table columns.
 Learn more about managing datasets in the [Datasets guide](./datasets.md).
 
@@ -18,11 +18,12 @@ Learn more about managing datasets in the [Datasets guide](./datasets.md).
 
 ## Tasks
 
-With Tasks you can coordinate large annotation projects with your users.
+With Tasks, you can coordinate large annotation projects with your users.
 Tasks are small assignments that are automatically distributed to users.
 
 On the Task screen, users can request new tasks, continue to work on existing tasks and finish tasks.
-These tasks will be assigned based on the user's experience levels, project priority and task availability. Read more about the tasks feature in the [Tasks and Projects guide](./tasks.md).
+These tasks will be assigned based on the user's experience levels, project priority, and task availability.
+Read more about the tasks feature in the [Tasks and Projects guide](./tasks.md).
 
 ![Work with Tasks](./images/dashboard_tasks.png)
 

@@ -2,8 +2,8 @@
 
 ## Newly Registered Users Don't Show Up
 
-Please go to the users list screen in the admin section.
-Deactivate the `Show Active Users Only` option above the users table.
+Please go to the User list screen in the admin section.
+Deactivate the `Show Active Users Only` option above the User table.
 
 ## How Can I Use My Dataset With webKnossos
 

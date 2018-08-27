@@ -11,7 +11,7 @@ If you would like to continue using webKnossos, we offer managed hosting plans f
 
 ## Installation on Your Own Server
 webKnossos is open-source, so you can install it on your own server.
-We recommend at server with at least 4 CPU cores, 16 GB RAM and as much disk space as you require for your datasets.
+We recommend a server with at least 4 CPU cores, 16 GB RAM, and as much disk space as you require for your datasets.
 As prerequisites, you need to install [Git](https://git-scm.com/), [Docker](https://docs.docker.com/install/) and [Docker Compose](https://docs.docker.com/compose/install/) on your server.
 
 To get started, simply clone the Git repository and start the docker containers:
@@ -40,13 +40,13 @@ Please refer to the [Code Readme](../README.md) for details.
 
 ## Onboarding
 When starting with webKnossos you first need to create an organization.
-An organization respresents your lab in webKnossos and handles permissions for users and datasets.
-Choose a descriptive name for your organization, e.g. "University of Springfield", "Simpsons Lab" or "Neuroscience Department".
+An organization represents your lab in webKnossos and handles permissions for users and datasets.
+Choose a descriptive name for your organization, e.g. "The University of Springfield", "Simpsons Lab" or "Neuroscience Department".
 
 ![Create your organization](./images/onboarding_organization.png)
 
 In the onboarding flow, you are asked to create a user account for yourself.
-This will be the first user of your organisation which will automatically be activated and granted admin rights.
+This will be the first user of your organization which will automatically be activated and granted admin rights.
 Make sure to enter a correct email address.
 
 ![Create your first user](./images/onboarding_user.png)
@@ -74,11 +74,11 @@ To get started with your first annotation, navigate to the `Datasets` tab on you
 Identify a dataset that your interested in and click on `Start Skeleton Tracing` to create a new skeleton annotation. 
 webKnossos will launch the main annotation screen allowing you to navigate your dataset and place markers to reconstruct skeletons. 
 
-Drag the mouse while pressing the left mouse button to navgiate the dataset. 
-Right click in the data to place markers, called nodes. 
-Basic movement in the dataset is done with mouse wheel or by pressing space bar keyboard shortcut.
+Drag the mouse while pressing the left mouse button to navigate the dataset. 
+Right-click in the data to place markers, called nodes. 
+Basic movement in the dataset is done with the mouse wheel or by pressing the spacebar keyboard shortcut.
 
-Learn more about skeleton, volume, and hybrid annotations as well as the interface in the [Tracing UI guide](./tracing_ui.md).
+Learn more about the skeleton, volume, and hybrid annotations as well as the interface in the [Tracing UI guide](./tracing_ui.md).
 
 {% embed data="{\"url\":\"https://www.youtube.com/embed/rMMaItS\_HYE\",\"type\":\"video\",\"title\":\"webKnossos Tracing UI Skeleton\",\"icon\":{\"type\":\"icon\",\"url\":\"https://www.youtube.com/yts/img/favicon\_144-vfliLAfaB.png\",\"width\":144,\"height\":144,\"aspectRatio\":1},\"thumbnail\":{\"type\":\"thumbnail\",\"url\":\"https://i.ytimg.com/vi/rMMaItS\_HYE/mqdefault.jpg\",\"width\":320,\"height\":180,\"aspectRatio\":0.5625},\"embed\":{\"type\":\"player\",\"url\":\"https://www.youtube.com/embed/rMMaItS\_HYE?rel=0&showinfo=0\",\"html\":\"<div style=\\\"left: 0; width: 100%; height: 0; position: relative; padding-bottom: 56.2493%;\\\"><iframe src=\\\"https://www.youtube.com/embed/rMMaItS\_HYE?rel=0&amp;showinfo=0\\\" style=\\\"border: 0; top: 0; left: 0; width: 100%; height: 100%; position: absolute;\\\" allowfullscreen scrolling=\\\"no\\\"></iframe></div>\",\"aspectRatio\":1.7778}}" %}
 

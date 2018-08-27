@@ -13,6 +13,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 - Improved security by enabling http security headers [#3084](https://github.com/scalableminds/webknossos/pull/3084)
 - Added the possibility to write markdown in the annotation description. [#3081](https://github.com/scalableminds/webknossos/pull/3081)
+- Added a user documentation for webKnossos [#3011](https://github.com/scalableminds/webknossos/pull/3011)
 
 ### Changed
 

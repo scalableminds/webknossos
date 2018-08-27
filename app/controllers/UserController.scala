@@ -166,12 +166,12 @@ class UserController @Inject()(val messagesApi: MessagesApi)
       (__ \ "email").read[String] and
       (__ \ "isActive").read[Boolean] and
       (__ \ "isAdmin").read[Boolean] and
-      (__ \ "teams").read[List[TeamMembershipSQL]](Reads.list(TeamMembershipSQL.publicReads)) and
+      (__ \ "teams").read[List[TeamMembership]](Reads.list(TeamMembership.publicReads)) and
       (__ \ "experiences").read[Map[String, Int]]).tupled
 
-  def ensureProperTeamAdministration(user: User, teams: List[(TeamMembershipSQL, Team)]) = {
+  def ensureProperTeamAdministration(user: User, teams: List[(TeamMembership, Team)]) = {
     Fox.combined(teams.map {
-      case (TeamMembershipSQL(_, true), team) => {
+      case (TeamMembership(_, true), team) => {
         for {
           _ <- bool2Fox(team.couldBeAdministratedBy(user)) ?~> Messages("team.admin.notPossibleBy", team.name, user.name)
         }

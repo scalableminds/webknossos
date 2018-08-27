@@ -25,7 +25,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Removed
 
--
+- Removed the md5hash from the user and the db so it gets only sended to braintracing. [#3109](https://github.com/scalableminds/webknossos/pull/3109)
 
 
 ## [18.09.0](https://github.com/scalableminds/webknossos/releases/tag/18.09.0) - 2018-08-20

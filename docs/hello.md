@@ -33,11 +33,14 @@ Try webKnossos yourself: [https://try.webknossos.org/](https://try.webknossos.or
 * Open-source development with [automated test suite](https://circleci.com/gh/scalableminds/webknossos)
 * [Docker-based deployment](https://hub.docker.com/r/scalableminds/webknossos/) for production and development
 
-<!--
-## Screenshots/Walkthrough
+## Screenshots
 
-TODO
--->
+![Skeleton Annotations](./images/tracing_ui_skeleton.png)
+![Volume Annotations](./images/tracing_ui_volume.png)
+![Flight Mode](./images/tracing_ui_flight.png)
+![Managing Datasets](./images/dashboard_datasets.png)
+![Working on Tasks](./images/dashboard_tasks.png)
+![Showcasing Datasets](./images/spotlight.png)
 
 ## Credits and Help
 

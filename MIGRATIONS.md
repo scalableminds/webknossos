@@ -8,6 +8,7 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 ### Postgres Evolutions:
 - [022-add-foreign-datastore.sql](conf/evolutions/022-add-foreign-datastore.sql)
 - [023-drop-datastore-type.sql](conf/evolutions/023-drop-datastore-type.sql)
+- [024-drop-md5hash.sql](conf/evolutions/024-drop-md5hash.sql)
 - some keys in `application.conf` have changed, if you overwrite them in your setup, please adapt: `application.secret` is now `play.crypto.secret`, `postgres.*` is now `slick.db.*`
 
 ## [18.09.0](https://github.com/scalableminds/webknossos/releases/tag/18.09.0) - 2018-08-20

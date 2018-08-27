@@ -13,7 +13,6 @@ import utils.SQLDAO
 case class DataStore(
                        name: String,
                        url: String,
-                       typ: DataStoreType,
                        key: String,
                        isDeleted: Boolean = false,
                        isForeign: Boolean = false
@@ -23,21 +22,9 @@ case class DataStore(
     Fox.successful(Json.obj(
       "name" -> name,
       "url" -> url,
-      "typ" -> typ.name,
       "isForeign" -> isForeign
     ))
   }
-}
-
-
-case class DataStoreInfo(
-                          name: String,
-                          url: String,
-                          typ: DataStoreType,
-                          accessToken: Option[String] = None)
-
-object DataStoreInfo {
-  implicit val dataStoreInfoFormat = Json.format[DataStoreInfo]
 }
 
 
@@ -51,7 +38,6 @@ object DataStoreDAO extends SQLDAO[DataStore, DatastoresRow, Datastores] {
     Fox.successful(DataStore(
       r.name,
       r.url,
-      DataStoreType.stringToType(r.typ),
       r.key,
       r.isdeleted,
       r.isforeign
@@ -82,8 +68,8 @@ object DataStoreDAO extends SQLDAO[DataStore, DatastoresRow, Datastores] {
 
   def insertOne(d: DataStore): Fox[Unit] = {
     for {
-      _ <- run(sqlu"""insert into webknossos.dataStores(name, url, key, typ, isDeleted, isForeign)
-                         values(${d.name}, ${d.url}, ${d.key}, '#${d.typ.name}', ${d.isDeleted}, ${d.isForeign})""")
+      _ <- run(sqlu"""insert into webknossos.dataStores(name, url, key, isDeleted, isForeign)
+                         values(${d.name}, ${d.url}, ${d.key}, ${d.isDeleted}, ${d.isForeign})""")
     } yield ()
   }
 

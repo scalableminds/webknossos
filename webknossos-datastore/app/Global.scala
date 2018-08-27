@@ -1,7 +1,3 @@
-/*
-* Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
-*/
-
 import play.api._
 import play.api.mvc.Results._
 import play.api.mvc.{Action, Handler, RequestHeader}

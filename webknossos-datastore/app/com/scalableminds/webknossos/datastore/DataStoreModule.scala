@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.webknossos.datastore
 
 import akka.actor.ActorSystem
@@ -17,6 +14,7 @@ class DataStoreModule(environment: Environment, configuration: Configuration) ex
   val system = ActorSystem("webknossos-datastore")
 
   def configure() = {
+    bind(classOf[DataStoreConfig]).asEagerSingleton()
     bind(classOf[AccessTokenService]).asEagerSingleton()
     bind(classOf[ActorSystem]).annotatedWith(Names.named("webknossos-datastore")).toInstance(system)
     bind(classOf[BinaryDataService]).asEagerSingleton()

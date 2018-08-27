@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.webknossos.datastore.services
 
 import java.io.File
@@ -9,7 +6,6 @@ import java.nio.file.{AccessDeniedException, Path, Paths}
 import akka.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
-import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.webknossos.datastore.dataformats.knossos.KnossosDataFormat
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormat
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
@@ -17,28 +13,29 @@ import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, UnusableDataSource}
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
 import net.liftweb.util.Helpers.tryo
-import play.api.Configuration
 import play.api.inject.ApplicationLifecycle
+import play.api.libs.json.Json
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class DataSourceService @Inject()(
-                                   config: Configuration,
+                                   config: DataStoreConfig,
                                    dataSourceRepository: DataSourceRepository,
                                    val lifecycle: ApplicationLifecycle,
                                    @Named("webknossos-datastore") val system: ActorSystem
                                  ) extends IntervalScheduler with LazyLogging with FoxImplicits {
 
-  override protected lazy val enabled: Boolean = config.getBoolean("braingames.binary.changeHandler.enabled").getOrElse(true)
-  protected lazy val tickerInterval: FiniteDuration = config.getInt("braingames.binary.changeHandler.interval").getOrElse(10).minutes
+  override protected lazy val enabled: Boolean = config.Braingames.Binary.ChangeHandler.enabled
+  protected lazy val tickerInterval: FiniteDuration = config.Braingames.Binary.ChangeHandler.tickerInterval
 
   private val MaxNumberOfFilesForDataFormatGuessing = 10
-  val dataBaseDir = Paths.get(config.getString("braingames.binary.baseFolder").getOrElse("binaryData"))
+  val dataBaseDir = Paths.get(config.Braingames.Binary.baseFolder)
 
   private val propertiesFileName = Paths.get("datasource-properties.json")
 
@@ -127,7 +124,7 @@ class DataSourceService @Inject()(
     if (errors.isEmpty) {
       Full(())
     } else {
-      ParamFailure("DataSource is invalid", errors.map("error" -> _))
+      ParamFailure("DataSource is invalid", Json.toJson(errors.map(e => Json.obj("error" -> e))))
     }
   }
 

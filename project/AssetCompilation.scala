@@ -98,18 +98,11 @@ object AssetCompilation {
 
         s.log.info("Updating Slick SQL schema from local database...")
 
-        //cannot use play config because this happens before play lifecycle. Thus, parsing the config file directly
-        val conf = com.typesafe.config.ConfigFactory.parseFile(new File("conf/application.conf")).resolve()
-
-        val pgUrl = sys.env.get("POSTGRES_URL").getOrElse(conf.getString("postgres.url"))
-        val pgUser = conf.getString("postgres.user")
-        val pgPass = conf.getString("postgres.password")
-        val pgDriver = conf.getString("postgres.driver")
-
         runner.run("slick.codegen.SourceCodeGenerator", dc.files,
-          Array("slick.jdbc.PostgresProfile", pgDriver, pgUrl, (sourceManaged / "schema").toString, "com.scalableminds.webknossos.schema", pgUser, pgPass),
+          Array("file://" + (base / "conf" / "application.conf").toString + "#slick", (sourceManaged / "schema").toString),
           s.log
         )
+
       } else {
         s.log.info("Slick SQL schema already up to date.")
       }

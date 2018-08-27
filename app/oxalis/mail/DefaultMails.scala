@@ -4,6 +4,7 @@ import com.scalableminds.util.mail.Mail
 import models.user.User
 import models.team.Organization
 import play.api.i18n.Messages
+import utils.WkConf
 import views._
 
 object DefaultMails {
@@ -15,13 +16,11 @@ object DefaultMails {
   /**
    * Base url used in emails
    */
-  val uri = conf.getString("http.uri").getOrElse("http://localhost")
+  val uri = WkConf.Http.uri
 
   val defaultFrom = "no-reply@webknossos.org"
 
-  val workloadMail = conf.getString("workload.mail").getOrElse("")
-
-  val newOrganizationMailingList = conf.getString("oxalis.newOrganizationMailingList").getOrElse("")
+  val newOrganizationMailingList = WkConf.Oxalis.newOrganizationMailingList
 
   def registerAdminNotifyerMail(user: User, email: String, brainDBResult: String, organization: Organization) =
     Mail(
@@ -66,14 +65,6 @@ object DefaultMails {
       subject = "Confirm resetting your webKnossos password",
       bodyText = html.mail.resetPassword(name, uri, token).body,
       recipients = List(receiver))
-  }
-
-  def availableTaskCountMail(tableRows: List[(String, Int, String)]) = {
-    Mail(
-      from = defaultFrom,
-      subject = "Available Tasks Overview",
-      bodyHtml = html.mail.availableTaskCounts(tableRows).body,
-      recipients = List(workloadMail))
   }
 
   def newOrganizationMail(organizationName: String, creatorEmail: String, domain: String) = {

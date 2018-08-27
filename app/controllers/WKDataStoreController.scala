@@ -42,7 +42,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
         DataStoreDAO.updateUrlByName(name, status.url)(GlobalAccessContext).map(_ => Ok)
       case e: JsError =>
         logger.error("Data store '$name' sent invalid update. Error: " + e)
-        Future.successful(JsonBadRequest(JsError.toFlatJson(e)))
+        Future.successful(JsonBadRequest(JsError.toJson(e)))
     }
   }
 
@@ -58,7 +58,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
 
       case e: JsError =>
         logger.warn("Data store reported invalid json for data sources.")
-        Fox.successful(JsonBadRequest(JsError.toFlatJson(e)))
+        Fox.successful(JsonBadRequest(JsError.toJson(e)))
     }
   }
 
@@ -72,7 +72,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
         }
       case e: JsError =>
         logger.warn("Data store reported invalid json for data source.")
-        Fox.successful(JsonBadRequest(JsError.toFlatJson(e)))
+        Fox.successful(JsonBadRequest(JsError.toJson(e)))
     }
   }
 

@@ -61,8 +61,7 @@ export type APIDataSourceType = APIDataSourceBaseType & {
 export type APIDataStoreType = {
   +name: string,
   +url: string,
-  +typ: "webknossos-store",
-  +accessToken?: string,
+  +isForeign?: boolean,
 };
 
 export type APITeamType = {
@@ -83,6 +82,7 @@ type APIDatasetBaseType = {
   +owningOrganization: string,
   +logoUrl: ?string,
   +lastUsedByUser: number,
+  +isForeign: boolean,
 };
 
 export type APIMaybeUnimportedDatasetType = APIDatasetBaseType & {
@@ -355,7 +355,8 @@ export type APIFeatureToggles = {
   +discussionBoard: string | false,
   +discussionBoardRequiresAdmin: boolean,
   +hybridTracings: boolean,
-  +allowOrganzationCreation: boolean,
+  +allowOrganizationCreation: boolean,
+  +addForeignDataset: boolean,
 };
 
 // Tracing related datatypes

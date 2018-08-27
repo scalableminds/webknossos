@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.util.tools
 
 import org.apache.commons.lang3.StringUtils

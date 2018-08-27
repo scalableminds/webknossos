@@ -53,7 +53,7 @@ object UserService extends FoxImplicits with IdentityService[User] {
   }
 
   def insert(_organization: ObjectId, email: String, firstName: String,
-             lastName: String, password: String, isActive: Boolean, teamRole: Boolean = false, loginInfo: LoginInfo, passwordInfo: PasswordInfo, isAdmin: Boolean = false): Fox[User] = {
+             lastName: String, isActive: Boolean, teamRole: Boolean = false, loginInfo: LoginInfo, passwordInfo: PasswordInfo, isAdmin: Boolean = false): Fox[User] = {
     implicit val ctx = GlobalAccessContext
     for {
       organizationTeamId <- OrganizationDAO.findOne(_organization).flatMap(_.organizationTeamId).toFox
@@ -67,7 +67,6 @@ object UserService extends FoxImplicits with IdentityService[User] {
         lastName,
         System.currentTimeMillis(),
         Json.toJson(UserConfiguration.default),
-        md5(password),
         loginInfo,
         passwordInfo,
         isAdmin,

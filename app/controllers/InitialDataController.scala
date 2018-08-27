@@ -57,7 +57,6 @@ Samplecountry
     "Boy",
     System.currentTimeMillis(),
     Json.toJson(UserConfiguration.default),
-    SCrypt.md5(defaultUserPassword),
     UserService.createLoginInfo(defaultUserEmail),
     UserService.createPasswordInfo(defaultUserPassword),
     isAdmin = true,

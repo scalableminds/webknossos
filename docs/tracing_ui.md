@@ -200,7 +200,7 @@ Remove labels with *Right Mouse Drag*.
 In the `Segmentation` tab on the right-hand side you can see the cell ID which are active, below your cursor, or in the middle of the viewport.
 
 ![Adding labels with the Trace tool](./images/volume_trace.gif)
-![Adding labels with the Brush tool](./images/volume_trace.gif)
+![Adding labels with the Brush tool](./images/volume_brush.gif)
 ![Removing labels with the Brush tool](./images/volume_delete.gif)
 
 ## Tracing UI Settings

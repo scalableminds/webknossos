@@ -49,7 +49,7 @@ You can assign an Experience to a user on the `Users` screen.
 
 ## Statistics
 
-TODOs
+TODO
 - Project Progress
 - Open Tasks
 

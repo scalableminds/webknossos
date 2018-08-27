@@ -407,7 +407,7 @@ class Authentication @Inject()(
 
   private def creatingOrganizationsIsAllowed(requestingUser: Option[User]) = {
     val noOrganizationPresent = InitialDataService.assertNoOrganizationsPresent
-    val activatedInConfig = bool2Fox(WkConf.Features.allowOrganizationCreation) ?~> "allowOrganzationCreation.notEnabled"
+    val activatedInConfig = bool2Fox(WkConf.Features.allowOrganizationCreation) ?~> "allowOrganizationCreation.notEnabled"
     val userIsSuperUser = bool2Fox(requestingUser.exists(_.isSuperUser))
 
     Fox.sequenceOfFulls(List(noOrganizationPresent, activatedInConfig, userIsSuperUser)).map(_.headOption).toFox

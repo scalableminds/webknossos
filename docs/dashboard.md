@@ -7,7 +7,10 @@ You can manage your datasets, create annotations, resume existing annotations an
 This screen shows all the available and accessible datasets for a user.
 The presentation differs corresponding to the user role.
 Normal users can start or continue annotations and work on tasks.
-[Admins and Team Managers](./users.md#access-rights-roles) also have access to dedicated administration screens and advanced dataset options.
+[Admins and Team Managers](./users.md#access-rights-roles) also have access to dedicated administration screens and advanced dataset properties.
+
+You can view the dataset, or create new skeleton or volume annotations from this screen.
+Search for your dataset by using the search bar or by sorting any of the table columns.
 
 ![Dashboard for Team Managers or Admins](./images/dashboard_datasets.png)
 ![Dashboard for Normal Users](./images/dashboard_normal_user.png)
@@ -15,25 +18,21 @@ Normal users can start or continue annotations and work on tasks.
 ## Tasks
 On the Task screen, users can request new tasks, continue to work on existing tasks and finish tasks.
 Tasks are pieces of work that are automatically distributed to users.
-These tasks will be assigned based on the user's experience levels, project priority and task availability. Read more about the tasks feature in the (Tasks and Projects guide](./tasks.md).
-
-
+These tasks will be assigned based on the user's experience levels, project priority and task availability. Read more about the tasks feature in the [Tasks and Projects guide](./tasks.md).
 
 ![Work on Tasks](./images/dashboard_tasks.png)
 
 ## Explorative Annotations
+Explorative Annotations are all skeleton or volume annotations that do not belong to a task.
+They are created by starting new annotations from the datasets screen or by uploading [NML files](./data_formats.md#nml).
 
-![Manage and Resume Explorative Annotations](./images/dashboard_annotations.png)
+In this screen, the annotations can be resumed, archived and downloaded.
+You can also add custom tags to annotations in order to organize them.
+
+![Manage and resume Explorative Annotations](./images/dashboard_annotations.png)
+![View archived Explorative Annotations](./images/dashboard_archive.png)
 
 ## Dataset Gallery
 
 This screen is the same gallery that is used on the public webKnossos screen.
 Here, it also includes non-public datasets.
-
-<!--
-- what are explorative tracings
-- archiving
-
-- dataset management
--> see chapter 
--->

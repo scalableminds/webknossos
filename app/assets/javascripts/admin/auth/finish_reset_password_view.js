@@ -31,6 +31,10 @@ class FinishResetPasswordView extends React.PureComponent<Props, State> {
       if (!err) {
         const data = formValues;
         const queryParam = this.props.location.search;
+        if (queryParam.indexOf("?token=") === -1) {
+          Toast.error(messages["auth.reset_token_not_supplied"]);
+          return;
+        }
         data.token = queryParam.substring(queryParam.indexOf("=") + 1);
         Request.sendJSONReceiveJSON("/api/auth/resetPassword", { data: formValues }).then(() => {
           Toast.success(messages["auth.reset_pw_confirmation"]);

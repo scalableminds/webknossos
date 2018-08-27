@@ -28,6 +28,9 @@ class FinishResetPasswordView extends React.PureComponent<Props, State> {
 
     this.props.form.validateFieldsAndScroll((err: ?Object, formValues: Object) => {
       if (!err) {
+        const data = formValues;
+        const queryParam = this.props.location.search;
+        data.token = queryParam.substring(queryParam.indexOf("=") + 1);
         Request.sendJSONReceiveJSON("/api/auth/resetPassword", { data: formValues }).then(() => {
           Toast.success(messages["auth.reset_pw_confirmation"]);
           this.props.history.push("/auth/login");
@@ -66,16 +69,6 @@ class FinishResetPasswordView extends React.PureComponent<Props, State> {
         <Col span={8}>
           <h3>Reset Password</h3>
           <Form onSubmit={this.handleSubmit}>
-            <FormItem>
-              {getFieldDecorator("token", {
-                rules: [
-                  {
-                    required: true,
-                    message: messages["auth.reset_token"],
-                  },
-                ],
-              })(<Input type="text" placeholder="Token" />)}
-            </FormItem>
             <FormItem hasFeedback>
               {getFieldDecorator("password.password1", {
                 rules: [

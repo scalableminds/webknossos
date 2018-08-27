@@ -157,7 +157,7 @@ class SpotlightView extends React.PureComponent<Props, State> {
   render() {
     return (
       <Layout>
-        {this.props.activeUser == null && features().allowOrganzationCreation ? (
+        {this.props.activeUser == null && features().allowOrganizationCreation ? (
           <WelcomeHeader history={this.props.history} />
         ) : (
           <SimpleHeader />

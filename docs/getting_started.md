@@ -80,7 +80,7 @@ Basic movement in the dataset is done with mouse wheel or by pressing space bar 
 
 Learn more about skeleton, volume, and hybrid annotations as well as the interface in the [Tracing UI guide](./tracing_ui.md).
 
-![Create a new Annotation from the Dashboard](./images/tracing_ui_skeleton.mp4)
+![Create a new Annotation from the Dashboard](https://youtu.be/rMMaItS_HYE)
 
 
 ## Learn more

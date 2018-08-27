@@ -8,7 +8,7 @@ webKnossos has a task system that is useful for efficiently managing large annot
 - `Task Instance`: Some Tasks need to be completed redundantly by multiple users in order to assure quality. The single assignments of the tasks are called Instances.
 - `Task Type`: Contains a blue print for Tasks. Includes information such as a description with instructions, allowed tracing modes, and advanced options.
 - `Project`: A group of many related Tasks is called a Project. Projects have a priority assigned to them which affects the order of assignment to users. Projects may be paused and resumed in order to manage the user workloads.
-- `Experience`: Admins and Team Managers can assign experience levels to users. Experiences are defined by a domain and a value, such as `flight-tracing 100`. Tasks specify the required experience level of a user.
+- `Experience`: Admins and Team Managers can assign experience levels to users. Experiences are defined by a domain and a value, such as `flight-tracing` and `100`. Tasks specify the required experience level of a user.
 
 It is possible to download all annotations that belong to either a Project or a Task Type for further processing.
 
@@ -62,16 +62,9 @@ Finally, collect the completed data from the `Projects` screen by downloading a 
 
 ## Task Assignment Criteria
 
-- Available Tasks are assigned to users that have the required experience and are members of the specified Team.
-- Multiple Task Instances will be assigned to different users.
-- Tasks from Projects with high Priority are more assigned first.
-- Tasks from paused Projects are not assigned at all.
-
-<!--
-## Statistics
-
-TODO
-- Project Progress
-- Open Tasks
--->
+- Available Tasks are assigned to users that have the required experience and are members of the specified Team
+- Multiple Task Instances will be assigned to different users
+- Tasks from Projects with high Priority are more assigned first
+- Tasks from paused Projects are not assigned at all
+- If there are multiple Tasks with the same priority, they will be chosen at random
 

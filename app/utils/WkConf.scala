@@ -65,6 +65,9 @@ object WkConf extends ConfigReader {
 
   object Braintracing {
     val active = getBoolean("braintracing.active")
+    val user = getString("braintracing.user")
+    val pw = getString("braintracing.pw")
+    val license = getString("braintracing.license")
   }
 
   object Features {

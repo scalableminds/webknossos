@@ -18,9 +18,9 @@ object BrainTracing extends LazyLogging with FoxImplicits {
   val URL = "http://braintracing.org/"
   val CREATE_URL = URL + "oxalis_create_user.php"
   val LOGTIME_URL = URL + "oxalis_add_hours.php"
-  val USER = "brain"
-  val PW = "trace"
-  val LICENSE = "hu39rxpv7m"
+  val USER = WkConf.Braintracing.user
+  val PW = WkConf.Braintracing.pw
+  val LICENSE = WkConf.Braintracing.license
 
   lazy val Mailer =
     Akka.system(play.api.Play.current).actorSelection("/user/mailActor")

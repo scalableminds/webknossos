@@ -23,7 +23,10 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
       val baseFolder = getString("braingames.binary.baseFolder")
       val loadTimeout = getInt("braingames.binary.loadTimeout") seconds
       val cacheMaxSize = getInt("braingames.binary.cacheMaxSize")
+
+      val children = List(ChangeHandler)
     }
+    val children = List(Binary)
   }
 
   object Datastore {
@@ -38,6 +41,8 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
       val address = getString("datastore.fossildb.address")
       val port = getInt("datastore.fossildb.port")
     }
+    val children = List(Oxalis, Fossildb)
   }
 
+  val children = List(Http, Braingames, Datastore)
 }

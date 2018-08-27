@@ -11,16 +11,20 @@ Normal users can start or continue annotations and work on tasks.
 
 You can view the dataset, or create new skeleton or volume annotations from this screen.
 Search for your dataset by using the search bar or by sorting any of the table columns.
+Learn more about managing datasets in the [Datasets guide](./datasets.md).
 
 ![Dashboard for Team Managers or Admins](./images/dashboard_datasets.png)
 ![Dashboard for Normal Users](./images/dashboard_normal_user.png)
 
 ## Tasks
+
+With Tasks you can coordinate large annotation projects with your users.
+Tasks are small assignments that are automatically distributed to users.
+
 On the Task screen, users can request new tasks, continue to work on existing tasks and finish tasks.
-Tasks are pieces of work that are automatically distributed to users.
 These tasks will be assigned based on the user's experience levels, project priority and task availability. Read more about the tasks feature in the [Tasks and Projects guide](./tasks.md).
 
-![Work on Tasks](./images/dashboard_tasks.png)
+![Work with Tasks](./images/dashboard_tasks.png)
 
 ## Explorative Annotations
 Explorative Annotations are all skeleton or volume annotations that do not belong to a task.
@@ -36,3 +40,4 @@ You can also add custom tags to annotations in order to organize them.
 
 This screen is the same gallery that is used on the public webKnossos screen.
 Here, it also includes non-public datasets.
+See a [live Dataset Gallery](https://demo.webknossos.org).

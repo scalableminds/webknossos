@@ -43,13 +43,13 @@ When starting with webKnossos you first need to create an organization.
 An organization respresents your lab in webKnossos and handles permissions for users and datasets.
 Choose a descriptive name for your organization, e.g. "University of Springfield", "Simpsons Lab" or "Neuroscience Department".
 
-TODO: Image onboarding org
+![Create your organization](./images/onboarding_organization.png)
 
 In the onboarding flow, you are asked to create a user account for yourself.
 This will be the first user of your organisation which will automatically be activated and granted admin rights.
 Make sure to enter a correct email address.
 
-TODO: Image onboarding user
+![Create your first user](./images/onboarding_user.png)
 
 ## Your First Dataset
 Now that you've completed the onboarding, you need to import a dataset.
@@ -65,10 +65,14 @@ The data was published by [Helmstaedter et al., 2011](https://www.nature.com/art
 By default, datasets are visible to all users in your organization.
 However, webKnossos includes fine-grained permissions to assign datasets to groups of users.
 
+![Upload your first dataset](./images/onboarding_data1.png)
+![Confirm the dataset properties](./images/onboarding_data2.png)
+
+
 ## Your First Annotation
 To get started with your first annotation, navigate to the `Datasets` tab on your [dashboard](./dashboard.md). 
 Identify a dataset that your interested in and click on `Start Skeleton Tracing` to create a new skeleton annotation. 
-webKnosso will launch the main annotation screen allowing you to navigate your dataset and place markers to reconstruct skeletons. 
+webKnossos will launch the main annotation screen allowing you to navigate your dataset and place markers to reconstruct skeletons. 
 
 Drag the mouse while pressing the left mouse button to navgiate the dataset. 
 Right click in the data to place markers, called nodes. 
@@ -76,7 +80,8 @@ Basic movement in the dataset is done with mouse wheel or by pressing space bar 
 
 Learn more about skeleton, volume, and hybrid annotations as well as the interface in the [Tracing UI guide](./tracing_ui.md).
 
-TODO Image / Gif show first tracing.
+![Create a new Annotation from the Dashboard](./images/tracing_ui_skeleton.mp4)
+
 
 ## Learn more
 Now you know the basics of webKnossos.

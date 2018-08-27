@@ -37,6 +37,7 @@ case class DataSet(
                        sharingToken: Option[String],
                        status: String,
                        logoUrl: Option[String],
+                       sortingKey: String = System.currentTimeMillis().toString,
                        created: Long = System.currentTimeMillis(),
                        isDeleted: Boolean = false
                      ) extends FoxImplicits {
@@ -142,6 +143,7 @@ case class DataSet(
         "isEditable" -> isEditable,
         "lastUsedByUser" -> lastUsedByUser,
         "logoUrl" -> logoUrl,
+        "sortingKey" -> sortingKey,
         "isForeign" -> dataStore.isForeign)
     }
   }
@@ -183,6 +185,7 @@ object DataSetDAO extends SQLDAO[DataSet, DatasetsRow, Datasets] {
         r.sharingtoken,
         r.status,
         r.logourl,
+        r.sortingkey,
         r.created.getTime,
         r.isdeleted
       )
@@ -275,9 +278,9 @@ object DataSetDAO extends SQLDAO[DataSet, DatasetsRow, Datasets] {
     val defaultConfiguration: Option[String] = d.defaultConfiguration.map(c => Json.toJson(c.configuration).toString)
     for {
       _ <- run(
-        sqlu"""insert into webknossos.dataSets(_id, _dataStore, _organization, defaultConfiguration, description, displayName, isPublic, isUsable, name, scale, status, sharingToken, created, isDeleted)
+        sqlu"""insert into webknossos.dataSets(_id, _dataStore, _organization, defaultConfiguration, description, displayName, isPublic, isUsable, name, scale, status, sharingToken, sortingKey, created, isDeleted)
                values(${d._id.id}, ${d._dataStore}, ${d._organization.id}, #${optionLiteral(defaultConfiguration.map(sanitize))}, ${d.description}, ${d.displayName}, ${d.isPublic}, ${d.isUsable},
-                      ${d.name}, #${optionLiteral(d.scale.map(s => writeScaleLiteral(s)))}, ${d.status.take(1024)}, ${d.sharingToken}, ${new java.sql.Timestamp(d.created)}, ${d.isDeleted})
+                      ${d.name}, #${optionLiteral(d.scale.map(s => writeScaleLiteral(s)))}, ${d.status.take(1024)}, ${d.sharingToken}, ${d.sortingKey}, ${new java.sql.Timestamp(d.created)}, ${d.isDeleted})
             """)
     } yield ()
   }

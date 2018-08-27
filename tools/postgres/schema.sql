@@ -72,6 +72,7 @@ CREATE TABLE webknossos.dataSets(
   status VARCHAR(1024) NOT NULL DEFAULT '',
   sharingToken CHAR(256),
   logoUrl VARCHAR(2048),
+  sortingKey VARCHAR(256) NOT NULL,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   UNIQUE (name, _organization)

@@ -76,7 +76,7 @@ Nodes are placed automatically along the flight path, creating skeleton very eff
 Skeleton annotations consist of connected nodes forming a graph.
 Nodes are connected through edges and are organized in trees.
 
-Nodes can be placed by right clicking (*Right Click*) in orthogonal mode or automatically when moving in flight or oblique mode.
+Nodes can be placed by right-clicking (*Right Click*) in orthogonal mode or automatically when moving in flight or oblique mode.
 webKnossos uses the concept of always having an active node and an active tree.
 All (global) operations are executed on the current active node, e.g. adding a comment or node deletion.
 Most keyboard shortcuts take the active node into context.
@@ -184,8 +184,8 @@ There are two ways for merging annotations:
 
 ## Volume Annotations
 
-Next to skeleton annotations, webKnossos also supports volume annotations.
-In this type of annotation you can label groups of voxels with efficient drawing tools.
+In addition to skeleton annotations, webKnossos also supports volume annotations.
+In this type of annotation, you can label groups of voxels with efficient drawing tools.
 
 ### Tools
 Select one of the drawing tools from the toolbar or toggle through with the keyboard shortcut *W*.
@@ -197,7 +197,7 @@ Select one of the drawing tools from the toolbar or toggle through with the keyb
 Add labels with *Left Mouse Drag*.
 Remove labels with *Right Mouse Drag*.
 
-In the `Segmentation` tab on the right-hand side you can see the cell ID which are active, below your cursor, or in the middle of the viewport.
+In the `Segmentation` tab on the right-hand side, you can see the cell IDs which are active, below your cursor, or in the middle of the viewport.
 
 ![Adding labels with the Trace tool](./images/volume_trace.gif)
 ![Adding labels with the Brush tool](./images/volume_brush.gif)
@@ -261,6 +261,6 @@ For multi-layer datasets, each layer can be adjusted separately.
 - `Highlight Hovered Cells`: Toggles whether segmented cells will be highlighted in all viewports when hovering over them with the mouse cursor. Useful for identifying the highlighted cell in across all viewports.
 
 #### Quality
-- `4 Bit`: Toggles data download from the server using only 4 Bit instead of 8 Bit for each pixel. Use this to reduce the amount of necessary internet bandwidth for webKnossos. Useful for showcasing data on the go over cellular networks, e.g 4G. 
+- `4 Bit`: Toggles data download from the server using only 4 Bit instead of 8 Bit for each pixel. Use this to reduce the amount of necessary internet bandwidth for webKnossos. Useful for showcasing data on the go over cellular networks, e.g 3G. 
 - `Quality`: Adjusts the quality level used for data download from the server. "High" will load the original, unmodified data. "Medium" and "Low" will load a downsampled version of the data layer to reduce network traffic. Use this to reduce the amount of necessary internet bandwidth for webKnossos.
 

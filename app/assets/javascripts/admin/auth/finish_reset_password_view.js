@@ -12,6 +12,7 @@ const FormItem = Form.Item;
 type Props = {
   form: Object,
   history: RouterHistory,
+  location: Object,
 };
 
 type State = {

@@ -53,7 +53,7 @@ Spherical projection is especially useful when rotating the camera, as pixels cl
 
 Flight mode is best used for annotating structures very quickly. Skilled tracers can follow "tube"-like structure as though they are "flying" through them. Nodes are placed automatically along the flight path, creating skeleton very efficiently.
 
-TODO: Image Flight Mode
+![Tracing neurons in Flight Mode](./images/tracing_ui_flightmode.jpg)
 
 #### Oblique Mode
 Oblique Mode is similar to Flight mode, but arbitrary cuts through the data are not projected on a sphere but are straight instead.

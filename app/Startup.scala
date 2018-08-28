@@ -1,26 +1,21 @@
 import akka.actor.Props
 import com.newrelic.api.agent.NewRelic
-import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mail.{Mailer, MailerConfig}
 import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService
 import javax.inject.Inject
-import models.annotation.AnnotationDAO
 import net.liftweb.common.{Failure, Full}
-import oxalis.cleanup.CleanUpService
-import oxalis.security.WebknossosEnvironment
 import play.api._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.concurrent._
 import utils.WkConf
 
 import scala.concurrent.Future
-import scala.concurrent.duration._
 import scala.sys.process._
 
-class Startup @Inject()  (app: Application, environment: WebknossosEnvironment) extends LazyLogging{
+class Startup @Inject()  (app: Application) extends LazyLogging{
 
-  logger.info("Executing Global START")
+  logger.info("Executing Startup")
   startActors(app)
 
   ensurePostgresDatabase.onComplete { _ =>
@@ -31,16 +26,6 @@ class Startup @Inject()  (app: Application, environment: WebknossosEnvironment) 
         case _ => logger.warn("Error while inserting initial data")
       }
     }
-  }
-
-  val tokenAuthenticatorService = environment.combinedAuthenticatorService.tokenAuthenticatorService
-
-  CleanUpService.register("deletion of expired tokens", tokenAuthenticatorService.dataStoreExpiry) {
-    tokenAuthenticatorService.removeExpiredTokens(GlobalAccessContext)
-  }
-
-  CleanUpService.register("deletion of old annotations in initializing state", 1 day) {
-    AnnotationDAO.deleteOldInitializingAnnotations
   }
 
   def startActors(app: Application) {

@@ -1,16 +1,21 @@
 import akka.actor.Props
 import com.newrelic.api.agent.NewRelic
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mail.{Mailer, MailerConfig}
 import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService
 import javax.inject.Inject
+import models.annotation.AnnotationDAO
 import net.liftweb.common.{Failure, Full}
+import oxalis.cleanup.CleanUpService
+import oxalis.security.WebknossosSilhouette
 import play.api._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.concurrent._
 import utils.WkConf
 
 import scala.concurrent.Future
+import scala.concurrent.duration._
 import scala.sys.process._
 
 class Startup @Inject()  (app: Application) extends LazyLogging{
@@ -41,6 +46,16 @@ class Startup @Inject()  (app: Application) extends LazyLogging{
     Akka.system(app).actorOf(
       Props(new Mailer(mailerConf)),
       name = "mailActor")
+  }
+
+  val tokenAuthenticatorService = WebknossosSilhouette.environment.combinedAuthenticatorService.tokenAuthenticatorService
+
+  CleanUpService.register("deletion of expired tokens", tokenAuthenticatorService.dataStoreExpiry) {
+    tokenAuthenticatorService.removeExpiredTokens(GlobalAccessContext)
+  }
+
+  CleanUpService.register("deletion of old annotations in initializing state", 1 day) {
+    AnnotationDAO.deleteOldInitializingAnnotations
   }
 
   def ensurePostgresDatabase = {

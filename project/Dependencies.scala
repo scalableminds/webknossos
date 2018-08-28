@@ -6,7 +6,7 @@ object Dependencies {
   val akkaVersion = "2.4.1"
   val log4jVersion = "2.0-beta9"
   val newrelicVersion = "3.44.1"
-  val playVersion = "2.5.0"
+  val playVersion = "2.5.8"
   val webknossosWrapVersion = "1.1.4"
 
   val airbrake = "com.scalableminds" %% "play-airbrake" % "0.5.0"

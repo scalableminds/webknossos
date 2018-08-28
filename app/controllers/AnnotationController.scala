@@ -39,7 +39,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       annotation <- provideAnnotation(typ, id) ?~> "annotation.notFound"
       restrictions <- restrictionsFor(typ, id) ?~> "restrictions.notFound"
       _ <- restrictions.allowAccess(request.identity) ?~> "notAllowed" ~> BAD_REQUEST
-      js <- annotation.publicWrites(request.identity, Some(restrictions), Some(readOnly)) ?~> "could not convert annotation to json"
+      js <- annotation.publicWrites(request.identity, Some(restrictions), Some(readOnly)) ?~> "annotation.write.failed"
       _ <- Fox.runOptional(request.identity) { user =>
         if (typ == AnnotationType.Task || typ == AnnotationType.Explorational) {
           TimeSpanService.logUserInteraction(user, annotation) // log time when a user starts working
@@ -56,11 +56,11 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     for {
       identifierA <- AnnotationIdentifier.parse(typ, id)
       identifierB <- AnnotationIdentifier.parse(mergedTyp, mergedId)
-      mergedAnnotation <- AnnotationMerger.mergeTwoByIds(identifierA, identifierB, true)
+      mergedAnnotation <- AnnotationMerger.mergeTwoByIds(identifierA, identifierB, true) ?~> "annotation.merge.failed"
       restrictions = AnnotationRestrictions.defaultAnnotationRestrictions(mergedAnnotation)
-      _ <- restrictions.allowAccess(request.identity) ?~> Messages("notAllowed") ~> BAD_REQUEST
+      _ <- restrictions.allowAccess(request.identity) ?~> "notAllowed" ~> BAD_REQUEST
       _ <- AnnotationDAO.insertOne(mergedAnnotation)
-      js <- mergedAnnotation.publicWrites(Some(request.identity), Some(restrictions))
+      js <- mergedAnnotation.publicWrites(Some(request.identity), Some(restrictions)) ?~> "annotation.write.failed"
     } yield {
       JsonOk(js, Messages("annotation.merge.success"))
     }
@@ -69,10 +69,10 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
   def loggedTime(typ: String, id: String) = SecuredAction.async { implicit request =>
       for {
-        annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
-        restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
-        _ <- restrictions.allowAccess(request.identity) ?~> Messages("notAllowed") ~> BAD_REQUEST
-        loggedTimeAsMap <- TimeSpanService.loggedTimeOfAnnotation(annotation._id, TimeSpan.groupByMonth)
+        annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest) ?~> "annotation.notFound"
+        restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest) ?~> "restrictions.notFound"
+        _ <- restrictions.allowAccess(request.identity) ?~> "notAllowed" ~> BAD_REQUEST
+        loggedTimeAsMap <- TimeSpanService.loggedTimeOfAnnotation(annotation._id, TimeSpan.groupByMonth) ?~> "annotation.timelogging.read.failed"
       } yield {
         Ok(Json.arr(
           loggedTimeAsMap.map {
@@ -85,13 +85,13 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
   def revert(typ: String, id: String, version: Int) = SecuredAction.async { implicit request =>
     for {
-      annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
-      restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
-      _ <- restrictions.allowUpdate(request.identity) ?~> Messages("notAllowed")
-      _ <- bool2Fox(annotation.isRevertPossible) ?~> Messages("annotation.revert.toOld")
+      annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest) ?~> "annotation.notFound"
+      restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest) ?~> "restrictions.notFound"
+      _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed"
+      _ <- bool2Fox(annotation.isRevertPossible) ?~> "annotation.revert.toOld"
       dataSet <- annotation.dataSet
       dataStoreHandler <- dataSet.dataStoreHandler
-      skeletonTracingId <- annotation.skeletonTracingId.toFox
+      skeletonTracingId <- annotation.skeletonTracingId.toFox ?~> "annotation.noSkeleton"
       newSkeletonTracingId <- dataStoreHandler.duplicateSkeletonTracing(skeletonTracingId, Some(version.toString))
       _ <- AnnotationDAO.updateSkeletonTracingId(annotation._id, newSkeletonTracingId)
     } yield {
@@ -102,10 +102,10 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
   def reset(typ: String, id: String) = SecuredAction.async { implicit request =>
     for {
-      annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
+      annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest) ?~> "annotation.notFound"
       _ <- ensureTeamAdministration(request.identity, annotation._team)
-      _ <- annotation.muta.resetToBase ?~> Messages("annotation.reset.failed")
-      updated <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
+      _ <- annotation.muta.resetToBase ?~> "annotation.reset.failed"
+      updated <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest) ?~> "annotation.notFound"
       json <- updated.publicWrites(Some(request.identity))
     } yield {
       JsonOk(json, Messages("annotation.reset.success"))
@@ -122,7 +122,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       _ <- Fox.assertTrue(isReopenAllowed(request.identity, annotation)) ?~> "reopen.notAllowed"
       _ <- annotation.muta.reopen ?~> "annotation.invalid"
       updatedAnnotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
-      json <- updatedAnnotation.publicWrites(Some(request.identity))
+      json <- updatedAnnotation.publicWrites(Some(request.identity)) ?~> "annotation.write.failed"
     } yield {
       JsonOk(json, Messages("annotation.reopened"))
     }
@@ -137,8 +137,8 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       for {
         dataSetSQL <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
         tracingType <- TracingType.values.find(_.toString == request.body.typ).toFox
-        annotation <- AnnotationService.createExplorationalFor(request.identity, dataSetSQL._id, tracingType, request.body.withFallback.getOrElse(true)) ?~> Messages("annotation.create.failed")
-        json <- annotation.publicWrites(Some(request.identity))
+        annotation <- AnnotationService.createExplorationalFor(request.identity, dataSetSQL._id, tracingType, request.body.withFallback.getOrElse(true)) ?~> "annotation.create.failed"
+        json <- annotation.publicWrites(Some(request.identity)) ?~> "annotation.write.failed"
       } yield {
         JsonOk(json)
       }
@@ -146,9 +146,9 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
   private def finishAnnotation(typ: String, id: String, user: User)(implicit request: SecuredRequest[_]): Fox[(Annotation, String)] = {
     for {
-      annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
-      restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
-      message <- annotation.muta.finish(user, restrictions)
+      annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest) ?~> "annotation.notFound"
+      restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest) ?~> "restrictions.notFound"
+      message <- annotation.muta.finish(user, restrictions) ?~> "annotation.finish.failed"
       updated <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       _ <- TimeSpanService.logUserInteraction(user, annotation) // log time on tracing end
     } yield {
@@ -158,7 +158,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
   def finish(typ: String, id: String) = SecuredAction.async { implicit request =>
     for {
-      (updated, message) <- finishAnnotation(typ, id, request.identity)
+      (updated, message) <- finishAnnotation(typ, id, request.identity) ?~> "annotation.finish.failed"
       restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
       json <- updated.publicWrites(Some(request.identity), Some(restrictions))
     } yield {
@@ -180,12 +180,12 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
   def editAnnotation(typ: String, id: String) = SecuredAction.async(parse.json) { implicit request =>
     for {
-      annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
+      annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest) ?~> "annotation.notFound"
       muta = annotation.muta
-      _ <- (request.body \ "name").asOpt[String].map(muta.rename).getOrElse(Fox.successful(())) ?~> Messages("annotation.edit.failed")
-      _ <- (request.body \ "description").asOpt[String].map(muta.setDescription).getOrElse(Fox.successful(())) ?~> Messages("annotation.edit.failed")
-      _ <- (request.body \ "isPublic").asOpt[Boolean].map(muta.setIsPublic).getOrElse(Fox.successful(())) ?~> Messages("annotation.edit.failed")
-      _ <- (request.body \ "tags").asOpt[List[String]].map(muta.setTags).getOrElse(Fox.successful(())) ?~> Messages("annotation.edit.failed")
+      _ <- (request.body \ "name").asOpt[String].map(muta.rename).getOrElse(Fox.successful(())) ?~> "annotation.edit.failed"
+      _ <- (request.body \ "description").asOpt[String].map(muta.setDescription).getOrElse(Fox.successful(())) ?~> "annotation.edit.failed"
+      _ <- (request.body \ "isPublic").asOpt[Boolean].map(muta.setIsPublic).getOrElse(Fox.successful(())) ?~> "annotation.edit.failed"
+      _ <- (request.body \ "tags").asOpt[List[String]].map(muta.setTags).getOrElse(Fox.successful(())) ?~> "annotation.edit.failed"
     } yield {
       JsonOk(Messages("annotation.edit.success"))
     }
@@ -194,8 +194,8 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   def annotationsForTask(taskId: String) = SecuredAction.async { implicit request =>
     for {
       taskIdValidated <- ObjectId.parse(taskId)
-      task <- TaskDAO.findOne(taskIdValidated) ?~> Messages("task.notFound")
-      project <- task.project
+      task <- TaskDAO.findOne(taskIdValidated) ?~> "task.notFound"
+      project <- task.project ?~> Messages("project.notFound", task._project)
       _ <- ensureTeamAdministration(request.identity, project._team)
       annotations <- task.annotations
       jsons <- Fox.serialSequence(annotations)(_.publicWrites(Some(request.identity)))

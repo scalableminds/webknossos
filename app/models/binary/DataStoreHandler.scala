@@ -4,6 +4,8 @@ import java.io.File
 import java.math.BigInteger
 import java.security.SecureRandom
 
+import akka.stream.scaladsl.Source
+import akka.util.ByteString
 import com.mohiva.play.silhouette.api.util.IDGenerator
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
@@ -110,7 +112,7 @@ class DataStoreHandler(dataStore: DataStore, dataSet: DataSet) extends LazyLoggi
     }
   }
 
-  def getVolumeTracing(tracingId: String): Fox[(VolumeTracing, Enumerator[Array[Byte]])] = {
+  def getVolumeTracing(tracingId: String): Fox[(VolumeTracing, Source[ByteString, _])] = {
     logger.debug("Called to get VolumeTracing." + baseInfo)
     for {
       tracing <- RPC(s"${dataStore.url}/data/tracings/volume/${tracingId}")
@@ -118,7 +120,7 @@ class DataStoreHandler(dataStore: DataStore, dataSet: DataSet) extends LazyLoggi
         .getWithProtoResponse[VolumeTracing](VolumeTracing)
       data <- RPC(s"${dataStore.url}/data/tracings/volume/${tracingId}/data")
         .withQueryString("token" -> DataStoreHandler.webKnossosToken)
-        .getStream.map(_._2)
+        .getStream
     } yield {
       (tracing, data)
     }

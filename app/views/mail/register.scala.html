@@ -1,10 +1,12 @@
-@( name: String, brainDBresult: String )
+@( name: String, brainDBresult: Option[String] )
 Hello @name,
 
 thank you for signing up for an webKnossos account! Your account is going to get
   activated after an administrator has reviewed your details.
 
-@brainDBresult
+@if(brainDBresult.isDefined) {
+@brainDBresult.get
+}
 
 Enjoy using webKnossos
 

@@ -83,6 +83,7 @@ type APIDatasetBaseType = {
   +logoUrl: ?string,
   +lastUsedByUser: number,
   +isForeign: boolean,
+  +sortingKey: number,
 };
 
 export type APIMaybeUnimportedDatasetType = APIDatasetBaseType & {

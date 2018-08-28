@@ -64,7 +64,7 @@ Finally, collect the completed data from the `Projects` screen by downloading a 
 
 - Available Tasks are assigned to users that have the required experience and are members of the specified Team
 - Multiple Task Instances will be assigned to different users
-- Tasks from Projects with high Priority are more assigned first
+- Tasks from Projects with high Priority are assigned first
 - Tasks from paused Projects are not assigned at all
 - If there are multiple Tasks with the same priority, they will be chosen at random
 

@@ -286,7 +286,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
       panels.push(
         <Panel header="Volume Options" key="3b">
           <LogSliderSetting
-            label="Bursh Size"
+            label="Brush Size"
             roundTo={0}
             min={Constants.MIN_BRUSH_SIZE}
             max={Constants.MAX_BRUSH_SIZE}

@@ -54,6 +54,7 @@ type UserSettingsViewProps = {
   onChangeBoundingBox: (value: ?Vector6) => void,
   onChangeRadius: (value: number) => void,
   onChangeZoomStep: (value: number) => void,
+  onChangeBrushSize: (value: number) => void,
   viewMode: ModeType,
   controlMode: ControlModeType,
   brushSize: number,

@@ -241,6 +241,7 @@ Not all settings are available in every tracing mode.
 - `Highlight Commented Nodes`: When active, nodes that have a comment associated with them will be rendered with a slight board around them. This is useful for quickly identifying (important) nodes.
 
 #### Volume Options
+- `Brush Size`: The current size of the brush drawing tool.
 - `Active Cell ID`: Contains the active cell's ID. Enter a valid cell ID to label voxels with this cell ID.
 
 #### Other

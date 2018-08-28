@@ -69,15 +69,15 @@ Find all available keyboard shortcuts for webKnossos listed below.
 
 ## Volume Mode
 
-| Key Binding                   | Operation                                                   |
-| ----------------------------- | ----------------------------------------------------------- |
-| Left Mouse Drag or Arrow Keys | Move (Move Mode) / Add To Current Cell (Trace / Brush Mode) |
-| SHIFT + Left Click            | Select Active Cell                                          |
-| CTRL + Left Mouse Drag        | Add Empty Voxels To Current Cell (in Trace / Brush Mode)    |
-| Right Mouse Drag              | Remove Voxels From Current Cell                             |
-| CTRL + Right Mouse Drag       | Remove Voxels From Any Cell                                 |
-| C                             | Create New Cell                                             |
-| W, 1                          | Toggle Modes (Move / Trace / Brush)                         |
-| SHIFT + Mousewheel            | Change Brush Size (Brush Mode)                              |
-| V                             | Copy Segmentation of Current Cell From Previous Slice       |
-| SHIFT + V                     | Copy Segmentation of Current Cell From Next Slice           |
+| Key Binding                       | Operation                                                   |
+| --------------------------------- | ----------------------------------------------------------- |
+| Left Mouse Drag or Arrow Keys     | Move (Move Mode) / Add To Current Cell (Trace / Brush Mode) |
+| SHIFT + Left Click                | Select Active Cell                                          |
+| CTRL + Left Mouse Drag            | Add Empty Voxels To Current Cell (in Trace / Brush Mode)    |
+| Right Mouse Drag                  | Remove Voxels From Current Cell                             |
+| CTRL + Right Mouse Drag           | Remove Voxels From Any Cell                                 |
+| C                                 | Create New Cell                                             |
+| W, 1                              | Toggle Modes (Move / Trace / Brush)                         |
+| SHIFT + Mousewheel or SHIFT + I, O | Change Brush Size (Brush Mode)                              |
+| V                                 | Copy Segmentation of Current Cell From Previous Slice       |
+| SHIFT + V                         | Copy Segmentation of Current Cell From Next Slice           |

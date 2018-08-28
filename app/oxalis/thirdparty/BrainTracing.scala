@@ -22,10 +22,10 @@ object BrainTracing extends LazyLogging with FoxImplicits {
   lazy val Mailer =
     Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
 
-  def registerIfNeeded(user: User, password: String): Fox[String] =
+  def registerIfNeeded(user: User, password: String): Fox[Option[String]] =
     for {
       organization <- user.organization
-      result <- (if (organization.name == "Connectomics department" && WkConf.Braintracing.active) register(user, password).toFox else Fox.successful("braintracing.none"))
+      result <- (if (organization.name == "Connectomics department" && WkConf.Braintracing.active) register(user, password).toFox.map(Some(_)) else Fox.successful(None))
     } yield result
 
   private def register(user: User, password: String): Future[String] = {

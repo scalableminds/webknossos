@@ -56,19 +56,10 @@ case class DataSet(
   def dataStore: Fox[DataStore] =
     DataStoreDAO.findOneByName(_dataStore.trim)(GlobalAccessContext) ?~> Messages("datastore.notFound")
 
-  def dataStoreInfo: Fox[DataStoreInfo] =
+  def dataStoreHandler(implicit ctx: DBAccessContext): Fox[DataStoreHandler] =
     for {
       dataStore <- dataStore
-    } yield DataStoreInfo(dataStore.name, dataStore.url, dataStore.typ)
-
-  def dataStoreHandler(implicit ctx: DBAccessContext): Fox[DataStoreHandlingStrategy] =
-    for {
-      dataStoreInfo <- dataStoreInfo
-    } yield {
-      dataStoreInfo.typ match {
-        case WebKnossosStore => new WKStoreHandlingStrategy(dataStoreInfo, this)
-      }
-    }
+    } yield new DataStoreHandler(dataStore, this)
 
   def urlEncodedName: String =
     UriEncoding.encodePathSegment(name, "UTF-8")
@@ -133,14 +124,14 @@ case class DataSet(
       logoUrl <- getLogoUrl
       isEditable <- isEditableBy(user)
       lastUsedByUser <- lastUsedByUser(user)
-      dataStoreInfo <- dataStoreInfo
+      dataStore <- dataStore
+      dataStoreJs <- dataStore.publicWrites
       organization <- organization
       dataSource <- constructDataSource
-      isForeign <- dataStore.map(_.isForeign)
     } yield {
       Json.obj("name" -> name,
         "dataSource" -> dataSource,
-        "dataStore" -> dataStoreInfo,
+        "dataStore" -> dataStoreJs,
         "owningOrganization" -> organization.name,
         "allowedTeams" -> teamsJs,
         "isActive" -> isUsable,
@@ -151,7 +142,7 @@ case class DataSet(
         "isEditable" -> isEditable,
         "lastUsedByUser" -> lastUsedByUser,
         "logoUrl" -> logoUrl,
-        "isForeign" -> isForeign)
+        "isForeign" -> dataStore.isForeign)
     }
   }
 }

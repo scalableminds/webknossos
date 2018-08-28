@@ -4,7 +4,7 @@ import com.mohiva.play.silhouette.api.services.{AuthenticatorService, IdentitySe
 import com.mohiva.play.silhouette.api.util.Clock
 import com.mohiva.play.silhouette.api.{Environment, EventBus, RequestProvider}
 import com.mohiva.play.silhouette.impl.authenticators.{BearerTokenAuthenticatorSettings, CookieAuthenticatorSettings}
-import com.mohiva.play.silhouette.impl.util.{DefaultFingerprintGenerator, SecureRandomIDGenerator}
+import com.mohiva.play.silhouette.impl.util.{DefaultFingerprintGenerator}
 import models.user.{User, UserService}
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
@@ -19,7 +19,7 @@ class WebknossosEnvironment @Inject()(configuration: Configuration)(implicit val
   val cookieSettings = configuration.underlying.as[CookieAuthenticatorSettings]("silhouette.cookieAuthenticator")
   val tokenSettings = configuration.underlying.as[BearerTokenAuthenticatorSettings]("silhouette.tokenAuthenticator")
   val fingerprintGenerator = new DefaultFingerprintGenerator(false)
-  val idGenerator = new SecureRandomIDGenerator()
+  val idGenerator = new CompactRandomIDGenerator
   val tokenDAO = new BearerTokenAuthenticatorDAO
 
   val combinedAuthenticatorService = CombinedAuthenticatorService(cookieSettings, tokenSettings, tokenDAO, fingerprintGenerator, idGenerator, Clock())

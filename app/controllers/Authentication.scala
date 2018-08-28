@@ -22,6 +22,7 @@ import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareAction}
 import oxalis.security._
 import oxalis.thirdparty.BrainTracing
 import oxalis.view.ProvidesUnauthorizedSessionData
+import play.api.Play.current
 import play.api._
 import play.api.data.Form
 import play.api.data.Forms.{email, _}

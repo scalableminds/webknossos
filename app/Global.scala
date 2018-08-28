@@ -1,4 +1,3 @@
-import com.newrelic.api.agent.NewRelic
 import com.typesafe.scalalogging.LazyLogging
 import play.api._
 import play.api.mvc.Results.Ok
@@ -23,11 +22,6 @@ object Global extends GlobalSettings with LazyLogging{
     } else {
       Some(Action {Ok(views.html.main())})
     }
-  }
-
-  override def onError(request: RequestHeader, ex: Throwable) = {
-    NewRelic.noticeError(ex)
-    super.onError(request, ex)
   }
 
 }

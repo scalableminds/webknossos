@@ -73,7 +73,7 @@ const WelcomeHeader = ({ history }) => (
                 style={{ marginRight: 50 }}
                 onClick={() => history.push("/onboarding")}
               >
-                Try it out now
+                Get Started
               </Button>
               <a
                 href="https://docs.webknossos.org/"
@@ -157,7 +157,7 @@ class SpotlightView extends React.PureComponent<Props, State> {
   render() {
     return (
       <Layout>
-        {this.props.activeUser == null && features().allowOrganzationCreation ? (
+        {this.props.activeUser == null && features().allowOrganizationCreation ? (
           <WelcomeHeader history={this.props.history} />
         ) : (
           <SimpleHeader />

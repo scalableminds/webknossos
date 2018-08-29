@@ -162,9 +162,9 @@ class Authentication @Inject()(
             } else {
               for {
                 organization <- OrganizationDAO.findOneByName(signUpData.organization)(GlobalAccessContext)
-                user <- UserService.insert(organization._id, email, firstName, lastName, signUpData.password, automaticUserActivation, isAdminOnRegistration,
+                user <- UserService.insert(organization._id, email, firstName, lastName, automaticUserActivation, isAdminOnRegistration,
                   loginInfo, passwordHasher.hash(signUpData.password))
-                brainDBResult <- BrainTracing.registerIfNeeded(user).toFox
+                brainDBResult <- BrainTracing.registerIfNeeded(user, signUpData.password).toFox
               } yield {
                 Mailer ! Send(DefaultMails.registerMail(user.name, user.email, brainDBResult))
                 Mailer ! Send(DefaultMails.registerAdminNotifyerMail(user, user.email, brainDBResult, organization))
@@ -389,7 +389,7 @@ class Authentication @Inject()(
                 } else {
                   for {
                     organization <- createOrganization(signUpData.organization) ?~> Messages("organization.create.failed")
-                    user <- UserService.insert(organization._id, email, firstName, lastName, signUpData.password, isActive = true, teamRole = true,
+                    user <- UserService.insert(organization._id, email, firstName, lastName, isActive = true, teamRole = true,
                       loginInfo, passwordHasher.hash(signUpData.password), isAdmin = true)
                     _ <- createOrganizationFolder(organization.name, loginInfo)
                   } yield {
@@ -407,7 +407,7 @@ class Authentication @Inject()(
 
   private def creatingOrganizationsIsAllowed(requestingUser: Option[User]) = {
     val noOrganizationPresent = InitialDataService.assertNoOrganizationsPresent
-    val activatedInConfig = bool2Fox(WkConf.Features.allowOrganizationCreation) ?~> "allowOrganzationCreation.notEnabled"
+    val activatedInConfig = bool2Fox(WkConf.Features.allowOrganizationCreation) ?~> "allowOrganizationCreation.notEnabled"
     val userIsSuperUser = bool2Fox(requestingUser.exists(_.isSuperUser))
 
     Fox.sequenceOfFulls(List(noOrganizationPresent, activatedInConfig, userIsSuperUser)).map(_.headOption).toFox

@@ -80,6 +80,8 @@ user.experience.set=Set experience of {0}
 user.experience.removed=Removed experience from {0}
 user.email.invalid=At least one Email is invalid
 user.notAuthorised=You are not authorized to view this resource. Please log in.
+user.id.notFound=We couldn''t find a user id in the request.
+user.id.invalid=The provided user id is invalid.
 
 braintracing.new=An account on braintracing.org was created for you. You can use the same credentials as on webKnossos to login.
 braintracing.error=We couldn''t atomatically create an account for you on braintracing.org. Please do it on your own.
@@ -224,6 +226,7 @@ task.notFound=Task couldn''t be found
 task.removed=Task was removed
 task.editSuccess=Task successfully edited
 task.noAnnotations=We couldn''t find finished annotations for this task
+task.annotation.failed=Failed to retrieve annotations for this task
 task.instances.changeImpossible=Due to the project settings it is not possible to change the number of instances of this task
 
 assignment.retrieval.failed=Failed to retrieve any assignment

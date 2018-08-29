@@ -50,6 +50,7 @@ team.notFound=Team could not be found.
 organization.create.forbidden=You are not allowed to create a new organization
 organization.create.failed=Failed to create a new organization
 organization.notFound=Organization {0} couldn''t be found
+organization.list.failed=Failed to retrieve list of organizations.
 
 user.automaticUserActivation=User was activated automatically
 user.accountCreated=Your account has been created. An administrator is going to unlock you soon.
@@ -171,6 +172,8 @@ project.notFound=Project {0} couldn''t be found
 project.update.failed=Project {0} update failed
 project.noAnnotations=We couldn''t find annotations for this project
 project.increaseTaskInstances.negative=Cannot increment task counts by negative number
+project.list.failed=Failed to retrieve list of projects.
+project.creation.failed=Failed to create project.
 
 role.invalid=Invalid role
 role.removed=Removed role from {0}
@@ -206,9 +209,9 @@ annotation.revert.toOld=Reverting the tracing to a previous version is not possi
 annotation.preferedMode.invalid=Prefered mode is invalid
 annotation.mode.invalid=Invalid annotation mode
 annotation.transferee.noDataSetAccess=Cannot transfer annotation to a user who has no access to the dataset
-annotation.timelogging.read.failed="Time
-annotation.write.failed="Could not convert annotation to json"
-annotation.noSkeleton="No skeleton tracing found for this annotation"
+annotation.timelogging.read.failed=Time
+annotation.write.failed=Could not convert annotation to json
+annotation.noSkeleton=No skeleton tracing found for this annotation
 
 issue.summary.notSupplied=No summary supplied
 issue.description.notSupplied=No description supplied
@@ -248,8 +251,13 @@ time.invalidFormat=Time couldn''t get parsed.
 point.invalidFormat=Invalid format. Use something like: 4, 63, 24
 
 mail.welcome.subject = Welcome to ScalableMinds
+
 script.notFound=Script couldn''t be found
 script.removalFailed=Failed to remove script
+script.write.failed=Failed to convert script to json
+script.notOwner=You are not the owner of the script you want to edit.
+
+serialization.failed=Failed to serialize data.
 
 sql.invalidBSONObjectId=Invalid BSONObjectID in SQL DB: {0}
 

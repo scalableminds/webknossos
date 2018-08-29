@@ -23,7 +23,7 @@ case class Script(
   def publicWrites: Fox[JsObject] = {
     implicit val ctx = GlobalAccessContext
     for {
-      owner <- UserDAO.findOne(_owner)
+      owner <- UserDAO.findOne(_owner) ?~> "user.notFound"
       ownerJs <- owner.compactWrites
     } yield {
       Json.obj(

@@ -12,7 +12,7 @@ const FormItem = Form.Item;
 type Props = {
   form: Object,
   history: RouterHistory,
-  location: Object,
+  resetToken: string,
 };
 
 type State = {
@@ -30,13 +30,12 @@ class FinishResetPasswordView extends React.PureComponent<Props, State> {
     this.props.form.validateFieldsAndScroll((err: ?Object, formValues: Object) => {
       if (!err) {
         const data = formValues;
-        const queryParam = this.props.location.search;
-        if (queryParam.indexOf("?token=") === -1) {
+        if (this.props.resetToken === "") {
           Toast.error(messages["auth.reset_token_not_supplied"]);
           return;
         }
-        data.token = queryParam.substring(queryParam.indexOf("=") + 1);
-        Request.sendJSONReceiveJSON("/api/auth/resetPassword", { data: formValues }).then(() => {
+        data.token = this.props.resetToken;
+        Request.sendJSONReceiveJSON("/api/auth/resetPassword", { data }).then(() => {
           Toast.success(messages["auth.reset_pw_confirmation"]);
           this.props.history.push("/auth/login");
         });

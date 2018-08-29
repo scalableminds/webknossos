@@ -16,7 +16,10 @@ import {
   setActiveTreeAction,
   setNodeRadiusAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
+import {
+  setActiveCellAction,
+  setBrushSizeAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import {
   NumberInputSetting,
   SwitchSetting,
@@ -51,8 +54,10 @@ type UserSettingsViewProps = {
   onChangeBoundingBox: (value: ?Vector6) => void,
   onChangeRadius: (value: number) => void,
   onChangeZoomStep: (value: number) => void,
+  onChangeBrushSize: (value: number) => void,
   viewMode: ModeType,
   controlMode: ControlModeType,
+  brushSize: number,
 };
 
 class UserSettingsView extends PureComponent<UserSettingsViewProps> {
@@ -280,6 +285,15 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
       const volumeTracing = enforceVolumeTracing(this.props.tracing);
       panels.push(
         <Panel header="Volume Options" key="3b">
+          <LogSliderSetting
+            label="Brush Size"
+            roundTo={0}
+            min={Constants.MIN_BRUSH_SIZE}
+            max={Constants.MAX_BRUSH_SIZE}
+            step={5}
+            value={this.props.brushSize}
+            onChange={this.props.onChangeBrushSize}
+          />
           <NumberInputSetting
             label="Active Cell ID"
             value={volumeTracing.activeCellId}
@@ -358,6 +372,7 @@ const mapStateToProps = (state: OxalisState) => ({
   maxZoomStep: getMaxZoomStep(state),
   viewMode: state.temporaryConfiguration.viewMode,
   controlMode: state.temporaryConfiguration.controlMode,
+  brushSize: state.temporaryConfiguration.brushSize,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
@@ -372,6 +387,10 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   onChangeActiveCellId(id: number) {
     dispatch(setActiveCellAction(id));
+  },
+  onChangeBrushSize(size: number) {
+    console.log(`called with size: ${size}`);
+    dispatch(setBrushSizeAction(size));
   },
   onChangeBoundingBox(boundingBox: ?Vector6) {
     dispatch(setUserBoundingBoxAction(Utils.computeBoundingBoxFromArray(boundingBox)));

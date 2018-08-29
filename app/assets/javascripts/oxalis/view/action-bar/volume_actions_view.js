@@ -22,7 +22,6 @@ type Props = {
 class VolumeActionsView extends PureComponent<Props> {
   handleSetTool = (event: { target: { value: VolumeToolType } }) => {
     Store.dispatch(setToolAction(event.target.value));
-    document.activeElement.blur();
   };
 
   handleCreateCell = () => {
@@ -31,7 +30,7 @@ class VolumeActionsView extends PureComponent<Props> {
 
   render() {
     return (
-      <div>
+      <div onClick={() => document.activeElement.blur()}>
         <RadioGroup
           onChange={this.handleSetTool}
           value={this.props.volumeTracing.activeTool}

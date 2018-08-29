@@ -27,7 +27,7 @@ class ConfigurationController @Inject()(val messagesApi: MessagesApi) extends Co
 
   def update = SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
     for {
-      jsConfiguration <- request.body.asOpt[JsObject] ?~> Messages("user.configuration.invalid")
+      jsConfiguration <- request.body.asOpt[JsObject] ?~> "user.configuration.invalid"
       conf = jsConfiguration.fields.toMap
       _ <- UserService.updateUserConfiguration(request.identity, UserConfiguration(conf))
     } yield {
@@ -48,7 +48,7 @@ class ConfigurationController @Inject()(val messagesApi: MessagesApi) extends Co
 
   def updateDataSet(dataSetName: String) = SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
     for {
-      jsConfiguration <- request.body.asOpt[JsObject] ?~> Messages("user.configuration.dataset.invalid")
+      jsConfiguration <- request.body.asOpt[JsObject] ?~> "user.configuration.dataset.invalid"
       conf = jsConfiguration.fields.toMap
       _ <- UserService.updateDataSetConfiguration(request.identity, dataSetName, DataSetConfiguration(conf))
     } yield {
@@ -67,9 +67,9 @@ class ConfigurationController @Inject()(val messagesApi: MessagesApi) extends Co
 
   def updateDataSetDefault(dataSetName: String) = SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
     for {
-      dataset <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataset.notFound")
-      _ <- Fox.assertTrue(request.identity.isTeamManagerOrAdminOfOrg(dataset._organization)) ?~> Messages("notAllowed")
-      jsConfiguration <- request.body.asOpt[JsObject] ?~> Messages("user.configuration.dataset.invalid")
+      dataset <- DataSetDAO.findOneByName(dataSetName) ?~> "dataset.notFound"
+      _ <- Fox.assertTrue(request.identity.isTeamManagerOrAdminOfOrg(dataset._organization)) ?~> "notAllowed"
+      jsConfiguration <- request.body.asOpt[JsObject] ?~> "user.configuration.dataset.invalid"
       conf = jsConfiguration.fields.toMap
       _ <- DataSetDAO.updateDefaultConfigurationByName(dataSetName, DataSetConfiguration(conf))
     } yield {

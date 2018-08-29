@@ -87,7 +87,6 @@ class ShareModalView extends PureComponent<ShareModalPropType, State> {
           The tracing cannot be made public, since the underlying dataset is not public.{" "}
           {this.props.isCurrentUserAdmin ? (
             <span>
-              Click{" "}
               <Popconfirm
                 title={
                   <div>
@@ -101,7 +100,7 @@ class ShareModalView extends PureComponent<ShareModalPropType, State> {
                 cancelText="No"
                 style={{ maxWidth: 400 }}
               >
-                <a href="#">here</a>
+                <a href="#">Click here</a>
               </Popconfirm>{" "}
               to make the dataset public.
             </span>

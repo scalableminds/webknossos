@@ -73,7 +73,7 @@ const WelcomeHeader = ({ history }) => (
                 style={{ marginRight: 50 }}
                 onClick={() => history.push("/onboarding")}
               >
-                Try it out now
+                Get Started
               </Button>
               <a
                 href="https://docs.webknossos.org/"

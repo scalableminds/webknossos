@@ -32,6 +32,7 @@ bsonid.invalid=The passed resource id ''{0}'' is invalid
 query.type.invalid=Invalid query type argument
 
 format.json.invalid=Invalid Json format
+format.json.missing=Missing format json
 
 image.create.failed=Failed to create image
 
@@ -230,10 +231,12 @@ task.requestAnother=Do you really want another task?
 task.unavailable=There is currently no task available
 task.notFound=Task couldn''t be found
 task.removed=Task was removed
+task.remove.failed=Task removal failed
 task.editSuccess=Task successfully edited
 task.noAnnotations=We couldn''t find finished annotations for this task
 task.annotation.failed=Failed to retrieve annotations for this task
 task.instances.changeImpossible=Due to the project settings it is not possible to change the number of instances of this task
+task.id.invalid=The provided task id is invalid.
 
 assignment.retrieval.failed=Failed to retrieve any assignment
 
@@ -246,6 +249,7 @@ taskType.notFound=Selected task type doesn''t exist
 taskType.deleteSuccess=Task type ''{0}'' successfully deleted
 taskType.deleteFailure=Task type ''{0}'' deletion failed
 taskType.noAnnotations=We couldn''t find finished annotations for this task type
+taskType.id.invalid=The provided task type id is invalid.
 
 time.invalidFormat=Time couldn''t get parsed.
 point.invalidFormat=Invalid format. Use something like: 4, 63, 24
@@ -256,6 +260,7 @@ script.notFound=Script couldn''t be found
 script.removalFailed=Failed to remove script
 script.write.failed=Failed to convert script to json
 script.notOwner=You are not the owner of the script you want to edit.
+script.invalid=Script is invalid
 
 serialization.failed=Failed to serialize data.
 

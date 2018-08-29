@@ -30,7 +30,11 @@ class VolumeActionsView extends PureComponent<Props> {
 
   render() {
     return (
-      <div onClick={() => document.activeElement.blur()}>
+      <div
+        onClick={() => {
+          if (document.activeElement) document.activeElement.blur();
+        }}
+      >
         <RadioGroup
           onChange={this.handleSetTool}
           value={this.props.volumeTracing.activeTool}

@@ -253,12 +253,10 @@ class ReactRouter extends React.Component<Props> {
                   <DatasetImportView
                     isEditingMode={false}
                     datasetName={match.params.datasetName || ""}
-                    onComplete={() => {
-                      window.location.replace(`${window.location.origin}/dashboard`);
-                    }}
-                    onCancel={() => {
-                      window.history.back();
-                    }}
+                    onComplete={() =>
+                      window.location.replace(`${window.location.origin}/dashboard`)
+                    }
+                    onCancel={() => window.history.back()}
                   />
                 )}
               />

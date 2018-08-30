@@ -52,7 +52,7 @@ object AnnotationService
         case None =>
           for {
             _ <- Fox.assertTrue(user.isTeamManagerOrAdminOfOrg(user._organization))
-            organizationTeamId <- OrganizationDAO.findOrganizationTeamId(user._organization)
+            organizationTeamId <- organizationDAO.findOrganizationTeamId(user._organization)
           } yield organizationTeamId
       }
     }).flatten

@@ -12,7 +12,7 @@ import models.annotation.AnnotationService
 import models.binary.DataSetDAO
 import models.project.ProjectDAO
 import models.task._
-import models.team.OrganizationDAO
+import models.team.{OrganizationDAO, OrganizationService}
 import models.user._
 import net.liftweb.common.Box
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
@@ -55,7 +55,7 @@ object NmlTaskParameters {
   implicit val nmlTaskParametersFormat: Format[NmlTaskParameters] = Json.format[NmlTaskParameters]
 }
 
-class TaskController @Inject() (val messagesApi: MessagesApi)
+class TaskController @Inject() (organizationService: OrganizationService, val messagesApi: MessagesApi)
   extends Controller
     with ResultBox
     with ProtoGeometryImplicits
@@ -276,7 +276,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
       numberOfOpen <- AnnotationService.countOpenNonAdminTasks(user)
     } yield {
       if (user.isAdmin) {
-        OrganizationDAO.findOne(user._organization).flatMap(_.teamIds)
+        organizationService.findTeamIdsOf(user._organization)
       } else if (numberOfOpen < MAX_OPEN_TASKS) {
         user.teamIds
       } else {

@@ -24,13 +24,7 @@ case class Organization(
                             isDeleted: Boolean = false
                           )
 
-class OrganizationService @Inject()(organizationDAO: OrganizationDAO) {
-
-  def organizationTeamId(_organization: ObjectId)(implicit ctx: DBAccessContext): Fox[ObjectId] =
-    organizationDAO.findOrganizationTeamId(_organization)
-
-  def findTeamIdsOf(_organization: ObjectId)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] =
-    TeamDAO.findAllIdsByOrganization(_organization)
+class OrganizationService @Inject()(organizationDAO: OrganizationDAO, teamDAO: TeamDAO) {
 
   def publicWrites(organization: Organization)(implicit ctx: DBAccessContext): Fox[JsObject] = {
     Fox.successful(Json.obj(

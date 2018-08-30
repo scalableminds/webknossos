@@ -326,7 +326,7 @@ class UserExperiencesDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO) exten
 
 }
 
-class UserDataSetConfigurationDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO) extends SimpleSQLDAO(sqlClient) {
+class UserDataSetConfigurationDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO, dataSetDAO: DataSetDAO) extends SimpleSQLDAO(sqlClient) {
 
   def findAllForUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Map[ObjectId, JsValue]] = {
     for {
@@ -370,7 +370,7 @@ class UserDataSetConfigurationDAO @Inject()(sqlClient: SQLClient, userDAO: UserD
 
   private def insertDatasetConfiguration(userId: ObjectId, dataSetName: String, configuration: Map[String, JsValue])(implicit ctx: DBAccessContext): Fox[Unit] = {
     for {
-      dataSet <- DataSetDAO.findOneByName(dataSetName)
+      dataSet <- dataSetDAO.findOneByName(dataSetName)
       _ <- insertDatasetConfiguration(userId, dataSet._id, configuration)
     } yield ()
   }

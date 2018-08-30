@@ -61,7 +61,7 @@ class UserService @Inject()(conf: WkConfInjected,
              lastName: String, isActive: Boolean, teamRole: Boolean = false, loginInfo: LoginInfo, passwordInfo: PasswordInfo, isAdmin: Boolean = false): Fox[User] = {
     implicit val ctx = GlobalAccessContext
     for {
-      organizationTeamId <- organizationDAO.findOne(_organization).flatMap(_.organizationTeamId).toFox
+      organizationTeamId <- organizationDAO.findOrganizationTeamId(_organization)
       orgTeam <- teamDAO.findOne(organizationTeamId)
       teamMemberships = List(TeamMembership(orgTeam._id, teamRole))
       user = User(

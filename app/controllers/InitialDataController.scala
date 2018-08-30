@@ -2,7 +2,6 @@ package controllers
 
 import com.mohiva.play.silhouette.api.LoginInfo
 import com.scalableminds.util.accesscontext.GlobalAccessContext
-import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
@@ -20,26 +19,26 @@ import play.api.Play.current
 import oxalis.security.WebknossosSilhouette.UserAwareAction
 import play.api.Play
 import play.api.libs.json.Json
-import utils.{ObjectId, WkConf}
+import utils.{ObjectId, WkConf, WkConfInjected}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class InitialDataController @Inject() (val messagesApi: MessagesApi)
+class InitialDataController @Inject()(initialDataService: InitialDataService, val messagesApi: MessagesApi)
   extends Controller with FoxImplicits {
 
   def triggerInsert = UserAwareAction.async { implicit request =>
     for {
-      _ <- InitialDataService.insert
+      _ <- initialDataService.insert
     } yield Ok
   }
 }
 
 
-object InitialDataService extends FoxImplicits with LazyLogging {
+class InitialDataService @Inject()(conf: WkConfInjected) extends FoxImplicits with LazyLogging {
   implicit val ctx = GlobalAccessContext
 
-  val defaultUserEmail = WkConf.Application.Authentication.DefaultUser.email
-  val defaultUserPassword = WkConf.Application.Authentication.DefaultUser.password
+  val defaultUserEmail = conf.Application.Authentication.DefaultUser.email
+  val defaultUserPassword = conf.Application.Authentication.DefaultUser.password
   val additionalInformation = """**Sample Organization**
 
 Sample Street 123
@@ -60,7 +59,7 @@ Samplecountry
     UserService.createLoginInfo(defaultUserEmail),
     UserService.createPasswordInfo(defaultUserPassword),
     isAdmin = true,
-    isSuperUser = WkConf.Application.Authentication.DefaultUser.isSuperUser,
+    isSuperUser = conf.Application.Authentication.DefaultUser.isSuperUser,
     isDeactivated = false
   )
 
@@ -79,7 +78,7 @@ Samplecountry
 
   def assertInitialDataEnabled =
     for {
-      _ <- bool2Fox(WkConf.Application.insertInitialData) ?~> "initialData.notEnabled"
+      _ <- bool2Fox(conf.Application.insertInitialData) ?~> "initialData.notEnabled"
     } yield ()
 
   def assertNoOrganizationsPresent =
@@ -115,7 +114,7 @@ Samplecountry
           None,
           TokenType.Authentication
         )
-      TokenDAO.insertOne(newToken)
+        TokenDAO.insertOne(newToken)
     }
   }
 
@@ -146,7 +145,7 @@ Samplecountry
             organizationTeam._id,
             "sampleTaskType",
             "Check those cells out!"
-            )
+          )
           for {_ <- TaskTypeDAO.insertOne(taskType)} yield ()
         }
         else Fox.successful(())
@@ -166,10 +165,10 @@ Samplecountry
   }
 
   def insertLocalDataStoreIfEnabled: Fox[Any] = {
-    if (WkConf.Datastore.enabled) {
+    if (conf.Datastore.enabled) {
       DataStoreDAO.findOneByName("localhost").futureBox.map { maybeStore =>
         if (maybeStore.isEmpty) {
-          DataStoreDAO.insertOne(DataStore("localhost", WkConf.Http.uri, WkConf.Datastore.key))
+          DataStoreDAO.insertOne(DataStore("localhost", conf.Http.uri, conf.Datastore.key))
         }
       }
     } else Fox.successful(())

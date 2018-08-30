@@ -24,7 +24,7 @@ import utils.{ObjectId, WkConf}
 
 import scala.concurrent.Future
 
-object UserService extends FoxImplicits with IdentityService[User] {
+object UserService extends FoxImplicits {
 
   lazy val Mailer =
     Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
@@ -139,4 +139,11 @@ object UserService extends FoxImplicits with IdentityService[User] {
   def createPasswordInfo(pw: String): PasswordInfo = {
     PasswordInfo("SCrypt", SCrypt.hashPassword(pw))
   }
+}
+
+object UserIdentityService extends IdentityService[User] {
+
+  def retrieve(loginInfo: LoginInfo): Future[Option[User]] =
+    UserDAO.findOneByEmail(loginInfo.providerKey)(GlobalAccessContext).futureBox.map(_.toOption)
+
 }

@@ -100,7 +100,9 @@ object AuthForms {
 class Authentication @Inject()(
                                 val messagesApi: MessagesApi,
                                 credentialsProvider: CredentialsProvider,
-                                passwordHasher: PasswordHasher)
+                                passwordHasher: PasswordHasher,
+                                initialDataService: InitialDataService
+                              )
   extends Controller
     with ProvidesUnauthorizedSessionData
     with FoxImplicits {
@@ -405,7 +407,7 @@ class Authentication @Inject()(
   }
 
   private def creatingOrganizationsIsAllowed(requestingUser: Option[User]) = {
-    val noOrganizationPresent = InitialDataService.assertNoOrganizationsPresent
+    val noOrganizationPresent = initialDataService.assertNoOrganizationsPresent
     val activatedInConfig = bool2Fox(WkConf.Features.allowOrganizationCreation) ?~> "allowOrganizationCreation.notEnabled"
     val userIsSuperUser = bool2Fox(requestingUser.exists(_.isSuperUser))
 
@@ -419,7 +421,7 @@ class Authentication @Inject()(
       organizationTeam = Team(ObjectId.generate, organization._id, organization.name, isOrganizationTeam = true)
       _ <- OrganizationDAO.insertOne(organization)(GlobalAccessContext)
       _ <- TeamDAO.insertOne(organizationTeam)(GlobalAccessContext)
-      _ <- InitialDataService.insertLocalDataStoreIfEnabled
+      _ <- initialDataService.insertLocalDataStoreIfEnabled
     } yield {
       organization
     }

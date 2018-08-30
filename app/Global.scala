@@ -22,16 +22,6 @@ object Global extends GlobalSettings with LazyLogging{
 
     logger.info("Executing Global START")
 
-    ensurePostgresDatabase.onComplete { _ =>
-      if (WkConf.Application.insertInitialData) {
-        InitialDataService.insert.futureBox.map {
-          case Full(_) => ()
-          case Failure(msg, _, _) => logger.info("No initial data inserted: " + msg)
-          case _ => logger.warn("Error while inserting initial data")
-        }
-      }
-    }
-
     val tokenAuthenticatorService = WebknossosSilhouette.environment.combinedAuthenticatorService.tokenAuthenticatorService
 
     CleanUpService.register("deletion of expired tokens", tokenAuthenticatorService.dataStoreExpiry) {
@@ -60,34 +50,6 @@ object Global extends GlobalSettings with LazyLogging{
     } else {
       Some(Action {Ok(views.html.main())})
     }
-  }
-
-  def ensurePostgresDatabase = {
-    logger.info("Running ensure_db.sh with POSTGRES_URL " + sys.env.get("POSTGRES_URL"))
-
-    val processLogger = ProcessLogger(
-      (o: String) => logger.info(o),
-      (e: String) => logger.error(e))
-
-    // this script is copied to the stage directory in AssetCompilation
-    val result = "./tools/postgres/ensure_db.sh" ! processLogger
-
-    if (result != 0)
-      throw new Exception("Could not ensure Postgres database. Is postgres installed?")
-
-    // diffing the actual DB schema against schema.sql:
-    logger.info("Running diff_schema.sh tools/postgres/schema.sql DB")
-    val errorMessage = new StringBuilder("Database schema does not fit to schema.sql:\n")
-    def appendMessage(value: String) = errorMessage.append(value + "\n")
-    val schemaDiffResult = "tools/postgres/diff_schema.sh tools/postgres/schema.sql DB" ! ProcessLogger(appendMessage, appendMessage)
-    if (schemaDiffResult == 0) {
-      logger.info("Schema is up to date.")
-    } else {
-      logger.error(errorMessage.toString())
-      NewRelic.noticeError(errorMessage.toString())
-    }
-
-    Future.successful(())
   }
 
 }

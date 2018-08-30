@@ -1,30 +1,26 @@
-import akka.actor.Props
+import akka.actor.{ActorSystem, Props}
 import com.newrelic.api.agent.NewRelic
-import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mail.{Mailer, MailerConfig}
 import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService
-import javax.inject.Inject
-import models.annotation.AnnotationDAO
+import javax.inject._
 import net.liftweb.common.{Failure, Full}
-import oxalis.cleanup.CleanUpService
-import oxalis.security.WebknossosSilhouette
-import play.api._
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.concurrent._
 import utils.WkConf
 
 import scala.concurrent.Future
-import scala.concurrent.duration._
 import scala.sys.process._
 
-class Startup @Inject()  (app: Application) extends LazyLogging{
+class Startup @Inject() (actorSystem: ActorSystem) extends LazyLogging {
 
   logger.info("Executing Startup")
-  startActors(app)
+  //TODO start actor System
+  //startActors(actorSystem)
 
   ensurePostgresDatabase.onComplete { _ =>
-    if (WkConf.Application.insertInitialData) {
+    //TODO insert initial data
+    //if (WkConf.Application.insertInitialData)
+    if (false) {
       InitialDataService.insert.futureBox.map {
         case Full(_) => ()
         case Failure(msg, _, _) => logger.info("No initial data inserted: " + msg)
@@ -33,7 +29,7 @@ class Startup @Inject()  (app: Application) extends LazyLogging{
     }
   }
 
-  def startActors(app: Application) {
+  def startActors(actorSystem: ActorSystem) {
     val mailerConf = MailerConfig(
       WkConf.Mail.enabled,
       WkConf.Mail.Smtp.host,
@@ -43,19 +39,9 @@ class Startup @Inject()  (app: Application) extends LazyLogging{
       WkConf.Mail.Smtp.pass,
       WkConf.Mail.Subject.prefix
     )
-    Akka.system(app).actorOf(
+    actorSystem.actorOf(
       Props(new Mailer(mailerConf)),
       name = "mailActor")
-  }
-
-  val tokenAuthenticatorService = WebknossosSilhouette.environment.combinedAuthenticatorService.tokenAuthenticatorService
-
-  CleanUpService.register("deletion of expired tokens", tokenAuthenticatorService.dataStoreExpiry) {
-    tokenAuthenticatorService.removeExpiredTokens(GlobalAccessContext)
-  }
-
-  CleanUpService.register("deletion of old annotations in initializing state", 1 day) {
-    AnnotationDAO.deleteOldInitializingAnnotations
   }
 
   def ensurePostgresDatabase = {

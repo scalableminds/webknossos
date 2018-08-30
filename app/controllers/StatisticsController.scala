@@ -15,7 +15,10 @@ import play.api.libs.json._
 
 import scala.concurrent.duration.Duration
 
-class StatisticsController @Inject()(val messagesApi: MessagesApi)
+class StatisticsController @Inject()(timeSpanService: TimeSpanService,
+                                     userDAO: UserDAO,
+                                     annotationDAO: AnnotationDAO,
+                                     val messagesApi: MessagesApi)
   extends Controller {
 
   val intervalHandler = Map(
@@ -35,10 +38,10 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
     intervalHandler.get(interval) match {
       case Some(handler) =>
         for {
-          times <- TimeSpanService.loggedTimePerInterval(handler, start, end)
-          numberOfUsers <- UserDAO.countAll
+          times <- timeSpanService.loggedTimePerInterval(handler, start, end)
+          numberOfUsers <- userDAO.countAll
           numberOfDatasets <- DataSetDAO.countAll
-          numberOfAnnotations <- AnnotationDAO.countAll
+          numberOfAnnotations <- annotationDAO.countAll
           numberOfAssignments <- TaskDAO.countAllOpenInstances
         } yield {
           Ok(Json.obj(
@@ -59,8 +62,8 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
   def users(interval: String, start: Option[Long], end: Option[Long], limit: Int) = SecuredAction.async { implicit request =>
     for {
       handler <- intervalHandler.get(interval) ?~> Messages("statistics.interval.invalid")
-      users <- UserDAO.findAll
-      usersWithTimes <- Fox.serialCombined(users)(user => TimeSpanService.loggedTimeOfUser(user, handler, start, end).map(user -> _))
+      users <- userDAO.findAll
+      usersWithTimes <- Fox.serialCombined(users)(user => timeSpanService.loggedTimeOfUser(user, handler, start, end).map(user -> _))
       data = usersWithTimes.sortBy(-_._2.map(_._2.toMillis).sum).take(limit)
       json <- Fox.combined(data.map {
         case (user, times) => for {

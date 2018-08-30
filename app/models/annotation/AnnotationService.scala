@@ -13,6 +13,7 @@ import com.scalableminds.webknossos.datastore.tracings._
 import com.scalableminds.webknossos.datastore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.tracings.volume.VolumeTracingDefaults
 import com.typesafe.scalalogging.LazyLogging
+import javax.inject.Inject
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
 import models.annotation.handler.SavedTracingInformationHandler
@@ -33,10 +34,14 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 import oxalis.security.WebknossosSilhouette.UserAwareRequest
 
-object AnnotationService
+class AnnotationService @Inject()(annotationInformationProvider: AnnotationInformationProvider,
+                                  savedTracingInformationHandler: SavedTracingInformationHandler,
+                                  annotationDAO: AnnotationDAO,
+                                  userDAO: UserDAO,
+                                  organizationDAO: OrganizationDAO,
+                                  nmlWriter: NmlWriter)
   extends BoxImplicits
   with FoxImplicits
-  with AnnotationInformationProvider
   with TextUtils
   with ProtoGeometryImplicits
   with LazyLogging {
@@ -120,7 +125,7 @@ object AnnotationService
         tracingIds._1,
         tracingIds._2
       )
-      _ <- AnnotationDAO.insertOne(annotation)
+      _ <- annotationDAO.insertOne(annotation)
     } yield {
       annotation
     }
@@ -128,24 +133,24 @@ object AnnotationService
 
   def finish(annotation: Annotation)(implicit ctx: DBAccessContext) = {
     // WARNING: needs to be repeatable, might be called multiple times for an annotation
-    AnnotationDAO.updateState(annotation._id, AnnotationState.Finished)
+    annotationDAO.updateState(annotation._id, AnnotationState.Finished)
   }
 
   def baseFor(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[Annotation] =
     (for {
-      list <- AnnotationDAO.findAllByTaskIdAndType(taskId, AnnotationType.TracingBase)
+      list <- annotationDAO.findAllByTaskIdAndType(taskId, AnnotationType.TracingBase)
     } yield list.headOption.toFox).flatten
 
   def annotationsFor(taskId: ObjectId)(implicit ctx: DBAccessContext) =
-      AnnotationDAO.findAllByTaskIdAndType(taskId, AnnotationType.Task)
+      annotationDAO.findAllByTaskIdAndType(taskId, AnnotationType.Task)
 
   def countActiveAnnotationsFor(taskId: ObjectId)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.countActiveByTask(taskId, AnnotationType.Task)
+    annotationDAO.countActiveByTask(taskId, AnnotationType.Task)
 
   def countOpenNonAdminTasks(user: User)(implicit ctx: DBAccessContext) =
     for {
       teamManagerTeamIds <- user.teamManagerTeamIds
-      result <- AnnotationDAO.countActiveAnnotationsFor(user._id, AnnotationType.Task, teamManagerTeamIds)
+      result <- annotationDAO.countActiveAnnotationsFor(user._id, AnnotationType.Task, teamManagerTeamIds)
     } yield result
 
   def tracingFromBase(annotationBase: Annotation, dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[String] = {
@@ -171,7 +176,7 @@ object AnnotationService
           typ = AnnotationType.Task,
           created = System.currentTimeMillis,
           modified = System.currentTimeMillis)
-        _ <- AnnotationDAO.updateInitialized(newAnnotation)
+        _ <- annotationDAO.updateInitialized(newAnnotation)
       } yield {
         newAnnotation
       }
@@ -209,7 +214,7 @@ object AnnotationService
   def abortInitializedAnnotationOnFailure(initializingAnnotationId: ObjectId, insertedAnnotationBox: Box[Annotation]) = {
     insertedAnnotationBox match {
       case Full(_) => Fox.successful(())
-      case _ => AnnotationDAO.abortInitializingAnnotation(initializingAnnotationId)
+      case _ => annotationDAO.abortInitializingAnnotation(initializingAnnotationId)
     }
   }
 
@@ -236,7 +241,7 @@ object AnnotationService
         None,
         description.getOrElse(""),
         typ = AnnotationType.TracingBase)
-      _ <- AnnotationDAO.insertOne(annotationBase)
+      _ <- annotationDAO.insertOne(annotationBase)
     } yield true
   }
 
@@ -262,7 +267,7 @@ object AnnotationService
         description,
         name = name.getOrElse(""),
         typ = annotationType)
-      _ <- AnnotationDAO.insertOne(annotation)
+      _ <- annotationDAO.insertOne(annotation)
     } yield annotation
   }
 
@@ -270,7 +275,7 @@ object AnnotationService
     for {
       tracingsNamesAndScalesAsTuples <- getTracingsScalesAndNamesFor(annotations)
       tracingsAndNamesFlattened = flattenTupledLists(tracingsNamesAndScalesAsTuples)
-      nmlsAndNames = tracingsAndNamesFlattened.map(tuple => (NmlWriter.toNmlStream(Some(tuple._1), None, tuple._4, tuple._3), tuple._2))
+      nmlsAndNames = tracingsAndNamesFlattened.map(tuple => (nmlWriter.toNmlStream(Some(tuple._1), None, tuple._4, tuple._3), tuple._2))
       zip <- createZip(nmlsAndNames, zipFileName)
     } yield zip
   }
@@ -299,7 +304,7 @@ object AnnotationService
       } yield dataSet.scale
     }
 
-    def getNames(annotations: List[Annotation]) = Fox.combined(annotations.map(a => SavedTracingInformationHandler.nameForAnnotation(a).toFox))
+    def getNames(annotations: List[Annotation]) = Fox.combined(annotations.map(a => savedTracingInformationHandler.nameForAnnotation(a).toFox))
 
     val annotationsGrouped: Map[ObjectId, List[Annotation]] = annotations.groupBy(_._dataSet)
     val tracings = annotationsGrouped.map {
@@ -335,11 +340,11 @@ object AnnotationService
 
   def transferAnnotationToUser(typ: String, id: String, userId: ObjectId)(implicit request: UserAwareRequest[_]) = {
     for {
-      annotation <- provideAnnotation(typ, id)
-      newUser <- UserDAO.findOne(userId) ?~> Messages("user.notFound")
+      annotation <- annotationInformationProvider.provideAnnotation(typ, id)
+      newUser <- userDAO.findOne(userId) ?~> Messages("user.notFound")
       _ <- DataSetDAO.findOne(annotation._dataSet)(AuthorizedAccessContext(newUser)) ?~> Messages("annotation.transferee.noDataSetAccess")
       _ <- annotation.muta.transferToUser(newUser)
-      updated <- provideAnnotation(typ, id)
+      updated <- annotationInformationProvider.provideAnnotation(typ, id)
     } yield updated
   }
 }

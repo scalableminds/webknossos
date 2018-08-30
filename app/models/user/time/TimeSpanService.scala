@@ -4,9 +4,10 @@ import com.scalableminds.util.mail.Send
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
+import javax.inject.Inject
 import models.annotation._
 import models.task.TaskDAO
-import models.user.User
+import models.user.{User, UserService}
 import models.team.OrganizationDAO
 import net.liftweb.common.Full
 import oxalis.mail.DefaultMails
@@ -19,7 +20,7 @@ import scala.collection.mutable
 import scala.concurrent.duration._
 
 
-object TimeSpanService extends FoxImplicits with LazyLogging {
+class TimeSpanService @Inject()(annotationDAO: AnnotationDAO, userService: UserService) extends FoxImplicits with LazyLogging {
   private val MaxTracingPause =
     WkConf.Oxalis.User.Time.tracingPauseInSeconds.toMillis
 
@@ -155,7 +156,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
     // Log time to annotation
     annotation match {
       case Some(a: ObjectId) =>
-        AnnotationDAO.logTime(a, duration)(GlobalAccessContext) ?~> "FAILED: AnnotationService.logTime"
+        annotationDAO.logTime(a, duration)(GlobalAccessContext) ?~> "FAILED: AnnotationService.logTime"
       case _ =>
         Fox.successful(())
       // do nothing, this is not a stored annotation
@@ -165,7 +166,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
   def signalOverTime(time: Long, annotationOpt: Option[Annotation])(implicit ctx: DBAccessContext): Fox[_] = {
     for {
       annotation <- annotationOpt.toFox
-      user <- annotation.user
+      user <- userService.findOneById(annotation._user, useCache = true)(GlobalAccessContext)
       task <- annotation.task
       project <- task.project
       annotationTime <- annotation.tracingTime ?~> "no annotation.tracingTime"
@@ -203,7 +204,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
   private def getAnnotation(annotation: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[Option[Annotation]] = {
     annotation match {
       case Some(annotationId) =>
-        AnnotationDAO.findOne(annotationId).map(Some(_))
+        annotationDAO.findOne(annotationId).map(Some(_))
       case _ =>
         Fox.successful(None)
     }

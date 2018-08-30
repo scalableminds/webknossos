@@ -2,14 +2,14 @@ package controllers
 
 import javax.inject.Inject
 import akka.util.Timeout
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import models.annotation._
-import models.binary.{DataSet, DataSetDAO, DataStoreHandler}
+import models.binary.{DataSet, DataSetDAO}
 import models.task.TaskDAO
 import models.user.time._
-import models.user.{User}
+import models.user.User
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest, UserAwareAction}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.{JsArray, _}

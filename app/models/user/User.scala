@@ -57,7 +57,7 @@ case class User(
       teamManagerMemberships <- teamManagerMemberships
     } yield teamManagerMemberships.map(_.teamId)
 
-  def teamIds =
+  def teamIds: Fox[List[ObjectId]] =
     for {
       teamMemberships <- teamMemberships
     } yield teamMemberships.map(_.teamId)

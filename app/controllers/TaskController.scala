@@ -12,11 +12,10 @@ import models.annotation.AnnotationService
 import models.binary.DataSetDAO
 import models.project.ProjectDAO
 import models.task._
-import models.team.{OrganizationDAO, OrganizationService}
+import models.team.OrganizationService
 import models.user._
 import net.liftweb.common.Box
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
-import play.api.Play.current
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
@@ -55,7 +54,9 @@ object NmlTaskParameters {
   implicit val nmlTaskParametersFormat: Format[NmlTaskParameters] = Json.format[NmlTaskParameters]
 }
 
-class TaskController @Inject() (organizationService: OrganizationService, val messagesApi: MessagesApi)
+class TaskController @Inject() (organizationService: OrganizationService,
+                                annotationService: AnnotationService,
+                                val messagesApi: MessagesApi)
   extends Controller
     with ResultBox
     with ProtoGeometryImplicits
@@ -75,7 +76,7 @@ class TaskController @Inject() (organizationService: OrganizationService, val me
 
   def create = SecuredAction.async(validateJson[List[TaskParameters]]) { implicit request =>
     createTasks(request.body.map { params =>
-      val tracing = AnnotationService.createTracingBase(params.dataSet, params.boundingBox, params.editPosition, params.editRotation)
+      val tracing = annotationService.createTracingBase(params.dataSet, params.boundingBox, params.editPosition, params.editRotation)
       (params, tracing)
     })
   }
@@ -148,7 +149,7 @@ class TaskController @Inject() (organizationService: OrganizationService, val me
       requestedTasksWithTracingIds = requestedTasks zip skeletonTracingIds
       taskObjects: List[Fox[Task]] = requestedTasksWithTracingIds.map(r => createTaskWithoutAnnotationBase(r._1._1, r._2))
       zipped = (requestedTasks, skeletonTracingIds, taskObjects).zipped.toList
-      annotationBases = zipped.map(tuple => AnnotationService.createAnnotationBase(
+      annotationBases = zipped.map(tuple => annotationService.createAnnotationBase(
         taskFox = tuple._3,
         request.identity._id,
         skeletonTracingIdBox = tuple._2,
@@ -261,8 +262,8 @@ class TaskController @Inject() (organizationService: OrganizationService, val me
     for {
       teams <- getAllowedTeamsForNextTask(user)
       (task, initializingAnnotationId) <-  TaskDAO.assignNext(user._id, teams) ?~> Messages("task.unavailable")
-      insertedAnnotationBox <- AnnotationService.createAnnotationFor(user, task, initializingAnnotationId).futureBox
-      _ <- AnnotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
+      insertedAnnotationBox <- annotationService.createAnnotationFor(user, task, initializingAnnotationId).futureBox
+      _ <- annotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
       annotation <- insertedAnnotationBox.toFox
       annotationJSON <- annotation.publicWrites(Some(user))
     } yield {
@@ -273,7 +274,7 @@ class TaskController @Inject() (organizationService: OrganizationService, val me
 
   private def getAllowedTeamsForNextTask(user: User)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
     (for {
-      numberOfOpen <- AnnotationService.countOpenNonAdminTasks(user)
+      numberOfOpen <- annotationService.countOpenNonAdminTasks(user)
     } yield {
       if (user.isAdmin) {
         organizationService.findTeamIdsOf(user._organization)

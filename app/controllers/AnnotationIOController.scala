@@ -26,7 +26,9 @@ import utils.ObjectId
 import scala.concurrent.Future
 
 
-class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
+class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
+                                       annotationDAO: AnnotationDAO,
+                                       val messagesApi: MessagesApi)
   extends Controller
     with AnnotationInformationProvider
     with FoxImplicits
@@ -129,7 +131,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
         skeletonTracingId <- annotation.skeletonTracingId.toFox
         tracing <- dataStoreHandler.getSkeletonTracing(skeletonTracingId)
       } yield {
-        (NmlWriter.toNmlStream(Some(tracing), None, annotation, dataSet.scale), name + ".nml")
+        (nmlWriter.toNmlStream(Some(tracing), None, annotation, dataSet.scale), name + ".nml")
       }
     }
 
@@ -143,7 +145,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
         (Enumerator.outputStream { outputStream =>
           ZipIO.zip(
             List(
-              new NamedEnumeratorStream(name + ".nml", NmlWriter.toNmlStream(skeletonTracingOpt, Some(volumeTracing), annotation, dataSet.scale)),
+              new NamedEnumeratorStream(name + ".nml", nmlWriter.toNmlStream(skeletonTracingOpt, Some(volumeTracing), annotation, dataSet.scale)),
               new NamedEnumeratorStream("data.zip", data)
             ), outputStream)
         }, name + ".zip")
@@ -178,7 +180,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
       projectIdValidated <- ObjectId.parse(projectId)
       project <- ProjectDAO.findOne(projectIdValidated) ?~> Messages("project.notFound", projectId)
       _ <- Fox.assertTrue(user.isTeamManagerOrAdminOf(project._team))
-      annotations <- AnnotationDAO.findAllFinishedForProject(projectIdValidated)
+      annotations <- annotationDAO.findAllFinishedForProject(projectIdValidated)
       zip <- AnnotationService.zipAnnotations(annotations, project.name + "_nmls.zip")
     } yield {
       Ok.sendFile(zip.file)

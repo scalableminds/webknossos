@@ -7,7 +7,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.webknossos.datastore.services.{AccessTokenService, BinaryDataService, DataSourceRepository, UserAccessRequest}
 import com.scalableminds.webknossos.datastore.models._
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, SegmentationLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId, SegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.requests.{DataServiceDataRequest, DataServiceMappingRequest, DataServiceRequestSettings}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection._
 import com.scalableminds.webknossos.datastore.models.{DataRequest, ImageThumbnail, WebKnossosDataRequest}
@@ -32,13 +32,14 @@ class BinaryDataController @Inject()(
     * Handles requests for raw binary data via HTTP POST from webKnossos.
     */
   def requestViaWebKnossos(
+                            organizationName: String,
                             dataSetName: String,
                             dataLayerName: String
-                          ) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)).async(validateJson[List[WebKnossosDataRequest]]) {
+                          ) = TokenSecuredAction(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))).async(validateJson[List[WebKnossosDataRequest]]) {
     implicit request =>
       AllowRemoteOrigin {
         for {
-          (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
+          (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
           data <- requestData(dataSource, dataLayer, request.body)
         } yield Ok(data)
       }
@@ -48,21 +49,22 @@ class BinaryDataController @Inject()(
     * Handles requests for raw binary data via HTTP GET.
     */
   def requestRawCuboid(
-                           dataSetName: String,
-                           dataLayerName: String,
-                           x: Int,
-                           y: Int,
-                           z: Int,
-                           width: Int,
-                           height: Int,
-                           depth: Int,
-                           resolution: Int,
-                           halfByte: Boolean
-                         ) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)).async {
+                        organizationName: String,
+                        dataSetName: String,
+                        dataLayerName: String,
+                        x: Int,
+                        y: Int,
+                        z: Int,
+                        width: Int,
+                        height: Int,
+                        depth: Int,
+                        resolution: Int,
+                        halfByte: Boolean
+                      ) = TokenSecuredAction(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))).async {
     implicit request =>
       AllowRemoteOrigin {
         for {
-          (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
+          (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
           request = DataRequest(
             new VoxelPosition(x, y, z, dataLayer.lookUpResolution(resolution)),
             width,
@@ -70,7 +72,7 @@ class BinaryDataController @Inject()(
             depth,
             DataServiceRequestSettings(halfByte = halfByte)
           )
-        data <- requestData(dataSource, dataLayer, request).map(Ok(_))
+          data <- requestData(dataSource, dataLayer, request).map(Ok(_))
         } yield data
       }
   }
@@ -79,6 +81,7 @@ class BinaryDataController @Inject()(
     * Handles requests for raw binary data via HTTP GET for debugging.
     */
   def requestViaAjaxDebug(
+                           organizationName: String,
                            dataSetName: String,
                            dataLayerName: String,
                            cubeSize: Int,
@@ -88,30 +91,31 @@ class BinaryDataController @Inject()(
                            resolution: Int,
                            halfByte: Boolean
                          ) =
-    requestRawCuboid(dataSetName, dataLayerName, x, y, z, cubeSize, cubeSize, cubeSize, resolution, halfByte)
+    requestRawCuboid(organizationName, dataSetName, dataLayerName, x, y, z, cubeSize, cubeSize, cubeSize, resolution, halfByte)
 
   /**
     * Handles a request for raw binary data via a HTTP GET. Used by knossos.
     */
   def requestViaKnossos(
+                         organizationName: String,
                          dataSetName: String,
                          dataLayerName: String,
                          resolution: Int,
                          x: Int, y: Int, z: Int,
                          cubeSize: Int
-                       ) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)).async {
+                       ) = TokenSecuredAction(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))).async {
     implicit request =>
       AllowRemoteOrigin {
         for {
-          (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
+          (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
           request = DataRequest(
-                        new VoxelPosition(x * cubeSize * resolution,
-                          y * cubeSize * resolution,
-                          z * cubeSize * resolution,
-                          Point3D(resolution, resolution, resolution)),
-          cubeSize,
-          cubeSize,
-          cubeSize)
+            new VoxelPosition(x * cubeSize * resolution,
+              y * cubeSize * resolution,
+              z * cubeSize * resolution,
+              Point3D(resolution, resolution, resolution)),
+            cubeSize,
+            cubeSize,
+            cubeSize)
           data <- requestData(dataSource, dataLayer, request).map(Ok(_))
         } yield data
       }
@@ -121,6 +125,7 @@ class BinaryDataController @Inject()(
     * Handles requests for data sprite sheets.
     */
   def requestSpriteSheet(
+                          organizationName: String,
                           dataSetName: String,
                           dataLayerName: String,
                           cubeSize: Int,
@@ -130,11 +135,11 @@ class BinaryDataController @Inject()(
                           z: Int,
                           resolution: Int,
                           halfByte: Boolean
-                        ) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)).async(parse.raw) {
+                        ) = TokenSecuredAction(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))).async(parse.raw) {
     implicit request =>
       AllowRemoteOrigin {
         for {
-          (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
+          (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
           request = DataRequest(
             new VoxelPosition(x, y, z, dataLayer.lookUpResolution(resolution)),
             cubeSize,
@@ -154,6 +159,7 @@ class BinaryDataController @Inject()(
     * Handles requests for data images.
     */
   def requestImage(
+                    organizationName: String,
                     dataSetName: String,
                     dataLayerName: String,
                     width: Int,
@@ -163,11 +169,11 @@ class BinaryDataController @Inject()(
                     z: Int,
                     resolution: Int,
                     halfByte: Boolean,
-                    blackAndWhite: Boolean) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)).async(parse.raw) {
+                    blackAndWhite: Boolean) = TokenSecuredAction(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))).async(parse.raw) {
     implicit request =>
       AllowRemoteOrigin {
         for {
-          (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
+          (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
           request = DataRequest(
             new VoxelPosition(x, y, z, dataLayer.lookUpResolution(resolution)),
             width,
@@ -187,6 +193,7 @@ class BinaryDataController @Inject()(
     * Handles requests for dataset thumbnail images as JPEG.
     */
   def requestImageThumbnailJpeg(
+                                 organizationName: String,
                                  dataSetName: String,
                                  dataLayerName: String,
                                  width: Int,
@@ -194,11 +201,11 @@ class BinaryDataController @Inject()(
                                  centerX: Option[Int],
                                  centerY: Option[Int],
                                  centerZ: Option[Int],
-                                 zoom: Option[Int]) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)).async(parse.raw) {
+                                 zoom: Option[Int]) = TokenSecuredAction(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))).async(parse.raw) {
     implicit request =>
       AllowRemoteOrigin {
         for {
-          thumbnailProvider <- respondWithImageThumbnail(dataSetName, dataLayerName, width, height, centerX, centerY, centerZ, zoom)
+          thumbnailProvider <- respondWithImageThumbnail(organizationName, dataSetName, dataLayerName, width, height, centerX, centerY, centerZ, zoom)
         } yield {
           Ok.stream(Enumerator.outputStream(thumbnailProvider).andThen(Enumerator.eof)).withHeaders(
             CONTENT_TYPE -> contentTypeJpeg,
@@ -211,6 +218,7 @@ class BinaryDataController @Inject()(
     * Handles requests for dataset thumbnail images as base64-encoded JSON.
     */
   def requestImageThumbnailJson(
+                                 organizationName: String,
                                  dataSetName: String,
                                  dataLayerName: String,
                                  width: Int,
@@ -219,11 +227,11 @@ class BinaryDataController @Inject()(
                                  centerY: Option[Int],
                                  centerZ: Option[Int],
                                  zoom: Option[Int]
-                               ) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)).async(parse.raw) {
+                               ) = TokenSecuredAction(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))).async(parse.raw) {
     implicit request =>
       AllowRemoteOrigin {
         for {
-          thumbnailProvider <- respondWithImageThumbnail(dataSetName, dataLayerName, width, height, centerX, centerY, centerZ, zoom)
+          thumbnailProvider <- respondWithImageThumbnail(organizationName, dataSetName, dataLayerName, width, height, centerX, centerY, centerZ, zoom)
         } yield {
           val os = new ByteArrayOutputStream()
           thumbnailProvider(Base64.getEncoder.wrap(os))
@@ -236,14 +244,15 @@ class BinaryDataController @Inject()(
     * Handles mapping requests.
     */
   def requestMapping(
+                      organizationName: String,
                       dataSetName: String,
                       dataLayerName: String,
                       mappingName: String
-                    ) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)).async {
+                    ) = TokenSecuredAction(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))).async {
     implicit request =>
       AllowRemoteOrigin {
         for {
-          (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
+          (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
           segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Messages("dataLayer.notFound")
           mappingRequest = DataServiceMappingRequest(dataSource, segmentationLayer, mappingName)
           result <- binaryDataService.handleMappingRequest(mappingRequest)
@@ -258,9 +267,9 @@ class BinaryDataController @Inject()(
       volumeTracingService.dataLayerForVolumeTracing(dataLayerName, dataSource))
   }
 
-  private def getDataSourceAndDataLayer(dataSetName: String, dataLayerName: String): Fox[(DataSource, DataLayer)] = {
+  private def getDataSourceAndDataLayer(organizationName: String, dataSetName: String, dataLayerName: String): Fox[(DataSource, DataLayer)] = {
     for {
-      dataSource <- dataSourceRepository.findUsableByName(dataSetName).toFox ?~> Messages("dataSource.notFound") ~> 404
+      dataSource <- dataSourceRepository.findUsable(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages("dataSource.notFound") ~> 404
       dataLayer <- getDataLayer(dataSource, dataLayerName) ?~> Messages("dataLayer.notFound", dataLayerName) ~> 404
     } yield {
       (dataSource, dataLayer)
@@ -302,17 +311,18 @@ class BinaryDataController @Inject()(
   }
 
   private def respondWithImageThumbnail(
-                                     dataSetName: String,
-                                     dataLayerName: String,
-                                     width: Int,
-                                     height: Int,
-                                     centerX: Option[Int],
-                                     centerY: Option[Int],
-                                     centerZ: Option[Int],
-                                     zoom: Option[Int]
-                                   ): Fox[(OutputStream) => Unit] = {
+                                         organizationName: String,
+                                         dataSetName: String,
+                                         dataLayerName: String,
+                                         width: Int,
+                                         height: Int,
+                                         centerX: Option[Int],
+                                         centerY: Option[Int],
+                                         centerZ: Option[Int],
+                                         zoom: Option[Int]
+                                       ): Fox[(OutputStream) => Unit] = {
     for {
-      (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
+      (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
       position = ImageThumbnail.goodThumbnailParameters(dataLayer, width, height, centerX, centerY, centerZ, zoom)
       request = DataRequest(position, width, height, 1)
       image <- respondWithSpriteSheet(dataSource, dataLayer, request, 1, blackAndWhite = false)
@@ -321,10 +331,10 @@ class BinaryDataController @Inject()(
     }
   }
 
-  def clearCache(dataSetName: String) = TokenSecuredAction(UserAccessRequest.administrateDataSources) {
+  def clearCache(organizationName: String, dataSetName: String) = TokenSecuredAction(UserAccessRequest.administrateDataSources) {
     implicit request =>
       AllowRemoteOrigin {
-        val count = binaryDataService.clearCache(dataSetName)
+        val count = binaryDataService.clearCache(organizationName, dataSetName)
         Ok("Closed " + count + " file handles")
       }
   }

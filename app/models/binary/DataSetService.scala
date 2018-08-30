@@ -20,8 +20,8 @@ object DataSetService extends FoxImplicits with LazyLogging {
   def isProperDataSetName(name: String): Boolean =
     name.matches("[A-Za-z0-9_\\-]*")
 
-  def assertNewDataSetName(name: String)(implicit ctx: DBAccessContext): Fox[Boolean] =
-    DataSetDAO.findOneByName(name)(GlobalAccessContext).reverse
+  def assertNewDataSetName(name: String, organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[Boolean] =
+    DataSetDAO.findOneByNameAndOrganization(name, organizationId)(GlobalAccessContext).reverse
 
   def createDataSet(
                      name: String,
@@ -85,8 +85,7 @@ object DataSetService extends FoxImplicits with LazyLogging {
                         dataStore: DataStore,
                         dataSource: InboxDataSource
                       )(implicit ctx: DBAccessContext): Fox[Unit] = {
-
-    DataSetDAO.findOneByName(dataSource.id.name)(GlobalAccessContext).futureBox.flatMap {
+    DataSetDAO.findOneByNameAndOrganizationName(dataSource.id.name, dataSource.id.team)(GlobalAccessContext).futureBox.flatMap {
       case Full(dataSet) if dataSet._dataStore == dataStore.name =>
         DataSetDAO.updateDataSourceByName(
           dataSource.id.name,
@@ -111,12 +110,6 @@ object DataSetService extends FoxImplicits with LazyLogging {
   def deactivateUnreportedDataSources(dataStoreName: String, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext) =
     DataSetDAO.deactivateUnreported(dataSources.map(_.id.name), dataStoreName)
 
-  def importDataSet(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[WSResponse] =
-    for {
-      dataStoreHandler <- dataSet.dataStoreHandler
-      result <- dataStoreHandler.importDataSource
-    } yield result
-
   def updateDataSources(dataStore: DataStore, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext) = {
     logger.info(s"[${dataStore.name}] Available datasets: " +
       s"${dataSources.count(_.isUsable)} (usable), ${dataSources.count(!_.isUsable)} (unusable)")
@@ -125,16 +118,16 @@ object DataSetService extends FoxImplicits with LazyLogging {
     }
   }
 
-  def getSharingToken(dataSetName: String)(implicit ctx: DBAccessContext) = {
+  def getSharingToken(dataSetName: String, organizationId: ObjectId)(implicit ctx: DBAccessContext) = {
 
     def createSharingToken(dataSetName: String)(implicit ctx: DBAccessContext) = {
       for {
         tokenValue <- new CompactRandomIDGenerator().generate
-        _ <- DataSetDAO.updateSharingTokenByName(dataSetName, Some(tokenValue))
+        _ <- DataSetDAO.updateSharingTokenByName(dataSetName, organizationId, Some(tokenValue))
       } yield tokenValue
     }
 
-    val tokenFoxOfFox: Fox[Fox[String]] = DataSetDAO.getSharingTokenByName(dataSetName).map {
+    val tokenFoxOfFox: Fox[Fox[String]] = DataSetDAO.getSharingTokenByName(dataSetName, organizationId).map {
       oldTokenOpt => {
         if (oldTokenOpt.isDefined) Fox.successful(oldTokenOpt.get)
         else createSharingToken(dataSetName)

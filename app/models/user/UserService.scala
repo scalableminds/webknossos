@@ -124,7 +124,7 @@ object UserService extends FoxImplicits with IdentityService[User] {
 
   def updateDataSetConfiguration(user: User, dataSetName: String, configuration: DataSetConfiguration)(implicit ctx: DBAccessContext) =
     for {
-      dataSet <- DataSetDAO.findOneByName(dataSetName)
+      dataSet <- DataSetDAO.findOneByNameAndOrganization(dataSetName, user._organization)
       _ <- UserDataSetConfigurationDAO.updateDatasetConfigurationForUserAndDataset(user._id, dataSet._id, configuration.configuration)
       _ = UserCache.invalidateUser(user._id)
     } yield ()

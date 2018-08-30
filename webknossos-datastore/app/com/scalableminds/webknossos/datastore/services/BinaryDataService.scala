@@ -173,7 +173,7 @@ class BinaryDataService @Inject()(config: DataStoreConfig) extends FoxImplicits 
     compressed
   }
 
-  def clearCache(dataSetName: String) = {
+  def clearCache(organizationName: String, dataSetName: String) = {
     def matchingPredicate(cubeKey: CachedCube) = {
       cubeKey.dataSourceName == dataSetName
     }

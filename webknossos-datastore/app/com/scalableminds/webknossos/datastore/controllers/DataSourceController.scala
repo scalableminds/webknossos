@@ -33,14 +33,14 @@ class DataSourceController @Inject()(
     }
   }
 
-  def read(dataSetName: String, returnFormatLike: Boolean) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)) {
+  def read(organizationName: String, dataSetName: String, returnFormatLike: Boolean) = TokenSecuredAction(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
     implicit request => {
       AllowRemoteOrigin {
-        val dsOption: Option[InboxDataSource] = dataSourceRepository.findByName(dataSetName)
+        val dsOption: Option[InboxDataSource] = dataSourceRepository.find(DataSourceId(dataSetName, organizationName))
         dsOption match {
           case Some(ds) => {
             val dslike: InboxDataSourceLike = ds
-            if(returnFormatLike) Ok(Json.toJson(dslike))
+            if (returnFormatLike) Ok(Json.toJson(dslike))
             else Ok(Json.toJson(ds))
           }
           case _ => Ok
@@ -69,35 +69,35 @@ class DataSourceController @Inject()(
   def upload = TokenSecuredAction(UserAccessRequest.administrateDataSources).async(parse.multipartFormData) {
     implicit request =>
 
-    val uploadForm = Form(
-      tuple(
-        "name" -> nonEmptyText.verifying("dataSet.name.invalid", n => n.matches("[A-Za-z0-9_\\-]*")),
-        "organization" -> nonEmptyText
-      )).fill(("", ""))
+      val uploadForm = Form(
+        tuple(
+          "name" -> nonEmptyText.verifying("dataSet.name.invalid", n => n.matches("[A-Za-z0-9_\\-]*")),
+          "organization" -> nonEmptyText
+        )).fill(("", ""))
 
-    AllowRemoteOrigin {
-      uploadForm.bindFromRequest(request.body.dataParts).fold(
-        hasErrors =
-          formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
-        success = {
-          case (name, organization) =>
-            val id = DataSourceId(name, organization)
-            for {
-              _ <- webKnossosServer.validateDataSourceUpload(id) ?~> Messages("dataSet.name.alreadyTaken")
-              zipFile <- request.body.file("zipFile[]") ?~> Messages("zip.file.notFound")
-              _ <- dataSourceService.handleUpload(id, new File(zipFile.ref.file.getAbsolutePath))
-            } yield {
-              Ok
-            }
-        })
-    }
+      AllowRemoteOrigin {
+        uploadForm.bindFromRequest(request.body.dataParts).fold(
+          hasErrors =
+            formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
+          success = {
+            case (name, organization) =>
+              val id = DataSourceId(name, organization)
+              for {
+                _ <- webKnossosServer.validateDataSourceUpload(id) ?~> Messages("dataSet.name.alreadyTaken")
+                zipFile <- request.body.file("zipFile[]") ?~> Messages("zip.file.notFound")
+                _ <- dataSourceService.handleUpload(id, new File(zipFile.ref.file.getAbsolutePath))
+              } yield {
+                Ok
+              }
+          })
+      }
   }
 
-  def explore(dataSetName: String) = TokenSecuredAction(UserAccessRequest.writeDataSource(dataSetName)) {
+  def explore(organizationName: String, dataSetName: String) = TokenSecuredAction(UserAccessRequest.writeDataSource(DataSourceId(dataSetName, organizationName))) {
     implicit request =>
       AllowRemoteOrigin {
         for {
-          previousDataSource <- dataSourceRepository.findByName(dataSetName) ?~ Messages("dataSource.notFound") ~> 404
+          previousDataSource <- dataSourceRepository.find(DataSourceId(dataSetName, organizationName)) ?~ Messages("dataSource.notFound") ~> 404
           (dataSource, messages) <- dataSourceService.exploreDataSource(previousDataSource.id, previousDataSource.toUsable)
         } yield {
           Ok(Json.obj(
@@ -108,12 +108,12 @@ class DataSourceController @Inject()(
       }
   }
 
-  def update(dataSetName: String) = TokenSecuredAction(UserAccessRequest.writeDataSource(dataSetName)).async(validateJson[DataSource]) {
+  def update(organizationName: String, dataSetName: String) = TokenSecuredAction(UserAccessRequest.writeDataSource(DataSourceId(dataSetName, organizationName))).async(validateJson[DataSource]) {
     implicit request =>
       AllowRemoteOrigin {
         for {
           _ <- Fox.successful(())
-          dataSource <- dataSourceRepository.findByName(dataSetName).toFox ?~> Messages ("dataSource.notFound") ~> 404
+          dataSource <- dataSourceRepository.find(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages("dataSource.notFound") ~> 404
           _ <- dataSourceService.updateDataSource(request.body.copy(id = dataSource.id))
         } yield {
           Ok
@@ -122,10 +122,10 @@ class DataSourceController @Inject()(
   }
 
   def createOrganizationDirectory(organizationName: String) = TokenSecuredAction(UserAccessRequest.administrateDataSources) { implicit request =>
-    AllowRemoteOrigin{
+    AllowRemoteOrigin {
       val newOrganizationFolder = new File(dataSourceService.dataBaseDir + "/" + organizationName)
-        newOrganizationFolder.mkdirs()
-      if(newOrganizationFolder.isDirectory)
+      newOrganizationFolder.mkdirs()
+      if (newOrganizationFolder.isDirectory)
         Ok
       else
         BadRequest

@@ -1,6 +1,7 @@
 package controllers
 
 import javax.inject.Inject
+
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.services.DataStoreStatus
@@ -15,6 +16,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsError, JsObject, JsSuccess}
 import play.api.mvc._
 import models.annotation.AnnotationState._
+import models.team.OrganizationDAO
 import oxalis.security.WebknossosSilhouette
 
 import scala.concurrent.Future
@@ -29,8 +31,9 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
   def validateDataSetUpload(name: String) = DataStoreAction(name).async(parse.json) { implicit request =>
     for {
       uploadInfo <- request.body.validate[DataSourceId].asOpt.toFox ?~> Messages("dataStore.upload.invalid")
+      organization <- OrganizationDAO.findOneByName(uploadInfo.team)(GlobalAccessContext) ?~> "organization.notFound"
       _ <- bool2Fox(DataSetService.isProperDataSetName(uploadInfo.name)) ?~> Messages("dataSet.name.invalid")
-      _ <- DataSetService.assertNewDataSetName(uploadInfo.name)(GlobalAccessContext) ?~> Messages("dataSet.name.alreadyTaken")
+      _ <- DataSetService.assertNewDataSetName(uploadInfo.name, organization._id)(GlobalAccessContext) ?~> Messages("dataSet.name.alreadyTaken")
       _ <- bool2Fox(uploadInfo.team.nonEmpty) ?~> Messages("team.invalid")
     } yield Ok
   }

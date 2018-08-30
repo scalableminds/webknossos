@@ -13,19 +13,16 @@ class DataSourceRepository @Inject()(
                                       webKnossosServer: WebKnossosServer,
                                       @Named("webknossos-datastore") val system: ActorSystem
                                     )
-    extends TemporaryStore[String, InboxDataSource]
+    extends TemporaryStore[DataSourceId, InboxDataSource]
     with FoxImplicits {
 
-  def findByName(name: String): Option[InboxDataSource] =
-    find(name)
-
-  def findUsableByName(name: String): Option[DataSource] =
-    find(name).flatMap(_.toUsable)
+  def findUsable(id: DataSourceId): Option[DataSource] =
+    find(id).flatMap(_.toUsable)
 
   def updateDataSource(dataSource: InboxDataSource): Fox[Unit] =
     for {
       _ <- Fox.successful(())
-      _ = insert(dataSource.id.name, dataSource)
+      _ = insert(dataSource.id, dataSource)
       _ <- webKnossosServer.reportDataSource(dataSource)
     } yield ()
 
@@ -33,7 +30,7 @@ class DataSourceRepository @Inject()(
     for {
       _ <- Fox.successful(())
       _ = removeAll
-      _ = dataSources.foreach(dataSource => insert(dataSource.id.name, dataSource))
+      _ = dataSources.foreach(dataSource => insert(dataSource.id, dataSource))
       _ <- webKnossosServer.reportDataSources(dataSources)
     } yield ()
 }

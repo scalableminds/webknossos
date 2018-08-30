@@ -1,6 +1,7 @@
 package controllers
 
 import javax.inject.Inject
+
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.mvc.ResultBox
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
@@ -12,7 +13,7 @@ import models.annotation.AnnotationService
 import models.binary.DataSetDAO
 import models.project.ProjectDAO
 import models.task._
-import models.team.OrganizationDAO
+import models.team.{OrganizationDAO, TeamDAO}
 import models.user._
 import net.liftweb.common.Box
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
@@ -142,7 +143,9 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
 
     for {
       dataSetName <- assertAllOnSameDataset
-      dataSet <- DataSetDAO.findOneByName(requestedTasks.head._1.dataSet) ?~> Messages("dataSet.notFound", dataSetName)
+      taskType <- TaskTypeDAO.findOne(ObjectId(requestedTasks.head._1.taskTypeId))
+      team <- TeamDAO.findOne(taskType._team)
+      dataSet <- DataSetDAO.findOneByNameAndOrganization(requestedTasks.head._1.dataSet, team._organization) ?~> Messages("dataSet.notFound", dataSetName)
       dataStoreHandler <- dataSet.dataStoreHandler
       skeletonTracingIds: List[Box[String]] <- dataStoreHandler.saveSkeletonTracings(SkeletonTracings(requestedTasks.map(_._2)))
       requestedTasksWithTracingIds = requestedTasks zip skeletonTracingIds

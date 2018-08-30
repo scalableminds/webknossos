@@ -49,10 +49,11 @@ class Mappings {
 
   constructor(layerName: string) {
     const { dataset } = Store.getState();
+    const organizationName = dataset.owningOrganization;
     const datasetName = dataset.name;
     const dataStoreUrl = dataset.dataStore.url;
     this.layerName = layerName;
-    this.baseUrl = `${dataStoreUrl}/data/datasets/${datasetName}/layers/${layerName}/mappings/`;
+    this.baseUrl = `${dataStoreUrl}/data/datasets/${organizationName}/${datasetName}/layers/${layerName}/mappings/`;
   }
 
   getMappingNames(): Array<string> {

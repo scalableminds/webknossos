@@ -1,11 +1,14 @@
 package controllers
 
 import javax.inject.Inject
+
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services.{AccessMode, AccessResourceType, UserAccessAnswer, UserAccessRequest}
 import models.annotation._
 import models.binary.{DataSetDAO, DataStoreHandler}
+import models.team.OrganizationDAO
 import models.user.User
 import net.liftweb.common.{Box, Full}
 import oxalis.security.WebknossosSilhouette.UserAwareAction
@@ -49,7 +52,7 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
           case AccessResourceType.datasource =>
             handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, userBox)(ctx)
           case AccessResourceType.tracing =>
-            handleTracingAccess(accessRequest.resourceId, accessRequest.mode, userBox)(ctx)
+            handleTracingAccess(accessRequest.resourceId.name, accessRequest.mode, userBox)(ctx)
           case _ =>
             Fox.successful(UserAccessAnswer(false, Some("Invalid access token.")))
         }
@@ -60,19 +63,20 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
   }
 
 
-  private def handleDataSourceAccess(dataSourceName: String, mode: AccessMode.Value, userBox: Box[User])(implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
+  private def handleDataSourceAccess(dataSourceId: DataSourceId, mode: AccessMode.Value, userBox: Box[User])(implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
     //Note: reading access is ensured in findOneBySourceName, depending on the implicit DBAccessContext
 
-    def tryRead: Fox[UserAccessAnswer] = {
-      DataSetDAO.findOneByName(dataSourceName).futureBox map {
+    def tryRead: Fox[UserAccessAnswer] =
+      for {
+        dataSourceBox <- DataSetDAO.findOneByNameAndOrganizationName(dataSourceId.name, dataSourceId.team).futureBox
+      } yield dataSourceBox match {
         case Full(_) => UserAccessAnswer(true)
         case _ => UserAccessAnswer(false, Some("No read access on dataset"))
       }
-    }
 
     def tryWrite: Fox[UserAccessAnswer] = {
       for {
-        dataset <- DataSetDAO.findOneByName(dataSourceName) ?~> "datasource.notFound"
+        dataset <- DataSetDAO.findOneByNameAndOrganizationName(dataSourceId.name, dataSourceId.team) ?~> "datasource.notFound"
         user <- userBox.toFox
         isAllowed <- user.isTeamManagerOrAdminOfOrg(dataset._organization)
       } yield {
@@ -125,7 +129,9 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
       restrictions <- restrictionsFor(AnnotationIdentifier(annotation.typ, annotation._id))
       allowed <- checkRestrictions(restrictions)
     } yield {
-      if (allowed) UserAccessAnswer(true) else UserAccessAnswer(false, Some(s"No ${mode.toString} access to tracing"))
+      if (allowed) UserAccessAnswer(true) else UserAccessAnswer(false, Some(s"No ${
+        mode.toString
+      } access to tracing"))
     }
   }
 }

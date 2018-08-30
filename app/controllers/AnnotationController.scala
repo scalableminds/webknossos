@@ -135,7 +135,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   def createExplorational(dataSetName: String) =
     SecuredAction.async(validateJson[CreateExplorationalParameters]) { implicit request =>
       for {
-        dataSetSQL <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
+        dataSetSQL <- DataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> Messages("dataSet.notFound", dataSetName)
         tracingType <- TracingType.values.find(_.toString == request.body.typ).toFox
         annotation <- AnnotationService.createExplorationalFor(request.identity, dataSetSQL._id, tracingType, request.body.withFallback.getOrElse(true)) ?~> Messages("annotation.create.failed")
         json <- annotation.publicWrites(Some(request.identity))

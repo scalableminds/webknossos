@@ -23,6 +23,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.ws.{WS, WSResponse}
 import play.api.mvc.Codec
+import play.utils.UriEncoding
 
 object DataStoreHandler {
   lazy val webKnossosToken = new CompactRandomIDGenerator().generateBlocking
@@ -124,9 +125,9 @@ class DataStoreHandler(dataStore: DataStore, dataSet: DataSet) extends LazyLoggi
     }
   }
 
-  def requestDataLayerThumbnail(dataLayerName: String, width: Int, height: Int, zoom: Option[Int], center: Option[Point3D]): Fox[Array[Byte]] = {
-    logger.debug("Thumbnail called for: " + dataSet.name + " Layer: " + dataLayerName)
-    RPC(s"${dataStore.url}/data/datasets/${dataSet.urlEncodedName}/layers/$dataLayerName/thumbnail.json")
+  def requestDataLayerThumbnail(organizationName: String, dataLayerName: String, width: Int, height: Int, zoom: Option[Int], center: Option[Point3D]): Fox[Array[Byte]] = {
+    logger.debug(s"Thumbnail called for: $organizationName-${dataSet.name} Layer: dataLayerName")
+    RPC(s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataSet.urlEncodedName}/layers/$dataLayerName/thumbnail.json")
       .withQueryString("token" -> DataStoreHandler.webKnossosToken)
       .withQueryString( "width" -> width.toString, "height" -> height.toString)
       .withQueryStringOptional("zoom", zoom.map(_.toString))
@@ -136,10 +137,5 @@ class DataStoreHandler(dataStore: DataStore, dataSet: DataSet) extends LazyLoggi
       .getWithJsonResponse[ImageThumbnail].map(thumbnail => Base64.decodeBase64(thumbnail.value))
   }
 
-  def importDataSource: Fox[WSResponse] = {
-    logger.debug("Import called for: " + dataSet.name)
-    RPC(s"${dataStore.url}/data/datasets/${dataSet.urlEncodedName}/import")
-      .withQueryString("token" -> DataStoreHandler.webKnossosToken)
-      .post()
-  }
+  private def urlEncode(text: String) = {UriEncoding.encodePathSegment(text, "UTF-8")}
 }

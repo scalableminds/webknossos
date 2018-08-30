@@ -372,7 +372,8 @@ object UserDataSetConfigurationDAO extends SimpleSQLDAO {
 
   private def insertDatasetConfiguration(userId: ObjectId, dataSetName: String, configuration: Map[String, JsValue])(implicit ctx: DBAccessContext): Fox[Unit] = {
     for {
-      dataSet <- DataSetDAO.findOneByName(dataSetName)
+      user <- UserDAO.findOne(userId)
+      dataSet <- DataSetDAO.findOneByNameAndOrganization(dataSetName, user._organization)
       _ <- insertDatasetConfiguration(userId, dataSet._id, configuration)
     } yield ()
   }

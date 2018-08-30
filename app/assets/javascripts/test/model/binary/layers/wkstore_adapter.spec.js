@@ -96,10 +96,10 @@ test.serial("requestFromStore: Token Handling should re-request a token when it'
     t.is(RequestMock.sendJSONReceiveArraybuffer.callCount, 2);
 
     const url = RequestMock.sendJSONReceiveArraybuffer.getCall(0).args[0];
-    t.is(url, "url/data/datasets/dataSet/layers/color/data?token=token");
+    t.is(url, "url/data/datasets/organization/dataSet/layers/color/data?token=token");
 
     const url2 = RequestMock.sendJSONReceiveArraybuffer.getCall(1).args[0];
-    t.is(url2, "url/data/datasets/dataSet/layers/color/data?token=token2");
+    t.is(url2, "url/data/datasets/organization/dataSet/layers/color/data?token=token2");
   });
 });
 
@@ -117,7 +117,7 @@ test.serial("requestFromStore: Request Handling: should pass the correct request
   const { layer } = t.context;
   const { batch } = prepare();
 
-  const expectedUrl = "url/data/datasets/dataSet/layers/color/data?token=token2";
+  const expectedUrl = "url/data/datasets/organization/dataSet/layers/color/data?token=token2";
   const expectedOptions = createExpectedOptions();
 
   return requestFromStore(layer, batch).then(() => {
@@ -137,7 +137,7 @@ test.serial(
     const { layer } = t.context;
     const { batch } = prepare();
 
-    const expectedUrl = "url/data/datasets/dataSet/layers/color/data?token=token2";
+    const expectedUrl = "url/data/datasets/organization/dataSet/layers/color/data?token=token2";
     const expectedOptions = createExpectedOptions(true);
 
     await requestFromStore(layer, batch).then(() => {
@@ -159,7 +159,8 @@ test.serial(
     const { segmentationLayer } = t.context;
 
     const { batch } = prepare();
-    const expectedUrl = "url/data/datasets/dataSet/layers/segmentation/data?token=token2";
+    const expectedUrl =
+      "url/data/datasets/organization/dataSet/layers/segmentation/data?token=token2";
     const expectedOptions = createExpectedOptions(false);
 
     await requestFromStore(segmentationLayer, batch).then(() => {

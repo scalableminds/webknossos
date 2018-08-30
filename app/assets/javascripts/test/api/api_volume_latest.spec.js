@@ -64,7 +64,7 @@ test("Data API: downloadRawDataCuboid should open a popup with the correct URL",
   t.true(window.open.calledOnce);
   t.true(
     window.open.calledWith(
-      "http://localhost:9000/data/datasets/ROI2017_wkw/layers/color/data?resolution=0&token=secure-token&x=1&y=2&z=3&width=8&height=6&depth=4",
+      "http://localhost:9000/data/datasets/Organization_X/ROI2017_wkw/layers/color/data?resolution=0&token=secure-token&x=1&y=2&z=3&width=8&height=6&depth=4",
     ),
   );
 });

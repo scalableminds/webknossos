@@ -25,7 +25,10 @@ import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class DataSetController @Inject()(userService: UserService, val messagesApi: MessagesApi) extends Controller {
+class DataSetController @Inject()(userService: UserService,
+                                  dataSetService: DataSetService,
+                                  teamDAO: TeamDAO,
+                                  val messagesApi: MessagesApi) extends Controller {
 
   val DefaultThumbnailWidth = 400
   val DefaultThumbnailHeight = 400
@@ -83,11 +86,11 @@ class DataSetController @Inject()(userService: UserService, val messagesApi: Mes
       dataSetName = (body \ "dataSetName").as[String]
       _ <- bool2Fox(request.identity.isAdmin) ?~> Messages("user.noAdmin")
       noDataStoreBox <- DataStoreDAO.findOneByName(dataStoreName).reverse.futureBox
-      _ <- Fox.runOptional(noDataStoreBox)(_ => DataSetService.addForeignDataStore(dataStoreName, url))
-      _ <- bool2Fox(DataSetService.isProperDataSetName(dataSetName)) ?~> Messages("dataSet.import.impossible.name")
+      _ <- Fox.runOptional(noDataStoreBox)(_ => dataSetService.addForeignDataStore(dataStoreName, url))
+      _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> Messages("dataSet.import.impossible.name")
       _ <- DataSetDAO.findOneByName(dataSetName).reverse ?~> Messages("dataSet.name.alreadyTaken")
       organizationName <- request.identity.organization.map(_.name)
-      _ <- DataSetService.addForeignDataSet(dataStoreName, dataSetName, organizationName)
+      _ <- dataSetService.addForeignDataSet(dataStoreName, dataSetName, organizationName)
     } yield {
       Ok
     }
@@ -149,9 +152,9 @@ class DataSetController @Inject()(userService: UserService, val messagesApi: Mes
 
   def importDataSet(dataSetName: String) = SecuredAction.async { implicit request =>
     for {
-      _ <- bool2Fox(DataSetService.isProperDataSetName(dataSetName)) ?~> Messages("dataSet.import.impossible.name")
+      _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> Messages("dataSet.import.impossible.name")
       dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
-      result <- DataSetService.importDataSet(dataSet)
+      result <- dataSetService.importDataSet(dataSet)
     } yield {
       Status(result.status)(result.body)
     }
@@ -163,7 +166,7 @@ class DataSetController @Inject()(userService: UserService, val messagesApi: Mes
         dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
         _ <- Fox.assertTrue(dataSet.isEditableBy(request.identity)) ?~> Messages("notAllowed")
         teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.parse(_))
-        userTeams <- TeamDAO.findAllEditable
+        userTeams <- teamDAO.findAllEditable
         oldAllowedTeams <- dataSet.allowedTeamIds
         teamsWithoutUpdate = oldAllowedTeams.filterNot(t => userTeams.exists(_._id == t))
         teamsWithUpdate = teamIdsValidated.filter(t => userTeams.exists(_._id == t))
@@ -175,7 +178,7 @@ class DataSetController @Inject()(userService: UserService, val messagesApi: Mes
 
   def getSharingToken(dataSetName: String) = SecuredAction.async { implicit request =>
     for {
-      token <- DataSetService.getSharingToken(dataSetName)
+      token <- dataSetService.getSharingToken(dataSetName)
     } yield Ok(Json.obj("sharingToken" -> token))
   }
 
@@ -191,8 +194,8 @@ class DataSetController @Inject()(userService: UserService, val messagesApi: Mes
 
   def isValidNewName(dataSetName: String) = SecuredAction.async { implicit request =>
     for {
-      _ <- bool2Fox(DataSetService.isProperDataSetName(dataSetName)) ?~> Messages("dataSet.name.invalid")
-      _ <- DataSetService.assertNewDataSetName(dataSetName)(GlobalAccessContext) ?~> Messages("dataSet.name.alreadyTaken")
+      _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> Messages("dataSet.name.invalid")
+      _ <- dataSetService.assertNewDataSetName(dataSetName)(GlobalAccessContext) ?~> Messages("dataSet.name.alreadyTaken")
     } yield Ok
   }
 

@@ -39,6 +39,9 @@ class InitialDataService @Inject()(userService: UserService,
                                    userTeamRolesDAO: UserTeamRolesDAO,
                                    userExperiencesDAO: UserExperiencesDAO,
                                    userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
+                                   taskTypeDAO: TaskTypeDAO,
+                                   projectDAO: ProjectDAO,
+                                   organizationDAO: OrganizationDAO,
                                    conf: WkConfInjected) extends FoxImplicits with LazyLogging {
   implicit val ctx = GlobalAccessContext
 
@@ -88,7 +91,7 @@ Samplecountry
 
   def assertNoOrganizationsPresent =
     for {
-      organizations <- OrganizationDAO.findAll
+      organizations <- organizationDAO.findAll
       _ <- bool2Fox(organizations.isEmpty) ?~> "initialData.organizationsNotEmpty"
     } yield ()
 
@@ -124,10 +127,10 @@ Samplecountry
   }
 
   def insertOrganization = {
-    OrganizationDAO.findOneByName(defaultOrganization.name).futureBox.flatMap {
+    organizationDAO.findOneByName(defaultOrganization.name).futureBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
-        OrganizationDAO.insertOne(defaultOrganization)
+        organizationDAO.insertOne(defaultOrganization)
     }.toFox
   }
 
@@ -142,7 +145,7 @@ Samplecountry
   }
 
   def insertTaskType = {
-    TaskTypeDAO.findAll.flatMap {
+    taskTypeDAO.findAll.flatMap {
       types =>
         if (types.isEmpty) {
           val taskType = TaskType(
@@ -151,19 +154,19 @@ Samplecountry
             "sampleTaskType",
             "Check those cells out!"
           )
-          for {_ <- TaskTypeDAO.insertOne(taskType)} yield ()
+          for {_ <- taskTypeDAO.insertOne(taskType)} yield ()
         }
         else Fox.successful(())
     }.toFox
   }
 
   def insertProject = {
-    ProjectDAO.findAll.flatMap {
+    projectDAO.findAll.flatMap {
       projects =>
         if (projects.isEmpty) {
           userService.defaultUser.flatMap { user =>
             val project = Project(ObjectId.generate, organizationTeam._id, user._id, "sampleProject", 100, false, Some(5400000))
-            for {_ <- ProjectDAO.insertOne(project)} yield ()
+            for {_ <- projectDAO.insertOne(project)} yield ()
           }
         } else Fox.successful(())
     }.toFox

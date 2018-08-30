@@ -3,12 +3,13 @@ package models.task
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
+import javax.inject.Inject
 import models.user.UserDAO
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{ObjectId, SQLDAO}
+import utils.{ObjectId, SQLClient, SQLDAO}
 
 
 case class Script(
@@ -47,7 +48,7 @@ object Script {
   }
 }
 
-object ScriptDAO extends SQLDAO[Script, ScriptsRow, Scripts] {
+class ScriptDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[Script, ScriptsRow, Scripts](sqlClient) {
   val collection = Scripts
 
   def idColumn(x: Scripts): Rep[String] = x._Id

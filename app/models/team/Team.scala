@@ -4,6 +4,7 @@ package models.team
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
+import javax.inject.Inject
 import models.user.User
 import play.api.Play.current
 import play.api.i18n.Messages
@@ -12,7 +13,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{ObjectId, SQLDAO}
+import utils.{ObjectId, SQLClient, SQLDAO}
 
 
 case class Team(
@@ -42,7 +43,7 @@ case class Team(
     }
 }
 
-object TeamDAO extends SQLDAO[Team, TeamsRow, Teams] {
+class TeamDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[Team, TeamsRow, Teams](sqlClient) {
   val collection = Teams
 
   def idColumn(x: Teams): Rep[String] = x._Id

@@ -11,12 +11,12 @@ import models.annotation.AnnotationState._
 import utils.ObjectId
 
 
-class TaskTypeInformationHandler @Inject() extends AnnotationInformationHandler with FoxImplicits {
+class TaskTypeInformationHandler @Inject()(taskTypeDAO: TaskTypeDAO, taskDAO: TaskDAO) extends AnnotationInformationHandler with FoxImplicits {
 
   override def provideAnnotation(taskTypeId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
-      taskType <- TaskTypeDAO.findOne(taskTypeId) ?~> "taskType.notFound"
-      tasks <- TaskDAO.findAllByTaskType(taskType._id)
+      taskType <- taskTypeDAO.findOne(taskTypeId) ?~> "taskType.notFound"
+      tasks <- taskDAO.findAllByTaskType(taskType._id)
       annotations <- Fox.serialCombined(tasks)(_.annotations).map(_.flatten).toFox
       finishedAnnotations = annotations.filter(_.state == Finished)
       _ <- assertAllOnSameDataset(finishedAnnotations)
@@ -29,7 +29,7 @@ class TaskTypeInformationHandler @Inject() extends AnnotationInformationHandler 
 
   override def restrictionsFor(taskTypeId: ObjectId)(implicit ctx: DBAccessContext) =
     for {
-      taskType <- TaskTypeDAO.findOne(taskTypeId) ?~> "taskType.notFound"
+      taskType <- taskTypeDAO.findOne(taskTypeId) ?~> "taskType.notFound"
     } yield {
       new AnnotationRestrictions {
         override def allowAccess(userOption: Option[User]): Fox[Boolean] =

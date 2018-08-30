@@ -4,6 +4,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.webknossos.schema.Tables._
+import javax.inject.Inject
 import models.annotation.AnnotationSettings
 import models.team.TeamDAO
 import play.api.Play.current
@@ -13,7 +14,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{ObjectId, SQLDAO, SecuredSQLDAO}
+import utils.{ObjectId, SQLClient, SQLDAO, SecuredSQLDAO}
 
 case class TaskType(
                          _id: ObjectId,
@@ -54,7 +55,7 @@ object TaskType {
   }
 }
 
-object TaskTypeDAO extends SQLDAO[TaskType, TasktypesRow, Tasktypes] with SecuredSQLDAO {
+class TaskTypeDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[TaskType, TasktypesRow, Tasktypes](sqlClient) with SecuredSQLDAO {
   val collection = Tasktypes
 
   def idColumn(x: Tasktypes): Rep[String] = x._Id

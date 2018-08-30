@@ -14,7 +14,10 @@ import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.AnyContent
 import utils.ObjectId
 
-class TimeController @Inject()(userService: UserService, userDAO: UserDAO, val messagesApi: MessagesApi) extends Controller with FoxImplicits {
+class TimeController @Inject()(userService: UserService,
+                               userDAO: UserDAO,
+                               timeSpanDAO: TimeSpanDAO,
+                               val messagesApi: MessagesApi) extends Controller with FoxImplicits {
 
   //all users with working hours > 0
   def getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]) = SecuredAction.async { implicit request =>
@@ -89,7 +92,7 @@ class TimeController @Inject()(userService: UserService, userDAO: UserDAO, val m
   def getUserHours(user: User, startDate: Calendar, endDate: Calendar)(implicit request: SecuredRequest[AnyContent]): Fox[JsObject] = {
     for {
       userJs <- user.compactWrites
-      timeJs <- TimeSpanDAO.findAllByUserWithTask(user._id,  Some(startDate.getTimeInMillis), Some(endDate.getTimeInMillis))
+      timeJs <- timeSpanDAO.findAllByUserWithTask(user._id,  Some(startDate.getTimeInMillis), Some(endDate.getTimeInMillis))
     } yield {
       Json.obj(
         "user" -> userJs,

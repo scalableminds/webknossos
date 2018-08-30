@@ -3,6 +3,7 @@ package models.user.time
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
+import javax.inject.Inject
 import models.annotation.Annotation
 import org.joda.time.DateTime
 import play.api.Play.current
@@ -12,7 +13,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsValue, Json}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{ObjectId, SQLDAO}
+import utils.{ObjectId, SQLClient, SQLDAO}
 
 import scala.concurrent.duration._
 
@@ -60,7 +61,7 @@ object TimeSpan {
 
 }
 
-object TimeSpanDAO extends SQLDAO[TimeSpan, TimespansRow, Timespans] {
+class TimeSpanDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[TimeSpan, TimespansRow, Timespans](sqlClient) {
   val collection = Timespans
   val MAX_TIMESTAMP = 253370761200000L
 

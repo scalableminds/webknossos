@@ -4,6 +4,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
+import javax.inject.Inject
 import models.annotation.{AnnotationState, AnnotationType}
 import models.task.TaskDAO
 import models.team.TeamDAO
@@ -14,7 +15,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json.{Json, _}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{ObjectId, SQLDAO}
+import utils.{ObjectId, SQLClient, SQLDAO}
 
 import scala.concurrent.Future
 
@@ -80,7 +81,7 @@ object Project {
 
 }
 
-object ProjectDAO extends SQLDAO[Project, ProjectsRow, Projects] {
+class ProjectDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[Project, ProjectsRow, Projects](sqlClient) {
   val collection = Projects
 
   def idColumn(x: Projects): Rep[String] = x._Id
@@ -176,11 +177,11 @@ object ProjectDAO extends SQLDAO[Project, ProjectsRow, Projects] {
 }
 
 
-object ProjectService extends LazyLogging with FoxImplicits {
+class ProjectService @Inject()(projectDAO: ProjectDAO) extends LazyLogging with FoxImplicits {
 
   def deleteOne(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[Boolean] = {
     val futureFox: Future[Fox[Boolean]] = for {
-      removalSuccessBox <- ProjectDAO.deleteOne(projectId).futureBox
+      removalSuccessBox <- projectDAO.deleteOne(projectId).futureBox
     } yield {
       removalSuccessBox match {
         case Full(_) => {

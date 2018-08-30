@@ -1,27 +1,28 @@
 package controllers
 
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.FoxImplicits
 import javax.inject.Inject
 import com.typesafe.config.ConfigRenderOptions
 import oxalis.security.WebknossosSilhouette.UserAwareAction
-import models.analytics.{AnalyticsEntry, AnalyticsSQL}
+import models.analytics.{AnalyticsDAO, AnalyticsEntry}
 import models.binary.DataStoreHandler
 import play.api.i18n.MessagesApi
 import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.libs.concurrent.Execution.Implicits._
-import utils.SimpleSQLDAO
+import utils.{ObjectId, SQLClient, SimpleSQLDAO}
 import slick.jdbc.PostgresProfile.api._
-import utils.ObjectId
 
-class Application @Inject()(val messagesApi: MessagesApi) extends Controller {
+class Application @Inject()(analyticsDAO: AnalyticsDAO,
+                            releaseInformationDAO: ReleaseInformationDAO,
+                            val messagesApi: MessagesApi) extends Controller {
 
   def buildInfo = UserAwareAction.async { implicit request =>
     val token = request.identity.flatMap { user =>
       if (user.isSuperUser) Some(DataStoreHandler.webKnossosToken) else None
     }
     for {
-      schemaVersion <- ReleaseInformationDAO.getSchemaVersion.futureBox
+      schemaVersion <- releaseInformationDAO.getSchemaVersion.futureBox
     } yield {
       Ok(Json.obj(
         "webknossos" -> webknossos.BuildInfo.toMap.mapValues(_.toString),
@@ -33,7 +34,7 @@ class Application @Inject()(val messagesApi: MessagesApi) extends Controller {
   }
 
   def analytics(namespace: String) = UserAwareAction(parse.json(1024 * 1024)) { implicit request =>
-    AnalyticsSQL.insertOne(
+    analyticsDAO.insertOne(
       AnalyticsEntry(
         ObjectId.generate,
         request.identity.map(_._id),
@@ -49,7 +50,7 @@ class Application @Inject()(val messagesApi: MessagesApi) extends Controller {
 }
 
 
-object ReleaseInformationDAO extends SimpleSQLDAO with FoxImplicits {
+class ReleaseInformationDAO @Inject()(sqlClient: SQLClient) extends SimpleSQLDAO(sqlClient) with FoxImplicits {
   def getSchemaVersion = {
     for {
       rList <- run(sql"select schemaVersion from webknossos.releaseInformation".as[Int])

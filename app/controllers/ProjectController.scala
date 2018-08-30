@@ -14,12 +14,16 @@ import utils.ObjectId
 
 import scala.concurrent.Future
 
-class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controller with FoxImplicits {
+class ProjectController @Inject()(projectService: ProjectService,
+                                  projectDAO: ProjectDAO,
+                                  annotationService: AnnotationService,
+                                  annotationDAO: AnnotationDAO,
+                                  val messagesApi: MessagesApi) extends Controller with FoxImplicits {
 
   def list = SecuredAction.async {
     implicit request =>
       for {
-        projects <- ProjectDAO.findAll
+        projects <- projectDAO.findAll
         js <- Fox.serialCombined(projects)(_.publicWrites)
       } yield {
         Ok(Json.toJson(js))
@@ -29,7 +33,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
   def listWithStatus = SecuredAction.async {
     implicit request =>
       for {
-        projects <- ProjectDAO.findAll
+        projects <- projectDAO.findAll
         allCounts <- TaskDAO.countAllOpenInstancesGroupedByProjects
         js <- Fox.serialCombined(projects) { project =>
           for {
@@ -45,7 +49,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
   def read(projectName: String) = SecuredAction.async {
     implicit request =>
       for {
-        project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
+        project <- projectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
         js <- project.publicWrites
       } yield {
         Ok(js)
@@ -55,9 +59,9 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
   def delete(projectName: String) = SecuredAction.async {
     implicit request =>
       for {
-        project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
+        project <- projectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
         _ <- bool2Fox(project.isDeletableBy(request.identity)) ?~> Messages("project.remove.notAllowed")
-        _ <- ProjectService.deleteOne(project._id) ?~> Messages("project.remove.failure")
+        _ <- projectService.deleteOne(project._id) ?~> Messages("project.remove.failure")
       } yield {
         JsonOk(Messages("project.remove.success"))
       }
@@ -65,11 +69,11 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
 
   def create = SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(Project.projectPublicReads) { project =>
-      ProjectDAO.findOneByName(project.name)(GlobalAccessContext).futureBox.flatMap {
+      projectDAO.findOneByName(project.name)(GlobalAccessContext).futureBox.flatMap {
         case Empty =>
           for {
             _ <- ensureTeamAdministration(request.identity, project._team)
-            _ <- ProjectDAO.insertOne(project)
+            _ <- projectDAO.insertOne(project)
             js <- project.publicWrites
           } yield Ok(js)
         case _ =>
@@ -81,10 +85,10 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
   def update(projectName: String) = SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(Project.projectPublicReads) { updateRequest =>
       for{
-        project <- ProjectDAO.findOneByName(projectName)(GlobalAccessContext) ?~> Messages("project.notFound", projectName)
+        project <- projectDAO.findOneByName(projectName)(GlobalAccessContext) ?~> Messages("project.notFound", projectName)
         _ <- ensureTeamAdministration(request.identity, project._team)
-        _ <- ProjectDAO.updateOne(updateRequest.copy(_id = project._id, paused = project.paused)) ?~> Messages("project.update.failed", projectName)
-        updated <- ProjectDAO.findOneByName(projectName)
+        _ <- projectDAO.updateOne(updateRequest.copy(_id = project._id, paused = project.paused)) ?~> Messages("project.update.failed", projectName)
+        updated <- projectDAO.findOneByName(projectName)
         js <- updated.publicWrites
       } yield Ok(js)
     }
@@ -102,10 +106,10 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
 
   private def updatePauseStatus(projectName: String, isPaused: Boolean)(implicit request: SecuredRequest[_]) = {
     for {
-      project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
+      project <- projectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
       _ <- ensureTeamAdministration(request.identity, project._team)
-      _ <- ProjectDAO.updatePaused(project._id, isPaused) ?~> Messages("project.update.failed", projectName)
-      updatedProject <- ProjectDAO.findOne(project._id) ?~> Messages("project.notFound", projectName)
+      _ <- projectDAO.updatePaused(project._id, isPaused) ?~> Messages("project.update.failed", projectName)
+      updatedProject <- projectDAO.findOne(project._id) ?~> Messages("project.notFound", projectName)
       js <- updatedProject.publicWrites
     } yield {
       Ok(js)
@@ -115,7 +119,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
   def tasksForProject(projectName: String) = SecuredAction.async {
     implicit request =>
       for {
-        project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
+        project <- projectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
         _ <- ensureTeamAdministration(request.identity, project._team) ?~> Messages("notAllowed")
         tasks <- TaskDAO.findAllByProject(project._id)(GlobalAccessContext)
         js <- Fox.serialCombined(tasks)(_.publicWrites)
@@ -128,7 +132,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
     implicit request =>
       for {
         _ <- bool2Fox(delta.getOrElse(1L) >= 0) ?~> Messages("project.increaseTaskInstances.negative")
-        project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
+        project <- projectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
         _ <- TaskDAO.incrementTotalInstancesOfAllWithProject(project._id, delta.getOrElse(1L))
         openInstanceCount <- TaskDAO.countOpenInstancesForProject(project._id)
         js <- project.publicWritesWithStatus(openInstanceCount)
@@ -138,7 +142,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
   def usersWithActiveTasks(projectName: String) = SecuredAction.async {
     implicit request =>
       for {
-        usersWithActiveTasks <- ProjectDAO.findUsersWithActiveTasks(projectName)
+        usersWithActiveTasks <- projectDAO.findUsersWithActiveTasks(projectName)
       } yield {
         Ok(Json.toJson(usersWithActiveTasks.map(tuple  => Json.obj("email" -> tuple._1, "activeTasks" -> tuple._2))))
       }
@@ -146,13 +150,13 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
 
   def transferActiveTasks(projectName: String) = SecuredAction.async(parse.json) { implicit request =>
     for {
-      project <- ProjectDAO.findOneByName(projectName)
+      project <- projectDAO.findOneByName(projectName)
       _ <- Fox.assertTrue(request.identity.isTeamManagerOrAdminOf(project._team))
       newUserId <- (request.body \ "userId").asOpt[String].toFox
       newUserIdValidated <- ObjectId.parse(newUserId)
-      activeAnnotations <- AnnotationDAO.findAllActiveForProject(project._id)
+      activeAnnotations <- annotationDAO.findAllActiveForProject(project._id)
       updated <- Fox.serialCombined(activeAnnotations){ id =>
-        AnnotationService.transferAnnotationToUser(AnnotationType.Task.toString, id.toString, newUserIdValidated)(securedRequestToUserAwareRequest)
+        annotationService.transferAnnotationToUser(AnnotationType.Task.toString, id.toString, newUserIdValidated)(securedRequestToUserAwareRequest)
       }
     } yield Ok
 

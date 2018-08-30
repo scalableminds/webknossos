@@ -6,6 +6,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.webknossos.schema.Tables._
+import javax.inject.Inject
 import models.annotation._
 import models.binary.DataSetDAO
 import models.project.ProjectDAO
@@ -102,7 +103,7 @@ case class Task(
 
 }
 
-object TaskDAO extends SQLDAO[Task, TasksRow, Tasks] {
+class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO) extends SQLDAO[Task, TasksRow, Tasks](sqlClient) {
   val collection = Tasks
 
   def idColumn(x: Tasks) = x._Id
@@ -248,7 +249,7 @@ object TaskDAO extends SQLDAO[Task, TasksRow, Tasks] {
       case _ => ""
     }
     val projectFilterFox = projectNameOpt match {
-      case Some(pName) => for {project <- ProjectDAO.findOneByName(pName)} yield s"(t._project = '${project._id}')"
+      case Some(pName) => for {project <- projectDAO.findOneByName(pName)} yield s"(t._project = '${project._id}')"
       case _ => Fox.successful("true")
     }
     val taskTypeFilter = taskTypeIdOpt.map(ttId => s"(t._taskType = '${ttId}')").getOrElse("true")

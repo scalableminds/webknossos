@@ -5,6 +5,7 @@ import com.scalableminds.util.rpc.RPC
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.typesafe.scalalogging.LazyLogging
+import javax.inject.Inject
 import models.team.OrganizationDAO
 import net.liftweb.common.Full
 import oxalis.security.{CompactRandomIDGenerator, URLSharing, WebknossosSilhouette}
@@ -13,7 +14,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.WSResponse
 import utils.ObjectId
 
-object DataSetService extends FoxImplicits with LazyLogging {
+class DataSetService @Inject()(organizationDAO: OrganizationDAO) extends FoxImplicits with LazyLogging {
 
   val system = Akka.system(play.api.Play.current)
 
@@ -32,7 +33,7 @@ object DataSetService extends FoxImplicits with LazyLogging {
                      ) = {
     implicit val ctx = GlobalAccessContext
     val newId = ObjectId.generate
-    OrganizationDAO.findOneByName(owningOrganization).futureBox.flatMap {
+    organizationDAO.findOneByName(owningOrganization).futureBox.flatMap {
       case Full(organization) => for {
         _ <- DataSetDAO.insertOne(DataSet(
                 newId,
@@ -59,7 +60,7 @@ object DataSetService extends FoxImplicits with LazyLogging {
     for {
       dataStore <- DataStoreDAO.findOneByName(dataStoreName)
       foreignDataset <- getForeignDataSet(dataStore.url, dataSetName)
-      _ <- DataSetService.createDataSet(dataSetName, dataStore, organizationName, foreignDataset)
+      _ <- createDataSet(dataSetName, dataStore, organizationName, foreignDataset)
     } yield {
       ()
     }
@@ -121,7 +122,7 @@ object DataSetService extends FoxImplicits with LazyLogging {
     logger.info(s"[${dataStore.name}] Available datasets: " +
       s"${dataSources.count(_.isUsable)} (usable), ${dataSources.count(!_.isUsable)} (unusable)")
     Fox.serialSequence(dataSources) { dataSource =>
-      DataSetService.updateDataSource(dataStore, dataSource)
+      updateDataSource(dataStore, dataSource)
     }
   }
 

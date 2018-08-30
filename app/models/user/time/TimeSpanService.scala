@@ -20,7 +20,10 @@ import scala.collection.mutable
 import scala.concurrent.duration._
 
 
-class TimeSpanService @Inject()(annotationDAO: AnnotationDAO, userService: UserService) extends FoxImplicits with LazyLogging {
+class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
+                                userService: UserService,
+                                taskDAO: TaskDAO,
+                                timeSpanDAO: TimeSpanDAO) extends FoxImplicits with LazyLogging {
   private val MaxTracingPause =
     WkConf.Oxalis.User.Time.tracingPauseInSeconds.toMillis
 
@@ -39,7 +42,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO, userService: UserS
                            end: Option[Long] = None)(implicit ctx: DBAccessContext): Fox[Map[T, Duration]] =
 
     for {
-      timeTrackingOpt <- TimeSpanDAO.findAllByUser(user._id, start, end).futureBox
+      timeTrackingOpt <- timeSpanDAO.findAllByUser(user._id, start, end).futureBox
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>
@@ -56,7 +59,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO, userService: UserS
                                  end: Option[Long] = None)(implicit ctx: DBAccessContext): Fox[Map[T, Duration]] =
 
     for {
-      timeTrackingOpt <- TimeSpanDAO.findAllByAnnotation(annotationId, start, end).futureBox
+      timeTrackingOpt <- timeSpanDAO.findAllByAnnotation(annotationId, start, end).futureBox
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>
@@ -68,7 +71,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO, userService: UserS
 
   def totalTimeOfUser[T](user: User, start: Option[Long], end: Option[Long])(implicit ctx: DBAccessContext): Fox[Duration] =
     for {
-      timeTrackingOpt <- TimeSpanDAO.findAllByUser(user._id, start, end).futureBox
+      timeTrackingOpt <- timeSpanDAO.findAllByUser(user._id, start, end).futureBox
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>
@@ -80,7 +83,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO, userService: UserS
 
   def loggedTimePerInterval[T](groupingF: TimeSpan => T, start: Option[Long] = None, end: Option[Long] = None): Fox[Map[T, Duration]] =
     for {
-      timeTrackingOpt <- TimeSpanDAO.findAll(start, end).futureBox
+      timeTrackingOpt <- timeSpanDAO.findAll(start, end).futureBox
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>
@@ -190,7 +193,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO, userService: UserS
     annotation.flatMap(_._task) match {
       case Some(taskId) =>
         for {
-          _ <- TaskDAO.logTime(taskId, duration)(GlobalAccessContext) ?~> "FAILED: TaskSQLDAO.logTime"
+          _ <- taskDAO.logTime(taskId, duration)(GlobalAccessContext) ?~> "FAILED: TaskSQLDAO.logTime"
           _ <- signalOverTime(duration, annotation)(GlobalAccessContext).futureBox //signalOverTime is expected to fail in some cases, hence the .futureBox
         } yield {}
       case _ =>
@@ -212,7 +215,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO, userService: UserS
 
   private def flushToDb(timespansToInsert: List[TimeSpan], timespansToUpdate: List[(TimeSpan, Long)])(implicit ctx: DBAccessContext) = {
     val updateResult = for {
-      _ <- Fox.serialCombined(timespansToInsert)(t => TimeSpanDAO.insertOne(t))
+      _ <- Fox.serialCombined(timespansToInsert)(t => timeSpanDAO.insertOne(t))
       _ <- Fox.serialCombined(timespansToUpdate)(t => updateTimeSpanInDb(t._1, t._2))
     } yield ()
 
@@ -229,7 +232,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO, userService: UserS
     val updated = timeSpan.addTime(duration, timestamp)
 
     for {
-      _ <- TimeSpanDAO.updateOne(updated)(ctx) ?~> "FAILED: TimeSpanDAO.update"
+      _ <- timeSpanDAO.updateOne(updated)(ctx) ?~> "FAILED: TimeSpanDAO.update"
       _ <- logTimeToAnnotation(duration, updated._annotation) ?~> "FAILED: TimeSpanService.logTimeToAnnotation"
       annotation <- getAnnotation(updated._annotation)
       _ <- logTimeToTask(duration, annotation) ?~> "FAILED: TimeSpanService.logTimeToTask"

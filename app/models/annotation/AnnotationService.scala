@@ -281,7 +281,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
   }
 
   private def flattenTupledLists[A,B,C,D](tupledLists: List[(List[A], List[B], List[C], List[D])]) = {
-    tupledLists.map(tuple => zippedFourLists(tuple._1, tuple._2, tuple._3, tuple._4)).flatten
+    tupledLists.flatMap(tuple => zippedFourLists(tuple._1, tuple._2, tuple._3, tuple._4))
   }
 
   private def zippedFourLists[A,B,C,D](l1: List[A], l2: List[B], l3: List[C], l4: List[D]): List[(A, B, C, D)] = {
@@ -338,7 +338,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     }
   }
 
-  def transferAnnotationToUser(typ: String, id: String, userId: ObjectId)(implicit request: UserAwareRequest[_]) = {
+  def transferAnnotationToUser(typ: String, id: String, userId: ObjectId)(implicit request: UserAwareRequest[_]): Fox[Annotation] = {
     for {
       annotation <- annotationInformationProvider.provideAnnotation(typ, id)
       newUser <- userDAO.findOne(userId) ?~> Messages("user.notFound")

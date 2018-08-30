@@ -56,6 +56,8 @@ object NmlTaskParameters {
 
 class TaskController @Inject() (organizationService: OrganizationService,
                                 annotationService: AnnotationService,
+                                scriptDAO: ScriptDAO,
+                                projectDAO: ProjectDAO,
                                 val messagesApi: MessagesApi)
   extends Controller
     with ResultBox
@@ -172,7 +174,7 @@ class TaskController @Inject() (organizationService: OrganizationService,
       case Some(scriptId) =>
         for {
           scriptIdValidated <- ObjectId.parse(scriptId)
-          _ <- ScriptDAO.findOne(scriptIdValidated) ?~> Messages("script.notFound")
+          _ <- scriptDAO.findOne(scriptIdValidated) ?~> Messages("script.notFound")
         } yield ()
       case _ => Fox.successful(())
     }
@@ -183,7 +185,7 @@ class TaskController @Inject() (organizationService: OrganizationService,
       _ <- skeletonTracingIdBox.toFox
       taskTypeIdValidated <- ObjectId.parse(params.taskTypeId)
       taskType <- TaskTypeDAO.findOne(taskTypeIdValidated) ?~> Messages("taskType.notFound")
-      project <- ProjectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
+      project <- projectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
       _ <- validateScript(params.scriptId)
       _ <- ensureTeamAdministration(request.identity, project._team)
       task = Task(

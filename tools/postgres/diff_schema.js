@@ -96,4 +96,9 @@ execSync(`find ${dir1} -type f -exec sort -o {} {} \\;`)
 execSync(`find ${dir2} -type f -exec sed -i 's/,$//' {} +`)
 execSync(`find ${dir2} -type f -exec sort -o {} {} \\;`)
 // diff
-execSync(`diff -r ${dir1} ${dir2}`, {stdio:[0,1,2]}) // we pass the std-output to the child process to see the diff
+try{
+	execSync(`diff -r ${dir1} ${dir2}`, {stdio:[0,1,2]}) // we pass the std-output to the child process to see the diff
+	console.log("[SUCCESS] Schemas do match")
+} catch(err) { // execSync throws an ugly error if a child-process failes
+	console.log("[FAILED] Schemas do not match")
+}

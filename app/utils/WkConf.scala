@@ -9,7 +9,9 @@ object WkConf extends ConfigReader {
   override def raw = play.api.Play.configuration
 
   object Application {
+
     val insertInitialData = getBoolean("application.insertInitialData")
+
     object Authentication {
       object DefaultUser {
         val email = getString("application.authentication.defaultUser.email")
@@ -20,7 +22,9 @@ object WkConf extends ConfigReader {
       val enableDevAutoVerify = getBoolean("application.authentication.enableDevAutoVerify")
       val enableDevAutoAdmin = getBoolean("application.authentication.enableDevAutoAdmin")
       val enableDevAutoLogin = getBoolean("application.authentication.enableDevAutoLogin")
+      val children = List(DefaultUser)
     }
+    val children = List(Authentication)
   }
 
   object Http {
@@ -47,11 +51,14 @@ object WkConf extends ConfigReader {
       object Time {
         val tracingPauseInSeconds = getInt("oxalis.user.time.tracingPauseInSeconds") seconds
       }
+      val children = List(Time)
     }
     object Tasks {
       val maxOpenPerUser = getInt("oxalis.tasks.maxOpenPerUser")
     }
     val newOrganizationMailingList = getString("oxalis.newOrganizationMailingList")
+
+    val children = List(User, Tasks)
   }
 
   object Datastore {
@@ -81,6 +88,7 @@ object WkConf extends ConfigReader {
       val resetPasswordExpiry = getDuration("silhouette.tokenAuthenticator.resetPasswordExpiry")
       val dataStoreExpiry = getDuration("silhouette.tokenAuthenticator.dataStoreExpiry")
     }
+    val children = List(TokenAuthenticator)
   }
 
   object Airbrake {
@@ -93,7 +101,8 @@ object WkConf extends ConfigReader {
     object Analytics {
       val trackingID = getString("google.analytics.trackingID")
     }
+    val children = List(Analytics)
   }
 
-
+  val children = List(Application, Http, Mail, Oxalis, Datastore, User, Braintracing, Features, Silhouette, Airbrake, Google)
 }

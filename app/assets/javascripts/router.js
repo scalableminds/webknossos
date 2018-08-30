@@ -257,7 +257,7 @@ class ReactRouter extends React.Component<Props> {
                       window.location.replace(`${window.location.origin}/dashboard`);
                     }}
                     onCancel={() => {
-                      window.location.replace(`${window.location.origin}/dashboard`);
+                      window.history.back();
                     }}
                   />
                 )}

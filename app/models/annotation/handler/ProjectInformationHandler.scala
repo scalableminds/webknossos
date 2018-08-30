@@ -2,6 +2,7 @@ package models.annotation.handler
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import javax.inject.Inject
 import models.annotation._
 import models.project.ProjectDAO
 import models.user.User
@@ -9,13 +10,13 @@ import models.user.User
 import scala.concurrent.ExecutionContext.Implicits.global
 import utils.ObjectId
 
-object ProjectInformationHandler extends AnnotationInformationHandler with FoxImplicits {
+class ProjectInformationHandler @Inject()(annotationDAO: AnnotationDAO) extends AnnotationInformationHandler with FoxImplicits {
 
   override def provideAnnotation(projectId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
   {
     for {
       project <- ProjectDAO.findOne(projectId) ?~> "project.notFound"
-      annotations <- AnnotationDAO.findAllFinishedForProject(project._id)
+      annotations <- annotationDAO.findAllFinishedForProject(project._id)
       _ <- assertAllOnSameDataset(annotations)
       _ <- assertNonEmpty(annotations) ?~> "project.noAnnotations"
       user <- userOpt ?~> "user.notAuthorised"

@@ -2,6 +2,7 @@ package models.annotation.handler
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import javax.inject.Inject
 import models.annotation._
 import models.task.TaskDAO
 import models.user.User
@@ -10,7 +11,7 @@ import models.annotation.AnnotationState._
 import models.project.ProjectDAO
 import utils.ObjectId
 
-object TaskInformationHandler extends AnnotationInformationHandler with FoxImplicits {
+class TaskInformationHandler @Inject() extends AnnotationInformationHandler with FoxImplicits {
 
   override def provideAnnotation(taskId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
     for {

@@ -19,7 +19,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
 
-class AnnotationController @Inject()(val messagesApi: MessagesApi)
+class AnnotationController @Inject()(annotationDAO: AnnotationDAO)(val messagesApi: MessagesApi)
   extends Controller
     with FoxImplicits
     with AnnotationInformationProvider {
@@ -59,7 +59,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       mergedAnnotation <- AnnotationMerger.mergeTwoByIds(identifierA, identifierB, true)
       restrictions = AnnotationRestrictions.defaultAnnotationRestrictions(mergedAnnotation)
       _ <- restrictions.allowAccess(request.identity) ?~> Messages("notAllowed") ~> BAD_REQUEST
-      _ <- AnnotationDAO.insertOne(mergedAnnotation)
+      _ <- annotationDAO.insertOne(mergedAnnotation)
       js <- mergedAnnotation.publicWrites(Some(request.identity), Some(restrictions))
     } yield {
       JsonOk(js, Messages("annotation.merge.success"))
@@ -93,7 +93,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       dataStoreHandler <- dataSet.dataStoreHandler
       skeletonTracingId <- annotation.skeletonTracingId.toFox
       newSkeletonTracingId <- dataStoreHandler.duplicateSkeletonTracing(skeletonTracingId, Some(version.toString))
-      _ <- AnnotationDAO.updateSkeletonTracingId(annotation._id, newSkeletonTracingId)
+      _ <- annotationDAO.updateSkeletonTracingId(annotation._id, newSkeletonTracingId)
     } yield {
       logger.info(s"REVERTED [$typ - $id, $version]")
       JsonOk("annotation.reverted")

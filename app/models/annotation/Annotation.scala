@@ -5,6 +5,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.webknossos.schema.Tables._
+import javax.inject.Inject
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
 import models.binary.{DataSet, DataSetDAO}
@@ -19,7 +20,7 @@ import slick.jdbc.GetResult._
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
-import utils.{ObjectId, SQLDAO}
+import utils.{ObjectId, SQLClient, SQLDAO}
 
 
 case class Annotation(
@@ -149,7 +150,7 @@ case class Annotation(
 }
 
 
-object AnnotationDAO extends SQLDAO[Annotation, AnnotationsRow, Annotations] {
+class AnnotationDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[Annotation, AnnotationsRow, Annotations](sqlClient) {
   val collection = Annotations
 
   def idColumn(x: Annotations): Rep[String] = x._Id

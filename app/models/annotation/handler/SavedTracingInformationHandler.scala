@@ -3,12 +3,13 @@ package models.annotation.handler
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.TextUtils._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import javax.inject.Inject
 import models.annotation._
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
 import utils.ObjectId
 
-object SavedTracingInformationHandler extends AnnotationInformationHandler with FoxImplicits {
+class SavedTracingInformationHandler @Inject()(annotationDAO: AnnotationDAO) extends AnnotationInformationHandler with FoxImplicits {
 
   override val cache = false
 
@@ -23,7 +24,7 @@ object SavedTracingInformationHandler extends AnnotationInformationHandler with 
     }
 
   def provideAnnotation(annotationId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
-    AnnotationDAO.findOne(annotationId) ?~> "annotation.notFound"
+    annotationDAO.findOne(annotationId) ?~> "annotation.notFound"
 
   def restrictionsFor(identifier: ObjectId)(implicit ctx: DBAccessContext) = {
     for {

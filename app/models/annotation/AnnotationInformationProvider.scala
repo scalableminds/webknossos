@@ -3,11 +3,12 @@ package models.annotation
 import oxalis.security.WebknossosSilhouette.UserAwareRequest
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import javax.inject.Inject
 import models.annotation.AnnotationType.AnnotationType
-import models.annotation.handler.AnnotationInformationHandler
+import models.annotation.handler.AnnotationInformationHandlerSelector
 import play.api.libs.concurrent.Execution.Implicits._
 
-trait AnnotationInformationProvider
+class AnnotationInformationProvider @Inject()(annotationInformationHandlerSelector: AnnotationInformationHandlerSelector)(annotationStore: AnnotationStore)
   extends play.api.http.Status
     with FoxImplicits
     with models.basics.Implicits {
@@ -19,7 +20,7 @@ trait AnnotationInformationProvider
     } yield annotation
 
   def provideAnnotation(annotationIdentifier: AnnotationIdentifier)(implicit request: UserAwareRequest[_]): Fox[Annotation] = {
-    AnnotationStore.requestAnnotation(annotationIdentifier, request.identity)
+    annotationStore.requestAnnotation(annotationIdentifier, request.identity)
   }
 
   def nameFor(annotation: Annotation)(implicit request: UserAwareRequest[_]): Fox[String] = {
@@ -40,6 +41,6 @@ trait AnnotationInformationProvider
   }
 
   private def handlerForTyp(typ: AnnotationType) =
-    AnnotationInformationHandler.informationHandlers(typ)
+    annotationInformationHandlerSelector.informationHandlers(typ)
 
 }

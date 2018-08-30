@@ -19,7 +19,7 @@ import play.api.Play.current
 import oxalis.security.WebknossosSilhouette.UserAwareAction
 import play.api.Play
 import play.api.libs.json.Json
-import utils.{ObjectId, WkConf, WkConfInjected}
+import utils.{ObjectId, WkConfInjected}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -34,7 +34,12 @@ class InitialDataController @Inject()(initialDataService: InitialDataService, va
 }
 
 
-class InitialDataService @Inject()(conf: WkConfInjected) extends FoxImplicits with LazyLogging {
+class InitialDataService @Inject()(userService: UserService,
+                                   userDAO: UserDAO,
+                                   userTeamRolesDAO: UserTeamRolesDAO,
+                                   userExperiencesDAO: UserExperiencesDAO,
+                                   userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
+                                   conf: WkConfInjected) extends FoxImplicits with LazyLogging {
   implicit val ctx = GlobalAccessContext
 
   val defaultUserEmail = conf.Application.Authentication.DefaultUser.email
@@ -56,8 +61,8 @@ Samplecountry
     "Boy",
     System.currentTimeMillis(),
     Json.toJson(UserConfiguration.default),
-    UserService.createLoginInfo(defaultUserEmail),
-    UserService.createPasswordInfo(defaultUserPassword),
+    userService.createLoginInfo(defaultUserEmail),
+    userService.createPasswordInfo(defaultUserPassword),
     isAdmin = true,
     isSuperUser = conf.Application.Authentication.DefaultUser.isSuperUser,
     isDeactivated = false
@@ -88,13 +93,13 @@ Samplecountry
     } yield ()
 
   def insertDefaultUser =  {
-    UserService.defaultUser.futureBox.flatMap {
+    userService.defaultUser.futureBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
         for {
-          _ <- UserDAO.insertOne(defaultUser)
-          _ <- UserExperiencesDAO.updateExperiencesForUser(defaultUser._id, Map("sampleExp" -> 10))
-          _ <- UserTeamRolesDAO.insertTeamMembership(defaultUser._id, TeamMembership(organizationTeam._id, true))
+          _ <- userDAO.insertOne(defaultUser)
+          _ <- userExperiencesDAO.updateExperiencesForUser(defaultUser._id, Map("sampleExp" -> 10))
+          _ <- userTeamRolesDAO.insertTeamMembership(defaultUser._id, TeamMembership(organizationTeam._id, true))
           _ = logger.info("Inserted default user scmboy")
         } yield ()
     }.toFox
@@ -156,7 +161,7 @@ Samplecountry
     ProjectDAO.findAll.flatMap {
       projects =>
         if (projects.isEmpty) {
-          UserService.defaultUser.flatMap { user =>
+          userService.defaultUser.flatMap { user =>
             val project = Project(ObjectId.generate, organizationTeam._id, user._id, "sampleProject", 100, false, Some(5400000))
             for {_ <- ProjectDAO.insertOne(project)} yield ()
           }

@@ -13,7 +13,9 @@ import play.api.libs.json.Json._
 import play.api.mvc.Result
 
 
-class ConfigurationController @Inject()(val messagesApi: MessagesApi) extends Controller {
+class ConfigurationController @Inject()(userService: UserService,
+                                        userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
+                                        val messagesApi: MessagesApi) extends Controller {
 
   def read = UserAwareAction.async { implicit request =>
     request.identity.toFox.flatMap { user =>
@@ -29,7 +31,7 @@ class ConfigurationController @Inject()(val messagesApi: MessagesApi) extends Co
     for {
       jsConfiguration <- request.body.asOpt[JsObject] ?~> Messages("user.configuration.invalid")
       conf = jsConfiguration.fields.toMap
-      _ <- UserService.updateUserConfiguration(request.identity, UserConfiguration(conf))
+      _ <- userService.updateUserConfiguration(request.identity, UserConfiguration(conf))
     } yield {
       JsonOk(Messages("user.configuration.updated"))
     }
@@ -38,7 +40,7 @@ class ConfigurationController @Inject()(val messagesApi: MessagesApi) extends Co
   def readDataSet(dataSetName: String) = UserAwareAction.async { implicit request =>
     request.identity.toFox.flatMap { user =>
       for {
-        configurationJson: JsValue <- UserDataSetConfigurationDAO.findOneForUserAndDataset(user._id, dataSetName)
+        configurationJson: JsValue <- userDataSetConfigurationDAO.findOneForUserAndDataset(user._id, dataSetName)
       } yield DataSetConfiguration(configurationJson.validate[Map[String, JsValue]].getOrElse(Map.empty))
     }
     .orElse(DataSetDAO.findOneByName(dataSetName).flatMap(_.defaultConfiguration))
@@ -50,7 +52,7 @@ class ConfigurationController @Inject()(val messagesApi: MessagesApi) extends Co
     for {
       jsConfiguration <- request.body.asOpt[JsObject] ?~> Messages("user.configuration.dataset.invalid")
       conf = jsConfiguration.fields.toMap
-      _ <- UserService.updateDataSetConfiguration(request.identity, dataSetName, DataSetConfiguration(conf))
+      _ <- userService.updateDataSetConfiguration(request.identity, dataSetName, DataSetConfiguration(conf))
     } yield {
       JsonOk(Messages("user.configuration.dataset.updated"))
     }

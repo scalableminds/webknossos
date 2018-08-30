@@ -25,7 +25,7 @@ import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controller {
+class DataSetController @Inject()(userService: UserService, val messagesApi: MessagesApi) extends Controller {
 
   val DefaultThumbnailWidth = 400
   val DefaultThumbnailHeight = 400
@@ -114,7 +114,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
     for {
       dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
       allowedTeams <- dataSet.allowedTeamIds
-      users <- UserService.findByTeams(allowedTeams)
+      users <- userService.findByTeams(allowedTeams)
       usersJs <- Fox.serialCombined(users.distinct)(_.compactWrites)
     } yield {
       Ok(Json.toJson(usersJs))

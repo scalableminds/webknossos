@@ -9,7 +9,7 @@ import models.annotation._
 import models.binary.{DataSet, DataSetDAO, DataStoreHandler}
 import models.task.TaskDAO
 import models.user.time._
-import models.user.{User, UserDAO}
+import models.user.{User}
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest, UserAwareAction}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.{JsArray, _}

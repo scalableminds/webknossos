@@ -23,7 +23,9 @@ import views.html
 
 import scala.concurrent.Future
 
-class UserController @Inject()(val messagesApi: MessagesApi)
+class UserController @Inject()(userService: UserService,
+                               userDAO: UserDAO,
+                               val messagesApi: MessagesApi)
   extends Controller
     with FoxImplicits {
 
@@ -38,7 +40,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   def user(userId: String) = SecuredAction.async { implicit request =>
     for {
       userIdValidated <- ObjectId.parse(userId)
-      user <- UserDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
+      user <- userDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
       _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
       js <- user.publicWrites(request.identity)
     } yield Ok(js)
@@ -65,7 +67,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   def userLoggedTime(userId: String) = SecuredAction.async { implicit request =>
     for {
       userIdValidated <- ObjectId.parse(userId)
-      user <- UserDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
+      user <- userDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
       _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
       loggedTimeAsMap <- TimeSpanService.loggedTimeOfUser(user, TimeSpan.groupByMonth)
     } yield {
@@ -85,7 +87,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
     Fox.combined(request.body.users.map { userId =>
       for {
         userIdValidated <- ObjectId.parse(userId)
-        user <- UserDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
+        user <- userDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
         _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
         result <- TimeSpanService.loggedTimeOfUser(user, groupByAnnotationAndDay, Some(request.body.start), Some(request.body.end))
       } yield {
@@ -112,7 +114,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   def userAnnotations(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = SecuredAction.async { implicit request =>
     for {
       userIdValidated <- ObjectId.parse(userId)
-      user <- UserDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
+      user <- userDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
       _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
       annotations <- AnnotationDAO.findAllFor(userIdValidated, isFinished, AnnotationType.Explorational, limit.getOrElse(defaultAnnotationLimit))
       jsonList <- Fox.serialCombined(annotations)(_.compactWrites)
@@ -124,7 +126,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   def userTasks(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = SecuredAction.async { implicit request =>
     for {
       userIdValidated <- ObjectId.parse(userId)
-      user <- UserDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
+      user <- userDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
       _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
       annotations <- AnnotationDAO.findAllFor(userIdValidated, isFinished, AnnotationType.Task, limit.getOrElse(defaultAnnotationLimit))
       jsonList <- Fox.serialCombined(annotations)(_.publicWrites(Some(request.identity)))
@@ -151,7 +153,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
       Filter("isAdmin", (value: Boolean, el: User) => Fox.successful(el.isAdmin == value))
     ) { filter =>
       for {
-        users <- UserDAO.findAll
+        users <- userDAO.findAll
         filtered <- filter.applyOn(users)
         js <- Fox.serialCombined(filtered.sortBy(_.lastName.toLowerCase))(u => u.publicWrites(request.identity))
       } yield {
@@ -193,7 +195,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
       case (firstName, lastName, email, isActive, isAdmin, assignedMemberships, experiences) =>
         for {
           userIdValidated <- ObjectId.parse(userId)
-          user <- UserDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
+          user <- userDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
           _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
           _ <- bool2Fox(checkAdminOnlyUpdates(user, isActive, isAdmin, email)(issuingUser)) ?~> Messages("notAllowed")
           teams <- Fox.combined(assignedMemberships.map(t => TeamDAO.findOne(t.teamId)(GlobalAccessContext) ?~> Messages("team.notFound")))
@@ -204,8 +206,8 @@ class UserController @Inject()(val messagesApi: MessagesApi)
           _ <- ensureProperTeamAdministration(user, teamsWithUpdate)
           trimmedExperiences = experiences.map { case (key, value) => key.trim -> value }
           updatedTeams = teamsWithUpdate.map(_._1) ++ teamsWithoutUpdate
-          _ <- UserService.update(user, firstName.trim, lastName.trim, email, isActive, isAdmin, updatedTeams, trimmedExperiences)
-          updatedUser <- UserDAO.findOne(userIdValidated)
+          _ <- userService.update(user, firstName.trim, lastName.trim, email, isActive, isAdmin, updatedTeams, trimmedExperiences)
+          updatedUser <- userDAO.findOne(userIdValidated)
           updatedJs <- updatedUser.publicWrites(request.identity)
         } yield {
           Ok(updatedJs)

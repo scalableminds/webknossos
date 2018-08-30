@@ -12,7 +12,6 @@ import com.scalableminds.util.rpc.RPC
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.binary.{DataStore, DataStoreDAO}
 import models.team._
-import models.user.UserService.{Mailer => _, _}
 import models.user._
 import net.liftweb.common.{Empty, Failure, Full}
 import org.apache.commons.codec.binary.Base64
@@ -22,7 +21,6 @@ import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareAction}
 import oxalis.security._
 import oxalis.thirdparty.BrainTracing
 import oxalis.view.ProvidesUnauthorizedSessionData
-import play.api.Play.current
 import play.api._
 import play.api.data.Form
 import play.api.data.Forms.{email, _}
@@ -101,7 +99,9 @@ class Authentication @Inject()(
                                 val messagesApi: MessagesApi,
                                 credentialsProvider: CredentialsProvider,
                                 passwordHasher: PasswordHasher,
-                                initialDataService: InitialDataService
+                                initialDataService: InitialDataService,
+                                userService: UserService,
+                                userDAO: UserDAO
                               )
   extends Controller
     with ProvidesUnauthorizedSessionData
@@ -153,7 +153,7 @@ class Authentication @Inject()(
           errors ::= Messages("user.lastName.invalid");
           ""
         }
-        UserService.retrieve(loginInfo).toFox.futureBox.flatMap {
+        userService.retrieve(loginInfo).toFox.futureBox.flatMap {
           case Full(_) =>
             errors ::= Messages("user.email.alreadyInUse")
             Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
@@ -163,7 +163,7 @@ class Authentication @Inject()(
             } else {
               for {
                 organization <- OrganizationDAO.findOneByName(signUpData.organization)(GlobalAccessContext)
-                user <- UserService.insert(organization._id, email, firstName, lastName, automaticUserActivation, isAdminOnRegistration,
+                user <- userService.insert(organization._id, email, firstName, lastName, automaticUserActivation, isAdminOnRegistration,
                   loginInfo, passwordHasher.hash(signUpData.password))
                 brainDBResult <- BrainTracing.registerIfNeeded(user, signUpData.password).toFox
               } yield {
@@ -185,7 +185,7 @@ class Authentication @Inject()(
         val email = signInData.email.toLowerCase
         val credentials = Credentials(email, signInData.password)
         credentialsProvider.authenticate(credentials).flatMap { loginInfo =>
-          UserService.retrieve(loginInfo).flatMap {
+          userService.retrieve(loginInfo).flatMap {
             case None =>
               Future.successful(BadRequest(Messages("error.noUser")))
             case Some(user) if (!user.isDeactivated) => for {
@@ -205,7 +205,7 @@ class Authentication @Inject()(
   def autoLogin = Action.async { implicit request =>
     for {
       _ <- bool2Fox(WkConf.Application.Authentication.enableDevAutoLogin) ?~> Messages("error.notInDev")
-      user <- UserService.defaultUser
+      user <- userService.defaultUser
       authenticator <- env.authenticatorService.create(user.loginInfo)
       value <- env.authenticatorService.init(authenticator)
       result <- env.authenticatorService.embed(value, Ok)
@@ -216,7 +216,7 @@ class Authentication @Inject()(
     if (request.identity.isSuperUser) {
       val loginInfo = LoginInfo(CredentialsProvider.ID, email)
       for {
-        _ <- findOneByEmail(email) ?~> Messages("user.notFound")
+        _ <- userService.findOneByEmail(email) ?~> Messages("user.notFound")
         _ <- env.authenticatorService.discard(request.authenticator, Ok) //to logout the admin
         authenticator <- env.authenticatorService.create(loginInfo)
         value <- env.authenticatorService.init(authenticator)
@@ -232,7 +232,7 @@ class Authentication @Inject()(
   def handleStartResetPassword = Action.async { implicit request =>
     emailForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
-      email => UserService.retrieve(LoginInfo(CredentialsProvider.ID, email.toLowerCase)).flatMap {
+      email => userService.retrieve(LoginInfo(CredentialsProvider.ID, email.toLowerCase)).flatMap {
         case None => Future.successful(BadRequest(Messages("error.noUser")))
         case Some(user) => {
           for {
@@ -254,7 +254,7 @@ class Authentication @Inject()(
         bearerTokenAuthenticatorService.userForToken(passwords.token.trim)(GlobalAccessContext).futureBox.flatMap {
           case Full(user) =>
             for {
-              _ <- UserDAO.updatePasswordInfo(user._id, passwordHasher.hash(passwords.password1))(GlobalAccessContext)
+              _ <- userDAO.updatePasswordInfo(user._id, passwordHasher.hash(passwords.password1))(GlobalAccessContext)
               _ <- bearerTokenAuthenticatorService.remove(passwords.token.trim)
             } yield Ok
           case _ =>
@@ -271,12 +271,12 @@ class Authentication @Inject()(
       passwords => {
         val credentials = Credentials(request.identity.email, passwords.oldPassword)
         credentialsProvider.authenticate(credentials).flatMap { loginInfo =>
-          UserService.retrieve(loginInfo).flatMap {
+          userService.retrieve(loginInfo).flatMap {
             case None =>
               Future.successful(BadRequest(Messages("error.noUser")))
             case Some(user) => val loginInfo = LoginInfo(CredentialsProvider.ID, request.identity.email)
               for {
-                _ <- UserService.changePasswordInfo(loginInfo, passwordHasher.hash(passwords.password1))
+                _ <- userService.changePasswordInfo(loginInfo, passwordHasher.hash(passwords.password1))
                 _ <- env.authenticatorService.discard(request.authenticator, Ok)
               } yield {
                 Mailer ! Send(DefaultMails.changePasswordMail(user.name, request.identity.email))
@@ -380,7 +380,7 @@ class Authentication @Inject()(
               errors ::= Messages("user.lastName.invalid");
               ""
             }
-            UserService.retrieve(loginInfo).toFox.futureBox.flatMap {
+            userService.retrieve(loginInfo).toFox.futureBox.flatMap {
               case Full(_) =>
                 errors ::= Messages("user.email.alreadyInUse")
                 Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
@@ -390,7 +390,7 @@ class Authentication @Inject()(
                 } else {
                   for {
                     organization <- createOrganization(signUpData.organization) ?~> Messages("organization.create.failed")
-                    user <- UserService.insert(organization._id, email, firstName, lastName, isActive = true, teamRole = true,
+                    user <- userService.insert(organization._id, email, firstName, lastName, isActive = true, teamRole = true,
                       loginInfo, passwordHasher.hash(signUpData.password), isAdmin = true)
                     _ <- createOrganizationFolder(organization.name, loginInfo)
                   } yield {

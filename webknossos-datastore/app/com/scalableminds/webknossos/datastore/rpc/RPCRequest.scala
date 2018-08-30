@@ -1,4 +1,4 @@
-package com.scalableminds.util.rpc
+package com.scalableminds.webknossos.datastore.rpc
 
 import java.io.File
 

@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, 
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.models.ImageThumbnail
 import com.scalableminds.webknossos.datastore.tracings.TracingSelector
-import com.scalableminds.util.rpc.RPC
+import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.util.tools.JsonHelper.boxFormat
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging

@@ -208,7 +208,7 @@ const KeyboardShortcutView = () => {
       action: "Toggle Move / Trace / Brush Mode",
     },
     {
-      keybinding: "Shift + Mousewheel",
+      keybinding: "Shift + Mousewheel or Shift + I,O",
       action: "Change Brush Size (Brush Mode)",
     },
     {

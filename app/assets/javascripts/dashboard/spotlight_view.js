@@ -1,13 +1,11 @@
 // @flow
 import * as React from "react";
 import { Link, withRouter } from "react-router-dom";
-import { Spin, Layout, message, Button, Row, Col } from "antd";
+import { Spin, Layout, Button, Row, Col } from "antd";
 import { connect } from "react-redux";
 import GalleryDatasetView from "dashboard/gallery_dataset_view";
 import { getOrganizations, getDatasets } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
-import messages from "messages";
-import * as Utils from "libs/utils";
 import features from "features";
 import type { RouterHistory } from "react-router-dom";
 import type { OxalisState } from "oxalis/store";
@@ -117,36 +115,26 @@ type Props = {
 
 type State = {
   datasets: Array<APIMaybeUnimportedDatasetType>,
+  hasOrganisations: boolean,
   isLoading: boolean,
 };
 
 class SpotlightView extends React.PureComponent<Props, State> {
   state = {
     datasets: [],
+    hasOrganisations: true,
     isLoading: true,
   };
 
   componentDidMount() {
     this.fetchData();
-    this.maybeRedirectToOnboarding();
-  }
-
-  async maybeRedirectToOnboarding() {
-    const organizations = await getOrganizations();
-    if (organizations.length > 0) {
-      return;
-    }
-
-    message.info(messages["setup.redirect"]);
-    await Utils.sleep(2000);
-    this.props.history.push("/onboarding");
   }
 
   async fetchData(): Promise<void> {
     try {
       this.setState({ isLoading: true });
-      const datasets = await getDatasets();
-      this.setState({ datasets });
+      const [datasets, organizations] = await Promise.all([getDatasets(), getOrganizations()]);
+      this.setState({ datasets, hasOrganisations: organizations.length > 0 });
     } catch (error) {
       handleGenericError(error);
     } finally {
@@ -157,7 +145,8 @@ class SpotlightView extends React.PureComponent<Props, State> {
   render() {
     return (
       <Layout>
-        {this.props.activeUser == null && features().allowOrganizationCreation ? (
+        {this.props.activeUser == null &&
+        (features().allowOrganizationCreation || !this.state.hasOrganisations) ? (
           <WelcomeHeader history={this.props.history} />
         ) : (
           <SimpleHeader />

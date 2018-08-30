@@ -78,9 +78,9 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
   def addForeignDataStoreAndDataSet() = SecuredAction.async { implicit request =>
     for {
       body <- request.body.asJson.toFox
-      url = (body \ "url").as[String]
-      dataStoreName = (body \ "dataStoreName").as[String]
-      dataSetName = (body \ "dataSetName").as[String]
+      url <- (body \ "url").asOpt[String] ?~> "dataSet.url.missing"
+      dataStoreName <- (body \ "dataStoreName").asOpt[String].toFox ?~> "dataSet.dataStore.missing"
+      dataSetName <- (body \ "dataSetName").asOpt[String] ?~> "dataSet.dataSet.missing"
       _ <- bool2Fox(request.identity.isAdmin) ?~> "user.noAdmin"
       noDataStoreBox <- DataStoreDAO.findOneByName(dataStoreName).reverse.futureBox
       _ <- Fox.runOptional(noDataStoreBox)(_ => DataSetService.addForeignDataStore(dataStoreName, url))

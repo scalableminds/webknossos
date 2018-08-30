@@ -1,5 +1,7 @@
 package controllers
 
+import akka.stream.scaladsl.{Source, StreamConverters}
+import akka.util.ByteString
 import javax.inject.Inject
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.accesscontext.DBAccessContext
@@ -137,14 +139,14 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
       for {
         dataStoreHandler <- dataSet.dataStoreHandler
         volumeTracingId <- annotation.volumeTracingId.toFox
-        (volumeTracing, data) <- dataStoreHandler.getVolumeTracing(volumeTracingId)
+        (volumeTracing, data: Source[ByteString, _]) <- dataStoreHandler.getVolumeTracing(volumeTracingId)
         skeletonTracingOpt <- Fox.runOptional(annotation.skeletonTracingId)(dataStoreHandler.getSkeletonTracing(_))
       } yield {
         (Enumerator.outputStream { outputStream =>
           ZipIO.zip(
             List(
-              new NamedEnumeratorStream(name + ".nml", NmlWriter.toNmlStream(skeletonTracingOpt, Some(volumeTracing), annotation, dataSet.scale)),
-              new NamedEnumeratorStream("data.zip", data)
+              new NamedEnumeratorStream(name + ".nml", NmlWriter.toNmlStream(skeletonTracingOpt, Some(volumeTracing), annotation, dataSet.scale))//,
+              //TODO new NamedEnumeratorStream("data.zip", data)
             ), outputStream)
         }, name + ".zip")
       }

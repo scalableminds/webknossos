@@ -6,16 +6,15 @@ import controllers.InitialDataService
 import javax.inject._
 import net.liftweb.common.{Failure, Full}
 import play.api.libs.concurrent.Execution.Implicits._
-import utils.WkConf
+import utils.WkConfInjected
 
 import scala.concurrent.Future
 import scala.sys.process._
 
-class Startup @Inject() (actorSystem: ActorSystem) extends LazyLogging {
+class Startup @Inject() (actorSystem: ActorSystem, conf: WkConfInjected) extends LazyLogging {
 
   logger.info("Executing Startup")
-  //TODO start actor System
-  //startActors(actorSystem)
+  startActors(actorSystem)
 
   ensurePostgresDatabase.onComplete { _ =>
     //TODO insert initial data
@@ -31,13 +30,13 @@ class Startup @Inject() (actorSystem: ActorSystem) extends LazyLogging {
 
   def startActors(actorSystem: ActorSystem) {
     val mailerConf = MailerConfig(
-      WkConf.Mail.enabled,
-      WkConf.Mail.Smtp.host,
-      WkConf.Mail.Smtp.port,
-      WkConf.Mail.Smtp.tls,
-      WkConf.Mail.Smtp.user,
-      WkConf.Mail.Smtp.pass,
-      WkConf.Mail.Subject.prefix
+      conf.Mail.enabled,
+      conf.Mail.Smtp.host,
+      conf.Mail.Smtp.port,
+      conf.Mail.Smtp.tls,
+      conf.Mail.Smtp.user,
+      conf.Mail.Smtp.pass,
+      conf.Mail.Subject.prefix
     )
     actorSystem.actorOf(
       Props(new Mailer(mailerConf)),

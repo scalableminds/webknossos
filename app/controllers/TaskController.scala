@@ -234,7 +234,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
   def listTasksForType(taskTypeId: String) = SecuredAction.async { implicit request =>
     for {
       taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
-      tasks <- TaskDAO.findAllByTaskType(taskTypeIdValidated) // TODO no check if taskType exists
+      _ <- TaskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
+      tasks <- TaskDAO.findAllByTaskType(taskTypeIdValidated)
       js <- Fox.serialCombined(tasks)(_.publicWrites)
     } yield {
       Ok(Json.toJson(js))

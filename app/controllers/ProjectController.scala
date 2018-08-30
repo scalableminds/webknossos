@@ -138,7 +138,8 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
   def usersWithActiveTasks(projectName: String) = SecuredAction.async {
     implicit request =>
       for {
-        usersWithActiveTasks <- ProjectDAO.findUsersWithActiveTasks(projectName) //TODO no check that project exists
+        _ <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
+        usersWithActiveTasks <- ProjectDAO.findUsersWithActiveTasks(projectName)
       } yield {
         Ok(Json.toJson(usersWithActiveTasks.map(tuple  => Json.obj("email" -> tuple._1, "activeTasks" -> tuple._2))))
       }

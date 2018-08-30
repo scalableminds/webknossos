@@ -13,6 +13,7 @@ import utils.ObjectId
 
 
 class ScriptController @Inject()(scriptDAO: ScriptDAO,
+                                 taskDAO: TaskDAO,
                                  val messagesApi: MessagesApi) extends Controller with FoxImplicits {
 
   val scriptPublicReads =
@@ -72,7 +73,7 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
       oldScript <- scriptDAO.findOne(scriptIdValidated) ?~> Messages("script.notFound")
       _ <- bool2Fox(oldScript._owner == request.identity._id) ?~> Messages("script.notOwner")
       _ <- scriptDAO.deleteOne(scriptIdValidated) ?~> Messages("script.removalFailed")
-      _ <- TaskDAO.removeScriptFromAllTasks(scriptIdValidated) ?~> Messages("script.removalFailed")
+      _ <- taskDAO.removeScriptFromAllTasks(scriptIdValidated) ?~> Messages("script.removalFailed")
     } yield {
       Ok
     }

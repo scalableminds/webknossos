@@ -21,6 +21,7 @@ import scala.concurrent.duration._
 
 class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
                                      taskDAO: TaskDAO,
+                                     dataSetDAO: DataSetDAO,
                                      annotationService: AnnotationService,
                                      timeSpanService: TimeSpanService,
                                      provider: AnnotationInformationProvider,
@@ -139,7 +140,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
   def createExplorational(dataSetName: String) =
     SecuredAction.async(validateJson[CreateExplorationalParameters]) { implicit request =>
       for {
-        dataSetSQL <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
+        dataSetSQL <- dataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
         tracingType <- TracingType.values.find(_.toString == request.body.typ).toFox
         annotation <- annotationService.createExplorationalFor(request.identity, dataSetSQL._id, tracingType, request.body.withFallback.getOrElse(true)) ?~> Messages("annotation.create.failed")
         json <- annotation.publicWrites(Some(request.identity))

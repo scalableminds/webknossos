@@ -27,6 +27,8 @@ import scala.concurrent.duration._
 
 class DataSetController @Inject()(userService: UserService,
                                   dataSetService: DataSetService,
+                                  dataSetAllowedTeamsDAO: DataSetAllowedTeamsDAO,
+                                  dataSetLastUsedTimesDAO: DataSetLastUsedTimesDAO,
                                   teamDAO: TeamDAO,
                                   dataSetDAO: DataSetDAO,
                                   val messagesApi: MessagesApi) extends Controller {
@@ -129,7 +131,7 @@ class DataSetController @Inject()(userService: UserService,
     val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
     for {
       dataSet <- dataSetDAO.findOneByName(dataSetName)(ctx) ?~> Messages("dataSet.notFound", dataSetName)
-      _ <- Fox.runOptional(request.identity)(user => DataSetLastUsedTimesDAO.updateForDataSetAndUser(dataSet._id, user._id))
+      _ <- Fox.runOptional(request.identity)(user => dataSetLastUsedTimesDAO.updateForDataSetAndUser(dataSet._id, user._id))
       js <- dataSet.publicWrites(request.identity)
     } yield {
       Ok(Json.toJson(js))
@@ -171,7 +173,7 @@ class DataSetController @Inject()(userService: UserService,
         oldAllowedTeams <- dataSet.allowedTeamIds
         teamsWithoutUpdate = oldAllowedTeams.filterNot(t => userTeams.exists(_._id == t))
         teamsWithUpdate = teamIdsValidated.filter(t => userTeams.exists(_._id == t))
-        _ <- DataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(dataSet._id, (teamsWithUpdate ++ teamsWithoutUpdate).distinct)
+        _ <- dataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(dataSet._id, (teamsWithUpdate ++ teamsWithoutUpdate).distinct)
       } yield
       Ok(Json.toJson((teamsWithUpdate ++ teamsWithoutUpdate).map(_.toString)))
     }

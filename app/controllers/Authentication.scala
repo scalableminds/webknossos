@@ -101,6 +101,8 @@ class Authentication @Inject()(
                                 passwordHasher: PasswordHasher,
                                 initialDataService: InitialDataService,
                                 userService: UserService,
+                                teamDAO: TeamDAO,
+                                organizationDAO: OrganizationDAO,
                                 userDAO: UserDAO
                               )
   extends Controller
@@ -162,7 +164,7 @@ class Authentication @Inject()(
               Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
             } else {
               for {
-                organization <- OrganizationDAO.findOneByName(signUpData.organization)(GlobalAccessContext)
+                organization <- organizationDAO.findOneByName(signUpData.organization)(GlobalAccessContext)
                 user <- userService.insert(organization._id, email, firstName, lastName, automaticUserActivation, isAdminOnRegistration,
                   loginInfo, passwordHasher.hash(signUpData.password))
                 brainDBResult <- BrainTracing.registerIfNeeded(user, signUpData.password).toFox
@@ -419,8 +421,8 @@ class Authentication @Inject()(
       organizationName <- normalizeName(organizationDisplayName).toFox ?~> "invalid organization name"
       organization = Organization(ObjectId.generate, organizationName.replaceAll(" ", "_"), "", "", organizationDisplayName)
       organizationTeam = Team(ObjectId.generate, organization._id, organization.name, isOrganizationTeam = true)
-      _ <- OrganizationDAO.insertOne(organization)(GlobalAccessContext)
-      _ <- TeamDAO.insertOne(organizationTeam)(GlobalAccessContext)
+      _ <- organizationDAO.insertOne(organization)(GlobalAccessContext)
+      _ <- teamDAO.insertOne(organizationTeam)(GlobalAccessContext)
       _ <- initialDataService.insertLocalDataStoreIfEnabled
     } yield {
       organization

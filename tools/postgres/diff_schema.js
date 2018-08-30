@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env node
 var program = require('commander');
 var randomstring = require("randomstring");
 const execSync = require('child_process').execSync;
@@ -23,7 +23,7 @@ function dump(parameter) {
 		const dbName = execSync(scriptdir+'/db_name.sh', {env: {'POSTGRES_URL': POSTGRES_URL}}).toString().trim() // "trim" to remove the line break
 		if(dbName !== tempDbName) {
 			console.log("Wrong dbName")	
-			process.exit()
+			process.exit(1)
 		}
 		console.log("Creating DB " + dbName)
 		const dbHost = execSync(scriptdir+'/db_host.sh', {env: {'POSTGRES_URL': POSTGRES_URL}}).toString().trim()
@@ -99,6 +99,6 @@ execSync(`find ${dir2} -type f -exec sort -o {} {} \\;`)
 try{
 	execSync(`diff -r ${dir1} ${dir2}`, {stdio:[0,1,2]}) // we pass the std-output to the child process to see the diff
 	console.log("[SUCCESS] Schemas do match")
-} catch(err) { // execSync throws an ugly error if a child-process failes
+} catch(err) { // execSync throws an ugly error if a child-process fails
 	console.log("[FAILED] Schemas do not match")
 }

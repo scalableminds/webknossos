@@ -18,6 +18,7 @@ class ProjectController @Inject()(projectService: ProjectService,
                                   projectDAO: ProjectDAO,
                                   annotationService: AnnotationService,
                                   annotationDAO: AnnotationDAO,
+                                  taskDAO: TaskDAO,
                                   val messagesApi: MessagesApi) extends Controller with FoxImplicits {
 
   def list = SecuredAction.async {
@@ -34,7 +35,7 @@ class ProjectController @Inject()(projectService: ProjectService,
     implicit request =>
       for {
         projects <- projectDAO.findAll
-        allCounts <- TaskDAO.countAllOpenInstancesGroupedByProjects
+        allCounts <- taskDAO.countAllOpenInstancesGroupedByProjects
         js <- Fox.serialCombined(projects) { project =>
           for {
             openTaskInstances <- Fox.successful(allCounts.get(project._id).getOrElse(0))
@@ -121,7 +122,7 @@ class ProjectController @Inject()(projectService: ProjectService,
       for {
         project <- projectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
         _ <- ensureTeamAdministration(request.identity, project._team) ?~> Messages("notAllowed")
-        tasks <- TaskDAO.findAllByProject(project._id)(GlobalAccessContext)
+        tasks <- taskDAO.findAllByProject(project._id)(GlobalAccessContext)
         js <- Fox.serialCombined(tasks)(_.publicWrites)
       } yield {
         Ok(Json.toJson(js))
@@ -133,8 +134,8 @@ class ProjectController @Inject()(projectService: ProjectService,
       for {
         _ <- bool2Fox(delta.getOrElse(1L) >= 0) ?~> Messages("project.increaseTaskInstances.negative")
         project <- projectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
-        _ <- TaskDAO.incrementTotalInstancesOfAllWithProject(project._id, delta.getOrElse(1L))
-        openInstanceCount <- TaskDAO.countOpenInstancesForProject(project._id)
+        _ <- taskDAO.incrementTotalInstancesOfAllWithProject(project._id, delta.getOrElse(1L))
+        openInstanceCount <- taskDAO.countOpenInstancesForProject(project._id)
         js <- project.publicWritesWithStatus(openInstanceCount)
       } yield Ok(js)
   }

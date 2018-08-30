@@ -58,6 +58,9 @@ class TaskController @Inject() (organizationService: OrganizationService,
                                 annotationService: AnnotationService,
                                 scriptDAO: ScriptDAO,
                                 projectDAO: ProjectDAO,
+                                taskTypeDAO: TaskTypeDAO,
+                                dataSetDAO: DataSetDAO,
+                                taskDAO: TaskDAO,
                                 val messagesApi: MessagesApi)
   extends Controller
     with ResultBox
@@ -68,7 +71,7 @@ class TaskController @Inject() (organizationService: OrganizationService,
 
   def read(taskId: String) = SecuredAction.async { implicit request =>
     for {
-      task <- TaskDAO.findOne(ObjectId(taskId)) ?~> Messages("task.notFound")
+      task <- taskDAO.findOne(ObjectId(taskId)) ?~> Messages("task.notFound")
       js <- task.publicWrites
     } yield {
       Ok(js)
@@ -90,8 +93,8 @@ class TaskController @Inject() (organizationService: OrganizationService,
       jsonString <- body.dataParts.get("formJSON").flatMap(_.headOption) ?~> Messages("format.json.missing")
       params <- JsonHelper.parseJsonToFox[NmlTaskParameters](jsonString) ?~> Messages("task.create.failed")
       taskTypeIdValidated <- ObjectId.parse(params.taskTypeId)
-      taskType <- TaskTypeDAO.findOne(taskTypeIdValidated) ?~> Messages("taskType.notFound")
-      project <- ProjectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
+      taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> Messages("taskType.notFound")
+      project <- projectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
       _ <- ensureTeamAdministration(request.identity, project._team)
       parseResults: List[NmlService.NmlParseResult] = NmlService.extractFromFile(inputFile.ref.file, inputFile.filename).parseResults
       skeletonSuccesses <- Fox.serialCombined(parseResults)(_.toSkeletonSuccessFox) ?~> Messages("task.create.failed")
@@ -145,7 +148,7 @@ class TaskController @Inject() (organizationService: OrganizationService,
 
     for {
       dataSetName <- assertAllOnSameDataset
-      dataSet <- DataSetDAO.findOneByName(requestedTasks.head._1.dataSet) ?~> Messages("dataSet.notFound", dataSetName)
+      dataSet <- dataSetDAO.findOneByName(requestedTasks.head._1.dataSet) ?~> Messages("dataSet.notFound", dataSetName)
       dataStoreHandler <- dataSet.dataStoreHandler
       skeletonTracingIds: List[Box[String]] <- dataStoreHandler.saveSkeletonTracings(SkeletonTracings(requestedTasks.map(_._2)))
       requestedTasksWithTracingIds = requestedTasks zip skeletonTracingIds
@@ -184,7 +187,7 @@ class TaskController @Inject() (organizationService: OrganizationService,
     for {
       _ <- skeletonTracingIdBox.toFox
       taskTypeIdValidated <- ObjectId.parse(params.taskTypeId)
-      taskType <- TaskTypeDAO.findOne(taskTypeIdValidated) ?~> Messages("taskType.notFound")
+      taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> Messages("taskType.notFound")
       project <- projectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
       _ <- validateScript(params.scriptId)
       _ <- ensureTeamAdministration(request.identity, project._team)
@@ -202,7 +205,7 @@ class TaskController @Inject() (organizationService: OrganizationService,
         editRotation = params.editRotation,
         creationInfo = params.creationInfo
       )
-      _ <- TaskDAO.insertOne(task)
+      _ <- taskDAO.insertOne(task)
     } yield task
   }
 
@@ -211,11 +214,11 @@ class TaskController @Inject() (organizationService: OrganizationService,
     val params = request.body
     for {
       taskIdValidated <- ObjectId.parse(taskId)
-      task <- TaskDAO.findOne(taskIdValidated) ?~> Messages("task.notFound")
+      task <- taskDAO.findOne(taskIdValidated) ?~> Messages("task.notFound")
       project <- task.project
       _ <- ensureTeamAdministration(request.identity, project._team) ?~> Messages("notAllowed")
-      _ <- TaskDAO.updateTotalInstances(task._id, task.totalInstances + params.openInstances - task.openInstances)
-      updatedTask <- TaskDAO.findOne(taskIdValidated)
+      _ <- taskDAO.updateTotalInstances(task._id, task.totalInstances + params.openInstances - task.openInstances)
+      updatedTask <- taskDAO.findOne(taskIdValidated)
       json <- updatedTask.publicWrites
     } yield {
       JsonOk(json, Messages("task.editSuccess"))
@@ -225,10 +228,10 @@ class TaskController @Inject() (organizationService: OrganizationService,
   def delete(taskId: String) = SecuredAction.async { implicit request =>
     for {
       taskIdValidated <- ObjectId.parse(taskId)
-      task <- TaskDAO.findOne(taskIdValidated) ?~> Messages("task.notFound")
+      task <- taskDAO.findOne(taskIdValidated) ?~> Messages("task.notFound")
       project <- task.project
       _ <- ensureTeamAdministration(request.identity, project._team) ?~> Messages("notAllowed")
-      _ <- TaskDAO.removeOneAndItsAnnotations(task._id)
+      _ <- taskDAO.removeOneAndItsAnnotations(task._id)
     } yield {
       JsonOk(Messages("task.removed"))
     }
@@ -237,7 +240,7 @@ class TaskController @Inject() (organizationService: OrganizationService,
   def listTasksForType(taskTypeId: String) = SecuredAction.async { implicit request =>
     for {
       taskTypeIdValidated <- ObjectId.parse(taskTypeId)
-      tasks <- TaskDAO.findAllByTaskType(taskTypeIdValidated)
+      tasks <- taskDAO.findAllByTaskType(taskTypeIdValidated)
       js <- Fox.serialCombined(tasks)(_.publicWrites)
     } yield {
       Ok(Json.toJson(js))
@@ -252,7 +255,7 @@ class TaskController @Inject() (organizationService: OrganizationService,
       taskIdsOpt <- Fox.runOptional((request.body \ "ids").asOpt[List[String]])(ids => Fox.serialCombined(ids)(ObjectId.parse))
       taskTypeIdOpt <- Fox.runOptional((request.body \ "taskType").asOpt[String])(ObjectId.parse(_))
       randomizeOpt = (request.body \ "random").asOpt[Boolean]
-      tasks <- TaskDAO.findAllByProjectAndTaskTypeAndIdsAndUser(projectNameOpt, taskTypeIdOpt, taskIdsOpt, userIdOpt, randomizeOpt)
+      tasks <- taskDAO.findAllByProjectAndTaskTypeAndIdsAndUser(projectNameOpt, taskTypeIdOpt, taskIdsOpt, userIdOpt, randomizeOpt)
       jsResult <- Fox.serialCombined(tasks)(_.publicWrites)
     } yield {
       Ok(Json.toJson(jsResult))
@@ -263,7 +266,7 @@ class TaskController @Inject() (organizationService: OrganizationService,
     val user = request.identity
     for {
       teams <- getAllowedTeamsForNextTask(user)
-      (task, initializingAnnotationId) <-  TaskDAO.assignNext(user._id, teams) ?~> Messages("task.unavailable")
+      (task, initializingAnnotationId) <- taskDAO.assignNext(user._id, teams) ?~> Messages("task.unavailable")
       insertedAnnotationBox <- annotationService.createAnnotationFor(user, task, initializingAnnotationId).futureBox
       _ <- annotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
       annotation <- insertedAnnotationBox.toFox
@@ -300,7 +303,7 @@ class TaskController @Inject() (organizationService: OrganizationService,
     val user = request.identity
     for {
       teamIds <- user.teamIds
-      task <- TaskDAO.peekNextAssignment(user._id, teamIds) ?~> Messages("task.unavailable")
+      task <- taskDAO.peekNextAssignment(user._id, teamIds) ?~> Messages("task.unavailable")
       taskJson <- task.publicWrites(GlobalAccessContext)
     } yield Ok(taskJson)
   }
@@ -308,7 +311,7 @@ class TaskController @Inject() (organizationService: OrganizationService,
 
   def listExperienceDomains = SecuredAction.async { implicit request =>
     for {
-      experienceDomains <- TaskDAO.listExperienceDomains
+      experienceDomains <- taskDAO.listExperienceDomains
     } yield Ok(Json.toJson(experienceDomains))
   }
 }

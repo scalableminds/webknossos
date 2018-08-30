@@ -17,6 +17,8 @@ import scala.concurrent.duration.Duration
 
 class StatisticsController @Inject()(timeSpanService: TimeSpanService,
                                      userDAO: UserDAO,
+                                     dataSetDAO: DataSetDAO,
+                                     taskDAO: TaskDAO,
                                      annotationDAO: AnnotationDAO,
                                      val messagesApi: MessagesApi)
   extends Controller {
@@ -40,9 +42,9 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
         for {
           times <- timeSpanService.loggedTimePerInterval(handler, start, end)
           numberOfUsers <- userDAO.countAll
-          numberOfDatasets <- DataSetDAO.countAll
+          numberOfDatasets <- dataSetDAO.countAll
           numberOfAnnotations <- annotationDAO.countAll
-          numberOfAssignments <- TaskDAO.countAllOpenInstances
+          numberOfAssignments <- taskDAO.countAllOpenInstances
         } yield {
           Ok(Json.obj(
             "name" -> "oxalis",

@@ -10,12 +10,12 @@ import models.user.User
 import scala.concurrent.ExecutionContext.Implicits.global
 import utils.ObjectId
 
-class ProjectInformationHandler @Inject()(annotationDAO: AnnotationDAO) extends AnnotationInformationHandler with FoxImplicits {
+class ProjectInformationHandler @Inject()(annotationDAO: AnnotationDAO, projectDAO: ProjectDAO) extends AnnotationInformationHandler with FoxImplicits {
 
   override def provideAnnotation(projectId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
   {
     for {
-      project <- ProjectDAO.findOne(projectId) ?~> "project.notFound"
+      project <- projectDAO.findOne(projectId) ?~> "project.notFound"
       annotations <- annotationDAO.findAllFinishedForProject(project._id)
       _ <- assertAllOnSameDataset(annotations)
       _ <- assertNonEmpty(annotations) ?~> "project.noAnnotations"
@@ -29,7 +29,7 @@ class ProjectInformationHandler @Inject()(annotationDAO: AnnotationDAO) extends 
 
   override def restrictionsFor(projectId: ObjectId)(implicit ctx: DBAccessContext) =
     for {
-      project <- ProjectDAO.findOne(projectId)
+      project <- projectDAO.findOne(projectId)
     } yield {
       new AnnotationRestrictions {
         override def allowAccess(userOption: Option[User]): Fox[Boolean] =

@@ -38,6 +38,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
                                   savedTracingInformationHandler: SavedTracingInformationHandler,
                                   annotationDAO: AnnotationDAO,
                                   userDAO: UserDAO,
+                                  dataSetDAO: DataSetDAO,
                                   organizationDAO: OrganizationDAO,
                                   nmlWriter: NmlWriter)
   extends BoxImplicits
@@ -111,7 +112,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         } yield (Some(skeletonTracingId), Some(volumeTracingId))
     }
     for {
-      dataSet <- DataSetDAO.findOne(_dataSet)
+      dataSet <- dataSetDAO.findOne(_dataSet)
       dataSource <- dataSet.constructDataSource
       usableDataSource <- dataSource.toUsable ?~> "DataSet is not imported."
       tracingIds <- createTracings(dataSet, usableDataSource)
@@ -165,8 +166,8 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
   def createAnnotationFor(user: User, task: Task, initializingAnnotationId: ObjectId)(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
     def useAsTemplateAndInsert(annotation: Annotation) = {
       for {
-        dataSetName <- DataSetDAO.getNameById(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
-        dataSet <- DataSetDAO.findOne(annotation._dataSet) ?~> ("Could not access DataSet " + dataSetName + ". Does your team have access?")
+        dataSetName <- dataSetDAO.getNameById(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
+        dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> ("Could not access DataSet " + dataSetName + ". Does your team have access?")
         newTracingId <- tracingFromBase(annotation, dataSet) ?~> "Failed to use annotation base as template."
         newAnnotation = annotation.copy(
           _id = initializingAnnotationId,
@@ -292,7 +293,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
 
     def getTracings(dataSetId: ObjectId, tracingIds: List[String]) = {
       for {
-        dataSet <- DataSetDAO.findOne(dataSetId)
+        dataSet <- dataSetDAO.findOne(dataSetId)
         dataStoreHandler <- dataSet.dataStoreHandler
         tracingContainers <- Fox.serialCombined(tracingIds.grouped(1000).toList)(dataStoreHandler.getSkeletonTracings)
       } yield tracingContainers.flatMap(_.tracings)
@@ -300,7 +301,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
 
     def getDatasetScale(dataSetId: ObjectId) = {
       for {
-        dataSet <- DataSetDAO.findOne(dataSetId)
+        dataSet <- dataSetDAO.findOne(dataSetId)
       } yield dataSet.scale
     }
 
@@ -342,7 +343,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     for {
       annotation <- annotationInformationProvider.provideAnnotation(typ, id)
       newUser <- userDAO.findOne(userId) ?~> Messages("user.notFound")
-      _ <- DataSetDAO.findOne(annotation._dataSet)(AuthorizedAccessContext(newUser)) ?~> Messages("annotation.transferee.noDataSetAccess")
+      _ <- dataSetDAO.findOne(annotation._dataSet)(AuthorizedAccessContext(newUser)) ?~> Messages("annotation.transferee.noDataSetAccess")
       _ <- annotation.muta.transferToUser(newUser)
       updated <- annotationInformationProvider.provideAnnotation(typ, id)
     } yield updated

@@ -40,6 +40,7 @@ class InitialDataService @Inject()(userService: UserService,
                                    userExperiencesDAO: UserExperiencesDAO,
                                    userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
                                    taskTypeDAO: TaskTypeDAO,
+                                   teamDAO: TeamDAO,
                                    projectDAO: ProjectDAO,
                                    organizationDAO: OrganizationDAO,
                                    conf: WkConfInjected) extends FoxImplicits with LazyLogging {
@@ -135,10 +136,10 @@ Samplecountry
   }
 
   def insertTeams = {
-    TeamDAO.findAll.flatMap {
+    teamDAO.findAll.flatMap {
       teams =>
         if (teams.isEmpty)
-          TeamDAO.insertOne(organizationTeam)
+          teamDAO.insertOne(organizationTeam)
         else
           Fox.successful(())
     }.toFox

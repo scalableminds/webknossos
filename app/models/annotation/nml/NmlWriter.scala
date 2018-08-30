@@ -1,5 +1,6 @@
 package models.annotation.nml
 
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import javax.xml.stream.{XMLOutputFactory, XMLStreamWriter}
 import com.scalableminds.util.geometry.Scale
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -270,7 +271,7 @@ class NmlWriter @Inject()(userService: UserService) extends FoxImplicits {
 
   def writeUser(annotation: Annotation)(implicit writer: XMLStreamWriter): Future[Unit] = {
     for {
-      userBox <- userService.findOneById(annotation._user, useCache = true).futureBox
+      userBox <- userService.findOneById(annotation._user, useCache = true)(GlobalAccessContext).futureBox
     } yield {
       userBox match {
         case Full(user) => Xml.withinElementSync("meta") {

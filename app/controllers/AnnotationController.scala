@@ -19,10 +19,14 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
 
-class AnnotationController @Inject()(annotationDAO: AnnotationDAO)(val messagesApi: MessagesApi)
+class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
+                                     taskDAO: TaskDAO,
+                                     annotationService: AnnotationService,
+                                     timeSpanService: TimeSpanService,
+                                     provider: AnnotationInformationProvider,
+                                     val messagesApi: MessagesApi)
   extends Controller
-    with FoxImplicits
-    with AnnotationInformationProvider {
+    with FoxImplicits {
 
   implicit val timeout = Timeout(5 seconds)
 
@@ -36,13 +40,13 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO)(val messagesA
 
   def info(typ: String, id: String, readOnly: Boolean = false) = UserAwareAction.async { implicit request =>
     for {
-      annotation <- provideAnnotation(typ, id) ?~> "annotation.notFound"
-      restrictions <- restrictionsFor(typ, id) ?~> "restrictions.notFound"
+      annotation <- provider.provideAnnotation(typ, id) ?~> "annotation.notFound"
+      restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound"
       _ <- restrictions.allowAccess(request.identity) ?~> "notAllowed" ~> BAD_REQUEST
       js <- annotation.publicWrites(request.identity, Some(restrictions), Some(readOnly)) ?~> "could not convert annotation to json"
       _ <- Fox.runOptional(request.identity) { user =>
         if (typ == AnnotationType.Task || typ == AnnotationType.Explorational) {
-          TimeSpanService.logUserInteraction(user, annotation) // log time when a user starts working
+          timeSpanService.logUserInteraction(user, annotation) // log time when a user starts working
         } else Fox.successful(())
       }
     } yield {
@@ -69,10 +73,10 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO)(val messagesA
 
   def loggedTime(typ: String, id: String) = SecuredAction.async { implicit request =>
       for {
-        annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
-        restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
+        annotation <- provider.provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
+        restrictions <- provider.restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
         _ <- restrictions.allowAccess(request.identity) ?~> Messages("notAllowed") ~> BAD_REQUEST
-        loggedTimeAsMap <- TimeSpanService.loggedTimeOfAnnotation(annotation._id, TimeSpan.groupByMonth)
+        loggedTimeAsMap <- timeSpanService.loggedTimeOfAnnotation(annotation._id, TimeSpan.groupByMonth)
       } yield {
         Ok(Json.arr(
           loggedTimeAsMap.map {
@@ -85,8 +89,8 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO)(val messagesA
 
   def revert(typ: String, id: String, version: Int) = SecuredAction.async { implicit request =>
     for {
-      annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
-      restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
+      annotation <- provider.provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
+      restrictions <- provider.restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
       _ <- restrictions.allowUpdate(request.identity) ?~> Messages("notAllowed")
       _ <- bool2Fox(annotation.isRevertPossible) ?~> Messages("annotation.revert.toOld")
       dataSet <- annotation.dataSet
@@ -102,10 +106,10 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO)(val messagesA
 
   def reset(typ: String, id: String) = SecuredAction.async { implicit request =>
     for {
-      annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
+      annotation <- provider.provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       _ <- ensureTeamAdministration(request.identity, annotation._team)
       _ <- annotation.muta.resetToBase ?~> Messages("annotation.reset.failed")
-      updated <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
+      updated <- provider.provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       json <- updated.publicWrites(Some(request.identity))
     } yield {
       JsonOk(json, Messages("annotation.reset.success"))
@@ -118,10 +122,10 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO)(val messagesA
     } yield (annotation._user == user._id || isAdminOrTeamManager)
 
     for {
-      annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
+      annotation <- provider.provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       _ <- Fox.assertTrue(isReopenAllowed(request.identity, annotation)) ?~> "reopen.notAllowed"
       _ <- annotation.muta.reopen ?~> "annotation.invalid"
-      updatedAnnotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
+      updatedAnnotation <- provider.provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       json <- updatedAnnotation.publicWrites(Some(request.identity))
     } yield {
       JsonOk(json, Messages("annotation.reopened"))
@@ -137,7 +141,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO)(val messagesA
       for {
         dataSetSQL <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
         tracingType <- TracingType.values.find(_.toString == request.body.typ).toFox
-        annotation <- AnnotationService.createExplorationalFor(request.identity, dataSetSQL._id, tracingType, request.body.withFallback.getOrElse(true)) ?~> Messages("annotation.create.failed")
+        annotation <- annotationService.createExplorationalFor(request.identity, dataSetSQL._id, tracingType, request.body.withFallback.getOrElse(true)) ?~> Messages("annotation.create.failed")
         json <- annotation.publicWrites(Some(request.identity))
       } yield {
         JsonOk(json)
@@ -146,11 +150,11 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO)(val messagesA
 
   private def finishAnnotation(typ: String, id: String, user: User)(implicit request: SecuredRequest[_]): Fox[(Annotation, String)] = {
     for {
-      annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
-      restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
+      annotation <- provider.provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
+      restrictions <- provider.restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
       message <- annotation.muta.finish(user, restrictions)
-      updated <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
-      _ <- TimeSpanService.logUserInteraction(user, annotation) // log time on tracing end
+      updated <- provider.provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
+      _ <- timeSpanService.logUserInteraction(user, annotation) // log time on tracing end
     } yield {
       (updated, message)
     }
@@ -159,7 +163,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO)(val messagesA
   def finish(typ: String, id: String) = SecuredAction.async { implicit request =>
     for {
       (updated, message) <- finishAnnotation(typ, id, request.identity)
-      restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
+      restrictions <- provider.restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
       json <- updated.publicWrites(Some(request.identity), Some(restrictions))
     } yield {
       JsonOk(json, Messages(message))
@@ -180,7 +184,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO)(val messagesA
 
   def editAnnotation(typ: String, id: String) = SecuredAction.async(parse.json) { implicit request =>
     for {
-      annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
+      annotation <- provider.provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       muta = annotation.muta
       _ <- (request.body \ "name").asOpt[String].map(muta.rename).getOrElse(Fox.successful(())) ?~> Messages("annotation.edit.failed")
       _ <- (request.body \ "description").asOpt[String].map(muta.setDescription).getOrElse(Fox.successful(())) ?~> Messages("annotation.edit.failed")
@@ -194,7 +198,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO)(val messagesA
   def annotationsForTask(taskId: String) = SecuredAction.async { implicit request =>
     for {
       taskIdValidated <- ObjectId.parse(taskId)
-      task <- TaskDAO.findOne(taskIdValidated) ?~> Messages("task.notFound")
+      task <- taskDAO.findOne(taskIdValidated) ?~> Messages("task.notFound")
       project <- task.project
       _ <- ensureTeamAdministration(request.identity, project._team)
       annotations <- task.annotations
@@ -218,7 +222,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO)(val messagesA
     }
 
     for {
-      annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
+      annotation <- provider.provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       _ <- ensureTeamAdministration(request.identity, annotation._team)
       result <- tryToCancel(annotation)
     } yield result
@@ -226,11 +230,11 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO)(val messagesA
 
   def transfer(typ: String, id: String) = SecuredAction.async(parse.json) { implicit request =>
     for {
-      restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
+      restrictions <- provider.restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
       _ <- restrictions.allowFinish(request.identity) ?~> Messages("notAllowed")
       newUserId <- (request.body \ "userId").asOpt[String].toFox
       newUserIdValidated <- ObjectId.parse(newUserId)
-      updated <- AnnotationService.transferAnnotationToUser(typ, id, newUserIdValidated)(securedRequestToUserAwareRequest)
+      updated <- annotationService.transferAnnotationToUser(typ, id, newUserIdValidated)(securedRequestToUserAwareRequest)
       json <- updated.publicWrites(Some(request.identity), Some(restrictions))
     } yield {
       JsonOk(json)
@@ -239,9 +243,9 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO)(val messagesA
 
   def duplicate(typ: String, id: String) = SecuredAction.async { implicit request =>
     for {
-      annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
+      annotation <- provider.provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       newAnnotation <- duplicateAnnotation(annotation, request.identity)
-      restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
+      restrictions <- provider.restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
       json <- newAnnotation.publicWrites(Some(request.identity), Some(restrictions))
     } yield {
       JsonOk(json)
@@ -255,7 +259,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO)(val messagesA
       dataStoreHandler <- dataSet.dataStoreHandler
       newSkeletonTracingReference <- Fox.runOptional(annotation.skeletonTracingId)(id => dataStoreHandler.duplicateSkeletonTracing(id)) ?~> "Failed to duplicate skeleton tracing."
       newVolumeTracingReference <- Fox.runOptional(annotation.volumeTracingId)(id => dataStoreHandler.duplicateVolumeTracing(id)) ?~> "Failed to duplicate volume tracing."
-      clonedAnnotation <- AnnotationService.createFrom(
+      clonedAnnotation <- annotationService.createFrom(
         user, dataSet, newSkeletonTracingReference, newVolumeTracingReference, AnnotationType.Explorational, None, annotation.description) ?~> Messages("annotation.create.failed")
     } yield clonedAnnotation
   }

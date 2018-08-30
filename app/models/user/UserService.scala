@@ -27,6 +27,9 @@ class UserService @Inject()(conf: WkConfInjected,
                             userTeamRolesDAO: UserTeamRolesDAO,
                             userExperiencesDAO: UserExperiencesDAO,
                             userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
+                            organizationDAO: OrganizationDAO,
+                            teamDAO: TeamDAO,
+                            dataSetDAO: DataSetDAO,
                             userCache: UserCache,
                             actorSystem: ActorSystem) extends FoxImplicits with IdentityService[User] {
 
@@ -58,8 +61,8 @@ class UserService @Inject()(conf: WkConfInjected,
              lastName: String, isActive: Boolean, teamRole: Boolean = false, loginInfo: LoginInfo, passwordInfo: PasswordInfo, isAdmin: Boolean = false): Fox[User] = {
     implicit val ctx = GlobalAccessContext
     for {
-      organizationTeamId <- OrganizationDAO.findOne(_organization).flatMap(_.organizationTeamId).toFox
-      orgTeam <- TeamDAO.findOne(organizationTeamId)
+      organizationTeamId <- organizationDAO.findOne(_organization).flatMap(_.organizationTeamId).toFox
+      orgTeam <- teamDAO.findOne(organizationTeamId)
       teamMemberships = List(TeamMembership(orgTeam._id, teamRole))
       user = User(
         ObjectId.generate,
@@ -126,7 +129,7 @@ class UserService @Inject()(conf: WkConfInjected,
 
   def updateDataSetConfiguration(user: User, dataSetName: String, configuration: DataSetConfiguration)(implicit ctx: DBAccessContext) =
     for {
-      dataSet <- DataSetDAO.findOneByName(dataSetName)
+      dataSet <- dataSetDAO.findOneByName(dataSetName)
       _ <- userDataSetConfigurationDAO.updateDatasetConfigurationForUserAndDataset(user._id, dataSet._id, configuration.configuration)
       _ = userCache.invalidateUser(user._id)
     } yield ()

@@ -7,6 +7,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableDataSource, InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayer, AbstractSegmentationLayer, Category, DataSourceId, ElementClass, GenericDataSource, DataLayerLike => DataLayer}
 import com.scalableminds.webknossos.schema.Tables._
+import javax.inject.Inject
 import models.configuration.DataSetConfiguration
 import models.team._
 import models.user.User
@@ -20,7 +21,7 @@ import play.utils.UriEncoding
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
-import utils.{ObjectId, SQLDAO, SimpleSQLDAO}
+import utils.{ObjectId, SQLClient, SQLDAO, SimpleSQLDAO}
 
 
 case class DataSet(
@@ -42,16 +43,16 @@ case class DataSet(
                      ) extends FoxImplicits {
 
   def getDataLayerByName(dataLayerName: String)(implicit ctx: DBAccessContext): Fox[DataLayer] =
-    DataSetDataLayerDAO.findOneByNameForDataSet(dataLayerName, _id)
+    dataSetDataLayerDAO.findOneByNameForDataSet(dataLayerName, _id)
 
   def getLogoUrl: Fox[String] =
     logoUrl match {
       case Some(url) => Fox.successful(url)
-      case None => OrganizationDAO.findOne(_organization)(GlobalAccessContext).map(_.logoUrl)
+      case None => organizationDAO.findOne(_organization)(GlobalAccessContext).map(_.logoUrl)
     }
 
   def organization: Fox[Organization] =
-    OrganizationDAO.findOne(_organization)(GlobalAccessContext) ?~> Messages("organization.notFound")
+    organizationDAO.findOne(_organization)(GlobalAccessContext) ?~> Messages("organization.notFound")
 
   def dataStore: Fox[DataStore] =
     DataStoreDAO.findOneByName(_dataStore.trim)(GlobalAccessContext) ?~> Messages("datastore.notFound")
@@ -68,7 +69,7 @@ case class DataSet(
     userOpt match {
       case Some(user) =>
         (for {
-          lastUsedTime <- DataSetLastUsedTimesDAO.findForDataSetAndUser(this._id, user._id).futureBox
+          lastUsedTime <- dataSetLastUsedTimesDAO.findForDataSetAndUser(this._id, user._id).futureBox
         } yield lastUsedTime.toOption.getOrElse(0L)).toFox
       case _ => Fox.successful(0L)
     }
@@ -91,7 +92,7 @@ case class DataSet(
     isEditableBy(Some(user))
 
   def allowedTeamIds =
-    DataSetAllowedTeamsDAO.findAllForDataSet(_id)(GlobalAccessContext) ?~> Messages("allowedTeams.notFound")
+    dataSetAllowedTeamsDAO.findAllForDataSet(_id)(GlobalAccessContext) ?~> Messages("allowedTeams.notFound")
 
   def allowedTeams =
     for {
@@ -102,7 +103,7 @@ case class DataSet(
   def constructDataSource(implicit ctx: DBAccessContext): Fox[InboxDataSource] = {
     for {
       organization <- organization
-      dataLayersBox <- (DataSetDataLayerDAO.findAllForDataSet(_id) ?~> "could not find data layers").futureBox
+      dataLayersBox <- (dataSetDataLayerDAO.findAllForDataSet(_id) ?~> "could not find data layers").futureBox
       dataSourceId = DataSourceId(name, organization.name)
     } yield {
       dataLayersBox match {
@@ -147,7 +148,7 @@ case class DataSet(
   }
 }
 
-object DataSetDAO extends SQLDAO[DataSet, DatasetsRow, Datasets] {
+class DataSetDAO @Inject()(sqlClient: SQLClient, dataSetDataLayerDAO: DataSetDataLayerDAO, organizationDAO: OrganizationDAO) extends SQLDAO[DataSet, DatasetsRow, Datasets](sqlClient) {
   val collection = Datasets
 
   def idColumn(x: Datasets): Rep[String] = x._Id
@@ -286,7 +287,7 @@ object DataSetDAO extends SQLDAO[DataSet, DatasetsRow, Datasets] {
 
     for {
       old <- findOneByName(name)
-      organization <- OrganizationDAO.findOneByName(source.id.team)
+      organization <- organizationDAO.findOneByName(source.id.team)
       q =
       sqlu"""update webknossos.dataSets
                     set _dataStore = ${dataStoreName},
@@ -296,7 +297,7 @@ object DataSetDAO extends SQLDAO[DataSet, DatasetsRow, Datasets] {
                         status = ${source.statusOpt.getOrElse("")}
                    where _id = ${old._id.id}"""
       _ <- run(q)
-      _ <- DataSetDataLayerDAO.updateLayers(old._id, source)
+      _ <- dataSetDataLayerDAO.updateLayers(old._id, source)
     } yield ()
   }
 
@@ -323,7 +324,7 @@ object DataSetDAO extends SQLDAO[DataSet, DatasetsRow, Datasets] {
 }
 
 
-object DataSetResolutionsDAO extends SimpleSQLDAO {
+class DataSetResolutionsDAO @Inject()(sqlClient: SQLClient) extends SimpleSQLDAO(sqlClient) {
 
   def parseRow(row: DatasetResolutionsRow): Fox[Point3D] = {
     for {
@@ -362,14 +363,14 @@ object DataSetResolutionsDAO extends SimpleSQLDAO {
 }
 
 
-object DataSetDataLayerDAO extends SimpleSQLDAO {
+class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO: DataSetResolutionsDAO) extends SimpleSQLDAO(sqlClient) {
 
   def parseRow(row: DatasetLayersRow, dataSetId: ObjectId): Fox[DataLayer] = {
     val result: Fox[Fox[DataLayer]] = for {
       category <- Category.fromString(row.category).toFox ?~> "Could not parse Layer Category"
       boundingBox <- BoundingBox.fromSQL(parseArrayTuple(row.boundingbox).map(_.toInt)).toFox ?~> "Could not parse boundingbox"
       elementClass <- ElementClass.fromString(row.elementclass).toFox ?~> "Could not parse Layer ElementClass"
-      resolutions <- DataSetResolutionsDAO.findDataResolutionForLayer(dataSetId, row.name) ?~> "Could not find resolution for layer"
+      resolutions <- dataSetResolutionsDAO.findDataResolutionForLayer(dataSetId, row.name) ?~> "Could not find resolution for layer"
     } yield {
       (row.largestsegmentid, row.mappings) match {
         case (Some(segmentId), Some(mappings)) =>
@@ -437,13 +438,13 @@ object DataSetDataLayerDAO extends SimpleSQLDAO {
     }
     for {
       _ <- run(DBIO.sequence(List(clearQuery) ++ insertQueries))
-      _ <- DataSetResolutionsDAO.updateResolutions(_dataSet, source.toUsable.map(_.dataLayers))
+      _ <- dataSetResolutionsDAO.updateResolutions(_dataSet, source.toUsable.map(_.dataLayers))
     } yield ()
   }
 }
 
 
-object DataSetAllowedTeamsDAO extends SimpleSQLDAO {
+class DataSetAllowedTeamsDAO @Inject()(sqlClient: SQLClient) extends SimpleSQLDAO(sqlClient) {
 
   def findAllForDataSet(dataSetId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
     val query = for {
@@ -473,7 +474,7 @@ object DataSetAllowedTeamsDAO extends SimpleSQLDAO {
 }
 
 
-object DataSetLastUsedTimesDAO extends SimpleSQLDAO {
+class DataSetLastUsedTimesDAO @Inject()(sqlClient: SQLClient) extends SimpleSQLDAO(sqlClient) {
   def findForDataSetAndUser(dataSetId: ObjectId, userId: ObjectId): Fox[Long] = {
     for {
       rList <- run(sql"select lastUsedTime from webknossos.dataSet_lastUsedTimes where _dataSet = ${dataSetId} and _user = ${userId}".as[java.sql.Timestamp])

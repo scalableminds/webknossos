@@ -25,6 +25,9 @@ import scala.concurrent.Future
 
 class UserController @Inject()(userService: UserService,
                                userDAO: UserDAO,
+                               annotationDAO: AnnotationDAO,
+                               timeSpanService: TimeSpanService,
+                               teamDAO: TeamDAO,
                                val messagesApi: MessagesApi)
   extends Controller
     with FoxImplicits {
@@ -48,7 +51,7 @@ class UserController @Inject()(userService: UserService,
 
   def annotations(isFinished: Option[Boolean], limit: Option[Int]) = SecuredAction.async { implicit request =>
     for {
-      annotations <- AnnotationDAO.findAllFor(request.identity._id, isFinished, AnnotationType.Explorational, limit.getOrElse(defaultAnnotationLimit))
+      annotations <- annotationDAO.findAllFor(request.identity._id, isFinished, AnnotationType.Explorational, limit.getOrElse(defaultAnnotationLimit))
       jsonList <- Fox.serialCombined(annotations)(_.compactWrites)
     } yield {
       Ok(Json.toJson(jsonList))
@@ -57,7 +60,7 @@ class UserController @Inject()(userService: UserService,
 
   def tasks(isFinished: Option[Boolean], limit: Option[Int]) = SecuredAction.async { implicit request =>
     for {
-      annotations <- AnnotationDAO.findAllFor(request.identity._id, isFinished, AnnotationType.Task, limit.getOrElse(defaultAnnotationLimit))
+      annotations <- annotationDAO.findAllFor(request.identity._id, isFinished, AnnotationType.Task, limit.getOrElse(defaultAnnotationLimit))
       jsonList <- Fox.serialCombined(annotations)(_.publicWrites(Some(request.identity)))
     } yield {
       Ok(Json.toJson(jsonList))
@@ -69,7 +72,7 @@ class UserController @Inject()(userService: UserService,
       userIdValidated <- ObjectId.parse(userId)
       user <- userDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
       _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
-      loggedTimeAsMap <- TimeSpanService.loggedTimeOfUser(user, TimeSpan.groupByMonth)
+      loggedTimeAsMap <- timeSpanService.loggedTimeOfUser(user, TimeSpan.groupByMonth)
     } yield {
       JsonOk(Json.obj("loggedTime" ->
         loggedTimeAsMap.map { case (paymentInterval, duration) =>
@@ -89,7 +92,7 @@ class UserController @Inject()(userService: UserService,
         userIdValidated <- ObjectId.parse(userId)
         user <- userDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
         _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
-        result <- TimeSpanService.loggedTimeOfUser(user, groupByAnnotationAndDay, Some(request.body.start), Some(request.body.end))
+        result <- timeSpanService.loggedTimeOfUser(user, groupByAnnotationAndDay, Some(request.body.start), Some(request.body.end))
       } yield {
         Json.obj(
           "user" -> Json.obj(
@@ -116,7 +119,7 @@ class UserController @Inject()(userService: UserService,
       userIdValidated <- ObjectId.parse(userId)
       user <- userDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
       _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
-      annotations <- AnnotationDAO.findAllFor(userIdValidated, isFinished, AnnotationType.Explorational, limit.getOrElse(defaultAnnotationLimit))
+      annotations <- annotationDAO.findAllFor(userIdValidated, isFinished, AnnotationType.Explorational, limit.getOrElse(defaultAnnotationLimit))
       jsonList <- Fox.serialCombined(annotations)(_.compactWrites)
     } yield {
       Ok(Json.toJson(jsonList))
@@ -128,7 +131,7 @@ class UserController @Inject()(userService: UserService,
       userIdValidated <- ObjectId.parse(userId)
       user <- userDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
       _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
-      annotations <- AnnotationDAO.findAllFor(userIdValidated, isFinished, AnnotationType.Task, limit.getOrElse(defaultAnnotationLimit))
+      annotations <- annotationDAO.findAllFor(userIdValidated, isFinished, AnnotationType.Task, limit.getOrElse(defaultAnnotationLimit))
       jsonList <- Fox.serialCombined(annotations)(_.publicWrites(Some(request.identity)))
     } yield {
       Ok(Json.toJson(jsonList))
@@ -137,7 +140,7 @@ class UserController @Inject()(userService: UserService,
 
   def loggedTime = SecuredAction.async { implicit request =>
     for {
-      loggedTimeAsMap <- TimeSpanService.loggedTimeOfUser(request.identity, TimeSpan.groupByMonth)
+      loggedTimeAsMap <- timeSpanService.loggedTimeOfUser(request.identity, TimeSpan.groupByMonth)
     } yield {
       JsonOk(Json.obj("loggedTime" ->
         loggedTimeAsMap.map { case (paymentInterval, duration) =>
@@ -198,7 +201,7 @@ class UserController @Inject()(userService: UserService,
           user <- userDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
           _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
           _ <- bool2Fox(checkAdminOnlyUpdates(user, isActive, isAdmin, email)(issuingUser)) ?~> Messages("notAllowed")
-          teams <- Fox.combined(assignedMemberships.map(t => TeamDAO.findOne(t.teamId)(GlobalAccessContext) ?~> Messages("team.notFound")))
+          teams <- Fox.combined(assignedMemberships.map(t => teamDAO.findOne(t.teamId)(GlobalAccessContext) ?~> Messages("team.notFound")))
           oldTeamMemberships <- user.teamMemberships
           teamsWithoutUpdate <- Fox.filterNot(oldTeamMemberships)(t => issuingUser.isTeamManagerOrAdminOf(t.teamId))
           assignedMembershipWTeams = assignedMemberships.zip(teams)

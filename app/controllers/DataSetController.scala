@@ -28,6 +28,7 @@ import scala.concurrent.duration._
 class DataSetController @Inject()(userService: UserService,
                                   dataSetService: DataSetService,
                                   teamDAO: TeamDAO,
+                                  dataSetDAO: DataSetDAO,
                                   val messagesApi: MessagesApi) extends Controller {
 
   val DefaultThumbnailWidth = 400
@@ -67,7 +68,7 @@ class DataSetController @Inject()(userService: UserService,
     }
 
     for {
-      dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
+      dataSet <- dataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
       layer <- dataSet.getDataLayerByName(dataLayerName) ?~> Messages("dataLayer.notFound", dataLayerName)
       image <- imageFromCacheIfPossible(dataSet)
     } yield {
@@ -88,7 +89,7 @@ class DataSetController @Inject()(userService: UserService,
       noDataStoreBox <- DataStoreDAO.findOneByName(dataStoreName).reverse.futureBox
       _ <- Fox.runOptional(noDataStoreBox)(_ => dataSetService.addForeignDataStore(dataStoreName, url))
       _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> Messages("dataSet.import.impossible.name")
-      _ <- DataSetDAO.findOneByName(dataSetName).reverse ?~> Messages("dataSet.name.alreadyTaken")
+      _ <- dataSetDAO.findOneByName(dataSetName).reverse ?~> Messages("dataSet.name.alreadyTaken")
       organizationName <- request.identity.organization.map(_.name)
       _ <- dataSetService.addForeignDataSet(dataStoreName, dataSetName, organizationName)
     } yield {
@@ -104,7 +105,7 @@ class DataSetController @Inject()(userService: UserService,
         Fox.successful(el.isUsable == value))
     ) { filter =>
         for {
-          dataSets <- DataSetDAO.findAll
+          dataSets <- dataSetDAO.findAll
           filtered <- filter.applyOn(dataSets)
           js <- Fox.serialCombined(filtered)(d => d.publicWrites(request.identity))
         } yield {
@@ -115,7 +116,7 @@ class DataSetController @Inject()(userService: UserService,
 
   def accessList(dataSetName: String) = SecuredAction.async { implicit request =>
     for {
-      dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
+      dataSet <- dataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
       allowedTeams <- dataSet.allowedTeamIds
       users <- userService.findByTeams(allowedTeams)
       usersJs <- Fox.serialCombined(users.distinct)(_.compactWrites)
@@ -127,7 +128,7 @@ class DataSetController @Inject()(userService: UserService,
   def read(dataSetName: String, sharingToken: Option[String]) = UserAwareAction.async { implicit request =>
     val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
     for {
-      dataSet <- DataSetDAO.findOneByName(dataSetName)(ctx) ?~> Messages("dataSet.notFound", dataSetName)
+      dataSet <- dataSetDAO.findOneByName(dataSetName)(ctx) ?~> Messages("dataSet.notFound", dataSetName)
       _ <- Fox.runOptional(request.identity)(user => DataSetLastUsedTimesDAO.updateForDataSetAndUser(dataSet._id, user._id))
       js <- dataSet.publicWrites(request.identity)
     } yield {
@@ -139,10 +140,10 @@ class DataSetController @Inject()(userService: UserService,
     withJsonBodyUsing(dataSetPublicReads) {
       case (description, displayName, isPublic) =>
       for {
-        dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
+        dataSet <- dataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
         _ <- Fox.assertTrue(dataSet.isEditableBy(request.identity)) ?~> Messages("notAllowed")
-        _ <- DataSetDAO.updateFields(dataSet._id, description, displayName, isPublic)
-        updated <- DataSetDAO.findOneByName(dataSetName)
+        _ <- dataSetDAO.updateFields(dataSet._id, description, displayName, isPublic)
+        updated <- dataSetDAO.findOneByName(dataSetName)
         js <- updated.publicWrites(Some(request.identity))
       } yield {
         Ok(Json.toJson(js))
@@ -153,7 +154,7 @@ class DataSetController @Inject()(userService: UserService,
   def importDataSet(dataSetName: String) = SecuredAction.async { implicit request =>
     for {
       _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> Messages("dataSet.import.impossible.name")
-      dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
+      dataSet <- dataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
       result <- dataSetService.importDataSet(dataSet)
     } yield {
       Status(result.status)(result.body)
@@ -163,7 +164,7 @@ class DataSetController @Inject()(userService: UserService,
   def updateTeams(dataSetName: String) = SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyAs[List[String]] { teams =>
       for {
-        dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
+        dataSet <- dataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
         _ <- Fox.assertTrue(dataSet.isEditableBy(request.identity)) ?~> Messages("notAllowed")
         teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.parse(_))
         userTeams <- teamDAO.findAllEditable
@@ -184,7 +185,7 @@ class DataSetController @Inject()(userService: UserService,
 
   def deleteSharingToken(dataSetName: String) = SecuredAction.async { implicit request =>
     for {
-      _ <- DataSetDAO.updateSharingTokenByName(dataSetName, None)
+      _ <- dataSetDAO.updateSharingTokenByName(dataSetName, None)
     } yield Ok
   }
 

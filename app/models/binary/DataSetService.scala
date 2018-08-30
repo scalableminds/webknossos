@@ -14,7 +14,11 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.WSResponse
 import utils.ObjectId
 
-class DataSetService @Inject()(organizationDAO: OrganizationDAO) extends FoxImplicits with LazyLogging {
+class DataSetService @Inject()(organizationDAO: OrganizationDAO,
+                               dataSetDAO: DataSetDAO,
+                               dataSetDataLayerDAO: DataSetDataLayerDAO,
+                               dataSetAllowedTeamsDAO: DataSetAllowedTeamsDAO
+                              ) extends FoxImplicits with LazyLogging {
 
   val system = Akka.system(play.api.Play.current)
 
@@ -22,7 +26,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO) extends FoxImpl
     name.matches("[A-Za-z0-9_\\-]*")
 
   def assertNewDataSetName(name: String)(implicit ctx: DBAccessContext): Fox[Boolean] =
-    DataSetDAO.findOneByName(name)(GlobalAccessContext).reverse
+    dataSetDAO.findOneByName(name)(GlobalAccessContext).reverse
 
   def createDataSet(
                      name: String,
@@ -35,7 +39,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO) extends FoxImpl
     val newId = ObjectId.generate
     organizationDAO.findOneByName(owningOrganization).futureBox.flatMap {
       case Full(organization) => for {
-        _ <- DataSetDAO.insertOne(DataSet(
+        _ <- dataSetDAO.insertOne(DataSet(
                 newId,
                 dataStore.name,
                 organization._id,
@@ -49,8 +53,8 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO) extends FoxImpl
                 None,
                 dataSource.statusOpt.getOrElse(""),
                 None))
-        _ <- DataSetDataLayerDAO.updateLayers(newId, dataSource)
-        _ <- DataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(newId, List())
+        _ <- dataSetDataLayerDAO.updateLayers(newId, dataSource)
+        _ <- dataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(newId, List())
       } yield ()
       case _ => Fox.failure("org.notExist")
     }
@@ -87,9 +91,9 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO) extends FoxImpl
                         dataSource: InboxDataSource
                       )(implicit ctx: DBAccessContext): Fox[Unit] = {
 
-    DataSetDAO.findOneByName(dataSource.id.name)(GlobalAccessContext).futureBox.flatMap {
+    dataSetDAO.findOneByName(dataSource.id.name)(GlobalAccessContext).futureBox.flatMap {
       case Full(dataSet) if dataSet._dataStore == dataStore.name =>
-        DataSetDAO.updateDataSourceByName(
+        dataSetDAO.updateDataSourceByName(
           dataSource.id.name,
           dataStore.name,
           dataSource,
@@ -110,7 +114,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO) extends FoxImpl
   }
 
   def deactivateUnreportedDataSources(dataStoreName: String, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext) =
-    DataSetDAO.deactivateUnreported(dataSources.map(_.id.name), dataStoreName)
+    dataSetDAO.deactivateUnreported(dataSources.map(_.id.name), dataStoreName)
 
   def importDataSet(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[WSResponse] =
     for {
@@ -131,11 +135,11 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO) extends FoxImpl
     def createSharingToken(dataSetName: String)(implicit ctx: DBAccessContext) = {
       for {
         tokenValue <- new CompactRandomIDGenerator().generate
-        _ <- DataSetDAO.updateSharingTokenByName(dataSetName, Some(tokenValue))
+        _ <- dataSetDAO.updateSharingTokenByName(dataSetName, Some(tokenValue))
       } yield tokenValue
     }
 
-    val tokenFoxOfFox: Fox[Fox[String]] = DataSetDAO.getSharingTokenByName(dataSetName).map {
+    val tokenFoxOfFox: Fox[Fox[String]] = dataSetDAO.getSharingTokenByName(dataSetName).map {
       oldTokenOpt => {
         if (oldTokenOpt.isDefined) Fox.successful(oldTokenOpt.get)
         else createSharingToken(dataSetName)

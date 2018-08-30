@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 var program = require('commander');
 var randomstring = require("randomstring");
 const execSync = require('child_process').execSync;
@@ -5,14 +6,14 @@ var path = require('path');
 var fs = require('fs');
 var glob = require("glob")
 var tmp = require('tmp');
-var dircompare = require('dir-compare');
 
-let POSTGRES_URL = ""
-let ORIGINAL_POSTGRES_URL="jdbc:postgresql://localhost/webknossos" //"${POSTGRES_URL:-jdbc:postgresql://localhost/webknossos}" //TODO
+let POSTGRES_URL = process.env.POSTGRES_URL
+let ORIGINAL_POSTGRES_URL = (typeof POSTGRES_URL !== 'undefined') ? POSTGRES_URL:"jdbc:postgresql://localhost/webknossos"
 const scriptdir = __dirname
 const scriptName = __filename
 
 function dump(parameter) {
+	var cleanUp = function(){};
 	if(parameter == "DB") { 
 		POSTGRES_URL=ORIGINAL_POSTGRES_URL // this environment variable is passed to dump_schema.sh
 	} else {
@@ -22,7 +23,7 @@ function dump(parameter) {
 		const dbName = execSync(scriptdir+'/db_name.sh', {env: {'POSTGRES_URL': POSTGRES_URL}}).toString().trim() // "trim" to remove the line break
 		if(dbName !== tempDbName) {
 			console.log("Wrong dbName")	
-			preocess.exit()
+			process.exit()
 		}
 		console.log("Creating DB " + dbName)
 		const dbHost = execSync(scriptdir+'/db_host.sh', {env: {'POSTGRES_URL': POSTGRES_URL}}).toString().trim()
@@ -33,9 +34,20 @@ function dump(parameter) {
   			concatenateFileNames += " -f " + fileName;
 		});
 		execSync(`psql -U postgres -h ${dbHost} --dbname="${dbName}" -v ON_ERROR_STOP=ON -q ${concatenateFileNames}`, {env: {'PGPASSWORD': 'postgres'}})
+		cleanUp = function(){
+			console.log(`CLEANUP: DROP DATABASE ${dbName}`)
+			execSync(`psql -U postgres -h ${dbHost} -c \"DROP DATABASE ${dbName};\"`, {env: {'PGPASSWORD': 'postgres'}})
+		}
 	}
 	var tmpDir = tmp.dirSync();
-	execSync(`${scriptdir}/dump_schema.sh ${tmpDir.name}`, {env: {'POSTGRES_URL': POSTGRES_URL}})
+	try {
+		execSync(`${scriptdir}/dump_schema.sh ${tmpDir.name}`, {env: {'POSTGRES_URL': POSTGRES_URL}})
+	} catch(err) {
+		console.log(`CLEANUP: remove ${tmpDir.name}`)
+		execSync(`rm -rf ${tmpDir.name}`)
+		process.exit(1)
+	}
+	cleanUp();
 	return tmpDir.name
 }
 
@@ -48,17 +60,16 @@ function generateRandomName(){
 	return 'wk_tmp_' + random
 }
 
-function logDifference(result){
-	const diff = res.diffSet.filter(function(entry) {
-		return entry.state != 'equal'
-	});
-
-	diff.forEach(function (entry) {
-	    var name1 = entry.name1 ? entry.name1 : '';
-	    var name2 = entry.name2 ? entry.name2 : '';
-	    console.log(name1 + " " + entry.type1 + " " + entry.state + " " + name2 + " " + entry.type2);
-	});
-}
+process.on('exit', function(code) {
+    if (dir1) {
+    	console.log(`CLEANUP: remove ${dir1}`);
+    	execSync(`rm -rf ${dir1}`)
+    }
+    if (dir2){
+    	console.log(`CLEANUP: remove ${dir2}`);
+    	execSync(`rm -rf ${dir2}`)
+    }
+});
 
 program
   .version('0.1.0', '-v, --version')
@@ -77,18 +88,12 @@ if(process.argv.length != 4) { // 2 "real" parameter
 }
 
 program.parse(process.argv)
-dir1 = dump(p1);
-// TODO: clean up
-dir2 = dump(p2);
-// TODO: clean up
-
-// strip trailing commas and sort schema files:
-
+const dir1 = dump(p1);
+const dir2 = dump(p2);
+// sort and remove commas
+execSync(`find ${dir1} -type f -exec sed -i 's/,$//' {} +`)
+execSync(`find ${dir1} -type f -exec sort -o {} {} \\;`)
+execSync(`find ${dir2} -type f -exec sed -i 's/,$//' {} +`)
+execSync(`find ${dir2} -type f -exec sort -o {} {} \\;`)
 // diff
-var res = dircompare.compareSync(dir1, dir2, {compareSize: true});
-if (res.differences == 0) {
-	console.log("[SUCCESS] Same schema")
-} else {
-	console.log("[Failure] " + res.differences + " differences:")
-	logDifference(res)
-}
+execSync(`diff -r ${dir1} ${dir2}`, {stdio:[0,1,2]}) // we pass the std-output to the child process to see the diff

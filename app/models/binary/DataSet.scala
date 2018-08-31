@@ -42,29 +42,9 @@ case class DataSet(
                        isDeleted: Boolean = false
                      ) extends FoxImplicits {
 
-  def dataStore: Fox[DataStore] =
-    DataStoreDAO.findOneByName(_dataStore.trim)(GlobalAccessContext) ?~> Messages("datastore.notFound")
-
-  def dataStoreHandler(implicit ctx: DBAccessContext): Fox[DataStoreHandler] =
-    for {
-      dataStore <- dataStore
-    } yield new DataStoreHandler(dataStore, this)
-
   def urlEncodedName: String =
     UriEncoding.encodePathSegment(name, "UTF-8")
 
-  def lastUsedByUser(userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Long] = {
-    userOpt match {
-      case Some(user) =>
-        (for {
-          lastUsedTime <- dataSetLastUsedTimesDAO.findForDataSetAndUser(this._id, user._id).futureBox
-        } yield lastUsedTime.toOption.getOrElse(0L)).toFox
-      case _ => Fox.successful(0L)
-    }
-  }
-
-  def lastUsedByUser(user: User)(implicit ctx: DBAccessContext): Fox[Long] =
-    lastUsedByUser(Some(user))
 
   def isEditableBy(userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Boolean] = {
     userOpt match {
@@ -79,14 +59,6 @@ case class DataSet(
   def isEditableBy(user: User)(implicit ctx: DBAccessContext): Fox[Boolean] =
     isEditableBy(Some(user))
 
-  def allowedTeamIds =
-    dataSetAllowedTeamsDAO.findAllForDataSet(_id)(GlobalAccessContext) ?~> Messages("allowedTeams.notFound")
-
-  def allowedTeams =
-    for {
-      allowedTeamIds <- allowedTeamIds
-      allowedTeams <- Fox.combined(allowedTeamIds.map(TeamDAO.findOne(_)(GlobalAccessContext)))
-    } yield allowedTeams
 
 }
 

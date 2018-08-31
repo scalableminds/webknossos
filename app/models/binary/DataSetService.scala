@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, G
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableDataSource, InboxDataSourceLike => InboxDataSource}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
-import models.team.OrganizationDAO
+import models.team.{OrganizationDAO, TeamDAO}
 import models.user.User
 import net.liftweb.common.Full
 import oxalis.security.{CompactRandomIDGenerator, URLSharing, WebknossosSilhouette}
@@ -19,7 +19,10 @@ import utils.ObjectId
 
 class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                dataSetDAO: DataSetDAO,
+                               dataStoreDAO: DataStoreDAO,
+                               dataSetLastUsedTimesDAO: DataSetLastUsedTimesDAO,
                                dataSetDataLayerDAO: DataSetDataLayerDAO,
+                               teamDAO: TeamDAO,
                                dataSetAllowedTeamsDAO: DataSetAllowedTeamsDAO
                               ) extends FoxImplicits with LazyLogging {
 
@@ -61,14 +64,12 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     }
   }
 
-  def addForeignDataSet(dataStoreName: String, dataSetName: String, organizationName: String)(implicit ctx: DBAccessContext) = {
+  def addForeignDataSet(dataStoreName: String, dataSetName: String, organizationName: String)(implicit ctx: DBAccessContext): Fox[Unit] = {
     for {
-      dataStore <- DataStoreDAO.findOneByName(dataStoreName)
+      dataStore <- dataStoreDAO.findOneByName(dataStoreName)
       foreignDataset <- getForeignDataSet(dataStore.url, dataSetName)
       _ <- createDataSet(dataSetName, dataStore, organizationName, foreignDataset)
-    } yield {
-      ()
-    }
+    } yield ()
   }
 
   def getForeignDataSet(dataStoreUrl: String, dataSetName: String): Fox[InboxDataSource] = {
@@ -77,14 +78,11 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       .getWithJsonResponse[InboxDataSource]
   }
 
-
-  def addForeignDataStore(name: String, url: String)(implicit ctx: DBAccessContext) = {
+  def addForeignDataStore(name: String, url: String)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val dataStore = DataStore(name, url, "", isForeign = true) // the key can be "" because keys are only important for own DataStore. Own Datastores have a key that is not ""
     for {
-      _ <- DataStoreDAO.insertOne(dataStore)
-    } yield {
-      ()
-    }
+      _ <- dataStoreDAO.insertOne(dataStore)
+    } yield ()
   }
 
   def updateDataSource(
@@ -119,7 +117,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
   def importDataSet(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[WSResponse] =
     for {
-      dataStoreHandler <- dataSet.dataStoreHandler
+      dataStoreHandler <- handlerFor(dataSet)
       result <- dataStoreHandler.importDataSource
     } yield result
 
@@ -177,15 +175,43 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       case None => organizationDAO.findOne(dataSet._organization)(GlobalAccessContext).map(_.logoUrl)
     }
 
-  def publicWrites(dataSet: DataSet, user: Option[User]): Fox[JsObject] = {
+  def dataStoreFor(dataSet: DataSet): Fox[DataStore] =
+    dataStoreDAO.findOneByName(dataSet._dataStore.trim)(GlobalAccessContext) ?~> Messages("datastore.notFound")
+
+  def handlerFor(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[DataStoreHandler] =
+    for {
+      dataStore <- dataStoreFor(dataSet)
+    } yield new DataStoreHandler(dataStore, dataSet)
+
+  def lastUsedTimeFor(_dataSet: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Long] = {
+    userOpt match {
+      case Some(user) =>
+        (for {
+          lastUsedTime <- dataSetLastUsedTimesDAO.findForDataSetAndUser(_dataSet, user._id).futureBox
+        } yield lastUsedTime.toOption.getOrElse(0L)).toFox
+      case _ => Fox.successful(0L)
+    }
+  }
+
+
+  def allowedTeamIdsFor(_dataSet: ObjectId) =
+    dataSetAllowedTeamsDAO.findAllForDataSet(_dataSet)(GlobalAccessContext) ?~> Messages("allowedTeams.notFound")
+
+  def allowedTeamsFor(_dataSet: ObjectId) =
+    for {
+      allowedTeamIds <- allowedTeamIdsFor(_dataSet)
+      allowedTeams <- Fox.combined(allowedTeamIds.map(teamDAO.findOne(_)(GlobalAccessContext)))
+    } yield allowedTeams
+
+  def publicWrites(dataSet: DataSet, userOpt: Option[User]): Fox[JsObject] = {
     implicit val ctx = GlobalAccessContext
     for {
-      teams <- dataSet.allowedTeams
+      teams <- allowedTeamsFor(dataSet._id)
       teamsJs <- Fox.serialCombined(teams)(_.publicWrites)
       logoUrl <- logoUrlFor(dataSet)
-      isEditable <- dataSet.isEditableBy(user)
-      lastUsedByUser <- dataSet.lastUsedByUser(user)
-      dataStore <- dataSet.dataStore
+      isEditable <- dataSet.isEditableBy(userOpt)
+      lastUsedByUser <- lastUsedTimeFor(dataSet._id, userOpt)
+      dataStore <- dataStoreFor(dataSet)
       dataStoreJs <- dataStore.publicWrites
       organization <- organizationDAO.findOne(dataSet._organization) ?~> Messages("organization.notFound")
       dataSource <- dataSourceFor(dataSet)

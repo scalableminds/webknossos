@@ -100,17 +100,17 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     def createTracings(dataSet: DataSet, dataSource: DataSource): Fox[(Option[String], Option[String])] = tracingType match {
       case TracingType.skeleton =>
         for {
-          handler <- dataSet.dataStoreHandler
+          handler <- dataSetService.handlerFor(dataSet)
           skeletonTracingId <- handler.saveSkeletonTracing(SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name, editPosition = dataSource.center))
         } yield (Some(skeletonTracingId), None)
       case TracingType.volume =>
         for {
-          handler <- dataSet.dataStoreHandler
+          handler <- dataSetService.handlerFor(dataSet)
           volumeTracingId <- handler.saveVolumeTracing(createVolumeTracing(dataSource, withFallback))
         } yield (None, Some(volumeTracingId))
       case TracingType.hybrid =>
         for {
-          handler <- dataSet.dataStoreHandler
+          handler <- dataSetService.handlerFor(dataSet)
           skeletonTracingId <- handler.saveSkeletonTracing(SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name, editPosition = dataSource.center))
           volumeTracingId <- handler.saveVolumeTracing(createVolumeTracing(dataSource, withFallback))
         } yield (Some(skeletonTracingId), Some(volumeTracingId))
@@ -183,7 +183,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
   def tracingFromBase(annotationBase: Annotation, dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[String] = {
     for {
       dataSource <- bool2Fox(dataSet.isUsable) ?~> Messages("dataSet.notImported", dataSet.name)
-      dataStoreHandler <- dataSet.dataStoreHandler
+      dataStoreHandler <- dataSetService.handlerFor(dataSet)
       skeletonTracingId <- annotationBase.skeletonTracingId.toFox
       newTracingId <- dataStoreHandler.duplicateSkeletonTracing(skeletonTracingId)
     } yield newTracingId
@@ -320,7 +320,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     def getTracings(dataSetId: ObjectId, tracingIds: List[String]) = {
       for {
         dataSet <- dataSetDAO.findOne(dataSetId)
-        dataStoreHandler <- dataSet.dataStoreHandler
+        dataStoreHandler <- dataSetService.handlerFor(dataSet)
         tracingContainers <- Fox.serialCombined(tracingIds.grouped(1000).toList)(dataStoreHandler.getSkeletonTracings)
       } yield tracingContainers.flatMap(_.tracings)
     }

@@ -101,6 +101,7 @@ class Authentication @Inject()(
                                 passwordHasher: PasswordHasher,
                                 initialDataService: InitialDataService,
                                 userService: UserService,
+                                dataStoreDAO: DataStoreDAO,
                                 teamDAO: TeamDAO,
                                 organizationDAO: OrganizationDAO,
                                 userDAO: UserDAO
@@ -438,7 +439,7 @@ class Authentication @Inject()(
 
     for {
       token <- env.combinedAuthenticatorService.tokenAuthenticatorService.createAndInit(loginInfo, TokenType.DataStore, deleteOld = false).toFox
-      datastores <- DataStoreDAO.findAll(GlobalAccessContext)
+      datastores <- dataStoreDAO.findAll(GlobalAccessContext)
       _ <- Fox.combined(datastores.map(sendRPCToDataStore(_, token)))
     } yield Full(())
 

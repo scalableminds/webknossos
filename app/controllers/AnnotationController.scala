@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import models.annotation.AnnotationState.Cancelled
 import models.annotation._
-import models.binary.{DataSet, DataSetDAO}
+import models.binary.{DataSet, DataSetDAO, DataSetService}
 import models.project.ProjectDAO
 import models.task.TaskDAO
 import models.user.time._
@@ -24,6 +24,7 @@ import scala.concurrent.duration._
 class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
                                      taskDAO: TaskDAO,
                                      dataSetDAO: DataSetDAO,
+                                     dataSetService: DataSetService,
                                      annotationService: AnnotationService,
                                      projectDAO: ProjectDAO,
                                      timeSpanService: TimeSpanService,
@@ -98,7 +99,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
       _ <- restrictions.allowUpdate(request.identity) ?~> Messages("notAllowed")
       _ <- bool2Fox(annotation.isRevertPossible) ?~> Messages("annotation.revert.toOld")
       dataSet <- annotation.dataSet
-      dataStoreHandler <- dataSet.dataStoreHandler
+      dataStoreHandler <- dataSetService.handlerFor(dataSet)
       skeletonTracingId <- annotation.skeletonTracingId.toFox
       newSkeletonTracingId <- dataStoreHandler.duplicateSkeletonTracing(skeletonTracingId, Some(version.toString))
       _ <- annotationDAO.updateSkeletonTracingId(annotation._id, newSkeletonTracingId)
@@ -263,7 +264,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
     for {
       dataSet: DataSet <- annotation.dataSet
       _ <- bool2Fox(dataSet.isUsable) ?~> "DataSet is not imported."
-      dataStoreHandler <- dataSet.dataStoreHandler
+      dataStoreHandler <- dataSetService.handlerFor(dataSet)
       newSkeletonTracingReference <- Fox.runOptional(annotation.skeletonTracingId)(id => dataStoreHandler.duplicateSkeletonTracing(id)) ?~> "Failed to duplicate skeleton tracing."
       newVolumeTracingReference <- Fox.runOptional(annotation.volumeTracingId)(id => dataStoreHandler.duplicateVolumeTracing(id)) ?~> "Failed to duplicate volume tracing."
       clonedAnnotation <- annotationService.createFrom(

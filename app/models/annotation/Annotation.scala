@@ -97,7 +97,7 @@ case class Annotation(
       userJson <- user.compactWrites
       settings <- findSettings
       annotationRestrictions <- AnnotationRestrictions.writeAsJson(composeRestrictions(restrictions, readOnly), requestingUser)
-      dataStore <- dataSet.dataStore
+      dataStore <- dataStoreDAO.findOneByName(dataSet._dataStore.trim) ?~> Messages("datastore.notFound")
       dataStoreJs <- dataStore.publicWrites
     } yield {
       Json.obj(

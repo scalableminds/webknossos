@@ -96,7 +96,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
         _ <- bool2Fox(volumeTracingsWithDataLocations.size <= 1) ?~> "nml.file.multipleVolumes"
         dataSetName <- assertAllOnSameDataSet(skeletonTracings, volumeTracingsWithDataLocations.headOption.map(_._1)) ?~> "nml.file.differentDatasets"
         dataSet <- dataSetDAO.findOneByName(dataSetName)
-        dataStoreHandler <- dataSet.dataStoreHandler
+        dataStoreHandler <- dataSetService.handlerFor(dataSet)
         volumeTracingIdOpt <- Fox.runOptional(volumeTracingsWithDataLocations.headOption){ v =>
           dataStoreHandler.saveVolumeTracing(v._1, parsedFiles.otherFiles.get(v._2).map(_.file))
         }
@@ -132,7 +132,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
 
     def skeletonToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String) = {
       for {
-        dataStoreHandler <- dataSet.dataStoreHandler
+        dataStoreHandler <- dataSetService.handlerFor(dataSet)
         skeletonTracingId <- annotation.skeletonTracingId.toFox
         tracing <- dataStoreHandler.getSkeletonTracing(skeletonTracingId)
       } yield {
@@ -142,7 +142,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
 
     def volumeOrHybridToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String) = {
       for {
-        dataStoreHandler <- dataSet.dataStoreHandler
+        dataStoreHandler <- dataSetService.handlerFor(dataSet)
         volumeTracingId <- annotation.volumeTracingId.toFox
         (volumeTracing, data) <- dataStoreHandler.getVolumeTracing(volumeTracingId)
         skeletonTracingOpt <- Fox.runOptional(annotation.skeletonTracingId)(dataStoreHandler.getSkeletonTracing(_))

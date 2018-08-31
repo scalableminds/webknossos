@@ -7,6 +7,7 @@ import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
 import models.annotation.AnnotationSettings
 import models.team.TeamDAO
+import models.user.UserService
 import play.api.Play.current
 import play.api.i18n.Messages
 import play.api.i18n.Messages.Implicits._
@@ -26,21 +27,10 @@ case class TaskType(
                          isDeleted: Boolean = false
                          ) extends FoxImplicits {
 
-  def publicWrites(implicit ctx: DBAccessContext) = {
-    for {
-      team <- teamDAO.findOne(_team)(GlobalAccessContext) ?~> "team.notFound"
-    } yield Json.obj(
-      "id" -> _id.toString,
-      "summary" -> summary,
-      "description" -> description,
-      "teamId" -> team._id.toString,
-      "teamName" -> team.name,
-      "settings" -> Json.toJson(settings)
-    )
-  }
 }
 
-object TaskType {
+class TaskTypeService @Inject()(teamDAO: TeamDAO) {
+
   def fromForm(
                 summary: String,
                 description: String,
@@ -52,6 +42,19 @@ object TaskType {
       summary,
       description,
       settings)
+  }
+
+  def publicWrites(taskType: TaskType)(implicit ctx: DBAccessContext) = {
+    for {
+      team <- teamDAO.findOne(taskType._team)(GlobalAccessContext) ?~> "team.notFound"
+    } yield Json.obj(
+      "id" -> taskType._id.toString,
+      "summary" -> taskType.summary,
+      "description" -> taskType.description,
+      "teamId" -> team._id.toString,
+      "teamName" -> team.name,
+      "settings" -> Json.toJson(taskType.settings)
+    )
   }
 }
 

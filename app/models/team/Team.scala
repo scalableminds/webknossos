@@ -25,19 +25,20 @@ case class Team(
                   isDeleted: Boolean = false
                   ) extends FoxImplicits {
 
-  def organization: Fox[Organization] =
-    OrganizationDAO.findOne(_organization)(GlobalAccessContext)
-
   def couldBeAdministratedBy(user: User): Boolean =
     user._organization == this._organization
 
-  def publicWrites(implicit ctx: DBAccessContext): Fox[JsObject] =
+}
+
+class TeamService @Inject()(organizationDAO: OrganizationDAO) {
+
+  def publicWrites(team: Team)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
-      organization <- organization
+      organization <- organizationDAO.findOne(team._organization)(GlobalAccessContext)
     } yield {
       Json.obj(
-        "id" -> _id.toString,
-        "name" -> name,
+        "id" -> team._id.toString,
+        "name" -> team.name,
         "organization" -> organization.name
       )
     }

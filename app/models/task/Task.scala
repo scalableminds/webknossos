@@ -48,6 +48,7 @@ class TaskService @Inject()(annotationService: AnnotationService,
                             scriptDAO: ScriptDAO,
                             taskTypeDAO: TaskTypeDAO,
                             teamDAO: TeamDAO,
+                            taskTypeService: TaskTypeService,
                             projectDAO: ProjectDAO
                            ) extends FoxImplicits {
 
@@ -57,7 +58,7 @@ class TaskService @Inject()(annotationService: AnnotationService,
       dataSet <- dataSetDAO.findOne(annotationBase._dataSet)
       status <- statusOf(task).getOrElse(CompletionStatus(-1, -1, -1))
       taskType <- taskTypeDAO.findOne(task._taskType)(GlobalAccessContext)
-      taskTypeJs <- taskType.publicWrites
+      taskTypeJs <- taskTypeService.publicWrites(taskType)
       scriptInfo <- task._script.toFox.flatMap(sid => scriptDAO.findOne(sid)).futureBox
       scriptJs <- scriptInfo.toFox.flatMap(s => s.publicWrites).futureBox
       project <- projectDAO.findOne(task._project)

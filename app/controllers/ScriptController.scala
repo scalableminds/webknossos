@@ -14,6 +14,7 @@ import utils.ObjectId
 
 class ScriptController @Inject()(scriptDAO: ScriptDAO,
                                  taskDAO: TaskDAO,
+                                 scriptService: ScriptService,
                                  val messagesApi: MessagesApi) extends Controller with FoxImplicits {
 
   val scriptPublicReads =
@@ -26,7 +27,7 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
       for {
         _ <- bool2Fox(request.identity.isAdmin) ?~> "notAllowed"
         _ <- scriptDAO.insertOne(script)
-        js <- script.publicWrites ?~> "script.write.failed"
+        js <- scriptService.publicWrites(script) ?~> "script.write.failed"
       } yield {
         Ok(js)
       }
@@ -37,7 +38,7 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
     for {
       scriptIdValidated <- ObjectId.parse(scriptId)
       script <- scriptDAO.findOne(scriptIdValidated) ?~> "script.notFound"
-      js <- script.publicWrites ?~> "script.write.failed"
+      js <- scriptService.publicWrites(script) ?~> "script.write.failed"
     } yield {
       Ok(js)
     }
@@ -46,7 +47,7 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
   def list = SecuredAction.async { implicit request =>
     for {
       scripts <- scriptDAO.findAll
-      js <- Fox.serialCombined(scripts)(s => s.publicWrites)
+      js <- Fox.serialCombined(scripts)(s => scriptService.publicWrites(s))
     } yield {
       Ok(Json.toJson(js))
     }
@@ -60,7 +61,7 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
         _ <- bool2Fox(oldScript._owner == request.identity._id) ?~> "script.notOwner"
         updatedScript = scriptFromForm.copy(_id = oldScript._id)
         _ <- scriptDAO.updateOne(updatedScript)
-        js <- updatedScript.publicWrites ?~> "script.write.failed"
+        js <- scriptService.publicWrites(updatedScript) ?~> "script.write.failed"
       } yield {
         Ok(js)
       }

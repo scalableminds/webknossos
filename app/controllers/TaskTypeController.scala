@@ -4,6 +4,7 @@ import javax.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.AnnotationSettings
 import models.task._
+import models.user.UserService
 import oxalis.security.WebknossosSilhouette.SecuredAction
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
@@ -12,20 +13,24 @@ import play.api.libs.json.Reads._
 import play.api.libs.json._
 import utils.ObjectId
 
-class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO, taskDAO: TaskDAO, val messagesApi: MessagesApi) extends Controller with FoxImplicits{
+class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
+                                   taskDAO: TaskDAO,
+                                   taskTypeService: TaskTypeService,
+                                   userService: UserService,
+                                   val messagesApi: MessagesApi) extends Controller with FoxImplicits{
 
   val taskTypePublicReads =
     ((__ \ 'summary).read[String](minLength[String](2) or maxLength[String](50)) and
       (__ \ 'description).read[String] and
       (__ \ 'teamId).read[String] (ObjectId.stringObjectIdReads("teamId")) and
-      (__ \ 'settings).read[AnnotationSettings]) (TaskType.fromForm _)
+      (__ \ 'settings).read[AnnotationSettings]) (taskTypeService.fromForm _)
 
   def create = SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(taskTypePublicReads) { taskType =>
       for {
         _ <- userService.isTeamManagerOrAdminOf(request.identity, taskType._team)
         _ <- taskTypeDAO.insertOne(taskType)
-        js <- taskType.publicWrites
+        js <- taskTypeService.publicWrites(taskType)
       } yield Ok(js)
     }
   }
@@ -35,14 +40,14 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO, taskDAO: TaskDAO, v
       taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
       _ <- userService.isTeamManagerOrAdminOf(request.identity, taskType._team)
-      js <- taskType.publicWrites
+      js <- taskTypeService.publicWrites(taskType)
     } yield Ok(js)
   }
 
   def list = SecuredAction.async { implicit request =>
     for {
       taskTypes <- taskTypeDAO.findAll
-      js <- Fox.serialCombined(taskTypes)(t => t.publicWrites)
+      js <- Fox.serialCombined(taskTypes)(t => taskTypeService.publicWrites(t))
     } yield Ok(Json.toJson(js))
   }
 
@@ -55,7 +60,7 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO, taskDAO: TaskDAO, v
         _ <- userService.isTeamManagerOrAdminOf(request.identity, taskType._team)
         _ <- userService.isTeamManagerOrAdminOf(request.identity, updatedTaskType._team)
         _ <- taskTypeDAO.updateOne(updatedTaskType)
-        js <- updatedTaskType.publicWrites
+        js <- taskTypeService.publicWrites(updatedTaskType)
       } yield {
         JsonOk(js, Messages("taskType.editSuccess"))
       }

@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
-import models.user.UserDAO
+import models.user.{UserDAO, UserService}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
@@ -36,6 +36,24 @@ case class Script(
     }
   }
 
+}
+
+class ScriptService @Inject()(userDAO: UserDAO, userService: UserService) {
+
+  def publicWrites(script: Script): Fox[JsObject] = {
+    implicit val ctx = GlobalAccessContext
+    for {
+      owner <- userDAO.findOne(script._owner) ?~> "user.notFound"
+      ownerJs <- userService.compactWrites(owner)
+    } yield {
+      Json.obj(
+        "id" -> script._id.toString,
+        "name" -> script.name,
+        "gist" -> script.gist,
+        "owner" -> ownerJs
+      )
+    }
+  }
 }
 
 object Script {

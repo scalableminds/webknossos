@@ -15,6 +15,7 @@ import utils.ObjectId
 
 class TeamController @Inject()(teamDAO: TeamDAO,
                                userTeamRolesDAO: UserTeamRolesDAO,
+                               teamService: TeamService,
                                val messagesApi: MessagesApi) extends Controller {
 
   private def teamNameReads: Reads[String] =
@@ -23,7 +24,7 @@ class TeamController @Inject()(teamDAO: TeamDAO,
   def list = SecuredAction.async { implicit request =>
     for {
       allTeams <- teamDAO.findAllEditable
-      js <- Fox.serialCombined(allTeams)(_.publicWrites)
+      js <- Fox.serialCombined(allTeams)(t => teamService.publicWrites(t))
     } yield {
       Ok(Json.toJson(js))
     }
@@ -32,7 +33,7 @@ class TeamController @Inject()(teamDAO: TeamDAO,
   def listAllTeams = Action.async { implicit request =>
     for {
       allTeams <- teamDAO.findAll(GlobalAccessContext)
-      js <- Fox.serialCombined(allTeams)(_.publicWrites(GlobalAccessContext))
+      js <- Fox.serialCombined(allTeams)(t => teamService.publicWrites(t)(GlobalAccessContext))
     } yield {
       Ok(Json.toJson(js))
     }
@@ -55,7 +56,7 @@ class TeamController @Inject()(teamDAO: TeamDAO,
         _ <- bool2Fox(request.identity.isAdmin) ?~> "user.noAdmin"
         team = Team(ObjectId.generate, request.identity._organization, teamName)
         _ <- teamDAO.insertOne(team)
-        js <- team.publicWrites
+        js <- teamService.publicWrites(team)
       } yield {
         JsonOk(js, Messages("team.created"))
       }

@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, G
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableDataSource, InboxDataSourceLike => InboxDataSource}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
-import models.team.{OrganizationDAO, TeamDAO}
+import models.team.{OrganizationDAO, TeamDAO, TeamService}
 import models.user.User
 import net.liftweb.common.Full
 import oxalis.security.{CompactRandomIDGenerator, URLSharing, WebknossosSilhouette}
@@ -24,6 +24,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                dataSetLastUsedTimesDAO: DataSetLastUsedTimesDAO,
                                dataSetDataLayerDAO: DataSetDataLayerDAO,
                                teamDAO: TeamDAO,
+                               teamService: TeamService,
                                dataSetAllowedTeamsDAO: DataSetAllowedTeamsDAO,
                                val messagesApi: MessagesApi
                               ) extends FoxImplicits with LazyLogging {
@@ -208,7 +209,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     implicit val ctx = GlobalAccessContext
     for {
       teams <- allowedTeamsFor(dataSet._id)
-      teamsJs <- Fox.serialCombined(teams)(_.publicWrites)
+      teamsJs <- Fox.serialCombined(teams)(t => teamService.publicWrites(t))
       logoUrl <- logoUrlFor(dataSet)
       isEditable <- dataSet.isEditableBy(userOpt)
       lastUsedByUser <- lastUsedTimeFor(dataSet._id, userOpt)

@@ -6,7 +6,7 @@ import models.annotation.AnnotationDAO
 import models.binary.DataSetDAO
 import models.task.TaskDAO
 import models.user.time.{TimeSpan, TimeSpanService}
-import models.user.UserDAO
+import models.user.{UserDAO, UserService}
 import oxalis.security.WebknossosSilhouette.SecuredAction
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
@@ -17,6 +17,7 @@ import scala.concurrent.duration.Duration
 
 class StatisticsController @Inject()(timeSpanService: TimeSpanService,
                                      userDAO: UserDAO,
+                                     userService: UserService,
                                      dataSetDAO: DataSetDAO,
                                      taskDAO: TaskDAO,
                                      annotationDAO: AnnotationDAO,
@@ -69,7 +70,7 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
       data = usersWithTimes.sortBy(-_._2.map(_._2.toMillis).sum).take(limit)
       json <- Fox.combined(data.map {
         case (user, times) => for {
-          userJs <- user.compactWrites
+          userJs <- userService.compactWrites(user)
         } yield {Json.obj(
           "user" -> userJs,
           "tracingTimes" -> intervalTracingTimeJson(times)

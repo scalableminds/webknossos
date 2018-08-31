@@ -1,8 +1,11 @@
 package oxalis.thirdparty
 
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
+import javax.inject.Inject
+import models.team.OrganizationDAO
 import models.user.User
 import play.api.Play
 import play.api.Play.current
@@ -14,7 +17,7 @@ import utils.WkConf
 import scala.concurrent.{Future, Promise}
 import scala.util._
 
-object BrainTracing extends LazyLogging with FoxImplicits {
+class BrainTracing @Inject()(organizationDAO: OrganizationDAO) extends LazyLogging with FoxImplicits {
   val URL = "http://braintracing.org/"
   val CREATE_URL = URL + "oxalis_create_user.php"
   val LOGTIME_URL = URL + "oxalis_add_hours.php"
@@ -24,7 +27,7 @@ object BrainTracing extends LazyLogging with FoxImplicits {
 
   def registerIfNeeded(user: User, password: String): Fox[Option[String]] =
     for {
-      organization <- user.organization
+      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext) ?~> "organization.notFound"
       result <- (if (organization.name == "Connectomics department" && WkConf.Braintracing.active) register(user, password).toFox.map(Some(_)) else Fox.successful(None))
     } yield result
 

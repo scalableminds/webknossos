@@ -12,8 +12,7 @@ import models.user.{User, UserService}
 import models.team.OrganizationDAO
 import net.liftweb.common.Full
 import oxalis.mail.DefaultMails
-import oxalis.thirdparty.BrainTracing.Mailer
-import play.api.Play
+import oxalis.thirdparty.BrainTracing
 import play.api.libs.concurrent.Execution.Implicits._
 import utils.{ObjectId, WkConf}
 
@@ -24,7 +23,9 @@ import scala.concurrent.duration._
 class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
                                 userService: UserService,
                                 taskDAO: TaskDAO,
+                                brainTracing: BrainTracing,
                                 projectDAO: ProjectDAO,
+                                organizationDAO: OrganizationDAO,
                                 timeSpanDAO: TimeSpanDAO) extends FoxImplicits with LazyLogging {
   private val MaxTracingPause =
     WkConf.Oxalis.User.Time.tracingPauseInSeconds.toMillis
@@ -176,10 +177,10 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       project <- projectDAO.findOne(task._project)
       annotationTime <- annotation.tracingTime ?~> "no annotation.tracingTime"
       timeLimit <- project.expectedTime ?~> "no project.expectedTime"
-      organization <- user.organization
+      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
     } yield {
       if (annotationTime >= timeLimit && annotationTime - time < timeLimit) {
-        Mailer ! Send(DefaultMails.overLimitMail(
+        brainTracing.Mailer ! Send(DefaultMails.overLimitMail(
           user,
           project.name,
           task._id.toString,

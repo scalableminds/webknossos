@@ -13,14 +13,16 @@ import play.api.libs.json._
 import play.api.mvc.Action
 import utils.ObjectId
 
-class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller {
+class TeamController @Inject()(teamDAO: TeamDAO,
+                               userTeamRolesDAO: UserTeamRolesDAO,
+                               val messagesApi: MessagesApi) extends Controller {
 
   private def teamNameReads: Reads[String] =
     (__ \ "name").read[String]
 
   def list = SecuredAction.async { implicit request =>
     for {
-      allTeams <- TeamDAO.findAllEditable
+      allTeams <- teamDAO.findAllEditable
       js <- Fox.serialCombined(allTeams)(_.publicWrites)
     } yield {
       Ok(Json.toJson(js))
@@ -29,7 +31,7 @@ class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller 
 
   def listAllTeams = Action.async { implicit request =>
     for {
-      allTeams <- TeamDAO.findAll(GlobalAccessContext)
+      allTeams <- teamDAO.findAll(GlobalAccessContext)
       js <- Fox.serialCombined(allTeams)(_.publicWrites(GlobalAccessContext))
     } yield {
       Ok(Json.toJson(js))
@@ -39,9 +41,9 @@ class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller 
   def delete(id: String) = SecuredAction.async { implicit request =>
     for {
       teamIdValidated <- ObjectId.parse(id)
-      team <- TeamDAO.findOne(teamIdValidated) ?~> "team.notFound"
-      _ <- TeamDAO.deleteOne(teamIdValidated)
-      _ <- UserTeamRolesDAO.removeTeamFromAllUsers(teamIdValidated)
+      team <- teamDAO.findOne(teamIdValidated) ?~> "team.notFound"
+      _ <- teamDAO.deleteOne(teamIdValidated)
+      _ <- userTeamRolesDAO.removeTeamFromAllUsers(teamIdValidated)
     } yield {
       JsonOk(Messages("team.deleted"))
     }
@@ -52,7 +54,7 @@ class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller 
       for {
         _ <- bool2Fox(request.identity.isAdmin) ?~> "user.noAdmin"
         team = Team(ObjectId.generate, request.identity._organization, teamName)
-        _ <- TeamDAO.insertOne(team)
+        _ <- teamDAO.insertOne(team)
         js <- team.publicWrites
       } yield {
         JsonOk(js, Messages("team.created"))

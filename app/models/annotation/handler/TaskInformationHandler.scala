@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
 import models.annotation._
 import models.task.TaskDAO
-import models.user.User
+import models.user.{User, UserService}
 import play.api.libs.concurrent.Execution.Implicits._
 import models.annotation.AnnotationState._
 import models.project.ProjectDAO
@@ -13,6 +13,7 @@ import utils.ObjectId
 
 class TaskInformationHandler @Inject()(taskDAO: TaskDAO,
                                        annotationService: AnnotationService,
+                                       userService: UserService,
                                        projectDAO: ProjectDAO) extends AnnotationInformationHandler with FoxImplicits {
 
   override def provideAnnotation(taskId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
@@ -38,7 +39,7 @@ class TaskInformationHandler @Inject()(taskDAO: TaskDAO,
         override def allowAccess(userOption: Option[User]): Fox[Boolean] =
           (for {
             user <- userOption.toFox
-            allowed <- user.isTeamManagerOrAdminOf(project._team)
+            allowed <- userService.isTeamManagerOrAdminOf(user, project._team)
           } yield allowed).orElse(Fox.successful(false))
       }
     }

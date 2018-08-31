@@ -40,6 +40,7 @@ class InitialDataService @Inject()(userService: UserService,
                                    userExperiencesDAO: UserExperiencesDAO,
                                    userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
                                    taskTypeDAO: TaskTypeDAO,
+                                   dataStoreDAO: DataStoreDAO,
                                    teamDAO: TeamDAO,
                                    projectDAO: ProjectDAO,
                                    organizationDAO: OrganizationDAO,
@@ -175,9 +176,9 @@ Samplecountry
 
   def insertLocalDataStoreIfEnabled: Fox[Any] = {
     if (conf.Datastore.enabled) {
-      DataStoreDAO.findOneByName("localhost").futureBox.map { maybeStore =>
+      dataStoreDAO.findOneByName("localhost").futureBox.map { maybeStore =>
         if (maybeStore.isEmpty) {
-          DataStoreDAO.insertOne(DataStore("localhost", conf.Http.uri, conf.Datastore.key))
+          dataStoreDAO.insertOne(DataStore("localhost", conf.Http.uri, conf.Datastore.key))
         }
       }
     } else Fox.successful(())

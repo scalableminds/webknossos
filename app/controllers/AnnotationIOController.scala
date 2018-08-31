@@ -11,7 +11,7 @@ import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationState._
 import models.annotation.nml.{NmlService, NmlWriter}
 import models.annotation._
-import models.binary.{DataSet, DataSetDAO}
+import models.binary.{DataSet, DataSetDAO, DataSetService}
 import models.project.ProjectDAO
 import models.task._
 import models.user._
@@ -30,6 +30,8 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
                                        annotationDAO: AnnotationDAO,
                                        projectDAO: ProjectDAO,
                                        dataSetDAO: DataSetDAO,
+                                       dataSetService: DataSetService,
+                                       userService: UserService,
                                        taskDAO: TaskDAO,
                                        taskTypeDAO: TaskTypeDAO,
                                        annotationService: AnnotationService,
@@ -184,7 +186,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
     for {
       projectIdValidated <- ObjectId.parse(projectId)
       project <- projectDAO.findOne(projectIdValidated) ?~> Messages("project.notFound", projectId)
-      _ <- Fox.assertTrue(user.isTeamManagerOrAdminOf(project._team))
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, project._team))
       annotations <- annotationDAO.findAllFinishedForProject(projectIdValidated)
       zip <- annotationService.zipAnnotations(annotations, project.name + "_nmls.zip")
     } yield {
@@ -201,7 +203,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
     for {
       task <- taskDAO.findOne(ObjectId(taskId)).toFox ?~> Messages("task.notFound")
       project <- projectDAO.findOne(task._project) ?~> Messages("project.notFound")
-      _ <- ensureTeamAdministration(user, project._team) ?~> Messages("notAllowed")
+      _ <- userService.isTeamManagerOrAdminOf(user, project._team) ?~> Messages("notAllowed")
       zip <- createTaskZip(task)
     } yield Ok.sendFile(zip.file)
   }
@@ -218,7 +220,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
     for {
       taskTypeIdValidated <- ObjectId.parse(taskTypeId)
       tasktype <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> Messages("taskType.notFound")
-      _ <- ensureTeamAdministration(user, tasktype._team) ?~> Messages("notAllowed")
+      _ <- userService.isTeamManagerOrAdminOf(user, tasktype._team) ?~> Messages("notAllowed")
       zip <- createTaskTypeZip(tasktype)
     } yield Ok.sendFile(zip.file)
   }

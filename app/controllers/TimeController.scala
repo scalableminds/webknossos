@@ -23,7 +23,7 @@ class TimeController @Inject()(userService: UserService,
   def getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]) = SecuredAction.async { implicit request =>
     for {
       users <- userDAO.findAll
-      filteredUsers <- Fox.filter(users)(user => request.identity.isTeamManagerOrAdminOf(user)) //rather Admin than TeamManager
+      filteredUsers <- Fox.filter(users)(user => userService.isTeamManagerOrAdminOf(request.identity, user)) //rather Admin than TeamManager
       js <- loggedTimeForUserListByMonth(filteredUsers, year, month, startDay, endDay)
     } yield {
       Ok(js)
@@ -34,7 +34,7 @@ class TimeController @Inject()(userService: UserService,
   def getWorkingHoursOfUsers(userString: String, year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]) = SecuredAction.async { implicit request =>
     for {
       users <- Fox.combined(userString.split(",").toList.map(email => userService.findOneByEmail(email))) ?~> "user.email.invalid"
-      _ <- Fox.combined(users.map(user => Fox.assertTrue(request.identity.isTeamManagerOrAdminOf(user)))) ?~> "user.notAuthorised"
+      _ <- Fox.combined(users.map(user => Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, user)))) ?~> "user.notAuthorised"
       js <- loggedTimeForUserListByMonth(users, year, month, startDay, endDay)
     } yield {
       Ok(js)
@@ -45,7 +45,7 @@ class TimeController @Inject()(userService: UserService,
     for {
       userIdValidated <- ObjectId.parse(userId)
       user <- userService.findOneById(userIdValidated, false) ?~> "user.notFound"
-      _ <- Fox.assertTrue(request.identity.isTeamManagerOrAdminOf(user)) ?~> "user.notAuthorised"
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, user)) ?~> "user.notAuthorised"
       js <- loggedTimeForUserListByTimestamp(user,startDate, endDate)
     } yield {
       Ok(js)
@@ -91,7 +91,7 @@ class TimeController @Inject()(userService: UserService,
 
   def getUserHours(user: User, startDate: Calendar, endDate: Calendar)(implicit request: SecuredRequest[AnyContent]): Fox[JsObject] = {
     for {
-      userJs <- user.compactWrites
+      userJs <- userService.compactWrites(user)
       timeJs <- timeSpanDAO.findAllByUserWithTask(user._id,  Some(startDate.getTimeInMillis), Some(endDate.getTimeInMillis))
     } yield {
       Json.obj(

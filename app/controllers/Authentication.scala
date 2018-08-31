@@ -103,6 +103,7 @@ class Authentication @Inject()(
                                 userService: UserService,
                                 dataStoreDAO: DataStoreDAO,
                                 teamDAO: TeamDAO,
+                                brainTracing: BrainTracing,
                                 organizationDAO: OrganizationDAO,
                                 userDAO: UserDAO
                               )
@@ -168,7 +169,7 @@ class Authentication @Inject()(
                 organization <- organizationDAO.findOneByName(signUpData.organization)(GlobalAccessContext) ?~> Messages("organization.notFound", signUpData.organization)
                 user <- userService.insert(organization._id, email, firstName, lastName, automaticUserActivation, isAdminOnRegistration,
                   loginInfo, passwordHasher.hash(signUpData.password)) ?~> "user.creation.failed"
-                brainDBResult <- BrainTracing.registerIfNeeded(user, signUpData.password).toFox
+                brainDBResult <- brainTracing.registerIfNeeded(user, signUpData.password).toFox
               } yield {
                 Mailer ! Send(DefaultMails.registerMail(user.name, user.email, brainDBResult))
                 Mailer ! Send(DefaultMails.registerAdminNotifyerMail(user, user.email, brainDBResult, organization))

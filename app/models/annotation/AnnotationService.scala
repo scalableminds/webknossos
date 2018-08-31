@@ -18,11 +18,12 @@ import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
 import models.annotation.handler.SavedTracingInformationHandler
 import models.annotation.nml.NmlWriter
+import models.basics.Implicits
 import models.binary._
 import models.project.ProjectDAO
 import models.task.{Task, TaskTypeDAO}
 import models.team.OrganizationDAO
-import models.user.{User, UserDAO}
+import models.user.{User, UserDAO, UserService}
 import utils.ObjectId
 import play.api.i18n.Messages
 import play.api.Play.current
@@ -42,26 +43,28 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
                                   taskTypeDAO: TaskTypeDAO,
                                   dataSetService: DataSetService,
                                   dataSetDAO: DataSetDAO,
+                                  userService: UserService,
                                   projectDAO: ProjectDAO,
                                   organizationDAO: OrganizationDAO,
                                   nmlWriter: NmlWriter)
   extends BoxImplicits
   with FoxImplicits
+  with Implicits
   with TextUtils
   with ProtoGeometryImplicits
   with LazyLogging {
 
   private def selectSuitableTeam(user: User, dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[ObjectId] = {
     (for {
-      userTeamIds <- user.teamIds
-      datasetAllowedTeamIds <- dataSet.allowedTeamIds
+      userTeamIds <- userService.teamIdsFor(user._id)
+      datasetAllowedTeamIds <- dataSetService.allowedTeamIdsFor(dataSet._id)
     } yield {
       val selectedTeamOpt = datasetAllowedTeamIds.intersect(userTeamIds).headOption
       selectedTeamOpt match {
         case Some(selectedTeam) => Fox.successful(selectedTeam)
         case None =>
           for {
-            _ <- Fox.assertTrue(user.isTeamManagerOrAdminOfOrg(user._organization))
+            _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOfOrg(user, user._organization))
             organizationTeamId <- organizationDAO.findOrganizationTeamId(user._organization)
           } yield organizationTeamId
       }
@@ -176,7 +179,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
 
   def countOpenNonAdminTasks(user: User)(implicit ctx: DBAccessContext) =
     for {
-      teamManagerTeamIds <- user.teamManagerTeamIds
+      teamManagerTeamIds <- userService.teamManagerTeamIdsFor(user._id)
       result <- annotationDAO.countActiveAnnotationsFor(user._id, AnnotationType.Task, teamManagerTeamIds)
     } yield result
 

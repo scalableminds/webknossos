@@ -55,7 +55,7 @@ object AnnotationRestrictions extends FoxImplicits{
         else
           (for {
             user <- option2Fox(userOption)
-            isTeamManagerOrAdminOfTeam <- user.isTeamManagerOrAdminOf(annotation._team)
+            isTeamManagerOrAdminOfTeam <- userService.isTeamManagerOrAdminOf(user, annotation._team)
           } yield {
             annotation._user == user._id || isTeamManagerOrAdminOfTeam
           }).orElse(Fox.successful(false))
@@ -71,7 +71,7 @@ object AnnotationRestrictions extends FoxImplicits{
       override def allowFinish(user: Option[User]) = {
         (for {
           u <- option2Fox(user)
-          isTeamManagerOrAdminOfTeam <- u.isTeamManagerOrAdminOf(annotation._team)
+          isTeamManagerOrAdminOfTeam <- userService.isTeamManagerOrAdminOf(user, annotation._team)
         } yield {
           (annotation._user == u._id || isTeamManagerOrAdminOfTeam) && !(annotation.state == Finished)
         }).orElse(Fox.successful(false))

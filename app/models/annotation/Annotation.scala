@@ -94,7 +94,7 @@ case class Annotation(
       taskJson <- task.flatMap(_.publicWrites).getOrElse(JsNull)
       dataSet <- dataSet
       user <- user
-      userJson <- user.compactWrites
+      userJson <- userService.compactWrites(user)
       settings <- findSettings
       annotationRestrictions <- AnnotationRestrictions.writeAsJson(composeRestrictions(restrictions, readOnly), requestingUser)
       dataStore <- dataStoreDAO.findOneByName(dataSet._dataStore.trim) ?~> Messages("datastore.notFound")

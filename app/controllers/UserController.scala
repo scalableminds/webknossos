@@ -36,7 +36,7 @@ class UserController @Inject()(userService: UserService,
 
   def current = SecuredAction.async { implicit request =>
     for {
-      userJs <- request.identity.publicWrites(request.identity)
+      userJs <- userService.publicWrites(request.identity, request.identity)
     } yield Ok(userJs)
   }
 
@@ -44,8 +44,8 @@ class UserController @Inject()(userService: UserService,
     for {
       userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
       user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
-      _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> "notAllowed"
-      js <- user.publicWrites(request.identity)
+      _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed"
+      js <- userService.publicWrites(user, request.identity)
     } yield Ok(js)
   }
 
@@ -71,7 +71,7 @@ class UserController @Inject()(userService: UserService,
     for {
       userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
       user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
-      _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> "notAllowed"
+      _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed"
       loggedTimeAsMap <- timeSpanService.loggedTimeOfUser(user, TimeSpan.groupByMonth)
     } yield {
       JsonOk(Json.obj("loggedTime" ->
@@ -91,7 +91,7 @@ class UserController @Inject()(userService: UserService,
       for {
         userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
         user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
-        _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> "notAllowed"
+        _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed"
         result <- timeSpanService.loggedTimeOfUser(user, groupByAnnotationAndDay, Some(request.body.start), Some(request.body.end))
       } yield {
         Json.obj(
@@ -118,7 +118,7 @@ class UserController @Inject()(userService: UserService,
     for {
       userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
       user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
-      _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> "notAllowed"
+      _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed"
       annotations <- annotationDAO.findAllFor(userIdValidated, isFinished, AnnotationType.Explorational, limit.getOrElse(defaultAnnotationLimit))
       jsonList <- Fox.serialCombined(annotations)(_.compactWrites)
     } yield {
@@ -130,7 +130,7 @@ class UserController @Inject()(userService: UserService,
     for {
       userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
       user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
-      _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> "notAllowed"
+      _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed"
       annotations <- annotationDAO.findAllFor(userIdValidated, isFinished, AnnotationType.Task, limit.getOrElse(defaultAnnotationLimit))
       jsonList <- Fox.serialCombined(annotations)(_.publicWrites(Some(request.identity)))
     } yield {
@@ -152,13 +152,13 @@ class UserController @Inject()(userService: UserService,
 
   def list = SecuredAction.async { implicit request =>
     UsingFilters(
-      Filter("isEditable", (value: Boolean, el: User) => for {isEditable <- el.isEditableBy(request.identity)} yield isEditable == value),
+      Filter("isEditable", (value: Boolean, el: User) => for {isEditable <- userService.isEditableBy(el, request.identity)} yield isEditable == value),
       Filter("isAdmin", (value: Boolean, el: User) => Fox.successful(el.isAdmin == value))
     ) { filter =>
       for {
         users <- userDAO.findAll
         filtered <- filter.applyOn(users)
-        js <- Fox.serialCombined(filtered.sortBy(_.lastName.toLowerCase))(u => u.publicWrites(request.identity))
+        js <- Fox.serialCombined(filtered.sortBy(_.lastName.toLowerCase))(u => userService.publicWrites(u, request.identity))
       } yield {
         Ok(Json.toJson(js))
       }
@@ -199,19 +199,19 @@ class UserController @Inject()(userService: UserService,
         for {
           userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
           user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
-          _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> "notAllowed"
+          _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed"
           _ <- bool2Fox(checkAdminOnlyUpdates(user, isActive, isAdmin, email)(issuingUser)) ?~> "notAllowed"
           teams <- Fox.combined(assignedMemberships.map(t => teamDAO.findOne(t.teamId)(GlobalAccessContext) ?~> Messages("team.notFound")))
-          oldTeamMemberships <- user.teamMemberships
-          teamsWithoutUpdate <- Fox.filterNot(oldTeamMemberships)(t => issuingUser.isTeamManagerOrAdminOf(t.teamId))
+          oldTeamMemberships <- userService.teamMembershipsFor(user._id)
+          teamsWithoutUpdate <- Fox.filterNot(oldTeamMemberships)(t => userService.isTeamManagerOrAdminOf(issuingUser, t.teamId))
           assignedMembershipWTeams = assignedMemberships.zip(teams)
-          teamsWithUpdate <- Fox.filter(assignedMembershipWTeams)(t => issuingUser.isTeamManagerOrAdminOf(t._1.teamId))
+          teamsWithUpdate <- Fox.filter(assignedMembershipWTeams)(t => userService.isTeamManagerOrAdminOf(issuingUser, t._1.teamId))
           _ <- ensureProperTeamAdministration(user, teamsWithUpdate)
           trimmedExperiences = experiences.map { case (key, value) => key.trim -> value }
           updatedTeams = teamsWithUpdate.map(_._1) ++ teamsWithoutUpdate
           _ <- userService.update(user, firstName.trim, lastName.trim, email, isActive, isAdmin, updatedTeams, trimmedExperiences)
           updatedUser <- userDAO.findOne(userIdValidated)
-          updatedJs <- updatedUser.publicWrites(request.identity)
+          updatedJs <- userService.publicWrites(updatedUser, request.identity)
         } yield {
           Ok(updatedJs)
         }

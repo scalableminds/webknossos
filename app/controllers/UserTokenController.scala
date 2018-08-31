@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.services.{AccessMode, AccessResourceType, UserAccessAnswer, UserAccessRequest}
 import models.annotation._
 import models.binary.{DataSetDAO, DataStoreHandler}
-import models.user.User
+import models.user.{User, UserService}
 import net.liftweb.common.{Box, Full}
 import oxalis.security.WebknossosSilhouette.UserAwareAction
 import oxalis.security.{TokenType, URLSharing, WebknossosSilhouette}
@@ -15,10 +15,14 @@ import play.api.libs.json.Json
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class UserTokenController @Inject()(val messagesApi: MessagesApi)
+class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
+                                    annotationDAO: AnnotationDAO,
+                                    userService: UserService,
+                                    annotationStore: AnnotationStore,
+                                    annotationInformationProvider: AnnotationInformationProvider,
+                                    val messagesApi: MessagesApi)
   extends Controller
-    with WKDataStoreActionHelper
-    with AnnotationInformationProvider {
+    with WKDataStoreActionHelper {
 
   val bearerTokenService = WebknossosSilhouette.environment.combinedAuthenticatorService.tokenAuthenticatorService
 
@@ -64,7 +68,7 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
     //Note: reading access is ensured in findOneBySourceName, depending on the implicit DBAccessContext
 
     def tryRead: Fox[UserAccessAnswer] = {
-      DataSetDAO.findOneByName(dataSourceName).futureBox map {
+      dataSetDAO.findOneByName(dataSourceName).futureBox map {
         case Full(_) => UserAccessAnswer(true)
         case _ => UserAccessAnswer(false, Some("No read access on dataset"))
       }
@@ -72,9 +76,9 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
 
     def tryWrite: Fox[UserAccessAnswer] = {
       for {
-        dataset <- DataSetDAO.findOneByName(dataSourceName) ?~> "datasource.notFound"
+        dataset <- dataSetDAO.findOneByName(dataSourceName) ?~> "datasource.notFound"
         user <- userBox.toFox
-        isAllowed <- user.isTeamManagerOrAdminOfOrg(dataset._organization)
+        isAllowed <- userService.isTeamManagerOrAdminOfOrg(user, dataset._organization)
       } yield {
         UserAccessAnswer(isAllowed)
       }
@@ -84,7 +88,7 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
       userBox match {
         case Full(user) =>
           for {
-            isAllowed <- user.isTeamManagerOrAdminOfOrg(user._organization)
+            isAllowed <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
           } yield UserAccessAnswer(isAllowed)
         case _ => Fox.successful(UserAccessAnswer(false, Some("invalid access token")))
       }
@@ -101,13 +105,13 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
   private def handleTracingAccess(tracingId: String, mode: AccessMode.Value, userBox: Box[User])(implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
 
     def findAnnotationForTracing(tracingId: String): Fox[Annotation] = {
-      val annotationFox = AnnotationDAO.findOneByTracingId(tracingId)
+      val annotationFox = annotationDAO.findOneByTracingId(tracingId)
       for {
         annotationBox <- annotationFox.futureBox
       } yield {
         annotationBox match {
           case Full(_) => annotationBox
-          case _ => AnnotationStore.findCachedByTracingId(tracingId)
+          case _ => annotationStore.findCachedByTracingId(tracingId)
         }
       }
     }
@@ -122,7 +126,7 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
 
     for {
       annotation <- findAnnotationForTracing(tracingId)
-      restrictions <- restrictionsFor(AnnotationIdentifier(annotation.typ, annotation._id))
+      restrictions <- annotationInformationProvider.restrictionsFor(AnnotationIdentifier(annotation.typ, annotation._id))
       allowed <- checkRestrictions(restrictions)
     } yield {
       if (allowed) UserAccessAnswer(true) else UserAccessAnswer(false, Some(s"No ${mode.toString} access to tracing"))

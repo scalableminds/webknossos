@@ -50,7 +50,7 @@ case class DataSet(
     userOpt match {
       case Some(user) =>
         for {
-          isTeamManagerInOrg <- user.isTeamManagerInOrg(_organization)
+          isTeamManagerInOrg <- userService.isTeamManagerInOrg(user, _organization)
         } yield (user.isAdminOf(_organization) || isTeamManagerInOrg)
       case _ => Fox.successful(false)
     }

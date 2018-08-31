@@ -12,12 +12,15 @@ import play.api.mvc.Action
 import play.api.Play.current
 import utils.WkConf
 
-class OrganizationController @Inject()(val messagesApi: MessagesApi) extends Controller with FoxImplicits {
+class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
+                                       organizationService: OrganizationService,
+                                       val messagesApi: MessagesApi
+                                      ) extends Controller with FoxImplicits {
 
   def listAllOrganizations = Action.async { implicit request =>
     for {
-      allOrgs <- OrganizationDAO.findAll(GlobalAccessContext) ?~> "organization.list.failed"
-      js <- Fox.serialCombined(allOrgs)(o => o.publicWrites(GlobalAccessContext))
+      allOrgs <- organizationDAO.findAll(GlobalAccessContext) ?~> "organization.list.failed"
+      js <- Fox.serialCombined(allOrgs)(o => organizationService.publicWrites(o)(GlobalAccessContext))
     } yield {
       Ok(Json.toJson(js))
     }

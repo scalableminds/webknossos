@@ -7,7 +7,7 @@ import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import models.binary._
-import models.team.TeamDAO
+import models.team.{OrganizationDAO, TeamDAO}
 import models.user.UserService
 import oxalis.security.URLSharing
 import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareAction}
@@ -29,7 +29,9 @@ class DataSetController @Inject()(userService: UserService,
                                   dataSetService: DataSetService,
                                   dataSetAllowedTeamsDAO: DataSetAllowedTeamsDAO,
                                   dataSetDataLayerDAO: DataSetDataLayerDAO,
+                                  dataStoreDAO: DataStoreDAO,
                                   dataSetLastUsedTimesDAO: DataSetLastUsedTimesDAO,
+                                  organizationDAO: OrganizationDAO,
                                   teamDAO: TeamDAO,
                                   dataSetDAO: DataSetDAO,
                                   val messagesApi: MessagesApi) extends Controller {
@@ -89,11 +91,11 @@ class DataSetController @Inject()(userService: UserService,
       dataStoreName <- (body \ "dataStoreName").asOpt[String].toFox ?~> "dataSet.dataStore.missing"
       dataSetName <- (body \ "dataSetName").asOpt[String] ?~> "dataSet.dataSet.missing"
       _ <- bool2Fox(request.identity.isAdmin) ?~> "user.noAdmin"
-      noDataStoreBox <- DataStoreDAO.findOneByName(dataStoreName).reverse.futureBox
+      noDataStoreBox <- dataStoreDAO.findOneByName(dataStoreName).reverse.futureBox
       _ <- Fox.runOptional(noDataStoreBox)(_ => dataSetService.addForeignDataStore(dataStoreName, url))
       _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> "dataSet.import.impossible.name"
       _ <- dataSetDAO.findOneByName(dataSetName).reverse ?~> "dataSet.name.alreadyTaken"
-      organizationName <- request.identity.organization.map(_.name)
+      organizationName <- organizationDAO.findOne(request.identity._organization)(GlobalAccessContext).map(_.name)
       _ <- dataSetService.addForeignDataSet(dataStoreName, dataSetName, organizationName)
     } yield {
       Ok
@@ -110,7 +112,7 @@ class DataSetController @Inject()(userService: UserService,
         for {
           dataSets <- dataSetDAO.findAll ?~> "dataSet.list.failed"
           filtered <- filter.applyOn(dataSets)
-          js <- Fox.serialCombined(filtered)(d => d.publicWrites(request.identity))
+          js <- Fox.serialCombined(filtered)(d => dataSetService.publicWrites(d, request.identity))
         } yield {
           Ok(Json.toJson(js))
         }
@@ -120,9 +122,9 @@ class DataSetController @Inject()(userService: UserService,
   def accessList(dataSetName: String) = SecuredAction.async { implicit request =>
     for {
       dataSet <- dataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
-      allowedTeams <- dataSet.allowedTeamIds
+      allowedTeams <- dataSetService.allowedTeamIdsFor(dataSet._id)
       users <- userService.findByTeams(allowedTeams)
-      usersJs <- Fox.serialCombined(users.distinct)(_.compactWrites)
+      usersJs <- Fox.serialCombined(users.distinct)(u => userService.compactWrites(u))
     } yield {
       Ok(Json.toJson(usersJs))
     }
@@ -133,7 +135,7 @@ class DataSetController @Inject()(userService: UserService,
     for {
       dataSet <- dataSetDAO.findOneByName(dataSetName)(ctx) ?~> Messages("dataSet.notFound", dataSetName)
       _ <- Fox.runOptional(request.identity)(user => dataSetLastUsedTimesDAO.updateForDataSetAndUser(dataSet._id, user._id))
-      js <- dataSet.publicWrites(request.identity)
+      js <- dataSetService.publicWrites(dataSet, request.identity)
     } yield {
       Ok(Json.toJson(js))
     }
@@ -147,7 +149,7 @@ class DataSetController @Inject()(userService: UserService,
         _ <- Fox.assertTrue(dataSet.isEditableBy(request.identity)) ?~> "notAllowed"
         _ <- dataSetDAO.updateFields(dataSet._id, description, displayName, isPublic)
         updated <- dataSetDAO.findOneByName(dataSetName)
-        js <- updated.publicWrites(Some(request.identity))
+        js <- dataSetService.publicWrites(updated, Some(request.identity))
       } yield {
         Ok(Json.toJson(js))
       }
@@ -171,7 +173,7 @@ class DataSetController @Inject()(userService: UserService,
         _ <- Fox.assertTrue(dataSet.isEditableBy(request.identity)) ?~> "notAllowed"
         teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.parse(_))
         userTeams <- teamDAO.findAllEditable
-        oldAllowedTeams <- dataSet.allowedTeamIds
+        oldAllowedTeams <- dataSetService.allowedTeamIdsFor(dataSet._id)
         teamsWithoutUpdate = oldAllowedTeams.filterNot(t => userTeams.exists(_._id == t))
         teamsWithUpdate = teamIdsValidated.filter(t => userTeams.exists(_._id == t))
         _ <- dataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(dataSet._id, (teamsWithUpdate ++ teamsWithoutUpdate).distinct)

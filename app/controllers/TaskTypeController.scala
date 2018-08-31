@@ -12,7 +12,7 @@ import play.api.libs.json.Reads._
 import play.api.libs.json._
 import utils.ObjectId
 
-class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Controller with FoxImplicits{
+class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO, taskDAO: TaskDAO, val messagesApi: MessagesApi) extends Controller with FoxImplicits{
 
   val taskTypePublicReads =
     ((__ \ 'summary).read[String](minLength[String](2) or maxLength[String](50)) and
@@ -23,8 +23,8 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
   def create = SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(taskTypePublicReads) { taskType =>
       for {
-        _ <- ensureTeamAdministration(request.identity, taskType._team)
-        _ <- TaskTypeDAO.insertOne(taskType)
+        _ <- userService.isTeamManagerOrAdminOf(request.identity, taskType._team)
+        _ <- taskTypeDAO.insertOne(taskType)
         js <- taskType.publicWrites
       } yield Ok(js)
     }
@@ -33,15 +33,15 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
   def get(taskTypeId: String) = SecuredAction.async { implicit request =>
     for {
       taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
-      taskType <- TaskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
-      _ <- ensureTeamAdministration(request.identity, taskType._team)
+      taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
+      _ <- userService.isTeamManagerOrAdminOf(request.identity, taskType._team)
       js <- taskType.publicWrites
     } yield Ok(js)
   }
 
   def list = SecuredAction.async { implicit request =>
     for {
-      taskTypes <- TaskTypeDAO.findAll
+      taskTypes <- taskTypeDAO.findAll
       js <- Fox.serialCombined(taskTypes)(t => t.publicWrites)
     } yield Ok(Json.toJson(js))
   }
@@ -50,11 +50,11 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
     withJsonBodyUsing(taskTypePublicReads) { taskTypeFromForm =>
       for {
         taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
-        taskType <- TaskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
+        taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
         updatedTaskType = taskTypeFromForm.copy(_id = taskType._id)
-        _ <- ensureTeamAdministration(request.identity, taskType._team)
-        _ <- ensureTeamAdministration(request.identity, updatedTaskType._team)
-        _ <- TaskTypeDAO.updateOne(updatedTaskType)
+        _ <- userService.isTeamManagerOrAdminOf(request.identity, taskType._team)
+        _ <- userService.isTeamManagerOrAdminOf(request.identity, updatedTaskType._team)
+        _ <- taskTypeDAO.updateOne(updatedTaskType)
         js <- updatedTaskType.publicWrites
       } yield {
         JsonOk(js, Messages("taskType.editSuccess"))
@@ -65,10 +65,10 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
   def delete(taskTypeId: String) = SecuredAction.async { implicit request =>
     for {
       taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
-      taskType <- TaskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
-      _ <- ensureTeamAdministration(request.identity, taskType._team)
-      _ <- TaskTypeDAO.deleteOne(taskTypeIdValidated) ?~> "taskType.deleteFailure"
-      _ <- TaskDAO.removeAllWithTaskTypeAndItsAnnotations(taskTypeIdValidated) ?~> "taskType.deleteFailure"
+      taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
+      _ <- userService.isTeamManagerOrAdminOf(request.identity, taskType._team)
+      _ <- taskTypeDAO.deleteOne(taskTypeIdValidated) ?~> "taskType.deleteFailure"
+      _ <- taskDAO.removeAllWithTaskTypeAndItsAnnotations(taskTypeIdValidated) ?~> "taskType.deleteFailure"
     } yield {
       JsonOk(Messages("taskType.deleteSuccess", taskType.summary))
     }

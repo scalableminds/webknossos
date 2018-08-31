@@ -59,6 +59,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
                                 projectDAO: ProjectDAO,
                                 taskTypeDAO: TaskTypeDAO,
                                 dataSetDAO: DataSetDAO,
+                                userService: UserService,
                                 dataSetService: DataSetService,
                                 teamDAO: TeamDAO,
                                 taskDAO: TaskDAO,
@@ -97,7 +98,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
       taskTypeIdValidated <- ObjectId.parse(params.taskTypeId) ?~> "taskType.id.invalid"
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
       project <- projectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
-      _ <- ensureTeamAdministration(request.identity, project._team)
+      _ <- userService.isTeamManagerOrAdminOf(request.identity, project._team)
       parseResults: List[NmlService.NmlParseResult] = NmlService.extractFromFile(inputFile.ref.file, inputFile.filename).parseResults
       skeletonSuccesses <- Fox.serialCombined(parseResults)(_.toSkeletonSuccessFox) ?~> "task.create.failed"
       result <- createTasks(skeletonSuccesses.map(s => (buildFullParams(params, s.skeletonTracing.get, s.fileName, s.description), s.skeletonTracing.get)))
@@ -192,7 +193,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
       project <- projectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
       _ <- validateScript(params.scriptId) ?~> "script.invalid"
-      _ <- ensureTeamAdministration(request.identity, project._team)
+      _ <- userService.isTeamManagerOrAdminOf(request.identity, project._team)
       task = Task(
         ObjectId.generate,
         project._id,
@@ -218,7 +219,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
       taskIdValidated <- ObjectId.parse(taskId) ?~> "task.id.invalid"
       task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound"
       project <- projectDAO.findOne(task._project)
-      _ <- ensureTeamAdministration(request.identity, project._team) ?~> "notAllowed"
+      _ <- userService.isTeamManagerOrAdminOf(request.identity, project._team) ?~> "notAllowed"
       _ <- taskDAO.updateTotalInstances(task._id, task.totalInstances + params.openInstances - task.openInstances)
       updatedTask <- taskDAO.findOne(taskIdValidated)
       json <- taskService.publicWrites(updatedTask)
@@ -232,7 +233,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
       taskIdValidated <- ObjectId.parse(taskId) ?~> "task.id.invalid"
       task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound"
       project <- projectDAO.findOne(task._project)
-      _ <- ensureTeamAdministration(request.identity, project._team) ?~> Messages("notAllowed")
+      _ <- userService.isTeamManagerOrAdminOf(request.identity, project._team) ?~> Messages("notAllowed")
       _ <- taskDAO.removeOneAndItsAnnotations(task._id) ?~> "task.remove.failed"
     } yield {
       JsonOk(Messages("task.removed"))
@@ -286,10 +287,10 @@ class TaskController @Inject() (annotationService: AnnotationService,
       if (user.isAdmin) {
         teamDAO.findAllIdsByOrganization(user._organization)
       } else if (numberOfOpen < MAX_OPEN_TASKS) {
-        user.teamIds
+        userService.teamIdsFor(user._id)
       } else {
         (for {
-          teamManagerTeamIds <- user.teamManagerTeamIds
+          teamManagerTeamIds <- userService.teamManagerTeamIdsFor(user._id)
         } yield {
           if (teamManagerTeamIds.nonEmpty) {
             Fox.successful(teamManagerTeamIds)
@@ -304,7 +305,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
   def peekNext = SecuredAction.async { implicit request =>
     val user = request.identity
     for {
-      teamIds <- user.teamIds
+      teamIds <- userService.teamIdsFor(user._id)
       task <- taskDAO.peekNextAssignment(user._id, teamIds) ?~> "task.unavailable"
       taskJson <- taskService.publicWrites(task)(GlobalAccessContext)
     } yield Ok(taskJson)

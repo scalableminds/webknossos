@@ -144,4 +144,98 @@ class UserService @Inject()(conf: WkConfInjected,
   def createPasswordInfo(pw: String): PasswordInfo = {
     PasswordInfo("SCrypt", SCrypt.hashPassword(pw))
   }
+
+  def experiencesFor(_user: ObjectId): Fox[Map[String, Int]] =
+    userExperiencesDAO.findAllExperiencesForUser(_user)(GlobalAccessContext)
+
+  def teamMembershipsFor(_user: ObjectId): Fox[List[TeamMembership]] =
+    userTeamRolesDAO.findTeamMembershipsForUser(_user)(GlobalAccessContext)
+
+  def teamManagerMembershipsFor(_user: ObjectId): Fox[List[TeamMembership]] =
+    for {
+      teamMemberships <- teamMembershipsFor(_user)
+    } yield teamMemberships.filter(_.isTeamManager)
+
+  def teamManagerTeamIdsFor(_user: ObjectId) =
+    for {
+      teamManagerMemberships <- teamManagerMembershipsFor(_user)
+    } yield teamManagerMemberships.map(_.teamId)
+
+  def teamIdsFor(_user: ObjectId): Fox[List[ObjectId]] =
+    for {
+      teamMemberships <- teamMembershipsFor(_user)
+    } yield teamMemberships.map(_.teamId)
+
+  def isTeamManagerOrAdminOf(possibleAdmin: User, otherUser: User): Fox[Boolean] =
+    for {
+      otherUserTeamIds <- teamIdsFor(otherUser._id)
+      teamManagerTeamIds <- teamManagerTeamIdsFor(possibleAdmin._id)
+    } yield (otherUserTeamIds.intersect(teamManagerTeamIds).nonEmpty || possibleAdmin.isAdminOf(otherUser))
+
+  def isTeamManagerOrAdminOf(user: User, _team: ObjectId): Fox[Boolean] =
+    (for {
+      team <- teamDAO.findOne(_team)(GlobalAccessContext)
+      teamManagerTeamIds <- teamManagerTeamIdsFor(user._id)
+    } yield (teamManagerTeamIds.contains(_team) || user.isAdminOf(team._organization))) ?~> "team.admin.notAllowed"
+
+  def isTeamManagerInOrg(user: User, _organization: ObjectId): Fox[Boolean] =
+    for {
+      teamManagerMemberships <- teamManagerMembershipsFor(user._id)
+    } yield (teamManagerMemberships.nonEmpty && _organization == user._organization)
+
+  def isTeamManagerOrAdminOfOrg(user: User, _organization: ObjectId): Fox[Boolean] =
+    for {
+      isTeamManager <- isTeamManagerInOrg(user, _organization)
+    } yield (isTeamManager || user.isAdminOf(_organization))
+
+
+  def isEditableBy(possibleEditee: User, possibleEditor: User): Fox[Boolean] =
+    for {
+      otherIsTeamManagerOrAdmin <- isTeamManagerOrAdminOf(possibleEditor, possibleEditee)
+      teamMemberships <- teamMembershipsFor(possibleEditee._id)
+    } yield (otherIsTeamManagerOrAdmin || teamMemberships.isEmpty)
+
+  def publicWrites(user: User, requestingUser: User): Fox[JsObject] = {
+    implicit val ctx = GlobalAccessContext
+    for {
+      isEditable <- isEditableBy(user, requestingUser)
+      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
+      teamMemberships <- teamMembershipsFor(user._id)
+      teamMembershipsJs <- Fox.serialCombined(teamMemberships)(_.publicWrites)
+      experiences <- experiencesFor(user._id)
+    } yield {
+      Json.obj(
+        "id" -> user._id.toString,
+        "email" -> user.email,
+        "firstName" -> user.firstName,
+        "lastName" -> user.lastName,
+        "isAdmin" -> user.isAdmin,
+        "isActive" -> !user.isDeactivated,
+        "teams" -> teamMembershipsJs,
+        "experiences" -> experiences,
+        "lastActivity" -> user.lastActivity,
+        "isAnonymous" -> false,
+        "isEditable" -> isEditable,
+        "organization" -> organization.name,
+        "created" -> user.created
+      )
+    }
+  }
+
+  def compactWrites(user: User): Fox[JsObject] = {
+    implicit val ctx = GlobalAccessContext
+    for {
+      teamMemberships <- teamMembershipsFor(user._id)
+      teamMembershipsJs <- Fox.serialCombined(teamMemberships)(_.publicWrites)
+    } yield {
+      Json.obj(
+        "id" -> user._id.toString,
+        "email" -> user.email,
+        "firstName" -> user.firstName,
+        "lastName" -> user.lastName,
+        "isAnonymous" -> false,
+        "teams" -> teamMembershipsJs
+      )
+    }
+  }
 }

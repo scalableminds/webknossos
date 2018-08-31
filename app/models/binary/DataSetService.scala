@@ -11,8 +11,9 @@ import models.team.{OrganizationDAO, TeamDAO}
 import models.user.User
 import net.liftweb.common.Full
 import oxalis.security.{CompactRandomIDGenerator, URLSharing, WebknossosSilhouette}
-import play.api.i18n.Messages
+import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.i18n.Messages.Implicits._
 import play.api.libs.json.{JsObject, Json}
 import play.api.libs.ws.WSResponse
 import utils.ObjectId
@@ -23,7 +24,8 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                dataSetLastUsedTimesDAO: DataSetLastUsedTimesDAO,
                                dataSetDataLayerDAO: DataSetDataLayerDAO,
                                teamDAO: TeamDAO,
-                               dataSetAllowedTeamsDAO: DataSetAllowedTeamsDAO
+                               dataSetAllowedTeamsDAO: DataSetAllowedTeamsDAO,
+                               val messagesApi: MessagesApi
                               ) extends FoxImplicits with LazyLogging {
 
   def isProperDataSetName(name: String): Boolean =
@@ -154,7 +156,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
   def dataSourceFor(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[InboxDataSource] = {
     for {
-      organization <- organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> Messages("organization.notFound")
+      organization <- organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound"
       dataLayersBox <- dataSetDataLayerDAO.findAllForDataSet(dataSet._id).futureBox
       dataSourceId = DataSourceId(dataSet.name, organization.name)
     } yield {
@@ -176,7 +178,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     }
 
   def dataStoreFor(dataSet: DataSet): Fox[DataStore] =
-    dataStoreDAO.findOneByName(dataSet._dataStore.trim)(GlobalAccessContext) ?~> Messages("datastore.notFound")
+    dataStoreDAO.findOneByName(dataSet._dataStore.trim)(GlobalAccessContext) ?~> "datastore.notFound"
 
   def handlerFor(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[DataStoreHandler] =
     for {
@@ -193,11 +195,10 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     }
   }
 
+  def allowedTeamIdsFor(_dataSet: ObjectId)(implicit ctx: DBAccessContext) =
+    dataSetAllowedTeamsDAO.findAllForDataSet(_dataSet)(GlobalAccessContext) ?~> "allowedTeams.notFound"
 
-  def allowedTeamIdsFor(_dataSet: ObjectId) =
-    dataSetAllowedTeamsDAO.findAllForDataSet(_dataSet)(GlobalAccessContext) ?~> Messages("allowedTeams.notFound")
-
-  def allowedTeamsFor(_dataSet: ObjectId) =
+  def allowedTeamsFor(_dataSet: ObjectId)(implicit ctx: DBAccessContext) =
     for {
       allowedTeamIds <- allowedTeamIdsFor(_dataSet)
       allowedTeams <- Fox.combined(allowedTeamIds.map(teamDAO.findOne(_)(GlobalAccessContext)))
@@ -213,7 +214,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       lastUsedByUser <- lastUsedTimeFor(dataSet._id, userOpt)
       dataStore <- dataStoreFor(dataSet)
       dataStoreJs <- dataStore.publicWrites
-      organization <- organizationDAO.findOne(dataSet._organization) ?~> Messages("organization.notFound")
+      organization <- organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound"
       dataSource <- dataSourceFor(dataSet)
     } yield {
       Json.obj("name" -> dataSet.name,

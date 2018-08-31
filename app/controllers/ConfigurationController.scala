@@ -3,18 +3,19 @@ package controllers
 import com.scalableminds.util.tools.Fox
 import javax.inject.Inject
 import models.binary.{DataSet, DataSetDAO}
-import models.configuration.{DataSetConfiguration, UserConfiguration}
+import models.configuration.{DataSetConfiguration, DataSetConfigurationDefaults, UserConfiguration}
 import models.user.{UserDataSetConfigurationDAO, UserService}
 import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareAction}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsObject, JsValue}
 import play.api.libs.json.Json._
-import play.api.mvc.Result
 
 
 class ConfigurationController @Inject()(userService: UserService,
+                                        dataSetDAO: DataSetDAO,
                                         userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
+                                        dataSetConfigurationDefaults: DataSetConfigurationDefaults,
                                         val messagesApi: MessagesApi) extends Controller {
 
   def read = UserAwareAction.async { implicit request =>
@@ -43,9 +44,9 @@ class ConfigurationController @Inject()(userService: UserService,
         configurationJson: JsValue <- userDataSetConfigurationDAO.findOneForUserAndDataset(user._id, dataSetName)
       } yield DataSetConfiguration(configurationJson.validate[Map[String, JsValue]].getOrElse(Map.empty))
     }
-    .orElse(DataSetDAO.findOneByName(dataSetName).flatMap(_.defaultConfiguration))
-    .getOrElse(DataSetConfiguration.constructInitialDefault(List()))
-    .map(configuration => Ok(toJson(configuration.configurationOrDefaults)))
+    .orElse(dataSetDAO.findOneByName(dataSetName).flatMap(_.defaultConfiguration))
+    .getOrElse(dataSetConfigurationDefaults.constructInitialDefault(List()))
+    .map(configuration => Ok(toJson(dataSetConfigurationDefaults.configurationOrDefaults(configuration))))
   }
 
   def updateDataSet(dataSetName: String) = SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
@@ -59,21 +60,21 @@ class ConfigurationController @Inject()(userService: UserService,
   }
 
   def readDataSetDefault(dataSetName: String) = SecuredAction.async { implicit request =>
-    DataSetDAO.findOneByName(dataSetName).flatMap { dataSet: DataSet =>
+    dataSetDAO.findOneByName(dataSetName).flatMap { dataSet: DataSet =>
       dataSet.defaultConfiguration match {
-        case Some(c) => Fox.successful(Ok(toJson(c.configurationOrDefaults)))
-        case _ => DataSetConfiguration.constructInitialDefault(dataSet).map(c => Ok(toJson(c.configurationOrDefaults)))
+        case Some(c) => Fox.successful(Ok(toJson(dataSetConfigurationDefaults.configurationOrDefaults(c))))
+        case _ => dataSetConfigurationDefaults.constructInitialDefault(dataSet).map(c => Ok(toJson(dataSetConfigurationDefaults.configurationOrDefaults(c))))
       }
     }
   }
 
   def updateDataSetDefault(dataSetName: String) = SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
     for {
-      dataset <- DataSetDAO.findOneByName(dataSetName) ?~> "dataset.notFound"
-      _ <- Fox.assertTrue(request.identity.isTeamManagerOrAdminOfOrg(dataset._organization)) ?~> "notAllowed"
+      dataset <- dataSetDAO.findOneByName(dataSetName) ?~> "dataset.notFound"
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOfOrg(request.identity, dataset._organization)) ?~> "notAllowed"
       jsConfiguration <- request.body.asOpt[JsObject] ?~> "user.configuration.dataset.invalid"
       conf = jsConfiguration.fields.toMap
-      _ <- DataSetDAO.updateDefaultConfigurationByName(dataSetName, DataSetConfiguration(conf))
+      _ <- dataSetDAO.updateDefaultConfigurationByName(dataSetName, DataSetConfiguration(conf))
     } yield {
       JsonOk(Messages("user.configuration.dataset.updated"))
     }

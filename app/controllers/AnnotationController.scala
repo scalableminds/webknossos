@@ -11,7 +11,7 @@ import models.binary.{DataSet, DataSetDAO, DataSetService}
 import models.project.ProjectDAO
 import models.task.TaskDAO
 import models.user.time._
-import models.user.User
+import models.user.{User, UserService}
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest, UserAwareAction}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.{JsArray, _}
@@ -26,6 +26,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
                                      dataSetDAO: DataSetDAO,
                                      dataSetService: DataSetService,
                                      annotationService: AnnotationService,
+                                     userService: UserService,
                                      projectDAO: ProjectDAO,
                                      timeSpanService: TimeSpanService,
                                      provider: AnnotationInformationProvider,
@@ -112,7 +113,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
   def reset(typ: String, id: String) = SecuredAction.async { implicit request =>
     for {
       annotation <- provider.provideAnnotation(typ, id)(securedRequestToUserAwareRequest) ?~> "annotation.notFound"
-      _ <- ensureTeamAdministration(request.identity, annotation._team)
+      _ <- userService.isTeamManagerOrAdminOf(request.identity, annotation._team)
       _ <- annotationService.resetToBase(annotation) ?~> Messages("annotation.reset.failed")
       updated <- provider.provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       json <- updated.publicWrites(Some(request.identity))
@@ -123,7 +124,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
 
   def reopen(typ: String, id: String) = SecuredAction.async { implicit request =>
     def isReopenAllowed(user: User, annotation: Annotation) = for {
-      isAdminOrTeamManager <- user.isTeamManagerOrAdminOf(annotation._team)
+      isAdminOrTeamManager <- userService.isTeamManagerOrAdminOf(user, annotation._team)
     } yield (annotation._user == user._id || isAdminOrTeamManager)
 
     for {
@@ -207,7 +208,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
       taskIdValidated <- ObjectId.parse(taskId)
       task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound"
       project <- projectDAO.findOne(task._project)
-      _ <- ensureTeamAdministration(request.identity, project._team)
+      _ <- userService.isTeamManagerOrAdminOf(request.identity, project._team)
       annotations <- annotationService.annotationsFor(task._id) ?~> "task.annotation.failed"
       jsons <- Fox.serialSequence(annotations)(_.publicWrites(Some(request.identity)))
     } yield {
@@ -230,7 +231,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
 
     for {
       annotation <- provider.provideAnnotation(typ, id)(securedRequestToUserAwareRequest) ?~> "annotation.notFound"
-      _ <- ensureTeamAdministration(request.identity, annotation._team)
+      _ <- userService.isTeamManagerOrAdminOf(request.identity, annotation._team)
       result <- tryToCancel(annotation)
     } yield result
   }

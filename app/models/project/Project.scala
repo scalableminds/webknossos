@@ -32,37 +32,7 @@ case class Project(
                      isDeleted: Boolean = false
                      ) extends FoxImplicits {
 
-  def owner = UserService.findOneById(_owner, useCache = true)(GlobalAccessContext)
-
   def isDeletableBy(user: User) = user._id == _owner || user.isAdmin
-
-  def team(implicit ctx: DBAccessContext) =
-    TeamDAO.findOne(_team)(GlobalAccessContext)
-
-  def publicWrites(implicit ctx: DBAccessContext): Fox[JsObject] =
-    for {
-      owner <- owner.flatMap(_.compactWrites).futureBox
-      teamNameOpt <- TeamDAO.findOne(_team)(GlobalAccessContext).map(_.name).toFutureOption
-    } yield {
-      Json.obj(
-        "name" -> name,
-        "team" -> _team.toString,
-        "teamName" -> teamNameOpt,
-        "owner" -> owner.toOption,
-        "priority" -> priority,
-        "paused" -> paused,
-        "expectedTime" -> expectedTime,
-        "id" -> _id.toString
-      )
-    }
-
-  def publicWritesWithStatus(openTaskInstances: Int)(implicit ctx: DBAccessContext): Fox[JsObject] = {
-    for {
-      projectJson <- publicWrites
-    } yield {
-      projectJson + ("numberOfOpenAssignments" -> JsNumber(openTaskInstances))
-    }
-  }
 
 }
 
@@ -177,7 +147,7 @@ class ProjectDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[Project, Project
 }
 
 
-class ProjectService @Inject()(projectDAO: ProjectDAO) extends LazyLogging with FoxImplicits {
+class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userService: UserService, taskDAO: TaskDAO) extends LazyLogging with FoxImplicits {
 
   def deleteOne(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[Boolean] = {
     val futureFox: Future[Fox[Boolean]] = for {
@@ -186,7 +156,7 @@ class ProjectService @Inject()(projectDAO: ProjectDAO) extends LazyLogging with 
       removalSuccessBox match {
         case Full(_) => {
           for {
-            _ <- TaskDAO.removeAllWithProjectAndItsAnnotations(projectId)
+            _ <- taskDAO.removeAllWithProjectAndItsAnnotations(projectId)
           } yield true
         }
         case _ => {
@@ -197,5 +167,31 @@ class ProjectService @Inject()(projectDAO: ProjectDAO) extends LazyLogging with 
     }
     futureFox.toFox.flatten
   }
+
+  def publicWrites(project: Project)(implicit ctx: DBAccessContext): Fox[JsObject] =
+    for {
+      owner <- userService.findOneById(project._owner, useCache = true)(GlobalAccessContext).flatMap(u => userService.compactWrites(u)).futureBox
+      teamNameOpt <- teamDAO.findOne(project._team)(GlobalAccessContext).map(_.name).toFutureOption
+    } yield {
+      Json.obj(
+        "name" -> project.name,
+        "team" -> project._team.toString,
+        "teamName" -> teamNameOpt,
+        "owner" -> owner.toOption,
+        "priority" -> project.priority,
+        "paused" -> project.paused,
+        "expectedTime" -> project.expectedTime,
+        "id" -> project._id.toString
+      )
+    }
+
+  def publicWritesWithStatus(project: Project, openTaskInstances: Int)(implicit ctx: DBAccessContext): Fox[JsObject] = {
+    for {
+      projectJson <- publicWrites(project)
+    } yield {
+      projectJson + ("numberOfOpenAssignments" -> JsNumber(openTaskInstances))
+    }
+  }
+
 
 }

@@ -26,9 +26,6 @@ trait Controller extends PlayController
   implicit def AuthenticatedRequest2Request[T](r: SecuredRequest[T]): Request[T] =
     r.request
 
-  def ensureTeamAdministration(user: User, teamId: ObjectId): Fox[Unit] =
-    Fox.assertTrue(user.isTeamManagerOrAdminOf(teamId)) ?~> Messages("team.admin.notAllowed")
-
   def jsonErrorWrites(errors: JsError): JsObject =
     Json.obj(
       "errors" -> errors.errors.map(error =>

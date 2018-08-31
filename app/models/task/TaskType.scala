@@ -28,7 +28,7 @@ case class TaskType(
 
   def publicWrites(implicit ctx: DBAccessContext) = {
     for {
-      team <- TeamDAO.findOne(_team)(GlobalAccessContext) ?~> "team.notFound"
+      team <- teamDAO.findOne(_team)(GlobalAccessContext) ?~> "team.notFound"
     } yield Json.obj(
       "id" -> _id.toString,
       "summary" -> summary,
@@ -55,7 +55,7 @@ object TaskType {
   }
 }
 
-class TaskTypeDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[TaskType, TasktypesRow, Tasktypes](sqlClient) with SecuredSQLDAO {
+class TaskTypeDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[TaskType, TasktypesRow, Tasktypes](sqlClient) {
   val collection = Tasktypes
 
   def idColumn(x: Tasktypes): Rep[String] = x._Id

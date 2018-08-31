@@ -5,12 +5,15 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
 import models.annotation._
 import models.project.ProjectDAO
-import models.user.User
+import models.user.{User, UserService}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import utils.ObjectId
 
-class ProjectInformationHandler @Inject()(annotationDAO: AnnotationDAO, projectDAO: ProjectDAO) extends AnnotationInformationHandler with FoxImplicits {
+class ProjectInformationHandler @Inject()(annotationDAO: AnnotationDAO,
+                                          projectDAO: ProjectDAO,
+                                          userService: UserService
+                                         ) extends AnnotationInformationHandler with FoxImplicits {
 
   override def provideAnnotation(projectId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
   {
@@ -20,7 +23,7 @@ class ProjectInformationHandler @Inject()(annotationDAO: AnnotationDAO, projectD
       _ <- assertAllOnSameDataset(annotations)
       _ <- assertNonEmpty(annotations) ?~> "project.noAnnotations"
       user <- userOpt ?~> "user.notAuthorised"
-      _ <- Fox.assertTrue(user.isTeamManagerOrAdminOf(project._team))
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, project._team))
       _dataSet = annotations.head._dataSet
       mergedAnnotation <- AnnotationMerger.mergeN(projectId, persistTracing=false, user._id,
         _dataSet, project._team, AnnotationType.CompoundProject, annotations) ?~> "annotation.merge.failed.compound"
@@ -35,7 +38,7 @@ class ProjectInformationHandler @Inject()(annotationDAO: AnnotationDAO, projectD
         override def allowAccess(userOption: Option[User]): Fox[Boolean] =
           (for {
             user <- userOption.toFox
-            allowed <- user.isTeamManagerOrAdminOf(project._team)
+            allowed <- userService.isTeamManagerOrAdminOf(user, project._team)
           } yield allowed).orElse(Fox.successful(false))
       }
     }

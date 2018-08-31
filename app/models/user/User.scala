@@ -33,112 +33,20 @@ case class User(
                   created: Long = System.currentTimeMillis(),
                   isDeleted: Boolean = false
                   ) extends DBAccessContextPayload with Identity with FoxImplicits {
-  val name = firstName + " " + lastName
 
-  val abreviatedName =
+  val name: String = firstName + " " + lastName
+
+  val abreviatedName: String =
     (firstName.take(1) + lastName).toLowerCase.replace(" ", "_")
 
-  def organization = OrganizationDAO.findOne(_organization)(GlobalAccessContext)
-
-  def experiences = UserExperiencesDAO.findAllExperiencesForUser(_id)(GlobalAccessContext)
-
-  def userConfigurationStructured =
+  def userConfigurationStructured: Fox[UserConfiguration] =
     JsonHelper.jsResultToFox(userConfiguration.validate[Map[String, JsValue]]).map(UserConfiguration(_))
-
-  def teamMemberships = UserTeamRolesDAO.findTeamMembershipsForUser(_id)(GlobalAccessContext)
-
-  def teamManagerMemberships =
-    for {
-      teamMemberships <- teamMemberships
-    } yield teamMemberships.filter(_.isTeamManager)
-
-  def teamManagerTeamIds =
-    for {
-      teamManagerMemberships <- teamManagerMemberships
-    } yield teamManagerMemberships.map(_.teamId)
-
-  def teamIds: Fox[List[ObjectId]] =
-    for {
-      teamMemberships <- teamMemberships
-    } yield teamMemberships.map(_.teamId)
-
-  def isTeamManagerOrAdminOf(otherUser: User): Fox[Boolean] =
-    for {
-      otherUserTeamIds <- otherUser.teamIds
-      teamManagerTeamIds <- teamManagerTeamIds
-    } yield (otherUserTeamIds.intersect(teamManagerTeamIds).nonEmpty || this.isAdminOf(otherUser))
-
-  def isTeamManagerOrAdminOf(_team: ObjectId): Fox[Boolean] =
-    for {
-      team <- TeamDAO.findOne(_team)(GlobalAccessContext)
-      teamManagerTeamIds <- teamManagerTeamIds
-    } yield (teamManagerTeamIds.contains(_team) || this.isAdminOf(team._organization))
-
-  def isTeamManagerOrAdminOfOrg(_organization: ObjectId): Fox[Boolean] =
-    for {
-      isTeamManager <- isTeamManagerInOrg(_organization)
-    } yield (isTeamManager || this.isAdminOf(_organization))
-
-  def isEditableBy(otherUser: User): Fox[Boolean] =
-    for {
-      otherIsTeamManagerOrAdmin <- otherUser.isTeamManagerOrAdminOf(this)
-      teamMemberships <- teamMemberships
-    } yield (otherIsTeamManagerOrAdmin || teamMemberships.isEmpty)
-
-  def isTeamManagerInOrg(_organization: ObjectId): Fox[Boolean] =
-    for {
-      teamManagerMemberships <- teamManagerMemberships
-    } yield (teamManagerMemberships.nonEmpty && _organization == this._organization)
 
   def isAdminOf(_organization: ObjectId): Boolean =
     isAdmin && _organization == this._organization
 
   def isAdminOf(otherUser: User): Boolean =
     isAdminOf(otherUser._organization)
-
-  def publicWrites(requestingUser: User): Fox[JsObject] = {
-    implicit val ctx = GlobalAccessContext
-    for {
-      isEditable <- isEditableBy(requestingUser)
-      organization <- organization
-      teamMemberships <- teamMemberships
-      teamMembershipsJs <- Fox.serialCombined(teamMemberships)(_.publicWrites)
-      experiences <- experiences
-    } yield {
-      Json.obj(
-        "id" -> _id.toString,
-        "email" -> email,
-        "firstName" -> firstName,
-        "lastName" -> lastName,
-        "isAdmin" -> isAdmin,
-        "isActive" -> !isDeactivated,
-        "teams" -> teamMembershipsJs,
-        "experiences" -> experiences,
-        "lastActivity" -> lastActivity,
-        "isAnonymous" -> false,
-        "isEditable" -> isEditable,
-        "organization" -> organization.name,
-        "created" -> created
-      )
-    }
-  }
-
-  def compactWrites: Fox[JsObject] = {
-    implicit val ctx = GlobalAccessContext
-    for {
-      teamMemberships <- teamMemberships
-      teamMembershipsJs <- Fox.serialCombined(teamMemberships)(_.publicWrites)
-    } yield {
-      Json.obj(
-        "id" -> _id.toString,
-        "email" -> email,
-        "firstName" -> firstName,
-        "lastName" -> lastName,
-        "isAnonymous" -> false,
-        "teams" -> teamMembershipsJs
-      )
-    }
-  }
 
 }
 

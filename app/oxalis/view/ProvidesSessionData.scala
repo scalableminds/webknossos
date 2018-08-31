@@ -1,5 +1,5 @@
 package oxalis.view
-
+/* TODO
 import oxalis.security.WebknossosSilhouette.{UserAwareRequest, SecuredRequest}
 import play.api.mvc.Request
 
@@ -26,3 +26,4 @@ trait ProvidesUnauthorizedSessionData {
     UnAuthedSessionData(request.flash)
   }
 }
+*/

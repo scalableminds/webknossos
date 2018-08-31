@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{AnnotationDAO, AnnotationType}
 import models.team.TeamDAO
 import models.user.{User, UserDAO, UserService}
-import oxalis.security.WebknossosSilhouette.SecuredAction
+import oxalis.security.WebknossosSilhouette
 import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
@@ -113,15 +113,23 @@ class ReportDAO @Inject()(sqlClient: SQLClient, annotationDAO: AnnotationDAO) ex
 
 }
 
-class ReportController @Inject()(reportDAO: ReportDAO, teamDAO: TeamDAO, userDAO: UserDAO, userService: UserService, val messagesApi: MessagesApi) extends Controller with FoxImplicits {
+class ReportController @Inject()(reportDAO: ReportDAO,
+                                 teamDAO: TeamDAO,
+                                 userDAO: UserDAO,
+                                 userService: UserService,
+                                 sil: WebknossosSilhouette,
+                                 val messagesApi: MessagesApi) extends Controller with FoxImplicits {
 
-  def projectProgressOverview(teamId: String) = SecuredAction.async { implicit request =>
+  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
+  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
+
+  def projectProgressOverview(teamId: String) = sil.SecuredAction.async { implicit request =>
     for {
       entries <- reportDAO.projectProgress(ObjectId(teamId))(GlobalAccessContext)
     } yield Ok(Json.toJson(entries))
   }
 
-  def openTasksOverview(teamId: String) = SecuredAction.async { implicit request =>
+  def openTasksOverview(teamId: String) = sil.SecuredAction.async { implicit request =>
     for {
       teamIdValidated <- ObjectId.parse(teamId)
       team <- teamDAO.findOne(teamIdValidated)(GlobalAccessContext) ?~> "team.notFound"

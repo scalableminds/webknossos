@@ -7,7 +7,7 @@ import com.mohiva.play.silhouette.api.LoginInfo
 import com.mohiva.play.silhouette.api.exceptions.ProviderException
 import com.mohiva.play.silhouette.api.util.Credentials
 import com.scalableminds.util.mail._
-import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.rpc.RPC
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.binary.{DataStore, DataStoreDAO}
@@ -17,10 +17,8 @@ import net.liftweb.common.{Empty, Failure, Full}
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.HmacUtils
 import oxalis.mail.DefaultMails
-import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareAction}
 import oxalis.security._
 import oxalis.thirdparty.BrainTracing
-import oxalis.view.ProvidesUnauthorizedSessionData
 import play.api._
 import play.api.data.Form
 import play.api.data.Forms.{email, _}
@@ -105,15 +103,19 @@ class Authentication @Inject()(
                                 teamDAO: TeamDAO,
                                 brainTracing: BrainTracing,
                                 organizationDAO: OrganizationDAO,
+                                sil: WebknossosSilhouette,
                                 userDAO: UserDAO
                               )
   extends Controller
-    with ProvidesUnauthorizedSessionData
+    //TODO: with ProvidesUnauthorizedSessionData
     with FoxImplicits {
+
+  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
+  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
 
   import AuthForms._
 
-  val env = WebknossosSilhouette.environment
+  val env = sil.environment
   val bearerTokenAuthenticatorService = env.combinedAuthenticatorService.tokenAuthenticatorService
 
   private lazy val Mailer =
@@ -216,7 +218,7 @@ class Authentication @Inject()(
     } yield result
   }
 
-  def switchTo(email: String) = SecuredAction.async { implicit request =>
+  def switchTo(email: String) = sil.SecuredAction.async { implicit request =>
     if (request.identity.isSuperUser) {
       val loginInfo = LoginInfo(CredentialsProvider.ID, email)
       for {
@@ -269,7 +271,7 @@ class Authentication @Inject()(
   }
 
   // a user who is logged in can change his password
-  def changePassword = SecuredAction.async { implicit request =>
+  def changePassword = sil.SecuredAction.async { implicit request =>
     changePasswordForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       passwords => {
@@ -294,7 +296,7 @@ class Authentication @Inject()(
     )
   }
 
-  def getToken = SecuredAction.async { implicit request =>
+  def getToken = sil.SecuredAction.async { implicit request =>
     val futureOfFuture: Future[Future[Result]] = env.combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo).map {
       oldTokenOpt => {
         if (oldTokenOpt.isDefined) Future.successful(Ok(Json.obj("token" -> oldTokenOpt.get.id)))
@@ -311,7 +313,7 @@ class Authentication @Inject()(
     } yield result
   }
 
-  def deleteToken = SecuredAction.async { implicit request =>
+  def deleteToken = sil.SecuredAction.async { implicit request =>
     val futureOfFuture: Future[Future[Result]] = for {
       oldTokenOpt <- env.combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo)
     } yield {
@@ -325,14 +327,14 @@ class Authentication @Inject()(
     } yield result
   }
 
-  def logout = UserAwareAction.async { implicit request =>
+  def logout = sil.UserAwareAction.async { implicit request =>
     request.authenticator match {
       case Some(authenticator) => env.authenticatorService.discard(authenticator, Ok)
       case _ => Future.successful(Ok)
     }
   }
 
-  def singleSignOn(sso: String, sig: String) = UserAwareAction.async { implicit request =>
+  def singleSignOn(sso: String, sig: String) = sil.UserAwareAction.async { implicit request =>
     if (ssoKey == "")
       logger.warn("No SSO key configured! To use single-sign-on a sso key needs to be defined in the configuration.")
 
@@ -367,7 +369,7 @@ class Authentication @Inject()(
     }
   }
 
-  def createOrganizationWithAdmin = UserAwareAction.async { implicit request =>
+  def createOrganizationWithAdmin = sil.UserAwareAction.async { implicit request =>
     signUpForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       signUpData => {
@@ -447,17 +449,14 @@ class Authentication @Inject()(
   }
 
 
-}
-
-object Authentication {
-
   def getCookie(email: String)(implicit requestHeader: RequestHeader): Future[Cookie] = {
     val loginInfo = LoginInfo(CredentialsProvider.ID, email.toLowerCase)
     for {
-      authenticator <- WebknossosSilhouette.environment.authenticatorService.create(loginInfo)
-      value <- WebknossosSilhouette.environment.authenticatorService.init(authenticator)
+      authenticator <- sil.environment.authenticatorService.create(loginInfo)
+      value <- sil.environment.authenticatorService.init(authenticator)
     } yield {
       value
     }
   }
+
 }

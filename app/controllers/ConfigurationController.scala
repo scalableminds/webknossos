@@ -1,11 +1,12 @@
 package controllers
 
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import javax.inject.Inject
 import models.binary.{DataSet, DataSetDAO}
 import models.configuration.{DataSetConfiguration, DataSetConfigurationDefaults, UserConfiguration}
 import models.user.{UserDataSetConfigurationDAO, UserService}
-import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareAction}
+import oxalis.security.WebknossosSilhouette
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsObject, JsValue}
@@ -16,9 +17,13 @@ class ConfigurationController @Inject()(userService: UserService,
                                         dataSetDAO: DataSetDAO,
                                         userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
                                         dataSetConfigurationDefaults: DataSetConfigurationDefaults,
+                                        sil: WebknossosSilhouette,
                                         val messagesApi: MessagesApi) extends Controller {
 
-  def read = UserAwareAction.async { implicit request =>
+  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
+  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
+
+  def read = sil.UserAwareAction.async { implicit request =>
     request.identity.toFox.flatMap { user =>
       for {
         userConfig <- user.userConfigurationStructured
@@ -28,7 +33,7 @@ class ConfigurationController @Inject()(userService: UserService,
     .map(configuration => Ok(toJson(configuration)))
   }
 
-  def update = SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
+  def update = sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
     for {
       jsConfiguration <- request.body.asOpt[JsObject] ?~> "user.configuration.invalid"
       conf = jsConfiguration.fields.toMap
@@ -38,7 +43,7 @@ class ConfigurationController @Inject()(userService: UserService,
     }
   }
 
-  def readDataSet(dataSetName: String) = UserAwareAction.async { implicit request =>
+  def readDataSet(dataSetName: String) = sil.UserAwareAction.async { implicit request =>
     request.identity.toFox.flatMap { user =>
       for {
         configurationJson: JsValue <- userDataSetConfigurationDAO.findOneForUserAndDataset(user._id, dataSetName)
@@ -49,7 +54,7 @@ class ConfigurationController @Inject()(userService: UserService,
     .map(configuration => Ok(toJson(dataSetConfigurationDefaults.configurationOrDefaults(configuration))))
   }
 
-  def updateDataSet(dataSetName: String) = SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
+  def updateDataSet(dataSetName: String) = sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
     for {
       jsConfiguration <- request.body.asOpt[JsObject] ?~> "user.configuration.dataset.invalid"
       conf = jsConfiguration.fields.toMap
@@ -59,7 +64,7 @@ class ConfigurationController @Inject()(userService: UserService,
     }
   }
 
-  def readDataSetDefault(dataSetName: String) = SecuredAction.async { implicit request =>
+  def readDataSetDefault(dataSetName: String) = sil.SecuredAction.async { implicit request =>
     dataSetDAO.findOneByName(dataSetName).flatMap { dataSet: DataSet =>
       dataSet.defaultConfiguration match {
         case Some(c) => Fox.successful(Ok(toJson(dataSetConfigurationDefaults.configurationOrDefaults(c))))
@@ -68,7 +73,7 @@ class ConfigurationController @Inject()(userService: UserService,
     }
   }
 
-  def updateDataSetDefault(dataSetName: String) = SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
+  def updateDataSetDefault(dataSetName: String) = sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
     for {
       dataset <- dataSetDAO.findOneByName(dataSetName) ?~> "dataset.notFound"
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOfOrg(request.identity, dataset._organization)) ?~> "notAllowed"

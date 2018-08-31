@@ -19,7 +19,6 @@ import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
 import models.annotation.handler.SavedTracingInformationHandler
 import models.annotation.nml.NmlWriter
-import models.basics.Implicits
 import models.binary._
 import models.project.ProjectDAO
 import models.task.{Task, TaskDAO, TaskService, TaskTypeDAO}
@@ -35,7 +34,6 @@ import net.liftweb.common.{Box, Full}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
-import oxalis.security.WebknossosSilhouette.UserAwareRequest
 import play.api.libs.json.{JsNull, JsObject, Json}
 
 class AnnotationService @Inject()(annotationInformationProvider: AnnotationInformationProvider,
@@ -56,7 +54,6 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
                                   nmlWriter: NmlWriter)
   extends BoxImplicits
   with FoxImplicits
-  with Implicits
   with TextUtils
   with ProtoGeometryImplicits
   with LazyLogging {
@@ -375,13 +372,13 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     }
   }
 
-  def transferAnnotationToUser(typ: String, id: String, userId: ObjectId)(implicit request: UserAwareRequest[_]): Fox[Annotation] = {
+  def transferAnnotationToUser(typ: String, id: String, userId: ObjectId, issuingUser: User)(implicit ctx: DBAccessContext): Fox[Annotation] = {
     for {
-      annotation <- annotationInformationProvider.provideAnnotation(typ, id) ?~> "annotation.notFound"
+      annotation <- annotationInformationProvider.provideAnnotation(typ, id, issuingUser) ?~> "annotation.notFound"
       newUser <- userDAO.findOne(userId) ?~> "user.notFound"
       _ <- dataSetDAO.findOne(annotation._dataSet)(AuthorizedAccessContext(newUser)) ?~> "annotation.transferee.noDataSetAccess"
       _ <- annotationDAO.updateUser(annotation._id, newUser._id)
-      updated <- annotationInformationProvider.provideAnnotation(typ, id)
+      updated <- annotationInformationProvider.provideAnnotation(typ, id, issuingUser)
     } yield updated
   }
 

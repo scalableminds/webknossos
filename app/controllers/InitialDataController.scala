@@ -13,20 +13,21 @@ import models.team._
 import models.user._
 import net.liftweb.common.Full
 import org.joda.time.DateTime
-import oxalis.security.{Token, TokenDAO, TokenType}
+import oxalis.security.{Token, TokenDAO, TokenType, WebknossosSilhouette}
 import play.api.i18n.MessagesApi
 import play.api.Play.current
-import oxalis.security.WebknossosSilhouette.UserAwareAction
 import play.api.Play
 import play.api.libs.json.Json
 import utils.{ObjectId, WkConfInjected}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class InitialDataController @Inject()(initialDataService: InitialDataService, val messagesApi: MessagesApi)
+class InitialDataController @Inject()(initialDataService: InitialDataService,
+                                      sil: WebknossosSilhouette,
+                                      val messagesApi: MessagesApi)
   extends Controller with FoxImplicits {
 
-  def triggerInsert = UserAwareAction.async { implicit request =>
+  def triggerInsert = sil.UserAwareAction.async { implicit request =>
     for {
       _ <- initialDataService.insert
     } yield Ok

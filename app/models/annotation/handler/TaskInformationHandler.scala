@@ -14,6 +14,7 @@ import utils.ObjectId
 class TaskInformationHandler @Inject()(taskDAO: TaskDAO,
                                        annotationService: AnnotationService,
                                        userService: UserService,
+                                       annotationMerger: AnnotationMerger,
                                        projectDAO: ProjectDAO) extends AnnotationInformationHandler with FoxImplicits {
 
   override def provideAnnotation(taskId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
@@ -26,7 +27,7 @@ class TaskInformationHandler @Inject()(taskDAO: TaskDAO,
       user <- userOpt ?~> "user.notAuthorised"
       project <- projectDAO.findOne(task._project)
       _dataSet = finishedAnnotations.head._dataSet
-      mergedAnnotation <- AnnotationMerger.mergeN(task._id, persistTracing=false, user._id,
+      mergedAnnotation <- annotationMerger.mergeN(task._id, persistTracing=false, user._id,
         _dataSet, project._team, AnnotationType.CompoundTask, finishedAnnotations) ?~> "annotation.merge.failed.compound"
     } yield mergedAnnotation
 

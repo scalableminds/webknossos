@@ -12,7 +12,8 @@ import utils.ObjectId
 
 class ProjectInformationHandler @Inject()(annotationDAO: AnnotationDAO,
                                           projectDAO: ProjectDAO,
-                                          userService: UserService
+                                          userService: UserService,
+                                          annotationMerger: AnnotationMerger
                                          ) extends AnnotationInformationHandler with FoxImplicits {
 
   override def provideAnnotation(projectId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
@@ -25,7 +26,7 @@ class ProjectInformationHandler @Inject()(annotationDAO: AnnotationDAO,
       user <- userOpt ?~> "user.notAuthorised"
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, project._team))
       _dataSet = annotations.head._dataSet
-      mergedAnnotation <- AnnotationMerger.mergeN(projectId, persistTracing=false, user._id,
+      mergedAnnotation <- annotationMerger.mergeN(projectId, persistTracing=false, user._id,
         _dataSet, project._team, AnnotationType.CompoundProject, annotations) ?~> "annotation.merge.failed.compound"
     } yield mergedAnnotation
   }

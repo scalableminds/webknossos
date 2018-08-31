@@ -15,7 +15,7 @@ import models.binary.{DataSet, DataSetDAO, DataSetService}
 import models.project.ProjectDAO
 import models.task._
 import models.user._
-import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareRequest}
+import oxalis.security.WebknossosSilhouette
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
@@ -35,11 +35,15 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
                                        taskDAO: TaskDAO,
                                        taskTypeDAO: TaskTypeDAO,
                                        annotationService: AnnotationService,
+                                       sil: WebknossosSilhouette,
                                        provider: AnnotationInformationProvider,
                                        val messagesApi: MessagesApi)
   extends Controller
     with FoxImplicits
     with LazyLogging {
+
+  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
+  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
 
   private def nameForNmls(fileNames: Seq[String]) =
     if (fileNames.size == 1)
@@ -51,7 +55,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
     if (descriptions.size == 1) descriptions.headOption.flatten.getOrElse("") else ""
 
 
-  def upload = SecuredAction.async(parse.multipartFormData) { implicit request =>
+  def upload = sil.SecuredAction.async(parse.multipartFormData) { implicit request =>
 
     def returnError(zipParseResult: NmlService.ZipParseResult) = {
       if (zipParseResult.containsFailure) {
@@ -116,7 +120,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
     }
   }
 
-  def download(typ: String, id: String) = SecuredAction.async { implicit request =>
+  def download(typ: String, id: String) = sil.SecuredAction.async { implicit request =>
     logger.trace(s"Requested download for annotation: $typ/$id")
     for {
       identifier <- AnnotationIdentifier.parse(typ, id)
@@ -125,12 +129,12 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
         case AnnotationType.CompoundProject => downloadProject(id, request.identity)
         case AnnotationType.CompoundTask => downloadTask(id, request.identity)
         case AnnotationType.CompoundTaskType => downloadTaskType(id, request.identity)
-        case _ => downloadExplorational(id, typ, request.identity)(securedRequestToUserAwareRequest)
+        case _ => downloadExplorational(id, typ, request.identity)
       }
     } yield result
   }
 
-  def downloadExplorational(annotationId: String, typ: String, user: User)(implicit request: UserAwareRequest[_]) = {
+  def downloadExplorational(annotationId: String, typ: String, issuingUser: User)(implicit ctx: DBAccessContext) = {
 
     def skeletonToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String) = {
       for {
@@ -167,10 +171,10 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
     }
 
     for {
-      annotation <- provider.provideAnnotation(typ, annotationId)
+      annotation <- provider.provideAnnotation(typ, annotationId, issuingUser)
       restrictions <- provider.restrictionsFor(typ, annotationId)
       name <- provider.nameFor(annotation) ?~> Messages("annotation.name.impossible")
-      _ <- restrictions.allowDownload(user) ?~> Messages("annotation.download.notAllowed")
+      _ <- restrictions.allowDownload(issuingUser) ?~> Messages("annotation.download.notAllowed")
       dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
       (downloadStream, fileName) <- tracingToDownloadStream(dataSet, annotation, name)
     } yield {

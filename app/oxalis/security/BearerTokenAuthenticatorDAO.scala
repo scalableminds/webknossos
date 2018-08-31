@@ -131,7 +131,7 @@ class TokenDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[Token, TokensRow, 
   }
 }
 
-class BearerTokenAuthenticatorDAO @Inject()(tokenDAO: TokenDAO) extends AuthenticatorDAO[BearerTokenAuthenticator] {
+class BearerTokenAuthenticatorDAO(tokenDAO: TokenDAO) extends AuthenticatorDAO[BearerTokenAuthenticator] {
 
   /* functions as defined in Silhouette trait Authenticator DAO */
   override def find(value: String): Future[Option[BearerTokenAuthenticator]] =

@@ -4,27 +4,19 @@ import com.scalableminds.webknossos.datastore.controllers.ValidationHelpers
 import com.scalableminds.util.mvc.ExtendedController
 import com.scalableminds.util.tools.{Converter, Fox}
 import com.typesafe.scalalogging.LazyLogging
-import models.user.User
 import net.liftweb.common.{Box, Failure, Full, ParamFailure}
-import oxalis.view.ProvidesSessionData
-import play.api.i18n.{I18nSupport, Messages, MessagesApi}
+import play.api.i18n.{I18nSupport, Messages}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import play.api.mvc.{Request, Result, Controller => PlayController}
-import oxalis.security.WebknossosSilhouette.SecuredRequest
-import utils.ObjectId
 
 
 trait Controller extends PlayController
   with ExtendedController
-  with ProvidesSessionData
-  with models.basics.Implicits
+  //TODO with ProvidesSessionData
   with ValidationHelpers
   with I18nSupport
   with LazyLogging {
-
-  implicit def AuthenticatedRequest2Request[T](r: SecuredRequest[T]): Request[T] =
-    r.request
 
   def jsonErrorWrites(errors: JsError): JsObject =
     Json.obj(

@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.accesscontext.DBAccessContext
 import javax.inject.Inject
 import com.scalableminds.util.tools.Fox
 import models.annotation.AnnotationDAO
@@ -7,7 +8,7 @@ import models.binary.DataSetDAO
 import models.task.TaskDAO
 import models.user.time.{TimeSpan, TimeSpanService}
 import models.user.{UserDAO, UserService}
-import oxalis.security.WebknossosSilhouette.SecuredAction
+import oxalis.security.WebknossosSilhouette
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json._
@@ -21,8 +22,12 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
                                      dataSetDAO: DataSetDAO,
                                      taskDAO: TaskDAO,
                                      annotationDAO: AnnotationDAO,
+                                     sil: WebknossosSilhouette,
                                      val messagesApi: MessagesApi)
   extends Controller {
+
+  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
+  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
 
   val intervalHandler = Map(
     "month" -> TimeSpan.groupByMonth _,
@@ -37,7 +42,7 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
     )
   }
 
-  def webKnossos(interval: String, start: Option[Long], end: Option[Long]) = SecuredAction.async { implicit request =>
+  def webKnossos(interval: String, start: Option[Long], end: Option[Long]) = sil.SecuredAction.async { implicit request =>
     intervalHandler.get(interval) match {
       case Some(handler) =>
         for {
@@ -62,7 +67,7 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
   }
 
 
-  def users(interval: String, start: Option[Long], end: Option[Long], limit: Int) = SecuredAction.async { implicit request =>
+  def users(interval: String, start: Option[Long], end: Option[Long], limit: Int) = sil.SecuredAction.async { implicit request =>
     for {
       handler <- intervalHandler.get(interval) ?~> "statistics.interval.invalid"
       users <- userDAO.findAll

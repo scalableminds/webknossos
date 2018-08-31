@@ -8,7 +8,6 @@ import models.annotation._
 import models.binary.{DataSetDAO, DataStoreHandler}
 import models.user.{User, UserService}
 import net.liftweb.common.{Box, Full}
-import oxalis.security.WebknossosSilhouette.UserAwareAction
 import oxalis.security.{TokenType, URLSharing, WebknossosSilhouette}
 import play.api.i18n.MessagesApi
 import play.api.libs.json.Json
@@ -20,13 +19,17 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
                                     userService: UserService,
                                     annotationStore: AnnotationStore,
                                     annotationInformationProvider: AnnotationInformationProvider,
+                                    wkDataStoreActions: WKDataStoreActions,
+                                    sil: WebknossosSilhouette,
                                     val messagesApi: MessagesApi)
-  extends Controller
-    with WKDataStoreActionHelper {
+  extends Controller {
 
-  val bearerTokenService = WebknossosSilhouette.environment.combinedAuthenticatorService.tokenAuthenticatorService
+  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
+  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
 
-  def generateTokenForDataStore = UserAwareAction.async { implicit request =>
+  val bearerTokenService = sil.environment.combinedAuthenticatorService.tokenAuthenticatorService
+
+  def generateTokenForDataStore = sil.UserAwareAction.async { implicit request =>
     val context = userAwareRequestToDBAccess(request)
     val tokenFox: Fox[String] = request.identity match {
       case Some(user) =>
@@ -40,7 +43,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
     }
   }
 
-  def validateUserAccess(name: String, token: String) = DataStoreAction(name).async(validateJson[UserAccessRequest]) { implicit request =>
+  def validateUserAccess(name: String, token: String) = wkDataStoreActions.DataStoreAction(name).async(validateJson[UserAccessRequest]) { implicit request =>
     val accessRequest = request.body
     if (token == DataStoreHandler.webKnossosToken) {
       Fox.successful(Ok(Json.toJson(UserAccessAnswer(true))))

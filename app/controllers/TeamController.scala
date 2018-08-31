@@ -2,11 +2,11 @@ package controllers
 
 
 import javax.inject.Inject
-import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import models.team._
 import models.user.UserTeamRolesDAO
-import oxalis.security.WebknossosSilhouette.SecuredAction
+import oxalis.security.WebknossosSilhouette
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
@@ -16,12 +16,16 @@ import utils.ObjectId
 class TeamController @Inject()(teamDAO: TeamDAO,
                                userTeamRolesDAO: UserTeamRolesDAO,
                                teamService: TeamService,
+                               sil: WebknossosSilhouette,
                                val messagesApi: MessagesApi) extends Controller {
+
+  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
+  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
 
   private def teamNameReads: Reads[String] =
     (__ \ "name").read[String]
 
-  def list = SecuredAction.async { implicit request =>
+  def list = sil.SecuredAction.async { implicit request =>
     for {
       allTeams <- teamDAO.findAllEditable
       js <- Fox.serialCombined(allTeams)(t => teamService.publicWrites(t))
@@ -39,7 +43,7 @@ class TeamController @Inject()(teamDAO: TeamDAO,
     }
   }
 
-  def delete(id: String) = SecuredAction.async { implicit request =>
+  def delete(id: String) = sil.SecuredAction.async { implicit request =>
     for {
       teamIdValidated <- ObjectId.parse(id)
       team <- teamDAO.findOne(teamIdValidated) ?~> "team.notFound"
@@ -50,7 +54,7 @@ class TeamController @Inject()(teamDAO: TeamDAO,
     }
   }
 
-  def create = SecuredAction.async(parse.json) { implicit request =>
+  def create = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(teamNameReads) { teamName =>
       for {
         _ <- bool2Fox(request.identity.isAdmin) ?~> "user.noAdmin"

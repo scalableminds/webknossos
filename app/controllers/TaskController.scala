@@ -15,7 +15,7 @@ import models.task._
 import models.team.TeamDAO
 import models.user._
 import net.liftweb.common.Box
-import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
+import oxalis.security.WebknossosSilhouette
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
@@ -64,15 +64,19 @@ class TaskController @Inject() (annotationService: AnnotationService,
                                 teamDAO: TeamDAO,
                                 taskDAO: TaskDAO,
                                 taskService: TaskService,
+                                sil: WebknossosSilhouette,
                                 val messagesApi: MessagesApi)
   extends Controller
     with ResultBox
     with ProtoGeometryImplicits
     with FoxImplicits {
 
+  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
+  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
+
   val MAX_OPEN_TASKS = WkConf.Oxalis.Tasks.maxOpenPerUser
 
-  def read(taskId: String) = SecuredAction.async { implicit request =>
+  def read(taskId: String) = sil.SecuredAction.async { implicit request =>
     for {
       task <- taskDAO.findOne(ObjectId(taskId)) ?~> "task.notFound"
       js <- taskService.publicWrites(task)
@@ -82,14 +86,14 @@ class TaskController @Inject() (annotationService: AnnotationService,
   }
 
 
-  def create = SecuredAction.async(validateJson[List[TaskParameters]]) { implicit request =>
+  def create = sil.SecuredAction.async(validateJson[List[TaskParameters]]) { implicit request =>
     createTasks(request.body.map { params =>
       val tracing = annotationService.createTracingBase(params.dataSet, params.boundingBox, params.editPosition, params.editRotation)
       (params, tracing)
     })
   }
 
-  def createFromFile = SecuredAction.async { implicit request =>
+  def createFromFile = sil.SecuredAction.async { implicit request =>
     for {
       body <- request.body.asMultipartFormData ?~> "binary.payload.invalid"
       inputFile <- body.file("nmlFile[]") ?~> "nml.file.notFound"
@@ -125,7 +129,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
     )
   }
 
-  def createTasks(requestedTasks: List[(TaskParameters, SkeletonTracing)])(implicit request: SecuredRequest[_]): Fox[Result] = {
+  def createTasks(requestedTasks: List[(TaskParameters, SkeletonTracing)])(implicit request: sil.SecuredRequest[_]): Fox[Result] = {
     def assertAllOnSameDataset: Fox[String] = {
       def allOnSameDatasetIter(requestedTasksRest: List[(TaskParameters, SkeletonTracing)], dataSetName: String): Boolean = {
         requestedTasksRest match {
@@ -175,7 +179,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
     } yield Ok(Json.toJson(result))
   }
 
-  private def validateScript(scriptIdOpt: Option[String])(implicit request: SecuredRequest[_]): Fox[Unit] = {
+  private def validateScript(scriptIdOpt: Option[String])(implicit request: sil.SecuredRequest[_]): Fox[Unit] = {
     scriptIdOpt match {
       case Some(scriptId) =>
         for {
@@ -186,7 +190,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
     }
   }
 
-  private def createTaskWithoutAnnotationBase(params: TaskParameters, skeletonTracingIdBox: Box[String])(implicit request: SecuredRequest[_]): Fox[Task] = {
+  private def createTaskWithoutAnnotationBase(params: TaskParameters, skeletonTracingIdBox: Box[String])(implicit request: sil.SecuredRequest[_]): Fox[Task] = {
     for {
       _ <- skeletonTracingIdBox.toFox
       taskTypeIdValidated <- ObjectId.parse(params.taskTypeId)
@@ -213,7 +217,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
   }
 
 
-  def update(taskId: String) = SecuredAction.async(validateJson[TaskParameters]) { implicit request =>
+  def update(taskId: String) = sil.SecuredAction.async(validateJson[TaskParameters]) { implicit request =>
     val params = request.body
     for {
       taskIdValidated <- ObjectId.parse(taskId) ?~> "task.id.invalid"
@@ -228,7 +232,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
     }
   }
 
-  def delete(taskId: String) = SecuredAction.async { implicit request =>
+  def delete(taskId: String) = sil.SecuredAction.async { implicit request =>
     for {
       taskIdValidated <- ObjectId.parse(taskId) ?~> "task.id.invalid"
       task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound"
@@ -240,7 +244,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
     }
   }
 
-  def listTasksForType(taskTypeId: String) = SecuredAction.async { implicit request =>
+  def listTasksForType(taskTypeId: String) = sil.SecuredAction.async { implicit request =>
     for {
       taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
       tasks <- taskDAO.findAllByTaskType(taskTypeIdValidated) ?~> "taskType.notFound"
@@ -250,7 +254,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
     }
   }
 
-  def listTasks = SecuredAction.async(parse.json) { implicit request =>
+  def listTasks = sil.SecuredAction.async(parse.json) { implicit request =>
 
     for {
       userIdOpt <- Fox.runOptional((request.body \ "user").asOpt[String])(ObjectId.parse)
@@ -265,7 +269,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
     }
   }
 
-  def request = SecuredAction.async { implicit request =>
+  def request = sil.SecuredAction.async { implicit request =>
     val user = request.identity
     for {
       teams <- getAllowedTeamsForNextTask(user)
@@ -302,7 +306,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
     }).flatten
   }
 
-  def peekNext = SecuredAction.async { implicit request =>
+  def peekNext = sil.SecuredAction.async { implicit request =>
     val user = request.identity
     for {
       teamIds <- userService.teamIdsFor(user._id)
@@ -312,7 +316,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
   }
 
 
-  def listExperienceDomains = SecuredAction.async { implicit request =>
+  def listExperienceDomains = sil.SecuredAction.async { implicit request =>
     for {
       experienceDomains <- taskDAO.listExperienceDomains
     } yield Ok(Json.toJson(experienceDomains))

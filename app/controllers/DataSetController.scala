@@ -1,6 +1,6 @@
 package controllers
 
-import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import javax.inject.Inject
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.mvc.Filter
@@ -9,8 +9,7 @@ import com.scalableminds.util.tools.{Fox, JsonHelper}
 import models.binary._
 import models.team.{OrganizationDAO, TeamDAO}
 import models.user.UserService
-import oxalis.security.URLSharing
-import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareAction}
+import oxalis.security.{URLSharing, WebknossosSilhouette}
 import com.scalableminds.util.tools.Math
 import play.api.Play.current
 import play.api.cache.Cache
@@ -34,7 +33,11 @@ class DataSetController @Inject()(userService: UserService,
                                   organizationDAO: OrganizationDAO,
                                   teamDAO: TeamDAO,
                                   dataSetDAO: DataSetDAO,
+                                  sil: WebknossosSilhouette,
                                   val messagesApi: MessagesApi) extends Controller {
+
+  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
+  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
 
   val DefaultThumbnailWidth = 400
   val DefaultThumbnailHeight = 400
@@ -49,7 +52,7 @@ class DataSetController @Inject()(userService: UserService,
       (__ \ 'isPublic).read[Boolean]).tupled
 
 
-  def thumbnail(dataSetName: String, dataLayerName: String, w: Option[Int], h: Option[Int]) = UserAwareAction.async { implicit request =>
+  def thumbnail(dataSetName: String, dataLayerName: String, w: Option[Int], h: Option[Int]) = sil.UserAwareAction.async { implicit request =>
 
     def imageFromCacheIfPossible(dataSet: DataSet) = {
       val width = Math.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailHeight)
@@ -84,7 +87,7 @@ class DataSetController @Inject()(userService: UserService,
     }
   }
 
-  def addForeignDataStoreAndDataSet() = SecuredAction.async { implicit request =>
+  def addForeignDataStoreAndDataSet() = sil.SecuredAction.async { implicit request =>
     for {
       body <- request.body.asJson.toFox
       url <- (body \ "url").asOpt[String] ?~> "dataSet.url.missing"
@@ -102,7 +105,7 @@ class DataSetController @Inject()(userService: UserService,
     }
   }
 
-  def list = UserAwareAction.async { implicit request =>
+  def list = sil.UserAwareAction.async { implicit request =>
     UsingFilters(
       Filter("isEditable", (value: Boolean, el: DataSet) =>
         for {isEditable <- dataSetService.isEditableBy(el, request.identity)} yield {isEditable && value || !isEditable && !value}),
@@ -119,7 +122,7 @@ class DataSetController @Inject()(userService: UserService,
     }
   }
 
-  def accessList(dataSetName: String) = SecuredAction.async { implicit request =>
+  def accessList(dataSetName: String) = sil.SecuredAction.async { implicit request =>
     for {
       dataSet <- dataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
       allowedTeams <- dataSetService.allowedTeamIdsFor(dataSet._id)
@@ -130,7 +133,7 @@ class DataSetController @Inject()(userService: UserService,
     }
   }
 
-  def read(dataSetName: String, sharingToken: Option[String]) = UserAwareAction.async { implicit request =>
+  def read(dataSetName: String, sharingToken: Option[String]) = sil.UserAwareAction.async { implicit request =>
     val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
     for {
       dataSet <- dataSetDAO.findOneByName(dataSetName)(ctx) ?~> Messages("dataSet.notFound", dataSetName)
@@ -141,7 +144,7 @@ class DataSetController @Inject()(userService: UserService,
     }
   }
 
-  def update(dataSetName: String) = SecuredAction.async(parse.json) { implicit request =>
+  def update(dataSetName: String) = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(dataSetPublicReads) {
       case (description, displayName, isPublic) =>
       for {
@@ -156,7 +159,7 @@ class DataSetController @Inject()(userService: UserService,
     }
   }
 
-  def importDataSet(dataSetName: String) = SecuredAction.async { implicit request =>
+  def importDataSet(dataSetName: String) = sil.SecuredAction.async { implicit request =>
     for {
       _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> "dataSet.import.impossible.name"
       dataSet <- dataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
@@ -166,7 +169,7 @@ class DataSetController @Inject()(userService: UserService,
     }
   }
 
-  def updateTeams(dataSetName: String) = SecuredAction.async(parse.json) { implicit request =>
+  def updateTeams(dataSetName: String) = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyAs[List[String]] { teams =>
       for {
         dataSet <- dataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
@@ -182,23 +185,23 @@ class DataSetController @Inject()(userService: UserService,
     }
   }
 
-  def getSharingToken(dataSetName: String) = SecuredAction.async { implicit request =>
+  def getSharingToken(dataSetName: String) = sil.SecuredAction.async { implicit request =>
     for {
       token <- dataSetService.getSharingToken(dataSetName)
     } yield Ok(Json.obj("sharingToken" -> token))
   }
 
-  def deleteSharingToken(dataSetName: String) = SecuredAction.async { implicit request =>
+  def deleteSharingToken(dataSetName: String) = sil.SecuredAction.async { implicit request =>
     for {
       _ <- dataSetDAO.updateSharingTokenByName(dataSetName, None)
     } yield Ok
   }
 
-  def create(typ: String) = SecuredAction.async(parse.json) { implicit request =>
+  def create(typ: String) = sil.SecuredAction.async(parse.json) { implicit request =>
     Future.successful(JsonBadRequest(Messages("dataSet.type.invalid", typ)))
   }
 
-  def isValidNewName(dataSetName: String) = SecuredAction.async { implicit request =>
+  def isValidNewName(dataSetName: String) = sil.SecuredAction.async { implicit request =>
     for {
       _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> "dataSet.name.invalid"
       _ <- dataSetService.assertNewDataSetName(dataSetName)(GlobalAccessContext) ?~> "dataSet.name.alreadyTaken"

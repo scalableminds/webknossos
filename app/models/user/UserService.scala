@@ -14,9 +14,9 @@ import models.binary.DataSetDAO
 import models.configuration.{DataSetConfiguration, UserConfiguration}
 import models.team._
 import oxalis.mail.DefaultMails
+import oxalis.security.TokenDAO
 import oxalis.user.UserCache
 import play.api.libs.concurrent.Execution.Implicits._
-import oxalis.security.WebknossosSilhouette
 import play.api.libs.json._
 import utils.{ObjectId, WkConfInjected}
 
@@ -29,7 +29,9 @@ class UserService @Inject()(conf: WkConfInjected,
                             userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
                             organizationDAO: OrganizationDAO,
                             teamDAO: TeamDAO,
+                            teamMembershipService: TeamMembershipService,
                             dataSetDAO: DataSetDAO,
+                            tokenDAO: TokenDAO,
                             userCache: UserCache,
                             actorSystem: ActorSystem) extends FoxImplicits with IdentityService[User] {
 
@@ -101,7 +103,7 @@ class UserService @Inject()(conf: WkConfInjected,
       _ <- userTeamRolesDAO.updateTeamMembershipsForUser(user._id, teamMemberships)
       _ <- userExperiencesDAO.updateExperiencesForUser(user._id, experiences)
       _ = userCache.invalidateUser(user._id)
-      _ <- if (user.email == email) Fox.successful(()) else WebknossosSilhouette.environment.tokenDAO.updateEmail(user.email, email)
+      _ <- if (user.email == email) Fox.successful(()) else tokenDAO.updateEmail(user.email, email)
       updated <- userDAO.findOne(user._id)
     } yield updated
   }
@@ -201,7 +203,7 @@ class UserService @Inject()(conf: WkConfInjected,
       isEditable <- isEditableBy(user, requestingUser)
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
       teamMemberships <- teamMembershipsFor(user._id)
-      teamMembershipsJs <- Fox.serialCombined(teamMemberships)(_.publicWrites)
+      teamMembershipsJs <- Fox.serialCombined(teamMemberships)(tm => teamMembershipService.publicWrites(tm))
       experiences <- experiencesFor(user._id)
     } yield {
       Json.obj(
@@ -226,7 +228,7 @@ class UserService @Inject()(conf: WkConfInjected,
     implicit val ctx = GlobalAccessContext
     for {
       teamMemberships <- teamMembershipsFor(user._id)
-      teamMembershipsJs <- Fox.serialCombined(teamMemberships)(_.publicWrites)
+      teamMembershipsJs <- Fox.serialCombined(teamMemberships)(tm => teamMembershipService.publicWrites(tm))
     } yield {
       Json.obj(
         "id" -> user._id.toString,

@@ -14,7 +14,7 @@ import play.api.Play.current
 import play.api.i18n.Messages
 import play.api.i18n.Messages.Implicits._
 import play.api.mvc.RequestHeader
-import utils.WkConf
+import utils.WkConfInjected
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -22,12 +22,13 @@ import scala.concurrent.{ExecutionContext, Future}
 class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticatorSettings,
                                                 dao: BearerTokenAuthenticatorDAO,
                                                 idGenerator: IDGenerator,
+                                                clock: Clock,
                                                 userService: UserService,
-                                                clock: Clock)(implicit override val executionContext: ExecutionContext)
+                                                conf: WkConfInjected)(implicit override val executionContext: ExecutionContext)
                                             extends BearerTokenAuthenticatorService(settings, dao, idGenerator, clock) with FoxImplicits{
 
-  val resetPasswordExpiry = WkConf.Silhouette.TokenAuthenticator.resetPasswordExpiry.toMillis millis
-  val dataStoreExpiry = WkConf.Silhouette.TokenAuthenticator.dataStoreExpiry.toMillis millis
+  val resetPasswordExpiry = conf.Silhouette.TokenAuthenticator.resetPasswordExpiry.toMillis millis
+  val dataStoreExpiry = conf.Silhouette.TokenAuthenticator.dataStoreExpiry.toMillis millis
 
   def create(loginInfo: LoginInfo, tokenType: TokenType)(implicit request: RequestHeader): Future[BearerTokenAuthenticator] = {
     val expiry: Duration = tokenType match {

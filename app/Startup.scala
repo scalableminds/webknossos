@@ -24,13 +24,14 @@ class Startup @Inject() (actorSystem: ActorSystem,
                          cleanUpService: CleanUpService,
                          annotationDAO: AnnotationDAO,
                          lifecycle: ApplicationLifecycle,
+                         sil: WebknossosSilhouette,
                          sqlClient: SQLClient
                         ) extends LazyLogging {
 
   logger.info("Executing Startup")
   startActors(actorSystem)
 
-  val tokenAuthenticatorService = WebknossosSilhouette.environment.combinedAuthenticatorService.tokenAuthenticatorService
+  val tokenAuthenticatorService = sil.environment.combinedAuthenticatorService.tokenAuthenticatorService
 
   cleanUpService.register("deletion of expired tokens", tokenAuthenticatorService.dataStoreExpiry) {
     tokenAuthenticatorService.removeExpiredTokens(GlobalAccessContext)

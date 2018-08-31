@@ -1,11 +1,12 @@
 package controllers
 
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.FoxImplicits
 import javax.inject.Inject
 import com.typesafe.config.ConfigRenderOptions
-import oxalis.security.WebknossosSilhouette.UserAwareAction
 import models.analytics.{AnalyticsDAO, AnalyticsEntry}
 import models.binary.DataStoreHandler
+import oxalis.security.WebknossosSilhouette
 import play.api.i18n.MessagesApi
 import play.api.Play.current
 import play.api.libs.json.Json
@@ -15,9 +16,13 @@ import slick.jdbc.PostgresProfile.api._
 
 class Application @Inject()(analyticsDAO: AnalyticsDAO,
                             releaseInformationDAO: ReleaseInformationDAO,
+                            sil: WebknossosSilhouette,
                             val messagesApi: MessagesApi) extends Controller {
 
-  def buildInfo = UserAwareAction.async { implicit request =>
+  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
+  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
+
+  def buildInfo = sil.UserAwareAction.async { implicit request =>
     val token = request.identity.flatMap { user =>
       if (user.isSuperUser) Some(DataStoreHandler.webKnossosToken) else None
     }
@@ -33,7 +38,7 @@ class Application @Inject()(analyticsDAO: AnalyticsDAO,
     }
   }
 
-  def analytics(namespace: String) = UserAwareAction(parse.json(1024 * 1024)) { implicit request =>
+  def analytics(namespace: String) = sil.UserAwareAction(parse.json(1024 * 1024)) { implicit request =>
     analyticsDAO.insertOne(
       AnalyticsEntry(
         ObjectId.generate,
@@ -43,7 +48,7 @@ class Application @Inject()(analyticsDAO: AnalyticsDAO,
     Ok
   }
 
-  def features = UserAwareAction { implicit request =>
+  def features = sil.UserAwareAction { implicit request =>
     Ok(current.configuration.underlying.getConfig("features").resolve.root.render(ConfigRenderOptions.concise()))
   }
 

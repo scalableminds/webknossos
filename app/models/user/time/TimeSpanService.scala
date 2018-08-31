@@ -24,6 +24,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
                                 userService: UserService,
                                 taskDAO: TaskDAO,
                                 brainTracing: BrainTracing,
+                                annotationService: AnnotationService,
                                 projectDAO: ProjectDAO,
                                 organizationDAO: OrganizationDAO,
                                 timeSpanDAO: TimeSpanDAO) extends FoxImplicits with LazyLogging {
@@ -173,7 +174,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     for {
       annotation <- annotationOpt.toFox
       user <- userService.findOneById(annotation._user, useCache = true)(GlobalAccessContext)
-      task <- annotation.task
+      task <- annotationService.taskFor(annotation)
       project <- projectDAO.findOne(task._project)
       annotationTime <- annotation.tracingTime ?~> "no annotation.tracingTime"
       timeLimit <- project.expectedTime ?~> "no project.expectedTime"

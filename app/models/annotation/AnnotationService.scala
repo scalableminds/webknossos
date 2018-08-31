@@ -5,6 +5,7 @@ import java.io.{BufferedOutputStream, FileOutputStream}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -21,7 +22,7 @@ import models.annotation.nml.NmlWriter
 import models.basics.Implicits
 import models.binary._
 import models.project.ProjectDAO
-import models.task.{Task, TaskTypeDAO}
+import models.task.{Task, TaskDAO, TaskService, TaskTypeDAO}
 import models.team.OrganizationDAO
 import models.user.{User, UserDAO, UserService}
 import utils.ObjectId
@@ -35,17 +36,23 @@ import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 import oxalis.security.WebknossosSilhouette.UserAwareRequest
+import play.api.libs.json.{JsNull, JsObject, Json}
 
 class AnnotationService @Inject()(annotationInformationProvider: AnnotationInformationProvider,
                                   savedTracingInformationHandler: SavedTracingInformationHandler,
                                   annotationDAO: AnnotationDAO,
                                   userDAO: UserDAO,
                                   taskTypeDAO: TaskTypeDAO,
+                                  taskService: TaskService,
                                   dataSetService: DataSetService,
                                   dataSetDAO: DataSetDAO,
+                                  dataStoreService: DataStoreService,
+                                  taskDAO: TaskDAO,
                                   userService: UserService,
+                                  dataStoreDAO: DataStoreDAO,
                                   projectDAO: ProjectDAO,
                                   organizationDAO: OrganizationDAO,
+                                  annotationRestrictionDefults: AnnotationRestrictionDefults,
                                   nmlWriter: NmlWriter)
   extends BoxImplicits
   with FoxImplicits
@@ -383,13 +390,96 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       Fox.failure("annotation.revert.skeletonOnly")
     case AnnotationType.Task if annotation.skeletonTracingId.isDefined =>
       for {
-        task <- annotation.task.toFox
+        task <- taskFor(annotation)
         annotationBase <- baseForTask(task._id)
-        dataSet <- annotationBase.dataSet
+        dataSet <- dataSetDAO.findOne(annotationBase._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
         newTracingId <- tracingFromBase(annotationBase, dataSet)
         _ <- annotationDAO.updateSkeletonTracingId(annotation._id, newTracingId)
       } yield ()
     case _ if !annotation.skeletonTracingId.isDefined =>
       Fox.failure("annotation.revert.skeletonOnly")
+  }
+
+
+  private def settingsFor(annotation: Annotation)(implicit ctx: DBAccessContext) = {
+    if (annotation.typ == AnnotationType.Task || annotation.typ == AnnotationType.TracingBase)
+      for {
+        taskId <- annotation._task.toFox
+        task: Task <- taskDAO.findOne(taskId) ?~> Messages("task.notFound")
+        taskType <- taskTypeDAO.findOne(task._taskType) ?~> Messages("taskType.notFound")
+      } yield {
+        taskType.settings
+      }
+    else
+      Fox.successful(AnnotationSettings.defaultFor(annotation.tracingType))
+  }
+
+  def taskFor(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Task] =
+    annotation._task.toFox.flatMap(taskId => taskDAO.findOne(taskId)(GlobalAccessContext))
+
+  def composeRestrictionsFor(annotation: Annotation, restrictions: Option[AnnotationRestrictions], readOnly: Option[Boolean]) = {
+    if (readOnly.getOrElse(false))
+      annotationRestrictionDefults.readonlyAnnotation()
+    else
+      restrictions.getOrElse(annotationRestrictionDefults.defaultAnnotationRestrictions(annotation))
+  }
+
+  def publicWrites(annotation: Annotation, requestingUser: Option[User] = None, restrictions: Option[AnnotationRestrictions] = None, readOnly: Option[Boolean] = None): Fox[JsObject] = {
+    implicit val ctx = GlobalAccessContext
+    for {
+      dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFound"
+      task = annotation._task.toFox.flatMap(taskId => taskDAO.findOne(taskId))
+      taskJson <- task.flatMap(t => taskService.publicWrites(t)).getOrElse(JsNull)
+      user <- userService.findOneById(annotation._user, useCache = true)(GlobalAccessContext)
+      userJson <- userService.compactWrites(user)
+      settings <- settingsFor(annotation)
+      annotationRestrictions <- AnnotationRestrictions.writeAsJson(composeRestrictionsFor(annotation, restrictions, readOnly), requestingUser)
+      dataStore <- dataStoreDAO.findOneByName(dataSet._dataStore.trim) ?~> Messages("datastore.notFound")
+      dataStoreJs <- dataStoreService.publicWrites(dataStore)
+    } yield {
+      Json.obj(
+        "modified" -> annotation.modified,
+        "state" -> annotation.state,
+        "id" -> annotation.id,
+        "name" -> annotation.name,
+        "description" -> annotation.description,
+        "typ" -> annotation.typ,
+        "task" -> taskJson,
+        "stats" -> annotation.statistics,
+        "restrictions" -> annotationRestrictions,
+        "formattedHash" -> Formatter.formatHash(annotation._id.toString),
+        "tracing" -> Json.obj("skeleton" -> annotation.skeletonTracingId, "volume" -> annotation.volumeTracingId),
+        "dataSetName" -> dataSet.name,
+        "dataStore" -> dataStoreJs,
+        "isPublic" -> annotation.isPublic,
+        "settings" -> settings,
+        "tracingTime" -> annotation.tracingTime,
+        "tags" -> (annotation.tags ++ Set(dataSet.name, annotation.tracingType.toString)),
+        "user" -> userJson
+      )
+    }
+  }
+
+  //for Explorative Annotations list
+  def compactWrites(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[JsObject] = {
+    for {
+      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
+    } yield {
+      Json.obj(
+        "modified" -> annotation.modified,
+        "state" -> annotation.state,
+        "id" -> annotation._id.toString,
+        "name" -> annotation.name,
+        "description" -> annotation.description,
+        "typ" -> annotation.typ,
+        "stats" -> annotation.statistics,
+        "formattedHash" -> Formatter.formatHash(annotation._id.toString),
+        "tracing" -> Json.obj("skeleton" -> annotation.skeletonTracingId, "volume" -> annotation.volumeTracingId),
+        "dataSetName" -> dataSet.name,
+        "isPublic" -> annotation.isPublic,
+        "tracingTime" -> annotation.tracingTime,
+        "tags" -> (annotation.tags ++ Set(dataSet.name, annotation.tracingType.toString))
+      )
+    }
   }
 }

@@ -53,15 +53,6 @@ case class Annotation(
     else TracingType.volume
   }
 
-  def user: Fox[User] =
-    UserService.findOneById(_user, useCache = true)(GlobalAccessContext)
-
-  def task: Fox[Task] =
-    _task.toFox.flatMap(taskId => TaskDAO.findOne(taskId)(GlobalAccessContext))
-
-  def dataSet: Fox[DataSet] =
-    DataSetDAO.findOne(_dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
-
   def isRevertPossible: Boolean = {
     // Unfortunately, we can not revert all tracings, because we do not have the history for all of them
     // hence we need a way to decide if a tracing can safely be reverted. We will use the created date of the
@@ -69,82 +60,6 @@ case class Annotation(
     created > 1470002400000L  // 1.8.2016, 00:00:00
   }
 
-  private def findSettings(implicit ctx: DBAccessContext) = {
-    if (typ == AnnotationType.Task || typ == AnnotationType.TracingBase)
-      for {
-        taskId <- _task.toFox
-        task: Task <- TaskDAO.findOne(taskId) ?~> Messages("task.notFound")
-        taskType <- TaskTypeDAO.findOne(task._taskType) ?~> Messages("taskType.notFound")
-      } yield {
-        taskType.settings
-      }
-    else
-      Fox.successful(AnnotationSettings.defaultFor(tracingType))
-  }
-
-  private def composeRestrictions(restrictions: Option[AnnotationRestrictions], readOnly: Option[Boolean]) = {
-    if (readOnly.getOrElse(false))
-      AnnotationRestrictions.readonlyAnnotation()
-    else
-      restrictions.getOrElse(AnnotationRestrictions.defaultAnnotationRestrictions(this))
-  }
-
-  def publicWrites(requestingUser: Option[User] = None, restrictions: Option[AnnotationRestrictions] = None, readOnly: Option[Boolean] = None)(implicit ctx: DBAccessContext): Fox[JsObject] = {
-    for {
-      taskJson <- task.flatMap(_.publicWrites).getOrElse(JsNull)
-      dataSet <- dataSet
-      user <- user
-      userJson <- userService.compactWrites(user)
-      settings <- findSettings
-      annotationRestrictions <- AnnotationRestrictions.writeAsJson(composeRestrictions(restrictions, readOnly), requestingUser)
-      dataStore <- dataStoreDAO.findOneByName(dataSet._dataStore.trim) ?~> Messages("datastore.notFound")
-      dataStoreJs <- dataStore.publicWrites
-    } yield {
-      Json.obj(
-        "modified" -> modified,
-        "state" -> state,
-        "id" -> id,
-        "name" -> name,
-        "description" -> description,
-        "typ" -> typ,
-        "task" -> taskJson,
-        "stats" -> statistics,
-        "restrictions" -> annotationRestrictions,
-        "formattedHash" -> Formatter.formatHash(id),
-        "tracing" -> Json.obj("skeleton" -> skeletonTracingId, "volume" -> volumeTracingId),
-        "dataSetName" -> dataSet.name,
-        "dataStore" -> dataStoreJs,
-        "isPublic" -> isPublic,
-        "settings" -> settings,
-        "tracingTime" -> tracingTime,
-        "tags" -> (tags ++ Set(dataSet.name, tracingType.toString)),
-        "user" -> userJson
-      )
-    }
-  }
-
-  //for Explorative Annotations list
-  def compactWrites(implicit ctx: DBAccessContext): Fox[JsObject] = {
-    for {
-      dataSet <- dataSet
-    } yield {
-      Json.obj(
-        "modified" -> modified,
-        "state" -> state,
-        "id" -> id,
-        "name" -> name,
-        "description" -> description,
-        "typ" -> typ,
-        "stats" -> statistics,
-        "formattedHash" -> Formatter.formatHash(id),
-        "tracing" -> Json.obj("skeleton" -> skeletonTracingId, "volume" -> volumeTracingId),
-        "dataSetName" -> dataSet.name,
-        "isPublic" -> isPublic,
-        "tracingTime" -> tracingTime,
-        "tags" -> (tags ++ Set(dataSet.name, tracingType.toString))
-      )
-    }
-  }
 }
 
 

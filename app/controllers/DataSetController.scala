@@ -105,7 +105,7 @@ class DataSetController @Inject()(userService: UserService,
   def list = UserAwareAction.async { implicit request =>
     UsingFilters(
       Filter("isEditable", (value: Boolean, el: DataSet) =>
-        for {isEditable <- el.isEditableBy(request.identity)} yield {isEditable && value || !isEditable && !value}),
+        for {isEditable <- dataSetService.isEditableBy(el, request.identity)} yield {isEditable && value || !isEditable && !value}),
       Filter("isActive", (value: Boolean, el: DataSet) =>
         Fox.successful(el.isUsable == value))
     ) { filter =>
@@ -146,7 +146,7 @@ class DataSetController @Inject()(userService: UserService,
       case (description, displayName, isPublic) =>
       for {
         dataSet <- dataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
-        _ <- Fox.assertTrue(dataSet.isEditableBy(request.identity)) ?~> "notAllowed"
+        _ <- Fox.assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed"
         _ <- dataSetDAO.updateFields(dataSet._id, description, displayName, isPublic)
         updated <- dataSetDAO.findOneByName(dataSetName)
         js <- dataSetService.publicWrites(updated, Some(request.identity))
@@ -170,7 +170,7 @@ class DataSetController @Inject()(userService: UserService,
     withJsonBodyAs[List[String]] { teams =>
       for {
         dataSet <- dataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
-        _ <- Fox.assertTrue(dataSet.isEditableBy(request.identity)) ?~> "notAllowed"
+        _ <- Fox.assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed"
         teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.parse(_))
         userTeams <- teamDAO.findAllEditable
         oldAllowedTeams <- dataSetService.allowedTeamIdsFor(dataSet._id)

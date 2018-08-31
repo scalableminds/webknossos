@@ -6,13 +6,14 @@ import com.mohiva.play.silhouette.impl.daos.AuthenticatorDAO
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
+import javax.inject.Inject
 import org.joda.time.DateTime
 import oxalis.security.TokenType.TokenType
 import play.api.libs.concurrent.Execution.Implicits._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import play.api.i18n.{Messages, MessagesApi}
-import utils.{ObjectId, SQLDAO}
+import utils.{ObjectId, SQLClient, SQLDAO}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -54,7 +55,7 @@ object Token {
   }
 }
 
-object TokenDAO extends SQLDAO[Token, TokensRow, Tokens] {
+class TokenDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[Token, TokensRow, Tokens](sqlClient) {
   val collection = Tokens
 
   def idColumn(x: Tokens): Rep[String] = x._Id
@@ -130,7 +131,7 @@ object TokenDAO extends SQLDAO[Token, TokensRow, Tokens] {
   }
 }
 
-class BearerTokenAuthenticatorDAO extends AuthenticatorDAO[BearerTokenAuthenticator] {
+class BearerTokenAuthenticatorDAO @Inject()(tokenDAO: TokenDAO) extends AuthenticatorDAO[BearerTokenAuthenticator] {
 
   /* functions as defined in Silhouette trait Authenticator DAO */
   override def find(value: String): Future[Option[BearerTokenAuthenticator]] =
@@ -142,29 +143,29 @@ class BearerTokenAuthenticatorDAO extends AuthenticatorDAO[BearerTokenAuthentica
   override def update(newAuthenticator: BearerTokenAuthenticator): Future[BearerTokenAuthenticator] = {
     implicit val ctx = GlobalAccessContext
     (for {
-      oldAuthenticatorSQL <- TokenDAO.findOneByLoginInfo(newAuthenticator.loginInfo.providerID, newAuthenticator.loginInfo.providerKey, TokenType.Authentication)
-      _ <- TokenDAO.updateValues(oldAuthenticatorSQL._id, newAuthenticator.id, newAuthenticator.lastUsedDateTime, newAuthenticator.expirationDateTime, newAuthenticator.idleTimeout)
+      oldAuthenticatorSQL <- tokenDAO.findOneByLoginInfo(newAuthenticator.loginInfo.providerID, newAuthenticator.loginInfo.providerKey, TokenType.Authentication)
+      _ <- tokenDAO.updateValues(oldAuthenticatorSQL._id, newAuthenticator.id, newAuthenticator.lastUsedDateTime, newAuthenticator.expirationDateTime, newAuthenticator.idleTimeout)
       updated <- findOneByValue(newAuthenticator.id)
     } yield updated).toFutureOrThrowException("Could not update Token. Throwing exception because update cannot return a box, as defined by Silhouette trait AuthenticatorDAO")
   }
 
   override def remove(value: String): Future[Unit] =
     for {
-    _ <- TokenDAO.deleteOneByValue(value)(GlobalAccessContext).futureBox
+    _ <- tokenDAO.deleteOneByValue(value)(GlobalAccessContext).futureBox
     } yield ()
 
   /* custom functions */
 
   def findOneByValue(value: String)(implicit ctx: DBAccessContext): Fox[BearerTokenAuthenticator] = {
     for {
-      tokenSQL <- TokenDAO.findOneByValue(value)
+      tokenSQL <- tokenDAO.findOneByValue(value)
       tokenAuthenticator <- tokenSQL.toBearerTokenAuthenticator
     } yield tokenAuthenticator
   }
 
   def findOneByLoginInfo(loginInfo: LoginInfo, tokenType: TokenType)(implicit ctx: DBAccessContext): Future[Option[BearerTokenAuthenticator]] =
     (for {
-      tokenSQL <- TokenDAO.findOneByLoginInfo(loginInfo.providerID, loginInfo.providerKey, tokenType)
+      tokenSQL <- tokenDAO.findOneByLoginInfo(loginInfo.providerID, loginInfo.providerKey, tokenType)
       tokenAuthenticator <- tokenSQL.toBearerTokenAuthenticator
     } yield tokenAuthenticator).toFutureOption
 
@@ -181,15 +182,15 @@ class BearerTokenAuthenticatorDAO extends AuthenticatorDAO[BearerTokenAuthentica
   private def insert(authenticator: BearerTokenAuthenticator, tokenType: TokenType)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       tokenSQL <- Token.fromBearerTokenAuthenticator(authenticator, tokenType)
-      _ <- TokenDAO.insertOne(tokenSQL)
+      _ <- tokenDAO.insertOne(tokenSQL)
     } yield ()
 
   def deleteAllExpired(implicit ctx: DBAccessContext): Fox[Unit] =
-    TokenDAO.deleteAllExpired
+    tokenDAO.deleteAllExpired
 
   def updateEmail(oldEmail: String, newEmail: String)(implicit ctx: DBAccessContext): Fox[Unit] = {
     for {
-      _ <- TokenDAO.updateEmail(oldEmail, newEmail)
+      _ <- tokenDAO.updateEmail(oldEmail, newEmail)
     } yield ()
   }
 }

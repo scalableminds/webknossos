@@ -5,7 +5,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.{AnnotationDAO, AnnotationType}
+import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.team._
 import models.user._
 import models.user.time._
@@ -27,6 +27,7 @@ class UserController @Inject()(userService: UserService,
                                userDAO: UserDAO,
                                annotationDAO: AnnotationDAO,
                                timeSpanService: TimeSpanService,
+                               annotationService: AnnotationService,
                                teamDAO: TeamDAO,
                                val messagesApi: MessagesApi)
   extends Controller
@@ -52,7 +53,7 @@ class UserController @Inject()(userService: UserService,
   def annotations(isFinished: Option[Boolean], limit: Option[Int]) = SecuredAction.async { implicit request =>
     for {
       annotations <- annotationDAO.findAllFor(request.identity._id, isFinished, AnnotationType.Explorational, limit.getOrElse(defaultAnnotationLimit))
-      jsonList <- Fox.serialCombined(annotations)(_.compactWrites)
+      jsonList <- Fox.serialCombined(annotations)(a => annotationService.compactWrites(a))
     } yield {
       Ok(Json.toJson(jsonList))
     }
@@ -61,7 +62,7 @@ class UserController @Inject()(userService: UserService,
   def tasks(isFinished: Option[Boolean], limit: Option[Int]) = SecuredAction.async { implicit request =>
     for {
       annotations <- annotationDAO.findAllFor(request.identity._id, isFinished, AnnotationType.Task, limit.getOrElse(defaultAnnotationLimit))
-      jsonList <- Fox.serialCombined(annotations)(_.publicWrites(Some(request.identity)))
+      jsonList <- Fox.serialCombined(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
     } yield {
       Ok(Json.toJson(jsonList))
     }
@@ -120,7 +121,7 @@ class UserController @Inject()(userService: UserService,
       user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
       _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed"
       annotations <- annotationDAO.findAllFor(userIdValidated, isFinished, AnnotationType.Explorational, limit.getOrElse(defaultAnnotationLimit))
-      jsonList <- Fox.serialCombined(annotations)(_.compactWrites)
+      jsonList <- Fox.serialCombined(annotations)(a => annotationService.compactWrites(a))
     } yield {
       Ok(Json.toJson(jsonList))
     }
@@ -132,7 +133,7 @@ class UserController @Inject()(userService: UserService,
       user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
       _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed"
       annotations <- annotationDAO.findAllFor(userIdValidated, isFinished, AnnotationType.Task, limit.getOrElse(defaultAnnotationLimit))
-      jsonList <- Fox.serialCombined(annotations)(_.publicWrites(Some(request.identity)))
+      jsonList <- Fox.serialCombined(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
     } yield {
       Ok(Json.toJson(jsonList))
     }

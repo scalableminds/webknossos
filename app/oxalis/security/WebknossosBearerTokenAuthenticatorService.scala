@@ -22,6 +22,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticatorSettings,
                                                 dao: BearerTokenAuthenticatorDAO,
                                                 idGenerator: IDGenerator,
+                                                userService: UserService,
                                                 clock: Clock)(implicit override val executionContext: ExecutionContext)
                                             extends BearerTokenAuthenticatorService(settings, dao, idGenerator, clock) with FoxImplicits{
 
@@ -68,7 +69,7 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
     for {
       tokenAuthenticator <- dao.findOneByValue(tokenValue) ?~> Messages("auth.invalidToken")
       _ <- bool2Fox(tokenAuthenticator.isValid) ?~> Messages("auth.invalidToken")
-      user <- UserService.findOneByEmail(tokenAuthenticator.loginInfo.providerKey)
+      user <- userService.findOneByEmail(tokenAuthenticator.loginInfo.providerKey)
     } yield user
 
   def userForTokenOpt(tokenOpt: Option[String])(implicit ctx: DBAccessContext): Fox[User] = tokenOpt match {

@@ -42,6 +42,7 @@ class InitialDataService @Inject()(userService: UserService,
                                    taskTypeDAO: TaskTypeDAO,
                                    dataStoreDAO: DataStoreDAO,
                                    teamDAO: TeamDAO,
+                                   tokenDAO: TokenDAO,
                                    projectDAO: ProjectDAO,
                                    organizationDAO: OrganizationDAO,
                                    conf: WkConfInjected) extends FoxImplicits with LazyLogging {
@@ -112,7 +113,7 @@ Samplecountry
 
   def insertToken = {
     val expiryTime = Play.configuration.underlying.getDuration("silhouette.tokenAuthenticator.authenticatorExpiry").toMillis
-    TokenDAO.findOneByLoginInfo("credentials", defaultUserEmail, TokenType.Authentication).futureBox.flatMap {
+    tokenDAO.findOneByLoginInfo("credentials", defaultUserEmail, TokenType.Authentication).futureBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
         val newToken = Token(
@@ -124,7 +125,7 @@ Samplecountry
           None,
           TokenType.Authentication
         )
-        TokenDAO.insertOne(newToken)
+        tokenDAO.insertOne(newToken)
     }
   }
 

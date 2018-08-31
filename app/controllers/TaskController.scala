@@ -273,7 +273,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
       insertedAnnotationBox <- annotationService.createAnnotationFor(user, task, initializingAnnotationId).futureBox
       _ <- annotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
       annotation <- insertedAnnotationBox.toFox
-      annotationJSON <- annotation.publicWrites(Some(user))
+      annotationJSON <- annotationService.publicWrites(annotation, Some(user))
     } yield {
       JsonOk(annotationJSON, Messages("task.assigned"))
     }

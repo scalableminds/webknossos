@@ -19,24 +19,7 @@ case class Script(
                     gist: String,
                     created: Long = System.currentTimeMillis(),
                     isDeleted: Boolean = false
-                    ) extends FoxImplicits {
-
-  def publicWrites: Fox[JsObject] = {
-    implicit val ctx = GlobalAccessContext
-    for {
-      owner <- UserDAO.findOne(_owner) ?~> "user.notFound"
-      ownerJs <- owner.compactWrites
-    } yield {
-      Json.obj(
-        "id" -> _id.toString,
-        "name" -> name,
-        "gist" -> gist,
-        "owner" -> ownerJs
-      )
-    }
-  }
-
-}
+                    )
 
 class ScriptService @Inject()(userDAO: UserDAO, userService: UserService) {
 

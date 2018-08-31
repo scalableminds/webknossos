@@ -2,8 +2,9 @@ package models.annotation
 
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import javax.inject.Inject
 import javax.management.relation.Role
-import models.user.User
+import models.user.{User, UserService}
 import play.api.libs.json._
 import models.annotation.AnnotationState._
 import utils.ObjectId
@@ -30,8 +31,8 @@ class AnnotationRestrictions {
   def allowDownload(user: User): Fox[Boolean] = allowDownload(Some(user))
 }
 
-object AnnotationRestrictions extends FoxImplicits{
-  def writeAsJson(ar: AnnotationRestrictions, u: Option[User]) : Fox[JsObject] =
+object AnnotationRestrictions extends FoxImplicits {
+  def writeAsJson(ar: AnnotationRestrictions, u: Option[User]): Fox[JsObject] =
     for {
       allowAccess <- ar.allowAccess(u)
       allowUpdate <- ar.allowUpdate(u)
@@ -44,7 +45,9 @@ object AnnotationRestrictions extends FoxImplicits{
         "allowFinish" -> allowFinish,
         "allowDownload" -> allowDownload)
     }
+}
 
+class AnnotationRestrictionDefults @Inject()(userService: UserService) extends FoxImplicits {
   def restrictEverything =
     new AnnotationRestrictions()
 
@@ -68,12 +71,12 @@ object AnnotationRestrictions extends FoxImplicits{
         })
       }
 
-      override def allowFinish(user: Option[User]) = {
+      override def allowFinish(userOption: Option[User]) = {
         (for {
-          u <- option2Fox(user)
+          user <- option2Fox(userOption)
           isTeamManagerOrAdminOfTeam <- userService.isTeamManagerOrAdminOf(user, annotation._team)
         } yield {
-          (annotation._user == u._id || isTeamManagerOrAdminOfTeam) && !(annotation.state == Finished)
+          (annotation._user == user._id || isTeamManagerOrAdminOfTeam) && !(annotation.state == Finished)
         }).orElse(Fox.successful(false))
       }
     }

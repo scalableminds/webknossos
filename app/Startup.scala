@@ -1,24 +1,44 @@
 import akka.actor.{ActorSystem, Props}
 import com.newrelic.api.agent.NewRelic
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mail.{Mailer, MailerConfig}
 import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService
 import javax.inject._
+import models.annotation.AnnotationDAO
 import net.liftweb.common.{Failure, Full}
-import utils.WkConfInjected
+import oxalis.cleanup.CleanUpService
+import oxalis.security.WebknossosSilhouette
+import play.api.inject.ApplicationLifecycle
+import utils.{SQLClient, WkConfInjected}
 
-import scala.concurrent.{Future}
+import scala.concurrent.duration._
+import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.sys.process._
 
 
 class Startup @Inject() (actorSystem: ActorSystem,
                          conf: WkConfInjected,
-                         initialDataService: InitialDataService
+                         initialDataService: InitialDataService,
+                         cleanUpService: CleanUpService,
+                         annotationDAO: AnnotationDAO,
+                         lifecycle: ApplicationLifecycle,
+                         sqlClient: SQLClient
                         ) extends LazyLogging {
 
   logger.info("Executing Startup")
   startActors(actorSystem)
+
+  val tokenAuthenticatorService = WebknossosSilhouette.environment.combinedAuthenticatorService.tokenAuthenticatorService
+
+  cleanUpService.register("deletion of expired tokens", tokenAuthenticatorService.dataStoreExpiry) {
+    tokenAuthenticatorService.removeExpiredTokens(GlobalAccessContext)
+  }
+
+  cleanUpService.register("deletion of old annotations in initializing state", 1 day) {
+    annotationDAO.deleteOldInitializingAnnotations
+  }
 
   ensurePostgresDatabase.onComplete { _ =>
     if (conf.Application.insertInitialData) {
@@ -27,6 +47,13 @@ class Startup @Inject() (actorSystem: ActorSystem,
         case Failure(msg, _, _) => logger.info("No initial data inserted: " + msg)
         case _ => logger.warn("Error while inserting initial data")
       }
+    }
+  }
+
+  lifecycle.addStopHook { () =>
+    Future.successful {
+      logger.info("Closing SQL Database handle")
+      sqlClient.db.close()
     }
   }
 

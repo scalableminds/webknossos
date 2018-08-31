@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableD
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.team.{OrganizationDAO, TeamDAO, TeamService}
-import models.user.User
+import models.user.{User, UserService}
 import net.liftweb.common.Full
 import oxalis.security.{CompactRandomIDGenerator, URLSharing, WebknossosSilhouette}
 import play.api.i18n.{Messages, MessagesApi}
@@ -24,7 +24,9 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                dataSetLastUsedTimesDAO: DataSetLastUsedTimesDAO,
                                dataSetDataLayerDAO: DataSetDataLayerDAO,
                                teamDAO: TeamDAO,
+                               dataStoreService: DataStoreService,
                                teamService: TeamService,
+                               userService: UserService,
                                dataSetAllowedTeamsDAO: DataSetAllowedTeamsDAO,
                                val messagesApi: MessagesApi
                               ) extends FoxImplicits with LazyLogging {
@@ -205,16 +207,27 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       allowedTeams <- Fox.combined(allowedTeamIds.map(teamDAO.findOne(_)(GlobalAccessContext)))
     } yield allowedTeams
 
+
+  def isEditableBy(dataSet: DataSet, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Boolean] = {
+    userOpt match {
+      case Some(user) =>
+        for {
+          isTeamManagerInOrg <- userService.isTeamManagerInOrg(user, dataSet._organization)
+        } yield (user.isAdminOf(dataSet._organization) || isTeamManagerInOrg)
+      case _ => Fox.successful(false)
+    }
+  }
+
   def publicWrites(dataSet: DataSet, userOpt: Option[User]): Fox[JsObject] = {
     implicit val ctx = GlobalAccessContext
     for {
       teams <- allowedTeamsFor(dataSet._id)
       teamsJs <- Fox.serialCombined(teams)(t => teamService.publicWrites(t))
       logoUrl <- logoUrlFor(dataSet)
-      isEditable <- dataSet.isEditableBy(userOpt)
+      isEditable <- isEditableBy(dataSet, userOpt)
       lastUsedByUser <- lastUsedTimeFor(dataSet._id, userOpt)
       dataStore <- dataStoreFor(dataSet)
-      dataStoreJs <- dataStore.publicWrites
+      dataStoreJs <- dataStoreService.publicWrites(dataStore)
       organization <- organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound"
       dataSource <- dataSourceFor(dataSet)
     } yield {

@@ -16,33 +16,7 @@ import scala.concurrent.Future
 import sys.process._
 import scala.concurrent.duration._
 
-object Global extends GlobalSettings with LazyLogging{
-
-  override def onStart(app: Application) {
-
-    logger.info("Executing Global START")
-
-    val tokenAuthenticatorService = WebknossosSilhouette.environment.combinedAuthenticatorService.tokenAuthenticatorService
-
-    CleanUpService.register("deletion of expired tokens", tokenAuthenticatorService.dataStoreExpiry) {
-      tokenAuthenticatorService.removeExpiredTokens(GlobalAccessContext)
-    }
-
-    CleanUpService.register("deletion of old annotations in initializing state", 1 day) {
-      AnnotationDAO.deleteOldInitializingAnnotations
-    }
-
-    super.onStart(app)
-  }
-
-  override def onStop(app: Application): Unit = {
-    logger.info("Executing Global END")
-
-    logger.info("Closing SQL Database handle")
-    SQLClient.db.close()
-
-    super.onStop(app)
-  }
+object Global extends GlobalSettings with LazyLogging {
 
   override def onRouteRequest(request: RequestHeader): Option[Handler] = {
     if (request.uri.matches("^(/api/|/data/|/assets/).*$")) {

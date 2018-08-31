@@ -18,16 +18,18 @@ case class DataStore(
                        isDeleted: Boolean = false,
                        isForeign: Boolean = false
                        ) {
+}
 
-  def publicWrites: Fox[JsObject] = {
+class DataStoreService @Inject()() {
+
+  def publicWrites(dataStore: DataStore): Fox[JsObject] = {
     Fox.successful(Json.obj(
-      "name" -> name,
-      "url" -> url,
-      "isForeign" -> isForeign
+      "name" -> dataStore.name,
+      "url" -> dataStore.url,
+      "isForeign" -> dataStore.isForeign
     ))
   }
 }
-
 
 class DataStoreDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[DataStore, DatastoresRow, Datastores](sqlClient) {
   val collection = Datastores

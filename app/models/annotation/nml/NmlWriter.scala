@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.{BoundingBox, Point3D, Vector3D}
 import com.sun.xml.txw2.output.IndentingXMLStreamWriter
 import javax.inject.Inject
-import models.annotation.Annotation
+import models.annotation.{Annotation, AnnotationService}
 import models.user.UserService
 import net.liftweb.common.Full
 import org.joda.time.DateTime
@@ -33,7 +33,7 @@ case class NmlParameters(
                           taskBoundingBox: Option[BoundingBox]
                         )
 
-class NmlWriter @Inject()(userService: UserService) extends FoxImplicits {
+class NmlWriter @Inject()(userService: UserService, annotationService: AnnotationService) extends FoxImplicits {
   private lazy val outputService = XMLOutputFactory.newInstance()
 
   def toNmlStream(skeletonTracing: Option[SkeletonTracing], volumeTracing: Option[VolumeTracing], annotation: Annotation, scale: Option[Scale]) = Enumerator.outputStream { os =>
@@ -285,7 +285,7 @@ class NmlWriter @Inject()(userService: UserService) extends FoxImplicits {
 
   def writeTask(annotation: Annotation)(implicit writer: XMLStreamWriter): Future[Unit] = {
     for {
-      taskBox <- annotation.task.futureBox
+      taskBox <- annotationService.taskFor(annotation)(GlobalAccessContext).futureBox
     } yield {
       taskBox match {
         case Full(task) => Xml.withinElementSync("meta") {

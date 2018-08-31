@@ -2,7 +2,7 @@ package controllers
 
 import javax.inject.Inject
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
-import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -171,7 +171,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       restrictions <- provider.restrictionsFor(typ, annotationId)
       name <- provider.nameFor(annotation) ?~> Messages("annotation.name.impossible")
       _ <- restrictions.allowDownload(user) ?~> Messages("annotation.download.notAllowed")
-      dataSet <- annotation.dataSet
+      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
       (downloadStream, fileName) <- tracingToDownloadStream(dataSet, annotation, name)
     } yield {
       Ok.chunked(downloadStream).withHeaders(

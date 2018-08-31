@@ -5,11 +5,15 @@ import com.scalableminds.util.tools.TextUtils._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
 import models.annotation._
+import models.binary.DataSetDAO
 import models.user.{User, UserService}
 import play.api.libs.concurrent.Execution.Implicits._
 import utils.ObjectId
 
-class SavedTracingInformationHandler @Inject()(annotationDAO: AnnotationDAO, userService: UserService) extends AnnotationInformationHandler with FoxImplicits {
+class SavedTracingInformationHandler @Inject()(annotationDAO: AnnotationDAO,
+                                               dataSetDAO: DataSetDAO,
+                                               annotationRestrictionDefults: AnnotationRestrictionDefults,
+                                               userService: UserService) extends AnnotationInformationHandler with FoxImplicits {
 
   override val cache = false
 
@@ -17,7 +21,7 @@ class SavedTracingInformationHandler @Inject()(annotationDAO: AnnotationDAO, use
     for {
       userBox <- userService.findOneById(annotation._user, useCache = true)(GlobalAccessContext).futureBox
       userName <- userBox.map(_.abreviatedName).getOrElse("")
-      dataSetName <- annotation.dataSet.map(_.name)
+      dataSetName <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext).map(_.name)
       task = annotation._task.map(_.toString).getOrElse("explorational")
     } yield {
       val id = oxalis.view.helpers.formatHash(annotation.id)
@@ -31,7 +35,7 @@ class SavedTracingInformationHandler @Inject()(annotationDAO: AnnotationDAO, use
     for {
       annotation <- provideAnnotation(identifier, None)
     } yield {
-      AnnotationRestrictions.defaultAnnotationRestrictions(annotation)
+      annotationRestrictionDefults.defaultAnnotationRestrictions(annotation)
     }
   }
 

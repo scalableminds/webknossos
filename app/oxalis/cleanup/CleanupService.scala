@@ -2,13 +2,14 @@ package oxalis.cleanup
 
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
+import javax.inject.Inject
 import net.liftweb.common.{Empty, Failure, Full}
 import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
 
 import scala.concurrent.duration.FiniteDuration
 
-object CleanUpService extends LazyLogging {
+class CleanUpService @Inject()() extends LazyLogging {
 
   implicit val system = Akka.system(play.api.Play.current)
 

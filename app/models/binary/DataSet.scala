@@ -12,7 +12,6 @@ import models.configuration.DataSetConfiguration
 import models.team._
 import models.user.User
 import net.liftweb.common.Full
-import play.api.Play.current
 import play.api.i18n.Messages
 import play.api.i18n.Messages.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
@@ -44,21 +43,6 @@ case class DataSet(
 
   def urlEncodedName: String =
     UriEncoding.encodePathSegment(name, "UTF-8")
-
-
-  def isEditableBy(userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Boolean] = {
-    userOpt match {
-      case Some(user) =>
-        for {
-          isTeamManagerInOrg <- userService.isTeamManagerInOrg(user, _organization)
-        } yield (user.isAdminOf(_organization) || isTeamManagerInOrg)
-      case _ => Fox.successful(false)
-    }
-  }
-
-  def isEditableBy(user: User)(implicit ctx: DBAccessContext): Fox[Boolean] =
-    isEditableBy(Some(user))
-
 
 }
 

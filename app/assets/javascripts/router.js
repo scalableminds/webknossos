@@ -48,7 +48,7 @@ import Onboarding from "admin/onboarding";
 import * as Utils from "libs/utils";
 
 import type { OxalisState } from "oxalis/store";
-import type { APIUserType } from "admin/api_flow_types";
+import type { APIUserType, APIDataSetIdType } from "admin/api_flow_types";
 import type { ContextRouter } from "react-router-dom";
 
 const { Content } = Layout;
@@ -248,11 +248,14 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
-                path="/datasets/:datasetName/import"
+                path="/datasets/:organizationName/:datasetName/import"
                 render={({ match }: ContextRouter) => (
                   <DatasetImportView
                     isEditingMode={false}
-                    datasetName={match.params.datasetName || ""}
+                    datasetId={{
+                      name: match.params.datasetName || "",
+                      owningOrganization: match.params.organizationName || "",
+                    }}
                     onComplete={() => window.history.back()}
                     onCancel={() => window.history.back()}
                   />
@@ -260,11 +263,14 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
-                path="/datasets/:datasetName/edit"
+                path="/datasets/:organizationName/:datasetName/edit"
                 render={({ match }: ContextRouter) => (
                   <DatasetImportView
                     isEditingMode
-                    datasetName={match.params.datasetName || ""}
+                    datasetId={{
+                      name: match.params.datasetName || "",
+                      owningOrganization: match.params.organizationName || "",
+                    }}
                     onComplete={() => window.history.back()}
                     onCancel={() => window.history.back()}
                   />

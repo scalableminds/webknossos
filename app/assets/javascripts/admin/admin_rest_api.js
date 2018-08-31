@@ -23,6 +23,7 @@ import type {
   APIAnnotationWithTaskType,
   APIDataStoreType,
   DatasetConfigType,
+  APIDatasetIdType,
   APIDatasetType,
   APIMaybeUnimportedDatasetType,
   APIDataSourceType,
@@ -580,14 +581,20 @@ export function getDatasetDatasource(
   dataset: APIMaybeUnimportedDatasetType,
 ): Promise<APIDataSourceWithMessagesType> {
   return doWithToken(token =>
-    Request.receiveJSON(`${dataset.dataStore.url}/data/datasets/${dataset.name}?token=${token}`),
+    Request.receiveJSON(
+      `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${
+        dataset.name
+      }?token=${token}`,
+    ),
   );
 }
 
 export function readDatasetDatasource(dataset: APIDatasetType): Promise<APIDataSourceType> {
   return doWithToken(token =>
     Request.receiveJSON(
-      `${dataset.dataStore.url}/data/datasets/${dataset.name}/readInboxDataSource?token=${token}`,
+      `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${
+        dataset.name
+      }/readInboxDataSource?token=${token}`,
     ),
   );
 }
@@ -598,9 +605,12 @@ export async function updateDatasetDatasource(
   datasource: APIDataSourceType,
 ): Promise<void> {
   await doWithToken(token =>
-    Request.sendJSONReceiveJSON(`${dataStoreUrl}/data/datasets/${datasetName}?token=${token}`, {
-      data: datasource,
-    }),
+    Request.sendJSONReceiveJSON(
+      `${dataStoreUrl}/data/datasets/${datasource.id.team}/${datasetName}?token=${token}`,
+      {
+        data: datasource,
+      },
+    ),
   );
 }
 
@@ -611,9 +621,14 @@ export async function getActiveDatasets(): Promise<Array<APIDatasetType>> {
   return datasets;
 }
 
-export function getDataset(datasetName: string, sharingToken?: ?string): Promise<APIDatasetType> {
+export function getDataset(
+  datasetId: APIDatasetIdType,
+  sharingToken?: ?string,
+): Promise<APIDatasetType> {
   const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
-  return Request.receiveJSON(`/api/datasets/${datasetName}${sharingTokenSuffix}`);
+  return Request.receiveJSON(
+    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}${sharingTokenSuffix}`,
+  );
 }
 
 export function updateDataset(

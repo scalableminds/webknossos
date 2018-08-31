@@ -70,16 +70,19 @@ export type APITeamType = {
   +organization: string,
 };
 
-type APIDatasetBaseType = {
+export type APIDatasetIdType = {
+  +owningOrganization: string,
+  +name: string,
+};
+
+type APIDatasetBaseType = APIDatasetIdType & {
   +allowedTeams: Array<APITeamType>,
   +created: number,
   +dataStore: APIDataStoreType,
   +description: ?string,
   +isEditable: boolean,
   +isPublic: boolean,
-  +name: string,
   +displayName: ?string,
-  +owningOrganization: string,
   +logoUrl: ?string,
   +lastUsedByUser: number,
   +isForeign: boolean,

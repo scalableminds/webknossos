@@ -68,7 +68,7 @@ function ThumbnailAndDescription({
         <div
           className="dataset-thumbnail-image"
           style={{
-            background: `url(${thumbnailURL}?w=${thumbnailDimension}&h=${thumbnailDimension})`,
+            background: `url('${thumbnailURL}?w=${thumbnailDimension}&h=${thumbnailDimension}')`,
             backgroundSize: "cover",
             width: "100%",
             height: "100%",
@@ -108,7 +108,7 @@ class DatasetPanel extends React.PureComponent<Props, State> {
   };
 
   renderCard = (dataset: APIDatasetType) => (
-    <a href={`/datasets/${dataset.name}/view`} title="View Dataset">
+    <a href={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`} title="View Dataset">
       <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card">
         <ThumbnailAndDescriptionFromDataset dataset={dataset} />
       </Card>

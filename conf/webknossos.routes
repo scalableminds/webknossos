@@ -58,14 +58,14 @@ POST          /api/datasets/:dataSetName/createExplorational                    
 GET           /api/datasets                                                         controllers.DataSetController.list
 POST          /api/datasets                                                         controllers.DataSetController.create(typ: String)
 POST          /api/datasets/addForeign                                              controllers.DataSetController.addForeignDataStoreAndDataSet
-GET           /api/datasets/:organizationName/:dataSetName                          controllers.DataSetController.read(organizationName: String, dataSetName: String, sharingToken: Option[String])
 POST          /api/datasets/:dataSetName                                            controllers.DataSetController.update(dataSetName: String)
-GET           /api/datasets/:organizationName/:dataSetName/accessList               controllers.DataSetController.accessList(organizationName: String, dataSetName: String)
+GET           /api/datasets/:dataSetName/accessList                                 controllers.DataSetController.accessList(dataSetName: String)
 GET           /api/datasets/:dataSetName/sharingToken                               controllers.DataSetController.getSharingToken(dataSetName: String)
 DELETE        /api/datasets/:dataSetName/sharingToken                               controllers.DataSetController.deleteSharingToken(dataSetName: String)
 POST          /api/datasets/:dataSetName/teams                                      controllers.DataSetController.updateTeams(dataSetName: String)
 GET           /api/datasets/:organizationName/:dataSetName/layers/:layer/thumbnail  controllers.DataSetController.thumbnail(organizationName: String, dataSetName: String, layer: String, w: Option[Int], h: Option[Int])
 GET           /api/datasets/:dataSetName/isValidNewName                             controllers.DataSetController.isValidNewName(dataSetName: String)
+GET           /api/datasets/:organizationName/:dataSetName                          controllers.DataSetController.read(organizationName: String, dataSetName: String, sharingToken: Option[String])
 
 # Datastores
 GET           /api/datastores                                                       controllers.DataStoreController.list

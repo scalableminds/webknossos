@@ -80,7 +80,10 @@ class DatasetActionView extends React.PureComponent<Props, State> {
       <div>
         {this.props.isUserAdmin && dataset.dataSource.dataLayers == null ? (
           <div>
-            <Link to={`/datasets/${dataset.name}/import`} className="import-dataset">
+            <Link
+              to={`/datasets/${dataset.owningOrganization}/${dataset.name}/import`}
+              className="import-dataset"
+            >
               <Icon type="plus-circle-o" />Import
             </Link>
 
@@ -91,7 +94,10 @@ class DatasetActionView extends React.PureComponent<Props, State> {
           <div className="dataset-actions nowrap">
             {this.props.isUserAdmin && dataset.isEditable ? (
               <React.Fragment>
-                <Link to={`/datasets/${dataset.name}/edit`} title="Edit Dataset">
+                <Link
+                  to={`/datasets/${dataset.owningOrganization}/${dataset.name}/edit`}
+                  title="Edit Dataset"
+                >
                   <Icon type="edit" />Edit
                 </Link>
                 {!dataset.isForeign ? (

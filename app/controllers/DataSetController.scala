@@ -43,7 +43,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
 
   def thumbnail(organizationName: String, dataSetName: String, dataLayerName: String, w: Option[Int], h: Option[Int]) = UserAwareAction.async { implicit request =>
 
-    def imageFromCacheIfPossible(dataSet: DataSet, organizationName: String) = {
+    def imageFromCacheIfPossible(dataSet: DataSet) = {
       val width = Math.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailHeight)
       val height = Math.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
       Cache.get(s"thumbnail-$organizationName*$dataSetName*$dataLayerName-$width-$height") match {
@@ -66,8 +66,8 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
 
     for {
       dataSet <- DataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> Messages("dataSet.notFound", dataSetName)
-      layer <- dataSet.getDataLayerByName(dataLayerName) ?~> Messages("dataLayer.notFound", dataLayerName)
-      image <- imageFromCacheIfPossible(dataSet, organizationName)
+      _ <- dataSet.getDataLayerByName(dataLayerName) ?~> Messages("dataLayer.notFound", dataLayerName)
+      image <- imageFromCacheIfPossible(dataSet)
     } yield {
       Ok(image).withHeaders(
         CONTENT_LENGTH -> image.length.toString,
@@ -111,9 +111,9 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
     }
   }
 
-  def accessList(organizationName: String, dataSetName: String) = SecuredAction.async { implicit request =>
+  def accessList(dataSetName: String) = SecuredAction.async { implicit request =>
     for {
-      dataSet <- DataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> Messages("dataSet.notFound", dataSetName)
+      dataSet <- DataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> Messages("dataSet.notFound", dataSetName)
       allowedTeams <- dataSet.allowedTeamIds
       users <- UserService.findByTeams(allowedTeams)
       usersJs <- Fox.serialCombined(users.distinct)(_.compactWrites)

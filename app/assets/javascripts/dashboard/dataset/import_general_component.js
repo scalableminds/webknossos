@@ -11,12 +11,12 @@ import {
   getDataset,
   revokeDatasetSharingToken,
 } from "admin/admin_rest_api";
-import type { APIDatasetType } from "admin/api_flow_types";
+import type { APIDatasetType, APIDatasetIdType } from "admin/api_flow_types";
 import { FormItemWithInfo } from "./helper_components";
 
 type Props = {
   form: Object,
-  datasetName: string,
+  datasetId: APIDatasetIdType,
   hasNoAllowedTeams: boolean,
 };
 
@@ -38,8 +38,8 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
   }
 
   async fetch() {
-    const sharingToken = await getDatasetSharingToken(this.props.datasetName);
-    const dataSet = await getDataset(this.props.datasetName);
+    const sharingToken = await getDatasetSharingToken(this.props.datasetId.name);
+    const dataSet = await getDataset(this.props.datasetId);
     this.setState({ dataSet, sharingToken });
   }
 
@@ -53,7 +53,7 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
   };
 
   handleRevokeSharingLink = async (): Promise<void> => {
-    const { datasetName } = this.props;
+    const datasetName = this.props.datasetId.name;
     await revokeDatasetSharingToken(datasetName);
     const sharingToken = await getDatasetSharingToken(datasetName);
     this.setState({ sharingToken });
@@ -67,7 +67,7 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
   getSharingLink() {
     const doesNeedToken = !this.props.form.getFieldValue("dataset.isPublic");
     const tokenSuffix = `?token=${this.state.sharingToken}`;
-    return `${window.location.origin}/datasets/${this.props.datasetName}/view${
+    return `${window.location.origin}/datasets/${this.props.datasetId.name}/view${
       doesNeedToken ? tokenSuffix : ""
     }`;
   }
@@ -76,7 +76,7 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
     if (this.state.dataSet != null) {
       const dataStoreName = this.state.dataSet.dataStore.name;
       const dataStoreURL = this.state.dataSet.dataStore.url;
-      return `${dataStoreName}, ${dataStoreURL}, ${this.props.datasetName}`;
+      return `${dataStoreName}, ${dataStoreURL}, ${this.props.datasetId.name}`;
     } else return "";
   }
 

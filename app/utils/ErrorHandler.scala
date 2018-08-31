@@ -11,9 +11,6 @@ import play.api.routing.Router
 import play.api.{Configuration, OptionalSourceMapper, Play}
 
 import scala.concurrent.Future
-import controllers.{Authentication, routes}
-import play.api.http.Status.OK
-import play.api.Play.current
 
 class ErrorHandler @Inject() (
                                val messagesApi: MessagesApi,

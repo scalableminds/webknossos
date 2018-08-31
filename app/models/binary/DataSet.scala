@@ -42,15 +42,6 @@ case class DataSet(
                        isDeleted: Boolean = false
                      ) extends FoxImplicits {
 
-  def getLogoUrl: Fox[String] =
-    logoUrl match {
-      case Some(url) => Fox.successful(url)
-      case None => organizationDAO.findOne(_organization)(GlobalAccessContext).map(_.logoUrl)
-    }
-
-  def organization: Fox[Organization] =
-    organizationDAO.findOne(_organization)(GlobalAccessContext) ?~> Messages("organization.notFound")
-
   def dataStore: Fox[DataStore] =
     DataStoreDAO.findOneByName(_dataStore.trim)(GlobalAccessContext) ?~> Messages("datastore.notFound")
 
@@ -97,52 +88,6 @@ case class DataSet(
       allowedTeams <- Fox.combined(allowedTeamIds.map(TeamDAO.findOne(_)(GlobalAccessContext)))
     } yield allowedTeams
 
-  def constructDataSource(implicit ctx: DBAccessContext): Fox[InboxDataSource] = {
-    for {
-      organization <- organization
-      dataLayersBox <- (dataSetDataLayerDAO.findAllForDataSet(_id) ?~> "could not find data layers").futureBox
-      dataSourceId = DataSourceId(name, organization.name)
-    } yield {
-      dataLayersBox match {
-        case Full(dataLayers) if (dataLayers.length > 0) =>
-          for {
-            scale <- scale
-          } yield GenericDataSource[DataLayer](dataSourceId, dataLayers, scale)
-        case _ =>
-          Some(UnusableDataSource[DataLayer](dataSourceId, status, scale))
-      }
-    }
-  }
-
-  def publicWrites(user: Option[User]): Fox[JsObject] = {
-    implicit val ctx = GlobalAccessContext
-    for {
-      teams <- allowedTeams
-      teamsJs <- Fox.serialCombined(teams)(_.publicWrites)
-      logoUrl <- getLogoUrl
-      isEditable <- isEditableBy(user)
-      lastUsedByUser <- lastUsedByUser(user)
-      dataStore <- dataStore
-      dataStoreJs <- dataStore.publicWrites
-      organization <- organization
-      dataSource <- constructDataSource
-    } yield {
-      Json.obj("name" -> name,
-        "dataSource" -> dataSource,
-        "dataStore" -> dataStoreJs,
-        "owningOrganization" -> organization.name,
-        "allowedTeams" -> teamsJs,
-        "isActive" -> isUsable,
-        "isPublic" -> isPublic,
-        "description" -> description,
-        "displayName" -> displayName,
-        "created" -> created,
-        "isEditable" -> isEditable,
-        "lastUsedByUser" -> lastUsedByUser,
-        "logoUrl" -> logoUrl,
-        "isForeign" -> dataStore.isForeign)
-    }
-  }
 }
 
 class DataSetDAO @Inject()(sqlClient: SQLClient, dataSetDataLayerDAO: DataSetDataLayerDAO, organizationDAO: OrganizationDAO) extends SQLDAO[DataSet, DatasetsRow, Datasets](sqlClient) {

@@ -3,13 +3,17 @@ package models.binary
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.rpc.RPC
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, GenericDataSource, DataLayerLike => DataLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableDataSource, InboxDataSourceLike => InboxDataSource}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.team.OrganizationDAO
+import models.user.User
 import net.liftweb.common.Full
 import oxalis.security.{CompactRandomIDGenerator, URLSharing, WebknossosSilhouette}
+import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json.{JsObject, Json}
 import play.api.libs.ws.WSResponse
 import utils.ObjectId
 
@@ -147,5 +151,59 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       tokenFox <- tokenFoxOfFox
       token <- tokenFox
     } yield token
+  }
+
+
+  def dataSourceFor(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[InboxDataSource] = {
+    for {
+      organization <- organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> Messages("organization.notFound")
+      dataLayersBox <- dataSetDataLayerDAO.findAllForDataSet(dataSet._id).futureBox
+      dataSourceId = DataSourceId(dataSet.name, organization.name)
+    } yield {
+      dataLayersBox match {
+        case Full(dataLayers) if (dataLayers.length > 0) =>
+          for {
+            scale <- dataSet.scale
+          } yield GenericDataSource[DataLayer](dataSourceId, dataLayers, scale)
+        case _ =>
+          Some(UnusableDataSource[DataLayer](dataSourceId, dataSet.status, dataSet.scale))
+      }
+    }
+  }
+
+  def logoUrlFor(dataSet: DataSet): Fox[String] =
+    dataSet.logoUrl match {
+      case Some(url) => Fox.successful(url)
+      case None => organizationDAO.findOne(dataSet._organization)(GlobalAccessContext).map(_.logoUrl)
+    }
+
+  def publicWrites(dataSet: DataSet, user: Option[User]): Fox[JsObject] = {
+    implicit val ctx = GlobalAccessContext
+    for {
+      teams <- dataSet.allowedTeams
+      teamsJs <- Fox.serialCombined(teams)(_.publicWrites)
+      logoUrl <- logoUrlFor(dataSet)
+      isEditable <- dataSet.isEditableBy(user)
+      lastUsedByUser <- dataSet.lastUsedByUser(user)
+      dataStore <- dataSet.dataStore
+      dataStoreJs <- dataStore.publicWrites
+      organization <- organizationDAO.findOne(dataSet._organization) ?~> Messages("organization.notFound")
+      dataSource <- dataSourceFor(dataSet)
+    } yield {
+      Json.obj("name" -> dataSet.name,
+        "dataSource" -> dataSource,
+        "dataStore" -> dataStoreJs,
+        "owningOrganization" -> organization.name,
+        "allowedTeams" -> teamsJs,
+        "isActive" -> dataSet.isUsable,
+        "isPublic" -> dataSet.isPublic,
+        "description" -> dataSet.description,
+        "displayName" -> dataSet.displayName,
+        "created" -> dataSet.created,
+        "isEditable" -> isEditable,
+        "lastUsedByUser" -> lastUsedByUser,
+        "logoUrl" -> logoUrl,
+        "isForeign" -> dataStore.isForeign)
+    }
   }
 }

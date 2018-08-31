@@ -40,6 +40,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
                                   annotationDAO: AnnotationDAO,
                                   userDAO: UserDAO,
                                   taskTypeDAO: TaskTypeDAO,
+                                  dataSetService: DataSetService,
                                   dataSetDAO: DataSetDAO,
                                   projectDAO: ProjectDAO,
                                   organizationDAO: OrganizationDAO,
@@ -116,7 +117,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     }
     for {
       dataSet <- dataSetDAO.findOne(_dataSet)
-      dataSource <- dataSet.constructDataSource
+      dataSource <- dataSetService.dataSourceFor(dataSet)
       usableDataSource <- dataSource.toUsable ?~> "DataSet is not imported."
       tracingIds <- createTracings(dataSet, usableDataSource)
       teamId <- selectSuitableTeam(user, dataSet)

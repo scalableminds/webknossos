@@ -20,7 +20,7 @@ object DataSetConfiguration {
 
   def constructInitialDefault(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[DataSetConfiguration] =
     for {
-      dataSource <- dataSet.constructDataSource
+      dataSource <- dataSetService.datSourceFor(dataSet)
     } yield constructInitialDefault(dataSource.toUsable.map(d => d.dataLayers.filter(_.category != Category.segmentation).map(_.name)).getOrElse(List()))
 
   def constructInitialDefault(layerNames: List[String]): DataSetConfiguration = {

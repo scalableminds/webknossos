@@ -42,9 +42,6 @@ case class DataSet(
                        isDeleted: Boolean = false
                      ) extends FoxImplicits {
 
-  def getDataLayerByName(dataLayerName: String)(implicit ctx: DBAccessContext): Fox[DataLayer] =
-    dataSetDataLayerDAO.findOneByNameForDataSet(dataLayerName, _id)
-
   def getLogoUrl: Fox[String] =
     logoUrl match {
       case Some(url) => Fox.successful(url)

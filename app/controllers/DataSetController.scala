@@ -28,6 +28,7 @@ import scala.concurrent.duration._
 class DataSetController @Inject()(userService: UserService,
                                   dataSetService: DataSetService,
                                   dataSetAllowedTeamsDAO: DataSetAllowedTeamsDAO,
+                                  dataSetDataLayerDAO: DataSetDataLayerDAO,
                                   dataSetLastUsedTimesDAO: DataSetLastUsedTimesDAO,
                                   teamDAO: TeamDAO,
                                   dataSetDAO: DataSetDAO,
@@ -71,7 +72,7 @@ class DataSetController @Inject()(userService: UserService,
 
     for {
       dataSet <- dataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
-      layer <- dataSet.getDataLayerByName(dataLayerName) ?~> Messages("dataLayer.notFound", dataLayerName)
+      layer <- dataSetDataLayerDAO.findOneByNameForDataSet(dataLayerName, dataSet._id) ?~> Messages("dataLayer.notFound", dataLayerName)
       image <- imageFromCacheIfPossible(dataSet)
     } yield {
       Ok(image).withHeaders(

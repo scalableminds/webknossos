@@ -5,8 +5,10 @@ import akka.util.Timeout
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
+import models.annotation.AnnotationState.Cancelled
 import models.annotation._
 import models.binary.{DataSet, DataSetDAO}
+import models.project.ProjectDAO
 import models.task.TaskDAO
 import models.user.time._
 import models.user.User
@@ -23,6 +25,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
                                      taskDAO: TaskDAO,
                                      dataSetDAO: DataSetDAO,
                                      annotationService: AnnotationService,
+                                     projectDAO: ProjectDAO,
                                      timeSpanService: TimeSpanService,
                                      provider: AnnotationInformationProvider,
                                      val messagesApi: MessagesApi)
@@ -109,7 +112,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
     for {
       annotation <- provider.provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       _ <- ensureTeamAdministration(request.identity, annotation._team)
-      _ <- annotation.muta.resetToBase ?~> Messages("annotation.reset.failed")
+      _ <- annotationService.resetToBase(annotation) ?~> Messages("annotation.reset.failed")
       updated <- provider.provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       json <- updated.publicWrites(Some(request.identity))
     } yield {
@@ -125,7 +128,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
     for {
       annotation <- provider.provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       _ <- Fox.assertTrue(isReopenAllowed(request.identity, annotation)) ?~> "reopen.notAllowed"
-      _ <- annotation.muta.reopen ?~> "annotation.invalid"
+      _ <- annotationDAO.updateState(annotation._id, AnnotationState.Active) ?~> "annotation.invalid"
       updatedAnnotation <- provider.provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       json <- updatedAnnotation.publicWrites(Some(request.identity))
     } yield {
@@ -153,7 +156,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
     for {
       annotation <- provider.provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       restrictions <- provider.restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
-      message <- annotation.muta.finish(user, restrictions)
+      message <- annotationService.finish(annotation, user, restrictions)
       updated <- provider.provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       _ <- timeSpanService.logUserInteraction(user, annotation) // log time on tracing end
     } yield {
@@ -186,11 +189,14 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
   def editAnnotation(typ: String, id: String) = SecuredAction.async(parse.json) { implicit request =>
     for {
       annotation <- provider.provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
-      muta = annotation.muta
-      _ <- (request.body \ "name").asOpt[String].map(muta.rename).getOrElse(Fox.successful(())) ?~> Messages("annotation.edit.failed")
-      _ <- (request.body \ "description").asOpt[String].map(muta.setDescription).getOrElse(Fox.successful(())) ?~> Messages("annotation.edit.failed")
-      _ <- (request.body \ "isPublic").asOpt[Boolean].map(muta.setIsPublic).getOrElse(Fox.successful(())) ?~> Messages("annotation.edit.failed")
-      _ <- (request.body \ "tags").asOpt[List[String]].map(muta.setTags).getOrElse(Fox.successful(())) ?~> Messages("annotation.edit.failed")
+      name = (request.body \ "name").asOpt[String]
+      description = (request.body \ "description").asOpt[String]
+      isPublic = (request.body \ "isPublic").asOpt[Boolean]
+      tags = (request.body \ "tags").asOpt[List[String]]
+      _ <- Fox.runOptional(name)(annotationDAO.updateName(annotation._id, _)) ?~> Messages("annotation.edit.failed")
+      _ <- Fox.runOptional(description)(annotationDAO.updateDescription(annotation._id, _)) ?~> Messages("annotation.edit.failed")
+      _ <- Fox.runOptional(isPublic)(annotationDAO.updateIsPublic(annotation._id, _)) ?~> Messages("annotation.edit.failed")
+      _ <- Fox.runOptional(tags)(annotationDAO.updateTags(annotation._id, _)) ?~> Messages("annotation.edit.failed")
     } yield {
       JsonOk(Messages("annotation.edit.success"))
     }
@@ -200,9 +206,9 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
     for {
       taskIdValidated <- ObjectId.parse(taskId)
       task <- taskDAO.findOne(taskIdValidated) ?~> Messages("task.notFound")
-      project <- task.project
+      project <- projectDAO.findOne(task._project)
       _ <- ensureTeamAdministration(request.identity, project._team)
-      annotations <- task.annotations
+      annotations <- annotationService.annotationsFor(task._id)
       jsons <- Fox.serialSequence(annotations)(_.publicWrites(Some(request.identity)))
     } yield {
       Ok(JsArray(jsons.flatten))
@@ -214,10 +220,10 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
     def tryToCancel(annotation: Annotation) = {
       annotation match {
         case t if t.typ == AnnotationType.Task =>
-          annotation.muta.cancel.map { _ =>
+          annotationDAO.updateState(annotation._id, Cancelled).map { _ =>
             JsonOk(Messages("task.finished"))
           }
-        case _                                 =>
+        case _ =>
           Fox.successful(JsonOk(Messages("annotation.finished")))
       }
     }

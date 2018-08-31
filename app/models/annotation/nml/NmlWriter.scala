@@ -290,7 +290,7 @@ class NmlWriter @Inject()(userService: UserService) extends FoxImplicits {
       taskBox match {
         case Full(task) => Xml.withinElementSync("meta") {
           writer.writeAttribute("name", "taskId")
-          writer.writeAttribute("content", task.id)
+          writer.writeAttribute("content", task._id.toString)
         }
         case _ => ()
       }

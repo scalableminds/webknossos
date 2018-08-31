@@ -19,7 +19,8 @@ import models.annotation.AnnotationType.AnnotationType
 import models.annotation.handler.SavedTracingInformationHandler
 import models.annotation.nml.NmlWriter
 import models.binary._
-import models.task.Task
+import models.project.ProjectDAO
+import models.task.{Task, TaskTypeDAO}
 import models.team.OrganizationDAO
 import models.user.{User, UserDAO}
 import utils.ObjectId
@@ -38,7 +39,9 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
                                   savedTracingInformationHandler: SavedTracingInformationHandler,
                                   annotationDAO: AnnotationDAO,
                                   userDAO: UserDAO,
+                                  taskTypeDAO: TaskTypeDAO,
                                   dataSetDAO: DataSetDAO,
+                                  projectDAO: ProjectDAO,
                                   organizationDAO: OrganizationDAO,
                                   nmlWriter: NmlWriter)
   extends BoxImplicits
@@ -132,12 +135,34 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     }
   }
 
-  def finish(annotation: Annotation)(implicit ctx: DBAccessContext) = {
-    // WARNING: needs to be repeatable, might be called multiple times for an annotation
-    annotationDAO.updateState(annotation._id, AnnotationState.Finished)
+  // WARNING: needs to be repeatable, might be called multiple times for an annotation
+  def finish(annotation: Annotation, user: User, restrictions: AnnotationRestrictions)(implicit ctx: DBAccessContext): Fox[String] = {
+    def executeFinish: Fox[String] = {
+      for {
+        _ <- annotationDAO.updateState(annotation._id, AnnotationState.Finished)
+      } yield {
+        if (annotation._task.isEmpty)
+          "annotation.finished"
+        else
+          "task.finished"
+      }
+    }
+
+    (for {
+      allowed <- restrictions.allowFinish(user)
+    } yield {
+      if (allowed) {
+        if (annotation.state == Active)
+          executeFinish
+        else
+          Fox.failure("annotation.notActive")
+      } else {
+        Fox.failure("annotation.notPossible")
+      }
+    }).flatten
   }
 
-  def baseFor(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[Annotation] =
+  def baseForTask(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[Annotation] =
     (for {
       list <- annotationDAO.findAllByTaskIdAndType(taskId, AnnotationType.TracingBase)
     } yield list.headOption.toFox).flatten
@@ -184,7 +209,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     }
 
     for {
-      annotationBase <- task.annotationBase ?~> "Failed to retrieve annotation base."
+      annotationBase <- baseForTask(task._id) ?~> "Failed to retrieve annotation base."
       result <- useAsTemplateAndInsert(annotationBase).toFox
     } yield {
       result
@@ -229,9 +254,9 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
 
     for {
       task <- taskFox
-      taskType <- task.taskType
+      taskType <- taskTypeDAO.findOne(task._taskType)(GlobalAccessContext)
       skeletonTracingId <- skeletonTracingIdBox.toFox
-      project <- task.project
+      project <- projectDAO.findOne(task._project)
       annotationBase = Annotation(
         ObjectId.generate,
         dataSetId,
@@ -344,8 +369,23 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       annotation <- annotationInformationProvider.provideAnnotation(typ, id)
       newUser <- userDAO.findOne(userId) ?~> Messages("user.notFound")
       _ <- dataSetDAO.findOne(annotation._dataSet)(AuthorizedAccessContext(newUser)) ?~> Messages("annotation.transferee.noDataSetAccess")
-      _ <- annotation.muta.transferToUser(newUser)
+      _ <- annotationDAO.updateUser(annotation._id, newUser._id)
       updated <- annotationInformationProvider.provideAnnotation(typ, id)
     } yield updated
+  }
+
+  def resetToBase(annotation: Annotation)(implicit ctx: DBAccessContext) = annotation.typ match {
+    case AnnotationType.Explorational =>
+      Fox.failure("annotation.revert.skeletonOnly")
+    case AnnotationType.Task if annotation.skeletonTracingId.isDefined =>
+      for {
+        task <- annotation.task.toFox
+        annotationBase <- baseForTask(task._id)
+        dataSet <- annotationBase.dataSet
+        newTracingId <- tracingFromBase(annotationBase, dataSet)
+        _ <- annotationDAO.updateSkeletonTracingId(annotation._id, newTracingId)
+      } yield ()
+    case _ if !annotation.skeletonTracingId.isDefined =>
+      Fox.failure("annotation.revert.skeletonOnly")
   }
 }

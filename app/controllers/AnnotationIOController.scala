@@ -193,14 +193,14 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
   }
 
   def downloadTask(taskId: String, user: User)(implicit ctx: DBAccessContext) = {
-    def createTaskZip(task: Task): Fox[TemporaryFile] = task.annotations.flatMap { annotations =>
+    def createTaskZip(task: Task): Fox[TemporaryFile] = annotationService.annotationsFor(task._id).flatMap { annotations =>
       val finished = annotations.filter(_.state == Finished)
       annotationService.zipAnnotations(finished, task._id.toString + "_nmls.zip")
     }
 
     for {
       task <- taskDAO.findOne(ObjectId(taskId)).toFox ?~> Messages("task.notFound")
-      project <- task.project ?~> Messages("project.notFound")
+      project <- projectDAO.findOne(task._project) ?~> Messages("project.notFound")
       _ <- ensureTeamAdministration(user, project._team) ?~> Messages("notAllowed")
       zip <- createTaskZip(task)
     } yield Ok.sendFile(zip.file)
@@ -210,7 +210,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
     def createTaskTypeZip(taskType: TaskType) =
       for {
         tasks <- taskDAO.findAllByTaskType(taskType._id)
-        annotations <- Fox.serialCombined(tasks)(_.annotations).map(_.flatten).toFox
+        annotations <- Fox.serialCombined(tasks)(task => annotationService.annotationsFor(task._id)).map(_.flatten).toFox
         finishedAnnotations = annotations.filter(_.state == Finished)
         zip <- annotationService.zipAnnotations(finishedAnnotations, taskType.summary + "_nmls.zip")
       } yield zip

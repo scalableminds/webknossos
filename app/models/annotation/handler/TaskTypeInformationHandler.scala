@@ -11,13 +11,16 @@ import models.annotation.AnnotationState._
 import utils.ObjectId
 
 
-class TaskTypeInformationHandler @Inject()(taskTypeDAO: TaskTypeDAO, taskDAO: TaskDAO) extends AnnotationInformationHandler with FoxImplicits {
+class TaskTypeInformationHandler @Inject()(taskTypeDAO: TaskTypeDAO,
+                                           taskDAO: TaskDAO,
+                                           annotationService: AnnotationService
+                                          ) extends AnnotationInformationHandler with FoxImplicits {
 
   override def provideAnnotation(taskTypeId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
       taskType <- taskTypeDAO.findOne(taskTypeId) ?~> "taskType.notFound"
       tasks <- taskDAO.findAllByTaskType(taskType._id)
-      annotations <- Fox.serialCombined(tasks)(_.annotations).map(_.flatten).toFox
+      annotations <- Fox.serialCombined(tasks)(task => annotationService.annotationsFor(task._id)).map(_.flatten).toFox
       finishedAnnotations = annotations.filter(_.state == Finished)
       _ <- assertAllOnSameDataset(finishedAnnotations)
       _ <- assertNonEmpty(finishedAnnotations) ?~> "taskType.noAnnotations"

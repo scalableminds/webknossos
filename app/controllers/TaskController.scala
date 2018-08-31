@@ -61,6 +61,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
                                 dataSetDAO: DataSetDAO,
                                 teamDAO: TeamDAO,
                                 taskDAO: TaskDAO,
+                                taskService: TaskService,
                                 val messagesApi: MessagesApi)
   extends Controller
     with ResultBox
@@ -72,7 +73,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
   def read(taskId: String) = SecuredAction.async { implicit request =>
     for {
       task <- taskDAO.findOne(ObjectId(taskId)) ?~> Messages("task.notFound")
-      js <- task.publicWrites
+      js <- taskService.publicWrites(task)
     } yield {
       Ok(js)
     }
@@ -142,7 +143,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
       for {
         _ <- otherFox
         task <- taskFox
-        js <- task.publicWrites
+        js <- taskService.publicWrites(task)
       } yield js
     }
 
@@ -215,11 +216,11 @@ class TaskController @Inject() (annotationService: AnnotationService,
     for {
       taskIdValidated <- ObjectId.parse(taskId)
       task <- taskDAO.findOne(taskIdValidated) ?~> Messages("task.notFound")
-      project <- task.project
+      project <- projectDAO.findOne(task._project)
       _ <- ensureTeamAdministration(request.identity, project._team) ?~> Messages("notAllowed")
       _ <- taskDAO.updateTotalInstances(task._id, task.totalInstances + params.openInstances - task.openInstances)
       updatedTask <- taskDAO.findOne(taskIdValidated)
-      json <- updatedTask.publicWrites
+      json <- taskService.publicWrites(updatedTask)
     } yield {
       JsonOk(json, Messages("task.editSuccess"))
     }
@@ -229,7 +230,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
     for {
       taskIdValidated <- ObjectId.parse(taskId)
       task <- taskDAO.findOne(taskIdValidated) ?~> Messages("task.notFound")
-      project <- task.project
+      project <- projectDAO.findOne(task._project)
       _ <- ensureTeamAdministration(request.identity, project._team) ?~> Messages("notAllowed")
       _ <- taskDAO.removeOneAndItsAnnotations(task._id)
     } yield {
@@ -241,7 +242,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
     for {
       taskTypeIdValidated <- ObjectId.parse(taskTypeId)
       tasks <- taskDAO.findAllByTaskType(taskTypeIdValidated)
-      js <- Fox.serialCombined(tasks)(_.publicWrites)
+      js <- Fox.serialCombined(tasks)(taskService.publicWrites(_))
     } yield {
       Ok(Json.toJson(js))
     }
@@ -256,7 +257,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
       taskTypeIdOpt <- Fox.runOptional((request.body \ "taskType").asOpt[String])(ObjectId.parse(_))
       randomizeOpt = (request.body \ "random").asOpt[Boolean]
       tasks <- taskDAO.findAllByProjectAndTaskTypeAndIdsAndUser(projectNameOpt, taskTypeIdOpt, taskIdsOpt, userIdOpt, randomizeOpt)
-      jsResult <- Fox.serialCombined(tasks)(_.publicWrites)
+      jsResult <- Fox.serialCombined(tasks)(taskService.publicWrites(_))
     } yield {
       Ok(Json.toJson(jsResult))
     }
@@ -304,7 +305,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
     for {
       teamIds <- user.teamIds
       task <- taskDAO.peekNextAssignment(user._id, teamIds) ?~> Messages("task.unavailable")
-      taskJson <- task.publicWrites(GlobalAccessContext)
+      taskJson <- taskService.publicWrites(task)(GlobalAccessContext)
     } yield Ok(taskJson)
   }
 

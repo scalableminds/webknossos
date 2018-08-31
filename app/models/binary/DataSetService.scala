@@ -9,7 +9,6 @@ import javax.inject.Inject
 import models.team.OrganizationDAO
 import net.liftweb.common.Full
 import oxalis.security.{CompactRandomIDGenerator, URLSharing, WebknossosSilhouette}
-import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.WSResponse
 import utils.ObjectId
@@ -19,8 +18,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                dataSetDataLayerDAO: DataSetDataLayerDAO,
                                dataSetAllowedTeamsDAO: DataSetAllowedTeamsDAO
                               ) extends FoxImplicits with LazyLogging {
-
-  val system = Akka.system(play.api.Play.current)
 
   def isProperDataSetName(name: String): Boolean =
     name.matches("[A-Za-z0-9_\\-]*")

@@ -44,8 +44,6 @@ case class Annotation(
                           isDeleted: Boolean = false
                         ) extends FoxImplicits {
 
-  lazy val muta = new AnnotationMutations(this)
-
   lazy val id = _id.toString
   lazy val team = _team.toString
 

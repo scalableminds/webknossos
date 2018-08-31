@@ -41,66 +41,51 @@ case class Task(
                     creationInfo: Option[String],
                     created: Long = System.currentTimeMillis(),
                     isDeleted: Boolean = false
-                  ) extends FoxImplicits {
+                  )
 
-  def id = _id.toString
+class TaskService @Inject()(annotationService: AnnotationService,
+                            dataSetDAO: DataSetDAO,
+                            scriptDAO: ScriptDAO,
+                            taskTypeDAO: TaskTypeDAO,
+                            projectDAO: ProjectDAO
+                           ) extends FoxImplicits {
 
-  def annotationBase(implicit ctx: DBAccessContext) =
-    AnnotationService.baseFor(_id)
-
-  def taskType(implicit ctx: DBAccessContext) =
-    TaskTypeDAO.findOne(_taskType)(GlobalAccessContext)
-
-  def project(implicit ctx: DBAccessContext) =
-    ProjectDAO.findOne(_project)
-
-  def annotations(implicit ctx: DBAccessContext) =
-    AnnotationService.annotationsFor(_id)
-
-  def settings(implicit ctx: DBAccessContext) =
-    taskType.map(_.settings) getOrElse AnnotationSettings.defaultFor(TracingType.skeleton)
-
-  def countActive(implicit ctx: DBAccessContext) =
-    AnnotationService.countActiveAnnotationsFor(_id).getOrElse(0)
-
-  def status(implicit ctx: DBAccessContext) = {
+  def publicWrites(task: Task)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
-      active <- countActive
-    } yield CompletionStatus(openInstances, active, totalInstances - (active + openInstances))
-  }
-
-
-  def publicWrites(implicit ctx: DBAccessContext): Fox[JsObject] =
-    for {
-      annotationBase <- annotationBase
-      dataSet <- DataSetDAO.findOne(annotationBase._dataSet)
-      status <- status.getOrElse(CompletionStatus(-1, -1, -1))
-      taskType <- taskType
+      annotationBase <- annotationService.baseForTask(task._id)
+      dataSet <- dataSetDAO.findOne(annotationBase._dataSet)
+      status <- statusOf(task).getOrElse(CompletionStatus(-1, -1, -1))
+      taskType <- taskTypeDAO.findOne(task._taskType)(GlobalAccessContext)
       taskTypeJs <- taskType.publicWrites
-      scriptInfo <- _script.toFox.flatMap(sid => ScriptDAO.findOne(sid)).futureBox
+      scriptInfo <- task._script.toFox.flatMap(sid => scriptDAO.findOne(sid)).futureBox
       scriptJs <- scriptInfo.toFox.flatMap(s => s.publicWrites).futureBox
-      project <- project
+      project <- projectDAO.findOne(task._project)
       team <- project.team
     } yield {
       Json.obj(
-        "id" -> _id.toString,
-        "formattedHash" -> Formatter.formatHash(_id.toString),
+        "id" -> task._id.toString,
+        "formattedHash" -> Formatter.formatHash(task._id.toString),
         "projectName" -> project.name,
         "team" -> team.name,
         "type" -> taskTypeJs,
         "dataSet" -> dataSet.name,
-        "neededExperience" -> neededExperience,
-        "created" -> created,
+        "neededExperience" -> task.neededExperience,
+        "created" -> task.created,
         "status" -> status,
         "script" -> scriptJs.toOption,
-        "tracingTime" -> tracingTime,
-        "creationInfo" -> creationInfo,
-        "boundingBox" -> boundingBox,
-        "editPosition" -> editPosition,
-        "editRotation" -> editRotation
+        "tracingTime" -> task.tracingTime,
+        "creationInfo" -> task.creationInfo,
+        "boundingBox" -> task.boundingBox,
+        "editPosition" -> task.editPosition,
+        "editRotation" -> task.editRotation
       )
     }
 
+  def statusOf(task: Task)(implicit ctx: DBAccessContext) = {
+    for {
+      active <- annotationService.countActiveAnnotationsFor(task._id).getOrElse(0)
+    } yield CompletionStatus(task.openInstances, active, task.totalInstances - (active + task.openInstances))
+  }
 }
 
 class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO) extends SQLDAO[Task, TasksRow, Tasks](sqlClient) {

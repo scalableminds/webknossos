@@ -6,6 +6,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.annotation._
+import models.project.ProjectDAO
 import models.task.TaskDAO
 import models.user.{User, UserService}
 import models.team.OrganizationDAO
@@ -23,6 +24,7 @@ import scala.concurrent.duration._
 class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
                                 userService: UserService,
                                 taskDAO: TaskDAO,
+                                projectDAO: ProjectDAO,
                                 timeSpanDAO: TimeSpanDAO) extends FoxImplicits with LazyLogging {
   private val MaxTracingPause =
     WkConf.Oxalis.User.Time.tracingPauseInSeconds.toMillis
@@ -171,7 +173,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       annotation <- annotationOpt.toFox
       user <- userService.findOneById(annotation._user, useCache = true)(GlobalAccessContext)
       task <- annotation.task
-      project <- task.project
+      project <- projectDAO.findOne(task._project)
       annotationTime <- annotation.tracingTime ?~> "no annotation.tracingTime"
       timeLimit <- project.expectedTime ?~> "no project.expectedTime"
       organization <- user.organization

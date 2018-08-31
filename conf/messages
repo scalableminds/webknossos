@@ -32,6 +32,7 @@ bsonid.invalid=The passed resource id ''{0}'' is invalid
 query.type.invalid=Invalid query type argument
 
 format.json.invalid=Invalid Json format
+format.json.missing=Missing format json
 
 image.create.failed=Failed to create image
 
@@ -49,6 +50,8 @@ team.notFound=Team could not be found.
 
 organization.create.forbidden=You are not allowed to create a new organization
 organization.create.failed=Failed to create a new organization
+organization.notFound=Organization {0} couldn''t be found
+organization.list.failed=Failed to retrieve list of organizations.
 
 user.automaticUserActivation=User was activated automatically
 user.accountCreated=Your account has been created. An administrator is going to unlock you soon.
@@ -80,6 +83,9 @@ user.experience.set=Set experience of {0}
 user.experience.removed=Removed experience from {0}
 user.email.invalid=At least one Email is invalid
 user.notAuthorised=You are not authorized to view this resource. Please log in.
+user.id.notFound=We couldn''t find a user id in the request.
+user.id.invalid=The provided user id is invalid.
+user.creation.failed=Failed to create user
 
 braintracing.new=An account on braintracing.org was created for you. You can use the same credentials as on webKnossos to login.
 braintracing.error=We couldn''t atomatically create an account for you on braintracing.org. Please do it on your own.
@@ -108,6 +114,10 @@ dataSet.import.failedWithError=Import of the dataset failed with error: {0}
 dataSet.import.directoryEmpty=Import failed because the dataset directory is empty
 dataSet.import.noLayers=Import failed because no data layers could be found
 dataSet.defaultconfiguration.updated=Dataset default configuration updated
+dataSet.list.failed=Failed to retrieve list of data sets.
+dataSet.url.missing=URL missing in the supplied json
+dataSet.dataStore.missing=dataStore missing in the supplied json
+dataSet.dataSet.missing=dataSet missing in the supplied json
 
 dataSource.notFound=Datasource not found on datastore server
 
@@ -115,17 +125,6 @@ dataStore.notAvailable=Datastore not available. Please try again in a few minute
 dataStore.list.failed=Failed to retrieve list of data stores.
 dataStore.notFound=DataStore not found.
 dataStore.name.alreadyTaken=There already exists a DataStore with this name. Choose a different name, please.
-
-ndstore.invalid.response=Received invalid response from NDStore: ''{0}''
-ndstore.response.parseFailure=Received invalid json from NDStore
-ndstore.unreachable=Can''t reach the NDStore
-ndstore.invalid.resolutions=Dataset on NDStore doesn''t have any attached resolutions
-ndstore.invalid.imagesize.zero=Dataset on NDStore doesn''t have an associated bounding box / image size
-ndstore.invalid.offset.zero=Dataset on NDStore doesn''t have an associated offset
-ndstore.invalid.voxelres.zero=Dataset on NDStore doesn''t have an associated voxel resolution
-ndstore.invalid.channel.type=Dataset on NDStore has an invalid channel type (valid channel is e.g. ''image'')
-ndstore.invalid.data.type=Dataset on NDStore has an invalid data type (a valid type is e.g. ''uint8'')
-ndstore.invalid.token=Couldn''t find token on NDStore
 
 zip.file.notFound=No or invalid ZIP file specified
 zip.file.invalid=Uploaded ZIP file invalid or corrupted
@@ -177,6 +176,8 @@ project.notFound=Project {0} couldn''t be found
 project.update.failed=Project {0} update failed
 project.noAnnotations=We couldn''t find annotations for this project
 project.increaseTaskInstances.negative=Cannot increment task counts by negative number
+project.list.failed=Failed to retrieve list of projects.
+project.creation.failed=Failed to create project.
 
 role.invalid=Invalid role
 role.removed=Removed role from {0}
@@ -196,6 +197,7 @@ annotation.saved=Annotation was saved
 annotation.edit.success=Successfully updated annotation
 annotation.edit.failed=Updating the annotation failed
 annotation.finish.confirm=Are you sure you want to permanently finish this tracing?
+annotation.finish.failed=Finishing the annotation failed
 annotation.reset.success=Annotation was successfully reset
 annotation.revert.skeletonOnly=Reverting an annotation is only implemented for skeleton tracings of tasks
 annotation.download.notAllowed=You can''t download this tracing
@@ -203,6 +205,7 @@ annotation.notPossible=Couldn''t access annotation
 annotation.notActive=The tracing is not active and can''t be finished
 annotation.reset.failed=Couldn''t reset tracing to base
 annotation.merge.success=Merging successfully done
+annotation.merge.failed=Merging failed
 annotation.merge.failed.compound=Couldn''t merge annotations for compound view
 annotation.dirtyState=Annotation is not up to date. You can''t make any changes
 annotation.update.impossible=This annotation can''t be updated (read only)
@@ -210,6 +213,9 @@ annotation.revert.toOld=Reverting the tracing to a previous version is not possi
 annotation.preferedMode.invalid=Prefered mode is invalid
 annotation.mode.invalid=Invalid annotation mode
 annotation.transferee.noDataSetAccess=Cannot transfer annotation to a user who has no access to the dataset
+annotation.timelogging.read.failed=Time
+annotation.write.failed=Could not convert annotation to json
+annotation.noSkeleton=No skeleton tracing found for this annotation
 
 issue.summary.notSupplied=No summary supplied
 issue.description.notSupplied=No description supplied
@@ -228,9 +234,12 @@ task.requestAnother=Do you really want another task?
 task.unavailable=There is currently no task available
 task.notFound=Task couldn''t be found
 task.removed=Task was removed
+task.remove.failed=Task removal failed
 task.editSuccess=Task successfully edited
 task.noAnnotations=We couldn''t find finished annotations for this task
+task.annotation.failed=Failed to retrieve annotations for this task
 task.instances.changeImpossible=Due to the project settings it is not possible to change the number of instances of this task
+task.id.invalid=The provided task id is invalid.
 
 assignment.retrieval.failed=Failed to retrieve any assignment
 
@@ -243,15 +252,20 @@ taskType.notFound=Selected task type doesn''t exist
 taskType.deleteSuccess=Task type ''{0}'' successfully deleted
 taskType.deleteFailure=Task type ''{0}'' deletion failed
 taskType.noAnnotations=We couldn''t find finished annotations for this task type
-
-org.team=You are not authorized to delete the organization wide team.
+taskType.id.invalid=The provided task type id is invalid.
 
 time.invalidFormat=Time couldn''t get parsed.
 point.invalidFormat=Invalid format. Use something like: 4, 63, 24
 
 mail.welcome.subject = Welcome to ScalableMinds
+
 script.notFound=Script couldn''t be found
 script.removalFailed=Failed to remove script
+script.write.failed=Failed to convert script to json
+script.notOwner=You are not the owner of the script you want to edit.
+script.invalid=Script is invalid
+
+serialization.failed=Failed to serialize data.
 
 sql.invalidBSONObjectId=Invalid BSONObjectID in SQL DB: {0}
 

@@ -6,7 +6,6 @@ import javax.inject.Inject
 import com.mohiva.play.silhouette.api.LoginInfo
 import com.mohiva.play.silhouette.api.exceptions.ProviderException
 import com.mohiva.play.silhouette.api.util.Credentials
-import com.mohiva.play.silhouette.impl.authenticators.BearerTokenAuthenticator
 import com.scalableminds.util.mail._
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.rpc.RPC
@@ -31,7 +30,7 @@ import play.api.data.validation.Constraints._
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Akka
 import play.api.libs.json._
-import play.api.mvc.{Action, _}
+import play.api.mvc._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

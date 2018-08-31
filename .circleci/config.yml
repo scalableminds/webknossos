@@ -30,7 +30,7 @@ jobs:
           command: |
             docker-compose up -d postgres
             sleep 3
-            docker-compose run compile tools/postgres/diff_schema.sh tools/postgres/schema.sql "conf/evolutions/*.sql"
+            docker-compose run compile tools/postgres/diff_schema.js tools/postgres/schema.sql "conf/evolutions/*.sql"
       - run:
           name: Install frontend dependencies
           command: docker-compose run base yarn install --frozen-lockfile

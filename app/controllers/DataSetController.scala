@@ -85,14 +85,14 @@ class DataSetController @Inject()(userService: UserService,
   def addForeignDataStoreAndDataSet() = SecuredAction.async { implicit request =>
     for {
       body <- request.body.asJson.toFox
-      url = (body \ "url").as[String]
-      dataStoreName = (body \ "dataStoreName").as[String]
-      dataSetName = (body \ "dataSetName").as[String]
-      _ <- bool2Fox(request.identity.isAdmin) ?~> Messages("user.noAdmin")
+      url <- (body \ "url").asOpt[String] ?~> "dataSet.url.missing"
+      dataStoreName <- (body \ "dataStoreName").asOpt[String].toFox ?~> "dataSet.dataStore.missing"
+      dataSetName <- (body \ "dataSetName").asOpt[String] ?~> "dataSet.dataSet.missing"
+      _ <- bool2Fox(request.identity.isAdmin) ?~> "user.noAdmin"
       noDataStoreBox <- DataStoreDAO.findOneByName(dataStoreName).reverse.futureBox
       _ <- Fox.runOptional(noDataStoreBox)(_ => dataSetService.addForeignDataStore(dataStoreName, url))
-      _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> Messages("dataSet.import.impossible.name")
-      _ <- dataSetDAO.findOneByName(dataSetName).reverse ?~> Messages("dataSet.name.alreadyTaken")
+      _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> "dataSet.import.impossible.name"
+      _ <- dataSetDAO.findOneByName(dataSetName).reverse ?~> "dataSet.name.alreadyTaken"
       organizationName <- request.identity.organization.map(_.name)
       _ <- dataSetService.addForeignDataSet(dataStoreName, dataSetName, organizationName)
     } yield {
@@ -108,7 +108,7 @@ class DataSetController @Inject()(userService: UserService,
         Fox.successful(el.isUsable == value))
     ) { filter =>
         for {
-          dataSets <- dataSetDAO.findAll
+          dataSets <- dataSetDAO.findAll ?~> "dataSet.list.failed"
           filtered <- filter.applyOn(dataSets)
           js <- Fox.serialCombined(filtered)(d => d.publicWrites(request.identity))
         } yield {
@@ -144,7 +144,7 @@ class DataSetController @Inject()(userService: UserService,
       case (description, displayName, isPublic) =>
       for {
         dataSet <- dataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
-        _ <- Fox.assertTrue(dataSet.isEditableBy(request.identity)) ?~> Messages("notAllowed")
+        _ <- Fox.assertTrue(dataSet.isEditableBy(request.identity)) ?~> "notAllowed"
         _ <- dataSetDAO.updateFields(dataSet._id, description, displayName, isPublic)
         updated <- dataSetDAO.findOneByName(dataSetName)
         js <- updated.publicWrites(Some(request.identity))
@@ -156,7 +156,7 @@ class DataSetController @Inject()(userService: UserService,
 
   def importDataSet(dataSetName: String) = SecuredAction.async { implicit request =>
     for {
-      _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> Messages("dataSet.import.impossible.name")
+      _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> "dataSet.import.impossible.name"
       dataSet <- dataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
       result <- dataSetService.importDataSet(dataSet)
     } yield {
@@ -168,7 +168,7 @@ class DataSetController @Inject()(userService: UserService,
     withJsonBodyAs[List[String]] { teams =>
       for {
         dataSet <- dataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
-        _ <- Fox.assertTrue(dataSet.isEditableBy(request.identity)) ?~> Messages("notAllowed")
+        _ <- Fox.assertTrue(dataSet.isEditableBy(request.identity)) ?~> "notAllowed"
         teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.parse(_))
         userTeams <- teamDAO.findAllEditable
         oldAllowedTeams <- dataSet.allowedTeamIds
@@ -198,8 +198,8 @@ class DataSetController @Inject()(userService: UserService,
 
   def isValidNewName(dataSetName: String) = SecuredAction.async { implicit request =>
     for {
-      _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> Messages("dataSet.name.invalid")
-      _ <- dataSetService.assertNewDataSetName(dataSetName)(GlobalAccessContext) ?~> Messages("dataSet.name.alreadyTaken")
+      _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> "dataSet.name.invalid"
+      _ <- dataSetService.assertNewDataSetName(dataSetName)(GlobalAccessContext) ?~> "dataSet.name.alreadyTaken"
     } yield Ok
   }
 

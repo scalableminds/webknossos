@@ -42,9 +42,9 @@ class UserController @Inject()(userService: UserService,
 
   def user(userId: String) = SecuredAction.async { implicit request =>
     for {
-      userIdValidated <- ObjectId.parse(userId)
-      user <- userDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
-      _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
+      userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+      user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
+      _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> "notAllowed"
       js <- user.publicWrites(request.identity)
     } yield Ok(js)
   }
@@ -69,9 +69,9 @@ class UserController @Inject()(userService: UserService,
 
   def userLoggedTime(userId: String) = SecuredAction.async { implicit request =>
     for {
-      userIdValidated <- ObjectId.parse(userId)
-      user <- userDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
-      _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
+      userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+      user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
+      _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> "notAllowed"
       loggedTimeAsMap <- timeSpanService.loggedTimeOfUser(user, TimeSpan.groupByMonth)
     } yield {
       JsonOk(Json.obj("loggedTime" ->
@@ -89,9 +89,9 @@ class UserController @Inject()(userService: UserService,
   def usersLoggedTime = SecuredAction.async(validateJson[TimeSpanRequest]) { implicit request =>
     Fox.combined(request.body.users.map { userId =>
       for {
-        userIdValidated <- ObjectId.parse(userId)
-        user <- userDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
-        _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
+        userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+        user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
+        _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> "notAllowed"
         result <- timeSpanService.loggedTimeOfUser(user, groupByAnnotationAndDay, Some(request.body.start), Some(request.body.end))
       } yield {
         Json.obj(
@@ -116,9 +116,9 @@ class UserController @Inject()(userService: UserService,
 
   def userAnnotations(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = SecuredAction.async { implicit request =>
     for {
-      userIdValidated <- ObjectId.parse(userId)
-      user <- userDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
-      _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
+      userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+      user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
+      _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> "notAllowed"
       annotations <- annotationDAO.findAllFor(userIdValidated, isFinished, AnnotationType.Explorational, limit.getOrElse(defaultAnnotationLimit))
       jsonList <- Fox.serialCombined(annotations)(_.compactWrites)
     } yield {
@@ -128,9 +128,9 @@ class UserController @Inject()(userService: UserService,
 
   def userTasks(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = SecuredAction.async { implicit request =>
     for {
-      userIdValidated <- ObjectId.parse(userId)
-      user <- userDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
-      _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
+      userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+      user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
+      _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> "notAllowed"
       annotations <- annotationDAO.findAllFor(userIdValidated, isFinished, AnnotationType.Task, limit.getOrElse(defaultAnnotationLimit))
       jsonList <- Fox.serialCombined(annotations)(_.publicWrites(Some(request.identity)))
     } yield {
@@ -197,10 +197,10 @@ class UserController @Inject()(userService: UserService,
     withJsonBodyUsing(userUpdateReader) {
       case (firstName, lastName, email, isActive, isAdmin, assignedMemberships, experiences) =>
         for {
-          userIdValidated <- ObjectId.parse(userId)
-          user <- userDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
-          _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
-          _ <- bool2Fox(checkAdminOnlyUpdates(user, isActive, isAdmin, email)(issuingUser)) ?~> Messages("notAllowed")
+          userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+          user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
+          _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> "notAllowed"
+          _ <- bool2Fox(checkAdminOnlyUpdates(user, isActive, isAdmin, email)(issuingUser)) ?~> "notAllowed"
           teams <- Fox.combined(assignedMemberships.map(t => teamDAO.findOne(t.teamId)(GlobalAccessContext) ?~> Messages("team.notFound")))
           oldTeamMemberships <- user.teamMemberships
           teamsWithoutUpdate <- Fox.filterNot(oldTeamMemberships)(t => issuingUser.isTeamManagerOrAdminOf(t.teamId))

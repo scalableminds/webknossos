@@ -367,9 +367,9 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
 
   def transferAnnotationToUser(typ: String, id: String, userId: ObjectId)(implicit request: UserAwareRequest[_]): Fox[Annotation] = {
     for {
-      annotation <- annotationInformationProvider.provideAnnotation(typ, id)
-      newUser <- userDAO.findOne(userId) ?~> Messages("user.notFound")
-      _ <- dataSetDAO.findOne(annotation._dataSet)(AuthorizedAccessContext(newUser)) ?~> Messages("annotation.transferee.noDataSetAccess")
+      annotation <- annotationInformationProvider.provideAnnotation(typ, id) ?~> "annotation.notFound"
+      newUser <- userDAO.findOne(userId) ?~> "user.notFound"
+      _ <- dataSetDAO.findOne(annotation._dataSet)(AuthorizedAccessContext(newUser)) ?~> "annotation.transferee.noDataSetAccess"
       _ <- annotationDAO.updateUser(annotation._id, newUser._id)
       updated <- annotationInformationProvider.provideAnnotation(typ, id)
     } yield updated

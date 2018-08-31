@@ -161,13 +161,13 @@ class Authentication @Inject()(
             errors ::= Messages("user.email.alreadyInUse")
             Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
           case Empty =>
-            if (!errors.isEmpty) {
+            if (errors.nonEmpty) {
               Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
             } else {
               for {
-                organization <- organizationDAO.findOneByName(signUpData.organization)(GlobalAccessContext)
+                organization <- organizationDAO.findOneByName(signUpData.organization)(GlobalAccessContext) ?~> Messages("organization.notFound", signUpData.organization)
                 user <- userService.insert(organization._id, email, firstName, lastName, automaticUserActivation, isAdminOnRegistration,
-                  loginInfo, passwordHasher.hash(signUpData.password))
+                  loginInfo, passwordHasher.hash(signUpData.password)) ?~> "user.creation.failed"
                 brainDBResult <- BrainTracing.registerIfNeeded(user, signUpData.password).toFox
               } yield {
                 Mailer ! Send(DefaultMails.registerMail(user.name, user.email, brainDBResult))
@@ -207,7 +207,7 @@ class Authentication @Inject()(
 
   def autoLogin = Action.async { implicit request =>
     for {
-      _ <- bool2Fox(WkConf.Application.Authentication.enableDevAutoLogin) ?~> Messages("error.notInDev")
+      _ <- bool2Fox(WkConf.Application.Authentication.enableDevAutoLogin) ?~> "error.notInDev"
       user <- userService.defaultUser
       authenticator <- env.authenticatorService.create(user.loginInfo)
       value <- env.authenticatorService.init(authenticator)
@@ -219,7 +219,7 @@ class Authentication @Inject()(
     if (request.identity.isSuperUser) {
       val loginInfo = LoginInfo(CredentialsProvider.ID, email)
       for {
-        _ <- userService.findOneByEmail(email) ?~> Messages("user.notFound")
+        _ <- userService.findOneByEmail(email) ?~> "user.notFound"
         _ <- env.authenticatorService.discard(request.authenticator, Ok) //to logout the admin
         authenticator <- env.authenticatorService.create(loginInfo)
         value <- env.authenticatorService.init(authenticator)
@@ -392,9 +392,9 @@ class Authentication @Inject()(
                   Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
                 } else {
                   for {
-                    organization <- createOrganization(signUpData.organization) ?~> Messages("organization.create.failed")
+                    organization <- createOrganization(signUpData.organization) ?~> "organization.create.failed"
                     user <- userService.insert(organization._id, email, firstName, lastName, isActive = true, teamRole = true,
-                      loginInfo, passwordHasher.hash(signUpData.password), isAdmin = true)
+                      loginInfo, passwordHasher.hash(signUpData.password), isAdmin = true) ?~> "user.creation.failed"
                     _ <- createOrganizationFolder(organization.name, loginInfo)
                   } yield {
                     Mailer ! Send(DefaultMails.newOrganizationMail(organization.displayName, email.toLowerCase, request.headers.get("Host").headOption.getOrElse("")))

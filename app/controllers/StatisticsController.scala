@@ -63,7 +63,7 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
 
   def users(interval: String, start: Option[Long], end: Option[Long], limit: Int) = SecuredAction.async { implicit request =>
     for {
-      handler <- intervalHandler.get(interval) ?~> Messages("statistics.interval.invalid")
+      handler <- intervalHandler.get(interval) ?~> "statistics.interval.invalid"
       users <- userDAO.findAll
       usersWithTimes <- Fox.serialCombined(users)(user => timeSpanService.loggedTimeOfUser(user, handler, start, end).map(user -> _))
       data = usersWithTimes.sortBy(-_._2.map(_._2.toMillis).sum).take(limit)

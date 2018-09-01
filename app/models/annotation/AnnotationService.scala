@@ -178,9 +178,6 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
   def annotationsFor(taskId: ObjectId)(implicit ctx: DBAccessContext) =
       annotationDAO.findAllByTaskIdAndType(taskId, AnnotationType.Task)
 
-  def countActiveAnnotationsFor(taskId: ObjectId)(implicit ctx: DBAccessContext) =
-    annotationDAO.countActiveByTask(taskId, AnnotationType.Task)
-
   def countOpenNonAdminTasks(user: User)(implicit ctx: DBAccessContext) =
     for {
       teamManagerTeamIds <- userService.teamManagerTeamIdsFor(user._id)

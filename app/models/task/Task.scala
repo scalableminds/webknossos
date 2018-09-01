@@ -23,6 +23,7 @@ import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import utils.{ObjectId, SQLClient, SQLDAO}
 
+import scala.concurrent.Future
 import scala.util.Random
 
 
@@ -43,9 +44,9 @@ case class Task(
                     isDeleted: Boolean = false
                   )
 
-class TaskService @Inject()(annotationService: AnnotationService,
-                            dataSetDAO: DataSetDAO,
+class TaskService @Inject()(dataSetDAO: DataSetDAO,
                             scriptDAO: ScriptDAO,
+                            annotationDAO: AnnotationDAO,
                             taskTypeDAO: TaskTypeDAO,
                             teamDAO: TeamDAO,
                             scriptService: ScriptService,
@@ -55,7 +56,7 @@ class TaskService @Inject()(annotationService: AnnotationService,
 
   def publicWrites(task: Task)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
-      annotationBase <- annotationService.baseForTask(task._id)
+      annotationBase <- annotationBaseFor(task._id)
       dataSet <- dataSetDAO.findOne(annotationBase._dataSet)
       status <- statusOf(task).getOrElse(CompletionStatus(-1, -1, -1))
       taskType <- taskTypeDAO.findOne(task._taskType)(GlobalAccessContext)
@@ -84,11 +85,19 @@ class TaskService @Inject()(annotationService: AnnotationService,
       )
     }
 
-  def statusOf(task: Task)(implicit ctx: DBAccessContext) = {
+  def annotationBaseFor(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[Annotation] =
+    (for {
+      list <- annotationDAO.findAllByTaskIdAndType(taskId, AnnotationType.TracingBase)
+    } yield list.headOption.toFox).flatten
+
+  def statusOf(task: Task)(implicit ctx: DBAccessContext): Fox[CompletionStatus] =
     for {
-      active <- annotationService.countActiveAnnotationsFor(task._id).getOrElse(0)
+      active <- countActiveAnnotationsFor(task._id).getOrElse(0)
     } yield CompletionStatus(task.openInstances, active, task.totalInstances - (active + task.openInstances))
-  }
+
+  def countActiveAnnotationsFor(taskId: ObjectId)(implicit ctx: DBAccessContext) =
+    annotationDAO.countActiveByTask(taskId, AnnotationType.Task)
+
 }
 
 class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO) extends SQLDAO[Task, TasksRow, Tasks](sqlClient) {

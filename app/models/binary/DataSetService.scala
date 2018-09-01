@@ -10,7 +10,7 @@ import javax.inject.Inject
 import models.team.{OrganizationDAO, TeamDAO, TeamService}
 import models.user.{User, UserService}
 import net.liftweb.common.Full
-import oxalis.security.{CompactRandomIDGenerator, URLSharing, WebknossosSilhouette}
+import oxalis.security.{CompactRandomIDGenerator, URLSharing}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.i18n.Messages.Implicits._

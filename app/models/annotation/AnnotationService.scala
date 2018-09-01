@@ -309,20 +309,23 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     for {
       tracingsNamesAndScalesAsTuples <- getTracingsScalesAndNamesFor(annotations)
       tracingsAndNamesFlattened = flattenTupledLists(tracingsNamesAndScalesAsTuples)
-      nmlsAndNames = tracingsAndNamesFlattened.map(tuple => (nmlWriter.toNmlStream(Some(tuple._1), None, tuple._4, tuple._3), tuple._2))
+      nmlsAndNames = tracingsAndNamesFlattened.map(tuple => (nmlWriter.toNmlStream(Some(tuple._1), None, tuple._4, tuple._3, Some(tuple._5), tuple._6), tuple._2))
       zip <- createZip(nmlsAndNames, zipFileName)
     } yield zip
   }
 
-  private def flattenTupledLists[A,B,C,D](tupledLists: List[(List[A], List[B], List[C], List[D])]) = {
-    tupledLists.flatMap(tuple => zippedFourLists(tuple._1, tuple._2, tuple._3, tuple._4))
+  private def flattenTupledLists[A,B,C,D,E,F](tupledLists: List[(List[A], List[B], List[C], List[D], List[E], List[F])]) = {
+    tupledLists.flatMap(tuple => zippedFourLists(tuple._1, tuple._2, tuple._3, tuple._4, tuple._5, tuple._6))
   }
 
-  private def zippedFourLists[A,B,C,D](l1: List[A], l2: List[B], l3: List[C], l4: List[D]): List[(A, B, C, D)] = {
-    ((l1, l2, l3).zipped.toList, l4).zipped.toList.map( tuple => (tuple._1._1, tuple._1._2, tuple._1._3, tuple._2))
+  private def zippedFourLists[A,B,C,D,E,F](l1: List[A], l2: List[B], l3: List[C], l4: List[D], l5: List[E], l6: List[F]): List[(A, B, C, D, E, F)] = {
+    ((((l1, l2, l3).zipped.toList, l4).zipped.toList, l5).zipped.toList, l6).zipped.toList.map {
+      tuple => (tuple._1._1._1._1, tuple._1._1._1._2, tuple._1._1._1._3, tuple._1._1._2, tuple._1._2, tuple._2)
+    }
   }
 
-  private def getTracingsScalesAndNamesFor(annotations: List[Annotation])(implicit ctx: DBAccessContext): Fox[List[(List[SkeletonTracing], List[String], List[Option[Scale]], List[Annotation])]] = {
+  private def getTracingsScalesAndNamesFor(annotations: List[Annotation])(implicit ctx: DBAccessContext):
+    Fox[List[(List[SkeletonTracing], List[String], List[Option[Scale]], List[Annotation], List[User], List[Option[Task]])]] = {
 
     def getTracings(dataSetId: ObjectId, tracingIds: List[String]) = {
       for {
@@ -330,6 +333,14 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         dataStoreHandler <- dataSetService.handlerFor(dataSet)
         tracingContainers <- Fox.serialCombined(tracingIds.grouped(1000).toList)(dataStoreHandler.getSkeletonTracings)
       } yield tracingContainers.flatMap(_.tracings)
+    }
+
+    def getUsers(userIds: List[ObjectId]) = {
+      Fox.serialCombined(userIds)(userService.findOneById(_, useCache = true))
+    }
+
+    def getTasks(taskIds: List[Option[ObjectId]]) = {
+      Fox.serialCombined(taskIds)(taskIdOpt => Fox.runOptional(taskIdOpt)(taskDAO.findOne))
     }
 
     def getDatasetScale(dataSetId: ObjectId) = {
@@ -346,8 +357,10 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         for {
           scale <- getDatasetScale(dataSetId)
           tracings <- getTracings(dataSetId, annotations.flatMap(_.skeletonTracingId))
+          users <- getUsers(annotations.map(_._user)) ?~> "user.notFound"
+          taskOpts <- getTasks(annotations.map(_._task)) ?~> "task.notFound"
           names <- getNames(annotations)
-        } yield (tracings, names, annotations.map(a => scale), annotations)
+        } yield (tracings, names, annotations.map(a => scale), annotations, users, taskOpts)
       }
     }
     Fox.combined(tracings.toList)

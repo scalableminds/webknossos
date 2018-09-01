@@ -141,8 +141,10 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
         dataStoreHandler <- dataSetService.handlerFor(dataSet)
         skeletonTracingId <- annotation.skeletonTracingId.toFox
         tracing <- dataStoreHandler.getSkeletonTracing(skeletonTracingId)
+        user <- userService.findOneById(annotation._user, useCache = true)
+        taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
       } yield {
-        (nmlWriter.toNmlStream(Some(tracing), None, annotation, dataSet.scale), name + ".nml")
+        (nmlWriter.toNmlStream(Some(tracing), None, annotation, dataSet.scale, Some(user), taskOpt), name + ".nml")
       }
     }
 
@@ -151,12 +153,14 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
         dataStoreHandler <- dataSetService.handlerFor(dataSet)
         volumeTracingId <- annotation.volumeTracingId.toFox
         (volumeTracing, data) <- dataStoreHandler.getVolumeTracing(volumeTracingId)
-        skeletonTracingOpt <- Fox.runOptional(annotation.skeletonTracingId)(dataStoreHandler.getSkeletonTracing(_))
+        skeletonTracingOpt <- Fox.runOptional(annotation.skeletonTracingId)(dataStoreHandler.getSkeletonTracing)
+        user <- userService.findOneById(annotation._user, useCache = true)
+        taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
       } yield {
         (Enumerator.outputStream { outputStream =>
           ZipIO.zip(
             List(
-              new NamedEnumeratorStream(name + ".nml", nmlWriter.toNmlStream(skeletonTracingOpt, Some(volumeTracing), annotation, dataSet.scale)),
+              new NamedEnumeratorStream(name + ".nml", nmlWriter.toNmlStream(skeletonTracingOpt, Some(volumeTracing), annotation, dataSet.scale, Some(user), taskOpt)),
               new NamedEnumeratorStream("data.zip", data)
             ), outputStream)
         }, name + ".zip")

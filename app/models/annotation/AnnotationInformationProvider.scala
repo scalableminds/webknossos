@@ -6,12 +6,10 @@ import javax.inject.Inject
 import models.annotation.AnnotationType.AnnotationType
 import models.annotation.handler.AnnotationInformationHandlerSelector
 import models.user.User
-import oxalis.security.WebknossosSilhouette
 import play.api.libs.concurrent.Execution.Implicits._
 
 class AnnotationInformationProvider @Inject()(annotationInformationHandlerSelector: AnnotationInformationHandlerSelector,
-                                              sil: WebknossosSilhouette
-                                             )(annotationStore: AnnotationStore)
+                                              annotationStore: AnnotationStore)
   extends play.api.http.Status
     with FoxImplicits {
 

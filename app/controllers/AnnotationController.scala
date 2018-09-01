@@ -71,9 +71,9 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
 
   def merge(typ: String, id: String, mergedTyp: String, mergedId: String) = sil.SecuredAction.async { implicit request =>
     for {
-      identifierA <- AnnotationIdentifier.parse(typ, id)
-      identifierB <- AnnotationIdentifier.parse(mergedTyp, mergedId)
-      mergedAnnotation <- annotationMerger.mergeTwoByIds(identifierA, identifierB, true, request.identity) ?~> "annotation.merge.failed"
+      annotationA <- provider.provideAnnotation(typ, id, request.identity)
+      annotationB <- provider.provideAnnotation(mergedTyp, mergedId, request.identity)
+      mergedAnnotation <- annotationMerger.mergeTwo(annotationA, annotationB, true, request.identity) ?~> "annotation.merge.failed"
       restrictions = annotationRestrictionDefults.defaultAnnotationRestrictions(mergedAnnotation)
       _ <- restrictions.allowAccess(request.identity) ?~> Messages("notAllowed") ~> BAD_REQUEST
       _ <- annotationDAO.insertOne(mergedAnnotation)

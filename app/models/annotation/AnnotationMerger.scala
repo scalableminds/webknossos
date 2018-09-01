@@ -10,23 +10,9 @@ import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
 import utils.ObjectId
 
-class AnnotationMerger @Inject()(annotationStore: AnnotationStore,
-                                 dataSetDAO: DataSetDAO,
+class AnnotationMerger @Inject()(dataSetDAO: DataSetDAO,
                                  dataSetService: DataSetService
                                 ) extends FoxImplicits with LazyLogging {
-
-  def mergeTwoByIds(
-                    identifierA: AnnotationIdentifier,
-                    identifierB: AnnotationIdentifier,
-                    persistTracing: Boolean,
-                    issuingUser: User
-                   )(implicit ctx: DBAccessContext): Fox[Annotation] = {
-    for {
-      annotationA: Annotation <- annotationStore.requestAnnotation(identifierA, Some(issuingUser)) ?~> "Request Annotation in AnnotationStore failed"
-      annotationB: Annotation <- annotationStore.requestAnnotation(identifierB, Some(issuingUser)) ?~> "Request Annotation in AnnotationStore failed"
-      mergedAnnotation <- mergeTwo(annotationA, annotationB, persistTracing, issuingUser)
-    } yield mergedAnnotation
-  }
 
   def mergeTwo(
                 annotationA: Annotation,

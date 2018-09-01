@@ -32,7 +32,7 @@ case class NmlParameters(
                           taskBoundingBox: Option[BoundingBox]
                         )
 
-class NmlWriter @Inject()(annotationService: AnnotationService) extends FoxImplicits {
+class NmlWriter @Inject() extends FoxImplicits {
   private lazy val outputService = XMLOutputFactory.newInstance()
 
   def toNmlStream(skeletonTracing: Option[SkeletonTracing],

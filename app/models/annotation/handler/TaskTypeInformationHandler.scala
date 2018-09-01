@@ -14,7 +14,7 @@ import utils.ObjectId
 class TaskTypeInformationHandler @Inject()(taskTypeDAO: TaskTypeDAO,
                                            taskDAO: TaskDAO,
                                            userService: UserService,
-                                           annotationService: AnnotationService,
+                                           annotationDAO: AnnotationDAO,
                                            annotationMerger: AnnotationMerger
                                           ) extends AnnotationInformationHandler with FoxImplicits {
 
@@ -22,7 +22,7 @@ class TaskTypeInformationHandler @Inject()(taskTypeDAO: TaskTypeDAO,
     for {
       taskType <- taskTypeDAO.findOne(taskTypeId) ?~> "taskType.notFound"
       tasks <- taskDAO.findAllByTaskType(taskType._id)
-      annotations <- Fox.serialCombined(tasks)(task => annotationService.annotationsFor(task._id)).map(_.flatten).toFox
+      annotations <- Fox.serialCombined(tasks)(task => annotationDAO.findAllByTaskIdAndType(task._id, AnnotationType.Task)).map(_.flatten).toFox
       finishedAnnotations = annotations.filter(_.state == Finished)
       _ <- assertAllOnSameDataset(finishedAnnotations)
       _ <- assertNonEmpty(finishedAnnotations) ?~> "taskType.noAnnotations"

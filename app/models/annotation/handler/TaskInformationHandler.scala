@@ -12,7 +12,7 @@ import models.project.ProjectDAO
 import utils.ObjectId
 
 class TaskInformationHandler @Inject()(taskDAO: TaskDAO,
-                                       annotationService: AnnotationService,
+                                       annotationDAO: AnnotationDAO,
                                        userService: UserService,
                                        annotationMerger: AnnotationMerger,
                                        projectDAO: ProjectDAO) extends AnnotationInformationHandler with FoxImplicits {
@@ -20,7 +20,7 @@ class TaskInformationHandler @Inject()(taskDAO: TaskDAO,
   override def provideAnnotation(taskId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
       task <- taskDAO.findOne(taskId) ?~> "task.notFound"
-      annotations <- annotationService.annotationsFor(task._id)
+      annotations <- annotationDAO.findAllByTaskIdAndType(task._id, AnnotationType.Task)
       finishedAnnotations = annotations.filter(_.state == Finished)
       _ <- assertAllOnSameDataset(finishedAnnotations)
       _ <- assertNonEmpty(finishedAnnotations) ?~> "task.noAnnotations"

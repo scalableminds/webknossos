@@ -11,8 +11,7 @@ import models.team.{OrganizationDAO, TeamDAO}
 import models.user.UserService
 import oxalis.security.{URLSharing, WebknossosSilhouette}
 import com.scalableminds.util.tools.Math
-import play.api.Play.current
-import play.api.cache.Cache
+import play.api.cache.CacheApi
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -34,6 +33,7 @@ class DataSetController @Inject()(userService: UserService,
                                   teamDAO: TeamDAO,
                                   dataSetDAO: DataSetDAO,
                                   sil: WebknossosSilhouette,
+                                  cache: CacheApi,
                                   val messagesApi: MessagesApi) extends Controller {
 
   implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
@@ -54,11 +54,11 @@ class DataSetController @Inject()(userService: UserService,
 
   def thumbnail(dataSetName: String, dataLayerName: String, w: Option[Int], h: Option[Int]) = sil.UserAwareAction.async { implicit request =>
 
-    def imageFromCacheIfPossible(dataSet: DataSet) = {
+    def imageFromCacheIfPossible(dataSet: DataSet): Fox[Array[Byte]] = {
       val width = Math.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailHeight)
       val height = Math.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
-      Cache.get(s"thumbnail-$dataSetName*$dataLayerName-$width-$height") match {
-        case Some(a: Array[Byte]) =>
+      cache.get(s"thumbnail-$dataSetName*$dataLayerName-$width-$height") match {
+        case Some(a) =>
           Fox.successful(a)
         case _ => {
           val defaultCenterOpt = dataSet.defaultConfiguration.flatMap(c => c.configuration.get("position").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Point3D])))
@@ -66,9 +66,9 @@ class DataSetController @Inject()(userService: UserService,
           dataSetService.handlerFor(dataSet).flatMap(_.requestDataLayerThumbnail(dataLayerName, width, height, defaultZoomOpt, defaultCenterOpt)).map {
             result =>
               // We don't want all images to expire at the same time. Therefore, we add some random variation
-              Cache.set(s"thumbnail-$dataSetName*$dataLayerName-$width-$height",
+              cache.set(s"thumbnail-$dataSetName*$dataLayerName-$width-$height",
                 result,
-                (ThumbnailCacheDuration.toSeconds + math.random * 2.hours.toSeconds).toInt)
+                (ThumbnailCacheDuration.toSeconds + math.random * 2.hours.toSeconds) seconds)
               result
           }
         }

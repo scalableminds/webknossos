@@ -39,7 +39,7 @@ class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller 
   def delete(id: String) = SecuredAction.async { implicit request =>
     for {
       teamIdValidated <- ObjectId.parse(id)
-      team <- TeamDAO.findOne(teamIdValidated)
+      team <- TeamDAO.findOne(teamIdValidated) ?~> "team.notFound"
       _ <- TeamDAO.deleteOne(teamIdValidated)
       _ <- UserTeamRolesDAO.removeTeamFromAllUsers(teamIdValidated)
     } yield {
@@ -50,7 +50,7 @@ class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller 
   def create = SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(teamNameReads) { teamName =>
       for {
-        _ <- bool2Fox(request.identity.isAdmin) ?~> Messages("user.noAdmin")
+        _ <- bool2Fox(request.identity.isAdmin) ?~> "user.noAdmin"
         team = Team(ObjectId.generate, request.identity._organization, teamName)
         _ <- TeamDAO.insertOne(team)
         js <- team.publicWrites

@@ -5,7 +5,7 @@ import java.io.ByteArrayInputStream
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.{Point3D, Vector3D}
-import models.annotation.nml.NmlParser
+import models.annotation.nml.{NmlParser, NmlWriter}
 import net.liftweb.common.{Box, Full}
 import org.scalatest.FlatSpec
 import play.api.libs.iteratee.Iteratee
@@ -19,8 +19,8 @@ class NMLUnitTestSuite extends FlatSpec {
 
   def getObjectId = ObjectId.generate
 
-  def writeAndParseTracing(tracing: SkeletonTracing): Box[(Option[SkeletonTracing], Option[(VolumeTracing, String)], String)] = {
-    val nmlEnumarator = NMLWriterTestStub.toNmlStream(tracing, None)
+  def writeAndParseTracing(skeletonTracing: SkeletonTracing): Box[(Option[SkeletonTracing], Option[(VolumeTracing, String)], String)] = {
+    val nmlEnumarator = new NmlWriter().toNmlStream(Some(skeletonTracing), None, None, None, None, None)
     val arrayFuture = Iteratee.flatten(nmlEnumarator |>> Iteratee.consume[Array[Byte]]()).run
     val array = Await.result(arrayFuture, Duration.Inf)
     NmlParser.parse("", new ByteArrayInputStream(array))

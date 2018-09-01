@@ -306,7 +306,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     for {
       tracingsNamesAndScalesAsTuples <- getTracingsScalesAndNamesFor(annotations)
       tracingsAndNamesFlattened = flattenTupledLists(tracingsNamesAndScalesAsTuples)
-      nmlsAndNames = tracingsAndNamesFlattened.map(tuple => (nmlWriter.toNmlStream(Some(tuple._1), None, tuple._4, tuple._3, Some(tuple._5), tuple._6), tuple._2))
+      nmlsAndNames = tracingsAndNamesFlattened.map(tuple => (nmlWriter.toNmlStream(Some(tuple._1), None, Some(tuple._4), tuple._3, Some(tuple._5), tuple._6), tuple._2))
       zip <- createZip(nmlsAndNames, zipFileName)
     } yield zip
   }

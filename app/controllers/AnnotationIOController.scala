@@ -144,7 +144,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
         user <- userService.findOneById(annotation._user, useCache = true)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
       } yield {
-        (nmlWriter.toNmlStream(Some(tracing), None, annotation, dataSet.scale, Some(user), taskOpt), name + ".nml")
+        (nmlWriter.toNmlStream(Some(tracing), None, Some(annotation), dataSet.scale, Some(user), taskOpt), name + ".nml")
       }
     }
 
@@ -160,7 +160,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
         (Enumerator.outputStream { outputStream =>
           ZipIO.zip(
             List(
-              new NamedEnumeratorStream(name + ".nml", nmlWriter.toNmlStream(skeletonTracingOpt, Some(volumeTracing), annotation, dataSet.scale, Some(user), taskOpt)),
+              new NamedEnumeratorStream(name + ".nml", nmlWriter.toNmlStream(skeletonTracingOpt, Some(volumeTracing), Some(annotation), dataSet.scale, Some(user), taskOpt)),
               new NamedEnumeratorStream("data.zip", data)
             ), outputStream)
         }, name + ".zip")

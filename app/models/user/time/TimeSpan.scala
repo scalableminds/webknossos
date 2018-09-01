@@ -1,21 +1,15 @@
 package models.user.time
 
 import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
-import models.annotation.Annotation
 import org.joda.time.DateTime
-import play.api.Play.current
-import play.api.i18n.Messages
-import play.api.i18n.Messages.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsValue, Json}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
-
-import scala.concurrent.duration._
 
 
 case class TimeSpanRequest(users: List[String], start: Long, end: Long)

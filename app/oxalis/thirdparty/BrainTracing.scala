@@ -1,5 +1,6 @@
 package oxalis.thirdparty
 
+import akka.actor.ActorSystem
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -7,9 +8,7 @@ import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.team.OrganizationDAO
 import models.user.User
-import play.api.Play
 import play.api.Play.current
-import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.{WS, WSAuthScheme}
 import utils.WkConf
@@ -17,13 +16,13 @@ import utils.WkConf
 import scala.concurrent.{Future, Promise}
 import scala.util._
 
-class BrainTracing @Inject()(organizationDAO: OrganizationDAO) extends LazyLogging with FoxImplicits {
+class BrainTracing @Inject()(actorSystem: ActorSystem, organizationDAO: OrganizationDAO) extends LazyLogging with FoxImplicits {
   val URL = "http://braintracing.org/"
   val CREATE_URL = URL + "oxalis_create_user.php"
   val LOGTIME_URL = URL + "oxalis_add_hours.php"
 
   lazy val Mailer =
-    Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
+    actorSystem.actorSelection("/user/mailActor")
 
   def registerIfNeeded(user: User, password: String): Fox[Option[String]] =
     for {

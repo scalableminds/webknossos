@@ -2,6 +2,7 @@ package controllers
 
 import java.net.URLEncoder
 
+import akka.actor.ActorSystem
 import javax.inject.Inject
 import com.mohiva.play.silhouette.api.LoginInfo
 import com.mohiva.play.silhouette.api.exceptions.ProviderException
@@ -24,7 +25,6 @@ import play.api.data.Form
 import play.api.data.Forms.{email, _}
 import play.api.data.validation.Constraints._
 import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.concurrent.Akka
 import play.api.libs.json._
 import play.api.mvc._
 
@@ -93,8 +93,7 @@ object AuthForms {
 }
 
 
-class Authentication @Inject()(
-                                val messagesApi: MessagesApi,
+class Authentication @Inject()( actorSystem: ActorSystem,
                                 credentialsProvider: CredentialsProvider,
                                 passwordHasher: PasswordHasher,
                                 initialDataService: InitialDataService,
@@ -103,9 +102,10 @@ class Authentication @Inject()(
                                 teamDAO: TeamDAO,
                                 brainTracing: BrainTracing,
                                 organizationDAO: OrganizationDAO,
+                                userDAO: UserDAO,
                                 sil: WebknossosSilhouette,
-                                userDAO: UserDAO
-                              )
+                                val messagesApi: MessagesApi
+)
   extends Controller
     //TODO: with ProvidesUnauthorizedSessionData
     with FoxImplicits {
@@ -119,7 +119,7 @@ class Authentication @Inject()(
   val bearerTokenAuthenticatorService = env.combinedAuthenticatorService.tokenAuthenticatorService
 
   private lazy val Mailer =
-    Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
+    actorSystem.actorSelection("/user/mailActor")
 
   private lazy val ssoKey =
     WkConf.Application.Authentication.ssoKey

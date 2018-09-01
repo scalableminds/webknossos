@@ -4,26 +4,19 @@ import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
 import models.annotation._
 import models.binary.DataSetDAO
 import models.project.ProjectDAO
 import models.team.TeamDAO
-import models.user.{Experience, User}
-import org.joda.time.DateTime
-import org.joda.time.format.DateTimeFormat
-import play.api.Play.current
-import play.api.i18n.Messages
-import play.api.i18n.Messages.Implicits._
+import models.user.{Experience}
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.{JsNull, JsObject, Json}
+import play.api.libs.json.{JsObject, Json}
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import utils.{ObjectId, SQLClient, SQLDAO}
 
-import scala.concurrent.Future
 import scala.util.Random
 
 

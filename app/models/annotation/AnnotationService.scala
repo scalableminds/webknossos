@@ -25,9 +25,7 @@ import models.task.{Task, TaskDAO, TaskService, TaskTypeDAO}
 import models.team.OrganizationDAO
 import models.user.{User, UserDAO, UserService}
 import utils.ObjectId
-import play.api.i18n.Messages
-import play.api.Play.current
-import play.api.i18n.Messages.Implicits._
+import play.api.i18n.{I18nSupport, Messages, MessagesApi}
 
 import scala.concurrent.Future
 import net.liftweb.common.{Box, Full}
@@ -51,12 +49,14 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
                                   projectDAO: ProjectDAO,
                                   organizationDAO: OrganizationDAO,
                                   annotationRestrictionDefults: AnnotationRestrictionDefults,
-                                  nmlWriter: NmlWriter)
+                                  nmlWriter: NmlWriter,
+                                  val messagesApi: MessagesApi)
   extends BoxImplicits
   with FoxImplicits
   with TextUtils
   with ProtoGeometryImplicits
-  with LazyLogging {
+  with LazyLogging
+  with I18nSupport {
 
   private def selectSuitableTeam(user: User, dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[ObjectId] = {
     (for {

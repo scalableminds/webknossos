@@ -10,9 +10,6 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.{User, UserService}
 import oxalis.security.TokenType.TokenType
-import play.api.Play.current
-import play.api.i18n.Messages
-import play.api.i18n.Messages.Implicits._
 import play.api.mvc.RequestHeader
 import utils.WkConfInjected
 
@@ -68,8 +65,8 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
 
   def userForToken(tokenValue: String)(implicit ctx: DBAccessContext): Fox[User] =
     for {
-      tokenAuthenticator <- dao.findOneByValue(tokenValue) ?~> Messages("auth.invalidToken")
-      _ <- bool2Fox(tokenAuthenticator.isValid) ?~> Messages("auth.invalidToken")
+      tokenAuthenticator <- dao.findOneByValue(tokenValue) ?~> "auth.invalidToken"
+      _ <- bool2Fox(tokenAuthenticator.isValid) ?~> "auth.invalidToken"
       user <- userService.findOneByEmail(tokenAuthenticator.loginInfo.providerKey)
     } yield user
 

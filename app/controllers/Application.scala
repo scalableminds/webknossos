@@ -8,14 +8,14 @@ import models.analytics.{AnalyticsDAO, AnalyticsEntry}
 import models.binary.DataStoreHandler
 import oxalis.security.WebknossosSilhouette
 import play.api.i18n.MessagesApi
-import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.libs.concurrent.Execution.Implicits._
-import utils.{ObjectId, SQLClient, SimpleSQLDAO}
+import utils.{ObjectId, SQLClient, SimpleSQLDAO, WkConfInjected}
 import slick.jdbc.PostgresProfile.api._
 
 class Application @Inject()(analyticsDAO: AnalyticsDAO,
                             releaseInformationDAO: ReleaseInformationDAO,
+                            conf: WkConfInjected,
                             sil: WebknossosSilhouette,
                             val messagesApi: MessagesApi) extends Controller {
 
@@ -49,7 +49,7 @@ class Application @Inject()(analyticsDAO: AnalyticsDAO,
   }
 
   def features = sil.UserAwareAction { implicit request =>
-    Ok(current.configuration.underlying.getConfig("features").resolve.root.render(ConfigRenderOptions.concise()))
+    Ok(conf.raw.underlying.getConfig("features").resolve.root.render(ConfigRenderOptions.concise()))
   }
 
 }

@@ -15,8 +15,6 @@ import net.liftweb.common.Full
 import org.joda.time.DateTime
 import oxalis.security.{Token, TokenDAO, TokenType, WebknossosSilhouette}
 import play.api.i18n.MessagesApi
-import play.api.Play.current
-import play.api.Play
 import play.api.libs.json.Json
 import utils.{ObjectId, WkConfInjected}
 
@@ -113,7 +111,7 @@ Samplecountry
   }
 
   def insertToken = {
-    val expiryTime = Play.configuration.underlying.getDuration("silhouette.tokenAuthenticator.authenticatorExpiry").toMillis
+    val expiryTime = conf.Silhouette.TokenAuthenticator.authenticatorExpiry.toMillis
     tokenDAO.findOneByLoginInfo("credentials", defaultUserEmail, TokenType.Authentication).futureBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>

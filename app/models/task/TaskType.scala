@@ -7,15 +7,11 @@ import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
 import models.annotation.AnnotationSettings
 import models.team.TeamDAO
-import models.user.UserService
-import play.api.Play.current
-import play.api.i18n.Messages
-import play.api.i18n.Messages.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{ObjectId, SQLClient, SQLDAO, SecuredSQLDAO}
+import utils.{ObjectId, SQLClient, SQLDAO}
 
 case class TaskType(
                          _id: ObjectId,

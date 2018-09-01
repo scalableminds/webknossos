@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable import/no-extraneous-dependencies */
 var program = require('commander');
 var randomstring = require("randomstring");
 const execSync = require('child_process').execSync;
@@ -14,7 +15,7 @@ const scriptName = __filename
 
 function dump(parameter) {
 	var cleanUp = function(){};
-	if(parameter == "DB") { 
+	if(parameter == "DB") {
 		POSTGRES_URL=ORIGINAL_POSTGRES_URL // this environment variable is passed to dump_schema.sh
 	} else {
 		const tempDbName = generateRandomName()
@@ -22,7 +23,7 @@ function dump(parameter) {
 		POSTGRES_URL= postgresDirname + '/' + tempDbName;
 		const dbName = execSync(scriptdir+'/db_name.sh', {env: {'POSTGRES_URL': POSTGRES_URL}}).toString().trim() // "trim" to remove the line break
 		if(dbName !== tempDbName) {
-			console.log("Wrong dbName")	
+			console.log("Wrong dbName")
 			process.exit(1)
 		}
 		console.log("Creating DB " + dbName)

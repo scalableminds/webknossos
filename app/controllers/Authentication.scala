@@ -107,7 +107,6 @@ class Authentication @Inject()( actorSystem: ActorSystem,
                                 val messagesApi: MessagesApi
 )
   extends Controller
-    //TODO: with ProvidesUnauthorizedSessionData
     with FoxImplicits {
 
   implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)

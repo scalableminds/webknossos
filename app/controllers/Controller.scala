@@ -13,7 +13,6 @@ import play.api.mvc.{Request, Result, Controller => PlayController}
 
 trait Controller extends PlayController
   with ExtendedController
-  //TODO with ProvidesSessionData
   with ValidationHelpers
   with I18nSupport
   with LazyLogging {

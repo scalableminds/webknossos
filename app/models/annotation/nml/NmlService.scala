@@ -9,9 +9,6 @@ import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
-import play.api.i18n.Messages
-import play.api.Play.current
-import play.api.i18n.Messages.Implicits._
 import play.api.libs.Files.TemporaryFile
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -29,11 +26,11 @@ object NmlService extends LazyLogging {
 
     def toSkeletonSuccessFox: Fox[NmlParseSuccess] = this match {
       case NmlParseFailure(fileName, error) =>
-        Fox.failure(Messages("nml.file.invalid", fileName, error))
+        Fox.failure(s"Couldn’t parse file: $fileName. $error")
       case NmlParseSuccess(fileName, Some(skeletonTracing), _, description) =>
         Fox.successful(NmlParseSuccess(fileName, Some(skeletonTracing), None, description))
       case _ =>
-        Fox.failure(Messages("nml.file.invalid"))
+        Fox.failure("Couldn’t parse file")
     }
   }
 

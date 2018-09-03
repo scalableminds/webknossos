@@ -13,7 +13,7 @@ class DataSourceRepository @Inject()(
                                       webKnossosServer: WebKnossosServer,
                                       @Named("webknossos-datastore") val system: ActorSystem
                                     )
-    extends TemporaryStore[String, InboxDataSource]
+    extends TemporaryStore[String, InboxDataSource](system)
     with FoxImplicits {
 
   def findByName(name: String): Option[InboxDataSource] =

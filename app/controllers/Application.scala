@@ -10,12 +10,12 @@ import oxalis.security.WebknossosSilhouette
 import play.api.i18n.MessagesApi
 import play.api.libs.json.Json
 import play.api.libs.concurrent.Execution.Implicits._
-import utils.{ObjectId, SQLClient, SimpleSQLDAO, WkConfInjected}
+import utils.{ObjectId, SQLClient, SimpleSQLDAO, WkConf}
 import slick.jdbc.PostgresProfile.api._
 
 class Application @Inject()(analyticsDAO: AnalyticsDAO,
                             releaseInformationDAO: ReleaseInformationDAO,
-                            conf: WkConfInjected,
+                            conf: WkConf,
                             sil: WebknossosSilhouette,
                             val messagesApi: MessagesApi) extends Controller {
 

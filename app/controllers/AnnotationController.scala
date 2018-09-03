@@ -120,7 +120,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
   def reset(typ: String, id: String) = sil.SecuredAction.async { implicit request =>
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity) ?~> "annotation.notFound"
-      _ <- userService.isTeamManagerOrAdminOf(request.identity, annotation._team)
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, annotation._team))
       _ <- annotationService.resetToBase(annotation) ?~> Messages("annotation.reset.failed")
       updated <- provider.provideAnnotation(typ, id, request.identity)
       json <- annotationService.publicWrites(updated, Some(request.identity))
@@ -215,7 +215,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
       taskIdValidated <- ObjectId.parse(taskId)
       task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound"
       project <- projectDAO.findOne(task._project)
-      _ <- userService.isTeamManagerOrAdminOf(request.identity, project._team)
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
       annotations <- annotationService.annotationsFor(task._id) ?~> "task.annotation.failed"
       jsons <- Fox.serialSequence(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
     } yield {
@@ -238,7 +238,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
 
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity) ?~> "annotation.notFound"
-      _ <- userService.isTeamManagerOrAdminOf(request.identity, annotation._team)
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, annotation._team))
       result <- tryToCancel(annotation)
     } yield result
   }

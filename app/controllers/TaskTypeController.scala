@@ -33,7 +33,7 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
   def create = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(taskTypePublicReads) { taskType =>
       for {
-        _ <- userService.isTeamManagerOrAdminOf(request.identity, taskType._team)
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team))
         _ <- taskTypeDAO.insertOne(taskType)
         js <- taskTypeService.publicWrites(taskType)
       } yield Ok(js)
@@ -44,7 +44,7 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
     for {
       taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
-      _ <- userService.isTeamManagerOrAdminOf(request.identity, taskType._team)
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team))
       js <- taskTypeService.publicWrites(taskType)
     } yield Ok(js)
   }
@@ -62,8 +62,8 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
         taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
         taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
         updatedTaskType = taskTypeFromForm.copy(_id = taskType._id)
-        _ <- userService.isTeamManagerOrAdminOf(request.identity, taskType._team)
-        _ <- userService.isTeamManagerOrAdminOf(request.identity, updatedTaskType._team)
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team))
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, updatedTaskType._team))
         _ <- taskTypeDAO.updateOne(updatedTaskType)
         js <- taskTypeService.publicWrites(updatedTaskType)
       } yield {
@@ -76,7 +76,7 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
     for {
       taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
-      _ <- userService.isTeamManagerOrAdminOf(request.identity, taskType._team)
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team))
       _ <- taskTypeDAO.deleteOne(taskTypeIdValidated) ?~> "taskType.deleteFailure"
       _ <- taskDAO.removeAllWithTaskTypeAndItsAnnotations(taskTypeIdValidated) ?~> "taskType.deleteFailure"
     } yield {

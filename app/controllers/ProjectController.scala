@@ -80,7 +80,7 @@ class ProjectController @Inject()(projectService: ProjectService,
       projectDAO.findOneByName(project.name)(GlobalAccessContext).futureBox.flatMap {
         case Empty =>
           for {
-            _ <- userService.isTeamManagerOrAdminOf(request.identity, project._team)
+            _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
             _ <- projectDAO.insertOne(project) ?~> "project.creation.failed"
             js <- projectService.publicWrites(project)
           } yield Ok(js)
@@ -94,7 +94,7 @@ class ProjectController @Inject()(projectService: ProjectService,
     withJsonBodyUsing(Project.projectPublicReads) { updateRequest =>
       for{
         project <- projectDAO.findOneByName(projectName)(GlobalAccessContext) ?~> Messages("project.notFound", projectName)
-        _ <- userService.isTeamManagerOrAdminOf(request.identity, project._team)
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
         _ <- projectDAO.updateOne(updateRequest.copy(_id = project._id, paused = project.paused)) ?~> Messages("project.update.failed", projectName)
         updated <- projectDAO.findOneByName(projectName)
         js <- projectService.publicWrites(updated)
@@ -115,7 +115,7 @@ class ProjectController @Inject()(projectService: ProjectService,
   private def updatePauseStatus(projectName: String, isPaused: Boolean)(implicit request: sil.SecuredRequest[_]) = {
     for {
       project <- projectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
-      _ <- userService.isTeamManagerOrAdminOf(request.identity, project._team)
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
       _ <- projectDAO.updatePaused(project._id, isPaused) ?~> Messages("project.update.failed", projectName)
       updatedProject <- projectDAO.findOne(project._id) ?~> Messages("project.notFound", projectName)
       js <- projectService.publicWrites(updatedProject)
@@ -128,7 +128,7 @@ class ProjectController @Inject()(projectService: ProjectService,
     implicit request =>
       for {
         project <- projectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
-        _ <- userService.isTeamManagerOrAdminOf(request.identity, project._team) ?~> "notAllowed"
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed"
         tasks <- taskDAO.findAllByProject(project._id)(GlobalAccessContext)
         js <- Fox.serialCombined(tasks)(task => taskService.publicWrites(task))
       } yield {

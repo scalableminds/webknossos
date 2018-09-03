@@ -102,7 +102,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
       taskTypeIdValidated <- ObjectId.parse(params.taskTypeId) ?~> "taskType.id.invalid"
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
       project <- projectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
-      _ <- userService.isTeamManagerOrAdminOf(request.identity, project._team)
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
       parseResults: List[NmlService.NmlParseResult] = NmlService.extractFromFile(inputFile.ref.file, inputFile.filename).parseResults
       skeletonSuccesses <- Fox.serialCombined(parseResults)(_.toSkeletonSuccessFox) ?~> "task.create.failed"
       result <- createTasks(skeletonSuccesses.map(s => (buildFullParams(params, s.skeletonTracing.get, s.fileName, s.description), s.skeletonTracing.get)))
@@ -197,7 +197,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
       project <- projectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
       _ <- validateScript(params.scriptId) ?~> "script.invalid"
-      _ <- userService.isTeamManagerOrAdminOf(request.identity, project._team)
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
       task = Task(
         ObjectId.generate,
         project._id,
@@ -223,7 +223,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
       taskIdValidated <- ObjectId.parse(taskId) ?~> "task.id.invalid"
       task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound"
       project <- projectDAO.findOne(task._project)
-      _ <- userService.isTeamManagerOrAdminOf(request.identity, project._team) ?~> "notAllowed"
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed"
       _ <- taskDAO.updateTotalInstances(task._id, task.totalInstances + params.openInstances - task.openInstances)
       updatedTask <- taskDAO.findOne(taskIdValidated)
       json <- taskService.publicWrites(updatedTask)
@@ -237,7 +237,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
       taskIdValidated <- ObjectId.parse(taskId) ?~> "task.id.invalid"
       task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound"
       project <- projectDAO.findOne(task._project)
-      _ <- userService.isTeamManagerOrAdminOf(request.identity, project._team) ?~> Messages("notAllowed")
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Messages("notAllowed")
       _ <- taskDAO.removeOneAndItsAnnotations(task._id) ?~> "task.remove.failed"
     } yield {
       JsonOk(Messages("task.removed"))

@@ -211,7 +211,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
     for {
       task <- taskDAO.findOne(ObjectId(taskId)).toFox ?~> Messages("task.notFound")
       project <- projectDAO.findOne(task._project) ?~> Messages("project.notFound")
-      _ <- userService.isTeamManagerOrAdminOf(user, project._team) ?~> Messages("notAllowed")
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, project._team)) ?~> Messages("notAllowed")
       zip <- createTaskZip(task)
     } yield Ok.sendFile(zip.file)
   }
@@ -228,7 +228,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
     for {
       taskTypeIdValidated <- ObjectId.parse(taskTypeId)
       tasktype <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> Messages("taskType.notFound")
-      _ <- userService.isTeamManagerOrAdminOf(user, tasktype._team) ?~> Messages("notAllowed")
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, tasktype._team)) ?~> Messages("notAllowed")
       zip <- createTaskTypeZip(tasktype)
     } yield Ok.sendFile(zip.file)
   }

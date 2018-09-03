@@ -4,7 +4,6 @@ import _ from "lodash";
 export default {
   yes: "Yes",
   no: "No",
-  "setup.redirect": "This WebKnossos instance seems to be empty. Redirecting to initial setup...",
   unknown_error:
     "An unknown error occured. Please try again or check the console for more details.",
   "datastore.health": _.template(

@@ -115,14 +115,14 @@ type Props = {
 
 type State = {
   datasets: Array<APIMaybeUnimportedDatasetType>,
-  hasOrganisations: boolean,
+  hasOrganizations: boolean,
   isLoading: boolean,
 };
 
 class SpotlightView extends React.PureComponent<Props, State> {
   state = {
     datasets: [],
-    hasOrganisations: true,
+    hasOrganizations: true,
     isLoading: true,
   };
 
@@ -134,7 +134,7 @@ class SpotlightView extends React.PureComponent<Props, State> {
     try {
       this.setState({ isLoading: true });
       const [datasets, organizations] = await Promise.all([getDatasets(), getOrganizations()]);
-      this.setState({ datasets, hasOrganisations: organizations.length > 0 });
+      this.setState({ datasets, hasOrganizations: organizations.length > 0 });
     } catch (error) {
       handleGenericError(error);
     } finally {
@@ -146,7 +146,7 @@ class SpotlightView extends React.PureComponent<Props, State> {
     return (
       <Layout>
         {this.props.activeUser == null &&
-        (features().allowOrganizationCreation || !this.state.hasOrganisations) ? (
+        (features().allowOrganizationCreation || !this.state.hasOrganizations) ? (
           <WelcomeHeader history={this.props.history} />
         ) : (
           <SimpleHeader />

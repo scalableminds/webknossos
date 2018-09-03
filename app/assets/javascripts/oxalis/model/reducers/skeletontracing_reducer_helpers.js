@@ -188,7 +188,7 @@ export function deleteNode(
         newMaxNodeId = getMaximumNodeId(newTrees);
       }
 
-      const newActiveNodeId = neighborIds.length > 0 ? neighborIds[0] : null;
+      const newActiveNodeId = neighborIds.length > 0 ? Math.min(...neighborIds) : null;
       const newActiveTree =
         newActiveNodeId != null ? findTreeByNodeId(newTrees, newActiveNodeId).get() : activeTree;
       const newActiveTreeId = newActiveTree.treeId;
@@ -208,7 +208,7 @@ export function deleteEdge(
   targetNode: NodeType,
   timestamp: number,
   restrictions: RestrictionsAndSettingsType,
-): Maybe<TreeMapType> {
+): Maybe<[TreeMapType, number]> {
   return getSkeletonTracing(state.tracing).chain(skeletonTracing => {
     const { allowUpdate } = restrictions;
 
@@ -231,16 +231,19 @@ export function deleteEdge(
         return Maybe.Nothing();
       }
 
-      return Maybe.Just(
-        splitTreeByNodes(
-          state,
-          skeletonTracing,
-          sourceTree,
-          [sourceNode.id, targetNode.id],
-          [deletedEdge],
-          timestamp,
-        ),
+      const newTrees = splitTreeByNodes(
+        state,
+        skeletonTracing,
+        sourceTree,
+        [sourceNode.id, targetNode.id],
+        [deletedEdge],
+        timestamp,
       );
+
+      // The treeId of the tree the active node belongs to could have changed
+      const newActiveTree = findTreeByNodeId(newTrees, sourceNode.id).get();
+
+      return Maybe.Just([newTrees, newActiveTree.treeId]);
     } else {
       return Maybe.Nothing();
     }
@@ -309,7 +312,8 @@ function splitTreeByNodes(
   let intermediateState = state;
   // For each new tree root create a new tree
   const cutTrees = _.compact(
-    newTreeRootIds.map((rootNodeId, index) => {
+    // Sort the treeRootIds, so the tree connected to the node with the lowest id will remain the original tree (treeId, name, timestamp)
+    newTreeRootIds.sort().map((rootNodeId, index) => {
       // The rootNodeId could have already been traversed from another rootNodeId
       // as there are cyclic trees
       // In this case we do not need to create a new tree for this rootNodeId

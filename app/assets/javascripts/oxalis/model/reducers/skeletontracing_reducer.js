@@ -182,11 +182,12 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
                 ),
               ),
             )
-            .map(trees =>
+            .map(([trees, newActiveTreeId]) =>
               update(state, {
                 tracing: {
                   skeleton: {
                     trees: { $set: trees },
+                    activeTreeId: { $set: newActiveTreeId },
                   },
                 },
               }),

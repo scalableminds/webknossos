@@ -22,6 +22,9 @@
 <PROJECT_ROOT>/node_modules/ava/
 
 [options]
+suppress_comment=\\(.\\|\n\\)*\\$ExpectError
+suppress_comment=\\(.\\|\n\\)*\\$FlowFixMe
+include_warnings=true
 module.ignore_non_literal_requires=true
 
 module.name_mapper='three' -> '<PROJECT_ROOT>/node_modules/three.js/build/three.js'
@@ -32,7 +35,9 @@ module.name_mapper.extension='less' -> '<PROJECT_ROOT>/app/assets/flow/ProtoFlow
 
 [lints]
 all=error
-sketchy-null=warn
+sketchy-null-string=off
+sketchy-null-bool=off
+sketchy-null-mixed=off
 untyped-import=off
-unclear-type=warn
-deprecated-type=warn
+unclear-type=off
+deprecated-type=off

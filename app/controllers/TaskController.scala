@@ -6,7 +6,7 @@ import com.scalableminds.util.mvc.ResultBox
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
-import com.scalableminds.webknossos.datastore.tracings.{ProtoGeometryImplicits}
+import com.scalableminds.webknossos.datastore.tracings.ProtoGeometryImplicits
 import models.annotation.nml.NmlService
 import models.annotation.AnnotationService
 import models.binary.DataSetDAO
@@ -21,7 +21,7 @@ import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import play.api.mvc.Result
-import utils.ObjectId
+import utils.{ObjectId, WkConf}
 
 import scala.concurrent.Future
 
@@ -61,11 +61,11 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
     with ProtoGeometryImplicits
     with FoxImplicits {
 
-  val MAX_OPEN_TASKS = current.configuration.getInt("oxalis.tasks.maxOpenPerUser") getOrElse 2
+  val MAX_OPEN_TASKS = WkConf.Oxalis.Tasks.maxOpenPerUser
 
   def read(taskId: String) = SecuredAction.async { implicit request =>
     for {
-      task <- TaskDAO.findOne(ObjectId(taskId)) ?~> Messages("task.notFound")
+      task <- TaskDAO.findOne(ObjectId(taskId)) ?~> "task.notFound"
       js <- task.publicWrites
     } yield {
       Ok(js)
@@ -82,16 +82,16 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
 
   def createFromFile = SecuredAction.async { implicit request =>
     for {
-      body <- request.body.asMultipartFormData ?~> Messages("invalid")
-      inputFile <- body.file("nmlFile[]") ?~> Messages("nml.file.notFound")
-      jsonString <- body.dataParts.get("formJSON").flatMap(_.headOption) ?~> Messages("format.json.missing")
-      params <- JsonHelper.parseJsonToFox[NmlTaskParameters](jsonString) ?~> Messages("task.create.failed")
-      taskTypeIdValidated <- ObjectId.parse(params.taskTypeId)
-      taskType <- TaskTypeDAO.findOne(taskTypeIdValidated) ?~> Messages("taskType.notFound")
+      body <- request.body.asMultipartFormData ?~> "binary.payload.invalid"
+      inputFile <- body.file("nmlFile[]") ?~> "nml.file.notFound"
+      jsonString <- body.dataParts.get("formJSON").flatMap(_.headOption) ?~> "format.json.missing"
+      params <- JsonHelper.parseJsonToFox[NmlTaskParameters](jsonString) ?~> "task.create.failed"
+      taskTypeIdValidated <- ObjectId.parse(params.taskTypeId) ?~> "taskType.id.invalid"
+      taskType <- TaskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
       project <- ProjectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
       _ <- ensureTeamAdministration(request.identity, project._team)
       parseResults: List[NmlService.NmlParseResult] = NmlService.extractFromFile(inputFile.ref.file, inputFile.filename).parseResults
-      skeletonSuccesses <- Fox.serialCombined(parseResults)(_.toSkeletonSuccessFox) ?~> Messages("task.create.failed")
+      skeletonSuccesses <- Fox.serialCombined(parseResults)(_.toSkeletonSuccessFox) ?~> "task.create.failed"
       result <- createTasks(skeletonSuccesses.map(s => (buildFullParams(params, s.skeletonTracing.get, s.fileName, s.description), s.skeletonTracing.get)))
     } yield {
       result
@@ -126,7 +126,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
       }
 
       val firstDataSetName = requestedTasks.head._1.dataSet
-      if (allOnSameDatasetIter(requestedTasks, requestedTasks.head._1.dataSet))
+      if (allOnSameDatasetIter(requestedTasks, firstDataSetName))
         Fox.successful(firstDataSetName)
       else
         Fox.failure("Cannot create tasks on multiple datasets in one go.")
@@ -171,7 +171,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
       case Some(scriptId) =>
         for {
           scriptIdValidated <- ObjectId.parse(scriptId)
-          _ <- ScriptDAO.findOne(scriptIdValidated) ?~> Messages("script.notFound")
+          _ <- ScriptDAO.findOne(scriptIdValidated) ?~> "script.notFound"
         } yield ()
       case _ => Fox.successful(())
     }
@@ -181,9 +181,9 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
     for {
       _ <- skeletonTracingIdBox.toFox
       taskTypeIdValidated <- ObjectId.parse(params.taskTypeId)
-      taskType <- TaskTypeDAO.findOne(taskTypeIdValidated) ?~> Messages("taskType.notFound")
+      taskType <- TaskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
       project <- ProjectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
-      _ <- validateScript(params.scriptId)
+      _ <- validateScript(params.scriptId) ?~> "script.invalid"
       _ <- ensureTeamAdministration(request.identity, project._team)
       task = Task(
         ObjectId.generate,
@@ -207,10 +207,10 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
   def update(taskId: String) = SecuredAction.async(validateJson[TaskParameters]) { implicit request =>
     val params = request.body
     for {
-      taskIdValidated <- ObjectId.parse(taskId)
-      task <- TaskDAO.findOne(taskIdValidated) ?~> Messages("task.notFound")
+      taskIdValidated <- ObjectId.parse(taskId) ?~> "task.id.invalid"
+      task <- TaskDAO.findOne(taskIdValidated) ?~> "task.notFound"
       project <- task.project
-      _ <- ensureTeamAdministration(request.identity, project._team) ?~> Messages("notAllowed")
+      _ <- ensureTeamAdministration(request.identity, project._team) ?~> "notAllowed"
       _ <- TaskDAO.updateTotalInstances(task._id, task.totalInstances + params.openInstances - task.openInstances)
       updatedTask <- TaskDAO.findOne(taskIdValidated)
       json <- updatedTask.publicWrites
@@ -221,11 +221,11 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
 
   def delete(taskId: String) = SecuredAction.async { implicit request =>
     for {
-      taskIdValidated <- ObjectId.parse(taskId)
-      task <- TaskDAO.findOne(taskIdValidated) ?~> Messages("task.notFound")
+      taskIdValidated <- ObjectId.parse(taskId) ?~> "task.id.invalid"
+      task <- TaskDAO.findOne(taskIdValidated) ?~> "task.notFound"
       project <- task.project
-      _ <- ensureTeamAdministration(request.identity, project._team) ?~> Messages("notAllowed")
-      _ <- TaskDAO.removeOneAndItsAnnotations(task._id)
+      _ <- ensureTeamAdministration(request.identity, project._team)
+      _ <- TaskDAO.removeOneAndItsAnnotations(task._id) ?~> "task.remove.failed"
     } yield {
       JsonOk(Messages("task.removed"))
     }
@@ -233,7 +233,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
 
   def listTasksForType(taskTypeId: String) = SecuredAction.async { implicit request =>
     for {
-      taskTypeIdValidated <- ObjectId.parse(taskTypeId)
+      taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
+      _ <- TaskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
       tasks <- TaskDAO.findAllByTaskType(taskTypeIdValidated)
       js <- Fox.serialCombined(tasks)(_.publicWrites)
     } yield {
@@ -244,10 +245,10 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
   def listTasks = SecuredAction.async(parse.json) { implicit request =>
 
     for {
-      userIdOpt <- Fox.runOptional((request.body \ "user").asOpt[String])(ObjectId.parse(_))
+      userIdOpt <- Fox.runOptional((request.body \ "user").asOpt[String])(ObjectId.parse)
       projectNameOpt = (request.body \ "project").asOpt[String]
       taskIdsOpt <- Fox.runOptional((request.body \ "ids").asOpt[List[String]])(ids => Fox.serialCombined(ids)(ObjectId.parse))
-      taskTypeIdOpt <- Fox.runOptional((request.body \ "taskType").asOpt[String])(ObjectId.parse(_))
+      taskTypeIdOpt <- Fox.runOptional((request.body \ "taskType").asOpt[String])(ObjectId.parse)
       randomizeOpt = (request.body \ "random").asOpt[Boolean]
       tasks <- TaskDAO.findAllByProjectAndTaskTypeAndIdsAndUser(projectNameOpt, taskTypeIdOpt, taskIdsOpt, userIdOpt, randomizeOpt)
       jsResult <- Fox.serialCombined(tasks)(_.publicWrites)
@@ -260,7 +261,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
     val user = request.identity
     for {
       teams <- getAllowedTeamsForNextTask(user)
-      (task, initializingAnnotationId) <-  TaskDAO.assignNext(user._id, teams) ?~> Messages("task.unavailable")
+      (task, initializingAnnotationId) <-  TaskDAO.assignNext(user._id, teams) ?~> "task.unavailable"
       insertedAnnotationBox <- AnnotationService.createAnnotationFor(user, task, initializingAnnotationId).futureBox
       _ <- AnnotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
       annotation <- insertedAnnotationBox.toFox
@@ -297,7 +298,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
     val user = request.identity
     for {
       teamIds <- user.teamIds
-      task <- TaskDAO.peekNextAssignment(user._id, teamIds) ?~> Messages("task.unavailable")
+      task <- TaskDAO.peekNextAssignment(user._id, teamIds) ?~> "task.unavailable"
       taskJson <- task.publicWrites(GlobalAccessContext)
     } yield Ok(taskJson)
   }

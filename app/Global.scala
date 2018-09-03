@@ -1,20 +1,16 @@
-import akka.actor.Props
 import com.newrelic.api.agent.NewRelic
-import com.scalableminds.util.mail.Mailer
 import com.scalableminds.util.accesscontext.GlobalAccessContext
-import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService
 import models.annotation.AnnotationDAO
 import net.liftweb.common.{Failure, Full}
 import oxalis.cleanup.CleanUpService
 import oxalis.security.WebknossosSilhouette
-import play.api._
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.concurrent._
+import play.api._
 import play.api.mvc.Results.Ok
 import play.api.mvc._
-import utils.SQLClient
+import utils.{SQLClient, WkConf}
 
 import scala.concurrent.Future
 import sys.process._
@@ -23,16 +19,14 @@ import scala.concurrent.duration._
 object Global extends GlobalSettings with LazyLogging{
 
   override def onStart(app: Application) {
-    val conf = app.configuration
 
     logger.info("Executing Global START")
-    startActors(conf.underlying, app)
 
     ensurePostgresDatabase.onComplete { _ =>
-      if (conf.getBoolean("application.insertInitialData") getOrElse false) {
+      if (WkConf.Application.insertInitialData) {
         InitialDataService.insert.futureBox.map {
           case Full(_) => ()
-          case Failure(msg, _, _) => logger.warn("No initial data inserted: " + msg)
+          case Failure(msg, _, _) => logger.info("No initial data inserted: " + msg)
           case _ => logger.warn("Error while inserting initial data")
         }
       }
@@ -60,24 +54,12 @@ object Global extends GlobalSettings with LazyLogging{
     super.onStop(app)
   }
 
-  def startActors(conf: Config, app: Application) {
-
-    Akka.system(app).actorOf(
-      Props(new Mailer(conf)),
-      name = "mailActor")
-  }
-
   override def onRouteRequest(request: RequestHeader): Option[Handler] = {
     if (request.uri.matches("^(/api/|/data/|/assets/).*$")) {
       super.onRouteRequest(request)
     } else {
       Some(Action {Ok(views.html.main())})
     }
-  }
-
-  override def onError(request: RequestHeader, ex: Throwable) = {
-    NewRelic.noticeError(ex)
-    super.onError(request, ex)
   }
 
   def ensurePostgresDatabase = {

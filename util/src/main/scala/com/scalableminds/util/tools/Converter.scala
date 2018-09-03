@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.util.tools
 
 object DefaultConverters{
@@ -50,7 +47,7 @@ object DefaultConverters{
         value =>
           (0 until bytesPerElement).map{
             pos =>
-              (value >> (8 * pos)).byteValue 
+              (value >> (8 * pos)).byteValue
           }
       }
     }

@@ -15,7 +15,7 @@ services:
       - -Djava.net.preferIPv4Stack=true
       - -Dhttp.address=0.0.0.0
       - -Ddatastore.fossildb.address=fossildb
-      - -Dpostgres.url=jdbc:postgresql://postgres/webknossos
+      - -Dslick.db.url=jdbc:postgresql://postgres/webknossos
       - -Dapplication.insertInitialData=false
       - -Dapplication.authentication.enableDevAutoLogin=false
       # the following lines disable the integrated datastore:
@@ -101,8 +101,7 @@ services:
         "run
           -Djava.net.preferIPv4Stack=true
           -Dhttp.address=0.0.0.0
-          -Ddatastore.fossildb.address=fossildb-dev
-          -Dpostgres.url=$${POSTGRES_URL}"
+          -Ddatastore.fossildb.address=fossildb-dev"
     stdin_open: true
 
   backend-tests:
@@ -128,8 +127,7 @@ services:
         sbt
         -v -d
         "test-only e2e.* --
-          -Ddatastore.fossildb.address=fossildb
-          -Dpostgres.url=$${POSTGRES_URL}"
+          -Ddatastore.fossildb.address=fossildb"
     volumes:
       - ./binaryData/Connectomics department:/home/${USER_NAME:-sbt-user}/webknossos/binaryData/Organization_X
 

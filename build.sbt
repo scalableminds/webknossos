@@ -8,11 +8,17 @@ scalaVersion in ThisBuild := "2.11.8"
 
 version := "wk"
 
+scalacOptions in ThisBuild ++= Seq(
+  "-target:jvm-1.8",
+  "-feature",
+  "-deprecation",
+  "-language:implicitConversions",
+  "-language:postfixOps"
+)
 
 lazy val webknossosSettings = Seq(
   TwirlKeys.templateImports += "oxalis.view.helpers._",
   TwirlKeys.templateImports += "oxalis.view._",
-  scalacOptions += "-target:jvm-1.8",
   routesGenerator := InjectedRoutesGenerator,
   libraryDependencies ++= Dependencies.webknossosDependencies,
   resolvers ++= DependencyResolvers.dependencyResolvers,

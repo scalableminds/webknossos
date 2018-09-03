@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.webknossos.datastore.tracings.volume
 
 import java.io.File
@@ -72,7 +69,7 @@ class VolumeTracingService @Inject()(
     }
 
     val fallbackLayer = dataSource.dataLayers.flatMap {
-      case layer: SegmentationLayer => Some(layer)
+      case layer: SegmentationLayer if (Some(layer.name) == tracing.fallbackLayer) => Some(layer)
       case _ => None
     }.headOption
 

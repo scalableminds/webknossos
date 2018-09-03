@@ -1,7 +1,12 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 // @flow
 import test from "ava";
-import { tokenUserA, setCurrToken, resetDatabase } from "test/enzyme/e2e-setup";
+import {
+  tokenUserA,
+  setCurrToken,
+  resetDatabase,
+  writeFlowCheckingFile,
+} from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 
 test.before("Change token", async () => {
@@ -11,6 +16,7 @@ test.before("Change token", async () => {
 
 test("getTaskTypes()", async t => {
   const taskTypes = await api.getTaskTypes();
+  writeFlowCheckingFile(taskTypes, "task-type", "APITaskTypeType", { isArray: true });
   t.snapshot(taskTypes, { id: "taskTypes-getTaskTypes" });
 });
 

@@ -136,6 +136,9 @@ const Constants = {
   MIN_SCALE: 0.5,
   MAX_SCALE: 20,
 
+  MIN_BRUSH_SIZE: 5,
+  MAX_BRUSH_SIZE: 5000,
+
   // The node radius is the actual radius of the node in nm, it's dependent on zoom and dataset scale
   MIN_NODE_RADIUS: 1,
   MAX_NODE_RADIUS: 5000,

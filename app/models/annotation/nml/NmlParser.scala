@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package models.annotation.nml
 
 import java.io.InputStream
@@ -66,7 +63,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
         logger.debug(s"Parsed NML file. Trees: ${trees.size}, Volumes: ${volumes.size}")
 
         val volumeTracingWithDataLocation = if (volumes.isEmpty) None else Some(
-          (VolumeTracing(None, BoundingBox.empty, time, dataSetName, editPosition, editRotation, ElementClass.uint32, None, 0, 0, zoomLevel),
+          (VolumeTracing(None, BoundingBox.empty, time, dataSetName, editPosition, editRotation, ElementClass.uint32, volumes.head.fallbackLayer, 0, 0, zoomLevel),
             volumes.head.location)
         )
 
@@ -108,7 +105,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
   }
 
   def extractVolumes(volumeNodes: NodeSeq) = {
-    volumeNodes.map(node => Volume((node \ "@location").text))
+    volumeNodes.map(node => Volume((node \ "@location").text, (node \"@fallbackLayer").map(_.text).headOption))
   }
 
   private def parseTrees(treeNodes: NodeSeq, branchPoints: Seq[BranchPoint], comments: Seq[Comment]) = {

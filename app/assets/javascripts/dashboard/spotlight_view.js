@@ -1,17 +1,15 @@
 // @flow
 import * as React from "react";
 import { Link, withRouter } from "react-router-dom";
-import { Spin, Layout, message, Button, Row, Col } from "antd";
+import { Spin, Layout, Button, Row, Col } from "antd";
 import { connect } from "react-redux";
 import GalleryDatasetView from "dashboard/gallery_dataset_view";
 import { getOrganizations, getDatasets } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
-import messages from "messages";
-import * as Utils from "libs/utils";
 import features from "features";
 import type { RouterHistory } from "react-router-dom";
 import type { OxalisState } from "oxalis/store";
-import type { APIDatasetType, APIUserType } from "admin/api_flow_types";
+import type { APIMaybeUnimportedDatasetType, APIUserType } from "admin/api_flow_types";
 
 const { Content, Footer } = Layout;
 
@@ -73,7 +71,7 @@ const WelcomeHeader = ({ history }) => (
                 style={{ marginRight: 50 }}
                 onClick={() => history.push("/onboarding")}
               >
-                Try it out now
+                Get Started
               </Button>
               <a
                 href="https://docs.webknossos.org/"
@@ -116,37 +114,27 @@ type Props = {
 } & StateProps;
 
 type State = {
-  datasets: Array<APIDatasetType>,
+  datasets: Array<APIMaybeUnimportedDatasetType>,
+  hasOrganizations: boolean,
   isLoading: boolean,
 };
 
 class SpotlightView extends React.PureComponent<Props, State> {
   state = {
     datasets: [],
+    hasOrganizations: true,
     isLoading: true,
   };
 
   componentDidMount() {
     this.fetchData();
-    this.maybeRedirectToOnboarding();
-  }
-
-  async maybeRedirectToOnboarding() {
-    const organizations = await getOrganizations();
-    if (organizations.length > 0) {
-      return;
-    }
-
-    message.info(messages["setup.redirect"]);
-    await Utils.sleep(2000);
-    this.props.history.push("/onboarding");
   }
 
   async fetchData(): Promise<void> {
     try {
       this.setState({ isLoading: true });
-      const datasets = await getDatasets();
-      this.setState({ datasets });
+      const [datasets, organizations] = await Promise.all([getDatasets(), getOrganizations()]);
+      this.setState({ datasets, hasOrganizations: organizations.length > 0 });
     } catch (error) {
       handleGenericError(error);
     } finally {
@@ -157,7 +145,8 @@ class SpotlightView extends React.PureComponent<Props, State> {
   render() {
     return (
       <Layout>
-        {this.props.activeUser == null && features().allowOrganzationCreation ? (
+        {this.props.activeUser == null &&
+        (features().allowOrganizationCreation || !this.state.hasOrganizations) ? (
           <WelcomeHeader history={this.props.history} />
         ) : (
           <SimpleHeader />

@@ -75,6 +75,7 @@ class InputCatcher extends React.PureComponent<Props, {}> {
           onContextMenu={ignoreContextMenu}
           data-value={viewportID}
           className="inputcatcher"
+          style={{ position: "relative" }}
         >
           {this.props.displayScalebars ? <Scalebar /> : null}
           {this.props.children}

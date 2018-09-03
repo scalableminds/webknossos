@@ -400,7 +400,6 @@ export const defaultState: OxalisState = {
     particleSize: 5,
     radius: 5,
     rotateValue: 0.01,
-    scale: 1,
     scaleValue: 0.05,
     sortCommentsAsc: true,
     sortTreesByName: false,

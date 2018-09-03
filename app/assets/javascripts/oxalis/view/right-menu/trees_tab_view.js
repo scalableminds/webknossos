@@ -57,7 +57,7 @@ type Props = {
   onDeleteTree: () => void,
   onChangeTreeName: string => void,
   annotation: TracingType,
-  skeletonTracing: SkeletonTracingType,
+  skeletonTracing?: SkeletonTracingType,
   userConfiguration: UserConfigurationType,
   onSetActiveTree: number => void,
   showDropzoneModal: () => void,
@@ -114,6 +114,9 @@ class TreesTabView extends React.PureComponent<Props, State> {
   };
 
   handleChangeTreeName = evt => {
+    if (!this.props.skeletonTracing) {
+      return;
+    }
     const { activeGroupId } = this.props.skeletonTracing;
     if (activeGroupId != null) {
       api.tracing.renameGroup(activeGroupId, evt.target.value);
@@ -127,6 +130,9 @@ class TreesTabView extends React.PureComponent<Props, State> {
   };
 
   shuffleTreeColor = () => {
+    if (!this.props.skeletonTracing) {
+      return;
+    }
     getActiveTree(this.props.skeletonTracing).map(activeTree =>
       this.props.onShuffleTreeColor(activeTree.treeId),
     );
@@ -145,11 +151,15 @@ class TreesTabView extends React.PureComponent<Props, State> {
   }
 
   handleNmlDownload = async () => {
+    const { skeletonTracing } = this.props;
+    if (!skeletonTracing) {
+      return;
+    }
     await this.setState({ isDownloading: true });
     // Wait 1 second for the Modal to render
     const [buildInfo] = await Promise.all([getBuildInfo(), Utils.sleep(1000)]);
     const state = Store.getState();
-    const nml = serializeToNml(state, this.props.annotation, this.props.skeletonTracing, buildInfo);
+    const nml = serializeToNml(state, this.props.annotation, skeletonTracing, buildInfo);
     this.setState({ isDownloading: false });
 
     const blob = new Blob([nml], { type: "text/plain;charset=utf-8" });
@@ -157,6 +167,9 @@ class TreesTabView extends React.PureComponent<Props, State> {
   };
 
   getTreesComponents() {
+    if (!this.props.skeletonTracing) {
+      return null;
+    }
     const orderAttribute = this.props.userConfiguration.sortTreesByName ? "name" : "timestamp";
 
     return (
@@ -216,14 +229,14 @@ class TreesTabView extends React.PureComponent<Props, State> {
   }
 
   render() {
-    if (this.props.skeletonTracing.type !== "skeleton") {
-      // Extra guard to avoid that we try to render non-skeleton tracings
+    const { skeletonTracing } = this.props;
+    if (!skeletonTracing) {
       return null;
     }
-    const activeTreeName = getActiveTree(this.props.skeletonTracing)
+    const activeTreeName = getActiveTree(skeletonTracing)
       .map(activeTree => activeTree.name)
       .getOrElse("");
-    const activeGroupName = getActiveGroup(this.props.skeletonTracing)
+    const activeGroupName = getActiveGroup(skeletonTracing)
       .map(activeGroup => activeGroup.name)
       .getOrElse("");
 
@@ -250,7 +263,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
         <ButtonGroup>
           <SearchPopover
             onSelect={this.props.onSetActiveTree}
-            data={this.props.skeletonTracing.trees}
+            data={skeletonTracing.trees}
             idKey="treeId"
             searchKey="name"
             maxSearchResults={10}
@@ -309,7 +322,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
 
 const mapStateToProps = (state: OxalisState) => ({
   annotation: state.tracing,
-  skeletonTracing: enforceSkeletonTracing(state.tracing),
+  skeletonTracing: state.tracing.skeleton,
   userConfiguration: state.userConfiguration,
 });
 

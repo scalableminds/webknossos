@@ -312,10 +312,10 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
   }
 
   private def flattenTupledLists[A,B,C,D,E,F](tupledLists: List[(List[A], List[B], List[C], List[D], List[E], List[F])]) = {
-    tupledLists.flatMap(tuple => zippedFourLists(tuple._1, tuple._2, tuple._3, tuple._4, tuple._5, tuple._6))
+    tupledLists.flatMap(tuple => zippedSixLists(tuple._1, tuple._2, tuple._3, tuple._4, tuple._5, tuple._6))
   }
 
-  private def zippedFourLists[A,B,C,D,E,F](l1: List[A], l2: List[B], l3: List[C], l4: List[D], l5: List[E], l6: List[F]): List[(A, B, C, D, E, F)] = {
+  private def zippedSixLists[A,B,C,D,E,F](l1: List[A], l2: List[B], l3: List[C], l4: List[D], l5: List[E], l6: List[F]): List[(A, B, C, D, E, F)] = {
     ((((l1, l2, l3).zipped.toList, l4).zipped.toList, l5).zipped.toList, l6).zipped.toList.map {
       tuple => (tuple._1._1._1._1, tuple._1._1._1._2, tuple._1._1._1._3, tuple._1._1._2, tuple._1._2, tuple._2)
     }

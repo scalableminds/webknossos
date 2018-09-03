@@ -38,7 +38,6 @@ function readStoredLayoutConfigs() {
 let storedLayouts = readStoredLayoutConfigs();
 
 function persistLayoutConfigs() {
-  console.log("persisting layout");
   localStorage.setItem(localStorageKeys.goldenWkLayouts, JSON.stringify(storedLayouts));
   localStorage.setItem(localStorageKeys.currentLayoutVersion, JSON.stringify(currentLayoutVersion));
 }

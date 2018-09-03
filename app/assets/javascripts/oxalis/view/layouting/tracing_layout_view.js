@@ -57,9 +57,6 @@ export function getDesiredCanvasSize(): Maybe<[number, number]> {
 
   if (canvasAndLayoutContainer) {
     const { scrollWidth, scrollHeight } = canvasAndLayoutContainer;
-    // const { width, height } = canvasAndLayoutContainer.getBoundingClientRect();
-    // return Maybe.Just([width, height]);
-    console.log("scrollWidth, scrollHeight", scrollWidth, scrollHeight);
     return Maybe.Just([scrollWidth, scrollHeight]);
   }
   return Maybe.Nothing();
@@ -112,7 +109,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
         />
 
         <Layout className="tracing-layout">
-          <Header style={{ flex: "0 1 auto", zIndex: 210, minHeight: 48 }}>
+          <Header style={{ flex: "0 1 auto", zIndex: 210, minHeight: 46 }}>
             <ButtonComponent onClick={this.handleSettingsCollapse}>
               <Icon type={this.state.isSettingsCollapsed ? "menu-unfold" : "menu-fold"} />
               <span className="hide-on-small-screen">Settings</span>
@@ -131,17 +128,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
               <SettingsView />
             </Sider>
 
-            <div
-              id={canvasAndLayoutContainerID}
-              style={{
-                // height: "100%",
-                // width: "100%",
-                // display: "flex",
-                // flexDirection: "column",
-                // flex: "1 1 auto",
-                position: "relative",
-              }}
-            >
+            <div id={canvasAndLayoutContainerID} style={{ position: "relative" }}>
               <TracingView />
               <GoldenLayoutAdapter
                 id="layoutContainer"

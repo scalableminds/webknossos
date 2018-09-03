@@ -303,6 +303,9 @@ class PlaneController extends React.PureComponent<Props> {
         "shift + f": (timeFactor, first) => this.moveZ(getMoveValue(timeFactor) * 5, first),
         "shift + d": (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor) * 5, first),
 
+        "shift + i": () => this.changeBrushSizeIfBrushIsActive(-5),
+        "shift + o": () => this.changeBrushSizeIfBrushIsActive(5),
+
         "shift + space": (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor), first),
         "ctrl + space": (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor), first),
         space: (timeFactor, first) => this.moveZ(getMoveValue(timeFactor), first),
@@ -544,6 +547,16 @@ class PlaneController extends React.PureComponent<Props> {
 
     const moveValueMessage = messages["tracing.changed_move_value"] + moveValue;
     Toast.success(moveValueMessage, { key: "CHANGED_MOVE_VALUE" });
+  }
+
+  changeBrushSizeIfBrushIsActive(changeValue: number) {
+    const isBrushActive = Utils.maybe(getVolumeTool)(this.props.tracing.volume)
+      .map(tool => tool === VolumeToolEnum.BRUSH)
+      .getOrElse(false);
+    if (isBrushActive) {
+      const currentSize = Store.getState().temporaryConfiguration.brushSize;
+      Store.dispatch(setBrushSizeAction(currentSize + changeValue));
+    }
   }
 
   scrollPlanes(delta: number, type: ?ModifierKeys): void {

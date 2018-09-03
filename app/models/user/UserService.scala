@@ -58,7 +58,7 @@ object UserService extends FoxImplicits with IdentityService[User] {
     for {
       organizationTeamId <- OrganizationDAO.findOne(_organization).flatMap(_.organizationTeamId).toFox
       orgTeam <- TeamDAO.findOne(organizationTeamId)
-      teamMemberships = List(TeamMembershipSQL(orgTeam._id, teamRole))
+      teamMemberships = List(TeamMembership(orgTeam._id, teamRole))
       user = User(
         ObjectId.generate,
         _organization,
@@ -85,7 +85,7 @@ object UserService extends FoxImplicits with IdentityService[User] {
               email: String,
               activated: Boolean,
               isAdmin: Boolean,
-              teamMemberships: List[TeamMembershipSQL],
+              teamMemberships: List[TeamMembership],
               experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[User] = {
 
     if (user.isDeactivated && activated) {

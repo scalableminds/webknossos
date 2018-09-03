@@ -157,8 +157,9 @@ object NmlWriter extends FoxImplicits {
 
   def writeVolumeThings(volumeTracing: VolumeTracing)(implicit writer: XMLStreamWriter) = {
     Xml.withinElementSync("volume") {
-       writer.writeAttribute("id", "1")
-       writer.writeAttribute("location", "data.zip")
+      writer.writeAttribute("id", "1")
+      writer.writeAttribute("location", "data.zip")
+      volumeTracing.fallbackLayer.map(writer.writeAttribute("fallbackLayer", _))
     }
   }
 

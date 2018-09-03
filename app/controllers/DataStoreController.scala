@@ -11,7 +11,7 @@ import play.api.libs.json.{Json, Writes}
 class DataStoreController @Inject()(val messagesApi: MessagesApi) extends Controller with FoxImplicits {
   def list = UserAwareAction.async { implicit request =>
     for {
-      dataStores <- DataStoreDAO.findAll ?~> Messages("dataStore.list.failed")
+      dataStores <- DataStoreDAO.findAll ?~> "dataStore.list.failed"
       js <- Fox.serialCombined(dataStores)(d => d.publicWrites)
     } yield {
       Ok(Json.toJson(js))

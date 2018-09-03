@@ -18,26 +18,23 @@ object BrainTracing extends LazyLogging with FoxImplicits {
   val URL = "http://braintracing.org/"
   val CREATE_URL = URL + "oxalis_create_user.php"
   val LOGTIME_URL = URL + "oxalis_add_hours.php"
-  val USER = "brain"
-  val PW = "trace"
-  val LICENSE = "hu39rxpv7m"
 
   lazy val Mailer =
     Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
 
-  def registerIfNeeded(user: User, password: String): Fox[String] =
+  def registerIfNeeded(user: User, password: String): Fox[Option[String]] =
     for {
       organization <- user.organization
-      result <- (if (organization.name == "Connectomics department" && WkConf.Braintracing.active) register(user, password).toFox else Fox.successful("braintracing.none"))
+      result <- (if (organization.name == "Connectomics department" && WkConf.Braintracing.active) register(user, password).toFox.map(Some(_)) else Fox.successful(None))
     } yield result
 
   private def register(user: User, password: String): Future[String] = {
     val result = Promise[String]()
     val brainTracingRequest = WS
       .url(CREATE_URL)
-      .withAuth(USER, PW, WSAuthScheme.BASIC)
+      .withAuth(WkConf.Braintracing.user, WkConf.Braintracing.password, WSAuthScheme.BASIC)
       .withQueryString(
-        "license" -> LICENSE,
+        "license" -> WkConf.Braintracing.license,
         "firstname" -> user.firstName,
         "lastname" -> user.lastName,
         "email" -> user.email,

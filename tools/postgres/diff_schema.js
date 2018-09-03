@@ -6,6 +6,7 @@ var path = require('path');
 var fs = require('fs');
 var glob = require("glob")
 var tmp = require('tmp');
+var rimraf = require('rimraf');
 
 let POSTGRES_URL = process.env.POSTGRES_URL
 let ORIGINAL_POSTGRES_URL = (typeof POSTGRES_URL !== 'undefined') ? POSTGRES_URL:"jdbc:postgresql://localhost/webknossos"
@@ -41,7 +42,7 @@ function dump(parameter) {
 		execSync(`${scriptdir}/dump_schema.sh ${tmpDir.name}`, {env: {'POSTGRES_URL': POSTGRES_URL}})
 	} catch(err) {
 		console.log(`CLEANUP: remove ${tmpDir.name}`)
-		execSync(`rm -rf ${tmpDir.name}`)
+		rimraf.sync(tmpDir.name)
 		process.exit(1)
 	}
 	cleanUp();
@@ -60,20 +61,20 @@ function generateRandomName(){
 process.on('exit', function(code) {
     if (dir1) {
     	console.log(`CLEANUP: remove ${dir1}`);
-    	execSync(`rm -rf ${dir1}`)
+    	rimraf.sync(dir1)
     }
     if (dir2){
     	console.log(`CLEANUP: remove ${dir2}`);
-    	execSync(`rm -rf ${dir2}`)
+    	rimraf.sync(dir2)
     }
 });
 
 program
   .version('0.1.0', '-v, --version')
-  .arguments('<paramerter1> <paramerter2>')
-  .action(function (paramerter1, paramerter2) {
-     p1 = paramerter1;
-     p2 = paramerter2;
+  .arguments('<parameter1> <parameter2>')
+  .action(function (parameter1, parameter2) {
+     p1 = parameter1;
+     p2 = parameter2;
   });
 
 if(process.argv.length != 4) { // 2 "real" parameter

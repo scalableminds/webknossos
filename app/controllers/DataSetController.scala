@@ -37,6 +37,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
   val dataSetPublicReads =
     ((__ \ 'description).readNullable[String] and
       (__ \ 'displayName).readNullable[String] and
+      (__ \ 'sortingKey).readNullable[Long] and
       (__ \ 'isPublic).read[Boolean]).tupled
 
 
@@ -134,11 +135,11 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
 
   def update(dataSetName: String) = SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(dataSetPublicReads) {
-      case (description, displayName, isPublic) =>
+      case (description, displayName, sortingKey, isPublic) =>
       for {
         dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
         _ <- Fox.assertTrue(dataSet.isEditableBy(request.identity)) ?~> Messages("notAllowed")
-        _ <- DataSetDAO.updateFields(dataSet._id, description, displayName, isPublic)
+        _ <- DataSetDAO.updateFields(dataSet._id, description, displayName, sortingKey.getOrElse(dataSet.created), isPublic)
         updated <- DataSetDAO.findOneByName(dataSetName)
         js <- updated.publicWrites(Some(request.identity))
       } yield {

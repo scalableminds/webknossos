@@ -259,10 +259,10 @@ object DataSetDAO extends SQLDAO[DataSet, DatasetsRow, Datasets] {
     } yield ()
   }
 
-  def updateFields(_id: ObjectId, description: Option[String], displayName: Option[String], isPublic: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val q = for {row <- Datasets if (notdel(row) && row._Id === _id.id)} yield (row.description, row.displayname, row.ispublic)
+  def updateFields(_id: ObjectId, description: Option[String], displayName: Option[String], sortingKey: Long, isPublic: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val q = for {row <- Datasets if (notdel(row) && row._Id === _id.id)} yield (row.description, row.displayname, row.sortingkey, row.ispublic)
     for {
-      _ <- run(q.update(description, displayName, isPublic))
+      _ <- run(q.update(description, displayName, new java.sql.Timestamp(sortingKey), isPublic))
     } yield ()
   }
 

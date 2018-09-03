@@ -20,7 +20,7 @@ import play.api.Play.current
 import oxalis.security.WebknossosSilhouette.UserAwareAction
 import play.api.Play
 import play.api.libs.json.Json
-import utils.ObjectId
+import utils.{ObjectId, WkConf}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -38,8 +38,8 @@ class InitialDataController @Inject() (val messagesApi: MessagesApi)
 object InitialDataService extends FoxImplicits with LazyLogging {
   implicit val ctx = GlobalAccessContext
 
-  val defaultUserEmail = Play.configuration.getString("application.authentication.defaultUser.email").getOrElse("scmboy@scalableminds.com")
-  val defaultUserPassword = Play.configuration.getString("application.authentication.defaultUser.password").getOrElse("secret")
+  val defaultUserEmail = WkConf.Application.Authentication.DefaultUser.email
+  val defaultUserPassword = WkConf.Application.Authentication.DefaultUser.password
   val additionalInformation = """**Sample Organization**
 
 Sample Street 123
@@ -57,11 +57,10 @@ Samplecountry
     "Boy",
     System.currentTimeMillis(),
     Json.toJson(UserConfiguration.default),
-    SCrypt.md5(defaultUserPassword),
     UserService.createLoginInfo(defaultUserEmail),
     UserService.createPasswordInfo(defaultUserPassword),
     isAdmin = true,
-    isSuperUser = Play.configuration.getBoolean("application.authentication.defaultUser.isSuperUser").getOrElse(false),
+    isSuperUser = WkConf.Application.Authentication.DefaultUser.isSuperUser,
     isDeactivated = false
   )
 
@@ -80,7 +79,7 @@ Samplecountry
 
   def assertInitialDataEnabled =
     for {
-      _ <- bool2Fox(Play.configuration.getBoolean("application.insertInitialData").getOrElse(false)) ?~> "initialData.notEnabled"
+      _ <- bool2Fox(WkConf.Application.insertInitialData) ?~> "initialData.notEnabled"
     } yield ()
 
   def assertNoOrganizationsPresent =
@@ -96,7 +95,7 @@ Samplecountry
         for {
           _ <- UserDAO.insertOne(defaultUser)
           _ <- UserExperiencesDAO.updateExperiencesForUser(defaultUser._id, Map("sampleExp" -> 10))
-          _ <- UserTeamRolesDAO.insertTeamMembership(defaultUser._id, TeamMembershipSQL(organizationTeam._id, true))
+          _ <- UserTeamRolesDAO.insertTeamMembership(defaultUser._id, TeamMembership(organizationTeam._id, true))
           _ = logger.info("Inserted default user scmboy")
         } yield ()
     }.toFox
@@ -167,12 +166,10 @@ Samplecountry
   }
 
   def insertLocalDataStoreIfEnabled: Fox[Any] = {
-    if (Play.configuration.getBoolean("datastore.enabled").getOrElse(true)) {
+    if (WkConf.Datastore.enabled) {
       DataStoreDAO.findOneByName("localhost").futureBox.map { maybeStore =>
         if (maybeStore.isEmpty) {
-          val url = Play.configuration.getString("http.uri").getOrElse("http://localhost:9000")
-          val key = Play.configuration.getString("datastore.key").getOrElse("something-secure")
-          DataStoreDAO.insertOne(DataStore("localhost", url, WebKnossosStore, key))
+          DataStoreDAO.insertOne(DataStore("localhost", WkConf.Http.uri, WkConf.Datastore.key))
         }
       }
     } else Fox.successful(())

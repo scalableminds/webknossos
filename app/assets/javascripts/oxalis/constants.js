@@ -99,6 +99,12 @@ export type ContourModeType = $Keys<typeof ContourModeEnum>;
 export const NODE_ID_REF_REGEX = /#([0-9]+)/g;
 export const POSITION_REF_REGEX = /#\(([0-9]+,[0-9]+,[0-9]+)\)/g;
 
+// The plane in orthogonal mode is a little smaller than the viewport
+// as there are two borders (e.g., yellow and red) with width 2px each => 8px
+export const OUTER_BORDER_ORTHO = 4;
+const PLANE_WIDTH = 376;
+const VIEWPORT_WIDTH = PLANE_WIDTH + OUTER_BORDER_ORTHO * 2;
+
 const Constants = {
   ARBITRARY_VIEW: 4,
 
@@ -114,10 +120,8 @@ const Constants = {
 
   BUCKET_WIDTH: 32,
   BUCKET_SIZE: 32 ** 3,
-  // The plane in orthogonal mode is a little smaller than the viewport
-  // as there are two borders with width 2px each => 8px
-  PLANE_WIDTH: 376,
-  VIEWPORT_WIDTH: 384,
+  PLANE_WIDTH,
+  VIEWPORT_WIDTH,
   // The size of the gap between the 4 viewports in the orthogonal mode
   VIEWPORT_GAP_WIDTH: 20,
 
@@ -136,6 +140,9 @@ const Constants = {
   MAX_MOVE_VALUE_SLIDER: 1500,
 
   FPS: 50,
+
+  MIN_BRUSH_SIZE: 5,
+  MAX_BRUSH_SIZE: 5000,
 
   // The node radius is the actual radius of the node in nm, it's dependent on zoom and dataset scale
   MIN_NODE_RADIUS: 1,

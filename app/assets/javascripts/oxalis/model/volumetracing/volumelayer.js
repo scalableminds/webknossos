@@ -5,7 +5,6 @@
 
 import _ from "lodash";
 import Drawing from "libs/drawing";
-import Utils from "libs/utils";
 import Dimensions from "oxalis/model/dimensions";
 import { Vector3Indicies } from "oxalis/constants";
 import Store from "oxalis/store";
@@ -269,7 +268,7 @@ class VolumeLayer {
     let sumArea = 0;
     let sumCx = 0;
     let sumCy = 0;
-    for (const i of Utils.__range__(0, this.getContourList().length - 1, false)) {
+    for (let i = 0; i < this.getContourList().length - 1; i++) {
       const [x, y] = this.get2DCoordinate(this.getContourList()[i]);
       const [x1, y1] = this.get2DCoordinate(this.getContourList()[i + 1]);
       sumArea += x * y1 - x1 * y;

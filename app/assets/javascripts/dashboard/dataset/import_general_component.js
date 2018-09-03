@@ -1,15 +1,18 @@
 // @flow
 
 import * as React from "react";
-import { Button, Icon, Input, Checkbox, Form, Col, Row, Tooltip } from "antd";
+import { Button, Input, Checkbox, Col, Row, Tooltip } from "antd";
 import Clipboard from "clipboard-js";
 import Toast from "libs/toast";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import { AsyncButton } from "components/async_clickables";
-import { getDatasetSharingToken, revokeDatasetSharingToken } from "admin/admin_rest_api";
+import {
+  getDatasetSharingToken,
+  getDataset,
+  revokeDatasetSharingToken,
+} from "admin/admin_rest_api";
+import type { APIDatasetType } from "admin/api_flow_types";
 import { FormItemWithInfo } from "./helper_components";
-
-const FormItem = Form.Item;
 
 type Props = {
   form: Object,
@@ -19,6 +22,7 @@ type Props = {
 
 type State = {
   sharingToken: string,
+  dataSet: ?APIDatasetType,
 };
 
 export default class ImportGeneralComponent extends React.PureComponent<Props, State> {
@@ -26,6 +30,7 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
     super();
     this.state = {
       sharingToken: "",
+      dataSet: null,
     };
   }
   componentDidMount() {
@@ -34,7 +39,8 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
 
   async fetch() {
     const sharingToken = await getDatasetSharingToken(this.props.datasetName);
-    this.setState({ sharingToken });
+    const dataSet = await getDataset(this.props.datasetName);
+    this.setState({ dataSet, sharingToken });
   }
 
   handleSelectText(event: SyntheticInputEvent<>): void {
@@ -53,10 +59,25 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
     this.setState({ sharingToken });
   };
 
+  handleCopyAllowUsageText = async (): Promise<void> => {
+    await Clipboard.copy(this.getAllowUsageText());
+    Toast.success("Text copied to clipboard");
+  };
+
   getSharingLink() {
-    return `${window.location.origin}/datasets/${this.props.datasetName}/view?token=${
-      this.state.sharingToken
+    const doesNeedToken = !this.props.form.getFieldValue("dataset.isPublic");
+    const tokenSuffix = `?token=${this.state.sharingToken}`;
+    return `${window.location.origin}/datasets/${this.props.datasetName}/view${
+      doesNeedToken ? tokenSuffix : ""
     }`;
+  }
+
+  getAllowUsageText() {
+    if (this.state.dataSet != null) {
+      const dataStoreName = this.state.dataSet.dataStore.name;
+      const dataStoreURL = this.state.dataSet.dataStore.url;
+      return `${dataStoreName}, ${dataStoreURL}, ${this.props.datasetName}`;
+    } else return "";
   }
 
   render() {
@@ -101,8 +122,22 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
         </Row>
         {allowedTeamsComponent}
         <FormItemWithInfo
+          label="Visibility"
+          info="If checked, the dataset will be listed when unregistered users visit webKnossos."
+        >
+          {getFieldDecorator("dataset.isPublic", { valuePropName: "checked" })(
+            <Checkbox>Make dataset publicly accessible </Checkbox>,
+          )}
+        </FormItemWithInfo>
+        <FormItemWithInfo
           label="Sharing Link"
-          info="The sharing link can be used to allow unregistered users to view this dataset."
+          info={
+            <span>
+              The sharing link can be used to allow unregistered users to view this dataset. If the
+              dataset itself is not public, the link contains a secret token which ensures that the
+              dataset can be opened if you know the special link.
+            </span>
+          }
         >
           <Input.Group compact>
             <Input
@@ -111,22 +146,53 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
               style={{ width: "80%" }}
               readOnly
             />
-            <Button onClick={this.handleCopySharingLink} style={{ width: "10%" }} icon="copy" />
-            <AsyncButton onClick={this.handleRevokeSharingLink} style={{ width: "10%" }}>
-              Revoke
-            </AsyncButton>
+            <Button onClick={this.handleCopySharingLink} style={{ width: "10%" }} icon="copy">
+              Copy
+            </Button>
+            {form.getFieldValue("dataset.isPublic") ? null : (
+              <Tooltip
+                title={
+                  <span>
+                    The URL contains a secret token which enables anybody with this link to view the
+                    dataset. Renew the token to make the old link invalid.
+                  </span>
+                }
+              >
+                <AsyncButton
+                  onClick={this.handleRevokeSharingLink}
+                  style={{ width: "10%" }}
+                  icon="retweet"
+                >
+                  Renew
+                </AsyncButton>
+              </Tooltip>
+            )}
           </Input.Group>
         </FormItemWithInfo>
-        <FormItem>
-          {getFieldDecorator("dataset.isPublic", { valuePropName: "checked" })(
-            <Checkbox>
-              Make dataset publicly accessible{" "}
-              <Tooltip title="If checked, the dataset will be listed when unregistered users visit webKnossos.">
-                <Icon type="info-circle-o" style={{ color: "gray" }} />
-              </Tooltip>
-            </Checkbox>,
-          )}
-        </FormItem>
+        {form.getFieldValue("dataset.isPublic") ? (
+          <React.Fragment>
+            <FormItemWithInfo
+              label="Allow usage in other webknossos-instances using this text"
+              info="Give this text to users with other webknossos-instances so that they can add this dataset"
+            >
+              <Input.Group compact>
+                <Input
+                  value={this.getAllowUsageText()}
+                  onClick={this.handleSelectText}
+                  style={{ width: "80%" }}
+                  readOnly
+                />
+                <Button
+                  onClick={this.handleCopyAllowUsageText}
+                  style={{ width: "10%" }}
+                  icon="copy"
+                >
+                  Copy
+                </Button>
+              </Input.Group>
+            </FormItemWithInfo>
+          </React.Fragment>
+        ) : null}
       </div>
     );
 

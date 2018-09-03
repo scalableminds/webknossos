@@ -18,7 +18,7 @@ import ButtonComponent from "oxalis/view/components/button_component";
 import { connect } from "react-redux";
 import CommentTabView from "oxalis/view/right-menu/comment_tab/comment_tab_view";
 import AbstractTreeTabView from "oxalis/view/right-menu/abstract_tree_tab_view";
-import TreesTabView from "oxalis/view/right-menu/trees_tab_view";
+import TreesTabView, { importNmls } from "oxalis/view/right-menu/trees_tab_view";
 import MappingInfoView from "oxalis/view/right-menu/mapping_info_view";
 import DatasetInfoTabView from "oxalis/view/right-menu/dataset_info_tab_view";
 import InputCatcher, { recalculateInputCatcherSizes } from "oxalis/view/input_catcher";
@@ -36,6 +36,8 @@ const { Header, Sider } = Layout;
 
 type StateProps = {
   viewMode: ModeType,
+  displayScalebars: boolean,
+  isUpdateTracingAllowed: boolean,
 };
 
 type Props = StateProps & {
@@ -99,9 +101,10 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
 
   render() {
     const layoutType = determineLayout(this.props.initialControlmode, this.props.viewMode);
+    const { displayScalebars } = this.props;
 
     return (
-      <NmlUploadZoneContainer>
+      <NmlUploadZoneContainer onImport={importNmls} isAllowed={this.props.isUpdateTracingAllowed}>
         <OxalisController
           initialTracingType={this.props.initialTracingType}
           initialAnnotationId={this.props.initialAnnotationId}
@@ -151,9 +154,24 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
                    * All possible layout panes are passed here. Depending on the actual layout,
                    *  the components are rendered or not.
                    */}
-                <InputCatcher viewportID={OrthoViews.PLANE_XY} key="xy" portalKey="xy" />
-                <InputCatcher viewportID={OrthoViews.PLANE_YZ} key="yz" portalKey="yz" />
-                <InputCatcher viewportID={OrthoViews.PLANE_XZ} key="xz" portalKey="xz" />
+                <InputCatcher
+                  viewportID={OrthoViews.PLANE_XY}
+                  key="xy"
+                  portalKey="xy"
+                  displayScalebars={displayScalebars}
+                />
+                <InputCatcher
+                  viewportID={OrthoViews.PLANE_YZ}
+                  key="yz"
+                  portalKey="yz"
+                  displayScalebars={displayScalebars}
+                />
+                <InputCatcher
+                  viewportID={OrthoViews.PLANE_XZ}
+                  key="xz"
+                  portalKey="xz"
+                  displayScalebars={displayScalebars}
+                />
                 <InputCatcher viewportID={OrthoViews.TDView} key="td" portalKey="td">
                   <TDViewControls />
                 </InputCatcher>
@@ -183,6 +201,8 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
 function mapStateToProps(state: OxalisState): StateProps {
   return {
     viewMode: state.temporaryConfiguration.viewMode,
+    displayScalebars: state.userConfiguration.displayScalebars,
+    isUpdateTracingAllowed: state.tracing.restrictions.allowUpdate,
   };
 }
 

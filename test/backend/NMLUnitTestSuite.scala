@@ -16,46 +16,32 @@ import scala.concurrent.duration.Duration
 
 
 class NMLUnitTestSuite extends FlatSpec {
-  val timestamp = 123456789
 
   def getObjectId = ObjectId.generate
 
-  def writeAndParseTracing(tracing: SkeletonTracing): Box[(Either[SkeletonTracing, (VolumeTracing, String)], String)] = {
+  def writeAndParseTracing(tracing: SkeletonTracing): Box[(Option[SkeletonTracing], Option[(VolumeTracing, String)], String)] = {
     val nmlEnumarator = NMLWriterTestStub.toNmlStream(tracing, None)
     val arrayFuture = Iteratee.flatten(nmlEnumarator |>> Iteratee.consume[Array[Byte]]()).run
     val array = Await.result(arrayFuture, Duration.Inf)
     NmlParser.parse("", new ByteArrayInputStream(array))
   }
 
-  def isParseSuccessful(parsedTracing: Box[(Either[SkeletonTracing, (VolumeTracing, String)], String)]): Boolean = {
+  def isParseSuccessful(parsedTracing: Box[(Option[SkeletonTracing], Option[(VolumeTracing, String)], String)]): Boolean = {
     parsedTracing match {
-      case Full(either) => either match {
-        case (Left(_), _) => true
+      case Full(tuple) => tuple match {
+        case (Some(_), _, _) => true
         case _ => false
       }
       case _ => false
     }
   }
 
-  def createDummyNode(id: Int) = Node(id, Point3D(id, id, id), Vector3D(id, id, id), id, 1, 10, 8, id % 2 == 0, timestamp)
-
-  var tree1 = Tree(1, Seq(createDummyNode(0), createDummyNode(1), createDummyNode(2), createDummyNode(7)),
-    Seq(Edge(0, 1), Edge(2, 1), Edge(1, 7)), Some(Color(23, 23, 23, 1)), Seq(BranchPoint(1, 0), BranchPoint(7, 0)), Seq(Comment(0, "comment")),
-    "TestTree-0", timestamp, None)
-
-  var tree2 = Tree(2, Seq(createDummyNode(4), createDummyNode(5), createDummyNode(6)),
-    Seq(Edge(4, 5), Edge(5, 6)), Some(Color(30, 30, 30, 1)), Seq[BranchPoint](), Seq[Comment](),
-    "TestTree-1", timestamp, Some(1))
-
-  var treeGroup1 = TreeGroup("Axon 1", 1, Seq(TreeGroup("Blah", 3), TreeGroup("Blah 2", 4)))
-  var treeGroup2 = TreeGroup("Axon 2", 2)
-
-  var dummyTracing = SkeletonTracing("dummy_dataset", Seq(tree1, tree2), timestamp, None, Some(1), Point3D(1, 1, 1), Vector3D(1.0, 1.0, 1.0), 1.0, 0, None, Seq(treeGroup1, treeGroup2))
+  val dummyTracing = Dummies.tracing
 
   "NML writing and parsing" should "yield the same state" in {
     writeAndParseTracing(dummyTracing) match {
-      case Full(either) => either match {
-        case (Left(tracing), _) => {
+      case Full(tuple) => tuple match {
+        case (Some(tracing), _, _) => {
           assert(tracing == dummyTracing)
         }
         case _ => throw new Exception

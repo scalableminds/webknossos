@@ -3,7 +3,6 @@ package utils
 import javax.inject.Inject
 
 import com.mohiva.play.silhouette.api.SecuredErrorHandler
-import com.scalableminds.util.mvc.JsonResult
 import play.api.http.DefaultHttpErrorHandler
 import play.api.i18n.{I18nSupport, Messages, MessagesApi}
 import play.api.mvc.Results._
@@ -12,9 +11,6 @@ import play.api.routing.Router
 import play.api.{Configuration, OptionalSourceMapper, Play}
 
 import scala.concurrent.Future
-import controllers.{Authentication, routes}
-import play.api.http.Status.OK
-import play.api.Play.current
 
 class ErrorHandler @Inject() (
                                val messagesApi: MessagesApi,

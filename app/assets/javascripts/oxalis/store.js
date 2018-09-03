@@ -98,10 +98,14 @@ export type TreeType = {|
   +nodes: NodeMapType,
 |};
 
+export type TreeGroupTypeFlat = {|
+  +name: string,
+  +groupId: number,
+|};
+
 export type TreeGroupType = {
-  name: string,
-  groupId: number,
-  children: Array<TreeGroupType>,
+  ...TreeGroupTypeFlat,
+  +children: Array<TreeGroupType>,
 };
 
 export type VolumeCellType = {
@@ -152,6 +156,7 @@ export type SkeletonTracingType = {|
   +treeGroups: Array<TreeGroupType>,
   +activeTreeId: ?number,
   +activeNodeId: ?number,
+  +activeGroupId: ?number,
   +cachedMaxNodeId: number,
 |};
 
@@ -181,11 +186,11 @@ export type HybridTracingType = {|
 
 export type TracingType = HybridTracingType;
 
-export type DatasetLayerConfigurationType = {
+export type DatasetLayerConfigurationType = {|
   +color: Vector3,
   +brightness: number,
   +contrast: number,
-};
+|};
 
 export type DatasetConfigurationType = {
   +fourBit: boolean,
@@ -202,11 +207,12 @@ export type DatasetConfigurationType = {
   +rotation?: Vector3,
 };
 
-export type UserConfigurationType = {
+export type UserConfigurationType = {|
   +clippingDistance: number,
   +clippingDistanceArbitrary: number,
   +crosshairSize: number,
   +displayCrosshair: boolean,
+  +displayScalebars: boolean,
   +dynamicSpaceDirection: boolean,
   +keyboardDelay: number,
   +mouseRotateValue: number,
@@ -224,7 +230,7 @@ export type UserConfigurationType = {
   +sphericalCapRadius: number,
   +tdViewDisplayPlanes: boolean,
   +hideTreeRemovalWarning: boolean,
-};
+|};
 
 export type MappingType = { [key: number]: number };
 
@@ -328,7 +334,7 @@ type UiInformationType = {
   +showDropzoneModal: boolean,
 };
 
-export type OxalisState = {
+export type OxalisState = {|
   +datasetConfiguration: DatasetConfigurationType,
   +userConfiguration: UserConfigurationType,
   +temporaryConfiguration: TemporaryConfigurationType,
@@ -340,7 +346,7 @@ export type OxalisState = {
   +viewModeData: ViewModeData,
   +activeUser: ?APIUserType,
   +uiInformation: UiInformationType,
-};
+|};
 
 const defaultViewportRect = {
   top: 0,
@@ -382,6 +388,7 @@ export const defaultState: OxalisState = {
     clippingDistanceArbitrary: 64,
     crosshairSize: 0.1,
     displayCrosshair: true,
+    displayScalebars: false,
     dynamicSpaceDirection: true,
     keyboardDelay: 200,
     mouseRotateValue: 0.004,
@@ -441,6 +448,7 @@ export const defaultState: OxalisState = {
     allowedTeams: [],
     logoUrl: null,
     lastUsedByUser: 0,
+    isForeign: false,
   },
   tracing: {
     ...initialAnnotationInfo,

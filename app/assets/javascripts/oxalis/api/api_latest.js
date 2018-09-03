@@ -22,13 +22,19 @@ import {
   setTreeNameAction,
   setActiveTreeAction,
   setTreeColorIndexAction,
+  setTreeVisibilityAction,
+  setTreeGroupAction,
+  setTreeGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import { callDeep } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import {
   findTreeByNodeId,
   getNodeAndTree,
   getActiveNode,
   getActiveTree,
   getTree,
+  getFlatTreeGroups,
+  getTreeGroupsMap,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getLayerBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import { setActiveCellAction, setToolAction } from "oxalis/model/actions/volumetracing_actions";
@@ -44,11 +50,12 @@ import type {
   VolumeTracingType,
   TracingTypeTracingType,
   MappingType,
+  TreeGroupTypeFlat,
 } from "oxalis/store";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import Toast from "libs/toast";
 import window, { location } from "libs/window";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import { ControlModeEnum, OrthoViews, VolumeToolEnum } from "oxalis/constants";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
@@ -252,6 +259,68 @@ class TracingApi {
     const tracing = Store.getState().tracing;
     assertSkeleton(tracing);
     Store.dispatch(setTreeColorIndexAction(treeId, colorIndex));
+  }
+
+  /**
+   * Changes the visibility of the referenced tree.
+   *
+   * @example
+   * api.tracing.setTreeVisibility(3, false);
+   */
+  setTreeVisibility(treeId: ?number, isVisible: boolean) {
+    const { tracing } = Store.getState();
+    assertSkeleton(tracing);
+    Store.dispatch(setTreeVisibilityAction(treeId, isVisible));
+  }
+
+  /**
+   * Gets a list of tree groups
+   *
+   * @example
+   * api.tracing.getTreeGroups();
+   */
+  getTreeGroups(): Array<TreeGroupTypeFlat> {
+    const { tracing } = Store.getState();
+    return getFlatTreeGroups(assertSkeleton(tracing));
+  }
+
+  /**
+   * Sets the parent group of the referenced tree.
+   *
+   * @example
+   * api.tracing.setTreeGroup(
+   *   3,
+   *   api.tracing.getTreeGroups.find(({ name }) => name === "My Tree Group").id,
+   * );
+   */
+  setTreeGroup(treeId?: number, groupId?: number) {
+    const { tracing } = Store.getState();
+    const skeletonTracing = assertSkeleton(tracing);
+    const treeGroupMap = getTreeGroupsMap(skeletonTracing);
+    if (groupId != null && treeGroupMap[groupId] == null) {
+      throw new Error("Provided group ID does not exist");
+    }
+
+    Store.dispatch(setTreeGroupAction(groupId, treeId));
+  }
+
+  /**
+   * Renames the group referenced by the provided id.
+   *
+   * @example
+   * api.tracing.renameGroup(
+   *   3,
+   *   "New group name",
+   * );
+   */
+  renameGroup(groupId: number, newName: string) {
+    const { tracing } = Store.getState();
+    const skeletonTracing = assertSkeleton(tracing);
+    const newTreeGroups = _.cloneDeep(skeletonTracing.treeGroups);
+    callDeep(newTreeGroups, groupId, item => {
+      item.name = newName;
+    });
+    Store.dispatch(setTreeGroupsAction(newTreeGroups));
   }
 
   /**
@@ -741,6 +810,7 @@ class UserApi {
     - clippingDistanceArbitrary
     - dynamicSpaceDirection
     - displayCrosshair
+    - displayScalebars
     - scale
     - tdViewDisplayPlanes
     - newNodeNewTree
@@ -825,6 +895,7 @@ class UtilsApi {
    *   - CREATE_TREE
    *   - DELETE_TREE
    *   - SET_ACTIVE_TREE
+   *   - SET_ACTIVE_GROUP
    *   - SET_TREE_NAME
    *   - MERGE_TREES
    *   - SELECT_NEXT_TREE

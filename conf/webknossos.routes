@@ -57,6 +57,7 @@ GET           /api/teams/:id/progressOverview                                   
 POST          /api/datasets/:dataSetName/createExplorational                    controllers.AnnotationController.createExplorational(dataSetName: String)
 GET           /api/datasets                                                     controllers.DataSetController.list
 POST          /api/datasets                                                     controllers.DataSetController.create(typ: String)
+POST          /api/datasets/addForeign                                          controllers.DataSetController.addForeignDataStoreAndDataSet
 GET           /api/datasets/:dataSetName                                        controllers.DataSetController.read(dataSetName: String, sharingToken: Option[String])
 POST          /api/datasets/:dataSetName                                        controllers.DataSetController.update(dataSetName: String)
 GET           /api/datasets/:dataSetName/accessList                             controllers.DataSetController.accessList(dataSetName: String)
@@ -64,6 +65,7 @@ GET           /api/datasets/:dataSetName/sharingToken                           
 DELETE        /api/datasets/:dataSetName/sharingToken                           controllers.DataSetController.deleteSharingToken(dataSetName: String)
 POST          /api/datasets/:dataSetName/teams                                  controllers.DataSetController.updateTeams(dataSetName: String)
 GET           /api/datasets/:dataSetName/layers/:layer/thumbnail                controllers.DataSetController.thumbnail(dataSetName: String, layer: String, w: Option[Int], h: Option[Int])
+GET           /api/datasets/:dataSetName/isValidNewName                         controllers.DataSetController.isValidNewName(dataSetName: String)
 
 # Datastores
 GET           /api/datastores                                                   controllers.DataStoreController.list
@@ -103,6 +105,7 @@ GET           /api/annotations/:typ/:id/loggedTime                              
 POST          /api/tasks                                                        controllers.TaskController.create
 POST          /api/tasks/createFromFile                                         controllers.TaskController.createFromFile
 POST          /api/tasks/list                                                   controllers.TaskController.listTasks
+GET           /api/tasks/experienceDomains                                      controllers.TaskController.listExperienceDomains
 GET           /api/tasks/:id                                                    controllers.TaskController.read(id: String)
 DELETE        /api/tasks/:id                                                    controllers.TaskController.delete(id: String)
 PUT           /api/tasks/:id                                                    controllers.TaskController.update(id: String)

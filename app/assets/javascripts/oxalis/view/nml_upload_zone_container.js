@@ -3,19 +3,13 @@ import * as React from "react";
 import Dropzone from "react-dropzone";
 import prettyBytes from "pretty-bytes";
 import { Button, Icon, Modal, Avatar, List, Spin, Checkbox, Alert } from "antd";
-import { readFileAsText } from "components/file_upload";
-import { parseNml } from "oxalis/model/helpers/nml_helpers";
-import { addTreesAndGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
 import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
-import Toast from "libs/toast";
-import Store from "oxalis/store";
 import type { OxalisState } from "oxalis/store";
 import { connect } from "react-redux";
 import FormattedDate from "components/formatted_date";
-import Utils from "libs/utils";
 
 type State = {
-  files: Array<*>,
+  files: Array<File>,
   dropzoneActive: boolean,
   isImporting: boolean,
   createGroupForEachFile: boolean,
@@ -28,6 +22,8 @@ type StateProps = {
 
 type Props = StateProps & {
   children: React.Node,
+  isAllowed: boolean,
+  onImport: (files: Array<File>, createGroupForEachFile: boolean) => Promise<void>,
 };
 
 function OverlayDropZone({ children }) {
@@ -60,13 +56,19 @@ function OverlayDropZone({ children }) {
   );
 }
 
-function NmlDropArea({ showClickHint }) {
+function NmlDropArea({ showClickHint, isAllowed }) {
   return (
     <React.Fragment>
       <div>
         <Icon type="inbox" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />
       </div>
-      <h5>Drop NML files here{showClickHint ? " or click to select files" : null}...</h5>
+      {isAllowed ? (
+        <h5>Drop NML files here{showClickHint ? " or click to select files" : null}...</h5>
+      ) : (
+        <h5 style={{ color: "rgb(247,80,61)" }}>
+          You cannot upload NML files into a read-only tracing.
+        </h5>
+      )}
     </React.Fragment>
   );
 }
@@ -92,12 +94,15 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
     this.setState({ dropzoneActive: false });
   };
 
-  onDrop = (files: Array<*>) => {
-    this.setState({
-      files,
-      dropzoneActive: false,
-    });
-
+  onDrop = (files: Array<File>) => {
+    if (this.props.isAllowed) {
+      this.setState({
+        files,
+        dropzoneActive: false,
+      });
+    } else {
+      this.setState({ dropzoneActive: false });
+    }
     this.props.hideDropzoneModal();
   };
 
@@ -131,36 +136,12 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
   }
 
   importNmls = async () => {
-    this.setState({
-      isImporting: true,
-    });
-
+    this.setState({ isImporting: true });
     try {
-      const { successes: importActions, errors } = await Utils.promiseAllWithErrors(
-        this.state.files.map(async file => {
-          const nmlString = await readFileAsText(file);
-          try {
-            const { trees, treeGroups } = await parseNml(
-              nmlString,
-              this.state.createGroupForEachFile ? file.name : null,
-            );
-            return addTreesAndGroupsAction(trees, treeGroups);
-          } catch (e) {
-            throw new Error(`"${file.name}" could not be parsed. ${e.message}`);
-          }
-        }),
+      await this.props.onImport(
+        this.state.files,
+        this.state.files.length > 1 ? this.state.createGroupForEachFile : false,
       );
-
-      if (errors.length > 0) {
-        throw errors;
-      }
-
-      // Dispatch the actual actions as the very last step, so that
-      // not a single store mutation happens if something above throws
-      // an error
-      importActions.forEach(action => Store.dispatch(action));
-    } catch (e) {
-      (Array.isArray(e) ? e : [e]).forEach(err => Toast.error(err.message));
     } finally {
       this.setState({ isImporting: false, files: [] });
     }
@@ -169,10 +150,12 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
   renderDropzoneModal() {
     return (
       <Modal visible footer={null} onCancel={this.props.hideDropzoneModal}>
-        <Alert
-          message="Did you know that you do can just drag-and-drop NML files directly into the tracing view? You don't have to explicitly open this dialog first."
-          style={{ marginBottom: 12 }}
-        />
+        {this.props.isAllowed ? (
+          <Alert
+            message="Did you know that you do can just drag-and-drop NML files directly into this view? You don't have to explicitly open this dialog first."
+            style={{ marginBottom: 12 }}
+          />
+        ) : null}
         <Dropzone
           multiple
           disablePreview
@@ -185,13 +168,22 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
           }}
           onDrop={this.onDrop}
         >
-          <NmlDropArea showClickHint />
+          <NmlDropArea showClickHint isAllowed={this.props.isAllowed} />
         </Dropzone>
       </Modal>
     );
   }
 
   renderImportModal() {
+    const createGroupsCheckbox = (
+      <Checkbox
+        style={{ float: "left" }}
+        onChange={e => this.setState({ createGroupForEachFile: e.target.checked })}
+        checked={this.state.createGroupForEachFile}
+      >
+        Create a new tree group for each file.
+      </Checkbox>
+    );
     return (
       <Modal
         title={`Import ${this.state.files.length} NML file(s)`}
@@ -199,13 +191,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
         onCancel={() => this.setState({ files: [] })}
         footer={
           <React.Fragment>
-            <Checkbox
-              style={{ float: "left" }}
-              onChange={e => this.setState({ createGroupForEachFile: e.target.checked })}
-              checked={this.state.createGroupForEachFile}
-            >
-              Create a new tree group for each file.
-            </Checkbox>
+            {this.state.files.length > 1 ? createGroupsCheckbox : null}
             <Button key="submit" type="primary" onClick={this.importNmls}>
               Import
             </Button>
@@ -237,7 +223,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
         }
         {this.state.dropzoneActive && !this.props.showDropzoneModal ? (
           <OverlayDropZone>
-            <NmlDropArea showClickHint={false} />
+            <NmlDropArea showClickHint={false} isAllowed={this.props.isAllowed} />
           </OverlayDropZone>
         ) : null}
         {

@@ -4,7 +4,7 @@
  */
 
 import _ from "lodash";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import { V3 } from "libs/mjs";
 import Store from "oxalis/store";
 import type { Vector3, ModeType } from "oxalis/constants";

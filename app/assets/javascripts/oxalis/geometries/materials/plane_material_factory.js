@@ -5,7 +5,7 @@
 
 import _ from "lodash";
 import * as THREE from "three";
-import Utils, { maybe } from "libs/utils";
+import * as Utils from "libs/utils";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
@@ -367,7 +367,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
-          storeState => maybe(getActiveCellId)(storeState.tracing.volume).getOrElse(0),
+          storeState => Utils.maybe(getActiveCellId)(storeState.tracing.volume).getOrElse(0),
           () => this.updateActiveCellId(),
           true,
         ),
@@ -391,7 +391,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         listenToStoreProperty(
           storeState =>
             volumeToolEnumToIndex(
-              Utils.toNullable(maybe(getVolumeTool)(storeState.tracing.volume)),
+              Utils.toNullable(Utils.maybe(getVolumeTool)(storeState.tracing.volume)),
             ),
           volumeTool => {
             this.uniforms.activeVolumeToolIndex.value = volumeTool;
@@ -403,7 +403,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   }
 
   updateActiveCellId() {
-    const activeCellId = maybe(getActiveCellId)(Store.getState().tracing.volume).getOrElse(0);
+    const activeCellId = Utils.maybe(getActiveCellId)(Store.getState().tracing.volume).getOrElse(0);
     const mappedActiveCellId = Model.getSegmentationLayer().cube.mapId(activeCellId);
     // Convert the id into 4 bytes (little endian)
     const [a, b, g, r] = Utils.convertDecToBase256(mappedActiveCellId);

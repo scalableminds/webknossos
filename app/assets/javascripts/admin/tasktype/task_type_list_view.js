@@ -6,7 +6,7 @@ import * as React from "react";
 import { Link, withRouter } from "react-router-dom";
 import { Table, Tag, Icon, Spin, Button, Input, Modal } from "antd";
 import Markdown from "react-remarkable";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import messages from "messages";
 import { getTaskTypes, deleteTaskType } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
@@ -81,9 +81,9 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
           });
 
           await deleteTaskType(taskType.id);
-          this.setState({
-            tasktypes: this.state.tasktypes.filter(p => p.id !== taskType.id),
-          });
+          this.setState(prevState => ({
+            tasktypes: prevState.tasktypes.filter(p => p.id !== taskType.id),
+          }));
         } catch (error) {
           handleGenericError(error);
         } finally {
@@ -130,7 +130,7 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
             <Table
               dataSource={Utils.filterWithSearchQueryOR(
                 this.state.tasktypes,
-                ["id", "team", "summary", "description", "settings"],
+                ["id", "teamName", "summary", "description", "settings"],
                 this.state.searchQuery,
               )}
               rowKey="id"
@@ -145,28 +145,28 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                 dataIndex="id"
                 key="id"
                 width={100}
-                sorter={Utils.localeCompareBy(typeHint, "id")}
+                sorter={Utils.localeCompareBy(typeHint, taskType => taskType.id)}
                 className="monospace-id"
               />
               <Column
                 title="Team"
-                dataIndex="team.name"
+                dataIndex="teamName"
                 key="team"
                 width={130}
-                sorter={Utils.localeCompareBy(typeHint, "team")}
+                sorter={Utils.localeCompareBy(typeHint, taskType => taskType.teamName)}
               />
               <Column
                 title="Summary"
                 dataIndex="summary"
                 key="summary"
                 width={130}
-                sorter={Utils.localeCompareBy(typeHint, "summary")}
+                sorter={Utils.localeCompareBy(typeHint, taskType => taskType.summary)}
               />
               <Column
                 title="Description"
                 dataIndex="description"
                 key="description"
-                sorter={Utils.localeCompareBy(typeHint, "description")}
+                sorter={Utils.localeCompareBy(typeHint, taskType => taskType.description)}
                 render={description => (
                   <div className="task-type-description short">
                     <Markdown

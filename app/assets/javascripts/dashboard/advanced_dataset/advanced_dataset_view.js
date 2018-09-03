@@ -2,24 +2,23 @@
 /* eslint-disable jsx-a11y/href-no-hash, react/prefer-stateless-function, react/no-unused-state */
 
 import * as React from "react";
-import TemplateHelpers from "libs/template_helpers";
-import Utils from "libs/utils";
+import { stringToColor, formatTuple } from "libs/format_utils";
+import * as Utils from "libs/utils";
 import { Table, Icon, Tag } from "antd";
 import DatasetActionView from "dashboard/advanced_dataset/dataset_action_view";
 import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
-import type { DatasetType } from "dashboard/dataset_view";
-import type { APITeamType } from "admin/api_flow_types";
+import type { APITeamType, APIMaybeUnimportedDatasetType } from "admin/api_flow_types";
 import dice from "dice-coefficient";
 import _ from "lodash";
 import FormattedDate from "components/formatted_date";
 
 const { Column } = Table;
 
-const typeHint: DatasetType[] = [];
+const typeHint: APIMaybeUnimportedDatasetType[] = [];
 const useLruRank = false;
 
 type Props = {
-  datasets: Array<DatasetType>,
+  datasets: Array<APIMaybeUnimportedDatasetType>,
   searchQuery: string,
   isUserAdmin: boolean,
 };
@@ -30,6 +29,17 @@ type State = {
 };
 
 class AdvancedDatasetView extends React.PureComponent<Props, State> {
+  constructor() {
+    super();
+    this.state = {
+      sortedInfo: {
+        columnKey: useLruRank ? "" : "created",
+        order: "descend",
+      },
+      prevSearchQuery: "",
+    };
+  }
+
   static getDerivedStateFromProps(nextProps: Props, prevState: State): $Shape<State> {
     const maybeSortedInfo =
       // Clear the sorting exactly when the search box is initially filled
@@ -43,17 +53,6 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
     return {
       prevSearchQuery: nextProps.searchQuery,
       ...maybeSortedInfo,
-    };
-  }
-
-  constructor() {
-    super();
-    this.state = {
-      sortedInfo: {
-        columnKey: useLruRank ? "" : "created",
-        order: "descend",
-      },
-      prevSearchQuery: "",
     };
   }
 
@@ -78,7 +77,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
       : filteredDataSource;
 
     // Create a map from dataset to its rank
-    const datasetToRankMap: Map<DatasetType, number> = new Map(
+    const datasetToRankMap: Map<APIMaybeUnimportedDatasetType, number> = new Map(
       dataSourceSortedByRank.map((dataset, rank) => [dataset, rank]),
     );
 
@@ -120,15 +119,13 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             title="Name"
             dataIndex="name"
             key="name"
-            sorter={Utils.localeCompareBy(typeHint, "name")}
+            sorter={Utils.localeCompareBy(typeHint, dataset => dataset.name)}
             sortOrder={sortedInfo.columnKey === "name" && sortedInfo.order}
-            render={(name: string, dataset: DatasetType) => (
+            render={(name: string, dataset: APIMaybeUnimportedDatasetType) => (
               <div>
                 {dataset.name}
                 <br />
-                <Tag color={TemplateHelpers.stringToColor(dataset.dataStore.name)}>
-                  {dataset.dataStore.name}
-                </Tag>
+                <Tag color={stringToColor(dataset.dataStore.name)}>{dataset.dataStore.name}</Tag>
               </div>
             )}
           />
@@ -137,7 +134,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             title="Creation Date"
             dataIndex="created"
             key="created"
-            sorter={Utils.compareBy(typeHint, "created")}
+            sorter={Utils.compareBy(typeHint, dataset => dataset.created)}
             sortOrder={sortedInfo.columnKey === "created" && sortedInfo.order}
             render={created => <FormattedDate timestamp={created} />}
           />
@@ -146,8 +143,8 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             dataIndex="scale"
             key="scale"
             width={120}
-            render={(__, dataset: DatasetType) =>
-              TemplateHelpers.formatTuple(dataset.dataSource.scale)
+            render={(__, dataset: APIMaybeUnimportedDatasetType) =>
+              formatTuple(dataset.dataSource.scale)
             }
           />
 
@@ -156,10 +153,10 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             dataIndex="allowedTeams"
             key="allowedTeams"
             width={150}
-            render={(teams: Array<APITeamType>, dataset: DatasetType) =>
+            render={(teams: Array<APITeamType>, dataset: APIMaybeUnimportedDatasetType) =>
               teams.map(team => (
                 <Tag
-                  color={TemplateHelpers.stringToColor(team.name)}
+                  color={stringToColor(team.name)}
                   key={`allowed_teams_${dataset.name}_${team.name}`}
                 >
                   {team.name}
@@ -194,7 +191,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
           <Column
             title="Data Layers"
             dataIndex="dataSource.dataLayers"
-            render={(__, dataset: DatasetType) =>
+            render={(__, dataset: APIMaybeUnimportedDatasetType) =>
               (dataset.dataSource.dataLayers || []).map(layer => (
                 <Tag key={layer.name}>
                   {layer.category} - {layer.elementClass}
@@ -207,7 +204,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             width={200}
             title="Actions"
             key="actions"
-            render={(__, dataset: DatasetType) => (
+            render={(__, dataset: APIMaybeUnimportedDatasetType) => (
               <DatasetActionView isUserAdmin={isUserAdmin} dataset={dataset} />
             )}
           />

@@ -5,8 +5,8 @@ import { withRouter } from "react-router-dom";
 import { Form, Input, Select, Button, Card, Spin, Upload, Icon, Col, Row } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
-import Utils from "libs/utils";
-import { getDatastores, addDataset } from "admin/admin_rest_api";
+import * as Utils from "libs/utils";
+import { getDatastores, addDataset, isDatasetNameValid } from "admin/admin_rest_api";
 
 import type { APIDataStoreType, APIUserType, DatasetConfigType } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
@@ -112,7 +112,6 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
         );
       }
     };
-
     return (
       <div className="dataset-administration" style={{ padding: 5 }}>
         <Spin spinning={this.state.isUploading} size="large">
@@ -126,7 +125,18 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
                         { required: true, message: messages["dataset.import.required.name"] },
                         { min: 3 },
                         { pattern: /[0-9a-zA-Z_-]+$/ },
+                        {
+                          validator: async (_rule, value, callback) => {
+                            const reasons = await isDatasetNameValid(value);
+                            if (reasons != null) {
+                              callback(reasons);
+                            } else {
+                              callback();
+                            }
+                          },
+                        },
                       ],
+                      validateFirst: true,
                     })(<Input autoFocus />)}
                   </FormItem>
                 </Col>

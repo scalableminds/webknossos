@@ -270,7 +270,7 @@ object AnnotationService
     for {
       tracingsNamesAndScalesAsTuples <- getTracingsScalesAndNamesFor(annotations)
       tracingsAndNamesFlattened = flattenTupledLists(tracingsNamesAndScalesAsTuples)
-      nmlsAndNames = tracingsAndNamesFlattened.map(tuple => (NmlWriter.toNmlStream(Left(tuple._1), tuple._4, tuple._3), tuple._2))
+      nmlsAndNames = tracingsAndNamesFlattened.map(tuple => (NmlWriter.toNmlStream(Some(tuple._1), None, tuple._4, tuple._3), tuple._2))
       zip <- createZip(nmlsAndNames, zipFileName)
     } yield zip
   }
@@ -335,9 +335,9 @@ object AnnotationService
 
   def transferAnnotationToUser(typ: String, id: String, userId: ObjectId)(implicit request: UserAwareRequest[_]) = {
     for {
-      annotation <- provideAnnotation(typ, id)
-      newUser <- UserDAO.findOne(userId) ?~> Messages("user.notFound")
-      _ <- DataSetDAO.findOne(annotation._dataSet)(AuthorizedAccessContext(newUser)) ?~> Messages("annotation.transferee.noDataSetAccess")
+      annotation <- provideAnnotation(typ, id) ?~> "annotation.notFound"
+      newUser <- UserDAO.findOne(userId) ?~> "user.notFound"
+      _ <- DataSetDAO.findOne(annotation._dataSet)(AuthorizedAccessContext(newUser)) ?~> "annotation.transferee.noDataSetAccess"
       _ <- annotation.muta.transferToUser(newUser)
       updated <- provideAnnotation(typ, id)
     } yield updated

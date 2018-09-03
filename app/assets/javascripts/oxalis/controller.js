@@ -9,7 +9,7 @@ import { withRouter } from "react-router-dom";
 import { Spin } from "antd";
 import _ from "lodash";
 import app from "app";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import renderIndependently from "libs/render_independently";
 import BackboneEvents from "backbone-events-standalone";
 import Stats from "stats.js";

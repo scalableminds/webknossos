@@ -4,7 +4,6 @@ import _ from "lodash";
 export default {
   yes: "Yes",
   no: "No",
-  "setup.redirect": "This WebKnossos instance seems to be empty. Redirecting to initial setup...",
   unknown_error:
     "An unknown error occured. Please try again or check the console for more details.",
   "datastore.health": _.template(
@@ -56,6 +55,8 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.no_viewport_scaling_setting":
     "Scaling the viewports via k/l is not supported anymore. Instead you can increase the viewport size by dragging the borders between the panes. You can also rearrange the panes by dragging the tabs.",
   "tracing.natural_sorting": "Correctly sort numbers in text (word2 < word10). This may be slow!",
+  "tracing.cant_create_node_due_to_active_group":
+    "You cannot create nodes, since no tree is active.",
   "datastore.unknown_type": "Unknown datastore type:",
   "webgl.disabled": "Couldn't initialise WebGL, please make sure WebGL is enabled.",
   "webgl.context_loss":
@@ -95,8 +96,6 @@ In order to restore the current window, a reload is necessary.`,
   "annotation.was_finished": "Annotation was archived",
   "annotation.was_re_opened": "Annotation was reopened",
   "annotation.delete": "Do you really want to reset and cancel this annotation?",
-  "annotation.dataset_no_public":
-    "Public tracings require the respective dataset to be public too. Please, make sure to add public access rights to the dataset as well.",
   "annotation.was_edited": "Successfully updated annotation",
   "project.delete": "Do you really want to delete this project?",
   "project.increase_instances":

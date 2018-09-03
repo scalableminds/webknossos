@@ -11,12 +11,13 @@ import Maybe from "data.maybe";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import ColorGenerator from "libs/color_generator";
 import update from "immutability-helper";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import Constants, { NODE_ID_REF_REGEX } from "oxalis/constants";
 import {
   getSkeletonTracing,
   getActiveNodeFromTree,
   getActiveTree,
+  getActiveGroup,
   findTreeByNodeId,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3 } from "oxalis/constants";
@@ -68,7 +69,10 @@ function getMaximumTreeId(trees: TreeMapType): number {
   return _.max(_.map(trees, "treeId"));
 }
 
-function* mapGroups(groups: Array<TreeGroupType>, callback: TreeGroupType => *) {
+export function* mapGroups<R>(
+  groups: Array<TreeGroupType>,
+  callback: TreeGroupType => R,
+): Generator<R, void, void> {
   for (const group of groups) {
     yield callback(group);
     if (group.children) {
@@ -186,9 +190,8 @@ export function deleteNode(
       }
 
       const newActiveNodeId = neighborIds.length > 0 ? neighborIds[0] : null;
-      const newActiveTree = newActiveNodeId
-        ? findTreeByNodeId(newTrees, newActiveNodeId).get()
-        : activeTree;
+      const newActiveTree =
+        newActiveNodeId != null ? findTreeByNodeId(newTrees, newActiveNodeId).get() : activeTree;
       const newActiveTreeId = newActiveTree.treeId;
 
       return Maybe.Just([newTrees, newActiveTreeId, newActiveNodeId, newMaxNodeId]);
@@ -432,7 +435,11 @@ export function createTree(state: OxalisState, timestamp: number): Maybe<TreeTyp
       const newTreeId = _.isNumber(maxTreeId) ? maxTreeId + 1 : Constants.MIN_TREE_ID;
 
       const name = generateTreeName(state, timestamp, newTreeId);
-      const groupId = Utils.toNullable(getActiveTree(skeletonTracing).map(tree => tree.groupId));
+      const groupIdOfActiveTreeMaybe = getActiveTree(skeletonTracing).map(tree => tree.groupId);
+      const groupIdOfActiveGroupMaybe = getActiveGroup(skeletonTracing).map(group => group.groupId);
+      const groupId = Utils.toNullable(
+        groupIdOfActiveTreeMaybe.orElse(() => groupIdOfActiveGroupMaybe),
+      );
 
       // Create the new tree
       const tree: TreeType = {
@@ -704,7 +711,8 @@ export function toggleAllTreesReducer(
 export function toggleTreeGroupReducer(
   state: OxalisState,
   skeletonTracing: SkeletonTracingType,
-  groupId: string,
+  groupId: number,
+  targetVisibility?: boolean,
 ): OxalisState {
   let toggledGroup;
   forEachGroups(skeletonTracing.treeGroups, group => {
@@ -716,9 +724,12 @@ export function toggleTreeGroupReducer(
   const affectedGroupIds = new Set(mapGroups([toggledGroup], group => group.groupId));
 
   // Let's make all trees visible if there is one invisible tree in one of the affected groups
-  const shouldBecomeVisible = _.values(skeletonTracing.trees).some(
-    tree => affectedGroupIds.has(tree.groupId) && !tree.isVisible,
-  );
+  const shouldBecomeVisible =
+    targetVisibility != null
+      ? targetVisibility
+      : _.values(skeletonTracing.trees).some(
+          tree => affectedGroupIds.has(tree.groupId) && !tree.isVisible,
+        );
 
   const updateTreeObject = {};
   const isVisibleUpdater = {

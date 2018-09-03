@@ -7,7 +7,7 @@ import BackboneEvents from "backbone-events-standalone";
 import constants from "oxalis/constants";
 import Date from "libs/date";
 import { document } from "libs/window";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import KeyboardJS from "libs/keyboardjs_wrapper";
 import Hammer from "libs/hammerjs_wrapper";
 import type { Point2 } from "oxalis/constants";
@@ -134,7 +134,7 @@ export class InputKeyboard {
     options?: { delay?: number, supportInputElements?: boolean },
   ) {
     if (options) {
-      this.delay = options.delay || this.delay;
+      this.delay = options.delay != null ? options.delay : this.delay;
       this.supportInputElements = options.supportInputElements || this.supportInputElements;
     }
 
@@ -238,6 +238,8 @@ export class InputKeyboard {
 // The mouse module.
 // Events: over, out, leftClick, rightClick, leftDownMove
 class InputMouseButton {
+  // Remove once https://github.com/babel/babel-eslint/pull/584 is merged
+  // eslint-disable-next-line no-use-before-define
   mouse: InputMouse;
   name: MouseButtonStringType;
   which: MouseButtonWhichType;

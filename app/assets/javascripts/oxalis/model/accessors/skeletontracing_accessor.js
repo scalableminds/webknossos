@@ -7,8 +7,11 @@ import type {
   TreeType,
   TreeMapType,
   BranchPointType,
+  TreeGroupTypeFlat,
 } from "oxalis/store";
 import type { HybridServerTracingType, ServerSkeletonTracingType } from "admin/api_flow_types";
+import { mapGroups } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { findGroup } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 
 export type SkeletonTracingStatsType = {|
   treeCount: number,
@@ -50,6 +53,15 @@ export function getActiveTree(skeletonTracing: SkeletonTracingType) {
   const { activeTreeId } = skeletonTracing;
   if (activeTreeId != null) {
     return Maybe.Just(skeletonTracing.trees[activeTreeId]);
+  }
+  return Maybe.Nothing();
+}
+
+export function getActiveGroup(skeletonTracing: SkeletonTracingType) {
+  const { activeGroupId } = skeletonTracing;
+  if (activeGroupId != null) {
+    const group = findGroup(skeletonTracing.treeGroups, activeGroupId);
+    return Maybe.fromNullable(group);
   }
   return Maybe.Nothing();
 }
@@ -145,4 +157,18 @@ export function getStats(tracing: TracingType): Maybe<SkeletonTracingStatsType> 
       edgeCount: _.reduce(trees, (sum, tree) => sum + tree.edges.size(), 0),
       branchPointCount: _.reduce(trees, (sum, tree) => sum + _.size(tree.branchPoints), 0),
     }));
+}
+
+export function getFlatTreeGroups(skeletonTracing: SkeletonTracingType): Array<TreeGroupTypeFlat> {
+  return Array.from(
+    mapGroups(skeletonTracing.treeGroups, ({ children: _children, ...bareTreeGroup }) => ({
+      ...bareTreeGroup,
+    })),
+  );
+}
+
+export function getTreeGroupsMap(
+  skeletonTracing: SkeletonTracingType,
+): { [key: number]: TreeGroupTypeFlat } {
+  return _.keyBy(getFlatTreeGroups(skeletonTracing), "groupId");
 }

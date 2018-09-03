@@ -7,7 +7,7 @@ import { setViewModeAction } from "oxalis/model/actions/settings_actions";
 import type { OxalisState, AllowedModeType } from "oxalis/store";
 import Store from "oxalis/store";
 import { connect } from "react-redux";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 
 type Props = {
   viewMode: ModeType,

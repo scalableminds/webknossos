@@ -9,7 +9,7 @@ import constants, { ControlModeEnum } from "oxalis/constants";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
-import TemplateHelpers from "libs/template_helpers";
+import { formatScale } from "libs/format_utils";
 import {
   setAnnotationNameAction,
   setAnnotationDescriptionAction,
@@ -73,33 +73,33 @@ const shortcuts = [
   },
 ];
 
+export function calculateZoomLevel(flycam: FlycamType, dataset: APIDatasetType): number {
+  const zoom = getPlaneScalingFactor(flycam);
+  let width;
+  const viewMode = Store.getState().temporaryConfiguration.viewMode;
+  if (constants.MODES_PLANE.includes(viewMode)) {
+    width = constants.PLANE_WIDTH;
+  } else if (constants.MODES_ARBITRARY.includes(viewMode)) {
+    width = constants.VIEWPORT_WIDTH;
+  } else {
+    throw new Error(`Model mode not recognized: ${viewMode}`);
+  }
+  // unit is nm
+  const baseVoxel = getBaseVoxel(dataset.dataSource.scale);
+  return zoom * width * baseVoxel;
+}
+
+export function formatZoomLevel(zoomLevel: number): string {
+  if (zoomLevel < 1000) {
+    return `${zoomLevel.toFixed(0)} nm`;
+  } else if (zoomLevel < 1000000) {
+    return `${(zoomLevel / 1000).toFixed(1)} μm`;
+  } else {
+    return `${(zoomLevel / 1000000).toFixed(1)} mm`;
+  }
+}
+
 class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
-  calculateZoomLevel(): number {
-    const zoom = getPlaneScalingFactor(this.props.flycam);
-    let width;
-    const viewMode = Store.getState().temporaryConfiguration.viewMode;
-    if (constants.MODES_PLANE.includes(viewMode)) {
-      width = constants.PLANE_WIDTH;
-    } else if (constants.MODES_ARBITRARY.includes(viewMode)) {
-      width = constants.VIEWPORT_WIDTH;
-    } else {
-      throw new Error(`Model mode not recognized: ${viewMode}`);
-    }
-    // unit is nm
-    const baseVoxel = getBaseVoxel(this.props.dataset.dataSource.scale);
-    return zoom * width * baseVoxel;
-  }
-
-  chooseUnit(zoomLevel: number): string {
-    if (zoomLevel < 1000) {
-      return `${zoomLevel.toFixed(0)} nm`;
-    } else if (zoomLevel < 1000000) {
-      return `${(zoomLevel / 1000).toFixed(1)} μm`;
-    } else {
-      return `${(zoomLevel / 1000000).toFixed(1)} mm`;
-    }
-  }
-
   setAnnotationName = (newName: string) => {
     this.props.setAnnotationName(newName);
   };
@@ -150,14 +150,17 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
   }
 
   getDatasetName(isPublicViewMode: boolean) {
-    const { name: datasetName, displayName, description } = this.props.dataset;
+    const { name: datasetName, displayName, description: datasetDescription } = this.props.dataset;
 
     if (isPublicViewMode) {
       return (
         <div>
           <p>Dataset: {displayName || datasetName}</p>
-          {description ? (
-            <Markdown source={description} options={{ html: false, breaks: true, linkify: true }} />
+          {datasetDescription ? (
+            <Markdown
+              source={datasetDescription}
+              options={{ html: false, breaks: true, linkify: true }}
+            />
           ) : null}
         </div>
       );
@@ -189,7 +192,11 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
       annotationTypeLabel = (
         <span>
           Explorational Tracing:
-          <EditableTextLabel value={tracingName} onChange={this.setAnnotationName} />
+          <EditableTextLabel
+            value={tracingName}
+            onChange={this.setAnnotationName}
+            label="Annotation Name"
+          />
         </span>
       );
     }
@@ -199,12 +206,14 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
       <div className="flex-overflow">
         <p>{annotationTypeLabel}</p>
         <p>
-          <span>
+          <span style={{ verticalAlign: "top" }}>
             Description:
             <EditableTextLabel
               value={tracingDescription}
               onChange={this.setAnnotationDescription}
               rows={4}
+              markdown
+              label="Annotation Description"
             />
           </span>
         </p>
@@ -216,17 +225,15 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
     const isPublicViewMode =
       Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
 
-    const zoomLevel = this.calculateZoomLevel();
+    const zoomLevel = calculateZoomLevel(this.props.flycam, this.props.dataset);
 
     return (
       <div className="flex-overflow">
         {this.getTracingName(isPublicViewMode)}
         {this.getDatasetName(isPublicViewMode)}
 
-        <p>Viewport Width: {this.chooseUnit(zoomLevel)}</p>
-        <p>
-          Dataset Resolution: {TemplateHelpers.formatScale(this.props.dataset.dataSource.scale)}
-        </p>
+        <p>Viewport Width: {formatZoomLevel(zoomLevel)}</p>
+        <p>Dataset Resolution: {formatScale(this.props.dataset.dataSource.scale)}</p>
 
         {this.getTracingStatistics()}
         {this.getKeyboardShortcuts(isPublicViewMode)}

@@ -17,7 +17,7 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
   val taskTypePublicReads =
     ((__ \ 'summary).read[String](minLength[String](2) or maxLength[String](50)) and
       (__ \ 'description).read[String] and
-      (__ \ 'team).read[String] (ObjectId.stringObjectIdReads("team")) and
+      (__ \ 'teamId).read[String] (ObjectId.stringObjectIdReads("teamId")) and
       (__ \ 'settings).read[AnnotationSettings]) (TaskType.fromForm _)
 
   def create = SecuredAction.async(parse.json) { implicit request =>
@@ -32,8 +32,8 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
 
   def get(taskTypeId: String) = SecuredAction.async { implicit request =>
     for {
-      taskTypeIdValidated <- ObjectId.parse(taskTypeId)
-      taskType <- TaskTypeDAO.findOne(taskTypeIdValidated) ?~> Messages("taskType.notFound")
+      taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
+      taskType <- TaskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
       _ <- ensureTeamAdministration(request.identity, taskType._team)
       js <- taskType.publicWrites
     } yield Ok(js)
@@ -49,8 +49,8 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
   def update(taskTypeId: String) = SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(taskTypePublicReads) { taskTypeFromForm =>
       for {
-        taskTypeIdValidated <- ObjectId.parse(taskTypeId)
-        taskType <- TaskTypeDAO.findOne(taskTypeIdValidated) ?~> Messages("taskType.notFound")
+        taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
+        taskType <- TaskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
         updatedTaskType = taskTypeFromForm.copy(_id = taskType._id)
         _ <- ensureTeamAdministration(request.identity, taskType._team)
         _ <- ensureTeamAdministration(request.identity, updatedTaskType._team)
@@ -64,11 +64,11 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
 
   def delete(taskTypeId: String) = SecuredAction.async { implicit request =>
     for {
-      taskTypeIdValidated <- ObjectId.parse(taskTypeId)
-      taskType <- TaskTypeDAO.findOne(taskTypeIdValidated) ?~> Messages("taskType.notFound")
+      taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
+      taskType <- TaskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
       _ <- ensureTeamAdministration(request.identity, taskType._team)
-      _ <- TaskTypeDAO.deleteOne(taskTypeIdValidated) ?~> Messages("taskType.deleteFailure")
-      _ <- TaskDAO.removeAllWithTaskTypeAndItsAnnotations(taskTypeIdValidated) ?~> Messages("taskType.deleteFailure")
+      _ <- TaskTypeDAO.deleteOne(taskTypeIdValidated) ?~> "taskType.deleteFailure"
+      _ <- TaskDAO.removeAllWithTaskTypeAndItsAnnotations(taskTypeIdValidated) ?~> "taskType.deleteFailure"
     } yield {
       JsonOk(Messages("taskType.deleteSuccess", taskType.summary))
     }

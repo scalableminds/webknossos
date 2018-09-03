@@ -6,13 +6,15 @@
 import _ from "lodash";
 import * as React from "react";
 import Maybe from "data.maybe";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import update from "immutability-helper";
+import Store from "oxalis/store";
 import { connect } from "react-redux";
-import { Input, Menu, Dropdown, Tooltip, Icon, Modal, Button, Row, Col } from "antd";
+import { Input, Menu, Dropdown, Tooltip, Icon } from "antd";
 import ButtonComponent from "oxalis/view/components/button_component";
 import InputComponent from "oxalis/view/components/input_component";
-import { InputKeyboardNoLoop } from "libs/input";
+import { InputKeyboard } from "libs/input";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { getActiveTree, getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   setActiveNodeAction,
@@ -20,10 +22,11 @@ import {
   deleteCommentAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import TreeWithComments from "oxalis/view/right-menu/comment_tab/tree_with_comments";
-import { Comment, MarkdownComment } from "oxalis/view/right-menu/comment_tab/comment";
+import { Comment } from "oxalis/view/right-menu/comment_tab/comment";
 import { AutoSizer, List } from "react-virtualized";
 import Enum from "Enumjs";
 import messages from "messages";
+import { MarkdownModal } from "oxalis/view/components/markdown_modal";
 import type { Dispatch } from "redux";
 import type { OxalisState, SkeletonTracingType, TreeType, CommentType } from "oxalis/store";
 import type { Comparator } from "libs/utils";
@@ -48,7 +51,7 @@ type SortOptionsType = {
 };
 function getTreeSorter({ sortBy, isSortedAscending }: SortOptionsType): Comparator<TreeType> {
   return sortBy === SortByEnum.ID
-    ? Utils.compareBy(treeTypeHint, "treeId", isSortedAscending)
+    ? Utils.compareBy(treeTypeHint, tree => tree.treeId, isSortedAscending)
     : Utils.localeCompareBy(
         treeTypeHint,
         tree => `${tree.name}_${tree.treeId}`,
@@ -59,7 +62,7 @@ function getTreeSorter({ sortBy, isSortedAscending }: SortOptionsType): Comparat
 
 function getCommentSorter({ sortBy, isSortedAscending }: SortOptionsType): Comparator<CommentType> {
   return sortBy === SortByEnum.ID
-    ? Utils.compareBy(([]: Array<CommentType>), "nodeId", isSortedAscending)
+    ? Utils.compareBy(([]: Array<CommentType>), comment => comment.nodeId, isSortedAscending)
     : Utils.localeCompareBy(
         commentTypeHint,
         comment => `${comment.content}_${comment.nodeId}`,
@@ -86,6 +89,16 @@ type CommentTabStateType = {
 class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
   listRef: ?List;
 
+  state = {
+    isSortedAscending: true,
+    sortBy: SortByEnum.NAME,
+    data: [],
+    // TODO: Remove once https://github.com/yannickcr/eslint-plugin-react/issues/1751 is merged
+    // eslint-disable-next-line react/no-unused-state
+    collapsedTreeIds: {},
+    isMarkdownModalVisible: false,
+  };
+
   static getDerivedStateFromProps(
     props: Props,
     state: CommentTabStateType,
@@ -105,15 +118,18 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
     return { data };
   }
 
-  state = {
-    isSortedAscending: true,
-    sortBy: SortByEnum.NAME,
-    data: [],
-    // TODO: Remove once https://github.com/yannickcr/eslint-plugin-react/issues/1751 is merged
-    // eslint-disable-next-line react/no-unused-state
-    collapsedTreeIds: {},
-    isMarkdownModalVisible: false,
-  };
+  componentDidMount() {
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        state => state.userConfiguration.keyboardDelay,
+        keyboardDelay => {
+          if (this.keyboard != null) {
+            this.keyboard.delay = keyboardDelay;
+          }
+        },
+      ),
+    );
+  }
 
   componentDidUpdate(prevProps) {
     if (
@@ -128,12 +144,18 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
 
   componentWillUnmount() {
     this.keyboard.destroy();
+    this.unsubscribeStoreListeners();
   }
 
-  keyboard = new InputKeyboardNoLoop({
-    n: () => this.nextComment(),
-    p: () => this.previousComment(),
-  });
+  storePropertyUnsubscribers: Array<() => void> = [];
+
+  keyboard = new InputKeyboard(
+    {
+      n: () => this.nextComment(),
+      p: () => this.previousComment(),
+    },
+    { delay: Store.getState().userConfiguration.keyboardDelay },
+  );
 
   nextComment = (forward: boolean = true) => {
     getActiveNode(this.props.skeletonTracing).map(activeNode => {
@@ -193,6 +215,11 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
     }));
   };
 
+  unsubscribeStoreListeners() {
+    this.storePropertyUnsubscribers.forEach(unsubscribe => unsubscribe());
+    this.storePropertyUnsubscribers = [];
+  }
+
   getActiveComment(createIfNotExisting: boolean = false) {
     return Utils.zipMaybe(
       getActiveTree(this.props.skeletonTracing),
@@ -223,43 +250,14 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
 
     return activeCommentMaybe
       .map(comment => (
-        <Modal
-          key="comment-markdown-modal"
-          title={
-            <span>
-              Edit Comment (
-              <a href="https://markdown-it.github.io/" target="_blank" rel="noopener noreferrer">
-                Markdown enabled
-              </a>
-              )
-            </span>
-          }
+        <MarkdownModal
+          key={comment.nodeId}
+          source={comment.content}
           visible={this.state.isMarkdownModalVisible}
-          onCancel={onOk}
-          closable={false}
-          width={700}
-          footer={[
-            <Button key="back" onClick={onOk}>
-              Ok
-            </Button>,
-          ]}
-        >
-          <Row gutter={16}>
-            <Col span={12}>
-              <InputComponent
-                value={comment.content}
-                onChange={this.handleChangeInput}
-                placeholder="Add comment"
-                rows={5}
-                autosize={{ minRows: 5, maxRows: 20 }}
-                isTextArea
-              />
-            </Col>
-            <Col span={12} style={{ maxHeight: 430, overflowY: "auto" }}>
-              <MarkdownComment comment={comment} />
-            </Col>
-          </Row>
-        </Modal>
+          onChange={this.handleChangeInput}
+          onOk={onOk}
+          label="Comment"
+        />
       ))
       .getOrElse(null);
   }
@@ -361,15 +359,13 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
             placeholder="Add comment"
             style={{ width: "60%" }}
           />
-          {"Disable until the backend supports multiline comments" && false ? (
-            <ButtonComponent
-              onClick={() => this.setMarkdownModalVisibility(true)}
-              disabled={activeNodeMaybe.isNothing}
-              type={isMultilineComment ? "primary" : "button"}
-            >
-              <Icon type="edit" />Markdown
-            </ButtonComponent>
-          ) : null}
+          <ButtonComponent
+            onClick={() => this.setMarkdownModalVisibility(true)}
+            disabled={activeNodeMaybe.isNothing}
+            type={isMultilineComment ? "primary" : "button"}
+          >
+            <Icon type="edit" />Markdown
+          </ButtonComponent>
           <ButtonComponent onClick={this.nextComment}>
             <i className="fa fa-arrow-right" />
           </ButtonComponent>

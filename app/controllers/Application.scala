@@ -5,7 +5,7 @@ import javax.inject.Inject
 import com.typesafe.config.ConfigRenderOptions
 import oxalis.security.WebknossosSilhouette.UserAwareAction
 import models.analytics.{AnalyticsEntry, AnalyticsSQL}
-import models.binary.DataStoreHandlingStrategy
+import models.binary.DataStoreHandler
 import play.api.i18n.MessagesApi
 import play.api.Play.current
 import play.api.libs.json.Json
@@ -18,7 +18,7 @@ class Application @Inject()(val messagesApi: MessagesApi) extends Controller {
 
   def buildInfo = UserAwareAction.async { implicit request =>
     val token = request.identity.flatMap { user =>
-      if (user.isSuperUser) Some(DataStoreHandlingStrategy.webKnossosToken) else None
+      if (user.isSuperUser) Some(DataStoreHandler.webKnossosToken) else None
     }
     for {
       schemaVersion <- ReleaseInformationDAO.getSchemaVersion.futureBox

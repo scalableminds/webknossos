@@ -8,7 +8,7 @@ import { connect } from "react-redux";
 import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
-import Utils, { maybe, enforce } from "libs/utils";
+import * as Utils from "libs/utils";
 import Toast from "libs/toast";
 import { document } from "libs/window";
 import { InputMouse, InputKeyboard, InputKeyboardNoLoop } from "libs/input";
@@ -300,6 +300,9 @@ class PlaneController extends React.PureComponent<Props> {
         "shift + f": (timeFactor, first) => this.moveZ(getMoveValue(timeFactor) * 5, first),
         "shift + d": (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor) * 5, first),
 
+        "shift + i": () => this.changeBrushSizeIfBrushIsActive(-5),
+        "shift + o": () => this.changeBrushSizeIfBrushIsActive(5),
+
         "shift + space": (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor), first),
         "ctrl + space": (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor), first),
         space: (timeFactor, first) => this.moveZ(getMoveValue(timeFactor), first),
@@ -541,6 +544,16 @@ class PlaneController extends React.PureComponent<Props> {
     Toast.success(moveValueMessage, { key: "CHANGED_MOVE_VALUE" });
   }
 
+  changeBrushSizeIfBrushIsActive(changeValue: number) {
+    const isBrushActive = Utils.maybe(getVolumeTool)(this.props.tracing.volume)
+      .map(tool => tool === VolumeToolEnum.BRUSH)
+      .getOrElse(false);
+    if (isBrushActive) {
+      const currentSize = Store.getState().temporaryConfiguration.brushSize;
+      Store.dispatch(setBrushSizeAction(currentSize + changeValue));
+    }
+  }
+
   scrollPlanes(delta: number, type: ?ModifierKeys): void {
     switch (type) {
       case null: {
@@ -552,7 +565,7 @@ class PlaneController extends React.PureComponent<Props> {
         break;
       }
       case "shift": {
-        const isBrushActive = maybe(getVolumeTool)(this.props.tracing.volume)
+        const isBrushActive = Utils.maybe(getVolumeTool)(this.props.tracing.volume)
           .map(tool => tool === VolumeToolEnum.BRUSH)
           .getOrElse(false);
         if (isBrushActive) {
@@ -591,7 +604,7 @@ class PlaneController extends React.PureComponent<Props> {
     return (...args) => {
       if (skeletonHandler && volumeHandler) {
         // Deal with both modes
-        const tool = enforce(getVolumeTool)(this.props.tracing.volume);
+        const tool = Utils.enforce(getVolumeTool)(this.props.tracing.volume);
         if (tool === VolumeToolEnum.MOVE) {
           skeletonHandler(...args);
         } else {

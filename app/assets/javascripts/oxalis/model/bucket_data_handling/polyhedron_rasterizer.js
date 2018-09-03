@@ -3,7 +3,7 @@
  * @flow
  */
 
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import { M4x4 } from "libs/mjs";
 import type { Matrix4x4 } from "libs/mjs";
 

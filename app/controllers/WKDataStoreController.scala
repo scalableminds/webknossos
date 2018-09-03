@@ -28,10 +28,10 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
 
   def validateDataSetUpload(name: String) = DataStoreAction(name).async(parse.json) { implicit request =>
     for {
-      uploadInfo <- request.body.validate[DataSourceId].asOpt.toFox ?~> Messages("dataStore.upload.invalid")
-      _ <- bool2Fox(DataSetService.isProperDataSetName(uploadInfo.name)) ?~> Messages("dataSet.name.invalid")
-      _ <- DataSetService.assertNewDataSetName(uploadInfo.name)(GlobalAccessContext) ?~> Messages("dataSet.name.alreadyTaken")
-      _ <- bool2Fox(uploadInfo.team.nonEmpty) ?~> Messages("team.invalid")
+      uploadInfo <- request.body.validate[DataSourceId].asOpt.toFox ?~> "dataStore.upload.invalid"
+      _ <- bool2Fox(DataSetService.isProperDataSetName(uploadInfo.name)) ?~> "dataSet.name.invalid"
+      _ <- DataSetService.assertNewDataSetName(uploadInfo.name)(GlobalAccessContext) ?~> "dataSet.name.alreadyTaken"
+      _ <- bool2Fox(uploadInfo.team.nonEmpty) ?~> "team.invalid"
     } yield Ok
   }
 
@@ -42,7 +42,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
         DataStoreDAO.updateUrlByName(name, status.url)(GlobalAccessContext).map(_ => Ok)
       case e: JsError =>
         logger.error("Data store '$name' sent invalid update. Error: " + e)
-        Future.successful(JsonBadRequest(JsError.toFlatJson(e)))
+        Future.successful(JsonBadRequest(JsError.toJson(e)))
     }
   }
 
@@ -58,7 +58,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
 
       case e: JsError =>
         logger.warn("Data store reported invalid json for data sources.")
-        Fox.successful(JsonBadRequest(JsError.toFlatJson(e)))
+        Fox.successful(JsonBadRequest(JsError.toJson(e)))
     }
   }
 
@@ -72,7 +72,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
         }
       case e: JsError =>
         logger.warn("Data store reported invalid json for data source.")
-        Fox.successful(JsonBadRequest(JsError.toFlatJson(e)))
+        Fox.successful(JsonBadRequest(JsError.toJson(e)))
     }
   }
 

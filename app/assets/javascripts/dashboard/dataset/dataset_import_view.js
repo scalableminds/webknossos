@@ -9,6 +9,7 @@ import {
   updateDataset,
   getDatasetDefaultConfiguration,
   updateDatasetDefaultConfiguration,
+  readDatasetDatasource,
   getDatasetDatasource,
   updateDatasetDatasource,
   updateDatasetTeams,
@@ -21,6 +22,7 @@ import type {
   APIDataSourceWithMessagesType,
 } from "admin/api_flow_types";
 import { handleGenericError } from "libs/error_handling";
+import { datasetCache } from "dashboard/dashboard_view";
 import { Hideable, confirmAsync, hasFormError } from "./helper_components";
 import SimpleAdvancedDataForm from "./simple_advanced_data_form";
 import DefaultConfigComponent from "./default_config_component";
@@ -80,7 +82,13 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     try {
       this.setState({ isLoading: true });
       const dataset = await getDataset(this.props.datasetName);
-      const { dataSource, messages: dataSourceMessages } = await getDatasetDatasource(dataset);
+      let dataSource;
+      let dataSourceMessages = [];
+      if (dataset.isForeign) {
+        dataSource = await readDatasetDatasource(dataset);
+      } else {
+        ({ dataSource, messages: dataSourceMessages } = await getDatasetDatasource(dataset));
+      }
       if (dataSource == null) {
         throw new Error("No datasource received from server.");
       }
@@ -173,7 +181,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     }
   }
 
-  async doesUserWantToChangeAllowedTeams(teamIds: Array<*>): Promise<boolean> {
+  async doesUserWantToChangeAllowedTeams(teamIds: Array<string>): Promise<boolean> {
     if (teamIds.length > 0) {
       return false;
     }
@@ -218,12 +226,15 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       }
 
       const dataSource = JSON.parse(formValues.dataSourceJson);
-      await updateDatasetDatasource(this.props.datasetName, dataset.dataStore.url, dataSource);
+      if (this.state.dataset != null && !this.state.dataset.isForeign) {
+        await updateDatasetDatasource(this.props.datasetName, dataset.dataStore.url, dataSource);
+      }
 
       await updateDatasetTeams(dataset.name, teamIds);
 
       const verb = this.props.isEditingMode ? "updated" : "imported";
       Toast.success(`Successfully ${verb} ${this.props.datasetName}`);
+      datasetCache.clear();
       this.props.onComplete();
     });
   };
@@ -369,6 +380,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                   <Hideable hidden={this.state.activeTabKey !== "data"}>
                     <SimpleAdvancedDataForm
                       key="SimpleAdvancedDataForm"
+                      isForeignDataset={this.state.dataset != null && this.state.dataset.isForeign}
                       form={form}
                       activeDataSourceEditMode={this.state.activeDataSourceEditMode}
                       onChange={activeEditMode => {

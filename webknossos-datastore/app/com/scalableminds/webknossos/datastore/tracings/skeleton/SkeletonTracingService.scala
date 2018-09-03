@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.webknossos.datastore.tracings.skeleton
 
 import com.google.inject.Inject
@@ -111,7 +108,9 @@ class SkeletonTracingService @Inject()(
 
   private def mergeTwo(tracingA: SkeletonTracing, tracingB: SkeletonTracing) = {
     val nodeMapping = TreeUtils.calculateNodeMapping(tracingA.trees, tracingB.trees)
-    val mergedTrees = TreeUtils.mergeTrees(tracingA.trees, tracingB.trees, nodeMapping)
+    val groupMapping = TreeUtils.calculateGroupMapping(tracingA.treeGroups, tracingB.treeGroups)
+    val mergedTrees = TreeUtils.mergeTrees(tracingA.trees, tracingB.trees, nodeMapping, groupMapping)
+    val mergedGroups = TreeUtils.mergeGroups(tracingA.treeGroups, tracingB.treeGroups, groupMapping)
     val mergedBoundingBox = for {
       boundinBoxA <- tracingA.boundingBox
       boundinBoxB <- tracingB.boundingBox
@@ -119,7 +118,7 @@ class SkeletonTracingService @Inject()(
       BoundingBox.combine(List[BoundingBox](boundinBoxA, boundinBoxB))
     }
 
-    tracingA.copy(trees = mergedTrees, boundingBox = mergedBoundingBox, version = 0, userBoundingBox = None)
+    tracingA.copy(trees = mergedTrees, treeGroups = mergedGroups, boundingBox = mergedBoundingBox, version = 0, userBoundingBox = None)
   }
 
   def merge(tracings: Seq[SkeletonTracing]): SkeletonTracing = tracings.reduceLeft(mergeTwo)

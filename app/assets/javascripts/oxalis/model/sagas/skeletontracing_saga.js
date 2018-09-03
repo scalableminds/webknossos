@@ -4,7 +4,7 @@
  */
 import _ from "lodash";
 import { Modal } from "antd";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import Toast from "libs/toast";
 import messages from "messages";
 import Store from "oxalis/store";
@@ -16,8 +16,8 @@ import {
   _takeEvery,
   select,
   race,
-  type Saga,
 } from "oxalis/model/sagas/effect-generators";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
 import {
   deleteBranchPointAction,
   setTreeNameAction,
@@ -62,7 +62,7 @@ import EdgeCollection, { diffEdgeCollections } from "oxalis/model/edge_collectio
 function* centerActiveNode(action: ActionType): Saga<void> {
   getActiveNode(yield* select((state: OxalisState) => enforceSkeletonTracing(state.tracing))).map(
     activeNode => {
-      if (action.suppressAnimation) {
+      if (action.suppressAnimation === true) {
         Store.dispatch(setPositionAction(activeNode.position));
         Store.dispatch(setRotationAction(activeNode.rotation));
       } else {
@@ -107,6 +107,18 @@ function* watchBranchPointDeletion(): Saga<void> {
   }
 }
 
+function* watchFailedNodeCreations(): Saga<void> {
+  while (true) {
+    yield* take("CREATE_NODE");
+    const activeGroupId = yield* select(
+      state => enforceSkeletonTracing(state.tracing).activeGroupId,
+    );
+    if (activeGroupId != null) {
+      Toast.warning(messages["tracing.cant_create_node_due_to_active_group"]);
+    }
+  }
+}
+
 export function* watchTreeNames(): Saga<void> {
   const state = yield* select(_state => _state);
 
@@ -135,6 +147,7 @@ export function* watchSkeletonTracingAsync(): Saga<void> {
     ],
     centerActiveNode,
   );
+  yield* fork(watchFailedNodeCreations);
   yield* fork(watchBranchPointDeletion);
 }
 

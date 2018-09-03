@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(19);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(24);
 COMMIT TRANSACTION;
 
 CREATE TABLE webknossos.analytics(
@@ -114,8 +114,8 @@ CREATE TABLE webknossos.dataStores(
   name VARCHAR(256) PRIMARY KEY NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\.]+$'),
   url VARCHAR(512) UNIQUE NOT NULL CHECK (url ~* '^https?://[a-z0-9\.]+.*$'),
   key VARCHAR(1024) NOT NULL,
-  typ webknossos.DATASTORE_TYPE NOT NULL DEFAULT 'webknossos-store',
-  isDeleted BOOLEAN NOT NULL DEFAULT false
+  isDeleted BOOLEAN NOT NULL DEFAULT false,
+  isForeign BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TABLE webknossos.projects(
@@ -174,6 +174,10 @@ CREATE TABLE webknossos.tasks(
   CONSTRAINT openInstancesLargeEnoughCheck CHECK (openInstances >= 0)
 );
 
+CREATE TABLE webknossos.experienceDomains(
+  domain VARCHAR(256) PRIMARY KEY
+);
+
 CREATE TABLE webknossos.teams(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   _organization CHAR(24) NOT NULL,
@@ -217,7 +221,6 @@ CREATE TABLE webknossos.users(
   lastName VARCHAR(256) NOT NULL, -- CHECK (lastName ~* '^[A-Za-z0-9\-_ ]+$'),
   lastActivity TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   userConfiguration JSONB NOT NULL,
-  md5hash VARCHAR(32) NOT NULL DEFAULT '',
   loginInfo_providerID webknossos.USER_LOGININFO_PROVDERIDS NOT NULL DEFAULT 'credentials',
   loginInfo_providerKey VARCHAR(512) NOT NULL,
   passwordInfo_hasher webknossos.USER_PASSWORDINFO_HASHERS NOT NULL DEFAULT 'SCrypt',
@@ -417,3 +420,27 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER onDeleteAnnotationTrigger
 AFTER DELETE ON webknossos.annotations
 FOR EACH ROW EXECUTE PROCEDURE webknossos.onDeleteAnnotation();
+
+
+CREATE FUNCTION webknossos.onInsertTask() RETURNS trigger AS $$
+  BEGIN
+    INSERT INTO webknossos.experienceDomains(domain) values(NEW.neededExperience_domain) ON CONFLICT DO NOTHING;
+    RETURN NULL;
+  END;
+$$ LANGUAGE plpgsql;
+
+CREATE FUNCTION webknossos.onInsertUserExperience() RETURNS trigger AS $$
+  BEGIN
+    INSERT INTO webknossos.experienceDomains(domain) values(NEW.domain) ON CONFLICT DO NOTHING;
+    RETURN NULL;
+  END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER onDeleteAnnotationTrigger
+AFTER INSERT ON webknossos.tasks
+FOR EACH ROW EXECUTE PROCEDURE webknossos.onInsertTask();
+
+CREATE TRIGGER onInsertUserExperienceTrigger
+AFTER INSERT ON webknossos.user_experiences
+FOR EACH ROW EXECUTE PROCEDURE webknossos.onInsertUserExperience();

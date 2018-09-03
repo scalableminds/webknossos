@@ -6,7 +6,7 @@ import messages from "messages";
 import Store from "oxalis/throttled_store";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { loginUser } from "admin/admin_rest_api";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import type { RouterHistory } from "react-router-dom";
 
 const FormItem = Form.Item;

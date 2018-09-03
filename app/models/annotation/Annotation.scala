@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2011-2018 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package models.annotation
 
 import com.scalableminds.util.mvc.Formatter
@@ -101,7 +98,8 @@ case class Annotation(
       userJson <- user.compactWrites
       settings <- findSettings
       annotationRestrictions <- AnnotationRestrictions.writeAsJson(composeRestrictions(restrictions, readOnly), requestingUser)
-      dataStoreInfo <- dataSet.dataStoreInfo
+      dataStore <- dataSet.dataStore
+      dataStoreJs <- dataStore.publicWrites
     } yield {
       Json.obj(
         "modified" -> modified,
@@ -116,12 +114,35 @@ case class Annotation(
         "formattedHash" -> Formatter.formatHash(id),
         "tracing" -> Json.obj("skeleton" -> skeletonTracingId, "volume" -> volumeTracingId),
         "dataSetName" -> dataSet.name,
-        "dataStore" -> dataStoreInfo,
+        "dataStore" -> dataStoreJs,
         "isPublic" -> isPublic,
         "settings" -> settings,
         "tracingTime" -> tracingTime,
         "tags" -> (tags ++ Set(dataSet.name, tracingType.toString)),
         "user" -> userJson
+      )
+    }
+  }
+
+  //for Explorative Annotations list
+  def compactWrites(implicit ctx: DBAccessContext): Fox[JsObject] = {
+    for {
+      dataSet <- dataSet
+    } yield {
+      Json.obj(
+        "modified" -> modified,
+        "state" -> state,
+        "id" -> id,
+        "name" -> name,
+        "description" -> description,
+        "typ" -> typ,
+        "stats" -> statistics,
+        "formattedHash" -> Formatter.formatHash(id),
+        "tracing" -> Json.obj("skeleton" -> skeletonTracingId, "volume" -> volumeTracingId),
+        "dataSetName" -> dataSet.name,
+        "isPublic" -> isPublic,
+        "tracingTime" -> tracingTime,
+        "tags" -> (tags ++ Set(dataSet.name, tracingType.toString))
       )
     }
   }

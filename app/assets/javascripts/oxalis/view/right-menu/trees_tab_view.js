@@ -3,6 +3,7 @@
  * @flow
  */
 
+import api from "oxalis/api/internal_api";
 import * as React from "react";
 import { connect } from "react-redux";
 import { Button, Dropdown, Input, Menu, Icon, Spin, Modal, Tooltip } from "antd";
@@ -14,6 +15,7 @@ import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_action
 import {
   enforceSkeletonTracing,
   getActiveTree,
+  getActiveGroup,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   setTreeNameAction,
@@ -112,7 +114,12 @@ class TreesTabView extends React.PureComponent<Props, State> {
   };
 
   handleChangeTreeName = evt => {
-    this.props.onChangeTreeName(evt.target.value);
+    const { activeGroupId } = this.props.skeletonTracing;
+    if (activeGroupId != null) {
+      api.tracing.renameGroup(activeGroupId, evt.target.value);
+    } else {
+      this.props.onChangeTreeName(evt.target.value);
+    }
   };
 
   deleteTree = () => {
@@ -157,6 +164,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
         trees={this.props.skeletonTracing.trees}
         treeGroups={this.props.skeletonTracing.treeGroups}
         activeTreeId={this.props.skeletonTracing.activeTreeId}
+        activeGroupId={this.props.skeletonTracing.activeGroupId}
         sortBy={orderAttribute}
       />
     );
@@ -210,6 +218,9 @@ class TreesTabView extends React.PureComponent<Props, State> {
   render() {
     const activeTreeName = getActiveTree(this.props.skeletonTracing)
       .map(activeTree => activeTree.name)
+      .getOrElse("");
+    const activeGroupName = getActiveGroup(this.props.skeletonTracing)
+      .map(activeGroup => activeGroup.name)
       .getOrElse("");
 
     // Avoid that the title switches to the other title during the fadeout of the Modal
@@ -273,7 +284,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
           </ButtonComponent>
           <InputComponent
             onChange={this.handleChangeTreeName}
-            value={activeTreeName}
+            value={activeTreeName || activeGroupName}
             style={{ width: "60%" }}
           />
           <ButtonComponent onClick={this.props.onSelectNextTreeForward}>

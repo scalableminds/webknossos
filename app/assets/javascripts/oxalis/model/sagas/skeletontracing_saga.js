@@ -107,6 +107,18 @@ function* watchBranchPointDeletion(): Saga<void> {
   }
 }
 
+function* watchFailedNodeCreations(): Saga<void> {
+  while (true) {
+    yield* take("CREATE_NODE");
+    const activeGroupId = yield* select(
+      state => enforceSkeletonTracing(state.tracing).activeGroupId,
+    );
+    if (activeGroupId != null) {
+      Toast.warning(messages["tracing.cant_create_node_due_to_active_group"]);
+    }
+  }
+}
+
 export function* watchTreeNames(): Saga<void> {
   const state = yield* select(_state => _state);
 
@@ -135,6 +147,7 @@ export function* watchSkeletonTracingAsync(): Saga<void> {
     ],
     centerActiveNode,
   );
+  yield* fork(watchFailedNodeCreations);
   yield* fork(watchBranchPointDeletion);
 }
 

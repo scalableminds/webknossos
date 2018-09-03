@@ -72,6 +72,7 @@ const initialState = {
       },
       activeTreeId: 1,
       activeNodeId: null,
+      activeGroupId: null,
       cachedMaxNodeId: 0,
     },
   },

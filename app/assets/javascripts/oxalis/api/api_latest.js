@@ -24,7 +24,9 @@ import {
   setTreeColorIndexAction,
   setTreeVisibilityAction,
   setTreeGroupAction,
+  setTreeGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import { callDeep } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import {
   findTreeByNodeId,
   getNodeAndTree,
@@ -300,6 +302,25 @@ class TracingApi {
     }
 
     Store.dispatch(setTreeGroupAction(groupId, treeId));
+  }
+
+  /**
+   * Renames the group referenced by the provided id.
+   *
+   * @example
+   * api.tracing.renameGroup(
+   *   3,
+   *   "New group name",
+   * );
+   */
+  renameGroup(groupId: number, newName: string) {
+    const { tracing } = Store.getState();
+    const skeletonTracing = assertSkeleton(tracing);
+    const newTreeGroups = _.cloneDeep(skeletonTracing.treeGroups);
+    callDeep(newTreeGroups, groupId, item => {
+      item.name = newName;
+    });
+    Store.dispatch(setTreeGroupsAction(newTreeGroups));
   }
 
   /**
@@ -874,6 +895,7 @@ class UtilsApi {
    *   - CREATE_TREE
    *   - DELETE_TREE
    *   - SET_ACTIVE_TREE
+   *   - SET_ACTIVE_GROUP
    *   - SET_TREE_NAME
    *   - MERGE_TREES
    *   - SELECT_NEXT_TREE

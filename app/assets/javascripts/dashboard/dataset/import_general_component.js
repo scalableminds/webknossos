@@ -1,7 +1,7 @@
 // @flow
 
 import * as React from "react";
-import { Button, Input, Checkbox, Col, Row, Tooltip } from "antd";
+import { Button, Input, Checkbox, Col, Row, Tooltip, DatePicker } from "antd";
 import Clipboard from "clipboard-js";
 import Toast from "libs/toast";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
@@ -120,6 +120,14 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
             </FormItemWithInfo>
           </Col>
         </Row>
+        <FormItemWithInfo
+          label="Publication Date"
+          info="This date is the publication date of the dataset. It is used to sort the datasets in the dataset gallery."
+        >
+          {getFieldDecorator("dataset.sortingKey")(
+            <DatePicker placeholder="Select a Publication Date" />,
+          )}
+        </FormItemWithInfo>
         {allowedTeamsComponent}
         <FormItemWithInfo
           label="Visibility"

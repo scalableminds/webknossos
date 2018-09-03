@@ -10,7 +10,7 @@ import net.liftweb.common.{Failure, Full}
 import oxalis.cleanup.CleanUpService
 import oxalis.security.WebknossosSilhouette
 import play.api.inject.ApplicationLifecycle
-import utils.{SQLClient, WkConfInjected}
+import utils.{SQLClient, WkConf}
 
 import scala.concurrent.duration._
 import scala.concurrent.Future
@@ -19,7 +19,7 @@ import scala.sys.process._
 
 
 class Startup @Inject() (actorSystem: ActorSystem,
-                         conf: WkConfInjected,
+                         conf: WkConf,
                          initialDataService: InitialDataService,
                          cleanUpService: CleanUpService,
                          annotationDAO: AnnotationDAO,

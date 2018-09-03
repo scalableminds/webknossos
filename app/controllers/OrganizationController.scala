@@ -12,6 +12,7 @@ import utils.WkConf
 
 class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
                                        organizationService: OrganizationService,
+                                       conf: WkConf,
                                        val messagesApi: MessagesApi
                                       ) extends Controller with FoxImplicits {
 
@@ -25,6 +26,6 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
   }
 
   def getOperatorData = Action { implicit request =>
-      Ok(Json.toJson(WkConf.operatorData))
+      Ok(Json.toJson(conf.operatorData))
   }
 }

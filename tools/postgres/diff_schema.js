@@ -19,7 +19,7 @@ function dump(parameter) {
 	} else {
 		const tempDbName = generateRandomName()
 		const postgresDirname = path.dirname(ORIGINAL_POSTGRES_URL)
-		POSTGRES_URL= postgresDirname + '/' + tempDbName;
+		POSTGRES_URL= `${postgresDirname}/${tempDbName}`;
 		const dbName = execSync(scriptdir+'/db_name.sh', {env: {'POSTGRES_URL': POSTGRES_URL}}).toString().trim() // "trim" to remove the line break
 		if(dbName !== tempDbName) {
 			console.log("Wrong dbName")	
@@ -29,10 +29,7 @@ function dump(parameter) {
 		const dbHost = execSync(scriptdir+'/db_host.sh', {env: {'POSTGRES_URL': POSTGRES_URL}}).toString().trim()
 		execSync(`psql -U postgres -h ${dbHost} -c "CREATE DATABASE ${dbName};"`, {env: {'PGPASSWORD': 'postgres'}})
 		var fileNames = glob.sync(parameter)
-		let concatenateFileNames = ""
-		fileNames.forEach(function(fileName) {
-  			concatenateFileNames += " -f " + fileName;
-		});
+		const concatenateFileNames = fileNames.map(name => "-f " + name).join(' ')
 		execSync(`psql -U postgres -h ${dbHost} --dbname="${dbName}" -v ON_ERROR_STOP=ON -q ${concatenateFileNames}`, {env: {'PGPASSWORD': 'postgres'}})
 		cleanUp = function(){
 			console.log(`CLEANUP: DROP DATABASE ${dbName}`)

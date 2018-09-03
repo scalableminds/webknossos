@@ -1,46 +1,34 @@
 .experience-change-modal {
-	.user-experience-table {
-		margin-bottom: 24px;
-		.ant-table-header {
-			padding-bottom: 0px;
-		}
-		.disabled {
-			color: rgba(0, 0, 0, 0.25);
-		}
-		.clickable-icon {
-			padding: 3px;
-			border-radius: 5px;
-		}
-		.active-icon {
-			background-color: rgba(196, 195, 194, 0.7);
-		}
-		.hoverable-icon {
-			&:hover {
-				cursor: pointer;
-				background-color: rgba(196, 195, 194, 1);
-			}
-		}
-		.disabled-icon {
-			background-color: rgba(196, 195, 194, 0.25);
-		}
-		.disabled-clickable-icon:hover {
-			cursor: not-allowed;
-		}
-	}
-	.experience-input {
-		width: 50%;
-	}
-	.invisible-icon {
-		color: rgba(0, 0, 0, 0);
-	}
-	.clear-input-icon {
-		margin-right: 16px;
-		margin-left: 8px;
-	}
-	.confirm-button {
-		float: left;
-	}
-	.add-button {
-		margin-left: 8px;
-	}
+  .user-experience-table {
+    margin-bottom: 24px;
+    .ant-table-header {
+      overflow-y: auto;
+    }
+    .ant-table-body {
+      overflow-y: auto !important;
+    }
+    .disabled {
+      color: rgba(0, 0, 0, 0.25);
+    }
+  }
+  .clickable-icon:hover {
+    cursor: pointer;
+    color: rgba(64, 169, 255, 1);
+  }
+  .disabled-clickable-icon {
+    color: rgba(0, 0, 0, 0.25);
+    &:hover {
+      cursor: not-allowed;
+    }
+  }
+  .experience-input {
+    width: 50%;
+  }
+  .clear-input-icon {
+    margin-left: 8px;
+  }
+  .add-button {
+    margin-left: 8px;
+    float: right;
+  }
 }

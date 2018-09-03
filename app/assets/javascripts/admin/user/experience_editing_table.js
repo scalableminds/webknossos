@@ -32,20 +32,11 @@ const ExperienceEditingTable = ({
   setRemoveOfEntryTo,
   removeEntryFromTable,
 }: Props) => {
-  let size = "default";
-  let scroll = {};
-  if (isMultipleUsersEditing && tableData.length > 3) {
-    size = "small";
-    scroll = { y: 150 };
-  }
-  if (!isMultipleUsersEditing && tableData.length > 5) {
-    size = "small";
-    scroll = { y: 325 };
-  }
+  const scroll = { y: isMultipleUsersEditing ? 150 : 325 };
   return (
     <Table
       title={() => title}
-      size={size}
+      size="small"
       dataSource={tableData}
       rowKey="domain"
       pagination={false}
@@ -55,7 +46,6 @@ const ExperienceEditingTable = ({
       <Column
         title="Experience Domain"
         key="domain"
-        width={isMultipleUsersEditing ? "30%" : "35%"}
         render={record =>
           record.removed ? <div className="disabled">{record.domain}</div> : record.domain
         }
@@ -63,7 +53,7 @@ const ExperienceEditingTable = ({
       <Column
         title="Experience Value"
         key="value"
-        width={isMultipleUsersEditing ? "40%" : "45%"}
+        width="20%"
         render={record => {
           const index = tableData.findIndex(entry => entry.domain === record.domain);
           return (
@@ -76,24 +66,13 @@ const ExperienceEditingTable = ({
               {!isMultipleUsersEditing && recordModifiedAndExistedBefore(record) ? (
                 <Tooltip placement="top" title="Revert Changes">
                   <Icon
-                    style={
-                      record.removed
-                        ? {
-                            marginLeft: 15,
-                            color: "rgba(0, 0, 0, 0.25)",
-                          }
-                        : { marginLeft: 15 }
-                    }
-                    className={
-                      record.removed ? "disabled-clickable-icon" : "hoverable-icon clickable-icon"
-                    }
+                    style={{ marginLeft: 15 }}
+                    className={record.removed ? "disabled-clickable-icon" : "clickable-icon"}
                     type="rollback"
                     onClick={record.removed ? null : () => revertChangesOfEntry(index)}
                   />
                 </Tooltip>
-              ) : (
-                <Icon style={{ marginLeft: 21 }} className="invisible-icon" type="rollback" />
-              )}
+              ) : null}
             </span>
           );
         }}
@@ -101,18 +80,26 @@ const ExperienceEditingTable = ({
       <Column
         title="Delete Entry"
         key="removed"
-        width="20%"
+        width="10%"
         render={record => {
           const index = tableData.findIndex(entry => entry.domain === record.domain);
           return (
             <span>
               {record.removed ? (
                 <Tooltip placement="top" title="Undo">
-                  <Icon type="rollback" onClick={() => setRemoveOfEntryTo(index, false)} />
+                  <Icon
+                    type="rollback"
+                    className="clickable-icon"
+                    onClick={() => setRemoveOfEntryTo(index, false)}
+                  />
                 </Tooltip>
               ) : (
                 <Tooltip placement="top" title="Delete this Domain">
-                  <Icon type="delete" onClick={() => setRemoveOfEntryTo(index, true)} />
+                  <Icon
+                    type="delete"
+                    className="clickable-icon"
+                    onClick={() => setRemoveOfEntryTo(index, true)}
+                  />
                 </Tooltip>
               )}
             </span>
@@ -126,7 +113,11 @@ const ExperienceEditingTable = ({
             const index = tableData.findIndex(entry => entry.domain === record.domain);
             return (
               <Tooltip placement="top" title="Remove Entry">
-                <Icon type="rollback" onClick={() => removeEntryFromTable(index)} />
+                <Icon
+                  type="close"
+                  className="clickable-icon"
+                  onClick={() => removeEntryFromTable(index)}
+                />
               </Tooltip>
             );
           }}

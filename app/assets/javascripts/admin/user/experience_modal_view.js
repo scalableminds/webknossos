@@ -305,11 +305,11 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
       return (
         <Table
           title={() => "Shared Experience Domains"}
-          size={sharedExperiencesEntries.length > 3 ? "small" : "default"}
+          size="small"
           dataSource={sharedExperiencesEntries}
           rowKey="domain"
           pagination={false}
-          scroll={sharedExperiencesEntries.length > 3 ? { y: 150 } : {}}
+          scroll={150}
           className="user-experience-table"
         >
           <Column title="Experience Domain" key="domain" dataIndex="domain" width="50%" />
@@ -395,20 +395,11 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
             <Tooltip placement="top" title="Clear Input">
               <Icon
                 type="close-circle"
-                className="clear-input-icon hoverable-icon clickable-icon"
+                className="clear-input-icon clickable-icon"
                 onClick={() => this.setState({ enteredExperiences: [] })}
               />
             </Tooltip>
-          ) : (
-            <Icon type="close-circle" className="clear-input-icon invisible-icon" />
-          )}
-          <Button
-            className="add-button"
-            disabled={!this.state.enteredExperiences || this.state.enteredExperiences.length <= 0}
-            onClick={() => this.addEnteredExperiences(false)}
-          >
-            {this.state.enteredExperiences.length <= 1 ? "Add Experience" : "Add Experiences"}
-          </Button>
+          ) : null}
           {mutlipleUsers ? (
             <Button
               className="add-button"
@@ -420,6 +411,13 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
                 : "Remove Experiences"}
             </Button>
           ) : null}
+          <Button
+            className="add-button"
+            disabled={!this.state.enteredExperiences || this.state.enteredExperiences.length <= 0}
+            onClick={() => this.addEnteredExperiences(false)}
+          >
+            {this.state.enteredExperiences.length <= 1 ? "Add Experience" : "Add Experiences"}
+          </Button>
         </span>
       </Modal>
     );

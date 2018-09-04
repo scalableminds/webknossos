@@ -314,42 +314,45 @@ function splitTreeByNodes(
   // For each new tree root create a new tree
   const cutTrees = _.compact(
     // Sort the treeRootIds, so the tree connected to the node with the lowest id will remain the original tree (treeId, name, timestamp)
-    newTreeRootIds.sort().map((rootNodeId, index) => {
-      // The rootNodeId could have already been traversed from another rootNodeId
-      // as there are cyclic trees
-      // In this case we do not need to create a new tree for this rootNodeId
-      if (visitedNodes[rootNodeId] === true) {
-        return null;
-      }
+    newTreeRootIds
+      .slice()
+      .sort((a, b) => a - b)
+      .map((rootNodeId, index) => {
+        // The rootNodeId could have already been traversed from another rootNodeId
+        // as there are cyclic trees
+        // In this case we do not need to create a new tree for this rootNodeId
+        if (visitedNodes[rootNodeId] === true) {
+          return null;
+        }
 
-      let newTree;
-      if (index === 0) {
-        // Reuse the properties of the original tree for the first tree
-        newTree = {
-          branchPoints: [],
-          color: activeTree.color,
-          comments: [],
-          edges: new EdgeCollection(),
-          name: activeTree.name,
-          nodes: new DiffableMap(),
-          timestamp: activeTree.timestamp,
-          treeId: activeTree.treeId,
-          isVisible: true,
-          groupId: activeTree.groupId,
-        };
-      } else {
-        const immutableNewTree = createTree(intermediateState, timestamp).get();
-        // Cast to mutable tree type since we want to mutably do the split
-        // in this reducer for performance reasons.
-        newTree = ((immutableNewTree: any): TreeType);
-        intermediateState = update(intermediateState, {
-          tracing: { skeleton: { trees: { [newTree.treeId]: { $set: newTree } } } },
-        });
-      }
+        let newTree;
+        if (index === 0) {
+          // Reuse the properties of the original tree for the first tree
+          newTree = {
+            branchPoints: [],
+            color: activeTree.color,
+            comments: [],
+            edges: new EdgeCollection(),
+            name: activeTree.name,
+            nodes: new DiffableMap(),
+            timestamp: activeTree.timestamp,
+            treeId: activeTree.treeId,
+            isVisible: true,
+            groupId: activeTree.groupId,
+          };
+        } else {
+          const immutableNewTree = createTree(intermediateState, timestamp).get();
+          // Cast to mutable tree type since we want to mutably do the split
+          // in this reducer for performance reasons.
+          newTree = ((immutableNewTree: any): TreeType);
+          intermediateState = update(intermediateState, {
+            tracing: { skeleton: { trees: { [newTree.treeId]: { $set: newTree } } } },
+          });
+        }
 
-      traverseTree(rootNodeId, newTree);
-      return newTree;
-    }),
+        traverseTree(rootNodeId, newTree);
+        return newTree;
+      }),
   );
 
   // Write branchpoints into correct trees

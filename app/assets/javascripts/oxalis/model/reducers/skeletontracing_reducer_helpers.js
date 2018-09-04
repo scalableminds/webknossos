@@ -17,6 +17,7 @@ import {
   getSkeletonTracing,
   getActiveNodeFromTree,
   getActiveTree,
+  getActiveGroup,
   findTreeByNodeId,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3 } from "oxalis/constants";
@@ -434,7 +435,11 @@ export function createTree(state: OxalisState, timestamp: number): Maybe<TreeTyp
       const newTreeId = _.isNumber(maxTreeId) ? maxTreeId + 1 : Constants.MIN_TREE_ID;
 
       const name = generateTreeName(state, timestamp, newTreeId);
-      const groupId = Utils.toNullable(getActiveTree(skeletonTracing).map(tree => tree.groupId));
+      const groupIdOfActiveTreeMaybe = getActiveTree(skeletonTracing).map(tree => tree.groupId);
+      const groupIdOfActiveGroupMaybe = getActiveGroup(skeletonTracing).map(group => group.groupId);
+      const groupId = Utils.toNullable(
+        groupIdOfActiveTreeMaybe.orElse(() => groupIdOfActiveGroupMaybe),
+      );
 
       // Create the new tree
       const tree: TreeType = {
@@ -707,6 +712,7 @@ export function toggleTreeGroupReducer(
   state: OxalisState,
   skeletonTracing: SkeletonTracingType,
   groupId: number,
+  targetVisibility?: boolean,
 ): OxalisState {
   let toggledGroup;
   forEachGroups(skeletonTracing.treeGroups, group => {
@@ -718,9 +724,12 @@ export function toggleTreeGroupReducer(
   const affectedGroupIds = new Set(mapGroups([toggledGroup], group => group.groupId));
 
   // Let's make all trees visible if there is one invisible tree in one of the affected groups
-  const shouldBecomeVisible = _.values(skeletonTracing.trees).some(
-    tree => affectedGroupIds.has(tree.groupId) && !tree.isVisible,
-  );
+  const shouldBecomeVisible =
+    targetVisibility != null
+      ? targetVisibility
+      : _.values(skeletonTracing.trees).some(
+          tree => affectedGroupIds.has(tree.groupId) && !tree.isVisible,
+        );
 
   const updateTreeObject = {};
   const isVisibleUpdater = {

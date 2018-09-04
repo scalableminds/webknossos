@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable import/no-extraneous-dependencies */
 var program = require("commander");
 var randomstring = require("randomstring");
 const execSync = require("child_process").execSync;

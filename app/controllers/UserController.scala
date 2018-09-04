@@ -37,9 +37,9 @@ class UserController @Inject()(val messagesApi: MessagesApi)
 
   def user(userId: String) = SecuredAction.async { implicit request =>
     for {
-      userIdValidated <- ObjectId.parse(userId)
-      user <- UserDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
-      _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
+      userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+      user <- UserDAO.findOne(userIdValidated) ?~> "user.notFound"
+      _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> "notAllowed"
       js <- user.publicWrites(request.identity)
     } yield Ok(js)
   }
@@ -64,9 +64,9 @@ class UserController @Inject()(val messagesApi: MessagesApi)
 
   def userLoggedTime(userId: String) = SecuredAction.async { implicit request =>
     for {
-      userIdValidated <- ObjectId.parse(userId)
-      user <- UserDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
-      _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
+      userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+      user <- UserDAO.findOne(userIdValidated) ?~> "user.notFound"
+      _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> "notAllowed"
       loggedTimeAsMap <- TimeSpanService.loggedTimeOfUser(user, TimeSpan.groupByMonth)
     } yield {
       JsonOk(Json.obj("loggedTime" ->
@@ -84,9 +84,9 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   def usersLoggedTime = SecuredAction.async(validateJson[TimeSpanRequest]) { implicit request =>
     Fox.combined(request.body.users.map { userId =>
       for {
-        userIdValidated <- ObjectId.parse(userId)
-        user <- UserDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
-        _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
+        userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+        user <- UserDAO.findOne(userIdValidated) ?~> "user.notFound"
+        _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> "notAllowed"
         result <- TimeSpanService.loggedTimeOfUser(user, groupByAnnotationAndDay, Some(request.body.start), Some(request.body.end))
       } yield {
         Json.obj(
@@ -111,9 +111,9 @@ class UserController @Inject()(val messagesApi: MessagesApi)
 
   def userAnnotations(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = SecuredAction.async { implicit request =>
     for {
-      userIdValidated <- ObjectId.parse(userId)
-      user <- UserDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
-      _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
+      userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+      user <- UserDAO.findOne(userIdValidated) ?~> "user.notFound"
+      _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> "notAllowed"
       annotations <- AnnotationDAO.findAllFor(userIdValidated, isFinished, AnnotationType.Explorational, limit.getOrElse(defaultAnnotationLimit))
       jsonList <- Fox.serialCombined(annotations)(_.compactWrites)
     } yield {
@@ -123,9 +123,9 @@ class UserController @Inject()(val messagesApi: MessagesApi)
 
   def userTasks(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = SecuredAction.async { implicit request =>
     for {
-      userIdValidated <- ObjectId.parse(userId)
-      user <- UserDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
-      _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
+      userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+      user <- UserDAO.findOne(userIdValidated) ?~> "user.notFound"
+      _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> "notAllowed"
       annotations <- AnnotationDAO.findAllFor(userIdValidated, isFinished, AnnotationType.Task, limit.getOrElse(defaultAnnotationLimit))
       jsonList <- Fox.serialCombined(annotations)(_.publicWrites(Some(request.identity)))
     } yield {
@@ -166,12 +166,12 @@ class UserController @Inject()(val messagesApi: MessagesApi)
       (__ \ "email").read[String] and
       (__ \ "isActive").read[Boolean] and
       (__ \ "isAdmin").read[Boolean] and
-      (__ \ "teams").read[List[TeamMembershipSQL]](Reads.list(TeamMembershipSQL.publicReads)) and
+      (__ \ "teams").read[List[TeamMembership]](Reads.list(TeamMembership.publicReads)) and
       (__ \ "experiences").read[Map[String, Int]]).tupled
 
-  def ensureProperTeamAdministration(user: User, teams: List[(TeamMembershipSQL, Team)]) = {
+  def ensureProperTeamAdministration(user: User, teams: List[(TeamMembership, Team)]) = {
     Fox.combined(teams.map {
-      case (TeamMembershipSQL(_, true), team) => {
+      case (TeamMembership(_, true), team) => {
         for {
           _ <- bool2Fox(team.couldBeAdministratedBy(user)) ?~> Messages("team.admin.notPossibleBy", team.name, user.name)
         }
@@ -192,10 +192,10 @@ class UserController @Inject()(val messagesApi: MessagesApi)
     withJsonBodyUsing(userUpdateReader) {
       case (firstName, lastName, email, isActive, isAdmin, assignedMemberships, experiences) =>
         for {
-          userIdValidated <- ObjectId.parse(userId)
-          user <- UserDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
-          _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
-          _ <- bool2Fox(checkAdminOnlyUpdates(user, isActive, isAdmin, email)(issuingUser)) ?~> Messages("notAllowed")
+          userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+          user <- UserDAO.findOne(userIdValidated) ?~> "user.notFound"
+          _ <- Fox.assertTrue(user.isEditableBy(request.identity)) ?~> "notAllowed"
+          _ <- bool2Fox(checkAdminOnlyUpdates(user, isActive, isAdmin, email)(issuingUser)) ?~> "notAllowed"
           teams <- Fox.combined(assignedMemberships.map(t => TeamDAO.findOne(t.teamId)(GlobalAccessContext) ?~> Messages("team.notFound")))
           oldTeamMemberships <- user.teamMemberships
           teamsWithoutUpdate <- Fox.filterNot(oldTeamMemberships)(t => issuingUser.isTeamManagerOrAdminOf(t.teamId))

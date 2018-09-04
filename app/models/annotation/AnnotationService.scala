@@ -335,9 +335,9 @@ object AnnotationService
 
   def transferAnnotationToUser(typ: String, id: String, userId: ObjectId)(implicit request: UserAwareRequest[_]) = {
     for {
-      annotation <- provideAnnotation(typ, id)
-      newUser <- UserDAO.findOne(userId) ?~> Messages("user.notFound")
-      _ <- DataSetDAO.findOne(annotation._dataSet)(AuthorizedAccessContext(newUser)) ?~> Messages("annotation.transferee.noDataSetAccess")
+      annotation <- provideAnnotation(typ, id) ?~> "annotation.notFound"
+      newUser <- UserDAO.findOne(userId) ?~> "user.notFound"
+      _ <- DataSetDAO.findOne(annotation._dataSet)(AuthorizedAccessContext(newUser)) ?~> "annotation.transferee.noDataSetAccess"
       _ <- annotation.muta.transferToUser(newUser)
       updated <- provideAnnotation(typ, id)
     } yield updated

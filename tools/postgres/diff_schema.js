@@ -1,30 +1,32 @@
 #!/usr/bin/env node
 /* eslint-disable import/no-extraneous-dependencies */
-var program = require("commander");
-var randomstring = require("randomstring");
+const program = require("commander");
+const randomstring = require("randomstring");
 const execSync = require("child_process").execSync;
-var path = require("path");
-var fs = require("fs");
-var glob = require("glob");
-var tmp = require("tmp");
-var rimraf = require("rimraf");
+const path = require("path");
+const fs = require("fs");
+const glob = require("glob");
+const tmp = require("tmp");
+const rimraf = require("rimraf");
 const replace = require("replace-in-file");
 
 let POSTGRES_URL = process.env.POSTGRES_URL;
-let ORIGINAL_POSTGRES_URL =
+const ORIGINAL_POSTGRES_URL =
   typeof POSTGRES_URL !== "undefined" ? POSTGRES_URL : "jdbc:postgresql://localhost/webknossos";
 const scriptdir = __dirname;
 const scriptName = __filename;
+let p1;
+let p2;
 let dir1;
 let dir2;
 
 function dump(parameter) {
-  if (parameter == "DB") {
+  if (parameter === "DB") {
     POSTGRES_URL = ORIGINAL_POSTGRES_URL; // this environment variable is passed to dump_schema.sh
     return dumpToFolder();
   } else {
     const { dbName, dbHost } = initTmpDB();
-    console.log("Creating DB " + dbName);
+    console.log(`Creating DB ${dbName}`);
     execSync(`psql -U postgres -h ${dbHost} -c "CREATE DATABASE ${dbName};"`, {
       env: { PGPASSWORD: "postgres" },
     });
@@ -36,36 +38,37 @@ function dump(parameter) {
       process.exit(1);
     } finally {
       console.log(`CLEANUP: DROP DATABASE ${dbName}`);
-      execSync(`psql -U postgres -h ${dbHost} -c \"DROP DATABASE ${dbName};\"`, {
+      execSync(`psql -U postgres -h ${dbHost} -c "DROP DATABASE ${dbName};"`, {
         env: { PGPASSWORD: "postgres" },
       });
     }
   }
+  return null;
 }
 
 function initTmpDB() {
   const tempDbName = generateRandomName();
   const postgresDirname = path.dirname(ORIGINAL_POSTGRES_URL);
   POSTGRES_URL = `${postgresDirname}/${tempDbName}`; // this environment variable is passed to dump_schema.sh
-  const dbName = execSync(scriptdir + "/db_name.sh", { env: { POSTGRES_URL: POSTGRES_URL } })
+  const dbName = execSync(`${scriptdir}/db_name.sh`, { env: { POSTGRES_URL } })
     .toString()
     .trim(); // "trim" to remove the line break
   if (dbName !== tempDbName) {
     console.log("Wrong dbName");
     process.exit(1);
   }
-  const dbHost = execSync(scriptdir + "/db_host.sh", { env: { POSTGRES_URL: POSTGRES_URL } })
+  const dbHost = execSync(`${scriptdir}/db_host.sh`, { env: { POSTGRES_URL } })
     .toString()
     .trim();
   return {
-    dbName: dbName,
-    dbHost: dbHost,
+    dbName,
+    dbHost,
   };
 }
 
 function loadDataIntoDB(parameter, dbHost, dbName) {
-  var fileNames = glob.sync(parameter);
-  const concatenateFileNames = fileNames.map(name => "-f " + name).join(" ");
+  const fileNames = glob.sync(parameter);
+  const concatenateFileNames = fileNames.map(name => `-f ${name}`).join(" ");
   execSync(
     `psql -U postgres -h ${dbHost} --dbname="${dbName}" -v ON_ERROR_STOP=ON -q ${concatenateFileNames}`,
     { env: { PGPASSWORD: "postgres" } },
@@ -73,9 +76,9 @@ function loadDataIntoDB(parameter, dbHost, dbName) {
 }
 
 function dumpToFolder() {
-  var tmpDir = tmp.dirSync();
+  const tmpDir = tmp.dirSync();
   try {
-    execSync(`${scriptdir}/dump_schema.sh ${tmpDir.name}`, { env: { POSTGRES_URL: POSTGRES_URL } });
+    execSync(`${scriptdir}/dump_schema.sh ${tmpDir.name}`, { env: { POSTGRES_URL } });
   } catch (err) {
     console.log(`CLEANUP: remove ${tmpDir.name}`);
     rimraf.sync(tmpDir.name);
@@ -90,7 +93,7 @@ function generateRandomName() {
     charset: "alphanumeric",
     capitalization: "lowercase",
   });
-  return "wk_tmp_" + random;
+  return `wk_tmp_${random}`;
 }
 
 function sortFile(fileName) {
@@ -108,12 +111,12 @@ function sortFile(fileName) {
 program
   .version("0.1.0", "-v, --version")
   .arguments("<parameter1> <parameter2>")
-  .action(function(parameter1, parameter2) {
+  .action((parameter1, parameter2) => {
     p1 = parameter1;
     p2 = parameter2;
   });
 
-if (process.argv.length != 4) {
+if (process.argv.length !== 4) {
   // 2 "real" parameter
   console.log("Usage: $0 <sqlFiles|DB> <sqlFiles|DB>");
   console.log("Examples:");
@@ -127,11 +130,11 @@ try {
   dir1 = dump(p1);
   dir2 = dump(p2);
   // sort and remove commas
-  glob.sync(dir1 + "/**", { nodir: true }).forEach(fileName => {
+  glob.sync(`${dir1}/**`, { nodir: true }).forEach(fileName => {
     replace.sync({ files: fileName, from: /,$/gm, to: "" });
     sortFile(fileName);
   });
-  glob.sync(dir2 + "/**", { nodir: true }).forEach(fileName => {
+  glob.sync(`${dir2}/**`, { nodir: true }).forEach(fileName => {
     replace.sync({ files: fileName, from: /,$/gm, to: "" });
     sortFile(fileName);
   });

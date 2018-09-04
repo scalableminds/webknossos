@@ -27,7 +27,7 @@ import scala.concurrent.{ExecutionContext, Future}
   * //@param passwordHasherList List of password hasher supported by the application.
   * @param executionContext The execution context to handle the asynchronous operations.
   */
-class CredentialsProvider @Inject()(userService: UserService) (passwordHasher: PasswordHasher)(implicit val executionContext: ExecutionContext)
+class CredentialsProvider @Inject()(userService: UserService, passwordHasher: PasswordHasher)(implicit val executionContext: ExecutionContext)
   extends Provider with ExecutionContextProvider {
 
   override def id = ID

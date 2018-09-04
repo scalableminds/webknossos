@@ -47,6 +47,10 @@ const KeyboardShortcutView = () => {
       action: "Delete Edge/split Trees",
     },
     {
+      keybinding: "K, L",
+      action: "Increase/Decrease Size of Layout",
+    },
+    {
       keybinding: "B, J",
       action: "Set/jump To Last Branchpoint",
     },

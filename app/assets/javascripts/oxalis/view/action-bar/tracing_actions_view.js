@@ -18,6 +18,7 @@ import { location } from "libs/window";
 import type { OxalisState, RestrictionsAndSettingsType, TaskType } from "oxalis/store";
 import type { APIUserType, APITracingType } from "admin/api_flow_types";
 import { layoutEmitter } from "oxalis/view/layouting/layout_persistence";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 
 type StateProps = {
   tracingType: APITracingType,
@@ -235,7 +236,12 @@ class TracingActionsView extends PureComponent<StateProps, State> {
 
     elements.push(
       <Menu.Item key="reset-layout">
-        <div onClick={() => layoutEmitter.emit("resetLayout")}>
+        <div
+          onClick={() => {
+            Store.dispatch(updateUserSettingAction("layoutScaleValue", 1));
+            layoutEmitter.emit("resetLayout");
+          }}
+        >
           <Icon type="laptop" />
           Reset Layout
         </div>

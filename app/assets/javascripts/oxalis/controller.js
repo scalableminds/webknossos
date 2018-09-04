@@ -25,7 +25,7 @@ import ApiLoader from "oxalis/api/api_loader";
 import api from "oxalis/api/internal_api";
 import { wkReadyAction } from "oxalis/model/actions/actions";
 import { saveNowAction, undoAction, redoAction } from "oxalis/model/actions/save_actions";
-import { setViewModeAction } from "oxalis/model/actions/settings_actions";
+import { setViewModeAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Model from "oxalis/model";
 import { HANDLED_ERROR } from "oxalis/model_initialization";
 import messages from "messages";
@@ -182,6 +182,13 @@ class Controller extends React.PureComponent<Props, State> {
     ));
   }
 
+  setLayoutScale(multiplier: number): void {
+    let scale = Store.getState().userConfiguration.layoutScaleValue + 0.05 * multiplier;
+    scale = Math.min(constants.MAX_LAYOUT_SCALE, scale);
+    scale = Math.max(constants.MIN_LAYOUT_SCALE, scale);
+    Store.dispatch(updateUserSettingAction("layoutScaleValue", scale));
+  }
+
   isWebGlSupported() {
     return (
       window.WebGLRenderingContext &&
@@ -269,20 +276,8 @@ class Controller extends React.PureComponent<Props, State> {
     this.keyboardNoLoop = new InputKeyboardNoLoop(keyboardControls);
 
     this.keyboard = new InputKeyboard({
-      l: () => {
-        window.scale = window.scale || 1;
-        window.scale -= 0.05;
-        window.scale = Math.max(window.scale, 1);
-        layoutEmitter.emit("changedScale");
-        // Toast.warning(messages["tracing.no_viewport_scaling_setting"]);
-      },
-
-      k: () => {
-        window.scale = window.scale || 1;
-        window.scale += 0.05;
-        layoutEmitter.emit("changedScale");
-        // Toast.warning(messages["tracing.no_viewport_scaling_setting"]);
-      },
+      l: () => this.setLayoutScale(-1),
+      k: () => this.setLayoutScale(1),
     });
   }
 

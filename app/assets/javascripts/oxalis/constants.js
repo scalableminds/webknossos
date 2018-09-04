@@ -141,6 +141,9 @@ const Constants = {
 
   FPS: 50,
 
+  MIN_LAYOUT_SCALE: 1,
+  MAX_LAYOUT_SCALE: 5,
+
   MIN_BRUSH_SIZE: 5,
   MAX_BRUSH_SIZE: 5000,
 

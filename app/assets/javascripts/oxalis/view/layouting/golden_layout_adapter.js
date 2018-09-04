@@ -6,6 +6,8 @@ import _ from "lodash";
 import Constants from "oxalis/constants";
 import Toast from "libs/toast";
 import window from "libs/window";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import Store from "oxalis/store";
 import { PortalTarget, RenderToPortal } from "./portal_utils";
 import { layoutEmitter } from "./layout_persistence";
 
@@ -34,7 +36,7 @@ const monkeypatchGLSizeGetter = gl => {
       return _oldWidth.call(gl, value);
     } else {
       const { width } = getGroundTruthLayoutRect();
-      return width * window.scale;
+      return width * Store.getState().userConfiguration.layoutScaleValue;
     }
   };
   const _oldHeight = gl.container.height;
@@ -43,7 +45,7 @@ const monkeypatchGLSizeGetter = gl => {
       return _oldHeight.call(gl, value);
     } else {
       const { height } = getGroundTruthLayoutRect();
-      return height * window.scale;
+      return height * Store.getState().userConfiguration.layoutScaleValue;
     }
   };
 };
@@ -54,11 +56,12 @@ const updateSizeForGl = gl => {
     return;
   }
   const { width, height } = getGroundTruthLayoutRect();
+  const layoutScale = Store.getState().userConfiguration.layoutScaleValue;
+  console.log("updateSizeForGl with scale ===", layoutScale);
+  container.style.width = `${Math.floor(width * layoutScale)}px`;
+  container.style.height = `${Math.floor(height * layoutScale)}px`;
 
-  container.style.width = `${Math.floor(width * window.scale)}px`;
-  container.style.height = `${Math.floor(height * window.scale)}px`;
-
-  gl.updateSize(width * window.scale, height * window.scale);
+  gl.updateSize(width * layoutScale, height * layoutScale);
 };
 
 export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
@@ -99,22 +102,24 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
     this.gl = gl;
     gl.registerComponent("PortalTarget", PortalTarget);
 
-    window.scale = window.scale || 1;
     const updateSize = () => updateSizeForGl(gl);
-    const updateSizeDebounced = _.debounce(updateSize, Constants.RESIZE_THROTTLE_TIME);
+    const updateSizeDebounced = _.debounce(updateSize, Constants.RESIZE_THROTTLE_TIME / 5);
     window.addEventListener("resize", updateSize);
     const unbindResizeListener = () => window.removeEventListener("resize", updateSize);
-    const unbindResetListener = layoutEmitter.on("resetLayout", () => {
-      window.scale = 1;
-      this.rebuildLayout();
-    });
-    const unbindChangedScaleListener = layoutEmitter.on("changedScale", updateSizeDebounced);
+    const unbindResetListener = layoutEmitter.on("resetLayout", () => this.rebuildLayout());
+    const unbindChangedScaleListener = listenToStoreProperty(
+      store => store.userConfiguration.layoutScaleValue,
+      () => {
+        updateSizeDebounced();
+        setTimeout(updateSizeDebounced, 1000);
+      },
+    );
 
     gl.on("stateChanged", () => this.onStateChange());
 
     this.unbindListeners = [unbindResetListener, unbindChangedScaleListener, unbindResizeListener];
 
-    updateSize(gl);
+    updateSize();
     // The timeout is necessary since react cannot deal with react.render calls (which goldenlayout executes)
     // while being in the middle of a react lifecycle (componentDidMount)
     setTimeout(() => {
@@ -135,7 +140,7 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
       // Monkeypatch the gl size getters so that the layout can be larger then the viewport (k/l scaling)
       monkeypatchGLSizeGetter(gl);
       // Ensure that the size is correct
-      updateSize(gl);
+      updateSize();
     }, 10);
   }
 

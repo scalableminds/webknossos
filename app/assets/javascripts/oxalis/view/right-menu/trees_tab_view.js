@@ -314,7 +314,9 @@ class TreesTabView extends React.PureComponent<Props, State> {
           </Dropdown>
         </InputGroup>
 
-        <ul style={{ flex: "1 1 auto", overflow: "auto" }}>{this.getTreesComponents()}</ul>
+        <ul style={{ flex: "1 1 auto", overflow: "auto", margin: 0, padding: 0 }}>
+          {this.getTreesComponents()}
+        </ul>
       </div>
     );
   }

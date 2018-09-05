@@ -11,7 +11,9 @@ const rimraf = require("rimraf");
 const replace = require("replace-in-file");
 
 const POSTGRES_URL =
-  typeof process.env.POSTGRES_URL !== "undefined" ? process.env.POSTGRES_URL : "jdbc:postgresql://localhost/webknossos";
+  typeof process.env.POSTGRES_URL !== "undefined"
+    ? process.env.POSTGRES_URL
+    : "jdbc:postgresql://localhost/webknossos";
 const scriptdir = __dirname;
 const scriptName = __filename;
 let p1;

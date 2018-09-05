@@ -63,14 +63,19 @@ In contrast to Orthogonal mode, any arbitrary slice through the dataset at any r
 Flight mode also allows a resliced view through the data.
 In contrast to Oblique mode, the data is projected on the inside of a sphere with the camera located at the center of the sphere.
 
+![Tracing neurons efficiently in Flight mode](./images/tracing_ui_flightmode.jpg)
+
 Spherical projection is especially useful when rotating the camera, as pixels close to the center of the screen move in a predictable manner.
 Interactions and movements in Flight mode feel similar to First-Person-View (FPV) games.
+
+![Spherical projection of the Flight mode](./images/tracing_ui_flightmode_schema.png)
+![Seamless rotation and navigation in the Flight mode](./images/tracing_ui_flightmode_rotate.png)
+
+![Changing the radius of the spherical projection](./images/tracing_ui_flightmode_radius.gif)
 
 Flight mode is best used for annotating structures very quickly.
 Trained tracers can follow "tube"-like structures as though they are "flying" through them.
 Nodes are placed automatically along the flight path, creating skeleton very efficiently.
-
-![Tracing neurons efficiently in Flight mode](./images/tracing_ui_flightmode.jpg)
 
 ### Nodes and Trees
 Skeleton annotations consist of connected nodes forming a graph.

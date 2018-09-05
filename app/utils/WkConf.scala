@@ -1,12 +1,17 @@
 package utils
 
 import com.scalableminds.util.tools.ConfigReader
+import javax.inject.Inject
+import play.api.Configuration
 import play.api.Play.current
 
 import scala.concurrent.duration._
 
-object WkConf extends ConfigReader {
-  override def raw = play.api.Play.configuration
+
+object WkConf extends WkConfInjected(play.api.Play.configuration)
+
+class WkConfInjected @Inject() (configuration: Configuration) extends ConfigReader {
+  override def raw = configuration
 
   object Application {
 
@@ -87,6 +92,7 @@ object WkConf extends ConfigReader {
     object TokenAuthenticator {
       val resetPasswordExpiry = getDuration("silhouette.tokenAuthenticator.resetPasswordExpiry")
       val dataStoreExpiry = getDuration("silhouette.tokenAuthenticator.dataStoreExpiry")
+      val authenticatorExpiry = getDuration("silhouette.tokenAuthenticator.authenticatorExpiry")
     }
     val children = List(TokenAuthenticator)
   }

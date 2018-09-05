@@ -26,6 +26,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 - Fixed a bug where large volume downloads contained invalid data.zip archives [#3086](https://github.com/scalableminds/webknossos/pull/3086)
 - Fixed a bug where non-privileged users were wrongly allowed to pause/unpause projects [#3097](https://github.com/scalableminds/webknossos/pull/3097)
+- Fixed a regression bug which caused the initial data loading to fail sometimes [#3149](https://github.com/scalableminds/webknossos/pull/3149)
 
 ### Removed
 

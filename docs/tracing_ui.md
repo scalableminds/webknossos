@@ -69,7 +69,7 @@ Spherical projection is especially useful when rotating the camera, as pixels cl
 Interactions and movements in Flight mode feel similar to First-Person-View (FPV) games.
 
 ![Spherical projection of the Flight mode](./images/tracing_ui_flightmode_schema.png)
-![Seamless rotation and navigation in the Flight mode](./images/tracing_ui_flightmode_rotate.png)
+![Seamless rotation and navigation in the Flight mode](./images/tracing_ui_flightmode_rotate.gif)
 
 ![Changing the radius of the spherical projection](./images/tracing_ui_flightmode_radius.gif)
 

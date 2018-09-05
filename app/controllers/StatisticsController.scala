@@ -1,13 +1,14 @@
 package controllers
 
+import com.scalableminds.util.accesscontext.DBAccessContext
 import javax.inject.Inject
 import com.scalableminds.util.tools.Fox
 import models.annotation.AnnotationDAO
 import models.binary.DataSetDAO
 import models.task.TaskDAO
 import models.user.time.{TimeSpan, TimeSpanService}
-import models.user.UserDAO
-import oxalis.security.WebknossosSilhouette.SecuredAction
+import models.user.{UserDAO, UserService}
+import oxalis.security.WebknossosSilhouette
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json._
@@ -15,8 +16,18 @@ import play.api.libs.json._
 
 import scala.concurrent.duration.Duration
 
-class StatisticsController @Inject()(val messagesApi: MessagesApi)
+class StatisticsController @Inject()(timeSpanService: TimeSpanService,
+                                     userDAO: UserDAO,
+                                     userService: UserService,
+                                     dataSetDAO: DataSetDAO,
+                                     taskDAO: TaskDAO,
+                                     annotationDAO: AnnotationDAO,
+                                     sil: WebknossosSilhouette,
+                                     val messagesApi: MessagesApi)
   extends Controller {
+
+  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
+  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
 
   val intervalHandler = Map(
     "month" -> TimeSpan.groupByMonth _,
@@ -31,15 +42,15 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
     )
   }
 
-  def webKnossos(interval: String, start: Option[Long], end: Option[Long]) = SecuredAction.async { implicit request =>
+  def webKnossos(interval: String, start: Option[Long], end: Option[Long]) = sil.SecuredAction.async { implicit request =>
     intervalHandler.get(interval) match {
       case Some(handler) =>
         for {
-          times <- TimeSpanService.loggedTimePerInterval(handler, start, end)
-          numberOfUsers <- UserDAO.countAll
-          numberOfDatasets <- DataSetDAO.countAll
-          numberOfAnnotations <- AnnotationDAO.countAll
-          numberOfAssignments <- TaskDAO.countAllOpenInstances
+          times <- timeSpanService.loggedTimePerInterval(handler, start, end)
+          numberOfUsers <- userDAO.countAll
+          numberOfDatasets <- dataSetDAO.countAll
+          numberOfAnnotations <- annotationDAO.countAll
+          numberOfAssignments <- taskDAO.countAllOpenInstances
         } yield {
           Ok(Json.obj(
             "name" -> "oxalis",
@@ -56,15 +67,15 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
   }
 
 
-  def users(interval: String, start: Option[Long], end: Option[Long], limit: Int) = SecuredAction.async { implicit request =>
+  def users(interval: String, start: Option[Long], end: Option[Long], limit: Int) = sil.SecuredAction.async { implicit request =>
     for {
       handler <- intervalHandler.get(interval) ?~> "statistics.interval.invalid"
-      users <- UserDAO.findAll
-      usersWithTimes <- Fox.serialCombined(users)(user => TimeSpanService.loggedTimeOfUser(user, handler, start, end).map(user -> _))
+      users <- userDAO.findAll
+      usersWithTimes <- Fox.serialCombined(users)(user => timeSpanService.loggedTimeOfUser(user, handler, start, end).map(user -> _))
       data = usersWithTimes.sortBy(-_._2.map(_._2.toMillis).sum).take(limit)
       json <- Fox.combined(data.map {
         case (user, times) => for {
-          userJs <- user.compactWrites
+          userJs <- userService.compactWrites(user)
         } yield {Json.obj(
           "user" -> userJs,
           "tracingTimes" -> intervalTracingTimeJson(times)

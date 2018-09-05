@@ -2,18 +2,22 @@ package models.annotation.handler
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import javax.inject.Inject
 import models.annotation.AnnotationType.AnnotationType
 import models.annotation._
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
 import utils.ObjectId
 
-object AnnotationInformationHandler {
+class AnnotationInformationHandlerSelector @Inject()(projectInformationHandler: ProjectInformationHandler,
+                                                     taskInformationHandler: TaskInformationHandler,
+                                                     taskTypeInformationHandler: TaskTypeInformationHandler,
+                                                     savedTracingInformationHandler: SavedTracingInformationHandler) {
   val informationHandlers: Map[AnnotationType, AnnotationInformationHandler] = Map(
-    AnnotationType.CompoundProject -> ProjectInformationHandler,
-    AnnotationType.CompoundTask     -> TaskInformationHandler,
-    AnnotationType.CompoundTaskType -> TaskTypeInformationHandler)
-      .withDefaultValue(SavedTracingInformationHandler)
+    AnnotationType.CompoundProject -> projectInformationHandler,
+    AnnotationType.CompoundTask     -> taskInformationHandler,
+    AnnotationType.CompoundTaskType -> taskTypeInformationHandler)
+      .withDefaultValue(savedTracingInformationHandler)
 }
 
 trait AnnotationInformationHandler extends FoxImplicits {

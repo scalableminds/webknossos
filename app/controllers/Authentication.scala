@@ -3,8 +3,10 @@ package controllers
 import java.net.URLEncoder
 
 import akka.actor.ActorSystem
+import com.mohiva.play.silhouette.api
+import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import javax.inject.Inject
-import com.mohiva.play.silhouette.api.LoginInfo
+import com.mohiva.play.silhouette.api.{LoginInfo, Silhouette}
 import com.mohiva.play.silhouette.api.exceptions.ProviderException
 import com.mohiva.play.silhouette.api.util.Credentials
 import com.scalableminds.util.mail._
@@ -106,19 +108,19 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                defaultMails: DefaultMails,
                                rpc: RPC,
                                conf: WkConf,
-                               sil: WebknossosSilhouette,
+                               sil: Silhouette[WkEnv],
                                val messagesApi: MessagesApi
 )
   extends Controller
     with FoxImplicits {
 
-  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
+  implicit def userAwareRequestToDBAccess(implicit request: UserAwareRequest[WkEnv, _]) = DBAccessContext(request.identity)
+  implicit def securedRequestToDBAccess(implicit request: SecuredRequest[WkEnv, _]) = DBAccessContext(Some(request.identity))
 
   import AuthForms._
 
-  val env = sil.environment
-  val bearerTokenAuthenticatorService = env.combinedAuthenticatorService.tokenAuthenticatorService
+  val env: api.Environment[WkEnv] = sil.env
+  val bearerTokenAuthenticatorService = env.authenticatorService.tokenAuthenticatorService
 
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")

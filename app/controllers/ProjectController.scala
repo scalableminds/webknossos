@@ -7,7 +7,9 @@ import models.project._
 import models.task._
 import models.user.UserService
 import net.liftweb.common.Empty
-import oxalis.security.WebknossosSilhouette
+import oxalis.security.WkEnv
+import com.mohiva.play.silhouette.api.Silhouette
+import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
@@ -22,11 +24,11 @@ class ProjectController @Inject()(projectService: ProjectService,
                                   taskDAO: TaskDAO,
                                   userService: UserService,
                                   taskService: TaskService,
-                                  sil: WebknossosSilhouette,
+                                  sil: Silhouette[WkEnv],
                                   val messagesApi: MessagesApi) extends Controller with FoxImplicits {
 
-  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
+  implicit def userAwareRequestToDBAccess(implicit request: UserAwareRequest[WkEnv, _]) = DBAccessContext(request.identity)
+  implicit def securedRequestToDBAccess(implicit request: SecuredRequest[WkEnv, _]) = DBAccessContext(Some(request.identity))
 
   def list = sil.SecuredAction.async {
     implicit request =>

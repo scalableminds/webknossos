@@ -17,7 +17,9 @@ import models.binary.{DataSet, DataSetDAO, DataSetService}
 import models.project.ProjectDAO
 import models.task._
 import models.user._
-import oxalis.security.WebknossosSilhouette
+import oxalis.security.WkEnv
+import com.mohiva.play.silhouette.api.Silhouette
+import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
@@ -37,15 +39,15 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
                                        taskDAO: TaskDAO,
                                        taskTypeDAO: TaskTypeDAO,
                                        annotationService: AnnotationService,
-                                       sil: WebknossosSilhouette,
+                                       sil: Silhouette[WkEnv],
                                        provider: AnnotationInformationProvider,
                                        val messagesApi: MessagesApi)
   extends Controller
     with FoxImplicits
     with LazyLogging {
 
-  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
+  implicit def userAwareRequestToDBAccess(implicit request: UserAwareRequest[WkEnv, _]) = DBAccessContext(request.identity)
+  implicit def securedRequestToDBAccess(implicit request: SecuredRequest[WkEnv, _]) = DBAccessContext(Some(request.identity))
 
   private def nameForNmls(fileNames: Seq[String]) =
     if (fileNames.size == 1)

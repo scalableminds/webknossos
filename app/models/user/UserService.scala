@@ -18,11 +18,11 @@ import oxalis.security.TokenDAO
 import oxalis.user.UserCache
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
-import utils.{ObjectId, WkConfInjected}
+import utils.{ObjectId, WkConf}
 
 import scala.concurrent.Future
 
-class UserService @Inject()(conf: WkConfInjected,
+class UserService @Inject()(conf: WkConf,
                             userDAO: UserDAO,
                             userTeamRolesDAO: UserTeamRolesDAO,
                             userExperiencesDAO: UserExperiencesDAO,
@@ -32,6 +32,7 @@ class UserService @Inject()(conf: WkConfInjected,
                             teamMembershipService: TeamMembershipService,
                             dataSetDAO: DataSetDAO,
                             tokenDAO: TokenDAO,
+                            defaultMails: DefaultMails,
                             userCache: UserCache,
                             actorSystem: ActorSystem) extends FoxImplicits with IdentityService[User] {
 
@@ -96,7 +97,7 @@ class UserService @Inject()(conf: WkConfInjected,
               experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[User] = {
 
     if (user.isDeactivated && activated) {
-      Mailer ! Send(DefaultMails.activatedMail(user.name, user.email))
+      Mailer ! Send(defaultMails.activatedMail(user.name, user.email))
     }
     for {
       _ <- userDAO.updateValues(user._id, firstName, lastName, email, isAdmin, isDeactivated = !activated)

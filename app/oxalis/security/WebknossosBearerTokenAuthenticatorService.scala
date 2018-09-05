@@ -11,7 +11,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.{User, UserService}
 import oxalis.security.TokenType.TokenType
 import play.api.mvc.RequestHeader
-import utils.WkConfInjected
+import utils.WkConf
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -21,7 +21,7 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
                                                 idGenerator: IDGenerator,
                                                 clock: Clock,
                                                 userService: UserService,
-                                                conf: WkConfInjected)(implicit override val executionContext: ExecutionContext)
+                                                conf: WkConf)(implicit override val executionContext: ExecutionContext)
                                             extends BearerTokenAuthenticatorService(settings, dao, idGenerator, clock) with FoxImplicits{
 
   val resetPasswordExpiry = conf.Silhouette.TokenAuthenticator.resetPasswordExpiry.toMillis millis

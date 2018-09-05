@@ -189,7 +189,7 @@ export function deleteNode(
         newMaxNodeId = getMaximumNodeId(newTrees);
       }
 
-      const newActiveNodeId = neighborIds.length > 0 ? neighborIds[0] : null;
+      const newActiveNodeId = neighborIds.length > 0 ? Math.min(...neighborIds) : null;
       const newActiveTree =
         newActiveNodeId != null ? findTreeByNodeId(newTrees, newActiveNodeId).get() : activeTree;
       const newActiveTreeId = newActiveTree.treeId;
@@ -209,7 +209,7 @@ export function deleteEdge(
   targetNode: NodeType,
   timestamp: number,
   restrictions: RestrictionsAndSettingsType,
-): Maybe<TreeMapType> {
+): Maybe<[TreeMapType, number]> {
   return getSkeletonTracing(state.tracing).chain(skeletonTracing => {
     const { allowUpdate } = restrictions;
 
@@ -232,16 +232,19 @@ export function deleteEdge(
         return Maybe.Nothing();
       }
 
-      return Maybe.Just(
-        splitTreeByNodes(
-          state,
-          skeletonTracing,
-          sourceTree,
-          [sourceNode.id, targetNode.id],
-          [deletedEdge],
-          timestamp,
-        ),
+      const newTrees = splitTreeByNodes(
+        state,
+        skeletonTracing,
+        sourceTree,
+        [sourceNode.id, targetNode.id],
+        [deletedEdge],
+        timestamp,
       );
+
+      // The treeId of the tree the active node belongs to could have changed
+      const newActiveTree = findTreeByNodeId(newTrees, sourceNode.id).get();
+
+      return Maybe.Just([newTrees, newActiveTree.treeId]);
     } else {
       return Maybe.Nothing();
     }
@@ -310,42 +313,46 @@ function splitTreeByNodes(
   let intermediateState = state;
   // For each new tree root create a new tree
   const cutTrees = _.compact(
-    newTreeRootIds.map((rootNodeId, index) => {
-      // The rootNodeId could have already been traversed from another rootNodeId
-      // as there are cyclic trees
-      // In this case we do not need to create a new tree for this rootNodeId
-      if (visitedNodes[rootNodeId] === true) {
-        return null;
-      }
+    // Sort the treeRootIds, so the tree connected to the node with the lowest id will remain the original tree (treeId, name, timestamp)
+    newTreeRootIds
+      .slice()
+      .sort((a, b) => a - b)
+      .map((rootNodeId, index) => {
+        // The rootNodeId could have already been traversed from another rootNodeId
+        // as there are cyclic trees
+        // In this case we do not need to create a new tree for this rootNodeId
+        if (visitedNodes[rootNodeId] === true) {
+          return null;
+        }
 
-      let newTree;
-      if (index === 0) {
-        // Reuse the properties of the original tree for the first tree
-        newTree = {
-          branchPoints: [],
-          color: activeTree.color,
-          comments: [],
-          edges: new EdgeCollection(),
-          name: activeTree.name,
-          nodes: new DiffableMap(),
-          timestamp: activeTree.timestamp,
-          treeId: activeTree.treeId,
-          isVisible: true,
-          groupId: activeTree.groupId,
-        };
-      } else {
-        const immutableNewTree = createTree(intermediateState, timestamp).get();
-        // Cast to mutable tree type since we want to mutably do the split
-        // in this reducer for performance reasons.
-        newTree = ((immutableNewTree: any): TreeType);
-        intermediateState = update(intermediateState, {
-          tracing: { skeleton: { trees: { [newTree.treeId]: { $set: newTree } } } },
-        });
-      }
+        let newTree;
+        if (index === 0) {
+          // Reuse the properties of the original tree for the first tree
+          newTree = {
+            branchPoints: [],
+            color: activeTree.color,
+            comments: [],
+            edges: new EdgeCollection(),
+            name: activeTree.name,
+            nodes: new DiffableMap(),
+            timestamp: activeTree.timestamp,
+            treeId: activeTree.treeId,
+            isVisible: true,
+            groupId: activeTree.groupId,
+          };
+        } else {
+          const immutableNewTree = createTree(intermediateState, timestamp).get();
+          // Cast to mutable tree type since we want to mutably do the split
+          // in this reducer for performance reasons.
+          newTree = ((immutableNewTree: any): TreeType);
+          intermediateState = update(intermediateState, {
+            tracing: { skeleton: { trees: { [newTree.treeId]: { $set: newTree } } } },
+          });
+        }
 
-      traverseTree(rootNodeId, newTree);
-      return newTree;
-    }),
+        traverseTree(rootNodeId, newTree);
+        return newTree;
+      }),
   );
 
   // Write branchpoints into correct trees

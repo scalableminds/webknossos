@@ -1,10 +1,7 @@
 package models.binary
 
 import java.io.File
-import java.math.BigInteger
-import java.security.SecureRandom
 
-import com.mohiva.play.silhouette.api.util.IDGenerator
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -12,17 +9,14 @@ import com.scalableminds.webknossos.datastore.models.ImageThumbnail
 import com.scalableminds.webknossos.datastore.tracings.TracingSelector
 import com.scalableminds.util.rpc.RPC
 import com.scalableminds.util.tools.JsonHelper.boxFormat
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
 import org.apache.commons.codec.binary.Base64
 import oxalis.security.CompactRandomIDGenerator
-import play.api.Play.current
-import play.api.http.Status
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.ws.{WS, WSResponse}
-import play.api.mvc.Codec
+import play.api.libs.ws.WSResponse
 
 object DataStoreHandler {
   lazy val webKnossosToken = new CompactRandomIDGenerator().generateBlocking

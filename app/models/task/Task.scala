@@ -4,20 +4,15 @@ import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.webknossos.schema.Tables._
+import javax.inject.Inject
 import models.annotation._
 import models.binary.DataSetDAO
 import models.project.ProjectDAO
 import models.team.TeamDAO
-import models.user.{Experience, User}
-import org.joda.time.DateTime
-import org.joda.time.format.DateTimeFormat
-import play.api.Play.current
-import play.api.i18n.Messages
-import play.api.i18n.Messages.Implicits._
+import models.user.{Experience}
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.{JsNull, JsObject, Json}
+import play.api.libs.json.{JsObject, Json}
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import utils.{ObjectId, SQLClient, SQLDAO}
@@ -40,69 +35,65 @@ case class Task(
                     creationInfo: Option[String],
                     created: Long = System.currentTimeMillis(),
                     isDeleted: Boolean = false
-                  ) extends FoxImplicits {
+                  )
 
-  def id = _id.toString
+class TaskService @Inject()(dataSetDAO: DataSetDAO,
+                            scriptDAO: ScriptDAO,
+                            annotationDAO: AnnotationDAO,
+                            taskTypeDAO: TaskTypeDAO,
+                            teamDAO: TeamDAO,
+                            scriptService: ScriptService,
+                            taskTypeService: TaskTypeService,
+                            projectDAO: ProjectDAO
+                           ) extends FoxImplicits {
 
-  def annotationBase(implicit ctx: DBAccessContext) =
-    AnnotationService.baseFor(_id)
-
-  def taskType(implicit ctx: DBAccessContext) =
-    TaskTypeDAO.findOne(_taskType)(GlobalAccessContext)
-
-  def project(implicit ctx: DBAccessContext) =
-    ProjectDAO.findOne(_project)
-
-  def annotations(implicit ctx: DBAccessContext) =
-    AnnotationService.annotationsFor(_id)
-
-  def settings(implicit ctx: DBAccessContext) =
-    taskType.map(_.settings) getOrElse AnnotationSettings.defaultFor(TracingType.skeleton)
-
-  def countActive(implicit ctx: DBAccessContext) =
-    AnnotationService.countActiveAnnotationsFor(_id).getOrElse(0)
-
-  def status(implicit ctx: DBAccessContext) = {
+  def publicWrites(task: Task)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
-      active <- countActive
-    } yield CompletionStatus(openInstances, active, totalInstances - (active + openInstances))
-  }
-
-
-  def publicWrites(implicit ctx: DBAccessContext): Fox[JsObject] =
-    for {
-      annotationBase <- annotationBase
-      dataSet <- DataSetDAO.findOne(annotationBase._dataSet)
-      status <- status.getOrElse(CompletionStatus(-1, -1, -1))
-      taskType <- taskType
-      taskTypeJs <- taskType.publicWrites
-      scriptInfo <- _script.toFox.flatMap(sid => ScriptDAO.findOne(sid)).futureBox
-      scriptJs <- scriptInfo.toFox.flatMap(s => s.publicWrites).futureBox
-      project <- project
-      team <- project.team
+      annotationBase <- annotationBaseFor(task._id)
+      dataSet <- dataSetDAO.findOne(annotationBase._dataSet)
+      status <- statusOf(task).getOrElse(CompletionStatus(-1, -1, -1))
+      taskType <- taskTypeDAO.findOne(task._taskType)(GlobalAccessContext)
+      taskTypeJs <- taskTypeService.publicWrites(taskType)
+      scriptInfo <- task._script.toFox.flatMap(sid => scriptDAO.findOne(sid)).futureBox
+      scriptJs <- scriptInfo.toFox.flatMap(s => scriptService.publicWrites(s)).futureBox
+      project <- projectDAO.findOne(task._project)
+      team <- teamDAO.findOne(project._team)(GlobalAccessContext)
     } yield {
       Json.obj(
-        "id" -> _id.toString,
-        "formattedHash" -> Formatter.formatHash(_id.toString),
+        "id" -> task._id.toString,
+        "formattedHash" -> Formatter.formatHash(task._id.toString),
         "projectName" -> project.name,
         "team" -> team.name,
         "type" -> taskTypeJs,
         "dataSet" -> dataSet.name,
-        "neededExperience" -> neededExperience,
-        "created" -> created,
+        "neededExperience" -> task.neededExperience,
+        "created" -> task.created,
         "status" -> status,
         "script" -> scriptJs.toOption,
-        "tracingTime" -> tracingTime,
-        "creationInfo" -> creationInfo,
-        "boundingBox" -> boundingBox,
-        "editPosition" -> editPosition,
-        "editRotation" -> editRotation
+        "tracingTime" -> task.tracingTime,
+        "creationInfo" -> task.creationInfo,
+        "boundingBox" -> task.boundingBox,
+        "editPosition" -> task.editPosition,
+        "editRotation" -> task.editRotation
       )
     }
 
+  def annotationBaseFor(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[Annotation] =
+    (for {
+      list <- annotationDAO.findAllByTaskIdAndType(taskId, AnnotationType.TracingBase)
+    } yield list.headOption.toFox).flatten
+
+  def statusOf(task: Task)(implicit ctx: DBAccessContext): Fox[CompletionStatus] =
+    for {
+      active <- countActiveAnnotationsFor(task._id).getOrElse(0)
+    } yield CompletionStatus(task.openInstances, active, task.totalInstances - (active + task.openInstances))
+
+  def countActiveAnnotationsFor(taskId: ObjectId)(implicit ctx: DBAccessContext) =
+    annotationDAO.countActiveByTask(taskId, AnnotationType.Task)
+
 }
 
-object TaskDAO extends SQLDAO[Task, TasksRow, Tasks] {
+class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO) extends SQLDAO[Task, TasksRow, Tasks](sqlClient) {
   val collection = Tasks
 
   def idColumn(x: Tasks) = x._Id
@@ -248,7 +239,7 @@ object TaskDAO extends SQLDAO[Task, TasksRow, Tasks] {
       case _ => ""
     }
     val projectFilterFox = projectNameOpt match {
-      case Some(pName) => for {project <- ProjectDAO.findOneByName(pName)} yield s"(t._project = '${project._id}')"
+      case Some(pName) => for {project <- projectDAO.findOneByName(pName)} yield s"(t._project = '${project._id}')"
       case _ => Fox.successful("true")
     }
     val taskTypeFilter = taskTypeIdOpt.map(ttId => s"(t._taskType = '${ttId}')").getOrElse("true")

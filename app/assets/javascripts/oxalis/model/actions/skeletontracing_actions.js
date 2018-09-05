@@ -75,6 +75,7 @@ type AddTreesAndGroupsActionType = {
 };
 type DeleteTreeActionType = { type: "DELETE_TREE", treeId?: number, timestamp: number };
 type SetActiveTreeActionType = { type: "SET_ACTIVE_TREE", treeId: number };
+type SetActiveGroupActionType = { type: "SET_ACTIVE_GROUP", groupId: number };
 type MergeTreesActionType = { type: "MERGE_TREES", sourceNodeId: number, targetNodeId: number };
 type SetTreeNameActionType = { type: "SET_TREE_NAME", name: ?string, treeId: ?number };
 type SelectNextTreeActionType = { type: "SELECT_NEXT_TREE", forward: ?boolean };
@@ -103,6 +104,7 @@ export type SkeletonTracingActionType =
   | DeleteNodeActionType
   | DeleteEdgeActionType
   | SetActiveNodeActionType
+  | SetActiveGroupActionType
   | SetNodeRadiusActionType
   | CreateBranchPointActionType
   | DeleteBranchPointActionType
@@ -304,6 +306,11 @@ export const toggleTreeGroupAction = (groupId: number): ToggleTreeGroupActionTyp
 export const setActiveTreeAction = (treeId: number): SetActiveTreeActionType => ({
   type: "SET_ACTIVE_TREE",
   treeId,
+});
+
+export const setActiveGroupAction = (groupId: number): SetActiveGroupActionType => ({
+  type: "SET_ACTIVE_GROUP",
+  groupId,
 });
 
 export const mergeTreesAction = (

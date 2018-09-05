@@ -332,7 +332,9 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   }
 
   renderTaskList() {
-    const tasks = this.getCurrentTasks().sort(Utils.compareBy(typeHint, task => task.created));
+    const tasks = this.getCurrentTasks().sort(
+      Utils.compareBy(typeHint, task => task.created, false),
+    );
     const descriptionClassName = classNames("task-type-description", {
       short: this.state.showFinishedTasks || this.props.isAdminView,
     });

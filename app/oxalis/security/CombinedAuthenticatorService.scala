@@ -7,7 +7,7 @@ import com.mohiva.play.silhouette.impl.authenticators._
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import models.user.UserService
 import play.api.mvc._
-import utils.WkConfInjected
+import utils.WkConf
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -31,7 +31,7 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
                                         idGenerator: IDGenerator,
                                         clock: Clock,
                                         userService: UserService,
-                                        conf: WkConfInjected)(implicit val executionContext: ExecutionContext)
+                                        conf: WkConf)(implicit val executionContext: ExecutionContext)
   extends AuthenticatorService[CombinedAuthenticator] with Logger {
 
   val cookieAuthenticatorService = new CookieAuthenticatorService(cookieSettings, None, fingerprintGenerator, idGenerator, clock)

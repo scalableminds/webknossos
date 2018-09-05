@@ -9,15 +9,15 @@ import models.user.{User, UserService}
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 import play.api.Configuration
-import utils.WkConfInjected
+import utils.WkConf
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits.global
 
 
-class WebknossosEnvironment (conf: WkConfInjected,
-                              tokenDAO: TokenDAO,
-                              userService: UserService)(implicit val executionContext: ExecutionContext) extends Environment[User, CombinedAuthenticator] {
+class WebknossosEnvironment (conf: WkConf,
+                             tokenDAO: TokenDAO,
+                             userService: UserService)(implicit val executionContext: ExecutionContext) extends Environment[User, CombinedAuthenticator] {
   val eventBusObject = EventBus()
   val cookieSettings = conf.raw.underlying.as[CookieAuthenticatorSettings]("silhouette.cookieAuthenticator")
   val tokenSettings = conf.raw.underlying.as[BearerTokenAuthenticatorSettings]("silhouette.tokenAuthenticator")

@@ -5,9 +5,9 @@ import com.scalableminds.util.tools.Fox
 import javax.inject.Inject
 import models.user.{User, UserDAO}
 import play.api.cache._
-import utils.{ObjectId, WkConfInjected}
+import utils.{ObjectId, WkConf}
 
-class UserCache @Inject()(userDAO: UserDAO, conf: WkConfInjected, cache: CacheApi) {
+class UserCache @Inject()(userDAO: UserDAO, conf: WkConf, cache: CacheApi) {
   def cacheKeyForUser(id: ObjectId) =
     s"user.${id.toString}"
 

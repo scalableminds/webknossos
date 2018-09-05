@@ -21,20 +21,15 @@ export class AbstractPrefetchStrategy {
   u: number;
   v: number;
 
-  forContentType(contentTypes: { skeleton: boolean, volume: boolean }): boolean {
-    if (_.isEmpty(this.contentTypes)) {
+  forContentType(givenContentTypes: {
+    skeleton: boolean,
+    volume: boolean,
+    readOnly: boolean,
+  }): boolean {
+    if (this.contentTypes.length === 0) {
       return true;
     }
-
-    if (contentTypes.skeleton && this.contentTypes.includes("skeleton")) {
-      return true;
-    }
-
-    if (contentTypes.volume && this.contentTypes.includes("volume")) {
-      return true;
-    }
-
-    return false;
+    return this.contentTypes.some(contentType => givenContentTypes[contentType]);
   }
 
   inVelocityRange(value: number): boolean {
@@ -191,7 +186,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
 }
 
 export class PrefetchStrategySkeleton extends PrefetchStrategy {
-  contentTypes = ["skeleton", "readonly"];
+  contentTypes = ["skeleton", "readOnly"];
   name = "SKELETON";
   preloadingSlides = 2;
 }

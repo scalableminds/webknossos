@@ -2,13 +2,12 @@ package com.scalableminds.webknossos.datastore.storage
 
 import akka.actor.ActorSystem
 import akka.agent.Agent
+import javax.inject.Inject
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.FiniteDuration
 
-trait TemporaryStore[K, V] {
-
-  implicit val system: ActorSystem
+class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
 
   lazy val ts = Agent[Map[K, V]](Map())
 

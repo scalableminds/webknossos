@@ -8,7 +8,6 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Failure, Full}
-import play.api.Play.current
 import play.api.http.HeaderNames
 import play.api.http.Status._
 import play.api.libs.iteratee.Enumerator
@@ -18,9 +17,9 @@ import play.api.libs.ws._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 
-class RPCRequest(val id: Int, val url: String) extends FoxImplicits with LazyLogging {
+class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxImplicits with LazyLogging {
 
-  var request: WSRequest = WS.url(url)
+  var request: WSRequest = wsClient.url(url)
 
   def withQueryString(parameters: (String, String)*): RPCRequest = {
     request = request.withQueryString(parameters :_*)

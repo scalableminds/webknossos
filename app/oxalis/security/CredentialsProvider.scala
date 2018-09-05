@@ -27,7 +27,7 @@ import scala.concurrent.{ExecutionContext, Future}
   * //@param passwordHasherList List of password hasher supported by the application.
   * @param executionContext The execution context to handle the asynchronous operations.
   */
-class CredentialsProvider @Inject() (passwordHasher: PasswordHasher)(implicit val executionContext: ExecutionContext)
+class CredentialsProvider @Inject()(userService: UserService, passwordHasher: PasswordHasher)(implicit val executionContext: ExecutionContext)
   extends Provider with ExecutionContextProvider {
 
   override def id = ID
@@ -37,11 +37,11 @@ class CredentialsProvider @Inject() (passwordHasher: PasswordHasher)(implicit va
 
   def authenticate(credentials: Credentials): Future[LoginInfo] = {
     loginInfo(credentials).flatMap { loginInfo =>
-      UserService.retrieve(loginInfo).flatMap {
+      userService.retrieve(loginInfo).flatMap {
         case Some(user) => passwordHasherList.find(_.id == user.passwordInfo.hasher) match {
           case Some(hasher) if hasher.matches(user.passwordInfo, credentials.password) =>
             if (hasher != passwordHasher) {
-              UserService.changePasswordInfo(loginInfo, passwordHasher.hash(credentials.password)).map(_ => loginInfo).futureBox.map(
+              userService.changePasswordInfo(loginInfo, passwordHasher.hash(credentials.password)).map(_ => loginInfo).futureBox.map(
                 _.openOrThrowException(throw new IdentityNotFoundException("User not found"))
               )
             } else {

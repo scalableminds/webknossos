@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Button, Input, Checkbox, Col, Row, Tooltip } from "antd";
 import Clipboard from "clipboard-js";
+import features from "features";
 import Toast from "libs/toast";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import { AsyncButton } from "components/async_clickables";
@@ -169,7 +170,7 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
             )}
           </Input.Group>
         </FormItemWithInfo>
-        {form.getFieldValue("dataset.isPublic") ? (
+        {form.getFieldValue("dataset.isPublic") && features().addForeignDataset ? (
           <React.Fragment>
             <FormItemWithInfo
               label="Allow usage in other webknossos-instances using this text"

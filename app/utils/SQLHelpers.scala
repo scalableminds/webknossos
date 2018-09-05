@@ -5,10 +5,11 @@ import com.newrelic.api.agent.NewRelic
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
+import javax.inject.Inject
 import models.user.User
 import net.liftweb.common.Full
 import oxalis.security.SharingTokenContainer
-import play.api.i18n.Messages
+import play.api.Configuration
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
@@ -16,8 +17,6 @@ import slick.dbio.DBIOAction
 import slick.jdbc.{PositionedParameters, PostgresProfile, SetParameter}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.{AbstractTable, Rep, TableQuery}
-import play.api.Play.current
-import play.api.i18n.Messages.Implicits._
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
@@ -25,8 +24,8 @@ import play.api.data.validation.ValidationError
 import play.api.libs.json.Reads
 
 
-object SQLClient {
-  lazy val db: PostgresProfile.backend.Database = Database.forConfig("slick.db", play.api.Play.configuration.underlying)
+class SQLClient @Inject()(configuration: Configuration) {
+  lazy val db: PostgresProfile.backend.Database = Database.forConfig("slick.db", configuration.underlying)
 }
 
 case class ObjectId(id: String) {
@@ -36,7 +35,7 @@ case class ObjectId(id: String) {
 object ObjectId extends FoxImplicits {
   implicit val jsonFormat = Json.format[ObjectId]
   def generate = fromBsonId(BSONObjectID.generate)
-  def parse(input: String) = parseSync(input).toFox ?~> Messages("bsonid.invalid", input)
+  def parse(input: String) = parseSync(input).toFox ?~> s"The passed resource id ‘$input’ is invalid"
   private def fromBsonId(bson: BSONObjectID) = ObjectId(bson.stringify)
   private def parseSync(input: String) = BSONObjectID.parse(input).map(fromBsonId).toOption
 
@@ -50,12 +49,12 @@ trait SQLTypeImplicits {
   }
 }
 
-trait SimpleSQLDAO extends FoxImplicits with LazyLogging with SQLTypeImplicits {
+class SimpleSQLDAO @Inject()(sqlClient: SQLClient) extends FoxImplicits with LazyLogging with SQLTypeImplicits {
 
   lazy val transactionSerializationError = "could not serialize access"
 
   def run[R](query: DBIOAction[R, NoStream, Nothing], retryCount: Int = 0, retryIfErrorContains: List[String] = List()): Fox[R] = {
-    val foxFuture = SQLClient.db.run(query.asTry).map { result: Try[R] =>
+    val foxFuture = sqlClient.db.run(query.asTry).map { result: Try[R] =>
       result match {
         case Success(res) => {
           Fox.successful(res)
@@ -120,7 +119,7 @@ trait SimpleSQLDAO extends FoxImplicits with LazyLogging with SQLTypeImplicits {
 
 }
 
-trait SecuredSQLDAO extends SimpleSQLDAO {
+abstract class SecuredSQLDAO @Inject()(sqlClient: SQLClient) extends SimpleSQLDAO(sqlClient) {
   def collectionName: String
   def existingCollectionName = collectionName + "_"
 
@@ -181,7 +180,7 @@ trait SecuredSQLDAO extends SimpleSQLDAO {
 
 }
 
-trait SQLDAO[C, R, X <: AbstractTable[R]] extends SecuredSQLDAO {
+abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SQLClient) extends SecuredSQLDAO(sqlClient) {
   def collection: TableQuery[X]
   def collectionName = collection.shaped.value.schemaName.map(_ + ".").getOrElse("") + collection.shaped.value.tableName
 

@@ -2,11 +2,12 @@ package models.analytics
 
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
+import javax.inject.Inject
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsValue, Json}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{ObjectId, SQLDAO}
+import utils.{ObjectId, SQLClient, SQLDAO}
 
 case class AnalyticsEntry(
                               _id: ObjectId,
@@ -17,7 +18,7 @@ case class AnalyticsEntry(
                               isDeleted: Boolean = false
                              )
 
-object AnalyticsSQL extends SQLDAO[AnalyticsEntry, AnalyticsRow, Analytics] {
+class AnalyticsDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[AnalyticsEntry, AnalyticsRow, Analytics](sqlClient) {
   val collection = Analytics
 
   def idColumn(x: Analytics): Rep[String] = x._Id

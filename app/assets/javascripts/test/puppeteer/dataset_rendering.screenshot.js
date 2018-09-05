@@ -48,6 +48,7 @@ const datasetNames = [
   "e2006_knossos",
   "confocal-multi_knossos",
   "fluro-rgb_knossos",
+  "dsA_2",
 ];
 
 datasetNames.map(async datasetName => {

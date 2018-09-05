@@ -16,7 +16,7 @@ import org.joda.time.DateTime
 import oxalis.security.{Token, TokenDAO, TokenType, WebknossosSilhouette}
 import play.api.i18n.MessagesApi
 import play.api.libs.json.Json
-import utils.{ObjectId, WkConfInjected}
+import utils.{ObjectId, WkConf}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -44,7 +44,7 @@ class InitialDataService @Inject()(userService: UserService,
                                    tokenDAO: TokenDAO,
                                    projectDAO: ProjectDAO,
                                    organizationDAO: OrganizationDAO,
-                                   conf: WkConfInjected) extends FoxImplicits with LazyLogging {
+                                   conf: WkConf) extends FoxImplicits with LazyLogging {
   implicit val ctx = GlobalAccessContext
 
   val defaultUserEmail = conf.Application.Authentication.DefaultUser.email

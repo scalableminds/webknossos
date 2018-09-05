@@ -115,6 +115,7 @@
     "base64-js": "^1.2.1",
     "classnames": "^2.2.5",
     "clipboard-js": "^0.2.0",
+    "comlinkjs": "^3.0.3",
     "data.maybe": "^1.2.2",
     "deep-for-each": "^2.0.3",
     "deep-freeze": "0.0.1",
@@ -148,11 +149,13 @@
     "react-virtualized": "^9.20.1",
     "redux": "^3.6.0",
     "redux-saga": "^0.16.0",
+    "reselect": "^3.0.1",
     "scroll-into-view-if-needed": "2.2.8",
     "stats.js": "^1.0.0",
     "three": "^0.87.0",
     "tween.js": "^16.3.1",
-    "whatwg-fetch": "^1.1.0"
+    "whatwg-fetch": "^1.1.0",
+    "worker-loader": "^2.0.0"
   },
   "resolutions": {
     "**/mini-store": "^1.1.0"

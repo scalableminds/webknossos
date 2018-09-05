@@ -10,9 +10,13 @@ import { doWithToken } from "admin/admin_rest_api";
 import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import type { DataLayerType } from "oxalis/store";
-import { getResolutions, isSegmentationLayer } from "oxalis/model/accessors/dataset_accessor.js";
+import { getResolutions, isSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
 import constants from "oxalis/constants";
+import { createWorker } from "oxalis/workers/comlink_wrapper";
+import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
+
+const decodeFourBit = createWorker(DecodeFourBitWorker);
 
 export const REQUEST_TIMEOUT = 30000;
 
@@ -71,28 +75,12 @@ export async function requestFromStore(
       },
     );
 
-    let result = new Uint8Array(responseBuffer);
+    let resultBuffer = responseBuffer;
     if (fourBit) {
-      result = decodeFourBit(result);
+      resultBuffer = await decodeFourBit(resultBuffer);
     }
-    return result;
+    return new Uint8Array(resultBuffer);
   });
-}
-
-function decodeFourBit(bufferArray: Uint8Array): Uint8Array {
-  // Expand 4-bit data
-  const newColors = new Uint8Array(bufferArray.length << 1);
-
-  let index = 0;
-  while (index < newColors.length) {
-    const value = bufferArray[index >> 1];
-    newColors[index] = value & 0b11110000;
-    index++;
-    newColors[index] = value << 4;
-    index++;
-  }
-
-  return newColors;
 }
 
 export async function sendToStore(batch: Array<DataBucket>): Promise<void> {

@@ -1,7 +1,9 @@
 package models.annotation
 
+import akka.actor.ActorSystem
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.annotation.handler.AnnotationInformationHandlerSelector
@@ -11,7 +13,10 @@ import play.api.libs.concurrent.Execution.Implicits._
 
 import scala.concurrent.duration._
 
-class AnnotationStore @Inject()(annotationInformationHandlerSelector: AnnotationInformationHandlerSelector) extends LazyLogging {
+class AnnotationStore @Inject()(annotationInformationHandlerSelector: AnnotationInformationHandlerSelector,
+                                system: ActorSystem,
+                                temporaryAnnotationStore: TemporaryStore[String, Annotation]
+                               ) extends LazyLogging {
 
   private val cacheTimeout = 5 minutes
 
@@ -51,15 +56,15 @@ class AnnotationStore @Inject()(annotationInformationHandlerSelector: Annotation
   }
 
   private def storeInCache(id: AnnotationIdentifier, annotation: Annotation) = {
-    TemporaryAnnotationStore.insert(id.toUniqueString, annotation, Some(cacheTimeout))
+    temporaryAnnotationStore.insert(id.toUniqueString, annotation, Some(cacheTimeout))
   }
 
   private def getFromCache(annotationId: AnnotationIdentifier): Option[Fox[Annotation]] = {
-    TemporaryAnnotationStore.find(annotationId.toUniqueString).map(Fox.successful(_))
+    temporaryAnnotationStore.find(annotationId.toUniqueString).map(Fox.successful(_))
   }
 
   def findCachedByTracingId(tracingId: String): Box[Annotation] = {
-    val annotationOpt = TemporaryAnnotationStore.findAll.find(a => a.skeletonTracingId == Some(tracingId) || a.volumeTracingId == Some(tracingId))
+    val annotationOpt = temporaryAnnotationStore.findAll.find(a => a.skeletonTracingId == Some(tracingId) || a.volumeTracingId == Some(tracingId))
     annotationOpt match {
       case Some(annotation) => Full(annotation)
       case None => Empty

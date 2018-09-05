@@ -365,12 +365,12 @@ test("SkeletonTracingSaga should emit update actions on split tree", t => {
   t.is(updateActions[2].value.id, 4);
 
   t.is(updateActions[3].name, "createNode");
-  t.is(updateActions[3].value.id, 1);
+  t.is(updateActions[3].value.id, 4);
   t.is(updateActions[3].value.treeId, 4);
 
   t.deepEqual(updateActions[4], { name: "deleteNode", value: { treeId: 2, nodeId: 2 } });
   t.deepEqual(updateActions[5], { name: "deleteNode", value: { treeId: 2, nodeId: 3 } });
-  t.deepEqual(updateActions[6], { name: "deleteNode", value: { treeId: 2, nodeId: 1 } });
+  t.deepEqual(updateActions[6], { name: "deleteNode", value: { treeId: 2, nodeId: 4 } });
   t.deepEqual(updateActions[7], { name: "deleteEdge", value: { treeId: 2, source: 2, target: 3 } });
   t.deepEqual(updateActions[8], { name: "deleteEdge", value: { treeId: 2, source: 3, target: 4 } });
   t.deepEqual(updateActions[9], { name: "deleteEdge", value: { treeId: 2, source: 1, target: 3 } });
@@ -588,7 +588,7 @@ test("compactUpdateActions should detect a tree split (1/3)", t => {
   // a treeComponent of size two that is moved to the new tree
   t.deepEqual(simplifiedFirstBatch[1], {
     name: "moveTreeComponent",
-    value: { sourceId: 1, targetId: 2, nodeIds: [1] },
+    value: { sourceId: 1, targetId: 2, nodeIds: [3, 4] },
   });
   // the deletion of the node and its two edges
   t.deepEqual(simplifiedFirstBatch[2], {
@@ -631,13 +631,13 @@ test("compactUpdateActions should detect a tree split (2/3)", t => {
   t.is(simplifiedFirstBatch[0].value.id, 2);
   t.deepEqual(simplifiedFirstBatch[1], {
     name: "moveTreeComponent",
-    value: { sourceId: 1, targetId: 2, nodeIds: [5, 6, 7] },
+    value: { sourceId: 1, targetId: 2, nodeIds: [3, 4] },
   });
   t.is(simplifiedFirstBatch[2].name, "createTree");
   t.is(simplifiedFirstBatch[2].value.id, 3);
   t.deepEqual(simplifiedFirstBatch[3], {
     name: "moveTreeComponent",
-    value: { sourceId: 1, targetId: 3, nodeIds: [1] },
+    value: { sourceId: 1, targetId: 3, nodeIds: [5, 6, 7] },
   });
   // the deletion of the node and its three edges
   t.deepEqual(simplifiedFirstBatch[4], {
@@ -685,7 +685,7 @@ test("compactUpdateActions should detect a tree split (3/3)", t => {
   // a treeComponent of size four that is moved to the new tree (a)
   t.deepEqual(simplifiedFirstBatch[1], {
     name: "moveTreeComponent",
-    value: { sourceId: 1, targetId: 2, nodeIds: [1] },
+    value: { sourceId: 1, targetId: 2, nodeIds: [3, 4, 5, 6] },
   });
   // and the deletion of the node and its two edges (a)
   t.deepEqual(simplifiedFirstBatch[2], {
@@ -704,12 +704,12 @@ test("compactUpdateActions should detect a tree split (3/3)", t => {
   // a treeComponent of size two that is moved to the new tree (b)
   t.deepEqual(simplifiedSecondBatch[1], {
     name: "moveTreeComponent",
-    value: { sourceId: 1, targetId: 3, nodeIds: [3] },
+    value: { sourceId: 2, targetId: 3, nodeIds: [5, 6] },
   });
   // and the deletion of the node and its two edges (b)
   t.deepEqual(simplifiedSecondBatch[2], {
     name: "deleteNode",
-    value: { nodeId: 4, treeId: 1 },
+    value: { nodeId: 4, treeId: 2 },
   });
   t.is(simplifiedSecondBatch[3].name, "deleteEdge");
   t.is(simplifiedSecondBatch[4].name, "deleteEdge");

@@ -374,9 +374,6 @@ test("SkeletonTracingSaga should emit update actions on split tree", t => {
   t.deepEqual(updateActions[7], { name: "deleteEdge", value: { treeId: 2, source: 2, target: 3 } });
   t.deepEqual(updateActions[8], { name: "deleteEdge", value: { treeId: 2, source: 3, target: 4 } });
   t.deepEqual(updateActions[9], { name: "deleteEdge", value: { treeId: 2, source: 1, target: 3 } });
-
-  t.is(updateActions[10].name, "updateTree");
-  t.is(updateActions[10].value.id, 2);
 });
 
 test("compactUpdateActions should detect a tree merge (1/3)", t => {
@@ -412,8 +409,7 @@ test("compactUpdateActions should detect a tree merge (1/3)", t => {
     name: "createEdge",
     value: { treeId: 2, source: 1, target: 4 },
   });
-  t.is(simplifiedFirstBatch[3].name, "updateTree");
-  t.is(simplifiedFirstBatch.length, 4);
+  t.is(simplifiedFirstBatch.length, 3);
 });
 
 test("compactUpdateActions should detect a tree merge (2/3)", t => {
@@ -476,8 +472,7 @@ test("compactUpdateActions should detect a tree merge (2/3)", t => {
     name: "createEdge",
     value: { treeId: 2, source: 1, target: 5 },
   });
-  t.is(simplifiedSecondBatch[5].name, "updateTree");
-  t.is(simplifiedSecondBatch.length, 6);
+  t.is(simplifiedSecondBatch.length, 5);
 });
 
 test("compactUpdateActions should detect a tree merge (3/3)", t => {
@@ -535,8 +530,7 @@ test("compactUpdateActions should detect a tree merge (3/3)", t => {
     name: "createEdge",
     value: { treeId: 1, source: 4, target: 1 },
   });
-  t.is(simplifiedFirstBatch[3].name, "updateTree");
-  t.is(simplifiedFirstBatch.length, 4);
+  t.is(simplifiedFirstBatch.length, 3);
 
   // the creation of another tree, two nodes and one edge (b)
   const simplifiedSecondBatch = simplifiedUpdateActions[1].actions;
@@ -560,8 +554,7 @@ test("compactUpdateActions should detect a tree merge (3/3)", t => {
     name: "createEdge",
     value: { treeId: 1, source: 6, target: 1 },
   });
-  t.is(simplifiedThirdBatch[3].name, "updateTree");
-  t.is(simplifiedThirdBatch.length, 4);
+  t.is(simplifiedThirdBatch.length, 3);
 });
 
 test("compactUpdateActions should detect a tree split (1/3)", t => {
@@ -597,8 +590,7 @@ test("compactUpdateActions should detect a tree split (1/3)", t => {
   });
   t.is(simplifiedFirstBatch[3].name, "deleteEdge");
   t.is(simplifiedFirstBatch[4].name, "deleteEdge");
-  t.is(simplifiedFirstBatch[5].name, "updateTree");
-  t.is(simplifiedFirstBatch.length, 6);
+  t.is(simplifiedFirstBatch.length, 5);
 });
 
 test("compactUpdateActions should detect a tree split (2/3)", t => {
@@ -647,8 +639,7 @@ test("compactUpdateActions should detect a tree split (2/3)", t => {
   t.is(simplifiedFirstBatch[5].name, "deleteEdge");
   t.is(simplifiedFirstBatch[6].name, "deleteEdge");
   t.is(simplifiedFirstBatch[7].name, "deleteEdge");
-  t.is(simplifiedFirstBatch[8].name, "updateTree");
-  t.is(simplifiedFirstBatch.length, 9);
+  t.is(simplifiedFirstBatch.length, 8);
 });
 
 test("compactUpdateActions should detect a tree split (3/3)", t => {
@@ -694,8 +685,7 @@ test("compactUpdateActions should detect a tree split (3/3)", t => {
   });
   t.is(simplifiedFirstBatch[3].name, "deleteEdge");
   t.is(simplifiedFirstBatch[4].name, "deleteEdge");
-  t.is(simplifiedFirstBatch[5].name, "updateTree");
-  t.is(simplifiedFirstBatch.length, 6);
+  t.is(simplifiedFirstBatch.length, 5);
 
   // the creation of a new tree (b)
   const simplifiedSecondBatch = simplifiedUpdateActions[1].actions;
@@ -713,8 +703,7 @@ test("compactUpdateActions should detect a tree split (3/3)", t => {
   });
   t.is(simplifiedSecondBatch[3].name, "deleteEdge");
   t.is(simplifiedSecondBatch[4].name, "deleteEdge");
-  t.is(simplifiedSecondBatch[5].name, "updateTree");
-  t.is(simplifiedSecondBatch.length, 6);
+  t.is(simplifiedSecondBatch.length, 5);
 });
 
 test("compactUpdateActions should do nothing if it cannot compact", t => {
@@ -806,6 +795,5 @@ test("compactUpdateActions should not detect a deleted tree if there is no delet
   });
   t.is(simplifiedFirstBatch[2].name, "deleteEdge");
   t.is(simplifiedFirstBatch[3].name, "deleteEdge");
-  t.is(simplifiedFirstBatch[4].name, "updateTree");
-  t.is(simplifiedFirstBatch.length, 5);
+  t.is(simplifiedFirstBatch.length, 4);
 });

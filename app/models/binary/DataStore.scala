@@ -3,11 +3,12 @@ package models.binary
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
+import javax.inject.Inject
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsObject, Json}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.SQLDAO
+import utils.{SQLClient, SQLDAO}
 
 
 case class DataStore(
@@ -17,18 +18,20 @@ case class DataStore(
                        isDeleted: Boolean = false,
                        isForeign: Boolean = false
                        ) {
+}
 
-  def publicWrites: Fox[JsObject] = {
+class DataStoreService @Inject()() {
+
+  def publicWrites(dataStore: DataStore): Fox[JsObject] = {
     Fox.successful(Json.obj(
-      "name" -> name,
-      "url" -> url,
-      "isForeign" -> isForeign
+      "name" -> dataStore.name,
+      "url" -> dataStore.url,
+      "isForeign" -> dataStore.isForeign
     ))
   }
 }
 
-
-object DataStoreDAO extends SQLDAO[DataStore, DatastoresRow, Datastores] {
+class DataStoreDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[DataStore, DatastoresRow, Datastores](sqlClient) {
   val collection = Datastores
 
   def idColumn(x: Datastores): Rep[String] = x.name

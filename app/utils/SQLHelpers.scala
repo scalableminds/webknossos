@@ -5,9 +5,11 @@ import com.newrelic.api.agent.NewRelic
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
+import javax.inject.Inject
 import models.user.User
 import net.liftweb.common.Full
 import oxalis.security.SharingTokenContainer
+import play.api.Configuration
 import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
@@ -25,8 +27,8 @@ import play.api.data.validation.ValidationError
 import play.api.libs.json.Reads
 
 
-object SQLClient {
-  lazy val db: PostgresProfile.backend.Database = Database.forConfig("slick.db", play.api.Play.configuration.underlying)
+class SQLClient @Inject()(configuration: Configuration) {
+  lazy val db: PostgresProfile.backend.Database = Database.forConfig("slick.db", configuration.underlying)
 }
 
 case class ObjectId(id: String) {
@@ -50,12 +52,12 @@ trait SQLTypeImplicits {
   }
 }
 
-trait SimpleSQLDAO extends FoxImplicits with LazyLogging with SQLTypeImplicits {
+class SimpleSQLDAO @Inject()(sqlClient: SQLClient) extends FoxImplicits with LazyLogging with SQLTypeImplicits {
 
   lazy val transactionSerializationError = "could not serialize access"
 
   def run[R](query: DBIOAction[R, NoStream, Nothing], retryCount: Int = 0, retryIfErrorContains: List[String] = List()): Fox[R] = {
-    val foxFuture = SQLClient.db.run(query.asTry).map { result: Try[R] =>
+    val foxFuture = sqlClient.db.run(query.asTry).map { result: Try[R] =>
       result match {
         case Success(res) => {
           Fox.successful(res)
@@ -120,7 +122,7 @@ trait SimpleSQLDAO extends FoxImplicits with LazyLogging with SQLTypeImplicits {
 
 }
 
-trait SecuredSQLDAO extends SimpleSQLDAO {
+abstract class SecuredSQLDAO @Inject()(sqlClient: SQLClient) extends SimpleSQLDAO(sqlClient) {
   def collectionName: String
   def existingCollectionName = collectionName + "_"
 
@@ -181,7 +183,7 @@ trait SecuredSQLDAO extends SimpleSQLDAO {
 
 }
 
-trait SQLDAO[C, R, X <: AbstractTable[R]] extends SecuredSQLDAO {
+abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SQLClient) extends SecuredSQLDAO(sqlClient) {
   def collection: TableQuery[X]
   def collectionName = collection.shaped.value.schemaName.map(_ + ".").getOrElse("") + collection.shaped.value.tableName
 

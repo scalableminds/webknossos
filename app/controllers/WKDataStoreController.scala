@@ -4,7 +4,7 @@ import javax.inject.Inject
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.services.DataStoreStatus
-import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{Annotation, AnnotationDAO}
@@ -19,39 +19,47 @@ import oxalis.security.WebknossosSilhouette
 
 import scala.concurrent.Future
 
-class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
+class WKDataStoreController @Inject()(dataSetService: DataSetService,
+                                      annotationDAO: AnnotationDAO,
+                                      dataStoreDAO: DataStoreDAO,
+                                      timeSpanService: TimeSpanService,
+                                      wkDataStoreActions: WKDataStoreActions,
+                                      sil: WebknossosSilhouette,
+                                      val messagesApi: MessagesApi)
   extends Controller
-    with WKDataStoreActionHelper
     with LazyLogging {
 
-  val bearerTokenService = WebknossosSilhouette.environment.combinedAuthenticatorService.tokenAuthenticatorService
+  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
+  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
 
-  def validateDataSetUpload(name: String) = DataStoreAction(name).async(parse.json) { implicit request =>
+  val bearerTokenService = sil.environment.combinedAuthenticatorService.tokenAuthenticatorService
+
+  def validateDataSetUpload(name: String) = wkDataStoreActions.DataStoreAction(name).async(parse.json) { implicit request =>
     for {
       uploadInfo <- request.body.validate[DataSourceId].asOpt.toFox ?~> "dataStore.upload.invalid"
-      _ <- bool2Fox(DataSetService.isProperDataSetName(uploadInfo.name)) ?~> "dataSet.name.invalid"
-      _ <- DataSetService.assertNewDataSetName(uploadInfo.name)(GlobalAccessContext) ?~> "dataSet.name.alreadyTaken"
+      _ <- bool2Fox(dataSetService.isProperDataSetName(uploadInfo.name)) ?~> "dataSet.name.invalid"
+      _ <- dataSetService.assertNewDataSetName(uploadInfo.name)(GlobalAccessContext) ?~> "dataSet.name.alreadyTaken"
       _ <- bool2Fox(uploadInfo.team.nonEmpty) ?~> "team.invalid"
     } yield Ok
   }
 
-  def statusUpdate(name: String) = DataStoreAction(name).async(parse.json) { implicit request =>
+  def statusUpdate(name: String) = wkDataStoreActions.DataStoreAction(name).async(parse.json) { implicit request =>
     request.body.validate[DataStoreStatus] match {
       case JsSuccess(status, _) =>
         logger.debug(s"Status update from data store '$name'. Status: " + status.ok)
-        DataStoreDAO.updateUrlByName(name, status.url)(GlobalAccessContext).map(_ => Ok)
+        dataStoreDAO.updateUrlByName(name, status.url)(GlobalAccessContext).map(_ => Ok)
       case e: JsError =>
         logger.error("Data store '$name' sent invalid update. Error: " + e)
         Future.successful(JsonBadRequest(JsError.toJson(e)))
     }
   }
 
-  def updateAll(name: String) = DataStoreAction(name).async(parse.json) { implicit request =>
+  def updateAll(name: String) = wkDataStoreActions.DataStoreAction(name).async(parse.json) { implicit request =>
     request.body.validate[List[InboxDataSource]] match {
       case JsSuccess(dataSources, _) =>
         for {
-          _ <- DataSetService.deactivateUnreportedDataSources(request.dataStore.name, dataSources)(GlobalAccessContext)
-          _ <- DataSetService.updateDataSources(request.dataStore, dataSources)(GlobalAccessContext)
+          _ <- dataSetService.deactivateUnreportedDataSources(request.dataStore.name, dataSources)(GlobalAccessContext)
+          _ <- dataSetService.updateDataSources(request.dataStore, dataSources)(GlobalAccessContext)
         } yield {
           JsonOk
         }
@@ -62,11 +70,11 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def updateOne(name: String) = DataStoreAction(name).async(parse.json) { implicit request =>
+  def updateOne(name: String) = wkDataStoreActions.DataStoreAction(name).async(parse.json) { implicit request =>
     request.body.validate[InboxDataSource] match {
       case JsSuccess(dataSource, _) =>
         for {
-          _ <- DataSetService.updateDataSources(request.dataStore, List(dataSource))(GlobalAccessContext)
+          _ <- dataSetService.updateDataSources(request.dataStore, List(dataSource))(GlobalAccessContext)
         } yield {
           JsonOk
         }
@@ -76,21 +84,21 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def handleTracingUpdateReport(name: String) = DataStoreAction(name).async(parse.json) { implicit request =>
+  def handleTracingUpdateReport(name: String) = wkDataStoreActions.DataStoreAction(name).async(parse.json) { implicit request =>
     for {
       tracingId <- (request.body \ "tracingId").asOpt[String].toFox
-      annotation <- AnnotationDAO.findOneByTracingId(tracingId)(GlobalAccessContext)
+      annotation <- annotationDAO.findOneByTracingId(tracingId)(GlobalAccessContext)
       _ <- ensureAnnotationNotFinished(annotation)
       timestamps <- (request.body \ "timestamps").asOpt[List[Long]].toFox
       statisticsOpt = (request.body \ "statistics").asOpt[JsObject]
       userTokenOpt = (request.body \ "userToken").asOpt[String]
       _ <- statisticsOpt match {
-        case Some(statistics) => AnnotationDAO.updateStatistics(annotation._id, statistics)(GlobalAccessContext)
+        case Some(statistics) => annotationDAO.updateStatistics(annotation._id, statistics)(GlobalAccessContext)
         case None => Fox.successful(())
       }
-      _ <- AnnotationDAO.updateModified(annotation._id, System.currentTimeMillis)(GlobalAccessContext)
+      _ <- annotationDAO.updateModified(annotation._id, System.currentTimeMillis)(GlobalAccessContext)
       userBox <- bearerTokenService.userForTokenOpt(userTokenOpt)(GlobalAccessContext).futureBox
-      _ <- Fox.runOptional(userBox)(user => TimeSpanService.logUserInteraction(timestamps, user, annotation)(GlobalAccessContext))
+      _ <- Fox.runOptional(userBox)(user => timeSpanService.logUserInteraction(timestamps, user, annotation)(GlobalAccessContext))
     } yield {
       Ok
     }
@@ -102,7 +110,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
   }
 }
 
-trait WKDataStoreActionHelper extends FoxImplicits with Results with I18nSupport {
+class WKDataStoreActions @Inject()(dataStoreDAO: DataStoreDAO, val messagesApi: MessagesApi) extends FoxImplicits with Results with I18nSupport {
 
   import play.api.mvc._
 
@@ -112,7 +120,7 @@ trait WKDataStoreActionHelper extends FoxImplicits with Results with I18nSupport
     def invokeBlock[A](request: Request[A], block: (RequestWithDataStore[A]) => Future[Result]): Future[Result] = {
       request.getQueryString("key")
         .toFox
-        .flatMap(key => DataStoreDAO.findOneByKey(key)(GlobalAccessContext)) // Check if key is valid
+        .flatMap(key => dataStoreDAO.findOneByKey(key)(GlobalAccessContext)) // Check if key is valid
         //.filter(dataStore => dataStore.name == name) // Check if correct name is provided
         .flatMap(dataStore => block(new RequestWithDataStore(dataStore, request))) // Run underlying action
         .getOrElse(Forbidden(Messages("dataStore.notFound"))) // Default error

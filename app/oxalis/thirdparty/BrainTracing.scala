@@ -1,12 +1,14 @@
 package oxalis.thirdparty
 
+import akka.actor.ActorSystem
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
+import javax.inject.Inject
+import models.team.OrganizationDAO
 import models.user.User
-import play.api.Play
 import play.api.Play.current
-import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.{WS, WSAuthScheme}
 import utils.WkConf
@@ -14,27 +16,30 @@ import utils.WkConf
 import scala.concurrent.{Future, Promise}
 import scala.util._
 
-object BrainTracing extends LazyLogging with FoxImplicits {
+class BrainTracing @Inject()(actorSystem: ActorSystem,
+                             organizationDAO: OrganizationDAO,
+                             conf: WkConf
+                            ) extends LazyLogging with FoxImplicits {
   val URL = "http://braintracing.org/"
   val CREATE_URL = URL + "oxalis_create_user.php"
   val LOGTIME_URL = URL + "oxalis_add_hours.php"
 
   lazy val Mailer =
-    Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
+    actorSystem.actorSelection("/user/mailActor")
 
   def registerIfNeeded(user: User, password: String): Fox[Option[String]] =
     for {
-      organization <- user.organization
-      result <- (if (organization.name == "Connectomics department" && WkConf.Braintracing.active) register(user, password).toFox.map(Some(_)) else Fox.successful(None))
+      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext) ?~> "organization.notFound"
+      result <- (if (organization.name == "Connectomics department" && conf.Braintracing.active) register(user, password).toFox.map(Some(_)) else Fox.successful(None))
     } yield result
 
   private def register(user: User, password: String): Future[String] = {
     val result = Promise[String]()
     val brainTracingRequest = WS
       .url(CREATE_URL)
-      .withAuth(WkConf.Braintracing.user, WkConf.Braintracing.password, WSAuthScheme.BASIC)
+      .withAuth(conf.Braintracing.user, conf.Braintracing.password, WSAuthScheme.BASIC)
       .withQueryString(
-        "license" -> WkConf.Braintracing.license,
+        "license" -> conf.Braintracing.license,
         "firstname" -> user.firstName,
         "lastname" -> user.lastName,
         "email" -> user.email,

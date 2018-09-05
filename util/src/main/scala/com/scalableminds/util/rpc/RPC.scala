@@ -2,11 +2,14 @@ package com.scalableminds.util.rpc
 
 import java.util.concurrent.atomic.AtomicInteger
 
-object RPC {
+import javax.inject.Inject
+import play.api.libs.ws.WSClient
+
+class RPC @Inject()(ws: WSClient) {
 
   private val requestCounter: AtomicInteger = new AtomicInteger()
 
   def apply(url: String): RPCRequest = {
-    new RPCRequest(requestCounter.getAndIncrement(), url)
+    new RPCRequest(requestCounter.getAndIncrement(), url, ws)
   }
 }

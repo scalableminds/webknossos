@@ -19,7 +19,7 @@ class Application @Inject()(tracingDataStore: TracingDataStore,
     AllowRemoteOrigin {
       for {
         _ <- tracingDataStore.healthClient.checkHealth
-      } yield Ok
+      } yield Ok("Ok")
     }
   }
 

@@ -10,9 +10,8 @@ const tmp = require("tmp");
 const rimraf = require("rimraf");
 const replace = require("replace-in-file");
 
-let POSTGRES_URL = process.env.POSTGRES_URL;
-const ORIGINAL_POSTGRES_URL =
-  typeof POSTGRES_URL !== "undefined" ? POSTGRES_URL : "jdbc:postgresql://localhost/webknossos";
+const POSTGRES_URL =
+  typeof process.env.POSTGRES_URL !== "undefined" ? process.env.POSTGRES_URL : "jdbc:postgresql://localhost/webknossos";
 const scriptdir = __dirname;
 const scriptName = __filename;
 let p1;
@@ -22,17 +21,16 @@ let dir2;
 
 function dump(parameter) {
   if (parameter === "DB") {
-    POSTGRES_URL = ORIGINAL_POSTGRES_URL; // this environment variable is passed to dump_schema.sh
-    return dumpToFolder();
+    return dumpToFolder(POSTGRES_URL);
   } else {
-    const { dbName, dbHost } = initTmpDB();
+    const { dbName, dbHost, postgresUrl } = initTmpDB();
     console.log(`Creating DB ${dbName}`);
     execSync(`psql -U postgres -h ${dbHost} -c "CREATE DATABASE ${dbName};"`, {
       env: { PGPASSWORD: "postgres" },
     });
     try {
       loadDataIntoDB(parameter, dbHost, dbName);
-      return dumpToFolder();
+      return dumpToFolder(postgresUrl);
     } catch (err) {
       console.log(err);
       process.exit(1);
@@ -48,21 +46,22 @@ function dump(parameter) {
 
 function initTmpDB() {
   const tempDbName = generateRandomName();
-  const postgresDirname = path.dirname(ORIGINAL_POSTGRES_URL);
-  POSTGRES_URL = `${postgresDirname}/${tempDbName}`; // this environment variable is passed to dump_schema.sh
-  const dbName = execSync(`${scriptdir}/db_name.sh`, { env: { POSTGRES_URL } })
+  const postgresDirname = path.dirname(POSTGRES_URL);
+  const postgresUrl = `${postgresDirname}/${tempDbName}`;
+  const dbName = execSync(`${scriptdir}/db_name.sh`, { env: { POSTGRES_URL: postgresUrl } })
     .toString()
     .trim(); // "trim" to remove the line break
   if (dbName !== tempDbName) {
     console.log("Wrong dbName");
     process.exit(1);
   }
-  const dbHost = execSync(`${scriptdir}/db_host.sh`, { env: { POSTGRES_URL } })
+  const dbHost = execSync(`${scriptdir}/db_host.sh`, { env: { POSTGRES_URL: postgresUrl } })
     .toString()
     .trim();
   return {
     dbName,
     dbHost,
+    postgresUrl,
   };
 }
 
@@ -75,10 +74,10 @@ function loadDataIntoDB(parameter, dbHost, dbName) {
   );
 }
 
-function dumpToFolder() {
+function dumpToFolder(postgresUrl) {
   const tmpDir = tmp.dirSync();
   try {
-    execSync(`${scriptdir}/dump_schema.sh ${tmpDir.name}`, { env: { POSTGRES_URL } });
+    execSync(`${scriptdir}/dump_schema.sh ${tmpDir.name}`, { env: { POSTGRES_URL: postgresUrl } });
   } catch (err) {
     console.log(`CLEANUP: remove ${tmpDir.name}`);
     rimraf.sync(tmpDir.name);

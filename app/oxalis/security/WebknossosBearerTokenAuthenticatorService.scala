@@ -10,11 +10,8 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.{User, UserService}
 import oxalis.security.TokenType.TokenType
-import play.api.Play.current
-import play.api.i18n.Messages
-import play.api.i18n.Messages.Implicits._
 import play.api.mvc.RequestHeader
-import utils.WkConf
+import utils.WkConfInjected
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -22,11 +19,13 @@ import scala.concurrent.{ExecutionContext, Future}
 class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticatorSettings,
                                                 dao: BearerTokenAuthenticatorDAO,
                                                 idGenerator: IDGenerator,
-                                                clock: Clock)(implicit override val executionContext: ExecutionContext)
+                                                clock: Clock,
+                                                userService: UserService,
+                                                conf: WkConfInjected)(implicit override val executionContext: ExecutionContext)
                                             extends BearerTokenAuthenticatorService(settings, dao, idGenerator, clock) with FoxImplicits{
 
-  val resetPasswordExpiry = WkConf.Silhouette.TokenAuthenticator.resetPasswordExpiry.toMillis millis
-  val dataStoreExpiry = WkConf.Silhouette.TokenAuthenticator.dataStoreExpiry.toMillis millis
+  val resetPasswordExpiry = conf.Silhouette.TokenAuthenticator.resetPasswordExpiry.toMillis millis
+  val dataStoreExpiry = conf.Silhouette.TokenAuthenticator.dataStoreExpiry.toMillis millis
 
   def create(loginInfo: LoginInfo, tokenType: TokenType)(implicit request: RequestHeader): Future[BearerTokenAuthenticator] = {
     val expiry: Duration = tokenType match {
@@ -66,9 +65,9 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
 
   def userForToken(tokenValue: String)(implicit ctx: DBAccessContext): Fox[User] =
     for {
-      tokenAuthenticator <- dao.findOneByValue(tokenValue) ?~> Messages("auth.invalidToken")
-      _ <- bool2Fox(tokenAuthenticator.isValid) ?~> Messages("auth.invalidToken")
-      user <- UserService.findOneByEmail(tokenAuthenticator.loginInfo.providerKey)
+      tokenAuthenticator <- dao.findOneByValue(tokenValue) ?~> "auth.invalidToken"
+      _ <- bool2Fox(tokenAuthenticator.isValid) ?~> "auth.invalidToken"
+      user <- userService.findOneByEmail(tokenAuthenticator.loginInfo.providerKey)
     } yield user
 
   def userForTokenOpt(tokenOpt: Option[String])(implicit ctx: DBAccessContext): Fox[User] = tokenOpt match {

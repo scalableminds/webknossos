@@ -5,7 +5,9 @@ import com.mohiva.play.silhouette.api.services.{AuthenticatorResult, Authenticat
 import com.mohiva.play.silhouette.api.util.{Clock, FingerprintGenerator, IDGenerator}
 import com.mohiva.play.silhouette.impl.authenticators._
 import com.scalableminds.util.accesscontext.GlobalAccessContext
+import models.user.UserService
 import play.api.mvc._
+import utils.WkConfInjected
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -27,11 +29,13 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
                                         tokenDao : BearerTokenAuthenticatorDAO,
                                         fingerprintGenerator: FingerprintGenerator,
                                         idGenerator: IDGenerator,
-                                        clock: Clock)(implicit val executionContext: ExecutionContext)
+                                        clock: Clock,
+                                        userService: UserService,
+                                        conf: WkConfInjected)(implicit val executionContext: ExecutionContext)
   extends AuthenticatorService[CombinedAuthenticator] with Logger {
 
   val cookieAuthenticatorService = new CookieAuthenticatorService(cookieSettings, None, fingerprintGenerator, idGenerator, clock)
-  val tokenAuthenticatorService = new WebknossosBearerTokenAuthenticatorService(tokenSettings, tokenDao, idGenerator, clock)
+  val tokenAuthenticatorService = new WebknossosBearerTokenAuthenticatorService(tokenSettings, tokenDao, idGenerator, clock, userService, conf)
 
   //is actually createCookie, called as "create" because it is the default
   override def create(loginInfo: LoginInfo)(implicit request: RequestHeader): Future[CombinedAuthenticator] = {

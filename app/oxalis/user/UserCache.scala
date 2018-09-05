@@ -2,26 +2,26 @@ package oxalis.user
 
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
+import javax.inject.Inject
 import models.user.{User, UserDAO}
-import play.api.Play.current
-import play.api.cache.Cache
-import utils.{ObjectId, WkConf}
+import play.api.cache._
+import utils.{ObjectId, WkConfInjected}
 
-object UserCache {
+class UserCache @Inject()(userDAO: UserDAO, conf: WkConfInjected, cache: CacheApi) {
   def cacheKeyForUser(id: ObjectId) =
     s"user.${id.toString}"
 
   def findUser(id: ObjectId) = {
-    Cache.getOrElse(cacheKeyForUser(id), WkConf.User.cacheTimeoutInMinutes) {
-      UserDAO.findOne(id)(GlobalAccessContext)
+    cache.getOrElse(cacheKeyForUser(id), conf.User.cacheTimeoutInMinutes) {
+      userDAO.findOne(id)(GlobalAccessContext)
     }
   }
 
   def store(id: ObjectId, user: Fox[User]) = {
-    Cache.set(cacheKeyForUser(id), user)
+    cache.set(cacheKeyForUser(id), user)
     user
   }
 
   def invalidateUser(id: ObjectId) =
-    Cache.remove(cacheKeyForUser(id))
+    cache.remove(cacheKeyForUser(id))
 }

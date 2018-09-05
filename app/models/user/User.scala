@@ -5,18 +5,16 @@ import com.mohiva.play.silhouette.api.{Identity, LoginInfo}
 import com.scalableminds.util.accesscontext._
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.schema.Tables._
+import javax.inject.Inject
 import models.binary.DataSetDAO
 import models.configuration.{DataSetConfiguration, UserConfiguration}
 import models.team._
-import play.api.Play.current
-import play.api.i18n.Messages
-import play.api.i18n.Messages.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
-import utils.{ObjectId, SQLDAO, SimpleSQLDAO}
+import utils.{ObjectId, SQLClient, SQLDAO, SimpleSQLDAO}
 
 
 case class User(
@@ -35,62 +33,14 @@ case class User(
                   created: Long = System.currentTimeMillis(),
                   isDeleted: Boolean = false
                   ) extends DBAccessContextPayload with Identity with FoxImplicits {
-  val name = firstName + " " + lastName
 
-  val abreviatedName =
+  val name: String = firstName + " " + lastName
+
+  val abreviatedName: String =
     (firstName.take(1) + lastName).toLowerCase.replace(" ", "_")
 
-  def organization = OrganizationDAO.findOne(_organization)(GlobalAccessContext)
-
-  def experiences = UserExperiencesDAO.findAllExperiencesForUser(_id)(GlobalAccessContext)
-
-  def userConfigurationStructured =
+  def userConfigurationStructured: Fox[UserConfiguration] =
     JsonHelper.jsResultToFox(userConfiguration.validate[Map[String, JsValue]]).map(UserConfiguration(_))
-
-  def teamMemberships = UserTeamRolesDAO.findTeamMembershipsForUser(_id)(GlobalAccessContext)
-
-  def teamManagerMemberships =
-    for {
-      teamMemberships <- teamMemberships
-    } yield teamMemberships.filter(_.isTeamManager)
-
-  def teamManagerTeamIds =
-    for {
-      teamManagerMemberships <- teamManagerMemberships
-    } yield teamManagerMemberships.map(_.teamId)
-
-  def teamIds =
-    for {
-      teamMemberships <- teamMemberships
-    } yield teamMemberships.map(_.teamId)
-
-  def isTeamManagerOrAdminOf(otherUser: User): Fox[Boolean] =
-    for {
-      otherUserTeamIds <- otherUser.teamIds
-      teamManagerTeamIds <- teamManagerTeamIds
-    } yield (otherUserTeamIds.intersect(teamManagerTeamIds).nonEmpty || this.isAdminOf(otherUser))
-
-  def isTeamManagerOrAdminOf(_team: ObjectId): Fox[Boolean] =
-    for {
-      team <- TeamDAO.findOne(_team)(GlobalAccessContext)
-      teamManagerTeamIds <- teamManagerTeamIds
-    } yield (teamManagerTeamIds.contains(_team) || this.isAdminOf(team._organization))
-
-  def isTeamManagerOrAdminOfOrg(_organization: ObjectId): Fox[Boolean] =
-    for {
-      isTeamManager <- isTeamManagerInOrg(_organization)
-    } yield (isTeamManager || this.isAdminOf(_organization))
-
-  def isEditableBy(otherUser: User): Fox[Boolean] =
-    for {
-      otherIsTeamManagerOrAdmin <- otherUser.isTeamManagerOrAdminOf(this)
-      teamMemberships <- teamMemberships
-    } yield (otherIsTeamManagerOrAdmin || teamMemberships.isEmpty)
-
-  def isTeamManagerInOrg(_organization: ObjectId): Fox[Boolean] =
-    for {
-      teamManagerMemberships <- teamManagerMemberships
-    } yield (teamManagerMemberships.nonEmpty && _organization == this._organization)
 
   def isAdminOf(_organization: ObjectId): Boolean =
     isAdmin && _organization == this._organization
@@ -98,53 +48,9 @@ case class User(
   def isAdminOf(otherUser: User): Boolean =
     isAdminOf(otherUser._organization)
 
-  def publicWrites(requestingUser: User): Fox[JsObject] = {
-    implicit val ctx = GlobalAccessContext
-    for {
-      isEditable <- isEditableBy(requestingUser)
-      organization <- organization
-      teamMemberships <- teamMemberships
-      teamMembershipsJs <- Fox.serialCombined(teamMemberships)(_.publicWrites)
-      experiences <- experiences
-    } yield {
-      Json.obj(
-        "id" -> _id.toString,
-        "email" -> email,
-        "firstName" -> firstName,
-        "lastName" -> lastName,
-        "isAdmin" -> isAdmin,
-        "isActive" -> !isDeactivated,
-        "teams" -> teamMembershipsJs,
-        "experiences" -> experiences,
-        "lastActivity" -> lastActivity,
-        "isAnonymous" -> false,
-        "isEditable" -> isEditable,
-        "organization" -> organization.name,
-        "created" -> created
-      )
-    }
-  }
-
-  def compactWrites: Fox[JsObject] = {
-    implicit val ctx = GlobalAccessContext
-    for {
-      teamMemberships <- teamMemberships
-      teamMembershipsJs <- Fox.serialCombined(teamMemberships)(_.publicWrites)
-    } yield {
-      Json.obj(
-        "id" -> _id.toString,
-        "email" -> email,
-        "firstName" -> firstName,
-        "lastName" -> lastName,
-        "isAnonymous" -> false,
-        "teams" -> teamMembershipsJs
-      )
-    }
-  }
-
 }
 
-object UserDAO extends SQLDAO[User, UsersRow, Users] {
+class UserDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[User, UsersRow, Users](sqlClient) {
   val collection = Users
 
   def idColumn(x: Users): Rep[String] = x._Id
@@ -266,7 +172,7 @@ object UserDAO extends SQLDAO[User, UsersRow, Users] {
   }
 }
 
-object UserTeamRolesDAO extends SimpleSQLDAO {
+class UserTeamRolesDAO @Inject()(userDAO: UserDAO, sqlClient: SQLClient) extends SimpleSQLDAO(sqlClient) {
 
   def findTeamMembershipsForUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[TeamMembership]] = {
     val query = for {
@@ -288,14 +194,14 @@ object UserTeamRolesDAO extends SimpleSQLDAO {
     val clearQuery = sqlu"delete from webknossos.user_team_roles where _user = ${userId}"
     val insertQueries = teamMemberships.map(insertQuery(userId, _))
     for {
-      _ <- UserDAO.assertUpdateAccess(userId)
+      _ <- userDAO.assertUpdateAccess(userId)
       _ <- run(DBIO.sequence(List(clearQuery) ++ insertQueries).transactionally)
     } yield ()
   }
 
   def insertTeamMembership(userId: ObjectId, teamMembership: TeamMembership)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- UserDAO.assertUpdateAccess(userId)
+      _ <- userDAO.assertUpdateAccess(userId)
       _ <- run(insertQuery(userId, teamMembership))
     } yield ()
 
@@ -307,7 +213,7 @@ object UserTeamRolesDAO extends SimpleSQLDAO {
 
 }
 
-object UserExperiencesDAO extends SimpleSQLDAO {
+class UserExperiencesDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO) extends SimpleSQLDAO(sqlClient) {
 
   def findAllExperiencesForUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Map[String, Int]] = {
     for {
@@ -321,14 +227,14 @@ object UserExperiencesDAO extends SimpleSQLDAO {
     val clearQuery = sqlu"delete from webknossos.user_experiences where _user = ${userId}"
     val insertQueries = experiences.map { case (domain, value) => sqlu"insert into webknossos.user_experiences(_user, domain, value) values(${userId}, ${domain}, ${value})"}
     for {
-      _ <- UserDAO.assertUpdateAccess(userId)
+      _ <- userDAO.assertUpdateAccess(userId)
       _ <- run(DBIO.sequence(List(clearQuery) ++ insertQueries).transactionally)
     } yield ()
   }
 
 }
 
-object UserDataSetConfigurationDAO extends SimpleSQLDAO {
+class UserDataSetConfigurationDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO, dataSetDAO: DataSetDAO) extends SimpleSQLDAO(sqlClient) {
 
   def findAllForUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Map[ObjectId, JsValue]] = {
     for {
@@ -354,7 +260,7 @@ object UserDataSetConfigurationDAO extends SimpleSQLDAO {
 
   def updateDatasetConfigurationForUserAndDataset(userId: ObjectId, dataSetId: ObjectId, configuration: Map[String, JsValue])(implicit ctx: DBAccessContext): Fox[Unit] = {
     for {
-      _ <- UserDAO.assertUpdateAccess(userId)
+      _ <- userDAO.assertUpdateAccess(userId)
       deleteQuery = sqlu"""delete from webknossos.user_dataSetConfigurations
                where _user = ${userId} and _dataSet = ${dataSetId}"""
       insertQuery  = sqlu"""insert into webknossos.user_dataSetConfigurations(_user, _dataSet, configuration)
@@ -372,15 +278,15 @@ object UserDataSetConfigurationDAO extends SimpleSQLDAO {
 
   private def insertDatasetConfiguration(userId: ObjectId, dataSetName: String, configuration: Map[String, JsValue])(implicit ctx: DBAccessContext): Fox[Unit] = {
     for {
-      user <- UserDAO.findOne(userId)
-      dataSet <- DataSetDAO.findOneByNameAndOrganization(dataSetName, user._organization)
+      user <- userDAO.findOne(userId)
+      dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, user._organization)
       _ <- insertDatasetConfiguration(userId, dataSet._id, configuration)
     } yield ()
   }
 
   private def insertDatasetConfiguration(userId: ObjectId, dataSetId: ObjectId, configuration: Map[String, JsValue])(implicit ctx: DBAccessContext): Fox[Unit] = {
     for {
-      _ <- UserDAO.assertUpdateAccess(userId)
+      _ <- userDAO.assertUpdateAccess(userId)
       _ <- run(
         sqlu"""insert into webknossos.user_dataSetConfigurations(_user, _dataSet, configuration)
                values ('#${sanitize(configuration.toString)}', ${userId} and _dataSet = ${dataSetId})""")

@@ -119,6 +119,14 @@ export function callDeep(
   });
 }
 
+export function findGroup(groups: Array<TreeGroupType>, groupId: number): ?TreeGroupType {
+  let foundGroup = null;
+  callDeep(groups, groupId, group => {
+    foundGroup = group;
+  });
+  return foundGroup;
+}
+
 export function createGroupToTreesMap(trees: TreeMapType): { [number]: Array<TreeType> } {
   return _.groupBy(trees, tree => (tree.groupId != null ? tree.groupId : MISSING_GROUP_ID));
 }

@@ -10,8 +10,10 @@ import { pingDataStoreIfAppropriate, pingMentionedDataStores } from "admin/datas
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import handleStatus from "libs/handle_http_status";
 import FetchBufferWorker from "oxalis/workers/fetch_buffer.worker";
+import CompressWorker from "oxalis/workers/compress.worker";
 
 const fetchBufferViaWorker = createWorker(FetchBufferWorker);
+const compress = createWorker(CompressWorker);
 
 type methodType = "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH";
 
@@ -53,7 +55,7 @@ class Request {
     let body = _.isString(options.data) ? options.data : JSON.stringify(options.data);
 
     if (options.compress) {
-      body = await Utils.compress(body);
+      body = await compress(body);
       if (options.headers == null) {
         options.headers = {
           "Content-Encoding": "gzip",

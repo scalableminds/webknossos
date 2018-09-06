@@ -6,6 +6,7 @@ import { getExistingExperienceDomains } from "admin/admin_rest_api";
 const Option = Select.Option;
 
 type Props = {
+  value: string,
   disabled: boolean,
   onSelect: () => void,
   onDeselect: () => void,
@@ -37,7 +38,7 @@ class SelectExperienceDomain extends React.PureComponent<Props, State> {
     return (
       <Select
         mode="tags"
-        value={[]}
+        value={this.props.value}
         maxTagCount={1}
         disabled={this.props.disabled}
         className="experience-input"

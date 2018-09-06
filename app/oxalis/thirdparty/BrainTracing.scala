@@ -8,15 +8,18 @@ import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.team.OrganizationDAO
 import models.user.User
-import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.ws.{WS, WSAuthScheme}
+import play.api.libs.ws.{WS, WSAuthScheme, WSClient}
 import utils.WkConf
 
 import scala.concurrent.{Future, Promise}
 import scala.util._
 
-class BrainTracing @Inject()(actorSystem: ActorSystem, organizationDAO: OrganizationDAO) extends LazyLogging with FoxImplicits {
+class BrainTracing @Inject()(actorSystem: ActorSystem,
+                             organizationDAO: OrganizationDAO,
+                             ws: WSClient,
+                             conf: WkConf
+                            ) extends LazyLogging with FoxImplicits {
   val URL = "http://braintracing.org/"
   val CREATE_URL = URL + "oxalis_create_user.php"
   val LOGTIME_URL = URL + "oxalis_add_hours.php"
@@ -27,16 +30,16 @@ class BrainTracing @Inject()(actorSystem: ActorSystem, organizationDAO: Organiza
   def registerIfNeeded(user: User, password: String): Fox[Option[String]] =
     for {
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext) ?~> "organization.notFound"
-      result <- (if (organization.name == "Connectomics department" && WkConf.Braintracing.active) register(user, password).toFox.map(Some(_)) else Fox.successful(None))
+      result <- (if (organization.name == "Connectomics department" && conf.Braintracing.active) register(user, password).toFox.map(Some(_)) else Fox.successful(None))
     } yield result
 
   private def register(user: User, password: String): Future[String] = {
     val result = Promise[String]()
-    val brainTracingRequest = WS
+    val brainTracingRequest = ws
       .url(CREATE_URL)
-      .withAuth(WkConf.Braintracing.user, WkConf.Braintracing.password, WSAuthScheme.BASIC)
+      .withAuth(conf.Braintracing.user, conf.Braintracing.password, WSAuthScheme.BASIC)
       .withQueryString(
-        "license" -> WkConf.Braintracing.license,
+        "license" -> conf.Braintracing.license,
         "firstname" -> user.firstName,
         "lastname" -> user.lastName,
         "email" -> user.email,

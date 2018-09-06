@@ -2,23 +2,19 @@
 
 import _ from "lodash";
 import * as React from "react";
-import { Modal, Button, Tooltip, Icon, Table } from "antd";
+import { Modal, Button, Tooltip, Icon, Table, InputNumber } from "antd";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { updateUser } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import type { APIUserType, ExperienceDomainListType } from "admin/api_flow_types";
 import SelectExperienceDomain from "components/select_experience_domain";
-import ExperienceEditingTable from "admin/user/experience_editing_table";
-import type { EditTableEntry } from "admin/user/experience_editing_table";
 
 const { Column } = Table;
 
-type SharedTableEntry = {
+export type EditTableEntry = {
   domain: string,
   value: number,
-  lowestValue: number,
-  highestValue: number,
 };
 
 type Props = {
@@ -341,6 +337,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     const changeEntries = this.state.changeEntries;
     const isValid = this.validateDomainAndValues(changeEntries);
     const mutlipleUsers = this.props.selectedUsers.length > 1;
+    const scroll = { y: mutlipleUsers ? 150 : 325 };
     return (
       <Modal
         className="experience-change-modal"
@@ -366,8 +363,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
           </div>
         }
       >
-        {mutlipleUsers ? this.renderSharedExperienceTable() : null}
-        <ExperienceEditingTable
+        <Table
           title={
             mutlipleUsers
               ? "Changes"
@@ -375,14 +371,94 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
                   this.props.selectedUsers[0].firstName
                 }`
           }
-          tableData={changeEntries}
-          isMultipleUsersEditing={mutlipleUsers}
-          setValueOfEntry={this.setValueOfEntry}
-          recordModifiedAndExistedBefore={this.recordModifiedAndExistedBefore}
-          revertChangesOfEntry={this.revertChangesOfEntry}
-          setRemoveOfEntryTo={this.setRemoveOfEntryTo}
-          removeEntryFromTable={this.removeEntryFromTable}
-        />
+          size="small"
+          dataSource={changeEntries}
+          rowKey="domain"
+          pagination={false}
+          scroll={scroll}
+          className="user-experience-table"
+        >
+          <Column
+            title="Experience Domain"
+            key="domain"
+            render={record =>
+              record.removed ? <div className="disabled">{record.domain}</div> : record.domain
+            }
+          />
+          <Column
+            title="Experience Value"
+            key="value"
+            width="20%"
+            render={record => {
+              const index = changeEntries.findIndex(entry => entry.domain === record.domain);
+              return (
+                <span>
+                  <InputNumber
+                    disabled={record.removed}
+                    value={changeEntries[index].value}
+                    onChange={value => this.setValueOfEntry(index, value)}
+                  />
+                  {!mutlipleUsers && this.recordModifiedAndExistedBefore(record) ? (
+                    <Tooltip placement="top" title="Revert Changes">
+                      <Icon
+                        style={{ marginLeft: 15 }}
+                        className={record.removed ? "disabled-clickable-icon" : "clickable-icon"}
+                        type="rollback"
+                        onClick={record.removed ? null : () => this.revertChangesOfEntry(index)}
+                      />
+                    </Tooltip>
+                  ) : null}
+                </span>
+              );
+            }}
+          />
+          <Column
+            title="Delete Entry"
+            key="removed"
+            width="10%"
+            render={record => {
+              const index = changeEntries.findIndex(entry => entry.domain === record.domain);
+              return (
+                <span>
+                  {record.removed ? (
+                    <Tooltip placement="top" title="Undo">
+                      <Icon
+                        type="rollback"
+                        className="clickable-icon"
+                        onClick={() => this.setRemoveOfEntryTo(index, false)}
+                      />
+                    </Tooltip>
+                  ) : (
+                    <Tooltip placement="top" title="Delete this Domain">
+                      <Icon
+                        type="delete"
+                        className="clickable-icon"
+                        onClick={() => this.setRemoveOfEntryTo(index, true)}
+                      />
+                    </Tooltip>
+                  )}
+                </span>
+              );
+            }}
+          />
+          {mutlipleUsers ? (
+            <Column
+              width="10%"
+              render={record => {
+                const index = changeEntries.findIndex(entry => entry.domain === record.domain);
+                return (
+                  <Tooltip placement="top" title="Remove Entry">
+                    <Icon
+                      type="close"
+                      className="clickable-icon"
+                      onClick={() => this.removeEntryFromTable(index)}
+                    />
+                  </Tooltip>
+                );
+              }}
+            />
+          ) : null}
+        </Table>
         <span>
           <SelectExperienceDomain
             disabled={false}

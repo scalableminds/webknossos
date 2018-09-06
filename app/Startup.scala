@@ -8,7 +8,7 @@ import javax.inject._
 import models.annotation.AnnotationDAO
 import net.liftweb.common.{Failure, Full}
 import oxalis.cleanup.CleanUpService
-import oxalis.security.WkEnv
+import oxalis.security.{WkSilhouetteEnvironment, WkEnv}
 import com.mohiva.play.silhouette.api.Silhouette
 import play.api.inject.ApplicationLifecycle
 import utils.{SQLClient, WkConf}
@@ -24,6 +24,7 @@ class Startup @Inject() (actorSystem: ActorSystem,
                          initialDataService: InitialDataService,
                          cleanUpService: CleanUpService,
                          annotationDAO: AnnotationDAO,
+                         wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                          lifecycle: ApplicationLifecycle,
                          sil: Silhouette[WkEnv],
                          sqlClient: SQLClient
@@ -32,7 +33,7 @@ class Startup @Inject() (actorSystem: ActorSystem,
   logger.info("Executing Startup")
   startActors(actorSystem)
 
-  val tokenAuthenticatorService = sil.env.combinedAuthenticatorService.tokenAuthenticatorService
+  val tokenAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
   cleanUpService.register("deletion of expired tokens", tokenAuthenticatorService.dataStoreExpiry) {
     tokenAuthenticatorService.removeExpiredTokens(GlobalAccessContext)

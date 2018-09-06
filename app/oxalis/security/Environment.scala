@@ -11,6 +11,7 @@ import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 import play.api.i18n.MessagesApi
 import utils.WkConf
 
+import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -20,14 +21,17 @@ trait WkEnv extends Env {
   type A = CombinedAuthenticator
 }
 
-class WebknossosEnvironment @Inject()(conf: WkConf,
-                                      tokenDAO: TokenDAO,
-                                      userService: UserService,
-                                      val messagesApi: MessagesApi
+class WkSilhouetteEnvironment @Inject()(conf: WkConf,
+                                        tokenDAO: TokenDAO,
+                                        userService: UserService,
+                                        val messagesApi: MessagesApi
                                      )(implicit val executionContext: ExecutionContext) extends Environment[WkEnv] {
   val eventBusObject = EventBus()
   val cookieSettings = conf.raw.underlying.as[CookieAuthenticatorSettings]("silhouette.cookieAuthenticator")
-  val tokenSettings = conf.raw.underlying.as[BearerTokenAuthenticatorSettings]("silhouette.tokenAuthenticator")
+  val tokenSettings = BearerTokenAuthenticatorSettings(
+    authenticatorIdleTimeout = Some(conf.Silhouette.TokenAuthenticator.authenticatorIdleTimeout.toMillis millis),
+    authenticatorExpiry = conf.Silhouette.TokenAuthenticator.authenticatorExpiry.toMillis millis
+  )
   val fingerprintGenerator = new DefaultFingerprintGenerator(false)
   val idGenerator = new CompactRandomIDGenerator
   val bearerTokenAuthenticatorDAO = new BearerTokenAuthenticatorDAO(tokenDAO)

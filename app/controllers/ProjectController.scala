@@ -114,7 +114,7 @@ class ProjectController @Inject()(projectService: ProjectService,
       updatePauseStatus(projectName, isPaused = false)
   }
 
-  private def updatePauseStatus(projectName: String, isPaused: Boolean)(implicit request: sil.SecuredRequest[_]) = {
+  private def updatePauseStatus(projectName: String, isPaused: Boolean)(implicit request: SecuredRequest[WkEnv, _]) = {
     for {
       project <- projectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))

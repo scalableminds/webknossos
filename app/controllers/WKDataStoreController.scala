@@ -15,7 +15,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsError, JsObject, JsSuccess}
 import play.api.mvc._
 import models.annotation.AnnotationState._
-import oxalis.security.{WebknossosBearerTokenAuthenticatorService, WkEnv}
+import oxalis.security.{WebknossosBearerTokenAuthenticatorService, WkEnv, WkSilhouetteEnvironment}
 import com.mohiva.play.silhouette.api.Silhouette
 import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 
@@ -26,6 +26,7 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
                                       dataStoreDAO: DataStoreDAO,
                                       timeSpanService: TimeSpanService,
                                       wkDataStoreActions: WKDataStoreActions,
+                                      wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                                       sil: Silhouette[WkEnv],
                                       val messagesApi: MessagesApi)
   extends Controller
@@ -34,7 +35,7 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
   implicit def userAwareRequestToDBAccess(implicit request: UserAwareRequest[WkEnv, _]) = DBAccessContext(request.identity)
   implicit def securedRequestToDBAccess(implicit request: SecuredRequest[WkEnv, _]) = DBAccessContext(Some(request.identity))
 
-  val bearerTokenService: WebknossosBearerTokenAuthenticatorService = sil.env.combinedAuthenticatorService.tokenAuthenticatorService
+  val bearerTokenServices = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
   def validateDataSetUpload(name: String) = wkDataStoreActions.DataStoreAction(name).async(parse.json) { implicit request =>
     for {

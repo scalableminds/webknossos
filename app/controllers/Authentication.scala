@@ -108,6 +108,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                defaultMails: DefaultMails,
                                rpc: RPC,
                                conf: WkConf,
+                               wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                                sil: Silhouette[WkEnv],
                                val messagesApi: MessagesApi
 )
@@ -120,7 +121,8 @@ class Authentication @Inject()(actorSystem: ActorSystem,
   import AuthForms._
 
   val env: api.Environment[WkEnv] = sil.env
-  val bearerTokenAuthenticatorService = env.authenticatorService.tokenAuthenticatorService
+  val combinedAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService
+  val bearerTokenAuthenticatorService = combinedAuthenticatorService.tokenAuthenticatorService
 
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
@@ -301,11 +303,11 @@ class Authentication @Inject()(actorSystem: ActorSystem,
   }
 
   def getToken = sil.SecuredAction.async { implicit request =>
-    val futureOfFuture: Future[Future[Result]] = env.combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo).map {
+    val futureOfFuture: Future[Future[Result]] = combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo).map {
       oldTokenOpt => {
         if (oldTokenOpt.isDefined) Future.successful(Ok(Json.obj("token" -> oldTokenOpt.get.id)))
         else {
-          env.combinedAuthenticatorService.createToken(request.identity.loginInfo).map {
+          combinedAuthenticatorService.createToken(request.identity.loginInfo).map {
             newToken => Ok(Json.obj("token" -> newToken.id))
           }
         }
@@ -319,9 +321,9 @@ class Authentication @Inject()(actorSystem: ActorSystem,
 
   def deleteToken = sil.SecuredAction.async { implicit request =>
     val futureOfFuture: Future[Future[Result]] = for {
-      oldTokenOpt <- env.combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo)
+      oldTokenOpt <- combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo)
     } yield {
-      if (oldTokenOpt.isDefined) env.combinedAuthenticatorService.discard(oldTokenOpt.get, Ok(Json.obj("messages" -> Messages("auth.tokenDeleted"))))
+      if (oldTokenOpt.isDefined) combinedAuthenticatorService.discard(oldTokenOpt.get, Ok(Json.obj("messages" -> Messages("auth.tokenDeleted"))))
       else Future.successful(Ok)
     }
 
@@ -445,7 +447,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
     }
 
     for {
-      token <- env.combinedAuthenticatorService.tokenAuthenticatorService.createAndInit(loginInfo, TokenType.DataStore, deleteOld = false).toFox
+      token <- combinedAuthenticatorService.tokenAuthenticatorService.createAndInit(loginInfo, TokenType.DataStore, deleteOld = false).toFox
       datastores <- dataStoreDAO.findAll(GlobalAccessContext)
       _ <- Fox.combined(datastores.map(sendRPCToDataStore(_, token)))
     } yield Full(())
@@ -456,8 +458,8 @@ class Authentication @Inject()(actorSystem: ActorSystem,
   def getCookie(email: String)(implicit requestHeader: RequestHeader): Future[Cookie] = {
     val loginInfo = LoginInfo(CredentialsProvider.ID, email.toLowerCase)
     for {
-      authenticator <- sil.environment.authenticatorService.create(loginInfo)
-      value <- sil.environment.authenticatorService.init(authenticator)
+      authenticator <- wkSilhouetteEnvironment.authenticatorService.create(loginInfo)
+      value <- wkSilhouetteEnvironment.authenticatorService.init(authenticator)
     } yield {
       value
     }

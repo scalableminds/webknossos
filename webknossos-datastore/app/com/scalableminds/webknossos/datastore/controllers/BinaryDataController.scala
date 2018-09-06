@@ -14,11 +14,14 @@ import com.scalableminds.webknossos.datastore.models.{DataRequest, ImageThumbnai
 import com.scalableminds.webknossos.datastore.tracings.volume.VolumeTracingService
 import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
 import com.scalableminds.util.tools.Fox
+import net.liftweb.common.{Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.Json
+
+import scala.concurrent.Future
 
 class BinaryDataController @Inject()(
                                       binaryDataService: BinaryDataService,
@@ -273,7 +276,11 @@ class BinaryDataController @Inject()(
                            dataRequests: DataRequestCollection
                          ): Fox[Array[Byte]] = {
     val requests = dataRequests.map(r => DataServiceDataRequest(dataSource, dataLayer, r.cuboid(dataLayer), r.settings))
-    binaryDataService.handleDataRequests(requests)
+    binaryDataService.handleDataRequests(requests).futureBox.map(_ match {
+        case Full(data) => Fox.successful(data)
+        case Empty => Fox.failure("") ~> 404
+        case f: Failure => Future.successful(f) ~> 500
+      }).toFox.flatten
   }
 
   private def contentTypeJpeg = play.api.libs.MimeTypes.forExtension("jpeg").getOrElse(play.api.http.ContentTypes.BINARY)
@@ -297,7 +304,7 @@ class BinaryDataController @Inject()(
       spriteSheet <- ImageCreator.spriteSheetFor(data, params) ?~> Messages("image.create.failed")
       firstSheet <- spriteSheet.pages.headOption ?~> Messages("image.page.failed")
     } yield {
-      new JPEGWriter().writeToOutputStream(firstSheet.image)
+      new JPEGWriter().writeToOutputStream(firstSheet.image)(_)
     }
   }
 

@@ -75,14 +75,6 @@ class BinaryDataService @Inject()(config: DataStoreConfig) extends FoxImplicits 
   }
 
   private def handleBucketRequest(request: DataServiceDataRequest, bucket: BucketPosition): Fox[Array[Byte]] = {
-
-    def emptyBucket: Array[Byte] = {
-      new Array[Byte](DataLayer.bucketLength *
-                      DataLayer.bucketLength *
-                      DataLayer.bucketLength *
-                      request.dataLayer.bytesPerElement)
-    }
-
     if (request.dataLayer.doesContainBucket(bucket)) {
       val readInstruction = DataReadInstruction(
         dataBaseDir,
@@ -90,25 +82,25 @@ class BinaryDataService @Inject()(config: DataStoreConfig) extends FoxImplicits 
         request.dataLayer,
         bucket)
 
-      loadWithRetry(request.dataLayer.bucketProvider, readInstruction, emptyBucket)
+      loadWithRetry(request.dataLayer.bucketProvider, readInstruction)
     } else {
-      Fox.successful(emptyBucket)
+      Fox.empty
     }
   }
 
-  private def loadWithRetry(bucketProvider: BucketProvider, readInstruction: DataReadInstruction, emptyBucket: Array[Byte], remainingTries: Int = 5): Fox[Array[Byte]] = {
+  private def loadWithRetry(bucketProvider: BucketProvider, readInstruction: DataReadInstruction, remainingTries: Int = 5): Fox[Array[Byte]] = {
     bucketProvider.load(readInstruction, cache, loadTimeout).futureBox.map {
       case Full(data) =>
         Fox.successful(data)
       case Empty =>
-        Fox.successful(emptyBucket)
+        Fox.empty
       case f: Failure =>
         if (remainingTries > 0) {
           Thread.sleep(20)
           val msg = s"BinaryDataService: retrying bucket loading, remaining tries: $remainingTries, error: ${f.msg}"
           logger.debug(msg)
           NewRelic.noticeError(msg)
-          loadWithRetry(bucketProvider, readInstruction, emptyBucket, remainingTries - 1)
+          loadWithRetry(bucketProvider, readInstruction, remainingTries - 1)
         } else {
           val msg = s"BinaryDataService failure after all retries: ${f.msg}"
           logger.error(msg)

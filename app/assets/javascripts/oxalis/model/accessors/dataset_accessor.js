@@ -7,7 +7,7 @@ import type { APIDatasetType } from "admin/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
 import type { SettingsType, DataLayerType } from "oxalis/store";
 import Maybe from "data.maybe";
-import { createSelector } from "reselect";
+import memoizeOne from "memoize-one";
 
 export function getResolutions(dataset: APIDatasetType): Vector3[] {
   // Different layers can have different resolutions. At the moment,
@@ -47,9 +47,7 @@ function _getMaxZoomStep(maybeDataset: ?APIDatasetType): number {
   return maxZoomstep;
 }
 
-// With createSelector, we ensure that the last return value of _getMaxZoomStep is reused,
-// if the dataset didn't change.
-export const getMaxZoomStep = createSelector(_getMaxZoomStep, _.identity);
+export const getMaxZoomStep = memoizeOne(_getMaxZoomStep);
 
 function getDataLayers(dataset: APIDatasetType): DataLayerType[] {
   return dataset.dataSource.dataLayers;

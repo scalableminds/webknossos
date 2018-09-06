@@ -369,9 +369,13 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   }
 
   renderTable() {
+    const filteredAndSortedTracings = this.getFilteredTracings().sort(
+      Utils.compareBy(typeHint, annotation => annotation.modified, false),
+    );
+
     return (
       <Table
-        dataSource={this.getFilteredTracings()}
+        dataSource={filteredAndSortedTracings}
         rowKey="id"
         pagination={{
           defaultPageSize: 50,

@@ -1,6 +1,8 @@
 package controllers
 
-import akka.stream.scaladsl.{Source, StreamConverters}
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl._
 import akka.util.ByteString
 import javax.inject.Inject
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
@@ -45,6 +47,8 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
   extends Controller
     with FoxImplicits
     with LazyLogging {
+  implicit val actorSystem = ActorSystem()
+  implicit val materializer = ActorMaterializer()
 
   implicit def userAwareRequestToDBAccess(implicit request: UserAwareRequest[WkEnv, _]) = DBAccessContext(request.identity)
   implicit def securedRequestToDBAccess(implicit request: SecuredRequest[WkEnv, _]) = DBAccessContext(Some(request.identity))
@@ -161,11 +165,12 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
         user <- userService.findOneById(annotation._user, useCache = true)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
       } yield {
+        val dataEnumerator = Enumerator.fromStream(data.runWith(StreamConverters.asInputStream()))
         (Enumerator.outputStream { outputStream =>
           ZipIO.zip(
             List(
-              new NamedEnumeratorStream(name + ".nml", nmlWriter.toNmlStream(skeletonTracingOpt, Some(volumeTracing), Some(annotation), dataSet.scale, Some(user), taskOpt))//,
-              //TODO new NamedEnumeratorStream("data.zip", data)
+              new NamedEnumeratorStream(name + ".nml", nmlWriter.toNmlStream(skeletonTracingOpt, Some(volumeTracing), Some(annotation), dataSet.scale, Some(user), taskOpt)),
+              new NamedEnumeratorStream("data.zip", dataEnumerator)
             ), outputStream)
         }, name + ".zip")
       }

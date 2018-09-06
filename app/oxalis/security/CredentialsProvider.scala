@@ -1,13 +1,14 @@
 package oxalis.security
 
 import javax.inject.Inject
-
 import com.mohiva.play.silhouette.api._
 import com.mohiva.play.silhouette.api.exceptions.ConfigurationException
 import com.mohiva.play.silhouette.api.repositories.AuthInfoRepository
 import com.mohiva.play.silhouette.api.util.{Credentials, ExecutionContextProvider, PasswordInfo}
 import com.mohiva.play.silhouette.impl.exceptions.{IdentityNotFoundException, InvalidPasswordException}
 import com.mohiva.play.silhouette.impl.providers.CredentialsProvider._
+import com.mohiva.play.silhouette.impl.providers.PasswordProvider
+import com.mohiva.play.silhouette.impl.providers.PasswordProvider.PasswordInfoNotFound
 import com.scalableminds.util.accesscontext.DBAccessContext
 import models.user.UserService
 import net.liftweb.common.Full
@@ -28,9 +29,11 @@ import scala.concurrent.{ExecutionContext, Future}
   * @param executionContext The execution context to handle the asynchronous operations.
   */
 class CredentialsProvider @Inject()(userService: UserService, passwordHasher: PasswordHasher)(implicit val executionContext: ExecutionContext)
-  extends Provider with ExecutionContextProvider {
+  extends PasswordProvider with ExecutionContextProvider {
 
   override def id = ID
+
+  val authInfoRepository = ???
 
   //can be expanded in the future with different hasher
   val passwordHasherList: List[com.mohiva.play.silhouette.api.util.PasswordHasher] = List(passwordHasher)
@@ -47,12 +50,12 @@ class CredentialsProvider @Inject()(userService: UserService, passwordHasher: Pa
             } else {
               Future.successful(loginInfo)
             }
-          case Some(hasher) => throw new InvalidPasswordException(InvalidPassword.format(id))
-          case None => throw new ConfigurationException(UnsupportedHasher.format(
+          case Some(hasher) => throw new InvalidPasswordException(PasswordProvider.PasswordDoesNotMatch.format(id))
+          case None => throw new ConfigurationException(PasswordProvider.HasherIsNotRegistered.format(
             id, user.passwordInfo.hasher, passwordHasherList.map(_.id).mkString(", ")
           ))
         }
-        case None => throw new IdentityNotFoundException(UnknownCredentials.format(id))
+        case None => throw new IdentityNotFoundException(PasswordProvider.PasswordInfoNotFound.format(id))
       }
     }
   }

@@ -153,7 +153,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       signUpData => {
         val email = signUpData.email.toLowerCase
-        val loginInfo = LoginInfo(wkSilhouetteEnvironment.credentialsProviderId, email)
+        val loginInfo = LoginInfo(CredentialsProvider.ID, email)
         var errors = List[String]()
         val firstName = normalizeName(signUpData.firstName).getOrElse {
           errors ::= Messages("user.firstName.invalid");

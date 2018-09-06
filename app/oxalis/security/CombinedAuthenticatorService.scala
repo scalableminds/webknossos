@@ -1,11 +1,12 @@
 package oxalis.security
 
 import com.mohiva.play.silhouette.api._
-import com.mohiva.play.silhouette.api.crypto.{AuthenticatorEncoder, Base64, CookieSigner}
+import com.mohiva.play.silhouette.api.crypto.{AuthenticatorEncoder, Base64, Base64AuthenticatorEncoder, CookieSigner}
 import com.mohiva.play.silhouette.api.services.{AuthenticatorResult, AuthenticatorService}
 import com.mohiva.play.silhouette.api.util.{Clock, ExtractableRequest, FingerprintGenerator, IDGenerator}
 import com.mohiva.play.silhouette.impl.authenticators._
 import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.typesafe.scalalogging.LazyLogging
 import models.user.UserService
 import play.api.mvc._
 import utils.WkConf
@@ -26,9 +27,15 @@ case class CombinedAuthenticator(actualAuthenticator: StorableAuthenticator) ext
   override def isValid: Boolean = actualAuthenticator.isValid
 }
 
-class IdentityAuthenticatorEncoder extends AuthenticatorEncoder {
-  override def encode(data: String): String = data
-  override def decode(data: String): String = data
+class IdentityAuthenticatorEncoder extends AuthenticatorEncoder with LazyLogging {
+  override def encode(data: String): String = {
+    logger.info("decoding cookie:", data)
+    data
+  }
+  override def decode(data: String): String = {
+    logger.info("encoding cookie:", data)
+    data
+  }
 }
 
 class IdentityCookieSigner extends CookieSigner {
@@ -50,7 +57,7 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
                                         cookieSettings,
                                         None,
                                         new IdentityCookieSigner,
-                                        new IdentityAuthenticatorEncoder,
+                                        new Base64AuthenticatorEncoder,
                                         fingerprintGenerator,
                                         idGenerator,
                                         clock)

@@ -39,8 +39,6 @@ class WkSilhouetteEnvironment @Inject()(conf: WkConf,
   val combinedAuthenticatorService = CombinedAuthenticatorService(cookieSettings,
     tokenSettings, bearerTokenAuthenticatorDAO, fingerprintGenerator, idGenerator, Clock(), userService, conf)
 
-  val credentialsProviderId = "credentials"
-
   override def identityService: IdentityService[User] = userService
 
   override def authenticatorService: AuthenticatorService[CombinedAuthenticator] = combinedAuthenticatorService

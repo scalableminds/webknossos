@@ -1,12 +1,5 @@
 // @flow
 
-// This module provides performance intensive functions, which is why it has to be
-// imported and used via a webworker like this:
-// import { proxy } from "comlinkjs";
-// import DecodeFourBitWorker from ".../workers/decode_four_bit.worker";
-// const decodeFourBit = proxy(new DecodeFourBitWorker);
-// await decodeFourBit(...)
-
 import { expose } from "./comlink_wrapper";
 
 // This function receives and returns ArrayBuffer, since that can be transferred without

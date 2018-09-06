@@ -3,7 +3,6 @@
 import _ from "lodash";
 import * as React from "react";
 import { Modal, Button, Tooltip, Icon, Table, InputNumber } from "antd";
-import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { updateUser } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
@@ -15,6 +14,8 @@ import type {
 import SelectExperienceDomain from "components/select_experience_domain";
 
 const { Column } = Table;
+
+// TODO => visual bug when editing a value of a domain the first time !!!
 
 type SharedTableEntry = {
   domain: string,
@@ -116,7 +117,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
       : [];
 
   updatedAllUsers = async () => {
-    const newExperiences: ExperienceMapType = [];
+    const newExperiences: ExperienceMapType = {};
     const relevantEntries =
       this.props.selectedUsers.length === 1
         ? this.state.changeEntries
@@ -128,6 +129,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
 
     const newUserPromises = this.props.selectedUsers.map(user => {
       const newUser = { ...user, experiences: newExperiences };
+      console.log(newUser);
       return this.sendUserToServer(newUser, user);
     });
     this.resolvePromisesAndCloseModal(newUserPromises);
@@ -164,7 +166,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
 
   setValueOfEntry = (index: number, value: number) => {
     if (value > 0) {
-      if (this.state.selectedUsers.length > 1) {
+      if (this.props.selectedUsers.length > 1) {
         this.setState(prevState => ({
           sharedExperiencesEntries: prevState.sharedExperiencesEntries.map(
             (entry, currentIndex) => {
@@ -283,41 +285,6 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     return relevantEntries.map(entry => entry.domain);
   };
 
-  /* renderSharedExperienceTable = () => {
-    const sharedExperiencesEntries = this.state.sharedExperiencesEntries;
-    if (sharedExperiencesEntries && sharedExperiencesEntries.length > 0) {
-      return (
-        <Table
-          title={() => "Shared Experience Domains"}
-          size="small"
-          dataSource={sharedExperiencesEntries}
-          rowKey="domain"
-          pagination={false}
-          scroll={150}
-          className="user-experience-table"
-        >
-          <Column title="Experience Domain" key="domain" dataIndex="domain" width="50%" />
-          <Column
-            title="Experience Value"
-            key="value"
-            width="50%"
-            render={record =>
-              record.highestValue === record.lowestValue
-                ? record.value
-                : `varying from ${record.lowestValue} to ${record.highestValue}`
-            }
-          />
-        </Table>
-      );
-    } else if (this.props.selectedUsers.length > 1) {
-      return (
-        <span>
-          <Icon type="info-circle-o" />The selected users don′t have shared Experience Domains.
-        </span>
-      );
-    } else return null;
-  }; */
-
   render() {
     if (!this.props.visible && this.props.selectedUsers.length === 0) {
       return null;
@@ -350,13 +317,6 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
         }
       >
         <Table
-          title={
-            mutlipleUsers
-              ? "Changes"
-              : `Experiences of User ${this.props.selectedUsers[0].lastName} , ${
-                  this.props.selectedUsers[0].firstName
-                }`
-          }
           size="small"
           dataSource={mutlipleUsers ? sharedExperiencesEntries : changeEntries}
           rowKey="domain"
@@ -364,11 +324,15 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
           scroll={scroll}
           className="user-experience-table"
         >
-          <Column title="Experience Domain" key="domain" dataIndex="domain" />
+          <Column
+            title="Experience Domain"
+            key="domain"
+            dataIndex="domain"
+            width={mutlipleUsers ? "30%" : "40%"}
+          />
           {mutlipleUsers ? (
             <Column
-              title="Experience Value"
-              key="value"
+              title="Current Experience Value"
               width="25%"
               render={record =>
                 record.highestValue === record.lowestValue
@@ -380,7 +344,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
           <Column
             title="Experience Value"
             key="value"
-            width="20%"
+            width={mutlipleUsers ? "25%" : "40%"}
             render={record => {
               const relevantEntries =
                 this.props.selectedUsers.length === 1
@@ -410,7 +374,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
           <Column
             title="Delete Entry"
             key="removed"
-            width="10%"
+            width="20%"
             render={record => {
               const index = changeEntries.findIndex(entry => entry.domain === record.domain);
               return (

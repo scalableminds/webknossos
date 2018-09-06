@@ -7,6 +7,7 @@ import SettingsView from "oxalis/view/settings/settings_view";
 import ActionBarView from "oxalis/view/action_bar_view";
 import RightMenuView from "oxalis/view/right_menu_view";
 import TracingView from "oxalis/view/tracing_view";
+import VersionView from "oxalis/view/version_view";
 import { Layout, Icon } from "antd";
 import { location } from "libs/window";
 import ButtonComponent from "oxalis/view/components/button_component";
@@ -21,6 +22,7 @@ const { Header, Sider } = Layout;
 
 type StateProps = {
   isUpdateTracingAllowed: boolean,
+  isVersionRestoreActive: boolean,
 };
 
 type Props = StateProps & {
@@ -97,6 +99,11 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
                 <RightMenuView />
               </div>
             </div>
+            {this.props.isVersionRestoreActive ? (
+              <Sider width={400} style={{ borderLeft: "1px solid #e8e8e8", padding: 3 }}>
+                <VersionView />
+              </Sider>
+            ) : null}
           </Layout>
         </Layout>
       </NmlUploadZoneContainer>
@@ -105,6 +112,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
 }
 const mapStateToProps = (state: OxalisState): StateProps => ({
   isUpdateTracingAllowed: state.tracing.restrictions.allowUpdate,
+  isVersionRestoreActive: state.uiInformation.isVersionRestoreActive,
 });
 
 export default connect(mapStateToProps)(TracingLayoutView);

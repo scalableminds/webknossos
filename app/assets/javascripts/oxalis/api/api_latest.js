@@ -412,10 +412,11 @@ class TracingApi {
     newTracingType: TracingTypeTracingType,
     newAnnotationId: string,
     newControlMode: ControlModeType,
+    version?: number,
   ) {
     Store.dispatch(restartSagaAction());
     UrlManager.reset();
-    await Model.fetch(newTracingType, newAnnotationId, newControlMode, false);
+    await Model.fetch(newTracingType, newAnnotationId, newControlMode, false, version);
     Store.dispatch(discardSaveQueuesAction());
     Store.dispatch(wkReadyAction());
     UrlManager.updateUnthrottled();

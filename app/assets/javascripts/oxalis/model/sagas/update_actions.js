@@ -115,6 +115,12 @@ type UpdateTreeGroupsUpdateAction = {
     treeGroups: Array<TreeGroupType>,
   },
 };
+type RevertToVersionUpdateAction = {
+  name: "revertToVersion",
+  value: {
+    sourceVersion: number,
+  },
+};
 type UpdateTracingUpdateAction =
   | UpdateSkeletonTracingUpdateAction
   | UpdateVolumeTracingUpdateAction;
@@ -132,6 +138,7 @@ export type UpdateAction =
   | UpdateTracingUpdateAction
   | UpdateBucketUpdateAction
   | ToggleTreeUpdateAction
+  | RevertToVersionUpdateAction
   | UpdateTreeGroupsUpdateAction;
 
 export function createTree(tree: TreeType): UpdateTreeUpdateAction {
@@ -297,6 +304,14 @@ export function updateTreeGroups(treeGroups: Array<TreeGroupType>): UpdateTreeGr
     name: "updateTreeGroups",
     value: {
       treeGroups,
+    },
+  };
+}
+export function revertToVersion(version: number) {
+  return {
+    name: "revertToVersion",
+    value: {
+      sourceVersion: version,
     },
   };
 }

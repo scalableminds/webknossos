@@ -14,6 +14,14 @@ function UiReducer(state: OxalisState, action: ActionType): OxalisState {
       });
     }
 
+    case "SET_VERSION_RESTORE_MODE_ACTION_TYPE": {
+      return update(state, {
+        uiInformation: {
+          isVersionRestoreActive: { $set: action.active },
+        },
+      });
+    }
+
     default:
       return state;
   }

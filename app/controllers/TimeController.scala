@@ -23,9 +23,6 @@ class TimeController @Inject()(userService: UserService,
                                sil: Silhouette[WkEnv],
                                val messagesApi: MessagesApi) extends Controller with FoxImplicits {
 
-  implicit def userAwareRequestToDBAccess(implicit request: UserAwareRequest[WkEnv, _]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: SecuredRequest[WkEnv, _]) = DBAccessContext(Some(request.identity))
-
   //all users with working hours > 0
   def getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]) = sil.SecuredAction.async { implicit request =>
     for {

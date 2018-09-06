@@ -116,9 +116,6 @@ class Authentication @Inject()(actorSystem: ActorSystem,
   extends Controller
     with FoxImplicits {
 
-  implicit def userAwareRequestToDBAccess(implicit request: UserAwareRequest[WkEnv, _]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: SecuredRequest[WkEnv, _]) = DBAccessContext(Some(request.identity))
-
   import AuthForms._
 
   val env: api.Environment[WkEnv] = sil.env

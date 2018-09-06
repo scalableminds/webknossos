@@ -16,9 +16,6 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
                                     sil: Silhouette[WkEnv],
                                     val messagesApi: MessagesApi) extends Controller with FoxImplicits {
 
-  implicit def userAwareRequestToDBAccess(implicit request: UserAwareRequest[WkEnv, _]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: SecuredRequest[WkEnv, _]) = DBAccessContext(Some(request.identity))
-
   def list = sil.UserAwareAction.async { implicit request =>
     for {
       dataStores <- dataStoreDAO.findAll ?~> "dataStore.list.failed"

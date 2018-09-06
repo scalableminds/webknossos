@@ -21,9 +21,6 @@ class TeamController @Inject()(teamDAO: TeamDAO,
                                sil: Silhouette[WkEnv],
                                val messagesApi: MessagesApi) extends Controller {
 
-  implicit def userAwareRequestToDBAccess(implicit request: UserAwareRequest[WkEnv, _]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: SecuredRequest[WkEnv, _]) = DBAccessContext(Some(request.identity))
-
   private def teamNameReads: Reads[String] =
     (__ \ "name").read[String]
 

@@ -38,9 +38,6 @@ class DataSetController @Inject()(userService: UserService,
                                   cache: CacheApi,
                                   val messagesApi: MessagesApi) extends Controller {
 
-  implicit def userAwareRequestToDBAccess(implicit request: UserAwareRequest[WkEnv, _]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: SecuredRequest[WkEnv, _]) = DBAccessContext(Some(request.identity))
-
   val DefaultThumbnailWidth = 400
   val DefaultThumbnailHeight = 400
   val MaxThumbnailWidth = 4000

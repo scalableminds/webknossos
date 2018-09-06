@@ -27,9 +27,6 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
                                     val messagesApi: MessagesApi)
   extends Controller {
 
-  implicit def userAwareRequestToDBAccess(implicit request: UserAwareRequest[WkEnv, _]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: SecuredRequest[WkEnv, _]) = DBAccessContext(Some(request.identity))
-
   val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
   def generateTokenForDataStore = sil.UserAwareAction.async { implicit request =>

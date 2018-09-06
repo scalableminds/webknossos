@@ -21,9 +21,6 @@ class Application @Inject()(analyticsDAO: AnalyticsDAO,
                             sil: Silhouette[WkEnv],
                             val messagesApi: MessagesApi) extends Controller {
 
-  implicit def userAwareRequestToDBAccess(implicit request: UserAwareRequest[WkEnv, _]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: SecuredRequest[WkEnv, _]) = DBAccessContext(Some(request.identity))
-
   def buildInfo = sil.UserAwareAction.async { implicit request =>
     val token = request.identity.flatMap { user =>
       if (user.isSuperUser) Some(DataStoreHandler.webKnossosToken) else None

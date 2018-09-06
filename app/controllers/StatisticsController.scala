@@ -28,9 +28,6 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
                                      val messagesApi: MessagesApi)
   extends Controller {
 
-  implicit def userAwareRequestToDBAccess(implicit request: UserAwareRequest[WkEnv, _]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: SecuredRequest[WkEnv, _]) = DBAccessContext(Some(request.identity))
-
   val intervalHandler = Map(
     "month" -> TimeSpan.groupByMonth _,
     "week" -> TimeSpan.groupByWeek _

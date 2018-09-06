@@ -37,9 +37,6 @@ class UserController @Inject()(userService: UserService,
   extends Controller
     with FoxImplicits {
 
-  implicit def userAwareRequestToDBAccess(implicit request: UserAwareRequest[WkEnv, _]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: SecuredRequest[WkEnv, _]) = DBAccessContext(Some(request.identity))
-
   val defaultAnnotationLimit = 1000
 
   def current = sil.SecuredAction.async { implicit request =>

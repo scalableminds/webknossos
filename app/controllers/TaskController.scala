@@ -74,9 +74,6 @@ class TaskController @Inject() (annotationService: AnnotationService,
     with ProtoGeometryImplicits
     with FoxImplicits {
 
-  implicit def userAwareRequestToDBAccess(implicit request: UserAwareRequest[WkEnv, _]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: SecuredRequest[WkEnv, _]) = DBAccessContext(Some(request.identity))
-
   val MAX_OPEN_TASKS = conf.Oxalis.Tasks.maxOpenPerUser
 
   def read(taskId: String) = sil.SecuredAction.async { implicit request =>

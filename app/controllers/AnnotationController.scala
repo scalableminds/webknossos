@@ -41,9 +41,6 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
   extends Controller
     with FoxImplicits {
 
-  implicit def userAwareRequestToDBAccess(implicit request: UserAwareRequest[WkEnv, _]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: SecuredRequest[WkEnv, _]) = DBAccessContext(Some(request.identity))
-
   implicit val timeout = Timeout(5 seconds)
 
   def empty(typ: String, id: String) = sil.SecuredAction { implicit request =>

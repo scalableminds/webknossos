@@ -50,9 +50,6 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
   implicit val actorSystem = ActorSystem()
   implicit val materializer = ActorMaterializer()
 
-  implicit def userAwareRequestToDBAccess(implicit request: UserAwareRequest[WkEnv, _]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: SecuredRequest[WkEnv, _]) = DBAccessContext(Some(request.identity))
-
   private def nameForNmls(fileNames: Seq[String]) =
     if (fileNames.size == 1)
       fileNames.headOption.map(_.replaceAll("\\.nml$", ""))

@@ -21,9 +21,6 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
                                  sil: Silhouette[WkEnv],
                                  val messagesApi: MessagesApi) extends Controller with FoxImplicits {
 
-  implicit def userAwareRequestToDBAccess(implicit request: UserAwareRequest[WkEnv, _]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: SecuredRequest[WkEnv, _]) = DBAccessContext(Some(request.identity))
-
   val scriptPublicReads =
     ((__ \ 'name).read[String](minLength[String](2) or maxLength[String](50)) and
       (__ \ 'gist).read[String] and

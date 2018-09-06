@@ -21,7 +21,6 @@ class UserAuthInfoRepository @Inject()(userService: UserService) extends AuthInf
     userService.changePasswordInfo(loginInfo, authInfo.asInstanceOf[PasswordInfo]).toFutureWithEmptyToFailure.map(_.asInstanceOf[T])
   }
 
-
   override def add[T <: AuthInfo](loginInfo: LoginInfo, authInfo: T): Future[T] = Future.failed(new Exception("Not Implemented"))
 
   override def save[T <: AuthInfo](loginInfo: LoginInfo, authInfo: T): Future[T] = Future.failed(new Exception("Not Implemented"))

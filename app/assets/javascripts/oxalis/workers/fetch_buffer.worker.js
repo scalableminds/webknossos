@@ -9,4 +9,4 @@ function fetchBufferViaWebworker(url: RequestInfo, options?: RequestOptions) {
     .then(response => response.arrayBuffer());
 }
 
-export default expose(fetchBufferViaWebworker, self);
+export default expose(fetchBufferViaWebworker);

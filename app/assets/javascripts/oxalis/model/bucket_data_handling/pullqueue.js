@@ -93,9 +93,44 @@ class PullQueue {
     // Measuring the time until response arrives to select appropriate preloading strategy
     const roundTripBeginTime = new Date();
     const layerInfo = getLayerByName(dataset, this.layerName);
+
+    const handleBucket = (bucketAddress, bucketData, resolutions) => {
+      const zoomStep = bucketAddress[3];
+      if (zoomStep > this.cube.MAX_UNSAMPLED_ZOOM_STEP) {
+        // todo: when does this happen? is it a problem if we are advancing the offset in this case?
+        return;
+      }
+
+      const bucket = this.cube.getBucket(bucketAddress);
+      this.cube.boundingBox.removeOutsideArea(bucket, bucketAddress, bucketData);
+      this.maybeWhitenEmptyBucket(bucketData);
+      if (bucket.type === "data") {
+        bucket.receiveData(bucketData);
+        if (zoomStep === this.cube.MAX_UNSAMPLED_ZOOM_STEP) {
+          const higherAddress = zoomedAddressToAnotherZoomStep(
+            bucketAddress,
+            resolutions,
+            zoomStep + 1,
+          );
+
+          const resolutionsFactors = getResolutionsFactors(
+            resolutions[zoomStep + 1],
+            resolutions[zoomStep],
+          );
+          const higherBucket = this.cube.getOrCreateBucket(higherAddress);
+          if (higherBucket.type === "data") {
+            higherBucket.downsampleFromLowerBucket(
+              bucket,
+              resolutionsFactors,
+              layerInfo.category === "segmentation",
+            );
+          }
+        }
+      }
+    };
+
     try {
       const responseBuffer = await requestFromStore(layerInfo, batch);
-      let bucketData;
       this.connectionInfo.log(
         this.layerName,
         roundTripBeginTime,
@@ -103,39 +138,14 @@ class PullQueue {
         responseBuffer.length,
       );
 
-      let offset = 0;
       const resolutions = getResolutions(dataset);
-      for (const bucketAddress of batch) {
-        const zoomStep = bucketAddress[3];
-        if (zoomStep > this.cube.MAX_UNSAMPLED_ZOOM_STEP) {
-          continue;
-        }
-        bucketData = responseBuffer.subarray(offset, (offset += this.cube.BUCKET_LENGTH));
-        const bucket = this.cube.getBucket(bucketAddress);
-        this.cube.boundingBox.removeOutsideArea(bucket, bucketAddress, bucketData);
-        this.maybeWhitenEmptyBucket(bucketData);
-        if (bucket.type === "data") {
-          bucket.receiveData(bucketData);
-          if (zoomStep === this.cube.MAX_UNSAMPLED_ZOOM_STEP) {
-            const higherAddress = zoomedAddressToAnotherZoomStep(
-              bucketAddress,
-              resolutions,
-              zoomStep + 1,
-            );
-
-            const resolutionsFactors = getResolutionsFactors(
-              resolutions[zoomStep + 1],
-              resolutions[zoomStep],
-            );
-            const higherBucket = this.cube.getOrCreateBucket(higherAddress);
-            if (higherBucket.type === "data") {
-              higherBucket.downsampleFromLowerBucket(
-                bucket,
-                resolutionsFactors,
-                layerInfo.category === "segmentation",
-              );
-            }
-          }
+      let offset = 0;
+      const successfulBucketIndices = [0, 1, 2, 3, 4];
+      for (const [index, bucketAddress] of batch.entries()) {
+        const isSuccess = successfulBucketIndices.indexOf(index) > -1;
+        if (isSuccess) {
+          const bucketData = responseBuffer.subarray(offset, (offset += this.cube.BUCKET_LENGTH));
+          handleBucket(bucketAddress, bucketData, resolutions);
         }
       }
     } catch (error) {

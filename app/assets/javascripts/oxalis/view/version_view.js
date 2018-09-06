@@ -1,9 +1,8 @@
 // @flow
 
 import * as React from "react";
-import { Spin, Button, List, Tooltip, Icon } from "antd";
+import { Spin, Button, List, Tooltip, Icon, Avatar } from "antd";
 import { ControlModeEnum } from "oxalis/constants";
-import type { OxalisState, SkeletonTracingType } from "oxalis/store";
 import { connect } from "react-redux";
 import Model from "oxalis/model";
 import { getUpdateActionLog } from "admin/admin_rest_api";
@@ -17,6 +16,17 @@ import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_
 import { revertToVersion } from "oxalis/model/sagas/update_actions";
 import { pushSaveQueueAction, setVersionNumberAction } from "oxalis/model/actions/save_actions";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import type { OxalisState, SkeletonTracingType } from "oxalis/store";
+import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+
+type AddToValueFn = <T>(
+  T,
+) => {
+  name: $PropertyType<T, "name">,
+  value: { ...$PropertyType<T, "value">, actionTimestamp: number, version: number },
+};
+
+type ServerUpdateAction = $Call<AddToValueFn, UpdateAction>;
 
 type Props = {
   skeletonTracing: SkeletonTracingType,
@@ -24,7 +34,7 @@ type Props = {
 
 type State = {
   isLoading: boolean,
-  versions: Array<Array<Object>>,
+  versions: Array<Array<ServerUpdateAction>>,
   originalVersion: number,
 };
 
@@ -36,11 +46,8 @@ class VersionView extends React.Component<Props, State> {
   };
 
   componentDidMount() {
-    const { tracingId } = this.props.skeletonTracing;
-    if (tracingId != null) {
-      this.fetchData(tracingId);
-      Store.dispatch(setAnnotationAllowUpdateAction(false));
-    }
+    this.fetchData(this.props.skeletonTracing.tracingId);
+    Store.dispatch(setAnnotationAllowUpdateAction(false));
   }
 
   async fetchData(tracingId: string) {
@@ -54,6 +61,51 @@ class VersionView extends React.Component<Props, State> {
     } finally {
       this.setState({ isLoading: false });
     }
+  }
+
+  getDescriptionForBatch(batch: Array<ServerUpdateAction>): { description: string, type: string } {
+    const moveTreeComponentUA = batch.find(ua => ua.name === "moveTreeComponent");
+    if (moveTreeComponentUA != null) {
+      if (batch.some(ua => ua.name === "createTree")) {
+        return {
+          description: `Split off a tree with ${moveTreeComponentUA.value.nodeIds.length} nodes.`,
+          type: "arrows-alt",
+        };
+      } else if (batch.some(ua => ua.name === "deleteTree")) {
+        return {
+          description: `Merged a tree with ${moveTreeComponentUA.value.nodeIds.length} nodes.`,
+          type: "shrink",
+        };
+      }
+    }
+
+    const deleteTreeUA = batch.find(ua => ua.name === "deleteTree");
+    if (deleteTreeUA != null) {
+      return {
+        description: `Deleted tree with id ${deleteTreeUA.value.id}.`,
+        type: "delete",
+      };
+    }
+
+    const deleteNodeUA = batch.find(ua => ua.name === "deleteNode");
+    if (deleteNodeUA != null) {
+      return {
+        description: `Deleted node with id ${deleteNodeUA.value.nodeId}.`,
+        type: "delete",
+      };
+    }
+
+    const revertToVersionUA = batch.find(ua => ua.name === "revertToVersion");
+    if (revertToVersionUA != null) {
+      return {
+        description: `Reverted to version ${revertToVersionUA.value.sourceVersion}.`,
+        type: "backward",
+      };
+    }
+    return {
+      description: `${batch[0].name} and ${batch.length - 1} other entries.`,
+      type: "plus-circle",
+    };
   }
 
   async previewVersion(version: number) {
@@ -93,6 +145,7 @@ class VersionView extends React.Component<Props, State> {
           Restore this version
         </Button>
       );
+      const { description, type } = this.getDescriptionForBatch(batch);
       return (
         <React.Fragment>
           <List.Item
@@ -102,6 +155,7 @@ class VersionView extends React.Component<Props, State> {
             <List.Item.Meta
               title={<FormattedDate timestamp={lastTimestamp} />}
               onClick={() => this.previewVersion(version)}
+              avatar={<Avatar icon={type} />}
               description={
                 <React.Fragment>
                   {isNewest ? (
@@ -109,7 +163,7 @@ class VersionView extends React.Component<Props, State> {
                       <i>Newest version</i> <br />
                     </React.Fragment>
                   ) : null}
-                  {batch[0].name} and {batch.length - 1} other entries.
+                  {description}
                 </React.Fragment>
               }
             />
@@ -121,7 +175,7 @@ class VersionView extends React.Component<Props, State> {
     // TODO: server should send version numbers as part of the batches
     const versionsWithVersionNumbers = this.state.versions.map((batch, index) => {
       batch.forEach(action => {
-        action.version = this.state.versions.length - index;
+        action.value.version = this.state.versions.length - index;
       });
       return batch;
     });
@@ -151,9 +205,9 @@ class VersionView extends React.Component<Props, State> {
             {filteredVersions.map((batch, index) => (
               <VersionEntry
                 batch={batch}
-                version={batch[0].version}
+                version={batch[0].value.version}
                 isNewest={index === 0}
-                key={batch[0].version}
+                key={batch[0].value.version}
               />
             ))}
           </List>

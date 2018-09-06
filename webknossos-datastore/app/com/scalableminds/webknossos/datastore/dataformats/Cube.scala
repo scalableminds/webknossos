@@ -31,9 +31,7 @@ trait Cube {
     // Check if we are the last one to use this cube, if that is the case and the cube needs to be removed -> remove it
     this.synchronized {
       accessCounter -= 1
-      if (accessCounter == 0 && scheduledForRemoval) {
-        onFinalize()
-      }
+      tryRemoval()
     }
   }
 
@@ -41,10 +39,15 @@ trait Cube {
     this.synchronized {
       scheduledForRemoval = true
       // Check if we can directly remove this cube (only possible if it is currently unused)
-      if (accessCounter == 0) {
-        isRemoved = true
-        onFinalize()
-      }
+      tryRemoval()
+    }
+  }
+
+  private def tryRemoval(): Unit = {
+    // should only be called in a synchronized block
+    if (!isRemoved && accessCounter == 0 && scheduledForRemoval) {
+      isRemoved = true
+      onFinalize()
     }
   }
 

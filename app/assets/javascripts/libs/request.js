@@ -5,7 +5,6 @@
 
 import _ from "lodash";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
 import { pingDataStoreIfAppropriate, pingMentionedDataStores } from "admin/datastore_health_check";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import handleStatus from "libs/handle_http_status";

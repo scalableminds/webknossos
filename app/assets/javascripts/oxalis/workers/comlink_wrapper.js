@@ -20,4 +20,7 @@ export const createWorker: <Fn>(fn: Fn) => Fn = WorkerClass =>
 
 export const proxy = _proxy;
 export const transferHandlers = _transferHandlers;
-export const expose = _expose;
+export const expose = <T>(fn: T, _self: any): T => {
+  _expose(fn, _self);
+  return fn;
+};

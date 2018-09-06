@@ -11,7 +11,7 @@ import { expose } from "./comlink_wrapper";
 
 // This function receives and returns ArrayBuffer, since that can be transferred without
 // copying to/out of the webworker
-export default function decodeFourBit(buffer: ArrayBuffer): ArrayBuffer {
+function decodeFourBit(buffer: ArrayBuffer): ArrayBuffer {
   const bufferArray = new Uint8Array(buffer);
   // Expand 4-bit data
   const newColors = new Uint8Array(2 * bufferArray.length);
@@ -28,4 +28,4 @@ export default function decodeFourBit(buffer: ArrayBuffer): ArrayBuffer {
   return newColors.buffer;
 }
 
-expose(decodeFourBit, self);
+export default expose(decodeFourBit, self);

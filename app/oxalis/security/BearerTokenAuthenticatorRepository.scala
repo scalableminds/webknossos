@@ -1,8 +1,8 @@
 package oxalis.security
 
 import com.mohiva.play.silhouette.api.LoginInfo
+import com.mohiva.play.silhouette.api.repositories.AuthenticatorRepository
 import com.mohiva.play.silhouette.impl.authenticators.BearerTokenAuthenticator
-import com.mohiva.play.silhouette.impl.daos.AuthenticatorDAO
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
@@ -12,7 +12,6 @@ import oxalis.security.TokenType.TokenType
 import play.api.libs.concurrent.Execution.Implicits._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import play.api.i18n.{Messages, MessagesApi}
 import utils.{ObjectId, SQLClient, SQLDAO}
 
 import scala.concurrent.Future
@@ -131,7 +130,7 @@ class TokenDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[Token, TokensRow, 
   }
 }
 
-class BearerTokenAuthenticatorDAO(tokenDAO: TokenDAO) extends AuthenticatorDAO[BearerTokenAuthenticator] {
+class BearerTokenAuthenticatorRepository(tokenDAO: TokenDAO) extends AuthenticatorRepository[BearerTokenAuthenticator] {
 
   /* functions as defined in Silhouette trait Authenticator DAO */
   override def find(value: String): Future[Option[BearerTokenAuthenticator]] =

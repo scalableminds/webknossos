@@ -9,6 +9,7 @@ import javax.inject.Inject
 import com.mohiva.play.silhouette.api.{LoginInfo, Silhouette}
 import com.mohiva.play.silhouette.api.exceptions.ProviderException
 import com.mohiva.play.silhouette.api.util.Credentials
+import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
 import com.scalableminds.util.mail._
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.webknossos.datastore.rpc.RPC
@@ -155,7 +156,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       signUpData => {
         val email = signUpData.email.toLowerCase
-        val loginInfo = LoginInfo(CredentialsProvider.ID, email)
+        val loginInfo = LoginInfo(wkSilhouetteEnvironment.credentialsProviderId, email)
         var errors = List[String]()
         val firstName = normalizeName(signUpData.firstName).getOrElse {
           errors ::= Messages("user.firstName.invalid");

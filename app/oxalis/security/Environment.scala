@@ -34,10 +34,12 @@ class WkSilhouetteEnvironment @Inject()(conf: WkConf,
   )
   val fingerprintGenerator = new DefaultFingerprintGenerator(false)
   val idGenerator = new CompactRandomIDGenerator
-  val bearerTokenAuthenticatorDAO = new BearerTokenAuthenticatorDAO(tokenDAO)
+  val bearerTokenAuthenticatorDAO = new BearerTokenAuthenticatorRepository(tokenDAO)
 
   val combinedAuthenticatorService = CombinedAuthenticatorService(cookieSettings,
     tokenSettings, bearerTokenAuthenticatorDAO, fingerprintGenerator, idGenerator, Clock(), userService, conf)
+
+  val credentialsProviderId = "credentials"
 
   override def identityService: IdentityService[User] = userService
 

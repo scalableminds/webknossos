@@ -35,7 +35,7 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
   implicit def userAwareRequestToDBAccess(implicit request: UserAwareRequest[WkEnv, _]) = DBAccessContext(request.identity)
   implicit def securedRequestToDBAccess(implicit request: SecuredRequest[WkEnv, _]) = DBAccessContext(Some(request.identity))
 
-  val bearerTokenServices = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
+  val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
   def validateDataSetUpload(name: String) = wkDataStoreActions.DataStoreAction(name).async(parse.json) { implicit request =>
     for {

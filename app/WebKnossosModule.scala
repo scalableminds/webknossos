@@ -1,5 +1,6 @@
 import com.google.inject.AbstractModule
 import controllers.InitialDataService
+import models.annotation.AnnotationStore
 import models.task.TaskService
 import models.user._
 import oxalis.user.UserCache

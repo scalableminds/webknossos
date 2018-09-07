@@ -42,8 +42,9 @@ class BinaryDataController @Inject()(
       AllowRemoteOrigin {
         for {
           (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
-          data <- requestData(dataSource, dataLayer, request.body)
-        } yield Ok(data)
+          (data, indices) <- requestData(dataSource, dataLayer, request.body)
+        } yield Ok(data).withHeaders(
+          "BUCKETS" -> indices.mkString(", "))
       }
   }
 
@@ -73,8 +74,9 @@ class BinaryDataController @Inject()(
             depth,
             DataServiceRequestSettings(halfByte = halfByte)
           )
-        data <- requestData(dataSource, dataLayer, request).map(Ok(_))
-        } yield data
+          (data, indices) <- requestData(dataSource, dataLayer, request)
+        } yield Ok(data).withHeaders(
+          "BUCKETS" -> indices.mkString(", "))
       }
   }
 
@@ -115,8 +117,9 @@ class BinaryDataController @Inject()(
           cubeSize,
           cubeSize,
           cubeSize)
-          data <- requestData(dataSource, dataLayer, request).map(Ok(_))
-        } yield data
+          (data, indices) <- requestData(dataSource, dataLayer, request)
+        } yield Ok(data).withHeaders(
+          "BUCKETS" -> indices.mkString(", "))
       }
   }
 
@@ -274,13 +277,9 @@ class BinaryDataController @Inject()(
                            dataSource: DataSource,
                            dataLayer: DataLayer,
                            dataRequests: DataRequestCollection
-                         ): Fox[Array[Byte]] = {
+                         ): Fox[(Array[Byte], List[Int])] = {
     val requests = dataRequests.map(r => DataServiceDataRequest(dataSource, dataLayer, r.cuboid(dataLayer), r.settings))
-    binaryDataService.handleDataRequests(requests).futureBox.map(_ match {
-        case Full(data) => Fox.successful(data)
-        case Empty => Fox.failure("") ~> 404
-        case f: Failure => Future.successful(f) ~> 500
-      }).toFox.flatten
+    binaryDataService.handleDataRequests(requests)
   }
 
   private def contentTypeJpeg = play.api.libs.MimeTypes.forExtension("jpeg").getOrElse(play.api.http.ContentTypes.BINARY)
@@ -300,7 +299,7 @@ class BinaryDataController @Inject()(
       imagesPerRow,
       blackAndWhite = blackAndWhite)
     for {
-      data <- requestData(dataSource, dataLayer, request)
+      (data, indices) <- requestData(dataSource, dataLayer, request)
       spriteSheet <- ImageCreator.spriteSheetFor(data, params) ?~> Messages("image.create.failed")
       firstSheet <- spriteSheet.pages.headOption ?~> Messages("image.page.failed")
     } yield {

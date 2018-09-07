@@ -155,6 +155,7 @@ export type SkeletonTracingType = {|
   +treeGroups: Array<TreeGroupType>,
   +activeTreeId: ?number,
   +activeNodeId: ?number,
+  +activeGroupId: ?number,
   +cachedMaxNodeId: number,
 |};
 
@@ -434,6 +435,7 @@ export const defaultState: OxalisState = {
     allowedTeams: [],
     logoUrl: null,
     lastUsedByUser: 0,
+    isForeign: false,
   },
   tracing: {
     ...initialAnnotationInfo,

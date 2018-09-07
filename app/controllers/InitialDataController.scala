@@ -2,7 +2,6 @@ package controllers
 
 import com.mohiva.play.silhouette.api.LoginInfo
 import com.scalableminds.util.accesscontext.GlobalAccessContext
-import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
@@ -14,32 +13,42 @@ import models.team._
 import models.user._
 import net.liftweb.common.Full
 import org.joda.time.DateTime
-import oxalis.security.{Token, TokenDAO, TokenType}
+import oxalis.security.{Token, TokenDAO, TokenType, WebknossosSilhouette}
 import play.api.i18n.MessagesApi
-import play.api.Play.current
-import oxalis.security.WebknossosSilhouette.UserAwareAction
-import play.api.Play
 import play.api.libs.json.Json
 import utils.{ObjectId, WkConf}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class InitialDataController @Inject() (val messagesApi: MessagesApi)
+class InitialDataController @Inject()(initialDataService: InitialDataService,
+                                      sil: WebknossosSilhouette,
+                                      val messagesApi: MessagesApi)
   extends Controller with FoxImplicits {
 
-  def triggerInsert = UserAwareAction.async { implicit request =>
+  def triggerInsert = sil.UserAwareAction.async { implicit request =>
     for {
-      _ <- InitialDataService.insert
+      _ <- initialDataService.insert
     } yield Ok
   }
 }
 
 
-object InitialDataService extends FoxImplicits with LazyLogging {
+class InitialDataService @Inject()(userService: UserService,
+                                   userDAO: UserDAO,
+                                   userTeamRolesDAO: UserTeamRolesDAO,
+                                   userExperiencesDAO: UserExperiencesDAO,
+                                   userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
+                                   taskTypeDAO: TaskTypeDAO,
+                                   dataStoreDAO: DataStoreDAO,
+                                   teamDAO: TeamDAO,
+                                   tokenDAO: TokenDAO,
+                                   projectDAO: ProjectDAO,
+                                   organizationDAO: OrganizationDAO,
+                                   conf: WkConf) extends FoxImplicits with LazyLogging {
   implicit val ctx = GlobalAccessContext
 
-  val defaultUserEmail = WkConf.Application.Authentication.DefaultUser.email
-  val defaultUserPassword = WkConf.Application.Authentication.DefaultUser.password
+  val defaultUserEmail = conf.Application.Authentication.DefaultUser.email
+  val defaultUserPassword = conf.Application.Authentication.DefaultUser.password
   val additionalInformation = """**Sample Organization**
 
 Sample Street 123
@@ -57,11 +66,10 @@ Samplecountry
     "Boy",
     System.currentTimeMillis(),
     Json.toJson(UserConfiguration.default),
-    SCrypt.md5(defaultUserPassword),
-    UserService.createLoginInfo(defaultUserEmail),
-    UserService.createPasswordInfo(defaultUserPassword),
+    userService.createLoginInfo(defaultUserEmail),
+    userService.createPasswordInfo(defaultUserPassword),
     isAdmin = true,
-    isSuperUser = WkConf.Application.Authentication.DefaultUser.isSuperUser,
+    isSuperUser = conf.Application.Authentication.DefaultUser.isSuperUser,
     isDeactivated = false
   )
 
@@ -80,31 +88,31 @@ Samplecountry
 
   def assertInitialDataEnabled =
     for {
-      _ <- bool2Fox(WkConf.Application.insertInitialData) ?~> "initialData.notEnabled"
+      _ <- bool2Fox(conf.Application.insertInitialData) ?~> "initialData.notEnabled"
     } yield ()
 
   def assertNoOrganizationsPresent =
     for {
-      organizations <- OrganizationDAO.findAll
+      organizations <- organizationDAO.findAll
       _ <- bool2Fox(organizations.isEmpty) ?~> "initialData.organizationsNotEmpty"
     } yield ()
 
   def insertDefaultUser =  {
-    UserService.defaultUser.futureBox.flatMap {
+    userService.defaultUser.futureBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
         for {
-          _ <- UserDAO.insertOne(defaultUser)
-          _ <- UserExperiencesDAO.updateExperiencesForUser(defaultUser._id, Map("sampleExp" -> 10))
-          _ <- UserTeamRolesDAO.insertTeamMembership(defaultUser._id, TeamMembershipSQL(organizationTeam._id, true))
+          _ <- userDAO.insertOne(defaultUser)
+          _ <- userExperiencesDAO.updateExperiencesForUser(defaultUser._id, Map("sampleExp" -> 10))
+          _ <- userTeamRolesDAO.insertTeamMembership(defaultUser._id, TeamMembership(organizationTeam._id, true))
           _ = logger.info("Inserted default user scmboy")
         } yield ()
     }.toFox
   }
 
   def insertToken = {
-    val expiryTime = Play.configuration.underlying.getDuration("silhouette.tokenAuthenticator.authenticatorExpiry").toMillis
-    TokenDAO.findOneByLoginInfo("credentials", defaultUserEmail, TokenType.Authentication).futureBox.flatMap {
+    val expiryTime = conf.Silhouette.TokenAuthenticator.authenticatorExpiry.toMillis
+    tokenDAO.findOneByLoginInfo("credentials", defaultUserEmail, TokenType.Authentication).futureBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
         val newToken = Token(
@@ -116,30 +124,30 @@ Samplecountry
           None,
           TokenType.Authentication
         )
-      TokenDAO.insertOne(newToken)
+        tokenDAO.insertOne(newToken)
     }
   }
 
   def insertOrganization = {
-    OrganizationDAO.findOneByName(defaultOrganization.name).futureBox.flatMap {
+    organizationDAO.findOneByName(defaultOrganization.name).futureBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
-        OrganizationDAO.insertOne(defaultOrganization)
+        organizationDAO.insertOne(defaultOrganization)
     }.toFox
   }
 
   def insertTeams = {
-    TeamDAO.findAll.flatMap {
+    teamDAO.findAll.flatMap {
       teams =>
         if (teams.isEmpty)
-          TeamDAO.insertOne(organizationTeam)
+          teamDAO.insertOne(organizationTeam)
         else
           Fox.successful(())
     }.toFox
   }
 
   def insertTaskType = {
-    TaskTypeDAO.findAll.flatMap {
+    taskTypeDAO.findAll.flatMap {
       types =>
         if (types.isEmpty) {
           val taskType = TaskType(
@@ -147,30 +155,30 @@ Samplecountry
             organizationTeam._id,
             "sampleTaskType",
             "Check those cells out!"
-            )
-          for {_ <- TaskTypeDAO.insertOne(taskType)} yield ()
+          )
+          for {_ <- taskTypeDAO.insertOne(taskType)} yield ()
         }
         else Fox.successful(())
     }.toFox
   }
 
   def insertProject = {
-    ProjectDAO.findAll.flatMap {
+    projectDAO.findAll.flatMap {
       projects =>
         if (projects.isEmpty) {
-          UserService.defaultUser.flatMap { user =>
+          userService.defaultUser.flatMap { user =>
             val project = Project(ObjectId.generate, organizationTeam._id, user._id, "sampleProject", 100, false, Some(5400000))
-            for {_ <- ProjectDAO.insertOne(project)} yield ()
+            for {_ <- projectDAO.insertOne(project)} yield ()
           }
         } else Fox.successful(())
     }.toFox
   }
 
   def insertLocalDataStoreIfEnabled: Fox[Any] = {
-    if (WkConf.Datastore.enabled) {
-      DataStoreDAO.findOneByName("localhost").futureBox.map { maybeStore =>
+    if (conf.Datastore.enabled) {
+      dataStoreDAO.findOneByName("localhost").futureBox.map { maybeStore =>
         if (maybeStore.isEmpty) {
-          DataStoreDAO.insertOne(DataStore("localhost", WkConf.Http.uri, WebKnossosStore, WkConf.Datastore.key))
+          dataStoreDAO.insertOne(DataStore("localhost", conf.Http.uri, conf.Datastore.key))
         }
       }
     } else Fox.successful(())

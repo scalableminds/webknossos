@@ -1,12 +1,8 @@
-/*
- * Copyright (C) 2011-2014 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.webknossos.datastore.services
 
 import com.google.inject.Inject
 import com.scalableminds.util.tools.Fox
-import play.api.Play.current
-import play.api.cache.Cache
+import play.api.cache.CacheApi
 import play.api.libs.json.{Format, Json, Reads, Writes}
 
 import scala.concurrent.duration._
@@ -54,13 +50,13 @@ object UserAccessRequest {
 }
 
 
-class AccessTokenService @Inject()(webKnossosServer: WebKnossosServer) {
+class AccessTokenService @Inject()(webKnossosServer: WebKnossosServer, cache: CacheApi) {
 
   val AccessExpiration: FiniteDuration = 2.minutes
 
   def hasUserAccess(token: String, accessRequest: UserAccessRequest): Fox[UserAccessAnswer] = {
     val key = accessRequest.toCacheKey(token)
-    Cache.getOrElse(key, AccessExpiration.toSeconds.toInt) {
+    cache.getOrElse(key, AccessExpiration) {
       webKnossosServer.requestUserAccess(token, accessRequest)
     }
   }

@@ -1,46 +1,49 @@
 package oxalis.thirdparty
 
+import akka.actor.ActorSystem
+import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
+import javax.inject.Inject
+import models.team.OrganizationDAO
 import models.user.User
-import play.api.Play
-import play.api.Play.current
-import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.ws.{WS, WSAuthScheme}
+import play.api.libs.ws.{WS, WSAuthScheme, WSClient}
 import utils.WkConf
 
 import scala.concurrent.{Future, Promise}
 import scala.util._
 
-object BrainTracing extends LazyLogging with FoxImplicits {
+class BrainTracing @Inject()(actorSystem: ActorSystem,
+                             organizationDAO: OrganizationDAO,
+                             ws: WSClient,
+                             conf: WkConf
+                            ) extends LazyLogging with FoxImplicits {
   val URL = "http://braintracing.org/"
   val CREATE_URL = URL + "oxalis_create_user.php"
   val LOGTIME_URL = URL + "oxalis_add_hours.php"
-  val USER = "brain"
-  val PW = "trace"
-  val LICENSE = "hu39rxpv7m"
 
   lazy val Mailer =
-    Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
+    actorSystem.actorSelection("/user/mailActor")
 
-  def registerIfNeeded(user: User): Fox[String] =
+  def registerIfNeeded(user: User, password: String): Fox[Option[String]] =
     for {
-      organization <- user.organization
-      result <- (if (organization.name == "Connectomics department" && WkConf.Braintracing.active) register(user).toFox else Fox.successful("braintracing.none"))
+      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext) ?~> "organization.notFound"
+      result <- (if (organization.name == "Connectomics department" && conf.Braintracing.active) register(user, password).toFox.map(Some(_)) else Fox.successful(None))
     } yield result
 
-  private def register(user: User): Future[String] = {
+  private def register(user: User, password: String): Future[String] = {
     val result = Promise[String]()
-    val brainTracingRequest = WS
+    val brainTracingRequest = ws
       .url(CREATE_URL)
-      .withAuth(USER, PW, WSAuthScheme.BASIC)
+      .withAuth(conf.Braintracing.user, conf.Braintracing.password, WSAuthScheme.BASIC)
       .withQueryString(
-        "license" -> LICENSE,
+        "license" -> conf.Braintracing.license,
         "firstname" -> user.firstName,
         "lastname" -> user.lastName,
         "email" -> user.email,
-        "pword" -> user.md5hash)
+        "pword" -> SCrypt.md5(password))
       .get()
       .map { response =>
         result complete (response.status match {

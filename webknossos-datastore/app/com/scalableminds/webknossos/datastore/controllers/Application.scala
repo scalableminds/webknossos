@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -22,7 +19,7 @@ class Application @Inject()(tracingDataStore: TracingDataStore,
     AllowRemoteOrigin {
       for {
         _ <- tracingDataStore.healthClient.checkHealth
-      } yield Ok
+      } yield Ok("Ok")
     }
   }
 

@@ -3,10 +3,16 @@
 import * as React from "react";
 import { Button, Input, Checkbox, Col, Row, Tooltip } from "antd";
 import Clipboard from "clipboard-js";
+import features from "features";
 import Toast from "libs/toast";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import { AsyncButton } from "components/async_clickables";
-import { getDatasetSharingToken, revokeDatasetSharingToken } from "admin/admin_rest_api";
+import {
+  getDatasetSharingToken,
+  getDataset,
+  revokeDatasetSharingToken,
+} from "admin/admin_rest_api";
+import type { APIDatasetType } from "admin/api_flow_types";
 import { FormItemWithInfo } from "./helper_components";
 
 type Props = {
@@ -17,6 +23,7 @@ type Props = {
 
 type State = {
   sharingToken: string,
+  dataSet: ?APIDatasetType,
 };
 
 export default class ImportGeneralComponent extends React.PureComponent<Props, State> {
@@ -24,6 +31,7 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
     super();
     this.state = {
       sharingToken: "",
+      dataSet: null,
     };
   }
   componentDidMount() {
@@ -32,7 +40,8 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
 
   async fetch() {
     const sharingToken = await getDatasetSharingToken(this.props.datasetName);
-    this.setState({ sharingToken });
+    const dataSet = await getDataset(this.props.datasetName);
+    this.setState({ dataSet, sharingToken });
   }
 
   handleSelectText(event: SyntheticInputEvent<>): void {
@@ -51,12 +60,25 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
     this.setState({ sharingToken });
   };
 
+  handleCopyAllowUsageText = async (): Promise<void> => {
+    await Clipboard.copy(this.getAllowUsageText());
+    Toast.success("Text copied to clipboard");
+  };
+
   getSharingLink() {
     const doesNeedToken = !this.props.form.getFieldValue("dataset.isPublic");
     const tokenSuffix = `?token=${this.state.sharingToken}`;
     return `${window.location.origin}/datasets/${this.props.datasetName}/view${
       doesNeedToken ? tokenSuffix : ""
     }`;
+  }
+
+  getAllowUsageText() {
+    if (this.state.dataSet != null) {
+      const dataStoreName = this.state.dataSet.dataStore.name;
+      const dataStoreURL = this.state.dataSet.dataStore.url;
+      return `${dataStoreName}, ${dataStoreURL}, ${this.props.datasetName}`;
+    } else return "";
   }
 
   render() {
@@ -148,6 +170,30 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
             )}
           </Input.Group>
         </FormItemWithInfo>
+        {form.getFieldValue("dataset.isPublic") && features().addForeignDataset ? (
+          <React.Fragment>
+            <FormItemWithInfo
+              label="Allow usage in other webknossos-instances using this text"
+              info="Give this text to users with other webknossos-instances so that they can add this dataset"
+            >
+              <Input.Group compact>
+                <Input
+                  value={this.getAllowUsageText()}
+                  onClick={this.handleSelectText}
+                  style={{ width: "80%" }}
+                  readOnly
+                />
+                <Button
+                  onClick={this.handleCopyAllowUsageText}
+                  style={{ width: "10%" }}
+                  icon="copy"
+                >
+                  Copy
+                </Button>
+              </Input.Group>
+            </FormItemWithInfo>
+          </React.Fragment>
+        ) : null}
       </div>
     );
 

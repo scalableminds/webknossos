@@ -1,28 +1,25 @@
 package oxalis.mail
 
 import com.scalableminds.util.mail.Mail
+import javax.inject.Inject
 import models.user.User
 import models.team.Organization
 import play.api.i18n.Messages
 import utils.WkConf
 import views._
 
-object DefaultMails {
-  /**
-   * Configuration used for settings
-   */
-  val conf = play.api.Play.current.configuration
+class DefaultMails @Inject()(conf: WkConf) {
 
   /**
    * Base url used in emails
    */
-  val uri = WkConf.Http.uri
+  val uri = conf.Http.uri
 
   val defaultFrom = "no-reply@webknossos.org"
 
-  val newOrganizationMailingList = WkConf.Oxalis.newOrganizationMailingList
+  val newOrganizationMailingList = conf.Oxalis.newOrganizationMailingList
 
-  def registerAdminNotifyerMail(user: User, email: String, brainDBResult: String, organization: Organization) =
+  def registerAdminNotifyerMail(user: User, email: String, brainDBResult: Option[String], organization: Organization) =
     Mail(
       from = email,
       headers = Map("Sender" -> defaultFrom),
@@ -37,11 +34,11 @@ object DefaultMails {
       bodyText = html.mail.timeLimit(user.name, projectName, taskId, annotationId, uri).body,
       recipients = List(organization.overTimeMailingList))
 
-  def registerMail(name: String, receiver: String, brainDBresult: String)(implicit messages: Messages) =
+  def registerMail(name: String, receiver: String, brainDBresult: Option[String])(implicit messages: Messages) =
     Mail(
       from = defaultFrom,
       subject = "Thanks for your registration on " + uri,
-      bodyText = html.mail.register(name, Messages(brainDBresult)).body,
+      bodyText = html.mail.register(name, brainDBresult.map(Messages(_))).body,
       recipients = List(receiver))
 
   def activatedMail(name: String, receiver: String) =

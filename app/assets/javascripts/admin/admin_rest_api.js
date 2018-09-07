@@ -585,6 +585,14 @@ export function getDatasetDatasource(
   );
 }
 
+export function readDatasetDatasource(dataset: APIDatasetType): Promise<APIDataSourceType> {
+  return doWithToken(token =>
+    Request.receiveJSON(
+      `${dataset.dataStore.url}/data/datasets/${dataset.name}/readInboxDataSource?token=${token}`,
+    ),
+  );
+}
+
 export async function updateDatasetDatasource(
   datasetName: string,
   dataStoreUrl: string,
@@ -648,6 +656,21 @@ export async function addDataset(datasetConfig: DatasetConfigType): Promise<void
       host: datasetConfig.datastore,
     }),
   );
+}
+
+export async function addForeignDataSet(
+  dataStoreName: string,
+  url: string,
+  dataSetName: string,
+): Promise<string> {
+  const { result } = await Request.sendJSONReceiveJSON("/api/datasets/addForeign", {
+    data: {
+      dataStoreName,
+      url,
+      dataSetName,
+    },
+  });
+  return result;
 }
 
 // Returns void if the name is valid. Otherwise, a string is returned which denotes the reason.

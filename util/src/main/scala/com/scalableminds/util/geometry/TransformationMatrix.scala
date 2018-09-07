@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.util.geometry
 
 case class MatrixBase3D(x: Vector3D, y: Vector3D, z: Vector3D)
@@ -19,9 +16,9 @@ object TransformationMatrix {
       0, 1, 0, 0,
       0, 0, 1, 0,
       0, 0, 0, 1))
-  
+
   def apply(pos: Vector3D, rotationBase: MatrixBase3D): TransformationMatrix = {
-    
+
     val MatrixBase3D(ny, nx, nz) = rotationBase
 
     TransformationMatrix(Array(

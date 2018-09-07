@@ -4,9 +4,10 @@ import _ from "lodash";
 import * as React from "react";
 import { connect } from "react-redux";
 import update from "immutability-helper";
-import { Modal, Dropdown, Menu, Icon, Input, Checkbox } from "antd";
+import { Dropdown, Menu, Icon, Checkbox } from "antd";
 import {
   setActiveTreeAction,
+  setActiveGroupAction,
   toggleTreeAction,
   toggleTreeGroupAction,
   toggleAllTreesAction,
@@ -33,12 +34,14 @@ const CHECKBOX_STYLE = { verticalAlign: "middle" };
 
 type Props = {
   activeTreeId: number,
+  activeGroupId: number,
   treeGroups: Array<TreeGroupType>,
   // TODO: eslint doesn't recognize, that sortBy is indeed used in the getDerivedStateFromProps function
   // eslint-disable-next-line react/no-unused-prop-types
   sortBy: string,
   trees: TreeMapType,
   onSetActiveTree: number => void,
+  onSetActiveGroup: number => void,
   onToggleTree: number => void,
   onToggleAllTrees: () => void,
   onToggleTreeGroup: number => void,
@@ -50,7 +53,6 @@ type State = {
   prevProps: ?Props,
   expandedGroupIds: { [number]: boolean },
   groupTree: Array<TreeNodeType>,
-  renamingGroup: ?{ groupId: number, name: string },
   searchFocusOffset: number,
 };
 
@@ -58,7 +60,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   state = {
     expandedGroupIds: {},
     groupTree: [],
-    renamingGroup: null,
     prevProps: null,
     searchFocusOffset: 0,
   };
@@ -126,9 +127,14 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }
   };
 
-  onSelect = evt => {
+  onSelectTree = evt => {
     const treeId = evt.target.dataset.id;
     this.props.onSetActiveTree(parseInt(treeId, 10));
+  };
+
+  onSelectGroup = evt => {
+    const groupId = evt.target.dataset.id;
+    this.props.onSetActiveGroup(parseInt(groupId, 10));
   };
 
   onExpand = (params: { node: TreeNodeType, expanded: boolean }) => {
@@ -163,7 +169,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   createGroup(groupId: number) {
     const newTreeGroups = _.cloneDeep(this.props.treeGroups);
     const newGroupId = getMaximumGroupId(newTreeGroups) + 1;
-    const newGroup = makeBasicGroupObject(newGroupId, "");
+    const newGroup = makeBasicGroupObject(newGroupId, `Group ${newGroupId}`);
     if (groupId === MISSING_GROUP_ID) {
       newTreeGroups.push(newGroup);
     } else {
@@ -171,15 +177,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         item.children.push(newGroup);
       });
     }
-    this.props.onUpdateTreeGroups(newTreeGroups);
-    this.setState({ renamingGroup: { groupId: newGroupId, name: "" } });
-  }
-
-  renameGroup(groupId: number, newName: string) {
-    const newTreeGroups = _.cloneDeep(this.props.treeGroups);
-    callDeep(newTreeGroups, groupId, item => {
-      item.name = newName;
-    });
     this.props.onUpdateTreeGroups(newTreeGroups);
   }
 
@@ -204,11 +201,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
   handleDropdownClick = (params: { item: *, key: string }) => {
     const { item, key } = params;
-    const { groupId, name } = item.props;
+    const { groupId } = item.props;
     if (key === "create") {
       this.createGroup(groupId);
-    } else if (key === "rename") {
-      this.setState({ renamingGroup: { groupId, name } });
     } else if (key === "delete") {
       this.deleteGroup(groupId);
     }
@@ -220,13 +215,10 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     const isRoot = id === MISSING_GROUP_ID;
     const menu = (
       <Menu onClick={this.handleDropdownClick}>
-        <Menu.Item key="create" groupId={id} name={name}>
+        <Menu.Item key="create" groupId={id}>
           <Icon type="plus" />Create new group
         </Menu.Item>
-        <Menu.Item key="rename" groupId={id} name={name} disabled={isRoot}>
-          <Icon type="tool" />Rename
-        </Menu.Item>
-        <Menu.Item key="delete" groupId={id} name={name} disabled={isRoot}>
+        <Menu.Item key="delete" groupId={id} disabled={isRoot}>
           <Icon type="delete" />Delete
         </Menu.Item>
       </Menu>
@@ -236,11 +228,14 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     const displayableName = name.trim() || "<no name>";
 
     const nameAndDropdown = (
-      <Dropdown overlay={menu} placement="bottomCenter">
-        <span className="ant-dropdown-link">
-          {displayableName} <Icon type="setting" className="group-actions-icon" />
+      <span className="ant-dropdown-link">
+        <span data-id={id} onClick={this.onSelectGroup}>
+          {displayableName}
         </span>
-      </Dropdown>
+        <Dropdown overlay={menu} placement="bottomCenter">
+          <Icon type="setting" className="group-actions-icon" />
+        </Dropdown>
+      </span>
     );
 
     return (
@@ -256,39 +251,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     );
   };
 
-  onRenameOk = (newName: string = "") => {
-    if (this.state.renamingGroup != null) {
-      this.renameGroup(this.state.renamingGroup.groupId, newName);
-      this.setState({ renamingGroup: null });
-    }
-  };
-
-  onRenameCancel = () => {
-    this.setState({ renamingGroup: null });
-  };
-
-  renderRenameModal = () => {
-    let newName;
-    return (
-      <Modal
-        title="Rename group"
-        visible={this.state.renamingGroup != null}
-        onOk={() => this.onRenameOk(newName)}
-        onCancel={this.onRenameCancel}
-        destroyOnClose
-      >
-        <Input
-          onChange={e => {
-            newName = e.target.value;
-          }}
-          defaultValue={this.state.renamingGroup != null ? this.state.renamingGroup.name : ""}
-          onPressEnter={() => this.onRenameOk(newName)}
-          ref={input => input != null && input.focus()}
-        />
-      </Modal>
-    );
-  };
-
   generateNodeProps = (params: { node: TreeNodeType }) => {
     // This method can be used to add props to each node of the SortableTree component
     const { node } = params;
@@ -300,7 +262,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       const tree = this.props.trees[parseInt(node.id, 10)];
       const rgbColorString = tree.color.map(c => Math.round(c * 255)).join(",");
       nodeProps.title = (
-        <div data-id={node.id} onClick={this.onSelect}>
+        <div data-id={node.id} onClick={this.onSelectTree}>
           <Checkbox
             checked={tree.isVisible}
             onChange={this.onCheck}
@@ -316,9 +278,15 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     return nodeProps;
   };
 
-  keySearchMethod(params: { node: TreeNodeType, searchQuery: number }) {
+  keySearchMethod(params: {
+    node: TreeNodeType,
+    searchQuery: { activeTreeId: number, activeGroupId: number },
+  }): boolean {
     const { node, searchQuery } = params;
-    return node.type === TYPE_TREE && node.id === searchQuery;
+    return (
+      (node.type === TYPE_TREE && node.id === searchQuery.activeTreeId) ||
+      (node.type === TYPE_GROUP && node.id === searchQuery.activeGroupId)
+    );
   }
 
   canDrop(params: { nextParent: TreeNodeType }) {
@@ -332,18 +300,21 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   }
 
   render() {
+    const { activeTreeId, activeGroupId } = this.props;
     return (
       <AutoSizer>
         {({ height, width }) => (
           <div style={{ height, width }}>
-            {this.renderRenameModal()}
+            {
+              // this.renderCreateGroupModal()
+            }
             <SortableTree
               treeData={this.state.groupTree}
               onChange={this.onChange}
               onMoveNode={this.onMoveNode}
               onVisibilityToggle={this.onExpand}
               searchMethod={this.keySearchMethod}
-              searchQuery={this.props.activeTreeId}
+              searchQuery={{ activeTreeId, activeGroupId }}
               generateNodeProps={this.generateNodeProps}
               canDrop={this.canDrop}
               canDrag={this.canDrag}
@@ -363,6 +334,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onSetActiveTree(treeId) {
     dispatch(setActiveTreeAction(treeId));
+  },
+  onSetActiveGroup(groupId) {
+    dispatch(setActiveGroupAction(groupId));
   },
   onToggleTree(treeId) {
     dispatch(toggleTreeAction(treeId));

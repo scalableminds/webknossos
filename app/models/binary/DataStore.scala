@@ -3,43 +3,35 @@ package models.binary
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
+import javax.inject.Inject
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsObject, Json}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.SQLDAO
+import utils.{SQLClient, SQLDAO}
 
 
 case class DataStore(
                        name: String,
                        url: String,
-                       typ: DataStoreType,
                        key: String,
-                       isDeleted: Boolean = false
+                       isDeleted: Boolean = false,
+                       isForeign: Boolean = false
                        ) {
+}
 
-  def publicWrites: Fox[JsObject] = {
+class DataStoreService @Inject()() {
+
+  def publicWrites(dataStore: DataStore): Fox[JsObject] = {
     Fox.successful(Json.obj(
-      "name" -> name,
-      "url" -> url,
-      "typ" -> typ.name
+      "name" -> dataStore.name,
+      "url" -> dataStore.url,
+      "isForeign" -> dataStore.isForeign
     ))
   }
 }
 
-
-case class DataStoreInfo(
-                          name: String,
-                          url: String,
-                          typ: DataStoreType,
-                          accessToken: Option[String] = None)
-
-object DataStoreInfo {
-  implicit val dataStoreInfoFormat = Json.format[DataStoreInfo]
-}
-
-
-object DataStoreDAO extends SQLDAO[DataStore, DatastoresRow, Datastores] {
+class DataStoreDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[DataStore, DatastoresRow, Datastores](sqlClient) {
   val collection = Datastores
 
   def idColumn(x: Datastores): Rep[String] = x.name
@@ -49,9 +41,9 @@ object DataStoreDAO extends SQLDAO[DataStore, DatastoresRow, Datastores] {
     Fox.successful(DataStore(
       r.name,
       r.url,
-      DataStoreType.stringToType(r.typ),
       r.key,
-      r.isdeleted
+      r.isdeleted,
+      r.isforeign
     ))
 
   def findOneByKey(key: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
@@ -79,8 +71,8 @@ object DataStoreDAO extends SQLDAO[DataStore, DatastoresRow, Datastores] {
 
   def insertOne(d: DataStore): Fox[Unit] = {
     for {
-      _ <- run(sqlu"""insert into webknossos.dataStores(name, url, key, typ, isDeleted)
-                         values(${d.name}, ${d.url}, ${d.key}, '#${d.typ.name}', ${d.isDeleted})""")
+      _ <- run(sqlu"""insert into webknossos.dataStores(name, url, key, isDeleted, isForeign)
+                         values(${d.name}, ${d.url}, ${d.key}, ${d.isDeleted}, ${d.isForeign})""")
     } yield ()
   }
 

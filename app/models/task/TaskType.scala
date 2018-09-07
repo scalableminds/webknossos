@@ -4,16 +4,14 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.webknossos.schema.Tables._
+import javax.inject.Inject
 import models.annotation.AnnotationSettings
 import models.team.TeamDAO
-import play.api.Play.current
-import play.api.i18n.Messages
-import play.api.i18n.Messages.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{ObjectId, SQLDAO, SecuredSQLDAO}
+import utils.{ObjectId, SQLClient, SQLDAO}
 
 case class TaskType(
                          _id: ObjectId,
@@ -25,21 +23,10 @@ case class TaskType(
                          isDeleted: Boolean = false
                          ) extends FoxImplicits {
 
-  def publicWrites(implicit ctx: DBAccessContext) = {
-    for {
-      team <- TeamDAO.findOne(_team)(GlobalAccessContext) ?~> "team.notFound"
-    } yield Json.obj(
-      "id" -> _id.toString,
-      "summary" -> summary,
-      "description" -> description,
-      "teamId" -> team._id.toString,
-      "teamName" -> team.name,
-      "settings" -> Json.toJson(settings)
-    )
-  }
 }
 
-object TaskType {
+class TaskTypeService @Inject()(teamDAO: TeamDAO) {
+
   def fromForm(
                 summary: String,
                 description: String,
@@ -52,9 +39,22 @@ object TaskType {
       description,
       settings)
   }
+
+  def publicWrites(taskType: TaskType)(implicit ctx: DBAccessContext) = {
+    for {
+      team <- teamDAO.findOne(taskType._team)(GlobalAccessContext) ?~> "team.notFound"
+    } yield Json.obj(
+      "id" -> taskType._id.toString,
+      "summary" -> taskType.summary,
+      "description" -> taskType.description,
+      "teamId" -> team._id.toString,
+      "teamName" -> team.name,
+      "settings" -> Json.toJson(taskType.settings)
+    )
+  }
 }
 
-object TaskTypeDAO extends SQLDAO[TaskType, TasktypesRow, Tasktypes] with SecuredSQLDAO {
+class TaskTypeDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[TaskType, TasktypesRow, Tasktypes](sqlClient) {
   val collection = Tasktypes
 
   def idColumn(x: Tasktypes): Rep[String] = x._Id

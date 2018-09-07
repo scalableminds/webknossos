@@ -6,11 +6,7 @@ import { Modal, Button, Tooltip, Icon, Table, InputNumber, Checkbox } from "antd
 import * as Utils from "libs/utils";
 import { updateUser } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
-import type {
-  APIUserType,
-  ExperienceMapType,
-  ExperienceDomainListType,
-} from "admin/api_flow_types";
+import type { APIUserType, ExperienceDomainListType } from "admin/api_flow_types";
 import SelectExperienceDomain from "components/select_experience_domain";
 
 const { Column } = Table;

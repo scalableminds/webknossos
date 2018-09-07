@@ -3,7 +3,7 @@ import sbt._
 
 
 object Dependencies {
-  val akkaVersion = "2.4.10"
+  val akkaVersion = "2.5.11"
   val log4jVersion = "2.0-beta9"
   val newrelicVersion = "3.44.1"
   val webknossosWrapVersion = "1.1.4"
@@ -26,13 +26,14 @@ object Dependencies {
   val log4jCore =  "org.apache.logging.log4j" % "log4j-api" % log4jVersion
   val newrelic = "com.newrelic.agent.java" % "newrelic-agent" % newrelicVersion
   val newrelicApi = "com.newrelic.agent.java" % "newrelic-api" % newrelicVersion
+  val playFramework = "com.typesafe.play" %% "play" % "2.6.18"
   val playJson = "com.typesafe.play" %% "play-json" % "2.6.10"
   val playIteratees = "com.typesafe.play" %% "play-iteratees" % "2.6.1"
   val reactiveBson = "org.reactivemongo" %% "reactivemongo-bson" % "0.11.13"
   val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.2"
   val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.4.0"
   val scalaTest = "org.scalatest" %% "scalatest" % "3.0.5" % "test"
-  val silhouette = "com.mohiva" %% "play-silhouette" % "4.0.0"
+  val silhouette = "com.mohiva" %% "play-silhouette" % "5.0.5"
   val silhouetteTestkit = "com.mohiva" %% "play-silhouette-testkit" % "4.0.0" % "test"
   val urlHelper = "com.netaporter" %% "scala-uri" % "0.4.14"
   val webknossosWrap = "com.scalableminds" %% "webknossos-wrap" % webknossosWrapVersion
@@ -43,7 +44,6 @@ object Dependencies {
     "com.typesafe.slick" %% "slick" % "3.2.3",
     "com.typesafe.slick" %% "slick-hikaricp" % "3.2.3",
     "com.typesafe.slick" %% "slick-codegen" % "3.2.3",
-    //"com.github.tminglei" %% "slick-pg" % "0.15.5",
     "org.postgresql" % "postgresql" % "42.2.2")
 
   val utilDependencies = Seq(
@@ -57,6 +57,7 @@ object Dependencies {
     log4jCore,
     playJson,
     playIteratees,
+    playFramework,
     reactiveBson,
     scalapbRuntime,
     scalaLogging
@@ -64,7 +65,7 @@ object Dependencies {
 
   val webknossosDatastoreDependencies = Seq(
     akkaLogging,
-    cache,
+    ehcache,
     newrelic,
     newrelicApi,
     webknossosWrap,

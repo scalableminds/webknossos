@@ -21,8 +21,6 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.Json
 
-import scala.concurrent.Future
-
 class BinaryDataController @Inject()(
                                       binaryDataService: BinaryDataService,
                                       dataSourceRepository: DataSourceRepository,
@@ -43,8 +41,7 @@ class BinaryDataController @Inject()(
         for {
           (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
           (data, indices) <- requestData(dataSource, dataLayer, request.body)
-        } yield Ok(data).withHeaders(
-          "BUCKETS" -> indices.mkString(", "))
+        } yield Ok(data).withHeaders("BUCKETS" -> indices.mkString(", "))
       }
   }
 
@@ -75,8 +72,7 @@ class BinaryDataController @Inject()(
             DataServiceRequestSettings(halfByte = halfByte)
           )
           (data, indices) <- requestData(dataSource, dataLayer, request)
-        } yield Ok(data).withHeaders(
-          "BUCKETS" -> indices.mkString(", "))
+        } yield Ok(data).withHeaders("BUCKETS" -> indices.mkString(", "))
       }
   }
 
@@ -118,8 +114,7 @@ class BinaryDataController @Inject()(
           cubeSize,
           cubeSize)
           (data, indices) <- requestData(dataSource, dataLayer, request)
-        } yield Ok(data).withHeaders(
-          "BUCKETS" -> indices.mkString(", "))
+        } yield Ok(data).withHeaders("BUCKETS" -> indices.mkString(", "))
       }
   }
 

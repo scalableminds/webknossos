@@ -55,7 +55,7 @@ class ShareModalView extends PureComponent<ShareModalPropType, State> {
   getUrl() {
     const loc = window.location;
     // in readonly mode the pathname already contains "/readonly"
-    let { pathname } = loc;
+    const { pathname } = loc;
     const url = `${loc.origin + pathname}${loc.hash}`;
     return url;
   }

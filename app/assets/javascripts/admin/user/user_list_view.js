@@ -244,6 +244,7 @@ class UserListView extends React.PureComponent<Props, State> {
       getCheckboxProps: user => ({
         disabled: !user.isActive,
       }),
+      selectedRowKeys: this.state.selectedUserIds,
     };
 
     const activationFilterWarning = this.state.activationFilter.includes("true") ? (
@@ -467,7 +468,10 @@ class UserListView extends React.PureComponent<Props, State> {
           visible={this.state.isExperienceModalVisible}
           selectedUserIds={this.state.selectedUserIds}
           users={this.state.users}
-          onChange={this.handleUsersChange}
+          onChange={newUsers => {
+            this.handleUsersChange(newUsers);
+            this.setState({ selectedUserIds: [] });
+          }}
           onCancel={() => this.setState({ isExperienceModalVisible: false })}
         />
         <TeamRoleModalView

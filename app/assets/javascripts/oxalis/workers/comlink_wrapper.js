@@ -1,9 +1,11 @@
+// @flow
 import headersTransferHandler from "oxalis/workers/headers_transfer_handler";
 
-const isNodeContext = typeof process !== "undefined" && process.title !== "browser";
-
 function importComlink() {
+  const isNodeContext = typeof process !== "undefined" && process.title !== "browser";
   if (!isNodeContext) {
+    // Comlink should only be imported in a browser context, since it makes use of functionality
+    // which does not exist in node
     // eslint-disable-next-line global-require
     const { proxy, transferHandlers, expose: _expose } = require("comlinkjs");
     return { proxy, transferHandlers, _expose };
@@ -24,9 +26,20 @@ const { proxy, transferHandlers, _expose } = importComlink();
 // Since this wrapper is imported from both sides, the handlers are also registered on both sides.
 transferHandlers.set("Headers", headersTransferHandler);
 
-export const createWorker: <Fn>(fn: Fn) => Fn = WorkerClass => {
-  if (isNodeContext) {
-    // In a node context (e.g., when executing tests), we don't create web workers
+// Worker modules export bare functions, but webpack turns these into Worker classes which need to be
+// instantiated first.
+// To ensure that code always executes the necessary instantiation, we cheat a bit with the typing in the following code.
+// In reality, `expose` receives a function and returns it again. However, we tell flow that it wraps the function, so that
+// unwrapping becomes necessary.
+// The unwrapping has to be done with `createWorker` which in fact instantiates the worker class.
+// As a result, we have some cheated types in the following two functions, but gain type safety for all usages of web worker modules.
+type UseCreateWorkerToUseMe<T> = { +_wrapped: T };
+
+export function createWorker<T>(WorkerClass: UseCreateWorkerToUseMe<T>): T {
+  if (proxy == null) {
+    // In a node context (e.g., when executing tests), we don't create web workers which is why
+    // we can simply return the input function here.
+    // $FlowIgnore
     return WorkerClass;
   }
 
@@ -36,15 +49,16 @@ export const createWorker: <Fn>(fn: Fn) => Fn = WorkerClass => {
     // directly imported. We exploit this by simply typing this createWorker function as an identity function
     // (T => T). That way, we gain proper flow typing for functions executed in web workers. However,
     // we need to suppress the following flow error for that to work.
-    // $FlowFixMe
+    // $FlowIgnore
     new WorkerClass(),
   );
-};
+}
 
-export const expose = <T>(fn: T): T => {
+export function expose<T>(fn: T): UseCreateWorkerToUseMe<T> {
   // In a node context (e.g., when executing tests), we don't create web workers
-  if (!isNodeContext) {
+  if (_expose != null) {
     _expose(fn, self);
   }
+  // $FlowIgnore
   return fn;
-};
+}

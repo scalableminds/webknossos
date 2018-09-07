@@ -40,8 +40,8 @@ class SelectExperienceDomain extends React.PureComponent<Props, State> {
         mode="tags"
         value={this.props.value}
         maxTagCount={1}
+        style={{ width: `${this.props.width}%` }}
         disabled={this.props.disabled}
-        className="experience-input"
         placeholder="New Experience Domain"
         onSelect={this.props.onSelect}
         onDeselect={this.props.onDeselect}

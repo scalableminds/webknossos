@@ -412,6 +412,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
         <SelectExperienceDomain
           disabled={false}
           value={[]}
+          width={50}
           onSelect={this.addEnteredExperience}
           onDeselect={() => {}}
           alreadyUsedDomains={this.getDomainsOfTable()}

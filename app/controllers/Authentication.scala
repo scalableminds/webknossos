@@ -93,18 +93,21 @@ object AuthForms {
 }
 
 
-class Authentication @Inject()( actorSystem: ActorSystem,
-                                credentialsProvider: CredentialsProvider,
-                                passwordHasher: PasswordHasher,
-                                initialDataService: InitialDataService,
-                                userService: UserService,
-                                dataStoreDAO: DataStoreDAO,
-                                teamDAO: TeamDAO,
-                                brainTracing: BrainTracing,
-                                organizationDAO: OrganizationDAO,
-                                userDAO: UserDAO,
-                                sil: WebknossosSilhouette,
-                                val messagesApi: MessagesApi
+class Authentication @Inject()(actorSystem: ActorSystem,
+                               credentialsProvider: CredentialsProvider,
+                               passwordHasher: PasswordHasher,
+                               initialDataService: InitialDataService,
+                               userService: UserService,
+                               dataStoreDAO: DataStoreDAO,
+                               teamDAO: TeamDAO,
+                               brainTracing: BrainTracing,
+                               organizationDAO: OrganizationDAO,
+                               userDAO: UserDAO,
+                               defaultMails: DefaultMails,
+                               rpc: RPC,
+                               conf: WkConf,
+                               sil: WebknossosSilhouette,
+                               val messagesApi: MessagesApi
 )
   extends Controller
     with FoxImplicits {
@@ -121,13 +124,13 @@ class Authentication @Inject()( actorSystem: ActorSystem,
     actorSystem.actorSelection("/user/mailActor")
 
   private lazy val ssoKey =
-    WkConf.Application.Authentication.ssoKey
+    conf.Application.Authentication.ssoKey
 
   val automaticUserActivation: Boolean =
-    WkConf.Application.Authentication.enableDevAutoVerify
+    conf.Application.Authentication.enableDevAutoVerify
 
   val isAdminOnRegistration: Boolean =
-    WkConf.Application.Authentication.enableDevAutoAdmin
+    conf.Application.Authentication.enableDevAutoAdmin
 
   def normalizeName(name: String): Option[String] = {
     val replacementMap = Map("ü" -> "ue", "Ü" -> "Ue", "ö" -> "oe", "Ö" -> "Oe", "ä" -> "ae", "Ä" -> "Ae", "ß" -> "ss",
@@ -172,8 +175,8 @@ class Authentication @Inject()( actorSystem: ActorSystem,
                   loginInfo, passwordHasher.hash(signUpData.password)) ?~> "user.creation.failed"
                 brainDBResult <- brainTracing.registerIfNeeded(user, signUpData.password).toFox
               } yield {
-                Mailer ! Send(DefaultMails.registerMail(user.name, user.email, brainDBResult))
-                Mailer ! Send(DefaultMails.registerAdminNotifyerMail(user, user.email, brainDBResult, organization))
+                Mailer ! Send(defaultMails.registerMail(user.name, user.email, brainDBResult))
+                Mailer ! Send(defaultMails.registerAdminNotifyerMail(user, user.email, brainDBResult, organization))
                 Ok
               }
             }
@@ -209,7 +212,7 @@ class Authentication @Inject()( actorSystem: ActorSystem,
 
   def autoLogin = Action.async { implicit request =>
     for {
-      _ <- bool2Fox(WkConf.Application.Authentication.enableDevAutoLogin) ?~> "error.notInDev"
+      _ <- bool2Fox(conf.Application.Authentication.enableDevAutoLogin) ?~> "error.notInDev"
       user <- userService.defaultUser
       authenticator <- env.authenticatorService.create(user.loginInfo)
       value <- env.authenticatorService.init(authenticator)
@@ -243,7 +246,7 @@ class Authentication @Inject()( actorSystem: ActorSystem,
           for {
             token <- bearerTokenAuthenticatorService.createAndInit(user.loginInfo, TokenType.ResetPassword)
           } yield {
-            Mailer ! Send(DefaultMails.resetPasswordMail(user.name, email.toLowerCase, token))
+            Mailer ! Send(defaultMails.resetPasswordMail(user.name, email.toLowerCase, token))
             Ok
           }
         }
@@ -284,7 +287,7 @@ class Authentication @Inject()( actorSystem: ActorSystem,
                 _ <- userService.changePasswordInfo(loginInfo, passwordHasher.hash(passwords.password1))
                 _ <- env.authenticatorService.discard(request.authenticator, Ok)
               } yield {
-                Mailer ! Send(DefaultMails.changePasswordMail(user.name, request.identity.email))
+                Mailer ! Send(defaultMails.changePasswordMail(user.name, request.identity.email))
                 Ok
               }
           }
@@ -399,7 +402,7 @@ class Authentication @Inject()( actorSystem: ActorSystem,
                       loginInfo, passwordHasher.hash(signUpData.password), isAdmin = true) ?~> "user.creation.failed"
                     _ <- createOrganizationFolder(organization.name, loginInfo)
                   } yield {
-                    Mailer ! Send(DefaultMails.newOrganizationMail(organization.displayName, email.toLowerCase, request.headers.get("Host").headOption.getOrElse("")))
+                    Mailer ! Send(defaultMails.newOrganizationMail(organization.displayName, email.toLowerCase, request.headers.get("Host").headOption.getOrElse("")))
                     Ok
                   }
                 }
@@ -413,7 +416,7 @@ class Authentication @Inject()( actorSystem: ActorSystem,
 
   private def creatingOrganizationsIsAllowed(requestingUser: Option[User]) = {
     val noOrganizationPresent = initialDataService.assertNoOrganizationsPresent
-    val activatedInConfig = bool2Fox(WkConf.Features.allowOrganizationCreation) ?~> "allowOrganizationCreation.notEnabled"
+    val activatedInConfig = bool2Fox(conf.Features.allowOrganizationCreation) ?~> "allowOrganizationCreation.notEnabled"
     val userIsSuperUser = bool2Fox(requestingUser.exists(_.isSuperUser))
 
     Fox.sequenceOfFulls(List(noOrganizationPresent, activatedInConfig, userIsSuperUser)).map(_.headOption).toFox
@@ -434,7 +437,7 @@ class Authentication @Inject()( actorSystem: ActorSystem,
 
   private def createOrganizationFolder(organizationName: String, loginInfo: LoginInfo)(implicit request: RequestHeader) = {
     def sendRPCToDataStore(dataStore: DataStore, token: String) = {
-      RPC(s"${dataStore.url}/data/triggers/newOrganizationFolder")
+      rpc(s"${dataStore.url}/data/triggers/newOrganizationFolder")
         .withQueryString("token" -> token, "organizationName" -> organizationName)
         .get
     }

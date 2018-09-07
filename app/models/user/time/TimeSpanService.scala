@@ -27,9 +27,12 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
                                 annotationService: AnnotationService,
                                 projectDAO: ProjectDAO,
                                 organizationDAO: OrganizationDAO,
-                                timeSpanDAO: TimeSpanDAO) extends FoxImplicits with LazyLogging {
+                                timeSpanDAO: TimeSpanDAO,
+                                defaultMails: DefaultMails,
+                                conf: WkConf
+                               ) extends FoxImplicits with LazyLogging {
   private val MaxTracingPause =
-    WkConf.Oxalis.User.Time.tracingPauseInSeconds.toMillis
+    conf.Oxalis.User.Time.tracingPauseInSeconds.toMillis
 
   def logUserInteraction(user: User, annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val timestamp = System.currentTimeMillis
@@ -181,7 +184,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
     } yield {
       if (annotationTime >= timeLimit && annotationTime - time < timeLimit) {
-        brainTracing.Mailer ! Send(DefaultMails.overLimitMail(
+        brainTracing.Mailer ! Send(defaultMails.overLimitMail(
           user,
           project.name,
           task._id.toString,

@@ -17,5 +17,6 @@ class WebKnossosModule extends AbstractModule {
     bind(classOf[UserExperiencesDAO]).asEagerSingleton()
     bind(classOf[UserDataSetConfigurationDAO]).asEagerSingleton()
     bind(classOf[UserCache]).asEagerSingleton()
+    bind(classOf[AnnotationStore]).asEagerSingleton()
   }
 }

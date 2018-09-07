@@ -26,7 +26,6 @@ class Startup @Inject() (actorSystem: ActorSystem,
                          annotationDAO: AnnotationDAO,
                          wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                          lifecycle: ApplicationLifecycle,
-                         sil: Silhouette[WkEnv],
                          sqlClient: SQLClient
                         ) extends LazyLogging {
 

@@ -15,9 +15,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsError, JsObject, JsSuccess}
 import play.api.mvc._
 import models.annotation.AnnotationState._
-import oxalis.security.{WebknossosBearerTokenAuthenticatorService, WkEnv, WkSilhouetteEnvironment}
-import com.mohiva.play.silhouette.api.Silhouette
-import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
+import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
 
 import scala.concurrent.Future
 
@@ -27,11 +25,10 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
                                       timeSpanService: TimeSpanService,
                                       wkDataStoreActions: WKDataStoreActions,
                                       wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-                                      sil: Silhouette[WkEnv],
                                       val messagesApi: MessagesApi)
   extends Controller
     with LazyLogging {
-  
+
   val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
   def validateDataSetUpload(name: String) = wkDataStoreActions.DataStoreAction(name).async(parse.json) { implicit request =>

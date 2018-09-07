@@ -8,8 +8,8 @@ import { updateUser } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import type {
   APIUserType,
-  ExperienceDomainListType,
   ExperienceMapType,
+  ExperienceDomainListType,
 } from "admin/api_flow_types";
 import SelectExperienceDomain from "components/select_experience_domain";
 
@@ -47,8 +47,8 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
   constructor(props: Props) {
     super(props);
     this.state = {
-      multipleUsersEntries: this.loadSharedTableEntries(props.selectedUsers),
-      singleUsersEntries: this.loadChangeTableEntries(props.selectedUsers),
+      multipleUsersEntries: this.loadMultipleUserEntries(props.selectedUsers),
+      singleUsersEntries: this.loadSingleUserEntries(props.selectedUsers),
       showOnlySharedExperiences: false,
     };
   }
@@ -56,13 +56,13 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
   componentWillReceiveProps(nextProps: Props) {
     if (nextProps.visible && !this.props.visible) {
       this.setState({
-        multipleUsersEntries: this.loadSharedTableEntries(nextProps.selectedUsers),
-        singleUsersEntries: this.loadChangeTableEntries(nextProps.selectedUsers),
+        multipleUsersEntries: this.loadMultipleUserEntries(nextProps.selectedUsers),
+        singleUsersEntries: this.loadSingleUserEntries(nextProps.selectedUsers),
       });
     }
   }
 
-  loadSharedTableEntries = (users: Array<APIUserType>): Array<MultipleUserTableEntry> => {
+  loadMultipleUserEntries = (users: Array<APIUserType>): Array<MultipleUserTableEntry> => {
     if (users.length <= 1) {
       return [];
     }
@@ -110,12 +110,11 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     );
   };
 
-  loadChangeTableEntries = (users: Array<APIUserType>): Array<SingleUserTableEntry> =>
+  loadSingleUserEntries = (users: Array<APIUserType>): Array<SingleUserTableEntry> =>
     users.length === 1
       ? _.map(users[0].experiences, (value, domain) => ({
           domain,
           value,
-          removed: false,
         })).sort(
           Utils.localeCompareBy(([]: Array<SingleUserTableEntry>), entry =>
             entry.domain.toLowerCase(),
@@ -124,16 +123,16 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
       : [];
 
   updatedAllUsers = async () => {
-    const newExperiences: ExperienceMapType = {};
-    const relevantEntries =
-      this.props.selectedUsers.length === 1
-        ? this.state.singleUsersEntries
-        : this.state.multipleUsersEntries;
-
-    relevantEntries.forEach(entry => {
-      newExperiences[entry.domain] = entry.value;
-    });
-
+    const newExperiences = {};
+    if (this.props.selectedUsers.length === 1) {
+      this.state.singleUsersEntries.forEach(entry => {
+        newExperiences[entry.domain] = entry.value;
+      });
+    } else {
+      this.state.multipleUsersEntries.forEach(entry => {
+        newExperiences[entry.domain] = entry.value;
+      });
+    }
     const newUserPromises = this.props.selectedUsers.map(user => {
       const newUser = { ...user, experiences: newExperiences };
       return this.sendUserToServer(newUser, user);
@@ -171,9 +170,9 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
 
   setValueOfEntry = (index: number, value: number) => {
     if (value > 0) {
-      if (this.props.selectedUsers.length > 1) {
+      if (this.props.selectedUsers.length === 1) {
         this.setState(prevState => ({
-          multipleUsersEntries: prevState.multipleUsersEntries.map((entry, currentIndex) => {
+          singleUsersEntries: prevState.singleUsersEntries.map((entry, currentIndex) => {
             if (currentIndex === index) {
               return {
                 ...entry,
@@ -186,7 +185,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
         }));
       } else {
         this.setState(prevState => ({
-          singleUsersEntries: prevState.singleUsersEntries.map((entry, currentIndex) => {
+          multipleUsersEntries: prevState.multipleUsersEntries.map((entry, currentIndex) => {
             if (currentIndex === index) {
               return {
                 ...entry,
@@ -284,19 +283,17 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     }
   };
 
-  getDomainsOfTable = (): ExperienceDomainListType => {
-    const relevantEntries =
-      this.props.selectedUsers.length === 1
-        ? this.state.singleUsersEntries
-        : this.state.multipleUsersEntries;
-    return relevantEntries.map(entry => entry.domain);
-  };
+  getDomainsOfTable = (): ExperienceDomainListType =>
+    this.props.selectedUsers.length === 1
+      ? this.state.singleUsersEntries.map(entry => entry.domain)
+      : this.state.multipleUsersEntries.map(entry => entry.domain);
 
   render() {
     if (!this.props.visible && this.props.selectedUsers.length === 0) {
       return null;
     }
     const singleUsersEntries = this.state.singleUsersEntries;
+    // applies optional filter for shared entries
     const multipleUsersEntries = this.state.multipleUsersEntries.filter(
       entry => !this.state.showOnlySharedExperiences || entry.isShared,
     );
@@ -353,7 +350,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
             <Column
               title="Current Experience Value"
               width="30%"
-              render={record =>
+              render={(record: MultipleUserTableEntry) =>
                 // eslint-disable-next-line no-nested-ternary
                 record.highestValue === -1 && record.lowestValue === -1
                   ? ""
@@ -368,15 +365,17 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
             key="value"
             width={mutlipleUsers ? "25%" : "40%"}
             render={record => {
-              const relevantEntries =
-                this.props.selectedUsers.length === 1
-                  ? this.state.singleUsersEntries
-                  : this.state.multipleUsersEntries;
-              const index = relevantEntries.findIndex(entry => entry.domain === record.domain);
+              const index = mutlipleUsers
+                ? this.state.multipleUsersEntries.findIndex(entry => entry.domain === record.domain)
+                : this.state.singleUsersEntries.findIndex(entry => entry.domain === record.domain);
               return (
                 <span>
                   <InputNumber
-                    value={relevantEntries[index].value}
+                    value={
+                      mutlipleUsers
+                        ? this.state.multipleUsersEntries[index].value
+                        : this.state.singleUsersEntries[index].value
+                    }
                     onChange={value => this.setValueOfEntry(index, value)}
                   />
                   {(mutlipleUsers && record.value !== record.lowestValue) ||

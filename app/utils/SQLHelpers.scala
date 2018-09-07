@@ -10,7 +10,6 @@ import models.user.User
 import net.liftweb.common.Full
 import oxalis.security.SharingTokenContainer
 import play.api.Configuration
-import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
@@ -18,8 +17,6 @@ import slick.dbio.DBIOAction
 import slick.jdbc.{PositionedParameters, PostgresProfile, SetParameter}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.{AbstractTable, Rep, TableQuery}
-import play.api.Play.current
-import play.api.i18n.Messages.Implicits._
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
@@ -38,7 +35,7 @@ case class ObjectId(id: String) {
 object ObjectId extends FoxImplicits {
   implicit val jsonFormat = Json.format[ObjectId]
   def generate = fromBsonId(BSONObjectID.generate)
-  def parse(input: String) = parseSync(input).toFox ?~> Messages("bsonid.invalid", input)
+  def parse(input: String) = parseSync(input).toFox ?~> s"The passed resource id ‘$input’ is invalid"
   private def fromBsonId(bson: BSONObjectID) = ObjectId(bson.stringify)
   private def parseSync(input: String) = BSONObjectID.parse(input).map(fromBsonId).toOption
 

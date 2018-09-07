@@ -1,3 +1,4 @@
+/* eslint-disable import/no-extraneous-dependencies */
 const { Client } = require("pg");
 const moment = require("moment");
 

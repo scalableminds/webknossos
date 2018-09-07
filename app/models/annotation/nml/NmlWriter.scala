@@ -283,8 +283,10 @@ class NmlWriter @Inject() extends FoxImplicits {
       }
     }
     taskOpt.foreach { task =>
-      writer.writeAttribute("name", "taskId")
-      writer.writeAttribute("content", task._id.toString)
+      Xml.withinElementSync("meta") {
+        writer.writeAttribute("name", "taskId")
+        writer.writeAttribute("content", task._id.toString)
+      }
     }
   }
 }

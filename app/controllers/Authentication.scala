@@ -3,8 +3,6 @@ package controllers
 import java.net.URLEncoder
 
 import akka.actor.ActorSystem
-import com.mohiva.play.silhouette.api
-import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import javax.inject.Inject
 import com.mohiva.play.silhouette.api.{LoginInfo, Silhouette}
 import com.mohiva.play.silhouette.api.exceptions.ProviderException
@@ -112,13 +110,12 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                                sil: Silhouette[WkEnv],
                                val messagesApi: MessagesApi
-)
+                              )
   extends Controller
     with FoxImplicits {
 
   import AuthForms._
 
-  val env: api.Environment[WkEnv] = sil.env
   val combinedAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService
   val bearerTokenAuthenticatorService = combinedAuthenticatorService.tokenAuthenticatorService
 
@@ -199,9 +196,9 @@ class Authentication @Inject()(actorSystem: ActorSystem,
             case None =>
               Future.successful(BadRequest(Messages("error.noUser")))
             case Some(user) if (!user.isDeactivated) => for {
-              authenticator <- env.authenticatorService.create(loginInfo)
-              value <- env.authenticatorService.init(authenticator)
-              result <- env.authenticatorService.embed(value, Ok)
+              authenticator <- combinedAuthenticatorService.create(loginInfo)
+              value <- combinedAuthenticatorService.init(authenticator)
+              result <- combinedAuthenticatorService.embed(value, Ok)
             } yield result
             case Some(user) => Future.successful(BadRequest(Messages("user.deactivated")))
           }
@@ -216,9 +213,9 @@ class Authentication @Inject()(actorSystem: ActorSystem,
     for {
       _ <- bool2Fox(conf.Application.Authentication.enableDevAutoLogin) ?~> "error.notInDev"
       user <- userService.defaultUser
-      authenticator <- env.authenticatorService.create(user.loginInfo)
-      value <- env.authenticatorService.init(authenticator)
-      result <- env.authenticatorService.embed(value, Ok)
+      authenticator <- combinedAuthenticatorService.create(user.loginInfo)
+      value <- combinedAuthenticatorService.init(authenticator)
+      result <- combinedAuthenticatorService.embed(value, Ok)
     } yield result
   }
 
@@ -227,10 +224,10 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       val loginInfo = LoginInfo(CredentialsProvider.ID, email)
       for {
         _ <- userService.findOneByEmail(email) ?~> "user.notFound"
-        _ <- env.authenticatorService.discard(request.authenticator, Ok) //to logout the admin
-        authenticator <- env.authenticatorService.create(loginInfo)
-        value <- env.authenticatorService.init(authenticator)
-        result <- env.authenticatorService.embed(value, Redirect("/dashboard")) //to login the new user
+        _ <- combinedAuthenticatorService.discard(request.authenticator, Ok) //to logout the admin
+        authenticator <- combinedAuthenticatorService.create(loginInfo)
+        value <- combinedAuthenticatorService.init(authenticator)
+        result <- combinedAuthenticatorService.embed(value, Redirect("/dashboard")) //to login the new user
       } yield result
     } else {
       Logger.warn(s"User tried to switch (${request.identity.email} -> $email) but is no Superuser!")
@@ -287,7 +284,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
             case Some(user) => val loginInfo = LoginInfo(CredentialsProvider.ID, request.identity.email)
               for {
                 _ <- userService.changePasswordInfo(loginInfo, passwordHasher.hash(passwords.password1))
-                _ <- env.authenticatorService.discard(request.authenticator, Ok)
+                _ <- combinedAuthenticatorService.discard(request.authenticator, Ok)
               } yield {
                 Mailer ! Send(defaultMails.changePasswordMail(user.name, request.identity.email))
                 Ok
@@ -333,7 +330,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
 
   def logout = sil.UserAwareAction.async { implicit request =>
     request.authenticator match {
-      case Some(authenticator) => env.authenticatorService.discard(authenticator, Ok)
+      case Some(authenticator) => combinedAuthenticatorService.discard(authenticator, Ok)
       case _ => Future.successful(Ok)
     }
   }
@@ -445,7 +442,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
     }
 
     for {
-      token <- combinedAuthenticatorService.tokenAuthenticatorService.createAndInit(loginInfo, TokenType.DataStore, deleteOld = false).toFox
+      token <- bearerTokenAuthenticatorService.createAndInit(loginInfo, TokenType.DataStore, deleteOld = false).toFox
       datastores <- dataStoreDAO.findAll(GlobalAccessContext)
       _ <- Fox.combined(datastores.map(sendRPCToDataStore(_, token)))
     } yield Full(())
@@ -456,8 +453,8 @@ class Authentication @Inject()(actorSystem: ActorSystem,
   def getCookie(email: String)(implicit requestHeader: RequestHeader): Future[Cookie] = {
     val loginInfo = LoginInfo(CredentialsProvider.ID, email.toLowerCase)
     for {
-      authenticator <- wkSilhouetteEnvironment.authenticatorService.create(loginInfo)
-      value <- wkSilhouetteEnvironment.authenticatorService.init(authenticator)
+      authenticator <- combinedAuthenticatorService.create(loginInfo)
+      value <- combinedAuthenticatorService.init(authenticator)
     } yield {
       value
     }

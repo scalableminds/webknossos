@@ -15,7 +15,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsError, JsObject, JsSuccess}
 import play.api.mvc._
 import models.annotation.AnnotationState._
-import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
+import oxalis.security.WkSilhouetteEnvironment
 
 import scala.concurrent.Future
 

@@ -25,13 +25,6 @@ trait Controller
     with LazyLogging
 
 
-class WkTokenValidationService @Inject()(accessTokenService: AccessTokenService)(implicit ec: ExecutionContext)
-  extends FoxImplicits {
-
-
-
-}
-
 trait RemoteOriginHelpers {
 
   def AllowRemoteOrigin(f: => Future[Result])(implicit ec: ExecutionContext): Future[Result] =
@@ -58,11 +51,12 @@ trait ValidationHelpers {
     _.validate[A].asEither.left.map(e => BadRequest(JsError.toJson(e)))
   )
 
-  def validateProto[A <: GeneratedMessage with Message[A]](implicit companion: GeneratedMessageCompanion[A]) = BodyParsers.parse.raw.validate { raw =>
-    if (raw.size < raw.memoryThreshold) {
-      Box(raw.asBytes()).flatMap(x => tryo(companion.parseFrom(x.toArray))).toRight[Result](BadRequest("invalid request body"))
-    } else {
-      tryo(companion.parseFrom(CodedInputStream.newInstance(new FileInputStream(raw.asFile)))).toRight[Result](BadRequest("invalid request body"))
+  def validateProto[A <: GeneratedMessage with Message[A]](implicit companion: GeneratedMessageCompanion[A], ec: ExecutionContext) =
+    BodyParsers.parse.raw.validate { raw =>
+      if (raw.size < raw.memoryThreshold) {
+        Box(raw.asBytes()).flatMap(x => tryo(companion.parseFrom(x.toArray))).toRight[Result](BadRequest("invalid request body"))
+      } else {
+        tryo(companion.parseFrom(CodedInputStream.newInstance(new FileInputStream(raw.asFile)))).toRight[Result](BadRequest("invalid request body"))
+      }
     }
-  }
 }

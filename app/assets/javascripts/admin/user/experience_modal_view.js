@@ -128,7 +128,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
           newExperiences[entry.domain] = entry.value;
         });
         const newUser = { ...user, experiences: newExperiences };
-        return this.sendUserToServer(newUser);
+        return this.sendUserToServer(newUser, user);
       });
     } else {
       const newExperiences = {};

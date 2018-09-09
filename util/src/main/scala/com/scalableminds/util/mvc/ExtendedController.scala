@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import net.liftweb.common.{Full, _}
 import play.api.http.Status._
 import play.api.http.{HeaderNames, HttpEntity, Status, Writeable}
-import play.api.i18n.{I18nSupport, Messages}
+import play.api.i18n.{I18nSupport, Messages, MessagesProvider}
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
 import play.api.mvc.{Request, ResponseHeader, Result}
@@ -14,43 +14,43 @@ import play.twirl.api._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-trait ResultBox extends I18nSupport{
+trait ResultBox extends I18nSupport {
 
-  def asResult[T <: Result](b: Box[T]): Result = b match {
+  def asResult[T <: Result](b: Box[T])(implicit messages: MessagesProvider): Result = b match {
     case Full(result) =>
       result
     case ParamFailure(msg, _, _, statusCode: Int) =>
       new JsonResult(statusCode)(Messages(msg))
-    case ParamFailure(msg, _, _, messages: JsArray) =>
-      new JsonResult(BAD_REQUEST)(jsonMessages(messages))
+    case ParamFailure(msg, _, _, msgs: JsArray) =>
+      new JsonResult(BAD_REQUEST)(jsonMessages(msgs))
     case Failure(msg, _, chain) =>
       new JsonResult(BAD_REQUEST)(Messages(msg), formatChainOpt(chain))
     case Empty =>
       new JsonResult(NOT_FOUND)("Couldn't find the requested resource.")
   }
 
-  def formatChainOpt(chain: Box[Failure]): Option[String] = chain match {
+  def formatChainOpt(chain: Box[Failure])(implicit messages: MessagesProvider): Option[String] = chain match {
     case Full(failure) => Some(formatChain(chain))
     case _ => None
   }
 
-  private def formatChain(chain: Box[Failure]): String = chain match {
+  private def formatChain(chain: Box[Failure])(implicit messages: MessagesProvider): String = chain match {
     case Full(failure) =>
       " <~ " + Messages(failure.msg) + formatChain(failure.chain)
     case _ => ""
   }
 
-  def jsonMessages(messages: JsArray): JsObject =
+  def jsonMessages(msgs: JsArray)(implicit messages: MessagesProvider): JsObject =
     Json.obj(
-      "messages" -> messages)
+      "messages" -> msgs)
 }
 
 trait ResultImplicits extends ResultBox with I18nSupport{
 
-  implicit def fox2FutureResult[T <: Result](b: Fox[T])(implicit ec: ExecutionContext): Future[Result] =
+  implicit def fox2FutureResult[T <: Result](b: Fox[T])(implicit ec: ExecutionContext, messages: MessagesProvider): Future[Result] =
     b.futureBox.map(asResult)
 
-  implicit def futureBox2Result[T <: Result](b: Box[Future[T]])(implicit ec: ExecutionContext): Future[Result] = {
+  implicit def futureBox2Result[T <: Result](b: Box[Future[T]])(implicit ec: ExecutionContext, messages: MessagesProvider): Future[Result] = {
     b match {
       case Full(f) =>
         f.map(value => asResult(Full(value)))
@@ -61,14 +61,14 @@ trait ResultImplicits extends ResultBox with I18nSupport{
     }
   }
 
-  implicit def boxFuture2Result[T <: Result](f: Future[Box[T]])(implicit ec: ExecutionContext): Future[Result] = {
+  implicit def boxFuture2Result[T <: Result](f: Future[Box[T]])(implicit ec: ExecutionContext, messages: MessagesProvider): Future[Result] = {
     f.map {
       b =>
         asResult(b)
     }
   }
 
-  implicit def box2Result[T <: Result](b: Box[T]): Result =
+  implicit def box2Result[T <: Result](b: Box[T])(implicit messages: MessagesProvider): Result =
     asResult(b)
 
 }

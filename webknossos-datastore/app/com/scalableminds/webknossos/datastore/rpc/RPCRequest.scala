@@ -54,28 +54,28 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
 
   def post(file: File): Fox[WSResponse] = {
     request = request
-      .withBody(FileBody(file))
+      .withBody(file)
       .withMethod("POST")
     performRequest
   }
 
   def postWithJsonResponse[T : Reads](file: File): Fox[T] = {
     request = request
-      .withBody(FileBody(file))
+      .withBody(file)
       .withMethod("POST")
     parseJsonResponse(performRequest)
   }
 
   def postWithProtoResponse[T <: GeneratedMessage with Message[T]](file: File)(companion: GeneratedMessageCompanion[T]): Fox[T] = {
     request = request
-      .withBody(FileBody(file))
+      .withBody(file)
       .withMethod("POST")
     parseProtoResponse(performRequest)(companion)
   }
 
   def post[T : Writes](body: T = Json.obj()): Fox[WSResponse] = {
     request = request
-      .withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
+      .addHttpHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
       .withBody(Json.toJson(body))
       .withMethod("POST")
     performRequest
@@ -83,7 +83,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
 
   def postWithJsonResponse[T : Writes, U : Reads](body: T = Json.obj()): Fox[U] = {
     request = request
-      .withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
+      .addHttpHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
       .withBody(Json.toJson(body))
       .withMethod("POST")
     parseJsonResponse(performRequest)
@@ -91,7 +91,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
 
   def postJsonWithProtoResponse[J: Writes, T <: GeneratedMessage with Message[T]](body: J = Json.obj())(companion: GeneratedMessageCompanion[T]): Fox[T] = {
     request = request
-      .withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
+      .addHttpHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
       .withBody(Json.toJson(body))
       .withMethod("POST")
     parseProtoResponse(performRequest)(companion)
@@ -99,7 +99,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
 
   def postProtoWithJsonResponse[T <: GeneratedMessage with Message[T], J: Reads](body: T): Fox[J] = {
     request = request
-      .withHeaders(HeaderNames.CONTENT_TYPE -> "application/x-protobuf")
+      .addHttpHeaders(HeaderNames.CONTENT_TYPE -> "application/x-protobuf")
       .withBody(body.toByteArray)
       .withMethod("POST")
     parseJsonResponse(performRequest)
@@ -187,8 +187,8 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
         s"<${body.bytes.length} bytes of protobuf data>"
       case body: InMemoryBody =>
         body.bytes.take(100).utf8String + (if(body.bytes.size > 100) s"... <omitted ${body.bytes.size - 100} bytes>" else "")
-      case body: FileBody =>
-        s"<file: ${body.file.length} bytes>"
+      case body: SourceBody =>
+        s"<streaming source>"
       case _ =>
         ""
     }

@@ -4,63 +4,46 @@ import java.io.FileInputStream
 
 import com.google.protobuf.CodedInputStream
 import com.scalableminds.util.mvc.ExtendedController
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessAnswer, UserAccessRequest}
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
+import javax.inject.Inject
 import net.liftweb.common.Box
 import net.liftweb.util.Helpers.tryo
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsError, Reads}
-import play.api.mvc.Results.BadRequest
-import play.api.mvc.{Controller => PlayController, _}
+import play.api.mvc._
+import play.api.mvc.Results._
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 trait Controller
-  extends PlayController
+  extends InjectedController
     with ExtendedController
     with RemoteOriginHelpers
     with ValidationHelpers
     with LazyLogging
 
-trait TokenSecuredController extends Controller {
 
-  def accessTokenService: AccessTokenService
+class WkTokenValidationService @Inject()(accessTokenService: AccessTokenService)(implicit ec: ExecutionContext)
+  extends FoxImplicits {
 
-  case class TokenSecuredAction(accessRequest: UserAccessRequest) extends ActionBuilder[Request] {
 
-    private def hasUserAccess[A](implicit request: Request[A]): Fox[UserAccessAnswer] = {
-      request.getQueryString("token").map { token =>
-        accessTokenService.hasUserAccess(token, accessRequest)
-      }.getOrElse(Fox.successful(UserAccessAnswer(false, Some("No access token."))))
-    }
 
-    def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[Result]): Future[Result] = {
-      hasUserAccess(request).flatMap {
-        case UserAccessAnswer(true, _) =>
-          block(request)
-        case UserAccessAnswer(false, Some(msg)) =>
-          Future.successful(Forbidden("Forbidden: " + msg))
-        case _ =>
-          Future.successful(Forbidden("Token authentication failed"))
-      }
-    }
-  }
 }
 
 trait RemoteOriginHelpers {
 
-  def AllowRemoteOrigin(f: => Future[Result]): Future[Result] =
+  def AllowRemoteOrigin(f: => Future[Result])(implicit ec: ExecutionContext): Future[Result] =
     f.map(addHeadersToResult)
 
-  def AllowRemoteOrigin(f: => Result): Result =
+  def AllowRemoteOrigin(f: => Result)(implicit ec: ExecutionContext): Result =
     addHeadersToResult(f)
 
-  def addHeadersToResult(result: Result): Result =
+  def addHeadersToResult(result: Result)(implicit ec: ExecutionContext): Result =
     result.withHeaders("Access-Control-Allow-Origin" -> "*", "Access-Control-Max-Age" -> "600")
 
-  case class AllowRemoteOrigin[A](action: Action[A]) extends Action[A] {
+  case class AllowRemoteOrigin[A](action: Action[A])(implicit val executionContext: ExecutionContext) extends Action[A] {
 
     lazy val parser = action.parser
 
@@ -71,7 +54,7 @@ trait RemoteOriginHelpers {
 
 trait ValidationHelpers {
 
-  def validateJson[A : Reads] = BodyParsers.parse.json.validate(
+  def validateJson[A : Reads](implicit ec: ExecutionContext) = BodyParsers.parse.json.validate(
     _.validate[A].asEither.left.map(e => BadRequest(JsError.toJson(e)))
   )
 

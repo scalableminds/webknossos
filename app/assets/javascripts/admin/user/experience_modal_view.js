@@ -119,20 +119,33 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
       : [];
 
   updatedAllUsers = async () => {
-    const newExperiences = {};
-    if (this.props.selectedUsers.length === 1) {
-      this.state.singleUsersEntries.forEach(entry => {
-        newExperiences[entry.domain] = entry.value;
+    let newUserPromises: Array<Promise<APIUserType>>;
+    if (this.state.showOnlySharedExperiences && this.props.selectedUsers.length > 1) {
+      const relevantEntries = this.state.multipleUsersEntries.filter(entry => entry.isShared);
+      newUserPromises = this.props.selectedUsers.map(user => {
+        const newExperiences = { ...user.experiences };
+        relevantEntries.forEach(entry => {
+          newExperiences[entry.domain] = entry.value;
+        });
+        const newUser = { ...user, experiences: newExperiences };
+        return this.sendUserToServer(newUser);
       });
     } else {
-      this.state.multipleUsersEntries.forEach(entry => {
-        newExperiences[entry.domain] = entry.value;
+      const newExperiences = {};
+      if (this.props.selectedUsers.length === 1) {
+        this.state.singleUsersEntries.forEach(entry => {
+          newExperiences[entry.domain] = entry.value;
+        });
+      } else {
+        this.state.multipleUsersEntries.forEach(entry => {
+          newExperiences[entry.domain] = entry.value;
+        });
+      }
+      newUserPromises = this.props.selectedUsers.map(user => {
+        const newUser = { ...user, experiences: newExperiences };
+        return this.sendUserToServer(newUser, user);
       });
     }
-    const newUserPromises = this.props.selectedUsers.map(user => {
-      const newUser = { ...user, experiences: newExperiences };
-      return this.sendUserToServer(newUser, user);
-    });
     this.resolvePromisesAndCloseModal(newUserPromises);
   };
 

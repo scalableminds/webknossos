@@ -15,8 +15,7 @@ class VolumeTracingController @Inject()(
                                          val dataSourceRepository: DataSourceRepository,
                                          val webKnossosServer: WebKnossosServer,
                                          val accessTokenService: AccessTokenService,
-                                         tracingDataStore: TracingDataStore,
-                                         val messagesApi: MessagesApi
+                                         tracingDataStore: TracingDataStore
                                        ) extends TracingController[VolumeTracing, VolumeTracings] {
 
   implicit val tracingsCompanion = VolumeTracings
@@ -25,39 +24,45 @@ class VolumeTracingController @Inject()(
 
   implicit def unpackMultiple(tracings: VolumeTracings): List[VolumeTracing] = tracings.tracings.toList
 
-  def initialData(tracingId: String) = TokenSecuredAction(UserAccessRequest.webknossos).async {
+  def initialData(tracingId: String) = Action.async {
     implicit request =>
-      AllowRemoteOrigin {
-        for {
-          initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-          dataSource <- dataSourceRepository.findUsableByName(tracing.dataSetName) ?~> Messages("dataSet.notFound")
-          _ <- tracingService.initializeWithData(tracingId, tracing, dataSource, initialData)
-        } yield Ok(Json.toJson(tracingId))
+      accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+        AllowRemoteOrigin {
+          for {
+            initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
+            tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+            dataSource <- dataSourceRepository.findUsableByName(tracing.dataSetName) ?~> Messages("dataSet.notFound")
+            _ <- tracingService.initializeWithData(tracingId, tracing, dataSource, initialData)
+          } yield Ok(Json.toJson(tracingId))
+        }
       }
   }
 
-  def getData(tracingId: String, version: Option[Long]) = TokenSecuredAction(UserAccessRequest.webknossos).async {
+  def getData(tracingId: String, version: Option[Long]) = Action.async {
     implicit request => {
-      AllowRemoteOrigin {
-        for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-        } yield {
-          Ok.chunked(tracingService.data(tracingId, tracing))
+      accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+        AllowRemoteOrigin {
+          for {
+            tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+          } yield {
+            Ok.chunked(tracingService.data(tracingId, tracing))
+          }
         }
       }
     }
   }
 
 
-  def duplicate(tracingId: String, version: Option[Long]) = TokenSecuredAction(UserAccessRequest.webknossos).async {
+  def duplicate(tracingId: String, version: Option[Long]) = Action.async {
     implicit request => {
-      AllowRemoteOrigin {
-        for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-          newId <- tracingService.duplicate(tracingId, tracing)
-        } yield {
-          Ok(Json.toJson(newId))
+      accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+        AllowRemoteOrigin {
+          for {
+            tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+            newId <- tracingService.duplicate(tracingId, tracing)
+          } yield {
+            Ok(Json.toJson(newId))
+          }
         }
       }
     }

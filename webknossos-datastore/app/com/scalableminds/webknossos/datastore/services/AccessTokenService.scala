@@ -57,6 +57,11 @@ class AccessTokenService @Inject()(webKnossosServer: WebKnossosServer, cache: Sy
 
   val AccessExpiration: FiniteDuration = 2.minutes
 
+  def validateAccessForSyncBlock[A](accessRequest: UserAccessRequest)(block: => Result)(implicit request: Request[A], ec: ExecutionContext): Fox[Result] =
+    validateAccess(accessRequest) {
+      Future.successful(block)
+    }
+
   def validateAccess[A](accessRequest: UserAccessRequest)(block: => Future[Result])(implicit request: Request[A], ec: ExecutionContext): Fox[Result] = {
     hasUserAccess(accessRequest, request).flatMap { userAccessAnswer =>
       executeBlockOnPositiveAnswer(userAccessAnswer, block)

@@ -122,8 +122,8 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
           </Col>
         </Row>
         <FormItemWithInfo
-          label="Publication Date"
-          info="This date is the publication date of the dataset. It is used to sort the datasets in the dataset gallery."
+          label="Sorting Date"
+          info="This date can be used to sort the datasets within webKnossos. For example, if the dataset was published in a paper, you can input the publication date of the paper here."
         >
           {getFieldDecorator("dataset.sortingKey")(
             <DatePicker placeholder="Select a Publication Date" />,

@@ -12,11 +12,7 @@ import InputComponent from "oxalis/view/components/input_component";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
-import {
-  enforceSkeletonTracing,
-  getActiveTree,
-  getActiveGroup,
-} from "oxalis/model/accessors/skeletontracing_accessor";
+import { getActiveTree, getActiveGroup } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   setTreeNameAction,
   createTreeAction,

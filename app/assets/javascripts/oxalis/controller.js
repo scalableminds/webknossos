@@ -32,7 +32,6 @@ import messages from "messages";
 import { fetchGistContent } from "libs/gist";
 import { document } from "libs/window";
 import NewTaskDescriptionModal from "oxalis/view/new_task_description_modal";
-import { layoutEmitter } from "oxalis/view/layouting/layout_persistence";
 
 import type { ModeType, ControlModeType } from "oxalis/constants";
 import type { OxalisState, TracingTypeTracingType } from "oxalis/store";

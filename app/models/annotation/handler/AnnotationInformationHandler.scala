@@ -6,8 +6,9 @@ import javax.inject.Inject
 import models.annotation.AnnotationType.AnnotationType
 import models.annotation._
 import models.user.User
-import play.api.libs.concurrent.Execution.Implicits._
 import utils.ObjectId
+
+import scala.concurrent.ExecutionContext
 
 class AnnotationInformationHandlerSelector @Inject()(projectInformationHandler: ProjectInformationHandler,
                                                      taskInformationHandler: TaskInformationHandler,
@@ -21,6 +22,8 @@ class AnnotationInformationHandlerSelector @Inject()(projectInformationHandler: 
 }
 
 trait AnnotationInformationHandler extends FoxImplicits {
+
+  implicit val ec: ExecutionContext
 
   def cache: Boolean = true
 

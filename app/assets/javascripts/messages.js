@@ -122,7 +122,7 @@ In order to restore the current window, a reload is necessary.`,
   "auth.reset_new_password2": "Please repeat your new password!",
   "auth.reset_token": "Please input the token!",
   "auth.reset_token_not_supplied":
-    "There was no token was found in the URL. Check your E-Mails to get the correct URL.",
+    "There was no token found in the URL. Check your E-Mails to get the correct URL.",
   "auth.reset_email_notification":
     "An email with instructions to reset your password has been send to you.",
   "auth.reset_pw_confirmation": "Your password was successfully changed",

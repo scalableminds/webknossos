@@ -10,7 +10,6 @@ import models.user.User
 import net.liftweb.common.Full
 import oxalis.security.SharingTokenContainer
 import play.api.Configuration
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{Json, JsonValidationError, Reads}
 import reactivemongo.bson.BSONObjectID
 import slick.dbio.DBIOAction
@@ -143,7 +142,7 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SQLClient) extends SimpleSQLDA
     }
   }
 
-  def assertUpdateAccess(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def assertUpdateAccess(id: ObjectId)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Unit] = {
     if (ctx.globalAccess) Fox.successful(())
     else {
       for {
@@ -154,7 +153,7 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SQLClient) extends SimpleSQLDA
     }
   }
 
-  def assertDeleteAccess(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def assertDeleteAccess(id: ObjectId)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Unit] = {
     if (ctx.globalAccess) Fox.successful(())
     else {
       for {

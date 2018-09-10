@@ -5,8 +5,14 @@
 
 import _ from "lodash";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
 import { pingDataStoreIfAppropriate, pingMentionedDataStores } from "admin/datastore_health_check";
+import { createWorker } from "oxalis/workers/comlink_wrapper";
+import handleStatus from "libs/handle_http_status";
+import FetchBufferWorker from "oxalis/workers/fetch_buffer.worker";
+import CompressWorker from "oxalis/workers/compress.worker";
+
+const fetchBufferViaWorker = createWorker(FetchBufferWorker);
+const compress = createWorker(CompressWorker);
 
 type methodType = "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH";
 
@@ -15,6 +21,7 @@ type RequestOptions = {
   method?: methodType,
   timeout?: number,
   compress?: boolean,
+  useWebworkerForArrayBuffer?: boolean,
 };
 
 export type RequestOptionsWithData<T> = RequestOptions & {
@@ -47,7 +54,7 @@ class Request {
     let body = _.isString(options.data) ? options.data : JSON.stringify(options.data);
 
     if (options.compress) {
-      body = await Utils.compress(body);
+      body = await compress(body);
       if (options.headers == null) {
         options.headers = {
           "Content-Encoding": "gzip",
@@ -147,8 +154,11 @@ class Request {
   receiveArraybuffer = (url: string, options: RequestOptions = {}): Promise<ArrayBuffer> =>
     this.triggerRequest(
       url,
-      _.defaultsDeep(options, { headers: { Accept: "application/octet-stream" } }),
-      response => response.arrayBuffer(),
+      _.defaultsDeep(options, {
+        headers: { Accept: "application/octet-stream" },
+        useWebworkerForArrayBuffer: true,
+      }),
+      // response => response.arrayBuffer(),
     );
 
   // IN:  JSON
@@ -201,9 +211,14 @@ class Request {
     }
     options.headers = headers;
 
-    let fetchPromise = fetch(url, options).then(this.handleStatus);
-    if (responseDataHandler != null) {
-      fetchPromise = fetchPromise.then(responseDataHandler);
+    let fetchPromise;
+    if (options.useWebworkerForArrayBuffer) {
+      fetchPromise = fetchBufferViaWorker(url, options);
+    } else {
+      fetchPromise = fetch(url, options).then(handleStatus);
+      if (responseDataHandler != null) {
+        fetchPromise = fetchPromise.then(responseDataHandler);
+      }
     }
 
     if (!options.doNotCatch) {
@@ -227,13 +242,6 @@ class Request {
     new Promise(resolve => {
       setTimeout(() => resolve("timeout"), timeout);
     });
-
-  handleStatus = (response: Response): Promise<Response> => {
-    if (response.status >= 200 && response.status < 400) {
-      return Promise.resolve(response);
-    }
-    return Promise.reject(response);
-  };
 
   handleError = (requestedUrl: string, error: Response | Error): Promise<void> => {
     // Check whether this request failed due to a problematic

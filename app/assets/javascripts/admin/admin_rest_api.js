@@ -514,10 +514,7 @@ export function getAnnotationInformation(
   annotationId: string,
   tracingType: APITracingType,
 ): Promise<APIAnnotationType> {
-  // Include /readOnly part whenever it is in the pathname
-  const isReadOnly = location.pathname.endsWith("/readOnly");
-  const readOnlyPart = isReadOnly ? "readOnly/" : "";
-  const infoUrl = `/api/annotations/${tracingType}/${annotationId}/${readOnlyPart}info`;
+  const infoUrl = `/api/annotations/${tracingType}/${annotationId}/info`;
   return Request.receiveJSON(infoUrl);
 }
 

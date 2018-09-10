@@ -1,11 +1,14 @@
 package com.scalableminds.webknossos.datastore.controllers
 
+import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracings}
 import com.scalableminds.webknossos.datastore.services.{AccessTokenService, DataSourceRepository, UserAccessRequest, WebKnossosServer}
 import com.scalableminds.webknossos.datastore.tracings._
 import com.scalableminds.webknossos.datastore.tracings.volume.VolumeTracingService
 import play.api.i18n.{Messages, MessagesApi}
+import play.api.libs.iteratee.Enumerator
+import play.api.libs.iteratee.streams.IterateeStreams
 import play.api.libs.json.Json
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -45,7 +48,8 @@ class VolumeTracingController @Inject()(
           for {
             tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
           } yield {
-            Ok.chunked(tracingService.data(tracingId, tracing))
+            val enumerator: Enumerator[Array[Byte]] = tracingService.data(tracingId, tracing)
+            Ok.chunked(Source.fromPublisher(IterateeStreams.enumeratorToPublisher(enumerator)))
           }
         }
       }

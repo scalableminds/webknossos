@@ -86,7 +86,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
       return {
         domain,
         value,
-        lowestValue: min,
+        lowestValue: isShared ? min : 0,
         highestValue: max,
         isShared,
         changed: false,
@@ -165,12 +165,14 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     this.setState(prevState => ({
       tableEntries: prevState.tableEntries.map((entry, currentIndex) => {
         if (currentIndex === index) {
+          const value =
+            this.props.selectedUsers.length === 1 ||
+            (entry.isShared && entry.lowestValue === entry.highestValue && entry.highestValue >= 1)
+              ? this.props.selectedUsers[0].experiences[entry.domain]
+              : 0;
           return {
             ...entry,
-            value:
-              entry.isShared && entry.lowestValue === entry.highestValue && entry.highestValue >= 1
-                ? this.props.selectedUsers[0].experiences[entry.domain]
-                : 0,
+            value,
             changed: false,
           };
         } else {
@@ -329,6 +331,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
             {this.state.removedDomains.map((domain: string) => (
               <Tooltip key={domain} placement="top" title="Do not remove this Domain">
                 <Tag
+                  style={{ magin: 8, marginTop: 10 }}
                   className="clickable-icon"
                   onClick={() => {
                     this.setState(prevState => ({

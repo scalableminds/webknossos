@@ -268,7 +268,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
             onChange={this.onChangeUser.overrideNodeRadius}
           />
           <SwitchSetting
-            label="Single-Node-Tree Mode"
+            label={`Allow Single-node-tree mode ("Soma clicking")${""}`}
             value={this.props.userConfiguration.newNodeNewTree}
             onChange={this.onChangeUser.newNodeNewTree}
           />

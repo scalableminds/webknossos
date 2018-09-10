@@ -1,10 +1,12 @@
 package controllers
 
+import com.scalableminds.util.accesscontext.DBAccessContext
 import javax.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.AnnotationSettings
 import models.task._
-import oxalis.security.WebknossosSilhouette.SecuredAction
+import models.user.UserService
+import oxalis.security.WebknossosSilhouette
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
@@ -12,63 +14,71 @@ import play.api.libs.json.Reads._
 import play.api.libs.json._
 import utils.ObjectId
 
-class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Controller with FoxImplicits{
+class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
+                                   taskDAO: TaskDAO,
+                                   taskTypeService: TaskTypeService,
+                                   userService: UserService,
+                                   sil: WebknossosSilhouette,
+                                   val messagesApi: MessagesApi) extends Controller with FoxImplicits{
+
+  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
+  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
 
   val taskTypePublicReads =
     ((__ \ 'summary).read[String](minLength[String](2) or maxLength[String](50)) and
       (__ \ 'description).read[String] and
       (__ \ 'teamId).read[String] (ObjectId.stringObjectIdReads("teamId")) and
-      (__ \ 'settings).read[AnnotationSettings]) (TaskType.fromForm _)
+      (__ \ 'settings).read[AnnotationSettings]) (taskTypeService.fromForm _)
 
-  def create = SecuredAction.async(parse.json) { implicit request =>
+  def create = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(taskTypePublicReads) { taskType =>
       for {
-        _ <- ensureTeamAdministration(request.identity, taskType._team)
-        _ <- TaskTypeDAO.insertOne(taskType)
-        js <- taskType.publicWrites
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team))
+        _ <- taskTypeDAO.insertOne(taskType)
+        js <- taskTypeService.publicWrites(taskType)
       } yield Ok(js)
     }
   }
 
-  def get(taskTypeId: String) = SecuredAction.async { implicit request =>
+  def get(taskTypeId: String) = sil.SecuredAction.async { implicit request =>
     for {
       taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
-      taskType <- TaskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
-      _ <- ensureTeamAdministration(request.identity, taskType._team)
-      js <- taskType.publicWrites
+      taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team))
+      js <- taskTypeService.publicWrites(taskType)
     } yield Ok(js)
   }
 
-  def list = SecuredAction.async { implicit request =>
+  def list = sil.SecuredAction.async { implicit request =>
     for {
-      taskTypes <- TaskTypeDAO.findAll
-      js <- Fox.serialCombined(taskTypes)(t => t.publicWrites)
+      taskTypes <- taskTypeDAO.findAll
+      js <- Fox.serialCombined(taskTypes)(t => taskTypeService.publicWrites(t))
     } yield Ok(Json.toJson(js))
   }
 
-  def update(taskTypeId: String) = SecuredAction.async(parse.json) { implicit request =>
+  def update(taskTypeId: String) = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(taskTypePublicReads) { taskTypeFromForm =>
       for {
         taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
-        taskType <- TaskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
+        taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
         updatedTaskType = taskTypeFromForm.copy(_id = taskType._id)
-        _ <- ensureTeamAdministration(request.identity, taskType._team)
-        _ <- ensureTeamAdministration(request.identity, updatedTaskType._team)
-        _ <- TaskTypeDAO.updateOne(updatedTaskType)
-        js <- updatedTaskType.publicWrites
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team))
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, updatedTaskType._team))
+        _ <- taskTypeDAO.updateOne(updatedTaskType)
+        js <- taskTypeService.publicWrites(updatedTaskType)
       } yield {
         JsonOk(js, Messages("taskType.editSuccess"))
       }
     }
   }
 
-  def delete(taskTypeId: String) = SecuredAction.async { implicit request =>
+  def delete(taskTypeId: String) = sil.SecuredAction.async { implicit request =>
     for {
       taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
-      taskType <- TaskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
-      _ <- ensureTeamAdministration(request.identity, taskType._team)
-      _ <- TaskTypeDAO.deleteOne(taskTypeIdValidated) ?~> "taskType.deleteFailure"
-      _ <- TaskDAO.removeAllWithTaskTypeAndItsAnnotations(taskTypeIdValidated) ?~> "taskType.deleteFailure"
+      taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team))
+      _ <- taskTypeDAO.deleteOne(taskTypeIdValidated) ?~> "taskType.deleteFailure"
+      _ <- taskDAO.removeAllWithTaskTypeAndItsAnnotations(taskTypeIdValidated) ?~> "taskType.deleteFailure"
     } yield {
       JsonOk(Messages("taskType.deleteSuccess", taskType.summary))
     }

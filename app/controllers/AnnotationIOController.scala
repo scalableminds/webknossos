@@ -13,7 +13,7 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationState._
-import models.annotation.nml.{NmlService, NmlWriter}
+import models.annotation.nml.{NmlResults, NmlService, NmlWriter}
 import models.annotation._
 import models.binary.{DataSet, DataSetDAO, DataSetService}
 import models.project.ProjectDAO
@@ -45,7 +45,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
                                        annotationService: AnnotationService,
                                        sil: Silhouette[WkEnv],
                                        provider: AnnotationInformationProvider,
-                                       val messagesApi: MessagesApi)
+                                       nmlService: NmlService)
   extends Controller
     with FoxImplicits
     with LazyLogging {
@@ -64,10 +64,10 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
 
   def upload = sil.SecuredAction.async(parse.multipartFormData) { implicit request =>
 
-    def returnError(zipParseResult: NmlService.ZipParseResult) = {
+    def returnError(zipParseResult: NmlResults.ZipParseResult) = {
       if (zipParseResult.containsFailure) {
         val errors = zipParseResult.parseResults.flatMap {
-          case result: NmlService.NmlParseFailure =>
+          case result: NmlResults.NmlParseFailure =>
             Some("error" -> Messages("nml.file.invalid", result.fileName, result.error))
           case _ => None
         }
@@ -85,22 +85,22 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
 
     val shouldCreateGroupForEachFile: Boolean = request.body.dataParts("createGroupForEachFile")(0) == "true"
 
-    val parsedFiles = request.body.files.foldLeft(NmlService.ZipParseResult()) {
-      case (acc, next) => acc.combineWith(NmlService.extractFromFile(next.ref.file, next.filename))
+    val parsedFiles = request.body.files.foldLeft(NmlResults.ZipParseResult()) {
+      case (acc, next) => acc.combineWith(nmlService.extractFromFile(next.ref.file, next.filename))
     }
 
 
     val tracingsProcessed =
       if (shouldCreateGroupForEachFile)
-        NmlService.wrapTreesInGroups(parsedFiles.parseResults)
+        nmlService.wrapTreesInGroups(parsedFiles.parseResults)
       else
-        NmlService.addPrefixesToTreeNames(parsedFiles.parseResults)
+        nmlService.addPrefixesToTreeNames(parsedFiles.parseResults)
 
     val parseSuccess = tracingsProcessed.filter(_.succeeded)
 
     if (!parsedFiles.isEmpty) {
       val tracings = parseSuccess.flatMap(_.bothTracingOpts)
-      val (skeletonTracings, volumeTracingsWithDataLocations) = NmlService.splitVolumeAndSkeletonTracings(tracings)
+      val (skeletonTracings, volumeTracingsWithDataLocations) = nmlService.splitVolumeAndSkeletonTracings(tracings)
       val name = nameForNmls(parseSuccess.map(_.fileName))
       val description = descriptionForNMLs(parseSuccess.map(_.description))
 

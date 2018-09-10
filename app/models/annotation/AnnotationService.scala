@@ -29,7 +29,7 @@ import play.api.i18n.{I18nSupport, Messages, MessagesApi}
 
 import scala.concurrent.Future
 import net.liftweb.common.{Box, Full}
-import play.api.libs.Files.TemporaryFile
+import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsNull, JsObject, Json}
@@ -50,7 +50,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
                                   organizationDAO: OrganizationDAO,
                                   annotationRestrictionDefults: AnnotationRestrictionDefults,
                                   nmlWriter: NmlWriter,
-                                  val messagesApi: MessagesApi)
+                                  temporaryFileCreator: TemporaryFileCreator)
   extends BoxImplicits
   with FoxImplicits
   with TextUtils
@@ -364,7 +364,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
   }
 
   private def createZip(nmls: List[(Enumerator[Array[Byte]],String)], zipFileName: String): Future[TemporaryFile] = {
-    val zipped = TemporaryFile(normalize(zipFileName), ".zip")
+    val zipped = temporaryFileCreator.create(normalize(zipFileName), ".zip")
     val zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(zipped.file)))
 
     def addToZip(nmls: List[(Enumerator[Array[Byte]],String)]): Future[Boolean] = {

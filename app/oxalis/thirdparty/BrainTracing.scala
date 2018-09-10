@@ -9,7 +9,7 @@ import javax.inject.Inject
 import models.team.OrganizationDAO
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.ws.{WS, WSAuthScheme, WSClient}
+import play.api.libs.ws.{WSAuthScheme, WSClient}
 import utils.WkConf
 
 import scala.concurrent.{Future, Promise}

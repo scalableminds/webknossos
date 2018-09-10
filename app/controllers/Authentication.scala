@@ -104,6 +104,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                organizationDAO: OrganizationDAO,
                                userDAO: UserDAO,
                                defaultMails: DefaultMails,
+                               rpc: RPC,
                                conf: WkConf,
                                sil: WebknossosSilhouette,
                                val messagesApi: MessagesApi
@@ -436,7 +437,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
 
   private def createOrganizationFolder(organizationName: String, loginInfo: LoginInfo)(implicit request: RequestHeader) = {
     def sendRPCToDataStore(dataStore: DataStore, token: String) = {
-      RPC(s"${dataStore.url}/data/triggers/newOrganizationFolder")
+      rpc(s"${dataStore.url}/data/triggers/newOrganizationFolder")
         .withQueryString("token" -> token, "organizationName" -> organizationName)
         .get
     }

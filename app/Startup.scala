@@ -75,7 +75,7 @@ class Startup @Inject() (actorSystem: ActorSystem,
     logger.info("Running diff_schema.sh tools/postgres/schema.sql DB")
     val errorMessage = new StringBuilder("Database schema does not fit to schema.sql:\n")
     def appendMessage(value: String) = errorMessage.append(value + "\n")
-    val schemaDiffResult = "tools/postgres/diff_schema.sh tools/postgres/schema.sql DB" ! ProcessLogger(appendMessage, appendMessage)
+    val schemaDiffResult = "tools/postgres/diff_schema.js tools/postgres/schema.sql DB" ! ProcessLogger(appendMessage, appendMessage)
     if (schemaDiffResult == 0) {
       logger.info("Schema is up to date.")
     } else {

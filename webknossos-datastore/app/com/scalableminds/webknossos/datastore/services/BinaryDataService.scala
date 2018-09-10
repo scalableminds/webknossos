@@ -30,18 +30,24 @@ class BinaryDataService @Inject()(config: DataStoreConfig) extends FoxImplicits 
 
   lazy val cache = new DataCubeCache(maxCacheSize)
 
-  def handleDataRequests(requests: List[DataServiceDataRequest]): Fox[Array[Byte]] = {
-    val requestData = requests.map { request =>
+  def handleDataRequests(requests: List[DataServiceDataRequest]): Fox[(Array[Byte], List[Int])] = {
+    val requestsCount = requests.length
+    val requestData = requests.zipWithIndex.map { case (request, index) =>
       getDataForRequest(request).map { data =>
         if (request.settings.halfByte) {
-          convertToHalfByte(data)
+          (convertToHalfByte(data), index)
         } else {
-          data
+          (data, index)
         }
       }
     }
 
-    Fox.combined(requestData).map(_.appendArrays)
+    Fox.sequenceOfFulls(requestData).map{l =>
+      val bytesArrays = l.map{case (byteArray, _) => byteArray}
+      val foundIndices = l.map{case (_, index) => index}
+      val notFoundIndices = List.range(0,requestsCount).diff(foundIndices)
+      (bytesArrays.appendArrays, notFoundIndices)
+    }
   }
 
   def handleMappingRequest(request: DataServiceMappingRequest): Fox[Array[Byte]] = {

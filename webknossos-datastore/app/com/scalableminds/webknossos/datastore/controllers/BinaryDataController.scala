@@ -21,8 +21,6 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.Json
 
-import scala.concurrent.Future
-
 class BinaryDataController @Inject()(
                                       binaryDataService: BinaryDataService,
                                       dataSourceRepository: DataSourceRepository,
@@ -42,9 +40,13 @@ class BinaryDataController @Inject()(
       AllowRemoteOrigin {
         for {
           (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
-          data <- requestData(dataSource, dataLayer, request.body)
-        } yield Ok(data)
+          (data, indices) <- requestData(dataSource, dataLayer, request.body)
+        } yield Ok(data).withHeaders("MISSING-BUCKETS" -> formatMissingBucketList(indices))
       }
+  }
+
+  def formatMissingBucketList(indices: List[Int]): String = {
+    "[" + indices.mkString(", ") + "]"
   }
 
   /**
@@ -73,8 +75,8 @@ class BinaryDataController @Inject()(
             depth,
             DataServiceRequestSettings(halfByte = halfByte)
           )
-        data <- requestData(dataSource, dataLayer, request).map(Ok(_))
-        } yield data
+          (data, indices) <- requestData(dataSource, dataLayer, request)
+        } yield Ok(data).withHeaders("MISSING-BUCKETS" -> formatMissingBucketList(indices))
       }
   }
 
@@ -115,8 +117,8 @@ class BinaryDataController @Inject()(
           cubeSize,
           cubeSize,
           cubeSize)
-          data <- requestData(dataSource, dataLayer, request).map(Ok(_))
-        } yield data
+          (data, indices) <- requestData(dataSource, dataLayer, request)
+        } yield Ok(data).withHeaders("MISSING-BUCKETS" -> formatMissingBucketList(indices))
       }
   }
 
@@ -274,13 +276,9 @@ class BinaryDataController @Inject()(
                            dataSource: DataSource,
                            dataLayer: DataLayer,
                            dataRequests: DataRequestCollection
-                         ): Fox[Array[Byte]] = {
+                         ): Fox[(Array[Byte], List[Int])] = {
     val requests = dataRequests.map(r => DataServiceDataRequest(dataSource, dataLayer, r.cuboid(dataLayer), r.settings))
-    binaryDataService.handleDataRequests(requests).futureBox.map(_ match {
-        case Full(data) => Fox.successful(data)
-        case Empty => Fox.failure("") ~> 404
-        case f: Failure => Future.successful(f) ~> 500
-      }).toFox.flatten
+    binaryDataService.handleDataRequests(requests)
   }
 
   private def contentTypeJpeg = play.api.libs.MimeTypes.forExtension("jpeg").getOrElse(play.api.http.ContentTypes.BINARY)
@@ -300,7 +298,7 @@ class BinaryDataController @Inject()(
       imagesPerRow,
       blackAndWhite = blackAndWhite)
     for {
-      data <- requestData(dataSource, dataLayer, request)
+      (data, indices) <- requestData(dataSource, dataLayer, request)
       spriteSheet <- ImageCreator.spriteSheetFor(data, params) ?~> Messages("image.create.failed")
       firstSheet <- spriteSheet.pages.headOption ?~> Messages("image.page.failed")
     } yield {

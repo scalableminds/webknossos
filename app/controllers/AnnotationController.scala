@@ -15,7 +15,7 @@ import models.user.{User, UserService}
 import oxalis.security.WebknossosSilhouette
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.{JsArray, _}
-import utils.ObjectId
+import utils.{ObjectId, WkConf}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -32,6 +32,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
                                      annotationMerger: AnnotationMerger,
                                      provider: AnnotationInformationProvider,
                                      annotationRestrictionDefults: AnnotationRestrictionDefults,
+                                     conf: WkConf,
                                      sil: WebknossosSilhouette,
                                      val messagesApi: MessagesApi
                                     )
@@ -44,11 +45,11 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
   implicit val timeout = Timeout(5 seconds)
 
   def empty(typ: String, id: String) = sil.SecuredAction { implicit request =>
-    Ok(views.html.main())
+    Ok(views.html.main(conf))
   }
 
   def emptyReadOnly(typ: String, id: String) = sil.UserAwareAction { implicit request =>
-    Ok(views.html.main())
+    Ok(views.html.main(conf))
   }
 
   def info(typ: String, id: String, readOnly: Boolean = false) = sil.UserAwareAction.async { implicit request =>

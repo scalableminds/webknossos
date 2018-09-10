@@ -65,6 +65,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
                                 teamDAO: TeamDAO,
                                 taskDAO: TaskDAO,
                                 taskService: TaskService,
+                                conf: WkConf,
                                 sil: WebknossosSilhouette,
                                 val messagesApi: MessagesApi)
   extends Controller
@@ -75,7 +76,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
   implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
   implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
 
-  val MAX_OPEN_TASKS = WkConf.Oxalis.Tasks.maxOpenPerUser
+  val MAX_OPEN_TASKS = conf.Oxalis.Tasks.maxOpenPerUser
 
   def read(taskId: String) = sil.SecuredAction.async { implicit request =>
     for {

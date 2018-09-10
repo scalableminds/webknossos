@@ -28,6 +28,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                teamService: TeamService,
                                userService: UserService,
                                dataSetAllowedTeamsDAO: DataSetAllowedTeamsDAO,
+                               rpc: RPC,
                                val messagesApi: MessagesApi
                               ) extends FoxImplicits with LazyLogging {
 
@@ -78,7 +79,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
   }
 
   def getForeignDataSet(dataStoreUrl: String, dataSetName: String): Fox[InboxDataSource] = {
-    RPC(s"${dataStoreUrl}/data/datasets/${dataSetName}/readInboxDataSourceLike")
+    rpc(s"${dataStoreUrl}/data/datasets/${dataSetName}/readInboxDataSourceLike")
       .withQueryString("token" -> "") // we don't need a valid token because the DataSet is public, but we have to add the parameter token because it is a TokenSecuredAction
       .getWithJsonResponse[InboxDataSource]
   }
@@ -179,7 +180,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
   def handlerFor(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[DataStoreHandler] =
     for {
       dataStore <- dataStoreFor(dataSet)
-    } yield new DataStoreHandler(dataStore, dataSet)
+    } yield new DataStoreHandler(dataStore, dataSet, rpc)
 
   def lastUsedTimeFor(_dataSet: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Long] = {
     userOpt match {

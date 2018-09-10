@@ -108,9 +108,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                rpc: RPC,
                                conf: WkConf,
                                wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-                               sil: Silhouette[WkEnv],
-                               val messagesApi: MessagesApi
-                              )
+                               sil: Silhouette[WkEnv])
   extends Controller
     with FoxImplicits {
 

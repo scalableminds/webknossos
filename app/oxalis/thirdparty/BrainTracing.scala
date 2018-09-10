@@ -38,7 +38,7 @@ class BrainTracing @Inject()(actorSystem: ActorSystem,
     val brainTracingRequest = ws
       .url(CREATE_URL)
       .withAuth(conf.Braintracing.user, conf.Braintracing.password, WSAuthScheme.BASIC)
-      .withQueryString(
+      .addQueryStringParameters(
         "license" -> conf.Braintracing.license,
         "firstname" -> user.firstName,
         "lastname" -> user.lastName,

@@ -21,8 +21,7 @@ import utils.{ObjectId, WkConf}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class InitialDataController @Inject()(initialDataService: InitialDataService,
-                                      sil: Silhouette[WkEnv],
-                                      val messagesApi: MessagesApi)
+                                      sil: Silhouette[WkEnv])
   extends Controller with FoxImplicits {
 
   def triggerInsert = sil.UserAwareAction.async { implicit request =>

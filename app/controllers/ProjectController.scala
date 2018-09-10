@@ -24,8 +24,7 @@ class ProjectController @Inject()(projectService: ProjectService,
                                   taskDAO: TaskDAO,
                                   userService: UserService,
                                   taskService: TaskService,
-                                  sil: Silhouette[WkEnv],
-                                  val messagesApi: MessagesApi) extends Controller with FoxImplicits {
+                                  sil: Silhouette[WkEnv]) extends Controller with FoxImplicits {
 
   def list = sil.SecuredAction.async {
     implicit request =>

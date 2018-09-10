@@ -18,8 +18,7 @@ import utils.ObjectId
 class ScriptController @Inject()(scriptDAO: ScriptDAO,
                                  taskDAO: TaskDAO,
                                  scriptService: ScriptService,
-                                 sil: Silhouette[WkEnv],
-                                 val messagesApi: MessagesApi) extends Controller with FoxImplicits {
+                                 sil: Silhouette[WkEnv]) extends Controller with FoxImplicits {
 
   val scriptPublicReads =
     ((__ \ 'name).read[String](minLength[String](2) or maxLength[String](50)) and

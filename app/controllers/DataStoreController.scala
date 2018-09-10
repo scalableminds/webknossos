@@ -13,8 +13,7 @@ import play.api.libs.json.{Json, Writes}
 
 class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
                                     dataStoreService: DataStoreService,
-                                    sil: Silhouette[WkEnv],
-                                    val messagesApi: MessagesApi) extends Controller with FoxImplicits {
+                                    sil: Silhouette[WkEnv]) extends Controller with FoxImplicits {
 
   def list = sil.UserAwareAction.async { implicit request =>
     for {

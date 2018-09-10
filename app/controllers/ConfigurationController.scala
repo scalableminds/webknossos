@@ -19,8 +19,7 @@ class ConfigurationController @Inject()(userService: UserService,
                                         dataSetDAO: DataSetDAO,
                                         userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
                                         dataSetConfigurationDefaults: DataSetConfigurationDefaults,
-                                        sil: Silhouette[WkEnv],
-                                        val messagesApi: MessagesApi) extends Controller {
+                                        sil: Silhouette[WkEnv]) extends Controller {
 
   def read = sil.UserAwareAction.async { implicit request =>
     request.identity.toFox.flatMap { user =>

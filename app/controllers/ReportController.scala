@@ -119,8 +119,7 @@ class ReportController @Inject()(reportDAO: ReportDAO,
                                  teamDAO: TeamDAO,
                                  userDAO: UserDAO,
                                  userService: UserService,
-                                 sil: Silhouette[WkEnv],
-                                 val messagesApi: MessagesApi) extends Controller with FoxImplicits {
+                                 sil: Silhouette[WkEnv]) extends Controller with FoxImplicits {
 
   def projectProgressOverview(teamId: String) = sil.SecuredAction.async { implicit request =>
     for {

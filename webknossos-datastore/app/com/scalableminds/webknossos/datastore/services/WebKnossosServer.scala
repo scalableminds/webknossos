@@ -26,8 +26,7 @@ class WebKnossosServer @Inject()(
                                   rpc: RPC,
                                   config: DataStoreConfig,
                                   val lifecycle: ApplicationLifecycle,
-                                  @Named("webknossos-datastore") val system: ActorSystem,
-                                  val messagesApi: MessagesApi
+                                  @Named("webknossos-datastore") val system: ActorSystem
                                 ) extends IntervalScheduler with LazyLogging {
 
   private val dataStoreKey: String = config.Datastore.key

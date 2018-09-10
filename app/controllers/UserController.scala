@@ -14,7 +14,7 @@ import com.mohiva.play.silhouette.api.Silhouette
 import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import play.api.data.Forms._
 import play.api.data._
-import play.api.i18n.{Messages, MessagesApi}
+import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Json._
@@ -32,8 +32,7 @@ class UserController @Inject()(userService: UserService,
                                teamMembershipService: TeamMembershipService,
                                annotationService: AnnotationService,
                                teamDAO: TeamDAO,
-                               sil: Silhouette[WkEnv],
-                               val messagesApi: MessagesApi)
+                               sil: Silhouette[WkEnv])
   extends Controller
     with FoxImplicits {
 
@@ -179,7 +178,7 @@ class UserController @Inject()(userService: UserService,
       (__ \ "teams").read[List[TeamMembership]](Reads.list(teamMembershipService.publicReads)) and
       (__ \ "experiences").read[Map[String, Int]]).tupled
 
-  def ensureProperTeamAdministration(user: User, teams: List[(TeamMembership, Team)]) = {
+  def ensureProperTeamAdministration(user: User, teams: List[(TeamMembership, Team)])(implicit m: MessagesProvider) = {
     Fox.combined(teams.map {
       case (TeamMembership(_, true), team) => {
         for {

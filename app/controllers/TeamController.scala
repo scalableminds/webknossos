@@ -18,8 +18,7 @@ import utils.ObjectId
 class TeamController @Inject()(teamDAO: TeamDAO,
                                userTeamRolesDAO: UserTeamRolesDAO,
                                teamService: TeamService,
-                               sil: Silhouette[WkEnv],
-                               val messagesApi: MessagesApi) extends Controller {
+                               sil: Silhouette[WkEnv]) extends Controller {
 
   private def teamNameReads: Reads[String] =
     (__ \ "name").read[String]

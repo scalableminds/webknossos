@@ -18,8 +18,7 @@ import slick.jdbc.PostgresProfile.api._
 class Application @Inject()(analyticsDAO: AnalyticsDAO,
                             releaseInformationDAO: ReleaseInformationDAO,
                             conf: WkConf,
-                            sil: Silhouette[WkEnv],
-                            val messagesApi: MessagesApi) extends Controller {
+                            sil: Silhouette[WkEnv]) extends Controller {
 
   def buildInfo = sil.UserAwareAction.async { implicit request =>
     val token = request.identity.flatMap { user =>

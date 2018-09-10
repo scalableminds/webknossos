@@ -95,7 +95,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     return this.sortEntries(tableEntries);
   };
 
-  updatedAllUsers = async () => {
+  changed = async () => {
     let relevantEntries = this.state.tableEntries.filter(
       entry =>
         entry.changed || (entry.lowestValue === entry.highestValue && entry.highestValue >= 1),
@@ -226,7 +226,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
         width={800}
         footer={
           <div>
-            <Button type="primary" onClick={this.updatedAllUsers}>
+            <Button type="primary" onClick={this.updateAllUsers}>
               Submit Changes
             </Button>
             <Button onClick={() => this.props.onCancel()}>Cancel</Button>

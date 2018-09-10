@@ -10,17 +10,20 @@ import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
 import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
 import utils.ObjectId
 
+import scala.concurrent.ExecutionContext
+
 class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
                                    taskDAO: TaskDAO,
                                    taskTypeService: TaskTypeService,
                                    userService: UserService,
-                                   sil: Silhouette[WkEnv]) extends Controller with FoxImplicits{
+                                   sil: Silhouette[WkEnv])
+                                  (implicit ec: ExecutionContext)
+  extends Controller with FoxImplicits{
 
   val taskTypePublicReads =
     ((__ \ 'summary).read[String](minLength[String](2) or maxLength[String](50)) and

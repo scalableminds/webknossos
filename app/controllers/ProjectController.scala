@@ -11,11 +11,10 @@ import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
 import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import utils.ObjectId
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 class ProjectController @Inject()(projectService: ProjectService,
                                   projectDAO: ProjectDAO,
@@ -24,7 +23,9 @@ class ProjectController @Inject()(projectService: ProjectService,
                                   taskDAO: TaskDAO,
                                   userService: UserService,
                                   taskService: TaskService,
-                                  sil: Silhouette[WkEnv]) extends Controller with FoxImplicits {
+                                  sil: Silhouette[WkEnv])
+                                 (implicit ec: ExecutionContext)
+  extends Controller with FoxImplicits {
 
   def list = sil.SecuredAction.async {
     implicit request =>

@@ -1,7 +1,7 @@
 package controllers
 
 import javax.inject.Inject
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -11,19 +11,13 @@ import models.user._
 import models.user.time._
 import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
-import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
-import play.api.data.Forms._
-import play.api.data._
-import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
-import play.api.libs.concurrent.Execution.Implicits._
+import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Json._
 import play.api.libs.json._
-import play.twirl.api.Html
 import utils.ObjectId
-import views.html
 
-import scala.concurrent.Future
+import scala.concurrent.ExecutionContext
 
 class UserController @Inject()(userService: UserService,
                                userDAO: UserDAO,
@@ -33,6 +27,7 @@ class UserController @Inject()(userService: UserService,
                                annotationService: AnnotationService,
                                teamDAO: TeamDAO,
                                sil: Silhouette[WkEnv])
+                              (implicit ec: ExecutionContext)
   extends Controller
     with FoxImplicits {
 

@@ -19,7 +19,7 @@ import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
 import play.api.libs.json.{JsArray, _}
 import utils.{ObjectId, WkConf}
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 
@@ -36,7 +36,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
                                      annotationRestrictionDefults: AnnotationRestrictionDefults,
                                      conf: WkConf,
                                      sil: Silhouette[WkEnv]
-                                    )
+                                    )(implicit ec: ExecutionContext)
   extends Controller
     with FoxImplicits {
 

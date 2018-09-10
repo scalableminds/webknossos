@@ -12,7 +12,7 @@ import net.liftweb.common.{Box, Full}
 import oxalis.security._
 import play.api.libs.json.Json
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 
 class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
                                     annotationDAO: AnnotationDAO,
@@ -22,6 +22,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
                                     dataStoreService: DataStoreService,
                                     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                                     sil: Silhouette[WkEnv])
+                                   (implicit ec: ExecutionContext)
   extends Controller {
 
   val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService

@@ -31,8 +31,7 @@ import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json._
 import play.api.mvc._
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import utils.{ObjectId, WkConf}
 
 
@@ -111,7 +110,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                conf: WkConf,
                                wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                                sil: Silhouette[WkEnv]
-)
+                              )(implicit ec: ExecutionContext)
   extends Controller
     with FoxImplicits {
 

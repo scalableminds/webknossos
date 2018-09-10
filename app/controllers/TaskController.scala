@@ -20,12 +20,11 @@ import com.mohiva.play.silhouette.api.Silhouette
 import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import models.annotation.nml.NmlResults.NmlParseResult
 import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import play.api.mvc.Result
 import utils.{ObjectId, WkConf}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 case class TaskParameters(
                            taskTypeId: String,
@@ -70,6 +69,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
                                 nmlService: NmlService,
                                 conf: WkConf,
                                 sil: Silhouette[WkEnv])
+                               (implicit ec: ExecutionContext)
   extends Controller
     with ResultBox
     with ProtoGeometryImplicits

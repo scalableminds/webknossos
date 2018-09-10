@@ -34,6 +34,7 @@ object Dependencies {
   val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.2"
   val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.4.0"
   val scalaTest = "org.scalatest" %% "scalatest" % "3.0.5" % "test"
+  val scalaTestPlusPlay = "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % "test"
   val silhouette = "com.mohiva" %% "play-silhouette" % "5.0.5"
   val silhouetteTestkit = "com.mohiva" %% "play-silhouette-testkit" % "5.0.5" % "test"
   val urlHelper = "com.netaporter" %% "scala-uri" % "0.4.14"
@@ -85,6 +86,7 @@ object Dependencies {
     commonsCodec,
     scalaAsync,
     scalaTest,
+    scalaTestPlusPlay,
     silhouette,
     silhouetteTestkit,
     specs2 % Test,

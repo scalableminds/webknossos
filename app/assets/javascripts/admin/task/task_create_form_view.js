@@ -170,7 +170,9 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
               // Workaround: Antd replaces file objects in the formValues with a wrapper file
               // The original file object is contained in the originFileObj property
               // This is most likely not intentional and may change in a future Antd version
-              formValues.nmlFile = formValues.nmlFile.map(wrapperFile => wrapperFile.originFileObj);
+              formValues.nmlFiles = formValues.nmlFiles.map(
+                wrapperFile => wrapperFile.originFileObj,
+              );
 
               response = await createTaskFromNML(formValues);
             } else {
@@ -311,27 +313,27 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
               </FormItem>
 
               {this.state.isNMLSpecification ? (
-                <FormItem label="NML File" hasFeedback>
-                  {getFieldDecorator("nmlFile", {
+                <FormItem label="NML Files" hasFeedback>
+                  {getFieldDecorator("nmlFiles", {
                     rules: [{ required: true }],
                     valuePropName: "fileList",
                     getValueFromEvent: this.normFile,
                   })(
                     <Upload.Dragger
                       accept=".nml,.zip"
-                      name="nmlFile"
+                      name="nmlFiles"
                       beforeUpload={file => {
-                        this.props.form.setFieldsValue({ nmlFile: [file] });
+                        this.props.form.setFieldsValue({ nmlFiles: [file] });
                         return false;
                       }}
                     >
                       <p className="ant-upload-drag-icon">
                         <Icon type="inbox" />
                       </p>
-                      <p className="ant-upload-text">Click or Drag File to This Area to Upload</p>
+                      <p className="ant-upload-text">Click or Drag Files to This Area to Upload</p>
                       <p>
-                        Every nml creates a new task. You can either upload a single NML file or a
-                        zipped collection of nml files (.zip).
+                        Every nml creates a new task. You can upload multiple NML files or zipped
+                        collections of nml files (.zip).
                       </p>
                     </Upload.Dragger>,
                   )}

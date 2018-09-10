@@ -380,7 +380,7 @@ export function createTasks(tasks: Array<NewTaskType>): Promise<Array<TaskCreati
 export function createTaskFromNML(task: NewTaskType): Promise<Array<TaskCreationResponseType>> {
   return Request.sendMultipartFormReceiveJSON("/api/tasks/createFromFile", {
     data: {
-      nmlFile: task.nmlFile,
+      nmlFiles: task.nmlFiles,
       formJSON: JSON.stringify(task),
     },
   });

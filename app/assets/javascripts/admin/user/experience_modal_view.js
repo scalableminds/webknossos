@@ -53,7 +53,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     }
   }
 
-  sortEntries(entries: Array<TableEntry>) {
+  sortEntries(entries: Array<TableEntry>): Array<TableEntry> {
     return entries.sort(
       Utils.localeCompareBy(([]: Array<TableEntry>), entry => entry.domain.toLowerCase()),
     );

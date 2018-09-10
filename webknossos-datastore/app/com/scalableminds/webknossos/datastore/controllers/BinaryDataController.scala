@@ -182,7 +182,6 @@ class BinaryDataController @Inject()(
           Result(
             header = ResponseHeader(200),
             body = HttpEntity.Streamed(StreamConverters.asOutputStream().mapMaterializedValue { outputStream => imageProvider(outputStream) }, None, Some(contentTypeJpeg)))
-          //TODO: disposition
         }
       }
   }
@@ -207,7 +206,6 @@ class BinaryDataController @Inject()(
           Result(
             header = ResponseHeader(200),
             body = HttpEntity.Streamed(StreamConverters.asOutputStream().mapMaterializedValue { outputStream => thumbnailProvider(outputStream) }, None, Some(contentTypeJpeg)))
-          //TODO: disposition
         }
       }
   }

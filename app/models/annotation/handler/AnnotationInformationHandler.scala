@@ -26,9 +26,8 @@ trait AnnotationInformationHandler extends FoxImplicits {
 
   def provideAnnotation(identifier: ObjectId, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation]
 
-  def nameForAnnotation(t: Annotation)(implicit ctx: DBAccessContext): Fox[String] = {
+  def nameForAnnotation(t: Annotation)(implicit ctx: DBAccessContext): Fox[String] =
     Fox.successful(t.id)
-  }
 
   def restrictionsFor(identifier: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions]
 

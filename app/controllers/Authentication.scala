@@ -438,13 +438,13 @@ class Authentication @Inject()(actorSystem: ActorSystem,
   private def createOrganizationFolder(organizationName: String, loginInfo: LoginInfo)(implicit request: RequestHeader) = {
     def sendRPCToDataStore(dataStore: DataStore, token: String) = {
       rpc(s"${dataStore.url}/data/triggers/newOrganizationFolder")
-        .withQueryString("token" -> token, "organizationName" -> organizationName)
+        .addQueryString("token" -> token, "organizationName" -> organizationName)
         .get
     }
 
     for {
       token <- combinedAuthenticatorService.tokenAuthenticatorService.createAndInit(loginInfo, TokenType.DataStore, deleteOld = false).toFox
-      datastores <- dataStoreDAO.findAll(GlobalAccessContext)
+      datastores <- dataStoreDAO.findAll(GlobalAccessContext, ec)
       _ <- Fox.combined(datastores.map(sendRPCToDataStore(_, token)))
     } yield Full(())
 

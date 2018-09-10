@@ -47,12 +47,12 @@ trait RemoteOriginHelpers {
 
 trait ValidationHelpers {
 
-  def validateJson[A : Reads](implicit ec: ExecutionContext) = BodyParsers.parse.json.validate(
+  def validateJson[A : Reads](implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext) = bodyParsers.json.validate(
     _.validate[A].asEither.left.map(e => BadRequest(JsError.toJson(e)))
   )
 
-  def validateProto[A <: GeneratedMessage with Message[A]](implicit companion: GeneratedMessageCompanion[A], ec: ExecutionContext) =
-    BodyParsers.parse.raw.validate { raw =>
+  def validateProto[A <: GeneratedMessage with Message[A]](implicit bodyParsers: PlayBodyParsers, companion: GeneratedMessageCompanion[A], ec: ExecutionContext) =
+    bodyParsers.raw.validate { raw =>
       if (raw.size < raw.memoryThreshold) {
         Box(raw.asBytes()).flatMap(x => tryo(companion.parseFrom(x.toArray))).toRight[Result](BadRequest("invalid request body"))
       } else {

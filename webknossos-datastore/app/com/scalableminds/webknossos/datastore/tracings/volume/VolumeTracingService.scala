@@ -16,6 +16,7 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.iteratee.Enumerator
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class VolumeTracingService @Inject()(
@@ -39,9 +40,9 @@ class VolumeTracingService @Inject()(
 
   val tracingStore = tracingDataStore.volumes
 
-  override def currentVersion(tracingId: String): Fox[Long] = tracingDataStore.volumes.getVersion(tracingId).getOrElse(0L)
+  override def currentVersion(tracingId: String)(implicit ec: ExecutionContext): Fox[Long] = tracingDataStore.volumes.getVersion(tracingId).getOrElse(0L)
 
-  def handleUpdateGroup(tracingId: String, updateGroup: UpdateActionGroup[VolumeTracing]): Fox[_] = {
+  def handleUpdateGroup(tracingId: String, updateGroup: UpdateActionGroup[VolumeTracing])(implicit ec: ExecutionContext): Fox[_] = {
     updateGroup.actions.foldLeft(find(tracingId)) { (tracing, action) =>
       tracing.futureBox.flatMap {
         case Full(t) =>

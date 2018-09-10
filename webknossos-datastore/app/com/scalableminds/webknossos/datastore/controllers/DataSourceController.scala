@@ -8,19 +8,20 @@ import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, Dat
 import com.scalableminds.webknossos.datastore.services._
 import play.api.data.Form
 import play.api.data.Forms.{nonEmptyText, tuple}
-import play.api.i18n.{Messages}
+import play.api.i18n.Messages
 import play.api.libs.json.Json
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, InboxDataSourceLike}
+import play.api.mvc.PlayBodyParsers
 
+import scala.concurrent.ExecutionContext
 
-import scala.concurrent.ExecutionContext.Implicits.global
-
-class DataSourceController @Inject()(
-                                      dataSourceRepository: DataSourceRepository,
-                                      dataSourceService: DataSourceService,
-                                      webKnossosServer: WebKnossosServer,
-                                      accessTokenService: AccessTokenService
-                                    ) extends Controller with FoxImplicits {
+class DataSourceController @Inject()(dataSourceRepository: DataSourceRepository,
+                                     dataSourceService: DataSourceService,
+                                     webKnossosServer: WebKnossosServer,
+                                     accessTokenService: AccessTokenService)
+                                    (implicit bodyParsers: PlayBodyParsers,
+                                      ec: ExecutionContext)
+  extends Controller with FoxImplicits {
 
   def list() = Action.async {
     implicit request => {

@@ -9,8 +9,8 @@ import javax.inject.Inject
 import models.annotation.handler.AnnotationInformationHandlerSelector
 import models.user.User
 import net.liftweb.common.{Box, Empty, Failure, Full}
-import play.api.libs.concurrent.Execution.Implicits._
 
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
 class AnnotationStore @Inject()(annotationInformationHandlerSelector: AnnotationInformationHandlerSelector,
@@ -22,7 +22,8 @@ class AnnotationStore @Inject()(annotationInformationHandlerSelector: Annotation
 
   case class StoredResult(result: Fox[Annotation], timestamp: Long = System.currentTimeMillis)
 
-  def requestAnnotation(id: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext) = {
+  def requestAnnotation(id: AnnotationIdentifier, user: Option[User])
+                       (implicit ctx: DBAccessContext, ec: ExecutionContext): Future[Box[Annotation]] = {
     requestFromCache(id)
     .getOrElse(requestFromHandler(id, user))
     .futureBox
@@ -34,7 +35,7 @@ class AnnotationStore @Inject()(annotationInformationHandlerSelector: Annotation
     }
   }
 
-  private def requestFromCache(id: AnnotationIdentifier): Option[Fox[Annotation]] = {
+  private def requestFromCache(id: AnnotationIdentifier)(implicit ec: ExecutionContext): Option[Fox[Annotation]] = {
     val handler = annotationInformationHandlerSelector.informationHandlers(id.annotationType)
     if (handler.cache) {
       val cached = getFromCache(id)
@@ -59,7 +60,7 @@ class AnnotationStore @Inject()(annotationInformationHandlerSelector: Annotation
     temporaryAnnotationStore.insert(id.toUniqueString, annotation, Some(cacheTimeout))
   }
 
-  private def getFromCache(annotationId: AnnotationIdentifier): Option[Fox[Annotation]] = {
+  private def getFromCache(annotationId: AnnotationIdentifier)(implicit ec: ExecutionContext): Option[Fox[Annotation]] = {
     temporaryAnnotationStore.find(annotationId.toUniqueString).map(Fox.successful(_))
   }
 

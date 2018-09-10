@@ -8,7 +8,9 @@ import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import net.liftweb.common.Failure
 import play.api.i18n.Messages
 import play.api.libs.json.{Json, Reads}
+import play.api.mvc.PlayBodyParsers
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits.global
 
 trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMessage with Message[Ts]] extends Controller {
@@ -30,6 +32,8 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
   implicit def packMultiple(tracings: List[T]): Ts
 
   implicit val updateActionReads: Reads[UpdateAction[T]] = tracingService.updateActionReads
+
+  implicit val bodyParsers: PlayBodyParsers
 
   def save = Action.async(validateProto[T]) {
     implicit request =>

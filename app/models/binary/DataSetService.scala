@@ -10,13 +10,12 @@ import javax.inject.Inject
 import models.team.{OrganizationDAO, TeamDAO, TeamService}
 import models.user.{User, UserService}
 import net.liftweb.common.Full
-import oxalis.security.{CompactRandomIDGenerator, URLSharing}
-import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.i18n.Messages.Implicits._
+import oxalis.security.{CompactRandomIDGenerator}
 import play.api.libs.json.{JsObject, Json}
 import play.api.libs.ws.WSResponse
 import utils.ObjectId
+
+import scala.concurrent.ExecutionContext
 
 class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                dataSetDAO: DataSetDAO,
@@ -34,8 +33,8 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
   def isProperDataSetName(name: String): Boolean =
     name.matches("[A-Za-z0-9_\\-]*")
 
-  def assertNewDataSetName(name: String)(implicit ctx: DBAccessContext): Fox[Boolean] =
-    dataSetDAO.findOneByName(name)(GlobalAccessContext).reverse
+  def assertNewDataSetName(name: String)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Boolean] =
+    dataSetDAO.findOneByName(name)(GlobalAccessContext, ec).reverse
 
   def createDataSet(
                      name: String,
@@ -43,7 +42,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                      owningOrganization: String,
                      dataSource: InboxDataSource,
                      isActive: Boolean = false
-                     ) = {
+                     )(implicit ec: ExecutionContext) = {
     implicit val ctx = GlobalAccessContext
     val newId = ObjectId.generate
     organizationDAO.findOneByName(owningOrganization).futureBox.flatMap {
@@ -79,7 +78,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
   def getForeignDataSet(dataStoreUrl: String, dataSetName: String): Fox[InboxDataSource] = {
     rpc(s"${dataStoreUrl}/data/datasets/${dataSetName}/readInboxDataSourceLike")
-      .withQueryString("token" -> "") // we don't need a valid token because the DataSet is public, but we have to add the parameter token because it is a TokenSecuredAction
+      .addQueryString("token" -> "") // we don't need a valid token because the DataSet is public, but we have to add the parameter token because it is a TokenSecuredAction
       .getWithJsonResponse[InboxDataSource]
   }
 
@@ -93,15 +92,15 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
   def updateDataSource(
                         dataStore: DataStore,
                         dataSource: InboxDataSource
-                      )(implicit ctx: DBAccessContext): Fox[Unit] = {
+                      )(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Unit] = {
 
-    dataSetDAO.findOneByName(dataSource.id.name)(GlobalAccessContext).futureBox.flatMap {
+    dataSetDAO.findOneByName(dataSource.id.name)(GlobalAccessContext, ec).futureBox.flatMap {
       case Full(dataSet) if dataSet._dataStore == dataStore.name =>
         dataSetDAO.updateDataSourceByName(
           dataSource.id.name,
           dataStore.name,
           dataSource,
-          dataSource.isUsable)(GlobalAccessContext).futureBox
+          dataSource.isUsable)(GlobalAccessContext, ec).futureBox
       case Full(_) =>
         // TODO: There is a problem: The dataset name is already in use by some (potentially different) team.
         // We are not going to update that datasource.

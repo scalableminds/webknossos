@@ -7,8 +7,9 @@ import javax.inject.Inject
 import models.annotation.AnnotationType.AnnotationType
 import models.binary.{DataSetDAO, DataSetService}
 import models.user.User
-import play.api.libs.concurrent.Execution.Implicits._
 import utils.ObjectId
+
+import scala.concurrent.ExecutionContext
 
 class AnnotationMerger @Inject()(dataSetDAO: DataSetDAO,
                                  dataSetService: DataSetService
@@ -19,7 +20,7 @@ class AnnotationMerger @Inject()(dataSetDAO: DataSetDAO,
                 annotationB: Annotation,
                 persistTracing: Boolean,
                 issuingUser: User
-    )(implicit ctx: DBAccessContext): Fox[Annotation] = {
+    )(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Annotation] = {
     mergeN(
       ObjectId.generate,
       persistTracing,
@@ -39,7 +40,7 @@ class AnnotationMerger @Inject()(dataSetDAO: DataSetDAO,
               _team: ObjectId,
               typ: AnnotationType,
               annotations: List[Annotation]
-    )(implicit ctx: DBAccessContext): Fox[Annotation] = {
+    )(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Annotation] = {
     if (annotations.isEmpty)
       Fox.empty
     else {
@@ -60,7 +61,8 @@ class AnnotationMerger @Inject()(dataSetDAO: DataSetDAO,
     }
   }
 
-  private def mergeTracingsOfAnnotations(annotations: List[Annotation], dataSetId: ObjectId, persistTracing: Boolean)(implicit ctx: DBAccessContext): Fox[String] = {
+  private def mergeTracingsOfAnnotations(annotations: List[Annotation], dataSetId: ObjectId, persistTracing: Boolean)
+                                        (implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[String] = {
     for {
       dataSet <- dataSetDAO.findOne(dataSetId)
       dataStoreHandler <- dataSetService.handlerFor(dataSet)

@@ -7,15 +7,17 @@ import com.scalableminds.webknossos.datastore.tracings.TracingSelector
 import com.scalableminds.webknossos.datastore.tracings.skeleton._
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
+import play.api.mvc.PlayBodyParsers
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 
-class SkeletonTracingController @Inject()(
-                                           val tracingService: SkeletonTracingService,
-                                           val dataSourceRepository: DataSourceRepository,
-                                           val webKnossosServer: WebKnossosServer,
-                                           val accessTokenService: AccessTokenService
-                                       ) extends TracingController[SkeletonTracing, SkeletonTracings] {
+class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingService,
+                                          val dataSourceRepository: DataSourceRepository,
+                                          val webKnossosServer: WebKnossosServer,
+                                          val accessTokenService: AccessTokenService)
+                                         (implicit val bodyParsers: PlayBodyParsers,
+                                          ec: ExecutionContext)
+  extends TracingController[SkeletonTracing, SkeletonTracings] {
 
   implicit val tracingsCompanion = SkeletonTracings
 

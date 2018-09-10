@@ -22,6 +22,8 @@ import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 import play.api.data.validation.ValidationError
 
+import scala.concurrent.ExecutionContext
+
 
 class SQLClient @Inject()(configuration: Configuration) {
   lazy val db: PostgresProfile.backend.Database = Database.forConfig("slick.db", configuration.underlying)
@@ -192,9 +194,9 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SQLClien
 
   def notdel(r: X) = isDeletedColumn(r) === false
 
-  def parse(row: X#TableElementType): Fox[C]
+  def parse(row: X#TableElementType)(implicit ec: ExecutionContext): Fox[C]
 
-  def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[C] = {
+  def findOne(id: ObjectId)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[C] = {
     run(collection.filter(r => isDeletedColumn(r) === false && idColumn(r) === id.id).result.headOption).map {
       case Some(r) =>
         parse(r) ?~> ("sql: could not parse database row for object" + id)
@@ -203,7 +205,7 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SQLClien
     }.flatten
   }
 
-  def findAll(implicit ctx: DBAccessContext): Fox[List[C]] =
+  def findAll(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[List[C]] =
     for {
       r <- run(collection.filter(row => notdel(row)).result)
       parsed <- Fox.combined(r.toList.map(parse))

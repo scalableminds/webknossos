@@ -16,6 +16,7 @@ import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
 import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
 import play.api.libs.json.{JsArray, _}
+import play.api.mvc.PlayBodyParsers
 import utils.{ObjectId, WkConf}
 
 import scala.concurrent.ExecutionContext
@@ -34,8 +35,9 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
                                      provider: AnnotationInformationProvider,
                                      annotationRestrictionDefults: AnnotationRestrictionDefults,
                                      conf: WkConf,
-                                     sil: Silhouette[WkEnv]
-                                    )(implicit ec: ExecutionContext)
+                                     sil: Silhouette[WkEnv])
+                                    (implicit ec: ExecutionContext,
+                                     bodyParsers: PlayBodyParsers)
   extends Controller
     with FoxImplicits {
 

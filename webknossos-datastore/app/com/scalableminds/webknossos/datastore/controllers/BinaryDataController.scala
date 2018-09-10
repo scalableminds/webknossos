@@ -19,7 +19,7 @@ import net.liftweb.util.Helpers.tryo
 import play.api.http.HttpEntity
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.Json
-import play.api.mvc.{ResponseHeader, Result}
+import play.api.mvc.{PlayBodyParsers, ResponseHeader, Result}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -28,7 +28,8 @@ class BinaryDataController @Inject()(
                                       dataSourceRepository: DataSourceRepository,
                                       volumeTracingService: VolumeTracingService,
                                       accessTokenService: AccessTokenService)
-                                    (implicit ec: ExecutionContext)
+                                    (implicit ec: ExecutionContext,
+                                     bodyParsers: PlayBodyParsers)
                                     extends Controller {
 
   /**

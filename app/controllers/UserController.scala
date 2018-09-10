@@ -15,6 +15,7 @@ import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Json._
 import play.api.libs.json._
+import play.api.mvc.PlayBodyParsers
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -27,7 +28,8 @@ class UserController @Inject()(userService: UserService,
                                annotationService: AnnotationService,
                                teamDAO: TeamDAO,
                                sil: Silhouette[WkEnv])
-                              (implicit ec: ExecutionContext)
+                              (implicit ec: ExecutionContext,
+                               bodyParsers: PlayBodyParsers)
   extends Controller
     with FoxImplicits {
 

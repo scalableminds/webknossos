@@ -22,7 +22,7 @@ import models.annotation.nml.NmlResults.NmlParseResult
 import play.api.libs.Files
 import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
 import play.api.libs.json._
-import play.api.mvc.{MultipartFormData, Result}
+import play.api.mvc.{PlayBodyParsers, MultipartFormData, Result}
 import utils.{ObjectId, WkConf}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -70,7 +70,8 @@ class TaskController @Inject() (annotationService: AnnotationService,
                                 nmlService: NmlService,
                                 conf: WkConf,
                                 sil: Silhouette[WkEnv])
-                               (implicit ec: ExecutionContext)
+                               (implicit ec: ExecutionContext,
+                                bodyParsers: PlayBodyParsers)
   extends Controller
     with ResultBox
     with ProtoGeometryImplicits

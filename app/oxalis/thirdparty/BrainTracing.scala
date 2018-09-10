@@ -8,9 +8,8 @@ import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.team.OrganizationDAO
 import models.user.User
-import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.ws.{WS, WSAuthScheme}
+import play.api.libs.ws.{WS, WSAuthScheme, WSClient}
 import utils.WkConf
 
 import scala.concurrent.{Future, Promise}
@@ -18,6 +17,7 @@ import scala.util._
 
 class BrainTracing @Inject()(actorSystem: ActorSystem,
                              organizationDAO: OrganizationDAO,
+                             ws: WSClient,
                              conf: WkConf
                             ) extends LazyLogging with FoxImplicits {
   val URL = "http://braintracing.org/"
@@ -35,7 +35,7 @@ class BrainTracing @Inject()(actorSystem: ActorSystem,
 
   private def register(user: User, password: String): Future[String] = {
     val result = Promise[String]()
-    val brainTracingRequest = WS
+    val brainTracingRequest = ws
       .url(CREATE_URL)
       .withAuth(conf.Braintracing.user, conf.Braintracing.password, WSAuthScheme.BASIC)
       .withQueryString(

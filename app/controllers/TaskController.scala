@@ -313,7 +313,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
     for {
       teamIds <- userService.teamIdsFor(user._id)
       task <- taskDAO.peekNextAssignment(user._id, teamIds) ?~> "task.unavailable"
-      taskJson <- taskService.publicWrites(task)(GlobalAccessContext)
+      taskJson <- taskService.publicWrites(task)(GlobalAccessContext, ec)
     } yield Ok(taskJson)
   }
 

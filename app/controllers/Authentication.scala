@@ -170,7 +170,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
               Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
             } else {
               for {
-                organization <- organizationDAO.findOneByName(signUpData.organization)(GlobalAccessContext) ?~> Messages("organization.notFound", signUpData.organization)
+                organization <- organizationDAO.findOneByName(signUpData.organization)(GlobalAccessContext, ec) ?~> Messages("organization.notFound", signUpData.organization)
                 user <- userService.insert(organization._id, email, firstName, lastName, automaticUserActivation, isAdminOnRegistration,
                   loginInfo, passwordHasher.hash(signUpData.password)) ?~> "user.creation.failed"
                 brainDBResult <- brainTracing.registerIfNeeded(user, signUpData.password).toFox
@@ -259,10 +259,10 @@ class Authentication @Inject()(actorSystem: ActorSystem,
     resetPasswordForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       passwords => {
-        bearerTokenAuthenticatorService.userForToken(passwords.token.trim)(GlobalAccessContext).futureBox.flatMap {
+        bearerTokenAuthenticatorService.userForToken(passwords.token.trim)(GlobalAccessContext, ec).futureBox.flatMap {
           case Full(user) =>
             for {
-              _ <- userDAO.updatePasswordInfo(user._id, passwordHasher.hash(passwords.password1))(GlobalAccessContext)
+              _ <- userDAO.updatePasswordInfo(user._id, passwordHasher.hash(passwords.password1))(GlobalAccessContext, ec)
               _ <- bearerTokenAuthenticatorService.remove(passwords.token.trim)
             } yield Ok
           case _ =>
@@ -427,8 +427,8 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       organizationName <- normalizeName(organizationDisplayName).toFox ?~> "invalid organization name"
       organization = Organization(ObjectId.generate, organizationName.replaceAll(" ", "_"), "", "", organizationDisplayName)
       organizationTeam = Team(ObjectId.generate, organization._id, organization.name, isOrganizationTeam = true)
-      _ <- organizationDAO.insertOne(organization)(GlobalAccessContext)
-      _ <- teamDAO.insertOne(organizationTeam)(GlobalAccessContext)
+      _ <- organizationDAO.insertOne(organization)(GlobalAccessContext, ec)
+      _ <- teamDAO.insertOne(organizationTeam)(GlobalAccessContext, ec)
       _ <- initialDataService.insertLocalDataStoreIfEnabled
     } yield {
       organization

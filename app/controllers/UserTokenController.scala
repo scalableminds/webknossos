@@ -50,7 +50,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
         Fox.successful(Ok(Json.toJson(UserAccessAnswer(true))))
       } else {
         for {
-          userBox <- bearerTokenService.userForToken(token)(GlobalAccessContext).futureBox
+          userBox <- bearerTokenService.userForToken(token)(GlobalAccessContext, ec).futureBox
           ctxFromUserBox = DBAccessContext(userBox)
           ctx = URLSharing.fallbackTokenAccessContext(Some(token))(ctxFromUserBox)
           answer <- accessRequest.resourceType match {

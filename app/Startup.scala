@@ -36,7 +36,7 @@ class Startup @Inject() (actorSystem: ActorSystem,
   val tokenAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
   cleanUpService.register("deletion of expired tokens", tokenAuthenticatorService.dataStoreExpiry) {
-    tokenAuthenticatorService.removeExpiredTokens(GlobalAccessContext)
+    tokenAuthenticatorService.removeExpiredTokens(GlobalAccessContext, ec)
   }
 
   cleanUpService.register("deletion of old annotations in initializing state", 1 day) {

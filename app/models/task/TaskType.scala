@@ -42,7 +42,7 @@ class TaskTypeService @Inject()(teamDAO: TeamDAO) {
 
   def publicWrites(taskType: TaskType)(implicit ctx: DBAccessContext) = {
     for {
-      team <- teamDAO.findOne(taskType._team)(GlobalAccessContext) ?~> "team.notFound"
+      team <- teamDAO.findOne(taskType._team)(GlobalAccessContext, ec) ?~> "team.notFound"
     } yield Json.obj(
       "id" -> taskType._id.toString,
       "summary" -> taskType.summary,

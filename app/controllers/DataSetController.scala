@@ -96,7 +96,7 @@ extends Controller {
       _ <- Fox.runOptional(noDataStoreBox)(_ => dataSetService.addForeignDataStore(dataStoreName, url))
       _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> "dataSet.import.impossible.name"
       _ <- dataSetDAO.findOneByName(dataSetName).reverse ?~> "dataSet.name.alreadyTaken"
-      organizationName <- organizationDAO.findOne(request.identity._organization)(GlobalAccessContext).map(_.name)
+      organizationName <- organizationDAO.findOne(request.identity._organization)(GlobalAccessContext, ec).map(_.name)
       _ <- dataSetService.addForeignDataSet(dataStoreName, dataSetName, organizationName)
     } yield {
       Ok
@@ -202,7 +202,7 @@ extends Controller {
   def isValidNewName(dataSetName: String) = sil.SecuredAction.async { implicit request =>
     for {
       _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> "dataSet.name.invalid"
-      _ <- dataSetService.assertNewDataSetName(dataSetName)(GlobalAccessContext) ?~> "dataSet.name.alreadyTaken"
+      _ <- dataSetService.assertNewDataSetName(dataSetName)(GlobalAccessContext, ec) ?~> "dataSet.name.alreadyTaken"
     } yield Ok
   }
 

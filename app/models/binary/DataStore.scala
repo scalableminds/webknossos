@@ -38,7 +38,7 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO) extends FoxImplicit
                        (implicit request: Request[A], m: MessagesProvider): Fox[Result] = {
     request.getQueryString("key")
       .toFox
-      .flatMap(key => dataStoreDAO.findOneByKey(key)(GlobalAccessContext)) // Check if key is valid
+      .flatMap(key => dataStoreDAO.findOneByKey(key)(GlobalAccessContext, ec)) // Check if key is valid
       .flatMap(dataStore => block(dataStore)) // Run underlying action
       .getOrElse(Forbidden(Messages("dataStore.notFound"))) // Default error
     }

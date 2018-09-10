@@ -37,8 +37,8 @@ extends Controller {
 
   def listAllTeams = Action.async { implicit request =>
     for {
-      allTeams <- teamDAO.findAll(GlobalAccessContext)
-      js <- Fox.serialCombined(allTeams)(t => teamService.publicWrites(t)(GlobalAccessContext))
+      allTeams <- teamDAO.findAll(GlobalAccessContext, ec)
+      js <- Fox.serialCombined(allTeams)(t => teamService.publicWrites(t)(GlobalAccessContext, ec))
     } yield {
       Ok(Json.toJson(js))
     }

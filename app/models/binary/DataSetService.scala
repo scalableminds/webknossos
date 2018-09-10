@@ -119,7 +119,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
   def deactivateUnreportedDataSources(dataStoreName: String, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext, ec: ExecutionContext) =
     dataSetDAO.deactivateUnreported(dataSources.map(_.id.name), dataStoreName)
 
-  def importDataSet(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[WSResponse] =
+  def importDataSet(dataSet: DataSet)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[WSResponse] =
     for {
       dataStoreHandler <- handlerFor(dataSet)
       result <- dataStoreHandler.importDataSource
@@ -180,7 +180,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     }
 
   def dataStoreFor(dataSet: DataSet)(implicit ec: ExecutionContext): Fox[DataStore] =
-    dataStoreDAO.findOneByName(dataSet._dataStore.trim)(GlobalAccessContext) ?~> "datastore.notFound"
+    dataStoreDAO.findOneByName(dataSet._dataStore.trim)(GlobalAccessContext, ec) ?~> "datastore.notFound"
 
   def handlerFor(dataSet: DataSet)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[DataStoreHandler] =
     for {
@@ -203,7 +203,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
   def allowedTeamsFor(_dataSet: ObjectId)(implicit ctx: DBAccessContext, ec: ExecutionContext) =
     for {
       allowedTeamIds <- allowedTeamIdsFor(_dataSet)
-      allowedTeams <- Fox.combined(allowedTeamIds.map(teamDAO.findOne(_)(GlobalAccessContext)))
+      allowedTeams <- Fox.combined(allowedTeamIds.map(teamDAO.findOne(_)(GlobalAccessContext, ec)))
     } yield allowedTeams
 
 

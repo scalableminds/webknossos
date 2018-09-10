@@ -202,7 +202,7 @@ class UserController @Inject()(userService: UserService,
           user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
           _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed"
           _ <- bool2Fox(checkAdminOnlyUpdates(user, isActive, isAdmin, email)(issuingUser)) ?~> "notAllowed"
-          teams <- Fox.combined(assignedMemberships.map(t => teamDAO.findOne(t.teamId)(GlobalAccessContext) ?~> Messages("team.notFound")))
+          teams <- Fox.combined(assignedMemberships.map(t => teamDAO.findOne(t.teamId)(GlobalAccessContext, ec) ?~> Messages("team.notFound")))
           oldTeamMemberships <- userService.teamMembershipsFor(user._id)
           teamsWithoutUpdate <- Fox.filterNot(oldTeamMemberships)(t => userService.isTeamManagerOrAdminOf(issuingUser, t.teamId))
           assignedMembershipWTeams = assignedMemberships.zip(teams)

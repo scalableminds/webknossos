@@ -31,7 +31,7 @@ class TeamService @Inject()(organizationDAO: OrganizationDAO) {
 
   def publicWrites(team: Team)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
-      organization <- organizationDAO.findOne(team._organization)(GlobalAccessContext)
+      organization <- organizationDAO.findOne(team._organization)(GlobalAccessContext, ec)
     } yield {
       Json.obj(
         "id" -> team._id.toString,

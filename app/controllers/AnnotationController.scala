@@ -107,7 +107,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
       restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound"
       _ <- restrictions.allowUpdate(request.identity) ?~> Messages("notAllowed")
       _ <- bool2Fox(annotation.isRevertPossible) ?~> Messages("annotation.revert.toOld")
-      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
+      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext, ec) ?~> "dataSet.notFound"
       dataStoreHandler <- dataSetService.handlerFor(dataSet)
       skeletonTracingId <- annotation.skeletonTracingId.toFox ?~> "annotation.noSkeleton"
       newSkeletonTracingId <- dataStoreHandler.duplicateSkeletonTracing(skeletonTracingId, Some(version.toString))
@@ -270,7 +270,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
 
   private def duplicateAnnotation(annotation: Annotation, user: User)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Annotation] = {
     for {
-      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
+      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext, ec) ?~> "dataSet.notFound"
       _ <- bool2Fox(dataSet.isUsable) ?~> Messages("dataSet.notImported", dataSet.name)
       dataStoreHandler <- dataSetService.handlerFor(dataSet)
       newSkeletonTracingReference <- Fox.runOptional(annotation.skeletonTracingId)(id => dataStoreHandler.duplicateSkeletonTracing(id)) ?~> "Failed to duplicate skeleton tracing."

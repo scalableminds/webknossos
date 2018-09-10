@@ -19,9 +19,9 @@ class SavedTracingInformationHandler @Inject()(annotationDAO: AnnotationDAO,
 
   override def nameForAnnotation(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[String] =
     for {
-      userBox <- userService.findOneById(annotation._user, useCache = true)(GlobalAccessContext).futureBox
+      userBox <- userService.findOneById(annotation._user, useCache = true)(GlobalAccessContext, ec).futureBox
       userName <- userBox.map(_.abreviatedName).getOrElse("")
-      dataSetName <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext).map(_.name)
+      dataSetName <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext, ec).map(_.name)
       task = annotation._task.map(_.toString).getOrElse("explorational")
     } yield {
       val id = oxalis.view.helpers.formatHash(annotation.id)

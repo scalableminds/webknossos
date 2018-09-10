@@ -138,7 +138,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[Annotation, A
     } yield parsed
 
   // hint: does not use access query (because they dont support prefixes yet). use only after separate access check
-  def findAllActiveForProject(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] =
+  def findAllActiveForProject(projectId: ObjectId)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[List[ObjectId]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(sql""" select a._id from
@@ -197,7 +197,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[Annotation, A
 
   // update operations
 
-  def insertOne(a: Annotation): Fox[Unit] = {
+  def insertOne(a: Annotation)(implicit ec: ExecutionContext): Fox[Unit] = {
     for {
       _ <- run(
         sqlu"""
@@ -210,7 +210,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[Annotation, A
     } yield ()
   }
 
-  def updateInitialized(a: Annotation): Fox[Unit] = {
+  def updateInitialized(a: Annotation)(implicit ec: ExecutionContext): Fox[Unit] = {
     for {
       _ <- run(
         sqlu"""
@@ -237,65 +237,65 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[Annotation, A
     } yield ()
   }
 
-  def abortInitializingAnnotation(id: ObjectId): Fox[Unit] = {
+  def abortInitializingAnnotation(id: ObjectId)(implicit ec: ExecutionContext): Fox[Unit] = {
     for {
       _ <- run(sqlu"delete from webknossos.annotations where _id = ${id.id} and state = '#${AnnotationState.Initializing.toString}'".withTransactionIsolation(Serializable),
                retryCount = 50, retryIfErrorContains = List(transactionSerializationError))
     } yield ()
   }
 
-  def deleteOldInitializingAnnotations: Fox[Unit] = {
+  def deleteOldInitializingAnnotations(implicit ec: ExecutionContext): Fox[Unit] = {
     for {
       _ <- run(sqlu"delete from webknossos.annotations where state = '#${AnnotationState.Initializing.toString}' and created < (now() - interval '1 hour')")
     } yield ()
   }
 
-  def logTime(id: ObjectId, time: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def logTime(id: ObjectId, time: Long)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id) ?~> "FAILED: AnnotationSQLDAO.assertUpdateAccess"
       _ <- run(sqlu"update webknossos.annotations set tracingTime = Coalesce(tracingTime, 0) + $time where _id = ${id.id}") ?~> "FAILED: run in AnnotationSQLDAO.logTime"
     } yield ()
 
-  def updateState(id: ObjectId, state: AnnotationState)(implicit ctx: DBAccessContext) =
+  def updateState(id: ObjectId, state: AnnotationState)(implicit ctx: DBAccessContext, ec: ExecutionContext) =
     for {
       _ <- assertUpdateAccess(id) ?~> "FAILED: AnnotationSQLDAO.assertUpdateAccess"
       _ <- run(sqlu"update webknossos.annotations set state = '#${state}' where _id = ${id.id}".withTransactionIsolation(Serializable),
               retryCount = 50, retryIfErrorContains = List(transactionSerializationError)) ?~> "FAILED: run in AnnotationSQLDAO.updateState"
     } yield ()
 
-  def updateDescription(id: ObjectId, description: String)(implicit ctx: DBAccessContext) =
+  def updateDescription(id: ObjectId, description: String)(implicit ctx: DBAccessContext, ec: ExecutionContext) =
     updateStringCol(id, _.description, description)
 
-  def updateName(id: ObjectId, name: String)(implicit ctx: DBAccessContext) =
+  def updateName(id: ObjectId, name: String)(implicit ctx: DBAccessContext, ec: ExecutionContext) =
     updateStringCol(id, _.name, name)
 
-  def updateIsPublic(id: ObjectId, isPublic: Boolean)(implicit ctx: DBAccessContext) =
+  def updateIsPublic(id: ObjectId, isPublic: Boolean)(implicit ctx: DBAccessContext, ec: ExecutionContext) =
     updateBooleanCol(id, _.ispublic, isPublic)
 
-  def updateTags(id: ObjectId, tags: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateTags(id: ObjectId, tags: List[String])(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
       _ <- run(sqlu"update webknossos.annotations set tags = '#${writeArrayTuple(tags.map(sanitize(_)))}' where _id = ${id.id}")
     } yield ()
 
-  def updateModified(id: ObjectId, modified: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateModified(id: ObjectId, modified: Long)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
       _ <- run(sqlu"update webknossos.annotations set modified = ${new java.sql.Timestamp(modified)} where _id = ${id.id}")
     } yield ()
 
-  def updateSkeletonTracingId(id: ObjectId, newSkeletonTracingId: String)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateSkeletonTracingId(id: ObjectId, newSkeletonTracingId: String)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
       _ <- run(sqlu"update webknossos.annotations set skeletonTracingId = ${newSkeletonTracingId} where _id = ${id.id}")
     } yield ()
 
-  def updateStatistics(id: ObjectId, statistics: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateStatistics(id: ObjectId, statistics: JsObject)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
       _ <- run(sqlu"update webknossos.annotations set statistics = '#${sanitize(statistics.toString)}' where _id = ${id.id}")
     } yield ()
 
-  def updateUser(id: ObjectId, userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateUser(id: ObjectId, userId: ObjectId)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Unit] =
     updateObjectIdCol(id, _._User, userId)
 }

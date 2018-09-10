@@ -13,7 +13,7 @@ class UserCache @Inject()(userDAO: UserDAO, conf: WkConf, cache: SyncCacheApi) {
 
   def findUser(id: ObjectId) = {
     cache.getOrElseUpdate(cacheKeyForUser(id), conf.User.cacheTimeoutInMinutes) {
-      userDAO.findOne(id)(GlobalAccessContext)
+      userDAO.findOne(id)(GlobalAccessContext, ec)
     }
   }
 

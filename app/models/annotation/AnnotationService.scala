@@ -195,7 +195,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
                          (implicit m: MessagesProvider, ctx: DBAccessContext, ec: ExecutionContext): Fox[Annotation] = {
     def useAsTemplateAndInsert(annotation: Annotation) = {
       for {
-        dataSetName <- dataSetDAO.getNameById(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
+        dataSetName <- dataSetDAO.getNameById(annotation._dataSet)(GlobalAccessContext, ec) ?~> "dataSet.notFound"
         dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> ("Could not access DataSet " + dataSetName + ". Does your team have access?")
         newTracingId <- tracingFromBase(annotation, dataSet) ?~> "Failed to use annotation base as template."
         newAnnotation = annotation.copy(
@@ -258,7 +258,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
 
     for {
       task <- taskFox
-      taskType <- taskTypeDAO.findOne(task._taskType)(GlobalAccessContext)
+      taskType <- taskTypeDAO.findOne(task._taskType)(GlobalAccessContext, ec)
       skeletonTracingId <- skeletonTracingIdBox.toFox
       project <- projectDAO.findOne(task._project)
       annotationBase = Annotation(
@@ -399,7 +399,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       for {
         task <- taskFor(annotation)
         annotationBase <- baseForTask(task._id)
-        dataSet <- dataSetDAO.findOne(annotationBase._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
+        dataSet <- dataSetDAO.findOne(annotationBase._dataSet)(GlobalAccessContext, ec) ?~> "dataSet.notFound"
         newTracingId <- tracingFromBase(annotationBase, dataSet)
         _ <- annotationDAO.updateSkeletonTracingId(annotation._id, newTracingId)
       } yield ()
@@ -422,7 +422,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
   }
 
   def taskFor(annotation: Annotation)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Task] =
-    annotation._task.toFox.flatMap(taskId => taskDAO.findOne(taskId)(GlobalAccessContext))
+    annotation._task.toFox.flatMap(taskId => taskDAO.findOne(taskId)(GlobalAccessContext, ec))
 
   def composeRestrictionsFor(annotation: Annotation, restrictions: Option[AnnotationRestrictions], readOnly: Option[Boolean]) = {
     if (readOnly.getOrElse(false))
@@ -438,7 +438,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFound"
       task = annotation._task.toFox.flatMap(taskId => taskDAO.findOne(taskId))
       taskJson <- task.flatMap(t => taskService.publicWrites(t)).getOrElse(JsNull)
-      user <- userService.findOneById(annotation._user, useCache = true)(GlobalAccessContext)
+      user <- userService.findOneById(annotation._user, useCache = true)(GlobalAccessContext, ec)
       userJson <- userService.compactWrites(user)
       settings <- settingsFor(annotation)
       annotationRestrictions <- AnnotationRestrictions.writeAsJson(composeRestrictionsFor(annotation, restrictions, readOnly), requestingUser)
@@ -471,7 +471,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
   //for Explorative Annotations list
   def compactWrites(annotation: Annotation)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[JsObject] = {
     for {
-      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
+      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext, ec) ?~> "dataSet.notFound"
     } yield {
       Json.obj(
         "modified" -> annotation.modified,

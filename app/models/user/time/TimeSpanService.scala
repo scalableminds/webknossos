@@ -166,7 +166,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     // Log time to annotation
     annotation match {
       case Some(a: ObjectId) =>
-        annotationDAO.logTime(a, duration)(GlobalAccessContext) ?~> "FAILED: AnnotationService.logTime"
+        annotationDAO.logTime(a, duration)(GlobalAccessContext, ec) ?~> "FAILED: AnnotationService.logTime"
       case _ =>
         Fox.successful(())
       // do nothing, this is not a stored annotation
@@ -176,12 +176,12 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
   def signalOverTime(time: Long, annotationOpt: Option[Annotation])(implicit ctx: DBAccessContext): Fox[_] = {
     for {
       annotation <- annotationOpt.toFox
-      user <- userService.findOneById(annotation._user, useCache = true)(GlobalAccessContext)
+      user <- userService.findOneById(annotation._user, useCache = true)(GlobalAccessContext, ec)
       task <- annotationService.taskFor(annotation)
       project <- projectDAO.findOne(task._project)
       annotationTime <- annotation.tracingTime ?~> "no annotation.tracingTime"
       timeLimit <- project.expectedTime ?~> "no project.expectedTime"
-      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
+      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext, ec)
     } yield {
       if (annotationTime >= timeLimit && annotationTime - time < timeLimit) {
         brainTracing.Mailer ! Send(defaultMails.overLimitMail(
@@ -200,8 +200,8 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     annotation.flatMap(_._task) match {
       case Some(taskId) =>
         for {
-          _ <- taskDAO.logTime(taskId, duration)(GlobalAccessContext) ?~> "FAILED: TaskSQLDAO.logTime"
-          _ <- signalOverTime(duration, annotation)(GlobalAccessContext).futureBox //signalOverTime is expected to fail in some cases, hence the .futureBox
+          _ <- taskDAO.logTime(taskId, duration)(GlobalAccessContext, ec) ?~> "FAILED: TaskSQLDAO.logTime"
+          _ <- signalOverTime(duration, annotation)(GlobalAccessContext, ec).futureBox //signalOverTime is expected to fail in some cases, hence the .futureBox
         } yield {}
       case _ =>
         Fox.successful(())

@@ -35,7 +35,7 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
       for {
         uploadInfo <- request.body.validate[DataSourceId].asOpt.toFox ?~> "dataStore.upload.invalid"
         _ <- bool2Fox(dataSetService.isProperDataSetName(uploadInfo.name)) ?~> "dataSet.name.invalid"
-        _ <- dataSetService.assertNewDataSetName(uploadInfo.name)(GlobalAccessContext) ?~> "dataSet.name.alreadyTaken"
+        _ <- dataSetService.assertNewDataSetName(uploadInfo.name)(GlobalAccessContext, ec) ?~> "dataSet.name.alreadyTaken"
         _ <- bool2Fox(uploadInfo.team.nonEmpty) ?~> "team.invalid"
       } yield Ok
     }
@@ -46,7 +46,7 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
       request.body.validate[DataStoreStatus] match {
         case JsSuccess(status, _) =>
           logger.debug(s"Status update from data store '$name'. Status: " + status.ok)
-          dataStoreDAO.updateUrlByName(name, status.url)(GlobalAccessContext).map(_ => Ok)
+          dataStoreDAO.updateUrlByName(name, status.url)(GlobalAccessContext, ec).map(_ => Ok)
         case e: JsError =>
           logger.error("Data store '$name' sent invalid update. Error: " + e)
           Future.successful(JsonBadRequest(JsError.toJson(e)))
@@ -59,8 +59,8 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
       request.body.validate[List[InboxDataSource]] match {
         case JsSuccess(dataSources, _) =>
           for {
-            _ <- dataSetService.deactivateUnreportedDataSources(dataStore.name, dataSources)(GlobalAccessContext)
-            _ <- dataSetService.updateDataSources(dataStore, dataSources)(GlobalAccessContext)
+            _ <- dataSetService.deactivateUnreportedDataSources(dataStore.name, dataSources)(GlobalAccessContext, ec)
+            _ <- dataSetService.updateDataSources(dataStore, dataSources)(GlobalAccessContext, ec)
           } yield {
             JsonOk
           }
@@ -77,7 +77,7 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
       request.body.validate[InboxDataSource] match {
         case JsSuccess(dataSource, _) =>
           for {
-            _ <- dataSetService.updateDataSources(dataStore, List(dataSource))(GlobalAccessContext)
+            _ <- dataSetService.updateDataSources(dataStore, List(dataSource))(GlobalAccessContext, ec)
           } yield {
             JsonOk
           }
@@ -92,18 +92,18 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
     dataStoreService.validateAccess(name) { dataStore =>
       for {
         tracingId <- (request.body \ "tracingId").asOpt[String].toFox
-        annotation <- annotationDAO.findOneByTracingId(tracingId)(GlobalAccessContext)
+        annotation <- annotationDAO.findOneByTracingId(tracingId)(GlobalAccessContext, ec)
         _ <- ensureAnnotationNotFinished(annotation)
         timestamps <- (request.body \ "timestamps").asOpt[List[Long]].toFox
         statisticsOpt = (request.body \ "statistics").asOpt[JsObject]
         userTokenOpt = (request.body \ "userToken").asOpt[String]
         _ <- statisticsOpt match {
-          case Some(statistics) => annotationDAO.updateStatistics(annotation._id, statistics)(GlobalAccessContext)
+          case Some(statistics) => annotationDAO.updateStatistics(annotation._id, statistics)(GlobalAccessContext, ec)
           case None => Fox.successful(())
         }
-        _ <- annotationDAO.updateModified(annotation._id, System.currentTimeMillis)(GlobalAccessContext)
-        userBox <- bearerTokenService.userForTokenOpt(userTokenOpt)(GlobalAccessContext).futureBox
-        _ <- Fox.runOptional(userBox)(user => timeSpanService.logUserInteraction(timestamps, user, annotation)(GlobalAccessContext))
+        _ <- annotationDAO.updateModified(annotation._id, System.currentTimeMillis)(GlobalAccessContext, ec)
+        userBox <- bearerTokenService.userForTokenOpt(userTokenOpt)(GlobalAccessContext, ec).futureBox
+        _ <- Fox.runOptional(userBox)(user => timeSpanService.logUserInteraction(timestamps, user, annotation)(GlobalAccessContext, ec))
       } yield {
         Ok
       }

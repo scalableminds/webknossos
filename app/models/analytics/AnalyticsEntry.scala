@@ -35,7 +35,7 @@ class AnalyticsDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[AnalyticsEntry
         r.isdeleted
       ))
 
-  def insertOne(a: AnalyticsEntry): Fox[Unit] = {
+  def insertOne(a: AnalyticsEntry)(implicit ec: ExecutionContext): Fox[Unit] = {
     for {
       _ <- run(sqlu"""insert into webknossos.analytics(_id, _user, namespace, value, created, isDeleted)
                          values(${a._id.toString}, ${a._user.map(_.id)}, ${a.namespace}, #${sanitize(a.value.toString)},

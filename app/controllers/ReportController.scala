@@ -131,10 +131,10 @@ class ReportController @Inject()(reportDAO: ReportDAO,
   def openTasksOverview(teamId: String) = sil.SecuredAction.async { implicit request =>
     for {
       teamIdValidated <- ObjectId.parse(teamId)
-      team <- teamDAO.findOne(teamIdValidated)(GlobalAccessContext) ?~> "team.notFound"
-      users <- userDAO.findAllByTeams(List(team._id), includeDeactivated = false)(GlobalAccessContext)
+      team <- teamDAO.findOne(teamIdValidated)(GlobalAccessContext, ec) ?~> "team.notFound"
+      users <- userDAO.findAllByTeams(List(team._id), includeDeactivated = false)(GlobalAccessContext, ec)
       nonAdminUsers <- Fox.filterNot(users)(u => userService.isTeamManagerOrAdminOf(u, teamIdValidated))
-      entries: List[OpenTasksEntry] <- getAllAvailableTaskCountsAndProjects(nonAdminUsers)(GlobalAccessContext)
+      entries: List[OpenTasksEntry] <- getAllAvailableTaskCountsAndProjects(nonAdminUsers)(GlobalAccessContext, ec)
     } yield Ok(Json.toJson(entries))
   }
 

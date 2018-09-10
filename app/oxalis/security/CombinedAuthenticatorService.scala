@@ -77,7 +77,7 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
 
   // only called in token case
   def findByLoginInfo(loginInfo: LoginInfo) =
-    tokenDao.findOneByLoginInfo(loginInfo, TokenType.Authentication)(GlobalAccessContext).map(opt => opt.map(CombinedAuthenticator(_)))
+    tokenDao.findOneByLoginInfo(loginInfo, TokenType.Authentication)(GlobalAccessContext, ec).map(opt => opt.map(CombinedAuthenticator(_)))
 
   // only called in the cookie case
   override def init(authenticator: CombinedAuthenticator)(implicit request: RequestHeader): Future[Cookie] =

@@ -17,8 +17,8 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
 
   def listAllOrganizations = Action.async { implicit request =>
     for {
-      allOrgs <- organizationDAO.findAll(GlobalAccessContext) ?~> "organization.list.failed"
-      js <- Fox.serialCombined(allOrgs)(o => organizationService.publicWrites(o)(GlobalAccessContext))
+      allOrgs <- organizationDAO.findAll(GlobalAccessContext, ec) ?~> "organization.list.failed"
+      js <- Fox.serialCombined(allOrgs)(o => organizationService.publicWrites(o)(GlobalAccessContext, ec))
     } yield {
       Ok(Json.toJson(js))
     }

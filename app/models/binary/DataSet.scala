@@ -239,7 +239,7 @@ class DataSetResolutionsDAO @Inject()(sqlClient: SQLClient) extends SimpleSQLDAO
     }
   }
 
-  def updateResolutions(_dataSet: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
+  def updateResolutions(_dataSet: ObjectId, dataLayersOpt: Option[List[DataLayer]])(implicit ec: ExecutionContext): Fox[Unit] = {
     val clearQuery = sqlu"delete from webknossos.dataSet_resolutions where _dataSet = ${_dataSet.id}"
     val insertQueries = dataLayersOpt match {
       case Some(dataLayers: List[DataLayer]) => {

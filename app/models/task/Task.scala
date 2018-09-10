@@ -52,12 +52,12 @@ class TaskService @Inject()(dataSetDAO: DataSetDAO,
       annotationBase <- annotationBaseFor(task._id)
       dataSet <- dataSetDAO.findOne(annotationBase._dataSet)
       status <- statusOf(task).getOrElse(CompletionStatus(-1, -1, -1))
-      taskType <- taskTypeDAO.findOne(task._taskType)(GlobalAccessContext)
+      taskType <- taskTypeDAO.findOne(task._taskType)(GlobalAccessContext, ec)
       taskTypeJs <- taskTypeService.publicWrites(taskType)
       scriptInfo <- task._script.toFox.flatMap(sid => scriptDAO.findOne(sid)).futureBox
       scriptJs <- scriptInfo.toFox.flatMap(s => scriptService.publicWrites(s)).futureBox
       project <- projectDAO.findOne(task._project)
-      team <- teamDAO.findOne(project._team)(GlobalAccessContext)
+      team <- teamDAO.findOne(project._team)(GlobalAccessContext, ec)
     } yield {
       Json.obj(
         "id" -> task._id.toString,

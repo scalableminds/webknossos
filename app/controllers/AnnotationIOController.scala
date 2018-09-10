@@ -188,7 +188,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       restrictions <- provider.restrictionsFor(typ, annotationId)
       name <- provider.nameFor(annotation) ?~> Messages("annotation.name.impossible")
       _ <- restrictions.allowDownload(issuingUser) ?~> Messages("annotation.download.notAllowed")
-      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
+      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext, ec) ?~> "dataSet.notFound"
       (downloadStream, fileName) <- tracingToDownloadStream(dataSet, annotation, name)
     } yield {
       Ok.chunked(Source.fromPublisher(IterateeStreams.enumeratorToPublisher(downloadStream)))

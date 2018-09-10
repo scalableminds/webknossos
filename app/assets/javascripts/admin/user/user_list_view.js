@@ -148,11 +148,10 @@ class UserListView extends React.PureComponent<Props, State> {
   };
 
   closeExperienceModal = (updatedUsers: Array<APIUserType>): void => {
+    const updatedUsersMap = _.keyBy(updatedUsers, u => u.id);
     this.setState(prevState => ({
       isExperienceModalVisible: false,
-      users: prevState.users.map(
-        user => updatedUsers.find(currentUser => currentUser.id === user.id) || user,
-      ),
+      users: prevState.users.map(user => updatedUsersMap[user.id] || user),
       singleSelectedUser: null,
     }));
   };

@@ -30,7 +30,7 @@ class SelectExperienceDomain extends React.PureComponent<Props, State> {
     this.setState({ domains: await getExistingExperienceDomains() });
   }
 
-  removeAlreadyUsedDomains(): ExperienceDomainListType {
+  getUnusedDomains(): ExperienceDomainListType {
     return this.state.domains.filter(domain => !this.props.alreadyUsedDomains.includes(domain));
   }
 
@@ -46,7 +46,7 @@ class SelectExperienceDomain extends React.PureComponent<Props, State> {
         onSelect={this.props.onSelect}
         onDeselect={this.props.onDeselect}
       >
-        {this.removeAlreadyUsedDomains().map(domain => <Option key={domain}>{domain}</Option>)}
+        {this.getUnusedDomains().map(domain => <Option key={domain}>{domain}</Option>)}
       </Select>
     );
   }

@@ -2,7 +2,7 @@
 
 import _ from "lodash";
 import * as React from "react";
-import { Modal, Button, Tooltip, Icon, Table, InputNumber, Checkbox } from "antd";
+import { Modal, Button, Tooltip, Icon, Table, InputNumber, Checkbox, Tag } from "antd";
 import * as Utils from "libs/utils";
 import { updateUser } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
@@ -11,19 +11,13 @@ import SelectExperienceDomain from "components/select_experience_domain";
 
 const { Column } = Table;
 
-// TODO => visual bug when editing a value of a domain the first time !!!
-
-type MultipleUserTableEntry = {
+type TableEntry = {
   domain: string,
   value: number,
   lowestValue: number,
   highestValue: number,
   isShared: boolean,
-};
-
-type SingleUserTableEntry = {
-  domain: string,
-  value: number,
+  changed: boolean,
 };
 
 type Props = {
@@ -34,8 +28,8 @@ type Props = {
 };
 
 type State = {
-  multipleUsersEntries: Array<MultipleUserTableEntry>,
-  singleUsersEntries: Array<SingleUserTableEntry>,
+  tableEntries: Array<TableEntry>,
+  removedDomains: Array<string>,
   showOnlySharedExperiences: boolean,
 };
 
@@ -43,8 +37,8 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
   constructor(props: Props) {
     super(props);
     this.state = {
-      multipleUsersEntries: this.loadMultipleUserEntries(props.selectedUsers),
-      singleUsersEntries: this.loadSingleUserEntries(props.selectedUsers),
+      tableEntries: this.loadTableEntries(props.selectedUsers),
+      removedDomains: [],
       showOnlySharedExperiences: false,
     };
   }
@@ -52,100 +46,76 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
   componentWillReceiveProps(nextProps: Props) {
     if (nextProps.visible && !this.props.visible) {
       this.setState({
-        multipleUsersEntries: this.loadMultipleUserEntries(nextProps.selectedUsers),
-        singleUsersEntries: this.loadSingleUserEntries(nextProps.selectedUsers),
+        tableEntries: this.loadTableEntries(nextProps.selectedUsers),
+        removedDomains: [],
+        showOnlySharedExperiences: false,
       });
     }
   }
 
-  loadMultipleUserEntries = (users: Array<APIUserType>): Array<MultipleUserTableEntry> => {
-    if (users.length <= 1) {
-      return [];
-    }
-    // find all existing experience domains
-    let sharedTableEntries: Array<MultipleUserTableEntry> = [];
-    users.forEach(user => {
-      Object.keys(user.experiences).forEach(experience => {
-        if (!sharedTableEntries.find(entry => entry.domain === experience)) {
-          sharedTableEntries.push({
-            domain: experience,
-            value: 0,
-            lowestValue: 0,
-            highestValue: -1,
-            isShared: true,
-          });
-        }
-      });
-    });
-    // create sharedTableEntries
-    sharedTableEntries = sharedTableEntries.map(entry => {
-      let highestValue = -1;
-      let lowestValue = -1;
-      let isShared = true;
-      const domain = entry.domain;
-      users.forEach(user => {
-        const experiences = user.experiences;
-        if (domain in experiences) {
-          highestValue = highestValue > experiences[domain] ? highestValue : experiences[domain];
-          lowestValue =
-            lowestValue < experiences[domain] && lowestValue !== -1
-              ? lowestValue
-              : experiences[domain];
-        } else {
-          isShared = false;
-          lowestValue = 0;
-        }
-      });
-      return { domain, highestValue, lowestValue, value: lowestValue, isShared };
-    });
-    // sort entries
-    return sharedTableEntries.sort(
-      Utils.localeCompareBy(([]: Array<MultipleUserTableEntry>), entry =>
-        entry.domain.toLowerCase(),
-      ),
+  sortEntries(entries: Array<TableEntry>) {
+    return entries.sort(
+      Utils.localeCompareBy(([]: Array<TableEntry>), entry => entry.domain.toLowerCase()),
     );
-  };
+  }
 
-  loadSingleUserEntries = (users: Array<APIUserType>): Array<SingleUserTableEntry> =>
-    users.length === 1
-      ? _.map(users[0].experiences, (value, domain) => ({
+  loadTableEntries = (users: Array<APIUserType>): Array<TableEntry> => {
+    if (users.length <= 1) {
+      return this.sortEntries(
+        _.map(users[0].experiences, (value, domain) => ({
           domain,
           value,
-        })).sort(
-          Utils.localeCompareBy(([]: Array<SingleUserTableEntry>), entry =>
-            entry.domain.toLowerCase(),
-          ),
-        )
-      : [];
+          lowestValue: -1,
+          highestValue: -1,
+          isShared: true,
+          changed: false,
+        })),
+      );
+    }
+    // find all existing experience domains
+    const allSharedDomains: Array<string> = _.intersection(
+      ...users.map(user => Object.keys(user.experiences)),
+    );
+    const allDomains: Array<string> = _.union(...users.map(user => Object.keys(user.experiences)));
+    const tableEntries = allDomains.map(domain => {
+      const usersValues = users.map(user => user.experiences[domain]);
+      const min = _.min(usersValues);
+      const max = _.max(usersValues);
+      const isShared = allSharedDomains.indexOf(domain) > -1;
+      const value = isShared && max === min ? min : 0;
+      return {
+        domain,
+        value,
+        lowestValue: min,
+        highestValue: max,
+        isShared,
+        changed: false,
+      };
+    });
+    return this.sortEntries(tableEntries);
+  };
 
   updatedAllUsers = async () => {
-    let newUserPromises: Array<Promise<APIUserType>>;
-    if (this.state.showOnlySharedExperiences && this.props.selectedUsers.length > 1) {
-      const relevantEntries = this.state.multipleUsersEntries.filter(entry => entry.isShared);
-      newUserPromises = this.props.selectedUsers.map(user => {
-        const newExperiences = { ...user.experiences };
-        relevantEntries.forEach(entry => {
-          newExperiences[entry.domain] = entry.value;
-        });
-        const newUser = { ...user, experiences: newExperiences };
-        return this.sendUserToServer(newUser, user);
-      });
-    } else {
-      const newExperiences = {};
-      if (this.props.selectedUsers.length === 1) {
-        this.state.singleUsersEntries.forEach(entry => {
-          newExperiences[entry.domain] = entry.value;
-        });
-      } else {
-        this.state.multipleUsersEntries.forEach(entry => {
-          newExperiences[entry.domain] = entry.value;
-        });
-      }
-      newUserPromises = this.props.selectedUsers.map(user => {
-        const newUser = { ...user, experiences: newExperiences };
-        return this.sendUserToServer(newUser, user);
-      });
+    let relevantEntries = this.state.tableEntries.filter(
+      entry =>
+        entry.changed || (entry.lowestValue === entry.highestValue && entry.highestValue >= 1),
+    );
+    if (this.state.showOnlySharedExperiences) {
+      relevantEntries = this.state.tableEntries.filter(entry => entry.isShared);
     }
+    const newUserPromises: Array<Promise<APIUserType>> = this.props.selectedUsers.map(user => {
+      const newExperiences = { ...user.experiences };
+      relevantEntries.forEach(entry => {
+        newExperiences[entry.domain] = entry.value;
+      });
+      this.state.removedDomains.forEach(domain => {
+        if (domain in newExperiences) {
+          delete newExperiences[domain];
+        }
+      });
+      const newUser = { ...user, experiences: newExperiences };
+      return this.sendUserToServer(newUser, user);
+    });
     this.resolvePromisesAndCloseModal(newUserPromises);
   };
 
@@ -157,8 +127,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     Promise.all(usersPromises).then(
       newUsers => {
         this.setState({
-          multipleUsersEntries: [],
-          singleUsersEntries: [],
+          tableEntries: [],
         });
         this.props.onChange(newUsers);
       },
@@ -168,154 +137,87 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     );
   }
 
-  recordModifiedAndExistedBefore = (record: SingleUserTableEntry): boolean => {
-    if (this.props.selectedUsers.length === 1)
-      return (
-        record.value !== this.props.selectedUsers[0].experiences[record.domain] &&
-        record.domain in this.props.selectedUsers[0].experiences
-      );
-    else return false;
-  };
-
   setValueOfEntry = (index: number, value: number) => {
     if (value > 0) {
-      if (this.props.selectedUsers.length === 1) {
-        this.setState(prevState => ({
-          singleUsersEntries: prevState.singleUsersEntries.map((entry, currentIndex) => {
-            if (currentIndex === index) {
-              return {
-                ...entry,
-                value,
-              };
-            } else {
-              return entry;
-            }
-          }),
-        }));
-      } else {
-        this.setState(prevState => ({
-          multipleUsersEntries: prevState.multipleUsersEntries.map((entry, currentIndex) => {
-            if (currentIndex === index) {
-              return {
-                ...entry,
-                value,
-              };
-            } else {
-              return entry;
-            }
-          }),
-        }));
-      }
+      this.setState(prevState => ({
+        tableEntries: prevState.tableEntries.map((entry, currentIndex) => {
+          if (currentIndex === index) {
+            return {
+              ...entry,
+              value,
+              changed: true,
+            };
+          } else {
+            return entry;
+          }
+        }),
+      }));
     }
   };
 
   revertChangesOfEntry = (index: number) => {
-    if (this.props.selectedUsers.length === 1) {
-      this.setState(prevState => ({
-        singleUsersEntries: prevState.singleUsersEntries.map((entry, currentIndex) => {
-          if (currentIndex === index) {
-            return {
-              ...entry,
-              value: this.props.selectedUsers[0].experiences[entry.domain],
-            };
-          } else {
-            return entry;
-          }
-        }),
-      }));
-    } else {
-      this.setState(prevState => ({
-        multipleUsersEntries: prevState.multipleUsersEntries.map((entry, currentIndex) => {
-          if (currentIndex === index) {
-            return {
-              ...entry,
-              value: entry.lowestValue,
-            };
-          } else {
-            return entry;
-          }
-        }),
-      }));
-    }
+    this.setState(prevState => ({
+      tableEntries: prevState.tableEntries.map((entry, currentIndex) => {
+        if (currentIndex === index) {
+          return {
+            ...entry,
+            value:
+              entry.isShared && entry.lowestValue === entry.highestValue && entry.highestValue >= 1
+                ? this.props.selectedUsers[0].experiences[entry.domain]
+                : 0,
+            changed: false,
+          };
+        } else {
+          return entry;
+        }
+      }),
+    }));
   };
 
-  removeEntryFromTable = (index: number) => {
-    if (this.props.selectedUsers.length === 1) {
-      this.setState(prevState => ({
-        singleUsersEntries: prevState.singleUsersEntries.filter(
-          entry => entry.domain !== prevState.singleUsersEntries[index].domain,
-        ),
-      }));
-    } else {
-      this.setState(prevState => ({
-        multipleUsersEntries: prevState.multipleUsersEntries.filter(
-          entry => entry.domain !== prevState.multipleUsersEntries[index].domain,
-        ),
-      }));
-    }
+  removeEntryFromTable = (domain: string) => {
+    this.setState(prevState => ({
+      tableEntries: prevState.tableEntries.filter(entry => entry.domain !== domain),
+      removedDomains: _.concat(prevState.removedDomains, domain),
+    }));
   };
 
   addEnteredExperience = (domain: string) => {
-    if (this.props.selectedUsers.length === 1) {
-      if (this.state.singleUsersEntries.findIndex(entry => entry.domain === domain) > -1) {
-        return;
-      }
-      const newExperience: SingleUserTableEntry = {
-        domain,
-        value: 1,
-      };
-      this.setState(prevState => ({
-        singleUsersEntries: _.concat(prevState.singleUsersEntries, newExperience).sort(
-          Utils.localeCompareBy(([]: Array<SingleUserTableEntry>), entry =>
-            entry.domain.toLowerCase(),
-          ),
-        ),
-      }));
-    } else {
-      if (this.state.multipleUsersEntries.findIndex(entry => entry.domain === domain) > -1) {
-        return;
-      }
-      const newExperience: MultipleUserTableEntry = {
-        domain,
-        value: 1,
-        lowestValue: -1,
-        highestValue: -1,
-        isShared: true,
-      };
-      this.setState(prevState => ({
-        multipleUsersEntries: _.concat(prevState.multipleUsersEntries, newExperience).sort(
-          Utils.localeCompareBy(([]: Array<SingleUserTableEntry>), entry =>
-            entry.domain.toLowerCase(),
-          ),
-        ),
-      }));
+    if (this.state.tableEntries.findIndex(entry => entry.domain === domain) > -1) {
+      return;
     }
+    const newExperience: TableEntry = {
+      domain,
+      value: 0,
+      lowestValue: -1,
+      highestValue: -1,
+      isShared: true,
+      changed: false,
+    };
+    this.setState(prevState => ({
+      tableEntries: this.sortEntries(_.concat(prevState.tableEntries, newExperience)),
+      removedDomains: prevState.removedDomains.filter(currentDomain => currentDomain !== domain),
+    }));
   };
 
   getDomainsOfTable = (): ExperienceDomainListType =>
-    this.props.selectedUsers.length === 1
-      ? this.state.singleUsersEntries.map(entry => entry.domain)
-      : this.state.multipleUsersEntries.map(entry => entry.domain);
+    this.state.tableEntries.map(entry => entry.domain);
 
   render() {
     if (!this.props.visible && this.props.selectedUsers.length === 0) {
       return null;
     }
-    const singleUsersEntries = this.state.singleUsersEntries;
-    // applies optional filter for shared entries
-    const multipleUsersEntries = this.state.multipleUsersEntries.filter(
+    const tableEntries = this.state.tableEntries.filter(
       entry => !this.state.showOnlySharedExperiences || entry.isShared,
     );
-    const mutlipleUsers = this.props.selectedUsers.length > 1;
-    const scroll = { y: mutlipleUsers ? 150 : 325 };
+    const multipleUsers = this.props.selectedUsers.length > 1;
     return (
       <Modal
         className="experience-change-modal"
         title={
-          mutlipleUsers
-            ? "Changes Experiences of Multiple Users"
-            : `Change Experiences of User ${this.props.selectedUsers[0].lastName} , ${
-                this.props.selectedUsers[0].firstName
+          multipleUsers
+            ? "Changes Experiences of Selected Users"
+            : `Change Experiences for ${this.props.selectedUsers[0].firstName} , ${
+                this.props.selectedUsers[0].lastName
               }`
         }
         visible={this.props.visible}
@@ -331,7 +233,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
           </div>
         }
       >
-        {mutlipleUsers ? (
+        {multipleUsers ? (
           <Checkbox
             style={{ marginTop: 24, marginBottom: 24 }}
             onChange={(e: SyntheticInputEvent<>) =>
@@ -343,52 +245,49 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
         ) : null}
         <Table
           size="small"
-          dataSource={mutlipleUsers ? multipleUsersEntries : singleUsersEntries}
+          dataSource={tableEntries}
           rowKey="domain"
           pagination={false}
-          scroll={scroll}
+          scroll={{ y: 350 }}
           className="user-experience-table"
         >
           <Column
             title="Experience Domain"
             key="domain"
             dataIndex="domain"
-            width={mutlipleUsers ? "30%" : "40%"}
+            width={multipleUsers ? "30%" : "40%"}
           />
-          {mutlipleUsers ? (
+          {multipleUsers ? (
             <Column
               title="Current Experience Value"
               width="30%"
-              render={(record: MultipleUserTableEntry) =>
-                // eslint-disable-next-line no-nested-ternary
-                record.highestValue === -1 && record.lowestValue === -1
-                  ? ""
-                  : record.highestValue === record.lowestValue
-                    ? record.highestValue
-                    : `varying from ${record.lowestValue} to ${record.highestValue}`
-              }
+              render={(record: TableEntry) => {
+                if (record.highestValue === -1 && record.lowestValue === -1) return "";
+                return record.highestValue === record.lowestValue
+                  ? record.highestValue
+                  : `varying from ${record.lowestValue} to ${record.highestValue}`;
+              }}
             />
           ) : null}
           <Column
             title="Experience Value"
             key="value"
-            width={mutlipleUsers ? "25%" : "40%"}
+            width={multipleUsers ? "25%" : "40%"}
             render={record => {
-              const index = mutlipleUsers
-                ? this.state.multipleUsersEntries.findIndex(entry => entry.domain === record.domain)
-                : this.state.singleUsersEntries.findIndex(entry => entry.domain === record.domain);
+              const index = this.state.tableEntries.findIndex(
+                entry => entry.domain === record.domain,
+              );
               return (
                 <span>
                   <InputNumber
                     value={
-                      mutlipleUsers
-                        ? this.state.multipleUsersEntries[index].value
-                        : this.state.singleUsersEntries[index].value
+                      this.state.tableEntries[index].value > 0
+                        ? this.state.tableEntries[index].value
+                        : ""
                     }
                     onChange={value => this.setValueOfEntry(index, value)}
                   />
-                  {(mutlipleUsers && record.value !== record.lowestValue) ||
-                  this.recordModifiedAndExistedBefore(record) ? (
+                  {record.changed ? (
                     <Tooltip placement="top" title="Revert Changes">
                       <Icon
                         style={{ marginLeft: 15 }}
@@ -404,24 +303,41 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
           />
           <Column
             title="Delete Entry"
-            key="removed"
-            width={mutlipleUsers ? "15%" : "20%"}
-            render={record => {
-              const index = singleUsersEntries.findIndex(entry => entry.domain === record.domain);
-              return (
-                <span>
-                  <Tooltip placement="top" title="Remove Entry">
-                    <Icon
-                      type="delete"
-                      className="clickable-icon"
-                      onClick={() => this.removeEntryFromTable(index)}
-                    />
-                  </Tooltip>
-                </span>
-              );
-            }}
+            width={multipleUsers ? "15%" : "20%"}
+            render={record => (
+              <span>
+                <Tooltip placement="top" title="Remove Entry">
+                  <Icon
+                    type="delete"
+                    className="clickable-icon"
+                    onClick={() => this.removeEntryFromTable(record.domain)}
+                  />
+                </Tooltip>
+              </span>
+            )}
           />
         </Table>
+        {multipleUsers && this.state.removedDomains.length > 0 ? (
+          <div style={{ marginBottom: 24 }}>
+            These Experience Domains will be removed from the selected Users:<br />
+            {this.state.removedDomains.map((domain: string) => (
+              <Tooltip key={domain} placement="top" title="Do not remove this Domain">
+                <Tag
+                  className="clickable-icon"
+                  onClick={() => {
+                    this.setState(prevState => ({
+                      removedDomains: prevState.removedDomains.filter(
+                        currentDomain => currentDomain !== domain,
+                      ),
+                    }));
+                  }}
+                >
+                  {domain} <Icon type="close" theme="outlined" />
+                </Tag>
+              </Tooltip>
+            ))}
+          </div>
+        ) : null}
         <SelectExperienceDomain
           disabled={false}
           value={[]}

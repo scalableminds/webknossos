@@ -14,7 +14,6 @@ import models.user.time._
 import models.user.{User, UserService}
 import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
-import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
 import play.api.libs.json.{JsArray, _}
 import utils.{ObjectId, WkConf}

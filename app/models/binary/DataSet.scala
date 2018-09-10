@@ -8,6 +8,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableD
 import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayer, AbstractSegmentationLayer, Category, DataSourceId, ElementClass, GenericDataSource, DataLayerLike => DataLayer}
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
+
 import models.configuration.DataSetConfiguration
 import models.team._
 import models.user.User
@@ -20,6 +21,7 @@ import play.utils.UriEncoding
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
+import slick.sql
 import utils.{ObjectId, SQLClient, SQLDAO, SimpleSQLDAO}
 
 
@@ -126,9 +128,15 @@ class DataSetDAO @Inject()(sqlClient: SQLClient, dataSetDataLayerDAO: DataSetDat
       rList <- run(sql"select #${columns} from #${existingCollectionName} where name = ${name} and _organization = ${organizationId} and #${accessQuery}".as[DatasetsRow])
       r <- rList.headOption.toFox
       parsed <- parse(r)
-    } yield {
-      parsed
-    }
+    } yield parsed
+
+  def getOrganizationForDataSet(dataSetName: String)(implicit ctx: DBAccessContext): Fox[ObjectId] =
+    for {
+      accessQuery <- readAccessQuery
+      rList <- run(sql"select _organization from #${existingCollectionName} where name = ${dataSetName} and #${accessQuery} order by created asc".as[String])
+      r <- rList.headOption.toFox
+      parsed <- ObjectId.parse(r)
+    } yield parsed
 
   def getIdByName(name: String)(implicit ctx: DBAccessContext): Fox[ObjectId] =
     for {

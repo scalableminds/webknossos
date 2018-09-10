@@ -27,7 +27,6 @@ import * as Utils from "libs/utils";
 import DataLayer from "oxalis/model/data_layer";
 import ConnectionInfo from "oxalis/model/data_connection_info";
 import { ControlModeEnum } from "oxalis/constants";
-import type { ControlModeType } from "oxalis/constants";
 import Toast from "libs/toast";
 import ErrorHandling from "libs/error_handling";
 import UrlManager from "oxalis/controller/url_manager";

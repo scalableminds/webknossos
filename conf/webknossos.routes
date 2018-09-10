@@ -58,6 +58,7 @@ POST          /api/datasets/:organizationName/:dataSetName/createExplorational  
 GET           /api/datasets                                                         controllers.DataSetController.list
 POST          /api/datasets                                                         controllers.DataSetController.create(typ: String)
 POST          /api/datasets/addForeign                                              controllers.DataSetController.addForeignDataStoreAndDataSet
+GET           /api/datasets/disambiguation/:dataSetName                             controllers.DataSetController.getOrganizationForDataSet(dataSetName: String)
 POST          /api/datasets/:organizationName/:dataSetName                          controllers.DataSetController.update(organizationName: String, dataSetName: String)
 GET           /api/datasets/:organizationName/:dataSetName/accessList               controllers.DataSetController.accessList(organizationName: String, dataSetName: String)
 GET           /api/datasets/:organizationName/:dataSetName/sharingToken             controllers.DataSetController.getSharingToken(organizationName: String, dataSetName: String)

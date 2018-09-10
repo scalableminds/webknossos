@@ -67,9 +67,9 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
   getSharingLink() {
     const doesNeedToken = !this.props.form.getFieldValue("dataset.isPublic");
     const tokenSuffix = `?token=${this.state.sharingToken}`;
-    return `${window.location.origin}/datasets/${this.props.datasetId.name}/view${
-      doesNeedToken ? tokenSuffix : ""
-    }`;
+    return `${window.location.origin}/datasets/${this.props.datasetId.owningOrganization}/${
+      this.props.datasetId.name
+    }/view${doesNeedToken ? tokenSuffix : ""}`;
   }
 
   getAllowUsageText() {

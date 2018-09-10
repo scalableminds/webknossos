@@ -123,7 +123,11 @@ export function setupOxalis(t, mode, apiVersion) {
     .returns(Promise.resolve({ token: TOKEN }));
   Request.receiveJSON.returns(Promise.resolve({}));
 
-  return Model.fetch(TRACING_TYPE, ANNOTATION_ID, ControlModeEnum.TRACE, true)
+  return Model.fetch(
+    TRACING_TYPE,
+    { annotationId: ANNOTATION_ID, type: ControlModeEnum.TRACE },
+    true,
+  )
     .then(() => {
       // Trigger the event ourselves, as the OxalisController is not instantiated
       app.vent.trigger("webknossos:ready");

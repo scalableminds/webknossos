@@ -200,4 +200,11 @@ class DataSetController @Inject()(userService: UserService,
     } yield Ok
   }
 
+  def getOrganizationForDataSet(dataSetName: String) = sil.UserAwareAction.async { implicit request =>
+    for {
+      organizationId <- dataSetDAO.getOrganizationForDataSet(dataSetName)
+      organization <- organizationDAO.findOne(organizationId)
+    } yield Ok(Json.obj("organizationName" -> organization.name))
+  }
+
 }

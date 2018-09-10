@@ -766,6 +766,13 @@ export async function revokeDatasetSharingToken(datasetId: APIDatasetIdType): Pr
   );
 }
 
+export async function getOrganizationForDataset(datasetName: string): Promise<string> {
+  const { organizationName } = await Request.receiveJSON(
+    `/api/datasets/disambiguation/${datasetName}`,
+  );
+  return organizationName;
+}
+
 // #### Datastores
 export async function getDatastores(): Promise<Array<APIDataStoreType>> {
   const datastores = await Request.receiveJSON("/api/datastores");

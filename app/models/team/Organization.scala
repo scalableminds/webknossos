@@ -1,15 +1,14 @@
 package models.team
 
 import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
+import javax.inject.Inject
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
-import play.api.Play.current
-import play.api.i18n.Messages.Implicits._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{ObjectId, SQLDAO}
+import utils.{ObjectId, SQLClient, SQLDAO}
 
 case class Organization(
                             _id: ObjectId,
@@ -21,25 +20,22 @@ case class Organization(
                             overTimeMailingList: String = "",
                             created: Long = System.currentTimeMillis(),
                             isDeleted: Boolean = false
-                          ) {
+                          )
 
-  def organizationTeamId(implicit ctx: DBAccessContext): Fox[ObjectId] =
-    OrganizationDAO.findOrganizationTeamId(_id)
+class OrganizationService @Inject()(organizationDAO: OrganizationDAO, teamDAO: TeamDAO) {
 
-  def teamIds(implicit ctx: DBAccessContext): Fox[List[ObjectId]] =
-    TeamDAO.findAllIdsByOrganization(_id)
-
-  def publicWrites(implicit ctx: DBAccessContext): Fox[JsObject] = {
+  def publicWrites(organization: Organization)(implicit ctx: DBAccessContext): Fox[JsObject] = {
     Fox.successful(Json.obj(
-      "id" -> _id.toString,
-      "name" -> name,
-      "additionalInformation" -> additionalInformation,
-      "displayName" -> displayName
+      "id" -> organization._id.toString,
+      "name" -> organization.name,
+      "additionalInformation" -> organization.additionalInformation,
+      "displayName" -> organization.displayName
     ))
   }
+
 }
 
-object OrganizationDAO extends SQLDAO[Organization, OrganizationsRow, Organizations] {
+class OrganizationDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[Organization, OrganizationsRow, Organizations](sqlClient) {
   val collection = Organizations
 
   def idColumn(x: Organizations): Rep[String] = x._Id

@@ -202,11 +202,11 @@ function* diffEdges(
 
 function updateTreePredicate(prevTree: TreeType, tree: TreeType): boolean {
   return (
-    prevTree.branchPoints !== tree.branchPoints ||
+    !_.isEqual(prevTree.branchPoints, tree.branchPoints) ||
     prevTree.color !== tree.color ||
     prevTree.name !== tree.name ||
     !_.isEqual(prevTree.comments, tree.comments) ||
-    !_.isEqual(prevTree.timestamp, tree.timestamp) ||
+    prevTree.timestamp !== tree.timestamp ||
     prevTree.groupId !== tree.groupId
   );
 }

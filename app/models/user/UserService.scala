@@ -43,7 +43,7 @@ class UserService @Inject()(conf: WkConf,
   val defaultUserEmail = conf.Application.Authentication.DefaultUser.email
 
   def defaultUser = {
-    userDAO.findOneByEmail(defaultUserEmail)(GlobalAccessContext)
+    userDAO.findOneByEmail(defaultUserEmail)(GlobalAccessContext, ec)
   }
 
   def findByTeams(teams: List[ObjectId])(implicit ctx: DBAccessContext) = {
@@ -58,7 +58,7 @@ class UserService @Inject()(conf: WkConf,
   }
 
   def logActivity(_user: ObjectId, lastActivity: Long) = {
-    userDAO.updateLastActivity(_user, lastActivity)(GlobalAccessContext)
+    userDAO.updateLastActivity(_user, lastActivity)(GlobalAccessContext, ec)
   }
 
   def insert(_organization: ObjectId, email: String, firstName: String,
@@ -113,14 +113,14 @@ class UserService @Inject()(conf: WkConf,
   def changePasswordInfo(loginInfo: LoginInfo, passwordInfo: PasswordInfo) = {
     for {
       user <- findOneByEmail(loginInfo.providerKey)
-      _ <- userDAO.updatePasswordInfo(user._id, passwordInfo)(GlobalAccessContext)
+      _ <- userDAO.updatePasswordInfo(user._id, passwordInfo)(GlobalAccessContext, ec)
     } yield {
       passwordInfo
     }
   }
 
   def findOneByEmail(email: String): Fox[User] = {
-    userDAO.findOneByEmail(email)(GlobalAccessContext)
+    userDAO.findOneByEmail(email)(GlobalAccessContext, ec)
   }
 
   def updateUserConfiguration(user: User, configuration: UserConfiguration)(implicit ctx: DBAccessContext) = {
@@ -150,10 +150,10 @@ class UserService @Inject()(conf: WkConf,
   }
 
   def experiencesFor(_user: ObjectId): Fox[Map[String, Int]] =
-    userExperiencesDAO.findAllExperiencesForUser(_user)(GlobalAccessContext)
+    userExperiencesDAO.findAllExperiencesForUser(_user)(GlobalAccessContext, ec)
 
   def teamMembershipsFor(_user: ObjectId): Fox[List[TeamMembership]] =
-    userTeamRolesDAO.findTeamMembershipsForUser(_user)(GlobalAccessContext)
+    userTeamRolesDAO.findTeamMembershipsForUser(_user)(GlobalAccessContext, ec)
 
   def teamManagerMembershipsFor(_user: ObjectId): Fox[List[TeamMembership]] =
     for {
@@ -178,7 +178,7 @@ class UserService @Inject()(conf: WkConf,
 
   def isTeamManagerOrAdminOf(user: User, _team: ObjectId): Fox[Boolean] =
     (for {
-      team <- teamDAO.findOne(_team)(GlobalAccessContext)
+      team <- teamDAO.findOne(_team)(GlobalAccessContext, ec)
       teamManagerTeamIds <- teamManagerTeamIdsFor(user._id)
     } yield (teamManagerTeamIds.contains(_team) || user.isAdminOf(team._organization))) ?~> "team.admin.notAllowed"
 
@@ -203,7 +203,7 @@ class UserService @Inject()(conf: WkConf,
     implicit val ctx = GlobalAccessContext
     for {
       isEditable <- isEditableBy(user, requestingUser)
-      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
+      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext, ec)
       teamMemberships <- teamMembershipsFor(user._id)
       teamMembershipsJs <- Fox.serialCombined(teamMemberships)(tm => teamMembershipService.publicWrites(tm))
       experiences <- experiencesFor(user._id)

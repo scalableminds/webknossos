@@ -8,18 +8,18 @@ import models.analytics.{AnalyticsDAO, AnalyticsEntry}
 import models.binary.DataStoreHandler
 import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
-import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
-import play.api.i18n.MessagesApi
 import play.api.libs.json.Json
-import play.api.libs.concurrent.Execution.Implicits._
 import utils.{ObjectId, SQLClient, SimpleSQLDAO, WkConf}
 import slick.jdbc.PostgresProfile.api._
+
+import scala.concurrent.ExecutionContext
 
 class Application @Inject()(analyticsDAO: AnalyticsDAO,
                             releaseInformationDAO: ReleaseInformationDAO,
                             conf: WkConf,
-                            sil: Silhouette[WkEnv],
-                            val messagesApi: MessagesApi) extends Controller {
+                            sil: Silhouette[WkEnv])
+                           (implicit ec: ExecutionContext)
+  extends Controller {
 
   def buildInfo = sil.UserAwareAction.async { implicit request =>
     val token = request.identity.flatMap { user =>
@@ -55,7 +55,7 @@ class Application @Inject()(analyticsDAO: AnalyticsDAO,
 
 
 class ReleaseInformationDAO @Inject()(sqlClient: SQLClient) extends SimpleSQLDAO(sqlClient) with FoxImplicits {
-  def getSchemaVersion = {
+  def getSchemaVersion(implicit ec: ExecutionContext) = {
     for {
       rList <- run(sql"select schemaVersion from webknossos.releaseInformation".as[Int])
       r <- rList.headOption.toFox

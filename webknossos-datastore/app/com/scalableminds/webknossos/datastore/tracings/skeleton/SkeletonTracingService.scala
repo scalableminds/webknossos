@@ -8,8 +8,9 @@ import com.scalableminds.webknossos.datastore.tracings.UpdateAction.SkeletonUpda
 import com.scalableminds.webknossos.datastore.tracings._
 import com.scalableminds.webknossos.datastore.tracings.skeleton.updating._
 import net.liftweb.common.{Empty, Full}
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{Json, Writes}
+
+import scala.concurrent.ExecutionContext
 
 class SkeletonTracingService @Inject()(
                                         tracingDataStore: TracingDataStore,
@@ -29,12 +30,13 @@ class SkeletonTracingService @Inject()(
 
   implicit val updateActionReads = SkeletonUpdateAction.skeletonUpdateActionFormat
 
-  def currentVersion(tracingId: String): Fox[Long] = tracingDataStore.skeletonUpdates.getVersion(tracingId, mayBeEmpty = Some(true)).getOrElse(0L)
+  def currentVersion(tracingId: String)(implicit ec: ExecutionContext): Fox[Long] =
+    tracingDataStore.skeletonUpdates.getVersion(tracingId, mayBeEmpty = Some(true)).getOrElse(0L)
 
-  def handleUpdateGroup(tracingId: String, updateActionGroup: UpdateActionGroup[SkeletonTracing]): Fox[_] =
+  def handleUpdateGroup(tracingId: String, updateActionGroup: UpdateActionGroup[SkeletonTracing])(implicit ec: ExecutionContext): Fox[_] =
     tracingDataStore.skeletonUpdates.put(tracingId, updateActionGroup.version, updateActionGroup.actions.map(_.addTimestamp(updateActionGroup.timestamp)))
 
-  override def applyPendingUpdates(tracing: SkeletonTracing, tracingId: String, desiredVersion: Option[Long]): Fox[SkeletonTracing] = {
+  override def applyPendingUpdates(tracing: SkeletonTracing, tracingId: String, desiredVersion: Option[Long])(implicit ec: ExecutionContext): Fox[SkeletonTracing] = {
     val existingVersion = tracing.version
     findDesiredOrNewestPossibleVersion(tracing, tracingId, desiredVersion).flatMap { newVersion =>
       if (newVersion > existingVersion) {
@@ -51,7 +53,7 @@ class SkeletonTracingService @Inject()(
     }
   }
 
-  private def findDesiredOrNewestPossibleVersion(tracing: SkeletonTracing, tracingId: String, desiredVersion: Option[Long]): Fox[Long] = {
+  private def findDesiredOrNewestPossibleVersion(tracing: SkeletonTracing, tracingId: String, desiredVersion: Option[Long])(implicit ec: ExecutionContext): Fox[Long] = {
     (for {
       newestUpdateVersion <- tracingDataStore.skeletonUpdates.getVersion(tracingId, mayBeEmpty = Some(true))
     } yield {
@@ -62,7 +64,7 @@ class SkeletonTracingService @Inject()(
     }).getOrElse(tracing.version) //if there are no updates at all, assume tracing is brand new (possibly created from NML)
   }
 
-  private def findPendingUpdates(tracingId: String, existingVersion: Long, desiredVersion: Long): Fox[List[SkeletonUpdateAction]] = {
+  private def findPendingUpdates(tracingId: String, existingVersion: Long, desiredVersion: Long)(implicit ec: ExecutionContext): Fox[List[SkeletonUpdateAction]] = {
     if (desiredVersion == existingVersion) Fox.successful(List())
     else {
       for {
@@ -73,7 +75,7 @@ class SkeletonTracingService @Inject()(
     }
   }
 
-  private def update(tracing: SkeletonTracing, tracingId: String, updates: List[SkeletonUpdateAction], newVersion: Long): Fox[SkeletonTracing] = {
+  private def update(tracing: SkeletonTracing, tracingId: String, updates: List[SkeletonUpdateAction], newVersion: Long)(implicit ec: ExecutionContext): Fox[SkeletonTracing] = {
     def updateIter(tracingFox: Fox[SkeletonTracing], remainingUpdates: List[SkeletonUpdateAction]): Fox[SkeletonTracing] = {
       tracingFox.futureBox.flatMap {
         case Empty => Fox.empty
@@ -101,7 +103,7 @@ class SkeletonTracingService @Inject()(
     }
   }
 
-  def duplicate(tracing: SkeletonTracing): Fox[String] = {
+  def duplicate(tracing: SkeletonTracing)(implicit ec: ExecutionContext): Fox[String] = {
     val newTracing = tracing.withCreatedTimestamp(System.currentTimeMillis()).withVersion(0)
     save(newTracing, None, newTracing.version)
   }

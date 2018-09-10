@@ -1,6 +1,6 @@
 package models.annotation
 
-import java.io.{BufferedOutputStream, FileOutputStream}
+import java.io.{BufferedOutputStream, File, FileOutputStream}
 
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
@@ -25,12 +25,11 @@ import models.task.{Task, TaskDAO, TaskService, TaskTypeDAO}
 import models.team.OrganizationDAO
 import models.user.{User, UserDAO, UserService}
 import utils.ObjectId
-import play.api.i18n.{I18nSupport, Messages, MessagesApi}
+import play.api.i18n.{I18nSupport, Messages, MessagesApi, MessagesProvider}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import net.liftweb.common.{Box, Full}
-import play.api.libs.Files.TemporaryFile
-import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsNull, JsObject, Json}
 
@@ -50,15 +49,14 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
                                   organizationDAO: OrganizationDAO,
                                   annotationRestrictionDefults: AnnotationRestrictionDefults,
                                   nmlWriter: NmlWriter,
-                                  val messagesApi: MessagesApi)
+                                  temporaryFileCreator: TemporaryFileCreator)
   extends BoxImplicits
   with FoxImplicits
   with TextUtils
   with ProtoGeometryImplicits
-  with LazyLogging
-  with I18nSupport {
+  with LazyLogging {
 
-  private def selectSuitableTeam(user: User, dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[ObjectId] = {
+  private def selectSuitableTeam(user: User, dataSet: DataSet)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[ObjectId] = {
     (for {
       userTeamIds <- userService.teamIdsFor(user._id)
       datasetAllowedTeamIds <- dataSetService.allowedTeamIdsFor(dataSet._id)
@@ -102,7 +100,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
                               user: User,
                               _dataSet: ObjectId,
                               tracingType: TracingType.Value,
-                              withFallback: Boolean)(implicit ctx: DBAccessContext): Fox[Annotation] = {
+                              withFallback: Boolean)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Annotation] = {
 
     def createTracings(dataSet: DataSet, dataSource: DataSource): Fox[(Option[String], Option[String])] = tracingType match {
       case TracingType.skeleton =>
@@ -144,7 +142,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
   }
 
   // WARNING: needs to be repeatable, might be called multiple times for an annotation
-  def finish(annotation: Annotation, user: User, restrictions: AnnotationRestrictions)(implicit ctx: DBAccessContext): Fox[String] = {
+  def finish(annotation: Annotation, user: User, restrictions: AnnotationRestrictions)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[String] = {
     def executeFinish: Fox[String] = {
       for {
         _ <- annotationDAO.updateState(annotation._id, AnnotationState.Finished)
@@ -170,21 +168,21 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     }).flatten
   }
 
-  def baseForTask(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[Annotation] =
+  def baseForTask(taskId: ObjectId)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Annotation] =
     (for {
       list <- annotationDAO.findAllByTaskIdAndType(taskId, AnnotationType.TracingBase)
     } yield list.headOption.toFox).flatten
 
-  def annotationsFor(taskId: ObjectId)(implicit ctx: DBAccessContext) =
+  def annotationsFor(taskId: ObjectId)(implicit ctx: DBAccessContext, ec: ExecutionContext) =
       annotationDAO.findAllByTaskIdAndType(taskId, AnnotationType.Task)
 
-  def countOpenNonAdminTasks(user: User)(implicit ctx: DBAccessContext) =
+  def countOpenNonAdminTasks(user: User)(implicit ctx: DBAccessContext, ec: ExecutionContext) =
     for {
       teamManagerTeamIds <- userService.teamManagerTeamIdsFor(user._id)
       result <- annotationDAO.countActiveAnnotationsFor(user._id, AnnotationType.Task, teamManagerTeamIds)
     } yield result
 
-  def tracingFromBase(annotationBase: Annotation, dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[String] = {
+  def tracingFromBase(annotationBase: Annotation, dataSet: DataSet)(implicit ctx: DBAccessContext, m: MessagesProvider, ec: ExecutionContext): Fox[String] = {
     for {
       dataSource <- bool2Fox(dataSet.isUsable) ?~> Messages("dataSet.notImported", dataSet.name)
       dataStoreHandler <- dataSetService.handlerFor(dataSet)
@@ -193,10 +191,11 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     } yield newTracingId
   }
 
-  def createAnnotationFor(user: User, task: Task, initializingAnnotationId: ObjectId)(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
+  def createAnnotationFor(user: User, task: Task, initializingAnnotationId: ObjectId)
+                         (implicit m: MessagesProvider, ctx: DBAccessContext, ec: ExecutionContext): Fox[Annotation] = {
     def useAsTemplateAndInsert(annotation: Annotation) = {
       for {
-        dataSetName <- dataSetDAO.getNameById(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
+        dataSetName <- dataSetDAO.getNameById(annotation._dataSet)(GlobalAccessContext, ec) ?~> "dataSet.notFound"
         dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> ("Could not access DataSet " + dataSetName + ". Does your team have access?")
         newTracingId <- tracingFromBase(annotation, dataSet) ?~> "Failed to use annotation base as template."
         newAnnotation = annotation.copy(
@@ -242,7 +241,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       trees = Seq(initialTree))
   }
 
-  def abortInitializedAnnotationOnFailure(initializingAnnotationId: ObjectId, insertedAnnotationBox: Box[Annotation]) = {
+  def abortInitializedAnnotationOnFailure(initializingAnnotationId: ObjectId, insertedAnnotationBox: Box[Annotation])(implicit ec: ExecutionContext) = {
     insertedAnnotationBox match {
       case Full(_) => Fox.successful(())
       case _ => annotationDAO.abortInitializingAnnotation(initializingAnnotationId)
@@ -255,11 +254,11 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
                             skeletonTracingIdBox: Box[String],
                             dataSetId: ObjectId,
                             description: Option[String]
-    )(implicit ctx: DBAccessContext) = {
+    )(implicit ctx: DBAccessContext, ec: ExecutionContext) = {
 
     for {
       task <- taskFox
-      taskType <- taskTypeDAO.findOne(task._taskType)(GlobalAccessContext)
+      taskType <- taskTypeDAO.findOne(task._taskType)(GlobalAccessContext, ec)
       skeletonTracingId <- skeletonTracingIdBox.toFox
       project <- projectDAO.findOne(task._project)
       annotationBase = Annotation(
@@ -284,7 +283,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
                   volumeTracingId: Option[String],
                   annotationType: AnnotationType,
                   name: Option[String],
-                  description: String)(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
+                  description: String)(implicit m: MessagesProvider, ctx: DBAccessContext, ec: ExecutionContext): Fox[Annotation] = {
     for {
       teamId <- selectSuitableTeam(user, dataSet)
       annotation = Annotation(
@@ -302,7 +301,8 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     } yield annotation
   }
 
-  def zipAnnotations(annotations: List[Annotation], zipFileName: String)(implicit messages: Messages, ctx: DBAccessContext): Fox[TemporaryFile] = {
+  def zipAnnotations(annotations: List[Annotation], zipFileName: String)
+                    (implicit m: MessagesProvider, ctx: DBAccessContext, ec: ExecutionContext): Fox[TemporaryFile] = {
     for {
       tracingsNamesAndScalesAsTuples <- getTracingsScalesAndNamesFor(annotations)
       tracingsAndNamesFlattened = flattenTupledLists(tracingsNamesAndScalesAsTuples)
@@ -321,7 +321,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     }
   }
 
-  private def getTracingsScalesAndNamesFor(annotations: List[Annotation])(implicit ctx: DBAccessContext):
+  private def getTracingsScalesAndNamesFor(annotations: List[Annotation])(implicit ctx: DBAccessContext, ec: ExecutionContext):
     Fox[List[(List[SkeletonTracing], List[String], List[Option[Scale]], List[Annotation], List[User], List[Option[Task]])]] = {
 
     def getTracings(dataSetId: ObjectId, tracingIds: List[String]) = {
@@ -363,9 +363,9 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     Fox.combined(tracings.toList)
   }
 
-  private def createZip(nmls: List[(Enumerator[Array[Byte]],String)], zipFileName: String): Future[TemporaryFile] = {
-    val zipped = TemporaryFile(normalize(zipFileName), ".zip")
-    val zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(zipped.file)))
+  private def createZip(nmls: List[(Enumerator[Array[Byte]],String)], zipFileName: String)(implicit ec: ExecutionContext): Future[TemporaryFile] = {
+    val zipped = temporaryFileCreator.create(normalize(zipFileName), ".zip")
+    val zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(zipped.path.toString))))
 
     def addToZip(nmls: List[(Enumerator[Array[Byte]],String)]): Future[Boolean] = {
       nmls match {
@@ -382,7 +382,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     }
   }
 
-  def transferAnnotationToUser(typ: String, id: String, userId: ObjectId, issuingUser: User)(implicit ctx: DBAccessContext): Fox[Annotation] = {
+  def transferAnnotationToUser(typ: String, id: String, userId: ObjectId, issuingUser: User)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Annotation] = {
     for {
       annotation <- annotationInformationProvider.provideAnnotation(typ, id, issuingUser) ?~> "annotation.notFound"
       newUser <- userDAO.findOne(userId) ?~> "user.notFound"
@@ -392,14 +392,14 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     } yield updated
   }
 
-  def resetToBase(annotation: Annotation)(implicit ctx: DBAccessContext) = annotation.typ match {
+  def resetToBase(annotation: Annotation)(implicit ctx: DBAccessContext, m: MessagesProvider, ec: ExecutionContext) = annotation.typ match {
     case AnnotationType.Explorational =>
       Fox.failure("annotation.revert.skeletonOnly")
     case AnnotationType.Task if annotation.skeletonTracingId.isDefined =>
       for {
         task <- taskFor(annotation)
         annotationBase <- baseForTask(task._id)
-        dataSet <- dataSetDAO.findOne(annotationBase._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
+        dataSet <- dataSetDAO.findOne(annotationBase._dataSet)(GlobalAccessContext, ec) ?~> "dataSet.notFound"
         newTracingId <- tracingFromBase(annotationBase, dataSet)
         _ <- annotationDAO.updateSkeletonTracingId(annotation._id, newTracingId)
       } yield ()
@@ -408,12 +408,12 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
   }
 
 
-  private def settingsFor(annotation: Annotation)(implicit ctx: DBAccessContext) = {
+  private def settingsFor(annotation: Annotation)(implicit ctx: DBAccessContext, ec: ExecutionContext) = {
     if (annotation.typ == AnnotationType.Task || annotation.typ == AnnotationType.TracingBase)
       for {
         taskId <- annotation._task.toFox
-        task: Task <- taskDAO.findOne(taskId) ?~> Messages("task.notFound")
-        taskType <- taskTypeDAO.findOne(task._taskType) ?~> Messages("taskType.notFound")
+        task: Task <- taskDAO.findOne(taskId) ?~> "task.notFound"
+        taskType <- taskTypeDAO.findOne(task._taskType) ?~> "taskType.notFound"
       } yield {
         taskType.settings
       }
@@ -421,8 +421,8 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       Fox.successful(AnnotationSettings.defaultFor(annotation.tracingType))
   }
 
-  def taskFor(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Task] =
-    annotation._task.toFox.flatMap(taskId => taskDAO.findOne(taskId)(GlobalAccessContext))
+  def taskFor(annotation: Annotation)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Task] =
+    annotation._task.toFox.flatMap(taskId => taskDAO.findOne(taskId)(GlobalAccessContext, ec))
 
   def composeRestrictionsFor(annotation: Annotation, restrictions: Option[AnnotationRestrictions], readOnly: Option[Boolean]) = {
     if (readOnly.getOrElse(false))
@@ -431,17 +431,18 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       restrictions.getOrElse(annotationRestrictionDefults.defaultAnnotationRestrictions(annotation))
   }
 
-  def publicWrites(annotation: Annotation, requestingUser: Option[User] = None, restrictions: Option[AnnotationRestrictions] = None, readOnly: Option[Boolean] = None): Fox[JsObject] = {
+  def publicWrites(annotation: Annotation, requestingUser: Option[User] = None, restrictions: Option[AnnotationRestrictions] = None, readOnly: Option[Boolean] = None)
+                  (implicit ec: ExecutionContext): Fox[JsObject] = {
     implicit val ctx = GlobalAccessContext
     for {
       dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFound"
       task = annotation._task.toFox.flatMap(taskId => taskDAO.findOne(taskId))
       taskJson <- task.flatMap(t => taskService.publicWrites(t)).getOrElse(JsNull)
-      user <- userService.findOneById(annotation._user, useCache = true)(GlobalAccessContext)
+      user <- userService.findOneById(annotation._user, useCache = true)(GlobalAccessContext, ec)
       userJson <- userService.compactWrites(user)
       settings <- settingsFor(annotation)
       annotationRestrictions <- AnnotationRestrictions.writeAsJson(composeRestrictionsFor(annotation, restrictions, readOnly), requestingUser)
-      dataStore <- dataStoreDAO.findOneByName(dataSet._dataStore.trim) ?~> Messages("datastore.notFound")
+      dataStore <- dataStoreDAO.findOneByName(dataSet._dataStore.trim) ?~> "datastore.notFound"
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
     } yield {
       Json.obj(
@@ -468,9 +469,9 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
   }
 
   //for Explorative Annotations list
-  def compactWrites(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[JsObject] = {
+  def compactWrites(annotation: Annotation)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[JsObject] = {
     for {
-      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
+      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext, ec) ?~> "dataSet.notFound"
     } yield {
       Json.obj(
         "modified" -> annotation.modified,

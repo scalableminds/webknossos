@@ -8,11 +8,10 @@ import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.team.OrganizationDAO
 import models.user.User
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.ws.{WS, WSAuthScheme, WSClient}
+import play.api.libs.ws.{WSAuthScheme, WSClient}
 import utils.WkConf
 
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util._
 
 class BrainTracing @Inject()(actorSystem: ActorSystem,
@@ -27,18 +26,18 @@ class BrainTracing @Inject()(actorSystem: ActorSystem,
   lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
 
-  def registerIfNeeded(user: User, password: String): Fox[Option[String]] =
+  def registerIfNeeded(user: User, password: String)(implicit ec: ExecutionContext): Fox[Option[String]] =
     for {
-      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext) ?~> "organization.notFound"
+      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext, ec) ?~> "organization.notFound"
       result <- (if (organization.name == "Connectomics department" && conf.Braintracing.active) register(user, password).toFox.map(Some(_)) else Fox.successful(None))
     } yield result
 
-  private def register(user: User, password: String): Future[String] = {
+  private def register(user: User, password: String)(implicit ec: ExecutionContext): Future[String] = {
     val result = Promise[String]()
     val brainTracingRequest = ws
       .url(CREATE_URL)
       .withAuth(conf.Braintracing.user, conf.Braintracing.password, WSAuthScheme.BASIC)
-      .withQueryString(
+      .addQueryStringParameters(
         "license" -> conf.Braintracing.license,
         "firstname" -> user.firstName,
         "lastname" -> user.lastName,

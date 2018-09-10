@@ -48,7 +48,7 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
   }
 
   def init(authenticator: BearerTokenAuthenticator, tokenType: TokenType, deleteOld: Boolean = true)(implicit request: RequestHeader): Future[String] = {
-    repository.add(authenticator, tokenType, deleteOld)(GlobalAccessContext).map { a =>
+    repository.add(authenticator, tokenType, deleteOld)(GlobalAccessContext, ec).map { a =>
       a.id
     }.recover {
       case e => throw new AuthenticatorInitializationException(InitError.format(ID, authenticator), e)

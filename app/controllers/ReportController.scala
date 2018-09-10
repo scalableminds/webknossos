@@ -8,12 +8,11 @@ import models.team.TeamDAO
 import models.user.{User, UserDAO, UserService}
 import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
-import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
-import play.api.i18n.MessagesApi
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import slick.jdbc.PostgresProfile.api._
 import utils.{ObjectId, SQLClient, SimpleSQLDAO}
+
+import scala.concurrent.ExecutionContext
 
 
 case class OpenTasksEntry(id: String, user: String, totalAssignments: Int, assignmentsByProjects: Map[String, Int])
@@ -25,7 +24,7 @@ object ProjectProgressEntry { implicit val jsonFormat = Json.format[ProjectProgr
 
 class ReportDAO @Inject()(sqlClient: SQLClient, annotationDAO: AnnotationDAO) extends SimpleSQLDAO(sqlClient) {
 
-  def projectProgress(teamId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[ProjectProgressEntry]] = {
+  def projectProgress(teamId: ObjectId)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[List[ProjectProgressEntry]] = {
     for {
       r <- run(
         sql"""
@@ -89,7 +88,7 @@ class ReportDAO @Inject()(sqlClient: SQLClient, annotationDAO: AnnotationDAO) ex
   }
 
 
-  def getAssignmentsByProjectsFor(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Map[String, Int]] = {
+  def getAssignmentsByProjectsFor(userId: ObjectId)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Map[String, Int]] = {
     for {
       r <- run(sql"""
         select p._id, p.name, t.neededExperience_domain, t.neededExperience_value, count(t._id)
@@ -119,22 +118,23 @@ class ReportController @Inject()(reportDAO: ReportDAO,
                                  teamDAO: TeamDAO,
                                  userDAO: UserDAO,
                                  userService: UserService,
-                                 sil: Silhouette[WkEnv],
-                                 val messagesApi: MessagesApi) extends Controller with FoxImplicits {
+                                 sil: Silhouette[WkEnv])
+                                (implicit ec: ExecutionContext)
+  extends Controller with FoxImplicits {
 
   def projectProgressOverview(teamId: String) = sil.SecuredAction.async { implicit request =>
     for {
-      entries <- reportDAO.projectProgress(ObjectId(teamId))(GlobalAccessContext)
+      entries <- reportDAO.projectProgress(ObjectId(teamId))(GlobalAccessContext, ec)
     } yield Ok(Json.toJson(entries))
   }
 
   def openTasksOverview(teamId: String) = sil.SecuredAction.async { implicit request =>
     for {
       teamIdValidated <- ObjectId.parse(teamId)
-      team <- teamDAO.findOne(teamIdValidated)(GlobalAccessContext) ?~> "team.notFound"
-      users <- userDAO.findAllByTeams(List(team._id), includeDeactivated = false)(GlobalAccessContext)
+      team <- teamDAO.findOne(teamIdValidated)(GlobalAccessContext, ec) ?~> "team.notFound"
+      users <- userDAO.findAllByTeams(List(team._id), includeDeactivated = false)(GlobalAccessContext, ec)
       nonAdminUsers <- Fox.filterNot(users)(u => userService.isTeamManagerOrAdminOf(u, teamIdValidated))
-      entries: List[OpenTasksEntry] <- getAllAvailableTaskCountsAndProjects(nonAdminUsers)(GlobalAccessContext)
+      entries: List[OpenTasksEntry] <- getAllAvailableTaskCountsAndProjects(nonAdminUsers)(GlobalAccessContext, ec)
     } yield Ok(Json.toJson(entries))
   }
 

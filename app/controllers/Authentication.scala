@@ -31,8 +31,7 @@ import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json._
 import play.api.mvc._
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import utils.{ObjectId, WkConf}
 
 
@@ -110,9 +109,8 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                rpc: RPC,
                                conf: WkConf,
                                wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-                               sil: Silhouette[WkEnv],
-                               val messagesApi: MessagesApi
-)
+                               sil: Silhouette[WkEnv]
+                              )(implicit ec: ExecutionContext)
   extends Controller
     with FoxImplicits {
 
@@ -172,7 +170,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
               Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
             } else {
               for {
-                organization <- organizationDAO.findOneByName(signUpData.organization)(GlobalAccessContext) ?~> Messages("organization.notFound", signUpData.organization)
+                organization <- organizationDAO.findOneByName(signUpData.organization)(GlobalAccessContext, ec) ?~> Messages("organization.notFound", signUpData.organization)
                 user <- userService.insert(organization._id, email, firstName, lastName, automaticUserActivation, isAdminOnRegistration,
                   loginInfo, passwordHasher.hash(signUpData.password)) ?~> "user.creation.failed"
                 brainDBResult <- brainTracing.registerIfNeeded(user, signUpData.password).toFox
@@ -261,10 +259,10 @@ class Authentication @Inject()(actorSystem: ActorSystem,
     resetPasswordForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       passwords => {
-        bearerTokenAuthenticatorService.userForToken(passwords.token.trim)(GlobalAccessContext).futureBox.flatMap {
+        bearerTokenAuthenticatorService.userForToken(passwords.token.trim)(GlobalAccessContext, ec).futureBox.flatMap {
           case Full(user) =>
             for {
-              _ <- userDAO.updatePasswordInfo(user._id, passwordHasher.hash(passwords.password1))(GlobalAccessContext)
+              _ <- userDAO.updatePasswordInfo(user._id, passwordHasher.hash(passwords.password1))(GlobalAccessContext, ec)
               _ <- bearerTokenAuthenticatorService.remove(passwords.token.trim)
             } yield Ok
           case _ =>
@@ -429,8 +427,8 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       organizationName <- normalizeName(organizationDisplayName).toFox ?~> "invalid organization name"
       organization = Organization(ObjectId.generate, organizationName.replaceAll(" ", "_"), "", "", organizationDisplayName)
       organizationTeam = Team(ObjectId.generate, organization._id, organization.name, isOrganizationTeam = true)
-      _ <- organizationDAO.insertOne(organization)(GlobalAccessContext)
-      _ <- teamDAO.insertOne(organizationTeam)(GlobalAccessContext)
+      _ <- organizationDAO.insertOne(organization)(GlobalAccessContext, ec)
+      _ <- teamDAO.insertOne(organizationTeam)(GlobalAccessContext, ec)
       _ <- initialDataService.insertLocalDataStoreIfEnabled
     } yield {
       organization
@@ -440,13 +438,13 @@ class Authentication @Inject()(actorSystem: ActorSystem,
   private def createOrganizationFolder(organizationName: String, loginInfo: LoginInfo)(implicit request: RequestHeader) = {
     def sendRPCToDataStore(dataStore: DataStore, token: String) = {
       rpc(s"${dataStore.url}/data/triggers/newOrganizationFolder")
-        .withQueryString("token" -> token, "organizationName" -> organizationName)
+        .addQueryString("token" -> token, "organizationName" -> organizationName)
         .get
     }
 
     for {
       token <- combinedAuthenticatorService.tokenAuthenticatorService.createAndInit(loginInfo, TokenType.DataStore, deleteOld = false).toFox
-      datastores <- dataStoreDAO.findAll(GlobalAccessContext)
+      datastores <- dataStoreDAO.findAll(GlobalAccessContext, ec)
       _ <- Fox.combined(datastores.map(sendRPCToDataStore(_, token)))
     } yield Full(())
 

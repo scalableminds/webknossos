@@ -1,7 +1,7 @@
 package oxalis.security
 
 import com.mohiva.play.silhouette.api._
-import com.mohiva.play.silhouette.api.crypto.{Base64AuthenticatorEncoder, CookieSigner}
+import com.mohiva.play.silhouette.api.crypto.{Base64AuthenticatorEncoder, Signer}
 import com.mohiva.play.silhouette.api.services.{AuthenticatorResult, AuthenticatorService}
 import com.mohiva.play.silhouette.api.util.{Clock, ExtractableRequest, FingerprintGenerator, IDGenerator}
 import com.mohiva.play.silhouette.impl.authenticators._
@@ -26,7 +26,7 @@ case class CombinedAuthenticator(actualAuthenticator: StorableAuthenticator) ext
   override def isValid: Boolean = actualAuthenticator.isValid
 }
 
-class IdentityCookieSigner extends CookieSigner {
+class IdentityCookieSigner extends Signer {
   override def sign(data: String): String = data
   override def extract(message: String): Try[String] = Success(message)
 }
@@ -35,6 +35,7 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
                                         tokenSettings: BearerTokenAuthenticatorSettings,
                                         tokenDao : BearerTokenAuthenticatorRepository,
                                         fingerprintGenerator: FingerprintGenerator,
+                                        cookieHeaderEncoding: CookieHeaderEncoding,
                                         idGenerator: IDGenerator,
                                         clock: Clock,
                                         userService: UserService,
@@ -45,6 +46,7 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
                                         cookieSettings,
                                         None,
                                         new IdentityCookieSigner,
+                                        cookieHeaderEncoding,
                                         new Base64AuthenticatorEncoder,
                                         fingerprintGenerator,
                                         idGenerator,
@@ -75,7 +77,7 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
 
   // only called in token case
   def findByLoginInfo(loginInfo: LoginInfo) =
-    tokenDao.findOneByLoginInfo(loginInfo, TokenType.Authentication)(GlobalAccessContext).map(opt => opt.map(CombinedAuthenticator(_)))
+    tokenDao.findOneByLoginInfo(loginInfo, TokenType.Authentication)(GlobalAccessContext, ec).map(opt => opt.map(CombinedAuthenticator(_)))
 
   // only called in the cookie case
   override def init(authenticator: CombinedAuthenticator)(implicit request: RequestHeader): Future[Cookie] =

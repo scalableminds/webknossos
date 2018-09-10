@@ -11,11 +11,10 @@ import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
 import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import utils.ObjectId
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 class ProjectController @Inject()(projectService: ProjectService,
                                   projectDAO: ProjectDAO,
@@ -24,8 +23,9 @@ class ProjectController @Inject()(projectService: ProjectService,
                                   taskDAO: TaskDAO,
                                   userService: UserService,
                                   taskService: TaskService,
-                                  sil: Silhouette[WkEnv],
-                                  val messagesApi: MessagesApi) extends Controller with FoxImplicits {
+                                  sil: Silhouette[WkEnv])
+                                 (implicit ec: ExecutionContext)
+  extends Controller with FoxImplicits {
 
   def list = sil.SecuredAction.async {
     implicit request =>
@@ -76,7 +76,7 @@ class ProjectController @Inject()(projectService: ProjectService,
 
   def create = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(Project.projectPublicReads) { project =>
-      projectDAO.findOneByName(project.name)(GlobalAccessContext).futureBox.flatMap {
+      projectDAO.findOneByName(project.name)(GlobalAccessContext, ec).futureBox.flatMap {
         case Empty =>
           for {
             _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
@@ -92,7 +92,7 @@ class ProjectController @Inject()(projectService: ProjectService,
   def update(projectName: String) = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(Project.projectPublicReads) { updateRequest =>
       for{
-        project <- projectDAO.findOneByName(projectName)(GlobalAccessContext) ?~> Messages("project.notFound", projectName)
+        project <- projectDAO.findOneByName(projectName)(GlobalAccessContext, ec) ?~> Messages("project.notFound", projectName)
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
         _ <- projectDAO.updateOne(updateRequest.copy(_id = project._id, paused = project.paused)) ?~> Messages("project.update.failed", projectName)
         updated <- projectDAO.findOneByName(projectName)
@@ -128,7 +128,7 @@ class ProjectController @Inject()(projectService: ProjectService,
       for {
         project <- projectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed"
-        tasks <- taskDAO.findAllByProject(project._id)(GlobalAccessContext)
+        tasks <- taskDAO.findAllByProject(project._id)(GlobalAccessContext, ec)
         js <- Fox.serialCombined(tasks)(task => taskService.publicWrites(task))
       } yield {
         Ok(Json.toJson(js))

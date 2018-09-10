@@ -10,24 +10,23 @@ import models.user.time.TimeSpanDAO
 import models.user._
 import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
-import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
-import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsObject, JsValue, Json}
-import play.api.mvc.AnyContent
 import utils.ObjectId
+
+import scala.concurrent.ExecutionContext
 
 class TimeController @Inject()(userService: UserService,
                                userDAO: UserDAO,
                                timeSpanDAO: TimeSpanDAO,
-                               sil: Silhouette[WkEnv],
-                               val messagesApi: MessagesApi) extends Controller with FoxImplicits {
+                               sil: Silhouette[WkEnv])
+                              (implicit ec: ExecutionContext)
+  extends Controller with FoxImplicits {
 
   //all users with working hours > 0
   def getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]) = sil.SecuredAction.async { implicit request =>
     for {
       users <- userDAO.findAll
-      filteredUsers <- Fox.filter(users)(user => userService.isTeamManagerOrAdminOf(request.identity, user)) //rather Admin than TeamManager
+      filteredUsers <- Fox.filter(users)(user => userService.isTeamManagerOrAdminOf(request.identity, user))
       js <- loggedTimeForUserListByMonth(filteredUsers, year, month, startDay, endDay)
     } yield {
       Ok(js)

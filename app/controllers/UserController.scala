@@ -1,7 +1,7 @@
 package controllers
 
 import javax.inject.Inject
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -11,19 +11,14 @@ import models.user._
 import models.user.time._
 import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
-import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
-import play.api.data.Forms._
-import play.api.data._
-import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.concurrent.Execution.Implicits._
+import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Json._
 import play.api.libs.json._
-import play.twirl.api.Html
+import play.api.mvc.PlayBodyParsers
 import utils.ObjectId
-import views.html
 
-import scala.concurrent.Future
+import scala.concurrent.ExecutionContext
 
 class UserController @Inject()(userService: UserService,
                                userDAO: UserDAO,
@@ -32,8 +27,9 @@ class UserController @Inject()(userService: UserService,
                                teamMembershipService: TeamMembershipService,
                                annotationService: AnnotationService,
                                teamDAO: TeamDAO,
-                               sil: Silhouette[WkEnv],
-                               val messagesApi: MessagesApi)
+                               sil: Silhouette[WkEnv])
+                              (implicit ec: ExecutionContext,
+                               bodyParsers: PlayBodyParsers)
   extends Controller
     with FoxImplicits {
 
@@ -179,7 +175,7 @@ class UserController @Inject()(userService: UserService,
       (__ \ "teams").read[List[TeamMembership]](Reads.list(teamMembershipService.publicReads)) and
       (__ \ "experiences").read[Map[String, Int]]).tupled
 
-  def ensureProperTeamAdministration(user: User, teams: List[(TeamMembership, Team)]) = {
+  def ensureProperTeamAdministration(user: User, teams: List[(TeamMembership, Team)])(implicit m: MessagesProvider) = {
     Fox.combined(teams.map {
       case (TeamMembership(_, true), team) => {
         for {
@@ -206,7 +202,7 @@ class UserController @Inject()(userService: UserService,
           user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
           _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed"
           _ <- bool2Fox(checkAdminOnlyUpdates(user, isActive, isAdmin, email)(issuingUser)) ?~> "notAllowed"
-          teams <- Fox.combined(assignedMemberships.map(t => teamDAO.findOne(t.teamId)(GlobalAccessContext) ?~> Messages("team.notFound")))
+          teams <- Fox.combined(assignedMemberships.map(t => teamDAO.findOne(t.teamId)(GlobalAccessContext, ec) ?~> Messages("team.notFound")))
           oldTeamMemberships <- userService.teamMembershipsFor(user._id)
           teamsWithoutUpdate <- Fox.filterNot(oldTeamMemberships)(t => userService.isTeamManagerOrAdminOf(issuingUser, t.teamId))
           assignedMembershipWTeams = assignedMemberships.zip(teams)

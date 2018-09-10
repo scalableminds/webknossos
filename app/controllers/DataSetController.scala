@@ -81,7 +81,7 @@ class DataSetController @Inject()(userService: UserService,
     } yield {
       Ok(image).withHeaders(
         CONTENT_LENGTH -> image.length.toString,
-        CONTENT_TYPE -> play.api.libs.MimeTypes.forExtension("jpeg").getOrElse(play.api.http.ContentTypes.BINARY)
+        CONTENT_TYPE -> "image/jpeg"
       )
     }
   }

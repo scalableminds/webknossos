@@ -35,7 +35,7 @@ object Dependencies {
   val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.4.0"
   val scalaTest = "org.scalatest" %% "scalatest" % "3.0.5" % "test"
   val silhouette = "com.mohiva" %% "play-silhouette" % "5.0.5"
-  val silhouetteTestkit = "com.mohiva" %% "play-silhouette-testkit" % "4.0.0" % "test"
+  val silhouetteTestkit = "com.mohiva" %% "play-silhouette-testkit" % "5.0.5" % "test"
   val urlHelper = "com.netaporter" %% "scala-uri" % "0.4.14"
   val webknossosWrap = "com.scalableminds" %% "webknossos-wrap" % webknossosWrapVersion
   val xmlWriter = "org.glassfish.jaxb" % "txw2" % "2.2.11"

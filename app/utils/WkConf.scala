@@ -91,7 +91,16 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
       val authenticatorExpiry = getDuration("silhouette.tokenAuthenticator.authenticatorExpiry")
       val authenticatorIdleTimeout = getDuration("silhouette.tokenAuthenticator.authenticatorIdleTimeout")
     }
-    val children = List(TokenAuthenticator)
+    object CookieAuthenticator {
+      val cookieName = getString("silhouette.cookieAuthenticator.cookieName")
+      val cookiePath = getString("silhouette.cookieAuthenticator.cookiePath")
+      val secureCookie = getBoolean("silhouette.cookieAuthenticator.secureCookie")
+      val httpOnlyCookie = getBoolean("silhouette.cookieAuthenticator.httpOnlyCookie")
+      val useFingerprinting = getBoolean("silhouette.cookieAuthenticator.useFingerprinting")
+      val authenticatorExpiry = getDuration("silhouette.cookieAuthenticator.authenticatorExpiry")
+      val cookieMaxAge = getDuration("silhouette.cookieAuthenticator.cookieMaxAge")
+    }
+    val children = List(TokenAuthenticator, CookieAuthenticator)
   }
 
   object Airbrake {

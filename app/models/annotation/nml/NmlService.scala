@@ -3,68 +3,17 @@ package models.annotation.nml
 import java.io.{File, FileInputStream, InputStream}
 import java.nio.file.{Files, StandardCopyOption}
 
+import com.scalableminds.util.io.ZipIO
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, TreeGroup}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.util.io.ZipIO
-import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Empty, Failure, Full}
-import play.api.libs.Files.TemporaryFile
+import javax.inject.Inject
+import models.annotation.nml.NmlResults._
+import net.liftweb.common.{Empty, Failure, Full}
+import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 
-import scala.concurrent.ExecutionContext.Implicits.global
 
-
-object NmlService extends LazyLogging {
-
-  sealed trait NmlParseResult {
-    def fileName: String
-
-    def bothTracingOpts: Option[(Option[SkeletonTracing], Option[(VolumeTracing, String)])] = None
-    def description: Option[String] = None
-
-    def succeeded: Boolean
-
-    def toSkeletonSuccessFox: Fox[NmlParseSuccess] = this match {
-      case NmlParseFailure(fileName, error) =>
-        Fox.failure(s"Couldn’t parse file: $fileName. $error")
-      case NmlParseSuccess(fileName, Some(skeletonTracing), _, description) =>
-        Fox.successful(NmlParseSuccess(fileName, Some(skeletonTracing), None, description))
-      case _ =>
-        Fox.failure("Couldn’t parse file")
-    }
-  }
-
-  case class NmlParseSuccess(fileName: String, skeletonTracing: Option[SkeletonTracing], volumeTracingWithDataLocation: Option[(VolumeTracing, String)], _description: String) extends NmlParseResult {
-    def succeeded = true
-
-    override def bothTracingOpts = Some((skeletonTracing, volumeTracingWithDataLocation))
-    override def description = Some(_description)
-  }
-
-  case class NmlParseFailure(fileName: String, error: String) extends NmlParseResult {
-    def succeeded = false
-  }
-
-  case class NmlParseEmpty(fileName: String) extends NmlParseResult {
-    def succeeded = false
-  }
-
-  case class ZipParseResult(parseResults: List[NmlParseResult] = Nil, otherFiles: Map[String, TemporaryFile] = Map.empty) {
-    def combineWith(other: ZipParseResult) = {
-      ZipParseResult(parseResults ::: other.parseResults, other.otherFiles ++ otherFiles)
-    }
-
-    def isEmpty = {
-      !parseResults.exists(_.succeeded)
-    }
-
-    def containsFailure = {
-      parseResults.exists {
-        case _: NmlParseFailure => true
-        case _ => false
-      }
-    }
-  }
+class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator) extends LazyLogging {
 
   def extractFromNml(file: File, name: String): NmlParseResult = {
     extractFromNml(new FileInputStream(file), name)
@@ -87,8 +36,8 @@ object NmlService extends LazyLogging {
         val result = extractFromNml(file, filename.toString)
         parseResults ::= result
       } else {
-        val tempFile = TemporaryFile(filename.toString)
-        Files.copy(file, tempFile.file.toPath, StandardCopyOption.REPLACE_EXISTING)
+        val tempFile = temporaryFileCreator.create(filename.toString)
+        Files.copy(file, tempFile.path, StandardCopyOption.REPLACE_EXISTING)
         otherFiles += (filename.toString -> tempFile)
       }
     }

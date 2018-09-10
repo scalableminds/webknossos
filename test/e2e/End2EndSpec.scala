@@ -2,19 +2,22 @@ package e2e
 
 import scala.concurrent.{Await, Future}
 import scala.sys.process.ProcessIO
-import play.api.libs.ws.{WSClient}
+import play.api.libs.ws.WSClient
 import play.api.test.WithServer
-
 import org.scalatestplus.play.guice._
+
 import scala.concurrent.duration._
 import org.specs2.main.Arguments
 import org.specs2.mutable._
 
 import sys.process._
 import com.typesafe.scalalogging.LazyLogging
-import javax.inject.Inject
 
-class End2EndSpec @Inject()(ws: WSClient)(arguments: Arguments) extends Specification with GuiceFakeApplicationFactory with LazyLogging {
+class End2EndSpec (arguments: Arguments) extends Specification with GuiceFakeApplicationFactory with LazyLogging {
+
+  val application = fakeApplication()
+
+  lazy val ws: WSClient = application.injector.instanceOf[WSClient]
 
   val argumentMapRead = parseCustomJavaArgs(arguments)
   val testPort = 9000
@@ -24,7 +27,7 @@ class End2EndSpec @Inject()(ws: WSClient)(arguments: Arguments) extends Specific
   "my application" should {
 
     "pass the e2e tests" in new WithServer(
-      app = fakeApplication().withinargumentMap),
+      app = application,
       port = testPort) {
 
       val resp = Await.result(ws.url(s"http://localhost:$testPort").get(), 2 seconds)

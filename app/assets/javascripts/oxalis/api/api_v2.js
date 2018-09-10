@@ -786,6 +786,7 @@ class UtilsApi {
    *   - CREATE_TREE
    *   - DELETE_TREE
    *   - SET_ACTIVE_TREE
+   *   - SET_ACTIVE_GROUP
    *   - SET_TREE_NAME
    *   - MERGE_TREES
    *   - SELECT_NEXT_TREE

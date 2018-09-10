@@ -4,7 +4,6 @@ import _ from "lodash";
 export default {
   yes: "Yes",
   no: "No",
-  "setup.redirect": "This WebKnossos instance seems to be empty. Redirecting to initial setup...",
   unknown_error:
     "An unknown error occured. Please try again or check the console for more details.",
   "datastore.health": _.template(
@@ -54,6 +53,8 @@ In order to restore the current window, a reload is necessary.`,
     "Cyclic trees are not supported by the abstract tree viewer.",
   "tracing.changed_move_value": "The move value was changed to: ",
   "tracing.natural_sorting": "Correctly sort numbers in text (word2 < word10). This may be slow!",
+  "tracing.cant_create_node_due_to_active_group":
+    "You cannot create nodes, since no tree is active.",
   "datastore.unknown_type": "Unknown datastore type:",
   "webgl.disabled": "Couldn't initialise WebGL, please make sure WebGL is enabled.",
   "webgl.context_loss":
@@ -66,6 +67,7 @@ In order to restore the current window, a reload is necessary.`,
   "task.peek_next": _.template(
     "The next task will most likely be part of project <%- projectName %>",
   ),
+  "task.confirm_reset": "Do you really want to reset this task?",
   "task.reset_success": "Annotation was successfully reset.",
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",

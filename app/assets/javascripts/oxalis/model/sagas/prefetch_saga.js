@@ -95,6 +95,7 @@ function getTracingTypes(state: OxalisState) {
   return {
     skeleton: state.tracing.skeleton != null,
     volume: state.tracing.volume != null,
+    readOnly: state.tracing.readOnly != null,
   };
 }
 

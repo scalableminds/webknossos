@@ -231,9 +231,16 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     );
   };
 
-  async resetTask(annotation: APIAnnotationType) {
-    await resetAnnotation(annotation.id, annotation.typ);
-    Toast.success(messages["task.reset_success"]);
+  resetTask(annotation: APIAnnotationType) {
+    Modal.confirm({
+      content: messages["task.confirm_reset"],
+      cancelText: messages.no,
+      okText: messages.yes,
+      onOk: async () => {
+        await resetAnnotation(annotation.id, annotation.typ);
+        Toast.success(messages["task.reset_success"]);
+      },
+    });
   }
 
   cancelAnnotation(annotation: APIAnnotationType) {
@@ -332,7 +339,9 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   }
 
   renderTaskList() {
-    const tasks = this.getCurrentTasks().sort(Utils.compareBy(typeHint, task => task.created));
+    const tasks = this.getCurrentTasks().sort(
+      Utils.compareBy(typeHint, task => task.created, false),
+    );
     const descriptionClassName = classNames("task-type-description", {
       short: this.state.showFinishedTasks || this.props.isAdminView,
     });

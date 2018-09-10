@@ -1,21 +1,29 @@
 package controllers
 
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import javax.inject.Inject
 import models.binary.{DataSet, DataSetDAO}
-import models.configuration.{DataSetConfiguration, UserConfiguration}
+import models.configuration.{DataSetConfiguration, DataSetConfigurationDefaults, UserConfiguration}
 import models.user.{UserDataSetConfigurationDAO, UserService}
-import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareAction}
+import oxalis.security.WebknossosSilhouette
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsObject, JsValue}
 import play.api.libs.json.Json._
-import play.api.mvc.Result
 
 
-class ConfigurationController @Inject()(val messagesApi: MessagesApi) extends Controller {
+class ConfigurationController @Inject()(userService: UserService,
+                                        dataSetDAO: DataSetDAO,
+                                        userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
+                                        dataSetConfigurationDefaults: DataSetConfigurationDefaults,
+                                        sil: WebknossosSilhouette,
+                                        val messagesApi: MessagesApi) extends Controller {
 
-  def read = UserAwareAction.async { implicit request =>
+  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
+  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
+
+  def read = sil.UserAwareAction.async { implicit request =>
     request.identity.toFox.flatMap { user =>
       for {
         userConfig <- user.userConfigurationStructured
@@ -25,53 +33,53 @@ class ConfigurationController @Inject()(val messagesApi: MessagesApi) extends Co
     .map(configuration => Ok(toJson(configuration)))
   }
 
-  def update = SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
+  def update = sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
     for {
-      jsConfiguration <- request.body.asOpt[JsObject] ?~> Messages("user.configuration.invalid")
+      jsConfiguration <- request.body.asOpt[JsObject] ?~> "user.configuration.invalid"
       conf = jsConfiguration.fields.toMap
-      _ <- UserService.updateUserConfiguration(request.identity, UserConfiguration(conf))
+      _ <- userService.updateUserConfiguration(request.identity, UserConfiguration(conf))
     } yield {
       JsonOk(Messages("user.configuration.updated"))
     }
   }
 
-  def readDataSet(dataSetName: String) = UserAwareAction.async { implicit request =>
+  def readDataSet(dataSetName: String) = sil.UserAwareAction.async { implicit request =>
     request.identity.toFox.flatMap { user =>
       for {
-        configurationJson: JsValue <- UserDataSetConfigurationDAO.findOneForUserAndDataset(user._id, dataSetName)
+        configurationJson: JsValue <- userDataSetConfigurationDAO.findOneForUserAndDataset(user._id, dataSetName)
       } yield DataSetConfiguration(configurationJson.validate[Map[String, JsValue]].getOrElse(Map.empty))
     }
-    .orElse(DataSetDAO.findOneByName(dataSetName).flatMap(_.defaultConfiguration))
-    .getOrElse(DataSetConfiguration.constructInitialDefault(List()))
-    .map(configuration => Ok(toJson(configuration.configurationOrDefaults)))
+    .orElse(dataSetDAO.findOneByName(dataSetName).flatMap(_.defaultConfiguration))
+    .getOrElse(dataSetConfigurationDefaults.constructInitialDefault(List()))
+    .map(configuration => Ok(toJson(dataSetConfigurationDefaults.configurationOrDefaults(configuration))))
   }
 
-  def updateDataSet(dataSetName: String) = SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
+  def updateDataSet(dataSetName: String) = sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
     for {
-      jsConfiguration <- request.body.asOpt[JsObject] ?~> Messages("user.configuration.dataset.invalid")
+      jsConfiguration <- request.body.asOpt[JsObject] ?~> "user.configuration.dataset.invalid"
       conf = jsConfiguration.fields.toMap
-      _ <- UserService.updateDataSetConfiguration(request.identity, dataSetName, DataSetConfiguration(conf))
+      _ <- userService.updateDataSetConfiguration(request.identity, dataSetName, DataSetConfiguration(conf))
     } yield {
       JsonOk(Messages("user.configuration.dataset.updated"))
     }
   }
 
-  def readDataSetDefault(dataSetName: String) = SecuredAction.async { implicit request =>
-    DataSetDAO.findOneByName(dataSetName).flatMap { dataSet: DataSet =>
+  def readDataSetDefault(dataSetName: String) = sil.SecuredAction.async { implicit request =>
+    dataSetDAO.findOneByName(dataSetName).flatMap { dataSet: DataSet =>
       dataSet.defaultConfiguration match {
-        case Some(c) => Fox.successful(Ok(toJson(c.configurationOrDefaults)))
-        case _ => DataSetConfiguration.constructInitialDefault(dataSet).map(c => Ok(toJson(c.configurationOrDefaults)))
+        case Some(c) => Fox.successful(Ok(toJson(dataSetConfigurationDefaults.configurationOrDefaults(c))))
+        case _ => dataSetConfigurationDefaults.constructInitialDefault(dataSet).map(c => Ok(toJson(dataSetConfigurationDefaults.configurationOrDefaults(c))))
       }
     }
   }
 
-  def updateDataSetDefault(dataSetName: String) = SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
+  def updateDataSetDefault(dataSetName: String) = sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
     for {
-      dataset <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataset.notFound")
-      _ <- Fox.assertTrue(request.identity.isTeamManagerOrAdminOfOrg(dataset._organization)) ?~> Messages("notAllowed")
-      jsConfiguration <- request.body.asOpt[JsObject] ?~> Messages("user.configuration.dataset.invalid")
+      dataset <- dataSetDAO.findOneByName(dataSetName) ?~> "dataset.notFound"
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOfOrg(request.identity, dataset._organization)) ?~> "notAllowed"
+      jsConfiguration <- request.body.asOpt[JsObject] ?~> "user.configuration.dataset.invalid"
       conf = jsConfiguration.fields.toMap
-      _ <- DataSetDAO.updateDefaultConfigurationByName(dataSetName, DataSetConfiguration(conf))
+      _ <- dataSetDAO.updateDefaultConfigurationByName(dataSetName, DataSetConfiguration(conf))
     } yield {
       JsonOk(Messages("user.configuration.dataset.updated"))
     }

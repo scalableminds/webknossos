@@ -11,107 +11,107 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
 
   object Application {
 
-    val insertInitialData = getBoolean("application.insertInitialData")
+    val insertInitialData = get[Boolean]("application.insertInitialData")
 
     object Authentication {
       object DefaultUser {
-        val email = getString("application.authentication.defaultUser.email")
-        val password = getString("application.authentication.defaultUser.password")
-        val isSuperUser = getBoolean("application.authentication.defaultUser.isSuperUser")
+        val email = get[String]("application.authentication.defaultUser.email")
+        val password = get[String]("application.authentication.defaultUser.password")
+        val isSuperUser = get[Boolean]("application.authentication.defaultUser.isSuperUser")
       }
-      val ssoKey = getString("application.authentication.ssoKey")
-      val enableDevAutoVerify = getBoolean("application.authentication.enableDevAutoVerify")
-      val enableDevAutoAdmin = getBoolean("application.authentication.enableDevAutoAdmin")
-      val enableDevAutoLogin = getBoolean("application.authentication.enableDevAutoLogin")
+      val ssoKey = get[String]("application.authentication.ssoKey")
+      val enableDevAutoVerify = get[Boolean]("application.authentication.enableDevAutoVerify")
+      val enableDevAutoAdmin = get[Boolean]("application.authentication.enableDevAutoAdmin")
+      val enableDevAutoLogin = get[Boolean]("application.authentication.enableDevAutoLogin")
       val children = List(DefaultUser)
     }
     val children = List(Authentication)
   }
 
   object Http {
-    val uri = getString("http.uri")
+    val uri = get[String]("http.uri")
   }
 
   object Mail {
-    val enabled = getBoolean("mail.enabled")
+    val enabled = get[Boolean]("mail.enabled")
     object Smtp {
-      val host = getString("mail.smtp.host")
-      val port = getInt("mail.smtp.port")
-      val tls = getBoolean("mail.smtp.tls")
-      val auth = getBoolean("mail.smtp.auth")
-      val user = getString("mail.smtp.user")
-      val pass = getString("mail.smtp.pass")
+      val host = get[String]("mail.smtp.host")
+      val port = get[Int]("mail.smtp.port")
+      val tls = get[Boolean]("mail.smtp.tls")
+      val auth = get[Boolean]("mail.smtp.auth")
+      val user = get[String]("mail.smtp.user")
+      val pass = get[String]("mail.smtp.pass")
     }
     object Subject {
-      val prefix = getString("mail.subject.prefix")
+      val prefix = get[String]("mail.subject.prefix")
     }
   }
 
   object Oxalis {
     object User {
       object Time {
-        val tracingPauseInSeconds = getInt("oxalis.user.time.tracingPauseInSeconds") seconds
+        val tracingPauseInSeconds = get[Int]("oxalis.user.time.tracingPauseInSeconds") seconds
       }
       val children = List(Time)
     }
     object Tasks {
-      val maxOpenPerUser = getInt("oxalis.tasks.maxOpenPerUser")
+      val maxOpenPerUser = get[Int]("oxalis.tasks.maxOpenPerUser")
     }
-    val newOrganizationMailingList = getString("oxalis.newOrganizationMailingList")
+    val newOrganizationMailingList = get[String]("oxalis.newOrganizationMailingList")
 
     val children = List(User, Tasks)
   }
 
   object Datastore {
-    val enabled = getBoolean("datastore.enabled")
-    val key = getString("datastore.key")
+    val enabled = get[Boolean]("datastore.enabled")
+    val key = get[String]("datastore.key")
   }
 
   object User {
-    val cacheTimeoutInMinutes = getInt("user.cacheTimeoutInMinutes") minutes
+    val cacheTimeoutInMinutes = get[Int]("user.cacheTimeoutInMinutes") minutes
   }
 
   object Braintracing {
-    val active = getBoolean("braintracing.active")
-    val user = getString("braintracing.user")
-    val password = getString("braintracing.password")
-    val license = getString("braintracing.license")
+    val active = get[Boolean]("braintracing.active")
+    val user = get[String]("braintracing.user")
+    val password = get[String]("braintracing.password")
+    val license = get[String]("braintracing.license")
   }
 
   object Features {
-    val allowOrganizationCreation = getBoolean("features.allowOrganizationCreation")
+    val allowOrganizationCreation = get[Boolean]("features.allowOrganizationCreation")
   }
 
-  val operatorData = getString("operatorData")
+  val operatorData = get[String]("operatorData")
 
   object Silhouette {
     object TokenAuthenticator {
-      val resetPasswordExpiry = getDuration("silhouette.tokenAuthenticator.resetPasswordExpiry")
-      val dataStoreExpiry = getDuration("silhouette.tokenAuthenticator.dataStoreExpiry")
-      val authenticatorExpiry = getDuration("silhouette.tokenAuthenticator.authenticatorExpiry")
-      val authenticatorIdleTimeout = getDuration("silhouette.tokenAuthenticator.authenticatorIdleTimeout")
+      val resetPasswordExpiry = get[Duration]("silhouette.tokenAuthenticator.resetPasswordExpiry")
+      val dataStoreExpiry = get[Duration]("silhouette.tokenAuthenticator.dataStoreExpiry")
+      val authenticatorExpiry = get[Duration]("silhouette.tokenAuthenticator.authenticatorExpiry")
+      val authenticatorIdleTimeout = get[Duration]("silhouette.tokenAuthenticator.authenticatorIdleTimeout")
     }
     object CookieAuthenticator {
-      val cookieName = getString("silhouette.cookieAuthenticator.cookieName")
-      val cookiePath = getString("silhouette.cookieAuthenticator.cookiePath")
-      val secureCookie = getBoolean("silhouette.cookieAuthenticator.secureCookie")
-      val httpOnlyCookie = getBoolean("silhouette.cookieAuthenticator.httpOnlyCookie")
-      val useFingerprinting = getBoolean("silhouette.cookieAuthenticator.useFingerprinting")
-      val authenticatorExpiry = getDuration("silhouette.cookieAuthenticator.authenticatorExpiry")
-      val cookieMaxAge = getDuration("silhouette.cookieAuthenticator.cookieMaxAge")
+      val cookieName = get[String]("silhouette.cookieAuthenticator.cookieName")
+      val cookiePath = get[String]("silhouette.cookieAuthenticator.cookiePath")
+      val secureCookie = get[Boolean]("silhouette.cookieAuthenticator.secureCookie")
+      val httpOnlyCookie = get[Boolean]("silhouette.cookieAuthenticator.httpOnlyCookie")
+      val useFingerprinting = get[Boolean]("silhouette.cookieAuthenticator.useFingerprinting")
+      val authenticatorExpiry = get[Duration]("silhouette.cookieAuthenticator.authenticatorExpiry")
+      val cookieMaxAge = get[Duration]("silhouette.cookieAuthenticator.cookieMaxAge")
     }
     val children = List(TokenAuthenticator, CookieAuthenticator)
   }
 
   object Airbrake {
-    val projectID = getString("airbrake.projectID")
-    val projectKey = getString("airbrake.projectKey")
-    val environment = getString("airbrake.environment")
+    val projectID = get[String]("airbrake.projectID")
+    val projectKey = get[String]("airbrake.projectKey")
+    val environment = get[String]("airbrake.environment")
   }
 
   object Google {
     object Analytics {
-      val trackingID = getString("google.analytics.trackingID")
+      val trackingID = get[String]("google.analytics.trackingID")
     }
     val children = List(Analytics)
   }

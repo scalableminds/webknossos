@@ -29,6 +29,7 @@ object Dependencies {
   val playFramework = "com.typesafe.play" %% "play" % "2.6.18"
   val playJson = "com.typesafe.play" %% "play-json" % "2.6.10"
   val playIteratees = "com.typesafe.play" %% "play-iteratees" % "2.6.1"
+  val playIterateesStreams = "com.typesafe.play" %% "play-iteratees-reactive-streams" % "2.6.1"
   val reactiveBson = "org.reactivemongo" %% "reactivemongo-bson" % "0.11.13"
   val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.2"
   val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.4.0"
@@ -72,6 +73,7 @@ object Dependencies {
     grpc,
     grpcServices,
     scalapbRuntimeGrpc,
+    playIterateesStreams,
     filters,
     ws,
     guice

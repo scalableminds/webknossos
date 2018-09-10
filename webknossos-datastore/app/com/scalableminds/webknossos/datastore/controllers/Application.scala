@@ -11,8 +11,7 @@ import play.api.mvc.Action
 import play.api.mvc.Results.Ok
 
 class Application @Inject()(tracingDataStore: TracingDataStore,
-                            dataStoreConfig: DataStoreConfig,
-                            val messagesApi: MessagesApi
+                            dataStoreConfig: DataStoreConfig
                            ) extends Controller {
 
   def health = Action.async { implicit request =>

@@ -102,18 +102,16 @@ class ReactRouter extends React.Component<Props> {
     return <h3>Invalid tracing URL.</h3>;
   };
 
-  tracingViewMode = ({ match }: ContextRouter) => {
-    return (
-      <TracingLayoutView
-        initialTracingType={APITracingTypeEnum.View}
-        initialCommandType={{
-          type: ControlModeEnum.VIEW,
-          name: match.params.datasetName || "",
-          owningOrganization: match.params.organizationName || "",
-        }}
-      />
-    );
-  };
+  tracingViewMode = ({ match }: ContextRouter) => (
+    <TracingLayoutView
+      initialTracingType={APITracingTypeEnum.View}
+      initialCommandType={{
+        type: ControlModeEnum.VIEW,
+        name: match.params.datasetName || "",
+        owningOrganization: match.params.organizationName || "",
+      }}
+    />
+  );
 
   render() {
     const isAuthenticated = this.props.activeUser !== null;

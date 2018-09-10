@@ -58,7 +58,7 @@ class DataSetController @Inject()(userService: UserService,
     def imageFromCacheIfPossible(dataSet: DataSet): Fox[Array[Byte]] = {
       val width = Math.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailHeight)
       val height = Math.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
-      cache.get(s"thumbnail-$dataSetName*$dataLayerName-$width-$height") match {
+      cache.get[Array[Byte]](s"thumbnail-$dataSetName*$dataLayerName-$width-$height") match {
         case Some(a) =>
           Fox.successful(a)
         case _ => {

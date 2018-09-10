@@ -203,7 +203,7 @@ class Mappings {
     console.time("Time to create mapping texture");
     // $FlowFixMe Flow chooses the wrong library definition, because it doesn't seem to know that Object.keys always returns strings and throws an error
     const keys = Uint32Array.from(Object.keys(mapping), x => parseInt(x, 10));
-    keys.sort();
+    keys.sort((a, b) => a - b);
     // $FlowFixMe Flow doesn't recognize that mapping cannot be null or undefined :/
     const values = Uint32Array.from(keys, key => mapping[key]);
     // Instantiate the Uint8Arrays with the array buffer from the Uint32Arrays, so that each 32-bit value is converted

@@ -103,7 +103,7 @@ GET           /api/annotations/:typ/:id/loggedTime                              
 
 # Tasks
 POST          /api/tasks                                                        controllers.TaskController.create
-POST          /api/tasks/createFromFile                                         controllers.TaskController.createFromFiles
+POST          /api/tasks/createFromFiles                                        controllers.TaskController.createFromFiles
 POST          /api/tasks/list                                                   controllers.TaskController.listTasks
 GET           /api/tasks/experienceDomains                                      controllers.TaskController.listExperienceDomains
 GET           /api/tasks/:id                                                    controllers.TaskController.read(id: String)

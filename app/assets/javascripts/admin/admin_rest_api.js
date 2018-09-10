@@ -378,7 +378,7 @@ export function createTasks(tasks: Array<NewTaskType>): Promise<Array<TaskCreati
 
 // TODO fix return types
 export function createTaskFromNML(task: NewTaskType): Promise<Array<TaskCreationResponseType>> {
-  return Request.sendMultipartFormReceiveJSON("/api/tasks/createFromFile", {
+  return Request.sendMultipartFormReceiveJSON("/api/tasks/createFromFiles", {
     data: {
       nmlFiles: task.nmlFiles,
       formJSON: JSON.stringify(task),

@@ -130,7 +130,7 @@ class PullQueue {
     };
 
     try {
-      const responseBuffer = await requestFromStore(layerInfo, batch);
+      const { buffer: responseBuffer, missingBuckets } = await requestFromStore(layerInfo, batch);
       this.connectionInfo.log(
         this.layerName,
         roundTripBeginTime,
@@ -140,10 +140,14 @@ class PullQueue {
 
       const resolutions = getResolutions(dataset);
       let offset = 0;
-      const successfulBucketIndices = [0, 1, 2, 3, 4];
       for (const [index, bucketAddress] of batch.entries()) {
-        const isSuccess = successfulBucketIndices.indexOf(index) > -1;
-        if (isSuccess) {
+        const isMissing = missingBuckets.indexOf(index) > -1;
+        if (isMissing) {
+          const bucket = this.cube.getBucket(bucketAddress);
+          if (bucket.type === "data") {
+            bucket.pullFailed(true);
+          }
+        } else {
           const bucketData = responseBuffer.subarray(offset, (offset += this.cube.BUCKET_LENGTH));
           handleBucket(bucketAddress, bucketData, resolutions);
         }
@@ -152,7 +156,7 @@ class PullQueue {
       for (const bucketAddress of batch) {
         const bucket = this.cube.getBucket(bucketAddress);
         if (bucket.type === "data") {
-          bucket.pullFailed();
+          bucket.pullFailed(false);
           if (bucket.dirty) {
             this.add({ bucket: bucketAddress, priority: PullQueueConstants.PRIORITY_HIGHEST });
           }

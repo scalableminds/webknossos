@@ -22,11 +22,13 @@ import models.user._
 import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
 import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
+import play.api.http.HttpEntity
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.Json
+import play.api.mvc.{ResponseHeader, Result}
 import utils.ObjectId
 
 import scala.concurrent.Future
@@ -190,9 +192,9 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
     } yield {
       Ok.chunked(downloadStream).withHeaders(
         CONTENT_TYPE ->
-          "application/octet-stream",
+          (if (fileName.toLowerCase.endsWith(".zip")) "application/zip" else "application/xml"),
         CONTENT_DISPOSITION ->
-          s"filename=${'"'}${fileName}${'"'}")
+          s"attachment;filename=${'"'}${fileName}${'"'}")
     }
   }
 
@@ -204,7 +206,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       annotations <- annotationDAO.findAllFinishedForProject(projectIdValidated)
       zip <- annotationService.zipAnnotations(annotations, project.name + "_nmls.zip")
     } yield {
-      Ok.sendFile(zip.file)
+      Ok.sendFile(zip.file, inline = false)
     }
   }
 
@@ -219,7 +221,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       project <- projectDAO.findOne(task._project) ?~> Messages("project.notFound")
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, project._team)) ?~> Messages("notAllowed")
       zip <- createTaskZip(task)
-    } yield Ok.sendFile(zip.file)
+    } yield Ok.sendFile(zip.file, inline = false)
   }
 
   def downloadTaskType(taskTypeId: String, user: User)(implicit ctx: DBAccessContext) = {
@@ -236,6 +238,6 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       tasktype <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> Messages("taskType.notFound")
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, tasktype._team)) ?~> Messages("notAllowed")
       zip <- createTaskTypeZip(tasktype)
-    } yield Ok.sendFile(zip.file)
+    } yield Ok.sendFile(zip.file, inline = false)
   }
 }

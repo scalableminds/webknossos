@@ -21,23 +21,22 @@ import { getActiveUser } from "admin/admin_rest_api";
 
 import "../stylesheets/main.less";
 
-document.addEventListener("DOMContentLoaded", async () => {
-  ErrorHandling.initialize({ throwAssertions: false, sendLocalErrors: false });
-
-  document.addEventListener("click", googleAnalyticsLogClicks);
-
-  // try retreive the currently active user if logged in
+async function loadActiveUser() {
+  // Try to retreive the currently active user if logged in
   try {
-    // eslint-disable-next-line no-unused-vars
-    const [_, user] = await Promise.all([
-      loadFeatureToggles(),
-      getActiveUser({ doNotCatch: true }),
-    ]);
+    const user = await getActiveUser({ doNotCatch: true });
     Store.dispatch(setActiveUserAction(user));
     ErrorHandling.setCurrentUser(user);
   } catch (e) {
     // pass
   }
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  ErrorHandling.initialize({ throwAssertions: false, sendLocalErrors: false });
+
+  document.addEventListener("click", googleAnalyticsLogClicks);
+  await Promise.all([loadFeatureToggles(), loadActiveUser()]);
 
   const containerElement = document.getElementById("main-container");
   if (containerElement) {

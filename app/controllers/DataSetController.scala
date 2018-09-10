@@ -18,11 +18,9 @@ import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import utils.ObjectId
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
-import net.liftweb.common.Full
+import play.cache.SyncCacheApi
 
-import scala.concurrent.ExecutionContext.Implicits._
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
 class DataSetController @Inject()(userService: UserService,
@@ -35,7 +33,9 @@ class DataSetController @Inject()(userService: UserService,
                                   teamDAO: TeamDAO,
                                   dataSetDAO: DataSetDAO,
                                   sil: Silhouette[WkEnv],
-                                  cache: CacheApi) extends Controller {
+                                  cache: CacheApi)
+                                 (implicit ec: ExecutionContext)
+extends Controller {
 
   val DefaultThumbnailWidth = 400
   val DefaultThumbnailHeight = 400

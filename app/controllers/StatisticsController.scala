@@ -1,6 +1,5 @@
 package controllers
 
-import com.scalableminds.util.accesscontext.DBAccessContext
 import javax.inject.Inject
 import com.scalableminds.util.tools.Fox
 import models.annotation.AnnotationDAO
@@ -10,12 +9,11 @@ import models.user.time.{TimeSpan, TimeSpanService}
 import models.user.{UserDAO, UserService}
 import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
-import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
-import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.concurrent.Execution.Implicits._
+import play.api.i18n.{Messages}
 import play.api.libs.json.Json._
 import play.api.libs.json._
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 
 class StatisticsController @Inject()(timeSpanService: TimeSpanService,
@@ -25,6 +23,7 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
                                      taskDAO: TaskDAO,
                                      annotationDAO: AnnotationDAO,
                                      sil: Silhouette[WkEnv])
+                                    (implicit ec: ExecutionContext)
   extends Controller {
 
   val intervalHandler = Map(

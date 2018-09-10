@@ -10,13 +10,12 @@ import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{Annotation, AnnotationDAO}
 import models.binary._
 import models.user.time.TimeSpanService
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsError, JsObject, JsSuccess}
 import models.annotation.AnnotationState._
 import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
 import com.mohiva.play.silhouette.api.Silhouette
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 class WKDataStoreController @Inject()(dataSetService: DataSetService,
                                       dataStoreService: DataStoreService,
@@ -25,6 +24,7 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
                                       timeSpanService: TimeSpanService,
                                       wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                                       sil: Silhouette[WkEnv])
+                                     (implicit ec: ExecutionContext)
   extends Controller
     with LazyLogging {
 

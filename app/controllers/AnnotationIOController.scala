@@ -25,14 +25,13 @@ import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import play.api.http.HttpEntity
 import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
 import play.api.libs.Files.TemporaryFile
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.streams.IterateeStreams
 import play.api.libs.json.Json
 import play.api.mvc.{ResponseHeader, Result}
 import utils.ObjectId
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
 class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
@@ -47,6 +46,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
                                        sil: Silhouette[WkEnv],
                                        provider: AnnotationInformationProvider,
                                        nmlService: NmlService)
+                                      (implicit ec: ExecutionContext)
   extends Controller
     with FoxImplicits
     with LazyLogging {

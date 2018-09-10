@@ -10,15 +10,18 @@ import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
 import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import play.api.mvc.Action
 import utils.ObjectId
 
+import scala.concurrent.ExecutionContext
+
 class TeamController @Inject()(teamDAO: TeamDAO,
                                userTeamRolesDAO: UserTeamRolesDAO,
                                teamService: TeamService,
-                               sil: Silhouette[WkEnv]) extends Controller {
+                               sil: Silhouette[WkEnv])
+                              (implicit ec: ExecutionContext)
+extends Controller {
 
   private def teamNameReads: Reads[String] =
     (__ \ "name").read[String]

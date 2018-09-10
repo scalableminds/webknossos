@@ -89,6 +89,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
       val resetPasswordExpiry = getDuration("silhouette.tokenAuthenticator.resetPasswordExpiry")
       val dataStoreExpiry = getDuration("silhouette.tokenAuthenticator.dataStoreExpiry")
       val authenticatorExpiry = getDuration("silhouette.tokenAuthenticator.authenticatorExpiry")
+      val authenticatorIdleTimeout = getDuration("silhouette.tokenAuthenticator.authenticatorIdleTimeout")
     }
     val children = List(TokenAuthenticator)
   }

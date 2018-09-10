@@ -8,7 +8,9 @@ import models.binary.DataSetDAO
 import models.task.TaskDAO
 import models.user.time.{TimeSpan, TimeSpanService}
 import models.user.{UserDAO, UserService}
-import oxalis.security.WebknossosSilhouette
+import oxalis.security.WkEnv
+import com.mohiva.play.silhouette.api.Silhouette
+import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json._
@@ -22,12 +24,9 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
                                      dataSetDAO: DataSetDAO,
                                      taskDAO: TaskDAO,
                                      annotationDAO: AnnotationDAO,
-                                     sil: WebknossosSilhouette,
+                                     sil: Silhouette[WkEnv],
                                      val messagesApi: MessagesApi)
   extends Controller {
-
-  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
 
   val intervalHandler = Map(
     "month" -> TimeSpan.groupByMonth _,

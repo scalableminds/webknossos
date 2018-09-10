@@ -15,7 +15,9 @@ import models.task._
 import models.team.TeamDAO
 import models.user._
 import net.liftweb.common.Box
-import oxalis.security.WebknossosSilhouette
+import oxalis.security.WkEnv
+import com.mohiva.play.silhouette.api.Silhouette
+import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
@@ -65,15 +67,12 @@ class TaskController @Inject() (annotationService: AnnotationService,
                                 taskDAO: TaskDAO,
                                 taskService: TaskService,
                                 conf: WkConf,
-                                sil: WebknossosSilhouette,
+                                sil: Silhouette[WkEnv],
                                 val messagesApi: MessagesApi)
   extends Controller
     with ResultBox
     with ProtoGeometryImplicits
     with FoxImplicits {
-
-  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
 
   val MAX_OPEN_TASKS = conf.Oxalis.Tasks.maxOpenPerUser
 
@@ -130,7 +129,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
     )
   }
 
-  def createTasks(requestedTasks: List[(TaskParameters, SkeletonTracing)])(implicit request: sil.SecuredRequest[_]): Fox[Result] = {
+  def createTasks(requestedTasks: List[(TaskParameters, SkeletonTracing)])(implicit request: SecuredRequest[WkEnv, _]): Fox[Result] = {
     def assertAllOnSameDataset: Fox[String] = {
       def allOnSameDatasetIter(requestedTasksRest: List[(TaskParameters, SkeletonTracing)], dataSetName: String): Boolean = {
         requestedTasksRest match {
@@ -180,7 +179,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
     } yield Ok(Json.toJson(result))
   }
 
-  private def validateScript(scriptIdOpt: Option[String])(implicit request: sil.SecuredRequest[_]): Fox[Unit] = {
+  private def validateScript(scriptIdOpt: Option[String])(implicit request: SecuredRequest[WkEnv, _]): Fox[Unit] = {
     scriptIdOpt match {
       case Some(scriptId) =>
         for {
@@ -191,7 +190,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
     }
   }
 
-  private def createTaskWithoutAnnotationBase(params: TaskParameters, skeletonTracingIdBox: Box[String])(implicit request: sil.SecuredRequest[_]): Fox[Task] = {
+  private def createTaskWithoutAnnotationBase(params: TaskParameters, skeletonTracingIdBox: Box[String])(implicit request: SecuredRequest[WkEnv, _]): Fox[Task] = {
     for {
       _ <- skeletonTracingIdBox.toFox
       taskTypeIdValidated <- ObjectId.parse(params.taskTypeId)

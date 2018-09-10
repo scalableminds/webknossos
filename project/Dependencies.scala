@@ -32,8 +32,8 @@ object Dependencies {
   val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.2"
   val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.4.0"
   val scalaTest = "org.scalatest" %% "scalatest" % "3.0.5" % "test"
-  val silhouette = "com.mohiva" %% "play-silhouette" % "3.0.5"
-  val silhouetteTestkit = "com.mohiva" %% "play-silhouette-testkit" % "3.0.5" % "test"
+  val silhouette = "com.mohiva" %% "play-silhouette" % "4.0.0"
+  val silhouetteTestkit = "com.mohiva" %% "play-silhouette-testkit" % "4.0.0" % "test"
   val urlHelper = "com.netaporter" %% "scala-uri" % "0.4.14"
   val webknossosWrap = "com.scalableminds" %% "webknossos-wrap" % webknossosWrapVersion
   val xmlWriter = "org.glassfish.jaxb" % "txw2" % "2.2.11"

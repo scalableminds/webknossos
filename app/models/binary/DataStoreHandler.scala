@@ -16,14 +16,15 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
 import org.apache.commons.codec.binary.Base64
 import oxalis.security.CompactRandomIDGenerator
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.WSResponse
 
+import scala.concurrent.ExecutionContext
+
 object DataStoreHandler {
-  lazy val webKnossosToken = new CompactRandomIDGenerator().generateBlocking
+  lazy val webKnossosToken = CompactRandomIDGenerator.generateBlocking(16)
 }
 
-class DataStoreHandler(dataStore: DataStore, dataSet: DataSet, rpc: RPC) extends LazyLogging {
+class DataStoreHandler(dataStore: DataStore, dataSet: DataSet, rpc: RPC)(implicit ec: ExecutionContext) extends LazyLogging {
 
   def baseInfo = s"Dataset: ${dataSet.name} Datastore: ${dataStore.url}"
 

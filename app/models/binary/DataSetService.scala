@@ -12,11 +12,12 @@ import models.user.{User, UserService}
 import net.liftweb.common.Full
 import oxalis.security.{CompactRandomIDGenerator, URLSharing}
 import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.i18n.Messages.Implicits._
 import play.api.libs.json.{JsObject, Json}
 import play.api.libs.ws.WSResponse
 import utils.ObjectId
+
+import scala.concurrent.ExecutionContext
 
 class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                dataSetDAO: DataSetDAO,
@@ -29,7 +30,8 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                userService: UserService,
                                dataSetAllowedTeamsDAO: DataSetAllowedTeamsDAO,
                                rpc: RPC
-                              ) extends FoxImplicits with LazyLogging {
+                              )(implicit ec: ExecutionContext)
+  extends FoxImplicits with LazyLogging {
 
   def isProperDataSetName(name: String): Boolean =
     name.matches("[A-Za-z0-9_\\-]*")

@@ -5,11 +5,12 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
 import models.user.{UserDAO, UserService}
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
+
+import scala.concurrent.ExecutionContext
 
 
 case class Script(
@@ -21,7 +22,7 @@ case class Script(
                     isDeleted: Boolean = false
                     )
 
-class ScriptService @Inject()(userDAO: UserDAO, userService: UserService) {
+class ScriptService @Inject()(userDAO: UserDAO, userService: UserService)(implicit ec: ExecutionContext) {
 
   def publicWrites(script: Script): Fox[JsObject] = {
     implicit val ctx = GlobalAccessContext
@@ -49,7 +50,7 @@ object Script {
   }
 }
 
-class ScriptDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[Script, ScriptsRow, Scripts](sqlClient) {
+class ScriptDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SQLDAO[Script, ScriptsRow, Scripts](sqlClient) {
   val collection = Scripts
 
   def idColumn(x: Scripts): Rep[String] = x._Id

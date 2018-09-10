@@ -8,7 +8,6 @@ import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Request, Result, Results, WrappedRequest}
 import slick.jdbc.PostgresProfile.api._
-import play.api.libs.concurrent.Execution.Implicits._
 import slick.lifted.Rep
 import utils.{SQLClient, SQLDAO}
 
@@ -24,7 +23,7 @@ case class DataStore(
                        ) {
 }
 
-class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO) extends FoxImplicits with Results {
+class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext) extends FoxImplicits with Results {
 
   def publicWrites(dataStore: DataStore): Fox[JsObject] = {
     Fox.successful(Json.obj(
@@ -44,7 +43,7 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO) extends FoxImplicit
     }
 }
 
-class DataStoreDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[DataStore, DatastoresRow, Datastores](sqlClient) {
+class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SQLDAO[DataStore, DatastoresRow, Datastores](sqlClient) {
   val collection = Datastores
 
   def idColumn(x: Datastores): Rep[String] = x.name

@@ -268,7 +268,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
             onChange={this.onChangeUser.overrideNodeRadius}
           />
           <SwitchSetting
-            label="Create Single-Node Trees"
+            label="Single-Node-Tree Mode"
             value={this.props.userConfiguration.newNodeNewTree}
             onChange={this.onChangeUser.newNodeNewTree}
           />

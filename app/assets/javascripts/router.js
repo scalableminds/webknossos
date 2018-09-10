@@ -129,40 +129,35 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
-                path="/dashboard/gallery"
-                render={() => (
-                  <DashboardView userId={null} isAdminView={false} initialTabKey="datasets" />
-                )}
+                path="/dashboard/:tab"
+                render={({ match }: ContextRouter) => {
+                  let initialTabKey: ?string;
+                  switch (match.params.tab) {
+                    case "gallery":
+                      initialTabKey = "datasets";
+                      break;
+                    case "datasets":
+                      initialTabKey = "advanced-datasets";
+                      break;
+                    case "tasks":
+                      initialTabKey = "tasks";
+                      break;
+                    case "annotations":
+                      initialTabKey = "explorativeAnnotations";
+                      break;
+                    default:
+                      initialTabKey = null;
+                  }
+                  return (
+                    <DashboardView
+                      userId={null}
+                      isAdminView={false}
+                      initialTabKey={initialTabKey}
+                    />
+                  );
+                }}
               />
-              <SecuredRoute
-                isAuthenticated={isAuthenticated}
-                path="/dashboard/datasets"
-                render={() => (
-                  <DashboardView
-                    userId={null}
-                    isAdminView={false}
-                    initialTabKey="advanced-datasets"
-                  />
-                )}
-              />
-              <SecuredRoute
-                isAuthenticated={isAuthenticated}
-                path="/dashboard/tasks"
-                render={() => (
-                  <DashboardView userId={null} isAdminView={false} initialTabKey="tasks" />
-                )}
-              />
-              <SecuredRoute
-                isAuthenticated={isAuthenticated}
-                path="/dashboard/annotations"
-                render={() => (
-                  <DashboardView
-                    userId={null}
-                    isAdminView={false}
-                    initialTabKey="explorativeAnnotations"
-                  />
-                )}
-              />
+
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/dashboard"

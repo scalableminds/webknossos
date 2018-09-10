@@ -10,7 +10,6 @@ import models.user.User
 import net.liftweb.common.Full
 import oxalis.security.SharingTokenContainer
 import play.api.Configuration
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{Json, JsonValidationError, Reads}
 import reactivemongo.bson.BSONObjectID
 import slick.dbio.DBIOAction
@@ -21,6 +20,8 @@ import slick.lifted.{AbstractTable, Rep, TableQuery}
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 import play.api.data.validation.ValidationError
+
+import scala.concurrent.ExecutionContext
 
 
 class SQLClient @Inject()(configuration: Configuration) {
@@ -34,7 +35,7 @@ case class ObjectId(id: String) {
 object ObjectId extends FoxImplicits {
   implicit val jsonFormat = Json.format[ObjectId]
   def generate = fromBsonId(BSONObjectID.generate)
-  def parse(input: String) = parseSync(input).toFox ?~> s"The passed resource id ‘$input’ is invalid"
+  def parse(input: String)(implicit ec: ExecutionContext) = parseSync(input).toFox ?~> s"The passed resource id ‘$input’ is invalid"
   private def fromBsonId(bson: BSONObjectID) = ObjectId(bson.stringify)
   private def parseSync(input: String) = BSONObjectID.parse(input).map(fromBsonId).toOption
 
@@ -48,7 +49,7 @@ trait SQLTypeImplicits {
   }
 }
 
-class SimpleSQLDAO @Inject()(sqlClient: SQLClient) extends FoxImplicits with LazyLogging with SQLTypeImplicits {
+class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends FoxImplicits with LazyLogging with SQLTypeImplicits {
 
   lazy val transactionSerializationError = "could not serialize access"
 
@@ -118,7 +119,7 @@ class SimpleSQLDAO @Inject()(sqlClient: SQLClient) extends FoxImplicits with Laz
 
 }
 
-abstract class SecuredSQLDAO @Inject()(sqlClient: SQLClient) extends SimpleSQLDAO(sqlClient) {
+abstract class SecuredSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
   def collectionName: String
   def existingCollectionName = collectionName + "_"
 
@@ -179,7 +180,7 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SQLClient) extends SimpleSQLDA
 
 }
 
-abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SQLClient) extends SecuredSQLDAO(sqlClient) {
+abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SecuredSQLDAO(sqlClient) {
   def collection: TableQuery[X]
   def collectionName = collection.shaped.value.schemaName.map(_ + ".").getOrElse("") + collection.shaped.value.tableName
 

@@ -15,7 +15,7 @@ import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 import scala.concurrent.ExecutionContext
 
 
-class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator) extends LazyLogging {
+class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit ec: ExecutionContext) extends LazyLogging {
 
   def extractFromNml(file: File, name: String): NmlParseResult = {
     extractFromNml(new FileInputStream(file), name)
@@ -29,7 +29,7 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator) extends L
     }
   }
 
-  def extractFromZip(file: File, zipFileName: Option[String] = None)(implicit ec: ExecutionContext): ZipParseResult = {
+  def extractFromZip(file: File, zipFileName: Option[String] = None): ZipParseResult = {
     val name = zipFileName getOrElse file.getName
     var otherFiles = Map.empty[String, TemporaryFile]
     var parseResults = List.empty[NmlParseResult]
@@ -88,7 +88,7 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator) extends L
     }
   }
 
-  def extractFromFile(file: File, fileName: String)(implicit ec: ExecutionContext): ZipParseResult = {
+  def extractFromFile(file: File, fileName: String): ZipParseResult = {
     if (fileName.endsWith(".zip")) {
       logger.trace("Extracting from Zip file")
       extractFromZip(file, Some(fileName))

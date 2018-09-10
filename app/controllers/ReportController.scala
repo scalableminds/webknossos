@@ -22,7 +22,7 @@ case class ProjectProgressEntry(projectName: String, paused: Boolean, totalTasks
                                 finishedInstances: Int, activeInstances: Int)
 object ProjectProgressEntry { implicit val jsonFormat = Json.format[ProjectProgressEntry] }
 
-class ReportDAO @Inject()(sqlClient: SQLClient, annotationDAO: AnnotationDAO) extends SimpleSQLDAO(sqlClient) {
+class ReportDAO @Inject()(sqlClient: SQLClient, annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
 
   def projectProgress(teamId: ObjectId)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[List[ProjectProgressEntry]] = {
     for {

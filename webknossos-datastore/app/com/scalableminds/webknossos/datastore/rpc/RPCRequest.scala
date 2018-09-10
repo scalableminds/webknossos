@@ -21,14 +21,14 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
 
   var request: WSRequest = wsClient.url(url)
 
-  def withQueryString(parameters: (String, String)*): RPCRequest = {
-    request = request.withQueryString(parameters :_*)
+  def addQueryString(parameters: (String, String)*): RPCRequest = {
+    request = request.addQueryStringParameters(parameters :_*)
     this
   }
 
-  def withQueryStringOptional(key: String, valueOptional: Option[String]): RPCRequest = {
+  def addQueryStringOptional(key: String, valueOptional: Option[String]): RPCRequest = {
     valueOptional match {
-      case Some(value: String) => { request = request.withQueryString((key, value))}
+      case Some(value: String) => { request = request.addQueryStringParameters((key, value))}
       case _ =>
     }
     this

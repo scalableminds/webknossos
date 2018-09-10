@@ -10,16 +10,18 @@ import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.streams.IterateeStreams
 import play.api.libs.json.Json
+import play.api.mvc.PlayBodyParsers
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 
-class VolumeTracingController @Inject()(
-                                         val tracingService: VolumeTracingService,
-                                         val dataSourceRepository: DataSourceRepository,
-                                         val webKnossosServer: WebKnossosServer,
-                                         val accessTokenService: AccessTokenService,
-                                         tracingDataStore: TracingDataStore
-                                       ) extends TracingController[VolumeTracing, VolumeTracings] {
+class VolumeTracingController @Inject()(val tracingService: VolumeTracingService,
+                                        val dataSourceRepository: DataSourceRepository,
+                                        val webKnossosServer: WebKnossosServer,
+                                        val accessTokenService: AccessTokenService,
+                                        tracingDataStore: TracingDataStore)
+                                       (implicit val ec: ExecutionContext,
+                                        val bodyParsers: PlayBodyParsers)
+  extends TracingController[VolumeTracing, VolumeTracings] {
 
   implicit val tracingsCompanion = VolumeTracings
 

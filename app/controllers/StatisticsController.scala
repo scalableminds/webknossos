@@ -24,8 +24,7 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
                                      dataSetDAO: DataSetDAO,
                                      taskDAO: TaskDAO,
                                      annotationDAO: AnnotationDAO,
-                                     sil: Silhouette[WkEnv],
-                                     val messagesApi: MessagesApi)
+                                     sil: Silhouette[WkEnv])
   extends Controller {
 
   val intervalHandler = Map(

@@ -28,8 +28,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                teamService: TeamService,
                                userService: UserService,
                                dataSetAllowedTeamsDAO: DataSetAllowedTeamsDAO,
-                               rpc: RPC,
-                               val messagesApi: MessagesApi
+                               rpc: RPC
                               ) extends FoxImplicits with LazyLogging {
 
   def isProperDataSetName(name: String): Boolean =

@@ -35,8 +35,7 @@ class DataSetController @Inject()(userService: UserService,
                                   teamDAO: TeamDAO,
                                   dataSetDAO: DataSetDAO,
                                   sil: Silhouette[WkEnv],
-                                  cache: CacheApi,
-                                  val messagesApi: MessagesApi) extends Controller {
+                                  cache: CacheApi) extends Controller {
 
   val DefaultThumbnailWidth = 400
   val DefaultThumbnailHeight = 400

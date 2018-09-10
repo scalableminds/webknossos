@@ -11,7 +11,7 @@ import net.liftweb.common.Full
 import oxalis.security.SharingTokenContainer
 import play.api.Configuration
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, JsonValidationError, Reads}
 import reactivemongo.bson.BSONObjectID
 import slick.dbio.DBIOAction
 import slick.jdbc.{PositionedParameters, PostgresProfile, SetParameter}
@@ -21,7 +21,6 @@ import slick.lifted.{AbstractTable, Rep, TableQuery}
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 import play.api.data.validation.ValidationError
-import play.api.libs.json.Reads
 
 
 class SQLClient @Inject()(configuration: Configuration) {
@@ -40,7 +39,7 @@ object ObjectId extends FoxImplicits {
   private def parseSync(input: String) = BSONObjectID.parse(input).map(fromBsonId).toOption
 
   def stringObjectIdReads(key: String) =
-    Reads.filter[String](ValidationError("bsonid.invalid", key))(parseSync(_).isDefined)
+    Reads.filter[String](JsonValidationError("bsonid.invalid", key))(parseSync(_).isDefined)
 }
 
 trait SQLTypeImplicits {

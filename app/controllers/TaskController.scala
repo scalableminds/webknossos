@@ -19,7 +19,7 @@ import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
 import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import models.annotation.nml.NmlResults.NmlParseResult
-import play.api.i18n.{Messages, MessagesApi}
+import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import play.api.mvc.Result
@@ -69,8 +69,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
                                 taskService: TaskService,
                                 nmlService: NmlService,
                                 conf: WkConf,
-                                sil: Silhouette[WkEnv],
-                                val messagesApi: MessagesApi)
+                                sil: Silhouette[WkEnv])
   extends Controller
     with ResultBox
     with ProtoGeometryImplicits
@@ -286,7 +285,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
   }
 
 
-  private def getAllowedTeamsForNextTask(user: User)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
+  private def getAllowedTeamsForNextTask(user: User)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[List[ObjectId]] = {
     (for {
       numberOfOpen <- annotationService.countOpenNonAdminTasks(user)
     } yield {

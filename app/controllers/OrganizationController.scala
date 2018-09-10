@@ -12,8 +12,7 @@ import utils.WkConf
 
 class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
                                        organizationService: OrganizationService,
-                                       conf: WkConf,
-                                       val messagesApi: MessagesApi
+                                       conf: WkConf
                                       ) extends Controller with FoxImplicits {
 
   def listAllOrganizations = Action.async { implicit request =>

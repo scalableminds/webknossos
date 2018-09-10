@@ -25,8 +25,7 @@ trait WkEnv extends Env {
 class WkSilhouetteEnvironment @Inject()(conf: WkConf,
                                         tokenDAO: TokenDAO,
                                         userService: UserService,
-                                        cookieHeaderEncoding: CookieHeaderEncoding,
-                                        val messagesApi: MessagesApi
+                                        cookieHeaderEncoding: CookieHeaderEncoding
                                      )(implicit val executionContext: ExecutionContext) extends Environment[WkEnv] {
   val eventBusObject = EventBus()
 

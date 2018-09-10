@@ -93,7 +93,7 @@ class DataSourceController @Inject()(
               for {
                 _ <- webKnossosServer.validateDataSourceUpload(id) ?~> Messages("dataSet.name.alreadyTaken")
                 zipFile <- request.body.file("zipFile[]") ?~> Messages("zip.file.notFound")
-                _ <- dataSourceService.handleUpload(id, new File(zipFile.ref.file.getAbsolutePath))
+                _ <- dataSourceService.handleUpload(id, new File(zipFile.ref.path.toAbsolutePath.toString))
               } yield {
                 Ok
               }

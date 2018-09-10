@@ -23,10 +23,11 @@ import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
 import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import play.api.http.HttpEntity
-import play.api.i18n.{Messages, MessagesApi}
+import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
+import play.api.libs.iteratee.streams.IterateeStreams
 import play.api.libs.json.Json
 import play.api.mvc.{ResponseHeader, Result}
 import utils.ObjectId
@@ -141,7 +142,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
     } yield result
   }
 
-  def downloadExplorational(annotationId: String, typ: String, issuingUser: User)(implicit ctx: DBAccessContext) = {
+  def downloadExplorational(annotationId: String, typ: String, issuingUser: User)(implicit ctx: DBAccessContext, m: MessagesProvider) = {
 
     def skeletonToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String) = {
       for {
@@ -190,15 +191,15 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
       (downloadStream, fileName) <- tracingToDownloadStream(dataSet, annotation, name)
     } yield {
-      Ok.chunked(downloadStream).withHeaders(
-        CONTENT_TYPE ->
-          (if (fileName.toLowerCase.endsWith(".zip")) "application/zip" else "application/xml"),
+      Ok.chunked(Source.fromPublisher(IterateeStreams.enumeratorToPublisher(downloadStream)))
+        .as(if (fileName.toLowerCase.endsWith(".zip")) "application/zip" else "application/xml")
+        .withHeaders(
         CONTENT_DISPOSITION ->
           s"attachment;filename=${'"'}${fileName}${'"'}")
     }
   }
 
-  def downloadProject(projectId: String, user: User)(implicit ctx: DBAccessContext) = {
+  def downloadProject(projectId: String, user: User)(implicit ctx: DBAccessContext, m: MessagesProvider) = {
     for {
       projectIdValidated <- ObjectId.parse(projectId)
       project <- projectDAO.findOne(projectIdValidated) ?~> Messages("project.notFound", projectId)
@@ -210,7 +211,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
     }
   }
 
-  def downloadTask(taskId: String, user: User)(implicit ctx: DBAccessContext) = {
+  def downloadTask(taskId: String, user: User)(implicit ctx: DBAccessContext, m: MessagesProvider) = {
     def createTaskZip(task: Task): Fox[TemporaryFile] = annotationService.annotationsFor(task._id).flatMap { annotations =>
       val finished = annotations.filter(_.state == Finished)
       annotationService.zipAnnotations(finished, task._id.toString + "_nmls.zip")
@@ -224,7 +225,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
     } yield Ok.sendFile(zip.file, inline = false)
   }
 
-  def downloadTaskType(taskTypeId: String, user: User)(implicit ctx: DBAccessContext) = {
+  def downloadTaskType(taskTypeId: String, user: User)(implicit ctx: DBAccessContext, m: MessagesProvider) = {
     def createTaskTypeZip(taskType: TaskType) =
       for {
         tasks <- taskDAO.findAllByTaskType(taskType._id)

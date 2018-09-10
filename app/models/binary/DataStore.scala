@@ -1,14 +1,18 @@
 package models.binary
 
-import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
-import play.api.libs.concurrent.Execution.Implicits._
+import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
+import play.api.mvc.{Request, Result, Results, WrappedRequest}
 import slick.jdbc.PostgresProfile.api._
+import play.api.libs.concurrent.Execution.Implicits._
 import slick.lifted.Rep
 import utils.{SQLClient, SQLDAO}
+
+import scala.concurrent.{ExecutionContext, Future}
 
 
 case class DataStore(
@@ -20,7 +24,7 @@ case class DataStore(
                        ) {
 }
 
-class DataStoreService @Inject()() {
+class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO) extends FoxImplicits with Results {
 
   def publicWrites(dataStore: DataStore): Fox[JsObject] = {
     Fox.successful(Json.obj(
@@ -29,6 +33,15 @@ class DataStoreService @Inject()() {
       "isForeign" -> dataStore.isForeign
     ))
   }
+
+  def validateAccess[A](name: String)(block: (DataStore) => Future[Result])
+                       (implicit request: Request[A], m: MessagesProvider): Fox[Result] = {
+    request.getQueryString("key")
+      .toFox
+      .flatMap(key => dataStoreDAO.findOneByKey(key)(GlobalAccessContext)) // Check if key is valid
+      .flatMap(dataStore => block(dataStore)) // Run underlying action
+      .getOrElse(Forbidden(Messages("dataStore.notFound"))) // Default error
+    }
 }
 
 class DataStoreDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[DataStore, DatastoresRow, Datastores](sqlClient) {

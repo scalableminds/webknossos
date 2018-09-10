@@ -20,8 +20,7 @@ import utils.ObjectId
 class TimeController @Inject()(userService: UserService,
                                userDAO: UserDAO,
                                timeSpanDAO: TimeSpanDAO,
-                               sil: Silhouette[WkEnv],
-                               val messagesApi: MessagesApi) extends Controller with FoxImplicits {
+                               sil: Silhouette[WkEnv]) extends Controller with FoxImplicits {
 
   //all users with working hours > 0
   def getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]) = sil.SecuredAction.async { implicit request =>

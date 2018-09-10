@@ -17,6 +17,7 @@ import {
   getSkeletonTracing,
   getActiveNodeFromTree,
   getActiveTree,
+  getActiveGroup,
   findTreeByNodeId,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3 } from "oxalis/constants";
@@ -188,7 +189,7 @@ export function deleteNode(
         newMaxNodeId = getMaximumNodeId(newTrees);
       }
 
-      const newActiveNodeId = neighborIds.length > 0 ? neighborIds[0] : null;
+      const newActiveNodeId = neighborIds.length > 0 ? Math.min(...neighborIds) : null;
       const newActiveTree =
         newActiveNodeId != null ? findTreeByNodeId(newTrees, newActiveNodeId).get() : activeTree;
       const newActiveTreeId = newActiveTree.treeId;
@@ -208,7 +209,7 @@ export function deleteEdge(
   targetNode: NodeType,
   timestamp: number,
   restrictions: RestrictionsAndSettingsType,
-): Maybe<TreeMapType> {
+): Maybe<[TreeMapType, number]> {
   return getSkeletonTracing(state.tracing).chain(skeletonTracing => {
     const { allowUpdate } = restrictions;
 
@@ -231,16 +232,19 @@ export function deleteEdge(
         return Maybe.Nothing();
       }
 
-      return Maybe.Just(
-        splitTreeByNodes(
-          state,
-          skeletonTracing,
-          sourceTree,
-          [sourceNode.id, targetNode.id],
-          [deletedEdge],
-          timestamp,
-        ),
+      const newTrees = splitTreeByNodes(
+        state,
+        skeletonTracing,
+        sourceTree,
+        [sourceNode.id, targetNode.id],
+        [deletedEdge],
+        timestamp,
       );
+
+      // The treeId of the tree the active node belongs to could have changed
+      const newActiveTree = findTreeByNodeId(newTrees, sourceNode.id).get();
+
+      return Maybe.Just([newTrees, newActiveTree.treeId]);
     } else {
       return Maybe.Nothing();
     }
@@ -309,42 +313,46 @@ function splitTreeByNodes(
   let intermediateState = state;
   // For each new tree root create a new tree
   const cutTrees = _.compact(
-    newTreeRootIds.map((rootNodeId, index) => {
-      // The rootNodeId could have already been traversed from another rootNodeId
-      // as there are cyclic trees
-      // In this case we do not need to create a new tree for this rootNodeId
-      if (visitedNodes[rootNodeId] === true) {
-        return null;
-      }
+    // Sort the treeRootIds, so the tree connected to the node with the lowest id will remain the original tree (treeId, name, timestamp)
+    newTreeRootIds
+      .slice()
+      .sort((a, b) => a - b)
+      .map((rootNodeId, index) => {
+        // The rootNodeId could have already been traversed from another rootNodeId
+        // as there are cyclic trees
+        // In this case we do not need to create a new tree for this rootNodeId
+        if (visitedNodes[rootNodeId] === true) {
+          return null;
+        }
 
-      let newTree;
-      if (index === 0) {
-        // Reuse the properties of the original tree for the first tree
-        newTree = {
-          branchPoints: [],
-          color: activeTree.color,
-          comments: [],
-          edges: new EdgeCollection(),
-          name: activeTree.name,
-          nodes: new DiffableMap(),
-          timestamp: activeTree.timestamp,
-          treeId: activeTree.treeId,
-          isVisible: true,
-          groupId: activeTree.groupId,
-        };
-      } else {
-        const immutableNewTree = createTree(intermediateState, timestamp).get();
-        // Cast to mutable tree type since we want to mutably do the split
-        // in this reducer for performance reasons.
-        newTree = ((immutableNewTree: any): TreeType);
-        intermediateState = update(intermediateState, {
-          tracing: { skeleton: { trees: { [newTree.treeId]: { $set: newTree } } } },
-        });
-      }
+        let newTree;
+        if (index === 0) {
+          // Reuse the properties of the original tree for the first tree
+          newTree = {
+            branchPoints: [],
+            color: activeTree.color,
+            comments: [],
+            edges: new EdgeCollection(),
+            name: activeTree.name,
+            nodes: new DiffableMap(),
+            timestamp: activeTree.timestamp,
+            treeId: activeTree.treeId,
+            isVisible: true,
+            groupId: activeTree.groupId,
+          };
+        } else {
+          const immutableNewTree = createTree(intermediateState, timestamp).get();
+          // Cast to mutable tree type since we want to mutably do the split
+          // in this reducer for performance reasons.
+          newTree = ((immutableNewTree: any): TreeType);
+          intermediateState = update(intermediateState, {
+            tracing: { skeleton: { trees: { [newTree.treeId]: { $set: newTree } } } },
+          });
+        }
 
-      traverseTree(rootNodeId, newTree);
-      return newTree;
-    }),
+        traverseTree(rootNodeId, newTree);
+        return newTree;
+      }),
   );
 
   // Write branchpoints into correct trees
@@ -434,7 +442,11 @@ export function createTree(state: OxalisState, timestamp: number): Maybe<TreeTyp
       const newTreeId = _.isNumber(maxTreeId) ? maxTreeId + 1 : Constants.MIN_TREE_ID;
 
       const name = generateTreeName(state, timestamp, newTreeId);
-      const groupId = Utils.toNullable(getActiveTree(skeletonTracing).map(tree => tree.groupId));
+      const groupIdOfActiveTreeMaybe = getActiveTree(skeletonTracing).map(tree => tree.groupId);
+      const groupIdOfActiveGroupMaybe = getActiveGroup(skeletonTracing).map(group => group.groupId);
+      const groupId = Utils.toNullable(
+        groupIdOfActiveTreeMaybe.orElse(() => groupIdOfActiveGroupMaybe),
+      );
 
       // Create the new tree
       const tree: TreeType = {
@@ -707,6 +719,7 @@ export function toggleTreeGroupReducer(
   state: OxalisState,
   skeletonTracing: SkeletonTracingType,
   groupId: number,
+  targetVisibility?: boolean,
 ): OxalisState {
   let toggledGroup;
   forEachGroups(skeletonTracing.treeGroups, group => {
@@ -718,9 +731,12 @@ export function toggleTreeGroupReducer(
   const affectedGroupIds = new Set(mapGroups([toggledGroup], group => group.groupId));
 
   // Let's make all trees visible if there is one invisible tree in one of the affected groups
-  const shouldBecomeVisible = _.values(skeletonTracing.trees).some(
-    tree => affectedGroupIds.has(tree.groupId) && !tree.isVisible,
-  );
+  const shouldBecomeVisible =
+    targetVisibility != null
+      ? targetVisibility
+      : _.values(skeletonTracing.trees).some(
+          tree => affectedGroupIds.has(tree.groupId) && !tree.isVisible,
+        );
 
   const updateTreeObject = {};
   const isVisibleUpdater = {

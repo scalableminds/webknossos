@@ -72,6 +72,7 @@ const initialState = {
       },
       activeTreeId: 1,
       activeNodeId: null,
+      activeGroupId: null,
       cachedMaxNodeId: 0,
     },
   },
@@ -332,15 +333,15 @@ test("SkeletonTracing should delete nodes and split the tree", t => {
   const newTrees = state1.tracing.skeleton.trees;
 
   t.is(Object.keys(newTrees).length, 4);
-  t.is(newTrees[2].nodes.get(0).id, 0);
-  t.is(newTrees[2].comments.length, 1);
-  t.is(newTrees[2].comments[0].nodeId, 0);
+  t.is(newTrees[0].nodes.get(0).id, 0);
+  t.is(newTrees[0].comments.length, 1);
+  t.is(newTrees[0].comments[0].nodeId, 0);
 
+  t.is(newTrees[2].nodes.get(2).id, 2);
   t.is(newTrees[1].nodes.get(4).id, 4);
-  t.is(newTrees[3].nodes.get(2).id, 2);
 
-  t.is(newTrees[0].nodes.get(7).id, 7);
-  t.is(newTrees[0].branchPoints[0].nodeId, 7);
+  t.is(newTrees[3].nodes.get(7).id, 7);
+  t.is(newTrees[3].branchPoints[0].nodeId, 7);
 });
 
 test("SkeletonTracing should not delete an edge if the two nodes are not neighbors", t => {
@@ -1217,7 +1218,7 @@ test("SkeletonTracing should delete a specified node (1/2)", t => {
   t.falsy(newState.tracing.skeleton.trees[1].nodes.has(2));
   // tree is split
   t.truthy(newState.tracing.skeleton.trees[2]);
-  t.is(newState.tracing.skeleton.activeNodeId, 3);
+  t.is(newState.tracing.skeleton.activeNodeId, 1);
   t.is(newState.tracing.skeleton.activeTreeId, 1);
 });
 
@@ -1242,7 +1243,7 @@ test("SkeletonTracing should delete a specified node (2/2)", t => {
   t.falsy(newState.tracing.skeleton.trees[1].nodes.has(2));
   // tree is split
   t.truthy(newState.tracing.skeleton.trees[2]);
-  t.is(newState.tracing.skeleton.activeNodeId, 3);
+  t.is(newState.tracing.skeleton.activeNodeId, 1);
   t.is(newState.tracing.skeleton.activeTreeId, 1);
 });
 

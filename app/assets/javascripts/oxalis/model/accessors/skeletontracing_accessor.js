@@ -11,6 +11,7 @@ import type {
 } from "oxalis/store";
 import type { HybridServerTracingType, ServerSkeletonTracingType } from "admin/api_flow_types";
 import { mapGroups } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { findGroup } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 
 export type SkeletonTracingStatsType = {|
   treeCount: number,
@@ -52,6 +53,15 @@ export function getActiveTree(skeletonTracing: SkeletonTracingType) {
   const { activeTreeId } = skeletonTracing;
   if (activeTreeId != null) {
     return Maybe.Just(skeletonTracing.trees[activeTreeId]);
+  }
+  return Maybe.Nothing();
+}
+
+export function getActiveGroup(skeletonTracing: SkeletonTracingType) {
+  const { activeGroupId } = skeletonTracing;
+  if (activeGroupId != null) {
+    const group = findGroup(skeletonTracing.treeGroups, activeGroupId);
+    return Maybe.fromNullable(group);
   }
   return Maybe.Nothing();
 }

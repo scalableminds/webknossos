@@ -145,13 +145,13 @@ class BinaryDataController @Inject()(
         AllowRemoteOrigin {
           for {
             (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
-            request = DataRequest(
+            dataRequest = DataRequest(
               new VoxelPosition(x, y, z, dataLayer.lookUpResolution(resolution)),
               cubeSize,
               cubeSize,
               cubeSize,
               DataServiceRequestSettings(halfByte = halfByte))
-            imageProvider <- respondWithSpriteSheet(dataSource, dataLayer, request, imagesPerRow, blackAndWhite = false)
+            imageProvider <- respondWithSpriteSheet(dataSource, dataLayer, dataRequest, imagesPerRow, blackAndWhite = false)
           } yield {
             Result(
               header = ResponseHeader(200),
@@ -180,13 +180,13 @@ class BinaryDataController @Inject()(
         AllowRemoteOrigin {
           for {
             (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
-            request = DataRequest(
+            dataRequest = DataRequest(
               new VoxelPosition(x, y, z, dataLayer.lookUpResolution(resolution)),
               width,
               height,
               1,
               DataServiceRequestSettings(halfByte = halfByte))
-            imageProvider <- respondWithSpriteSheet(dataSource, dataLayer, request, 1, blackAndWhite)
+            imageProvider <- respondWithSpriteSheet(dataSource, dataLayer, dataRequest, 1, blackAndWhite)
           } yield {
             Result(
               header = ResponseHeader(200),
@@ -318,7 +318,7 @@ class BinaryDataController @Inject()(
       spriteSheet <- ImageCreator.spriteSheetFor(data, params) ?~> Messages("image.create.failed")
       firstSheet <- spriteSheet.pages.headOption ?~> Messages("image.page.failed")
     } yield {
-      new JPEGWriter().writeToOutputStream(firstSheet.image)
+      new JPEGWriter().writeToOutputStream(firstSheet.image)(_)
     }
   }
 

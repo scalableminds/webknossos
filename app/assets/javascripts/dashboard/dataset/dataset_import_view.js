@@ -115,7 +115,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         color: [255, 255, 255],
       };
       const datasetDefaultConfiguration = (await getDatasetDefaultConfiguration(
-        this.props.datasetId.name,
+        this.props.datasetId,
       )) || {
         layers: _.fromPairs(
           dataSource.dataLayers.map(layer => [layer.name, defaultConfigPerLayer]),
@@ -215,14 +215,11 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       if (await this.doesUserWantToChangeAllowedTeams(teamIds)) {
         return;
       }
-      await updateDataset(
-        this.props.datasetId.name,
-        Object.assign({}, dataset, formValues.dataset),
-      );
+      await updateDataset(this.props.datasetId, Object.assign({}, dataset, formValues.dataset));
 
       if (datasetDefaultConfiguration != null) {
         await updateDatasetDefaultConfiguration(
-          this.props.datasetId.name,
+          this.props.datasetId,
           _.extend({}, datasetDefaultConfiguration, formValues.defaultConfiguration, {
             layers: JSON.parse(formValues.defaultConfigurationLayersJson),
           }),
@@ -234,7 +231,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         await updateDatasetDatasource(this.props.datasetId.name, dataset.dataStore.url, dataSource);
       }
 
-      await updateDatasetTeams(dataset.name, teamIds);
+      await updateDatasetTeams(dataset, teamIds);
 
       const verb = this.props.isEditingMode ? "updated" : "imported";
       Toast.success(`Successfully ${verb} ${this.props.datasetId.name}`);

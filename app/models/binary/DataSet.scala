@@ -116,7 +116,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient, dataSetDataLayerDAO: DataSetDat
 
   def findOneByNameAndOrganizationName(name: String, organizationName: String)(implicit ctx: DBAccessContext): Fox[DataSet] =
     for {
-      organization <- OrganizationDAO.findOneByName(organizationName) ?~> "organization.notFound"
+      organization <- organizationDAO.findOneByName(organizationName) ?~> "organization.notFound"
       dataset <- findOneByNameAndOrganization(name, organization._id)
     } yield dataset
 

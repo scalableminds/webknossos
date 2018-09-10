@@ -48,7 +48,7 @@ import Onboarding from "admin/onboarding";
 import * as Utils from "libs/utils";
 
 import type { OxalisState } from "oxalis/store";
-import type { APIUserType, APIDataSetIdType } from "admin/api_flow_types";
+import type { APIUserType } from "admin/api_flow_types";
 import type { ContextRouter } from "react-router-dom";
 
 const { Content } = Layout;
@@ -90,8 +90,10 @@ class ReactRouter extends React.Component<Props> {
       return (
         <TracingLayoutView
           initialTracingType={tracingType}
-          initialAnnotationId={match.params.id || ""}
-          initialControlmode={ControlModeEnum.TRACE}
+          initialCommandType={{
+            type: ControlModeEnum.TRACE,
+            annotationId: match.params.id || "",
+          }}
         />
       );
     }
@@ -102,8 +104,11 @@ class ReactRouter extends React.Component<Props> {
   tracingViewMode = ({ match }: ContextRouter) => (
     <TracingLayoutView
       initialTracingType={APITracingTypeEnum.View}
-      initialAnnotationId={match.params.id || ""}
-      initialControlmode={ControlModeEnum.VIEW}
+      initialCommandType={{
+        type: ControlModeEnum.VIEW,
+        name: match.params.datasetName || "",
+        owningOrganization: match.params.organizationName || "",
+      }}
     />
   );
 
@@ -362,6 +367,10 @@ class ReactRouter extends React.Component<Props> {
               <Route path="/auth/resetPassword" component={StartResetPasswordView} />
               <Route path="/auth/finishResetPassword" component={FinishResetPasswordView} />
               <Route path="/spotlight" component={SpotlightView} />
+              <Route
+                path="/datasets/:organizationName/:datasetName/view"
+                render={this.tracingViewMode}
+              />
               <Route path="/datasets/:id/view" render={this.tracingViewMode} />
               <Route path="/imprint" component={Imprint} />
               <Route path="/privacy" component={Privacy} />

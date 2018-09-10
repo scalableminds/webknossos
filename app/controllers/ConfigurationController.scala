@@ -5,23 +5,13 @@ import com.scalableminds.util.tools.Fox
 import javax.inject.Inject
 
 import models.binary.{DataSet, DataSetDAO}
-<<<<<<< HEAD
-import models.configuration.{DataSetConfiguration, UserConfiguration}
-import models.team.OrganizationDAO
-=======
 import models.configuration.{DataSetConfiguration, DataSetConfigurationDefaults, UserConfiguration}
->>>>>>> 3f35de88f27aa554ce1fce82121b8fce9d8b64c0
 import models.user.{UserDataSetConfigurationDAO, UserService}
 import oxalis.security.WebknossosSilhouette
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsObject, JsValue}
 import play.api.libs.json.Json._
-<<<<<<< HEAD
-import play.api.mvc.Result
-import utils.ObjectId
-=======
->>>>>>> 3f35de88f27aa554ce1fce82121b8fce9d8b64c0
 
 
 class ConfigurationController @Inject()(userService: UserService,
@@ -66,11 +56,11 @@ class ConfigurationController @Inject()(userService: UserService,
         config <- dataSet.defaultConfiguration
       } yield config
     )
-      .getOrElse(DataSetConfiguration.constructInitialDefault(List()))
+      .getOrElse(dataSetConfigurationDefaults.constructInitialDefault(List()))
       .map(configuration => Ok(toJson(dataSetConfigurationDefaults.configurationOrDefaults(configuration))))
   }
 
-  def updateDataSet(dataSetName: String) = sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
+  def updateDataSet(organizationName: String, dataSetName: String) = sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
     for {
       jsConfiguration <- request.body.asOpt[JsObject] ?~> "user.configuration.dataset.invalid"
       conf = jsConfiguration.fields.toMap
@@ -80,8 +70,8 @@ class ConfigurationController @Inject()(userService: UserService,
     }
   }
 
-  def readDataSetDefault(dataSetName: String) = sil.SecuredAction.async { implicit request =>
-    DataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization).flatMap { dataSet: DataSet =>
+  def readDataSetDefault(organizationName: String, dataSetName: String) = sil.SecuredAction.async { implicit request =>
+    dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization).flatMap { dataSet: DataSet =>
       dataSet.defaultConfiguration match {
         case Some(c) => Fox.successful(Ok(toJson(dataSetConfigurationDefaults.configurationOrDefaults(c))))
         case _ => dataSetConfigurationDefaults.constructInitialDefault(dataSet).map(c => Ok(toJson(dataSetConfigurationDefaults.configurationOrDefaults(c))))
@@ -89,9 +79,9 @@ class ConfigurationController @Inject()(userService: UserService,
     }
   }
 
-  def updateDataSetDefault(dataSetName: String) = sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
+  def updateDataSetDefault(organizationName: String, dataSetName: String) = sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
     for {
-      dataset <- DataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> "dataset.notFound"
+      dataset <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> "dataset.notFound"
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOfOrg(request.identity, dataset._organization)) ?~> "notAllowed"
       jsConfiguration <- request.body.asOpt[JsObject] ?~> "user.configuration.dataset.invalid"
       conf = jsConfiguration.fields.toMap

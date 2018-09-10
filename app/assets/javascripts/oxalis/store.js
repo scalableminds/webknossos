@@ -46,6 +46,7 @@ import type {
   APIUserType,
   APIDatasetType,
   APIDataLayerType,
+  APIDatasetIdType,
 } from "admin/api_flow_types";
 
 export type CommentType = {|
@@ -184,6 +185,16 @@ export type HybridTracingType = {|
 |};
 
 export type TracingType = HybridTracingType;
+
+export type TraceOrViewCommandType =
+  | {
+      +type: typeof ControlModeEnum.VIEW,
+      ...$Exact<APIDatasetIdType>,
+    }
+  | {
+      +type: typeof ControlModeEnum.TRACE,
+      +annotationId: string,
+    };
 
 export type DatasetLayerConfigurationType = {|
   +color: Vector3,

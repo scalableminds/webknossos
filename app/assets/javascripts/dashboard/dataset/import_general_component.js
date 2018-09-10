@@ -38,7 +38,7 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
   }
 
   async fetch() {
-    const sharingToken = await getDatasetSharingToken(this.props.datasetId.name);
+    const sharingToken = await getDatasetSharingToken(this.props.datasetId);
     const dataSet = await getDataset(this.props.datasetId);
     this.setState({ dataSet, sharingToken });
   }
@@ -53,9 +53,8 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
   };
 
   handleRevokeSharingLink = async (): Promise<void> => {
-    const datasetName = this.props.datasetId.name;
-    await revokeDatasetSharingToken(datasetName);
-    const sharingToken = await getDatasetSharingToken(datasetName);
+    await revokeDatasetSharingToken(this.props.datasetId);
+    const sharingToken = await getDatasetSharingToken(this.props.datasetId);
     this.setState({ sharingToken });
   };
 

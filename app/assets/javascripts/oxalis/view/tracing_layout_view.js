@@ -10,8 +10,7 @@ import TracingView from "oxalis/view/tracing_view";
 import { Layout, Icon } from "antd";
 import { location } from "libs/window";
 import ButtonComponent from "oxalis/view/components/button_component";
-import type { TracingTypeTracingType, OxalisState } from "oxalis/store";
-import type { ControlModeType } from "oxalis/constants";
+import type { TracingTypeTracingType, OxalisState, TraceOrViewCommandType } from "oxalis/store";
 import Toast from "libs/toast";
 import messages from "messages";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
@@ -25,8 +24,7 @@ type StateProps = {
 
 type Props = StateProps & {
   initialTracingType: TracingTypeTracingType,
-  initialAnnotationId: string,
-  initialControlmode: ControlModeType,
+  initialCommandType: TraceOrViewCommandType,
 };
 
 type State = {
@@ -59,8 +57,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
       <NmlUploadZoneContainer onImport={importNmls} isAllowed={this.props.isUpdateTracingAllowed}>
         <OxalisController
           initialTracingType={this.props.initialTracingType}
-          initialAnnotationId={this.props.initialAnnotationId}
-          initialControlmode={this.props.initialControlmode}
+          initialCommandType={this.props.initialCommandType}
         />
 
         <Layout className="tracing-layout">

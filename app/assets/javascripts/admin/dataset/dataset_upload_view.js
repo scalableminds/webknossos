@@ -127,7 +127,12 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
                         { pattern: /[0-9a-zA-Z_-]+$/ },
                         {
                           validator: async (_rule, value, callback) => {
-                            const reasons = await isDatasetNameValid(value);
+                            const reasons = await isDatasetNameValid({
+                              name: value,
+                              owningOrganization: this.props.activeUser
+                                ? this.props.activeUser.organization
+                                : "",
+                            });
                             if (reasons != null) {
                               callback(reasons);
                             } else {

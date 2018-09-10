@@ -523,11 +523,11 @@ export function getAnnotationInformation(
 }
 
 export function createExplorational(
-  datasetName: string,
+  datasetId: APIDatasetIdType,
   typ: "volume" | "skeleton" | "hybrid",
   withFallback: boolean,
 ): Promise<APIAnnotationType> {
-  const url = `/api/datasets/${datasetName}/createExplorational`;
+  const url = `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/createExplorational`;
   return Request.sendJSONReceiveJSON(url, { data: { typ, withFallback } });
 }
 
@@ -632,35 +632,47 @@ export function getDataset(
 }
 
 export function updateDataset(
-  datasetName: string,
+  datasetId: APIDatasetIdType,
   dataset: APIDatasetType,
 ): Promise<APIDatasetType> {
-  return Request.sendJSONReceiveJSON(`/api/datasets/${datasetName}`, {
-    data: dataset,
-  });
+  return Request.sendJSONReceiveJSON(
+    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}`,
+    {
+      data: dataset,
+    },
+  );
 }
 
-export function getDatasetConfiguration(datasetName: string): Promise<Object> {
-  return Request.receiveJSON(`/api/dataSetConfigurations/${datasetName}`);
+export function getDatasetConfiguration(datasetId: APIDatasetIdType): Promise<Object> {
+  return Request.receiveJSON(
+    `/api/dataSetConfigurations/${datasetId.owningOrganization}/${datasetId.name}`,
+  );
 }
 
 export function getDatasetDefaultConfiguration(
-  datasetName: string,
+  datasetId: APIDatasetIdType,
 ): Promise<DatasetConfigurationType> {
-  return Request.receiveJSON(`/api/dataSetConfigurations/default/${datasetName}`);
+  return Request.receiveJSON(
+    `/api/dataSetConfigurations/default/${datasetId.owningOrganization}/${datasetId.name}`,
+  );
 }
 
 export function updateDatasetDefaultConfiguration(
-  datasetName: string,
+  datasetId: APIDatasetIdType,
   datasetConfiguration: DatasetConfigurationType,
 ): Promise<{}> {
-  return Request.sendJSONReceiveJSON(`/api/dataSetConfigurations/default/${datasetName}`, {
-    data: datasetConfiguration,
-  });
+  return Request.sendJSONReceiveJSON(
+    `/api/dataSetConfigurations/default/${datasetId.owningOrganization}/${datasetId.name}`,
+    {
+      data: datasetConfiguration,
+    },
+  );
 }
 
-export function getDatasetAccessList(datasetName: string): Promise<Array<APIUserType>> {
-  return Request.receiveJSON(`/api/datasets/${datasetName}/accessList`);
+export function getDatasetAccessList(datasetId: APIDatasetIdType): Promise<Array<APIUserType>> {
+  return Request.receiveJSON(
+    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/accessList`,
+  );
 }
 
 export async function addDataset(datasetConfig: DatasetConfigType): Promise<void> {
@@ -688,14 +700,17 @@ export async function addForeignDataSet(
 }
 
 // Returns void if the name is valid. Otherwise, a string is returned which denotes the reason.
-export async function isDatasetNameValid(dataSetName: string): Promise<?string> {
-  if (dataSetName === "") {
+export async function isDatasetNameValid(datasetId: APIDatasetIdType): Promise<?string> {
+  if (datasetId.name === "") {
     return "The dataset name must not be empty.";
   }
   try {
-    await Request.receiveJSON(`/api/datasets/${dataSetName}/isValidNewName`, {
-      doNotCatch: true,
-    });
+    await Request.receiveJSON(
+      `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/isValidNewName`,
+      {
+        doNotCatch: true,
+      },
+    );
     return null;
   } catch (ex) {
     const json = JSON.parse(await ex.text());
@@ -704,12 +719,15 @@ export async function isDatasetNameValid(dataSetName: string): Promise<?string> 
 }
 
 export function updateDatasetTeams(
-  datasetName: string,
+  datasetId: APIDatasetIdType,
   newTeams: Array<string>,
 ): Promise<APIDatasetType> {
-  return Request.sendJSONReceiveJSON(`/api/datasets/${datasetName}/teams`, {
-    data: newTeams,
-  });
+  return Request.sendJSONReceiveJSON(
+    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/teams`,
+    {
+      data: newTeams,
+    },
+  );
 }
 
 export async function triggerDatasetCheck(datastoreHost: string): Promise<void> {
@@ -722,22 +740,30 @@ export async function triggerDatasetCheck(datastoreHost: string): Promise<void> 
 
 export async function triggerDatasetClearCache(
   datastoreHost: string,
-  datasetName: string,
+  datasetId: APIDatasetIdType,
 ): Promise<void> {
   await doWithToken(token =>
-    Request.triggerRequest(`/data/triggers/clearCache/${datasetName}?token=${token}`, {
-      host: datastoreHost,
-    }),
+    Request.triggerRequest(
+      `/data/triggers/clearCache/${datasetId.owningOrganization}/${datasetId.name}?token=${token}`,
+      {
+        host: datastoreHost,
+      },
+    ),
   );
 }
 
-export async function getDatasetSharingToken(datasetName: string): Promise<string> {
-  const { sharingToken } = await Request.receiveJSON(`/api/datasets/${datasetName}/sharingToken`);
+export async function getDatasetSharingToken(datasetId: APIDatasetIdType): Promise<string> {
+  const { sharingToken } = await Request.receiveJSON(
+    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/sharingToken`,
+  );
   return sharingToken;
 }
 
-export async function revokeDatasetSharingToken(datasetName: string): Promise<void> {
-  await Request.triggerRequest(`/api/datasets/${datasetName}/sharingToken`, { method: "DELETE" });
+export async function revokeDatasetSharingToken(datasetId: APIDatasetIdType): Promise<void> {
+  await Request.triggerRequest(
+    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/sharingToken`,
+    { method: "DELETE" },
+  );
 }
 
 // #### Datastores

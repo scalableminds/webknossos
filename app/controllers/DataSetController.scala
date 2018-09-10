@@ -59,7 +59,7 @@ class DataSetController @Inject()(userService: UserService,
     def imageFromCacheIfPossible(dataSet: DataSet): Fox[Array[Byte]] = {
       val width = Math.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailHeight)
       val height = Math.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
-      Cache.get(s"thumbnail-$organizationName*$dataSetName*$dataLayerName-$width-$height") match {
+      cache.get[Array[Byte]](s"thumbnail-$organizationName*$dataSetName*$dataLayerName-$width-$height") match {
         case Some(a) =>
           Fox.successful(a)
         case _ => {
@@ -68,7 +68,7 @@ class DataSetController @Inject()(userService: UserService,
           dataSetService.handlerFor(dataSet).flatMap(_.requestDataLayerThumbnail(organizationName, dataLayerName, width, height, defaultZoomOpt, defaultCenterOpt)).map {
             result =>
               // We don't want all images to expire at the same time. Therefore, we add some random variation
-              Cache.set(s"thumbnail-$organizationName*$dataSetName*$dataLayerName-$width-$height",
+              cache.set(s"thumbnail-$organizationName*$dataSetName*$dataLayerName-$width-$height",
                 result,
                 (ThumbnailCacheDuration.toSeconds + math.random * 2.hours.toSeconds) seconds)
               result
@@ -124,7 +124,7 @@ class DataSetController @Inject()(userService: UserService,
     }
   }
 
-  def accessList(dataSetName: String) = sil.SecuredAction.async { implicit request =>
+  def accessList(organizationName: String, dataSetName: String) = sil.SecuredAction.async { implicit request =>
     for {
       dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> Messages("dataSet.notFound", dataSetName)
       allowedTeams <- dataSetService.allowedTeamIdsFor(dataSet._id)
@@ -146,7 +146,7 @@ class DataSetController @Inject()(userService: UserService,
     }
   }
 
-  def update(dataSetName: String) = sil.SecuredAction.async(parse.json) { implicit request =>
+  def update(organizationName: String, dataSetName: String) = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(dataSetPublicReads) {
       case (description, displayName, isPublic) =>
       for {
@@ -161,7 +161,7 @@ class DataSetController @Inject()(userService: UserService,
     }
   }
 
-  def updateTeams(dataSetName: String) = sil.SecuredAction.async(parse.json) { implicit request =>
+  def updateTeams(organizationName: String, dataSetName: String) = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyAs[List[String]] { teams =>
       for {
         dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> Messages("dataSet.notFound", dataSetName)
@@ -177,13 +177,13 @@ class DataSetController @Inject()(userService: UserService,
     }
   }
 
-  def getSharingToken(dataSetName: String) = sil.SecuredAction.async { implicit request =>
+  def getSharingToken(organizationName: String, dataSetName: String) = sil.SecuredAction.async { implicit request =>
     for {
       token <- dataSetService.getSharingToken(dataSetName, request.identity._organization)
     } yield Ok(Json.obj("sharingToken" -> token))
   }
 
-  def deleteSharingToken(dataSetName: String) = sil.SecuredAction.async { implicit request =>
+  def deleteSharingToken(organizationName: String, dataSetName: String) = sil.SecuredAction.async { implicit request =>
     for {
       _ <- dataSetDAO.updateSharingTokenByName(dataSetName, request.identity._organization, None)
     } yield Ok
@@ -193,7 +193,7 @@ class DataSetController @Inject()(userService: UserService,
     Future.successful(JsonBadRequest(Messages("dataSet.type.invalid", typ)))
   }
 
-  def isValidNewName(dataSetName: String) = sil.SecuredAction.async { implicit request =>
+  def isValidNewName(organizationName: String, dataSetName: String) = sil.SecuredAction.async { implicit request =>
     for {
       _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> "dataSet.name.invalid"
       _ <- dataSetService.assertNewDataSetName(dataSetName, request.identity._organization)(GlobalAccessContext) ?~> "dataSet.name.alreadyTaken"

@@ -206,7 +206,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   async makeDatasetPublic(dataset: APIDatasetType) {
     const newDataset = { ...dataset, isPublic: true };
-    await updateDataset(dataset.name, newDataset);
+    await updateDataset(dataset, newDataset);
     dispatch(setDatasetAction(newDataset));
   },
 });

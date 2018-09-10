@@ -33,8 +33,8 @@ import { fetchGistContent } from "libs/gist";
 import { document } from "libs/window";
 import NewTaskDescriptionModal from "oxalis/view/new_task_description_modal";
 
-import type { ModeType, ControlModeType } from "oxalis/constants";
-import type { OxalisState, TracingTypeTracingType } from "oxalis/store";
+import type { ModeType } from "oxalis/constants";
+import type { OxalisState, TracingTypeTracingType, TraceOrViewCommandType } from "oxalis/store";
 import type { RouterHistory } from "react-router-dom";
 
 type StateProps = {
@@ -44,8 +44,7 @@ type StateProps = {
 type Props = {
   history: RouterHistory,
   initialTracingType: TracingTypeTracingType,
-  initialAnnotationId: string,
-  initialControlmode: ControlModeType,
+  initialCommandType: TraceOrViewCommandType,
 } & StateProps;
 
 type State = {
@@ -83,12 +82,7 @@ class Controller extends React.PureComponent<Props, State> {
       Toast.error(messages["webgl.disabled"]);
     }
 
-    Model.fetch(
-      this.props.initialTracingType,
-      this.props.initialAnnotationId,
-      this.props.initialControlmode,
-      true,
-    )
+    Model.fetch(this.props.initialTracingType, this.props.initialCommandType, true)
       .then(() => this.modelFetchDone())
       .catch(error => {
         // Don't throw errors for errors already handled by the model.

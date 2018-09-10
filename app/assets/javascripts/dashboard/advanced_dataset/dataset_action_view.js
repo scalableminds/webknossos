@@ -25,17 +25,17 @@ class DatasetActionView extends React.PureComponent<Props, State> {
     typ: "skeleton" | "volume" | "hybrid",
     withFallback: boolean,
   ) => {
-    const annotation = await createExplorational(dataset.name, typ, withFallback);
+    const annotation = await createExplorational(dataset, typ, withFallback);
     this.props.history.push(`/annotations/${annotation.typ}/${annotation.id}`);
   };
 
   clearCache = async (dataset: APIMaybeUnimportedDatasetType) => {
-    await triggerDatasetClearCache(dataset.dataStore.url, dataset.name);
+    await triggerDatasetClearCache(dataset.dataStore.url, dataset);
     Toast.success(messages["dataset.clear_cache_success"]);
   };
 
   render() {
-    const dataset = this.props.dataset;
+    const { dataset } = this.props;
     const centerBackgroundImageStyle = {
       verticalAlign: "middle",
     };

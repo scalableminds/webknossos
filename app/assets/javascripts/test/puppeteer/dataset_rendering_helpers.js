@@ -5,8 +5,11 @@ const pixelmatch = require("pixelmatch");
 
 const DEV_AUTH_TOKEN = "secretScmBoyToken";
 
-async function createExplorational(datasetName, typ, withFallback, baseUrl) {
-  const fullUrl = urljoin(baseUrl, `/api/datasets/${datasetName}/createExplorational`);
+async function createExplorational(datasetId, typ, withFallback, baseUrl) {
+  const fullUrl = urljoin(
+    baseUrl,
+    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/createExplorational`,
+  );
   return (await fetch(fullUrl, {
     body: JSON.stringify({ typ, withFallback }),
     method: "POST",
@@ -17,8 +20,8 @@ async function createExplorational(datasetName, typ, withFallback, baseUrl) {
   })).json();
 }
 
-async function screenshotDataset(page, baseUrl, datasetName) {
-  const createdExplorational = await createExplorational(datasetName, "skeleton", false, baseUrl);
+async function screenshotDataset(page, baseUrl, datasetId) {
+  const createdExplorational = await createExplorational(datasetId, "skeleton", false, baseUrl);
   return openTracingViewAndScreenshot(page, baseUrl, createdExplorational.id);
 }
 

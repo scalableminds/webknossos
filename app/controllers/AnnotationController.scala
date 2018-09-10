@@ -148,7 +148,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
   case class CreateExplorationalParameters(typ: String, withFallback: Option[Boolean])
   object CreateExplorationalParameters {implicit val jsonFormat = Json.format[CreateExplorationalParameters]}
 
-  def createExplorational(dataSetName: String) =
+  def createExplorational(organizationName: String, dataSetName: String) =
     sil.SecuredAction.async(validateJson[CreateExplorationalParameters]) { implicit request =>
       for {
         dataSetSQL <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> Messages("dataSet.notFound", dataSetName)

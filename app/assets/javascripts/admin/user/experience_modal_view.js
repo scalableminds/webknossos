@@ -95,7 +95,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     return this.sortEntries(tableEntries);
   };
 
-  changed = async () => {
+  updateAllUsers = async () => {
     let relevantEntries = this.state.tableEntries.filter(
       entry =>
         entry.changed || (entry.lowestValue === entry.highestValue && entry.highestValue >= 1),
@@ -104,16 +104,22 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
       relevantEntries = this.state.tableEntries.filter(entry => entry.isShared);
     }
     const newUserPromises: Array<Promise<APIUserType>> = this.props.selectedUsers.map(user => {
-      const newExperiences = { ...user.experiences };
-      relevantEntries.forEach(entry => {
-        newExperiences[entry.domain] = entry.value;
-      });
+      const newExperiences = {
+        ...user.experiences,
+        ..._.fromPairs(relevantEntries.map(entry => [entry.domain, entry.value])),
+      };
       this.state.removedDomains.forEach(domain => {
         if (domain in newExperiences) {
           delete newExperiences[domain];
         }
       });
-      const newUser = { ...user, experiences: newExperiences };
+      const orderedExperiences = {};
+      Object.keys(newExperiences)
+        .sort()
+        .forEach(key => {
+          orderedExperiences[key] = newExperiences[key];
+        });
+      const newUser = { ...user, experiences: orderedExperiences };
       return this.sendUserToServer(newUser, user);
     });
     this.resolvePromisesAndCloseModal(newUserPromises);

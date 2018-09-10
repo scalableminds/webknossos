@@ -26,6 +26,7 @@ type OwnProps = {
   userId: ?string,
   isAdminView: boolean,
   history: RouterHistory,
+  initialTabKey: ?string,
 };
 
 type StateProps = {
@@ -64,8 +65,10 @@ class DashboardView extends React.PureComponent<Props, State> {
 
     const cachedDatasets = datasetCache.get();
 
+    const initialTabKey =
+      this.props.initialTabKey || (lastUsedTabKey && isValid ? lastUsedTabKey : defaultTab);
     this.state = {
-      activeTabKey: lastUsedTabKey && isValid ? lastUsedTabKey : defaultTab,
+      activeTabKey: initialTabKey,
       user: null,
       isLoadingDatasets: false,
       datasets: cachedDatasets,

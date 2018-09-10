@@ -121,7 +121,7 @@ class ReactRouter extends React.Component<Props> {
                 path="/"
                 render={() =>
                   isAuthenticated ? (
-                    <DashboardView userId={null} isAdminView={false} />
+                    <DashboardView userId={null} isAdminView={false} initialTabKey={null} />
                   ) : (
                     <SpotlightView />
                   )
@@ -129,8 +129,46 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
+                path="/dashboard/gallery"
+                render={() => (
+                  <DashboardView userId={null} isAdminView={false} initialTabKey="datasets" />
+                )}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/dashboard/datasets"
+                render={() => (
+                  <DashboardView
+                    userId={null}
+                    isAdminView={false}
+                    initialTabKey="advanced-datasets"
+                  />
+                )}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/dashboard/tasks"
+                render={() => (
+                  <DashboardView userId={null} isAdminView={false} initialTabKey="tasks" />
+                )}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/dashboard/annotations"
+                render={() => (
+                  <DashboardView
+                    userId={null}
+                    isAdminView={false}
+                    initialTabKey="explorativeAnnotations"
+                  />
+                )}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
                 path="/dashboard"
-                render={() => <DashboardView userId={null} isAdminView={false} />}
+                render={() => (
+                  <DashboardView userId={null} isAdminView={false} initialTabKey={null} />
+                )}
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
@@ -139,6 +177,7 @@ class ReactRouter extends React.Component<Props> {
                   <DashboardView
                     userId={match.params.userId}
                     isAdminView={match.params.userId !== null}
+                    initialTabKey={null}
                   />
                 )}
               />
@@ -254,7 +293,7 @@ class ReactRouter extends React.Component<Props> {
                     isEditingMode={false}
                     datasetName={match.params.datasetName || ""}
                     onComplete={() =>
-                      window.location.replace(`${window.location.origin}/dashboard`)
+                      window.location.replace(`${window.location.origin}/dashboard/datasets`)
                     }
                     onCancel={() => window.history.back()}
                   />

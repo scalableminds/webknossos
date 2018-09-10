@@ -183,9 +183,14 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
 
   private def requestBodyPreview: String = {
     request.body match {
-      case body: InMemoryBody => body.bytes.toString
-      case body: FileBody => s"<file: ${body.file.length} bytes>"
-      case _ => ""
+      case body: InMemoryBody if request.headers.get(HeaderNames.CONTENT_TYPE).getOrElse(List()).contains("application/x-protobuf") =>
+        s"<${body.bytes.length} bytes of protobuf data>"
+      case body: InMemoryBody =>
+        body.bytes.take(100).utf8String + (if(body.bytes.size > 100) s"... <omitted ${body.bytes.size - 100} bytes>" else "")
+      case body: FileBody =>
+        s"<file: ${body.file.length} bytes>"
+      case _ =>
+        ""
     }
   }
 }

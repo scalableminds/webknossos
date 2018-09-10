@@ -1,26 +1,23 @@
 package oxalis.mail
 
 import com.scalableminds.util.mail.Mail
+import javax.inject.Inject
 import models.user.User
 import models.team.Organization
 import play.api.i18n.Messages
 import utils.WkConf
 import views._
 
-object DefaultMails {
-  /**
-   * Configuration used for settings
-   */
-  val conf = play.api.Play.current.configuration
+class DefaultMails @Inject()(conf: WkConf) {
 
   /**
    * Base url used in emails
    */
-  val uri = WkConf.Http.uri
+  val uri = conf.Http.uri
 
   val defaultFrom = "no-reply@webknossos.org"
 
-  val newOrganizationMailingList = WkConf.Oxalis.newOrganizationMailingList
+  val newOrganizationMailingList = conf.Oxalis.newOrganizationMailingList
 
   def registerAdminNotifyerMail(user: User, email: String, brainDBResult: Option[String], organization: Organization) =
     Mail(

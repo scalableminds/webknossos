@@ -4,15 +4,13 @@ package models.team
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
+import javax.inject.Inject
 import models.user.User
-import play.api.Play.current
-import play.api.i18n.Messages
-import play.api.i18n.Messages.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{ObjectId, SQLDAO}
+import utils.{ObjectId, SQLClient, SQLDAO}
 
 
 case class Team(
@@ -24,25 +22,26 @@ case class Team(
                   isDeleted: Boolean = false
                   ) extends FoxImplicits {
 
-  def organization: Fox[Organization] =
-    OrganizationDAO.findOne(_organization)(GlobalAccessContext)
-
   def couldBeAdministratedBy(user: User): Boolean =
     user._organization == this._organization
 
-  def publicWrites(implicit ctx: DBAccessContext): Fox[JsObject] =
+}
+
+class TeamService @Inject()(organizationDAO: OrganizationDAO) {
+
+  def publicWrites(team: Team)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
-      organization <- organization
+      organization <- organizationDAO.findOne(team._organization)(GlobalAccessContext)
     } yield {
       Json.obj(
-        "id" -> _id.toString,
-        "name" -> name,
+        "id" -> team._id.toString,
+        "name" -> team.name,
         "organization" -> organization.name
       )
     }
 }
 
-object TeamDAO extends SQLDAO[Team, TeamsRow, Teams] {
+class TeamDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[Team, TeamsRow, Teams](sqlClient) {
   val collection = Teams
 
   def idColumn(x: Teams): Rep[String] = x._Id

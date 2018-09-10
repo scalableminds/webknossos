@@ -4,14 +4,15 @@ import com.scalableminds.util.mail.Send
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
+import javax.inject.Inject
 import models.annotation._
+import models.project.ProjectDAO
 import models.task.TaskDAO
-import models.user.User
+import models.user.{User, UserService}
 import models.team.OrganizationDAO
 import net.liftweb.common.Full
 import oxalis.mail.DefaultMails
-import oxalis.thirdparty.BrainTracing.Mailer
-import play.api.Play
+import oxalis.thirdparty.BrainTracing
 import play.api.libs.concurrent.Execution.Implicits._
 import utils.{ObjectId, WkConf}
 
@@ -19,9 +20,19 @@ import scala.collection.mutable
 import scala.concurrent.duration._
 
 
-object TimeSpanService extends FoxImplicits with LazyLogging {
+class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
+                                userService: UserService,
+                                taskDAO: TaskDAO,
+                                brainTracing: BrainTracing,
+                                annotationService: AnnotationService,
+                                projectDAO: ProjectDAO,
+                                organizationDAO: OrganizationDAO,
+                                timeSpanDAO: TimeSpanDAO,
+                                defaultMails: DefaultMails,
+                                conf: WkConf
+                               ) extends FoxImplicits with LazyLogging {
   private val MaxTracingPause =
-    WkConf.Oxalis.User.Time.tracingPauseInSeconds.toMillis
+    conf.Oxalis.User.Time.tracingPauseInSeconds.toMillis
 
   def logUserInteraction(user: User, annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val timestamp = System.currentTimeMillis
@@ -38,7 +49,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
                            end: Option[Long] = None)(implicit ctx: DBAccessContext): Fox[Map[T, Duration]] =
 
     for {
-      timeTrackingOpt <- TimeSpanDAO.findAllByUser(user._id, start, end).futureBox
+      timeTrackingOpt <- timeSpanDAO.findAllByUser(user._id, start, end).futureBox
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>
@@ -55,7 +66,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
                                  end: Option[Long] = None)(implicit ctx: DBAccessContext): Fox[Map[T, Duration]] =
 
     for {
-      timeTrackingOpt <- TimeSpanDAO.findAllByAnnotation(annotationId, start, end).futureBox
+      timeTrackingOpt <- timeSpanDAO.findAllByAnnotation(annotationId, start, end).futureBox
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>
@@ -67,7 +78,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
 
   def totalTimeOfUser[T](user: User, start: Option[Long], end: Option[Long])(implicit ctx: DBAccessContext): Fox[Duration] =
     for {
-      timeTrackingOpt <- TimeSpanDAO.findAllByUser(user._id, start, end).futureBox
+      timeTrackingOpt <- timeSpanDAO.findAllByUser(user._id, start, end).futureBox
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>
@@ -79,7 +90,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
 
   def loggedTimePerInterval[T](groupingF: TimeSpan => T, start: Option[Long] = None, end: Option[Long] = None): Fox[Map[T, Duration]] =
     for {
-      timeTrackingOpt <- TimeSpanDAO.findAll(start, end).futureBox
+      timeTrackingOpt <- timeSpanDAO.findAll(start, end).futureBox
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>
@@ -155,7 +166,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
     // Log time to annotation
     annotation match {
       case Some(a: ObjectId) =>
-        AnnotationDAO.logTime(a, duration)(GlobalAccessContext) ?~> "FAILED: AnnotationService.logTime"
+        annotationDAO.logTime(a, duration)(GlobalAccessContext) ?~> "FAILED: AnnotationService.logTime"
       case _ =>
         Fox.successful(())
       // do nothing, this is not a stored annotation
@@ -165,15 +176,15 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
   def signalOverTime(time: Long, annotationOpt: Option[Annotation])(implicit ctx: DBAccessContext): Fox[_] = {
     for {
       annotation <- annotationOpt.toFox
-      user <- annotation.user
-      task <- annotation.task
-      project <- task.project
+      user <- userService.findOneById(annotation._user, useCache = true)(GlobalAccessContext)
+      task <- annotationService.taskFor(annotation)
+      project <- projectDAO.findOne(task._project)
       annotationTime <- annotation.tracingTime ?~> "no annotation.tracingTime"
       timeLimit <- project.expectedTime ?~> "no project.expectedTime"
-      organization <- user.organization
+      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
     } yield {
       if (annotationTime >= timeLimit && annotationTime - time < timeLimit) {
-        Mailer ! Send(DefaultMails.overLimitMail(
+        brainTracing.Mailer ! Send(defaultMails.overLimitMail(
           user,
           project.name,
           task._id.toString,
@@ -189,7 +200,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
     annotation.flatMap(_._task) match {
       case Some(taskId) =>
         for {
-          _ <- TaskDAO.logTime(taskId, duration)(GlobalAccessContext) ?~> "FAILED: TaskSQLDAO.logTime"
+          _ <- taskDAO.logTime(taskId, duration)(GlobalAccessContext) ?~> "FAILED: TaskSQLDAO.logTime"
           _ <- signalOverTime(duration, annotation)(GlobalAccessContext).futureBox //signalOverTime is expected to fail in some cases, hence the .futureBox
         } yield {}
       case _ =>
@@ -203,7 +214,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
   private def getAnnotation(annotation: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[Option[Annotation]] = {
     annotation match {
       case Some(annotationId) =>
-        AnnotationDAO.findOne(annotationId).map(Some(_))
+        annotationDAO.findOne(annotationId).map(Some(_))
       case _ =>
         Fox.successful(None)
     }
@@ -211,7 +222,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
 
   private def flushToDb(timespansToInsert: List[TimeSpan], timespansToUpdate: List[(TimeSpan, Long)])(implicit ctx: DBAccessContext) = {
     val updateResult = for {
-      _ <- Fox.serialCombined(timespansToInsert)(t => TimeSpanDAO.insertOne(t))
+      _ <- Fox.serialCombined(timespansToInsert)(t => timeSpanDAO.insertOne(t))
       _ <- Fox.serialCombined(timespansToUpdate)(t => updateTimeSpanInDb(t._1, t._2))
     } yield ()
 
@@ -228,7 +239,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
     val updated = timeSpan.addTime(duration, timestamp)
 
     for {
-      _ <- TimeSpanDAO.updateOne(updated)(ctx) ?~> "FAILED: TimeSpanDAO.update"
+      _ <- timeSpanDAO.updateOne(updated)(ctx) ?~> "FAILED: TimeSpanDAO.update"
       _ <- logTimeToAnnotation(duration, updated._annotation) ?~> "FAILED: TimeSpanService.logTimeToAnnotation"
       annotation <- getAnnotation(updated._annotation)
       _ <- logTimeToTask(duration, annotation) ?~> "FAILED: TimeSpanService.logTimeToTask"

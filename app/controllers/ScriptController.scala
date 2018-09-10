@@ -1,77 +1,85 @@
 package controllers
 
+import com.scalableminds.util.accesscontext.DBAccessContext
 import javax.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.task._
+import oxalis.security.WebknossosSilhouette
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
-import oxalis.security.WebknossosSilhouette.SecuredAction
 import utils.ObjectId
 
 
-class ScriptController @Inject()(val messagesApi: MessagesApi) extends Controller with FoxImplicits {
+class ScriptController @Inject()(scriptDAO: ScriptDAO,
+                                 taskDAO: TaskDAO,
+                                 scriptService: ScriptService,
+                                 sil: WebknossosSilhouette,
+                                 val messagesApi: MessagesApi) extends Controller with FoxImplicits {
+
+  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
+  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
 
   val scriptPublicReads =
     ((__ \ 'name).read[String](minLength[String](2) or maxLength[String](50)) and
       (__ \ 'gist).read[String] and
       (__ \ 'owner).read[String] (ObjectId.stringObjectIdReads("owner"))) (Script.fromForm _)
 
-  def create = SecuredAction.async(parse.json) { implicit request =>
+  def create = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(scriptPublicReads) { script =>
       for {
         _ <- bool2Fox(request.identity.isAdmin) ?~> "notAllowed"
-        _ <- ScriptDAO.insertOne(script)
-        js <- script.publicWrites ?~> "script.write.failed"
+        _ <- scriptDAO.insertOne(script)
+        js <- scriptService.publicWrites(script) ?~> "script.write.failed"
       } yield {
         Ok(js)
       }
     }
   }
 
-  def get(scriptId: String) = SecuredAction.async { implicit request =>
+  def get(scriptId: String) = sil.SecuredAction.async { implicit request =>
     for {
       scriptIdValidated <- ObjectId.parse(scriptId)
-      script <- ScriptDAO.findOne(scriptIdValidated) ?~> "script.notFound"
-      js <- script.publicWrites ?~> "script.write.failed"
+      script <- scriptDAO.findOne(scriptIdValidated) ?~> "script.notFound"
+      js <- scriptService.publicWrites(script) ?~> "script.write.failed"
     } yield {
       Ok(js)
     }
   }
 
-  def list = SecuredAction.async { implicit request =>
+  def list = sil.SecuredAction.async { implicit request =>
     for {
-      scripts <- ScriptDAO.findAll
-      js <- Fox.serialCombined(scripts)(s => s.publicWrites)
+      scripts <- scriptDAO.findAll
+      js <- Fox.serialCombined(scripts)(s => scriptService.publicWrites(s))
     } yield {
       Ok(Json.toJson(js))
     }
   }
 
-  def update(scriptId: String) = SecuredAction.async(parse.json) { implicit request =>
+  def update(scriptId: String) = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(scriptPublicReads) { scriptFromForm =>
       for {
         scriptIdValidated <- ObjectId.parse(scriptId)
-        oldScript <- ScriptDAO.findOne(scriptIdValidated) ?~> "script.notFound"
+        oldScript <- scriptDAO.findOne(scriptIdValidated) ?~> "script.notFound"
         _ <- bool2Fox(oldScript._owner == request.identity._id) ?~> "script.notOwner"
         updatedScript = scriptFromForm.copy(_id = oldScript._id)
-        _ <- ScriptDAO.updateOne(updatedScript)
-        js <- updatedScript.publicWrites ?~> "script.write.failed"
+        _ <- scriptDAO.updateOne(updatedScript)
+        js <- scriptService.publicWrites(updatedScript) ?~> "script.write.failed"
       } yield {
         Ok(js)
       }
     }
   }
 
-  def delete(scriptId: String) = SecuredAction.async { implicit request =>
+  def delete(scriptId: String) = sil.SecuredAction.async { implicit request =>
     for {
       scriptIdValidated <- ObjectId.parse(scriptId)
-      oldScript <- ScriptDAO.findOne(scriptIdValidated) ?~> "script.notFound"
+      oldScript <- scriptDAO.findOne(scriptIdValidated) ?~> "script.notFound"
       _ <- bool2Fox(oldScript._owner == request.identity._id) ?~> "script.notOwner"
-      _ <- ScriptDAO.deleteOne(scriptIdValidated) ?~> "script.removalFailed"
-      _ <- TaskDAO.removeScriptFromAllTasks(scriptIdValidated) ?~> "script.removalFailed"
+      _ <- scriptDAO.deleteOne(scriptIdValidated) ?~> "script.removalFailed"
+      _ <- taskDAO.removeScriptFromAllTasks(scriptIdValidated) ?~> "script.removalFailed"
     } yield {
       Ok
     }

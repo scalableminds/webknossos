@@ -1,4 +1,5 @@
 // Parse PR descriptions for release notes
+/* eslint-disable import/no-extraneous-dependencies, global-require, import/no-dynamic-require */
 const fetch = require("node-fetch");
 const fs = require("fs");
 

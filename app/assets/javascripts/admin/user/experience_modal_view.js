@@ -115,7 +115,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
       });
       const orderedExperiences = {};
       Object.keys(newExperiences)
-        .sort()
+        .sort(Utils.localeCompareBy(([]: Array<string>), domain => domain.toLowerCase()))
         .forEach(key => {
           orderedExperiences[key] = newExperiences[key];
         });

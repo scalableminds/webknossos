@@ -143,6 +143,19 @@ class DataSetController @Inject()(userService: UserService,
     }
   }
 
+  def health(dataSetName: String, sharingToken: Option[String]) = sil.UserAwareAction.async { implicit request =>
+    val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
+    for {
+      dataSet <- dataSetDAO.findOneByName(dataSetName)(ctx) ?~> Messages("dataSet.notFound", dataSetName)
+      dataSource <- dataSetService.dataSourceFor(dataSet) ?~> "dataSource.notFound"
+      usableDataSource <- dataSource.toUsable.toFox ?~> "dataSet.notImported"
+      datalayer <- usableDataSource.dataLayers.headOption.toFox ?~> "dataSet.noLayers"
+      thumbnail <- dataSetService.handlerFor(dataSet).flatMap(_.requestDataLayerThumbnail(datalayer.name, 100, 100, None, None)) ?~> "dataSet.loadingDataFailed"
+    } yield {
+      Ok("Ok")
+    }
+  }
+
   def update(dataSetName: String) = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(dataSetPublicReads) {
       case (description, displayName, isPublic) =>

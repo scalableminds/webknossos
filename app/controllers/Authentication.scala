@@ -4,12 +4,13 @@ import java.net.URLEncoder
 
 import akka.actor.ActorSystem
 import javax.inject.Inject
-import com.mohiva.play.silhouette.api.LoginInfo
+import com.mohiva.play.silhouette.api.{LoginInfo, Silhouette}
 import com.mohiva.play.silhouette.api.exceptions.ProviderException
 import com.mohiva.play.silhouette.api.util.Credentials
+import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
 import com.scalableminds.util.mail._
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.rpc.RPC
+import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.binary.{DataStore, DataStoreDAO}
 import models.team._
@@ -106,19 +107,17 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                defaultMails: DefaultMails,
                                rpc: RPC,
                                conf: WkConf,
-                               sil: WebknossosSilhouette,
+                               wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+                               sil: Silhouette[WkEnv],
                                val messagesApi: MessagesApi
-)
+                              )
   extends Controller
     with FoxImplicits {
 
-  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
-
   import AuthForms._
 
-  val env = sil.environment
-  val bearerTokenAuthenticatorService = env.combinedAuthenticatorService.tokenAuthenticatorService
+  val combinedAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService
+  val bearerTokenAuthenticatorService = combinedAuthenticatorService.tokenAuthenticatorService
 
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
@@ -197,9 +196,9 @@ class Authentication @Inject()(actorSystem: ActorSystem,
             case None =>
               Future.successful(BadRequest(Messages("error.noUser")))
             case Some(user) if (!user.isDeactivated) => for {
-              authenticator <- env.authenticatorService.create(loginInfo)
-              value <- env.authenticatorService.init(authenticator)
-              result <- env.authenticatorService.embed(value, Ok)
+              authenticator <- combinedAuthenticatorService.create(loginInfo)
+              value <- combinedAuthenticatorService.init(authenticator)
+              result <- combinedAuthenticatorService.embed(value, Ok)
             } yield result
             case Some(user) => Future.successful(BadRequest(Messages("user.deactivated")))
           }
@@ -214,9 +213,9 @@ class Authentication @Inject()(actorSystem: ActorSystem,
     for {
       _ <- bool2Fox(conf.Application.Authentication.enableDevAutoLogin) ?~> "error.notInDev"
       user <- userService.defaultUser
-      authenticator <- env.authenticatorService.create(user.loginInfo)
-      value <- env.authenticatorService.init(authenticator)
-      result <- env.authenticatorService.embed(value, Ok)
+      authenticator <- combinedAuthenticatorService.create(user.loginInfo)
+      value <- combinedAuthenticatorService.init(authenticator)
+      result <- combinedAuthenticatorService.embed(value, Ok)
     } yield result
   }
 
@@ -225,10 +224,10 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       val loginInfo = LoginInfo(CredentialsProvider.ID, email)
       for {
         _ <- userService.findOneByEmail(email) ?~> "user.notFound"
-        _ <- env.authenticatorService.discard(request.authenticator, Ok) //to logout the admin
-        authenticator <- env.authenticatorService.create(loginInfo)
-        value <- env.authenticatorService.init(authenticator)
-        result <- env.authenticatorService.embed(value, Redirect("/dashboard")) //to login the new user
+        _ <- combinedAuthenticatorService.discard(request.authenticator, Ok) //to logout the admin
+        authenticator <- combinedAuthenticatorService.create(loginInfo)
+        value <- combinedAuthenticatorService.init(authenticator)
+        result <- combinedAuthenticatorService.embed(value, Redirect("/dashboard")) //to login the new user
       } yield result
     } else {
       Logger.warn(s"User tried to switch (${request.identity.email} -> $email) but is no Superuser!")
@@ -285,7 +284,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
             case Some(user) => val loginInfo = LoginInfo(CredentialsProvider.ID, request.identity.email)
               for {
                 _ <- userService.changePasswordInfo(loginInfo, passwordHasher.hash(passwords.password1))
-                _ <- env.authenticatorService.discard(request.authenticator, Ok)
+                _ <- combinedAuthenticatorService.discard(request.authenticator, Ok)
               } yield {
                 Mailer ! Send(defaultMails.changePasswordMail(user.name, request.identity.email))
                 Ok
@@ -299,11 +298,11 @@ class Authentication @Inject()(actorSystem: ActorSystem,
   }
 
   def getToken = sil.SecuredAction.async { implicit request =>
-    val futureOfFuture: Future[Future[Result]] = env.combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo).map {
+    val futureOfFuture: Future[Future[Result]] = combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo).map {
       oldTokenOpt => {
         if (oldTokenOpt.isDefined) Future.successful(Ok(Json.obj("token" -> oldTokenOpt.get.id)))
         else {
-          env.combinedAuthenticatorService.createToken(request.identity.loginInfo).map {
+          combinedAuthenticatorService.createToken(request.identity.loginInfo).map {
             newToken => Ok(Json.obj("token" -> newToken.id))
           }
         }
@@ -317,9 +316,9 @@ class Authentication @Inject()(actorSystem: ActorSystem,
 
   def deleteToken = sil.SecuredAction.async { implicit request =>
     val futureOfFuture: Future[Future[Result]] = for {
-      oldTokenOpt <- env.combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo)
+      oldTokenOpt <- combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo)
     } yield {
-      if (oldTokenOpt.isDefined) env.combinedAuthenticatorService.discard(oldTokenOpt.get, Ok(Json.obj("messages" -> Messages("auth.tokenDeleted"))))
+      if (oldTokenOpt.isDefined) combinedAuthenticatorService.discard(oldTokenOpt.get, Ok(Json.obj("messages" -> Messages("auth.tokenDeleted"))))
       else Future.successful(Ok)
     }
 
@@ -331,7 +330,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
 
   def logout = sil.UserAwareAction.async { implicit request =>
     request.authenticator match {
-      case Some(authenticator) => env.authenticatorService.discard(authenticator, Ok)
+      case Some(authenticator) => combinedAuthenticatorService.discard(authenticator, Ok)
       case _ => Future.successful(Ok)
     }
   }
@@ -443,7 +442,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
     }
 
     for {
-      token <- env.combinedAuthenticatorService.tokenAuthenticatorService.createAndInit(loginInfo, TokenType.DataStore, deleteOld = false).toFox
+      token <- bearerTokenAuthenticatorService.createAndInit(loginInfo, TokenType.DataStore, deleteOld = false).toFox
       datastores <- dataStoreDAO.findAll(GlobalAccessContext)
       _ <- Fox.combined(datastores.map(sendRPCToDataStore(_, token)))
     } yield Full(())
@@ -454,8 +453,8 @@ class Authentication @Inject()(actorSystem: ActorSystem,
   def getCookie(email: String)(implicit requestHeader: RequestHeader): Future[Cookie] = {
     val loginInfo = LoginInfo(CredentialsProvider.ID, email.toLowerCase)
     for {
-      authenticator <- sil.environment.authenticatorService.create(loginInfo)
-      value <- sil.environment.authenticatorService.init(authenticator)
+      authenticator <- combinedAuthenticatorService.create(loginInfo)
+      value <- combinedAuthenticatorService.init(authenticator)
     } yield {
       value
     }

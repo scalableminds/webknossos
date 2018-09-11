@@ -39,13 +39,13 @@ case class DataSet(
                        sharingToken: Option[String],
                        status: String,
                        logoUrl: Option[String],
+                       sortingKey: Long = System.currentTimeMillis(),
                        created: Long = System.currentTimeMillis(),
                        isDeleted: Boolean = false
                      ) extends FoxImplicits {
 
   def urlEncodedName: String =
     UriEncoding.encodePathSegment(name, "UTF-8")
-
 }
 
 class DataSetDAO @Inject()(sqlClient: SQLClient, dataSetDataLayerDAO: DataSetDataLayerDAO, organizationDAO: OrganizationDAO) extends SQLDAO[DataSet, DatasetsRow, Datasets](sqlClient) {
@@ -84,6 +84,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient, dataSetDataLayerDAO: DataSetDat
         r.sharingtoken,
         r.status,
         r.logourl,
+        r.sortingkey.getTime,
         r.created.getTime,
         r.isdeleted
       )
@@ -169,10 +170,10 @@ class DataSetDAO @Inject()(sqlClient: SQLClient, dataSetDataLayerDAO: DataSetDat
     } yield ()
   }
 
-  def updateFields(_id: ObjectId, description: Option[String], displayName: Option[String], isPublic: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val q = for {row <- Datasets if (notdel(row) && row._Id === _id.id)} yield (row.description, row.displayname, row.ispublic)
+  def updateFields(_id: ObjectId, description: Option[String], displayName: Option[String], sortingKey: Long, isPublic: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val q = for {row <- Datasets if (notdel(row) && row._Id === _id.id)} yield (row.description, row.displayname, row.sortingkey, row.ispublic)
     for {
-      _ <- run(q.update(description, displayName, isPublic))
+      _ <- run(q.update(description, displayName, new java.sql.Timestamp(sortingKey), isPublic))
     } yield ()
   }
 
@@ -188,9 +189,9 @@ class DataSetDAO @Inject()(sqlClient: SQLClient, dataSetDataLayerDAO: DataSetDat
     val defaultConfiguration: Option[String] = d.defaultConfiguration.map(c => Json.toJson(c.configuration).toString)
     for {
       _ <- run(
-        sqlu"""insert into webknossos.dataSets(_id, _dataStore, _organization, defaultConfiguration, description, displayName, isPublic, isUsable, name, scale, status, sharingToken, created, isDeleted)
+        sqlu"""insert into webknossos.dataSets(_id, _dataStore, _organization, defaultConfiguration, description, displayName, isPublic, isUsable, name, scale, status, sharingToken, sortingKey, created, isDeleted)
                values(${d._id.id}, ${d._dataStore}, ${d._organization.id}, #${optionLiteral(defaultConfiguration.map(sanitize))}, ${d.description}, ${d.displayName}, ${d.isPublic}, ${d.isUsable},
-                      ${d.name}, #${optionLiteral(d.scale.map(s => writeScaleLiteral(s)))}, ${d.status.take(1024)}, ${d.sharingToken}, ${new java.sql.Timestamp(d.created)}, ${d.isDeleted})
+                      ${d.name}, #${optionLiteral(d.scale.map(s => writeScaleLiteral(s)))}, ${d.status.take(1024)}, ${d.sharingToken}, ${new java.sql.Timestamp(d.sortingKey)}, ${new java.sql.Timestamp(d.created)}, ${d.isDeleted})
             """)
     } yield ()
   }

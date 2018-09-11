@@ -1,18 +1,22 @@
 // @flow
 
-import Base64 from "base64-js";
 import Request from "libs/request";
 import Store from "oxalis/store";
 import { pushSaveQueueAction } from "oxalis/model/actions/save_actions";
 import { updateBucket } from "oxalis/model/sagas/update_actions";
-import * as Utils from "libs/utils";
 import { doWithToken } from "admin/admin_rest_api";
 import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import type { DataLayerType } from "oxalis/store";
-import { getResolutions, isSegmentationLayer } from "oxalis/model/accessors/dataset_accessor.js";
+import { getResolutions, isSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
 import constants from "oxalis/constants";
+import { createWorker } from "oxalis/workers/comlink_wrapper";
+import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
+import ByteArrayToBase64Worker from "oxalis/workers/byte_array_to_base64.worker";
+
+const decodeFourBit = createWorker(DecodeFourBitWorker);
+const byteArrayToBase64 = createWorker(ByteArrayToBase64Worker);
 
 export const REQUEST_TIMEOUT = 30000;
 
@@ -74,45 +78,25 @@ export async function requestFromStore(
       },
     );
 
-    let result = new Uint8Array(responseBuffer);
+    let resultBuffer = responseBuffer;
     if (fourBit) {
-      result = decodeFourBit(result);
+      resultBuffer = await decodeFourBit(resultBuffer);
     }
-    return result;
+    return new Uint8Array(resultBuffer);
   });
 }
 
-function decodeFourBit(bufferArray: Uint8Array): Uint8Array {
-  // Expand 4-bit data
-  const newColors = new Uint8Array(bufferArray.length << 1);
-
-  let index = 0;
-  while (index < newColors.length) {
-    const value = bufferArray[index >> 1];
-    newColors[index] = value & 0b11110000;
-    index++;
-    newColors[index] = value << 4;
-    index++;
-  }
-
-  return newColors;
-}
-
 export async function sendToStore(batch: Array<DataBucket>): Promise<void> {
-  const YIELD_AFTER_X_BUCKETS = 3;
-  let counter = 0;
   const items = [];
   for (const bucket of batch) {
-    counter++;
-    // Do not block the main thread for too long as Base64.fromByteArray is performance heavy
-    // eslint-disable-next-line no-await-in-loop
-    if (counter % YIELD_AFTER_X_BUCKETS === 0) await Utils.sleep(1);
     const bucketData = bucket.getData();
     const bucketInfo = createSendBucketInfo(
       bucket.zoomedAddress,
       getResolutions(Store.getState().dataset),
     );
-    items.push(updateBucket(bucketInfo, Base64.fromByteArray(bucketData)));
+    // eslint-disable-next-line no-await-in-loop
+    const base64 = await byteArrayToBase64(bucketData);
+    items.push(updateBucket(bucketInfo, base64));
   }
   Store.dispatch(pushSaveQueueAction(items, "volume"));
 }

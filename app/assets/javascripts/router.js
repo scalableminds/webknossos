@@ -235,14 +235,15 @@ class ReactRouter extends React.Component<Props> {
                 path="/annotations/:type/:id"
                 render={this.tracingView}
                 serverAuthenticationCallback={async ({ match }: ContextRouter) => {
-                  const isReadOnly = window.location.pathname.endsWith("readOnly");
-                  if (isReadOnly) {
+                  try {
                     const annotationInformation = await getAnnotationInformation(
                       match.params.id || "",
                       Enum.coalesce(APITracingTypeEnum, match.params.type) ||
                         APITracingTypeEnum.Explorational,
                     );
                     return annotationInformation.isPublic;
+                  } catch (ex) {
+                    // Annotation could not be found
                   }
                   return false;
                 }}

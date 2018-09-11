@@ -1,7 +1,7 @@
 // @flow
 
 import * as React from "react";
-import { Button, Input, Checkbox, Col, Row, Tooltip } from "antd";
+import { Button, Input, Checkbox, Col, Row, Tooltip, DatePicker } from "antd";
 import Clipboard from "clipboard-js";
 import features from "features";
 import Toast from "libs/toast";
@@ -120,6 +120,14 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
             </FormItemWithInfo>
           </Col>
         </Row>
+        <FormItemWithInfo
+          label="Sorting Date"
+          info="This date can be used to sort the datasets within webKnossos. For example, if the dataset was published in a paper, you can input the publication date of the paper here."
+        >
+          {getFieldDecorator("dataset.sortingKey")(
+            <DatePicker placeholder="Select a Publication Date" />,
+          )}
+        </FormItemWithInfo>
         {allowedTeamsComponent}
         <FormItemWithInfo
           label="Visibility"

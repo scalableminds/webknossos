@@ -14,6 +14,7 @@ import {
   updateDatasetDatasource,
   updateDatasetTeams,
 } from "admin/admin_rest_api";
+import moment from "moment";
 import type { DatasetConfigurationType } from "oxalis/store";
 import messages from "messages";
 import type {
@@ -93,7 +94,6 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       if (dataSource == null) {
         throw new Error("No datasource received from server.");
       }
-
       this.props.form.setFieldsValue({
         dataSourceJson: toJSON(dataSource),
         dataset: {
@@ -101,6 +101,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
           isPublic: dataset.isPublic || false,
           description: dataset.description || undefined,
           allowedTeams: dataset.allowedTeams || [],
+          sortingKey: moment(dataset.sortingKey),
         },
       });
       // This call cannot be combined with the previous setFieldsValue,
@@ -210,12 +211,16 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         Toast.warning(messages["dataset.import.invalid_fields"]);
         return;
       }
-
+      const datasetChangeValues = { ...formValues.dataset };
+      if (datasetChangeValues.sortingKey != null) {
+        datasetChangeValues.sortingKey = datasetChangeValues.sortingKey.valueOf();
+      }
       const teamIds = formValues.dataset.allowedTeams.map(t => t.id);
       if (await this.doesUserWantToChangeAllowedTeams(teamIds)) {
         return;
       }
-      await updateDataset(this.props.datasetId, Object.assign({}, dataset, formValues.dataset));
+
+      await updateDataset(this.props.datasetId, Object.assign({}, dataset, datasetChangeValues));
 
       if (datasetDefaultConfiguration != null) {
         await updateDatasetDefaultConfiguration(

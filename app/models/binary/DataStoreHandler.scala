@@ -2,12 +2,14 @@ package models.binary
 
 import java.io.File
 
+import akka.stream.scaladsl.Source
+import akka.util.ByteString
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.models.ImageThumbnail
 import com.scalableminds.webknossos.datastore.tracings.TracingSelector
-import com.scalableminds.util.rpc.RPC
+import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.util.tools.JsonHelper.boxFormat
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
@@ -15,9 +17,6 @@ import net.liftweb.common.Box
 import org.apache.commons.codec.binary.Base64
 import oxalis.security.CompactRandomIDGenerator
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.iteratee.Enumerator
-import play.api.libs.ws.{WS, WSResponse}
-import play.api.mvc.Codec
 import play.utils.UriEncoding
 
 object DataStoreHandler {
@@ -106,7 +105,7 @@ class DataStoreHandler(dataStore: DataStore, dataSet: DataSet, rpc: RPC) extends
     }
   }
 
-  def getVolumeTracing(tracingId: String): Fox[(VolumeTracing, Enumerator[Array[Byte]])] = {
+  def getVolumeTracing(tracingId: String): Fox[(VolumeTracing, Source[ByteString, _])] = {
     logger.debug("Called to get VolumeTracing." + baseInfo)
     for {
       tracing <- rpc(s"${dataStore.url}/data/tracings/volume/${tracingId}")
@@ -114,7 +113,7 @@ class DataStoreHandler(dataStore: DataStore, dataSet: DataSet, rpc: RPC) extends
         .getWithProtoResponse[VolumeTracing](VolumeTracing)
       data <- rpc(s"${dataStore.url}/data/tracings/volume/${tracingId}/data")
         .withQueryString("token" -> DataStoreHandler.webKnossosToken)
-        .getStream.map(_._2)
+        .getStream
     } yield {
       (tracing, data)
     }

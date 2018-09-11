@@ -17,12 +17,12 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
 class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticatorSettings,
-                                                dao: BearerTokenAuthenticatorDAO,
+                                                repository: BearerTokenAuthenticatorRepository,
                                                 idGenerator: IDGenerator,
                                                 clock: Clock,
                                                 userService: UserService,
                                                 conf: WkConf)(implicit override val executionContext: ExecutionContext)
-                                            extends BearerTokenAuthenticatorService(settings, dao, idGenerator, clock) with FoxImplicits{
+                                            extends BearerTokenAuthenticatorService(settings, repository, idGenerator, clock) with FoxImplicits{
 
   val resetPasswordExpiry = conf.Silhouette.TokenAuthenticator.resetPasswordExpiry.toMillis millis
   val dataStoreExpiry = conf.Silhouette.TokenAuthenticator.dataStoreExpiry.toMillis millis
@@ -48,7 +48,7 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
   }
 
   def init(authenticator: BearerTokenAuthenticator, tokenType: TokenType, deleteOld: Boolean = true)(implicit request: RequestHeader): Future[String] = {
-    dao.add(authenticator, tokenType, deleteOld)(GlobalAccessContext).map { a =>
+    repository.add(authenticator, tokenType, deleteOld)(GlobalAccessContext).map { a =>
       a.id
     }.recover {
       case e => throw new AuthenticatorInitializationException(InitError.format(ID, authenticator), e)
@@ -65,7 +65,7 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
 
   def userForToken(tokenValue: String)(implicit ctx: DBAccessContext): Fox[User] =
     for {
-      tokenAuthenticator <- dao.findOneByValue(tokenValue) ?~> "auth.invalidToken"
+      tokenAuthenticator <- repository.findOneByValue(tokenValue) ?~> "auth.invalidToken"
       _ <- bool2Fox(tokenAuthenticator.isValid) ?~> "auth.invalidToken"
       user <- userService.findOneByEmail(tokenAuthenticator.loginInfo.providerKey)
     } yield user
@@ -76,8 +76,8 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
   }
 
   def remove(tokenValue: String): Fox[Unit] =
-    dao.remove(tokenValue)
+    repository.remove(tokenValue)
 
   def removeExpiredTokens(implicit ctx: DBAccessContext) =
-    dao.deleteAllExpired
+    repository.deleteAllExpired
 }

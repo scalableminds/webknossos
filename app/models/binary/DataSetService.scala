@@ -1,7 +1,7 @@
 package models.binary
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.rpc.RPC
+import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, GenericDataSource, DataLayerLike => DataLayer}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableDataSource, InboxDataSourceLike => InboxDataSource}
@@ -238,6 +238,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         "isEditable" -> isEditable,
         "lastUsedByUser" -> lastUsedByUser,
         "logoUrl" -> logoUrl,
+        "sortingKey" -> dataSet.sortingKey,
         "isForeign" -> dataStore.isForeign)
     }
   }

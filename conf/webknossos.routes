@@ -54,11 +54,13 @@ GET           /api/teams/:id/openTasksOverview                                  
 GET           /api/teams/:id/progressOverview                                       controllers.ReportController.projectProgressOverview(id: String)
 
 # DataSets
+<<<<<<< HEAD
 POST          /api/datasets/:organizationName/:dataSetName/createExplorational      controllers.AnnotationController.createExplorational(organizationName: String, dataSetName: String)
 GET           /api/datasets                                                         controllers.DataSetController.list
 POST          /api/datasets                                                         controllers.DataSetController.create(typ: String)
 POST          /api/datasets/addForeign                                              controllers.DataSetController.addForeignDataStoreAndDataSet
-GET           /api/datasets/disambiguation/:dataSetName                             controllers.DataSetController.getOrganizationForDataSet(dataSetName: String)
+GET           /api/datasets/disambiguate/:dataSetName/toNew                         controllers.DataSetController.getOrganizationForDataSet(dataSetName: String)
+GET           /api/datasets/:organizationName/:dataSetName/health                   controllers.DataSetController.health(organizationName: String, dataSetName: String, sharingToken: Option[String])
 POST          /api/datasets/:organizationName/:dataSetName                          controllers.DataSetController.update(organizationName: String, dataSetName: String)
 GET           /api/datasets/:organizationName/:dataSetName/accessList               controllers.DataSetController.accessList(organizationName: String, dataSetName: String)
 GET           /api/datasets/:organizationName/:dataSetName/sharingToken             controllers.DataSetController.getSharingToken(organizationName: String, dataSetName: String)
@@ -67,6 +69,34 @@ POST          /api/datasets/:organizationName/:dataSetName/teams                
 GET           /api/datasets/:organizationName/:dataSetName/layers/:layer/thumbnail  controllers.DataSetController.thumbnail(organizationName: String, dataSetName: String, layer: String, w: Option[Int], h: Option[Int])
 GET           /api/datasets/:organizationName/:dataSetName/isValidNewName           controllers.DataSetController.isValidNewName(organizationName: String, dataSetName: String)
 GET           /api/datasets/:organizationName/:dataSetName                          controllers.DataSetController.read(organizationName: String, dataSetName: String, sharingToken: Option[String])
+||||||| merged common ancestors
+POST          /api/datasets/:dataSetName/createExplorational                    controllers.AnnotationController.createExplorational(dataSetName: String)
+GET           /api/datasets                                                     controllers.DataSetController.list
+POST          /api/datasets                                                     controllers.DataSetController.create(typ: String)
+POST          /api/datasets/addForeign                                          controllers.DataSetController.addForeignDataStoreAndDataSet
+GET           /api/datasets/:dataSetName                                        controllers.DataSetController.read(dataSetName: String, sharingToken: Option[String])
+POST          /api/datasets/:dataSetName                                        controllers.DataSetController.update(dataSetName: String)
+GET           /api/datasets/:dataSetName/accessList                             controllers.DataSetController.accessList(dataSetName: String)
+GET           /api/datasets/:dataSetName/sharingToken                           controllers.DataSetController.getSharingToken(dataSetName: String)
+DELETE        /api/datasets/:dataSetName/sharingToken                           controllers.DataSetController.deleteSharingToken(dataSetName: String)
+POST          /api/datasets/:dataSetName/teams                                  controllers.DataSetController.updateTeams(dataSetName: String)
+GET           /api/datasets/:dataSetName/layers/:layer/thumbnail                controllers.DataSetController.thumbnail(dataSetName: String, layer: String, w: Option[Int], h: Option[Int])
+GET           /api/datasets/:dataSetName/isValidNewName                         controllers.DataSetController.isValidNewName(dataSetName: String)
+=======
+POST          /api/datasets/:dataSetName/createExplorational                    controllers.AnnotationController.createExplorational(dataSetName: String)
+GET           /api/datasets                                                     controllers.DataSetController.list
+POST          /api/datasets                                                     controllers.DataSetController.create(typ: String)
+POST          /api/datasets/addForeign                                          controllers.DataSetController.addForeignDataStoreAndDataSet
+GET           /api/datasets/:dataSetName                                        controllers.DataSetController.read(dataSetName: String, sharingToken: Option[String])
+
+POST          /api/datasets/:dataSetName                                        controllers.DataSetController.update(dataSetName: String)
+GET           /api/datasets/:dataSetName/accessList                             controllers.DataSetController.accessList(dataSetName: String)
+GET           /api/datasets/:dataSetName/sharingToken                           controllers.DataSetController.getSharingToken(dataSetName: String)
+DELETE        /api/datasets/:dataSetName/sharingToken                           controllers.DataSetController.deleteSharingToken(dataSetName: String)
+POST          /api/datasets/:dataSetName/teams                                  controllers.DataSetController.updateTeams(dataSetName: String)
+GET           /api/datasets/:dataSetName/layers/:layer/thumbnail                controllers.DataSetController.thumbnail(dataSetName: String, layer: String, w: Option[Int], h: Option[Int])
+GET           /api/datasets/:dataSetName/isValidNewName                         controllers.DataSetController.isValidNewName(dataSetName: String)
+>>>>>>> 7d7723b0b7267ddb1a04c17cc695df67cfefdd11
 
 # Datastores
 GET           /api/datastores                                                       controllers.DataStoreController.list
@@ -103,6 +133,7 @@ GET           /api/annotations/:typ/:id/download                                
 GET           /api/annotations/:typ/:id/loggedTime                                  controllers.AnnotationController.loggedTime(typ: String, id: String)
 
 # Tasks
+<<<<<<< HEAD
 POST          /api/tasks                                                            controllers.TaskController.create
 POST          /api/tasks/createFromFile                                             controllers.TaskController.createFromFile
 POST          /api/tasks/list                                                       controllers.TaskController.listTasks
@@ -111,6 +142,25 @@ GET           /api/tasks/:id                                                    
 DELETE        /api/tasks/:id                                                        controllers.TaskController.delete(id: String)
 PUT           /api/tasks/:id                                                        controllers.TaskController.update(id: String)
 GET           /api/tasks/:id/annotations                                            controllers.AnnotationController.annotationsForTask(id: String)
+||||||| merged common ancestors
+POST          /api/tasks                                                        controllers.TaskController.create
+POST          /api/tasks/createFromFile                                         controllers.TaskController.createFromFile
+POST          /api/tasks/list                                                   controllers.TaskController.listTasks
+GET           /api/tasks/experienceDomains                                      controllers.TaskController.listExperienceDomains
+GET           /api/tasks/:id                                                    controllers.TaskController.read(id: String)
+DELETE        /api/tasks/:id                                                    controllers.TaskController.delete(id: String)
+PUT           /api/tasks/:id                                                    controllers.TaskController.update(id: String)
+GET           /api/tasks/:id/annotations                                        controllers.AnnotationController.annotationsForTask(id: String)
+=======
+POST          /api/tasks                                                        controllers.TaskController.create
+POST          /api/tasks/createFromFiles                                        controllers.TaskController.createFromFiles
+POST          /api/tasks/list                                                   controllers.TaskController.listTasks
+GET           /api/tasks/experienceDomains                                      controllers.TaskController.listExperienceDomains
+GET           /api/tasks/:id                                                    controllers.TaskController.read(id: String)
+DELETE        /api/tasks/:id                                                    controllers.TaskController.delete(id: String)
+PUT           /api/tasks/:id                                                    controllers.TaskController.update(id: String)
+GET           /api/tasks/:id/annotations                                        controllers.AnnotationController.annotationsForTask(id: String)
+>>>>>>> 7d7723b0b7267ddb1a04c17cc695df67cfefdd11
 
 # TaskTypes
 GET           /api/taskTypes                                                        controllers.TaskTypeController.list

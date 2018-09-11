@@ -1,5 +1,6 @@
 package controllers
 
+import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import javax.inject.Inject
 
@@ -10,7 +11,7 @@ import com.scalableminds.util.tools.{Fox, JsonHelper}
 import models.binary._
 import models.team.{OrganizationDAO, TeamDAO}
 import models.user.UserService
-import oxalis.security.{URLSharing, WebknossosSilhouette}
+import oxalis.security.{URLSharing, WkEnv}
 import com.scalableminds.util.tools.Math
 import play.api.cache.CacheApi
 import play.api.i18n.{Messages, MessagesApi}
@@ -33,12 +34,9 @@ class DataSetController @Inject()(userService: UserService,
                                   organizationDAO: OrganizationDAO,
                                   teamDAO: TeamDAO,
                                   dataSetDAO: DataSetDAO,
-                                  sil: WebknossosSilhouette,
+                                  sil: Silhouette[WkEnv],
                                   cache: CacheApi,
                                   val messagesApi: MessagesApi) extends Controller {
-
-  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
 
   val DefaultThumbnailWidth = 400
   val DefaultThumbnailHeight = 400
@@ -50,6 +48,7 @@ class DataSetController @Inject()(userService: UserService,
   val dataSetPublicReads =
     ((__ \ 'description).readNullable[String] and
       (__ \ 'displayName).readNullable[String] and
+      (__ \ 'sortingKey).readNullable[Long] and
       (__ \ 'isPublic).read[Boolean]).tupled
 
 
@@ -146,13 +145,26 @@ class DataSetController @Inject()(userService: UserService,
     }
   }
 
-  def update(organizationName: String, dataSetName: String) = sil.SecuredAction.async(parse.json) { implicit request =>
+  def health(organizationName:String, dataSetName: String, sharingToken: Option[String]) = sil.UserAwareAction.async { implicit request =>
+    val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
+    for {
+      dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(ctx) ?~> Messages("dataSet.notFound", dataSetName)
+      dataSource <- dataSetService.dataSourceFor(dataSet) ?~> "dataSource.notFound"
+      usableDataSource <- dataSource.toUsable.toFox ?~> "dataSet.notImported"
+      datalayer <- usableDataSource.dataLayers.headOption.toFox ?~> "dataSet.noLayers"
+      thumbnail <- dataSetService.handlerFor(dataSet).flatMap(_.requestDataLayerThumbnail(datalayer.name, 100, 100, None, None)) ?~> "dataSet.loadingDataFailed"
+    } yield {
+      Ok("Ok")
+    }
+  }
+
+    def update(organizationName: String, dataSetName: String) = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(dataSetPublicReads) {
-      case (description, displayName, isPublic) =>
+      case (description, displayName, sortingKey, isPublic) =>
       for {
         dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> Messages("dataSet.notFound", dataSetName)
         _ <- Fox.assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed"
-        _ <- dataSetDAO.updateFields(dataSet._id, description, displayName, isPublic)
+        _ <- dataSetDAO.updateFields(dataSet._id, description, displayName, sortingKey.getOrElse(dataSet.created), isPublic)
         updated <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization)
         js <- dataSetService.publicWrites(updated, Some(request.identity))
       } yield {

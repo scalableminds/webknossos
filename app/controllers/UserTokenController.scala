@@ -1,5 +1,6 @@
 package controllers
 
+import com.mohiva.play.silhouette.api.Silhouette
 import javax.inject.Inject
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
@@ -10,7 +11,8 @@ import models.annotation._
 import models.binary.{DataSetDAO, DataStoreHandler}
 import models.user.{User, UserService}
 import net.liftweb.common.{Box, Full}
-import oxalis.security.{TokenType, URLSharing, WebknossosSilhouette}
+import oxalis.security._
+import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import play.api.i18n.MessagesApi
 import play.api.libs.json.Json
 
@@ -22,14 +24,12 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
                                     annotationStore: AnnotationStore,
                                     annotationInformationProvider: AnnotationInformationProvider,
                                     wkDataStoreActions: WKDataStoreActions,
-                                    sil: WebknossosSilhouette,
+                                    wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+                                    sil: Silhouette[WkEnv],
                                     val messagesApi: MessagesApi)
   extends Controller {
 
-  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
-
-  val bearerTokenService = sil.environment.combinedAuthenticatorService.tokenAuthenticatorService
+  val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
   def generateTokenForDataStore = sil.UserAwareAction.async { implicit request =>
     val context = userAwareRequestToDBAccess(request)

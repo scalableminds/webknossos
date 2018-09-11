@@ -7,7 +7,9 @@ import javax.inject.Inject
 import models.binary.{DataSet, DataSetDAO}
 import models.configuration.{DataSetConfiguration, DataSetConfigurationDefaults, UserConfiguration}
 import models.user.{UserDataSetConfigurationDAO, UserService}
-import oxalis.security.WebknossosSilhouette
+import oxalis.security.WkEnv
+import com.mohiva.play.silhouette.api.Silhouette
+import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsObject, JsValue}
@@ -18,11 +20,8 @@ class ConfigurationController @Inject()(userService: UserService,
                                         dataSetDAO: DataSetDAO,
                                         userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
                                         dataSetConfigurationDefaults: DataSetConfigurationDefaults,
-                                        sil: WebknossosSilhouette,
+                                        sil: Silhouette[WkEnv],
                                         val messagesApi: MessagesApi) extends Controller {
-
-  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
 
   def read = sil.UserAwareAction.async { implicit request =>
     request.identity.toFox.flatMap { user =>

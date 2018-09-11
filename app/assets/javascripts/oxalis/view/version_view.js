@@ -18,16 +18,7 @@ import { revertToVersion } from "oxalis/model/sagas/update_actions";
 import { pushSaveQueueAction, setVersionNumberAction } from "oxalis/model/actions/save_actions";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { OxalisState, SkeletonTracingType } from "oxalis/store";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-
-type AddToValueFn = <T>(
-  T,
-) => {
-  name: $PropertyType<T, "name">,
-  value: { ...$PropertyType<T, "value">, actionTimestamp: number, version: number },
-};
-
-type ServerUpdateAction = $Call<AddToValueFn, UpdateAction>;
+import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
 
 type Props = {
   skeletonTracing: SkeletonTracingType,
@@ -69,41 +60,57 @@ class VersionView extends React.Component<Props, State> {
 
     const moveTreeComponentUAs = groupedUpdateActions.moveTreeComponent;
     if (moveTreeComponentUAs != null) {
+      const firstMoveTreeComponentUA = moveTreeComponentUAs[0];
+      if (firstMoveTreeComponentUA.name !== "moveTreeComponent") {
+        throw new Error("Flow constraint violated");
+      }
       if (groupedUpdateActions.createTree != null) {
         return {
           description: `Split off a tree with ${
-            moveTreeComponentUAs[0].value.nodeIds.length
+            firstMoveTreeComponentUA.value.nodeIds.length
           } nodes.`,
           type: "arrows-alt",
         };
       } else if (groupedUpdateActions.deleteTree != null) {
         return {
-          description: `Merged a tree with ${moveTreeComponentUAs[0].value.nodeIds.length} nodes.`,
+          description: `Merged a tree with ${firstMoveTreeComponentUA.value.nodeIds.length} nodes.`,
           type: "shrink",
         };
       }
     }
 
     const deleteTreeUAs = groupedUpdateActions.deleteTree;
+    const firstDeleteTreeUA = deleteTreeUAs[0];
+    if (firstDeleteTreeUA.name !== "deleteTree") {
+        throw new Error("Flow constraint violated");
+      }
     if (deleteTreeUAs != null) {
       return {
-        description: `Deleted the tree with id ${deleteTreeUAs[0].value.id}.`,
+        description: `Deleted the tree with id ${firstDeleteTreeUA.value.id}.`,
         type: "delete",
       };
     }
 
     const deleteNodeUAs = groupedUpdateActions.deleteNode;
+    const firstDeleteNodeUA = deleteNodeUAs[0];
+    if (firstDeleteNodeUA.name !== "deleteNode") {
+      throw new Error("Flow constraint violated");
+    }
     if (deleteNodeUAs != null) {
       return {
-        description: `Deleted the node with id ${deleteNodeUAs[0].value.nodeId}.`,
+        description: `Deleted the node with id ${firstDeleteNodeUA.value.nodeId}.`,
         type: "delete",
       };
     }
 
     const revertToVersionUAs = groupedUpdateActions.revertToVersion;
+    const firstRevertToVersionUA = revertToVersionUAs[0];
+    if (firstRevertToVersionUA.name !== "revertToVersion") {
+      throw new Error("Flow constraint violated");
+    }
     if (revertToVersionUAs != null) {
       return {
-        description: `Reverted to version ${revertToVersionUAs[0].value.sourceVersion}.`,
+        description: `Reverted to version ${firstRevertToVersionUA.value.sourceVersion}.`,
         type: "backward",
       };
     }

@@ -12,10 +12,9 @@ import org.specs2.mutable._
 
 import sys.process._
 import com.typesafe.scalalogging.LazyLogging
+import play.api.inject.guice.GuiceApplicationBuilder
 
 class End2EndSpec (arguments: Arguments) extends Specification with GuiceFakeApplicationFactory with LazyLogging {
-
-  val application = fakeApplication()
 
   lazy val ws: WSClient = application.injector.instanceOf[WSClient]
 
@@ -23,6 +22,8 @@ class End2EndSpec (arguments: Arguments) extends Specification with GuiceFakeApp
   val testPort = 9000
   val argumentMap = argumentMapRead +
                  ("http.port"    -> testPort)
+
+  val application = new GuiceApplicationBuilder().configure(argumentMap).build()
 
   "my application" should {
 

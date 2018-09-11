@@ -8,7 +8,9 @@ import javax.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.time.TimeSpanDAO
 import models.user._
-import oxalis.security.WebknossosSilhouette
+import oxalis.security.WkEnv
+import com.mohiva.play.silhouette.api.Silhouette
+import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsObject, JsValue, Json}
@@ -18,11 +20,8 @@ import utils.ObjectId
 class TimeController @Inject()(userService: UserService,
                                userDAO: UserDAO,
                                timeSpanDAO: TimeSpanDAO,
-                               sil: WebknossosSilhouette,
+                               sil: Silhouette[WkEnv],
                                val messagesApi: MessagesApi) extends Controller with FoxImplicits {
-
-  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
 
   //all users with working hours > 0
   def getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]) = sil.SecuredAction.async { implicit request =>

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import _ from "lodash";
-import { Spin, Button, List, Tooltip, Icon, Avatar } from "antd";
+import { Spin, Button, List, Avatar } from "antd";
 import { ControlModeEnum } from "oxalis/constants";
 import { connect } from "react-redux";
 import Model from "oxalis/model";

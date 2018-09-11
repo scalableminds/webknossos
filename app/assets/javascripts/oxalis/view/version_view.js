@@ -116,7 +116,7 @@ class VersionView extends React.Component<Props, State> {
     }
     return {
       description: `${batch[0].name} and ${batch.length - 1} other entries.`,
-      type: "plus-circle",
+      type: "plus",
     };
   }
 
@@ -167,7 +167,7 @@ class VersionView extends React.Component<Props, State> {
             <List.Item.Meta
               title={<FormattedDate timestamp={lastTimestamp} />}
               onClick={() => this.previewVersion(version)}
-              avatar={<Avatar icon={type} />}
+              avatar={<Avatar size="small" icon={type} />}
               description={
                 <React.Fragment>
                   {isNewest ? (
@@ -196,35 +196,37 @@ class VersionView extends React.Component<Props, State> {
     );
 
     return (
-      <React.Fragment>
-        <Tooltip
-          title="You are currently previewing older versions of this tracing. Either restore a version by selecting it or abort the preview to continue tracing."
-          placement="bottom"
-        >
-          <h3 style={{ display: "inline-block" }}>
-            Version History <Icon style={{ color: "orange" }} type="exclamation-circle" />
-          </h3>
-        </Tooltip>
-        <Button
-          className="close-button"
-          style={{ float: "right" }}
-          onClick={this.handleClose}
-          shape="circle"
-          icon="close"
-        />
-        <Spin spinning={this.state.isLoading}>
-          <List>
-            {filteredVersions.map((batch, index) => (
-              <VersionEntry
-                batch={batch}
-                version={batch[0].value.version}
-                isNewest={index === 0}
-                key={batch[0].value.version}
-              />
-            ))}
-          </List>
-        </Spin>
-      </React.Fragment>
+      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        <div style={{ flex: "1 1 auto" }}>
+          <h4 style={{ display: "inline-block" }}>Version History</h4>
+          <Button
+            className="close-button"
+            style={{ float: "right", border: 0 }}
+            onClick={this.handleClose}
+            shape="circle"
+            icon="close"
+          />
+          <div style={{ fontSize: 12, marginBottom: 8, color: "rgba(0, 0, 0, 0.65)" }}>
+            You are currently previewing older versions of this tracing. Either restore a version by
+            selecting it or close this view to continue tracing. The tracing shown tracing is in{" "}
+            <b>read-only</b> mode as long as this view is opened.
+          </div>
+        </div>
+        <div style={{ flex: "1 1 auto", overflowY: "auto" }}>
+          <Spin spinning={this.state.isLoading}>
+            <List>
+              {filteredVersions.map((batch, index) => (
+                <VersionEntry
+                  batch={batch}
+                  version={batch[0].value.version}
+                  isNewest={index === 0}
+                  key={batch[0].value.version}
+                />
+              ))}
+            </List>
+          </Spin>
+        </div>
+      </div>
     );
   }
 }

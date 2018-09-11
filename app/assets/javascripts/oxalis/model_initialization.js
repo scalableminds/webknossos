@@ -37,7 +37,6 @@ import {
   getSharingToken,
   getUserConfiguration,
   getDatasetConfiguration,
-  getUser,
 } from "admin/admin_rest_api";
 import messages from "messages";
 import type {
@@ -85,8 +84,7 @@ export async function initialize(
   if (initialCommandType.type === ControlModeEnum.TRACE) {
     const { annotationId } = initialCommandType;
     annotation = await getAnnotationInformation(annotationId, tracingType);
-    const organization = annotation.user ? (await getUser(annotation.user.id)).organization : "";
-    datasetId = { name: annotation.dataSetName, owningOrganization: organization };
+    datasetId = { name: annotation.dataSetName, owningOrganization: annotation.organization };
 
     if (!annotation.restrictions.allowAccess) {
       Toast.error(messages["tracing.no_access"]);

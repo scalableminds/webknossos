@@ -29,6 +29,7 @@ const StoreMock = {
         typ: "webknossos-store",
         url: "url",
       },
+      owningOrganization: "organization",
       dataSource,
     },
     datasetConfiguration: { fourBit: _fourBit },

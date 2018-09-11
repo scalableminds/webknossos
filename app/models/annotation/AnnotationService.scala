@@ -435,6 +435,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     implicit val ctx = GlobalAccessContext
     for {
       dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFound"
+      organization <- organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound"
       task = annotation._task.toFox.flatMap(taskId => taskDAO.findOne(taskId))
       taskJson <- task.flatMap(t => taskService.publicWrites(t)).getOrElse(JsNull)
       user <- userService.findOneById(annotation._user, useCache = true)(GlobalAccessContext)
@@ -457,6 +458,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         "formattedHash" -> Formatter.formatHash(annotation._id.toString),
         "tracing" -> Json.obj("skeleton" -> annotation.skeletonTracingId, "volume" -> annotation.volumeTracingId),
         "dataSetName" -> dataSet.name,
+        "organization" -> organization.name,
         "dataStore" -> dataStoreJs,
         "isPublic" -> annotation.isPublic,
         "settings" -> settings,
@@ -471,6 +473,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
   def compactWrites(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[JsObject] = {
     for {
       dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
+      organization <- organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound"
     } yield {
       Json.obj(
         "modified" -> annotation.modified,
@@ -483,6 +486,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         "formattedHash" -> Formatter.formatHash(annotation._id.toString),
         "tracing" -> Json.obj("skeleton" -> annotation.skeletonTracingId, "volume" -> annotation.volumeTracingId),
         "dataSetName" -> dataSet.name,
+        "organization" -> organization.name,
         "isPublic" -> annotation.isPublic,
         "tracingTime" -> annotation.tracingTime,
         "tags" -> (annotation.tags ++ Set(dataSet.name, annotation.tracingType.toString))

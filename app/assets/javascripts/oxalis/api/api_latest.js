@@ -727,7 +727,7 @@ class DataApi {
 
     return doWithToken(token => {
       const downloadUrl =
-        `${dataset.dataStore.url}/data/datasets/${
+        `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${
           dataset.name
         }/layers/${layerName}/data?resolution=0&` +
         `token=${token}&` +

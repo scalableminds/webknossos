@@ -258,6 +258,7 @@ export type APIAnnotationTypeCompact = {
     +volume: ?string,
   },
   +dataSetName: string,
+  +organization: string,
   +description: string,
   +formattedHash: string,
   +modified: number,

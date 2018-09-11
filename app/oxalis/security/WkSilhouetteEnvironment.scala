@@ -1,29 +1,40 @@
 package oxalis.security
-import com.google.inject.Inject
 import com.mohiva.play.silhouette.api.services.{AuthenticatorService, IdentityService}
 import com.mohiva.play.silhouette.api.util.Clock
-import com.mohiva.play.silhouette.api.{Environment, EventBus, RequestProvider}
+import com.mohiva.play.silhouette.api.{Env, Environment, EventBus, RequestProvider}
 import com.mohiva.play.silhouette.impl.authenticators.{BearerTokenAuthenticatorSettings, CookieAuthenticatorSettings}
 import com.mohiva.play.silhouette.impl.util.DefaultFingerprintGenerator
+import javax.inject.Inject
 import models.user.{User, UserService}
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
-import play.api.Configuration
+import play.api.i18n.MessagesApi
 import utils.WkConf
 
+import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits.global
 
 
-class WebknossosEnvironment (conf: WkConf,
-                             tokenDAO: TokenDAO,
-                             userService: UserService)(implicit val executionContext: ExecutionContext) extends Environment[User, CombinedAuthenticator] {
+trait WkEnv extends Env {
+  type I = User
+  type A = CombinedAuthenticator
+}
+
+class WkSilhouetteEnvironment @Inject()(conf: WkConf,
+                                        tokenDAO: TokenDAO,
+                                        userService: UserService,
+                                        val messagesApi: MessagesApi
+                                     )(implicit val executionContext: ExecutionContext) extends Environment[WkEnv] {
   val eventBusObject = EventBus()
   val cookieSettings = conf.raw.underlying.as[CookieAuthenticatorSettings]("silhouette.cookieAuthenticator")
-  val tokenSettings = conf.raw.underlying.as[BearerTokenAuthenticatorSettings]("silhouette.tokenAuthenticator")
+  val tokenSettings = BearerTokenAuthenticatorSettings(
+    authenticatorIdleTimeout = Some(conf.Silhouette.TokenAuthenticator.authenticatorIdleTimeout.toMillis millis),
+    authenticatorExpiry = conf.Silhouette.TokenAuthenticator.authenticatorExpiry.toMillis millis
+  )
   val fingerprintGenerator = new DefaultFingerprintGenerator(false)
   val idGenerator = new CompactRandomIDGenerator
-  val bearerTokenAuthenticatorDAO = new BearerTokenAuthenticatorDAO(tokenDAO)
+  val bearerTokenAuthenticatorDAO = new BearerTokenAuthenticatorRepository(tokenDAO)
 
   val combinedAuthenticatorService = CombinedAuthenticatorService(cookieSettings,
     tokenSettings, bearerTokenAuthenticatorDAO, fingerprintGenerator, idGenerator, Clock(), userService, conf)

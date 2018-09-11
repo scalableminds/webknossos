@@ -1,6 +1,7 @@
 // @flow
 
 import * as React from "react";
+import _ from "lodash";
 import { Spin, Button, List, Tooltip, Icon, Avatar } from "antd";
 import { ControlModeEnum } from "oxalis/constants";
 import { connect } from "react-redux";
@@ -46,8 +47,8 @@ class VersionView extends React.Component<Props, State> {
   };
 
   componentDidMount() {
-    this.fetchData(this.props.skeletonTracing.tracingId);
     Store.dispatch(setAnnotationAllowUpdateAction(false));
+    this.fetchData(this.props.skeletonTracing.tracingId);
   }
 
   async fetchData(tracingId: string) {
@@ -64,41 +65,45 @@ class VersionView extends React.Component<Props, State> {
   }
 
   getDescriptionForBatch(batch: Array<ServerUpdateAction>): { description: string, type: string } {
-    const moveTreeComponentUA = batch.find(ua => ua.name === "moveTreeComponent");
-    if (moveTreeComponentUA != null) {
-      if (batch.some(ua => ua.name === "createTree")) {
+    const groupedUpdateActions = _.groupBy(batch, "name");
+
+    const moveTreeComponentUAs = groupedUpdateActions.moveTreeComponent;
+    if (moveTreeComponentUAs != null) {
+      if (groupedUpdateActions.createTree != null) {
         return {
-          description: `Split off a tree with ${moveTreeComponentUA.value.nodeIds.length} nodes.`,
+          description: `Split off a tree with ${
+            moveTreeComponentUAs[0].value.nodeIds.length
+          } nodes.`,
           type: "arrows-alt",
         };
-      } else if (batch.some(ua => ua.name === "deleteTree")) {
+      } else if (groupedUpdateActions.deleteTree != null) {
         return {
-          description: `Merged a tree with ${moveTreeComponentUA.value.nodeIds.length} nodes.`,
+          description: `Merged a tree with ${moveTreeComponentUAs[0].value.nodeIds.length} nodes.`,
           type: "shrink",
         };
       }
     }
 
-    const deleteTreeUA = batch.find(ua => ua.name === "deleteTree");
-    if (deleteTreeUA != null) {
+    const deleteTreeUAs = groupedUpdateActions.deleteTree;
+    if (deleteTreeUAs != null) {
       return {
-        description: `Deleted tree with id ${deleteTreeUA.value.id}.`,
+        description: `Deleted the tree with id ${deleteTreeUAs[0].value.id}.`,
         type: "delete",
       };
     }
 
-    const deleteNodeUA = batch.find(ua => ua.name === "deleteNode");
-    if (deleteNodeUA != null) {
+    const deleteNodeUAs = groupedUpdateActions.deleteNode;
+    if (deleteNodeUAs != null) {
       return {
-        description: `Deleted node with id ${deleteNodeUA.value.nodeId}.`,
+        description: `Deleted the node with id ${deleteNodeUAs[0].value.nodeId}.`,
         type: "delete",
       };
     }
 
-    const revertToVersionUA = batch.find(ua => ua.name === "revertToVersion");
-    if (revertToVersionUA != null) {
+    const revertToVersionUAs = groupedUpdateActions.revertToVersion;
+    if (revertToVersionUAs != null) {
       return {
-        description: `Reverted to version ${revertToVersionUA.value.sourceVersion}.`,
+        description: `Reverted to version ${revertToVersionUAs[0].value.sourceVersion}.`,
         type: "backward",
       };
     }

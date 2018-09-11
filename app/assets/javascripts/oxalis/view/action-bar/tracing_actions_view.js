@@ -53,7 +53,8 @@ class TracingActionsView extends PureComponent<StateProps, State> {
     Store.dispatch(undoAction());
   };
 
-  handleRestore = () => {
+  handleRestore = async () => {
+    await Model.save();
     Store.dispatch(setVersionRestoreModeAction(true));
   };
 

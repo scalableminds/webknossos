@@ -200,7 +200,9 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                     elements.push(<Tag key="branchPointsAllowed">Branchpoints</Tag>);
                   if (settings.somaClickingAllowed)
                     elements.push(
-                      <Tag key="somaClickingAllowed">{`Allow Single-node-tree mode ("Soma clicking")${""}`}</Tag>,
+                      <Tag key="somaClickingAllowed">
+                        Allow Single-node-tree mode (&quot;Soma clicking&quot;)
+                      </Tag>,
                     );
                   return elements;
                 }}

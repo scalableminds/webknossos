@@ -149,7 +149,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
             <FormItem label="Settings">
               {getFieldDecorator("settings.somaClickingAllowed", {
                 valuePropName: "checked",
-              })(<Checkbox>{`Allow Single-node-tree mode ("Soma clicking")${""}`}</Checkbox>)}
+              })(<Checkbox>Allow Single-node-tree mode (&quot;Soma clicking&quot;)</Checkbox>)}
             </FormItem>
 
             <FormItem>

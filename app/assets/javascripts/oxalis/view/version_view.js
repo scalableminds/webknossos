@@ -80,11 +80,11 @@ class VersionView extends React.Component<Props, State> {
     }
 
     const deleteTreeUAs = groupedUpdateActions.deleteTree;
-    const firstDeleteTreeUA = deleteTreeUAs[0];
-    if (firstDeleteTreeUA.name !== "deleteTree") {
+    if (deleteTreeUAs != null) {
+      const firstDeleteTreeUA = deleteTreeUAs[0];
+      if (firstDeleteTreeUA.name !== "deleteTree") {
         throw new Error("Flow constraint violated");
       }
-    if (deleteTreeUAs != null) {
       return {
         description: `Deleted the tree with id ${firstDeleteTreeUA.value.id}.`,
         type: "delete",
@@ -92,11 +92,11 @@ class VersionView extends React.Component<Props, State> {
     }
 
     const deleteNodeUAs = groupedUpdateActions.deleteNode;
-    const firstDeleteNodeUA = deleteNodeUAs[0];
-    if (firstDeleteNodeUA.name !== "deleteNode") {
-      throw new Error("Flow constraint violated");
-    }
     if (deleteNodeUAs != null) {
+      const firstDeleteNodeUA = deleteNodeUAs[0];
+      if (firstDeleteNodeUA.name !== "deleteNode") {
+        throw new Error("Flow constraint violated");
+      }
       return {
         description: `Deleted the node with id ${firstDeleteNodeUA.value.nodeId}.`,
         type: "delete",
@@ -104,11 +104,11 @@ class VersionView extends React.Component<Props, State> {
     }
 
     const revertToVersionUAs = groupedUpdateActions.revertToVersion;
-    const firstRevertToVersionUA = revertToVersionUAs[0];
-    if (firstRevertToVersionUA.name !== "revertToVersion") {
-      throw new Error("Flow constraint violated");
-    }
     if (revertToVersionUAs != null) {
+      const firstRevertToVersionUA = revertToVersionUAs[0];
+      if (firstRevertToVersionUA.name !== "revertToVersion") {
+        throw new Error("Flow constraint violated");
+      }
       return {
         description: `Reverted to version ${firstRevertToVersionUA.value.sourceVersion}.`,
         type: "backward",

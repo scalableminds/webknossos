@@ -17,9 +17,10 @@ import models.user._
 import net.liftweb.common.Box
 import oxalis.security.WebknossosSilhouette
 import play.api.i18n.{Messages, MessagesApi}
+import play.api.libs.Files
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
-import play.api.mvc.Result
+import play.api.mvc.{MultipartFormData, Result}
 import utils.{ObjectId, WkConf}
 
 import scala.concurrent.Future
@@ -94,17 +95,18 @@ class TaskController @Inject() (annotationService: AnnotationService,
     })
   }
 
-  def createFromFile = sil.SecuredAction.async { implicit request =>
+  def createFromFiles = sil.SecuredAction.async { implicit request =>
     for {
       body <- request.body.asMultipartFormData ?~> "binary.payload.invalid"
-      inputFile <- body.file("nmlFile[]") ?~> "nml.file.notFound"
+      inputFiles = body.files.filter(file => file.filename.toLowerCase.endsWith(".nml") || file.filename.toLowerCase.endsWith(".zip"))
+      _ <- bool2Fox(inputFiles.nonEmpty) ?~> "nml.file.notFound"
       jsonString <- body.dataParts.get("formJSON").flatMap(_.headOption) ?~> "format.json.missing"
       params <- JsonHelper.parseJsonToFox[NmlTaskParameters](jsonString) ?~> "task.create.failed"
       taskTypeIdValidated <- ObjectId.parse(params.taskTypeId) ?~> "taskType.id.invalid"
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
       project <- projectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
-      parseResults: List[NmlService.NmlParseResult] = NmlService.extractFromFile(inputFile.ref.file, inputFile.filename).parseResults
+      parseResults: List[NmlService.NmlParseResult] = NmlService.extractFromFiles(inputFiles.map(f => (f.ref.file, f.filename))).parseResults
       skeletonSuccesses <- Fox.serialCombined(parseResults)(_.toSkeletonSuccessFox) ?~> "task.create.failed"
       result <- createTasks(skeletonSuccesses.map(s => (buildFullParams(params, s.skeletonTracing.get, s.fileName, s.description), s.skeletonTracing.get)))
     } yield {

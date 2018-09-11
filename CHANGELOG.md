@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Added the brush size to the settings on the left in volume tracing. The size can now also be adjusted by using only the keyboard. [#3126](https://github.com/scalableminds/webknossos/pull/3126)
 - Added a user documentation for webKnossos [#3011](https://github.com/scalableminds/webknossos/pull/3011)
 - Tree groups can now be activated. This allows to rename a tree group analogous to renaming a tree. Also, toggling the visibility of a tree group can now be done by using the shortcuts "1" and "2". [#3066](https://github.com/scalableminds/webknossos/pull/3066)
+- Added the possibility to upload multiple NML files during task creation, even if they are not in a zip archive
 
 ### Changed
 

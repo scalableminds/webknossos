@@ -78,11 +78,7 @@ extends Controller {
       layer <- dataSetDataLayerDAO.findOneByNameForDataSet(dataLayerName, dataSet._id) ?~> Messages("dataLayer.notFound", dataLayerName)
       image <- imageFromCacheIfPossible(dataSet)
     } yield {
-      Ok(image)
-        .as("image/jpeg")
-        .withHeaders(
-          CONTENT_LENGTH -> image.length.toString
-        )
+      Ok(image).as("image/jpeg")
     }
   }
 

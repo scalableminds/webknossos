@@ -16,8 +16,7 @@ import Navbar from "navbar";
 import { Imprint, Privacy } from "components/legal";
 
 import TracingLayoutView from "oxalis/view/tracing_layout_view";
-import DashboardView from "dashboard/dashboard_view";
-import { urlTokenToTabKeyMap } from "dashboard/dashboard_view";
+import DashboardView, { urlTokenToTabKeyMap } from "dashboard/dashboard_view";
 import SpotlightView from "dashboard/spotlight_view";
 import LoginView from "admin/auth/login_view";
 import RegistrationView from "admin/auth/registration_view";
@@ -132,7 +131,8 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/dashboard/:tab"
                 render={({ match }: ContextRouter) => {
-                  const initialTabKey = urlTokenToTabKeyMap[match.params.tab];
+                  const tab: ?string = match.params.tab;
+                  const initialTabKey: ?string = tab ? urlTokenToTabKeyMap[tab] : null;
                   return (
                     <DashboardView
                       userId={null}

@@ -22,7 +22,6 @@ import { parseAsMaybe } from "libs/utils";
 const TabPane = Tabs.TabPane;
 
 const validTabKeys = ["datasets", "advanced-datasets", "tasks", "explorativeAnnotations"];
-const tabKeyToURL = ["gallery", "datasets", "tasks", "annotations"];
 
 type OwnProps = {
   userId: ?string,

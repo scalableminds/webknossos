@@ -137,6 +137,12 @@ object NmlService extends LazyLogging {
     }
   }
 
+  def extractFromFiles(files: Seq[(File, String)]): ZipParseResult = {
+    files.foldLeft(NmlService.ZipParseResult()) {
+      case (acc, next) => acc.combineWith(extractFromFile(next._1, next._2))
+    }
+  }
+
   def extractFromFile(file: File, fileName: String): ZipParseResult = {
     if (fileName.endsWith(".zip")) {
       logger.trace("Extracting from Zip file")

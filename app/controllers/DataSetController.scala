@@ -1,5 +1,7 @@
 package controllers
 
+import com.mohiva.play.silhouette.api.Silhouette
+import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import javax.inject.Inject
 import com.scalableminds.util.geometry.Point3D
@@ -9,7 +11,7 @@ import com.scalableminds.util.tools.{Fox, JsonHelper}
 import models.binary._
 import models.team.{OrganizationDAO, TeamDAO}
 import models.user.UserService
-import oxalis.security.{URLSharing, WebknossosSilhouette}
+import oxalis.security.{URLSharing, WkEnv}
 import com.scalableminds.util.tools.Math
 import play.api.cache.CacheApi
 import play.api.i18n.{Messages, MessagesApi}
@@ -32,12 +34,9 @@ class DataSetController @Inject()(userService: UserService,
                                   organizationDAO: OrganizationDAO,
                                   teamDAO: TeamDAO,
                                   dataSetDAO: DataSetDAO,
-                                  sil: WebknossosSilhouette,
+                                  sil: Silhouette[WkEnv],
                                   cache: CacheApi,
                                   val messagesApi: MessagesApi) extends Controller {
-
-  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
 
   val DefaultThumbnailWidth = 400
   val DefaultThumbnailHeight = 400
@@ -142,6 +141,19 @@ class DataSetController @Inject()(userService: UserService,
       js <- dataSetService.publicWrites(dataSet, request.identity)
     } yield {
       Ok(Json.toJson(js))
+    }
+  }
+
+  def health(dataSetName: String, sharingToken: Option[String]) = sil.UserAwareAction.async { implicit request =>
+    val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
+    for {
+      dataSet <- dataSetDAO.findOneByName(dataSetName)(ctx) ?~> Messages("dataSet.notFound", dataSetName)
+      dataSource <- dataSetService.dataSourceFor(dataSet) ?~> "dataSource.notFound"
+      usableDataSource <- dataSource.toUsable.toFox ?~> "dataSet.notImported"
+      datalayer <- usableDataSource.dataLayers.headOption.toFox ?~> "dataSet.noLayers"
+      thumbnail <- dataSetService.handlerFor(dataSet).flatMap(_.requestDataLayerThumbnail(datalayer.name, 100, 100, None, None)) ?~> "dataSet.loadingDataFailed"
+    } yield {
+      Ok("Ok")
     }
   }
 

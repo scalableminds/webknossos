@@ -48,6 +48,7 @@ class DataSetController @Inject()(userService: UserService,
   val dataSetPublicReads =
     ((__ \ 'description).readNullable[String] and
       (__ \ 'displayName).readNullable[String] and
+      (__ \ 'sortingKey).readNullable[Long] and
       (__ \ 'isPublic).read[Boolean]).tupled
 
 
@@ -158,11 +159,11 @@ class DataSetController @Inject()(userService: UserService,
 
   def update(dataSetName: String) = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(dataSetPublicReads) {
-      case (description, displayName, isPublic) =>
+      case (description, displayName, sortingKey, isPublic) =>
       for {
         dataSet <- dataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
         _ <- Fox.assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed"
-        _ <- dataSetDAO.updateFields(dataSet._id, description, displayName, isPublic)
+        _ <- dataSetDAO.updateFields(dataSet._id, description, displayName, sortingKey.getOrElse(dataSet.created), isPublic)
         updated <- dataSetDAO.findOneByName(dataSetName)
         js <- dataSetService.publicWrites(updated, Some(request.identity))
       } yield {

@@ -18,11 +18,11 @@ import play.api.i18n.MessagesApi
 import play.api.libs.json.Json
 import utils.{ObjectId, WkConf}
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 
 class InitialDataController @Inject()(initialDataService: InitialDataService,
-                                      sil: Silhouette[WkEnv],
-                                      val messagesApi: MessagesApi)
+                                      sil: Silhouette[WkEnv])
+                                     (implicit ec: ExecutionContext)
   extends Controller with FoxImplicits {
 
   def triggerInsert = sil.UserAwareAction.async { implicit request =>
@@ -44,7 +44,8 @@ class InitialDataService @Inject()(userService: UserService,
                                    tokenDAO: TokenDAO,
                                    projectDAO: ProjectDAO,
                                    organizationDAO: OrganizationDAO,
-                                   conf: WkConf) extends FoxImplicits with LazyLogging {
+                                   conf: WkConf)
+  extends FoxImplicits with LazyLogging {
   implicit val ctx = GlobalAccessContext
 
   val defaultUserEmail = conf.Application.Authentication.DefaultUser.email
@@ -73,7 +74,7 @@ Samplecountry
     isDeactivated = false
   )
 
-  def insert: Fox[Unit] =
+  def insert(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       _ <- assertInitialDataEnabled
       _ <- assertNoOrganizationsPresent
@@ -86,18 +87,18 @@ Samplecountry
       _ <- insertLocalDataStoreIfEnabled
     } yield ()
 
-  def assertInitialDataEnabled =
+  def assertInitialDataEnabled(implicit ec: ExecutionContext) =
     for {
       _ <- bool2Fox(conf.Application.insertInitialData) ?~> "initialData.notEnabled"
     } yield ()
 
-  def assertNoOrganizationsPresent =
+  def assertNoOrganizationsPresent(implicit ec: ExecutionContext) =
     for {
       organizations <- organizationDAO.findAll
       _ <- bool2Fox(organizations.isEmpty) ?~> "initialData.organizationsNotEmpty"
     } yield ()
 
-  def insertDefaultUser =  {
+  def insertDefaultUser(implicit ec: ExecutionContext) =  {
     userService.defaultUser.futureBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
@@ -110,7 +111,7 @@ Samplecountry
     }.toFox
   }
 
-  def insertToken = {
+  def insertToken(implicit ec: ExecutionContext) = {
     val expiryTime = conf.Silhouette.TokenAuthenticator.authenticatorExpiry.toMillis
     tokenDAO.findOneByLoginInfo("credentials", defaultUserEmail, TokenType.Authentication).futureBox.flatMap {
       case Full(_) => Fox.successful(())
@@ -128,7 +129,7 @@ Samplecountry
     }
   }
 
-  def insertOrganization = {
+  def insertOrganization(implicit ec: ExecutionContext) = {
     organizationDAO.findOneByName(defaultOrganization.name).futureBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
@@ -136,7 +137,7 @@ Samplecountry
     }.toFox
   }
 
-  def insertTeams = {
+  def insertTeams(implicit ec: ExecutionContext) = {
     teamDAO.findAll.flatMap {
       teams =>
         if (teams.isEmpty)
@@ -146,7 +147,7 @@ Samplecountry
     }.toFox
   }
 
-  def insertTaskType = {
+  def insertTaskType(implicit ec: ExecutionContext) = {
     taskTypeDAO.findAll.flatMap {
       types =>
         if (types.isEmpty) {
@@ -162,7 +163,7 @@ Samplecountry
     }.toFox
   }
 
-  def insertProject = {
+  def insertProject(implicit ec: ExecutionContext) = {
     projectDAO.findAll.flatMap {
       projects =>
         if (projects.isEmpty) {
@@ -174,7 +175,7 @@ Samplecountry
     }.toFox
   }
 
-  def insertLocalDataStoreIfEnabled: Fox[Any] = {
+  def insertLocalDataStoreIfEnabled(implicit ec: ExecutionContext): Fox[Any] = {
     if (conf.Datastore.enabled) {
       dataStoreDAO.findOneByName("localhost").futureBox.map { maybeStore =>
         if (maybeStore.isEmpty) {

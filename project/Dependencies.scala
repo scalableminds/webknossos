@@ -3,10 +3,9 @@ import sbt._
 
 
 object Dependencies {
-  val akkaVersion = "2.4.10"
+  val akkaVersion = "2.5.11"
   val log4jVersion = "2.0-beta9"
   val newrelicVersion = "3.44.1"
-  val playVersion = "2.5.8"
   val webknossosWrapVersion = "1.1.4"
 
   val akkaAgent = "com.typesafe.akka" %% "akka-agent" % akkaVersion
@@ -27,13 +26,17 @@ object Dependencies {
   val log4jCore =  "org.apache.logging.log4j" % "log4j-api" % log4jVersion
   val newrelic = "com.newrelic.agent.java" % "newrelic-agent" % newrelicVersion
   val newrelicApi = "com.newrelic.agent.java" % "newrelic-api" % newrelicVersion
-  val playFramework = "com.typesafe.play" %% "play" % playVersion
+  val playFramework = "com.typesafe.play" %% "play" % "2.6.18"
+  val playJson = "com.typesafe.play" %% "play-json" % "2.6.10"
+  val playIteratees = "com.typesafe.play" %% "play-iteratees" % "2.6.1"
+  val playIterateesStreams = "com.typesafe.play" %% "play-iteratees-reactive-streams" % "2.6.1"
   val reactiveBson = "org.reactivemongo" %% "reactivemongo-bson" % "0.11.13"
   val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.2"
   val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.4.0"
   val scalaTest = "org.scalatest" %% "scalatest" % "3.0.5" % "test"
-  val silhouette = "com.mohiva" %% "play-silhouette" % "4.0.0"
-  val silhouetteTestkit = "com.mohiva" %% "play-silhouette-testkit" % "4.0.0" % "test"
+  val scalaTestPlusPlay = "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % "test"
+  val silhouette = "com.mohiva" %% "play-silhouette" % "5.0.5"
+  val silhouetteTestkit = "com.mohiva" %% "play-silhouette-testkit" % "5.0.5" % "test"
   val urlHelper = "com.netaporter" %% "scala-uri" % "0.4.14"
   val webknossosWrap = "com.scalableminds" %% "webknossos-wrap" % webknossosWrapVersion
   val xmlWriter = "org.glassfish.jaxb" % "txw2" % "2.2.11"
@@ -43,7 +46,6 @@ object Dependencies {
     "com.typesafe.slick" %% "slick" % "3.2.3",
     "com.typesafe.slick" %% "slick-hikaricp" % "3.2.3",
     "com.typesafe.slick" %% "slick-codegen" % "3.2.3",
-    //"com.github.tminglei" %% "slick-pg" % "0.15.5",
     "org.postgresql" % "postgresql" % "42.2.2")
 
   val utilDependencies = Seq(
@@ -55,6 +57,8 @@ object Dependencies {
     liftUtil,
     log4jApi,
     log4jCore,
+    playJson,
+    playIteratees,
     playFramework,
     reactiveBson,
     scalapbRuntime,
@@ -63,15 +67,17 @@ object Dependencies {
 
   val webknossosDatastoreDependencies = Seq(
     akkaLogging,
-    cache,
+    ehcache,
     newrelic,
     newrelicApi,
     webknossosWrap,
     grpc,
     grpcServices,
     scalapbRuntimeGrpc,
+    playIterateesStreams,
     filters,
-    ws
+    ws,
+    guice
   )
 
   val webknossosDependencies = Seq(
@@ -80,6 +86,7 @@ object Dependencies {
     commonsCodec,
     scalaAsync,
     scalaTest,
+    scalaTestPlusPlay,
     silhouette,
     silhouetteTestkit,
     specs2 % Test,

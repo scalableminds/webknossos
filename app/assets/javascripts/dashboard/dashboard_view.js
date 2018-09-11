@@ -1,6 +1,7 @@
 // @flow
 /* eslint-disable jsx-a11y/href-no-hash */
 
+import _ from "lodash";
 import * as React from "react";
 import { connect } from "react-redux";
 import { Spin, Tabs } from "antd";
@@ -54,6 +55,13 @@ export const datasetCache = {
   clear(): void {
     localStorage.removeItem(wkDatasetsCacheKey);
   },
+};
+
+export const urlTokenToTabKeyMap = {
+  gallery: "datasets",
+  datasets: "advanced-datasets",
+  tasks: "tasks",
+  annotations: "explorativeAnnotations",
 };
 
 class DashboardView extends React.PureComponent<Props, State> {
@@ -190,11 +198,13 @@ class DashboardView extends React.PureComponent<Props, State> {
     }
 
     const onTabChange = activeTabKey => {
-      const index = validTabKeys.indexOf(activeTabKey);
-      if (index > -1) {
+      const tabKeyToURLMap = _.invert(urlTokenToTabKeyMap);
+      const url = tabKeyToURLMap[activeTabKey];
+      if (url) {
         localStorage.setItem("lastUsedDashboardTab", activeTabKey);
-        this.props.history.push(`/dashboard/${tabKeyToURL[index]}`);
+        this.props.history.push(`/dashboard/${url}`);
       }
+
       this.setState({ activeTabKey });
     };
     const userHeader = this.props.isAdminView ? (

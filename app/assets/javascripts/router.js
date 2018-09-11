@@ -17,6 +17,7 @@ import { Imprint, Privacy } from "components/legal";
 
 import TracingLayoutView from "oxalis/view/tracing_layout_view";
 import DashboardView from "dashboard/dashboard_view";
+import { urlTokenToTabKeyMap } from "dashboard/dashboard_view";
 import SpotlightView from "dashboard/spotlight_view";
 import LoginView from "admin/auth/login_view";
 import RegistrationView from "admin/auth/registration_view";
@@ -131,28 +132,12 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/dashboard/:tab"
                 render={({ match }: ContextRouter) => {
-                  let initialTabKey: ?string;
-                  switch (match.params.tab) {
-                    case "gallery":
-                      initialTabKey = "datasets";
-                      break;
-                    case "datasets":
-                      initialTabKey = "advanced-datasets";
-                      break;
-                    case "tasks":
-                      initialTabKey = "tasks";
-                      break;
-                    case "annotations":
-                      initialTabKey = "explorativeAnnotations";
-                      break;
-                    default:
-                      initialTabKey = null;
-                  }
+                  const initialTabKey = urlTokenToTabKeyMap[match.params.tab];
                   return (
                     <DashboardView
                       userId={null}
                       isAdminView={false}
-                      initialTabKey={initialTabKey}
+                      initialTabKey={initialTabKey || null}
                     />
                   );
                 }}

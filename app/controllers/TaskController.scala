@@ -158,9 +158,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
 
     for {
       dataSetName <- assertAllOnSameDataset
-      taskType <- taskTypeDAO.findOne(ObjectId(requestedTasks.head._1.taskTypeId))
-      team <- teamDAO.findOne(taskType._team)
-      dataSet <- dataSetDAO.findOneByNameAndOrganization(requestedTasks.head._1.dataSet, team._organization) ?~> Messages("dataSet.notFound", dataSetName)
+      dataSet <- dataSetDAO.findOneByNameAndOrganization(requestedTasks.head._1.dataSet, request.identity._organization) ?~> Messages("dataSet.notFound", dataSetName)
       dataStoreHandler <- dataSetService.handlerFor(dataSet)
       skeletonTracingIds: List[Box[String]] <- dataStoreHandler.saveSkeletonTracings(SkeletonTracings(requestedTasks.map(_._2)))
       requestedTasksWithTracingIds = requestedTasks zip skeletonTracingIds

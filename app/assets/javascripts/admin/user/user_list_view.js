@@ -153,6 +153,7 @@ class UserListView extends React.PureComponent<Props, State> {
       isExperienceModalVisible: false,
       users: prevState.users.map(user => updatedUsersMap[user.id] || user),
       singleSelectedUser: null,
+      selectedUserIds: prevState.singleSelectedUser == null ? [] : prevState.selectedUserIds,
     }));
   };
 
@@ -263,6 +264,7 @@ class UserListView extends React.PureComponent<Props, State> {
       getCheckboxProps: user => ({
         disabled: !user.isActive,
       }),
+      selectedRowKeys: this.state.selectedUserIds,
     };
 
     const activationFilterWarning = this.state.activationFilter.includes("true") ? (

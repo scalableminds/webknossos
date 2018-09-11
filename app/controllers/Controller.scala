@@ -1,10 +1,14 @@
 package controllers
 
+import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
+import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext}
 import com.scalableminds.webknossos.datastore.controllers.ValidationHelpers
 import com.scalableminds.util.mvc.ExtendedController
 import com.scalableminds.util.tools.{Converter, Fox}
 import com.typesafe.scalalogging.LazyLogging
+import models.user.User
 import net.liftweb.common.{Box, Failure, Full, ParamFailure}
+import oxalis.security.WkEnv
 import play.api.i18n.{I18nSupport, Messages}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
@@ -56,5 +60,17 @@ trait Controller extends PlayController
       case e: JsError           =>
         Fox.successful(JsonBadRequest(jsonErrorWrites(e), Messages("format.json.invalid")))
     }
+  }
+
+  implicit def userToDBAccess(user: User): DBAccessContext = {
+    AuthorizedAccessContext(user)
+  }
+
+  implicit def userAwareRequestToDBAccess(implicit request: UserAwareRequest[WkEnv, _]) = {
+    DBAccessContext(request.identity)
+  }
+
+  implicit def securedRequestToDBAccess(implicit request: SecuredRequest[WkEnv, _]) = {
+    DBAccessContext(Some(request.identity))
   }
 }

@@ -2,6 +2,7 @@
 import test from "ava";
 import _ from "lodash";
 import * as accessors from "oxalis/model/accessors/flycam_accessor";
+import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
 
 const initialState = {
   dataset: {
@@ -32,7 +33,7 @@ const initialState = {
 };
 
 test("Flycam Accessors should calculate the max zoom step", t => {
-  t.is(accessors.getMaxZoomStep(initialState), 16);
+  t.is(getMaxZoomStep(initialState.dataset), 16);
 });
 
 test("Flycam Accessors should calculate the request log zoom step (1/3)", t => {

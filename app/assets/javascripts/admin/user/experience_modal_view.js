@@ -82,11 +82,11 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
       const min = _.min(usersValues);
       const max = _.max(usersValues);
       const isShared = allSharedDomains.indexOf(domain) > -1;
-      const value = isShared && max === min ? min : 0;
+      const value = isShared && max === min ? min : -1;
       return {
         domain,
         value,
-        lowestValue: isShared ? min : 0,
+        lowestValue: min,
         highestValue: max,
         isShared,
         changed: false,
@@ -98,7 +98,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
   updateAllUsers = async () => {
     let relevantEntries = this.state.tableEntries.filter(
       entry =>
-        entry.changed || (entry.lowestValue === entry.highestValue && entry.highestValue >= 1),
+        entry.changed || (entry.lowestValue === entry.highestValue && entry.highestValue >= 0),
     );
     if (this.state.showOnlySharedExperiences) {
       relevantEntries = this.state.tableEntries.filter(entry => entry.isShared);
@@ -144,7 +144,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
   }
 
   setValueOfEntry = (index: number, value: number) => {
-    if (value > 0) {
+    if (value >= 0) {
       this.setState(prevState => ({
         tableEntries: prevState.tableEntries.map((entry, currentIndex) => {
           if (currentIndex === index) {
@@ -166,10 +166,11 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
       tableEntries: prevState.tableEntries.map((entry, currentIndex) => {
         if (currentIndex === index) {
           const value =
-            this.props.selectedUsers.length === 1 ||
-            (entry.isShared && entry.lowestValue === entry.highestValue && entry.highestValue >= 1)
+            (this.props.selectedUsers.length === 1 &&
+              entry.domain in this.props.selectedUsers[0].experiences) ||
+            (entry.isShared && entry.lowestValue === entry.highestValue && entry.highestValue >= 0)
               ? this.props.selectedUsers[0].experiences[entry.domain]
-              : 0;
+              : -1;
           return {
             ...entry,
             value,
@@ -195,7 +196,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     }
     const newExperience: TableEntry = {
       domain,
-      value: 0,
+      value: -1,
       lowestValue: -1,
       highestValue: -1,
       isShared: true,
@@ -231,7 +232,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
         visible={this.props.visible}
         onCancel={this.props.onCancel}
         maskClosable={false}
-        width={800}
+        width={850}
         footer={
           <div>
             <Button type="primary" onClick={this.updateAllUsers}>
@@ -263,12 +264,12 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
             title="Experience Domain"
             key="domain"
             dataIndex="domain"
-            width={multipleUsers ? "30%" : "40%"}
+            width={multipleUsers ? "25%" : "40%"}
           />
           {multipleUsers ? (
             <Column
               title="Current Experience Value"
-              width="30%"
+              width="25%"
               render={(record: TableEntry) => {
                 if (record.highestValue === -1 && record.lowestValue === -1) return "";
                 return record.highestValue === record.lowestValue
@@ -277,6 +278,21 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
               }}
             />
           ) : null}
+          {multipleUsers ? (
+            <Column
+              title="Is Shared"
+              width="10%"
+              className="centered-table-item"
+              render={(record: TableEntry) =>
+                record.isShared ? (
+                  <Icon type="check" theme="outlined" />
+                ) : (
+                  <Icon type="close" theme="outlined" />
+                )
+              }
+            />
+          ) : null}
+          )
           <Column
             title="Experience Value"
             key="value"
@@ -289,7 +305,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
                 <span>
                   <InputNumber
                     value={
-                      this.state.tableEntries[index].value > 0
+                      this.state.tableEntries[index].value > -1
                         ? this.state.tableEntries[index].value
                         : ""
                     }

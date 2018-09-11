@@ -21,6 +21,7 @@ import { parseAsMaybe } from "libs/utils";
 const TabPane = Tabs.TabPane;
 
 const validTabKeys = ["datasets", "advanced-datasets", "tasks", "explorativeAnnotations"];
+const tabKeyToURL = ["gallery", "datasets", "tasks", "annotations"];
 
 type OwnProps = {
   userId: ?string,
@@ -189,9 +190,10 @@ class DashboardView extends React.PureComponent<Props, State> {
     }
 
     const onTabChange = activeTabKey => {
-      const isValid = validTabKeys.indexOf(activeTabKey) > -1;
-      if (isValid) {
+      const index = validTabKeys.indexOf(activeTabKey);
+      if (index > -1) {
         localStorage.setItem("lastUsedDashboardTab", activeTabKey);
+        this.props.history.push(`/dashboard/${tabKeyToURL[index]}`);
       }
       this.setState({ activeTabKey });
     };

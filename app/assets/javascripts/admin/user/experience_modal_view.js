@@ -16,12 +16,14 @@ const { Column } = Table;
 // A -1 for lowestValue and highestValue indicate that these values are invalid
 // -> happens when a new domain is added.
 // Used to render "Current Experience Value" and used while reverting changes
+
+// sharedByCount is the number of users that had the entry in beforehand
 type TableEntry = {
   domain: string,
   value: number,
   lowestValue: number,
   highestValue: number,
-  isShared: boolean,
+  sharedByCount: boolean,
   changed: boolean,
 };
 
@@ -72,28 +74,36 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
           value,
           lowestValue: -1,
           highestValue: -1,
-          isShared: true,
+          sharedByCount: 1,
           changed: false,
         })),
       );
     }
-    // find all existing experience domains and all shared domains
-    const allSharedDomains: Array<string> = _.intersection(
-      ...users.map(user => Object.keys(user.experiences)),
-    );
+    // find all existing experience domains
     const allDomains: Array<string> = _.union(...users.map(user => Object.keys(user.experiences)));
-    const tableEntries = allDomains.map(domain => {
-      const usersValues = users.map(user => user.experiences[domain]);
+    // adds the number of users with this domain (sharedByCount) to all domains
+    const allDomainsWithCount = allDomains.map(domain => {
+      let sharedByCount = 0;
+      users.forEach(user => {
+        if (domain in user.experiences) {
+          sharedByCount++;
+        }
+      });
+      return { domain, sharedByCount };
+    });
+    // create a table entry for each domain
+    const tableEntries = allDomainsWithCount.map(entry => {
+      const usersValues = users.map(user => user.experiences[entry.domain]);
       const min = _.min(usersValues);
       const max = _.max(usersValues);
-      const isShared = allSharedDomains.indexOf(domain) > -1;
+      const isShared = entry.sharedByCount === users.length;
       const value = isShared && max === min ? min : -1;
       return {
-        domain,
+        domain: entry.domain,
         value,
         lowestValue: min,
         highestValue: max,
-        isShared,
+        sharedByCount: entry.sharedByCount,
         changed: false,
       };
     });
@@ -103,7 +113,9 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
   updateAllUsers = async () => {
     let relevantEntries = this.state.tableEntries.filter(entry => entry.changed);
     if (this.state.showOnlySharedExperiences) {
-      relevantEntries = this.state.tableEntries.filter(entry => entry.isShared);
+      relevantEntries = this.state.tableEntries.filter(
+        entry => entry.sharedByCount === this.props.selectedUsers.length,
+      );
     }
     const newUserPromises: Array<Promise<APIUserType>> = this.props.selectedUsers.map(user => {
       const newExperiences = {
@@ -169,11 +181,15 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
         if (currentIndex !== index) {
           return entry;
         }
+        // only able to revert to a value when in single-user mode and the user already had this domain
+        // or when in multiple-user mode and the domain was shared beforehand and all users have the same value
+        // -> sharedByCount === count of users and highestValue === lowestValue and highestValue >= 0 -> not -1
         const firstUser = this.props.selectedUsers[0];
         const isSingleUserWithEntry =
           this.props.selectedUsers.length === 1 && entry.domain in firstUser.experiences;
+        const isShared = entry.sharedByCount === this.props.selectedUsers.length;
         const isValueSharedAndExistedBefore =
-          entry.isShared && entry.lowestValue === entry.highestValue && entry.highestValue >= 0;
+          isShared && entry.lowestValue === entry.highestValue && entry.highestValue >= 0;
         const value =
           isSingleUserWithEntry || isValueSharedAndExistedBefore
             ? firstUser.experiences[entry.domain]
@@ -198,12 +214,13 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     if (this.state.tableEntries.findIndex(entry => entry.domain === domain) > -1) {
       return;
     }
+    // a newly entered domain is owned by everyone but has invalid lowest and highest values
     const newExperience: TableEntry = {
       domain,
       value: -1,
       lowestValue: -1,
       highestValue: -1,
-      isShared: true,
+      sharedByCount: this.props.selectedUsers.length,
       changed: false,
     };
     this.setState(prevState => ({
@@ -219,9 +236,10 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     if (!this.props.visible && this.props.selectedUsers.length === 0) {
       return null;
     }
-    const tableEntries = this.state.tableEntries.filter(
+    const tableEntries = this.state.tableEntries;
+    /* .filter(
       entry => !this.state.showOnlySharedExperiences || entry.isShared,
-    );
+    ); TODO remove showOnlySharedExperiences */
     const multipleUsers = this.props.selectedUsers.length > 1;
     return (
       <Modal
@@ -284,23 +302,26 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
           ) : null}
           {multipleUsers ? (
             <Column
-              title="Is Shared"
-              width="10%"
+              title="Shared By"
+              width="20%"
               className="centered-table-item"
-              render={(record: TableEntry) =>
-                record.isShared ? (
-                  <Icon type="check" theme="outlined" />
-                ) : (
-                  <Icon type="close" theme="outlined" />
-                )
-              }
+              render={(record: TableEntry) => {
+                const iconName =
+                  record.sharedByCount === this.props.selectedUsers.length ? "check" : "close";
+                return (
+                  <React.Fragment>
+                    <Icon type={iconName} theme="outlined" style={{ maginRight: 8 }} />
+                    {record.sharedByCount}
+                  </React.Fragment>
+                );
+              }}
             />
           ) : null}
           )
           <Column
             title="Experience Value"
             key="value"
-            width={multipleUsers ? "25%" : "40%"}
+            width={multipleUsers ? "15%" : "40%"}
             render={record => {
               const index = this.state.tableEntries.findIndex(
                 entry => entry.domain === record.domain,

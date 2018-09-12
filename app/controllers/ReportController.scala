@@ -24,7 +24,7 @@ object ProjectProgressEntry { implicit val jsonFormat = Json.format[ProjectProgr
 
 class ReportDAO @Inject()(sqlClient: SQLClient, annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
 
-  def projectProgress(teamId: ObjectId)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[List[ProjectProgressEntry]] = {
+  def projectProgress(teamId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[ProjectProgressEntry]] = {
     for {
       r <- run(
         sql"""
@@ -88,7 +88,7 @@ class ReportDAO @Inject()(sqlClient: SQLClient, annotationDAO: AnnotationDAO)(im
   }
 
 
-  def getAssignmentsByProjectsFor(userId: ObjectId)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Map[String, Int]] = {
+  def getAssignmentsByProjectsFor(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Map[String, Int]] = {
     for {
       r <- run(sql"""
         select p._id, p.name, t.neededExperience_domain, t.neededExperience_value, count(t._id)
@@ -124,7 +124,7 @@ class ReportController @Inject()(reportDAO: ReportDAO,
 
   def projectProgressOverview(teamId: String) = sil.SecuredAction.async { implicit request =>
     for {
-      entries <- reportDAO.projectProgress(ObjectId(teamId))(GlobalAccessContext, ec)
+      entries <- reportDAO.projectProgress(ObjectId(teamId))(GlobalAccessContext)
     } yield Ok(Json.toJson(entries))
   }
 

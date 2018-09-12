@@ -2,7 +2,7 @@
 
 import _ from "lodash";
 import * as React from "react";
-import { Modal, Button, Tooltip, Icon, Table, InputNumber, Checkbox, Tag } from "antd";
+import { Modal, Button, Tooltip, Icon, Table, InputNumber, Tag } from "antd";
 import * as Utils from "libs/utils";
 import { updateUser } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
@@ -23,7 +23,7 @@ type TableEntry = {
   value: number,
   lowestValue: number,
   highestValue: number,
-  sharedByCount: boolean,
+  sharedByCount: number,
   changed: boolean,
 };
 

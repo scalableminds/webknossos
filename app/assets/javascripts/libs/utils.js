@@ -3,7 +3,6 @@ import _ from "lodash";
 import type { Vector3, Vector4, Vector6, BoundingBoxType } from "oxalis/constants";
 import Maybe from "data.maybe";
 import window, { document, location } from "libs/window";
-import pako from "pako";
 import naturalSort from "javascript-natural-sort";
 import type { APIUserType } from "admin/api_flow_types";
 
@@ -404,22 +403,6 @@ export function addEventListenerWithDelegation(
   };
   element.addEventListener(eventName, wrapperFunc, false);
   return { [eventName]: wrapperFunc };
-}
-
-export async function compress(data: Uint8Array | string): Promise<Uint8Array> {
-  const DEFLATE_PUSH_SIZE = 65536;
-
-  const deflator = new pako.Deflate({ gzip: true });
-  for (let offset = 0; offset < data.length; offset += DEFLATE_PUSH_SIZE) {
-    // The second parameter to push indicates whether this is the last chunk to be deflated
-    deflator.push(
-      data.slice(offset, offset + DEFLATE_PUSH_SIZE),
-      offset + DEFLATE_PUSH_SIZE >= data.length,
-    );
-    // eslint-disable-next-line no-await-in-loop
-    await sleep(1);
-  }
-  return deflator.result;
 }
 
 export function median8(dataArray: Array<number>): number {

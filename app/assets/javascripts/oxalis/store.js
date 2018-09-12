@@ -448,6 +448,7 @@ export const defaultState: OxalisState = {
     logoUrl: null,
     lastUsedByUser: 0,
     isForeign: false,
+    sortingKey: 123,
   },
   tracing: {
     ...initialAnnotationInfo,

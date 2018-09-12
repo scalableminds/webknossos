@@ -69,6 +69,7 @@ In order to restore the current window, a reload is necessary.`,
   "task.peek_next": _.template(
     "The next task will most likely be part of project <%- projectName %>",
   ),
+  "task.confirm_reset": "Do you really want to reset this task?",
   "task.reset_success": "Annotation was successfully reset.",
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",

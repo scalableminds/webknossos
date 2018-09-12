@@ -1,4 +1,4 @@
-package com.scalableminds.util.rpc
+package com.scalableminds.webknossos.datastore.rpc
 
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -12,4 +12,5 @@ class RPC @Inject()(ws: WSClient) {
   def apply(url: String): RPCRequest = {
     new RPCRequest(requestCounter.getAndIncrement(), url, ws)
   }
+
 }

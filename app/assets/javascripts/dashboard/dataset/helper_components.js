@@ -75,7 +75,7 @@ export class RetryingErrorBoundary extends React.Component<
   }
 }
 
-export const confirmAsync = (opts: Object) =>
+export const confirmAsync = (opts: Object): Promise<boolean> =>
   new Promise(resolve => {
     Modal.confirm({
       ...opts,

@@ -77,7 +77,7 @@ trait ValidationHelpers {
 
   def validateProto[A <: GeneratedMessage with Message[A]](implicit companion: GeneratedMessageCompanion[A]) = BodyParsers.parse.raw.validate { raw =>
     if (raw.size < raw.memoryThreshold) {
-      Box(raw.asBytes()).flatMap(x => tryo(companion.parseFrom(x))).toRight[Result](BadRequest("invalid request body"))
+      Box(raw.asBytes()).flatMap(x => tryo(companion.parseFrom(x.toArray))).toRight[Result](BadRequest("invalid request body"))
     } else {
       tryo(companion.parseFrom(CodedInputStream.newInstance(new FileInputStream(raw.asFile)))).toRight[Result](BadRequest("invalid request body"))
     }

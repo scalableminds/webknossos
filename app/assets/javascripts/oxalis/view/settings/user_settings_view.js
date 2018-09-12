@@ -28,7 +28,7 @@ import {
   LogSliderSetting,
 } from "oxalis/view/settings/setting_input_views";
 import { setUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
-import { getMaxZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
 import {
   enforceSkeletonTracing,
   getActiveNode,
@@ -268,7 +268,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
             onChange={this.onChangeUser.overrideNodeRadius}
           />
           <SwitchSetting
-            label="Soma Clicking"
+            label="Single-node-tree mode (&quot;Soma clicking&quot;)"
             value={this.props.userConfiguration.newNodeNewTree}
             onChange={this.onChangeUser.newNodeNewTree}
           />
@@ -369,7 +369,7 @@ const mapStateToProps = (state: OxalisState) => ({
   userConfiguration: state.userConfiguration,
   tracing: state.tracing,
   zoomStep: state.flycam.zoomStep,
-  maxZoomStep: getMaxZoomStep(state),
+  maxZoomStep: getMaxZoomStep(state.dataset),
   viewMode: state.temporaryConfiguration.viewMode,
   controlMode: state.temporaryConfiguration.controlMode,
   brushSize: state.temporaryConfiguration.brushSize,

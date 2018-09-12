@@ -135,9 +135,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
       restrictions <- annotationInformationProvider.restrictionsFor(AnnotationIdentifier(annotation.typ, annotation._id))
       allowed <- checkRestrictions(restrictions)
     } yield {
-      if (allowed) UserAccessAnswer(true) else UserAccessAnswer(false, Some(s"No ${
-        mode.toString
-      } access to tracing"))
+      if (allowed) UserAccessAnswer(true) else UserAccessAnswer(false, Some(s"No ${mode.toString} access to tracing"))
     }
   }
 }

@@ -6,7 +6,7 @@
 import _ from "lodash";
 import Toast from "libs/toast";
 import { pingDataStoreIfAppropriate, pingMentionedDataStores } from "admin/datastore_health_check";
-import { createWorker, wrapFunction } from "oxalis/workers/comlink_wrapper";
+import { createWorker } from "oxalis/workers/comlink_wrapper";
 import handleStatus from "libs/handle_http_status";
 import FetchBufferWorker from "oxalis/workers/fetch_buffer.worker";
 import FetchBufferWithHeadersWorker from "oxalis/workers/fetch_buffer_with_headers.worker";
@@ -154,7 +154,7 @@ class Request {
       }),
     );
 
-  receiveArraybuffer = (url: string, options: RequestOptions = {}): Promise<ArrayBuffer> =>
+  receiveArraybuffer = (url: string, options: RequestOptions = {}): Promise<*> =>
     this.triggerRequest(
       url,
       _.defaultsDeep(options, {

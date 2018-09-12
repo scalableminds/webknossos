@@ -96,11 +96,6 @@ class PullQueue {
 
     const handleBucket = (bucketAddress, bucketData, resolutions) => {
       const zoomStep = bucketAddress[3];
-      if (zoomStep > this.cube.MAX_UNSAMPLED_ZOOM_STEP) {
-        // todo: when does this happen? is it a problem if we are advancing the offset in this case?
-        return;
-      }
-
       const bucket = this.cube.getBucket(bucketAddress);
       this.cube.boundingBox.removeOutsideArea(bucket, bucketAddress, bucketData);
       this.maybeWhitenEmptyBucket(bucketData);
@@ -129,6 +124,8 @@ class PullQueue {
       }
     };
 
+    const { renderMissingDataBlack } = Store.getState().datasetConfiguration;
+
     try {
       const { buffer: responseBuffer, missingBuckets } = await requestFromStore(layerInfo, batch);
       this.connectionInfo.log(
@@ -142,13 +139,16 @@ class PullQueue {
       let offset = 0;
       for (const [index, bucketAddress] of batch.entries()) {
         const isMissing = missingBuckets.indexOf(index) > -1;
-        if (isMissing) {
-          const bucket = this.cube.getBucket(bucketAddress);
-          if (bucket.type === "data") {
-            bucket.pullFailed(true);
-          }
+        const bucket = this.cube.getBucket(bucketAddress);
+        if (bucket.type !== "data") {
+          continue;
+        }
+        if (isMissing && !renderMissingDataBlack) {
+          bucket.pullFailed(true);
         } else {
-          const bucketData = responseBuffer.subarray(offset, (offset += this.cube.BUCKET_LENGTH));
+          const bucketData = isMissing
+            ? new Uint8Array(bucket.BUCKET_LENGTH)
+            : responseBuffer.subarray(offset, (offset += this.cube.BUCKET_LENGTH));
           handleBucket(bucketAddress, bucketData, resolutions);
         }
       }

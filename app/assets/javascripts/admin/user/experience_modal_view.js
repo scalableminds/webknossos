@@ -37,7 +37,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
   constructor(props: Props) {
     super(props);
     this.state = {
-      tableEntries: this.loadTableEntries(props.selectedUsers),
+      tableEntries: this.getTableEntries(props.selectedUsers),
       removedDomains: [],
       showOnlySharedExperiences: false,
     };
@@ -46,7 +46,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
   componentWillReceiveProps(nextProps: Props) {
     if (nextProps.visible && !this.props.visible) {
       this.setState({
-        tableEntries: this.loadTableEntries(nextProps.selectedUsers),
+        tableEntries: this.getTableEntries(nextProps.selectedUsers),
         removedDomains: [],
         showOnlySharedExperiences: false,
       });
@@ -59,7 +59,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     );
   }
 
-  loadTableEntries = (users: Array<APIUserType>): Array<TableEntry> => {
+  getTableEntries = (users: Array<APIUserType>): Array<TableEntry> => {
     if (users.length <= 1) {
       return this.sortEntries(
         _.map(users[0].experiences, (value, domain) => ({
@@ -96,10 +96,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
   };
 
   updateAllUsers = async () => {
-    let relevantEntries = this.state.tableEntries.filter(
-      entry =>
-        entry.changed || (entry.lowestValue === entry.highestValue && entry.highestValue >= 0),
-    );
+    let relevantEntries = this.state.tableEntries.filter(entry => entry.changed);
     if (this.state.showOnlySharedExperiences) {
       relevantEntries = this.state.tableEntries.filter(entry => entry.isShared);
     }
@@ -144,41 +141,40 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
   }
 
   setValueOfEntry = (index: number, value: number) => {
-    if (value >= 0) {
-      this.setState(prevState => ({
-        tableEntries: prevState.tableEntries.map((entry, currentIndex) => {
-          if (currentIndex === index) {
-            return {
-              ...entry,
-              value,
-              changed: true,
-            };
-          } else {
-            return entry;
-          }
-        }),
-      }));
+    if (value < 0) {
+      return;
     }
+    this.setState(prevState => ({
+      tableEntries: prevState.tableEntries.map((entry, currentIndex) => {
+        if (currentIndex !== index) {
+          return entry;
+        }
+        return {
+          ...entry,
+          value,
+          changed: true,
+        };
+      }),
+    }));
   };
 
   revertChangesOfEntry = (index: number) => {
     this.setState(prevState => ({
       tableEntries: prevState.tableEntries.map((entry, currentIndex) => {
-        if (currentIndex === index) {
-          const value =
-            (this.props.selectedUsers.length === 1 &&
-              entry.domain in this.props.selectedUsers[0].experiences) ||
-            (entry.isShared && entry.lowestValue === entry.highestValue && entry.highestValue >= 0)
-              ? this.props.selectedUsers[0].experiences[entry.domain]
-              : -1;
-          return {
-            ...entry,
-            value,
-            changed: false,
-          };
-        } else {
+        if (currentIndex !== index) {
           return entry;
         }
+        const value =
+          (this.props.selectedUsers.length === 1 &&
+            entry.domain in this.props.selectedUsers[0].experiences) ||
+          (entry.isShared && entry.lowestValue === entry.highestValue && entry.highestValue >= 0)
+            ? this.props.selectedUsers[0].experiences[entry.domain]
+            : -1;
+        return {
+          ...entry,
+          value,
+          changed: false,
+        };
       }),
     }));
   };
@@ -225,14 +221,14 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
         title={
           multipleUsers
             ? "Changes Experiences of Selected Users"
-            : `Change Experiences for ${this.props.selectedUsers[0].firstName} , ${
+            : `Change Experiences for ${this.props.selectedUsers[0].firstName} ${
                 this.props.selectedUsers[0].lastName
               }`
         }
         visible={this.props.visible}
         onCancel={this.props.onCancel}
-        maskClosable={false}
         width={850}
+        maskClosable={false}
         footer={
           <div>
             <Button type="primary" onClick={this.updateAllUsers}>
@@ -343,9 +339,13 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
         </Table>
         {multipleUsers && this.state.removedDomains.length > 0 ? (
           <div style={{ marginBottom: 24 }}>
-            These Experience Domains will be removed from all Selected Users:<br />
+            These experience domains will be removed from all selected users:<br />
             {this.state.removedDomains.map((domain: string) => (
-              <Tooltip key={domain} placement="top" title="Do not remove this Domain">
+              <Tooltip
+                key={domain}
+                placement="top"
+                title="Click here if you don't want to remove this domain from all selected users."
+              >
                 <Tag
                   style={{ magin: 8, marginTop: 10 }}
                   className="clickable-icon"

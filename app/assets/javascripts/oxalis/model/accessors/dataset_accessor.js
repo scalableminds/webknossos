@@ -6,6 +6,8 @@ import constants, { Vector3Indicies, ModeValues } from "oxalis/constants";
 import type { APIDatasetType } from "admin/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
 import type { SettingsType, DataLayerType } from "oxalis/store";
+import Maybe from "data.maybe";
+import memoizeOne from "memoize-one";
 
 export function getResolutions(dataset: APIDatasetType): Vector3[] {
   // Different layers can have different resolutions. At the moment,
@@ -31,6 +33,21 @@ export function getResolutions(dataset: APIDatasetType): Vector3[] {
 
   return mostExtensiveResolutions.concat(extendedResolutions);
 }
+
+function _getMaxZoomStep(maybeDataset: ?APIDatasetType): number {
+  const minimumZoomStepCount = 1;
+  const maxZoomstep = Maybe.fromNullable(maybeDataset)
+    .map(dataset =>
+      Math.max(
+        minimumZoomStepCount,
+        Math.max(0, ...getResolutions(dataset).map(r => Math.max(r[0], r[1], r[2]))),
+      ),
+    )
+    .getOrElse(2 ** (minimumZoomStepCount + constants.DOWNSAMPLED_ZOOM_STEP_COUNT - 1));
+  return maxZoomstep;
+}
+
+export const getMaxZoomStep = memoizeOne(_getMaxZoomStep);
 
 function getDataLayers(dataset: APIDatasetType): DataLayerType[] {
   return dataset.dataSource.dataLayers;

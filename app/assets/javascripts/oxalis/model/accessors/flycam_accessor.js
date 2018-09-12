@@ -2,14 +2,13 @@
 import type { Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { FlycamType, OxalisState } from "oxalis/store";
 import constants, { OrthoViews } from "oxalis/constants";
-import Maybe from "data.maybe";
 import Dimensions from "oxalis/model/dimensions";
 import * as scaleInfo from "oxalis/model/scaleinfo";
 import * as Utils from "libs/utils";
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4 } from "libs/mjs";
 import * as THREE from "three";
-import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
 
 // All methods in this file should use constants.PLANE_WIDTH instead of constants.VIEWPORT_WIDTH
 // as the area that is rendered is only of size PLANE_WIDTH.
@@ -55,21 +54,8 @@ export function getZoomedMatrix(flycam: FlycamType): Matrix4x4 {
   return M4x4.scale1(flycam.zoomStep, flycam.currentMatrix);
 }
 
-export function getMaxZoomStep(state: OxalisState): number {
-  const minimumZoomStepCount = 1;
-  const maxZoomstep = Maybe.fromNullable(state.dataset)
-    .map(dataset =>
-      Math.max(
-        minimumZoomStepCount,
-        Math.max(0, ...getResolutions(dataset).map(r => Math.max(r[0], r[1], r[2]))),
-      ),
-    )
-    .getOrElse(2 ** (minimumZoomStepCount + constants.DOWNSAMPLED_ZOOM_STEP_COUNT - 1));
-  return maxZoomstep;
-}
-
 export function getRequestLogZoomStep(state: OxalisState): number {
-  const maxLogZoomStep = Math.log2(getMaxZoomStep(state));
+  const maxLogZoomStep = Math.log2(getMaxZoomStep(state.dataset));
   const min = Math.min(state.datasetConfiguration.quality, maxLogZoomStep);
   const value =
     Math.ceil(Math.log2(state.flycam.zoomStep / MAX_ZOOM_STEP_DIFF)) +

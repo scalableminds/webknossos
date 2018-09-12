@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
-import io.grpc.netty.NettyChannelBuilder
+import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder
 import io.grpc.health.v1._
 import net.liftweb.common.{Box, Empty, Full}
 import net.liftweb.util.Helpers.tryo

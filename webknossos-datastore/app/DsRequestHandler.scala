@@ -5,7 +5,7 @@ import play.api.mvc.{Action, RequestHeader}
 import play.api.routing.Router
 
 class DsRequestHandler @Inject() (router: Router, errorHandler: HttpErrorHandler,
-                                configuration: HttpConfiguration, filters: HttpFilters)
+                                  configuration: HttpConfiguration, filters: HttpFilters)
   extends DefaultHttpRequestHandler(router, errorHandler, configuration, filters) {
   override def routeRequest(request: RequestHeader) = {
     if (request.method == "OPTIONS") {

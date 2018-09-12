@@ -37,7 +37,6 @@ type Props = {
 type State = {
   tableEntries: Array<TableEntry>,
   removedDomains: Array<string>,
-  showOnlySharedExperiences: boolean,
 };
 
 class ExperienceModalView extends React.PureComponent<Props, State> {
@@ -46,7 +45,6 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     this.state = {
       tableEntries: this.getTableEntries(props.selectedUsers),
       removedDomains: [],
-      showOnlySharedExperiences: false,
     };
   }
 
@@ -55,7 +53,6 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
       this.setState({
         tableEntries: this.getTableEntries(nextProps.selectedUsers),
         removedDomains: [],
-        showOnlySharedExperiences: false,
       });
     }
   }
@@ -111,12 +108,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
   };
 
   updateAllUsers = async () => {
-    let relevantEntries = this.state.tableEntries.filter(entry => entry.changed);
-    if (this.state.showOnlySharedExperiences) {
-      relevantEntries = this.state.tableEntries.filter(
-        entry => entry.sharedByCount === this.props.selectedUsers.length,
-      );
-    }
+    const relevantEntries = this.state.tableEntries.filter(entry => entry.changed);
     const newUserPromises: Array<Promise<APIUserType>> = this.props.selectedUsers.map(user => {
       const newExperiences = {
         ...user.experiences,
@@ -237,9 +229,6 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
       return null;
     }
     const tableEntries = this.state.tableEntries;
-    /* .filter(
-      entry => !this.state.showOnlySharedExperiences || entry.isShared,
-    ); TODO remove showOnlySharedExperiences */
     const multipleUsers = this.props.selectedUsers.length > 1;
     return (
       <Modal
@@ -264,16 +253,6 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
           </div>
         }
       >
-        {multipleUsers ? (
-          <Checkbox
-            style={{ marginTop: 24, marginBottom: 24 }}
-            onChange={(e: SyntheticInputEvent<>) =>
-              this.setState({ showOnlySharedExperiences: e.target.checked })
-            }
-          >
-            Show Only Shared Experience Domains
-          </Checkbox>
-        ) : null}
         <Table
           size="small"
           dataSource={tableEntries}

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import _ from "lodash";
-import { Spin, Button, List, Avatar } from "antd";
+import { Spin, Button, List, Avatar, Alert } from "antd";
 import { ControlModeEnum } from "oxalis/constants";
 import { connect } from "react-redux";
 import Model from "oxalis/model";
@@ -12,7 +12,7 @@ import { handleGenericError } from "libs/error_handling";
 import FormattedDate from "components/formatted_date";
 import api from "oxalis/api/internal_api";
 import classNames from "classnames";
-import { setVersionRestoreModeAction } from "oxalis/model/actions/ui_actions";
+import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_actions";
 import { revertToVersion } from "oxalis/model/sagas/update_actions";
 import { pushSaveQueueAction, setVersionNumberAction } from "oxalis/model/actions/save_actions";
@@ -130,19 +130,19 @@ class VersionView extends React.Component<Props, State> {
     Store.dispatch(setVersionNumberAction(this.state.originalVersion, "skeleton"));
     Store.dispatch(pushSaveQueueAction([revertToVersion(version)], "skeleton"));
     await Model.save();
-    Store.dispatch(setVersionRestoreModeAction(false));
+    Store.dispatch(setVersionRestoreVisibilityAction(false));
     Store.dispatch(setAnnotationAllowUpdateAction(true));
   }
 
   handleClose = async () => {
     await this.previewVersion(this.state.originalVersion);
-    Store.dispatch(setVersionRestoreModeAction(false));
+    Store.dispatch(setVersionRestoreVisibilityAction(false));
     Store.dispatch(setAnnotationAllowUpdateAction(true));
   };
 
   render() {
     const VersionEntry = ({ batch, version, isNewest }) => {
-      const lastTimestamp = Math.max(...batch.map(entry => entry.value.actionTimestamp));
+      const lastTimestamp = _.max(batch.map(entry => entry.value.actionTimestamp));
       const isActiveVersion = this.props.skeletonTracing.version === version;
       const liClassName = classNames("version-entry", {
         "active-version-entry": isActiveVersion,
@@ -207,9 +207,16 @@ class VersionView extends React.Component<Props, State> {
             icon="close"
           />
           <div style={{ fontSize: 12, marginBottom: 8, color: "rgba(0, 0, 0, 0.65)" }}>
-            You are currently previewing older versions of this tracing. Either restore a version by
-            selecting it or close this view to continue tracing. The tracing shown tracing is in{" "}
-            <b>read-only</b> mode as long as this view is opened.
+            <Alert
+              type="info"
+              message={
+                <React.Fragment>
+                  You are currently previewing older versions of this tracing. Either restore a
+                  version by selecting it or close this view to continue tracing. The shown tracing
+                  is in <b>read-only</b> mode as long as this view is opened.
+                </React.Fragment>
+              }
+            />
           </div>
         </div>
         <div style={{ flex: "1 1 auto", overflowY: "auto" }}>

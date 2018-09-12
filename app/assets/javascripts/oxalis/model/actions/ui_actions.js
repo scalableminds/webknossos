@@ -2,25 +2,29 @@
 /* eslint-disable import/prefer-default-export */
 
 type SetDropzoneModalVisibilityActionType = {
-  type: "SET_DROPZONE_MODAL_VISIBILITY_ACTION_TYPE",
+  type: "SET_DROPZONE_MODAL_VISIBILITY",
   visible: boolean,
 };
 
-type SetVersionRestoreModeActionType = {
-  type: "SET_VERSION_RESTORE_MODE_ACTION_TYPE",
+type SetVersionRestoreVisibilityActionType = {
+  type: "SET_VERSION_RESTORE_VISIBILITY",
   active: boolean,
 };
 
-export type UiActionType = SetDropzoneModalVisibilityActionType | SetVersionRestoreModeActionType;
+export type UiActionType =
+  | SetDropzoneModalVisibilityActionType
+  | SetVersionRestoreVisibilityActionType;
 
 export const setDropzoneModalVisibilityAction = (
   visible: boolean,
 ): SetDropzoneModalVisibilityActionType => ({
-  type: "SET_DROPZONE_MODAL_VISIBILITY_ACTION_TYPE",
+  type: "SET_DROPZONE_MODAL_VISIBILITY",
   visible,
 });
 
-export const setVersionRestoreModeAction = (active: boolean): SetVersionRestoreModeActionType => ({
-  type: "SET_VERSION_RESTORE_MODE_ACTION_TYPE",
+export const setVersionRestoreVisibilityAction = (
+  active: boolean,
+): SetVersionRestoreVisibilityActionType => ({
+  type: "SET_VERSION_RESTORE_VISIBILITY",
   active,
 });

@@ -13,7 +13,7 @@ import ButtonComponent from "oxalis/view/components/button_component";
 import messages from "messages";
 import api from "oxalis/api/internal_api";
 import { undoAction, redoAction } from "oxalis/model/actions/save_actions";
-import { setVersionRestoreModeAction } from "oxalis/model/actions/ui_actions";
+import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import { copyAnnotationToUserAccount, finishAnnotation } from "admin/admin_rest_api";
 import { location } from "libs/window";
 import type { OxalisState, RestrictionsAndSettingsType, TaskType } from "oxalis/store";
@@ -55,7 +55,7 @@ class TracingActionsView extends PureComponent<StateProps, State> {
 
   handleRestore = async () => {
     await Model.save();
-    Store.dispatch(setVersionRestoreModeAction(true));
+    Store.dispatch(setVersionRestoreVisibilityAction(true));
   };
 
   handleRedo = () => {

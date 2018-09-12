@@ -22,7 +22,7 @@ const { Header, Sider } = Layout;
 
 type StateProps = {
   isUpdateTracingAllowed: boolean,
-  isVersionRestoreActive: boolean,
+  showVersionRestore: boolean,
 };
 
 type Props = StateProps & {
@@ -99,7 +99,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
                 <RightMenuView />
               </div>
             </div>
-            {this.props.isVersionRestoreActive ? (
+            {this.props.showVersionRestore ? (
               <Sider width={400} style={{ borderLeft: "1px solid #e8e8e8", padding: 3 }}>
                 <VersionView />
               </Sider>
@@ -112,7 +112,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
 }
 const mapStateToProps = (state: OxalisState): StateProps => ({
   isUpdateTracingAllowed: state.tracing.restrictions.allowUpdate,
-  isVersionRestoreActive: state.uiInformation.isVersionRestoreActive,
+  showVersionRestore: state.uiInformation.showVersionRestore,
 });
 
 export default connect(mapStateToProps)(TracingLayoutView);

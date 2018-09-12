@@ -317,7 +317,10 @@ export function updateVolumeTracing(
     },
   };
 }
-export function updateBucket(bucketInfo: SendBucketInfo, base64Data: string) {
+export function updateBucket(
+  bucketInfo: SendBucketInfo,
+  base64Data: string,
+): UpdateBucketUpdateAction {
   return {
     name: "updateBucket",
     value: Object.assign({}, bucketInfo, {
@@ -333,7 +336,7 @@ export function updateTreeGroups(treeGroups: Array<TreeGroupType>): UpdateTreeGr
     },
   };
 }
-export function revertToVersion(version: number) {
+export function revertToVersion(version: number): RevertToVersionUpdateAction {
   return {
     name: "revertToVersion",
     value: {

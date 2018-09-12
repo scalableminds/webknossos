@@ -5,6 +5,7 @@
 import type { SkeletonTracingStatsType } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3, Vector6, Point3 } from "oxalis/constants";
 import type { BoundingBoxObjectType, EdgeType, CommentType, TreeGroupType } from "oxalis/store";
+import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
 import Enum from "Enumjs";
 
 export type APIMessageType = { ["info" | "warning" | "error"]: string };
@@ -361,6 +362,11 @@ export type APIFeatureToggles = {
 };
 
 // Tracing related datatypes
+export type APIUpdateActionBatch = {
+  version: number,
+  value: Array<ServerUpdateAction>,
+};
+
 export type ServerNodeType = {
   id: number,
   position: Point3,

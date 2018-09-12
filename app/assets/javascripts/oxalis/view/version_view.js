@@ -17,8 +17,19 @@ import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_
 import { revertToVersion } from "oxalis/model/sagas/update_actions";
 import { pushSaveQueueAction, setVersionNumberAction } from "oxalis/model/actions/save_actions";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import ScrollIntoViewIfNeeded from "react-scroll-into-view-if-needed";
 import type { OxalisState, SkeletonTracingType } from "oxalis/store";
-import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
+import type {
+  ServerUpdateAction,
+  CreateNodeUpdateAction,
+  DeleteNodeUpdateAction,
+  UpdateTreeUpdateAction,
+  DeleteTreeUpdateAction,
+  RevertToVersionUpdateAction,
+} from "oxalis/model/sagas/update_actions";
+import type { APIUpdateActionBatch } from "admin/api_flow_types";
+
+type DescriptionType = { description: string, type: string };
 
 type Props = {
   skeletonTracing: SkeletonTracingType,
@@ -26,8 +37,39 @@ type Props = {
 
 type State = {
   isLoading: boolean,
-  versions: Array<Array<ServerUpdateAction>>,
+  versions: Array<APIUpdateActionBatch>,
   originalVersion: number,
+};
+
+const descriptionFns = {
+  deleteTree: (action: DeleteTreeUpdateAction): DescriptionType => ({
+    description: `Deleted the tree with id ${action.value.id}.`,
+    type: "delete",
+  }),
+  deleteNode: (action: DeleteNodeUpdateAction): DescriptionType => ({
+    description: `Deleted the node with id ${action.value.nodeId}.`,
+    type: "delete",
+  }),
+  revertToVersion: (action: RevertToVersionUpdateAction): DescriptionType => ({
+    description: `Reverted to version ${action.value.sourceVersion}.`,
+    type: "backward",
+  }),
+  createNode: (action: CreateNodeUpdateAction): DescriptionType => ({
+    description: `Created the node with id ${action.value.id}.`,
+    type: "plus",
+  }),
+  createTree: (action: UpdateTreeUpdateAction): DescriptionType => ({
+    description: `Created the tree with id ${action.value.id}.`,
+    type: "plus",
+  }),
+  updateTreeGroups: (): DescriptionType => ({
+    description: "Updated the tree groups.",
+    type: "edit",
+  }),
+  updateTree: (action: UpdateTreeUpdateAction): DescriptionType => ({
+    description: `Updated the tree with id ${action.value.id}.`,
+    type: "edit",
+  }),
 };
 
 class VersionView extends React.Component<Props, State> {
@@ -55,8 +97,19 @@ class VersionView extends React.Component<Props, State> {
     }
   }
 
-  getDescriptionForBatch(batch: Array<ServerUpdateAction>): { description: string, type: string } {
-    const groupedUpdateActions = _.groupBy(batch, "name");
+  getDescriptionForSpecificBatch(
+    actions: Array<ServerUpdateAction>,
+    type: string,
+  ): DescriptionType {
+    const firstAction = actions[0];
+    if (firstAction.name !== type) {
+      throw new Error("Flow constraint violated");
+    }
+    return descriptionFns[type](firstAction);
+  }
+
+  getDescriptionForBatch(actions: Array<ServerUpdateAction>): DescriptionType {
+    const groupedUpdateActions = _.groupBy(actions, "name");
 
     const moveTreeComponentUAs = groupedUpdateActions.moveTreeComponent;
     if (moveTreeComponentUAs != null) {
@@ -81,42 +134,43 @@ class VersionView extends React.Component<Props, State> {
 
     const deleteTreeUAs = groupedUpdateActions.deleteTree;
     if (deleteTreeUAs != null) {
-      const firstDeleteTreeUA = deleteTreeUAs[0];
-      if (firstDeleteTreeUA.name !== "deleteTree") {
-        throw new Error("Flow constraint violated");
-      }
-      return {
-        description: `Deleted the tree with id ${firstDeleteTreeUA.value.id}.`,
-        type: "delete",
-      };
+      return this.getDescriptionForSpecificBatch(deleteTreeUAs, "deleteTree");
     }
 
     const deleteNodeUAs = groupedUpdateActions.deleteNode;
     if (deleteNodeUAs != null) {
-      const firstDeleteNodeUA = deleteNodeUAs[0];
-      if (firstDeleteNodeUA.name !== "deleteNode") {
-        throw new Error("Flow constraint violated");
-      }
-      return {
-        description: `Deleted the node with id ${firstDeleteNodeUA.value.nodeId}.`,
-        type: "delete",
-      };
+      return this.getDescriptionForSpecificBatch(deleteNodeUAs, "deleteNode");
     }
 
     const revertToVersionUAs = groupedUpdateActions.revertToVersion;
     if (revertToVersionUAs != null) {
-      const firstRevertToVersionUA = revertToVersionUAs[0];
-      if (firstRevertToVersionUA.name !== "revertToVersion") {
-        throw new Error("Flow constraint violated");
-      }
-      return {
-        description: `Reverted to version ${firstRevertToVersionUA.value.sourceVersion}.`,
-        type: "backward",
-      };
+      return this.getDescriptionForSpecificBatch(revertToVersionUAs, "revertToVersion");
     }
+
+    const createNodeUAs = groupedUpdateActions.createNode;
+    if (createNodeUAs != null) {
+      return this.getDescriptionForSpecificBatch(createNodeUAs, "createNode");
+    }
+
+    const createTreeUAs = groupedUpdateActions.createTree;
+    if (createTreeUAs != null) {
+      return this.getDescriptionForSpecificBatch(createTreeUAs, "createTree");
+    }
+
+    const updateTreeGroupsUAs = groupedUpdateActions.updateTreeGroups;
+    if (updateTreeGroupsUAs != null) {
+      return this.getDescriptionForSpecificBatch(updateTreeGroupsUAs, "updateTreeGroups");
+    }
+
+    const updateTreeUAs = groupedUpdateActions.updateTree;
+    if (updateTreeUAs != null) {
+      return this.getDescriptionForSpecificBatch(updateTreeUAs, "updateTree");
+    }
+
+    // Catch-all for other update actions, currently updateNode and updateTracing.
     return {
-      description: `${batch[0].name} and ${batch.length - 1} other entries.`,
-      type: "plus",
+      description: "Modified the tracing.",
+      type: "edit",
     };
   }
 
@@ -141,8 +195,8 @@ class VersionView extends React.Component<Props, State> {
   };
 
   render() {
-    const VersionEntry = ({ batch, version, isNewest }) => {
-      const lastTimestamp = _.max(batch.map(entry => entry.value.actionTimestamp));
+    const VersionEntry = ({ actions, version, isNewest }) => {
+      const lastTimestamp = _.max(actions.map(action => action.value.actionTimestamp));
       const isActiveVersion = this.props.skeletonTracing.version === version;
       const liClassName = classNames("version-entry", {
         "active-version-entry": isActiveVersion,
@@ -154,10 +208,10 @@ class VersionView extends React.Component<Props, State> {
           type="primary"
           onClick={() => this.restoreVersion(version)}
         >
-          Restore this version
+          Restore
         </Button>
       );
-      const { description, type } = this.getDescriptionForBatch(batch);
+      const { description, type } = this.getDescriptionForBatch(actions);
       return (
         <React.Fragment>
           <List.Item
@@ -165,7 +219,11 @@ class VersionView extends React.Component<Props, State> {
             actions={isActiveVersion && !isNewest ? [restoreButton] : []}
           >
             <List.Item.Meta
-              title={<FormattedDate timestamp={lastTimestamp} />}
+              title={
+                <React.Fragment>
+                  Version {version} (<FormattedDate timestamp={lastTimestamp} />)
+                </React.Fragment>
+              }
               onClick={() => this.previewVersion(version)}
               avatar={<Avatar size="small" icon={type} />}
               description={
@@ -184,15 +242,9 @@ class VersionView extends React.Component<Props, State> {
       );
     };
 
-    // TODO: server should send version numbers as part of the batches
-    const versionsWithVersionNumbers = this.state.versions.map((batch, index) => {
-      batch.forEach(action => {
-        action.value.version = this.state.versions.length - index;
-      });
-      return batch;
-    });
-    const filteredVersions = versionsWithVersionNumbers.filter(
-      (batch, index) => index === 0 || batch.length > 1 || batch[0].name !== "updateTracing",
+    const filteredVersions = this.state.versions.filter(
+      (batch, index) =>
+        index === 0 || batch.value.length > 1 || batch.value[0].name !== "updateTracing",
     );
 
     return (
@@ -221,16 +273,18 @@ class VersionView extends React.Component<Props, State> {
         </div>
         <div style={{ flex: "1 1 auto", overflowY: "auto" }}>
           <Spin spinning={this.state.isLoading}>
-            <List>
-              {filteredVersions.map((batch, index) => (
-                <VersionEntry
-                  batch={batch}
-                  version={batch[0].value.version}
-                  isNewest={index === 0}
-                  key={batch[0].value.version}
-                />
-              ))}
-            </List>
+            <ScrollIntoViewIfNeeded options={{ behavior: "instant", block: "end" }}>
+              <List>
+                {filteredVersions.map((batch, index) => (
+                  <VersionEntry
+                    actions={batch.value}
+                    version={batch.version}
+                    isNewest={index === 0}
+                    key={batch.version}
+                  />
+                ))}
+              </List>
+            </ScrollIntoViewIfNeeded>
           </Spin>
         </div>
       </div>

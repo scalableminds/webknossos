@@ -42,6 +42,7 @@ import type {
   ServerSkeletonTracingType,
   ServerVolumeTracingType,
   APIAnnotationTypeCompact,
+  APIUpdateActionBatch,
 } from "admin/api_flow_types";
 import { APITracingTypeEnum } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/task/task_search_form";
@@ -574,7 +575,7 @@ export function getUpdateActionLog(
   dataStoreUrl: string,
   tracingId: string,
   tracingType: "skeleton" | "volume",
-): Promise<*> {
+): Promise<Array<APIUpdateActionBatch>> {
   return doWithToken(token =>
     Request.receiveJSON(
       `${dataStoreUrl}/data/tracings/${tracingType}/${tracingId}/updateActionLog?token=${token}`,

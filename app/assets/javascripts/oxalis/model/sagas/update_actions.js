@@ -14,7 +14,7 @@ import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reduce
 
 export type NodeWithTreeIdType = { treeId: number } & NodeType;
 
-type UpdateTreeUpdateAction = {|
+export type UpdateTreeUpdateAction = {|
   name: "createTree" | "updateTree",
   value: {|
     id: number,
@@ -27,7 +27,7 @@ type UpdateTreeUpdateAction = {|
     timestamp: number,
   |},
 |};
-type DeleteTreeUpdateAction = {|
+export type DeleteTreeUpdateAction = {|
   name: "deleteTree",
   value: {| id: number |},
 |};
@@ -46,7 +46,7 @@ type MergeTreeUpdateAction = {|
     targetId: number,
   |},
 |};
-type CreateNodeUpdateAction = {|
+export type CreateNodeUpdateAction = {|
   name: "createNode",
   value: NodeWithTreeIdType,
 |};
@@ -60,7 +60,7 @@ type ToggleTreeUpdateAction = {|
     id: number,
   |},
 |};
-type DeleteNodeUpdateAction = {|
+export type DeleteNodeUpdateAction = {|
   name: "deleteNode",
   value: {|
     treeId: number,
@@ -83,7 +83,7 @@ type DeleteEdgeUpdateAction = {|
     target: number,
   |},
 |};
-type UpdateSkeletonTracingUpdateAction = {|
+export type UpdateSkeletonTracingUpdateAction = {|
   name: "updateTracing",
   value: {|
     activeNode: ?number,
@@ -116,7 +116,7 @@ type UpdateTreeGroupsUpdateAction = {|
     treeGroups: Array<TreeGroupType>,
   |},
 |};
-type RevertToVersionUpdateAction = {|
+export type RevertToVersionUpdateAction = {|
   name: "revertToVersion",
   value: {|
     sourceVersion: number,
@@ -144,7 +144,7 @@ type AddServerValuesFn = <T>(
   T,
 ) => {
   ...T,
-  value: { ...$PropertyType<T, "value">, actionTimestamp: number, version: number },
+  value: { ...$PropertyType<T, "value">, actionTimestamp: number },
 };
 type AsServerAction<A> = $Call<AddServerValuesFn, A>;
 

@@ -253,7 +253,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
         }
         visible={this.props.visible}
         onCancel={this.props.onCancel}
-        width={850}
+        width={800}
         maskClosable={false}
         footer={
           <div>
@@ -283,15 +283,15 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
           className="user-experience-table"
         >
           <Column
-            title="Experience Domain"
+            title="Domain"
             key="domain"
             dataIndex="domain"
-            width={multipleUsers ? "25%" : "40%"}
+            width={multipleUsers ? "35%" : "40%"}
           />
           {multipleUsers ? (
             <Column
-              title="Current Experience Value"
-              width="25%"
+              title="Current Value"
+              width="20%"
               render={(record: TableEntry) => {
                 if (record.highestValue === -1 && record.lowestValue === -1) return "";
                 return record.highestValue === record.lowestValue
@@ -303,7 +303,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
           {multipleUsers ? (
             <Column
               title="Shared By"
-              width="20%"
+              width="18%"
               className="centered-table-item"
               render={(record: TableEntry) => {
                 const iconName =
@@ -319,9 +319,9 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
           ) : null}
           )
           <Column
-            title="Experience Value"
+            title={multipleUsers ? "New Value" : "Value"}
             key="value"
-            width={multipleUsers ? "15%" : "40%"}
+            width={multipleUsers ? "20%" : "40%"}
             render={record => {
               const index = this.state.tableEntries.findIndex(
                 entry => entry.domain === record.domain,
@@ -351,8 +351,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
             }}
           />
           <Column
-            title="Delete Entry"
-            width={multipleUsers ? "15%" : "20%"}
+            width={multipleUsers ? "7%" : "20%"}
             render={record => (
               <span>
                 <Tooltip placement="top" title="Remove Entry">

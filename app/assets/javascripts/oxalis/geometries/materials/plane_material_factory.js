@@ -342,7 +342,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       listenToStoreProperty(
         storeState => storeState.dataset,
         dataset => {
-          const { lowerBoundary, upperBoundary } = getBoundaries(Store.getState().dataset);
+          const { lowerBoundary, upperBoundary } = getBoundaries(dataset);
           this.uniforms.bboxMin.value.set(...lowerBoundary);
           this.uniforms.bboxMax.value.set(...upperBoundary);
         },

@@ -79,10 +79,15 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
   }
 
   componentWillUnmount() {
+    this.unbind();
+  }
+
+  unbind() {
     this.unbindListeners.forEach(unbind => unbind());
   }
 
   rebuildLayout() {
+    this.unbind();
     this.gl.destroy();
     this.setupLayout();
   }

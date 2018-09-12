@@ -220,6 +220,18 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
     }
   }
 
+  def toFutureWithEmptyToFailure: Future[A] = {
+    (for {
+      box: Box[A] <- this.futureBox
+    } yield {
+      box match {
+        case Full(a) => Future.successful(a)
+        case Failure(msg, ex, chain) => Future.failed(new Exception(msg))
+        case Empty => Future.failed(new Exception("Empty"))
+      }
+    }).flatMap(identity)
+  }
+
   /**
    * Helper to force an implicit conversation
    */

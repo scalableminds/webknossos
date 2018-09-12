@@ -1,7 +1,7 @@
 package models.user
 
 import com.mohiva.play.silhouette.api.util.PasswordInfo
-import com.mohiva.play.silhouette.api.{Identity, LoginInfo}
+import com.mohiva.play.silhouette.api.{AuthInfo, Identity, LoginInfo}
 import com.scalableminds.util.accesscontext._
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.schema.Tables._

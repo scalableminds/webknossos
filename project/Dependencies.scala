@@ -3,23 +3,21 @@ import sbt._
 
 
 object Dependencies {
-  val akkaVersion = "2.4.1"
+  val akkaVersion = "2.4.10"
   val log4jVersion = "2.0-beta9"
   val newrelicVersion = "3.44.1"
-  val playVersion = "2.4.6"
+  val playVersion = "2.5.8"
   val webknossosWrapVersion = "1.1.4"
 
-  val airbrake = "com.scalableminds" %% "play-airbrake" % "0.5.0"
   val akkaAgent = "com.typesafe.akka" %% "akka-agent" % akkaVersion
   val akkaLogging = "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
-  val akkaRemote = "com.typesafe.akka" %% "akka-remote" % akkaVersion
   val akkaTest = "com.typesafe.akka" %% "akka-testkit" % akkaVersion
   val ceedubs = "net.ceedubs" %% "ficus" % "1.1.2"
   val commonsCodec = "commons-codec" % "commons-codec" % "1.10"
   val commonsEmail = "org.apache.commons" % "commons-email" % "1.3.1"
   val commonsIo = "commons-io" % "commons-io" % "2.4"
   val commonsLang = "org.apache.commons" % "commons-lang3" % "3.1"
-  val grpc = "io.grpc" % "grpc-netty" % scalapb.compiler.Version.grpcJavaVersion
+  val grpc = "io.grpc" % "grpc-netty-shaded" % scalapb.compiler.Version.grpcJavaVersion
   val grpcServices = "io.grpc" % "grpc-services" % scalapb.compiler.Version.grpcJavaVersion
   val scalapbRuntime = "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion
   val scalapbRuntimeGrpc = "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion
@@ -34,8 +32,8 @@ object Dependencies {
   val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.2"
   val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.4.0"
   val scalaTest = "org.scalatest" %% "scalatest" % "3.0.5" % "test"
-  val silhouette = "com.mohiva" %% "play-silhouette" % "3.0.5"
-  val silhouetteTestkit = "com.mohiva" %% "play-silhouette-testkit" % "3.0.5" % "test"
+  val silhouette = "com.mohiva" %% "play-silhouette" % "4.0.0"
+  val silhouetteTestkit = "com.mohiva" %% "play-silhouette-testkit" % "4.0.0" % "test"
   val urlHelper = "com.netaporter" %% "scala-uri" % "0.4.14"
   val webknossosWrap = "com.scalableminds" %% "webknossos-wrap" % webknossosWrapVersion
   val xmlWriter = "org.glassfish.jaxb" % "txw2" % "2.2.11"
@@ -50,7 +48,6 @@ object Dependencies {
 
   val utilDependencies = Seq(
     akkaAgent,
-    akkaRemote,
     commonsEmail,
     commonsIo,
     commonsLang,
@@ -61,8 +58,7 @@ object Dependencies {
     playFramework,
     reactiveBson,
     scalapbRuntime,
-    scalaLogging,
-    ws
+    scalaLogging
   )
 
   val webknossosDatastoreDependencies = Seq(
@@ -75,11 +71,10 @@ object Dependencies {
     grpcServices,
     scalapbRuntimeGrpc,
     filters,
-    component("play-test")
+    ws
   )
 
   val webknossosDependencies = Seq(
-    airbrake,
     akkaTest,
     ceedubs,
     commonsCodec,

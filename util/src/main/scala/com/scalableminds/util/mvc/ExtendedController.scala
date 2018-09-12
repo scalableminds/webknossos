@@ -1,9 +1,11 @@
 package com.scalableminds.util.mvc
 
+import akka.stream.scaladsl.Source
+import akka.util.ByteString
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import net.liftweb.common.{Full, _}
 import play.api.http.Status._
-import play.api.http.{HeaderNames, Status, Writeable}
+import play.api.http.{HeaderNames, HttpEntity, Status, Writeable}
 import play.api.i18n.{I18nSupport, Messages}
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
@@ -71,14 +73,14 @@ trait ResultImplicits extends ResultBox with I18nSupport{
 
 }
 
-class JsonResult(status: Int) extends Result(header = ResponseHeader(status), body = Enumerator(Array[Byte]())) with JsonResultAttribues {
+class JsonResult(status: Int) extends Result(header = ResponseHeader(status), body = HttpEntity.NoEntity) with JsonResultAttribues {
 
   val isSuccess = List(OK) contains status
 
   def createResult(content: JsObject)(implicit writeable: Writeable[JsObject]) =
     Result(
-      header = ResponseHeader(status, writeable.contentType.map(ct => Map(HeaderNames.CONTENT_TYPE -> ct)).getOrElse(Map.empty)),
-      body = Enumerator(writeable.transform(content)))
+      header = ResponseHeader(status),
+      body = HttpEntity.Strict(writeable.transform(content), writeable.contentType))
 
   def messageTypeFromStatus =
     if (isSuccess)

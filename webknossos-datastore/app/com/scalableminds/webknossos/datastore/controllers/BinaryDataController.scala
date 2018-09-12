@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.controllers
 import java.io.{ByteArrayOutputStream, OutputStream}
 import java.util.Base64
 
+import akka.stream.scaladsl.StreamConverters
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.webknossos.datastore.services.{AccessTokenService, BinaryDataService, DataSourceRepository, UserAccessRequest}
@@ -16,10 +17,12 @@ import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGW
 import com.scalableminds.util.tools.Fox
 import net.liftweb.common.{Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
+import play.api.http.HttpEntity
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.Json
+import play.api.mvc.{ResponseHeader, Result}
 
 class BinaryDataController @Inject()(
                                       binaryDataService: BinaryDataService,
@@ -148,9 +151,9 @@ class BinaryDataController @Inject()(
             DataServiceRequestSettings(halfByte = halfByte))
           imageProvider <- respondWithSpriteSheet(dataSource, dataLayer, request, imagesPerRow, blackAndWhite = false)
         } yield {
-          Ok.stream(Enumerator.outputStream(imageProvider).andThen(Enumerator.eof)).withHeaders(
-            CONTENT_TYPE -> contentTypeJpeg,
-            CONTENT_DISPOSITION -> "filename=test.jpg")
+          Result(
+            header = ResponseHeader(200),
+            body = HttpEntity.Streamed(StreamConverters.asOutputStream().mapMaterializedValue { outputStream => imageProvider(outputStream) }, None, Some(contentTypeJpeg)))
         }
       }
   }
@@ -181,9 +184,9 @@ class BinaryDataController @Inject()(
             DataServiceRequestSettings(halfByte = halfByte))
           imageProvider <- respondWithSpriteSheet(dataSource, dataLayer, request, 1, blackAndWhite)
         } yield {
-          Ok.stream(Enumerator.outputStream(imageProvider).andThen(Enumerator.eof)).withHeaders(
-            CONTENT_TYPE -> contentTypeJpeg,
-            CONTENT_DISPOSITION -> "filename=test.jpg")
+          Result(
+            header = ResponseHeader(200),
+            body = HttpEntity.Streamed(StreamConverters.asOutputStream().mapMaterializedValue { outputStream => imageProvider(outputStream) }, None, Some(contentTypeJpeg)))
         }
       }
   }
@@ -205,9 +208,9 @@ class BinaryDataController @Inject()(
         for {
           thumbnailProvider <- respondWithImageThumbnail(dataSetName, dataLayerName, width, height, centerX, centerY, centerZ, zoom)
         } yield {
-          Ok.stream(Enumerator.outputStream(thumbnailProvider).andThen(Enumerator.eof)).withHeaders(
-            CONTENT_TYPE -> contentTypeJpeg,
-            CONTENT_DISPOSITION -> "filename=thumbnail.jpg")
+          Result(
+            header = ResponseHeader(200),
+            body = HttpEntity.Streamed(StreamConverters.asOutputStream().mapMaterializedValue { outputStream => thumbnailProvider(outputStream) }, None, Some(contentTypeJpeg)))
         }
       }
   }

@@ -238,7 +238,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
       okText: messages.yes,
       onOk: async () => {
         await resetAnnotation(annotation.id, annotation.typ);
-        Toast.success(messages["task.reset_success"]);
+        Toast.success(messages["annotation.reset_success"]);
       },
     });
   }

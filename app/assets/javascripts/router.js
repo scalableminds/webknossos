@@ -131,13 +131,13 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/dashboard/:tab"
                 render={({ match }: ContextRouter) => {
-                  const tab: ?string = match.params.tab;
-                  const initialTabKey: ?string = tab ? urlTokenToTabKeyMap[tab] : null;
+                  const tab = match.params.tab;
+                  const initialTabKey = tab ? urlTokenToTabKeyMap[tab] : null;
                   return (
                     <DashboardView
                       userId={null}
                       isAdminView={false}
-                      initialTabKey={initialTabKey || null}
+                      initialTabKey={initialTabKey}
                     />
                   );
                 }}

@@ -83,8 +83,8 @@ class DataSourceController @Inject()(
           case (name, organization) =>
             val id = DataSourceId(name, organization)
             for {
-              _ <- webKnossosServer.validateDataSourceUpload(id) ?~> Messages("dataSet.name.alreadyTaken")
-              zipFile <- request.body.file("zipFile[]") ?~> Messages("zip.file.notFound")
+              _ <- webKnossosServer.validateDataSourceUpload(id) ?~> "dataSet.name.alreadyTaken"
+              zipFile <- request.body.file("zipFile[]") ?~> "zip.file.notFound"
               _ <- dataSourceService.handleUpload(id, new File(zipFile.ref.file.getAbsolutePath))
             } yield {
               Ok

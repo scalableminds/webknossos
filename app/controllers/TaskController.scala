@@ -144,7 +144,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
       if (allOnSameDatasetIter(requestedTasks, firstDataSetName))
         Fox.successful(firstDataSetName)
       else
-        Fox.failure("Cannot create tasks on multiple datasets in one go.")
+        Fox.failure(Messages("task.notOnSameDataSet"))
     }
 
     def taskToJsonFoxed(taskFox: Fox[Task], otherFox: Fox[_]): Fox[JsObject] = {

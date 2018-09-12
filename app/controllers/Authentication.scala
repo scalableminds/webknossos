@@ -36,7 +36,7 @@ import utils.{ObjectId, WkConf}
 
 object AuthForms {
 
-  val passwordMinLength = 6
+  val passwordMinLength = 8
 
   // Sign up
   case class SignUpData(organization: String, email: String, firstName: String, lastName: String, password: String)

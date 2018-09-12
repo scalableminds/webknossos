@@ -12,6 +12,10 @@ import SelectExperienceDomain from "components/select_experience_domain";
 const { Column } = Table;
 
 // Value being -1 means that this entry has no changes and that not all users did share this value in the beginning
+
+// A -1 for lowestValue and highestValue indicate that these values are invalid
+// -> happens when a new domain is added.
+// Used to render "Current Experience Value" and used while reverting changes
 type TableEntry = {
   domain: string,
   value: number,
@@ -165,11 +169,14 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
         if (currentIndex !== index) {
           return entry;
         }
+        const firstUser = this.props.selectedUsers[0];
+        const isSingleUserWithEntry =
+          this.props.selectedUsers.length === 1 && entry.domain in firstUser.experiences;
+        const isValueSharedAndExistedBefore =
+          entry.isShared && entry.lowestValue === entry.highestValue && entry.highestValue >= 0;
         const value =
-          (this.props.selectedUsers.length === 1 &&
-            entry.domain in this.props.selectedUsers[0].experiences) ||
-          (entry.isShared && entry.lowestValue === entry.highestValue && entry.highestValue >= 0)
-            ? this.props.selectedUsers[0].experiences[entry.domain]
+          isSingleUserWithEntry || isValueSharedAndExistedBefore
+            ? firstUser.experiences[entry.domain]
             : -1;
         return {
           ...entry,
@@ -187,8 +194,6 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     }));
   };
 
-  // A -1 for lowestValue and highestValue indicate that these values are invalid
-  // -> happens when a new domain is added. Used to render "Current Experience Value"
   addEnteredExperience = (domain: string) => {
     if (this.state.tableEntries.findIndex(entry => entry.domain === domain) > -1) {
       return;

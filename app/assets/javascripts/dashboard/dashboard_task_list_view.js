@@ -370,7 +370,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
               <b>Project:</b> {task.projectName}
             </Col>
             <Col span={7}>
-              <b>Task Finished:</b> <FormattedDate timestamp={task.annotation.modified} />
+              <b>Finished:</b> <FormattedDate timestamp={task.annotation.modified} />
             </Col>
             <Col span={3}>{this.renderActions(task)}</Col>
           </Row>
@@ -428,7 +428,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
           </Button>
         </div>
         <h3 id="tasksHeadline" className="TestTasksHeadline">
-          Tasks
+          {this.state.showFinishedTasks ? "Finished" : null} Tasks
         </h3>
         <div className="clearfix" style={{ margin: "20px 0px" }} />
         {this.renderTaskList()}

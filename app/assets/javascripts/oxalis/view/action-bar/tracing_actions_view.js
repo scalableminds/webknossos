@@ -242,7 +242,7 @@ class TracingActionsView extends PureComponent<StateProps, State> {
       elements.push(
         <Menu.Item key="restore-button" onClick={this.handleRestore}>
           <Icon type="bars" theme="outlined" />
-          Restore older version
+          Restore Older Version
         </Menu.Item>,
       );
     }

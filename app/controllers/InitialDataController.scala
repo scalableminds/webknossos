@@ -18,11 +18,11 @@ import play.api.i18n.MessagesApi
 import play.api.libs.json.Json
 import utils.{ObjectId, WkConf}
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 
 class InitialDataController @Inject()(initialDataService: InitialDataService,
-                                      sil: Silhouette[WkEnv],
-                                      val messagesApi: MessagesApi)
+                                      sil: Silhouette[WkEnv])
+                                     (implicit ec: ExecutionContext)
   extends Controller with FoxImplicits {
 
   def triggerInsert = sil.UserAwareAction.async { implicit request =>
@@ -44,7 +44,9 @@ class InitialDataService @Inject()(userService: UserService,
                                    tokenDAO: TokenDAO,
                                    projectDAO: ProjectDAO,
                                    organizationDAO: OrganizationDAO,
-                                   conf: WkConf) extends FoxImplicits with LazyLogging {
+                                   conf: WkConf)
+                                  (implicit ec: ExecutionContext)
+  extends FoxImplicits with LazyLogging {
   implicit val ctx = GlobalAccessContext
 
   val defaultUserEmail = conf.Application.Authentication.DefaultUser.email

@@ -158,9 +158,9 @@ jobs:
           name: Upgrade dev-deployment & wait
           command: >
             curl
-              -X POST
-              -H "X-Auth-Token: $RELEASE_API_TOKEN"
-              https://kube.scm.io/upgrade/webknossos/dev/master?user=CI+%28nightly%29
+            -X POST
+            -H "X-Auth-Token: $RELEASE_API_TOKEN"
+            https://kube.scm.io/upgrade/webknossos/dev/master?user=CI+%28nightly%29
             && sleep 180
       - run:
           name: Run screenshot-tests
@@ -181,7 +181,7 @@ workflows:
       - nightly
     triggers:
       - schedule:
-          cron: "32 * * * *"
+          cron: "45 * * * *"
           filters:
             branches:
               only:

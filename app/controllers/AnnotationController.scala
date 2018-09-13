@@ -14,12 +14,12 @@ import models.user.time._
 import models.user.{User, UserService}
 import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
-import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
-import play.api.i18n.{Messages, MessagesApi}
+import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
 import play.api.libs.json.{JsArray, _}
+import play.api.mvc.PlayBodyParsers
 import utils.{ObjectId, WkConf}
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 
@@ -35,9 +35,9 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
                                      provider: AnnotationInformationProvider,
                                      annotationRestrictionDefults: AnnotationRestrictionDefults,
                                      conf: WkConf,
-                                     sil: Silhouette[WkEnv],
-                                     val messagesApi: MessagesApi
-                                    )
+                                     sil: Silhouette[WkEnv])
+                                    (implicit ec: ExecutionContext,
+                                     bodyParsers: PlayBodyParsers)
   extends Controller
     with FoxImplicits {
 
@@ -267,7 +267,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
     }
   }
 
-  private def duplicateAnnotation(annotation: Annotation, user: User)(implicit ctx: DBAccessContext): Fox[Annotation] = {
+  private def duplicateAnnotation(annotation: Annotation, user: User)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Annotation] = {
     for {
       dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
       _ <- bool2Fox(dataSet.isUsable) ?~> Messages("dataSet.notImported", dataSet.name)

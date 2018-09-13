@@ -7,12 +7,12 @@ import models.user.{User, UserDAO}
 import play.api.cache._
 import utils.{ObjectId, WkConf}
 
-class UserCache @Inject()(userDAO: UserDAO, conf: WkConf, cache: CacheApi) {
+class UserCache @Inject()(userDAO: UserDAO, conf: WkConf, cache: SyncCacheApi) {
   def cacheKeyForUser(id: ObjectId) =
     s"user.${id.toString}"
 
   def findUser(id: ObjectId) = {
-    cache.getOrElse(cacheKeyForUser(id), conf.User.cacheTimeoutInMinutes) {
+    cache.getOrElseUpdate(cacheKeyForUser(id), conf.User.cacheTimeoutInMinutes) {
       userDAO.findOne(id)(GlobalAccessContext)
     }
   }

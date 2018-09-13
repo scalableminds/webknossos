@@ -4,11 +4,12 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
+
+import scala.concurrent.ExecutionContext
 
 case class Organization(
                             _id: ObjectId,
@@ -22,7 +23,7 @@ case class Organization(
                             isDeleted: Boolean = false
                           )
 
-class OrganizationService @Inject()(organizationDAO: OrganizationDAO, teamDAO: TeamDAO) {
+class OrganizationService @Inject()(organizationDAO: OrganizationDAO, teamDAO: TeamDAO)(implicit ec: ExecutionContext) {
 
   def publicWrites(organization: Organization)(implicit ctx: DBAccessContext): Fox[JsObject] = {
     Fox.successful(Json.obj(
@@ -35,7 +36,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO, teamDAO: T
 
 }
 
-class OrganizationDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[Organization, OrganizationsRow, Organizations](sqlClient) {
+class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SQLDAO[Organization, OrganizationsRow, Organizations](sqlClient) {
   val collection = Organizations
 
   def idColumn(x: Organizations): Rep[String] = x._Id

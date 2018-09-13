@@ -5,11 +5,11 @@ import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import net.liftweb.common.{Empty, Failure, Full}
-import play.api.libs.concurrent.Execution.Implicits._
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
-class CleanUpService @Inject()(system: ActorSystem) extends LazyLogging {
+class CleanUpService @Inject()(system: ActorSystem)(implicit ec: ExecutionContext) extends LazyLogging {
 
   @volatile var akkaIsShuttingDown = false
 

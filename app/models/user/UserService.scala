@@ -17,11 +17,10 @@ import models.team._
 import oxalis.mail.DefaultMails
 import oxalis.security.TokenDAO
 import oxalis.user.UserCache
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import utils.{ObjectId, WkConf}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 class UserService @Inject()(conf: WkConf,
                             userDAO: UserDAO,
@@ -35,7 +34,9 @@ class UserService @Inject()(conf: WkConf,
                             tokenDAO: TokenDAO,
                             defaultMails: DefaultMails,
                             userCache: UserCache,
-                            actorSystem: ActorSystem) extends FoxImplicits with IdentityService[User] {
+                            actorSystem: ActorSystem)
+                           (implicit ec: ExecutionContext)
+  extends FoxImplicits with IdentityService[User] {
 
   lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")

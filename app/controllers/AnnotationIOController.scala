@@ -13,7 +13,7 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationState._
-import models.annotation.nml.{NmlService, NmlWriter}
+import models.annotation.nml.{NmlResults, NmlService, NmlWriter}
 import models.annotation._
 import models.binary.{DataSet, DataSetDAO, DataSetService}
 import models.project.ProjectDAO
@@ -23,15 +23,15 @@ import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
 import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import play.api.http.HttpEntity
-import play.api.i18n.{Messages, MessagesApi}
+import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
 import play.api.libs.Files.TemporaryFile
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
+import play.api.libs.iteratee.streams.IterateeStreams
 import play.api.libs.json.Json
 import play.api.mvc.{ResponseHeader, Result}
 import utils.ObjectId
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
 class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
@@ -45,7 +45,8 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
                                        annotationService: AnnotationService,
                                        sil: Silhouette[WkEnv],
                                        provider: AnnotationInformationProvider,
-                                       val messagesApi: MessagesApi)
+                                       nmlService: NmlService)
+                                      (implicit ec: ExecutionContext)
   extends Controller
     with FoxImplicits
     with LazyLogging {
@@ -64,10 +65,10 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
 
   def upload = sil.SecuredAction.async(parse.multipartFormData) { implicit request =>
 
-    def returnError(zipParseResult: NmlService.ZipParseResult) = {
+    def returnError(zipParseResult: NmlResults.ZipParseResult) = {
       if (zipParseResult.containsFailure) {
         val errors = zipParseResult.parseResults.flatMap {
-          case result: NmlService.NmlParseFailure =>
+          case result: NmlResults.NmlParseFailure =>
             Some("error" -> Messages("nml.file.invalid", result.fileName, result.error))
           case _ => None
         }
@@ -85,22 +86,22 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
 
     val shouldCreateGroupForEachFile: Boolean = request.body.dataParts("createGroupForEachFile")(0) == "true"
 
-    val parsedFiles = request.body.files.foldLeft(NmlService.ZipParseResult()) {
-      case (acc, next) => acc.combineWith(NmlService.extractFromFile(next.ref.file, next.filename))
+    val parsedFiles = request.body.files.foldLeft(NmlResults.ZipParseResult()) {
+      case (acc, next) => acc.combineWith(nmlService.extractFromFile(next.ref.file, next.filename))
     }
 
 
     val tracingsProcessed =
       if (shouldCreateGroupForEachFile)
-        NmlService.wrapTreesInGroups(parsedFiles.parseResults)
+        nmlService.wrapTreesInGroups(parsedFiles.parseResults)
       else
-        NmlService.addPrefixesToTreeNames(parsedFiles.parseResults)
+        nmlService.addPrefixesToTreeNames(parsedFiles.parseResults)
 
     val parseSuccess = tracingsProcessed.filter(_.succeeded)
 
     if (!parsedFiles.isEmpty) {
       val tracings = parseSuccess.flatMap(_.bothTracingOpts)
-      val (skeletonTracings, volumeTracingsWithDataLocations) = NmlService.splitVolumeAndSkeletonTracings(tracings)
+      val (skeletonTracings, volumeTracingsWithDataLocations) = nmlService.splitVolumeAndSkeletonTracings(tracings)
       val name = nameForNmls(parseSuccess.map(_.fileName))
       val description = descriptionForNMLs(parseSuccess.map(_.description))
 
@@ -141,7 +142,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
     } yield result
   }
 
-  def downloadExplorational(annotationId: String, typ: String, issuingUser: User)(implicit ctx: DBAccessContext) = {
+  def downloadExplorational(annotationId: String, typ: String, issuingUser: User)(implicit ctx: DBAccessContext, m: MessagesProvider) = {
 
     def skeletonToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String) = {
       for {
@@ -190,15 +191,15 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
       (downloadStream, fileName) <- tracingToDownloadStream(dataSet, annotation, name)
     } yield {
-      Ok.chunked(downloadStream).withHeaders(
-        CONTENT_TYPE ->
-          (if (fileName.toLowerCase.endsWith(".zip")) "application/zip" else "application/xml"),
+      Ok.chunked(Source.fromPublisher(IterateeStreams.enumeratorToPublisher(downloadStream)))
+        .as(if (fileName.toLowerCase.endsWith(".zip")) "application/zip" else "application/xml")
+        .withHeaders(
         CONTENT_DISPOSITION ->
           s"attachment;filename=${'"'}${fileName}${'"'}")
     }
   }
 
-  def downloadProject(projectId: String, user: User)(implicit ctx: DBAccessContext) = {
+  def downloadProject(projectId: String, user: User)(implicit ctx: DBAccessContext, m: MessagesProvider) = {
     for {
       projectIdValidated <- ObjectId.parse(projectId)
       project <- projectDAO.findOne(projectIdValidated) ?~> Messages("project.notFound", projectId)
@@ -210,7 +211,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
     }
   }
 
-  def downloadTask(taskId: String, user: User)(implicit ctx: DBAccessContext) = {
+  def downloadTask(taskId: String, user: User)(implicit ctx: DBAccessContext, m: MessagesProvider) = {
     def createTaskZip(task: Task): Fox[TemporaryFile] = annotationService.annotationsFor(task._id).flatMap { annotations =>
       val finished = annotations.filter(_.state == Finished)
       annotationService.zipAnnotations(finished, task._id.toString + "_nmls.zip")
@@ -224,7 +225,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
     } yield Ok.sendFile(zip.file, inline = false)
   }
 
-  def downloadTaskType(taskTypeId: String, user: User)(implicit ctx: DBAccessContext) = {
+  def downloadTaskType(taskTypeId: String, user: User)(implicit ctx: DBAccessContext, m: MessagesProvider) = {
     def createTaskTypeZip(taskType: TaskType) =
       for {
         tasks <- taskDAO.findAllByTaskType(taskType._id)

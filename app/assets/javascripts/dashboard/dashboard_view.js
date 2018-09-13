@@ -1,7 +1,6 @@
 // @flow
 /* eslint-disable jsx-a11y/href-no-hash */
 
-import _ from "lodash";
 import * as React from "react";
 import { connect } from "react-redux";
 import { Spin, Tabs } from "antd";
@@ -27,7 +26,6 @@ type OwnProps = {
   userId: ?string,
   isAdminView: boolean,
   history: RouterHistory,
-  initialTabKey: ?string,
 };
 
 type StateProps = {
@@ -56,13 +54,6 @@ export const datasetCache = {
   },
 };
 
-export const urlTokenToTabKeyMap = {
-  gallery: "datasets",
-  datasets: "advanced-datasets",
-  tasks: "tasks",
-  annotations: "explorativeAnnotations",
-};
-
 class DashboardView extends React.PureComponent<Props, State> {
   constructor(props: Props) {
     super(props);
@@ -73,10 +64,8 @@ class DashboardView extends React.PureComponent<Props, State> {
 
     const cachedDatasets = datasetCache.get();
 
-    const initialTabKey =
-      this.props.initialTabKey || (lastUsedTabKey && isValid ? lastUsedTabKey : defaultTab);
     this.state = {
-      activeTabKey: initialTabKey,
+      activeTabKey: lastUsedTabKey && isValid ? lastUsedTabKey : defaultTab,
       user: null,
       isLoadingDatasets: false,
       datasets: cachedDatasets,
@@ -197,13 +186,10 @@ class DashboardView extends React.PureComponent<Props, State> {
     }
 
     const onTabChange = activeTabKey => {
-      const tabKeyToURLMap = _.invert(urlTokenToTabKeyMap);
-      const url = tabKeyToURLMap[activeTabKey];
-      if (url) {
+      const isValid = validTabKeys.indexOf(activeTabKey) > -1;
+      if (isValid) {
         localStorage.setItem("lastUsedDashboardTab", activeTabKey);
-        this.props.history.push(`/dashboard/${url}`);
       }
-
       this.setState({ activeTabKey });
     };
     const userHeader = this.props.isAdminView ? (

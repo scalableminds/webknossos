@@ -7,11 +7,12 @@ import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
 import models.annotation.AnnotationSettings
 import models.team.TeamDAO
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
+
+import scala.concurrent.ExecutionContext
 
 case class TaskType(
                          _id: ObjectId,
@@ -25,7 +26,7 @@ case class TaskType(
 
 }
 
-class TaskTypeService @Inject()(teamDAO: TeamDAO) {
+class TaskTypeService @Inject()(teamDAO: TeamDAO)(implicit ec: ExecutionContext) {
 
   def fromForm(
                 summary: String,
@@ -54,7 +55,7 @@ class TaskTypeService @Inject()(teamDAO: TeamDAO) {
   }
 }
 
-class TaskTypeDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[TaskType, TasktypesRow, Tasktypes](sqlClient) {
+class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SQLDAO[TaskType, TasktypesRow, Tasktypes](sqlClient) {
   val collection = Tasktypes
 
   def idColumn(x: Tasktypes): Rep[String] = x._Id

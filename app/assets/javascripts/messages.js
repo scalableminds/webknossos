@@ -9,6 +9,12 @@ export default {
   "datastore.health": _.template(
     "The datastore server at <%- url %> does not seem to be available. This is likely due to an update. Please check back in five minutes.",
   ),
+  "datastore.version.webknossos": _.template(
+    "The version of webknossos (<%- webknossosVersion %>) is to old for the datastore (<%- url %>) with the version (<%- dataStoreVersion %>). Please upgrade your webknossos instance",
+  ),
+  "datastore.version.datastore": _.template(
+    "The version (<%- dataStoreVersion %>) of the datastore (<%- url %>) is to old for your webknossos version (<%- webknossosVersion %>).",
+  ),
   "save.failed_simultaneous_tracing": `It seems that you edited the tracing simultaneously in different windows.
 Editing should be done in a single window only.
 

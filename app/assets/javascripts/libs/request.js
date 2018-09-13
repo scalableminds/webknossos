@@ -169,7 +169,7 @@ class Request {
       host: "",
       credentials: "same-origin",
       headers: {},
-      doNotCatch: false,
+      dontShowErrorToast: false,
       params: null,
     };
 
@@ -206,8 +206,10 @@ class Request {
       fetchPromise = fetchPromise.then(responseDataHandler);
     }
 
-    if (!options.doNotCatch) {
-      fetchPromise = fetchPromise.catch(this.handleError.bind(this, url));
+    if (!options.doNotInvestigate) {
+      fetchPromise = fetchPromise.catch(
+        this.handleError.bind(this, url, !options.dontShowErrorToast),
+      );
     }
 
     if (options.timeout != null) {
@@ -235,7 +237,11 @@ class Request {
     return Promise.reject(response);
   };
 
-  handleError = (requestedUrl: string, error: Response | Error): Promise<void> => {
+  handleError = (
+    requestedUrl: string,
+    dontShowErrorToast,
+    error: Response | Error,
+  ): Promise<void> => {
     // Check whether this request failed due to a problematic
     // datastore
     pingDataStoreIfAppropriate(requestedUrl);
@@ -250,7 +256,7 @@ class Request {
               json.status = error.status;
             }
 
-            Toast.messages(json.messages);
+            if (!dontShowErrorToast) Toast.messages(json.messages);
 
             // Check whether the error chain mentions an url which belongs
             // to a datastore. Then, ping the datastore
@@ -258,7 +264,7 @@ class Request {
 
             return Promise.reject(json);
           } catch (jsonError) {
-            Toast.error(text);
+            if (!dontShowErrorToast) Toast.error(text);
             return Promise.reject(text);
           }
         },

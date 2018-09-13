@@ -84,7 +84,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
 
   componentWillMount() {
     (async () => {
-      const projects = await Request.receiveJSON("/api/projects", { doNotCatch: true });
+      const projects = await Request.receiveJSON("/api/projects", { dontShowErrorToast: true });
       this.setState({
         projects: projects.map(project => ({ id: project.id, label: project.name })),
       });

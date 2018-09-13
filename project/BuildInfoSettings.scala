@@ -47,7 +47,8 @@ object BuildInfoSettings {
       "commitDate" -> commitDate,
       "ciBuild" -> ciBuild,
       "ciTag" -> ciTag,
-      "gitTag" -> gitTag
+      "gitTag" -> gitTag,
+      "oldestSupportedVersion" -> "test-tag-0"
     ),
     buildInfoPackage := "webknossos",
     buildInfoOptions := Seq(BuildInfoOption.ToJson)
@@ -59,7 +60,8 @@ object BuildInfoSettings {
       "commitDate" -> commitDate,
       "ciBuild" -> ciBuild,
       "ciTag" -> ciTag,
-      "gitTag" -> gitTag
+      "gitTag" -> gitTag,
+      "oldestSupportedVersion" -> "test-tag-0"
     ),
     buildInfoPackage := "webknossosDatastore",
     buildInfoOptions := Seq(BuildInfoOption.ToJson)

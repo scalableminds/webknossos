@@ -24,7 +24,7 @@ import "../stylesheets/main.less";
 async function loadActiveUser() {
   // Try to retreive the currently active user if logged in
   try {
-    const user = await getActiveUser({ doNotCatch: true });
+    const user = await getActiveUser({ dontShowErrorToast: true });
     Store.dispatch(setActiveUserAction(user));
     ErrorHandling.setCurrentUser(user);
   } catch (e) {

@@ -7,12 +7,14 @@ import play.api.libs.json.Json
 import play.api.mvc.Action
 import play.api.mvc.Results._
 
-class StandaloneDatastore{
+class StandaloneDatastore extends RemoteOriginHelpers {
 
   def buildInfo = Action { implicit request =>
-    Ok(Json.obj(
-      "webknossosDatastore" -> webknossosDatastore.BuildInfo.toMap.mapValues(_.toString),
-      "webknossos-wrap" -> webknossoswrap.BuildInfo.toMap.mapValues(_.toString)
-    ))
+    AllowRemoteOrigin {
+      Ok(Json.obj(
+        "webknossosDatastore" -> webknossosDatastore.BuildInfo.toMap.mapValues(_.toString),
+        "webknossos-wrap" -> webknossoswrap.BuildInfo.toMap.mapValues(_.toString)
+      ))
+    }
   }
 }

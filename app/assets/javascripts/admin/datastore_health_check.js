@@ -26,11 +26,38 @@ export const pingDataStoreIfAppropriate = memoizedThrottle(async (requestedUrl: 
   if (usedDataStore != null) {
     const { url } = usedDataStore;
     const healthEndpoint = `${url}/data/health`;
-    Request.triggerRequest(healthEndpoint, { doNotCatch: true, mode: "cors", timeout: 5000 }).catch(
-      () => {
+    Request.triggerRequest(healthEndpoint, { doNotInvestigate: true, mode: "cors", timeout: 5000 })
+      .then(async () => {
+        const buildinfoWebknossos = await RestAPI.getBuildInfo();
+        const webknossosVersion = buildinfoWebknossos.webknossos.gitTag;
+        const webknossosOldestSupportedVersion =
+          buildinfoWebknossos.webknossos.oldestSupportedVersion;
+
+        const buildinfoDataStore = await RestAPI.getDataStoreBuildInfo(url);
+        if (buildinfoDataStore.webknossosDatastore) {
+          // only do this in case of a standalone-datastore
+          const dataStoreVersion = buildinfoDataStore.webknossosDatastore.gitTag;
+          const datastoreOldestSupportedVersion =
+            buildinfoDataStore.webknossosDatastore.oldestSupportedVersion;
+
+          if (dataStoreVersion < webknossosOldestSupportedVersion) {
+            Toast.warning(
+              messages["datastore.version.datastore"]({ webknossosVersion, dataStoreVersion, url }),
+            );
+          } else if (webknossosVersion < datastoreOldestSupportedVersion) {
+            Toast.warning(
+              messages["datastore.version.webknossos"]({
+                webknossosVersion,
+                dataStoreVersion,
+                url,
+              }),
+            );
+          }
+        }
+      })
+      .catch(() => {
         Toast.warning(messages["datastore.health"]({ url }));
-      },
-    );
+      });
   }
 }, 5000);
 

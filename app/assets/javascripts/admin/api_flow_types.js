@@ -339,6 +339,8 @@ export type APIBuildInfoType = {
     commitDate: string,
     ciTag: string,
     ciBuild: string,
+    gitTag: string,
+    oldestSupportedVersion: string,
   },
   "webknossos-wrap": {
     builtAtMillis: string,

@@ -201,7 +201,9 @@ class DashboardView extends React.PureComponent<Props, State> {
       const url = tabKeyToURLMap[activeTabKey];
       if (url) {
         localStorage.setItem("lastUsedDashboardTab", activeTabKey);
-        this.props.history.push(`/dashboard/${url}`);
+        if (!this.props.isAdminView) {
+          this.props.history.push(`/dashboard/${url}`);
+        }
       }
 
       this.setState({ activeTabKey });

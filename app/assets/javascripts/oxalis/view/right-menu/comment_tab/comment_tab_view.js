@@ -211,7 +211,7 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
 
   toggleExpandForAllTrees = () => {
     this.setState(prevState => {
-      const shouldBeCollapsed = !_.values(prevState.collapsedTreeIds).some(_ => _);
+      const shouldBeCollapsed = !_.values(prevState.collapsedTreeIds).some(bool => bool);
 
       const collapsedTreeIds = shouldBeCollapsed
         ? _.mapValues(this.props.skeletonTracing.trees, () => true)

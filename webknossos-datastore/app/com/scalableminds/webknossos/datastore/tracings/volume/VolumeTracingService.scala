@@ -23,11 +23,11 @@ class VolumeTracingService @Inject()(
                                       val temporaryTracingStore: TemporaryTracingStore[VolumeTracing]
                                     )
   extends TracingService[VolumeTracing]
-  with VolumeTracingBucketHelper
-  with WKWDataFormatHelper
-  with ProtoGeometryImplicits
-  with FoxImplicits
-  with LazyLogging {
+    with VolumeTracingBucketHelper
+    with WKWDataFormatHelper
+    with ProtoGeometryImplicits
+    with FoxImplicits
+    with LazyLogging {
 
   implicit val volumeDataStore = tracingDataStore.volumeData
 
@@ -49,7 +49,7 @@ class VolumeTracingService @Inject()(
             case a: UpdateBucketVolumeAction =>
               val resolution = math.pow(2, a.zoomStep).toInt
               val bucket = new BucketPosition(a.position.x, a.position.y, a.position.z, Point3D(resolution, resolution, resolution))
-              saveBucket(volumeTracingLayer(tracingId, t), bucket, a.data).map(_ => t)
+              saveBucket(volumeTracingLayer(tracingId, t), bucket, a.data, updateGroup.version).map(_ => t)
             case a: UpdateTracingVolumeAction =>
               Fox.successful(t.copy(activeSegmentId = Some(a.activeSegmentId), editPosition = a.editPosition, editRotation = a.editRotation, largestSegmentId = a.largestSegmentId, zoomLevel = a.zoomLevel, userBoundingBox = a.userBoundingBox))
             case _ =>
@@ -89,7 +89,7 @@ class VolumeTracingService @Inject()(
           case (header, buckets) =>
             if (header.numBlocksPerCube == 1) {
               parseWKWFilePath(fileName.toString).map { bucket =>
-                saveBucket(dataLayer, bucket, buckets.next())
+                saveBucket(dataLayer, bucket, buckets.next(), tracing.version)
               }
             }
         }
@@ -98,7 +98,7 @@ class VolumeTracingService @Inject()(
 
   def data(tracingId: String, tracing: VolumeTracing): Enumerator[Array[Byte]] = {
     val dataLayer = volumeTracingLayer(tracingId, tracing)
-    val buckets = new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(1))
+    val buckets = new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(1, Some(tracing.version)))
 
     Enumerator.outputStream { os =>
       ZipIO.zip(buckets, os)
@@ -119,8 +119,8 @@ class VolumeTracingService @Inject()(
     val buckets: Iterator[(BucketPosition, Array[Byte])] = sourceDataLayer.bucketProvider.bucketStream(1)
     for {
       _ <- Fox.combined(buckets.map { case (bucketPosition, bucketData) =>
-              saveBucket(destinationDataLayer, bucketPosition, bucketData)
-            }.toList)
+        saveBucket(destinationDataLayer, bucketPosition, bucketData, destinationTracing.version)
+      }.toList)
     } yield ()
   }
 

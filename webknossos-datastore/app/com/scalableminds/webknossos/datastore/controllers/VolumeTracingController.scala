@@ -41,7 +41,7 @@ class VolumeTracingController @Inject()(
     implicit request => {
       AllowRemoteOrigin {
         for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+          tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
         } yield {
           Ok.chunked(tracingService.data(tracingId, tracing))
         }

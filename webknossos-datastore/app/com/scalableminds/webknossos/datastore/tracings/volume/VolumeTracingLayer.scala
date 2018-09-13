@@ -22,8 +22,8 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer)
     loadBucket(layer, readInstruction.bucket)
   }
 
-  override def bucketStream(resolution: Int): Iterator[(BucketPosition, Array[Byte])] = {
-    bucketStream(layer, resolution)
+  override def bucketStream(resolution: Int, version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] = {
+    bucketStream(layer, resolution, version)
   }
 }
 

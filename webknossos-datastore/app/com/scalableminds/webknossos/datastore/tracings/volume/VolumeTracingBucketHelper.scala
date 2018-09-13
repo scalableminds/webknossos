@@ -27,27 +27,27 @@ trait VolumeTracingBucketHelper extends WKWMortonHelper with KeyValueStoreImplic
     volumeDataStore.get(key, mayBeEmpty = Some(true)).futureBox.map(_.toStream.headOption.map(_.value))
   }
 
-  def saveBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition, data: Array[Byte]): Fox[_] = {
+  def saveBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition, data: Array[Byte], version: Long): Fox[_] = {
     val key = buildBucketKey(dataLayer.name, bucket)
-    volumeDataStore.put(key, 0, data)
+    volumeDataStore.put(key, version, data)
   }
 
-  def bucketStream(dataLayer: VolumeTracingLayer, resolution: Int): Iterator[(BucketPosition, Array[Byte])] = {
+  def bucketStream(dataLayer: VolumeTracingLayer, resolution: Int, version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] = {
     val key = buildKeyPrefix(dataLayer.name, resolution)
-    new BucketIterator(key, volumeDataStore)
+    new BucketIterator(key, volumeDataStore, version)
   }
 }
 
 
 
-class BucketIterator(prefix: String, volumeDataStore: FossilDBClient) extends Iterator[(BucketPosition, Array[Byte])] with WKWMortonHelper with KeyValueStoreImplicits with FoxImplicits  {
+class BucketIterator(prefix: String, volumeDataStore: FossilDBClient, version: Option[Long] = None) extends Iterator[(BucketPosition, Array[Byte])] with WKWMortonHelper with KeyValueStoreImplicits with FoxImplicits  {
   val batchSize = 64
 
   var currentStartKey = prefix
   var currentBatchIterator: Iterator[KeyValuePair[Array[Byte]]] = fetchNext
 
   def fetchNext =
-    volumeDataStore.getMultipleKeys(currentStartKey, Some(prefix), None, Some(batchSize)).toIterator
+    volumeDataStore.getMultipleKeys(currentStartKey, Some(prefix), version, Some(batchSize)).toIterator
 
   def fetchNextAndSave = {
     currentBatchIterator = fetchNext

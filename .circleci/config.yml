@@ -21,7 +21,14 @@ jobs:
           keys:
             - cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
             - cache-{{ checksum ".circleci/cache_version" }}-master
-
+      - restore_cache:
+          keys:
+            - sbt-cache-{{ checksum "project/Dependencies.scala" }}
+            - sbt-cache-
+      - restore_cache:
+          keys:
+            - yarn-cache-{{ checksum "yarn.lock" }}
+            - yarn-cache-
       - run:
           name: Assert unique evolution numbers
           command: tools/postgres/assert_unique_evolution_numbers.sh
@@ -54,9 +61,17 @@ jobs:
           paths:
             - "project/target"
             - "target"
+
+      - save_cache:
+          key: sbt-cache-{{ checksum "project/Dependencies.scala" }}
+          paths:
             - "~/.m2"
             - "~/.ivy2"
             - "~/.sbt"
+
+      - save_cache:
+          key: yarn-cache-{{ checksum "yarn.lock" }}
+          paths:
             - "~/.yarn-cache"
 
       - run:

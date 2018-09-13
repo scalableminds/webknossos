@@ -6,25 +6,25 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.services.{AccessMode, AccessResourceType, UserAccessAnswer, UserAccessRequest}
 import models.annotation._
-import models.binary.{DataSetDAO, DataStoreHandler}
+import models.binary.{DataSetDAO, DataStoreHandler, DataStoreService}
 import models.user.{User, UserService}
 import net.liftweb.common.{Box, Full}
 import oxalis.security._
-import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
-import play.api.i18n.MessagesApi
 import play.api.libs.json.Json
+import play.api.mvc.PlayBodyParsers
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 
 class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
                                     annotationDAO: AnnotationDAO,
                                     userService: UserService,
                                     annotationStore: AnnotationStore,
                                     annotationInformationProvider: AnnotationInformationProvider,
-                                    wkDataStoreActions: WKDataStoreActions,
+                                    dataStoreService: DataStoreService,
                                     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-                                    sil: Silhouette[WkEnv],
-                                    val messagesApi: MessagesApi)
+                                    sil: Silhouette[WkEnv])
+                                   (implicit ec: ExecutionContext,
+                                    bodyParsers: PlayBodyParsers)
   extends Controller {
 
   val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
@@ -43,25 +43,27 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
     }
   }
 
-  def validateUserAccess(name: String, token: String) = wkDataStoreActions.DataStoreAction(name).async(validateJson[UserAccessRequest]) { implicit request =>
-    val accessRequest = request.body
-    if (token == DataStoreHandler.webKnossosToken) {
-      Fox.successful(Ok(Json.toJson(UserAccessAnswer(true))))
-    } else {
-      for {
-        userBox <- bearerTokenService.userForToken(token)(GlobalAccessContext).futureBox
-        ctxFromUserBox = DBAccessContext(userBox)
-        ctx = URLSharing.fallbackTokenAccessContext(Some(token))(ctxFromUserBox)
-        answer <- accessRequest.resourceType match {
-          case AccessResourceType.datasource =>
-            handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, userBox)(ctx)
-          case AccessResourceType.tracing =>
-            handleTracingAccess(accessRequest.resourceId, accessRequest.mode, userBox)(ctx)
-          case _ =>
-            Fox.successful(UserAccessAnswer(false, Some("Invalid access token.")))
+  def validateUserAccess(name: String, token: String) = Action.async(validateJson[UserAccessRequest]) { implicit request =>
+    dataStoreService.validateAccess(name) { dataStore =>
+      val accessRequest = request.body
+      if (token == DataStoreHandler.webKnossosToken) {
+        Fox.successful(Ok(Json.toJson(UserAccessAnswer(true))))
+      } else {
+        for {
+          userBox <- bearerTokenService.userForToken(token)(GlobalAccessContext).futureBox
+          ctxFromUserBox = DBAccessContext(userBox)
+          ctx = URLSharing.fallbackTokenAccessContext(Some(token))(ctxFromUserBox)
+          answer <- accessRequest.resourceType match {
+            case AccessResourceType.datasource =>
+              handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, userBox)(ctx)
+            case AccessResourceType.tracing =>
+              handleTracingAccess(accessRequest.resourceId, accessRequest.mode, userBox)(ctx)
+            case _ =>
+              Fox.successful(UserAccessAnswer(false, Some("Invalid access token.")))
+          }
+        } yield {
+          Ok(Json.toJson(answer))
         }
-      } yield {
-        Ok(Json.toJson(answer))
       }
     }
   }

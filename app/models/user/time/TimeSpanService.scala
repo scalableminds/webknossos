@@ -13,10 +13,10 @@ import models.team.OrganizationDAO
 import net.liftweb.common.Full
 import oxalis.mail.DefaultMails
 import oxalis.thirdparty.BrainTracing
-import play.api.libs.concurrent.Execution.Implicits._
 import utils.{ObjectId, WkConf}
 
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 
@@ -29,8 +29,8 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
                                 organizationDAO: OrganizationDAO,
                                 timeSpanDAO: TimeSpanDAO,
                                 defaultMails: DefaultMails,
-                                conf: WkConf
-                               ) extends FoxImplicits with LazyLogging {
+                                conf: WkConf)
+                               (implicit ec: ExecutionContext) extends FoxImplicits with LazyLogging {
   private val MaxTracingPause =
     conf.Oxalis.User.Time.tracingPauseInSeconds.toMillis
 

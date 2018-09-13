@@ -2,7 +2,7 @@
 
 import _ from "lodash";
 import * as React from "react";
-import { Modal, Button, Tooltip, Icon, Table, InputNumber, Tag } from "antd";
+import { Modal, Button, Tooltip, Icon, Table, InputNumber, Tag, Badge } from "antd";
 import * as Utils from "libs/utils";
 import { updateUser } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
@@ -225,24 +225,25 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     this.state.tableEntries.map(entry => entry.domain);
 
   render() {
-    if (!this.props.visible && this.props.selectedUsers.length === 0) {
+    const selectedUsersCount = this.props.selectedUsers.length;
+    if (!this.props.visible && selectedUsersCount === 0) {
       return null;
     }
     const tableEntries = this.state.tableEntries;
-    const multipleUsers = this.props.selectedUsers.length > 1;
+    const multipleUsers = selectedUsersCount > 1;
     return (
       <Modal
         className="experience-change-modal"
         title={
           multipleUsers
-            ? "Changes Experiences of Selected Users"
+            ? `Changes Experiences of ${selectedUsersCount} Users`
             : `Change Experiences for ${this.props.selectedUsers[0].firstName} ${
                 this.props.selectedUsers[0].lastName
               }`
         }
         visible={this.props.visible}
         onCancel={this.props.onCancel}
-        width={800}
+        width={multipleUsers ? 800 : 600}
         maskClosable={false}
         footer={
           <div>
@@ -281,18 +282,33 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
           ) : null}
           {multipleUsers ? (
             <Column
-              title="Shared By"
+              title="User Count"
               width="18%"
               className="centered-table-item"
               render={(record: TableEntry) => {
-                const iconName =
-                  record.sharedByCount === this.props.selectedUsers.length ? "check" : "close";
-                return (
-                  <React.Fragment>
-                    <Icon type={iconName} theme="outlined" style={{ maginRight: 8 }} />
-                    {record.sharedByCount}
-                  </React.Fragment>
+                const isSharedByAll = record.sharedByCount === this.props.selectedUsers.length;
+                const badge = (
+                  <Tooltip
+                    title={
+                      isSharedByAll
+                        ? "All selected users have this experience domain."
+                        : `Only ${record.sharedByCount} of the selected users ${
+                            record.sharedByCount === 1 ? "has" : "have"
+                          } this experience domain. Changing the value of the domain will give all selected users this domain.`
+                    }
+                  >
+                    <Badge
+                      count={record.sharedByCount}
+                      style={
+                        isSharedByAll
+                          ? { backgroundColor: "#52c41a" }
+                          : { backgroundColor: "#fff", color: "#999" }
+                      }
+                    />
+                  </Tooltip>
                 );
+
+                return <React.Fragment>{badge}</React.Fragment>;
               }}
             />
           ) : null}

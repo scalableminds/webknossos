@@ -12,6 +12,7 @@ import { ControlModeEnum } from "oxalis/constants";
 import { APITracingTypeEnum } from "admin/api_flow_types";
 import { getAnnotationInformation } from "admin/admin_rest_api";
 import SecuredRoute from "components/secured_route";
+import DisableGenericDnd from "components/disable_generic_dnd";
 import Navbar from "navbar";
 import { Imprint, Privacy } from "components/legal";
 
@@ -113,6 +114,7 @@ class ReactRouter extends React.Component<Props> {
     return (
       <Router history={browserHistory}>
         <Layout>
+          <DisableGenericDnd />
           <Navbar isAuthenticated={isAuthenticated} />
           <Content>
             <Switch>

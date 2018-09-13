@@ -155,7 +155,7 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Upgrade dev-deployment & wait
+          name: Upgrade dev-deployment
           command: >
             curl
             -X POST
@@ -170,7 +170,7 @@ jobs:
       - run:
           name: Run screenshot-tests
           command: >
-            URL=https://$CIRCLE_BRANCH.webknossos.xyz/
+            URL=https://master.webknossos.xyz/
             yarn test-screenshot
 
 workflows:

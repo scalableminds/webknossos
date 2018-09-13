@@ -236,7 +236,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
         className="experience-change-modal"
         title={
           multipleUsers
-            ? `Changes Experiences of ${selectedUsersCount} Users`
+            ? `Change Experiences of ${selectedUsersCount} Users`
             : `Change Experiences for ${this.props.selectedUsers[0].firstName} ${
                 this.props.selectedUsers[0].lastName
               }`

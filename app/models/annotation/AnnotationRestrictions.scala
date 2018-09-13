@@ -44,7 +44,7 @@ object AnnotationRestrictions extends FoxImplicits {
     }
 }
 
-class AnnotationRestrictionDefults @Inject()(userService: UserService) extends FoxImplicits {
+class AnnotationRestrictionDefaults @Inject()(userService: UserService) extends FoxImplicits {
   def restrictEverything =
     new AnnotationRestrictions()
 

@@ -47,7 +47,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
                                   dataStoreDAO: DataStoreDAO,
                                   projectDAO: ProjectDAO,
                                   organizationDAO: OrganizationDAO,
-                                  annotationRestrictionDefults: AnnotationRestrictionDefults,
+                                  annotationRestrictionDefults: AnnotationRestrictionDefaults,
                                   nmlWriter: NmlWriter,
                                   temporaryFileCreator: TemporaryFileCreator)
                                  (implicit ec: ExecutionContext)

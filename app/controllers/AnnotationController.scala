@@ -33,7 +33,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
                                      timeSpanService: TimeSpanService,
                                      annotationMerger: AnnotationMerger,
                                      provider: AnnotationInformationProvider,
-                                     annotationRestrictionDefults: AnnotationRestrictionDefults,
+                                     annotationRestrictionDefaults: AnnotationRestrictionDefaults,
                                      conf: WkConf,
                                      sil: Silhouette[WkEnv])
                                     (implicit ec: ExecutionContext,
@@ -64,7 +64,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
       annotationA <- provider.provideAnnotation(typ, id, request.identity)
       annotationB <- provider.provideAnnotation(mergedTyp, mergedId, request.identity)
       mergedAnnotation <- annotationMerger.mergeTwo(annotationA, annotationB, true, request.identity) ?~> "annotation.merge.failed"
-      restrictions = annotationRestrictionDefults.defaultsFor(mergedAnnotation)
+      restrictions = annotationRestrictionDefaults.defaultsFor(mergedAnnotation)
       _ <- restrictions.allowAccess(request.identity) ?~> Messages("notAllowed") ~> BAD_REQUEST
       _ <- annotationDAO.insertOne(mergedAnnotation)
       js <- annotationService.publicWrites(mergedAnnotation, Some(request.identity), Some(restrictions)) ?~> "annotation.write.failed"

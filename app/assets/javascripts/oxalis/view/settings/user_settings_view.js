@@ -389,7 +389,6 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
     dispatch(setActiveCellAction(id));
   },
   onChangeBrushSize(size: number) {
-    console.log(`called with size: ${size}`);
     dispatch(setBrushSizeAction(size));
   },
   onChangeBoundingBox(boundingBox: ?Vector6) {

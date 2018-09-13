@@ -7,13 +7,14 @@ import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import slick.jdbc.GetResult._
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
+
+import scala.concurrent.ExecutionContext
 
 
 case class Annotation(
@@ -56,7 +57,7 @@ case class Annotation(
 }
 
 
-class AnnotationDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[Annotation, AnnotationsRow, Annotations](sqlClient) {
+class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SQLDAO[Annotation, AnnotationsRow, Annotations](sqlClient) {
   val collection = Annotations
 
   def idColumn(x: Annotations): Rep[String] = x._Id

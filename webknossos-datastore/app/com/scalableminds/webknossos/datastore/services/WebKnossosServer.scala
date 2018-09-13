@@ -26,8 +26,7 @@ class WebKnossosServer @Inject()(
                                   rpc: RPC,
                                   config: DataStoreConfig,
                                   val lifecycle: ApplicationLifecycle,
-                                  @Named("webknossos-datastore") val system: ActorSystem,
-                                  val messagesApi: MessagesApi
+                                  @Named("webknossos-datastore") val system: ActorSystem
                                 ) extends IntervalScheduler with LazyLogging {
 
   private val dataStoreKey: String = config.Datastore.key
@@ -48,38 +47,38 @@ class WebKnossosServer @Inject()(
 
   def reportStatus(ok: Boolean): Fox[_] = {
     rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/status")
-      .withQueryString("key" -> dataStoreKey)
+      .addQueryString("key" -> dataStoreKey)
       .post(DataStoreStatus(ok, dataStoreUrl))
   }
 
   def reportDataSource(dataSource: InboxDataSourceLike): Fox[_] = {
     rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/datasource")
-      .withQueryString("key" -> dataStoreKey)
+      .addQueryString("key" -> dataStoreKey)
       .post(dataSource)
   }
 
   def reportDataSources(dataSources: List[InboxDataSourceLike]): Fox[_] = {
     rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/datasources")
-      .withQueryString("key" -> dataStoreKey)
+      .addQueryString("key" -> dataStoreKey)
       .post(dataSources)
   }
 
   def validateDataSourceUpload(id: DataSourceId): Fox[_] = {
     rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/verifyUpload")
-      .withQueryString("key" -> dataStoreKey)
+      .addQueryString("key" -> dataStoreKey)
       .post(id)
   }
 
   def reportTracingUpdates(tracingId: String, timestamps: List[Long], statistics: Option[JsObject], userToken: Option[String]): Fox[_] = {
     rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/handleTracingUpdateReport")
-      .withQueryString("key" -> dataStoreKey)
+      .addQueryString("key" -> dataStoreKey)
       .post(Json.obj("timestamps" -> timestamps, "statistics" -> statistics, "tracingId" -> tracingId, "userToken" -> userToken))
   }
 
   def requestUserAccess(token: String, accessRequest: UserAccessRequest): Fox[UserAccessAnswer] = {
     rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/validateUserAccess")
-      .withQueryString("key" -> dataStoreKey)
-      .withQueryString("token" -> token)
+      .addQueryString("key" -> dataStoreKey)
+      .addQueryString("token" -> token)
       .postWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
   }
 }

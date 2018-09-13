@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.wrap.WKWFile
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty}
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 
 class WKWCube(wkwFile: WKWFile) extends Cube {
 
@@ -31,7 +31,7 @@ class WKWBucketProvider(layer: WKWLayer)
     with FoxImplicits
     with LazyLogging {
 
-  override def loadFromUnderlying(readInstruction: DataReadInstruction): Fox[WKWCube] = {
+  override def loadFromUnderlying(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[WKWCube] = {
 
     val wkwFile = wkwFilePath(
       readInstruction.cube,

@@ -38,7 +38,7 @@ class SavedTracingInformationHandler @Inject()(annotationDAO: AnnotationDAO,
     for {
       annotation <- provideAnnotation(identifier, None)
     } yield {
-      annotationRestrictionDefults.defaultAnnotationRestrictions(annotation)
+      annotationRestrictionDefults.defaultsFor(annotation)
     }
   }
 

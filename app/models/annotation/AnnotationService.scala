@@ -425,14 +425,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
   def taskFor(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Task] =
     annotation._task.toFox.flatMap(taskId => taskDAO.findOne(taskId)(GlobalAccessContext))
 
-  def composeRestrictionsFor(annotation: Annotation, restrictions: Option[AnnotationRestrictions], readOnly: Option[Boolean]) = {
-    if (readOnly.getOrElse(false))
-      annotationRestrictionDefults.readonlyAnnotation()
-    else
-      restrictions.getOrElse(annotationRestrictionDefults.defaultAnnotationRestrictions(annotation))
-  }
-
-  def publicWrites(annotation: Annotation, requestingUser: Option[User] = None, restrictions: Option[AnnotationRestrictions] = None, readOnly: Option[Boolean] = None): Fox[JsObject] = {
+  def publicWrites(annotation: Annotation, requestingUser: Option[User] = None, restrictionsOpt: Option[AnnotationRestrictions] = None): Fox[JsObject] = {
     implicit val ctx = GlobalAccessContext
     for {
       dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFound"
@@ -441,7 +434,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       user <- userService.findOneById(annotation._user, useCache = true)(GlobalAccessContext)
       userJson <- userService.compactWrites(user)
       settings <- settingsFor(annotation)
-      annotationRestrictions <- AnnotationRestrictions.writeAsJson(composeRestrictionsFor(annotation, restrictions, readOnly), requestingUser)
+      restrictionsJs <- AnnotationRestrictions.writeAsJson(restrictionsOpt.getOrElse(annotationRestrictionDefults.defaultsFor(annotation)), requestingUser)
       dataStore <- dataStoreDAO.findOneByName(dataSet._dataStore.trim) ?~> "datastore.notFound"
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
     } yield {
@@ -454,7 +447,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         "typ" -> annotation.typ,
         "task" -> taskJson,
         "stats" -> annotation.statistics,
-        "restrictions" -> annotationRestrictions,
+        "restrictions" -> restrictionsJs,
         "formattedHash" -> Formatter.formatHash(annotation._id.toString),
         "tracing" -> Json.obj("skeleton" -> annotation.skeletonTracingId, "volume" -> annotation.volumeTracingId),
         "dataSetName" -> dataSet.name,

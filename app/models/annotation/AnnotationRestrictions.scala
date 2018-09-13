@@ -1,13 +1,10 @@
 package models.annotation
 
-import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
-import javax.management.relation.Role
 import models.user.{User, UserService}
 import play.api.libs.json._
 import models.annotation.AnnotationState._
-import utils.ObjectId
 
 import scala.concurrent._
 import ExecutionContext.Implicits.global
@@ -51,7 +48,7 @@ class AnnotationRestrictionDefults @Inject()(userService: UserService) extends F
   def restrictEverything =
     new AnnotationRestrictions()
 
-  def defaultAnnotationRestrictions(annotation: Annotation): AnnotationRestrictions =
+  def defaultsFor(annotation: Annotation): AnnotationRestrictions =
     new AnnotationRestrictions {
       override def allowAccess(userOption: Option[User]) = {
         if(annotation.isPublic) Fox.successful(true)

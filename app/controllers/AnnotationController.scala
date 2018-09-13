@@ -43,20 +43,12 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
 
   implicit val timeout = Timeout(5 seconds)
 
-  def empty(typ: String, id: String) = sil.SecuredAction { implicit request =>
-    Ok(views.html.main(conf))
-  }
-
-  def emptyReadOnly(typ: String, id: String) = sil.UserAwareAction { implicit request =>
-    Ok(views.html.main(conf))
-  }
-
-  def info(typ: String, id: String, readOnly: Boolean = false) = sil.UserAwareAction.async { implicit request =>
+  def info(typ: String, id: String) = sil.UserAwareAction.async { implicit request =>
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity) ?~> "annotation.notFound"
       restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound"
       _ <- restrictions.allowAccess(request.identity) ?~> "notAllowed" ~> BAD_REQUEST
-      js <- annotationService.publicWrites(annotation, request.identity, Some(restrictions), Some(readOnly)) ?~> "annotation.write.failed"
+      js <- annotationService.publicWrites(annotation, request.identity, Some(restrictions)) ?~> "annotation.write.failed"
       _ <- Fox.runOptional(request.identity) { user =>
         if (typ == AnnotationType.Task || typ == AnnotationType.Explorational) {
           timeSpanService.logUserInteraction(user, annotation) // log time when a user starts working
@@ -67,14 +59,12 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
     }
   }
 
-  def infoReadOnly(typ: String, id: String) = info(typ, id, readOnly = true)
-
   def merge(typ: String, id: String, mergedTyp: String, mergedId: String) = sil.SecuredAction.async { implicit request =>
     for {
       annotationA <- provider.provideAnnotation(typ, id, request.identity)
       annotationB <- provider.provideAnnotation(mergedTyp, mergedId, request.identity)
       mergedAnnotation <- annotationMerger.mergeTwo(annotationA, annotationB, true, request.identity) ?~> "annotation.merge.failed"
-      restrictions = annotationRestrictionDefults.defaultAnnotationRestrictions(mergedAnnotation)
+      restrictions = annotationRestrictionDefults.defaultsFor(mergedAnnotation)
       _ <- restrictions.allowAccess(request.identity) ?~> Messages("notAllowed") ~> BAD_REQUEST
       _ <- annotationDAO.insertOne(mergedAnnotation)
       js <- annotationService.publicWrites(mergedAnnotation, Some(request.identity), Some(restrictions)) ?~> "annotation.write.failed"

@@ -11,6 +11,7 @@ import {
   resetAnnotation,
   deleteAnnotation,
 } from "admin/admin_rest_api";
+import Toast from "libs/toast";
 import messages from "messages";
 import TransferTaskModal from "dashboard/transfer_task_modal";
 import type { APIUserType, APITaskType, APIAnnotationType } from "admin/api_flow_types";
@@ -64,6 +65,11 @@ class TaskAnnotationView extends React.PureComponent<Props & StateProps, State> 
     });
   };
 
+  resetAnnotation = async (annotation: APIAnnotationType) => {
+    await resetAnnotation(annotation.id, annotation.typ);
+    Toast.success(messages["annotation.reset_success"]);
+  };
+
   finishAnnotation = async (annotation: APIAnnotationType) => {
     const updatedAnnotation = await finishAnnotation(annotation.id, annotation.typ);
     this.updateAnnotationState(updatedAnnotation);
@@ -90,16 +96,15 @@ class TaskAnnotationView extends React.PureComponent<Props & StateProps, State> 
       doesAnnotationNotBelongToActiveUser = annotation.user.id !== this.props.activeUser.id;
     }
 
-    // TODO use react fragments <> instead of spans
     const label =
       annotation.state === "Finished" || doesAnnotationNotBelongToActiveUser ? (
-        <span>
+        <React.Fragment>
           <Icon type="eye-o" />View
-        </span>
+        </React.Fragment>
       ) : (
-        <span>
+        <React.Fragment>
           <Icon type="play-circle-o" />Trace
-        </span>
+        </React.Fragment>
       );
 
     return (
@@ -123,7 +128,7 @@ class TaskAnnotationView extends React.PureComponent<Props & StateProps, State> 
           </a>
         </Item>
         <Item key={`${annotation.id}-reset`}>
-          <span onClick={() => resetAnnotation(annotation.id, annotation.typ)}>
+          <span onClick={() => this.resetAnnotation(annotation)}>
             <Icon type="rollback" />Reset
           </span>
         </Item>

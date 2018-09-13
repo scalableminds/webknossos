@@ -47,6 +47,7 @@ extends Controller {
   val dataSetPublicReads =
     ((__ \ 'description).readNullable[String] and
       (__ \ 'displayName).readNullable[String] and
+      (__ \ 'sortingKey).readNullable[Long] and
       (__ \ 'isPublic).read[Boolean]).tupled
 
 
@@ -139,13 +140,26 @@ extends Controller {
     }
   }
 
+  def health(dataSetName: String, sharingToken: Option[String]) = sil.UserAwareAction.async { implicit request =>
+    val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
+    for {
+      dataSet <- dataSetDAO.findOneByName(dataSetName)(ctx) ?~> Messages("dataSet.notFound", dataSetName)
+      dataSource <- dataSetService.dataSourceFor(dataSet) ?~> "dataSource.notFound"
+      usableDataSource <- dataSource.toUsable.toFox ?~> "dataSet.notImported"
+      datalayer <- usableDataSource.dataLayers.headOption.toFox ?~> "dataSet.noLayers"
+      thumbnail <- dataSetService.handlerFor(dataSet).flatMap(_.requestDataLayerThumbnail(datalayer.name, 100, 100, None, None)) ?~> "dataSet.loadingDataFailed"
+    } yield {
+      Ok("Ok")
+    }
+  }
+
   def update(dataSetName: String) = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(dataSetPublicReads) {
-      case (description, displayName, isPublic) =>
+      case (description, displayName, sortingKey, isPublic) =>
       for {
         dataSet <- dataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
         _ <- Fox.assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed"
-        _ <- dataSetDAO.updateFields(dataSet._id, description, displayName, isPublic)
+        _ <- dataSetDAO.updateFields(dataSet._id, description, displayName, sortingKey.getOrElse(dataSet.created), isPublic)
         updated <- dataSetDAO.findOneByName(dataSetName)
         js <- dataSetService.publicWrites(updated, Some(request.identity))
       } yield {

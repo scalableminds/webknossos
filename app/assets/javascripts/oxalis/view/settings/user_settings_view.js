@@ -268,7 +268,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
             onChange={this.onChangeUser.overrideNodeRadius}
           />
           <SwitchSetting
-            label="Soma Clicking"
+            label="Single-node-tree mode (&quot;Soma clicking&quot;)"
             value={this.props.userConfiguration.newNodeNewTree}
             onChange={this.onChangeUser.newNodeNewTree}
           />
@@ -389,7 +389,6 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
     dispatch(setActiveCellAction(id));
   },
   onChangeBrushSize(size: number) {
-    console.log(`called with size: ${size}`);
     dispatch(setBrushSizeAction(size));
   },
   onChangeBoundingBox(boundingBox: ?Vector6) {

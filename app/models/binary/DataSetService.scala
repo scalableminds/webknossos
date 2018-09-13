@@ -246,6 +246,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         "isEditable" -> isEditable,
         "lastUsedByUser" -> lastUsedByUser,
         "logoUrl" -> logoUrl,
+        "sortingKey" -> dataSet.sortingKey,
         "isForeign" -> dataStore.isForeign)
     }
   }

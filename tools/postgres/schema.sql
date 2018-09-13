@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(24);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(25);
 COMMIT TRANSACTION;
 
 CREATE TABLE webknossos.analytics(
@@ -72,6 +72,7 @@ CREATE TABLE webknossos.dataSets(
   status VARCHAR(1024) NOT NULL DEFAULT '',
   sharingToken CHAR(256),
   logoUrl VARCHAR(2048),
+  sortingKey TIMESTAMPTZ NOT NULL,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   UNIQUE (name, _organization)

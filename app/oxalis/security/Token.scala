@@ -9,11 +9,11 @@ import javax.inject.Inject
 import org.joda.time.DateTime
 import com.scalableminds.webknossos.schema.Tables._
 import slick.jdbc.PostgresProfile.api._
-import play.api.libs.concurrent.Execution.Implicits._
 import oxalis.security.TokenType.TokenType
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{FiniteDuration, MILLISECONDS}
 
 
@@ -27,7 +27,7 @@ case class Token(_id: ObjectId,
                  created: Long = System.currentTimeMillis(),
                  isDeleted: Boolean = false) {
 
-  def toBearerTokenAuthenticator: Fox[BearerTokenAuthenticator] = {
+  def toBearerTokenAuthenticator(implicit ec: ExecutionContext): Fox[BearerTokenAuthenticator] = {
     Fox.successful(BearerTokenAuthenticator(
       value,
       loginInfo,
@@ -39,7 +39,7 @@ case class Token(_id: ObjectId,
 }
 
 object Token {
-  def fromBearerTokenAuthenticator(b: BearerTokenAuthenticator, tokenType: TokenType): Fox[Token] = {
+  def fromBearerTokenAuthenticator(b: BearerTokenAuthenticator, tokenType: TokenType)(implicit ec: ExecutionContext): Fox[Token] = {
     Fox.successful(Token(
       ObjectId.generate,
       b.id,
@@ -54,7 +54,7 @@ object Token {
   }
 }
 
-class TokenDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[Token, TokensRow, Tokens](sqlClient) {
+class TokenDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SQLDAO[Token, TokensRow, Tokens](sqlClient) {
   val collection = Tokens
 
   def idColumn(x: Tokens): Rep[String] = x._Id

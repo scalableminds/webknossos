@@ -9,6 +9,7 @@ import models.user.{User, UserService}
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 import play.api.i18n.MessagesApi
+import play.api.mvc.{Cookie, CookieHeaderEncoding}
 import utils.WkConf
 
 import scala.concurrent.duration._
@@ -24,20 +25,34 @@ trait WkEnv extends Env {
 class WkSilhouetteEnvironment @Inject()(conf: WkConf,
                                         tokenDAO: TokenDAO,
                                         userService: UserService,
-                                        val messagesApi: MessagesApi
+                                        cookieHeaderEncoding: CookieHeaderEncoding
                                      )(implicit val executionContext: ExecutionContext) extends Environment[WkEnv] {
   val eventBusObject = EventBus()
-  val cookieSettings = conf.raw.underlying.as[CookieAuthenticatorSettings]("silhouette.cookieAuthenticator")
+
+  val cookieSettings = CookieAuthenticatorSettings(
+    conf.Silhouette.CookieAuthenticator.cookieName,
+    conf.Silhouette.CookieAuthenticator.cookiePath,
+    None,
+    conf.Silhouette.CookieAuthenticator.secureCookie,
+    conf.Silhouette.CookieAuthenticator.httpOnlyCookie,
+    Some(Cookie.SameSite.Lax),
+    conf.Silhouette.CookieAuthenticator.useFingerprinting,
+    Some(conf.Silhouette.CookieAuthenticator.cookieMaxAge.toMillis millis),
+    None,
+    conf.Silhouette.CookieAuthenticator.authenticatorExpiry.toMillis millis
+  )
+
   val tokenSettings = BearerTokenAuthenticatorSettings(
     authenticatorIdleTimeout = Some(conf.Silhouette.TokenAuthenticator.authenticatorIdleTimeout.toMillis millis),
     authenticatorExpiry = conf.Silhouette.TokenAuthenticator.authenticatorExpiry.toMillis millis
   )
+
   val fingerprintGenerator = new DefaultFingerprintGenerator(false)
   val idGenerator = new CompactRandomIDGenerator
   val bearerTokenAuthenticatorDAO = new BearerTokenAuthenticatorRepository(tokenDAO)
 
   val combinedAuthenticatorService = CombinedAuthenticatorService(cookieSettings,
-    tokenSettings, bearerTokenAuthenticatorDAO, fingerprintGenerator, idGenerator, Clock(), userService, conf)
+    tokenSettings, bearerTokenAuthenticatorDAO, fingerprintGenerator, cookieHeaderEncoding, idGenerator, Clock(), userService, conf)
 
   override def identityService: IdentityService[User] = userService
 

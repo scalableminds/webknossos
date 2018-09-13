@@ -15,7 +15,7 @@ import FormattedDate from "components/formatted_date";
 const { Column } = Table;
 
 const typeHint: APIMaybeUnimportedDatasetType[] = [];
-const useLruRank = false;
+const useLruRank = true;
 
 type Props = {
   datasets: Array<APIMaybeUnimportedDatasetType>,

@@ -8,12 +8,11 @@ import models.team.TeamDAO
 import models.user.{User, UserDAO, UserService}
 import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
-import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
-import play.api.i18n.MessagesApi
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import slick.jdbc.PostgresProfile.api._
 import utils.{ObjectId, SQLClient, SimpleSQLDAO}
+
+import scala.concurrent.ExecutionContext
 
 
 case class OpenTasksEntry(id: String, user: String, totalAssignments: Int, assignmentsByProjects: Map[String, Int])
@@ -23,7 +22,7 @@ case class ProjectProgressEntry(projectName: String, paused: Boolean, totalTasks
                                 finishedInstances: Int, activeInstances: Int)
 object ProjectProgressEntry { implicit val jsonFormat = Json.format[ProjectProgressEntry] }
 
-class ReportDAO @Inject()(sqlClient: SQLClient, annotationDAO: AnnotationDAO) extends SimpleSQLDAO(sqlClient) {
+class ReportDAO @Inject()(sqlClient: SQLClient, annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
 
   def projectProgress(teamId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[ProjectProgressEntry]] = {
     for {
@@ -119,8 +118,9 @@ class ReportController @Inject()(reportDAO: ReportDAO,
                                  teamDAO: TeamDAO,
                                  userDAO: UserDAO,
                                  userService: UserService,
-                                 sil: Silhouette[WkEnv],
-                                 val messagesApi: MessagesApi) extends Controller with FoxImplicits {
+                                 sil: Silhouette[WkEnv])
+                                (implicit ec: ExecutionContext)
+  extends Controller with FoxImplicits {
 
   def projectProgressOverview(teamId: String) = sil.SecuredAction.async { implicit request =>
     for {

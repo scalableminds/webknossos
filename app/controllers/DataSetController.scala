@@ -18,11 +18,9 @@ import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import utils.ObjectId
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
-import net.liftweb.common.Full
+import play.cache.SyncCacheApi
 
-import scala.concurrent.ExecutionContext.Implicits._
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
 class DataSetController @Inject()(userService: UserService,
@@ -35,8 +33,9 @@ class DataSetController @Inject()(userService: UserService,
                                   teamDAO: TeamDAO,
                                   dataSetDAO: DataSetDAO,
                                   sil: Silhouette[WkEnv],
-                                  cache: CacheApi,
-                                  val messagesApi: MessagesApi) extends Controller {
+                                  cache: CacheApi)
+                                 (implicit ec: ExecutionContext)
+extends Controller {
 
   val DefaultThumbnailWidth = 400
   val DefaultThumbnailHeight = 400
@@ -48,6 +47,7 @@ class DataSetController @Inject()(userService: UserService,
   val dataSetPublicReads =
     ((__ \ 'description).readNullable[String] and
       (__ \ 'displayName).readNullable[String] and
+      (__ \ 'sortingKey).readNullable[Long] and
       (__ \ 'isPublic).read[Boolean]).tupled
 
 
@@ -79,10 +79,7 @@ class DataSetController @Inject()(userService: UserService,
       layer <- dataSetDataLayerDAO.findOneByNameForDataSet(dataLayerName, dataSet._id) ?~> Messages("dataLayer.notFound", dataLayerName)
       image <- imageFromCacheIfPossible(dataSet)
     } yield {
-      Ok(image).withHeaders(
-        CONTENT_LENGTH -> image.length.toString,
-        CONTENT_TYPE -> play.api.libs.MimeTypes.forExtension("jpeg").getOrElse(play.api.http.ContentTypes.BINARY)
-      )
+      Ok(image).as("image/jpeg")
     }
   }
 
@@ -143,13 +140,26 @@ class DataSetController @Inject()(userService: UserService,
     }
   }
 
+  def health(dataSetName: String, sharingToken: Option[String]) = sil.UserAwareAction.async { implicit request =>
+    val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
+    for {
+      dataSet <- dataSetDAO.findOneByName(dataSetName)(ctx) ?~> Messages("dataSet.notFound", dataSetName)
+      dataSource <- dataSetService.dataSourceFor(dataSet) ?~> "dataSource.notFound"
+      usableDataSource <- dataSource.toUsable.toFox ?~> "dataSet.notImported"
+      datalayer <- usableDataSource.dataLayers.headOption.toFox ?~> "dataSet.noLayers"
+      thumbnail <- dataSetService.handlerFor(dataSet).flatMap(_.requestDataLayerThumbnail(datalayer.name, 100, 100, None, None)) ?~> "dataSet.loadingDataFailed"
+    } yield {
+      Ok("Ok")
+    }
+  }
+
   def update(dataSetName: String) = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(dataSetPublicReads) {
-      case (description, displayName, isPublic) =>
+      case (description, displayName, sortingKey, isPublic) =>
       for {
         dataSet <- dataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
         _ <- Fox.assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed"
-        _ <- dataSetDAO.updateFields(dataSet._id, description, displayName, isPublic)
+        _ <- dataSetDAO.updateFields(dataSet._id, description, displayName, sortingKey.getOrElse(dataSet.created), isPublic)
         updated <- dataSetDAO.findOneByName(dataSetName)
         js <- dataSetService.publicWrites(updated, Some(request.identity))
       } yield {

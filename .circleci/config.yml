@@ -148,39 +148,25 @@ jobs:
       - run:
           name: Report coverage
           command: docker-compose run base yarn coverage
+
   nightly:
     docker:
-      - image: docker:18.02
+      - image: scalableminds/puppeteer:master
     steps:
       - checkout
-    environment:
-      USER_NAME: circleci
-      USER_UID: 1001
-      USER_GID: 1001
-      TZ: Europe/Berlin
-    steps:
-      - checkout
-      - setup_remote_docker
       - run:
-          name: Install packages
-          command: apk --no-cache add curl
-      - run:
-          name: Pull webknossos-dev docker image
-          command: |
-            docker pull scalableminds/webknossos-dev:$CIRCLE_BRANCH
-            docker tag scalableminds/webknossos-dev:$CIRCLE_BRANCH scalableminds/webknossos-dev
-      - run:
-          name: Upgrade dev-deployment
+          name: Upgrade dev-deployment & wait
           command: >
             curl
               -X POST
               -H "X-Auth-Token: $RELEASE_API_TOKEN"
               https://kube.scm.io/upgrade/webknossos/dev/master?user=CI+%28nightly%29
+            && sleep 180
       - run:
           name: Run screenshot-tests
           command: >
             URL=https://$CIRCLE_BRANCH.webknossos.xyz/
-            docker-compose up screenshot-tests
+            yarn test-screenshot
 
 workflows:
   version: 2
@@ -195,7 +181,7 @@ workflows:
       - nightly
     triggers:
       - schedule:
-          cron: "12 * * * *"
+          cron: "32 * * * *"
           filters:
             branches:
               only:

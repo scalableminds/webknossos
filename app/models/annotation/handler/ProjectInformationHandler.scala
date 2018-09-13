@@ -7,14 +7,15 @@ import models.annotation._
 import models.project.ProjectDAO
 import models.user.{User, UserService}
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import utils.ObjectId
+
+import scala.concurrent.ExecutionContext
 
 class ProjectInformationHandler @Inject()(annotationDAO: AnnotationDAO,
                                           projectDAO: ProjectDAO,
                                           userService: UserService,
                                           annotationMerger: AnnotationMerger
-                                         ) extends AnnotationInformationHandler with FoxImplicits {
+                                         )(implicit val ec: ExecutionContext) extends AnnotationInformationHandler with FoxImplicits {
 
   override def provideAnnotation(projectId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
   {

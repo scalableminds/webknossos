@@ -9,14 +9,15 @@ import javax.inject.Inject
 import models.annotation.handler.AnnotationInformationHandlerSelector
 import models.user.User
 import net.liftweb.common.{Box, Empty, Failure, Full}
-import play.api.libs.concurrent.Execution.Implicits._
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 class AnnotationStore @Inject()(annotationInformationHandlerSelector: AnnotationInformationHandlerSelector,
                                 system: ActorSystem,
                                 temporaryAnnotationStore: TemporaryStore[String, Annotation]
-                               ) extends LazyLogging {
+                               )(implicit ec: ExecutionContext)
+  extends LazyLogging {
 
   private val cacheTimeout = 5 minutes
 

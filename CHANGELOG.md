@@ -11,6 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Added
 
+- Added URLs to the tabs in the dashboard. [#3183](https://github.com/scalableminds/webknossos/pull/3183)
 - Improved security by enabling http security headers. [#3084](https://github.com/scalableminds/webknossos/pull/3084)
 - Added the possibility to write markdown in the annotation description. [#3081](https://github.com/scalableminds/webknossos/pull/3081)
 - Added the brush size to the settings on the left in volume tracing. The size can now also be adjusted by using only the keyboard. [#3126](https://github.com/scalableminds/webknossos/pull/3126)
@@ -18,6 +19,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Tree groups can now be activated. This allows to rename a tree group analogous to renaming a tree. Also, toggling the visibility of a tree group can now be done by using the shortcuts "1" and "2". [#3066](https://github.com/scalableminds/webknossos/pull/3066)
 - Added the possibility to upload multiple NML files during task creation, even if they are not in a zip archive
 - Added the possibility to supply a dedicated "sorting date" for datasets to change the sorting order in the gallery view, by default the creation date is used [#3124](https://github.com/scalableminds/webknossos/pull/3124)
+- The datasets in the dashboard are now sorted according to their user-specific usage. As a result, relevant datasets should appear at the top of the list. [#3206](https://github.com/scalableminds/webknossos/pull/3206)
 
 ### Changed
 

@@ -5,10 +5,9 @@ import java.io._
 import net.liftweb.common.{Box, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 import org.apache.commons.io.IOUtils
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 
-import scala.concurrent.{Future, blocking}
+import scala.concurrent.{ExecutionContext, Future, blocking}
 
 trait NamedStream {
   def name: String
@@ -21,15 +20,15 @@ trait NamedStream {
       name.replace(sep, '/')
   }
 
-  def writeTo(out: OutputStream): Future[Unit]
+  def writeTo(out: OutputStream)(implicit ec: ExecutionContext): Future[Unit]
 }
 
 case class NamedFunctionStream(name: String, writer: OutputStream => Future[Unit]) extends NamedStream {
-  def writeTo(out: OutputStream) = writer(out)
+  def writeTo(out: OutputStream)(implicit ec: ExecutionContext) = writer(out)
 }
 
 case class NamedEnumeratorStream(name: String, enumerator: Enumerator[Array[Byte]]) extends NamedStream {
-  def writeTo(out: OutputStream) = {
+  def writeTo(out: OutputStream)(implicit ec: ExecutionContext) = {
     val iteratee = Iteratee.foreach[Array[Byte]] { bytes =>
       out.write(bytes)
     }
@@ -40,7 +39,7 @@ case class NamedEnumeratorStream(name: String, enumerator: Enumerator[Array[Byte
 case class NamedFileStream(name: String, file: File) extends NamedStream{
   def stream(): InputStream =  new FileInputStream(file)
 
-  def writeTo(out: OutputStream): Future[Unit] = {
+  def writeTo(out: OutputStream)(implicit ec: ExecutionContext): Future[Unit] = {
     Future {
       blocking {
         val in = stream()

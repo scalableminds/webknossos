@@ -12,11 +12,12 @@ import models.user.{User, UserService}
 import net.liftweb.common.Full
 import oxalis.security.{CompactRandomIDGenerator, URLSharing}
 import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.i18n.Messages.Implicits._
 import play.api.libs.json.{JsObject, Json}
 import play.api.libs.ws.WSResponse
 import utils.ObjectId
+
+import scala.concurrent.ExecutionContext
 
 class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                dataSetDAO: DataSetDAO,
@@ -28,9 +29,9 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                teamService: TeamService,
                                userService: UserService,
                                dataSetAllowedTeamsDAO: DataSetAllowedTeamsDAO,
-                               rpc: RPC,
-                               val messagesApi: MessagesApi
-                              ) extends FoxImplicits with LazyLogging {
+                               rpc: RPC
+                              )(implicit ec: ExecutionContext)
+  extends FoxImplicits with LazyLogging {
 
   def isProperDataSetName(name: String): Boolean =
     name.matches("[A-Za-z0-9_\\-]*")
@@ -80,7 +81,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
   def getForeignDataSet(dataStoreUrl: String, dataSetName: String): Fox[InboxDataSource] = {
     rpc(s"${dataStoreUrl}/data/datasets/${dataSetName}/readInboxDataSourceLike")
-      .withQueryString("token" -> "") // we don't need a valid token because the DataSet is public, but we have to add the parameter token because it is a TokenSecuredAction
+      .addQueryString("token" -> "") // we don't need a valid token because the DataSet is public, but we have to add the parameter token because it is a TokenSecuredAction
       .getWithJsonResponse[InboxDataSource]
   }
 

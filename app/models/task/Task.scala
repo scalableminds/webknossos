@@ -10,13 +10,13 @@ import models.annotation._
 import models.binary.DataSetDAO
 import models.project.ProjectDAO
 import models.team.TeamDAO
-import models.user.{Experience}
-import play.api.libs.concurrent.Execution.Implicits._
+import models.user.Experience
 import play.api.libs.json.{JsObject, Json}
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import utils.{ObjectId, SQLClient, SQLDAO}
 
+import scala.concurrent.ExecutionContext
 import scala.util.Random
 
 
@@ -45,7 +45,7 @@ class TaskService @Inject()(dataSetDAO: DataSetDAO,
                             scriptService: ScriptService,
                             taskTypeService: TaskTypeService,
                             projectDAO: ProjectDAO
-                           ) extends FoxImplicits {
+                           )(implicit ec: ExecutionContext) extends FoxImplicits {
 
   def publicWrites(task: Task)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
@@ -93,7 +93,7 @@ class TaskService @Inject()(dataSetDAO: DataSetDAO,
 
 }
 
-class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO) extends SQLDAO[Task, TasksRow, Tasks](sqlClient) {
+class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit ec: ExecutionContext) extends SQLDAO[Task, TasksRow, Tasks](sqlClient) {
   val collection = Tasks
 
   def idColumn(x: Tasks) = x._Id

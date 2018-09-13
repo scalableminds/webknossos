@@ -5,11 +5,12 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
 import org.joda.time.DateTime
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsValue, Json}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
+
+import scala.concurrent.ExecutionContext
 
 
 case class TimeSpanRequest(users: List[String], start: Long, end: Long)
@@ -55,7 +56,7 @@ object TimeSpan {
 
 }
 
-class TimeSpanDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[TimeSpan, TimespansRow, Timespans](sqlClient) {
+class TimeSpanDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SQLDAO[TimeSpan, TimespansRow, Timespans](sqlClient) {
   val collection = Timespans
   val MAX_TIMESTAMP = 253370761200000L
 

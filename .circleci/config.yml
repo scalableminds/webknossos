@@ -91,7 +91,6 @@ jobs:
           key: webpack-hard-source-cache-{{ .Branch }}-{{ .Revision }}
           paths:
             - "node_modules/.cache/hard-source"
-            - "node_modules/.cache/autodll-webpack-plugin"
 
       - run:
           name: Build webknossos docker image

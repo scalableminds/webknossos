@@ -1,6 +1,6 @@
 // @flow
 import * as React from "react";
-import { Icon, Spin, Table, Card } from "antd";
+import { Tag, Icon, Spin, Table, Card } from "antd";
 import * as Utils from "libs/utils";
 import Loop from "components/loop";
 import { getProjectProgressReport } from "admin/admin_rest_api";
@@ -8,6 +8,7 @@ import type { APIProjectProgressReportType, APITeamType } from "admin/api_flow_t
 import FormattedDate from "components/formatted_date";
 import Toast from "libs/toast";
 import messages from "messages";
+import StackedBarChart, { colors } from "components/stacked_bar_chart";
 import TeamSelectionForm from "./team_selection_form";
 
 const { Column, ColumnGroup } = Table;
@@ -115,42 +116,47 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
               title="Tasks"
               dataIndex="totalTasks"
               sorter={Utils.compareBy(typeHint, project => project.totalTasks)}
+              render={number => number.toLocaleString()}
             />
             <ColumnGroup title="Instances">
               <Column
                 title="Total"
                 dataIndex="totalInstances"
                 sorter={Utils.compareBy(typeHint, project => project.totalInstances)}
+                render={number => number.toLocaleString()}
               />
               <Column
-                title="Open"
-                dataIndex="openInstances"
-                sorter={Utils.compareBy(typeHint, project => project.openInstances)}
-                render={(text, item) =>
-                  `${item.openInstances} (${Math.round(
-                    (item.openInstances / item.totalInstances) * 100,
-                  )} %)`
-                }
-              />
-              <Column
-                title="Active"
-                dataIndex="activeInstances"
-                sorter={Utils.compareBy(typeHint, project => project.activeInstances)}
-                render={(text, item) =>
-                  `${item.activeInstances} (${Math.round(
-                    (item.activeInstances / item.totalInstances) * 100,
-                  )} %)`
-                }
-              />
-              <Column
-                title="Finished"
+                title={<Tag color={colors.finished}>Finished</Tag>}
                 dataIndex="finishedInstances"
                 sorter={Utils.compareBy(typeHint, project => project.finishedInstances)}
-                render={(text, item) =>
-                  `${item.finishedInstances} (${Math.round(
-                    (item.finishedInstances / item.totalInstances) * 100,
-                  )} %)`
+                render={(text, item) => ({
+                  props: {
+                    colSpan: 3,
+                  },
+                  children: (
+                    <StackedBarChart
+                      a={item.finishedInstances}
+                      b={item.activeInstances}
+                      c={item.openInstances}
+                    />
+                  ),
+                })}
+              />
+              <Column
+                title={<Tag color={colors.active}>Active</Tag>}
+                dataIndex="activeInstances"
+                sorter={Utils.compareBy(typeHint, project => project.activeInstances)}
+                render={() => ({ props: { colSpan: 0 }, children: null })}
+              />
+              <Column
+                title={
+                  <Tag color={colors.open} style={{ color: colors.openFG }}>
+                    Open
+                  </Tag>
                 }
+                dataIndex="openInstances"
+                sorter={Utils.compareBy(typeHint, project => project.openInstances)}
+                render={() => ({ props: { colSpan: 0 }, children: null })}
               />
             </ColumnGroup>
           </Table>

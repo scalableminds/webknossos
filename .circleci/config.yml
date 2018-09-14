@@ -29,6 +29,10 @@ jobs:
           keys:
             - yarn-cache-{{ checksum "yarn.lock" }}
             - yarn-cache-
+      - restore_cache:
+          keys:
+            - webpack-cache-{{ .Branch }}
+            - webpack-cache-master
       - run:
           name: Assert unique evolution numbers
           command: tools/postgres/assert_unique_evolution_numbers.sh
@@ -73,6 +77,11 @@ jobs:
           key: yarn-cache-{{ checksum "yarn.lock" }}
           paths:
             - "~/.yarn-cache"
+
+      - save_cache:
+          key: webpack-cache-{{ .Branch }}
+          paths:
+            - "node_modules/.cache/uglifyjs-webpack-plugin"
 
       - run:
           name: Build webknossos docker image

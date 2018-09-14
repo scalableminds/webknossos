@@ -1,6 +1,6 @@
 error.invalidCredentials=Email or Password is wrong
 error.noUser=There is no user to this email
-error.notInDev=This feature is only available in dev mode7
+error.notInDev=This feature is only available in dev mode
 error.passwordsDontMatch=Passwords don’t match
 
 notAllowed=You are not authorized to view or edit this resource

@@ -172,18 +172,21 @@ jobs:
             -H "X-Auth-Token: $RELEASE_API_TOKEN"
             https://kube.scm.io/hooks/install/webknossos/dev/master?user=CI+%28nightly%29
       - run:
-          name: Install dependencies and sleep at least 10min
+          name: Install dependencies and sleep at least 3min
           command: |
             yarn install --frozen-lockfile &
-            sleep 600 &
+            sleep 180 &
             wait
+      - run:
+          name: Refresh datasets
+          command: curl https://master.webknossos.xyz/data/triggers/checkInboxBlocking?token=secretScmBoyToken
       - run:
           name: Run screenshot-tests
           command: |
             for i in {1..5}; do # retry
               URL=https://master.webknossos.xyz/ \
               yarn test-screenshot || s=$?
-              sleep 60
+              sleep 30
             done
             (exit $s)
 
@@ -200,7 +203,7 @@ workflows:
       - nightly
     triggers:
       - schedule:
-          cron: "22 * * * *"
+          cron: "57 * * * *"
           filters:
             branches:
               only:

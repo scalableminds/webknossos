@@ -38,7 +38,8 @@ export const pingDataStoreIfAppropriate = memoizedThrottle(async (requestedUrl: 
           ? buildinfoDatastore.webknossosDatastore
           : buildinfoDatastore.webknossos;
         const dataStoreVersion = buildInfoWebknossosDatastore.version;
-        const oldestSupportedWebknossosVersion = buildInfoWebknossosDatastore.oldestSupportedWebknossosVersion;
+        const oldestSupportedWebknossosVersion =
+          buildInfoWebknossosDatastore.oldestSupportedWebknossosVersion;
 
         if (dataStoreVersion < oldestSupportedDatastoreVersion) {
           Toast.warning(

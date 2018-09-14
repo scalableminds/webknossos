@@ -41,7 +41,7 @@ class Navbar extends React.PureComponent<Props, State> {
   async componentWillMount() {
     const buildInfo = await getBuildInfo();
     this.setState({
-      version:buildInfo.webknossos.version
+      version: buildInfo.webknossos.version,
     });
   }
 

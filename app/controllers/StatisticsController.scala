@@ -1,6 +1,5 @@
 package controllers
 
-import com.scalableminds.util.accesscontext.DBAccessContext
 import javax.inject.Inject
 import com.scalableminds.util.tools.Fox
 import models.annotation.AnnotationDAO
@@ -8,12 +7,13 @@ import models.binary.DataSetDAO
 import models.task.TaskDAO
 import models.user.time.{TimeSpan, TimeSpanService}
 import models.user.{UserDAO, UserService}
-import oxalis.security.WebknossosSilhouette
-import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.concurrent.Execution.Implicits._
+import oxalis.security.WkEnv
+import com.mohiva.play.silhouette.api.Silhouette
+import play.api.i18n.{Messages}
 import play.api.libs.json.Json._
 import play.api.libs.json._
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 
 class StatisticsController @Inject()(timeSpanService: TimeSpanService,
@@ -22,12 +22,9 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
                                      dataSetDAO: DataSetDAO,
                                      taskDAO: TaskDAO,
                                      annotationDAO: AnnotationDAO,
-                                     sil: WebknossosSilhouette,
-                                     val messagesApi: MessagesApi)
+                                     sil: Silhouette[WkEnv])
+                                    (implicit ec: ExecutionContext)
   extends Controller {
-
-  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
 
   val intervalHandler = Map(
     "month" -> TimeSpan.groupByMonth _,

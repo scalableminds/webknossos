@@ -6,12 +6,13 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{AnnotationDAO, AnnotationType}
 import models.team.TeamDAO
 import models.user.{User, UserDAO, UserService}
-import oxalis.security.WebknossosSilhouette
-import play.api.i18n.MessagesApi
-import play.api.libs.concurrent.Execution.Implicits._
+import oxalis.security.WkEnv
+import com.mohiva.play.silhouette.api.Silhouette
 import play.api.libs.json.Json
 import slick.jdbc.PostgresProfile.api._
 import utils.{ObjectId, SQLClient, SimpleSQLDAO}
+
+import scala.concurrent.ExecutionContext
 
 
 case class OpenTasksEntry(id: String, user: String, totalAssignments: Int, assignmentsByProjects: Map[String, Int])
@@ -21,7 +22,7 @@ case class ProjectProgressEntry(projectName: String, paused: Boolean, totalTasks
                                 finishedInstances: Int, activeInstances: Int)
 object ProjectProgressEntry { implicit val jsonFormat = Json.format[ProjectProgressEntry] }
 
-class ReportDAO @Inject()(sqlClient: SQLClient, annotationDAO: AnnotationDAO) extends SimpleSQLDAO(sqlClient) {
+class ReportDAO @Inject()(sqlClient: SQLClient, annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
 
   def projectProgress(teamId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[ProjectProgressEntry]] = {
     for {
@@ -117,11 +118,9 @@ class ReportController @Inject()(reportDAO: ReportDAO,
                                  teamDAO: TeamDAO,
                                  userDAO: UserDAO,
                                  userService: UserService,
-                                 sil: WebknossosSilhouette,
-                                 val messagesApi: MessagesApi) extends Controller with FoxImplicits {
-
-  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
+                                 sil: Silhouette[WkEnv])
+                                (implicit ec: ExecutionContext)
+  extends Controller with FoxImplicits {
 
   def projectProgressOverview(teamId: String) = sil.SecuredAction.async { implicit request =>
     for {

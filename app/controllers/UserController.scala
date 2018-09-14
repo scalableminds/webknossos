@@ -1,7 +1,7 @@
 package controllers
 
 import javax.inject.Inject
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -9,19 +9,16 @@ import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.team._
 import models.user._
 import models.user.time._
-import oxalis.security.WebknossosSilhouette
-import play.api.data.Forms._
-import play.api.data._
-import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.concurrent.Execution.Implicits._
+import oxalis.security.WkEnv
+import com.mohiva.play.silhouette.api.Silhouette
+import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Json._
 import play.api.libs.json._
-import play.twirl.api.Html
+import play.api.mvc.PlayBodyParsers
 import utils.ObjectId
-import views.html
 
-import scala.concurrent.Future
+import scala.concurrent.ExecutionContext
 
 class UserController @Inject()(userService: UserService,
                                userDAO: UserDAO,
@@ -30,13 +27,11 @@ class UserController @Inject()(userService: UserService,
                                teamMembershipService: TeamMembershipService,
                                annotationService: AnnotationService,
                                teamDAO: TeamDAO,
-                               sil: WebknossosSilhouette,
-                               val messagesApi: MessagesApi)
+                               sil: Silhouette[WkEnv])
+                              (implicit ec: ExecutionContext,
+                               bodyParsers: PlayBodyParsers)
   extends Controller
     with FoxImplicits {
-
-  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
 
   val defaultAnnotationLimit = 1000
 
@@ -180,7 +175,7 @@ class UserController @Inject()(userService: UserService,
       (__ \ "teams").read[List[TeamMembership]](Reads.list(teamMembershipService.publicReads)) and
       (__ \ "experiences").read[Map[String, Int]]).tupled
 
-  def ensureProperTeamAdministration(user: User, teams: List[(TeamMembership, Team)]) = {
+  def ensureProperTeamAdministration(user: User, teams: List[(TeamMembership, Team)])(implicit m: MessagesProvider) = {
     Fox.combined(teams.map {
       case (TeamMembership(_, true), team) => {
         for {

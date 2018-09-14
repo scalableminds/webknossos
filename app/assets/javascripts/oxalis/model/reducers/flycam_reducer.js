@@ -2,7 +2,7 @@
 import update from "immutability-helper";
 import type { OxalisState } from "oxalis/store";
 import type { ActionType } from "oxalis/model/actions/actions";
-import { getMaxZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { M4x4 } from "libs/mjs";
 import type { Matrix4x4 } from "libs/mjs";
@@ -114,7 +114,7 @@ function moveReducer(state: OxalisState, vector: Vector3): OxalisState {
 export function zoomReducer(state: OxalisState, zoomStep: number): OxalisState {
   return update(state, {
     flycam: {
-      zoomStep: { $set: Utils.clamp(ZOOM_STEP_MIN, zoomStep, getMaxZoomStep(state)) },
+      zoomStep: { $set: Utils.clamp(ZOOM_STEP_MIN, zoomStep, getMaxZoomStep(state.dataset)) },
     },
   });
 }

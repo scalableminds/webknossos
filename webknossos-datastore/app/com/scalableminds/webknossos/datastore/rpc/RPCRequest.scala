@@ -1,7 +1,9 @@
-package com.scalableminds.util.rpc
+package com.scalableminds.webknossos.datastore.rpc
 
 import java.io.File
 
+import akka.stream.scaladsl.Source
+import akka.util.ByteString
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
@@ -13,19 +15,20 @@ import play.api.libs.json._
 import play.api.libs.ws._
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
 
 class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxImplicits with LazyLogging {
 
   var request: WSRequest = wsClient.url(url)
 
-  def withQueryString(parameters: (String, String)*): RPCRequest = {
-    request = request.withQueryString(parameters :_*)
+  def addQueryString(parameters: (String, String)*): RPCRequest = {
+    request = request.addQueryStringParameters(parameters :_*)
     this
   }
 
-  def withQueryStringOptional(key: String, valueOptional: Option[String]): RPCRequest = {
+  def addQueryStringOptional(key: String, valueOptional: Option[String]): RPCRequest = {
     valueOptional match {
-      case Some(value: String) => { request = request.withQueryString((key, value))}
+      case Some(value: String) => { request = request.addQueryStringParameters((key, value))}
       case _ =>
     }
     this
@@ -51,28 +54,28 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
 
   def post(file: File): Fox[WSResponse] = {
     request = request
-      .withBody(FileBody(file))
+      .withBody(file)
       .withMethod("POST")
     performRequest
   }
 
   def postWithJsonResponse[T : Reads](file: File): Fox[T] = {
     request = request
-      .withBody(FileBody(file))
+      .withBody(file)
       .withMethod("POST")
     parseJsonResponse(performRequest)
   }
 
   def postWithProtoResponse[T <: GeneratedMessage with Message[T]](file: File)(companion: GeneratedMessageCompanion[T]): Fox[T] = {
     request = request
-      .withBody(FileBody(file))
+      .withBody(file)
       .withMethod("POST")
     parseProtoResponse(performRequest)(companion)
   }
 
   def post[T : Writes](body: T = Json.obj()): Fox[WSResponse] = {
     request = request
-      .withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
+      .addHttpHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
       .withBody(Json.toJson(body))
       .withMethod("POST")
     performRequest
@@ -80,7 +83,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
 
   def postWithJsonResponse[T : Writes, U : Reads](body: T = Json.obj()): Fox[U] = {
     request = request
-      .withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
+      .addHttpHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
       .withBody(Json.toJson(body))
       .withMethod("POST")
     parseJsonResponse(performRequest)
@@ -88,7 +91,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
 
   def postJsonWithProtoResponse[J: Writes, T <: GeneratedMessage with Message[T]](body: J = Json.obj())(companion: GeneratedMessageCompanion[T]): Fox[T] = {
     request = request
-      .withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
+      .addHttpHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
       .withBody(Json.toJson(body))
       .withMethod("POST")
     parseProtoResponse(performRequest)(companion)
@@ -96,16 +99,16 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
 
   def postProtoWithJsonResponse[T <: GeneratedMessage with Message[T], J: Reads](body: T): Fox[J] = {
     request = request
-      .withHeaders(HeaderNames.CONTENT_TYPE -> "application/x-protobuf")
+      .addHttpHeaders(HeaderNames.CONTENT_TYPE -> "application/x-protobuf")
       .withBody(body.toByteArray)
       .withMethod("POST")
     parseJsonResponse(performRequest)
   }
 
-  def getStream: Fox[(WSResponseHeaders, Enumerator[Array[Byte]])] = {
+  def getStream: Fox[Source[ByteString, _]] = {
     logger.debug(s"Sending WS request to $url (ID: $id). " +
       s"RequestBody: '${requestBodyPreview}'")
-    request.withMethod("GET").withRequestTimeout(-1).stream().map(Full(_)).recover {
+    request.withMethod("GET").withRequestTimeout(Duration.Inf).stream().map(response => Full(response.bodyAsSource)).recover {
       case e =>
         val errorMsg = s"Error sending WS request to $url (ID: $id): " +
           s"${e.getMessage}\n${e.getStackTrace.mkString("\n    ")}"
@@ -167,7 +170,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
           s"ResponseBody: '${response.body.take(100)}'")
       }
       try {
-        Full(companion.parseFrom(response.bodyAsBytes))
+        Full(companion.parseFrom(response.bodyAsBytes.toArray))
       } catch {
         case e: Exception => {
           val errorMsg = s"Request returned invalid Protocol Buffer Data (ID: $id): $e"
@@ -180,9 +183,14 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
 
   private def requestBodyPreview: String = {
     request.body match {
-      case body: InMemoryBody => new String(body.bytes.take(100).map(_.toChar))
-      case body: FileBody => s"<file: ${body.file.length} bytes>"
-      case _ => ""
+      case body: InMemoryBody if request.headers.get(HeaderNames.CONTENT_TYPE).getOrElse(List()).contains("application/x-protobuf") =>
+        s"<${body.bytes.length} bytes of protobuf data>"
+      case body: InMemoryBody =>
+        body.bytes.take(100).utf8String + (if(body.bytes.size > 100) s"... <omitted ${body.bytes.size - 100} bytes>" else "")
+      case body: SourceBody =>
+        s"<streaming source>"
+      case _ =>
+        ""
     }
   }
 }

@@ -7,13 +7,14 @@ import models.project._
 import models.task._
 import models.user.UserService
 import net.liftweb.common.Empty
-import oxalis.security.WebknossosSilhouette
+import oxalis.security.WkEnv
+import com.mohiva.play.silhouette.api.Silhouette
+import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import utils.ObjectId
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 class ProjectController @Inject()(projectService: ProjectService,
                                   projectDAO: ProjectDAO,
@@ -22,11 +23,9 @@ class ProjectController @Inject()(projectService: ProjectService,
                                   taskDAO: TaskDAO,
                                   userService: UserService,
                                   taskService: TaskService,
-                                  sil: WebknossosSilhouette,
-                                  val messagesApi: MessagesApi) extends Controller with FoxImplicits {
-
-  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
+                                  sil: Silhouette[WkEnv])
+                                 (implicit ec: ExecutionContext)
+  extends Controller with FoxImplicits {
 
   def list = sil.SecuredAction.async {
     implicit request =>
@@ -112,7 +111,7 @@ class ProjectController @Inject()(projectService: ProjectService,
       updatePauseStatus(projectName, isPaused = false)
   }
 
-  private def updatePauseStatus(projectName: String, isPaused: Boolean)(implicit request: sil.SecuredRequest[_]) = {
+  private def updatePauseStatus(projectName: String, isPaused: Boolean)(implicit request: SecuredRequest[WkEnv, _]) = {
     for {
       project <- projectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))

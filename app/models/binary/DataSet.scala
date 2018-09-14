@@ -10,17 +10,14 @@ import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
 import models.configuration.DataSetConfiguration
 import models.team._
-import models.user.User
-import net.liftweb.common.Full
-import play.api.i18n.Messages
-import play.api.i18n.Messages.Implicits._
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import play.utils.UriEncoding
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO, SimpleSQLDAO}
+
+import scala.concurrent.ExecutionContext
 
 
 case class DataSet(
@@ -37,16 +34,17 @@ case class DataSet(
                        sharingToken: Option[String],
                        status: String,
                        logoUrl: Option[String],
+                       sortingKey: Long = System.currentTimeMillis(),
                        created: Long = System.currentTimeMillis(),
                        isDeleted: Boolean = false
                      ) extends FoxImplicits {
 
   def urlEncodedName: String =
     UriEncoding.encodePathSegment(name, "UTF-8")
-
 }
 
-class DataSetDAO @Inject()(sqlClient: SQLClient, dataSetDataLayerDAO: DataSetDataLayerDAO, organizationDAO: OrganizationDAO) extends SQLDAO[DataSet, DatasetsRow, Datasets](sqlClient) {
+class DataSetDAO @Inject()(sqlClient: SQLClient, dataSetDataLayerDAO: DataSetDataLayerDAO, organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
+  extends SQLDAO[DataSet, DatasetsRow, Datasets](sqlClient) {
   val collection = Datasets
 
   def idColumn(x: Datasets): Rep[String] = x._Id
@@ -82,6 +80,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient, dataSetDataLayerDAO: DataSetDat
         r.sharingtoken,
         r.status,
         r.logourl,
+        r.sortingkey.getTime,
         r.created.getTime,
         r.isdeleted
       )
@@ -155,10 +154,10 @@ class DataSetDAO @Inject()(sqlClient: SQLClient, dataSetDataLayerDAO: DataSetDat
     } yield ()
   }
 
-  def updateFields(_id: ObjectId, description: Option[String], displayName: Option[String], isPublic: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val q = for {row <- Datasets if (notdel(row) && row._Id === _id.id)} yield (row.description, row.displayname, row.ispublic)
+  def updateFields(_id: ObjectId, description: Option[String], displayName: Option[String], sortingKey: Long, isPublic: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val q = for {row <- Datasets if (notdel(row) && row._Id === _id.id)} yield (row.description, row.displayname, row.sortingkey, row.ispublic)
     for {
-      _ <- run(q.update(description, displayName, isPublic))
+      _ <- run(q.update(description, displayName, new java.sql.Timestamp(sortingKey), isPublic))
     } yield ()
   }
 
@@ -174,9 +173,9 @@ class DataSetDAO @Inject()(sqlClient: SQLClient, dataSetDataLayerDAO: DataSetDat
     val defaultConfiguration: Option[String] = d.defaultConfiguration.map(c => Json.toJson(c.configuration).toString)
     for {
       _ <- run(
-        sqlu"""insert into webknossos.dataSets(_id, _dataStore, _organization, defaultConfiguration, description, displayName, isPublic, isUsable, name, scale, status, sharingToken, created, isDeleted)
+        sqlu"""insert into webknossos.dataSets(_id, _dataStore, _organization, defaultConfiguration, description, displayName, isPublic, isUsable, name, scale, status, sharingToken, sortingKey, created, isDeleted)
                values(${d._id.id}, ${d._dataStore}, ${d._organization.id}, #${optionLiteral(defaultConfiguration.map(sanitize))}, ${d.description}, ${d.displayName}, ${d.isPublic}, ${d.isUsable},
-                      ${d.name}, #${optionLiteral(d.scale.map(s => writeScaleLiteral(s)))}, ${d.status.take(1024)}, ${d.sharingToken}, ${new java.sql.Timestamp(d.created)}, ${d.isDeleted})
+                      ${d.name}, #${optionLiteral(d.scale.map(s => writeScaleLiteral(s)))}, ${d.status.take(1024)}, ${d.sharingToken}, ${new java.sql.Timestamp(d.sortingKey)}, ${new java.sql.Timestamp(d.created)}, ${d.isDeleted})
             """)
     } yield ()
   }
@@ -222,7 +221,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient, dataSetDataLayerDAO: DataSetDat
 }
 
 
-class DataSetResolutionsDAO @Inject()(sqlClient: SQLClient) extends SimpleSQLDAO(sqlClient) {
+class DataSetResolutionsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
 
   def parseRow(row: DatasetResolutionsRow): Fox[Point3D] = {
     for {
@@ -261,7 +260,7 @@ class DataSetResolutionsDAO @Inject()(sqlClient: SQLClient) extends SimpleSQLDAO
 }
 
 
-class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO: DataSetResolutionsDAO) extends SimpleSQLDAO(sqlClient) {
+class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO: DataSetResolutionsDAO)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
 
   def parseRow(row: DatasetLayersRow, dataSetId: ObjectId): Fox[DataLayer] = {
     val result: Fox[Fox[DataLayer]] = for {
@@ -342,7 +341,7 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
 }
 
 
-class DataSetAllowedTeamsDAO @Inject()(sqlClient: SQLClient) extends SimpleSQLDAO(sqlClient) {
+class DataSetAllowedTeamsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
 
   def findAllForDataSet(dataSetId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
     val query = for {
@@ -372,7 +371,7 @@ class DataSetAllowedTeamsDAO @Inject()(sqlClient: SQLClient) extends SimpleSQLDA
 }
 
 
-class DataSetLastUsedTimesDAO @Inject()(sqlClient: SQLClient) extends SimpleSQLDAO(sqlClient) {
+class DataSetLastUsedTimesDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
   def findForDataSetAndUser(dataSetId: ObjectId, userId: ObjectId): Fox[Long] = {
     for {
       rList <- run(sql"select lastUsedTime from webknossos.dataSet_lastUsedTimes where _dataSet = ${dataSetId} and _user = ${userId}".as[java.sql.Timestamp])

@@ -8,13 +8,13 @@ import com.scalableminds.webknossos.datastore.tracings.UpdateAction.SkeletonUpda
 import com.scalableminds.webknossos.datastore.tracings._
 import com.scalableminds.webknossos.datastore.tracings.skeleton.updating._
 import net.liftweb.common.{Empty, Full}
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{Json, Writes}
 
-class SkeletonTracingService @Inject()(
-                                        tracingDataStore: TracingDataStore,
-                                        val temporaryTracingStore: TemporaryTracingStore[SkeletonTracing]
-                                      )
+import scala.concurrent.ExecutionContext
+
+class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
+                                       val temporaryTracingStore: TemporaryTracingStore[SkeletonTracing])
+                                      (implicit ec: ExecutionContext)
   extends TracingService[SkeletonTracing]
     with KeyValueStoreImplicits
     with ProtoGeometryImplicits

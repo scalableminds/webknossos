@@ -12,12 +12,14 @@ import models.project.ProjectDAO
 import models.task.TaskDAO
 import models.user.time._
 import models.user.{User, UserService}
-import oxalis.security.WebknossosSilhouette
-import play.api.i18n.{Messages, MessagesApi}
+import oxalis.security.WkEnv
+import com.mohiva.play.silhouette.api.Silhouette
+import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
 import play.api.libs.json.{JsArray, _}
+import play.api.mvc.PlayBodyParsers
 import utils.{ObjectId, WkConf}
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 
@@ -33,14 +35,11 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
                                      provider: AnnotationInformationProvider,
                                      annotationRestrictionDefults: AnnotationRestrictionDefults,
                                      conf: WkConf,
-                                     sil: WebknossosSilhouette,
-                                     val messagesApi: MessagesApi
-                                    )
+                                     sil: Silhouette[WkEnv])
+                                    (implicit ec: ExecutionContext,
+                                     bodyParsers: PlayBodyParsers)
   extends Controller
     with FoxImplicits {
-
-  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
 
   implicit val timeout = Timeout(5 seconds)
 
@@ -268,7 +267,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
     }
   }
 
-  private def duplicateAnnotation(annotation: Annotation, user: User)(implicit ctx: DBAccessContext): Fox[Annotation] = {
+  private def duplicateAnnotation(annotation: Annotation, user: User)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Annotation] = {
     for {
       dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
       _ <- bool2Fox(dataSet.isUsable) ?~> Messages("dataSet.notImported", dataSet.name)

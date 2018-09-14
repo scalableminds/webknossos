@@ -42,6 +42,7 @@ import type {
   ServerSkeletonTracingType,
   ServerVolumeTracingType,
   APIAnnotationTypeCompact,
+  ExperienceDomainListType,
 } from "admin/api_flow_types";
 import { APITracingTypeEnum } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/task/task_search_form";
@@ -378,9 +379,9 @@ export function createTasks(tasks: Array<NewTaskType>): Promise<Array<TaskCreati
 
 // TODO fix return types
 export function createTaskFromNML(task: NewTaskType): Promise<Array<TaskCreationResponseType>> {
-  return Request.sendMultipartFormReceiveJSON("/api/tasks/createFromFile", {
+  return Request.sendMultipartFormReceiveJSON("/api/tasks/createFromFiles", {
     data: {
-      nmlFile: task.nmlFile,
+      nmlFiles: task.nmlFiles,
       formJSON: JSON.stringify(task),
     },
   });
@@ -514,10 +515,7 @@ export function getAnnotationInformation(
   annotationId: string,
   tracingType: APITracingType,
 ): Promise<APIAnnotationType> {
-  // Include /readOnly part whenever it is in the pathname
-  const isReadOnly = location.pathname.endsWith("/readOnly");
-  const readOnlyPart = isReadOnly ? "readOnly/" : "";
-  const infoUrl = `/api/annotations/${tracingType}/${annotationId}/${readOnlyPart}info`;
+  const infoUrl = `/api/annotations/${tracingType}/${annotationId}/info`;
   return Request.receiveJSON(infoUrl);
 }
 
@@ -821,4 +819,9 @@ export function getFeatureToggles(): Promise<APIFeatureToggles> {
 
 export function getOperatorData(): Promise<string> {
   return Request.receiveJSON("/api/operatorData");
+}
+
+// ## Experience Domains
+export function getExistingExperienceDomains(): Promise<ExperienceDomainListType> {
+  return Request.receiveJSON("/api/tasks/experienceDomains");
 }

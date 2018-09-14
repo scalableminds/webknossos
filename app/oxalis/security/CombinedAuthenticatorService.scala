@@ -1,8 +1,9 @@
 package oxalis.security
 
 import com.mohiva.play.silhouette.api._
+import com.mohiva.play.silhouette.api.crypto.{Base64AuthenticatorEncoder, Signer}
 import com.mohiva.play.silhouette.api.services.{AuthenticatorResult, AuthenticatorService}
-import com.mohiva.play.silhouette.api.util.{Clock, FingerprintGenerator, IDGenerator}
+import com.mohiva.play.silhouette.api.util.{Clock, ExtractableRequest, FingerprintGenerator, IDGenerator}
 import com.mohiva.play.silhouette.impl.authenticators._
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import models.user.UserService
@@ -10,6 +11,7 @@ import play.api.mvc._
 import utils.WkConf
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Success, Try}
 
 /*
  * Combining BearerTokenAuthenticator and TokenAuthenticator from Silhouette
@@ -24,18 +26,34 @@ case class CombinedAuthenticator(actualAuthenticator: StorableAuthenticator) ext
   override def isValid: Boolean = actualAuthenticator.isValid
 }
 
+class IdentityCookieSigner extends Signer {
+  override def sign(data: String): String = data
+  override def extract(message: String): Try[String] = Success(message)
+}
+
 case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSettings,
                                         tokenSettings: BearerTokenAuthenticatorSettings,
-                                        tokenDao : BearerTokenAuthenticatorDAO,
+                                        tokenDao : BearerTokenAuthenticatorRepository,
                                         fingerprintGenerator: FingerprintGenerator,
+                                        cookieHeaderEncoding: CookieHeaderEncoding,
                                         idGenerator: IDGenerator,
                                         clock: Clock,
                                         userService: UserService,
                                         conf: WkConf)(implicit val executionContext: ExecutionContext)
   extends AuthenticatorService[CombinedAuthenticator] with Logger {
 
-  val cookieAuthenticatorService = new CookieAuthenticatorService(cookieSettings, None, fingerprintGenerator, idGenerator, clock)
-  val tokenAuthenticatorService = new WebknossosBearerTokenAuthenticatorService(tokenSettings, tokenDao, idGenerator, clock, userService, conf)
+  val cookieAuthenticatorService = new CookieAuthenticatorService(
+                                        cookieSettings,
+                                        None,
+                                        new IdentityCookieSigner,
+                                        cookieHeaderEncoding,
+                                        new Base64AuthenticatorEncoder,
+                                        fingerprintGenerator,
+                                        idGenerator,
+                                        clock)
+
+  val tokenAuthenticatorService = new WebknossosBearerTokenAuthenticatorService(
+                                        tokenSettings, tokenDao, idGenerator, clock, userService, conf)
 
   //is actually createCookie, called as "create" because it is the default
   override def create(loginInfo: LoginInfo)(implicit request: RequestHeader): Future[CombinedAuthenticator] = {
@@ -48,7 +66,7 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
     tokenAuthenticator.map(CombinedAuthenticator(_))
   }
 
-  override def retrieve(implicit request: RequestHeader): Future[Option[CombinedAuthenticator]] = {
+  override def retrieve[B](implicit request: ExtractableRequest[B]): Future[Option[CombinedAuthenticator]] = {
     for {
       optionCookie <- cookieAuthenticatorService.retrieve(request)
       optionToken <- tokenAuthenticatorService.retrieve(request)

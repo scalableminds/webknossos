@@ -41,7 +41,7 @@ export type NewTaskType = {
   +teamName: string,
   +taskTypeId: string,
   +csvFile?: File,
-  +nmlFile?: File,
+  +nmlFiles?: File,
 };
 
 export type TaskCreationResponseType = {

@@ -83,6 +83,7 @@ type APIDatasetBaseType = {
   +logoUrl: ?string,
   +lastUsedByUser: number,
   +isForeign: boolean,
+  +sortingKey: number,
 };
 
 export type APIMaybeUnimportedDatasetType = APIDatasetBaseType & {
@@ -107,6 +108,8 @@ export type APITeamMembershipType = {
 };
 
 export type ExperienceMapType = { +[string]: number };
+
+export type ExperienceDomainListType = Array<string>;
 
 export type APIUserBaseType = {
   +email: string,

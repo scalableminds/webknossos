@@ -6,21 +6,22 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.Fox
 import models.team._
 import models.user.UserTeamRolesDAO
-import oxalis.security.WebknossosSilhouette
+import oxalis.security.WkEnv
+import com.mohiva.play.silhouette.api.Silhouette
+import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import play.api.mvc.Action
 import utils.ObjectId
 
+import scala.concurrent.ExecutionContext
+
 class TeamController @Inject()(teamDAO: TeamDAO,
                                userTeamRolesDAO: UserTeamRolesDAO,
                                teamService: TeamService,
-                               sil: WebknossosSilhouette,
-                               val messagesApi: MessagesApi) extends Controller {
-
-  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
+                               sil: Silhouette[WkEnv])
+                              (implicit ec: ExecutionContext)
+extends Controller {
 
   private def teamNameReads: Reads[String] =
     (__ \ "name").read[String]

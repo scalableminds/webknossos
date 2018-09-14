@@ -11,18 +11,18 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
   override def raw = configuration
 
   object Http {
-    val uri = getString("http.uri")
+    val uri = get[String]("http.uri")
   }
 
   object Braingames {
     object Binary {
       object ChangeHandler {
-        val enabled = getBoolean("braingames.binary.changeHandler.enabled")
-        val tickerInterval = getInt("braingames.binary.changeHandler.tickerInterval") minutes
+        val enabled = get[Boolean]("braingames.binary.changeHandler.enabled")
+        val tickerInterval = get[Int]("braingames.binary.changeHandler.tickerInterval") minutes
       }
-      val baseFolder = getString("braingames.binary.baseFolder")
-      val loadTimeout = getInt("braingames.binary.loadTimeout") seconds
-      val cacheMaxSize = getInt("braingames.binary.cacheMaxSize")
+      val baseFolder = get[String]("braingames.binary.baseFolder")
+      val loadTimeout = get[Int]("braingames.binary.loadTimeout") seconds
+      val cacheMaxSize = get[Int]("braingames.binary.cacheMaxSize")
 
       val children = List(ChangeHandler)
     }
@@ -30,16 +30,16 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
   }
 
   object Datastore {
-    val key = getString("datastore.key")
-    val name = getString("datastore.name")
+    val key = get[String]("datastore.key")
+    val name = get[String]("datastore.name")
     object Oxalis {
-      val uri = getString("datastore.oxalis.uri")
-      val secured = getBoolean("datastore.oxalis.secured")
-      val pingIntervalMinutes = getInt("datastore.oxalis.pingIntervalMinutes") minutes
+      val uri = get[String]("datastore.oxalis.uri")
+      val secured = get[Boolean]("datastore.oxalis.secured")
+      val pingIntervalMinutes = get[Int]("datastore.oxalis.pingIntervalMinutes") minutes
     }
     object Fossildb {
-      val address = getString("datastore.fossildb.address")
-      val port = getInt("datastore.fossildb.port")
+      val address = get[String]("datastore.fossildb.address")
+      val port = get[Int]("datastore.fossildb.port")
     }
     val children = List(Oxalis, Fossildb)
   }

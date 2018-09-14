@@ -229,14 +229,15 @@ class ReactRouter extends React.Component<Props> {
                 path="/annotations/:type/:id"
                 render={this.tracingView}
                 serverAuthenticationCallback={async ({ match }: ContextRouter) => {
-                  const isReadOnly = window.location.pathname.endsWith("readOnly");
-                  if (isReadOnly) {
+                  try {
                     const annotationInformation = await getAnnotationInformation(
                       match.params.id || "",
                       Enum.coalesce(APITracingTypeEnum, match.params.type) ||
                         APITracingTypeEnum.Explorational,
                     );
                     return annotationInformation.isPublic;
+                  } catch (ex) {
+                    // Annotation could not be found
                   }
                   return false;
                 }}
@@ -356,7 +357,15 @@ class ReactRouter extends React.Component<Props> {
               />
 
               <Route path="/auth/resetPassword" component={StartResetPasswordView} />
-              <Route path="/auth/finishResetPassword" component={FinishResetPasswordView} />
+              <Route
+                path="/auth/finishResetPassword"
+                render={({ location }: ContextRouter) => {
+                  const params = Utils.getUrlParamsObjectFromString(location.search);
+                  const resetToken =
+                    typeof params.token === "string" ? decodeURI(params.token) : "";
+                  return <FinishResetPasswordView resetToken={resetToken} />;
+                }}
+              />
               <Route path="/spotlight" component={SpotlightView} />
               <Route path="/datasets/:id/view" render={this.tracingViewMode} />
               <Route path="/imprint" component={Imprint} />

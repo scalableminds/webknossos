@@ -6,21 +6,20 @@ import javax.inject.Inject
 import com.typesafe.config.ConfigRenderOptions
 import models.analytics.{AnalyticsDAO, AnalyticsEntry}
 import models.binary.DataStoreHandler
-import oxalis.security.WebknossosSilhouette
-import play.api.i18n.MessagesApi
+import oxalis.security.WkEnv
+import com.mohiva.play.silhouette.api.Silhouette
 import play.api.libs.json.Json
-import play.api.libs.concurrent.Execution.Implicits._
 import utils.{ObjectId, SQLClient, SimpleSQLDAO, WkConf}
 import slick.jdbc.PostgresProfile.api._
+
+import scala.concurrent.ExecutionContext
 
 class Application @Inject()(analyticsDAO: AnalyticsDAO,
                             releaseInformationDAO: ReleaseInformationDAO,
                             conf: WkConf,
-                            sil: WebknossosSilhouette,
-                            val messagesApi: MessagesApi) extends Controller {
-
-  implicit def userAwareRequestToDBAccess(implicit request: sil.UserAwareRequest[_]) = DBAccessContext(request.identity)
-  implicit def securedRequestToDBAccess(implicit request: sil.SecuredRequest[_]) = DBAccessContext(Some(request.identity))
+                            sil: Silhouette[WkEnv])
+                           (implicit ec: ExecutionContext)
+  extends Controller {
 
   def buildInfo = sil.UserAwareAction.async { implicit request =>
     val token = request.identity.flatMap { user =>
@@ -55,8 +54,8 @@ class Application @Inject()(analyticsDAO: AnalyticsDAO,
 }
 
 
-class ReleaseInformationDAO @Inject()(sqlClient: SQLClient) extends SimpleSQLDAO(sqlClient) with FoxImplicits {
-  def getSchemaVersion = {
+class ReleaseInformationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) with FoxImplicits {
+  def getSchemaVersion(implicit ec: ExecutionContext) = {
     for {
       rList <- run(sql"select schemaVersion from webknossos.releaseInformation".as[Int])
       r <- rList.headOption.toFox

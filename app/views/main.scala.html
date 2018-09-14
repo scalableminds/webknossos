@@ -17,6 +17,7 @@
       data-airbrake-environment-name="@(conf.Airbrake.environment)"></script>
     <script type="text/javascript" src="@routes.Assets.at("bundle/vendors~main.js")?nocache=@(webknossos.BuildInfo.commitHash)"></script>
     <script type="text/javascript" src="@routes.Assets.at("bundle/main.js")?nocache=@(webknossos.BuildInfo.commitHash)"></script>
+    <script type="text/javascript" src="@routes.Assets.at("bundle/libs.dll.js")?nocache=@(webknossos.BuildInfo.commitHash)"></script>
   </head>
   <body>
     <main id="main-container"></main>

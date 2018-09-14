@@ -7,6 +7,7 @@ module.exports = function(env = {}) {
   const UglifyJsPlugin = require("uglifyjs-webpack-plugin");
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
   const HardSourceWebpackPlugin = require("hard-source-webpack-plugin");
+  const AutoDllPlugin = require("autodll-webpack-plugin");
 
   var srcPath = path.resolve(__dirname, "app/assets/javascripts/");
   var nodePath = path.join(__dirname, "node_modules/");
@@ -24,6 +25,24 @@ module.exports = function(env = {}) {
       chunkFilename: "[name].css",
     }),
     new HardSourceWebpackPlugin(),
+    new AutoDllPlugin({
+      filename: "libs.dll.js",
+      entry: {
+        vendor: [
+          "react",
+          "react-dom",
+          "antd",
+          "lodash",
+          "three",
+          "protobufjs",
+          "moment",
+          "pako",
+          "tween.js",
+          "redux",
+          "redux-saga",
+        ],
+      },
+    }),
   ];
 
   if (env.production) {

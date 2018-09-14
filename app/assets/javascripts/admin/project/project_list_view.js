@@ -189,7 +189,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
           <div className="clearfix" style={{ margin: "20px 0px" }} />
           <Spin spinning={this.state.isLoading} size="large">
             <Table
-              dataSource={Utils.filterWithSearchQueryOR(
+              dataSource={Utils.filterWithSearchQueryAND(
                 this.state.projects,
                 ["name", "team", "priority", "owner", "numberOfOpenAssignments"],
                 this.state.searchQuery,

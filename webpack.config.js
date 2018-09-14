@@ -1,5 +1,4 @@
 module.exports = function(env = {}) {
-  env.production = true;
   /* eslint no-var:0, import/no-extraneous-dependencies:0, global-require:0, func-names:0 */
   var webpack = require("webpack");
   var fs = require("fs");

@@ -88,7 +88,7 @@ jobs:
             - "node_modules/.cache/uglifyjs-webpack-plugin"
 
       - save_cache:
-          key: webpack-hard-source-cache-{{ .Branch }}-{{ .Revision }}
+          key: webpack-hard-source-cache-{{ .Branch }}-{{ checksum "yarn.lock" }}-{{ .Revision }}
           paths:
             - "node_modules/.cache/hard-source"
 

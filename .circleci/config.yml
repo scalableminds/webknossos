@@ -186,7 +186,7 @@ jobs:
             for i in {1..5}; do # retry
               URL=https://master.webknossos.xyz/ \
               yarn test-screenshot || s=$?
-              sleep 30
+              sleep 10
             done
             (exit $s)
 

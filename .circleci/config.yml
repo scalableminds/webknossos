@@ -169,9 +169,12 @@ jobs:
             wait
       - run:
           name: Run screenshot-tests
-          command: >
-            URL=https://master.webknossos.xyz/
-            yarn test-screenshot
+          command: |
+            for i in {1..5}; do # retry
+              URL=https://master.webknossos.xyz/ \
+              yarn test-screenshot || s=$?
+            done
+            (exit $s)
 
 workflows:
   version: 2

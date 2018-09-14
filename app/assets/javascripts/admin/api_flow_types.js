@@ -340,7 +340,9 @@ export type APIBuildInfoType = {
     ciTag: string,
     ciBuild: string,
     gitTag: string,
-    oldestSupportedVersion: string,
+    version: string,
+    oldestSupportedDatastoreVersion: string,
+    oldestSupportedWebknossosVersion: string,
   },
   "webknossos-wrap": {
     builtAtMillis: string,
@@ -350,6 +352,19 @@ export type APIBuildInfoType = {
     version: string,
     sbtVersion: string,
     builtAtString: string,
+  },
+  webknossosDatastore?: {
+    name: string,
+    commitHash: string,
+    scalaVersion: string,
+    version: string,
+    sbtVersion: string,
+    commitDate: string,
+    ciTag: string,
+    ciBuild: string,
+    gitTag: string,
+    version: string,
+    oldestSupportedWebknossosVersion: string,
   },
 };
 

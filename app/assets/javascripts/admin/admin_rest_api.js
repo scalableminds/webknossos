@@ -810,7 +810,7 @@ export function getBuildInfo(): Promise<APIBuildInfoType> {
 }
 
 // ### BuildInfo datastore
-export function getDataStoreBuildInfo(dataStoreUrl): Promise<APIBuildInfoType> {
+export function getDataStoreBuildInfo(dataStoreUrl: string): Promise<APIBuildInfoType> {
   return Request.receiveJSON(`${dataStoreUrl}/api/buildinfo`);
 }
 

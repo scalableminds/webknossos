@@ -37,6 +37,10 @@ object BuildInfoSettings {
     }
   }.toString()
 
+  def version() = {
+    if(ciTag != "") ciTag else gitTag+(if(ciBuild != "") ciBuild else "-dev")
+  }
+
   val ciBuild = if (System.getenv().containsKey("CIRCLE_BUILD_NUM")) System.getenv().get("CIRCLE_BUILD_NUM") else "";
   val ciTag = if (System.getenv().containsKey("CIRCLE_TAG")) System.getenv().get("CIRCLE_TAG") else "";
 
@@ -48,7 +52,9 @@ object BuildInfoSettings {
       "ciBuild" -> ciBuild,
       "ciTag" -> ciTag,
       "gitTag" -> gitTag,
-      "oldestSupportedVersion" -> "test-tag-0"
+      "version" -> version(),
+      "oldestSupportedDatastoreVersion" -> "18.09.0",
+      "oldestSupportedWebknossosVersion" -> "18.09.0"
     ),
     buildInfoPackage := "webknossos",
     buildInfoOptions := Seq(BuildInfoOption.ToJson)
@@ -61,7 +67,8 @@ object BuildInfoSettings {
       "ciBuild" -> ciBuild,
       "ciTag" -> ciTag,
       "gitTag" -> gitTag,
-      "oldestSupportedVersion" -> "test-tag-0"
+      "version" -> version(),
+      "oldestSupportedWebknossosVersion" -> "18.09.0"
     ),
     buildInfoPackage := "webknossosDatastore",
     buildInfoOptions := Seq(BuildInfoOption.ToJson)

@@ -239,7 +239,7 @@ class Request {
 
   handleError = (
     requestedUrl: string,
-    dontShowErrorToast,
+    dontShowErrorToast: boolean,
     error: Response | Error,
   ): Promise<void> => {
     // Check whether this request failed due to a problematic

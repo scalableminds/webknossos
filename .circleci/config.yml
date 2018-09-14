@@ -155,17 +155,27 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Upgrade dev-deployment
+          name: Remove dev-deployment
           command: >
             curl
             -X POST
             -H "X-Auth-Token: $RELEASE_API_TOKEN"
-            https://kube.scm.io/upgrade/webknossos/dev/master?user=CI+%28nightly%29
+            https://kube.scm.io/hooks/remove/webknossos/dev/master?user=CI+%28nightly%29
       - run:
-          name: Install dependencies and sleep at least 3min
+          name: Wait 3min
+          command: sleep 180
+      - run:
+          name: Install dev-deployment
+          command: >
+            curl
+            -X POST
+            -H "X-Auth-Token: $RELEASE_API_TOKEN"
+            https://kube.scm.io/hooks/install/webknossos/dev/master?user=CI+%28nightly%29
+      - run:
+          name: Install dependencies and sleep at least 10min
           command: |
             yarn install --frozen-lockfile &
-            sleep 180 &
+            sleep 600 &
             wait
       - run:
           name: Run screenshot-tests
@@ -173,6 +183,7 @@ jobs:
             for i in {1..5}; do # retry
               URL=https://master.webknossos.xyz/ \
               yarn test-screenshot || s=$?
+              sleep 60
             done
             (exit $s)
 

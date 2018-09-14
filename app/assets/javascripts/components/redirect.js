@@ -4,11 +4,11 @@ import { withRouter } from "react-router-dom";
 import type { RouterHistory } from "react-router-dom";
 
 type Props = {
-  redirectTo: Function,
+  redirectTo: () => Promise<string>,
   history: RouterHistory,
 };
 
-class CustomRedirect extends React.PureComponent<Props> {
+class AsyncRedirect extends React.PureComponent<Props> {
   componentDidMount() {
     this.redirect();
   }
@@ -23,4 +23,4 @@ class CustomRedirect extends React.PureComponent<Props> {
   }
 }
 
-export default withRouter(CustomRedirect);
+export default withRouter(AsyncRedirect);

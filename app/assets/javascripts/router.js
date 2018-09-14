@@ -12,7 +12,7 @@ import { ControlModeEnum } from "oxalis/constants";
 import { APITracingTypeEnum } from "admin/api_flow_types";
 import { getAnnotationInformation, getOrganizationForDataset } from "admin/admin_rest_api";
 import SecuredRoute from "components/secured_route";
-import CustomRedirect from "components/redirect";
+import AsyncRedirect from "components/redirect";
 import Navbar from "navbar";
 import { Imprint, Privacy } from "components/legal";
 
@@ -384,7 +384,7 @@ class ReactRouter extends React.Component<Props> {
               <Route
                 path="/datasets/:id/view"
                 render={({ match }: ContextRouter) => (
-                  <CustomRedirect
+                  <AsyncRedirect
                     redirectTo={async () => {
                       const datasetName = match.params.id || "";
                       const organizationName = await getOrganizationForDataset(datasetName);

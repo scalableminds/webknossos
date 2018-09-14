@@ -97,7 +97,6 @@ export async function initialize(
 
     Store.dispatch(setTaskAction(annotation.task));
   } else {
-    // In View Mode the TraceOrViewCommandType contains the dataset name and the owning organization
     const { name, owningOrganization } = initialCommandType;
     datasetId = { name, owningOrganization };
   }

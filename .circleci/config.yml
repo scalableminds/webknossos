@@ -31,8 +31,12 @@ jobs:
             - yarn-cache-
       - restore_cache:
           keys:
-            - webpack-cache-{{ .Branch }}
-            - webpack-cache-master
+            - webpack-uglifyjs-cache-{{ .Branch }}
+            - webpack-uglifyjs-cache-master
+      - restore_cache:
+          keys:
+            - webpack-hard-source-cache-{{ .Branch }}
+            - webpack-hard-source-cache-master
       - run:
           name: Assert unique evolution numbers
           command: tools/postgres/assert_unique_evolution_numbers.sh
@@ -79,9 +83,14 @@ jobs:
             - "~/.yarn-cache"
 
       - save_cache:
-          key: webpack-cache-{{ .Branch }}
+          key: webpack-uglifyjs-cache-{{ .Branch }}-{{ .Revision }}
           paths:
             - "node_modules/.cache/uglifyjs-webpack-plugin"
+
+      - save_cache:
+          key: webpack-hard-source-cache-{{ .Branch }}-{{ .Revision }}
+          paths:
+            - "node_modules/.cache/hard-source"
 
       - run:
           name: Build webknossos docker image

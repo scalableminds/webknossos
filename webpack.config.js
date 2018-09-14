@@ -1,10 +1,12 @@
 module.exports = function(env = {}) {
+  env.production = true;
   /* eslint no-var:0, import/no-extraneous-dependencies:0, global-require:0, func-names:0 */
   var webpack = require("webpack");
   var fs = require("fs");
   var path = require("path");
   const UglifyJsPlugin = require("uglifyjs-webpack-plugin");
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+  const HardSourceWebpackPlugin = require("hard-source-webpack-plugin");
 
   var srcPath = path.resolve(__dirname, "app/assets/javascripts/");
   var nodePath = path.join(__dirname, "node_modules/");
@@ -21,6 +23,7 @@ module.exports = function(env = {}) {
       filename: "[name].css",
       chunkFilename: "[name].css",
     }),
+    new HardSourceWebpackPlugin(),
   ];
 
   if (env.production) {

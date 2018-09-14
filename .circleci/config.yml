@@ -203,8 +203,9 @@ workflows:
       - nightly
     triggers:
       - schedule:
-          cron: "15 * * * *"
+          # 02:15 AM UTC
+          cron: "15 2 * * *"
           filters:
             branches:
               only:
-                - nightly-ci
+                - master

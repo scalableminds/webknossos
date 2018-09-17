@@ -113,27 +113,15 @@ jobs:
       - run:
           name: Lint frontend code
           command: |
-            if [ "${CIRCLE_BRANCH}" == "master" ]; then
-              echo "Skipping this step on master..."
-            else
-              docker-compose run base bash -c "yarn run lint && yarn run am-i-pretty"
-            fi
+            .circleci/not-on-master.sh docker-compose run base bash -c "yarn run lint && yarn run am-i-pretty
       - run:
           name: Run frontend tests
           command: |
-            if [ "${CIRCLE_BRANCH}" == "master" ]; then
-              echo "Skipping this step on master..."
-            else
-              docker-compose run base yarn test-verbose
-            fi
+            .circleci/not-on-master.sh docker-compose run base yarn test-verbose
       - run:
           name: Run backend tests
           command: |
-            if [ "${CIRCLE_BRANCH}" == "master" ]; then
-              echo "Skipping this step on master..."
-            else
-              docker-compose run backend-tests
-            fi
+            .circleci/not-on-master.sh docker-compose run backend-tests
       - run:
           name: Run end-to-end tests
           command: |
@@ -148,11 +136,7 @@ jobs:
       - run:
           name: Validate frontend types with flow
           command: |
-            if [ "${CIRCLE_BRANCH}" == "master" ]; then
-              echo "Skipping this step on master..."
-            else
-              docker-compose run base yarn flow
-            fi
+            .circleci/not-on-master.sh docker-compose run base yarn flow
       - run:
           name: Start webknossos
           background: true

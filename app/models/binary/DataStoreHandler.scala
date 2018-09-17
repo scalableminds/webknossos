@@ -16,73 +16,74 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
 import org.apache.commons.codec.binary.Base64
 import oxalis.security.CompactRandomIDGenerator
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.WSResponse
 
+import scala.concurrent.ExecutionContext
+
 object DataStoreHandler {
-  lazy val webKnossosToken = new CompactRandomIDGenerator().generateBlocking
+  lazy val webKnossosToken = CompactRandomIDGenerator.generateBlocking(16)
 }
 
-class DataStoreHandler(dataStore: DataStore, dataSet: DataSet, rpc: RPC) extends LazyLogging {
+class DataStoreHandler(dataStore: DataStore, dataSet: DataSet, rpc: RPC)(implicit ec: ExecutionContext) extends LazyLogging {
 
   def baseInfo = s"Dataset: ${dataSet.name} Datastore: ${dataStore.url}"
 
   def getSkeletonTracing(tracingId: String): Fox[SkeletonTracing] = {
     logger.debug("Called to get SkeletonTracing." + baseInfo)
     rpc(s"${dataStore.url}/data/tracings/skeleton/${tracingId}")
-      .withQueryString("token" -> DataStoreHandler.webKnossosToken)
+      .addQueryString("token" -> DataStoreHandler.webKnossosToken)
       .getWithProtoResponse[SkeletonTracing](SkeletonTracing)
   }
 
   def getSkeletonTracings(tracingIds: List[String]): Fox[SkeletonTracings] = {
     logger.debug("Called to get multiple SkeletonTracings." + baseInfo)
     rpc(s"${dataStore.url}/data/tracings/skeleton/getMultiple")
-      .withQueryString("token" -> DataStoreHandler.webKnossosToken)
+      .addQueryString("token" -> DataStoreHandler.webKnossosToken)
       .postJsonWithProtoResponse[List[TracingSelector], SkeletonTracings](tracingIds.map(TracingSelector(_)))(SkeletonTracings)
   }
 
   def saveSkeletonTracing(tracing: SkeletonTracing): Fox[String] = {
     logger.debug("Called to save SkeletonTracing." + baseInfo)
     rpc(s"${dataStore.url}/data/tracings/skeleton/save")
-      .withQueryString("token" -> DataStoreHandler.webKnossosToken)
+      .addQueryString("token" -> DataStoreHandler.webKnossosToken)
       .postProtoWithJsonResponse[SkeletonTracing, String](tracing)
   }
 
   def saveSkeletonTracings(tracings: SkeletonTracings): Fox[List[Box[String]]] = {
     logger.debug("Called to save SkeletonTracings." + baseInfo)
     rpc(s"${dataStore.url}/data/tracings/skeleton/saveMultiple")
-      .withQueryString("token" -> DataStoreHandler.webKnossosToken)
+      .addQueryString("token" -> DataStoreHandler.webKnossosToken)
       .postProtoWithJsonResponse[SkeletonTracings, List[Box[String]]](tracings)
   }
 
   def duplicateSkeletonTracing(skeletonTracingId: String, versionString: Option[String] = None): Fox[String] = {
     logger.debug("Called to duplicate SkeletonTracing." + baseInfo)
     rpc(s"${dataStore.url}/data/tracings/skeleton/${skeletonTracingId}/duplicate")
-      .withQueryString("token" -> DataStoreHandler.webKnossosToken)
-      .withQueryStringOptional("version", versionString)
+      .addQueryString("token" -> DataStoreHandler.webKnossosToken)
+      .addQueryStringOptional("version", versionString)
       .getWithJsonResponse[String]
   }
 
   def duplicateVolumeTracing(volumeTracingId: String): Fox[String] = {
     logger.debug("Called to duplicate VolumeTracing." + baseInfo)
     rpc(s"${dataStore.url}/data/tracings/volume/${volumeTracingId}/duplicate")
-      .withQueryString("token" -> DataStoreHandler.webKnossosToken)
+      .addQueryString("token" -> DataStoreHandler.webKnossosToken)
       .getWithJsonResponse[String]
   }
 
   def mergeSkeletonTracingsByIds(tracingIds: List[String], persistTracing: Boolean): Fox[String] = {
     logger.debug("Called to merge SkeletonTracings by ids." + baseInfo)
     rpc(s"${dataStore.url}/data/tracings/skeleton/mergedFromIds")
-      .withQueryString("token" -> DataStoreHandler.webKnossosToken)
-      .withQueryString("persist" -> persistTracing.toString)
+      .addQueryString("token" -> DataStoreHandler.webKnossosToken)
+      .addQueryString("persist" -> persistTracing.toString)
       .postWithJsonResponse[List[TracingSelector], String](tracingIds.map(TracingSelector(_)))
   }
 
   def mergeSkeletonTracingsByContents(tracings: SkeletonTracings, persistTracing: Boolean): Fox[String] = {
     logger.debug("Called to merge SkeletonTracings by contents." + baseInfo)
     rpc(s"${dataStore.url}/data/tracings/skeleton/mergedFromContents")
-      .withQueryString("token" -> DataStoreHandler.webKnossosToken)
-      .withQueryString("persist" -> persistTracing.toString)
+      .addQueryString("token" -> DataStoreHandler.webKnossosToken)
+      .addQueryString("persist" -> persistTracing.toString)
       .postProtoWithJsonResponse[SkeletonTracings, String](tracings)
   }
 
@@ -90,12 +91,12 @@ class DataStoreHandler(dataStore: DataStore, dataSet: DataSet, rpc: RPC) extends
     logger.debug("Called to create VolumeTracing." + baseInfo)
     for {
       tracingId <- rpc(s"${dataStore.url}/data/tracings/volume/save")
-        .withQueryString("token" -> DataStoreHandler.webKnossosToken)
+        .addQueryString("token" -> DataStoreHandler.webKnossosToken)
         .postProtoWithJsonResponse[VolumeTracing, String](tracing)
       _ <- initialData match {
         case Some(file) =>
           rpc(s"${dataStore.url}/data/tracings/volume/${tracingId}/initialData")
-            .withQueryString("token" -> DataStoreHandler.webKnossosToken)
+            .addQueryString("token" -> DataStoreHandler.webKnossosToken)
             .post(file)
         case _ =>
           Fox.successful(())
@@ -109,10 +110,10 @@ class DataStoreHandler(dataStore: DataStore, dataSet: DataSet, rpc: RPC) extends
     logger.debug("Called to get VolumeTracing." + baseInfo)
     for {
       tracing <- rpc(s"${dataStore.url}/data/tracings/volume/${tracingId}")
-        .withQueryString("token" -> DataStoreHandler.webKnossosToken)
+        .addQueryString("token" -> DataStoreHandler.webKnossosToken)
         .getWithProtoResponse[VolumeTracing](VolumeTracing)
       data <- rpc(s"${dataStore.url}/data/tracings/volume/${tracingId}/data")
-        .withQueryString("token" -> DataStoreHandler.webKnossosToken)
+        .addQueryString("token" -> DataStoreHandler.webKnossosToken)
         .getStream
     } yield {
       (tracing, data)
@@ -122,19 +123,19 @@ class DataStoreHandler(dataStore: DataStore, dataSet: DataSet, rpc: RPC) extends
   def requestDataLayerThumbnail(dataLayerName: String, width: Int, height: Int, zoom: Option[Int], center: Option[Point3D]): Fox[Array[Byte]] = {
     logger.debug("Thumbnail called for: " + dataSet.name + " Layer: " + dataLayerName)
     rpc(s"${dataStore.url}/data/datasets/${dataSet.urlEncodedName}/layers/$dataLayerName/thumbnail.json")
-      .withQueryString("token" -> DataStoreHandler.webKnossosToken)
-      .withQueryString( "width" -> width.toString, "height" -> height.toString)
-      .withQueryStringOptional("zoom", zoom.map(_.toString))
-      .withQueryStringOptional("centerX", center.map(_.x.toString))
-      .withQueryStringOptional("centerY", center.map(_.y.toString))
-      .withQueryStringOptional("centerZ", center.map(_.z.toString))
+      .addQueryString("token" -> DataStoreHandler.webKnossosToken)
+      .addQueryString( "width" -> width.toString, "height" -> height.toString)
+      .addQueryStringOptional("zoom", zoom.map(_.toString))
+      .addQueryStringOptional("centerX", center.map(_.x.toString))
+      .addQueryStringOptional("centerY", center.map(_.y.toString))
+      .addQueryStringOptional("centerZ", center.map(_.z.toString))
       .getWithJsonResponse[ImageThumbnail].map(thumbnail => Base64.decodeBase64(thumbnail.value))
   }
 
   def importDataSource: Fox[WSResponse] = {
     logger.debug("Import called for: " + dataSet.name)
     rpc(s"${dataStore.url}/data/datasets/${dataSet.urlEncodedName}/import")
-      .withQueryString("token" -> DataStoreHandler.webKnossosToken)
+      .addQueryString("token" -> DataStoreHandler.webKnossosToken)
       .post()
   }
 }

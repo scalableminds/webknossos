@@ -8,6 +8,7 @@ import com.scalableminds.webknossos.datastore.geometry.{Point3D, Vector3D}
 import models.annotation.nml.{NmlParser, NmlWriter}
 import net.liftweb.common.{Box, Full}
 import org.scalatest.FlatSpec
+import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.libs.iteratee.Iteratee
 import utils.ObjectId
 

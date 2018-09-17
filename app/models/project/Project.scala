@@ -10,14 +10,13 @@ import models.task.TaskDAO
 import models.team.TeamDAO
 import models.user.{User, UserService}
 import net.liftweb.common.Full
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{Json, _}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
 case class Project(
@@ -51,7 +50,7 @@ object Project {
 
 }
 
-class ProjectDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[Project, ProjectsRow, Projects](sqlClient) {
+class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SQLDAO[Project, ProjectsRow, Projects](sqlClient) {
   val collection = Projects
 
   def idColumn(x: Projects): Rep[String] = x._Id
@@ -147,7 +146,8 @@ class ProjectDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[Project, Project
 }
 
 
-class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userService: UserService, taskDAO: TaskDAO) extends LazyLogging with FoxImplicits {
+class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userService: UserService, taskDAO: TaskDAO)(implicit ec: ExecutionContext)
+  extends LazyLogging with FoxImplicits {
 
   def deleteOne(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[Boolean] = {
     val futureFox: Future[Fox[Boolean]] = for {

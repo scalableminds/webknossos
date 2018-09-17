@@ -43,6 +43,7 @@ import type {
   ServerVolumeTracingType,
   APIAnnotationTypeCompact,
   APIUpdateActionBatch,
+  ExperienceDomainListType,
 } from "admin/api_flow_types";
 import { APITracingTypeEnum } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/task/task_search_form";
@@ -831,4 +832,9 @@ export function getFeatureToggles(): Promise<APIFeatureToggles> {
 
 export function getOperatorData(): Promise<string> {
   return Request.receiveJSON("/api/operatorData");
+}
+
+// ## Experience Domains
+export function getExistingExperienceDomains(): Promise<ExperienceDomainListType> {
+  return Request.receiveJSON("/api/tasks/experienceDomains");
 }

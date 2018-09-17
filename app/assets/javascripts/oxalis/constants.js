@@ -17,6 +17,12 @@ export type BoundingBoxType = {
   min: Vector3,
   max: Vector3,
 };
+export type Rect = {
+  top: number,
+  left: number,
+  width: number,
+  height: number,
+};
 
 export const AnnotationContentTypes = ["skeleton", "volume", "hybrid"];
 export const Vector2Indicies = [0, 1];
@@ -31,8 +37,10 @@ export const OrthoViews = {
   PLANE_XZ: "PLANE_XZ",
   TDView: "TDView",
 };
+export const ArbitraryViewport = "arbitraryViewport";
 export type OrthoViewType = $Keys<typeof OrthoViews>;
 export type OrthoViewMapType<T> = { [key: OrthoViewType]: T };
+export type ViewportType = OrthoViewType | typeof ArbitraryViewport;
 export const OrthoViewValues: Array<OrthoViewType> = Object.keys(OrthoViews);
 export const OrthoViewIndices = {
   PLANE_XY: OrthoViewValues.indexOf("PLANE_XY"),
@@ -133,8 +141,8 @@ const Constants = {
 
   FPS: 50,
 
-  MIN_SCALE: 0.5,
-  MAX_SCALE: 20,
+  MIN_LAYOUT_SCALE: 1,
+  MAX_LAYOUT_SCALE: 5,
 
   MIN_BRUSH_SIZE: 5,
   MAX_BRUSH_SIZE: 5000,

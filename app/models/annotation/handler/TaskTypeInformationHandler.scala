@@ -6,9 +6,10 @@ import javax.inject.Inject
 import models.annotation._
 import models.task.{TaskDAO, TaskTypeDAO}
 import models.user.{User, UserService}
-import play.api.libs.concurrent.Execution.Implicits._
 import models.annotation.AnnotationState._
 import utils.ObjectId
+
+import scala.concurrent.ExecutionContext
 
 
 class TaskTypeInformationHandler @Inject()(taskTypeDAO: TaskTypeDAO,
@@ -16,7 +17,8 @@ class TaskTypeInformationHandler @Inject()(taskTypeDAO: TaskTypeDAO,
                                            userService: UserService,
                                            annotationDAO: AnnotationDAO,
                                            annotationMerger: AnnotationMerger
-                                          ) extends AnnotationInformationHandler with FoxImplicits {
+                                          )(implicit val ec: ExecutionContext)
+  extends AnnotationInformationHandler with FoxImplicits {
 
   override def provideAnnotation(taskTypeId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
     for {

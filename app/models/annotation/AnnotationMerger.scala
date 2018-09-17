@@ -7,12 +7,14 @@ import javax.inject.Inject
 import models.annotation.AnnotationType.AnnotationType
 import models.binary.{DataSetDAO, DataSetService}
 import models.user.User
-import play.api.libs.concurrent.Execution.Implicits._
 import utils.ObjectId
+
+import scala.concurrent.ExecutionContext
 
 class AnnotationMerger @Inject()(dataSetDAO: DataSetDAO,
                                  dataSetService: DataSetService
-                                ) extends FoxImplicits with LazyLogging {
+                                )(implicit ec: ExecutionContext)
+  extends FoxImplicits with LazyLogging {
 
   def mergeTwo(
                 annotationA: Annotation,

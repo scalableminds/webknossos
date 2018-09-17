@@ -12,6 +12,7 @@ const FormItem = Form.Item;
 type Props = {
   form: Object,
   history: RouterHistory,
+  resetToken: string,
 };
 
 type State = {
@@ -28,7 +29,13 @@ class FinishResetPasswordView extends React.PureComponent<Props, State> {
 
     this.props.form.validateFieldsAndScroll((err: ?Object, formValues: Object) => {
       if (!err) {
-        Request.sendJSONReceiveJSON("/api/auth/resetPassword", { data: formValues }).then(() => {
+        const data = formValues;
+        if (this.props.resetToken === "") {
+          Toast.error(messages["auth.reset_token_not_supplied"]);
+          return;
+        }
+        data.token = this.props.resetToken;
+        Request.sendJSONReceiveJSON("/api/auth/resetPassword", { data }).then(() => {
           Toast.success(messages["auth.reset_pw_confirmation"]);
           this.props.history.push("/auth/login");
         });
@@ -66,16 +73,6 @@ class FinishResetPasswordView extends React.PureComponent<Props, State> {
         <Col span={8}>
           <h3>Reset Password</h3>
           <Form onSubmit={this.handleSubmit}>
-            <FormItem>
-              {getFieldDecorator("token", {
-                rules: [
-                  {
-                    required: true,
-                    message: messages["auth.reset_token"],
-                  },
-                ],
-              })(<Input type="text" placeholder="Token" />)}
-            </FormItem>
             <FormItem hasFeedback>
               {getFieldDecorator("password.password1", {
                 rules: [

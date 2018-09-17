@@ -70,7 +70,7 @@ In order to restore the current window, a reload is necessary.`,
     "The next task will most likely be part of project <%- projectName %>",
   ),
   "task.confirm_reset": "Do you really want to reset this task?",
-  "task.reset_success": "Annotation was successfully reset.",
+  "annotation.reset_success": "Annotation was successfully reset.",
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
   "dataset.clear_cache_success": "The dataset was reloaded successfully",
@@ -125,6 +125,8 @@ In order to restore the current window, a reload is necessary.`,
   "auth.reset_new_password": "Please input your new password!",
   "auth.reset_new_password2": "Please repeat your new password!",
   "auth.reset_token": "Please input the token!",
+  "auth.reset_token_not_supplied":
+    "There was no token found in the URL. Check your E-Mails to get the correct URL.",
   "auth.reset_email_notification":
     "An email with instructions to reset your password has been send to you.",
   "auth.reset_pw_confirmation": "Your password was successfully changed",

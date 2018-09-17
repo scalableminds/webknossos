@@ -357,7 +357,15 @@ class ReactRouter extends React.Component<Props> {
               />
 
               <Route path="/auth/resetPassword" component={StartResetPasswordView} />
-              <Route path="/auth/finishResetPassword" component={FinishResetPasswordView} />
+              <Route
+                path="/auth/finishResetPassword"
+                render={({ location }: ContextRouter) => {
+                  const params = Utils.getUrlParamsObjectFromString(location.search);
+                  const resetToken =
+                    typeof params.token === "string" ? decodeURI(params.token) : "";
+                  return <FinishResetPasswordView resetToken={resetToken} />;
+                }}
+              />
               <Route path="/spotlight" component={SpotlightView} />
               <Route path="/datasets/:id/view" render={this.tracingViewMode} />
               <Route path="/imprint" component={Imprint} />

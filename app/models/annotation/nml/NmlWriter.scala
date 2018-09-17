@@ -9,14 +9,13 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.{BoundingBox, Point3D, Vector3D}
 import com.sun.xml.txw2.output.IndentingXMLStreamWriter
 import javax.inject.Inject
-import models.annotation.{Annotation, AnnotationService}
+import models.annotation.{Annotation}
 import models.task.Task
 import models.user.User
 import org.joda.time.DateTime
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
 case class NmlParameters(
@@ -32,7 +31,7 @@ case class NmlParameters(
                           taskBoundingBox: Option[BoundingBox]
                         )
 
-class NmlWriter @Inject() extends FoxImplicits {
+class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
   private lazy val outputService = XMLOutputFactory.newInstance()
 
   def toNmlStream(skeletonTracing: Option[SkeletonTracing],

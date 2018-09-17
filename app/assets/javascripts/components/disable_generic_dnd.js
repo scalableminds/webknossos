@@ -13,7 +13,7 @@ export default class DisableGenericDnd extends React.Component<{}> {
     window.removeEventListener("drop", this.preventDefault);
   }
 
-  preventDefault = e => {
+  preventDefault = (e: Event) => {
     e.preventDefault();
   };
 

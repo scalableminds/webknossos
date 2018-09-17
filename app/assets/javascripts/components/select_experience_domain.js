@@ -8,7 +8,7 @@ import { getExistingExperienceDomains } from "admin/admin_rest_api";
 const Option = Select.Option;
 
 type Props = {
-  value: ?string,
+  value: ?string | ?Array<string>,
   width: number,
   placeholder: string,
   notFoundContent: ?string,

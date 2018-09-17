@@ -5,6 +5,7 @@ module.exports = function(env = {}) {
   var path = require("path");
   const UglifyJsPlugin = require("uglifyjs-webpack-plugin");
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+  const HardSourceWebpackPlugin = require("hard-source-webpack-plugin");
 
   var srcPath = path.resolve(__dirname, "app/assets/javascripts/");
   var nodePath = path.join(__dirname, "node_modules/");
@@ -21,7 +22,7 @@ module.exports = function(env = {}) {
       filename: "[name].css",
       chunkFilename: "[name].css",
     }),
-
+    new HardSourceWebpackPlugin(),
     // GoldenLayout requires these libraries to be available in
     // the global scope
     new webpack.ProvidePlugin({

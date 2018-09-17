@@ -15,7 +15,6 @@ import SecuredRoute from "components/secured_route";
 import Navbar from "navbar";
 import { Imprint, Privacy } from "components/legal";
 
-
 import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
 import DashboardView, { urlTokenToTabKeyMap } from "dashboard/dashboard_view";
 import SpotlightView from "dashboard/spotlight_view";

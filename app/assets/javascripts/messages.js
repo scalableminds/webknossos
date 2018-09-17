@@ -7,10 +7,10 @@ export default {
   unknown_error:
     "An unknown error occured. Please try again or check the console for more details.",
   "datastore.health": _.template(
-    "The datastore server at <%- url %> does not seem to be available. This is likely due to an update. Please check back in five minutes.",
+    "The datastore server at <%- url %> does not seem too be available. This is likely due to an update. Please check back in five minutes.",
   ),
   "datastore.version.webknossos": _.template(
-    "The version of webknossos (<%- webknossosVersion %>) is to old for the datastore (<%- url %>) with the version (<%- dataStoreVersion %>). Please upgrade your webknossos instance",
+    "The version of webknossos (<%- webknossosVersion %>) is too old for the datastore (<%- url %>) with the version (<%- dataStoreVersion %>). Please upgrade your webknossos instance",
   ),
   "datastore.version.datastore": _.template(
     "The version (<%- dataStoreVersion %>) of the datastore (<%- url %>) is to old for your webknossos version (<%- webknossosVersion %>).",

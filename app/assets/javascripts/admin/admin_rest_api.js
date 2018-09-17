@@ -677,7 +677,7 @@ export async function isDatasetNameValid(dataSetName: string): Promise<?string> 
   }
   try {
     await Request.receiveJSON(`/api/datasets/${dataSetName}/isValidNewName`, {
-      dontShowErrorToast: true,
+      showErrorToast: false,
     });
     return null;
   } catch (ex) {
@@ -777,10 +777,10 @@ export async function getTimeTrackingForUser(
 
 export async function getProjectProgressReport(
   teamId: string,
-  dontShowErrorToast?: boolean = false,
+  showErrorToast?: boolean = true,
 ): Promise<Array<APIProjectProgressReportType>> {
   const progressData = await Request.receiveJSON(`/api/teams/${teamId}/progressOverview`, {
-    dontShowErrorToast,
+    showErrorToast,
   });
   assertResponseLimit(progressData);
   return progressData;

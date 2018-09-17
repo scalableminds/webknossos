@@ -85,4 +85,5 @@ declare module "antd" {
     static Dragger: React$ComponentType<P>;
   }
   declare class Popconfirm<P> extends React$Component<P> {}
+  declare class Badge<P> extends React$Component<P> {}
 }

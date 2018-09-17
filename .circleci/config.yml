@@ -29,6 +29,12 @@ jobs:
           keys:
             - yarn-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "yarn.lock" }}
             - yarn-cache-{{ checksum ".circleci/cache_version" }}-
+      - run:
+          name: Assert unique evolution numbers
+          command: tools/postgres/assert_unique_evolution_numbers.sh
+      - run:
+          name: Install frontend dependencies
+          command: docker-compose run base yarn install --frozen-lockfile
       - restore_cache:
           keys:
             - webpack-uglifyjs-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
@@ -37,12 +43,6 @@ jobs:
           keys:
             - webpack-hard-source-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ checksum "yarn.lock" }}
             - webpack-hard-source-cache-{{ checksum ".circleci/cache_version" }}-master-{{ checksum "yarn.lock" }}
-      - run:
-          name: Assert unique evolution numbers
-          command: tools/postgres/assert_unique_evolution_numbers.sh
-      - run:
-          name: Install frontend dependencies
-          command: docker-compose run base yarn install --frozen-lockfile
       - run:
           name: Assert schema.sql and evolutions are equal
           command: |

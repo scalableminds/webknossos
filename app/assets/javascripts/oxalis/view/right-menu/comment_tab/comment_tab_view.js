@@ -345,7 +345,7 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
     );
 
     return (
-      <div className="flex-column">
+      <div className="flex-column" style={{ height: "inherit" }}>
         {this.renderMarkdownModal()}
         <InputGroup compact>
           <SearchPopover

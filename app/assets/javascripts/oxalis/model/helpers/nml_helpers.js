@@ -351,6 +351,13 @@ function _parseBool(obj: Object, key: string, defaultValue?: boolean): boolean {
   return obj[key] === "true";
 }
 
+function _parseEntities(obj: Object, key: string): string {
+  if (obj[key] == null) {
+    throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
+  }
+  return Saxophone.parseEntities(obj[key]);
+}
+
 function findTreeByNodeId(trees: TreeMapType, nodeId: number): ?TreeType {
   return _.values(trees).find(tree => tree.nodes.has(nodeId));
 }
@@ -447,7 +454,7 @@ export function parseNml(
                 _parseFloat(attr, "color.g", DEFAULT_COLOR[1]),
                 _parseFloat(attr, "color.b", DEFAULT_COLOR[2]),
               ],
-              name: Saxophone.parseEntities(attr.name),
+              name: _parseEntities(attr, "name"),
               comments: [],
               nodes: new DiffableMap(),
               branchPoints: [],
@@ -519,7 +526,7 @@ export function parseNml(
           case "comment": {
             const currentComment = {
               nodeId: _parseInt(attr, "node"),
-              content: Saxophone.parseEntities(attr.content),
+              content: _parseEntities(attr, "content"),
             };
             const tree = findTreeByNodeId(trees, currentComment.nodeId);
             if (tree == null)
@@ -545,7 +552,7 @@ export function parseNml(
           case "group": {
             const newGroup = {
               groupId: _parseInt(attr, "id"),
-              name: Saxophone.parseEntities(attr.name),
+              name: _parseEntities(attr, "name"),
               children: [],
             };
             if (existingGroupIds.has(newGroup.groupId))

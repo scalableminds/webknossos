@@ -1,3 +1,6 @@
+// @flow
+
+import _ from "lodash";
 import * as React from "react";
 import { Select } from "antd";
 import type { ExperienceDomainListType } from "admin/api_flow_types";
@@ -6,10 +9,13 @@ import { getExistingExperienceDomains } from "admin/admin_rest_api";
 const Option = Select.Option;
 
 type Props = {
-  value: string,
+  value: ?string,
+  placeholder: string,
+  notFoundContent: ?string,
   disabled: boolean,
-  onSelect: () => void,
-  onDeselect: () => void,
+  mode: string,
+  onSelect: ?() => void,
+  onChange: ?() => void,
   alreadyUsedDomains: ExperienceDomainListType,
 };
 
@@ -35,18 +41,28 @@ class SelectExperienceDomain extends React.PureComponent<Props, State> {
   }
 
   render() {
+    const options = this.getUnusedDomains().map(domain => <Option key={domain}>{domain}</Option>);
+    const notFoundContent = this.props.notFoundContent || "Not Found";
+    const additionalProps = {};
+    if (this.props.onChange) {
+      additionalProps.onChange = this.props.onChange;
+    }
+    if (this.props.onSelect) {
+      additionalProps.onSelect = this.props.onSelect;
+    }
     return (
       <Select
-        mode="tags"
+        showSearch
+        mode={this.props.mode}
         value={this.props.value}
-        maxTagCount={1}
+        optionFilterProp="children"
+        notFoundContent={notFoundContent}
         style={{ width: `${this.props.width}%` }}
         disabled={this.props.disabled}
-        placeholder="New Experience Domain"
-        onSelect={this.props.onSelect}
-        onDeselect={this.props.onDeselect}
+        placeholder={this.props.placeholder}
+        {...additionalProps}
       >
-        {this.getUnusedDomains().map(domain => <Option key={domain}>{domain}</Option>)}
+        {options}
       </Select>
     );
   }

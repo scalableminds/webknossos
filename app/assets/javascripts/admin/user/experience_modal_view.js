@@ -388,10 +388,13 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
         ) : null}
         <SelectExperienceDomain
           disabled={false}
+          mode="tags"
+          placeholder="New Experience Domain"
+          notFoundContent={null}
+          hasFieldDecorator={false}
           value={[]}
           width={50}
           onSelect={this.addEnteredExperience}
-          onDeselect={() => {}}
           alreadyUsedDomains={this.getDomainsOfTable()}
         />
       </Modal>

@@ -18,14 +18,17 @@ jobs:
           name: Prepare dependency folders
           command: mkdir -p project/target target ~/.m2 ~/.ivy2 ~/.sbt ~/.yarn-cache
       - restore_cache:
+          name: Restore target cache
           keys:
             - target-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
             - target-cache-{{ checksum ".circleci/cache_version" }}-master
       - restore_cache:
+          name: Restore sbt cache
           keys:
             - sbt-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "project/Dependencies.scala" }}
             - sbt-cache-{{ checksum ".circleci/cache_version" }}-
       - restore_cache:
+          name: Restore yarn cache
           keys:
             - yarn-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "yarn.lock" }}
             - yarn-cache-{{ checksum ".circleci/cache_version" }}-
@@ -36,10 +39,12 @@ jobs:
           name: Install frontend dependencies
           command: docker-compose run base yarn install --frozen-lockfile
       - restore_cache:
+          name: Restore webpack-uglifyjs cache
           keys:
             - webpack-uglifyjs-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
             - webpack-uglifyjs-cache-{{ checksum ".circleci/cache_version" }}-master
       - restore_cache:
+          name: Restore webpack-hard-source cache
           keys:
             - webpack-hard-source-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ checksum "yarn.lock" }}
             - webpack-hard-source-cache-{{ checksum ".circleci/cache_version" }}-master-{{ checksum "yarn.lock" }}
@@ -65,12 +70,14 @@ jobs:
           command: docker-compose run base sbt "project webknossosDatastore" compile stage
 
       - save_cache:
+          name: Save target cache
           key: target-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ .Revision }}
           paths:
             - "project/target"
             - "target"
 
       - save_cache:
+          name: Save sbt cache
           key: sbt-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "project/Dependencies.scala" }}
           paths:
             - "~/.m2"
@@ -78,16 +85,19 @@ jobs:
             - "~/.sbt"
 
       - save_cache:
+          name: Save yarn cache
           key: yarn-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "yarn.lock" }}
           paths:
             - "~/.yarn-cache"
 
       - save_cache:
+          name: Save webpack-uglifyjs cache
           key: webpack-uglifyjs-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ .Revision }}
           paths:
             - "node_modules/.cache/uglifyjs-webpack-plugin"
 
       - save_cache:
+          name: Save webpack-hard-source cache
           key: webpack-hard-source-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ checksum "yarn.lock" }}-{{ .Revision }}
           paths:
             - "node_modules/.cache/hard-source"

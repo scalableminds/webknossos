@@ -35,6 +35,7 @@ import {
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import api from "oxalis/api/internal_api";
+import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { V3 } from "libs/mjs";
 
 const OrthoViewToNumber: OrthoViewMapType<number> = {
@@ -131,12 +132,16 @@ function onClick(
   const pickingScene = new THREE.Scene();
   pickingScene.add(pickingNode);
 
+  let { width, height } = getInputCatcherRect(plane);
+  width = Math.round(width);
+  height = Math.round(height);
+
   const buffer = planeView.renderOrthoViewToTexture(plane, pickingScene);
   // Beware of the fact that new browsers yield float numbers for the mouse position
   const [x, y] = [Math.round(position.x), Math.round(position.y)];
   // compute the index of the pixel under the cursor,
   // while inverting along the y-axis, because OpenGL has its origin bottom-left :/
-  const index = (x + (planeView.curWidth - y) * planeView.curWidth) * 4;
+  const index = (x + (width - y) * height) * 4;
   // the nodeId can be reconstructed by interpreting the RGB values of the pixel as a base-255 number
   const nodeId = buffer.subarray(index, index + 3).reduce((a, b) => a * 255 + b, 0);
   SceneController.skeleton.stopPicking();

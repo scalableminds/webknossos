@@ -19,24 +19,24 @@ jobs:
           command: mkdir -p project/target target ~/.m2 ~/.ivy2 ~/.sbt ~/.yarn-cache
       - restore_cache:
           keys:
-            - cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
-            - cache-{{ checksum ".circleci/cache_version" }}-master
+            - target-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
+            - target-cache-{{ checksum ".circleci/cache_version" }}-master
       - restore_cache:
           keys:
-            - sbt-cache-{{ checksum "project/Dependencies.scala" }}
-            - sbt-cache-
+            - sbt-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "project/Dependencies.scala" }}
+            - sbt-cache-{{ checksum ".circleci/cache_version" }}-
       - restore_cache:
           keys:
-            - yarn-cache-{{ checksum "yarn.lock" }}
-            - yarn-cache-
+            - yarn-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "yarn.lock" }}
+            - yarn-cache-{{ checksum ".circleci/cache_version" }}-
       - restore_cache:
           keys:
-            - webpack-uglifyjs-cache-{{ .Branch }}
-            - webpack-uglifyjs-cache-master
+            - webpack-uglifyjs-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
+            - webpack-uglifyjs-cache-{{ checksum ".circleci/cache_version" }}-master
       - restore_cache:
           keys:
-            - webpack-hard-source-cache-{{ .Branch }}
-            - webpack-hard-source-cache-master
+            - webpack-hard-source-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ checksum "yarn.lock" }}
+            - webpack-hard-source-cache-{{ checksum ".circleci/cache_version" }}-master-{{ checksum "yarn.lock" }}
       - run:
           name: Assert unique evolution numbers
           command: tools/postgres/assert_unique_evolution_numbers.sh
@@ -65,30 +65,30 @@ jobs:
           command: docker-compose run base sbt "project webknossosDatastore" compile stage
 
       - save_cache:
-          key: cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ .Revision }}
+          key: target-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ .Revision }}
           paths:
             - "project/target"
             - "target"
 
       - save_cache:
-          key: sbt-cache-{{ checksum "project/Dependencies.scala" }}
+          key: sbt-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "project/Dependencies.scala" }}
           paths:
             - "~/.m2"
             - "~/.ivy2"
             - "~/.sbt"
 
       - save_cache:
-          key: yarn-cache-{{ checksum "yarn.lock" }}
+          key: yarn-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "yarn.lock" }}
           paths:
             - "~/.yarn-cache"
 
       - save_cache:
-          key: webpack-uglifyjs-cache-{{ .Branch }}-{{ .Revision }}
+          key: webpack-uglifyjs-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ .Revision }}
           paths:
             - "node_modules/.cache/uglifyjs-webpack-plugin"
 
       - save_cache:
-          key: webpack-hard-source-cache-{{ .Branch }}-{{ checksum "yarn.lock" }}-{{ .Revision }}
+          key: webpack-hard-source-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ checksum "yarn.lock" }}-{{ .Revision }}
           paths:
             - "node_modules/.cache/hard-source"
 

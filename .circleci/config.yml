@@ -231,7 +231,7 @@ jobs:
           command: |
             for i in {1..5}; do # retry
               URL=https://master.webknossos.xyz/ \
-              yarn test-screenshot && break || s=$?
+              yarn test-screenshot && s=0 && break || s=$?
               sleep 30
             done
             (exit $s)

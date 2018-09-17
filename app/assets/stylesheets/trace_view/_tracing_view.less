@@ -1,3 +1,5 @@
+@import "../_variables.less";
+
 #tracing {
   position: relative;
   display: inline-block;
@@ -122,6 +124,17 @@
 }
 .tracing-right-menu {
   min-width: 450px;
+}
+
+#version-restore-sider {
+  border-left: 1px solid #e8e8e8;
+  padding: 3;
+  padding-top: 15px;
+  position: fixed;
+  right: 0;
+  z-index: 1000;
+  top: @navbar-height;
+  bottom: 0;
 }
 
 .version-entry {

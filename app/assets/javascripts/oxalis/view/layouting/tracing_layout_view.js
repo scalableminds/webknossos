@@ -181,7 +181,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
               </GoldenLayoutAdapter>
             </div>
             {this.props.showVersionRestore ? (
-              <Sider width={400} style={{ borderLeft: "1px solid #e8e8e8", padding: 3 }}>
+              <Sider id="version-restore-sider" width={400}>
                 <VersionView />
               </Sider>
             ) : null}

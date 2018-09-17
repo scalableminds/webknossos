@@ -17,7 +17,6 @@ import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_
 import { revertToVersion } from "oxalis/model/sagas/update_actions";
 import { pushSaveQueueAction, setVersionNumberAction } from "oxalis/model/actions/save_actions";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
-import ScrollIntoViewIfNeeded from "react-scroll-into-view-if-needed";
 import type { OxalisState, SkeletonTracingType } from "oxalis/store";
 import type {
   ServerUpdateAction,
@@ -38,7 +37,6 @@ type Props = {
 type State = {
   isLoading: boolean,
   versions: Array<APIUpdateActionBatch>,
-  originalVersion: number,
 };
 
 const descriptionFns = {
@@ -76,7 +74,6 @@ class VersionView extends React.Component<Props, State> {
   state = {
     isLoading: false,
     versions: [],
-    originalVersion: this.props.skeletonTracing.version,
   };
 
   componentDidMount() {
@@ -95,6 +92,10 @@ class VersionView extends React.Component<Props, State> {
     } finally {
       this.setState({ isLoading: false });
     }
+  }
+
+  getNewestVersion(): number {
+    return _.max(this.state.versions.map(batch => batch.version)) || 0;
   }
 
   getDescriptionForSpecificBatch(
@@ -181,7 +182,7 @@ class VersionView extends React.Component<Props, State> {
   }
 
   async restoreVersion(version: number) {
-    Store.dispatch(setVersionNumberAction(this.state.originalVersion, "skeleton"));
+    Store.dispatch(setVersionNumberAction(this.getNewestVersion(), "skeleton"));
     Store.dispatch(pushSaveQueueAction([revertToVersion(version)], "skeleton"));
     await Model.save();
     Store.dispatch(setVersionRestoreVisibilityAction(false));
@@ -189,7 +190,7 @@ class VersionView extends React.Component<Props, State> {
   }
 
   handleClose = async () => {
-    await this.previewVersion(this.state.originalVersion);
+    await this.previewVersion(this.getNewestVersion());
     Store.dispatch(setVersionRestoreVisibilityAction(false));
     Store.dispatch(setAnnotationAllowUpdateAction(true));
   };
@@ -249,7 +250,7 @@ class VersionView extends React.Component<Props, State> {
 
     return (
       <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-        <div style={{ flex: "1 1 auto" }}>
+        <div style={{ flex: "0 1 auto" }}>
           <h4 style={{ display: "inline-block" }}>Version History</h4>
           <Button
             className="close-button"
@@ -273,18 +274,16 @@ class VersionView extends React.Component<Props, State> {
         </div>
         <div style={{ flex: "1 1 auto", overflowY: "auto" }}>
           <Spin spinning={this.state.isLoading}>
-            <ScrollIntoViewIfNeeded options={{ behavior: "instant", block: "end" }}>
-              <List>
-                {filteredVersions.map((batch, index) => (
-                  <VersionEntry
-                    actions={batch.value}
-                    version={batch.version}
-                    isNewest={index === 0}
-                    key={batch.version}
-                  />
-                ))}
-              </List>
-            </ScrollIntoViewIfNeeded>
+            <List>
+              {filteredVersions.map((batch, index) => (
+                <VersionEntry
+                  actions={batch.value}
+                  version={batch.version}
+                  isNewest={index === 0}
+                  key={batch.version}
+                />
+              ))}
+            </List>
           </Spin>
         </div>
       </div>

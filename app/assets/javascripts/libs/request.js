@@ -222,9 +222,7 @@ class Request {
     }
 
     if (!options.doNotInvestigate) {
-      fetchPromise = fetchPromise.catch(
-        this.handleError.bind(this, url, options.showErrorToast),
-      );
+      fetchPromise = fetchPromise.catch(this.handleError.bind(this, url, options.showErrorToast));
     }
 
     if (options.timeout != null) {

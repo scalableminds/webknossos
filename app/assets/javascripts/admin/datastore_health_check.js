@@ -26,40 +26,48 @@ export const pingDataStoreIfAppropriate = memoizedThrottle(async (requestedUrl: 
   if (usedDataStore != null) {
     const { url } = usedDataStore;
     const healthEndpoint = `${url}/data/health`;
-    Request.triggerRequest(healthEndpoint, { doNotInvestigate: true, mode: "cors", timeout: 5000 })
-      .then(async () => {
-        const buildinfoWebknossos = await RestAPI.getBuildInfo();
-        const webknossosVersion = buildinfoWebknossos.webknossos.version;
-        const oldestSupportedDatastoreVersion =
-          buildinfoWebknossos.webknossos.oldestSupportedDatastoreVersion;
-
-        const buildinfoDatastore = await RestAPI.getDataStoreBuildInfo(url);
-        const buildInfoWebknossosDatastore = buildinfoDatastore.webknossosDatastore
-          ? buildinfoDatastore.webknossosDatastore
-          : buildinfoDatastore.webknossos;
-        const dataStoreVersion = buildInfoWebknossosDatastore.version;
-        const oldestSupportedWebknossosVersion =
-          buildInfoWebknossosDatastore.oldestSupportedWebknossosVersion;
-
-        if (dataStoreVersion < oldestSupportedDatastoreVersion) {
-          Toast.warning(
-            messages["datastore.version.datastore"]({ webknossosVersion, dataStoreVersion, url }),
-          );
-        } else if (webknossosVersion < oldestSupportedWebknossosVersion) {
-          Toast.warning(
-            messages["datastore.version.webknossos"]({
-              webknossosVersion,
-              dataStoreVersion,
-              url,
-            }),
-          );
-        }
-      })
-      .catch(() => {
-        Toast.warning(messages["datastore.health"]({ url }));
-      });
+    Request.triggerRequest(healthEndpoint, {
+      doNotInvestigate: true,
+      mode: "cors",
+      timeout: 5000,
+    }).then(
+      () => checkVersionMismatch(url),
+      () => Toast.warning(messages["datastore.health"]({ url })),
+    );
   }
 }, 5000);
+
+async function checkVersionMismatch(url: string) {
+  const [buildinfoWebknossos, buildinfoDatastore] = await Promise.all([
+    RestAPI.getBuildInfo(),
+    RestAPI.getDataStoreBuildInfo(url),
+  ]);
+
+  const webknossosVersion = buildinfoWebknossos.webknossos.version;
+  const oldestSupportedDatastoreVersion =
+    buildinfoWebknossos.webknossos.oldestSupportedDatastoreVersion;
+
+  const buildInfoWebknossosDatastore = buildinfoDatastore.webknossosDatastore
+    ? buildinfoDatastore.webknossosDatastore
+    : buildinfoDatastore.webknossos;
+  const dataStoreVersion = buildInfoWebknossosDatastore.version;
+  const oldestSupportedWebknossosVersion =
+    buildInfoWebknossosDatastore.oldestSupportedWebknossosVersion;
+
+  if (dataStoreVersion < oldestSupportedDatastoreVersion) {
+    Toast.warning(
+      messages["datastore.version.datastore"]({ webknossosVersion, dataStoreVersion, url }),
+    );
+  } else if (webknossosVersion < oldestSupportedWebknossosVersion) {
+    Toast.warning(
+      messages["datastore.version.webknossos"]({
+        webknossosVersion,
+        dataStoreVersion,
+        url,
+      }),
+    );
+  }
+}
 
 const extractUrls = (str: string): Array<string> => {
   const urlMatcher = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{2,256}(\.[a-z]{2,6})?\b([-a-zA-Z0-9@:%_+.~#?&\\=]*)/g;

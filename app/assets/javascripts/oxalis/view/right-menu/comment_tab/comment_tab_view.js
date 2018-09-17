@@ -390,7 +390,7 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
           <ButtonComponent
             onClick={this.toggleExpandForAllTrees}
             icon="shrink"
-            title="Collapse or expand or groups"
+            title="Collapse or expand groups"
           />
         </InputGroup>
         <div style={{ flex: "1 1 auto", marginTop: 20 }}>

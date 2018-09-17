@@ -48,7 +48,7 @@ export function MarkdownModal({
             <a href="https://markdown-it.github.io/" target="_blank" rel="noopener noreferrer">
               Markdown
             </a>{" "}
-            for formatting, you can also create link to nodes and positions by using hashtags. For
+            for formatting, you can also create links to nodes and positions by using hashtags. For
             example, <code>#123</code> links to node 123, while <code>#(1,2,3)</code> points to the
             position 1,2,3.
           </React.Fragment>

@@ -11,6 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Added
 
+- Added URLs to the tabs in the dashboard. [#3183](https://github.com/scalableminds/webknossos/pull/3183)
 - Improved security by enabling http security headers. [#3084](https://github.com/scalableminds/webknossos/pull/3084)
 - Added the possibility to write markdown in the annotation description. [#3081](https://github.com/scalableminds/webknossos/pull/3081)
 - Added the brush size to the settings on the left in volume tracing. The size can now also be adjusted by using only the keyboard. [#3126](https://github.com/scalableminds/webknossos/pull/3126)

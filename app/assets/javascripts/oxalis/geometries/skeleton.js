@@ -372,7 +372,7 @@ class Skeleton {
     }
 
     // Uniforms
-    const { particleSize, scale, overrideNodeRadius } = state.userConfiguration;
+    const { particleSize, overrideNodeRadius } = state.userConfiguration;
     let activeNodeId = skeletonTracing.activeNodeId;
     activeNodeId = activeNodeId == null ? -1 : activeNodeId;
     let activeTreeId = skeletonTracing.activeTreeId;
@@ -382,7 +382,6 @@ class Skeleton {
     nodeUniforms.planeZoomFactor.value = getPlaneScalingFactor(state.flycam);
     nodeUniforms.overrideParticleSize.value = particleSize;
     nodeUniforms.overrideNodeRadius.value = overrideNodeRadius;
-    nodeUniforms.viewportScale.value = scale;
     nodeUniforms.activeTreeId.value = activeTreeId;
     nodeUniforms.activeNodeId.value = activeNodeId;
 

@@ -231,6 +231,9 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     notFoundContent={messages["task.domain_does_not_exist"]}
                     width={100}
                     alreadyUsedDomains={[]}
+                    onSelect={null}
+                    onChange={null}
+                    value={null}
                   />,
                 )}
               </FormItem>

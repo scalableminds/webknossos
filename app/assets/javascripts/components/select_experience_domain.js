@@ -1,6 +1,5 @@
 // @flow
 
-import _ from "lodash";
 import * as React from "react";
 import { Select } from "antd";
 import type { ExperienceDomainListType } from "admin/api_flow_types";
@@ -10,11 +9,12 @@ const Option = Select.Option;
 
 type Props = {
   value: ?string,
+  width: number,
   placeholder: string,
   notFoundContent: ?string,
   disabled: boolean,
   mode: string,
-  onSelect: ?() => void,
+  onSelect: ?(string) => void,
   onChange: ?() => void,
   alreadyUsedDomains: ExperienceDomainListType,
 };

@@ -72,6 +72,7 @@ export async function initialize(
   annotationIdOrDatasetName: string,
   controlMode: ControlModeType,
   initialFetch: boolean,
+  version?: number,
 ): Promise<?{
   dataLayers: DataLayerCollection,
   connectionInfo: ConnectionInfo,
@@ -106,6 +107,7 @@ export async function initialize(
   const [dataset, initialUserSettings, initialDatasetSettings, tracing] = await fetchParallel(
     annotation,
     datasetName,
+    version,
   );
 
   initializeDataset(initialFetch, dataset, tracing);
@@ -132,6 +134,7 @@ export async function initialize(
 async function fetchParallel(
   annotation: ?APIAnnotationType,
   datasetName: string,
+  version?: number,
 ): Promise<[APIDatasetType, *, *, ?HybridServerTracingType]> {
   return Promise.all([
     getDataset(datasetName, getSharingToken()),
@@ -140,7 +143,7 @@ async function fetchParallel(
     // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
     // (Also see https://github.com/facebook/flow/issues/4936)
     // $FlowFixMe: Type inference with Promise.all seems to be a bit broken in flow
-    annotation ? getTracingForAnnotations(annotation) : null,
+    annotation ? getTracingForAnnotations(annotation, version) : null,
   ]);
 }
 

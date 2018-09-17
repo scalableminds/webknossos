@@ -21,7 +21,8 @@ In order to restore the current window, a reload is necessary.`,
   "save.leave_page_unfinished":
     "WARNING: You have unsaved progress that may be lost when hitting OK. Please click cancel, wait until the progress is saved and the save button displays a checkmark before leaving the page..",
   "save.failed": "Failed to save tracing. Retrying.",
-  "undo.no_undo": "There is no action that could be undone.",
+  "undo.no_undo":
+    "There is no action that could be undone. However, if you want to restore an earlier version of this tracing, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
   "undo.no_redo": "There is no action that could be redone.",
   "download.wait": "Please wait...",
   "download.close_window": "You may close this window after the download has started.",

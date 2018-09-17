@@ -31,12 +31,14 @@ export class OxalisModel {
     annotationIdOrDatasetName: string,
     controlMode: ControlModeType,
     initialFetch: boolean,
+    version?: number,
   ) {
     const initializationInformation = await initialize(
       tracingType,
       annotationIdOrDatasetName,
       controlMode,
       initialFetch,
+      version,
     );
     if (initializationInformation) {
       // Only executed on initial fetch

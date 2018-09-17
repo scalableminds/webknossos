@@ -7,6 +7,7 @@ import * as Utils from "libs/utils";
 import { updateUser } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import type { APIUserType, ExperienceDomainListType } from "admin/api_flow_types";
+import Toast from "libs/toast";
 import SelectExperienceDomain from "components/select_experience_domain";
 
 const { Column } = Table;
@@ -203,6 +204,10 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
   };
 
   addEnteredExperience = (domain: string) => {
+    if (domain.length < 3) {
+      Toast.warning("A experience domain needs at least 3 letters.");
+      return;
+    }
     if (this.state.tableEntries.findIndex(entry => entry.domain === domain) > -1) {
       return;
     }

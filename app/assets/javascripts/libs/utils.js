@@ -307,6 +307,7 @@ export function toNullable<T>(_maybe: Maybe<T>): ?T {
   return _maybe.isJust ? _maybe.get() : null;
 }
 
+// TODO: Remove this function as it's currently unused
 // Filters an array given a search string. Supports searching for several words as OR query.
 // Supports nested properties
 export function filterWithSearchQueryOR<T: { +[string]: mixed }, P: $Keys<T>>(

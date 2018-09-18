@@ -22,6 +22,11 @@ type SetAnnotationDescriptionActionType = {
   description: string,
 };
 
+type SetAnnotationAllowUpdateActionType = {
+  type: "SET_ANNOTATION_ALLOW_UPDATE",
+  allowUpdate: boolean,
+};
+
 type SetUserBoundingBoxType = {
   type: "SET_USER_BOUNDING_BOX",
   userBoundingBox: ?BoundingBoxType,
@@ -32,6 +37,7 @@ export type AnnotationActionTypes =
   | SetAnnotationNameActionType
   | SetAnnotationPubliceActionType
   | SetAnnotationDescriptionActionType
+  | SetAnnotationAllowUpdateActionType
   | SetUserBoundingBoxType;
 
 export const initializeAnnotationAction = (
@@ -56,6 +62,13 @@ export const setAnnotationDescriptionAction = (
 ): SetAnnotationDescriptionActionType => ({
   type: "SET_ANNOTATION_DESCRIPTION",
   description,
+});
+
+export const setAnnotationAllowUpdateAction = (
+  allowUpdate: boolean,
+): SetAnnotationAllowUpdateActionType => ({
+  type: "SET_ANNOTATION_ALLOW_UPDATE",
+  allowUpdate,
 });
 
 // Strictly speaking this is no annotation action but a tracing action, as the boundingBox is saved with

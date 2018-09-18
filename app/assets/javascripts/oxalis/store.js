@@ -29,6 +29,7 @@ import type {
   VolumeToolType,
   ControlModeType,
   BoundingBoxType,
+  Rect,
 } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import DiffableMap from "libs/diffable_map";
@@ -223,8 +224,7 @@ export type UserConfigurationType = {|
   +particleSize: number,
   +radius: number,
   +rotateValue: number,
-  +scale: number,
-  +scaleValue: number,
+  +layoutScaleValue: number,
   +sortCommentsAsc: boolean,
   +sortTreesByName: boolean,
   +sphericalCapRadius: number,
@@ -313,19 +313,26 @@ export type PartialCameraData = {
 export type PlaneModeData = {
   +activeViewport: OrthoViewType,
   +tdCamera: CameraData,
+  +inputCatcherRects: {
+    +PLANE_XY: Rect,
+    +PLANE_YZ: Rect,
+    +PLANE_XZ: Rect,
+    +TDView: Rect,
+  },
 };
 
-type ArbitraryModeData = null;
-type FlightModeData = null;
+type ArbitraryModeData = {
+  +inputCatcherRect: Rect,
+};
 
 export type ViewModeData = {
   +plane: PlaneModeData,
-  +arbitrary: ?ArbitraryModeData,
-  +flight: ?FlightModeData,
+  +arbitrary: ArbitraryModeData,
 };
 
 type UiInformationType = {
   +showDropzoneModal: boolean,
+  +showVersionRestore: boolean,
 };
 
 export type OxalisState = {|
@@ -341,6 +348,13 @@ export type OxalisState = {|
   +activeUser: ?APIUserType,
   +uiInformation: UiInformationType,
 |};
+
+const defaultViewportRect = {
+  top: 0,
+  left: 0,
+  width: Constants.VIEWPORT_WIDTH,
+  height: Constants.VIEWPORT_WIDTH,
+};
 
 const initialAnnotationInfo = {
   annotationId: "",
@@ -387,8 +401,7 @@ export const defaultState: OxalisState = {
     particleSize: 5,
     radius: 5,
     rotateValue: 0.01,
-    scale: 1,
-    scaleValue: 0.05,
+    layoutScaleValue: 1,
     sortCommentsAsc: true,
     sortTreesByName: false,
     sphericalCapRadius: 140,
@@ -486,13 +499,21 @@ export const defaultState: OxalisState = {
         lookAt: [0, 0, 0],
         position: [0, 0, 0],
       },
+      inputCatcherRects: {
+        PLANE_XY: defaultViewportRect,
+        PLANE_YZ: defaultViewportRect,
+        PLANE_XZ: defaultViewportRect,
+        TDView: defaultViewportRect,
+      },
     },
-    arbitrary: null,
-    flight: null,
+    arbitrary: {
+      inputCatcherRect: defaultViewportRect,
+    },
   },
   activeUser: null,
   uiInformation: {
     showDropzoneModal: false,
+    showVersionRestore: false,
   },
 };
 

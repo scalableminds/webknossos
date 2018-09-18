@@ -1,5 +1,6 @@
 // @flow
 import * as React from "react";
+import { Alert } from "antd";
 import { connect } from "react-redux";
 import TracingActionsView from "oxalis/view/action-bar/tracing_actions_view";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
@@ -9,10 +10,19 @@ import Constants, { ControlModeEnum } from "oxalis/constants";
 import type { ModeType, ControlModeType } from "oxalis/constants";
 import type { OxalisState, TracingType } from "oxalis/store";
 
+const VersionRestoreWarning = (
+  <Alert
+    message="Read-only version restore mode active!"
+    style={{ padding: "4px 15px" }}
+    type="info"
+  />
+);
+
 type Props = {
   viewMode: ModeType,
   controlMode: ControlModeType,
   tracing: TracingType,
+  showVersionRestore: boolean,
 };
 
 // eslint-disable-next-line react/prefer-stateless-function
@@ -24,7 +34,8 @@ class ActionBarView extends React.PureComponent<Props> {
 
     return (
       <div className="action-bar">
-        {isTraceMode ? <TracingActionsView /> : null}
+        {isTraceMode && !this.props.showVersionRestore ? <TracingActionsView /> : null}
+        {this.props.showVersionRestore ? VersionRestoreWarning : null}
         <DatasetPositionView />
         {hasVolume && isVolumeSupported ? <VolumeActionsView /> : null}
         {isTraceMode ? <ViewModesView /> : null}
@@ -36,6 +47,7 @@ const mapStateToProps = (state: OxalisState): Props => ({
   viewMode: state.temporaryConfiguration.viewMode,
   controlMode: state.temporaryConfiguration.controlMode,
   tracing: state.tracing,
+  showVersionRestore: state.uiInformation.showVersionRestore,
 });
 
 export default connect(mapStateToProps)(ActionBarView);

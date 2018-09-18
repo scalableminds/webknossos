@@ -1,6 +1,6 @@
 // @flow
 import * as React from "react";
-import { Tag, Icon, Spin, Table, Card } from "antd";
+import { Badge, Icon, Spin, Table, Card } from "antd";
 import * as Utils from "libs/utils";
 import Loop from "components/loop";
 import { getProjectProgressReport } from "admin/admin_rest_api";
@@ -121,12 +121,30 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
             <ColumnGroup title="Instances">
               <Column
                 title="Total"
+                width={100}
                 dataIndex="totalInstances"
                 sorter={Utils.compareBy(typeHint, project => project.totalInstances)}
                 render={number => number.toLocaleString()}
               />
               <Column
-                title={<Tag color={colors.finished}>Finished</Tag>}
+                title="Progress"
+                key="progress"
+                dataIndex="finishedInstances"
+                width={100}
+                sorter={Utils.compareBy(
+                  typeHint,
+                  ({ finishedInstances, totalInstances }) => finishedInstances / totalInstances,
+                )}
+                render={(finishedInstances, item) =>
+                  finishedInstances === item.totalInstances ? (
+                    <Badge count="100%" style={{ backgroundColor: colors.finished }} />
+                  ) : (
+                    <span>{Math.round((100 * finishedInstances) / item.totalInstances)} %</span>
+                  )
+                }
+              />
+              <Column
+                title={<Badge count="Finished" style={{ background: colors.finished }} />}
                 dataIndex="finishedInstances"
                 sorter={Utils.compareBy(typeHint, project => project.finishedInstances)}
                 render={(text, item) => ({
@@ -143,16 +161,14 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
                 })}
               />
               <Column
-                title={<Tag color={colors.active}>Active</Tag>}
+                title={<Badge count="Active" style={{ background: colors.active }} />}
                 dataIndex="activeInstances"
                 sorter={Utils.compareBy(typeHint, project => project.activeInstances)}
                 render={() => ({ props: { colSpan: 0 }, children: null })}
               />
               <Column
                 title={
-                  <Tag color={colors.open} style={{ color: colors.openFG }}>
-                    Open
-                  </Tag>
+                  <Badge count="Open" style={{ background: colors.open, color: colors.openFG }} />
                 }
                 dataIndex="openInstances"
                 sorter={Utils.compareBy(typeHint, project => project.openInstances)}

@@ -4,7 +4,7 @@ import * as React from "react";
 
 export const colors = {
   finished: "#52c41a",
-  active: "#1890ff",
+  active: "rgb(255, 85, 0)",
   open: "#f5f5f5",
   openFG: "rgba(0, 0, 0, .7)",
 };

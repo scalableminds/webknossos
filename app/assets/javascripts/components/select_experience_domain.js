@@ -24,6 +24,13 @@ type State = {
 };
 
 class SelectExperienceDomain extends React.PureComponent<Props, State> {
+  static defaultProps = {
+    mode: "default",
+    alreadyUsedDomains: [],
+    onChange: () => {},
+    onSelect: () => {},
+  };
+
   state = {
     domains: [],
   };

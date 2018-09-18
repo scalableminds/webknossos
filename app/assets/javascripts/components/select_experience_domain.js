@@ -14,8 +14,8 @@ type Props = {
   notFoundContent: ?string,
   disabled: boolean,
   mode: string,
-  onSelect: ?(string) => void,
-  onChange: ?() => void,
+  onSelect: string => void,
+  onChange: () => void,
   alreadyUsedDomains: ExperienceDomainListType,
 };
 
@@ -29,6 +29,9 @@ class SelectExperienceDomain extends React.PureComponent<Props, State> {
     alreadyUsedDomains: [],
     onChange: () => {},
     onSelect: () => {},
+    value: null,
+    notFoundContent: null,
+    disabled: false,
   };
 
   state = {
@@ -48,28 +51,20 @@ class SelectExperienceDomain extends React.PureComponent<Props, State> {
   }
 
   render() {
-    const options = this.getUnusedDomains().map(domain => <Option key={domain}>{domain}</Option>);
-    const notFoundContent = this.props.notFoundContent || "Not Found";
-    const additionalProps = {};
-    if (this.props.onChange) {
-      additionalProps.onChange = this.props.onChange;
-    }
-    if (this.props.onSelect) {
-      additionalProps.onSelect = this.props.onSelect;
-    }
     return (
       <Select
         showSearch
         mode={this.props.mode}
         value={this.props.value}
         optionFilterProp="children"
-        notFoundContent={notFoundContent}
+        notFoundContent={this.props.notFoundContent}
         style={{ width: `${this.props.width}%` }}
         disabled={this.props.disabled}
         placeholder={this.props.placeholder}
-        {...additionalProps}
+        onSelect={this.props.onSelect}
+        onChange={this.props.onChange}
       >
-        {options}
+        {this.getUnusedDomains().map(domain => <Option key={domain}>{domain}</Option>)}
       </Select>
     );
   }

@@ -205,7 +205,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
 
   addEnteredExperience = (domain: string) => {
     if (domain.length < 3) {
-      Toast.warning("A experience domain needs at least 3 letters.");
+      Toast.warning("An experience domain needs at least 3 letters.");
       return;
     }
     if (this.state.tableEntries.findIndex(entry => entry.domain === domain) > -1) {
@@ -392,15 +392,11 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
           </div>
         ) : null}
         <SelectExperienceDomain
-          disabled={false}
           mode="tags"
           placeholder="New Experience Domain"
-          notFoundContent={null}
-          hasFieldDecorator={false}
           value={[]}
           width={50}
           onSelect={this.addEnteredExperience}
-          onChange={null}
           alreadyUsedDomains={this.getDomainsOfTable()}
         />
       </Modal>

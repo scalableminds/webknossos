@@ -35,6 +35,20 @@ type State = {
   isUserScriptsModalOpen: boolean,
 };
 
+export const resetLayoutItem = (
+  <Menu.Item key="reset-layout">
+    <div
+      onClick={() => {
+        Store.dispatch(updateUserSettingAction("layoutScaleValue", 1));
+        layoutEmitter.emit("resetLayout");
+      }}
+    >
+      <Icon type="laptop" />
+      Reset Layout
+    </div>
+  </Menu.Item>
+);
+
 class TracingActionsView extends PureComponent<StateProps, State> {
   state = {
     isShareModalOpen: false,
@@ -249,19 +263,7 @@ class TracingActionsView extends PureComponent<StateProps, State> {
       );
     }
 
-    elements.push(
-      <Menu.Item key="reset-layout">
-        <div
-          onClick={() => {
-            Store.dispatch(updateUserSettingAction("layoutScaleValue", 1));
-            layoutEmitter.emit("resetLayout");
-          }}
-        >
-          <Icon type="laptop" />
-          Reset Layout
-        </div>
-      </Menu.Item>,
-    );
+    elements.push(resetLayoutItem);
 
     const menu = <Menu>{elements}</Menu>;
 

@@ -8,14 +8,14 @@ import { getExistingExperienceDomains } from "admin/admin_rest_api";
 const Option = Select.Option;
 
 type Props = {
-  value: ?string | ?Array<string>,
+  value?: string | Array<string>,
   width: number,
   placeholder: string,
-  notFoundContent: ?string,
+  notFoundContent?: string,
   disabled: boolean,
-  mode: string,
-  onSelect: string => void,
-  onChange: () => void,
+  mode?: string,
+  onSelect?: string => void,
+  onChange?: () => void,
   alreadyUsedDomains: ExperienceDomainListType,
 };
 
@@ -25,13 +25,7 @@ type State = {
 
 class SelectExperienceDomain extends React.PureComponent<Props, State> {
   static defaultProps = {
-    mode: "default",
     alreadyUsedDomains: [],
-    onChange: () => {},
-    onSelect: () => {},
-    value: null,
-    notFoundContent: null,
-    disabled: false,
   };
 
   state = {

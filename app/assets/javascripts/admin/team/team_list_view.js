@@ -137,7 +137,7 @@ class TeamListView extends React.PureComponent<Props, State> {
           <Spin spinning={this.state.isLoading} size="large">
             {this.state.teams.length <= 1 ? this.renderPlaceholder() : null}
             <Table
-              dataSource={Utils.filterWithSearchQueryOR(
+              dataSource={Utils.filterWithSearchQueryAND(
                 this.state.teams,
                 ["name"],
                 this.state.searchQuery,

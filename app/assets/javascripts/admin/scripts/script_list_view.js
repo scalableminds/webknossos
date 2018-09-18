@@ -130,7 +130,7 @@ class ScriptListView extends React.PureComponent<Props, State> {
 
           <Spin spinning={this.state.isLoading} size="large">
             <Table
-              dataSource={Utils.filterWithSearchQueryOR(
+              dataSource={Utils.filterWithSearchQueryAND(
                 this.state.scripts,
                 ["name", "id", "owner", "gist"],
                 this.state.searchQuery,

@@ -361,6 +361,7 @@ export type APIFeatureToggles = {
   +hybridTracings: boolean,
   +allowOrganizationCreation: boolean,
   +addForeignDataset: boolean,
+  +hideNavbarLogin: boolean,
 };
 
 // Tracing related datatypes

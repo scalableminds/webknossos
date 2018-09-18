@@ -21,7 +21,8 @@ In order to restore the current window, a reload is necessary.`,
   "save.leave_page_unfinished":
     "WARNING: You have unsaved progress that may be lost when hitting OK. Please click cancel, wait until the progress is saved and the save button displays a checkmark before leaving the page..",
   "save.failed": "Failed to save tracing. Retrying.",
-  "undo.no_undo": "There is no action that could be undone.",
+  "undo.no_undo":
+    "There is no action that could be undone. However, if you want to restore an earlier version of this tracing, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
   "undo.no_redo": "There is no action that could be redone.",
   "download.wait": "Please wait...",
   "download.close_window": "You may close this window after the download has started.",
@@ -52,6 +53,8 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.tree_viewer_no_cyclic_trees":
     "Cyclic trees are not supported by the abstract tree viewer.",
   "tracing.changed_move_value": "The move value was changed to: ",
+  "tracing.no_viewport_scaling_setting":
+    "Scaling the viewports via k/l is not supported anymore. Instead you can increase the viewport size by dragging the borders between the panes. You can also rearrange the panes by dragging the tabs.",
   "tracing.natural_sorting": "Correctly sort numbers in text (word2 < word10). This may be slow!",
   "tracing.cant_create_node_due_to_active_group":
     "You cannot create nodes, since no tree is active.",

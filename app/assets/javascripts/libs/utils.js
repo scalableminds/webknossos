@@ -458,6 +458,18 @@ export function sortArray8(arr: Array<number>): void {
   swap(arr, 3, 4);
 }
 
+export function waitForSelector(selector: string): Promise<*> {
+  const tryToResolve = resolve => {
+    const el = document.querySelector(selector);
+    if (el) {
+      resolve(el);
+    } else {
+      window.requestAnimationFrame(() => tryToResolve(resolve));
+    }
+  };
+  return new Promise(tryToResolve);
+}
+
 export function convertDecToBase256(num: number): Vector4 {
   const divMod = n => [Math.floor(n / 256), n % 256];
   let tmp = num;

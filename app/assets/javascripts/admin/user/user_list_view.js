@@ -378,6 +378,7 @@ class UserListView extends React.PureComponent<Props, State> {
               title="Email"
               dataIndex="email"
               key="email"
+              width={300}
               sorter={Utils.localeCompareBy(typeHint, user => user.email)}
               render={(__, user: APIUserType) =>
                 this.props.activeUser.isAdmin ? (
@@ -409,7 +410,7 @@ class UserListView extends React.PureComponent<Props, State> {
               title="Experiences"
               dataIndex="experiences"
               key="experiences"
-              width={300}
+              width={250}
               render={(experiences: ExperienceMapType, user: APIUserType) =>
                 _.map(experiences, (value, domain) => (
                   <Tag
@@ -430,7 +431,7 @@ class UserListView extends React.PureComponent<Props, State> {
               title="Teams - Role"
               dataIndex="teams"
               key="teams_"
-              width={300}
+              width={250}
               render={(teams: Array<APITeamMembershipType>, user: APIUserType) => {
                 if (user.isAdmin) {
                   return (

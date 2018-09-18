@@ -1,5 +1,7 @@
 @import "../../../node_modules/antd/dist/antd.less";
 @import "../../../node_modules/font-awesome/less/font-awesome.less";
+@import "../../../node_modules/golden-layout/src/css/goldenlayout-base.css";
+@import "../../../node_modules/golden-layout/src/css/goldenlayout-light-theme.css";
 @import "../../../node_modules/react-sortable-tree/style.css";
 
 // To update the antd iconfont:
@@ -19,6 +21,7 @@
 @import "trace_view/_right_menu.less";
 @import "_help.less";
 @import "antd_overwrites.less";
+@import "goldenlayout_overwrites.less";
 @import "react_sortable_tree_overwrites.less";
 @import "_admin.less";
 
@@ -31,7 +34,7 @@ body {
   font-weight: 400;
   font-size: 16px;
   -webkit-font-smoothing: antialised;
-  height: ~"calc(100vh - 41px)";
+  height: 100vh;
   padding-top: @navbar-height;
 }
 
@@ -168,7 +171,6 @@ i {
 .flex-overflow {
   overflow-y: auto;
   flex-grow: 1;
-  height: 0;
 }
 
 .monospace-id {
@@ -200,10 +202,14 @@ img.img-50 {
   }
 }
 
-@media screen and (max-width: 960px) {
+@media screen and (max-width: 968px) {
   .container {
     width: auto;
     margin: 0 10px;
+  }
+
+  .hide-on-small-screen {
+    display: none;
   }
 }
 

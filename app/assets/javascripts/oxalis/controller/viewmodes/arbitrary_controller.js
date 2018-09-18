@@ -13,6 +13,7 @@ import * as Utils from "libs/utils";
 import Toast from "libs/toast";
 import type { ModeType, Point2 } from "oxalis/constants";
 import Store from "oxalis/store";
+import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import Model from "oxalis/model";
 import {
   updateUserSettingAction,
@@ -32,7 +33,7 @@ import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import Crosshair from "oxalis/geometries/crosshair";
 import app from "app";
 import ArbitraryView from "oxalis/view/arbitrary_view";
-import constants from "oxalis/constants";
+import constants, { ArbitraryViewport } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import {
   yawFlycamAction,
@@ -52,7 +53,7 @@ import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import SceneController from "oxalis/controller/scene_controller";
 import api from "oxalis/api/internal_api";
 
-const CANVAS_SELECTOR = "#render-canvas";
+const arbitraryViewportSelector = "#inputcatcher_arbitraryViewport";
 
 type Props = {
   onRender: () => void,
@@ -92,33 +93,33 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   initMouse(): void {
-    this.input.mouse = new InputMouse(CANVAS_SELECTOR, {
-      leftDownMove: (delta: Point2) => {
-        if (this.props.viewMode === constants.MODE_ARBITRARY) {
-          Store.dispatch(
-            yawFlycamAction(delta.x * Store.getState().userConfiguration.mouseRotateValue, true),
-          );
-          Store.dispatch(
-            pitchFlycamAction(
-              delta.y * -1 * Store.getState().userConfiguration.mouseRotateValue,
-              true,
-            ),
-          );
-        } else if (this.props.viewMode === constants.MODE_ARBITRARY_PLANE) {
-          const f =
-            Store.getState().flycam.zoomStep /
-            (this.arbitraryView.width / constants.VIEWPORT_WIDTH);
-          Store.dispatch(moveFlycamAction([delta.x * f, delta.y * f, 0]));
-        }
-      },
-      scroll: this.scroll,
-      pinch: (delta: number) => {
-        if (delta < 0) {
-          Store.dispatch(zoomOutAction());
-        } else {
-          Store.dispatch(zoomInAction());
-        }
-      },
+    Utils.waitForSelector(arbitraryViewportSelector).then(() => {
+      this.input.mouse = new InputMouse(arbitraryViewportSelector, {
+        leftDownMove: (delta: Point2) => {
+          if (this.props.viewMode === constants.MODE_ARBITRARY) {
+            Store.dispatch(
+              yawFlycamAction(delta.x * Store.getState().userConfiguration.mouseRotateValue, true),
+            );
+            Store.dispatch(
+              pitchFlycamAction(
+                delta.y * -1 * Store.getState().userConfiguration.mouseRotateValue,
+                true,
+              ),
+            );
+          } else if (this.props.viewMode === constants.MODE_ARBITRARY_PLANE) {
+            const f = Store.getState().flycam.zoomStep / getViewportScale(ArbitraryViewport);
+            Store.dispatch(moveFlycamAction([delta.x * f, delta.y * f, 0]));
+          }
+        },
+        scroll: this.scroll,
+        pinch: (delta: number) => {
+          if (delta < 0) {
+            Store.dispatch(zoomOutAction());
+          } else {
+            Store.dispatch(zoomInAction());
+          }
+        },
+      });
     });
   }
 
@@ -290,7 +291,7 @@ class ArbitraryController extends React.PureComponent<Props> {
           this.setClippingDistance(clippingDistanceArbitrary);
           this.crosshair.setScale(crosshairSize);
           this.crosshair.setVisibility(displayCrosshair);
-          this.arbitraryView.resize();
+          this.arbitraryView.resizeThrottled();
         },
       ),
       listenToStoreProperty(

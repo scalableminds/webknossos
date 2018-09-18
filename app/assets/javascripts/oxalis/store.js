@@ -332,6 +332,7 @@ export type ViewModeData = {
 
 type UiInformationType = {
   +showDropzoneModal: boolean,
+  +showVersionRestore: boolean,
 };
 
 export type OxalisState = {|
@@ -512,6 +513,7 @@ export const defaultState: OxalisState = {
   activeUser: null,
   uiInformation: {
     showDropzoneModal: false,
+    showVersionRestore: false,
   },
 };
 

@@ -30,7 +30,7 @@ In order to restore the current window, a reload is necessary.`,
     "You just enabled the option to render missing data black. Please refresh this page so that the changes can take effect.",
   "data.disabled_render_missing_data_black": `You just disabled the option to render missing
   data black. This means that in case of missing data, data of lower quality is rendered
-  instead. Only enable this option if you are understand its effect. Please refresh
+  instead. Only enable this option if you understand its effect. Please refresh
   this page so that the changes can take effect.`,
   "tracing.copy_position": "Click this button to copy the position.",
   "tracing.copy_rotation": "Click this button to copy the rotation.",

@@ -7,7 +7,7 @@ import _ from "lodash";
 import * as React from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import { Collapse, Row, Col, Select } from "antd";
+import { Tooltip, Collapse, Row, Col, Select, Icon } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
 import type {
@@ -83,6 +83,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
       value
         ? messages["data.enabled_render_missing_data_black"]
         : messages["data.disabled_render_missing_data_black"],
+      { timeout: 8000 },
     );
     this.props.onChange("renderMissingDataBlack", value);
   };
@@ -132,7 +133,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             <Option value="2">low</Option>
           </DropdownSetting>
           <SwitchSetting
-            label="Render Missing Data Black"
+            label={
+              <React.Fragment>
+                Render Missing Data Black{" "}
+                <Tooltip title="Upsample lower resolution data for missing higher resolution data.">
+                  <Icon type="info-circle" />
+                </Tooltip>
+              </React.Fragment>
+            }
             value={this.props.datasetConfiguration.renderMissingDataBlack}
             onChange={this.onChangeRenderMissingDataBlack}
           />

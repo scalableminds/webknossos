@@ -14,9 +14,9 @@ import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reduce
 
 export type NodeWithTreeIdType = { treeId: number } & NodeType;
 
-type UpdateTreeUpdateAction = {
+export type UpdateTreeUpdateAction = {|
   name: "createTree" | "updateTree",
-  value: {
+  value: {|
     id: number,
     updatedId: ?number,
     color: Vector3,
@@ -24,100 +24,104 @@ type UpdateTreeUpdateAction = {
     comments: Array<CommentType>,
     branchPoints: Array<BranchPointType>,
     groupId: ?number,
-  },
-};
-type DeleteTreeUpdateAction = {
+    timestamp: number,
+  |},
+|};
+export type DeleteTreeUpdateAction = {|
   name: "deleteTree",
-  value: { id: number },
-};
-type MoveTreeComponentUpdateAction = {
+  value: {| id: number |},
+|};
+type MoveTreeComponentUpdateAction = {|
   name: "moveTreeComponent",
-  value: {
+  value: {|
     sourceId: number,
     targetId: number,
     nodeIds: Array<number>,
-  },
-};
-type MergeTreeUpdateAction = {
+  |},
+|};
+type MergeTreeUpdateAction = {|
   name: "mergeTree",
-  value: {
+  value: {|
     sourceId: number,
     targetId: number,
-  },
-};
-type CreateNodeUpdateAction = {
+  |},
+|};
+export type CreateNodeUpdateAction = {|
   name: "createNode",
   value: NodeWithTreeIdType,
-};
-type UpdateNodeUpdateAction = {
+|};
+type UpdateNodeUpdateAction = {|
   name: "updateNode",
   value: NodeWithTreeIdType,
-};
-type ToggleTreeUpdateAction = {
+|};
+type ToggleTreeUpdateAction = {|
   name: "toggleTree",
-  value: {
+  value: {|
     id: number,
-  },
-};
-type DeleteNodeUpdateAction = {
+  |},
+|};
+export type DeleteNodeUpdateAction = {|
   name: "deleteNode",
-  value: {
+  value: {|
     treeId: number,
     nodeId: number,
-  },
-};
-type CreateEdgeUpdateAction = {
+  |},
+|};
+type CreateEdgeUpdateAction = {|
   name: "createEdge",
-  value: {
+  value: {|
     treeId: number,
     source: number,
     target: number,
-  },
-};
-type DeleteEdgeUpdateAction = {
+  |},
+|};
+type DeleteEdgeUpdateAction = {|
   name: "deleteEdge",
-  value: {
+  value: {|
     treeId: number,
     source: number,
     target: number,
-  },
-};
-type UpdateSkeletonTracingUpdateAction = {
+  |},
+|};
+export type UpdateSkeletonTracingUpdateAction = {|
   name: "updateTracing",
-  value: {
+  value: {|
     activeNode: ?number,
     editPosition: Vector3,
     editRotation: Vector3,
     userBoundingBox: ?BoundingBoxObjectType,
     zoomLevel: number,
-  },
-};
-type UpdateVolumeTracingUpdateAction = {
+  |},
+|};
+type UpdateVolumeTracingUpdateAction = {|
   name: "updateTracing",
-  value: {
+  value: {|
     activeSegmentId: number,
     editPosition: Vector3,
     editRotation: Vector3,
     largestSegmentId: number,
     userBoundingBox: ?BoundingBoxObjectType,
     zoomLevel: number,
-  },
-};
-type UpdateBucketUpdateAction = {
+  |},
+|};
+type UpdateBucketUpdateAction = {|
   name: "updateBucket",
   value: SendBucketInfo & {
     base64Data: string,
   },
-};
-type UpdateTreeGroupsUpdateAction = {
+|};
+type UpdateTreeGroupsUpdateAction = {|
   name: "updateTreeGroups",
-  value: {
+  value: {|
     treeGroups: Array<TreeGroupType>,
-  },
-};
-type UpdateTracingUpdateAction =
-  | UpdateSkeletonTracingUpdateAction
-  | UpdateVolumeTracingUpdateAction;
+  |},
+|};
+export type RevertToVersionUpdateAction = {|
+  name: "revertToVersion",
+  value: {|
+    sourceVersion: number,
+  |},
+|};
 
 export type UpdateAction =
   | UpdateTreeUpdateAction
@@ -129,10 +133,39 @@ export type UpdateAction =
   | DeleteNodeUpdateAction
   | CreateEdgeUpdateAction
   | DeleteEdgeUpdateAction
-  | UpdateTracingUpdateAction
+  | UpdateSkeletonTracingUpdateAction
+  | UpdateVolumeTracingUpdateAction
   | UpdateBucketUpdateAction
   | ToggleTreeUpdateAction
+  | RevertToVersionUpdateAction
   | UpdateTreeGroupsUpdateAction;
+
+type AddServerValuesFn = <T>(
+  T,
+) => {
+  ...T,
+  value: { ...$PropertyType<T, "value">, actionTimestamp: number },
+};
+type AsServerAction<A> = $Call<AddServerValuesFn, A>;
+
+// Since flow does not provide ways to perform type transformations on the
+// single parts of a union, we need to write this out manually.
+export type ServerUpdateAction =
+  | AsServerAction<UpdateTreeUpdateAction>
+  | AsServerAction<DeleteTreeUpdateAction>
+  | AsServerAction<MergeTreeUpdateAction>
+  | AsServerAction<MoveTreeComponentUpdateAction>
+  | AsServerAction<CreateNodeUpdateAction>
+  | AsServerAction<UpdateNodeUpdateAction>
+  | AsServerAction<DeleteNodeUpdateAction>
+  | AsServerAction<CreateEdgeUpdateAction>
+  | AsServerAction<DeleteEdgeUpdateAction>
+  | AsServerAction<UpdateSkeletonTracingUpdateAction>
+  | AsServerAction<UpdateVolumeTracingUpdateAction>
+  | AsServerAction<UpdateBucketUpdateAction>
+  | AsServerAction<ToggleTreeUpdateAction>
+  | AsServerAction<RevertToVersionUpdateAction>
+  | AsServerAction<UpdateTreeGroupsUpdateAction>;
 
 export function createTree(tree: TreeType): UpdateTreeUpdateAction {
   return {
@@ -284,7 +317,10 @@ export function updateVolumeTracing(
     },
   };
 }
-export function updateBucket(bucketInfo: SendBucketInfo, base64Data: string) {
+export function updateBucket(
+  bucketInfo: SendBucketInfo,
+  base64Data: string,
+): UpdateBucketUpdateAction {
   return {
     name: "updateBucket",
     value: Object.assign({}, bucketInfo, {
@@ -297,6 +333,14 @@ export function updateTreeGroups(treeGroups: Array<TreeGroupType>): UpdateTreeGr
     name: "updateTreeGroups",
     value: {
       treeGroups,
+    },
+  };
+}
+export function revertToVersion(version: number): RevertToVersionUpdateAction {
+  return {
+    name: "revertToVersion",
+    value: {
+      sourceVersion: version,
     },
   };
 }

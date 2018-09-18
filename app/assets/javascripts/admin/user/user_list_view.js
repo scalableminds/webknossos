@@ -343,7 +343,7 @@ class UserListView extends React.PureComponent<Props, State> {
 
         <Spin size="large" spinning={this.state.isLoading}>
           <Table
-            dataSource={Utils.filterWithSearchQueryOR(
+            dataSource={Utils.filterWithSearchQueryAND(
               this.state.users,
               ["firstName", "lastName", "email", "teams", user => Object.keys(user.experiences)],
               this.state.searchQuery,

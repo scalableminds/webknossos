@@ -1,14 +1,15 @@
 // @flow
 import * as React from "react";
-import { Alert } from "antd";
+import { Icon, Alert, Dropdown, Menu } from "antd";
 import { connect } from "react-redux";
-import TracingActionsView from "oxalis/view/action-bar/tracing_actions_view";
+import TracingActionsView, { resetLayoutItem } from "oxalis/view/action-bar/tracing_actions_view";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
 import ViewModesView from "oxalis/view/action-bar/view_modes_view";
 import VolumeActionsView from "oxalis/view/action-bar/volume_actions_view";
 import Constants, { ControlModeEnum } from "oxalis/constants";
 import type { ModeType, ControlModeType } from "oxalis/constants";
 import type { OxalisState, TracingType } from "oxalis/store";
+import ButtonComponent from "oxalis/view/components/button_component";
 
 const VersionRestoreWarning = (
   <Alert
@@ -31,10 +32,17 @@ class ActionBarView extends React.PureComponent<Props> {
     const isTraceMode = this.props.controlMode === ControlModeEnum.TRACE;
     const hasVolume = this.props.tracing.volume != null;
     const isVolumeSupported = !Constants.MODES_ARBITRARY.includes(this.props.viewMode);
+    const readonlyDropdown = (
+      <Dropdown overlay={<Menu>{resetLayoutItem}</Menu>}>
+        <ButtonComponent>
+          <Icon type="down" />
+        </ButtonComponent>
+      </Dropdown>
+    );
 
     return (
       <div className="action-bar">
-        {isTraceMode && !this.props.showVersionRestore ? <TracingActionsView /> : null}
+        {isTraceMode && !this.props.showVersionRestore ? <TracingActionsView /> : readonlyDropdown}
         {this.props.showVersionRestore ? VersionRestoreWarning : null}
         <DatasetPositionView />
         {hasVolume && isVolumeSupported ? <VolumeActionsView /> : null}

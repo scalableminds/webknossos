@@ -22,6 +22,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Tree groups can now be activated. This allows to rename a tree group analogous to renaming a tree. Also, toggling the visibility of a tree group can now be done by using the shortcuts "1" and "2". [#3066](https://github.com/scalableminds/webknossos/pull/3066)
 - Added the possibility to upload multiple NML files during task creation, even if they are not in a zip archive
 - Added the possibility to supply a dedicated "sorting date" for datasets to change the sorting order in the gallery view, by default the creation date is used [#3124](https://github.com/scalableminds/webknossos/pull/3124)
+- Added bar-chart visualization to project progress report. [#3224](https://github.com/scalableminds/webknossos/pull/3224)
 - Added a button to collapse all comments. [#3215](https://github.com/scalableminds/webknossos/pull/3215)
 - The datasets in the dashboard are now sorted according to their user-specific usage. As a result, relevant datasets should appear at the top of the list. [#3206](https://github.com/scalableminds/webknossos/pull/3206)
 
@@ -49,6 +50,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Fixed the sorting of the dashboard task list and explorative annotation list. [#3153](https://github.com/scalableminds/webknossos/pull/3153)
 - Fixed a missing notification when a task annotation was reset. [#3207](https://github.com/scalableminds/webknossos/pull/3207)
 - Fixed a bug where non-privileged users were wrongly allowed to pause/unpause projects. [#3097](https://github.com/scalableminds/webknossos/pull/3097)
+- Fixed a bug in copy-segmentation-slice feature. [#3245](https://github.com/scalableminds/webknossos/pull/3245)
 - Fixed a regression bug which caused the initial data loading to fail sometimes. [#3149](https://github.com/scalableminds/webknossos/pull/3149)
 - Fixed a bug which caused a blank screen sometimes when the user is not logged in. [#3167](https://github.com/scalableminds/webknossos/pull/3167)
 - Fixed a bug where NML downloads of Task Annotations failed. [#3166](https://github.com/scalableminds/webknossos/pull/3166)

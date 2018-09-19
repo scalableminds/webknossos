@@ -76,11 +76,14 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     }
     const currentLayer = yield* call(createVolumeLayer, startEditingAction.planeId);
     const activeTool = yield* select(state => enforceVolumeTracing(state.tracing).activeTool);
+    // added variables -> use initialViewport for checking if still in the same viewport
+    const initialViewport = yield* select(state => state.viewModeData.plane.activeViewport);
+    const activeViewportBounding = yield* call(getBoundingsFromPosition);
 
     if (activeTool === VolumeToolEnum.BRUSH) {
       yield* call(
         labelWithIterator,
-        currentLayer.getCircleVoxelIterator(startEditingAction.position),
+        currentLayer.getCircleVoxelIterator(startEditingAction.position, activeViewportBounding),
         contourTracingMode,
       );
     }
@@ -95,13 +98,19 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
       if (!addToLayerAction || addToLayerAction.type !== "ADD_TO_LAYER") {
         throw new Error("Unexpected action. Satisfy flow.");
       }
-
+      // maybe check wether addToLayerAction.position is out of initialViewport -> ignore painting maybe?
+      const currentViewport = yield* select(state => state.viewModeData.plane.activeViewport);
+      if (currentViewport !== initialViewport) {
+        continue;
+      }
       if (activeTool === VolumeToolEnum.TRACE) {
         currentLayer.addContour(addToLayerAction.position);
       } else if (activeTool === VolumeToolEnum.BRUSH) {
+        const currentViewportBounding = yield* call(getBoundingsFromPosition);
+
         yield* call(
           labelWithIterator,
-          currentLayer.getCircleVoxelIterator(addToLayerAction.position),
+          currentLayer.getCircleVoxelIterator(addToLayerAction.position, currentViewportBounding),
           contourTracingMode,
         );
       }
@@ -109,6 +118,16 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
 
     yield* call(finishLayer, currentLayer, activeTool, contourTracingMode);
   }
+}
+
+function* getBoundingsFromPosition(): Saga<Array<Vector2d>> {
+  const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
+  const zoom = yield* select(state => state.flycam.zoomStep);
+  const halfViewportWidth = Math.round((Constants.PLANE_WIDTH / 2) * zoom);
+  return [
+    [position[0] - halfViewportWidth, position[1] - halfViewportWidth],
+    [position[0] + halfViewportWidth, position[1] + halfViewportWidth],
+  ];
 }
 
 function* createVolumeLayer(planeId: OrthoViewType): Saga<VolumeLayer> {

@@ -23,6 +23,8 @@ export class VoxelIterator {
   height: number;
   minCoord2d: Vector2;
   get3DCoordinate: Vector2 => Vector3;
+  boundingBox: Array<Vector2>;
+  next: Vector3;
 
   static finished(): VoxelIterator {
     const iterator = new VoxelIterator([], 0, 0, [0, 0]);
@@ -36,28 +38,59 @@ export class VoxelIterator {
     height: number,
     minCoord2d: Vector2,
     get3DCoordinate: Vector2 => Vector3 = () => [0, 0, 0],
+    boundingBox: (Array<Vector2>) => undefined,
   ) {
     this.map = map;
     this.width = width;
     this.height = height;
     this.minCoord2d = minCoord2d;
     this.get3DCoordinate = get3DCoordinate;
-    if (!this.map[0][0]) {
+    this.boundingBox = boundingBox;
+    const firstCoordinate = this.get3DCoordinate([this.minCoord2d[0], this.minCoord2d[1]]);
+    if (!this.map[0][0] || !this.isCoordinateInBounds(firstCoordinate)) {
       this.getNext();
+    } else {
+      this.next = firstCoordinate;
     }
   }
 
+  isCoordinateInBounds(coor: Vector3): boolean {
+    if (!this.boundingBox) {
+      return true;
+    }
+    return (
+      coor[0] >= this.boundingBox[0][0] &&
+      coor[0] <= this.boundingBox[1][0] &&
+      coor[1] >= this.boundingBox[0][1] &&
+      coor[1] <= this.boundingBox[1][1]
+    );
+  }
+
   getNext(): Vector3 {
-    const res = this.get3DCoordinate([this.x + this.minCoord2d[0], this.y + this.minCoord2d[1]]);
+    if (!this.hasNext) {
+      return null;
+    }
+    const res = this.next;
     let foundNext = false;
     while (!foundNext) {
       this.x = (this.x + 1) % this.width;
       if (this.x === 0) {
         this.y++;
       }
-      if (this.map[this.x][this.y] || this.y === this.height) {
-        this.hasNext = this.y !== this.height;
+      if (this.y === this.height) {
         foundNext = true;
+        this.hasNext = false;
+      }
+      if (this.map[this.x][this.y]) {
+        const currentCoordinate = this.get3DCoordinate([
+          this.x + this.minCoord2d[0],
+          this.y + this.minCoord2d[1],
+        ]);
+        // check position for beeing in bounds
+        if (this.isCoordinateInBounds(currentCoordinate)) {
+          this.next = currentCoordinate;
+          foundNext = true;
+        }
       }
     }
     return res;
@@ -171,7 +204,7 @@ class VolumeLayer {
     return iterator;
   }
 
-  getCircleVoxelIterator(position: Vector3): VoxelIterator {
+  getCircleVoxelIterator(position: Vector3, boundings: Array<Vector2> = undefined): VoxelIterator {
     const radius = Math.round(
       this.pixelsToVoxels(Store.getState().temporaryConfiguration.brushSize) / 2,
     );
@@ -201,13 +234,14 @@ class VolumeLayer {
         }
       }
     }
-
+    // minCoord2d -> links oben position des gesamten Kreises
     const iterator = new VoxelIterator(
       map,
       width,
       height,
       minCoord2d,
       this.get3DCoordinate.bind(this),
+      boundings,
     );
     return iterator;
   }

@@ -77,6 +77,7 @@ export function getPlaneMouseControls(planeId: OrthoViewType): * {
         (contourTracingMode === ContourModeEnum.DRAW ||
           contourTracingMode === ContourModeEnum.DRAW_OVERWRITE)
       ) {
+        // -> fix in addToLayerAction -> saga
         Store.dispatch(addToLayerAction(calculateGlobalPos(pos)));
       }
     },

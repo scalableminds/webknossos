@@ -8,6 +8,7 @@ import * as THREE from "three";
 import * as Utils from "libs/utils";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
+import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import AbstractPlaneMaterialFactory, {
   sanitizeName,
 } from "oxalis/geometries/materials/abstract_plane_material_factory";
@@ -310,7 +311,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        storeState => getPlaneScalingFactor(storeState.flycam) / storeState.userConfiguration.scale,
+        storeState => getPlaneScalingFactor(storeState.flycam) / getViewportScale(this.planeID),
         pixelToVoxelFactor => {
           this.uniforms.pixelToVoxelFactor.value = pixelToVoxelFactor;
         },

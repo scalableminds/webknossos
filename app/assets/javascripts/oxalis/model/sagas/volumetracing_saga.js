@@ -12,6 +12,7 @@ import {
   _takeEvery,
   fork,
 } from "oxalis/model/sagas/effect-generators";
+import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import {
   updateDirectionAction,
@@ -149,7 +150,12 @@ function* copySegmentationLayer(action: CopySegmentationLayerActionType): Saga<v
   const segmentationLayer = yield* call([Model, Model.getSegmentationLayer]);
   const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
   const zoom = yield* select(state => state.flycam.zoomStep);
+  const baseVoxelFactors = yield* select(state =>
+    Dimensions.transDim(getBaseVoxelFactors(state.dataset.dataSource.scale), activeViewport),
+  );
   const halfViewportWidth = Math.round((Constants.PLANE_WIDTH / 2) * zoom);
+  const [scaledOffsetX, scaledOffsetY] = baseVoxelFactors.map(f => halfViewportWidth * f);
+
   const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
 
   function copyVoxelLabel(voxelTemplateAddress, voxelTargetAddress) {
@@ -173,8 +179,8 @@ function* copySegmentationLayer(action: CopySegmentationLayerActionType): Saga<v
 
   const [tx, ty, tz] = Dimensions.transDim(position, activeViewport);
   const z = tz;
-  for (let x = tx - halfViewportWidth; x < tx + halfViewportWidth; x++) {
-    for (let y = ty - halfViewportWidth; y < ty + halfViewportWidth; y++) {
+  for (let x = tx - scaledOffsetX; x < tx + scaledOffsetX; x++) {
+    for (let y = ty - scaledOffsetY; y < ty + scaledOffsetY; y++) {
       copyVoxelLabel(
         Dimensions.transDim([x, y, tz + direction * directionInverter], activeViewport),
         Dimensions.transDim([x, y, z], activeViewport),

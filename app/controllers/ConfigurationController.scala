@@ -10,17 +10,19 @@ import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
 import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsObject, JsValue}
 import play.api.libs.json.Json._
+
+import scala.concurrent.ExecutionContext
 
 
 class ConfigurationController @Inject()(userService: UserService,
                                         dataSetDAO: DataSetDAO,
                                         userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
                                         dataSetConfigurationDefaults: DataSetConfigurationDefaults,
-                                        sil: Silhouette[WkEnv],
-                                        val messagesApi: MessagesApi) extends Controller {
+                                        sil: Silhouette[WkEnv])
+                                       (implicit ec: ExecutionContext)
+  extends Controller {
 
   def read = sil.UserAwareAction.async { implicit request =>
     request.identity.toFox.flatMap { user =>

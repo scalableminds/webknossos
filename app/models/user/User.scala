@@ -9,12 +9,13 @@ import javax.inject.Inject
 import models.binary.DataSetDAO
 import models.configuration.{DataSetConfiguration, UserConfiguration}
 import models.team._
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO, SimpleSQLDAO}
+
+import scala.concurrent.ExecutionContext
 
 
 case class User(
@@ -50,7 +51,7 @@ case class User(
 
 }
 
-class UserDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[User, UsersRow, Users](sqlClient) {
+class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SQLDAO[User, UsersRow, Users](sqlClient) {
   val collection = Users
 
   def idColumn(x: Users): Rep[String] = x._Id
@@ -172,7 +173,7 @@ class UserDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[User, UsersRow, Use
   }
 }
 
-class UserTeamRolesDAO @Inject()(userDAO: UserDAO, sqlClient: SQLClient) extends SimpleSQLDAO(sqlClient) {
+class UserTeamRolesDAO @Inject()(userDAO: UserDAO, sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
 
   def findTeamMembershipsForUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[TeamMembership]] = {
     val query = for {
@@ -213,7 +214,7 @@ class UserTeamRolesDAO @Inject()(userDAO: UserDAO, sqlClient: SQLClient) extends
 
 }
 
-class UserExperiencesDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO) extends SimpleSQLDAO(sqlClient) {
+class UserExperiencesDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
 
   def findAllExperiencesForUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Map[String, Int]] = {
     for {
@@ -234,7 +235,7 @@ class UserExperiencesDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO) exten
 
 }
 
-class UserDataSetConfigurationDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO, dataSetDAO: DataSetDAO) extends SimpleSQLDAO(sqlClient) {
+class UserDataSetConfigurationDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO, dataSetDAO: DataSetDAO)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
 
   def findAllForUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Map[ObjectId, JsValue]] = {
     for {

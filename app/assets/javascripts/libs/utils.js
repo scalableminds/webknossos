@@ -307,6 +307,7 @@ export function toNullable<T>(_maybe: Maybe<T>): ?T {
   return _maybe.isJust ? _maybe.get() : null;
 }
 
+// TODO: Remove this function as it's currently unused
 // Filters an array given a search string. Supports searching for several words as OR query.
 // Supports nested properties
 export function filterWithSearchQueryOR<T: { +[string]: mixed }, P: $Keys<T>>(
@@ -455,6 +456,18 @@ export function sortArray8(arr: Array<number>): void {
   swap(arr, 2, 4);
   swap(arr, 3, 5);
   swap(arr, 3, 4);
+}
+
+export function waitForSelector(selector: string): Promise<*> {
+  const tryToResolve = resolve => {
+    const el = document.querySelector(selector);
+    if (el) {
+      resolve(el);
+    } else {
+      window.requestAnimationFrame(() => tryToResolve(resolve));
+    }
+  };
+  return new Promise(tryToResolve);
 }
 
 export function convertDecToBase256(num: number): Vector4 {

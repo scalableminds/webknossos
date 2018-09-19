@@ -28,6 +28,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 ### Changed
 
 - The modal used to change the experience of users by admins got a rework. [#3077](https://github.com/scalableminds/webknossos/pull/3077) 
+- During task creation, specifying an experience domain is now possible by choosing from existing domains. [#3233](https://github.com/scalableminds/webknossos/pull/3233)
 - Unified the search functionality within webKnossos to implement an AND logic everyhwere. [#3228](https://github.com/scalableminds/webknossos/pull/3228)
 - Renamed "Soma Clicking" to "Single-Node-Tree Mode". [#3141](https://github.com/scalableminds/webknossos/pull/3141/files)
 - The fallback segmentation layer attribute of volume tracings is now persisted to NML/ZIP files. Upon re-upload, only volume tracings with this attribute will show a fallback layer. Use `tools/volumeAddFallbackLayer.py` to add this attribute to existing volume tracings. [#3088](https://github.com/scalableminds/webknossos/pull/3088)

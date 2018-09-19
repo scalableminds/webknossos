@@ -139,7 +139,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
                   finishedInstances === item.totalInstances ? (
                     <Badge count="100%" style={{ backgroundColor: colors.finished }} />
                   ) : (
-                    <span>{Math.round((100 * finishedInstances) / item.totalInstances)} %</span>
+                    <span>{Math.floor((100 * finishedInstances) / item.totalInstances)} %</span>
                   )
                 }
               />
@@ -167,9 +167,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
                 render={() => ({ props: { colSpan: 0 }, children: null })}
               />
               <Column
-                title={
-                  <Badge count="Open" style={{ background: colors.open, color: colors.openFG }} />
-                }
+                title={<Badge count="Open" style={{ background: colors.open }} />}
                 dataIndex="openInstances"
                 sorter={Utils.compareBy(typeHint, project => project.openInstances)}
                 render={() => ({ props: { colSpan: 0 }, children: null })}

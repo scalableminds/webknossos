@@ -4,9 +4,8 @@ import * as React from "react";
 
 export const colors = {
   finished: "#52c41a",
-  active: "rgb(255, 85, 0)",
-  open: "#f5f5f5",
-  openFG: "rgba(0, 0, 0, .7)",
+  active: "#1890ff",
+  open: "rgb(255, 85, 0)",
 };
 const indexToType = ["finished", "active", "open"];
 
@@ -34,7 +33,7 @@ export default function StackedBarChart({ a, b, c }: { a: number, b: number, c: 
               background: colors[type],
               minWidth: `${renderedPercentages[index]}%`,
               display: percentages[index] === 0 ? "none" : "inline-block",
-              color: index < 2 ? "#ffffff" : colors.openFG,
+              color: "#ffffff",
             }}
           >
             {number.toLocaleString()}

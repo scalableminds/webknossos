@@ -33,6 +33,16 @@ export async function screenshotDataset(
   return openTracingViewAndScreenshot(page, baseUrl, createdExplorational.id);
 }
 
+function removeFpsMeter(page: Page) {
+  return page.evaluate(() => {
+    const fpsMeter = document.querySelector("#stats");
+    if (fpsMeter != null) {
+      const { parentNode } = fpsMeter;
+      if (parentNode != null) parentNode.removeChild(fpsMeter);
+    }
+  });
+}
+
 async function waitForTracingViewLoad(page: Page) {
   let inputCatchers;
   while (inputCatchers == null || inputCatchers.length < 4) {
@@ -41,31 +51,24 @@ async function waitForTracingViewLoad(page: Page) {
   }
 }
 
-async function waitForRenderingFinish(page: Page): Promise<Buffer> {
-  const tdViewSelector = "#inputcatcher_TDView";
-  const tdView = await page.$(tdViewSelector);
-  if (tdView == null)
-    throw new Error(`Element ${tdViewSelector} not present, although page is loaded.`);
-  const boundingBox = await tdView.boundingBox();
-  if (boundingBox == null) throw new Error(`Element ${tdViewSelector} has no bounding box.`);
-  const { width, height } = boundingBox;
+async function waitForRenderingFinish(page: Page) {
+  // Remove the FPS meter as it will update even after the rendering is finished
+  await removeFpsMeter(page);
 
   let currentShot;
-  let lastShot = await tdView.screenshot();
+  let lastShot = await page.screenshot();
   let changedPixels = Infinity;
-  // If the screenshot of the TDView didn't change in the last x seconds, we're probably done
+  // If the screenshot of the page didn't change in the last x seconds, rendering should be finished
   while (currentShot == null || changedPixels > 0) {
     await page.waitFor(10000);
-    currentShot = await tdView.screenshot();
+    currentShot = await page.screenshot({ fullPage: true });
     if (lastShot != null) {
-      changedPixels = pixelmatch(lastShot, currentShot, {}, width, height, {
+      changedPixels = pixelmatch(lastShot, currentShot, {}, 1920, 1080, {
         threshold: 0.0,
       });
     }
     lastShot = currentShot;
   }
-
-  return currentShot;
 }
 
 async function openTracingViewAndScreenshot(
@@ -78,12 +81,16 @@ async function openTracingViewAndScreenshot(
   });
 
   await waitForTracingViewLoad(page);
-
-  const tdViewScreenshot = await waitForRenderingFinish(page);
+  await waitForRenderingFinish(page);
 
   // Take screenshots of the other rendered planes
-  const PLANE_IDS = ["#inputcatcher_PLANE_XY", "#inputcatcher_PLANE_YZ", "#inputcatcher_PLANE_XZ"];
-  const screenshots = [tdViewScreenshot];
+  const PLANE_IDS = [
+    "#inputcatcher_TDView",
+    "#inputcatcher_PLANE_XY",
+    "#inputcatcher_PLANE_YZ",
+    "#inputcatcher_PLANE_XZ",
+  ];
+  const screenshots = [];
   for (const planeId of PLANE_IDS) {
     const element = await page.$(planeId);
     if (element == null)

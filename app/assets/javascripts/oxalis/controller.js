@@ -83,11 +83,15 @@ class Controller extends React.PureComponent<Props, State> {
       Toast.error(messages["webgl.disabled"]);
     }
 
+    // Preview a working tracing version if the showVersionRestore URL parameter is supplied
+    const version = Utils.hasUrlParam("showVersionRestore") ? 1 : undefined;
+
     Model.fetch(
       this.props.initialTracingType,
       this.props.initialAnnotationId,
       this.props.initialControlmode,
       true,
+      version,
     )
       .then(() => this.modelFetchDone())
       .catch(error => {

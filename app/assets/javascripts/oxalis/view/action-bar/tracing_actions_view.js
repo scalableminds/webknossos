@@ -13,6 +13,7 @@ import ButtonComponent from "oxalis/view/components/button_component";
 import messages from "messages";
 import api from "oxalis/api/internal_api";
 import { undoAction, redoAction } from "oxalis/model/actions/save_actions";
+import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import { copyAnnotationToUserAccount, finishAnnotation } from "admin/admin_rest_api";
 import { location } from "libs/window";
 import type { OxalisState, RestrictionsAndSettingsType, TaskType } from "oxalis/store";
@@ -36,6 +37,20 @@ type State = {
   isUserScriptsModalOpen: boolean,
 };
 
+export const resetLayoutItem = (
+  <Menu.Item key="reset-layout">
+    <div
+      onClick={() => {
+        Store.dispatch(updateUserSettingAction("layoutScaleValue", 1));
+        layoutEmitter.emit("resetLayout");
+      }}
+    >
+      <Icon type="laptop" />
+      Reset Layout
+    </div>
+  </Menu.Item>
+);
+
 class TracingActionsView extends PureComponent<StateProps, State> {
   state = {
     isShareModalOpen: false,
@@ -54,6 +69,11 @@ class TracingActionsView extends PureComponent<StateProps, State> {
 
   handleUndo = () => {
     Store.dispatch(undoAction());
+  };
+
+  handleRestore = async () => {
+    await Model.save();
+    Store.dispatch(setVersionRestoreVisibilityAction(true));
   };
 
   handleRedo = () => {
@@ -236,19 +256,16 @@ class TracingActionsView extends PureComponent<StateProps, State> {
       );
     }
 
-    elements.push(
-      <Menu.Item key="reset-layout">
-        <div
-          onClick={() => {
-            Store.dispatch(updateUserSettingAction("layoutScaleValue", 1));
-            layoutEmitter.emit("resetLayout");
-          }}
-        >
-          <Icon type="laptop" />
-          Reset Layout
-        </div>
-      </Menu.Item>,
-    );
+    if (isSkeletonMode && restrictions.allowUpdate) {
+      elements.push(
+        <Menu.Item key="restore-button" onClick={this.handleRestore}>
+          <Icon type="bars" theme="outlined" />
+          Restore Older Version
+        </Menu.Item>,
+      );
+    }
+
+    elements.push(resetLayoutItem);
 
     const onStlUpload = async info => {
       const buffer = await readFileAsArrayBuffer(info.file);

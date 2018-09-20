@@ -21,6 +21,7 @@ The most common buttons are:
 - `Share`: Create a shareable link to your dataset containing the current position, rotation, zoom level etc. Use this to collaboratively work with colleagues. Read more about this feature in the [Sharing guide](./sharing.md).  
 - `Add Script`: Using the [webKnossos frontend API](https://demo.webknossos.org/assets/docs/frontend-api/index.html) users can interact with webKnossos programmatically. User scripts can be executed from here. Admins can add often used scripts to webKnossos to make them available to all users for easy access.
 - `Restore Older Version`: Only available for skeleton tracings. Opens a view that shows all previous versions of a skeleton tracing. From this view, any older version can be selected, previewed, and restored.
+- `Import STL Mesh`: 3D Meshes can be imported into the current tracing view by uploading corresponding STL files. Read more information in [Mesh Visualization](#mesh-visualization).
 
 A user can directly jump to positions within their datasets by entering them in the position input field.
 The same is true for the rotation in some tracing modes.
@@ -208,6 +209,14 @@ In the `Segmentation` tab on the right-hand side, you can see the cell IDs which
 ![Adding labels with the Trace tool](./images/volume_trace.gif)
 ![Adding labels with the Brush tool](./images/volume_brush.gif)
 ![Removing labels with the Brush tool](./images/volume_delete.gif)
+
+### Mesh Visualization
+With the help of external tools, such as [Amira](https://www.fei.com/software/amira-avizo/), volume data can be converted to 3D meshes. These meshes can be imported into webKnossos to view them alongside the actual data.
+
+To import an STL file, use the `Import STL Mesh` option in the [toolbar](#the-toolbar).
+
+![A 3D Mesh visualized in webKnossos](./images/stl_mesh.png)
+
 
 ## Tracing UI Settings
 The settings menu allows users to fine-tune some parameters of webKnossos.

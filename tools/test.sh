@@ -12,6 +12,9 @@ cmd=$1
 shift;
 additionalParams=$@
 
+# Create test-bundle dir if it does not exist
+mkdir -p "$testBundlePath"
+
 function prepare {
   rm -rf "$testBundlePath" && mkdir "$testBundlePath"
   # Webpack with the proto loader isn't used when running the tests, so the proto files need to be prepared manually
@@ -24,7 +27,7 @@ function ensureUpToDateTests {
   lastChangedSource=$($FIND "$jsPath" -regex ".*\.js$" -type f -printf '%T@ %p \n' | sort -n | tail -1 | awk -F'.' '{print $1}')
   lastChangedTests=$($FIND "$testBundlePath" -type f -printf '%T@ %p \n' | sort -n | tail -1 | awk -F'.' '{print $1}')
 
-  if [ $lastChangedSource -gt $lastChangedTests ]
+  if [ ! $lastChangedTests ] || [ $lastChangedSource -gt $lastChangedTests ]
   then
     YELLOW='\e[33m'
     NC='\033[0m' # No Color

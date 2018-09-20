@@ -220,8 +220,14 @@ class PlaneView {
     this.unbindChangedScaleListener = listenToStoreProperty(
       store => store.userConfiguration.layoutScaleValue,
       this.resizeThrottled,
-      true,
     );
+
+    const { layoutScaleValue } = Store.getState().userConfiguration;
+    if (layoutScaleValue > 1) {
+      // Workaround
+      // Otherwise, the initial canvas size is not set correctly
+      setTimeout(this.resizeThrottled, 500);
+    }
   }
 }
 

@@ -220,6 +220,7 @@ class PlaneView {
     this.unbindChangedScaleListener = listenToStoreProperty(
       store => store.userConfiguration.layoutScaleValue,
       this.resizeThrottled,
+      true,
     );
   }
 }

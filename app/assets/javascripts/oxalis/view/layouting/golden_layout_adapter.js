@@ -118,6 +118,7 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
         updateSizeDebounced();
         setTimeout(updateSizeDebounced, 1000);
       },
+      true,
     );
 
     gl.on("stateChanged", () => this.onStateChange());

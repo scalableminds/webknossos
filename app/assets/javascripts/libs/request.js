@@ -18,7 +18,7 @@ const compress = createWorker(CompressWorker);
 
 type methodType = "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH";
 
-type RequestOptions = {
+export type RequestOptions = {
   headers?: { [key: string]: string },
   method?: methodType,
   timeout?: number,

@@ -171,7 +171,6 @@ CREATE TABLE webknossos.tasks(
   creationInfo VARCHAR(512),
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  CONSTRAINT openInstancesSmallEnoughCheck CHECK (openInstances <= totalInstances),
   CONSTRAINT openInstancesLargeEnoughCheck CHECK (openInstances >= 0)
 );
 
@@ -360,7 +359,7 @@ $$ LANGUAGE plpgsql;
 
 CREATE FUNCTION webknossos.onUpdateTask() RETURNS trigger AS $$
   BEGIN
-    IF NEW.totalInstances > OLD.totalInstances THEN
+    IF NEW.totalInstances <> OLD.totalInstances THEN
       UPDATE webknossos.tasks SET openInstances = openInstances + (NEW.totalInstances - OLD.totalInstances) WHERE _id = NEW._id;
     END IF;
     RETURN NULL;

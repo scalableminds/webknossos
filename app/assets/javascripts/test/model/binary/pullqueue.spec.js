@@ -27,6 +27,9 @@ const StoreMock = {
     dataset: {
       dataSource: { dataLayers: [layer] },
     },
+    datasetConfiguration: {
+      renderMissingDataBlack: true,
+    },
   }),
   dispatch: sinon.stub(),
   subscribe: sinon.stub(),
@@ -76,7 +79,9 @@ test.serial("Successful pulling: should receive the correct data", t => {
   const bucketData2 = _.range(0, 32 * 32 * 32).map(i => (2 * i) % 256);
   const responseBuffer = new Uint8Array(bucketData1.concat(bucketData2));
   WkstoreAdapterMock.requestFromStore = sinon.stub();
-  WkstoreAdapterMock.requestFromStore.returns(Promise.resolve(responseBuffer));
+  WkstoreAdapterMock.requestFromStore.returns(
+    Promise.resolve({ buffer: responseBuffer, missingBuckets: [] }),
+  );
 
   pullQueue.pull();
 
@@ -95,7 +100,7 @@ function prepare() {
   WkstoreAdapterMock.requestFromStore.onFirstCall().returns(Promise.reject());
   WkstoreAdapterMock.requestFromStore
     .onSecondCall()
-    .returns(Promise.resolve(new Uint8Array(32 * 32 * 32)));
+    .returns(Promise.resolve({ buffer: new Uint8Array(32 * 32 * 32), missingBuckets: [] }));
 }
 
 test.serial("Request Failure: should not request twice if not bucket dirty", t => {

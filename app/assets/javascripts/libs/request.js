@@ -9,9 +9,11 @@ import { pingDataStoreIfAppropriate, pingMentionedDataStores } from "admin/datas
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import handleStatus from "libs/handle_http_status";
 import FetchBufferWorker from "oxalis/workers/fetch_buffer.worker";
+import FetchBufferWithHeadersWorker from "oxalis/workers/fetch_buffer_with_headers.worker";
 import CompressWorker from "oxalis/workers/compress.worker";
 
 const fetchBufferViaWorker = createWorker(FetchBufferWorker);
+const fetchBufferWithHeaders = createWorker(FetchBufferWithHeadersWorker);
 const compress = createWorker(CompressWorker);
 
 type methodType = "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH";
@@ -22,6 +24,7 @@ export type RequestOptions = {
   timeout?: number,
   compress?: boolean,
   useWebworkerForArrayBuffer?: boolean,
+  extractHeaders?: boolean,
 };
 
 export type RequestOptionsWithData<T> = RequestOptions & {
@@ -151,14 +154,13 @@ class Request {
       }),
     );
 
-  receiveArraybuffer = (url: string, options: RequestOptions = {}): Promise<ArrayBuffer> =>
+  receiveArraybuffer = (url: string, options: RequestOptions = {}): Promise<*> =>
     this.triggerRequest(
       url,
       _.defaultsDeep(options, {
         headers: { Accept: "application/octet-stream" },
         useWebworkerForArrayBuffer: true,
       }),
-      // response => response.arrayBuffer(),
     );
 
   // IN:  JSON
@@ -167,6 +169,15 @@ class Request {
     url: string,
     options: RequestOptionsWithData<any>,
   ): Promise<ArrayBuffer> => this.receiveArraybuffer(url, await this.prepareJSON(url, options));
+
+  sendJSONReceiveArraybufferWithHeaders = async (
+    url: string,
+    options: RequestOptionsWithData<any>,
+  ): Promise<{ buffer: ArrayBuffer, headers: Object }> =>
+    this.receiveArraybuffer(url, {
+      ...(await this.prepareJSON(url, options)),
+      extractHeaders: true,
+    });
 
   // TODO: babel doesn't support generic arrow-functions yet
   triggerRequest<T>(
@@ -213,7 +224,9 @@ class Request {
 
     let fetchPromise;
     if (options.useWebworkerForArrayBuffer) {
-      fetchPromise = fetchBufferViaWorker(url, options);
+      fetchPromise = options.extractHeaders
+        ? fetchBufferWithHeaders(url, options)
+        : fetchBufferViaWorker(url, options);
     } else {
       fetchPromise = fetch(url, options).then(handleStatus);
       if (responseDataHandler != null) {

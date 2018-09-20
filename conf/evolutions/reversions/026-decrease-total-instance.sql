@@ -16,6 +16,6 @@ CREATE TRIGGER onUpdateTaskTrigger
 AFTER UPDATE ON webknossos.tasks
 FOR EACH ROW EXECUTE PROCEDURE webknossos.onUpdateTask();
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 24;
+UPDATE webknossos.releaseInformation SET schemaVersion = 25;
 
 COMMIT TRANSACTION;

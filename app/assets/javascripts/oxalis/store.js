@@ -205,6 +205,7 @@ export type DatasetConfigurationType = {
   +position?: Vector3,
   +zoom?: number,
   +rotation?: Vector3,
+  +renderMissingDataBlack: true,
 };
 
 export type UserConfigurationType = {|
@@ -332,6 +333,7 @@ export type ViewModeData = {
 
 type UiInformationType = {
   +showDropzoneModal: boolean,
+  +showVersionRestore: boolean,
 };
 
 export type OxalisState = {|
@@ -382,6 +384,7 @@ export const defaultState: OxalisState = {
     quality: 0,
     segmentationOpacity: 20,
     highlightHoveredCellId: true,
+    renderMissingDataBlack: true,
   },
   userConfiguration: {
     clippingDistance: 50,
@@ -512,6 +515,7 @@ export const defaultState: OxalisState = {
   activeUser: null,
   uiInformation: {
     showDropzoneModal: false,
+    showVersionRestore: false,
   },
 };
 

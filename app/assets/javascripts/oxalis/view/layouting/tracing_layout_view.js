@@ -9,6 +9,7 @@ import OxalisController from "oxalis/controller";
 import SettingsView from "oxalis/view/settings/settings_view";
 import ActionBarView from "oxalis/view/action_bar_view";
 import TracingView from "oxalis/view/tracing_view";
+import VersionView from "oxalis/view/version_view";
 import { Layout, Icon } from "antd";
 import { location } from "libs/window";
 import { withRouter } from "react-router-dom";
@@ -38,6 +39,7 @@ type StateProps = {
   viewMode: ModeType,
   displayScalebars: boolean,
   isUpdateTracingAllowed: boolean,
+  showVersionRestore: boolean,
 };
 
 type Props = StateProps & {
@@ -178,6 +180,11 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
                 <MappingInfoView key="MappingInfoView" portalKey="MappingInfoView" />
               </GoldenLayoutAdapter>
             </div>
+            {this.props.showVersionRestore ? (
+              <Sider id="version-restore-sider" width={400}>
+                <VersionView />
+              </Sider>
+            ) : null}
           </Layout>
         </Layout>
       </NmlUploadZoneContainer>
@@ -190,6 +197,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     viewMode: state.temporaryConfiguration.viewMode,
     displayScalebars: state.userConfiguration.displayScalebars,
     isUpdateTracingAllowed: state.tracing.restrictions.allowUpdate,
+    showVersionRestore: state.uiInformation.showVersionRestore,
   };
 }
 

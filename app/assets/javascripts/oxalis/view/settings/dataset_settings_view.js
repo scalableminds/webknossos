@@ -7,7 +7,9 @@ import _ from "lodash";
 import * as React from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import { Collapse, Row, Col, Select } from "antd";
+import { Tooltip, Collapse, Row, Col, Select, Icon } from "antd";
+import Toast from "libs/toast";
+import messages from "messages";
 import type {
   DatasetConfigurationType,
   DatasetLayerConfigurationType,
@@ -76,6 +78,16 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     this.props.onChange(propertyName, parseInt(value));
   };
 
+  onChangeRenderMissingDataBlack = (value: boolean): void => {
+    Toast.warning(
+      value
+        ? messages["data.enabled_render_missing_data_black"]
+        : messages["data.disabled_render_missing_data_black"],
+      { timeout: 8000 },
+    );
+    this.props.onChange("renderMissingDataBlack", value);
+  };
+
   render() {
     const colorSettings = _.map(this.props.datasetConfiguration.layers, this.getColorSettings);
 
@@ -120,6 +132,18 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             <Option value="1">medium</Option>
             <Option value="2">low</Option>
           </DropdownSetting>
+          <SwitchSetting
+            label={
+              <React.Fragment>
+                Render Missing Data Black{" "}
+                <Tooltip title="Upsample lower resolution data for missing higher resolution data.">
+                  <Icon type="info-circle" />
+                </Tooltip>
+              </React.Fragment>
+            }
+            value={this.props.datasetConfiguration.renderMissingDataBlack}
+            onChange={this.onChangeRenderMissingDataBlack}
+          />
         </Panel>
       </Collapse>
     );

@@ -519,7 +519,11 @@ class UserListView extends React.PureComponent<Props, State> {
             initialDomainToEdit={this.state.domainToEdit}
             onChange={this.closeExperienceModal}
             onCancel={() =>
-              this.setState({ isExperienceModalVisible: false, singleSelectedUser: null })
+              this.setState({
+                isExperienceModalVisible: false,
+                singleSelectedUser: null,
+                domainToEdit: null,
+              })
             }
           />
         ) : null}

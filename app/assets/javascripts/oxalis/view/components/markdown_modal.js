@@ -1,6 +1,6 @@
 // @flow
 import * as React from "react";
-import { Modal, Button, Row, Col } from "antd";
+import { Alert, Modal, Button, Row, Col } from "antd";
 import Markdown from "react-remarkable";
 import InputComponent from "oxalis/view/components/input_component";
 
@@ -30,15 +30,7 @@ export function MarkdownModal({
   return (
     <Modal
       key="comment-markdown-modal"
-      title={
-        <span>
-          {`Edit ${label}`} (
-          <a href="https://markdown-it.github.io/" target="_blank" rel="noopener noreferrer">
-            Markdown enabled
-          </a>
-          )
-        </span>
-      }
+      title={<span>{`Edit ${label}`}</span>}
       visible={visible}
       onCancel={onOk}
       closable={false}
@@ -49,6 +41,21 @@ export function MarkdownModal({
         </Button>,
       ]}
     >
+      <Alert
+        message={
+          <React.Fragment>
+            In addition to using{" "}
+            <a href="https://markdown-it.github.io/" target="_blank" rel="noopener noreferrer">
+              Markdown
+            </a>{" "}
+            for formatting, you can also create links to nodes and positions by using hashtags. For
+            example, <code>#123</code> links to node 123, while <code>#(1,2,3)</code> points to the
+            position 1,2,3.
+          </React.Fragment>
+        }
+        type="info"
+        style={{ marginBottom: 16 }}
+      />
       <Row gutter={16}>
         <Col span={12}>
           <InputComponent

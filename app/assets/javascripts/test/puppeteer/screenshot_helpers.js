@@ -1,9 +1,10 @@
+// @flow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-const pixelmatch = require("pixelmatch");
-const { PNG } = require("pngjs");
-const fs = require("fs");
+import pixelmatch from "pixelmatch";
+import { PNG } from "pngjs";
+import fs from "fs";
 
-function openScreenshot(path, name) {
+function openScreenshot(path: string, name: string): Promise<PNG> {
   return new Promise(resolve => {
     fs.createReadStream(`${path}/${name}.png`)
       .on("error", error => {
@@ -20,7 +21,7 @@ function openScreenshot(path, name) {
   });
 }
 
-function saveScreenshot(png, path, name) {
+function saveScreenshot(png: PNG, path: string, name: string): Promise<void> {
   return new Promise(resolve => {
     png
       .pack()
@@ -29,14 +30,20 @@ function saveScreenshot(png, path, name) {
   });
 }
 
-function bufferToPng(buffer, width, height) {
+function bufferToPng(buffer: Buffer, width: number, height: number): Promise<PNG> {
   return new Promise(resolve => {
     const png = new PNG({ width, height });
     png.parse(buffer, () => resolve(png));
   });
 }
 
-async function compareScreenshot(screenshotBuffer, width, height, path, name) {
+export async function compareScreenshot(
+  screenshotBuffer: Buffer,
+  width: number,
+  height: number,
+  path: string,
+  name: string,
+): Promise<number> {
   const [newScreenshot, existingScreenshot] = await Promise.all([
     bufferToPng(screenshotBuffer, width, height),
     openScreenshot(path, name),
@@ -67,6 +74,4 @@ async function compareScreenshot(screenshotBuffer, width, height, path, name) {
   return pixelErrors;
 }
 
-module.exports = {
-  compareScreenshot,
-};
+export default {};

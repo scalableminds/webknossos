@@ -1,15 +1,17 @@
+// @flow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-const test = require("ava");
-const puppeteer = require("puppeteer");
-const path = require("path");
-const { screenshotDataset, DEV_AUTH_TOKEN } = require("./dataset_rendering_helpers");
-const { compareScreenshot } = require("./screenshot_helpers");
+import test from "ava";
+import puppeteer, { type Browser } from "puppeteer";
+import path from "path";
+import fetch, { Headers } from "node-fetch";
+import { screenshotDataset, DEV_AUTH_TOKEN } from "./dataset_rendering_helpers";
+import { compareScreenshot } from "./screenshot_helpers";
 
 process.on("unhandledRejection", (err, promise) => {
   console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");
 });
 
-const BASE_PATH = path.join(__dirname, "../screenshots");
+const BASE_PATH = path.join(__dirname, "../../../../app/assets/javascripts/test/screenshots");
 
 let URL = "https://master.webknossos.xyz";
 if (!process.env.URL) {
@@ -25,7 +27,7 @@ if (!process.env.URL) {
 }
 console.log(`[Info] Executing tests on URL ${URL}.`);
 
-async function getNewPage(browser) {
+async function getNewPage(browser: Browser) {
   const page = await browser.newPage();
   page.setViewport({ width: 1920, height: 1080 });
   page.setExtraHTTPHeaders({
@@ -38,6 +40,8 @@ test.beforeEach(async t => {
   t.context.browser = await puppeteer.launch({
     args: ["--headless", "--hide-scrollbars", "--no-sandbox", "--disable-setuid-sandbox"],
   });
+  global.Headers = Headers;
+  global.fetch = fetch;
 });
 
 // These are the datasets that are available on our dev instance

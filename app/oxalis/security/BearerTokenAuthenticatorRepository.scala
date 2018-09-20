@@ -6,11 +6,10 @@ import com.mohiva.play.silhouette.impl.authenticators.BearerTokenAuthenticator
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import oxalis.security.TokenType.TokenType
-import play.api.libs.concurrent.Execution.Implicits._
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
-class BearerTokenAuthenticatorRepository(tokenDAO: TokenDAO) extends AuthenticatorRepository[BearerTokenAuthenticator] {
+class BearerTokenAuthenticatorRepository(tokenDAO: TokenDAO)(implicit ec: ExecutionContext) extends AuthenticatorRepository[BearerTokenAuthenticator] {
 
   override def find(value: String): Future[Option[BearerTokenAuthenticator]] =
     findOneByValue(value)(GlobalAccessContext).toFutureOption

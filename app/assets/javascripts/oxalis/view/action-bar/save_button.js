@@ -74,7 +74,7 @@ class SaveButton extends React.PureComponent<Props, State> {
             %
           </React.Fragment>
         ) : (
-          <React.Fragment>Save</React.Fragment>
+          <span className="hide-on-small-screen">Save</span>
         )}
       </ButtonComponent>
     );

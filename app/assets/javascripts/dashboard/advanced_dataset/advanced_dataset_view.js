@@ -15,7 +15,7 @@ import FormattedDate from "components/formatted_date";
 const { Column } = Table;
 
 const typeHint: APIMaybeUnimportedDatasetType[] = [];
-const useLruRank = false;
+const useLruRank = true;
 
 type Props = {
   datasets: Array<APIMaybeUnimportedDatasetType>,
@@ -65,7 +65,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
   render() {
     const { isUserAdmin } = this.props;
     const isImported = dataset => dataset.dataSource.dataLayers != null;
-    const filteredDataSource = Utils.filterWithSearchQueryOR(
+    const filteredDataSource = Utils.filterWithSearchQueryAND(
       isUserAdmin ? this.props.datasets : this.props.datasets.filter(isImported),
       ["name", "description"],
       this.props.searchQuery,

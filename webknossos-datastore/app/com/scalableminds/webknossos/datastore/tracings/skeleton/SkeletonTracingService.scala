@@ -8,13 +8,13 @@ import com.scalableminds.webknossos.datastore.tracings.UpdateAction.SkeletonUpda
 import com.scalableminds.webknossos.datastore.tracings._
 import com.scalableminds.webknossos.datastore.tracings.skeleton.updating._
 import net.liftweb.common.{Empty, Full}
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.{Json, Writes}
+import play.api.libs.json.{JsObject, Json, Writes}
 
-class SkeletonTracingService @Inject()(
-                                        tracingDataStore: TracingDataStore,
-                                        val temporaryTracingStore: TemporaryTracingStore[SkeletonTracing]
-                                      )
+import scala.concurrent.ExecutionContext
+
+class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
+                                       val temporaryTracingStore: TemporaryTracingStore[SkeletonTracing])
+                                      (implicit ec: ExecutionContext)
   extends TracingService[SkeletonTracing]
     with KeyValueStoreImplicits
     with ProtoGeometryImplicits
@@ -124,9 +124,16 @@ class SkeletonTracingService @Inject()(
   def merge(tracings: Seq[SkeletonTracing]): SkeletonTracing = tracings.reduceLeft(mergeTwo)
 
   def updateActionLog(tracingId: String) = {
+    def versionedTupleToJson(tuple: (Long, List[SkeletonUpdateAction])): JsObject = {
+      Json.obj(
+        "version" -> tuple._1,
+        "value" -> Json.toJson(tuple._2)
+      )
+    }
     for {
-      updateActionGroups <- tracingDataStore.skeletonUpdates.getMultipleVersions(tracingId)(fromJson[List[SkeletonUpdateAction]])
-    } yield (Json.toJson(updateActionGroups))
+      updateActionGroups <- tracingDataStore.skeletonUpdates.getMultipleVersionsAsVersionValueTuple(tracingId)(fromJson[List[SkeletonUpdateAction]])
+      updateActionGroupsJs = updateActionGroups.map(versionedTupleToJson)
+    } yield (Json.toJson(updateActionGroupsJs))
   }
 
   def updateActionStatistics(tracingId: String) = {

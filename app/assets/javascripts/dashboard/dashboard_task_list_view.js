@@ -238,7 +238,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
       okText: messages.yes,
       onOk: async () => {
         await resetAnnotation(annotation.id, annotation.typ);
-        Toast.success(messages["task.reset_success"]);
+        Toast.success(messages["annotation.reset_success"]);
       },
     });
   }
@@ -340,7 +340,11 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 
   renderTaskList() {
     const tasks = this.getCurrentTasks().sort(
-      Utils.compareBy(typeHint, task => task.created, false),
+      Utils.compareBy(
+        typeHint,
+        task => (this.state.showFinishedTasks ? task.annotation.modified : task.created),
+        false,
+      ),
     );
     const descriptionClassName = classNames("task-type-description", {
       short: this.state.showFinishedTasks || this.props.isAdminView,
@@ -355,28 +359,44 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
       </React.Fragment>
     );
 
-    const TaskCard = task => (
-      <Card key={task.id} title={<TaskCardTitle task={task} />} style={{ margin: "10px" }}>
-        <Row gutter={16}>
-          <Col span={16}>
-            <div className={descriptionClassName}>
-              <Markdown
-                source={task.type.description}
-                options={{ html: false, breaks: true, linkify: true }}
-              />
-            </div>
-          </Col>
-          <Col span={8}>
-            <p style={{ marginBottom: 14 }}>
+    const TaskCard = task =>
+      this.state.showFinishedTasks ? (
+        <Card key={task.id} style={{ margin: "10px" }}>
+          <Row gutter={16}>
+            <Col span={7}>
               <b>Task ID:</b> {task.id}
-              <br />
+            </Col>
+            <Col span={7}>
               <b>Project:</b> {task.projectName}
-            </p>
-            {this.renderActions(task)}
-          </Col>
-        </Row>
-      </Card>
-    );
+            </Col>
+            <Col span={7}>
+              <b>Finished:</b> <FormattedDate timestamp={task.annotation.modified} />
+            </Col>
+            <Col span={3}>{this.renderActions(task)}</Col>
+          </Row>
+        </Card>
+      ) : (
+        <Card key={task.id} title={<TaskCardTitle task={task} />} style={{ margin: "10px" }}>
+          <Row gutter={16}>
+            <Col span={16}>
+              <div className={descriptionClassName}>
+                <Markdown
+                  source={task.type.description}
+                  options={{ html: false, breaks: true, linkify: true }}
+                />
+              </div>
+            </Col>
+            <Col span={8}>
+              <p style={{ marginBottom: 14 }}>
+                <b>Task ID:</b> {task.id}
+                <br />
+                <b>Project:</b> {task.projectName}
+              </p>
+              {this.renderActions(task)}
+            </Col>
+          </Row>
+        </Card>
+      );
 
     return (
       <List
@@ -408,7 +428,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
           </Button>
         </div>
         <h3 id="tasksHeadline" className="TestTasksHeadline">
-          Tasks
+          {this.state.showFinishedTasks ? "Finished" : null} Tasks
         </h3>
         <div className="clearfix" style={{ margin: "20px 0px" }} />
         {this.renderTaskList()}

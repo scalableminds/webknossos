@@ -42,6 +42,8 @@ import type {
   ServerSkeletonTracingType,
   ServerVolumeTracingType,
   APIAnnotationTypeCompact,
+  APIUpdateActionBatch,
+  ExperienceDomainListType,
 } from "admin/api_flow_types";
 import { APITracingTypeEnum } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/task/task_search_form";
@@ -529,10 +531,11 @@ export function createExplorational(
 
 export async function getTracingForAnnotations(
   annotation: APIAnnotationType,
+  version?: number,
 ): Promise<HybridServerTracingType> {
   const [_skeleton, _volume] = await Promise.all([
-    getTracingForAnnotationType(annotation, "skeleton"),
-    getTracingForAnnotationType(annotation, "volume"),
+    getTracingForAnnotationType(annotation, "skeleton", version),
+    getTracingForAnnotationType(annotation, "volume", version),
   ]);
 
   const skeleton = ((_skeleton: any): ?ServerSkeletonTracingType);
@@ -547,14 +550,18 @@ export async function getTracingForAnnotations(
 export async function getTracingForAnnotationType(
   annotation: APIAnnotationType,
   tracingType: "skeleton" | "volume",
+  version?: number,
 ): Promise<?ServerTracingType> {
   const tracingId = annotation.tracing[tracingType];
   if (!tracingId) {
     return null;
   }
+  const possibleVersionString = version != null ? `&version=${version}` : "";
   const tracingArrayBuffer = await doWithToken(token =>
     Request.receiveArraybuffer(
-      `${annotation.dataStore.url}/data/tracings/${tracingType}/${tracingId}?token=${token}`,
+      `${
+        annotation.dataStore.url
+      }/data/tracings/${tracingType}/${tracingId}?token=${token}${possibleVersionString}`,
       { headers: { Accept: "application/x-protobuf" } },
     ),
   );
@@ -563,6 +570,18 @@ export async function getTracingForAnnotationType(
   // The tracing id is not contained in the server tracing, but in the annotation content
   tracing.id = tracingId;
   return tracing;
+}
+
+export function getUpdateActionLog(
+  dataStoreUrl: string,
+  tracingId: string,
+  tracingType: "skeleton" | "volume",
+): Promise<Array<APIUpdateActionBatch>> {
+  return doWithToken(token =>
+    Request.receiveJSON(
+      `${dataStoreUrl}/data/tracings/${tracingType}/${tracingId}/updateActionLog?token=${token}`,
+    ),
+  );
 }
 
 // ### Datasets
@@ -813,4 +832,9 @@ export function getFeatureToggles(): Promise<APIFeatureToggles> {
 
 export function getOperatorData(): Promise<string> {
   return Request.receiveJSON("/api/operatorData");
+}
+
+// ## Experience Domains
+export function getExistingExperienceDomains(): Promise<ExperienceDomainListType> {
+  return Request.receiveJSON("/api/tasks/experienceDomains");
 }

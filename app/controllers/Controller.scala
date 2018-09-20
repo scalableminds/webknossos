@@ -9,19 +9,20 @@ import com.typesafe.scalalogging.LazyLogging
 import models.user.User
 import net.liftweb.common.{Box, Failure, Full, ParamFailure}
 import oxalis.security.WkEnv
-import play.api.i18n.{I18nSupport, Messages}
-import play.api.libs.concurrent.Execution.Implicits._
+import play.api.i18n.{I18nSupport, Messages, MessagesProvider}
 import play.api.libs.json._
-import play.api.mvc.{Request, Result, Controller => PlayController}
+import play.api.mvc.{InjectedController, Request, Result}
+
+import scala.concurrent.ExecutionContext
 
 
-trait Controller extends PlayController
+trait Controller extends InjectedController
   with ExtendedController
   with ValidationHelpers
   with I18nSupport
   with LazyLogging {
 
-  def jsonErrorWrites(errors: JsError): JsObject =
+  def jsonErrorWrites(errors: JsError)(implicit m: MessagesProvider): JsObject =
     Json.obj(
       "errors" -> errors.errors.map(error =>
         error._2.foldLeft(Json.obj("field" -> error._1.toJsonString)) {
@@ -41,19 +42,19 @@ trait Controller extends PlayController
     }
   }
 
-  def withJsonBodyAs[A](f: A => Fox[Result])(implicit rds: Reads[A], request: Request[JsValue]): Fox[Result] = {
+  def withJsonBodyAs[A](f: A => Fox[Result])(implicit rds: Reads[A], request: Request[JsValue], m: MessagesProvider, ec: ExecutionContext): Fox[Result] = {
     withJsonBodyUsing(rds)(f)
   }
 
-  def withJsonBodyUsing[A](reads: Reads[A])(f: A => Fox[Result])(implicit request: Request[JsValue]): Fox[Result] = {
+  def withJsonBodyUsing[A](reads: Reads[A])(f: A => Fox[Result])(implicit request: Request[JsValue], m: MessagesProvider, ec: ExecutionContext): Fox[Result] = {
     withJsonUsing(request.body, reads)(f)
   }
 
-  def withJsonAs[A](json: JsReadable)(f: A => Fox[Result])(implicit rds: Reads[A]): Fox[Result] = {
+  def withJsonAs[A](json: JsReadable)(f: A => Fox[Result])(implicit rds: Reads[A], m: MessagesProvider, ec: ExecutionContext): Fox[Result] = {
     withJsonUsing(json, rds)(f)
   }
 
-  def withJsonUsing[A](json: JsReadable, reads: Reads[A])(f: A => Fox[Result]): Fox[Result] = {
+  def withJsonUsing[A](json: JsReadable, reads: Reads[A])(f: A => Fox[Result])(implicit m: MessagesProvider, ec: ExecutionContext): Fox[Result] = {
     json.validate(reads) match {
       case JsSuccess(result, _) =>
         f(result)

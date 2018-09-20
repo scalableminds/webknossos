@@ -53,7 +53,7 @@ function createSendBucketInfo(zoomedAddress: Vector4, resolutions: Array<Vector3
 export async function requestFromStore(
   layerInfo: DataLayerType,
   batch: Array<Vector4>,
-): Promise<Uint8Array> {
+): Promise<{ buffer: Uint8Array, missingBuckets: number[] }> {
   const fourBit =
     Store.getState().datasetConfiguration.fourBit &&
     !isSegmentationLayer(Store.getState().dataset, layerInfo.name);
@@ -67,19 +67,20 @@ export async function requestFromStore(
     const datasetName = state.dataset.name;
     const dataStoreUrl = state.dataset.dataStore.url;
 
-    const responseBuffer = await Request.sendJSONReceiveArraybuffer(
+    const { buffer: responseBuffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
       `${dataStoreUrl}/data/datasets/${datasetName}/layers/${layerInfo.name}/data?token=${token}`,
       {
         data: bucketInfo,
         timeout: REQUEST_TIMEOUT,
       },
     );
+    const missingBuckets = JSON.parse(headers["missing-buckets"]);
 
     let resultBuffer = responseBuffer;
     if (fourBit) {
       resultBuffer = await decodeFourBit(resultBuffer);
     }
-    return new Uint8Array(resultBuffer);
+    return { buffer: new Uint8Array(resultBuffer), missingBuckets };
   });
 }
 

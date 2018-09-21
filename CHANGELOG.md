@@ -25,6 +25,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Added bar-chart visualization to project progress report. [#3224](https://github.com/scalableminds/webknossos/pull/3224)
 - Added a button to collapse all comments. [#3215](https://github.com/scalableminds/webknossos/pull/3215)
 - The datasets in the dashboard are now sorted according to their user-specific usage. As a result, relevant datasets should appear at the top of the list. [#3206](https://github.com/scalableminds/webknossos/pull/3206)
+- 3D Meshes can now be imported into the tracing view by uploading corresponding STL files. [#3242](https://github.com/scalableminds/webknossos/pull/3242)
 
 ### Changed
 

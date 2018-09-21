@@ -43,6 +43,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Improved overall drag-and-drop behavior by preventing the browser from opening the dragged file when the actual drag target was missed. [#3222](https://github.com/scalableminds/webknossos/pull/3222)
 - The checkboxes in the user list view will clear now after the experience domains of users have been changed. [#3178](https://github.com/scalableminds/webknossos/pull/3178)
 - Resetting a user's task requires a confirmation now. [#3181](https://github.com/scalableminds/webknossos/pull/3181)
+- The tracing layout was changed to be more compact. [#3256](https://github.com/scalableminds/webknossos/pull/3256)
 
 ### Fixed
 
@@ -55,6 +56,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Fixed a bug which caused a blank screen sometimes when the user is not logged in. [#3167](https://github.com/scalableminds/webknossos/pull/3167)
 - Fixed a bug where NML downloads of Task Annotations failed. [#3166](https://github.com/scalableminds/webknossos/pull/3166)
 - Fixed a bug where vieweing Compound Annotations (such as all tasks for a project in one view) failed. [#3174](https://github.com/scalableminds/webknossos/pull/3174)
+- Fixed a layouting issue which occurred on a fresh page load when the layout was scaled to be bigger than the available space. [#3256](https://github.com/scalableminds/webknossos/pull/3256)
 
 ### Removed
 

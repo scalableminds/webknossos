@@ -74,7 +74,9 @@ export default class TextureBucketManager {
     this.freeIndexSet = new Set(_.range(this.maximumCapacity));
 
     this.dataTextures = [];
+  }
 
+  startRAFLoops() {
     this.keepLookUpBufferUpToDate();
     this.processWriterQueue();
   }
@@ -134,7 +136,7 @@ export default class TextureBucketManager {
   }
 
   keepLookUpBufferUpToDate() {
-    if (this.isRefreshBufferOutOfDate) {
+    if (this.lookUpTexture.isInitialized() && this.isRefreshBufferOutOfDate) {
       this._refreshLookUpBuffer();
     }
     window.requestAnimationFrame(() => {
@@ -157,7 +159,11 @@ export default class TextureBucketManager {
     const bucketHeightInTexture = packedBucketSize / this.textureWidth;
     const bucketsPerTexture = (this.textureWidth * this.textureWidth) / packedBucketSize;
 
-    while (performance.now() - startingTime < maxTimePerFrame && this.writerQueue.length > 0) {
+    while (
+      this.dataTextures[0].isInitialized() &&
+      performance.now() - startingTime < maxTimePerFrame &&
+      this.writerQueue.length > 0
+    ) {
       const { bucket, _index } = this.writerQueue.pop();
       if (!this.activeBucketToIndexMap.has(bucket)) {
         // This bucket is not needed anymore
@@ -207,6 +213,8 @@ export default class TextureBucketManager {
       getRenderer(),
     );
     this.lookUpTexture = lookUpTexture;
+
+    this.startRAFLoops();
   }
 
   getLookUpBuffer() {

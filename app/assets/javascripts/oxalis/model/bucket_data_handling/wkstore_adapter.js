@@ -14,6 +14,7 @@ import constants from "oxalis/constants";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
 import ByteArrayToBase64Worker from "oxalis/workers/byte_array_to_base64.worker";
+import { parseAsMaybe } from "libs/utils";
 
 const decodeFourBit = createWorker(DecodeFourBitWorker);
 const byteArrayToBase64 = createWorker(ByteArrayToBase64Worker);
@@ -74,7 +75,7 @@ export async function requestFromStore(
         timeout: REQUEST_TIMEOUT,
       },
     );
-    const missingBuckets = JSON.parse(headers["missing-buckets"]);
+    const missingBuckets = parseAsMaybe(headers["missing-buckets"]).getOrElse([]);
 
     let resultBuffer = responseBuffer;
     if (fourBit) {

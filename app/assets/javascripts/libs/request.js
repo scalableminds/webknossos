@@ -158,7 +158,10 @@ class Request {
     this.triggerRequest(
       url,
       _.defaultsDeep(options, {
-        headers: { Accept: "application/octet-stream" },
+        headers: {
+          Accept: "application/octet-stream",
+          "Access-Control-Request-Headers": "content-type, missing-buckets",
+        },
         useWebworkerForArrayBuffer: true,
       }),
     );

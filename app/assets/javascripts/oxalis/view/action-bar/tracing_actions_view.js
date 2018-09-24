@@ -3,7 +3,7 @@ import React, { PureComponent } from "react";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import { connect } from "react-redux";
-import { Button, Dropdown, Menu, Icon, Modal } from "antd";
+import { Upload, Button, Dropdown, Menu, Icon, Modal } from "antd";
 import Constants from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
 import ShareModalView from "oxalis/view/action-bar/share_modal_view";
@@ -20,6 +20,8 @@ import type { OxalisState, RestrictionsAndSettingsType, TaskType } from "oxalis/
 import type { APIUserType, APITracingType } from "admin/api_flow_types";
 import { layoutEmitter } from "oxalis/view/layouting/layout_persistence";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import SceneController from "oxalis/controller/scene_controller";
+import { readFileAsArrayBuffer } from "libs/read_file";
 
 type StateProps = {
   tracingType: APITracingType,
@@ -264,6 +266,20 @@ class TracingActionsView extends PureComponent<StateProps, State> {
     }
 
     elements.push(resetLayoutItem);
+
+    const onStlUpload = async info => {
+      const buffer = await readFileAsArrayBuffer(info.file);
+      SceneController.addSTL(buffer);
+    };
+
+    elements.push(
+      <Menu.Item key="stl-mesh">
+        <Upload beforeUpload={() => false} onChange={onStlUpload} showUploadList={false}>
+          <Icon type="upload" />
+          Import STL Mesh
+        </Upload>
+      </Menu.Item>,
+    );
 
     const menu = <Menu>{elements}</Menu>;
 

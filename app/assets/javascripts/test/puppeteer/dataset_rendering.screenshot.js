@@ -3,7 +3,7 @@
 import test from "ava";
 import puppeteer, { type Browser } from "puppeteer";
 import path from "path";
-import fetch, { Headers } from "node-fetch";
+import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
 import { screenshotDataset, DEV_AUTH_TOKEN } from "./dataset_rendering_helpers";
 import { compareScreenshot } from "./screenshot_helpers";
 
@@ -44,6 +44,7 @@ test.beforeEach(async t => {
   global.fetch = fetch;
   global.Request = Request;
   global.Response = Response;
+  global.FetchError = FetchError;
 });
 
 // These are the datasets that are available on our dev instance

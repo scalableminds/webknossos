@@ -62,7 +62,9 @@ export class VoxelIterator {
       coor[0] >= this.boundingBox[0][0] &&
       coor[0] <= this.boundingBox[1][0] &&
       coor[1] >= this.boundingBox[0][1] &&
-      coor[1] <= this.boundingBox[1][1]
+      coor[1] <= this.boundingBox[1][1] &&
+      coor[2] >= this.boundingBox[0][2] &&
+      coor[2] <= this.boundingBox[1][2]
     );
   }
 

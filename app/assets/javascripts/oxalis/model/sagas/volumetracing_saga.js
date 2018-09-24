@@ -78,7 +78,8 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     const activeTool = yield* select(state => enforceVolumeTracing(state.tracing).activeTool);
     // added variables -> use initialViewport for checking if still in the same viewport
     const initialViewport = yield* select(state => state.viewModeData.plane.activeViewport);
-    const activeViewportBounding = yield* call(getBoundingsFromPosition);
+    const activeViewportBounding = yield* call(getBoundingsFromPosition, initialViewport);
+    console.log(initialViewport, activeViewportBounding);
 
     if (activeTool === VolumeToolEnum.BRUSH) {
       yield* call(
@@ -106,8 +107,8 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
       if (activeTool === VolumeToolEnum.TRACE) {
         currentLayer.addContour(addToLayerAction.position);
       } else if (activeTool === VolumeToolEnum.BRUSH) {
-        const currentViewportBounding = yield* call(getBoundingsFromPosition);
-
+        const currentViewportBounding = yield* call(getBoundingsFromPosition, currentViewport);
+        console.log(currentViewport, currentViewportBounding);
         yield* call(
           labelWithIterator,
           currentLayer.getCircleVoxelIterator(addToLayerAction.position, currentViewportBounding),
@@ -120,14 +121,31 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
   }
 }
 
-function* getBoundingsFromPosition(): Saga<Array<Vector2d>> {
+function* getBoundingsFromPosition(currentViewport: OrthoViewType): Saga<Array<Vector3d>> {
   const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
   const zoom = yield* select(state => state.flycam.zoomStep);
   const halfViewportWidth = Math.round((Constants.PLANE_WIDTH / 2) * zoom);
-  return [
-    [position[0] - halfViewportWidth, position[1] - halfViewportWidth],
-    [position[0] + halfViewportWidth, position[1] + halfViewportWidth],
-  ];
+  switch (
+    currentViewport // needs debugging
+  ) {
+    case "PLANE_XY":
+      return [
+        [position[0] - halfViewportWidth, position[1] - halfViewportWidth, position[2]],
+        [position[0] + halfViewportWidth, position[1] + halfViewportWidth, position[2]],
+      ];
+    case "PLANE_YZ":
+      return [
+        [position[0], position[1] - halfViewportWidth, position[2] - halfViewportWidth],
+        [position[0], position[1] + halfViewportWidth, position[2] + halfViewportWidth],
+      ];
+    case "PLANE_XZ":
+      return [
+        [position[0] - halfViewportWidth, position[1], position[2] - halfViewportWidth],
+        [position[0] + halfViewportWidth, position[1], position[2] + halfViewportWidth],
+      ];
+    default:
+      return null;
+  }
 }
 
 function* createVolumeLayer(planeId: OrthoViewType): Saga<VolumeLayer> {

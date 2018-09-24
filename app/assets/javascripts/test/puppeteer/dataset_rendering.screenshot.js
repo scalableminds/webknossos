@@ -42,6 +42,8 @@ test.beforeEach(async t => {
   });
   global.Headers = Headers;
   global.fetch = fetch;
+  global.Request = Request;
+  global.Response = Response;
 });
 
 // These are the datasets that are available on our dev instance

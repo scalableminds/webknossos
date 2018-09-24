@@ -8,6 +8,7 @@ import UpdatableTexture from "libs/UpdatableTexture";
 import window from "libs/window";
 import { createUpdatableTexture } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import { getRenderer } from "oxalis/controller/renderer";
+import { waitForCondition } from "libs/utils";
 
 // A TextureBucketManager instance is responsible for making buckets available
 // to the GPU.
@@ -76,7 +77,11 @@ export default class TextureBucketManager {
     this.dataTextures = [];
   }
 
-  startRAFLoops() {
+  async startRAFLoops() {
+    await waitForCondition(
+      () => this.lookUpTexture.isInitialized() && this.dataTextures[0].isInitialized(),
+    );
+
     this.keepLookUpBufferUpToDate();
     this.processWriterQueue();
   }
@@ -136,7 +141,7 @@ export default class TextureBucketManager {
   }
 
   keepLookUpBufferUpToDate() {
-    if (this.lookUpTexture.isInitialized() && this.isRefreshBufferOutOfDate) {
+    if (this.isRefreshBufferOutOfDate) {
       this._refreshLookUpBuffer();
     }
     window.requestAnimationFrame(() => {
@@ -159,11 +164,7 @@ export default class TextureBucketManager {
     const bucketHeightInTexture = packedBucketSize / this.textureWidth;
     const bucketsPerTexture = (this.textureWidth * this.textureWidth) / packedBucketSize;
 
-    while (
-      this.dataTextures[0].isInitialized() &&
-      performance.now() - startingTime < maxTimePerFrame &&
-      this.writerQueue.length > 0
-    ) {
+    while (performance.now() - startingTime < maxTimePerFrame && this.writerQueue.length > 0) {
       const { bucket, _index } = this.writerQueue.pop();
       if (!this.activeBucketToIndexMap.has(bucket)) {
         // This bucket is not needed anymore

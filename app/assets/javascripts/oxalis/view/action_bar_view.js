@@ -31,6 +31,7 @@ class ActionBarView extends React.PureComponent<Props> {
   render() {
     const isTraceMode = this.props.controlMode === ControlModeEnum.TRACE;
     const hasVolume = this.props.tracing.volume != null;
+    const hasSkeleton = this.props.tracing.skeleton != null;
     const isVolumeSupported = !Constants.MODES_ARBITRARY.includes(this.props.viewMode);
     const readonlyDropdown = (
       <Dropdown overlay={<Menu>{resetLayoutItem}</Menu>}>
@@ -46,7 +47,7 @@ class ActionBarView extends React.PureComponent<Props> {
         {this.props.showVersionRestore ? VersionRestoreWarning : null}
         <DatasetPositionView />
         {hasVolume && isVolumeSupported ? <VolumeActionsView /> : null}
-        {isTraceMode ? <ViewModesView /> : null}
+        {hasSkeleton && isTraceMode ? <ViewModesView /> : null}
       </div>
     );
   }

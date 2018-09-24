@@ -49,24 +49,24 @@ UpdatableTexture.prototype.constructor = UpdatableTexture;
 
 UpdatableTexture.prototype.isUpdatableTexture = true;
 
-UpdatableTexture.prototype.setRenderer = function(renderer) {
+UpdatableTexture.prototype.setRenderer = function setRenderer(renderer) {
   this.renderer = renderer;
   this.gl = this.renderer.getContext();
   this.utils = THREE.WebGLUtils(this.gl, this.renderer.extensions);
 };
 
-UpdatableTexture.prototype.setSize = function(width, height) {
+UpdatableTexture.prototype.setSize = function setSize(width, height) {
   if (width === this.width && height === this.height) return;
 
-  const textureProperties = this.renderer.properties.get(this);
-  if (!textureProperties.__webglTexture) return;
+  if (!this.isInitialized()) return;
 
   this.width = width;
   this.height = height;
 
   const activeTexture = this.gl.getParameter(this.gl.TEXTURE_BINDING_2D);
+  const textureProperties = this.renderer.properties.get(this);
   this.gl.bindTexture(this.gl.TEXTURE_2D, textureProperties.__webglTexture);
-  if (!textureProperties.__webglTexture) this.width = null;
+  if (!this.isInitialized()) this.width = null;
   this.gl.texImage2D(
     this.gl.TEXTURE_2D,
     0,
@@ -81,12 +81,19 @@ UpdatableTexture.prototype.setSize = function(width, height) {
   this.gl.bindTexture(this.gl.TEXTURE_2D, activeTexture);
 };
 
-UpdatableTexture.prototype.update = function(src, x, y, width, height) {
+UpdatableTexture.prototype.isInitialized = function isInitialized() {
+  return this.renderer.properties.get(this).__webglTexture != null;
+};
+
+UpdatableTexture.prototype.update = function update(src, x, y, width, height) {
   this.setSize(width, width);
-  const textureProperties = this.renderer.properties.get(this);
-  if (!textureProperties.__webglTexture) return;
+  if (!this.isInitialized()) {
+    console.warn("Update called before texture was initialized. This update is discarded");
+    return;
+  }
 
   const activeTexture = this.gl.getParameter(this.gl.TEXTURE_BINDING_2D);
+  const textureProperties = this.renderer.properties.get(this);
   this.gl.bindTexture(this.gl.TEXTURE_2D, textureProperties.__webglTexture);
   this.gl.texSubImage2D(
     this.gl.TEXTURE_2D,

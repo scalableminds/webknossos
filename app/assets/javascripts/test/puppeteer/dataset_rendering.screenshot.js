@@ -65,7 +65,7 @@ const datasetNames = [
 ];
 
 datasetNames.map(async datasetName => {
-  test(`it should render dataset ${datasetName} correctly`, async t => {
+  test.serial(`it should render dataset ${datasetName} correctly`, async t => {
     const { screenshot, width, height } = await screenshotDataset(
       await getNewPage(t.context.browser),
       URL,

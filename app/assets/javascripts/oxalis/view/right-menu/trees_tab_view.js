@@ -25,6 +25,7 @@ import {
   setActiveTreeAction,
   addTreesAndGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import { readFileAsText } from "libs/read_file";
 import Store from "oxalis/store";
 import { serializeToNml, getNmlName, parseNml } from "oxalis/model/helpers/nml_helpers";
 import * as Utils from "libs/utils";
@@ -63,15 +64,6 @@ type State = {
   isUploading: boolean,
   isDownloading: boolean,
 };
-
-function readFileAsText(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = reject;
-    reader.onload = () => resolve(reader.result.toString());
-    reader.readAsText(file);
-  });
-}
 
 export async function importNmls(files: Array<File>, createGroupForEachFile: boolean) {
   try {

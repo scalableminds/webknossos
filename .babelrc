@@ -13,7 +13,7 @@
         "@babel/plugin-proposal-class-properties",
         "@babel/plugin-transform-flow-strip-types",
         "syntax-dynamic-import",
-        ["@babel/plugin-proposal-object-rest-spread", { "useBuiltIns": true }]
+        ["@babel/plugin-proposal-object-rest-spread", { "useBuiltIns": true }],
         "istanbul"
       ],
     }

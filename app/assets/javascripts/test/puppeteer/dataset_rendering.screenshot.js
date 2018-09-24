@@ -4,10 +4,9 @@ import anyTest from "ava";
 import puppeteer, { type Browser } from "puppeteer";
 import path from "path";
 import fetch, { Headers } from "node-fetch";
+import type { TestInterface } from "ava";
 import { screenshotDataset, DEV_AUTH_TOKEN } from "./dataset_rendering_helpers";
 import { compareScreenshot } from "./screenshot_helpers";
-
-import type { TestInterface } from "ava";
 
 process.on("unhandledRejection", (err, promise) => {
   console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");

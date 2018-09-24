@@ -205,6 +205,7 @@ export type DatasetConfigurationType = {
   +position?: Vector3,
   +zoom?: number,
   +rotation?: Vector3,
+  +renderMissingDataBlack: true,
 };
 
 export type UserConfigurationType = {|
@@ -383,6 +384,7 @@ export const defaultState: OxalisState = {
     quality: 0,
     segmentationOpacity: 20,
     highlightHoveredCellId: true,
+    renderMissingDataBlack: true,
   },
   userConfiguration: {
     clippingDistance: 50,

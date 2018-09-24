@@ -7,7 +7,40 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/18.09.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/18.10.0...HEAD)
+
+### Added
+
+- 
+
+### Changed
+
+- The UI for editing experience domains of users was improved. [#3254](https://github.com/scalableminds/webknossos/pull/3254)
+- The tracing layout was changed to be more compact. [#3256](https://github.com/scalableminds/webknossos/pull/3256)
+
+### Fixed
+
+- Fixed a layouting issue which occurred on a fresh page load when the layout was scaled to be bigger than the available space. [#3256](https://github.com/scalableminds/webknossos/pull/3256)
+- 
+
+### Removed
+
+- 
+
+
+## [18.10.0](https://github.com/scalableminds/webknossos/releases/tag/18.10.0) - 2018-09-22
+[Commits](https://github.com/scalableminds/webknossos/compare/18.09.0...18.10.0)
+
+### Highlights
+
+- WebKnossos is documented now! Check it out: https://docs.webknossos.org [#3011](https://github.com/scalableminds/webknossos/pull/3011)
+- There are multiple improvements of the tracing view:
+  - Added customizable layouting to the tracing view. [#3070](https://github.com/scalableminds/webknossos/pull/3070)
+  - Improved general performance of the tracing view by leveraging web workers. [#3162](https://github.com/scalableminds/webknossos/pull/3162)
+  - Added a view to restore any older version of a skeleton tracing. Access it through the dropdown next to the Save button. [#3194](https://github.com/scalableminds/webknossos/pull/3194)
+  - And more usability improvements: [#3126](https://github.com/scalableminds/webknossos/pull/3126), [#3066](https://github.com/scalableminds/webknossos/pull/3066)
+- Project administration got some UI improvements: [#3077](https://github.com/scalableminds/webknossos/pull/3077), [#3224](https://github.com/scalableminds/webknossos/pull/3224), [#3233](https://github.com/scalableminds/webknossos/pull/3233)
+- Improved security by enabling http security headers. [#3084](https://github.com/scalableminds/webknossos/pull/3084)
 
 ### Added
 
@@ -25,6 +58,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Added bar-chart visualization to project progress report. [#3224](https://github.com/scalableminds/webknossos/pull/3224)
 - Added a button to collapse all comments. [#3215](https://github.com/scalableminds/webknossos/pull/3215)
 - The datasets in the dashboard are now sorted according to their user-specific usage. As a result, relevant datasets should appear at the top of the list. [#3206](https://github.com/scalableminds/webknossos/pull/3206)
+- 3D Meshes can now be imported into the tracing view by uploading corresponding STL files. [#3242](https://github.com/scalableminds/webknossos/pull/3242)
 
 ### Changed
 
@@ -43,7 +77,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Improved overall drag-and-drop behavior by preventing the browser from opening the dragged file when the actual drag target was missed. [#3222](https://github.com/scalableminds/webknossos/pull/3222)
 - The checkboxes in the user list view will clear now after the experience domains of users have been changed. [#3178](https://github.com/scalableminds/webknossos/pull/3178)
 - Resetting a user's task requires a confirmation now. [#3181](https://github.com/scalableminds/webknossos/pull/3181)
-- The tracing layout was changed to be more compact. [#3256](https://github.com/scalableminds/webknossos/pull/3256)
 
 ### Fixed
 
@@ -55,8 +88,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Fixed a regression bug which caused the initial data loading to fail sometimes. [#3149](https://github.com/scalableminds/webknossos/pull/3149)
 - Fixed a bug which caused a blank screen sometimes when the user is not logged in. [#3167](https://github.com/scalableminds/webknossos/pull/3167)
 - Fixed a bug where NML downloads of Task Annotations failed. [#3166](https://github.com/scalableminds/webknossos/pull/3166)
-- Fixed a bug where vieweing Compound Annotations (such as all tasks for a project in one view) failed. [#3174](https://github.com/scalableminds/webknossos/pull/3174)
-- Fixed a layouting issue which occurred on a fresh page load when the layout was scaled to be bigger than the available space. [#3256](https://github.com/scalableminds/webknossos/pull/3256)
+- Fixed a bug where viewing Compound Annotations (such as all tasks for a project in one view) failed. [#3174](https://github.com/scalableminds/webknossos/pull/3174)
 
 ### Removed
 

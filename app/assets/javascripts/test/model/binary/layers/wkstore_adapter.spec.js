@@ -11,7 +11,7 @@ mockRequire.stopAll();
 
 const RequestMock = {
   always: (promise, func) => promise.then(func, func),
-  sendJSONReceiveArraybuffer: sinon.stub(),
+  sendJSONReceiveArraybufferWithHeaders: sinon.stub(),
   receiveJSON: sinon.stub(),
 };
 const { dataSource } = datasetServerObject;
@@ -67,21 +67,23 @@ function prepare() {
   const bucketData2 = _.range(0, 32 * 32 * 32).map(i => (2 * i) % 256);
   const responseBuffer = new Uint8Array(bucketData1.concat(bucketData2));
 
-  RequestMock.sendJSONReceiveArraybuffer = sinon.stub();
-  RequestMock.sendJSONReceiveArraybuffer.returns(Promise.resolve(responseBuffer));
+  RequestMock.sendJSONReceiveArraybufferWithHeaders = sinon.stub();
+  RequestMock.sendJSONReceiveArraybufferWithHeaders.returns(
+    Promise.resolve({ buffer: responseBuffer, headers: { "missing-buckets": "[]" } }),
+  );
   return { batch, responseBuffer };
 }
 
 test.serial("requestFromStore: Token Handling should re-request a token when it's invalid", t => {
   const { layer } = t.context;
   const { batch, responseBuffer } = prepare();
-  RequestMock.sendJSONReceiveArraybuffer = sinon.stub();
-  RequestMock.sendJSONReceiveArraybuffer
+  RequestMock.sendJSONReceiveArraybufferWithHeaders = sinon.stub();
+  RequestMock.sendJSONReceiveArraybufferWithHeaders
     .onFirstCall()
     // eslint-disable-next-line prefer-promise-reject-errors
     .returns(Promise.reject({ status: 403 }))
     .onSecondCall()
-    .returns(Promise.resolve(responseBuffer));
+    .returns(Promise.resolve({ buffer: responseBuffer, headers: { "missing-buckets": "[]" } }));
 
   RequestMock.receiveJSON = sinon.stub();
   RequestMock.receiveJSON
@@ -91,14 +93,14 @@ test.serial("requestFromStore: Token Handling should re-request a token when it'
     .returns(Promise.resolve({ token: "token2" }));
 
   return requestFromStore(layer, batch).then(result => {
-    t.deepEqual(result, responseBuffer);
+    t.deepEqual(result.buffer, responseBuffer);
 
-    t.is(RequestMock.sendJSONReceiveArraybuffer.callCount, 2);
+    t.is(RequestMock.sendJSONReceiveArraybufferWithHeaders.callCount, 2);
 
-    const url = RequestMock.sendJSONReceiveArraybuffer.getCall(0).args[0];
+    const url = RequestMock.sendJSONReceiveArraybufferWithHeaders.getCall(0).args[0];
     t.is(url, "url/data/datasets/dataSet/layers/color/data?token=token");
 
-    const url2 = RequestMock.sendJSONReceiveArraybuffer.getCall(1).args[0];
+    const url2 = RequestMock.sendJSONReceiveArraybufferWithHeaders.getCall(1).args[0];
     t.is(url2, "url/data/datasets/dataSet/layers/color/data?token=token2");
   });
 });
@@ -121,9 +123,9 @@ test.serial("requestFromStore: Request Handling: should pass the correct request
   const expectedOptions = createExpectedOptions();
 
   return requestFromStore(layer, batch).then(() => {
-    t.is(RequestMock.sendJSONReceiveArraybuffer.callCount, 1);
+    t.is(RequestMock.sendJSONReceiveArraybufferWithHeaders.callCount, 1);
 
-    const [url, options] = RequestMock.sendJSONReceiveArraybuffer.getCall(0).args;
+    const [url, options] = RequestMock.sendJSONReceiveArraybufferWithHeaders.getCall(0).args;
     t.is(url, expectedUrl);
     t.deepEqual(options, expectedOptions);
   });
@@ -141,9 +143,9 @@ test.serial(
     const expectedOptions = createExpectedOptions(true);
 
     await requestFromStore(layer, batch).then(() => {
-      t.is(RequestMock.sendJSONReceiveArraybuffer.callCount, 1);
+      t.is(RequestMock.sendJSONReceiveArraybufferWithHeaders.callCount, 1);
 
-      const [url, options] = RequestMock.sendJSONReceiveArraybuffer.getCall(0).args;
+      const [url, options] = RequestMock.sendJSONReceiveArraybufferWithHeaders.getCall(0).args;
       t.is(url, expectedUrl);
       t.deepEqual(options, expectedOptions);
     });
@@ -163,9 +165,9 @@ test.serial(
     const expectedOptions = createExpectedOptions(false);
 
     await requestFromStore(segmentationLayer, batch).then(() => {
-      t.is(RequestMock.sendJSONReceiveArraybuffer.callCount, 1);
+      t.is(RequestMock.sendJSONReceiveArraybufferWithHeaders.callCount, 1);
 
-      const [url, options] = RequestMock.sendJSONReceiveArraybuffer.getCall(0).args;
+      const [url, options] = RequestMock.sendJSONReceiveArraybufferWithHeaders.getCall(0).args;
       t.is(url, expectedUrl);
       t.deepEqual(options, expectedOptions);
     });

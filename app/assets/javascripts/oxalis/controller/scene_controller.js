@@ -8,6 +8,7 @@ import app from "app";
 import * as Utils from "libs/utils";
 import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
+import parseStlBuffer from "libs/parse_stl_buffer";
 import { V3 } from "libs/mjs";
 import {
   getPosition,
@@ -79,6 +80,14 @@ class SceneController {
     this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.dataSource.scale));
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.rootGroup);
+  }
+
+  addSTL(stlBuffer: ArrayBuffer): void {
+    const geometry = parseStlBuffer(stlBuffer);
+    geometry.computeVertexNormals();
+
+    const meshMaterial = new THREE.MeshNormalMaterial();
+    this.scene.add(new THREE.Mesh(geometry, meshMaterial));
   }
 
   createMeshes(): void {

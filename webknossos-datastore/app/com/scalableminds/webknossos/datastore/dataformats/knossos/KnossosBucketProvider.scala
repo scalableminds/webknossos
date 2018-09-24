@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.webknossos.datastore.dataformats.knossos
 
 import java.io.{FileInputStream, FileNotFoundException, RandomAccessFile}
@@ -19,7 +16,8 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import org.apache.commons.lang3.reflect.FieldUtils
-import play.api.libs.concurrent.Execution.Implicits._
+
+import scala.concurrent.ExecutionContext
 
 class KnossosCube(mappedData: MappedByteBuffer, channel: FileChannel, raf: RandomAccessFile)
   extends Cube
@@ -121,7 +119,7 @@ object KnossosCube {
 
 class KnossosBucketProvider(layer: KnossosLayer) extends BucketProvider with FoxImplicits with LazyLogging {
 
-  override def loadFromUnderlying(readInstruction: DataReadInstruction): Fox[KnossosCube] = {
+  override def loadFromUnderlying(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[KnossosCube] = {
     for {
       section <- layer.sections.find(_.doesContainCube(readInstruction.cube))
       knossosFile <- loadKnossosFile(readInstruction, section)

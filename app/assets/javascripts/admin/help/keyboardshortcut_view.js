@@ -30,6 +30,11 @@ const KeyboardShortcutView = () => {
       action: "Move Along Z-axis",
     },
     {
+      keybinding: "E or R",
+      action:
+        "Move along the current direction (determined by the vector between the last two created nodes). Use R to move in the opposite direction.",
+    },
+    {
       keybinding: "Right Click",
       action: "Set Node",
     },
@@ -43,7 +48,7 @@ const KeyboardShortcutView = () => {
     },
     {
       keybinding: "K, L",
-      action: "Scale Up/down Viewport Size",
+      action: "Increase/Decrease Size of Layout",
     },
     {
       keybinding: "B, J",
@@ -107,6 +112,14 @@ const KeyboardShortcutView = () => {
     {
       keybinding: "Shift + Mousewheel",
       action: "Change Node Radius",
+    },
+    {
+      keybinding: "H, G",
+      action: "Increase/Decrease the Move Value",
+    },
+    {
+      keybinding: "CTRL + Shift + F",
+      action: "Open Tree Search (if Tree List is visible)",
     },
   ];
 
@@ -195,7 +208,7 @@ const KeyboardShortcutView = () => {
       action: "Toggle Move / Trace / Brush Mode",
     },
     {
-      keybinding: "Shift + Mousewheel",
+      keybinding: "Shift + Mousewheel or Shift + I,O",
       action: "Change Brush Size (Brush Mode)",
     },
     {

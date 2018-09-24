@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.webknossos.datastore.tracings.volume
 
 import java.io.File
@@ -12,7 +9,7 @@ import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, ElementClass, SegmentationLayer}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.tracings._
-import com.scalableminds.util.io.ZipIO
+import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.wrap.WKWFile
 import com.typesafe.scalalogging.LazyLogging
@@ -72,7 +69,7 @@ class VolumeTracingService @Inject()(
     }
 
     val fallbackLayer = dataSource.dataLayers.flatMap {
-      case layer: SegmentationLayer => Some(layer)
+      case layer: SegmentationLayer if (Some(layer.name) == tracing.fallbackLayer) => Some(layer)
       case _ => None
     }.headOption
 
@@ -106,6 +103,25 @@ class VolumeTracingService @Inject()(
     Enumerator.outputStream { os =>
       ZipIO.zip(buckets, os)
     }
+  }
+
+  def duplicate(tracingId: String, tracing: VolumeTracing): Fox[String] = {
+    val newTracing = tracing.withCreatedTimestamp(System.currentTimeMillis()).withVersion(0)
+    for {
+      newId <- save(newTracing, None, newTracing.version)
+      _ <- duplicateData(tracingId, tracing, newId, newTracing)
+    } yield newId
+  }
+
+  def duplicateData(sourceId: String, sourceTracing: VolumeTracing, destinationId: String, destinationTracing: VolumeTracing) = {
+    val sourceDataLayer = volumeTracingLayer(sourceId, sourceTracing)
+    val destinationDataLayer = volumeTracingLayer(destinationId, destinationTracing)
+    val buckets: Iterator[(BucketPosition, Array[Byte])] = sourceDataLayer.bucketProvider.bucketStream(1)
+    for {
+      _ <- Fox.combined(buckets.map { case (bucketPosition, bucketData) =>
+              saveBucket(destinationDataLayer, bucketPosition, bucketData)
+            }.toList)
+    } yield ()
   }
 
   private def volumeTracingLayer(tracingId: String, tracing: VolumeTracing): VolumeTracingLayer = {

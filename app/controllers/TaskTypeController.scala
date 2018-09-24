@@ -1,77 +1,86 @@
 package controllers
 
+import com.scalableminds.util.accesscontext.DBAccessContext
 import javax.inject.Inject
-
-import com.scalableminds.util.reactivemongo.JsonFormatHelper
-import com.scalableminds.util.tools.FoxImplicits
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.AnnotationSettings
 import models.task._
-import oxalis.security.WebknossosSilhouette.SecuredAction
+import models.user.UserService
+import oxalis.security.WkEnv
+import com.mohiva.play.silhouette.api.Silhouette
+import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
+import utils.ObjectId
 
-class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Controller with FoxImplicits{
+import scala.concurrent.ExecutionContext
+
+class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
+                                   taskDAO: TaskDAO,
+                                   taskTypeService: TaskTypeService,
+                                   userService: UserService,
+                                   sil: Silhouette[WkEnv])
+                                  (implicit ec: ExecutionContext)
+  extends Controller with FoxImplicits{
 
   val taskTypePublicReads =
     ((__ \ 'summary).read[String](minLength[String](2) or maxLength[String](50)) and
       (__ \ 'description).read[String] and
-      (__ \ 'team).read[String] (JsonFormatHelper.StringObjectIdReads("team")) and
-      (__ \ 'settings).read[AnnotationSettings]) (TaskType.fromForm _)
+      (__ \ 'teamId).read[String] (ObjectId.stringObjectIdReads("teamId")) and
+      (__ \ 'settings).read[AnnotationSettings]) (taskTypeService.fromForm _)
 
-  def create = SecuredAction.async(parse.json) { implicit request =>
+  def create = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(taskTypePublicReads) { taskType =>
       for {
-        _ <- ensureTeamAdministration(request.identity, taskType._team)
-        _ <- TaskTypeDAO.insert(taskType)
-      } yield {
-        JsonOk(TaskType.transformToJson(taskType))
-      }
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team))
+        _ <- taskTypeDAO.insertOne(taskType)
+        js <- taskTypeService.publicWrites(taskType)
+      } yield Ok(js)
     }
   }
 
-  def get(taskTypeId: String) = SecuredAction.async { implicit request =>
+  def get(taskTypeId: String) = sil.SecuredAction.async { implicit request =>
     for {
-      taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-      _ <- ensureTeamAdministration(request.identity, taskType._team)
-    } yield {
-      JsonOk(TaskType.transformToJson(taskType))
-    }
+      taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
+      taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team))
+      js <- taskTypeService.publicWrites(taskType)
+    } yield Ok(js)
   }
 
-
-  def list = SecuredAction.async { implicit request =>
+  def list = sil.SecuredAction.async { implicit request =>
     for {
-      taskTypes <- TaskTypeDAO.findAll
-    } yield {
-      Ok(Json.toJson(taskTypes.map(TaskType.transformToJson)))
-    }
+      taskTypes <- taskTypeDAO.findAll
+      js <- Fox.serialCombined(taskTypes)(t => taskTypeService.publicWrites(t))
+    } yield Ok(Json.toJson(js))
   }
 
-  def update(taskTypeId: String) = SecuredAction.async(parse.json) { implicit request =>
-    withJsonBodyUsing(taskTypePublicReads) { tt =>
+  def update(taskTypeId: String) = sil.SecuredAction.async(parse.json) { implicit request =>
+    withJsonBodyUsing(taskTypePublicReads) { taskTypeFromForm =>
       for {
-        taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-        updatedTaskType = tt.copy(_id = taskType._id)
-        _ <- ensureTeamAdministration(request.identity, taskType._team)
-        _ <- ensureTeamAdministration(request.identity, updatedTaskType._team)
-        _ <- TaskTypeDAO.update(taskType._id, updatedTaskType)
-        tasks <- TaskDAO.findAllByTaskType(taskType._id)
+        taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
+        taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
+        updatedTaskType = taskTypeFromForm.copy(_id = taskType._id)
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team))
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, updatedTaskType._team))
+        _ <- taskTypeDAO.updateOne(updatedTaskType)
+        js <- taskTypeService.publicWrites(updatedTaskType)
       } yield {
-        JsonOk(TaskType.transformToJson(updatedTaskType), Messages("taskType.editSuccess"))
+        JsonOk(js, Messages("taskType.editSuccess"))
       }
     }
   }
 
-  def delete(taskTypeId: String) = SecuredAction.async { implicit request =>
+  def delete(taskTypeId: String) = sil.SecuredAction.async { implicit request =>
     for {
-      taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-      _ <- ensureTeamAdministration(request.identity, taskType._team)
-      _ <- TaskTypeDAO.removeById(taskType._id) ?~> Messages("taskType.deleteFailure")
+      taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
+      taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team))
+      _ <- taskTypeDAO.deleteOne(taskTypeIdValidated) ?~> "taskType.deleteFailure"
+      _ <- taskDAO.removeAllWithTaskTypeAndItsAnnotations(taskTypeIdValidated) ?~> "taskType.deleteFailure"
     } yield {
-      TaskService.removeAllWithTaskType(taskType)
       JsonOk(Messages("taskType.deleteSuccess", taskType.summary))
     }
   }

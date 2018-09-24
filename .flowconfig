@@ -12,21 +12,35 @@
 <PROJECT_ROOT>/lib/.*
 <PROJECT_ROOT>/public/.*
 <PROJECT_ROOT>/tools/.*
-<PROJECT_ROOT>/node_modules/flow-coverage-report/
-<PROJECT_ROOT>/node_modules/draft-js/
-<PROJECT_ROOT>/node_modules/documentation/
-<PROJECT_ROOT>/node_modules/immutable/
 <PROJECT_ROOT>/node_modules/webpack-cli/
+<PROJECT_ROOT>/node_modules/findup/
+<PROJECT_ROOT>/node_modules/documentation/
+<PROJECT_ROOT>/node_modules/flow-coverage-report/
+<PROJECT_ROOT>/node_modules/jsonlint/
+<PROJECT_ROOT>/node_modules/hard-source-webpack-plugin/
+<PROJECT_ROOT>/.nyc_output
+
+[untyped]
+<PROJECT_ROOT>/node_modules/ava/
 
 [options]
+suppress_comment=\\(.\\|\n\\)*\\$ExpectError
+suppress_comment=\\(.\\|\n\\)*\\$FlowFixMe
+suppress_comment=\\(.\\|\n\\)*\\$FlowIgnore
+include_warnings=true
 module.ignore_non_literal_requires=true
-module.name_mapper='three' -> '<PROJECT_ROOT>/node_modules/three.js/build/three.js'
 
+module.name_mapper='three' -> '<PROJECT_ROOT>/node_modules/three.js/build/three.js'
 module.name_mapper='^\([^.].*\)' -> '<PROJECT_ROOT>/app/assets/javascripts/\1'
-module.name_mapper.extension='less' -> '<PROJECT_ROOT>/app/assets/javascripts/flow/LESSFlowStub.js.flow'
+
+module.name_mapper.extension='proto' -> '<PROJECT_ROOT>/app/assets/flow/ProtoFlowStub.js.flow'
+module.name_mapper.extension='less' -> '<PROJECT_ROOT>/app/assets/flow/ProtoFlowStub.js.flow'
 
 [lints]
 all=error
-sketchy-null=warn
+sketchy-null-string=off
+sketchy-null-bool=off
+sketchy-null-mixed=off
 untyped-import=off
-unclear-type=warn
+unclear-type=off
+deprecated-type=off

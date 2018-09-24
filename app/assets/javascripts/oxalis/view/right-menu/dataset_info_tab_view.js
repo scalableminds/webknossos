@@ -9,18 +9,20 @@ import constants, { ControlModeEnum } from "oxalis/constants";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
-import TemplateHelpers from "libs/template_helpers";
+import { formatScale } from "libs/format_utils";
 import {
   setAnnotationNameAction,
   setAnnotationDescriptionAction,
 } from "oxalis/model/actions/annotation_actions";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import { Table } from "antd";
-import type { OxalisState, TracingType, DatasetType, TaskType, FlycamType } from "oxalis/store";
+import Markdown from "react-remarkable";
+import type { APIDatasetType } from "admin/api_flow_types";
+import type { OxalisState, TracingType, TaskType, FlycamType } from "oxalis/store";
 
 type DatasetInfoTabStateProps = {
   tracing: TracingType,
-  dataset: DatasetType,
+  dataset: APIDatasetType,
   flycam: FlycamType,
   task: ?TaskType,
 };
@@ -71,33 +73,33 @@ const shortcuts = [
   },
 ];
 
+export function calculateZoomLevel(flycam: FlycamType, dataset: APIDatasetType): number {
+  const zoom = getPlaneScalingFactor(flycam);
+  let width;
+  const viewMode = Store.getState().temporaryConfiguration.viewMode;
+  if (constants.MODES_PLANE.includes(viewMode)) {
+    width = constants.PLANE_WIDTH;
+  } else if (constants.MODES_ARBITRARY.includes(viewMode)) {
+    width = constants.VIEWPORT_WIDTH;
+  } else {
+    throw new Error(`Model mode not recognized: ${viewMode}`);
+  }
+  // unit is nm
+  const baseVoxel = getBaseVoxel(dataset.dataSource.scale);
+  return zoom * width * baseVoxel;
+}
+
+export function formatZoomLevel(zoomLevel: number): string {
+  if (zoomLevel < 1000) {
+    return `${zoomLevel.toFixed(0)} nm`;
+  } else if (zoomLevel < 1000000) {
+    return `${(zoomLevel / 1000).toFixed(1)} μm`;
+  } else {
+    return `${(zoomLevel / 1000000).toFixed(1)} mm`;
+  }
+}
+
 class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
-  calculateZoomLevel(): number {
-    const zoom = getPlaneScalingFactor(this.props.flycam);
-    let width;
-    const viewMode = Store.getState().temporaryConfiguration.viewMode;
-    if (constants.MODES_PLANE.includes(viewMode)) {
-      width = constants.PLANE_WIDTH;
-    } else if (constants.MODES_ARBITRARY.includes(viewMode)) {
-      width = constants.VIEWPORT_WIDTH;
-    } else {
-      throw new Error(`Model mode not recognized: ${viewMode}`);
-    }
-    // unit is nm
-    const baseVoxel = getBaseVoxel(this.props.dataset.scale);
-    return zoom * width * baseVoxel;
-  }
-
-  chooseUnit(zoomLevel: number): string {
-    if (zoomLevel < 1000) {
-      return `${zoomLevel.toFixed(0)} nm`;
-    } else if (zoomLevel < 1000000) {
-      return `${(zoomLevel / 1000).toFixed(1)} μm`;
-    } else {
-      return `${(zoomLevel / 1000000).toFixed(1)} mm`;
-    }
-  }
-
   setAnnotationName = (newName: string) => {
     this.props.setAnnotationName(newName);
   };
@@ -106,12 +108,74 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
     this.props.setAnnotationDescription(newDescription);
   };
 
-  render() {
-    const { tracingType, name, description } = this.props.tracing;
-    const tracingName = name || "<untitled>";
-    const tracingDescription = description || "<no comment>";
+  getTracingStatistics() {
     const statsMaybe = getStats(this.props.tracing);
+
+    return this.props.tracing.skeleton != null ? (
+      <div>
+        <p>Number of Trees: {statsMaybe.map(stats => stats.treeCount).getOrElse(null)}</p>
+        <p>Number of Nodes: {statsMaybe.map(stats => stats.nodeCount).getOrElse(null)}</p>
+        <p>Number of Edges: {statsMaybe.map(stats => stats.edgeCount).getOrElse(null)}</p>
+        <p>
+          Number of Branch Points: {statsMaybe.map(stats => stats.branchPointCount).getOrElse(null)}
+        </p>
+      </div>
+    ) : null;
+  }
+
+  getKeyboardShortcuts(isPublicViewMode: boolean) {
+    return isPublicViewMode ? (
+      <Table
+        dataSource={shortcuts}
+        columns={shortcutColumns}
+        pagination={false}
+        style={{ marginRight: 20, marginTop: 25, marginBottom: 25 }}
+        size="small"
+      />
+    ) : null;
+  }
+
+  getOrganisationLogo(isPublicViewMode: boolean) {
+    if (!this.props.dataset.logoUrl) {
+      return null;
+    }
+
+    return isPublicViewMode ? (
+      <img
+        style={{ maxHeight: 250 }}
+        src={this.props.dataset.logoUrl}
+        alt={`${this.props.dataset.owningOrganization} Logo`}
+      />
+    ) : null;
+  }
+
+  getDatasetName(isPublicViewMode: boolean) {
+    const { name: datasetName, displayName, description: datasetDescription } = this.props.dataset;
+
+    if (isPublicViewMode) {
+      return (
+        <div>
+          <p>Dataset: {displayName || datasetName}</p>
+          {datasetDescription ? (
+            <Markdown
+              source={datasetDescription}
+              options={{ html: false, breaks: true, linkify: true }}
+            />
+          ) : null}
+        </div>
+      );
+    }
+
+    return <p>Dataset: {datasetName}</p>;
+  }
+
+  getTracingName(isPublicViewMode: boolean) {
+    if (isPublicViewMode) return null;
+
     let annotationTypeLabel;
+
+    const { tracingType, name } = this.props.tracing;
+    const tracingName = name || "<untitled>";
 
     if (this.props.task != null) {
       // In case we have a task display its id
@@ -128,66 +192,52 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
       annotationTypeLabel = (
         <span>
           Explorational Tracing:
-          <EditableTextLabel value={tracingName} onChange={this.setAnnotationName} />
+          <EditableTextLabel
+            value={tracingName}
+            onChange={this.setAnnotationName}
+            label="Annotation Name"
+          />
         </span>
       );
     }
-
-    const zoomLevel = this.calculateZoomLevel();
-    const dataSetName = this.props.dataset.name;
-    const isPublicViewMode =
-      Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
+    const tracingDescription = this.props.tracing.description || "<no description>";
 
     return (
       <div className="flex-overflow">
         <p>{annotationTypeLabel}</p>
-        <p>Dataset: {dataSetName}</p>
-        <p>Viewport Width: {this.chooseUnit(zoomLevel)}</p>
-        <p>Dataset Resolution: {TemplateHelpers.formatScale(this.props.dataset.scale)}</p>
         <p>
-          <span>
+          <span style={{ verticalAlign: "top" }}>
             Description:
             <EditableTextLabel
               value={tracingDescription}
               onChange={this.setAnnotationDescription}
               rows={4}
+              markdown
+              label="Annotation Description"
             />
           </span>
         </p>
-        {this.props.tracing.type === "skeleton" ? (
-          <div>
-            <p>Number of Trees: {statsMaybe.map(stats => stats.treeCount).getOrElse(null)}</p>
-            <p>Number of Nodes: {statsMaybe.map(stats => stats.nodeCount).getOrElse(null)}</p>
-            <p>Number of Edges: {statsMaybe.map(stats => stats.edgeCount).getOrElse(null)}</p>
-            <p>
-              Number of Branch Points:{" "}
-              {statsMaybe.map(stats => stats.branchPointCount).getOrElse(null)}
-            </p>
-          </div>
-        ) : null}
-        {isPublicViewMode ? (
-          <div>
-            <Table
-              dataSource={shortcuts}
-              columns={shortcutColumns}
-              pagination={false}
-              style={{ marginRight: 20 }}
-              size="small"
-            />
-            <div>
-              <img
-                className="img-50"
-                src="/assets/images/Max-Planck-Gesellschaft.svg"
-                alt="Max Plank Geselleschaft Logo"
-              />
-              <img
-                className="img-50"
-                src="/assets/images/MPI-brain-research.svg"
-                alt="Max Plank Institute of Brain Research Logo"
-              />
-            </div>
-          </div>
-        ) : null}
+      </div>
+    );
+  }
+
+  render() {
+    const isPublicViewMode =
+      Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
+
+    const zoomLevel = calculateZoomLevel(this.props.flycam, this.props.dataset);
+
+    return (
+      <div className="flex-overflow">
+        {this.getTracingName(isPublicViewMode)}
+        {this.getDatasetName(isPublicViewMode)}
+
+        <p>Viewport Width: {formatZoomLevel(zoomLevel)}</p>
+        <p>Dataset Resolution: {formatScale(this.props.dataset.dataSource.scale)}</p>
+
+        {this.getTracingStatistics()}
+        {this.getKeyboardShortcuts(isPublicViewMode)}
+        {this.getOrganisationLogo(isPublicViewMode)}
       </div>
     );
   }
@@ -209,4 +259,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect(mapStateToProps, mapDispatchToProps)(DatasetInfoTabView);
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps,
+)(DatasetInfoTabView);

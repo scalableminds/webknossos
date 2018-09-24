@@ -7,7 +7,7 @@ import BackboneEvents from "backbone-events-standalone";
 import constants from "oxalis/constants";
 import Date from "libs/date";
 import { document } from "libs/window";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import KeyboardJS from "libs/keyboardjs_wrapper";
 import Hammer from "libs/hammerjs_wrapper";
 import type { Point2 } from "oxalis/constants";
@@ -69,8 +69,15 @@ function shouldIgnore(event: KeyboardEvent, key: KeyboardKey) {
 export class InputKeyboardNoLoop {
   bindings: Array<KeyboardBindingPress> = [];
   isStarted: boolean = true;
+  supportInputElements: boolean = false;
 
-  constructor(initialBindings: BindingMap<KeyboardHandler>) {
+  constructor(
+    initialBindings: BindingMap<KeyboardHandler>,
+    options?: { supportInputElements?: boolean },
+  ) {
+    if (options) {
+      this.supportInputElements = options.supportInputElements || this.supportInputElements;
+    }
     for (const key of Object.keys(initialBindings)) {
       const callback = initialBindings[key];
       this.attach(key, callback);
@@ -84,7 +91,7 @@ export class InputKeyboardNoLoop {
         if (!this.isStarted) {
           return;
         }
-        if (!Utils.isNoElementFocussed()) {
+        if (!this.supportInputElements && !Utils.isNoElementFocussed()) {
           return;
         }
         if (shouldIgnore(event, key)) {
@@ -120,9 +127,16 @@ export class InputKeyboard {
   bindings: Array<KeyboardBindingDownUp> = [];
   isStarted: boolean = true;
   delay: number = 0;
+  supportInputElements: boolean = false;
 
-  constructor(initialBindings: BindingMap<KeyboardLoopHandler>, delay: number = 0) {
-    this.delay = delay;
+  constructor(
+    initialBindings: BindingMap<KeyboardLoopHandler>,
+    options?: { delay?: number, supportInputElements?: boolean },
+  ) {
+    if (options) {
+      this.delay = options.delay != null ? options.delay : this.delay;
+      this.supportInputElements = options.supportInputElements || this.supportInputElements;
+    }
 
     for (const key of Object.keys(initialBindings)) {
       const callback = initialBindings[key];
@@ -205,7 +219,7 @@ export class InputKeyboard {
           const elapsed = curTime - lastTime;
           callback.lastTime = curTime;
 
-          callback(elapsed / 1000 * constants.FPS, false);
+          callback((elapsed / 1000) * constants.FPS, false);
         }
       }
 
@@ -224,6 +238,8 @@ export class InputKeyboard {
 // The mouse module.
 // Events: over, out, leftClick, rightClick, leftDownMove
 class InputMouseButton {
+  // Remove once https://github.com/babel/babel-eslint/pull/584 is merged
+  // eslint-disable-next-line no-use-before-define
   mouse: InputMouse;
   name: MouseButtonStringType;
   which: MouseButtonWhichType;
@@ -246,6 +262,7 @@ class InputMouseButton {
 
   handleMouseDown(event: MouseEvent): void {
     // event.which is 0 on touch devices as there are no mouse buttons, interpret that as the left mouse button
+    // $FlowFixMe Safari doesn't support evt.buttons, but only evt.which is non-standardized
     const eventWhich = event.which !== 0 ? event.which : 1;
     if (eventWhich === this.which) {
       document.activeElement.blur();
@@ -258,6 +275,7 @@ class InputMouseButton {
 
   handleMouseUp(event: MouseEvent, triggeredByTouch: boolean): void {
     // event.which is 0 on touch devices as there are no mouse buttons, interpret that as the left mouse button
+    // $FlowFixMe Safari doesn't support evt.buttons, but only evt.which is non-standardized
     const eventWhich = event.which !== 0 ? event.which : 1;
     if (eventWhich === this.which && this.down) {
       this.mouse.trigger(`${this.name}MouseUp`, event);
@@ -372,7 +390,9 @@ export class InputMouse {
       Utils.addEventListenerWithDelegation(document, "wheel", this.targetSelector, this.mouseWheel),
     );
 
-    this.hammerManager = new Hammer(this.domElement);
+    this.hammerManager = new Hammer(this.domElement, {
+      inputClass: Hammer.TouchInput,
+    });
     this.hammerManager.get("pan").set({ direction: Hammer.DIRECTION_ALL });
     this.hammerManager.get("pinch").set({ enable: true });
     this.hammerManager.on("panstart", (evt: HammerJsEvent) => this.mouseDown(evt.srcEvent));
@@ -479,8 +499,8 @@ export class InputMouse {
   isButtonPressed(evt: MouseEvent): boolean {
     if (evt.buttons != null) {
       return evt.buttons !== 0;
+      // $FlowFixMe Safari doesn't support evt.buttons, but only evt.which is non-standardized
     } else if (evt.which) {
-      // Safari doesn't support evt.buttons
       return evt.which !== 0;
     }
 

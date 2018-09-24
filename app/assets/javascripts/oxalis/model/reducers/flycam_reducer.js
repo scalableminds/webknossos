@@ -2,12 +2,12 @@
 import update from "immutability-helper";
 import type { OxalisState } from "oxalis/store";
 import type { ActionType } from "oxalis/model/actions/actions";
-import { getMaxZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { M4x4 } from "libs/mjs";
 import type { Matrix4x4 } from "libs/mjs";
 import type { Vector3 } from "oxalis/constants";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import Dimensions from "oxalis/model/dimensions";
 import _ from "lodash";
 
@@ -83,7 +83,7 @@ function rotateReducer(
   });
 }
 
-function getMatrixScale(dataSetScale: Vector3): Vector3 {
+export function getMatrixScale(dataSetScale: Vector3): Vector3 {
   const scale = [1 / dataSetScale[0], 1 / dataSetScale[1], 1 / dataSetScale[2]];
   const maxScale = Math.max(scale[0], scale[1], scale[2]);
   const multi = 1 / maxScale;
@@ -114,28 +114,28 @@ function moveReducer(state: OxalisState, vector: Vector3): OxalisState {
 export function zoomReducer(state: OxalisState, zoomStep: number): OxalisState {
   return update(state, {
     flycam: {
-      zoomStep: { $set: Utils.clamp(ZOOM_STEP_MIN, zoomStep, getMaxZoomStep(state)) },
+      zoomStep: { $set: Utils.clamp(ZOOM_STEP_MIN, zoomStep, getMaxZoomStep(state.dataset)) },
     },
   });
 }
 
 export function setDirectionReducer(state: OxalisState, direction: Vector3) {
-  if (state.userConfiguration.dynamicSpaceDirection) {
-    const spaceDirectionOrtho = [0, 1, 2].map(index => (direction[index] < 0 ? -1 : 1));
-    return update(state, {
-      flycam: { spaceDirectionOrtho: { $set: spaceDirectionOrtho } },
-    });
-  }
-  return state;
+  const spaceDirectionOrtho = direction.map(el => (el < 0 ? -1 : 1));
+  return update(state, {
+    flycam: {
+      direction: { $set: direction },
+      spaceDirectionOrtho: { $set: spaceDirectionOrtho },
+    },
+  });
 }
 
 export function setRotationReducer(state: OxalisState, rotation: Vector3) {
   if (state.dataset != null) {
     const [x, y, z] = rotation;
-    let matrix = resetMatrix(state.flycam.currentMatrix, state.dataset.scale);
-    matrix = rotateOnAxis(matrix, -z * Math.PI / 180, [0, 0, 1]);
-    matrix = rotateOnAxis(matrix, -y * Math.PI / 180, [0, 1, 0]);
-    matrix = rotateOnAxis(matrix, -x * Math.PI / 180, [1, 0, 0]);
+    let matrix = resetMatrix(state.flycam.currentMatrix, state.dataset.dataSource.scale);
+    matrix = rotateOnAxis(matrix, (-z * Math.PI) / 180, [0, 0, 1]);
+    matrix = rotateOnAxis(matrix, (-y * Math.PI) / 180, [0, 1, 0]);
+    matrix = rotateOnAxis(matrix, (-x * Math.PI) / 180, [1, 0, 0]);
     return update(state, { flycam: { currentMatrix: { $set: matrix } } });
   }
   return state;
@@ -216,7 +216,7 @@ function FlycamReducer(state: OxalisState, action: ActionType): OxalisState {
         const { planeId, increaseSpeedWithZoom } = action;
         const vector = Dimensions.transDim(action.vector, planeId);
         const zoomFactor = increaseSpeedWithZoom ? state.flycam.zoomStep : 1;
-        const scaleFactor = getBaseVoxelFactors(dataset.scale);
+        const scaleFactor = getBaseVoxelFactors(dataset.dataSource.scale);
         const delta = [
           vector[0] * zoomFactor * scaleFactor[0],
           vector[1] * zoomFactor * scaleFactor[1],

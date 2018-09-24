@@ -1,14 +1,13 @@
-/*
- * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.webknossos.datastore.tracings
 
 import com.google.inject.Inject
-import play.api.Configuration
+import com.scalableminds.webknossos.datastore.DataStoreConfig
 
-class TracingDataStore @Inject()(config: Configuration) {
+class TracingDataStore @Inject()(config: DataStoreConfig) {
 
-  new FossilDBClient("healthCheckOnly", config).checkHealth
+  val healthClient = new FossilDBClient("healthCheckOnly", config)
+
+  healthClient.checkHealth
 
   lazy val skeletons = new FossilDBClient("skeletons", config)
 

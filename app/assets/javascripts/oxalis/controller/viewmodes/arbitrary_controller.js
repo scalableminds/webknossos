@@ -9,10 +9,11 @@ import _ from "lodash";
 import { InputKeyboard, InputMouse, InputKeyboardNoLoop } from "libs/input";
 import type { ModifierKeys } from "libs/input";
 import { V3 } from "libs/mjs";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import Toast from "libs/toast";
 import type { ModeType, Point2 } from "oxalis/constants";
 import Store from "oxalis/store";
+import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import Model from "oxalis/model";
 import {
   updateUserSettingAction,
@@ -20,7 +21,7 @@ import {
 } from "oxalis/model/actions/settings_actions";
 import {
   setActiveNodeAction,
-  deleteNodeWithConfirmAction,
+  deleteActiveNodeAsUserAction,
   createNodeAction,
   createBranchPointAction,
   requestDeleteBranchPointAction,
@@ -30,8 +31,9 @@ import {
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import Crosshair from "oxalis/geometries/crosshair";
+import app from "app";
 import ArbitraryView from "oxalis/view/arbitrary_view";
-import constants from "oxalis/constants";
+import constants, { ArbitraryViewport } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import {
   yawFlycamAction,
@@ -41,13 +43,17 @@ import {
   moveFlycamAction,
 } from "oxalis/model/actions/flycam_actions";
 import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
-import { getActiveNode, getMaxNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  enforceSkeletonTracing,
+  getActiveNode,
+  getMaxNodeId,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import messages from "messages";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import SceneController from "oxalis/controller/scene_controller";
 import api from "oxalis/api/internal_api";
 
-const CANVAS_SELECTOR = "#render-canvas";
+const arbitraryViewportSelector = "#inputcatcher_arbitraryViewport";
 
 type Props = {
   onRender: () => void,
@@ -66,6 +72,7 @@ class ArbitraryController extends React.PureComponent<Props> {
   input: {
     mouse?: InputMouse,
     keyboard?: InputKeyboard,
+    keyboardLoopDelayed?: InputKeyboard,
     keyboardNoLoop?: InputKeyboardNoLoop,
   };
   storePropertyUnsubscribers: Array<Function>;
@@ -81,51 +88,38 @@ class ArbitraryController extends React.PureComponent<Props> {
     this.start();
   }
 
-  componentDidUpdate(prevProps: Props) {
-    if (prevProps.viewMode !== this.props.viewMode) {
-      this.plane.setMode(this.props.viewMode);
-    }
-  }
-
   componentWillUnmount() {
     this.stop();
   }
 
-  pingBinaries(): void {
-    const matrix = Store.getState().flycam.currentMatrix;
-    Model.getColorBinaries().forEach(binary =>
-      binary.arbitraryPing(matrix, Store.getState().datasetConfiguration.quality),
-    );
-  }
-
   initMouse(): void {
-    this.input.mouse = new InputMouse(CANVAS_SELECTOR, {
-      leftDownMove: (delta: Point2) => {
-        if (this.props.viewMode === constants.MODE_ARBITRARY) {
-          Store.dispatch(
-            yawFlycamAction(delta.x * Store.getState().userConfiguration.mouseRotateValue, true),
-          );
-          Store.dispatch(
-            pitchFlycamAction(
-              delta.y * -1 * Store.getState().userConfiguration.mouseRotateValue,
-              true,
-            ),
-          );
-        } else if (this.props.viewMode === constants.MODE_ARBITRARY_PLANE) {
-          const f =
-            Store.getState().flycam.zoomStep /
-            (this.arbitraryView.width / constants.VIEWPORT_WIDTH);
-          Store.dispatch(moveFlycamAction([delta.x * f, delta.y * f, 0]));
-        }
-      },
-      scroll: this.scroll,
-      pinch: (delta: number) => {
-        if (delta < 0) {
-          Store.dispatch(zoomOutAction());
-        } else {
-          Store.dispatch(zoomInAction());
-        }
-      },
+    Utils.waitForSelector(arbitraryViewportSelector).then(() => {
+      this.input.mouse = new InputMouse(arbitraryViewportSelector, {
+        leftDownMove: (delta: Point2) => {
+          if (this.props.viewMode === constants.MODE_ARBITRARY) {
+            Store.dispatch(
+              yawFlycamAction(delta.x * Store.getState().userConfiguration.mouseRotateValue, true),
+            );
+            Store.dispatch(
+              pitchFlycamAction(
+                delta.y * -1 * Store.getState().userConfiguration.mouseRotateValue,
+                true,
+              ),
+            );
+          } else if (this.props.viewMode === constants.MODE_ARBITRARY_PLANE) {
+            const f = Store.getState().flycam.zoomStep / getViewportScale(ArbitraryViewport);
+            Store.dispatch(moveFlycamAction([delta.x * f, delta.y * f, 0]));
+          }
+        },
+        scroll: this.scroll,
+        pinch: (delta: number) => {
+          if (delta < 0) {
+            Store.dispatch(zoomOutAction());
+          } else {
+            Store.dispatch(zoomInAction());
+          }
+        },
+      });
     });
   }
 
@@ -190,11 +184,16 @@ class ArbitraryController extends React.PureComponent<Props> {
       o: () => {
         Store.dispatch(zoomOutAction());
       },
-
-      // Change move value
-      h: () => this.changeMoveValue(25),
-      g: () => this.changeMoveValue(-25),
     });
+
+    // Own InputKeyboard with delay for changing the Move Value, because otherwise the values changes to drastically
+    this.input.keyboardLoopDelayed = new InputKeyboard(
+      {
+        h: () => this.changeMoveValue(25),
+        g: () => this.changeMoveValue(-25),
+      },
+      { delay: Store.getState().userConfiguration.keyboardDelay },
+    );
 
     this.input.keyboardNoLoop = new InputKeyboardNoLoop({
       "1": () => {
@@ -212,7 +211,8 @@ class ArbitraryController extends React.PureComponent<Props> {
 
       // Recenter active node
       s: () => {
-        getActiveNode(Store.getState().tracing).map(activeNode =>
+        const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
+        getActiveNode(skeletonTracing).map(activeNode =>
           api.tracing.centerPositionAnimated(activeNode.position, false, activeNode.rotation),
         );
       },
@@ -227,7 +227,7 @@ class ArbitraryController extends React.PureComponent<Props> {
 
       // Delete active node and recenter last node
       "shift + space": () => {
-        Store.dispatch(deleteNodeWithConfirmAction());
+        Store.dispatch(deleteActiveNodeAsUserAction(Store.getState()));
       },
     });
   }
@@ -240,22 +240,22 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   nextNode(nextOne: boolean): void {
-    Utils.zipMaybe(
-      getActiveNode(Store.getState().tracing),
-      getMaxNodeId(Store.getState().tracing),
-    ).map(([activeNode, maxNodeId]) => {
-      if ((nextOne && activeNode.id === maxNodeId) || (!nextOne && activeNode.id === 1)) {
-        return;
-      }
-      Store.dispatch(setActiveNodeAction(activeNode.id + 2 * Number(nextOne) - 1)); // implicit cast from boolean to int
-    });
+    const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
+    Utils.zipMaybe(getActiveNode(skeletonTracing), getMaxNodeId(skeletonTracing)).map(
+      ([activeNode, maxNodeId]) => {
+        if ((nextOne && activeNode.id === maxNodeId) || (!nextOne && activeNode.id === 1)) {
+          return;
+        }
+        Store.dispatch(setActiveNodeAction(activeNode.id + 2 * Number(nextOne) - 1)); // implicit cast from boolean to int
+      },
+    );
   }
 
   getVoxelOffset(timeFactor: number): number {
     const state = Store.getState();
-    const moveValue3d = state.userConfiguration.moveValue3d;
-    const baseVoxel = getBaseVoxel(state.dataset.scale);
-    return moveValue3d * timeFactor / baseVoxel / constants.FPS;
+    const { moveValue3d } = state.userConfiguration;
+    const baseVoxel = getBaseVoxel(state.dataset.dataSource.scale);
+    return (moveValue3d * timeFactor) / baseVoxel / constants.FPS;
   }
 
   move(timeFactor: number): void {
@@ -267,34 +267,31 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   init(): void {
-    const clippingDistanceArbitrary = Store.getState().userConfiguration.clippingDistanceArbitrary;
+    const { clippingDistanceArbitrary } = Store.getState().userConfiguration;
     this.setClippingDistance(clippingDistanceArbitrary);
   }
 
   bindToEvents(): void {
-    this.listenTo(this.arbitraryView, "render", this.pingBinaries);
     this.listenTo(this.arbitraryView, "render", this.props.onRender);
 
-    for (const name of Object.keys(Model.binary)) {
-      const binary = Model.binary[name];
-      this.listenTo(binary.cube, "bucketLoaded", this.arbitraryView.draw);
+    const onBucketLoaded = () => {
+      this.arbitraryView.draw();
+      app.vent.trigger("rerender");
+    };
+
+    for (const dataLayer of Model.getAllLayers()) {
+      this.listenTo(dataLayer.cube, "bucketLoaded", onBucketLoaded);
     }
 
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         state => state.userConfiguration,
         userConfiguration => {
-          const {
-            sphericalCapRadius,
-            clippingDistanceArbitrary,
-            displayCrosshair,
-            crosshairSize,
-          } = userConfiguration;
-          this.plane.setSphericalCapRadius(sphericalCapRadius);
+          const { clippingDistanceArbitrary, displayCrosshair, crosshairSize } = userConfiguration;
           this.setClippingDistance(clippingDistanceArbitrary);
           this.crosshair.setScale(crosshairSize);
           this.crosshair.setVisibility(displayCrosshair);
-          this.arbitraryView.resize();
+          this.arbitraryView.resizeThrottled();
         },
       ),
       listenToStoreProperty(
@@ -307,6 +304,15 @@ class ArbitraryController extends React.PureComponent<Props> {
           }
         },
       ),
+      listenToStoreProperty(
+        state => state.userConfiguration.keyboardDelay,
+        keyboardDelay => {
+          const { keyboardLoopDelayed } = this.input;
+          if (keyboardLoopDelayed != null) {
+            keyboardLoopDelayed.delay = keyboardDelay;
+          }
+        },
+      ),
     );
   }
 
@@ -315,7 +321,6 @@ class ArbitraryController extends React.PureComponent<Props> {
     this.arbitraryView.start();
 
     this.plane = new ArbitraryPlane();
-    this.plane.setMode(this.props.viewMode);
     this.crosshair = new Crosshair(Store.getState().userConfiguration.crosshairSize);
     this.crosshair.setVisibility(Store.getState().userConfiguration.displayCrosshair);
 
@@ -328,7 +333,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     this.initMouse();
     this.init();
 
-    const clippingDistance = Store.getState().userConfiguration.clippingDistance;
+    const { clippingDistance } = Store.getState().userConfiguration;
     SceneController.setClippingDistance(clippingDistance);
 
     this.arbitraryView.draw();
@@ -350,6 +355,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     }
 
     this.arbitraryView.stop();
+    this.plane.destroy();
 
     this.isStarted = false;
   }
@@ -363,6 +369,7 @@ class ArbitraryController extends React.PureComponent<Props> {
   destroyInput() {
     Utils.__guard__(this.input.mouse, x => x.destroy());
     Utils.__guard__(this.input.keyboard, x => x.destroy());
+    Utils.__guard__(this.input.keyboardLoopDelayed, x => x.destroy());
     Utils.__guard__(this.input.keyboardNoLoop, x => x.destroy());
   }
 
@@ -382,6 +389,9 @@ class ArbitraryController extends React.PureComponent<Props> {
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue);
 
     Store.dispatch(updateUserSettingAction("moveValue3d", moveValue));
+
+    const moveValueMessage = messages["tracing.changed_move_value"] + moveValue;
+    Toast.success(moveValueMessage, { key: "CHANGED_MOVE_VALUE" });
   }
 
   setParticleSize(delta: number): void {

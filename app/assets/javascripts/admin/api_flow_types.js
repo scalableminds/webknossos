@@ -3,26 +3,66 @@
  * @flow
  */
 import type { SkeletonTracingStatsType } from "oxalis/model/accessors/skeletontracing_accessor";
-import type { Vector3, Vector6 } from "oxalis/constants";
-import type { DataLayerType, SettingsType, BoundingBoxObjectType } from "oxalis/store";
+import type { Vector3, Vector6, Point3 } from "oxalis/constants";
+import type { BoundingBoxObjectType, EdgeType, CommentType, TreeGroupType } from "oxalis/store";
+import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
+import Enum from "Enumjs";
 
 export type APIMessageType = { ["info" | "warning" | "error"]: string };
 
-export type APIDataSourceType = {
+type ElementClassType = "uint8" | "uint16" | "uint32";
+
+export type APIMappingType = {
+  +parent?: string,
+  +name: string,
+  +classes?: Array<Array<number>>,
+  +colors?: Array<number>,
+  +hideUnmappedIds?: boolean,
+};
+
+type APIDataLayerBaseType = {|
+  +name: string,
+  +boundingBox: BoundingBoxObjectType,
+  +resolutions: Array<Vector3>,
+  +elementClass: ElementClassType,
+  +mappings?: Array<string>,
+|};
+
+type APIColorLayerType = {|
+  ...APIDataLayerBaseType,
+  category: "color",
+|};
+
+type APISegmentationLayerType = {|
+  ...APIDataLayerBaseType,
+  category: "segmentation",
+  largestSegmentId: number,
+|};
+
+export type APIDataLayerType = APIColorLayerType | APISegmentationLayerType;
+
+type APIDataSourceBaseType = {
   +id: {
     +name: string,
     +team: string,
   },
   +status?: string,
-  +dataLayers: Array<DataLayerType>,
+};
+
+export type APIMaybeUnimportedDataSourceType = APIDataSourceBaseType & {
+  +dataLayers?: Array<APIDataLayerType>,
+  +scale: ?Vector3,
+};
+
+export type APIDataSourceType = APIDataSourceBaseType & {
+  +dataLayers: Array<APIDataLayerType>,
   +scale: Vector3,
 };
 
 export type APIDataStoreType = {
   +name: string,
   +url: string,
-  +typ: "webknossos-store" | "nd-store",
-  +accessToken?: string,
+  +isForeign?: boolean,
 };
 
 export type APITeamType = {
@@ -31,19 +71,30 @@ export type APITeamType = {
   +organization: string,
 };
 
-export type APIDatasetType = {
+type APIDatasetBaseType = {
   +allowedTeams: Array<APITeamType>,
   +created: number,
-  +dataSource: APIDataSourceType,
   +dataStore: APIDataStoreType,
   +description: ?string,
-  +isActive: boolean,
   +isEditable: boolean,
   +isPublic: boolean,
   +name: string,
-  +displayName: string,
+  +displayName: ?string,
   +owningOrganization: string,
-  +sourceType: "wkw" | "knossos",
+  +logoUrl: ?string,
+  +lastUsedByUser: number,
+  +isForeign: boolean,
+  +sortingKey: number,
+};
+
+export type APIMaybeUnimportedDatasetType = APIDatasetBaseType & {
+  +dataSource: APIMaybeUnimportedDataSourceType,
+  +isActive: boolean,
+};
+
+export type APIDatasetType = APIDatasetBaseType & {
+  +dataSource: APIDataSourceType,
+  +isActive: true,
 };
 
 export type APIDataSourceWithMessagesType = {
@@ -59,18 +110,24 @@ export type APITeamMembershipType = {
 
 export type ExperienceMapType = { +[string]: number };
 
-export type APIUserType = {
+export type ExperienceDomainListType = Array<string>;
+
+export type APIUserBaseType = {
   +email: string,
-  +experiences: ExperienceMapType,
   +firstName: string,
   +lastName: string,
   +id: string,
+  +isAnonymous: boolean,
+  +teams: Array<APITeamMembershipType>,
+};
+
+export type APIUserType = APIUserBaseType & {
+  +created: number,
+  +experiences: ExperienceMapType,
   +isAdmin: boolean,
   +isActive: boolean,
-  +isAnonymous: boolean,
   +isEditable: boolean,
   +lastActivity: number,
-  +teams: Array<APITeamMembershipType>,
   +organization: string,
 };
 
@@ -85,30 +142,35 @@ export type APIUserLoggedTimeType = {
   loggedTime: Array<APITimeIntervalType>,
 };
 
-export type APIRestrictionsType = {
+export type APIActiveUserType = {
+  email: string,
+  activeTasks: number,
+};
+
+export type APIRestrictionsType = {|
   +allowAccess: boolean,
   +allowUpdate: boolean,
   +allowFinish: boolean,
   +allowDownload: boolean,
-};
+|};
 
 export type APIAllowedModeType = "orthogonal" | "oblique" | "flight" | "volume";
 
-export type APISettingsType = {
+export type APISettingsType = {|
   +allowedModes: Array<APIAllowedModeType>,
   +preferredMode?: APIAllowedModeType,
   +branchPointsAllowed: boolean,
   +somaClickingAllowed: boolean,
-};
+|};
 
-export const APITracingTypeEnum = {
+export const APITracingTypeEnum = Enum.make({
   Explorational: "Explorational",
   Task: "Task",
   View: "View",
   CompoundTask: "CompoundTask",
   CompoundProject: "CompoundProject",
   CompoundTaskType: "CompoundTaskType",
-};
+});
 
 export type APITracingType = $Keys<typeof APITracingTypeEnum>;
 
@@ -116,17 +178,30 @@ export type APITaskTypeType = {
   +id: string,
   +summary: string,
   +description: string,
-  +team: string,
-  +settings: SettingsType,
+  +teamId: string,
+  +teamName: string,
+  +settings: APISettingsType,
 };
 
 export type TaskStatusType = { +open: number, +active: number, +finished: number };
 
-export type APIScriptType = {
-  +id: string,
+type APIScriptTypeBase = {
   +name: string,
-  +owner: APIUserType,
   +gist: string,
+};
+
+export type APIScriptType = APIScriptTypeBase & {
+  +id: string,
+  +owner: APIUserBaseType,
+};
+
+export type APIScriptUpdaterType = APIScriptTypeBase & {
+  +id: string,
+  +owner: string,
+};
+
+export type APIScriptCreatorType = APIScriptTypeBase & {
+  +owner: string,
 };
 
 type APIProjectTypeBase = {
@@ -135,12 +210,11 @@ type APIProjectTypeBase = {
   +priority: number,
   +paused: boolean,
   +expectedTime: number,
-  +numberOfOpenAssignments: number,
 };
 
 export type APIProjectType = APIProjectTypeBase & {
   +id: string,
-  +owner: APIUserType,
+  +owner: APIUserBaseType,
 };
 
 export type APIProjectUpdaterType = APIProjectTypeBase & {
@@ -152,10 +226,14 @@ export type APIProjectCreatorType = APIProjectTypeBase & {
   +owner: string,
 };
 
+export type APIProjectWithAssignmentsType = APIProjectType & {
+  +numberOfOpenAssignments: number,
+};
+
 export type APITaskType = {
-  +boundingBox: BoundingBoxObjectType,
-  +boundingBoxVec6: Vector6,
-  +created: string,
+  +boundingBox: ?BoundingBoxObjectType,
+  +boundingBoxVec6?: Vector6,
+  +created: number,
   +creationInfo: ?string,
   +dataSet: string,
   +editPosition: Vector3,
@@ -170,50 +248,47 @@ export type APITaskType = {
   +script: ?APIScriptType,
   +status: TaskStatusType,
   +team: string,
-  +tracingTime: number,
+  +tracingTime: ?number,
   +type: APITaskTypeType,
   +directLinks?: Array<string>,
 };
 
-export type APIAnnotationType = {
-  +content: {
-    +id: string,
-    +typ: string,
+export type APIAnnotationTypeCompact = {
+  +tracing: {
+    +skeleton: ?string,
+    +volume: ?string,
   },
   +dataSetName: string,
-  +dataStore: APIDataStoreType,
   +description: string,
   +formattedHash: string,
-  +modified: string,
+  +modified: number,
   +id: string,
   +isPublic: boolean,
   +name: string,
+  +state: string,
+  +stats: SkeletonTracingStatsType | {||},
+  +tags: Array<string>,
+  +tracingTime: ?number,
+  +typ: APITracingType,
+};
+
+type APIAnnotationTypeBase = APIAnnotationTypeCompact & {
+  +dataStore: APIDataStoreType,
   +restrictions: APIRestrictionsType,
   +settings: APISettingsType,
-  +state: string,
-  +stats: SkeletonTracingStatsType,
-  +tags: Array<string>,
+  +user?: APIUserBaseType,
+};
+
+export type APIAnnotationType = APIAnnotationTypeBase & {
+  +task: ?APITaskType,
+};
+
+export type APIAnnotationWithTaskType = APIAnnotationTypeBase & {
   +task: APITaskType,
-  +tracingTime: number,
-  +typ: APITracingType,
-  +user?: APIUserType,
 };
 
 export type APITaskWithAnnotationType = APITaskType & {
   +annotation: APIAnnotationType,
-};
-
-export type APIDatastoreType = {
-  +name: string,
-  +url: string,
-  +typ: string,
-};
-
-export type NDStoreConfigType = {
-  +name: string,
-  +team: string,
-  +server: string,
-  +token: string,
 };
 
 export type DatasetConfigType = {
@@ -240,8 +315,8 @@ export type APIProjectProgressReportType = {
   +totalTasks: number,
   +totalInstances: number,
   +openInstances: number,
+  +activeInstances: number,
   +finishedInstances: number,
-  +inProgressInstances: number,
 };
 
 export type APIOpenTasksReportType = {
@@ -254,8 +329,8 @@ export type APIOpenTasksReportType = {
 export type APIOrganizationType = {
   +id: string,
   +name: string,
-  +teams: Array<string>,
-  +organizationTeam: string,
+  +additionalInformation: string,
+  +displayName: string,
 };
 
 export type APIBuildInfoType = {
@@ -266,6 +341,8 @@ export type APIBuildInfoType = {
     version: string,
     sbtVersion: string,
     commitDate: string,
+    ciTag: string,
+    ciBuild: string,
   },
   "webknossos-wrap": {
     builtAtMillis: string,
@@ -279,7 +356,97 @@ export type APIBuildInfoType = {
 };
 
 export type APIFeatureToggles = {
-  +discussionBoard: boolean,
+  +discussionBoard: string | false,
+  +discussionBoardRequiresAdmin: boolean,
+  +hybridTracings: boolean,
+  +allowOrganizationCreation: boolean,
+  +addForeignDataset: boolean,
+  +hideNavbarLogin: boolean,
+};
+
+// Tracing related datatypes
+export type APIUpdateActionBatch = {
+  version: number,
+  value: Array<ServerUpdateAction>,
+};
+
+export type ServerNodeType = {
+  id: number,
+  position: Point3,
+  rotation: Point3,
+  bitDepth: number,
+  viewport: number,
+  resolution: number,
+  radius: number,
+  createdTimestamp: number,
+  interpolation: boolean,
+};
+
+export type ServerBranchPointType = {
+  createdTimestamp: number,
+  nodeId: number,
+};
+
+export type ServerBoundingBoxType = {
+  topLeft: Point3,
+  width: number,
+  height: number,
+  depth: number,
+};
+
+export type ServerBoundingBoxTypeTuple = {
+  topLeft: Vector3,
+  width: number,
+  height: number,
+  depth: number,
+};
+
+export type ServerSkeletonTracingTreeType = {
+  branchPoints: Array<ServerBranchPointType>,
+  color: ?{ r: number, g: number, b: number },
+  comments: Array<CommentType>,
+  edges: Array<EdgeType>,
+  name: string,
+  nodes: Array<ServerNodeType>,
+  treeId: number,
+  createdTimestamp: number,
+  groupId?: ?number,
+};
+
+export type ServerTracingBaseType = {|
+  id: string,
+  userBoundingBox?: ServerBoundingBoxType,
+  createdTimestamp: number,
+  dataSetName: string,
+  editPosition: Point3,
+  editRotation: Point3,
+  error?: string,
+  version: number,
+  zoomLevel: number,
+|};
+
+export type ServerSkeletonTracingType = {|
+  ...ServerTracingBaseType,
+  activeNodeId?: number,
+  boundingBox?: ServerBoundingBoxType,
+  trees: Array<ServerSkeletonTracingTreeType>,
+  treeGroups: ?Array<TreeGroupType>,
+|};
+
+export type ServerVolumeTracingType = {|
+  ...ServerTracingBaseType,
+  activeSegmentId?: number,
+  boundingBox: ServerBoundingBoxType,
+  elementClass: ElementClassType,
+  fallbackLayer?: string,
+  largestSegmentId: number,
+|};
+
+export type ServerTracingType = ServerSkeletonTracingType | ServerVolumeTracingType;
+
+export type HybridServerTracingType = {
+  skeleton: ?ServerSkeletonTracingType,
+  volume: ?ServerVolumeTracingType,
 };
 
 export default {};

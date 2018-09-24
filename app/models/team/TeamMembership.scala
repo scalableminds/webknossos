@@ -1,56 +1,30 @@
 package models.team
 
-import com.scalableminds.util.reactivemongo.{DBAccessContext, JsonFormatHelper}
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.tools.Fox
+import javax.inject.Inject
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{Json, _}
-import scala.concurrent.ExecutionContext.Implicits._
-import reactivemongo.play.json.BSONFormats._
-import reactivemongo.bson.BSONObjectID
+import play.api.libs.json._
 import utils.ObjectId
 
 
-case class TeamMembershipSQL(teamId: ObjectId, isTeamManager: Boolean)
+case class TeamMembership(teamId: ObjectId, isTeamManager: Boolean)
 
-object TeamMembershipSQL {
-  def fromTeamMembership(t: TeamMembership)(implicit ctx: DBAccessContext): Fox[TeamMembershipSQL] = {
+class TeamMembershipService @Inject()(teamDAO: TeamDAO) {
+  def publicWrites(teamMembership: TeamMembership)(implicit ctx: DBAccessContext): Fox[JsObject] = {
     for {
-      team <- TeamSQLDAO.findOne(ObjectId.fromBsonId(t._id))
+      team <- teamDAO.findOne(teamMembership.teamId)
     } yield {
-      TeamMembershipSQL(team._id, t.isTeamManager)
+      Json.obj(
+        "id" -> teamMembership.teamId.toString,
+        "name" -> team.name,
+        "isTeamManager" -> teamMembership.isTeamManager
+      )
     }
   }
-}
 
-case class TeamMembership(_id: BSONObjectID, name: String, isTeamManager: Boolean) {
-  override def toString =
-    if (isTeamManager)
-      s"teamManager - ${_id}"
-    else
-      s"user - ${_id}"
-}
-
-object TeamMembership extends FoxImplicits {
-  implicit val teamMembershipFormat = Json.format[TeamMembership]
-
-  def teamMembershipPublicWrites(teamMembership: TeamMembership): JsObject =
-    Json.obj(
-      "id" -> teamMembership._id.stringify,
-      "isTeamManager" -> teamMembership.isTeamManager,
-      "name" -> teamMembership.name
-    )
-
-  def teamMembershipPublicReads(): Reads[TeamMembership] =
-    ((__ \ "id").read[String](JsonFormatHelper.StringObjectIdReads("id")) and
-      (__ \ "name").read[String] and
+  def publicReads(): Reads[TeamMembership] =
+    ((__ \ "id").read[String](ObjectId.stringObjectIdReads("id")) and
       (__ \ "isTeamManager").read[Boolean]
-      ) ((id, name, isTeamManager) => TeamMembership(BSONObjectID(id), name, isTeamManager))
-
-  def fromTeamMembershipSQL(t: TeamMembershipSQL)(implicit ctx: DBAccessContext): Fox[TeamMembership] =
-    for {
-      team <- TeamSQLDAO.findOne(t.teamId)
-      bsonId <- t.teamId.toBSONObjectId.toFox
-    } yield {
-      TeamMembership(bsonId, team.name, t.isTeamManager)
-    }
+      ) ((id, isTeamManager) => TeamMembership(ObjectId(id), isTeamManager))
 }

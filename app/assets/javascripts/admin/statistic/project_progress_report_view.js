@@ -1,20 +1,25 @@
 // @flow
 import * as React from "react";
-import { Icon, Spin, Table, Card } from "antd";
-import Utils from "libs/utils";
-import FormatUtils from "libs/format_utils";
+import { Badge, Icon, Spin, Table, Card } from "antd";
+import * as Utils from "libs/utils";
 import Loop from "components/loop";
 import { getProjectProgressReport } from "admin/admin_rest_api";
-import type { APIProjectProgressReportType } from "admin/api_flow_types";
+import type { APIProjectProgressReportType, APITeamType } from "admin/api_flow_types";
+import FormattedDate from "components/formatted_date";
+import Toast from "libs/toast";
+import messages from "messages";
+import StackedBarChart, { colors } from "components/stacked_bar_chart";
 import TeamSelectionForm from "./team_selection_form";
 
 const { Column, ColumnGroup } = Table;
 
 const RELOAD_INTERVAL = 10 * 60 * 1000; // 10 min
 
+const typeHint: APIProjectProgressReportType[] = [];
+
 type State = {
   areSettingsVisible: boolean,
-  teamId: ?string,
+  team: ?APITeamType,
   data: Array<APIProjectProgressReportType>,
   isLoading: boolean,
   updatedAt: ?number,
@@ -24,40 +29,48 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
   state = {
     areSettingsVisible: true,
     data: [],
-    teamId: undefined,
+    team: undefined,
     isLoading: false,
     updatedAt: null,
   };
 
   async fetchData(suppressLoadingState?: boolean = false) {
-    const { teamId } = this.state;
-    if (teamId == null) {
+    const { team } = this.state;
+    if (team == null) {
       this.setState({ data: [] });
     } else if (suppressLoadingState) {
+      const errorToastKey = "progress-report-failed-to-refresh";
       try {
-        const progessData = await getProjectProgressReport(teamId);
+        const progessData = await getProjectProgressReport(team.id);
         this.setState({ data: progessData, updatedAt: Date.now() });
+        Toast.close(errorToastKey);
       } catch (err) {
-        // Fail silently
+        Toast.error(messages["project.report.failed_to_refresh"], {
+          sticky: true,
+          key: errorToastKey,
+        });
       }
     } else {
       this.setState({ isLoading: true });
-      const progessData = await getProjectProgressReport(teamId);
+      const progessData = await getProjectProgressReport(team.id);
       this.setState({ data: progessData, updatedAt: Date.now(), isLoading: false });
     }
   }
 
-  handleTeamChange = (teamId: string) => {
-    this.setState({ teamId, areSettingsVisible: false }, () => {
+  handleTeamChange = (team: APITeamType) => {
+    this.setState({ team, areSettingsVisible: false }, () => {
       this.fetchData();
     });
   };
+
   handleOpenSettings = () => {
     this.setState({ areSettingsVisible: true });
   };
+
   handleReload = () => {
     this.fetchData();
   };
+
   handleAutoReload = () => {
     this.fetchData(true);
   };
@@ -67,14 +80,14 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
       <div className="container">
         <Loop onTick={this.handleAutoReload} interval={RELOAD_INTERVAL} />
         <div className="pull-right">
-          {this.state.updatedAt != null ? FormatUtils.formatDate(this.state.updatedAt) : null}{" "}
+          {this.state.updatedAt != null ? <FormattedDate timestamp={this.state.updatedAt} /> : null}{" "}
           <Icon type="setting" onClick={this.handleOpenSettings} />
           <Icon type="reload" onClick={this.handleReload} />
         </div>
         <h3>Project Progress</h3>
         {this.state.areSettingsVisible ? (
           <Card>
-            <TeamSelectionForm value={this.state.teamId} onChange={this.handleTeamChange} />
+            <TeamSelectionForm value={this.state.team} onChange={this.handleTeamChange} />
           </Card>
         ) : null}
 
@@ -92,49 +105,72 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
               title="Project"
               dataIndex="projectName"
               defaultSortOrder="ascend"
-              sorter={Utils.localeCompareBy("projectName")}
+              sorter={Utils.localeCompareBy(typeHint, project => project.projectName)}
               render={(text, item) => (
                 <span>
                   {item.paused ? <Icon type="pause-circle-o" /> : null} {text}
                 </span>
               )}
             />
-            <Column title="Tasks" dataIndex="totalTasks" sorter={Utils.compareBy("totalTasks")} />
+            <Column
+              title="Tasks"
+              dataIndex="totalTasks"
+              sorter={Utils.compareBy(typeHint, project => project.totalTasks)}
+              render={number => number.toLocaleString()}
+            />
             <ColumnGroup title="Instances">
               <Column
                 title="Total"
+                width={100}
                 dataIndex="totalInstances"
-                sorter={Utils.compareBy("totalInstances")}
+                sorter={Utils.compareBy(typeHint, project => project.totalInstances)}
+                render={number => number.toLocaleString()}
               />
               <Column
-                title="Open"
-                dataIndex="openInstances"
-                sorter={Utils.compareBy("openInstances")}
-                render={(text, item) =>
-                  `${item.openInstances} (${Math.round(
-                    item.openInstances / item.totalInstances * 100,
-                  )} %)`
-                }
-              />
-              <Column
-                title="Active"
-                dataIndex="activeInstances"
-                sorter={Utils.compareBy("activeInstances")}
-                render={(text, item) =>
-                  `${item.activeInstances} (${Math.round(
-                    item.activeInstances / item.totalInstances * 100,
-                  )} %)`
-                }
-              />
-              <Column
-                title="Finished"
+                title="Progress"
+                key="progress"
                 dataIndex="finishedInstances"
-                sorter={Utils.compareBy("finishedInstances")}
-                render={(text, item) =>
-                  `${item.finishedInstances} (${Math.round(
-                    item.finishedInstances / item.totalInstances * 100,
-                  )} %)`
+                width={100}
+                sorter={Utils.compareBy(
+                  typeHint,
+                  ({ finishedInstances, totalInstances }) => finishedInstances / totalInstances,
+                )}
+                render={(finishedInstances, item) =>
+                  finishedInstances === item.totalInstances ? (
+                    <Badge count="100%" style={{ backgroundColor: colors.finished }} />
+                  ) : (
+                    <span>{Math.floor((100 * finishedInstances) / item.totalInstances)} %</span>
+                  )
                 }
+              />
+              <Column
+                title={<Badge count="Finished" style={{ background: colors.finished }} />}
+                dataIndex="finishedInstances"
+                sorter={Utils.compareBy(typeHint, project => project.finishedInstances)}
+                render={(text, item) => ({
+                  props: {
+                    colSpan: 3,
+                  },
+                  children: (
+                    <StackedBarChart
+                      a={item.finishedInstances}
+                      b={item.activeInstances}
+                      c={item.openInstances}
+                    />
+                  ),
+                })}
+              />
+              <Column
+                title={<Badge count="Active" style={{ background: colors.active }} />}
+                dataIndex="activeInstances"
+                sorter={Utils.compareBy(typeHint, project => project.activeInstances)}
+                render={() => ({ props: { colSpan: 0 }, children: null })}
+              />
+              <Column
+                title={<Badge count="Open" style={{ background: colors.open }} />}
+                dataIndex="openInstances"
+                sorter={Utils.compareBy(typeHint, project => project.openInstances)}
+                render={() => ({ props: { colSpan: 0 }, children: null })}
               />
             </ColumnGroup>
           </Table>

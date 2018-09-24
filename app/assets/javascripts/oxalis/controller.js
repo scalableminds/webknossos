@@ -6,18 +6,17 @@
 import * as React from "react";
 import { connect } from "react-redux";
 import { withRouter } from "react-router-dom";
-import { Spin, Modal } from "antd";
+import { Spin } from "antd";
 import _ from "lodash";
 import app from "app";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
+import renderIndependently from "libs/render_independently";
 import BackboneEvents from "backbone-events-standalone";
 import Stats from "stats.js";
 import { InputKeyboardNoLoop, InputKeyboard } from "libs/input";
 import Toast from "libs/toast";
 import Store from "oxalis/store";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
-import SkeletonTracingPlaneController from "oxalis/controller/combinations/skeletontracing_plane_controller";
-import VolumeTracingPlaneController from "oxalis/controller/combinations/volumetracing_plane_controller";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import SceneController from "oxalis/controller/scene_controller";
 import UrlManager from "oxalis/controller/url_manager";
@@ -28,9 +27,11 @@ import { wkReadyAction } from "oxalis/model/actions/actions";
 import { saveNowAction, undoAction, redoAction } from "oxalis/model/actions/save_actions";
 import { setViewModeAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Model from "oxalis/model";
+import { HANDLED_ERROR } from "oxalis/model_initialization";
 import messages from "messages";
 import { fetchGistContent } from "libs/gist";
 import { document } from "libs/window";
+import NewTaskDescriptionModal from "oxalis/view/new_task_description_modal";
 
 import type { ModeType, ControlModeType } from "oxalis/constants";
 import type { OxalisState, TracingTypeTracingType } from "oxalis/store";
@@ -55,10 +56,6 @@ class Controller extends React.PureComponent<Props, State> {
   keyboard: InputKeyboard;
   keyboardNoLoop: InputKeyboardNoLoop;
   stats: Stats;
-
-  // Copied from backbone events (TODO: handle this better)
-  listenTo: Function;
-  stopListening: Function;
 
   state = {
     ready: false,
@@ -86,32 +83,41 @@ class Controller extends React.PureComponent<Props, State> {
       Toast.error(messages["webgl.disabled"]);
     }
 
+    // Preview a working tracing version if the showVersionRestore URL parameter is supplied
+    const version = Utils.hasUrlParam("showVersionRestore") ? 1 : undefined;
+
     Model.fetch(
       this.props.initialTracingType,
       this.props.initialAnnotationId,
       this.props.initialControlmode,
       true,
+      version,
     )
       .then(() => this.modelFetchDone())
       .catch(error => {
         // Don't throw errors for errors already handled by the model.
-        if (error !== Model.HANDLED_ERROR) {
+        if (error !== HANDLED_ERROR) {
           throw error;
         }
       });
   }
 
   modelFetchDone() {
-    const beforeUnload = () => {
-      const stateSaved = Model.stateSaved();
-      if (!stateSaved && Store.getState().tracing.restrictions.allowUpdate) {
-        Store.dispatch(saveNowAction());
-        window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
-        window.setTimeout(() => {
-          // restore the event handler in case a user chose to stay on the page
-          window.onbeforeunload = beforeUnload;
-        }, 500);
-        return messages["save.leave_page_unfinished"];
+    const beforeUnload = (evt, action) => {
+      // Only show the prompt if this is a proper beforeUnload event from the browser
+      // or the pathname changed
+      // This check has to be done because history.block triggers this function even if only the url hash changed
+      if (action === undefined || evt.pathname !== window.location.pathname) {
+        const stateSaved = Model.stateSaved();
+        if (!stateSaved && Store.getState().tracing.restrictions.allowUpdate) {
+          Store.dispatch(saveNowAction());
+          window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
+          window.setTimeout(() => {
+            // restore the event handler in case a user chose to stay on the page
+            window.onbeforeunload = beforeUnload;
+          }, 500);
+          return messages["save.leave_page_unfinished"];
+        }
       }
       return null;
     };
@@ -129,12 +135,6 @@ class Controller extends React.PureComponent<Props, State> {
     this.initKeyboard();
     this.initTaskScript();
     this.maybeShowNewTaskTypeModal();
-
-    for (const binaryName of Object.keys(Model.binary)) {
-      this.listenTo(Model.binary[binaryName].cube, "bucketLoaded", () =>
-        app.vent.trigger("rerender"),
-      );
-    }
 
     window.webknossos = new ApiLoader(Model);
 
@@ -175,23 +175,21 @@ class Controller extends React.PureComponent<Props, State> {
     const taskType = task.type;
     const title = `Attention, new Task Type: ${taskType.summary}`;
     if (taskType.description) {
-      text = `${messages["task.new_description"]}:<br>${taskType.description}`;
+      text = `${messages["task.new_description"]}:\n${taskType.description}`;
     } else {
       text = messages["task.no_description"];
     }
 
-    Modal.info({
-      title,
-      content: text,
-    });
+    renderIndependently(destroy => (
+      <NewTaskDescriptionModal title={title} description={text} destroy={destroy} />
+    ));
   }
 
-  scaleTrianglesPlane(delta: number): void {
-    let scale = Store.getState().userConfiguration.scale + delta;
-    scale = Math.min(constants.MAX_SCALE, scale);
-    scale = Math.max(constants.MIN_SCALE, scale);
-
-    Store.dispatch(updateUserSettingAction("scale", scale));
+  setLayoutScale(multiplier: number): void {
+    let scale = Store.getState().userConfiguration.layoutScaleValue + 0.05 * multiplier;
+    scale = Math.min(constants.MAX_LAYOUT_SCALE, scale);
+    scale = Math.max(constants.MIN_LAYOUT_SCALE, scale);
+    Store.dispatch(updateUserSettingAction("layoutScaleValue", scale));
   }
 
   isWebGlSupported() {
@@ -281,16 +279,8 @@ class Controller extends React.PureComponent<Props, State> {
     this.keyboardNoLoop = new InputKeyboardNoLoop(keyboardControls);
 
     this.keyboard = new InputKeyboard({
-      // Scale planes
-      l: timeFactor => {
-        const scaleValue = Store.getState().userConfiguration.scaleValue;
-        this.scaleTrianglesPlane(-scaleValue * timeFactor);
-      },
-
-      k: timeFactor => {
-        const scaleValue = Store.getState().userConfiguration.scaleValue;
-        this.scaleTrianglesPlane(scaleValue * timeFactor);
-      },
+      l: () => this.setLayoutScale(-1),
+      k: () => this.setLayoutScale(1),
     });
   }
 
@@ -316,7 +306,6 @@ class Controller extends React.PureComponent<Props, State> {
         />
       );
     }
-    const state = Store.getState();
     const allowedModes = Store.getState().tracing.restrictions.allowedModes;
     const mode = this.props.viewMode;
 
@@ -333,17 +322,7 @@ class Controller extends React.PureComponent<Props, State> {
     if (isArbitrary) {
       return <ArbitraryController onRender={this.updateStats} viewMode={mode} />;
     } else if (isPlane) {
-      switch (state.tracing.type) {
-        case "volume": {
-          return <VolumeTracingPlaneController onRender={this.updateStats} />;
-        }
-        case "skeleton": {
-          return <SkeletonTracingPlaneController onRender={this.updateStats} />;
-        }
-        default: {
-          return <PlaneController onRender={this.updateStats} />;
-        }
-      }
+      return <PlaneController onRender={this.updateStats} />;
     } else {
       // At the moment, all possible view modes consist of the union of MODES_ARBITRARY and MODES_PLANE
       // In case we add new viewmodes, the following error will be thrown.

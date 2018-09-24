@@ -2,13 +2,16 @@
 /* eslint-disable prefer-default-export */
 import type { Vector3, Vector6 } from "oxalis/constants";
 import * as React from "react";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import _ from "lodash";
 import { Input } from "antd";
+import type { ServerBoundingBoxTypeTuple } from "admin/api_flow_types";
 
 type BaseProps<T> = {
   value: T | string,
   onChange: (value: T) => void,
+  changeOnlyOnBlur?: boolean,
+  allowDecimals?: boolean,
 };
 
 type State = {
@@ -20,6 +23,10 @@ type State = {
 // Accepts both a string or a VectorX as input and always outputs a valid VectorX
 class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>, State> {
   defaultValue: T;
+  static defaultProps = {
+    value: "",
+    onChange: () => {},
+  };
 
   constructor(props: BaseProps<T>) {
     super(props);
@@ -51,18 +58,37 @@ class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>,
       isEditing: false,
     });
     if (this.state.isValid) {
-      this.setState({
-        isValid: true,
-        text: this.getText(this.props.value),
-      });
+      if (this.props.changeOnlyOnBlur) {
+        const vector = ((Utils.stringToNumberArray(this.state.text): any): T);
+        this.props.onChange(vector);
+      } else {
+        this.setState({
+          isValid: true,
+          text: this.getText(this.props.value),
+        });
+      }
     } else {
-      this.props.onChange(this.defaultValue);
-      this.setState({
-        isValid: true,
-        text: this.defaultValue.join(", "),
+      this.setState(prevState => {
+        const fallbackValue = this.makeInvalidValueValid(prevState.text);
+        this.props.onChange(fallbackValue);
+        return {
+          isValid: true,
+          text: fallbackValue.join(", "),
+        };
       });
     }
   };
+
+  makeInvalidValueValid(text: string): T {
+    const validSubVector = text
+      .replace(this.props.allowDecimals ? /[^0-9,.]/gm : /[^0-9,]/gm, "")
+      .split(",")
+      .map(el => parseFloat(el) || 0)
+      .slice(0, this.defaultValue.length);
+    const paddedVector = validSubVector.concat(this.defaultValue.slice(validSubVector.length));
+    const vector = ((paddedVector: any): T);
+    return vector;
+  }
 
   handleFocus = () => {
     this.setState({
@@ -76,13 +102,18 @@ class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>,
     const text = evt.target.value;
 
     // only numbers, commas and whitespace is allowed
-    const isValidInput = /^[\d\s,]*$/g.test(text);
+    const isValidInput = this.props.allowDecimals
+      ? /^[\d\s,.]*$/g.test(text)
+      : /^[\d\s,]*$/g.test(text);
+
     const value = Utils.stringToNumberArray(text);
     const isValidFormat = value.length === this.defaultValue.length;
 
     if (isValidFormat && isValidInput) {
-      const vector = ((value: any): T);
-      this.props.onChange(vector);
+      if (!this.props.changeOnlyOnBlur) {
+        const vector = ((value: any): T);
+        this.props.onChange(vector);
+      }
     }
 
     this.setState({
@@ -92,7 +123,7 @@ class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>,
   };
 
   render() {
-    const props = _.omit(this.props, ["onChange", "value"]);
+    const props = _.omit(this.props, ["onChange", "value", "changeOnlyOnBlur"]);
     return (
       <Input
         onChange={this.handleChange}
@@ -111,4 +142,49 @@ export class Vector3Input extends BaseVector<Vector3> {
 
 export class Vector6Input extends BaseVector<Vector6> {
   defaultValue: Vector6 = [0, 0, 0, 0, 0, 0];
+}
+
+type BoundingBoxInputProps = {
+  value: ServerBoundingBoxTypeTuple,
+  onChange: ServerBoundingBoxTypeTuple => void,
+};
+
+function boundingBoxToVector6(value: ServerBoundingBoxTypeTuple): Vector6 {
+  const { topLeft, width, height, depth } = value;
+  const [x, y, z] = topLeft;
+  return [x, y, z, width, height, depth];
+}
+
+const emptyBoundingBox = {
+  topLeft: [0, 0, 0],
+  width: 0,
+  height: 0,
+  depth: 0,
+};
+
+export class BoundingBoxInput extends React.PureComponent<BoundingBoxInputProps> {
+  static defaultProps = {
+    value: emptyBoundingBox,
+    onChange: () => {},
+  };
+
+  render() {
+    const { value, onChange, ...props } = this.props;
+    const vector6Value = boundingBoxToVector6(value || emptyBoundingBox);
+    return (
+      <Vector6Input
+        {...props}
+        value={vector6Value}
+        changeOnlyOnBlur
+        onChange={([x, y, z, width, height, depth]) =>
+          onChange({
+            topLeft: [x, y, z],
+            width,
+            height,
+            depth,
+          })
+        }
+      />
+    );
+  }
 }

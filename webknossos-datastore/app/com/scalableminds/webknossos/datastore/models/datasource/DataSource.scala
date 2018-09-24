@@ -1,13 +1,8 @@
-/*
- * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.webknossos.datastore.models
 
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.GenericInboxDataSource
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
 import play.api.libs.json._
-import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONObjectIDFormat
 
 package object datasource {
 

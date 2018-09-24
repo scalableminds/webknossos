@@ -3,7 +3,7 @@ import React, { PureComponent } from "react";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import { connect } from "react-redux";
-import { Button, Dropdown, Menu, Icon, Modal } from "antd";
+import { Upload, Button, Dropdown, Menu, Icon, Modal } from "antd";
 import Constants from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
 import ShareModalView from "oxalis/view/action-bar/share_modal_view";
@@ -13,15 +13,20 @@ import ButtonComponent from "oxalis/view/components/button_component";
 import messages from "messages";
 import api from "oxalis/api/internal_api";
 import { undoAction, redoAction } from "oxalis/model/actions/save_actions";
+import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import { copyAnnotationToUserAccount, finishAnnotation } from "admin/admin_rest_api";
 import { location } from "libs/window";
-import type { OxalisState, RestrictionsType, SettingsType, TaskType } from "oxalis/store";
+import type { OxalisState, RestrictionsAndSettingsType, TaskType } from "oxalis/store";
 import type { APIUserType, APITracingType } from "admin/api_flow_types";
+import { layoutEmitter } from "oxalis/view/layouting/layout_persistence";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import SceneController from "oxalis/controller/scene_controller";
+import { readFileAsArrayBuffer } from "libs/read_file";
 
 type StateProps = {
   tracingType: APITracingType,
   annotationId: string,
-  restrictions: RestrictionsType & SettingsType,
+  restrictions: RestrictionsAndSettingsType,
   task: ?TaskType,
   activeUser: ?APIUserType,
 };
@@ -31,6 +36,20 @@ type State = {
   isMergeModalOpen: boolean,
   isUserScriptsModalOpen: boolean,
 };
+
+export const resetLayoutItem = (
+  <Menu.Item key="reset-layout">
+    <div
+      onClick={() => {
+        Store.dispatch(updateUserSettingAction("layoutScaleValue", 1));
+        layoutEmitter.emit("resetLayout");
+      }}
+    >
+      <Icon type="laptop" />
+      Reset Layout
+    </div>
+  </Menu.Item>
+);
 
 class TracingActionsView extends PureComponent<StateProps, State> {
   state = {
@@ -50,6 +69,11 @@ class TracingActionsView extends PureComponent<StateProps, State> {
 
   handleUndo = () => {
     Store.dispatch(undoAction());
+  };
+
+  handleRestore = async () => {
+    await Model.save();
+    Store.dispatch(setVersionRestoreVisibilityAction(true));
   };
 
   handleRedo = () => {
@@ -145,11 +169,9 @@ class TracingActionsView extends PureComponent<StateProps, State> {
           <ButtonComponent key="read-only-button" type="primary" disabled>
             Read only
           </ButtonComponent>,
-          isSkeletonMode ? (
-            <ButtonComponent key="copy-button" icon="file-add" onClick={this.handleCopyToAccount}>
-              Copy To My Account
-            </ButtonComponent>
-          ) : null,
+          <ButtonComponent key="copy-button" icon="file-add" onClick={this.handleCopyToAccount}>
+            Copy To My Account
+          </ButtonComponent>,
         ];
 
     const finishAndNextTaskButton =
@@ -233,6 +255,31 @@ class TracingActionsView extends PureComponent<StateProps, State> {
         />,
       );
     }
+
+    if (isSkeletonMode && restrictions.allowUpdate) {
+      elements.push(
+        <Menu.Item key="restore-button" onClick={this.handleRestore}>
+          <Icon type="bars" theme="outlined" />
+          Restore Older Version
+        </Menu.Item>,
+      );
+    }
+
+    elements.push(resetLayoutItem);
+
+    const onStlUpload = async info => {
+      const buffer = await readFileAsArrayBuffer(info.file);
+      SceneController.addSTL(buffer);
+    };
+
+    elements.push(
+      <Menu.Item key="stl-mesh">
+        <Upload beforeUpload={() => false} onChange={onStlUpload} showUploadList={false}>
+          <Icon type="upload" />
+          Import STL Mesh
+        </Upload>
+      </Menu.Item>,
+    );
 
     const menu = <Menu>{elements}</Menu>;
 

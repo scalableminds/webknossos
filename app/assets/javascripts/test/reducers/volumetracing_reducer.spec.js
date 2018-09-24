@@ -12,39 +12,55 @@ import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
 import Maybe from "data.maybe";
 import { VolumeToolEnum } from "oxalis/constants";
 import type { TracingType, VolumeTracingType } from "oxalis/store";
+import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
 const { defaultState } = require("oxalis/store");
 
 const volumeTracing = {
   type: "volume",
-  tracingType: "Explorational",
-  name: "",
   activeCellId: 0,
   cells: [],
   activeTool: VolumeToolEnum.MOVE,
   maxCellId: 0,
   contourList: [],
   lastCentroid: null,
-  restrictions: {
-    branchPointsAllowed: true,
-    allowUpdate: true,
-    allowFinish: true,
-    allowAccess: true,
-    allowDownload: true,
-  },
 };
 
 function getVolumeTracing(tracing: TracingType): Maybe<VolumeTracingType> {
-  if (tracing.type === "volume") {
-    return Maybe.Just(tracing);
+  if (tracing.volume != null) {
+    return Maybe.Just(tracing.volume);
   }
   throw new Error("Tracing is not of type volume!");
 }
 
 const initialState = update(defaultState, {
   tracing: {
-    $set: volumeTracing,
+    tracingType: { $set: "Explorational" },
+    name: { $set: "" },
+    restrictions: {
+      $set: {
+        branchPointsAllowed: true,
+        allowUpdate: true,
+        allowFinish: true,
+        allowAccess: true,
+        allowDownload: true,
+      },
+    },
+    volume: { $set: volumeTracing },
+  },
+  dataset: {
+    dataSource: {
+      dataLayers: {
+        $set: [
+          {
+            // We need to have some resolutions. Otherwise,
+            // getRequestLogZoomStep will always return 0
+            resolutions: [[1, 1, 1], [2, 2, 2], [4, 4, 4]],
+          },
+        ],
+      },
+    },
   },
 });
 
@@ -137,7 +153,7 @@ test("VolumeTracing should create an existing cell and not update the maxCellId"
   const createCellAction = VolumeTracingActions.createCellAction(2);
   const alteredState = update(initialState, {
     tracing: {
-      maxCellId: { $set: 5 },
+      volume: { maxCellId: { $set: 5 } },
     },
   });
 
@@ -152,7 +168,9 @@ test("VolumeTracing should create cells and update the maxCellId", t => {
   const createCellAction = VolumeTracingActions.createCellAction();
   const alteredState = update(initialState, {
     tracing: {
-      maxCellId: { $set: 5 },
+      volume: {
+        maxCellId: { $set: 5 },
+      },
     },
   });
 
@@ -178,13 +196,15 @@ test("VolumeTracing should set trace/view tool", t => {
   });
 });
 
-test("VolumeTracing should not allow to set trace tool if the zoomStep is > 1", t => {
+test("VolumeTracing should not allow to set trace tool if getRequestLogZoomStep(zoomStep) is > 1", t => {
   const setToolAction = VolumeTracingActions.setToolAction(VolumeToolEnum.TRACE);
   const alteredState = update(initialState, {
     flycam: {
-      zoomStep: { $set: 2 },
+      zoomStep: { $set: 3 },
     },
   });
+
+  t.true(getRequestLogZoomStep(alteredState) > 1);
 
   // Try to change tool to Trace
   const newState = VolumeTracingReducer(alteredState, setToolAction);
@@ -249,14 +269,16 @@ test("VolumeTracing should add values to the contourList", t => {
   });
 });
 
-test("VolumeTracing should not add values to the contourList if zoomStep > 1", t => {
+test("VolumeTracing should not add values to the contourList if getRequestLogZoomStep(zoomStep) > 1", t => {
   const contourList = [[4, 6, 9], [1, 2, 3], [9, 3, 2]];
   const addToLayerActionFn = VolumeTracingActions.addToLayerAction;
   const alteredState = update(initialState, {
     flycam: {
-      zoomStep: { $set: 2 },
+      zoomStep: { $set: 3 },
     },
   });
+
+  t.true(getRequestLogZoomStep(alteredState) > 1);
 
   // Try to add positions to the contourList
   let newState = VolumeTracingReducer(alteredState, addToLayerActionFn(contourList[0]));

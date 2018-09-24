@@ -41,7 +41,9 @@ declare module "lodash" {
     | string
     | ((value: V, key: string, object: O) => R);
   declare type OIteratee<O> = OIterateeWithResult<any, O, any>;
-  declare type OFlatMapIteratee<T, U> = OIterateeWithResult<any, T, Array<U>>;
+  declare type OFlatMapIteratee<T, O, U> =
+    | ((item: T, key: string, object: O) => Array<U>)
+    | propertyIterateeShorthand;
 
   declare type Predicate<T> =
     | ((value: T, index: number, array: Array<T>) => any)
@@ -248,7 +250,10 @@ declare module "lodash" {
     findLast<T>(array: ?Array<T>, predicate?: Predicate<T>, fromIndex?: number): T | void;
     findLast<V, A, T: { [id: string]: A }>(object: T, predicate?: OPredicate<A, T>): V;
     flatMap<T, U>(array: ?Array<T>, iteratee?: FlatMapIteratee<T, U>): Array<U>;
-    flatMap<T: Object, U>(object: T, iteratee?: OFlatMapIteratee<T, U>): Array<U>;
+    flatMap<V, K, T: { +[key: K]: V }, U>(
+      object: T,
+      iteratee?: OFlatMapIteratee<V, T, U>,
+    ): Array<U>;
     flatMapDeep<T, U>(array: ?Array<T>, iteratee?: FlatMapIteratee<T, U>): Array<U>;
     flatMapDeep<T: Object, U>(object: T, iteratee?: OFlatMapIteratee<T, U>): Array<U>;
     flatMapDepth<T, U>(
@@ -266,7 +271,7 @@ declare module "lodash" {
     forEachRight<T>(array: ?Array<T>, iteratee?: Iteratee<T>): Array<T>;
     forEachRight<T: Object>(object: T, iteratee?: OIteratee<T>): T;
     groupBy<V, T>(array: ?Array<T>, iteratee?: ValueOnlyIteratee<T>): { [key: V]: Array<T> };
-    groupBy<V, A, T: { [id: string]: A }>(
+    groupBy<V, A, T: { +[id: string | number]: A }>(
       object: T,
       iteratee?: ValueOnlyIteratee<A>,
     ): { [key: V]: Array<A> };
@@ -287,7 +292,7 @@ declare module "lodash" {
     keyBy<T: Object, V: string>(array: ?Array<T>, iteratee?: V): { [key: $ElementType<T, V>]: T };
     keyBy<V, A, I, T: { [id: I]: A }>(object: T, iteratee?: ValueOnlyIteratee<A>): { [key: V]: ?A };
     map<T, U>(array: ?Array<T>, iteratee?: MapIterator<T, U>): Array<U>;
-    map<V, K, T: {[key: K]: V} | {+[key: K]: V}, U>(object: T, iteratee?: OMapIterator<V, T, U>): Array<U>;
+    map<V, K, T: { +[key: K]: V }, U>(object: T, iteratee?: OMapIterator<V, T, U>): Array<U>;
     map(str: ?string, iteratee?: (char: string, index: number, str: string) => any): string;
     orderBy<T>(
       array: ?Array<T>,
@@ -726,8 +731,7 @@ declare module "lodash" {
       updater: Function,
       customizer?: Function,
     ): Object;
-    values<K, V>(object?: { [key: K]: V }): Array<V>;
-    values(object?: ?Object): Array<any>;
+    values<K, V>(object: { +[key: K]: V } | Array<V>): Array<V>;
     valuesIn(object?: ?Object): Array<any>;
 
     // Seq

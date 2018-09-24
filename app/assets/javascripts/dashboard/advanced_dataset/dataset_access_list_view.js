@@ -2,10 +2,11 @@
 /* eslint-disable jsx-a11y/href-no-hash */
 
 import * as React from "react";
-import TemplateHelpers from "libs/template_helpers";
+import { stringToColor } from "libs/format_utils";
 import { getDatasetAccessList } from "admin/admin_rest_api";
 import type { APIDatasetType, APIUserType } from "admin/api_flow_types";
 import { Spin, Tag } from "antd";
+import { handleGenericError } from "libs/error_handling";
 
 type Props = {
   dataset: APIDatasetType,
@@ -27,13 +28,15 @@ export default class DatasetAccessListView extends React.PureComponent<Props, St
   }
 
   async fetchData(): Promise<void> {
-    this.setState({ isLoading: true });
-    const datasetUsers = await getDatasetAccessList(this.props.dataset.name);
-
-    this.setState({
-      datasetUsers,
-      isLoading: false,
-    });
+    try {
+      this.setState({ isLoading: true });
+      const datasetUsers = await getDatasetAccessList(this.props.dataset.name);
+      this.setState({ datasetUsers });
+    } catch (error) {
+      handleGenericError(error);
+    } finally {
+      this.setState({ isLoading: false });
+    }
   }
 
   renderTable() {
@@ -47,7 +50,7 @@ export default class DatasetAccessListView extends React.PureComponent<Props, St
                 {user.firstName} {user.lastName}
               </div>
               {user.teams.map(team => (
-                <Tag color={TemplateHelpers.stringToColor(team.name)} key={`${user.id}-${team.id}`}>
+                <Tag color={stringToColor(team.name)} key={`${user.id}-${team.id}`}>
                   {team.name}
                 </Tag>
               ))}

@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.webknossos.datastore.tracings.skeleton
 
 import com.google.inject.Inject
@@ -11,13 +8,13 @@ import com.scalableminds.webknossos.datastore.tracings.UpdateAction.SkeletonUpda
 import com.scalableminds.webknossos.datastore.tracings._
 import com.scalableminds.webknossos.datastore.tracings.skeleton.updating._
 import net.liftweb.common.{Empty, Full}
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.Json
+import play.api.libs.json.{JsObject, Json, Writes}
 
-class SkeletonTracingService @Inject()(
-                                        tracingDataStore: TracingDataStore,
-                                        val temporaryTracingStore: TemporaryTracingStore[SkeletonTracing]
-                                      )
+import scala.concurrent.ExecutionContext
+
+class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
+                                       val temporaryTracingStore: TemporaryTracingStore[SkeletonTracing])
+                                      (implicit ec: ExecutionContext)
   extends TracingService[SkeletonTracing]
     with KeyValueStoreImplicits
     with ProtoGeometryImplicits
@@ -34,9 +31,8 @@ class SkeletonTracingService @Inject()(
 
   def currentVersion(tracingId: String): Fox[Long] = tracingDataStore.skeletonUpdates.getVersion(tracingId, mayBeEmpty = Some(true)).getOrElse(0L)
 
-  def handleUpdateGroup(tracingId: String, updateActionGroup: UpdateActionGroup[SkeletonTracing]): Fox[_] = {
-    tracingDataStore.skeletonUpdates.put(tracingId, updateActionGroup.version, updateActionGroup.actions)
-  }
+  def handleUpdateGroup(tracingId: String, updateActionGroup: UpdateActionGroup[SkeletonTracing]): Fox[_] =
+    tracingDataStore.skeletonUpdates.put(tracingId, updateActionGroup.version, updateActionGroup.actions.map(_.addTimestamp(updateActionGroup.timestamp)))
 
   override def applyPendingUpdates(tracing: SkeletonTracing, tracingId: String, desiredVersion: Option[Long]): Fox[SkeletonTracing] = {
     val existingVersion = tracing.version
@@ -84,7 +80,7 @@ class SkeletonTracingService @Inject()(
         case Full(tracing) => {
           remainingUpdates match {
             case List() => Fox.successful(tracing)
-            case RevertToVersionAction(sourceVersion) :: tail => {
+            case RevertToVersionAction(sourceVersion, actionTimestamp) :: tail => {
               val sourceTracing = find(tracingId, Some(sourceVersion), useCache = false, applyUpdates = true)
               updateIter(sourceTracing, tail)
             }
@@ -112,7 +108,9 @@ class SkeletonTracingService @Inject()(
 
   private def mergeTwo(tracingA: SkeletonTracing, tracingB: SkeletonTracing) = {
     val nodeMapping = TreeUtils.calculateNodeMapping(tracingA.trees, tracingB.trees)
-    val mergedTrees = TreeUtils.mergeTrees(tracingA.trees, tracingB.trees, nodeMapping)
+    val groupMapping = TreeUtils.calculateGroupMapping(tracingA.treeGroups, tracingB.treeGroups)
+    val mergedTrees = TreeUtils.mergeTrees(tracingA.trees, tracingB.trees, nodeMapping, groupMapping)
+    val mergedGroups = TreeUtils.mergeGroups(tracingA.treeGroups, tracingB.treeGroups, groupMapping)
     val mergedBoundingBox = for {
       boundinBoxA <- tracingA.boundingBox
       boundinBoxB <- tracingB.boundingBox
@@ -120,15 +118,22 @@ class SkeletonTracingService @Inject()(
       BoundingBox.combine(List[BoundingBox](boundinBoxA, boundinBoxB))
     }
 
-    tracingA.copy(trees = mergedTrees, boundingBox = mergedBoundingBox, version = 0, userBoundingBox = None)
+    tracingA.copy(trees = mergedTrees, treeGroups = mergedGroups, boundingBox = mergedBoundingBox, version = 0, userBoundingBox = None)
   }
 
   def merge(tracings: Seq[SkeletonTracing]): SkeletonTracing = tracings.reduceLeft(mergeTwo)
 
   def updateActionLog(tracingId: String) = {
+    def versionedTupleToJson(tuple: (Long, List[SkeletonUpdateAction])): JsObject = {
+      Json.obj(
+        "version" -> tuple._1,
+        "value" -> Json.toJson(tuple._2)
+      )
+    }
     for {
-      updateActionGroups <- tracingDataStore.skeletonUpdates.getMultipleVersions(tracingId)(fromJson[List[SkeletonUpdateAction]])
-    } yield (Json.toJson(updateActionGroups))
+      updateActionGroups <- tracingDataStore.skeletonUpdates.getMultipleVersionsAsVersionValueTuple(tracingId)(fromJson[List[SkeletonUpdateAction]])
+      updateActionGroupsJs = updateActionGroups.map(versionedTupleToJson)
+    } yield (Json.toJson(updateActionGroupsJs))
   }
 
   def updateActionStatistics(tracingId: String) = {
@@ -138,7 +143,8 @@ class SkeletonTracingService @Inject()(
     } yield {
       Json.obj(
         "updateTracingActionCount" -> updateActions.count(updateAction => updateAction match {case a: UpdateTracingSkeletonAction => true case _ => false}),
-        "createNodeActionCount" -> updateActions.count(updateAction => updateAction match {case a: CreateNodeSkeletonAction => true case _ => false})
+        "createNodeActionCount" -> updateActions.count(updateAction => updateAction match {case a: CreateNodeSkeletonAction => true case _ => false}),
+        "deleteNodeActionCount" -> updateActions.count(updateAction => updateAction match {case a: DeleteNodeSkeletonAction => true case _ => false})
       )
     }
   }

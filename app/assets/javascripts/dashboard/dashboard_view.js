@@ -1,18 +1,23 @@
 // @flow
 /* eslint-disable jsx-a11y/href-no-hash */
 
+import _ from "lodash";
 import * as React from "react";
 import { connect } from "react-redux";
-import Request from "libs/request";
 import { Spin, Tabs } from "antd";
-import Utils from "libs/utils";
 import DatasetView from "dashboard/dataset_view";
 import DashboardTaskListView from "dashboard/dashboard_task_list_view";
 import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
-import { getActiveUser } from "oxalis/model/accessors/user_accessor";
-
-import type { APIUserType } from "admin/api_flow_types";
+import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
+import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
+import Request from "libs/request";
+import { withRouter } from "react-router-dom";
+import type { APIUserType, APIMaybeUnimportedDatasetType } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
+import type { RouterHistory } from "react-router-dom";
+import { handleGenericError } from "libs/error_handling";
+import { getUser, getDatastores, triggerDatasetCheck, getDatasets } from "admin/admin_rest_api";
+import { parseAsMaybe } from "libs/utils";
 
 const TabPane = Tabs.TabPane;
 
@@ -21,6 +26,8 @@ const validTabKeys = ["datasets", "advanced-datasets", "tasks", "explorativeAnno
 type OwnProps = {
   userId: ?string,
   isAdminView: boolean,
+  history: RouterHistory,
+  initialTabKey: ?string,
 };
 
 type StateProps = {
@@ -32,6 +39,28 @@ type Props = OwnProps & StateProps;
 type State = {
   activeTabKey: string,
   user: ?APIUserType,
+  datasets: Array<APIMaybeUnimportedDatasetType>,
+  isLoadingDatasets: boolean,
+};
+
+export const wkDatasetsCacheKey = "wk.datasets";
+export const datasetCache = {
+  set(datasets: APIMaybeUnimportedDatasetType[]): void {
+    localStorage.setItem("wk.datasets", JSON.stringify(datasets));
+  },
+  get(): APIMaybeUnimportedDatasetType[] {
+    return parseAsMaybe(localStorage.getItem(wkDatasetsCacheKey)).getOrElse([]);
+  },
+  clear(): void {
+    localStorage.removeItem(wkDatasetsCacheKey);
+  },
+};
+
+export const urlTokenToTabKeyMap = {
+  gallery: "datasets",
+  datasets: "advanced-datasets",
+  tasks: "tasks",
+  annotations: "explorativeAnnotations",
 };
 
 class DashboardView extends React.PureComponent<Props, State> {
@@ -41,39 +70,105 @@ class DashboardView extends React.PureComponent<Props, State> {
     const lastUsedTabKey = localStorage.getItem("lastUsedDashboardTab");
     const isValid = lastUsedTabKey && validTabKeys.indexOf(lastUsedTabKey) > -1;
     const defaultTab = this.props.isAdminView ? "tasks" : "datasets";
+
+    const cachedDatasets = datasetCache.get();
+
+    const initialTabKey =
+      this.props.initialTabKey || (lastUsedTabKey && isValid ? lastUsedTabKey : defaultTab);
     this.state = {
-      activeTabKey: lastUsedTabKey && isValid ? lastUsedTabKey : defaultTab,
+      activeTabKey: initialTabKey,
       user: null,
+      isLoadingDatasets: false,
+      datasets: cachedDatasets,
     };
   }
 
   componentDidMount() {
-    this.fetchData();
+    this.fetchUser();
+    this.fetchDatasets();
   }
 
-  async fetchData(): Promise<void> {
-    const url = this.props.userId ? `/api/users/${this.props.userId}` : "/api/user";
-    const user = await Request.receiveJSON(url);
+  componentDidCatch(error: Error) {
+    console.error(error);
+    // An unknown error was thrown. To avoid any problems with the caching of datasets,
+    // we simply clear the cache for the datasets and re-fetch.
+    this.setState({ datasets: [] });
+    datasetCache.clear();
+    this.fetchDatasets();
+  }
 
-    this.setState({
-      user,
+  handleCheckDatasets = async (): Promise<void> => {
+    if (this.state.isLoadingDatasets) return;
+
+    try {
+      this.setState({ isLoadingDatasets: true });
+      const datastores = await getDatastores();
+      await Promise.all(
+        datastores.filter(ds => !ds.isForeign).map(datastore => triggerDatasetCheck(datastore.url)),
+      );
+      await this.fetchDatasets();
+    } catch (error) {
+      handleGenericError(error);
+    } finally {
+      this.setState({ isLoadingDatasets: false });
+    }
+  };
+
+  async fetchUser(): Promise<void> {
+    const user =
+      this.props.userId != null ? await getUser(this.props.userId) : this.props.activeUser;
+
+    this.setState({ user });
+  }
+
+  uploadNmls = async (files: Array<File>, createGroupForEachFile: boolean): Promise<void> => {
+    const response = await Request.sendMultipartFormReceiveJSON("/api/annotations/upload", {
+      data: { nmlFile: files, createGroupForEachFile },
     });
+    this.props.history.push(`/annotations/${response.annotation.typ}/${response.annotation.id}`);
+  };
+
+  async fetchDatasets(): Promise<void> {
+    try {
+      this.setState({ isLoadingDatasets: true });
+      const datasets = await getDatasets();
+      datasetCache.set(datasets);
+
+      // todo: before setting datasets here, replace the LRU counts by the old ones
+      // datasets.forEach(dataset => {
+
+      // })
+
+      this.setState({
+        datasets,
+      });
+    } catch (error) {
+      handleGenericError(error);
+    } finally {
+      this.setState({ isLoadingDatasets: false });
+    }
   }
 
   getTabs(user: APIUserType) {
     if (this.props.activeUser) {
-      const isUserAdmin = Utils.isUserAdmin(this.props.activeUser);
       const isAdminView = this.props.isAdminView;
+
+      const datasetViewProps = {
+        user,
+        onCheckDatasets: this.handleCheckDatasets,
+        datasets: this.state.datasets,
+        isLoading: this.state.isLoadingDatasets,
+      };
 
       return [
         !isAdminView ? (
           <TabPane tab="Dataset Gallery" key="datasets">
-            <DatasetView user={user} dataViewType="gallery" />
+            <DatasetView {...datasetViewProps} dataViewType="gallery" />
           </TabPane>
         ) : null,
-        !isAdminView && isUserAdmin ? (
+        !isAdminView ? (
           <TabPane tab="Datasets" key="advanced-datasets">
-            <DatasetView user={user} dataViewType="advanced" />
+            <DatasetView {...datasetViewProps} dataViewType="advanced" />
           </TabPane>
         ) : null,
         <TabPane tab="Tasks" key="tasks">
@@ -92,7 +187,7 @@ class DashboardView extends React.PureComponent<Props, State> {
   }
 
   render() {
-    const user = this.state.user;
+    const { user } = this.state;
     if (!user) {
       return (
         <div className="text-center" style={{ marginTop: 50, width: "100vw" }}>
@@ -102,10 +197,15 @@ class DashboardView extends React.PureComponent<Props, State> {
     }
 
     const onTabChange = activeTabKey => {
-      const isValid = validTabKeys.indexOf(activeTabKey) > -1;
-      if (isValid) {
+      const tabKeyToURLMap = _.invert(urlTokenToTabKeyMap);
+      const url = tabKeyToURLMap[activeTabKey];
+      if (url) {
         localStorage.setItem("lastUsedDashboardTab", activeTabKey);
+        if (!this.props.isAdminView) {
+          this.props.history.push(`/dashboard/${url}`);
+        }
       }
+
       this.setState({ activeTabKey });
     };
     const userHeader = this.props.isAdminView ? (
@@ -115,18 +215,24 @@ class DashboardView extends React.PureComponent<Props, State> {
     ) : null;
 
     return (
-      <div className="container">
-        {userHeader}
-        <Tabs activeKey={this.state.activeTabKey} onChange={onTabChange} style={{ marginTop: 20 }}>
-          {this.getTabs(user)}
-        </Tabs>
-      </div>
+      <NmlUploadZoneContainer onImport={this.uploadNmls} isAllowed>
+        <div className="container">
+          {userHeader}
+          <Tabs
+            activeKey={this.state.activeTabKey}
+            onChange={onTabChange}
+            style={{ marginTop: 20 }}
+          >
+            {this.getTabs(user)}
+          </Tabs>
+        </div>
+      </NmlUploadZoneContainer>
     );
   }
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
-  activeUser: getActiveUser(state.activeUser),
+  activeUser: enforceActiveUser(state.activeUser),
 });
 
-export default connect(mapStateToProps)(DashboardView);
+export default connect(mapStateToProps)(withRouter(DashboardView));

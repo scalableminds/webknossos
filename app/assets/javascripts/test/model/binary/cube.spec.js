@@ -8,10 +8,24 @@ import mockRequire from "mock-require";
 import sinon from "sinon";
 import _ from "lodash";
 import runAsync from "test/helpers/run-async";
+import datasetServerObject from "test/fixtures/dataset_server_object";
+import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
 
 import type { TestInterface } from "ava";
 
 mockRequire.stopAll();
+
+const StoreMock = {
+  getState: () => ({
+    dataset: datasetServerObject,
+    tracing: { skeleton: skeletontracingServerObject },
+    datasetConfiguration: { fourBit: false },
+  }),
+  dispatch: sinon.stub(),
+  subscribe: sinon.stub(),
+};
+
+mockRequire("oxalis/store", StoreMock);
 
 mockRequire("oxalis/model/sagas/root_saga", function*() {
   yield;
@@ -28,7 +42,7 @@ mockRequire("libs/error_handling", {
 mockRequire("libs/toast", { error: _.noop });
 
 // Avoid node caching and make sure all mockRequires are applied
-const Cube = mockRequire.reRequire("oxalis/model/binary/data_cube").default;
+const Cube = mockRequire.reRequire("oxalis/model/bucket_data_handling/data_cube").default;
 
 // Ava's recommendation for Flow types
 // https://github.com/avajs/ava/blob/master/docs/recipes/flow.md#typing-tcontext
@@ -39,7 +53,10 @@ const test: TestInterface<{
 }> = (anyTest: any);
 
 test.beforeEach(t => {
-  const cube = new Cube([100, 100, 100], 3, 24);
+  const mockedLayer = {
+    resolutions: [[1, 1, 1], [2, 2, 2], [4, 4, 4], [8, 8, 8], [16, 16, 16], [32, 32, 32]],
+  };
+  const cube = new Cube([100, 100, 100], 3, 24, mockedLayer);
   const pullQueue = {
     add: sinon.stub(),
     pull: sinon.stub(),

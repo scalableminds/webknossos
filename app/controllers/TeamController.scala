@@ -2,64 +2,66 @@ package controllers
 
 
 import javax.inject.Inject
-
-import com.scalableminds.util.reactivemongo.GlobalAccessContext
-import com.scalableminds.util.tools.DefaultConverters._
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.tools.Fox
 import models.team._
-import models.user.UserService
-import net.liftweb.common.{Empty, Full}
-import oxalis.security.WebknossosSilhouette.SecuredAction
+import models.user.UserTeamRolesDAO
+import oxalis.security.WkEnv
+import com.mohiva.play.silhouette.api.Silhouette
+import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.Json
+import play.api.libs.json._
 import play.api.mvc.Action
+import utils.ObjectId
 
-import scala.concurrent.Future
+import scala.concurrent.ExecutionContext
 
-class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller {
+class TeamController @Inject()(teamDAO: TeamDAO,
+                               userTeamRolesDAO: UserTeamRolesDAO,
+                               teamService: TeamService,
+                               sil: Silhouette[WkEnv])
+                              (implicit ec: ExecutionContext)
+extends Controller {
 
+  private def teamNameReads: Reads[String] =
+    (__ \ "name").read[String]
 
-  def list = SecuredAction.async { implicit request =>
-    UsingFilters(
-      Filter("isEditable", (value: Boolean, el: Team) =>
-        el.isEditableBy(request.identity) == value)
-    ) { filter =>
-      for {
-        allTeams <- TeamDAO.findAll
-        filteredTeams = filter.applyOn(allTeams)
-        js <- Future.traverse(filteredTeams)(Team.teamPublicWrites(_))
-      } yield {
-        Ok(Json.toJson(js))
-      }
-    }
-  }
-
-  def listAllTeams = Action.async { implicit request =>
+  def list = sil.SecuredAction.async { implicit request =>
     for {
-      allTeams <- TeamDAO.findAll(GlobalAccessContext)
-      js <- Future.traverse(allTeams)(Team.teamPublicWrites(_)(GlobalAccessContext))
+      allTeams <- teamDAO.findAllEditable
+      js <- Fox.serialCombined(allTeams)(t => teamService.publicWrites(t))
     } yield {
       Ok(Json.toJson(js))
     }
   }
 
-  def delete(id: String) = SecuredAction.async { implicit request =>
+  def listAllTeams = Action.async { implicit request =>
     for {
-      team <- TeamDAO.findOneById(id)
-      _ <- TeamService.remove(team)
-      _ <- UserService.removeTeamFromUsers(team)
+      allTeams <- teamDAO.findAll(GlobalAccessContext)
+      js <- Fox.serialCombined(allTeams)(t => teamService.publicWrites(t)(GlobalAccessContext))
+    } yield {
+      Ok(Json.toJson(js))
+    }
+  }
+
+  def delete(id: String) = sil.SecuredAction.async { implicit request =>
+    for {
+      teamIdValidated <- ObjectId.parse(id)
+      team <- teamDAO.findOne(teamIdValidated) ?~> "team.notFound"
+      _ <- teamDAO.deleteOne(teamIdValidated)
+      _ <- userTeamRolesDAO.removeTeamFromAllUsers(teamIdValidated)
     } yield {
       JsonOk(Messages("team.deleted"))
     }
   }
 
-  def create = SecuredAction.async(parse.json) { implicit request =>
-    withJsonBodyUsing(Team.teamReadsName) { teamName =>
-      val team = Team(teamName, request.identity.organization)
+  def create = sil.SecuredAction.async(parse.json) { implicit request =>
+    withJsonBodyUsing(teamNameReads) { teamName =>
       for {
-        _ <- bool2Fox(request.identity.isAdmin) ?~> Messages("user.noAdmin")
-        _ <- TeamService.create(team, request.identity)
-        js <- Team.teamPublicWrites(team)
+        _ <- bool2Fox(request.identity.isAdmin) ?~> "user.noAdmin"
+        team = Team(ObjectId.generate, request.identity._organization, teamName)
+        _ <- teamDAO.insertOne(team)
+        js <- teamService.publicWrites(team)
       } yield {
         JsonOk(js, Messages("team.created"))
       }

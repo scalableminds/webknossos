@@ -38,10 +38,10 @@ export type NewTaskType = {
   +projectName: string,
   +scriptId: ?string,
   +openInstances: number,
-  +team: string,
+  +teamName: string,
   +taskTypeId: string,
   +csvFile?: File,
-  +nmlFile?: File,
+  +nmlFiles?: File,
 };
 
 export type TaskCreationResponseType = {
@@ -69,7 +69,7 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
       !_.isString(task.neededExperience.domain) ||
       !_.isString(task.dataSet) ||
       !_.isString(task.taskTypeId) ||
-      !_.isString(task.team) ||
+      !_.isString(task.teamName) ||
       !_.isString(task.projectName) ||
       task.editPosition.some(Number.isNaN) ||
       task.editRotation.some(Number.isNaN) ||
@@ -127,7 +127,7 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
     const rotY = parseInt(words[8]);
     const rotZ = parseInt(words[9]);
     const openInstances = parseInt(words[10]);
-    const team = words[11];
+    const teamName = words[11];
     const boundingBoxX = parseInt(words[12]);
     const boundingBoxY = parseInt(words[13]);
     const boundingBoxZ = parseInt(words[14]);
@@ -150,7 +150,7 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
 
     return {
       dataSet,
-      team,
+      teamName,
       taskTypeId,
       scriptId,
       openInstances,
@@ -183,6 +183,11 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
     const formValues = this.props.form.getFieldsValue();
 
     if (formValues.csvFile) {
+      // Workaround: Antd replaces file objects in the formValues with a wrapper file
+      // The original file object is contained in the originFileObj property
+      // This is most likely not intentional and may change in a future Antd version
+      formValues.csvFile = formValues.csvFile.map(wrapperFile => wrapperFile.originFileObj);
+
       tasks = await this.readCSVFile(formValues.csvFile[0]);
     } else {
       tasks = this.parseText(formValues.bulkText);
@@ -258,9 +263,9 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
               following format:
               <br />
               <a href="/dashboard">dataSet</a>, <a href="/taskTypes">taskTypeId</a>,{" "}
-              experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances,{" "}
-              <a href="/teams">team</a>, minX, minY, minZ, width, height, depth,{" "}
-              <a href="/projects">project</a> [, <a href="/scripts">scriptId</a>]
+              experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY,
+              <a href="/teams">team</a>, minZ, width, height, depth, <a href="/projects">project</a>{" "}
+              [, <a href="/scripts">scriptId</a>]
             </p>
             <Form onSubmit={this.handleSubmit} layout="vertical">
               <FormItem label="Bulk Task Specification" hasFeedback>
@@ -320,7 +325,7 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
               <FormItem>
                 {this.state.isUploading ? (
                   <Progress
-                    percent={parseInt(this.state.tasksProcessed / this.state.tasksCount * 100)}
+                    percent={parseInt((this.state.tasksProcessed / this.state.tasksCount) * 100)}
                     showInfo
                     status="active"
                   />

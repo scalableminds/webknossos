@@ -3,35 +3,43 @@
  * @flow
  */
 
-import _ from "lodash";
+import api from "oxalis/api/internal_api";
 import * as React from "react";
 import { connect } from "react-redux";
-import { Button, Dropdown, Input, Menu, Icon, Spin, Modal } from "antd";
-import TreesTabItemView from "oxalis/view/right-menu/trees_tab_item_view";
+import { Button, Dropdown, Input, Menu, Icon, Spin, Modal, Tooltip } from "antd";
+import TreeHierarchyView from "oxalis/view/right-menu/tree_hierarchy_view";
 import InputComponent from "oxalis/view/components/input_component";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
+import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
+import { getActiveTree, getActiveGroup } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   setTreeNameAction,
   createTreeAction,
-  addTreesAction,
-  deleteTreeWithConfirmAction,
+  deleteTreeAsUserAction,
   shuffleTreeColorAction,
   shuffleAllTreeColorsAction,
   selectNextTreeAction,
   toggleAllTreesAction,
   toggleInactiveTreesAction,
+  setActiveTreeAction,
+  addTreesAndGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import { readFileAsText } from "libs/read_file";
 import Store from "oxalis/store";
 import { serializeToNml, getNmlName, parseNml } from "oxalis/model/helpers/nml_helpers";
-import Utils from "libs/utils";
-import FileUpload from "components/file_upload";
+import * as Utils from "libs/utils";
 import { saveAs } from "file-saver";
-import Toast from "libs/toast";
 import { getBuildInfo } from "admin/admin_rest_api";
+import Toast from "libs/toast";
 import type { Dispatch } from "redux";
-import type { OxalisState, SkeletonTracingType, UserConfigurationType } from "oxalis/store";
+import type {
+  OxalisState,
+  TracingType,
+  SkeletonTracingType,
+  UserConfigurationType,
+} from "oxalis/store";
+import SearchPopover from "./search_popover";
 
 const ButtonGroup = Button.Group;
 const InputGroup = Input.Group;
@@ -45,14 +53,47 @@ type Props = {
   onCreateTree: () => void,
   onDeleteTree: () => void,
   onChangeTreeName: string => void,
-  skeletonTracing: SkeletonTracingType,
+  annotation: TracingType,
+  skeletonTracing?: SkeletonTracingType,
   userConfiguration: UserConfigurationType,
+  onSetActiveTree: number => void,
+  showDropzoneModal: () => void,
 };
 
 type State = {
   isUploading: boolean,
   isDownloading: boolean,
 };
+
+export async function importNmls(files: Array<File>, createGroupForEachFile: boolean) {
+  try {
+    const { successes: importActions, errors } = await Utils.promiseAllWithErrors(
+      files.map(async file => {
+        const nmlString = await readFileAsText(file);
+        try {
+          const { trees, treeGroups } = await parseNml(
+            nmlString,
+            createGroupForEachFile ? file.name : null,
+          );
+          return addTreesAndGroupsAction(trees, treeGroups);
+        } catch (e) {
+          throw new Error(`"${file.name}" could not be parsed. ${e.message}`);
+        }
+      }),
+    );
+
+    if (errors.length > 0) {
+      throw errors;
+    }
+
+    // Dispatch the actual actions as the very last step, so that
+    // not a single store mutation happens if something above throws
+    // an error
+    importActions.forEach(action => Store.dispatch(action));
+  } catch (e) {
+    (Array.isArray(e) ? e : [e]).forEach(err => Toast.error(err.message));
+  }
+}
 
 class TreesTabView extends React.PureComponent<Props, State> {
   state = {
@@ -61,7 +102,15 @@ class TreesTabView extends React.PureComponent<Props, State> {
   };
 
   handleChangeTreeName = evt => {
-    this.props.onChangeTreeName(evt.target.value);
+    if (!this.props.skeletonTracing) {
+      return;
+    }
+    const { activeGroupId } = this.props.skeletonTracing;
+    if (activeGroupId != null) {
+      api.tracing.renameGroup(activeGroupId, evt.target.value);
+    } else {
+      this.props.onChangeTreeName(evt.target.value);
+    }
   };
 
   deleteTree = () => {
@@ -69,6 +118,9 @@ class TreesTabView extends React.PureComponent<Props, State> {
   };
 
   shuffleTreeColor = () => {
+    if (!this.props.skeletonTracing) {
+      return;
+    }
     getActiveTree(this.props.skeletonTracing).map(activeTree =>
       this.props.onShuffleTreeColor(activeTree.treeId),
     );
@@ -87,39 +139,36 @@ class TreesTabView extends React.PureComponent<Props, State> {
   }
 
   handleNmlDownload = async () => {
+    const { skeletonTracing } = this.props;
+    if (!skeletonTracing) {
+      return;
+    }
     await this.setState({ isDownloading: true });
     // Wait 1 second for the Modal to render
     const [buildInfo] = await Promise.all([getBuildInfo(), Utils.sleep(1000)]);
     const state = Store.getState();
-    const nml = serializeToNml(state, this.props.skeletonTracing, buildInfo);
+    const nml = serializeToNml(state, this.props.annotation, skeletonTracing, buildInfo);
     this.setState({ isDownloading: false });
 
     const blob = new Blob([nml], { type: "text/plain;charset=utf-8" });
     saveAs(blob, getNmlName(state));
   };
 
-  handleNmlUpload = async (nmlString: string) => {
-    let trees;
-    try {
-      trees = await parseNml(nmlString);
-      Store.dispatch(addTreesAction(trees));
-    } catch (e) {
-      Toast.error(e.message);
-    } finally {
-      this.setState({ isUploading: false });
-    }
-  };
-
   getTreesComponents() {
+    if (!this.props.skeletonTracing) {
+      return null;
+    }
     const orderAttribute = this.props.userConfiguration.sortTreesByName ? "name" : "timestamp";
 
-    return _.orderBy(this.props.skeletonTracing.trees, [orderAttribute], ["asc"]).map(tree => (
-      <TreesTabItemView
-        key={tree.treeId}
-        tree={tree}
+    return (
+      <TreeHierarchyView
+        trees={this.props.skeletonTracing.trees}
+        treeGroups={this.props.skeletonTracing.treeGroups}
         activeTreeId={this.props.skeletonTracing.activeTreeId}
+        activeGroupId={this.props.skeletonTracing.activeGroupId}
+        sortBy={orderAttribute}
       />
-    ));
+    );
   }
 
   handleDropdownClick = ({ key }) => {
@@ -154,30 +203,29 @@ class TreesTabView extends React.PureComponent<Props, State> {
           </div>
         </Menu.Item>
         <Menu.Item key="handleNmlDownload">
-          <div onClick={this.handleNmlDownload} title="Download visible trees as NML">
-            <Icon type="download" /> Download as NML
+          <div onClick={this.handleNmlDownload} title="Download selected trees as NML">
+            <Icon type="download" /> Download Selected Trees
           </div>
         </Menu.Item>
         <Menu.Item key="importNml">
-          <FileUpload
-            accept=".nml"
-            multiple={false}
-            name="nmlFile"
-            showUploadList={false}
-            onSuccess={this.handleNmlUpload}
-            onUploading={() => this.setState({ isUploading: true })}
-            onError={() => this.setState({ isUploading: false })}
-          >
+          <div onClick={this.props.showDropzoneModal} title="Import NML files">
             <Icon type="upload" /> Import NML
-          </FileUpload>
+          </div>
         </Menu.Item>
       </Menu>
     );
   }
 
   render() {
-    const activeTreeName = getActiveTree(this.props.skeletonTracing)
+    const { skeletonTracing } = this.props;
+    if (!skeletonTracing) {
+      return null;
+    }
+    const activeTreeName = getActiveTree(skeletonTracing)
       .map(activeTree => activeTree.name)
+      .getOrElse("");
+    const activeGroupName = getActiveGroup(skeletonTracing)
+      .map(activeGroup => activeGroup.name)
       .getOrElse("");
 
     // Avoid that the title switches to the other title during the fadeout of the Modal
@@ -189,7 +237,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     }
 
     return (
-      <div id="tree-list" className="flex-column">
+      <div id="tree-list">
         <Modal
           visible={this.state.isDownloading || this.state.isUploading}
           title={title}
@@ -201,6 +249,19 @@ class TreesTabView extends React.PureComponent<Props, State> {
           <Spin />
         </Modal>
         <ButtonGroup>
+          <SearchPopover
+            onSelect={this.props.onSetActiveTree}
+            data={skeletonTracing.trees}
+            idKey="treeId"
+            searchKey="name"
+            maxSearchResults={10}
+          >
+            <Tooltip title="Open the search via CTRL + Shift + F">
+              <ButtonComponent>
+                <Icon type="search" />
+              </ButtonComponent>
+            </Tooltip>
+          </SearchPopover>
           <ButtonComponent onClick={this.props.onCreateTree} title="Create Tree">
             <i className="fa fa-plus" /> Create
           </ButtonComponent>
@@ -228,7 +289,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
           </ButtonComponent>
           <InputComponent
             onChange={this.handleChangeTreeName}
-            value={activeTreeName}
+            value={activeTreeName || activeGroupName}
             style={{ width: "60%" }}
           />
           <ButtonComponent onClick={this.props.onSelectNextTreeForward}>
@@ -241,14 +302,17 @@ class TreesTabView extends React.PureComponent<Props, State> {
           </Dropdown>
         </InputGroup>
 
-        <ul className="flex-overflow">{this.getTreesComponents()}</ul>
+        <ul style={{ flex: "1 1 auto", overflow: "auto", margin: 0, padding: 0 }}>
+          {this.getTreesComponents()}
+        </ul>
       </div>
     );
   }
 }
 
 const mapStateToProps = (state: OxalisState) => ({
-  skeletonTracing: state.tracing,
+  annotation: state.tracing,
+  skeletonTracing: state.tracing.skeleton,
   userConfiguration: state.userConfiguration,
 });
 
@@ -272,11 +336,20 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
     dispatch(createTreeAction());
   },
   onDeleteTree() {
-    dispatch(deleteTreeWithConfirmAction());
+    dispatch(deleteTreeAsUserAction());
   },
   onChangeTreeName(name) {
     dispatch(setTreeNameAction(name));
   },
+  onSetActiveTree(treeId) {
+    dispatch(setActiveTreeAction(treeId));
+  },
+  showDropzoneModal() {
+    dispatch(setDropzoneModalVisibilityAction(true));
+  },
 });
 
-export default connect(mapStateToProps, mapDispatchToProps)(TreesTabView);
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps,
+)(TreesTabView);

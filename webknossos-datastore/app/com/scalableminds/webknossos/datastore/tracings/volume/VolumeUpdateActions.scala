@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.webknossos.datastore.tracings.volume
 
 import java.util.Base64
@@ -9,7 +6,7 @@ import com.scalableminds.webknossos.datastore.tracings.UpdateAction.VolumeUpdate
 import com.scalableminds.util.geometry.{Point3D, Vector3D}
 import play.api.libs.json._
 
-case class UpdateBucketVolumeAction(position: Point3D, cubeSize: Int, zoomStep: Int, base64Data: String) extends VolumeUpdateAction {
+case class UpdateBucketVolumeAction(position: Point3D, cubeSize: Int, zoomStep: Int, base64Data: String, actionTimestamp: Option[Long] = None) extends VolumeUpdateAction {
   lazy val data: Array[Byte] = Base64.getDecoder().decode(base64Data)
 }
 
@@ -23,7 +20,8 @@ case class UpdateTracingVolumeAction(
                                       editRotation: Vector3D,
                                       largestSegmentId: Long,
                                       zoomLevel: Double,
-                                      userBoundingBox: Option[com.scalableminds.util.geometry.BoundingBox]
+                                      userBoundingBox: Option[com.scalableminds.util.geometry.BoundingBox],
+                                      actionTimestamp: Option[Long] = None
                                     ) extends VolumeUpdateAction
 
 object UpdateTracingVolumeAction {
@@ -41,4 +39,5 @@ object VolumeUpdateAction {
       }
     }
   }
+
 }

@@ -7,7 +7,9 @@ import _ from "lodash";
 import * as React from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import { Collapse, Row, Col, Select } from "antd";
+import { Tooltip, Collapse, Row, Col, Select, Icon } from "antd";
+import Toast from "libs/toast";
+import messages from "messages";
 import type {
   DatasetConfigurationType,
   DatasetLayerConfigurationType,
@@ -23,7 +25,9 @@ import {
   DropdownSetting,
   ColorSetting,
 } from "oxalis/view/settings/setting_input_views";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
+import constants from "oxalis/constants";
+import type { ModeType } from "oxalis/constants";
 
 const Panel = Collapse.Panel;
 const Option = Select.Option;
@@ -36,6 +40,7 @@ type DatasetSettingsProps = {
     propertyName: $Keys<DatasetLayerConfigurationType>,
     value: any,
   ) => void,
+  viewMode: ModeType,
 };
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
@@ -73,6 +78,16 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     this.props.onChange(propertyName, parseInt(value));
   };
 
+  onChangeRenderMissingDataBlack = (value: boolean): void => {
+    Toast.warning(
+      value
+        ? messages["data.enabled_render_missing_data_black"]
+        : messages["data.disabled_render_missing_data_black"],
+      { timeout: 8000 },
+    );
+    this.props.onChange("renderMissingDataBlack", value);
+  };
+
   render() {
     const colorSettings = _.map(this.props.datasetConfiguration.layers, this.getColorSettings);
 
@@ -89,6 +104,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             value={this.props.datasetConfiguration.segmentationOpacity}
             onChange={_.partial(this.props.onChange, "segmentationOpacity")}
           />
+          <SwitchSetting
+            label="Highlight Hovered Cells"
+            value={this.props.datasetConfiguration.highlightHoveredCellId}
+            onChange={_.partial(this.props.onChange, "highlightHoveredCellId")}
+          />
         </Panel>
         <Panel header="Quality" key="3">
           <SwitchSetting
@@ -96,11 +116,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             value={this.props.datasetConfiguration.fourBit}
             onChange={_.partial(this.props.onChange, "fourBit")}
           />
-          <SwitchSetting
-            label="Interpolation"
-            value={this.props.datasetConfiguration.interpolation}
-            onChange={_.partial(this.props.onChange, "interpolation")}
-          />
+          {constants.MODES_ARBITRARY.includes(this.props.viewMode) ? null : (
+            <SwitchSetting
+              label="Interpolation"
+              value={this.props.datasetConfiguration.interpolation}
+              onChange={_.partial(this.props.onChange, "interpolation")}
+            />
+          )}
           <DropdownSetting
             label="Quality"
             value={this.props.datasetConfiguration.quality}
@@ -110,6 +132,18 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             <Option value="1">medium</Option>
             <Option value="2">low</Option>
           </DropdownSetting>
+          <SwitchSetting
+            label={
+              <React.Fragment>
+                Render Missing Data Black{" "}
+                <Tooltip title="Upsample lower resolution data for missing higher resolution data.">
+                  <Icon type="info-circle" />
+                </Tooltip>
+              </React.Fragment>
+            }
+            value={this.props.datasetConfiguration.renderMissingDataBlack}
+            onChange={this.onChangeRenderMissingDataBlack}
+          />
         </Panel>
       </Collapse>
     );
@@ -130,4 +164,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect(mapStateToProps, mapDispatchToProps)(DatasetSettings);
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps,
+)(DatasetSettings);

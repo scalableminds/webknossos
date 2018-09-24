@@ -9,12 +9,10 @@ import type {
   VolumeToolType,
   ContourModeType,
 } from "oxalis/constants";
-import type { ServerVolumeTracingType } from "oxalis/model";
-import type { APIAnnotationType } from "admin/api_flow_types";
+import type { ServerVolumeTracingType } from "admin/api_flow_types";
 
 type InitializeVolumeTracingActionType = {
   type: "INITIALIZE_VOLUMETRACING",
-  annotation: APIAnnotationType,
   tracing: ServerVolumeTracingType,
 };
 type CreateCellActionType = { type: "CREATE_CELL", cellId: ?number };
@@ -30,7 +28,7 @@ export type CopySegmentationLayerActionType = {
 };
 type UpdateDirectionActionType = { type: "UPDATE_DIRECTION", centroid: Vector3 };
 type ResetContourActionType = { type: "RESET_CONTOUR" };
-type SetBrushPositionActionType = { type: "SET_BRUSH_POSITION", position: Vector2 };
+type SetMousePositionActionType = { type: "SET_MOUSE_POSITION", position: Vector2 };
 type HideBrushActionType = { type: "HIDE_BRUSH" };
 type SetBrushSizeActionType = { type: "SET_BRUSH_SIZE", brushSize: number };
 type SetContourTracingModeType = { type: "SET_CONTOUR_TRACING_MODE", mode: ContourModeType };
@@ -46,7 +44,7 @@ export type VolumeTracingActionType =
   | CycleToolActionType
   | UpdateDirectionActionType
   | ResetContourActionType
-  | SetBrushPositionActionType
+  | SetMousePositionActionType
   | HideBrushActionType
   | SetBrushSizeActionType
   | CopySegmentationLayerActionType
@@ -59,11 +57,9 @@ export const VolumeTracingSaveRelevantActions = [
 ];
 
 export const initializeVolumeTracingAction = (
-  annotation: APIAnnotationType,
   tracing: ServerVolumeTracingType,
 ): InitializeVolumeTracingActionType => ({
   type: "INITIALIZE_VOLUMETRACING",
-  annotation,
   tracing,
 });
 
@@ -120,8 +116,8 @@ export const resetContourAction = (): ResetContourActionType => ({
   type: "RESET_CONTOUR",
 });
 
-export const setBrushPositionAction = (position: Vector2): SetBrushPositionActionType => ({
-  type: "SET_BRUSH_POSITION",
+export const setMousePositionAction = (position: Vector2): SetMousePositionActionType => ({
+  type: "SET_MOUSE_POSITION",
   position,
 });
 

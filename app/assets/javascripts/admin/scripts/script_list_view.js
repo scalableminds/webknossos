@@ -5,16 +5,19 @@ import _ from "lodash";
 import * as React from "react";
 import { Link, withRouter } from "react-router-dom";
 import { Table, Icon, Spin, Button, Input, Modal } from "antd";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import messages from "messages";
 import { getScripts, deleteScript } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
 import type { APIScriptType, APIUserType } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
+import { handleGenericError } from "libs/error_handling";
 
 const { Column } = Table;
 const { Search } = Input;
+
+const typeHint: APIScriptType[] = [];
 
 type Props = {
   history: RouterHistory,
@@ -67,18 +70,41 @@ class ScriptListView extends React.PureComponent<Props, State> {
     Modal.confirm({
       title: messages["script.delete"],
       onOk: async () => {
-        this.setState({
-          isLoading: true,
-        });
+        try {
+          this.setState({
+            isLoading: true,
+          });
 
-        await deleteScript(script.id);
-        this.setState({
-          isLoading: false,
-          scripts: this.state.scripts.filter(s => s.id !== script.id),
-        });
+          await deleteScript(script.id);
+          this.setState(prevState => ({
+            scripts: prevState.scripts.filter(s => s.id !== script.id),
+          }));
+        } catch (error) {
+          handleGenericError(error);
+        } finally {
+          this.setState({ isLoading: false });
+        }
       },
     });
   };
+
+  renderPlaceholder() {
+    return this.state.isLoading ? null : (
+      <React.Fragment>
+        {"There are no scripts. You can "}
+        <Link to="/scripts/create">add a script</Link>
+        {
+          " which can be automatically executed in tasks. Scripts can, for example, be used to add custom keyboard shortcuts."
+        }
+        <br />
+        {"See the "}
+        <Link to="/assets/docs/frontend-api/index.html" target="_blank">
+          Frontend API Documentation
+        </Link>
+        {" for more information."}
+      </React.Fragment>
+    );
+  }
 
   render() {
     const marginRight = { marginRight: 20 };
@@ -104,7 +130,7 @@ class ScriptListView extends React.PureComponent<Props, State> {
 
           <Spin spinning={this.state.isLoading} size="large">
             <Table
-              dataSource={Utils.filterWithSearchQueryOR(
+              dataSource={Utils.filterWithSearchQueryAND(
                 this.state.scripts,
                 ["name", "id", "owner", "gist"],
                 this.state.searchQuery,
@@ -114,33 +140,34 @@ class ScriptListView extends React.PureComponent<Props, State> {
                 defaultPageSize: 50,
               }}
               style={{ marginTop: 30, marginBotton: 30 }}
+              locale={{ emptyText: this.renderPlaceholder() }}
             >
               <Column
                 title="ID"
                 dataIndex="id"
                 key="id"
                 className="monospace-id"
-                sorter={Utils.localeCompareBy("id")}
+                sorter={Utils.localeCompareBy(typeHint, script => script.id)}
               />
               <Column
                 title="Name"
                 dataIndex="name"
                 key="name"
-                sorter={Utils.localeCompareBy("name")}
+                sorter={Utils.localeCompareBy(typeHint, script => script.name)}
               />
 
               <Column
                 title="Owner"
                 dataIndex="owner"
                 key="owner"
-                sorter={Utils.localeCompareBy((scripts: APIScriptType) => scripts.owner.lastName)}
+                sorter={Utils.localeCompareBy(typeHint, script => script.owner.lastName)}
                 render={(owner: APIUserType) => `${owner.firstName} ${owner.lastName}`}
               />
               <Column
                 title="Gist URL"
                 dataIndex="gist"
                 key="gist"
-                sorter={Utils.localeCompareBy("gist")}
+                sorter={Utils.localeCompareBy(typeHint, script => script.gist)}
                 render={(gist: string) => (
                   <a href={gist} target="_blank" rel="noopener noreferrer">
                     {gist}

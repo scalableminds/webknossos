@@ -1,18 +1,28 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-/* eslint-disable import/first */
 // @flow
-import { tokenUserA, setCurrToken } from "../enzyme/e2e-setup";
 import test from "ava";
 import _ from "lodash";
+import {
+  tokenUserA,
+  tokenUserD,
+  setCurrToken,
+  resetDatabase,
+  writeFlowCheckingFile,
+} from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import type { APIProjectType, APIProjectUpdaterType } from "admin/api_flow_types";
 
-test.before("Change token", async () => {
+test.before("Reset database", async () => {
+  resetDatabase();
+});
+
+test.beforeEach("Change token", async () => {
   setCurrToken(tokenUserA);
 });
 
 test.serial("getProjects()", async t => {
   const projects = _.sortBy(await api.getProjects(), p => p.name);
+  writeFlowCheckingFile(projects, "project", "APIProjectType", { isArray: true });
   t.snapshot(projects, { id: "projects-getProjects()" });
 });
 
@@ -76,6 +86,16 @@ test.serial("updateProject(projectName: string, project: APIProjectType)", async
   const revertedProject = await api.updateProject(projectName, projectWithOwnerId);
   t.snapshot(revertedProject, {
     id: "projects-revertedProject",
+  });
+});
+
+test.serial("increaseProjectTaskInstances", async t => {
+  await setCurrToken(tokenUserD);
+  const projectName = (await api.getProjects())[0].name;
+
+  const updatedProject = await api.increaseProjectTaskInstances(projectName, 10);
+  t.snapshot(updatedProject, {
+    id: "projects-increaseProjectTaskInstances(projectName: string, delta?: number)",
   });
 });
 

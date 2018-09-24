@@ -1,24 +1,19 @@
 package models.task
 
-import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
-import models.user.{User, UserDAO}
-import play.api.Play.current
-import play.api.i18n.Messages
-import play.api.i18n.Messages.Implicits._
-import play.api.libs.concurrent.Execution.Implicits._
+import javax.inject.Inject
+import models.user.{UserDAO, UserService}
 import play.api.libs.json._
-import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{ObjectId, SQLDAO}
+import utils.{ObjectId, SQLClient, SQLDAO}
 
-import scala.concurrent.Future
+import scala.concurrent.ExecutionContext
 
 
-case class ScriptSQL(
+case class Script(
                     _id: ObjectId,
                     _owner: ObjectId,
                     name: String,
@@ -27,27 +22,45 @@ case class ScriptSQL(
                     isDeleted: Boolean = false
                     )
 
-object ScriptSQL {
-  def fromScript(s: Script) = {
-    Fox.successful(ScriptSQL(
-      ObjectId.fromBsonId(s._id),
-      ObjectId.fromBsonId(s._owner),
-      s.name,
-      s.gist,
-      System.currentTimeMillis(),
-      false
-    ))
+class ScriptService @Inject()(userDAO: UserDAO, userService: UserService)(implicit ec: ExecutionContext) {
+
+  def publicWrites(script: Script): Fox[JsObject] = {
+    implicit val ctx = GlobalAccessContext
+    for {
+      owner <- userDAO.findOne(script._owner) ?~> "user.notFound"
+      ownerJs <- userService.compactWrites(owner)
+    } yield {
+      Json.obj(
+        "id" -> script._id.toString,
+        "name" -> script.name,
+        "gist" -> script.gist,
+        "owner" -> ownerJs
+      )
+    }
   }
 }
 
-object ScriptSQLDAO extends SQLDAO[ScriptSQL, ScriptsRow, Scripts] {
+object Script {
+  def fromForm(
+                name: String,
+                gist: String,
+                _owner: String) = {
+
+    Script(ObjectId.generate, ObjectId(_owner), name, gist)
+  }
+}
+
+class ScriptDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SQLDAO[Script, ScriptsRow, Scripts](sqlClient) {
   val collection = Scripts
 
   def idColumn(x: Scripts): Rep[String] = x._Id
   def isDeletedColumn(x: Scripts): Rep[Boolean] = x.isdeleted
 
-  def parse(r: ScriptsRow): Fox[ScriptSQL] =
-    Fox.successful(ScriptSQL(
+  override def readAccessQ(requestingUserId: ObjectId): String =
+    s"(select _organization from webknossos.users_ u where u._id = _owner) = (select _organization from webknossos.users_ u where u._id = '${requestingUserId}')"
+
+  def parse(r: ScriptsRow): Fox[Script] =
+    Fox.successful(Script(
       ObjectId(r._Id),
       ObjectId(r._Owner),
       r.name,
@@ -56,107 +69,28 @@ object ScriptSQLDAO extends SQLDAO[ScriptSQL, ScriptsRow, Scripts] {
       r.isdeleted
     ))
 
-  def insertOne(s: ScriptSQL)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def insertOne(s: Script)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- run(sqlu"""insert into webknossos.scripts(_id, _owner, name, gist, created, isDeleted)
-                         values(${s._id.id}, ${s._owner.id}, ${s.name}, ${s.gist}, ${new java.sql.Timestamp(s.created)}, ${s.isDeleted})""")
+                         values(${s._id}, ${s._owner}, ${s.name}, ${s.gist}, ${new java.sql.Timestamp(s.created)}, ${s.isDeleted})""")
     } yield ()
 
-  def updateOne(s: ScriptSQL)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateOne(s: Script)(implicit ctx: DBAccessContext): Fox[Unit] =
     for { //note that s.created is skipped
       _ <- assertUpdateAccess(s._id)
       _ <- run(sqlu"""update webknossos.scripts
                           set
-                            _owner = ${s._owner.id},
+                            _owner = ${s._owner},
                             name = ${s.name},
                             gist = ${s.gist},
                             isDeleted = ${s.isDeleted}
-                          where _id = ${s._id.id}""")
+                          where _id = ${s._id}""")
     } yield ()
-}
 
-
-case class Script(
-  name: String,
-  gist: String,
-  _owner: BSONObjectID,
-  _id: BSONObjectID = BSONObjectID.generate) {
-
-  lazy val id: String = _id.stringify
-}
-
-object Script extends FoxImplicits {
-
-  implicit val scriptFormat = Json.format[Script]
-
-  def fromForm(
-    name: String,
-    gist: String,
-    _owner: String) = {
-
-    Script(name, gist, BSONObjectID(_owner))
-  }
-
-  def scriptPublicWrites(script: Script)(implicit ctx: DBAccessContext): Future[JsObject] =
+  override def findAll(implicit ctx: DBAccessContext): Fox[List[Script]] =
     for {
-      owner <- UserDAO.findOneById(script._owner).map(User.userCompactWrites.writes).futureBox
-    } yield {
-      Json.obj(
-        "id" -> script.id,
-        "name" -> script.name,
-        "gist" -> script.gist,
-        "owner" -> owner.toOption
-      )
-    }
-
-  def fromScriptSQL(s: ScriptSQL)(implicit ctx: DBAccessContext): Fox[Script] = {
-    for {
-      idBson <- s._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id.toString)
-      ownerBson <- s._owner.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._owner.toString)
-    } yield {
-      Script(
-        s.name,
-        s.gist,
-        ownerBson,
-        idBson
-      )
-    }
-  }
-}
-
-
-object ScriptDAO {
-
-  def findOneById(id: BSONObjectID)(implicit ctx: DBAccessContext): Fox[Script] = findOneById(id.stringify)
-
-  def findOneById(id: String)(implicit ctx: DBAccessContext): Fox[Script] =
-    for {
-      scriptSQL <- ScriptSQLDAO.findOne(ObjectId(id))
-      script <- Script.fromScriptSQL(scriptSQL)
-    } yield script
-
-  def insert(script: Script)(implicit ctx: DBAccessContext): Fox[Script] =
-    for {
-      scriptSQL <- ScriptSQL.fromScript(script)
-      _ <- ScriptSQLDAO.insertOne(scriptSQL)
-    } yield script
-
-
-  def findAll(implicit ctx: DBAccessContext): Fox[List[Script]] =
-    for {
-      scriptsSQL <- ScriptSQLDAO.findAll
-      scripts <- Fox.combined(scriptsSQL.map(Script.fromScriptSQL(_)))
-    } yield scripts
-
-
-  def update(_id: BSONObjectID, script: Script)(implicit ctx: DBAccessContext) =
-    for {
-      scriptSQL <- ScriptSQL.fromScript(script.copy(_id = _id))
-      _ <- ScriptSQLDAO.updateOne(scriptSQL)
-      updated <- findOneById(_id)
-    } yield updated
-
-  def removeById(id: String)(implicit ctx: DBAccessContext) =
-    ScriptSQLDAO.deleteOne(ObjectId(id))
-
+      accessQuery <- readAccessQuery
+      r <- run(sql"select #${columns} from webknossos.scripts_ where #${accessQuery}".as[ScriptsRow])
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
 }

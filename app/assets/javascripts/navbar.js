@@ -6,8 +6,9 @@ import { Link, withRouter } from "react-router-dom";
 import { Layout, Menu, Icon } from "antd";
 import { connect } from "react-redux";
 import Request from "libs/request";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import LoginView from "admin/auth/login_view";
+import { getBuildInfo } from "admin/admin_rest_api";
 import { logoutUserAction } from "oxalis/model/actions/user_actions";
 import Store from "oxalis/store";
 import features from "features";
@@ -28,7 +29,25 @@ type Props = {
   history: RouterHistory,
 } & StateProps;
 
-class Navbar extends React.PureComponent<Props> {
+type State = {
+  version: ?string,
+};
+
+class Navbar extends React.PureComponent<Props, State> {
+  state = {
+    version: null,
+  };
+
+  async componentWillMount() {
+    const buildInfo = await getBuildInfo();
+    this.setState({
+      version:
+        buildInfo.webknossos.ciTag !== ""
+          ? buildInfo.webknossos.ciTag
+          : buildInfo.webknossos.ciBuild,
+    });
+  }
+
   handleLogout = async () => {
     await Request.receiveJSON("/api/auth/logout");
     Store.dispatch(logoutUserAction());
@@ -44,12 +63,57 @@ class Navbar extends React.PureComponent<Props> {
       display: "flex",
       alignItems: "center",
       color: "rgba(255, 255, 255, 0.67)",
-      background: "#404040",
+      background: "#001529",
     };
 
     const isAuthenticated = this.props.isAuthenticated && this.props.activeUser != null;
     const isAdmin =
       this.props.activeUser != null ? Utils.isUserAdmin(this.props.activeUser) : false;
+
+    const helpMenu = (
+      <SubMenu
+        key="sub3"
+        title={
+          <span>
+            <Icon type="medicine-box" />Help
+          </span>
+        }
+      >
+        <Menu.Item key="user-documentation">
+          <a target="_blank" href="https://docs.webknossos.org" rel="noopener noreferrer">
+            User Documentation
+          </a>
+        </Menu.Item>
+        {(!features().discussionBoardRequiresAdmin || isAdmin) &&
+        features().discussionBoard !== false ? (
+          <Menu.Item key="discussion-board">
+            <a href={features().discussionBoard} target="_blank" rel="noopener noreferrer">
+              Community Support
+            </a>
+          </Menu.Item>
+        ) : null}
+        <Menu.Item key="frontend-api">
+          <a target="_blank" href="/assets/docs/frontend-api/index.html">
+            Frontend API Documentation
+          </a>
+        </Menu.Item>
+        <Menu.Item key="keyboard-shortcuts">
+          <a target="_blank" href="/help/keyboardshortcuts" rel="noopener noreferrer">
+            Keyboard Shortcuts
+          </a>
+        </Menu.Item>
+        <Menu.Item key="credits">
+          <a target="_blank" href="https://webknossos.org" rel="noopener noreferrer">
+            About & Credits
+          </a>
+        </Menu.Item>
+        {this.state.version !== "" ? (
+          <Menu.Item disabled key="version">
+            Version: {this.state.version}
+          </Menu.Item>
+        ) : null}
+      </SubMenu>
+    );
 
     const menuItems = [];
     menuItems.push(
@@ -114,44 +178,13 @@ class Navbar extends React.PureComponent<Props> {
       );
     }
 
-    menuItems.push(
-      <SubMenu
-        key="sub3"
-        title={
-          <span>
-            <Icon type="medicine-box" />Help
-          </span>
-        }
-      >
-        <Menu.Item key="11">
-          <a target="_blank" href="/assets/docs/frontend-api/index.html">
-            Frontend API Documentation
-          </a>
-        </Menu.Item>
-        <Menu.Item key="/help/keyboardshortcuts">
-          <a target="_blank" href="/help/keyboardshortcuts">
-            Keyboard Shortcuts
-          </a>
-        </Menu.Item>
-      </SubMenu>,
-    );
-
-    if (isAdmin && features().discussionBoard) {
-      menuItems.push(
-        <Menu.Item key="13">
-          <a href="https://discuss.webknossos.org" target="_blank" rel="noopener noreferrer">
-            <Icon type="notification" />
-            Discussion Board
-          </a>
-        </Menu.Item>,
-      );
-    }
+    menuItems.push(helpMenu);
 
     return (
       <Header style={navbarStyle}>
         <Menu
           mode="horizontal"
-          defaultSelectedkeys={[this.props.history.location.pathname]}
+          defaultSelectedKeys={[this.props.history.location.pathname]}
           style={{ lineHeight: "48px", flex: isAuthenticated ? "1" : undefined }}
           theme="dark"
         >
@@ -186,9 +219,9 @@ class Navbar extends React.PureComponent<Props> {
                   </Menu.Item>
                 </SubMenu>,
               ])
-            : null}
+            : helpMenu}
         </Menu>
-        {!isAuthenticated ? (
+        {!(isAuthenticated || features().hideNavbarLogin) ? (
           <div style={{ flex: 1, display: "flex", justifyContent: "flex-end" }}>
             <LoginView layout="inline" redirect={this.props.history.location.pathname} />
           </div>

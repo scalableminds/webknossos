@@ -1,14 +1,13 @@
-/*
- * Copyright (C) 2011-2014 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.webknossos.datastore.services
 
 import com.google.inject.Inject
 import com.scalableminds.util.tools.Fox
-import play.api.Play.current
-import play.api.cache.Cache
+import play.api.cache.{CacheApi, SyncCacheApi}
 import play.api.libs.json.{Format, Json, Reads, Writes}
+import play.api.mvc.Results.Forbidden
+import play.api.mvc.{Request, Result}
 
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
 object AccessMode extends Enumeration {
@@ -54,14 +53,43 @@ object UserAccessRequest {
 }
 
 
-class AccessTokenService @Inject()(webKnossosServer: WebKnossosServer) {
+class AccessTokenService @Inject()(webKnossosServer: WebKnossosServer, cache: SyncCacheApi) {
 
   val AccessExpiration: FiniteDuration = 2.minutes
 
-  def hasUserAccess(token: String, accessRequest: UserAccessRequest): Fox[UserAccessAnswer] = {
+  def validateAccessForSyncBlock[A](accessRequest: UserAccessRequest)(block: => Result)(implicit request: Request[A], ec: ExecutionContext): Fox[Result] =
+    validateAccess(accessRequest) {
+      Future.successful(block)
+    }
+
+  def validateAccess[A](accessRequest: UserAccessRequest)(block: => Future[Result])(implicit request: Request[A], ec: ExecutionContext): Fox[Result] = {
+    hasUserAccess(accessRequest, request).flatMap { userAccessAnswer =>
+      executeBlockOnPositiveAnswer(userAccessAnswer, block)
+    }
+  }
+
+  private def hasUserAccess[A](accessRequest: UserAccessRequest, request: Request[A])(implicit ec: ExecutionContext): Fox[UserAccessAnswer] = {
+    request.getQueryString("token").map { token =>
+      hasUserAccess(accessRequest, token)
+    }.getOrElse(Fox.successful(UserAccessAnswer(false, Some("No access token."))))
+  }
+
+  private def hasUserAccess(accessRequest: UserAccessRequest, token: String)(implicit ec: ExecutionContext): Fox[UserAccessAnswer] = {
     val key = accessRequest.toCacheKey(token)
-    Cache.getOrElse(key, AccessExpiration.toSeconds.toInt) {
+    cache.getOrElseUpdate(key, AccessExpiration) {
       webKnossosServer.requestUserAccess(token, accessRequest)
     }
   }
+
+  private def executeBlockOnPositiveAnswer[A](userAccessAnswer: UserAccessAnswer, block: => Future[Result])(implicit request: Request[A]): Future[Result] = {
+    userAccessAnswer match {
+      case UserAccessAnswer(true, _) =>
+        block
+      case UserAccessAnswer(false, Some(msg)) =>
+        Future.successful(Forbidden("Forbidden: " + msg))
+      case _ =>
+        Future.successful(Forbidden("Token authentication failed"))
+    }
+  }
+
 }

@@ -1,49 +1,51 @@
 package models.annotation
 
-import oxalis.security.WebknossosSilhouette.{UserAwareRequest}
-import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.AnnotationType._
-import models.annotation.handler.AnnotationInformationHandler
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json._
+import javax.inject.Inject
+import models.annotation.AnnotationType.AnnotationType
+import models.annotation.handler.AnnotationInformationHandlerSelector
+import models.user.User
 
-trait AnnotationInformationProvider
+import scala.concurrent.ExecutionContext
+
+class AnnotationInformationProvider @Inject()(annotationInformationHandlerSelector: AnnotationInformationHandlerSelector,
+                                              annotationStore: AnnotationStore)
+                                             (implicit ec: ExecutionContext)
   extends play.api.http.Status
-    with FoxImplicits
-    with models.basics.Implicits {
+    with FoxImplicits {
 
-  def withAnnotation[T](
-    typ: AnnotationType,
-    id: String)(f: Annotation => Fox[T])(implicit request: UserAwareRequest[_]): Fox[T] = {
+  def provideAnnotation(typ: String, id: String, user: User)(implicit ctx: DBAccessContext): Fox[Annotation] =
+    provideAnnotation(typ, id, Some(user))
 
-    withAnnotation(AnnotationIdentifier(typ, id))(a => f(a))
+  def provideAnnotation(typ: String, id: String, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
+    for {
+      annotationIdentifier <- AnnotationIdentifier.parse(typ, id)
+      annotation <- provideAnnotation(annotationIdentifier, userOpt) ?~> "annotation.notFound"
+    } yield annotation
+
+  def provideAnnotation(annotationIdentifier: AnnotationIdentifier, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] = {
+    annotationStore.requestAnnotation(annotationIdentifier, userOpt)
   }
 
-  def withAnnotation[T](
-    annotationId: AnnotationIdentifier)(f: Annotation => Fox[T])(implicit request: UserAwareRequest[_]): Fox[T] = {
-
-    findAnnotation(annotationId).flatMap(f)
+  def nameFor(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[String] = {
+    if (annotation.name == "") {
+      handlerForTyp(annotation.typ).nameForAnnotation(annotation)
+    } else
+      Fox.successful(annotation.name)
   }
 
-  def findAnnotation(
-    typ: AnnotationType,
-    id: String)(implicit request: UserAwareRequest[_]): Fox[Annotation] = {
-
-    findAnnotation(AnnotationIdentifier(typ, id))
-  }
-
-  def findAnnotation(annotationId: AnnotationIdentifier)(implicit request: UserAwareRequest[_]): Fox[Annotation] = {
-    AnnotationStore.requestAnnotation(annotationId, request.identity)
-  }
-
-  def nameForAnnotation(annotation: Annotation)(implicit request: UserAwareRequest[_]): Fox[String] = {
-    val handler = AnnotationInformationHandler.informationHandlers(annotation.typ)
-    annotation._name.toFox.orElse(handler.nameForAnnotation(annotation).toFox)
-  }
+  def restrictionsFor(typ: String, id: String)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions] =
+    for {
+      annotationIdentifier <- AnnotationIdentifier.parse(typ, id)
+      restrictions <- restrictionsFor(annotationIdentifier)
+    } yield restrictions
 
   def restrictionsFor(annotationId: AnnotationIdentifier)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions] = {
-    AnnotationInformationHandler.informationHandlers(annotationId.annotationType).restrictionsFor(annotationId.identifier)
+    handlerForTyp(annotationId.annotationType).restrictionsFor(annotationId.identifier)
   }
+
+  private def handlerForTyp(typ: AnnotationType) =
+    annotationInformationHandlerSelector.informationHandlers(typ)
 
 }

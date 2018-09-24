@@ -5,94 +5,430 @@
 
 import _ from "lodash";
 import * as THREE from "three";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import Model from "oxalis/model";
-import AbstractPlaneMaterialFactory from "oxalis/geometries/materials/abstract_plane_material_factory";
-import type { Vector3 } from "oxalis/constants";
-import type { DatasetLayerConfigurationType } from "oxalis/store";
+import Store from "oxalis/store";
+import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
+import AbstractPlaneMaterialFactory, {
+  sanitizeName,
+} from "oxalis/geometries/materials/abstract_plane_material_factory";
 import type { ShaderMaterialOptionsType } from "oxalis/geometries/materials/abstract_plane_material_factory";
+import type { OrthoViewType, Vector3 } from "oxalis/constants";
+import type { DatasetLayerConfigurationType } from "oxalis/store";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import {
+  getPlaneScalingFactor,
+  getRequestLogZoomStep,
+} from "oxalis/model/accessors/flycam_accessor";
+import { OrthoViews, OrthoViewValues, ModeValues, volumeToolEnumToIndex } from "oxalis/constants";
+import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
+import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
+import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
+import { getPackingDegree } from "oxalis/model/bucket_data_handling/data_rendering_logic";
+import {
+  getColorLayers,
+  getResolutions,
+  isRgb,
+  getByteCount,
+  getBoundaries,
+} from "oxalis/model/accessors/dataset_accessor";
 
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
 
+function getColorLayerNames() {
+  return getColorLayers(Store.getState().dataset).map(layer => sanitizeName(layer.name));
+}
+
 class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
+  planeID: OrthoViewType;
+  isOrthogonal: boolean;
+
+  constructor(planeID: OrthoViewType, isOrthogonal: boolean, shaderId: number) {
+    super(shaderId);
+    this.planeID = planeID;
+    this.isOrthogonal = isOrthogonal;
+  }
+
+  stopListening() {
+    this.storePropertyUnsubscribers.forEach(fn => fn());
+  }
+
   setupUniforms(): void {
     super.setupUniforms();
 
     this.uniforms = _.extend(this.uniforms, {
-      offset: {
-        type: "v2",
-        value: new THREE.Vector2(0, 0),
-      },
-      repeat: {
-        type: "v2",
-        value: new THREE.Vector2(1, 1),
-      },
       alpha: {
         type: "f",
         value: 0,
       },
+      highlightHoveredCellId: {
+        type: "b",
+        value: true,
+      },
+      sphericalCapRadius: {
+        type: "f",
+        value: 140,
+      },
+      globalPosition: {
+        type: "v3",
+        value: new THREE.Vector3(0, 0, 0),
+      },
+      anchorPoint: {
+        type: "v4",
+        value: new THREE.Vector3(0, 0, 0),
+      },
+      fallbackAnchorPoint: {
+        type: "v4",
+        value: new THREE.Vector3(0, 0, 0),
+      },
+      zoomStep: {
+        type: "f",
+        value: 1,
+      },
+      zoomValue: {
+        type: "f",
+        value: 1,
+      },
+      useBilinearFiltering: {
+        type: "b",
+        value: true,
+      },
+      isMappingEnabled: {
+        type: "b",
+        value: false,
+      },
+      mappingSize: {
+        type: "f",
+        value: 0,
+      },
+      hideUnmappedIds: {
+        type: "b",
+        value: false,
+      },
+      globalMousePosition: {
+        type: "v3",
+        value: new THREE.Vector3(0, 0, 0),
+      },
+      brushSizeInPixel: {
+        type: "f",
+        value: 0,
+      },
+      pixelToVoxelFactor: {
+        type: "f",
+        value: 0,
+      },
+      activeCellId: {
+        type: "v4",
+        value: new THREE.Vector4(0, 0, 0, 0),
+      },
+      isMouseInActiveViewport: {
+        type: "b",
+        value: false,
+      },
+      isMouseInCanvas: {
+        type: "b",
+        value: false,
+      },
+      activeVolumeToolIndex: {
+        type: "f",
+        value: 0,
+      },
+      viewMode: {
+        type: "f",
+        value: 0,
+      },
+      planeID: {
+        type: "f",
+        value: OrthoViewValues.indexOf(this.planeID),
+      },
+      bboxMin: {
+        type: "v3",
+        value: new THREE.Vector3(0, 0, 0),
+      },
+      bboxMax: {
+        type: "v3",
+        value: new THREE.Vector3(0, 0, 0),
+      },
     });
+
+    for (const dataLayer of Model.getAllLayers()) {
+      this.uniforms[sanitizeName(`${dataLayer.name}_maxZoomStep`)] = {
+        type: "f",
+        value: dataLayer.cube.MAX_ZOOM_STEP,
+      };
+    }
   }
 
   convertColor(color: Vector3): Vector3 {
     return [color[0] / 255, color[1] / 255, color[2] / 255];
   }
 
-  createTextures(): void {
-    // create textures
-    let shaderName;
-    this.textures = {};
-    for (const name of Object.keys(Model.binary)) {
-      const binary = Model.binary[name];
-      const bytes = binary.targetBitDepth >> 3;
-      shaderName = this.sanitizeName(name);
-      this.textures[shaderName] = this.createDataTexture(this.tWidth, bytes);
-      this.textures[shaderName].binaryCategory = binary.category;
-      this.textures[shaderName].binaryName = binary.name;
+  attachTextures(): void {
+    // Add data and look up textures for each layer
+    for (const dataLayer of Model.getAllLayers()) {
+      const { name } = dataLayer;
+      const [lookUpTexture, ...dataTextures] = dataLayer.layerRenderingManager.getDataTextures();
+
+      this.uniforms[`${sanitizeName(name)}_textures`] = {
+        type: "tv",
+        value: dataTextures,
+      };
+
+      this.uniforms[`${sanitizeName(name)}_data_texture_width`] = {
+        type: "f",
+        value: dataLayer.layerRenderingManager.textureWidth,
+      };
+
+      this.uniforms[sanitizeName(`${name}_lookup_texture`)] = {
+        type: "t",
+        value: lookUpTexture,
+      };
     }
 
-    for (shaderName of Object.keys(this.textures)) {
-      const texture = this.textures[shaderName];
-      this.uniforms[`${shaderName}_texture`] = {
+    // Add mapping
+    const segmentationLayer = Model.getSegmentationLayer();
+    if (segmentationLayer != null && Model.isMappingSupported) {
+      const [
+        mappingTexture,
+        mappingLookupTexture,
+        mappingColorTexture,
+      ] = segmentationLayer.mappings.getMappingTextures();
+      this.uniforms[sanitizeName(`${segmentationLayer.name}_mapping_texture`)] = {
         type: "t",
-        value: texture,
+        value: mappingTexture,
       };
-      if (texture.binaryCategory !== "segmentation") {
-        this.uniforms[`${shaderName}_weight`] = {
-          type: "f",
-          value: 1,
-        };
-        this.uniforms[`${shaderName}_color`] = {
-          type: "v3",
-          value: DEFAULT_COLOR,
-        };
-      }
+      this.uniforms[sanitizeName(`${segmentationLayer.name}_mapping_lookup_texture`)] = {
+        type: "t",
+        value: mappingLookupTexture,
+      };
+      this.uniforms[sanitizeName(`${segmentationLayer.name}_mapping_color_texture`)] = {
+        type: "t",
+        value: mappingColorTexture,
+      };
+    }
+
+    // Add weight/color uniforms
+    for (const name of getColorLayerNames()) {
+      this.uniforms[`${name}_weight`] = {
+        type: "f",
+        value: 1,
+      };
+      this.uniforms[`${name}_color`] = {
+        type: "v3",
+        value: DEFAULT_COLOR,
+      };
     }
   }
 
   makeMaterial(options?: ShaderMaterialOptionsType): void {
     super.makeMaterial(options);
 
-    this.material.setColorInterpolation = interpolation => {
-      for (const name of Object.keys(this.textures)) {
-        const texture = this.textures[name];
-        if (texture.binaryCategory === "color") {
-          texture.magFilter = interpolation;
-          texture.needsUpdate = true;
-        }
-      }
+    this.material.setGlobalPosition = ([x, y, z]) => {
+      this.uniforms.globalPosition.value.set(x, y, z);
     };
 
-    this.material.setScaleParams = ({ offset, repeat }) => {
-      this.uniforms.offset.value.set(offset.x, offset.y);
-      this.uniforms.repeat.value.set(repeat.x, repeat.y);
+    this.material.setAnchorPoint = ([x, y, z]) => {
+      this.uniforms.anchorPoint.value.set(x, y, z);
+    };
+
+    this.material.setFallbackAnchorPoint = ([x, y, z]) => {
+      this.uniforms.fallbackAnchorPoint.value.set(x, y, z);
     };
 
     this.material.setSegmentationAlpha = alpha => {
       this.uniforms.alpha.value = alpha / 100;
     };
 
+    this.material.setUseBilinearFiltering = isEnabled => {
+      this.uniforms.useBilinearFiltering.value = isEnabled;
+    };
+
+    this.material.setIsMappingEnabled = isMappingEnabled => {
+      this.uniforms.isMappingEnabled.value = isMappingEnabled;
+    };
+
     this.material.side = THREE.DoubleSide;
+
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        storeState => getRequestLogZoomStep(storeState),
+        zoomStep => {
+          this.uniforms.zoomStep.value = zoomStep;
+        },
+        true,
+      ),
+    );
+
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        storeState => storeState.userConfiguration.sphericalCapRadius,
+        sphericalCapRadius => {
+          this.uniforms.sphericalCapRadius.value = sphericalCapRadius;
+        },
+        true,
+      ),
+    );
+
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        storeState => storeState.flycam.zoomStep,
+        zoomStep => {
+          this.uniforms.zoomValue.value = zoomStep;
+        },
+        true,
+      ),
+    );
+
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        storeState => storeState.temporaryConfiguration.activeMapping.mappingSize,
+        mappingSize => {
+          this.uniforms.mappingSize.value = mappingSize;
+        },
+        true,
+      ),
+    );
+
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        storeState => storeState.temporaryConfiguration.activeMapping.hideUnmappedIds,
+        hideUnmappedIds => {
+          this.uniforms.hideUnmappedIds.value = hideUnmappedIds;
+        },
+        true,
+      ),
+    );
+
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        storeState => storeState.temporaryConfiguration.viewMode,
+        viewMode => {
+          this.uniforms.viewMode.value = ModeValues.indexOf(viewMode);
+        },
+        true,
+      ),
+    );
+
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        storeState => getPlaneScalingFactor(storeState.flycam) / getViewportScale(this.planeID),
+        pixelToVoxelFactor => {
+          this.uniforms.pixelToVoxelFactor.value = pixelToVoxelFactor;
+        },
+        true,
+      ),
+    );
+
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        storeState => storeState.viewModeData.plane.activeViewport === this.planeID,
+        isMouseInActiveViewport => {
+          this.uniforms.isMouseInActiveViewport.value = isMouseInActiveViewport;
+        },
+        true,
+      ),
+    );
+
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        storeState => storeState.datasetConfiguration.highlightHoveredCellId,
+        highlightHoveredCellId => {
+          this.uniforms.highlightHoveredCellId.value = highlightHoveredCellId;
+        },
+        true,
+      ),
+    );
+
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        storeState => storeState.dataset,
+        dataset => {
+          const { lowerBoundary, upperBoundary } = getBoundaries(dataset);
+          this.uniforms.bboxMin.value.set(...lowerBoundary);
+          this.uniforms.bboxMax.value.set(...upperBoundary);
+        },
+        true,
+      ),
+    );
+
+    const hasSegmentation = Model.getSegmentationLayer() != null;
+    if (hasSegmentation) {
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          storeState => storeState.temporaryConfiguration.mousePosition,
+          globalMousePosition => {
+            if (!globalMousePosition) {
+              this.uniforms.isMouseInCanvas.value = false;
+              return;
+            }
+            if (Store.getState().viewModeData.plane.activeViewport === OrthoViews.TDView) {
+              return;
+            }
+
+            const [x, y, z] = calculateGlobalPos({
+              x: globalMousePosition[0],
+              y: globalMousePosition[1],
+            });
+            this.uniforms.globalMousePosition.value.set(x, y, z);
+            this.uniforms.isMouseInCanvas.value = true;
+          },
+          true,
+        ),
+      );
+
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          storeState => storeState.temporaryConfiguration.brushSize,
+          brushSize => {
+            this.uniforms.brushSizeInPixel.value = brushSize;
+          },
+          true,
+        ),
+      );
+
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          storeState => Utils.maybe(getActiveCellId)(storeState.tracing.volume).getOrElse(0),
+          () => this.updateActiveCellId(),
+          true,
+        ),
+      );
+
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          storeState => storeState.temporaryConfiguration.activeMapping.isMappingEnabled,
+          () => this.updateActiveCellId(),
+        ),
+      );
+
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          storeState => storeState.temporaryConfiguration.activeMapping.mapping,
+          () => this.updateActiveCellId(),
+        ),
+      );
+
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          storeState =>
+            volumeToolEnumToIndex(
+              Utils.toNullable(Utils.maybe(getVolumeTool)(storeState.tracing.volume)),
+            ),
+          volumeTool => {
+            this.uniforms.activeVolumeToolIndex.value = volumeTool;
+          },
+          true,
+        ),
+      );
+    }
+  }
+
+  updateActiveCellId() {
+    const activeCellId = Utils.maybe(getActiveCellId)(Store.getState().tracing.volume).getOrElse(0);
+    const mappedActiveCellId = Model.getSegmentationLayer().cube.mapId(activeCellId);
+    // Convert the id into 4 bytes (little endian)
+    const [a, b, g, r] = Utils.convertDecToBase256(mappedActiveCellId);
+    this.uniforms.activeCellId.value.set(r, g, b, a);
   }
 
   updateUniformsForLayer(settings: DatasetLayerConfigurationType, name: string): void {
@@ -105,77 +441,32 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   }
 
   getFragmentShader(): string {
-    const colorLayerNames = _.map(Model.getColorBinaries(), b => this.sanitizeName(b.name));
-    const segmentationBinary = Model.getSegmentationBinary();
+    const colorLayerNames = getColorLayerNames();
+    const segmentationLayer = Model.getSegmentationLayer();
+    const segmentationName = sanitizeName(segmentationLayer ? segmentationLayer.name : "");
+    const { dataset } = Store.getState();
+    const datasetScale = dataset.dataSource.scale;
+    // Don't compile code for segmentation in arbitrary mode
+    const hasSegmentation = this.isOrthogonal && segmentationLayer != null;
 
-    return _.template(
-      `\
-<% _.each(layers, function(name) { %>
-  uniform sampler2D <%= name %>_texture;
-  uniform float <%= name %>_brightness;
-  uniform float <%= name %>_contrast;
-  uniform vec3 <%= name %>_color;
-  uniform float <%= name %>_weight;
-<% }) %>
-<% if (hasSegmentation) { %>
-  uniform sampler2D <%= segmentationName %>_texture;
-<% } %>
-uniform vec2 offset, repeat;
-uniform float alpha;
-varying vec2 vUv;
-/* Inspired from: http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl */
-vec3 hsv_to_rgb(vec4 HSV)
-{
-  vec4 K;
-  vec3 p;
-  K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-  p = abs(fract(HSV.xxx + K.xyz) * 6.0 - K.www);
-  return HSV.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), HSV.y);
-}
-void main() {
-  float golden_ratio = 0.618033988749895;
-  float color_value  = 0.0;
-  vec2 texture_pos = vUv * repeat + offset;
-  // Need to mirror y for some reason.
-  texture_pos = vec2(texture_pos.x, 1.0 - texture_pos.y);
-  <% if (hasSegmentation) { %>
-    vec4 volume_color = texture2D(<%= segmentationName %>_texture, texture_pos);
-    float id = (volume_color.r * 255.0);
-  <% } else { %>
-    float id = 0.0;
-  <% } %>
-  /* Get Color Value(s) */
-  <% if (isRgb) { %>
-    vec3 data_color = texture2D( <%= layers[0] %>_texture, texture_pos).xyz;
-    data_color = (data_color + <%= layers[0] %>_brightness - 0.5) * <%= layers[0] %>_contrast + 0.5;
-  <% } else { %>
-    vec3 data_color = vec3(0.0, 0.0, 0.0);
-    <% _.each(layers, function(name){ %>
-      /* Get grayscale value */
-      color_value = texture2D( <%= name %>_texture, texture_pos).r;
-      /* Brightness / Contrast Transformation */
-      color_value = (color_value + <%= name %>_brightness - 0.5) * <%= name %>_contrast + 0.5;
+    const segmentationPackingDegree = hasSegmentation
+      ? getPackingDegree(getByteCount(dataset, segmentationLayer.name))
+      : 0;
 
-      /* Multiply with color and weight */
-      data_color += color_value * <%= name %>_weight * <%= name %>_color;
-    <% }) %> ;
-    data_color = clamp(data_color, 0.0, 1.0);
-  <% } %>
-  /* Color map (<= to fight rounding mistakes) */
-  if ( id > 0.1 ) {
-    vec4 HSV = vec4( mod( id * golden_ratio, 1.0), 1.0, 1.0, 1.0 );
-    gl_FragColor = vec4(mix( data_color, hsv_to_rgb(HSV), alpha ), 1.0);
-  } else {
-    gl_FragColor = vec4(data_color, 1.0);
-  }
-}\
-`,
-    )({
-      layers: colorLayerNames,
-      hasSegmentation: segmentationBinary != null,
-      segmentationName: this.sanitizeName(segmentationBinary ? segmentationBinary.name : ""),
-      isRgb: Utils.__guard__(Model.binary.color, x1 => x1.targetBitDepth) === 24,
+    const code = getMainFragmentShader({
+      colorLayerNames,
+      hasSegmentation,
+      segmentationName,
+      segmentationPackingDegree,
+      isRgb: Model.dataLayers.color && isRgb(dataset, Model.dataLayers.color.name),
+      isMappingSupported: Model.isMappingSupported,
+      dataTextureCountPerLayer: Model.maximumDataTextureCountForLayer,
+      resolutions: getResolutions(dataset),
+      datasetScale,
+      isOrthogonal: this.isOrthogonal,
     });
+
+    return code;
   }
 }
 

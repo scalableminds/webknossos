@@ -1,4 +1,5 @@
 /**
+
  * tracing_settings_view.js
  * @flow
  */
@@ -15,7 +16,10 @@ import {
   setActiveTreeAction,
   setNodeRadiusAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
+import {
+  setActiveCellAction,
+  setBrushSizeAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import {
   NumberInputSetting,
   SwitchSetting,
@@ -24,10 +28,15 @@ import {
   LogSliderSetting,
 } from "oxalis/view/settings/setting_input_views";
 import { setUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
-import { getMaxZoomStep } from "oxalis/model/accessors/flycam_accessor";
-import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
+import {
+  enforceSkeletonTracing,
+  getActiveNode,
+} from "oxalis/model/accessors/skeletontracing_accessor";
+import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import type { UserConfigurationType, OxalisState, TracingType } from "oxalis/store";
 import type { Dispatch } from "redux";
 
@@ -37,7 +46,7 @@ type UserSettingsViewProps = {
   userConfiguration: UserConfigurationType,
   tracing: TracingType,
   zoomStep: number,
-  state: OxalisState,
+  maxZoomStep: number,
   onChangeUser: (key: $Keys<UserConfigurationType>, value: any) => void,
   onChangeActiveNodeId: (value: number) => void,
   onChangeActiveTreeId: (value: number) => void,
@@ -45,8 +54,10 @@ type UserSettingsViewProps = {
   onChangeBoundingBox: (value: ?Vector6) => void,
   onChangeRadius: (value: number) => void,
   onChangeZoomStep: (value: number) => void,
+  onChangeBrushSize: (value: number) => void,
   viewMode: ModeType,
   controlMode: ControlModeType,
+  brushSize: number,
 };
 
 class UserSettingsView extends PureComponent<UserSettingsViewProps> {
@@ -68,18 +79,9 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
               label="Zoom"
               roundTo={3}
               min={0.001}
-              max={getMaxZoomStep(this.props.state)}
+              max={this.props.maxZoomStep}
               value={this.props.zoomStep}
               onChange={this.props.onChangeZoomStep}
-            />
-            <LogSliderSetting
-              label="Viewport Scale"
-              roundTo={3}
-              min={Constants.MIN_SCALE}
-              max={Constants.MAX_SCALE}
-              step={0.1}
-              value={this.props.userConfiguration.scale}
-              onChange={this.onChangeUser.scale}
             />
             <LogSliderSetting
               label="Clipping Distance"
@@ -94,6 +96,11 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
               value={this.props.userConfiguration.displayCrosshair}
               onChange={this.onChangeUser.displayCrosshair}
             />
+            <SwitchSetting
+              label="Show Scalebars"
+              value={this.props.userConfiguration.displayScalebars}
+              onChange={this.onChangeUser.displayScalebars}
+            />
           </Panel>
         );
       case Constants.MODE_VOLUME:
@@ -103,29 +110,33 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
               label="Zoom"
               roundTo={3}
               min={0.1}
-              max={getMaxZoomStep(this.props.state)}
+              max={this.props.maxZoomStep}
               value={this.props.zoomStep}
               onChange={this.props.onChangeZoomStep}
-            />
-            <LogSliderSetting
-              label="Viewport Scale"
-              roundTo={3}
-              min={0.05}
-              max={20}
-              step={0.1}
-              value={this.props.userConfiguration.scale}
-              onChange={this.onChangeUser.scale}
             />
             <SwitchSetting
               label="Show Crosshairs"
               value={this.props.userConfiguration.displayCrosshair}
               onChange={this.onChangeUser.displayCrosshair}
             />
+            <SwitchSetting
+              label="Show Scalebars"
+              value={this.props.userConfiguration.displayScalebars}
+              onChange={this.onChangeUser.displayScalebars}
+            />
           </Panel>
         );
       default:
         return (
           <Panel header="Flight Options" key="2">
+            <LogSliderSetting
+              label="Zoom"
+              roundTo={3}
+              min={0.001}
+              max={this.props.maxZoomStep}
+              value={this.props.zoomStep}
+              onChange={this.props.onChangeZoomStep}
+            />
             <NumberSliderSetting
               label="Mouse Rotation"
               min={0.0001}
@@ -175,23 +186,23 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
   };
 
   getSkeletonOrVolumeOptions = () => {
-    const mode = this.props.viewMode;
     const isPublicViewMode = this.props.controlMode === ControlModeEnum.VIEW;
 
-    if (
-      Constants.MODES_SKELETON.includes(mode) &&
-      !isPublicViewMode &&
-      this.props.tracing.type === "skeleton"
-    ) {
-      const activeNodeId =
-        this.props.tracing.activeNodeId != null ? this.props.tracing.activeNodeId : "";
-      const activeTreeId =
-        this.props.tracing.activeTreeId != null ? this.props.tracing.activeTreeId : "";
-      const activeNodeRadius = getActiveNode(this.props.tracing)
+    if (isPublicViewMode) {
+      return null;
+    }
+
+    const panels = [];
+
+    if (this.props.tracing.skeleton != null) {
+      const skeletonTracing = enforceSkeletonTracing(this.props.tracing);
+      const activeNodeId = skeletonTracing.activeNodeId != null ? skeletonTracing.activeNodeId : "";
+      const activeTreeId = skeletonTracing.activeTreeId != null ? skeletonTracing.activeTreeId : "";
+      const activeNodeRadius = getActiveNode(skeletonTracing)
         .map(activeNode => activeNode.radius)
         .getOrElse(0);
-      return (
-        <Panel header="Nodes & Trees" key="3">
+      panels.push(
+        <Panel header="Nodes & Trees" key="3a">
           <NumberInputSetting
             label="Active Node ID"
             value={activeNodeId}
@@ -230,48 +241,41 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
             onChange={this.onChangeUser.overrideNodeRadius}
           />
           <SwitchSetting
-            label="Soma Clicking"
+            label="Single-node-tree mode (&quot;Soma clicking&quot;)"
             value={this.props.userConfiguration.newNodeNewTree}
             onChange={this.onChangeUser.newNodeNewTree}
           />
-        </Panel>
-      );
-    } else if (
-      mode === Constants.MODE_VOLUME &&
-      !isPublicViewMode &&
-      this.props.tracing.type === "volume"
-    ) {
-      return (
-        <Panel header="Volume Options" key="3">
-          <NumberInputSetting
-            label="Active Cell ID"
-            value={this.props.tracing.activeCellId}
-            onChange={this.props.onChangeActiveCellId}
-          />
           <SwitchSetting
-            label="3D Volume Rendering"
-            value={this.props.userConfiguration.isosurfaceDisplay}
-            onChange={this.onChangeUser.isosurfaceDisplay}
+            label="Highlight Commented Nodes"
+            value={this.props.userConfiguration.highlightCommentedNodes}
+            onChange={this.onChangeUser.highlightCommentedNodes}
           />
-          <NumberSliderSetting
-            label="3D Rendering Bounding Box Size"
-            min={1}
-            max={10}
-            step={0.1}
-            value={this.props.userConfiguration.isosurfaceBBsize}
-            onChange={this.onChangeUser.isosurfaceBBsize}
-          />
-          <NumberSliderSetting
-            label="3D Rendering Resolution"
-            min={40}
-            max={400}
-            value={this.props.userConfiguration.isosurfaceResolution}
-            onChange={this.onChangeUser.isosurfaceResolution}
-          />
-        </Panel>
+        </Panel>,
       );
     }
-    return null;
+
+    if (this.props.tracing.volume != null) {
+      const volumeTracing = enforceVolumeTracing(this.props.tracing);
+      panels.push(
+        <Panel header="Volume Options" key="3b">
+          <LogSliderSetting
+            label="Brush Size"
+            roundTo={0}
+            min={Constants.MIN_BRUSH_SIZE}
+            max={Constants.MAX_BRUSH_SIZE}
+            step={5}
+            value={this.props.brushSize}
+            onChange={this.props.onChangeBrushSize}
+          />
+          <NumberInputSetting
+            label="Active Cell ID"
+            value={volumeTracing.activeCellId}
+            onChange={this.props.onChangeActiveCellId}
+          />
+        </Panel>,
+      );
+    }
+    return panels;
   };
 
   render() {
@@ -296,7 +300,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
     );
 
     return (
-      <Collapse defaultActiveKey={["1", "2", "3", "4"]}>
+      <Collapse defaultActiveKey={["1", "2", "3a", "3b", "4"]}>
         <Panel header="Controls" key="1">
           <NumberSliderSetting
             label="Keyboard delay (ms)"
@@ -318,7 +322,9 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
           <Vector6InputSetting
             label="Bounding Box"
             tooltipTitle="Format: minX, minY, minZ, width, height, depth"
-            value={Utils.computeArrayFromBoundingBox(this.props.tracing.userBoundingBox)}
+            value={Utils.computeArrayFromBoundingBox(
+              getSomeTracing(this.props.tracing).userBoundingBox,
+            )}
             onChange={this.props.onChangeBoundingBox}
           />
           <SwitchSetting
@@ -336,9 +342,10 @@ const mapStateToProps = (state: OxalisState) => ({
   userConfiguration: state.userConfiguration,
   tracing: state.tracing,
   zoomStep: state.flycam.zoomStep,
-  state,
+  maxZoomStep: getMaxZoomStep(state.dataset),
   viewMode: state.temporaryConfiguration.viewMode,
   controlMode: state.temporaryConfiguration.controlMode,
+  brushSize: state.temporaryConfiguration.brushSize,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
@@ -354,15 +361,21 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onChangeActiveCellId(id: number) {
     dispatch(setActiveCellAction(id));
   },
+  onChangeBrushSize(size: number) {
+    dispatch(setBrushSizeAction(size));
+  },
   onChangeBoundingBox(boundingBox: ?Vector6) {
     dispatch(setUserBoundingBoxAction(Utils.computeBoundingBoxFromArray(boundingBox)));
   },
   onChangeZoomStep(zoomStep: number) {
     dispatch(setZoomStepAction(zoomStep));
   },
-  onChangeRadius(radius: any) {
+  onChangeRadius(radius: number) {
     dispatch(setNodeRadiusAction(radius));
   },
 });
 
-export default connect(mapStateToProps, mapDispatchToProps)(UserSettingsView);
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps,
+)(UserSettingsView);

@@ -3,45 +3,16 @@ package models.annotation
 import play.api.libs.json.{Reads, Writes}
 import utils.EnumUtils
 
-object AnnotationTypeSQL extends Enumeration {
-  type AnnotationTypeSQL = Value
+object AnnotationType extends Enumeration {
+  type AnnotationType = Value
 
   val Task, View, Explorational, TracingBase, Orphan, CompoundTask, CompoundProject, CompoundTaskType = Value
 
-  implicit val enumReads: Reads[AnnotationTypeSQL.Value] = EnumUtils.enumReads(AnnotationTypeSQL)
+  implicit val enumReads: Reads[AnnotationType.Value] = EnumUtils.enumReads(AnnotationType)
 
-  implicit def enumWrites: Writes[AnnotationTypeSQL.Value] = EnumUtils.enumWrites
+  implicit def enumWrites: Writes[AnnotationType.Value] = EnumUtils.enumWrites
 
   def fromString(s: String): Option[Value] = values.find(_.toString == s)
 
   def UserTracings = List(Task, Explorational)
-}
-
-
-object AnnotationType {
-  type AnnotationType = String
-
-  // User types
-  val Task = "Task"
-  val Explorational = "Explorational"
-
-  // View is an artifact of the frontend using the same code for tracing and dataset viewing. never found in db
-  val View = "View"
-
-  // Compound types. never found in db
-  val CompoundTask = "CompoundTask"
-  val CompoundProject = "CompoundProject"
-  val CompoundTaskType = "CompoundTaskType"
-
-  // System Types
-  val TracingBase = "TracingBase"
-  val Orphan = "Orphan"  // Annotations whose task was deleted
-
-  val UserTracings = List(
-    Task,
-    Explorational)
-
-  val SystemTracings = List(
-    TracingBase,
-    Orphan)
 }

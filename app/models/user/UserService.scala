@@ -1,121 +1,146 @@
 package models.user
 
+import akka.actor.ActorSystem
 import com.mohiva.play.silhouette.api.LoginInfo
+import com.mohiva.play.silhouette.api.repositories.AuthInfoRepository
 import com.mohiva.play.silhouette.api.services.IdentityService
 import com.mohiva.play.silhouette.api.util.PasswordInfo
 import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
 import com.scalableminds.util.mail.Send
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.security.SCrypt
-import com.scalableminds.util.security.SCrypt._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.AnnotationService
+import javax.inject.Inject
+import models.binary.DataSetDAO
 import models.configuration.{DataSetConfiguration, UserConfiguration}
 import models.team._
 import oxalis.mail.DefaultMails
+import oxalis.security.TokenDAO
 import oxalis.user.UserCache
-import play.api.Play
-import play.api.Play.current
-import play.api.libs.concurrent.Akka
-import play.api.libs.concurrent.Execution.Implicits._
-import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats._
+import play.api.libs.json._
+import utils.{ObjectId, WkConf}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
-object UserService extends FoxImplicits with IdentityService[User] {
+class UserService @Inject()(conf: WkConf,
+                            userDAO: UserDAO,
+                            userTeamRolesDAO: UserTeamRolesDAO,
+                            userExperiencesDAO: UserExperiencesDAO,
+                            userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
+                            organizationDAO: OrganizationDAO,
+                            teamDAO: TeamDAO,
+                            teamMembershipService: TeamMembershipService,
+                            dataSetDAO: DataSetDAO,
+                            tokenDAO: TokenDAO,
+                            defaultMails: DefaultMails,
+                            userCache: UserCache,
+                            actorSystem: ActorSystem)
+                           (implicit ec: ExecutionContext)
+  extends FoxImplicits with IdentityService[User] {
 
   lazy val Mailer =
-    Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
+    actorSystem.actorSelection("/user/mailActor")
 
-  val defaultUserEmail = Play.configuration.getString("application.authentication.defaultUser.email").get
+  val defaultUserEmail = conf.Application.Authentication.DefaultUser.email
 
   def defaultUser = {
-    UserDAO.findOneByEmail(defaultUserEmail)(GlobalAccessContext)
+    userDAO.findOneByEmail(defaultUserEmail)(GlobalAccessContext)
   }
 
-  def removeTeamFromUsers(team: Team)(implicit ctx: DBAccessContext) = {
-    UserDAO.removeTeamFromUsers(team._id)
+  def findByTeams(teams: List[ObjectId])(implicit ctx: DBAccessContext) = {
+    userDAO.findAllByTeams(teams)
   }
 
-  def findAll()(implicit ctx: DBAccessContext) =
-    UserDAO.findAll
-
-  def findByTeams(teams: List[BSONObjectID])(implicit ctx: DBAccessContext) = {
-    UserDAO.findByTeams(teams)
-  }
-
-  def findOneById(id: String, useCache: Boolean)(implicit ctx: DBAccessContext): Fox[User] = {
+  def findOneById(userId: ObjectId, useCache: Boolean)(implicit ctx: DBAccessContext): Fox[User] = {
     if (useCache)
-      UserCache.findUser(id)
+      userCache.findUser(userId)
     else
-      UserCache.store(id, UserDAO.findOneById(id))
+      userCache.store(userId, userDAO.findOne(userId))
   }
 
-  def logActivity(_user: BSONObjectID, lastActivity: Long) = {
-    UserDAO.logActivity(_user, lastActivity)(GlobalAccessContext)
+  def logActivity(_user: ObjectId, lastActivity: Long) = {
+    userDAO.updateLastActivity(_user, lastActivity)(GlobalAccessContext)
   }
 
-  def insert(organization: String, email: String, firstName: String,
-             lastName: String, password: String, isActive: Boolean, teamRole: Boolean = false, loginInfo: LoginInfo, passwordInfo: PasswordInfo): Fox[User] =
+  def insert(_organization: ObjectId, email: String, firstName: String,
+             lastName: String, isActive: Boolean, teamRole: Boolean = false, loginInfo: LoginInfo, passwordInfo: PasswordInfo, isAdmin: Boolean = false): Fox[User] = {
+    implicit val ctx = GlobalAccessContext
     for {
-      organizationTeamId <- OrganizationDAO.findOneByName(organization)(GlobalAccessContext).map(_._organizationTeam)
-      orgTeam <- TeamDAO.findOneById(organizationTeamId)(GlobalAccessContext)
-      teamMemberships = List(TeamMembership(orgTeam._id, orgTeam.name, teamRole))
-      user = User(email, firstName, lastName, isActive = isActive, md5(password), organization, teamMemberships, loginInfo = loginInfo, passwordInfo = passwordInfo)
-      _ <- UserDAO.insert(user)(GlobalAccessContext)
+      organizationTeamId <- organizationDAO.findOrganizationTeamId(_organization)
+      orgTeam <- teamDAO.findOne(organizationTeamId)
+      teamMemberships = List(TeamMembership(orgTeam._id, teamRole))
+      user = User(
+        ObjectId.generate,
+        _organization,
+        email,
+        firstName,
+        lastName,
+        System.currentTimeMillis(),
+        Json.toJson(UserConfiguration.default),
+        loginInfo,
+        passwordInfo,
+        isAdmin,
+        isSuperUser = false,
+        isDeactivated = !isActive
+      )
+      _ <- userDAO.insertOne(user)
+      _ <- Fox.combined(teamMemberships.map(userTeamRolesDAO.insertTeamMembership(user._id, _)))
     } yield user
+  }
 
   def update(
               user: User,
               firstName: String,
               lastName: String,
+              email: String,
               activated: Boolean,
               isAdmin: Boolean,
-              teams: List[TeamMembership],
+              teamMemberships: List[TeamMembership],
               experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[User] = {
 
-    if (!user.isActive && activated) {
-      Mailer ! Send(DefaultMails.activatedMail(user.name, user.email))
+    if (user.isDeactivated && activated) {
+      Mailer ! Send(defaultMails.activatedMail(user.name, user.email))
     }
-    UserDAO.update(user._id, firstName, lastName, activated, isAdmin, teams, experiences).map {
-      result =>
-        UserCache.invalidateUser(user.id)
-        result
-    }
+    for {
+      _ <- userDAO.updateValues(user._id, firstName, lastName, email, isAdmin, isDeactivated = !activated)
+      _ <- userTeamRolesDAO.updateTeamMembershipsForUser(user._id, teamMemberships)
+      _ <- userExperiencesDAO.updateExperiencesForUser(user._id, experiences)
+      _ = userCache.invalidateUser(user._id)
+      _ <- if (user.email == email) Fox.successful(()) else tokenDAO.updateEmail(user.email, email)
+      updated <- userDAO.findOne(user._id)
+    } yield updated
   }
 
   def changePasswordInfo(loginInfo: LoginInfo, passwordInfo: PasswordInfo) = {
     for {
       user <- findOneByEmail(loginInfo.providerKey)
-      _ <- UserDAO.changePasswordInfo(user._id, passwordInfo)(GlobalAccessContext)
+      _ <- userDAO.updatePasswordInfo(user._id, passwordInfo)(GlobalAccessContext)
     } yield {
       passwordInfo
     }
   }
 
   def findOneByEmail(email: String): Fox[User] = {
-    UserDAO.findOneByEmail(email)(GlobalAccessContext)
+    userDAO.findOneByEmail(email)(GlobalAccessContext)
   }
 
   def updateUserConfiguration(user: User, configuration: UserConfiguration)(implicit ctx: DBAccessContext) = {
-    UserDAO.updateUserConfiguration(user, configuration).map {
+    userDAO.updateUserConfiguration(user._id, configuration).map {
       result =>
-        UserCache.invalidateUser(user.id)
+        userCache.invalidateUser(user._id)
         result
     }
   }
 
-  def updateDataSetConfiguration(user: User, dataSetName: String, configuration: DataSetConfiguration)(implicit ctx: DBAccessContext) = {
-    UserDAO.updateDataSetConfiguration(user, dataSetName, configuration).map {
-      result =>
-        UserCache.invalidateUser(user.id)
-        result
-    }
-  }
+  def updateDataSetConfiguration(user: User, dataSetName: String, configuration: DataSetConfiguration)(implicit ctx: DBAccessContext) =
+    for {
+      dataSet <- dataSetDAO.findOneByName(dataSetName)
+      _ <- userDataSetConfigurationDAO.updateDatasetConfigurationForUserAndDataset(user._id, dataSet._id, configuration.configuration)
+      _ = userCache.invalidateUser(user._id)
+    } yield ()
 
   def retrieve(loginInfo: LoginInfo): Future[Option[User]] =
-    UserDAO.findOneByEmail(loginInfo.providerKey)(GlobalAccessContext).futureBox.map(_.toOption)
+    findOneByEmail(loginInfo.providerKey).futureBox.map(_.toOption)
 
   def createLoginInfo(email: String): LoginInfo = {
     LoginInfo(CredentialsProvider.ID, email)
@@ -123,5 +148,99 @@ object UserService extends FoxImplicits with IdentityService[User] {
 
   def createPasswordInfo(pw: String): PasswordInfo = {
     PasswordInfo("SCrypt", SCrypt.hashPassword(pw))
+  }
+
+  def experiencesFor(_user: ObjectId): Fox[Map[String, Int]] =
+    userExperiencesDAO.findAllExperiencesForUser(_user)(GlobalAccessContext)
+
+  def teamMembershipsFor(_user: ObjectId): Fox[List[TeamMembership]] =
+    userTeamRolesDAO.findTeamMembershipsForUser(_user)(GlobalAccessContext)
+
+  def teamManagerMembershipsFor(_user: ObjectId): Fox[List[TeamMembership]] =
+    for {
+      teamMemberships <- teamMembershipsFor(_user)
+    } yield teamMemberships.filter(_.isTeamManager)
+
+  def teamManagerTeamIdsFor(_user: ObjectId) =
+    for {
+      teamManagerMemberships <- teamManagerMembershipsFor(_user)
+    } yield teamManagerMemberships.map(_.teamId)
+
+  def teamIdsFor(_user: ObjectId): Fox[List[ObjectId]] =
+    for {
+      teamMemberships <- teamMembershipsFor(_user)
+    } yield teamMemberships.map(_.teamId)
+
+  def isTeamManagerOrAdminOf(possibleAdmin: User, otherUser: User): Fox[Boolean] =
+    for {
+      otherUserTeamIds <- teamIdsFor(otherUser._id)
+      teamManagerTeamIds <- teamManagerTeamIdsFor(possibleAdmin._id)
+    } yield (otherUserTeamIds.intersect(teamManagerTeamIds).nonEmpty || possibleAdmin.isAdminOf(otherUser))
+
+  def isTeamManagerOrAdminOf(user: User, _team: ObjectId): Fox[Boolean] =
+    (for {
+      team <- teamDAO.findOne(_team)(GlobalAccessContext)
+      teamManagerTeamIds <- teamManagerTeamIdsFor(user._id)
+    } yield (teamManagerTeamIds.contains(_team) || user.isAdminOf(team._organization))) ?~> "team.admin.notAllowed"
+
+  def isTeamManagerInOrg(user: User, _organization: ObjectId): Fox[Boolean] =
+    for {
+      teamManagerMemberships <- teamManagerMembershipsFor(user._id)
+    } yield (teamManagerMemberships.nonEmpty && _organization == user._organization)
+
+  def isTeamManagerOrAdminOfOrg(user: User, _organization: ObjectId): Fox[Boolean] =
+    for {
+      isTeamManager <- isTeamManagerInOrg(user, _organization)
+    } yield (isTeamManager || user.isAdminOf(_organization))
+
+
+  def isEditableBy(possibleEditee: User, possibleEditor: User): Fox[Boolean] =
+    for {
+      otherIsTeamManagerOrAdmin <- isTeamManagerOrAdminOf(possibleEditor, possibleEditee)
+      teamMemberships <- teamMembershipsFor(possibleEditee._id)
+    } yield (otherIsTeamManagerOrAdmin || teamMemberships.isEmpty)
+
+  def publicWrites(user: User, requestingUser: User): Fox[JsObject] = {
+    implicit val ctx = GlobalAccessContext
+    for {
+      isEditable <- isEditableBy(user, requestingUser)
+      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
+      teamMemberships <- teamMembershipsFor(user._id)
+      teamMembershipsJs <- Fox.serialCombined(teamMemberships)(tm => teamMembershipService.publicWrites(tm))
+      experiences <- experiencesFor(user._id)
+    } yield {
+      Json.obj(
+        "id" -> user._id.toString,
+        "email" -> user.email,
+        "firstName" -> user.firstName,
+        "lastName" -> user.lastName,
+        "isAdmin" -> user.isAdmin,
+        "isActive" -> !user.isDeactivated,
+        "teams" -> teamMembershipsJs,
+        "experiences" -> experiences,
+        "lastActivity" -> user.lastActivity,
+        "isAnonymous" -> false,
+        "isEditable" -> isEditable,
+        "organization" -> organization.name,
+        "created" -> user.created
+      )
+    }
+  }
+
+  def compactWrites(user: User): Fox[JsObject] = {
+    implicit val ctx = GlobalAccessContext
+    for {
+      teamMemberships <- teamMembershipsFor(user._id)
+      teamMembershipsJs <- Fox.serialCombined(teamMemberships)(tm => teamMembershipService.publicWrites(tm))
+    } yield {
+      Json.obj(
+        "id" -> user._id.toString,
+        "email" -> user.email,
+        "firstName" -> user.firstName,
+        "lastName" -> user.lastName,
+        "isAnonymous" -> false,
+        "teams" -> teamMembershipsJs
+      )
+    }
   }
 }

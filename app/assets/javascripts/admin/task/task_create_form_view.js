@@ -2,23 +2,10 @@
 import _ from "lodash";
 import React from "react";
 import { withRouter } from "react-router-dom";
-import {
-  Form,
-  Input,
-  Select,
-  Button,
-  Card,
-  Radio,
-  Upload,
-  Modal,
-  Icon,
-  InputNumber,
-  Spin,
-} from "antd";
+import { Form, Select, Button, Card, Radio, Upload, Modal, Icon, InputNumber, Spin } from "antd";
 import {
   getActiveDatasets,
   getProjects,
-  getEditableTeams,
   getScripts,
   getTaskTypes,
   getTask,
@@ -27,13 +14,14 @@ import {
   updateTask,
 } from "admin/admin_rest_api";
 import { Vector3Input, Vector6Input } from "libs/vector_input";
+import SelectExperienceDomain from "components/select_experience_domain";
+import messages from "messages";
 
 import type {
   APIDatasetType,
   APITaskTypeType,
   APIProjectType,
   APIScriptType,
-  APITeamType,
 } from "admin/api_flow_types";
 import type { BoundingBoxObjectType } from "oxalis/store";
 import type { Vector6 } from "oxalis/constants";
@@ -55,7 +43,6 @@ type State = {
   taskTypes: Array<APITaskTypeType>,
   projects: Array<APIProjectType>,
   scripts: Array<APIScriptType>,
-  teams: Array<APITeamType>,
   isNMLSpecification: boolean,
   isUploading: boolean,
 };
@@ -108,25 +95,24 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     taskTypes: [],
     projects: [],
     scripts: [],
-    teams: [],
     isNMLSpecification: false,
     isUploading: false,
   };
+
   componentDidMount() {
     this.fetchData();
     this.applyDefaults();
   }
 
   async fetchData() {
-    const [datasets, projects, teams, scripts, taskTypes] = await Promise.all([
+    const [datasets, projects, scripts, taskTypes] = await Promise.all([
       getActiveDatasets(),
       getProjects(),
-      getEditableTeams(),
       getScripts(),
       getTaskTypes(),
     ]);
 
-    this.setState({ datasets, projects, teams, scripts, taskTypes });
+    this.setState({ datasets, projects, scripts, taskTypes });
   }
 
   async applyDefaults() {
@@ -171,6 +157,13 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
           let response;
           try {
             if (this.state.isNMLSpecification) {
+              // Workaround: Antd replaces file objects in the formValues with a wrapper file
+              // The original file object is contained in the originFileObj property
+              // This is most likely not intentional and may change in a future Antd version
+              formValues.nmlFiles = formValues.nmlFiles.map(
+                wrapperFile => wrapperFile.originFileObj,
+              );
+
               response = await createTaskFromNML(formValues);
             } else {
               response = await createTasks([formValues]);
@@ -229,8 +222,15 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
 
               <FormItem label="Experience Domain" hasFeedback>
                 {getFieldDecorator("neededExperience.domain", {
-                  rules: [{ required: true }, { min: 3 }],
-                })(<Input disabled={isEditingMode} />)}
+                  rules: [{ required: true }],
+                })(
+                  <SelectExperienceDomain
+                    disabled={isEditingMode}
+                    placeholder="Select an Experience Domain"
+                    notFoundContent={messages["task.domain_does_not_exist"]}
+                    width={100}
+                  />,
+                )}
               </FormItem>
 
               <FormItem label="Experience Value" hasFeedback>
@@ -243,27 +243,6 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                 {getFieldDecorator("openInstances", {
                   rules: [{ required: true }, { type: "number" }],
                 })(<InputNumber style={fullWidth} min={0} />)}
-              </FormItem>
-
-              <FormItem label="Team" hasFeedback>
-                {getFieldDecorator("team", {
-                  rules: [{ required: true }],
-                })(
-                  <Select
-                    showSearch
-                    placeholder="Select a Team"
-                    optionFilterProp="children"
-                    style={fullWidth}
-                    autoFocus
-                    disabled={isEditingMode}
-                  >
-                    {this.state.teams.map((team: APITeamType) => (
-                      <Option key={team.id} value={team.id}>
-                        {team.name}
-                      </Option>
-                    ))}
-                  </Select>,
-                )}
               </FormItem>
 
               <FormItem label="Project" hasFeedback>
@@ -311,10 +290,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                 extra="topLeft.x, topLeft.y, topLeft.z, width, height, depth"
                 hasFeedback
               >
-                {getFieldDecorator("boundingBox")(
-                  // $FlowFixMe VectorComponent expects value + onChange props which will be set automatically by the form
-                  <Vector6Input disabled={isEditingMode} />,
-                )}
+                {getFieldDecorator("boundingBox")(<Vector6Input disabled={isEditingMode} />)}
               </FormItem>
 
               <FormItem label="Task Specification" hasFeedback>
@@ -334,27 +310,20 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
               </FormItem>
 
               {this.state.isNMLSpecification ? (
-                <FormItem label="NML File" hasFeedback>
-                  {getFieldDecorator("nmlFile", {
+                <FormItem label="NML Files" hasFeedback>
+                  {getFieldDecorator("nmlFiles", {
                     rules: [{ required: true }],
                     valuePropName: "fileList",
                     getValueFromEvent: this.normFile,
                   })(
-                    <Upload.Dragger
-                      accept=".nml,.zip"
-                      name="nmlFile"
-                      beforeUpload={file => {
-                        this.props.form.setFieldsValue({ nmlFile: [file] });
-                        return false;
-                      }}
-                    >
+                    <Upload.Dragger accept=".nml,.zip" name="nmlFiles" beforeUpload={() => false}>
                       <p className="ant-upload-drag-icon">
                         <Icon type="inbox" />
                       </p>
-                      <p className="ant-upload-text">Click or Drag File to This Area to Upload</p>
+                      <p className="ant-upload-text">Click or Drag Files to This Area to Upload</p>
                       <p>
-                        Every nml creates a new task. You can either upload a single NML file or a
-                        zipped collection of nml files (.zip).
+                        Every nml creates a new task. You can upload multiple NML files or zipped
+                        collections of nml files (.zip).
                       </p>
                     </Upload.Dragger>,
                   )}
@@ -386,7 +355,6 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     {getFieldDecorator("editPosition", {
                       rules: [{ required: true }],
                       initialValue: [0, 0, 0],
-                      // $FlowFixMe VectorComponent expects value + onChange props which will be set automatically by the form
                     })(<Vector3Input style={fullWidth} disabled={isEditingMode} />)}
                   </FormItem>
 
@@ -394,7 +362,6 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     {getFieldDecorator("editRotation", {
                       rules: [{ required: true }],
                       initialValue: [0, 0, 0],
-                      // $FlowFixMe VectorComponent expects value + onChange props which will be set automatically by the form
                     })(<Vector3Input style={fullWidth} disabled={isEditingMode} />)}
                   </FormItem>
                 </div>

@@ -36,7 +36,7 @@ class Cube {
   constructor(properties: PropertiesType) {
     this.min = properties.min || [0, 0, 0];
     this.max = properties.max;
-    const lineWidth = properties.lineWidth || 1;
+    const lineWidth = properties.lineWidth != null ? properties.lineWidth : 1;
     const color = properties.color || 0x000000;
     this.showCrossSections = properties.showCrossSections || false;
 
@@ -145,7 +145,7 @@ class Cube {
     }
   }
 
-  getMeshes() {
+  getMeshes(): Array<typeof THREE.Line> {
     return [this.cube].concat(_.values(this.crossSections));
   }
 

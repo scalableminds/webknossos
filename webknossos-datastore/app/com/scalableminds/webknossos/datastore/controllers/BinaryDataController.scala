@@ -1,11 +1,9 @@
-/*
- * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.webknossos.datastore.controllers
 
 import java.io.{ByteArrayOutputStream, OutputStream}
 import java.util.Base64
 
+import akka.stream.scaladsl.StreamConverters
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.webknossos.datastore.services.{AccessTokenService, BinaryDataService, DataSourceRepository, UserAccessRequest}
@@ -17,19 +15,23 @@ import com.scalableminds.webknossos.datastore.models.{DataRequest, ImageThumbnai
 import com.scalableminds.webknossos.datastore.tracings.volume.VolumeTracingService
 import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
 import com.scalableminds.util.tools.Fox
+import net.liftweb.common.{Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
-import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.iteratee.Enumerator
+import play.api.http.HttpEntity
+import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.Json
+import play.api.mvc.{PlayBodyParsers, ResponseHeader, Result}
+
+import scala.concurrent.{ExecutionContext, Future}
 
 class BinaryDataController @Inject()(
                                       binaryDataService: BinaryDataService,
                                       dataSourceRepository: DataSourceRepository,
                                       volumeTracingService: VolumeTracingService,
-                                      val accessTokenService: AccessTokenService,
-                                      val messagesApi: MessagesApi
-                                    ) extends TokenSecuredController {
+                                      accessTokenService: AccessTokenService)
+                                    (implicit ec: ExecutionContext,
+                                     bodyParsers: PlayBodyParsers)
+                                    extends Controller {
 
   /**
     * Handles requests for raw binary data via HTTP POST from webKnossos.
@@ -37,14 +39,20 @@ class BinaryDataController @Inject()(
   def requestViaWebKnossos(
                             dataSetName: String,
                             dataLayerName: String
-                          ) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)).async(validateJson[List[WebKnossosDataRequest]]) {
+                          ) = Action.async(validateJson[List[WebKnossosDataRequest]]) {
     implicit request =>
-      AllowRemoteOrigin {
-        for {
-          (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
-          data <- requestData(dataSource, dataLayer, request.body)
-        } yield Ok(data)
-      }
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(dataSetName)) {
+        AllowRemoteOrigin {
+            for {
+              (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
+              (data, indices) <- requestData(dataSource, dataLayer, request.body)
+            } yield Ok(data).withHeaders("MISSING-BUCKETS" -> formatMissingBucketList(indices))
+          }
+        }
+  }
+
+  def formatMissingBucketList(indices: List[Int]): String = {
+    "[" + indices.mkString(", ") + "]"
   }
 
   /**
@@ -61,20 +69,22 @@ class BinaryDataController @Inject()(
                            depth: Int,
                            resolution: Int,
                            halfByte: Boolean
-                         ) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)).async {
+                         ) = Action.async {
     implicit request =>
-      AllowRemoteOrigin {
-        for {
-          (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
-          request = DataRequest(
-            new VoxelPosition(x, y, z, dataLayer.lookUpResolution(resolution)),
-            width,
-            height,
-            depth,
-            DataServiceRequestSettings(halfByte = halfByte)
-          )
-        data <- requestData(dataSource, dataLayer, request).map(Ok(_))
-        } yield data
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(dataSetName)) {
+        AllowRemoteOrigin {
+          for {
+            (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
+            request = DataRequest(
+              new VoxelPosition(x, y, z, dataLayer.lookUpResolution(resolution)),
+              width,
+              height,
+              depth,
+              DataServiceRequestSettings(halfByte = halfByte)
+            )
+          (data, indices) <- requestData(dataSource, dataLayer, request)
+          } yield Ok(data).withHeaders("MISSING-BUCKETS" -> formatMissingBucketList(indices))
+        }
       }
   }
 
@@ -102,21 +112,23 @@ class BinaryDataController @Inject()(
                          resolution: Int,
                          x: Int, y: Int, z: Int,
                          cubeSize: Int
-                       ) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)).async {
+                       ) = Action.async {
     implicit request =>
-      AllowRemoteOrigin {
-        for {
-          (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
-          request = DataRequest(
-                        new VoxelPosition(x * cubeSize * resolution,
-                          y * cubeSize * resolution,
-                          z * cubeSize * resolution,
-                          Point3D(resolution, resolution, resolution)),
-          cubeSize,
-          cubeSize,
-          cubeSize)
-          data <- requestData(dataSource, dataLayer, request).map(Ok(_))
-        } yield data
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(dataSetName)) {
+        AllowRemoteOrigin {
+          for {
+            (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
+            request = DataRequest(
+                          new VoxelPosition(x * cubeSize * resolution,
+                            y * cubeSize * resolution,
+                            z * cubeSize * resolution,
+                            Point3D(resolution, resolution, resolution)),
+            cubeSize,
+            cubeSize,
+            cubeSize)
+            (data, indices) <- requestData(dataSource, dataLayer, request)
+        } yield Ok(data).withHeaders("MISSING-BUCKETS" -> formatMissingBucketList(indices))
+        }
       }
   }
 
@@ -133,22 +145,24 @@ class BinaryDataController @Inject()(
                           z: Int,
                           resolution: Int,
                           halfByte: Boolean
-                        ) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)).async(parse.raw) {
+                        ) = Action.async(parse.raw) {
     implicit request =>
-      AllowRemoteOrigin {
-        for {
-          (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
-          request = DataRequest(
-            new VoxelPosition(x, y, z, dataLayer.lookUpResolution(resolution)),
-            cubeSize,
-            cubeSize,
-            cubeSize,
-            DataServiceRequestSettings(halfByte = halfByte))
-          imageProvider <- respondWithSpriteSheet(dataSource, dataLayer, request, imagesPerRow, blackAndWhite = false)
-        } yield {
-          Ok.stream(Enumerator.outputStream(imageProvider).andThen(Enumerator.eof)).withHeaders(
-            CONTENT_TYPE -> contentTypeJpeg,
-            CONTENT_DISPOSITION -> "filename=test.jpg")
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(dataSetName)) {
+        AllowRemoteOrigin {
+          for {
+            (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
+            dataRequest = DataRequest(
+              new VoxelPosition(x, y, z, dataLayer.lookUpResolution(resolution)),
+              cubeSize,
+              cubeSize,
+              cubeSize,
+              DataServiceRequestSettings(halfByte = halfByte))
+            imageProvider <- respondWithSpriteSheet(dataSource, dataLayer, dataRequest, imagesPerRow, blackAndWhite = false)
+          } yield {
+            Result(
+              header = ResponseHeader(200),
+              body = HttpEntity.Streamed(StreamConverters.asOutputStream().mapMaterializedValue { outputStream => imageProvider(outputStream) }, None, Some(contentTypeJpeg)))
+          }
         }
       }
   }
@@ -166,22 +180,24 @@ class BinaryDataController @Inject()(
                     z: Int,
                     resolution: Int,
                     halfByte: Boolean,
-                    blackAndWhite: Boolean) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)).async(parse.raw) {
+                    blackAndWhite: Boolean) = Action.async(parse.raw) {
     implicit request =>
-      AllowRemoteOrigin {
-        for {
-          (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
-          request = DataRequest(
-            new VoxelPosition(x, y, z, dataLayer.lookUpResolution(resolution)),
-            width,
-            height,
-            1,
-            DataServiceRequestSettings(halfByte = halfByte))
-          imageProvider <- respondWithSpriteSheet(dataSource, dataLayer, request, 1, blackAndWhite)
-        } yield {
-          Ok.stream(Enumerator.outputStream(imageProvider).andThen(Enumerator.eof)).withHeaders(
-            CONTENT_TYPE -> contentTypeJpeg,
-            CONTENT_DISPOSITION -> "filename=test.jpg")
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(dataSetName)) {
+        AllowRemoteOrigin {
+          for {
+            (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
+            dataRequest = DataRequest(
+              new VoxelPosition(x, y, z, dataLayer.lookUpResolution(resolution)),
+              width,
+              height,
+              1,
+              DataServiceRequestSettings(halfByte = halfByte))
+            imageProvider <- respondWithSpriteSheet(dataSource, dataLayer, dataRequest, 1, blackAndWhite)
+          } yield {
+            Result(
+              header = ResponseHeader(200),
+              body = HttpEntity.Streamed(StreamConverters.asOutputStream().mapMaterializedValue { outputStream => imageProvider(outputStream) }, None, Some(contentTypeJpeg)))
+          }
         }
       }
   }
@@ -197,15 +213,17 @@ class BinaryDataController @Inject()(
                                  centerX: Option[Int],
                                  centerY: Option[Int],
                                  centerZ: Option[Int],
-                                 zoom: Option[Int]) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)).async(parse.raw) {
+                                 zoom: Option[Int]) = Action.async(parse.raw) {
     implicit request =>
-      AllowRemoteOrigin {
-        for {
-          thumbnailProvider <- respondWithImageThumbnail(dataSetName, dataLayerName, width, height, centerX, centerY, centerZ, zoom)
-        } yield {
-          Ok.stream(Enumerator.outputStream(thumbnailProvider).andThen(Enumerator.eof)).withHeaders(
-            CONTENT_TYPE -> contentTypeJpeg,
-            CONTENT_DISPOSITION -> "filename=thumbnail.jpg")
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(dataSetName)) {
+        AllowRemoteOrigin {
+          for {
+            thumbnailProvider <- respondWithImageThumbnail(dataSetName, dataLayerName, width, height, centerX, centerY, centerZ, zoom)
+          } yield {
+            Result(
+              header = ResponseHeader(200),
+              body = HttpEntity.Streamed(StreamConverters.asOutputStream().mapMaterializedValue { outputStream => thumbnailProvider(outputStream) }, None, Some(contentTypeJpeg)))
+          }
         }
       }
   }
@@ -222,15 +240,17 @@ class BinaryDataController @Inject()(
                                  centerY: Option[Int],
                                  centerZ: Option[Int],
                                  zoom: Option[Int]
-                               ) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)).async(parse.raw) {
+                               ) = Action.async(parse.raw) {
     implicit request =>
-      AllowRemoteOrigin {
-        for {
-          thumbnailProvider <- respondWithImageThumbnail(dataSetName, dataLayerName, width, height, centerX, centerY, centerZ, zoom)
-        } yield {
-          val os = new ByteArrayOutputStream()
-          thumbnailProvider(Base64.getEncoder.wrap(os))
-          Ok(Json.toJson(ImageThumbnail(contentTypeJpeg, os.toString)))
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(dataSetName)) {
+        AllowRemoteOrigin {
+          for {
+            thumbnailProvider <- respondWithImageThumbnail(dataSetName, dataLayerName, width, height, centerX, centerY, centerZ, zoom)
+          } yield {
+            val os = new ByteArrayOutputStream()
+            thumbnailProvider(Base64.getEncoder.wrap(os))
+            Ok(Json.toJson(ImageThumbnail(contentTypeJpeg, os.toString)))
+          }
         }
       }
   }
@@ -242,16 +262,18 @@ class BinaryDataController @Inject()(
                       dataSetName: String,
                       dataLayerName: String,
                       mappingName: String
-                    ) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)).async {
+                    ) = Action.async {
     implicit request =>
-      AllowRemoteOrigin {
-        for {
-          (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
-          segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Messages("dataLayer.notFound")
-          mappingRequest = DataServiceMappingRequest(dataSource, segmentationLayer, mappingName)
-          result <- binaryDataService.handleMappingRequest(mappingRequest)
-        } yield {
-          Ok(result)
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(dataSetName)) {
+        AllowRemoteOrigin {
+          for {
+            (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
+            segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Messages("dataLayer.notFound")
+            mappingRequest = DataServiceMappingRequest(dataSource, segmentationLayer, mappingName)
+            result <- binaryDataService.handleMappingRequest(mappingRequest)
+          } yield {
+            Ok(result)
+          }
         }
       }
   }
@@ -261,7 +283,7 @@ class BinaryDataController @Inject()(
       volumeTracingService.dataLayerForVolumeTracing(dataLayerName, dataSource))
   }
 
-  private def getDataSourceAndDataLayer(dataSetName: String, dataLayerName: String): Fox[(DataSource, DataLayer)] = {
+  private def getDataSourceAndDataLayer(dataSetName: String, dataLayerName: String)(implicit m: MessagesProvider): Fox[(DataSource, DataLayer)] = {
     for {
       dataSource <- dataSourceRepository.findUsableByName(dataSetName).toFox ?~> Messages("dataSource.notFound") ~> 404
       dataLayer <- getDataLayer(dataSource, dataLayerName) ?~> Messages("dataLayer.notFound", dataLayerName) ~> 404
@@ -274,12 +296,12 @@ class BinaryDataController @Inject()(
                            dataSource: DataSource,
                            dataLayer: DataLayer,
                            dataRequests: DataRequestCollection
-                         ): Fox[Array[Byte]] = {
+                         ): Fox[(Array[Byte], List[Int])] = {
     val requests = dataRequests.map(r => DataServiceDataRequest(dataSource, dataLayer, r.cuboid(dataLayer), r.settings))
     binaryDataService.handleDataRequests(requests)
   }
 
-  private def contentTypeJpeg = play.api.libs.MimeTypes.forExtension("jpeg").getOrElse(play.api.http.ContentTypes.BINARY)
+  private def contentTypeJpeg = "image/jpeg"
 
   private def respondWithSpriteSheet(
                                       dataSource: DataSource,
@@ -287,7 +309,7 @@ class BinaryDataController @Inject()(
                                       request: DataRequest,
                                       imagesPerRow: Int,
                                       blackAndWhite: Boolean
-                                    ): Fox[(OutputStream) => Unit] = {
+                                    )(implicit m: MessagesProvider): Fox[(OutputStream) => Unit] = {
     val params = ImageCreatorParameters(
       dataLayer.bytesPerElement,
       request.settings.halfByte,
@@ -296,11 +318,11 @@ class BinaryDataController @Inject()(
       imagesPerRow,
       blackAndWhite = blackAndWhite)
     for {
-      data <- requestData(dataSource, dataLayer, request)
+      (data, indices) <- requestData(dataSource, dataLayer, request)
       spriteSheet <- ImageCreator.spriteSheetFor(data, params) ?~> Messages("image.create.failed")
       firstSheet <- spriteSheet.pages.headOption ?~> Messages("image.page.failed")
     } yield {
-      new JPEGWriter().writeToOutputStream(firstSheet.image)
+      new JPEGWriter().writeToOutputStream(firstSheet.image)(_)
     }
   }
 
@@ -313,7 +335,7 @@ class BinaryDataController @Inject()(
                                      centerY: Option[Int],
                                      centerZ: Option[Int],
                                      zoom: Option[Int]
-                                   ): Fox[(OutputStream) => Unit] = {
+                                   )(implicit m: MessagesProvider): Fox[(OutputStream) => Unit] = {
     for {
       (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
       position = ImageThumbnail.goodThumbnailParameters(dataLayer, width, height, centerX, centerY, centerZ, zoom)
@@ -323,4 +345,15 @@ class BinaryDataController @Inject()(
       image
     }
   }
+
+  def clearCache(dataSetName: String) = Action.async {
+    implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
+        AllowRemoteOrigin {
+          val count = binaryDataService.clearCache(dataSetName)
+          Future.successful(Ok("Closed " + count + " file handles"))
+        }
+      }
+  }
+
 }

@@ -1,9 +1,8 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import test from "ava";
-import sinon from "sinon";
-import mockRequire from "mock-require";
 import { VolumeToolEnum } from "oxalis/constants";
 import { setupOxalis } from "test/helpers/apiHelpers";
+import window from "libs/window";
 import { tracing as TRACING } from "../fixtures/volumetracing_server_objects";
 
 // All the mocking is done in the helpers file, so it can be reused for both skeleton and volume API
@@ -42,8 +41,7 @@ test("setVolumeTool should throw an error for an invalid tool", t => {
 
 test("Data API: labelVoxels should label a list of voxels", t => {
   const { api, model } = t.context;
-  const cube = model.getSegmentationBinary().cube;
-  sinon.stub(model.getSegmentationBinary().layer, "requestFromStoreImpl").returns(new Uint8Array());
+  const cube = model.getSegmentationLayer().cube;
 
   api.data.labelVoxels([[1, 2, 3], [7, 8, 9]], 34);
   // The specified voxels should be labeled with the new value
@@ -60,7 +58,6 @@ test("Data API: getVolumeTracingLayerName should return the name of the volume t
 
 test("Data API: downloadRawDataCuboid should open a popup with the correct URL", async t => {
   const { api } = t.context;
-  const window = mockRequire.reRequire("libs/window");
 
   await api.data.downloadRawDataCuboid("color", [1, 2, 3], [9, 8, 7]);
 

@@ -5,7 +5,6 @@
 
 import _ from "lodash";
 import BackboneEvents from "backbone-events-standalone";
-import Utils from "libs/utils";
 import messages from "messages";
 import type { Vector2 } from "oxalis/constants";
 import type { TreeType } from "oxalis/store";
@@ -330,7 +329,7 @@ class AbstractTreeRenderer {
   drawChainFromTo(top: number, left: number, tree: AbstractNodeType, decision: DecisionType): void {
     // Draw the chain and the tree, connect them.
     let node = tree;
-    for (const i of Utils.__range__(0, decision.chainCount, true)) {
+    for (let i = 0; i <= decision.chainCount; i++) {
       this.addNode(left, top + i * this.nodeDistance, node.id);
       node = node.children[0];
       if (i !== 0) {
@@ -375,7 +374,7 @@ class AbstractTreeRenderer {
   calculateBranchMiddle(decision: DecisionType, left: number, right: number): number {
     const leftChild = decision.node.children[0];
     const rightChild = decision.node.children[1];
-    return (right - left) * leftChild.width / (leftChild.width + rightChild.width) + left;
+    return ((right - left) * leftChild.width) / (leftChild.width + rightChild.width) + left;
   }
 
   /**
@@ -598,7 +597,6 @@ class AbstractTreeRenderer {
    * @param {Number} height
    */
   setDimensions(width: number, height: number): void {
-    this.canvas.style.width = `${width}px`;
     this.canvas.style.height = `${height}px`;
     this.canvas.width = width;
     this.canvas.height = height;

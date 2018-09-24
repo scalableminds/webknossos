@@ -6,19 +6,15 @@
           "targets": {
             "node": "current"
           },
-          "exclude": [
-            "transform-regenerator"
-          ],
         }],
         "@babel/preset-react",
       ],
       plugins: [
-        "@babel/plugin-transform-async-to-generator",
         "@babel/plugin-proposal-class-properties",
         "@babel/plugin-transform-flow-strip-types",
-        ["import", { libraryName: "antd" }],
         "syntax-dynamic-import",
         ["@babel/plugin-proposal-object-rest-spread", { "useBuiltIns": true }]
+        "istanbul"
       ],
     }
   },
@@ -33,15 +29,11 @@
           "last 1 iOS versions"
         ]
       },
-      "exclude": [
-        "transform-regenerator"
-      ],
       "modules": false,
     }],
     "@babel/preset-react",
   ],
   plugins: [
-    "@babel/plugin-transform-async-to-generator",
     "@babel/plugin-proposal-class-properties",
     "@babel/plugin-transform-flow-strip-types",
     ["import", { libraryName: "antd" }],

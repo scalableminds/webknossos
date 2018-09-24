@@ -1,16 +1,22 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-/* eslint-disable import/first */
 // @flow
-import { tokenUserA, setCurrToken } from "../enzyme/e2e-setup";
 import test from "ava";
+import {
+  tokenUserA,
+  setCurrToken,
+  resetDatabase,
+  writeFlowCheckingFile,
+} from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 
-test.before("Change token", async () => {
+test.before("Reset database and change token", async () => {
+  resetDatabase();
   setCurrToken(tokenUserA);
 });
 
 test("getUsers()", async t => {
   const users = await api.getUsers();
+  writeFlowCheckingFile(users, "user", "APIUserType", { isArray: true });
   t.snapshot(users, { id: "users-getUsers" });
 });
 
@@ -45,5 +51,18 @@ test("updateUser()", async t => {
 test("getLoggedTimes()", async t => {
   const activeUser = await api.getActiveUser();
   const loggedTimes = await api.getLoggedTimes(activeUser.id);
+  writeFlowCheckingFile(loggedTimes, "logged-times", "APITimeIntervalType", { isArray: true });
   t.snapshot(loggedTimes, { id: "users-loggedTimes" });
+});
+
+test("getAuthToken()", async t => {
+  const authToken = await api.getAuthToken();
+  t.snapshot(authToken, { id: "users-authToken" });
+});
+
+test("revokeAuthToken()", async t => {
+  // Don't revoke the authToken or all test will fail!!!
+  // Leave the test anyway to remind everyone of this.
+  // await api.revokeAuthToken();
+  t.pass();
 });

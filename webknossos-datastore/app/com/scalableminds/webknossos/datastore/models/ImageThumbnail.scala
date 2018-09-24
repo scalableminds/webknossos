@@ -1,6 +1,3 @@
-/*
-* Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
-*/
 package com.scalableminds.webknossos.datastore.models
 
 import com.scalableminds.util.geometry.Point3D
@@ -18,7 +15,6 @@ object ImageThumbnail {
     val wr = math.floor(math.log(dataLayer.boundingBox.width.toDouble / width) / math.log(2)).toInt - 1
     val hr = math.floor(math.log(dataLayer.boundingBox.height.toDouble / height) / math.log(2)).toInt - 1
 
-    // TODO what about gaps in resolutions?
     math.max(0, List(wr, hr, dataLayer.resolutions.size - 1).min)
   }
 
@@ -35,7 +31,7 @@ object ImageThumbnail {
                     Point3D(centerX.get, centerY.get, centerZ.get)
                  else dataLayer.boundingBox.center
     val resolutionExponent = zoom.getOrElse(bestResolutionExponent(dataLayer, width, height))
-    val resolution = dataLayer.lookUpResolution(resolutionExponent)
+    val resolution = dataLayer.lookUpResolution(resolutionExponent, snapToClosest = true)
     val x = Math.max(0, center.x - width * resolution.x / 2)
     val y = Math.max(0, center.y - height * resolution.y / 2)
     val z = center.z

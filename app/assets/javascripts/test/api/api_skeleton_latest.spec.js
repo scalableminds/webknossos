@@ -2,6 +2,10 @@
 import test from "ava";
 import sinon from "sinon";
 import { setupOxalis, KeyboardJS } from "test/helpers/apiHelpers";
+import Store from "oxalis/store";
+import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
+import { setTreeGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
+import { makeBasicGroupObject } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 
 // All the mocking is done in the helpers file, so it can be reused for both skeleton and volume API
 test.beforeEach(t => setupOxalis(t, "skeleton"));
@@ -73,10 +77,13 @@ test("Data Api: setMapping should throw an error if the layer name is not valid"
 
 test("Data Api: setMapping should set a mapping of a layer", t => {
   const { api, model } = t.context;
-  const cube = model.getBinaryByName("segmentation").cube;
-  t.is(cube.hasMapping(), false);
+  const cube = model.getCubeByLayerName("segmentation");
+  t.is(Store.getState().temporaryConfiguration.activeMapping.mapping, null);
   api.data.setMapping("segmentation", [1, 3]);
-  t.is(cube.hasMapping(), true);
+  t.not(Store.getState().temporaryConfiguration.activeMapping.mapping, null);
+  // Workaround: This is usually called after the mapping textures were created successfully
+  // and can be rendered, which doesn't happen in this test scenario
+  Store.dispatch(setMappingEnabledAction(true));
   t.is(cube.mapId(1), 3);
 });
 
@@ -102,7 +109,7 @@ test("Data Api: getDataValue should get the data value for a layer, position and
   // event is being triggered.
   // There is another spec for pullqueue.js
   const { api, model } = t.context;
-  const cube = model.getBinaryByName("segmentation").cube;
+  const cube = model.getCubeByLayerName("segmentation");
   const position = [100, 100, 100];
   const zoomStep = 0;
   const bucketAddress = cube.positionToZoomedAddress(position, zoomStep);
@@ -200,4 +207,41 @@ test("setTreeName should set the name of the active tree if no treeId is specifi
   api.tracing.setTreeName(NAME);
   const name = api.tracing.getTreeName(1);
   t.is(name, NAME);
+});
+
+test.serial("getTreeGroups should get all tree groups and set a tree group", t => {
+  const api = t.context.api;
+  Store.dispatch(
+    setTreeGroupsAction([makeBasicGroupObject(3, "group 3"), makeBasicGroupObject(7, "group 7")]),
+  );
+
+  t.deepEqual(api.tracing.getTreeGroups(), [
+    { name: "group 3", groupId: 3 },
+    { name: "group 7", groupId: 7 },
+  ]);
+
+  api.tracing.setTreeGroup(2, 3);
+  api.tracing.setTreeGroup(1, 7);
+
+  const state = Store.getState();
+  t.is(state.tracing.skeleton.trees[2].groupId, 3);
+  t.is(state.tracing.skeleton.trees[1].groupId, 7);
+});
+
+test.serial("renameGroup should rename a tree group", t => {
+  const api = t.context.api;
+  Store.dispatch(
+    setTreeGroupsAction([makeBasicGroupObject(3, "group 3"), makeBasicGroupObject(7, "group 7")]),
+  );
+  api.tracing.renameGroup(7, "renamed");
+  const state = Store.getState();
+  t.is(state.tracing.skeleton.treeGroups[1].name, "renamed");
+});
+
+test("setTreeGroup should set the visibility of a tree", t => {
+  const api = t.context.api;
+  api.tracing.setTreeVisibility(2, false);
+  t.false(Store.getState().tracing.skeleton.trees[2].isVisible);
+  api.tracing.setTreeVisibility(2, true);
+  t.true(Store.getState().tracing.skeleton.trees[2].isVisible);
 });

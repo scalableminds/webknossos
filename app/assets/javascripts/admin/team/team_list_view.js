@@ -3,19 +3,22 @@
 
 import _ from "lodash";
 import * as React from "react";
-import { Table, Icon, Spin, Button, Input, Modal } from "antd";
-import Utils from "libs/utils";
+import { Table, Icon, Spin, Button, Input, Modal, Alert } from "antd";
+import * as Utils from "libs/utils";
 import messages from "messages";
-import CreateTeamModal from "admin/team/create_team_modal_view.js";
+import CreateTeamModal from "admin/team/create_team_modal_view";
 import { getEditableTeams, deleteTeam } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
 import { withRouter } from "react-router-dom";
 import type { APITeamType } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
+import { handleGenericError } from "libs/error_handling";
 
 const { Column } = Table;
 const { Search } = Input;
+
+const typeHint: APITeamType[] = [];
 
 type Props = {
   history: RouterHistory,
@@ -70,33 +73,41 @@ class TeamListView extends React.PureComponent<Props, State> {
     Modal.confirm({
       title: messages["team.delete"],
       onOk: async () => {
-        this.setState({
-          isLoading: true,
-        });
-
-        deleteTeam(team.id).then(
-          () => {
-            this.setState({
-              isLoading: false,
-              teams: this.state.teams.filter(t => t.id !== team.id),
-            });
-          },
-          () => {
-            this.setState({
-              isLoading: false,
-            });
-          },
-        );
+        try {
+          this.setState({ isLoading: true });
+          await deleteTeam(team.id);
+          this.setState(prevState => ({
+            teams: prevState.teams.filter(t => t.id !== team.id),
+          }));
+        } catch (error) {
+          handleGenericError(error);
+        } finally {
+          this.setState({ isLoading: false });
+        }
       },
     });
   };
 
-  createTeam = async (newTeam: APITeamType) => {
-    this.setState({
+  createTeam = (newTeam: APITeamType) => {
+    this.setState(prevState => ({
       isTeamCreationModalVisible: false,
-      teams: this.state.teams.concat([newTeam]),
-    });
+      teams: prevState.teams.concat([newTeam]),
+    }));
   };
+
+  renderPlaceholder() {
+    const teamMessage = (
+      <React.Fragment>
+        {"You can "}
+        <a onClick={() => this.setState({ isTeamCreationModalVisible: true })}>add a team</a>
+        {" to control access to specific datasets and manage which users can be assigned to tasks."}
+      </React.Fragment>
+    );
+
+    return this.state.isLoading ? null : (
+      <Alert message="Add more teams" description={teamMessage} type="info" showIcon />
+    );
+  }
 
   render() {
     const marginRight = { marginRight: 20 };
@@ -124,10 +135,11 @@ class TeamListView extends React.PureComponent<Props, State> {
           <div className="clearfix" style={{ margin: "20px 0px" }} />
 
           <Spin spinning={this.state.isLoading} size="large">
+            {this.state.teams.length <= 1 ? this.renderPlaceholder() : null}
             <Table
-              dataSource={Utils.filterWithSearchQueryOR(
+              dataSource={Utils.filterWithSearchQueryAND(
                 this.state.teams,
-                ["name", "owner", "parent"],
+                ["name"],
                 this.state.searchQuery,
               )}
               rowKey="id"
@@ -140,7 +152,7 @@ class TeamListView extends React.PureComponent<Props, State> {
                 title="Name"
                 dataIndex="name"
                 key="name"
-                sorter={Utils.localeCompareBy("name")}
+                sorter={Utils.localeCompareBy(typeHint, team => team.name)}
               />
               <Column
                 title="Action"

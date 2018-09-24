@@ -1,10 +1,6 @@
-/*
- * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.util.image
 
 import com.scalableminds.util.tools.ExtendedTypes._
-import play.api.data.validation.ValidationError
 import play.api.libs.json.Json._
 import play.api.libs.json.{Format, JsValue, _}
 
@@ -33,15 +29,15 @@ object Color {
       case JsArray(ts) =>
         val c = ts.map(fromJson[Float](_)).flatMap(_.asOpt)
         if (c.size != ts.size)
-          JsError(Seq(JsPath() -> Seq(ValidationError("validate.error.array.invalidContent"))))
+          JsError(Seq(JsPath() -> Seq(JsonValidationError("validate.error.array.invalidContent"))))
         else
           c.size match {
             case 3 => JsSuccess(Color(c(0), c(1), c(2), 1))
             case 4 => JsSuccess(Color(c(0), c(1), c(2), c(3)))
-            case _ => JsError(Seq(JsPath() -> Seq(ValidationError("validate.error.array.invalidContent"))))
+            case _ => JsError(Seq(JsPath() -> Seq(JsonValidationError("validate.error.array.invalidContent"))))
           }
       case _ =>
-        JsError(Seq(JsPath() -> Seq(ValidationError("validate.error.expected.point3DArray"))))
+        JsError(Seq(JsPath() -> Seq(JsonValidationError("validate.error.expected.point3DArray"))))
     }
   }
 

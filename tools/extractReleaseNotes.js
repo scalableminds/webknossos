@@ -1,4 +1,5 @@
 // Parse PR descriptions for release notes
+/* eslint-disable import/no-extraneous-dependencies, global-require, import/no-dynamic-require */
 const fetch = require("node-fetch");
 const fs = require("fs");
 
@@ -7,7 +8,7 @@ const CACHED_RESPONSE_PATH = "";
 
 // Search for Mailable description, then any text until the : and a newline
 // Then match any text: [^]* is used in javascript to match any character including newlines
-const RELEASE_NOTES_REGEX = /Mailable description[^:]*:\r?\n([^]*)/;
+const RELEASE_NOTES_REGEX = /^Mailable description[^:]*:\r?\n([^]*)/;
 
 (async () => {
   let parsedJSON;

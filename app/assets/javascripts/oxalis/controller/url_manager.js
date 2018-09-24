@@ -4,16 +4,17 @@
  */
 
 import _ from "lodash";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import { V3 } from "libs/mjs";
 import Store from "oxalis/store";
 import type { Vector3, ModeType } from "oxalis/constants";
 import constants, { ModeValues } from "oxalis/constants";
 import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
-import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getSkeletonTracing, getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
+import { applyState } from "oxalis/model_initialization";
 import window, { location } from "libs/window";
+import type { TracingType } from "oxalis/store";
 
-const NO_MODIFY_TIMEOUT = 5000;
 const MAX_UPDATE_INTERVAL = 1000;
 
 export type UrlManagerState = {
@@ -27,7 +28,6 @@ export type UrlManagerState = {
 class UrlManager {
   baseUrl: string;
   initialState: UrlManagerState;
-  lastUrl: ?string;
 
   initialize() {
     this.baseUrl = document.location.pathname + document.location.search;
@@ -42,28 +42,17 @@ class UrlManager {
 
   update = _.throttle(() => this.updateUnthrottled(), MAX_UPDATE_INTERVAL);
 
-  updateUnthrottled(force: boolean = false) {
-    if (window.isNavigating) {
-      // The router initiated an URL change
-      return;
-    }
-
+  updateUnthrottled() {
     const url = this.buildUrl();
-    if (!url) {
-      return;
-    }
+    window.history.replaceState({}, null, url);
+  }
 
-    // Don't tamper with URL if changed externally for some time
-    const urlDidNotChange = location.href === this.lastUrl;
-    const isFreshUrl = this.lastUrl == null;
-
-    if (isFreshUrl || urlDidNotChange || force) {
-      window.history.replaceState({}, null, url);
-      this.lastUrl = location.href;
-    } else {
-      setTimeout(() => {
-        this.lastUrl = null;
-      }, NO_MODIFY_TIMEOUT);
+  onHashChange() {
+    const stateString = location.hash.slice(1);
+    if (stateString) {
+      const [key, value] = stateString.split("=");
+      // The value can either be a single number or multiple numbers delimited by a ,
+      applyState({ [key]: value.indexOf(",") > -1 ? value.split(",").map(Number) : Number(value) });
     }
   }
 
@@ -75,7 +64,7 @@ class UrlManager {
     const state: UrlManagerState = {};
 
     if (stateString) {
-      const stateArray = stateString.split(",").map(item => Number(item));
+      const stateArray = stateString.split(",").map(Number);
       if (stateArray.length >= 5) {
         state.position = Utils.numberArrayToVector3(stateArray.slice(0, 3));
 
@@ -105,29 +94,32 @@ class UrlManager {
 
   startUrlUpdater(): void {
     Store.subscribe(() => this.update());
+    window.onhashchange = () => this.onHashChange();
   }
 
-  buildUrl(): ?string {
-    const tracing = Store.getState().tracing;
-    if (!tracing) {
-      return null;
-    }
-    const viewMode = Store.getState().temporaryConfiguration.viewMode;
-    let state = V3.floor(getPosition(Store.getState().flycam));
-    // Convert viewMode to number
-    state.push(ModeValues.indexOf(viewMode));
+  buildHash(tracing: TracingType) {
+    const position = V3.floor(getPosition(Store.getState().flycam));
+    const { viewMode } = Store.getState().temporaryConfiguration;
+    const viewModeIndex = ModeValues.indexOf(viewMode);
+    const zoomStep = Store.getState().flycam.zoomStep.toFixed(2);
+    const rotation = constants.MODES_ARBITRARY.includes(viewMode)
+      ? getRotation(Store.getState().flycam).map(e => e.toFixed(2))
+      : [];
 
-    if (constants.MODES_ARBITRARY.includes(viewMode)) {
-      state = state
-        .concat([Store.getState().flycam.zoomStep.toFixed(2)])
-        .concat(getRotation(Store.getState().flycam).map(e => e.toFixed(2)));
-    } else {
-      state = state.concat([Store.getState().flycam.zoomStep.toFixed(2)]);
-    }
+    const activeNodeId = getSkeletonTracing(tracing)
+      .chain(skeletonTracing => getActiveNode(skeletonTracing))
+      .map(node => [node.id])
+      .getOrElse([]);
 
-    getActiveNode(tracing).map(node => state.push(node.id));
+    return [...position, viewModeIndex, zoomStep, ...rotation, ...activeNodeId].join(",");
+  }
+
+  buildUrl(): string {
+    const { tracing } = Store.getState();
+
+    const hash = this.buildHash(tracing);
     const newBaseUrl = updateTypeAndId(this.baseUrl, tracing.tracingType, tracing.annotationId);
-    return `${newBaseUrl}#${state.join(",")}`;
+    return `${newBaseUrl}#${hash}`;
   }
 }
 
@@ -141,7 +133,7 @@ export function updateTypeAndId(
   // will only ever be updated for the annotations route as the other route is for
   // dataset viewing only
   return baseUrl.replace(
-    /^(.*\/annotations)\/(.*?)\/([^/]*)(\/?.*)$/,
+    /^(.*\/annotations)\/(.*?)\/([^/?]*)(\/?.*)$/,
     (all, base, type, id, rest) => `${base}/${tracingType}/${annotationId}${rest}`,
   );
 }

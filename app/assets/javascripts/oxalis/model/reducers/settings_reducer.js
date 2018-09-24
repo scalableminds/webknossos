@@ -4,43 +4,81 @@
  */
 
 import _ from "lodash";
-import update from "immutability-helper";
+import {
+  updateKey,
+  updateKey2,
+  updateKey3,
+  type StateShape1,
+  type StateShape2,
+} from "oxalis/model/helpers/deep_update";
 import type { OxalisState } from "oxalis/store";
 import type { ActionType } from "oxalis/model/actions/actions";
+
+//
+// Update helpers
+//
+
+const updateUserConfig = (
+  state: OxalisState,
+  shape: StateShape1<"userConfiguration">,
+): OxalisState => updateKey(state, "userConfiguration", shape);
+
+const updateDatasetConfig = (state: OxalisState, shape: StateShape1<"datasetConfiguration">) =>
+  updateKey(state, "datasetConfiguration", shape);
+
+const updateTemporaryConfig = (state: OxalisState, shape: StateShape1<"temporaryConfiguration">) =>
+  updateKey(state, "temporaryConfiguration", shape);
+
+const updateActiveMapping = (
+  state: OxalisState,
+  shape: StateShape2<"temporaryConfiguration", "activeMapping">,
+) => updateKey2(state, "temporaryConfiguration", "activeMapping", shape);
+
+//
+// Reducer
+//
 
 function SettingsReducer(state: OxalisState, action: ActionType): OxalisState {
   switch (action.type) {
     case "UPDATE_USER_SETTING": {
       const { propertyName, value } = action;
-      return update(state, { userConfiguration: { [propertyName]: { $set: value } } });
+
+      return updateUserConfig(state, { [propertyName]: value });
     }
 
     case "UPDATE_DATASET_SETTING": {
       const { propertyName, value } = action;
-      return update(state, { datasetConfiguration: { [propertyName]: { $set: value } } });
+      return updateDatasetConfig(state, { [propertyName]: value });
     }
 
     case "UPDATE_TEMPORARY_SETTING": {
       const { propertyName, value } = action;
-      return update(state, { temporaryConfiguration: { [propertyName]: { $set: value } } });
+      return updateTemporaryConfig(state, { [propertyName]: value });
     }
 
     case "TOGGLE_TEMPORARY_SETTING": {
       const { propertyName } = action;
-      const value = !state.temporaryConfiguration[propertyName];
-      return update(state, { temporaryConfiguration: { [propertyName]: { $set: value } } });
+      const value: any = !state.temporaryConfiguration[propertyName];
+      return updateTemporaryConfig(state, { [propertyName]: value });
     }
 
     case "UPDATE_LAYER_SETTING": {
       const { layerName, propertyName, value } = action;
-      return update(state, {
-        datasetConfiguration: { layers: { [layerName]: { [propertyName]: { $set: value } } } },
+      return updateKey3(state, "datasetConfiguration", "layers", layerName, {
+        [propertyName]: value,
       });
+    }
+
+    case "SET_MOUSE_POSITION": {
+      return updateTemporaryConfig(state, { mousePosition: action.position });
     }
 
     case "INITIALIZE_SETTINGS": {
       // Only color layers need layer settings
-      const colorLayers = _.filter(state.dataset.dataLayers, layer => layer.category === "color");
+      const colorLayers = _.filter(
+        state.dataset.dataSource.dataLayers,
+        layer => layer.category === "color",
+      );
       const initialLayerSettings = action.initialDatasetSettings.layers;
       const layerSettingsDefaults = _.transform(
         colorLayers,
@@ -63,43 +101,53 @@ function SettingsReducer(state: OxalisState, action: ActionType): OxalisState {
         layers: layerSettingsDefaults,
       });
 
-      return update(state, {
-        datasetConfiguration: { $merge: initialDatasetSettingsWithDefaults },
-        userConfiguration: { $merge: action.initialUserSettings },
-      });
+      return {
+        ...state,
+        datasetConfiguration: {
+          ...state.datasetConfiguration,
+          ...initialDatasetSettingsWithDefaults,
+        },
+        userConfiguration: {
+          ...state.userConfiguration,
+          ...action.initialUserSettings,
+        },
+      };
     }
 
     case "SET_DATASET": {
-      const dataset = {
-        dataStore: action.dataset.dataStore,
-        name: action.dataset.dataSource.id.name,
-        scale: action.dataset.dataSource.scale,
-        dataLayers: action.dataset.dataSource.dataLayers,
+      const { dataset } = action;
+      return {
+        ...state,
+        dataset,
       };
-
-      return update(state, {
-        dataset: { $set: dataset },
-      });
     }
 
     case "SET_VIEW_MODE": {
       const allowedModes = state.tracing.restrictions.allowedModes;
       if (allowedModes.includes(action.viewMode)) {
-        return update(state, {
-          temporaryConfiguration: { viewMode: { $set: action.viewMode } },
-        });
+        return updateTemporaryConfig(state, { viewMode: action.viewMode });
       } else {
         return state;
       }
     }
     case "SET_FLIGHTMODE_RECORDING": {
-      return update(state, {
-        temporaryConfiguration: { flightmodeRecording: { $set: action.value } },
-      });
+      return updateTemporaryConfig(state, { flightmodeRecording: action.value });
     }
     case "SET_CONTROL_MODE": {
-      return update(state, {
-        temporaryConfiguration: { controlMode: { $set: action.controlMode } },
+      return updateTemporaryConfig(state, { controlMode: action.controlMode });
+    }
+    case "SET_MAPPING_ENABLED": {
+      const { isMappingEnabled } = action;
+      return updateActiveMapping(state, {
+        isMappingEnabled,
+      });
+    }
+    case "SET_MAPPING": {
+      return updateActiveMapping(state, {
+        mappingSize: action.mapping != null ? _.size(action.mapping) : 0,
+        mapping: action.mapping,
+        mappingColors: action.mappingColors,
+        hideUnmappedIds: action.hideUnmappedIds || false,
       });
     }
     default:

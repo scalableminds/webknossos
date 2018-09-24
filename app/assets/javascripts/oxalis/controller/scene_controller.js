@@ -5,15 +5,17 @@
 
 import _ from "lodash";
 import app from "app";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
+import parseStlBuffer from "libs/parse_stl_buffer";
 import { V3 } from "libs/mjs";
 import {
   getPosition,
   getPlaneScalingFactor,
-  getViewportBoundingBox,
+  getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
+import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import { getVoxelPerNM } from "oxalis/model/scaleinfo";
@@ -21,12 +23,13 @@ import Plane from "oxalis/geometries/plane";
 import Skeleton from "oxalis/geometries/skeleton";
 import Cube from "oxalis/geometries/cube";
 import ContourGeometry from "oxalis/geometries/contourgeometry";
-import VolumeGeometry from "oxalis/geometries/volumegeometry";
 import Dimensions from "oxalis/model/dimensions";
 import { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView } from "oxalis/constants";
-import PolygonFactory from "oxalis/view/polygons/polygon_factory";
 import type { Vector3, OrthoViewType, OrthoViewMapType, BoundingBoxType } from "oxalis/constants";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import { getRenderer } from "oxalis/controller/renderer";
+import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
+import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 
 const CUBE_COLOR = 0x999999;
 
@@ -35,10 +38,6 @@ class SceneController {
   current: number;
   displayPlane: OrthoViewMapType<boolean>;
   planeShift: Vector3;
-  pingBinary: boolean;
-  pingBinarySeg: boolean;
-  volumeMeshes: THREE.Object3D;
-  polygonFactory: ?PolygonFactory;
   cube: Cube;
   userBoundingBox: Cube;
   taskBoundingBox: ?Cube;
@@ -60,18 +59,13 @@ class SceneController {
       [OrthoViews.PLANE_XZ]: true,
     };
     this.planeShift = [0, 0, 0];
-    this.pingBinary = true;
-    this.pingBinarySeg = true;
   }
 
   initialize() {
+    this.renderer = getRenderer();
+
     this.createMeshes();
     this.bindToEvents();
-
-    this.renderer = new THREE.WebGLRenderer({
-      canvas: document.getElementById("render-canvas"),
-      antialias: true,
-    });
     this.scene = new THREE.Scene();
 
     // Because the voxel coordinates do not have a cube shape but are distorted,
@@ -83,18 +77,27 @@ class SceneController {
     this.rootGroup.add(this.getRootNode());
 
     // The dimension(s) with the highest resolution will not be distorted
-    this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.scale));
+    this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.dataSource.scale));
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.rootGroup);
+  }
+
+  addSTL(stlBuffer: ArrayBuffer): void {
+    const geometry = parseStlBuffer(stlBuffer);
+    geometry.computeVertexNormals();
+
+    const meshMaterial = new THREE.MeshNormalMaterial();
+    this.scene.add(new THREE.Mesh(geometry, meshMaterial));
   }
 
   createMeshes(): void {
     this.rootNode = new THREE.Object3D();
 
     // Cubes
+    const { lowerBoundary, upperBoundary } = getBoundaries(Store.getState().dataset);
     this.cube = new Cube({
-      min: Model.lowerBoundary,
-      max: Model.upperBoundary,
+      min: lowerBoundary,
+      max: upperBoundary,
       color: CUBE_COLOR,
       showCrossSections: true,
     });
@@ -107,16 +110,15 @@ class SceneController {
     });
     this.userBoundingBox.getMeshes().forEach(mesh => this.rootNode.add(mesh));
 
-    const taskBoundingBox = Store.getState().tracing.boundingBox;
+    const taskBoundingBox = getSomeTracing(Store.getState().tracing).boundingBox;
     this.buildTaskingBoundingBox(taskBoundingBox);
 
-    this.volumeMeshes = new THREE.Object3D();
-    if (Store.getState().tracing.type === "volume") {
+    if (Store.getState().tracing.volume != null) {
       this.contour = new ContourGeometry();
       this.contour.getMeshes().forEach(mesh => this.rootNode.add(mesh));
     }
 
-    if (Store.getState().tracing.type === "skeleton") {
+    if (Store.getState().tracing.skeleton != null) {
       this.skeleton = new Skeleton();
       this.rootNode.add(this.skeleton.getRootNode());
     }
@@ -128,8 +130,8 @@ class SceneController {
     };
 
     this.planes[OrthoViews.PLANE_XY].setRotation(new THREE.Euler(Math.PI, 0, 0));
-    this.planes[OrthoViews.PLANE_YZ].setRotation(new THREE.Euler(Math.PI, 1 / 2 * Math.PI, 0));
-    this.planes[OrthoViews.PLANE_XZ].setRotation(new THREE.Euler(-1 / 2 * Math.PI, 0, 0));
+    this.planes[OrthoViews.PLANE_YZ].setRotation(new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0));
+    this.planes[OrthoViews.PLANE_XZ].setRotation(new THREE.Euler((-1 / 2) * Math.PI, 0, 0));
 
     for (const plane of _.values(this.planes)) {
       plane.getMeshes().forEach(mesh => this.rootNode.add(mesh));
@@ -152,70 +154,22 @@ class SceneController {
     }
   }
 
-  renderVolumeIsosurface(cellId: number): void {
-    const state = Store.getState();
-    if (!state.userConfiguration.isosurfaceDisplay || Model.getSegmentationBinary() == null) {
-      return;
-    }
-
-    if (this.polygonFactory != null) {
-      this.polygonFactory.cancel();
-    }
-
-    const factor = state.userConfiguration.isosurfaceBBsize;
-    const bb = getViewportBoundingBox(state);
-
-    for (let i = 0; i <= 2; i++) {
-      const width = bb.max[i] - bb.min[i];
-      const diff = (factor - 1) * width / 2;
-      bb.min[i] -= diff;
-      bb.max[i] += diff;
-    }
-
-    this.polygonFactory = new PolygonFactory(
-      Model.getSegmentationBinary().cube,
-      state.userConfiguration.isosurfaceResolution,
-      bb.min,
-      bb.max,
-      cellId,
-    );
-    this.polygonFactory.getTriangles().then(triangles => {
-      if (triangles == null) {
-        return;
-      }
-      this.rootNode.remove(this.volumeMeshes);
-      this.volumeMeshes = new THREE.Object3D();
-      this.rootNode.add(this.volumeMeshes);
-
-      for (const triangleIdString of Object.keys(triangles)) {
-        const triangleId = parseInt(triangleIdString, 10);
-        const mappedId = Model.getSegmentationBinary().cube.mapId(triangleId);
-        const volume = new VolumeGeometry(triangles[triangleId], mappedId);
-        volume.getMeshes().forEach(mesh => this.volumeMeshes.add(mesh));
-      }
-      app.vent.trigger("rerender");
-      this.polygonFactory = null;
-    });
-  }
-
   updateSceneForCam = (id: OrthoViewType): void => {
     // This method is called for each of the four cams. Even
     // though they are all looking at the same scene, some
     // things have to be changed for each cam.
 
-    let pos;
     this.cube.updateForCam(id);
     this.userBoundingBox.updateForCam(id);
     Utils.__guard__(this.taskBoundingBox, x => x.updateForCam(id));
 
     if (id !== OrthoViews.TDView) {
       let ind;
-      this.volumeMeshes.visible = false;
       for (const planeId of OrthoViewValuesWithoutTDView) {
         if (planeId === id) {
           this.planes[planeId].setOriginalCrosshairColor();
           this.planes[planeId].setVisible(true);
-          pos = _.clone(getPosition(Store.getState().flycam));
+          const pos = _.clone(getPosition(Store.getState().flycam));
           ind = Dimensions.getIndices(planeId);
           // Offset the plane so the user can see the skeletonTracing behind the plane
           pos[ind[2]] +=
@@ -226,9 +180,8 @@ class SceneController {
         }
       }
     } else {
-      this.volumeMeshes.visible = true;
       for (const planeId of OrthoViewValuesWithoutTDView) {
-        pos = getPosition(Store.getState().flycam);
+        const pos = getPosition(Store.getState().flycam);
         this.planes[planeId].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2]));
         this.planes[planeId].setGrayCrosshairColor();
         this.planes[planeId].setVisible(true);
@@ -237,16 +190,37 @@ class SceneController {
     }
   };
 
-  update = (): void => {
+  update = (optPlane?: ArbitraryPlane): void => {
     const gPos = getPosition(Store.getState().flycam);
     const globalPosVec = new THREE.Vector3(...gPos);
     const planeScale = getPlaneScalingFactor(Store.getState().flycam);
-    for (const planeId of OrthoViewValuesWithoutTDView) {
-      this.planes[planeId].updateTexture();
-      // Update plane position
-      this.planes[planeId].setPosition(globalPosVec);
-      // Update plane scale
-      this.planes[planeId].setScale(planeScale);
+
+    // The anchor point refers to the top-left-front bucket of the bounding box
+    // which covers all three rendered planes. Relative to this anchor point,
+    // all buckets necessary for rendering are addressed. The anchorPoint is
+    // defined with bucket indices for the coordinate system of the current zoomStep.
+    let anchorPoint;
+    // The fallbackAnchorPoint is similar to the anchorPoint, but refers to the
+    // coordinate system of the next zoomStep which is used for fallback rendering.
+    let fallbackAnchorPoint;
+
+    const zoomStep = getRequestLogZoomStep(Store.getState());
+    for (const dataLayer of Model.getAllLayers()) {
+      [anchorPoint, fallbackAnchorPoint] = dataLayer.layerRenderingManager.updateDataTextures(
+        gPos,
+        zoomStep,
+      );
+    }
+
+    if (optPlane) {
+      optPlane.updateAnchorPoints(anchorPoint, fallbackAnchorPoint);
+      optPlane.setPosition(globalPosVec);
+    } else {
+      for (const currentPlane of _.values(this.planes)) {
+        currentPlane.updateAnchorPoints(anchorPoint, fallbackAnchorPoint);
+        currentPlane.setPosition(globalPosVec);
+        currentPlane.setScale(planeScale);
+      }
     }
   };
 
@@ -259,7 +233,7 @@ class SceneController {
 
   setClippingDistance(value: number): void {
     // convert nm to voxel
-    const voxelPerNMVector = getVoxelPerNM(Store.getState().dataset.scale);
+    const voxelPerNMVector = getVoxelPerNM(Store.getState().dataset.dataSource.scale);
     V3.scale(voxelPerNMVector, value, this.planeShift);
 
     app.vent.trigger("rerender");
@@ -292,17 +266,13 @@ class SceneController {
     for (const plane of _.values(this.planes)) {
       plane.setSegmentationAlpha(alpha);
     }
-    this.pingBinarySeg = alpha !== 0;
   }
 
-  pingDataLayer(dataLayerName: string): boolean {
-    if (Model.binary[dataLayerName].category === "color") {
-      return this.pingBinary;
+  setIsMappingEnabled(isMappingEnabled: boolean): void {
+    for (const plane of _.values(this.planes)) {
+      plane.setIsMappingEnabled(isMappingEnabled);
     }
-    if (Model.binary[dataLayerName].category === "segmentation") {
-      return this.pingBinarySeg;
-    }
-    return false;
+    app.vent.trigger("rerender");
   }
 
   stopPlaneMode(): void {
@@ -324,26 +294,44 @@ class SceneController {
   }
 
   bindToEvents(): void {
-    Store.subscribe(() => {
-      const {
-        clippingDistance,
-        displayCrosshair,
-        tdViewDisplayPlanes,
-      } = Store.getState().userConfiguration;
-      const { segmentationOpacity } = Store.getState().datasetConfiguration;
-      this.setSegmentationAlpha(segmentationOpacity);
-      this.setClippingDistance(clippingDistance);
-      this.setDisplayCrosshair(displayCrosshair);
-      this.setDisplayPlanes(tdViewDisplayPlanes);
-      this.setInterpolation(Store.getState().datasetConfiguration.interpolation);
-    });
     listenToStoreProperty(
-      storeState => storeState.tracing.userBoundingBox,
+      storeState => storeState.userConfiguration.clippingDistance,
+      clippingDistance => this.setClippingDistance(clippingDistance),
+    );
+
+    listenToStoreProperty(
+      storeState => storeState.userConfiguration.displayCrosshair,
+      displayCrosshair => this.setDisplayCrosshair(displayCrosshair),
+    );
+
+    listenToStoreProperty(
+      storeState => storeState.userConfiguration.tdViewDisplayPlanes,
+      tdViewDisplayPlanes => this.setDisplayPlanes(tdViewDisplayPlanes),
+    );
+
+    listenToStoreProperty(
+      storeState => storeState.datasetConfiguration.segmentationOpacity,
+      segmentationOpacity => this.setSegmentationAlpha(segmentationOpacity),
+    );
+
+    listenToStoreProperty(
+      storeState => storeState.datasetConfiguration.interpolation,
+      interpolation => this.setInterpolation(interpolation),
+    );
+
+    listenToStoreProperty(
+      storeState => getSomeTracing(storeState.tracing).userBoundingBox,
       bb => this.setUserBoundingBox(bb),
     );
+
     listenToStoreProperty(
-      storeState => storeState.tracing.boundingBox,
+      storeState => getSomeTracing(storeState.tracing).boundingBox,
       bb => this.buildTaskingBoundingBox(bb),
+    );
+
+    listenToStoreProperty(
+      storeState => storeState.temporaryConfiguration.activeMapping.isMappingEnabled,
+      isMappingEnabled => this.setIsMappingEnabled(isMappingEnabled),
     );
   }
 }

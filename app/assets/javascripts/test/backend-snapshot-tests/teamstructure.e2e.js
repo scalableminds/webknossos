@@ -1,6 +1,7 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-/* eslint-disable import/first */
 // @flow
+import test from "ava";
+import _ from "lodash";
 import {
   tokenUserA,
   tokenUserB,
@@ -8,10 +9,13 @@ import {
   tokenUserD,
   tokenUserE,
   setCurrToken,
-} from "../enzyme/e2e-setup";
-import test from "ava";
-import _ from "lodash";
+  resetDatabase,
+} from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
+
+test.before("Reset database", async () => {
+  resetDatabase();
+});
 
 /*
 TEAM STRUCTURE USED FOR TESTING:
@@ -77,10 +81,8 @@ test("teams_create_user_D", async t => {
   await setCurrToken(tokenUserD);
   t.plan(1);
 
-  const organizations = await api.getOrganizations();
   const newTeam = {
     name: "test-team-name",
-    organization: organizations[0].name,
   };
   await api.createTeam(newTeam).catch(err => {
     t.is(err.messages[0].error, "Access denied. Only admin users can execute this operation.");
@@ -92,13 +94,13 @@ test("taskTypes_userDefault", async t => {
   await setCurrToken(tokenUserA);
   const taskTypes = _.sortBy(await api.getTaskTypes(), taskType => taskType.id);
   t.is(taskTypes[0].description, "Check those cells out!");
-  t.is(taskTypes.length, 1);
+  t.is(taskTypes.length, 2);
 });
 
 test("taskTypes_user_D", async t => {
   await setCurrToken(tokenUserD);
   const taskTypes = _.sortBy(await api.getTaskTypes(), taskType => taskType.id);
-  t.is(taskTypes.length, 0);
+  t.is(taskTypes.length, 1);
 });
 
 test("taskTypes_user_E", async t => {

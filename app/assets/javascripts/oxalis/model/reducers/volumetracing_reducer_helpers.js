@@ -27,7 +27,9 @@ export function setToolReducer(
 
   return update(state, {
     tracing: {
-      activeTool: { $set: tool },
+      volume: {
+        activeTool: { $set: tool },
+      },
     },
   });
 }
@@ -45,7 +47,9 @@ export function setActiveCellReducer(
 
   return update(state, {
     tracing: {
-      activeCellId: { $set: id },
+      volume: {
+        activeCellId: { $set: id },
+      },
     },
   });
 }
@@ -72,9 +76,11 @@ export function createCellReducer(
 
   return update(state, {
     tracing: {
-      activeCellId: { $set: cell.id },
-      cells: { [cell.id]: { $set: cell } },
-      maxCellId: { $set: newMaxCellId },
+      volume: {
+        activeCellId: { $set: cell.id },
+        cells: { [cell.id]: { $set: cell } },
+        maxCellId: { $set: newMaxCellId },
+      },
     },
   });
 }
@@ -94,7 +100,9 @@ export function updateDirectionReducer(
   }
   return update(newState, {
     tracing: {
-      lastCentroid: { $set: centroid },
+      volume: {
+        lastCentroid: { $set: centroid },
+      },
     },
   });
 }
@@ -111,7 +119,9 @@ export function addToLayerReducer(
 
   return update(state, {
     tracing: {
-      contourList: { $push: [position] },
+      volume: {
+        contourList: { $push: [position] },
+      },
     },
   });
 }
@@ -119,21 +129,25 @@ export function addToLayerReducer(
 export function resetContourReducer(state: OxalisState) {
   return update(state, {
     tracing: {
-      contourList: { $set: [] },
+      volume: {
+        contourList: { $set: [] },
+      },
     },
   });
 }
 
 export function hideBrushReducer(state: OxalisState) {
   return update(state, {
-    temporaryConfiguration: { brushPosition: { $set: null } },
+    temporaryConfiguration: { mousePosition: { $set: null } },
   });
 }
 
 export function setContourTracingModeReducer(state: OxalisState, mode: ContourModeType) {
   return update(state, {
     tracing: {
-      contourTracingMode: { $set: mode },
+      volume: {
+        contourTracingMode: { $set: mode },
+      },
     },
   });
 }

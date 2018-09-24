@@ -1,15 +1,25 @@
-/*
- * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.webknossos.datastore.controllers
 
+import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.webknossos.datastore.tracings.TracingDataStore
 import javax.inject.Inject
 
-import play.api.i18n.MessagesApi
 import play.api.mvc.Action
+import play.api.mvc.Results.Ok
 
-class Application @Inject()(val messagesApi: MessagesApi) extends Controller {
+import scala.concurrent.ExecutionContext
 
-  def health = Action { implicit request => Ok }
+class Application @Inject()(tracingDataStore: TracingDataStore,
+                            dataStoreConfig: DataStoreConfig)
+                           (implicit ec: ExecutionContext)
+  extends Controller {
+
+  def health = Action.async { implicit request =>
+    AllowRemoteOrigin {
+      for {
+        _ <- tracingDataStore.healthClient.checkHealth
+      } yield Ok("Ok")
+    }
+  }
 
 }

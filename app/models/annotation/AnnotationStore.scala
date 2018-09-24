@@ -1,16 +1,23 @@
 package models.annotation
 
-import com.scalableminds.util.reactivemongo.DBAccessContext
+import akka.actor.ActorSystem
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.typesafe.scalalogging.LazyLogging
-import models.annotation.handler.AnnotationInformationHandler
+import javax.inject.Inject
+import models.annotation.handler.AnnotationInformationHandlerSelector
 import models.user.User
 import net.liftweb.common.{Box, Empty, Failure, Full}
-import play.api.libs.concurrent.Execution.Implicits._
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-object AnnotationStore extends LazyLogging {
+class AnnotationStore @Inject()(annotationInformationHandlerSelector: AnnotationInformationHandlerSelector,
+                                system: ActorSystem,
+                                temporaryAnnotationStore: TemporaryStore[String, Annotation]
+                               )(implicit ec: ExecutionContext)
+  extends LazyLogging {
 
   private val cacheTimeout = 5 minutes
 
@@ -29,7 +36,7 @@ object AnnotationStore extends LazyLogging {
   }
 
   private def requestFromCache(id: AnnotationIdentifier): Option[Fox[Annotation]] = {
-    val handler = AnnotationInformationHandler.informationHandlers(id.annotationType)
+    val handler = annotationInformationHandlerSelector.informationHandlers(id.annotationType)
     if (handler.cache) {
       val cached = getFromCache(id)
       cached
@@ -38,7 +45,7 @@ object AnnotationStore extends LazyLogging {
   }
 
   private def requestFromHandler(id: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext) = {
-    val handler = AnnotationInformationHandler.informationHandlers(id.annotationType)
+    val handler = annotationInformationHandlerSelector.informationHandlers(id.annotationType)
     for {
       annotation <- handler.provideAnnotation(id.identifier, user)
     } yield {
@@ -50,15 +57,15 @@ object AnnotationStore extends LazyLogging {
   }
 
   private def storeInCache(id: AnnotationIdentifier, annotation: Annotation) = {
-    TemporaryAnnotationStore.insert(id.toUniqueString, annotation, Some(cacheTimeout))
+    temporaryAnnotationStore.insert(id.toUniqueString, annotation, Some(cacheTimeout))
   }
 
   private def getFromCache(annotationId: AnnotationIdentifier): Option[Fox[Annotation]] = {
-    TemporaryAnnotationStore.find(annotationId.toUniqueString).map(Fox.successful(_))
+    temporaryAnnotationStore.find(annotationId.toUniqueString).map(Fox.successful(_))
   }
 
   def findCachedByTracingId(tracingId: String): Box[Annotation] = {
-    val annotationOpt = TemporaryAnnotationStore.findAll.find(a => a.tracingReference.id == tracingId)
+    val annotationOpt = temporaryAnnotationStore.findAll.find(a => a.skeletonTracingId == Some(tracingId) || a.volumeTracingId == Some(tracingId))
     annotationOpt match {
       case Some(annotation) => Full(annotation)
       case None => Empty

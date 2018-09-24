@@ -12,73 +12,44 @@ import {
   disallowVolumeTracingWarning,
   watchVolumeTracingAsync,
 } from "oxalis/model/sagas/volumetracing_saga";
-import { watchAnnotationAsync } from "oxalis/model/sagas/annotation_saga";
+import { watchDataRelevantChanges } from "oxalis/model/sagas/prefetch_saga";
+import {
+  warnAboutSegmentationOpacity,
+  watchAnnotationAsync,
+} from "oxalis/model/sagas/annotation_saga";
 import { alert } from "libs/window";
-import { select, fork, take, cancel } from "redux-saga/effects";
-import Model from "oxalis/model";
-import Toast from "libs/toast";
-import messages from "messages";
+import { _all, _call, fork, take, _cancel } from "oxalis/model/sagas/effect-generators";
+import type { Saga } from "oxalis/model/sagas/effect-generators";
 
-export default function* rootSaga(): Generator<*, *, *> {
+export default function* rootSaga(): Saga<void> {
   while (true) {
-    const task = yield fork(restartableSaga);
-    yield take("RESTART_SAGA");
-    yield cancel(task);
+    const task = yield* fork(restartableSaga);
+    yield* take("RESTART_SAGA");
+    yield _cancel(task);
   }
 }
 
-function* restartableSaga(): Generator<*, *, *> {
+function* restartableSaga(): Saga<void> {
   try {
-    yield [
-      warnAboutSegmentationOpacity(),
-      watchPushSettingsAsync(),
-      watchSkeletonTracingAsync(),
-      collectUndoStates(),
-      saveTracingAsync(),
-      pushAnnotationAsync(),
-      editVolumeLayerAsync(),
-      disallowVolumeTracingWarning(),
-      watchVolumeTracingAsync(),
-      watchAnnotationAsync(),
-    ];
+    yield _all([
+      _call(warnAboutSegmentationOpacity),
+      _call(watchPushSettingsAsync),
+      _call(watchSkeletonTracingAsync),
+      _call(collectUndoStates),
+      _call(saveTracingAsync),
+      _call(pushAnnotationAsync),
+      _call(editVolumeLayerAsync),
+      _call(disallowVolumeTracingWarning),
+      _call(watchVolumeTracingAsync),
+      _call(watchAnnotationAsync),
+      _call(watchDataRelevantChanges),
+    ]);
   } catch (err) {
+    console.error(err);
     alert(`\
 Internal error.
 Please reload the page to avoid losing data.
 
 ${err} ${err.stack}`);
-  }
-}
-
-// TODO: move this saga functionality as soon as annotation_saga.js was merged
-
-function* warnAboutSegmentationOpacity(): Generator<*, *, *> {
-  const warnMaybe = function* warnMaybe() {
-    const shouldWarn = Model.shouldDisplaySegmentationData() && !Model.canDisplaySegmentationData();
-    if (shouldWarn) {
-      const isVolumeTracing = yield select(state => state.tracing.type === "volume");
-      if (isVolumeTracing) {
-        Toast.message("error", messages["tracing.segmentation_zoom_warning"], true);
-      } else {
-        Toast.message("info", messages["tracing.segmentation_zoom_warning"], false, 3000);
-      }
-    } else if (!shouldWarn) {
-      Toast.close(messages["tracing.segmentation_zoom_warning"]);
-    }
-  };
-
-  yield take("INITIALIZE_SETTINGS");
-  yield* warnMaybe();
-
-  while (true) {
-    yield take([
-      "ZOOM_IN",
-      "ZOOM_OUT",
-      "ZOOM_BY_DELTA",
-      "SET_ZOOM_STEP",
-      action =>
-        action.type === "UPDATE_DATASET_SETTING" && action.propertyName === "segmentationOpacity",
-    ]);
-    yield* warnMaybe();
   }
 }

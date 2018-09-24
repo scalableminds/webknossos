@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.webknossos.datastore.services
 
 import akka.actor.ActorSystem
@@ -16,7 +13,7 @@ class DataSourceRepository @Inject()(
                                       webKnossosServer: WebKnossosServer,
                                       @Named("webknossos-datastore") val system: ActorSystem
                                     )
-    extends TemporaryStore[String, InboxDataSource]
+    extends TemporaryStore[String, InboxDataSource](system)
     with FoxImplicits {
 
   def findByName(name: String): Option[InboxDataSource] =
@@ -25,10 +22,12 @@ class DataSourceRepository @Inject()(
   def findUsableByName(name: String): Option[DataSource] =
     find(name).flatMap(_.toUsable)
 
-  def updateDataSource(dataSource: InboxDataSource): Unit = {
-    insert(dataSource.id.name, dataSource)
-    webKnossosServer.reportDataSource(dataSource)
-  }
+  def updateDataSource(dataSource: InboxDataSource): Fox[Unit] =
+    for {
+      _ <- Fox.successful(())
+      _ = insert(dataSource.id.name, dataSource)
+      _ <- webKnossosServer.reportDataSource(dataSource)
+    } yield ()
 
   def updateDataSources(dataSources: List[InboxDataSource]): Fox[Unit] =
     for {

@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.util.tools
 
 import net.liftweb.common.{Box, Empty, Failure, Full}
@@ -8,12 +5,9 @@ import play.api.libs.json.{JsError, JsResult, JsSuccess}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
+import scala.util.{Success, Try}
 
 trait FoxImplicits {
-  implicit def bool2Fox(b: Boolean)(implicit ec: ExecutionContext): Fox[Boolean] =
-    if(b) Fox.successful(b)
-    else  Fox.empty
-
   implicit def futureBox2Fox[T](f: Future[Box[T]])(implicit ec: ExecutionContext): Fox[T] =
     new Fox(f)
 
@@ -37,11 +31,21 @@ trait FoxImplicits {
     case JsError(e) => Fox.failure(s"Invalid json: $e")
   }
 
+  implicit def try2Fox[T](t: Try[T])(implicit ec: ExecutionContext): Fox[T] = t match {
+    case Success(result) => Fox.successful(result)
+    case _ => Fox.failure("")
+  }
+
   implicit def fox2FutureBox[T](f: Fox[T])(implicit ec: ExecutionContext): Future[Box[T]] =
     f.futureBox
+
+  // This one is no longer implicit since that has lead to confusion. Should always be used explicitly.
+  def bool2Fox(b: Boolean)(implicit ec: ExecutionContext): Fox[Boolean] =
+    if(b) Fox.successful(b)
+    else  Fox.empty
 }
 
-object Fox{
+object Fox extends FoxImplicits {
   def apply[A](future: Future[Box[A]])(implicit ec: ExecutionContext): Fox[A]  =
     new Fox(future)
 
@@ -125,6 +129,34 @@ object Fox{
         case (Full(e), l) => e :: l
       }
     }
+
+  def filterNot[T](seq: List[T])(f: T => Fox[Boolean])(implicit ec: ExecutionContext) =
+    filter(seq, inverted= true)(f)
+
+  def filter[T](seq: List[T], inverted: Boolean = false)(f: T => Fox[Boolean])(implicit ec: ExecutionContext) = {
+    for {
+      results <- serialCombined(seq)(f)
+      zipped = results.zip(seq)
+    } yield (zipped.filter(_._1 != inverted).map(_._2))
+  }
+
+  def runOptional[A, B](input: Option[A])(f: A => Fox[B])(implicit ec: ExecutionContext) = {
+    input match {
+      case Some(i) =>
+        for {
+          result <- f(i)
+        } yield Some(result)
+      case None =>
+        Fox.successful(None)}
+  }
+
+  def assertTrue(fox: Fox[Boolean])(implicit ec: ExecutionContext): Fox[Unit] = {
+    for {
+      asBoolean <- fox
+      _ <- bool2Fox(asBoolean)
+    } yield ()
+  }
+
 }
 
 class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
@@ -186,6 +218,18 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
     } yield {
       box.openOrThrowException(justification)
     }
+  }
+
+  def toFutureWithEmptyToFailure: Future[A] = {
+    (for {
+      box: Box[A] <- this.futureBox
+    } yield {
+      box match {
+        case Full(a) => Future.successful(a)
+        case Failure(msg, ex, chain) => Future.failed(new Exception(msg))
+        case Empty => Future.failed(new Exception("Empty"))
+      }
+    }).flatMap(identity)
   }
 
   /**

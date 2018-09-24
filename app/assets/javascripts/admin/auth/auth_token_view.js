@@ -32,8 +32,8 @@ class AuthTokenView extends React.PureComponent<{}, State> {
   }
 
   handleRevokeToken = async (): Promise<void> => {
-    this.setState({ isLoading: true });
     try {
+      this.setState({ isLoading: true });
       await revokeAuthToken();
       const token = await getAuthToken();
       this.setState({ currentToken: token });

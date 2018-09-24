@@ -1,25 +1,29 @@
-/*
- * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package controllers
 
 import javax.inject.Inject
-
 import com.scalableminds.util.tools.Fox
 import models.annotation.AnnotationDAO
 import models.binary.DataSetDAO
 import models.task.TaskDAO
 import models.user.time.{TimeSpan, TimeSpanService}
-import models.user.{User, UserDAO, UserService}
-import oxalis.security.WebknossosSilhouette.SecuredAction
-import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.concurrent.Execution.Implicits._
+import models.user.{UserDAO, UserService}
+import oxalis.security.WkEnv
+import com.mohiva.play.silhouette.api.Silhouette
+import play.api.i18n.{Messages}
 import play.api.libs.json.Json._
 import play.api.libs.json._
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 
-class StatisticsController @Inject()(val messagesApi: MessagesApi)
+class StatisticsController @Inject()(timeSpanService: TimeSpanService,
+                                     userDAO: UserDAO,
+                                     userService: UserService,
+                                     dataSetDAO: DataSetDAO,
+                                     taskDAO: TaskDAO,
+                                     annotationDAO: AnnotationDAO,
+                                     sil: Silhouette[WkEnv])
+                                    (implicit ec: ExecutionContext)
   extends Controller {
 
   val intervalHandler = Map(
@@ -35,15 +39,15 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
     )
   }
 
-  def webKnossos(interval: String, start: Option[Long], end: Option[Long]) = SecuredAction.async { implicit request =>
+  def webKnossos(interval: String, start: Option[Long], end: Option[Long]) = sil.SecuredAction.async { implicit request =>
     intervalHandler.get(interval) match {
       case Some(handler) =>
         for {
-          times <- TimeSpanService.loggedTimePerInterval(handler, start, end)
-          numberOfUsers <- UserDAO.countAll
-          numberOfDatasets <- DataSetDAO.countAll
-          numberOfAnnotations <- AnnotationDAO.countAll
-          numberOfAssignments <- TaskDAO.countAllOpenInstances
+          times <- timeSpanService.loggedTimePerInterval(handler, start, end)
+          numberOfUsers <- userDAO.countAll
+          numberOfDatasets <- dataSetDAO.countAll
+          numberOfAnnotations <- annotationDAO.countAll
+          numberOfAssignments <- taskDAO.countAllOpenInstances
         } yield {
           Ok(Json.obj(
             "name" -> "oxalis",
@@ -59,19 +63,23 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def users(interval: String, start: Option[Long], end: Option[Long], limit: Int) = SecuredAction.async { implicit request =>
+
+  def users(interval: String, start: Option[Long], end: Option[Long], limit: Int) = sil.SecuredAction.async { implicit request =>
     for {
-      handler <- intervalHandler.get(interval) ?~> Messages("statistics.interval.invalid")
-      users <- UserDAO.findAll
-      usersWithTimes <- Fox.serialCombined(users)(user => TimeSpanService.loggedTimeOfUser(user, handler, start, end).map(user -> _))
-    } yield {
-      val data = usersWithTimes.sortBy(-_._2.map(_._2.toMillis).sum).take(limit)
-      val json = data.map {
-        case (user, times) => Json.obj(
-          "user" -> User.userCompactWrites.writes(user),
+      handler <- intervalHandler.get(interval) ?~> "statistics.interval.invalid"
+      users <- userDAO.findAll
+      usersWithTimes <- Fox.serialCombined(users)(user => timeSpanService.loggedTimeOfUser(user, handler, start, end).map(user -> _))
+      data = usersWithTimes.sortBy(-_._2.map(_._2.toMillis).sum).take(limit)
+      json <- Fox.combined(data.map {
+        case (user, times) => for {
+          userJs <- userService.compactWrites(user)
+        } yield {Json.obj(
+          "user" -> userJs,
           "tracingTimes" -> intervalTracingTimeJson(times)
-        )
-      }
+        )}
+        case _ => Fox.failure("serialization.failed")
+      })
+    } yield {
       Ok(Json.toJson(json))
     }
   }

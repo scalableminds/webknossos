@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.webknossos.datastore.tracings.skeleton.updating
 
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
@@ -26,4 +23,6 @@ trait SkeletonUpdateActionHelper {
     case Some(aColor) => Some(convertColor(aColor))
     case None => None
   }
+  protected def convertTreeGroup(aTreeGroup: UpdateActionTreeGroup): TreeGroup =
+    TreeGroup(aTreeGroup.name, aTreeGroup.groupId, aTreeGroup.children.map(convertTreeGroup))
 }

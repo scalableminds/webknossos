@@ -4,7 +4,7 @@ import { connect } from "react-redux";
 import { withRouter } from "react-router-dom";
 import { Form, Input, Select, Button, Card } from "antd";
 import { getAdminUsers, updateScript, createScript, getScript } from "admin/admin_rest_api";
-import { getActiveUser } from "oxalis/model/accessors/user_accessor";
+import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 
 import type { APIUserType } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
@@ -31,6 +31,7 @@ class ScriptCreateView extends React.PureComponent<Props, State> {
   state = {
     users: [],
   };
+
   componentDidMount() {
     this.fetchData();
     this.applyDefaults();
@@ -132,7 +133,7 @@ class ScriptCreateView extends React.PureComponent<Props, State> {
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
-  activeUser: getActiveUser(state.activeUser),
+  activeUser: enforceActiveUser(state.activeUser),
 });
 
 export default connect(mapStateToProps)(withRouter(Form.create()(ScriptCreateView)));

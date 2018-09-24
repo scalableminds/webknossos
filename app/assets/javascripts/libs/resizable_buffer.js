@@ -2,8 +2,6 @@
  * resizable_buffer.js
  * @flow
  */
-/* globals Class:false $TypedArray:false */
-import Utils from "libs/utils";
 
 const GROW_MULTIPLIER = 1.3;
 
@@ -94,7 +92,7 @@ class ResizableBuffer<T: $TypedArray> {
     this.length += subarray.length;
   }
 
-  pop(r: ?Array<number>) {
+  pop(r: ?Array<number>): ?Array<number> {
     if (r == null) {
       r = new Array(this.elementLength);
     }
@@ -114,7 +112,7 @@ class ResizableBuffer<T: $TypedArray> {
     return r;
   }
 
-  top(r: ?Array<number>) {
+  top(r: ?Array<number>): ?Array<number> {
     if (r == null) {
       r = new Array(this.elementLength);
     }
@@ -150,21 +148,6 @@ class ResizableBuffer<T: $TypedArray> {
 
       this.buffer = newBuffer;
     }
-  }
-
-  toString(): string {
-    const length = this.getLength();
-    const result = [];
-
-    for (const i of Utils.__range__(0, length, false)) {
-      const element = [];
-      for (const j of Utils.__range__(0, this.elementLength, false)) {
-        element.push(this.buffer[i * this.elementLength + j]);
-      }
-      result.push(`[ ${element.join(", ")} ]`);
-    }
-
-    return `(${length}) { ${result.join(", ")} }`;
   }
 }
 

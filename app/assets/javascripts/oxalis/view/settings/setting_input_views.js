@@ -8,7 +8,7 @@
 /* eslint-disable jsx-a11y/label-has-for */
 
 import * as React from "react";
-import Utils from "libs/utils";
+import * as Utils from "libs/utils";
 import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Select } from "antd";
 import type { Vector3, Vector6 } from "oxalis/constants";
 
@@ -32,6 +32,7 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
       this.props.onChange(_value);
     }
   };
+
   render() {
     const { value, label, max, min, step, onChange } = this.props;
 
@@ -93,8 +94,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
   calculateValue(value: number) {
     const a = 200 / (Math.log(this.props.max) - Math.log(this.props.min));
     const b =
-      100 *
-      (Math.log(this.props.min) + Math.log(this.props.max)) /
+      (100 * (Math.log(this.props.min) + Math.log(this.props.max))) /
       (Math.log(this.props.min) - Math.log(this.props.max));
     return Math.exp((value - b) / a);
   }
@@ -104,8 +104,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
   getSliderValue = () => {
     const a = 200 / (Math.log(this.props.max) - Math.log(this.props.min));
     const b =
-      100 *
-      (Math.log(this.props.min) + Math.log(this.props.max)) /
+      (100 * (Math.log(this.props.min) + Math.log(this.props.max))) /
       (Math.log(this.props.min) - Math.log(this.props.max));
     const scaleValue = a * Math.log(this.props.value) + b;
     return Math.round(scaleValue);
@@ -147,7 +146,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
 type SwitchSettingProps = {
   onChange: (value: boolean) => void,
   value: boolean,
-  label: string,
+  label: string | React.Node,
 };
 
 export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {

@@ -1,5 +1,6 @@
 declare module "antd" {
   declare class Alert<P> extends React$Component<P> {}
+  declare class Avatar<P> extends React$Component<P> {}
   declare class Button<P> extends React$Component<P> {
     static Group: React$ComponentType<P>;
   }
@@ -19,8 +20,11 @@ declare module "antd" {
     static Group: React$ComponentType<P>;
     static Search: React$ComponentType<P>;
     static TextArea: React$ComponentType<P>;
+    focus: () => void;
   }
-  declare class InputNumber<P> extends React$Component<P> {}
+  declare class InputNumber<P> extends React$Component<P> {
+    focus: () => void;
+  }
   declare class Form<P> extends React$Component<P> {
     static create: (
       options?: Object,
@@ -33,15 +37,25 @@ declare module "antd" {
     static Header: React$ComponentType<P>;
     static Sider: React$ComponentType<P>;
   }
+  declare class List<P> extends React$Component<P> {
+    static Item: React$ComponentType<P> & { Meta: React$ComponentType<P> };
+  }
   declare class Menu<P> extends React$Component<P> {
     static Item: React$ComponentType<P>;
     static SubMenu: React$ComponentType<P>;
   }
+  declare var message: Object;
   declare class Modal<P> extends React$Component<P> {
     static confirm: Function;
     static info: Function;
   }
   declare var notification: Object;
+  declare class Pagination<P> extends React$Component<P> {}
+  declare class Popover<P> extends React$Component<P> {}
+  declare class AutoComplete<P> extends React$Component<P> {
+    static Option: React$ComponentType<*>;
+    blur: () => void;
+  }
   declare class Progress<P> extends React$Component<P> {}
   declare class Radio<P> extends React$Component<P> {
     static Button: React$ComponentType<P>;
@@ -62,8 +76,16 @@ declare module "antd" {
     static TabPane: React$ComponentType<P>;
   }
   declare class Tag<P> extends React$Component<P> {}
+  declare class Tree<P> extends React$Component<P> {
+    static TreeNode: React$ComponentType<P>;
+  }
   declare class Tooltip<P> extends React$Component<P> {}
+  declare class Steps<P> extends React$Component<P> {
+    static Step: React$ComponentType<P>;
+  }
   declare class Upload<P> extends React$Component<P> {
     static Dragger: React$ComponentType<P>;
   }
+  declare class Popconfirm<P> extends React$Component<P> {}
+  declare class Badge<P> extends React$Component<P> {}
 }

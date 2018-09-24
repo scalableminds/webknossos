@@ -1,10 +1,6 @@
-/*
- * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.util.geometry
 
 import com.scalableminds.util.tools.Math._
-import play.api.data.validation.ValidationError
 import play.api.libs.json.Json._
 import play.api.libs.json._
 
@@ -108,7 +104,7 @@ object Vector3D {
             JsError("Invalid array content: " + x)
         }
       case _ =>
-        JsError(Seq(JsPath() -> Seq(ValidationError("validate.error.listExpected"))))
+        JsError(Seq(JsPath() -> Seq(JsonValidationError("validate.error.listExpected"))))
     }
 
     def writes(v: Vector3D) =

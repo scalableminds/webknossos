@@ -12,27 +12,31 @@ import { Provider } from "react-redux";
 import { load as loadFeatureToggles } from "features";
 import Store from "oxalis/throttled_store";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
+import { googleAnalyticsLogClicks } from "oxalis/model/helpers/google_analytics_middleware";
 
 import "whatwg-fetch";
 import "es6-promise";
 
 import { getActiveUser } from "admin/admin_rest_api";
 
-// $FlowFixMe: CSS/LESS imports are a special WebPack feature
 import "../stylesheets/main.less";
 
-document.addEventListener("DOMContentLoaded", async () => {
-  ErrorHandling.initialize({ throwAssertions: false, sendLocalErrors: false });
-
-  // try retreive the currently active user if logged in
+async function loadActiveUser() {
+  // Try to retreive the currently active user if logged in
   try {
-    await loadFeatureToggles();
     const user = await getActiveUser({ doNotCatch: true });
     Store.dispatch(setActiveUserAction(user));
     ErrorHandling.setCurrentUser(user);
   } catch (e) {
     // pass
   }
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  ErrorHandling.initialize({ throwAssertions: false, sendLocalErrors: false });
+
+  document.addEventListener("click", googleAnalyticsLogClicks);
+  await Promise.all([loadFeatureToggles(), loadActiveUser()]);
 
   const containerElement = document.getElementById("main-container");
   if (containerElement) {

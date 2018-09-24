@@ -7,6 +7,7 @@ import AirbrakeClient from "airbrake-js";
 import Toast from "libs/toast";
 import { location } from "libs/window";
 import type { APIUserType } from "admin/api_flow_types";
+import messages from "messages";
 
 type ErrorHandlingOptionsType = {
   throwAssertions: boolean,
@@ -15,6 +16,27 @@ type ErrorHandlingOptionsType = {
 
 class ErrorWithParams extends Error {
   params: ?mixed;
+}
+
+// This method can be used when catching error within async processes.
+// For example:
+// try {
+//   this.setState({ isLoading: true });
+// } except (error) {
+//   handleGenericError(error);
+// } finally {
+//   this.setState({isLoading: false});
+// }
+// When the thrown error is coming from the server, our request module
+// will show the error to the user.
+// If some other error occurred, this function will tell the user so.
+export function handleGenericError(error: { ...Error, messages?: mixed }) {
+  if (error.messages) {
+    // The user was already notified about this error
+    return;
+  }
+  Toast.error(messages.unknown_error);
+  console.warn(error);
 }
 
 class ErrorHandling {
@@ -52,6 +74,7 @@ class ErrorHandling {
     });
 
     this.airbrake.addFilter(notice => {
+      notice.context = notice.context || {};
       notice.context.environment = envName;
       if (this.commitHash != null) {
         notice.context.version = this.commitHash;
@@ -60,9 +83,12 @@ class ErrorHandling {
     });
 
     if (!this.sendLocalErrors) {
-      this.airbrake.addFilter(
-        () => location.hostname !== "127.0.0.1" && location.hostname !== "localhost",
-      );
+      this.airbrake.addFilter(notice => {
+        if (location.hostname !== "127.0.0.1" && location.hostname !== "localhost") {
+          return notice;
+        }
+        return null;
+      });
     }
 
     window.onerror = (message: string, file: string, line: number, colno: number, error: Error) => {
@@ -128,6 +154,7 @@ class ErrorHandling {
 
   setCurrentUser(user: APIUserType) {
     this.airbrake.addFilter(notice => {
+      notice.context = notice.context || {};
       notice.context.user = _.pick(user, ["id", "email", "firstName", "lastName", "isActive"]);
       return notice;
     });

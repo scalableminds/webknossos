@@ -2,12 +2,11 @@
 import React from "react";
 import { Form, Icon, Input, Button, Col, Row } from "antd";
 import { withRouter, Link } from "react-router-dom";
-import Request from "libs/request";
 import messages from "messages";
 import Store from "oxalis/throttled_store";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
-import { getActiveUser } from "admin/admin_rest_api";
-import Utils from "libs/utils";
+import { loginUser } from "admin/admin_rest_api";
+import * as Utils from "libs/utils";
 import type { RouterHistory } from "react-router-dom";
 
 const FormItem = Form.Item;
@@ -25,10 +24,8 @@ class LoginView extends React.PureComponent<Props> {
 
     this.props.form.validateFields(async (err: ?Object, formValues: Object) => {
       if (!err) {
-        await Request.sendJSONReceiveJSON("/api/auth/login", { data: formValues });
+        const user = await loginUser(formValues);
         if (!Utils.hasUrlParam("redirectPage")) {
-          const user = await getActiveUser();
-
           Store.dispatch(setActiveUserAction(user));
           if (this.props.redirect) {
             // Use "redirect" prop for internal redirects, e.g. for SecuredRoutes

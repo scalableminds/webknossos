@@ -1,42 +1,78 @@
 // @flow
 import React from "react";
-import { notification, Icon } from "antd";
+import { notification, Icon, Collapse } from "antd";
+
+const Panel = Collapse.Panel;
 
 export type ToastStyleType = "info" | "warning" | "success" | "error";
-export type MessageType = { success: string } | { error: string };
+export type MessageType = { success?: string, error?: string, chain?: string };
+export type ToastConfigType = {
+  sticky?: boolean,
+  timeout?: number,
+  key?: string,
+};
 
 const Toast = {
   messages(messages: Array<MessageType>): void {
+    const errorChainObject = messages.find(msg => typeof msg.chain !== "undefined");
+    const errorChainString: ?string = errorChainObject && errorChainObject.chain;
     messages.forEach(singleMessage => {
       if (singleMessage.success != null) {
         this.success(singleMessage.success);
       }
       if (singleMessage.error != null) {
-        this.error(singleMessage.error);
+        if (errorChainString) {
+          this.renderDetailedErrorMessage(singleMessage.error, errorChainString);
+        } else {
+          this.error(singleMessage.error);
+        }
       }
     });
   },
 
+  renderDetailedErrorMessage(errorString: string, errorChain: string): void {
+    this.error(
+      <div>
+        {errorString}
+        <Collapse
+          className="errorChainCollapse"
+          bordered={false}
+          style={{ background: "transparent", marginLeft: -16 }}
+        >
+          <Panel
+            header="Show debug information"
+            style={{ background: "transparent", border: 0, fontSize: 10 }}
+          >
+            {errorChain}
+          </Panel>
+        </Collapse>
+      </div>,
+      { sticky: true },
+    );
+  },
+
   message(
     type: ToastStyleType,
-    message: string,
-    sticky: boolean = false,
-    timeout: number = 6000,
+    message: string | React$Element<any>,
+    config: ToastConfigType,
   ): void {
+    const timeout = config.timeout != null ? config.timeout : 6000;
+    const key = config.key || (typeof message === "string" ? message : null);
+    const sticky = config.sticky;
     let toastMessage;
-    if (message.match(/<html[^>]*>/)) {
+    if (typeof message === "string" && message.match(/<html[^>]*>/)) {
       const src = `data:text/html;charset=utf-8,${escape(message)}`;
       toastMessage = <iframe src={src} title="toast-iframe" />;
     } else {
       toastMessage = message;
     }
 
-    const timeOutSeconds = timeout / 1000;
+    const timeOutInSeconds = timeout / 1000;
 
     let toastConfig = {
       icon: undefined,
-      key: toastMessage,
-      duration: sticky ? 0 : timeOutSeconds,
+      key,
+      duration: sticky ? 0 : timeOutInSeconds,
       message: toastMessage,
       style: {},
       className: "",
@@ -56,20 +92,20 @@ const Toast = {
     notification[type](toastConfig);
   },
 
-  info(message: string, sticky?: boolean) {
-    return this.message("info", message, sticky);
+  info(message: string, config: ToastConfigType = {}): void {
+    return this.message("info", message, config);
   },
 
-  warning(message: string, sticky?: boolean) {
-    return this.message("warning", message, sticky);
+  warning(message: string, config: ToastConfigType = {}): void {
+    return this.message("warning", message, config);
   },
 
-  success(message: string = "Success :-)", sticky?: boolean) {
-    return this.message("success", message, sticky);
+  success(message: string = "Success :-)", config: ToastConfigType = {}): void {
+    return this.message("success", message, config);
   },
 
-  error(message: string = "Error :-/", sticky?: boolean) {
-    return this.message("error", message, sticky);
+  error(message: string | React$Element<any> = "Error :-/", config: ToastConfigType = {}): void {
+    return this.message("error", message, config);
   },
 
   close(key: string) {

@@ -1,20 +1,20 @@
-/*
- * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.webknossos.datastore.tracings
 
 import com.google.protobuf.ByteString
 import com.scalableminds.fossildb.proto.fossildbapi._
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
-import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
+import com.scalableminds.webknossos.datastore.DataStoreConfig
+import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
-import io.grpc.netty.NettyChannelBuilder
+import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder
+import io.grpc.health.v1._
 import net.liftweb.common.{Box, Empty, Full}
 import net.liftweb.util.Helpers.tryo
 import play.api.Configuration
 import play.api.libs.json.{Json, Reads, Writes}
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 
 
@@ -45,19 +45,26 @@ case class VersionedKeyValuePair[T](versionedKey: VersionedKey, value: T) {
 }
 
 
-class FossilDBClient(collection: String, config: Configuration) extends FoxImplicits with LazyLogging {
-  val address = config.getString("datastore.fossildb.address").getOrElse("localhost")
-  val port = config.getInt("datastore.fossildb.port").getOrElse(7155)
-  val channel = NettyChannelBuilder.forAddress(address, port).maxInboundMessageSize(Int.MaxValue).usePlaintext(true).build
+class FossilDBClient(collection: String, config: DataStoreConfig) extends FoxImplicits with LazyLogging {
+  val address = config.Datastore.Fossildb.address
+  val port = config.Datastore.Fossildb.port
+  val channel = NettyChannelBuilder.forAddress(address, port).maxInboundMessageSize(Int.MaxValue).usePlaintext.build
   val blockingStub = FossilDBGrpc.blockingStub(channel)
+  val blockingStubHealth = HealthGrpc.newBlockingStub(channel)
 
-  def checkHealth = {
+  def checkHealth: Fox[Unit] = {
     try {
-      val reply: HealthReply = blockingStub.health(HealthRequest())
-      if (!reply.success) throw new Exception(reply.errorMessage.getOrElse(""))
-      logger.info("Successfully tested FossilDB health at " + address + ":" + port)
+      val reply: HealthCheckResponse = blockingStubHealth.check(HealthCheckRequest.getDefaultInstance())
+      val replyString = reply.getStatus.toString
+      if (!(replyString == "SERVING")) throw new Exception(replyString)
+      logger.info("Successfully tested FossilDB health at " + address + ":" + port + ". Reply: " + replyString)
+      Fox.successful(())
     } catch {
-      case e: Exception => logger.error("Failed to connect to FossilDB at " + address + ":" + port + ": " + e)
+      case e: Exception => {
+        val errorText = "Failed to connect to FossilDB at " + address + ":" + port + ": " + e
+        logger.error(errorText)
+        Fox.failure(errorText)
+      }
     }
   }
 
@@ -98,11 +105,20 @@ class FossilDBClient(collection: String, config: Configuration) extends FoxImpli
 
   def getMultipleVersions[T](key: String, newestVersion: Option[Long] = None, oldestVersion: Option[Long] = None)
                             (implicit fromByteArray: Array[Byte] => Box[T]): Fox[List[T]] = {
+    for {
+      versionValueTuples <- getMultipleVersionsAsVersionValueTuple(key, newestVersion, oldestVersion)
+    } yield versionValueTuples.map(_._2)
+  }
+
+  def getMultipleVersionsAsVersionValueTuple[T](key: String, newestVersion: Option[Long] = None, oldestVersion: Option[Long] = None)
+                                               (implicit fromByteArray: Array[Byte] => Box[T]): Fox[List[(Long,T)]] = {
     try {
       val reply = blockingStub.getMultipleVersions(GetMultipleVersionsRequest(collection, key, newestVersion, oldestVersion))
       if (!reply.success) throw new Exception(reply.errorMessage.getOrElse(""))
       val parsedValues: List[Box[T]] = reply.values.map{v => fromByteArray(v.toByteArray)}.toList
-      Fox.combined(parsedValues.map{box: Box[T] => box.toFox})
+      for {
+        values <- Fox.combined(parsedValues.map{box: Box[T] => box.toFox})
+      } yield reply.versions.zip(values).toList
     } catch {
       case e: Exception => Fox.failure("could not get multiple versions from FossilDB" + e.getMessage)
     }

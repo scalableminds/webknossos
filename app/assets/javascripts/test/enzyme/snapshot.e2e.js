@@ -1,9 +1,12 @@
 // @flow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-/* eslint-disable import/first */
-
 // This needs to be the very first import
-import { createSnapshotable, debugWrapper, waitForAllRequests } from "./e2e-setup";
+import {
+  createSnapshotable,
+  debugWrapper,
+  waitForAllRequests,
+  resetDatabase,
+} from "test/enzyme/e2e-setup";
 import { mount } from "enzyme";
 import test from "ava";
 import mockRequire from "mock-require";
@@ -11,11 +14,13 @@ import React from "react";
 import { Provider } from "react-redux";
 import { Router } from "react-router-dom";
 import createBrowserHistory from "history/createBrowserHistory";
+import { load as loadFeatureToggles } from "features";
 
 // Those wrappers interfere with global.window and global.document otherwise
 mockRequire("libs/hammerjs_wrapper", {});
 mockRequire("libs/keyboardjs_wrapper", {});
 mockRequire("libs/window", global.window);
+mockRequire("libs/datasource.schema.json", {});
 
 // The following components cannot be rendered by enzyme. Let's mock them
 mockRequire("antd/lib/upload", () => <div />);
@@ -39,6 +44,12 @@ const { getActiveUser } = mockRequire.reRequire("../../admin/admin_rest_api");
 // const TracingLayoutView = mockRequire.reRequire("../../oxalis/view/tracing_layout_view").default;
 
 const browserHistory = createBrowserHistory();
+
+test.before(async () => {
+  const featureTogglePromise = loadFeatureToggles();
+  resetDatabase();
+  await featureTogglePromise;
+});
 
 test.beforeEach(async _ => {
   // There needs to be an active user in the store for the pages to render correctly

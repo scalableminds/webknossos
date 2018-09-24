@@ -1,17 +1,23 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-/* eslint-disable import/first */
 // @flow
-import { tokenUserA, setCurrToken } from "../enzyme/e2e-setup";
 import test from "ava";
 import _ from "lodash";
+import {
+  tokenUserA,
+  setCurrToken,
+  resetDatabase,
+  writeFlowCheckingFile,
+} from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 
-test.before("Change token", async () => {
+test.before("Reset database and change token", async () => {
+  resetDatabase();
   setCurrToken(tokenUserA);
 });
 
 test("getTeams()", async t => {
   const teams = _.sortBy(await api.getTeams(), team => team.name);
+  writeFlowCheckingFile(teams, "team", "APITeamType", { isArray: true });
   t.snapshot(teams, { id: "teams-getTeams()" });
 });
 
@@ -20,17 +26,14 @@ test("getEditableTeams()", async t => {
   t.snapshot(editableTeams, { id: "teams-getEditableTeams()" });
 });
 
-test("getOrganizations()", async t => {
-  const organizations = await api.getOrganizations();
-  t.snapshot(organizations, { id: "teams-getOrganizations()" });
+test("getOrganizationNames()", async t => {
+  const organizations = await api.getOrganizationNames();
+  t.snapshot(organizations, { id: "teams-getOrganizationNames()" });
 });
 
 test("createTeam and deleteTeam", async t => {
-  const organizations = await api.getOrganizations();
   const newTeam = {
     name: "test-team-name",
-    parent: organizations[0].name,
-    roles: [{ name: "admin" }, { name: "user" }],
   };
 
   const createdTeam = await api.createTeam(newTeam);

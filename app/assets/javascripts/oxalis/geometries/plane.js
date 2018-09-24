@@ -3,25 +3,20 @@
  * @flow
  */
 
-import app from "app";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import * as THREE from "three";
-import Model from "oxalis/model";
-import {
-  getArea,
-  getRequestLogZoomStep,
-  getTexturePosition,
-} from "oxalis/model/accessors/flycam_accessor";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
 import Dimensions from "oxalis/model/dimensions";
-import Constants, {
+import constants, {
   OrthoViews,
+  OrthoViewValues,
   OrthoViewColors,
   OrthoViewCrosshairColors,
   OrthoViewGrayCrosshairColor,
 } from "oxalis/constants";
-import type { OrthoViewType, Vector3 } from "oxalis/constants";
+import type { OrthoViewType, Vector3, Vector4 } from "oxalis/constants";
 import _ from "lodash";
 
 class Plane {
@@ -34,6 +29,7 @@ class Plane {
   scaleVector: THREE.Vector3;
   crosshair: Array<THREE.LineSegments>;
   TDViewBorders: THREE.Line;
+  renderer: THREE.WebGLRenderer;
 
   constructor(planeID: OrthoViewType) {
     this.planeID = planeID;
@@ -43,7 +39,7 @@ class Plane {
     // dimension with the highest resolution. In all other dimensions, the plane
     // is smaller in voxels, so that it is squared in nm.
     // --> scaleInfo.baseVoxel
-    const baseVoxelFactors = getBaseVoxelFactors(Store.getState().dataset.scale);
+    const baseVoxelFactors = getBaseVoxelFactors(Store.getState().dataset.dataSource.scale);
     const scaleArray = Dimensions.transDim(baseVoxelFactors, this.planeID);
     this.scaleVector = new THREE.Vector3(...scaleArray);
 
@@ -51,11 +47,18 @@ class Plane {
   }
 
   createMeshes(): void {
-    const pWidth = Constants.PLANE_WIDTH;
-    const tWidth = Constants.TEXTURE_WIDTH;
+    const pWidth = constants.PLANE_WIDTH;
     // create plane
     const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1);
-    const textureMaterial = new PlaneMaterialFactory(tWidth).getMaterial();
+
+    const textureMaterial = new PlaneMaterialFactory(
+      this.planeID,
+      true,
+      OrthoViewValues.indexOf(this.planeID),
+    )
+      .setup()
+      .getMaterial();
+
     this.plane = new THREE.Mesh(planeGeo, textureMaterial);
 
     // create crosshair
@@ -64,12 +67,12 @@ class Plane {
     for (let i = 0; i <= 1; i++) {
       crosshairGeometries[i] = new THREE.Geometry();
       crosshairGeometries[i].vertices.push(
-        new THREE.Vector3(-pWidth / 2 * i, -pWidth / 2 * (1 - i), 0),
+        new THREE.Vector3((-pWidth / 2) * i, (-pWidth / 2) * (1 - i), 0),
       );
       crosshairGeometries[i].vertices.push(new THREE.Vector3(-25 * i, -25 * (1 - i), 0));
       crosshairGeometries[i].vertices.push(new THREE.Vector3(25 * i, 25 * (1 - i), 0));
       crosshairGeometries[i].vertices.push(
-        new THREE.Vector3(pWidth / 2 * i, pWidth / 2 * (1 - i), 0),
+        new THREE.Vector3((pWidth / 2) * i, (pWidth / 2) * (1 - i), 0),
       );
       this.crosshair[i] = new THREE.LineSegments(
         crosshairGeometries[i],
@@ -114,32 +117,13 @@ class Plane {
     });
   };
 
-  updateTexture(): void {
-    const area = getArea(Store.getState(), this.planeID);
-    for (const name of Object.keys(Model.binary)) {
-      const binary = Model.binary[name];
-      const dataBuffer = binary.planes[this.planeID].get({
-        position: getTexturePosition(Store.getState(), this.planeID),
-        zoomStep: getRequestLogZoomStep(Store.getState()),
-        area,
-      });
-
-      if (dataBuffer) {
-        this.plane.material.setData(name, dataBuffer);
-        app.vent.trigger("rerender");
-      }
+  updateAnchorPoints(anchorPoint: ?Vector4, fallbackAnchorPoint: ?Vector4): void {
+    if (anchorPoint) {
+      this.plane.material.setAnchorPoint(anchorPoint);
     }
-
-    this.plane.material.setScaleParams({
-      repeat: {
-        x: (area[2] - area[0]) / Constants.TEXTURE_WIDTH,
-        y: (area[3] - area[1]) / Constants.TEXTURE_WIDTH,
-      },
-      offset: {
-        x: area[0] / Constants.TEXTURE_WIDTH,
-        y: 1 - area[3] / Constants.TEXTURE_WIDTH,
-      },
-    });
+    if (fallbackAnchorPoint) {
+      this.plane.material.setFallbackAnchorPoint(fallbackAnchorPoint);
+    }
   }
 
   setScale = (factor: number): void => {
@@ -159,7 +143,7 @@ class Plane {
     );
   };
 
-  setPosition = (posVec: Vector3): void => {
+  setPosition = (posVec: THREE.Vector3): void => {
     this.TDViewBorders.position.copy(posVec);
     this.crosshair[0].position.copy(posVec);
     this.crosshair[1].position.copy(posVec);
@@ -173,6 +157,9 @@ class Plane {
       offset.y = -1;
     }
     this.plane.position.copy(offset.addVectors(posVec, offset));
+
+    const globalPosition = getPosition(Store.getState().flycam);
+    this.plane.material.setGlobalPosition(globalPosition);
   };
 
   setVisible = (visible: boolean): void => {
@@ -184,13 +171,16 @@ class Plane {
 
   setSegmentationAlpha(alpha: number): void {
     this.plane.material.setSegmentationAlpha(alpha);
-    app.vent.trigger("rerender");
   }
 
   getMeshes = () => [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]];
 
   setLinearInterpolationEnabled = (enabled: boolean) => {
-    this.plane.material.setColorInterpolation(enabled ? THREE.LinearFilter : THREE.NearestFilter);
+    this.plane.material.setUseBilinearFiltering(enabled);
+  };
+
+  setIsMappingEnabled = (isMappingEnabled: boolean) => {
+    this.plane.material.setIsMappingEnabled(isMappingEnabled);
   };
 }
 

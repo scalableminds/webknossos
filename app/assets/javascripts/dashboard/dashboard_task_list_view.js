@@ -6,10 +6,9 @@ import { connect } from "react-redux";
 import { Link, withRouter } from "react-router-dom";
 import Request from "libs/request";
 import { AsyncButton } from "components/async_clickables";
-import { Spin, Table, Button, Modal, Tag, Icon } from "antd";
+import { Button, Modal, Tag, Icon, Card, Row, Col, List } from "antd";
 import Markdown from "react-remarkable";
-import Utils from "libs/utils";
-import moment from "moment";
+import * as Utils from "libs/utils";
 import Toast from "libs/toast";
 import messages from "messages";
 import TransferTaskModal from "dashboard/transfer_task_modal";
@@ -20,9 +19,11 @@ import {
   requestTask,
   peekNextTasks,
 } from "admin/admin_rest_api";
-import { getActiveUser } from "oxalis/model/accessors/user_accessor";
+import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
+import { handleGenericError } from "libs/error_handling";
+import classNames from "classnames";
 import type {
   APITaskWithAnnotationType,
   APIUserType,
@@ -30,8 +31,9 @@ import type {
 } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import type { RouterHistory } from "react-router-dom";
+import FormattedDate from "components/formatted_date";
 
-const { Column } = Table;
+const typeHint: APITaskWithAnnotationType[] = [];
 
 type StateProps = {
   activeUser: APIUserType,
@@ -113,41 +115,51 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     Modal.confirm({
       content: messages["annotation.finish"],
       onOk: async () => {
-        const annotation = task.annotation;
+        const { annotation } = task;
 
         const changedAnnotationWithTask = await finishTask(annotation.id);
 
         const changedTask = convertAnnotationToTaskWithAnnotationType(changedAnnotationWithTask);
 
-        const newUnfinishedTasks = this.state.unfinishedTasks.filter(t => t.id !== task.id);
-        const newFinishedTasks = [changedTask].concat(this.state.finishedTasks);
+        this.setState(prevState => {
+          const newUnfinishedTasks = prevState.unfinishedTasks.filter(t => t.id !== task.id);
+          const newFinishedTasks = [changedTask].concat(prevState.finishedTasks);
 
-        this.setState({
-          unfinishedTasks: newUnfinishedTasks,
-          finishedTasks: newFinishedTasks,
+          return {
+            unfinishedTasks: newUnfinishedTasks,
+            finishedTasks: newFinishedTasks,
+          };
         });
       },
     });
   }
 
   async fetchData(): Promise<void> {
-    this.setState({ isLoading: true });
     const isFinished = this.state.showFinishedTasks;
     const url = this.props.userId
       ? `/api/users/${this.props.userId}/tasks?isFinished=${isFinished.toString()}`
       : `/api/user/tasks?isFinished=${isFinished.toString()}`;
-    const annotationsWithTasks = await Request.receiveJSON(url);
 
-    const tasks = annotationsWithTasks.map(convertAnnotationToTaskWithAnnotationType);
+    try {
+      this.setState({ isLoading: true });
+      const annotationsWithTasks = await Request.receiveJSON(url);
+      const tasks = annotationsWithTasks.map(convertAnnotationToTaskWithAnnotationType);
 
-    this.setState({
-      [isFinished ? "finishedTasks" : "unfinishedTasks"]: tasks,
-      isLoading: false,
-    });
+      this.setState({
+        [isFinished ? "finishedTasks" : "unfinishedTasks"]: tasks,
+      });
+    } catch (error) {
+      handleGenericError(error);
+    } finally {
+      this.setState({ isLoading: false });
+    }
   }
 
   toggleShowFinished = () => {
-    this.setState({ showFinishedTasks: !this.state.showFinishedTasks }, () => this.fetchData());
+    this.setState(
+      prevState => ({ showFinishedTasks: !prevState.showFinishedTasks }),
+      () => this.fetchData(),
+    );
   };
 
   openTransferModal(annotationId: string) {
@@ -158,7 +170,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   }
 
   renderActions = (task: APITaskWithAnnotationType) => {
-    const annotation = task.annotation;
+    const { annotation } = task;
     const isAdmin =
       this.props.activeUser.isAdmin ||
       this.props.activeUser.teams
@@ -205,7 +217,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
             </a>
             <br />
             <a href="#" onClick={() => this.cancelAnnotation(annotation)}>
-              <Icon type="delete" />Cancel
+              <Icon type="delete" />Reset and Cancel
             </a>
             <br />
           </div>
@@ -219,9 +231,16 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     );
   };
 
-  async resetTask(annotation: APIAnnotationType) {
-    await resetAnnotation(annotation.id, annotation.typ);
-    Toast.success(messages["task.reset_success"]);
+  resetTask(annotation: APIAnnotationType) {
+    Modal.confirm({
+      content: messages["task.confirm_reset"],
+      cancelText: messages.no,
+      okText: messages.yes,
+      onOk: async () => {
+        await resetAnnotation(annotation.id, annotation.typ);
+        Toast.success(messages["annotation.reset_success"]);
+      },
+    });
   }
 
   cancelAnnotation(annotation: APIAnnotationType) {
@@ -235,15 +254,15 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
       onOk: async () => {
         await deleteAnnotation(annotationId, annotation.typ);
         if (wasFinished) {
-          this.setState({
-            finishedTasks: this.state.finishedTasks.filter(t => t.annotation.id !== annotationId),
-          });
+          this.setState(prevState => ({
+            finishedTasks: prevState.finishedTasks.filter(t => t.annotation.id !== annotationId),
+          }));
         } else {
-          this.setState({
-            unfinishedTasks: this.state.unfinishedTasks.filter(
+          this.setState(prevState => ({
+            unfinishedTasks: prevState.unfinishedTasks.filter(
               t => t.annotation.id !== annotationId,
             ),
-          });
+          }));
         }
       },
     });
@@ -254,11 +273,11 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
       return this.getNewTask();
     } else {
       let modalContent = messages["task.request_new"];
-      const likelyNextTasks = await peekNextTasks();
+      const likelyNextTask = await peekNextTasks();
 
-      if (likelyNextTasks.length > 0) {
+      if (likelyNextTask != null) {
         modalContent += `\n${messages["task.peek_next"]({
-          projectName: likelyNextTasks[0].projectName,
+          projectName: likelyNextTask.projectName,
         })}`;
       }
 
@@ -274,11 +293,11 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     try {
       const newTaskAnnotation = await requestTask();
 
-      this.setState({
-        unfinishedTasks: this.state.unfinishedTasks.concat([
+      this.setState(prevState => ({
+        unfinishedTasks: prevState.unfinishedTasks.concat([
           convertAnnotationToTaskWithAnnotationType(newTaskAnnotation),
         ]),
-      });
+      }));
     } catch (ex) {
       // catch exception so that promise does not fail and the modal will close
     } finally {
@@ -289,17 +308,23 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   handleTransferredTask() {
     this.setState({ isTransferModalVisible: false });
 
-    const removeTransferredTask = tasks =>
-      tasks.filter(t => t.annotation.id !== this.state.currentAnnotationId);
+    const removeTransferredTask = (tasks, currentAnnotationId) =>
+      tasks.filter(t => t.annotation.id !== currentAnnotationId);
 
     if (this.state.showFinishedTasks) {
-      this.setState({
-        finishedTasks: removeTransferredTask(this.state.finishedTasks),
-      });
+      this.setState(prevState => ({
+        finishedTasks: removeTransferredTask(
+          prevState.finishedTasks,
+          prevState.currentAnnotationId,
+        ),
+      }));
     } else {
-      this.setState({
-        unfinishedTasks: removeTransferredTask(this.state.unfinishedTasks),
-      });
+      this.setState(prevState => ({
+        unfinishedTasks: removeTransferredTask(
+          prevState.unfinishedTasks,
+          prevState.currentAnnotationId,
+        ),
+      }));
     }
   }
 
@@ -307,71 +332,82 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     return this.state.showFinishedTasks ? this.state.finishedTasks : this.state.unfinishedTasks;
   }
 
-  renderTable() {
+  renderPlaceholder() {
+    return this.state.isLoading
+      ? null
+      : 'You have no assigned tasks. Request a new task by clicking on the "Get a New Task" button.';
+  }
+
+  renderTaskList() {
+    const tasks = this.getCurrentTasks().sort(
+      Utils.compareBy(
+        typeHint,
+        task => (this.state.showFinishedTasks ? task.annotation.modified : task.created),
+        false,
+      ),
+    );
+    const descriptionClassName = classNames("task-type-description", {
+      short: this.state.showFinishedTasks || this.props.isAdminView,
+    });
+
+    const TaskCardTitle = ({ task }) => (
+      <React.Fragment>
+        <span style={{ marginRight: 8 }}>
+          {task.type.summary} (<FormattedDate timestamp={task.created} />)
+        </span>
+        {task.type.settings.allowedModes.map(mode => <Tag key={mode}>{mode}</Tag>)}
+      </React.Fragment>
+    );
+
+    const TaskCard = task =>
+      this.state.showFinishedTasks ? (
+        <Card key={task.id} style={{ margin: "10px" }}>
+          <Row gutter={16}>
+            <Col span={7}>
+              <b>Task ID:</b> {task.id}
+            </Col>
+            <Col span={7}>
+              <b>Project:</b> {task.projectName}
+            </Col>
+            <Col span={7}>
+              <b>Finished:</b> <FormattedDate timestamp={task.annotation.modified} />
+            </Col>
+            <Col span={3}>{this.renderActions(task)}</Col>
+          </Row>
+        </Card>
+      ) : (
+        <Card key={task.id} title={<TaskCardTitle task={task} />} style={{ margin: "10px" }}>
+          <Row gutter={16}>
+            <Col span={16}>
+              <div className={descriptionClassName}>
+                <Markdown
+                  source={task.type.description}
+                  options={{ html: false, breaks: true, linkify: true }}
+                />
+              </div>
+            </Col>
+            <Col span={8}>
+              <p style={{ marginBottom: 14 }}>
+                <b>Task ID:</b> {task.id}
+                <br />
+                <b>Project:</b> {task.projectName}
+              </p>
+              {this.renderActions(task)}
+            </Col>
+          </Row>
+        </Card>
+      );
+
     return (
-      <Table
-        dataSource={this.getCurrentTasks().filter(task => {
-          if (this.state.showFinishedTasks) return task.annotation.state === "Finished";
-          else return task.annotation.state !== "Finished";
-        })}
-        rowKey="id"
+      <List
+        dataSource={tasks}
         pagination={{
           defaultPageSize: 50,
         }}
-      >
-        <Column
-          title="ID"
-          dataIndex="id"
-          width={100}
-          sorter={Utils.localeCompareBy("id")}
-          className="monospace-id"
-        />
-        <Column
-          title="Type"
-          dataIndex="type.summary"
-          width={200}
-          sorter={Utils.localeCompareBy(t => t.type.summary)}
-        />
-        <Column
-          title="Project"
-          dataIndex="projectName"
-          width={110}
-          sorter={Utils.localeCompareBy("projectName")}
-        />
-        <Column
-          title="Description"
-          dataIndex="type.description"
-          sorter={Utils.localeCompareBy(t => t.type.description)}
-          render={description => (
-            <div className="task-type-description">
-              <Markdown
-                source={description}
-                options={{ html: false, breaks: true, linkify: true }}
-              />
-            </div>
-          )}
-          width={550}
-        />
-        <Column
-          title="Modes"
-          dataIndex="type.settings.allowedModes"
-          sorter={Utils.localeCompareBy(t => t.type.settings.allowedModes.join("-"))}
-          render={modes => modes.map(mode => <Tag key={mode}>{mode}</Tag>)}
-        />
-        <Column
-          title="Creation Date"
-          dataIndex="created"
-          width={150}
-          sorter={Utils.localeCompareBy("created")}
-          render={created => moment(created).format("YYYY-MM-DD HH:SS")}
-        />
-        <Column
-          title="Actions"
-          className="nowrap"
-          width={150}
-          render={(__, task) => this.renderActions(task)}
-        />
-      </Table>
+        loading={this.state.isLoading}
+        renderItem={TaskCard}
+        locale={{ emptyText: this.renderPlaceholder() }}
+      />
     );
   }
 
@@ -392,12 +428,10 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
           </Button>
         </div>
         <h3 id="tasksHeadline" className="TestTasksHeadline">
-          Tasks
+          {this.state.showFinishedTasks ? "Finished" : null} Tasks
         </h3>
         <div className="clearfix" style={{ margin: "20px 0px" }} />
-
-        <Spin spinning={this.state.isLoading}>{this.renderTable()}</Spin>
-
+        {this.renderTaskList()}
         <TransferTaskModal
           visible={this.state.isTransferModalVisible}
           annotationId={this.state.currentAnnotationId}
@@ -411,7 +445,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
-  activeUser: getActiveUser(state.activeUser),
+  activeUser: enforceActiveUser(state.activeUser),
 });
 
 export default connect(mapStateToProps)(withRouter(DashboardTaskListView));

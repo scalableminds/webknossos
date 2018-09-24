@@ -65,7 +65,6 @@ class DiffableMap<K: number, V> {
     let idx = 0;
     while (this.chunks[idx] != null) {
       if (this.chunks[idx].has(key)) {
-        // $FlowFixMe
         return this.chunks[idx].get(key);
       }
       idx++;

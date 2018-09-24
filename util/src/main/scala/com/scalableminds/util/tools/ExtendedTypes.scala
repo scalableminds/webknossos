@@ -1,6 +1,3 @@
-/*
-* Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
-*/
 package com.scalableminds.util.tools
 
 import java.io.RandomAccessFile
@@ -9,7 +6,6 @@ import java.nio.ByteBuffer
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.Math._
 import net.liftweb.common.{Box, Failure}
-import play.api.libs.ws.{WSAuthScheme, WSRequest}
 
 import scala.collection.immutable.Queue
 import scala.concurrent.ExecutionContext.Implicits._
@@ -221,17 +217,6 @@ object ExtendedTypes {
     def failIfTrue(errorMsg: String): Box[Boolean] = b match {
       case false => Full(false)
       case true => Failure(errorMsg)
-    }
-  }
-
-  case class Auth(isEnabled: Boolean, username: String = "", password: String = "")
-
-  implicit class ExtendedWSRequestHolder(r: WSRequest) {
-    def withAuth(a: Auth): WSRequest = {
-      if (a.isEnabled)
-        r.withAuth(a.username, a.password, WSAuthScheme.BASIC)
-      else
-        r
     }
   }
 

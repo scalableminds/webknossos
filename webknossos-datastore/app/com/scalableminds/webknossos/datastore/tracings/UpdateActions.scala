@@ -1,17 +1,18 @@
-/*
- * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.webknossos.datastore.tracings
 
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.trueaccord.scalapb.{GeneratedMessage, Message}
+import scalapb.{GeneratedMessage, Message}
 import play.api.libs.json._
 
 trait UpdateAction[T <: GeneratedMessage with Message[T]] {
   // def applyTo(tracing: T, service: TracingService[T]): Fox[T] = Fox.successful(tracing)
 
+  def actionTimestamp: Option[Long]
+
   def applyOn(tracing: T): T = tracing
+
+  def addTimestamp(timestamp: Long): UpdateAction[T] = { this }
 }
 
 object UpdateAction {

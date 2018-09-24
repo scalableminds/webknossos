@@ -1,190 +1,220 @@
 package controllers
 
+import com.mohiva.play.silhouette.api.Silhouette
+import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import javax.inject.Inject
-
-import com.scalableminds.util.reactivemongo.{GlobalAccessContext, MongoHelpers}
 import com.scalableminds.util.geometry.Point3D
-import com.scalableminds.util.reactivemongo.GlobalAccessContext
+import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import models.binary._
-import models.team.TeamDAO
-import models.user.{User, UserService}
-import oxalis.ndstore.{ND2WK, NDServerConnection}
-import oxalis.security.URLSharing
-import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest, UserAwareAction}
-import play.api.Play.current
-import play.api.cache.Cache
+import models.team.{OrganizationDAO, TeamDAO}
+import models.user.UserService
+import oxalis.security.{URLSharing, WkEnv}
+import com.scalableminds.util.tools.Math
+import play.api.cache.CacheApi
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats._
+import utils.ObjectId
+import play.cache.SyncCacheApi
 
-import scala.concurrent.ExecutionContext.Implicits._
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
-class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controller {
+class DataSetController @Inject()(userService: UserService,
+                                  dataSetService: DataSetService,
+                                  dataSetAllowedTeamsDAO: DataSetAllowedTeamsDAO,
+                                  dataSetDataLayerDAO: DataSetDataLayerDAO,
+                                  dataStoreDAO: DataStoreDAO,
+                                  dataSetLastUsedTimesDAO: DataSetLastUsedTimesDAO,
+                                  organizationDAO: OrganizationDAO,
+                                  teamDAO: TeamDAO,
+                                  dataSetDAO: DataSetDAO,
+                                  sil: Silhouette[WkEnv],
+                                  cache: CacheApi)
+                                 (implicit ec: ExecutionContext)
+extends Controller {
 
-  val ThumbnailWidth = 200
-  val ThumbnailHeight = 200
+  val DefaultThumbnailWidth = 400
+  val DefaultThumbnailHeight = 400
+  val MaxThumbnailWidth = 4000
+  val MaxThumbnailHeight = 4000
 
   val ThumbnailCacheDuration = 1 day
 
   val dataSetPublicReads =
     ((__ \ 'description).readNullable[String] and
       (__ \ 'displayName).readNullable[String] and
+      (__ \ 'sortingKey).readNullable[Long] and
       (__ \ 'isPublic).read[Boolean]).tupled
 
 
-  def thumbnail(dataSetName: String, dataLayerName: String) = UserAwareAction.async { implicit request =>
+  def thumbnail(dataSetName: String, dataLayerName: String, w: Option[Int], h: Option[Int]) = sil.UserAwareAction.async { implicit request =>
 
-    def imageFromCacheIfPossible(dataSet: DataSet) =
-    // We don't want all images to expire at the same time. Therefore, we add a day of randomness, hence the 1 day
-      Cache.get(s"thumbnail-$dataSetName*$dataLayerName") match {
-        case Some(a: Array[Byte]) =>
+    def imageFromCacheIfPossible(dataSet: DataSet): Fox[Array[Byte]] = {
+      val width = Math.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailHeight)
+      val height = Math.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
+      cache.get[Array[Byte]](s"thumbnail-$dataSetName*$dataLayerName-$width-$height") match {
+        case Some(a) =>
           Fox.successful(a)
         case _ => {
-          val defaultCenterOpt = dataSet.defaultConfiguration.flatMap(c => JsonHelper.jsResultToOpt(c.configuration("position").validate[Point3D]))
-          val defaultZoomOpt = dataSet.defaultConfiguration.flatMap(c => JsonHelper.jsResultToOpt(c.configuration("zoom").validate[Int]))
-          dataSet.dataStore.requestDataLayerThumbnail(dataLayerName, ThumbnailWidth, ThumbnailHeight, defaultZoomOpt, defaultCenterOpt).map {
+          val defaultCenterOpt = dataSet.defaultConfiguration.flatMap(c => c.configuration.get("position").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Point3D])))
+          val defaultZoomOpt = dataSet.defaultConfiguration.flatMap(c => c.configuration.get("zoom").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Int])))
+          dataSetService.handlerFor(dataSet).flatMap(_.requestDataLayerThumbnail(dataLayerName, width, height, defaultZoomOpt, defaultCenterOpt)).map {
             result =>
-              Cache.set(s"thumbnail-$dataSetName*$dataLayerName",
+              // We don't want all images to expire at the same time. Therefore, we add some random variation
+              cache.set(s"thumbnail-$dataSetName*$dataLayerName-$width-$height",
                 result,
-                (ThumbnailCacheDuration.toSeconds + math.random * 2.hours.toSeconds).toInt)
+                (ThumbnailCacheDuration.toSeconds + math.random * 2.hours.toSeconds) seconds)
               result
           }
         }
       }
+    }
 
     for {
-      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
-      layer <- DataSetService.getDataLayer(dataSet, dataLayerName) ?~> Messages("dataLayer.notFound", dataLayerName)
+      dataSet <- dataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
+      layer <- dataSetDataLayerDAO.findOneByNameForDataSet(dataLayerName, dataSet._id) ?~> Messages("dataLayer.notFound", dataLayerName)
       image <- imageFromCacheIfPossible(dataSet)
     } yield {
-      Ok(image).withHeaders(
-        CONTENT_LENGTH -> image.length.toString,
-        CONTENT_TYPE -> play.api.libs.MimeTypes.forExtension("jpeg").getOrElse(play.api.http.ContentTypes.BINARY)
-      )
+      Ok(image).as("image/jpeg")
     }
   }
 
-  def list = UserAwareAction.async { implicit request =>
+  def addForeignDataStoreAndDataSet() = sil.SecuredAction.async { implicit request =>
+    for {
+      body <- request.body.asJson.toFox
+      url <- (body \ "url").asOpt[String] ?~> "dataSet.url.missing"
+      dataStoreName <- (body \ "dataStoreName").asOpt[String].toFox ?~> "dataSet.dataStore.missing"
+      dataSetName <- (body \ "dataSetName").asOpt[String] ?~> "dataSet.dataSet.missing"
+      _ <- bool2Fox(request.identity.isAdmin) ?~> "user.noAdmin"
+      noDataStoreBox <- dataStoreDAO.findOneByName(dataStoreName).reverse.futureBox
+      _ <- Fox.runOptional(noDataStoreBox)(_ => dataSetService.addForeignDataStore(dataStoreName, url))
+      _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> "dataSet.import.impossible.name"
+      _ <- dataSetDAO.findOneByName(dataSetName).reverse ?~> "dataSet.name.alreadyTaken"
+      organizationName <- organizationDAO.findOne(request.identity._organization)(GlobalAccessContext).map(_.name)
+      _ <- dataSetService.addForeignDataSet(dataStoreName, dataSetName, organizationName)
+    } yield {
+      Ok
+    }
+  }
+
+  def list = sil.UserAwareAction.async { implicit request =>
     UsingFilters(
       Filter("isEditable", (value: Boolean, el: DataSet) =>
-        el.isEditableBy(request.identity) && value || !el.isEditableBy(request.identity) && !value),
+        for {isEditable <- dataSetService.isEditableBy(el, request.identity)} yield {isEditable && value || !isEditable && !value}),
       Filter("isActive", (value: Boolean, el: DataSet) =>
-        el.isActive == value)
+        Fox.successful(el.isUsable == value))
     ) { filter =>
-      DataSetDAO.findAll.flatMap {
-        dataSets =>
-          for {
-            js <- Fox.serialCombined(filter.applyOn(dataSets))(d => DataSet.dataSetPublicWrites(d, request.identity))
-          } yield {
-            Ok(Json.toJson(js))
-          }
-      }
+        for {
+          dataSets <- dataSetDAO.findAll ?~> "dataSet.list.failed"
+          filtered <- filter.applyOn(dataSets)
+          js <- Fox.serialCombined(filtered)(d => dataSetService.publicWrites(d, request.identity))
+        } yield {
+          Ok(Json.toJson(js))
+        }
     }
   }
 
-  def accessList(dataSetName: String) = SecuredAction.async { implicit request =>
+  def accessList(dataSetName: String) = sil.SecuredAction.async { implicit request =>
     for {
-      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
-      users <- UserService.findByTeams(dataSet.allowedTeams)
+      dataSet <- dataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
+      allowedTeams <- dataSetService.allowedTeamIdsFor(dataSet._id)
+      users <- userService.findByTeams(allowedTeams)
+      usersJs <- Fox.serialCombined(users.distinct)(u => userService.compactWrites(u))
     } yield {
-      Ok(Writes.list(User.userCompactWrites).writes(users))
+      Ok(Json.toJson(usersJs))
     }
   }
 
-  def read(dataSetName: String, sharingToken: Option[String]) = UserAwareAction.async { implicit request =>
+  def read(dataSetName: String, sharingToken: Option[String]) = sil.UserAwareAction.async { implicit request =>
     val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
     for {
-      dataSet <- DataSetDAO.findOneBySourceName(dataSetName)(ctx) ?~> Messages("dataSet.notFound", dataSetName)
-      js <- DataSet.dataSetPublicWrites(dataSet, request.identity)
+      dataSet <- dataSetDAO.findOneByName(dataSetName)(ctx) ?~> Messages("dataSet.notFound", dataSetName)
+      _ <- Fox.runOptional(request.identity)(user => dataSetLastUsedTimesDAO.updateForDataSetAndUser(dataSet._id, user._id))
+      js <- dataSetService.publicWrites(dataSet, request.identity)
     } yield {
       Ok(Json.toJson(js))
     }
   }
 
-  def update(dataSetName: String) = SecuredAction.async(parse.json) { implicit request =>
+  def health(dataSetName: String, sharingToken: Option[String]) = sil.UserAwareAction.async { implicit request =>
+    val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
+    for {
+      dataSet <- dataSetDAO.findOneByName(dataSetName)(ctx) ?~> Messages("dataSet.notFound", dataSetName)
+      dataSource <- dataSetService.dataSourceFor(dataSet) ?~> "dataSource.notFound"
+      usableDataSource <- dataSource.toUsable.toFox ?~> "dataSet.notImported"
+      datalayer <- usableDataSource.dataLayers.headOption.toFox ?~> "dataSet.noLayers"
+      thumbnail <- dataSetService.handlerFor(dataSet).flatMap(_.requestDataLayerThumbnail(datalayer.name, 100, 100, None, None)) ?~> "dataSet.loadingDataFailed"
+    } yield {
+      Ok("Ok")
+    }
+  }
+
+  def update(dataSetName: String) = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(dataSetPublicReads) {
-      case (description, displayName, isPublic) =>
+      case (description, displayName, sortingKey, isPublic) =>
       for {
-        dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
-        _ <- allowedToAdministrate(request.identity, dataSet)
-        updatedDataSet <- DataSetService.update(dataSet, description, displayName, isPublic)
-        js <- DataSet.dataSetPublicWrites(updatedDataSet, Some(request.identity))
+        dataSet <- dataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
+        _ <- Fox.assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed"
+        _ <- dataSetDAO.updateFields(dataSet._id, description, displayName, sortingKey.getOrElse(dataSet.created), isPublic)
+        updated <- dataSetDAO.findOneByName(dataSetName)
+        js <- dataSetService.publicWrites(updated, Some(request.identity))
       } yield {
         Ok(Json.toJson(js))
       }
     }
   }
 
-
-  def importDataSet(dataSetName: String) = SecuredAction.async { implicit request =>
+  def importDataSet(dataSetName: String) = sil.SecuredAction.async { implicit request =>
     for {
-      _ <- DataSetService.isProperDataSetName(dataSetName) ?~> Messages("dataSet.import.impossible.name")
-      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
-      result <- DataSetService.importDataSet(dataSet)
+      _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> "dataSet.import.impossible.name"
+      dataSet <- dataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
+      result <- dataSetService.importDataSet(dataSet)
     } yield {
       Status(result.status)(result.body)
     }
   }
 
-  def updateTeams(dataSetName: String) = SecuredAction.async(parse.json) { implicit request =>
+  def updateTeams(dataSetName: String) = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyAs[List[String]] { teams =>
       for {
-        dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
-        _ <- allowedToAdministrate(request.identity, dataSet)
-        teamsBson <- Fox.combined(teams.map(MongoHelpers.parseBsonToFox))
-        userTeams <- TeamDAO.findAll.map(_.filter(team => team.isEditableBy(request.identity)))
-        teamsWithoutUpdate = dataSet.allowedTeams.filterNot(t => userTeams.exists(_._id == t))
-        teamsWithUpdate = teamsBson.filter(t => userTeams.exists(_._id == t))
-        _ <- DataSetService.updateTeams(dataSet, teamsWithUpdate ++ teamsWithoutUpdate)
+        dataSet <- dataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
+        _ <- Fox.assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed"
+        teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.parse(_))
+        userTeams <- teamDAO.findAllEditable
+        oldAllowedTeams <- dataSetService.allowedTeamIdsFor(dataSet._id)
+        teamsWithoutUpdate = oldAllowedTeams.filterNot(t => userTeams.exists(_._id == t))
+        teamsWithUpdate = teamIdsValidated.filter(t => userTeams.exists(_._id == t))
+        _ <- dataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(dataSet._id, (teamsWithUpdate ++ teamsWithoutUpdate).distinct)
       } yield
-      Ok(Json.toJson(teamsWithUpdate ++ teamsWithoutUpdate))
+      Ok(Json.toJson((teamsWithUpdate ++ teamsWithoutUpdate).map(_.toString)))
     }
   }
 
-  def getSharingToken(dataSetName: String) = SecuredAction.async { implicit request =>
+  def getSharingToken(dataSetName: String) = sil.SecuredAction.async { implicit request =>
     for {
-      token <- DataSetService.getSharingToken(dataSetName)
+      token <- dataSetService.getSharingToken(dataSetName)
     } yield Ok(Json.obj("sharingToken" -> token))
   }
 
-  def deleteSharingToken(dataSetName: String) = SecuredAction.async { implicit request =>
+  def deleteSharingToken(dataSetName: String) = sil.SecuredAction.async { implicit request =>
     for {
-      _ <- DataSetSQLDAO.updateSharingTokenByName(dataSetName, None)
+      _ <- dataSetDAO.updateSharingTokenByName(dataSetName, None)
     } yield Ok
   }
 
-  val externalDataSetFormReads =
-    ((__ \ 'server).read[String] and
-      (__ \ 'name).read[String] and
-      (__ \ 'token).read[String] and
-      (__ \ 'team).read[String]) (
-    (server, name, token, team) => (server, name, token, BSONObjectID(team)))
+  def create(typ: String) = sil.SecuredAction.async(parse.json) { implicit request =>
+    Future.successful(JsonBadRequest(Messages("dataSet.type.invalid", typ)))
+  }
 
-  private def createNDStoreDataSet(implicit request: SecuredRequest[JsValue]) =
-    withJsonBodyUsing(externalDataSetFormReads){
-      case (server, name, token, team) =>
-        for {
-          _ <- DataSetService.checkIfNewDataSetName(name) ?~> Messages("dataSet.name.alreadyTaken")
-          _ <- ensureTeamAdministration(request.identity, team)
-          ndProject <- NDServerConnection.requestProjectInformationFromNDStore(server, name, token)
-          dataSet <- ND2WK.dataSetFromNDProject(ndProject, team)
-          _ <-  DataSetDAO.insert(dataSet)(GlobalAccessContext)
-        } yield JsonOk(Messages("dataSet.create.success"))
-    }
-
-  def create(typ: String) = SecuredAction.async(parse.json) { implicit request =>
-    typ match {
-      case "ndstore" =>
-        createNDStoreDataSet(request)
-      case _ =>
-        Future.successful(JsonBadRequest(Messages("dataSet.type.invalid", typ)))
-    }
+  def isValidNewName(dataSetName: String) = sil.SecuredAction.async { implicit request =>
+    for {
+      _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> "dataSet.name.invalid"
+      _ <- dataSetService.assertNewDataSetName(dataSetName)(GlobalAccessContext) ?~> "dataSet.name.alreadyTaken"
+    } yield Ok
   }
 
 }

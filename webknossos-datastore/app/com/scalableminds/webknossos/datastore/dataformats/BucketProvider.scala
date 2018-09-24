@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.webknossos.datastore.dataformats
 
 import java.util.concurrent.TimeoutException
@@ -16,11 +13,11 @@ import net.liftweb.common.Failure
 import collection.JavaConverters._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 trait BucketProvider extends FoxImplicits with LazyLogging {
 
-  def loadFromUnderlying(readInstruction: DataReadInstruction): Fox[Cube] = Fox.empty
+  def loadFromUnderlying(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[Cube] = Fox.empty
 
   def load(readInstruction: DataReadInstruction, cache: DataCubeCache, timeout: FiniteDuration): Fox[Array[Byte]] = {
 

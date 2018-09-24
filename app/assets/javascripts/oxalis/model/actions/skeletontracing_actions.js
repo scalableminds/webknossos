@@ -1,21 +1,21 @@
-/* eslint-disable import/prefer-default-export */
-
-/**
- * skeletontracing_actions.js
- * @flow
- */
+// @flow
+import React from "react";
 import Store from "oxalis/store";
-import { getActiveNode, getTree } from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  enforceSkeletonTracing,
+  getActiveNode,
+  getTree,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import messages from "messages";
 import { Modal } from "antd";
+import renderIndependently from "libs/render_independently";
+import RemoveTreeModal from "oxalis/view/remove_tree_modal";
 import type { Vector3 } from "oxalis/constants";
-import type { ServerSkeletonTracingType } from "oxalis/model";
-import type { APIAnnotationType } from "admin/api_flow_types";
-import type { SkeletonTracingType, TreeMapType } from "oxalis/store";
+import type { ServerSkeletonTracingType } from "admin/api_flow_types";
+import type { OxalisState, SkeletonTracingType, TreeMapType, TreeGroupType } from "oxalis/store";
 
 type InitializeSkeletonTracingActionType = {
   type: "INITIALIZE_SKELETONTRACING",
-  annotation: APIAnnotationType,
   tracing: ServerSkeletonTracingType,
 };
 type CreateNodeActionType = {
@@ -39,7 +39,11 @@ type DeleteEdgeActionType = {
   targetNodeId: number,
   timestamp: number,
 };
-type SetActiveNodeActionType = { type: "SET_ACTIVE_NODE", nodeId: number };
+type SetActiveNodeActionType = {
+  type: "SET_ACTIVE_NODE",
+  nodeId: number,
+  suppressAnimation: boolean,
+};
 type SetNodeRadiusActionType = {
   type: "SET_NODE_RADIUS",
   radius: number,
@@ -53,17 +57,33 @@ type CreateBranchPointActionType = {
   timestamp: number,
 };
 type DeleteBranchPointActionType = { type: "DELETE_BRANCHPOINT" };
-type ToggleTreeActionType = { type: "TOGGLE_TREE", treeId?: number, timestamp: number };
+type ToggleTreeActionType = { type: "TOGGLE_TREE", treeId: ?number, timestamp: number };
+type SetTreeVisibilityActionType = {
+  type: "SET_TREE_VISIBILITY",
+  treeId: ?number,
+  isVisible: boolean,
+};
 type ToggleAllTreesActionType = { type: "TOGGLE_ALL_TREES", timestamp: number };
 type ToggleInactiveTreesActionType = { type: "TOGGLE_INACTIVE_TREES", timestamp: number };
+type ToggleTreeGroupActionType = { type: "TOGGLE_TREE_GROUP", groupId: number };
 type RequestDeleteBranchPointActionType = { type: "REQUEST_DELETE_BRANCHPOINT" };
 type CreateTreeActionType = { type: "CREATE_TREE", timestamp: number };
-type AddTreesActionType = { type: "ADD_TREES", trees: TreeMapType };
+type AddTreesAndGroupsActionType = {
+  type: "ADD_TREES_AND_GROUPS",
+  trees: TreeMapType,
+  treeGroups: Array<TreeGroupType>,
+};
 type DeleteTreeActionType = { type: "DELETE_TREE", treeId?: number, timestamp: number };
 type SetActiveTreeActionType = { type: "SET_ACTIVE_TREE", treeId: number };
+type SetActiveGroupActionType = { type: "SET_ACTIVE_GROUP", groupId: number };
 type MergeTreesActionType = { type: "MERGE_TREES", sourceNodeId: number, targetNodeId: number };
 type SetTreeNameActionType = { type: "SET_TREE_NAME", name: ?string, treeId: ?number };
 type SelectNextTreeActionType = { type: "SELECT_NEXT_TREE", forward: ?boolean };
+type SetTreeColorIndexActionType = {
+  type: "SET_TREE_COLOR_INDEX",
+  treeId: ?number,
+  colorIndex: number,
+};
 type ShuffleTreeColorActionType = { type: "SHUFFLE_TREE_COLOR", treeId?: number };
 type ShuffleAllTreeColorsActionType = { type: "SHUFFLE_ALL_TREE_COLORS", treeId?: number };
 type CreateCommentActionType = {
@@ -74,6 +94,8 @@ type CreateCommentActionType = {
 };
 type DeleteCommentActionType = { type: "DELETE_COMMENT", nodeId: ?number, treeId?: number };
 type SetTracingActionType = { type: "SET_TRACING", tracing: SkeletonTracingType };
+type SetTreeGroupsActionType = { type: "SET_TREE_GROUPS", treeGroups: Array<TreeGroupType> };
+type SetTreeGroupActionType = { type: "SET_TREE_GROUP", groupId: ?number, treeId?: number };
 type NoActionType = { type: "NONE" };
 
 export type SkeletonTracingActionType =
@@ -82,27 +104,32 @@ export type SkeletonTracingActionType =
   | DeleteNodeActionType
   | DeleteEdgeActionType
   | SetActiveNodeActionType
+  | SetActiveGroupActionType
   | SetNodeRadiusActionType
   | CreateBranchPointActionType
   | DeleteBranchPointActionType
   | RequestDeleteBranchPointActionType
   | CreateTreeActionType
-  | AddTreesActionType
+  | AddTreesAndGroupsActionType
   | DeleteTreeActionType
   | SetActiveTreeActionType
   | MergeTreesActionType
   | SetTreeNameActionType
-  | SetTreeNameActionType
   | SelectNextTreeActionType
   | ShuffleTreeColorActionType
   | ShuffleAllTreeColorsActionType
+  | SetTreeColorIndexActionType
   | CreateCommentActionType
   | DeleteCommentActionType
   | ToggleTreeActionType
   | ToggleAllTreesActionType
+  | SetTreeVisibilityActionType
   | ToggleInactiveTreesActionType
+  | ToggleTreeGroupActionType
   | NoActionType
-  | SetTracingActionType;
+  | SetTracingActionType
+  | SetTreeGroupsActionType
+  | SetTreeGroupActionType;
 
 export const SkeletonTracingSaveRelevantActions = [
   "INITIALIZE_SKELETONTRACING",
@@ -114,7 +141,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "CREATE_BRANCHPOINT",
   "DELETE_BRANCHPOINT",
   "CREATE_TREE",
-  "ADD_TREES",
+  "ADD_TREES_AND_GROUPS",
   "DELETE_TREE",
   "SET_ACTIVE_TREE",
   "SET_TREE_NAME",
@@ -125,6 +152,8 @@ export const SkeletonTracingSaveRelevantActions = [
   "CREATE_COMMENT",
   "DELETE_COMMENT",
   "SET_USER_BOUNDING_BOX",
+  "SET_TREE_GROUPS",
+  "SET_TREE_GROUP",
 ];
 
 const noAction = (): NoActionType => ({
@@ -132,11 +161,9 @@ const noAction = (): NoActionType => ({
 });
 
 export const initializeSkeletonTracingAction = (
-  annotation: APIAnnotationType,
   tracing: ServerSkeletonTracingType,
 ): InitializeSkeletonTracingActionType => ({
   type: "INITIALIZE_SKELETONTRACING",
-  annotation,
   tracing,
 });
 
@@ -168,31 +195,6 @@ export const deleteNodeAction = (
   timestamp,
 });
 
-export const deleteNodeWithConfirmAction = (
-  nodeId?: number,
-  treeId?: number,
-): DeleteNodeActionType | NoActionType => {
-  const state = Store.getState();
-  return getActiveNode(state.tracing)
-    .map(activeNode => {
-      nodeId = nodeId != null ? nodeId : activeNode.id;
-      if (state.task != null && nodeId === 1) {
-        // Let the user confirm the deletion of the initial node (node with id 1) of a task
-        Modal.confirm({
-          title: messages["tracing.delete_initial_node"],
-          onOk: () => {
-            Store.dispatch(deleteNodeAction(nodeId, treeId));
-          },
-        });
-        // As Modal.confirm is async, return noAction() and the modal will dispatch the real action
-        // if the user confirms
-        return noAction();
-      }
-      return deleteNodeAction(nodeId, treeId);
-    })
-    .getOrElse(noAction());
-};
-
 export const deleteEdgeAction = (
   sourceNodeId: number,
   targetNodeId: number,
@@ -204,9 +206,13 @@ export const deleteEdgeAction = (
   timestamp,
 });
 
-export const setActiveNodeAction = (nodeId: number): SetActiveNodeActionType => ({
+export const setActiveNodeAction = (
+  nodeId: number,
+  suppressAnimation: boolean = false,
+): SetActiveNodeActionType => ({
   type: "SET_ACTIVE_NODE",
   nodeId,
+  suppressAnimation,
 });
 
 export const setNodeRadiusAction = (
@@ -244,9 +250,13 @@ export const createTreeAction = (timestamp: number = Date.now()): CreateTreeActi
   timestamp,
 });
 
-export const addTreesAction = (trees: TreeMapType): AddTreesActionType => ({
-  type: "ADD_TREES",
+export const addTreesAndGroupsAction = (
+  trees: TreeMapType,
+  treeGroups: Array<TreeGroupType>,
+): AddTreesAndGroupsActionType => ({
+  type: "ADD_TREES_AND_GROUPS",
   trees,
+  treeGroups,
 });
 
 export const deleteTreeAction = (
@@ -258,38 +268,22 @@ export const deleteTreeAction = (
   timestamp,
 });
 
-export const deleteTreeWithConfirmAction = (treeId?: number): NoActionType => {
-  const state = Store.getState();
-  getTree(state.tracing, treeId).map(tree => {
-    if (state.task != null && tree.nodes.has(1) != null) {
-      // Let the user confirm the deletion of the initial node (node with id 1) of a task
-      Modal.confirm({
-        title: messages["tracing.delete_tree_with_initial_node"],
-        onOk: () => {
-          Store.dispatch(deleteTreeAction(treeId));
-        },
-      });
-    } else {
-      Modal.confirm({
-        title: messages["tracing.delete_tree"],
-        onOk: () => {
-          Store.dispatch(deleteTreeAction(treeId));
-        },
-      });
-    }
-  });
-  // As Modal.confirm is async, return noAction() and the modal will dispatch the real action
-  // if the user confirms
-  return noAction();
-};
-
 export const toggleTreeAction = (
-  treeId?: number,
+  treeId: ?number,
   timestamp: number = Date.now(),
 ): ToggleTreeActionType => ({
   type: "TOGGLE_TREE",
   treeId,
   timestamp,
+});
+
+export const setTreeVisibilityAction = (
+  treeId: ?number,
+  isVisible: boolean,
+): SetTreeVisibilityActionType => ({
+  type: "SET_TREE_VISIBILITY",
+  treeId,
+  isVisible,
 });
 
 export const toggleAllTreesAction = (timestamp: number = Date.now()): ToggleAllTreesActionType => ({
@@ -304,9 +298,19 @@ export const toggleInactiveTreesAction = (
   timestamp,
 });
 
+export const toggleTreeGroupAction = (groupId: number): ToggleTreeGroupActionType => ({
+  type: "TOGGLE_TREE_GROUP",
+  groupId,
+});
+
 export const setActiveTreeAction = (treeId: number): SetActiveTreeActionType => ({
   type: "SET_ACTIVE_TREE",
   treeId,
+});
+
+export const setActiveGroupAction = (groupId: number): SetActiveGroupActionType => ({
+  type: "SET_ACTIVE_GROUP",
+  groupId,
 });
 
 export const mergeTreesAction = (
@@ -330,6 +334,15 @@ export const setTreeNameAction = (
 export const selectNextTreeAction = (forward: ?boolean = true): SelectNextTreeActionType => ({
   type: "SELECT_NEXT_TREE",
   forward,
+});
+
+export const setTreeColorIndexAction = (
+  treeId: ?number,
+  colorIndex: number,
+): SetTreeColorIndexActionType => ({
+  type: "SET_TREE_COLOR_INDEX",
+  treeId,
+  colorIndex,
 });
 
 export const shuffleTreeColorAction = (treeId: number): ShuffleTreeColorActionType => ({
@@ -362,3 +375,71 @@ export const setTracingAction = (tracing: SkeletonTracingType): SetTracingAction
   type: "SET_TRACING",
   tracing,
 });
+
+export const setTreeGroupsAction = (treeGroups: Array<TreeGroupType>): SetTreeGroupsActionType => ({
+  type: "SET_TREE_GROUPS",
+  treeGroups,
+});
+
+export const setTreeGroupAction = (groupId: ?number, treeId?: number): SetTreeGroupActionType => ({
+  type: "SET_TREE_GROUP",
+  groupId,
+  treeId,
+});
+
+// The following actions have the prefix "AsUser" which means that they
+// offer some additional logic which is sensible from a user-centered point of view.
+// For example, the deleteActiveNodeAsUserAction also initiates the deletion of a tree,
+// when the current tree is empty.
+
+export const deleteActiveNodeAsUserAction = (
+  state: OxalisState,
+): DeleteNodeActionType | NoActionType | DeleteTreeActionType => {
+  const skeletonTracing = enforceSkeletonTracing(state.tracing);
+  return (
+    getActiveNode(skeletonTracing)
+      .map(activeNode => {
+        const nodeId = activeNode.id;
+        if (state.task != null && nodeId === 1) {
+          // Let the user confirm the deletion of the initial node (node with id 1) of a task
+          Modal.confirm({
+            title: messages["tracing.delete_initial_node"],
+            onOk: () => {
+              Store.dispatch(deleteNodeAction(nodeId));
+            },
+          });
+          // As Modal.confirm is async, return noAction() and the modal will dispatch the real action
+          // if the user confirms
+          return noAction();
+        }
+        return deleteNodeAction(nodeId);
+      })
+      // If the tree is empty, it will be deleted
+      .getOrElse(deleteTreeAction())
+  );
+};
+
+export const deleteTreeAsUserAction = (treeId?: number): NoActionType => {
+  const state = Store.getState();
+  const skeletonTracing = enforceSkeletonTracing(state.tracing);
+  getTree(skeletonTracing, treeId).map(tree => {
+    if (state.task != null && tree.nodes.has(1)) {
+      // Let the user confirm the deletion of the initial node (node with id 1) of a task
+      Modal.confirm({
+        title: messages["tracing.delete_tree_with_initial_node"],
+        onOk: () => {
+          Store.dispatch(deleteTreeAction(treeId));
+        },
+      });
+    } else if (state.userConfiguration.hideTreeRemovalWarning) {
+      Store.dispatch(deleteTreeAction(treeId));
+    } else {
+      renderIndependently(destroy => (
+        <RemoveTreeModal onOk={() => Store.dispatch(deleteTreeAction(treeId))} destroy={destroy} />
+      ));
+    }
+  });
+  // As Modal.confirm is async, return noAction() and the modal will dispatch the real action
+  // if the user confirms
+  return noAction();
+};

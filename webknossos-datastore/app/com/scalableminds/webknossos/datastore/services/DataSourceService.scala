@@ -1,15 +1,11 @@
-/*
- * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.webknossos.datastore.services
 
 import java.io.File
-import java.nio.file.{Path, Paths}
+import java.nio.file.{AccessDeniedException, Path, Paths}
 
 import akka.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
-import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.webknossos.datastore.dataformats.knossos.KnossosDataFormat
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormat
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
@@ -17,30 +13,29 @@ import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, UnusableDataSource}
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
 import net.liftweb.util.Helpers.tryo
-import play.api.Configuration
 import play.api.inject.ApplicationLifecycle
-import play.api.libs.json.{JsValue, Json}
-import reactivemongo.bson.BSONObjectID
+import play.api.libs.json.Json
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class DataSourceService @Inject()(
-                                   config: Configuration,
+                                   config: DataStoreConfig,
                                    dataSourceRepository: DataSourceRepository,
                                    val lifecycle: ApplicationLifecycle,
                                    @Named("webknossos-datastore") val system: ActorSystem
                                  ) extends IntervalScheduler with LazyLogging with FoxImplicits {
 
-  override protected lazy val enabled: Boolean = config.getBoolean("braingames.binary.changeHandler.enabled").getOrElse(true)
-  protected lazy val tickerInterval: FiniteDuration = config.getInt("braingames.binary.changeHandler.interval").getOrElse(10).minutes
+  override protected lazy val enabled: Boolean = config.Braingames.Binary.ChangeHandler.enabled
+  protected lazy val tickerInterval: FiniteDuration = config.Braingames.Binary.ChangeHandler.tickerInterval
 
   private val MaxNumberOfFilesForDataFormatGuessing = 10
-  private val dataBaseDir = Paths.get(config.getString("braingames.binary.baseFolder").getOrElse("binaryData"))
+  val dataBaseDir = Paths.get(config.Braingames.Binary.baseFolder)
 
   private val propertiesFileName = Paths.get("datasource-properties.json")
 
@@ -67,21 +62,31 @@ class DataSourceService @Inject()(
     }
   }
 
-  def handleUpload(id: DataSourceId, dataSetZip: File): Box[Unit] = {
+  def handleUpload(id: DataSourceId, dataSetZip: File): Fox[Unit] = {
+
+    def ensureDirectory(dir: Path) =
+      try {
+        Fox.successful(PathUtils.ensureDirectory(dir))
+      } catch {
+        case e: AccessDeniedException => Fox.failure("dataSet.import.fileAccessDenied")
+      }
+
     val dataSourceDir = dataBaseDir.resolve(id.team).resolve(id.name)
-    PathUtils.ensureDirectory(dataSourceDir)
 
     logger.info(s"Uploading and unzipping dataset into $dataSourceDir")
 
-    ZipIO.unzipToFolder(dataSetZip, dataSourceDir, includeHiddenFiles = false, truncateCommonPrefix = true) match {
-      case Full(_) =>
-        dataSourceRepository.updateDataSource(dataSourceFromFolder(dataSourceDir, id.team))
-        Full(())
-      case e =>
-        val errorMsg = s"Error unzipping uploaded dataset to $dataSourceDir: $e"
-        logger.warn(errorMsg)
-        Failure(errorMsg)
-    }
+    for {
+      _ <- ensureDirectory(dataSourceDir)
+      unzipResult = ZipIO.unzipToFolder(dataSetZip, dataSourceDir, includeHiddenFiles = false, truncateCommonPrefix = true, Some(Category.values.map(_.toString).toList))
+      _ <- unzipResult match {
+        case Full(_) => dataSourceRepository.updateDataSource(dataSourceFromFolder(dataSourceDir, id.team))
+        case e => {
+          val errorMsg = s"Error unzipping uploaded dataset to $dataSourceDir: $e"
+          logger.warn(errorMsg)
+          Fox.failure(errorMsg)
+        }
+      }
+    } yield ()
   }
 
   def exploreDataSource(id: DataSourceId, previous: Option[DataSource]): Box[(DataSource, List[(String, String)])] = {
@@ -99,9 +104,9 @@ class DataSourceService @Inject()(
     def Check(expression: Boolean, msg: String): Option[String] = if (!expression) Some(msg) else None
 
     // Check, that each dimension increases monotonically between different resolutions.
-    val resolutionsByX = dataSource.dataLayers.flatMap(_.resolutions).sortBy(_.x)
-    val resolutionsByY = dataSource.dataLayers.flatMap(_.resolutions).sortBy(_.y)
-    val resolutionsByZ = dataSource.dataLayers.flatMap(_.resolutions).sortBy(_.z)
+    val resolutionsByX = dataSource.dataLayers.map(_.resolutions.sortBy(_.x))
+    val resolutionsByY = dataSource.dataLayers.map(_.resolutions.sortBy(_.y))
+    val resolutionsByZ = dataSource.dataLayers.map(_.resolutions.sortBy(_.z))
 
     val errors = List(
       Check(dataSource.scale.isValid, "DataSource scale is invalid"),
@@ -119,17 +124,17 @@ class DataSourceService @Inject()(
     if (errors.isEmpty) {
       Full(())
     } else {
-      ParamFailure("DataSource is invalid", errors.map("error" -> _))
+      ParamFailure("DataSource is invalid", Json.toJson(errors.map(e => Json.obj("error" -> e))))
     }
   }
 
-  def updateDataSource(dataSource: DataSource): Box[Unit] = {
-    validateDataSource(dataSource).flatMap { _ =>
-      val propertiesFile = dataBaseDir.resolve(dataSource.id.team).resolve(dataSource.id.name).resolve(propertiesFileName)
-      JsonHelper.jsonToFile(propertiesFile, dataSource).map { _ =>
-        dataSourceRepository.updateDataSource(dataSource)
-      }
-    }
+  def updateDataSource(dataSource: DataSource): Fox[Unit] = {
+    for {
+      _ <- validateDataSource(dataSource).toFox
+      propertiesFile = dataBaseDir.resolve(dataSource.id.team).resolve(dataSource.id.name).resolve(propertiesFileName)
+      _ = JsonHelper.jsonToFile(propertiesFile, dataSource)
+      _ <- dataSourceRepository.updateDataSource(dataSource)
+    } yield ()
   }
 
   private def teamAwareInboxSources(path: Path): List[InboxDataSource] = {

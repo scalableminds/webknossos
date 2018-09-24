@@ -3,25 +3,33 @@
 
 import _ from "lodash";
 import * as React from "react";
+import moment from "moment";
 import { connect } from "react-redux";
 import { Link, withRouter } from "react-router-dom";
-import { Table, Tag, Icon, Spin, Button, Input, Modal } from "antd";
+import { Table, Tag, Icon, Spin, Button, Input, Modal, Alert, Row, Col, Tooltip } from "antd";
 import TeamRoleModalView from "admin/user/team_role_modal_view";
 import ExperienceModalView from "admin/user/experience_modal_view";
-import TemplateHelpers from "libs/template_helpers";
-import Utils from "libs/utils";
+import { stringToColor } from "libs/format_utils";
+import * as Utils from "libs/utils";
 import { getEditableUsers, updateUser } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
-import { getActiveUser } from "oxalis/model/accessors/user_accessor";
+import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import messages from "messages";
-
 import type { APIUserType, APITeamMembershipType, ExperienceMapType } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
 import type { OxalisState } from "oxalis/store";
+import EditableTextLabel from "oxalis/view/components/editable_text_label";
+import Toast from "libs/toast";
+import { InviteUsersPopover } from "admin/onboarding";
+import Clipboard from "clipboard-js";
+import Store from "../../oxalis/store";
+import { logoutUserAction } from "../../oxalis/model/actions/user_actions";
 
 const { Column } = Table;
 const { Search } = Input;
+
+const typeHint: APIUserType[] = [];
 
 type StateProps = {
   activeUser: APIUserType,
@@ -37,8 +45,11 @@ type State = {
   selectedUserIds: Array<string>,
   isExperienceModalVisible: boolean,
   isTeamRoleModalVisible: boolean,
+  isInvitePopoverVisible: boolean,
+  singleSelectedUser: ?APIUserType,
   activationFilter: Array<"true" | "false">,
   searchQuery: string,
+  domainToEdit: ?string,
 };
 
 const persistence: Persistence<State> = new Persistence(
@@ -56,8 +67,11 @@ class UserListView extends React.PureComponent<Props, State> {
     selectedUserIds: [],
     isExperienceModalVisible: false,
     isTeamRoleModalVisible: false,
+    isInvitePopoverVisible: false,
     activationFilter: ["true"],
     searchQuery: "",
+    singleSelectedUser: null,
+    domainToEdit: null,
   };
 
   componentWillMount() {
@@ -73,6 +87,9 @@ class UserListView extends React.PureComponent<Props, State> {
   }
 
   async fetchData(): Promise<void> {
+    this.setState({
+      isLoading: true,
+    });
     const users = await getEditableUsers();
 
     this.setState({
@@ -82,26 +99,47 @@ class UserListView extends React.PureComponent<Props, State> {
   }
 
   activateUser = (selectedUser: APIUserType, isActive: boolean = true): void => {
-    const newUsers = this.state.users.map(user => {
-      if (selectedUser.id === user.id) {
-        const newUser = Object.assign({}, user, { isActive });
+    this.setState(prevState => {
+      const newUsers = prevState.users.map(user => {
+        if (selectedUser.id === user.id) {
+          const newUser = Object.assign({}, user, { isActive });
+          updateUser(newUser);
+          return newUser;
+        }
+        return user;
+      });
 
-        updateUser(newUser);
-        return newUser;
-      }
-
-      return user;
-    });
-
-    this.setState({
-      users: newUsers,
-      selectedUserIds: [selectedUser.id],
-      isTeamRoleModalVisible: isActive,
+      return {
+        users: newUsers,
+        selectedUserIds: [selectedUser.id],
+        isTeamRoleModalVisible: isActive,
+      };
     });
   };
 
   deactivateUser = (user: APIUserType): void => {
     this.activateUser(user, false);
+  };
+
+  changeEmail = (selectedUser: APIUserType, newEmail: string): void => {
+    this.setState(prevState => {
+      const newUsers = prevState.users.map(user => {
+        if (selectedUser.id === user.id) {
+          const newUser = Object.assign({}, user, { email: newEmail });
+          updateUser(newUser);
+          return newUser;
+        }
+        return user;
+      });
+
+      return {
+        users: newUsers,
+        selectedUserIds: [selectedUser.id],
+      };
+    });
+    Toast.success(messages["users.change_email_confirmation"]);
+
+    if (this.props.activeUser.email === selectedUser.email) Store.dispatch(logoutUserAction());
   };
 
   handleUsersChange = (updatedUsers: Array<APIUserType>): void => {
@@ -110,6 +148,16 @@ class UserListView extends React.PureComponent<Props, State> {
       isExperienceModalVisible: false,
       isTeamRoleModalVisible: false,
     });
+  };
+
+  closeExperienceModal = (updatedUsers: Array<APIUserType>): void => {
+    const updatedUsersMap = _.keyBy(updatedUsers, u => u.id);
+    this.setState(prevState => ({
+      isExperienceModalVisible: false,
+      users: prevState.users.map(user => updatedUsersMap[user.id] || user),
+      singleSelectedUser: null,
+      selectedUserIds: prevState.singleSelectedUser == null ? [] : prevState.selectedUserIds,
+    }));
   };
 
   handleSearch = (event: SyntheticInputEvent<>): void => {
@@ -140,6 +188,76 @@ class UserListView extends React.PureComponent<Props, State> {
     }
   };
 
+  renderNewUsersAlert() {
+    const now = moment();
+    const newInactiveUsers = this.state.users.filter(
+      user => !user.isActive && moment.duration(now.diff(user.created)).asDays() <= 14,
+    );
+
+    const newInactiveUsersHeader = (
+      <React.Fragment>
+        There are new inactive users{" "}
+        <Tooltip
+          title="The displayed users are inactive and were created in the past 14 days."
+          placement="right"
+        >
+          <Icon type="info-circle" />
+        </Tooltip>
+      </React.Fragment>
+    );
+    const newInactiveUsersList = (
+      <React.Fragment>
+        {newInactiveUsers.map(user => (
+          <Row key={user.id} gutter={16}>
+            <Col span={6}>{`${user.firstName} ${user.lastName} (${user.email}) `}</Col>
+            <Col span={4}>
+              <a href="#" onClick={() => this.activateUser(user)}>
+                <Icon type="user-add" />Activate User
+              </a>
+            </Col>
+          </Row>
+        ))}
+      </React.Fragment>
+    );
+
+    return newInactiveUsers.length ? (
+      <Alert
+        message={newInactiveUsersHeader}
+        description={newInactiveUsersList}
+        type="info"
+        iconType="user"
+        showIcon
+        style={{ marginTop: 20 }}
+      />
+    ) : null;
+  }
+
+  renderPlaceholder() {
+    const noUsersMessage = (
+      <React.Fragment>
+        {"You can "}
+        <a onClick={() => this.setState({ isInvitePopoverVisible: true })}>invite more users</a>
+        {" to join your organization. After the users joined, you need to activate them manually."}
+      </React.Fragment>
+    );
+
+    return this.state.isLoading ? null : (
+      <Alert
+        message="Invite more users"
+        description={noUsersMessage}
+        type="info"
+        showIcon
+        style={{ marginTop: 20 }}
+      />
+    );
+  }
+
+  getAllSelectedUsers(): Array<APIUserType> {
+    if (this.state.selectedUserIds.length > 0) {
+      return this.state.users.filter(user => this.state.selectedUserIds.includes(user.id));
+    } else return [];
+  }
+
   render() {
     const hasRowsSelected = this.state.selectedUserIds.length > 0;
     const rowSelection = {
@@ -149,15 +267,17 @@ class UserListView extends React.PureComponent<Props, State> {
       getCheckboxProps: user => ({
         disabled: !user.isActive,
       }),
+      selectedRowKeys: this.state.selectedUserIds,
     };
 
     const activationFilterWarning = this.state.activationFilter.includes("true") ? (
       <Tag closable onClose={this.handleDismissActivationFilter} color="blue">
-        Show Active User Only
+        Show Active Users Only
       </Tag>
     ) : null;
 
     const marginRight = { marginRight: 20 };
+    const noOtherUsers = this.state.users.length < 2;
 
     return (
       <div className="container test-UserListView">
@@ -175,7 +295,9 @@ class UserListView extends React.PureComponent<Props, State> {
           Edit Teams
         </Button>
         <Button
-          onClick={() => this.setState({ isExperienceModalVisible: true })}
+          onClick={() => {
+            this.setState({ isExperienceModalVisible: true });
+          }}
           icon="trophy"
           disabled={!hasRowsSelected}
           style={marginRight}
@@ -200,6 +322,17 @@ class UserListView extends React.PureComponent<Props, State> {
             Grant Admin Rights
           </Button>
         ) : null}
+        <InviteUsersPopover
+          organizationName={this.props.activeUser.organization}
+          visible={this.state.isInvitePopoverVisible}
+          handleVisibleChange={visible => {
+            this.setState({ isInvitePopoverVisible: visible });
+          }}
+        >
+          <Button icon="user-add" style={marginRight}>
+            Invite Users
+          </Button>
+        </InviteUsersPopover>
         {activationFilterWarning}
         <Search
           style={{ width: 200, float: "right" }}
@@ -208,11 +341,14 @@ class UserListView extends React.PureComponent<Props, State> {
           value={this.state.searchQuery}
         />
 
+        {noOtherUsers ? this.renderPlaceholder() : null}
+        {this.renderNewUsersAlert()}
+
         <Spin size="large" spinning={this.state.isLoading}>
           <Table
-            dataSource={Utils.filterWithSearchQueryOR(
+            dataSource={Utils.filterWithSearchQueryAND(
               this.state.users,
-              ["firstName", "lastName", "email", "teams", "experiences"],
+              ["firstName", "lastName", "email", "teams", user => Object.keys(user.experiences)],
               this.state.searchQuery,
             )}
             rowKey="id"
@@ -232,30 +368,74 @@ class UserListView extends React.PureComponent<Props, State> {
               dataIndex="lastName"
               key="lastName"
               width={130}
-              sorter={Utils.localeCompareBy("lastName")}
+              sorter={Utils.localeCompareBy(typeHint, user => user.lastName)}
             />
             <Column
               title="First Name"
               dataIndex="firstName"
               key="firstName"
               width={130}
-              sorter={Utils.localeCompareBy("firstName")}
+              sorter={Utils.localeCompareBy(typeHint, user => user.firstName)}
             />
             <Column
               title="Email"
               dataIndex="email"
               key="email"
-              sorter={Utils.localeCompareBy("email")}
+              width={300}
+              sorter={Utils.localeCompareBy(typeHint, user => user.email)}
+              render={(__, user: APIUserType) =>
+                this.props.activeUser.isAdmin ? (
+                  <EditableTextLabel
+                    value={user.email}
+                    label="Email"
+                    rules={{
+                      message: messages["auth.registration_email_invalid"],
+                      type: "email",
+                    }}
+                    onChange={newEmail => {
+                      if (newEmail !== user.email) {
+                        Modal.confirm({
+                          title: messages["users.change_email_title"],
+                          content: messages["users.change_email"]({
+                            newEmail,
+                          }),
+                          onOk: () => this.changeEmail(user, newEmail),
+                        });
+                      }
+                    }}
+                  />
+                ) : (
+                  user.email
+                )
+              }
             />
             <Column
               title="Experiences"
               dataIndex="experiences"
               key="experiences"
-              width={300}
+              width={250}
               render={(experiences: ExperienceMapType, user: APIUserType) =>
                 _.map(experiences, (value, domain) => (
                   <Tag key={`experience_${user.id}_${domain}`}>
-                    {domain} : {value}
+                    <span
+                      onClick={() => {
+                        this.setState({
+                          singleSelectedUser: user,
+                          isExperienceModalVisible: true,
+                          domainToEdit: domain,
+                        });
+                      }}
+                    >
+                      {domain} : {value}
+                    </span>
+                    <Icon
+                      type="copy"
+                      style={{ margin: "0 0 0 5px" }}
+                      onClick={async () => {
+                        await Clipboard.copy(domain);
+                        Toast.success(`"${domain}" copied to clipboard`);
+                      }}
+                    />
                   </Tag>
                 ))
               }
@@ -264,7 +444,7 @@ class UserListView extends React.PureComponent<Props, State> {
               title="Teams - Role"
               dataIndex="teams"
               key="teams_"
-              width={300}
+              width={250}
               render={(teams: Array<APITeamMembershipType>, user: APIUserType) => {
                 if (user.isAdmin) {
                   return (
@@ -276,10 +456,7 @@ class UserListView extends React.PureComponent<Props, State> {
                   return teams.map(team => {
                     const roleName = team.isTeamManager ? "Team Manager" : "User";
                     return (
-                      <Tag
-                        key={`team_role_${user.id}_${team.id}`}
-                        color={TemplateHelpers.stringToColor(roleName)}
-                      >
+                      <Tag key={`team_role_${user.id}_${team.id}`} color={stringToColor(roleName)}>
                         {team.name}: {roleName}
                       </Tag>
                     );
@@ -315,29 +492,41 @@ class UserListView extends React.PureComponent<Props, State> {
                   </Link>
                   <br />
                   {// eslint-disable-next-line no-nested-ternary
-                  this.props.activeUser.isAdmin ? (
-                    user.isActive ? (
+                  user.isActive ? (
+                    this.props.activeUser.isAdmin ? (
                       <a href="#" onClick={() => this.deactivateUser(user)}>
                         <Icon type="user-delete" />Deactivate User
                       </a>
-                    ) : (
-                      <a href="#" onClick={() => this.activateUser(user)}>
-                        <Icon type="user-add" />Activate User
-                      </a>
-                    )
-                  ) : null}
+                    ) : null
+                  ) : (
+                    <a href="#" onClick={() => this.activateUser(user)}>
+                      <Icon type="user-add" />Activate User
+                    </a>
+                  )}
                 </span>
               )}
             />
           </Table>
         </Spin>
-        <ExperienceModalView
-          visible={this.state.isExperienceModalVisible}
-          selectedUserIds={this.state.selectedUserIds}
-          users={this.state.users}
-          onChange={this.handleUsersChange}
-          onCancel={() => this.setState({ isExperienceModalVisible: false })}
-        />
+        {this.state.isExperienceModalVisible ? (
+          <ExperienceModalView
+            visible={this.state.isExperienceModalVisible}
+            selectedUsers={
+              this.state.singleSelectedUser
+                ? [this.state.singleSelectedUser]
+                : this.getAllSelectedUsers()
+            }
+            initialDomainToEdit={this.state.domainToEdit}
+            onChange={this.closeExperienceModal}
+            onCancel={() =>
+              this.setState({
+                isExperienceModalVisible: false,
+                singleSelectedUser: null,
+                domainToEdit: null,
+              })
+            }
+          />
+        ) : null}
         <TeamRoleModalView
           visible={this.state.isTeamRoleModalVisible}
           selectedUserIds={this.state.selectedUserIds}
@@ -351,7 +540,7 @@ class UserListView extends React.PureComponent<Props, State> {
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
-  activeUser: getActiveUser(state.activeUser),
+  activeUser: enforceActiveUser(state.activeUser),
 });
 
 export default connect(mapStateToProps)(withRouter(UserListView));

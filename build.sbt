@@ -2,19 +2,23 @@ import play.routes.compiler.InjectedRoutesGenerator
 import play.sbt.routes.RoutesKeys.routesGenerator
 import sbt._
 
-val wkVersion = scala.io.Source.fromFile("version").mkString.trim
-
-name := "oxalis"
-
-version := wkVersion
+name := "webknossos"
 
 scalaVersion in ThisBuild := "2.11.8"
 
+version := "wk"
+
+scalacOptions in ThisBuild ++= Seq(
+  "-target:jvm-1.8",
+  "-feature",
+  "-deprecation",
+  "-language:implicitConversions",
+  "-language:postfixOps"
+)
 
 lazy val webknossosSettings = Seq(
   TwirlKeys.templateImports += "oxalis.view.helpers._",
   TwirlKeys.templateImports += "oxalis.view._",
-  scalacOptions += "-target:jvm-1.8",
   routesGenerator := InjectedRoutesGenerator,
   libraryDependencies ++= Dependencies.webknossosDependencies,
   resolvers ++= DependencyResolvers.dependencyResolvers,
@@ -34,7 +38,7 @@ lazy val webknossosDatastoreSettings = Seq(
   resolvers ++= DependencyResolvers.dependencyResolvers,
   routesGenerator := InjectedRoutesGenerator,
   name := "webknossos-datastore",
-  version := "wk-" + wkVersion
+  version := "wk"
 )
 
 

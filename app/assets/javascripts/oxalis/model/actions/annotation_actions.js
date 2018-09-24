@@ -1,5 +1,11 @@
 // @flow
 import type { BoundingBoxType } from "oxalis/constants";
+import type { APIAnnotationType } from "admin/api_flow_types";
+
+type InitializeAnnotationType = {
+  type: "INITIALIZE_ANNOTATION",
+  annotation: APIAnnotationType,
+};
 
 type SetAnnotationNameActionType = {
   type: "SET_ANNOTATION_NAME",
@@ -16,16 +22,30 @@ type SetAnnotationDescriptionActionType = {
   description: string,
 };
 
+type SetAnnotationAllowUpdateActionType = {
+  type: "SET_ANNOTATION_ALLOW_UPDATE",
+  allowUpdate: boolean,
+};
+
 type SetUserBoundingBoxType = {
   type: "SET_USER_BOUNDING_BOX",
   userBoundingBox: ?BoundingBoxType,
 };
 
 export type AnnotationActionTypes =
+  | InitializeAnnotationType
   | SetAnnotationNameActionType
   | SetAnnotationPubliceActionType
   | SetAnnotationDescriptionActionType
+  | SetAnnotationAllowUpdateActionType
   | SetUserBoundingBoxType;
+
+export const initializeAnnotationAction = (
+  annotation: APIAnnotationType,
+): InitializeAnnotationType => ({
+  type: "INITIALIZE_ANNOTATION",
+  annotation,
+});
 
 export const setAnnotationNameAction = (name: string): SetAnnotationNameActionType => ({
   type: "SET_ANNOTATION_NAME",
@@ -42,6 +62,13 @@ export const setAnnotationDescriptionAction = (
 ): SetAnnotationDescriptionActionType => ({
   type: "SET_ANNOTATION_DESCRIPTION",
   description,
+});
+
+export const setAnnotationAllowUpdateAction = (
+  allowUpdate: boolean,
+): SetAnnotationAllowUpdateActionType => ({
+  type: "SET_ANNOTATION_ALLOW_UPDATE",
+  allowUpdate,
 });
 
 // Strictly speaking this is no annotation action but a tracing action, as the boundingBox is saved with

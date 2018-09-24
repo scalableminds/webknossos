@@ -1,3 +1,4 @@
+pg/
 seleniumLogs/
 npm-debug.log
 yarn-error.log
@@ -60,4 +61,12 @@ dev-db/
 docker-compose.override.yml
 app/assets/javascripts/test/snapshots/debug-htmls/*
 !app/assets/javascripts/test/snapshots/debug-htmls/.gitkeep
+app/assets/javascripts/test/snapshots/flow-check/*
+!app/assets/javascripts/test/snapshots/flow-check/.gitkeep
 .eslintcache
+*.sublime-project
+*.sublime-workspace
+**/screenshots/*.diff.png
+**/screenshots/*.new.png
+.nyc_output
+coverage

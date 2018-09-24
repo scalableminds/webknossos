@@ -1,44 +1,44 @@
 package models.annotation.handler
 
-import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.TextUtils._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.{Annotation, AnnotationDAO, AnnotationRestrictions}
-import models.user.User
-import play.api.libs.concurrent.Execution.Implicits._
+import javax.inject.Inject
+import models.annotation._
+import models.binary.DataSetDAO
+import models.user.{User, UserService}
+import utils.ObjectId
 
-import scala.concurrent.Future
+import scala.concurrent.ExecutionContext
 
-object SavedTracingInformationHandler extends AnnotationInformationHandler with FoxImplicits {
+class SavedTracingInformationHandler @Inject()(annotationDAO: AnnotationDAO,
+                                               dataSetDAO: DataSetDAO,
+                                               annotationRestrictionDefults: AnnotationRestrictionDefults,
+                                               userService: UserService)
+                                              (implicit val ec: ExecutionContext)
+  extends AnnotationInformationHandler with FoxImplicits {
 
   override val cache = false
 
-  override def nameForAnnotation(a: Annotation)(implicit ctx: DBAccessContext): Future[String] = a match {
-    case annotation: Annotation =>
-      for {
-        userName <- annotation.user.toFox.map(_.abreviatedName).getOrElse("")
-        task <- annotation.task.map(_.id).getOrElse("explorational")
-      } yield {
-        val id = oxalis.view.helpers.formatHash(annotation.id)
-        normalize(s"${annotation.dataSetName}__${task}__${userName}__${id}")
-      }
-    case a =>
-      Future.successful(a.id)
-  }
-
-  def provideAnnotation(annotationId: String, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] = {
+  override def nameForAnnotation(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[String] =
     for {
-      annotation <- AnnotationDAO.findOneById(annotationId) ?~> "annotation.notFound"
+      userBox <- userService.findOneById(annotation._user, useCache = true)(GlobalAccessContext).futureBox
+      userName <- userBox.map(_.abreviatedName).getOrElse("")
+      dataSetName <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext).map(_.name)
+      task = annotation._task.map(_.toString).getOrElse("explorational")
     } yield {
-      annotation
+      val id = oxalis.view.helpers.formatHash(annotation.id)
+      normalize(s"${dataSetName}__${task}__${userName}__${id}")
     }
-  }
 
-  def restrictionsFor(identifier: String)(implicit ctx: DBAccessContext) = {
+  def provideAnnotation(annotationId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
+    annotationDAO.findOne(annotationId) ?~> "annotation.notFound"
+
+  def restrictionsFor(identifier: ObjectId)(implicit ctx: DBAccessContext) = {
     for {
       annotation <- provideAnnotation(identifier, None)
     } yield {
-      AnnotationRestrictions.defaultAnnotationRestrictions(annotation)
+      annotationRestrictionDefults.defaultAnnotationRestrictions(annotation)
     }
   }
 

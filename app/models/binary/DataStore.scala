@@ -1,46 +1,64 @@
-/*
- * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package models.binary
 
-import java.util.UUID
-
-import com.scalableminds.util.reactivemongo.DBAccessContext
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.schema.Tables.{Datastores, _}
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.functional.syntax._
-import play.api.libs.json.{Json, Writes, __}
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.schema.Tables._
+import javax.inject.Inject
+import play.api.i18n.{Messages, MessagesProvider}
+import play.api.libs.json.{JsObject, Json}
+import play.api.mvc.{Request, Result, Results, WrappedRequest}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.SQLDAO
+import utils.{SQLClient, SQLDAO}
+
+import scala.concurrent.{ExecutionContext, Future}
 
 
-case class DataStoreSQL(
+case class DataStore(
                        name: String,
                        url: String,
-                       typ: DataStoreType,
                        key: String,
-                       isDeleted: Boolean = false
-                       )
+                       isDeleted: Boolean = false,
+                       isForeign: Boolean = false
+                       ) {
+}
 
+class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext) extends FoxImplicits with Results {
 
-object DataStoreSQLDAO extends SQLDAO[DataStoreSQL, DatastoresRow, Datastores] {
+  def publicWrites(dataStore: DataStore): Fox[JsObject] = {
+    Fox.successful(Json.obj(
+      "name" -> dataStore.name,
+      "url" -> dataStore.url,
+      "isForeign" -> dataStore.isForeign
+    ))
+  }
+
+  def validateAccess[A](name: String)(block: (DataStore) => Future[Result])
+                       (implicit request: Request[A], m: MessagesProvider): Fox[Result] = {
+    request.getQueryString("key")
+      .toFox
+      .flatMap(key => dataStoreDAO.findOneByKey(key)(GlobalAccessContext)) // Check if key is valid
+      .flatMap(dataStore => block(dataStore)) // Run underlying action
+      .getOrElse(Forbidden(Messages("dataStore.notFound"))) // Default error
+    }
+}
+
+class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SQLDAO[DataStore, DatastoresRow, Datastores](sqlClient) {
   val collection = Datastores
 
   def idColumn(x: Datastores): Rep[String] = x.name
   def isDeletedColumn(x: Datastores): Rep[Boolean] = x.isdeleted
 
-  def parse(r: DatastoresRow): Fox[DataStoreSQL] =
-    Fox.successful(DataStoreSQL(
+  def parse(r: DatastoresRow): Fox[DataStore] =
+    Fox.successful(DataStore(
       r.name,
       r.url,
-      DataStoreType.stringToType(r.typ),
       r.key,
-      r.isdeleted
+      r.isdeleted,
+      r.isforeign
     ))
 
-  def findOneByKey(key: String)(implicit ctx: DBAccessContext): Fox[DataStoreSQL] =
+  def findOneByKey(key: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
     for {
       rOpt <- run(Datastores.filter(r => notdel(r) && r.key === key).result.headOption)
       r <- rOpt.toFox
@@ -49,7 +67,7 @@ object DataStoreSQLDAO extends SQLDAO[DataStoreSQL, DatastoresRow, Datastores] {
       parsed
     }
 
-  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataStoreSQL] =
+  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
     for {
       rOpt <- run(Datastores.filter(r => notdel(r) && r.name === name).result.headOption)
       r <- rOpt.toFox
@@ -63,84 +81,11 @@ object DataStoreSQLDAO extends SQLDAO[DataStoreSQL, DatastoresRow, Datastores] {
     for {_ <- run(q.update(url))} yield ()
   }
 
-  def insertOne(d: DataStoreSQL): Fox[Unit] = {
+  def insertOne(d: DataStore): Fox[Unit] = {
     for {
-      _ <- run(sqlu"""insert into webknossos.dataStores(name, url, key, typ, isDeleted)
-                         values(${d.name}, ${d.url}, ${d.key}, '#${d.typ.name}', ${d.isDeleted})""")
+      _ <- run(sqlu"""insert into webknossos.dataStores(name, url, key, isDeleted, isForeign)
+                         values(${d.name}, ${d.url}, ${d.key}, ${d.isDeleted}, ${d.isForeign})""")
     } yield ()
   }
-
-}
-
-object DataStoreSQL {
-  def fromDataStore(d: DataStore) =
-    Fox.successful(DataStoreSQL(d.name, d.url, d.typ, d.key, false))
-}
-
-
-
-case class DataStore(
-  name: String,
-  url: String,
-  typ: DataStoreType,
-  key: String = UUID.randomUUID().toString)
-
-case class DataStoreInfo(
-  name: String,
-  url: String,
-  typ: DataStoreType,
-  accessToken: Option[String] = None)
-
-object DataStoreInfo {
-  implicit val dataStoreInfoFormat = Json.format[DataStoreInfo]
-}
-
-object DataStore {
-  private[binary] val dataStoreFormat = Json.format[DataStore]
-
-  def dataStorePublicWrites: Writes[DataStore] =
-    ((__ \ "name").write[String] and
-      (__ \ "url").write[String] and
-      (__ \ "typ").write[DataStoreType]) (ds =>
-      (ds.name, ds.url, ds.typ))
-
-  def fromDataStoreSQL(s: DataStoreSQL): Fox[DataStore] = {
-    Fox.successful(DataStore(
-      s.name,
-      s.url,
-      s.typ,
-      s.key
-    ))
-  }
-}
-
-object DataStoreDAO {
-
-  def findOneByKey(key: String)(implicit ctx: DBAccessContext) =
-    for {
-      dataStoreSQL <- DataStoreSQLDAO.findOneByKey(key)
-      dataStore <- DataStore.fromDataStoreSQL(dataStoreSQL)
-    } yield dataStore
-
-  def findOneByName(name: String)(implicit ctx: DBAccessContext) =
-    for {
-      dataStoreSQL <- DataStoreSQLDAO.findOneByName(name)
-      dataStore <- DataStore.fromDataStoreSQL(dataStoreSQL)
-    } yield dataStore
-
-  def findAll(implicit ctx: DBAccessContext): Fox[List[DataStore]] =
-    for {
-      dataStoresSQL <- DataStoreSQLDAO.findAll
-      dataStores <- Fox.combined(dataStoresSQL.map(DataStore.fromDataStoreSQL(_)))
-    } yield dataStores
-
-  def updateUrl(name: String, url: String)(implicit ctx: DBAccessContext) =
-    DataStoreSQLDAO.updateUrlByName(name, url)
-
-  def insert(dataStore: DataStore)(implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      dataStoreSQL <- DataStoreSQL.fromDataStore(dataStore)
-      _ <- DataStoreSQLDAO.insertOne(dataStoreSQL)
-    } yield ()
 
 }

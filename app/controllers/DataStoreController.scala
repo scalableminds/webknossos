@@ -1,22 +1,29 @@
 package controllers
 
+import com.scalableminds.util.accesscontext.DBAccessContext
 import javax.inject.Inject
-
-import com.scalableminds.util.tools.FoxImplicits
-import models.binary.{DataStore, DataStoreDAO}
-import oxalis.security.WebknossosSilhouette.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import models.binary.{DataStore, DataStoreDAO, DataStoreService}
+import oxalis.security.WkEnv
+import com.mohiva.play.silhouette.api.Silhouette
+import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.Writes
-/**
-  * Created by tmbo on 29.11.16.
-  */
-class DataStoreController @Inject()(val messagesApi: MessagesApi) extends Controller with FoxImplicits {
-  def list = UserAwareAction.async { implicit request =>
+import play.api.libs.json.{Json, Writes}
+
+import scala.concurrent.ExecutionContext
+
+class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
+                                    dataStoreService: DataStoreService,
+                                    sil: Silhouette[WkEnv])
+                                   (implicit ec: ExecutionContext)
+  extends Controller with FoxImplicits {
+
+  def list = sil.UserAwareAction.async { implicit request =>
     for {
-      dataStores <- DataStoreDAO.findAll ?~> Messages("dataStore.list.failed")
+      dataStores <- dataStoreDAO.findAll ?~> "dataStore.list.failed"
+      js <- Fox.serialCombined(dataStores)(d => dataStoreService.publicWrites(d))
     } yield {
-      Ok(Writes.list(DataStore.dataStorePublicWrites).writes(dataStores))
+      Ok(Json.toJson(js))
     }
   }
 }

@@ -5,21 +5,30 @@
 
 import _ from "lodash";
 import Toast from "libs/toast";
-import Utils from "libs/utils";
+import { pingDataStoreIfAppropriate, pingMentionedDataStores } from "admin/datastore_health_check";
+import { createWorker } from "oxalis/workers/comlink_wrapper";
+import handleStatus from "libs/handle_http_status";
+import FetchBufferWorker from "oxalis/workers/fetch_buffer.worker";
+import FetchBufferWithHeadersWorker from "oxalis/workers/fetch_buffer_with_headers.worker";
+import CompressWorker from "oxalis/workers/compress.worker";
+
+const fetchBufferViaWorker = createWorker(FetchBufferWorker);
+const fetchBufferWithHeaders = createWorker(FetchBufferWithHeadersWorker);
+const compress = createWorker(CompressWorker);
 
 type methodType = "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH";
 
-type RequestOptions = {
+export type RequestOptions = {
   headers?: { [key: string]: string },
   method?: methodType,
   timeout?: number,
+  compress?: boolean,
+  useWebworkerForArrayBuffer?: boolean,
+  extractHeaders?: boolean,
 };
 
-export type RequestOptionsWithData<T> = {
+export type RequestOptionsWithData<T> = RequestOptions & {
   data: T,
-  headers?: { [key: string]: string },
-  method?: methodType,
-  timeout?: number,
 };
 
 class Request {
@@ -31,6 +40,7 @@ class Request {
       _.defaultsDeep(options, { headers: { Accept: "application/json" } }),
       this.handleEmptyJsonResponse,
     );
+
   prepareJSON = async (
     url: string,
     options: RequestOptionsWithData<any>,
@@ -47,7 +57,7 @@ class Request {
     let body = _.isString(options.data) ? options.data : JSON.stringify(options.data);
 
     if (options.compress) {
-      body = await Utils.compress(body);
+      body = await compress(body);
       if (options.headers == null) {
         options.headers = {
           "Content-Encoding": "gzip",
@@ -106,6 +116,8 @@ class Request {
           formData.append(`${formKey}[]`, value, value.name);
         } else if (typeof value === "string" || value === null) {
           formData.append(formKey, value);
+        } else if (typeof value === "number" || typeof value === "boolean") {
+          formData.append(formKey, `${value}`);
         } else {
           // nested object
           toFormData(value, formData, key);
@@ -142,11 +154,16 @@ class Request {
       }),
     );
 
-  receiveArraybuffer = (url: string, options: RequestOptions = {}): Promise<ArrayBuffer> =>
+  receiveArraybuffer = (url: string, options: RequestOptions = {}): Promise<*> =>
     this.triggerRequest(
       url,
-      _.defaultsDeep(options, { headers: { Accept: "application/octet-stream" } }),
-      response => response.arrayBuffer(),
+      _.defaultsDeep(options, {
+        headers: {
+          Accept: "application/octet-stream",
+          "Access-Control-Request-Headers": "content-type, missing-buckets",
+        },
+        useWebworkerForArrayBuffer: true,
+      }),
     );
 
   // IN:  JSON
@@ -155,6 +172,15 @@ class Request {
     url: string,
     options: RequestOptionsWithData<any>,
   ): Promise<ArrayBuffer> => this.receiveArraybuffer(url, await this.prepareJSON(url, options));
+
+  sendJSONReceiveArraybufferWithHeaders = async (
+    url: string,
+    options: RequestOptionsWithData<any>,
+  ): Promise<{ buffer: ArrayBuffer, headers: Object }> =>
+    this.receiveArraybuffer(url, {
+      ...(await this.prepareJSON(url, options)),
+      extractHeaders: true,
+    });
 
   // TODO: babel doesn't support generic arrow-functions yet
   triggerRequest<T>(
@@ -199,13 +225,20 @@ class Request {
     }
     options.headers = headers;
 
-    let fetchPromise = fetch(url, options).then(this.handleStatus);
-    if (responseDataHandler != null) {
-      fetchPromise = fetchPromise.then(responseDataHandler);
+    let fetchPromise;
+    if (options.useWebworkerForArrayBuffer) {
+      fetchPromise = options.extractHeaders
+        ? fetchBufferWithHeaders(url, options)
+        : fetchBufferViaWorker(url, options);
+    } else {
+      fetchPromise = fetch(url, options).then(handleStatus);
+      if (responseDataHandler != null) {
+        fetchPromise = fetchPromise.then(responseDataHandler);
+      }
     }
 
     if (!options.doNotCatch) {
-      fetchPromise = fetchPromise.catch(this.handleError);
+      fetchPromise = fetchPromise.catch(this.handleError.bind(this, url));
     }
 
     if (options.timeout != null) {
@@ -226,14 +259,10 @@ class Request {
       setTimeout(() => resolve("timeout"), timeout);
     });
 
-  handleStatus = (response: Response): Promise<Response> => {
-    if (response.status >= 200 && response.status < 400) {
-      return Promise.resolve(response);
-    }
-    return Promise.reject(response);
-  };
-
-  handleError = (error: Response | Error): Promise<void> => {
+  handleError = (requestedUrl: string, error: Response | Error): Promise<void> => {
+    // Check whether this request failed due to a problematic
+    // datastore
+    pingDataStoreIfAppropriate(requestedUrl);
     if (error instanceof Response) {
       return error.text().then(
         text => {
@@ -241,11 +270,16 @@ class Request {
             const json = JSON.parse(text);
 
             // Propagate HTTP status code for further processing down the road
-            if (error.status) {
+            if (error.status != null) {
               json.status = error.status;
             }
 
             Toast.messages(json.messages);
+
+            // Check whether the error chain mentions an url which belongs
+            // to a datastore. Then, ping the datastore
+            pingMentionedDataStores(text);
+
             return Promise.reject(json);
           } catch (jsonError) {
             Toast.error(text);

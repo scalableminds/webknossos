@@ -1,25 +1,20 @@
 // @flow
 import React, { PureComponent } from "react";
 import { connect } from "react-redux";
-import { withRouter } from "react-router-dom";
 import Toast from "libs/toast";
 import Request from "libs/request";
-import { Modal, Button, Upload, Select, Form, Spin } from "antd";
+import { Icon, Alert, Modal, Button, Select, Form, Spin, Checkbox, Tooltip } from "antd";
 import messages from "messages";
 import InputComponent from "oxalis/view/components/input_component";
 import api from "oxalis/api/internal_api";
-import type { OxalisState } from "oxalis/store";
-import type { RouterHistory } from "react-router-dom";
-
-type AnnotationInfoType = {
-  typ: string,
-  id: string,
-};
-
-type TaskTypeInfoType = {
-  id: string,
-  label: string,
-};
+import type { OxalisState, TreeMapType, TreeGroupType } from "oxalis/store";
+import { getAnnotationInformation, getTracingForAnnotationType } from "admin/admin_rest_api";
+import { addTreesAndGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
+import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import * as Utils from "libs/utils";
+import type { APIAnnotationType } from "admin/api_flow_types";
+import Store from "oxalis/store";
+import { location } from "libs/window";
 
 type ProjectInfoType = {
   id: string,
@@ -30,50 +25,67 @@ type StateProps = {
   annotationId: string,
   tracingType: string,
 };
+
 type Props = {
   isVisible: boolean,
   onOk: () => void,
-  history: RouterHistory,
+  addTreesAndGroupsAction: (TreeMapType, Array<TreeGroupType>) => void,
 } & StateProps;
 
 type MergeModalViewState = {
-  taskTypes: Array<TaskTypeInfoType>,
   projects: Array<ProjectInfoType>,
-  selectedTaskType: ?string,
   selectedProject: ?string,
   selectedExplorativeAnnotation: string,
-  selectedNML: ?AnnotationInfoType,
   isUploading: boolean,
 };
 
-type UploadInfoType<T> = {
-  file:
-    | {
-        status: "uploading",
-      }
-    | {
-        status: "done" | "error",
-        response: T,
-      },
+type ButtonWithCheckboxProps = {
+  checkboxContent: React$Element<*>,
+  button: React$Element<*>,
+  onButtonClick: (SyntheticInputEvent<>, boolean) => Promise<void> | void,
 };
 
+type ButtonWithCheckboxState = {
+  isChecked: boolean,
+};
+
+class ButtonWithCheckbox extends PureComponent<ButtonWithCheckboxProps, ButtonWithCheckboxState> {
+  state = {
+    isChecked: true,
+  };
+  render() {
+    return (
+      <React.Fragment>
+        <Form.Item>
+          <Checkbox
+            onChange={event => this.setState({ isChecked: event.target.checked })}
+            checked={this.state.isChecked}
+          >
+            {this.props.checkboxContent}
+          </Checkbox>
+        </Form.Item>
+        <Form.Item>
+          {React.cloneElement(this.props.button, {
+            onClick: evt => this.props.onButtonClick(evt, this.state.isChecked),
+          })}
+        </Form.Item>
+      </React.Fragment>
+    );
+  }
+}
+
 class MergeModalView extends PureComponent<Props, MergeModalViewState> {
-  state: MergeModalViewState = {
-    taskTypes: [],
+  state = {
     projects: [],
-    selectedTaskType: null,
     selectedProject: null,
     selectedExplorativeAnnotation: "",
-    selectedNML: null,
     isUploading: false,
   };
 
   componentWillMount() {
     (async () => {
-      const taskTypes = await Request.receiveJSON("/api/taskTypes", { doNotCatch: true });
       const projects = await Request.receiveJSON("/api/projects", { doNotCatch: true });
       this.setState({
-        taskTypes: taskTypes.map(taskType => ({ id: taskType.id, label: taskType.summary })),
         projects: projects.map(project => ({ id: project.id, label: project.name })),
       });
     })();
@@ -82,14 +94,11 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
   async merge(url: string) {
     await api.tracing.save();
     const annotation = await Request.receiveJSON(url);
-    Toast.success(messages["tracing.merged"]);
+    Toast.success(messages["tracing.merged_with_redirect"]);
     const redirectUrl = `/annotations/${annotation.typ}/${annotation.id}`;
-    this.props.history.push(redirectUrl);
+    await Utils.sleep(1500);
+    location.href = redirectUrl;
   }
-
-  handleChangeMergeTaskType = (taskType: string) => {
-    this.setState({ selectedTaskType: taskType });
-  };
 
   handleChangeMergeProject = (project: string) => {
     this.setState({ selectedProject: project });
@@ -99,98 +108,96 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     this.setState({ selectedExplorativeAnnotation: event.target.value });
   };
 
-  handleChangeNML = (
-    info: UploadInfoType<{ annotation: AnnotationInfoType, messages: Array<any> }>,
-  ) => {
-    if (info.file.status === "done") {
-      const { annotation } = info.file.response;
-      Toast.messages(info.file.response.messages);
-      this.setState({ isUploading: false });
-      const url =
-        `/api/annotations/${annotation.typ}/${annotation.id}/merge/` +
-        `${this.props.tracingType}/${this.props.annotationId}`;
-      this.merge(url);
-    } else if (info.file.status === "error") {
-      Toast.messages(info.file.response.messages);
-      this.setState({ isUploading: false });
-    }
-  };
-
   handleBeforeUploadNML = () => {
     this.setState({ isUploading: true });
   };
 
-  handleMergeTaskType = (event: SyntheticInputEvent<>) => {
-    event.preventDefault();
-    const { selectedTaskType } = this.state;
-    if (selectedTaskType != null) {
-      const url =
-        `/api/annotations/CompoundTaskType/${selectedTaskType}/` +
-        `merge/${this.props.tracingType}/${this.props.annotationId}`;
-      this.merge(url);
-    }
-  };
-
-  handleMergeProject = (event: SyntheticInputEvent<>) => {
+  handleMergeProject = async (event: SyntheticInputEvent<>, isLocalMerge: boolean) => {
     event.preventDefault();
     const { selectedProject } = this.state;
     if (selectedProject != null) {
-      const url =
-        `/api/annotations/CompoundProject/${selectedProject}/merge/` +
-        `${this.props.tracingType}/${this.props.annotationId}`;
-      this.merge(url);
+      if (isLocalMerge) {
+        const annotation = await getAnnotationInformation(selectedProject, "CompoundProject");
+        this.mergeAnnotationIntoActiveTracing(annotation);
+      } else {
+        const url =
+          `/api/annotations/CompoundProject/${selectedProject}/merge/` +
+          `${this.props.tracingType}/${this.props.annotationId}`;
+        this.merge(url);
+      }
     }
   };
 
-  handleMergeExplorativeAnnotation = async (event: SyntheticInputEvent<>) => {
+  handleMergeExplorativeAnnotation = async (
+    event: SyntheticInputEvent<>,
+    isLocalMerge: boolean,
+  ) => {
     event.preventDefault();
     const { selectedExplorativeAnnotation } = this.state;
 
     if (selectedExplorativeAnnotation != null) {
-      const url =
-        `/api/annotations/Explorational/${selectedExplorativeAnnotation}/merge/` +
-        `${this.props.tracingType}/${this.props.annotationId}`;
-      this.merge(url);
+      if (isLocalMerge) {
+        const annotation = await getAnnotationInformation(
+          selectedExplorativeAnnotation,
+          "Explorational",
+        );
+        this.mergeAnnotationIntoActiveTracing(annotation);
+      } else {
+        const url =
+          `/api/annotations/Explorational/${selectedExplorativeAnnotation}/merge/` +
+          `${this.props.tracingType}/${this.props.annotationId}`;
+        this.merge(url);
+      }
     }
   };
 
+  async mergeAnnotationIntoActiveTracing(annotation: APIAnnotationType): Promise<void> {
+    if (annotation.dataSetName !== Store.getState().dataset.name) {
+      Toast.error(messages["merge.different_dataset"]);
+      return;
+    }
+    const tracing = await getTracingForAnnotationType(annotation, "skeleton");
+    if (!tracing || !tracing.trees) {
+      Toast.error(messages["merge.volume_unsupported"]);
+      return;
+    }
+    const { trees, treeGroups } = tracing;
+    this.setState({ isUploading: true });
+    // Wait for an animation frame so that the loading animation is kicked off
+    await Utils.animationFrame();
+    this.props.addTreesAndGroupsAction(createTreeMapFromTreeArray(trees), treeGroups || []);
+    this.setState({ isUploading: false });
+    Toast.success(messages["tracing.merged"]);
+    this.props.onOk();
+  }
+
   render() {
+    const mergeIntoActiveTracingCheckbox = (
+      <React.Fragment>
+        Merge into active tracing{" "}
+        <Tooltip title="If this option is enabled, trees and tree groups will be imported directly into the currently opened tracing. If not, a new explorative annotation will be created in your account.">
+          <Icon type="info-circle-o" style={{ color: "gray" }} />
+        </Tooltip>
+      </React.Fragment>
+    );
+
     return (
       <Modal
         title="Merge"
         visible={this.props.isVisible}
-        onOk={this.props.onOk}
         onCancel={this.props.onOk}
         className="merge-modal"
+        width={800}
+        footer={null}
       >
         <Spin spinning={this.state.isUploading}>
-          <Form layout="inline" onSubmit={this.handleMergeTaskType}>
-            <Form.Item label="Task Type">
-              <Select
-                value={this.state.selectedTaskType}
-                style={{ width: 200 }}
-                onChange={this.handleChangeMergeTaskType}
-              >
-                {this.state.taskTypes.map(taskType => (
-                  <Select.Option key={taskType.id} value={taskType.id}>
-                    {taskType.label}
-                  </Select.Option>
-                ))}
-              </Select>
-            </Form.Item>
-            <Form.Item>
-              <Button
-                type="primary"
-                htmlType="submit"
-                size="default"
-                disabled={this.state.selectedTaskType == null}
-              >
-                Merge
-              </Button>
-            </Form.Item>
-          </Form>
+          <Alert
+            type="info"
+            style={{ marginBottom: 12 }}
+            message="If you would like to import NML files, please drag and drop them into the tracing view."
+          />
 
-          <Form layout="inline" onSubmit={this.handleMergeProject}>
+          <Form layout="inline">
             <Form.Item label="Project">
               <Select
                 value={this.state.selectedProject}
@@ -204,38 +211,19 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
                 ))}
               </Select>
             </Form.Item>
-            <Form.Item>
-              <Button
-                type="primary"
-                htmlType="submit"
-                size="default"
-                disabled={this.state.selectedProject == null}
-              >
-                Merge
-              </Button>
-            </Form.Item>
+
+            <ButtonWithCheckbox
+              checkboxContent={mergeIntoActiveTracingCheckbox}
+              button={
+                <Button type="primary" size="default" disabled={this.state.selectedProject == null}>
+                  Merge
+                </Button>
+              }
+              onButtonClick={this.handleMergeProject}
+            />
           </Form>
 
           <Form layout="inline">
-            <Form.Item label="NML">
-              <Upload
-                name="nmlFile"
-                action="/api/annotations/upload"
-                headers={{ authorization: "authorization-text" }}
-                beforeUpload={this.handleBeforeUploadNML}
-                onChange={this.handleChangeNML}
-                value={this.state.selectedNML}
-                accept=".nml"
-                showUploadList={false}
-              >
-                <Button icon="upload" style={{ width: 200 }}>
-                  Upload NML and merge
-                </Button>
-              </Upload>
-            </Form.Item>
-          </Form>
-
-          <Form layout="inline" onSubmit={this.handleMergeExplorativeAnnotation}>
             <Form.Item label="Explorative Annotation">
               <InputComponent
                 value={this.state.selectedExplorativeAnnotation}
@@ -243,19 +231,20 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
                 onChange={this.handleChangeMergeExplorativeAnnotation}
               />
             </Form.Item>
-            <Form.Item>
-              <Button
-                type="primary"
-                htmlType="submit"
-                size="default"
-                disabled={this.state.selectedExplorativeAnnotation.length !== 24}
-              >
-                Merge
-              </Button>
-            </Form.Item>
+            <ButtonWithCheckbox
+              checkboxContent={mergeIntoActiveTracingCheckbox}
+              button={
+                <Button
+                  type="primary"
+                  size="default"
+                  disabled={this.state.selectedExplorativeAnnotation.length !== 24}
+                >
+                  Merge
+                </Button>
+              }
+              onButtonClick={this.handleMergeExplorativeAnnotation}
+            />
           </Form>
-          <hr />
-          <p>The merged tracing will be saved as a new explorative tracing.</p>
         </Spin>
       </Modal>
     );
@@ -269,4 +258,13 @@ function mapStateToProps(state: OxalisState): StateProps {
   };
 }
 
-export default connect(mapStateToProps)(withRouter(MergeModalView));
+const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
+  addTreesAndGroupsAction(trees: TreeMapType, treeGroups: Array<TreeGroupType>) {
+    dispatch(addTreesAndGroupsAction(trees, treeGroups));
+  },
+});
+
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps,
+)(MergeModalView);

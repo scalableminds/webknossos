@@ -9,6 +9,7 @@ import type {
   DatasetConfigurationType,
   DatasetLayerConfigurationType,
   TemporaryConfigurationType,
+  MappingType,
 } from "oxalis/store";
 import type { APIDatasetType } from "admin/api_flow_types";
 import type { ModeType, ControlModeType } from "oxalis/constants";
@@ -47,6 +48,13 @@ type SetDatasetAction = { type: "SET_DATASET", dataset: APIDatasetType };
 type SetViewModeActionType = { type: "SET_VIEW_MODE", viewMode: ModeType };
 type SetFlightmodeRecordingActionType = { type: "SET_FLIGHTMODE_RECORDING", value: boolean };
 type SetControlModeActionType = { type: "SET_CONTROL_MODE", controlMode: ControlModeType };
+type SetMappingEnabledActionType = { type: "SET_MAPPING_ENABLED", isMappingEnabled: boolean };
+type SetMappingActionType = {
+  type: "SET_MAPPING",
+  mapping: ?MappingType,
+  mappingColors: ?Array<number>,
+  hideUnmappedIds: ?boolean,
+};
 export type SettingActionType =
   | UpdateUserSettingActionType
   | UpdateDatasetSettingActionType
@@ -57,7 +65,9 @@ export type SettingActionType =
   | SetDatasetAction
   | SetViewModeActionType
   | SetFlightmodeRecordingActionType
-  | SetControlModeActionType;
+  | SetControlModeActionType
+  | SetMappingEnabledActionType
+  | SetMappingActionType;
 
 export const updateUserSettingAction = (
   propertyName: $Keys<UserConfigurationType>,
@@ -131,4 +141,22 @@ export const setFlightmodeRecordingAction = (value: boolean): SetFlightmodeRecor
 export const setControlModeAction = (controlMode: ControlModeType): SetControlModeActionType => ({
   type: "SET_CONTROL_MODE",
   controlMode,
+});
+
+export const setMappingEnabledAction = (
+  isMappingEnabled: boolean,
+): SetMappingEnabledActionType => ({
+  type: "SET_MAPPING_ENABLED",
+  isMappingEnabled,
+});
+
+export const setMappingAction = (
+  mapping: ?MappingType,
+  mappingColors: ?Array<number>,
+  hideUnmappedIds: ?boolean,
+): SetMappingActionType => ({
+  type: "SET_MAPPING",
+  mapping,
+  mappingColors,
+  hideUnmappedIds,
 });

@@ -5,13 +5,14 @@
 
 import _ from "lodash";
 import Drawing from "libs/drawing";
-import Utils from "libs/utils";
 import Dimensions from "oxalis/model/dimensions";
 import { Vector3Indicies } from "oxalis/constants";
 import Store from "oxalis/store";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
+import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import type { OrthoViewType, Vector2, Vector3 } from "oxalis/constants";
+import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 
 export class VoxelIterator {
   hasNext: boolean = true;
@@ -99,12 +100,8 @@ class VolumeLayer {
   }
 
   getContourList() {
-    const volumeTracing = Store.getState().tracing;
-    if (volumeTracing.type !== "volume") {
-      throw new Error("getContourList must only be called in a volume tracing!");
-    } else {
-      return volumeTracing.contourList;
-    }
+    const volumeTracing = enforceVolumeTracing(Store.getState().tracing);
+    return volumeTracing.contourList;
   }
 
   finish(): void {
@@ -178,7 +175,7 @@ class VolumeLayer {
     const radius = Math.round(
       this.pixelsToVoxels(Store.getState().temporaryConfiguration.brushSize) / 2,
     );
-    const width = 2 * radius + 1;
+    const width = 2 * radius;
     const height = width;
 
     const map = new Array(width);
@@ -188,22 +185,22 @@ class VolumeLayer {
         map[x][y] = false;
       }
     }
-    const coord2d = this.get2DCoordinate(position);
-    const minCoord2d = [Math.floor(coord2d[0] - radius), Math.floor(coord2d[1] - radius)];
-
-    const setMap = function(x: number, y: number, value = true): void {
-      x = Math.floor(x);
-      y = Math.floor(y);
-      map[x - minCoord2d[0]][y - minCoord2d[1]] = value;
-    };
+    const floatingCoord2d = this.get2DCoordinate(position);
+    const coord2d = [Math.floor(floatingCoord2d[0]), Math.floor(floatingCoord2d[1])];
+    const minCoord2d = [coord2d[0] - radius, coord2d[1] - radius];
 
     // Use the baseVoxelFactors to scale the circle, otherwise it'll become an ellipse
-    const baseVoxelFactors = this.get2DCoordinate(
-      getBaseVoxelFactors(Store.getState().dataset.scale),
+    const [u, v] = this.get2DCoordinate(
+      getBaseVoxelFactors(Store.getState().dataset.dataSource.scale),
     );
-    Drawing.fillCircle(coord2d[0], coord2d[1], radius, baseVoxelFactors, (x, y) =>
-      setMap(x, y, true),
-    );
+
+    for (let x = 0; x < width; x++) {
+      for (let y = 0; y < width; y++) {
+        if (Math.sqrt(((x - radius) / u) ** 2 + ((y - radius) / v) ** 2) < radius) {
+          map[x][y] = true;
+        }
+      }
+    }
 
     const iterator = new VoxelIterator(
       map,
@@ -271,7 +268,7 @@ class VolumeLayer {
     let sumArea = 0;
     let sumCx = 0;
     let sumCy = 0;
-    for (const i of Utils.__range__(0, this.getContourList().length - 1, false)) {
+    for (let i = 0; i < this.getContourList().length - 1; i++) {
       const [x, y] = this.get2DCoordinate(this.getContourList()[i]);
       const [x1, y1] = this.get2DCoordinate(this.getContourList()[i + 1]);
       sumArea += x * y1 - x1 * y;
@@ -289,8 +286,8 @@ class VolumeLayer {
   pixelsToVoxels(pixels: number): number {
     const state = Store.getState();
     const zoomFactor = getPlaneScalingFactor(state.flycam);
-    const viewportScale = state.userConfiguration.scale;
-    return pixels / viewportScale * zoomFactor;
+    const viewportScale = getViewportScale(this.plane);
+    return (pixels / viewportScale) * zoomFactor;
   }
 }
 

@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
 package com.scalableminds.webknossos.datastore.models.datasource
 
 import com.scalableminds.util.geometry.BoundingBox
@@ -66,9 +63,11 @@ trait DataLayerLike {
 
   def resolutions: List[Point3D]
 
-  def lookUpResolution(resolutionExponent: Int): Point3D = {
+  def lookUpResolution(resolutionExponent: Int, snapToClosest: Boolean = false): Point3D = {
     val resPower = Math.pow(2, resolutionExponent).toInt
-    resolutions.find(resolution => resolution.maxDim == resPower).getOrElse(Point3D(resPower, resPower, resPower))
+    val matchOpt = resolutions.find(resolution => resolution.maxDim == resPower)
+    if (snapToClosest) matchOpt.getOrElse(resolutions.minBy(resolution => math.abs(resPower - resolution.maxDim)))
+    else matchOpt.getOrElse(Point3D(resPower, resPower, resPower))
   }
 
   def elementClass: ElementClass.Value

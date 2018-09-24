@@ -1,16 +1,21 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-/* eslint-disable import/first */
 // @flow
-import { tokenUserA, setCurrToken } from "../enzyme/e2e-setup";
 import test from "ava";
 import _ from "lodash";
-import * as api from "admin/admin_rest_api";
 import moment from "moment";
+import {
+  tokenUserA,
+  setCurrToken,
+  resetDatabase,
+  writeFlowCheckingFile,
+} from "test/enzyme/e2e-setup";
+import * as api from "admin/admin_rest_api";
 
 let activeUser;
 let firstTeam;
 
-test.before("Initialize values", async () => {
+test.before("Reset database and initialize values", async () => {
+  resetDatabase();
   setCurrToken(tokenUserA);
   activeUser = await api.getActiveUser();
 
@@ -21,8 +26,12 @@ test.before("Initialize values", async () => {
 test("getTimeTrackingForUserByMonth", async t => {
   const timeTrackingForUserByMonth = await api.getTimeTrackingForUserByMonth(
     activeUser.email,
-    moment("20180101", "YYYYMMDD"),
+    moment("20160401", "YYYYMMDD"),
   );
+  t.true(timeTrackingForUserByMonth.length > 0);
+  writeFlowCheckingFile(timeTrackingForUserByMonth, "time-tracking", "APITimeTrackingType", {
+    isArray: true,
+  });
   t.snapshot(timeTrackingForUserByMonth, { id: "timetracking-timeTrackingForUserByMonth" });
 });
 
@@ -30,17 +39,33 @@ test("getTimeTrackingForUser", async t => {
   const timeTrackingForUser = await api.getTimeTrackingForUser(
     activeUser.id,
     moment("20180101", "YYYYMMDD"),
-    moment("20180108", "YYYYMMDD"),
+    moment("20181001", "YYYYMMDD"),
   );
+  t.true(timeTrackingForUser.length > 0);
   t.snapshot(timeTrackingForUser, { id: "timetracking-timeTrackingForUser" });
+});
+
+test("getTimeTrackingForUser for a user other than the active user", async t => {
+  const idUserC = "770b9f4d2a7c0e4d008da6ef";
+  const timeTrackingForUser = await api.getTimeTrackingForUser(
+    idUserC,
+    moment("20160401", "YYYYMMDD"),
+    moment("20160420", "YYYYMMDD"),
+  );
+  t.true(timeTrackingForUser.length > 0);
+  t.snapshot(timeTrackingForUser, { id: "timetracking-timeTrackingForUser-C" });
 });
 
 test("getProjectProgressReport", async t => {
   const projectProgressReport = await api.getProjectProgressReport(firstTeam.id);
+  writeFlowCheckingFile(projectProgressReport, "project-progress", "APIProjectProgressReportType", {
+    isArray: true,
+  });
   t.snapshot(projectProgressReport, { id: "timetracking-projectProgressReport" });
 });
 
 test("getOpenTasksReport", async t => {
   const openTasksReport = await api.getOpenTasksReport(firstTeam.id);
+  writeFlowCheckingFile(openTasksReport, "open-tasks", "APIOpenTasksReportType", { isArray: true });
   t.snapshot(openTasksReport, { id: "timetracking-openTasksReport" });
 });

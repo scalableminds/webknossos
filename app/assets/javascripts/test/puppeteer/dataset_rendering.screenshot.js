@@ -38,7 +38,13 @@ async function getNewPage(browser: Browser) {
 
 test.beforeEach(async t => {
   t.context.browser = await puppeteer.launch({
-    args: ["--headless", "--hide-scrollbars", "--no-sandbox", "--disable-setuid-sandbox"],
+    args: [
+      "--headless",
+      "--hide-scrollbars",
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+    ],
   });
   global.Headers = Headers;
   global.fetch = fetch;

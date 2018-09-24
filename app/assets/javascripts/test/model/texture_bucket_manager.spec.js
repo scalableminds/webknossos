@@ -26,6 +26,10 @@ mock(
       this.width = width;
       this.height = height;
     }
+
+    isInitialized() {
+      return true;
+    }
   },
 );
 

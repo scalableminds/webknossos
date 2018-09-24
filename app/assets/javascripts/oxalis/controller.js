@@ -83,11 +83,15 @@ class Controller extends React.PureComponent<Props, State> {
       Toast.error(messages["webgl.disabled"]);
     }
 
+    // Preview a working tracing version if the showVersionRestore URL parameter is supplied
+    const version = Utils.hasUrlParam("showVersionRestore") ? 1 : undefined;
+
     Model.fetch(
       this.props.initialTracingType,
       this.props.initialAnnotationId,
       this.props.initialControlmode,
       true,
+      version,
     )
       .then(() => this.modelFetchDone())
       .catch(error => {
@@ -181,12 +185,11 @@ class Controller extends React.PureComponent<Props, State> {
     ));
   }
 
-  scaleTrianglesPlane(delta: number): void {
-    let scale = Store.getState().userConfiguration.scale + delta;
-    scale = Math.min(constants.MAX_SCALE, scale);
-    scale = Math.max(constants.MIN_SCALE, scale);
-
-    Store.dispatch(updateUserSettingAction("scale", scale));
+  setLayoutScale(multiplier: number): void {
+    let scale = Store.getState().userConfiguration.layoutScaleValue + 0.05 * multiplier;
+    scale = Math.min(constants.MAX_LAYOUT_SCALE, scale);
+    scale = Math.max(constants.MIN_LAYOUT_SCALE, scale);
+    Store.dispatch(updateUserSettingAction("layoutScaleValue", scale));
   }
 
   isWebGlSupported() {
@@ -276,16 +279,8 @@ class Controller extends React.PureComponent<Props, State> {
     this.keyboardNoLoop = new InputKeyboardNoLoop(keyboardControls);
 
     this.keyboard = new InputKeyboard({
-      // Scale planes
-      l: timeFactor => {
-        const scaleValue = Store.getState().userConfiguration.scaleValue;
-        this.scaleTrianglesPlane(-scaleValue * timeFactor);
-      },
-
-      k: timeFactor => {
-        const scaleValue = Store.getState().userConfiguration.scaleValue;
-        this.scaleTrianglesPlane(scaleValue * timeFactor);
-      },
+      l: () => this.setLayoutScale(-1),
+      k: () => this.setLayoutScale(1),
     });
   }
 

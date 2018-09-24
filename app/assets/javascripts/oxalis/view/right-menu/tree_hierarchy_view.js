@@ -230,7 +230,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     const nameAndDropdown = (
       <span className="ant-dropdown-link">
         <span data-id={id} onClick={this.onSelectGroup}>
-          {displayableName}
+          {displayableName}{" "}
         </span>
         <Dropdown overlay={menu} placement="bottomCenter">
           <Icon type="setting" className="group-actions-icon" />

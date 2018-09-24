@@ -2,19 +2,7 @@
 import _ from "lodash";
 import React from "react";
 import { withRouter } from "react-router-dom";
-import {
-  Form,
-  Input,
-  Select,
-  Button,
-  Card,
-  Radio,
-  Upload,
-  Modal,
-  Icon,
-  InputNumber,
-  Spin,
-} from "antd";
+import { Form, Select, Button, Card, Radio, Upload, Modal, Icon, InputNumber, Spin } from "antd";
 import {
   getActiveDatasets,
   getProjects,
@@ -26,6 +14,8 @@ import {
   updateTask,
 } from "admin/admin_rest_api";
 import { Vector3Input, Vector6Input } from "libs/vector_input";
+import SelectExperienceDomain from "components/select_experience_domain";
+import messages from "messages";
 
 import type {
   APIDatasetType,
@@ -232,8 +222,15 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
 
               <FormItem label="Experience Domain" hasFeedback>
                 {getFieldDecorator("neededExperience.domain", {
-                  rules: [{ required: true }, { min: 3 }],
-                })(<Input disabled={isEditingMode} />)}
+                  rules: [{ required: true }],
+                })(
+                  <SelectExperienceDomain
+                    disabled={isEditingMode}
+                    placeholder="Select an Experience Domain"
+                    notFoundContent={messages["task.domain_does_not_exist"]}
+                    width={100}
+                  />,
+                )}
               </FormItem>
 
               <FormItem label="Experience Value" hasFeedback>

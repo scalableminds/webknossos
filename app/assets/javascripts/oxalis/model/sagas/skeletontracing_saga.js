@@ -16,6 +16,7 @@ import {
   _takeEvery,
   select,
   race,
+  call,
 } from "oxalis/model/sagas/effect-generators";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import {
@@ -58,6 +59,7 @@ import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import api from "oxalis/api/internal_api";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import EdgeCollection, { diffEdgeCollections } from "oxalis/model/edge_collection";
+import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 
 function* centerActiveNode(action: ActionType): Saga<void> {
   getActiveNode(yield* select((state: OxalisState) => enforceSkeletonTracing(state.tracing))).map(
@@ -131,6 +133,13 @@ export function* watchTreeNames(): Saga<void> {
   }
 }
 
+export function* watchVersionRestoreParam(): Saga<void> {
+  const showVersionRestore = yield* call(Utils.hasUrlParam, "showVersionRestore");
+  if (showVersionRestore) {
+    yield* put(setVersionRestoreVisibilityAction(true));
+  }
+}
+
 export function* watchSkeletonTracingAsync(): Saga<void> {
   yield* take("INITIALIZE_SKELETONTRACING");
   yield _takeEvery("WK_READY", watchTreeNames);
@@ -149,6 +158,7 @@ export function* watchSkeletonTracingAsync(): Saga<void> {
   );
   yield* fork(watchFailedNodeCreations);
   yield* fork(watchBranchPointDeletion);
+  yield* fork(watchVersionRestoreParam);
 }
 
 function* diffNodes(

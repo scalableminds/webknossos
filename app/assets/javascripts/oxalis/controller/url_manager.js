@@ -133,7 +133,7 @@ export function updateTypeAndId(
   // will only ever be updated for the annotations route as the other route is for
   // dataset viewing only
   return baseUrl.replace(
-    /^(.*\/annotations)\/(.*?)\/([^/]*)(\/?.*)$/,
+    /^(.*\/annotations)\/(.*?)\/([^/?]*)(\/?.*)$/,
     (all, base, type, id, rest) => `${base}/${tracingType}/${annotationId}${rest}`,
   );
 }

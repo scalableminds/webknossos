@@ -22,6 +22,7 @@ import type { OxalisState } from "oxalis/store";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import Toast from "libs/toast";
 import { InviteUsersPopover } from "admin/onboarding";
+import Clipboard from "clipboard-js";
 import Store from "../../oxalis/store";
 import { logoutUserAction } from "../../oxalis/model/actions/user_actions";
 
@@ -48,6 +49,7 @@ type State = {
   singleSelectedUser: ?APIUserType,
   activationFilter: Array<"true" | "false">,
   searchQuery: string,
+  domainToEdit: ?string,
 };
 
 const persistence: Persistence<State> = new Persistence(
@@ -69,6 +71,7 @@ class UserListView extends React.PureComponent<Props, State> {
     activationFilter: ["true"],
     searchQuery: "",
     singleSelectedUser: null,
+    domainToEdit: null,
   };
 
   componentWillMount() {
@@ -413,16 +416,26 @@ class UserListView extends React.PureComponent<Props, State> {
               width={250}
               render={(experiences: ExperienceMapType, user: APIUserType) =>
                 _.map(experiences, (value, domain) => (
-                  <Tag
-                    key={`experience_${user.id}_${domain}`}
-                    onClick={() => {
-                      this.setState({
-                        singleSelectedUser: user,
-                        isExperienceModalVisible: true,
-                      });
-                    }}
-                  >
-                    {domain} : {value}
+                  <Tag key={`experience_${user.id}_${domain}`}>
+                    <span
+                      onClick={() => {
+                        this.setState({
+                          singleSelectedUser: user,
+                          isExperienceModalVisible: true,
+                          domainToEdit: domain,
+                        });
+                      }}
+                    >
+                      {domain} : {value}
+                    </span>
+                    <Icon
+                      type="copy"
+                      style={{ margin: "0 0 0 5px" }}
+                      onClick={async () => {
+                        await Clipboard.copy(domain);
+                        Toast.success(`"${domain}" copied to clipboard`);
+                      }}
+                    />
                   </Tag>
                 ))
               }
@@ -503,9 +516,14 @@ class UserListView extends React.PureComponent<Props, State> {
                 ? [this.state.singleSelectedUser]
                 : this.getAllSelectedUsers()
             }
+            initialDomainToEdit={this.state.domainToEdit}
             onChange={this.closeExperienceModal}
             onCancel={() =>
-              this.setState({ isExperienceModalVisible: false, singleSelectedUser: null })
+              this.setState({
+                isExperienceModalVisible: false,
+                singleSelectedUser: null,
+                domainToEdit: null,
+              })
             }
           />
         ) : null}

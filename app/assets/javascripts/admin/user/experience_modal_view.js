@@ -9,6 +9,7 @@ import { handleGenericError } from "libs/error_handling";
 import type { APIUserType, ExperienceDomainListType } from "admin/api_flow_types";
 import Toast from "libs/toast";
 import SelectExperienceDomain from "components/select_experience_domain";
+import HighlightableRow from "components/highlightable_row";
 
 const { Column } = Table;
 
@@ -33,11 +34,13 @@ type Props = {
   onCancel: () => void,
   visible: boolean,
   selectedUsers: Array<APIUserType>,
+  initialDomainToEdit: ?string,
 };
 
 type State = {
   tableEntries: Array<TableEntry>,
   removedDomains: Array<string>,
+  domainToEdit: ?string,
 };
 
 class ExperienceModalView extends React.PureComponent<Props, State> {
@@ -46,16 +49,8 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     this.state = {
       tableEntries: this.getTableEntries(props.selectedUsers),
       removedDomains: [],
+      domainToEdit: props.initialDomainToEdit,
     };
-  }
-
-  componentWillReceiveProps(nextProps: Props) {
-    if (nextProps.visible && !this.props.visible) {
-      this.setState({
-        tableEntries: this.getTableEntries(nextProps.selectedUsers),
-        removedDomains: [],
-      });
-    }
   }
 
   sortEntries(entries: Array<TableEntry>): Array<TableEntry> {
@@ -223,6 +218,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     this.setState(prevState => ({
       tableEntries: this.sortEntries(_.concat(prevState.tableEntries, newExperience)),
       removedDomains: prevState.removedDomains.filter(currentDomain => currentDomain !== domain),
+      domainToEdit: domain,
     }));
   };
 
@@ -234,7 +230,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     if (!this.props.visible && selectedUsersCount === 0) {
       return null;
     }
-    const tableEntries = this.state.tableEntries;
+    const { tableEntries } = this.state;
     const multipleUsers = selectedUsersCount > 1;
     return (
       <Modal
@@ -266,6 +262,14 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
           pagination={false}
           scroll={{ y: 350 }}
           className="user-experience-table"
+          components={{
+            body: {
+              row: HighlightableRow,
+            },
+          }}
+          onRow={record => ({
+            shouldHighlight: record.domain === this.state.domainToEdit,
+          })}
         >
           <Column
             title="Domain"
@@ -329,6 +333,17 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
               return (
                 <span>
                   <InputNumber
+                    ref={ref => {
+                      if (ref == null || this.state.domainToEdit !== record.domain) {
+                        return;
+                      }
+                      ref.focus();
+                      setTimeout(() => {
+                        // Unfortunately, the time out is necessary, since otherwise the
+                        // focus is not correctly set
+                        this.setState({ domainToEdit: null });
+                      }, 0);
+                    }}
                     value={
                       this.state.tableEntries[index].value > -1
                         ? this.state.tableEntries[index].value

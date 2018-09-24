@@ -393,7 +393,7 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
             title="Collapse or expand groups"
           />
         </InputGroup>
-        <div style={{ flex: "1 1 auto", marginTop: 20 }}>
+        <div style={{ flex: "1 1 auto", marginTop: 20, listStyle: "none" }}>
           <AutoSizer>
             {({ height, width }) => (
               <div style={{ height, width }} className="flex-overflow">

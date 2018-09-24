@@ -244,6 +244,10 @@ workflows:
           filters:
             tags:
               only: /.*/
+      - nightly:
+          filters:
+            tags:
+              only: /.*/
   nightly:
     jobs:
       - nightly

@@ -1,6 +1,6 @@
 package controllers
 
-import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import javax.inject.Inject
 import models.binary.{DataSet, DataSetDAO}
@@ -50,7 +50,7 @@ class ConfigurationController @Inject()(userService: UserService,
         configurationJson: JsValue <- userDataSetConfigurationDAO.findOneForUserAndDataset(user._id, dataSetName)
       } yield DataSetConfiguration(configurationJson.validate[Map[String, JsValue]].getOrElse(Map.empty))
     }
-    .orElse(dataSetDAO.findOneByName(dataSetName).flatMap(_.defaultConfiguration))
+    .orElse(dataSetDAO.findOneByName(dataSetName)(GlobalAccessContext).flatMap(_.defaultConfiguration))
     .getOrElse(dataSetConfigurationDefaults.constructInitialDefault(List()))
     .map(configuration => Ok(toJson(dataSetConfigurationDefaults.configurationOrDefaults(configuration))))
   }

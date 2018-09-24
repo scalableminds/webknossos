@@ -101,6 +101,10 @@ export class DataBucket {
     return this.state === BucketStateEnum.LOADED;
   }
 
+  isMissing(): boolean {
+    return this.state === BucketStateEnum.MISSING;
+  }
+
   label(labelFunc: Uint8Array => void) {
     labelFunc(this.getOrCreateData());
     this.dirty = true;
@@ -145,6 +149,9 @@ export class DataBucket {
     switch (this.state) {
       case BucketStateEnum.REQUESTED:
         this.state = isMissing ? BucketStateEnum.MISSING : BucketStateEnum.UNREQUESTED;
+        if (isMissing) {
+          this.trigger("bucketMissing");
+        }
         break;
       default:
         this.unexpectedState();

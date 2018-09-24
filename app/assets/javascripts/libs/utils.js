@@ -458,6 +458,17 @@ export function sortArray8(arr: Array<number>): void {
   swap(arr, 3, 4);
 }
 
+export function waitForCondition(pred: () => boolean): Promise<void> {
+  const tryToResolve = resolve => {
+    if (pred()) {
+      resolve();
+    } else {
+      window.requestAnimationFrame(() => tryToResolve(resolve));
+    }
+  };
+  return new Promise(tryToResolve);
+}
+
 export function waitForSelector(selector: string): Promise<*> {
   const tryToResolve = resolve => {
     const el = document.querySelector(selector);

@@ -46,7 +46,7 @@ class BinaryDataController @Inject()(
             for {
               (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
               (data, indices) <- requestData(dataSource, dataLayer, request.body)
-            } yield Ok(data).withHeaders("MISSING-BUCKETS" -> formatMissingBucketList(indices))
+            } yield Ok(data).withHeaders("MISSING-BUCKETS" -> formatMissingBucketList(indices), "Access-Control-Expose-Headers" -> "MISSING-BUCKETS")
           }
         }
   }
@@ -83,7 +83,7 @@ class BinaryDataController @Inject()(
               DataServiceRequestSettings(halfByte = halfByte)
             )
           (data, indices) <- requestData(dataSource, dataLayer, request)
-          } yield Ok(data).withHeaders("MISSING-BUCKETS" -> formatMissingBucketList(indices))
+          } yield Ok(data).withHeaders("MISSING-BUCKETS" -> formatMissingBucketList(indices), "Access-Control-Expose-Headers" -> "MISSING-BUCKETS")
         }
       }
   }
@@ -127,7 +127,7 @@ class BinaryDataController @Inject()(
             cubeSize,
             cubeSize)
             (data, indices) <- requestData(dataSource, dataLayer, request)
-        } yield Ok(data).withHeaders("MISSING-BUCKETS" -> formatMissingBucketList(indices))
+        } yield Ok(data).withHeaders("MISSING-BUCKETS" -> formatMissingBucketList(indices), "Access-Control-Expose-Headers" -> "MISSING-BUCKETS")
         }
       }
   }

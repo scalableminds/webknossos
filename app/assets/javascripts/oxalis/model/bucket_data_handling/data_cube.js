@@ -349,9 +349,9 @@ class DataCube {
           };
           bucket.label(labelFunc);
 
-          // Push bucket if it's loaded, otherwise, TemporalBucketManager will push
-          // it once it is.
-          if (bucket.isLoaded()) {
+          // Push bucket if it's loaded or missing (i.e., not existent on the server),
+          // otherwise, TemporalBucketManager will push it once it is available.
+          if (bucket.isLoaded() || bucket.isMissing()) {
             this.pushQueue.insert(bucket);
           }
         }

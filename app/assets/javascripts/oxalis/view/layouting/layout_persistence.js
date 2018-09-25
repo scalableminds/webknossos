@@ -55,7 +55,13 @@ const persistLayoutConfigsDebounced = _.debounce(persistLayoutConfigs, 1000);
 
 export function getLayoutConfig(layoutKey: LayoutKeys) {
   if (storedLayouts[layoutKey]) {
-    return storedLayouts[layoutKey];
+    // Use default dimensions and settings
+    const { dimensions, settings } = defaultLayouts[layoutKey];
+    return {
+      ...storedLayouts[layoutKey],
+      dimensions,
+      settings,
+    };
   }
 
   return defaultLayouts[layoutKey];

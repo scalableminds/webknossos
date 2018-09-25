@@ -4,7 +4,7 @@ import sbt._
 
 name := "webknossos"
 
-scalaVersion in ThisBuild := "2.12.6"
+scalaVersion in ThisBuild := "2.11.8"
 
 version := "wk"
 

@@ -29,6 +29,7 @@ class DataSetConfigurationDefaults @Inject()(dataSetService: DataSetService) {
         "interpolation" -> JsBoolean(true),
         "segmentationOpacity" -> JsNumber(20),
         "highlightHoveredCellId" -> JsBoolean(true),
+        "renderMissingDataBlack" -> JsBoolean(true),
         "layers" -> layerValues)
     )
   }

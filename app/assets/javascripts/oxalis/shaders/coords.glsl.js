@@ -83,3 +83,15 @@ export const getWorldCoordUVW: ShaderModuleType = {
     }
   `,
 };
+
+export const isOutsideOfBoundingBox: ShaderModuleType = {
+  code: `
+    bool isOutsideOfBoundingBox(vec3 worldCoordUVW) {
+      vec3 worldCoord = transDim(worldCoordUVW);
+      return (
+        worldCoord.x < bboxMin.x || worldCoord.y < bboxMin.y || worldCoord.z < bboxMin.z ||
+        worldCoord.x > bboxMax.x || worldCoord.y > bboxMax.y || worldCoord.z > bboxMax.z
+      );
+    }
+  `,
+};

@@ -22,6 +22,7 @@ import type { OxalisState } from "oxalis/store";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import Toast from "libs/toast";
 import { InviteUsersPopover } from "admin/onboarding";
+import Clipboard from "clipboard-js";
 import Store from "../../oxalis/store";
 import { logoutUserAction } from "../../oxalis/model/actions/user_actions";
 
@@ -48,6 +49,7 @@ type State = {
   singleSelectedUser: ?APIUserType,
   activationFilter: Array<"true" | "false">,
   searchQuery: string,
+  domainToEdit: ?string,
 };
 
 const persistence: Persistence<State> = new Persistence(
@@ -69,6 +71,7 @@ class UserListView extends React.PureComponent<Props, State> {
     activationFilter: ["true"],
     searchQuery: "",
     singleSelectedUser: null,
+    domainToEdit: null,
   };
 
   componentWillMount() {
@@ -343,7 +346,7 @@ class UserListView extends React.PureComponent<Props, State> {
 
         <Spin size="large" spinning={this.state.isLoading}>
           <Table
-            dataSource={Utils.filterWithSearchQueryOR(
+            dataSource={Utils.filterWithSearchQueryAND(
               this.state.users,
               ["firstName", "lastName", "email", "teams", user => Object.keys(user.experiences)],
               this.state.searchQuery,
@@ -378,6 +381,7 @@ class UserListView extends React.PureComponent<Props, State> {
               title="Email"
               dataIndex="email"
               key="email"
+              width={300}
               sorter={Utils.localeCompareBy(typeHint, user => user.email)}
               render={(__, user: APIUserType) =>
                 this.props.activeUser.isAdmin ? (
@@ -409,19 +413,29 @@ class UserListView extends React.PureComponent<Props, State> {
               title="Experiences"
               dataIndex="experiences"
               key="experiences"
-              width={300}
+              width={250}
               render={(experiences: ExperienceMapType, user: APIUserType) =>
                 _.map(experiences, (value, domain) => (
-                  <Tag
-                    key={`experience_${user.id}_${domain}`}
-                    onClick={() => {
-                      this.setState({
-                        singleSelectedUser: user,
-                        isExperienceModalVisible: true,
-                      });
-                    }}
-                  >
-                    {domain} : {value}
+                  <Tag key={`experience_${user.id}_${domain}`}>
+                    <span
+                      onClick={() => {
+                        this.setState({
+                          singleSelectedUser: user,
+                          isExperienceModalVisible: true,
+                          domainToEdit: domain,
+                        });
+                      }}
+                    >
+                      {domain} : {value}
+                    </span>
+                    <Icon
+                      type="copy"
+                      style={{ margin: "0 0 0 5px" }}
+                      onClick={async () => {
+                        await Clipboard.copy(domain);
+                        Toast.success(`"${domain}" copied to clipboard`);
+                      }}
+                    />
                   </Tag>
                 ))
               }
@@ -430,7 +444,7 @@ class UserListView extends React.PureComponent<Props, State> {
               title="Teams - Role"
               dataIndex="teams"
               key="teams_"
-              width={300}
+              width={250}
               render={(teams: Array<APITeamMembershipType>, user: APIUserType) => {
                 if (user.isAdmin) {
                   return (
@@ -502,9 +516,14 @@ class UserListView extends React.PureComponent<Props, State> {
                 ? [this.state.singleSelectedUser]
                 : this.getAllSelectedUsers()
             }
+            initialDomainToEdit={this.state.domainToEdit}
             onChange={this.closeExperienceModal}
             onCancel={() =>
-              this.setState({ isExperienceModalVisible: false, singleSelectedUser: null })
+              this.setState({
+                isExperienceModalVisible: false,
+                singleSelectedUser: null,
+                domainToEdit: null,
+              })
             }
           />
         ) : null}

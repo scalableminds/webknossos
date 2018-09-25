@@ -221,7 +221,7 @@ class Navbar extends React.PureComponent<Props, State> {
               ])
             : helpMenu}
         </Menu>
-        {!isAuthenticated ? (
+        {!(isAuthenticated || features().hideNavbarLogin) ? (
           <div style={{ flex: 1, display: "flex", justifyContent: "flex-end" }}>
             <LoginView layout="inline" redirect={this.props.history.location.pathname} />
           </div>

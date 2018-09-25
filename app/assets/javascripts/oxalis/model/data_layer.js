@@ -13,6 +13,7 @@ import {
   getLayerBoundaries,
   getBitDepth,
 } from "oxalis/model/accessors/dataset_accessor";
+import ErrorHandling from "libs/error_handling";
 
 // TODO: Non-reactive
 class DataLayer {
@@ -36,6 +37,8 @@ class DataLayer {
 
     const { dataset } = Store.getState();
     const bitDepth = getBitDepth(getLayerByName(dataset, this.name));
+
+    ErrorHandling.assert(layerInfo.resolutions.length > 0, "Resolutions for layer cannot be empty");
 
     this.cube = new DataCube(
       getLayerBoundaries(dataset, this.name).upperBoundary,

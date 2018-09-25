@@ -9,9 +9,9 @@ import Date from "libs/date";
 import * as Utils from "libs/utils";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { OxalisState } from "oxalis/store";
-import type { ActionType } from "oxalis/model/actions/actions";
+import type { Action } from "oxalis/model/actions/actions";
 
-function SaveReducer(state: OxalisState, action: ActionType): OxalisState {
+function SaveReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
     case "PUSH_SAVE_QUEUE": {
       // Only report tracing statistics, if a "real" update to the tracing happened

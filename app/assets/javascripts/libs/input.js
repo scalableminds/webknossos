@@ -33,9 +33,9 @@ type KeyboardLoopHandler = (number, isOriginalEvent: boolean) => void;
 type KeyboardBindingPress = [KeyboardKey, KeyboardHandler, KeyboardHandler];
 type KeyboardBindingDownUp = [KeyboardKey, KeyboardHandler, KeyboardHandler];
 type BindingMap<T: Function> = { [key: KeyboardKey]: T };
-type MouseButtonWhichType = 1 | 3;
-type MouseButtonStringType = "left" | "right";
-type MouseHandlerType =
+type MouseButtonWhich = 1 | 3;
+type MouseButtonString = "left" | "right";
+type MouseHandler =
   | ((deltaY: number, modifier: ?ModifierKeys) => void)
   | ((position: Point2, id: ?string, event: MouseEvent) => void)
   | ((delta: Point2, position: Point2, id: ?string, event: MouseEvent) => void);
@@ -241,19 +241,14 @@ class InputMouseButton {
   // Remove once https://github.com/babel/babel-eslint/pull/584 is merged
   // eslint-disable-next-line no-use-before-define
   mouse: InputMouse;
-  name: MouseButtonStringType;
-  which: MouseButtonWhichType;
+  name: MouseButtonString;
+  which: MouseButtonWhich;
   id: ?string;
   down: boolean = false;
   drag: boolean = false;
   moveDelta: number = 0;
 
-  constructor(
-    name: MouseButtonStringType,
-    which: MouseButtonWhichType,
-    mouse: InputMouse,
-    id: ?string,
-  ) {
+  constructor(name: MouseButtonString, which: MouseButtonWhich, mouse: InputMouse, id: ?string) {
     this.name = name;
     this.which = which;
     this.mouse = mouse;
@@ -315,7 +310,7 @@ export class InputMouse {
   delegatedEvents: { string?: Function };
 
   // Copied from backbone events (TODO: handle this better)
-  on: (bindings: BindingMap<MouseHandlerType>) => void;
+  on: (bindings: BindingMap<MouseHandler>) => void;
   off: Function;
   trigger: Function;
 
@@ -323,7 +318,7 @@ export class InputMouse {
 
   constructor(
     targetSelector: string,
-    initialBindings: BindingMap<MouseHandlerType> = {},
+    initialBindings: BindingMap<MouseHandler> = {},
     id: ?string = null,
   ) {
     _.extend(this, BackboneEvents);

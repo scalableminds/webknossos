@@ -11,7 +11,7 @@ import messages from "messages";
 import { getTaskTypes, deleteTaskType } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
-import type { APITaskTypeType } from "admin/api_flow_types";
+import type { APITaskType } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
 import { handleGenericError } from "libs/error_handling";
 
@@ -25,7 +25,7 @@ type Props = {
 
 type State = {
   isLoading: boolean,
-  tasktypes: Array<APITaskTypeType>,
+  tasktypes: Array<APITaskType>,
   searchQuery: string,
 };
 
@@ -71,7 +71,7 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
     this.setState({ searchQuery: event.target.value });
   };
 
-  deleteTaskType = (taskType: APITaskTypeType) => {
+  deleteTaskType = (taskType: APITaskType) => {
     Modal.confirm({
       title: messages["taskType.delete"],
       onOk: async () => {
@@ -105,7 +105,7 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
 
   render() {
     const marginRight = { marginRight: 20 };
-    const typeHint: Array<APITaskTypeType> = [];
+    const typeHint: Array<APITaskType> = [];
 
     return (
       <div className="container">
@@ -212,7 +212,7 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                 title="Action"
                 key="actions"
                 width={140}
-                render={(__, taskType: APITaskTypeType) => (
+                render={(__, taskType: APITaskType) => (
                   <span>
                     <Link to={`/annotations/CompoundTaskType/${taskType.id}`} title="View">
                       <Icon type="eye-o" />View

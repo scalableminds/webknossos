@@ -33,12 +33,7 @@ import { saveAs } from "file-saver";
 import { getBuildInfo } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import type { Dispatch } from "redux";
-import type {
-  OxalisState,
-  TracingType,
-  SkeletonTracingType,
-  UserConfigurationType,
-} from "oxalis/store";
+import type { OxalisState, Tracing, SkeletonTracing, UserConfiguration } from "oxalis/store";
 import SearchPopover from "./search_popover";
 
 const ButtonGroup = Button.Group;
@@ -53,9 +48,9 @@ type Props = {
   onCreateTree: () => void,
   onDeleteTree: () => void,
   onChangeTreeName: string => void,
-  annotation: TracingType,
-  skeletonTracing?: SkeletonTracingType,
-  userConfiguration: UserConfigurationType,
+  annotation: Tracing,
+  skeletonTracing?: SkeletonTracing,
+  userConfiguration: UserConfiguration,
   onSetActiveTree: number => void,
   showDropzoneModal: () => void,
 };

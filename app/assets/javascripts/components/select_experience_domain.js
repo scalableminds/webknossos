@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Select } from "antd";
-import type { ExperienceDomainListType } from "admin/api_flow_types";
+import type { ExperienceDomainList } from "admin/api_flow_types";
 import { getExistingExperienceDomains } from "admin/admin_rest_api";
 
 const Option = Select.Option;
@@ -16,11 +16,11 @@ type Props = {
   mode?: string,
   onSelect?: string => void,
   onChange?: () => void,
-  alreadyUsedDomains: ExperienceDomainListType,
+  alreadyUsedDomains: ExperienceDomainList,
 };
 
 type State = {
-  domains: ExperienceDomainListType,
+  domains: ExperienceDomainList,
 };
 
 class SelectExperienceDomain extends React.PureComponent<Props, State> {
@@ -40,7 +40,7 @@ class SelectExperienceDomain extends React.PureComponent<Props, State> {
     this.setState({ domains: await getExistingExperienceDomains() });
   }
 
-  getUnusedDomains(): ExperienceDomainListType {
+  getUnusedDomains(): ExperienceDomainList {
     return this.state.domains.filter(domain => !this.props.alreadyUsedDomains.includes(domain));
   }
 

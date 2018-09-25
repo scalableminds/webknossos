@@ -16,11 +16,11 @@ const fetchBufferViaWorker = createWorker(FetchBufferWorker);
 const fetchBufferWithHeaders = createWorker(FetchBufferWithHeadersWorker);
 const compress = createWorker(CompressWorker);
 
-type methodType = "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH";
+type method = "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH";
 
 export type RequestOptions = {
   headers?: { [key: string]: string },
-  method?: methodType,
+  method?: method,
   timeout?: number,
   compress?: boolean,
   useWebworkerForArrayBuffer?: boolean,

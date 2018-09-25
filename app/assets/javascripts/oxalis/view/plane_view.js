@@ -9,7 +9,7 @@ import TWEEN from "tween.js";
 import * as THREE from "three";
 import Store from "oxalis/store";
 import Constants, { OrthoViews, OrthoViewValues, OrthoViewColors } from "oxalis/constants";
-import type { OrthoViewType, OrthoViewMapType } from "oxalis/constants";
+import type { OrthoView, OrthoViewMap } from "oxalis/constants";
 import SceneController from "oxalis/controller/scene_controller";
 import { getDesiredCanvasSize } from "oxalis/view/layouting/tracing_layout_view";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
@@ -50,7 +50,7 @@ class PlaneView {
   listenTo: Function;
   unbindChangedScaleListener: () => void;
 
-  cameras: OrthoViewMapType<THREE.OrthographicCamera>;
+  cameras: OrthoViewMap<THREE.OrthographicCamera>;
 
   running: boolean;
   needsRerender: boolean;
@@ -105,7 +105,7 @@ class PlaneView {
     window.requestAnimationFrame(() => this.animate());
   }
 
-  renderOrthoViewToTexture(plane: OrthoViewType, scene: THREE.Scene): Uint8Array {
+  renderOrthoViewToTexture(plane: OrthoView, scene: THREE.Scene): Uint8Array {
     const { renderer } = SceneController;
 
     renderer.autoClear = true;
@@ -197,7 +197,7 @@ class PlaneView {
     this.draw();
   };
 
-  getCameras(): OrthoViewMapType<THREE.OrthographicCamera> {
+  getCameras(): OrthoViewMap<THREE.OrthographicCamera> {
     return this.cameras;
   }
 

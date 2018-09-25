@@ -1,10 +1,10 @@
 // @flow
 import * as React from "react";
 import classNames from "classnames";
-import type { TreeType } from "oxalis/store";
+import type { Tree } from "oxalis/store";
 
 type Props = {
-  tree: TreeType,
+  tree: Tree,
   collapsed: boolean,
   style: Object,
   onExpand: number => void,

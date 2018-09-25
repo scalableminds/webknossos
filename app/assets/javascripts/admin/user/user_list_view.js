@@ -16,7 +16,7 @@ import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import messages from "messages";
-import type { APIUserType, APITeamMembershipType, ExperienceMapType } from "admin/api_flow_types";
+import type { APIUser, APITeamMembership, ExperienceMap } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
 import type { OxalisState } from "oxalis/store";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
@@ -29,10 +29,10 @@ import { logoutUserAction } from "../../oxalis/model/actions/user_actions";
 const { Column } = Table;
 const { Search } = Input;
 
-const typeHint: APIUserType[] = [];
+const typeHint: APIUser[] = [];
 
 type StateProps = {
-  activeUser: APIUserType,
+  activeUser: APIUser,
 };
 
 type Props = {
@@ -41,12 +41,12 @@ type Props = {
 
 type State = {
   isLoading: boolean,
-  users: Array<APIUserType>,
+  users: Array<APIUser>,
   selectedUserIds: Array<string>,
   isExperienceModalVisible: boolean,
   isTeamRoleModalVisible: boolean,
   isInvitePopoverVisible: boolean,
-  singleSelectedUser: ?APIUserType,
+  singleSelectedUser: ?APIUser,
   activationFilter: Array<"true" | "false">,
   searchQuery: string,
   domainToEdit: ?string,
@@ -98,7 +98,7 @@ class UserListView extends React.PureComponent<Props, State> {
     });
   }
 
-  activateUser = (selectedUser: APIUserType, isActive: boolean = true): void => {
+  activateUser = (selectedUser: APIUser, isActive: boolean = true): void => {
     this.setState(prevState => {
       const newUsers = prevState.users.map(user => {
         if (selectedUser.id === user.id) {
@@ -117,11 +117,11 @@ class UserListView extends React.PureComponent<Props, State> {
     });
   };
 
-  deactivateUser = (user: APIUserType): void => {
+  deactivateUser = (user: APIUser): void => {
     this.activateUser(user, false);
   };
 
-  changeEmail = (selectedUser: APIUserType, newEmail: string): void => {
+  changeEmail = (selectedUser: APIUser, newEmail: string): void => {
     this.setState(prevState => {
       const newUsers = prevState.users.map(user => {
         if (selectedUser.id === user.id) {
@@ -142,7 +142,7 @@ class UserListView extends React.PureComponent<Props, State> {
     if (this.props.activeUser.email === selectedUser.email) Store.dispatch(logoutUserAction());
   };
 
-  handleUsersChange = (updatedUsers: Array<APIUserType>): void => {
+  handleUsersChange = (updatedUsers: Array<APIUser>): void => {
     this.setState({
       users: updatedUsers,
       isExperienceModalVisible: false,
@@ -150,7 +150,7 @@ class UserListView extends React.PureComponent<Props, State> {
     });
   };
 
-  closeExperienceModal = (updatedUsers: Array<APIUserType>): void => {
+  closeExperienceModal = (updatedUsers: Array<APIUser>): void => {
     const updatedUsersMap = _.keyBy(updatedUsers, u => u.id);
     this.setState(prevState => ({
       isExperienceModalVisible: false,
@@ -252,7 +252,7 @@ class UserListView extends React.PureComponent<Props, State> {
     );
   }
 
-  getAllSelectedUsers(): Array<APIUserType> {
+  getAllSelectedUsers(): Array<APIUser> {
     if (this.state.selectedUserIds.length > 0) {
       return this.state.users.filter(user => this.state.selectedUserIds.includes(user.id));
     } else return [];
@@ -383,7 +383,7 @@ class UserListView extends React.PureComponent<Props, State> {
               key="email"
               width={300}
               sorter={Utils.localeCompareBy(typeHint, user => user.email)}
-              render={(__, user: APIUserType) =>
+              render={(__, user: APIUser) =>
                 this.props.activeUser.isAdmin ? (
                   <EditableTextLabel
                     value={user.email}
@@ -414,7 +414,7 @@ class UserListView extends React.PureComponent<Props, State> {
               dataIndex="experiences"
               key="experiences"
               width={250}
-              render={(experiences: ExperienceMapType, user: APIUserType) =>
+              render={(experiences: ExperienceMap, user: APIUser) =>
                 _.map(experiences, (value, domain) => (
                   <Tag key={`experience_${user.id}_${domain}`}>
                     <span
@@ -445,7 +445,7 @@ class UserListView extends React.PureComponent<Props, State> {
               dataIndex="teams"
               key="teams_"
               width={250}
-              render={(teams: Array<APITeamMembershipType>, user: APIUserType) => {
+              render={(teams: Array<APITeamMembership>, user: APIUser) => {
                 if (user.isAdmin) {
                   return (
                     <Tag key={`team_role_${user.id}`} color="red">
@@ -475,7 +475,7 @@ class UserListView extends React.PureComponent<Props, State> {
               ]}
               filtered
               filteredValue={this.state.activationFilter}
-              onFilter={(value: boolean, user: APIUserType) => user.isActive.toString() === value}
+              onFilter={(value: boolean, user: APIUser) => user.isActive.toString() === value}
               render={isActive => {
                 const icon = isActive ? "check-circle-o" : "close-circle-o";
                 return <Icon type={icon} style={{ fontSize: 20 }} />;
@@ -485,7 +485,7 @@ class UserListView extends React.PureComponent<Props, State> {
               title="Actions"
               key="actions"
               width={160}
-              render={(__, user: APIUserType) => (
+              render={(__, user: APIUser) => (
                 <span>
                   <Link to={`/users/${user.id}/details`}>
                     <Icon type="user" />Show Tracings

@@ -3,7 +3,7 @@ import _ from "lodash";
 import NanoEvents from "nanoevents";
 
 import defaultLayouts, { currentLayoutVersion } from "./default_layout_configs";
-import type { LayoutKeysType } from "./default_layout_configs";
+import type { LayoutKeys } from "./default_layout_configs";
 
 export const layoutEmitter = new NanoEvents();
 
@@ -53,7 +53,7 @@ layoutEmitter.on("resetLayout", () => {
 
 const persistLayoutConfigsDebounced = _.debounce(persistLayoutConfigs, 1000);
 
-export function getLayoutConfig(layoutKey: LayoutKeysType) {
+export function getLayoutConfig(layoutKey: LayoutKeys) {
   if (storedLayouts[layoutKey]) {
     return storedLayouts[layoutKey];
   }

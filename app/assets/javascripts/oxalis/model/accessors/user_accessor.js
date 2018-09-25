@@ -1,9 +1,9 @@
 // @flow
 
 import messages from "messages";
-import type { APIUserType } from "admin/api_flow_types";
+import type { APIUser } from "admin/api_flow_types";
 
-export function enforceActiveUser(activeUser: ?APIUserType): APIUserType {
+export function enforceActiveUser(activeUser: ?APIUser): APIUser {
   if (activeUser) {
     return activeUser;
   } else {

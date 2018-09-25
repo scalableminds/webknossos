@@ -8,6 +8,7 @@ import UpdatableTexture from "libs/UpdatableTexture";
 import window from "libs/window";
 import { createUpdatableTexture } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import { getRenderer } from "oxalis/controller/renderer";
+import { waitForCondition } from "libs/utils";
 
 // A TextureBucketManager instance is responsible for making buckets available
 // to the GPU.
@@ -74,6 +75,12 @@ export default class TextureBucketManager {
     this.freeIndexSet = new Set(_.range(this.maximumCapacity));
 
     this.dataTextures = [];
+  }
+
+  async startRAFLoops() {
+    await waitForCondition(
+      () => this.lookUpTexture.isInitialized() && this.dataTextures[0].isInitialized(),
+    );
 
     this.keepLookUpBufferUpToDate();
     this.processWriterQueue();
@@ -207,6 +214,8 @@ export default class TextureBucketManager {
       getRenderer(),
     );
     this.lookUpTexture = lookUpTexture;
+
+    this.startRAFLoops();
   }
 
   getLookUpBuffer() {

@@ -49,6 +49,7 @@ import { APITracingTypeEnum } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/task/task_search_form";
 import type { NewTaskType, TaskCreationResponseType } from "admin/task/task_create_bulk_view";
 import type { DatasetConfigurationType } from "oxalis/store";
+import type { RequestOptions } from "libs/request";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -524,9 +525,13 @@ export function createExplorational(
   datasetName: string,
   typ: "volume" | "skeleton" | "hybrid",
   withFallback: boolean,
+  options?: RequestOptions = {},
 ): Promise<APIAnnotationType> {
   const url = `/api/datasets/${datasetName}/createExplorational`;
-  return Request.sendJSONReceiveJSON(url, { data: { typ, withFallback } });
+  return Request.sendJSONReceiveJSON(
+    url,
+    Object.assign({}, { data: { typ, withFallback } }, options),
+  );
 }
 
 export async function getTracingForAnnotations(

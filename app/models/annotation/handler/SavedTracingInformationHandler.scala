@@ -13,7 +13,7 @@ import scala.concurrent.ExecutionContext
 
 class SavedTracingInformationHandler @Inject()(annotationDAO: AnnotationDAO,
                                                dataSetDAO: DataSetDAO,
-                                               annotationRestrictionDefults: AnnotationRestrictionDefults,
+                                               annotationRestrictionDefults: AnnotationRestrictionDefaults,
                                                userService: UserService)
                                               (implicit val ec: ExecutionContext)
   extends AnnotationInformationHandler with FoxImplicits {
@@ -38,7 +38,7 @@ class SavedTracingInformationHandler @Inject()(annotationDAO: AnnotationDAO,
     for {
       annotation <- provideAnnotation(identifier, None)
     } yield {
-      annotationRestrictionDefults.defaultAnnotationRestrictions(annotation)
+      annotationRestrictionDefults.defaultsFor(annotation)
     }
   }
 

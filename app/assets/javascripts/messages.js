@@ -27,6 +27,12 @@ In order to restore the current window, a reload is necessary.`,
   "download.wait": "Please wait...",
   "download.close_window": "You may close this window after the download has started.",
   "add_script.confirm_change": "This will replace the code you have written. Continue?",
+  "data.enabled_render_missing_data_black":
+    "You just enabled the option to render missing data black. Please refresh this page so that the changes can take effect.",
+  "data.disabled_render_missing_data_black": `You just disabled the option to render missing
+  data black. This means that in case of missing data, data of lower quality is rendered
+  instead. Only enable this option if you understand its effect. Please refresh
+  this page so that the changes can take effect.`,
   "tracing.copy_position": "Click this button to copy the position.",
   "tracing.copy_rotation": "Click this button to copy the rotation.",
   "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered cell id",

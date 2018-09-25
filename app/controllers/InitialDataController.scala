@@ -185,4 +185,14 @@ Samplecountry
       }
     } else Fox.successful(())
   }
+
+  def insertLocalTracingStoreIfEnabled: Fox[Any] = {
+    if (conf.Tracingstore.enabled) {
+      tracingStoreDAO.findOneByName("localhost").futureBox.map { maybeStore =>
+        if (maybeStore.isEmpty) {
+          tracingStoreDAO.insertOne(DataStore("localhost", conf.Http.uri, conf.Tracingstore.key))
+        }
+      }
+    } else Fox.successful(())
+  }
 }

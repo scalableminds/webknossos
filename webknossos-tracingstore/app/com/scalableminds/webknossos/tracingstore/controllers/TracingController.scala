@@ -4,6 +4,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.services.{AccessTokenService, DataSourceRepository, UserAccessRequest, WebKnossosServer}
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingSelector, TracingService, UpdateAction, UpdateActionGroup}
+import com.scalableminds.util.tools.JsonHelper.boxFormat
 import net.liftweb.common.Failure
 import play.api.i18n.Messages
 import play.api.libs.json.{Json, Reads}

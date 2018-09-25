@@ -67,6 +67,11 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
     val key = get[String]("datastore.key")
   }
 
+  object Tracingstore {
+    val enabled = get[Boolean]("tracingstore.enabled")
+    val key = get[String]("tracingstore.key")
+  }
+
   object User {
     val cacheTimeoutInMinutes = get[Int]("user.cacheTimeoutInMinutes") minutes
   }

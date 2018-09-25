@@ -80,6 +80,10 @@ object Dependencies {
     guice
   )
 
+  val webknossosTracingstoreDependencies = Seq(
+
+  )
+
   val webknossosDependencies = Seq(
     akkaTest,
     ceedubs,

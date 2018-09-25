@@ -4,7 +4,7 @@ import javax.inject.Inject
 import akka.util.Timeout
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.tracings.TracingType
+import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import models.annotation.AnnotationState.Cancelled
 import models.annotation._
 import models.binary.{DataSet, DataSetDAO, DataSetService}

@@ -12,7 +12,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, Data
 import com.scalableminds.webknossos.datastore.models.requests.{DataServiceDataRequest, DataServiceMappingRequest, DataServiceRequestSettings}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection._
 import com.scalableminds.webknossos.datastore.models.{DataRequest, ImageThumbnail, WebKnossosDataRequest}
-import com.scalableminds.webknossos.datastore.tracings.volume.VolumeTracingService
 import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
 import com.scalableminds.util.tools.Fox
 import net.liftweb.common.{Empty, Failure, Full}
@@ -27,7 +26,6 @@ import scala.concurrent.{ExecutionContext, Future}
 class BinaryDataController @Inject()(
                                       binaryDataService: BinaryDataService,
                                       dataSourceRepository: DataSourceRepository,
-                                      volumeTracingService: VolumeTracingService,
                                       accessTokenService: AccessTokenService)
                                     (implicit ec: ExecutionContext,
                                      bodyParsers: PlayBodyParsers)
@@ -283,8 +281,10 @@ class BinaryDataController @Inject()(
   }
 
   private def getDataLayer(dataSource: DataSource, dataLayerName: String): Fox[DataLayer] = {
-    dataSource.getDataLayer(dataLayerName).toFox.orElse(
-      volumeTracingService.dataLayerForVolumeTracing(dataLayerName, dataSource))
+    dataSource.getDataLayer(dataLayerName).toFox
+
+      /*TODO .orElse(
+      volumeTracingService.dataLayerForVolumeTracing(dataLayerName, dataSource))*/
   }
 
   private def getDataSourceAndDataLayer(dataSetName: String, dataLayerName: String)(implicit m: MessagesProvider): Fox[(DataSource, DataLayer)] = {

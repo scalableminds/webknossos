@@ -41,6 +41,13 @@ lazy val webknossosDatastoreSettings = Seq(
   version := "wk"
 )
 
+lazy val webknossosTracingstoreSettings = Seq(
+  libraryDependencies ++= Dependencies.webknossosTracingstoreDependencies,
+  resolvers ++= DependencyResolvers.dependencyResolvers,
+  routesGenerator := InjectedRoutesGenerator,
+  name := "webknossos-tracingstore",
+  version := "wk"
+)
 
 val protocolBufferSettings = Seq(
   ProtocPlugin.autoImport.PB.targets in Compile := Seq(
@@ -59,13 +66,19 @@ lazy val webknossosDatastore = (project in file("webknossos-datastore"))
   .enablePlugins(play.sbt.PlayScala)
   .enablePlugins(BuildInfoPlugin)
   .enablePlugins(ProtocPlugin)
-  .enablePlugins(play.sbt.PlayScala)
-  .enablePlugins(BuildInfoPlugin)
   .settings(protocolBufferSettings)
   .settings((webknossosDatastoreSettings ++ BuildInfoSettings.webknossosDatastoreBuildInfoSettings):_*)
 
+lazy val webknossosTracingstore = (project in file("webknossos-tracingstore"))
+  .dependsOn(webknossosDatastore)
+  .enablePlugins(play.sbt.PlayScala)
+  .enablePlugins(BuildInfoPlugin)
+  .enablePlugins(ProtocPlugin)
+  .settings(protocolBufferSettings)
+  .settings((webknossosTracingstoreSettings ++ BuildInfoSettings.webknossosTracingstoreBuildInfoSettings):_*)
+
 lazy val webknossos = (project in file("."))
-  .dependsOn(util, webknossosDatastore)
+  .dependsOn(util, webknossosTracingstore)
   .enablePlugins(play.sbt.PlayScala)
   .enablePlugins(BuildInfoPlugin)
   .settings((webknossosSettings ++ AssetCompilation.settings ++ BuildInfoSettings.webknossosBuildInfoSettings):_*)

@@ -69,6 +69,7 @@ class WebKnossosServer @Inject()(
       .post(id)
   }
 
+  //TODO move?
   def reportTracingUpdates(tracingId: String, timestamps: List[Long], statistics: Option[JsObject], userToken: Option[String]): Fox[_] = {
     rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/handleTracingUpdateReport")
       .addQueryString("key" -> dataStoreKey)

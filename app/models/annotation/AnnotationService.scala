@@ -10,9 +10,9 @@ import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceLike => DataSource, SegmentationLayerLike => SegmentationLayer}
-import com.scalableminds.webknossos.datastore.tracings._
-import com.scalableminds.webknossos.datastore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults}
-import com.scalableminds.webknossos.datastore.tracings.volume.VolumeTracingDefaults
+import com.scalableminds.webknossos.tracingstore.tracings._
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.annotation.AnnotationState._

@@ -13,7 +13,7 @@ class RequestHandler @Inject() (router: Router,
   extends DefaultHttpRequestHandler(router, errorHandler, httpConfiguration, filters) {
 
   override def routeRequest(request: RequestHeader): Option[Handler] = {
-    if (request.uri.matches("^(/api/|/data/|/assets/).*$")) {
+    if (request.uri.matches("^(/api/|/data/|/tracings/|/assets/).*$")) {
       super.routeRequest(request)
     } else {
       Some(Action {Ok(views.html.main(conf))})

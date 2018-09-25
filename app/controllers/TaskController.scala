@@ -6,7 +6,7 @@ import com.scalableminds.util.mvc.ResultBox
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
-import com.scalableminds.webknossos.datastore.tracings.ProtoGeometryImplicits
+import com.scalableminds.webknossos.tracingstore.tracings.ProtoGeometryImplicits
 import models.annotation.nml.{NmlResults, NmlService}
 import models.annotation.AnnotationService
 import models.binary.{DataSetDAO, DataSetService}

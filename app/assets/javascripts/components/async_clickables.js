@@ -3,10 +3,10 @@
 import * as React from "react";
 import { Button, Spin } from "antd";
 
-const onClick = async function() {
+const onClick = async function(event: SyntheticInputEvent<>) {
   this.setState({ isLoading: true });
   try {
-    await this.props.onClick();
+    await this.props.onClick(event);
   } finally {
     if (this._isMounted) {
       this.setState({ isLoading: false });
@@ -15,7 +15,7 @@ const onClick = async function() {
 };
 
 type Props = {
-  onClick: () => Promise<any>,
+  onClick: (SyntheticInputEvent<>) => Promise<any>,
 };
 
 type State = { isLoading: boolean };

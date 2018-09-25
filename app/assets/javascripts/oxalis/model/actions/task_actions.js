@@ -6,10 +6,10 @@
  */
 import type { Task } from "oxalis/store";
 
-type setTaskActionType = { type: "SET_TASK", task: ?Task };
-export type TaskAction = setTaskActionType;
+type SetTaskAction = { type: "SET_TASK", task: ?Task };
+export type TaskAction = SetTaskAction;
 
-export const setTaskAction = (task: ?Task): setTaskActionType => ({
+export const setTaskAction = (task: ?Task): SetTaskAction => ({
   type: "SET_TASK",
   task,
 });

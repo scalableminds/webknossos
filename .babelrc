@@ -14,6 +14,18 @@
       "plugins": [
         "istanbul"
       ]
+    },
+    "production": {
+      "plugins": [
+        // Do not add babel-plugin-import to the test env, it doesn't work together with istanbul
+        // https://github.com/istanbuljs/babel-plugin-istanbul/issues/161
+        [
+          "import",
+          {
+            "libraryName": "antd"
+          }
+        ]
+      ]
     }
   },
   "presets": [
@@ -37,13 +49,6 @@
   ],
   "plugins": [
     "@babel/plugin-proposal-class-properties",
-    // Currently broken (as of 1.9.1) - does not rename the import (_select) in a line like `const { Option } = Select;`
-    // [
-    //   "import",
-    //   {
-    //     "libraryName": "antd"
-    //   }
-    // ],
     "@babel/plugin-syntax-dynamic-import",
     [
       "@babel/plugin-proposal-object-rest-spread",

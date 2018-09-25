@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import java.io.File
+import java.nio.file.Paths
 
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Point3D
@@ -11,9 +12,14 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
+import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
+import com.scalableminds.webknossos.datastore.services.BinaryDataService
 import com.scalableminds.webknossos.wrap.WKWFile
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
+
+import scala.concurrent.duration._
 import play.api.libs.iteratee.Enumerator
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -38,6 +44,9 @@ class VolumeTracingService @Inject()(
   val tracingType = TracingType.volume
 
   val tracingStore = tracingDataStore.volumes
+
+  //TODO: find better place for the magic numbers
+  val binaryDataService = new BinaryDataService(Paths.get(""), 10 seconds, 100)
 
   override def currentVersion(tracingId: String): Fox[Long] = tracingDataStore.volumes.getVersion(tracingId).getOrElse(0L)
 
@@ -96,13 +105,20 @@ class VolumeTracingService @Inject()(
     }
   }
 
-  def data(tracingId: String, tracing: VolumeTracing): Enumerator[Array[Byte]] = {
+  def allData(tracingId: String, tracing: VolumeTracing): Enumerator[Array[Byte]] = {
     val dataLayer = volumeTracingLayer(tracingId, tracing)
     val buckets = new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(1))
 
     Enumerator.outputStream { os =>
       ZipIO.zip(buckets, os)
     }
+  }
+
+  def data(tracingId: String, tracing: VolumeTracing, dataRequests: DataRequestCollection): Fox[(Array[Byte], List[Int])] = {
+    val dataLayer = volumeTracingLayer(tracingId, tracing)
+
+    val requests = dataRequests.map(r => DataServiceDataRequest(null, dataLayer, r.cuboid(dataLayer), r.settings))
+    binaryDataService.handleDataRequests(requests)
   }
 
   def duplicate(tracingId: String, tracing: VolumeTracing): Fox[String] = {

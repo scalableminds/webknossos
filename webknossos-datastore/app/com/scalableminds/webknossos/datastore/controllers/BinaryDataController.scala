@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import java.io.{ByteArrayOutputStream, OutputStream}
+import java.nio.file.Paths
 import java.util.Base64
 
 import akka.stream.scaladsl.StreamConverters
@@ -14,6 +15,7 @@ import com.scalableminds.webknossos.datastore.models.DataRequestCollection._
 import com.scalableminds.webknossos.datastore.models.{DataRequest, ImageThumbnail, WebKnossosDataRequest}
 import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.DataStoreConfig
 import net.liftweb.common.{Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 import play.api.http.HttpEntity
@@ -24,12 +26,14 @@ import play.api.mvc.{PlayBodyParsers, ResponseHeader, Result}
 import scala.concurrent.{ExecutionContext, Future}
 
 class BinaryDataController @Inject()(
-                                      binaryDataService: BinaryDataService,
                                       dataSourceRepository: DataSourceRepository,
+                                      config: DataStoreConfig,
                                       accessTokenService: AccessTokenService)
                                     (implicit ec: ExecutionContext,
                                      bodyParsers: PlayBodyParsers)
                                     extends Controller {
+
+  val binaryDataService = new BinaryDataService(Paths.get(config.Braingames.Binary.baseFolder), config.Braingames.Binary.loadTimeout, config.Braingames.Binary.cacheMaxSize)
 
   /**
     * Handles requests for raw binary data via HTTP POST from webKnossos.
@@ -280,17 +284,10 @@ class BinaryDataController @Inject()(
       }
   }
 
-  private def getDataLayer(dataSource: DataSource, dataLayerName: String): Fox[DataLayer] = {
-    dataSource.getDataLayer(dataLayerName).toFox
-
-      /*TODO .orElse(
-      volumeTracingService.dataLayerForVolumeTracing(dataLayerName, dataSource))*/
-  }
-
   private def getDataSourceAndDataLayer(dataSetName: String, dataLayerName: String)(implicit m: MessagesProvider): Fox[(DataSource, DataLayer)] = {
     for {
       dataSource <- dataSourceRepository.findUsableByName(dataSetName).toFox ?~> Messages("dataSource.notFound") ~> 404
-      dataLayer <- getDataLayer(dataSource, dataLayerName) ?~> Messages("dataLayer.notFound", dataLayerName) ~> 404
+      dataLayer <- dataSource.getDataLayer(dataLayerName) ?~> Messages("dataLayer.notFound", dataLayerName) ~> 404
     } yield {
       (dataSource, dataLayer)
     }

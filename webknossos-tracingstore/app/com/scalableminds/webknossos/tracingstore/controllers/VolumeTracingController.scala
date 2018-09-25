@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.tracingstore.controllers
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracings}
+import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
 import com.scalableminds.webknossos.datastore.services.{AccessTokenService, DataSourceRepository, UserAccessRequest, WebKnossosServer}
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
@@ -43,19 +44,41 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
       }
   }
 
-  def getData(tracingId: String, version: Option[Long]) = Action.async {
+  def allData(tracingId: String, version: Option[Long]) = Action.async {
     implicit request => {
       accessTokenService.validateAccess(UserAccessRequest.webknossos) {
         AllowRemoteOrigin {
           for {
             tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
           } yield {
-            val enumerator: Enumerator[Array[Byte]] = tracingService.data(tracingId, tracing)
+            val enumerator: Enumerator[Array[Byte]] = tracingService.allData(tracingId, tracing)
             Ok.chunked(Source.fromPublisher(IterateeStreams.enumeratorToPublisher(enumerator)))
           }
         }
       }
     }
+  }
+
+  def data(tracingId: String) = Action.async(validateJson[List[WebKnossosDataRequest]]) {
+    implicit request => {
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+        AllowRemoteOrigin {
+          for {
+            tracing <- tracingService.find(tracingId) ?~>  Messages("tracing.notFound")
+            (data, indices) <- tracingService.data(tracingId, tracing, request.body)
+          } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
+        }
+      }
+    }
+  }
+
+
+  private def getMissingBucketsHeaders(indices: List[Int]): Seq[(String, String)] = {
+    List(("MISSING-BUCKETS" -> formatMissingBucketList(indices)), ("Access-Control-Expose-Headers" -> "MISSING-BUCKETS"))
+  }
+
+  private def formatMissingBucketList(indices: List[Int]): String = {
+    "[" + indices.mkString(", ") + "]"
   }
 
 

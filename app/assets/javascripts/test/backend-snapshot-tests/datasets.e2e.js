@@ -33,7 +33,7 @@ test.serial("getDatasets", async t => {
     retry++;
   }
   datasets = _.sortBy(datasets, d => d.name);
-  writeFlowCheckingFile(datasets, "dataset", "APIMaybeUnimportedDatasetType", { isArray: true });
+  writeFlowCheckingFile(datasets, "dataset", "APIMaybeUnimportedDataset", { isArray: true });
   t.snapshot(datasets, { id: "datasets-getDatasets" });
 });
 

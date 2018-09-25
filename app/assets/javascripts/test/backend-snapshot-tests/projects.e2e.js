@@ -22,7 +22,7 @@ test.beforeEach("Change token", async () => {
 
 test.serial("getProjects()", async t => {
   const projects = _.sortBy(await api.getProjects(), p => p.name);
-  writeFlowCheckingFile(projects, "project", "APIProjectType", { isArray: true });
+  writeFlowCheckingFile(projects, "project", "APIProject", { isArray: true });
   t.snapshot(projects, { id: "projects-getProjects()" });
 });
 

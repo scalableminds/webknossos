@@ -115,7 +115,7 @@ test("tasks_user_D", async t => {
   t.plan(1);
 
   await api.getTask("58135c192faeb34c0081c058").catch(err => {
-    t.is(err.messages[0].error, "Task couldn't be found");
+    t.is(err.messages[0].error, "Task couldn’t be found");
   });
 });
 
@@ -124,7 +124,7 @@ test("tasks_user_E", async t => {
   t.plan(1);
 
   await api.getTask("58135c192faeb34c0081c058").catch(err => {
-    t.is(err.messages[0].error, "Task couldn't be found");
+    t.is(err.messages[0].error, "Task couldn’t be found");
   });
 });
 
@@ -157,6 +157,6 @@ test("project_user_B", async t => {
 
   const projectName = "Test_Project";
   await api.deleteProject(projectName).catch(err => {
-    t.is(err.messages[0].error, "Project Test_Project couldn't be found");
+    t.is(err.messages[0].error, "Project Test_Project couldn’t be found");
   });
 });

@@ -16,14 +16,16 @@ function TreeWithComments(props: Props) {
     props.onExpand(props.tree.treeId);
   };
 
-  const liClassName = classNames({ bold: props.isActive });
+  const liClassName = classNames("nowrap", { bold: props.isActive });
   const iClassName = classNames("fa", "fa-fw", {
     "fa-chevron-right": props.collapsed,
     "fa-chevron-down": !props.collapsed,
   });
+  // eslint-disable-next-line no-unused-vars
+  const { width, ...liStyle } = props.style;
 
   return (
-    <li style={props.style} className={liClassName}>
+    <li style={liStyle} className={liClassName}>
       <a onClick={handleToggleComment}>
         <i className={iClassName} />
       </a>

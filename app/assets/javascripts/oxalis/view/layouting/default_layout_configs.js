@@ -50,7 +50,8 @@ const NonSkeletonRightHandColumn = Stack(Panes.DatasetInfoTabView, Panes.Mapping
 const createLayout = (...content: Array<*>) => ({
   settings: LayoutSettings,
   dimensions: {
-    headerHeight: 31,
+    headerHeight: 18,
+    borderWidth: 1,
   },
   content,
 });

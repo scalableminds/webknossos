@@ -66,6 +66,10 @@ test.serial("updateTask()", async t => {
 
   t.deepEqual(updatedTask.status.open, newTask.openInstances);
   t.snapshot(updatedTask, { id: "tasks-updatedTask" });
+
+  // Reset task to original state
+  const revertedTask = await api.updateTask(task.id, task);
+  t.is(revertedTask.status.open, task.status.open);
 });
 
 test.serial("transferTask()", async t => {

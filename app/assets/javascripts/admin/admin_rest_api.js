@@ -566,7 +566,7 @@ export async function getTracingForAnnotationType(
     Request.receiveArraybuffer(
       `${
         annotation.dataStore.url
-      }/data/tracings/${tracingType}/${tracingId}?token=${token}${possibleVersionString}`,
+      }/tracings/${tracingType}/${tracingId}?token=${token}${possibleVersionString}`,
       { headers: { Accept: "application/x-protobuf" } },
     ),
   );
@@ -584,7 +584,7 @@ export function getUpdateActionLog(
 ): Promise<Array<APIUpdateActionBatch>> {
   return doWithToken(token =>
     Request.receiveJSON(
-      `${dataStoreUrl}/data/tracings/${tracingType}/${tracingId}/updateActionLog?token=${token}`,
+      `${dataStoreUrl}/tracings/${tracingType}/${tracingId}/updateActionLog?token=${token}`,
     ),
   );
 }

@@ -42,6 +42,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
                                        userService: UserService,
                                        taskDAO: TaskDAO,
                                        taskTypeDAO: TaskTypeDAO,
+                                       tracingStoreService: TracingStoreService,
                                        annotationService: AnnotationService,
                                        sil: Silhouette[WkEnv],
                                        provider: AnnotationInformationProvider,
@@ -110,12 +111,12 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
         _ <- bool2Fox(volumeTracingsWithDataLocations.size <= 1) ?~> "nml.file.multipleVolumes"
         dataSetName <- assertAllOnSameDataSet(skeletonTracings, volumeTracingsWithDataLocations.headOption.map(_._1)) ?~> "nml.file.differentDatasets"
         dataSet <- dataSetDAO.findOneByName(dataSetName)
-        dataStoreHandler <- dataSetService.handlerFor(dataSet)
+        tracingStoreClient <- tracingStoreService.clientFor(dataSet)
         volumeTracingIdOpt <- Fox.runOptional(volumeTracingsWithDataLocations.headOption){ v =>
-          dataStoreHandler.saveVolumeTracing(v._1, parsedFiles.otherFiles.get(v._2).map(_.file))
+          tracingStoreClient.saveVolumeTracing(v._1, parsedFiles.otherFiles.get(v._2).map(_.file))
         }
         mergedSkeletonTracingIdOpt <- Fox.runOptional(skeletonTracings.headOption){ s =>
-          dataStoreHandler.mergeSkeletonTracingsByContents(SkeletonTracings(skeletonTracings), persistTracing=true)
+          tracingStoreClient.mergeSkeletonTracingsByContents(SkeletonTracings(skeletonTracings), persistTracing=true)
         }
         annotation <- annotationService.createFrom(
           request.identity, dataSet, mergedSkeletonTracingIdOpt, volumeTracingIdOpt, AnnotationType.Explorational, name, description)
@@ -146,9 +147,9 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
 
     def skeletonToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String) = {
       for {
-        dataStoreHandler <- dataSetService.handlerFor(dataSet)
+        tracingStoreClient <- tracingStoreService.clientFor(dataSet)
         skeletonTracingId <- annotation.skeletonTracingId.toFox
-        tracing <- dataStoreHandler.getSkeletonTracing(skeletonTracingId)
+        tracing <- tracingStoreClient.getSkeletonTracing(skeletonTracingId)
         user <- userService.findOneById(annotation._user, useCache = true)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
       } yield {
@@ -158,10 +159,10 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
 
     def volumeOrHybridToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String) = {
       for {
-        dataStoreHandler <- dataSetService.handlerFor(dataSet)
+        tracingStoreClient <- tracingStoreService.clientFor(dataSet)
         volumeTracingId <- annotation.volumeTracingId.toFox
-        (volumeTracing, data: Source[ByteString, _]) <- dataStoreHandler.getVolumeTracing(volumeTracingId)
-        skeletonTracingOpt <- Fox.runOptional(annotation.skeletonTracingId)(dataStoreHandler.getSkeletonTracing)
+        (volumeTracing, data: Source[ByteString, _]) <- tracingStoreClient.getVolumeTracing(volumeTracingId)
+        skeletonTracingOpt <- Fox.runOptional(annotation.skeletonTracingId)(tracingStoreClient.getSkeletonTracing)
         user <- userService.findOneById(annotation._user, useCache = true)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
       } yield {

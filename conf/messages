@@ -126,6 +126,9 @@ dataStore.list.failed=Failed to retrieve list of data stores.
 dataStore.notFound=DataStore not found.
 dataStore.name.alreadyTaken=There already exists a DataStore with this name. Choose a different name, please.
 
+tracingStore.notFound=TracingStore not found.
+tracingStore.list.failed=Failed to retrieve list of tracing stores.
+
 zip.file.notFound=No or invalid ZIP file specified
 zip.file.invalid=Uploaded ZIP file invalid or corrupted
 zip.file.tooLarge=The ZIP file must not be larger than 1GB

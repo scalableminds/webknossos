@@ -150,7 +150,7 @@ async function sendUpdateActions(explorational, queue) {
   const skeletonTracingId = explorational.tracing.skeleton;
   if (skeletonTracingId == null) throw new Error("No skeleton tracing present.");
   return sendRequestWithToken(
-    `${explorational.dataStore.url}/data/tracings/skeleton/${skeletonTracingId}/update?token=`,
+    `${explorational.dataStore.url}/tracings/skeleton/${skeletonTracingId}/update?token=`,
     {
       method: "POST",
       headers: { "X-Date": "123456789" },

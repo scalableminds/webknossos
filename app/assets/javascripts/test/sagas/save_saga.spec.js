@@ -122,7 +122,7 @@ test("SaveSaga should send request to server", t => {
   expectValueDeepEqual(
     t,
     saga.next(DATASTORE_URL),
-    call(sendRequestWithToken, `${DATASTORE_URL}/data/tracings/skeleton/1234567890/update?token=`, {
+    call(sendRequestWithToken, `${DATASTORE_URL}/tracings/skeleton/1234567890/update?token=`, {
       method: "POST",
       headers: { "X-Date": `${TIMESTAMP}` },
       data: saveQueueWithVersions,
@@ -145,7 +145,7 @@ test("SaveSaga should retry update actions", t => {
   expectValueDeepEqual(
     t,
     saga.next(DATASTORE_URL),
-    call(sendRequestWithToken, `${DATASTORE_URL}/data/tracings/skeleton/1234567890/update?token=`, {
+    call(sendRequestWithToken, `${DATASTORE_URL}/tracings/skeleton/1234567890/update?token=`, {
       method: "POST",
       headers: { "X-Date": `${TIMESTAMP}` },
       data: saveQueueWithVersions,
@@ -174,7 +174,7 @@ test("SaveSaga should escalate on permanent client error update actions", t => {
   expectValueDeepEqual(
     t,
     saga.next(DATASTORE_URL),
-    call(sendRequestWithToken, `${DATASTORE_URL}/data/tracings/skeleton/1234567890/update?token=`, {
+    call(sendRequestWithToken, `${DATASTORE_URL}/tracings/skeleton/1234567890/update?token=`, {
       method: "POST",
       headers: { "X-Date": `${TIMESTAMP}` },
       data: saveQueueWithVersions,

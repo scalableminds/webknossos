@@ -5,6 +5,7 @@ import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
+import models.annotation.{TracingStore, TracingStoreDAO}
 import models.binary._
 import models.configuration.UserConfiguration
 import models.project.{Project, ProjectDAO}
@@ -40,6 +41,7 @@ class InitialDataService @Inject()(userService: UserService,
                                    userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
                                    taskTypeDAO: TaskTypeDAO,
                                    dataStoreDAO: DataStoreDAO,
+                                   tracingStoreDAO: TracingStoreDAO,
                                    teamDAO: TeamDAO,
                                    tokenDAO: TokenDAO,
                                    projectDAO: ProjectDAO,
@@ -86,6 +88,7 @@ Samplecountry
       _ <- insertTaskType
       _ <- insertProject
       _ <- insertLocalDataStoreIfEnabled
+      _ <- insertLocalTracingStoreIfEnabled
     } yield ()
 
   def assertInitialDataEnabled =
@@ -190,7 +193,7 @@ Samplecountry
     if (conf.Tracingstore.enabled) {
       tracingStoreDAO.findOneByName("localhost").futureBox.map { maybeStore =>
         if (maybeStore.isEmpty) {
-          tracingStoreDAO.insertOne(DataStore("localhost", conf.Http.uri, conf.Tracingstore.key))
+          tracingStoreDAO.insertOne(TracingStore("localhost", conf.Http.uri, conf.Tracingstore.key))
         }
       }
     } else Fox.successful(())

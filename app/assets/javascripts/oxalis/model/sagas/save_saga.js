@@ -169,7 +169,7 @@ export function* sendRequestToServer(
   try {
     yield* call(
       sendRequestWithToken,
-      `${dataStoreUrl}/data/tracings/${type}/${tracingId}/update?token=`,
+      `${dataStoreUrl}/tracings/${type}/${tracingId}/update?token=`,
       {
         method: "POST",
         headers: { "X-Date": `${timestamp}` },

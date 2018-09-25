@@ -66,7 +66,7 @@ test.beforeEach(t => {
   const tracingId = ANNOTATION.tracing[contentType];
 
   Request.receiveJSON
-    .withArgs(`${ANNOTATION.dataStore.url}/data/tracings/${contentType}/${tracingId}`)
+    .withArgs(`${ANNOTATION.dataStore.url}/tracings/${contentType}/${tracingId}`)
     .returns(Promise.resolve(_.cloneDeep(TRACING)));
   User.prototype.fetch.returns(Promise.resolve());
 });

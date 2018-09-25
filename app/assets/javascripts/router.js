@@ -12,11 +12,12 @@ import { ControlModeEnum } from "oxalis/constants";
 import { APITracingTypeEnum } from "admin/api_flow_types";
 import { getAnnotationInformation } from "admin/admin_rest_api";
 import SecuredRoute from "components/secured_route";
+import DisableGenericDnd from "components/disable_generic_dnd";
 import Navbar from "navbar";
 import { Imprint, Privacy } from "components/legal";
 
-import TracingLayoutView from "oxalis/view/tracing_layout_view";
-import DashboardView from "dashboard/dashboard_view";
+import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
+import DashboardView, { urlTokenToTabKeyMap } from "dashboard/dashboard_view";
 import SpotlightView from "dashboard/spotlight_view";
 import LoginView from "admin/auth/login_view";
 import RegistrationView from "admin/auth/registration_view";
@@ -113,6 +114,7 @@ class ReactRouter extends React.Component<Props> {
     return (
       <Router history={browserHistory}>
         <Layout>
+          <DisableGenericDnd />
           <Navbar isAuthenticated={isAuthenticated} />
           <Content>
             <Switch>
@@ -121,7 +123,7 @@ class ReactRouter extends React.Component<Props> {
                 path="/"
                 render={() =>
                   isAuthenticated ? (
-                    <DashboardView userId={null} isAdminView={false} />
+                    <DashboardView userId={null} isAdminView={false} initialTabKey={null} />
                   ) : (
                     <SpotlightView />
                   )
@@ -129,8 +131,26 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
+                path="/dashboard/:tab"
+                render={({ match }: ContextRouter) => {
+                  const tab = match.params.tab;
+                  const initialTabKey = tab ? urlTokenToTabKeyMap[tab] : null;
+                  return (
+                    <DashboardView
+                      userId={null}
+                      isAdminView={false}
+                      initialTabKey={initialTabKey}
+                    />
+                  );
+                }}
+              />
+
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
                 path="/dashboard"
-                render={() => <DashboardView userId={null} isAdminView={false} />}
+                render={() => (
+                  <DashboardView userId={null} isAdminView={false} initialTabKey={null} />
+                )}
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
@@ -139,6 +159,7 @@ class ReactRouter extends React.Component<Props> {
                   <DashboardView
                     userId={match.params.userId}
                     isAdminView={match.params.userId !== null}
+                    initialTabKey={null}
                   />
                 )}
               />
@@ -255,7 +276,7 @@ class ReactRouter extends React.Component<Props> {
                     isEditingMode={false}
                     datasetName={match.params.datasetName || ""}
                     onComplete={() =>
-                      window.location.replace(`${window.location.origin}/dashboard`)
+                      window.location.replace(`${window.location.origin}/dashboard/datasets`)
                     }
                     onCancel={() => window.history.back()}
                   />

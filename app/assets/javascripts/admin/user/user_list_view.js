@@ -16,13 +16,13 @@ import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import messages from "messages";
-
 import type { APIUserType, APITeamMembershipType, ExperienceMapType } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
 import type { OxalisState } from "oxalis/store";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import Toast from "libs/toast";
 import { InviteUsersPopover } from "admin/onboarding";
+import Clipboard from "clipboard-js";
 import Store from "../../oxalis/store";
 import { logoutUserAction } from "../../oxalis/model/actions/user_actions";
 
@@ -46,8 +46,10 @@ type State = {
   isExperienceModalVisible: boolean,
   isTeamRoleModalVisible: boolean,
   isInvitePopoverVisible: boolean,
+  singleSelectedUser: ?APIUserType,
   activationFilter: Array<"true" | "false">,
   searchQuery: string,
+  domainToEdit: ?string,
 };
 
 const persistence: Persistence<State> = new Persistence(
@@ -68,6 +70,8 @@ class UserListView extends React.PureComponent<Props, State> {
     isInvitePopoverVisible: false,
     activationFilter: ["true"],
     searchQuery: "",
+    singleSelectedUser: null,
+    domainToEdit: null,
   };
 
   componentWillMount() {
@@ -83,6 +87,9 @@ class UserListView extends React.PureComponent<Props, State> {
   }
 
   async fetchData(): Promise<void> {
+    this.setState({
+      isLoading: true,
+    });
     const users = await getEditableUsers();
 
     this.setState({
@@ -141,6 +148,16 @@ class UserListView extends React.PureComponent<Props, State> {
       isExperienceModalVisible: false,
       isTeamRoleModalVisible: false,
     });
+  };
+
+  closeExperienceModal = (updatedUsers: Array<APIUserType>): void => {
+    const updatedUsersMap = _.keyBy(updatedUsers, u => u.id);
+    this.setState(prevState => ({
+      isExperienceModalVisible: false,
+      users: prevState.users.map(user => updatedUsersMap[user.id] || user),
+      singleSelectedUser: null,
+      selectedUserIds: prevState.singleSelectedUser == null ? [] : prevState.selectedUserIds,
+    }));
   };
 
   handleSearch = (event: SyntheticInputEvent<>): void => {
@@ -235,6 +252,12 @@ class UserListView extends React.PureComponent<Props, State> {
     );
   }
 
+  getAllSelectedUsers(): Array<APIUserType> {
+    if (this.state.selectedUserIds.length > 0) {
+      return this.state.users.filter(user => this.state.selectedUserIds.includes(user.id));
+    } else return [];
+  }
+
   render() {
     const hasRowsSelected = this.state.selectedUserIds.length > 0;
     const rowSelection = {
@@ -272,7 +295,9 @@ class UserListView extends React.PureComponent<Props, State> {
           Edit Teams
         </Button>
         <Button
-          onClick={() => this.setState({ isExperienceModalVisible: true })}
+          onClick={() => {
+            this.setState({ isExperienceModalVisible: true });
+          }}
           icon="trophy"
           disabled={!hasRowsSelected}
           style={marginRight}
@@ -321,7 +346,7 @@ class UserListView extends React.PureComponent<Props, State> {
 
         <Spin size="large" spinning={this.state.isLoading}>
           <Table
-            dataSource={Utils.filterWithSearchQueryOR(
+            dataSource={Utils.filterWithSearchQueryAND(
               this.state.users,
               ["firstName", "lastName", "email", "teams", user => Object.keys(user.experiences)],
               this.state.searchQuery,
@@ -356,6 +381,7 @@ class UserListView extends React.PureComponent<Props, State> {
               title="Email"
               dataIndex="email"
               key="email"
+              width={300}
               sorter={Utils.localeCompareBy(typeHint, user => user.email)}
               render={(__, user: APIUserType) =>
                 this.props.activeUser.isAdmin ? (
@@ -387,11 +413,29 @@ class UserListView extends React.PureComponent<Props, State> {
               title="Experiences"
               dataIndex="experiences"
               key="experiences"
-              width={300}
+              width={250}
               render={(experiences: ExperienceMapType, user: APIUserType) =>
                 _.map(experiences, (value, domain) => (
                   <Tag key={`experience_${user.id}_${domain}`}>
-                    {domain} : {value}
+                    <span
+                      onClick={() => {
+                        this.setState({
+                          singleSelectedUser: user,
+                          isExperienceModalVisible: true,
+                          domainToEdit: domain,
+                        });
+                      }}
+                    >
+                      {domain} : {value}
+                    </span>
+                    <Icon
+                      type="copy"
+                      style={{ margin: "0 0 0 5px" }}
+                      onClick={async () => {
+                        await Clipboard.copy(domain);
+                        Toast.success(`"${domain}" copied to clipboard`);
+                      }}
+                    />
                   </Tag>
                 ))
               }
@@ -400,7 +444,7 @@ class UserListView extends React.PureComponent<Props, State> {
               title="Teams - Role"
               dataIndex="teams"
               key="teams_"
-              width={300}
+              width={250}
               render={(teams: Array<APITeamMembershipType>, user: APIUserType) => {
                 if (user.isAdmin) {
                   return (
@@ -464,16 +508,25 @@ class UserListView extends React.PureComponent<Props, State> {
             />
           </Table>
         </Spin>
-        <ExperienceModalView
-          visible={this.state.isExperienceModalVisible}
-          selectedUserIds={this.state.selectedUserIds}
-          users={this.state.users}
-          onChange={newUsers => {
-            this.handleUsersChange(newUsers);
-            this.setState({ selectedUserIds: [] });
-          }}
-          onCancel={() => this.setState({ isExperienceModalVisible: false })}
-        />
+        {this.state.isExperienceModalVisible ? (
+          <ExperienceModalView
+            visible={this.state.isExperienceModalVisible}
+            selectedUsers={
+              this.state.singleSelectedUser
+                ? [this.state.singleSelectedUser]
+                : this.getAllSelectedUsers()
+            }
+            initialDomainToEdit={this.state.domainToEdit}
+            onChange={this.closeExperienceModal}
+            onCancel={() =>
+              this.setState({
+                isExperienceModalVisible: false,
+                singleSelectedUser: null,
+                domainToEdit: null,
+              })
+            }
+          />
+        ) : null}
         <TeamRoleModalView
           visible={this.state.isTeamRoleModalVisible}
           selectedUserIds={this.state.selectedUserIds}

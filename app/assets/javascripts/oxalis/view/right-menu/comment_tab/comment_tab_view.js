@@ -209,6 +209,19 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
     }));
   };
 
+  toggleExpandForAllTrees = () => {
+    this.setState(prevState => {
+      const shouldBeCollapsed = !_.values(prevState.collapsedTreeIds).some(bool => bool);
+
+      const collapsedTreeIds = shouldBeCollapsed
+        ? _.mapValues(this.props.skeletonTracing.trees, () => true)
+        : {};
+      return {
+        collapsedTreeIds,
+      };
+    });
+  };
+
   toggleExpand = (treeId: number) => {
     this.setState(prevState => ({
       collapsedTreeIds: update(prevState.collapsedTreeIds, { $toggle: [treeId] }),
@@ -332,7 +345,7 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
     );
 
     return (
-      <div className="flex-column">
+      <div className="flex-column" style={{ height: "inherit" }}>
         {this.renderMarkdownModal()}
         <InputGroup compact>
           <SearchPopover
@@ -342,40 +355,45 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
             searchKey="content"
             maxSearchResults={10}
           >
-            <Tooltip title="Open the search via CTRL + Shift + F">
-              <ButtonComponent>
-                <Icon type="search" />
-              </ButtonComponent>
-            </Tooltip>
+            <ButtonComponent icon="search" title="Open the search via CTRL + Shift + F" />
           </SearchPopover>
-          <ButtonComponent onClick={this.previousComment}>
-            <i className="fa fa-arrow-left" />
-          </ButtonComponent>
+          <ButtonComponent
+            title="Jump to previous comment"
+            onClick={this.previousComment}
+            icon="arrow-left"
+          />
           <InputComponent
             value={activeCommentContent}
             disabled={activeNodeMaybe.isNothing}
             onChange={evt => this.handleChangeInput(evt, true)}
             onPressEnter={evt => evt.target.blur()}
             placeholder="Add comment"
-            style={{ width: "60%" }}
+            style={{ width: "50%" }}
           />
           <ButtonComponent
             onClick={() => this.setMarkdownModalVisibility(true)}
             disabled={activeNodeMaybe.isNothing}
             type={isMultilineComment ? "primary" : "button"}
-          >
-            <Icon type="edit" />Markdown
-          </ButtonComponent>
-          <ButtonComponent onClick={this.nextComment}>
-            <i className="fa fa-arrow-right" />
-          </ButtonComponent>
+            icon="edit"
+            title="Open dialog to edit comment in multi-line mode"
+          />
+          <ButtonComponent
+            title="Jump to next comment"
+            onClick={this.nextComment}
+            icon="arrow-right"
+          />
           <Dropdown overlay={this.renderSortDropdown()}>
             <ButtonComponent title="Sort" onClick={this.toggleSortingDirection}>
               {this.renderSortIcon()}
             </ButtonComponent>
           </Dropdown>
+          <ButtonComponent
+            onClick={this.toggleExpandForAllTrees}
+            icon="shrink"
+            title="Collapse or expand groups"
+          />
         </InputGroup>
-        <div style={{ flex: "1 1 auto", marginTop: 20 }}>
+        <div style={{ flex: "1 1 auto", marginTop: 20, listStyle: "none" }}>
           <AutoSizer>
             {({ height, width }) => (
               <div style={{ height, width }} className="flex-overflow">

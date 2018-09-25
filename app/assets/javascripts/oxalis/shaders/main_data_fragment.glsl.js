@@ -17,7 +17,7 @@ import constants, {
 import compileShader from "./shader_module_system";
 import { convertCellIdToRGB, getBrushOverlay, getSegmentationId } from "./segmentation.glsl";
 import { inverse, round, div, isNan, transDim, isFlightMode } from "./utils.glsl";
-import { getRelativeCoords, getWorldCoordUVW } from "./coords.glsl";
+import { getRelativeCoords, getWorldCoordUVW, isOutsideOfBoundingBox } from "./coords.glsl";
 import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
 
 type ParamsType = {|
@@ -84,6 +84,8 @@ uniform float sphericalCapRadius;
 uniform float viewMode;
 uniform float alpha;
 uniform bool highlightHoveredCellId;
+uniform vec3 bboxMin;
+uniform vec3 bboxMax;
 uniform vec3 globalPosition;
 uniform vec3 anchorPoint;
 uniform vec3 fallbackAnchorPoint;
@@ -123,6 +125,7 @@ ${compileShader(
       transDim,
       getRelativeCoords,
       getWorldCoordUVW,
+      isOutsideOfBoundingBox,
       getMaybeFilteredColorOrFallback,
       hasSegmentation ? convertCellIdToRGB : null,
       hasSegmentation ? getBrushOverlay : null,
@@ -133,6 +136,10 @@ void main() {
   float color_value  = 0.0;
 
   vec3 worldCoordUVW = getWorldCoordUVW();
+  if (isOutsideOfBoundingBox(worldCoordUVW)) {
+    gl_FragColor = vec4(0.0);
+    return;
+  }
   vec3 coords = getRelativeCoords(worldCoordUVW, zoomStep);
 
   vec3 bucketPosition = div(floor(coords), bucketWidth);

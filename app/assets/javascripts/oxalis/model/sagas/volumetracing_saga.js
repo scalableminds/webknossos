@@ -125,24 +125,45 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
 function* getBoundingsFromPosition(currentViewport: OrthoViewType): Saga<Array<Vector3d>> {
   const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
   const zoom = yield* select(state => state.flycam.zoomStep);
+  const scales = yield* select(state => getBaseVoxelFactors(state.dataset.dataSource.scale));
   const halfViewportWidth = Math.round((Constants.PLANE_WIDTH / 2) * zoom);
   switch (
     currentViewport // needs debugging
   ) {
     case "PLANE_XY":
       return [
-        [position[0] - halfViewportWidth, position[1] - halfViewportWidth, position[2]],
+        [
+          (position[0] - halfViewportWidth) * scales[0],
+          (position[1] - halfViewportWidth) * scales[1],
+          position[2],
+        ] * scales[2],
         [position[0] + halfViewportWidth, position[1] + halfViewportWidth, position[2]],
       ];
     case "PLANE_YZ":
       return [
-        [position[0], position[1] - halfViewportWidth, position[2] - halfViewportWidth],
-        [position[0], position[1] + halfViewportWidth, position[2] + halfViewportWidth],
+        [
+          position[0] * scales[0],
+          (position[1] - halfViewportWidth) * scales[1],
+          (position[2] - halfViewportWidth) * scales[2],
+        ],
+        [
+          position[0] * scales[0],
+          (position[1] + halfViewportWidth) * scales[1],
+          (position[2] + halfViewportWidth) * scales[2],
+        ],
       ];
     case "PLANE_XZ":
       return [
-        [position[0] - halfViewportWidth, position[1], position[2] - halfViewportWidth],
-        [position[0] + halfViewportWidth, position[1], position[2] + halfViewportWidth],
+        [
+          (position[0] - halfViewportWidth) * scales[0],
+          position[1] * scales[1],
+          (position[2] - halfViewportWidth) * scales[2],
+        ],
+        [
+          (position[0] + halfViewportWidth) * scales[2],
+          position[1] * scales[1],
+          (position[2] + halfViewportWidth) * scales[2],
+        ],
       ];
     default:
       return null;

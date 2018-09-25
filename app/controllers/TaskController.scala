@@ -77,7 +77,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
     with ProtoGeometryImplicits
     with FoxImplicits {
 
-  val MAX_OPEN_TASKS = conf.Oxalis.Tasks.maxOpenPerUser
+  val MAX_OPEN_TASKS = conf.WebKnossos.Tasks.maxOpenPerUser
 
   def read(taskId: String) = sil.SecuredAction.async { implicit request =>
     for {

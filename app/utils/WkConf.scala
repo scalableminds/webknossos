@@ -47,17 +47,17 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
     }
   }
 
-  object Oxalis {
+  object WebKnossos {
     object User {
       object Time {
-        val tracingPauseInSeconds = get[Int]("oxalis.user.time.tracingPauseInSeconds") seconds
+        val tracingPauseInSeconds = get[Int]("webKnossos.user.time.tracingPauseInSeconds") seconds
       }
       val children = List(Time)
     }
     object Tasks {
-      val maxOpenPerUser = get[Int]("oxalis.tasks.maxOpenPerUser")
+      val maxOpenPerUser = get[Int]("webKnossos.tasks.maxOpenPerUser")
     }
-    val newOrganizationMailingList = get[String]("oxalis.newOrganizationMailingList")
+    val newOrganizationMailingList = get[String]("webKnossos.newOrganizationMailingList")
 
     val children = List(User, Tasks)
   }
@@ -116,5 +116,5 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
     val children = List(Analytics)
   }
 
-  val children = List(Application, Http, Mail, Oxalis, Datastore, User, Braintracing, Features, Silhouette, Airbrake, Google)
+  val children = List(Application, Http, Mail, WebKnossos, Datastore, User, Braintracing, Features, Silhouette, Airbrake, Google)
 }

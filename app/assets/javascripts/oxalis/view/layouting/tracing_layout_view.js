@@ -29,7 +29,7 @@ import type { ControlMode, Mode } from "oxalis/constants";
 import RecordingSwitch from "oxalis/view/recording_switch";
 import TDViewControls from "oxalis/view/td_view_controls";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
-import { GoldenLayoutAdapter } from "./golden_layout_adapter";
+import { GoldenLayoutAdapter, getDesiredLayoutRect } from "./golden_layout_adapter";
 import { getLayoutConfig, storeLayoutConfig } from "./layout_persistence";
 import { determineLayout } from "./default_layout_configs";
 
@@ -53,22 +53,13 @@ type State = {
 };
 
 const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
-export function getDesiredCanvasSize(): Maybe<[number, number]> {
-  // const canvasAndLayoutContainer = document.getElementById(canvasAndLayoutContainerID);
-  const canvasAndLayoutContainer = document.querySelector("#layoutContainer");
-
-  if (canvasAndLayoutContainer) {
-    const { scrollWidth, scrollHeight } = canvasAndLayoutContainer;
-    return Maybe.Just([scrollWidth, scrollHeight]);
-  }
-  return Maybe.Nothing();
-}
 
 const GOLDEN_LAYOUT_ADAPTER_STYLE = {
   display: "block",
   height: "100%",
   width: "100%",
   flex: "1 1 auto",
+  overflow: "hidden",
 };
 
 class TracingLayoutView extends React.PureComponent<Props, State> {

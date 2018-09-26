@@ -11,9 +11,9 @@ import Store from "oxalis/store";
 import Constants, { OrthoViews, OrthoViewValues, OrthoViewColors } from "oxalis/constants";
 import type { OrthoView, OrthoViewMap } from "oxalis/constants";
 import SceneController from "oxalis/controller/scene_controller";
-import { getDesiredCanvasSize } from "oxalis/view/layouting/tracing_layout_view";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import { getDesiredLayoutRect } from "oxalis/view/layouting/golden_layout_adapter";
 
 export const setupRenderArea = (
   renderer: THREE.WebGLRenderer,
@@ -186,9 +186,8 @@ class PlaneView {
   }, Constants.RESIZE_THROTTLE_TIME);
 
   resize = (): void => {
-    getDesiredCanvasSize().map(([width, height]) =>
-      SceneController.renderer.setSize(width, height),
-    );
+    const { width, height } = getDesiredLayoutRect();
+    SceneController.renderer.setSize(width, height);
 
     for (const plane of OrthoViewValues) {
       this.cameras[plane].aspect = 1;

@@ -23,10 +23,21 @@ type Props<KeyType> = {
 const getGroundTruthLayoutRect = () => {
   const mainContainer = document.querySelector(".ant-layout .ant-layout-has-sider");
   if (!mainContainer) {
-    return { width: 1000, height: 1000 };
+    return { width: 500, height: 500 };
   }
-  const { clientWidth: width, clientHeight: height } = mainContainer;
-  return { width, height };
+  const { offsetWidth, offsetHeight } = mainContainer;
+  // The -1s are a workaround, since otherwise scrollbars
+  // would appear from time to time
+  return { width: offsetWidth - 1, height: offsetHeight - 1 };
+};
+
+export const getDesiredLayoutRect = () => {
+  const { layoutScaleValue } = Store.getState().userConfiguration;
+  const { width, height } = getGroundTruthLayoutRect();
+  return {
+    width: width * layoutScaleValue,
+    height: height * layoutScaleValue,
+  };
 };
 
 const monkeypatchGLSizeGetter = gl => {

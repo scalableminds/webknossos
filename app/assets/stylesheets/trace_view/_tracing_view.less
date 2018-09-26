@@ -26,8 +26,7 @@
   -moz-box-sizing: border-box;
   float: left;
 
-  margin-right: 20px;
-  margin-bottom: 20px;
+  margin: 0;
   border-color: white;
 
   &:hover {
@@ -79,13 +78,9 @@
 }
 
 .tracing-layout {
-  height: ~"calc(100vh - 60px)";
+  height: ~"calc(100vh - 48px)";
   display: flex;
 
-  .ant-layout-header {
-    height: auto;
-    min-height: 64px;
-  }
   &.ant-layout,
   & .ant-layout {
     overflow: initial;

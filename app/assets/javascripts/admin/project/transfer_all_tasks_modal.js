@@ -8,22 +8,22 @@ import {
   getUsersWithActiveTasks,
   transferActiveTasksOfProject,
 } from "admin/admin_rest_api";
-import type { APIUserType, APIProjectType, APIActiveUserType } from "admin/api_flow_types";
+import type { APIUser, APIProject, APIActiveUser } from "admin/api_flow_types";
 import Toast from "libs/toast";
 import messages from "messages";
 import { handleGenericError } from "libs/error_handling";
 import UserSelectionComponent from "admin/user/user_selection_component";
 
 type Props = {
-  project: ?APIProjectType,
+  project: ?APIProject,
   onCancel: () => void,
   onComplete: () => void,
 };
 
 type State = {
-  users: Array<APIUserType>,
-  selectedUser: ?APIUserType,
-  usersWithActiveTasks: Array<APIActiveUserType>,
+  users: Array<APIUser>,
+  selectedUser: ?APIUser,
+  usersWithActiveTasks: Array<APIActiveUser>,
   isLoading: boolean,
 };
 

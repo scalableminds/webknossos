@@ -1,7 +1,7 @@
 // @flow
-import type { ShaderModuleType } from "./shader_module_system";
+import type { ShaderModule } from "./shader_module_system";
 
-export const hsvToRgb: ShaderModuleType = {
+export const hsvToRgb: ShaderModule = {
   requirements: [],
   code: `
     /* Inspired from: http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl */
@@ -16,7 +16,7 @@ export const hsvToRgb: ShaderModuleType = {
   `,
 };
 
-export const inverse: ShaderModuleType = {
+export const inverse: ShaderModule = {
   requirements: [],
   code: `
     // https://github.com/glslify/glsl-inverse/blob/master/index.glsl
@@ -63,7 +63,7 @@ export const inverse: ShaderModuleType = {
   `,
 };
 
-export const div: ShaderModuleType = {
+export const div: ShaderModule = {
   requirements: [],
   code: `
     float div(float a, float b) {
@@ -76,7 +76,7 @@ export const div: ShaderModuleType = {
   `,
 };
 
-export const round: ShaderModuleType = {
+export const round: ShaderModule = {
   requirements: [],
   code: `
     float round(float a) {
@@ -93,7 +93,7 @@ export const round: ShaderModuleType = {
 `,
 };
 
-export const isNan: ShaderModuleType = {
+export const isNan: ShaderModule = {
   requirements: [],
   code: `
     bool isNan(float val) {
@@ -106,7 +106,7 @@ export const isNan: ShaderModuleType = {
   `,
 };
 
-export const vec4ToFloat: ShaderModuleType = {
+export const vec4ToFloat: ShaderModule = {
   code: `
     // Be careful! Floats higher than 2**24 cannot be expressed precisely.
     float vec4ToFloat(vec4 v) {
@@ -116,7 +116,7 @@ export const vec4ToFloat: ShaderModuleType = {
   `,
 };
 
-export const greaterThanVec4: ShaderModuleType = {
+export const greaterThanVec4: ShaderModule = {
   code: `
     bool greaterThanVec4(vec4 x, vec4 y) {
       if (x.a > y.a) return true;
@@ -131,7 +131,7 @@ export const greaterThanVec4: ShaderModuleType = {
   `,
 };
 
-export const transDim: ShaderModuleType = {
+export const transDim: ShaderModule = {
   code: `
     // Similar to the transDim function in dimensions.js, this function transposes dimensions for the current plane.
     vec3 transDim(vec3 array) {
@@ -147,7 +147,7 @@ export const transDim: ShaderModuleType = {
   `,
 };
 
-export const getW: ShaderModuleType = {
+export const getW: ShaderModule = {
   code: `
     float getW(vec3 vector) {
       if (planeID == <%= OrthoViewIndices.PLANE_XY %>) {
@@ -162,7 +162,7 @@ export const getW: ShaderModuleType = {
   `,
 };
 
-export const isFlightMode: ShaderModuleType = {
+export const isFlightMode: ShaderModule = {
   code: `
     bool isFlightMode() {
       return viewMode == <%= ModeValuesIndices.Flight %>;

@@ -20,7 +20,7 @@ import { inverse, round, div, isNan, transDim, isFlightMode } from "./utils.glsl
 import { getRelativeCoords, getWorldCoordUVW, isOutsideOfBoundingBox } from "./coords.glsl";
 import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
 
-type ParamsType = {|
+type Params = {|
   colorLayerNames: string[],
   hasSegmentation: boolean,
   segmentationName: string,
@@ -43,7 +43,7 @@ function formatNumberAsGLSLFloat(aNumber: number): string {
   }
 }
 
-export default function getMainFragmentShader(params: ParamsType) {
+export default function getMainFragmentShader(params: Params) {
   const { hasSegmentation } = params;
   return _.template(
     `

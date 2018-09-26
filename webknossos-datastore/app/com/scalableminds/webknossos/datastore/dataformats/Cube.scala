@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.dataformats
 
-import com.newrelic.api.agent.NewRelic
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import net.liftweb.common.Box
@@ -18,7 +17,6 @@ trait Cube {
   def tryAccess(): Boolean = {
     this.synchronized {
       if (isRemoved) {
-        NewRelic.noticeError("Tried to access cube which is already removed.")
         false
       } else {
         accessCounter += 1

@@ -1,7 +1,7 @@
 // @flow
-import type { IsBusyInfoType } from "oxalis/store";
+import type { IsBusyInfo } from "oxalis/store";
 
-export function isBusy(isBusyInfo: IsBusyInfoType): boolean {
+export function isBusy(isBusyInfo: IsBusyInfo): boolean {
   return isBusyInfo.skeleton || isBusyInfo.volume;
 }
 

@@ -16,7 +16,7 @@ import * as THREE from "three";
 import TrackballControls from "libs/trackball_controls";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
-import type { TracingType, CameraData, OxalisState, FlycamType } from "oxalis/store";
+import type { Tracing, CameraData, OxalisState, Flycam } from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import SceneController from "oxalis/controller/scene_controller";
 import {
@@ -39,7 +39,7 @@ import constants, {
   OrthoViewValuesWithoutTDView,
   VolumeToolEnum,
 } from "oxalis/constants";
-import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
+import type { Point2, Vector3, OrthoView, OrthoViewMap } from "oxalis/constants";
 import type { ModifierKeys } from "libs/input";
 import {
   setViewportAction,
@@ -81,9 +81,9 @@ type OwnProps = {
 };
 
 type Props = OwnProps & {
-  flycam: FlycamType,
+  flycam: Flycam,
   scale: Vector3,
-  tracing: TracingType,
+  tracing: Tracing,
 };
 
 class PlaneController extends React.PureComponent<Props> {
@@ -92,7 +92,7 @@ class PlaneController extends React.PureComponent<Props> {
   // Plane Controller: Responsible for Plane Modes
   planeView: PlaneView;
   input: {
-    mouseControllers: OrthoViewMapType<InputMouse>,
+    mouseControllers: OrthoViewMap<InputMouse>,
     keyboard?: InputKeyboard,
     keyboardNoLoop?: InputKeyboardNoLoop,
     keyboardLoopDelayed?: InputKeyboard,
@@ -169,7 +169,7 @@ class PlaneController extends React.PureComponent<Props> {
     };
   }
 
-  getPlaneMouseControls(planeId: OrthoViewType): Object {
+  getPlaneMouseControls(planeId: OrthoView): Object {
     const baseControls = {
       leftDownMove: (delta: Point2) => {
         const viewportScale = getViewportScale(planeId);

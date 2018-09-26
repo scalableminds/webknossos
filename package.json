@@ -71,7 +71,6 @@
     "style-loader": "^0.20.2",
     "terser-webpack-plugin": "^1.1.0",
     "tmp": "0.0.33",
-    "url-join": "^4.0.0",
     "url-loader": "^1.0.1",
     "webpack": "^4.20.2",
     "webpack-cli": "^3.1.0"
@@ -166,6 +165,7 @@
     "stats.js": "^1.0.0",
     "three": "^0.87.0",
     "tween.js": "^16.3.1",
+    "url-join": "^4.0.0",
     "whatwg-fetch": "^1.1.0",
     "worker-loader": "^2.0.0"
   },

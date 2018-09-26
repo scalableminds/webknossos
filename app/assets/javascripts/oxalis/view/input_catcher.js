@@ -2,13 +2,13 @@
 
 import * as React from "react";
 import { setInputCatcherRect } from "oxalis/model/actions/view_mode_actions";
-import type { Rect, ViewportType } from "oxalis/constants";
+import type { Rect, Viewport } from "oxalis/constants";
 import Store from "oxalis/store";
 import makeRectRelativeToCanvas from "oxalis/view/layouting/layout_canvas_adapter";
 import Scalebar from "oxalis/view/scalebar";
 
 type Props = {
-  viewportID: ViewportType,
+  viewportID: Viewport,
   children?: React.Node,
   displayScalebars?: boolean,
 };
@@ -31,7 +31,7 @@ function makeInputCatcherQuadratic(inputCatcherDOM: HTMLElement): Rect {
     height: wrapperHeight,
   } = noneOverflowWrapper.getBoundingClientRect();
 
-  const squareExtent = Math.round(Math.min(wrapperWidth - 10, wrapperHeight - 10));
+  const squareExtent = Math.round(Math.min(wrapperWidth, wrapperHeight));
   inputCatcherDOM.style.width = `${squareExtent}px`;
   inputCatcherDOM.style.height = `${squareExtent}px`;
 

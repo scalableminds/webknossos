@@ -7,8 +7,8 @@ import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
 import ViewModesView from "oxalis/view/action-bar/view_modes_view";
 import VolumeActionsView from "oxalis/view/action-bar/volume_actions_view";
 import Constants, { ControlModeEnum } from "oxalis/constants";
-import type { ModeType, ControlModeType } from "oxalis/constants";
-import type { OxalisState, TracingType } from "oxalis/store";
+import type { Mode, ControlMode } from "oxalis/constants";
+import type { OxalisState, Tracing } from "oxalis/store";
 import ButtonComponent from "oxalis/view/components/button_component";
 
 const VersionRestoreWarning = (
@@ -20,9 +20,9 @@ const VersionRestoreWarning = (
 );
 
 type Props = {
-  viewMode: ModeType,
-  controlMode: ControlModeType,
-  tracing: TracingType,
+  viewMode: Mode,
+  controlMode: ControlMode,
+  tracing: Tracing,
   showVersionRestore: boolean,
 };
 
@@ -31,6 +31,7 @@ class ActionBarView extends React.PureComponent<Props> {
   render() {
     const isTraceMode = this.props.controlMode === ControlModeEnum.TRACE;
     const hasVolume = this.props.tracing.volume != null;
+    const hasSkeleton = this.props.tracing.skeleton != null;
     const isVolumeSupported = !Constants.MODES_ARBITRARY.includes(this.props.viewMode);
     const readonlyDropdown = (
       <Dropdown overlay={<Menu>{resetLayoutItem}</Menu>}>
@@ -46,7 +47,7 @@ class ActionBarView extends React.PureComponent<Props> {
         {this.props.showVersionRestore ? VersionRestoreWarning : null}
         <DatasetPositionView />
         {hasVolume && isVolumeSupported ? <VolumeActionsView /> : null}
-        {isTraceMode ? <ViewModesView /> : null}
+        {hasSkeleton && isTraceMode ? <ViewModesView /> : null}
       </div>
     );
   }

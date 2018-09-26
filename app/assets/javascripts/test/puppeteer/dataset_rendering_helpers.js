@@ -56,7 +56,7 @@ async function waitForRenderingFinish(page: Page) {
   await removeFpsMeter(page);
 
   let currentShot;
-  let lastShot = await page.screenshot();
+  let lastShot = await page.screenshot({ fullPage: true });
   let changedPixels = Infinity;
   // If the screenshot of the page didn't change in the last x seconds, rendering should be finished
   while (currentShot == null || changedPixels > 0) {

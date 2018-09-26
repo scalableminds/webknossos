@@ -49,13 +49,13 @@ import Onboarding from "admin/onboarding";
 import * as Utils from "libs/utils";
 
 import type { OxalisState } from "oxalis/store";
-import type { APIUserType } from "admin/api_flow_types";
+import type { APIUser } from "admin/api_flow_types";
 import type { ContextRouter } from "react-router-dom";
 
 const { Content } = Layout;
 
 type StateProps = {
-  activeUser: ?APIUserType,
+  activeUser: ?APIUser,
 };
 
 type Props = StateProps;

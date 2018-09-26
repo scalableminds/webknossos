@@ -4,7 +4,7 @@ import * as THREE from "three";
 import Store from "oxalis/store";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
-import type { UniformsType } from "oxalis/geometries/materials/abstract_plane_material_factory";
+import type { Uniforms } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
 export const NodeTypes = {
@@ -18,7 +18,7 @@ export const COLOR_TEXTURE_WIDTH_FIXED = COLOR_TEXTURE_WIDTH.toFixed(1);
 
 class NodeShader {
   material: THREE.RawShaderMaterial;
-  uniforms: UniformsType;
+  uniforms: Uniforms;
 
   constructor(treeColorTexture: THREE.DataTexture) {
     this.setupUniforms(treeColorTexture);

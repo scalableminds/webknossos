@@ -41,16 +41,18 @@ class TemporalBucketManager {
   }
 
   makeLoadedPromise(bucket: DataBucket): Promise<void> {
-    const loadedPromise = new Promise((resolve, _reject) =>
-      bucket.on("bucketLoaded", () => {
+    const loadedPromise = new Promise((resolve, _reject) => {
+      const onLoadedOrMissingHandler = () => {
         if (bucket.dirty) {
           this.pushQueue.insert(bucket);
         }
 
         this.loadedPromises = _.without(this.loadedPromises, loadedPromise);
         return resolve();
-      }),
-    );
+      };
+      bucket.on("bucketLoaded", onLoadedOrMissingHandler);
+      bucket.on("bucketMissing", onLoadedOrMissingHandler);
+    });
     return loadedPromise;
   }
 

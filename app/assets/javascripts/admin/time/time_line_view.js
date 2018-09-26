@@ -9,26 +9,26 @@ import messages from "messages";
 import { formatMilliseconds } from "libs/format_utils";
 import { getEditableUsers, getTimeTrackingForUser } from "admin/admin_rest_api";
 
-import type { APIUserType, APITimeTrackingType } from "admin/api_flow_types";
+import type { APIUser, APITimeTracking } from "admin/api_flow_types";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
 const RangePicker = DatePicker.RangePicker;
 
-type TimeTrackingStatsType = {
+type TimeTrackingStats = {
   totalTime: number,
   numberTasks: number,
   averageTimePerTask: number,
 };
 
-type DateRangeType = [moment$Moment, moment$Moment];
+type DateRange = [moment$Moment, moment$Moment];
 
 type State = {
-  user: ?APIUserType,
-  users: Array<APIUserType>,
-  dateRange: DateRangeType,
-  timeTrackingData: Array<APITimeTrackingType>,
-  stats: TimeTrackingStatsType,
+  user: ?APIUser,
+  users: Array<APIUser>,
+  dateRange: DateRange,
+  timeTrackingData: Array<APITimeTracking>,
+  stats: TimeTrackingStats,
 };
 
 class TimeLineView extends React.PureComponent<*, State> {
@@ -93,7 +93,7 @@ class TimeLineView extends React.PureComponent<*, State> {
     this.fetchTimeTrackingData();
   };
 
-  handleDateChange = async (dates: DateRangeType) => {
+  handleDateChange = async (dates: DateRange) => {
     // to ease the load on the server restrict date range selection to a month
     if (dates[0].diff(dates[1], "days") > 31) {
       Toast.error(messages["timetracking.date_range_too_long"]);
@@ -119,7 +119,7 @@ class TimeLineView extends React.PureComponent<*, State> {
     const timeTrackingRowGrouped = []; // shows each time span grouped by annotation id
     const timeTrackingRowTotal = []; // show all times spans in a single row
 
-    this.state.timeTrackingData.forEach((datum: APITimeTrackingType) => {
+    this.state.timeTrackingData.forEach((datum: APITimeTracking) => {
       const duration = moment.duration(datum.time).asMilliseconds();
       const start = new Date(datum.timestamp);
       const end = new Date(datum.timestamp + duration);
@@ -154,7 +154,7 @@ class TimeLineView extends React.PureComponent<*, State> {
                   style={{ width: "100%" }}
                   onChange={this.handleUserChange}
                 >
-                  {this.state.users.filter(u => u.isActive).map((user: APIUserType) => (
+                  {this.state.users.filter(u => u.isActive).map((user: APIUser) => (
                     <Option key={user.id} value={user.id}>
                       {`${user.lastName}, ${user.firstName} ${user.email}`}
                     </Option>

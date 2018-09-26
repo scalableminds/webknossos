@@ -1,51 +1,51 @@
 /* eslint-disable import/prefer-default-export */
 // @flow
-import type { Vector3, OrthoViewType } from "oxalis/constants";
+import type { Vector3, OrthoView } from "oxalis/constants";
 
-type ZoomInActionType = { type: "ZOOM_IN" };
-type ZoomOutActionType = { type: "ZOOM_OUT" };
-type ZoomByDeltaActionType = { type: "ZOOM_BY_DELTA", zoomDelta: number };
-type SetZoomStepActionType = { type: "SET_ZOOM_STEP", zoomStep: number };
-type SetPositionActionType = { type: "SET_POSITION", position: Vector3, dimensionToSkip: ?number };
-type SetRotationActionType = { type: "SET_ROTATION", rotation: Vector3 };
-type SetDirectionActionType = { type: "SET_DIRECTION", direction: Vector3 };
-type MoveFlycamOrthoActionType = {
+type ZoomInAction = { type: "ZOOM_IN" };
+type ZoomOutAction = { type: "ZOOM_OUT" };
+type ZoomByDeltaAction = { type: "ZOOM_BY_DELTA", zoomDelta: number };
+type SetZoomStepAction = { type: "SET_ZOOM_STEP", zoomStep: number };
+type SetPositionAction = { type: "SET_POSITION", position: Vector3, dimensionToSkip: ?number };
+type SetRotationAction = { type: "SET_ROTATION", rotation: Vector3 };
+type SetDirectionAction = { type: "SET_DIRECTION", direction: Vector3 };
+type MoveFlycamOrthoAction = {
   type: "MOVE_FLYCAM_ORTHO",
   vector: Vector3,
-  planeId: ?OrthoViewType,
+  planeId: ?OrthoView,
 };
-type MovePlaneFlycamOrthoActionType = {
+type MovePlaneFlycamOrthoAction = {
   type: "MOVE_PLANE_FLYCAM_ORTHO",
   vector: Vector3,
-  planeId: OrthoViewType,
+  planeId: OrthoView,
   increaseSpeedWithZoom: boolean,
 };
-type MoveFlycamActionType = { type: "MOVE_FLYCAM", vector: Vector3 };
-type YawFlycamActionType = { type: "YAW_FLYCAM", angle: number, regardDistance: boolean };
-type RollFlycamActionType = { type: "ROLL_FLYCAM", angle: number, regardDistance: boolean };
-type PitchFlycamActionType = { type: "PITCH_FLYCAM", angle: number, regardDistance: boolean };
-type RotateFlycamActionType = {
+type MoveFlycamAction = { type: "MOVE_FLYCAM", vector: Vector3 };
+type YawFlycamAction = { type: "YAW_FLYCAM", angle: number, regardDistance: boolean };
+type RollFlycamAction = { type: "ROLL_FLYCAM", angle: number, regardDistance: boolean };
+type PitchFlycamAction = { type: "PITCH_FLYCAM", angle: number, regardDistance: boolean };
+type RotateFlycamAction = {
   type: "ROTATE_FLYCAM",
   angle: number,
   axis: Vector3,
   regardDistance: boolean,
 };
 
-export type FlycamActionType =
-  | ZoomInActionType
-  | ZoomOutActionType
-  | ZoomByDeltaActionType
-  | SetZoomStepActionType
-  | SetPositionActionType
-  | SetRotationActionType
-  | SetDirectionActionType
-  | MoveFlycamActionType
-  | MoveFlycamOrthoActionType
-  | MovePlaneFlycamOrthoActionType
-  | YawFlycamActionType
-  | RollFlycamActionType
-  | PitchFlycamActionType
-  | RotateFlycamActionType;
+export type FlycamAction =
+  | ZoomInAction
+  | ZoomOutAction
+  | ZoomByDeltaAction
+  | SetZoomStepAction
+  | SetPositionAction
+  | SetRotationAction
+  | SetDirectionAction
+  | MoveFlycamAction
+  | MoveFlycamOrthoAction
+  | MovePlaneFlycamOrthoAction
+  | YawFlycamAction
+  | RollFlycamAction
+  | PitchFlycamAction
+  | RotateFlycamAction;
 
 export const FlycamActions = [
   "ZOOM_IN",
@@ -64,64 +64,64 @@ export const FlycamActions = [
   "ROTATE_FLYCAM",
 ];
 
-export const zoomInAction = (): ZoomInActionType => ({ type: "ZOOM_IN" });
-export const zoomOutAction = (): ZoomOutActionType => ({ type: "ZOOM_OUT" });
-export const zoomByDeltaAction = (zoomDelta: number): ZoomByDeltaActionType => ({
+export const zoomInAction = (): ZoomInAction => ({ type: "ZOOM_IN" });
+export const zoomOutAction = (): ZoomOutAction => ({ type: "ZOOM_OUT" });
+export const zoomByDeltaAction = (zoomDelta: number): ZoomByDeltaAction => ({
   type: "ZOOM_BY_DELTA",
   zoomDelta,
 });
-export const setZoomStepAction = (zoomStep: number): SetZoomStepActionType => ({
+export const setZoomStepAction = (zoomStep: number): SetZoomStepAction => ({
   type: "SET_ZOOM_STEP",
   zoomStep,
 });
 export const setPositionAction = (
   position: Vector3,
   dimensionToSkip: ?number,
-): SetPositionActionType => ({
+): SetPositionAction => ({
   type: "SET_POSITION",
   position,
   dimensionToSkip,
 });
-export const setRotationAction = (rotation: Vector3): SetRotationActionType => ({
+export const setRotationAction = (rotation: Vector3): SetRotationAction => ({
   type: "SET_ROTATION",
   rotation,
 });
-export const setDirectionAction = (direction: Vector3): SetDirectionActionType => ({
+export const setDirectionAction = (direction: Vector3): SetDirectionAction => ({
   type: "SET_DIRECTION",
   direction,
 });
 export const moveFlycamOrthoAction = (
   vector: Vector3,
-  planeId: ?OrthoViewType,
-): MoveFlycamOrthoActionType => ({ type: "MOVE_FLYCAM_ORTHO", vector, planeId });
+  planeId: ?OrthoView,
+): MoveFlycamOrthoAction => ({ type: "MOVE_FLYCAM_ORTHO", vector, planeId });
 export const movePlaneFlycamOrthoAction = (
   vector: Vector3,
-  planeId: OrthoViewType,
+  planeId: OrthoView,
   increaseSpeedWithZoom?: boolean = true,
-): MovePlaneFlycamOrthoActionType => ({
+): MovePlaneFlycamOrthoAction => ({
   type: "MOVE_PLANE_FLYCAM_ORTHO",
   vector,
   planeId,
   increaseSpeedWithZoom,
 });
-export const moveFlycamAction = (vector: Vector3): MoveFlycamActionType => ({
+export const moveFlycamAction = (vector: Vector3): MoveFlycamAction => ({
   type: "MOVE_FLYCAM",
   vector,
 });
 export const yawFlycamAction = (
   angle: number,
   regardDistance?: boolean = false,
-): YawFlycamActionType => ({ type: "YAW_FLYCAM", angle, regardDistance });
+): YawFlycamAction => ({ type: "YAW_FLYCAM", angle, regardDistance });
 export const rollFlycamAction = (
   angle: number,
   regardDistance?: boolean = false,
-): RollFlycamActionType => ({ type: "ROLL_FLYCAM", angle, regardDistance });
+): RollFlycamAction => ({ type: "ROLL_FLYCAM", angle, regardDistance });
 export const pitchFlycamAction = (
   angle: number,
   regardDistance?: boolean = false,
-): PitchFlycamActionType => ({ type: "PITCH_FLYCAM", angle, regardDistance });
+): PitchFlycamAction => ({ type: "PITCH_FLYCAM", angle, regardDistance });
 export const rotateFlycamAction = (
   angle: number,
   axis: Vector3,
   regardDistance?: boolean = false,
-): RotateFlycamActionType => ({ type: "ROTATE_FLYCAM", angle, axis, regardDistance });
+): RotateFlycamAction => ({ type: "ROTATE_FLYCAM", angle, axis, regardDistance });

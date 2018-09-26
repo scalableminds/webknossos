@@ -9,7 +9,7 @@ import { handleGenericError } from "libs/error_handling";
 import features from "features";
 import type { RouterHistory } from "react-router-dom";
 import type { OxalisState } from "oxalis/store";
-import type { APIMaybeUnimportedDatasetType, APIUserType } from "admin/api_flow_types";
+import type { APIMaybeUnimportedDataset, APIUser } from "admin/api_flow_types";
 
 const { Content, Footer } = Layout;
 
@@ -106,7 +106,7 @@ const WelcomeHeader = ({ history }) => (
 );
 
 type StateProps = {
-  activeUser: ?APIUserType,
+  activeUser: ?APIUser,
 };
 
 type Props = {
@@ -114,7 +114,7 @@ type Props = {
 } & StateProps;
 
 type State = {
-  datasets: Array<APIMaybeUnimportedDatasetType>,
+  datasets: Array<APIMaybeUnimportedDataset>,
   hasOrganizations: boolean,
   isLoading: boolean,
 };

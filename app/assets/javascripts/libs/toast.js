@@ -4,16 +4,16 @@ import { notification, Icon, Collapse } from "antd";
 
 const Panel = Collapse.Panel;
 
-export type ToastStyleType = "info" | "warning" | "success" | "error";
-export type MessageType = { success?: string, error?: string, chain?: string };
-export type ToastConfigType = {
+export type ToastStyle = "info" | "warning" | "success" | "error";
+export type Message = { success?: string, error?: string, chain?: string };
+export type ToastConfig = {
   sticky?: boolean,
   timeout?: number,
   key?: string,
 };
 
 const Toast = {
-  messages(messages: Array<MessageType>): void {
+  messages(messages: Array<Message>): void {
     const errorChainObject = messages.find(msg => typeof msg.chain !== "undefined");
     const errorChainString: ?string = errorChainObject && errorChainObject.chain;
     messages.forEach(singleMessage => {
@@ -51,11 +51,7 @@ const Toast = {
     );
   },
 
-  message(
-    type: ToastStyleType,
-    message: string | React$Element<any>,
-    config: ToastConfigType,
-  ): void {
+  message(type: ToastStyle, message: string | React$Element<any>, config: ToastConfig): void {
     const timeout = config.timeout != null ? config.timeout : 6000;
     const key = config.key || (typeof message === "string" ? message : null);
     const sticky = config.sticky;
@@ -92,19 +88,19 @@ const Toast = {
     notification[type](toastConfig);
   },
 
-  info(message: string, config: ToastConfigType = {}): void {
+  info(message: string, config: ToastConfig = {}): void {
     return this.message("info", message, config);
   },
 
-  warning(message: string, config: ToastConfigType = {}): void {
+  warning(message: string, config: ToastConfig = {}): void {
     return this.message("warning", message, config);
   },
 
-  success(message: string = "Success :-)", config: ToastConfigType = {}): void {
+  success(message: string = "Success :-)", config: ToastConfig = {}): void {
     return this.message("success", message, config);
   },
 
-  error(message: string | React$Element<any> = "Error :-/", config: ToastConfigType = {}): void {
+  error(message: string | React$Element<any> = "Error :-/", config: ToastConfig = {}): void {
     return this.message("error", message, config);
   },
 

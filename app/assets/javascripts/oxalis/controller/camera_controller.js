@@ -12,7 +12,7 @@ import Dimensions from "oxalis/model/dimensions";
 import Store from "oxalis/store";
 import TWEEN from "tween.js";
 import type { CameraData } from "oxalis/store";
-import type { Vector3, OrthoViewMapType, OrthoViewType } from "oxalis/constants";
+import type { Vector3, OrthoViewMap, OrthoView } from "oxalis/constants";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -20,7 +20,7 @@ import { setTDCameraAction } from "oxalis/model/actions/view_mode_actions";
 import { voxelToNm, getBaseVoxel } from "oxalis/model/scaleinfo";
 
 type Props = {
-  cameras: OrthoViewMapType<THREE.OrthographicCamera>,
+  cameras: OrthoViewMap<THREE.OrthographicCamera>,
   onCameraPositionChanged: () => void,
 };
 
@@ -138,7 +138,7 @@ type TweenState = {
   b: number,
 };
 
-export function rotate3DViewTo(id: OrthoViewType, animate: boolean = true): void {
+export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
   const state = Store.getState();
   const { dataset } = state;
   const b = voxelToNm(dataset.dataSource.scale, getBoundaries(dataset).upperBoundary);
@@ -193,12 +193,12 @@ export function rotate3DViewTo(id: OrthoViewType, animate: boolean = true): void
     const l = -offsetX;
     const t = offsetY;
 
-    const positionOffset: OrthoViewMapType<Vector3> = {
+    const positionOffset: OrthoViewMap<Vector3> = {
       [OrthoViews.PLANE_XY]: [0, 0, -1],
       [OrthoViews.PLANE_YZ]: [1, 0, 0],
       [OrthoViews.PLANE_XZ]: [0, 1, 0],
     };
-    const upVector: OrthoViewMapType<Vector3> = {
+    const upVector: OrthoViewMap<Vector3> = {
       [OrthoViews.PLANE_XY]: [0, -1, 0],
       [OrthoViews.PLANE_YZ]: [0, -1, 0],
       [OrthoViews.PLANE_XZ]: [0, 0, -1],

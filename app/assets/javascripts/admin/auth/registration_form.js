@@ -5,7 +5,7 @@ import { Form, Input, Button, Row, Col, Icon, Select, Checkbox } from "antd";
 import messages from "messages";
 import Request from "libs/request";
 import { loginUser, getOrganizations } from "admin/admin_rest_api";
-import type { APIOrganizationType } from "admin/api_flow_types";
+import type { APIOrganization } from "admin/api_flow_types";
 import Store from "oxalis/throttled_store";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 
@@ -25,7 +25,7 @@ type Props = {|
 
 type State = {
   confirmDirty: boolean,
-  organizations: Array<APIOrganizationType>,
+  organizations: Array<APIOrganization>,
 };
 
 class RegistrationView extends React.PureComponent<Props, State> {

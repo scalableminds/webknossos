@@ -30,9 +30,9 @@ import { updateVolumeTracing } from "oxalis/model/sagas/update_actions";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import Model from "oxalis/model";
-import Constants, { VolumeToolEnum, ContourModeEnum, OrthoViews } from "oxalis/constants";
+import Constants, { VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import type { OrthoView, VolumeTool, ContourMode, BoundingBox } from "oxalis/constants";
+import type { OrthoView, VolumeTool, ContourMode, BoundingBoxType } from "oxalis/constants";
 import type { VolumeTracing, Flycam } from "oxalis/store";
 import api from "oxalis/api/internal_api";
 
@@ -118,42 +118,21 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
   }
 }
 
-function* getBoundingsFromPosition(currentViewport: OrthoView): Saga<?BoundingBox> {
+function* getBoundingsFromPosition(currentViewport: OrthoView): Saga<?BoundingBoxType> {
   const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
   const zoom = yield* select(state => state.flycam.zoomStep);
   const scales = yield* select(state => getBaseVoxelFactors(state.dataset.dataSource.scale));
   const halfViewportWidth = Math.round((Constants.PLANE_WIDTH / 2) * zoom);
-  let relevantCoordinates;
-  switch (currentViewport) {
-    case OrthoViews.PLANE_XY:
-      relevantCoordinates = [1, 1, 0];
-      break;
-    case OrthoViews.PLANE_YZ:
-      relevantCoordinates = [0, 1, 1];
-      break;
-    case OrthoViews.PLANE_XZ:
-      relevantCoordinates = [1, 0, 1];
-      break;
-    default:
-      return null;
-  }
+  const relevantCoordinates = Dimensions.transDim([1, 1, 0], currentViewport);
   let halfViewportBounds = [
     halfViewportWidth * scales[0] * relevantCoordinates[0],
     halfViewportWidth * scales[1] * relevantCoordinates[1],
     halfViewportWidth * scales[2] * relevantCoordinates[2],
   ];
-  halfViewportBounds = halfViewportBounds.map(value => Math.ceil(value));
+  halfViewportBounds = V3.ceil(halfViewportBounds);
   return {
-    min: [
-      position[0] - halfViewportBounds[0],
-      position[1] - halfViewportBounds[1],
-      position[2] - halfViewportBounds[2],
-    ],
-    max: [
-      position[0] + halfViewportBounds[0],
-      position[1] + halfViewportBounds[1],
-      position[2] + halfViewportBounds[2],
-    ],
+    min: V3.sub(position, halfViewportBounds),
+    max: V3.add(position, halfViewportBounds),
   };
 }
 

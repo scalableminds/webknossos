@@ -1,7 +1,8 @@
 import java.nio.file.{Files, StandardCopyOption}
 
 import sbt.Keys._
-import sbt.{Task, _}
+import sbt._
+import sys.process.Process
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -31,7 +32,10 @@ object AssetCompilation {
       Process("kill" :: pid :: Nil).run()
   }
 
-  private def npmInstall: Def.Initialize[Task[Seq[File]]] = (npmPath, baseDirectory, streams) map { (npm, base, s) =>
+  private def npmInstall: Def.Initialize[Task[Seq[File]]] = Def.task {
+    val npm = npmPath.value
+    val base = baseDirectory.value
+    val s = streams.value
     try{
       val exitValue = startProcess(npm, List("install"), base) ! s.log
       if(exitValue != 0)
@@ -43,7 +47,11 @@ object AssetCompilation {
     Seq()
   }
 
-  private def webpackGenerateTask: Def.Initialize[Task[Any]] = (webpackPath, baseDirectory, streams, target) map { (webpack, base, s, t) =>
+  private def webpackGenerateTask: Def.Initialize[Task[Any]] = Def.task {
+    val webpack = webpackPath.value
+    val base = baseDirectory.value
+    val s = streams.value
+    val t = target.value
     try{
       Future{
         startProcess(webpack, List("-w"), base) ! s.log
@@ -64,7 +72,11 @@ object AssetCompilation {
     }
   }
 
-  private def assetsGenerationTask: Def.Initialize[Task[Unit]] = (webpackPath, baseDirectory, streams, target) map { (webpack, base, s, t) =>
+  private def assetsGenerationTask: Def.Initialize[Task[Unit]] = Def.task {
+    val webpack = webpackPath.value
+    val base = baseDirectory.value
+    val s = streams.value
+    val t = target.value
     try {
       val destination = t  / "universal" / "stage" / "tools" / "postgres"
       destination.mkdirs
@@ -84,39 +96,44 @@ object AssetCompilation {
     }
   } dependsOn npmInstall
 
-  private def slickClassesFromDBSchemaTask: Def.Initialize[Task[Seq[File]]] =
-    (runner in Compile, dependencyClasspath in Compile, sourceManaged, baseDirectory, streams, target) map { (runner, dc, sourceManaged, base, s, t) =>
+  private def slickClassesFromDBSchemaTask: Def.Initialize[Task[Seq[File]]] = Def.task {
+    val runnerVal = (runner in Compile).value
+    val dc = (dependencyClasspath in Compile).value
+    val sourceManagedVal = (sourceManaged in Compile).value
+    val base = baseDirectory.value
+    val s = streams.value
+    val t = target.value
 
-      val schemaPath = base / "tools" / "postgres" / "schema.sql"
-      val slickTablesOutPath = sourceManaged / "schema" / "com" / "scalableminds" / "webknossos" / "schema" / "Tables.scala"
+    val schemaPath = base / "tools" / "postgres" / "schema.sql"
+    val slickTablesOutPath = sourceManagedVal / "schema" / "com" / "scalableminds" / "webknossos" / "schema" / "Tables.scala"
 
-      val shouldUpdate = !slickTablesOutPath.exists || slickTablesOutPath.lastModified < schemaPath.lastModified
+    val shouldUpdate = !slickTablesOutPath.exists || slickTablesOutPath.lastModified < schemaPath.lastModified
 
-      if (shouldUpdate) {
-        s.log.info("Ensuring Postgres DB is running for Slick code generation...")
-        startProcess((base / "tools" / "postgres" / "ensure_db.sh").toString, List(), base)  ! s.log
+    if (shouldUpdate) {
+      s.log.info("Ensuring Postgres DB is running for Slick code generation...")
+      startProcess((base / "tools" / "postgres" / "ensure_db.sh").toString, List(), base)  ! s.log
 
-        s.log.info("Updating Slick SQL schema from local database...")
+      s.log.info("Updating Slick SQL schema from local database...")
 
-        runner.run("slick.codegen.SourceCodeGenerator", dc.files,
-          Array("file://" + (base / "conf" / "application.conf").toString + "#slick", (sourceManaged / "schema").toString),
-          s.log
-        )
+      runnerVal.run("slick.codegen.SourceCodeGenerator", dc.files,
+        Array("file://" + (base / "conf" / "application.conf").toString + "#slick", (sourceManagedVal / "schema").toString),
+        s.log
+      )
 
-      } else {
-        s.log.info("Slick SQL schema already up to date.")
-      }
-
-      Seq((slickTablesOutPath))
+    } else {
+      s.log.info("Slick SQL schema already up to date.")
     }
+
+    Seq((slickTablesOutPath))
+  }
 
   val settings = Seq(
     AssetCompilation.SettingsKeys.webpackPath := (Path("node_modules") / ".bin" / "webpack").getPath,
     AssetCompilation.SettingsKeys.npmPath := "yarn",
-    run in Compile <<= (run in Compile) map(killWebpack) dependsOn webpackGenerateTask,
-    sourceGenerators in Compile <+= slickClassesFromDBSchemaTask,
+    run in Compile := {(run in Compile) map(killWebpack) dependsOn webpackGenerateTask},
+    sourceGenerators in Compile += slickClassesFromDBSchemaTask,
     managedSourceDirectories in Compile += sourceManaged.value,
-    stage <<= stage dependsOn assetsGenerationTask,
-    dist <<= dist dependsOn assetsGenerationTask
+    stage := (stage dependsOn assetsGenerationTask).value,
+    dist := (dist dependsOn assetsGenerationTask).value
   )
 }

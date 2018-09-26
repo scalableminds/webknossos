@@ -36,7 +36,7 @@ import {
   updateSkeletonTracing,
   updateTreeGroups,
 } from "oxalis/model/sagas/update_actions";
-import type { ActionType } from "oxalis/model/actions/actions";
+import type { Action } from "oxalis/model/actions/actions";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -47,12 +47,12 @@ import {
 import { V3 } from "libs/mjs";
 import { generateTreeName } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import type {
-  SkeletonTracingType,
-  NodeType,
-  TreeType,
-  TreeMapType,
-  NodeMapType,
-  FlycamType,
+  SkeletonTracing,
+  Node,
+  Tree,
+  TreeMap,
+  NodeMap,
+  Flycam,
   OxalisState,
 } from "oxalis/store";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
@@ -61,7 +61,7 @@ import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import EdgeCollection, { diffEdgeCollections } from "oxalis/model/edge_collection";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 
-function* centerActiveNode(action: ActionType): Saga<void> {
+function* centerActiveNode(action: Action): Saga<void> {
   getActiveNode(yield* select((state: OxalisState) => enforceSkeletonTracing(state.tracing))).map(
     activeNode => {
       if (action.suppressAnimation === true) {
@@ -125,7 +125,7 @@ export function* watchTreeNames(): Saga<void> {
   const state = yield* select(_state => _state);
 
   // rename trees with an empty/default tree name
-  for (const tree: TreeType of _.values(enforceSkeletonTracing(state.tracing).trees)) {
+  for (const tree: Tree of _.values(enforceSkeletonTracing(state.tracing).trees)) {
     if (tree.name === "") {
       const newName = generateTreeName(state, tree.timestamp, tree.treeId);
       yield* put(setTreeNameAction(newName, tree.treeId));
@@ -162,8 +162,8 @@ export function* watchSkeletonTracingAsync(): Saga<void> {
 }
 
 function* diffNodes(
-  prevNodes: NodeMapType,
-  nodes: NodeMapType,
+  prevNodes: NodeMap,
+  nodes: NodeMap,
   treeId: number,
 ): Generator<UpdateAction, void, void> {
   if (prevNodes === nodes) return;
@@ -191,7 +191,7 @@ function* diffNodes(
   }
 }
 
-function updateNodePredicate(prevNode: NodeType, node: NodeType): boolean {
+function updateNodePredicate(prevNode: Node, node: Node): boolean {
   return !_.isEqual(prevNode, node);
 }
 
@@ -210,7 +210,7 @@ function* diffEdges(
   }
 }
 
-function updateTreePredicate(prevTree: TreeType, tree: TreeType): boolean {
+function updateTreePredicate(prevTree: Tree, tree: Tree): boolean {
   return (
     !_.isEqual(prevTree.branchPoints, tree.branchPoints) ||
     prevTree.color !== tree.color ||
@@ -222,8 +222,8 @@ function updateTreePredicate(prevTree: TreeType, tree: TreeType): boolean {
 }
 
 export function* diffTrees(
-  prevTrees: TreeMapType,
-  trees: TreeMapType,
+  prevTrees: TreeMap,
+  trees: TreeMap,
 ): Generator<UpdateAction, void, void> {
   if (prevTrees === trees) return;
   const { onlyA: deletedTreeIds, onlyB: addedTreeIds, both: bothTreeIds } = Utils.diffArrays(
@@ -245,7 +245,7 @@ export function* diffTrees(
   }
   for (const treeId of bothTreeIds) {
     const tree = trees[treeId];
-    const prevTree: TreeType = prevTrees[treeId];
+    const prevTree: Tree = prevTrees[treeId];
     if (tree !== prevTree) {
       yield* diffNodes(prevTree.nodes, tree.nodes, treeId);
       yield* diffEdges(prevTree.edges, tree.edges, treeId);
@@ -261,7 +261,7 @@ export function* diffTrees(
 
 const diffTreeCache = {};
 
-export function cachedDiffTrees(prevTrees: TreeMapType, trees: TreeMapType): Array<UpdateAction> {
+export function cachedDiffTrees(prevTrees: TreeMap, trees: TreeMap): Array<UpdateAction> {
   // Try to use the cached version of the diff if available to increase performance
   if (prevTrees !== diffTreeCache.prevTrees || trees !== diffTreeCache.trees) {
     diffTreeCache.prevTrees = prevTrees;
@@ -272,9 +272,9 @@ export function cachedDiffTrees(prevTrees: TreeMapType, trees: TreeMapType): Arr
 }
 
 export function* diffSkeletonTracing(
-  prevSkeletonTracing: SkeletonTracingType,
-  skeletonTracing: SkeletonTracingType,
-  flycam: FlycamType,
+  prevSkeletonTracing: SkeletonTracing,
+  skeletonTracing: SkeletonTracing,
+  flycam: Flycam,
 ): Generator<UpdateAction, void, void> {
   if (prevSkeletonTracing !== skeletonTracing) {
     yield* cachedDiffTrees(prevSkeletonTracing.trees, skeletonTracing.trees);

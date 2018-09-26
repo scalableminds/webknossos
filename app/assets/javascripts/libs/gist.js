@@ -9,7 +9,7 @@ import Toast from "libs/toast";
 import messages from "messages";
 
 // https://developer.github.com/v3/gists/#get-a-single-gist
-type GithubGistType = {
+type GithubGist = {
   files: {
     [string]: {
       size: number,
@@ -31,7 +31,7 @@ export async function fetchGistContent(url: string, name: string): Promise<strin
 
   let gist;
   try {
-    gist = (await Request.receiveJSON(`https://api.github.com/gists/${gistId}`): GithubGistType);
+    gist = (await Request.receiveJSON(`https://api.github.com/gists/${gistId}`): GithubGist);
   } catch (e) {
     handleError(name);
     return "";

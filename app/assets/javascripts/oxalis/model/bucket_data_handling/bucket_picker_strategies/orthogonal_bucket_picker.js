@@ -1,13 +1,13 @@
 // @flow
 import PriorityQueue from "js-priority-queue";
-import type { Vector3, Vector4, OrthoViewMapType } from "oxalis/constants";
+import type { Vector3, Vector4, OrthoViewMap } from "oxalis/constants";
 import constants, { OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import {
   getResolutionsFactors,
   zoomedAddressToAnotherZoomStep,
 } from "oxalis/model/helpers/position_converter";
 import Dimensions from "oxalis/model/dimensions";
-import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
+import type { Area } from "oxalis/model/accessors/flycam_accessor";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import Store from "oxalis/store";
@@ -20,7 +20,7 @@ export default function determineBucketsForOrthogonal(
   isFallbackAvailable: boolean,
   anchorPoint: Vector4,
   fallbackAnchorPoint: Vector4,
-  areas: OrthoViewMapType<AreaType>,
+  areas: OrthoViewMap<Area>,
   subBucketLocality: Vector3,
 ) {
   addNecessaryBucketsToPriorityQueueOrthogonal(
@@ -52,7 +52,7 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
   logZoomStep: number,
   zoomedAnchorPoint: Vector4,
   isFallback: boolean,
-  areas: OrthoViewMapType<AreaType>,
+  areas: OrthoViewMap<Area>,
   subBucketLocality: Vector3,
 ): void {
   const resolutions = getResolutions(Store.getState().dataset);

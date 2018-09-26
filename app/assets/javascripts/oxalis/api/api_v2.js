@@ -30,17 +30,17 @@ import {
 import { getLayerBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import { setActiveCellAction, setToolAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
-import type { Vector3, VolumeToolType, ControlModeType } from "oxalis/constants";
+import type { Vector3, VolumeTool, ControlMode } from "oxalis/constants";
 import type {
-  NodeType,
-  UserConfigurationType,
-  DatasetConfigurationType,
-  TreeMapType,
-  TracingType,
-  SkeletonTracingType,
-  VolumeTracingType,
-  TracingTypeTracingType,
-  MappingType,
+  Node,
+  UserConfiguration,
+  DatasetConfiguration,
+  TreeMap,
+  Tracing,
+  SkeletonTracing,
+  VolumeTracing,
+  TracingTypeTracing,
+  Mapping,
 } from "oxalis/store";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import Toast from "libs/toast";
@@ -58,7 +58,7 @@ import dimensions from "oxalis/model/dimensions";
 import { doWithToken, finishAnnotation, requestTask } from "admin/admin_rest_api";
 import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import messages from "messages";
-import type { ToastStyleType } from "libs/toast";
+import type { ToastStyle } from "libs/toast";
 import update from "immutability-helper";
 
 function assertExists(value: any, message: string) {
@@ -67,21 +67,21 @@ function assertExists(value: any, message: string) {
   }
 }
 
-function assertSkeleton(tracing: TracingType): SkeletonTracingType {
+function assertSkeleton(tracing: Tracing): SkeletonTracing {
   if (tracing.skeleton == null) {
     throw new Error("This api function should only be called in a skeleton tracing.");
   }
   return tracing.skeleton;
 }
 
-function assertVolume(tracing: TracingType): VolumeTracingType {
+function assertVolume(tracing: Tracing): VolumeTracing {
   if (tracing.volume == null) {
     throw new Error("This api function should only be called in a volume tracing.");
   }
   return tracing.volume;
 }
 
-function makeTreeBackwardsCompatible(tree: TreeMapType) {
+function makeTreeBackwardsCompatible(tree: TreeMap) {
   return update(tree, {
     nodes: { $apply: nodes => nodes.toObject() },
   });
@@ -135,7 +135,7 @@ class TracingApi {
   /**
    * Returns all nodes belonging to a tracing.
    */
-  getAllNodes(): Array<NodeType> {
+  getAllNodes(): Array<Node> {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
 
     const { trees } = skeletonTracing;
@@ -305,9 +305,9 @@ class TracingApi {
    *
    */
   async restart(
-    newTracingType: TracingTypeTracingType,
+    newTracingType: TracingTypeTracing,
     newAnnotationId: string,
-    newControlMode: ControlModeType,
+    newControlMode: ControlMode,
   ) {
     Store.dispatch(restartSagaAction());
     UrlManager.reset();
@@ -476,7 +476,7 @@ class TracingApi {
    * "MOVE", "TRACE" or "BRUSH".
    * _Volume tracing only!_
    */
-  getVolumeTool(): ?VolumeToolType {
+  getVolumeTool(): ?VolumeTool {
     const tracing = assertVolume(Store.getState().tracing);
     return getVolumeTool(tracing);
   }
@@ -486,7 +486,7 @@ class TracingApi {
    * "MOVE", "TRACE" or "BRUSH".
    * _Volume tracing only!_
    */
-  setVolumeTool(tool: VolumeToolType) {
+  setVolumeTool(tool: VolumeTool) {
     assertVolume(Store.getState().tracing);
     assertExists(tool, "Volume tool is missing.");
     if (VolumeToolEnum[tool] == null) {
@@ -537,7 +537,7 @@ class DataApi {
    *
    * api.setMapping("segmentation", mapping);
    */
-  setMapping(layerName: string, mapping: MappingType) {
+  setMapping(layerName: string, mapping: Mapping) {
     if (!Model.isMappingSupported) {
       throw new Error(messages["mapping.too_few_textures"]);
     }
@@ -662,7 +662,7 @@ class DataApi {
    * @example
    * const segmentationOpacity = api.data.getConfiguration("segmentationOpacity");
    */
-  getConfiguration(key: $Keys<DatasetConfigurationType>) {
+  getConfiguration(key: $Keys<DatasetConfiguration>) {
     return Store.getState().datasetConfiguration[key];
   }
 
@@ -673,7 +673,7 @@ class DataApi {
    * @example
    * api.user.setConfiguration("segmentationOpacity", 20);
    */
-  setConfiguration(key: $Keys<DatasetConfigurationType>, value) {
+  setConfiguration(key: $Keys<DatasetConfiguration>, value) {
     Store.dispatch(updateDatasetSettingAction(key, value));
   }
 }
@@ -717,7 +717,7 @@ class UserApi {
   * @example
   * const keyboardDelay = api.user.getConfiguration("keyboardDelay");
   */
-  getConfiguration(key: $Keys<UserConfigurationType>) {
+  getConfiguration(key: $Keys<UserConfiguration>) {
     return Store.getState().userConfiguration[key];
   }
 
@@ -728,7 +728,7 @@ class UserApi {
    * @example
    * api.data.setConfiguration("keyboardDelay", 20);
    */
-  setConfiguration(key: $Keys<UserConfigurationType>, value) {
+  setConfiguration(key: $Keys<UserConfiguration>, value) {
     Store.dispatch(updateUserSettingAction(key, value));
   }
 }
@@ -768,7 +768,7 @@ class UtilsApi {
    * // ... optionally:
    * // removeToast();
    */
-  showToast(type: ToastStyleType, message: string, timeout: number): ?Function {
+  showToast(type: ToastStyle, message: string, timeout: number): ?Function {
     Toast.message(type, message, { sticky: timeout === 0, timeout });
     return () => Toast.close(message);
   }

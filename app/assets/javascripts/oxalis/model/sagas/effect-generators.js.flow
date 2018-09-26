@@ -11,7 +11,7 @@ import {
   cancel as typedCancel,
 } from 'redux-saga/effects';
 import type { OxalisState } from "oxalis/store";
-import type { ActionType } from "oxalis/model/actions/actions";
+import type { Action } from "oxalis/model/actions/actions";
 
 declare type Context = Object;
 
@@ -133,18 +133,18 @@ declare type CallFn =
 /* ------------------ Effects without return types ------------------ */
 
 declare type PutFn = {
-  <T: ActionType>(action: T): Generator<*, void, *>;
-  <T: ActionType>(channel: Channel, action: T): Generator<*, void, *>;
+  <T: Action>(action: T): Generator<*, void, *>;
+  <T: Action>(channel: Channel, action: T): Generator<*, void, *>;
 }
 
 type ExtractReturnType = <R>((...args: any) => R) => R;
 type ReturnType<Fn> = $Call<ExtractReturnType, Fn>
 
 declare type CancelledFn = () => Generator<*, bool, *>;
-declare type TakeFn = <P: Pattern>(pattern: P) => Generator<*, ActionType, *>;
+declare type TakeFn = <P: Pattern>(pattern: P) => Generator<*, Action, *>;
 declare type RaceFnTest = (...args: any) => Generator<*, ReturnType<typeof typedRace>, *>;
 
-declare type RaceFn = <R: { +[name: string]: Effect }>(effects: R) => Generator<*, {+[name: $Keys<R>]: ?ActionType}, *>;
+declare type RaceFn = <R: { +[name: string]: Effect }>(effects: R) => Generator<*, {+[name: $Keys<R>]: ?Action}, *>;
 
 
 declare export var select : SelectFn;

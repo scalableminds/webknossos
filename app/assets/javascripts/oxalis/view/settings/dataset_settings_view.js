@@ -10,11 +10,7 @@ import type { Dispatch } from "redux";
 import { Tooltip, Collapse, Row, Col, Select, Icon } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
-import type {
-  DatasetConfigurationType,
-  DatasetLayerConfigurationType,
-  OxalisState,
-} from "oxalis/store";
+import type { DatasetConfiguration, DatasetLayerConfiguration, OxalisState } from "oxalis/store";
 import {
   updateDatasetSettingAction,
   updateLayerSettingAction,
@@ -27,20 +23,20 @@ import {
 } from "oxalis/view/settings/setting_input_views";
 import * as Utils from "libs/utils";
 import constants from "oxalis/constants";
-import type { ModeType } from "oxalis/constants";
+import type { Mode } from "oxalis/constants";
 
 const Panel = Collapse.Panel;
 const Option = Select.Option;
 
 type DatasetSettingsProps = {
-  datasetConfiguration: DatasetConfigurationType,
-  onChange: (propertyName: $Keys<DatasetConfigurationType>, value: any) => void,
+  datasetConfiguration: DatasetConfiguration,
+  onChange: (propertyName: $Keys<DatasetConfiguration>, value: any) => void,
   onChangeLayer: (
     layerName: string,
-    propertyName: $Keys<DatasetLayerConfigurationType>,
+    propertyName: $Keys<DatasetLayerConfiguration>,
     value: any,
   ) => void,
-  viewMode: ModeType,
+  viewMode: Mode,
 };
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
@@ -74,7 +70,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     </div>
   );
 
-  onChangeQuality = (propertyName: $Keys<DatasetConfigurationType>, value: string) => {
+  onChangeQuality = (propertyName: $Keys<DatasetConfiguration>, value: string) => {
     this.props.onChange(propertyName, parseInt(value));
   };
 

@@ -6,13 +6,13 @@ import { getEditableUsers, getProjects, getTaskTypes } from "admin/admin_rest_ap
 import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
 import { withRouter } from "react-router-dom";
-import type { APIUserType, APIProjectType, APITaskTypeType } from "admin/api_flow_types";
+import type { APIUser, APIProject, APITaskType } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
 
-export type QueryObjectType = {
+export type QueryObject = {
   taskType?: string,
   ids?: Array<string>,
   project?: string,
@@ -20,7 +20,7 @@ export type QueryObjectType = {
   random?: boolean,
 };
 
-export type TaskFormFieldValuesType = {
+export type TaskFormFieldValues = {
   taskId?: string,
   taskTypeId?: string,
   projectName?: string,
@@ -31,16 +31,16 @@ export type TaskFormFieldValuesType = {
 type Props = {
   form: Object,
   onChange: Function,
-  initialFieldValues?: TaskFormFieldValuesType,
+  initialFieldValues?: TaskFormFieldValues,
   isLoading: boolean,
   history: RouterHistory,
 };
 
 type State = {
-  users: Array<APIUserType>,
-  projects: Array<APIProjectType>,
-  taskTypes: Array<APITaskTypeType>,
-  fieldValues: TaskFormFieldValuesType,
+  users: Array<APIUser>,
+  projects: Array<APIProject>,
+  taskTypes: Array<APITaskType>,
+  fieldValues: TaskFormFieldValues,
 };
 
 const persistence: Persistence<State> = new Persistence(
@@ -100,8 +100,8 @@ class TaskSearchForm extends React.Component<Props, State> {
       event.preventDefault();
     }
 
-    this.props.form.validateFields((err, formValues: TaskFormFieldValuesType) => {
-      const queryObject: QueryObjectType = {};
+    this.props.form.validateFields((err, formValues: TaskFormFieldValues) => {
+      const queryObject: QueryObject = {};
 
       if (formValues.taskId) {
         const taskIds = formValues.taskId
@@ -165,7 +165,7 @@ class TaskSearchForm extends React.Component<Props, State> {
                   optionFilterProp="children"
                   style={{ width: "100%" }}
                 >
-                  {this.state.taskTypes.map((taskType: APITaskTypeType) => (
+                  {this.state.taskTypes.map((taskType: APITaskType) => (
                     <Option key={taskType.id} value={taskType.id}>
                       {`${taskType.summary}`}
                     </Option>
@@ -186,7 +186,7 @@ class TaskSearchForm extends React.Component<Props, State> {
                   optionFilterProp="children"
                   style={{ width: "100%" }}
                 >
-                  {this.state.projects.map((project: APIProjectType) => (
+                  {this.state.projects.map((project: APIProject) => (
                     <Option key={project.id} value={project.name}>
                       {`${project.name}`}
                     </Option>
@@ -205,7 +205,7 @@ class TaskSearchForm extends React.Component<Props, State> {
                   optionFilterProp="children"
                   style={{ width: "100%" }}
                 >
-                  {this.state.users.filter(u => u.isActive).map((user: APIUserType) => (
+                  {this.state.users.filter(u => u.isActive).map((user: APIUser) => (
                     <Option key={user.id} value={user.id}>
                       {`${user.lastName}, ${user.firstName} ${user.email}`}
                     </Option>

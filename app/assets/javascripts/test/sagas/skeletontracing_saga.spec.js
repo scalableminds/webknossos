@@ -4,7 +4,7 @@ import mockRequire from "mock-require";
 import ChainReducer from "test/helpers/chainReducer";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
-import type { SaveQueueEntryType } from "oxalis/store";
+import type { SaveQueueEntry } from "oxalis/store";
 import { createSaveQueueFromUpdateActions, withoutUpdateTracing } from "../helpers/saveHelpers";
 import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 
@@ -40,9 +40,7 @@ function testDiffing(prevTracing, nextTracing, flycam) {
   );
 }
 
-function compactSaveQueueWithUpdateActions(
-  queue: Array<SaveQueueEntryType>,
-): Array<SaveQueueEntryType> {
+function compactSaveQueueWithUpdateActions(queue: Array<SaveQueueEntry>): Array<SaveQueueEntry> {
   return compactSaveQueue(
     queue.map(batch => ({
       ...batch,

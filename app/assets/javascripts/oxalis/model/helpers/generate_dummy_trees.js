@@ -1,6 +1,6 @@
 // @flow
 import _ from "lodash";
-import type { ServerSkeletonTracingTreeType } from "admin/api_flow_types";
+import type { ServerSkeletonTracingTree } from "admin/api_flow_types";
 
 // This is a quick'n'dirty code to generate a huge amount of mocked trees.
 // Since the server cannot handle such big tracings at the moment, we'll
@@ -12,10 +12,10 @@ import type { ServerSkeletonTracingTreeType } from "admin/api_flow_types";
 export default function generateDummyTrees(
   treeCount: number,
   nodeCount: number,
-): Array<ServerSkeletonTracingTreeType> {
+): Array<ServerSkeletonTracingTree> {
   let currentNewNodeId = 1;
   let currentTreeId = 1;
-  function generateDummyTree(): ServerSkeletonTracingTreeType {
+  function generateDummyTree(): ServerSkeletonTracingTree {
     const nodes = [];
     const edges = [];
     let counter = -1;

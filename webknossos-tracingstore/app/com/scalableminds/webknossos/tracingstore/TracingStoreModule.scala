@@ -18,6 +18,6 @@ class TracingStoreModule(environment: Environment, configuration: Configuration)
     bind(classOf[TracingDataStore]).asEagerSingleton()
     bind(classOf[SkeletonTracingService]).asEagerSingleton()
     bind(classOf[VolumeTracingService]).asEagerSingleton()
-    bind(classOf[AbstractWebKnossosServer]).to(classOf[WebKnossosServer]).asEagerSingleton()
+    //bind(classOf[AbstractWebKnossosServer]).to(classOf[WebKnossosServer]).asEagerSingleton()
   }
 }

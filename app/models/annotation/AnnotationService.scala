@@ -43,6 +43,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
                                   dataSetDAO: DataSetDAO,
                                   dataStoreService: DataStoreService,
                                   tracingStoreService: TracingStoreService,
+                                  tracingStoreDAO: TracingStoreDAO,
                                   taskDAO: TaskDAO,
                                   userService: UserService,
                                   dataStoreDAO: DataStoreDAO,
@@ -438,6 +439,8 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       restrictionsJs <- AnnotationRestrictions.writeAsJson(restrictionsOpt.getOrElse(annotationRestrictionDefults.defaultsFor(annotation)), requestingUser)
       dataStore <- dataStoreDAO.findOneByName(dataSet._dataStore.trim) ?~> "datastore.notFound"
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
+      tracingStore <- tracingStoreDAO.findFirst
+      tracingStoreJs <- tracingStoreService.publicWrites(tracingStore)
     } yield {
       Json.obj(
         "modified" -> annotation.modified,
@@ -453,6 +456,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         "tracing" -> Json.obj("skeleton" -> annotation.skeletonTracingId, "volume" -> annotation.volumeTracingId),
         "dataSetName" -> dataSet.name,
         "dataStore" -> dataStoreJs,
+        "tracinStore" -> tracingStoreJs,
         "isPublic" -> annotation.isPublic,
         "settings" -> settings,
         "tracingTime" -> annotation.tracingTime,

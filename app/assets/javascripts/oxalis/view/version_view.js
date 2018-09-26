@@ -82,10 +82,10 @@ class VersionView extends React.Component<Props, State> {
   }
 
   async fetchData(tracingId: string) {
-    const { url: dataStoreUrl } = Store.getState().dataset.dataStore;
+    const tracingStoreUrl = Store.getState().tracing.tracingStore.url;
     this.setState({ isLoading: true });
     try {
-      const updateActionLog = await getUpdateActionLog(dataStoreUrl, tracingId, "skeleton");
+      const updateActionLog = await getUpdateActionLog(tracingStoreUrl, tracingId, "skeleton");
       this.setState({ versions: updateActionLog });
     } catch (error) {
       handleGenericError(error);

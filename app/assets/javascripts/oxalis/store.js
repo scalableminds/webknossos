@@ -47,6 +47,7 @@ import type {
   APIUser,
   APIDataset,
   APIDataLayer,
+  APITracingStore,
 } from "admin/api_flow_types";
 
 export type CommentType = {|
@@ -138,6 +139,7 @@ export type Annotation = {|
   +tags: Array<string>,
   +description: string,
   +name: string,
+  +tracingStore: APITracingStore,
   +tracingType: TracingTypeTracing,
 |};
 
@@ -372,6 +374,10 @@ const initialAnnotationInfo = {
   tags: [],
   description: "",
   name: "",
+  tracingStore: {
+    name: "localhost",
+    url: "http://localhost:9000",
+  },
   tracingType: "View",
 };
 

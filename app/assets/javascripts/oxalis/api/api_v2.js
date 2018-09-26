@@ -610,6 +610,7 @@ class DataApi {
     const dataset = Store.getState().dataset;
 
     return doWithToken(token => {
+      // todo: use tracingStore maybe?
       const downloadUrl =
         `${dataset.dataStore.url}/data/datasets/${
           dataset.name

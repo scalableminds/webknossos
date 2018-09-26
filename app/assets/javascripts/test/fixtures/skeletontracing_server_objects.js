@@ -85,6 +85,7 @@ export const annotation: APIAnnotation = {
   tracing: { skeleton: "47e37793-d0be-4240-a371-87ce68561a13", volume: null },
   dataSetName: "ROI2017_wkw",
   dataStore: { name: "localhost", url: "http://localhost:9000", typ: "webknossos-store" },
+  tracingStore: { name: "localhost", url: "http://localhost:9000" },
   settings: {
     allowedModes: ["orthogonal", "oblique", "flight"],
     branchPointsAllowed: true,

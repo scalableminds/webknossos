@@ -22,6 +22,7 @@ import type {
   APIAnnotation,
   APIAnnotationWithTask,
   APIDataStore,
+  APITracingStore,
   DatasetConfig,
   APIDataset,
   APIMaybeUnimportedDataset,
@@ -558,7 +559,7 @@ export async function getTracingForAnnotationType(
   const tracingArrayBuffer = await doWithToken(token =>
     Request.receiveArraybuffer(
       `${
-        annotation.dataStore.url
+        annotation.tracingStore.url
       }/tracings/${tracingType}/${tracingId}?token=${token}${possibleVersionString}`,
       { headers: { Accept: "application/x-protobuf" } },
     ),
@@ -742,6 +743,10 @@ export async function getDatastores(): Promise<Array<APIDataStore>> {
   return datastores;
 }
 export const getDataStoresCached = _.memoize(getDatastores);
+
+export function getTracingstore(): Promise<APITracingStore> {
+  return Request.receiveJSON("api/tracingstore");
+}
 
 // ### Active User
 export function getActiveUser(options: Object = {}): Promise<APIUser> {

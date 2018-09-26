@@ -163,13 +163,13 @@ export function* sendRequestToServer(
   const { version, type, tracingId } = yield* select(state =>
     Maybe.fromNullable(state.tracing[tracingType]).get(),
   );
-  const dataStoreUrl = yield* select(state => state.dataset.dataStore.url);
+  const tracingStoreUrl = yield* select(state => state.tracing.tracingStore.url);
   compactedSaveQueue = addVersionNumbers(compactedSaveQueue, version);
 
   try {
     yield* call(
       sendRequestWithToken,
-      `${dataStoreUrl}/tracings/${type}/${tracingId}/update?token=`,
+      `${tracingStoreUrl}/tracings/${type}/${tracingId}/update?token=`,
       {
         method: "POST",
         headers: { "X-Date": `${timestamp}` },

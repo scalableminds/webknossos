@@ -16,7 +16,7 @@ import constants, {
   OrthoViewCrosshairColors,
   OrthoViewGrayCrosshairColor,
 } from "oxalis/constants";
-import type { OrthoViewType, Vector3, Vector4 } from "oxalis/constants";
+import type { OrthoView, Vector3, Vector4 } from "oxalis/constants";
 import _ from "lodash";
 
 class Plane {
@@ -24,14 +24,14 @@ class Plane {
   // the plane itself, its texture, borders and crosshairs.
 
   plane: THREE.Mesh;
-  planeID: OrthoViewType;
+  planeID: OrthoView;
   displayCrosshair: boolean;
   scaleVector: THREE.Vector3;
   crosshair: Array<THREE.LineSegments>;
   TDViewBorders: THREE.Line;
   renderer: THREE.WebGLRenderer;
 
-  constructor(planeID: OrthoViewType) {
+  constructor(planeID: OrthoView) {
     this.planeID = planeID;
     this.displayCrosshair = true;
 

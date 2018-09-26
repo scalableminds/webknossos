@@ -11,16 +11,16 @@ import EdgeCollection from "oxalis/model/edge_collection";
 import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reducer_helpers";
 import type {
   OxalisState,
-  SkeletonTracingType,
-  TracingType,
-  NodeMapType,
-  TreeType,
-  TreeMapType,
-  TemporaryMutableTreeMapType,
-  TreeGroupType,
+  SkeletonTracing,
+  Tracing,
+  NodeMap,
+  Tree,
+  TreeMap,
+  TemporaryMutableTreeMap,
+  TreeGroup,
 } from "oxalis/store";
 import type { BoundingBoxType } from "oxalis/constants";
-import type { APIBuildInfoType } from "admin/api_flow_types";
+import type { APIBuildInfo } from "admin/api_flow_types";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 
 // NML Defaults
@@ -98,9 +98,9 @@ export function getNmlName(state: OxalisState): string {
 
 export function serializeToNml(
   state: OxalisState,
-  annotation: TracingType,
-  tracing: SkeletonTracingType,
-  buildInfo: APIBuildInfoType,
+  annotation: Tracing,
+  tracing: SkeletonTracing,
+  buildInfo: APIBuildInfo,
 ): string {
   // Only visible trees will be serialized!
   // _.filter throws flow errors here, because the type definitions are wrong and I'm not able to fix them
@@ -127,8 +127,8 @@ export function serializeToNml(
 
 function serializeMetaInformation(
   state: OxalisState,
-  annotation: TracingType,
-  buildInfo: APIBuildInfoType,
+  annotation: Tracing,
+  buildInfo: APIBuildInfo,
 ): Array<string> {
   return _.compact([
     serializeTag("meta", {
@@ -174,8 +174,8 @@ function serializeBoundingBox(bb: ?BoundingBoxType, name: string): string {
 
 function serializeParameters(
   state: OxalisState,
-  annotation: TracingType,
-  skeletonTracing: SkeletonTracingType,
+  annotation: Tracing,
+  skeletonTracing: SkeletonTracing,
 ): Array<string> {
   const editPosition = getPosition(state.flycam).map(Math.round);
   const editRotation = getRotation(state.flycam);
@@ -219,7 +219,7 @@ function serializeParameters(
   ];
 }
 
-function serializeTrees(trees: Array<TreeType>): Array<string> {
+function serializeTrees(trees: Array<Tree>): Array<string> {
   return _.flatten(
     trees.map(tree =>
       serializeTagWithChildren(
@@ -246,7 +246,7 @@ function serializeTrees(trees: Array<TreeType>): Array<string> {
   );
 }
 
-function serializeNodes(nodes: NodeMapType): Array<string> {
+function serializeNodes(nodes: NodeMap): Array<string> {
   return nodes.map(node => {
     const position = node.position.map(Math.round);
     return serializeTag("node", {
@@ -271,7 +271,7 @@ function serializeEdges(edges: EdgeCollection): Array<string> {
   return edges.map(edge => serializeTag("edge", { source: edge.source, target: edge.target }));
 }
 
-function serializeBranchPoints(trees: Array<TreeType>): Array<string> {
+function serializeBranchPoints(trees: Array<Tree>): Array<string> {
   const branchPoints = _.flatten(trees.map(tree => tree.branchPoints));
   return [
     "<branchpoints>",
@@ -284,7 +284,7 @@ function serializeBranchPoints(trees: Array<TreeType>): Array<string> {
   ];
 }
 
-function serializeComments(trees: Array<TreeType>): Array<string> {
+function serializeComments(trees: Array<Tree>): Array<string> {
   const comments = _.flatten(trees.map(tree => tree.comments));
   return [
     "<comments>",
@@ -297,7 +297,7 @@ function serializeComments(trees: Array<TreeType>): Array<string> {
   ];
 }
 
-function serializeTreeGroups(treeGroups: Array<TreeGroupType>): Array<string> {
+function serializeTreeGroups(treeGroups: Array<TreeGroup>): Array<string> {
   return _.flatten(
     treeGroups.map(treeGroup =>
       serializeTagWithChildren(
@@ -358,11 +358,11 @@ function _parseEntities(obj: Object, key: string): string {
   return Saxophone.parseEntities(obj[key]);
 }
 
-function findTreeByNodeId(trees: TreeMapType, nodeId: number): ?TreeType {
+function findTreeByNodeId(trees: TreeMap, nodeId: number): ?Tree {
   return _.values(trees).find(tree => tree.nodes.has(nodeId));
 }
 
-function isTreeConnected(tree: TreeType): boolean {
+function isTreeConnected(tree: Tree): boolean {
   const visitedNodes = new Map();
 
   if (tree.nodes.size() > 0) {
@@ -395,10 +395,10 @@ function getEdgeHash(source: number, target: number) {
 }
 
 function wrapInNewGroup(
-  originalTrees: TreeMapType,
-  originalTreeGroups: Array<TreeGroupType>,
+  originalTrees: TreeMap,
+  originalTreeGroups: Array<TreeGroup>,
   wrappingGroupName: string,
-): [TreeMapType, Array<TreeGroupType>] {
+): [TreeMap, Array<TreeGroup>] {
   // It does not matter whether the group id is used in the active tracing, since
   // this case will be handled during import, anyway. The group id just shouldn't clash
   // with the nml itself.
@@ -423,18 +423,18 @@ function wrapInNewGroup(
 export function parseNml(
   nmlString: string,
   wrappingGroupName?: ?string,
-): Promise<{ trees: TreeMapType, treeGroups: Array<TreeGroupType> }> {
+): Promise<{ trees: TreeMap, treeGroups: Array<TreeGroup> }> {
   return new Promise((resolve, reject) => {
     const parser = new Saxophone();
 
-    const trees: TemporaryMutableTreeMapType = {};
-    const treeGroups: Array<TreeGroupType> = [];
+    const trees: TemporaryMutableTreeMap = {};
+    const treeGroups: Array<TreeGroup> = [];
     const existingNodeIds = new Set();
     const existingGroupIds = new Set();
     const existingEdges = new Set();
-    let currentTree: ?TreeType = null;
-    let currentGroup: ?TreeGroupType = null;
-    const groupIdToParent: { [number]: ?TreeGroupType } = {};
+    let currentTree: ?Tree = null;
+    let currentGroup: ?TreeGroup = null;
+    const groupIdToParent: { [number]: ?TreeGroup } = {};
     parser
       .on("tagopen", node => {
         const attr = Saxophone.parseAttrs(node.attrs);

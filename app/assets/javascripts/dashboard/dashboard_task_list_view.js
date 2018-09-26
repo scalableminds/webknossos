@@ -24,19 +24,15 @@ import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
 import { handleGenericError } from "libs/error_handling";
 import classNames from "classnames";
-import type {
-  APITaskWithAnnotationType,
-  APIUserType,
-  APIAnnotationType,
-} from "admin/api_flow_types";
+import type { APITaskWithAnnotation, APIUser, APIAnnotation } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import type { RouterHistory } from "react-router-dom";
 import FormattedDate from "components/formatted_date";
 
-const typeHint: APITaskWithAnnotationType[] = [];
+const typeHint: APITaskWithAnnotation[] = [];
 
 type StateProps = {
-  activeUser: APIUserType,
+  activeUser: APIUser,
 };
 
 type Props = {
@@ -47,8 +43,8 @@ type Props = {
 
 type State = {
   showFinishedTasks: boolean,
-  finishedTasks: Array<APITaskWithAnnotationType>,
-  unfinishedTasks: Array<APITaskWithAnnotationType>,
+  finishedTasks: Array<APITaskWithAnnotation>,
+  unfinishedTasks: Array<APITaskWithAnnotation>,
   isLoading: boolean,
   isTransferModalVisible: boolean,
   currentAnnotationId: ?string,
@@ -60,8 +56,8 @@ const persistence: Persistence<State> = new Persistence(
 );
 
 const convertAnnotationToTaskWithAnnotationType = (
-  annotation: APIAnnotationType,
-): APITaskWithAnnotationType => {
+  annotation: APIAnnotation,
+): APITaskWithAnnotation => {
   const { task } = annotation;
 
   if (!task) {
@@ -81,7 +77,7 @@ const convertAnnotationToTaskWithAnnotationType = (
     };
   }
 
-  const newTask: APITaskWithAnnotationType = Object.assign({}, task, {
+  const newTask: APITaskWithAnnotation = Object.assign({}, task, {
     annotation,
   });
   return newTask;
@@ -111,7 +107,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 
   getFinishVerb = () => (this.state.showFinishedTasks ? "Unfinished" : "Finished");
 
-  confirmFinish(task: APITaskWithAnnotationType) {
+  confirmFinish(task: APITaskWithAnnotation) {
     Modal.confirm({
       content: messages["annotation.finish"],
       onOk: async () => {
@@ -169,7 +165,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     });
   }
 
-  renderActions = (task: APITaskWithAnnotationType) => {
+  renderActions = (task: APITaskWithAnnotation) => {
     const { annotation } = task;
     const isAdmin =
       this.props.activeUser.isAdmin ||
@@ -231,7 +227,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     );
   };
 
-  resetTask(annotation: APIAnnotationType) {
+  resetTask(annotation: APIAnnotation) {
     Modal.confirm({
       content: messages["task.confirm_reset"],
       cancelText: messages.no,
@@ -243,7 +239,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     });
   }
 
-  cancelAnnotation(annotation: APIAnnotationType) {
+  cancelAnnotation(annotation: APIAnnotation) {
     const wasFinished = this.state.showFinishedTasks;
     const annotationId = annotation.id;
 

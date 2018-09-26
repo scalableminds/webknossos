@@ -11,7 +11,7 @@ type Rule = {
   type?: string,
 };
 
-type EditableTextLabelPropType = {
+type EditableTextLabelProp = {
   value: string,
   onChange: Function,
   rules?: Rule,
@@ -25,7 +25,7 @@ type State = {
   value: string,
 };
 
-class EditableTextLabel extends React.PureComponent<EditableTextLabelPropType, State> {
+class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State> {
   static defaultProps = {
     rows: 1,
   };
@@ -39,7 +39,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelPropType, S
     this.componentWillReceiveProps(this.props);
   }
 
-  componentWillReceiveProps(newProps: EditableTextLabelPropType) {
+  componentWillReceiveProps(newProps: EditableTextLabelProp) {
     this.setState({ value: newProps.value });
   }
 

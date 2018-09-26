@@ -88,32 +88,10 @@ class BinaryDataService @Inject()(config: DataStoreConfig) extends FoxImplicits 
         request.dataLayer,
         bucket)
 
-      loadWithRetry(request.dataLayer.bucketProvider, readInstruction)
+      request.dataLayer.bucketProvider.load(readInstruction, cache, loadTimeout)
     } else {
       Fox.empty
     }
-  }
-
-  private def loadWithRetry(bucketProvider: BucketProvider, readInstruction: DataReadInstruction, remainingTries: Int = 5): Fox[Array[Byte]] = {
-    bucketProvider.load(readInstruction, cache, loadTimeout).futureBox.map {
-      case Full(data) =>
-        Fox.successful(data)
-      case Empty =>
-        Fox.empty
-      case f: Failure =>
-        if (remainingTries > 0) {
-          Thread.sleep(20)
-          val msg = s"BinaryDataService: retrying bucket loading, remaining tries: $remainingTries, error: ${f.msg}"
-          logger.debug(msg)
-          NewRelic.noticeError(msg)
-          loadWithRetry(bucketProvider, readInstruction, remainingTries - 1)
-        } else {
-          val msg = s"BinaryDataService failure after all retries: ${f.msg}"
-          logger.error(msg)
-          NewRelic.noticeError(msg)
-          f.toFox
-        }
-    }.toFox.flatten
   }
 
   /**

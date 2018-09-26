@@ -3,19 +3,19 @@ import _ from "lodash";
 import * as React from "react";
 import { Select } from "antd";
 import { getEditableTeams } from "admin/admin_rest_api";
-import type { APITeamType } from "admin/api_flow_types";
+import type { APITeam } from "admin/api_flow_types";
 
 const { Option } = Select;
 
 type Props = {
-  value?: APITeamType | Array<APITeamType>,
-  onChange?: (value: APITeamType | Array<APITeamType>) => void,
+  value?: APITeam | Array<APITeam>,
+  onChange?: (value: APITeam | Array<APITeam>) => void,
   mode?: "default" | "multiple",
 };
 
 type State = {
-  editableTeams: Array<APITeamType>,
-  allowedTeams: Array<APITeamType>,
+  editableTeams: Array<APITeam>,
+  allowedTeams: Array<APITeam>,
 };
 
 class TeamSelectionComponent extends React.PureComponent<Props, State> {

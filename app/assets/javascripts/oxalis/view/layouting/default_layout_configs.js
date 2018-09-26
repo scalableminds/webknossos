@@ -6,7 +6,7 @@
  */
 
 // @flow
-import type { ControlModeType, ModeType } from "oxalis/constants";
+import type { ControlMode, Mode } from "oxalis/constants";
 import Constants, { ControlModeEnum } from "oxalis/constants";
 import { Pane, Column, Row, Stack } from "./golden_layout_helpers";
 
@@ -68,9 +68,9 @@ const defaultLayouts = {
   VolumeTracingView,
 };
 
-type LayoutType = $Keys<typeof defaultLayouts>;
+type Layout = $Keys<typeof defaultLayouts>;
 
-export function determineLayout(controlMode: ControlModeType, viewMode: ModeType): LayoutType {
+export function determineLayout(controlMode: ControlMode, viewMode: Mode): Layout {
   if (controlMode === ControlModeEnum.VIEW) {
     return "OrthoLayoutView";
   }
@@ -87,5 +87,5 @@ export function determineLayout(controlMode: ControlModeType, viewMode: ModeType
   }
 }
 
-export type LayoutKeysType = $Keys<typeof defaultLayouts>;
+export type LayoutKeys = $Keys<typeof defaultLayouts>;
 export default defaultLayouts;

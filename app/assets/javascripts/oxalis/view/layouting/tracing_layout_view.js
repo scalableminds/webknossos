@@ -24,8 +24,8 @@ import MappingInfoView from "oxalis/view/right-menu/mapping_info_view";
 import DatasetInfoTabView from "oxalis/view/right-menu/dataset_info_tab_view";
 import InputCatcher, { recalculateInputCatcherSizes } from "oxalis/view/input_catcher";
 import { ArbitraryViewport, OrthoViews } from "oxalis/constants";
-import type { OxalisState, TracingTypeTracingType } from "oxalis/store";
-import type { ControlModeType, ModeType } from "oxalis/constants";
+import type { OxalisState, TracingTypeTracing } from "oxalis/store";
+import type { ControlMode, Mode } from "oxalis/constants";
 import RecordingSwitch from "oxalis/view/recording_switch";
 import TDViewControls from "oxalis/view/td_view_controls";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
@@ -36,16 +36,16 @@ import { determineLayout } from "./default_layout_configs";
 const { Header, Sider } = Layout;
 
 type StateProps = {
-  viewMode: ModeType,
+  viewMode: Mode,
   displayScalebars: boolean,
   isUpdateTracingAllowed: boolean,
   showVersionRestore: boolean,
 };
 
 type Props = StateProps & {
-  initialTracingType: TracingTypeTracingType,
+  initialTracingType: TracingTypeTracing,
   initialAnnotationId: string,
-  initialControlmode: ControlModeType,
+  initialControlmode: ControlMode,
 };
 
 type State = {

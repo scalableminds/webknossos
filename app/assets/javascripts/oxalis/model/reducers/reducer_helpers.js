@@ -1,13 +1,13 @@
 // @flow
 /* eslint-disable import/prefer-default-export */
 import type { BoundingBoxType } from "oxalis/constants";
-import type { APIAnnotationType, ServerBoundingBoxType } from "admin/api_flow_types";
-import type { AnnotationType, BoundingBoxObjectType } from "oxalis/store";
+import type { APIAnnotation, ServerBoundingBox } from "admin/api_flow_types";
+import type { Annotation, BoundingBoxObject } from "oxalis/store";
 import Maybe from "data.maybe";
 import * as Utils from "libs/utils";
 
 export function convertServerBoundingBoxToFrontend(
-  boundingBox: ?ServerBoundingBoxType,
+  boundingBox: ?ServerBoundingBox,
 ): ?BoundingBoxType {
   return Maybe.fromNullable(boundingBox)
     .map(bb =>
@@ -20,7 +20,7 @@ export function convertServerBoundingBoxToFrontend(
 
 export function convertFrontendBoundingBoxToServer(
   boundingBox: ?BoundingBoxType,
-): ?BoundingBoxObjectType {
+): ?BoundingBoxObject {
   return Maybe.fromNullable(boundingBox)
     .map(bb => ({
       topLeft: bb.min,
@@ -31,9 +31,7 @@ export function convertFrontendBoundingBoxToServer(
     .getOrElse(null);
 }
 
-export function convertPointToVecInBoundingBox(
-  boundingBox: ServerBoundingBoxType,
-): BoundingBoxObjectType {
+export function convertPointToVecInBoundingBox(boundingBox: ServerBoundingBox): BoundingBoxObject {
   return {
     width: boundingBox.width,
     height: boundingBox.height,
@@ -42,9 +40,7 @@ export function convertPointToVecInBoundingBox(
   };
 }
 
-export function convertServerAnnotationToFrontendAnnotation(
-  annotation: APIAnnotationType,
-): AnnotationType {
+export function convertServerAnnotationToFrontendAnnotation(annotation: APIAnnotation): Annotation {
   const { id: annotationId, isPublic, tags, description, name, typ: tracingType } = annotation;
   const restrictions = {
     ...annotation.restrictions,

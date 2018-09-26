@@ -6,7 +6,7 @@ import { Modal, Button, Tooltip, Icon, Table, InputNumber, Tag, Badge } from "an
 import * as Utils from "libs/utils";
 import { updateUser } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
-import type { APIUserType, ExperienceDomainListType } from "admin/api_flow_types";
+import type { APIUser, ExperienceDomainList } from "admin/api_flow_types";
 import Toast from "libs/toast";
 import SelectExperienceDomain from "components/select_experience_domain";
 import HighlightableRow from "components/highlightable_row";
@@ -30,10 +30,10 @@ type TableEntry = {
 };
 
 type Props = {
-  onChange: (Array<APIUserType>) => void,
+  onChange: (Array<APIUser>) => void,
   onCancel: () => void,
   visible: boolean,
-  selectedUsers: Array<APIUserType>,
+  selectedUsers: Array<APIUser>,
   initialDomainToEdit: ?string,
 };
 
@@ -59,7 +59,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     );
   }
 
-  getTableEntries = (users: Array<APIUserType>): Array<TableEntry> => {
+  getTableEntries = (users: Array<APIUser>): Array<TableEntry> => {
     if (users.length <= 1) {
       return this.sortEntries(
         _.map(users[0].experiences, (value, domain) => ({
@@ -105,7 +105,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
 
   updateAllUsers = async () => {
     const relevantEntries = this.state.tableEntries.filter(entry => entry.changed);
-    const newUserPromises: Array<Promise<APIUserType>> = this.props.selectedUsers.map(user => {
+    const newUserPromises: Array<Promise<APIUser>> = this.props.selectedUsers.map(user => {
       const newExperiences = {
         ...user.experiences,
         ..._.fromPairs(relevantEntries.map(entry => [entry.domain, entry.value])),
@@ -127,11 +127,11 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     this.resolvePromisesAndCloseModal(newUserPromises);
   };
 
-  sendUserToServer(newUser: APIUserType, oldUser: APIUserType): Promise<APIUserType> {
+  sendUserToServer(newUser: APIUser, oldUser: APIUser): Promise<APIUser> {
     return updateUser(newUser).then(() => Promise.resolve(newUser), () => Promise.reject(oldUser));
   }
 
-  resolvePromisesAndCloseModal(usersPromises: Array<Promise<APIUserType>>): void {
+  resolvePromisesAndCloseModal(usersPromises: Array<Promise<APIUser>>): void {
     Promise.all(usersPromises).then(
       newUsers => {
         this.setState({
@@ -222,7 +222,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     }));
   };
 
-  getDomainsOfTable = (): ExperienceDomainListType =>
+  getDomainsOfTable = (): ExperienceDomainList =>
     this.state.tableEntries.map(entry => entry.domain);
 
   render() {

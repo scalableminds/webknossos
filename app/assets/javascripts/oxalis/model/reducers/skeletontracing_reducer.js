@@ -33,12 +33,12 @@ import {
   getNodeAndTree,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import Constants from "oxalis/constants";
-import type { OxalisState, SkeletonTracingType } from "oxalis/store";
-import type { ActionType } from "oxalis/model/actions/actions";
+import type { OxalisState, SkeletonTracing } from "oxalis/store";
+import type { Action } from "oxalis/model/actions/actions";
 import Maybe from "data.maybe";
 import Toast from "libs/toast";
 
-function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisState {
+function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState {
   const { restrictions } = state.tracing;
   switch (action.type) {
     case "INITIALIZE_SKELETONTRACING": {
@@ -79,7 +79,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         });
       const activeTreeId = Utils.toNullable(activeTreeIdMaybe);
 
-      const skeletonTracing: SkeletonTracingType = {
+      const skeletonTracing: SkeletonTracing = {
         createdTimestamp: action.tracing.createdTimestamp,
         type: "skeleton",
         activeNodeId,

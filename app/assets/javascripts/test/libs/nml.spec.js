@@ -7,7 +7,7 @@ import { defaultState } from "oxalis/store";
 import update from "immutability-helper";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
-import type { NodeType } from "oxalis/store";
+import type { Node } from "oxalis/store";
 
 const TIMESTAMP = 123456789;
 const DateMock = {
@@ -24,7 +24,7 @@ const SkeletonTracingReducer = mock.reRequire("oxalis/model/reducers/skeletontra
   .default;
 const SkeletonTracingActions = mock.reRequire("oxalis/model/actions/skeletontracing_actions");
 
-const createDummyNode = (id: number): NodeType => ({
+const createDummyNode = (id: number): Node => ({
   bitDepth: 8,
   id,
   position: [id, id, id],

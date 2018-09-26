@@ -6,18 +6,14 @@
  *
  */
 
-import type { OxalisState, VolumeTracingType, VolumeCellType } from "oxalis/store";
-import type { VolumeToolType, Vector3, ContourModeType } from "oxalis/constants";
+import type { OxalisState, VolumeTracing, VolumeCell } from "oxalis/store";
+import type { VolumeTool, Vector3, ContourMode } from "oxalis/constants";
 import { VolumeToolEnum } from "oxalis/constants";
 import update from "immutability-helper";
 import { isVolumeTracingDisallowed } from "oxalis/model/accessors/volumetracing_accessor";
 import { setDirectionReducer } from "oxalis/model/reducers/flycam_reducer";
 
-export function setToolReducer(
-  state: OxalisState,
-  volumeTracing: VolumeTracingType,
-  tool: VolumeToolType,
-) {
+export function setToolReducer(state: OxalisState, volumeTracing: VolumeTracing, tool: VolumeTool) {
   if (tool === volumeTracing.activeTool) {
     return state;
   }
@@ -34,11 +30,7 @@ export function setToolReducer(
   });
 }
 
-export function setActiveCellReducer(
-  state: OxalisState,
-  volumeTracing: VolumeTracingType,
-  id: number,
-) {
+export function setActiveCellReducer(state: OxalisState, volumeTracing: VolumeTracing, id: number) {
   const newActiveCell = volumeTracing.cells[id];
 
   if (newActiveCell == null && id > 0) {
@@ -54,11 +46,7 @@ export function setActiveCellReducer(
   });
 }
 
-export function createCellReducer(
-  state: OxalisState,
-  volumeTracing: VolumeTracingType,
-  id: ?number,
-) {
+export function createCellReducer(state: OxalisState, volumeTracing: VolumeTracing, id: ?number) {
   if (id === 0) {
     // cellId 0 means there is no annotation, so there must not be a cell with id 0
     return state;
@@ -72,7 +60,7 @@ export function createCellReducer(
   }
 
   // Create the new VolumeCell
-  const cell: VolumeCellType = { id };
+  const cell: VolumeCell = { id };
 
   return update(state, {
     tracing: {
@@ -87,7 +75,7 @@ export function createCellReducer(
 
 export function updateDirectionReducer(
   state: OxalisState,
-  volumeTracing: VolumeTracingType,
+  volumeTracing: VolumeTracing,
   centroid: Vector3,
 ) {
   let newState = state;
@@ -109,7 +97,7 @@ export function updateDirectionReducer(
 
 export function addToLayerReducer(
   state: OxalisState,
-  volumeTracing: VolumeTracingType,
+  volumeTracing: VolumeTracing,
   position: Vector3,
 ) {
   const { allowUpdate } = state.tracing.restrictions;
@@ -142,7 +130,7 @@ export function hideBrushReducer(state: OxalisState) {
   });
 }
 
-export function setContourTracingModeReducer(state: OxalisState, mode: ContourModeType) {
+export function setContourTracingModeReducer(state: OxalisState, mode: ContourMode) {
   return update(state, {
     tracing: {
       volume: {

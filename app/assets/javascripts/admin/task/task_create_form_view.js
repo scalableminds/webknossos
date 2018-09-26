@@ -17,15 +17,10 @@ import { Vector3Input, Vector6Input } from "libs/vector_input";
 import SelectExperienceDomain from "components/select_experience_domain";
 import messages from "messages";
 
-import type {
-  APIDatasetType,
-  APITaskTypeType,
-  APIProjectType,
-  APIScriptType,
-} from "admin/api_flow_types";
-import type { BoundingBoxObjectType } from "oxalis/store";
+import type { APIDataset, APITaskType, APIProject, APIScript } from "admin/api_flow_types";
+import type { BoundingBoxObject } from "oxalis/store";
 import type { Vector6 } from "oxalis/constants";
-import type { TaskCreationResponseType } from "admin/task/task_create_bulk_view";
+import type { TaskCreationResponse } from "admin/task/task_create_bulk_view";
 import type { RouterHistory } from "react-router-dom";
 
 const FormItem = Form.Item;
@@ -39,19 +34,19 @@ type Props = {
 };
 
 type State = {
-  datasets: Array<APIDatasetType>,
-  taskTypes: Array<APITaskTypeType>,
-  projects: Array<APIProjectType>,
-  scripts: Array<APIScriptType>,
+  datasets: Array<APIDataset>,
+  taskTypes: Array<APITaskType>,
+  projects: Array<APIProject>,
+  scripts: Array<APIScript>,
   isNMLSpecification: boolean,
   isUploading: boolean,
 };
 
-export function handleTaskCreationResponse(responses: Array<TaskCreationResponseType>) {
+export function handleTaskCreationResponse(responses: Array<TaskCreationResponse>) {
   const successfulTasks = [];
   const failedTasks = [];
 
-  responses.forEach((response: TaskCreationResponseType, i: number) => {
+  responses.forEach((response: TaskCreationResponse, i: number) => {
     if (response.status === 200 && response.success) {
       successfulTasks.push(
         `${response.success.id},${response.success.creationInfo ||
@@ -129,7 +124,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     }
   }
 
-  transformBoundingBox(boundingBox: Vector6): BoundingBoxObjectType {
+  transformBoundingBox(boundingBox: Vector6): BoundingBoxObject {
     return {
       topLeft: [boundingBox[0] || 0, boundingBox[1] || 0, boundingBox[2] || 0],
       width: boundingBox[3] || 0,
@@ -211,7 +206,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     autoFocus
                     disabled={isEditingMode}
                   >
-                    {this.state.taskTypes.map((taskType: APITaskTypeType) => (
+                    {this.state.taskTypes.map((taskType: APITaskType) => (
                       <Option key={taskType.id} value={taskType.id}>
                         {taskType.summary}
                       </Option>
@@ -257,7 +252,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     autoFocus
                     disabled={isEditingMode}
                   >
-                    {this.state.projects.map((project: APIProjectType) => (
+                    {this.state.projects.map((project: APIProject) => (
                       <Option key={project.id} value={project.name}>
                         {project.name}
                       </Option>
@@ -276,7 +271,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     autoFocus
                     disabled={isEditingMode}
                   >
-                    {this.state.scripts.map((script: APIScriptType) => (
+                    {this.state.scripts.map((script: APIScript) => (
                       <Option key={script.id} value={script.id}>
                         {script.name}
                       </Option>
@@ -342,7 +337,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                         autoFocus
                         disabled={isEditingMode}
                       >
-                        {this.state.datasets.map((dataset: APIDatasetType) => (
+                        {this.state.datasets.map((dataset: APIDataset) => (
                           <Option key={dataset.name} value={dataset.name}>
                             {dataset.name}
                           </Option>

@@ -30,9 +30,14 @@ import { updateVolumeTracing } from "oxalis/model/sagas/update_actions";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import Model from "oxalis/model";
-import Constants, { VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
+import Constants, { VolumeToolEnum, ContourModeEnum, OrthoViews } from "oxalis/constants";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import type { OrthoViewType, VolumeToolType, ContourModeType } from "oxalis/constants";
+import type {
+  OrthoViewType,
+  VolumeToolType,
+  ContourModeType,
+  BoundingBoxType,
+} from "oxalis/constants";
 import type { VolumeTracingType, FlycamType } from "oxalis/store";
 import api from "oxalis/api/internal_api";
 
@@ -118,49 +123,43 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
   }
 }
 
-function* getBoundingsFromPosition(currentViewport: OrthoViewType): Saga<Array<Vector3d>> {
+function* getBoundingsFromPosition(currentViewport: OrthoViewType): Saga<?BoundingBoxType> {
   const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
   const zoom = yield* select(state => state.flycam.zoomStep);
   const scales = yield* select(state => getBaseVoxelFactors(state.dataset.dataSource.scale));
   const halfViewportWidth = Math.round((Constants.PLANE_WIDTH / 2) * zoom);
-  let halfViewportBounds;
+  let relevantCoordinates;
   switch (currentViewport) {
-    case "PLANE_XY":
-      halfViewportBounds = [
-        Math.ceil(halfViewportWidth * scales[0]),
-        Math.ceil(halfViewportWidth * scales[1]),
-        0,
-      ];
+    case OrthoViews.PLANE_XY:
+      relevantCoordinates = [1, 1, 0];
       break;
-    case "PLANE_YZ":
-      halfViewportBounds = [
-        0,
-        Math.ceil(halfViewportWidth * scales[1]),
-        Math.ceil(halfViewportWidth * scales[2]),
-      ];
+    case OrthoViews.PLANE_YZ:
+      relevantCoordinates = [0, 1, 1];
       break;
-    case "PLANE_XZ":
-      halfViewportBounds = [
-        Math.ceil(halfViewportWidth * scales[0]),
-        0,
-        Math.ceil(halfViewportWidth * scales[2]),
-      ];
+    case OrthoViews.PLANE_XZ:
+      relevantCoordinates = [1, 0, 1];
       break;
     default:
       return null;
   }
-  return [
-    [
+  let halfViewportBounds = [
+    halfViewportWidth * scales[0] * relevantCoordinates[0],
+    halfViewportWidth * scales[1] * relevantCoordinates[1],
+    halfViewportWidth * scales[2] * relevantCoordinates[2],
+  ];
+  halfViewportBounds = halfViewportBounds.map(value => Math.ceil(value));
+  return {
+    min: [
       position[0] - halfViewportBounds[0],
       position[1] - halfViewportBounds[1],
       position[2] - halfViewportBounds[2],
     ],
-    [
+    max: [
       position[0] + halfViewportBounds[0],
       position[1] + halfViewportBounds[1],
       position[2] + halfViewportBounds[2],
     ],
-  ];
+  };
 }
 
 function* createVolumeLayer(planeId: OrthoViewType): Saga<VolumeLayer> {

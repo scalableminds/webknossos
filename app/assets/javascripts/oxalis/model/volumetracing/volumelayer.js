@@ -11,7 +11,7 @@ import Store from "oxalis/store";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import type { OrthoViewType, Vector2, Vector3 } from "oxalis/constants";
+import type { OrthoViewType, Vector2, Vector3, BoundingBoxType } from "oxalis/constants";
 import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 
 export class VoxelIterator {
@@ -23,7 +23,7 @@ export class VoxelIterator {
   height: number;
   minCoord2d: Vector2;
   get3DCoordinate: Vector2 => Vector3;
-  boundingBox: Array<Vector2>;
+  boundingBox: ?BoundingBoxType;
   next: Vector3;
 
   static finished(): VoxelIterator {
@@ -38,7 +38,7 @@ export class VoxelIterator {
     height: number,
     minCoord2d: Vector2,
     get3DCoordinate: Vector2 => Vector3 = () => [0, 0, 0],
-    boundingBox: (Array<Vector2>) => undefined,
+    boundingBox: ?BoundingBoxType = undefined,
   ) {
     this.map = map;
     this.width = width;
@@ -59,19 +59,16 @@ export class VoxelIterator {
       return true;
     }
     return (
-      coor[0] >= this.boundingBox[0][0] &&
-      coor[0] <= this.boundingBox[1][0] &&
-      coor[1] >= this.boundingBox[0][1] &&
-      coor[1] <= this.boundingBox[1][1] &&
-      coor[2] >= this.boundingBox[0][2] &&
-      coor[2] <= this.boundingBox[1][2]
+      coor[0] >= this.boundingBox.min[0] &&
+      coor[0] <= this.boundingBox.max[0] &&
+      coor[1] >= this.boundingBox.min[1] &&
+      coor[1] <= this.boundingBox.max[1] &&
+      coor[2] >= this.boundingBox.min[2] &&
+      coor[2] <= this.boundingBox.max[2]
     );
   }
 
   getNext(): Vector3 {
-    if (!this.hasNext) {
-      return null;
-    }
     const res = this.next;
     let foundNext = false;
     while (!foundNext) {
@@ -206,7 +203,10 @@ class VolumeLayer {
     return iterator;
   }
 
-  getCircleVoxelIterator(position: Vector3, boundings: Array<Vector3> = undefined): VoxelIterator {
+  getCircleVoxelIterator(
+    position: Vector3,
+    boundings: ?BoundingBoxType = undefined,
+  ): VoxelIterator {
     const radius = Math.round(
       this.pixelsToVoxels(Store.getState().temporaryConfiguration.brushSize) / 2,
     );

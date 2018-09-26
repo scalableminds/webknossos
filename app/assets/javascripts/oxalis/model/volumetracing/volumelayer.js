@@ -11,7 +11,7 @@ import Store from "oxalis/store";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import type { OrthoViewType, Vector2, Vector3, BoundingBoxType } from "oxalis/constants";
+import type { OrthoView, Vector2, Vector3, BoundingBox } from "oxalis/constants";
 import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 
 export class VoxelIterator {
@@ -23,7 +23,7 @@ export class VoxelIterator {
   height: number;
   minCoord2d: Vector2;
   get3DCoordinate: Vector2 => Vector3;
-  boundingBox: ?BoundingBoxType;
+  boundingBox: ?BoundingBox;
   next: Vector3;
 
   static finished(): VoxelIterator {
@@ -38,7 +38,7 @@ export class VoxelIterator {
     height: number,
     minCoord2d: Vector2,
     get3DCoordinate?: Vector2 => Vector3 = () => [0, 0, 0],
-    boundingBox?: ?BoundingBoxType,
+    boundingBox?: ?BoundingBox,
   ) {
     this.map = map;
     this.width = width;
@@ -97,13 +97,13 @@ export class VoxelIterator {
 }
 
 class VolumeLayer {
-  plane: OrthoViewType;
+  plane: OrthoView;
   thirdDimensionValue: number;
   contourList: Array<Vector3>;
   maxCoord: ?Vector3;
   minCoord: ?Vector3;
 
-  constructor(plane: OrthoViewType, thirdDimensionValue: number) {
+  constructor(plane: OrthoView, thirdDimensionValue: number) {
     this.plane = plane;
     this.thirdDimensionValue = thirdDimensionValue;
     this.maxCoord = null;

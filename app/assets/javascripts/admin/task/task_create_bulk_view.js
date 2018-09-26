@@ -7,9 +7,9 @@ import { handleTaskCreationResponse } from "admin/task/task_create_form_view";
 import Messages from "messages";
 import Toast from "libs/toast";
 
-import type { APITaskType } from "admin/api_flow_types";
+import type { APITask } from "admin/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
-import type { BoundingBoxObjectType } from "oxalis/store";
+import type { BoundingBoxObject } from "oxalis/store";
 
 const FormItem = Form.Item;
 const TextArea = Input.TextArea;
@@ -26,8 +26,8 @@ type State = {
   tasksProcessed: number,
 };
 
-export type NewTaskType = {
-  +boundingBox: ?BoundingBoxObjectType,
+export type NewTask = {
+  +boundingBox: ?BoundingBoxObject,
   +dataSet: string,
   +editPosition: Vector3,
   +editRotation: Vector3,
@@ -44,9 +44,9 @@ export type NewTaskType = {
   +nmlFiles?: File,
 };
 
-export type TaskCreationResponseType = {
+export type TaskCreationResponse = {
   status: number,
-  success?: APITaskType,
+  success?: APITask,
   error?: string,
 };
 
@@ -62,7 +62,7 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
     return tasks.every(this.isValidTask);
   }
 
-  isValidTask(task: NewTaskType): boolean {
+  isValidTask(task: NewTask): boolean {
     const boundingBox = task.boundingBox;
 
     if (
@@ -107,13 +107,13 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
       .filter(word => word !== "");
   }
 
-  parseText(bulkText: string): Array<NewTaskType> {
+  parseText(bulkText: string): Array<NewTask> {
     return this.splitToLines(bulkText)
       .map(line => this.parseLine(line))
       .filter(task => task !== null);
   }
 
-  parseLine(line: string): NewTaskType {
+  parseLine(line: string): NewTask {
     const words = this.splitToWords(line);
 
     const dataSet = words[0];
@@ -166,7 +166,7 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
     };
   }
 
-  async readCSVFile(csvFile: File): Promise<Array<NewTaskType>> {
+  async readCSVFile(csvFile: File): Promise<Array<NewTask>> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       // $FlowFixMe reader.result is wrongfully typed as ArrayBuffer
@@ -202,7 +202,7 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
     }
   };
 
-  getInvalidTaskIndices(tasks: Array<NewTaskType>): Array<number> {
+  getInvalidTaskIndices(tasks: Array<NewTask>): Array<number> {
     // returns the index / line number of an invalidly parsed task
     // returned indicies start at 1 for easier matching by non-CS people
     const isValidTasks = tasks.map(this.isValidTask);
@@ -215,7 +215,7 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
     }, invalidTasks);
   }
 
-  async batchUpload(tasks: Array<NewTaskType>) {
+  async batchUpload(tasks: Array<NewTask>) {
     // upload the tasks in batches to save the server from dying
     this.setState({
       isUploading: true,

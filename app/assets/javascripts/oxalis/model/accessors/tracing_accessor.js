@@ -1,20 +1,15 @@
 // @flow
 
+import type { Tracing, VolumeTracing, SkeletonTracing, ReadOnlyTracing } from "oxalis/store";
 import type {
-  TracingType,
-  VolumeTracingType,
-  SkeletonTracingType,
-  ReadOnlyTracingType,
-} from "oxalis/store";
-import type {
-  HybridServerTracingType,
-  ServerSkeletonTracingType,
-  ServerVolumeTracingType,
+  HybridServerTracing,
+  ServerSkeletonTracing,
+  ServerVolumeTracing,
 } from "admin/api_flow_types";
 
 export function getSomeTracing(
-  tracing: TracingType,
-): SkeletonTracingType | VolumeTracingType | ReadOnlyTracingType {
+  tracing: Tracing,
+): SkeletonTracing | VolumeTracing | ReadOnlyTracing {
   if (tracing.skeleton != null) {
     return tracing.skeleton;
   } else if (tracing.volume != null) {
@@ -26,8 +21,8 @@ export function getSomeTracing(
 }
 
 export function getSomeServerTracing(
-  tracing: HybridServerTracingType,
-): ServerSkeletonTracingType | ServerVolumeTracingType {
+  tracing: HybridServerTracing,
+): ServerSkeletonTracing | ServerVolumeTracing {
   if (tracing.skeleton != null) {
     return tracing.skeleton;
   } else if (tracing.volume != null) {

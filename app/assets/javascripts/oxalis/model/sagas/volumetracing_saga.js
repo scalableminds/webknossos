@@ -18,7 +18,7 @@ import {
   updateDirectionAction,
   resetContourAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import type { CopySegmentationLayerActionType } from "oxalis/model/actions/volumetracing_actions";
+import type { CopySegmentationLayerAction } from "oxalis/model/actions/volumetracing_actions";
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import Dimensions from "oxalis/model/dimensions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
@@ -33,12 +33,12 @@ import Model from "oxalis/model";
 import Constants, { VolumeToolEnum, ContourModeEnum, OrthoViews } from "oxalis/constants";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import type {
-  OrthoViewType,
-  VolumeToolType,
-  ContourModeType,
-  BoundingBoxType,
+  OrthoView,
+  VolumeTool,
+  ContourMode,
+  BoundingBox,
 } from "oxalis/constants";
-import type { VolumeTracingType, FlycamType } from "oxalis/store";
+import type { VolumeTracing, Flycam } from "oxalis/store";
 import api from "oxalis/api/internal_api";
 
 export function* watchVolumeTracingAsync(): Saga<void> {
@@ -123,7 +123,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
   }
 }
 
-function* getBoundingsFromPosition(currentViewport: OrthoViewType): Saga<?BoundingBoxType> {
+function* getBoundingsFromPosition(currentViewport: OrthoView): Saga<?BoundingBox> {
   const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
   const zoom = yield* select(state => state.flycam.zoomStep);
   const scales = yield* select(state => getBaseVoxelFactors(state.dataset.dataSource.scale));
@@ -162,7 +162,7 @@ function* getBoundingsFromPosition(currentViewport: OrthoViewType): Saga<?Boundi
   };
 }
 
-function* createVolumeLayer(planeId: OrthoViewType): Saga<VolumeLayer> {
+function* createVolumeLayer(planeId: OrthoView): Saga<VolumeLayer> {
   const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
   const thirdDimValue = position[Dimensions.thirdDimensionForPlane(planeId)];
   return new VolumeLayer(planeId, thirdDimValue);
@@ -190,7 +190,7 @@ function* labelWithIterator(iterator, contourTracingMode): Saga<void> {
   }
 }
 
-function* copySegmentationLayer(action: CopySegmentationLayerActionType): Saga<void> {
+function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void> {
   const activeViewport = yield* select(state => state.viewModeData.plane.activeViewport);
   if (activeViewport === "TDView") {
     // Cannot copy labels from 3D view
@@ -241,8 +241,8 @@ function* copySegmentationLayer(action: CopySegmentationLayerActionType): Saga<v
 
 export function* finishLayer(
   layer: VolumeLayer,
-  activeTool: VolumeToolType,
-  contourTracingMode: ContourModeType,
+  activeTool: VolumeTool,
+  contourTracingMode: ContourMode,
 ): Saga<void> {
   if (layer == null || layer.isEmpty()) {
     return;
@@ -271,9 +271,9 @@ export function* disallowVolumeTracingWarning(): Saga<*> {
 }
 
 export function* diffVolumeTracing(
-  prevVolumeTracing: VolumeTracingType,
-  volumeTracing: VolumeTracingType,
-  flycam: FlycamType,
+  prevVolumeTracing: VolumeTracing,
+  volumeTracing: VolumeTracing,
+  flycam: Flycam,
 ): Generator<UpdateAction, void, void> {
   // no diffing happening here (yet) as for volume tracings there are only updateTracing actions so far
   yield updateVolumeTracing(

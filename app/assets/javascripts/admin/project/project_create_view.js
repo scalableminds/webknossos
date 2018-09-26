@@ -12,7 +12,7 @@ import {
 } from "admin/admin_rest_api";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 
-import type { APIUserType, APITeamType } from "admin/api_flow_types";
+import type { APIUser, APITeam } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import type { RouterHistory } from "react-router-dom";
 
@@ -20,7 +20,7 @@ const FormItem = Form.Item;
 const Option = Select.Option;
 
 type StateProps = {
-  activeUser: APIUserType,
+  activeUser: APIUser,
 };
 
 type Props = {
@@ -30,8 +30,8 @@ type Props = {
 } & StateProps;
 
 type State = {
-  teams: Array<APITeamType>,
-  users: Array<APIUserType>,
+  teams: Array<APITeam>,
+  users: Array<APIUser>,
 };
 
 class ProjectCreateView extends React.PureComponent<Props, State> {
@@ -122,7 +122,7 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
                   style={fullWidth}
                   disabled={isEditMode}
                 >
-                  {this.state.teams.map((team: APITeamType) => (
+                  {this.state.teams.map((team: APITeam) => (
                     <Option key={team.id} value={team.id}>
                       {team.name}
                     </Option>
@@ -142,7 +142,7 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
                   style={fullWidth}
                   disabled={isEditMode}
                 >
-                  {this.state.users.map((user: APIUserType) => (
+                  {this.state.users.map((user: APIUser) => (
                     <Option key={user.id} value={user.id}>
                       {`${user.lastName}, ${user.firstName} ${user.email}`}
                     </Option>

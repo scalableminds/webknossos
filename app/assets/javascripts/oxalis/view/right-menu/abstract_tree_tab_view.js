@@ -8,12 +8,12 @@ import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 import AbstractTreeRenderer from "oxalis/view/right-menu/abstract_tree_renderer";
-import type { NodeListItemType } from "oxalis/view/right-menu/abstract_tree_renderer";
-import type { OxalisState, SkeletonTracingType } from "oxalis/store";
+import type { NodeListItem } from "oxalis/view/right-menu/abstract_tree_renderer";
+import type { OxalisState, SkeletonTracing } from "oxalis/store";
 
 type Props = {
   dispatch: Dispatch<*>,
-  skeletonTracing: ?SkeletonTracingType,
+  skeletonTracing: ?SkeletonTracing,
 };
 
 class AbstractTreeView extends Component<Props> {
@@ -32,7 +32,7 @@ class AbstractTreeView extends Component<Props> {
     window.removeEventListener("resize", this.drawTree, false);
   }
 
-  nodeList: Array<NodeListItemType> = [];
+  nodeList: Array<NodeListItem> = [];
   drawTree = _.throttle(() => {
     if (!this.props.skeletonTracing) {
       return;

@@ -4,10 +4,10 @@ import type { Vector3, Vector4, Vector6, BoundingBoxType } from "oxalis/constant
 import Maybe from "data.maybe";
 import window, { document, location } from "libs/window";
 import naturalSort from "javascript-natural-sort";
-import type { APIUserType } from "admin/api_flow_types";
+import type { APIUser } from "admin/api_flow_types";
 
 export type Comparator<T> = (T, T) => -1 | 0 | 1;
-type UrlParamsType = { [key: string]: string };
+type UrlParams = { [key: string]: string };
 
 function swap(arr, a, b) {
   let tmp;
@@ -217,24 +217,24 @@ export function point3ToVector3({ x, y, z }: { x: number, y: number, z: number }
   return [x, y, z];
 }
 
-function isUserTeamManager(user: APIUserType): boolean {
+function isUserTeamManager(user: APIUser): boolean {
   return _.findIndex(user.teams, team => team.isTeamManager) >= 0;
 }
 
-export function isUserAdmin(user: APIUserType): boolean {
+export function isUserAdmin(user: APIUser): boolean {
   return user.isAdmin || isUserTeamManager(user);
 }
 
-export function getUrlParamsObject(): UrlParamsType {
+export function getUrlParamsObject(): UrlParams {
   return getUrlParamsObjectFromString(location.search);
 }
 
-export function getUrlParamsObjectFromString(str: string): UrlParamsType {
+export function getUrlParamsObjectFromString(str: string): UrlParams {
   // Parse the URL parameters as objects and return it or just a single param
   return str
     .substring(1)
     .split("&")
-    .reduce((result: UrlParamsType, value: string): UrlParamsType => {
+    .reduce((result: UrlParams, value: string): UrlParams => {
       const parts = value.split("=");
       if (parts[0]) {
         const key = decodeURIComponent(parts[0]);

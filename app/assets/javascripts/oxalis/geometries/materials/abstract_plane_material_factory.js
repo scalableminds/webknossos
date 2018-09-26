@@ -8,19 +8,19 @@ import * as THREE from "three";
 import UpdatableTexture from "libs/UpdatableTexture";
 import app from "app";
 import Store from "oxalis/store";
-import type { DatasetLayerConfigurationType } from "oxalis/store";
+import type { DatasetLayerConfiguration } from "oxalis/store";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import { getColorLayers } from "oxalis/model/accessors/dataset_accessor";
 
-export type UniformsType = {
+export type Uniforms = {
   [key: string]: {
     type: "f" | "i" | "t" | "v2" | "v3" | "tv",
     value: any,
   },
 };
 
-export type ShaderMaterialOptionsType = {
+export type ShaderMaterialOptions = {
   polygonOffset?: boolean,
   polygonOffsetFactor?: number,
   polygonOffsetUnits?: number,
@@ -99,7 +99,7 @@ export function sanitizeName(name: ?string): string {
 
 class AbstractPlaneMaterialFactory {
   material: THREE.ShaderMaterial;
-  uniforms: UniformsType;
+  uniforms: Uniforms;
   attributes: Object;
   minFilter: THREE.NearestFilter;
   maxFilter: THREE.NearestFilter;
@@ -138,7 +138,7 @@ class AbstractPlaneMaterialFactory {
     }
   }
 
-  makeMaterial(options?: ShaderMaterialOptionsType): void {
+  makeMaterial(options?: ShaderMaterialOptions): void {
     this.material = new THREE.ShaderMaterial(
       _.extend(options, {
         uniforms: this.uniforms,
@@ -168,7 +168,7 @@ class AbstractPlaneMaterialFactory {
     );
   }
 
-  updateUniformsForLayer(settings: DatasetLayerConfigurationType, name: string) {
+  updateUniformsForLayer(settings: DatasetLayerConfiguration, name: string) {
     this.uniforms[`${name}_brightness`].value = settings.brightness / 255;
     this.uniforms[`${name}_contrast`].value = settings.contrast;
   }

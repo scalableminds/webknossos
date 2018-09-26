@@ -4,7 +4,7 @@ import * as React from "react";
 import _ from "lodash";
 import { Input } from "antd";
 
-type InputComponentPropType = {
+type InputComponentProp = {
   onChange?: Function,
   onFocus?: Function,
   onBlur?: Function,
@@ -14,7 +14,7 @@ type InputComponentPropType = {
   isTextArea?: boolean,
 };
 
-type InputComponentStateType = {
+type InputComponentState = {
   isFocused: boolean,
   currentValue: string,
 };
@@ -29,8 +29,8 @@ type InputComponentStateType = {
  * Inspired by https://github.com/facebook/react/issues/955#issuecomment-281802381
  * @class
  */
-class InputComponent extends React.PureComponent<InputComponentPropType, InputComponentStateType> {
-  static defaultProps: InputComponentPropType = {
+class InputComponent extends React.PureComponent<InputComponentProp, InputComponentState> {
+  static defaultProps: InputComponentProp = {
     onChange: _.noop,
     onFocus: _.noop,
     onBlur: _.noop,
@@ -45,7 +45,7 @@ class InputComponent extends React.PureComponent<InputComponentPropType, InputCo
     currentValue: this.props.value,
   };
 
-  componentWillReceiveProps = (nextProps: InputComponentPropType) => {
+  componentWillReceiveProps = (nextProps: InputComponentProp) => {
     if (!this.state.isFocused) {
       this.setState({ currentValue: nextProps.value });
     }

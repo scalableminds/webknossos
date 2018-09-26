@@ -1,8 +1,6 @@
 import sbt._
 
 object DependencyResolvers {
-  val novusRel = "repo.novus rels" at "http://repo.novus.com/releases/"
-  val novuesSnaps = "repo.novus snaps" at "http://repo.novus.com/snapshots/"
   val sonaRels = "sonatype rels" at "https://oss.sonatype.org/content/repositories/releases/"
   val sonaSnaps = "sonatype snaps" at "https://oss.sonatype.org/content/repositories/snapshots/"
   val sgSnaps = "sgodbillon" at "https://bitbucket.org/sgodbillon/repository/raw/master/snapshots/"

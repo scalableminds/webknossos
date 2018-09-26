@@ -15,8 +15,6 @@ object DependencyResolvers {
   val atlassian = "Atlassian Releases" at "https://maven.atlassian.com/public/"
 
   val dependencyResolvers = Seq(
-    novusRel,
-    novuesSnaps,
     sonaRels,
     sonaSnaps,
     sgSnaps,

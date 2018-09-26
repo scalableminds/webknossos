@@ -38,7 +38,7 @@ export class VoxelIterator {
     height: number,
     minCoord2d: Vector2,
     get3DCoordinate?: Vector2 => Vector3 = () => [0, 0, 0],
-    boundingBox?: BoundingBoxType,
+    boundingBox?: ?BoundingBoxType,
   ) {
     this.map = map;
     this.width = width;
@@ -203,7 +203,7 @@ class VolumeLayer {
     return iterator;
   }
 
-  getCircleVoxelIterator(position: Vector3, boundings?: BoundingBoxType): VoxelIterator {
+  getCircleVoxelIterator(position: Vector3, boundings?: ?BoundingBoxType): VoxelIterator {
     const radius = Math.round(
       this.pixelsToVoxels(Store.getState().temporaryConfiguration.brushSize) / 2,
     );

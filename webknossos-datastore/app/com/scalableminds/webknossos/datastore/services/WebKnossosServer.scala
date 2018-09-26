@@ -22,12 +22,16 @@ object DataStoreStatus {
   implicit val dataStoreStatusFormat = Json.format[DataStoreStatus]
 }
 
+trait AbstractWebKnossosServer {
+  def requestUserAccess(token: String, accessRequest: UserAccessRequest): Fox[UserAccessAnswer]
+}
+
 class WebKnossosServer @Inject()(
                                   rpc: RPC,
                                   config: DataStoreConfig,
                                   val lifecycle: ApplicationLifecycle,
                                   @Named("webknossos-datastore") val system: ActorSystem
-                                ) extends IntervalScheduler with LazyLogging {
+                                ) extends AbstractWebKnossosServer with IntervalScheduler with LazyLogging {
 
   private val dataStoreKey: String = config.Datastore.key
   private val dataStoreName: String = config.Datastore.name
@@ -69,13 +73,7 @@ class WebKnossosServer @Inject()(
       .post(id)
   }
 
-  def reportTracingUpdates(tracingId: String, timestamps: List[Long], statistics: Option[JsObject], userToken: Option[String]): Fox[_] = {
-    rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/handleTracingUpdateReport")
-      .addQueryString("key" -> dataStoreKey)
-      .post(Json.obj("timestamps" -> timestamps, "statistics" -> statistics, "tracingId" -> tracingId, "userToken" -> userToken))
-  }
-
-  def requestUserAccess(token: String, accessRequest: UserAccessRequest): Fox[UserAccessAnswer] = {
+  override def requestUserAccess(token: String, accessRequest: UserAccessRequest): Fox[UserAccessAnswer] = {
     rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/validateUserAccess")
       .addQueryString("key" -> dataStoreKey)
       .addQueryString("token" -> token)

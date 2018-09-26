@@ -4,7 +4,8 @@ import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracings}
 import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
-import com.scalableminds.webknossos.datastore.services.{AccessTokenService, DataSourceRepository, UserAccessRequest, WebKnossosServer}
+import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessRequest}
+import com.scalableminds.webknossos.tracingstore.WebKnossosServer
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import play.api.i18n.Messages
@@ -16,7 +17,6 @@ import play.api.mvc.PlayBodyParsers
 import scala.concurrent.ExecutionContext
 
 class VolumeTracingController @Inject()(val tracingService: VolumeTracingService,
-                                        val dataSourceRepository: DataSourceRepository,
                                         val webKnossosServer: WebKnossosServer,
                                         val accessTokenService: AccessTokenService,
                                         tracingDataStore: TracingDataStore)
@@ -37,8 +37,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
           for {
             initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
             tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-            dataSource <- dataSourceRepository.findUsableByName(tracing.dataSetName) ?~> Messages("dataSet.notFound")
-            _ <- tracingService.initializeWithData(tracingId, tracing, dataSource, initialData)
+            _ <- tracingService.initializeWithData(tracingId, tracing, initialData)
           } yield Ok(Json.toJson(tracingId))
         }
       }

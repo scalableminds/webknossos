@@ -2,8 +2,9 @@ package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.google.inject.Inject
 import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.webknossos.tracingstore.TracingStoreConfig
 
-class TracingDataStore @Inject()(config: DataStoreConfig) {
+class TracingDataStore @Inject()(config: TracingStoreConfig) {
 
   val healthClient = new FossilDBClient("healthCheckOnly", config)
 

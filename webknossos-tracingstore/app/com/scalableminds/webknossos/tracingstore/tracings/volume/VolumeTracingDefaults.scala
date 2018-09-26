@@ -12,4 +12,5 @@ object VolumeTracingDefaults {
   val largestSegmentId = 0
 
   val zoomLevel = 0.1
+
 }

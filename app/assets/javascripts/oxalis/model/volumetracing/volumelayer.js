@@ -58,6 +58,7 @@ export class VoxelIterator {
     if (!this.boundingBox) {
       return true;
     }
+    debugger;
     return (
       coor[0] >= this.boundingBox[0][0] &&
       coor[0] <= this.boundingBox[1][0] &&

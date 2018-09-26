@@ -3,7 +3,7 @@
 import test from "ava";
 import puppeteer, { type Browser } from "puppeteer";
 import path from "path";
-import fetch, { Headers } from "node-fetch";
+import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
 import { screenshotDataset, DEV_AUTH_TOKEN } from "./dataset_rendering_helpers";
 import { compareScreenshot } from "./screenshot_helpers";
 
@@ -38,10 +38,19 @@ async function getNewPage(browser: Browser) {
 
 test.beforeEach(async t => {
   t.context.browser = await puppeteer.launch({
-    args: ["--headless", "--hide-scrollbars", "--no-sandbox", "--disable-setuid-sandbox"],
+    args: [
+      "--headless",
+      "--hide-scrollbars",
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+    ],
   });
   global.Headers = Headers;
   global.fetch = fetch;
+  global.Request = Request;
+  global.Response = Response;
+  global.FetchError = FetchError;
 });
 
 // These are the datasets that are available on our dev instance
@@ -56,7 +65,7 @@ const datasetNames = [
 ];
 
 datasetNames.map(async datasetName => {
-  test(`it should render dataset ${datasetName} correctly`, async t => {
+  test.serial(`it should render dataset ${datasetName} correctly`, async t => {
     const { screenshot, width, height } = await screenshotDataset(
       await getNewPage(t.context.browser),
       URL,

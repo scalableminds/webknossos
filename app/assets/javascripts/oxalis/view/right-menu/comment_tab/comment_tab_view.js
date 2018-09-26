@@ -28,14 +28,14 @@ import Enum from "Enumjs";
 import messages from "messages";
 import { MarkdownModal } from "oxalis/view/components/markdown_modal";
 import type { Dispatch } from "redux";
-import type { OxalisState, SkeletonTracingType, TreeType, CommentType } from "oxalis/store";
+import type { OxalisState, SkeletonTracing, Tree, CommentType } from "oxalis/store";
 import type { Comparator } from "libs/utils";
 import { makeSkeletonTracingGuard } from "oxalis/view/guards";
 import SearchPopover from "../search_popover";
 
 const InputGroup = Input.Group;
 
-const treeTypeHint = ([]: Array<TreeType>);
+const treeTypeHint = ([]: Array<Tree>);
 const commentTypeHint = ([]: Array<CommentType>);
 
 const SortByEnum = Enum.make({
@@ -45,11 +45,11 @@ const SortByEnum = Enum.make({
 });
 type SortByEnumType = $Keys<typeof SortByEnum>;
 
-type SortOptionsType = {
+type SortOptions = {
   sortBy: SortByEnumType,
   isSortedAscending: boolean,
 };
-function getTreeSorter({ sortBy, isSortedAscending }: SortOptionsType): Comparator<TreeType> {
+function getTreeSorter({ sortBy, isSortedAscending }: SortOptions): Comparator<Tree> {
   return sortBy === SortByEnum.ID
     ? Utils.compareBy(treeTypeHint, tree => tree.treeId, isSortedAscending)
     : Utils.localeCompareBy(
@@ -60,7 +60,7 @@ function getTreeSorter({ sortBy, isSortedAscending }: SortOptionsType): Comparat
       );
 }
 
-function getCommentSorter({ sortBy, isSortedAscending }: SortOptionsType): Comparator<CommentType> {
+function getCommentSorter({ sortBy, isSortedAscending }: SortOptions): Comparator<CommentType> {
   return sortBy === SortByEnum.ID
     ? Utils.compareBy(([]: Array<CommentType>), comment => comment.nodeId, isSortedAscending)
     : Utils.localeCompareBy(
@@ -72,21 +72,21 @@ function getCommentSorter({ sortBy, isSortedAscending }: SortOptionsType): Compa
 }
 
 type Props = {
-  skeletonTracing: SkeletonTracingType,
+  skeletonTracing: SkeletonTracing,
   setActiveNode: (nodeId: number) => void,
   deleteComment: () => void,
   createComment: (text: string) => void,
 };
 
-type CommentTabStateType = {
+type CommentTabState = {
   isSortedAscending: boolean,
   sortBy: SortByEnumType,
-  data: Array<TreeType | CommentType>,
+  data: Array<Tree | CommentType>,
   collapsedTreeIds: { [number]: boolean },
   isMarkdownModalVisible: boolean,
 };
 
-class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
+class CommentTabView extends React.PureComponent<Props, CommentTabState> {
   listRef: ?List;
 
   state = {
@@ -99,10 +99,7 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
     isMarkdownModalVisible: false,
   };
 
-  static getDerivedStateFromProps(
-    props: Props,
-    state: CommentTabStateType,
-  ): $Shape<CommentTabStateType> {
+  static getDerivedStateFromProps(props: Props, state: CommentTabState): $Shape<CommentTabState> {
     const sortedTrees = _.values(props.skeletonTracing.trees)
       .filter(tree => tree.comments.length > 0)
       .sort(getTreeSorter(state));
@@ -170,7 +167,7 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
 
       const sortedComments = _.flatMap(
         sortedTrees,
-        (tree: TreeType): Array<CommentType> =>
+        (tree: Tree): Array<CommentType> =>
           tree.comments
             .slice()
             .sort(getCommentSorter({ sortBy, isSortedAscending: sortAscending })),
@@ -393,7 +390,7 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
             title="Collapse or expand groups"
           />
         </InputGroup>
-        <div style={{ flex: "1 1 auto", marginTop: 20 }}>
+        <div style={{ flex: "1 1 auto", marginTop: 20, listStyle: "none" }}>
           <AutoSizer>
             {({ height, width }) => (
               <div style={{ height, width }} className="flex-overflow">

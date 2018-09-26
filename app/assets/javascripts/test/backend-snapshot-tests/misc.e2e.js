@@ -16,13 +16,13 @@ test.before("Reset database and change token", async () => {
 
 test("datastores()", async t => {
   const datastores = await api.getDatastores();
-  writeFlowCheckingFile(datastores, "datastore", "APIDataStoreType", { isArray: true });
+  writeFlowCheckingFile(datastores, "datastore", "APIDataStore", { isArray: true });
   t.snapshot(datastores, { id: "misc-datastores" });
 });
 
 test("activeUser()", async t => {
   const activeUser = await api.getActiveUser();
-  writeFlowCheckingFile(activeUser, "user", "APIUserType");
+  writeFlowCheckingFile(activeUser, "user", "APIUser");
   t.snapshot(activeUser, { id: "misc-activeUser" });
 });
 

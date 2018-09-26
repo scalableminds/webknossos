@@ -16,19 +16,20 @@ import { undoAction, redoAction } from "oxalis/model/actions/save_actions";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import { copyAnnotationToUserAccount, finishAnnotation } from "admin/admin_rest_api";
 import { location } from "libs/window";
-import type { OxalisState, RestrictionsAndSettingsType, TaskType } from "oxalis/store";
-import type { APIUserType, APITracingType } from "admin/api_flow_types";
+import type { OxalisState, RestrictionsAndSettings, Task } from "oxalis/store";
+import type { APIUser, APITracingType } from "admin/api_flow_types";
 import { layoutEmitter } from "oxalis/view/layouting/layout_persistence";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import SceneController from "oxalis/controller/scene_controller";
 import { readFileAsArrayBuffer } from "libs/read_file";
+import { AsyncButton } from "components/async_clickables";
 
 type StateProps = {
   tracingType: APITracingType,
   annotationId: string,
-  restrictions: RestrictionsAndSettingsType,
-  task: ?TaskType,
-  activeUser: ?APIUserType,
+  restrictions: RestrictionsAndSettings,
+  task: ?Task,
+  activeUser: ?APIUser,
 };
 
 type State = {
@@ -169,9 +170,9 @@ class TracingActionsView extends PureComponent<StateProps, State> {
           <ButtonComponent key="read-only-button" type="primary" disabled>
             Read only
           </ButtonComponent>,
-          <ButtonComponent key="copy-button" icon="file-add" onClick={this.handleCopyToAccount}>
+          <AsyncButton key="copy-button" icon="file-add" onClick={this.handleCopyToAccount}>
             Copy To My Account
-          </ButtonComponent>,
+          </AsyncButton>,
         ];
 
     const finishAndNextTaskButton =

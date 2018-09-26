@@ -5,116 +5,116 @@
  * @flow
  */
 import type {
-  UserConfigurationType,
-  DatasetConfigurationType,
-  DatasetLayerConfigurationType,
-  TemporaryConfigurationType,
-  MappingType,
+  UserConfiguration,
+  DatasetConfiguration,
+  DatasetLayerConfiguration,
+  TemporaryConfiguration,
+  Mapping,
 } from "oxalis/store";
-import type { APIDatasetType } from "admin/api_flow_types";
-import type { ModeType, ControlModeType } from "oxalis/constants";
+import type { APIDataset } from "admin/api_flow_types";
+import type { Mode, ControlMode } from "oxalis/constants";
 
-type UpdateUserSettingActionType = {
+type UpdateUserSettingAction = {
   type: "UPDATE_USER_SETTING",
-  propertyName: $Keys<UserConfigurationType>,
+  propertyName: $Keys<UserConfiguration>,
   value: any,
 };
-type UpdateDatasetSettingActionType = {
+type UpdateDatasetSettingAction = {
   type: "UPDATE_DATASET_SETTING",
-  propertyName: $Keys<DatasetConfigurationType>,
+  propertyName: $Keys<DatasetConfiguration>,
   value: any,
 };
-type UpdateTemporarySettingActionType = {
+type UpdateTemporarySettingAction = {
   type: "UPDATE_TEMPORARY_SETTING",
-  propertyName: $Keys<TemporaryConfigurationType>,
+  propertyName: $Keys<TemporaryConfiguration>,
   value: any,
 };
-export type ToggleTemporarySettingActionType = {
+export type ToggleTemporarySettingAction = {
   type: "TOGGLE_TEMPORARY_SETTING",
-  propertyName: $Keys<TemporaryConfigurationType>,
+  propertyName: $Keys<TemporaryConfiguration>,
 };
-type UpdateLayerSettingActionType = {
+type UpdateLayerSettingAction = {
   type: "UPDATE_LAYER_SETTING",
   layerName: string,
-  propertyName: $Keys<DatasetLayerConfigurationType>,
+  propertyName: $Keys<DatasetLayerConfiguration>,
   value: any,
 };
 export type InitializeSettingsAction = {
   type: "INITIALIZE_SETTINGS",
-  initialUserSettings: UserConfigurationType,
-  initialDatasetSettings: DatasetConfigurationType,
+  initialUserSettings: UserConfiguration,
+  initialDatasetSettings: DatasetConfiguration,
 };
-type SetDatasetAction = { type: "SET_DATASET", dataset: APIDatasetType };
-type SetViewModeActionType = { type: "SET_VIEW_MODE", viewMode: ModeType };
-type SetFlightmodeRecordingActionType = { type: "SET_FLIGHTMODE_RECORDING", value: boolean };
-type SetControlModeActionType = { type: "SET_CONTROL_MODE", controlMode: ControlModeType };
-type SetMappingEnabledActionType = { type: "SET_MAPPING_ENABLED", isMappingEnabled: boolean };
-type SetMappingActionType = {
+type SetDatasetAction = { type: "SET_DATASET", dataset: APIDataset };
+type SetViewModeAction = { type: "SET_VIEW_MODE", viewMode: Mode };
+type SetFlightmodeRecordingAction = { type: "SET_FLIGHTMODE_RECORDING", value: boolean };
+type SetControlModeAction = { type: "SET_CONTROL_MODE", controlMode: ControlMode };
+type SetMappingEnabledAction = { type: "SET_MAPPING_ENABLED", isMappingEnabled: boolean };
+type SetMappingAction = {
   type: "SET_MAPPING",
-  mapping: ?MappingType,
+  mapping: ?Mapping,
   mappingColors: ?Array<number>,
   hideUnmappedIds: ?boolean,
 };
-export type SettingActionType =
-  | UpdateUserSettingActionType
-  | UpdateDatasetSettingActionType
-  | UpdateTemporarySettingActionType
-  | ToggleTemporarySettingActionType
+export type SettingAction =
+  | UpdateUserSettingAction
+  | UpdateDatasetSettingAction
+  | UpdateTemporarySettingAction
+  | ToggleTemporarySettingAction
   | InitializeSettingsAction
-  | UpdateLayerSettingActionType
+  | UpdateLayerSettingAction
   | SetDatasetAction
-  | SetViewModeActionType
-  | SetFlightmodeRecordingActionType
-  | SetControlModeActionType
-  | SetMappingEnabledActionType
-  | SetMappingActionType;
+  | SetViewModeAction
+  | SetFlightmodeRecordingAction
+  | SetControlModeAction
+  | SetMappingEnabledAction
+  | SetMappingAction;
 
 export const updateUserSettingAction = (
-  propertyName: $Keys<UserConfigurationType>,
+  propertyName: $Keys<UserConfiguration>,
   value: any,
-): UpdateUserSettingActionType => ({
+): UpdateUserSettingAction => ({
   type: "UPDATE_USER_SETTING",
   propertyName,
   value,
 });
 
 export const updateDatasetSettingAction = (
-  propertyName: $Keys<DatasetConfigurationType>,
+  propertyName: $Keys<DatasetConfiguration>,
   value: any,
-): UpdateDatasetSettingActionType => ({
+): UpdateDatasetSettingAction => ({
   type: "UPDATE_DATASET_SETTING",
   propertyName,
   value,
 });
 
 export const updateTemporarySettingAction = (
-  propertyName: $Keys<TemporaryConfigurationType>,
+  propertyName: $Keys<TemporaryConfiguration>,
   value: any,
-): UpdateTemporarySettingActionType => ({
+): UpdateTemporarySettingAction => ({
   type: "UPDATE_TEMPORARY_SETTING",
   propertyName,
   value,
 });
 
 export const toggleTemporarySettingAction = (
-  propertyName: $Keys<TemporaryConfigurationType>,
-): ToggleTemporarySettingActionType => ({
+  propertyName: $Keys<TemporaryConfiguration>,
+): ToggleTemporarySettingAction => ({
   type: "TOGGLE_TEMPORARY_SETTING",
   propertyName,
 });
 
 export const updateLayerSettingAction = (
   layerName: string,
-  propertyName: $Keys<DatasetLayerConfigurationType>,
+  propertyName: $Keys<DatasetLayerConfiguration>,
   value: any,
-): UpdateLayerSettingActionType => ({
+): UpdateLayerSettingAction => ({
   type: "UPDATE_LAYER_SETTING",
   layerName,
   propertyName,
   value,
 });
 
-export const setDatasetAction = (dataset: APIDatasetType): SetDatasetAction => ({
+export const setDatasetAction = (dataset: APIDataset): SetDatasetAction => ({
   type: "SET_DATASET",
   dataset,
 });
@@ -128,33 +128,31 @@ export const initializeSettingsAction = (
   initialDatasetSettings,
 });
 
-export const setViewModeAction = (viewMode: ModeType): SetViewModeActionType => ({
+export const setViewModeAction = (viewMode: Mode): SetViewModeAction => ({
   type: "SET_VIEW_MODE",
   viewMode,
 });
 
-export const setFlightmodeRecordingAction = (value: boolean): SetFlightmodeRecordingActionType => ({
+export const setFlightmodeRecordingAction = (value: boolean): SetFlightmodeRecordingAction => ({
   type: "SET_FLIGHTMODE_RECORDING",
   value,
 });
 
-export const setControlModeAction = (controlMode: ControlModeType): SetControlModeActionType => ({
+export const setControlModeAction = (controlMode: ControlMode): SetControlModeAction => ({
   type: "SET_CONTROL_MODE",
   controlMode,
 });
 
-export const setMappingEnabledAction = (
-  isMappingEnabled: boolean,
-): SetMappingEnabledActionType => ({
+export const setMappingEnabledAction = (isMappingEnabled: boolean): SetMappingEnabledAction => ({
   type: "SET_MAPPING_ENABLED",
   isMappingEnabled,
 });
 
 export const setMappingAction = (
-  mapping: ?MappingType,
+  mapping: ?Mapping,
   mappingColors: ?Array<number>,
   hideUnmappedIds: ?boolean,
-): SetMappingActionType => ({
+): SetMappingAction => ({
   type: "SET_MAPPING",
   mapping,
   mappingColors,

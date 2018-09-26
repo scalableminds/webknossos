@@ -55,16 +55,18 @@ export function Comment({ comment, isActive, style }: CommentProps) {
     Store.dispatch(setActiveNodeAction(comment.nodeId));
   };
 
-  const liClassName = classNames("markdown", "markdown-small", {
+  const liClassName = classNames("markdown", "markdown-small", "nowrap", {
     bold: isActive,
   });
   const iClassName = classNames("fa", "fa-fw", {
     "fa-angle-right": isActive,
   });
+  // eslint-disable-next-line no-unused-vars
+  const { width, ...liStyle } = style;
   const isMultiLine = comment.content.indexOf("\n") !== -1;
 
   return (
-    <li className={liClassName} style={style}>
+    <li className={liClassName} style={liStyle}>
       <span>
         <i className={iClassName} />
         <a onClick={handleClick}>{comment.nodeId}</a>

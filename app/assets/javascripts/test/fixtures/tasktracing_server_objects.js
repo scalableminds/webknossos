@@ -1,7 +1,7 @@
 // @flow
-import type { ServerSkeletonTracingType, APIAnnotationType } from "admin/api_flow_types";
+import type { ServerSkeletonTracing, APIAnnotation } from "admin/api_flow_types";
 
-export const tracing: ServerSkeletonTracingType = {
+export const tracing: ServerSkeletonTracing = {
   trees: [
     {
       nodes: [
@@ -37,7 +37,7 @@ export const tracing: ServerSkeletonTracingType = {
   id: "e90133de-b2db-4912-8261-8b6f84f7edab",
 };
 
-export const annotation: APIAnnotationType = {
+export const annotation: APIAnnotation = {
   modified: 1529066010230,
   state: "Active",
   id: "5b1fd1cf97000027049c67ee",

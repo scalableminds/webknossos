@@ -13,7 +13,7 @@ test("getTasks()", async t => {
   const allTasks = (await api.getTasks({})).filter(
     task => task.projectName !== "Test_Project3(for_annotation_mutations)",
   );
-  writeFlowCheckingFile(allTasks, "task", "APITaskType", { isArray: true });
+  writeFlowCheckingFile(allTasks, "task", "APITask", { isArray: true });
   t.snapshot(allTasks, { id: "tasks-getTasks" });
 
   const complexQueriedTasks = await api.getTasks({
@@ -123,7 +123,7 @@ test.serial("requestTask()", async t => {
   const createdTaskWrapper = createdTaskWrappers[0];
   const newTaskAnnotation = await api.requestTask();
 
-  writeFlowCheckingFile(newTaskAnnotation, "annotation-with-task", "APIAnnotationWithTaskType");
+  writeFlowCheckingFile(newTaskAnnotation, "annotation-with-task", "APIAnnotationWithTask");
   t.snapshot(replaceVolatileValues(newTaskAnnotation), { id: "task-requestTask" });
 
   if (createdTaskWrapper.success != null) {

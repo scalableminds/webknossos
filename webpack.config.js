@@ -3,7 +3,7 @@ module.exports = function(env = {}) {
   var webpack = require("webpack");
   var fs = require("fs");
   var path = require("path");
-  const UglifyJsPlugin = require("uglifyjs-webpack-plugin");
+  const TerserPlugin = require("terser-webpack-plugin");
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
   const HardSourceWebpackPlugin = require("hard-source-webpack-plugin");
 
@@ -35,11 +35,11 @@ module.exports = function(env = {}) {
 
   if (env.production) {
     plugins.push(
-      new UglifyJsPlugin({
+      new TerserPlugin({
         cache: true,
         parallel: true,
         sourceMap: true,
-        uglifyOptions: {
+        terserOptions: {
           // compress is bugged, see https://github.com/mishoo/UglifyJS2/issues/2842
           // even inline: 1 causes bugs, see https://github.com/scalableminds/webknossos/pull/2713
           compress: false,
@@ -125,6 +125,7 @@ module.exports = function(env = {}) {
       modules: [srcPath, nodePath, protoPath],
     },
     optimization: {
+      minimize: false,
       splitChunks: {
         chunks: "initial",
       },

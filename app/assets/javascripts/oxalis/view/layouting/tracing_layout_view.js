@@ -4,7 +4,6 @@
  */
 
 import * as React from "react";
-import Maybe from "data.maybe";
 import OxalisController from "oxalis/controller";
 import SettingsView from "oxalis/view/settings/settings_view";
 import ActionBarView from "oxalis/view/action_bar_view";
@@ -29,7 +28,7 @@ import type { ControlMode, Mode } from "oxalis/constants";
 import RecordingSwitch from "oxalis/view/recording_switch";
 import TDViewControls from "oxalis/view/td_view_controls";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
-import { GoldenLayoutAdapter, getDesiredLayoutRect } from "./golden_layout_adapter";
+import { GoldenLayoutAdapter } from "./golden_layout_adapter";
 import { getLayoutConfig, storeLayoutConfig } from "./layout_persistence";
 import { determineLayout } from "./default_layout_configs";
 

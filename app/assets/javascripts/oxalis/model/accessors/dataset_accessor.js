@@ -76,8 +76,12 @@ export function isRgb(dataset: APIDataset, layerName: string): boolean {
   );
 }
 
+export function getByteCountFromLayer(layerInfo: DataLayerType): number {
+  return getBitDepth(layerInfo) >> 3;
+}
+
 export function getByteCount(dataset: APIDataset, layerName: string): number {
-  return getBitDepth(getLayerByName(dataset, layerName)) >> 3;
+  return getByteCountFromLayer(getLayerByName(dataset, layerName));
 }
 
 type Boundary = { lowerBoundary: Vector3, upperBoundary: Vector3 };

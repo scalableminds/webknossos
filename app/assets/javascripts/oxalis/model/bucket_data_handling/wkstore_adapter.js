@@ -8,7 +8,11 @@ import { doWithToken } from "admin/admin_rest_api";
 import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import type { DataLayerType } from "oxalis/store";
-import { getResolutions, isSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getResolutions,
+  isSegmentationLayer,
+  getByteCountFromLayer,
+} from "oxalis/model/accessors/dataset_accessor";
 import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
 import constants from "oxalis/constants";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
@@ -54,7 +58,7 @@ function createSendBucketInfo(zoomedAddress: Vector4, resolutions: Array<Vector3
 export async function requestFromStore(
   layerInfo: DataLayerType,
   batch: Array<Vector4>,
-): Promise<{ buffer: Uint8Array, missingBuckets: number[] }> {
+): Promise<Array<?Uint8Array>> {
   const fourBit =
     Store.getState().datasetConfiguration.fourBit &&
     !isSegmentationLayer(Store.getState().dataset, layerInfo.name);
@@ -83,8 +87,27 @@ export async function requestFromStore(
     if (fourBit) {
       resultBuffer = await decodeFourBit(resultBuffer);
     }
-    return { buffer: new Uint8Array(resultBuffer), missingBuckets };
+
+    return sliceBufferIntoPieces(layerInfo, batch, missingBuckets, new Uint8Array(resultBuffer));
   });
+}
+
+function sliceBufferIntoPieces(
+  layerInfo: DataLayerType,
+  batch: Array<Vector4>,
+  missingBuckets: Array<number>,
+  buffer: Uint8Array,
+): Array<?Uint8Array> {
+  let offset = 0;
+  const BUCKET_LENGTH = constants.BUCKET_SIZE * getByteCountFromLayer(layerInfo);
+
+  const bucketBuffers = batch.map((_bucketAddress, index) => {
+    const isMissing = missingBuckets.indexOf(index) > -1;
+    const subbuffer = isMissing ? null : buffer.subarray(offset, (offset += BUCKET_LENGTH));
+    return subbuffer;
+  });
+
+  return bucketBuffers;
 }
 
 export async function sendToStore(batch: Array<DataBucket>): Promise<void> {

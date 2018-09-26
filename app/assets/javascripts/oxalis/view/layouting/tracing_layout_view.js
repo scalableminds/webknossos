@@ -4,7 +4,6 @@
  */
 
 import * as React from "react";
-import Maybe from "data.maybe";
 import OxalisController from "oxalis/controller";
 import SettingsView from "oxalis/view/settings/settings_view";
 import ActionBarView from "oxalis/view/action_bar_view";
@@ -53,22 +52,13 @@ type State = {
 };
 
 const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
-export function getDesiredCanvasSize(): Maybe<[number, number]> {
-  // const canvasAndLayoutContainer = document.getElementById(canvasAndLayoutContainerID);
-  const canvasAndLayoutContainer = document.querySelector("#layoutContainer");
-
-  if (canvasAndLayoutContainer) {
-    const { scrollWidth, scrollHeight } = canvasAndLayoutContainer;
-    return Maybe.Just([scrollWidth, scrollHeight]);
-  }
-  return Maybe.Nothing();
-}
 
 const GOLDEN_LAYOUT_ADAPTER_STYLE = {
   display: "block",
   height: "100%",
   width: "100%",
   flex: "1 1 auto",
+  overflow: "hidden",
 };
 
 class TracingLayoutView extends React.PureComponent<Props, State> {
@@ -111,7 +101,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
         />
 
         <Layout className="tracing-layout">
-          <Header style={{ flex: "0 1 auto", zIndex: 210, minHeight: 50 }}>
+          <Header style={{ flex: "0 1 auto", zIndex: 210, height: 50 }}>
             <ButtonComponent onClick={this.handleSettingsCollapse}>
               <Icon type={this.state.isSettingsCollapsed ? "menu-unfold" : "menu-fold"} />
               <span className="hide-on-small-screen">Settings</span>

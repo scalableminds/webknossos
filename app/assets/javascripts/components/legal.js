@@ -7,7 +7,7 @@ type Props = {};
 
 type State = {
   operatorData: string,
-  organizationData: Array<APIOrganizationType>,
+  organizationData: Array<APIOrganization>,
 };
 
 class LegalBase extends React.PureComponent<Props, State> {

@@ -6,10 +6,10 @@ import _ from "lodash";
 import AirbrakeClient from "airbrake-js";
 import Toast from "libs/toast";
 import { location } from "libs/window";
-import type { APIUserType } from "admin/api_flow_types";
+import type { APIUser } from "admin/api_flow_types";
 import messages from "messages";
 
-type ErrorHandlingOptionsType = {
+type ErrorHandlingOptions = {
   throwAssertions: boolean,
   sendLocalErrors: boolean,
 };
@@ -45,7 +45,7 @@ class ErrorHandling {
   commitHash: ?string;
   airbrake: AirbrakeClient;
 
-  initialize(options: ErrorHandlingOptionsType) {
+  initialize(options: ErrorHandlingOptions) {
     if (options == null) {
       options = { throwAssertions: false, sendLocalErrors: false };
     }
@@ -152,7 +152,7 @@ class ErrorHandling {
     this.assert(false, `${message} (${actual} != ${wanted})`, assertionContext);
   }
 
-  setCurrentUser(user: APIUserType) {
+  setCurrentUser(user: APIUser) {
     this.airbrake.addFilter(notice => {
       notice.context = notice.context || {};
       notice.context.user = _.pick(user, ["id", "email", "firstName", "lastName", "isActive"]);

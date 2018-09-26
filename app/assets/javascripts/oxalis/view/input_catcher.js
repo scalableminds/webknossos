@@ -2,13 +2,13 @@
 
 import * as React from "react";
 import { setInputCatcherRect } from "oxalis/model/actions/view_mode_actions";
-import type { Rect, ViewportType } from "oxalis/constants";
+import type { Rect, Viewport } from "oxalis/constants";
 import Store from "oxalis/store";
 import makeRectRelativeToCanvas from "oxalis/view/layouting/layout_canvas_adapter";
 import Scalebar from "oxalis/view/scalebar";
 
 type Props = {
-  viewportID: ViewportType,
+  viewportID: Viewport,
   children?: React.Node,
   displayScalebars?: boolean,
 };

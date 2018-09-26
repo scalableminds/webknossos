@@ -1,18 +1,18 @@
 // @flow
 import type {
-  VolumeTracingType,
-  BranchPointType,
+  VolumeTracing,
+  BranchPoint,
   CommentType,
-  TreeType,
-  NodeType,
-  BoundingBoxObjectType,
-  TreeGroupType,
+  Tree,
+  Node,
+  BoundingBoxObject,
+  TreeGroup,
 } from "oxalis/store";
 import type { Vector3, BoundingBoxType } from "oxalis/constants";
 import type { SendBucketInfo } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reducer_helpers";
 
-export type NodeWithTreeIdType = { treeId: number } & NodeType;
+export type NodeWithTreeId = { treeId: number } & Node;
 
 export type UpdateTreeUpdateAction = {|
   name: "createTree" | "updateTree",
@@ -22,7 +22,7 @@ export type UpdateTreeUpdateAction = {|
     color: Vector3,
     name: string,
     comments: Array<CommentType>,
-    branchPoints: Array<BranchPointType>,
+    branchPoints: Array<BranchPoint>,
     groupId: ?number,
     timestamp: number,
   |},
@@ -48,11 +48,11 @@ type MergeTreeUpdateAction = {|
 |};
 export type CreateNodeUpdateAction = {|
   name: "createNode",
-  value: NodeWithTreeIdType,
+  value: NodeWithTreeId,
 |};
 type UpdateNodeUpdateAction = {|
   name: "updateNode",
-  value: NodeWithTreeIdType,
+  value: NodeWithTreeId,
 |};
 type ToggleTreeUpdateAction = {|
   name: "toggleTree",
@@ -89,7 +89,7 @@ export type UpdateSkeletonTracingUpdateAction = {|
     activeNode: ?number,
     editPosition: Vector3,
     editRotation: Vector3,
-    userBoundingBox: ?BoundingBoxObjectType,
+    userBoundingBox: ?BoundingBoxObject,
     zoomLevel: number,
   |},
 |};
@@ -100,7 +100,7 @@ type UpdateVolumeTracingUpdateAction = {|
     editPosition: Vector3,
     editRotation: Vector3,
     largestSegmentId: number,
-    userBoundingBox: ?BoundingBoxObjectType,
+    userBoundingBox: ?BoundingBoxObject,
     zoomLevel: number,
   |},
 |};
@@ -113,7 +113,7 @@ type UpdateBucketUpdateAction = {|
 type UpdateTreeGroupsUpdateAction = {|
   name: "updateTreeGroups",
   value: {|
-    treeGroups: Array<TreeGroupType>,
+    treeGroups: Array<TreeGroup>,
   |},
 |};
 export type RevertToVersionUpdateAction = {|
@@ -167,7 +167,7 @@ export type ServerUpdateAction =
   | AsServerAction<RevertToVersionUpdateAction>
   | AsServerAction<UpdateTreeGroupsUpdateAction>;
 
-export function createTree(tree: TreeType): UpdateTreeUpdateAction {
+export function createTree(tree: Tree): UpdateTreeUpdateAction {
   return {
     name: "createTree",
     value: {
@@ -190,7 +190,7 @@ export function deleteTree(treeId: number): DeleteTreeUpdateAction {
     },
   };
 }
-export function updateTree(tree: TreeType): UpdateTreeUpdateAction {
+export function updateTree(tree: Tree): UpdateTreeUpdateAction {
   return {
     name: "updateTree",
     value: {
@@ -205,7 +205,7 @@ export function updateTree(tree: TreeType): UpdateTreeUpdateAction {
     },
   };
 }
-export function toggleTree(tree: TreeType): ToggleTreeUpdateAction {
+export function toggleTree(tree: Tree): ToggleTreeUpdateAction {
   return {
     name: "toggleTree",
     value: {
@@ -250,13 +250,13 @@ export function deleteEdge(
     },
   };
 }
-export function createNode(treeId: number, node: NodeType): CreateNodeUpdateAction {
+export function createNode(treeId: number, node: Node): CreateNodeUpdateAction {
   return {
     name: "createNode",
     value: Object.assign({}, node, { treeId }),
   };
 }
-export function updateNode(treeId: number, node: NodeType): UpdateNodeUpdateAction {
+export function updateNode(treeId: number, node: Node): UpdateNodeUpdateAction {
   return {
     name: "updateNode",
     value: Object.assign({}, node, { treeId }),
@@ -300,7 +300,7 @@ export function moveTreeComponent(
   };
 }
 export function updateVolumeTracing(
-  tracing: VolumeTracingType,
+  tracing: VolumeTracing,
   position: Vector3,
   rotation: Vector3,
   zoomLevel: number,
@@ -328,7 +328,7 @@ export function updateBucket(
     }),
   };
 }
-export function updateTreeGroups(treeGroups: Array<TreeGroupType>): UpdateTreeGroupsUpdateAction {
+export function updateTreeGroups(treeGroups: Array<TreeGroup>): UpdateTreeGroupsUpdateAction {
   return {
     name: "updateTreeGroups",
     value: {

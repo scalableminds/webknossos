@@ -3,13 +3,13 @@ import _ from "lodash";
 import messages from "messages";
 import ErrorHandling from "libs/error_handling";
 import constants, { Vector3Indicies, ModeValues } from "oxalis/constants";
-import type { APIDatasetType } from "admin/api_flow_types";
+import type { APIDataset } from "admin/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
-import type { SettingsType, DataLayerType } from "oxalis/store";
+import type { Settings, DataLayerType } from "oxalis/store";
 import Maybe from "data.maybe";
 import memoizeOne from "memoize-one";
 
-export function getResolutions(dataset: APIDatasetType): Vector3[] {
+export function getResolutions(dataset: APIDataset): Vector3[] {
   // Different layers can have different resolutions. At the moment,
   // unequal resolutions will result in undefined behavior.
   // However, if resolutions are subset of each other, everything should be fine.
@@ -34,7 +34,7 @@ export function getResolutions(dataset: APIDatasetType): Vector3[] {
   return mostExtensiveResolutions.concat(extendedResolutions);
 }
 
-function _getMaxZoomStep(maybeDataset: ?APIDatasetType): number {
+function _getMaxZoomStep(maybeDataset: ?APIDataset): number {
   const minimumZoomStepCount = 1;
   const maxZoomstep = Maybe.fromNullable(maybeDataset)
     .map(dataset =>
@@ -49,11 +49,11 @@ function _getMaxZoomStep(maybeDataset: ?APIDatasetType): number {
 
 export const getMaxZoomStep = memoizeOne(_getMaxZoomStep);
 
-function getDataLayers(dataset: APIDatasetType): DataLayerType[] {
+function getDataLayers(dataset: APIDataset): DataLayerType[] {
   return dataset.dataSource.dataLayers;
 }
 
-export function getLayerByName(dataset: APIDatasetType, layerName: string): DataLayerType {
+export function getLayerByName(dataset: APIDataset, layerName: string): DataLayerType {
   const dataLayers = getDataLayers(dataset);
   const hasUniqueNames = _.uniqBy(dataLayers, "name").length === dataLayers.length;
   ErrorHandling.assert(hasUniqueNames, messages["dataset.unique_layer_names"]);
@@ -65,24 +65,24 @@ export function getLayerByName(dataset: APIDatasetType, layerName: string): Data
   return layer;
 }
 
-export function getMappings(dataset: APIDatasetType, layerName: string): string[] {
+export function getMappings(dataset: APIDataset, layerName: string): string[] {
   return getLayerByName(dataset, layerName).mappings || [];
 }
 
-export function isRgb(dataset: APIDatasetType, layerName: string): boolean {
+export function isRgb(dataset: APIDataset, layerName: string): boolean {
   return (
     getLayerByName(dataset, layerName).category === "color" &&
     getByteCount(dataset, layerName) === 3
   );
 }
 
-export function getByteCount(dataset: APIDatasetType, layerName: string): number {
+export function getByteCount(dataset: APIDataset, layerName: string): number {
   return getBitDepth(getLayerByName(dataset, layerName)) >> 3;
 }
 
-type BoundaryType = { lowerBoundary: Vector3, upperBoundary: Vector3 };
+type Boundary = { lowerBoundary: Vector3, upperBoundary: Vector3 };
 
-export function getLayerBoundaries(dataset: APIDatasetType, layerName: string): BoundaryType {
+export function getLayerBoundaries(dataset: APIDataset, layerName: string): Boundary {
   const { topLeft, width, height, depth } = getLayerByName(dataset, layerName).boundingBox;
   const lowerBoundary = topLeft;
   const upperBoundary = [topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth];
@@ -90,7 +90,7 @@ export function getLayerBoundaries(dataset: APIDatasetType, layerName: string): 
   return { lowerBoundary, upperBoundary };
 }
 
-export function getBoundaries(dataset: APIDatasetType): BoundaryType {
+export function getBoundaries(dataset: APIDataset): Boundary {
   const lowerBoundary = [Infinity, Infinity, Infinity];
   const upperBoundary = [-Infinity, -Infinity, -Infinity];
   const layers = getDataLayers(dataset);
@@ -106,7 +106,7 @@ export function getBoundaries(dataset: APIDatasetType): BoundaryType {
   return { lowerBoundary, upperBoundary };
 }
 
-export function getDatasetCenter(dataset: APIDatasetType): Vector3 {
+export function getDatasetCenter(dataset: APIDataset): Vector3 {
   const { lowerBoundary, upperBoundary } = getBoundaries(dataset);
   return [
     (lowerBoundary[0] + upperBoundary[0]) / 2,
@@ -115,7 +115,7 @@ export function getDatasetCenter(dataset: APIDatasetType): Vector3 {
   ];
 }
 
-export function determineAllowedModes(dataset: APIDatasetType, settings: SettingsType) {
+export function determineAllowedModes(dataset: APIDataset, settings: Settings) {
   // The order of allowedModes should be independent from the server and instead be similar to ModeValues
   let allowedModes = _.intersection(ModeValues, settings.allowedModes);
 
@@ -141,15 +141,15 @@ export function getBitDepth(layerInfo: DataLayerType): number {
   return parseInt(layerInfo.elementClass.substring(4), 10);
 }
 
-export function isSegmentationLayer(dataset: APIDatasetType, layerName: string): boolean {
+export function isSegmentationLayer(dataset: APIDataset, layerName: string): boolean {
   return getLayerByName(dataset, layerName).category === "segmentation";
 }
 
-export function isColorLayer(dataset: APIDatasetType, layerName: string): boolean {
+export function isColorLayer(dataset: APIDataset, layerName: string): boolean {
   return getLayerByName(dataset, layerName).category === "color";
 }
 
-export function getSegmentationLayer(dataset: APIDatasetType): ?DataLayerType {
+export function getSegmentationLayer(dataset: APIDataset): ?DataLayerType {
   const segmentationLayers = dataset.dataSource.dataLayers.filter(dataLayer =>
     isSegmentationLayer(dataset, dataLayer.name),
   );
@@ -160,15 +160,15 @@ export function getSegmentationLayer(dataset: APIDatasetType): ?DataLayerType {
   return segmentationLayers[0];
 }
 
-export function hasSegmentation(dataset: APIDatasetType): boolean {
+export function hasSegmentation(dataset: APIDataset): boolean {
   return getSegmentationLayer(dataset) != null;
 }
 
-export function getColorLayers(dataset: APIDatasetType): Array<DataLayerType> {
+export function getColorLayers(dataset: APIDataset): Array<DataLayerType> {
   return dataset.dataSource.dataLayers.filter(dataLayer => isColorLayer(dataset, dataLayer.name));
 }
 
-export function getThumbnailURL(dataset: APIDatasetType): string {
+export function getThumbnailURL(dataset: APIDataset): string {
   const datasetName = dataset.name;
   const layers = dataset.dataSource.dataLayers;
   const colorLayer = _.find(layers, { category: "color" });

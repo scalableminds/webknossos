@@ -7,7 +7,7 @@ import GL from "gl";
 import fs from "fs";
 import compileShader from "oxalis/shaders/shader_module_system";
 
-import type { ShaderModuleType } from "oxalis/shaders/shader_module_system";
+import type { ShaderModule } from "oxalis/shaders/shader_module_system";
 
 export const dumpToPng = (gl: GL, width: number, height: number) => {
   const path = "out.png";
@@ -38,7 +38,7 @@ export const dumpToPng = (gl: GL, width: number, height: number) => {
   stream.on("close", () => console.log(`Image written: ${path}`));
 };
 
-export function renderShader(fragColorExpr: string, shaderModule: ShaderModuleType) {
+export function renderShader(fragColorExpr: string, shaderModule: ShaderModule) {
   const pWidth = 10;
   const width = pWidth;
   const height = pWidth;

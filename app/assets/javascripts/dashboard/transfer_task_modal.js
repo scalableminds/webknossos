@@ -3,12 +3,12 @@
 import * as React from "react";
 import { Modal, Button } from "antd";
 import { transferTask } from "admin/admin_rest_api";
-import type { APIAnnotationType } from "admin/api_flow_types";
+import type { APIAnnotation } from "admin/api_flow_types";
 import { handleGenericError } from "libs/error_handling";
 import UserSelectionComponent from "admin/user/user_selection_component";
 
 type Props = {
-  onChange: (updatedAnnotation: APIAnnotationType) => void,
+  onChange: (updatedAnnotation: APIAnnotation) => void,
   annotationId: ?string,
   onCancel: Function,
   visible: boolean,

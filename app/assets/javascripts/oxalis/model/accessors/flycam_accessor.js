@@ -1,6 +1,6 @@
 // @flow
-import type { Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
-import type { FlycamType, OxalisState } from "oxalis/store";
+import type { Vector3, OrthoView, OrthoViewMap } from "oxalis/constants";
+import type { Flycam, OxalisState } from "oxalis/store";
 import constants, { OrthoViews } from "oxalis/constants";
 import Dimensions from "oxalis/model/dimensions";
 import * as scaleInfo from "oxalis/model/scaleinfo";
@@ -18,22 +18,22 @@ import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
 // maximum difference between requested coordinate and actual texture position
 const MAX_ZOOM_STEP_DIFF = constants.MAX_RENDERING_TARGET_WIDTH / constants.PLANE_WIDTH;
 
-export function getUp(flycam: FlycamType): Vector3 {
+export function getUp(flycam: Flycam): Vector3 {
   const matrix = flycam.currentMatrix;
   return [matrix[4], matrix[5], matrix[6]];
 }
 
-export function getLeft(flycam: FlycamType): Vector3 {
+export function getLeft(flycam: Flycam): Vector3 {
   const matrix = flycam.currentMatrix;
   return [matrix[0], matrix[1], matrix[2]];
 }
 
-export function getPosition(flycam: FlycamType): Vector3 {
+export function getPosition(flycam: Flycam): Vector3 {
   const matrix = flycam.currentMatrix;
   return [matrix[12], matrix[13], matrix[14]];
 }
 
-export function getRotation(flycam: FlycamType): Vector3 {
+export function getRotation(flycam: Flycam): Vector3 {
   const object = new THREE.Object3D();
   const matrix = new THREE.Matrix4().fromArray(flycam.currentMatrix).transpose();
   object.applyMatrix(matrix);
@@ -50,7 +50,7 @@ export function getRotation(flycam: FlycamType): Vector3 {
   ];
 }
 
-export function getZoomedMatrix(flycam: FlycamType): Matrix4x4 {
+export function getZoomedMatrix(flycam: Flycam): Matrix4x4 {
   return M4x4.scale1(flycam.zoomStep, flycam.currentMatrix);
 }
 
@@ -67,11 +67,11 @@ export function getTextureScalingFactor(state: OxalisState): number {
   return state.flycam.zoomStep / Math.pow(2, getRequestLogZoomStep(state));
 }
 
-export function getPlaneScalingFactor(flycam: FlycamType): number {
+export function getPlaneScalingFactor(flycam: Flycam): number {
   return flycam.zoomStep;
 }
 
-export function getRotationOrtho(planeId: OrthoViewType): Vector3 {
+export function getRotationOrtho(planeId: OrthoView): Vector3 {
   switch (planeId) {
     case OrthoViews.PLANE_YZ:
       return [0, 270, 0];
@@ -83,9 +83,9 @@ export function getRotationOrtho(planeId: OrthoViewType): Vector3 {
   }
 }
 
-export type AreaType = { left: number, top: number, right: number, bottom: number };
+export type Area = { left: number, top: number, right: number, bottom: number };
 
-export function getArea(state: OxalisState, planeId: OrthoViewType): AreaType {
+export function getArea(state: OxalisState, planeId: OrthoView): Area {
   const [u, v] = Dimensions.getIndices(planeId);
 
   const position = getPosition(state.flycam);
@@ -108,7 +108,7 @@ export function getArea(state: OxalisState, planeId: OrthoViewType): AreaType {
   };
 }
 
-export function getAreas(state: OxalisState): OrthoViewMapType<AreaType> {
+export function getAreas(state: OxalisState): OrthoViewMap<Area> {
   return {
     [OrthoViews.PLANE_XY]: getArea(state, OrthoViews.PLANE_XY),
     [OrthoViews.PLANE_XZ]: getArea(state, OrthoViews.PLANE_XZ),

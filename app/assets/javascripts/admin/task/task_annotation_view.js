@@ -14,7 +14,7 @@ import {
 import Toast from "libs/toast";
 import messages from "messages";
 import TransferTaskModal from "dashboard/transfer_task_modal";
-import type { APIUserType, APITaskType, APIAnnotationType } from "admin/api_flow_types";
+import type { APIUser, APITask, APIAnnotation } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import FormattedDate from "components/formatted_date";
 
@@ -22,17 +22,17 @@ const { Item } = Menu;
 const { confirm } = Modal;
 
 type Props = {
-  task: APITaskType,
+  task: APITask,
 };
 
 type StateProps = {
-  activeUser: ?APIUserType,
+  activeUser: ?APIUser,
 };
 
 type State = {
   isTransferModalVisible: boolean,
-  annotations: Array<APIAnnotationType>,
-  currentAnnotation: ?APIAnnotationType,
+  annotations: Array<APIAnnotation>,
+  currentAnnotation: ?APIAnnotation,
 };
 
 class TaskAnnotationView extends React.PureComponent<Props & StateProps, State> {
@@ -51,7 +51,7 @@ class TaskAnnotationView extends React.PureComponent<Props & StateProps, State> 
     this.setState({ annotations });
   }
 
-  deleteAnnotation = (annotation: APIAnnotationType) => {
+  deleteAnnotation = (annotation: APIAnnotation) => {
     confirm({
       title: messages["annotation.delete"],
       cancelText: messages.no,
@@ -65,22 +65,22 @@ class TaskAnnotationView extends React.PureComponent<Props & StateProps, State> 
     });
   };
 
-  resetAnnotation = async (annotation: APIAnnotationType) => {
+  resetAnnotation = async (annotation: APIAnnotation) => {
     await resetAnnotation(annotation.id, annotation.typ);
     Toast.success(messages["annotation.reset_success"]);
   };
 
-  finishAnnotation = async (annotation: APIAnnotationType) => {
+  finishAnnotation = async (annotation: APIAnnotation) => {
     const updatedAnnotation = await finishAnnotation(annotation.id, annotation.typ);
     this.updateAnnotationState(updatedAnnotation);
   };
 
-  reOpenAnnotation = async (annotation: APIAnnotationType) => {
+  reOpenAnnotation = async (annotation: APIAnnotation) => {
     const updatedAnnotation = await reOpenAnnotation(annotation.id, annotation.typ);
     this.updateAnnotationState(updatedAnnotation);
   };
 
-  updateAnnotationState = (updatedAnnotation: APIAnnotationType) => {
+  updateAnnotationState = (updatedAnnotation: APIAnnotation) => {
     this.setState(prevState => ({
       isTransferModalVisible: false,
       annotations: prevState.annotations.map(
@@ -89,7 +89,7 @@ class TaskAnnotationView extends React.PureComponent<Props & StateProps, State> 
     }));
   };
 
-  getDropdownMenu(annotation: APIAnnotationType) {
+  getDropdownMenu(annotation: APIAnnotation) {
     let doesAnnotationNotBelongToActiveUser = true;
 
     if (annotation.user && this.props.activeUser) {
@@ -162,7 +162,7 @@ class TaskAnnotationView extends React.PureComponent<Props & StateProps, State> 
       <div>
         <table>
           <tbody>
-            {this.state.annotations.map((annotation: APIAnnotationType) => {
+            {this.state.annotations.map((annotation: APIAnnotation) => {
               const userString = annotation.user
                 ? `${annotation.user.firstName} ${annotation.user.lastName} ( ${
                     annotation.user.email

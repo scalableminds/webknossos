@@ -1,8 +1,8 @@
 // @flow
 import React, { PureComponent } from "react";
 import { connect } from "react-redux";
-import type { VolumeToolType } from "oxalis/constants";
-import type { OxalisState, VolumeTracingType } from "oxalis/store";
+import type { VolumeTool } from "oxalis/constants";
+import type { OxalisState, VolumeTracing } from "oxalis/store";
 import { VolumeToolEnum } from "oxalis/constants";
 import Store from "oxalis/store";
 import { setToolAction, createCellAction } from "oxalis/model/actions/volumetracing_actions";
@@ -16,11 +16,11 @@ const RadioButton = Radio.Button;
 const ButtonGroup = Button.Group;
 
 type Props = {
-  volumeTracing: VolumeTracingType,
+  volumeTracing: VolumeTracing,
 };
 
 class VolumeActionsView extends PureComponent<Props> {
-  handleSetTool = (event: { target: { value: VolumeToolType } }) => {
+  handleSetTool = (event: { target: { value: VolumeTool } }) => {
     Store.dispatch(setToolAction(event.target.value));
   };
 

@@ -1,8 +1,8 @@
 // @flow
-import type { ShaderModuleType } from "./shader_module_system";
+import type { ShaderModule } from "./shader_module_system";
 import { getColorForCoords } from "./texture_access.glsl";
 
-export const getBilinearColorFor: ShaderModuleType = {
+export const getBilinearColorFor: ShaderModule = {
   requirements: [getColorForCoords],
   code: `
     vec4 getBilinearColorFor(
@@ -35,7 +35,7 @@ export const getBilinearColorFor: ShaderModuleType = {
   `,
 };
 
-export const getTrilinearColorFor: ShaderModuleType = {
+export const getTrilinearColorFor: ShaderModule = {
   requirements: [getColorForCoords],
   code: `
     vec4 getTrilinearColorFor(
@@ -81,7 +81,7 @@ export const getTrilinearColorFor: ShaderModuleType = {
   `,
 };
 
-const getMaybeFilteredColor: ShaderModuleType = {
+const getMaybeFilteredColor: ShaderModule = {
   requirements: [getColorForCoords, getBilinearColorFor, getTrilinearColorFor],
   code: `
     vec4 getMaybeFilteredColor(
@@ -108,7 +108,7 @@ const getMaybeFilteredColor: ShaderModuleType = {
   `,
 };
 
-export const getMaybeFilteredColorOrFallback: ShaderModuleType = {
+export const getMaybeFilteredColorOrFallback: ShaderModule = {
   requirements: [getMaybeFilteredColor],
   code: `
     vec4 getMaybeFilteredColorOrFallback(

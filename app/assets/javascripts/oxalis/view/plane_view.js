@@ -180,7 +180,6 @@ class PlaneView {
   }
 
   resizeThrottled = _.throttle((): void => {
-    // todo: is this still called?
     // throttle resize to avoid annoying flickering
     this.resize();
   }, Constants.RESIZE_THROTTLE_TIME);
@@ -220,13 +219,6 @@ class PlaneView {
       store => store.userConfiguration.layoutScaleValue,
       this.resizeThrottled,
     );
-
-    const { layoutScaleValue } = Store.getState().userConfiguration;
-    if (layoutScaleValue > 1) {
-      // Workaround
-      // Otherwise, the initial canvas size is not set correctly
-      setTimeout(this.resizeThrottled, 500);
-    }
   }
 }
 

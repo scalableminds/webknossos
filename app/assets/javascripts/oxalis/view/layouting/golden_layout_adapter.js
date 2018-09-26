@@ -68,7 +68,6 @@ const updateSizeForGl = gl => {
   }
   const { width, height } = getGroundTruthLayoutRect();
   const layoutScale = Store.getState().userConfiguration.layoutScaleValue;
-  console.log("updateSizeForGl with scale ===", layoutScale);
   container.style.width = `${Math.floor(width * layoutScale)}px`;
   container.style.height = `${Math.floor(height * layoutScale)}px`;
 
@@ -127,7 +126,6 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
       store => store.userConfiguration.layoutScaleValue,
       () => {
         updateSizeDebounced();
-        setTimeout(updateSizeDebounced, 1000);
       },
       true,
     );

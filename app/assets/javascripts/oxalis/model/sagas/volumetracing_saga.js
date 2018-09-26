@@ -77,11 +77,9 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     }
     const currentLayer = yield* call(createVolumeLayer, startEditingAction.planeId);
     const activeTool = yield* select(state => enforceVolumeTracing(state.tracing).activeTool);
-    // added variables -> use initialViewport for checking if still in the same viewport
+
     const initialViewport = yield* select(state => state.viewModeData.plane.activeViewport);
     const activeViewportBounding = yield* call(getBoundingsFromPosition, initialViewport);
-    console.log(activeViewportBounding);
-    console.log(" ");
     if (activeTool === VolumeToolEnum.BRUSH) {
       yield* call(
         labelWithIterator,
@@ -100,15 +98,14 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
       if (!addToLayerAction || addToLayerAction.type !== "ADD_TO_LAYER") {
         throw new Error("Unexpected action. Satisfy flow.");
       }
-      // maybe check wether addToLayerAction.position is out of initialViewport -> ignore painting maybe?
-      const currentViewport = yield* select(state => state.viewModeData.plane.activeViewport);
-      if (currentViewport !== initialViewport) {
+      // if the current viewport does not match the initial viewport -> dont draw
+      if (initialViewport !== (yield* select(state => state.viewModeData.plane.activeViewport))) {
         continue;
       }
       if (activeTool === VolumeToolEnum.TRACE) {
         currentLayer.addContour(addToLayerAction.position);
       } else if (activeTool === VolumeToolEnum.BRUSH) {
-        const currentViewportBounding = yield* call(getBoundingsFromPosition, currentViewport);
+        const currentViewportBounding = yield* call(getBoundingsFromPosition, initialViewport);
         yield* call(
           labelWithIterator,
           currentLayer.getCircleVoxelIterator(addToLayerAction.position, currentViewportBounding),
@@ -125,16 +122,9 @@ function* getBoundingsFromPosition(currentViewport: OrthoViewType): Saga<Array<V
   const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
   const zoom = yield* select(state => state.flycam.zoomStep);
   const scales = yield* select(state => getBaseVoxelFactors(state.dataset.dataSource.scale));
-  const baseVoxelFactors = yield* select(state =>
-    Dimensions.transDim(getBaseVoxelFactors(state.dataset.dataSource.scale), currentViewport),
-  );
-  console.log(scales, baseVoxelFactors, Dimensions.transDim(baseVoxelFactors));
-
   const halfViewportWidth = Math.round((Constants.PLANE_WIDTH / 2) * zoom);
   let halfViewportBounds;
-  switch (
-    currentViewport // needs debugging
-  ) {
+  switch (currentViewport) {
     case "PLANE_XY":
       halfViewportBounds = [
         Math.ceil(halfViewportWidth * scales[0]),

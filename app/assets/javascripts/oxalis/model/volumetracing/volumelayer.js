@@ -58,7 +58,6 @@ export class VoxelIterator {
     if (!this.boundingBox) {
       return true;
     }
-    debugger;
     return (
       coor[0] >= this.boundingBox[0][0] &&
       coor[0] <= this.boundingBox[1][0] &&
@@ -207,7 +206,7 @@ class VolumeLayer {
     return iterator;
   }
 
-  getCircleVoxelIterator(position: Vector3, boundings: Array<Vector2> = undefined): VoxelIterator {
+  getCircleVoxelIterator(position: Vector3, boundings: Array<Vector3> = undefined): VoxelIterator {
     const radius = Math.round(
       this.pixelsToVoxels(Store.getState().temporaryConfiguration.brushSize) / 2,
     );
@@ -237,7 +236,6 @@ class VolumeLayer {
         }
       }
     }
-    // minCoord2d -> links oben position des gesamten Kreises
     const iterator = new VoxelIterator(
       map,
       width,

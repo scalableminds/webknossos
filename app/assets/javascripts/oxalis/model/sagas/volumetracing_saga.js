@@ -32,12 +32,7 @@ import Toast from "libs/toast";
 import Model from "oxalis/model";
 import Constants, { VolumeToolEnum, ContourModeEnum, OrthoViews } from "oxalis/constants";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import type {
-  OrthoView,
-  VolumeTool,
-  ContourMode,
-  BoundingBox,
-} from "oxalis/constants";
+import type { OrthoView, VolumeTool, ContourMode, BoundingBox } from "oxalis/constants";
 import type { VolumeTracing, Flycam } from "oxalis/store";
 import api from "oxalis/api/internal_api";
 

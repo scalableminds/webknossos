@@ -12,6 +12,7 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.geometry.BoundingBox
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.services.BinaryDataService
@@ -72,21 +73,18 @@ class VolumeTracingService @Inject()(
     }.map(t => save(t.copy(version = updateGroup.version), Some(tracingId), updateGroup.version))
   }
 
-  def initializeWithData(tracingId: String, tracing: VolumeTracing, dataSource: DataSource, initialData: File): Box[_] = {
+  def initializeWithData(tracingId: String, tracing: VolumeTracing, initialData: File): Box[_] = {
     if (tracing.version != 0L) {
       return Failure("Tracing has already been edited.")
     }
 
-    val fallbackLayer = dataSource.dataLayers.flatMap {
-      case layer: SegmentationLayer if (Some(layer.name) == tracing.fallbackLayer) => Some(layer)
-      case _ => None
-    }.headOption
+    //TODO: initialize largestSegmentId, elementClass and boundingBox already on wK side
 
     val newTracing = tracing.copy(
-      boundingBox = dataSource.boundingBox,
-      elementClass = fallbackLayer.map(layer => elementClassToProto(layer.elementClass)).getOrElse(VolumeTracingDefaults.elementClass),
-      fallbackLayer = fallbackLayer.map(_.name),
-      largestSegmentId = fallbackLayer.map(_.largestSegmentId).getOrElse(VolumeTracingDefaults.largestSegmentId))
+      boundingBox = BoundingBox(Point3D(0,0,0),1000,1000,1000),
+      elementClass = VolumeTracingDefaults.elementClass,
+      largestSegmentId = VolumeTracingDefaults.largestSegmentId
+    )
 
     save(newTracing, Some(tracingId), 0)
 

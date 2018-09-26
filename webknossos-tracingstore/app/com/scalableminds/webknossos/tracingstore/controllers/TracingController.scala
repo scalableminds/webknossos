@@ -2,7 +2,8 @@ package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.controllers.Controller
-import com.scalableminds.webknossos.datastore.services.{AccessTokenService, DataSourceRepository, UserAccessRequest, WebKnossosServer}
+import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessRequest}
+import com.scalableminds.webknossos.tracingstore.WebKnossosServer
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingSelector, TracingService, UpdateAction, UpdateActionGroup}
 import com.scalableminds.util.tools.JsonHelper.boxFormat
 import net.liftweb.common.Failure
@@ -14,8 +15,6 @@ import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import scala.concurrent.ExecutionContext
 
 trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMessage with Message[Ts]] extends Controller {
-
-  def dataSourceRepository: DataSourceRepository
 
   def tracingService: TracingService[T]
 

@@ -67,6 +67,8 @@ export async function requestFromStore(
     const state = Store.getState();
     const datasetName = state.dataset.name;
     const dataStoreUrl = state.dataset.dataStore.url;
+    // todo: use tracingStore first and then datastore as fallback
+    // const tracingStoreUrl = state.dataset.tracingStore.url;
 
     const { buffer: responseBuffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
       `${dataStoreUrl}/data/datasets/${datasetName}/layers/${layerInfo.name}/data?token=${token}`,

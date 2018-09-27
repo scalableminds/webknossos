@@ -456,7 +456,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         "tracing" -> Json.obj("skeleton" -> annotation.skeletonTracingId, "volume" -> annotation.volumeTracingId),
         "dataSetName" -> dataSet.name,
         "dataStore" -> dataStoreJs,
-        "tracinStore" -> tracingStoreJs,
+        "tracingStore" -> tracingStoreJs,
         "isPublic" -> annotation.isPublic,
         "settings" -> settings,
         "tracingTime" -> annotation.tracingTime,

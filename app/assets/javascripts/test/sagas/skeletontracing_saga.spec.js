@@ -268,7 +268,7 @@ test("SkeletonTracingSaga should emit an updateNode update action", t => {
   t.is(updateActions[0].value.treeId, 1);
 });
 
-test("SkeletonTracingSaga should emit an updateNode update action", t => {
+test("SkeletonTracingSaga should emit an updateNode update action 2", t => {
   const testState = ChainReducer(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, setNodeRadiusAction)

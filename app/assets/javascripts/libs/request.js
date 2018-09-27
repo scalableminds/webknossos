@@ -5,6 +5,7 @@
 
 import _ from "lodash";
 import Toast from "libs/toast";
+import urljoin from "url-join";
 import { pingDataStoreIfAppropriate, pingMentionedDataStores } from "admin/datastore_health_check";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import handleStatus from "libs/handle_http_status";
@@ -200,7 +201,7 @@ class Request {
     options = _.defaultsDeep(options, defaultOptions);
 
     if (options.host) {
-      url = options.host + url;
+      url = urljoin(options.host, url);
     }
 
     // Append URL parameters to the URL

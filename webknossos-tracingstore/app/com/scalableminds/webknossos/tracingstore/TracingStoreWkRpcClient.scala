@@ -16,9 +16,9 @@ class TracingStoreWkRpcClient @Inject()(
                                   val lifecycle: ApplicationLifecycle
                                 ) extends WkRpcClient with LazyLogging {
 
-  private val dataStoreKey: String = config.Tracingstore.key
-  private val dataStoreName: String = config.Tracingstore.name
-  private val dataStoreUrl: String = config.Http.uri
+  private val tracingStoreKey: String = config.Tracingstore.key
+  private val tracingStoreName: String = config.Tracingstore.name
+  private val tracingStoreUrl: String = config.Http.uri
 
   private val webKnossosUrl = {
     val url = config.Tracingstore.Oxalis.uri
@@ -29,14 +29,14 @@ class TracingStoreWkRpcClient @Inject()(
   }
 
   def reportTracingUpdates(tracingId: String, timestamps: List[Long], statistics: Option[JsObject], userToken: Option[String]): Fox[_] = {
-    rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/handleTracingUpdateReport")
-      .addQueryString("key" -> dataStoreKey)
+    rpc(s"$webKnossosUrl/api/tracingstores/$tracingStoreName/handleTracingUpdateReport")
+      .addQueryString("key" -> tracingStoreKey)
       .post(Json.obj("timestamps" -> timestamps, "statistics" -> statistics, "tracingId" -> tracingId, "userToken" -> userToken))
   }
 
   override def requestUserAccess(token: String, accessRequest: UserAccessRequest): Fox[UserAccessAnswer] = {
-    rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/validateUserAccess")
-      .addQueryString("key" -> dataStoreKey)
+    rpc(s"$webKnossosUrl/api/tracingstores/$tracingStoreName/validateUserAccess")
+      .addQueryString("key" -> tracingStoreKey)
       .addQueryString("token" -> token)
       .postWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
   }

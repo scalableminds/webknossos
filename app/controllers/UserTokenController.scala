@@ -11,7 +11,7 @@ import models.user.{User, UserService}
 import net.liftweb.common.{Box, Full}
 import oxalis.security._
 import play.api.libs.json.Json
-import play.api.mvc.PlayBodyParsers
+import play.api.mvc.{PlayBodyParsers, Result}
 
 import scala.concurrent.ExecutionContext
 
@@ -21,6 +21,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
                                     annotationStore: AnnotationStore,
                                     annotationInformationProvider: AnnotationInformationProvider,
                                     dataStoreService: DataStoreService,
+                                    tracingStoreService: TracingStoreService,
                                     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                                     sil: Silhouette[WkEnv])
                                    (implicit ec: ExecutionContext,
@@ -43,27 +44,36 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
     }
   }
 
-  def validateUserAccess(name: String, token: String) = Action.async(validateJson[UserAccessRequest]) { implicit request =>
+  def validateAccessViaDatastore(name: String, token: String) = Action.async(validateJson[UserAccessRequest]) { implicit request =>
     dataStoreService.validateAccess(name) { dataStore =>
-      val accessRequest = request.body
-      if (token == DataStoreRpcClient.webKnossosToken) {
-        Fox.successful(Ok(Json.toJson(UserAccessAnswer(true))))
-      } else {
-        for {
-          userBox <- bearerTokenService.userForToken(token)(GlobalAccessContext).futureBox
-          ctxFromUserBox = DBAccessContext(userBox)
-          ctx = URLSharing.fallbackTokenAccessContext(Some(token))(ctxFromUserBox)
-          answer <- accessRequest.resourceType match {
-            case AccessResourceType.datasource =>
-              handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, userBox)(ctx)
-            case AccessResourceType.tracing =>
-              handleTracingAccess(accessRequest.resourceId, accessRequest.mode, userBox)(ctx)
-            case _ =>
-              Fox.successful(UserAccessAnswer(false, Some("Invalid access token.")))
-          }
-        } yield {
-          Ok(Json.toJson(answer))
+      validateUserAccess(request.body, token)
+    }
+  }
+
+  def validateAccessViaTracingstore(name: String, token: String) = Action.async(validateJson[UserAccessRequest]) { implicit request =>
+    tracingStoreService.validateAccess(name) { tracingStore =>
+      validateUserAccess(request.body, token)
+    }
+  }
+
+  private def validateUserAccess(accessRequest: UserAccessRequest, token: String)(implicit ec: ExecutionContext): Fox[Result] = {
+    if (token == DataStoreRpcClient.webKnossosToken) {
+      Fox.successful(Ok(Json.toJson(UserAccessAnswer(true))))
+    } else {
+      for {
+        userBox <- bearerTokenService.userForToken(token)(GlobalAccessContext).futureBox
+        ctxFromUserBox = DBAccessContext(userBox)
+        ctx = URLSharing.fallbackTokenAccessContext(Some(token))(ctxFromUserBox)
+        answer <- accessRequest.resourceType match {
+          case AccessResourceType.datasource =>
+            handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, userBox)(ctx)
+          case AccessResourceType.tracing =>
+            handleTracingAccess(accessRequest.resourceId, accessRequest.mode, userBox)(ctx)
+          case _ =>
+            Fox.successful(UserAccessAnswer(false, Some("Invalid access token.")))
         }
+      } yield {
+        Ok(Json.toJson(answer))
       }
     }
   }

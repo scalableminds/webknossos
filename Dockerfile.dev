@@ -1,4 +1,4 @@
-FROM scalableminds/sbt:master__103
+FROM scalableminds/sbt:master__104
 ARG VERSION_NODE="8.x"
 
 ENV DEBIAN_FRONTEND noninteractive
@@ -23,5 +23,3 @@ RUN apt-get update \
       mesa-utils xvfb libgl1-mesa-dri libglapi-mesa libosmesa6 pkg-config x11proto-xext-dev xserver-xorg-dev libxext-dev libxi-dev \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-RUN mkdir -m 777 /root/.cache

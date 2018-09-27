@@ -13,4 +13,6 @@ addSbtPlugin("com.frugalmechanic" % "fm-sbt-s3-resolver" % "0.16.0")
 
 addSbtPlugin("com.thesamet" % "sbt-protoc" % "0.99.18")
 
+addSbtPlugin("io.get-coursier" % "sbt-coursier" % "1.0.3")
+
 libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.7.4"

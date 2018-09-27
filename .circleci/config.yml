@@ -236,6 +236,9 @@ jobs:
             done
             (exit $s)
 
+      - store_artifacts:
+          path: app/assets/javascripts/test/screenshots
+
 workflows:
   version: 2
   default:

@@ -5,9 +5,9 @@
 
 import update from "immutability-helper";
 import type { OxalisState } from "oxalis/store";
-import type { ActionType } from "oxalis/model/actions/actions";
+import type { Action } from "oxalis/model/actions/actions";
 
-function TaskReducer(state: OxalisState, action: ActionType): OxalisState {
+function TaskReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
     case "SET_TASK": {
       return update(state, {

@@ -17,7 +17,7 @@ import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_
 import { revertToVersion } from "oxalis/model/sagas/update_actions";
 import { pushSaveQueueAction, setVersionNumberAction } from "oxalis/model/actions/save_actions";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
-import type { OxalisState, SkeletonTracingType } from "oxalis/store";
+import type { OxalisState, SkeletonTracing } from "oxalis/store";
 import type {
   ServerUpdateAction,
   CreateNodeUpdateAction,
@@ -28,10 +28,10 @@ import type {
 } from "oxalis/model/sagas/update_actions";
 import type { APIUpdateActionBatch } from "admin/api_flow_types";
 
-type DescriptionType = { description: string, type: string };
+type Description = { description: string, type: string };
 
 type Props = {
-  skeletonTracing: SkeletonTracingType,
+  skeletonTracing: SkeletonTracing,
 };
 
 type State = {
@@ -40,31 +40,31 @@ type State = {
 };
 
 const descriptionFns = {
-  deleteTree: (action: DeleteTreeUpdateAction): DescriptionType => ({
+  deleteTree: (action: DeleteTreeUpdateAction): Description => ({
     description: `Deleted the tree with id ${action.value.id}.`,
     type: "delete",
   }),
-  deleteNode: (action: DeleteNodeUpdateAction): DescriptionType => ({
+  deleteNode: (action: DeleteNodeUpdateAction): Description => ({
     description: `Deleted the node with id ${action.value.nodeId}.`,
     type: "delete",
   }),
-  revertToVersion: (action: RevertToVersionUpdateAction): DescriptionType => ({
+  revertToVersion: (action: RevertToVersionUpdateAction): Description => ({
     description: `Reverted to version ${action.value.sourceVersion}.`,
     type: "backward",
   }),
-  createNode: (action: CreateNodeUpdateAction): DescriptionType => ({
+  createNode: (action: CreateNodeUpdateAction): Description => ({
     description: `Created the node with id ${action.value.id}.`,
     type: "plus",
   }),
-  createTree: (action: UpdateTreeUpdateAction): DescriptionType => ({
+  createTree: (action: UpdateTreeUpdateAction): Description => ({
     description: `Created the tree with id ${action.value.id}.`,
     type: "plus",
   }),
-  updateTreeGroups: (): DescriptionType => ({
+  updateTreeGroups: (): Description => ({
     description: "Updated the tree groups.",
     type: "edit",
   }),
-  updateTree: (action: UpdateTreeUpdateAction): DescriptionType => ({
+  updateTree: (action: UpdateTreeUpdateAction): Description => ({
     description: `Updated the tree with id ${action.value.id}.`,
     type: "edit",
   }),
@@ -98,10 +98,7 @@ class VersionView extends React.Component<Props, State> {
     return _.max(this.state.versions.map(batch => batch.version)) || 0;
   }
 
-  getDescriptionForSpecificBatch(
-    actions: Array<ServerUpdateAction>,
-    type: string,
-  ): DescriptionType {
+  getDescriptionForSpecificBatch(actions: Array<ServerUpdateAction>, type: string): Description {
     const firstAction = actions[0];
     if (firstAction.name !== type) {
       throw new Error("Flow constraint violated");
@@ -109,7 +106,7 @@ class VersionView extends React.Component<Props, State> {
     return descriptionFns[type](firstAction);
   }
 
-  getDescriptionForBatch(actions: Array<ServerUpdateAction>): DescriptionType {
+  getDescriptionForBatch(actions: Array<ServerUpdateAction>): Description {
     const groupedUpdateActions = _.groupBy(actions, "name");
 
     const moveTreeComponentUAs = groupedUpdateActions.moveTreeComponent;

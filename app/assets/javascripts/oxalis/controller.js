@@ -33,19 +33,19 @@ import { fetchGistContent } from "libs/gist";
 import { document } from "libs/window";
 import NewTaskDescriptionModal from "oxalis/view/new_task_description_modal";
 
-import type { ModeType, ControlModeType } from "oxalis/constants";
-import type { OxalisState, TracingTypeTracingType } from "oxalis/store";
+import type { Mode, ControlMode } from "oxalis/constants";
+import type { OxalisState, TracingTypeTracing } from "oxalis/store";
 import type { RouterHistory } from "react-router-dom";
 
 type StateProps = {
-  viewMode: ModeType,
+  viewMode: Mode,
 };
 
 type Props = {
   history: RouterHistory,
-  initialTracingType: TracingTypeTracingType,
+  initialTracingType: TracingTypeTracing,
   initialAnnotationId: string,
-  initialControlmode: ControlModeType,
+  initialControlmode: ControlMode,
 } & StateProps;
 
 type State = {

@@ -7,16 +7,16 @@ import { Icon, Alert, Modal, Button, Select, Form, Spin, Checkbox, Tooltip } fro
 import messages from "messages";
 import InputComponent from "oxalis/view/components/input_component";
 import api from "oxalis/api/internal_api";
-import type { OxalisState, TreeMapType, TreeGroupType } from "oxalis/store";
+import type { OxalisState, TreeMap, TreeGroup } from "oxalis/store";
 import { getAnnotationInformation, getTracingForAnnotationType } from "admin/admin_rest_api";
 import { addTreesAndGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
 import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import * as Utils from "libs/utils";
-import type { APIAnnotationType } from "admin/api_flow_types";
+import type { APIAnnotation } from "admin/api_flow_types";
 import Store from "oxalis/store";
 import { location } from "libs/window";
 
-type ProjectInfoType = {
+type ProjectInfo = {
   id: string,
   label: string,
 };
@@ -29,11 +29,11 @@ type StateProps = {
 type Props = {
   isVisible: boolean,
   onOk: () => void,
-  addTreesAndGroupsAction: (TreeMapType, Array<TreeGroupType>) => void,
+  addTreesAndGroupsAction: (TreeMap, Array<TreeGroup>) => void,
 } & StateProps;
 
 type MergeModalViewState = {
-  projects: Array<ProjectInfoType>,
+  projects: Array<ProjectInfo>,
   selectedProject: ?string,
   selectedExplorativeAnnotation: string,
   isUploading: boolean,
@@ -151,7 +151,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     }
   };
 
-  async mergeAnnotationIntoActiveTracing(annotation: APIAnnotationType): Promise<void> {
+  async mergeAnnotationIntoActiveTracing(annotation: APIAnnotation): Promise<void> {
     if (annotation.dataSetName !== Store.getState().dataset.name) {
       Toast.error(messages["merge.different_dataset"]);
       return;
@@ -259,7 +259,7 @@ function mapStateToProps(state: OxalisState): StateProps {
 }
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
-  addTreesAndGroupsAction(trees: TreeMapType, treeGroups: Array<TreeGroupType>) {
+  addTreesAndGroupsAction(trees: TreeMap, treeGroups: Array<TreeGroup>) {
     dispatch(addTreesAndGroupsAction(trees, treeGroups));
   },
 });

@@ -5,7 +5,7 @@ import { Modal, Button, Radio, Col, Row, Checkbox } from "antd";
 import update from "immutability-helper";
 import { updateUser, getEditableTeams } from "admin/admin_rest_api";
 import messages from "messages";
-import type { APIUserType, APITeamType, APITeamMembershipType } from "admin/api_flow_types";
+import type { APIUser, APITeam, APITeamMembership } from "admin/api_flow_types";
 
 const RadioButton = Radio.Button;
 const RadioGroup = Radio.Group;
@@ -15,20 +15,20 @@ const ROLES = {
   user: "user",
 };
 
-type TeamRoleModalPropType = {
+type TeamRoleModalProp = {
   onChange: Function,
   onCancel: Function,
   visible: boolean,
   selectedUserIds: Array<string>,
-  users: Array<APIUserType>,
+  users: Array<APIUser>,
 };
 
 type State = {
-  teams: Array<APITeamType>,
-  selectedTeams: { [key: string]: APITeamMembershipType },
+  teams: Array<APITeam>,
+  selectedTeams: { [key: string]: APITeamMembership },
 };
 
-class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, State> {
+class TeamRoleModalView extends React.PureComponent<TeamRoleModalProp, State> {
   state = {
     selectedTeams: {},
     teams: [],
@@ -38,7 +38,7 @@ class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, State
     this.fetchData();
   }
 
-  componentWillReceiveProps(newProps: TeamRoleModalPropType) {
+  componentWillReceiveProps(newProps: TeamRoleModalProp) {
     // If a single user is selected, pre-select his teams
     if (newProps.selectedUserIds.length === 1) {
       const user = this.props.users.find(_user => _user.id === newProps.selectedUserIds[0]);
@@ -60,9 +60,7 @@ class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, State
   setTeams = () => {
     const newUserPromises = this.props.users.map(user => {
       if (this.props.selectedUserIds.includes(user.id)) {
-        const newTeams = ((Object.values(this.state.selectedTeams): any): Array<
-          APITeamMembershipType,
-        >);
+        const newTeams = ((Object.values(this.state.selectedTeams): any): Array<APITeamMembership>);
         const newUser = Object.assign({}, user, { teams: newTeams });
 
         // server-side validation can reject a user's new teams
@@ -105,7 +103,7 @@ class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, State
     }));
   }
 
-  getTeamComponent(team: APITeamType) {
+  getTeamComponent(team: APITeam) {
     return (
       <Checkbox
         value={team.name}
@@ -123,7 +121,7 @@ class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, State
     );
   }
 
-  getRoleComponent(team: APITeamType) {
+  getRoleComponent(team: APITeam) {
     const selectedTeam = this.state.selectedTeams[team.name];
     let selectedValue = null;
     if (selectedTeam) {

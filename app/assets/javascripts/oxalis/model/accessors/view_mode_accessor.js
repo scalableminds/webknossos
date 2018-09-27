@@ -1,7 +1,7 @@
 // @flow
 
 import Store from "oxalis/store";
-import type { Rect, ViewportType } from "oxalis/constants";
+import type { Rect, Viewport } from "oxalis/constants";
 import constants, { ArbitraryViewport } from "oxalis/constants";
 
 export function getTDViewportSize(): number {
@@ -10,7 +10,7 @@ export function getTDViewportSize(): number {
   return camera.right - camera.left;
 }
 
-export function getInputCatcherRect(viewport: ViewportType): Rect {
+export function getInputCatcherRect(viewport: Viewport): Rect {
   if (viewport === ArbitraryViewport) {
     return Store.getState().viewModeData.arbitrary.inputCatcherRect;
   } else {
@@ -19,7 +19,7 @@ export function getInputCatcherRect(viewport: ViewportType): Rect {
   }
 }
 
-export function getViewportScale(viewport: ViewportType): number {
+export function getViewportScale(viewport: Viewport): number {
   const { width } = getInputCatcherRect(viewport);
   return width / constants.VIEWPORT_WIDTH;
 }

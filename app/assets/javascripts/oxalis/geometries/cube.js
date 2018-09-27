@@ -7,13 +7,13 @@ import _ from "lodash";
 import app from "app";
 import * as THREE from "three";
 import BackboneEvents from "backbone-events-standalone";
-import type { Vector3, OrthoViewMapType, OrthoViewType } from "oxalis/constants";
+import type { Vector3, OrthoViewMap, OrthoView } from "oxalis/constants";
 import { OrthoViews, OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import dimensions from "oxalis/model/dimensions";
 import Store from "oxalis/store";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 
-type PropertiesType = {
+type Properties = {
   min?: Vector3,
   max: Vector3,
   lineWidth?: number,
@@ -22,7 +22,7 @@ type PropertiesType = {
 };
 
 class Cube {
-  crossSections: OrthoViewMapType<THREE.Line>;
+  crossSections: OrthoViewMap<THREE.Line>;
   cube: THREE.Line;
   min: Vector3;
   max: Vector3;
@@ -33,7 +33,7 @@ class Cube {
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
 
-  constructor(properties: PropertiesType) {
+  constructor(properties: Properties) {
     this.min = properties.min || [0, 0, 0];
     this.max = properties.max;
     const lineWidth = properties.lineWidth != null ? properties.lineWidth : 1;
@@ -149,7 +149,7 @@ class Cube {
     return [this.cube].concat(_.values(this.crossSections));
   }
 
-  updateForCam(id: OrthoViewType) {
+  updateForCam(id: OrthoView) {
     if (!this.initialized) {
       return;
     }

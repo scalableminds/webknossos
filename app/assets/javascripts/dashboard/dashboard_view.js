@@ -12,7 +12,7 @@ import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import Request from "libs/request";
 import { withRouter } from "react-router-dom";
-import type { APIUserType, APIMaybeUnimportedDatasetType } from "admin/api_flow_types";
+import type { APIUser, APIMaybeUnimportedDataset } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import type { RouterHistory } from "react-router-dom";
 import { handleGenericError } from "libs/error_handling";
@@ -31,24 +31,24 @@ type OwnProps = {
 };
 
 type StateProps = {
-  activeUser: APIUserType,
+  activeUser: APIUser,
 };
 
 type Props = OwnProps & StateProps;
 
 type State = {
   activeTabKey: string,
-  user: ?APIUserType,
-  datasets: Array<APIMaybeUnimportedDatasetType>,
+  user: ?APIUser,
+  datasets: Array<APIMaybeUnimportedDataset>,
   isLoadingDatasets: boolean,
 };
 
 export const wkDatasetsCacheKey = "wk.datasets";
 export const datasetCache = {
-  set(datasets: APIMaybeUnimportedDatasetType[]): void {
+  set(datasets: APIMaybeUnimportedDataset[]): void {
     localStorage.setItem("wk.datasets", JSON.stringify(datasets));
   },
-  get(): APIMaybeUnimportedDatasetType[] {
+  get(): APIMaybeUnimportedDataset[] {
     return parseAsMaybe(localStorage.getItem(wkDatasetsCacheKey)).getOrElse([]);
   },
   clear(): void {
@@ -149,7 +149,7 @@ class DashboardView extends React.PureComponent<Props, State> {
     }
   }
 
-  getTabs(user: APIUserType) {
+  getTabs(user: APIUser) {
     if (this.props.activeUser) {
       const isAdminView = this.props.isAdminView;
 

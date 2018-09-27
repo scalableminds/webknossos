@@ -1,8 +1,8 @@
 // @flow
 
-import type { ShaderModuleType } from "./shader_module_system";
+import type { ShaderModule } from "./shader_module_system";
 
-export const linearizeVec3ToIndex: ShaderModuleType = {
+export const linearizeVec3ToIndex: ShaderModule = {
   requirements: [],
   code: `
     // E.g., the vector [9, 5, 2]  will be linearized to the scalar index 900 + 50 + 2, when base == 10
@@ -12,7 +12,7 @@ export const linearizeVec3ToIndex: ShaderModuleType = {
 `,
 };
 
-export const linearizeVec3ToIndexWithMod: ShaderModuleType = {
+export const linearizeVec3ToIndexWithMod: ShaderModule = {
   requirements: [],
   code: `
     // Same as linearizeVec3ToIndex. However, a mod parameter m can be passed when the final index
@@ -23,7 +23,7 @@ export const linearizeVec3ToIndexWithMod: ShaderModuleType = {
 `,
 };
 
-export const getRgbaAtIndex: ShaderModuleType = {
+export const getRgbaAtIndex: ShaderModule = {
   code: `
     vec4 getRgbaAtIndex(sampler2D texture, float textureWidth, float idx) {
       float finalPosX = mod(idx, textureWidth);
@@ -40,7 +40,7 @@ export const getRgbaAtIndex: ShaderModuleType = {
   `,
 };
 
-export const getRgbaAtXYIndex: ShaderModuleType = {
+export const getRgbaAtXYIndex: ShaderModule = {
   code: `
     vec4 getRgbaAtXYIndex(sampler2D texture, float textureWidth, float x, float y) {
       return texture2D(
@@ -93,7 +93,7 @@ export const getRgbaAtXYIndex: ShaderModuleType = {
   `,
 };
 
-const getColorFor: ShaderModuleType = {
+const getColorFor: ShaderModule = {
   requirements: [
     linearizeVec3ToIndex,
     linearizeVec3ToIndexWithMod,
@@ -183,7 +183,7 @@ const getColorFor: ShaderModuleType = {
   `,
 };
 
-export const getColorForCoords: ShaderModuleType = {
+export const getColorForCoords: ShaderModule = {
   requirements: [getColorFor],
   code: `
     vec4 getColorForCoords(

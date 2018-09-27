@@ -11,7 +11,7 @@ import Constants, { ArbitraryViewport } from "oxalis/constants";
 import Store from "oxalis/store";
 import SceneController from "oxalis/controller/scene_controller";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
-import { getDesiredCanvasSize } from "oxalis/view/layouting/tracing_layout_view";
+import { getDesiredLayoutRect } from "oxalis/view/layouting/golden_layout_adapter";
 import window from "libs/window";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -177,10 +177,8 @@ class ArbitraryView {
 
   resizeImpl = (): void => {
     // Call this after the canvas was resized to fix the viewport
-    getDesiredCanvasSize().map(([width, height]) =>
-      SceneController.renderer.setSize(width, height),
-    );
-
+    const { width, height } = getDesiredLayoutRect();
+    SceneController.renderer.setSize(width, height);
     this.draw();
   };
 

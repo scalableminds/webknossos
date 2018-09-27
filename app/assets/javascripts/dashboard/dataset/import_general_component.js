@@ -12,7 +12,7 @@ import {
   getDataset,
   revokeDatasetSharingToken,
 } from "admin/admin_rest_api";
-import type { APIDatasetType } from "admin/api_flow_types";
+import type { APIDataset } from "admin/api_flow_types";
 import { FormItemWithInfo } from "./helper_components";
 
 type Props = {
@@ -23,7 +23,7 @@ type Props = {
 
 type State = {
   sharingToken: string,
-  dataSet: ?APIDatasetType,
+  dataSet: ?APIDataset,
 };
 
 export default class ImportGeneralComponent extends React.PureComponent<Props, State> {

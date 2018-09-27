@@ -15,13 +15,9 @@ import {
   updateDatasetTeams,
 } from "admin/admin_rest_api";
 import moment from "moment";
-import type { DatasetConfigurationType } from "oxalis/store";
+import type { DatasetConfiguration } from "oxalis/store";
 import messages from "messages";
-import type {
-  APIDatasetType,
-  APIMessageType,
-  APIDataSourceWithMessagesType,
-} from "admin/api_flow_types";
+import type { APIDataset, APIMessage, APIDataSourceWithMessages } from "admin/api_flow_types";
 import { handleGenericError } from "libs/error_handling";
 import { datasetCache } from "dashboard/dashboard_view";
 import { Hideable, confirmAsync, hasFormError } from "./helper_components";
@@ -42,22 +38,22 @@ type Props = {
   onCancel: () => void,
 };
 
-type TabKeyType = "data" | "general" | "defaultConfig";
+type TabKey = "data" | "general" | "defaultConfig";
 
 type State = {
-  dataset: ?APIDatasetType,
-  datasetDefaultConfiguration: ?DatasetConfigurationType,
-  messages: Array<APIMessageType>,
+  dataset: ?APIDataset,
+  datasetDefaultConfiguration: ?DatasetConfiguration,
+  messages: Array<APIMessage>,
   isLoading: boolean,
   activeDataSourceEditMode: "simple" | "advanced",
-  activeTabKey: TabKeyType,
+  activeTabKey: TabKey,
 };
 
 export type FormData = {
-  dataSource: APIDataSourceWithMessagesType,
+  dataSource: APIDataSourceWithMessages,
   dataSourceJson: string,
-  dataset: APIDatasetType,
-  defaultConfiguration: DatasetConfigurationType,
+  dataset: APIDataset,
+  defaultConfiguration: DatasetConfiguration,
   defaultConfigurationLayersJson: string,
 };
 

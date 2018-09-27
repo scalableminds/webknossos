@@ -8,7 +8,7 @@ import ConnectionInfo from "oxalis/model/data_connection_info";
 import { requestFromStore } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import type { Vector3, Vector4 } from "oxalis/constants";
-import type { DataStoreInfoType, DataLayerType } from "oxalis/store";
+import type { DataStoreInfo, DataLayerType } from "oxalis/store";
 import PriorityQueue from "js-priority-queue";
 import {
   getResolutionsFactors,
@@ -17,7 +17,7 @@ import {
 import { getResolutions, getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import Store from "oxalis/store";
 
-export type PullQueueItemType = {
+export type PullQueueItem = {
   priority: number,
   bucket: Vector4,
 };
@@ -39,19 +39,19 @@ const BATCH_SIZE = 3;
 
 class PullQueue {
   cube: DataCube;
-  queue: Array<PullQueueItemType>;
+  queue: Array<PullQueueItem>;
   priorityQueue: PriorityQueue;
   batchCount: number;
   layerName: string;
   whitenEmptyBuckets: boolean;
   connectionInfo: ConnectionInfo;
-  datastoreInfo: DataStoreInfoType;
+  datastoreInfo: DataStoreInfo;
 
   constructor(
     cube: DataCube,
     layerName: string,
     connectionInfo: ConnectionInfo,
-    datastoreInfo: DataStoreInfoType,
+    datastoreInfo: DataStoreInfo,
   ) {
     this.cube = cube;
     this.layerName = layerName;
@@ -194,11 +194,11 @@ class PullQueue {
     this.priorityQueue = newQueue;
   }
 
-  add(item: PullQueueItemType): void {
+  add(item: PullQueueItem): void {
     this.priorityQueue.queue(item);
   }
 
-  addAll(items: Array<PullQueueItemType>): void {
+  addAll(items: Array<PullQueueItem>): void {
     for (const item of items) {
       this.priorityQueue.queue(item);
     }

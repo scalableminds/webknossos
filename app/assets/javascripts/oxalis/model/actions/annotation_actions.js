@@ -1,72 +1,70 @@
 // @flow
 import type { BoundingBoxType } from "oxalis/constants";
-import type { APIAnnotationType } from "admin/api_flow_types";
+import type { APIAnnotation } from "admin/api_flow_types";
 
-type InitializeAnnotationType = {
+type InitializeAnnotation = {
   type: "INITIALIZE_ANNOTATION",
-  annotation: APIAnnotationType,
+  annotation: APIAnnotation,
 };
 
-type SetAnnotationNameActionType = {
+type SetAnnotationNameAction = {
   type: "SET_ANNOTATION_NAME",
   name: string,
 };
 
-type SetAnnotationPubliceActionType = {
+type SetAnnotationPubliceAction = {
   type: "SET_ANNOTATION_PUBLIC",
   isPublic: boolean,
 };
 
-type SetAnnotationDescriptionActionType = {
+type SetAnnotationDescriptionAction = {
   type: "SET_ANNOTATION_DESCRIPTION",
   description: string,
 };
 
-type SetAnnotationAllowUpdateActionType = {
+type SetAnnotationAllowUpdateAction = {
   type: "SET_ANNOTATION_ALLOW_UPDATE",
   allowUpdate: boolean,
 };
 
-type SetUserBoundingBoxType = {
+type SetUserBoundingBox = {
   type: "SET_USER_BOUNDING_BOX",
   userBoundingBox: ?BoundingBoxType,
 };
 
 export type AnnotationActionTypes =
-  | InitializeAnnotationType
-  | SetAnnotationNameActionType
-  | SetAnnotationPubliceActionType
-  | SetAnnotationDescriptionActionType
-  | SetAnnotationAllowUpdateActionType
-  | SetUserBoundingBoxType;
+  | InitializeAnnotation
+  | SetAnnotationNameAction
+  | SetAnnotationPubliceAction
+  | SetAnnotationDescriptionAction
+  | SetAnnotationAllowUpdateAction
+  | SetUserBoundingBox;
 
-export const initializeAnnotationAction = (
-  annotation: APIAnnotationType,
-): InitializeAnnotationType => ({
+export const initializeAnnotationAction = (annotation: APIAnnotation): InitializeAnnotation => ({
   type: "INITIALIZE_ANNOTATION",
   annotation,
 });
 
-export const setAnnotationNameAction = (name: string): SetAnnotationNameActionType => ({
+export const setAnnotationNameAction = (name: string): SetAnnotationNameAction => ({
   type: "SET_ANNOTATION_NAME",
   name,
 });
 
-export const setAnnotationPublicAction = (isPublic: boolean): SetAnnotationPubliceActionType => ({
+export const setAnnotationPublicAction = (isPublic: boolean): SetAnnotationPubliceAction => ({
   type: "SET_ANNOTATION_PUBLIC",
   isPublic,
 });
 
 export const setAnnotationDescriptionAction = (
   description: string,
-): SetAnnotationDescriptionActionType => ({
+): SetAnnotationDescriptionAction => ({
   type: "SET_ANNOTATION_DESCRIPTION",
   description,
 });
 
 export const setAnnotationAllowUpdateAction = (
   allowUpdate: boolean,
-): SetAnnotationAllowUpdateActionType => ({
+): SetAnnotationAllowUpdateAction => ({
   type: "SET_ANNOTATION_ALLOW_UPDATE",
   allowUpdate,
 });
@@ -75,7 +73,7 @@ export const setAnnotationAllowUpdateAction = (
 // the tracing, hence no ANNOTATION in the action type.
 export const setUserBoundingBoxAction = (
   userBoundingBox: ?BoundingBoxType,
-): SetUserBoundingBoxType => ({
+): SetUserBoundingBox => ({
   type: "SET_USER_BOUNDING_BOX",
   userBoundingBox,
 });

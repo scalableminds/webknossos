@@ -18,7 +18,7 @@ import {
   updateDirectionAction,
   resetContourAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import type { CopySegmentationLayerActionType } from "oxalis/model/actions/volumetracing_actions";
+import type { CopySegmentationLayerAction } from "oxalis/model/actions/volumetracing_actions";
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import Dimensions from "oxalis/model/dimensions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
@@ -32,8 +32,8 @@ import Toast from "libs/toast";
 import Model from "oxalis/model";
 import Constants, { VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import type { OrthoViewType, VolumeToolType, ContourModeType } from "oxalis/constants";
-import type { VolumeTracingType, FlycamType } from "oxalis/store";
+import type { OrthoView, VolumeTool, ContourMode } from "oxalis/constants";
+import type { VolumeTracing, Flycam } from "oxalis/store";
 import api from "oxalis/api/internal_api";
 
 export function* watchVolumeTracingAsync(): Saga<void> {
@@ -112,7 +112,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
   }
 }
 
-function* createVolumeLayer(planeId: OrthoViewType): Saga<VolumeLayer> {
+function* createVolumeLayer(planeId: OrthoView): Saga<VolumeLayer> {
   const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
   const thirdDimValue = position[Dimensions.thirdDimensionForPlane(planeId)];
   return new VolumeLayer(planeId, thirdDimValue);
@@ -140,7 +140,7 @@ function* labelWithIterator(iterator, contourTracingMode): Saga<void> {
   }
 }
 
-function* copySegmentationLayer(action: CopySegmentationLayerActionType): Saga<void> {
+function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void> {
   const activeViewport = yield* select(state => state.viewModeData.plane.activeViewport);
   if (activeViewport === "TDView") {
     // Cannot copy labels from 3D view
@@ -191,8 +191,8 @@ function* copySegmentationLayer(action: CopySegmentationLayerActionType): Saga<v
 
 export function* finishLayer(
   layer: VolumeLayer,
-  activeTool: VolumeToolType,
-  contourTracingMode: ContourModeType,
+  activeTool: VolumeTool,
+  contourTracingMode: ContourMode,
 ): Saga<void> {
   if (layer == null || layer.isEmpty()) {
     return;
@@ -221,9 +221,9 @@ export function* disallowVolumeTracingWarning(): Saga<*> {
 }
 
 export function* diffVolumeTracing(
-  prevVolumeTracing: VolumeTracingType,
-  volumeTracing: VolumeTracingType,
-  flycam: FlycamType,
+  prevVolumeTracing: VolumeTracing,
+  volumeTracing: VolumeTracing,
+  flycam: Flycam,
 ): Generator<UpdateAction, void, void> {
   // no diffing happening here (yet) as for volume tracings there are only updateTracing actions so far
   yield updateVolumeTracing(

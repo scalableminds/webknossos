@@ -27,7 +27,7 @@ test("getScript()", async t => {
   const firstScript = scripts[0];
 
   const script = await api.getScript(firstScript.id);
-  writeFlowCheckingFile(script, "script", "APIScriptType");
+  writeFlowCheckingFile(script, "script", "APIScript");
   t.snapshot(script, { id: "scripts-getScript" });
 });
 

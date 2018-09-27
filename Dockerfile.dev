@@ -1,4 +1,4 @@
-FROM scalableminds/sbt:master__72
+FROM scalableminds/sbt:master__103
 ARG VERSION_NODE="8.x"
 
 ENV DEBIAN_FRONTEND noninteractive

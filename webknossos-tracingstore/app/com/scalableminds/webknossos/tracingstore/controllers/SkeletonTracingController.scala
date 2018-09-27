@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.controllers
 import com.google.inject.Inject
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessRequest}
-import com.scalableminds.webknossos.tracingstore.WebKnossosServer
+import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreWkRpcClient}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingSelector
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton._
 import play.api.i18n.Messages
@@ -13,8 +13,8 @@ import play.api.mvc.PlayBodyParsers
 import scala.concurrent.ExecutionContext
 
 class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingService,
-                                          val webKnossosServer: WebKnossosServer,
-                                          val accessTokenService: AccessTokenService)
+                                          val webKnossosServer: TracingStoreWkRpcClient,
+                                          val accessTokenService: TracingStoreAccessTokenService)
                                          (implicit val ec: ExecutionContext,
                                           val bodyParsers: PlayBodyParsers)
   extends TracingController[SkeletonTracing, SkeletonTracings] {

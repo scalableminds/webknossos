@@ -18,8 +18,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class DataSourceController @Inject()(
                                       dataSourceRepository: DataSourceRepository,
                                       dataSourceService: DataSourceService,
-                                      webKnossosServer: WebKnossosServer,
-                                      accessTokenService: AccessTokenService
+                                      webKnossosServer: DataStoreWkRpcClient,
+                                      accessTokenService: DataStoreAccessTokenService
                                     )(implicit bodyParsers: PlayBodyParsers)
   extends Controller with FoxImplicits {
 

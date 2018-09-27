@@ -5,7 +5,7 @@ import com.google.inject.Inject
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracings}
 import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
 import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessRequest}
-import com.scalableminds.webknossos.tracingstore.WebKnossosServer
+import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreWkRpcClient}
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import play.api.i18n.Messages
@@ -17,8 +17,8 @@ import play.api.mvc.PlayBodyParsers
 import scala.concurrent.ExecutionContext
 
 class VolumeTracingController @Inject()(val tracingService: VolumeTracingService,
-                                        val webKnossosServer: WebKnossosServer,
-                                        val accessTokenService: AccessTokenService,
+                                        val webKnossosServer: TracingStoreWkRpcClient,
+                                        val accessTokenService: TracingStoreAccessTokenService,
                                         tracingDataStore: TracingDataStore)
                                        (implicit val ec: ExecutionContext,
                                         val bodyParsers: PlayBodyParsers)

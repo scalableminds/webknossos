@@ -3,7 +3,6 @@ package com.scalableminds.webknossos.tracingstore
 import akka.actor.ActorSystem
 import com.google.inject.AbstractModule
 import com.google.inject.name.Names
-import com.scalableminds.webknossos.datastore.services.AbstractWebKnossosServer
 import play.api.{Configuration, Environment}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingDataStore
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTracingService
@@ -18,6 +17,7 @@ class TracingStoreModule(environment: Environment, configuration: Configuration)
     bind(classOf[TracingDataStore]).asEagerSingleton()
     bind(classOf[SkeletonTracingService]).asEagerSingleton()
     bind(classOf[VolumeTracingService]).asEagerSingleton()
-    //bind(classOf[AbstractWebKnossosServer]).to(classOf[WebKnossosServer]).asEagerSingleton()
+    bind(classOf[TracingStoreAccessTokenService]).asEagerSingleton()
+    bind(classOf[TracingStoreWkRpcClient]).asEagerSingleton()
   }
 }

@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.controllers
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessRequest}
-import com.scalableminds.webknossos.tracingstore.WebKnossosServer
+import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreWkRpcClient}
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingSelector, TracingService, UpdateAction, UpdateActionGroup}
 import com.scalableminds.util.tools.JsonHelper.boxFormat
 import net.liftweb.common.Failure
@@ -18,9 +18,9 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
 
   def tracingService: TracingService[T]
 
-  def webKnossosServer: WebKnossosServer
+  def webKnossosServer: TracingStoreWkRpcClient
 
-  def accessTokenService: AccessTokenService
+  def accessTokenService: TracingStoreAccessTokenService
 
   implicit val tracingCompanion: GeneratedMessageCompanion[T] = tracingService.tracingCompanion
 

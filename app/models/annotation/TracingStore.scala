@@ -40,10 +40,10 @@ class TracingStoreService @Inject()(tracingStoreDAO: TracingStoreDAO, rpc: RPC)(
       .getOrElse(Forbidden(Messages("tracingStore.notFound"))) // Default error
   }
 
-  def clientFor(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[TracingStoreClient] = {
+  def clientFor(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[TracingStoreRpcClient] = {
     for {
       tracingStore <- tracingStoreDAO.findFirst ?~> "tracingStore.notFound"
-    } yield new TracingStoreClient(tracingStore, dataSet, rpc)
+    } yield new TracingStoreRpcClient(tracingStore, dataSet, rpc)
   }
 }
 

@@ -9,7 +9,7 @@ object VolumeTracingDefaults {
 
   val elementClass = ElementClass.uint32
 
-  val largestSegmentId = 0
+  val largestSegmentId = 0L
 
   val zoomLevel = 0.1
 

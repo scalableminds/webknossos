@@ -1,9 +1,10 @@
 // @flow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-import test from "ava";
+import anyTest from "ava";
 import puppeteer, { type Browser } from "puppeteer";
 import path from "path";
 import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
+import type { TestInterface } from "ava";
 import { screenshotDataset, DEV_AUTH_TOKEN } from "./dataset_rendering_helpers";
 import { compareScreenshot } from "./screenshot_helpers";
 
@@ -26,6 +27,12 @@ if (!process.env.URL) {
   }
 }
 console.log(`[Info] Executing tests on URL ${URL}.`);
+
+// Ava's recommendation for Flow types
+// https://github.com/avajs/ava/blob/master/docs/recipes/flow.md#typing-tcontext
+const test: TestInterface<{
+  browser: Browser,
+}> = (anyTest: any);
 
 async function getNewPage(browser: Browser) {
   const page = await browser.newPage();

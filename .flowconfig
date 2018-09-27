@@ -20,9 +20,6 @@
 <PROJECT_ROOT>/node_modules/hard-source-webpack-plugin/
 <PROJECT_ROOT>/.nyc_output
 
-[untyped]
-<PROJECT_ROOT>/node_modules/ava/
-
 [options]
 suppress_comment=\\(.\\|\n\\)*\\$ExpectError
 suppress_comment=\\(.\\|\n\\)*\\$FlowFixMe

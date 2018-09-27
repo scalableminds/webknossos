@@ -98,14 +98,15 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
       if (!addToLayerAction || addToLayerAction.type !== "ADD_TO_LAYER") {
         throw new Error("Unexpected action. Satisfy flow.");
       }
-      // if the current viewport does not match the initial viewport -> dont draw
-      if (initialViewport !== (yield* select(state => state.viewModeData.plane.activeViewport))) {
+      const activeViewport = yield* select(state => state.viewModeData.plane.activeViewport);
+      if (initialViewport !== activeViewport) {
+        // if the current viewport does not match the initial viewport -> dont draw
         continue;
       }
       if (activeTool === VolumeToolEnum.TRACE) {
         currentLayer.addContour(addToLayerAction.position);
       } else if (activeTool === VolumeToolEnum.BRUSH) {
-        const currentViewportBounding = yield* call(getBoundingsFromPosition, initialViewport);
+        const currentViewportBounding = yield* call(getBoundingsFromPosition, activeViewport);
         yield* call(
           labelWithIterator,
           currentLayer.getCircleVoxelIterator(addToLayerAction.position, currentViewportBounding),
@@ -121,13 +122,15 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
 function* getBoundingsFromPosition(currentViewport: OrthoView): Saga<?BoundingBoxType> {
   const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
   const zoom = yield* select(state => state.flycam.zoomStep);
-  const scales = yield* select(state => getBaseVoxelFactors(state.dataset.dataSource.scale));
+  const baseVoxelFactors = yield* select(state =>
+    getBaseVoxelFactors(state.dataset.dataSource.scale),
+  );
   const halfViewportWidth = Math.round((Constants.PLANE_WIDTH / 2) * zoom);
   const relevantCoordinates = Dimensions.transDim([1, 1, 0], currentViewport);
   let halfViewportBounds = [
-    halfViewportWidth * scales[0] * relevantCoordinates[0],
-    halfViewportWidth * scales[1] * relevantCoordinates[1],
-    halfViewportWidth * scales[2] * relevantCoordinates[2],
+    halfViewportWidth * baseVoxelFactors[0] * relevantCoordinates[0],
+    halfViewportWidth * baseVoxelFactors[1] * relevantCoordinates[1],
+    halfViewportWidth * baseVoxelFactors[2] * relevantCoordinates[2],
   ];
   halfViewportBounds = V3.ceil(halfViewportBounds);
   return {

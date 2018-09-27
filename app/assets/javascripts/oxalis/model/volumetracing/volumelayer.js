@@ -27,7 +27,7 @@ export class VoxelIterator {
   next: Vector3;
 
   static finished(): VoxelIterator {
-    const iterator = new VoxelIterator([], 0, 0, [0, 0]);
+    const iterator = new VoxelIterator([], 0, 0, [0, 0], () => [0, 0, 0]);
     iterator.hasNext = false;
     return iterator;
   }
@@ -37,7 +37,7 @@ export class VoxelIterator {
     width: number,
     height: number,
     minCoord2d: Vector2,
-    get3DCoordinate?: Vector2 => Vector3 = () => [0, 0, 0],
+    get3DCoordinate: Vector2 => Vector3,
     boundingBox?: ?BoundingBoxType,
   ) {
     this.map = map;
@@ -46,11 +46,11 @@ export class VoxelIterator {
     this.minCoord2d = minCoord2d;
     this.get3DCoordinate = get3DCoordinate;
     this.boundingBox = boundingBox;
-    const firstCoordinate = this.get3DCoordinate([this.minCoord2d[0], this.minCoord2d[1]]);
-    if (!this.map[0][0] || !this.isCoordinateInBounds(firstCoordinate)) {
-      this.getNext();
-    } else {
+    const firstCoordinate = this.get3DCoordinate(this.minCoord2d);
+    if (this.map[0][0] && this.isCoordinateInBounds(firstCoordinate)) {
       this.next = firstCoordinate;
+    } else {
+      this.getNext();
     }
   }
 
@@ -79,8 +79,7 @@ export class VoxelIterator {
       if (this.y === this.height) {
         foundNext = true;
         this.hasNext = false;
-      }
-      if (this.map[this.x][this.y]) {
+      } else if (this.map[this.x][this.y]) {
         const currentCoordinate = this.get3DCoordinate([
           this.x + this.minCoord2d[0],
           this.y + this.minCoord2d[1],

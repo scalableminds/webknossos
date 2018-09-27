@@ -334,6 +334,7 @@ export type ViewModeData = {
 type UiInformation = {
   +showDropzoneModal: boolean,
   +showVersionRestore: boolean,
+  +storedLayouts: Object,
 };
 
 export type OxalisState = {|

@@ -11,7 +11,15 @@ type SetVersionRestoreVisibilityAction = {
   active: boolean,
 };
 
-export type UiAction = SetDropzoneModalVisibilityAction | SetVersionRestoreVisibilityAction;
+type SetStoredLayoutsAction = {
+  type: "SET_STORED_LAYOUTS",
+  storedLayouts: boolean,
+};
+
+export type UiAction =
+  | SetDropzoneModalVisibilityAction
+  | SetVersionRestoreVisibilityAction
+  | SetStoredLayoutsAction;
 
 export const setDropzoneModalVisibilityAction = (
   visible: boolean,
@@ -25,4 +33,9 @@ export const setVersionRestoreVisibilityAction = (
 ): SetVersionRestoreVisibilityAction => ({
   type: "SET_VERSION_RESTORE_VISIBILITY",
   active,
+});
+
+export const setStoredLayoutsAction = (storedLayouts: Object): SetStoredLayoutsAction => ({
+  type: "SET_STORED_LAYOUTS",
+  storedLayouts,
 });

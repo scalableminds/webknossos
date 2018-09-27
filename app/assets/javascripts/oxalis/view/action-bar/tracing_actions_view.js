@@ -3,7 +3,7 @@ import React, { PureComponent } from "react";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import { connect } from "react-redux";
-import { Upload, Button, Dropdown, Menu, Icon, Modal } from "antd";
+import { Upload, Button, Dropdown, Menu, Icon, Modal, Tooltip } from "antd";
 import Constants from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
 import ShareModalView from "oxalis/view/action-bar/share_modal_view";
@@ -18,8 +18,6 @@ import { copyAnnotationToUserAccount, finishAnnotation } from "admin/admin_rest_
 import { location } from "libs/window";
 import type { OxalisState, RestrictionsAndSettings, Task } from "oxalis/store";
 import type { APIUser, APITracingType } from "admin/api_flow_types";
-import { layoutEmitter } from "oxalis/view/layouting/layout_persistence";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import SceneController from "oxalis/controller/scene_controller";
 import { readFileAsArrayBuffer } from "libs/read_file";
 import { AsyncButton } from "components/async_clickables";
@@ -36,21 +34,66 @@ type State = {
   isShareModalOpen: boolean,
   isMergeModalOpen: boolean,
   isUserScriptsModalOpen: boolean,
+  selectedLayout: Object,
 };
 
-export const resetLayoutItem = (
-  <Menu.Item key="reset-layout">
-    <div
-      onClick={() => {
-        Store.dispatch(updateUserSettingAction("layoutScaleValue", 1));
-        layoutEmitter.emit("resetLayout");
-      }}
+type ResetLayoutItemProps = {
+  customLayouts: Object,
+  onReset: () => void,
+  onSelectLayout: string => void,
+  onDeleteLayout: string => void,
+  addNewLayout: () => void,
+};
+
+export const ResetLayoutItem = ({
+  customLayouts,
+  onReset,
+  onSelectLayout,
+  onDeleteLayout,
+  addNewLayout,
+}: ResetLayoutItemProps) => {
+  const customLayoutsItems = customLayouts.map(layout => (
+    <Menu.Item key={layout}>
+      <React.Fragment>
+        <div onClick={() => onSelectLayout(layout)}>{layout}</div>
+        <Tooltip placement="top" title="Remove this layout">
+          <Icon type="delete" className="clickable-icon" onClick={() => onDeleteLayout(layout)} />
+        </Tooltip>
+      </React.Fragment>
+    </Menu.Item>
+  ));
+  return (
+    <Menu.SubMenu
+      title={
+        <React.Fragment>
+          <Icon type="laptop" /> Layout
+        </React.Fragment>
+      }
+      key="layout"
     >
-      <Icon type="laptop" />
-      Reset Layout
-    </div>
-  </Menu.Item>
-);
+      <Menu.Item>
+        <div onClick={onReset}>Reset Layout</div>
+      </Menu.Item>
+      <Menu.Item>
+        <div onClick={addNewLayout}>Add a new Layout</div>
+      </Menu.Item>
+      <Menu.Divider />
+      {customLayoutsItems}
+    </Menu.SubMenu>
+  );
+};
+
+/*
+* notes: make currently selected layout in the list bold and set a <Icon type="check" theme="outlined" /> behind it.
+* add default layout that wont be persistend
+*
+* steps: 1. make a methods that creates entries based on a mock json/object that creates all entries: done
+* create schema: done
+* put into store: on going
+* add modal to add a new Layout
+* apply schema
+* 
+*/
 
 class TracingActionsView extends PureComponent<StateProps, State> {
   state = {
@@ -266,7 +309,7 @@ class TracingActionsView extends PureComponent<StateProps, State> {
       );
     }
 
-    elements.push(resetLayoutItem);
+    elements.push(ResetLayoutItem);
 
     const onStlUpload = async info => {
       const buffer = await readFileAsArrayBuffer(info.file);

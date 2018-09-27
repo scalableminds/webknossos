@@ -11,7 +11,8 @@ import Store from "oxalis/store";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import type { OrthoViewType, Vector2, Vector3 } from "oxalis/constants";
+import type { OrthoView, Vector2, Vector3 } from "oxalis/constants";
+import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 
 export class VoxelIterator {
   hasNext: boolean = true;
@@ -64,13 +65,13 @@ export class VoxelIterator {
 }
 
 class VolumeLayer {
-  plane: OrthoViewType;
+  plane: OrthoView;
   thirdDimensionValue: number;
   contourList: Array<Vector3>;
   maxCoord: ?Vector3;
   minCoord: ?Vector3;
 
-  constructor(plane: OrthoViewType, thirdDimensionValue: number) {
+  constructor(plane: OrthoView, thirdDimensionValue: number) {
     this.plane = plane;
     this.thirdDimensionValue = thirdDimensionValue;
     this.maxCoord = null;
@@ -285,7 +286,7 @@ class VolumeLayer {
   pixelsToVoxels(pixels: number): number {
     const state = Store.getState();
     const zoomFactor = getPlaneScalingFactor(state.flycam);
-    const viewportScale = state.userConfiguration.scale;
+    const viewportScale = getViewportScale(this.plane);
     return (pixels / viewportScale) * zoomFactor;
   }
 }

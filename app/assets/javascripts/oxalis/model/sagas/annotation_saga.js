@@ -3,7 +3,7 @@ import Model from "oxalis/model";
 import { take, _takeEvery, select, call } from "oxalis/model/sagas/effect-generators";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { editAnnotation } from "admin/admin_rest_api";
-import type { EditableAnnotationType } from "admin/admin_rest_api";
+import type { EditableAnnotation } from "admin/admin_rest_api";
 import messages from "messages";
 import Toast from "libs/toast";
 import {
@@ -18,7 +18,7 @@ export function* pushAnnotationUpdateAsync(): Saga<void> {
   const tracing = yield* select(state => state.tracing);
 
   // The extra type annotaton is needed here for flow
-  const editObject: $Shape<EditableAnnotationType> = {
+  const editObject: $Shape<EditableAnnotation> = {
     name: tracing.name,
     isPublic: tracing.isPublic,
     description: tracing.description,

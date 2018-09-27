@@ -5,6 +5,7 @@
 
 import * as React from "react";
 import { connect } from "react-redux";
+import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 import * as Utils from "libs/utils";
@@ -15,7 +16,7 @@ import * as THREE from "three";
 import TrackballControls from "libs/trackball_controls";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
-import type { TracingType, CameraData, OxalisState, FlycamType } from "oxalis/store";
+import type { Tracing, CameraData, OxalisState, Flycam } from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import SceneController from "oxalis/controller/scene_controller";
 import {
@@ -38,7 +39,7 @@ import constants, {
   OrthoViewValuesWithoutTDView,
   VolumeToolEnum,
 } from "oxalis/constants";
-import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
+import type { Point2, Vector3, OrthoView, OrthoViewMap } from "oxalis/constants";
 import type { ModifierKeys } from "libs/input";
 import {
   setViewportAction,
@@ -80,9 +81,9 @@ type OwnProps = {
 };
 
 type Props = OwnProps & {
-  flycam: FlycamType,
+  flycam: Flycam,
   scale: Vector3,
-  tracing: TracingType,
+  tracing: Tracing,
 };
 
 class PlaneController extends React.PureComponent<Props> {
@@ -91,10 +92,11 @@ class PlaneController extends React.PureComponent<Props> {
   // Plane Controller: Responsible for Plane Modes
   planeView: PlaneView;
   input: {
-    mouseControllers: OrthoViewMapType<InputMouse>,
+    mouseControllers: OrthoViewMap<InputMouse>,
     keyboard?: InputKeyboard,
     keyboardNoLoop?: InputKeyboardNoLoop,
     keyboardLoopDelayed?: InputKeyboard,
+    keyboardNoLoop?: InputKeyboardNoLoop,
   };
   storePropertyUnsubscribers: Array<Function>;
   isStarted: boolean;
@@ -132,22 +134,16 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   initMouse(): void {
-    for (const id of OrthoViewValues) {
-      if (id !== OrthoViews.TDView) {
-        const inputcatcherSelector = `#inputcatcher_${OrthoViews[id]}`;
+    OrthoViewValues.forEach(id => {
+      const inputcatcherSelector = `#inputcatcher_${OrthoViews[id]}`;
+      Utils.waitForSelector(inputcatcherSelector).then(() => {
         this.input.mouseControllers[id] = new InputMouse(
           inputcatcherSelector,
-          this.getPlaneMouseControls(id),
+          id !== OrthoViews.TDView ? this.getPlaneMouseControls(id) : this.getTDViewMouseControls(),
           id,
         );
-      } else {
-        this.input.mouseControllers[id] = new InputMouse(
-          "#inputcatcher_TDView",
-          this.getTDViewMouseControls(),
-          id,
-        );
-      }
-    }
+      });
+    });
   }
 
   getTDViewMouseControls(): Object {
@@ -173,10 +169,10 @@ class PlaneController extends React.PureComponent<Props> {
     };
   }
 
-  getPlaneMouseControls(planeId: OrthoViewType): Object {
+  getPlaneMouseControls(planeId: OrthoView): Object {
     const baseControls = {
       leftDownMove: (delta: Point2) => {
-        const viewportScale = Store.getState().userConfiguration.scale;
+        const viewportScale = getViewportScale(planeId);
         return this.movePlane([(delta.x * -1) / viewportScale, (delta.y * -1) / viewportScale, 0]);
       },
 
@@ -198,7 +194,7 @@ class PlaneController extends React.PureComponent<Props> {
 
     const { leftClick: volumeLeftClick, ...volumeControls } =
       this.props.tracing.volume != null
-        ? volumeController.getPlaneMouseControls()
+        ? volumeController.getPlaneMouseControls(planeId)
         : emptyDefaultHandler;
 
     ensureNonConflictingHandlers(skeletonControls, volumeControls);
@@ -250,23 +246,24 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   initTrackballControls(): void {
-    const view = document.getElementById("inputcatcher_TDView");
-    const pos = voxelToNm(this.props.scale, getPosition(this.props.flycam));
-    const tdCamera = this.planeView.getCameras()[OrthoViews.TDView];
-    this.controls = new TrackballControls(tdCamera, view, new THREE.Vector3(...pos), () => {
-      // write threeJS camera into store
-      Store.dispatch(setTDCameraAction(threeCameraToCameraData(tdCamera)));
+    Utils.waitForSelector("#inputcatcher_TDView").then(view => {
+      const pos = voxelToNm(this.props.scale, getPosition(this.props.flycam));
+      const tdCamera = this.planeView.getCameras()[OrthoViews.TDView];
+      this.controls = new TrackballControls(tdCamera, view, new THREE.Vector3(...pos), () => {
+        // write threeJS camera into store
+        Store.dispatch(setTDCameraAction(threeCameraToCameraData(tdCamera)));
+      });
+
+      this.controls.noZoom = true;
+      this.controls.noPan = true;
+      this.controls.staticMoving = true;
+
+      this.controls.target.set(...pos);
+
+      // This is necessary, since we instantiated this.controls now. This should be removed
+      // when the workaround with requestAnimationFrame(initInputHandlers) is removed.
+      this.forceUpdate();
     });
-
-    this.controls.noZoom = true;
-    this.controls.noPan = true;
-    this.controls.staticMoving = true;
-
-    this.controls.target.set(...pos);
-
-    // This is necessary, since we instantiated this.controls now. This should be removed
-    // when the workaround with requestAnimationFrame(initInputHandlers) is removed.
-    this.forceUpdate();
   }
 
   initKeyboard(): void {
@@ -405,15 +402,13 @@ class PlaneController extends React.PureComponent<Props> {
     // Workaround: defer mouse initialization to make sure DOM elements have
     // actually been rendered by React (InputCatchers Component)
     // DOM Elements get deleted when switching between ortho and arbitrary mode
-    const initInputHandlers = () => {
-      if (!document.getElementById("inputcatcher_TDView")) {
-        window.requestAnimationFrame(initInputHandlers);
-      } else if (this.isStarted) {
+
+    Utils.waitForSelector("#inputcatcher_TDView").then(() => {
+      if (this.isStarted) {
         this.initTrackballControls();
         this.initMouse();
       }
-    };
-    initInputHandlers();
+    });
   }
 
   stop(): void {
@@ -499,12 +494,12 @@ class PlaneController extends React.PureComponent<Props> {
     if (zoomToMouse) {
       zoomToPosition = this.input.mouseControllers[OrthoViews.TDView].position;
     }
-    Store.dispatch(zoomTDViewAction(value, zoomToPosition, this.planeView.curWidth));
+    const { width } = getInputCatcherRect(OrthoViews.TDView);
+    Store.dispatch(zoomTDViewAction(value, zoomToPosition, width));
   }
 
   moveTDView(delta: Point2): void {
-    const state = Store.getState();
-    const { scale } = state.userConfiguration;
+    const scale = getViewportScale(OrthoViews.TDView);
     Store.dispatch(moveTDViewXAction((delta.x / scale) * -1));
     Store.dispatch(moveTDViewYAction((delta.y / scale) * -1));
   }
@@ -658,13 +653,13 @@ export function calculateGlobalPos(clickPos: Point2): Vector3 {
   const { activeViewport } = state.viewModeData.plane;
   const curGlobalPos = getPosition(state.flycam);
   const zoomFactor = getPlaneScalingFactor(state.flycam);
-  const viewportScale = state.userConfiguration.scale;
+  const actualWidth = getInputCatcherRect(activeViewport).width;
+  const viewportScale = actualWidth / constants.VIEWPORT_WIDTH;
   const planeRatio = getBaseVoxelFactors(state.dataset.dataSource.scale);
 
-  const diffX =
-    (((constants.VIEWPORT_WIDTH * viewportScale) / 2 - clickPos.x) / viewportScale) * zoomFactor;
-  const diffY =
-    (((constants.VIEWPORT_WIDTH * viewportScale) / 2 - clickPos.y) / viewportScale) * zoomFactor;
+  const center = (constants.VIEWPORT_WIDTH * viewportScale) / 2;
+  const diffX = ((center - clickPos.x) / viewportScale) * zoomFactor;
+  const diffY = ((center - clickPos.y) / viewportScale) * zoomFactor;
 
   switch (activeViewport) {
     case OrthoViews.PLANE_XY:

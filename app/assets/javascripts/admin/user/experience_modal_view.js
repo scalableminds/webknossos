@@ -6,8 +6,10 @@ import { Modal, Button, Tooltip, Icon, Table, InputNumber, Tag, Badge } from "an
 import * as Utils from "libs/utils";
 import { updateUser } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
-import type { APIUserType, ExperienceDomainListType } from "admin/api_flow_types";
+import type { APIUser, ExperienceDomainList } from "admin/api_flow_types";
+import Toast from "libs/toast";
 import SelectExperienceDomain from "components/select_experience_domain";
+import HighlightableRow from "components/highlightable_row";
 
 const { Column } = Table;
 
@@ -28,15 +30,17 @@ type TableEntry = {
 };
 
 type Props = {
-  onChange: (Array<APIUserType>) => void,
+  onChange: (Array<APIUser>) => void,
   onCancel: () => void,
   visible: boolean,
-  selectedUsers: Array<APIUserType>,
+  selectedUsers: Array<APIUser>,
+  initialDomainToEdit: ?string,
 };
 
 type State = {
   tableEntries: Array<TableEntry>,
   removedDomains: Array<string>,
+  domainToEdit: ?string,
 };
 
 class ExperienceModalView extends React.PureComponent<Props, State> {
@@ -45,16 +49,8 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     this.state = {
       tableEntries: this.getTableEntries(props.selectedUsers),
       removedDomains: [],
+      domainToEdit: props.initialDomainToEdit,
     };
-  }
-
-  componentWillReceiveProps(nextProps: Props) {
-    if (nextProps.visible && !this.props.visible) {
-      this.setState({
-        tableEntries: this.getTableEntries(nextProps.selectedUsers),
-        removedDomains: [],
-      });
-    }
   }
 
   sortEntries(entries: Array<TableEntry>): Array<TableEntry> {
@@ -63,7 +59,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     );
   }
 
-  getTableEntries = (users: Array<APIUserType>): Array<TableEntry> => {
+  getTableEntries = (users: Array<APIUser>): Array<TableEntry> => {
     if (users.length <= 1) {
       return this.sortEntries(
         _.map(users[0].experiences, (value, domain) => ({
@@ -109,7 +105,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
 
   updateAllUsers = async () => {
     const relevantEntries = this.state.tableEntries.filter(entry => entry.changed);
-    const newUserPromises: Array<Promise<APIUserType>> = this.props.selectedUsers.map(user => {
+    const newUserPromises: Array<Promise<APIUser>> = this.props.selectedUsers.map(user => {
       const newExperiences = {
         ...user.experiences,
         ..._.fromPairs(relevantEntries.map(entry => [entry.domain, entry.value])),
@@ -131,11 +127,11 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     this.resolvePromisesAndCloseModal(newUserPromises);
   };
 
-  sendUserToServer(newUser: APIUserType, oldUser: APIUserType): Promise<APIUserType> {
+  sendUserToServer(newUser: APIUser, oldUser: APIUser): Promise<APIUser> {
     return updateUser(newUser).then(() => Promise.resolve(newUser), () => Promise.reject(oldUser));
   }
 
-  resolvePromisesAndCloseModal(usersPromises: Array<Promise<APIUserType>>): void {
+  resolvePromisesAndCloseModal(usersPromises: Array<Promise<APIUser>>): void {
     Promise.all(usersPromises).then(
       newUsers => {
         this.setState({
@@ -203,6 +199,10 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
   };
 
   addEnteredExperience = (domain: string) => {
+    if (domain.length < 3) {
+      Toast.warning("An experience domain needs at least 3 letters.");
+      return;
+    }
     if (this.state.tableEntries.findIndex(entry => entry.domain === domain) > -1) {
       return;
     }
@@ -218,10 +218,11 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     this.setState(prevState => ({
       tableEntries: this.sortEntries(_.concat(prevState.tableEntries, newExperience)),
       removedDomains: prevState.removedDomains.filter(currentDomain => currentDomain !== domain),
+      domainToEdit: domain,
     }));
   };
 
-  getDomainsOfTable = (): ExperienceDomainListType =>
+  getDomainsOfTable = (): ExperienceDomainList =>
     this.state.tableEntries.map(entry => entry.domain);
 
   render() {
@@ -229,7 +230,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
     if (!this.props.visible && selectedUsersCount === 0) {
       return null;
     }
-    const tableEntries = this.state.tableEntries;
+    const { tableEntries } = this.state;
     const multipleUsers = selectedUsersCount > 1;
     return (
       <Modal
@@ -261,6 +262,14 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
           pagination={false}
           scroll={{ y: 350 }}
           className="user-experience-table"
+          components={{
+            body: {
+              row: HighlightableRow,
+            },
+          }}
+          onRow={record => ({
+            shouldHighlight: record.domain === this.state.domainToEdit,
+          })}
         >
           <Column
             title="Domain"
@@ -324,6 +333,17 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
               return (
                 <span>
                   <InputNumber
+                    ref={ref => {
+                      if (ref == null || this.state.domainToEdit !== record.domain) {
+                        return;
+                      }
+                      ref.focus();
+                      setTimeout(() => {
+                        // Unfortunately, the time out is necessary, since otherwise the
+                        // focus is not correctly set
+                        this.setState({ domainToEdit: null });
+                      }, 0);
+                    }}
                     value={
                       this.state.tableEntries[index].value > -1
                         ? this.state.tableEntries[index].value
@@ -388,10 +408,11 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
         ) : null}
         <SelectExperienceDomain
           disabled={false}
+          mode="tags"
+          placeholder="New Experience Domain"
           value={[]}
           width={50}
           onSelect={this.addEnteredExperience}
-          onDeselect={() => {}}
           alreadyUsedDomains={this.getDomainsOfTable()}
         />
       </Modal>

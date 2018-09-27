@@ -2,11 +2,11 @@
 
 import * as THREE from "three";
 import { COLOR_TEXTURE_WIDTH_FIXED } from "oxalis/geometries/materials/node_shader";
-import type { UniformsType } from "oxalis/geometries/materials/abstract_plane_material_factory";
+import type { Uniforms } from "oxalis/geometries/materials/abstract_plane_material_factory";
 
 class EdgeShader {
   material: THREE.RawShaderMaterial;
-  uniforms: UniformsType;
+  uniforms: Uniforms;
 
   constructor(treeColorTexture: THREE.DataTexture) {
     this.setupUniforms(treeColorTexture);

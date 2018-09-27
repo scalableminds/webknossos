@@ -1,123 +1,127 @@
 // @flow
 import type {
-  VolumeTracingType,
-  BranchPointType,
+  VolumeTracing,
+  BranchPoint,
   CommentType,
-  TreeType,
-  NodeType,
-  BoundingBoxObjectType,
-  TreeGroupType,
+  Tree,
+  Node,
+  BoundingBoxObject,
+  TreeGroup,
 } from "oxalis/store";
 import type { Vector3, BoundingBoxType } from "oxalis/constants";
 import type { SendBucketInfo } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reducer_helpers";
 
-export type NodeWithTreeIdType = { treeId: number } & NodeType;
+export type NodeWithTreeId = { treeId: number } & Node;
 
-type UpdateTreeUpdateAction = {
+export type UpdateTreeUpdateAction = {|
   name: "createTree" | "updateTree",
-  value: {
+  value: {|
     id: number,
     updatedId: ?number,
     color: Vector3,
     name: string,
     comments: Array<CommentType>,
-    branchPoints: Array<BranchPointType>,
+    branchPoints: Array<BranchPoint>,
     groupId: ?number,
-  },
-};
-type DeleteTreeUpdateAction = {
+    timestamp: number,
+  |},
+|};
+export type DeleteTreeUpdateAction = {|
   name: "deleteTree",
-  value: { id: number },
-};
-type MoveTreeComponentUpdateAction = {
+  value: {| id: number |},
+|};
+type MoveTreeComponentUpdateAction = {|
   name: "moveTreeComponent",
-  value: {
+  value: {|
     sourceId: number,
     targetId: number,
     nodeIds: Array<number>,
-  },
-};
-type MergeTreeUpdateAction = {
+  |},
+|};
+type MergeTreeUpdateAction = {|
   name: "mergeTree",
-  value: {
+  value: {|
     sourceId: number,
     targetId: number,
-  },
-};
-type CreateNodeUpdateAction = {
+  |},
+|};
+export type CreateNodeUpdateAction = {|
   name: "createNode",
-  value: NodeWithTreeIdType,
-};
-type UpdateNodeUpdateAction = {
+  value: NodeWithTreeId,
+|};
+type UpdateNodeUpdateAction = {|
   name: "updateNode",
-  value: NodeWithTreeIdType,
-};
-type ToggleTreeUpdateAction = {
+  value: NodeWithTreeId,
+|};
+type ToggleTreeUpdateAction = {|
   name: "toggleTree",
-  value: {
+  value: {|
     id: number,
-  },
-};
-type DeleteNodeUpdateAction = {
+  |},
+|};
+export type DeleteNodeUpdateAction = {|
   name: "deleteNode",
-  value: {
+  value: {|
     treeId: number,
     nodeId: number,
-  },
-};
-type CreateEdgeUpdateAction = {
+  |},
+|};
+type CreateEdgeUpdateAction = {|
   name: "createEdge",
-  value: {
+  value: {|
     treeId: number,
     source: number,
     target: number,
-  },
-};
-type DeleteEdgeUpdateAction = {
+  |},
+|};
+type DeleteEdgeUpdateAction = {|
   name: "deleteEdge",
-  value: {
+  value: {|
     treeId: number,
     source: number,
     target: number,
-  },
-};
-type UpdateSkeletonTracingUpdateAction = {
+  |},
+|};
+export type UpdateSkeletonTracingUpdateAction = {|
   name: "updateTracing",
-  value: {
+  value: {|
     activeNode: ?number,
     editPosition: Vector3,
     editRotation: Vector3,
-    userBoundingBox: ?BoundingBoxObjectType,
+    userBoundingBox: ?BoundingBoxObject,
     zoomLevel: number,
-  },
-};
-type UpdateVolumeTracingUpdateAction = {
+  |},
+|};
+type UpdateVolumeTracingUpdateAction = {|
   name: "updateTracing",
-  value: {
+  value: {|
     activeSegmentId: number,
     editPosition: Vector3,
     editRotation: Vector3,
     largestSegmentId: number,
-    userBoundingBox: ?BoundingBoxObjectType,
+    userBoundingBox: ?BoundingBoxObject,
     zoomLevel: number,
-  },
-};
-type UpdateBucketUpdateAction = {
+  |},
+|};
+type UpdateBucketUpdateAction = {|
   name: "updateBucket",
   value: SendBucketInfo & {
     base64Data: string,
   },
-};
-type UpdateTreeGroupsUpdateAction = {
+|};
+type UpdateTreeGroupsUpdateAction = {|
   name: "updateTreeGroups",
-  value: {
-    treeGroups: Array<TreeGroupType>,
-  },
-};
-type UpdateTracingUpdateAction =
-  | UpdateSkeletonTracingUpdateAction
-  | UpdateVolumeTracingUpdateAction;
+  value: {|
+    treeGroups: Array<TreeGroup>,
+  |},
+|};
+export type RevertToVersionUpdateAction = {|
+  name: "revertToVersion",
+  value: {|
+    sourceVersion: number,
+  |},
+|};
 
 export type UpdateAction =
   | UpdateTreeUpdateAction
@@ -129,12 +133,41 @@ export type UpdateAction =
   | DeleteNodeUpdateAction
   | CreateEdgeUpdateAction
   | DeleteEdgeUpdateAction
-  | UpdateTracingUpdateAction
+  | UpdateSkeletonTracingUpdateAction
+  | UpdateVolumeTracingUpdateAction
   | UpdateBucketUpdateAction
   | ToggleTreeUpdateAction
+  | RevertToVersionUpdateAction
   | UpdateTreeGroupsUpdateAction;
 
-export function createTree(tree: TreeType): UpdateTreeUpdateAction {
+type AddServerValuesFn = <T>(
+  T,
+) => {
+  ...T,
+  value: { ...$PropertyType<T, "value">, actionTimestamp: number },
+};
+type AsServerAction<A> = $Call<AddServerValuesFn, A>;
+
+// Since flow does not provide ways to perform type transformations on the
+// single parts of a union, we need to write this out manually.
+export type ServerUpdateAction =
+  | AsServerAction<UpdateTreeUpdateAction>
+  | AsServerAction<DeleteTreeUpdateAction>
+  | AsServerAction<MergeTreeUpdateAction>
+  | AsServerAction<MoveTreeComponentUpdateAction>
+  | AsServerAction<CreateNodeUpdateAction>
+  | AsServerAction<UpdateNodeUpdateAction>
+  | AsServerAction<DeleteNodeUpdateAction>
+  | AsServerAction<CreateEdgeUpdateAction>
+  | AsServerAction<DeleteEdgeUpdateAction>
+  | AsServerAction<UpdateSkeletonTracingUpdateAction>
+  | AsServerAction<UpdateVolumeTracingUpdateAction>
+  | AsServerAction<UpdateBucketUpdateAction>
+  | AsServerAction<ToggleTreeUpdateAction>
+  | AsServerAction<RevertToVersionUpdateAction>
+  | AsServerAction<UpdateTreeGroupsUpdateAction>;
+
+export function createTree(tree: Tree): UpdateTreeUpdateAction {
   return {
     name: "createTree",
     value: {
@@ -157,7 +190,7 @@ export function deleteTree(treeId: number): DeleteTreeUpdateAction {
     },
   };
 }
-export function updateTree(tree: TreeType): UpdateTreeUpdateAction {
+export function updateTree(tree: Tree): UpdateTreeUpdateAction {
   return {
     name: "updateTree",
     value: {
@@ -172,7 +205,7 @@ export function updateTree(tree: TreeType): UpdateTreeUpdateAction {
     },
   };
 }
-export function toggleTree(tree: TreeType): ToggleTreeUpdateAction {
+export function toggleTree(tree: Tree): ToggleTreeUpdateAction {
   return {
     name: "toggleTree",
     value: {
@@ -217,13 +250,13 @@ export function deleteEdge(
     },
   };
 }
-export function createNode(treeId: number, node: NodeType): CreateNodeUpdateAction {
+export function createNode(treeId: number, node: Node): CreateNodeUpdateAction {
   return {
     name: "createNode",
     value: Object.assign({}, node, { treeId }),
   };
 }
-export function updateNode(treeId: number, node: NodeType): UpdateNodeUpdateAction {
+export function updateNode(treeId: number, node: Node): UpdateNodeUpdateAction {
   return {
     name: "updateNode",
     value: Object.assign({}, node, { treeId }),
@@ -267,7 +300,7 @@ export function moveTreeComponent(
   };
 }
 export function updateVolumeTracing(
-  tracing: VolumeTracingType,
+  tracing: VolumeTracing,
   position: Vector3,
   rotation: Vector3,
   zoomLevel: number,
@@ -284,7 +317,10 @@ export function updateVolumeTracing(
     },
   };
 }
-export function updateBucket(bucketInfo: SendBucketInfo, base64Data: string) {
+export function updateBucket(
+  bucketInfo: SendBucketInfo,
+  base64Data: string,
+): UpdateBucketUpdateAction {
   return {
     name: "updateBucket",
     value: Object.assign({}, bucketInfo, {
@@ -292,11 +328,19 @@ export function updateBucket(bucketInfo: SendBucketInfo, base64Data: string) {
     }),
   };
 }
-export function updateTreeGroups(treeGroups: Array<TreeGroupType>): UpdateTreeGroupsUpdateAction {
+export function updateTreeGroups(treeGroups: Array<TreeGroup>): UpdateTreeGroupsUpdateAction {
   return {
     name: "updateTreeGroups",
     value: {
       treeGroups,
+    },
+  };
+}
+export function revertToVersion(version: number): RevertToVersionUpdateAction {
+  return {
+    name: "revertToVersion",
+    value: {
+      sourceVersion: version,
     },
   };
 }

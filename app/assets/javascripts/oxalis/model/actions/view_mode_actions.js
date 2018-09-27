@@ -1,49 +1,55 @@
 // @flow
 
 import constants from "oxalis/constants";
-import type { OrthoViewType } from "oxalis/constants";
 import type { PartialCameraData } from "oxalis/store";
 import * as THREE from "three";
 import { getTDViewportSize } from "oxalis/model/accessors/view_mode_accessor";
+import type { Rect, OrthoView, Viewport } from "oxalis/constants";
 
-type SetViewportActionType = {
+type SetViewportAction = {
   type: "SET_VIEWPORT",
-  viewport: OrthoViewType,
+  viewport: OrthoView,
 };
 
-type SetTDCameraActionType = {
+type SetTDCameraAction = {
   type: "SET_TD_CAMERA",
   cameraData: PartialCameraData,
 };
 
-type CenterTDViewActionType = {
+type CenterTDViewAction = {
   type: "CENTER_TD_VIEW",
 };
 
-type ZoomTDViewActionType = {
+type ZoomTDViewAction = {
   type: "ZOOM_TD_VIEW",
   value: number,
   targetPosition: THREE.Vector3,
   curWidth: number,
 };
 
-type MoveTDViewByVectorActionType = {
+type MoveTDViewByVectorAction = {
   type: "MOVE_TD_VIEW_BY_VECTOR",
   x: number,
   y: number,
 };
 
-export const setViewportAction = (viewport: OrthoViewType): SetViewportActionType => ({
+type SetInputCatcherRect = {
+  type: "SET_INPUT_CATCHER_RECT",
+  viewport: Viewport,
+  rect: Rect,
+};
+
+export const setViewportAction = (viewport: OrthoView): SetViewportAction => ({
   type: "SET_VIEWPORT",
   viewport,
 });
 
-export const setTDCameraAction = (cameraData: PartialCameraData): SetTDCameraActionType => ({
+export const setTDCameraAction = (cameraData: PartialCameraData): SetTDCameraAction => ({
   type: "SET_TD_CAMERA",
   cameraData,
 });
 
-export const centerTDViewAction = (): CenterTDViewActionType => ({
+export const centerTDViewAction = (): CenterTDViewAction => ({
   type: "CENTER_TD_VIEW",
 });
 
@@ -51,30 +57,37 @@ export const zoomTDViewAction = (
   value: number,
   targetPosition: THREE.Vector3,
   curWidth: number,
-): ZoomTDViewActionType => ({
+): ZoomTDViewAction => ({
   type: "ZOOM_TD_VIEW",
   value,
   targetPosition,
   curWidth,
 });
 
-export const moveTDViewByVectorAction = (x: number, y: number): MoveTDViewByVectorActionType => ({
+export const moveTDViewByVectorAction = (x: number, y: number): MoveTDViewByVectorAction => ({
   type: "MOVE_TD_VIEW_BY_VECTOR",
   x,
   y,
 });
 
-export const moveTDViewXAction = (x: number): MoveTDViewByVectorActionType =>
+export const moveTDViewXAction = (x: number): MoveTDViewByVectorAction =>
   moveTDViewByVectorAction((x * getTDViewportSize()) / constants.VIEWPORT_WIDTH, 0);
 
-export const moveTDViewYAction = (y: number): MoveTDViewByVectorActionType =>
+export const moveTDViewYAction = (y: number): MoveTDViewByVectorAction =>
   moveTDViewByVectorAction(0, (-y * getTDViewportSize()) / constants.VIEWPORT_WIDTH);
 
-export type ViewModeActionType =
-  | SetViewportActionType
-  | SetTDCameraActionType
-  | CenterTDViewActionType
-  | ZoomTDViewActionType
-  | MoveTDViewByVectorActionType;
+export const setInputCatcherRect = (viewport: Viewport, rect: Rect): SetInputCatcherRect => ({
+  type: "SET_INPUT_CATCHER_RECT",
+  viewport,
+  rect,
+});
+
+export type ViewModeAction =
+  | SetViewportAction
+  | SetTDCameraAction
+  | CenterTDViewAction
+  | ZoomTDViewAction
+  | MoveTDViewByVectorAction
+  | SetInputCatcherRect;
 
 export default {};

@@ -12,10 +12,11 @@ import { ControlModeEnum } from "oxalis/constants";
 import { APITracingTypeEnum } from "admin/api_flow_types";
 import { getAnnotationInformation } from "admin/admin_rest_api";
 import SecuredRoute from "components/secured_route";
+import DisableGenericDnd from "components/disable_generic_dnd";
 import Navbar from "navbar";
 import { Imprint, Privacy } from "components/legal";
 
-import TracingLayoutView from "oxalis/view/tracing_layout_view";
+import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
 import DashboardView, { urlTokenToTabKeyMap } from "dashboard/dashboard_view";
 import SpotlightView from "dashboard/spotlight_view";
 import LoginView from "admin/auth/login_view";
@@ -48,13 +49,13 @@ import Onboarding from "admin/onboarding";
 import * as Utils from "libs/utils";
 
 import type { OxalisState } from "oxalis/store";
-import type { APIUserType } from "admin/api_flow_types";
+import type { APIUser } from "admin/api_flow_types";
 import type { ContextRouter } from "react-router-dom";
 
 const { Content } = Layout;
 
 type StateProps = {
-  activeUser: ?APIUserType,
+  activeUser: ?APIUser,
 };
 
 type Props = StateProps;
@@ -113,6 +114,7 @@ class ReactRouter extends React.Component<Props> {
     return (
       <Router history={browserHistory}>
         <Layout>
+          <DisableGenericDnd />
           <Navbar isAuthenticated={isAuthenticated} />
           <Content>
             <Switch>

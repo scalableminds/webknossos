@@ -1,23 +1,33 @@
+// @flow
+
 import * as React from "react";
 import { Select } from "antd";
-import type { ExperienceDomainListType } from "admin/api_flow_types";
+import type { ExperienceDomainList } from "admin/api_flow_types";
 import { getExistingExperienceDomains } from "admin/admin_rest_api";
 
 const Option = Select.Option;
 
 type Props = {
-  value: string,
+  value?: string | Array<string>,
+  width: number,
+  placeholder: string,
+  notFoundContent?: string,
   disabled: boolean,
-  onSelect: () => void,
-  onDeselect: () => void,
-  alreadyUsedDomains: ExperienceDomainListType,
+  mode?: string,
+  onSelect?: string => void,
+  onChange?: () => void,
+  alreadyUsedDomains: ExperienceDomainList,
 };
 
 type State = {
-  domains: ExperienceDomainListType,
+  domains: ExperienceDomainList,
 };
 
 class SelectExperienceDomain extends React.PureComponent<Props, State> {
+  static defaultProps = {
+    alreadyUsedDomains: [],
+  };
+
   state = {
     domains: [],
   };
@@ -30,21 +40,23 @@ class SelectExperienceDomain extends React.PureComponent<Props, State> {
     this.setState({ domains: await getExistingExperienceDomains() });
   }
 
-  getUnusedDomains(): ExperienceDomainListType {
+  getUnusedDomains(): ExperienceDomainList {
     return this.state.domains.filter(domain => !this.props.alreadyUsedDomains.includes(domain));
   }
 
   render() {
     return (
       <Select
-        mode="tags"
+        showSearch
+        mode={this.props.mode}
         value={this.props.value}
-        maxTagCount={1}
+        optionFilterProp="children"
+        notFoundContent={this.props.notFoundContent}
         style={{ width: `${this.props.width}%` }}
         disabled={this.props.disabled}
-        placeholder="New Experience Domain"
+        placeholder={this.props.placeholder}
         onSelect={this.props.onSelect}
-        onDeselect={this.props.onDeselect}
+        onChange={this.props.onChange}
       >
         {this.getUnusedDomains().map(domain => <Option key={domain}>{domain}</Option>)}
       </Select>

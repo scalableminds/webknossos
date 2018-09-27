@@ -13,8 +13,8 @@ import determineBucketsForFlight from "oxalis/model/bucket_data_handling/bucket_
 import { getAreas, getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import * as THREE from "three";
 import UpdatableTexture from "libs/UpdatableTexture";
-import type { Vector3, Vector4, OrthoViewMapType, ModeType } from "oxalis/constants";
-import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
+import type { Vector3, Vector4, OrthoViewMap, Mode } from "oxalis/constants";
+import type { Area } from "oxalis/model/accessors/flycam_accessor";
 import { getResolutions, getByteCount } from "oxalis/model/accessors/dataset_accessor";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
@@ -61,9 +61,9 @@ export default class LayerRenderingManager {
   // Indicates whether the current position is closer to the previous or next bucket for each dimension
   // For example, if the current position is [31, 10, 25] the value would be [1, -1, 1]
   lastSubBucketLocality: Vector3 = [-1, -1, -1];
-  lastAreas: OrthoViewMapType<AreaType>;
+  lastAreas: OrthoViewMap<Area>;
   lastZoomedMatrix: M4x4;
-  lastViewMode: ModeType;
+  lastViewMode: Mode;
   lastIsInvisible: boolean;
   textureBucketManager: TextureBucketManager;
   textureWidth: number;

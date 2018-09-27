@@ -22,6 +22,8 @@ import models.user._
 import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
 import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
+import com.scalableminds.webknossos.datastore.models.datasource.SegmentationLayer
+import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
 import play.api.http.HttpEntity
 import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
 import play.api.libs.Files.TemporaryFile
@@ -113,7 +115,10 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
         dataSet <- dataSetDAO.findOneByName(dataSetName)
         tracingStoreClient <- tracingStoreService.clientFor(dataSet)
         volumeTracingIdOpt <- Fox.runOptional(volumeTracingsWithDataLocations.headOption){ v =>
-          tracingStoreClient.saveVolumeTracing(v._1, parsedFiles.otherFiles.get(v._2).map(_.file))
+          for {
+            processedVolumeTracing <- adaptPropertiesToFallbackLayer(v._1, dataSet)
+            savedTracingId <- tracingStoreClient.saveVolumeTracing(processedVolumeTracing, parsedFiles.otherFiles.get(v._2).map(_.file))
+          } yield savedTracingId
         }
         mergedSkeletonTracingIdOpt <- Fox.runOptional(skeletonTracings.headOption){ s =>
           tracingStoreClient.mergeSkeletonTracingsByContents(SkeletonTracings(skeletonTracings), persistTracing=true)
@@ -126,6 +131,23 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       )
     } else {
       returnError(parsedFiles)
+    }
+  }
+
+  private def adaptPropertiesToFallbackLayer(volumeTracing: VolumeTracing, dataSet: DataSet): Fox[VolumeTracing] = {
+    for {
+      dataSource <- dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable)
+    } yield {
+      val fallbackLayer = dataSource.dataLayers.flatMap {
+        case layer: SegmentationLayer if (Some(layer.name) == volumeTracing.fallbackLayer) => Some(layer)
+        case _ => None
+      }.headOption
+
+      volumeTracing.copy(
+        boundingBox = dataSource.boundingBox,
+        elementClass = fallbackLayer.map(layer => elementClassToProto(layer.elementClass)).getOrElse(VolumeTracingDefaults.elementClass),
+        fallbackLayer = fallbackLayer.map(_.name),
+        largestSegmentId = fallbackLayer.map(_.largestSegmentId).getOrElse(VolumeTracingDefaults.largestSegmentId))
     }
   }
 

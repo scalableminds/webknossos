@@ -32,7 +32,7 @@ import Toast from "libs/toast";
 import Model from "oxalis/model";
 import Constants, { VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import type { OrthoView, VolumeTool, ContourMode } from "oxalis/constants";
+import type { OrthoView, VolumeTool, ContourMode, BoundingBoxType } from "oxalis/constants";
 import type { VolumeTracing, Flycam } from "oxalis/store";
 import api from "oxalis/api/internal_api";
 
@@ -78,10 +78,12 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     const currentLayer = yield* call(createVolumeLayer, startEditingAction.planeId);
     const activeTool = yield* select(state => enforceVolumeTracing(state.tracing).activeTool);
 
+    const initialViewport = yield* select(state => state.viewModeData.plane.activeViewport);
+    const activeViewportBounding = yield* call(getBoundingsFromPosition, initialViewport);
     if (activeTool === VolumeToolEnum.BRUSH) {
       yield* call(
         labelWithIterator,
-        currentLayer.getCircleVoxelIterator(startEditingAction.position),
+        currentLayer.getCircleVoxelIterator(startEditingAction.position, activeViewportBounding),
         contourTracingMode,
       );
     }
@@ -96,13 +98,18 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
       if (!addToLayerAction || addToLayerAction.type !== "ADD_TO_LAYER") {
         throw new Error("Unexpected action. Satisfy flow.");
       }
-
+      const activeViewport = yield* select(state => state.viewModeData.plane.activeViewport);
+      if (initialViewport !== activeViewport) {
+        // if the current viewport does not match the initial viewport -> dont draw
+        continue;
+      }
       if (activeTool === VolumeToolEnum.TRACE) {
         currentLayer.addContour(addToLayerAction.position);
       } else if (activeTool === VolumeToolEnum.BRUSH) {
+        const currentViewportBounding = yield* call(getBoundingsFromPosition, activeViewport);
         yield* call(
           labelWithIterator,
-          currentLayer.getCircleVoxelIterator(addToLayerAction.position),
+          currentLayer.getCircleVoxelIterator(addToLayerAction.position, currentViewportBounding),
           contourTracingMode,
         );
       }
@@ -110,6 +117,26 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
 
     yield* call(finishLayer, currentLayer, activeTool, contourTracingMode);
   }
+}
+
+function* getBoundingsFromPosition(currentViewport: OrthoView): Saga<?BoundingBoxType> {
+  const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
+  const zoom = yield* select(state => state.flycam.zoomStep);
+  const baseVoxelFactors = yield* select(state =>
+    getBaseVoxelFactors(state.dataset.dataSource.scale),
+  );
+  const halfViewportWidth = Math.round((Constants.PLANE_WIDTH / 2) * zoom);
+  const relevantCoordinates = Dimensions.transDim([1, 1, 0], currentViewport);
+  let halfViewportBounds = [
+    halfViewportWidth * baseVoxelFactors[0] * relevantCoordinates[0],
+    halfViewportWidth * baseVoxelFactors[1] * relevantCoordinates[1],
+    halfViewportWidth * baseVoxelFactors[2] * relevantCoordinates[2],
+  ];
+  halfViewportBounds = V3.ceil(halfViewportBounds);
+  return {
+    min: V3.sub(position, halfViewportBounds),
+    max: V3.add(position, halfViewportBounds),
+  };
 }
 
 function* createVolumeLayer(planeId: OrthoView): Saga<VolumeLayer> {

@@ -7,7 +7,7 @@ import java.util.Base64
 import akka.stream.scaladsl.StreamConverters
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Point3D
-import com.scalableminds.webknossos.datastore.services.{AccessTokenService, BinaryDataService, DataSourceRepository, UserAccessRequest}
+import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.models._
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, SegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.requests.{DataServiceDataRequest, DataServiceMappingRequest, DataServiceRequestSettings}
@@ -28,7 +28,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class BinaryDataController @Inject()(
                                       dataSourceRepository: DataSourceRepository,
                                       config: DataStoreConfig,
-                                      accessTokenService: AccessTokenService)
+                                      accessTokenService: DataStoreAccessTokenService)
                                     (implicit ec: ExecutionContext,
                                      bodyParsers: PlayBodyParsers)
                                     extends Controller {

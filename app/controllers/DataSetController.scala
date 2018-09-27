@@ -62,7 +62,7 @@ extends Controller {
         case _ => {
           val defaultCenterOpt = dataSet.defaultConfiguration.flatMap(c => c.configuration.get("position").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Point3D])))
           val defaultZoomOpt = dataSet.defaultConfiguration.flatMap(c => c.configuration.get("zoom").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Int])))
-          dataSetService.handlerFor(dataSet).flatMap(_.requestDataLayerThumbnail(dataLayerName, width, height, defaultZoomOpt, defaultCenterOpt)).map {
+          dataSetService.clientFor(dataSet).flatMap(_.requestDataLayerThumbnail(dataLayerName, width, height, defaultZoomOpt, defaultCenterOpt)).map {
             result =>
               // We don't want all images to expire at the same time. Therefore, we add some random variation
               cache.set(s"thumbnail-$dataSetName*$dataLayerName-$width-$height",
@@ -147,7 +147,7 @@ extends Controller {
       dataSource <- dataSetService.dataSourceFor(dataSet) ?~> "dataSource.notFound"
       usableDataSource <- dataSource.toUsable.toFox ?~> "dataSet.notImported"
       datalayer <- usableDataSource.dataLayers.headOption.toFox ?~> "dataSet.noLayers"
-      thumbnail <- dataSetService.handlerFor(dataSet).flatMap(_.requestDataLayerThumbnail(datalayer.name, 100, 100, None, None)) ?~> "dataSet.loadingDataFailed"
+      thumbnail <- dataSetService.clientFor(dataSet).flatMap(_.requestDataLayerThumbnail(datalayer.name, 100, 100, None, None)) ?~> "dataSet.loadingDataFailed"
     } yield {
       Ok("Ok")
     }

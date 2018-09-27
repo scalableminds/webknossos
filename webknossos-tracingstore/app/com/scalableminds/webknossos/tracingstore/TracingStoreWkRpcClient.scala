@@ -3,17 +3,18 @@ package com.scalableminds.webknossos.tracingstore
 import com.google.inject.Inject
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.services.{AbstractWebKnossosServer, UserAccessAnswer, UserAccessRequest}
+import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessAnswer, UserAccessRequest, WkRpcClient}
 import com.typesafe.scalalogging.LazyLogging
+import play.api.cache.SyncCacheApi
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
 
 
-class WebKnossosServer @Inject()(
+class TracingStoreWkRpcClient @Inject()(
                                   rpc: RPC,
                                   config: TracingStoreConfig,
                                   val lifecycle: ApplicationLifecycle
-                                ) extends AbstractWebKnossosServer with LazyLogging {
+                                ) extends WkRpcClient with LazyLogging {
 
   private val dataStoreKey: String = config.Tracingstore.key
   private val dataStoreName: String = config.Tracingstore.name
@@ -40,3 +41,5 @@ class WebKnossosServer @Inject()(
       .postWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
   }
 }
+
+class TracingStoreAccessTokenService @Inject()(val webKnossosServer: TracingStoreWkRpcClient, val cache: SyncCacheApi) extends AccessTokenService

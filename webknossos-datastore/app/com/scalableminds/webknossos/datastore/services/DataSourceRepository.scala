@@ -10,7 +10,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class DataSourceRepository @Inject()(
-                                      webKnossosServer: WebKnossosServer,
+                                      webKnossosServer: DataStoreWkRpcClient,
                                       @Named("webknossos-datastore") val system: ActorSystem
                                     )
     extends TemporaryStore[String, InboxDataSource](system)

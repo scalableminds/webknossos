@@ -6,7 +6,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.services.{AccessMode, AccessResourceType, UserAccessAnswer, UserAccessRequest}
 import models.annotation._
-import models.binary.{DataSetDAO, DataStoreHandler, DataStoreService}
+import models.binary.{DataSetDAO, DataStoreRpcClient, DataStoreService}
 import models.user.{User, UserService}
 import net.liftweb.common.{Box, Full}
 import oxalis.security._
@@ -46,7 +46,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
   def validateUserAccess(name: String, token: String) = Action.async(validateJson[UserAccessRequest]) { implicit request =>
     dataStoreService.validateAccess(name) { dataStore =>
       val accessRequest = request.body
-      if (token == DataStoreHandler.webKnossosToken) {
+      if (token == DataStoreRpcClient.webKnossosToken) {
         Fox.successful(Ok(Json.toJson(UserAccessAnswer(true))))
       } else {
         for {

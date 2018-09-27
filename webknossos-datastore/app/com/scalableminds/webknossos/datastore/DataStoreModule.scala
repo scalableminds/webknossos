@@ -12,10 +12,10 @@ class DataStoreModule(environment: Environment, configuration: Configuration) ex
 
   def configure() = {
     bind(classOf[DataStoreConfig]).asEagerSingleton()
-    bind(classOf[AccessTokenService]).asEagerSingleton()
+    bind(classOf[DataStoreAccessTokenService]).asEagerSingleton()
     bind(classOf[ActorSystem]).annotatedWith(Names.named("webknossos-datastore")).toInstance(system)
     bind(classOf[DataSourceRepository]).asEagerSingleton()
     bind(classOf[DataSourceService]).asEagerSingleton()
-    bind(classOf[AbstractWebKnossosServer]).to(classOf[WebKnossosServer]).asEagerSingleton()
+    bind(classOf[DataStoreWkRpcClient]).asEagerSingleton()
   }
 }

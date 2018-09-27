@@ -78,16 +78,6 @@ class VolumeTracingService @Inject()(
       return Failure("Tracing has already been edited.")
     }
 
-    //TODO: initialize largestSegmentId, elementClass and boundingBox already on wK side
-
-    val newTracing = tracing.copy(
-      boundingBox = BoundingBox(Point3D(0,0,0),1000,1000,1000),
-      elementClass = VolumeTracingDefaults.elementClass,
-      largestSegmentId = VolumeTracingDefaults.largestSegmentId
-    )
-
-    save(newTracing, Some(tracingId), 0)
-
     val dataLayer = volumeTracingLayer(tracingId, tracing)
 
     ZipIO.withUnziped(initialData) {

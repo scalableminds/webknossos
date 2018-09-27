@@ -10,7 +10,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.tracingstore.tracings.TracingType
+import com.scalableminds.webknossos.tracingstore.tracings.{ProtoGeometryImplicits, TracingType}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationState._
 import models.annotation.nml.{NmlResults, NmlService, NmlWriter}
@@ -22,7 +22,7 @@ import models.user._
 import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
 import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
-import com.scalableminds.webknossos.datastore.models.datasource.SegmentationLayer
+import com.scalableminds.webknossos.datastore.models.datasource.{ElementClass, SegmentationLayer}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
 import play.api.http.HttpEntity
 import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
@@ -52,6 +52,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
                                       (implicit ec: ExecutionContext)
   extends Controller
     with FoxImplicits
+    with ProtoGeometryImplicits
     with LazyLogging {
   implicit val actorSystem = ActorSystem()
   implicit val materializer = ActorMaterializer()
@@ -134,18 +135,17 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
     }
   }
 
-  private def adaptPropertiesToFallbackLayer(volumeTracing: VolumeTracing, dataSet: DataSet): Fox[VolumeTracing] = {
+  private def adaptPropertiesToFallbackLayer(volumeTracing: VolumeTracing, dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[VolumeTracing] = {
     for {
       dataSource <- dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable)
-    } yield {
-      val fallbackLayer = dataSource.dataLayers.flatMap {
+      fallbackLayer = dataSource.dataLayers.flatMap {
         case layer: SegmentationLayer if (Some(layer.name) == volumeTracing.fallbackLayer) => Some(layer)
         case _ => None
       }.headOption
-
+    } yield {
       volumeTracing.copy(
-        boundingBox = dataSource.boundingBox,
-        elementClass = fallbackLayer.map(layer => elementClassToProto(layer.elementClass)).getOrElse(VolumeTracingDefaults.elementClass),
+        boundingBox = boundingBoxToProto(dataSource.boundingBox),
+        elementClass = fallbackLayer.map(layer => elementClassToProto(layer.elementClass)).getOrElse(elementClassToProto(VolumeTracingDefaults.elementClass)),
         fallbackLayer = fallbackLayer.map(_.name),
         largestSegmentId = fallbackLayer.map(_.largestSegmentId).getOrElse(VolumeTracingDefaults.largestSegmentId))
     }

@@ -29,7 +29,7 @@ class BrainTracing @Inject()(actorSystem: ActorSystem,
   def registerIfNeeded(user: User, password: String)(implicit ec: ExecutionContext): Fox[Option[String]] =
     for {
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext) ?~> "organization.notFound"
-      result <- (if (organization.name == "Connectomics department" && conf.Braintracing.active) register(user, password).toFox.map(Some(_)) else Fox.successful(None))
+      result <- (if (organization.name == "Connectomics_Department" && conf.Braintracing.active) register(user, password).toFox.map(Some(_)) else Fox.successful(None))
     } yield result
 
   private def register(user: User, password: String)(implicit ec: ExecutionContext): Future[String] = {

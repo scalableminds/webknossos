@@ -5,7 +5,7 @@
 
 import _ from "lodash";
 import ConnectionInfo from "oxalis/model/data_connection_info";
-import { requestFromStore } from "oxalis/model/bucket_data_handling/wkstore_adapter";
+import { requestWithFallback } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import type { DataStoreInfo, DataLayerType } from "oxalis/store";
@@ -97,7 +97,7 @@ class PullQueue {
     const { renderMissingDataBlack } = Store.getState().datasetConfiguration;
 
     try {
-      const bucketBuffers = await requestFromStore(layerInfo, batch);
+      const bucketBuffers = await requestWithFallback(layerInfo, batch);
       this.connectionInfo.log(
         this.layerName,
         roundTripBeginTime,

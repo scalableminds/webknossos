@@ -172,6 +172,7 @@ export type VolumeTracing = {|
   +contourTracingMode: ContourMode,
   +contourList: Array<Vector3>,
   +cells: VolumeCellMap,
+  +fallbackLayer?: string,
 |};
 
 export type ReadOnlyTracing = {|

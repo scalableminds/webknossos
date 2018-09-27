@@ -19,6 +19,7 @@ import { createWorker } from "oxalis/workers/comlink_wrapper";
 import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
 import ByteArrayToBase64Worker from "oxalis/workers/byte_array_to_base64.worker";
 import { parseAsMaybe } from "libs/utils";
+import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 
 const decodeFourBit = createWorker(DecodeFourBitWorker);
 const byteArrayToBase64 = createWorker(ByteArrayToBase64Worker);
@@ -55,7 +56,61 @@ function createSendBucketInfo(zoomedAddress: Vector4, resolutions: Array<Vector3
   };
 }
 
+function getNullIndices<T>(arr: Array<?T>): Array<number> {
+  return arr.map((el, idx) => (el != null ? -1 : idx)).filter(idx => idx > -1);
+}
+
+export async function requestWithFallback(
+  layerInfo: DataLayerType,
+  batch: Array<Vector4>,
+): Promise<Array<?Uint8Array>> {
+  const state = Store.getState();
+  const datasetName = state.dataset.name;
+  const dataStoreHost = state.dataset.dataStore.url;
+  const tracingStoreHost = state.tracing.tracingStore.url;
+  const isSegmentation = isSegmentationLayer(state.dataset, layerInfo.name);
+
+  const getDataStoreUrl = (optLayerName?: string) =>
+    `${dataStoreHost}/data/datasets/${datasetName}/layers/${optLayerName || layerInfo.name}`;
+  const getTracingStoreUrl = () => `${tracingStoreHost}/tracings/volume/${layerInfo.name}`;
+
+  // For non-segmentation layers and for viewing datasets, we'll always use the datastore URL
+  const shouldUseDataStore = !isSegmentation || state.tracing.volume == null;
+  const requestUrl = shouldUseDataStore ? getDataStoreUrl() : getTracingStoreUrl();
+
+  const bucketBuffers = await requestFromStore(requestUrl, layerInfo, batch).catch(() => {
+    return batch.map(() => null);
+  });
+  const missingBucketIndices = getNullIndices(bucketBuffers);
+
+  const retry =
+    !shouldUseDataStore &&
+    missingBucketIndices.length > 0 &&
+    enforceVolumeTracing(state.tracing).fallbackLayer != null;
+  if (!retry) {
+    return bucketBuffers;
+  }
+
+  // Request missing buckets from the datastore as a fallback
+  const fallbackBatch = missingBucketIndices.map(idx => batch[idx]);
+  const fallbackBuffers = await requestFromStore(
+    getDataStoreUrl(enforceVolumeTracing(state.tracing).fallbackLayer),
+    layerInfo,
+    fallbackBatch,
+  );
+
+  return bucketBuffers.map((bucket, idx) => {
+    if (bucket != null) {
+      return bucket;
+    } else {
+      const fallbackIdx = missingBucketIndices.indexOf(idx);
+      return fallbackBuffers[fallbackIdx];
+    }
+  });
+}
+
 export async function requestFromStore(
+  dataUrl: string,
   layerInfo: DataLayerType,
   batch: Array<Vector4>,
 ): Promise<Array<?Uint8Array>> {
@@ -68,14 +123,8 @@ export async function requestFromStore(
   );
 
   return doWithToken(async token => {
-    const state = Store.getState();
-    const datasetName = state.dataset.name;
-    const dataStoreUrl = state.dataset.dataStore.url;
-    // todo: use tracingStore first and then datastore as fallback
-    // const tracingStoreUrl = state.dataset.tracingStore.url;
-
     const { buffer: responseBuffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
-      `${dataStoreUrl}/data/datasets/${datasetName}/layers/${layerInfo.name}/data?token=${token}`,
+      `${dataUrl}/data?token=${token}`,
       {
         data: bucketInfo,
         timeout: REQUEST_TIMEOUT,

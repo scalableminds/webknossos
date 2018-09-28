@@ -113,8 +113,8 @@ object AssetCompilation {
   val settings = Seq(
     AssetCompilation.SettingsKeys.webpackPath := (Path("node_modules") / ".bin" / "webpack").getPath,
     AssetCompilation.SettingsKeys.npmPath := "yarn",
-    run in Compile <<= (run in Compile) map(killWebpack) dependsOn webpackGenerateTask,
-    sourceGenerators in Compile += Def.task[Seq[File]] {slickClassesFromDBSchemaTask.value},
+    run in Compile := ((run in Compile) map(killWebpack) dependsOn webpackGenerateTask).evaluated,
+    sourceGenerators in Compile += slickClassesFromDBSchemaTask,
     managedSourceDirectories in Compile += sourceManaged.value,
     stage := (stage dependsOn assetsGenerationTask).value,
     dist := (dist dependsOn assetsGenerationTask).value

@@ -2,13 +2,9 @@ import play.routes.compiler.InjectedRoutesGenerator
 import play.sbt.routes.RoutesKeys.routesGenerator
 import sbt._
 
-name := "webknossos"
-
-scalaVersion in ThisBuild := "2.11.8"
-
-version := "wk"
-
-scalacOptions in ThisBuild ++= Seq(
+ThisBuild / version := "wk"
+ThisBuild / scalaVersion := "2.11.8"
+ThisBuild / scalacOptions ++= Seq(
   "-target:jvm-1.8",
   "-feature",
   "-deprecation",
@@ -16,37 +12,13 @@ scalacOptions in ThisBuild ++= Seq(
   "-language:postfixOps"
 )
 
-lazy val webknossosSettings = Seq(
-  TwirlKeys.templateImports += "oxalis.view.helpers._",
-  TwirlKeys.templateImports += "oxalis.view._",
-  routesGenerator := InjectedRoutesGenerator,
-  libraryDependencies ++= Dependencies.webknossosDependencies,
+lazy val commonSettings = Seq(
   resolvers ++= DependencyResolvers.dependencyResolvers,
-  sourceDirectory in Assets := file("none"),
-  updateOptions := updateOptions.value.withLatestSnapshots(true),
-  unmanagedJars in Compile ++= {
-    val libs = baseDirectory.value / "lib"
-    val subs = (libs ** "*") filter { _.isDirectory }
-    val targets = ( (subs / "target") ** "*" ) filter {f => f.name.startsWith("scala-") && f.isDirectory}
-    ((libs +++ subs +++ targets) ** "*.jar").classpath
-  },
   sources in (Compile, doc) := Seq.empty,
   publishArtifact in (Compile, packageDoc) := false
 )
 
-
-lazy val webknossosDatastoreSettings = Seq(
-  libraryDependencies ++= Dependencies.webknossosDatastoreDependencies,
-  resolvers ++= DependencyResolvers.dependencyResolvers,
-  routesGenerator := InjectedRoutesGenerator,
-  name := "webknossos-datastore",
-  version := "wk",
-  sources in (Compile, doc) := Seq.empty,
-  publishArtifact in (Compile, packageDoc) := false
-)
-
-
-val protocolBufferSettings = Seq(
+lazy val protocolBufferSettings = Seq(
   ProtocPlugin.autoImport.PB.targets in Compile := Seq(
     scalapb.gen() -> new java.io.File((sourceManaged in Compile).value + "/proto")
   ),
@@ -54,10 +26,8 @@ val protocolBufferSettings = Seq(
 
 lazy val util = (project in file("util"))
   .settings(
-    resolvers ++= DependencyResolvers.dependencyResolvers,
-    libraryDependencies ++= Dependencies.utilDependencies,
-    sources in (Compile, doc) := Seq.empty,
-    publishArtifact in (Compile, packageDoc) := false
+    commonSettings,
+    libraryDependencies ++= Dependencies.utilDependencies
   )
 
 lazy val webknossosDatastore = (project in file("webknossos-datastore"))
@@ -65,13 +35,34 @@ lazy val webknossosDatastore = (project in file("webknossos-datastore"))
   .enablePlugins(play.sbt.PlayScala)
   .enablePlugins(BuildInfoPlugin)
   .enablePlugins(ProtocPlugin)
-  .enablePlugins(play.sbt.PlayScala)
-  .enablePlugins(BuildInfoPlugin)
-  .settings(protocolBufferSettings)
-  .settings((webknossosDatastoreSettings ++ BuildInfoSettings.webknossosDatastoreBuildInfoSettings):_*)
+  .settings(
+    name := "webknossos-datastore",
+    commonSettings,
+    protocolBufferSettings,
+    BuildInfoSettings.webknossosDatastoreBuildInfoSettings,
+    libraryDependencies ++= Dependencies.webknossosDatastoreDependencies,
+    routesGenerator := InjectedRoutesGenerator
+  )
 
 lazy val webknossos = (project in file("."))
   .dependsOn(util, webknossosDatastore)
   .enablePlugins(play.sbt.PlayScala)
   .enablePlugins(BuildInfoPlugin)
-  .settings((webknossosSettings ++ AssetCompilation.settings ++ BuildInfoSettings.webknossosBuildInfoSettings):_*)
+  .settings(
+    name := "webknossos",
+    commonSettings,
+    AssetCompilation.settings,
+    BuildInfoSettings.webknossosBuildInfoSettings,
+    TwirlKeys.templateImports += "oxalis.view.helpers._",
+    TwirlKeys.templateImports += "oxalis.view._",
+    routesGenerator := InjectedRoutesGenerator,
+    libraryDependencies ++= Dependencies.webknossosDependencies,
+    sourceDirectory in Assets := file("none"),
+    updateOptions := updateOptions.value.withLatestSnapshots(true),
+    unmanagedJars in Compile ++= {
+      val libs = baseDirectory.value / "lib"
+      val subs = (libs ** "*") filter { _.isDirectory }
+      val targets = ( (subs / "target") ** "*" ) filter {f => f.name.startsWith("scala-") && f.isDirectory}
+      ((libs +++ subs +++ targets) ** "*.jar").classpath
+    }
+  )

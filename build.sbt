@@ -29,7 +29,9 @@ lazy val webknossosSettings = Seq(
     val subs = (libs ** "*") filter { _.isDirectory }
     val targets = ( (subs / "target") ** "*" ) filter {f => f.name.startsWith("scala-") && f.isDirectory}
     ((libs +++ subs +++ targets) ** "*.jar").classpath
-  }
+  },
+  sources in (Compile, doc) := Seq.empty,
+  publishArtifact in (Compile, packageDoc) := false
 )
 
 
@@ -38,7 +40,9 @@ lazy val webknossosDatastoreSettings = Seq(
   resolvers ++= DependencyResolvers.dependencyResolvers,
   routesGenerator := InjectedRoutesGenerator,
   name := "webknossos-datastore",
-  version := "wk"
+  version := "wk",
+  sources in (Compile, doc) := Seq.empty,
+  publishArtifact in (Compile, packageDoc) := false
 )
 
 
@@ -51,7 +55,9 @@ val protocolBufferSettings = Seq(
 lazy val util = (project in file("util"))
   .settings(
     resolvers ++= DependencyResolvers.dependencyResolvers,
-    libraryDependencies ++= Dependencies.utilDependencies
+    libraryDependencies ++= Dependencies.utilDependencies,
+    sources in (Compile, doc) := Seq.empty,
+    publishArtifact in (Compile, packageDoc) := false
   )
 
 lazy val webknossosDatastore = (project in file("webknossos-datastore"))

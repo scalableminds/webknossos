@@ -23,7 +23,7 @@ lazy val webknossosSettings = Seq(
   libraryDependencies ++= Dependencies.webknossosDependencies,
   resolvers ++= DependencyResolvers.dependencyResolvers,
   sourceDirectory in Assets := file("none"),
-  updateOptions := updateOptions.value.withLatestSnapshots(true).withCachedResolution(true),
+  updateOptions := updateOptions.value.withLatestSnapshots(true),
   unmanagedJars in Compile ++= {
     val libs = baseDirectory.value / "lib"
     val subs = (libs ** "*") filter { _.isDirectory }
@@ -38,8 +38,7 @@ lazy val webknossosDatastoreSettings = Seq(
   resolvers ++= DependencyResolvers.dependencyResolvers,
   routesGenerator := InjectedRoutesGenerator,
   name := "webknossos-datastore",
-  version := "wk",
-  updateOptions := updateOptions.value.withCachedResolution(true)
+  version := "wk"
 )
 
 
@@ -52,8 +51,7 @@ val protocolBufferSettings = Seq(
 lazy val util = (project in file("util"))
   .settings(
     resolvers ++= DependencyResolvers.dependencyResolvers,
-    libraryDependencies ++= Dependencies.utilDependencies,
-    updateOptions := updateOptions.value.withCachedResolution(true)
+    libraryDependencies ++= Dependencies.utilDependencies
   )
 
 lazy val webknossosDatastore = (project in file("webknossos-datastore"))

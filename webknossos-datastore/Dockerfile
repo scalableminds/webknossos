@@ -3,15 +3,15 @@ FROM openjdk:8-jre
 RUN mkdir -p /srv/webknossos-datastore \
   && groupadd -g 1000 -r webknossos \
   && useradd -u 1000 -r -g webknossos webknossos \
-  && cd /srv/webknossos-datastore \
-  && mkdir tracingData \
-  && chown -R webknossos .
+  && mkdir /srv/webknossos-datastore/tracingData
 
 WORKDIR /srv/webknossos-datastore
 
 VOLUME /srv/webknossos-datastore/binaryData /srv/webknossos-datastore/tracingData /tmp
 
 COPY target/universal/stage .
+
+RUN chown -R webknossos .
 
 USER webknossos
 

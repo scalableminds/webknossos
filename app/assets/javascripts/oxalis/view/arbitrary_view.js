@@ -7,18 +7,22 @@ import app from "app";
 import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 import TWEEN from "tween.js";
-import Constants from "oxalis/constants";
+import Constants, { ArbitraryViewport } from "oxalis/constants";
 import Store from "oxalis/store";
 import SceneController from "oxalis/controller/scene_controller";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
+import { getDesiredLayoutRect } from "oxalis/view/layouting/golden_layout_adapter";
 import window from "libs/window";
+import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import { clearCanvas, setupRenderArea } from "./plane_view";
 
 class ArbitraryView {
   // Copied form backbone events (TODO: handle this better)
   trigger: Function;
+  unbindChangedScaleListener: () => void;
 
   animate: () => void;
-  resize: () => void;
   setClippingDistance: (value: number) => void;
 
   needsRerender: boolean;
@@ -26,8 +30,6 @@ class ArbitraryView {
   isRunning: boolean = false;
   animationRequestId: ?number = null;
 
-  width: number;
-  height: number;
   scaleFactor: number;
   camDistance: number;
 
@@ -38,7 +40,6 @@ class ArbitraryView {
 
   constructor() {
     this.animate = this.animateImpl.bind(this);
-    this.resize = this.resizeImpl.bind(this);
     this.setClippingDistance = this.setClippingDistanceImpl.bind(this);
     _.extend(this, BackboneEvents);
 
@@ -73,12 +74,17 @@ class ArbitraryView {
       this.group.add(this.camera);
       SceneController.rootGroup.add(this.group);
 
-      this.resize();
+      this.resizeImpl();
 
       // start the rendering loop
       this.animationRequestId = window.requestAnimationFrame(this.animate);
       // Dont forget to handle window resizing!
-      window.addEventListener("resize", this.resize);
+      window.addEventListener("resize", this.resizeThrottled);
+      this.unbindChangedScaleListener = listenToStoreProperty(
+        store => store.userConfiguration.layoutScaleValue,
+        this.resizeThrottled,
+        true,
+      );
     }
   }
 
@@ -92,7 +98,8 @@ class ArbitraryView {
 
       SceneController.rootGroup.remove(this.group);
 
-      window.removeEventListener("resize", this.resize);
+      window.removeEventListener("resize", this.resizeThrottled);
+      this.unbindChangedScaleListener();
     }
   }
 
@@ -141,12 +148,13 @@ class ArbitraryView {
       camera.matrix.multiply(new THREE.Matrix4().makeTranslation(...this.cameraPosition));
       camera.matrixWorldNeedsUpdate = true;
 
-      renderer.setViewport(0, 0, this.width, this.width);
-      renderer.setScissor(0, 0, this.width, this.width);
-      renderer.setScissorTest(true);
-      renderer.setClearColor(0xffffff, 1);
+      clearCanvas(renderer);
 
-      renderer.render(scene, camera);
+      const { left, top, width, height } = getInputCatcherRect(ArbitraryViewport);
+      if (width > 0 && height > 0) {
+        setupRenderArea(renderer, left, top, Math.min(width, height), width, height, 0xffffff);
+        renderer.render(scene, camera);
+      }
 
       this.needsRerender = false;
       window.needsRerender = false;
@@ -167,16 +175,15 @@ class ArbitraryView {
     geometry.addToScene(this.group);
   }
 
-  // throttle resize to avoid annoying flickering
-  resizeThrottled = _.throttle(() => this.resize(), Constants.RESIZE_THROTTLE_TIME);
-
-  resizeImpl(): void {
+  resizeImpl = (): void => {
     // Call this after the canvas was resized to fix the viewport
-    // Needs to be bound
-    this.width = Store.getState().userConfiguration.scale * Constants.VIEWPORT_WIDTH;
-    SceneController.renderer.setSize(this.width, this.width);
+    const { width, height } = getDesiredLayoutRect();
+    SceneController.renderer.setSize(width, height);
     this.draw();
-  }
+  };
+
+  // throttle resize to avoid annoying flickering
+  resizeThrottled = _.throttle(this.resizeImpl, Constants.RESIZE_THROTTLE_TIME);
 
   setClippingDistanceImpl(value: number): void {
     this.camera.near = this.camDistance - value;

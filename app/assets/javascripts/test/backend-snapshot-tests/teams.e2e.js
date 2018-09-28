@@ -17,7 +17,7 @@ test.before("Reset database and change token", async () => {
 
 test("getTeams()", async t => {
   const teams = _.sortBy(await api.getTeams(), team => team.name);
-  writeFlowCheckingFile(teams, "team", "APITeamType", { isArray: true });
+  writeFlowCheckingFile(teams, "team", "APITeam", { isArray: true });
   t.snapshot(teams, { id: "teams-getTeams()" });
 });
 

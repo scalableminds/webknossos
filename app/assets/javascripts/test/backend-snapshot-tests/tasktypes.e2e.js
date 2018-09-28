@@ -16,7 +16,7 @@ test.before("Change token", async () => {
 
 test("getTaskTypes()", async t => {
   const taskTypes = await api.getTaskTypes();
-  writeFlowCheckingFile(taskTypes, "task-type", "APITaskTypeType", { isArray: true });
+  writeFlowCheckingFile(taskTypes, "task-type", "APITaskType", { isArray: true });
   t.snapshot(taskTypes, { id: "taskTypes-getTaskTypes" });
 });
 

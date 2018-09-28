@@ -8,6 +8,7 @@ import app from "app";
 import * as Utils from "libs/utils";
 import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
+import parseStlBuffer from "libs/parse_stl_buffer";
 import { V3 } from "libs/mjs";
 import {
   getPosition,
@@ -24,7 +25,7 @@ import Cube from "oxalis/geometries/cube";
 import ContourGeometry from "oxalis/geometries/contourgeometry";
 import Dimensions from "oxalis/model/dimensions";
 import { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView } from "oxalis/constants";
-import type { Vector3, OrthoViewType, OrthoViewMapType, BoundingBoxType } from "oxalis/constants";
+import type { Vector3, OrthoView, OrthoViewMap, BoundingBoxType } from "oxalis/constants";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { getRenderer } from "oxalis/controller/renderer";
 import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
@@ -35,13 +36,13 @@ const CUBE_COLOR = 0x999999;
 class SceneController {
   skeleton: Skeleton;
   current: number;
-  displayPlane: OrthoViewMapType<boolean>;
+  displayPlane: OrthoViewMap<boolean>;
   planeShift: Vector3;
   cube: Cube;
   userBoundingBox: Cube;
   taskBoundingBox: ?Cube;
   contour: ContourGeometry;
-  planes: OrthoViewMapType<Plane>;
+  planes: OrthoViewMap<Plane>;
   rootNode: THREE.Object3D;
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
@@ -79,6 +80,14 @@ class SceneController {
     this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.dataSource.scale));
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.rootGroup);
+  }
+
+  addSTL(stlBuffer: ArrayBuffer): void {
+    const geometry = parseStlBuffer(stlBuffer);
+    geometry.computeVertexNormals();
+
+    const meshMaterial = new THREE.MeshNormalMaterial();
+    this.scene.add(new THREE.Mesh(geometry, meshMaterial));
   }
 
   createMeshes(): void {
@@ -145,7 +154,7 @@ class SceneController {
     }
   }
 
-  updateSceneForCam = (id: OrthoViewType): void => {
+  updateSceneForCam = (id: OrthoView): void => {
     // This method is called for each of the four cams. Even
     // though they are all looking at the same scene, some
     // things have to be changed for each cam.

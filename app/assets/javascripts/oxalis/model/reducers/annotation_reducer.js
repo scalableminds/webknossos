@@ -1,15 +1,15 @@
 // @flow
 
 import update from "immutability-helper";
-import { updateKey, type StateShape1 } from "oxalis/model/helpers/deep_update";
+import { updateKey, updateKey2, type StateShape1 } from "oxalis/model/helpers/deep_update";
 import type { OxalisState } from "oxalis/store";
-import type { ActionType } from "oxalis/model/actions/actions";
+import type { Action } from "oxalis/model/actions/actions";
 import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reducers/reducer_helpers";
 
 const updateTracing = (state: OxalisState, shape: StateShape1<"tracing">): OxalisState =>
   updateKey(state, "tracing", shape);
 
-function AnnotationReducer(state: OxalisState, action: ActionType): OxalisState {
+function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
     case "INITIALIZE_ANNOTATION": {
       const annotationInfo = convertServerAnnotationToFrontendAnnotation(action.annotation);
@@ -34,6 +34,11 @@ function AnnotationReducer(state: OxalisState, action: ActionType): OxalisState 
       return updateTracing(state, {
         description,
       });
+    }
+
+    case "SET_ANNOTATION_ALLOW_UPDATE": {
+      const { allowUpdate } = action;
+      return updateKey2(state, "tracing", "restrictions", { allowUpdate });
     }
 
     case "SET_USER_BOUNDING_BOX": {

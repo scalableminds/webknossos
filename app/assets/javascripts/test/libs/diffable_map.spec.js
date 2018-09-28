@@ -13,7 +13,7 @@ test("DiffableMap should be empty", t => {
 
   t.is(emptyMap.size(), 0);
   t.false(emptyMap.has(1));
-  t.throws(() => emptyMap.get(1));
+  t.throws((): void => emptyMap.get(1));
 });
 
 test("DiffableMap should behave immutable on set/delete operations", t => {
@@ -53,7 +53,7 @@ test("DiffableMap should be clonable and mutable on clone/mutableSet", t => {
   t.false(map1.existsCache === map2.existsCache);
 
   // Id should be the same since the internal structures look the same
-  t.is(map1.id, map2.id);
+  t.is(map1.getId(), map2.getId());
 
   t.is(map1.entryCount + 1, map2.entryCount);
   t.is(map1.itemsPerBatch, map2.itemsPerBatch);

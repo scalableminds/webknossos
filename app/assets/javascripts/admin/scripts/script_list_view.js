@@ -10,14 +10,14 @@ import messages from "messages";
 import { getScripts, deleteScript } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
-import type { APIScriptType, APIUserType } from "admin/api_flow_types";
+import type { APIScript, APIUser } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
 import { handleGenericError } from "libs/error_handling";
 
 const { Column } = Table;
 const { Search } = Input;
 
-const typeHint: APIScriptType[] = [];
+const typeHint: APIScript[] = [];
 
 type Props = {
   history: RouterHistory,
@@ -25,7 +25,7 @@ type Props = {
 
 type State = {
   isLoading: boolean,
-  scripts: Array<APIScriptType>,
+  scripts: Array<APIScript>,
   searchQuery: string,
 };
 
@@ -66,7 +66,7 @@ class ScriptListView extends React.PureComponent<Props, State> {
     this.setState({ searchQuery: event.target.value });
   };
 
-  deleteScript = (script: APIScriptType) => {
+  deleteScript = (script: APIScript) => {
     Modal.confirm({
       title: messages["script.delete"],
       onOk: async () => {
@@ -130,7 +130,7 @@ class ScriptListView extends React.PureComponent<Props, State> {
 
           <Spin spinning={this.state.isLoading} size="large">
             <Table
-              dataSource={Utils.filterWithSearchQueryOR(
+              dataSource={Utils.filterWithSearchQueryAND(
                 this.state.scripts,
                 ["name", "id", "owner", "gist"],
                 this.state.searchQuery,
@@ -161,7 +161,7 @@ class ScriptListView extends React.PureComponent<Props, State> {
                 dataIndex="owner"
                 key="owner"
                 sorter={Utils.localeCompareBy(typeHint, script => script.owner.lastName)}
-                render={(owner: APIUserType) => `${owner.firstName} ${owner.lastName}`}
+                render={(owner: APIUser) => `${owner.firstName} ${owner.lastName}`}
               />
               <Column
                 title="Gist URL"
@@ -177,7 +177,7 @@ class ScriptListView extends React.PureComponent<Props, State> {
               <Column
                 title="Action"
                 key="actions"
-                render={(__, script: APIScriptType) => (
+                render={(__, script: APIScript) => (
                   <span>
                     <Link to={`/scripts/${script.id}/edit`}>
                       <Icon type="edit" />Edit

@@ -5,7 +5,7 @@
 
 export const ModeValues = ["orthogonal", "flight", "oblique", "volume"]; //   MODE_PLANE_TRACING | MODE_ARBITRARY | MODE_ARBITRARY_PLANE | MODE_VOLUME
 export const ModeValuesIndices = { Orthogonal: 0, Flight: 1, Oblique: 2, Volume: 3 };
-export type ModeType = "orthogonal" | "oblique" | "flight" | "volume";
+export type Mode = "orthogonal" | "oblique" | "flight" | "volume";
 export type Vector2 = [number, number];
 export type Vector3 = [number, number, number];
 export type Vector4 = [number, number, number, number];
@@ -16,6 +16,12 @@ export type Point3 = { x: number, y: number, z: number };
 export type BoundingBoxType = {
   min: Vector3,
   max: Vector3,
+};
+export type Rect = {
+  top: number,
+  left: number,
+  width: number,
+  height: number,
 };
 
 export const AnnotationContentTypes = ["skeleton", "volume", "hybrid"];
@@ -31,9 +37,11 @@ export const OrthoViews = {
   PLANE_XZ: "PLANE_XZ",
   TDView: "TDView",
 };
-export type OrthoViewType = $Keys<typeof OrthoViews>;
-export type OrthoViewMapType<T> = { [key: OrthoViewType]: T };
-export const OrthoViewValues: Array<OrthoViewType> = Object.keys(OrthoViews);
+export const ArbitraryViewport = "arbitraryViewport";
+export type OrthoView = $Keys<typeof OrthoViews>;
+export type OrthoViewMap<T> = { [key: OrthoView]: T };
+export type Viewport = OrthoView | typeof ArbitraryViewport;
+export const OrthoViewValues: Array<OrthoView> = Object.keys(OrthoViews);
 export const OrthoViewIndices = {
   PLANE_XY: OrthoViewValues.indexOf("PLANE_XY"),
   PLANE_YZ: OrthoViewValues.indexOf("PLANE_YZ"),
@@ -46,14 +54,14 @@ export const OrthoViewValuesWithoutTDView = [
   OrthoViews.PLANE_XZ,
 ];
 
-export const OrthoViewColors: OrthoViewMapType<number> = {
+export const OrthoViewColors: OrthoViewMap<number> = {
   [OrthoViews.PLANE_XY]: 0xff0000,
   [OrthoViews.PLANE_YZ]: 0x0000ff,
   [OrthoViews.PLANE_XZ]: 0x00ff00,
   [OrthoViews.TDView]: 0xffffff,
 };
 
-export const OrthoViewCrosshairColors: OrthoViewMapType<[number, number]> = {
+export const OrthoViewCrosshairColors: OrthoViewMap<[number, number]> = {
   [OrthoViews.PLANE_XY]: [0x0000ff, 0x00ff00],
   [OrthoViews.PLANE_YZ]: [0xff0000, 0x00ff00],
   [OrthoViews.PLANE_XZ]: [0x0000ff, 0xff0000],
@@ -66,16 +74,16 @@ export const ControlModeEnum = {
   TRACE: "TRACE",
   VIEW: "VIEW",
 };
-export type ControlModeType = $Keys<typeof ControlModeEnum>;
+export type ControlMode = $Keys<typeof ControlModeEnum>;
 
 export const VolumeToolEnum = {
   MOVE: "MOVE",
   TRACE: "TRACE",
   BRUSH: "BRUSH",
 };
-export type VolumeToolType = $Keys<typeof VolumeToolEnum>;
+export type VolumeTool = $Keys<typeof VolumeToolEnum>;
 
-export function volumeToolEnumToIndex(volumeTool: ?VolumeToolType): number {
+export function volumeToolEnumToIndex(volumeTool: ?VolumeTool): number {
   return Object.keys(VolumeToolEnum).indexOf(volumeTool);
 }
 
@@ -86,7 +94,7 @@ export const ContourModeEnum = {
   DELETE_FROM_ACTIVE_CELL: "DELETE_FROM_ACTIVE_CELL",
   DELETE_FROM_ANY_CELL: "DELETE_FROM_ANY_CELL",
 };
-export type ContourModeType = $Keys<typeof ContourModeEnum>;
+export type ContourMode = $Keys<typeof ContourModeEnum>;
 
 export const NODE_ID_REF_REGEX = /#([0-9]+)/g;
 export const POSITION_REF_REGEX = /#\(([0-9]+,[0-9]+,[0-9]+)\)/g;
@@ -133,8 +141,8 @@ const Constants = {
 
   FPS: 50,
 
-  MIN_SCALE: 0.5,
-  MAX_SCALE: 20,
+  MIN_LAYOUT_SCALE: 1,
+  MAX_LAYOUT_SCALE: 5,
 
   MIN_BRUSH_SIZE: 5,
   MAX_BRUSH_SIZE: 5000,

@@ -4,7 +4,7 @@ import * as React from "react";
 import _ from "lodash";
 import { Button } from "antd";
 
-type ButtonComponentPropType = {
+type ButtonComponentProp = {
   onClick?: Function,
 };
 
@@ -12,8 +12,8 @@ type ButtonComponentPropType = {
  * A lightweight wrapper around <Button> to automatically blur the button
  * after it was clicked.
  */
-class ButtonComponent extends React.PureComponent<ButtonComponentPropType> {
-  static defaultProps: ButtonComponentPropType = {
+class ButtonComponent extends React.PureComponent<ButtonComponentProp> {
+  static defaultProps: ButtonComponentProp = {
     onClick: _.noop,
   };
 

@@ -48,7 +48,7 @@ const KeyboardShortcutView = () => {
     },
     {
       keybinding: "K, L",
-      action: "Scale Up/down Viewport Size",
+      action: "Increase/Decrease Size of Layout",
     },
     {
       keybinding: "B, J",

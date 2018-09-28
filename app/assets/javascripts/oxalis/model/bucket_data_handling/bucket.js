@@ -15,6 +15,7 @@ import Toast from "libs/toast";
 export const BucketStateEnum = {
   UNREQUESTED: "UNREQUESTED",
   REQUESTED: "REQUESTED",
+  MISSING: "MISSING", // Missing means that the bucket couldn't be found on the data store
   LOADED: "LOADED",
 };
 export type BucketStateEnumType = $Keys<typeof BucketStateEnum>;
@@ -100,6 +101,10 @@ export class DataBucket {
     return this.state === BucketStateEnum.LOADED;
   }
 
+  isMissing(): boolean {
+    return this.state === BucketStateEnum.MISSING;
+  }
+
   label(labelFunc: Uint8Array => void) {
     labelFunc(this.getOrCreateData());
     this.dirty = true;
@@ -140,10 +145,13 @@ export class DataBucket {
     }
   }
 
-  pullFailed(): void {
+  pullFailed(isMissing: boolean): void {
     switch (this.state) {
       case BucketStateEnum.REQUESTED:
-        this.state = BucketStateEnum.UNREQUESTED;
+        this.state = isMissing ? BucketStateEnum.MISSING : BucketStateEnum.UNREQUESTED;
+        if (isMissing) {
+          this.trigger("bucketMissing");
+        }
         break;
       default:
         this.unexpectedState();

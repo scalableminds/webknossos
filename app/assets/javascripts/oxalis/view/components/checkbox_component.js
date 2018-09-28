@@ -4,7 +4,7 @@ import * as React from "react";
 import _ from "lodash";
 import { Checkbox } from "antd";
 
-type CheckboxComponentPropType = {
+type CheckboxComponentProp = {
   onClick?: Function,
 };
 
@@ -12,8 +12,8 @@ type CheckboxComponentPropType = {
  * A lightweight wrapper around <Checkbox> to automatically blur the checkbox
  * after it was clicked.
  */
-class CheckboxComponent extends React.PureComponent<CheckboxComponentPropType> {
-  static defaultProps: CheckboxComponentPropType = {
+class CheckboxComponent extends React.PureComponent<CheckboxComponentProp> {
+  static defaultProps: CheckboxComponentProp = {
     onClick: _.noop,
   };
 

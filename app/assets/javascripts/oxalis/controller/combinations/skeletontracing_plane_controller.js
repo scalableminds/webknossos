@@ -33,11 +33,12 @@ import {
   enforceSkeletonTracing,
   getActiveNode,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
+import type { Point2, Vector3, OrthoView, OrthoViewMap } from "oxalis/constants";
 import api from "oxalis/api/internal_api";
+import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { V3 } from "libs/mjs";
 
-const OrthoViewToNumber: OrthoViewMapType<number> = {
+const OrthoViewToNumber: OrthoViewMap<number> = {
   [OrthoViews.PLANE_XY]: 0,
   [OrthoViews.PLANE_YZ]: 1,
   [OrthoViews.PLANE_XZ]: 2,
@@ -59,16 +60,16 @@ function simulateTracing(nodesPerTree: number = -1, nodesAlreadySet: number = 0)
 
 export function getPlaneMouseControls(planeView: PlaneView) {
   return {
-    leftClick: (pos: Point2, plane: OrthoViewType, event: MouseEvent, isTouch: boolean) =>
+    leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) =>
       onClick(planeView, pos, event.shiftKey, event.altKey, event.ctrlKey, plane, isTouch),
-    rightClick: (pos: Point2, plane: OrthoViewType, event: MouseEvent) =>
+    rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent) =>
       setWaypoint(calculateGlobalPos(pos), event.ctrlKey),
   };
 }
 
 export function getTDViewMouseControls(planeView: PlaneView): Object {
   return {
-    leftClick: (pos: Point2, plane: OrthoViewType, event: MouseEvent, isTouch: boolean) =>
+    leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) =>
       onClick(
         planeView,
         pos,
@@ -117,7 +118,7 @@ function onClick(
   shiftPressed: boolean,
   altPressed: boolean,
   ctrlPressed: boolean,
-  plane: OrthoViewType,
+  plane: OrthoView,
   isTouch: boolean,
 ): void {
   if (!shiftPressed && !isTouch) {
@@ -131,12 +132,16 @@ function onClick(
   const pickingScene = new THREE.Scene();
   pickingScene.add(pickingNode);
 
+  let { width, height } = getInputCatcherRect(plane);
+  width = Math.round(width);
+  height = Math.round(height);
+
   const buffer = planeView.renderOrthoViewToTexture(plane, pickingScene);
   // Beware of the fact that new browsers yield float numbers for the mouse position
   const [x, y] = [Math.round(position.x), Math.round(position.y)];
   // compute the index of the pixel under the cursor,
   // while inverting along the y-axis, because OpenGL has its origin bottom-left :/
-  const index = (x + (planeView.curWidth - y) * planeView.curWidth) * 4;
+  const index = (x + (width - y) * height) * 4;
   // the nodeId can be reconstructed by interpreting the RGB values of the pixel as a base-255 number
   const nodeId = buffer.subarray(index, index + 3).reduce((a, b) => a * 255 + b, 0);
   SceneController.skeleton.stopPicking();

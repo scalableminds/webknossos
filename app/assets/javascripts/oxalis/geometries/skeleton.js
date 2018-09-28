@@ -16,13 +16,13 @@ import NodeShader, {
 import EdgeShader from "oxalis/geometries/materials/edge_shader";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
-import type { SkeletonTracingType, TreeType, NodeType } from "oxalis/store";
+import type { SkeletonTracing, Tree, Node } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 
 const MAX_CAPACITY = 1000;
 
 // eslint-disable-next-line no-use-before-define
-type BufferHelperType = typeof NodeBufferHelperType | typeof EdgeBufferHelperType;
+type BufferHelper = typeof NodeBufferHelperType | typeof EdgeBufferHelperType;
 
 type Buffer = {
   capacity: number,
@@ -40,7 +40,7 @@ type BufferCollection = {
   buffers: Array<Buffer>,
   idToBufferPosition: Map<number, BufferPosition>,
   freeList: Array<BufferPosition>,
-  helper: BufferHelperType,
+  helper: BufferHelper,
   material: THREE.Material,
 };
 
@@ -88,7 +88,7 @@ const EdgeBufferHelperType = {
 class Skeleton {
   rootNode: THREE.Object3D;
   pickingNode: THREE.Object3D;
-  prevTracing: SkeletonTracingType;
+  prevTracing: SkeletonTracing;
   nodes: BufferCollection;
   edges: BufferCollection;
   treeColorTexture: THREE.DataTexture;
@@ -112,7 +112,7 @@ class Skeleton {
     });
   }
 
-  reset(skeletonTracing: SkeletonTracingType) {
+  reset(skeletonTracing: SkeletonTracing) {
     // Remove all existing geometries
     this.rootNode.remove(...this.rootNode.children);
     this.pickingNode.remove(...this.pickingNode.children);
@@ -166,7 +166,7 @@ class Skeleton {
   initializeBufferCollection(
     initialCapacity: number,
     material: THREE.Material,
-    helper: BufferHelperType,
+    helper: BufferHelper,
   ): BufferCollection {
     const initialBuffer = this.initializeBuffer(
       Math.max(initialCapacity, MAX_CAPACITY),
@@ -183,7 +183,7 @@ class Skeleton {
     };
   }
 
-  initializeBuffer(capacity: number, material: THREE.Material, helper: BufferHelperType): Buffer {
+  initializeBuffer(capacity: number, material: THREE.Material, helper: BufferHelper): Buffer {
     const geometry = new THREE.BufferGeometry();
     helper.addAttributes(geometry, capacity);
     const mesh = helper.buildMesh(geometry, material);
@@ -272,7 +272,7 @@ class Skeleton {
    * @param collection - collection of all buffers
    * @param deleteFunc - callback(buffer, index) that actually updates a node / edge
    */
-  refresh(skeletonTracing: SkeletonTracingType) {
+  refresh(skeletonTracing: SkeletonTracing) {
     const state = Store.getState();
     const diff = cachedDiffTrees(this.prevTracing.trees, skeletonTracing.trees);
 
@@ -372,7 +372,7 @@ class Skeleton {
     }
 
     // Uniforms
-    const { particleSize, scale, overrideNodeRadius } = state.userConfiguration;
+    const { particleSize, overrideNodeRadius } = state.userConfiguration;
     let activeNodeId = skeletonTracing.activeNodeId;
     activeNodeId = activeNodeId == null ? -1 : activeNodeId;
     let activeTreeId = skeletonTracing.activeTreeId;
@@ -382,7 +382,6 @@ class Skeleton {
     nodeUniforms.planeZoomFactor.value = getPlaneScalingFactor(state.flycam);
     nodeUniforms.overrideParticleSize.value = particleSize;
     nodeUniforms.overrideNodeRadius.value = overrideNodeRadius;
-    nodeUniforms.viewportScale.value = scale;
     nodeUniforms.activeTreeId.value = activeTreeId;
     nodeUniforms.activeNodeId.value = activeNodeId;
 
@@ -428,7 +427,7 @@ class Skeleton {
    * Utility function to create a complete tree.
    * Usually called only once initially.
    */
-  createTree(tree: TreeType) {
+  createTree(tree: Tree) {
     for (const node of tree.nodes.values()) {
       this.createNode(tree.treeId, node);
     }
@@ -450,7 +449,7 @@ class Skeleton {
   /**
    * Creates a new node in a WebGL buffer.
    */
-  createNode(treeId: number, node: NodeType) {
+  createNode(treeId: number, node: Node) {
     const id = this.combineIds(node.id, treeId);
     this.create(id, this.nodes, ({ buffer, index }) => {
       const attributes = buffer.geometry.attributes;
@@ -513,7 +512,7 @@ class Skeleton {
   /**
    * Creates a new edge in a WebGL buffer.
    */
-  createEdge(treeId: number, source: NodeType, target: NodeType) {
+  createEdge(treeId: number, source: Node, target: Node) {
     const id = this.combineIds(treeId, source.id, target.id);
     this.create(id, this.edges, ({ buffer, index }) => {
       const positionAttribute = buffer.geometry.attributes.position;

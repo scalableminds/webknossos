@@ -2,7 +2,7 @@
  * mapping_info_view.js
  * @flow
  */
-import React, { Component } from "react";
+import React from "react";
 import { Table, Tooltip, Icon } from "antd";
 import { connect } from "react-redux";
 import Cube from "oxalis/model/bucket_data_handling/data_cube";
@@ -11,8 +11,8 @@ import Model from "oxalis/model";
 import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { SwitchSetting } from "oxalis/view/settings/setting_input_views";
-import type { OrthoViewType, Vector2, Vector3 } from "oxalis/constants";
-import type { OxalisState, MappingType } from "oxalis/store";
+import type { OrthoView, Vector2, Vector3 } from "oxalis/constants";
+import type { OxalisState, Mapping } from "oxalis/store";
 import { OrthoViews } from "oxalis/constants";
 import _ from "lodash";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
@@ -24,10 +24,10 @@ type Props = {
   zoomStep: number,
   mousePosition: ?Vector2,
   isMappingEnabled: boolean,
-  mapping: ?MappingType,
+  mapping: ?Mapping,
   mappingColors: ?Array<number>,
   setMappingEnabled: boolean => void,
-  activeViewport: OrthoViewType,
+  activeViewport: OrthoView,
   activeCellId: number,
 };
 
@@ -43,14 +43,22 @@ const convertCellIdToHSV = (id: number, customColors: ?Array<number>) => {
   return `hsla(${value * 360}, 100%, 50%, 0.15)`;
 };
 
-class MappingInfoView extends Component<Props> {
+const hasSegmentation = () => Model.getSegmentationLayer() != null;
+
+class MappingInfoView extends React.Component<Props> {
   componentDidMount() {
+    if (!hasSegmentation()) {
+      return;
+    }
     const cube = this.getSegmentationCube();
     cube.on("bucketLoaded", this._forceUpdate);
     cube.on("volumeLabeled", this._forceUpdate);
   }
 
   componentWillUnmount() {
+    if (!hasSegmentation()) {
+      return;
+    }
     const cube = this.getSegmentationCube();
     cube.off("bucketLoaded", this._forceUpdate);
     cube.off("volumeLabeled", this._forceUpdate);
@@ -143,6 +151,9 @@ class MappingInfoView extends Component<Props> {
   }
 
   render() {
+    if (!hasSegmentation()) {
+      return "No segmentation available";
+    }
     const hasMapping = this.props.mapping != null;
 
     return (
@@ -187,4 +198,8 @@ const debounceTime = 100;
 export default connect(
   mapStateToProps,
   mapDispatchToProps,
+  null,
+  {
+    pure: false,
+  },
 )(debounceRender(MappingInfoView, debounceTime));

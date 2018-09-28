@@ -53,7 +53,7 @@ val protocolBufferSettings = Seq(
   ProtocPlugin.autoImport.PB.targets in Compile := Seq(
     scalapb.gen() -> new java.io.File((sourceManaged in Compile).value + "/proto")
   ),
-  ProtocPlugin.autoImport.PB.protoSources := Seq(new java.io.File("webknossos-datastore/proto")))
+  ProtocPlugin.autoImport.PB.protoSources := Seq(new java.io.File("webknossos-tracingstore/proto")))
 
 lazy val util = (project in file("util"))
   .settings(Seq(

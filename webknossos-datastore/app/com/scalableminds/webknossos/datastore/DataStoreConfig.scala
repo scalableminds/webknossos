@@ -37,11 +37,7 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
       val secured = get[Boolean]("datastore.oxalis.secured")
       val pingIntervalMinutes = get[Int]("datastore.oxalis.pingIntervalMinutes") minutes
     }
-    object Fossildb {
-      val address = get[String]("datastore.fossildb.address")
-      val port = get[Int]("datastore.fossildb.port")
-    }
-    val children = List(Oxalis, Fossildb)
+    val children = List(Oxalis)
   }
 
   val children = List(Http, Braingames, Datastore)

@@ -1,8 +1,8 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.{ElementClass => ProtoElementClass}
-import com.scalableminds.webknossos.datastore.geometry.{BoundingBox => ProtoBoundingBox, Point3D => ProtoPoint3D, Vector3D => ProtoVector3D}
+import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing.{ElementClass => ProtoElementClass}
+import com.scalableminds.webknossos.tracingstore.geometry.{BoundingBox => ProtoBoundingBox, Point3D => ProtoPoint3D, Vector3D => ProtoVector3D}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 
 trait ProtoGeometryImplicits {

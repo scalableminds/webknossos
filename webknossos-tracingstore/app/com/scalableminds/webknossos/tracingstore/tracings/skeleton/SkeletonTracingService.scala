@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
-import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
+import com.scalableminds.webknossos.tracingstore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.tracingstore.tracings.UpdateAction.SkeletonUpdateAction
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._

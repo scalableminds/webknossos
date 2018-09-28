@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.tracingstore.controllers
 
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
-import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracings}
+import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracings}
 import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
 import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessRequest}
 import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreWkRpcClient}

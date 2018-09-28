@@ -3,8 +3,8 @@ package models.annotation.nml
 import java.io.InputStream
 
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
-import com.scalableminds.webknossos.datastore.SkeletonTracing._
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
+import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.ProtoGeometryImplicits
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults, TreeValidator}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.Volume

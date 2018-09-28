@@ -10,7 +10,7 @@ import {
   writeFlowCheckingFile,
 } from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
-import type { APIProjectType, APIProjectUpdaterType } from "admin/api_flow_types";
+import type { APIProject, APIProjectUpdater } from "admin/api_flow_types";
 
 test.before("Reset database", async () => {
   resetDatabase();
@@ -22,7 +22,7 @@ test.beforeEach("Change token", async () => {
 
 test.serial("getProjects()", async t => {
   const projects = _.sortBy(await api.getProjects(), p => p.name);
-  writeFlowCheckingFile(projects, "project", "APIProjectType", { isArray: true });
+  writeFlowCheckingFile(projects, "project", "APIProject", { isArray: true });
   t.snapshot(projects, { id: "projects-getProjects()" });
 });
 
@@ -61,7 +61,7 @@ test.serial("createProject and deleteProject", async t => {
   t.snapshot(response, { id: "projects-deleteProject(projectName: string)" });
 });
 
-function convertProjectToProjectUpdater(project: APIProjectType): APIProjectUpdaterType {
+function convertProjectToProjectUpdater(project: APIProject): APIProjectUpdater {
   // $FlowFixMe
   return Object.assign({}, project, {
     owner: project.owner.id,
@@ -74,7 +74,7 @@ test.serial("updateProject(projectName: string, project: APIProjectType)", async
 
   const projectWithOwnerId = convertProjectToProjectUpdater(project);
 
-  const projectWithNewPriority: APIProjectUpdaterType = Object.assign({}, projectWithOwnerId, {
+  const projectWithNewPriority: APIProjectUpdater = Object.assign({}, projectWithOwnerId, {
     priority: 1337,
   });
 

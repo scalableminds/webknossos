@@ -1,7 +1,7 @@
 // @flow
 import _ from "lodash";
 import Store from "oxalis/store";
-import type { TracingTypeTracingType, TraceOrViewCommandType } from "oxalis/store";
+import type { TracingTypeTracing, TraceOrViewCommand } from "oxalis/store";
 import type { UrlManagerState } from "oxalis/controller/url_manager";
 import {
   setDatasetAction,
@@ -40,12 +40,12 @@ import {
 } from "admin/admin_rest_api";
 import messages from "messages";
 import type {
-  APIAnnotationType,
-  APIDatasetIdType,
-  APIDatasetType,
-  APIDataLayerType,
-  HybridServerTracingType,
-  ServerVolumeTracingType,
+  APIAnnotation,
+  APIDatasetId,
+  APIDataset,
+  APIDataLayer,
+  HybridServerTracing,
+  ServerVolumeTracing,
 } from "admin/api_flow_types";
 import {
   getDatasetCenter,
@@ -68,9 +68,10 @@ type DataLayerCollection = {
 };
 
 export async function initialize(
-  tracingType: TracingTypeTracingType,
-  initialCommandType: TraceOrViewCommandType,
+  tracingType: TracingTypeTracing,
+  initialCommandType: TraceOrViewCommand,
   initialFetch: boolean,
+  version?: number,
 ): Promise<?{
   dataLayers: DataLayerCollection,
   connectionInfo: ConnectionInfo,
@@ -79,8 +80,8 @@ export async function initialize(
 }> {
   Store.dispatch(setControlModeAction(initialCommandType.type));
 
-  let annotation: APIAnnotationType;
-  let datasetId: APIDatasetIdType;
+  let annotation: APIAnnotation;
+  let datasetId: APIDatasetId;
   if (initialCommandType.type === ControlModeEnum.TRACE) {
     const { annotationId } = initialCommandType;
     annotation = await getAnnotationInformation(annotationId, tracingType);
@@ -104,6 +105,7 @@ export async function initialize(
   const [dataset, initialUserSettings, initialDatasetSettings, tracing] = await fetchParallel(
     annotation,
     datasetId,
+    version,
   );
 
   initializeDataset(initialFetch, dataset, tracing);
@@ -128,9 +130,10 @@ export async function initialize(
 }
 
 async function fetchParallel(
-  annotation: ?APIAnnotationType,
-  datasetId: APIDatasetIdType,
-): Promise<[APIDatasetType, *, *, ?HybridServerTracingType]> {
+  annotation: ?APIAnnotation,
+  datasetId: APIDatasetId,
+  version?: number,
+): Promise<[APIDataset, *, *, ?HybridServerTracing]> {
   return Promise.all([
     getDataset(datasetId, getSharingToken()),
     getUserConfiguration(),
@@ -138,14 +141,14 @@ async function fetchParallel(
     // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
     // (Also see https://github.com/facebook/flow/issues/4936)
     // $FlowFixMe: Type inference with Promise.all seems to be a bit broken in flow
-    annotation ? getTracingForAnnotations(annotation) : null,
+    annotation ? getTracingForAnnotations(annotation, version) : null,
   ]);
 }
 
 function validateSpecsForLayers(
-  layers: Array<APIDataLayerType>,
+  layers: Array<APIDataLayer>,
 ): {
-  textureInformationPerLayer: Map<APIDataLayerType, DataTextureSizeAndCount>,
+  textureInformationPerLayer: Map<APIDataLayer, DataTextureSizeAndCount>,
   isMappingSupported: boolean,
 } {
   const specs = DataRenderingLogic.getSupportedTextureSpecs();
@@ -177,7 +180,7 @@ function validateSpecsForLayers(
   return { isMappingSupported, textureInformationPerLayer };
 }
 
-function initializeTracing(annotation: APIAnnotationType, tracing: HybridServerTracingType) {
+function initializeTracing(annotation: APIAnnotation, tracing: HybridServerTracing) {
   // This method is not called for the View mode
   const { dataset } = Store.getState();
 
@@ -215,8 +218,8 @@ function initializeTracing(annotation: APIAnnotationType, tracing: HybridServerT
 
 function initializeDataset(
   initialFetch: boolean,
-  dataset: APIDatasetType,
-  tracing: ?HybridServerTracingType,
+  dataset: APIDataset,
+  tracing: ?HybridServerTracing,
 ): void {
   let error;
   if (!dataset) {
@@ -298,9 +301,9 @@ function initializeDataLayerInstances(): {
 }
 
 function setupLayerForVolumeTracing(
-  _layers: APIDataLayerType[],
-  tracing: ServerVolumeTracingType,
-): Array<APIDataLayerType> {
+  _layers: APIDataLayer[],
+  tracing: ServerVolumeTracing,
+): Array<APIDataLayer> {
   // This method adds/merges the segmentation layers of the tracing into the dataset layers
   let layers = _.clone(_layers);
 
@@ -339,7 +342,7 @@ function setupLayerForVolumeTracing(
 
 function determineDefaultState(
   urlState: UrlManagerState,
-  tracing: ?HybridServerTracingType,
+  tracing: ?HybridServerTracing,
 ): $Shape<UrlManagerState> {
   // If there is no editPosition (e.g. when viewing a dataset) and
   // no default position, compute the center of the dataset

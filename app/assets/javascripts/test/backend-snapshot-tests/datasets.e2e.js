@@ -9,9 +9,9 @@ import {
   writeFlowCheckingFile,
 } from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
-import type { APIDatasetType } from "admin/api_flow_types";
+import type { APIDataset } from "admin/api_flow_types";
 
-async function getFirstDataset(): Promise<APIDatasetType> {
+async function getFirstDataset(): Promise<APIDataset> {
   const datasets = await api.getActiveDatasets();
   const dataset = _.sortBy(datasets, d => d.name)[0];
 
@@ -33,7 +33,7 @@ test.serial("getDatasets", async t => {
     retry++;
   }
   datasets = _.sortBy(datasets, d => d.name);
-  writeFlowCheckingFile(datasets, "dataset", "APIMaybeUnimportedDatasetType", { isArray: true });
+  writeFlowCheckingFile(datasets, "dataset", "APIMaybeUnimportedDataset", { isArray: true });
   t.snapshot(datasets, { id: "datasets-getDatasets" });
 });
 

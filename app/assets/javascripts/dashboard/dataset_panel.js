@@ -6,13 +6,13 @@ import { formatScale } from "libs/format_utils";
 import _ from "lodash";
 import { getThumbnailURL, hasSegmentation } from "oxalis/model/accessors/dataset_accessor";
 
-import type { APIDatasetType } from "admin/api_flow_types";
+import type { APIDataset } from "admin/api_flow_types";
 
 const columnSpan = { xs: 24, sm: 24, md: 24, lg: 12, xl: 12, xxl: 8 };
 const thumbnailDimension = 500;
 
 type Props = {
-  datasets: Array<APIDatasetType>,
+  datasets: Array<APIDataset>,
   organizationName: string,
   showOrganizationHeader: boolean,
   croppedDatasetCount: ?number,
@@ -22,13 +22,13 @@ type State = {
   showLessContent: boolean,
 };
 
-function getDisplayName(dataset: APIDatasetType): string {
+function getDisplayName(dataset: APIDataset): string {
   return dataset.displayName != null && dataset.displayName !== ""
     ? dataset.displayName
     : dataset.name;
 }
 
-function getDescription(dataset: APIDatasetType) {
+function getDescription(dataset: APIDataset) {
   let freeTextDescription = null;
   if (dataset.description) {
     freeTextDescription = (
@@ -85,7 +85,7 @@ function ThumbnailAndDescription({
   );
 }
 
-function ThumbnailAndDescriptionFromDataset({ dataset }: { dataset: APIDatasetType }) {
+function ThumbnailAndDescriptionFromDataset({ dataset }: { dataset: APIDataset }) {
   return (
     <ThumbnailAndDescription
       thumbnailURL={getThumbnailURL(dataset)}
@@ -107,7 +107,7 @@ class DatasetPanel extends React.PureComponent<Props, State> {
     this.setState(prevState => ({ showLessContent: !prevState.showLessContent }));
   };
 
-  renderCard = (dataset: APIDatasetType) => (
+  renderCard = (dataset: APIDataset) => (
     <a href={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`} title="View Dataset">
       <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card">
         <ThumbnailAndDescriptionFromDataset dataset={dataset} />
@@ -115,7 +115,7 @@ class DatasetPanel extends React.PureComponent<Props, State> {
     </a>
   );
 
-  renderMultiDatasetCard = (groupName: string, datasets: APIDatasetType[]) => {
+  renderMultiDatasetCard = (groupName: string, datasets: APIDataset[]) => {
     const multiDescription = (
       <div>
         This collection consists of multiple datasets:

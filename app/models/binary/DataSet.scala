@@ -8,9 +8,9 @@ import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableD
 import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayer, AbstractSegmentationLayer, Category, DataSourceId, ElementClass, GenericDataSource, DataLayerLike => DataLayer}
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
-
 import models.configuration.DataSetConfiguration
 import models.team._
+import play.api.i18n.Messages
 import play.api.libs.json._
 import play.utils.UriEncoding
 import slick.jdbc.PostgresProfile.api._
@@ -117,7 +117,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient, dataSetDataLayerDAO: DataSetDat
 
   def findOneByNameAndOrganizationName(name: String, organizationName: String)(implicit ctx: DBAccessContext): Fox[DataSet] =
     for {
-      organization <- organizationDAO.findOneByName(organizationName) ?~> "organization.notFound"
+      organization <- organizationDAO.findOneByName(organizationName) ?~> ("organization.notFound " + organizationName)
       dataset <- findOneByNameAndOrganization(name, organization._id)
     } yield dataset
 

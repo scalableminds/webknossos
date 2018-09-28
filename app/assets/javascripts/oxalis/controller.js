@@ -32,19 +32,18 @@ import messages from "messages";
 import { fetchGistContent } from "libs/gist";
 import { document } from "libs/window";
 import NewTaskDescriptionModal from "oxalis/view/new_task_description_modal";
-
-import type { ModeType } from "oxalis/constants";
-import type { OxalisState, TracingTypeTracingType, TraceOrViewCommandType } from "oxalis/store";
+import type Mode from "oxalis/constants";
+import type { OxalisState, TracingTypeTracing, TraceOrViewCommand } from "oxalis/store";
 import type { RouterHistory } from "react-router-dom";
 
 type StateProps = {
-  viewMode: ModeType,
+  viewMode: Mode,
 };
 
 type Props = {
   history: RouterHistory,
-  initialTracingType: TracingTypeTracingType,
-  initialCommandType: TraceOrViewCommandType,
+  initialTracingType: TracingTypeTracing,
+  initialCommandType: TraceOrViewCommand,
 } & StateProps;
 
 type State = {
@@ -82,7 +81,10 @@ class Controller extends React.PureComponent<Props, State> {
       Toast.error(messages["webgl.disabled"]);
     }
 
-    Model.fetch(this.props.initialTracingType, this.props.initialCommandType, true)
+    // Preview a working tracing version if the showVersionRestore URL parameter is supplied
+    const version = Utils.hasUrlParam("showVersionRestore") ? 1 : undefined;
+
+    Model.fetch(this.props.initialTracingType, this.props.initialCommandType, true, version)
       .then(() => this.modelFetchDone())
       .catch(error => {
         // Don't throw errors for errors already handled by the model.
@@ -175,12 +177,11 @@ class Controller extends React.PureComponent<Props, State> {
     ));
   }
 
-  scaleTrianglesPlane(delta: number): void {
-    let scale = Store.getState().userConfiguration.scale + delta;
-    scale = Math.min(constants.MAX_SCALE, scale);
-    scale = Math.max(constants.MIN_SCALE, scale);
-
-    Store.dispatch(updateUserSettingAction("scale", scale));
+  setLayoutScale(multiplier: number): void {
+    let scale = Store.getState().userConfiguration.layoutScaleValue + 0.05 * multiplier;
+    scale = Math.min(constants.MAX_LAYOUT_SCALE, scale);
+    scale = Math.max(constants.MIN_LAYOUT_SCALE, scale);
+    Store.dispatch(updateUserSettingAction("layoutScaleValue", scale));
   }
 
   isWebGlSupported() {
@@ -270,16 +271,8 @@ class Controller extends React.PureComponent<Props, State> {
     this.keyboardNoLoop = new InputKeyboardNoLoop(keyboardControls);
 
     this.keyboard = new InputKeyboard({
-      // Scale planes
-      l: timeFactor => {
-        const scaleValue = Store.getState().userConfiguration.scaleValue;
-        this.scaleTrianglesPlane(-scaleValue * timeFactor);
-      },
-
-      k: timeFactor => {
-        const scaleValue = Store.getState().userConfiguration.scaleValue;
-        this.scaleTrianglesPlane(scaleValue * timeFactor);
-      },
+      l: () => this.setLayoutScale(-1),
+      k: () => this.setLayoutScale(1),
     });
   }
 

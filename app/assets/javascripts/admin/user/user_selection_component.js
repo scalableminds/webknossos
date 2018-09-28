@@ -4,7 +4,7 @@ import _ from "lodash";
 import * as React from "react";
 import { Spin, Select } from "antd";
 import { getUsers } from "admin/admin_rest_api";
-import type { APIUserType } from "admin/api_flow_types";
+import type { APIUser } from "admin/api_flow_types";
 import { handleGenericError } from "libs/error_handling";
 
 const { Option } = Select;
@@ -15,7 +15,7 @@ type Props = {
 
 type State = {
   isLoading: boolean,
-  users: Array<APIUserType>,
+  users: Array<APIUser>,
   currentUserIdValue: string,
 };
 

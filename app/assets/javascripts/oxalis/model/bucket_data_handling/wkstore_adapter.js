@@ -14,6 +14,7 @@ import constants from "oxalis/constants";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
 import ByteArrayToBase64Worker from "oxalis/workers/byte_array_to_base64.worker";
+import { parseAsMaybe } from "libs/utils";
 
 const decodeFourBit = createWorker(DecodeFourBitWorker);
 const byteArrayToBase64 = createWorker(ByteArrayToBase64Worker);
@@ -53,7 +54,7 @@ function createSendBucketInfo(zoomedAddress: Vector4, resolutions: Array<Vector3
 export async function requestFromStore(
   layerInfo: DataLayerType,
   batch: Array<Vector4>,
-): Promise<Uint8Array> {
+): Promise<{ buffer: Uint8Array, missingBuckets: number[] }> {
   const fourBit =
     Store.getState().datasetConfiguration.fourBit &&
     !isSegmentationLayer(Store.getState().dataset, layerInfo.name);
@@ -68,7 +69,7 @@ export async function requestFromStore(
     const datasetName = dataset.name;
     const dataStoreUrl = dataset.dataStore.url;
 
-    const responseBuffer = await Request.sendJSONReceiveArraybuffer(
+    const { buffer: responseBuffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
       `${dataStoreUrl}/data/datasets/${organizationName}/${datasetName}/layers/${
         layerInfo.name
       }/data?token=${token}`,
@@ -77,12 +78,13 @@ export async function requestFromStore(
         timeout: REQUEST_TIMEOUT,
       },
     );
+    const missingBuckets = parseAsMaybe(headers["missing-buckets"]).getOrElse([]);
 
     let resultBuffer = responseBuffer;
     if (fourBit) {
       resultBuffer = await decodeFourBit(resultBuffer);
     }
-    return new Uint8Array(resultBuffer);
+    return { buffer: new Uint8Array(resultBuffer), missingBuckets };
   });
 }
 

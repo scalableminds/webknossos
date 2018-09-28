@@ -11,14 +11,14 @@ import { getEditableTeams, deleteTeam } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
 import { withRouter } from "react-router-dom";
-import type { APITeamType } from "admin/api_flow_types";
+import type { APITeam } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
 import { handleGenericError } from "libs/error_handling";
 
 const { Column } = Table;
 const { Search } = Input;
 
-const typeHint: APITeamType[] = [];
+const typeHint: APITeam[] = [];
 
 type Props = {
   history: RouterHistory,
@@ -26,7 +26,7 @@ type Props = {
 
 type State = {
   isLoading: boolean,
-  teams: Array<APITeamType>,
+  teams: Array<APITeam>,
   searchQuery: string,
   isTeamCreationModalVisible: boolean,
 };
@@ -69,7 +69,7 @@ class TeamListView extends React.PureComponent<Props, State> {
     this.setState({ searchQuery: event.target.value });
   };
 
-  deleteTeam = (team: APITeamType) => {
+  deleteTeam = (team: APITeam) => {
     Modal.confirm({
       title: messages["team.delete"],
       onOk: async () => {
@@ -88,7 +88,7 @@ class TeamListView extends React.PureComponent<Props, State> {
     });
   };
 
-  createTeam = (newTeam: APITeamType) => {
+  createTeam = (newTeam: APITeam) => {
     this.setState(prevState => ({
       isTeamCreationModalVisible: false,
       teams: prevState.teams.concat([newTeam]),
@@ -137,7 +137,7 @@ class TeamListView extends React.PureComponent<Props, State> {
           <Spin spinning={this.state.isLoading} size="large">
             {this.state.teams.length <= 1 ? this.renderPlaceholder() : null}
             <Table
-              dataSource={Utils.filterWithSearchQueryOR(
+              dataSource={Utils.filterWithSearchQueryAND(
                 this.state.teams,
                 ["name"],
                 this.state.searchQuery,
@@ -157,7 +157,7 @@ class TeamListView extends React.PureComponent<Props, State> {
               <Column
                 title="Action"
                 key="actions"
-                render={(__, script: APITeamType) => (
+                render={(__, script: APITeam) => (
                   <a href="#" onClick={_.partial(this.deleteTeam, script)}>
                     <Icon type="delete" />Delete
                   </a>

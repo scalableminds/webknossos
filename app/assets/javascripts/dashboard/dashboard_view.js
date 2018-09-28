@@ -1,6 +1,7 @@
 // @flow
 /* eslint-disable jsx-a11y/href-no-hash */
 
+import _ from "lodash";
 import * as React from "react";
 import { connect } from "react-redux";
 import { Spin, Tabs } from "antd";
@@ -11,7 +12,7 @@ import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import Request from "libs/request";
 import { withRouter } from "react-router-dom";
-import type { APIUserType, APIMaybeUnimportedDatasetType } from "admin/api_flow_types";
+import type { APIUser, APIMaybeUnimportedDataset } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import type { RouterHistory } from "react-router-dom";
 import { handleGenericError } from "libs/error_handling";
@@ -26,32 +27,40 @@ type OwnProps = {
   userId: ?string,
   isAdminView: boolean,
   history: RouterHistory,
+  initialTabKey: ?string,
 };
 
 type StateProps = {
-  activeUser: APIUserType,
+  activeUser: APIUser,
 };
 
 type Props = OwnProps & StateProps;
 
 type State = {
   activeTabKey: string,
-  user: ?APIUserType,
-  datasets: Array<APIMaybeUnimportedDatasetType>,
+  user: ?APIUser,
+  datasets: Array<APIMaybeUnimportedDataset>,
   isLoadingDatasets: boolean,
 };
 
 export const wkDatasetsCacheKey = "wk.datasets";
 export const datasetCache = {
-  set(datasets: APIMaybeUnimportedDatasetType[]): void {
+  set(datasets: APIMaybeUnimportedDataset[]): void {
     localStorage.setItem("wk.datasets", JSON.stringify(datasets));
   },
-  get(): APIMaybeUnimportedDatasetType[] {
+  get(): APIMaybeUnimportedDataset[] {
     return parseAsMaybe(localStorage.getItem(wkDatasetsCacheKey)).getOrElse([]);
   },
   clear(): void {
     localStorage.removeItem(wkDatasetsCacheKey);
   },
+};
+
+export const urlTokenToTabKeyMap = {
+  gallery: "datasets",
+  datasets: "advanced-datasets",
+  tasks: "tasks",
+  annotations: "explorativeAnnotations",
 };
 
 class DashboardView extends React.PureComponent<Props, State> {
@@ -64,8 +73,10 @@ class DashboardView extends React.PureComponent<Props, State> {
 
     const cachedDatasets = datasetCache.get();
 
+    const initialTabKey =
+      this.props.initialTabKey || (lastUsedTabKey && isValid ? lastUsedTabKey : defaultTab);
     this.state = {
-      activeTabKey: lastUsedTabKey && isValid ? lastUsedTabKey : defaultTab,
+      activeTabKey: initialTabKey,
       user: null,
       isLoadingDatasets: false,
       datasets: cachedDatasets,
@@ -138,7 +149,7 @@ class DashboardView extends React.PureComponent<Props, State> {
     }
   }
 
-  getTabs(user: APIUserType) {
+  getTabs(user: APIUser) {
     if (this.props.activeUser) {
       const isAdminView = this.props.isAdminView;
 
@@ -186,10 +197,15 @@ class DashboardView extends React.PureComponent<Props, State> {
     }
 
     const onTabChange = activeTabKey => {
-      const isValid = validTabKeys.indexOf(activeTabKey) > -1;
-      if (isValid) {
+      const tabKeyToURLMap = _.invert(urlTokenToTabKeyMap);
+      const url = tabKeyToURLMap[activeTabKey];
+      if (url) {
         localStorage.setItem("lastUsedDashboardTab", activeTabKey);
+        if (!this.props.isAdminView) {
+          this.props.history.push(`/dashboard/${url}`);
+        }
       }
+
       this.setState({ activeTabKey });
     };
     const userHeader = this.props.isAdminView ? (

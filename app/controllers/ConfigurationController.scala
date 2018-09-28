@@ -1,6 +1,6 @@
 package controllers
 
-import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import javax.inject.Inject
 
@@ -53,7 +53,7 @@ class ConfigurationController @Inject()(userService: UserService,
       } yield DataSetConfiguration(configurationJson.validate[Map[String, JsValue]].getOrElse(Map.empty))
     }.orElse(
       for {
-        dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)
+        dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(GlobalAccessContext)
         config <- dataSet.defaultConfiguration
       } yield config
     )

@@ -39,7 +39,7 @@ import { alert, location } from "libs/window";
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
 import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import type { TracingType, FlycamType, SaveQueueEntryType } from "oxalis/store";
+import type { Tracing, Flycam, SaveQueueEntry } from "oxalis/store";
 import type { RequestOptionsWithData } from "libs/request";
 import { moveTreeComponent } from "oxalis/model/sagas/update_actions";
 import { doWithToken } from "admin/admin_rest_api";
@@ -128,14 +128,14 @@ export function* pushTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
 
 export function sendRequestWithToken(
   urlWithoutToken: string,
-  data: RequestOptionsWithData<Array<SaveQueueEntryType>>,
+  data: RequestOptionsWithData<Array<SaveQueueEntry>>,
 ): Promise<*> {
   return doWithToken(token => Request.sendJSONReceiveJSON(`${urlWithoutToken}${token}`, data));
 }
 
 // This function returns the first n batches of the provided array, so that the count of
 // all actions in these n batches does not exceed maximumActionCountPerSave
-function sliceAppropriateBatchCount(batches: Array<SaveQueueEntryType>): Array<SaveQueueEntryType> {
+function sliceAppropriateBatchCount(batches: Array<SaveQueueEntry>): Array<SaveQueueEntry> {
   const slicedBatches = [];
   let actionCount = 0;
 
@@ -211,9 +211,9 @@ export function toggleErrorHighlighting(state: boolean): void {
 }
 
 export function addVersionNumbers(
-  updateActionsBatches: Array<SaveQueueEntryType>,
+  updateActionsBatches: Array<SaveQueueEntry>,
   lastVersion: number,
-): Array<SaveQueueEntryType> {
+): Array<SaveQueueEntry> {
   return updateActionsBatches.map(batch => Object.assign({}, batch, { version: ++lastVersion }));
 }
 
@@ -362,8 +362,8 @@ export function compactUpdateActions(updateActions: Array<UpdateAction>): Array<
 }
 
 export function compactSaveQueue(
-  updateActionsBatches: Array<SaveQueueEntryType>,
-): Array<SaveQueueEntryType> {
+  updateActionsBatches: Array<SaveQueueEntry>,
+): Array<SaveQueueEntry> {
   const result = updateActionsBatches.filter(
     updateActionsBatch => updateActionsBatch.actions.length > 0,
   );
@@ -382,9 +382,9 @@ export function compactSaveQueue(
 
 export function performDiffTracing(
   tracingType: "skeleton" | "volume",
-  prevTracing: TracingType,
-  tracing: TracingType,
-  flycam: FlycamType,
+  prevTracing: Tracing,
+  tracing: Tracing,
+  flycam: Flycam,
 ): Array<UpdateAction> {
   let actions = [];
   if (tracingType === "skeleton" && tracing.skeleton != null && prevTracing.skeleton != null) {

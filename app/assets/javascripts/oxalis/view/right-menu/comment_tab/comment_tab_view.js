@@ -28,14 +28,14 @@ import Enum from "Enumjs";
 import messages from "messages";
 import { MarkdownModal } from "oxalis/view/components/markdown_modal";
 import type { Dispatch } from "redux";
-import type { OxalisState, SkeletonTracingType, TreeType, CommentType } from "oxalis/store";
+import type { OxalisState, SkeletonTracing, Tree, CommentType } from "oxalis/store";
 import type { Comparator } from "libs/utils";
 import { makeSkeletonTracingGuard } from "oxalis/view/guards";
 import SearchPopover from "../search_popover";
 
 const InputGroup = Input.Group;
 
-const treeTypeHint = ([]: Array<TreeType>);
+const treeTypeHint = ([]: Array<Tree>);
 const commentTypeHint = ([]: Array<CommentType>);
 
 const SortByEnum = Enum.make({
@@ -45,11 +45,11 @@ const SortByEnum = Enum.make({
 });
 type SortByEnumType = $Keys<typeof SortByEnum>;
 
-type SortOptionsType = {
+type SortOptions = {
   sortBy: SortByEnumType,
   isSortedAscending: boolean,
 };
-function getTreeSorter({ sortBy, isSortedAscending }: SortOptionsType): Comparator<TreeType> {
+function getTreeSorter({ sortBy, isSortedAscending }: SortOptions): Comparator<Tree> {
   return sortBy === SortByEnum.ID
     ? Utils.compareBy(treeTypeHint, tree => tree.treeId, isSortedAscending)
     : Utils.localeCompareBy(
@@ -60,7 +60,7 @@ function getTreeSorter({ sortBy, isSortedAscending }: SortOptionsType): Comparat
       );
 }
 
-function getCommentSorter({ sortBy, isSortedAscending }: SortOptionsType): Comparator<CommentType> {
+function getCommentSorter({ sortBy, isSortedAscending }: SortOptions): Comparator<CommentType> {
   return sortBy === SortByEnum.ID
     ? Utils.compareBy(([]: Array<CommentType>), comment => comment.nodeId, isSortedAscending)
     : Utils.localeCompareBy(
@@ -72,21 +72,21 @@ function getCommentSorter({ sortBy, isSortedAscending }: SortOptionsType): Compa
 }
 
 type Props = {
-  skeletonTracing: SkeletonTracingType,
+  skeletonTracing: SkeletonTracing,
   setActiveNode: (nodeId: number) => void,
   deleteComment: () => void,
   createComment: (text: string) => void,
 };
 
-type CommentTabStateType = {
+type CommentTabState = {
   isSortedAscending: boolean,
   sortBy: SortByEnumType,
-  data: Array<TreeType | CommentType>,
+  data: Array<Tree | CommentType>,
   collapsedTreeIds: { [number]: boolean },
   isMarkdownModalVisible: boolean,
 };
 
-class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
+class CommentTabView extends React.PureComponent<Props, CommentTabState> {
   listRef: ?List;
 
   state = {
@@ -99,10 +99,7 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
     isMarkdownModalVisible: false,
   };
 
-  static getDerivedStateFromProps(
-    props: Props,
-    state: CommentTabStateType,
-  ): $Shape<CommentTabStateType> {
+  static getDerivedStateFromProps(props: Props, state: CommentTabState): $Shape<CommentTabState> {
     const sortedTrees = _.values(props.skeletonTracing.trees)
       .filter(tree => tree.comments.length > 0)
       .sort(getTreeSorter(state));
@@ -170,7 +167,7 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
 
       const sortedComments = _.flatMap(
         sortedTrees,
-        (tree: TreeType): Array<CommentType> =>
+        (tree: Tree): Array<CommentType> =>
           tree.comments
             .slice()
             .sort(getCommentSorter({ sortBy, isSortedAscending: sortAscending })),
@@ -207,6 +204,19 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
     this.setState(prevState => ({
       isSortedAscending: !prevState.isSortedAscending,
     }));
+  };
+
+  toggleExpandForAllTrees = () => {
+    this.setState(prevState => {
+      const shouldBeCollapsed = !_.values(prevState.collapsedTreeIds).some(bool => bool);
+
+      const collapsedTreeIds = shouldBeCollapsed
+        ? _.mapValues(this.props.skeletonTracing.trees, () => true)
+        : {};
+      return {
+        collapsedTreeIds,
+      };
+    });
   };
 
   toggleExpand = (treeId: number) => {
@@ -332,7 +342,7 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
     );
 
     return (
-      <div className="flex-column">
+      <div className="flex-column" style={{ height: "inherit" }}>
         {this.renderMarkdownModal()}
         <InputGroup compact>
           <SearchPopover
@@ -342,40 +352,45 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
             searchKey="content"
             maxSearchResults={10}
           >
-            <Tooltip title="Open the search via CTRL + Shift + F">
-              <ButtonComponent>
-                <Icon type="search" />
-              </ButtonComponent>
-            </Tooltip>
+            <ButtonComponent icon="search" title="Open the search via CTRL + Shift + F" />
           </SearchPopover>
-          <ButtonComponent onClick={this.previousComment}>
-            <i className="fa fa-arrow-left" />
-          </ButtonComponent>
+          <ButtonComponent
+            title="Jump to previous comment"
+            onClick={this.previousComment}
+            icon="arrow-left"
+          />
           <InputComponent
             value={activeCommentContent}
             disabled={activeNodeMaybe.isNothing}
             onChange={evt => this.handleChangeInput(evt, true)}
             onPressEnter={evt => evt.target.blur()}
             placeholder="Add comment"
-            style={{ width: "60%" }}
+            style={{ width: "50%" }}
           />
           <ButtonComponent
             onClick={() => this.setMarkdownModalVisibility(true)}
             disabled={activeNodeMaybe.isNothing}
             type={isMultilineComment ? "primary" : "button"}
-          >
-            <Icon type="edit" />Markdown
-          </ButtonComponent>
-          <ButtonComponent onClick={this.nextComment}>
-            <i className="fa fa-arrow-right" />
-          </ButtonComponent>
+            icon="edit"
+            title="Open dialog to edit comment in multi-line mode"
+          />
+          <ButtonComponent
+            title="Jump to next comment"
+            onClick={this.nextComment}
+            icon="arrow-right"
+          />
           <Dropdown overlay={this.renderSortDropdown()}>
             <ButtonComponent title="Sort" onClick={this.toggleSortingDirection}>
               {this.renderSortIcon()}
             </ButtonComponent>
           </Dropdown>
+          <ButtonComponent
+            onClick={this.toggleExpandForAllTrees}
+            icon="shrink"
+            title="Collapse or expand groups"
+          />
         </InputGroup>
-        <div style={{ flex: "1 1 auto", marginTop: 20 }}>
+        <div style={{ flex: "1 1 auto", marginTop: 20, listStyle: "none" }}>
           <AutoSizer>
             {({ height, width }) => (
               <div style={{ height, width }} className="flex-overflow">

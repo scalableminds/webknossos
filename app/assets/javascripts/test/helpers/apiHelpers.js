@@ -24,8 +24,14 @@ const Request = {
   sendJSONReceiveJSON: sinon.stub(),
   receiveArraybuffer: sinon.stub(),
   sendJSONReceiveArraybuffer: sinon.stub(),
+  sendJSONReceiveArraybufferWithHeaders: sinon.stub(),
   always: () => Promise.resolve(),
 };
+
+Request.sendJSONReceiveArraybufferWithHeaders.returns(
+  Promise.resolve({ buffer: new Uint8Array(1), headers: { "missing-buckets": "[]" } }),
+);
+
 const ErrorHandling = {
   assertExtendContext: _.noop,
   assertExists: _.noop,

@@ -29,7 +29,7 @@ test("getTimeTrackingForUserByMonth", async t => {
     moment("20160401", "YYYYMMDD"),
   );
   t.true(timeTrackingForUserByMonth.length > 0);
-  writeFlowCheckingFile(timeTrackingForUserByMonth, "time-tracking", "APITimeTrackingType", {
+  writeFlowCheckingFile(timeTrackingForUserByMonth, "time-tracking", "APITimeTracking", {
     isArray: true,
   });
   t.snapshot(timeTrackingForUserByMonth, { id: "timetracking-timeTrackingForUserByMonth" });
@@ -58,7 +58,7 @@ test("getTimeTrackingForUser for a user other than the active user", async t => 
 
 test("getProjectProgressReport", async t => {
   const projectProgressReport = await api.getProjectProgressReport(firstTeam.id);
-  writeFlowCheckingFile(projectProgressReport, "project-progress", "APIProjectProgressReportType", {
+  writeFlowCheckingFile(projectProgressReport, "project-progress", "APIProjectProgressReport", {
     isArray: true,
   });
   t.snapshot(projectProgressReport, { id: "timetracking-projectProgressReport" });
@@ -66,6 +66,6 @@ test("getProjectProgressReport", async t => {
 
 test("getOpenTasksReport", async t => {
   const openTasksReport = await api.getOpenTasksReport(firstTeam.id);
-  writeFlowCheckingFile(openTasksReport, "open-tasks", "APIOpenTasksReportType", { isArray: true });
+  writeFlowCheckingFile(openTasksReport, "open-tasks", "APIOpenTasksReport", { isArray: true });
   t.snapshot(openTasksReport, { id: "timetracking-openTasksReport" });
 });

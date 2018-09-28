@@ -6,7 +6,7 @@ import Toast from "libs/toast";
 import Clipboard from "clipboard-js";
 import { connect } from "react-redux";
 import type { OxalisState } from "oxalis/store";
-import type { APIUserType } from "admin/api_flow_types";
+import type { APIUser } from "admin/api_flow_types";
 import { location } from "libs/window";
 
 import RegistrationForm from "admin/auth/registration_form";
@@ -17,7 +17,7 @@ const Step = Steps.Step;
 const FormItem = Form.Item;
 
 type StateProps = {
-  activeUser: ?APIUserType,
+  activeUser: ?APIUser,
 };
 
 type State = {

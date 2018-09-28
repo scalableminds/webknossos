@@ -2,43 +2,59 @@
   "env": {
     "test": {
       "presets": [
-        ["env", {
-          "targets": {
-            "node": "current"
-          },
-        }],
-        "react",
+        [
+          "@babel/preset-env",
+          {
+            "targets": {
+              "node": "current"
+            }
+          }
+        ],
       ],
-      plugins: [
-        "transform-class-properties",
-        "transform-flow-strip-types",
-        "syntax-dynamic-import",
-        ["transform-object-rest-spread", { "useBuiltIns": true }],
+      "plugins": [
         "istanbul"
-      ],
+      ]
+    },
+    "production": {
+      "plugins": [
+        // Do not add babel-plugin-import to the test env, it doesn't work together with istanbul
+        // https://github.com/istanbuljs/babel-plugin-istanbul/issues/161
+        [
+          "import",
+          {
+            "libraryName": "antd"
+          }
+        ]
+      ]
     }
   },
-  presets: [
-    ["env", {
-      "targets": {
-        "browsers": [
-          "last 3 Chrome versions",
-          "last 3 Firefox versions",
-          "last 2 Edge versions",
-          "last 1 Safari versions",
-          "last 1 iOS versions"
-        ]
-      },
-      "modules": false,
-    }],
-    "react",
-    /*"react-optimize",*/
+  "presets": [
+    [
+      "@babel/preset-env",
+      {
+        "targets": {
+          "browsers": [
+            "last 3 Chrome versions",
+            "last 3 Firefox versions",
+            "last 2 Edge versions",
+            "last 1 Safari versions",
+            "last 1 iOS versions"
+          ]
+        },
+        "modules": false
+      }
+    ],
+    "@babel/preset-react",
+    "@babel/preset-flow"
   ],
-  plugins: [
-    "transform-class-properties",
-    "transform-flow-strip-types",
-    ["import", { libraryName: "antd" }],
-    "syntax-dynamic-import",
-    ["transform-object-rest-spread", { "useBuiltIns": true }]
-  ],
+  "plugins": [
+    "@babel/plugin-proposal-class-properties",
+    "@babel/plugin-syntax-dynamic-import",
+    [
+      "@babel/plugin-proposal-object-rest-spread",
+      {
+        "useBuiltIns": true
+      }
+    ]
+  ]
 }

@@ -5,23 +5,23 @@ import { Popconfirm, Alert, Divider, Radio, Modal, Input, Button, Row, Col } fro
 import { connect } from "react-redux";
 import Toast from "libs/toast";
 import { setAnnotationPublicAction } from "oxalis/model/actions/annotation_actions";
-import type { OxalisState, RestrictionsAndSettingsType } from "oxalis/store";
-import type { APIDatasetType } from "admin/api_flow_types";
+import type { OxalisState, RestrictionsAndSettings } from "oxalis/store";
+import type { APIDataset } from "admin/api_flow_types";
 import { updateDataset } from "admin/admin_rest_api";
 import { setDatasetAction } from "oxalis/model/actions/settings_actions";
 
 const RadioGroup = Radio.Group;
 
-type ShareModalPropType = {
+type ShareModalProp = {
   // eslint-disable-next-line react/no-unused-prop-types
   isPublic: boolean,
-  dataset: APIDatasetType,
+  dataset: APIDataset,
   isVisible: boolean,
   isCurrentUserAdmin: boolean,
   onOk: () => void,
-  restrictions: RestrictionsAndSettingsType,
+  restrictions: RestrictionsAndSettings,
   setAnnotationPublic: Function,
-  makeDatasetPublic: APIDatasetType => Promise<void>,
+  makeDatasetPublic: APIDataset => Promise<void>,
 };
 
 type State = {
@@ -43,12 +43,12 @@ function Hint({ children, style }) {
   );
 }
 
-class ShareModalView extends PureComponent<ShareModalPropType, State> {
+class ShareModalView extends PureComponent<ShareModalProp, State> {
   state = {
     isPublic: false,
   };
 
-  componentWillReceiveProps(newProps: ShareModalPropType) {
+  componentWillReceiveProps(newProps: ShareModalProp) {
     this.setState({ isPublic: newProps.isPublic });
   }
 
@@ -201,7 +201,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   setAnnotationPublic(isPublic: boolean) {
     dispatch(setAnnotationPublicAction(isPublic));
   },
-  async makeDatasetPublic(dataset: APIDatasetType) {
+  async makeDatasetPublic(dataset: APIDataset) {
     const newDataset = { ...dataset, isPublic: true };
     await updateDataset(dataset, newDataset);
     dispatch(setDatasetAction(newDataset));

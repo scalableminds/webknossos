@@ -11,7 +11,8 @@ import Store from "oxalis/store";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import type { OrthoViewType, Vector2, Vector3 } from "oxalis/constants";
+import type { OrthoView, Vector2, Vector3, BoundingBoxType } from "oxalis/constants";
+import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 
 export class VoxelIterator {
   hasNext: boolean = true;
@@ -22,9 +23,11 @@ export class VoxelIterator {
   height: number;
   minCoord2d: Vector2;
   get3DCoordinate: Vector2 => Vector3;
+  boundingBox: ?BoundingBoxType;
+  next: Vector3;
 
   static finished(): VoxelIterator {
-    const iterator = new VoxelIterator([], 0, 0, [0, 0]);
+    const iterator = new VoxelIterator([], 0, 0, [0, 0], () => [0, 0, 0]);
     iterator.hasNext = false;
     return iterator;
   }
@@ -34,29 +37,58 @@ export class VoxelIterator {
     width: number,
     height: number,
     minCoord2d: Vector2,
-    get3DCoordinate: Vector2 => Vector3 = () => [0, 0, 0],
+    get3DCoordinate: Vector2 => Vector3,
+    boundingBox?: ?BoundingBoxType,
   ) {
     this.map = map;
     this.width = width;
     this.height = height;
     this.minCoord2d = minCoord2d;
     this.get3DCoordinate = get3DCoordinate;
-    if (!this.map[0][0]) {
+    this.boundingBox = boundingBox;
+    const firstCoordinate = this.get3DCoordinate(this.minCoord2d);
+    if (this.map[0][0] && this.isCoordinateInBounds(firstCoordinate)) {
+      this.next = firstCoordinate;
+    } else {
       this.getNext();
     }
   }
 
+  isCoordinateInBounds(coor: Vector3): boolean {
+    if (!this.boundingBox) {
+      return true;
+    }
+    return (
+      coor[0] >= this.boundingBox.min[0] &&
+      coor[0] <= this.boundingBox.max[0] &&
+      coor[1] >= this.boundingBox.min[1] &&
+      coor[1] <= this.boundingBox.max[1] &&
+      coor[2] >= this.boundingBox.min[2] &&
+      coor[2] <= this.boundingBox.max[2]
+    );
+  }
+
   getNext(): Vector3 {
-    const res = this.get3DCoordinate([this.x + this.minCoord2d[0], this.y + this.minCoord2d[1]]);
+    const res = this.next;
     let foundNext = false;
     while (!foundNext) {
       this.x = (this.x + 1) % this.width;
       if (this.x === 0) {
         this.y++;
       }
-      if (this.map[this.x][this.y] || this.y === this.height) {
-        this.hasNext = this.y !== this.height;
+      if (this.y === this.height) {
         foundNext = true;
+        this.hasNext = false;
+      } else if (this.map[this.x][this.y]) {
+        const currentCoordinate = this.get3DCoordinate([
+          this.x + this.minCoord2d[0],
+          this.y + this.minCoord2d[1],
+        ]);
+        // check position for beeing in bounds
+        if (this.isCoordinateInBounds(currentCoordinate)) {
+          this.next = currentCoordinate;
+          foundNext = true;
+        }
       }
     }
     return res;
@@ -64,13 +96,13 @@ export class VoxelIterator {
 }
 
 class VolumeLayer {
-  plane: OrthoViewType;
+  plane: OrthoView;
   thirdDimensionValue: number;
   contourList: Array<Vector3>;
   maxCoord: ?Vector3;
   minCoord: ?Vector3;
 
-  constructor(plane: OrthoViewType, thirdDimensionValue: number) {
+  constructor(plane: OrthoView, thirdDimensionValue: number) {
     this.plane = plane;
     this.thirdDimensionValue = thirdDimensionValue;
     this.maxCoord = null;
@@ -170,7 +202,7 @@ class VolumeLayer {
     return iterator;
   }
 
-  getCircleVoxelIterator(position: Vector3): VoxelIterator {
+  getCircleVoxelIterator(position: Vector3, boundings?: ?BoundingBoxType): VoxelIterator {
     const radius = Math.round(
       this.pixelsToVoxels(Store.getState().temporaryConfiguration.brushSize) / 2,
     );
@@ -200,13 +232,13 @@ class VolumeLayer {
         }
       }
     }
-
     const iterator = new VoxelIterator(
       map,
       width,
       height,
       minCoord2d,
       this.get3DCoordinate.bind(this),
+      boundings,
     );
     return iterator;
   }
@@ -285,7 +317,7 @@ class VolumeLayer {
   pixelsToVoxels(pixels: number): number {
     const state = Store.getState();
     const zoomFactor = getPlaneScalingFactor(state.flycam);
-    const viewportScale = state.userConfiguration.scale;
+    const viewportScale = getViewportScale(this.plane);
     return (pixels / viewportScale) * zoomFactor;
   }
 }

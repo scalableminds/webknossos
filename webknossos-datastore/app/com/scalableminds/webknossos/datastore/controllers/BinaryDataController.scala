@@ -15,6 +15,7 @@ import com.scalableminds.webknossos.datastore.models.{DataRequest, ImageThumbnai
 import com.scalableminds.webknossos.datastore.tracings.volume.VolumeTracingService
 import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
 import com.scalableminds.util.tools.Fox
+import net.liftweb.common.{Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 import play.api.http.HttpEntity
 import play.api.i18n.{Messages, MessagesProvider}
@@ -30,7 +31,7 @@ class BinaryDataController @Inject()(
                                       accessTokenService: AccessTokenService)
                                     (implicit ec: ExecutionContext,
                                      bodyParsers: PlayBodyParsers)
-                                    extends Controller {
+  extends Controller {
 
   /**
     * Handles requests for raw binary data via HTTP POST from webKnossos.
@@ -45,28 +46,36 @@ class BinaryDataController @Inject()(
         AllowRemoteOrigin {
           for {
             (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
-            data <- requestData(dataSource, dataLayer, request.body)
-          } yield Ok(data)
+            (data, indices) <- requestData(dataSource, dataLayer, request.body)
+          } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
         }
       }
+  }
+
+  def getMissingBucketsHeaders(indices: List[Int]): Seq[(String, String)] = {
+    List(("MISSING-BUCKETS" -> formatMissingBucketList(indices)), ("Access-Control-Expose-Headers" -> "MISSING-BUCKETS"))
+  }
+
+  def formatMissingBucketList(indices: List[Int]): String = {
+    "[" + indices.mkString(", ") + "]"
   }
 
   /**
     * Handles requests for raw binary data via HTTP GET.
     */
   def requestRawCuboid(
-                           organizationName: String,
-                           dataSetName: String,
-                           dataLayerName: String,
-                           x: Int,
-                           y: Int,
-                           z: Int,
-                           width: Int,
-                           height: Int,
-                           depth: Int,
-                           resolution: Int,
-                           halfByte: Boolean
-                         ) = Action.async {
+                        organizationName: String,
+                        dataSetName: String,
+                        dataLayerName: String,
+                        x: Int,
+                        y: Int,
+                        z: Int,
+                        width: Int,
+                        height: Int,
+                        depth: Int,
+                        resolution: Int,
+                        halfByte: Boolean
+                      ) = Action.async {
     implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
         AllowRemoteOrigin {
@@ -79,8 +88,8 @@ class BinaryDataController @Inject()(
               depth,
               DataServiceRequestSettings(halfByte = halfByte)
             )
-          data <- requestData(dataSource, dataLayer, request).map(Ok(_))
-          } yield data
+            (data, indices) <- requestData(dataSource, dataLayer, request)
+          } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
         }
       }
   }
@@ -117,15 +126,15 @@ class BinaryDataController @Inject()(
           for {
             (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
             request = DataRequest(
-                          new VoxelPosition(x * cubeSize * resolution,
-                            y * cubeSize * resolution,
-                            z * cubeSize * resolution,
-                            Point3D(resolution, resolution, resolution)),
-                            cubeSize,
-                            cubeSize,
-                            cubeSize)
-            data <- requestData(dataSource, dataLayer, request).map(Ok(_))
-          } yield data
+              new VoxelPosition(x * cubeSize * resolution,
+                y * cubeSize * resolution,
+                z * cubeSize * resolution,
+                Point3D(resolution, resolution, resolution)),
+              cubeSize,
+              cubeSize,
+              cubeSize)
+            (data, indices) <- requestData(dataSource, dataLayer, request)
+          } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
         }
       }
   }
@@ -160,7 +169,9 @@ class BinaryDataController @Inject()(
           } yield {
             Result(
               header = ResponseHeader(200),
-              body = HttpEntity.Streamed(StreamConverters.asOutputStream().mapMaterializedValue { outputStream => imageProvider(outputStream) }, None, Some(contentTypeJpeg)))
+              body = HttpEntity.Streamed(StreamConverters.asOutputStream().mapMaterializedValue {
+                outputStream => imageProvider(outputStream)
+              }, None, Some(contentTypeJpeg)))
           }
         }
       }
@@ -196,7 +207,9 @@ class BinaryDataController @Inject()(
           } yield {
             Result(
               header = ResponseHeader(200),
-              body = HttpEntity.Streamed(StreamConverters.asOutputStream().mapMaterializedValue { outputStream => imageProvider(outputStream) }, None, Some(contentTypeJpeg)))
+              body = HttpEntity.Streamed(StreamConverters.asOutputStream().mapMaterializedValue {
+                outputStream => imageProvider(outputStream)
+              }, None, Some(contentTypeJpeg)))
           }
         }
       }
@@ -223,7 +236,9 @@ class BinaryDataController @Inject()(
           } yield {
             Result(
               header = ResponseHeader(200),
-              body = HttpEntity.Streamed(StreamConverters.asOutputStream().mapMaterializedValue { outputStream => thumbnailProvider(outputStream) }, None, Some(contentTypeJpeg)))
+              body = HttpEntity.Streamed(StreamConverters.asOutputStream().mapMaterializedValue {
+                outputStream => thumbnailProvider(outputStream)
+              }, None, Some(contentTypeJpeg)))
           }
         }
       }
@@ -299,7 +314,7 @@ class BinaryDataController @Inject()(
                            dataSource: DataSource,
                            dataLayer: DataLayer,
                            dataRequests: DataRequestCollection
-                         ): Fox[Array[Byte]] = {
+                         ): Fox[(Array[Byte], List[Int])] = {
     val requests = dataRequests.map(r => DataServiceDataRequest(dataSource, dataLayer, r.cuboid(dataLayer), r.settings))
     binaryDataService.handleDataRequests(requests)
   }
@@ -321,7 +336,7 @@ class BinaryDataController @Inject()(
       imagesPerRow,
       blackAndWhite = blackAndWhite)
     for {
-      data <- requestData(dataSource, dataLayer, request)
+      (data, indices) <- requestData(dataSource, dataLayer, request)
       spriteSheet <- ImageCreator.spriteSheetFor(data, params) ?~> Messages("image.create.failed")
       firstSheet <- spriteSheet.pages.headOption ?~> Messages("image.page.failed")
     } yield {

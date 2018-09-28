@@ -27,32 +27,32 @@ import {
   TYPE_TREE,
   TYPE_GROUP,
 } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
-import type { TreeMapType, TreeGroupType } from "oxalis/store";
-import type { TreeNodeType } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
+import type { TreeMap, TreeGroup } from "oxalis/store";
+import type { TreeNode } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 
 const CHECKBOX_STYLE = { verticalAlign: "middle" };
 
 type Props = {
   activeTreeId: number,
   activeGroupId: number,
-  treeGroups: Array<TreeGroupType>,
+  treeGroups: Array<TreeGroup>,
   // TODO: eslint doesn't recognize, that sortBy is indeed used in the getDerivedStateFromProps function
   // eslint-disable-next-line react/no-unused-prop-types
   sortBy: string,
-  trees: TreeMapType,
+  trees: TreeMap,
   onSetActiveTree: number => void,
   onSetActiveGroup: number => void,
   onToggleTree: number => void,
   onToggleAllTrees: () => void,
   onToggleTreeGroup: number => void,
-  onUpdateTreeGroups: (Array<TreeGroupType>) => void,
+  onUpdateTreeGroups: (Array<TreeGroup>) => void,
   onSetTreeGroup: (?number, number) => void,
 };
 
 type State = {
   prevProps: ?Props,
   expandedGroupIds: { [number]: boolean },
-  groupTree: Array<TreeNodeType>,
+  groupTree: Array<TreeNode>,
   searchFocusOffset: number,
 };
 
@@ -112,7 +112,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }
   }
 
-  onChange = (treeData: Array<TreeNodeType>) => {
+  onChange = (treeData: Array<TreeNode>) => {
     this.setState({ groupTree: treeData });
   };
 
@@ -137,7 +137,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     this.props.onSetActiveGroup(parseInt(groupId, 10));
   };
 
-  onExpand = (params: { node: TreeNodeType, expanded: boolean }) => {
+  onExpand = (params: { node: TreeNode, expanded: boolean }) => {
     // Cannot use object destructuring in the parameters here, because the linter will complain
     // about the Flow types
     const { node, expanded } = params;
@@ -147,9 +147,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   onMoveNode = (params: {
-    nextParentNode: TreeNodeType,
-    node: TreeNodeType,
-    treeData: Array<TreeNodeType>,
+    nextParentNode: TreeNode,
+    node: TreeNode,
+    treeData: Array<TreeNode>,
   }) => {
     const { nextParentNode, node, treeData } = params;
     if (node.type === TYPE_TREE) {
@@ -209,7 +209,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }
   };
 
-  renderGroupActionsDropdown = (node: TreeNodeType) => {
+  renderGroupActionsDropdown = (node: TreeNode) => {
     // The root group must not be removed or renamed
     const { id, name } = node;
     const isRoot = id === MISSING_GROUP_ID;
@@ -230,7 +230,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     const nameAndDropdown = (
       <span className="ant-dropdown-link">
         <span data-id={id} onClick={this.onSelectGroup}>
-          {displayableName}
+          {displayableName}{" "}
         </span>
         <Dropdown overlay={menu} placement="bottomCenter">
           <Icon type="setting" className="group-actions-icon" />
@@ -251,7 +251,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     );
   };
 
-  generateNodeProps = (params: { node: TreeNodeType }) => {
+  generateNodeProps = (params: { node: TreeNode }) => {
     // This method can be used to add props to each node of the SortableTree component
     const { node } = params;
     const nodeProps = {};
@@ -279,7 +279,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   keySearchMethod(params: {
-    node: TreeNodeType,
+    node: TreeNode,
     searchQuery: { activeTreeId: number, activeGroupId: number },
   }): boolean {
     const { node, searchQuery } = params;
@@ -289,12 +289,12 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     );
   }
 
-  canDrop(params: { nextParent: TreeNodeType }) {
+  canDrop(params: { nextParent: TreeNode }) {
     const { nextParent } = params;
     return nextParent != null && nextParent.type === TYPE_GROUP;
   }
 
-  canDrag(params: { node: TreeNodeType }) {
+  canDrag(params: { node: TreeNode }) {
     const { node } = params;
     return node.id !== MISSING_GROUP_ID;
   }

@@ -12,18 +12,18 @@ import {
   getDataset,
   revokeDatasetSharingToken,
 } from "admin/admin_rest_api";
-import type { APIDatasetType, APIDatasetIdType } from "admin/api_flow_types";
+import type { APIDataset, APIDatasetId } from "admin/api_flow_types";
 import { FormItemWithInfo } from "./helper_components";
 
 type Props = {
   form: Object,
-  datasetId: APIDatasetIdType,
+  datasetId: APIDatasetId,
   hasNoAllowedTeams: boolean,
 };
 
 type State = {
   sharingToken: string,
-  dataSet: ?APIDatasetType,
+  dataSet: ?APIDataset,
 };
 
 export default class ImportGeneralComponent extends React.PureComponent<Props, State> {
@@ -34,6 +34,7 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
       dataSet: null,
     };
   }
+
   componentDidMount() {
     this.fetch();
   }

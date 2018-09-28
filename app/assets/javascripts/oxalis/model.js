@@ -4,7 +4,7 @@
  */
 import _ from "lodash";
 import Store from "oxalis/store";
-import type { TracingTypeTracingType, TraceOrViewCommandType } from "oxalis/store";
+import type { TracingTypeTracing, TraceOrViewCommand } from "oxalis/store";
 import {} from "oxalis/model/actions/settings_actions";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import * as Utils from "libs/utils";
@@ -26,14 +26,16 @@ export class OxalisModel {
   maximumDataTextureCountForLayer: number;
 
   async fetch(
-    tracingType: TracingTypeTracingType,
-    initialCommandType: TraceOrViewCommandType,
+    tracingType: TracingTypeTracing,
+    initialCommandType: TraceOrViewCommand,
     initialFetch: boolean,
+    version?: number,
   ) {
     const initializationInformation = await initialize(
       tracingType,
       initialCommandType,
       initialFetch,
+      version,
     );
     if (initializationInformation) {
       // Only executed on initial fetch

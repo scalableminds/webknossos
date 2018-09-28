@@ -12,7 +12,7 @@ import {
   type StateShape2,
 } from "oxalis/model/helpers/deep_update";
 import type { OxalisState } from "oxalis/store";
-import type { ActionType } from "oxalis/model/actions/actions";
+import type { Action } from "oxalis/model/actions/actions";
 
 //
 // Update helpers
@@ -38,7 +38,7 @@ const updateActiveMapping = (
 // Reducer
 //
 
-function SettingsReducer(state: OxalisState, action: ActionType): OxalisState {
+function SettingsReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
     case "UPDATE_USER_SETTING": {
       const { propertyName, value } = action;

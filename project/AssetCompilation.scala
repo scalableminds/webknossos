@@ -34,7 +34,7 @@ object AssetCompilation {
 
   private def npmInstall: Def.Initialize[Task[Seq[File]]] = Def task {
     try{
-      val exitValue = startProcess(npmPath.value, List("install"), baseDirectory.value) ! streams.value.log
+      val exitValue = startProcess(npmPath.value, List("install", "--frozen-lockfile"), baseDirectory.value) ! streams.value.log
       if(exitValue != 0)
         throw new Error(s"Running npm failed with exit code: $exitValue")
     } catch {

@@ -22,7 +22,15 @@ import SceneController from "oxalis/controller/scene_controller";
 import { readFileAsArrayBuffer } from "libs/read_file";
 import { AsyncButton } from "components/async_clickables";
 
-type StateProps = {
+type Props = {
+  customLayouts: Object,
+  onResetLayout: () => void,
+  onSelectLayout: string => void,
+  onDeleteLayout: string => void,
+  addNewLayout: () => void,
+};
+
+type StateProps = Props & {
   tracingType: APITracingType,
   annotationId: string,
   restrictions: RestrictionsAndSettings,
@@ -39,40 +47,48 @@ type State = {
 
 type ResetLayoutItemProps = {
   customLayouts: Object,
-  onReset: () => void,
+  onResetLayout: () => void,
   onSelectLayout: string => void,
   onDeleteLayout: string => void,
   addNewLayout: () => void,
 };
 
-export const ResetLayoutItem = ({
-  customLayouts,
-  onReset,
-  onSelectLayout,
-  onDeleteLayout,
-  addNewLayout,
-}: ResetLayoutItemProps) => {
-  const customLayoutsItems = customLayouts.map(layout => (
+export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
+  const {
+    customLayouts,
+    onResetLayout,
+    onSelectLayout,
+    onDeleteLayout,
+    addNewLayout,
+    ...others
+  } = props;
+  const layoutNames = Object.keys(customLayouts);
+  const customLayoutsItems = layoutNames.map(layout => (
     <Menu.Item key={layout}>
-      <React.Fragment>
-        <div onClick={() => onSelectLayout(layout)}>{layout}</div>
+      <span>
+        <div
+          style={{ display: "inline-block", marginRight: 16 }}
+          onClick={() => onSelectLayout(layout)}
+        >
+          {layout}
+        </div>
         <Tooltip placement="top" title="Remove this layout">
           <Icon type="delete" className="clickable-icon" onClick={() => onDeleteLayout(layout)} />
         </Tooltip>
-      </React.Fragment>
+      </span>
     </Menu.Item>
   ));
   return (
     <Menu.SubMenu
+      {...others}
       title={
         <React.Fragment>
           <Icon type="laptop" /> Layout
         </React.Fragment>
       }
-      key="layout"
     >
       <Menu.Item>
-        <div onClick={onReset}>Reset Layout</div>
+        <div onClick={onResetLayout}>Reset Layout</div>
       </Menu.Item>
       <Menu.Item>
         <div onClick={addNewLayout}>Add a new Layout</div>
@@ -309,7 +325,16 @@ class TracingActionsView extends PureComponent<StateProps, State> {
       );
     }
 
-    elements.push(ResetLayoutItem);
+    elements.push(
+      <ResetLayoutItem
+        customLayouts={this.props.customLayouts}
+        onReset={this.props.onResetLayout}
+        onSelectLayout={this.props.onSelectLayout}
+        onDeleteLayout={this.props.onDeleteLayout}
+        addNewLayout={this.props.addNewLayout}
+        key="layout"
+      />,
+    );
 
     const onStlUpload = async info => {
       const buffer = await readFileAsArrayBuffer(info.file);

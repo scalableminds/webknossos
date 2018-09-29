@@ -29,10 +29,17 @@ import RecordingSwitch from "oxalis/view/recording_switch";
 import TDViewControls from "oxalis/view/td_view_controls";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import { GoldenLayoutAdapter } from "./golden_layout_adapter";
-import { getLayoutConfig, storeLayoutConfig } from "./layout_persistence";
+import { getLayoutConfig, storeLayoutConfig, getLayoutConfigs } from "./layout_persistence";
 import { determineLayout } from "./default_layout_configs";
 
 const { Header, Sider } = Layout;
+
+/* TODO: activeLayout merken und auch persistieren
+*  richtig beim einlesen des localStorage parsen
+*  default Fall behandeln
+*  alles durchgehen ob es vom schema/theorie her funktioniert
+*  debugger und testen
+*/
 
 type StateProps = {
   viewMode: Mode,
@@ -49,6 +56,7 @@ type Props = StateProps & {
 
 type State = {
   isSettingsCollapsed: boolean,
+  activeLayout: string,
 };
 
 const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
@@ -90,6 +98,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
 
   render() {
     const layoutType = determineLayout(this.props.initialControlmode, this.props.viewMode);
+    const storedLayoutsForViewMode = getLayoutConfigs(layoutType);
     const { displayScalebars } = this.props;
 
     return (
@@ -106,7 +115,12 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
               <Icon type={this.state.isSettingsCollapsed ? "menu-unfold" : "menu-fold"} />
               <span className="hide-on-small-screen">Settings</span>
             </ButtonComponent>
-            <ActionBarView />
+            <ActionBarView
+              storedLayoutsForViewMode={storedLayoutsForViewMode}
+              setCurrentLayout={layoutName => {
+                this.setState({ activeLayout: layoutName });
+              }}
+            />
           </Header>
           <Layout style={{ display: "flex" }}>
             <Sider
@@ -126,6 +140,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
                 id="layoutContainer"
                 style={GOLDEN_LAYOUT_ADAPTER_STYLE}
                 layoutKey={layoutType}
+                activeLayout={this.state.activeLayout}
                 layoutConfigGetter={getLayoutConfig}
                 onLayoutChange={this.onLayoutChange}
               >

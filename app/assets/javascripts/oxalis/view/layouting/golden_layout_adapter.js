@@ -14,7 +14,8 @@ import { layoutEmitter } from "./layout_persistence";
 type Props<KeyType> = {
   id: string,
   layoutKey: KeyType,
-  layoutConfigGetter: (layoutKey: KeyType) => Object,
+  activeLayout: string,
+  layoutConfigGetter: (layoutKey: KeyType, layoutName: string) => Object,
   onLayoutChange?: (config: Object, layoutKey: string) => void,
   children: React.Node,
   style: Object,
@@ -111,7 +112,7 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
 
   setupLayout() {
     const gl = new GoldenLayout(
-      this.props.layoutConfigGetter(this.props.layoutKey),
+      this.props.layoutConfigGetter(this.props.layoutKey, this.props.activeLayout),
       `#${this.props.id}`,
     );
     this.gl = gl;

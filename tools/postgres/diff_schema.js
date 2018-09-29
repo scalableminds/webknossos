@@ -13,12 +13,14 @@ const POSTGRES_URL =
   typeof process.env.POSTGRES_URL !== "undefined"
     ? process.env.POSTGRES_URL
     : "jdbc:postgresql://localhost/webknossos";
-const scriptdir = "tools/postgres";
+const scriptdir = __dirname;
 const scriptName = __filename;
+
 let p1;
 let p2;
 let dir1;
 let dir2;
+let exit_code;
 
 function dump(parameter) {
   if (parameter === "DB") {
@@ -83,7 +85,7 @@ function dumpToFolder(postgresUrl) {
   try {
     execSync(scriptdir + "/dump_schema.sh " + tmpDir, { env: { POSTGRES_URL: postgresUrl } });
   } catch (err) {
-    console.log("CLEANUP AAA: remove " + tmpDir);
+    console.log("CLEANUP: remove " + tmpDir);
     rimraf.sync(tmpDir);
     process.exit(1);
   }
@@ -145,13 +147,16 @@ try {
   // diff
   try {
     execSync("diff -r " + dir1 + " " + dir2);
+    exit_code = 0;
     console.log("[SUCCESS] Schemas do match");
   } catch (err) {
+    exit_code = 1;
     console.log(err.stdout.toString('utf8'))
     console.log("[FAILED] Schemas do not match");
   }
 } catch (err) {
   console.log(err);
+  exit_code = 2;
 } finally {
   if (typeof dir1 !== "undefined" && dir1) {
     console.log("CLEANUP: remove " + dir1);
@@ -161,4 +166,5 @@ try {
     console.log("CLEANUP: remove " + dir2);
     rimraf.sync(dir2);
   }
+  process.exit(exit_code)
 }

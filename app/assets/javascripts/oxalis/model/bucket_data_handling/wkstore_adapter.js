@@ -78,9 +78,9 @@ export async function requestWithFallback(
   const shouldUseDataStore = !isSegmentation || state.tracing.volume == null;
   const requestUrl = shouldUseDataStore ? getDataStoreUrl() : getTracingStoreUrl();
 
-  const bucketBuffers = await requestFromStore(requestUrl, layerInfo, batch).catch(() => {
-    return batch.map(() => null);
-  });
+  const bucketBuffers = await requestFromStore(requestUrl, layerInfo, batch).catch(() =>
+    batch.map(() => null),
+  );
   const missingBucketIndices = getNullIndices(bucketBuffers);
 
   const retry =

@@ -16,7 +16,6 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 - [024-drop-md5hash.sql](conf/evolutions/024-drop-md5hash.sql)
 - [025-add-dataset-sortingKey.sql](conf/evolutions/025-add-dataset-sortingKey.sql)
 - [026-decrease-total-instance.sql](conf/evolutions/026-decrease-total-instance.sql)
-- [027-fix-schema-version.sql](conf/evolutions/027-fix-schema-version.sql)
 
 ### Configuration Changes:
 - some keys in `application.conf` have changed, if you overwrite them in your setup, please adapt: `application.secret` is now `play.http.secret.key`, `postgres.*` is now `slick.db.*`

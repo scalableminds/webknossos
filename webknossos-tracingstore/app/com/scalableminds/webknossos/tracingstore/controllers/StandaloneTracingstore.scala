@@ -1,11 +1,11 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
 import play.api.libs.json.Json
-import play.api.mvc.Action
+import play.api.mvc.{Action, InjectedController}
 import play.api.mvc.Results._
 
 
-class StandaloneTracingstore {
+class StandaloneTracingstore extends InjectedController {
 
   def buildInfo = Action { implicit request =>
     Ok(Json.obj(

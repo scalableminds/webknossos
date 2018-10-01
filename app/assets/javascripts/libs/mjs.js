@@ -187,6 +187,8 @@ V3.round = function round(v: Vector3 | Float32Array, r: ?Float32Array): Float32A
 
 V3.floor = v => v.map(number => Math.floor(number));
 
+V3.ceil = v => v.map(number => Math.ceil(number));
+
 V3.toString = v => v.join(", ");
 
 V3.scale3 = function scale3(a, k, r) {

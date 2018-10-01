@@ -77,6 +77,7 @@ POST          /api/datastores/:name/verifyUpload                                
 POST          /api/datastores/:name/validateUserAccess                          controllers.UserTokenController.validateAccessViaDatastore(name: String, token: String)
 
 # Tracingstores
+GET           /api/tracingstore                                                 controllers.TracingStoreController.listOne
 POST          /api/tracingstores/:name/handleTracingUpdateReport                controllers.WKTracingStoreController.handleTracingUpdateReport(name: String)
 POST          /api/tracingstores/:name/validateUserAccess                       controllers.UserTokenController.validateAccessViaTracingstore(name: String, token: String)
 

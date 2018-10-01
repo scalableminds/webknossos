@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* eslint-disable import/no-extraneous-dependencies */
+/* eslint-disable import/no-extraneous-dependencies, prefer-template, prefer-arrow-callback */
 const program = require("commander");
 const randomstring = require("randomstring");
 const execSync = require("child_process").execSync;
@@ -20,7 +20,7 @@ let p1;
 let p2;
 let dir1;
 let dir2;
-let exit_code;
+let exitCode;
 
 function dump(parameter) {
   if (parameter === "DB") {
@@ -147,16 +147,16 @@ try {
   // diff
   try {
     execSync("diff -r " + dir1 + " " + dir2);
-    exit_code = 0;
+    exitCode = 0;
     console.log("[SUCCESS] Schemas do match");
   } catch (err) {
-    exit_code = 1;
-    console.log(err.stdout.toString('utf8'))
+    exitCode = 1;
+    console.log(err.stdout.toString("utf8"))
     console.log("[FAILED] Schemas do not match");
   }
 } catch (err) {
   console.log(err);
-  exit_code = 2;
+  exitCode = 2;
 } finally {
   if (typeof dir1 !== "undefined" && dir1) {
     console.log("CLEANUP: remove " + dir1);
@@ -166,5 +166,5 @@ try {
     console.log("CLEANUP: remove " + dir2);
     rimraf.sync(dir2);
   }
-  process.exit(exit_code)
+  process.exit(exitCode)
 }

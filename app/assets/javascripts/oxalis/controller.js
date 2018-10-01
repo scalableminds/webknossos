@@ -32,7 +32,7 @@ import messages from "messages";
 import { fetchGistContent } from "libs/gist";
 import { document } from "libs/window";
 import NewTaskDescriptionModal from "oxalis/view/new_task_description_modal";
-import type Mode from "oxalis/constants";
+import type { Mode } from "oxalis/constants";
 import type { OxalisState, TracingTypeTracing, TraceOrViewCommand } from "oxalis/store";
 import type { RouterHistory } from "react-router-dom";
 

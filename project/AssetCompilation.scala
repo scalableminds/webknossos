@@ -87,25 +87,30 @@ object AssetCompilation {
   } dependsOn npmInstall
 
   private def slickClassesFromDBSchemaTask: Def.Initialize[Task[Seq[File]]] = Def task{
+      val streamsValue = streams.value
+      val baseDirectoryValue = baseDirectory.value
+      val dependencyClasspathValue = (dependencyClasspath in Compile).value
+      val runnerValue = (runner in Compile).value
+      val sourceManagedValue = sourceManaged.value
 
-      val schemaPath = baseDirectory.value / "tools" / "postgres" / "schema.sql"
-      val slickTablesOutPath = sourceManaged.value / "schema" / "com" / "scalableminds" / "webknossos" / "schema" / "Tables.scala"
+      val schemaPath = baseDirectoryValue / "tools" / "postgres" / "schema.sql"
+      val slickTablesOutPath = sourceManagedValue / "schema" / "com" / "scalableminds" / "webknossos" / "schema" / "Tables.scala"
 
       val shouldUpdate = !slickTablesOutPath.exists || slickTablesOutPath.lastModified < schemaPath.lastModified
 
       if (shouldUpdate) {
-        streams.value.log.info("Ensuring Postgres DB is running for Slick code generation...")
-        startProcess((baseDirectory.value / "tools" / "postgres" / "ensure_db.sh").toString, List(), baseDirectory.value)  ! streams.value.log
+        streamsValue.log.info("Ensuring Postgres DB is running for Slick code generation...")
+        startProcess((baseDirectoryValue / "tools" / "postgres" / "ensure_db.sh").toString, List(), baseDirectoryValue)  ! streamsValue.log
 
-        streams.value.log.info("Updating Slick SQL schema from local database...")
+        streamsValue.log.info("Updating Slick SQL schema from local database...")
 
-        (runner in Compile).value.run("slick.codegen.SourceCodeGenerator", (dependencyClasspath in Compile).value.files,
-          Array("file://" + (baseDirectory.value / "conf" / "application.conf").toString + "#slick", (sourceManaged.value / "schema").toString),
-          streams.value.log
+        runnerValue.run("slick.codegen.SourceCodeGenerator", dependencyClasspathValue.files,
+          Array("file://" + (baseDirectoryValue / "conf" / "application.conf").toString + "#slick", (sourceManagedValue / "schema").toString),
+          streamsValue.log
         )
 
       } else {
-        streams.value.log.info("Slick SQL schema already up to date.")
+        streamsValue.log.info("Slick SQL schema already up to date.")
       }
 
       Seq((slickTablesOutPath))

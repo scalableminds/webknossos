@@ -788,7 +788,7 @@ export async function getTimeTrackingForUser(
 
 export async function getProjectProgressReport(
   teamId: string,
-  doNotCatch?: boolean = false,
+  showErrorToast?: boolean = true,
 ): Promise<Array<APIProjectProgressReport>> {
   const progressData = await Request.receiveJSON(`/api/teams/${teamId}/progressOverview`, {
     showErrorToast,

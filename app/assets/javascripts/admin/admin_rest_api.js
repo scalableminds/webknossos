@@ -708,7 +708,7 @@ export async function addForeignDataSet(
 }
 
 // Returns void if the name is valid. Otherwise, a string is returned which denotes the reason.
-export async function isDatasetNameValid(datasetId: APIDatasetIdType): Promise<?string> {
+export async function isDatasetNameValid(datasetId: APIDatasetId): Promise<?string> {
   if (datasetId.name === "") {
     return "The dataset name must not be empty.";
   }
@@ -748,7 +748,7 @@ export async function triggerDatasetCheck(datastoreHost: string): Promise<void> 
 
 export async function triggerDatasetClearCache(
   datastoreHost: string,
-  datasetId: APIDatasetIdType,
+  datasetId: APIDatasetId,
 ): Promise<void> {
   await doWithToken(token =>
     Request.triggerRequest(
@@ -760,14 +760,14 @@ export async function triggerDatasetClearCache(
   );
 }
 
-export async function getDatasetSharingToken(datasetId: APIDatasetIdType): Promise<string> {
+export async function getDatasetSharingToken(datasetId: APIDatasetId): Promise<string> {
   const { sharingToken } = await Request.receiveJSON(
     `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/sharingToken`,
   );
   return sharingToken;
 }
 
-export async function revokeDatasetSharingToken(datasetId: APIDatasetIdType): Promise<void> {
+export async function revokeDatasetSharingToken(datasetId: APIDatasetId): Promise<void> {
   await Request.triggerRequest(
     `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/sharingToken`,
     { method: "DELETE" },

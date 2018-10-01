@@ -411,7 +411,9 @@ class ReactRouter extends React.Component<Props> {
                     redirectTo={async () => {
                       const datasetName = match.params.id || "";
                       const organizationName = await getOrganizationForDataset(datasetName);
-                      return `/datasets/${await organizationName}/${datasetName}/view`;
+                      return `/datasets/${organizationName}/${datasetName}/view${
+                        window.location.search
+                      }${window.location.hash}`;
                     }}
                   />
                 )}

@@ -70,14 +70,10 @@ function initTmpDB() {
 function loadDataIntoDB(parameter, dbHost, dbName) {
   const fileNames = glob.sync(parameter);
   const concatenateFileNames = fileNames.map(name => "-f " + name).join(" ");
+  // prettier-ignore
   execSync(
-    "psql -U postgres -h " +
-      dbHost +
-      " --dbname='" +
-      dbName +
-      "' -v ON_ERROR_STOP=ON -q " +
-      concatenateFileNames,
-    { env: { PGPASSWORD: "postgres" } },
+    "psql -U postgres -h " + dbHost + " --dbname='" + dbName + "' -v ON_ERROR_STOP=ON -q " + concatenateFileNames,
+    { env: { PGPASSWORD: "postgres" } }
   );
 }
 

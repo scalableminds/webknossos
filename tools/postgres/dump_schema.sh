@@ -38,3 +38,6 @@ PGPASSWORD=postgres psql -U postgres -h "$dbHost" --dbname "$dbName" -c "\d+ web
   awk -v RS= -v FS='"' -v schemadir="$schemadir" "$FORMATING"
 
 PGPASSWORD=postgres psql -U postgres -h "$dbHost" --dbname "$dbName" -c "\df+ webknossos.*" > "$schemadir/Functions"
+
+PGPASSWORD=postgres psql -U postgres -h "$dbHost" --dbname "$dbName" \
+  -At -c " SELECT schemaVersion FROM webknossos.releaseInformation;" > "$schemadir/schemaVersion"

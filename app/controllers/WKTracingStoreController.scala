@@ -3,22 +3,34 @@ package controllers
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
-import models.annotation.{Annotation, AnnotationDAO, TracingStoreService}
+import models.annotation.{Annotation, AnnotationDAO, TracingStoreDAO, TracingStoreService}
 import models.user.time.TimeSpanService
-import oxalis.security.WkSilhouetteEnvironment
-import play.api.libs.json.JsObject
+import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
+import com.mohiva.play.silhouette.api.Silhouette
+import play.api.libs.json.{JsObject, Json}
 import models.annotation.AnnotationState._
 
 import scala.concurrent.ExecutionContext
 
 class WKTracingStoreController @Inject()(tracingStoreService: TracingStoreService,
+                                         tracingStoreDAO: TracingStoreDAO,
                                          wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                                          timeSpanService: TimeSpanService,
-                                         annotationDAO: AnnotationDAO
+                                         annotationDAO: AnnotationDAO,
+                                         sil: Silhouette[WkEnv]
                                         )(implicit ec: ExecutionContext)
   extends Controller with FoxImplicits {
 
   val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
+
+  def listOne = sil.UserAwareAction.async { implicit request =>
+    for {
+      tracingStore <- tracingStoreDAO.findFirst ?~> "tracingStore.list.failed"
+      js <- tracingStoreService.publicWrites(tracingStore)
+    } yield {
+      Ok(Json.toJson(js))
+    }
+  }
 
   def handleTracingUpdateReport(name: String) = Action.async(parse.json) { implicit request =>
     tracingStoreService.validateAccess(name) { dataStore =>

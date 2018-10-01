@@ -64,24 +64,27 @@ function initTmpDB() {
   const dbHost = execSync(scriptdir + "/db_host.sh", { env: { POSTGRES_URL: postgresUrl } })
     .toString()
     .trim();
-  return [
-    dbName,
-    dbHost,
-    postgresUrl,
-  ];
+  return [dbName, dbHost, postgresUrl];
 }
 
 function loadDataIntoDB(parameter, dbHost, dbName) {
   const fileNames = glob.sync(parameter);
   const concatenateFileNames = fileNames.map(name => "-f " + name).join(" ");
   execSync(
-    "psql -U postgres -h " + dbHost + " --dbname='" + dbName + "' -v ON_ERROR_STOP=ON -q " + concatenateFileNames,
-    { env: { PGPASSWORD: "postgres" } }
+    "psql -U postgres -h " +
+      dbHost +
+      " --dbname='" +
+      dbName +
+      "' -v ON_ERROR_STOP=ON -q " +
+      concatenateFileNames,
+    { env: { PGPASSWORD: "postgres" } },
   );
 }
 
 function dumpToFolder(postgresUrl) {
-  const tmpDir = execSync("mktemp -d").toString().trim();
+  const tmpDir = execSync("mktemp -d")
+    .toString()
+    .trim();
   try {
     execSync(scriptdir + "/dump_schema.sh " + tmpDir, { env: { POSTGRES_URL: postgresUrl } });
   } catch (err) {
@@ -116,7 +119,7 @@ function sortFile(fileName) {
 program
   .version("0.1.0", "-v, --version")
   .arguments("<parameter1> <parameter2>")
-  .action(function (parameter1, parameter2) {
+  .action(function(parameter1, parameter2) {
     p1 = parameter1;
     p2 = parameter2;
   });
@@ -135,11 +138,11 @@ try {
   dir1 = dump(p1);
   dir2 = dump(p2);
   // sort and remove commas
-  glob.sync(dir1 + "/**", { nodir: true }).forEach(function (fileName) {
+  glob.sync(dir1 + "/**", { nodir: true }).forEach(function(fileName) {
     replace({ files: fileName, replace: /,$/gm, with: "" });
     sortFile(fileName);
   });
-  glob.sync(dir2 + "/**", { nodir: true }).forEach(function (fileName) {
+  glob.sync(dir2 + "/**", { nodir: true }).forEach(function(fileName) {
     replace({ files: fileName, replace: /,$/gm, with: "" });
     sortFile(fileName);
   });
@@ -151,7 +154,7 @@ try {
     console.log("[SUCCESS] Schemas do match");
   } catch (err) {
     exitCode = 1;
-    console.log(err.stdout.toString("utf8"))
+    console.log(err.stdout.toString("utf8"));
     console.log("[FAILED] Schemas do not match");
   }
 } catch (err) {
@@ -166,5 +169,5 @@ try {
     console.log("CLEANUP: remove " + dir2);
     rimraf.sync(dir2);
   }
-  process.exit(exitCode)
+  process.exit(exitCode);
 }

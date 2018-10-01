@@ -8,7 +8,7 @@ import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.user.User
 import net.liftweb.common.Full
-import oxalis.security.SharingTokenContainer
+import oxalis.security.{SharingTokenContainer, UserSharingTokenContainer}
 import play.api.Configuration
 import play.api.libs.json.{Json, JsonValidationError, Reads}
 import reactivemongo.bson.BSONObjectID
@@ -135,7 +135,7 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: Execut
         userIdBox <- userIdFromCtx.futureBox
       } yield {
         userIdBox match {
-          case Full(userId) => "(" + readAccessQ(userId) + ")"
+          case Full(userId) => "(" + readAccessFromUserOrToken(userId, sharingTokenFromCtx)(ctx) + ")"
           case _ => "(" + anonymousReadAccessQ(sharingTokenFromCtx) + ")"
         }
       }
@@ -167,6 +167,7 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: Execut
   def userIdFromCtx(implicit ctx: DBAccessContext): Fox[ObjectId] = {
     ctx.data match {
       case Some(user: User) => Fox.successful(user._id)
+      case Some(userSharingTokenContainer: UserSharingTokenContainer) => Fox.successful(userSharingTokenContainer.user._id)
       case _ => Fox.failure("Access denied.")
     }
   }
@@ -174,7 +175,15 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: Execut
   private def sharingTokenFromCtx(implicit ctx: DBAccessContext): Option[String] = {
     ctx.data match {
       case Some(sharingTokenContainer: SharingTokenContainer) => Some(sanitize(sharingTokenContainer.sharingToken))
+      case Some(userSharingTokenContainer: UserSharingTokenContainer) => userSharingTokenContainer.sharingToken.map(sanitize(_))
       case _ => None
+    }
+  }
+
+  private def readAccessFromUserOrToken(userId: ObjectId, tokenOption: Option[String])(implicit ctx: DBAccessContext): String = {
+    tokenOption match {
+      case Some(_) => "((" + anonymousReadAccessQ(sharingTokenFromCtx) + ") OR (" + readAccessQ(userId) + "))"
+      case _ => "(" + readAccessQ(userId) + ")"
     }
   }
 

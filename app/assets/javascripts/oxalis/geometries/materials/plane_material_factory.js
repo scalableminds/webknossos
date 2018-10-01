@@ -12,9 +12,9 @@ import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import AbstractPlaneMaterialFactory, {
   sanitizeName,
 } from "oxalis/geometries/materials/abstract_plane_material_factory";
-import type { ShaderMaterialOptionsType } from "oxalis/geometries/materials/abstract_plane_material_factory";
-import type { OrthoViewType, Vector3 } from "oxalis/constants";
-import type { DatasetLayerConfigurationType } from "oxalis/store";
+import type { ShaderMaterialOptions } from "oxalis/geometries/materials/abstract_plane_material_factory";
+import type { OrthoView, Vector3 } from "oxalis/constants";
+import type { DatasetLayerConfiguration } from "oxalis/store";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import {
   getPlaneScalingFactor,
@@ -30,6 +30,7 @@ import {
   getResolutions,
   isRgb,
   getByteCount,
+  getBoundaries,
 } from "oxalis/model/accessors/dataset_accessor";
 
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
@@ -39,10 +40,10 @@ function getColorLayerNames() {
 }
 
 class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
-  planeID: OrthoViewType;
+  planeID: OrthoView;
   isOrthogonal: boolean;
 
-  constructor(planeID: OrthoViewType, isOrthogonal: boolean, shaderId: number) {
+  constructor(planeID: OrthoView, isOrthogonal: boolean, shaderId: number) {
     super(shaderId);
     this.planeID = planeID;
     this.isOrthogonal = isOrthogonal;
@@ -140,6 +141,14 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         type: "f",
         value: OrthoViewValues.indexOf(this.planeID),
       },
+      bboxMin: {
+        type: "v3",
+        value: new THREE.Vector3(0, 0, 0),
+      },
+      bboxMax: {
+        type: "v3",
+        value: new THREE.Vector3(0, 0, 0),
+      },
     });
 
     for (const dataLayer of Model.getAllLayers()) {
@@ -211,7 +220,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     }
   }
 
-  makeMaterial(options?: ShaderMaterialOptionsType): void {
+  makeMaterial(options?: ShaderMaterialOptions): void {
     super.makeMaterial(options);
 
     this.material.setGlobalPosition = ([x, y, z]) => {
@@ -330,6 +339,18 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       ),
     );
 
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        storeState => storeState.dataset,
+        dataset => {
+          const { lowerBoundary, upperBoundary } = getBoundaries(dataset);
+          this.uniforms.bboxMin.value.set(...lowerBoundary);
+          this.uniforms.bboxMax.value.set(...upperBoundary);
+        },
+        true,
+      ),
+    );
+
     const hasSegmentation = Model.getSegmentationLayer() != null;
     if (hasSegmentation) {
       this.storePropertyUnsubscribers.push(
@@ -410,7 +431,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     this.uniforms.activeCellId.value.set(r, g, b, a);
   }
 
-  updateUniformsForLayer(settings: DatasetLayerConfigurationType, name: string): void {
+  updateUniformsForLayer(settings: DatasetLayerConfiguration, name: string): void {
     super.updateUniformsForLayer(settings, name);
 
     if (settings.color != null) {

@@ -1,23 +1,23 @@
 // @flow
 /* eslint-disable import/prefer-default-export */
-import type { APIUserType } from "admin/api_flow_types";
+import type { APIUser } from "admin/api_flow_types";
 
-type SetActiveUserType = {
+type SetActiveUser = {
   type: "SET_ACTIVE_USER",
-  user: APIUserType,
+  user: APIUser,
 };
 
-type LogoutUserType = {
+type LogoutUser = {
   type: "LOGOUT_USER",
 };
 
-export type UserActionType = SetActiveUserType | LogoutUserType;
+export type UserAction = SetActiveUser | LogoutUser;
 
-export const setActiveUserAction = (user: APIUserType): SetActiveUserType => ({
+export const setActiveUserAction = (user: APIUser): SetActiveUser => ({
   type: "SET_ACTIVE_USER",
   user,
 });
 
-export const logoutUserAction = (): LogoutUserType => ({
+export const logoutUserAction = (): LogoutUser => ({
   type: "LOGOUT_USER",
 });

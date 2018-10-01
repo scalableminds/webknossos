@@ -1,7 +1,7 @@
 // @flow
 
 import _ from "lodash";
-import type { TreeType, TreeMapType, TreeGroupType } from "oxalis/store";
+import type { Tree, TreeMap, TreeGroup } from "oxalis/store";
 
 export const MISSING_GROUP_ID = -1;
 
@@ -11,23 +11,23 @@ const GroupTypeEnum = {
   [TYPE_GROUP]: TYPE_GROUP,
   [TYPE_TREE]: TYPE_TREE,
 };
-type TreeOrGroupType = $Keys<typeof GroupTypeEnum>;
+type TreeOrGroup = $Keys<typeof GroupTypeEnum>;
 
-export type TreeNodeType = {
+export type TreeNode = {
   name: string,
   id: number,
   expanded: boolean,
   isChecked: boolean,
   timestamp: number,
-  type: TreeOrGroupType,
-  children: Array<TreeNodeType>,
+  type: TreeOrGroup,
+  children: Array<TreeNode>,
 };
 
 export function makeBasicGroupObject(
   groupId: number,
   name: string,
-  children: Array<TreeGroupType> = [],
-): TreeGroupType {
+  children: Array<TreeGroup> = [],
+): TreeGroup {
   return {
     groupId,
     name,
@@ -38,9 +38,9 @@ export function makeBasicGroupObject(
 function makeTreeNode(
   id: number,
   name: string,
-  type: TreeOrGroupType,
-  optionalProperties: $Shape<TreeNodeType>,
-): TreeNodeType {
+  type: TreeOrGroup,
+  optionalProperties: $Shape<TreeNode>,
+): TreeNode {
   return _.extend(
     {
       id,
@@ -55,21 +55,18 @@ function makeTreeNode(
   );
 }
 
-function makeTreeNodeFromTree(tree: TreeType): TreeNodeType {
+function makeTreeNodeFromTree(tree: Tree): TreeNode {
   return makeTreeNode(tree.treeId, tree.name, TYPE_TREE, {
     timestamp: tree.timestamp,
     isChecked: tree.isVisible,
   });
 }
 
-function makeTreeNodeFromGroup(
-  group: TreeGroupType,
-  optionalProperties: $Shape<TreeNodeType>,
-): TreeNodeType {
+function makeTreeNodeFromGroup(group: TreeGroup, optionalProperties: $Shape<TreeNode>): TreeNode {
   return makeTreeNode(group.groupId, group.name, TYPE_GROUP, optionalProperties);
 }
 
-export function removeTreesAndTransform(groupTree: Array<TreeNodeType>): Array<TreeGroupType> {
+export function removeTreesAndTransform(groupTree: Array<TreeNode>): Array<TreeGroup> {
   // Remove all trees from the group hierarchy and transform groups to their basic form
   return _.filter(groupTree, treeNode => treeNode.type === TYPE_GROUP).map(group =>
     makeBasicGroupObject(group.id, group.name, removeTreesAndTransform(group.children)),
@@ -77,11 +74,11 @@ export function removeTreesAndTransform(groupTree: Array<TreeNodeType>): Array<T
 }
 
 export function insertTreesAndTransform(
-  groups: Array<TreeGroupType>,
-  groupToTreesMap: { [number]: Array<TreeType> },
+  groups: Array<TreeGroup>,
+  groupToTreesMap: { [number]: Array<Tree> },
   expandedGroupIds: { [number]: boolean },
   sortBy: string,
-): Array<TreeNodeType> {
+): Array<TreeNode> {
   // Insert all trees into their respective groups in the group hierarchy and transform groups to tree nodes
   return groups.map(group => {
     const { groupId } = group;
@@ -103,13 +100,13 @@ export function insertTreesAndTransform(
 }
 
 export function callDeep(
-  groups: Array<TreeGroupType>,
+  groups: Array<TreeGroup>,
   groupId: number,
-  callback: (TreeGroupType, number, Array<TreeGroupType>, ?number) => void,
+  callback: (TreeGroup, number, Array<TreeGroup>, ?number) => void,
   parentGroupId: ?number = MISSING_GROUP_ID,
 ) {
   // Deeply traverse the group hierarchy and execute the callback function when the treeNode with id groupId is found
-  groups.forEach((group: TreeGroupType, index: number, array: Array<TreeGroupType>) => {
+  groups.forEach((group: TreeGroup, index: number, array: Array<TreeGroup>) => {
     if (group.groupId === groupId) {
       callback(group, index, array, parentGroupId);
     }
@@ -119,7 +116,7 @@ export function callDeep(
   });
 }
 
-export function findGroup(groups: Array<TreeGroupType>, groupId: number): ?TreeGroupType {
+export function findGroup(groups: Array<TreeGroup>, groupId: number): ?TreeGroup {
   let foundGroup = null;
   callDeep(groups, groupId, group => {
     foundGroup = group;
@@ -127,6 +124,6 @@ export function findGroup(groups: Array<TreeGroupType>, groupId: number): ?TreeG
   return foundGroup;
 }
 
-export function createGroupToTreesMap(trees: TreeMapType): { [number]: Array<TreeType> } {
+export function createGroupToTreesMap(trees: TreeMap): { [number]: Array<Tree> } {
   return _.groupBy(trees, tree => (tree.groupId != null ? tree.groupId : MISSING_GROUP_ID));
 }

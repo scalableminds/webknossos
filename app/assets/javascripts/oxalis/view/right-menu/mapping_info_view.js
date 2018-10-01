@@ -11,8 +11,8 @@ import Model from "oxalis/model";
 import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { SwitchSetting } from "oxalis/view/settings/setting_input_views";
-import type { OrthoViewType, Vector2, Vector3 } from "oxalis/constants";
-import type { OxalisState, MappingType } from "oxalis/store";
+import type { OrthoView, Vector2, Vector3 } from "oxalis/constants";
+import type { OxalisState, Mapping } from "oxalis/store";
 import { OrthoViews } from "oxalis/constants";
 import _ from "lodash";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
@@ -24,10 +24,10 @@ type Props = {
   zoomStep: number,
   mousePosition: ?Vector2,
   isMappingEnabled: boolean,
-  mapping: ?MappingType,
+  mapping: ?Mapping,
   mappingColors: ?Array<number>,
   setMappingEnabled: boolean => void,
-  activeViewport: OrthoViewType,
+  activeViewport: OrthoView,
   activeCellId: number,
 };
 

@@ -25,6 +25,7 @@ import {
   setActiveTreeAction,
   addTreesAndGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import { readFileAsText } from "libs/read_file";
 import Store from "oxalis/store";
 import { serializeToNml, getNmlName, parseNml } from "oxalis/model/helpers/nml_helpers";
 import * as Utils from "libs/utils";
@@ -32,12 +33,7 @@ import { saveAs } from "file-saver";
 import { getBuildInfo } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import type { Dispatch } from "redux";
-import type {
-  OxalisState,
-  TracingType,
-  SkeletonTracingType,
-  UserConfigurationType,
-} from "oxalis/store";
+import type { OxalisState, Tracing, SkeletonTracing, UserConfiguration } from "oxalis/store";
 import SearchPopover from "./search_popover";
 
 const ButtonGroup = Button.Group;
@@ -52,9 +48,9 @@ type Props = {
   onCreateTree: () => void,
   onDeleteTree: () => void,
   onChangeTreeName: string => void,
-  annotation: TracingType,
-  skeletonTracing?: SkeletonTracingType,
-  userConfiguration: UserConfigurationType,
+  annotation: Tracing,
+  skeletonTracing?: SkeletonTracing,
+  userConfiguration: UserConfiguration,
   onSetActiveTree: number => void,
   showDropzoneModal: () => void,
 };
@@ -63,15 +59,6 @@ type State = {
   isUploading: boolean,
   isDownloading: boolean,
 };
-
-function readFileAsText(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = reject;
-    reader.onload = () => resolve(reader.result.toString());
-    reader.readAsText(file);
-  });
-}
 
 export async function importNmls(files: Array<File>, createGroupForEachFile: boolean) {
   try {

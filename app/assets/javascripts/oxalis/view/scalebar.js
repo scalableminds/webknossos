@@ -3,13 +3,13 @@
 import * as React from "react";
 import { connect } from "react-redux";
 import constants, { OUTER_BORDER_ORTHO } from "oxalis/constants";
-import type { OxalisState, FlycamType } from "oxalis/store";
+import type { OxalisState, Flycam } from "oxalis/store";
 import { calculateZoomLevel, formatZoomLevel } from "oxalis/view/right-menu/dataset_info_tab_view";
-import type { APIDatasetType } from "admin/api_flow_types";
+import type { APIDataset } from "admin/api_flow_types";
 
 type Props = {|
-  dataset: APIDatasetType,
-  flycam: FlycamType,
+  dataset: APIDataset,
+  flycam: Flycam,
 |};
 
 const scalebarWidthPercentage = 0.25;

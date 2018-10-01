@@ -22,7 +22,9 @@ declare module "antd" {
     static TextArea: React$ComponentType<P>;
     focus: () => void;
   }
-  declare class InputNumber<P> extends React$Component<P> {}
+  declare class InputNumber<P> extends React$Component<P> {
+    focus: () => void;
+  }
   declare class Form<P> extends React$Component<P> {
     static create: (
       options?: Object,

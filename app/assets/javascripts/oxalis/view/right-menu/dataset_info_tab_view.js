@@ -17,14 +17,14 @@ import {
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import { Table } from "antd";
 import Markdown from "react-remarkable";
-import type { APIDatasetType } from "admin/api_flow_types";
-import type { OxalisState, TracingType, TaskType, FlycamType } from "oxalis/store";
+import type { APIDataset } from "admin/api_flow_types";
+import type { OxalisState, Tracing, Task, Flycam } from "oxalis/store";
 
 type DatasetInfoTabStateProps = {
-  tracing: TracingType,
-  dataset: APIDatasetType,
-  flycam: FlycamType,
-  task: ?TaskType,
+  tracing: Tracing,
+  dataset: APIDataset,
+  flycam: Flycam,
+  task: ?Task,
 };
 
 type DatasetInfoTabProps = DatasetInfoTabStateProps & {
@@ -73,7 +73,7 @@ const shortcuts = [
   },
 ];
 
-export function calculateZoomLevel(flycam: FlycamType, dataset: APIDatasetType): number {
+export function calculateZoomLevel(flycam: Flycam, dataset: APIDataset): number {
   const zoom = getPlaneScalingFactor(flycam);
   let width;
   const viewMode = Store.getState().temporaryConfiguration.viewMode;

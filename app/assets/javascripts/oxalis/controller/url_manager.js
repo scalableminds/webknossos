@@ -7,19 +7,19 @@ import _ from "lodash";
 import * as Utils from "libs/utils";
 import { V3 } from "libs/mjs";
 import Store from "oxalis/store";
-import type { Vector3, ModeType } from "oxalis/constants";
+import type { Vector3, Mode } from "oxalis/constants";
 import constants, { ModeValues } from "oxalis/constants";
 import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getSkeletonTracing, getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import { applyState } from "oxalis/model_initialization";
 import window, { location } from "libs/window";
-import type { TracingType } from "oxalis/store";
+import type { Tracing } from "oxalis/store";
 
 const MAX_UPDATE_INTERVAL = 1000;
 
 export type UrlManagerState = {
   position?: Vector3,
-  mode?: ModeType,
+  mode?: Mode,
   zoomStep?: number,
   activeNode?: number,
   rotation?: Vector3,
@@ -97,7 +97,7 @@ class UrlManager {
     window.onhashchange = () => this.onHashChange();
   }
 
-  buildHash(tracing: TracingType) {
+  buildHash(tracing: Tracing) {
     const position = V3.floor(getPosition(Store.getState().flycam));
     const { viewMode } = Store.getState().temporaryConfiguration;
     const viewModeIndex = ModeValues.indexOf(viewMode);
@@ -133,7 +133,7 @@ export function updateTypeAndId(
   // will only ever be updated for the annotations route as the other route is for
   // dataset viewing only
   return baseUrl.replace(
-    /^(.*\/annotations)\/(.*?)\/([^/]*)(\/?.*)$/,
+    /^(.*\/annotations)\/(.*?)\/([^/?]*)(\/?.*)$/,
     (all, base, type, id, rest) => `${base}/${tracingType}/${annotationId}${rest}`,
   );
 }

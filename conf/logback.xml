@@ -14,6 +14,7 @@
   <logger name="frontend" level="INFO" />
   <logger name="oxalis" level="DEBUG" />
   <logger name="controllers" level="DEBUG" />
+  <logger name="controllers.AssetsConfiguration" level="INFO" />
   <logger name="models" level="DEBUG" />
 
   <root level="INFO">

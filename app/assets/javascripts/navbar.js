@@ -14,14 +14,14 @@ import Store from "oxalis/store";
 import features from "features";
 
 import type { OxalisState } from "oxalis/store";
-import type { APIUserType } from "admin/api_flow_types";
+import type { APIUser } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
 
 const { SubMenu } = Menu;
 const { Header } = Layout;
 
 type StateProps = {
-  activeUser: ?APIUserType,
+  activeUser: ?APIUser,
 };
 
 type Props = {
@@ -218,7 +218,7 @@ class Navbar extends React.PureComponent<Props, State> {
               ])
             : helpMenu}
         </Menu>
-        {!isAuthenticated ? (
+        {!(isAuthenticated || features().hideNavbarLogin) ? (
           <div style={{ flex: 1, display: "flex", justifyContent: "flex-end" }}>
             <LoginView layout="inline" redirect={this.props.history.location.pathname} />
           </div>

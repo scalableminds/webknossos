@@ -1,10 +1,10 @@
 // @flow
-import type { ShaderModuleType } from "./shader_module_system";
+import type { ShaderModule } from "./shader_module_system";
 import { hsvToRgb } from "./utils.glsl";
 import { binarySearchIndex } from "./mappings.glsl";
 import { getRgbaAtIndex } from "./texture_access.glsl";
 
-export const convertCellIdToRGB: ShaderModuleType = {
+export const convertCellIdToRGB: ShaderModule = {
   requirements: [hsvToRgb, getRgbaAtIndex],
   code: `
     vec3 convertCellIdToRGB(vec4 id) {
@@ -35,7 +35,7 @@ export const convertCellIdToRGB: ShaderModuleType = {
   `,
 };
 
-export const getBrushOverlay: ShaderModuleType = {
+export const getBrushOverlay: ShaderModule = {
   code: `
     vec4 getBrushOverlay(vec3 worldCoordUVW) {
       vec4 brushOverlayColor = vec4(0.0);
@@ -60,7 +60,7 @@ export const getBrushOverlay: ShaderModuleType = {
   `,
 };
 
-export const getSegmentationId: ShaderModuleType = {
+export const getSegmentationId: ShaderModule = {
   requirements: [binarySearchIndex, getRgbaAtIndex],
   code: `
     vec4 getSegmentationId(vec3 coords, vec3 fallbackCoords, bool hasFallback) {

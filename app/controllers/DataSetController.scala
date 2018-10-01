@@ -13,12 +13,11 @@ import models.team.{OrganizationDAO, TeamDAO}
 import models.user.UserService
 import oxalis.security.{URLSharing, WkEnv}
 import com.scalableminds.util.tools.Math
-import play.api.cache.CacheApi
+import play.api.cache.SyncCacheApi
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import utils.ObjectId
-import play.cache.SyncCacheApi
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
@@ -33,7 +32,7 @@ class DataSetController @Inject()(userService: UserService,
                                   teamDAO: TeamDAO,
                                   dataSetDAO: DataSetDAO,
                                   sil: Silhouette[WkEnv],
-                                  cache: CacheApi)
+                                  cache: SyncCacheApi)
                                  (implicit ec: ExecutionContext)
 extends Controller {
 

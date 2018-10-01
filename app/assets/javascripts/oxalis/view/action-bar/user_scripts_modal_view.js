@@ -6,12 +6,12 @@ import { Modal, Input, Select, Spin } from "antd";
 import Request from "libs/request";
 import { fetchGistContent } from "libs/gist";
 import messages from "messages";
-import type { ScriptType } from "oxalis/store";
+import type { Script } from "oxalis/store";
 import { handleGenericError } from "libs/error_handling";
 
 const TextArea = Input.TextArea;
 
-type UserScriptsModalViewPropsType = {
+type UserScriptsModalViewProps = {
   onOK: Function,
   isVisible: boolean,
 };
@@ -19,12 +19,12 @@ type UserScriptsModalViewPropsType = {
 type State = {
   code: string,
   isCodeChanged: boolean,
-  scripts: Array<ScriptType>,
+  scripts: Array<Script>,
   selectedScript: ?string,
   isLoading: boolean,
 };
 
-class UserScriptsModalView extends React.PureComponent<UserScriptsModalViewPropsType, State> {
+class UserScriptsModalView extends React.PureComponent<UserScriptsModalViewProps, State> {
   state = {
     code: "",
     isCodeChanged: false,
@@ -68,7 +68,7 @@ class UserScriptsModalView extends React.PureComponent<UserScriptsModalViewProps
     }
   };
 
-  loadScript = async (script: ScriptType) => {
+  loadScript = async (script: Script) => {
     try {
       this.setState({ isLoading: true });
       const content = await fetchGistContent(script.gist, script.name);

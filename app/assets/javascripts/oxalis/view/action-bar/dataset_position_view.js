@@ -1,9 +1,9 @@
 // @flow
 import React, { PureComponent } from "react";
-import type { OxalisState, FlycamType } from "oxalis/store";
+import type { OxalisState, Flycam } from "oxalis/store";
 import { connect } from "react-redux";
 import Clipboard from "clipboard-js";
-import type { ModeType } from "oxalis/constants";
+import type { Mode } from "oxalis/constants";
 import constants from "oxalis/constants";
 import Toast from "libs/toast";
 import { V3 } from "libs/mjs";
@@ -16,8 +16,8 @@ import ButtonComponent from "oxalis/view/components/button_component";
 import message from "messages";
 
 type Props = {
-  flycam: FlycamType,
-  viewMode: ModeType,
+  flycam: Flycam,
+  viewMode: Mode,
 };
 
 class DatasetPositionView extends PureComponent<Props> {

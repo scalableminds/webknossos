@@ -27,11 +27,18 @@ In order to restore the current window, a reload is necessary.`,
   "save.leave_page_unfinished":
     "WARNING: You have unsaved progress that may be lost when hitting OK. Please click cancel, wait until the progress is saved and the save button displays a checkmark before leaving the page..",
   "save.failed": "Failed to save tracing. Retrying.",
-  "undo.no_undo": "There is no action that could be undone.",
+  "undo.no_undo":
+    "There is no action that could be undone. However, if you want to restore an earlier version of this tracing, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
   "undo.no_redo": "There is no action that could be redone.",
   "download.wait": "Please wait...",
   "download.close_window": "You may close this window after the download has started.",
   "add_script.confirm_change": "This will replace the code you have written. Continue?",
+  "data.enabled_render_missing_data_black":
+    "You just enabled the option to render missing data black. Please refresh this page so that the changes can take effect.",
+  "data.disabled_render_missing_data_black": `You just disabled the option to render missing
+  data black. This means that in case of missing data, data of lower quality is rendered
+  instead. Only enable this option if you understand its effect. Please refresh
+  this page so that the changes can take effect.`,
   "tracing.copy_position": "Click this button to copy the position.",
   "tracing.copy_rotation": "Click this button to copy the rotation.",
   "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered cell id",
@@ -76,6 +83,8 @@ In order to restore the current window, a reload is necessary.`,
     "The next task will most likely be part of project <%- projectName %>",
   ),
   "task.confirm_reset": "Do you really want to reset this task?",
+  "task.domain_does_not_exist":
+    "No matching experience domain. Assign this domain to a user to add it to the listed options.",
   "annotation.reset_success": "Annotation was successfully reset.",
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",

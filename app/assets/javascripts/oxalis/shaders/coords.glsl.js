@@ -1,8 +1,8 @@
 // @flow
-import type { ShaderModuleType } from "./shader_module_system";
+import type { ShaderModule } from "./shader_module_system";
 import { getW } from "./utils.glsl";
 
-export const getResolution: ShaderModuleType = {
+export const getResolution: ShaderModule = {
   code: `
     vec3 getResolution(float zoomStep) {
       if (zoomStep == 0.0) {
@@ -19,7 +19,7 @@ export const getResolution: ShaderModuleType = {
   `,
 };
 
-export const getRelativeCoords: ShaderModuleType = {
+export const getRelativeCoords: ShaderModule = {
   requirements: [getResolution],
   code: `
     vec3 getRelativeCoords(vec3 worldCoordUVW, float usedZoomStep) {
@@ -43,7 +43,7 @@ export const getRelativeCoords: ShaderModuleType = {
   `,
 };
 
-export const getWorldCoordUVW: ShaderModuleType = {
+export const getWorldCoordUVW: ShaderModule = {
   requirements: [getW],
   code: `
     vec3 getWorldCoordUVW() {
@@ -80,6 +80,18 @@ export const getWorldCoordUVW: ShaderModuleType = {
       );
 
       return worldCoordUVW;
+    }
+  `,
+};
+
+export const isOutsideOfBoundingBox: ShaderModule = {
+  code: `
+    bool isOutsideOfBoundingBox(vec3 worldCoordUVW) {
+      vec3 worldCoord = transDim(worldCoordUVW);
+      return (
+        worldCoord.x < bboxMin.x || worldCoord.y < bboxMin.y || worldCoord.z < bboxMin.z ||
+        worldCoord.x > bboxMax.x || worldCoord.y > bboxMax.y || worldCoord.z > bboxMax.z
+      );
     }
   `,
 };

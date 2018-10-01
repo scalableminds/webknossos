@@ -1,3 +1,5 @@
+@import "../_variables.less";
+
 #tracing {
   position: relative;
   display: inline-block;
@@ -24,8 +26,7 @@
   -moz-box-sizing: border-box;
   float: left;
 
-  margin-right: 20px;
-  margin-bottom: 20px;
+  margin: 0;
   border-color: white;
 
   &:hover {
@@ -77,13 +78,9 @@
 }
 
 .tracing-layout {
-  height: ~"calc(100vh - 60px)";
+  height: ~"calc(100vh - 48px)";
   display: flex;
 
-  .ant-layout-header {
-    height: auto;
-    min-height: 64px;
-  }
   &.ant-layout,
   & .ant-layout {
     overflow: initial;
@@ -122,4 +119,29 @@
 }
 .tracing-right-menu {
   min-width: 450px;
+}
+
+#version-restore-sider {
+  border-left: 1px solid #e8e8e8;
+  padding: 3;
+  padding-top: 15px;
+  position: fixed;
+  right: 0;
+  z-index: 1000;
+  top: @navbar-height;
+  bottom: 0;
+}
+
+.version-entry {
+  padding: 3px;
+  &:hover:not(.active-version-entry) {
+    background-color: #e6f7ff;
+  }
+}
+.active-version-entry {
+  background-color: #bae7ff;
+}
+
+.close-button > i {
+  margin-right: 0px;
 }

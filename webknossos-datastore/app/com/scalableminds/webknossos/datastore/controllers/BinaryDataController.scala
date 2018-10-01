@@ -15,6 +15,7 @@ import com.scalableminds.webknossos.datastore.models.{DataRequest, ImageThumbnai
 import com.scalableminds.webknossos.datastore.tracings.volume.VolumeTracingService
 import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
 import com.scalableminds.util.tools.Fox
+import net.liftweb.common.{Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 import play.api.http.HttpEntity
 import play.api.i18n.{Messages, MessagesProvider}
@@ -44,10 +45,18 @@ class BinaryDataController @Inject()(
         AllowRemoteOrigin {
             for {
               (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
-              data <- requestData(dataSource, dataLayer, request.body)
-            } yield Ok(data)
+              (data, indices) <- requestData(dataSource, dataLayer, request.body)
+            } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
           }
         }
+  }
+
+  def getMissingBucketsHeaders(indices: List[Int]): Seq[(String, String)] = {
+    List(("MISSING-BUCKETS" -> formatMissingBucketList(indices)), ("Access-Control-Expose-Headers" -> "MISSING-BUCKETS"))
+  }
+
+  def formatMissingBucketList(indices: List[Int]): String = {
+    "[" + indices.mkString(", ") + "]"
   }
 
   /**
@@ -77,8 +86,8 @@ class BinaryDataController @Inject()(
               depth,
               DataServiceRequestSettings(halfByte = halfByte)
             )
-          data <- requestData(dataSource, dataLayer, request).map(Ok(_))
-          } yield data
+          (data, indices) <- requestData(dataSource, dataLayer, request)
+          } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
         }
       }
   }
@@ -121,8 +130,8 @@ class BinaryDataController @Inject()(
             cubeSize,
             cubeSize,
             cubeSize)
-            data <- requestData(dataSource, dataLayer, request).map(Ok(_))
-          } yield data
+            (data, indices) <- requestData(dataSource, dataLayer, request)
+        } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
         }
       }
   }
@@ -291,7 +300,7 @@ class BinaryDataController @Inject()(
                            dataSource: DataSource,
                            dataLayer: DataLayer,
                            dataRequests: DataRequestCollection
-                         ): Fox[Array[Byte]] = {
+                         ): Fox[(Array[Byte], List[Int])] = {
     val requests = dataRequests.map(r => DataServiceDataRequest(dataSource, dataLayer, r.cuboid(dataLayer), r.settings))
     binaryDataService.handleDataRequests(requests)
   }
@@ -313,7 +322,7 @@ class BinaryDataController @Inject()(
       imagesPerRow,
       blackAndWhite = blackAndWhite)
     for {
-      data <- requestData(dataSource, dataLayer, request)
+      (data, indices) <- requestData(dataSource, dataLayer, request)
       spriteSheet <- ImageCreator.spriteSheetFor(data, params) ?~> Messages("image.create.failed")
       firstSheet <- spriteSheet.pages.headOption ?~> Messages("image.page.failed")
     } yield {

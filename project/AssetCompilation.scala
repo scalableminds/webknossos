@@ -1,4 +1,5 @@
 import java.nio.file.{Files, StandardCopyOption}
+import java.util.function.Consumer
 
 import sbt.Keys._
 import sbt._
@@ -66,7 +67,27 @@ object AssetCompilation {
     }
   }
 
+  private def copyRecursively(from: File, to: File): Unit = {
+    def toConsumer[A](function: A => Any): Consumer[A] = new Consumer[A]() {
+      override def accept(arg: A): Unit = function.apply(arg)
+    }
+
+    Files.walk(from.toPath).forEach(toConsumer(cpSrc => {
+      val cpDest = to.toPath.resolve(from.toPath.relativize(cpSrc))
+      Files.copy(cpSrc, cpDest)
+    }))
+  }
+
+
+  private def deleteRecursively(file: File): Unit = {
+    if (file.isDirectory)
+      file.listFiles.foreach(deleteRecursively)
+    if (file.exists && !file.delete)
+      throw new Exception(s"Unable to delete ${file.getAbsolutePath}")
+  }
+
   private def assetsGenerationTask: Def.Initialize[Task[Unit]] = Def task {
+    // copy tools/postgres
     try {
       val destination = target.value  / "universal" / "stage" / "tools" / "postgres"
       destination.mkdirs
@@ -76,6 +97,26 @@ object AssetCompilation {
     } catch {
       case e: Exception => streams.value.log.error("Could not copy SQL schema to stage dir: " + e.getMessage)
     }
+
+    // copy node_modules for diff_schema.js
+    {
+      val nodeModules = Seq(
+        "commander",
+        "randomstring",
+        "glob",
+        "rimraf",
+        "replace-in-file"
+      )
+      val nodeSrc = baseDirectory.value / "node_modules"
+      val nodeDest = target.value  / "universal" / "stage" / "node_modules"
+      deleteRecursively(nodeDest)
+      nodeDest.mkdirs
+      nodeModules.foreach(node_module => {
+        copyRecursively(nodeSrc / node_module, nodeDest / node_module)
+      })
+    }
+
+    // run webpack
     try{
       val exitValue = startProcess(webpackPath.value, List("--env.production"), baseDirectory.value) ! streams.value.log
       if(exitValue != 0)

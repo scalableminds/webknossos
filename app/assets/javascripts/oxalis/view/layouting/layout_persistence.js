@@ -134,6 +134,7 @@ export function deleteLayout(layoutKey: LayoutKeys, layoutName: string) {
     delete newLayouts[layoutKey][layoutName];
   }
   Store.dispatch(setStoredLayoutsAction(newLayouts));
+  persistLayoutConfigsDebounced();
 }
 
 export function addNewLayout(
@@ -149,6 +150,7 @@ export function addNewLayout(
   if (newLayouts[layoutKey] && newLayouts[layoutKey][configFromLayout]) {
     newLayouts[layoutKey][newLayoutName] = newLayouts[layoutKey][configFromLayout];
     Store.dispatch(setStoredLayoutsAction(newLayouts));
+    persistLayoutConfigsDebounced();
     return true;
   }
   Toast.warning("Could not create a new Layout.");

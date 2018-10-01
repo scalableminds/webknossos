@@ -15,12 +15,12 @@ import TracingActionsView, { ResetLayoutItem } from "oxalis/view/action-bar/trac
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
 import ViewModesView from "oxalis/view/action-bar/view_modes_view";
 import VolumeActionsView from "oxalis/view/action-bar/volume_actions_view";
-import AddNewLayoutModal from "oxalis/view/action-bar/add-new-layout-modal";
+import AddNewLayoutModal from "oxalis/view/action-bar/add_new_layout_modal";
 import Constants, { ControlModeEnum } from "oxalis/constants";
 import type { Mode, ControlMode } from "oxalis/constants";
 import type { OxalisState, Tracing } from "oxalis/store";
 import ButtonComponent from "oxalis/view/components/button_component";
-import { lastUsedLayout } from "./default_layout_configs";
+import { lastUsedLayout } from "oxalis/view/layouting/default_layout_configs";
 
 const VersionRestoreWarning = (
   <Alert

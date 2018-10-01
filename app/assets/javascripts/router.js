@@ -406,14 +406,14 @@ class ReactRouter extends React.Component<Props> {
               />
               <Route
                 path="/datasets/:id/view"
-                render={({ match }: ContextRouter) => (
+                render={({ match, location }: ContextRouter) => (
                   <AsyncRedirect
                     redirectTo={async () => {
                       const datasetName = match.params.id || "";
                       const organizationName = await getOrganizationForDataset(datasetName);
-                      return `/datasets/${organizationName}/${datasetName}/view${
-                        window.location.search
-                      }${window.location.hash}`;
+                      return `/datasets/${organizationName}/${datasetName}/view${location.search}${
+                        location.hash
+                      }`;
                     }}
                   />
                 )}

@@ -34,13 +34,6 @@ import defaultLayouts, { determineLayout } from "./default_layout_configs";
 
 const { Header, Sider } = Layout;
 
-/* TODO: activeLayout merken und auch persistieren
-*  richtig beim einlesen des localStorage parsen
-*  default Fall behandeln
-*  alles durchgehen ob es vom schema/theorie her funktioniert
-*  debugger und testen
-*/
-
 type StateProps = {
   viewMode: Mode,
   displayScalebars: boolean,

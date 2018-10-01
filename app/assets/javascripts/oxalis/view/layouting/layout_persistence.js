@@ -3,7 +3,7 @@ import _ from "lodash";
 import NanoEvents from "nanoevents";
 import { setStoredLayoutsAction } from "oxalis/model/actions/ui_actions";
 import Store from "oxalis/store";
-
+import Toast from "libs/toast";
 import defaultLayouts, {
   currentLayoutVersion,
   defaultLayoutSchema,
@@ -81,11 +81,6 @@ function persistLayoutConfigs() {
   localStorage.setItem(localStorageKeys.currentLayoutVersion, JSON.stringify(currentLayoutVersion));
 }
 
-function clearStoredLayouts() {
-  localStorage.removeItem(localStorageKeys.goldenWkLayouts);
-  Store.dispatch(setStoredLayoutsAction(readStoredLayoutConfigs()));
-}
-
 layoutEmitter.on("resetLayout", (layoutKey: LayoutKeys, activeLayout: string) => {
   storeLayoutConfig(defaultLayouts[layoutKey], layoutKey, activeLayout);
 });
@@ -109,7 +104,7 @@ export function getLayoutConfig(layoutKey: LayoutKeys, layoutName: string) {
   return defaultLayouts[layoutKey];
 }
 
-export function storeLayoutConfig(layoutConfig: Object, layoutKey: string, layoutName: string) {
+function getDeepCopyOfStoredLayouts(): Object {
   const currentLayouts = Store.getState().uiInformation.storedLayouts;
   const layoutKeys = Object.keys(currentLayouts);
   const newLayouts = {};
@@ -117,15 +112,45 @@ export function storeLayoutConfig(layoutConfig: Object, layoutKey: string, layou
     newLayouts[currentLayoutKey] = {};
     const layoutNames = Object.keys(currentLayouts[currentLayoutKey]);
     layoutNames.forEach(currentLayoutName => {
-      if (currentLayoutKey === layoutKey && currentLayoutName === layoutName) {
-        newLayouts[currentLayoutKey][currentLayoutName] = layoutConfig;
-      } else {
-        newLayouts[currentLayoutKey][currentLayoutName] =
-          currentLayouts[currentLayoutKey][currentLayoutName];
-      }
+      newLayouts[currentLayoutKey][currentLayoutName] =
+        currentLayouts[currentLayoutKey][currentLayoutName];
     });
   });
-  console.log("persisting", newLayouts);
+  return newLayouts;
+}
+
+export function storeLayoutConfig(layoutConfig: Object, layoutKey: LayoutKeys, layoutName: string) {
+  const newLayouts = getDeepCopyOfStoredLayouts();
+  if (newLayouts[layoutKey] && newLayouts[layoutKey][layoutName]) {
+    newLayouts[layoutKey][layoutName] = layoutConfig;
+  }
   Store.dispatch(setStoredLayoutsAction(newLayouts));
   persistLayoutConfigsDebounced();
+}
+
+export function deleteLayout(layoutKey: LayoutKeys, layoutName: string) {
+  const newLayouts = getDeepCopyOfStoredLayouts();
+  if (newLayouts[layoutKey]) {
+    delete newLayouts[layoutKey][layoutName];
+  }
+  Store.dispatch(setStoredLayoutsAction(newLayouts));
+}
+
+export function addNewLayout(
+  layoutKey: LayoutKeys,
+  newLayoutName: string,
+  configFromLayout: string,
+): boolean {
+  const newLayouts = getDeepCopyOfStoredLayouts();
+  if (newLayouts[layoutKey] && newLayouts[layoutKey][newLayoutName]) {
+    Toast.info("This layout name is already used.");
+    return false;
+  }
+  if (newLayouts[layoutKey] && newLayouts[layoutKey][configFromLayout]) {
+    newLayouts[layoutKey][newLayoutName] = newLayouts[layoutKey][configFromLayout];
+    Store.dispatch(setStoredLayoutsAction(newLayouts));
+    return true;
+  }
+  Toast.warning("Could not create a new Layout.");
+  return false;
 }

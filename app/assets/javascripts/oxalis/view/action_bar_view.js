@@ -3,16 +3,24 @@ import * as React from "react";
 import { Icon, Alert, Dropdown, Menu } from "antd";
 import { connect } from "react-redux";
 import Store from "oxalis/store";
-import { layoutEmitter, getLayoutConfigs } from "oxalis/view/layouting/layout_persistence";
+import Toast from "libs/toast";
+import {
+  layoutEmitter,
+  deleteLayout,
+  getLayoutConfig,
+  addNewLayout,
+} from "oxalis/view/layouting/layout_persistence";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import TracingActionsView, { ResetLayoutItem } from "oxalis/view/action-bar/tracing_actions_view";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
 import ViewModesView from "oxalis/view/action-bar/view_modes_view";
 import VolumeActionsView from "oxalis/view/action-bar/volume_actions_view";
+import AddNewLayoutModal from "oxalis/view/action-bar/add-new-layout-modal";
 import Constants, { ControlModeEnum } from "oxalis/constants";
 import type { Mode, ControlMode } from "oxalis/constants";
 import type { OxalisState, Tracing } from "oxalis/store";
 import ButtonComponent from "oxalis/view/components/button_component";
+import { lastUsedLayout } from "./default_layout_configs";
 
 const VersionRestoreWarning = (
   <Alert
@@ -32,27 +40,29 @@ type StateProps = {
 type Props = StateProps & {
   storedLayoutNamesForView: Array<string>,
   activeLayout: string,
+  layoutKey: LayoutKeys,
   setCurrentLayout: string => void,
 };
+
 // eslint-disable-next-line react/prefer-stateless-function
 class ActionBarView extends React.PureComponent<Props> {
   handleResetLayout = () => {
     Store.dispatch(updateUserSettingAction("layoutScaleValue", 1));
-    layoutEmitter.emit("resetLayout");
-  };
-
-  handleLayoutSelected = (layoutName: string) => {
-    console.log("changing to layout:", layoutName);
+    layoutEmitter.emit("resetLayout", this.props.layoutKey, this.props.activeLayout);
   };
 
   handleLayoutDeleted = (layoutName: string) => {
-    console.log("deleting layout:", layoutName);
+    deleteLayout(this.props.layoutKey, layoutName);
   };
 
-  handleAddingNewLayout = () => {
-    // open popup/modal here to get the name
-    // and add another layout with the current layout settings
-    console.log("to be implemented");
+  addNewLayout = (layoutName: string) => {
+    if (layoutName === lastUsedLayout) {
+      Toast.info(`The name "${lastUsedLayout}" is reserved.`);
+    }
+    const currentLayout = getLayoutConfig(this.props.layoutKey, this.props.activeLayout);
+    if (addNewLayout(this.props.layoutKey, layoutName, currentLayout)) {
+      this.props.setCurrentLayout(layoutName);
+    }
   };
 
   render() {
@@ -64,9 +74,9 @@ class ActionBarView extends React.PureComponent<Props> {
       storedLayoutNamesForView: this.props.storedLayoutNamesForView,
       activeLayout: this.props.activeLayout,
       onResetLayout: this.handleResetLayout,
-      onSelectLayout: this.handleLayoutSelected,
+      onSelectLayout: this.props.setCurrentLayout,
       onDeleteLayout: this.handleLayoutDeleted,
-      addNewLayout: this.handleAddingNewLayout,
+      addNewLayout: this.addNewLayout,
     };
     const readonlyDropdown = (
       <Dropdown overlay={<Menu>{<ResetLayoutItem {...resetItemProps} />}</Menu>}>
@@ -77,17 +87,20 @@ class ActionBarView extends React.PureComponent<Props> {
     );
 
     return (
-      <div className="action-bar">
-        {isTraceMode && !this.props.showVersionRestore ? (
-          <TracingActionsView {...resetItemProps} />
-        ) : (
-          readonlyDropdown
-        )}
-        {this.props.showVersionRestore ? VersionRestoreWarning : null}
-        <DatasetPositionView />
-        {hasVolume && isVolumeSupported ? <VolumeActionsView /> : null}
-        {hasSkeleton && isTraceMode ? <ViewModesView /> : null}
-      </div>
+      <React.Fragment>
+        <div className="action-bar">
+          {isTraceMode && !this.props.showVersionRestore ? (
+            <TracingActionsView {...resetItemProps} />
+          ) : (
+            readonlyDropdown
+          )}
+          {this.props.showVersionRestore ? VersionRestoreWarning : null}
+          <DatasetPositionView />
+          {hasVolume && isVolumeSupported ? <VolumeActionsView /> : null}
+          {hasSkeleton && isTraceMode ? <ViewModesView /> : null}
+        </div>
+        <AddNewLayoutModal addLayout={this.addNewLayout} />
+      </React.Fragment>
     );
   }
 }

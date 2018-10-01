@@ -1,6 +1,6 @@
 import java.nio.file.{Files, StandardCopyOption}
 
-import sbt.Keys._
+import sbt.Keys.{runner, _}
 import sbt.{Task, _}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -31,26 +31,27 @@ object AssetCompilation {
       Process("kill" :: pid :: Nil).run()
   }
 
-  private def npmInstall: Def.Initialize[Task[Seq[File]]] = (npmPath, baseDirectory, streams) map { (npm, base, s) =>
+  private def npmInstall: Def.Initialize[Task[Seq[File]]] = Def task {
     try{
-      val exitValue = startProcess(npm, List("install"), base) ! s.log
+      val exitValue = startProcess(npmPath.value, List("install"), baseDirectory.value) ! streams.value.log
       if(exitValue != 0)
         throw new Error(s"Running npm failed with exit code: $exitValue")
     } catch {
       case e: java.io.IOException =>
-        s.log.error("Npm couldn't be found. Please set the configuration key 'AssetCompilation.npmPath' properly. " + e.getMessage)
+        streams.value.log.error("Npm couldn't be found. Please set the configuration key 'AssetCompilation.npmPath' properly. " + e.getMessage)
     }
+
     Seq()
   }
 
-  private def webpackGenerateTask: Def.Initialize[Task[Any]] = (webpackPath, baseDirectory, streams, target) map { (webpack, base, s, t) =>
+  private def webpackGenerateTask: Def.Initialize[Task[Any]] = Def task {
     try{
       Future{
-        startProcess(webpack, List("-w"), base) ! s.log
+        startProcess(webpackPath.value, List("-w"), baseDirectory.value) ! streams.value.log
       }
     } catch {
       case e: java.io.IOException =>
-        s.log.error("Webpack couldn't be found. Please set the configuration key 'AssetCompilation.webpackPath' properly. " + e.getMessage)
+        streams.value.log.error("Webpack couldn't be found. Please set the configuration key 'AssetCompilation.webpackPath' properly. " + e.getMessage)
     }
   } dependsOn npmInstall
 
@@ -64,47 +65,46 @@ object AssetCompilation {
     }
   }
 
-  private def assetsGenerationTask: Def.Initialize[Task[Unit]] = (webpackPath, baseDirectory, streams, target) map { (webpack, base, s, t) =>
+  private def assetsGenerationTask: Def.Initialize[Task[Unit]] = Def task {
     try {
-      val destination = t  / "universal" / "stage" / "tools" / "postgres"
+      val destination = target.value  / "universal" / "stage" / "tools" / "postgres"
       destination.mkdirs
-      (base / "tools" / "postgres").listFiles().foreach(
+      (baseDirectory.value / "tools" / "postgres").listFiles().foreach(
         file => Files.copy(file.toPath, (destination / file.name).toPath, StandardCopyOption.REPLACE_EXISTING)
       )
     } catch {
-      case e: Exception => s.log.error("Could not copy SQL schema to stage dir: " + e.getMessage)
+      case e: Exception => streams.value.log.error("Could not copy SQL schema to stage dir: " + e.getMessage)
     }
     try{
-      val exitValue = startProcess(webpack, List("--env.production"), base) ! s.log
+      val exitValue = startProcess(webpackPath.value, List("--env.production"), baseDirectory.value) ! streams.value.log
       if(exitValue != 0)
         throw new Error(s"Running webpack failed with exit code: $exitValue")
     } catch {
       case e: java.io.IOException =>
-        s.log.error("Webpack couldn't be found. Please set the configuration key 'AssetCompilation.webpackPath' properly. " + e.getMessage)
+        streams.value.log.error("Webpack couldn't be found. Please set the configuration key 'AssetCompilation.webpackPath' properly. " + e.getMessage)
     }
   } dependsOn npmInstall
 
-  private def slickClassesFromDBSchemaTask: Def.Initialize[Task[Seq[File]]] =
-    (runner in Compile, dependencyClasspath in Compile, sourceManaged, baseDirectory, streams, target) map { (runner, dc, sourceManaged, base, s, t) =>
+  private def slickClassesFromDBSchemaTask: Def.Initialize[Task[Seq[File]]] = Def task{
 
-      val schemaPath = base / "tools" / "postgres" / "schema.sql"
-      val slickTablesOutPath = sourceManaged / "schema" / "com" / "scalableminds" / "webknossos" / "schema" / "Tables.scala"
+      val schemaPath = baseDirectory.value / "tools" / "postgres" / "schema.sql"
+      val slickTablesOutPath = sourceManaged.value / "schema" / "com" / "scalableminds" / "webknossos" / "schema" / "Tables.scala"
 
       val shouldUpdate = !slickTablesOutPath.exists || slickTablesOutPath.lastModified < schemaPath.lastModified
 
       if (shouldUpdate) {
-        s.log.info("Ensuring Postgres DB is running for Slick code generation...")
-        startProcess((base / "tools" / "postgres" / "ensure_db.sh").toString, List(), base)  ! s.log
+        streams.value.log.info("Ensuring Postgres DB is running for Slick code generation...")
+        startProcess((baseDirectory.value / "tools" / "postgres" / "ensure_db.sh").toString, List(), baseDirectory.value)  ! streams.value.log
 
-        s.log.info("Updating Slick SQL schema from local database...")
+        streams.value.log.info("Updating Slick SQL schema from local database...")
 
-        runner.run("slick.codegen.SourceCodeGenerator", dc.files,
-          Array("file://" + (base / "conf" / "application.conf").toString + "#slick", (sourceManaged / "schema").toString),
-          s.log
+        (runner in Compile).value.run("slick.codegen.SourceCodeGenerator", (dependencyClasspath in Compile).value.files,
+          Array("file://" + (baseDirectory.value / "conf" / "application.conf").toString + "#slick", (sourceManaged.value / "schema").toString),
+          streams.value.log
         )
 
       } else {
-        s.log.info("Slick SQL schema already up to date.")
+        streams.value.log.info("Slick SQL schema already up to date.")
       }
 
       Seq((slickTablesOutPath))
@@ -113,10 +113,10 @@ object AssetCompilation {
   val settings = Seq(
     AssetCompilation.SettingsKeys.webpackPath := (Path("node_modules") / ".bin" / "webpack").getPath,
     AssetCompilation.SettingsKeys.npmPath := "yarn",
-    run in Compile <<= (run in Compile) map(killWebpack) dependsOn webpackGenerateTask,
-    sourceGenerators in Compile <+= slickClassesFromDBSchemaTask,
+    run in Compile := ((run in Compile) map(killWebpack) dependsOn webpackGenerateTask).evaluated,
+    sourceGenerators in Compile += slickClassesFromDBSchemaTask,
     managedSourceDirectories in Compile += sourceManaged.value,
-    stage <<= stage dependsOn assetsGenerationTask,
-    dist <<= dist dependsOn assetsGenerationTask
+    stage := (stage dependsOn assetsGenerationTask).value,
+    dist := (dist dependsOn assetsGenerationTask).value
   )
 }

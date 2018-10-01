@@ -1,5 +1,7 @@
 package controllers
 
+import java.io.File
+
 import javax.inject.Inject
 
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
@@ -23,7 +25,7 @@ import models.annotation.nml.NmlResults.NmlParseResult
 import play.api.libs.Files
 import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
 import play.api.libs.json._
-import play.api.mvc.{PlayBodyParsers, MultipartFormData, Result}
+import play.api.mvc.{MultipartFormData, PlayBodyParsers, Result}
 import utils.{ObjectId, WkConf}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -108,7 +110,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
       project <- projectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
-      parseResults: List[NmlParseResult] = nmlService.extractFromFiles(inputFiles.map(f => (f.ref.file, f.filename))).parseResults
+      parseResults: List[NmlParseResult] = nmlService.extractFromFiles(inputFiles.map(f => (new File(f.ref.path.toString), f.filename))).parseResults
       skeletonSuccesses <- Fox.serialCombined(parseResults)(_.toSkeletonSuccessFox) ?~> "task.create.failed"
       result <- createTasks(skeletonSuccesses.map(s => (buildFullParams(params, s.skeletonTracing.get, s.fileName, s.description), s.skeletonTracing.get)))
     } yield {

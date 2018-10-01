@@ -1,5 +1,7 @@
 package controllers
 
+import java.io.File
+
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl._
@@ -87,7 +89,10 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
     val shouldCreateGroupForEachFile: Boolean = request.body.dataParts("createGroupForEachFile")(0) == "true"
 
     val parsedFiles = request.body.files.foldLeft(NmlResults.ZipParseResult()) {
-      case (acc, next) => acc.combineWith(nmlService.extractFromFile(next.ref.file, next.filename))
+      case (acc, next) => {
+        val file = new File(next.ref.path.toString)
+        acc.combineWith(nmlService.extractFromFile(file, next.filename))
+      }
     }
 
 
@@ -112,7 +117,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
         dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization)
         dataStoreHandler <- dataSetService.handlerFor(dataSet)
         volumeTracingIdOpt <- Fox.runOptional(volumeTracingsWithDataLocations.headOption){ v =>
-          dataStoreHandler.saveVolumeTracing(v._1, parsedFiles.otherFiles.get(v._2).map(_.file))
+          dataStoreHandler.saveVolumeTracing(v._1, parsedFiles.otherFiles.get(v._2).map(tmpFile => new File(tmpFile.path.toString)))
         }
         mergedSkeletonTracingIdOpt <- Fox.runOptional(skeletonTracings.headOption){ s =>
           dataStoreHandler.mergeSkeletonTracingsByContents(SkeletonTracings(skeletonTracings), persistTracing=true)
@@ -207,7 +212,8 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       annotations <- annotationDAO.findAllFinishedForProject(projectIdValidated)
       zip <- annotationService.zipAnnotations(annotations, project.name + "_nmls.zip")
     } yield {
-      Ok.sendFile(zip.file, inline = false)
+      val file = new File(zip.path.toString)
+      Ok.sendFile(file, inline = false)
     }
   }
 
@@ -222,7 +228,10 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       project <- projectDAO.findOne(task._project) ?~> Messages("project.notFound")
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, project._team)) ?~> Messages("notAllowed")
       zip <- createTaskZip(task)
-    } yield Ok.sendFile(zip.file, inline = false)
+    } yield {
+      val file = new File(zip.path.toString)
+      Ok.sendFile(file, inline = false)
+    }
   }
 
   def downloadTaskType(taskTypeId: String, user: User)(implicit ctx: DBAccessContext, m: MessagesProvider) = {
@@ -239,6 +248,9 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       tasktype <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> Messages("taskType.notFound")
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, tasktype._team)) ?~> Messages("notAllowed")
       zip <- createTaskTypeZip(tasktype)
-    } yield Ok.sendFile(zip.file, inline = false)
+    } yield {
+      val file = new File(zip.path.toString)
+      Ok.sendFile(file, inline = false)
+    }
   }
 }

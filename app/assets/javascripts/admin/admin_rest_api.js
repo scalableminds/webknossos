@@ -791,7 +791,7 @@ export async function getProjectProgressReport(
   showErrorToast?: boolean = true,
 ): Promise<Array<APIProjectProgressReport>> {
   const progressData = await Request.receiveJSON(`/api/teams/${teamId}/progressOverview`, {
-    showErrorToast,
+    doNotCatch,
   });
   assertResponseLimit(progressData);
   return progressData;

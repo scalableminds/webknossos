@@ -8,7 +8,7 @@ import * as Utils from "libs/utils";
 import { Chart } from "react-google-charts";
 
 const { Column } = Table;
-type TimeEntryType = {
+type TimeEntry = {
   start: string,
   end: string,
   tracingTime: number,
@@ -20,16 +20,16 @@ type State = {
     numberOfDatasets: number,
     numberOfAnnotations: number,
     numberOfOpenAssignments: number,
-    tracingTimes: Array<TimeEntryType>,
+    tracingTimes: Array<TimeEntry>,
   },
-  timeEntries: Array<TimeEntryType>,
+  timeEntries: Array<TimeEntry>,
   isAchievementsLoading: boolean,
   isTimeEntriesLoading: boolean,
   startDate: moment$Moment,
   endDate: moment$Moment,
 };
 
-type GoogleChartsType = {
+type GoogleCharts = {
   chart: { getSelection: Function }, // https://developers.google.com/chart/interactive/docs/drawing_charts#chartwrapper
 };
 
@@ -87,7 +87,7 @@ class StatisticView extends React.PureComponent<{}, State> {
     });
   }
 
-  selectDataPoint = (chart: GoogleChartsType) => {
+  selectDataPoint = (chart: GoogleCharts) => {
     const indicies = chart.chart.getSelection()[0];
     const startDate = this.state.achievements.tracingTimes[indicies.row].start;
     this.setState(

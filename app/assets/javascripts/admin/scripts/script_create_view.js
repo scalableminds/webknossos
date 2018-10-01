@@ -6,7 +6,7 @@ import { Form, Input, Select, Button, Card } from "antd";
 import { getAdminUsers, updateScript, createScript, getScript } from "admin/admin_rest_api";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 
-import type { APIUserType } from "admin/api_flow_types";
+import type { APIUser } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import type { RouterHistory } from "react-router-dom";
 
@@ -14,7 +14,7 @@ const FormItem = Form.Item;
 const Option = Select.Option;
 
 type StateProps = {
-  activeUser: APIUserType,
+  activeUser: APIUser,
 };
 
 type Props = {
@@ -24,7 +24,7 @@ type Props = {
 } & StateProps;
 
 type State = {
-  users: Array<APIUserType>,
+  users: Array<APIUser>,
 };
 
 class ScriptCreateView extends React.PureComponent<Props, State> {
@@ -111,7 +111,7 @@ class ScriptCreateView extends React.PureComponent<Props, State> {
                   optionFilterProp="children"
                   style={{ width: "100%" }}
                 >
-                  {this.state.users.map((user: APIUserType) => (
+                  {this.state.users.map((user: APIUser) => (
                     <Option key={user.id} value={user.id}>
                       {`${user.lastName}, ${user.firstName} ${user.email}`}
                     </Option>

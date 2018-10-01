@@ -18,16 +18,36 @@ jobs:
           name: Prepare dependency folders
           command: mkdir -p project/target target ~/.m2 ~/.ivy2 ~/.sbt ~/.yarn-cache
       - restore_cache:
+          name: Restore target cache
           keys:
-            - cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
-            - cache-{{ checksum ".circleci/cache_version" }}-master
-
+            - target-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
+            - target-cache-{{ checksum ".circleci/cache_version" }}-master
+      - restore_cache:
+          name: Restore sbt cache
+          keys:
+            - sbt-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "project/Dependencies.scala" }}
+            - sbt-cache-{{ checksum ".circleci/cache_version" }}-
+      - restore_cache:
+          name: Restore yarn cache
+          keys:
+            - yarn-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "yarn.lock" }}
+            - yarn-cache-{{ checksum ".circleci/cache_version" }}-
       - run:
           name: Assert unique evolution numbers
           command: tools/postgres/assert_unique_evolution_numbers.sh
       - run:
           name: Install frontend dependencies
           command: docker-compose run base yarn install --frozen-lockfile
+      - restore_cache:
+          name: Restore webpack-uglifyjs cache
+          keys:
+            - webpack-uglifyjs-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
+            - webpack-uglifyjs-cache-{{ checksum ".circleci/cache_version" }}-master
+      - restore_cache:
+          name: Restore webpack-hard-source cache
+          keys:
+            - webpack-hard-source-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ checksum "yarn.lock" }}
+            - webpack-hard-source-cache-{{ checksum ".circleci/cache_version" }}-master-{{ checksum "yarn.lock" }}
       - run:
           name: Assert schema.sql and evolutions are equal
           command: |
@@ -50,14 +70,37 @@ jobs:
           command: docker-compose run base sbt "project webknossosDatastore" compile stage
 
       - save_cache:
-          key: cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ .Revision }}
+          name: Save target cache
+          key: target-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ .Revision }}
           paths:
             - "project/target"
             - "target"
+
+      - save_cache:
+          name: Save sbt cache
+          key: sbt-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "project/Dependencies.scala" }}
+          paths:
             - "~/.m2"
             - "~/.ivy2"
             - "~/.sbt"
+
+      - save_cache:
+          name: Save yarn cache
+          key: yarn-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "yarn.lock" }}
+          paths:
             - "~/.yarn-cache"
+
+      - save_cache:
+          name: Save webpack-uglifyjs cache
+          key: webpack-uglifyjs-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ .Revision }}
+          paths:
+            - "node_modules/.cache/uglifyjs-webpack-plugin"
+
+      - save_cache:
+          name: Save webpack-hard-source cache
+          key: webpack-hard-source-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ checksum "yarn.lock" }}-{{ .Revision }}
+          paths:
+            - "node_modules/.cache/hard-source"
 
       - run:
           name: Build webknossos docker image
@@ -69,24 +112,27 @@ jobs:
 
       - run:
           name: Lint frontend code
-          command: docker-compose run base bash -c "yarn run lint && yarn run am-i-pretty"
+          command: |
+            .circleci/not-on-master.sh docker-compose run base bash -c "yarn run lint && yarn run am-i-pretty"
       - run:
           name: Run frontend tests
-          command: docker-compose run base yarn test-verbose
+          command: |
+            .circleci/not-on-master.sh docker-compose run base yarn test-verbose
       - run:
           name: Run backend tests
-          command: docker-compose run backend-tests
+          command: |
+            .circleci/not-on-master.sh docker-compose run backend-tests
       - run:
           name: Run end-to-end tests
           command: |
             for i in {1..3}; do # retry
-              docker-compose run e2e-tests && s=0 && break || s=$?
+              .circleci/not-on-master.sh docker-compose run e2e-tests && s=0 && break || s=$?
             done
             (exit $s)
       - run:
           name: Validate frontend types with flow
-          command: docker-compose run base yarn flow
-
+          command: |
+            .circleci/not-on-master.sh docker-compose run base yarn flow
       - run:
           name: Start webknossos
           background: true
@@ -147,7 +193,52 @@ jobs:
 
       - run:
           name: Report coverage
-          command: docker-compose run base yarn coverage
+          command: .circleci/not-on-master.sh docker-compose run base yarn coverage
+
+  nightly:
+    docker:
+      - image: scalableminds/puppeteer:master
+    steps:
+      - checkout
+      - run:
+          name: Remove dev-deployment
+          command: >
+            curl
+            -X POST
+            -H "X-Auth-Token: $RELEASE_API_TOKEN"
+            https://kube.scm.io/hooks/remove/webknossos/dev/master?user=CI+%28nightly%29
+      - run:
+          name: Wait 3min
+          command: sleep 180
+      - run:
+          name: Install dev-deployment
+          command: >
+            curl
+            -X POST
+            -H "X-Auth-Token: $RELEASE_API_TOKEN"
+            https://kube.scm.io/hooks/install/webknossos/dev/master?user=CI+%28nightly%29
+      - run:
+          name: Install dependencies and sleep at least 3min
+          command: |
+            yarn install --frozen-lockfile &
+            sleep 180 &
+            wait
+      - run:
+          name: Refresh datasets
+          command: curl https://master.webknossos.xyz/data/triggers/checkInboxBlocking?token=secretScmBoyToken
+      - run:
+          name: Run screenshot-tests
+          command: |
+            for i in {1..5}; do # retry
+              URL=https://master.webknossos.xyz/ \
+              yarn test-screenshot && s=0 && break || s=$?
+              sleep 30
+            done
+            (exit $s)
+
+      - store_artifacts:
+          path: app/assets/javascripts/test/screenshots
+
 workflows:
   version: 2
   default:
@@ -156,3 +247,14 @@ workflows:
           filters:
             tags:
               only: /.*/
+  nightly:
+    jobs:
+      - nightly
+    triggers:
+      - schedule:
+          # 02:15 AM UTC
+          cron: "15 2 * * *"
+          filters:
+            branches:
+              only:
+                - master

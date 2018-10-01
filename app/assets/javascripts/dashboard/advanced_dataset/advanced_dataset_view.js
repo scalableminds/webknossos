@@ -7,18 +7,18 @@ import * as Utils from "libs/utils";
 import { Table, Icon, Tag } from "antd";
 import DatasetActionView from "dashboard/advanced_dataset/dataset_action_view";
 import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
-import type { APITeamType, APIMaybeUnimportedDatasetType } from "admin/api_flow_types";
+import type { APITeam, APIMaybeUnimportedDataset } from "admin/api_flow_types";
 import dice from "dice-coefficient";
 import _ from "lodash";
 import FormattedDate from "components/formatted_date";
 
 const { Column } = Table;
 
-const typeHint: APIMaybeUnimportedDatasetType[] = [];
-const useLruRank = false;
+const typeHint: APIMaybeUnimportedDataset[] = [];
+const useLruRank = true;
 
 type Props = {
-  datasets: Array<APIMaybeUnimportedDatasetType>,
+  datasets: Array<APIMaybeUnimportedDataset>,
   searchQuery: string,
   isUserAdmin: boolean,
 };
@@ -65,7 +65,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
   render() {
     const { isUserAdmin } = this.props;
     const isImported = dataset => dataset.dataSource.dataLayers != null;
-    const filteredDataSource = Utils.filterWithSearchQueryOR(
+    const filteredDataSource = Utils.filterWithSearchQueryAND(
       isUserAdmin ? this.props.datasets : this.props.datasets.filter(isImported),
       ["name", "description"],
       this.props.searchQuery,
@@ -77,7 +77,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
       : filteredDataSource;
 
     // Create a map from dataset to its rank
-    const datasetToRankMap: Map<APIMaybeUnimportedDatasetType, number> = new Map(
+    const datasetToRankMap: Map<APIMaybeUnimportedDataset, number> = new Map(
       dataSourceSortedByRank.map((dataset, rank) => [dataset, rank]),
     );
 
@@ -121,7 +121,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             key="name"
             sorter={Utils.localeCompareBy(typeHint, dataset => dataset.name)}
             sortOrder={sortedInfo.columnKey === "name" && sortedInfo.order}
-            render={(name: string, dataset: APIMaybeUnimportedDatasetType) => (
+            render={(name: string, dataset: APIMaybeUnimportedDataset) => (
               <div>
                 {dataset.name}
                 <br />
@@ -143,7 +143,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             dataIndex="scale"
             key="scale"
             width={120}
-            render={(__, dataset: APIMaybeUnimportedDatasetType) =>
+            render={(__, dataset: APIMaybeUnimportedDataset) =>
               formatTuple(dataset.dataSource.scale)
             }
           />
@@ -153,7 +153,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             dataIndex="allowedTeams"
             key="allowedTeams"
             width={150}
-            render={(teams: Array<APITeamType>, dataset: APIMaybeUnimportedDatasetType) =>
+            render={(teams: Array<APITeam>, dataset: APIMaybeUnimportedDataset) =>
               teams.map(team => (
                 <Tag
                   color={stringToColor(team.name)}
@@ -191,7 +191,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
           <Column
             title="Data Layers"
             dataIndex="dataSource.dataLayers"
-            render={(__, dataset: APIMaybeUnimportedDatasetType) =>
+            render={(__, dataset: APIMaybeUnimportedDataset) =>
               (dataset.dataSource.dataLayers || []).map(layer => (
                 <Tag key={layer.name}>
                   {layer.category} - {layer.elementClass}
@@ -204,7 +204,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             width={200}
             title="Actions"
             key="actions"
-            render={(__, dataset: APIMaybeUnimportedDatasetType) => (
+            render={(__, dataset: APIMaybeUnimportedDataset) => (
               <DatasetActionView isUserAdmin={isUserAdmin} dataset={dataset} />
             )}
           />

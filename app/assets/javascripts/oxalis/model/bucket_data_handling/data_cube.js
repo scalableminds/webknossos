@@ -24,7 +24,7 @@ import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_co
 import type { Vector3, Vector4 } from "oxalis/constants";
 import type { VoxelIterator } from "oxalis/model/volumetracing/volumelayer";
 import type { Bucket } from "oxalis/model/bucket_data_handling/bucket";
-import type { MappingType } from "oxalis/store";
+import type { Mapping } from "oxalis/store";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 
@@ -155,7 +155,7 @@ class DataCube {
       : false;
   }
 
-  getMapping(): ?MappingType {
+  getMapping(): ?Mapping {
     return this.isSegmentation
       ? Store.getState().temporaryConfiguration.activeMapping.mapping
       : null;
@@ -349,9 +349,9 @@ class DataCube {
           };
           bucket.label(labelFunc);
 
-          // Push bucket if it's loaded, otherwise, TemporalBucketManager will push
-          // it once it is.
-          if (bucket.isLoaded()) {
+          // Push bucket if it's loaded or missing (i.e., not existent on the server),
+          // otherwise, TemporalBucketManager will push it once it is available.
+          if (bucket.isLoaded() || bucket.isMissing()) {
             this.pushQueue.insert(bucket);
           }
         }
@@ -359,7 +359,7 @@ class DataCube {
     }
   }
 
-  getDataValue(voxel: Vector3, mapping: ?MappingType, zoomStep: number = 0): number {
+  getDataValue(voxel: Vector3, mapping: ?Mapping, zoomStep: number = 0): number {
     const bucket = this.getBucket(this.positionToZoomedAddress(voxel, zoomStep));
     const voxelIndex = this.getVoxelIndex(voxel, zoomStep);
 

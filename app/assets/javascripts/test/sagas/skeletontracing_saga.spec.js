@@ -4,7 +4,7 @@ import mockRequire from "mock-require";
 import ChainReducer from "test/helpers/chainReducer";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
-import type { SaveQueueEntryType } from "oxalis/store";
+import type { SaveQueueEntry } from "oxalis/store";
 import { createSaveQueueFromUpdateActions, withoutUpdateTracing } from "../helpers/saveHelpers";
 import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 
@@ -40,9 +40,7 @@ function testDiffing(prevTracing, nextTracing, flycam) {
   );
 }
 
-function compactSaveQueueWithUpdateActions(
-  queue: Array<SaveQueueEntryType>,
-): Array<SaveQueueEntryType> {
+function compactSaveQueueWithUpdateActions(queue: Array<SaveQueueEntry>): Array<SaveQueueEntry> {
   return compactSaveQueue(
     queue.map(batch => ({
       ...batch,
@@ -270,7 +268,7 @@ test("SkeletonTracingSaga should emit an updateNode update action", t => {
   t.is(updateActions[0].value.treeId, 1);
 });
 
-test("SkeletonTracingSaga should emit an updateNode update action", t => {
+test("SkeletonTracingSaga should emit an updateNode update action 2", t => {
   const testState = ChainReducer(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, setNodeRadiusAction)

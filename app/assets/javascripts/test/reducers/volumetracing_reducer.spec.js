@@ -11,7 +11,7 @@ import update from "immutability-helper";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
 import Maybe from "data.maybe";
 import { VolumeToolEnum } from "oxalis/constants";
-import type { TracingType, VolumeTracingType } from "oxalis/store";
+import type { Tracing, VolumeTracing } from "oxalis/store";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
@@ -27,7 +27,7 @@ const volumeTracing = {
   lastCentroid: null,
 };
 
-function getVolumeTracing(tracing: TracingType): Maybe<VolumeTracingType> {
+function getVolumeTracing(tracing: Tracing): Maybe<VolumeTracing> {
   if (tracing.volume != null) {
     return Maybe.Just(tracing.volume);
   }

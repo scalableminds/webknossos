@@ -105,11 +105,20 @@ class FossilDBClient(collection: String, config: DataStoreConfig) extends FoxImp
 
   def getMultipleVersions[T](key: String, newestVersion: Option[Long] = None, oldestVersion: Option[Long] = None)
                             (implicit fromByteArray: Array[Byte] => Box[T]): Fox[List[T]] = {
+    for {
+      versionValueTuples <- getMultipleVersionsAsVersionValueTuple(key, newestVersion, oldestVersion)
+    } yield versionValueTuples.map(_._2)
+  }
+
+  def getMultipleVersionsAsVersionValueTuple[T](key: String, newestVersion: Option[Long] = None, oldestVersion: Option[Long] = None)
+                                               (implicit fromByteArray: Array[Byte] => Box[T]): Fox[List[(Long,T)]] = {
     try {
       val reply = blockingStub.getMultipleVersions(GetMultipleVersionsRequest(collection, key, newestVersion, oldestVersion))
       if (!reply.success) throw new Exception(reply.errorMessage.getOrElse(""))
       val parsedValues: List[Box[T]] = reply.values.map{v => fromByteArray(v.toByteArray)}.toList
-      Fox.combined(parsedValues.map{box: Box[T] => box.toFox})
+      for {
+        values <- Fox.combined(parsedValues.map{box: Box[T] => box.toFox})
+      } yield reply.versions.zip(values).toList
     } catch {
       case e: Exception => Fox.failure("could not get multiple versions from FossilDB" + e.getMessage)
     }

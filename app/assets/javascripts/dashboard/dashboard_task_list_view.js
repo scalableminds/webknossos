@@ -24,19 +24,15 @@ import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
 import { handleGenericError } from "libs/error_handling";
 import classNames from "classnames";
-import type {
-  APITaskWithAnnotationType,
-  APIUserType,
-  APIAnnotationType,
-} from "admin/api_flow_types";
+import type { APITaskWithAnnotation, APIUser, APIAnnotation } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import type { RouterHistory } from "react-router-dom";
 import FormattedDate from "components/formatted_date";
 
-const typeHint: APITaskWithAnnotationType[] = [];
+const typeHint: APITaskWithAnnotation[] = [];
 
 type StateProps = {
-  activeUser: APIUserType,
+  activeUser: APIUser,
 };
 
 type Props = {
@@ -47,8 +43,8 @@ type Props = {
 
 type State = {
   showFinishedTasks: boolean,
-  finishedTasks: Array<APITaskWithAnnotationType>,
-  unfinishedTasks: Array<APITaskWithAnnotationType>,
+  finishedTasks: Array<APITaskWithAnnotation>,
+  unfinishedTasks: Array<APITaskWithAnnotation>,
   isLoading: boolean,
   isTransferModalVisible: boolean,
   currentAnnotationId: ?string,
@@ -60,8 +56,8 @@ const persistence: Persistence<State> = new Persistence(
 );
 
 const convertAnnotationToTaskWithAnnotationType = (
-  annotation: APIAnnotationType,
-): APITaskWithAnnotationType => {
+  annotation: APIAnnotation,
+): APITaskWithAnnotation => {
   const { task } = annotation;
 
   if (!task) {
@@ -81,7 +77,7 @@ const convertAnnotationToTaskWithAnnotationType = (
     };
   }
 
-  const newTask: APITaskWithAnnotationType = Object.assign({}, task, {
+  const newTask: APITaskWithAnnotation = Object.assign({}, task, {
     annotation,
   });
   return newTask;
@@ -111,7 +107,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 
   getFinishVerb = () => (this.state.showFinishedTasks ? "Unfinished" : "Finished");
 
-  confirmFinish(task: APITaskWithAnnotationType) {
+  confirmFinish(task: APITaskWithAnnotation) {
     Modal.confirm({
       content: messages["annotation.finish"],
       onOk: async () => {
@@ -169,7 +165,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     });
   }
 
-  renderActions = (task: APITaskWithAnnotationType) => {
+  renderActions = (task: APITaskWithAnnotation) => {
     const { annotation } = task;
     const isAdmin =
       this.props.activeUser.isAdmin ||
@@ -231,19 +227,19 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     );
   };
 
-  resetTask(annotation: APIAnnotationType) {
+  resetTask(annotation: APIAnnotation) {
     Modal.confirm({
       content: messages["task.confirm_reset"],
       cancelText: messages.no,
       okText: messages.yes,
       onOk: async () => {
         await resetAnnotation(annotation.id, annotation.typ);
-        Toast.success(messages["task.reset_success"]);
+        Toast.success(messages["annotation.reset_success"]);
       },
     });
   }
 
-  cancelAnnotation(annotation: APIAnnotationType) {
+  cancelAnnotation(annotation: APIAnnotation) {
     const wasFinished = this.state.showFinishedTasks;
     const annotationId = annotation.id;
 
@@ -340,7 +336,11 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 
   renderTaskList() {
     const tasks = this.getCurrentTasks().sort(
-      Utils.compareBy(typeHint, task => task.created, false),
+      Utils.compareBy(
+        typeHint,
+        task => (this.state.showFinishedTasks ? task.annotation.modified : task.created),
+        false,
+      ),
     );
     const descriptionClassName = classNames("task-type-description", {
       short: this.state.showFinishedTasks || this.props.isAdminView,
@@ -355,28 +355,44 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
       </React.Fragment>
     );
 
-    const TaskCard = task => (
-      <Card key={task.id} title={<TaskCardTitle task={task} />} style={{ margin: "10px" }}>
-        <Row gutter={16}>
-          <Col span={16}>
-            <div className={descriptionClassName}>
-              <Markdown
-                source={task.type.description}
-                options={{ html: false, breaks: true, linkify: true }}
-              />
-            </div>
-          </Col>
-          <Col span={8}>
-            <p style={{ marginBottom: 14 }}>
+    const TaskCard = task =>
+      this.state.showFinishedTasks ? (
+        <Card key={task.id} style={{ margin: "10px" }}>
+          <Row gutter={16}>
+            <Col span={7}>
               <b>Task ID:</b> {task.id}
-              <br />
+            </Col>
+            <Col span={7}>
               <b>Project:</b> {task.projectName}
-            </p>
-            {this.renderActions(task)}
-          </Col>
-        </Row>
-      </Card>
-    );
+            </Col>
+            <Col span={7}>
+              <b>Finished:</b> <FormattedDate timestamp={task.annotation.modified} />
+            </Col>
+            <Col span={3}>{this.renderActions(task)}</Col>
+          </Row>
+        </Card>
+      ) : (
+        <Card key={task.id} title={<TaskCardTitle task={task} />} style={{ margin: "10px" }}>
+          <Row gutter={16}>
+            <Col span={16}>
+              <div className={descriptionClassName}>
+                <Markdown
+                  source={task.type.description}
+                  options={{ html: false, breaks: true, linkify: true }}
+                />
+              </div>
+            </Col>
+            <Col span={8}>
+              <p style={{ marginBottom: 14 }}>
+                <b>Task ID:</b> {task.id}
+                <br />
+                <b>Project:</b> {task.projectName}
+              </p>
+              {this.renderActions(task)}
+            </Col>
+          </Row>
+        </Card>
+      );
 
     return (
       <List
@@ -408,7 +424,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
           </Button>
         </div>
         <h3 id="tasksHeadline" className="TestTasksHeadline">
-          Tasks
+          {this.state.showFinishedTasks ? "Finished" : null} Tasks
         </h3>
         <div className="clearfix" style={{ margin: "20px 0px" }} />
         {this.renderTaskList()}

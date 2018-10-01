@@ -29,14 +29,13 @@ import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json._
 import play.api.mvc._
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import utils.{ObjectId, WkConf}
 
 
 object AuthForms {
 
-  val passwordMinLength = 6
+  val passwordMinLength = 8
 
   // Sign up
   case class SignUpData(organization: String, email: String, firstName: String, lastName: String, password: String)
@@ -108,9 +107,8 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                rpc: RPC,
                                conf: WkConf,
                                wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-                               sil: Silhouette[WkEnv],
-                               val messagesApi: MessagesApi
-                              )
+                               sil: Silhouette[WkEnv]
+                              )(implicit ec: ExecutionContext)
   extends Controller
     with FoxImplicits {
 
@@ -437,7 +435,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
   private def createOrganizationFolder(organizationName: String, loginInfo: LoginInfo)(implicit request: RequestHeader) = {
     def sendRPCToDataStore(dataStore: DataStore, token: String) = {
       rpc(s"${dataStore.url}/data/triggers/newOrganizationFolder")
-        .withQueryString("token" -> token, "organizationName" -> organizationName)
+        .addQueryString("token" -> token, "organizationName" -> organizationName)
         .get
     }
 

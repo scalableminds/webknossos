@@ -8,7 +8,7 @@ import _ from "lodash";
 import React, { PureComponent } from "react";
 import { connect } from "react-redux";
 import { Collapse } from "antd";
-import type { ControlModeType, Vector6, ModeType } from "oxalis/constants";
+import type { ControlMode, Vector6, Mode } from "oxalis/constants";
 import Constants, { ControlModeEnum } from "oxalis/constants";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import {
@@ -37,17 +37,17 @@ import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_acces
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import * as Utils from "libs/utils";
-import type { UserConfigurationType, OxalisState, TracingType } from "oxalis/store";
+import type { UserConfiguration, OxalisState, Tracing } from "oxalis/store";
 import type { Dispatch } from "redux";
 
 const Panel = Collapse.Panel;
 
 type UserSettingsViewProps = {
-  userConfiguration: UserConfigurationType,
-  tracing: TracingType,
+  userConfiguration: UserConfiguration,
+  tracing: Tracing,
   zoomStep: number,
   maxZoomStep: number,
-  onChangeUser: (key: $Keys<UserConfigurationType>, value: any) => void,
+  onChangeUser: (key: $Keys<UserConfiguration>, value: any) => void,
   onChangeActiveNodeId: (value: number) => void,
   onChangeActiveTreeId: (value: number) => void,
   onChangeActiveCellId: (value: number) => void,
@@ -55,13 +55,13 @@ type UserSettingsViewProps = {
   onChangeRadius: (value: number) => void,
   onChangeZoomStep: (value: number) => void,
   onChangeBrushSize: (value: number) => void,
-  viewMode: ModeType,
-  controlMode: ControlModeType,
+  viewMode: Mode,
+  controlMode: ControlMode,
   brushSize: number,
 };
 
 class UserSettingsView extends PureComponent<UserSettingsViewProps> {
-  onChangeUser: { [$Keys<UserConfigurationType>]: Function };
+  onChangeUser: { [$Keys<UserConfiguration>]: Function };
 
   componentWillMount() {
     // cache onChange handler
@@ -82,15 +82,6 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
               max={this.props.maxZoomStep}
               value={this.props.zoomStep}
               onChange={this.props.onChangeZoomStep}
-            />
-            <LogSliderSetting
-              label="Viewport Scale"
-              roundTo={3}
-              min={Constants.MIN_SCALE}
-              max={Constants.MAX_SCALE}
-              step={0.1}
-              value={this.props.userConfiguration.scale}
-              onChange={this.onChangeUser.scale}
             />
             <LogSliderSetting
               label="Clipping Distance"
@@ -123,15 +114,6 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
               value={this.props.zoomStep}
               onChange={this.props.onChangeZoomStep}
             />
-            <LogSliderSetting
-              label="Viewport Scale"
-              roundTo={3}
-              min={Constants.MIN_SCALE}
-              max={Constants.MAX_SCALE}
-              step={0.1}
-              value={this.props.userConfiguration.scale}
-              onChange={this.onChangeUser.scale}
-            />
             <SwitchSetting
               label="Show Crosshairs"
               value={this.props.userConfiguration.displayCrosshair}
@@ -154,15 +136,6 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
               max={this.props.maxZoomStep}
               value={this.props.zoomStep}
               onChange={this.props.onChangeZoomStep}
-            />
-            <LogSliderSetting
-              label="Viewport Scale"
-              roundTo={3}
-              min={Constants.MIN_SCALE}
-              max={Constants.MAX_SCALE}
-              step={0.1}
-              value={this.props.userConfiguration.scale}
-              onChange={this.onChangeUser.scale}
             />
             <NumberSliderSetting
               label="Mouse Rotation"
@@ -268,7 +241,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
             onChange={this.onChangeUser.overrideNodeRadius}
           />
           <SwitchSetting
-            label="Soma Clicking"
+            label="Single-node-tree mode (&quot;Soma clicking&quot;)"
             value={this.props.userConfiguration.newNodeNewTree}
             onChange={this.onChangeUser.newNodeNewTree}
           />
@@ -389,7 +362,6 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
     dispatch(setActiveCellAction(id));
   },
   onChangeBrushSize(size: number) {
-    console.log(`called with size: ${size}`);
     dispatch(setBrushSizeAction(size));
   },
   onChangeBoundingBox(boundingBox: ?Vector6) {
@@ -398,7 +370,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onChangeZoomStep(zoomStep: number) {
     dispatch(setZoomStepAction(zoomStep));
   },
-  onChangeRadius(radius: any) {
+  onChangeRadius(radius: number) {
     dispatch(setNodeRadiusAction(radius));
   },
 });

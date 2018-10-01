@@ -1,5 +1,7 @@
 package controllers
 
+import java.io.File
+
 import javax.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.mvc.ResultBox
@@ -7,7 +9,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.tracings.ProtoGeometryImplicits
-import models.annotation.nml.NmlService
+import models.annotation.nml.{NmlResults, NmlService}
 import models.annotation.AnnotationService
 import models.binary.{DataSetDAO, DataSetService}
 import models.project.ProjectDAO
@@ -18,14 +20,14 @@ import net.liftweb.common.Box
 import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
 import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
-import play.api.i18n.{Messages, MessagesApi}
+import models.annotation.nml.NmlResults.NmlParseResult
 import play.api.libs.Files
-import play.api.libs.concurrent.Execution.Implicits._
+import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
 import play.api.libs.json._
-import play.api.mvc.{MultipartFormData, Result}
+import play.api.mvc.{MultipartFormData, PlayBodyParsers, Result}
 import utils.{ObjectId, WkConf}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 case class TaskParameters(
                            taskTypeId: String,
@@ -67,9 +69,11 @@ class TaskController @Inject() (annotationService: AnnotationService,
                                 teamDAO: TeamDAO,
                                 taskDAO: TaskDAO,
                                 taskService: TaskService,
+                                nmlService: NmlService,
                                 conf: WkConf,
-                                sil: Silhouette[WkEnv],
-                                val messagesApi: MessagesApi)
+                                sil: Silhouette[WkEnv])
+                               (implicit ec: ExecutionContext,
+                                bodyParsers: PlayBodyParsers)
   extends Controller
     with ResultBox
     with ProtoGeometryImplicits
@@ -105,7 +109,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
       project <- projectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
-      parseResults: List[NmlService.NmlParseResult] = NmlService.extractFromFiles(inputFiles.map(f => (f.ref.file, f.filename))).parseResults
+      parseResults: List[NmlParseResult] = nmlService.extractFromFiles(inputFiles.map(f => (new File(f.ref.path.toString), f.filename))).parseResults
       skeletonSuccesses <- Fox.serialCombined(parseResults)(_.toSkeletonSuccessFox) ?~> "task.create.failed"
       result <- createTasks(skeletonSuccesses.map(s => (buildFullParams(params, s.skeletonTracing.get, s.fileName, s.description), s.skeletonTracing.get)))
     } yield {
@@ -144,7 +148,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
       if (allOnSameDatasetIter(requestedTasks, firstDataSetName))
         Fox.successful(firstDataSetName)
       else
-        Fox.failure("Cannot create tasks on multiple datasets in one go.")
+        Fox.failure(Messages("task.notOnSameDataSet"))
     }
 
     def taskToJsonFoxed(taskFox: Fox[Task], otherFox: Fox[_]): Fox[JsObject] = {
@@ -286,7 +290,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
   }
 
 
-  private def getAllowedTeamsForNextTask(user: User)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
+  private def getAllowedTeamsForNextTask(user: User)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[List[ObjectId]] = {
     (for {
       numberOfOpen <- annotationService.countOpenNonAdminTasks(user)
     } yield {

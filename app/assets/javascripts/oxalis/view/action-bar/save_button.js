@@ -4,11 +4,11 @@ import { connect } from "react-redux";
 import Model from "oxalis/model";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { isBusy } from "oxalis/model/accessors/save_accessor";
-import type { OxalisState, ProgressInfoType, IsBusyInfoType } from "oxalis/store";
+import type { OxalisState, ProgressInfo, IsBusyInfo } from "oxalis/store";
 
 type StateProps = {|
-  progressInfo: ProgressInfoType,
-  isBusyInfo: IsBusyInfoType,
+  progressInfo: ProgressInfo,
+  isBusyInfo: IsBusyInfo,
 |};
 
 type Props = {
@@ -74,7 +74,7 @@ class SaveButton extends React.PureComponent<Props, State> {
             %
           </React.Fragment>
         ) : (
-          <React.Fragment>Save</React.Fragment>
+          <span className="hide-on-small-screen">Save</span>
         )}
       </ButtonComponent>
     );

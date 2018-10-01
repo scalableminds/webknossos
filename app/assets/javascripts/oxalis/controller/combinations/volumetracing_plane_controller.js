@@ -7,6 +7,7 @@ import _ from "lodash";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 import { OrthoViews, VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
+import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import Model from "oxalis/model";
 import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
@@ -28,12 +29,12 @@ import {
   getContourTracingMode,
   enforceVolumeTracing,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import type { OrthoViewType, Point2 } from "oxalis/constants";
+import type { OrthoView, Point2 } from "oxalis/constants";
 
 const simulateTracing = async (): Promise<void> => {
   Store.dispatch(setToolAction(VolumeToolEnum.TRACE));
 
-  const controls = getPlaneMouseControls();
+  const controls = getPlaneMouseControls(OrthoViews.PLANE_XY);
   let pos = (x, y) => ({ x, y });
 
   controls.leftMouseDown(pos(100, 100), OrthoViews.PLANE_XY, ({}: any));
@@ -55,7 +56,7 @@ const simulateTracing = async (): Promise<void> => {
   await simulateTracing();
 };
 
-export function getPlaneMouseControls(): * {
+export function getPlaneMouseControls(planeId: OrthoView): * {
   return {
     leftDownMove: (delta: Point2, pos: Point2) => {
       const { tracing } = Store.getState();
@@ -65,7 +66,7 @@ export function getPlaneMouseControls(): * {
 
       if (tool === VolumeToolEnum.MOVE) {
         const state = Store.getState();
-        const viewportScale = state.userConfiguration.scale;
+        const viewportScale = getViewportScale(planeId);
         const { activeViewport } = state.viewModeData.plane;
         const v = [(delta.x * -1) / viewportScale, (delta.y * -1) / viewportScale, 0];
         Store.dispatch(movePlaneFlycamOrthoAction(v, activeViewport, true));
@@ -80,7 +81,7 @@ export function getPlaneMouseControls(): * {
       }
     },
 
-    leftMouseDown: (pos: Point2, plane: OrthoViewType, event: MouseEvent) => {
+    leftMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
       const tool = Utils.enforce(getVolumeTool)(Store.getState().tracing.volume);
 
       if (!event.shiftKey && (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH)) {
@@ -118,7 +119,7 @@ export function getPlaneMouseControls(): * {
       }
     },
 
-    rightMouseDown: (pos: Point2, plane: OrthoViewType, event: MouseEvent) => {
+    rightMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
       const tool = Utils.enforce(getVolumeTool)(Store.getState().tracing.volume);
 
       if (!event.shiftKey && (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH)) {
@@ -142,7 +143,7 @@ export function getPlaneMouseControls(): * {
       }
     },
 
-    leftClick: (pos: Point2, plane: OrthoViewType, event: MouseEvent) => {
+    leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
       if (event.shiftKey) {
         const cellId = Model.getSegmentationLayer().cube.getDataValue(
           calculateGlobalPos(pos),

@@ -14,12 +14,12 @@ import models.user.time._
 import models.user.{User, UserService}
 import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
-import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
-import play.api.i18n.{Messages, MessagesApi}
+import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
 import play.api.libs.json.{JsArray, _}
+import play.api.mvc.PlayBodyParsers
 import utils.{ObjectId, WkConf}
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 
@@ -33,30 +33,22 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
                                      timeSpanService: TimeSpanService,
                                      annotationMerger: AnnotationMerger,
                                      provider: AnnotationInformationProvider,
-                                     annotationRestrictionDefults: AnnotationRestrictionDefults,
+                                     annotationRestrictionDefaults: AnnotationRestrictionDefaults,
                                      conf: WkConf,
-                                     sil: Silhouette[WkEnv],
-                                     val messagesApi: MessagesApi
-                                    )
+                                     sil: Silhouette[WkEnv])
+                                    (implicit ec: ExecutionContext,
+                                     bodyParsers: PlayBodyParsers)
   extends Controller
     with FoxImplicits {
 
   implicit val timeout = Timeout(5 seconds)
 
-  def empty(typ: String, id: String) = sil.SecuredAction { implicit request =>
-    Ok(views.html.main(conf))
-  }
-
-  def emptyReadOnly(typ: String, id: String) = sil.UserAwareAction { implicit request =>
-    Ok(views.html.main(conf))
-  }
-
-  def info(typ: String, id: String, readOnly: Boolean = false) = sil.UserAwareAction.async { implicit request =>
+  def info(typ: String, id: String) = sil.UserAwareAction.async { implicit request =>
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity) ?~> "annotation.notFound"
       restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound"
       _ <- restrictions.allowAccess(request.identity) ?~> "notAllowed" ~> BAD_REQUEST
-      js <- annotationService.publicWrites(annotation, request.identity, Some(restrictions), Some(readOnly)) ?~> "annotation.write.failed"
+      js <- annotationService.publicWrites(annotation, request.identity, Some(restrictions)) ?~> "annotation.write.failed"
       _ <- Fox.runOptional(request.identity) { user =>
         if (typ == AnnotationType.Task || typ == AnnotationType.Explorational) {
           timeSpanService.logUserInteraction(user, annotation) // log time when a user starts working
@@ -67,14 +59,12 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
     }
   }
 
-  def infoReadOnly(typ: String, id: String) = info(typ, id, readOnly = true)
-
   def merge(typ: String, id: String, mergedTyp: String, mergedId: String) = sil.SecuredAction.async { implicit request =>
     for {
       annotationA <- provider.provideAnnotation(typ, id, request.identity)
       annotationB <- provider.provideAnnotation(mergedTyp, mergedId, request.identity)
       mergedAnnotation <- annotationMerger.mergeTwo(annotationA, annotationB, true, request.identity) ?~> "annotation.merge.failed"
-      restrictions = annotationRestrictionDefults.defaultAnnotationRestrictions(mergedAnnotation)
+      restrictions = annotationRestrictionDefaults.defaultsFor(mergedAnnotation)
       _ <- restrictions.allowAccess(request.identity) ?~> Messages("notAllowed") ~> BAD_REQUEST
       _ <- annotationDAO.insertOne(mergedAnnotation)
       js <- annotationService.publicWrites(mergedAnnotation, Some(request.identity), Some(restrictions)) ?~> "annotation.write.failed"
@@ -267,7 +257,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
     }
   }
 
-  private def duplicateAnnotation(annotation: Annotation, user: User)(implicit ctx: DBAccessContext): Fox[Annotation] = {
+  private def duplicateAnnotation(annotation: Annotation, user: User)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Annotation] = {
     for {
       dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
       _ <- bool2Fox(dataSet.isUsable) ?~> Messages("dataSet.notImported", dataSet.name)

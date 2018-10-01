@@ -32,7 +32,7 @@ trait VolumeTracingBucketHelper extends WKWMortonHelper with KeyValueStoreImplic
     volumeDataStore.put(key, version, data)
   }
 
-  def bucketStream(dataLayer: VolumeTracingLayer, resolution: Int, version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] = {
+  def bucketStream(dataLayer: VolumeTracingLayer, resolution: Int, version: Option[Long]): Iterator[(BucketPosition, Array[Byte])] = {
     val key = buildKeyPrefix(dataLayer.name, resolution)
     new BucketIterator(key, volumeDataStore, version)
   }

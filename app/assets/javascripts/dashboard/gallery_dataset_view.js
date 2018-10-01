@@ -4,14 +4,14 @@ import * as Utils from "libs/utils";
 import { getOrganizations } from "admin/admin_rest_api";
 import DatasetPanel from "dashboard/dataset_panel";
 import _ from "lodash";
-import type { APIDatasetType, APIMaybeUnimportedDatasetType } from "admin/api_flow_types";
+import type { APIDataset, APIMaybeUnimportedDataset } from "admin/api_flow_types";
 
 type State = {
   organizationNameMap: { [key: string]: string },
 };
 
 type Props = {
-  datasets: Array<APIMaybeUnimportedDatasetType>,
+  datasets: Array<APIMaybeUnimportedDataset>,
   searchQuery: string,
 };
 
@@ -36,7 +36,7 @@ class GalleryDatasetView extends React.PureComponent<Props, State> {
 
   render() {
     // $FlowFixMe flow doesn't check that after filtering there are only imported datasets left
-    const activeDatasets: Array<APIDatasetType> = this.props.datasets.filter(ds => ds.isActive);
+    const activeDatasets: Array<APIDataset> = this.props.datasets.filter(ds => ds.isActive);
     const filteredDatasets = Utils.filterWithSearchQueryAND(
       activeDatasets,
       ["name", "description"],
@@ -50,16 +50,14 @@ class GalleryDatasetView extends React.PureComponent<Props, State> {
         // Sort each group of datasets
         [
           organization,
-          datasets.sort(
-            Utils.compareBy(([]: APIDatasetType[]), dataset => dataset.sortingKey, false),
-          ),
+          datasets.sort(Utils.compareBy(([]: APIDataset[]), dataset => dataset.sortingKey, false)),
         ],
       )
       .value()
       .sort(
         // Sort groups by creation date of first dataset
         Utils.compareBy(
-          ([]: Array<[string, Array<APIDatasetType>]>),
+          ([]: Array<[string, Array<APIDataset>]>),
           ([_organization, datasets]) => datasets[0].sortingKey,
           false,
         ),

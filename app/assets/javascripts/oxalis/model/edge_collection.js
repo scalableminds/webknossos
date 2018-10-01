@@ -2,10 +2,10 @@
 
 import _ from "lodash";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
-import type { EdgeType } from "oxalis/store";
+import type { Edge } from "oxalis/store";
 import * as Utils from "libs/utils";
 
-type EdgeMap = DiffableMap<number, Array<EdgeType>>;
+type EdgeMap = DiffableMap<number, Array<Edge>>;
 
 export default class EdgeCollection {
   // Edge map keyed by the source id of the edges (outgoing)
@@ -20,19 +20,19 @@ export default class EdgeCollection {
     this.edgeCount = 0;
   }
 
-  getEdgesForNode(nodeId: number): Array<EdgeType> {
+  getEdgesForNode(nodeId: number): Array<Edge> {
     return this.getOutgoingEdgesForNode(nodeId).concat(this.getIngoingEdgesForNode(nodeId));
   }
 
-  getOutgoingEdgesForNode(nodeId: number): Array<EdgeType> {
+  getOutgoingEdgesForNode(nodeId: number): Array<Edge> {
     return this.outMap.getNullable(nodeId) || [];
   }
 
-  getIngoingEdgesForNode(nodeId: number): Array<EdgeType> {
+  getIngoingEdgesForNode(nodeId: number): Array<Edge> {
     return this.inMap.getNullable(nodeId) || [];
   }
 
-  addEdges(edges: Array<EdgeType>, mutate: boolean = false): EdgeCollection {
+  addEdges(edges: Array<Edge>, mutate: boolean = false): EdgeCollection {
     const newOutgoingEdges = mutate ? this.outMap : this.outMap.clone();
     const newIngoingEdges = mutate ? this.inMap : this.inMap.clone();
     const newEdgeCount = this.edgeCount + edges.length;
@@ -52,11 +52,11 @@ export default class EdgeCollection {
     }
   }
 
-  addEdge(edge: EdgeType, mutate: boolean = false): EdgeCollection {
+  addEdge(edge: Edge, mutate: boolean = false): EdgeCollection {
     return this.addEdges([edge], mutate);
   }
 
-  removeEdge(edge: EdgeType): EdgeCollection {
+  removeEdge(edge: Edge): EdgeCollection {
     const outgoingEdges = this.outMap.getNullable(edge.source) || [];
     const ingoingEdges = this.inMap.getNullable(edge.target) || [];
 
@@ -75,11 +75,11 @@ export default class EdgeCollection {
     return EdgeCollection.loadFromMaps(newOutgoingEdgeMap, newIngoingEdgeMap, this.edgeCount - 1);
   }
 
-  map<T>(fn: (value: EdgeType) => T): Array<T> {
+  map<T>(fn: (value: Edge) => T): Array<T> {
     return this.asArray().map(fn);
   }
 
-  *all(): Generator<EdgeType, void, void> {
+  *all(): Generator<Edge, void, void> {
     for (const edgeArray of this.outMap.values()) {
       for (const edge of edgeArray) {
         yield edge;
@@ -87,7 +87,7 @@ export default class EdgeCollection {
     }
   }
 
-  asArray(): Array<EdgeType> {
+  asArray(): Array<Edge> {
     return Array.from(this.all());
   }
 
@@ -103,10 +103,10 @@ export default class EdgeCollection {
     return cloned;
   }
 
-  static loadFromArray(edges: Array<EdgeType>): EdgeCollection {
+  static loadFromArray(edges: Array<Edge>): EdgeCollection {
     // Build up temporary data structures for fast bulk processing
-    const rawOutMap: { [number]: Array<EdgeType> } = {};
-    const rawInMap: { [number]: Array<EdgeType> } = {};
+    const rawOutMap: { [number]: Array<Edge> } = {};
+    const rawInMap: { [number]: Array<Edge> } = {};
     edges.forEach(edge => {
       if (rawOutMap[edge.source]) {
         rawOutMap[edge.source].push(edge);
@@ -155,7 +155,7 @@ export default class EdgeCollection {
 export function diffEdgeCollections(
   edgeCollectionA: EdgeCollection,
   edgeCollectionB: EdgeCollection,
-): { onlyA: Array<EdgeType>, onlyB: Array<EdgeType> } {
+): { onlyA: Array<Edge>, onlyB: Array<Edge> } {
   // Since inMap and outMap are symmetrical to each other, it suffices to only diff the outMaps
   const mapDiff = diffDiffableMaps(edgeCollectionA.outMap, edgeCollectionB.outMap);
 

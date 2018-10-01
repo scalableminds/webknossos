@@ -15,8 +15,8 @@ import { formatTuple, formatSeconds } from "libs/format_utils";
 import TaskAnnotationView from "admin/task/task_annotation_view";
 import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
-import type { APITaskType, APITaskTypeType } from "admin/api_flow_types";
-import type { QueryObjectType, TaskFormFieldValuesType } from "admin/task/task_search_form";
+import type { APITask, APITaskType } from "admin/api_flow_types";
+import type { QueryObject, TaskFormFieldValues } from "admin/task/task_search_form";
 import type { RouterHistory } from "react-router-dom";
 import { handleGenericError } from "libs/error_handling";
 import FormattedDate from "components/formatted_date";
@@ -25,18 +25,18 @@ const { Column } = Table;
 const { Search, TextArea } = Input;
 
 type Props = {
-  initialFieldValues?: TaskFormFieldValuesType,
+  initialFieldValues?: TaskFormFieldValues,
   history: RouterHistory,
 };
 
 type State = {
   isLoading: boolean,
-  tasks: Array<APITaskType>,
+  tasks: Array<APITask>,
   searchQuery: string,
   isAnonymousTaskLinkModalVisible: boolean,
 };
 
-const typeHint: Array<APITaskType> = [];
+const typeHint: Array<APITask> = [];
 
 const persistence: Persistence<State> = new Persistence(
   { searchQuery: PropTypes.string },
@@ -59,7 +59,7 @@ class TaskListView extends React.PureComponent<Props, State> {
     persistence.persist(this.props.history, nextState);
   }
 
-  async fetchData(queryObject: QueryObjectType) {
+  async fetchData(queryObject: QueryObject) {
     if (!_.isEmpty(queryObject)) {
       this.setState({ isLoading: true });
 
@@ -82,7 +82,7 @@ class TaskListView extends React.PureComponent<Props, State> {
     this.setState({ searchQuery: event.target.value });
   };
 
-  deleteTask = (task: APITaskType) => {
+  deleteTask = (task: APITask) => {
     Modal.confirm({
       title: messages["task.delete"],
       onOk: async () => {
@@ -201,7 +201,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               key="type"
               width={100}
               sorter={Utils.localeCompareBy(typeHint, task => task.type.summary)}
-              render={(taskType: APITaskTypeType) => (
+              render={(taskType: APITaskType) => (
                 <a href={`/taskTypes#${taskType.id}`}>{taskType.summary}</a>
               )}
             />
@@ -217,7 +217,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               dataIndex="editPosition"
               key="editPosition"
               width={130}
-              render={(__, task: APITaskType) => (
+              render={(__, task: APITask) => (
                 <div className="nowrap">
                   {formatTuple(task.editPosition)} <br />
                   <span>{formatTuple(task.boundingBoxVec6)}</span>
@@ -251,7 +251,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               dataIndex="status"
               key="status"
               width={80}
-              render={(status, task: APITaskType) => (
+              render={(status, task: APITask) => (
                 <div className="nowrap">
                   <span title="Open Instances">
                     <Icon type="play-circle-o" />
@@ -279,7 +279,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               title="Action"
               key="actions"
               width={130}
-              render={(__, task: APITaskType) => (
+              render={(__, task: APITask) => (
                 <span>
                   {task.status.finished > 0 ? (
                     <a

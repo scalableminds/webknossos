@@ -9,7 +9,7 @@ import {
   updateTaskType,
   getTaskType,
 } from "admin/admin_rest_api";
-import type { APITeamType } from "admin/api_flow_types";
+import type { APITeam } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
 
 const FormItem = Form.Item;
@@ -23,7 +23,7 @@ type Props = {
 };
 
 type State = {
-  teams: Array<APITeamType>,
+  teams: Array<APITeam>,
 };
 
 class TaskTypeCreateView extends React.PureComponent<Props, State> {
@@ -98,7 +98,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
                   optionFilterProp="children"
                   style={{ width: "100%" }}
                 >
-                  {this.state.teams.map((team: APITeamType) => (
+                  {this.state.teams.map((team: APITeam) => (
                     <Option key={team.id} value={team.id}>
                       {`${team.name}`}
                     </Option>
@@ -149,7 +149,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
             <FormItem label="Settings">
               {getFieldDecorator("settings.somaClickingAllowed", {
                 valuePropName: "checked",
-              })(<Checkbox>Allow Soma clicking</Checkbox>)}
+              })(<Checkbox>Allow Single-node-tree mode (&quot;Soma clicking&quot;)</Checkbox>)}
             </FormItem>
 
             <FormItem>

@@ -6,11 +6,12 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
 import models.user.User
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
+
+import scala.concurrent.ExecutionContext
 
 
 case class Team(
@@ -27,7 +28,7 @@ case class Team(
 
 }
 
-class TeamService @Inject()(organizationDAO: OrganizationDAO) {
+class TeamService @Inject()(organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext) {
 
   def publicWrites(team: Team)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
@@ -41,7 +42,7 @@ class TeamService @Inject()(organizationDAO: OrganizationDAO) {
     }
 }
 
-class TeamDAO @Inject()(sqlClient: SQLClient) extends SQLDAO[Team, TeamsRow, Teams](sqlClient) {
+class TeamDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SQLDAO[Team, TeamsRow, Teams](sqlClient) {
   val collection = Teams
 
   def idColumn(x: Teams): Rep[String] = x._Id

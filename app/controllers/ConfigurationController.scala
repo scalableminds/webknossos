@@ -1,6 +1,6 @@
 package controllers
 
-import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import javax.inject.Inject
 import models.binary.{DataSet, DataSetDAO}
@@ -10,17 +10,19 @@ import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
 import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsObject, JsValue}
 import play.api.libs.json.Json._
+
+import scala.concurrent.ExecutionContext
 
 
 class ConfigurationController @Inject()(userService: UserService,
                                         dataSetDAO: DataSetDAO,
                                         userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
                                         dataSetConfigurationDefaults: DataSetConfigurationDefaults,
-                                        sil: Silhouette[WkEnv],
-                                        val messagesApi: MessagesApi) extends Controller {
+                                        sil: Silhouette[WkEnv])
+                                       (implicit ec: ExecutionContext)
+  extends Controller {
 
   def read = sil.UserAwareAction.async { implicit request =>
     request.identity.toFox.flatMap { user =>
@@ -48,7 +50,7 @@ class ConfigurationController @Inject()(userService: UserService,
         configurationJson: JsValue <- userDataSetConfigurationDAO.findOneForUserAndDataset(user._id, dataSetName)
       } yield DataSetConfiguration(configurationJson.validate[Map[String, JsValue]].getOrElse(Map.empty))
     }
-    .orElse(dataSetDAO.findOneByName(dataSetName).flatMap(_.defaultConfiguration))
+    .orElse(dataSetDAO.findOneByName(dataSetName)(GlobalAccessContext).flatMap(_.defaultConfiguration))
     .getOrElse(dataSetConfigurationDefaults.constructInitialDefault(List()))
     .map(configuration => Ok(toJson(dataSetConfigurationDefaults.configurationOrDefaults(configuration))))
   }

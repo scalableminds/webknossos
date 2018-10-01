@@ -7,13 +7,16 @@ import javax.inject.Inject
 import models.annotation._
 import models.binary.DataSetDAO
 import models.user.{User, UserService}
-import play.api.libs.concurrent.Execution.Implicits._
 import utils.ObjectId
+
+import scala.concurrent.ExecutionContext
 
 class SavedTracingInformationHandler @Inject()(annotationDAO: AnnotationDAO,
                                                dataSetDAO: DataSetDAO,
-                                               annotationRestrictionDefults: AnnotationRestrictionDefults,
-                                               userService: UserService) extends AnnotationInformationHandler with FoxImplicits {
+                                               annotationRestrictionDefults: AnnotationRestrictionDefaults,
+                                               userService: UserService)
+                                              (implicit val ec: ExecutionContext)
+  extends AnnotationInformationHandler with FoxImplicits {
 
   override val cache = false
 
@@ -35,7 +38,7 @@ class SavedTracingInformationHandler @Inject()(annotationDAO: AnnotationDAO,
     for {
       annotation <- provideAnnotation(identifier, None)
     } yield {
-      annotationRestrictionDefults.defaultAnnotationRestrictions(annotation)
+      annotationRestrictionDefults.defaultsFor(annotation)
     }
   }
 

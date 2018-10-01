@@ -29,8 +29,8 @@ import RecordingSwitch from "oxalis/view/recording_switch";
 import TDViewControls from "oxalis/view/td_view_controls";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import { GoldenLayoutAdapter } from "./golden_layout_adapter";
-import { storeLayoutConfig } from "./layout_persistence";
-import defaultLayouts, { determineLayout } from "./default_layout_configs";
+import { storeLayoutConfig, setActiveLayout, layoutEmitter } from "./layout_persistence";
+import { determineLayout } from "./default_layout_configs";
 
 const { Header, Sider } = Layout;
 
@@ -66,7 +66,6 @@ const GOLDEN_LAYOUT_ADAPTER_STYLE = {
 class TracingLayoutView extends React.PureComponent<Props, State> {
   constructor(props: Props) {
     super(props);
-    console.log("storedLayouts", this.props.storedLayouts);
     const layoutType = determineLayout(this.props.initialControlmode, this.props.viewMode);
     const lastActiveLayout = props.storedLayouts[layoutType].lastActive;
     this.state = {
@@ -96,24 +95,6 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     window.needsRerender = true;
     const layoutKey = determineLayout(this.props.initialControlmode, this.props.viewMode);
     storeLayoutConfig(layoutConfig, layoutKey, layoutName);
-  };
-
-  getCurrentLayout = (layoutKey: LayoutKeys, activeLayoutName: string) => {
-    const storedLayouts = this.props.storedLayouts;
-    if (!storedLayouts[layoutKey]) {
-      return defaultLayouts[layoutKey];
-    }
-    const layout = storedLayouts[layoutKey][activeLayoutName];
-    if (!layout) {
-      return defaultLayouts[layoutKey];
-    }
-    // Use default dimensions and settings
-    const { dimensions, settings } = defaultLayouts[layoutKey];
-    return {
-      ...layout,
-      dimensions,
-      settings,
-    };
   };
 
   getLayoutNamesFromCurrentView = (layoutKey): Array<string> => {
@@ -149,6 +130,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
               layoutKey={layoutType}
               setCurrentLayout={layoutName => {
                 this.setState({ activeLayout: layoutName });
+                setActiveLayout(layoutType, layoutName);
               }}
             />
           </Header>
@@ -170,7 +152,6 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
                 id="layoutContainer"
                 style={GOLDEN_LAYOUT_ADAPTER_STYLE}
                 layoutKey={layoutType}
-                getActiveLayout={this.getCurrentLayout}
                 activeLayoutName={this.state.activeLayout}
                 onLayoutChange={this.onLayoutChange}
               >

@@ -5,36 +5,36 @@ import { Input, Modal } from "antd";
 
 type Props = {
   addLayout: string => void,
+  visible: boolean,
+  onCancel: () => void,
 };
 
 type State = {
-  visible: boolean,
   value: string,
 };
 
 class AddNewLayoutModal extends React.PureComponent<Props, State> {
   state = {
-    visible: false,
+    value: "",
   };
 
   render() {
     return (
       <Modal
         title="Add a new layout"
-        visible={this.state.visible}
+        visible={this.props.visible}
         onOk={() => {
-          this.props.addLayout(this.props.value);
-          this.setState({ visible: false });
+          const value = this.state.value;
+          this.setState({ value: "" });
+          this.props.addLayout(value);
         }}
-        onCancel={() => {
-          this.setState({ visible: false });
-        }}
+        onCancel={this.props.onCancel}
       >
         <Input
           placeholder="Layout Name"
           value={this.state.value}
-          onChange={value => {
-            this.setState({ value });
+          onChange={evt => {
+            this.setState({ value: evt.target.value });
           }}
         />
       </Modal>

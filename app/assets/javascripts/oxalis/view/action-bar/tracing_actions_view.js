@@ -76,7 +76,7 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
               <Icon style={{ marginLeft: 16 }} type="check" theme="outlined" />
             ) : null}
           </div>
-          {isSelectedLayout ? (
+          {!isSelectedLayout ? (
             <Tooltip placement="top" title="Remove this layout">
               <Icon
                 type="delete"
@@ -340,7 +340,7 @@ class TracingActionsView extends PureComponent<StateProps, State> {
       <ResetLayoutItem
         storedLayoutNamesForView={this.props.storedLayoutNamesForView}
         activeLayout={this.props.activeLayout}
-        onReset={this.props.onResetLayout}
+        onResetLayout={this.props.onResetLayout}
         onSelectLayout={this.props.onSelectLayout}
         onDeleteLayout={this.props.onDeleteLayout}
         addNewLayout={this.props.addNewLayout}

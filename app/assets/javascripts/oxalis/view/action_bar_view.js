@@ -44,8 +44,16 @@ type Props = StateProps & {
   setCurrentLayout: string => void,
 };
 
+type State = {
+  isNewLayoutModalVisible: boolean,
+};
+
 // eslint-disable-next-line react/prefer-stateless-function
-class ActionBarView extends React.PureComponent<Props> {
+class ActionBarView extends React.PureComponent<Props, State> {
+  state = {
+    isNewLayoutModalVisible: false,
+  };
+
   handleResetLayout = () => {
     Store.dispatch(updateUserSettingAction("layoutScaleValue", 1));
     layoutEmitter.emit("resetLayout", this.props.layoutKey, this.props.activeLayout);
@@ -56,11 +64,12 @@ class ActionBarView extends React.PureComponent<Props> {
   };
 
   addNewLayout = (layoutName: string) => {
+    this.setState({ isNewLayoutModalVisible: false });
     if (layoutName === lastUsedLayout) {
       Toast.info(`The name "${lastUsedLayout}" is reserved.`);
     }
-    const currentLayout = getLayoutConfig(this.props.layoutKey, this.props.activeLayout);
-    if (addNewLayout(this.props.layoutKey, layoutName, currentLayout)) {
+    const configForLayout = getLayoutConfig(this.props.layoutKey, this.props.activeLayout);
+    if (addNewLayout(this.props.layoutKey, layoutName, configForLayout)) {
       this.props.setCurrentLayout(layoutName);
     }
   };
@@ -76,7 +85,9 @@ class ActionBarView extends React.PureComponent<Props> {
       onResetLayout: this.handleResetLayout,
       onSelectLayout: this.props.setCurrentLayout,
       onDeleteLayout: this.handleLayoutDeleted,
-      addNewLayout: this.addNewLayout,
+      addNewLayout: () => {
+        this.setState({ isNewLayoutModalVisible: true });
+      },
     };
     const readonlyDropdown = (
       <Dropdown overlay={<Menu>{<ResetLayoutItem {...resetItemProps} />}</Menu>}>
@@ -99,7 +110,11 @@ class ActionBarView extends React.PureComponent<Props> {
           {hasVolume && isVolumeSupported ? <VolumeActionsView /> : null}
           {hasSkeleton && isTraceMode ? <ViewModesView /> : null}
         </div>
-        <AddNewLayoutModal addLayout={this.addNewLayout} />
+        <AddNewLayoutModal
+          addLayout={this.addNewLayout}
+          visible={this.state.isNewLayoutModalVisible}
+          onCancel={() => this.setState({ isNewLayoutModalVisible: false })}
+        />
       </React.Fragment>
     );
   }

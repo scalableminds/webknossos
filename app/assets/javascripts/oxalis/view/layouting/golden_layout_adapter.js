@@ -9,13 +9,12 @@ import window from "libs/window";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Store from "oxalis/store";
 import { PortalTarget, RenderToPortal } from "./portal_utils";
-import { layoutEmitter } from "./layout_persistence";
+import { layoutEmitter, getLayoutConfig } from "./layout_persistence";
 
 type Props<KeyType> = {
   id: string,
   layoutKey: KeyType,
   activeLayoutName: string,
-  getActiveLayout: (KeyType, string) => Object,
   onLayoutChange?: (config: Object, layoutKey: string) => void,
   children: React.Node,
   style: Object,
@@ -107,6 +106,7 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
   }
 
   onStateChange() {
+    console.log("changing gl state");
     const { onLayoutChange } = this.props;
     if (onLayoutChange != null) {
       onLayoutChange(this.gl.toConfig(), this.props.activeLayoutName);
@@ -114,12 +114,10 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
   }
 
   setupLayout() {
-    const activeLayout = this.props.getActiveLayout(
-      this.props.layoutKey,
-      this.props.activeLayoutName,
-    );
+    const activeLayout = getLayoutConfig(this.props.layoutKey, this.props.activeLayoutName);
     const gl = new GoldenLayout(activeLayout, `#${this.props.id}`);
     this.gl = gl;
+    // console.log("new gl config", this.gl.toConfig());
     gl.registerComponent("PortalTarget", PortalTarget);
 
     const updateSize = () => updateSizeForGl(gl);

@@ -7,6 +7,7 @@ import Toast from "libs/toast";
 import defaultLayouts, {
   currentLayoutVersion,
   defaultLayoutSchema,
+  lastUsedLayout,
 } from "./default_layout_configs";
 import type { LayoutKeys } from "./default_layout_configs";
 
@@ -83,25 +84,27 @@ function persistLayoutConfigs() {
 
 layoutEmitter.on("resetLayout", (layoutKey: LayoutKeys, activeLayout: string) => {
   storeLayoutConfig(defaultLayouts[layoutKey], layoutKey, activeLayout);
+  layoutEmitter.emit("reloadLayout");
 });
 
 const persistLayoutConfigsDebounced = _.debounce(persistLayoutConfigs, 1000);
 
-export function getLayoutConfig(layoutKey: LayoutKeys, layoutName: string) {
+export function getLayoutConfig(layoutKey: LayoutKeys, activeLayoutName: string) {
   const storedLayouts = Store.getState().uiInformation.storedLayouts;
-  if (storedLayouts[layoutKey]) {
-    // Use default dimensions and settings
-    const layout = storedLayouts[layoutKey][layoutName];
-    if (layout) {
-      const { dimensions, settings } = defaultLayouts[layoutKey];
-      return {
-        ...storedLayouts[layoutKey],
-        dimensions,
-        settings,
-      };
-    }
+  if (!storedLayouts[layoutKey]) {
+    return defaultLayouts[layoutKey];
   }
-  return defaultLayouts[layoutKey];
+  const layout = storedLayouts[layoutKey][activeLayoutName];
+  if (!layout) {
+    return defaultLayouts[layoutKey];
+  }
+  // Use default dimensions and settings
+  const { dimensions, settings } = defaultLayouts[layoutKey];
+  return {
+    ...layout,
+    dimensions,
+    settings,
+  };
 }
 
 function getDeepCopyOfStoredLayouts(): Object {
@@ -140,19 +143,29 @@ export function deleteLayout(layoutKey: LayoutKeys, layoutName: string) {
 export function addNewLayout(
   layoutKey: LayoutKeys,
   newLayoutName: string,
-  configFromLayout: string,
+  configForLayout: string,
 ): boolean {
   const newLayouts = getDeepCopyOfStoredLayouts();
   if (newLayouts[layoutKey] && newLayouts[layoutKey][newLayoutName]) {
     Toast.info("This layout name is already used.");
     return false;
   }
-  if (newLayouts[layoutKey] && newLayouts[layoutKey][configFromLayout]) {
-    newLayouts[layoutKey][newLayoutName] = newLayouts[layoutKey][configFromLayout];
+  if (newLayouts[layoutKey]) {
+    newLayouts[layoutKey][newLayoutName] = configForLayout;
+    newLayouts[layoutKey][lastUsedLayout] = newLayoutName;
     Store.dispatch(setStoredLayoutsAction(newLayouts));
     persistLayoutConfigsDebounced();
     return true;
   }
   Toast.warning("Could not create a new Layout.");
   return false;
+}
+
+export function setActiveLayout(layoutKey: LayoutKeys, activeLayout: string) {
+  const newLayouts = getDeepCopyOfStoredLayouts();
+  if (newLayouts[layoutKey] && newLayouts[layoutKey][activeLayout]) {
+    newLayouts[layoutKey][lastUsedLayout] = activeLayout;
+    Store.dispatch(setStoredLayoutsAction(newLayouts));
+    persistLayoutConfigsDebounced();
+  }
 }

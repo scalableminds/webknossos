@@ -3,7 +3,6 @@ import * as React from "react";
 import { Icon, Alert, Dropdown, Menu } from "antd";
 import { connect } from "react-redux";
 import Store from "oxalis/store";
-import { setStoredLayoutsAction } from "oxalis/model/actions/ui_actions";
 import { layoutEmitter, getLayoutConfigs } from "oxalis/view/layouting/layout_persistence";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import TracingActionsView, { ResetLayoutItem } from "oxalis/view/action-bar/tracing_actions_view";
@@ -31,7 +30,8 @@ type StateProps = {
 };
 
 type Props = StateProps & {
-  storedLayoutsForViewMode: Object,
+  storedLayoutNamesForView: Array<string>,
+  activeLayout: string,
   setCurrentLayout: string => void,
 };
 // eslint-disable-next-line react/prefer-stateless-function
@@ -60,11 +60,9 @@ class ActionBarView extends React.PureComponent<Props> {
     const hasVolume = this.props.tracing.volume != null;
     const hasSkeleton = this.props.tracing.skeleton != null;
     const isVolumeSupported = !Constants.MODES_ARBITRARY.includes(this.props.viewMode);
-    console.log(this.props.storedLayouts);
-    const layouts = getLayoutConfigs();
-    console.log(layouts);
     const resetItemProps = {
-      customLayouts: { Layout1: "options", Layout2: "options" },
+      storedLayoutNamesForView: this.props.storedLayoutNamesForView,
+      activeLayout: this.props.activeLayout,
       onResetLayout: this.handleResetLayout,
       onSelectLayout: this.handleLayoutSelected,
       onDeleteLayout: this.handleLayoutDeleted,
@@ -98,7 +96,6 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   controlMode: state.temporaryConfiguration.controlMode,
   tracing: state.tracing,
   showVersionRestore: state.uiInformation.showVersionRestore,
-  storedLayouts: state.uiInformation.storedLayouts,
 });
 
 export default connect(mapStateToProps)(ActionBarView);

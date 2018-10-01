@@ -14,8 +14,8 @@ import { layoutEmitter } from "./layout_persistence";
 type Props<KeyType> = {
   id: string,
   layoutKey: KeyType,
-  activeLayout: string,
-  layoutConfigGetter: (layoutKey: KeyType, layoutName: string) => Object,
+  activeLayoutName: string,
+  activeLayout: Object,
   onLayoutChange?: (config: Object, layoutKey: string) => void,
   children: React.Node,
   style: Object,
@@ -106,15 +106,13 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
   onStateChange() {
     const { onLayoutChange } = this.props;
     if (onLayoutChange != null) {
-      onLayoutChange(this.gl.toConfig(), this.props.layoutKey);
+      onLayoutChange(this.gl.toConfig(), this.props.activeLayoutName);
     }
   }
 
   setupLayout() {
-    const gl = new GoldenLayout(
-      this.props.layoutConfigGetter(this.props.layoutKey, this.props.activeLayout),
-      `#${this.props.id}`,
-    );
+    console.log("activeLayout", this.props.activeLayout);
+    const gl = new GoldenLayout(this.props.activeLayout, `#${this.props.id}`);
     this.gl = gl;
     gl.registerComponent("PortalTarget", PortalTarget);
 

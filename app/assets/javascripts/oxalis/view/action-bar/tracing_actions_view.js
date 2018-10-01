@@ -23,7 +23,8 @@ import { readFileAsArrayBuffer } from "libs/read_file";
 import { AsyncButton } from "components/async_clickables";
 
 type Props = {
-  customLayouts: Object,
+  storedLayoutNamesForView: Object,
+  activeLayout: string,
   onResetLayout: () => void,
   onSelectLayout: string => void,
   onDeleteLayout: string => void,
@@ -46,7 +47,8 @@ type State = {
 };
 
 type ResetLayoutItemProps = {
-  customLayouts: Object,
+  storedLayoutNamesForView: Array<string>,
+  activeLayout: string,
   onResetLayout: () => void,
   onSelectLayout: string => void,
   onDeleteLayout: string => void,
@@ -55,22 +57,22 @@ type ResetLayoutItemProps = {
 
 export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
   const {
-    customLayouts,
+    storedLayoutNamesForView,
+    activeLayout,
     onResetLayout,
     onSelectLayout,
     onDeleteLayout,
     addNewLayout,
     ...others
   } = props;
-  const layoutNames = Object.keys(customLayouts);
-  const customLayoutsItems = layoutNames.map(layout => (
+  const customLayoutsItems = storedLayoutNamesForView.map(layout => (
     <Menu.Item key={layout}>
-      <span>
-        <div
-          style={{ display: "inline-block", marginRight: 16 }}
-          onClick={() => onSelectLayout(layout)}
-        >
+      <span className={layout === activeLayout ? "selected-layout-item" : null}>
+        <div className="inline-with-margin" onClick={() => onSelectLayout(layout)}>
           {layout}
+          {layout === activeLayout ? (
+            <Icon style={{ marginLeft: 16 }} type="check" theme="outlined" />
+          ) : null}
         </div>
         <Tooltip placement="top" title="Remove this layout">
           <Icon type="delete" className="clickable-icon" onClick={() => onDeleteLayout(layout)} />
@@ -327,7 +329,8 @@ class TracingActionsView extends PureComponent<StateProps, State> {
 
     elements.push(
       <ResetLayoutItem
-        customLayouts={this.props.customLayouts}
+        storedLayoutNamesForView={this.props.storedLayoutNamesForView}
+        activeLayout={this.props.activeLayout}
         onReset={this.props.onResetLayout}
         onSelectLayout={this.props.onSelectLayout}
         onDeleteLayout={this.props.onDeleteLayout}

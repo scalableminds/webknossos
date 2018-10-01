@@ -35,6 +35,8 @@ GET         /tracings/volume/:tracingId                                         
 POST        /tracings/volume/:tracingId/update                                                 @com.scalableminds.webknossos.datastore.controllers.VolumeTracingController.update(tracingId: String)
 GET         /tracings/volume/:tracingId/data                                                   @com.scalableminds.webknossos.datastore.controllers.VolumeTracingController.getData(tracingId: String, version: Option[Long])
 GET         /tracings/volume/:tracingId/duplicate                                              @com.scalableminds.webknossos.datastore.controllers.VolumeTracingController.duplicate(tracingId: String, version: Option[Long])
+GET         /tracings/volume/:tracingId/updateActionLog                                        @com.scalableminds.webknossos.datastore.controllers.VolumeTracingController.updateActionLog(tracingId: String)
+
 
 # Skeleton tracings
 POST        /tracings/skeleton/save                                                            @com.scalableminds.webknossos.datastore.controllers.SkeletonTracingController.save

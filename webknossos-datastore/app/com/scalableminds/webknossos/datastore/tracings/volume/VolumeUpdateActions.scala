@@ -4,6 +4,8 @@ import java.util.Base64
 
 import com.scalableminds.webknossos.datastore.tracings.UpdateAction.VolumeUpdateAction
 import com.scalableminds.util.geometry.{Point3D, Vector3D}
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.tracings.UpdateAction
 import play.api.libs.json._
 
 case class UpdateBucketVolumeAction(position: Point3D, cubeSize: Int, zoomStep: Int, base64Data: String, actionTimestamp: Option[Long] = None) extends VolumeUpdateAction {
@@ -30,13 +32,18 @@ object UpdateTracingVolumeAction {
 
 object VolumeUpdateAction {
 
-  implicit object volumeUpdateActionReads extends Reads[VolumeUpdateAction] {
+  implicit object volumeUpdateActionFormat extends Format[UpdateAction[VolumeTracing]] {
     override def reads(json: JsValue): JsResult[VolumeUpdateAction] = {
       (json \ "name").validate[String].flatMap {
         case "updateBucket" => (json \ "value").validate[UpdateBucketVolumeAction]
         case "updateTracing" => (json \ "value").validate[UpdateTracingVolumeAction]
         case unknownAction: String => JsError(s"Invalid update action s'$unknownAction'")
       }
+    }
+
+    override def writes(o: UpdateAction[VolumeTracing]): JsValue = o match {
+      case s: UpdateBucketVolumeAction => Json.obj("name" -> "updateBucket", "value" -> Json.toJson(s)(UpdateBucketVolumeAction.updateBucketVolumeActionFormat))
+      case s: UpdateTracingVolumeAction => Json.obj("name" -> "updateTracing", "value" -> Json.toJson(s)(UpdateTracingVolumeAction.updateTracingVolumeActionFormat))
     }
   }
 

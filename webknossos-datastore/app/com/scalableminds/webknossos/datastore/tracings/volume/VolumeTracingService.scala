@@ -11,10 +11,12 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.tracings._
 import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.tracings.UpdateAction.VolumeUpdateAction
 import com.scalableminds.webknossos.wrap.WKWFile
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.iteratee.Enumerator
+import play.api.libs.json.{Json, JsObject}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -33,7 +35,7 @@ class VolumeTracingService @Inject()(
 
   implicit val tracingCompanion = VolumeTracing
 
-  implicit val updateActionReads = VolumeUpdateAction.volumeUpdateActionReads
+  implicit val updateActionReads = VolumeUpdateAction.volumeUpdateActionFormat
 
   val tracingType = TracingType.volume
 
@@ -142,5 +144,18 @@ class VolumeTracingService @Inject()(
 
   def dataLayerForVolumeTracing(tracingId: String, dataSource: DataSource): Fox[SegmentationLayer] = {
     find(tracingId).map(volumeTracingLayerWithFallback(tracingId, _, dataSource))
+  }
+
+  def updateActionLog(tracingId: String) = {
+    def versionedTupleToJson(tuple: (Long, List[VolumeUpdateAction])): JsObject = {
+      Json.obj(
+        "version" -> tuple._1,
+        "value" -> Json.toJson(tuple._2)
+      )
+    }
+    for {
+      updateActionGroups <- tracingStore.getMultipleVersionsAsVersionValueTuple(tracingId)(fromJson[List[VolumeUpdateAction]])
+      updateActionGroupsJs = updateActionGroups.map(versionedTupleToJson)
+    } yield Json.toJson(updateActionGroupsJs)
   }
 }

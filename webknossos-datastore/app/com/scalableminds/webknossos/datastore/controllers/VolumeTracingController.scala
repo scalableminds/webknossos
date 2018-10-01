@@ -73,4 +73,17 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
       }
     }
   }
+
+  def updateActionLog(tracingId: String) = Action.async {
+    implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+        AllowRemoteOrigin {
+          for {
+            updateLog <- tracingService.updateActionLog(tracingId)
+          } yield {
+            Ok(updateLog)
+          }
+        }
+      }
+  }
 }

@@ -87,9 +87,6 @@ object AssetCompilation {
   } dependsOn npmInstall
 
   private def slickClassesFromDBSchemaTask: Def.Initialize[Task[Seq[File]]] = Def task{
-      val streamsVal = streams.value
-      val runnerVal = (runner in Compile).value
-      val dependencyClasspathVal = (dependencyClasspath in Compile).value
 
       val schemaPath = baseDirectory.value / "tools" / "postgres" / "schema.sql"
       val slickTablesOutPath = sourceManaged.value / "schema" / "com" / "scalableminds" / "webknossos" / "schema" / "Tables.scala"
@@ -97,18 +94,18 @@ object AssetCompilation {
       val shouldUpdate = !slickTablesOutPath.exists || slickTablesOutPath.lastModified < schemaPath.lastModified
 
       if (shouldUpdate) {
-        streamsVal.log.info("Ensuring Postgres DB is running for Slick code generation...")
-        startProcess((baseDirectory.value / "tools" / "postgres" / "ensure_db.sh").toString, List(), baseDirectory.value)  ! streamsVal.log
+        streams.value.log.info("Ensuring Postgres DB is running for Slick code generation...")
+        startProcess((baseDirectory.value / "tools" / "postgres" / "ensure_db.sh").toString, List(), baseDirectory.value)  ! streams.value.log
 
-        streamsVal.log.info("Updating Slick SQL schema from local database...")
+        streams.value.log.info("Updating Slick SQL schema from local database...")
 
-        runnerVal.run("slick.codegen.SourceCodeGenerator", dependencyClasspathVal.files,
+        (runner in Compile).value.run("slick.codegen.SourceCodeGenerator", (dependencyClasspath in Compile).value.files,
           Array("file://" + (baseDirectory.value / "conf" / "application.conf").toString + "#slick", (sourceManaged.value / "schema").toString),
-          streamsVal.log
+          streams.value.log
         )
 
       } else {
-        streamsVal.log.info("Slick SQL schema already up to date.")
+        streams.value.log.info("Slick SQL schema already up to date.")
       }
 
       Seq((slickTablesOutPath))
@@ -117,8 +114,8 @@ object AssetCompilation {
   val settings = Seq(
     AssetCompilation.SettingsKeys.webpackPath := (Path("node_modules") / ".bin" / "webpack").getPath,
     AssetCompilation.SettingsKeys.npmPath := "yarn",
-    run in Compile := {(run in Compile) map(killWebpack) dependsOn webpackGenerateTask},
-    sourceGenerators in Compile += Def.task[Seq[File]] {slickClassesFromDBSchemaTask.value},
+    run in Compile := ((run in Compile) map(killWebpack) dependsOn webpackGenerateTask).evaluated,
+    sourceGenerators in Compile += slickClassesFromDBSchemaTask,
     managedSourceDirectories in Compile += sourceManaged.value,
     stage := (stage dependsOn assetsGenerationTask).value,
     dist := (dist dependsOn assetsGenerationTask).value

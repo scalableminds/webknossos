@@ -86,8 +86,8 @@ function clearStoredLayouts() {
   Store.dispatch(setStoredLayoutsAction(readStoredLayoutConfigs()));
 }
 
-layoutEmitter.on("resetLayout", () => {
-  clearStoredLayouts();
+layoutEmitter.on("resetLayout", (layoutKey: LayoutKeys, activeLayout: string) => {
+  storeLayoutConfig(defaultLayouts[layoutKey], layoutKey, activeLayout);
 });
 
 const persistLayoutConfigsDebounced = _.debounce(persistLayoutConfigs, 1000);

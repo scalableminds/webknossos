@@ -65,21 +65,30 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
     addNewLayout,
     ...others
   } = props;
-  const customLayoutsItems = storedLayoutNamesForView.map(layout => (
-    <Menu.Item key={layout}>
-      <span className={layout === activeLayout ? "selected-layout-item" : null}>
-        <div className="inline-with-margin" onClick={() => onSelectLayout(layout)}>
-          {layout}
-          {layout === activeLayout ? (
-            <Icon style={{ marginLeft: 16 }} type="check" theme="outlined" />
+  const customLayoutsItems = storedLayoutNamesForView.map(layout => {
+    const isSelectedLayout = layout === activeLayout;
+    return (
+      <Menu.Item key={layout} className={isSelectedLayout ? "selected-layout-item" : null}>
+        <span>
+          <div className="inline-with-margin" onClick={() => onSelectLayout(layout)}>
+            {layout}
+            {isSelectedLayout ? (
+              <Icon style={{ marginLeft: 16 }} type="check" theme="outlined" />
+            ) : null}
+          </div>
+          {isSelectedLayout ? (
+            <Tooltip placement="top" title="Remove this layout">
+              <Icon
+                type="delete"
+                className="clickable-icon"
+                onClick={() => onDeleteLayout(layout)}
+              />
+            </Tooltip>
           ) : null}
-        </div>
-        <Tooltip placement="top" title="Remove this layout">
-          <Icon type="delete" className="clickable-icon" onClick={() => onDeleteLayout(layout)} />
-        </Tooltip>
-      </span>
-    </Menu.Item>
-  ));
+        </span>
+      </Menu.Item>
+    );
+  });
   return (
     <Menu.SubMenu
       {...others}

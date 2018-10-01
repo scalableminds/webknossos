@@ -15,7 +15,7 @@ type Props<KeyType> = {
   id: string,
   layoutKey: KeyType,
   activeLayoutName: string,
-  activeLayout: Object,
+  getActiveLayout: (KeyType, string) => Object,
   onLayoutChange?: (config: Object, layoutKey: string) => void,
   children: React.Node,
   style: Object,
@@ -84,7 +84,10 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
   }
 
   componentDidUpdate(prevProps: Props<*>) {
-    if (prevProps.layoutKey !== this.props.layoutKey) {
+    if (
+      prevProps.layoutKey !== this.props.layoutKey ||
+      prevProps.activeLayoutName !== this.props.activeLayoutName
+    ) {
       this.rebuildLayout();
     }
   }
@@ -111,8 +114,11 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
   }
 
   setupLayout() {
-    console.log("activeLayout", this.props.activeLayout);
-    const gl = new GoldenLayout(this.props.activeLayout, `#${this.props.id}`);
+    const activeLayout = this.props.getActiveLayout(
+      this.props.layoutKey,
+      this.props.activeLayoutName,
+    );
+    const gl = new GoldenLayout(activeLayout, `#${this.props.id}`);
     this.gl = gl;
     gl.registerComponent("PortalTarget", PortalTarget);
 

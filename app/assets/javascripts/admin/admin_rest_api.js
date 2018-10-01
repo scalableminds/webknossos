@@ -748,6 +748,8 @@ export function getTracingstore(): Promise<APITracingStore> {
   return Request.receiveJSON("api/tracingstore");
 }
 
+export const getTracingStoreCached = _.memoize(getTracingstore);
+
 // ### Active User
 export function getActiveUser(options: Object = {}): Promise<APIUser> {
   return Request.receiveJSON("/api/user", options);

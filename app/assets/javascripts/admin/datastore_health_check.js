@@ -21,8 +21,13 @@ const memoizedThrottle = (func, wait = 0, options = {}): Function => {
 export const pingDataStoreIfAppropriate = memoizedThrottle(async (requestedUrl: string): Promise<
   *,
 > => {
-  const datastores = await RestAPI.getDataStoresCached();
-  const usedDataStore = datastores.find(ds => requestedUrl.indexOf(ds.url) > -1);
+  const [datastores, tracingstore] = await [
+    RestAPI.getDataStoresCached(),
+    RestAPI.getTracingStoreCached(),
+  ];
+  const stores = datastores.concat(tracingstore);
+
+  const usedDataStore = stores.find(ds => requestedUrl.indexOf(ds.url) > -1);
   if (usedDataStore != null) {
     const { url } = usedDataStore;
     const healthEndpoint = `${url}/data/health`;

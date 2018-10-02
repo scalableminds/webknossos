@@ -23,6 +23,7 @@ import type {
   APIAnnotationWithTask,
   APIDataStore,
   DatasetConfig,
+  APIDatasetId,
   APIDataset,
   APIMaybeUnimportedDataset,
   APIDataSource,
@@ -515,12 +516,12 @@ export function getAnnotationInformation(
 }
 
 export function createExplorational(
-  datasetName: string,
+  datasetId: APIDatasetId,
   typ: "volume" | "skeleton" | "hybrid",
   withFallback: boolean,
   options?: RequestOptions = {},
 ): Promise<APIAnnotation> {
-  const url = `/api/datasets/${datasetName}/createExplorational`;
+  const url = `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/createExplorational`;
   return Request.sendJSONReceiveJSON(
     url,
     Object.assign({}, { data: { typ, withFallback } }, options),
@@ -594,14 +595,20 @@ export function getDatasetDatasource(
   dataset: APIMaybeUnimportedDataset,
 ): Promise<APIDataSourceWithMessages> {
   return doWithToken(token =>
-    Request.receiveJSON(`${dataset.dataStore.url}/data/datasets/${dataset.name}?token=${token}`),
+    Request.receiveJSON(
+      `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${
+        dataset.name
+      }?token=${token}`,
+    ),
   );
 }
 
 export function readDatasetDatasource(dataset: APIDataset): Promise<APIDataSource> {
   return doWithToken(token =>
     Request.receiveJSON(
-      `${dataset.dataStore.url}/data/datasets/${dataset.name}/readInboxDataSource?token=${token}`,
+      `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${
+        dataset.name
+      }/readInboxDataSource?token=${token}`,
     ),
   );
 }
@@ -612,9 +619,12 @@ export async function updateDatasetDatasource(
   datasource: APIDataSource,
 ): Promise<void> {
   await doWithToken(token =>
-    Request.sendJSONReceiveJSON(`${dataStoreUrl}/data/datasets/${datasetName}?token=${token}`, {
-      data: datasource,
-    }),
+    Request.sendJSONReceiveJSON(
+      `${dataStoreUrl}/data/datasets/${datasource.id.team}/${datasetName}?token=${token}`,
+      {
+        data: datasource,
+      },
+    ),
   );
 }
 
@@ -625,36 +635,52 @@ export async function getActiveDatasets(): Promise<Array<APIDataset>> {
   return datasets;
 }
 
-export function getDataset(datasetName: string, sharingToken?: ?string): Promise<APIDataset> {
+export function getDataset(datasetId: APIDatasetId, sharingToken?: ?string): Promise<APIDataset> {
   const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
-  return Request.receiveJSON(`/api/datasets/${datasetName}${sharingTokenSuffix}`);
+  return Request.receiveJSON(
+    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}${sharingTokenSuffix}`,
+  );
 }
 
-export function updateDataset(datasetName: string, dataset: APIDataset): Promise<APIDataset> {
-  return Request.sendJSONReceiveJSON(`/api/datasets/${datasetName}`, {
-    data: dataset,
-  });
+export function updateDataset(datasetId: APIDatasetId, dataset: APIDataset): Promise<APIDataset> {
+  return Request.sendJSONReceiveJSON(
+    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}`,
+    {
+      data: dataset,
+    },
+  );
 }
 
-export function getDatasetConfiguration(datasetName: string): Promise<Object> {
-  return Request.receiveJSON(`/api/dataSetConfigurations/${datasetName}`);
+export function getDatasetConfiguration(datasetId: APIDatasetId): Promise<Object> {
+  return Request.receiveJSON(
+    `/api/dataSetConfigurations/${datasetId.owningOrganization}/${datasetId.name}`,
+  );
 }
 
-export function getDatasetDefaultConfiguration(datasetName: string): Promise<DatasetConfiguration> {
-  return Request.receiveJSON(`/api/dataSetConfigurations/default/${datasetName}`);
+export function getDatasetDefaultConfiguration(
+  datasetId: APIDatasetId,
+): Promise<DatasetConfiguration> {
+  return Request.receiveJSON(
+    `/api/dataSetConfigurations/default/${datasetId.owningOrganization}/${datasetId.name}`,
+  );
 }
 
 export function updateDatasetDefaultConfiguration(
-  datasetName: string,
+  datasetId: APIDatasetId,
   datasetConfiguration: DatasetConfiguration,
 ): Promise<{}> {
-  return Request.sendJSONReceiveJSON(`/api/dataSetConfigurations/default/${datasetName}`, {
-    data: datasetConfiguration,
-  });
+  return Request.sendJSONReceiveJSON(
+    `/api/dataSetConfigurations/default/${datasetId.owningOrganization}/${datasetId.name}`,
+    {
+      data: datasetConfiguration,
+    },
+  );
 }
 
-export function getDatasetAccessList(datasetName: string): Promise<Array<APIUser>> {
-  return Request.receiveJSON(`/api/datasets/${datasetName}/accessList`);
+export function getDatasetAccessList(datasetId: APIDatasetId): Promise<Array<APIUser>> {
+  return Request.receiveJSON(
+    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/accessList`,
+  );
 }
 
 export async function addDataset(datasetConfig: DatasetConfig): Promise<void> {
@@ -682,14 +708,17 @@ export async function addForeignDataSet(
 }
 
 // Returns void if the name is valid. Otherwise, a string is returned which denotes the reason.
-export async function isDatasetNameValid(dataSetName: string): Promise<?string> {
-  if (dataSetName === "") {
+export async function isDatasetNameValid(datasetId: APIDatasetId): Promise<?string> {
+  if (datasetId.name === "") {
     return "The dataset name must not be empty.";
   }
   try {
-    await Request.receiveJSON(`/api/datasets/${dataSetName}/isValidNewName`, {
-      doNotCatch: true,
-    });
+    await Request.receiveJSON(
+      `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/isValidNewName`,
+      {
+        doNotCatch: true,
+      },
+    );
     return null;
   } catch (ex) {
     const json = JSON.parse(await ex.text());
@@ -698,12 +727,15 @@ export async function isDatasetNameValid(dataSetName: string): Promise<?string> 
 }
 
 export function updateDatasetTeams(
-  datasetName: string,
+  datasetId: APIDatasetId,
   newTeams: Array<string>,
 ): Promise<APIDataset> {
-  return Request.sendJSONReceiveJSON(`/api/datasets/${datasetName}/teams`, {
-    data: newTeams,
-  });
+  return Request.sendJSONReceiveJSON(
+    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/teams`,
+    {
+      data: newTeams,
+    },
+  );
 }
 
 export async function triggerDatasetCheck(datastoreHost: string): Promise<void> {
@@ -716,22 +748,37 @@ export async function triggerDatasetCheck(datastoreHost: string): Promise<void> 
 
 export async function triggerDatasetClearCache(
   datastoreHost: string,
-  datasetName: string,
+  datasetId: APIDatasetId,
 ): Promise<void> {
   await doWithToken(token =>
-    Request.triggerRequest(`/data/triggers/clearCache/${datasetName}?token=${token}`, {
-      host: datastoreHost,
-    }),
+    Request.triggerRequest(
+      `/data/triggers/clearCache/${datasetId.owningOrganization}/${datasetId.name}?token=${token}`,
+      {
+        host: datastoreHost,
+      },
+    ),
   );
 }
 
-export async function getDatasetSharingToken(datasetName: string): Promise<string> {
-  const { sharingToken } = await Request.receiveJSON(`/api/datasets/${datasetName}/sharingToken`);
+export async function getDatasetSharingToken(datasetId: APIDatasetId): Promise<string> {
+  const { sharingToken } = await Request.receiveJSON(
+    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/sharingToken`,
+  );
   return sharingToken;
 }
 
-export async function revokeDatasetSharingToken(datasetName: string): Promise<void> {
-  await Request.triggerRequest(`/api/datasets/${datasetName}/sharingToken`, { method: "DELETE" });
+export async function revokeDatasetSharingToken(datasetId: APIDatasetId): Promise<void> {
+  await Request.triggerRequest(
+    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/sharingToken`,
+    { method: "DELETE" },
+  );
+}
+
+export async function getOrganizationForDataset(datasetName: string): Promise<string> {
+  const { organizationName } = await Request.receiveJSON(
+    `/api/datasets/disambiguate/${datasetName}/toNew`,
+  );
+  return organizationName;
 }
 
 // #### Datastores

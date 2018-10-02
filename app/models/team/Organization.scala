@@ -61,6 +61,11 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
   override def readAccessQ(requestingUserId: ObjectId) =
     s"(_id in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}'))"
 
+  override def anonymousReadAccessQ(sharingToken: Option[String]): String = sharingToken match {
+    case Some(a) => "true"
+    case _ => "false"
+  }
+
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[Organization] =
     for {
       accessQuery <- readAccessQuery

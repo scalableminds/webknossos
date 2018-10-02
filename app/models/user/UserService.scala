@@ -134,7 +134,7 @@ class UserService @Inject()(conf: WkConf,
 
   def updateDataSetConfiguration(user: User, dataSetName: String, configuration: DataSetConfiguration)(implicit ctx: DBAccessContext) =
     for {
-      dataSet <- dataSetDAO.findOneByName(dataSetName)
+      dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, user._organization)
       _ <- userDataSetConfigurationDAO.updateDatasetConfigurationForUserAndDataset(user._id, dataSet._id, configuration.configuration)
       _ = userCache.invalidateUser(user._id)
     } yield ()

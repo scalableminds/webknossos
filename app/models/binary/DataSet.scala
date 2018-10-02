@@ -10,11 +10,13 @@ import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
 import models.configuration.DataSetConfiguration
 import models.team._
+import play.api.i18n.Messages
 import play.api.libs.json._
 import play.utils.UriEncoding
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
+import slick.sql
 import utils.{ObjectId, SQLClient, SQLDAO, SimpleSQLDAO}
 
 import scala.concurrent.ExecutionContext
@@ -113,15 +115,27 @@ class DataSetDAO @Inject()(sqlClient: SQLClient, dataSetDataLayerDAO: DataSetDat
     } yield parsed
   }
 
-  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataSet] =
+  def findOneByNameAndOrganizationName(name: String, organizationName: String)(implicit ctx: DBAccessContext): Fox[DataSet] =
+    for {
+      organization <- organizationDAO.findOneByName(organizationName) ?~> ("organization.notFound " + organizationName)
+      dataset <- findOneByNameAndOrganization(name, organization._id)
+    } yield dataset
+
+  def findOneByNameAndOrganization(name: String, organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[DataSet] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(sql"select #${columns} from #${existingCollectionName} where name = ${name} and #${accessQuery}".as[DatasetsRow])
+      rList <- run(sql"select #${columns} from #${existingCollectionName} where name = ${name} and _organization = ${organizationId} and #${accessQuery}".as[DatasetsRow])
       r <- rList.headOption.toFox
       parsed <- parse(r)
-    } yield {
-      parsed
-    }
+    } yield parsed
+
+  def getOrganizationForDataSet(dataSetName: String)(implicit ctx: DBAccessContext): Fox[ObjectId] =
+    for {
+      accessQuery <- readAccessQuery
+      rList <- run(sql"select _organization from #${existingCollectionName} where name = ${dataSetName} and #${accessQuery} order by created asc".as[String])
+      r <- rList.headOption.toFox
+      parsed <- ObjectId.parse(r)
+    } yield parsed
 
   def getIdByName(name: String)(implicit ctx: DBAccessContext): Fox[ObjectId] =
     for {
@@ -137,20 +151,20 @@ class DataSetDAO @Inject()(sqlClient: SQLClient, dataSetDataLayerDAO: DataSetDat
       r <- rList.headOption.toFox
     } yield r
 
-  def getSharingTokenByName(name: String)(implicit ctx: DBAccessContext): Fox[Option[String]] = {
+  def getSharingTokenByName(name: String, organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[Option[String]] = {
     for {
       accessQuery <- readAccessQuery
-      rList <- run(sql"select sharingToken from webknossos.datasets_ where name = ${name} and #${accessQuery}".as[Option[String]])
+      rList <- run(sql"select sharingToken from webknossos.datasets_ where name = ${name} and _organization = ${organizationId} and #${accessQuery}".as[Option[String]])
       r <- rList.headOption.toFox
     } yield {
       r
     }
   }
 
-  def updateSharingTokenByName(name: String, sharingToken: Option[String])(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def updateSharingTokenByName(name: String, organizationId: ObjectId, sharingToken: Option[String])(implicit ctx: DBAccessContext): Fox[Unit] = {
     for {
       accessQuery <- readAccessQuery
-      _ <- run(sqlu"update webknossos.datasets_ set sharingToken = ${sharingToken} where name = ${name} and #${accessQuery}")
+      _ <- run(sqlu"update webknossos.datasets_ set sharingToken = ${sharingToken} where name = ${name} and _organization = ${organizationId} and #${accessQuery}")
     } yield ()
   }
 
@@ -183,7 +197,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient, dataSetDataLayerDAO: DataSetDat
   def updateDataSourceByName(name: String, dataStoreName: String, source: InboxDataSource, isUsable: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] = {
 
     for {
-      old <- findOneByName(name)
+      old <- findOneByNameAndOrganizationName(name, source.id.team)
       organization <- organizationDAO.findOneByName(source.id.team)
       q =
       sqlu"""update webknossos.dataSets

@@ -109,17 +109,7 @@ export function getLayoutConfig(layoutKey: LayoutKeys, activeLayoutName: string)
 
 function getDeepCopyOfStoredLayouts(): Object {
   const currentLayouts = Store.getState().uiInformation.storedLayouts;
-  const layoutKeys = Object.keys(currentLayouts);
-  const newLayouts = {};
-  layoutKeys.forEach(currentLayoutKey => {
-    newLayouts[currentLayoutKey] = {};
-    const layoutNames = Object.keys(currentLayouts[currentLayoutKey]);
-    layoutNames.forEach(currentLayoutName => {
-      newLayouts[currentLayoutKey][currentLayoutName] =
-        currentLayouts[currentLayoutKey][currentLayoutName];
-    });
-  });
-  return newLayouts;
+  return _.cloneDeep(currentLayouts);
 }
 
 export function storeLayoutConfig(layoutConfig: Object, layoutKey: LayoutKeys, layoutName: string) {

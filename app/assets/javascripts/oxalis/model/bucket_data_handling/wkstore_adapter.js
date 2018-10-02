@@ -64,12 +64,15 @@ export async function requestFromStore(
   );
 
   return doWithToken(async token => {
-    const state = Store.getState();
-    const datasetName = state.dataset.name;
-    const dataStoreUrl = state.dataset.dataStore.url;
+    const { dataset } = Store.getState();
+    const organizationName = dataset.owningOrganization;
+    const datasetName = dataset.name;
+    const dataStoreUrl = dataset.dataStore.url;
 
     const { buffer: responseBuffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
-      `${dataStoreUrl}/data/datasets/${datasetName}/layers/${layerInfo.name}/data?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${organizationName}/${datasetName}/layers/${
+        layerInfo.name
+      }/data?token=${token}`,
       {
         data: bucketInfo,
         timeout: REQUEST_TIMEOUT,

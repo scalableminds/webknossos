@@ -29,6 +29,7 @@ export const annotation: APIAnnotation = {
   formattedHash: "f043e7",
   tracing: { skeleton: null, volume: "segmentation" },
   dataSetName: "ROI2017_wkw",
+  organization: "Connectomics Department",
   dataStore: { name: "localhost", url: "http://localhost:9000", typ: "webknossos-store" },
   settings: {
     allowedModes: ["volume"],

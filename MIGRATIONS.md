@@ -6,7 +6,7 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 
 ## Unreleased
 ### Postgres Evolutions:
-- 
+- [027-drop-dataset-name-unique-constraint.sql](conf/evolutions/027-drop-dataset-name-unique-constraint.sql)
 
 
 ## [18.10.0](https://github.com/scalableminds/webknossos/releases/tag/18.10.0) - 2018-09-22

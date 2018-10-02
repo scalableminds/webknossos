@@ -279,7 +279,8 @@ class UserDataSetConfigurationDAO @Inject()(sqlClient: SQLClient, userDAO: UserD
 
   private def insertDatasetConfiguration(userId: ObjectId, dataSetName: String, configuration: Map[String, JsValue])(implicit ctx: DBAccessContext): Fox[Unit] = {
     for {
-      dataSet <- dataSetDAO.findOneByName(dataSetName)
+      user <- userDAO.findOne(userId)
+      dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, user._organization)
       _ <- insertDatasetConfiguration(userId, dataSet._id, configuration)
     } yield ()
   }

@@ -23,8 +23,8 @@ import MappingInfoView from "oxalis/view/right-menu/mapping_info_view";
 import DatasetInfoTabView from "oxalis/view/right-menu/dataset_info_tab_view";
 import InputCatcher, { recalculateInputCatcherSizes } from "oxalis/view/input_catcher";
 import { ArbitraryViewport, OrthoViews } from "oxalis/constants";
-import type { OxalisState, TracingTypeTracing } from "oxalis/store";
-import type { ControlMode, Mode } from "oxalis/constants";
+import type { OxalisState, TracingTypeTracing, TraceOrViewCommand } from "oxalis/store";
+import type { Mode } from "oxalis/constants";
 import RecordingSwitch from "oxalis/view/recording_switch";
 import TDViewControls from "oxalis/view/td_view_controls";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
@@ -44,8 +44,7 @@ type StateProps = {
 
 type Props = StateProps & {
   initialTracingType: TracingTypeTracing,
-  initialAnnotationId: string,
-  initialControlmode: ControlMode,
+  initialCommandType: TraceOrViewCommand,
 };
 
 type State = {
@@ -66,7 +65,7 @@ const GOLDEN_LAYOUT_ADAPTER_STYLE = {
 class TracingLayoutView extends React.PureComponent<Props, State> {
   constructor(props: Props) {
     super(props);
-    const layoutType = determineLayout(this.props.initialControlmode, this.props.viewMode);
+    const layoutType = determineLayout(this.props.initialCommandType.type, this.props.viewMode);
     const lastActiveLayout = props.storedLayouts[layoutType].lastActive;
     this.state = {
       isSettingsCollapsed: true,
@@ -93,7 +92,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
   onLayoutChange = (layoutConfig, layoutName) => {
     recalculateInputCatcherSizes();
     window.needsRerender = true;
-    const layoutKey = determineLayout(this.props.initialControlmode, this.props.viewMode);
+    const layoutKey = determineLayout(this.props.initialCommandType.type, this.props.viewMode);
     storeLayoutConfig(layoutConfig, layoutKey, layoutName);
   };
 
@@ -105,17 +104,15 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
   };
 
   render() {
-    const layoutType = determineLayout(this.props.initialControlmode, this.props.viewMode);
+    const layoutType = determineLayout(this.props.initialCommandType.type, this.props.viewMode);
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
-
     const { displayScalebars } = this.props;
 
     return (
       <NmlUploadZoneContainer onImport={importNmls} isAllowed={this.props.isUpdateTracingAllowed}>
         <OxalisController
           initialTracingType={this.props.initialTracingType}
-          initialAnnotationId={this.props.initialAnnotationId}
-          initialControlmode={this.props.initialControlmode}
+          initialCommandType={this.props.initialCommandType}
         />
 
         <Layout className="tracing-layout">

@@ -30,6 +30,12 @@ object UpdateTracingVolumeAction {
   implicit val updateTracingVolumeActionFormat = Json.format[UpdateTracingVolumeAction]
 }
 
+case class RevertToVersionVolumeAction(sourceVersion: Long, actionTimestamp: Option[Long] = None) extends VolumeUpdateAction
+
+object RevertToVersionVolumeAction {
+  implicit val revertToVersionVolumeAction = Json.format[RevertToVersionVolumeAction]
+}
+
 object VolumeUpdateAction {
 
   implicit object volumeUpdateActionFormat extends Format[UpdateAction[VolumeTracing]] {
@@ -37,6 +43,7 @@ object VolumeUpdateAction {
       (json \ "name").validate[String].flatMap {
         case "updateBucket" => (json \ "value").validate[UpdateBucketVolumeAction]
         case "updateTracing" => (json \ "value").validate[UpdateTracingVolumeAction]
+        case "revertToVersion" => (json \ "value").validate[RevertToVersionVolumeAction]
         case unknownAction: String => JsError(s"Invalid update action s'$unknownAction'")
       }
     }
@@ -44,6 +51,7 @@ object VolumeUpdateAction {
     override def writes(o: UpdateAction[VolumeTracing]): JsValue = o match {
       case s: UpdateBucketVolumeAction => Json.obj("name" -> "updateBucket", "value" -> Json.toJson(s)(UpdateBucketVolumeAction.updateBucketVolumeActionFormat))
       case s: UpdateTracingVolumeAction => Json.obj("name" -> "updateTracing", "value" -> Json.toJson(s)(UpdateTracingVolumeAction.updateTracingVolumeActionFormat))
+      case s: RevertToVersionVolumeAction => Json.obj("name" -> "revertToVersion", "value" -> Json.toJson(s)(RevertToVersionVolumeAction.revertToVersionVolumeAction))
     }
   }
 

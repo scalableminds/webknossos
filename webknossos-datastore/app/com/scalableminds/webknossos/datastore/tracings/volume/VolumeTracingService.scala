@@ -54,6 +54,10 @@ class VolumeTracingService @Inject()(
               saveBucket(volumeTracingLayer(tracingId, t), bucket, a.data, updateGroup.version).map(_ => t)
             case a: UpdateTracingVolumeAction =>
               Fox.successful(t.copy(activeSegmentId = Some(a.activeSegmentId), editPosition = a.editPosition, editRotation = a.editRotation, largestSegmentId = a.largestSegmentId, zoomLevel = a.zoomLevel, userBoundingBox = a.userBoundingBox))
+            case a: RevertToVersionVolumeAction =>
+              val sourceTracing = find(tracingId, Some(a.sourceVersion))
+              val bucketStream = volumeTracingLayer(tracingId, t).bucketProvider.bucketStream(1)
+              sourceTracing
             case _ =>
               Fox.failure("Unknown action.")
           }
@@ -62,7 +66,7 @@ class VolumeTracingService @Inject()(
         case f: Failure =>
           Fox.failure(f.msg)
       }
-    }.map(t => save(t.copy(version = updateGroup.version), Some(tracingId), updateGroup.version))
+    }.map(t => save(t.copy(version = updateGroup.version, modifiedTimestamp = Some(updateGroup.timestamp)), Some(tracingId), updateGroup.version))
   }
 
   def initializeWithData(tracingId: String, tracing: VolumeTracing, dataSource: DataSource, initialData: File): Box[_] = {
@@ -147,15 +151,15 @@ class VolumeTracingService @Inject()(
   }
 
   def updateActionLog(tracingId: String) = {
-    def versionedTupleToJson(tuple: (Long, List[VolumeUpdateAction])): JsObject = {
+    def versionedTupleToJson(tuple: (Long, VolumeTracing)): JsObject = {
       Json.obj(
         "version" -> tuple._1,
-        "value" -> Json.toJson(tuple._2)
+        "value" -> Json.toJson(tuple._2.modifiedTimestamp)
       )
     }
     for {
-      updateActionGroups <- tracingStore.getMultipleVersionsAsVersionValueTuple(tracingId)(fromJson[List[VolumeUpdateAction]])
-      updateActionGroupsJs = updateActionGroups.map(versionedTupleToJson)
+      volumeTracings <- tracingDataStore.volumes.getMultipleVersionsAsVersionValueTuple(tracingId)(fromProto[VolumeTracing]) ?~> tracingId
+      updateActionGroupsJs = volumeTracings.map(versionedTupleToJson)
     } yield Json.toJson(updateActionGroupsJs)
   }
 }

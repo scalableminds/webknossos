@@ -120,7 +120,7 @@ class FossilDBClient(collection: String, config: DataStoreConfig) extends FoxImp
         values <- Fox.combined(parsedValues.map{box: Box[T] => box.toFox})
       } yield reply.versions.zip(values).toList
     } catch {
-      case e: Exception => Fox.failure("could not get multiple versions from FossilDB" + e.getMessage)
+      case e: Exception => Fox.failure("could not get multiple versions from FossilDB: " + e.getMessage)
     }
   }
 

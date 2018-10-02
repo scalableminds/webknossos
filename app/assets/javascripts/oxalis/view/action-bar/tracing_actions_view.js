@@ -22,16 +22,7 @@ import SceneController from "oxalis/controller/scene_controller";
 import { readFileAsArrayBuffer } from "libs/read_file";
 import { AsyncButton } from "components/async_clickables";
 
-type Props = {
-  storedLayoutNamesForView: Object,
-  activeLayout: string,
-  onResetLayout: () => void,
-  onSelectLayout: string => void,
-  onDeleteLayout: string => void,
-  addNewLayout: () => void,
-};
-
-type StateProps = Props & {
+type StateProps = {
   tracingType: APITracingType,
   annotationId: string,
   restrictions: RestrictionsAndSettings,
@@ -39,11 +30,19 @@ type StateProps = Props & {
   activeUser: ?APIUser,
 };
 
+type Props = StateProps & {
+  storedLayoutNamesForView: Array<string>,
+  activeLayout: string,
+  onResetLayout: () => void,
+  onSelectLayout: string => void,
+  onDeleteLayout: string => void,
+  addNewLayout: () => void,
+};
+
 type State = {
   isShareModalOpen: boolean,
   isMergeModalOpen: boolean,
   isUserScriptsModalOpen: boolean,
-  selectedLayout: Object,
 };
 
 type ResetLayoutItemProps = {
@@ -110,19 +109,7 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
   );
 };
 
-/*
-* notes: make currently selected layout in the list bold and set a <Icon type="check" theme="outlined" /> behind it.
-* add default layout that wont be persistend
-*
-* steps: 1. make a methods that creates entries based on a mock json/object that creates all entries: done
-* create schema: done
-* put into store: on going
-* add modal to add a new Layout
-* apply schema
-* 
-*/
-
-class TracingActionsView extends PureComponent<StateProps, State> {
+class TracingActionsView extends PureComponent<Props, State> {
   state = {
     isShareModalOpen: false,
     isMergeModalOpen: false,

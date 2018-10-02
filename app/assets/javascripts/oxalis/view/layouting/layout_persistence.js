@@ -143,7 +143,7 @@ export function deleteLayout(layoutKey: LayoutKeys, layoutName: string) {
 export function addNewLayout(
   layoutKey: LayoutKeys,
   newLayoutName: string,
-  configForLayout: string,
+  configForLayout: Object,
 ): boolean {
   const newLayouts = getDeepCopyOfStoredLayouts();
   if (newLayouts[layoutKey] && newLayouts[layoutKey][newLayoutName]) {

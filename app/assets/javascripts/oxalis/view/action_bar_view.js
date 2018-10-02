@@ -21,6 +21,7 @@ import type { Mode, ControlMode } from "oxalis/constants";
 import type { OxalisState, Tracing } from "oxalis/store";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { lastUsedLayout } from "oxalis/view/layouting/default_layout_configs";
+import type { LayoutKeys } from "oxalis/view/layouting/default_layout_configs";
 
 const VersionRestoreWarning = (
   <Alert

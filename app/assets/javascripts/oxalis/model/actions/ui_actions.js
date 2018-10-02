@@ -13,7 +13,7 @@ type SetVersionRestoreVisibilityAction = {
 
 type SetStoredLayoutsAction = {
   type: "SET_STORED_LAYOUTS",
-  storedLayouts: boolean,
+  storedLayouts: Object,
 };
 
 export type UiAction =

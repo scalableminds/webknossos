@@ -32,9 +32,8 @@ import messages from "messages";
 import { fetchGistContent } from "libs/gist";
 import { document } from "libs/window";
 import NewTaskDescriptionModal from "oxalis/view/new_task_description_modal";
-
-import type { Mode, ControlMode } from "oxalis/constants";
-import type { OxalisState, TracingTypeTracing } from "oxalis/store";
+import type { Mode } from "oxalis/constants";
+import type { OxalisState, TracingTypeTracing, TraceOrViewCommand } from "oxalis/store";
 import type { RouterHistory } from "react-router-dom";
 
 type StateProps = {
@@ -44,8 +43,7 @@ type StateProps = {
 type Props = {
   history: RouterHistory,
   initialTracingType: TracingTypeTracing,
-  initialAnnotationId: string,
-  initialControlmode: ControlMode,
+  initialCommandType: TraceOrViewCommand,
 } & StateProps;
 
 type State = {
@@ -86,13 +84,7 @@ class Controller extends React.PureComponent<Props, State> {
     // Preview a working tracing version if the showVersionRestore URL parameter is supplied
     const version = Utils.hasUrlParam("showVersionRestore") ? 1 : undefined;
 
-    Model.fetch(
-      this.props.initialTracingType,
-      this.props.initialAnnotationId,
-      this.props.initialControlmode,
-      true,
-      version,
-    )
+    Model.fetch(this.props.initialTracingType, this.props.initialCommandType, true, version)
       .then(() => this.modelFetchDone())
       .catch(error => {
         // Don't throw errors for errors already handled by the model.

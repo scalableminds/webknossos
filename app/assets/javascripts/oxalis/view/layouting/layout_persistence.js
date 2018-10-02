@@ -84,7 +84,6 @@ function persistLayoutConfigs() {
 
 layoutEmitter.on("resetLayout", (layoutKey: LayoutKeys, activeLayout: string) => {
   storeLayoutConfig(defaultLayouts[layoutKey], layoutKey, activeLayout);
-  layoutEmitter.emit("reloadLayout");
 });
 
 const persistLayoutConfigsDebounced = _.debounce(persistLayoutConfigs, 1000);

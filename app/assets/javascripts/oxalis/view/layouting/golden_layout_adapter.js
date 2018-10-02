@@ -117,7 +117,6 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
     const activeLayout = getLayoutConfig(this.props.layoutKey, this.props.activeLayoutName);
     const gl = new GoldenLayout(activeLayout, `#${this.props.id}`);
     this.gl = gl;
-    // console.log("new gl config", this.gl.toConfig());
     gl.registerComponent("PortalTarget", PortalTarget);
 
     const updateSize = () => updateSizeForGl(gl);

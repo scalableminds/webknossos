@@ -36,8 +36,8 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
   def isProperDataSetName(name: String): Boolean =
     name.matches("[A-Za-z0-9_\\-]*")
 
-  def assertNewDataSetName(name: String)(implicit ctx: DBAccessContext): Fox[Boolean] =
-    dataSetDAO.findOneByName(name)(GlobalAccessContext).reverse
+  def assertNewDataSetName(name: String, organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[Boolean] =
+    dataSetDAO.findOneByNameAndOrganization(name, organizationId)(GlobalAccessContext).reverse
 
   def createDataSet(
                      name: String,
@@ -96,8 +96,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                         dataStore: DataStore,
                         dataSource: InboxDataSource
                       )(implicit ctx: DBAccessContext): Fox[Unit] = {
-
-    dataSetDAO.findOneByName(dataSource.id.name)(GlobalAccessContext).futureBox.flatMap {
+    dataSetDAO.findOneByNameAndOrganizationName(dataSource.id.name, dataSource.id.team)(GlobalAccessContext).futureBox.flatMap {
       case Full(dataSet) if dataSet._dataStore == dataStore.name =>
         dataSetDAO.updateDataSourceByName(
           dataSource.id.name,
@@ -122,12 +121,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
   def deactivateUnreportedDataSources(dataStoreName: String, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext) =
     dataSetDAO.deactivateUnreported(dataSources.map(_.id.name), dataStoreName)
 
-  def importDataSet(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[WSResponse] =
-    for {
-      dataStoreHandler <- handlerFor(dataSet)
-      result <- dataStoreHandler.importDataSource
-    } yield result
-
   def updateDataSources(dataStore: DataStore, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext) = {
     logger.info(s"[${dataStore.name}] Available datasets: " +
       s"${dataSources.count(_.isUsable)} (usable), ${dataSources.count(!_.isUsable)} (unusable)")
@@ -136,16 +129,16 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     }
   }
 
-  def getSharingToken(dataSetName: String)(implicit ctx: DBAccessContext) = {
+  def getSharingToken(dataSetName: String, organizationId: ObjectId)(implicit ctx: DBAccessContext) = {
 
     def createSharingToken(dataSetName: String)(implicit ctx: DBAccessContext) = {
       for {
         tokenValue <- new CompactRandomIDGenerator().generate
-        _ <- dataSetDAO.updateSharingTokenByName(dataSetName, Some(tokenValue))
+        _ <- dataSetDAO.updateSharingTokenByName(dataSetName, organizationId, Some(tokenValue))
       } yield tokenValue
     }
 
-    val tokenFoxOfFox: Fox[Fox[String]] = dataSetDAO.getSharingTokenByName(dataSetName).map {
+    val tokenFoxOfFox: Fox[Fox[String]] = dataSetDAO.getSharingTokenByName(dataSetName, organizationId).map {
       oldTokenOpt => {
         if (oldTokenOpt.isDefined) Fox.successful(oldTokenOpt.get)
         else createSharingToken(dataSetName)

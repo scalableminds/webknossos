@@ -25,17 +25,17 @@ class DatasetActionView extends React.PureComponent<Props, State> {
     typ: "skeleton" | "volume" | "hybrid",
     withFallback: boolean,
   ) => {
-    const annotation = await createExplorational(dataset.name, typ, withFallback);
+    const annotation = await createExplorational(dataset, typ, withFallback);
     this.props.history.push(`/annotations/${annotation.typ}/${annotation.id}`);
   };
 
   clearCache = async (dataset: APIMaybeUnimportedDataset) => {
-    await triggerDatasetClearCache(dataset.dataStore.url, dataset.name);
+    await triggerDatasetClearCache(dataset.dataStore.url, dataset);
     Toast.success(messages["dataset.clear_cache_success"]);
   };
 
   render() {
-    const dataset = this.props.dataset;
+    const { dataset } = this.props;
     const centerBackgroundImageStyle = {
       verticalAlign: "middle",
     };
@@ -80,7 +80,10 @@ class DatasetActionView extends React.PureComponent<Props, State> {
       <div>
         {this.props.isUserAdmin && dataset.dataSource.dataLayers == null ? (
           <div>
-            <Link to={`/datasets/${dataset.name}/import`} className="import-dataset">
+            <Link
+              to={`/datasets/${dataset.owningOrganization}/${dataset.name}/import`}
+              className="import-dataset"
+            >
               <Icon type="plus-circle-o" />Import
             </Link>
 
@@ -91,7 +94,10 @@ class DatasetActionView extends React.PureComponent<Props, State> {
           <div className="dataset-actions nowrap">
             {this.props.isUserAdmin && dataset.isEditable ? (
               <React.Fragment>
-                <Link to={`/datasets/${dataset.name}/edit`} title="Edit Dataset">
+                <Link
+                  to={`/datasets/${dataset.owningOrganization}/${dataset.name}/edit`}
+                  title="Edit Dataset"
+                >
                   <Icon type="edit" />Edit
                 </Link>
                 {!dataset.isForeign ? (

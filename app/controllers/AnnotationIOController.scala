@@ -114,7 +114,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
         _ <- bool2Fox(skeletonTracings.nonEmpty || volumeTracingsWithDataLocations.nonEmpty) ?~> "nml.file.noFile"
         _ <- bool2Fox(volumeTracingsWithDataLocations.size <= 1) ?~> "nml.file.multipleVolumes"
         dataSetName <- assertAllOnSameDataSet(skeletonTracings, volumeTracingsWithDataLocations.headOption.map(_._1)) ?~> "nml.file.differentDatasets"
-        dataSet <- dataSetDAO.findOneByName(dataSetName)
+        dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization)
         dataStoreHandler <- dataSetService.handlerFor(dataSet)
         volumeTracingIdOpt <- Fox.runOptional(volumeTracingsWithDataLocations.headOption){ v =>
           dataStoreHandler.saveVolumeTracing(v._1, parsedFiles.otherFiles.get(v._2).map(tmpFile => new File(tmpFile.path.toString)))

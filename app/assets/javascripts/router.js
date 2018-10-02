@@ -10,8 +10,9 @@ import Enum from "Enumjs";
 import window from "libs/window";
 import { ControlModeEnum } from "oxalis/constants";
 import { APITracingTypeEnum } from "admin/api_flow_types";
-import { getAnnotationInformation } from "admin/admin_rest_api";
+import { getAnnotationInformation, getOrganizationForDataset } from "admin/admin_rest_api";
 import SecuredRoute from "components/secured_route";
+import AsyncRedirect from "components/redirect";
 import DisableGenericDnd from "components/disable_generic_dnd";
 import Navbar from "navbar";
 import { Imprint, Privacy } from "components/legal";
@@ -91,8 +92,10 @@ class ReactRouter extends React.Component<Props> {
       return (
         <TracingLayoutView
           initialTracingType={tracingType}
-          initialAnnotationId={match.params.id || ""}
-          initialControlmode={ControlModeEnum.TRACE}
+          initialCommandType={{
+            type: ControlModeEnum.TRACE,
+            annotationId: match.params.id || "",
+          }}
         />
       );
     }
@@ -103,8 +106,11 @@ class ReactRouter extends React.Component<Props> {
   tracingViewMode = ({ match }: ContextRouter) => (
     <TracingLayoutView
       initialTracingType={APITracingTypeEnum.View}
-      initialAnnotationId={match.params.id || ""}
-      initialControlmode={ControlModeEnum.VIEW}
+      initialCommandType={{
+        type: ControlModeEnum.VIEW,
+        name: match.params.datasetName || "",
+        owningOrganization: match.params.organizationName || "",
+      }}
     />
   );
 
@@ -270,11 +276,14 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
-                path="/datasets/:datasetName/import"
+                path="/datasets/:organizationName/:datasetName/import"
                 render={({ match }: ContextRouter) => (
                   <DatasetImportView
                     isEditingMode={false}
-                    datasetName={match.params.datasetName || ""}
+                    datasetId={{
+                      name: match.params.datasetName || "",
+                      owningOrganization: match.params.organizationName || "",
+                    }}
                     onComplete={() =>
                       window.location.replace(`${window.location.origin}/dashboard/datasets`)
                     }
@@ -284,11 +293,14 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
-                path="/datasets/:datasetName/edit"
+                path="/datasets/:organizationName/:datasetName/edit"
                 render={({ match }: ContextRouter) => (
                   <DatasetImportView
                     isEditingMode
-                    datasetName={match.params.datasetName || ""}
+                    datasetId={{
+                      name: match.params.datasetName || "",
+                      owningOrganization: match.params.organizationName || "",
+                    }}
                     onComplete={() => window.history.back()}
                     onCancel={() => window.history.back()}
                   />
@@ -388,7 +400,24 @@ class ReactRouter extends React.Component<Props> {
                 }}
               />
               <Route path="/spotlight" component={SpotlightView} />
-              <Route path="/datasets/:id/view" render={this.tracingViewMode} />
+              <Route
+                path="/datasets/:organizationName/:datasetName/view"
+                render={this.tracingViewMode}
+              />
+              <Route
+                path="/datasets/:id/view"
+                render={({ match, location }: ContextRouter) => (
+                  <AsyncRedirect
+                    redirectTo={async () => {
+                      const datasetName = match.params.id || "";
+                      const organizationName = await getOrganizationForDataset(datasetName);
+                      return `/datasets/${organizationName}/${datasetName}/view${location.search}${
+                        location.hash
+                      }`;
+                    }}
+                  />
+                )}
+              />
               <Route path="/imprint" component={Imprint} />
               <Route path="/privacy" component={Privacy} />
               <Route path="/onboarding" component={Onboarding} />

@@ -5,6 +5,7 @@
 
 import _ from "lodash";
 import Toast from "libs/toast";
+import urljoin from "url-join";
 import { pingDataStoreIfAppropriate, pingMentionedDataStores } from "admin/datastore_health_check";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import handleStatus from "libs/handle_http_status";
@@ -16,11 +17,11 @@ const fetchBufferViaWorker = createWorker(FetchBufferWorker);
 const fetchBufferWithHeaders = createWorker(FetchBufferWithHeadersWorker);
 const compress = createWorker(CompressWorker);
 
-type methodType = "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH";
+type method = "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH";
 
 export type RequestOptions = {
   headers?: { [key: string]: string },
-  method?: methodType,
+  method?: method,
   timeout?: number,
   compress?: boolean,
   useWebworkerForArrayBuffer?: boolean,
@@ -200,7 +201,7 @@ class Request {
     options = _.defaultsDeep(options, defaultOptions);
 
     if (options.host) {
-      url = options.host + url;
+      url = urljoin(options.host, url);
     }
 
     // Append URL parameters to the URL

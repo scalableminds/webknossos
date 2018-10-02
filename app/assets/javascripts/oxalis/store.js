@@ -21,13 +21,13 @@ import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_mid
 import googleAnalyticsMiddleware from "oxalis/model/helpers/google_analytics_middleware";
 import Constants, { ControlModeEnum, OrthoViews } from "oxalis/constants";
 import type {
-  OrthoViewType,
+  OrthoView,
   Vector2,
   Vector3,
-  ModeType,
-  ContourModeType,
-  VolumeToolType,
-  ControlModeType,
+  Mode,
+  ContourMode,
+  VolumeTool,
+  ControlMode,
   BoundingBoxType,
   Rect,
 } from "oxalis/constants";
@@ -35,18 +35,19 @@ import type { Matrix4x4 } from "libs/mjs";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import type { ActionType } from "oxalis/model/actions/actions";
+import type { Action } from "oxalis/model/actions/actions";
 import type {
-  APIRestrictionsType,
-  APIAllowedModeType,
-  APISettingsType,
-  APIDataStoreType,
+  APIRestrictions,
+  APIAllowedMode,
+  APISettings,
+  APIDataStore,
   APITracingType,
-  APIScriptType,
-  APITaskType,
-  APIUserType,
-  APIDatasetType,
-  APIDataLayerType,
+  APIScript,
+  APITask,
+  APIUser,
+  APIDatasetId,
+  APIDataset,
+  APIDataLayer,
 } from "admin/api_flow_types";
 
 export type CommentType = {|
@@ -54,12 +55,12 @@ export type CommentType = {|
   +nodeId: number,
 |};
 
-export type EdgeType = {
+export type Edge = {
   +source: number,
   +target: number,
 };
 
-export type NodeType = {
+export type Node = {
   +id: number,
   +position: Vector3,
   +rotation: Vector3,
@@ -71,31 +72,31 @@ export type NodeType = {
   +interpolation: boolean,
 };
 
-export type BranchPointType = {
+export type BranchPoint = {
   +timestamp: number,
   +nodeId: number,
 };
 
-export type NodeMapType = DiffableMap<number, NodeType>;
+export type NodeMap = DiffableMap<number, Node>;
 
-export type BoundingBoxObjectType = {
+export type BoundingBoxObject = {
   +topLeft: Vector3,
   +width: number,
   +height: number,
   +depth: number,
 };
 
-export type TreeType = {|
+export type Tree = {|
   +treeId: number,
   +groupId: ?number,
   +color: Vector3,
   +name: string,
   +timestamp: number,
   +comments: Array<CommentType>,
-  +branchPoints: Array<BranchPointType>,
+  +branchPoints: Array<BranchPoint>,
   +edges: EdgeCollection,
   +isVisible: boolean,
-  +nodes: NodeMapType,
+  +nodes: NodeMap,
 |};
 
 export type TreeGroupTypeFlat = {|
@@ -103,45 +104,45 @@ export type TreeGroupTypeFlat = {|
   +groupId: number,
 |};
 
-export type TreeGroupType = {
+export type TreeGroup = {
   ...TreeGroupTypeFlat,
-  +children: Array<TreeGroupType>,
+  +children: Array<TreeGroup>,
 };
 
-export type VolumeCellType = {
+export type VolumeCell = {
   +id: number,
 };
 
-export type VolumeCellMapType = { [number]: VolumeCellType };
+export type VolumeCellMap = { [number]: VolumeCell };
 
-export type DataLayerType = APIDataLayerType;
+export type DataLayerType = APIDataLayer;
 
-export type RestrictionsType = APIRestrictionsType;
+export type Restrictions = APIRestrictions;
 
-export type AllowedModeType = APIAllowedModeType;
+export type AllowedMode = APIAllowedMode;
 
-export type SettingsType = APISettingsType;
+export type Settings = APISettings;
 
-export type DataStoreInfoType = APIDataStoreType;
+export type DataStoreInfo = APIDataStore;
 
-export type TreeMapType = { +[number]: TreeType };
-export type TemporaryMutableTreeMapType = { [number]: TreeType };
+export type TreeMap = { +[number]: Tree };
+export type TemporaryMutableTreeMap = { [number]: Tree };
 
-export type TracingTypeTracingType = APITracingType;
+export type TracingTypeTracing = APITracingType;
 
-export type RestrictionsAndSettingsType = {| ...RestrictionsType, ...SettingsType |};
+export type RestrictionsAndSettings = {| ...Restrictions, ...Settings |};
 
-export type AnnotationType = {|
+export type Annotation = {|
   +annotationId: string,
-  +restrictions: RestrictionsAndSettingsType,
+  +restrictions: RestrictionsAndSettings,
   +isPublic: boolean,
   +tags: Array<string>,
   +description: string,
   +name: string,
-  +tracingType: TracingTypeTracingType,
+  +tracingType: TracingTypeTracing,
 |};
 
-type TracingBaseType = {|
+type TracingBase = {|
   +createdTimestamp: number,
   +version: number,
   +tracingId: string,
@@ -149,55 +150,65 @@ type TracingBaseType = {|
   +userBoundingBox: ?BoundingBoxType,
 |};
 
-export type SkeletonTracingType = {|
-  ...TracingBaseType,
+export type SkeletonTracing = {|
+  ...TracingBase,
   +type: "skeleton",
-  +trees: TreeMapType,
-  +treeGroups: Array<TreeGroupType>,
+  +trees: TreeMap,
+  +treeGroups: Array<TreeGroup>,
   +activeTreeId: ?number,
   +activeNodeId: ?number,
   +activeGroupId: ?number,
   +cachedMaxNodeId: number,
 |};
 
-export type VolumeTracingType = {|
-  ...TracingBaseType,
+export type VolumeTracing = {|
+  ...TracingBase,
   +type: "volume",
   +maxCellId: number,
-  +activeTool: VolumeToolType,
+  +activeTool: VolumeTool,
   +activeCellId: number,
   +lastCentroid: ?Vector3,
-  +contourTracingMode: ContourModeType,
+  +contourTracingMode: ContourMode,
   +contourList: Array<Vector3>,
-  +cells: VolumeCellMapType,
+  +cells: VolumeCellMap,
 |};
 
-export type ReadOnlyTracingType = {|
-  ...TracingBaseType,
+export type ReadOnlyTracing = {|
+  ...TracingBase,
   +type: "readonly",
 |};
 
-export type HybridTracingType = {|
-  ...AnnotationType,
-  skeleton: ?SkeletonTracingType,
-  volume: ?VolumeTracingType,
-  readOnly: ?ReadOnlyTracingType,
+export type HybridTracing = {|
+  ...Annotation,
+  skeleton: ?SkeletonTracing,
+  volume: ?VolumeTracing,
+  readOnly: ?ReadOnlyTracing,
 |};
 
-export type TracingType = HybridTracingType;
+export type Tracing = HybridTracing;
 
-export type DatasetLayerConfigurationType = {|
+export type TraceOrViewCommand =
+  | {
+      +type: typeof ControlModeEnum.VIEW,
+      ...$Exact<APIDatasetId>,
+    }
+  | {
+      +type: typeof ControlModeEnum.TRACE,
+      +annotationId: string,
+    };
+
+export type DatasetLayerConfiguration = {|
   +color: Vector3,
   +brightness: number,
   +contrast: number,
 |};
 
-export type DatasetConfigurationType = {
+export type DatasetConfiguration = {
   +fourBit: boolean,
   +interpolation: boolean,
   +keyboardDelay: number,
   +layers: {
-    [name: string]: DatasetLayerConfigurationType,
+    [name: string]: DatasetLayerConfiguration,
   },
   +quality: 0 | 1 | 2,
   +segmentationOpacity: number,
@@ -208,7 +219,7 @@ export type DatasetConfigurationType = {
   +renderMissingDataBlack: true,
 };
 
-export type UserConfigurationType = {|
+export type UserConfiguration = {|
   +clippingDistance: number,
   +clippingDistanceArbitrary: number,
   +crosshairSize: number,
@@ -233,16 +244,16 @@ export type UserConfigurationType = {|
   +hideTreeRemovalWarning: boolean,
 |};
 
-export type MappingType = { [key: number]: number };
+export type Mapping = { [key: number]: number };
 
-export type TemporaryConfigurationType = {
-  +viewMode: ModeType,
+export type TemporaryConfiguration = {
+  +viewMode: Mode,
   +flightmodeRecording: boolean,
-  +controlMode: ControlModeType,
+  +controlMode: ControlMode,
   +mousePosition: ?Vector2,
   +brushSize: number,
   +activeMapping: {
-    +mapping: ?MappingType,
+    +mapping: ?Mapping,
     +mappingColors: ?Array<number>,
     +hideUnmappedIds: boolean,
     +isMappingEnabled: boolean,
@@ -250,37 +261,37 @@ export type TemporaryConfigurationType = {
   },
 };
 
-export type ScriptType = APIScriptType;
+export type Script = APIScript;
 
-export type TaskType = APITaskType;
+export type Task = APITask;
 
-export type SaveQueueEntryType = {
+export type SaveQueueEntry = {
   version: number,
   timestamp: number,
   actions: Array<UpdateAction>,
 };
 
-export type ProgressInfoType = {
+export type ProgressInfo = {
   +processedActionCount: number,
   +totalActionCount: number,
 };
 
-export type IsBusyInfoType = {
+export type IsBusyInfo = {
   +skeleton: boolean,
   +volume: boolean,
 };
 
-export type SaveStateType = {
-  +isBusyInfo: IsBusyInfoType,
+export type SaveState = {
+  +isBusyInfo: IsBusyInfo,
   +queue: {
-    +skeleton: Array<SaveQueueEntryType>,
-    +volume: Array<SaveQueueEntryType>,
+    +skeleton: Array<SaveQueueEntry>,
+    +volume: Array<SaveQueueEntry>,
   },
   +lastSaveTimestamp: number,
-  +progressInfo: ProgressInfoType,
+  +progressInfo: ProgressInfo,
 };
 
-export type FlycamType = {
+export type Flycam = {
   +zoomStep: number,
   +currentMatrix: Matrix4x4,
   +spaceDirectionOrtho: [-1 | 1, -1 | 1, -1 | 1],
@@ -312,7 +323,7 @@ export type PartialCameraData = {
 };
 
 export type PlaneModeData = {
-  +activeViewport: OrthoViewType,
+  +activeViewport: OrthoView,
   +tdCamera: CameraData,
   +inputCatcherRects: {
     +PLANE_XY: Rect,
@@ -331,23 +342,23 @@ export type ViewModeData = {
   +arbitrary: ArbitraryModeData,
 };
 
-type UiInformationType = {
+type UiInformation = {
   +showDropzoneModal: boolean,
   +showVersionRestore: boolean,
 };
 
 export type OxalisState = {|
-  +datasetConfiguration: DatasetConfigurationType,
-  +userConfiguration: UserConfigurationType,
-  +temporaryConfiguration: TemporaryConfigurationType,
-  +dataset: APIDatasetType,
-  +tracing: TracingType,
-  +task: ?TaskType,
-  +save: SaveStateType,
-  +flycam: FlycamType,
+  +datasetConfiguration: DatasetConfiguration,
+  +userConfiguration: UserConfiguration,
+  +temporaryConfiguration: TemporaryConfiguration,
+  +dataset: APIDataset,
+  +tracing: Tracing,
+  +task: ?Task,
+  +save: SaveState,
+  +flycam: Flycam,
   +viewModeData: ViewModeData,
-  +activeUser: ?APIUserType,
-  +uiInformation: UiInformationType,
+  +activeUser: ?APIUser,
+  +uiInformation: UiInformation,
 |};
 
 const defaultViewportRect = {
@@ -521,7 +532,7 @@ export const defaultState: OxalisState = {
 
 const sagaMiddleware = createSagaMiddleware();
 
-export type ReducerType = (state: OxalisState, action: ActionType) => OxalisState;
+export type Reducer = (state: OxalisState, action: Action) => OxalisState;
 
 const combinedReducers = reduceReducers(
   SettingsReducer,

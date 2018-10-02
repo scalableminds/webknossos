@@ -9,9 +9,9 @@ import {
   writeFlowCheckingFile,
 } from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
-import type { APIDatasetType } from "admin/api_flow_types";
+import type { APIDataset } from "admin/api_flow_types";
 
-async function getFirstDataset(): Promise<APIDatasetType> {
+async function getFirstDataset(): Promise<APIDataset> {
   const datasets = await api.getActiveDatasets();
   const dataset = _.sortBy(datasets, d => d.name)[0];
 
@@ -33,7 +33,7 @@ test.serial("getDatasets", async t => {
     retry++;
   }
   datasets = _.sortBy(datasets, d => d.name);
-  writeFlowCheckingFile(datasets, "dataset", "APIMaybeUnimportedDatasetType", { isArray: true });
+  writeFlowCheckingFile(datasets, "dataset", "APIMaybeUnimportedDataset", { isArray: true });
   t.snapshot(datasets, { id: "datasets-getDatasets" });
 });
 
@@ -46,7 +46,7 @@ test("getActiveDatasets", async t => {
 
 test("getDatasetAccessList", async t => {
   const dataset = await getFirstDataset();
-  const accessList = _.sortBy(await api.getDatasetAccessList(dataset.name), user => user.id);
+  const accessList = _.sortBy(await api.getDatasetAccessList(dataset), user => user.id);
 
   t.snapshot(accessList, { id: "dataset-getDatasetAccessList" });
 });
@@ -54,11 +54,11 @@ test("getDatasetAccessList", async t => {
 test("updateDatasetTeams", async t => {
   const [dataset, newTeams] = await Promise.all([getFirstDataset(), api.getEditableTeams()]);
 
-  const updatedDataset = await api.updateDatasetTeams(dataset.name, newTeams.map(team => team.id));
+  const updatedDataset = await api.updateDatasetTeams(dataset, newTeams.map(team => team.id));
   t.snapshot(updatedDataset, { id: "dataset-updateDatasetTeams" });
 
   // undo the Change
-  await api.updateDatasetTeams(dataset.name, dataset.allowedTeams.map(team => team.id));
+  await api.updateDatasetTeams(dataset, dataset.allowedTeams.map(team => team.id));
 });
 
 // test("getDatasetSharingToken and revokeDatasetSharingToken", async t => {

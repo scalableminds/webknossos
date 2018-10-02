@@ -4,11 +4,11 @@
  */
 import Maybe from "data.maybe";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
-import type { TracingType, VolumeTracingType, OxalisState } from "oxalis/store";
-import type { VolumeToolType, ContourModeType } from "oxalis/constants";
-import type { HybridServerTracingType, ServerVolumeTracingType } from "admin/api_flow_types";
+import type { Tracing, VolumeTracing, OxalisState } from "oxalis/store";
+import type { VolumeTool, ContourMode } from "oxalis/constants";
+import type { HybridServerTracing, ServerVolumeTracing } from "admin/api_flow_types";
 
-export function getVolumeTracing(tracing: TracingType): Maybe<VolumeTracingType> {
+export function getVolumeTracing(tracing: Tracing): Maybe<VolumeTracing> {
   if (tracing.volume != null) {
     return Maybe.Just(tracing.volume);
   }
@@ -16,8 +16,8 @@ export function getVolumeTracing(tracing: TracingType): Maybe<VolumeTracingType>
 }
 
 export function serverTracingAsVolumeTracingMaybe(
-  tracing: ?HybridServerTracingType,
-): Maybe<ServerVolumeTracingType> {
+  tracing: ?HybridServerTracing,
+): Maybe<ServerVolumeTracing> {
   if (tracing && tracing.volume) {
     return Maybe.Just(tracing.volume);
   } else {
@@ -25,21 +25,21 @@ export function serverTracingAsVolumeTracingMaybe(
   }
 }
 
-export function enforceVolumeTracing(tracing: TracingType): VolumeTracingType {
+export function enforceVolumeTracing(tracing: Tracing): VolumeTracing {
   return getVolumeTracing(tracing).get();
 }
 
-export function getActiveCellId(volumeTracing: VolumeTracingType): number {
+export function getActiveCellId(volumeTracing: VolumeTracing): number {
   const { activeCellId } = volumeTracing;
   return activeCellId;
 }
 
-export function getVolumeTool(volumeTracing: VolumeTracingType): VolumeToolType {
+export function getVolumeTool(volumeTracing: VolumeTracing): VolumeTool {
   const { activeTool } = volumeTracing;
   return activeTool;
 }
 
-export function getContourTracingMode(volumeTracing: VolumeTracingType): ContourModeType {
+export function getContourTracingMode(volumeTracing: VolumeTracing): ContourMode {
   const { contourTracingMode } = volumeTracing;
   return contourTracingMode;
 }

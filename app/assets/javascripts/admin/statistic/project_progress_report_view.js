@@ -4,7 +4,7 @@ import { Badge, Icon, Spin, Table, Card } from "antd";
 import * as Utils from "libs/utils";
 import Loop from "components/loop";
 import { getProjectProgressReport } from "admin/admin_rest_api";
-import type { APIProjectProgressReportType, APITeamType } from "admin/api_flow_types";
+import type { APIProjectProgressReport, APITeam } from "admin/api_flow_types";
 import FormattedDate from "components/formatted_date";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -15,12 +15,12 @@ const { Column, ColumnGroup } = Table;
 
 const RELOAD_INTERVAL = 10 * 60 * 1000; // 10 min
 
-const typeHint: APIProjectProgressReportType[] = [];
+const typeHint: APIProjectProgressReport[] = [];
 
 type State = {
   areSettingsVisible: boolean,
-  team: ?APITeamType,
-  data: Array<APIProjectProgressReportType>,
+  team: ?APITeam,
+  data: Array<APIProjectProgressReport>,
   isLoading: boolean,
   updatedAt: ?number,
 };
@@ -57,7 +57,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
     }
   }
 
-  handleTeamChange = (team: APITeamType) => {
+  handleTeamChange = (team: APITeam) => {
     this.setState({ team, areSettingsVisible: false }, () => {
       this.fetchData();
     });

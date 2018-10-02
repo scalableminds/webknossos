@@ -5,6 +5,7 @@ import pixelmatch from "pixelmatch";
 import mergeImg from "merge-img";
 import type { Page } from "puppeteer";
 import { createExplorational } from "../../admin/admin_rest_api";
+import type { APIDatasetId } from "../../admin/api_flow_types";
 
 export const DEV_AUTH_TOKEN = "secretScmBoyToken";
 
@@ -26,10 +27,10 @@ function getDefaultRequestOptions(baseUrl: string) {
 export async function screenshotDataset(
   page: Page,
   baseUrl: string,
-  datasetName: string,
+  datasetId: APIDatasetId,
 ): Promise<Screenshot> {
   const options = getDefaultRequestOptions(baseUrl);
-  const createdExplorational = await createExplorational(datasetName, "skeleton", false, options);
+  const createdExplorational = await createExplorational(datasetId, "skeleton", false, options);
   return openTracingViewAndScreenshot(page, baseUrl, createdExplorational.id);
 }
 
@@ -56,7 +57,7 @@ async function waitForRenderingFinish(page: Page) {
   await removeFpsMeter(page);
 
   let currentShot;
-  let lastShot = await page.screenshot();
+  let lastShot = await page.screenshot({ fullPage: true });
   let changedPixels = Infinity;
   // If the screenshot of the page didn't change in the last x seconds, rendering should be finished
   while (currentShot == null || changedPixels > 0) {

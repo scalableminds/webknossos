@@ -4,16 +4,16 @@
  */
 
 import { OrthoViews } from "oxalis/constants";
-import type { OrthoViewType, Vector3 } from "oxalis/constants";
+import type { OrthoView, Vector3 } from "oxalis/constants";
 
-export type DimensionIndicesType = 0 | 1 | 2;
-export type DimensionMapType = [DimensionIndicesType, DimensionIndicesType, DimensionIndicesType];
+export type DimensionIndices = 0 | 1 | 2;
+export type DimensionMap = [DimensionIndices, DimensionIndices, DimensionIndices];
 
 // This is a class with static methods dealing with dimensions and
 // conversions between them.
 
 const Dimensions = {
-  getIndices(planeID: OrthoViewType): DimensionMapType {
+  getIndices(planeID: OrthoView): DimensionMap {
     // Returns a ordered 3-tuple [x, y, z] which represents the dimensions from the viewpoint
     switch (planeID) {
       case OrthoViews.PLANE_XY:
@@ -27,13 +27,13 @@ const Dimensions = {
     }
   },
 
-  transDim(array: Vector3, planeID: OrthoViewType): Vector3 {
+  transDim(array: Vector3, planeID: OrthoView): Vector3 {
     // Translate Dimension: Helper method to translate arrays with three elements
     const ind = this.getIndices(planeID);
     return [array[ind[0]], array[ind[1]], array[ind[2]]];
   },
 
-  planeForThirdDimension(dim: DimensionIndicesType): OrthoViewType {
+  planeForThirdDimension(dim: DimensionIndices): OrthoView {
     // Return the plane in which dim is always the same
     switch (dim) {
       case 2:
@@ -47,7 +47,7 @@ const Dimensions = {
     }
   },
 
-  thirdDimensionForPlane(planeID: OrthoViewType): DimensionIndicesType {
+  thirdDimensionForPlane(planeID: OrthoView): DimensionIndices {
     // Opposite of planeForThirdDimension
     switch (planeID) {
       case OrthoViews.PLANE_XY:

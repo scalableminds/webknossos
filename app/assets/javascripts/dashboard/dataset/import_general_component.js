@@ -12,18 +12,18 @@ import {
   getDataset,
   revokeDatasetSharingToken,
 } from "admin/admin_rest_api";
-import type { APIDatasetType } from "admin/api_flow_types";
+import type { APIDataset, APIDatasetId } from "admin/api_flow_types";
 import { FormItemWithInfo } from "./helper_components";
 
 type Props = {
   form: Object,
-  datasetName: string,
+  datasetId: APIDatasetId,
   hasNoAllowedTeams: boolean,
 };
 
 type State = {
   sharingToken: string,
-  dataSet: ?APIDatasetType,
+  dataSet: ?APIDataset,
 };
 
 export default class ImportGeneralComponent extends React.PureComponent<Props, State> {
@@ -34,13 +34,14 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
       dataSet: null,
     };
   }
+
   componentDidMount() {
     this.fetch();
   }
 
   async fetch() {
-    const sharingToken = await getDatasetSharingToken(this.props.datasetName);
-    const dataSet = await getDataset(this.props.datasetName);
+    const sharingToken = await getDatasetSharingToken(this.props.datasetId);
+    const dataSet = await getDataset(this.props.datasetId);
     this.setState({ dataSet, sharingToken });
   }
 
@@ -54,9 +55,8 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
   };
 
   handleRevokeSharingLink = async (): Promise<void> => {
-    const { datasetName } = this.props;
-    await revokeDatasetSharingToken(datasetName);
-    const sharingToken = await getDatasetSharingToken(datasetName);
+    await revokeDatasetSharingToken(this.props.datasetId);
+    const sharingToken = await getDatasetSharingToken(this.props.datasetId);
     this.setState({ sharingToken });
   };
 
@@ -68,16 +68,16 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
   getSharingLink() {
     const doesNeedToken = !this.props.form.getFieldValue("dataset.isPublic");
     const tokenSuffix = `?token=${this.state.sharingToken}`;
-    return `${window.location.origin}/datasets/${this.props.datasetName}/view${
-      doesNeedToken ? tokenSuffix : ""
-    }`;
+    return `${window.location.origin}/datasets/${this.props.datasetId.owningOrganization}/${
+      this.props.datasetId.name
+    }/view${doesNeedToken ? tokenSuffix : ""}`;
   }
 
   getAllowUsageText() {
     if (this.state.dataSet != null) {
       const dataStoreName = this.state.dataSet.dataStore.name;
       const dataStoreURL = this.state.dataSet.dataStore.url;
-      return `${dataStoreName}, ${dataStoreURL}, ${this.props.datasetName}`;
+      return `${dataStoreName}, ${dataStoreURL}, ${this.props.datasetId.name}`;
     } else return "";
   }
 

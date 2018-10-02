@@ -9,11 +9,11 @@ import TWEEN from "tween.js";
 import * as THREE from "three";
 import Store from "oxalis/store";
 import Constants, { OrthoViews, OrthoViewValues, OrthoViewColors } from "oxalis/constants";
-import type { OrthoViewType, OrthoViewMapType } from "oxalis/constants";
+import type { OrthoView, OrthoViewMap } from "oxalis/constants";
 import SceneController from "oxalis/controller/scene_controller";
-import { getDesiredCanvasSize } from "oxalis/view/layouting/tracing_layout_view";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import { getDesiredLayoutRect } from "oxalis/view/layouting/golden_layout_adapter";
 
 export const setupRenderArea = (
   renderer: THREE.WebGLRenderer,
@@ -50,7 +50,7 @@ class PlaneView {
   listenTo: Function;
   unbindChangedScaleListener: () => void;
 
-  cameras: OrthoViewMapType<THREE.OrthographicCamera>;
+  cameras: OrthoViewMap<THREE.OrthographicCamera>;
 
   running: boolean;
   needsRerender: boolean;
@@ -105,7 +105,7 @@ class PlaneView {
     window.requestAnimationFrame(() => this.animate());
   }
 
-  renderOrthoViewToTexture(plane: OrthoViewType, scene: THREE.Scene): Uint8Array {
+  renderOrthoViewToTexture(plane: OrthoView, scene: THREE.Scene): Uint8Array {
     const { renderer } = SceneController;
 
     renderer.autoClear = true;
@@ -180,15 +180,13 @@ class PlaneView {
   }
 
   resizeThrottled = _.throttle((): void => {
-    // todo: is this still called?
     // throttle resize to avoid annoying flickering
     this.resize();
   }, Constants.RESIZE_THROTTLE_TIME);
 
   resize = (): void => {
-    getDesiredCanvasSize().map(([width, height]) =>
-      SceneController.renderer.setSize(width, height),
-    );
+    const { width, height } = getDesiredLayoutRect();
+    SceneController.renderer.setSize(width, height);
 
     for (const plane of OrthoViewValues) {
       this.cameras[plane].aspect = 1;
@@ -197,7 +195,7 @@ class PlaneView {
     this.draw();
   };
 
-  getCameras(): OrthoViewMapType<THREE.OrthographicCamera> {
+  getCameras(): OrthoViewMap<THREE.OrthographicCamera> {
     return this.cameras;
   }
 
@@ -221,13 +219,6 @@ class PlaneView {
       store => store.userConfiguration.layoutScaleValue,
       this.resizeThrottled,
     );
-
-    const { layoutScaleValue } = Store.getState().userConfiguration;
-    if (layoutScaleValue > 1) {
-      // Workaround
-      // Otherwise, the initial canvas size is not set correctly
-      setTimeout(this.resizeThrottled, 500);
-    }
   }
 }
 

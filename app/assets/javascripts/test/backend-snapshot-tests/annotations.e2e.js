@@ -17,6 +17,8 @@ import { diffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 
+const dataSetId = { name: "confocal-multi_knossos", owningOrganization: "Organization_X" };
+
 process.on("unhandledRejection", (err, promise) => {
   console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");
 });
@@ -33,7 +35,7 @@ test("getAnnotationInformation()", async t => {
     APITracingTypeEnum.Explorational,
   );
   t.is(annotation.id, annotationId);
-  writeFlowCheckingFile(annotation, "annotation", "APIAnnotationType");
+  writeFlowCheckingFile(annotation, "annotation", "APIAnnotation");
   t.snapshot(annotation, { id: "annotations-getAnnotationInformation" });
 });
 
@@ -119,8 +121,7 @@ test.serial("finishAllAnnotations()", async t => {
 });
 
 test.serial("createExplorational() and finishAnnotation()", async t => {
-  const dataSetName = "confocal-multi_knossos";
-  const createdExplorational = await api.createExplorational(dataSetName, "skeleton", false);
+  const createdExplorational = await api.createExplorational(dataSetId, "skeleton", false);
 
   t.snapshot(replaceVolatileValues(createdExplorational), {
     id: "annotations-createExplorational",
@@ -136,11 +137,10 @@ test.serial("createExplorational() and finishAnnotation()", async t => {
 });
 
 test("getTracingForAnnotations()", async t => {
-  const dataSetName = "confocal-multi_knossos";
-  const createdExplorational = await api.createExplorational(dataSetName, "skeleton", false);
+  const createdExplorational = await api.createExplorational(dataSetId, "skeleton", false);
 
   const tracing = await api.getTracingForAnnotations(createdExplorational);
-  writeFlowCheckingFile(tracing, "tracing", "HybridServerTracingType");
+  writeFlowCheckingFile(tracing, "tracing", "HybridServerTracing");
   t.snapshot(replaceVolatileValues(tracing.skeleton), {
     id: "annotations-tracing",
   });
@@ -161,8 +161,7 @@ async function sendUpdateActions(explorational, queue) {
 }
 
 test("Send update actions and compare resulting tracing", async t => {
-  const dataSetName = "confocal-multi_knossos";
-  const createdExplorational = await api.createExplorational(dataSetName, "skeleton", false);
+  const createdExplorational = await api.createExplorational(dataSetId, "skeleton", false);
 
   const initialSkeleton = { activeNodeId: undefined, userBoundingBox: undefined };
   const saveQueue = addVersionNumbers(
@@ -183,8 +182,7 @@ test("Send update actions and compare resulting tracing", async t => {
 });
 
 test("Send complex update actions and compare resulting tracing", async t => {
-  const dataSetName = "confocal-multi_knossos";
-  const createdExplorational = await api.createExplorational(dataSetName, "skeleton", false);
+  const createdExplorational = await api.createExplorational(dataSetId, "skeleton", false);
 
   const trees = createTreeMapFromTreeArray(generateDummyTrees(5, 5));
   const treeGroups = [

@@ -4,7 +4,6 @@
  */
 
 import * as React from "react";
-import Maybe from "data.maybe";
 import OxalisController from "oxalis/controller";
 import SettingsView from "oxalis/view/settings/settings_view";
 import ActionBarView from "oxalis/view/action_bar_view";
@@ -24,8 +23,8 @@ import MappingInfoView from "oxalis/view/right-menu/mapping_info_view";
 import DatasetInfoTabView from "oxalis/view/right-menu/dataset_info_tab_view";
 import InputCatcher, { recalculateInputCatcherSizes } from "oxalis/view/input_catcher";
 import { ArbitraryViewport, OrthoViews } from "oxalis/constants";
-import type { OxalisState, TracingTypeTracingType } from "oxalis/store";
-import type { ControlModeType, ModeType } from "oxalis/constants";
+import type { OxalisState, TracingTypeTracing, TraceOrViewCommand } from "oxalis/store";
+import type { Mode } from "oxalis/constants";
 import RecordingSwitch from "oxalis/view/recording_switch";
 import TDViewControls from "oxalis/view/td_view_controls";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
@@ -36,16 +35,15 @@ import { determineLayout } from "./default_layout_configs";
 const { Header, Sider } = Layout;
 
 type StateProps = {
-  viewMode: ModeType,
+  viewMode: Mode,
   displayScalebars: boolean,
   isUpdateTracingAllowed: boolean,
   showVersionRestore: boolean,
 };
 
 type Props = StateProps & {
-  initialTracingType: TracingTypeTracingType,
-  initialAnnotationId: string,
-  initialControlmode: ControlModeType,
+  initialTracingType: TracingTypeTracing,
+  initialCommandType: TraceOrViewCommand,
 };
 
 type State = {
@@ -53,22 +51,13 @@ type State = {
 };
 
 const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
-export function getDesiredCanvasSize(): Maybe<[number, number]> {
-  // const canvasAndLayoutContainer = document.getElementById(canvasAndLayoutContainerID);
-  const canvasAndLayoutContainer = document.querySelector("#layoutContainer");
-
-  if (canvasAndLayoutContainer) {
-    const { scrollWidth, scrollHeight } = canvasAndLayoutContainer;
-    return Maybe.Just([scrollWidth, scrollHeight]);
-  }
-  return Maybe.Nothing();
-}
 
 const GOLDEN_LAYOUT_ADAPTER_STYLE = {
   display: "block",
   height: "100%",
   width: "100%",
   flex: "1 1 auto",
+  overflow: "hidden",
 };
 
 class TracingLayoutView extends React.PureComponent<Props, State> {
@@ -99,19 +88,18 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
   };
 
   render() {
-    const layoutType = determineLayout(this.props.initialControlmode, this.props.viewMode);
+    const layoutType = determineLayout(this.props.initialCommandType.type, this.props.viewMode);
     const { displayScalebars } = this.props;
 
     return (
       <NmlUploadZoneContainer onImport={importNmls} isAllowed={this.props.isUpdateTracingAllowed}>
         <OxalisController
           initialTracingType={this.props.initialTracingType}
-          initialAnnotationId={this.props.initialAnnotationId}
-          initialControlmode={this.props.initialControlmode}
+          initialCommandType={this.props.initialCommandType}
         />
 
         <Layout className="tracing-layout">
-          <Header style={{ flex: "0 1 auto", zIndex: 210, minHeight: 50 }}>
+          <Header style={{ flex: "0 1 auto", zIndex: 210, height: 50 }}>
             <ButtonComponent onClick={this.handleSettingsCollapse}>
               <Icon type={this.state.isSettingsCollapsed ? "menu-unfold" : "menu-fold"} />
               <span className="hide-on-small-screen">Settings</span>

@@ -1,7 +1,7 @@
 // @flow
-import type { ServerSkeletonTracingType, APIAnnotationType } from "admin/api_flow_types";
+import type { ServerSkeletonTracing, APIAnnotation } from "admin/api_flow_types";
 
-export const tracing: ServerSkeletonTracingType = {
+export const tracing: ServerSkeletonTracing = {
   id: "47e37793-d0be-4240-a371-87ce68561a13",
   trees: [
     {
@@ -70,7 +70,7 @@ export const tracing: ServerSkeletonTracingType = {
   version: 7,
 };
 
-export const annotation: APIAnnotationType = {
+export const annotation: APIAnnotation = {
   description: "",
   state: "Active",
   id: "598b52293c00009906f043e7",
@@ -84,6 +84,7 @@ export const annotation: APIAnnotationType = {
   formattedHash: "f043e7",
   tracing: { skeleton: "47e37793-d0be-4240-a371-87ce68561a13", volume: null },
   dataSetName: "ROI2017_wkw",
+  organization: "Connectomics Department",
   dataStore: { name: "localhost", url: "http://localhost:9000", typ: "webknossos-store" },
   settings: {
     allowedModes: ["orthogonal", "oblique", "flight"],

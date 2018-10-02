@@ -1,21 +1,21 @@
 // @flow
 import React, { PureComponent } from "react";
 import constants from "oxalis/constants";
-import type { ModeType } from "oxalis/constants";
+import type { Mode } from "oxalis/constants";
 import { Menu, Radio, Icon, Dropdown } from "antd";
 import { setViewModeAction } from "oxalis/model/actions/settings_actions";
-import type { OxalisState, AllowedModeType } from "oxalis/store";
+import type { OxalisState, AllowedMode } from "oxalis/store";
 import Store from "oxalis/store";
 import { connect } from "react-redux";
 import * as Utils from "libs/utils";
 
 type Props = {
-  viewMode: ModeType,
-  allowedModes: Array<AllowedModeType>,
+  viewMode: Mode,
+  allowedModes: Array<AllowedMode>,
 };
 
 type State = {
-  arbitraryModeLabel: ModeType,
+  arbitraryModeLabel: Mode,
 };
 
 class ViewModesView extends PureComponent<Props, State> {
@@ -38,11 +38,11 @@ class ViewModesView extends PureComponent<Props, State> {
     event.target.blur();
   };
 
-  handleChange = (event: { target: { value: ModeType } }) => {
+  handleChange = (event: { target: { value: Mode } }) => {
     Store.dispatch(setViewModeAction(event.target.value));
   };
 
-  isDisabled(mode: ModeType) {
+  isDisabled(mode: Mode) {
     return !this.props.allowedModes.includes(mode);
   }
 

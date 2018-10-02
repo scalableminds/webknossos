@@ -11,7 +11,7 @@ import type { ModifierKeys } from "libs/input";
 import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 import Toast from "libs/toast";
-import type { ModeType, Point2 } from "oxalis/constants";
+import type { Mode, Point2 } from "oxalis/constants";
 import Store from "oxalis/store";
 import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import Model from "oxalis/model";
@@ -57,7 +57,7 @@ const arbitraryViewportSelector = "#inputcatcher_arbitraryViewport";
 
 type Props = {
   onRender: () => void,
-  viewMode: ModeType,
+  viewMode: Mode,
 };
 
 class ArbitraryController extends React.PureComponent<Props> {

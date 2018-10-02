@@ -5,7 +5,7 @@ import type { Matrix4x4 } from "libs/mjs";
 import type { BoundingBoxType } from "oxalis/constants";
 import PolyhedronRasterizer from "oxalis/model/bucket_data_handling/polyhedron_rasterizer";
 import { AbstractPrefetchStrategy } from "oxalis/model/bucket_data_handling/prefetch_strategy_plane";
-import type { PullQueueItemType } from "oxalis/model/bucket_data_handling/pullqueue";
+import type { PullQueueItem } from "oxalis/model/bucket_data_handling/pullqueue";
 
 export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
   velocityRangeStart = 0;
@@ -52,7 +52,7 @@ export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
     matrix[14] += 1;
   }
 
-  prefetch(matrix: Matrix4x4, zoomStep: number): Array<PullQueueItemType> {
+  prefetch(matrix: Matrix4x4, zoomStep: number): Array<PullQueueItem> {
     const pullQueue = [];
 
     const matrix0 = M4x4.clone(matrix);

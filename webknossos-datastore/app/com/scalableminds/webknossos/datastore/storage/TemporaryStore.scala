@@ -1,36 +1,51 @@
 package com.scalableminds.webknossos.datastore.storage
 
-import akka.actor.ActorSystem
+import akka.actor.{Actor, ActorLogging, ActorSystem}
 import akka.agent.Agent
 import javax.inject.Inject
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.stm.Ref
 
 class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
 
-  lazy val ts = Agent[Map[K, V]](Map())
+  lazy val map: scala.collection.mutable.Map[K, V] = scala.collection.mutable.Map()
 
   def find(id: K) =
-    ts().get(id)
+    map.synchronized {
+      map.get(id)
+    }
 
   def findAll =
-    ts().values.toList
+    map.synchronized {
+      map.values.toList
+    }
 
   def removeAll =
-    ts.send(Map.empty[K, V])
+    map.synchronized {
+      map.clear()
+    }
 
   def removeAllExcept(l: Array[K]) =
-    ts.send(_.filterKeys(l.contains))
+    map.synchronized {
+      map.filterKeys(l.contains)
+    }
 
   def insert(id: K, t: V, to: Option[FiniteDuration] = None) = {
-    ts.send(_ + (id -> t))
+    map.synchronized {
+      map += (id -> t)
+    }
     to.foreach(system.scheduler.scheduleOnce(_)(remove(id)))
   }
 
   def insertAll(els: (K, V)*) =
-    ts.send(_ ++ els)
+    map.synchronized {
+      map ++= els
+    }
 
   def remove(id: K) =
-    ts.send(_ - id)
+    map.synchronized {
+      map -= id
+    }
 }

@@ -1,7 +1,7 @@
 // @flow
-import type { ServerVolumeTracingType, APIAnnotationType } from "admin/api_flow_types";
+import type { ServerVolumeTracing, APIAnnotation } from "admin/api_flow_types";
 
-export const tracing: ServerVolumeTracingType = {
+export const tracing: ServerVolumeTracing = {
   activeSegmentId: 10000,
   boundingBox: { topLeft: { x: 0, y: 0, z: 0 }, width: 1024, height: 1024, depth: 1024 },
   createdTimestamp: 1529066010230,
@@ -15,7 +15,7 @@ export const tracing: ServerVolumeTracingType = {
   zoomLevel: 0,
 };
 
-export const annotation: APIAnnotationType = {
+export const annotation: APIAnnotation = {
   description: "",
   state: "Active",
   id: "598b52293c00009906f043e7",
@@ -29,6 +29,7 @@ export const annotation: APIAnnotationType = {
   formattedHash: "f043e7",
   tracing: { skeleton: null, volume: "segmentation" },
   dataSetName: "ROI2017_wkw",
+  organization: "Connectomics Department",
   dataStore: { name: "localhost", url: "http://localhost:9000", typ: "webknossos-store" },
   settings: {
     allowedModes: ["volume"],

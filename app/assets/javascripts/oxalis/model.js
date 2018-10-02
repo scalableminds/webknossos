@@ -4,13 +4,12 @@
  */
 import _ from "lodash";
 import Store from "oxalis/store";
-import type { TracingTypeTracingType } from "oxalis/store";
+import type { TracingTypeTracing, TraceOrViewCommand } from "oxalis/store";
 import {} from "oxalis/model/actions/settings_actions";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import * as Utils from "libs/utils";
 import DataLayer from "oxalis/model/data_layer";
 import ConnectionInfo from "oxalis/model/data_connection_info";
-import type { ControlModeType } from "oxalis/constants";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
@@ -27,16 +26,14 @@ export class OxalisModel {
   maximumDataTextureCountForLayer: number;
 
   async fetch(
-    tracingType: TracingTypeTracingType,
-    annotationIdOrDatasetName: string,
-    controlMode: ControlModeType,
+    tracingType: TracingTypeTracing,
+    initialCommandType: TraceOrViewCommand,
     initialFetch: boolean,
     version?: number,
   ) {
     const initializationInformation = await initialize(
       tracingType,
-      annotationIdOrDatasetName,
-      controlMode,
+      initialCommandType,
       initialFetch,
       version,
     );

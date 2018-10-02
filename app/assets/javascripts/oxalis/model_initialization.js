@@ -1,7 +1,7 @@
 // @flow
 import _ from "lodash";
 import Store from "oxalis/store";
-import type { TracingTypeTracingType } from "oxalis/store";
+import type { TracingTypeTracing, TraceOrViewCommand } from "oxalis/store";
 import type { UrlManagerState } from "oxalis/controller/url_manager";
 import {
   setDatasetAction,
@@ -27,7 +27,6 @@ import * as Utils from "libs/utils";
 import DataLayer from "oxalis/model/data_layer";
 import ConnectionInfo from "oxalis/model/data_connection_info";
 import { ControlModeEnum } from "oxalis/constants";
-import type { ControlModeType } from "oxalis/constants";
 import Toast from "libs/toast";
 import ErrorHandling from "libs/error_handling";
 import UrlManager from "oxalis/controller/url_manager";
@@ -41,11 +40,12 @@ import {
 } from "admin/admin_rest_api";
 import messages from "messages";
 import type {
-  APIAnnotationType,
-  APIDatasetType,
-  APIDataLayerType,
-  HybridServerTracingType,
-  ServerVolumeTracingType,
+  APIAnnotation,
+  APIDatasetId,
+  APIDataset,
+  APIDataLayer,
+  HybridServerTracing,
+  ServerVolumeTracing,
 } from "admin/api_flow_types";
 import {
   getDatasetCenter,
@@ -68,9 +68,8 @@ type DataLayerCollection = {
 };
 
 export async function initialize(
-  tracingType: TracingTypeTracingType,
-  annotationIdOrDatasetName: string,
-  controlMode: ControlModeType,
+  tracingType: TracingTypeTracing,
+  initialCommandType: TraceOrViewCommand,
   initialFetch: boolean,
   version?: number,
 ): Promise<?{
@@ -79,14 +78,14 @@ export async function initialize(
   isMappingSupported: boolean,
   maximumDataTextureCountForLayer: number,
 }> {
-  Store.dispatch(setControlModeAction(controlMode));
+  Store.dispatch(setControlModeAction(initialCommandType.type));
 
-  let annotation: APIAnnotationType;
-  let datasetName;
-  if (controlMode === ControlModeEnum.TRACE) {
-    const annotationId = annotationIdOrDatasetName;
+  let annotation: APIAnnotation;
+  let datasetId: APIDatasetId;
+  if (initialCommandType.type === ControlModeEnum.TRACE) {
+    const { annotationId } = initialCommandType;
     annotation = await getAnnotationInformation(annotationId, tracingType);
-    datasetName = annotation.dataSetName;
+    datasetId = { name: annotation.dataSetName, owningOrganization: annotation.organization };
 
     if (!annotation.restrictions.allowAccess) {
       Toast.error(messages["tracing.no_access"]);
@@ -99,14 +98,13 @@ export async function initialize(
 
     Store.dispatch(setTaskAction(annotation.task));
   } else {
-    // In View mode, the annotationId is actually the datasetName
-    // as there is no annotation and no tracing!
-    datasetName = annotationIdOrDatasetName;
+    const { name, owningOrganization } = initialCommandType;
+    datasetId = { name, owningOrganization };
   }
 
   const [dataset, initialUserSettings, initialDatasetSettings, tracing] = await fetchParallel(
     annotation,
-    datasetName,
+    datasetId,
     version,
   );
 
@@ -132,14 +130,14 @@ export async function initialize(
 }
 
 async function fetchParallel(
-  annotation: ?APIAnnotationType,
-  datasetName: string,
+  annotation: ?APIAnnotation,
+  datasetId: APIDatasetId,
   version?: number,
-): Promise<[APIDatasetType, *, *, ?HybridServerTracingType]> {
+): Promise<[APIDataset, *, *, ?HybridServerTracing]> {
   return Promise.all([
-    getDataset(datasetName, getSharingToken()),
+    getDataset(datasetId, getSharingToken()),
     getUserConfiguration(),
-    getDatasetConfiguration(datasetName),
+    getDatasetConfiguration(datasetId),
     // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
     // (Also see https://github.com/facebook/flow/issues/4936)
     // $FlowFixMe: Type inference with Promise.all seems to be a bit broken in flow
@@ -148,9 +146,9 @@ async function fetchParallel(
 }
 
 function validateSpecsForLayers(
-  layers: Array<APIDataLayerType>,
+  layers: Array<APIDataLayer>,
 ): {
-  textureInformationPerLayer: Map<APIDataLayerType, DataTextureSizeAndCount>,
+  textureInformationPerLayer: Map<APIDataLayer, DataTextureSizeAndCount>,
   isMappingSupported: boolean,
 } {
   const specs = DataRenderingLogic.getSupportedTextureSpecs();
@@ -182,7 +180,7 @@ function validateSpecsForLayers(
   return { isMappingSupported, textureInformationPerLayer };
 }
 
-function initializeTracing(annotation: APIAnnotationType, tracing: HybridServerTracingType) {
+function initializeTracing(annotation: APIAnnotation, tracing: HybridServerTracing) {
   // This method is not called for the View mode
   const { dataset } = Store.getState();
 
@@ -220,8 +218,8 @@ function initializeTracing(annotation: APIAnnotationType, tracing: HybridServerT
 
 function initializeDataset(
   initialFetch: boolean,
-  dataset: APIDatasetType,
-  tracing: ?HybridServerTracingType,
+  dataset: APIDataset,
+  tracing: ?HybridServerTracing,
 ): void {
   let error;
   if (!dataset) {
@@ -303,9 +301,9 @@ function initializeDataLayerInstances(): {
 }
 
 function setupLayerForVolumeTracing(
-  _layers: APIDataLayerType[],
-  tracing: ServerVolumeTracingType,
-): Array<APIDataLayerType> {
+  _layers: APIDataLayer[],
+  tracing: ServerVolumeTracing,
+): Array<APIDataLayer> {
   // This method adds/merges the segmentation layers of the tracing into the dataset layers
   let layers = _.clone(_layers);
 
@@ -344,7 +342,7 @@ function setupLayerForVolumeTracing(
 
 function determineDefaultState(
   urlState: UrlManagerState,
-  tracing: ?HybridServerTracingType,
+  tracing: ?HybridServerTracing,
 ): $Shape<UrlManagerState> {
   // If there is no editPosition (e.g. when viewing a dataset) and
   // no default position, compute the center of the dataset

@@ -1,28 +1,28 @@
 /* eslint-disable import/prefer-default-export */
 
 // @flow
-import type { SkeletonTracingActionType } from "oxalis/model/actions/skeletontracing_actions";
-import type { VolumeTracingActionType } from "oxalis/model/actions/volumetracing_actions";
-import type { SettingActionType } from "oxalis/model/actions/settings_actions";
-import type { TaskActionType } from "oxalis/model/actions/task_actions";
-import type { SaveActionType } from "oxalis/model/actions/save_actions";
-import type { ViewModeActionType } from "oxalis/model/actions/view_mode_actions";
+import type { SkeletonTracingAction } from "oxalis/model/actions/skeletontracing_actions";
+import type { VolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
+import type { SettingAction } from "oxalis/model/actions/settings_actions";
+import type { TaskAction } from "oxalis/model/actions/task_actions";
+import type { SaveAction } from "oxalis/model/actions/save_actions";
+import type { ViewModeAction } from "oxalis/model/actions/view_mode_actions";
 import type { AnnotationActionTypes } from "oxalis/model/actions/annotation_actions";
-import type { FlycamActionType } from "oxalis/model/actions/flycam_actions";
-import type { UserActionType } from "oxalis/model/actions/user_actions";
-import type { UiActionType } from "oxalis/model/actions/ui_actions";
+import type { FlycamAction } from "oxalis/model/actions/flycam_actions";
+import type { UserAction } from "oxalis/model/actions/user_actions";
+import type { UiAction } from "oxalis/model/actions/ui_actions";
 
-export type ActionType =
-  | SkeletonTracingActionType
-  | VolumeTracingActionType
-  | SettingActionType
-  | TaskActionType
-  | SaveActionType
-  | ViewModeActionType
+export type Action =
+  | SkeletonTracingAction
+  | VolumeTracingAction
+  | SettingAction
+  | TaskAction
+  | SaveAction
+  | ViewModeAction
   | AnnotationActionTypes
-  | FlycamActionType
-  | UserActionType
-  | UiActionType;
+  | FlycamAction
+  | UserAction
+  | UiAction;
 
 export const wkReadyAction = () => ({
   type: "WK_READY",

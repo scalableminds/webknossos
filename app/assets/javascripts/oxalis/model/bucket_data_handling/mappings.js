@@ -16,14 +16,14 @@ import { getRenderer } from "oxalis/controller/renderer";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import messages from "messages";
 import { getMappings, getLayerByName } from "oxalis/model/accessors/dataset_accessor";
-import type { MappingType } from "oxalis/store";
-import type { APIMappingType } from "admin/api_flow_types";
+import type { Mapping } from "oxalis/store";
+import type { APIMapping } from "admin/api_flow_types";
 import type DataLayer from "oxalis/model/data_layer";
 
 export const MAPPING_TEXTURE_WIDTH = 4096;
 export const MAPPING_COLOR_TEXTURE_WIDTH = 16;
 
-type APIMappingsType = { [string]: APIMappingType };
+type APIMappings = { [string]: APIMapping };
 
 // For now, since we have no UI for this
 export function setupGlobalMappingsObject(segmentationLayer: DataLayer) {
@@ -49,10 +49,11 @@ class Mappings {
 
   constructor(layerName: string) {
     const { dataset } = Store.getState();
+    const organizationName = dataset.owningOrganization;
     const datasetName = dataset.name;
     const dataStoreUrl = dataset.dataStore.url;
     this.layerName = layerName;
-    this.baseUrl = `${dataStoreUrl}/data/datasets/${datasetName}/layers/${layerName}/mappings/`;
+    this.baseUrl = `${dataStoreUrl}/data/datasets/${organizationName}/${datasetName}/layers/${layerName}/mappings/`;
   }
 
   getMappingNames(): Array<string> {
@@ -74,7 +75,7 @@ class Mappings {
     }
   }
 
-  async fetchMappings(mappingName: string, fetchedMappings: APIMappingsType): Promise<void> {
+  async fetchMappings(mappingName: string, fetchedMappings: APIMappings): Promise<void> {
     const mapping = await this.fetchMapping(mappingName);
     if (mapping == null) return Promise.reject();
     fetchedMappings[mappingName] = mapping;
@@ -85,11 +86,11 @@ class Mappings {
     }
   }
 
-  fetchMapping(mappingName: string): Promise<APIMappingType> {
+  fetchMapping(mappingName: string): Promise<APIMapping> {
     return doWithToken((token: string) => {
       console.log("Start downloading mapping:", mappingName);
       return Request.receiveJSON(`${this.baseUrl + mappingName}?token=${token}`).then(
-        (mapping: APIMappingType) => {
+        (mapping: APIMapping) => {
           console.log("Done downloading mapping:", mappingName);
           return mapping;
         },
@@ -108,10 +109,10 @@ class Mappings {
 
   buildMappingObject(
     mappingName: string,
-    fetchedMappings: APIMappingsType,
+    fetchedMappings: APIMappings,
     assignNewIds: boolean,
-  ): MappingType {
-    const mappingObject: MappingType = {};
+  ): Mapping {
+    const mappingObject: Mapping = {};
 
     const maxId = this.getLargestSegmentId() + 1;
     // Initialize to the next multiple of 256 that is larger than maxId
@@ -134,7 +135,7 @@ class Mappings {
     return mappingObject;
   }
 
-  getMappingChain(mappingName: string, fetchedMappings: APIMappingsType): Array<string> {
+  getMappingChain(mappingName: string, fetchedMappings: APIMappings): Array<string> {
     const chain = [mappingName];
     const mapping = fetchedMappings[mappingName];
     const parentMappingName = mapping.parent;
@@ -196,7 +197,7 @@ class Mappings {
     );
   }
 
-  updateMappingTextures(mapping: ?MappingType): void {
+  updateMappingTextures(mapping: ?Mapping): void {
     if (mapping == null) return;
 
     console.log("Create mapping texture");

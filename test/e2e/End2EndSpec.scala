@@ -39,10 +39,7 @@ class End2EndSpec (arguments: Arguments) extends Specification with GuiceFakeApp
 
   }
 
-  private def runWebdriverTests: Int = {
-    val result = "yarn test-e2e".run().exitValue()
-    result
-  }
+  private def runWebdriverTests = "yarn test-e2e".run().exitValue()
 
   private def parseCustomJavaArgs(arguments: Arguments) = {
     val argumentsString = arguments.commandLine.arguments

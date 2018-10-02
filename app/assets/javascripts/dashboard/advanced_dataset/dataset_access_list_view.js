@@ -30,7 +30,7 @@ export default class DatasetAccessListView extends React.PureComponent<Props, St
   async fetchData(): Promise<void> {
     try {
       this.setState({ isLoading: true });
-      const datasetUsers = await getDatasetAccessList(this.props.dataset.name);
+      const datasetUsers = await getDatasetAccessList(this.props.dataset);
       this.setState({ datasetUsers });
     } catch (error) {
       handleGenericError(error);

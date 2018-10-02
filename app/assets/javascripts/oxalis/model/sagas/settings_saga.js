@@ -16,10 +16,15 @@ function* pushDatasetSettingsAsync(): Saga<void> {
   if (activeUser == null) return;
 
   const datasetName = yield* select(state => state.dataset.name);
+  const organizationName = yield* select(state => state.dataset.owningOrganization);
   const payload = yield* select(state => state.datasetConfiguration);
-  yield* call(Request.sendJSONReceiveJSON, `/api/dataSetConfigurations/${datasetName}`, {
-    data: payload,
-  });
+  yield* call(
+    Request.sendJSONReceiveJSON,
+    `/api/dataSetConfigurations/${organizationName}/${datasetName}`,
+    {
+      data: payload,
+    },
+  );
 }
 
 export default function* watchPushSettingsAsync(): Saga<void> {

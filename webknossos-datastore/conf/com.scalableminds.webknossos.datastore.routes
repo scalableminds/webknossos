@@ -3,59 +3,59 @@
 # ~~~~
 
 # Health endpoint
-GET         /health                                                                            @com.scalableminds.webknossos.datastore.controllers.Application.health
+GET         /health                                                                                              @com.scalableminds.webknossos.datastore.controllers.Application.health
 
 # Read binary data
-POST        /datasets/:dataSetName/layers/:dataLayerName/data                                  @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestViaWebKnossos(dataSetName: String, dataLayerName: String)
-GET         /datasets/:dataSetName/layers/:dataLayerName/data                                  @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestRawCuboid(dataSetName: String, dataLayerName: String, x: Int, y: Int, z: Int, width: Int, height: Int, depth: Int, resolution: Int, halfByte: Boolean ?= false)
-GET         /datasets/:dataSetName/layers/:dataLayerName/data                                  @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestViaAjaxDebug(dataSetName: String, dataLayerName: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int, halfByte: Boolean ?= false)
-GET         /datasets/:dataSetName/layers/:dataLayerName/sprite                                @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestSpriteSheet(dataSetName: String, dataLayerName: String, cubeSize: Int ?=128, imagesPerRow: Int ?= 8, x: Int, y: Int, z: Int, resolution: Int, halfByte: Boolean ?= false)
-GET         /datasets/:dataSetName/layers/:dataLayerName/image.jpg                             @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestImage(dataSetName: String, dataLayerName: String, width: Int, height: Int, x: Int, y: Int, z: Int, resolution: Int, halfByte: Boolean ?= false, blackAndWhite: Boolean ?= false)
-GET         /datasets/:dataSetName/layers/:dataLayerName/thumbnail.json                        @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestImageThumbnailJson(dataSetName: String, dataLayerName: String, width: Int, height: Int, centerX: Option[Int], centerY: Option[Int], centerZ: Option[Int], zoom: Option[Int])
-GET         /datasets/:dataSetName/layers/:dataLayerName/thumbnail.jpg                         @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestImageThumbnailJpeg(dataSetName: String, dataLayerName: String, width: Int, height: Int, centerX: Option[Int], centerY: Option[Int], centerZ: Option[Int], zoom: Option[Int])
+POST        /datasets/:organizationName/:dataSetName/layers/:dataLayerName/data                                  @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestViaWebKnossos(organizationName: String, dataSetName: String, dataLayerName: String)
+GET         /datasets/:organizationName/:dataSetName/layers/:dataLayerName/data                                  @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestRawCuboid(organizationName: String, dataSetName: String, dataLayerName: String, x: Int, y: Int, z: Int, width: Int, height: Int, depth: Int, resolution: Int, halfByte: Boolean ?= false)
+GET         /datasets/:organizationName/:dataSetName/layers/:dataLayerName/data                                  @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestViaAjaxDebug(organizationName: String, dataSetName: String, dataLayerName: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int, halfByte: Boolean ?= false)
+GET         /datasets/:organizationName/:dataSetName/layers/:dataLayerName/sprite                                @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestSpriteSheet(organizationName: String, dataSetName: String, dataLayerName: String, cubeSize: Int ?=128, imagesPerRow: Int ?= 8, x: Int, y: Int, z: Int, resolution: Int, halfByte: Boolean ?= false)
+GET         /datasets/:organizationName/:dataSetName/layers/:dataLayerName/image.jpg                             @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestImage(organizationName: String, dataSetName: String, dataLayerName: String, width: Int, height: Int, x: Int, y: Int, z: Int, resolution: Int, halfByte: Boolean ?= false, blackAndWhite: Boolean ?= false)
+GET         /datasets/:organizationName/:dataSetName/layers/:dataLayerName/thumbnail.json                        @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestImageThumbnailJson(organizationName: String, dataSetName: String, dataLayerName: String, width: Int, height: Int, centerX: Option[Int], centerY: Option[Int], centerZ: Option[Int], zoom: Option[Int])
+GET         /datasets/:organizationName/:dataSetName/layers/:dataLayerName/thumbnail.jpg                         @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestImageThumbnailJpeg(organizationName: String, dataSetName: String, dataLayerName: String, width: Int, height: Int, centerX: Option[Int], centerY: Option[Int], centerZ: Option[Int], zoom: Option[Int])
 
 # Knossos compatibale routes
-GET         /datasets/:dataSetName/layers/:dataLayerName/mag:resolution/x:x/y:y/z:z/bucket.raw @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestViaKnossos(dataSetName: String, dataLayerName: String, resolution: Int, x: Int, y: Int, z: Int, cubeSize: Int)
+GET         /datasets/:organizationName/:dataSetName/layers/:dataLayerName/mag:resolution/x:x/y:y/z:z/bucket.raw @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestViaKnossos(organizationName: String, dataSetName: String, dataLayerName: String, resolution: Int, x: Int, y: Int, z: Int, cubeSize: Int)
 
 # Segmentation mappings
-GET         /datasets/:dataSetName/layers/:dataLayerName/mappings/:mappingName                 @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestMapping(dataSetName: String, dataLayerName: String, mappingName: String)
+GET         /datasets/:organizationName/:dataSetName/layers/:dataLayerName/mappings/:mappingName                 @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestMapping(organizationName: String, dataSetName: String, dataLayerName: String, mappingName: String)
 
 # DataSource management
-GET         /datasets                                                                          @com.scalableminds.webknossos.datastore.controllers.DataSourceController.list
-POST        /datasets                                                                          @com.scalableminds.webknossos.datastore.controllers.DataSourceController.upload
-GET         /datasets/:dataSetName/readInboxDataSourceLike                                     @com.scalableminds.webknossos.datastore.controllers.DataSourceController.read(dataSetName: String, returnFormatLike: Boolean ?= true)
-GET         /datasets/:dataSetName/readInboxDataSource                                         @com.scalableminds.webknossos.datastore.controllers.DataSourceController.read(dataSetName: String, returnFormatLike: Boolean ?= false)
-POST        /datasets/:dataSetName                                                             @com.scalableminds.webknossos.datastore.controllers.DataSourceController.update(dataSetName: String)
-GET         /datasets/:dataSetName                                                             @com.scalableminds.webknossos.datastore.controllers.DataSourceController.explore(dataSetName: String)
+GET         /datasets                                                                                            @com.scalableminds.webknossos.datastore.controllers.DataSourceController.list
+POST        /datasets                                                                                            @com.scalableminds.webknossos.datastore.controllers.DataSourceController.upload
+GET         /datasets/:organizationName/:dataSetName/readInboxDataSourceLike                                     @com.scalableminds.webknossos.datastore.controllers.DataSourceController.read(organizationName: String, dataSetName: String, returnFormatLike: Boolean ?= true)
+GET         /datasets/:organizationName/:dataSetName/readInboxDataSource                                         @com.scalableminds.webknossos.datastore.controllers.DataSourceController.read(organizationName: String, dataSetName: String, returnFormatLike: Boolean ?= false)
+POST        /datasets/:organizationName/:dataSetName                                                             @com.scalableminds.webknossos.datastore.controllers.DataSourceController.update(organizationName: String, dataSetName: String)
+GET         /datasets/:organizationName/:dataSetName                                                             @com.scalableminds.webknossos.datastore.controllers.DataSourceController.explore(organizationName: String, dataSetName: String)
 
 # Volume tracings
-POST        /tracings/volume/save                                                              @com.scalableminds.webknossos.datastore.controllers.VolumeTracingController.save
-POST        /tracings/volume/:tracingId/initialData                                            @com.scalableminds.webknossos.datastore.controllers.VolumeTracingController.initialData(tracingId: String)
-GET         /tracings/volume/:tracingId                                                        @com.scalableminds.webknossos.datastore.controllers.VolumeTracingController.get(tracingId: String, version: Option[Long])
-POST        /tracings/volume/:tracingId/update                                                 @com.scalableminds.webknossos.datastore.controllers.VolumeTracingController.update(tracingId: String)
-GET         /tracings/volume/:tracingId/data                                                   @com.scalableminds.webknossos.datastore.controllers.VolumeTracingController.getData(tracingId: String, version: Option[Long])
-GET         /tracings/volume/:tracingId/duplicate                                            @com.scalableminds.webknossos.datastore.controllers.VolumeTracingController.duplicate(tracingId: String, version: Option[Long])
+POST        /tracings/volume/save                                                                                @com.scalableminds.webknossos.datastore.controllers.VolumeTracingController.save
+POST        /tracings/volume/:organizationName/:tracingId/initialData                                            @com.scalableminds.webknossos.datastore.controllers.VolumeTracingController.initialData(organizationName: String, tracingId: String)
+GET         /tracings/volume/:tracingId                                                                          @com.scalableminds.webknossos.datastore.controllers.VolumeTracingController.get(tracingId: String, version: Option[Long])
+POST        /tracings/volume/:tracingId/update                                                                   @com.scalableminds.webknossos.datastore.controllers.VolumeTracingController.update(tracingId: String)
+GET         /tracings/volume/:tracingId/data                                                                     @com.scalableminds.webknossos.datastore.controllers.VolumeTracingController.getData(tracingId: String, version: Option[Long])
+GET         /tracings/volume/:tracingId/duplicate                                                                @com.scalableminds.webknossos.datastore.controllers.VolumeTracingController.duplicate(tracingId: String, version: Option[Long])
 
 # Skeleton tracings
-POST        /tracings/skeleton/save                                                            @com.scalableminds.webknossos.datastore.controllers.SkeletonTracingController.save
-POST        /tracings/skeleton/saveMultiple                                                    @com.scalableminds.webknossos.datastore.controllers.SkeletonTracingController.saveMultiple
+POST        /tracings/skeleton/save                                                                              @com.scalableminds.webknossos.datastore.controllers.SkeletonTracingController.save
+POST        /tracings/skeleton/saveMultiple                                                                      @com.scalableminds.webknossos.datastore.controllers.SkeletonTracingController.saveMultiple
 
-POST        /tracings/skeleton/mergedFromContents                                              @com.scalableminds.webknossos.datastore.controllers.SkeletonTracingController.mergedFromContents(persist: Boolean)
-POST        /tracings/skeleton/mergedFromIds                                                   @com.scalableminds.webknossos.datastore.controllers.SkeletonTracingController.mergedFromIds(persist: Boolean)
+POST        /tracings/skeleton/mergedFromContents                                                                @com.scalableminds.webknossos.datastore.controllers.SkeletonTracingController.mergedFromContents(persist: Boolean)
+POST        /tracings/skeleton/mergedFromIds                                                                     @com.scalableminds.webknossos.datastore.controllers.SkeletonTracingController.mergedFromIds(persist: Boolean)
 
-GET         /tracings/skeleton/:tracingId                                                      @com.scalableminds.webknossos.datastore.controllers.SkeletonTracingController.get(tracingId: String, version: Option[Long])
-GET         /tracings/skeleton/:tracingId/updateActionStatistics                               @com.scalableminds.webknossos.datastore.controllers.SkeletonTracingController.updateActionStatistics(tracingId: String)
-GET         /tracings/skeleton/:tracingId/updateActionLog                                      @com.scalableminds.webknossos.datastore.controllers.SkeletonTracingController.updateActionLog(tracingId: String)
-POST        /tracings/skeleton/getMultiple                                                     @com.scalableminds.webknossos.datastore.controllers.SkeletonTracingController.getMultiple
+GET         /tracings/skeleton/:tracingId                                                                        @com.scalableminds.webknossos.datastore.controllers.SkeletonTracingController.get(tracingId: String, version: Option[Long])
+GET         /tracings/skeleton/:tracingId/updateActionStatistics                                                 @com.scalableminds.webknossos.datastore.controllers.SkeletonTracingController.updateActionStatistics(tracingId: String)
+GET         /tracings/skeleton/:tracingId/updateActionLog                                                        @com.scalableminds.webknossos.datastore.controllers.SkeletonTracingController.updateActionLog(tracingId: String)
+POST        /tracings/skeleton/getMultiple                                                                       @com.scalableminds.webknossos.datastore.controllers.SkeletonTracingController.getMultiple
 
-POST        /tracings/skeleton/:tracingId/update                                               @com.scalableminds.webknossos.datastore.controllers.SkeletonTracingController.update(tracingId: String)
-GET         /tracings/skeleton/:tracingId/duplicate                                            @com.scalableminds.webknossos.datastore.controllers.SkeletonTracingController.duplicate(tracingId: String, version: Option[Long])
+POST        /tracings/skeleton/:tracingId/update                                                                 @com.scalableminds.webknossos.datastore.controllers.SkeletonTracingController.update(tracingId: String)
+GET         /tracings/skeleton/:tracingId/duplicate                                                              @com.scalableminds.webknossos.datastore.controllers.SkeletonTracingController.duplicate(tracingId: String, version: Option[Long])
 
 # Actions
-GET         /triggers/checkInbox                                                               @com.scalableminds.webknossos.datastore.controllers.DataSourceController.triggerInboxCheck()
-GET         /triggers/checkInboxBlocking                                                       @com.scalableminds.webknossos.datastore.controllers.DataSourceController.triggerInboxCheckBlocking()
-GET         /triggers/newOrganizationFolder                                                    @com.scalableminds.webknossos.datastore.controllers.DataSourceController.createOrganizationDirectory(organizationName: String)
-GET         /triggers/clearCache/:dataSetName                                                  @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.clearCache(dataSetName: String)
+GET         /triggers/checkInbox                                                                                 @com.scalableminds.webknossos.datastore.controllers.DataSourceController.triggerInboxCheck()
+GET         /triggers/checkInboxBlocking                                                                         @com.scalableminds.webknossos.datastore.controllers.DataSourceController.triggerInboxCheckBlocking()
+GET         /triggers/newOrganizationFolder                                                                      @com.scalableminds.webknossos.datastore.controllers.DataSourceController.createOrganizationDirectory(organizationName: String)
+GET         /triggers/clearCache/:organizationName/:dataSetName                                                  @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.clearCache(organizationName: String, dataSetName: String)
 
 # Debugging
 

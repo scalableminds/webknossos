@@ -71,16 +71,19 @@ export type APITeam = {
   +organization: string,
 };
 
-type APIDatasetBase = {
+export type APIDatasetId = {
+  +owningOrganization: string,
+  +name: string,
+};
+
+type APIDatasetBase = APIDatasetId & {
   +allowedTeams: Array<APITeam>,
   +created: number,
   +dataStore: APIDataStore,
   +description: ?string,
   +isEditable: boolean,
   +isPublic: boolean,
-  +name: string,
   +displayName: ?string,
-  +owningOrganization: string,
   +logoUrl: ?string,
   +lastUsedByUser: number,
   +isForeign: boolean,
@@ -259,6 +262,7 @@ export type APIAnnotationTypeCompact = {
     +volume: ?string,
   },
   +dataSetName: string,
+  +organization: string,
   +description: string,
   +formattedHash: string,
   +modified: number,

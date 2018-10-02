@@ -34,11 +34,11 @@ class DataSourceController @Inject()(
     }
   }
 
-  def read(dataSetName: String, returnFormatLike: Boolean) = Action.async {
+  def read(organizationName: String, dataSetName: String, returnFormatLike: Boolean) = Action.async {
     implicit request => {
-      accessTokenService.validateAccessForSyncBlock(UserAccessRequest.readDataSources(dataSetName)) {
+      accessTokenService.validateAccessForSyncBlock(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
         AllowRemoteOrigin {
-          val dsOption: Option[InboxDataSource] = dataSourceRepository.findByName(dataSetName)
+          val dsOption: Option[InboxDataSource] = dataSourceRepository.find(DataSourceId(dataSetName, organizationName))
           dsOption match {
             case Some(ds) => {
               val dslike: InboxDataSourceLike = ds
@@ -76,11 +76,11 @@ class DataSourceController @Inject()(
   def upload = Action.async(parse.multipartFormData) {
     implicit request =>
 
-    val uploadForm = Form(
-      tuple(
-        "name" -> nonEmptyText.verifying("dataSet.name.invalid", n => n.matches("[A-Za-z0-9_\\-]*")),
-        "organization" -> nonEmptyText
-      )).fill(("", ""))
+      val uploadForm = Form(
+        tuple(
+          "name" -> nonEmptyText.verifying("dataSet.name.invalid", n => n.matches("[A-Za-z0-9_\\-]*")),
+          "organization" -> nonEmptyText
+        )).fill(("", ""))
 
 
     accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
@@ -103,12 +103,12 @@ class DataSourceController @Inject()(
     }
   }
 
-  def explore(dataSetName: String) = Action.async {
+  def explore(organizationName: String, dataSetName: String) = Action.async {
     implicit request =>
-      accessTokenService.validateAccessForSyncBlock(UserAccessRequest.writeDataSource(dataSetName)) {
+      accessTokenService.validateAccessForSyncBlock(UserAccessRequest.writeDataSource(DataSourceId(dataSetName, organizationName))) {
         AllowRemoteOrigin {
           for {
-            previousDataSource <- dataSourceRepository.findByName(dataSetName) ?~ Messages("dataSource.notFound") ~> 404
+            previousDataSource <- dataSourceRepository.find(DataSourceId(dataSetName, organizationName)) ?~ Messages("dataSource.notFound") ~> 404
             (dataSource, messages) <- dataSourceService.exploreDataSource(previousDataSource.id, previousDataSource.toUsable)
           } yield {
             Ok(Json.obj(
@@ -120,13 +120,13 @@ class DataSourceController @Inject()(
       }
   }
 
-  def update(dataSetName: String) = Action.async(validateJson[DataSource]) {
+  def update(organizationName: String, dataSetName: String) = Action.async(validateJson[DataSource]) {
     implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.writeDataSource(dataSetName)) {
+      accessTokenService.validateAccess(UserAccessRequest.writeDataSource(DataSourceId(dataSetName, organizationName))) {
         AllowRemoteOrigin {
           for {
             _ <- Fox.successful(())
-            dataSource <- dataSourceRepository.findByName(dataSetName).toFox ?~> Messages("dataSource.notFound") ~> 404
+            dataSource <- dataSourceRepository.find(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages("dataSource.notFound") ~> 404
             _ <- dataSourceService.updateDataSource(request.body.copy(id = dataSource.id))
           } yield {
             Ok

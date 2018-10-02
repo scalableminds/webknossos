@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.controllers
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracings}
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services.{AccessTokenService, DataSourceRepository, UserAccessRequest, WebKnossosServer}
 import com.scalableminds.webknossos.datastore.tracings._
 import com.scalableminds.webknossos.datastore.tracings.volume.VolumeTracingService
@@ -29,14 +30,14 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
 
   implicit def unpackMultiple(tracings: VolumeTracings): List[VolumeTracing] = tracings.tracings.toList
 
-  def initialData(tracingId: String) = Action.async {
+  def initialData(organizationName: String, tracingId: String) = Action.async {
     implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.webknossos) {
         AllowRemoteOrigin {
           for {
             initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
             tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-            dataSource <- dataSourceRepository.findUsableByName(tracing.dataSetName) ?~> Messages("dataSet.notFound")
+            dataSource <- dataSourceRepository.findUsable(DataSourceId(tracing.dataSetName, organizationName)) ?~> Messages("dataSet.notFound")
             _ <- tracingService.initializeWithData(tracingId, tracing, dataSource, initialData)
           } yield Ok(Json.toJson(tracingId))
         }

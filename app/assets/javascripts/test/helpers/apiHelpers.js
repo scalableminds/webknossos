@@ -108,6 +108,7 @@ export function setupOxalis(t, mode, apiVersion) {
   t.context.model = Model;
 
   const webknossos = new OxalisApi(Model);
+  const organizationName = "Connectomics Department";
 
   const ANNOTATION = modelData[mode].annotation;
   Request.receiveJSON
@@ -116,7 +117,7 @@ export function setupOxalis(t, mode, apiVersion) {
   const datasetClone = _.cloneDeep(DATASET);
 
   Request.receiveJSON
-    .withArgs(`/api/datasets/${ANNOTATION.dataSetName}`)
+    .withArgs(`/api/datasets/${organizationName}/${ANNOTATION.dataSetName}`)
     // Right now, initializeDataset() in model_initialization mutates the dataset to add a new
     // volume layer. Since this mutation should be isolated between different tests, we have to make
     // sure that each receiveJSON call returns its own clone. Without the following "onCall" line,
@@ -129,7 +130,11 @@ export function setupOxalis(t, mode, apiVersion) {
     .returns(Promise.resolve({ token: TOKEN }));
   Request.receiveJSON.returns(Promise.resolve({}));
 
-  return Model.fetch(TRACING_TYPE, ANNOTATION_ID, ControlModeEnum.TRACE, true)
+  return Model.fetch(
+    TRACING_TYPE,
+    { annotationId: ANNOTATION_ID, type: ControlModeEnum.TRACE },
+    true,
+  )
     .then(() => {
       // Trigger the event ourselves, as the OxalisController is not instantiated
       app.vent.trigger("webknossos:ready");

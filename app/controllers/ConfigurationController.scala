@@ -3,6 +3,7 @@ package controllers
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import javax.inject.Inject
+
 import models.binary.{DataSet, DataSetDAO}
 import models.configuration.{DataSetConfiguration, DataSetConfigurationDefaults, UserConfiguration}
 import models.user.{UserDataSetConfigurationDAO, UserService}
@@ -30,8 +31,8 @@ class ConfigurationController @Inject()(userService: UserService,
         userConfig <- user.userConfigurationStructured
       } yield userConfig.configurationOrDefaults
     }
-    .getOrElse(UserConfiguration.default.configuration)
-    .map(configuration => Ok(toJson(configuration)))
+      .getOrElse(UserConfiguration.default.configuration)
+      .map(configuration => Ok(toJson(configuration)))
   }
 
   def update = sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
@@ -44,18 +45,23 @@ class ConfigurationController @Inject()(userService: UserService,
     }
   }
 
-  def readDataSet(dataSetName: String) = sil.UserAwareAction.async { implicit request =>
+
+  def readDataSet(organizationName: String, dataSetName: String) = sil.UserAwareAction.async { implicit request =>
     request.identity.toFox.flatMap { user =>
       for {
         configurationJson: JsValue <- userDataSetConfigurationDAO.findOneForUserAndDataset(user._id, dataSetName)
       } yield DataSetConfiguration(configurationJson.validate[Map[String, JsValue]].getOrElse(Map.empty))
-    }
-    .orElse(dataSetDAO.findOneByName(dataSetName)(GlobalAccessContext).flatMap(_.defaultConfiguration))
-    .getOrElse(dataSetConfigurationDefaults.constructInitialDefault(List()))
-    .map(configuration => Ok(toJson(dataSetConfigurationDefaults.configurationOrDefaults(configuration))))
+    }.orElse(
+      for {
+        dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(GlobalAccessContext)
+        config <- dataSet.defaultConfiguration
+      } yield config
+    )
+      .getOrElse(dataSetConfigurationDefaults.constructInitialDefault(List()))
+      .map(configuration => Ok(toJson(dataSetConfigurationDefaults.configurationOrDefaults(configuration))))
   }
 
-  def updateDataSet(dataSetName: String) = sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
+  def updateDataSet(organizationName: String, dataSetName: String) = sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
     for {
       jsConfiguration <- request.body.asOpt[JsObject] ?~> "user.configuration.dataset.invalid"
       conf = jsConfiguration.fields.toMap
@@ -65,8 +71,8 @@ class ConfigurationController @Inject()(userService: UserService,
     }
   }
 
-  def readDataSetDefault(dataSetName: String) = sil.SecuredAction.async { implicit request =>
-    dataSetDAO.findOneByName(dataSetName).flatMap { dataSet: DataSet =>
+  def readDataSetDefault(organizationName: String, dataSetName: String) = sil.SecuredAction.async { implicit request =>
+    dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization).flatMap { dataSet: DataSet =>
       dataSet.defaultConfiguration match {
         case Some(c) => Fox.successful(Ok(toJson(dataSetConfigurationDefaults.configurationOrDefaults(c))))
         case _ => dataSetConfigurationDefaults.constructInitialDefault(dataSet).map(c => Ok(toJson(dataSetConfigurationDefaults.configurationOrDefaults(c))))
@@ -74,9 +80,9 @@ class ConfigurationController @Inject()(userService: UserService,
     }
   }
 
-  def updateDataSetDefault(dataSetName: String) = sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
+  def updateDataSetDefault(organizationName: String, dataSetName: String) = sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
     for {
-      dataset <- dataSetDAO.findOneByName(dataSetName) ?~> "dataset.notFound"
+      dataset <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> "dataset.notFound"
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOfOrg(request.identity, dataset._organization)) ?~> "notAllowed"
       jsConfiguration <- request.body.asOpt[JsObject] ?~> "user.configuration.dataset.invalid"
       conf = jsConfiguration.fields.toMap

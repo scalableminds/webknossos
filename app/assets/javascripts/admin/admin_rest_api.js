@@ -745,7 +745,7 @@ export async function getDatastores(): Promise<Array<APIDataStore>> {
 export const getDataStoresCached = _.memoize(getDatastores);
 
 export function getTracingstore(): Promise<APITracingStore> {
-  return Request.receiveJSON("api/tracingstore");
+  return Request.receiveJSON("/api/tracingstore");
 }
 
 export const getTracingStoreCached = _.memoize(getTracingstore);

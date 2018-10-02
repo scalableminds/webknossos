@@ -257,7 +257,10 @@ class OnboardingView extends React.PureComponent<StateProps, State> {
           <Modal visible width="85%" footer={null} maskClosable={false} onCancel={this.advanceStep}>
             <DatasetImportView
               isEditingMode={false}
-              datasetName={this.state.datasetNameToImport || ""}
+              datasetId={{
+                name: this.state.datasetNameToImport || "",
+                owningOrganization: this.state.organizationName || "",
+              }}
               onComplete={this.advanceStep}
               onCancel={this.advanceStep}
             />

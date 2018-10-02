@@ -107,11 +107,15 @@ test("Model Initialization: should throw an Error on unexpected failure", t => {
   const { model } = t.context;
   const rejectedDatasetError = new Error("mocked dataset rejection");
   Request.receiveJSON
-    .withArgs(`/api/datasets/${ANNOTATION.dataSetName}`)
+    .withArgs(`/api/datasets/Connectomics Department/${ANNOTATION.dataSetName}`)
     .returns(Promise.reject(rejectedDatasetError));
 
   return model
-    .fetch(TRACING_TYPE, ANNOTATION.dataSetName, "VIEW", true)
+    .fetch(
+      TRACING_TYPE,
+      { name: ANNOTATION.dataSetName, owningOrganization: "Connectomics Department", type: "VIEW" },
+      true,
+    )
     .then(() => {
       t.fail("Promise should not have been resolved.");
     })

@@ -109,11 +109,17 @@ object AssetCompilation {
       )
       val nodeSrc = baseDirectory.value / "node_modules"
       val nodeDest = target.value  / "universal" / "stage" / "node_modules"
-      deleteRecursively(nodeDest)
-      nodeDest.mkdirs
-      nodeModules.foreach(node_module => {
-        copyRecursively(nodeSrc / node_module, nodeDest / node_module)
+      val tmpPath = baseDirectory.value / "tmp"
+      val streamsValue = streams.value.log
+
+      tmpPath.mkdirs
+      startProcess(npmPath.value, List("init", "-y"), tmpPath) ! streamsValue
+      nodeModules.foreach(nodeModule => {
+        startProcess(npmPath.value, List("add", (nodeSrc / nodeModule).getAbsolutePath), tmpPath) ! streamsValue
       })
+      deleteRecursively(nodeDest)
+      copyRecursively(tmpPath / "node_modules", nodeDest)
+      deleteRecursively(tmpPath)
     }
 
     // run webpack

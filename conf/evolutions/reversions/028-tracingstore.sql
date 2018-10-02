@@ -3,6 +3,6 @@ START TRANSACTION;
 DROP VIEW webknossos.tracingStores_;
 DROP TABLE webknossos.tracingStores;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 26;
+UPDATE webknossos.releaseInformation SET schemaVersion = 27;
 
 COMMIT TRANSACTION;

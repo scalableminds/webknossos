@@ -139,10 +139,10 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
   case class CreateExplorationalParameters(typ: String, withFallback: Option[Boolean])
   object CreateExplorationalParameters {implicit val jsonFormat = Json.format[CreateExplorationalParameters]}
 
-  def createExplorational(dataSetName: String) =
+  def createExplorational(organizationName: String, dataSetName: String) =
     sil.SecuredAction.async(validateJson[CreateExplorationalParameters]) { implicit request =>
       for {
-        dataSetSQL <- dataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
+        dataSetSQL <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> Messages("dataSet.notFound", dataSetName)
         tracingType <- TracingType.values.find(_.toString == request.body.typ).toFox
         annotation <- annotationService.createExplorationalFor(request.identity, dataSetSQL._id, tracingType, request.body.withFallback.getOrElse(true)) ?~> "annotation.create.failed"
         json <- annotationService.publicWrites(annotation, Some(request.identity)) ?~> "annotation.write.failed"

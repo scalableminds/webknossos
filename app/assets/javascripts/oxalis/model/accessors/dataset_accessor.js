@@ -174,10 +174,11 @@ export function getColorLayers(dataset: APIDataset): Array<DataLayerType> {
 
 export function getThumbnailURL(dataset: APIDataset): string {
   const datasetName = dataset.name;
+  const organizationName = dataset.owningOrganization;
   const layers = dataset.dataSource.dataLayers;
   const colorLayer = _.find(layers, { category: "color" });
   if (colorLayer) {
-    return `/api/datasets/${datasetName}/layers/${colorLayer.name}/thumbnail`;
+    return `/api/datasets/${organizationName}/${datasetName}/layers/${colorLayer.name}/thumbnail`;
   }
   return "";
 }

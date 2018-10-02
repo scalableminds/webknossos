@@ -414,9 +414,17 @@ class TracingApi {
     newControlMode: ControlMode,
     version?: number,
   ) {
+    if (newControlMode === ControlModeEnum.VIEW)
+      throw new Error("Restarting with view option is not supported");
+
     Store.dispatch(restartSagaAction());
     UrlManager.reset();
-    await Model.fetch(newTracingType, newAnnotationId, newControlMode, false, version);
+    await Model.fetch(
+      newTracingType,
+      { annotationId: newAnnotationId, type: newControlMode },
+      false,
+      version,
+    );
     Store.dispatch(discardSaveQueuesAction());
     Store.dispatch(wkReadyAction());
     UrlManager.updateUnthrottled();
@@ -722,7 +730,7 @@ class DataApi {
     return doWithToken(token => {
       // todo: use tracingStore maybe?
       const downloadUrl =
-        `${dataset.dataStore.url}/data/datasets/${
+        `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${
           dataset.name
         }/layers/${layerName}/data?resolution=0&` +
         `token=${token}&` +

@@ -8,6 +8,7 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.codec.binary.Base64
 import oxalis.security.CompactRandomIDGenerator
 import play.api.libs.ws.WSResponse
+import play.utils.UriEncoding
 
 import scala.concurrent.ExecutionContext
 
@@ -19,11 +20,11 @@ class DataStoreRpcClient(dataStore: DataStore, dataSet: DataSet, rpc: RPC)(impli
 
   def baseInfo = s"Dataset: ${dataSet.name} Datastore: ${dataStore.url}"
 
-  def requestDataLayerThumbnail(dataLayerName: String, width: Int, height: Int, zoom: Option[Int], center: Option[Point3D]): Fox[Array[Byte]] = {
-    logger.debug("Thumbnail called for: " + dataSet.name + " Layer: " + dataLayerName)
-    rpc(s"${dataStore.url}/data/datasets/${dataSet.urlEncodedName}/layers/$dataLayerName/thumbnail.json")
+  def requestDataLayerThumbnail(organizationName: String, dataLayerName: String, width: Int, height: Int, zoom: Option[Int], center: Option[Point3D]): Fox[Array[Byte]] = {
+    logger.debug(s"Thumbnail called for: $organizationName-${dataSet.name} Layer: $dataLayerName")
+    rpc(s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataSet.urlEncodedName}/layers/$dataLayerName/thumbnail.json")
       .addQueryString("token" -> DataStoreRpcClient.webKnossosToken)
-      .addQueryString( "width" -> width.toString, "height" -> height.toString)
+      .addQueryString("width" -> width.toString, "height" -> height.toString)
       .addQueryStringOptional("zoom", zoom.map(_.toString))
       .addQueryStringOptional("centerX", center.map(_.x.toString))
       .addQueryStringOptional("centerY", center.map(_.y.toString))
@@ -31,10 +32,6 @@ class DataStoreRpcClient(dataStore: DataStore, dataSet: DataSet, rpc: RPC)(impli
       .getWithJsonResponse[ImageThumbnail].map(thumbnail => Base64.decodeBase64(thumbnail.value))
   }
 
-  def importDataSource: Fox[WSResponse] = {
-    logger.debug("Import called for: " + dataSet.name)
-    rpc(s"${dataStore.url}/data/datasets/${dataSet.urlEncodedName}/import")
-      .addQueryString("token" -> DataStoreRpcClient.webKnossosToken)
-      .post()
-  }
+  private def urlEncode(text: String) = {UriEncoding.encodePathSegment(text, "UTF-8")}
+
 }

@@ -7,7 +7,8 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 ## Unreleased
 - There is now a separate module for the tracing store, the datastore is no longer responsible for saving tracings. This module can run as a standalone application, or as a module of webknossos locally. It is recommended that you chose the option that was previously also in place for datastores. In case of a standalone datastore, the local one needs to be disabled in application.conf: `tracingstore.enabled = false` and `play.modules.disabled += "com.scalableminds.braingames.datastore.TracingStoreModule` – and in either case, the adress of the tracingstore (localhost or remote) needs to be inserted in the db in `webknossos.tracingStores`
 ### Postgres Evolutions:
-- [027-tracingstore.sql](conf/evolutions/026-tracingstore.sql)
+- [027-drop-dataset-name-unique-constraint.sql](conf/evolutions/027-drop-dataset-name-unique-constraint.sql)
+- [028-tracingstore.sql](conf/evolutions/028-tracingstore.sql)
 
 
 ## [18.10.0](https://github.com/scalableminds/webknossos/releases/tag/18.10.0) - 2018-09-22

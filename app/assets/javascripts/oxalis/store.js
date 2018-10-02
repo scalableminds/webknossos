@@ -45,6 +45,7 @@ import type {
   APIScript,
   APITask,
   APIUser,
+  APIDatasetId,
   APIDataset,
   APIDataLayer,
   APITracingStore,
@@ -188,6 +189,16 @@ export type HybridTracing = {|
 |};
 
 export type Tracing = HybridTracing;
+
+export type TraceOrViewCommand =
+  | {
+      +type: typeof ControlModeEnum.VIEW,
+      ...$Exact<APIDatasetId>,
+    }
+  | {
+      +type: typeof ControlModeEnum.TRACE,
+      +annotationId: string,
+    };
 
 export type DatasetLayerConfiguration = {|
   +color: Vector3,

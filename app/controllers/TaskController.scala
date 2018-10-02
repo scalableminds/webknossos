@@ -3,6 +3,7 @@ package controllers
 import java.io.File
 
 import javax.inject.Inject
+
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.mvc.ResultBox
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
@@ -162,7 +163,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
 
     for {
       dataSetName <- assertAllOnSameDataset
-      dataSet <- dataSetDAO.findOneByName(requestedTasks.head._1.dataSet) ?~> Messages("dataSet.notFound", dataSetName)
+      dataSet <- dataSetDAO.findOneByNameAndOrganization(requestedTasks.head._1.dataSet, request.identity._organization) ?~> Messages("dataSet.notFound", dataSetName)
       tracingStoreClient <- tracingStoreService.clientFor(dataSet)
       skeletonTracingIds: List[Box[String]] <- tracingStoreClient.saveSkeletonTracings(SkeletonTracings(requestedTasks.map(_._2)))
       requestedTasksWithTracingIds = requestedTasks zip skeletonTracingIds

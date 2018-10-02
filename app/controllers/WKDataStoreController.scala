@@ -1,6 +1,7 @@
 package controllers
 
 import javax.inject.Inject
+
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.services.DataStoreStatus
@@ -10,6 +11,7 @@ import com.typesafe.scalalogging.LazyLogging
 import models.binary._
 import play.api.libs.json.{JsError, JsObject, JsSuccess}
 import models.annotation.AnnotationState._
+import models.team.OrganizationDAO
 import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
 import com.mohiva.play.silhouette.api.Silhouette
 
@@ -18,6 +20,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class WKDataStoreController @Inject()(dataSetService: DataSetService,
                                       dataStoreService: DataStoreService,
                                       dataStoreDAO: DataStoreDAO,
+                                      organizationDAO: OrganizationDAO,
                                       sil: Silhouette[WkEnv])
                                      (implicit ec: ExecutionContext)
   extends Controller
@@ -27,8 +30,9 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
     dataStoreService.validateAccess(name) { dataStore =>
       for {
         uploadInfo <- request.body.validate[DataSourceId].asOpt.toFox ?~> "dataStore.upload.invalid"
+        organization <- organizationDAO.findOneByName(uploadInfo.team)(GlobalAccessContext) ?~> "organization.notFound"
         _ <- bool2Fox(dataSetService.isProperDataSetName(uploadInfo.name)) ?~> "dataSet.name.invalid"
-        _ <- dataSetService.assertNewDataSetName(uploadInfo.name)(GlobalAccessContext) ?~> "dataSet.name.alreadyTaken"
+        _ <- dataSetService.assertNewDataSetName(uploadInfo.name, organization._id)(GlobalAccessContext) ?~> "dataSet.name.alreadyTaken"
         _ <- bool2Fox(uploadInfo.team.nonEmpty) ?~> "team.invalid"
       } yield Ok
     }

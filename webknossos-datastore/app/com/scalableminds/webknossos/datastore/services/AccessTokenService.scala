@@ -2,7 +2,8 @@ package com.scalableminds.webknossos.datastore.services
 
 import com.google.inject.Inject
 import com.scalableminds.util.tools.Fox
-import play.api.cache.{CacheApi, SyncCacheApi}
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
+import play.api.cache.SyncCacheApi
 import play.api.libs.json.{Format, Json, Reads, Writes}
 import play.api.mvc.Results.Forbidden
 import play.api.mvc.{Request, Result}
@@ -24,7 +25,7 @@ object AccessResourceType extends Enumeration {
   implicit val jsonFormat = Format(Reads.enumNameReads(AccessResourceType), Writes.enumNameWrites)
 }
 
-case class UserAccessRequest(resourceId: String, resourceType: AccessResourceType.Value, mode: AccessMode.Value) {
+case class UserAccessRequest(resourceId: DataSourceId, resourceType: AccessResourceType.Value, mode: AccessMode.Value) {
   def toCacheKey(token: String) = s"$token#$resourceId#$resourceType#$mode"
 }
 
@@ -35,21 +36,21 @@ object UserAccessRequest {
   implicit val jsonFormat = Json.format[UserAccessRequest]
 
   def administrateDataSources =
-    UserAccessRequest("", AccessResourceType.datasource, AccessMode.administrate)
+    UserAccessRequest(DataSourceId("", ""), AccessResourceType.datasource, AccessMode.administrate)
   def listDataSources =
-    UserAccessRequest("", AccessResourceType.datasource, AccessMode.list)
-  def readDataSources(dataSourceName: String) =
-    UserAccessRequest(dataSourceName, AccessResourceType.datasource, AccessMode.read)
-  def writeDataSource(dataSourceName: String) =
-    UserAccessRequest(dataSourceName, AccessResourceType.datasource, AccessMode.write)
+    UserAccessRequest(DataSourceId("", ""), AccessResourceType.datasource, AccessMode.list)
+  def readDataSources(dataSourceId: DataSourceId) =
+    UserAccessRequest(dataSourceId, AccessResourceType.datasource, AccessMode.read)
+  def writeDataSource(dataSourceId: DataSourceId) =
+    UserAccessRequest(dataSourceId, AccessResourceType.datasource, AccessMode.write)
 
   def readTracing(tracingId: String) =
-    UserAccessRequest(tracingId, AccessResourceType.tracing, AccessMode.read)
+    UserAccessRequest(DataSourceId(tracingId, ""), AccessResourceType.tracing, AccessMode.read)
   def writeTracing(tracingId: String) =
-    UserAccessRequest(tracingId, AccessResourceType.tracing, AccessMode.write)
+    UserAccessRequest(DataSourceId(tracingId, ""), AccessResourceType.tracing, AccessMode.write)
 
   def webknossos =
-    UserAccessRequest("webknossos", AccessResourceType.webknossos, AccessMode.administrate)
+    UserAccessRequest(DataSourceId("webknossos", ""), AccessResourceType.webknossos, AccessMode.administrate)
 }
 
 trait AccessTokenService {

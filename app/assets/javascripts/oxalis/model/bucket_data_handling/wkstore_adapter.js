@@ -66,12 +66,13 @@ export async function requestWithFallback(
 ): Promise<Array<?Uint8Array>> {
   const state = Store.getState();
   const datasetName = state.dataset.name;
+  const organization = state.dataset.owningOrganization;
   const dataStoreHost = state.dataset.dataStore.url;
   const tracingStoreHost = state.tracing.tracingStore.url;
   const isSegmentation = isSegmentationLayer(state.dataset, layerInfo.name);
 
   const getDataStoreUrl = (optLayerName?: string) =>
-    `${dataStoreHost}/data/datasets/${datasetName}/layers/${optLayerName || layerInfo.name}`;
+    `${dataStoreHost}/data/datasets/${organization}/${datasetName}/layers/${optLayerName || layerInfo.name}`;
   const getTracingStoreUrl = () => `${tracingStoreHost}/tracings/volume/${layerInfo.name}`;
 
   // For non-segmentation layers and for viewing datasets, we'll always use the datastore URL

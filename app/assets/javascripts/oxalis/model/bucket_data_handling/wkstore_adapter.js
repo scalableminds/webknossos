@@ -72,7 +72,8 @@ export async function requestWithFallback(
   const isSegmentation = isSegmentationLayer(state.dataset, layerInfo.name);
 
   const getDataStoreUrl = (optLayerName?: string) =>
-    `${dataStoreHost}/data/datasets/${organization}/${datasetName}/layers/${optLayerName || layerInfo.name}`;
+    `${dataStoreHost}/data/datasets/${organization}/${datasetName}/layers/${optLayerName ||
+      layerInfo.name}`;
   const getTracingStoreUrl = () => `${tracingStoreHost}/tracings/volume/${layerInfo.name}`;
 
   // For non-segmentation layers and for viewing datasets, we'll always use the datastore URL

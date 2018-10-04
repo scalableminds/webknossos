@@ -2,8 +2,10 @@ package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
 import javax.inject.Inject
+
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services.{AccessMode, AccessResourceType, UserAccessAnswer, UserAccessRequest}
 import models.annotation._
 import models.binary.{DataSetDAO, DataStoreHandler, DataStoreService}
@@ -57,7 +59,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
             case AccessResourceType.datasource =>
               handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, userBox)(ctx)
             case AccessResourceType.tracing =>
-              handleTracingAccess(accessRequest.resourceId, accessRequest.mode, userBox)(ctx)
+              handleTracingAccess(accessRequest.resourceId.name, accessRequest.mode, userBox)(ctx)
             case _ =>
               Fox.successful(UserAccessAnswer(false, Some("Invalid access token.")))
           }
@@ -69,19 +71,20 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
   }
 
 
-  private def handleDataSourceAccess(dataSourceName: String, mode: AccessMode.Value, userBox: Box[User])(implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
+  private def handleDataSourceAccess(dataSourceId: DataSourceId, mode: AccessMode.Value, userBox: Box[User])(implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
     //Note: reading access is ensured in findOneBySourceName, depending on the implicit DBAccessContext
 
-    def tryRead: Fox[UserAccessAnswer] = {
-      dataSetDAO.findOneByName(dataSourceName).futureBox map {
+    def tryRead: Fox[UserAccessAnswer] =
+      for {
+        dataSourceBox <- dataSetDAO.findOneByNameAndOrganizationName(dataSourceId.name, dataSourceId.team).futureBox
+      } yield dataSourceBox match {
         case Full(_) => UserAccessAnswer(true)
         case _ => UserAccessAnswer(false, Some("No read access on dataset"))
       }
-    }
 
     def tryWrite: Fox[UserAccessAnswer] = {
       for {
-        dataset <- dataSetDAO.findOneByName(dataSourceName) ?~> "datasource.notFound"
+        dataset <- dataSetDAO.findOneByNameAndOrganizationName(dataSourceId.name, dataSourceId.team) ?~> "datasource.notFound"
         user <- userBox.toFox
         isAllowed <- userService.isTeamManagerOrAdminOfOrg(user, dataset._organization)
       } yield {

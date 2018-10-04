@@ -1,12 +1,11 @@
 #!/usr/bin/env node
-/* eslint-disable import/no-extraneous-dependencies */
+/* eslint-disable import/no-extraneous-dependencies, prefer-template, prefer-arrow-callback */
 const program = require("commander");
 const randomstring = require("randomstring");
 const execSync = require("child_process").execSync;
 const path = require("path");
 const fs = require("fs");
 const glob = require("glob");
-const tmp = require("tmp");
 const rimraf = require("rimraf");
 const replace = require("replace-in-file");
 
@@ -16,18 +15,23 @@ const POSTGRES_URL =
     : "jdbc:postgresql://localhost/webknossos";
 const scriptdir = __dirname;
 const scriptName = __filename;
+
 let p1;
 let p2;
 let dir1;
 let dir2;
+let exitCode;
 
 function dump(parameter) {
   if (parameter === "DB") {
     return dumpToFolder(POSTGRES_URL);
   } else {
-    const { dbName, dbHost, postgresUrl } = initTmpDB();
-    console.log(`Creating DB ${dbName}`);
-    execSync(`psql -U postgres -h ${dbHost} -c "CREATE DATABASE ${dbName};"`, {
+    const tmpdb = initTmpDB();
+    const dbName = tmpdb[0];
+    const dbHost = tmpdb[1];
+    const postgresUrl = tmpdb[2];
+    console.log("Creating DB " + dbName);
+    execSync("psql -U postgres -h " + dbHost + " -c 'CREATE DATABASE " + dbName + ";'", {
       env: { PGPASSWORD: "postgres" },
     });
     try {
@@ -37,8 +41,8 @@ function dump(parameter) {
       console.log(err);
       process.exit(1);
     } finally {
-      console.log(`CLEANUP: DROP DATABASE ${dbName}`);
-      execSync(`psql -U postgres -h ${dbHost} -c "DROP DATABASE ${dbName};"`, {
+      console.log("CLEANUP: DROP DATABASE " + dbName);
+      execSync("psql -U postgres -h " + dbHost + " -c 'DROP DATABASE " + dbName + ";'", {
         env: { PGPASSWORD: "postgres" },
       });
     }
@@ -49,43 +53,42 @@ function dump(parameter) {
 function initTmpDB() {
   const tempDbName = generateRandomName();
   const postgresDirname = path.dirname(POSTGRES_URL);
-  const postgresUrl = `${postgresDirname}/${tempDbName}`;
-  const dbName = execSync(`${scriptdir}/db_name.sh`, { env: { POSTGRES_URL: postgresUrl } })
+  const postgresUrl = postgresDirname + "/" + tempDbName;
+  const dbName = execSync(scriptdir + "/db_name.sh", { env: { POSTGRES_URL: postgresUrl } })
     .toString()
     .trim(); // "trim" to remove the line break
   if (dbName !== tempDbName) {
     console.log("Wrong dbName");
     process.exit(1);
   }
-  const dbHost = execSync(`${scriptdir}/db_host.sh`, { env: { POSTGRES_URL: postgresUrl } })
+  const dbHost = execSync(scriptdir + "/db_host.sh", { env: { POSTGRES_URL: postgresUrl } })
     .toString()
     .trim();
-  return {
-    dbName,
-    dbHost,
-    postgresUrl,
-  };
+  return [dbName, dbHost, postgresUrl];
 }
 
 function loadDataIntoDB(parameter, dbHost, dbName) {
   const fileNames = glob.sync(parameter);
-  const concatenateFileNames = fileNames.map(name => `-f ${name}`).join(" ");
+  const concatenateFileNames = fileNames.map(name => "-f " + name).join(" ");
+  // prettier-ignore
   execSync(
-    `psql -U postgres -h ${dbHost} --dbname="${dbName}" -v ON_ERROR_STOP=ON -q ${concatenateFileNames}`,
-    { env: { PGPASSWORD: "postgres" } },
+    "psql -U postgres -h " + dbHost + " --dbname='" + dbName + "' -v ON_ERROR_STOP=ON -q " + concatenateFileNames,
+    { env: { PGPASSWORD: "postgres" } }
   );
 }
 
 function dumpToFolder(postgresUrl) {
-  const tmpDir = tmp.dirSync();
+  const tmpDir = execSync("mktemp -d")
+    .toString()
+    .trim();
   try {
-    execSync(`${scriptdir}/dump_schema.sh ${tmpDir.name}`, { env: { POSTGRES_URL: postgresUrl } });
+    execSync(scriptdir + "/dump_schema.sh " + tmpDir, { env: { POSTGRES_URL: postgresUrl } });
   } catch (err) {
-    console.log(`CLEANUP: remove ${tmpDir.name}`);
-    rimraf.sync(tmpDir.name);
+    console.log("CLEANUP: remove " + tmpDir);
+    rimraf.sync(tmpDir);
     process.exit(1);
   }
-  return tmpDir.name;
+  return tmpDir;
 }
 
 function generateRandomName() {
@@ -94,7 +97,7 @@ function generateRandomName() {
     charset: "alphanumeric",
     capitalization: "lowercase",
   });
-  return `wk_tmp_${random}`;
+  return "wk_tmp_" + random;
 }
 
 function sortFile(fileName) {
@@ -104,7 +107,7 @@ function sortFile(fileName) {
     lines = lines.sort();
     fs.writeFileSync(fileName, lines.join("\n"));
   } catch (err) {
-    console.log(`FAILED to sort file ${fileName}`);
+    console.log("FAILED to sort file " + fileName);
     process.exit(1);
   }
 }
@@ -112,7 +115,7 @@ function sortFile(fileName) {
 program
   .version("0.1.0", "-v, --version")
   .arguments("<parameter1> <parameter2>")
-  .action((parameter1, parameter2) => {
+  .action(function(parameter1, parameter2) {
     p1 = parameter1;
     p2 = parameter2;
   });
@@ -131,31 +134,36 @@ try {
   dir1 = dump(p1);
   dir2 = dump(p2);
   // sort and remove commas
-  glob.sync(`${dir1}/**`, { nodir: true }).forEach(fileName => {
-    replace.sync({ files: fileName, from: /,$/gm, to: "" });
+  glob.sync(dir1 + "/**", { nodir: true }).forEach(function(fileName) {
+    replace({ files: fileName, replace: /,$/gm, with: "" });
     sortFile(fileName);
   });
-  glob.sync(`${dir2}/**`, { nodir: true }).forEach(fileName => {
-    replace.sync({ files: fileName, from: /,$/gm, to: "" });
+  glob.sync(dir2 + "/**", { nodir: true }).forEach(function(fileName) {
+    replace({ files: fileName, replace: /,$/gm, with: "" });
     sortFile(fileName);
   });
 
   // diff
   try {
-    execSync(`diff -r ${dir1} ${dir2}`, { stdio: [0, 1, 2] }); // we pass the std-output to the child process to see the diff
+    execSync("diff -r " + dir1 + " " + dir2);
+    exitCode = 0;
     console.log("[SUCCESS] Schemas do match");
   } catch (err) {
+    exitCode = 1;
+    console.log(err.stdout.toString("utf8"));
     console.log("[FAILED] Schemas do not match");
   }
 } catch (err) {
   console.log(err);
+  exitCode = 2;
 } finally {
   if (typeof dir1 !== "undefined" && dir1) {
-    console.log(`CLEANUP: remove ${dir1}`);
+    console.log("CLEANUP: remove " + dir1);
     rimraf.sync(dir1);
   }
   if (typeof dir2 !== "undefined" && dir2) {
-    console.log(`CLEANUP: remove ${dir2}`);
+    console.log("CLEANUP: remove " + dir2);
     rimraf.sync(dir2);
   }
+  process.exit(exitCode);
 }

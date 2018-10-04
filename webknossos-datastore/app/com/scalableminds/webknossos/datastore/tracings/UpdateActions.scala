@@ -12,7 +12,9 @@ trait UpdateAction[T <: GeneratedMessage with Message[T]] {
 
   def applyOn(tracing: T): T = tracing
 
-  def addTimestamp(timestamp: Long): UpdateAction[T] = { this }
+  def addTimestamp(timestamp: Long): UpdateAction[T] =  this
+
+  def transformToCompact: UpdateAction[T] = this
 }
 
 object UpdateAction {

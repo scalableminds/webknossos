@@ -44,29 +44,42 @@ class VolumeTracingService @Inject()(
   override def currentVersion(tracingId: String): Fox[Long] = tracingDataStore.volumes.getVersion(tracingId).getOrElse(0L)
 
   def handleUpdateGroup(tracingId: String, updateGroup: UpdateActionGroup[VolumeTracing]): Fox[_] = {
-    updateGroup.actions.foldLeft(find(tracingId)) { (tracing, action) =>
-      tracing.futureBox.flatMap {
-        case Full(t) =>
-          action match {
-            case a: UpdateBucketVolumeAction =>
-              val resolution = math.pow(2, a.zoomStep).toInt
-              val bucket = new BucketPosition(a.position.x, a.position.y, a.position.z, Point3D(resolution, resolution, resolution))
-              saveBucket(volumeTracingLayer(tracingId, t), bucket, a.data, updateGroup.version).map(_ => t)
-            case a: UpdateTracingVolumeAction =>
-              Fox.successful(t.copy(activeSegmentId = Some(a.activeSegmentId), editPosition = a.editPosition, editRotation = a.editRotation, largestSegmentId = a.largestSegmentId, zoomLevel = a.zoomLevel, userBoundingBox = a.userBoundingBox))
-            case a: RevertToVersionVolumeAction =>
-              val sourceTracing = find(tracingId, Some(a.sourceVersion))
-              val bucketStream = volumeTracingLayer(tracingId, t).bucketProvider.bucketStream(1)
-              sourceTracing
-            case _ =>
-              Fox.failure("Unknown action.")
-          }
-        case Empty =>
-          Fox.empty
-        case f: Failure =>
-          Fox.failure(f.msg)
-      }
-    }.map(t => save(t.copy(version = updateGroup.version, modifiedTimestamp = Some(updateGroup.timestamp)), Some(tracingId), updateGroup.version))
+    for {
+      _ <- updateGroup.actions.foldLeft(find(tracingId)) { (tracing, action) =>
+        tracing.futureBox.flatMap {
+          case Full(t) =>
+            action match {
+              case a: UpdateBucketVolumeAction =>
+                val resolution = math.pow(2, a.zoomStep).toInt
+                val bucket = new BucketPosition(a.position.x, a.position.y, a.position.z, Point3D(resolution, resolution, resolution))
+                saveBucket(volumeTracingLayer(tracingId, t), bucket, a.data, updateGroup.version).map(_ => t)
+              case a: UpdateTracingVolumeAction =>
+                Fox.successful(t.copy(activeSegmentId = Some(a.activeSegmentId), editPosition = a.editPosition, editRotation = a.editRotation, largestSegmentId = a.largestSegmentId, zoomLevel = a.zoomLevel, userBoundingBox = a.userBoundingBox))
+              case a: RevertToVersionVolumeAction => revertToVolumeVersion(tracingId, a.sourceVersion, updateGroup.version, t)
+              case _ =>
+                Fox.failure("Unknown action.")
+            }
+          case Empty =>
+            Fox.empty
+          case f: Failure =>
+            Fox.failure(f.msg)
+        }
+      }.map(t => save(t.copy(version = updateGroup.version, modifiedTimestamp = Some(updateGroup.timestamp)), Some(tracingId), updateGroup.version))
+      _ <- tracingDataStore.volumeUpdates.put(tracingId, updateGroup.version, updateGroup.actions.map(_.addTimestamp(updateGroup.timestamp)).map(_.transformToCompact))
+    } yield Fox.successful()
+  }
+
+  private def revertToVolumeVersion(tracingId: String, sourceVersion: Long, newVersion: Long, tracing: VolumeTracing) = {
+    val sourceTracing = find(tracingId, Some(sourceVersion))
+    val dataLayer = volumeTracingLayer(tracingId, tracing)
+    val bucketStream = dataLayer.volumeBucketProvider.bucketStreamWithVersion(1)
+    bucketStream.flatMap(tuple => if(tuple._3 > sourceVersion) Some(tuple._1) else None).map { bucketPosition =>
+      for {
+        bucket <- loadBucket(dataLayer, bucketPosition)
+        _ <- saveBucket(dataLayer, bucketPosition, bucket, newVersion)
+      } yield Fox.successful()
+    }
+    sourceTracing
   }
 
   def initializeWithData(tracingId: String, tracing: VolumeTracing, dataSource: DataSource, initialData: File): Box[_] = {
@@ -151,14 +164,15 @@ class VolumeTracingService @Inject()(
   }
 
   def updateActionLog(tracingId: String) = {
-    def versionedTupleToJson(tuple: (Long, VolumeTracing)): JsObject = {
+    def versionedTupleToJson(tuple: (Long, List[CompactVolumeUpdateAction])): JsObject = {
       Json.obj(
         "version" -> tuple._1,
-        "value" -> Json.toJson(tuple._2.modifiedTimestamp)
+        "value" -> Json.toJson(tuple._2)
       )
     }
+
     for {
-      volumeTracings <- tracingDataStore.volumes.getMultipleVersionsAsVersionValueTuple(tracingId)(fromProto[VolumeTracing]) ?~> tracingId
+      volumeTracings <- tracingDataStore.volumeUpdates.getMultipleVersionsAsVersionValueTuple(tracingId)(fromJson[List[CompactVolumeUpdateAction]])
       updateActionGroupsJs = volumeTracings.map(versionedTupleToJson)
     } yield Json.toJson(updateActionGroupsJs)
   }

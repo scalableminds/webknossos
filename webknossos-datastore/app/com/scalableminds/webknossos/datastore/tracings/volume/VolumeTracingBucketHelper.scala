@@ -4,7 +4,7 @@ import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
-import com.scalableminds.webknossos.datastore.tracings.{FossilDBClient, KeyValuePair, KeyValueStoreImplicits}
+import com.scalableminds.webknossos.datastore.tracings.{FossilDBClient, KeyValuePair, KeyValueStoreImplicits, VersionedKeyValuePair}
 import com.scalableminds.webknossos.wrap.WKWMortonHelper
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -22,9 +22,9 @@ trait VolumeTracingBucketHelper extends WKWMortonHelper with KeyValueStoreImplic
     s"$dataLayerName/${bucket.resolution.maxDim}/$mortonIndex-[${bucket.x},${bucket.y},${bucket.z}]"
   }
 
-  def loadBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition): Fox[Array[Byte]] = {
+  def loadBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition, version: Option[Long] = None): Fox[Array[Byte]] = {
     val key = buildBucketKey(dataLayer.name, bucket)
-    volumeDataStore.get(key, mayBeEmpty = Some(true)).futureBox.map(_.toStream.headOption.map(_.value))
+    volumeDataStore.get(key, version, mayBeEmpty = Some(true)).futureBox.map(_.toStream.headOption.map(_.value))
   }
 
   def saveBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition, data: Array[Byte], version: Long): Fox[_] = {
@@ -36,15 +36,20 @@ trait VolumeTracingBucketHelper extends WKWMortonHelper with KeyValueStoreImplic
     val key = buildKeyPrefix(dataLayer.name, resolution)
     new BucketIterator(key, volumeDataStore, version)
   }
+
+  def bucketStreamWithVersion(dataLayer: VolumeTracingLayer, resolution: Int, version: Option[Long]): Iterator[(BucketPosition, Array[Byte], Long)] = {
+    val key = buildKeyPrefix(dataLayer.name, resolution)
+    new VersionedBucketIterator(key, volumeDataStore, version)
+  }
 }
 
 
 
-class BucketIterator(prefix: String, volumeDataStore: FossilDBClient, version: Option[Long] = None) extends Iterator[(BucketPosition, Array[Byte])] with WKWMortonHelper with KeyValueStoreImplicits with FoxImplicits  {
+class VersionedBucketIterator(prefix: String, volumeDataStore: FossilDBClient, version: Option[Long] = None) extends Iterator[(BucketPosition, Array[Byte], Long)] with WKWMortonHelper with KeyValueStoreImplicits with FoxImplicits  {
   val batchSize = 64
 
   var currentStartKey = prefix
-  var currentBatchIterator: Iterator[KeyValuePair[Array[Byte]]] = fetchNext
+  var currentBatchIterator: Iterator[VersionedKeyValuePair[Array[Byte]]] = fetchNext
 
   def fetchNext =
     volumeDataStore.getMultipleKeys(currentStartKey, Some(prefix), version, Some(batchSize)).toIterator
@@ -60,10 +65,10 @@ class BucketIterator(prefix: String, volumeDataStore: FossilDBClient, version: O
     else fetchNextAndSave.hasNext
   }
 
-  override def next: (BucketPosition, Array[Byte]) = {
+  override def next: (BucketPosition, Array[Byte], Long) = {
     val nextRes = currentBatchIterator.next
     currentStartKey = nextRes.key
-    parseBucketKey(nextRes.key).map(key => (key._2 , nextRes.value)).get
+    parseBucketKey(nextRes.key).map(key => (key._2 , nextRes.value, nextRes.version)).get
   }
 
   private def parseBucketKey(key: String): Option[(String, BucketPosition)] = {
@@ -84,4 +89,15 @@ class BucketIterator(prefix: String, volumeDataStore: FossilDBClient, version: O
     }
   }
 
+}
+
+class BucketIterator(prefix: String, volumeDataStore: FossilDBClient, version: Option[Long] = None) extends Iterator[(BucketPosition, Array[Byte])]{
+  val versionedBucketIterator = new VersionedBucketIterator(prefix, volumeDataStore, version)
+
+  override def next: (BucketPosition, Array[Byte]) = {
+    val tuple = versionedBucketIterator.next
+    (tuple._1, tuple._2)
+  }
+
+  override def hasNext: Boolean = versionedBucketIterator.hasNext
 }

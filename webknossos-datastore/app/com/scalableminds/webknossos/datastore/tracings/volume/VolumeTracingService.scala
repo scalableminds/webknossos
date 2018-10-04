@@ -63,7 +63,7 @@ class VolumeTracingService @Inject()(
           case f: Failure =>
             Fox.failure(f.msg)
         }
-      }.map(t => save(t.copy(version = updateGroup.version, modifiedTimestamp = Some(updateGroup.timestamp)), Some(tracingId), updateGroup.version))
+      }.map(t => save(t.copy(version = updateGroup.version), Some(tracingId), updateGroup.version))
       _ <- tracingDataStore.volumeUpdates.put(tracingId, updateGroup.version, updateGroup.actions.map(_.addTimestamp(updateGroup.timestamp)).map(_.transformToCompact))
     } yield Fox.successful()
   }

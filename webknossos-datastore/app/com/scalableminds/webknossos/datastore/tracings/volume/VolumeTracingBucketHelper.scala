@@ -4,7 +4,7 @@ import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
-import com.scalableminds.webknossos.datastore.tracings.{FossilDBClient, KeyValuePair, KeyValueStoreImplicits, VersionedKeyValuePair}
+import com.scalableminds.webknossos.datastore.tracings.{FossilDBClient, KeyValueStoreImplicits, VersionedKeyValuePair}
 import com.scalableminds.webknossos.wrap.WKWMortonHelper
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -24,7 +24,10 @@ trait VolumeTracingBucketHelper extends WKWMortonHelper with KeyValueStoreImplic
 
   def loadBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition, version: Option[Long] = None): Fox[Array[Byte]] = {
     val key = buildBucketKey(dataLayer.name, bucket)
-    volumeDataStore.get(key, version, mayBeEmpty = Some(true)).futureBox.map(_.toStream.headOption.map(_.value))
+    volumeDataStore.get(key, version, mayBeEmpty = Some(true)).futureBox.map(_.toOption.map { versionedVolumeBucket =>
+      if(versionedVolumeBucket.value sameElements Array[Byte](0)) Fox.empty
+      else Fox.successful(versionedVolumeBucket.value)
+    }).flatten
   }
 
   def saveBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition, data: Array[Byte], version: Long): Fox[_] = {

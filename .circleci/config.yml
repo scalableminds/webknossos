@@ -16,7 +16,7 @@ jobs:
             DEV_CACHE=$CIRCLE_BRANCH docker-compose build base
       - run:
           name: Prepare dependency folders
-          command: mkdir -p project/target target ~/.m2 ~/.ivy2 ~/.sbt ~/.yarn-cache
+          command: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier ~/.cache/yarn
       - restore_cache:
           name: Restore target cache
           keys:
@@ -43,11 +43,6 @@ jobs:
           keys:
             - webpack-uglifyjs-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
             - webpack-uglifyjs-cache-{{ checksum ".circleci/cache_version" }}-master
-      - restore_cache:
-          name: Restore webpack-hard-source cache
-          keys:
-            - webpack-hard-source-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ checksum "yarn.lock" }}
-            - webpack-hard-source-cache-{{ checksum ".circleci/cache_version" }}-master-{{ checksum "yarn.lock" }}
       - run:
           name: Assert schema.sql and evolutions are equal
           command: |
@@ -80,27 +75,20 @@ jobs:
           name: Save sbt cache
           key: sbt-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "project/Dependencies.scala" }}
           paths:
-            - "~/.m2"
             - "~/.ivy2"
-            - "~/.sbt"
+            - "~/.cache/coursier"
 
       - save_cache:
           name: Save yarn cache
           key: yarn-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "yarn.lock" }}
           paths:
-            - "~/.yarn-cache"
+            - "~/.cache/yarn"
 
       - save_cache:
           name: Save webpack-uglifyjs cache
           key: webpack-uglifyjs-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ .Revision }}
           paths:
             - "node_modules/.cache/uglifyjs-webpack-plugin"
-
-      - save_cache:
-          name: Save webpack-hard-source cache
-          key: webpack-hard-source-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ checksum "yarn.lock" }}-{{ .Revision }}
-          paths:
-            - "node_modules/.cache/hard-source"
 
       - run:
           name: Build webknossos docker image

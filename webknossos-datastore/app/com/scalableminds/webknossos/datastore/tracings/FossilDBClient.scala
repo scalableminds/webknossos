@@ -134,4 +134,9 @@ class FossilDBClient(collection: String, config: DataStoreConfig) extends FoxImp
     }
   }
 
+  def shutdown() = {
+    channel.shutdownNow()
+    channel.awaitTermination(10, java.util.concurrent.TimeUnit.SECONDS)
+  }
+
 }

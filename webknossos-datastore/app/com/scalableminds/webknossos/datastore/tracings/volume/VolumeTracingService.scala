@@ -63,7 +63,7 @@ class VolumeTracingService @Inject()(
           case f: Failure =>
             Fox.failure(f.msg)
         }
-      }.map(t => save(t.copy(version = updateGroup.version, modifiedTimestamp = Some(updateGroup.timestamp)), Some(tracingId), updateGroup.version))
+      }.map(t => save(t.copy(version = updateGroup.version), Some(tracingId), updateGroup.version))
       _ <- tracingDataStore.volumeUpdates.put(tracingId, updateGroup.version, updateGroup.actions.map(_.addTimestamp(updateGroup.timestamp)).map(_.transformToCompact))
     } yield Fox.successful()
   }
@@ -72,11 +72,10 @@ class VolumeTracingService @Inject()(
     val sourceTracing = find(tracingId, Some(sourceVersion))
     val dataLayer = volumeTracingLayer(tracingId, tracing)
     val bucketStream = dataLayer.volumeBucketProvider.bucketStreamWithVersion(1)
-    bucketStream.flatMap(tuple => if(tuple._3 > sourceVersion) Some(tuple._1) else None).map { bucketPosition =>
-      for {
-        bucket <- loadBucket(dataLayer, bucketPosition)
-        _ <- saveBucket(dataLayer, bucketPosition, bucket, newVersion)
-      } yield Fox.successful()
+    bucketStream.foreach {
+      case (bucketPosition, _, version) =>
+        if(version > sourceVersion)
+          loadBucket(dataLayer, bucketPosition, Some(sourceVersion)).map(saveBucket(dataLayer, bucketPosition, _, newVersion))
     }
     sourceTracing
   }

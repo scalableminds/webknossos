@@ -41,7 +41,7 @@ object UpdateTracingVolumeAction {
 case class RevertToVersionVolumeAction(sourceVersion: Long, actionTimestamp: Option[Long] = None) extends VolumeUpdateAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
 
-  override def transformToCompact = CompactVolumeUpdateAction("updateBucket", actionTimestamp, Json.obj("sourceVersion" -> sourceVersion))
+  override def transformToCompact = CompactVolumeUpdateAction("revertToVersion", actionTimestamp, Json.obj("sourceVersion" -> sourceVersion))
 }
 
 object RevertToVersionVolumeAction {

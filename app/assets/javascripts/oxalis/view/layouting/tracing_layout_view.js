@@ -106,10 +106,8 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     storeLayoutConfig(layoutConfig, layoutKey, layoutName);
   };
 
-  getLayoutNamesFromCurrentView = (layoutKey): Array<string> => {
-    const storedLayouts = this.props.storedLayouts;
-    return storedLayouts[layoutKey]
-      ? Object.keys(storedLayouts[layoutKey]).filter(layoutName => layoutName !== "lastActive")
+  getLayoutNamesFromCurrentView = (layoutKey): Array<string> => this.props.storedLayouts[layoutKey]
+      ? Object.keys(this.props.storedLayouts[layoutKey])
       : [];
   };
 

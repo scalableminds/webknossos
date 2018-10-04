@@ -75,7 +75,10 @@ class VolumeTracingService @Inject()(
     bucketStream.foreach {
       case (bucketPosition, _, version) =>
         if(version > sourceVersion)
-          loadBucket(dataLayer, bucketPosition, Some(sourceVersion)).map(saveBucket(dataLayer, bucketPosition, _, newVersion))
+          loadBucket(dataLayer, bucketPosition, Some(sourceVersion)).futureBox.map {
+            case Full(bucket) => saveBucket(dataLayer, bucketPosition, bucket, newVersion)
+            case Empty => saveBucket(dataLayer, bucketPosition, Array[Byte](0), newVersion)
+          }
     }
     sourceTracing
   }

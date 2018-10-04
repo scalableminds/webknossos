@@ -72,17 +72,13 @@ class VolumeTracingService @Inject()(
     val sourceTracing = find(tracingId, Some(sourceVersion))
     val dataLayer = volumeTracingLayer(tracingId, tracing)
     val bucketStream = dataLayer.volumeBucketProvider.bucketStreamWithVersion(1)
-    bucketStream.map(t => println(t._1.toString))
-    /*bucketStream.flatMap(filterBuckets(_, sourceVersion)).map { bucketPosition =>
-      for {
-        bucket <- loadBucket(dataLayer, bucketPosition)
-        _ <- saveBucket(dataLayer, bucketPosition, bucket, newVersion)
-      } yield Fox.successful()
-    }*/
+    bucketStream.foreach {
+      case (bucketPosition, _, version) =>
+        if(version > sourceVersion)
+          loadBucket(dataLayer, bucketPosition, Some(sourceVersion)).map(saveBucket(dataLayer, bucketPosition, _, newVersion))
+    }
     sourceTracing
   }
-
-  private def filterBuckets(tuple: (BucketPosition, Array[Byte], Long), version: Long) = if(tuple._3 > version) Some(tuple._1) else None
 
   def initializeWithData(tracingId: String, tracing: VolumeTracing, dataSource: DataSource, initialData: File): Box[_] = {
     if (tracing.version != 0L) {

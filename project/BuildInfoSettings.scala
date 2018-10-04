@@ -38,7 +38,7 @@ object BuildInfoSettings {
   }.toString()
 
   def version() = {
-    if(ciTag != "") ciTag else gitTag+(if(ciBuild != "") ciBuild else "-dev")
+    if (ciTag != "") ciTag else gitTag + "-" + (if (ciBuild != "") ciBuild else "dev")
   }
 
   val ciBuild = if (System.getenv().containsKey("CIRCLE_BUILD_NUM")) System.getenv().get("CIRCLE_BUILD_NUM") else "";

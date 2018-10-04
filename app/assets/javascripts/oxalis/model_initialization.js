@@ -1,7 +1,7 @@
 // @flow
 import _ from "lodash";
 import Store from "oxalis/store";
-import type { TracingTypeTracing } from "oxalis/store";
+import type { TracingTypeTracing, TraceOrViewCommand } from "oxalis/store";
 import type { UrlManagerState } from "oxalis/controller/url_manager";
 import {
   setDatasetAction,
@@ -27,7 +27,6 @@ import * as Utils from "libs/utils";
 import DataLayer from "oxalis/model/data_layer";
 import ConnectionInfo from "oxalis/model/data_connection_info";
 import { ControlModeEnum } from "oxalis/constants";
-import type { ControlMode } from "oxalis/constants";
 import Toast from "libs/toast";
 import ErrorHandling from "libs/error_handling";
 import UrlManager from "oxalis/controller/url_manager";
@@ -42,6 +41,7 @@ import {
 import messages from "messages";
 import type {
   APIAnnotation,
+  APIDatasetId,
   APIDataset,
   APIDataLayer,
   HybridServerTracing,
@@ -69,8 +69,7 @@ type DataLayerCollection = {
 
 export async function initialize(
   tracingType: TracingTypeTracing,
-  annotationIdOrDatasetName: string,
-  controlMode: ControlMode,
+  initialCommandType: TraceOrViewCommand,
   initialFetch: boolean,
   version?: number,
 ): Promise<?{
@@ -79,14 +78,14 @@ export async function initialize(
   isMappingSupported: boolean,
   maximumDataTextureCountForLayer: number,
 }> {
-  Store.dispatch(setControlModeAction(controlMode));
+  Store.dispatch(setControlModeAction(initialCommandType.type));
 
   let annotation: APIAnnotation;
-  let datasetName;
-  if (controlMode === ControlModeEnum.TRACE) {
-    const annotationId = annotationIdOrDatasetName;
+  let datasetId: APIDatasetId;
+  if (initialCommandType.type === ControlModeEnum.TRACE) {
+    const { annotationId } = initialCommandType;
     annotation = await getAnnotationInformation(annotationId, tracingType);
-    datasetName = annotation.dataSetName;
+    datasetId = { name: annotation.dataSetName, owningOrganization: annotation.organization };
 
     if (!annotation.restrictions.allowAccess) {
       Toast.error(messages["tracing.no_access"]);
@@ -99,14 +98,13 @@ export async function initialize(
 
     Store.dispatch(setTaskAction(annotation.task));
   } else {
-    // In View mode, the annotationId is actually the datasetName
-    // as there is no annotation and no tracing!
-    datasetName = annotationIdOrDatasetName;
+    const { name, owningOrganization } = initialCommandType;
+    datasetId = { name, owningOrganization };
   }
 
   const [dataset, initialUserSettings, initialDatasetSettings, tracing] = await fetchParallel(
     annotation,
-    datasetName,
+    datasetId,
     version,
   );
 
@@ -133,13 +131,13 @@ export async function initialize(
 
 async function fetchParallel(
   annotation: ?APIAnnotation,
-  datasetName: string,
+  datasetId: APIDatasetId,
   version?: number,
 ): Promise<[APIDataset, *, *, ?HybridServerTracing]> {
   return Promise.all([
-    getDataset(datasetName, getSharingToken()),
+    getDataset(datasetId, getSharingToken()),
     getUserConfiguration(),
-    getDatasetConfiguration(datasetName),
+    getDatasetConfiguration(datasetId),
     // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
     // (Also see https://github.com/facebook/flow/issues/4936)
     // $FlowFixMe: Type inference with Promise.all seems to be a bit broken in flow

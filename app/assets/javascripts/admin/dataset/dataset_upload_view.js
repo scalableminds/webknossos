@@ -62,7 +62,7 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
     evt.preventDefault();
 
     this.props.form.validateFields(async (err, formValues) => {
-      const activeUser = this.props.activeUser;
+      const { activeUser } = this.props;
 
       // Workaround: Antd replaces file objects in the formValues with a wrapper file
       // The original file object is contained in the originFileObj property
@@ -127,7 +127,12 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
                         { pattern: /[0-9a-zA-Z_-]+$/ },
                         {
                           validator: async (_rule, value, callback) => {
-                            const reasons = await isDatasetNameValid(value);
+                            if (!this.props.activeUser)
+                              throw new Error("Can't do operation if no user is logged in.");
+                            const reasons = await isDatasetNameValid({
+                              name: value,
+                              owningOrganization: this.props.activeUser.organization,
+                            });
                             if (reasons != null) {
                               callback(reasons);
                             } else {

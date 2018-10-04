@@ -44,6 +44,10 @@ const descriptionFns = {
     description: `Updated the tree with id ${action.value.id}.`,
     type: "edit",
   }),
+  updateBucket: (): Description => ({
+    description: "Updated the segmentation.",
+    type: "picture",
+  }),
 };
 
 function getDescriptionForSpecificBatch(
@@ -114,6 +118,11 @@ function getDescriptionForBatch(actions: Array<ServerUpdateAction>): Description
   const updateTreeUAs = groupedUpdateActions.updateTree;
   if (updateTreeUAs != null) {
     return getDescriptionForSpecificBatch(updateTreeUAs, "updateTree");
+  }
+
+  const updateBucketUAs = groupedUpdateActions.updateBucket;
+  if (updateBucketUAs != null) {
+    return getDescriptionForSpecificBatch(updateBucketUAs, "updateBucket");
   }
 
   // Catch-all for other update actions, currently updateNode and updateTracing.

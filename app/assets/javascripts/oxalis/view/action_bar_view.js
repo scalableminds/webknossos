@@ -3,7 +3,6 @@ import * as React from "react";
 import { Icon, Alert, Dropdown, Menu } from "antd";
 import { connect } from "react-redux";
 import Store from "oxalis/store";
-import Toast from "libs/toast";
 import {
   layoutEmitter,
   deleteLayout,
@@ -20,7 +19,6 @@ import Constants, { ControlModeEnum } from "oxalis/constants";
 import type { Mode, ControlMode } from "oxalis/constants";
 import type { OxalisState, Tracing } from "oxalis/store";
 import ButtonComponent from "oxalis/view/components/button_component";
-import { lastUsedLayout } from "oxalis/view/layouting/default_layout_configs";
 import type { LayoutKeys } from "oxalis/view/layouting/default_layout_configs";
 
 const VersionRestoreWarning = (
@@ -66,9 +64,6 @@ class ActionBarView extends React.PureComponent<Props, State> {
 
   addNewLayout = (layoutName: string) => {
     this.setState({ isNewLayoutModalVisible: false });
-    if (layoutName === lastUsedLayout) {
-      Toast.info(`The name "${lastUsedLayout}" is reserved.`);
-    }
     const configForLayout = getLayoutConfig(this.props.layoutKey, this.props.activeLayout);
     if (addNewLayout(this.props.layoutKey, layoutName, configForLayout)) {
       this.props.setCurrentLayout(layoutName);

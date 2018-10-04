@@ -106,7 +106,6 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
   }
 
   onStateChange() {
-    console.log("changing gl state");
     const { onLayoutChange } = this.props;
     if (onLayoutChange != null) {
       onLayoutChange(this.gl.toConfig(), this.props.activeLayoutName);
@@ -147,7 +146,6 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
         // However, this should be mitigated by currentLayoutVersion in default_layout_configs.js
         Toast.error("Layout couldn't be restored. The default layout is used instead.");
         layoutEmitter.emit("resetLayout");
-        console.error(exception);
         return;
       }
       // Rerender since the portals just became available

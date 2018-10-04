@@ -7,7 +7,6 @@ import Toast from "libs/toast";
 import defaultLayouts, {
   currentLayoutVersion,
   defaultLayoutSchema,
-  lastUsedLayout,
 } from "./default_layout_configs";
 import type { LayoutKeys } from "./default_layout_configs";
 
@@ -37,23 +36,25 @@ function readStoredLayoutConfigs() {
       if (version !== 5) {
         return defaultLayoutSchema;
       }
-      // migrate to newst schema
+      // migrate to newset schema
       const withMulipleLayoutsSchema = {
         OrthoLayoutView: {
           "Custom Layout": layouts.OrthoLayoutView || defaultLayouts.OrthoLayoutView,
-          lastActive: "Custom Layout",
         },
         VolumeTracingView: {
           "Custom Layout": layouts.VolumeTracingView || defaultLayouts.VolumeTracingView,
-          lastActive: "Custom Layout",
         },
         ArbitraryLayout: {
           "Custom Layout": layouts.ArbitraryLayout || defaultLayouts.ArbitraryLayout,
-          lastActive: "Custom Layout",
         },
         OrthoLayout: {
           "Custom Layout": layouts.OrthoLayout || defaultLayouts.OrthoLayout,
-          lastActive: "Custom Layout",
+        },
+        LastActiveLayouts: {
+          OrthoLayoutView: "Custom Layout",
+          VolumeTracingView: "Custom Layout",
+          ArbitraryLayout: "Custom Layout",
+          OrthoLayout: "Custom Layout",
         },
       };
       return withMulipleLayoutsSchema;
@@ -141,7 +142,11 @@ export function addNewLayout(
   }
   if (newLayouts[layoutKey]) {
     newLayouts[layoutKey][newLayoutName] = configForLayout;
-    newLayouts[layoutKey][lastUsedLayout] = newLayoutName;
+    // might happen during migration
+    if (!newLayouts.LastActiveLayouts) {
+      newLayouts.LastActiveLayouts = {};
+    }
+    newLayouts.LastActiveLayouts[layoutKey] = newLayoutName;
     Store.dispatch(setStoredLayoutsAction(newLayouts));
     persistLayoutConfigsDebounced();
     return true;
@@ -153,8 +158,14 @@ export function addNewLayout(
 export function setActiveLayout(layoutKey: LayoutKeys, activeLayout: string) {
   const newLayouts = getDeepCopyOfStoredLayouts();
   if (newLayouts[layoutKey] && newLayouts[layoutKey][activeLayout]) {
-    newLayouts[layoutKey][lastUsedLayout] = activeLayout;
+    // might happen during migration
+    if (!newLayouts.LastActiveLayouts) {
+      newLayouts.LastActiveLayouts = {};
+    }
+    newLayouts.LastActiveLayouts[layoutKey] = activeLayout;
     Store.dispatch(setStoredLayoutsAction(newLayouts));
     persistLayoutConfigsDebounced();
+  } else {
+    Toast.error("The selected layout was not found. Please add a layout for the selected name.");
   }
 }

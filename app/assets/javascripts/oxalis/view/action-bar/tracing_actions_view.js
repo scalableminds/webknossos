@@ -257,7 +257,7 @@ class TracingActionsView extends PureComponent<StateProps, State> {
       );
     }
 
-    if (isSkeletonMode && restrictions.allowUpdate) {
+    if (restrictions.allowUpdate) {
       elements.push(
         <Menu.Item key="restore-button" onClick={this.handleRestore}>
           <Icon type="bars" theme="outlined" />

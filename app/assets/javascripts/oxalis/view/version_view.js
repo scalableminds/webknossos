@@ -67,18 +67,20 @@ class VersionView extends React.Component<Props, State> {
             />
           </div>
         </div>
-        <Tabs onChange={this.onChangeTab} activeKey={this.state.activeTracingType}>
-          {this.props.tracing.skeleton != null ? (
-            <TabPane tab="Skeleton" key="skeleton">
-              <VersionList tracingType="skeleton" tracing={this.props.tracing.skeleton} />
-            </TabPane>
-          ) : null}
-          {this.props.tracing.volume != null ? (
-            <TabPane tab="Volume" key="volume">
-              <VersionList tracingType="volume" tracing={this.props.tracing.volume} />
-            </TabPane>
-          ) : null}
-        </Tabs>
+        <div style={{ flex: "1 1 auto", overflowY: "auto" }}>
+          <Tabs onChange={this.onChangeTab} activeKey={this.state.activeTracingType}>
+            {this.props.tracing.skeleton != null ? (
+              <TabPane tab="Skeleton" key="skeleton">
+                <VersionList tracingType="skeleton" tracing={this.props.tracing.skeleton} />
+              </TabPane>
+            ) : null}
+            {this.props.tracing.volume != null ? (
+              <TabPane tab="Volume" key="volume">
+                <VersionList tracingType="volume" tracing={this.props.tracing.volume} />
+              </TabPane>
+            ) : null}
+          </Tabs>
+        </div>
       </div>
     );
   }

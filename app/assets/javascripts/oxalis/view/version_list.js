@@ -80,23 +80,21 @@ class VersionList extends React.Component<Props, State> {
     );
 
     return (
-      <div style={{ flex: "1 1 auto", overflowY: "auto" }}>
-        <Spin spinning={this.state.isLoading}>
-          <List>
-            {filteredVersions.map((batch, index) => (
-              <VersionEntry
-                actions={batch.value}
-                version={batch.version}
-                isNewest={index === 0}
-                isActive={this.props.tracing.version === batch.version}
-                onRestoreVersion={this.restoreVersion}
-                onPreviewVersion={version => previewVersion({ [this.props.tracingType]: version })}
-                key={batch.version}
-              />
-            ))}
-          </List>
-        </Spin>
-      </div>
+      <Spin spinning={this.state.isLoading}>
+        <List>
+          {filteredVersions.map((batch, index) => (
+            <VersionEntry
+              actions={batch.value}
+              version={batch.version}
+              isNewest={index === 0}
+              isActive={this.props.tracing.version === batch.version}
+              onRestoreVersion={this.restoreVersion}
+              onPreviewVersion={version => previewVersion({ [this.props.tracingType]: version })}
+              key={batch.version}
+            />
+          ))}
+        </List>
+      </Spin>
     );
   }
 }

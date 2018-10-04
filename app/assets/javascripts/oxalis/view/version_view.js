@@ -45,7 +45,7 @@ class VersionView extends React.Component<Props, State> {
   render() {
     return (
       <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-        <div style={{ flex: "0 1 auto" }}>
+        <div style={{ flex: "0 1 auto", padding: "0px 5px" }}>
           <h4 style={{ display: "inline-block" }}>Version History</h4>
           <Button
             className="close-button"

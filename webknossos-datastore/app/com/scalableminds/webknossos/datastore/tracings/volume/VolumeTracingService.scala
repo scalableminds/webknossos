@@ -56,8 +56,7 @@ class VolumeTracingService @Inject()(
               case a: UpdateTracingVolumeAction =>
                 Fox.successful(t.copy(activeSegmentId = Some(a.activeSegmentId), editPosition = a.editPosition, editRotation = a.editRotation, largestSegmentId = a.largestSegmentId, zoomLevel = a.zoomLevel, userBoundingBox = a.userBoundingBox))
               case a: RevertToVersionVolumeAction => revertToVolumeVersion(tracingId, a.sourceVersion, updateGroup.version, t)
-              case _ =>
-                Fox.failure("Unknown action.")
+              case _ => Fox.failure("Unknown action.")
             }
           case Empty =>
             Fox.empty

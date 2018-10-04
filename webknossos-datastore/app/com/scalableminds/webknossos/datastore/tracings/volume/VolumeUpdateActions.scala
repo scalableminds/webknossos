@@ -82,6 +82,7 @@ object VolumeUpdateAction {
       case s: UpdateBucketVolumeAction => Json.obj("name" -> "updateBucket", "value" -> Json.toJson(s)(UpdateBucketVolumeAction.updateBucketVolumeActionFormat))
       case s: UpdateTracingVolumeAction => Json.obj("name" -> "updateTracing", "value" -> Json.toJson(s)(UpdateTracingVolumeAction.updateTracingVolumeActionFormat))
       case s: RevertToVersionVolumeAction => Json.obj("name" -> "revertToVersion", "value" -> Json.toJson(s)(RevertToVersionVolumeAction.revertToVersionVolumeActionFormat))
+      case s: CompactVolumeUpdateAction => Json.toJson(s)(CompactVolumeUpdateAction.compactVolumeUpdateActionFormat)
     }
   }
 

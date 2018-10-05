@@ -56,10 +56,11 @@ class Navbar extends React.PureComponent<Props, State> {
   render() {
     const navbarStyle = {
       padding: 0,
+      paddingTop: 4,
       position: "fixed",
       width: "100%",
       zIndex: 1000,
-      height: 48,
+      height: "auto",
       display: "flex",
       alignItems: "center",
       color: "rgba(255, 255, 255, 0.67)",

@@ -12,7 +12,6 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
   object Application {
 
     val insertInitialData = get[Boolean]("application.insertInitialData")
-    val projectReportBlacklist = get[Seq[String]]("application.projectReportBlacklist")
 
     object Authentication {
       object DefaultUser {

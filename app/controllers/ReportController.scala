@@ -43,7 +43,8 @@ class ReportDAO @Inject()(sqlClient: SQLClient, annotationDAO: AnnotationDAO)(im
             CROSS JOIN experiences ue
           where p._team = ${teamId.id} and
           t.neededExperience_domain = ue.domain and
-          t.neededExperience_value <= ue.value
+          t.neededExperience_value <= ue.value and
+          not p.isblacklistedfromreport
           group by p._id, p.name, p.paused)
 
           ,projectModifiedTimes as (select p._id, MAX(a.modified) as modified
@@ -127,7 +128,7 @@ class ReportController @Inject()(reportDAO: ReportDAO,
     for {
       teamIdValidated <- ObjectId.parse(teamId)
       entries <- reportDAO.projectProgress(teamIdValidated)(GlobalAccessContext)
-    } yield Ok(Json.toJson(entries.filterNot(entry => conf.Application.projectReportBlacklist.contains(entry.projectName))))
+    } yield Ok(Json.toJson(entries))
   }
 
   def openTasksOverview(teamId: String) = sil.SecuredAction.async { implicit request =>

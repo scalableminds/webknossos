@@ -77,6 +77,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
     const isVolumeSupported = !Constants.MODES_ARBITRARY.includes(this.props.viewMode);
     const resetItemProps = {
       storedLayoutNamesForView: this.props.storedLayoutNamesForView,
+      layoutKey: this.props.layoutKey,
       activeLayout: this.props.activeLayout,
       onResetLayout: this.handleResetLayout,
       onSelectLayout: this.props.setCurrentLayout,

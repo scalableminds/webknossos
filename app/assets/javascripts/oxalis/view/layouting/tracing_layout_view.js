@@ -106,10 +106,8 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     storeLayoutConfig(layoutConfig, layoutKey, layoutName);
   };
 
-  getLayoutNamesFromCurrentView = (layoutKey): Array<string> => this.props.storedLayouts[layoutKey]
-      ? Object.keys(this.props.storedLayouts[layoutKey])
-      : [];
-  ;
+  getLayoutNamesFromCurrentView = (layoutKey): Array<string> =>
+    this.props.storedLayouts[layoutKey] ? Object.keys(this.props.storedLayouts[layoutKey]) : [];
 
   render() {
     const layoutType = determineLayout(this.props.initialCommandType.type, this.props.viewMode);

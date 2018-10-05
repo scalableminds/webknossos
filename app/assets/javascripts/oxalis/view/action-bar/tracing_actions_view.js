@@ -21,6 +21,7 @@ import type { APIUser, APITracingType } from "admin/api_flow_types";
 import SceneController from "oxalis/controller/scene_controller";
 import { readFileAsArrayBuffer } from "libs/read_file";
 import { AsyncButton } from "components/async_clickables";
+import { mapLayoutKeysToLanguage } from "oxalis/view/layouting/default_layout_configs";
 
 type StateProps = {
   tracingType: APITracingType,
@@ -32,6 +33,7 @@ type StateProps = {
 
 type Props = StateProps & {
   storedLayoutNamesForView: Array<string>,
+  layoutKey: string,
   activeLayout: string,
   onResetLayout: () => void,
   onSelectLayout: string => void,
@@ -47,6 +49,7 @@ type State = {
 
 type ResetLayoutItemProps = {
   storedLayoutNamesForView: Array<string>,
+  layoutKey: string,
   activeLayout: string,
   onResetLayout: () => void,
   onSelectLayout: string => void,
@@ -57,6 +60,7 @@ type ResetLayoutItemProps = {
 export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
   const {
     storedLayoutNamesForView,
+    layoutKey,
     activeLayout,
     onResetLayout,
     onSelectLayout,
@@ -64,26 +68,37 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
     addNewLayout,
     ...others
   } = props;
+  const layoutMissingHelpTitle = (
+    <React.Fragment>
+      <h5 style={{ color: "#fff" }}>Where is my layout?</h5>
+      <p>
+        {`The tracing views are seperated into four classes. Each of them has their own layouts. If you
+        can't find your layout please open the tracing in the correct view mode or just add it here manually.`}
+      </p>
+    </React.Fragment>
+  );
   const customLayoutsItems = storedLayoutNamesForView.map(layout => {
     const isSelectedLayout = layout === activeLayout;
     return (
       <Menu.Item key={layout} className={isSelectedLayout ? "selected-layout-item" : null}>
-        <span>
-          <div className="inline-with-margin" onClick={() => onSelectLayout(layout)}>
+        <span
+          onClick={() => onSelectLayout(layout)}
+          style={{ minWidth: "100%", minHeight: "auto", display: "inline-block" }}
+        >
+          <div className="inline-with-margin" style={{ marginRight: 16 }}>
             {layout}
             {isSelectedLayout ? (
-              <Icon style={{ marginLeft: 16 }} type="check" theme="outlined" />
-            ) : null}
+              <Icon type="check" className="sub-menu-item-icon" theme="outlined" />
+            ) : (
+              <Tooltip placement="top" title="Remove this layout">
+                <Icon
+                  type="delete"
+                  className="clickable-icon sub-menu-item-icon"
+                  onClick={() => onDeleteLayout(layout)}
+                />
+              </Tooltip>
+            )}
           </div>
-          {!isSelectedLayout ? (
-            <Tooltip placement="top" title="Remove this layout">
-              <Icon
-                type="delete"
-                className="clickable-icon"
-                onClick={() => onDeleteLayout(layout)}
-              />
-            </Tooltip>
-          ) : null}
         </span>
       </Menu.Item>
     );
@@ -94,6 +109,13 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
       title={
         <React.Fragment>
           <Icon type="laptop" /> Layout
+          <Tooltip placement="top" title={layoutMissingHelpTitle}>
+            <Icon
+              type="info-circle-o"
+              style={{ color: "gray", marginRight: 36 }}
+              className="sub-menu-item-icon"
+            />
+          </Tooltip>
         </React.Fragment>
       }
     >
@@ -104,7 +126,9 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
         <div onClick={addNewLayout}>Add a new Layout</div>
       </Menu.Item>
       <Menu.Divider />
-      {customLayoutsItems}
+      <Menu.ItemGroup title={`Layouts for ${mapLayoutKeysToLanguage[layoutKey]}`}>
+        {customLayoutsItems}
+      </Menu.ItemGroup>
     </Menu.SubMenu>
   );
 };
@@ -326,6 +350,7 @@ class TracingActionsView extends PureComponent<Props, State> {
     elements.push(
       <ResetLayoutItem
         storedLayoutNamesForView={this.props.storedLayoutNamesForView}
+        layoutKey={this.props.layoutKey}
         activeLayout={this.props.activeLayout}
         onResetLayout={this.props.onResetLayout}
         onSelectLayout={this.props.onSelectLayout}

@@ -44,6 +44,7 @@ declare module "antd" {
     static Item: React$ComponentType<P>;
     static SubMenu: React$ComponentType<P>;
     static Divider: React$ComponentType<P>;
+    static ItemGroup: React$ComponentType<P>;
   }
   declare var message: Object;
   declare class Modal<P> extends React$Component<P> {

@@ -21,8 +21,8 @@ class TracingStoreWkRpcClient @Inject()(
   private val tracingStoreUrl: String = config.Http.uri
 
   private val webKnossosUrl = {
-    val url = config.Tracingstore.Oxalis.uri
-    if (config.Tracingstore.Oxalis.secured)
+    val url = config.Tracingstore.WebKnossos.uri
+    if (config.Tracingstore.WebKnossos.secured)
       s"https://$url"
     else
       s"http://$url"

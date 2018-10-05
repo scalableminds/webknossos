@@ -16,16 +16,15 @@ class TracingStoreConfig @Inject()(configuration: Configuration) extends ConfigR
   object Tracingstore {
     val key = get[String]("tracingstore.key")
     val name = get[String]("tracingstore.name")
-    object Oxalis {
-      val uri = get[String]("tracingstore.oxalis.uri")
-      val secured = get[Boolean]("tracingstore.oxalis.secured")
-      val pingIntervalMinutes = get[Int]("tracingstore.oxalis.pingIntervalMinutes") minutes
+    object WebKnossos {
+      val uri = get[String]("tracingstore.webKnossos.uri")
+      val secured = get[Boolean]("tracingstore.webKnossos.secured")
     }
     object Fossildb {
       val address = get[String]("tracingstore.fossildb.address")
       val port = get[Int]("tracingstore.fossildb.port")
     }
-    val children = List(Oxalis, Fossildb)
+    val children = List(WebKnossos, Fossildb)
   }
 
   val children = List(Http, Tracingstore)

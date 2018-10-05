@@ -134,4 +134,9 @@ class FossilDBClient(collection: String, config: TracingStoreConfig) extends Fox
     }
   }
 
+  def shutdown() = {
+    channel.shutdownNow()
+    channel.awaitTermination(10, java.util.concurrent.TimeUnit.SECONDS)
+  }
+
 }

@@ -37,6 +37,8 @@ object Dependencies {
   val scalaTestPlusPlay = "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % "test"
   val silhouette = "com.mohiva" %% "play-silhouette" % "5.0.5"
   val silhouetteTestkit = "com.mohiva" %% "play-silhouette-testkit" % "5.0.5" % "test"
+  val trireme = "io.apigee.trireme" % "trireme-core" % "0.9.3"
+  val triremeNode = "io.apigee.trireme" % "trireme-node12src" % "0.9.3"
   val urlHelper = "com.netaporter" %% "scala-uri" % "0.4.14"
   val webknossosWrap = "com.scalableminds" %% "webknossos-wrap" % webknossosWrapVersion
   val xmlWriter = "org.glassfish.jaxb" % "txw2" % "2.2.11"
@@ -71,9 +73,6 @@ object Dependencies {
     newrelic,
     newrelicApi,
     webknossosWrap,
-    grpc,
-    grpcServices,
-    scalapbRuntimeGrpc,
     playIterateesStreams,
     filters,
     ws,
@@ -81,7 +80,9 @@ object Dependencies {
   )
 
   val webknossosTracingstoreDependencies = Seq(
-
+    grpc,
+    grpcServices,
+    scalapbRuntimeGrpc
   )
 
   val webknossosDependencies = Seq(
@@ -94,6 +95,8 @@ object Dependencies {
     silhouette,
     silhouetteTestkit,
     specs2 % Test,
+    trireme,
+    triremeNode,
     urlHelper,
     xmlWriter,
     woodstoxXml) ++ sql

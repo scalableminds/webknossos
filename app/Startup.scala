@@ -4,11 +4,13 @@ import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mail.{Mailer, MailerConfig}
 import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService
+import io.apigee.trireme.core.NodeEnvironment
+import java.io.File
 import javax.inject._
 import models.annotation.AnnotationDAO
 import net.liftweb.common.{Failure, Full}
 import oxalis.cleanup.CleanUpService
-import oxalis.security.{WkSilhouetteEnvironment, WkEnv}
+import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
 import com.mohiva.play.silhouette.api.Silhouette
 import play.api.inject.ApplicationLifecycle
 import utils.{SQLClient, WkConf}
@@ -73,13 +75,19 @@ class Startup @Inject() (actorSystem: ActorSystem,
       throw new Exception("Could not ensure Postgres database. Is postgres installed?")
 
     // diffing the actual DB schema against schema.sql:
-    logger.info("Running diff_schema.sh tools/postgres/schema.sql DB")
-    val errorMessage = new StringBuilder("Database schema does not fit to schema.sql:\n")
-    def appendMessage(value: String) = errorMessage.append(value + "\n")
-    val schemaDiffResult = "tools/postgres/diff_schema.js tools/postgres/schema.sql DB" ! ProcessLogger(appendMessage, appendMessage)
-    if (schemaDiffResult == 0) {
+    logger.info("Running diff_schema.js tools/postgres/schema.sql DB")
+    val nodeEnv = new NodeEnvironment()
+    nodeEnv.setDefaultNodeVersion("0.12")
+    val script = nodeEnv.createScript(
+      "diff_schema.js",
+      new File("tools/postgres/diff_schema.js"),
+      Array("tools/postgres/schema.sql", "DB")
+    )
+    val status = script.execute().get()
+    if (status.getExitCode() == 0) {
       logger.info("Schema is up to date.")
     } else {
+      val errorMessage = new StringBuilder("Database schema does not fit to schema.sql!")
       logger.error(errorMessage.toString())
       NewRelic.noticeError(errorMessage.toString())
     }

@@ -71,19 +71,21 @@ const defaultLayouts = {
 export const defaultLayoutSchema = {
   OrthoLayoutView: {
     "Custom Layout": defaultLayouts.OrthoLayoutView,
-    lastActive: "Custom Layout",
   },
   VolumeTracingView: {
     "Custom Layout": defaultLayouts.VolumeTracingView,
-    lastActive: "Custom Layout",
   },
   ArbitraryLayout: {
     "Custom Layout": defaultLayouts.ArbitraryLayout,
-    lastActive: "Custom Layout",
   },
   OrthoLayout: {
     "Custom Layout": defaultLayouts.OrthoLayout,
-    lastActive: "Custom Layout",
+  },
+  LastActiveLayouts: {
+    OrthoLayoutView: "Custom Layout",
+    VolumeTracingView: "Custom Layout",
+    ArbitraryLayout: "Custom Layout",
+    OrthoLayout: "Custom Layout",
   },
 };
 

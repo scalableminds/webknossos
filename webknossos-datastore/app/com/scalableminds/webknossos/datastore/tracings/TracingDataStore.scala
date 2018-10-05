@@ -30,6 +30,7 @@ class TracingDataStore @Inject()(config: DataStoreConfig,
     skeletonUpdates.shutdown()
     volumes.shutdown()
     volumeData.shutdown()
+    volumeUpdates.shutdown()
     ()
   }
 

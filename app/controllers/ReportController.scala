@@ -10,7 +10,7 @@ import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
 import play.api.libs.json.Json
 import slick.jdbc.PostgresProfile.api._
-import utils.{ObjectId, SQLClient, SimpleSQLDAO}
+import utils.{ObjectId, SQLClient, SimpleSQLDAO, WkConf}
 
 import scala.concurrent.ExecutionContext
 
@@ -118,14 +118,16 @@ class ReportController @Inject()(reportDAO: ReportDAO,
                                  teamDAO: TeamDAO,
                                  userDAO: UserDAO,
                                  userService: UserService,
+                                 conf: WkConf,
                                  sil: Silhouette[WkEnv])
                                 (implicit ec: ExecutionContext)
   extends Controller with FoxImplicits {
 
   def projectProgressOverview(teamId: String) = sil.SecuredAction.async { implicit request =>
     for {
-      entries <- reportDAO.projectProgress(ObjectId(teamId))(GlobalAccessContext)
-    } yield Ok(Json.toJson(entries))
+      teamIdValidated <- ObjectId.parse(teamId)
+      entries <- reportDAO.projectProgress(teamIdValidated)(GlobalAccessContext)
+    } yield Ok(Json.toJson(entries.filterNot(entry => conf.Application.projectReportBlacklist.contains(entry.projectName))))
   }
 
   def openTasksOverview(teamId: String) = sil.SecuredAction.async { implicit request =>

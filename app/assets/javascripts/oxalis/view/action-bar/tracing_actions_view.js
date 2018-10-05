@@ -107,7 +107,7 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
     <Menu.SubMenu
       {...others}
       title={
-        <React.Fragment>
+        <span style={{display: "inline-block", minWidth: 120}}>
           <Icon type="laptop" /> Layout
           <Tooltip placement="top" title={layoutMissingHelpTitle}>
             <Icon
@@ -116,7 +116,7 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
               className="sub-menu-item-icon"
             />
           </Tooltip>
-        </React.Fragment>
+        </span>
       }
     >
       <Menu.Item>
@@ -126,7 +126,7 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
         <div onClick={addNewLayout}>Add a new Layout</div>
       </Menu.Item>
       <Menu.Divider />
-      <Menu.ItemGroup title={`Layouts for ${mapLayoutKeysToLanguage[layoutKey]}`}>
+      <Menu.ItemGroup title={<span style={{fontSize: 14}}>{`Layouts for ${mapLayoutKeysToLanguage[layoutKey]}`}</span>}>
         {customLayoutsItems}
       </Menu.ItemGroup>
     </Menu.SubMenu>

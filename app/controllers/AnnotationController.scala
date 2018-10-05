@@ -150,6 +150,18 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
       }
     }
 
+  def makeHybrid(typ: String, id: String) = sil.SecuredAction.async { implicit request =>
+    for {
+      _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "make hybrid only for explorationals"
+      annotation <- provider.provideAnnotation(typ, id, request.identity)
+      _ <- annotationService.makeAnnotationHybrid(request.identity, annotation)
+      updated <- provider.provideAnnotation(typ, id, request.identity)
+      json <- annotationService.publicWrites(updated, Some(request.identity)) ?~> "annotation.write.failed"
+    } yield {
+      JsonOk(json)
+    }
+  }
+
   private def finishAnnotation(typ: String, id: String, issuingUser: User)(implicit ctx: DBAccessContext): Fox[(Annotation, String)] = {
     for {
       annotation <- provider.provideAnnotation(typ, id, issuingUser) ?~> "annotation.notFound"

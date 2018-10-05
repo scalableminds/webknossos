@@ -94,6 +94,7 @@ GET           /api/annotations/:typ/:id/revert                                  
 POST          /api/annotations/:typ/:id/transfer                                    controllers.AnnotationController.transfer(typ: String, id: String)
 
 GET           /api/annotations/:typ/:id/info                                        controllers.AnnotationController.info(typ: String, id: String)
+PATCH         /api/annotations/:typ/:id/makeHybrid                                  controllers.AnnotationController.makeHybrid(typ: String, id: String)
 DELETE        /api/annotations/:typ/:id                                             controllers.AnnotationController.cancel(typ: String, id: String)
 GET           /api/annotations/:typ/:id/merge/:mergedTyp/:mergedId                  controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String)
 GET           /api/annotations/:typ/:id/download                                    controllers.AnnotationIOController.download(typ: String, id: String)

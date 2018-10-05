@@ -12,7 +12,7 @@ mockRequire("oxalis/model/sagas/root_saga", function*() {
   yield;
 });
 mockRequire("libs/request", RequestMock);
-const WkstoreAdapterMock = { requestFromStore: sinon.stub() };
+const WkstoreAdapterMock = { requestWithFallback: sinon.stub() };
 mockRequire("oxalis/model/bucket_data_handling/wkstore_adapter", WkstoreAdapterMock);
 
 const layer = {
@@ -77,10 +77,10 @@ test.serial("Successful pulling: should receive the correct data", t => {
   const { pullQueue, buckets } = t.context;
   const bucketData1 = _.range(0, 32 * 32 * 32).map(i => i % 256);
   const bucketData2 = _.range(0, 32 * 32 * 32).map(i => (2 * i) % 256);
-  const responseBuffer = new Uint8Array(bucketData1.concat(bucketData2));
-  WkstoreAdapterMock.requestFromStore = sinon.stub();
-  WkstoreAdapterMock.requestFromStore.returns(
-    Promise.resolve({ buffer: responseBuffer, missingBuckets: [] }),
+
+  WkstoreAdapterMock.requestWithFallback = sinon.stub();
+  WkstoreAdapterMock.requestWithFallback.returns(
+    Promise.resolve([new Uint8Array(bucketData1), new Uint8Array(bucketData2)]),
   );
 
   pullQueue.pull();
@@ -96,21 +96,22 @@ test.serial("Successful pulling: should receive the correct data", t => {
 });
 
 function prepare() {
-  WkstoreAdapterMock.requestFromStore = sinon.stub();
-  WkstoreAdapterMock.requestFromStore.onFirstCall().returns(Promise.reject());
-  WkstoreAdapterMock.requestFromStore
+  WkstoreAdapterMock.requestWithFallback = sinon.stub();
+  WkstoreAdapterMock.requestWithFallback.onFirstCall().returns(Promise.reject());
+  WkstoreAdapterMock.requestWithFallback
     .onSecondCall()
-    .returns(Promise.resolve({ buffer: new Uint8Array(32 * 32 * 32), missingBuckets: [] }));
+    .returns(Promise.resolve([new Uint8Array(32 * 32 * 32)]));
 }
 
 test.serial("Request Failure: should not request twice if not bucket dirty", t => {
   const { pullQueue, buckets } = t.context;
+
   prepare();
   pullQueue.pull();
 
   return runAsync([
     () => {
-      t.is(WkstoreAdapterMock.requestFromStore.callCount, 1);
+      t.is(WkstoreAdapterMock.requestWithFallback.callCount, 1);
       t.is(buckets[0].state, BucketStateEnum.UNREQUESTED);
       t.is(buckets[1].state, BucketStateEnum.UNREQUESTED);
     },
@@ -126,7 +127,7 @@ test.serial("Request Failure: should reinsert dirty buckets", t => {
 
   return runAsync([
     () => {
-      t.is(WkstoreAdapterMock.requestFromStore.callCount, 2);
+      t.is(WkstoreAdapterMock.requestWithFallback.callCount, 2);
       t.is(buckets[0].state, BucketStateEnum.LOADED);
       t.is(buckets[1].state, BucketStateEnum.UNREQUESTED);
     },

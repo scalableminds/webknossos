@@ -54,19 +54,22 @@ class Navbar extends React.PureComponent<Props, State> {
   };
 
   render() {
-    const navbarStyle = {
+    const navbarStyle: Object = {
       padding: 0,
-      paddingTop: 4,
       position: "fixed",
       width: "100%",
       zIndex: 1000,
-      height: "auto",
+      height: 48,
       display: "flex",
       alignItems: "center",
       color: "rgba(255, 255, 255, 0.67)",
       background: "#001529",
     };
-
+    // used to adjust the height in login view
+    if (!this.props.activeUser) {
+      navbarStyle.paddingTop = 4;
+      navbarStyle.height = "auto";
+    }
     const isAuthenticated = this.props.isAuthenticated && this.props.activeUser != null;
     const isAdmin =
       this.props.activeUser != null ? Utils.isUserAdmin(this.props.activeUser) : false;

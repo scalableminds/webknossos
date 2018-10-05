@@ -32,6 +32,9 @@ const StoreMock = {
       owningOrganization: "organization",
       dataSource,
     },
+    tracing: {
+      tracingStore: { name: "localhost", url: "http://localhost:9000" },
+    },
     datasetConfiguration: { fourBit: _fourBit },
   }),
   dispatch: sinon.stub(),
@@ -41,7 +44,7 @@ mockRequire("libs/request", RequestMock);
 mockRequire("oxalis/store", StoreMock);
 
 const { DataBucket } = mockRequire.reRequire("oxalis/model/bucket_data_handling/bucket");
-const { requestFromStore, sendToStore } = mockRequire.reRequire(
+const { requestWithFallback, sendToStore } = mockRequire.reRequire(
   "oxalis/model/bucket_data_handling/wkstore_adapter",
 );
 
@@ -72,39 +75,50 @@ function prepare() {
   RequestMock.sendJSONReceiveArraybufferWithHeaders.returns(
     Promise.resolve({ buffer: responseBuffer, headers: { "missing-buckets": "[]" } }),
   );
-  return { batch, responseBuffer };
+  return {
+    batch,
+    responseBuffer,
+    bucketData1: new Uint8Array(bucketData1),
+    bucketData2: new Uint8Array(bucketData2),
+  };
 }
 
-test.serial("requestFromStore: Token Handling should re-request a token when it's invalid", t => {
-  const { layer } = t.context;
-  const { batch, responseBuffer } = prepare();
-  RequestMock.sendJSONReceiveArraybufferWithHeaders = sinon.stub();
-  RequestMock.sendJSONReceiveArraybufferWithHeaders
-    .onFirstCall()
-    // eslint-disable-next-line prefer-promise-reject-errors
-    .returns(Promise.reject({ status: 403 }))
-    .onSecondCall()
-    .returns(Promise.resolve({ buffer: responseBuffer, headers: { "missing-buckets": "[]" } }));
+test.serial(
+  "requestWithFallback: Token Handling should re-request a token when it's invalid",
+  t => {
+    const { layer } = t.context;
+    const { batch, responseBuffer, bucketData1, bucketData2 } = prepare();
+    RequestMock.sendJSONReceiveArraybufferWithHeaders = sinon.stub();
+    RequestMock.sendJSONReceiveArraybufferWithHeaders
+      .onFirstCall()
+      // eslint-disable-next-line prefer-promise-reject-errors
+      .returns(Promise.reject({ status: 403 }))
+      .onSecondCall()
+      .returns(Promise.resolve({ buffer: responseBuffer, headers: { "missing-buckets": "[]" } }));
 
-  RequestMock.receiveJSON = sinon.stub();
-  RequestMock.receiveJSON
-    .onFirstCall()
-    .returns(Promise.resolve(tokenResponse))
-    .onSecondCall()
-    .returns(Promise.resolve({ token: "token2" }));
+    RequestMock.receiveJSON = sinon.stub();
+    RequestMock.receiveJSON
+      .onFirstCall()
+      .returns(Promise.resolve(tokenResponse))
+      .onSecondCall()
+      .returns(Promise.resolve({ token: "token2" }));
 
-  return requestFromStore(layer, batch).then(result => {
-    t.deepEqual(result.buffer, responseBuffer);
+    return requestWithFallback(layer, batch).then(([buffer1, buffer2]) => {
+      // console.log("buffer1", buffer1);
+      // console.log("bucketData1", new Uint8Array(bucketData1));
+      t.deepEqual(buffer1, bucketData1);
+      t.deepEqual(buffer2, bucketData2);
 
-    t.is(RequestMock.sendJSONReceiveArraybufferWithHeaders.callCount, 2);
+      t.is(RequestMock.sendJSONReceiveArraybufferWithHeaders.callCount, 2);
 
-    const url = RequestMock.sendJSONReceiveArraybufferWithHeaders.getCall(0).args[0];
-    t.is(url, "url/data/datasets/organization/dataSet/layers/color/data?token=token");
+      const url = RequestMock.sendJSONReceiveArraybufferWithHeaders.getCall(0).args[0];
+      t.is(url, "url/data/datasets/organization/dataSet/layers/color/data?token=token");
 
-    const url2 = RequestMock.sendJSONReceiveArraybufferWithHeaders.getCall(1).args[0];
-    t.is(url2, "url/data/datasets/organization/dataSet/layers/color/data?token=token2");
-  });
-});
+      const url2 = RequestMock.sendJSONReceiveArraybufferWithHeaders.getCall(1).args[0];
+      t.is(url2, "url/data/datasets/organization/dataSet/layers/color/data?token=token2");
+    });
+  },
+);
 
 function createExpectedOptions(fourBit: boolean = false) {
   return {
@@ -116,24 +130,27 @@ function createExpectedOptions(fourBit: boolean = false) {
   };
 }
 
-test.serial("requestFromStore: Request Handling: should pass the correct request parameters", t => {
-  const { layer } = t.context;
-  const { batch } = prepare();
+test.serial(
+  "requestWithFallback: Request Handling: should pass the correct request parameters",
+  t => {
+    const { layer } = t.context;
+    const { batch } = prepare();
 
-  const expectedUrl = "url/data/datasets/organization/dataSet/layers/color/data?token=token2";
-  const expectedOptions = createExpectedOptions();
+    const expectedUrl = "url/data/datasets/organization/dataSet/layers/color/data?token=token2";
+    const expectedOptions = createExpectedOptions();
 
-  return requestFromStore(layer, batch).then(() => {
-    t.is(RequestMock.sendJSONReceiveArraybufferWithHeaders.callCount, 1);
+    return requestWithFallback(layer, batch).then(() => {
+      t.is(RequestMock.sendJSONReceiveArraybufferWithHeaders.callCount, 1);
 
-    const [url, options] = RequestMock.sendJSONReceiveArraybufferWithHeaders.getCall(0).args;
-    t.is(url, expectedUrl);
-    t.deepEqual(options, expectedOptions);
-  });
-});
+      const [url, options] = RequestMock.sendJSONReceiveArraybufferWithHeaders.getCall(0).args;
+      t.is(url, expectedUrl);
+      t.deepEqual(options, expectedOptions);
+    });
+  },
+);
 
 test.serial(
-  "requestFromStore: Request Handling: four bit mode should be respected for color layers",
+  "requestWithFallback: Request Handling: four bit mode should be respected for color layers",
   async t => {
     setFourBit(true);
     // test four bit color and 8 bit seg
@@ -143,7 +160,7 @@ test.serial(
     const expectedUrl = "url/data/datasets/organization/dataSet/layers/color/data?token=token2";
     const expectedOptions = createExpectedOptions(true);
 
-    await requestFromStore(layer, batch).then(() => {
+    await requestWithFallback(layer, batch).then(() => {
       t.is(RequestMock.sendJSONReceiveArraybufferWithHeaders.callCount, 1);
 
       const [url, options] = RequestMock.sendJSONReceiveArraybufferWithHeaders.getCall(0).args;
@@ -156,7 +173,7 @@ test.serial(
 );
 
 test.serial(
-  "requestFromStore: Request Handling: four bit mode should not be respected for segmentation layers",
+  "requestWithFallback: Request Handling: four bit mode should not be respected for segmentation layers",
   async t => {
     setFourBit(true);
     const { segmentationLayer } = t.context;
@@ -166,7 +183,7 @@ test.serial(
       "url/data/datasets/organization/dataSet/layers/segmentation/data?token=token2";
     const expectedOptions = createExpectedOptions(false);
 
-    await requestFromStore(segmentationLayer, batch).then(() => {
+    await requestWithFallback(segmentationLayer, batch).then(() => {
       t.is(RequestMock.sendJSONReceiveArraybufferWithHeaders.callCount, 1);
 
       const [url, options] = RequestMock.sendJSONReceiveArraybufferWithHeaders.getCall(0).args;

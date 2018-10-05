@@ -146,13 +146,13 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     def createNewTracings(dataSet: DataSet, dataSource: DataSource) = annotation.tracingType match {
       case TracingType.skeleton => createTracings(dataSet, dataSource, TracingType.volume, false).flatMap {
         case (_, Some(volumeId)) => annotationDAO.updateVolumeTracingId(annotation._id, volumeId)
-        case _ => Fox.failure("unexpected parameter return")
+        case _ => Fox.failure("unexpectedReturn")
       }
       case TracingType.volume => createTracings(dataSet, dataSource, TracingType.skeleton, false).flatMap {
         case (Some(skeletonId), _) => annotationDAO.updateSkeletonTracingId(annotation._id, skeletonId)
-        case _ => Fox.failure("unexpected parameter return")
+        case _ => Fox.failure("unexpectedReturn")
       }
-      case _ => Fox.failure("Cannot create additional tracing for hybrid annotation")
+      case _ => Fox.failure("annotation.makeHybrid.alreadyHybrid")
     }
 
     for {

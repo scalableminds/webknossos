@@ -7,6 +7,7 @@ import Toast from "libs/toast";
 import defaultLayouts, {
   currentLayoutVersion,
   defaultLayoutSchema,
+  mapLayoutKeysToLanguage,
 } from "./default_layout_configs";
 import type { LayoutKeys } from "./default_layout_configs";
 
@@ -166,6 +167,9 @@ export function setActiveLayout(layoutKey: LayoutKeys, activeLayout: string) {
     Store.dispatch(setStoredLayoutsAction(newLayouts));
     persistLayoutConfigsDebounced();
   } else {
-    Toast.error("The selected layout was not found. Please add a layout for the selected name.");
+    throw new Error(
+      `Active layout could not be set. The given layout ${layoutKey} was not found in layouts for 
+      ${mapLayoutKeysToLanguage[layoutKey]}`,
+    );
   }
 }

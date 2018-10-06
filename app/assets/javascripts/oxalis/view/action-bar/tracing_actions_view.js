@@ -72,7 +72,7 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
     <React.Fragment>
       <h5 style={{ color: "#fff" }}>Where is my layout?</h5>
       <p>
-        {`The tracing views are seperated into four classes. Each of them has their own layouts. If you
+        {`The tracing views are separated into four classes. Each of them has their own layouts. If you
         can't find your layout please open the tracing in the correct view mode or just add it here manually.`}
       </p>
     </React.Fragment>

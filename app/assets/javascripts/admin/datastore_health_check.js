@@ -52,7 +52,11 @@ async function checkVersionMismatch(url: string) {
 
   if (expectedDatastoreApiVersion < suppliedDatastoreApiVersion) {
     Toast.warning(
-      messages["datastore.version.too_new"]({ expectedDatastoreApiVersion, suppliedDatastoreApiVersion, url }),
+      messages["datastore.version.too_new"]({
+        expectedDatastoreApiVersion,
+        suppliedDatastoreApiVersion,
+        url,
+      }),
     );
   } else if (expectedDatastoreApiVersion > suppliedDatastoreApiVersion) {
     Toast.warning(

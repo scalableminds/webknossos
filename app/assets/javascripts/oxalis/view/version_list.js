@@ -6,7 +6,6 @@ import Store from "oxalis/store";
 import { ControlModeEnum } from "oxalis/constants";
 import Model from "oxalis/model";
 import api from "oxalis/api/internal_api";
-import app from "app";
 import { getUpdateActionLog } from "admin/admin_rest_api";
 import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_actions";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";

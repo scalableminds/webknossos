@@ -27,6 +27,7 @@ case class Project(
                      priority: Long,
                      paused: Boolean,
                      expectedTime: Option[Long],
+                     isBlacklistedFromReport: Boolean,
                      created: Long = System.currentTimeMillis(),
                      isDeleted: Boolean = false
                      ) extends FoxImplicits {
@@ -44,9 +45,10 @@ object Project {
       (__ \ 'priority).read[Int] and
       (__ \ 'paused).readNullable[Boolean] and
       (__ \ 'expectedTime).readNullable[Long] and
-      (__ \ 'owner).read[String](ObjectId.stringObjectIdReads("owner"))) (
-      (name, team, priority, paused, expectedTime, owner) =>
-        Project(ObjectId.generate, ObjectId(team), ObjectId(owner), name, priority, paused getOrElse false, expectedTime))
+      (__ \ 'owner).read[String](ObjectId.stringObjectIdReads("owner")) and
+      (__ \ 'isBlacklistedFromReport).read[Boolean]) (
+      (name, team, priority, paused, expectedTime, owner, isBlacklistedFromReport) =>
+        Project(ObjectId.generate, ObjectId(team), ObjectId(owner), name, priority, paused getOrElse false, expectedTime, isBlacklistedFromReport))
 
 }
 
@@ -65,6 +67,7 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) 
       r.priority,
       r.paused,
       r.expectedtime,
+      r.isblacklistedfromreport,
       r.created.getTime,
       r.isdeleted
     ))
@@ -120,8 +123,8 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) 
 
   def insertOne(p: Project)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- run(sqlu"""insert into webknossos.projects(_id, _team, _owner, name, priority, paused, expectedTime, created, isDeleted)
-                         values(${p._id.id}, ${p._team.id}, ${p._owner.id}, ${p.name}, ${p.priority}, ${p.paused}, ${p.expectedTime}, ${new java.sql.Timestamp(p.created)}, ${p.isDeleted})""")
+      _ <- run(sqlu"""insert into webknossos.projects(_id, _team, _owner, name, priority, paused, expectedTime, isblacklistedfromreport, created, isDeleted)
+                         values(${p._id.id}, ${p._team.id}, ${p._owner.id}, ${p.name}, ${p.priority}, ${p.paused}, ${p.expectedTime}, ${p.isBlacklistedFromReport}, ${new java.sql.Timestamp(p.created)}, ${p.isDeleted})""")
     } yield ()
 
 
@@ -136,6 +139,7 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) 
                             priority = ${p.priority},
                             paused = ${p.paused},
                             expectedTime = ${p.expectedTime},
+                            isblacklistedfromreport = ${p.isBlacklistedFromReport},
                             isDeleted = ${p.isDeleted}
                           where _id = ${p._id.id}""")
     } yield ()
@@ -181,6 +185,7 @@ class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userSer
         "priority" -> project.priority,
         "paused" -> project.paused,
         "expectedTime" -> project.expectedTime,
+        "isBlacklistedFromReport" -> project.isBlacklistedFromReport,
         "id" -> project._id.toString
       )
     }

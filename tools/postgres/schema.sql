@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(27);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(28);
 COMMIT TRANSACTION;
 
 CREATE TABLE webknossos.analytics(
@@ -127,6 +127,7 @@ CREATE TABLE webknossos.projects(
   priority BIGINT NOT NULL DEFAULT 100,
   paused BOOLEAN NOT NULL DEFAULT false,
   expectedTime BIGINT,
+  isBlacklistedFromReport BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );

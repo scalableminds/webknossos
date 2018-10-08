@@ -147,7 +147,7 @@ extends Controller {
       dataSource <- dataSetService.dataSourceFor(dataSet) ?~> "dataSource.notFound"
       usableDataSource <- dataSource.toUsable.toFox ?~> "dataSet.notImported"
       datalayer <- usableDataSource.dataLayers.headOption.toFox ?~> "dataSet.noLayers"
-      thumbnail <- dataSetService.handlerFor(dataSet).flatMap(_.requestDataLayerThumbnail(organizationName, datalayer.name, 100, 100, None, None)) ?~> "dataSet.loadingDataFailed"
+      _ <- dataSetService.handlerFor(dataSet).flatMap(_.requestDataLayerThumbnail(organizationName, datalayer.name, 100, 100, None, None)) ?~> "dataSet.loadingDataFailed"
     } yield {
       Ok("Ok")
     }

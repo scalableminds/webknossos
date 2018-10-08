@@ -71,10 +71,12 @@ function requestUserToken(): Promise<string> {
     return tokenRequestPromise;
   }
 
-  tokenRequestPromise = Request.receiveJSON("/api/userToken/generate").then(tokenObj => {
-    tokenRequestPromise = null;
-    return tokenObj.token;
-  });
+  tokenRequestPromise = Request.receiveJSON("/api/userToken/generate", { method: "POST" }).then(
+    tokenObj => {
+      tokenRequestPromise = null;
+      return tokenObj.token;
+    },
+  );
 
   return tokenRequestPromise;
 }
@@ -283,6 +285,7 @@ export async function increaseProjectTaskInstances(
 ): Promise<APIProjectWithAssignments> {
   const project = await Request.receiveJSON(
     `/api/projects/${projectName}/incrementEachTasksInstances?delta=${delta}`,
+    { method: "PATCH" },
   );
   return transformProject(project);
 }
@@ -318,12 +321,16 @@ export function updateProject(
 }
 
 export async function pauseProject(projectName: string): Promise<APIProject> {
-  const project = await Request.receiveJSON(`/api/projects/${projectName}/pause`);
+  const project = await Request.receiveJSON(`/api/projects/${projectName}/pause`, {
+    method: "PATCH",
+  });
   return transformProject(project);
 }
 
 export async function resumeProject(projectName: string): Promise<APIProject> {
-  const project = await Request.receiveJSON(`/api/projects/${projectName}/resume`);
+  const project = await Request.receiveJSON(`/api/projects/${projectName}/resume`, {
+    method: "PATCH",
+  });
   return transformProject(project);
 }
 
@@ -333,7 +340,7 @@ export function peekNextTasks(): Promise<?APITask> {
 }
 
 export function requestTask(): Promise<APIAnnotationWithTask> {
-  return Request.receiveJSON("/api/user/tasks/request");
+  return Request.receiveJSON("/api/user/tasks/request", { method: "POST" });
 }
 
 export function getAnnotationsForTask(taskId: string): Promise<Array<APIAnnotation>> {
@@ -404,6 +411,7 @@ export function finishTask(annotationId: string): Promise<APIAnnotation> {
 
 export function transferTask(annotationId: string, userId: string): Promise<APIAnnotation> {
   return Request.sendJSONReceiveJSON(`/api/annotations/Task/${annotationId}/transfer`, {
+    method: "PATCH",
     data: {
       userId,
     },
@@ -446,7 +454,9 @@ export function reOpenAnnotation(
   annotationId: string,
   annotationType: APITracingType,
 ): Promise<APIAnnotation> {
-  return Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/reopen`);
+  return Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/reopen`, {
+    method: "PATCH",
+  });
 }
 
 export type EditableAnnotation = {
@@ -463,6 +473,7 @@ export function editAnnotation(
 ): Promise<void> {
   return Request.sendJSONReceiveJSON(`/api/annotations/${annotationType}/${annotationId}/edit`, {
     data,
+    method: "PATCH",
   });
 }
 
@@ -470,14 +481,18 @@ export function finishAnnotation(
   annotationId: string,
   annotationType: APITracingType,
 ): Promise<APIAnnotation> {
-  return Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/finish`);
+  return Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/finish`, {
+    method: "PATCH",
+  });
 }
 
 export function resetAnnotation(
   annotationId: string,
   annotationType: APITracingType,
 ): Promise<APIAnnotation> {
-  return Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/reset`);
+  return Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/reset`, {
+    method: "PUT",
+  });
 }
 
 export function deleteAnnotation(
@@ -493,6 +508,7 @@ export function finishAllAnnotations(
   selectedAnnotationIds: Array<string>,
 ): Promise<{ messages: Array<Message> }> {
   return Request.sendJSONReceiveJSON("/api/annotations/Explorational/finish", {
+    method: "PATCH",
     data: {
       annotations: selectedAnnotationIds,
     },
@@ -504,7 +520,7 @@ export function copyAnnotationToUserAccount(
   tracingType: APITracingType,
 ): Promise<APIAnnotation> {
   const url = `/api/annotations/${tracingType}/${annotationId}/duplicate`;
-  return Request.receiveJSON(url);
+  return Request.receiveJSON(url, { method: "POST" });
 }
 
 export function getAnnotationInformation(
@@ -646,6 +662,7 @@ export function updateDataset(datasetId: APIDatasetId, dataset: APIDataset): Pro
   return Request.sendJSONReceiveJSON(
     `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}`,
     {
+      method: "PATCH",
       data: dataset,
     },
   );
@@ -654,6 +671,19 @@ export function updateDataset(datasetId: APIDatasetId, dataset: APIDataset): Pro
 export function getDatasetConfiguration(datasetId: APIDatasetId): Promise<Object> {
   return Request.receiveJSON(
     `/api/dataSetConfigurations/${datasetId.owningOrganization}/${datasetId.name}`,
+  );
+}
+
+export function updateDatasetConfiguration(
+  datasetId: APIDatasetId,
+  datasetConfig: DatasetConfiguration,
+): Object {
+  return Request.sendJSONReceiveJSON(
+    `/api/dataSetConfigurations/${datasetId.owningOrganization}/${datasetId.name}`,
+    {
+      method: "PUT",
+      data: datasetConfig,
+    },
   );
 }
 
@@ -672,6 +702,7 @@ export function updateDatasetDefaultConfiguration(
   return Request.sendJSONReceiveJSON(
     `/api/dataSetConfigurations/default/${datasetId.owningOrganization}/${datasetId.name}`,
     {
+      method: "PUT",
       data: datasetConfiguration,
     },
   );
@@ -733,6 +764,7 @@ export function updateDatasetTeams(
   return Request.sendJSONReceiveJSON(
     `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/teams`,
     {
+      method: "PATCH",
       data: newTeams,
     },
   );
@@ -797,6 +829,13 @@ export function getActiveUser(options: Object = {}): Promise<APIUser> {
 
 export function getUserConfiguration(): Object {
   return Request.receiveJSON("/api/user/userConfiguration");
+}
+
+export function updateUserConfiguration(userConfiguration: Object): Object {
+  return Request.sendJSONReceiveJSON("/api/user/userConfiguration", {
+    method: "PUT",
+    data: userConfiguration,
+  });
 }
 
 // ### TimeTracking

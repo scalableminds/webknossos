@@ -36,6 +36,7 @@ const Panes = {
 };
 
 const OrthoViewsGrid = [Column(Panes.xy, Panes.xz), Column(Panes.yz, Panes.td)];
+const OrthoViewsGridWideScreen = [Row(Panes.xy, Panes.xz, Panes.yz, Panes.td)];
 
 const SkeletonRightHandColumn = Stack(
   Panes.DatasetInfoTabView,
@@ -44,8 +45,13 @@ const SkeletonRightHandColumn = Stack(
   Panes.AbstractTreeTabView,
   Panes.Mappings,
 );
+const SkeletonRightHandColumnWideScreen = Row(
+  Stack(Panes.DatasetInfoTabView, Panes.Mappings),
+  Stack(Panes.TreesTabView, Panes.CommentTabView, Panes.AbstractTreeTabView),
+);
 
 const NonSkeletonRightHandColumn = Stack(Panes.DatasetInfoTabView, Panes.Mappings);
+const NonSkeletonRightHandColumnWideScreen = Row(Panes.DatasetInfoTabView, Panes.Mappings);
 
 const createLayout = (...content: Array<*>) => ({
   settings: LayoutSettings,
@@ -56,16 +62,48 @@ const createLayout = (...content: Array<*>) => ({
   content,
 });
 
-const OrthoLayout = createLayout(Row(...OrthoViewsGrid, SkeletonRightHandColumn));
-const OrthoLayoutView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
-const VolumeTracingView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
 const ArbitraryLayout = createLayout(Row(Panes.arbitraryViewport, SkeletonRightHandColumn));
+const OrthoLayout = createLayout(Row(...OrthoViewsGrid, SkeletonRightHandColumn));
+const OrthoLayoutWideScreen = createLayout(
+  Column(...OrthoViewsGridWideScreen, Row(SkeletonRightHandColumnWideScreen)),
+);
+const OrthoLayoutView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
+const OrthoLayoutViewWideScreen = createLayout(
+  Column(...OrthoViewsGridWideScreen, Row(NonSkeletonRightHandColumnWideScreen)),
+);
+const VolumeTracingView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
+const VolumeTracingViewWideScreen = createLayout(
+  Column(...OrthoViewsGridWideScreen, Row(NonSkeletonRightHandColumnWideScreen)),
+);
+// setting custom height of viewports to wide screens
+OrthoLayoutWideScreen.content[0].content[0].height = 60;
+OrthoLayoutViewWideScreen.content[0].content[0].height = 60;
+VolumeTracingViewWideScreen.content[0].content[0].height = 60;
+
+const getWindowAspectRatio = () => {
+  let x = 1;
+  let y = 1;
+  if (document.body) {
+    x = window.innerWidth || document.body.clientWidth || 1;
+    y = window.innerHeight || document.body.clientHeight || 1;
+  }
+  return x / y;
+};
+let isWideScreenWindow = getWindowAspectRatio() > 1.5;
 
 const defaultLayouts = {
   ArbitraryLayout,
-  OrthoLayout,
-  OrthoLayoutView,
-  VolumeTracingView,
+  OrthoLayout: isWideScreenWindow ? OrthoLayoutWideScreen : OrthoLayout,
+  OrthoLayoutView: isWideScreenWindow ? OrthoLayoutViewWideScreen : OrthoLayoutView,
+  VolumeTracingView: isWideScreenWindow ? VolumeTracingViewWideScreen : VolumeTracingView,
+};
+export const adjustDefaultLayouts = () => {
+  isWideScreenWindow = getWindowAspectRatio() > 1.5;
+  defaultLayouts.OrthoLayout = isWideScreenWindow ? OrthoLayoutWideScreen : OrthoLayout;
+  defaultLayouts.OrthoLayoutView = isWideScreenWindow ? OrthoLayoutViewWideScreen : OrthoLayoutView;
+  defaultLayouts.VolumeTracingView = isWideScreenWindow
+    ? VolumeTracingViewWideScreen
+    : VolumeTracingView;
 };
 
 type Layout = $Keys<typeof defaultLayouts>;

@@ -104,6 +104,8 @@ trait DataLayer extends DataLayerLike {
   def lengthOfUnderlyingCubes(resolution: Point3D): Int
 
   def bucketProvider: BucketProvider
+  
+  def containsResolution(resolution: Point3D) = resolutions.contains(resolution)
 
   def doesContainBucket(bucket: BucketPosition) =
     boundingBox.intersects(bucket.toHighestResBoundingBox)

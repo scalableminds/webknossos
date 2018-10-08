@@ -2,8 +2,13 @@ package com.scalableminds.webknossos.datastore.tracings
 
 import com.google.inject.Inject
 import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.typesafe.scalalogging.LazyLogging
+import play.api.inject.ApplicationLifecycle
 
-class TracingDataStore @Inject()(config: DataStoreConfig) {
+import scala.concurrent.Future
+
+class TracingDataStore @Inject()(config: DataStoreConfig,
+                                 lifecycle: ApplicationLifecycle) extends LazyLogging {
 
   val healthClient = new FossilDBClient("healthCheckOnly", config)
 
@@ -17,4 +22,19 @@ class TracingDataStore @Inject()(config: DataStoreConfig) {
 
   lazy val volumeData = new FossilDBClient("volumeData", config)
 
+  def shutdown() = {
+    healthClient.shutdown()
+    skeletons.shutdown()
+    skeletonUpdates.shutdown()
+    volumes.shutdown()
+    volumeData.shutdown()
+    ()
+  }
+
+  lifecycle.addStopHook { () =>
+    Future.successful {
+      logger.info("Closing TracingStore grpc channels...")
+      shutdown()
+    }
+  }
 }

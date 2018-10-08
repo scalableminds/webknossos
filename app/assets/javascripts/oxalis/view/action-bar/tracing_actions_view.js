@@ -80,7 +80,12 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
   const customLayoutsItems = storedLayoutNamesForView.map(layout => {
     const isSelectedLayout = layout === activeLayout;
     return (
-      <Menu.Item key={layout} className={isSelectedLayout ? "selected-layout-item" : null}>
+      <Menu.Item
+        key={layout}
+        className={
+          isSelectedLayout ? "selected-layout-item bullet-point-less-li" : "bullet-point-less-li"
+        }
+      >
         <span
           onClick={() => onSelectLayout(layout)}
           style={{ minWidth: "100%", minHeight: "auto", display: "inline-block" }}
@@ -127,7 +132,12 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
       </Menu.Item>
       <Menu.Divider />
       <Menu.ItemGroup
-        title="test"
+        className="available-layout-list"
+        title={
+          <span style={{ fontSize: 14 }}>{`Layouts for ${
+            mapLayoutKeysToLanguage[layoutKey]
+          }`}</span>
+        }
       >
         {customLayoutsItems}
       </Menu.ItemGroup>

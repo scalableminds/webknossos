@@ -85,7 +85,7 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
           onClick={() => onSelectLayout(layout)}
           style={{ minWidth: "100%", minHeight: "auto", display: "inline-block" }}
         >
-          <div className="inline-with-margin" style={{ marginRight: 16 }}>
+          <div className="inline-with-margin">
             {layout}
             {isSelectedLayout ? (
               <Icon type="check" className="sub-menu-item-icon" theme="outlined" />
@@ -127,11 +127,7 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
       </Menu.Item>
       <Menu.Divider />
       <Menu.ItemGroup
-        title={
-          <span style={{ fontSize: 14 }}>{`Layouts for ${
-            mapLayoutKeysToLanguage[layoutKey]
-          }`}</span>
-        }
+        title="test"
       >
         {customLayoutsItems}
       </Menu.ItemGroup>

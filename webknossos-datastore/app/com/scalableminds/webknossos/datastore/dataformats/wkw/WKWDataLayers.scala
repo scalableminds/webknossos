@@ -30,6 +30,7 @@ trait WKWLayer extends DataLayer {
   def lengthOfUnderlyingCubes(resolution: Point3D): Int = {
     wkwResolutions.find(_.resolutionAsPoint3D == resolution).map(_.cubeLength).getOrElse(0)
   }
+
 }
 
 case class WKWDataLayer(

@@ -116,7 +116,7 @@ CREATE TABLE webknossos.dataStores(
   url VARCHAR(512) UNIQUE NOT NULL CHECK (url ~* '^https?://[a-z0-9\.]+.*$'),
   key VARCHAR(1024) NOT NULL,
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  isForeign BOOLEAN NOT NULL DEFAULT fals DEFERRABLEe
+  isForeign BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TABLE webknossos.projects(

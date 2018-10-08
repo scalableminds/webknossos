@@ -53,8 +53,7 @@ object BuildInfoSettings {
       "ciTag" -> ciTag,
       "gitTag" -> gitTag,
       "version" -> version(),
-      "oldestSupportedDatastoreVersion" -> "18.09.0",
-      "oldestSupportedWebknossosVersion" -> "18.09.0"
+      "datastoreApiVersion" -> "1.0"
     ),
     buildInfoPackage := "webknossos",
     buildInfoOptions := Seq(BuildInfoOption.ToJson)
@@ -68,7 +67,7 @@ object BuildInfoSettings {
       "ciTag" -> ciTag,
       "gitTag" -> gitTag,
       "version" -> version(),
-      "oldestSupportedWebknossosVersion" -> "18.09.0"
+      "datastoreApiVersion" -> "1.0"
     ),
     buildInfoPackage := "webknossosDatastore",
     buildInfoOptions := Seq(BuildInfoOption.ToJson)

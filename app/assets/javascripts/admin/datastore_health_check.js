@@ -43,24 +43,20 @@ async function checkVersionMismatch(url: string) {
     RestAPI.getDataStoreBuildInfo(url),
   ]);
 
-  const webknossosVersion = buildinfoWebknossos.webknossos.version;
-  const oldestSupportedDatastoreVersion =
-    buildinfoWebknossos.webknossos.oldestSupportedDatastoreVersion;
+  const expectedDatastoreApiVersion = buildinfoWebknossos.webknossos.datastoreApiVersion;
 
   const buildInfoWebknossosDatastore = buildinfoDatastore.webknossosDatastore
     ? buildinfoDatastore.webknossosDatastore
     : buildinfoDatastore.webknossos;
-  const dataStoreVersion = buildInfoWebknossosDatastore.version;
-  const oldestSupportedWebknossosVersion =
-    buildInfoWebknossosDatastore.oldestSupportedWebknossosVersion;
+  const suppliedDatastoreApiVersion = buildInfoWebknossosDatastore.version;
 
-  if (dataStoreVersion < oldestSupportedDatastoreVersion) {
+  if (expectedDatastoreApiVersion < suppliedDatastoreApiVersion) {
     Toast.warning(
-      messages["datastore.version.datastore"]({ webknossosVersion, dataStoreVersion, url }),
+      messages["datastore.version.too_new"]({ webknossosVersion, dataStoreVersion, url }),
     );
   } else if (webknossosVersion < oldestSupportedWebknossosVersion) {
     Toast.warning(
-      messages["datastore.version.webknossos"]({
+      messages["datastore.version.too_old"]({
         webknossosVersion,
         dataStoreVersion,
         url,

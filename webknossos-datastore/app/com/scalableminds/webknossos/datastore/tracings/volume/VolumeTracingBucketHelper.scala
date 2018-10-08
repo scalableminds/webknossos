@@ -24,7 +24,7 @@ trait VolumeTracingBucketHelper extends WKWMortonHelper with KeyValueStoreImplic
 
   def loadBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition): Fox[Array[Byte]] = {
     val key = buildBucketKey(dataLayer.name, bucket)
-    volumeDataStore.get(key, mayBeEmpty = Some(true)).futureBox.map(_.toStream.headOption.map(_.value))
+    volumeDataStore.get(key, Some(0), Some(true)).futureBox.map(_.toStream.headOption.map(_.value))
   }
 
   def saveBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition, data: Array[Byte]): Fox[_] = {
@@ -47,7 +47,7 @@ class BucketIterator(prefix: String, volumeDataStore: FossilDBClient) extends It
   var currentBatchIterator: Iterator[KeyValuePair[Array[Byte]]] = fetchNext
 
   def fetchNext =
-    volumeDataStore.getMultipleKeys(currentStartKey, Some(prefix), None, Some(batchSize)).toIterator
+    volumeDataStore.getMultipleKeys(currentStartKey, Some(prefix), Some(0), Some(batchSize)).toIterator
 
   def fetchNextAndSave = {
     currentBatchIterator = fetchNext

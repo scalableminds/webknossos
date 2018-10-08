@@ -109,10 +109,10 @@ export function determineLayout(controlMode: ControlMode, viewMode: Mode): Layou
 }
 
 export const mapLayoutKeysToLanguage = {
-  OrthoLayoutView: "Orthogonal Tracings - View Only",
-  VolumeTracingView: "Volume Tracings",
-  ArbitraryLayout: "Arbitray View Mode",
-  OrthoLayout: "Orthogonal Tracings",
+  OrthoLayoutView: "Orthogonal Mode - View Only",
+  VolumeTracingView: "Volume Mode",
+  ArbitraryLayout: "Arbitray Mode",
+  OrthoLayout: "Orthogonal Mode",
 };
 
 export type LayoutKeys = $Keys<typeof defaultLayouts>;

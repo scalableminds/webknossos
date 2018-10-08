@@ -49,6 +49,7 @@ test.serial("createProject and deleteProject", async t => {
     paused: false,
     expectedTime: 1,
     numberOfOpenAssignments: 1,
+    isBlacklistedFromReport: true,
   };
 
   const createdProject = await api.createProject(newProject);

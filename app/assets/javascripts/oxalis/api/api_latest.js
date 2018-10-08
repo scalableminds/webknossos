@@ -69,6 +69,7 @@ import { requestTask, finishAnnotation, doWithToken } from "admin/admin_rest_api
 import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import messages from "messages";
 import type { ToastStyle } from "libs/toast";
+import type { Versions } from "oxalis/view/version_view";
 
 function assertExists(value: any, message: string) {
   if (value == null) {
@@ -412,7 +413,7 @@ class TracingApi {
     newTracingType: TracingTypeTracing,
     newAnnotationId: string,
     newControlMode: ControlMode,
-    version?: number,
+    versions?: Versions,
   ) {
     if (newControlMode === ControlModeEnum.VIEW)
       throw new Error("Restarting with view option is not supported");
@@ -423,7 +424,7 @@ class TracingApi {
       newTracingType,
       { annotationId: newAnnotationId, type: newControlMode },
       false,
-      version,
+      versions,
     );
     Store.dispatch(discardSaveQueuesAction());
     Store.dispatch(wkReadyAction());

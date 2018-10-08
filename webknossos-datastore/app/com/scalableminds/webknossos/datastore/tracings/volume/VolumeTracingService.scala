@@ -11,10 +11,12 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.tracings._
 import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.tracings.UpdateAction.VolumeUpdateAction
 import com.scalableminds.webknossos.wrap.WKWFile
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.iteratee.Enumerator
+import play.api.libs.json.{Json, JsObject}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -23,17 +25,17 @@ class VolumeTracingService @Inject()(
                                       val temporaryTracingStore: TemporaryTracingStore[VolumeTracing]
                                     )
   extends TracingService[VolumeTracing]
-  with VolumeTracingBucketHelper
-  with WKWDataFormatHelper
-  with ProtoGeometryImplicits
-  with FoxImplicits
-  with LazyLogging {
+    with VolumeTracingBucketHelper
+    with WKWDataFormatHelper
+    with ProtoGeometryImplicits
+    with FoxImplicits
+    with LazyLogging {
 
   implicit val volumeDataStore = tracingDataStore.volumeData
 
   implicit val tracingCompanion = VolumeTracing
 
-  implicit val updateActionReads = VolumeUpdateAction.volumeUpdateActionReads
+  implicit val updateActionReads = VolumeUpdateAction.volumeUpdateActionFormat
 
   val tracingType = TracingType.volume
 
@@ -42,25 +44,43 @@ class VolumeTracingService @Inject()(
   override def currentVersion(tracingId: String): Fox[Long] = tracingDataStore.volumes.getVersion(tracingId).getOrElse(0L)
 
   def handleUpdateGroup(tracingId: String, updateGroup: UpdateActionGroup[VolumeTracing]): Fox[_] = {
-    updateGroup.actions.foldLeft(find(tracingId)) { (tracing, action) =>
-      tracing.futureBox.flatMap {
-        case Full(t) =>
-          action match {
-            case a: UpdateBucketVolumeAction =>
-              val resolution = math.pow(2, a.zoomStep).toInt
-              val bucket = new BucketPosition(a.position.x, a.position.y, a.position.z, Point3D(resolution, resolution, resolution))
-              saveBucket(volumeTracingLayer(tracingId, t), bucket, a.data).map(_ => t)
-            case a: UpdateTracingVolumeAction =>
-              Fox.successful(t.copy(activeSegmentId = Some(a.activeSegmentId), editPosition = a.editPosition, editRotation = a.editRotation, largestSegmentId = a.largestSegmentId, zoomLevel = a.zoomLevel, userBoundingBox = a.userBoundingBox))
-            case _ =>
-              Fox.failure("Unknown action.")
+    for {
+      _ <- updateGroup.actions.foldLeft(find(tracingId)) { (tracing, action) =>
+        tracing.futureBox.flatMap {
+          case Full(t) =>
+            action match {
+              case a: UpdateBucketVolumeAction =>
+                val resolution = math.pow(2, a.zoomStep).toInt
+                val bucket = new BucketPosition(a.position.x, a.position.y, a.position.z, Point3D(resolution, resolution, resolution))
+                saveBucket(volumeTracingLayer(tracingId, t), bucket, a.data, updateGroup.version).map(_ => t)
+              case a: UpdateTracingVolumeAction =>
+                Fox.successful(t.copy(activeSegmentId = Some(a.activeSegmentId), editPosition = a.editPosition, editRotation = a.editRotation, largestSegmentId = a.largestSegmentId, zoomLevel = a.zoomLevel, userBoundingBox = a.userBoundingBox))
+              case a: RevertToVersionVolumeAction => revertToVolumeVersion(tracingId, a.sourceVersion, updateGroup.version, t)
+              case _ => Fox.failure("Unknown action.")
+            }
+          case Empty =>
+            Fox.empty
+          case f: Failure =>
+            Fox.failure(f.msg)
+        }
+      }.map(t => save(t.copy(version = updateGroup.version), Some(tracingId), updateGroup.version))
+      _ <- tracingDataStore.volumeUpdates.put(tracingId, updateGroup.version, updateGroup.actions.map(_.addTimestamp(updateGroup.timestamp)).map(_.transformToCompact))
+    } yield Fox.successful()
+  }
+
+  private def revertToVolumeVersion(tracingId: String, sourceVersion: Long, newVersion: Long, tracing: VolumeTracing) = {
+    val sourceTracing = find(tracingId, Some(sourceVersion))
+    val dataLayer = volumeTracingLayer(tracingId, tracing)
+    val bucketStream = dataLayer.volumeBucketProvider.bucketStreamWithVersion(1)
+    bucketStream.foreach {
+      case (bucketPosition, _, version) =>
+        if(version > sourceVersion)
+          loadBucket(dataLayer, bucketPosition, Some(sourceVersion)).futureBox.map {
+            case Full(bucket) => saveBucket(dataLayer, bucketPosition, bucket, newVersion)
+            case Empty => saveBucket(dataLayer, bucketPosition, Array[Byte](0), newVersion)
           }
-        case Empty =>
-          Fox.empty
-        case f: Failure =>
-          Fox.failure(f.msg)
-      }
-    }.map(t => save(t.copy(version = updateGroup.version), Some(tracingId), updateGroup.version))
+    }
+    sourceTracing
   }
 
   def initializeWithData(tracingId: String, tracing: VolumeTracing, dataSource: DataSource, initialData: File): Box[_] = {
@@ -89,7 +109,7 @@ class VolumeTracingService @Inject()(
           case (header, buckets) =>
             if (header.numBlocksPerCube == 1) {
               parseWKWFilePath(fileName.toString).map { bucket =>
-                saveBucket(dataLayer, bucket, buckets.next())
+                saveBucket(dataLayer, bucket, buckets.next(), tracing.version)
               }
             }
         }
@@ -98,7 +118,7 @@ class VolumeTracingService @Inject()(
 
   def data(tracingId: String, tracing: VolumeTracing): Enumerator[Array[Byte]] = {
     val dataLayer = volumeTracingLayer(tracingId, tracing)
-    val buckets = new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(1))
+    val buckets = new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(1, Some(tracing.version)))
 
     Enumerator.outputStream { os =>
       ZipIO.zip(buckets, os)
@@ -119,8 +139,8 @@ class VolumeTracingService @Inject()(
     val buckets: Iterator[(BucketPosition, Array[Byte])] = sourceDataLayer.bucketProvider.bucketStream(1)
     for {
       _ <- Fox.combined(buckets.map { case (bucketPosition, bucketData) =>
-              saveBucket(destinationDataLayer, bucketPosition, bucketData)
-            }.toList)
+        saveBucket(destinationDataLayer, bucketPosition, bucketData, destinationTracing.version)
+      }.toList)
     } yield ()
   }
 
@@ -142,5 +162,19 @@ class VolumeTracingService @Inject()(
 
   def dataLayerForVolumeTracing(tracingId: String, dataSource: DataSource): Fox[SegmentationLayer] = {
     find(tracingId).map(volumeTracingLayerWithFallback(tracingId, _, dataSource))
+  }
+
+  def updateActionLog(tracingId: String) = {
+    def versionedTupleToJson(tuple: (Long, List[CompactVolumeUpdateAction])): JsObject = {
+      Json.obj(
+        "version" -> tuple._1,
+        "value" -> Json.toJson(tuple._2)
+      )
+    }
+
+    for {
+      volumeTracings <- tracingDataStore.volumeUpdates.getMultipleVersionsAsVersionValueTuple(tracingId)(fromJson[List[CompactVolumeUpdateAction]])
+      updateActionGroupsJs = volumeTracings.map(versionedTupleToJson)
+    } yield Json.toJson(updateActionGroupsJs)
   }
 }

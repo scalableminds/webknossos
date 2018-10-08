@@ -12,6 +12,7 @@ import DataLayer from "oxalis/model/data_layer";
 import ConnectionInfo from "oxalis/model/data_connection_info";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
+import type { Versions } from "oxalis/view/version_view";
 import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { isBusy } from "oxalis/model/accessors/save_accessor";
 import { initialize } from "./model_initialization";
@@ -29,13 +30,13 @@ export class OxalisModel {
     tracingType: TracingTypeTracing,
     initialCommandType: TraceOrViewCommand,
     initialFetch: boolean,
-    version?: number,
+    versions?: Versions,
   ) {
     const initializationInformation = await initialize(
       tracingType,
       initialCommandType,
       initialFetch,
-      version,
+      versions,
     );
     if (initializationInformation) {
       // Only executed on initial fetch

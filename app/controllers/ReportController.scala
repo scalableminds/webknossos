@@ -10,7 +10,7 @@ import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
 import play.api.libs.json.Json
 import slick.jdbc.PostgresProfile.api._
-import utils.{ObjectId, SQLClient, SimpleSQLDAO}
+import utils.{ObjectId, SQLClient, SimpleSQLDAO, WkConf}
 
 import scala.concurrent.ExecutionContext
 
@@ -43,7 +43,8 @@ class ReportDAO @Inject()(sqlClient: SQLClient, annotationDAO: AnnotationDAO)(im
             CROSS JOIN experiences ue
           where p._team = ${teamId.id} and
           t.neededExperience_domain = ue.domain and
-          t.neededExperience_value <= ue.value
+          t.neededExperience_value <= ue.value and
+          not p.isblacklistedfromreport
           group by p._id, p.name, p.paused)
 
           ,projectModifiedTimes as (select p._id, MAX(a.modified) as modified
@@ -118,13 +119,15 @@ class ReportController @Inject()(reportDAO: ReportDAO,
                                  teamDAO: TeamDAO,
                                  userDAO: UserDAO,
                                  userService: UserService,
+                                 conf: WkConf,
                                  sil: Silhouette[WkEnv])
                                 (implicit ec: ExecutionContext)
   extends Controller with FoxImplicits {
 
   def projectProgressOverview(teamId: String) = sil.SecuredAction.async { implicit request =>
     for {
-      entries <- reportDAO.projectProgress(ObjectId(teamId))(GlobalAccessContext)
+      teamIdValidated <- ObjectId.parse(teamId)
+      entries <- reportDAO.projectProgress(teamIdValidated)(GlobalAccessContext)
     } yield Ok(Json.toJson(entries))
   }
 

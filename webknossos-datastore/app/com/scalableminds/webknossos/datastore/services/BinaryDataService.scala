@@ -81,7 +81,7 @@ class BinaryDataService @Inject()(config: DataStoreConfig) extends FoxImplicits 
   }
 
   private def handleBucketRequest(request: DataServiceDataRequest, bucket: BucketPosition): Fox[Array[Byte]] = {
-    if (request.dataLayer.doesContainBucket(bucket)) {
+    if (request.dataLayer.doesContainBucket(bucket) && request.dataLayer.containsResolution(bucket.resolution)) {
       val readInstruction = DataReadInstruction(
         dataBaseDir,
         request.dataSource,

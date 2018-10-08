@@ -1,11 +1,12 @@
 // @flow
 import * as React from "react";
 import _ from "lodash";
-import { Spin, List } from "antd";
+import { List } from "antd";
 import Store from "oxalis/store";
 import { ControlModeEnum } from "oxalis/constants";
 import Model from "oxalis/model";
 import api from "oxalis/api/internal_api";
+import app from "app";
 import { getUpdateActionLog } from "admin/admin_rest_api";
 import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_actions";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
@@ -27,10 +28,16 @@ type State = {
   versions: Array<APIUpdateActionBatch>,
 };
 
+const VERSION_LIST_PLACEHOLDER = { emptyText: "No versions created yet." };
+
 export async function previewVersion(versions?: Versions) {
   const { tracingType, annotationId } = Store.getState().tracing;
   await api.tracing.restart(tracingType, annotationId, ControlModeEnum.TRACE, versions);
   Store.dispatch(setAnnotationAllowUpdateAction(false));
+  if (versions != null && versions.volume != null) {
+    Model.getSegmentationLayer().cube.collectAllBuckets();
+    Model.getSegmentationLayer().layerRenderingManager.refresh();
+  }
 }
 
 class VersionList extends React.Component<Props, State> {
@@ -80,21 +87,22 @@ class VersionList extends React.Component<Props, State> {
     );
 
     return (
-      <Spin spinning={this.state.isLoading}>
-        <List>
-          {filteredVersions.map((batch, index) => (
-            <VersionEntry
-              actions={batch.value}
-              version={batch.version}
-              isNewest={index === 0}
-              isActive={this.props.tracing.version === batch.version}
-              onRestoreVersion={this.restoreVersion}
-              onPreviewVersion={version => previewVersion({ [this.props.tracingType]: version })}
-              key={batch.version}
-            />
-          ))}
-        </List>
-      </Spin>
+      <List
+        dataSource={filteredVersions}
+        loading={this.state.isLoading}
+        locale={VERSION_LIST_PLACEHOLDER}
+        renderItem={(batch, index) => (
+          <VersionEntry
+            actions={batch.value}
+            version={batch.version}
+            isNewest={index === 0}
+            isActive={this.props.tracing.version === batch.version}
+            onRestoreVersion={this.restoreVersion}
+            onPreviewVersion={version => previewVersion({ [this.props.tracingType]: version })}
+            key={batch.version}
+          />
+        )}
+      />
     );
   }
 }

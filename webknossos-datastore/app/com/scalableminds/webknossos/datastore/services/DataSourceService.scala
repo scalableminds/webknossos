@@ -45,7 +45,7 @@ class DataSourceService @Inject()(
   def checkInbox(): Fox[Unit] = {
     logger.info(s"Scanning inbox at: $dataBaseDir")
     for {
-      _ <- baseDirService.updateSymlinks
+      _ <- baseDirService.updateSymlinks ?~> "Failed to update dataset symbolic links"
       _ <- PathUtils.listDirectories(dataBaseDir) match {
               case Full(dirs) =>
                 for {

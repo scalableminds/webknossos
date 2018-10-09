@@ -17,14 +17,17 @@ class BaseDirService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionCo
 
   def updateSymlinks() : Fox[Unit] = {
     for {
-      _ <- Fox.successful(())
       organizationDirectoriesNested <- additionalDirs.map(dir => PathUtils.listDirectories(dir)).toSingleBox("listDirectories failed").toFox
-      organizationDirectories: List[Path] = organizationDirectoriesNested.flatten
-      datasetDirectoriesNested <- organizationDirectories.map(dir => PathUtils.listDirectories(dir)).toSingleBox("listDirectories failed").toFox
-      datasetDirectories: List[Path] = datasetDirectoriesNested.flatten
-      _ <- Fox.serialCombined(datasetDirectories){ directory => createSymlink(baseDir.resolve(directory.getParent.getFileName).resolve(directory.getFileName), directory) }
-      _ = logger.info(s"$datasetDirectories")
+      datasetDirectoriesNested <- organizationDirectoriesNested.flatten.map(dir => PathUtils.listDirectories(dir)).toSingleBox("listDirectories failed").toFox
+      _ <- createMissingSymlinks(datasetDirectoriesNested.flatten)
+      _ <- cleanUpDanglingSymlinks()
     } yield ()
+  }
+
+  private def createMissingSymlinks(datasetDirectories: List[Path]) = {
+    Fox.serialCombined(datasetDirectories) {
+      directory => createSymlink(baseDir.resolve(directory.getParent.getFileName).resolve(directory.getFileName), directory)
+    }
   }
 
   private def createSymlink(linkLocation: Path, actualDirLocation: Path) = {
@@ -42,6 +45,28 @@ class BaseDirService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionCo
       }
     } catch {
       case e: IOException => Fox.failure(s"Failed to create symbolic link at $linkLocation ${e.getMessage}")
+    }
+  }
+
+  private def cleanUpDanglingSymlinks() = {
+    for {
+      organizationDirectories <- PathUtils.listDirectories(baseDir).toFox
+      dataSetDirectories <- organizationDirectories.map(dir => PathUtils.listDirectoriesRaw(dir)).toSingleBox("listDirectories failed").toFox
+      _ <- Fox.serialCombined(dataSetDirectories.flatten)(cleanUpIfDanglingSymlink)
+    } yield ()
+  }
+
+  private def cleanUpIfDanglingSymlink(directory: Path): Fox[Unit] = {
+    try {
+      logger.info(s"testing for symlinkness: $directory")
+      if (Files.isSymbolicLink(directory) && Files.notExists(Files.readSymbolicLink(directory))) {
+        logger.info(s"Deleting dangling symbolic link at $directory which pointed to ${Files.readSymbolicLink(directory)}")
+        Fox.successful(Files.delete(directory))
+      } else {
+        Fox.successful(())
+      }
+    } catch {
+      case e: IOException => Fox.failure(s"Failed to analyze possible symlink for cleanup at $directory: ${e.getMessage}")
     }
   }
 

@@ -36,7 +36,6 @@ const Panes = {
 };
 
 const OrthoViewsGrid = [Column(Panes.xy, Panes.xz), Column(Panes.yz, Panes.td)];
-const OrthoViewsGridWideScreen = [Row(Panes.xy, Panes.xz, Panes.yz, Panes.td)];
 
 const SkeletonRightHandColumn = Stack(
   Panes.DatasetInfoTabView,
@@ -45,13 +44,8 @@ const SkeletonRightHandColumn = Stack(
   Panes.AbstractTreeTabView,
   Panes.Mappings,
 );
-const SkeletonRightHandColumnWideScreen = Row(
-  Stack(Panes.DatasetInfoTabView, Panes.Mappings),
-  Stack(Panes.TreesTabView, Panes.CommentTabView, Panes.AbstractTreeTabView),
-);
 
 const NonSkeletonRightHandColumn = Stack(Panes.DatasetInfoTabView, Panes.Mappings);
-const NonSkeletonRightHandColumnWideScreen = Row(Panes.DatasetInfoTabView, Panes.Mappings);
 
 const createLayout = (...content: Array<*>) => ({
   settings: LayoutSettings,
@@ -62,48 +56,51 @@ const createLayout = (...content: Array<*>) => ({
   content,
 });
 
-const ArbitraryLayout = createLayout(Row(Panes.arbitraryViewport, SkeletonRightHandColumn));
 const OrthoLayout = createLayout(Row(...OrthoViewsGrid, SkeletonRightHandColumn));
-const OrthoLayoutWideScreen = createLayout(
-  Column(...OrthoViewsGridWideScreen, Row(SkeletonRightHandColumnWideScreen)),
-);
 const OrthoLayoutView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
-const OrthoLayoutViewWideScreen = createLayout(
-  Column(...OrthoViewsGridWideScreen, Row(NonSkeletonRightHandColumnWideScreen)),
-);
 const VolumeTracingView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
-const VolumeTracingViewWideScreen = createLayout(
-  Column(...OrthoViewsGridWideScreen, Row(NonSkeletonRightHandColumnWideScreen)),
-);
-// setting custom height of viewports to wide screens
-OrthoLayoutWideScreen.content[0].content[0].height = 60;
-OrthoLayoutViewWideScreen.content[0].content[0].height = 60;
-VolumeTracingViewWideScreen.content[0].content[0].height = 60;
+const ArbitraryLayout = createLayout(Row(Panes.arbitraryViewport, SkeletonRightHandColumn));
 
-const getWindowAspectRatio = () => {
-  let x = 1;
-  let y = 1;
-  if (document.body) {
-    x = window.innerWidth || document.body.clientWidth || 1;
-    y = window.innerHeight || document.body.clientHeight || 1;
+export const setColumnWidthOfDefaultLayouts = () => {
+  let height;
+  let width;
+  const defaultLayouts = [OrthoLayout, OrthoLayoutView, VolumeTracingView];
+  const glContainer = document.getElementById("canvasAndLayoutContainer");
+  if (glContainer) {
+    height = glContainer.offsetHeight;
+    width = glContainer.offsetWidth;
+  } else {
+    if (window.innerWidth) {
+      width = window.innerWidth;
+      height = window.innerHeight;
+    } else if (document.body) {
+      // support for old versions of IE
+      width = document.body.clientWidth;
+      height = document.body.clientHeight;
+    } else {
+      return;
+    }
+    // subtraction navbar and layout header
+    height -= 50 + 48;
   }
-  return x / y;
+  let viewportWidth = ((height / 2) * 100) / width;
+  // setting minimum width for right menu
+  if (viewportWidth > 40) {
+    viewportWidth = 40;
+  }
+  defaultLayouts.forEach(layout => {
+    layout.content[0].content[0].width = viewportWidth;
+    layout.content[0].content[1].width = viewportWidth;
+    layout.content[0].content[2].width = 100 - 2 * viewportWidth;
+  });
 };
-let isWideScreenWindow = getWindowAspectRatio() > 1.5;
+setColumnWidthOfDefaultLayouts();
 
 const defaultLayouts = {
   ArbitraryLayout,
-  OrthoLayout: isWideScreenWindow ? OrthoLayoutWideScreen : OrthoLayout,
-  OrthoLayoutView: isWideScreenWindow ? OrthoLayoutViewWideScreen : OrthoLayoutView,
-  VolumeTracingView: isWideScreenWindow ? VolumeTracingViewWideScreen : VolumeTracingView,
-};
-export const adjustDefaultLayouts = () => {
-  isWideScreenWindow = getWindowAspectRatio() > 1.5;
-  defaultLayouts.OrthoLayout = isWideScreenWindow ? OrthoLayoutWideScreen : OrthoLayout;
-  defaultLayouts.OrthoLayoutView = isWideScreenWindow ? OrthoLayoutViewWideScreen : OrthoLayoutView;
-  defaultLayouts.VolumeTracingView = isWideScreenWindow
-    ? VolumeTracingViewWideScreen
-    : VolumeTracingView;
+  OrthoLayout,
+  OrthoLayoutView,
+  VolumeTracingView,
 };
 
 type Layout = $Keys<typeof defaultLayouts>;

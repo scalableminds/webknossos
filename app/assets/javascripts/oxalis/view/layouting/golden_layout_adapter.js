@@ -10,7 +10,7 @@ import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Store from "oxalis/store";
 import { PortalTarget, RenderToPortal } from "./portal_utils";
 import { layoutEmitter } from "./layout_persistence";
-import { adjustDefaultLayouts } from "./default_layout_configs";
+import { setColumnWidthOfDefaultLayouts } from "./default_layout_configs";
 
 type Props<KeyType> = {
   id: string,
@@ -123,7 +123,7 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
     window.addEventListener("resize", updateSize);
     const unbindResizeListener = () => window.removeEventListener("resize", updateSize);
     const unbindResetListener = layoutEmitter.on("resetLayout", () => {
-      adjustDefaultLayouts();
+      setColumnWidthOfDefaultLayouts();
       this.rebuildLayout();
     });
     const unbindChangedScaleListener = listenToStoreProperty(

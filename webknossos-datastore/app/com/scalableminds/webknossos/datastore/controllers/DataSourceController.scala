@@ -18,7 +18,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class DataSourceController @Inject()(
                                       dataSourceRepository: DataSourceRepository,
                                       dataSourceService: DataSourceService,
-                                      baseDirService: BaseDirService,
                                       webKnossosServer: WebKnossosServer,
                                       accessTokenService: AccessTokenService
                                     )(implicit bodyParsers: PlayBodyParsers)
@@ -140,7 +139,7 @@ class DataSourceController @Inject()(
     implicit request =>
       accessTokenService.validateAccessForSyncBlock(UserAccessRequest.administrateDataSources) {
         AllowRemoteOrigin {
-          val newOrganizationFolder = new File(baseDirService.defaultBaseDir + "/" + organizationName)
+          val newOrganizationFolder = new File(dataSourceService.dataBaseDir + "/" + organizationName)
           newOrganizationFolder.mkdirs()
           if (newOrganizationFolder.isDirectory)
             Ok

@@ -20,9 +20,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class BinaryDataService @Inject()(config: DataStoreConfig,
-                                  baseDirService: BaseDirService
-                                 ) extends FoxImplicits with LazyLogging {
+class BinaryDataService @Inject()(config: DataStoreConfig) extends FoxImplicits with LazyLogging {
+
+  val dataBaseDir = Paths.get(config.Braingames.Binary.baseFolder)
 
   val loadTimeout: FiniteDuration = config.Braingames.Binary.loadTimeout
 
@@ -51,7 +51,7 @@ class BinaryDataService @Inject()(config: DataStoreConfig,
   }
 
   def handleMappingRequest(request: DataServiceMappingRequest): Fox[Array[Byte]] = {
-    val readInstruction = MappingReadInstruction(baseDirService.baseDirFor(request.dataSource), request.dataSource, request.mapping)
+    val readInstruction = MappingReadInstruction(dataBaseDir, request.dataSource, request.mapping)
     request.dataLayer.mappingProvider.load(readInstruction)
   }
 
@@ -83,7 +83,7 @@ class BinaryDataService @Inject()(config: DataStoreConfig,
   private def handleBucketRequest(request: DataServiceDataRequest, bucket: BucketPosition): Fox[Array[Byte]] = {
     if (request.dataLayer.doesContainBucket(bucket) && request.dataLayer.containsResolution(bucket.resolution)) {
       val readInstruction = DataReadInstruction(
-        baseDirService.baseDirFor(request.dataSource),
+        dataBaseDir,
         request.dataSource,
         request.dataLayer,
         bucket)

@@ -20,7 +20,8 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
         val enabled = get[Boolean]("braingames.binary.changeHandler.enabled")
         val tickerInterval = get[Int]("braingames.binary.changeHandler.tickerInterval") minutes
       }
-      val baseFolders = get[Seq[String]]("braingames.binary.baseFolders").toList
+      val baseFolder = get[String]("braingames.binary.baseFolder")
+      val additionalFolders = get[Seq[String]]("braingames.binary.additionalFolders").toList
       val loadTimeout = get[Int]("braingames.binary.loadTimeout") seconds
       val cacheMaxSize = get[Int]("braingames.binary.cacheMaxSize")
 

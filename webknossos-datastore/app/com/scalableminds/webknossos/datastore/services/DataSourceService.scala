@@ -27,8 +27,8 @@ import scala.concurrent.duration._
 class DataSourceService @Inject()(
                                    config: DataStoreConfig,
                                    dataSourceRepository: DataSourceRepository,
-                                   baseDirService: BaseDirService,
                                    val lifecycle: ApplicationLifecycle,
+                                   baseDirService: BaseDirService,
                                    @Named("webknossos-datastore") val system: ActorSystem
                                  ) extends IntervalScheduler with LazyLogging with FoxImplicits {
 
@@ -36,33 +36,34 @@ class DataSourceService @Inject()(
   protected lazy val tickerInterval: FiniteDuration = config.Braingames.Binary.ChangeHandler.tickerInterval
 
   private val MaxNumberOfFilesForDataFormatGuessing = 10
-  val dataBaseDirs = baseDirService.baseDirs
+  val dataBaseDir = Paths.get(config.Braingames.Binary.baseFolder)
 
   private val propertiesFileName = Paths.get("datasource-properties.json")
 
   def tick: Unit = checkInbox()
 
   def checkInbox(): Fox[Unit] = {
-    logger.info(s"Scanning inbox at: $dataBaseDirs")
-    val boxes = dataBaseDirs.map(dir => PathUtils.listDirectories(dir)).toSingleBox("listDirectories failed")
-    boxes match {
-      case Full(dirsNested) =>
-        for {
-          _ <- Fox.successful(())
-          dirs = dirsNested.flatten
-          foundInboxSources = dirs.flatMap(teamAwareInboxSources)
-          dataSourceString = foundInboxSources.map { ds =>
-            s"'${ds.id.team}/${ds.id.name}' (${if (ds.isUsable) "active" else "inactive"})"
-          }.mkString(", ")
+    logger.info(s"Scanning inbox at: $dataBaseDir")
+    for {
+      _ <- baseDirService.updateSymlinks
+      _ <- PathUtils.listDirectories(dataBaseDir) match {
+              case Full(dirs) =>
+                for {
+                  _ <- Fox.successful(())
+                  foundInboxSources = dirs.flatMap(teamAwareInboxSources)
+                  dataSourceString = foundInboxSources.map { ds =>
+                    s"'${ds.id.team}/${ds.id.name}' (${if (ds.isUsable) "active" else "inactive"})"
+                  }.mkString(", ")
 
-          _ = logger.info(s"Finished scanning inbox: $dataSourceString")
-          _ <- dataSourceRepository.updateDataSources(foundInboxSources)
-        } yield ()
-      case e =>
-        val errorMsg = s"Failed to scan inbox. Error during list directories on $dataBaseDirs: $e"
-        logger.error(errorMsg)
-        Fox.failure(errorMsg)
-    }
+                  _ = logger.info(s"Finished scanning inbox: $dataSourceString")
+                  _ <- dataSourceRepository.updateDataSources(foundInboxSources)
+                } yield ()
+              case e =>
+                val errorMsg = s"Failed to scan inbox. Error during list directories on '$dataBaseDir': $e"
+                logger.error(errorMsg)
+                Fox.failure(errorMsg)
+            }
+    } yield ()
   }
 
   def handleUpload(id: DataSourceId, dataSetZip: File): Fox[Unit] = {
@@ -74,7 +75,7 @@ class DataSourceService @Inject()(
         case e: AccessDeniedException => Fox.failure("dataSet.import.fileAccessDenied")
       }
 
-    val dataSourceDir = baseDirService.defaultBaseDir.resolve(id.team).resolve(id.name)
+    val dataSourceDir = dataBaseDir.resolve(id.team).resolve(id.name)
 
     logger.info(s"Uploading and unzipping dataset into $dataSourceDir")
 
@@ -93,9 +94,8 @@ class DataSourceService @Inject()(
   }
 
   def exploreDataSource(id: DataSourceId, previous: Option[DataSource]): Box[(DataSource, List[(String, String)])] = {
-    val baseDir = baseDirService.baseDirFor(id)
-    val path = baseDir.resolve(id.team).resolve(id.name)
-    val report = DataSourceImportReport[Path](baseDir.relativize(path))
+    val path = dataBaseDir.resolve(id.team).resolve(id.name)
+    val report = DataSourceImportReport[Path](dataBaseDir.relativize(path))
     for {
       dataFormat <- guessDataFormat(path)
       result <- dataFormat.exploreDataSource(id, path, previous, report)
@@ -135,7 +135,7 @@ class DataSourceService @Inject()(
   def updateDataSource(dataSource: DataSource): Fox[Unit] = {
     for {
       _ <- validateDataSource(dataSource).toFox
-      propertiesFile = baseDirService.baseDirFor(dataSource.id).resolve(dataSource.id.team).resolve(dataSource.id.name).resolve(propertiesFileName)
+      propertiesFile = dataBaseDir.resolve(dataSource.id.team).resolve(dataSource.id.name).resolve(propertiesFileName)
       _ = JsonHelper.jsonToFile(propertiesFile, dataSource)
       _ <- dataSourceRepository.updateDataSource(dataSource)
     } yield ()

@@ -45,7 +45,7 @@ class VersionList extends React.Component<Props, State> {
   }
 
   async fetchData(tracingId: string) {
-    const { url: tracingStoreUrl } = Store.getState().tracing.tracingStore.url;
+    const { url: tracingStoreUrl } = Store.getState().tracing.tracingStore;
     this.setState({ isLoading: true });
     try {
       const updateActionLog = await getUpdateActionLog(

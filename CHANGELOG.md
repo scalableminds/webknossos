@@ -12,6 +12,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 ### Added
 
 - Added support for duplicate dataset names for different organizations [#3137](https://github.com/scalableminds/webknossos/pull/3137)
+- Added support to watch additional dataset directories, automatically creating symbolic links to the main directory [#3330](https://github.com/scalableminds/webknossos/pull/3330)
 
 ### Changed
 

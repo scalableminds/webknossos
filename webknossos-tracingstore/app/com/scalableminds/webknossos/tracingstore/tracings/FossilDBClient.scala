@@ -88,10 +88,10 @@ class FossilDBClient(collection: String, config: TracingStoreConfig) extends Fox
     }
   }
 
-  def getMultipleKeys[T](key: String, prefix: Option[String] = None, version: Option[Long] = None, limit: Option[Int] = None)(implicit fromByteArray: Array[Byte] => Box[T]): List[KeyValuePair[T]] = {
-    def flatCombineTuples[A,B](keys: List[A], values: List[Box[B]]) = {
-      val boxTuples: List[Box[(A,B)]] = keys.zip(values).map {
-        case (k, Full(v)) => Full(k,v)
+  def getMultipleKeys[T](key: String, prefix: Option[String] = None, version: Option[Long] = None, limit: Option[Int] = None)(implicit fromByteArray: Array[Byte] => Box[T]): List[VersionedKeyValuePair[T]] = {
+    def flatCombineTuples[A,B,C](keys: List[A], versions: List[B], values: List[Box[C]]) = {
+      val boxTuples: List[Box[(A,B,C)]] = (keys, versions, values).zipped.map {
+        case (k, v, Full(value)) => Full(k, v,value)
         case _ => Empty
       }
       boxTuples.flatten
@@ -100,7 +100,7 @@ class FossilDBClient(collection: String, config: TracingStoreConfig) extends Fox
     val reply = blockingStub.getMultipleKeys(GetMultipleKeysRequest(collection, key, prefix, version, limit))
     if (!reply.success) throw new Exception(reply.errorMessage.getOrElse(""))
     val parsedValues: List[Box[T]] = reply.values.map{ v => fromByteArray(v.toByteArray)}.toList
-    flatCombineTuples(reply.keys.toList, parsedValues).map{t => KeyValuePair(t._1, t._2)}
+    flatCombineTuples(reply.keys.toList, reply.actualVersions.toList, parsedValues).map{t => VersionedKeyValuePair(VersionedKey(t._1, t._2), t._3)}
   }
 
   def getMultipleVersions[T](key: String, newestVersion: Option[Long] = None, oldestVersion: Option[Long] = None)
@@ -120,7 +120,7 @@ class FossilDBClient(collection: String, config: TracingStoreConfig) extends Fox
         values <- Fox.combined(parsedValues.map{box: Box[T] => box.toFox})
       } yield reply.versions.zip(values).toList
     } catch {
-      case e: Exception => Fox.failure("could not get multiple versions from FossilDB" + e.getMessage)
+      case e: Exception => Fox.failure("could not get multiple versions from FossilDB: " + e.getMessage)
     }
   }
 

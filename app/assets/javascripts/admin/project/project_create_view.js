@@ -2,7 +2,7 @@
 import React from "react";
 import { withRouter } from "react-router-dom";
 import { connect } from "react-redux";
-import { Form, Input, Select, Button, Card, InputNumber } from "antd";
+import { Form, Input, Select, Button, Card, InputNumber, Checkbox } from "antd";
 import {
   getUsers,
   getEditableTeams,
@@ -15,6 +15,7 @@ import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import type { APIUser, APITeam } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import type { RouterHistory } from "react-router-dom";
+import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
@@ -162,6 +163,15 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
                 rules: [{ required: true }, { type: "number", min: 1 }],
               })(<InputNumber style={fullWidth} />)}
             </FormItem>
+
+            <FormItemWithInfo
+              label="Visibility in Project Progress View"
+              info="If checked, the project will not be listed in the project progress view."
+            >
+              {getFieldDecorator("isBlacklistedFromReport", { valuePropName: "checked" })(
+                <Checkbox>Do not show in Project Progress View</Checkbox>,
+              )}
+            </FormItemWithInfo>
 
             <FormItem>
               <Button type="primary" htmlType="submit">

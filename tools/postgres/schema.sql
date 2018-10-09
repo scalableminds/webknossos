@@ -134,6 +134,7 @@ CREATE TABLE webknossos.projects(
   priority BIGINT NOT NULL DEFAULT 100,
   paused BOOLEAN NOT NULL DEFAULT false,
   expectedTime BIGINT,
+  isBlacklistedFromReport BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );

@@ -7,6 +7,8 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 ## Unreleased
 - Some config keys have changed, if you overwrite them in your setup, please adapt: the `oxalis` prefix is renamed to `webKnossos` so the new keys are `webKnossos.user.time.tracingPauseInSeconds`, `webKnossos.tasks.maxOpenPerUser`, `webKnossos.newOrganizationMailingList` as well as `datastore.webKnossos.uri`, `datastore.webKnossos.secured`, `datastore.webKnossos.pingIntervalMinutes` for the datastore.
 - There is now a separate module for the tracing store, the datastore is no longer responsible for saving tracings. This module can run as a standalone application, or as a module of webknossos locally. It is recommended that you chose the option that was previously also in place for datastores. In case of a standalone datastore, the local one needs to be disabled in application.conf: `tracingstore.enabled = false` and `play.modules.disabled += "com.scalableminds.braingames.datastore.TracingStoreModule` – and in either case, the adress of the tracingstore (localhost or remote) needs to be inserted in the db in `webknossos.tracingStores`
+- The FossilDB version has changed from `0.1.10` to `0.1.14`.
+- The FossilDB needs to be run with an additional column family `volumeUpdates`
 
 #### Postgres Evolutions:
 - [027-drop-dataset-name-unique-constraint.sql](conf/evolutions/027-drop-dataset-name-unique-constraint.sql)

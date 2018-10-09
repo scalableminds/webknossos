@@ -6,6 +6,9 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 
 ## Unreleased
 - Some config keys have changed, if you overwrite them in your setup, please adapt: the `oxalis` prefix is renamed to `webKnossos` so the new keys are `webKnossos.user.time.tracingPauseInSeconds`, `webKnossos.tasks.maxOpenPerUser`, `webKnossos.newOrganizationMailingList` as well as `datastore.webKnossos.uri`, `datastore.webKnossos.secured`, `datastore.webKnossos.pingIntervalMinutes` for the datastore.
+- The FossilDB version has changed from `0.1.10` to `0.1.14`.
+- The FossilDB needs to be run with an additional column family `volumeUpdates`
+                                         
 
 #### Postgres Evolutions:
 - [027-drop-dataset-name-unique-constraint.sql](conf/evolutions/027-drop-dataset-name-unique-constraint.sql)

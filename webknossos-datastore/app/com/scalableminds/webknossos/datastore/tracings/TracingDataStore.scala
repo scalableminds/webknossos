@@ -22,12 +22,15 @@ class TracingDataStore @Inject()(config: DataStoreConfig,
 
   lazy val volumeData = new FossilDBClient("volumeData", config)
 
+  lazy val volumeUpdates = new FossilDBClient("volumeUpdates", config)
+
   def shutdown() = {
     healthClient.shutdown()
     skeletons.shutdown()
     skeletonUpdates.shutdown()
     volumes.shutdown()
     volumeData.shutdown()
+    volumeUpdates.shutdown()
     ()
   }
 

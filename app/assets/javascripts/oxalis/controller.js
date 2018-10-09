@@ -82,9 +82,9 @@ class Controller extends React.PureComponent<Props, State> {
     }
 
     // Preview a working tracing version if the showVersionRestore URL parameter is supplied
-    const version = Utils.hasUrlParam("showVersionRestore") ? 1 : undefined;
+    const versions = Utils.hasUrlParam("showVersionRestore") ? { skeleton: 1 } : undefined;
 
-    Model.fetch(this.props.initialTracingType, this.props.initialCommandType, true, version)
+    Model.fetch(this.props.initialTracingType, this.props.initialCommandType, true, versions)
       .then(() => this.modelFetchDone())
       .catch(error => {
         // Don't throw errors for errors already handled by the model.

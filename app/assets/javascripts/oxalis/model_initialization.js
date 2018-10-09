@@ -58,6 +58,7 @@ import { serverTracingAsVolumeTracingMaybe } from "oxalis/model/accessors/volume
 import { serverTracingAsSkeletonTracingMaybe } from "oxalis/model/accessors/skeletontracing_accessor";
 import { convertPointToVecInBoundingBox } from "oxalis/model/reducers/reducer_helpers";
 import { setupGlobalMappingsObject } from "oxalis/model/bucket_data_handling/mappings";
+import type { Versions } from "oxalis/view/version_view";
 import type { DataTextureSizeAndCount } from "./model/bucket_data_handling/data_rendering_logic";
 import * as DataRenderingLogic from "./model/bucket_data_handling/data_rendering_logic";
 
@@ -71,7 +72,7 @@ export async function initialize(
   tracingType: TracingTypeTracing,
   initialCommandType: TraceOrViewCommand,
   initialFetch: boolean,
-  version?: number,
+  versions?: Versions,
 ): Promise<?{
   dataLayers: DataLayerCollection,
   connectionInfo: ConnectionInfo,
@@ -105,7 +106,7 @@ export async function initialize(
   const [dataset, initialUserSettings, initialDatasetSettings, tracing] = await fetchParallel(
     annotation,
     datasetId,
-    version,
+    versions,
   );
 
   initializeDataset(initialFetch, dataset, tracing);
@@ -132,7 +133,7 @@ export async function initialize(
 async function fetchParallel(
   annotation: ?APIAnnotation,
   datasetId: APIDatasetId,
-  version?: number,
+  versions?: Versions,
 ): Promise<[APIDataset, *, *, ?HybridServerTracing]> {
   return Promise.all([
     getDataset(datasetId, getSharingToken()),
@@ -141,7 +142,7 @@ async function fetchParallel(
     // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
     // (Also see https://github.com/facebook/flow/issues/4936)
     // $FlowFixMe: Type inference with Promise.all seems to be a bit broken in flow
-    annotation ? getTracingForAnnotations(annotation, version) : null,
+    annotation ? getTracingForAnnotations(annotation, versions) : null,
   ]);
 }
 

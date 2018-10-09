@@ -97,35 +97,35 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     )
   }
 
+  def createTracings(dataSet: DataSet, dataSource: DataSource, tracingType: TracingType.Value, withFallback: Boolean)(implicit ctx: DBAccessContext): Fox[(Option[String], Option[String])] = tracingType match {
+    case TracingType.skeleton =>
+      for {
+        handler <- dataSetService.handlerFor(dataSet)
+        skeletonTracingId <- handler.saveSkeletonTracing(SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name, editPosition = dataSource.center))
+      } yield (Some(skeletonTracingId), None)
+    case TracingType.volume =>
+      for {
+        handler <- dataSetService.handlerFor(dataSet)
+        volumeTracingId <- handler.saveVolumeTracing(createVolumeTracing(dataSource, withFallback))
+      } yield (None, Some(volumeTracingId))
+    case TracingType.hybrid =>
+      for {
+        handler <- dataSetService.handlerFor(dataSet)
+        skeletonTracingId <- handler.saveSkeletonTracing(SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name, editPosition = dataSource.center))
+        volumeTracingId <- handler.saveVolumeTracing(createVolumeTracing(dataSource, withFallback))
+      } yield (Some(skeletonTracingId), Some(volumeTracingId))
+  }
+
   def createExplorationalFor(
                               user: User,
                               _dataSet: ObjectId,
                               tracingType: TracingType.Value,
                               withFallback: Boolean)(implicit ctx: DBAccessContext): Fox[Annotation] = {
-
-    def createTracings(dataSet: DataSet, dataSource: DataSource): Fox[(Option[String], Option[String])] = tracingType match {
-      case TracingType.skeleton =>
-        for {
-          handler <- dataSetService.handlerFor(dataSet)
-          skeletonTracingId <- handler.saveSkeletonTracing(SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name, editPosition = dataSource.center))
-        } yield (Some(skeletonTracingId), None)
-      case TracingType.volume =>
-        for {
-          handler <- dataSetService.handlerFor(dataSet)
-          volumeTracingId <- handler.saveVolumeTracing(createVolumeTracing(dataSource, withFallback))
-        } yield (None, Some(volumeTracingId))
-      case TracingType.hybrid =>
-        for {
-          handler <- dataSetService.handlerFor(dataSet)
-          skeletonTracingId <- handler.saveSkeletonTracing(SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name, editPosition = dataSource.center))
-          volumeTracingId <- handler.saveVolumeTracing(createVolumeTracing(dataSource, withFallback))
-        } yield (Some(skeletonTracingId), Some(volumeTracingId))
-    }
     for {
       dataSet <- dataSetDAO.findOne(_dataSet)
       dataSource <- dataSetService.dataSourceFor(dataSet)
       usableDataSource <- dataSource.toUsable ?~> "DataSet is not imported."
-      tracingIds <- createTracings(dataSet, usableDataSource)
+      tracingIds <- createTracings(dataSet, usableDataSource, tracingType, withFallback)
       teamId <- selectSuitableTeam(user, dataSet)
       annotation = Annotation(
         ObjectId.generate,
@@ -140,6 +140,27 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     } yield {
       annotation
     }
+  }
+
+  def makeAnnotationHybrid(user: User, annotation: Annotation)(implicit ctx: DBAccessContext) = {
+    def createNewTracings(dataSet: DataSet, dataSource: DataSource) = annotation.tracingType match {
+      case TracingType.skeleton => createTracings(dataSet, dataSource, TracingType.volume, false).flatMap {
+        case (_, Some(volumeId)) => annotationDAO.updateVolumeTracingId(annotation._id, volumeId)
+        case _ => Fox.failure("unexpectedReturn")
+      }
+      case TracingType.volume => createTracings(dataSet, dataSource, TracingType.skeleton, false).flatMap {
+        case (Some(skeletonId), _) => annotationDAO.updateSkeletonTracingId(annotation._id, skeletonId)
+        case _ => Fox.failure("unexpectedReturn")
+      }
+      case _ => Fox.failure("annotation.makeHybrid.alreadyHybrid")
+    }
+
+    for {
+      dataSet <- dataSetDAO.findOne(annotation._dataSet)
+      dataSource <- dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable)
+      _ <- createNewTracings(dataSet, dataSource)
+    } yield ()
+
   }
 
   // WARNING: needs to be repeatable, might be called multiple times for an annotation

@@ -12,7 +12,9 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 
 #### Postgres Evolutions:
 - [027-drop-dataset-name-unique-constraint.sql](conf/evolutions/027-drop-dataset-name-unique-constraint.sql)
-- [028-tracingstore.sql](conf/evolutions/028-tracingstore.sql)
+- [028-add-isBlacklistedFromReport.sql](conf/evolutions/028-add-isBlacklistedFromReport.sql)
+- [029-foreign-keys-deferrable.sql](conf/evolutions/029-foreign-keys-deferrable.sql)
+- [030-tracingstore.sql](conf/evolutions/030-tracingstore.sql)
 
 
 ## [18.10.0](https://github.com/scalableminds/webknossos/releases/tag/18.10.0) - 2018-09-22

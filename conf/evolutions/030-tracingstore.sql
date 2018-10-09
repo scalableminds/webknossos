@@ -11,6 +11,6 @@ CREATE TABLE webknossos.tracingStores(
 
 CREATE VIEW webknossos.tracingStores_ AS SELECT * FROM webknossos.tracingStores WHERE NOT isDeleted;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 29;
+UPDATE webknossos.releaseInformation SET schemaVersion = 30;
 
 COMMIT TRANSACTION;

@@ -70,3 +70,4 @@ app/assets/javascripts/test/snapshots/flow-check/*
 **/screenshots/*.new.png
 .nyc_output
 coverage
+*.vscode

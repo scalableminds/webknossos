@@ -232,7 +232,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     }
 
     return (
-      <div id="tree-list">
+      <div id="tree-list" className="info-tab-content">
         <Modal
           visible={this.state.isDownloading || this.state.isUploading}
           title={title}

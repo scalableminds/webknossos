@@ -228,7 +228,7 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
     const zoomLevel = calculateZoomLevel(this.props.flycam, this.props.dataset);
 
     return (
-      <div className="flex-overflow">
+      <div className="flex-overflow info-tab-content">
         {this.getTracingName(isPublicViewMode)}
         {this.getDatasetName(isPublicViewMode)}
 

@@ -11,7 +11,7 @@ import Constants, { ControlModeEnum } from "oxalis/constants";
 import { Pane, Column, Row, Stack } from "./golden_layout_helpers";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
-export const currentLayoutVersion = 5;
+export const currentLayoutVersion = 6;
 
 const LayoutSettings = {
   showPopoutIcon: false,
@@ -50,7 +50,7 @@ const NonSkeletonRightHandColumn = Stack(Panes.DatasetInfoTabView, Panes.Mapping
 const createLayout = (...content: Array<*>) => ({
   settings: LayoutSettings,
   dimensions: {
-    headerHeight: 18,
+    headerHeight: 20,
     borderWidth: 1,
   },
   content,
@@ -66,6 +66,27 @@ const defaultLayouts = {
   OrthoLayout,
   OrthoLayoutView,
   VolumeTracingView,
+};
+
+export const defaultLayoutSchema = {
+  OrthoLayoutView: {
+    "Custom Layout": defaultLayouts.OrthoLayoutView,
+  },
+  VolumeTracingView: {
+    "Custom Layout": defaultLayouts.VolumeTracingView,
+  },
+  ArbitraryLayout: {
+    "Custom Layout": defaultLayouts.ArbitraryLayout,
+  },
+  OrthoLayout: {
+    "Custom Layout": defaultLayouts.OrthoLayout,
+  },
+  LastActiveLayouts: {
+    OrthoLayoutView: "Custom Layout",
+    VolumeTracingView: "Custom Layout",
+    ArbitraryLayout: "Custom Layout",
+    OrthoLayout: "Custom Layout",
+  },
 };
 
 type Layout = $Keys<typeof defaultLayouts>;
@@ -86,6 +107,13 @@ export function determineLayout(controlMode: ControlMode, viewMode: Mode): Layou
     return "OrthoLayout";
   }
 }
+
+export const mapLayoutKeysToLanguage = {
+  OrthoLayoutView: "Orthogonal Mode - View Only",
+  VolumeTracingView: "Volume Mode",
+  ArbitraryLayout: "Arbitray Mode",
+  OrthoLayout: "Orthogonal Mode",
+};
 
 export type LayoutKeys = $Keys<typeof defaultLayouts>;
 export default defaultLayouts;

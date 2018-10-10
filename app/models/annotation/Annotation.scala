@@ -286,6 +286,12 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
       _ <- run(sqlu"update webknossos.annotations set skeletonTracingId = ${newSkeletonTracingId} where _id = ${id.id}")
     } yield ()
 
+  def updateVolumeTracingId(id: ObjectId, newVolumeTracingId: String)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(id)
+      _ <- run(sqlu"update webknossos.annotations set volumeTracingId = ${newVolumeTracingId} where _id = ${id.id}")
+    } yield ()
+
   def updateStatistics(id: ObjectId, statistics: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)

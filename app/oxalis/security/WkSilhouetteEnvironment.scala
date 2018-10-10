@@ -6,8 +6,6 @@ import com.mohiva.play.silhouette.impl.authenticators.{BearerTokenAuthenticatorS
 import com.mohiva.play.silhouette.impl.util.DefaultFingerprintGenerator
 import javax.inject.Inject
 import models.user.{User, UserService}
-import net.ceedubs.ficus.Ficus._
-import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 import play.api.i18n.MessagesApi
 import play.api.mvc.{Cookie, CookieHeaderEncoding}
 import utils.WkConf
@@ -48,11 +46,20 @@ class WkSilhouetteEnvironment @Inject()(conf: WkConf,
   )
 
   val fingerprintGenerator = new DefaultFingerprintGenerator(false)
-  val idGenerator = new CompactRandomIDGenerator
-  val bearerTokenAuthenticatorDAO = new BearerTokenAuthenticatorRepository(tokenDAO)
+  val idGenerator = new CompactRandomIDGenerator()(executionContext)
+  val bearerTokenAuthenticatorDAO = new BearerTokenAuthenticatorRepository(tokenDAO)(executionContext)
 
-  val combinedAuthenticatorService = CombinedAuthenticatorService(cookieSettings,
-    tokenSettings, bearerTokenAuthenticatorDAO, fingerprintGenerator, cookieHeaderEncoding, idGenerator, Clock(), userService, conf)
+  val combinedAuthenticatorService = CombinedAuthenticatorService(
+    cookieSettings,
+    tokenSettings,
+    bearerTokenAuthenticatorDAO,
+    fingerprintGenerator,
+    cookieHeaderEncoding,
+    idGenerator,
+    Clock(),
+    userService,
+    conf
+  )(executionContext)
 
   override def identityService: IdentityService[User] = userService
 

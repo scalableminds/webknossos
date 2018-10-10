@@ -17,7 +17,7 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 
 trait BucketProvider extends FoxImplicits with LazyLogging {
 
-  def loadFromUnderlying(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[Cube] = Fox.empty
+  def loadFromUnderlying(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[Cube] = Fox.empty(ec)
 
   def load(readInstruction: DataReadInstruction, cache: DataCubeCache, timeout: FiniteDuration): Fox[Array[Byte]] = {
 

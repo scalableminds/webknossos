@@ -90,23 +90,6 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
       }
   }
 
-  def revert(typ: String, id: String, version: Int) = sil.SecuredAction.async { implicit request =>
-    for {
-      annotation <- provider.provideAnnotation(typ, id, request.identity) ?~> "annotation.notFound"
-      restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound"
-      _ <- restrictions.allowUpdate(request.identity) ?~> Messages("notAllowed")
-      _ <- bool2Fox(annotation.isRevertPossible) ?~> Messages("annotation.revert.toOld")
-      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
-      dataStoreHandler <- dataSetService.handlerFor(dataSet)
-      skeletonTracingId <- annotation.skeletonTracingId.toFox ?~> "annotation.noSkeleton"
-      newSkeletonTracingId <- dataStoreHandler.duplicateSkeletonTracing(skeletonTracingId, Some(version.toString))
-      _ <- annotationDAO.updateSkeletonTracingId(annotation._id, newSkeletonTracingId)
-    } yield {
-      logger.info(s"REVERTED [$typ - $id, $version]")
-      JsonOk("annotation.reverted")
-    }
-  }
-
   def reset(typ: String, id: String) = sil.SecuredAction.async { implicit request =>
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity) ?~> "annotation.notFound"

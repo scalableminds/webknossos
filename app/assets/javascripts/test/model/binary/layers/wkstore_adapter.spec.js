@@ -104,8 +104,6 @@ test.serial(
       .returns(Promise.resolve({ token: "token2" }));
 
     return requestWithFallback(layer, batch).then(([buffer1, buffer2]) => {
-      // console.log("buffer1", buffer1);
-      // console.log("bucketData1", new Uint8Array(bucketData1));
       t.deepEqual(buffer1, bucketData1);
       t.deepEqual(buffer2, bucketData2);
 

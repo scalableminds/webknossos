@@ -15,7 +15,7 @@ import {
   setAnnotationDescriptionAction,
 } from "oxalis/model/actions/annotation_actions";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
-import { Table } from "antd";
+import { Table, List } from "antd";
 import Markdown from "react-remarkable";
 import type { APIDataset } from "admin/api_flow_types";
 import type { OxalisState, Tracing, Task, Flycam } from "oxalis/store";
@@ -89,7 +89,7 @@ export function calculateZoomLevel(flycam: Flycam, dataset: APIDataset): number 
   return zoom * width * baseVoxel;
 }
 
-export function formatZoomLevel(zoomLevel: number): string {
+export function formatNumberToLength(zoomLevel: number): string {
   if (zoomLevel < 1000) {
     return `${zoomLevel.toFixed(0)} nm`;
   } else if (zoomLevel < 1000000) {
@@ -97,6 +97,35 @@ export function formatZoomLevel(zoomLevel: number): string {
   } else {
     return `${(zoomLevel / 1000000).toFixed(1)} mm`;
   }
+}
+
+function getDatasetExtentInVoxel(dataset: APIDataset) {
+  const datasetBuckets = dataset.dataSource.dataLayers;
+  const numbOfBuckets = datasetBuckets.length;
+  const firstBoundingBox = datasetBuckets[0].boundingBox;
+  const extent = {
+    width: firstBoundingBox.width * numbOfBuckets,
+    height: firstBoundingBox.height,
+    depth: firstBoundingBox.depth,
+  };
+  return extent;
+}
+
+function getDatasetExtentInLength(dataset: APIDataset) {
+  const extentInVoxel = getDatasetExtentInVoxel(dataset);
+  const scale = dataset.dataSource.scale;
+  const extent = {
+    width: extentInVoxel.width * scale[0],
+    height: extentInVoxel.height * scale[1],
+    depth: extentInVoxel.depth * scale[2],
+  };
+  return extent;
+}
+
+function formatExtentWithLength(extent: Object) {
+  return `${formatNumberToLength(extent.width)} x ${formatNumberToLength(
+    extent.height,
+  )} x ${formatNumberToLength(extent.depth)}`;
 }
 
 class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
@@ -226,14 +255,28 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
       Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
 
     const zoomLevel = calculateZoomLevel(this.props.flycam, this.props.dataset);
-
+    const extentInVoxel = getDatasetExtentInVoxel(this.props.dataset);
+    const extent = getDatasetExtentInLength(this.props.dataset);
+    const datsetExtents = [
+      `${extentInVoxel.width} x ${extentInVoxel.height} x ${extentInVoxel.depth}`,
+      formatExtentWithLength(extent),
+    ];
     return (
       <div className="flex-overflow info-tab-content">
         {this.getTracingName(isPublicViewMode)}
         {this.getDatasetName(isPublicViewMode)}
 
-        <p>Viewport Width: {formatZoomLevel(zoomLevel)}</p>
+        <p>Viewport Width: {formatNumberToLength(zoomLevel)}</p>
         <p>Dataset Resolution: {formatScale(this.props.dataset.dataSource.scale)}</p>
+        <p>
+          Datset Extend:
+          <List
+            bordered={false}
+            split={false}
+            dataSource={datsetExtents}
+            renderItem={extentInfo => <List.Item>{extentInfo}</List.Item>}
+          />
+        </p>
 
         {this.getTracingStatistics()}
         {this.getKeyboardShortcuts(isPublicViewMode)}

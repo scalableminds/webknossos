@@ -22,6 +22,14 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "SET_STORED_LAYOUTS": {
+      return update(state, {
+        uiInformation: {
+          storedLayouts: { $set: action.storedLayouts },
+        },
+      });
+    }
+
     default:
       return state;
   }

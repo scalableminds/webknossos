@@ -50,6 +50,7 @@ type State = {
   isSettingsCollapsed: boolean,
 };
 
+export const headerHeight = 50;
 const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
 
 const GOLDEN_LAYOUT_ADAPTER_STYLE = {
@@ -99,7 +100,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
         />
 
         <Layout className="tracing-layout">
-          <Header style={{ flex: "0 1 auto", zIndex: 210, height: 50 }}>
+          <Header style={{ flex: "0 1 auto", zIndex: 210, height: headerHeight }}>
             <ButtonComponent onClick={this.handleSettingsCollapse}>
               <Icon type={this.state.isSettingsCollapsed ? "menu-unfold" : "menu-fold"} />
               <span className="hide-on-small-screen">Settings</span>

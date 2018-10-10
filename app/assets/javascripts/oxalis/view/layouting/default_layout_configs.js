@@ -6,9 +6,13 @@
  */
 
 // @flow
+import _ from "lodash";
 import type { ControlMode, Mode } from "oxalis/constants";
 import Constants, { ControlModeEnum } from "oxalis/constants";
+import { navbarHeight } from "navbar";
 import { Pane, Column, Row, Stack } from "./golden_layout_helpers";
+import { headerHeight } from "./tracing_layout_view";
+import { getGroundTruthLayoutRect } from "./golden_layout_adapter";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
 export const currentLayoutVersion = 5;
@@ -35,17 +39,10 @@ const Panes = {
   Mappings: Pane("Segmentation", "MappingInfoView"),
 };
 
-const OrthoViewsGrid = [Column(Panes.xy, Panes.xz), Column(Panes.yz, Panes.td)];
-
-const SkeletonRightHandColumn = Stack(
-  Panes.DatasetInfoTabView,
-  Panes.TreesTabView,
-  Panes.CommentTabView,
-  Panes.AbstractTreeTabView,
-  Panes.Mappings,
-);
-
-const NonSkeletonRightHandColumn = Stack(Panes.DatasetInfoTabView, Panes.Mappings);
+function setGlContainerWidth(container: Object, width: number) {
+  container.width = width;
+  return container;
+}
 
 const createLayout = (...content: Array<*>) => ({
   settings: LayoutSettings,
@@ -56,54 +53,46 @@ const createLayout = (...content: Array<*>) => ({
   content,
 });
 
-const OrthoLayout = createLayout(Row(...OrthoViewsGrid, SkeletonRightHandColumn));
-const OrthoLayoutView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
-const VolumeTracingView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
-const ArbitraryLayout = createLayout(Row(Panes.arbitraryViewport, SkeletonRightHandColumn));
+const SkeletonRightHandColumn = Stack(
+  Panes.DatasetInfoTabView,
+  Panes.TreesTabView,
+  Panes.CommentTabView,
+  Panes.AbstractTreeTabView,
+  Panes.Mappings,
+);
+const NonSkeletonRightHandColumn = Stack(Panes.DatasetInfoTabView, Panes.Mappings);
 
-export const setColumnWidthOfDefaultLayouts = () => {
-  let height;
-  let width;
-  const defaultLayouts = [OrthoLayout, OrthoLayoutView, VolumeTracingView];
-  const glContainer = document.getElementById("canvasAndLayoutContainer");
-  if (glContainer) {
-    height = glContainer.offsetHeight;
-    width = glContainer.offsetWidth;
-  } else {
-    if (window.innerWidth) {
-      width = window.innerWidth;
-      height = window.innerHeight;
-    } else if (document.body) {
-      // support for old versions of IE
-      width = document.body.clientWidth;
-      height = document.body.clientHeight;
-    } else {
-      return;
-    }
-    // subtraction navbar and layout header
-    height -= 50 + 48;
+const unmemoizedGetDefaultLayouts = () => {
+  let { height, width } = getGroundTruthLayoutRect();
+  // prevent default height and width
+  if (height === 500 && width === 500 && window.innerWidth) {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    height -= headerHeight + navbarHeight;
   }
-  let viewportWidth = ((height / 2) * 100) / width;
-  // setting minimum width for right menu
-  if (viewportWidth > 40) {
-    viewportWidth = 40;
-  }
-  defaultLayouts.forEach(layout => {
-    layout.content[0].content[0].width = viewportWidth;
-    layout.content[0].content[1].width = viewportWidth;
-    layout.content[0].content[2].width = 100 - 2 * viewportWidth;
-  });
-};
-setColumnWidthOfDefaultLayouts();
+  const viewportWidth = Math.min(((height / 2) * 100) / width, 40);
 
-const defaultLayouts = {
-  ArbitraryLayout,
-  OrthoLayout,
-  OrthoLayoutView,
-  VolumeTracingView,
+  const OrthoViewsGrid = [
+    setGlContainerWidth(Column(Panes.xy, Panes.xz), viewportWidth),
+    setGlContainerWidth(Column(Panes.yz, Panes.td), viewportWidth),
+  ];
+
+  const OrthoLayout = createLayout(Row(...OrthoViewsGrid, SkeletonRightHandColumn));
+  const OrthoLayoutView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
+  const VolumeTracingView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
+  const ArbitraryLayout = createLayout(Row(Panes.arbitraryViewport, SkeletonRightHandColumn));
+
+  return { OrthoLayout, OrthoLayoutView, VolumeTracingView, ArbitraryLayout };
 };
 
-type Layout = $Keys<typeof defaultLayouts>;
+const getDefaultLayouts = _.memoize(unmemoizedGetDefaultLayouts);
+
+export const resetDefaultLayouts = () => {
+  getDefaultLayouts.cache.clear();
+};
+
+type ExtractReturn<Fn> = $Call<<T>(() => T) => T, Fn>;
+type Layout = $Keys<ExtractReturn<typeof unmemoizedGetDefaultLayouts>>;
 
 export function determineLayout(controlMode: ControlMode, viewMode: Mode): Layout {
   if (controlMode === ControlModeEnum.VIEW) {
@@ -122,5 +111,5 @@ export function determineLayout(controlMode: ControlMode, viewMode: Mode): Layou
   }
 }
 
-export type LayoutKeys = $Keys<typeof defaultLayouts>;
-export default defaultLayouts;
+export type LayoutKeys = Layout;
+export default getDefaultLayouts;

@@ -10,7 +10,7 @@ import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Store from "oxalis/store";
 import { PortalTarget, RenderToPortal } from "./portal_utils";
 import { layoutEmitter } from "./layout_persistence";
-import { setColumnWidthOfDefaultLayouts } from "./default_layout_configs";
+import { resetDefaultLayouts } from "./default_layout_configs";
 
 type Props<KeyType> = {
   id: string,
@@ -21,7 +21,7 @@ type Props<KeyType> = {
   style: Object,
 };
 
-const getGroundTruthLayoutRect = () => {
+export const getGroundTruthLayoutRect = () => {
   const mainContainer = document.querySelector(".ant-layout .ant-layout-has-sider");
   if (!mainContainer) {
     return { width: 500, height: 500 };
@@ -123,7 +123,7 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
     window.addEventListener("resize", updateSize);
     const unbindResizeListener = () => window.removeEventListener("resize", updateSize);
     const unbindResetListener = layoutEmitter.on("resetLayout", () => {
-      setColumnWidthOfDefaultLayouts();
+      resetDefaultLayouts();
       this.rebuildLayout();
     });
     const unbindChangedScaleListener = listenToStoreProperty(

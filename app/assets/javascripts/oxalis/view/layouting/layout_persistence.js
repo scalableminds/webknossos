@@ -2,7 +2,7 @@
 import _ from "lodash";
 import NanoEvents from "nanoevents";
 
-import defaultLayouts, { currentLayoutVersion } from "./default_layout_configs";
+import getDefaultLayouts, { currentLayoutVersion } from "./default_layout_configs";
 import type { LayoutKeys } from "./default_layout_configs";
 
 export const layoutEmitter = new NanoEvents();
@@ -56,7 +56,7 @@ const persistLayoutConfigsDebounced = _.debounce(persistLayoutConfigs, 1000);
 export function getLayoutConfig(layoutKey: LayoutKeys) {
   if (storedLayouts[layoutKey]) {
     // Use default dimensions and settings
-    const { dimensions, settings } = defaultLayouts[layoutKey];
+    const { dimensions, settings } = getDefaultLayouts()[layoutKey];
     return {
       ...storedLayouts[layoutKey],
       dimensions,
@@ -64,7 +64,7 @@ export function getLayoutConfig(layoutKey: LayoutKeys) {
     };
   }
 
-  return defaultLayouts[layoutKey];
+  return getDefaultLayouts()[layoutKey];
 }
 
 export function storeLayoutConfig(layoutConfig: Object, layoutKey: string) {

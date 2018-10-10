@@ -52,6 +52,7 @@ import type { QueryObject } from "admin/task/task_search_form";
 import type { NewTask, TaskCreationResponse } from "admin/task/task_create_bulk_view";
 import type { DatasetConfiguration } from "oxalis/store";
 import type { RequestOptions } from "libs/request";
+import type { Versions } from "oxalis/view/version_view";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -531,11 +532,11 @@ export function createExplorational(
 
 export async function getTracingForAnnotations(
   annotation: APIAnnotation,
-  version?: number,
+  versions?: Versions = {},
 ): Promise<HybridServerTracing> {
   const [_skeleton, _volume] = await Promise.all([
-    getTracingForAnnotationType(annotation, "skeleton", version),
-    getTracingForAnnotationType(annotation, "volume", version),
+    getTracingForAnnotationType(annotation, "skeleton", versions.skeleton),
+    getTracingForAnnotationType(annotation, "volume", versions.volume),
   ]);
 
   const skeleton = ((_skeleton: any): ?ServerSkeletonTracing);
@@ -550,7 +551,7 @@ export async function getTracingForAnnotations(
 export async function getTracingForAnnotationType(
   annotation: APIAnnotation,
   tracingType: "skeleton" | "volume",
-  version?: number,
+  version?: ?number,
 ): Promise<?ServerTracing> {
   const tracingId = annotation.tracing[tracingType];
   if (!tracingId) {
@@ -573,13 +574,13 @@ export async function getTracingForAnnotationType(
 }
 
 export function getUpdateActionLog(
-  dataStoreUrl: string,
+  tracingStoreUrl: string,
   tracingId: string,
   tracingType: "skeleton" | "volume",
 ): Promise<Array<APIUpdateActionBatch>> {
   return doWithToken(token =>
     Request.receiveJSON(
-      `${dataStoreUrl}/tracings/${tracingType}/${tracingId}/updateActionLog?token=${token}`,
+      `${tracingStoreUrl}/tracings/${tracingType}/${tracingId}/updateActionLog?token=${token}`,
     ),
   );
 }

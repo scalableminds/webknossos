@@ -32,12 +32,12 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
   object Datastore {
     val key = get[String]("datastore.key")
     val name = get[String]("datastore.name")
-    object Oxalis {
-      val uri = get[String]("datastore.oxalis.uri")
-      val secured = get[Boolean]("datastore.oxalis.secured")
-      val pingIntervalMinutes = get[Int]("datastore.oxalis.pingIntervalMinutes") minutes
+    object WebKnossos {
+      val uri = get[String]("datastore.webKnossos.uri")
+      val secured = get[Boolean]("datastore.webKnossos.secured")
+      val pingIntervalMinutes = get[Int]("datastore.webKnossos.pingIntervalMinutes") minutes
     }
-    val children = List(Oxalis)
+    val children = List(WebKnossos)
   }
 
   val children = List(Http, Braingames, Datastore)

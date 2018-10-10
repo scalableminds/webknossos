@@ -38,14 +38,14 @@ class DataStoreWkRpcClient @Inject()(
   private val dataStoreUrl: String = config.Http.uri
 
   private val webKnossosUrl = {
-    val url = config.Datastore.Oxalis.uri
-    if (config.Datastore.Oxalis.secured)
+    val url = config.Datastore.WebKnossos.uri
+    if (config.Datastore.WebKnossos.secured)
       s"https://$url"
     else
       s"http://$url"
   }
 
-  protected lazy val tickerInterval: FiniteDuration = config.Datastore.Oxalis.pingIntervalMinutes
+  protected lazy val tickerInterval: FiniteDuration = config.Datastore.WebKnossos.pingIntervalMinutes
 
   def tick: Unit = reportStatus(ok = true)
 

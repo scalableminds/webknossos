@@ -48,7 +48,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
       accessTokenService.validateAccess(UserAccessRequest.webknossos) {
         AllowRemoteOrigin {
           for {
-            tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+            tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
           } yield {
             val enumerator: Enumerator[Array[Byte]] = tracingService.allData(tracingId, tracing)
             Ok.chunked(Source.fromPublisher(IterateeStreams.enumeratorToPublisher(enumerator)))
@@ -94,5 +94,18 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
         }
       }
     }
+  }
+
+  def updateActionLog(tracingId: String) = Action.async {
+    implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+        AllowRemoteOrigin {
+          for {
+            updateLog <- tracingService.updateActionLog(tracingId)
+          } yield {
+            Ok(updateLog)
+          }
+        }
+      }
   }
 }

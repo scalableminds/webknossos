@@ -172,7 +172,7 @@ Samplecountry
       projects =>
         if (projects.isEmpty) {
           userService.defaultUser.flatMap { user =>
-            val project = Project(ObjectId.generate, organizationTeam._id, user._id, "sampleProject", 100, false, Some(5400000))
+            val project = Project(ObjectId.generate, organizationTeam._id, user._id, "sampleProject", 100, false, Some(5400000), false)
             for {_ <- projectDAO.insertOne(project)} yield ()
           }
         } else Fox.successful(())

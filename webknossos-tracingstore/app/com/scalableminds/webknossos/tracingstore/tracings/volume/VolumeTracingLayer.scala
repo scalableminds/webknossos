@@ -22,8 +22,12 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer)
     loadBucket(layer, readInstruction.bucket)
   }
 
-  override def bucketStream(resolution: Int): Iterator[(BucketPosition, Array[Byte])] = {
-    bucketStream(layer, resolution)
+  override def bucketStream(resolution: Int, version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] = {
+    bucketStream(layer, resolution, version)
+  }
+
+  def bucketStreamWithVersion(resolution: Int, version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte], Long)] = {
+    bucketStreamWithVersion(layer, resolution, version)
   }
 }
 
@@ -38,7 +42,9 @@ case class VolumeTracingLayer(
 
   val dataFormat: DataFormat.Value = DataFormat.tracing
 
-  val bucketProvider: BucketProvider = new VolumeTracingBucketProvider(this)
+  val volumeBucketProvider: VolumeTracingBucketProvider = new VolumeTracingBucketProvider(this)
+
+  val bucketProvider: BucketProvider = volumeBucketProvider
 
   val mappings: Set[String] = Set.empty
 

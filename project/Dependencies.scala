@@ -19,8 +19,8 @@ object Dependencies {
   val grpcServices = "io.grpc" % "grpc-services" % scalapb.compiler.Version.grpcJavaVersion
   val scalapbRuntime = "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion
   val scalapbRuntimeGrpc = "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion
-  val liftCommon = "net.liftweb" % "lift-common_2.10" % "2.6-M3"
-  val liftUtil = "net.liftweb" % "lift-util_2.10" % "3.0-M1"
+  val liftCommon = "net.liftweb" %% "lift-common" % "3.0.2"
+  val liftUtil = "net.liftweb" %% "lift-util" % "3.0.2"
   val log4jApi = "org.apache.logging.log4j" % "log4j-core" % log4jVersion
   val log4jCore =  "org.apache.logging.log4j" % "log4j-api" % log4jVersion
   val newrelic = "com.newrelic.agent.java" % "newrelic-agent" % newrelicVersion

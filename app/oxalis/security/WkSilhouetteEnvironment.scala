@@ -12,7 +12,6 @@ import utils.WkConf
 
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
-import scala.concurrent.ExecutionContext.Implicits.global
 
 
 trait WkEnv extends Env {
@@ -46,8 +45,8 @@ class WkSilhouetteEnvironment @Inject()(conf: WkConf,
   )
 
   val fingerprintGenerator = new DefaultFingerprintGenerator(false)
-  val idGenerator = new CompactRandomIDGenerator()(executionContext)
-  val bearerTokenAuthenticatorDAO = new BearerTokenAuthenticatorRepository(tokenDAO)(executionContext)
+  val idGenerator = new CompactRandomIDGenerator
+  val bearerTokenAuthenticatorDAO = new BearerTokenAuthenticatorRepository(tokenDAO)
 
   val combinedAuthenticatorService = CombinedAuthenticatorService(
     cookieSettings,
@@ -59,7 +58,7 @@ class WkSilhouetteEnvironment @Inject()(conf: WkConf,
     Clock(),
     userService,
     conf
-  )(executionContext)
+  )
 
   override def identityService: IdentityService[User] = userService
 

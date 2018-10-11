@@ -20,6 +20,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - The UI for editing experience domains of users was improved. [#3254](https://github.com/scalableminds/webknossos/pull/3254)
 - The tracing layout was changed to be more compact. [#3256](https://github.com/scalableminds/webknossos/pull/3256)
 - It is no longer possible to draw outside of a viewport with the brush tool in volume tracing. [#3283](https://github.com/scalableminds/webknossos/pull/3283)
+- Users can now access the annotations of other users (of the same organization) given the link, even if they are non-public. [#3348](https://github.com/scalableminds/webknossos/pull/3348)
 
 ### Fixed
 

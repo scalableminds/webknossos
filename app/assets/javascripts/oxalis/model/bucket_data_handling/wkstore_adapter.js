@@ -30,6 +30,7 @@ export type SendBucketInfo = {
 type RequestBucketInfo = {
   ...SendBucketInfo,
   fourBit: boolean,
+  version: ?number,
 };
 
 // Converts a zoomed address ([x, y, z, zoomStep] array) into a bucket JSON
@@ -38,9 +39,11 @@ const createRequestBucketInfo = (
   zoomedAddress: Vector4,
   resolutions: Array<Vector3>,
   fourBit: boolean,
+  version: ?number,
 ): RequestBucketInfo => ({
   ...createSendBucketInfo(zoomedAddress, resolutions),
   fourBit,
+  ...(version != null ? { version } : {}),
 });
 
 function createSendBucketInfo(zoomedAddress: Vector4, resolutions: Array<Vector3>): SendBucketInfo {
@@ -55,12 +58,14 @@ export async function requestFromStore(
   layerInfo: DataLayerType,
   batch: Array<Vector4>,
 ): Promise<{ buffer: Uint8Array, missingBuckets: number[] }> {
-  const fourBit =
-    Store.getState().datasetConfiguration.fourBit &&
-    !isSegmentationLayer(Store.getState().dataset, layerInfo.name);
-  const resolutions = getResolutions(Store.getState().dataset);
+  const state = Store.getState();
+  const isSegmentation = isSegmentationLayer(state.dataset, layerInfo.name);
+  const fourBit = state.datasetConfiguration.fourBit && !isSegmentation;
+  const resolutions = getResolutions(state.dataset);
+  const version =
+    isSegmentation && state.tracing.volume != null ? state.tracing.volume.version : null;
   const bucketInfo = batch.map(zoomedAddress =>
-    createRequestBucketInfo(zoomedAddress, resolutions, fourBit),
+    createRequestBucketInfo(zoomedAddress, resolutions, fourBit, version),
   );
 
   return doWithToken(async token => {

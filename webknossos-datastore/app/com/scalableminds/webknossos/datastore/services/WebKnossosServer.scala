@@ -48,19 +48,19 @@ class WebKnossosServer @Inject()(
   def reportStatus(ok: Boolean): Fox[_] = {
     rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/status")
       .addQueryString("key" -> dataStoreKey)
-      .post(DataStoreStatus(ok, dataStoreUrl))
+      .patch(DataStoreStatus(ok, dataStoreUrl))
   }
 
   def reportDataSource(dataSource: InboxDataSourceLike): Fox[_] = {
     rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/datasource")
       .addQueryString("key" -> dataStoreKey)
-      .post(dataSource)
+      .put(dataSource)
   }
 
   def reportDataSources(dataSources: List[InboxDataSourceLike]): Fox[_] = {
     rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/datasources")
       .addQueryString("key" -> dataStoreKey)
-      .post(dataSources)
+      .put(dataSources)
   }
 
   def validateDataSourceUpload(id: DataSourceId): Fox[_] = {

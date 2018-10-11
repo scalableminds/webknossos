@@ -1,5 +1,6 @@
 package models.annotation
 
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
 import models.user.{User, UserService}
@@ -55,7 +56,7 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService) extends 
         else
           (for {
             user <- option2Fox(userOption)
-            owner <- userService.findOneById(annotation._user, true)
+            owner <- userService.findOneById(annotation._user, true)(GlobalAccessContext)
           } yield {
             owner._organization == user._organization
           }).orElse(Fox.successful(false))

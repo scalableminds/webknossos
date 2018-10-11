@@ -55,9 +55,9 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService) extends 
         else
           (for {
             user <- option2Fox(userOption)
-            isTeamManagerOrAdminOfTeam <- userService.isTeamManagerOrAdminOf(user, annotation._team)
+            owner <- userService.findOneById(annotation._user, true)
           } yield {
-            annotation._user == user._id || isTeamManagerOrAdminOfTeam
+            owner._organization == user._organization
           }).orElse(Fox.successful(false))
       }
 

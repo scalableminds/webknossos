@@ -48,6 +48,10 @@ const descriptionFns = {
     description: "Updated the segmentation.",
     type: "picture",
   }),
+  createTracing: (): Description => ({
+    description: "Created the tracing.",
+    type: "rocket",
+  }),
 };
 
 function getDescriptionForSpecificBatch(
@@ -123,6 +127,11 @@ function getDescriptionForBatch(actions: Array<ServerUpdateAction>): Description
   const updateBucketUAs = groupedUpdateActions.updateBucket;
   if (updateBucketUAs != null) {
     return getDescriptionForSpecificBatch(updateBucketUAs, "updateBucket");
+  }
+
+  const createTracingUAs = groupedUpdateActions.createTracing;
+  if (createTracingUAs != null) {
+    return getDescriptionForSpecificBatch(createTracingUAs, "createTracing");
   }
 
   // Catch-all for other update actions, currently updateNode and updateTracing.

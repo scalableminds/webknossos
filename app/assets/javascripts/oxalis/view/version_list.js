@@ -10,7 +10,7 @@ import { getUpdateActionLog } from "admin/admin_rest_api";
 import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_actions";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import { handleGenericError } from "libs/error_handling";
-import { revertToVersion } from "oxalis/model/sagas/update_actions";
+import { revertToVersion, serverCreateTracing } from "oxalis/model/sagas/update_actions";
 import { pushSaveQueueAction, setVersionNumberAction } from "oxalis/model/actions/save_actions";
 import VersionEntry from "oxalis/view/version_entry";
 import type { APIUpdateActionBatch } from "admin/api_flow_types";
@@ -59,6 +59,11 @@ class VersionList extends React.Component<Props, State> {
         tracingId,
         this.props.tracingType,
       );
+      // Insert version 0
+      updateActionLog.push({
+        version: 0,
+        value: [serverCreateTracing(this.props.tracing.createdTimestamp)],
+      });
       this.setState({ versions: updateActionLog });
     } catch (error) {
       handleGenericError(error);
@@ -80,14 +85,9 @@ class VersionList extends React.Component<Props, State> {
   };
 
   render() {
-    const filteredVersions = this.state.versions.filter(
-      (batch, index) =>
-        index === 0 || batch.value.length > 1 || batch.value[0].name !== "updateTracing",
-    );
-
     return (
       <List
-        dataSource={filteredVersions}
+        dataSource={this.state.versions}
         loading={this.state.isLoading}
         locale={VERSION_LIST_PLACEHOLDER}
         renderItem={(batch, index) => (

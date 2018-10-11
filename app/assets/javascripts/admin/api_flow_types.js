@@ -213,6 +213,7 @@ type APIProjectTypeBase = {
   +priority: number,
   +paused: boolean,
   +expectedTime: number,
+  +isBlacklistedFromReport: boolean,
 };
 
 export type APIProject = APIProjectTypeBase & {

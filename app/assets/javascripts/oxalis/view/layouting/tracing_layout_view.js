@@ -29,7 +29,7 @@ import RecordingSwitch from "oxalis/view/recording_switch";
 import TDViewControls from "oxalis/view/td_view_controls";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import { GoldenLayoutAdapter } from "./golden_layout_adapter";
-import { getLayoutConfig, storeLayoutConfig } from "./layout_persistence";
+import { storeLayoutConfig, setActiveLayout } from "./layout_persistence";
 import { determineLayout } from "./default_layout_configs";
 
 const { Header, Sider } = Layout;
@@ -39,6 +39,7 @@ type StateProps = {
   displayScalebars: boolean,
   isUpdateTracingAllowed: boolean,
   showVersionRestore: boolean,
+  storedLayouts: Object,
 };
 
 type Props = StateProps & {
@@ -48,6 +49,7 @@ type Props = StateProps & {
 
 type State = {
   isSettingsCollapsed: boolean,
+  activeLayout: string,
 };
 
 const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
@@ -61,9 +63,25 @@ const GOLDEN_LAYOUT_ADAPTER_STYLE = {
 };
 
 class TracingLayoutView extends React.PureComponent<Props, State> {
-  state = {
-    isSettingsCollapsed: true,
-  };
+  constructor(props: Props) {
+    super(props);
+    const layoutType = determineLayout(this.props.initialCommandType.type, this.props.viewMode);
+    let lastActiveLayout;
+    if (
+      props.storedLayouts.LastActiveLayouts &&
+      props.storedLayouts.LastActiveLayouts[layoutType]
+    ) {
+      lastActiveLayout = props.storedLayouts.LastActiveLayouts[layoutType];
+    } else {
+      // added as a valide fallback when there are no stored last active layouts
+      const firstStoredLayout = Object.keys(props.storedLayouts[layoutType])[0];
+      lastActiveLayout = firstStoredLayout;
+    }
+    this.state = {
+      isSettingsCollapsed: true,
+      activeLayout: lastActiveLayout,
+    };
+  }
 
   componentDidCatch() {
     Toast.error(messages["react.rendering_error"]);
@@ -81,14 +99,19 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     }));
   };
 
-  onLayoutChange = (layoutConfig, layoutKey) => {
+  onLayoutChange = (layoutConfig, layoutName) => {
     recalculateInputCatcherSizes();
     window.needsRerender = true;
-    storeLayoutConfig(layoutConfig, layoutKey);
+    const layoutKey = determineLayout(this.props.initialCommandType.type, this.props.viewMode);
+    storeLayoutConfig(layoutConfig, layoutKey, layoutName);
   };
+
+  getLayoutNamesFromCurrentView = (layoutKey): Array<string> =>
+    this.props.storedLayouts[layoutKey] ? Object.keys(this.props.storedLayouts[layoutKey]) : [];
 
   render() {
     const layoutType = determineLayout(this.props.initialCommandType.type, this.props.viewMode);
+    const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
     const { displayScalebars } = this.props;
 
     return (
@@ -99,12 +122,20 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
         />
 
         <Layout className="tracing-layout">
-          <Header style={{ flex: "0 1 auto", zIndex: 210, height: 50 }}>
+          <Header style={{ flex: "0 1 auto", zIndex: 210, height: 55 }}>
             <ButtonComponent onClick={this.handleSettingsCollapse}>
               <Icon type={this.state.isSettingsCollapsed ? "menu-unfold" : "menu-fold"} />
               <span className="hide-on-small-screen">Settings</span>
             </ButtonComponent>
-            <ActionBarView />
+            <ActionBarView
+              storedLayoutNamesForView={currentLayoutNames}
+              activeLayout={this.state.activeLayout}
+              layoutKey={layoutType}
+              setCurrentLayout={layoutName => {
+                this.setState({ activeLayout: layoutName });
+                setActiveLayout(layoutType, layoutName);
+              }}
+            />
           </Header>
           <Layout style={{ display: "flex" }}>
             <Sider
@@ -124,7 +155,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
                 id="layoutContainer"
                 style={GOLDEN_LAYOUT_ADAPTER_STYLE}
                 layoutKey={layoutType}
-                layoutConfigGetter={getLayoutConfig}
+                activeLayoutName={this.state.activeLayout}
                 onLayoutChange={this.onLayoutChange}
               >
                 {/*
@@ -186,6 +217,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     displayScalebars: state.userConfiguration.displayScalebars,
     isUpdateTracingAllowed: state.tracing.restrictions.allowUpdate,
     showVersionRestore: state.uiInformation.showVersionRestore,
+    storedLayouts: state.uiInformation.storedLayouts,
   };
 }
 

@@ -104,7 +104,7 @@ trait DataLayer extends DataLayerLike {
   def lengthOfUnderlyingCubes(resolution: Point3D): Int
 
   def bucketProvider: BucketProvider
-  
+
   def containsResolution(resolution: Point3D) = resolutions.contains(resolution)
 
   def doesContainBucket(bucket: BucketPosition) =
@@ -131,6 +131,7 @@ object DataLayer {
           case (DataFormat.knossos, _) => json.validate[KnossosDataLayer]
           case (DataFormat.wkw, Category.segmentation) => json.validate[WKWSegmentationLayer]
           case (DataFormat.wkw, _) => json.validate[WKWDataLayer]
+          case _ => json.validate[WKWDataLayer]
         }
       } yield {
         layer

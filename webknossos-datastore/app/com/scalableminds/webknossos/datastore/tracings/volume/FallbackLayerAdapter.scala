@@ -8,13 +8,12 @@ import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.util.tools.Fox
 import net.liftweb.common.{Empty, Failure, Full}
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.FiniteDuration
 
 class FallbackBucketProvider(primary: DataLayer, fallback: DataLayer) extends BucketProvider {
 
-  override def load(readInstruction: DataReadInstruction, cache: DataCubeCache, timeout: FiniteDuration): Fox[Array[Byte]] = {
+  override def load(readInstruction: DataReadInstruction, cache: DataCubeCache, timeout: FiniteDuration)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     val primaryReadInstruction = readInstruction.copy(dataLayer = primary)
     primary.bucketProvider.load(primaryReadInstruction, cache, timeout).futureBox.flatMap {
       case Full(data) =>

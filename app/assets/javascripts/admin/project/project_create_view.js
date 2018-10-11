@@ -60,6 +60,7 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
     const defaultValues = {
       priority: 100,
       expectedTime: 90,
+      isBlacklistedFromReport: false,
     };
 
     const defaultFormValues = Object.assign({}, defaultValues, project, {

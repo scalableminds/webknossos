@@ -1,30 +1,23 @@
 // @flow
 import { _all, _throttle, call, select, take } from "oxalis/model/sagas/effect-generators";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import Request from "libs/request";
+import { updateUserConfiguration, updateDatasetConfiguration } from "admin/admin_rest_api";
 
 function* pushUserSettingsAsync(): Saga<void> {
   const activeUser = yield* select(state => state.activeUser);
   if (activeUser == null) return;
 
-  const payload = yield* select(state => state.userConfiguration);
-  yield* call(Request.sendJSONReceiveJSON, "/api/user/userConfiguration", { data: payload });
+  const userConfiguration = yield* select(state => state.userConfiguration);
+  yield* call(updateUserConfiguration, userConfiguration);
 }
 
 function* pushDatasetSettingsAsync(): Saga<void> {
   const activeUser = yield* select(state => state.activeUser);
   if (activeUser == null) return;
 
-  const datasetName = yield* select(state => state.dataset.name);
-  const organizationName = yield* select(state => state.dataset.owningOrganization);
-  const payload = yield* select(state => state.datasetConfiguration);
-  yield* call(
-    Request.sendJSONReceiveJSON,
-    `/api/dataSetConfigurations/${organizationName}/${datasetName}`,
-    {
-      data: payload,
-    },
-  );
+  const dataset = yield* select(state => state.dataset);
+  const datasetConfiguration = yield* select(state => state.datasetConfiguration);
+  yield* call(updateDatasetConfiguration, dataset, datasetConfiguration);
 }
 
 export default function* watchPushSettingsAsync(): Saga<void> {

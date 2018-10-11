@@ -3,7 +3,7 @@ import React, { PureComponent } from "react";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import { connect } from "react-redux";
-import { Upload, Button, Dropdown, Menu, Icon, Modal } from "antd";
+import { Upload, Button, Dropdown, Menu, Icon, Modal, Tooltip } from "antd";
 import Constants from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
 import ShareModalView from "oxalis/view/action-bar/share_modal_view";
@@ -18,11 +18,10 @@ import { copyAnnotationToUserAccount, finishAnnotation } from "admin/admin_rest_
 import { location } from "libs/window";
 import type { OxalisState, RestrictionsAndSettings, Task } from "oxalis/store";
 import type { APIUser, APITracingType } from "admin/api_flow_types";
-import { layoutEmitter } from "oxalis/view/layouting/layout_persistence";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import SceneController from "oxalis/controller/scene_controller";
 import { readFileAsArrayBuffer } from "libs/read_file";
 import { AsyncButton } from "components/async_clickables";
+import { mapLayoutKeysToLanguage } from "oxalis/view/layouting/default_layout_configs";
 
 type StateProps = {
   tracingType: APITracingType,
@@ -32,27 +31,121 @@ type StateProps = {
   activeUser: ?APIUser,
 };
 
+type Props = StateProps & {
+  storedLayoutNamesForView: Array<string>,
+  layoutKey: string,
+  activeLayout: string,
+  onResetLayout: () => void,
+  onSelectLayout: string => void,
+  onDeleteLayout: string => void,
+  addNewLayout: () => void,
+};
+
 type State = {
   isShareModalOpen: boolean,
   isMergeModalOpen: boolean,
   isUserScriptsModalOpen: boolean,
 };
 
-export const resetLayoutItem = (
-  <Menu.Item key="reset-layout">
-    <div
-      onClick={() => {
-        Store.dispatch(updateUserSettingAction("layoutScaleValue", 1));
-        layoutEmitter.emit("resetLayout");
-      }}
-    >
-      <Icon type="laptop" />
-      Reset Layout
-    </div>
-  </Menu.Item>
-);
+type ResetLayoutItemProps = {
+  storedLayoutNamesForView: Array<string>,
+  layoutKey: string,
+  activeLayout: string,
+  onResetLayout: () => void,
+  onSelectLayout: string => void,
+  onDeleteLayout: string => void,
+  addNewLayout: () => void,
+};
 
-class TracingActionsView extends PureComponent<StateProps, State> {
+export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
+  const {
+    storedLayoutNamesForView,
+    layoutKey,
+    activeLayout,
+    onResetLayout,
+    onSelectLayout,
+    onDeleteLayout,
+    addNewLayout,
+    ...others
+  } = props;
+  const layoutMissingHelpTitle = (
+    <React.Fragment>
+      <h5 style={{ color: "#fff" }}>Where is my layout?</h5>
+      <p>
+        {`The tracing views are separated into four classes. Each of them has their own layouts. If you
+        can't find your layout please open the tracing in the correct view mode or just add it here manually.`}
+      </p>
+    </React.Fragment>
+  );
+  const customLayoutsItems = storedLayoutNamesForView.map(layout => {
+    const isSelectedLayout = layout === activeLayout;
+    return (
+      <Menu.Item
+        key={layout}
+        className={
+          isSelectedLayout ? "selected-layout-item bullet-point-less-li" : "bullet-point-less-li"
+        }
+      >
+        <span
+          onClick={() => onSelectLayout(layout)}
+          style={{ minWidth: "100%", minHeight: "auto", display: "inline-block" }}
+        >
+          <div className="inline-with-margin">
+            {layout}
+            {isSelectedLayout ? (
+              <Icon type="check" className="sub-menu-item-icon" theme="outlined" />
+            ) : (
+              <Tooltip placement="top" title="Remove this layout">
+                <Icon
+                  type="delete"
+                  className="clickable-icon sub-menu-item-icon"
+                  onClick={() => onDeleteLayout(layout)}
+                />
+              </Tooltip>
+            )}
+          </div>
+        </span>
+      </Menu.Item>
+    );
+  });
+  return (
+    <Menu.SubMenu
+      {...others}
+      title={
+        <span style={{ display: "inline-block", minWidth: 120 }}>
+          <Icon type="laptop" /> Layout
+          <Tooltip placement="top" title={layoutMissingHelpTitle}>
+            <Icon
+              type="info-circle-o"
+              style={{ color: "gray", marginRight: 36 }}
+              className="sub-menu-item-icon"
+            />
+          </Tooltip>
+        </span>
+      }
+    >
+      <Menu.Item>
+        <div onClick={onResetLayout}>Reset Layout</div>
+      </Menu.Item>
+      <Menu.Item>
+        <div onClick={addNewLayout}>Add a new Layout</div>
+      </Menu.Item>
+      <Menu.Divider />
+      <Menu.ItemGroup
+        className="available-layout-list"
+        title={
+          <span style={{ fontSize: 14 }}>{`Layouts for ${
+            mapLayoutKeysToLanguage[layoutKey]
+          }`}</span>
+        }
+      >
+        {customLayoutsItems}
+      </Menu.ItemGroup>
+    </Menu.SubMenu>
+  );
+};
+
+class TracingActionsView extends PureComponent<Props, State> {
   state = {
     isShareModalOpen: false,
     isMergeModalOpen: false,
@@ -266,7 +359,18 @@ class TracingActionsView extends PureComponent<StateProps, State> {
       );
     }
 
-    elements.push(resetLayoutItem);
+    elements.push(
+      <ResetLayoutItem
+        storedLayoutNamesForView={this.props.storedLayoutNamesForView}
+        layoutKey={this.props.layoutKey}
+        activeLayout={this.props.activeLayout}
+        onResetLayout={this.props.onResetLayout}
+        onSelectLayout={this.props.onSelectLayout}
+        onDeleteLayout={this.props.onDeleteLayout}
+        addNewLayout={this.props.addNewLayout}
+        key="layout"
+      />,
+    );
 
     const onStlUpload = async info => {
       const buffer = await readFileAsArrayBuffer(info.file);

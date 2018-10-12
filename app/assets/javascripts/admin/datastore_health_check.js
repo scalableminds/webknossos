@@ -48,9 +48,9 @@ async function checkVersionMismatch(url: string) {
   const buildInfoWebknossosDatastore = buildinfoDatastore.webknossosDatastore
     ? buildinfoDatastore.webknossosDatastore
     : buildinfoDatastore.webknossos;
-  const suppliedDatastoreApiVersion = buildInfoWebknossosDatastore.version;
+  const suppliedDatastoreApiVersion = buildInfoWebknossosDatastore.datastoreApiVersion;
 
-  if (expectedDatastoreApiVersion < suppliedDatastoreApiVersion) {
+  if (expectedDatastoreApiVersion.split(".")[0] < suppliedDatastoreApiVersion.split(".")[0]) {
     Toast.warning(
       messages["datastore.version.too_new"]({
         expectedDatastoreApiVersion,
@@ -58,7 +58,9 @@ async function checkVersionMismatch(url: string) {
         url,
       }),
     );
-  } else if (expectedDatastoreApiVersion > suppliedDatastoreApiVersion) {
+  } else if (
+    expectedDatastoreApiVersion.split(".")[0] > suppliedDatastoreApiVersion.split(".")[0]
+  ) {
     Toast.warning(
       messages["datastore.version.too_old"]({
         expectedDatastoreApiVersion,

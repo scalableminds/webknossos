@@ -15,7 +15,9 @@ import { headerHeight } from "./tracing_layout_view";
 import { getGroundTruthLayoutRect } from "./golden_layout_adapter";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
-export const currentLayoutVersion = 5;
+export const currentLayoutVersion = 6;
+
+export const layoutHeaderHeight = 20;
 
 const LayoutSettings = {
   showPopoutIcon: false,
@@ -47,7 +49,7 @@ function setGlContainerWidth(container: Object, width: number) {
 const createLayout = (...content: Array<*>) => ({
   settings: LayoutSettings,
   dimensions: {
-    headerHeight: 18,
+    headerHeight: layoutHeaderHeight,
     borderWidth: 1,
   },
   content,
@@ -99,6 +101,26 @@ export const resetDefaultLayouts = () => {
 
 type ExtractReturn<Fn> = $Call<<T>(() => T) => T, Fn>;
 type Layout = $Keys<ExtractReturn<typeof unmemoizedGetDefaultLayouts>>;
+export const defaultLayoutSchema = {
+  OrthoLayoutView: {
+    "Custom Layout": getDefaultLayouts().OrthoLayoutView,
+  },
+  VolumeTracingView: {
+    "Custom Layout": getDefaultLayouts().VolumeTracingView,
+  },
+  ArbitraryLayout: {
+    "Custom Layout": getDefaultLayouts().ArbitraryLayout,
+  },
+  OrthoLayout: {
+    "Custom Layout": getDefaultLayouts().OrthoLayout,
+  },
+  LastActiveLayouts: {
+    OrthoLayoutView: "Custom Layout",
+    VolumeTracingView: "Custom Layout",
+    ArbitraryLayout: "Custom Layout",
+    OrthoLayout: "Custom Layout",
+  },
+};
 
 export function determineLayout(controlMode: ControlMode, viewMode: Mode): Layout {
   if (controlMode === ControlModeEnum.VIEW) {
@@ -116,6 +138,13 @@ export function determineLayout(controlMode: ControlMode, viewMode: Mode): Layou
     return "OrthoLayout";
   }
 }
+
+export const mapLayoutKeysToLanguage = {
+  OrthoLayoutView: "Orthogonal Mode - View Only",
+  VolumeTracingView: "Volume Mode",
+  ArbitraryLayout: "Arbitray Mode",
+  OrthoLayout: "Orthogonal Mode",
+};
 
 export type LayoutKeys = Layout;
 export default getDefaultLayouts;

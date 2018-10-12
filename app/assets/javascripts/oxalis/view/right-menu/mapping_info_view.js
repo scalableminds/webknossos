@@ -157,7 +157,7 @@ class MappingInfoView extends React.Component<Props> {
     const hasMapping = this.props.mapping != null;
 
     return (
-      <div id="volume-mapping-info">
+      <div id="volume-mapping-info" className="info-tab-content">
         {hasMapping ? (
           <div style={{ marginBottom: 12 }}>
             <SwitchSetting

@@ -12,12 +12,15 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 ### Added
 
 - Added support for duplicate dataset names for different organizations [#3137](https://github.com/scalableminds/webknossos/pull/3137)
+- Added support to watch additional dataset directories, automatically creating symbolic links to the main directory [#3330](https://github.com/scalableminds/webknossos/pull/3330)
+- A User can now have multiple layouts for tracing views. [#3299](https://github.com/scalableminds/webknossos/pull/3299)
 
 ### Changed
 
 - The UI for editing experience domains of users was improved. [#3254](https://github.com/scalableminds/webknossos/pull/3254)
 - The tracing layout was changed to be more compact. [#3256](https://github.com/scalableminds/webknossos/pull/3256)
 - It is no longer possible to draw outside of a viewport with the brush tool in volume tracing. [#3283](https://github.com/scalableminds/webknossos/pull/3283)
+- Users can now access the annotations of other users (of the same organization) given the link, even if they are non-public. [#3348](https://github.com/scalableminds/webknossos/pull/3348)
 
 ### Fixed
 

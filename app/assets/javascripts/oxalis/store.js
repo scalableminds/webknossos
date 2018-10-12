@@ -49,6 +49,7 @@ import type {
   APIDataset,
   APIDataLayer,
 } from "admin/api_flow_types";
+import { defaultLayoutSchema } from "oxalis/view/layouting/default_layout_configs";
 
 export type CommentType = {|
   +content: string,
@@ -345,6 +346,7 @@ export type ViewModeData = {
 type UiInformation = {
   +showDropzoneModal: boolean,
   +showVersionRestore: boolean,
+  +storedLayouts: Object,
 };
 
 export type OxalisState = {|
@@ -527,6 +529,7 @@ export const defaultState: OxalisState = {
   uiInformation: {
     showDropzoneModal: false,
     showVersionRestore: false,
+    storedLayouts: defaultLayoutSchema,
   },
 };
 

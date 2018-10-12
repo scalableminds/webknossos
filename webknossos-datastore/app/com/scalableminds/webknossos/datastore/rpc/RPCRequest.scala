@@ -81,6 +81,22 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
     performRequest
   }
 
+  def put[T : Writes](body: T = Json.obj()): Fox[WSResponse] = {
+    request = request
+      .addHttpHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
+      .withBody(Json.toJson(body))
+      .withMethod("PUT")
+    performRequest
+  }
+
+  def patch[T : Writes](body: T = Json.obj()): Fox[WSResponse] = {
+    request = request
+      .addHttpHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
+      .withBody(Json.toJson(body))
+      .withMethod("PATCH")
+    performRequest
+  }
+
   def postWithJsonResponse[T : Writes, U : Reads](body: T = Json.obj()): Fox[U] = {
     request = request
       .addHttpHeaders(HeaderNames.CONTENT_TYPE -> "application/json")

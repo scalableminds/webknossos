@@ -126,7 +126,7 @@ export function setupOxalis(t, mode, apiVersion) {
     .returns(Promise.resolve(datasetClone));
   protoHelpers.parseProtoTracing.returns(_.cloneDeep(modelData[mode].tracing));
   Request.receiveJSON
-    .withArgs("/api/userToken/generate")
+    .withArgs("/api/userToken/generate", { method: "POST" })
     .returns(Promise.resolve({ token: TOKEN }));
   Request.receiveJSON.returns(Promise.resolve({}));
 

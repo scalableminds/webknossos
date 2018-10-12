@@ -28,6 +28,7 @@ class DataSourceService @Inject()(
                                    config: DataStoreConfig,
                                    dataSourceRepository: DataSourceRepository,
                                    val lifecycle: ApplicationLifecycle,
+                                   baseDirService: BaseDirService,
                                    @Named("webknossos-datastore") val system: ActorSystem
                                  ) extends IntervalScheduler with LazyLogging with FoxImplicits {
 
@@ -43,23 +44,26 @@ class DataSourceService @Inject()(
 
   def checkInbox(): Fox[Unit] = {
     logger.info(s"Scanning inbox at: $dataBaseDir")
-    PathUtils.listDirectories(dataBaseDir) match {
-      case Full(dirs) =>
-        for {
-          _ <- Fox.successful(())
-          foundInboxSources = dirs.flatMap(teamAwareInboxSources)
-          dataSourceString = foundInboxSources.map { ds =>
-            s"'${ds.id.team}/${ds.id.name}' (${if (ds.isUsable) "active" else "inactive"})"
-          }.mkString(", ")
+    for {
+      _ <- baseDirService.updateSymlinks ?~> "Failed to update dataset symbolic links"
+      _ <- PathUtils.listDirectories(dataBaseDir) match {
+              case Full(dirs) =>
+                for {
+                  _ <- Fox.successful(())
+                  foundInboxSources = dirs.flatMap(teamAwareInboxSources)
+                  dataSourceString = foundInboxSources.map { ds =>
+                    s"'${ds.id.team}/${ds.id.name}' (${if (ds.isUsable) "active" else "inactive"})"
+                  }.mkString(", ")
 
-          _ = logger.info(s"Finished scanning inbox: $dataSourceString")
-          _ <- dataSourceRepository.updateDataSources(foundInboxSources)
-        } yield ()
-      case e =>
-        val errorMsg = s"Failed to scan inbox. Error during list directories on '$dataBaseDir': $e"
-        logger.error(errorMsg)
-        Fox.failure(errorMsg)
-    }
+                  _ = logger.info(s"Finished scanning inbox: $dataSourceString")
+                  _ <- dataSourceRepository.updateDataSources(foundInboxSources)
+                } yield ()
+              case e =>
+                val errorMsg = s"Failed to scan inbox. Error during list directories on '$dataBaseDir': $e"
+                logger.error(errorMsg)
+                Fox.failure(errorMsg)
+            }
+    } yield ()
   }
 
   def handleUpload(id: DataSourceId, dataSetZip: File): Fox[Unit] = {

@@ -22,7 +22,7 @@ import TreesTabView, { importNmls } from "oxalis/view/right-menu/trees_tab_view"
 import MappingInfoView from "oxalis/view/right-menu/mapping_info_view";
 import DatasetInfoTabView from "oxalis/view/right-menu/dataset_info_tab_view";
 import InputCatcher, { recalculateInputCatcherSizes } from "oxalis/view/input_catcher";
-import { ArbitraryViewport, OrthoViews } from "oxalis/constants";
+import Constants, { ArbitraryViewport, OrthoViews } from "oxalis/constants";
 import type { OxalisState, TracingTypeTracing, TraceOrViewCommand } from "oxalis/store";
 import type { Mode } from "oxalis/constants";
 import RecordingSwitch from "oxalis/view/recording_switch";
@@ -52,7 +52,6 @@ type State = {
   activeLayout: string,
 };
 
-export const headerHeight = 55;
 const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
 
 const GOLDEN_LAYOUT_ADAPTER_STYLE = {
@@ -123,7 +122,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
         />
 
         <Layout className="tracing-layout">
-          <Header style={{ flex: "0 1 auto", zIndex: 210, height: headerHeight }}>
+          <Header style={{ flex: "0 1 auto", zIndex: 210, height: Constants.HEADER_HEIGHT }}>
             <ButtonComponent onClick={this.handleSettingsCollapse}>
               <Icon type={this.state.isSettingsCollapsed ? "menu-unfold" : "menu-fold"} />
               <span className="hide-on-small-screen">Settings</span>

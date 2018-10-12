@@ -166,6 +166,8 @@ const Constants = {
 
   MIN_TREE_ID: 1,
   MIN_NODE_ID: 1,
+
+  HEADER_HEIGHT: 55,
 };
 
 export default Constants;

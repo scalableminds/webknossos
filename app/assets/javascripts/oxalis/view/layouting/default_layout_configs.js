@@ -11,7 +11,6 @@ import type { ControlMode, Mode } from "oxalis/constants";
 import Constants, { ControlModeEnum } from "oxalis/constants";
 import { navbarHeight } from "navbar";
 import { Pane, Column, Row, Stack } from "./golden_layout_helpers";
-import { headerHeight } from "./tracing_layout_view";
 import { getGroundTruthLayoutRect } from "./golden_layout_adapter";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
@@ -71,7 +70,7 @@ const unmemoizedGetDefaultLayouts = () => {
     if (window.innerWidth) {
       width = window.innerWidth;
       height = window.innerHeight;
-      height -= headerHeight + navbarHeight;
+      height -= Constants.HEADER_HEIGHT + navbarHeight;
     } else {
       // use fallback values
       height = 500;

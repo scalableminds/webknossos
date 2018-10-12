@@ -24,7 +24,7 @@ type Props<KeyType> = {
 export const getGroundTruthLayoutRect = () => {
   const mainContainer = document.querySelector(".ant-layout .ant-layout-has-sider");
   if (!mainContainer) {
-    return { width: 500, height: 500 };
+    return { height: undefined, width: undefined };
   }
   const { offsetWidth, offsetHeight } = mainContainer;
   // The -1s are a workaround, since otherwise scrollbars
@@ -32,9 +32,17 @@ export const getGroundTruthLayoutRect = () => {
   return { width: offsetWidth - 1, height: offsetHeight - 1 };
 };
 
+function preventUndefinedRect(rect: Object) {
+  if (rect.height === undefined || rect.width === undefined) {
+    // use fallback values
+    return { height: 500, width: 500 };
+  }
+  return rect;
+}
+
 export const getDesiredLayoutRect = () => {
   const { layoutScaleValue } = Store.getState().userConfiguration;
-  const { width, height } = getGroundTruthLayoutRect();
+  const { width, height } = preventUndefinedRect(getGroundTruthLayoutRect());
   return {
     width: width * layoutScaleValue,
     height: height * layoutScaleValue,
@@ -47,7 +55,10 @@ const monkeypatchGLSizeGetter = gl => {
     if (value) {
       return _oldWidth.call(gl, value);
     } else {
-      const { width } = getGroundTruthLayoutRect();
+      let { width } = getGroundTruthLayoutRect();
+      if (width === undefined) {
+        width = 500;
+      }
       return width * Store.getState().userConfiguration.layoutScaleValue;
     }
   };
@@ -56,7 +67,10 @@ const monkeypatchGLSizeGetter = gl => {
     if (value) {
       return _oldHeight.call(gl, value);
     } else {
-      const { height } = getGroundTruthLayoutRect();
+      let { height } = getGroundTruthLayoutRect();
+      if (height === undefined) {
+        height = 500;
+      }
       return height * Store.getState().userConfiguration.layoutScaleValue;
     }
   };
@@ -67,7 +81,11 @@ const updateSizeForGl = gl => {
   if (!container) {
     return;
   }
-  const { width, height } = getGroundTruthLayoutRect();
+  let { width, height } = getGroundTruthLayoutRect();
+  if (width === undefined || height === undefined) {
+    width = 500;
+    height = 500;
+  }
   const layoutScale = Store.getState().userConfiguration.layoutScaleValue;
   container.style.width = `${Math.floor(width * layoutScale)}px`;
   container.style.height = `${Math.floor(height * layoutScale)}px`;

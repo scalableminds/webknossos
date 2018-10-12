@@ -65,10 +65,16 @@ const NonSkeletonRightHandColumn = Stack(Panes.DatasetInfoTabView, Panes.Mapping
 const unmemoizedGetDefaultLayouts = () => {
   let { height, width } = getGroundTruthLayoutRect();
   // prevent default height and width
-  if (height === 500 && width === 500 && window.innerWidth) {
-    width = window.innerWidth;
-    height = window.innerHeight;
-    height -= headerHeight + navbarHeight;
+  if (height === undefined || width === undefined) {
+    if (window.innerWidth) {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      height -= headerHeight + navbarHeight;
+    } else {
+      // use fallback values
+      height = 500;
+      width = 500;
+    }
   }
   const viewportWidth = Math.min(((height / 2) * 100) / width, 40);
 

@@ -6,6 +6,7 @@
  */
 
 // @flow
+import _ from "lodash";
 import type { ControlMode, Mode } from "oxalis/constants";
 import Constants, { ControlModeEnum } from "oxalis/constants";
 import { navbarHeight } from "navbar";
@@ -62,7 +63,7 @@ const SkeletonRightHandColumn = Stack(
 );
 const NonSkeletonRightHandColumn = Stack(Panes.DatasetInfoTabView, Panes.Mappings);
 
-const getDefaultLayoutsWithWidthAdjustment = () => {
+const unmemoizedGetDefaultLayouts = () => {
   let { height, width } = getGroundTruthLayoutRect();
   // prevent default height and width
   if (height === undefined || width === undefined) {
@@ -91,19 +92,10 @@ const getDefaultLayoutsWithWidthAdjustment = () => {
   return { OrthoLayout, OrthoLayoutView, VolumeTracingView, ArbitraryLayout };
 };
 
-let defaultLayouts = null;
-const getDefaultLayouts = () => {
-  if (defaultLayouts) {
-    return defaultLayouts;
-  } else {
-    defaultLayouts = getDefaultLayoutsWithWidthAdjustment();
-    return defaultLayouts;
-  }
-};
-console.log("defaultLayouts", defaultLayouts);
+const getDefaultLayouts = _.memoize(unmemoizedGetDefaultLayouts);
 
 export const resetDefaultLayouts = () => {
-  defaultLayouts = null;
+  getDefaultLayouts.cache.clear();
 };
 
 type ExtractReturn<Fn> = $Call<<T>(() => T) => T, Fn>;
@@ -111,7 +103,7 @@ type Layout = $Keys<ExtractReturn<typeof unmemoizedGetDefaultLayouts>>;
 
 export const getDefaultLayoutSchema = () => {
   resetDefaultLayouts();
-  getDefaultLayouts();
+  const defaultLayouts = getDefaultLayouts();
   return {
     OrthoLayoutView: {
       "Custom Layout": defaultLayouts.OrthoLayoutView,

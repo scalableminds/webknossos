@@ -6,7 +6,7 @@ import Store from "oxalis/store";
 import Toast from "libs/toast";
 import getDefaultLayouts, {
   currentLayoutVersion,
-  defaultLayoutSchema,
+  getDefaultLayoutSchema,
   mapLayoutKeysToLanguage,
 } from "./default_layout_configs";
 import type { LayoutKeys } from "./default_layout_configs";
@@ -24,18 +24,18 @@ const localStorageKeys = {
 function readStoredLayoutConfigs() {
   const storedLayoutVersion = localStorage.getItem(localStorageKeys.currentLayoutVersion);
   if (!storedLayoutVersion || disableLayoutPersistance) {
-    return defaultLayoutSchema;
+    return getDefaultLayoutSchema();
   }
   const layoutString = localStorage.getItem(localStorageKeys.goldenWkLayouts);
   if (!layoutString) {
-    return defaultLayoutSchema;
+    return getDefaultLayoutSchema();
   }
   try {
     const version = JSON.parse(storedLayoutVersion);
     const layouts = JSON.parse(layoutString);
     if (currentLayoutVersion > version) {
       if (version !== 5) {
-        return defaultLayoutSchema;
+        return getDefaultLayoutSchema();
       }
       // migrate to newset schema
       const withMulipleLayoutsSchema = {
@@ -68,15 +68,15 @@ function readStoredLayoutConfigs() {
     ) {
       return layouts;
     }
-    return defaultLayoutSchema;
+    return getDefaultLayoutSchema();
   } catch (ex) {
     // This should only happen if someone tinkers with localStorage manually
     console.warn("Layout config could not be deserialized.");
   }
-  return defaultLayoutSchema;
+  return getDefaultLayoutSchema();
 }
 
-Store.dispatch(setStoredLayoutsAction(readStoredLayoutConfigs()));
+setTimeout(() => Store.dispatch(setStoredLayoutsAction(readStoredLayoutConfigs())), 100);
 
 function persistLayoutConfigs() {
   const storedLayouts = Store.getState().uiInformation.storedLayouts;

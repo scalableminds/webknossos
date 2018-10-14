@@ -6,7 +6,6 @@
  */
 
 // @flow
-import _ from "lodash";
 import type { ControlMode, Mode } from "oxalis/constants";
 import Constants, { ControlModeEnum } from "oxalis/constants";
 import { navbarHeight } from "navbar";
@@ -63,7 +62,7 @@ const SkeletonRightHandColumn = Stack(
 );
 const NonSkeletonRightHandColumn = Stack(Panes.DatasetInfoTabView, Panes.Mappings);
 
-const unmemoizedGetDefaultLayouts = () => {
+const getDefaultLayoutsWithWidthAdjustment = () => {
   let { height, width } = getGroundTruthLayoutRect();
   // prevent default height and width
   if (height === undefined || width === undefined) {
@@ -92,33 +91,47 @@ const unmemoizedGetDefaultLayouts = () => {
   return { OrthoLayout, OrthoLayoutView, VolumeTracingView, ArbitraryLayout };
 };
 
-const getDefaultLayouts = _.memoize(unmemoizedGetDefaultLayouts);
+let defaultLayouts = null;
+const getDefaultLayouts = () => {
+  if (defaultLayouts) {
+    return defaultLayouts;
+  } else {
+    defaultLayouts = getDefaultLayoutsWithWidthAdjustment();
+    return defaultLayouts;
+  }
+};
+console.log("defaultLayouts", defaultLayouts);
 
 export const resetDefaultLayouts = () => {
-  getDefaultLayouts.cache.clear();
+  defaultLayouts = null;
 };
 
 type ExtractReturn<Fn> = $Call<<T>(() => T) => T, Fn>;
 type Layout = $Keys<ExtractReturn<typeof unmemoizedGetDefaultLayouts>>;
-export const defaultLayoutSchema = {
-  OrthoLayoutView: {
-    "Custom Layout": getDefaultLayouts().OrthoLayoutView,
-  },
-  VolumeTracingView: {
-    "Custom Layout": getDefaultLayouts().VolumeTracingView,
-  },
-  ArbitraryLayout: {
-    "Custom Layout": getDefaultLayouts().ArbitraryLayout,
-  },
-  OrthoLayout: {
-    "Custom Layout": getDefaultLayouts().OrthoLayout,
-  },
-  LastActiveLayouts: {
-    OrthoLayoutView: "Custom Layout",
-    VolumeTracingView: "Custom Layout",
-    ArbitraryLayout: "Custom Layout",
-    OrthoLayout: "Custom Layout",
-  },
+
+export const getDefaultLayoutSchema = () => {
+  resetDefaultLayouts();
+  getDefaultLayouts();
+  return {
+    OrthoLayoutView: {
+      "Custom Layout": defaultLayouts.OrthoLayoutView,
+    },
+    VolumeTracingView: {
+      "Custom Layout": defaultLayouts.VolumeTracingView,
+    },
+    ArbitraryLayout: {
+      "Custom Layout": defaultLayouts.ArbitraryLayout,
+    },
+    OrthoLayout: {
+      "Custom Layout": defaultLayouts.OrthoLayout,
+    },
+    LastActiveLayouts: {
+      OrthoLayoutView: "Custom Layout",
+      VolumeTracingView: "Custom Layout",
+      ArbitraryLayout: "Custom Layout",
+      OrthoLayout: "Custom Layout",
+    },
+  };
 };
 
 export function determineLayout(controlMode: ControlMode, viewMode: Mode): Layout {

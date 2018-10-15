@@ -90,4 +90,19 @@ trait PathUtils extends LazyLogging {
       Files.createDirectories(path)
     path
   }
+
+  // not following symlinks
+  def listDirectoriesRaw(directory: Path) = Box[List[Path]] {
+    try {
+      val directoryStream = Files.walk(directory, 1)
+      val r = directoryStream.iterator().asScala.toList
+      directoryStream.close()
+      Full(r)
+    } catch {
+      case ex: Exception =>
+        val errorMsg = s"Error: ${ex.getClass.getCanonicalName} - ${ex.getMessage}. Directory: ${directory.toAbsolutePath}"
+        logger.error(ex.getClass.getCanonicalName)
+        Failure(errorMsg)
+    }
+  }
 }

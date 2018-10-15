@@ -7,12 +7,16 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, InjectedController}
 import play.api.mvc.Results._
 
-class StandaloneDatastore extends InjectedController{
+import scala.concurrent.ExecutionContext
+
+class StandaloneDatastore @Inject()(implicit ec: ExecutionContext) extends InjectedController with RemoteOriginHelpers {
 
   def buildInfo = Action { implicit request =>
-    Ok(Json.obj(
-      "webknossosDatastore" -> webknossosDatastore.BuildInfo.toMap.mapValues(_.toString),
-      "webknossos-wrap" -> webknossoswrap.BuildInfo.toMap.mapValues(_.toString)
-    ))
+    AllowRemoteOrigin {
+      Ok(Json.obj(
+        "webknossosDatastore" -> webknossosDatastore.BuildInfo.toMap.mapValues(_.toString),
+        "webknossos-wrap" -> webknossoswrap.BuildInfo.toMap.mapValues(_.toString)
+      ))
+    }
   }
 }

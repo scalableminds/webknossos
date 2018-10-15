@@ -24,10 +24,12 @@ trait VolumeTracingBucketHelper extends WKWMortonHelper with KeyValueStoreImplic
 
   def loadBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition, version: Option[Long] = None): Fox[Array[Byte]] = {
     val key = buildBucketKey(dataLayer.name, bucket)
-    volumeDataStore.get(key, version, mayBeEmpty = Some(true)).futureBox.map(_.toOption.map { versionedVolumeBucket =>
-      if(versionedVolumeBucket.value sameElements Array[Byte](0)) Fox.empty
-      else Fox.successful(versionedVolumeBucket.value)
-    }).flatten
+    volumeDataStore.get(key, version, mayBeEmpty = Some(true)).futureBox.map(
+      _.toOption.map { versionedVolumeBucket =>
+        if(versionedVolumeBucket.value sameElements Array[Byte](0)) Fox.empty
+        else Fox.successful(versionedVolumeBucket.value)
+      }
+    ).toFox.flatten
   }
 
   def saveBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition, data: Array[Byte], version: Long): Fox[_] = {

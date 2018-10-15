@@ -6,12 +6,11 @@ object Dependencies {
   val akkaVersion = "2.5.11"
   val log4jVersion = "2.0-beta9"
   val newrelicVersion = "3.44.1"
-  val webknossosWrapVersion = "1.1.4"
+  val webknossosWrapVersion = "1.1.5"
 
   val akkaAgent = "com.typesafe.akka" %% "akka-agent" % akkaVersion
   val akkaLogging = "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
   val akkaTest = "com.typesafe.akka" %% "akka-testkit" % akkaVersion
-  val ceedubs = "net.ceedubs" %% "ficus" % "1.1.2"
   val commonsCodec = "commons-codec" % "commons-codec" % "1.10"
   val commonsEmail = "org.apache.commons" % "commons-email" % "1.3.1"
   val commonsIo = "commons-io" % "commons-io" % "2.4"
@@ -20,8 +19,8 @@ object Dependencies {
   val grpcServices = "io.grpc" % "grpc-services" % scalapb.compiler.Version.grpcJavaVersion
   val scalapbRuntime = "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion
   val scalapbRuntimeGrpc = "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion
-  val liftCommon = "net.liftweb" % "lift-common_2.10" % "2.6-M3"
-  val liftUtil = "net.liftweb" % "lift-util_2.10" % "3.0-M1"
+  val liftCommon = "net.liftweb" %% "lift-common" % "3.0.2"
+  val liftUtil = "net.liftweb" %% "lift-util" % "3.0.2"
   val log4jApi = "org.apache.logging.log4j" % "log4j-core" % log4jVersion
   val log4jCore =  "org.apache.logging.log4j" % "log4j-api" % log4jVersion
   val newrelic = "com.newrelic.agent.java" % "newrelic-agent" % newrelicVersion
@@ -30,16 +29,16 @@ object Dependencies {
   val playJson = "com.typesafe.play" %% "play-json" % "2.6.10"
   val playIteratees = "com.typesafe.play" %% "play-iteratees" % "2.6.1"
   val playIterateesStreams = "com.typesafe.play" %% "play-iteratees-reactive-streams" % "2.6.1"
-  val reactiveBson = "org.reactivemongo" %% "reactivemongo-bson" % "0.11.13"
-  val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.2"
-  val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.4.0"
+  val reactiveBson = "org.reactivemongo" %% "reactivemongo-bson" % "0.12.7"
+  val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.7"
+  val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0"
   val scalaTest = "org.scalatest" %% "scalatest" % "3.0.5" % "test"
   val scalaTestPlusPlay = "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % "test"
   val silhouette = "com.mohiva" %% "play-silhouette" % "5.0.5"
   val silhouetteTestkit = "com.mohiva" %% "play-silhouette-testkit" % "5.0.5" % "test"
   val trireme = "io.apigee.trireme" % "trireme-core" % "0.9.3"
   val triremeNode = "io.apigee.trireme" % "trireme-node12src" % "0.9.3"
-  val urlHelper = "com.netaporter" %% "scala-uri" % "0.4.14"
+  val urlHelper = "com.netaporter" %% "scala-uri" % "0.4.16"
   val webknossosWrap = "com.scalableminds" %% "webknossos-wrap" % webknossosWrapVersion
   val xmlWriter = "org.glassfish.jaxb" % "txw2" % "2.2.11"
   val woodstoxXml = "org.codehaus.woodstox" % "wstx-asl" % "3.2.3"
@@ -84,7 +83,6 @@ object Dependencies {
 
   val webknossosDependencies = Seq(
     akkaTest,
-    ceedubs,
     commonsCodec,
     scalaAsync,
     scalaTest,

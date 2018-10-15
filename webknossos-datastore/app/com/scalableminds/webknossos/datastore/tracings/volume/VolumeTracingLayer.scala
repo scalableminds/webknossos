@@ -9,6 +9,7 @@ import com.scalableminds.webknossos.datastore.models.requests.DataReadInstructio
 import com.scalableminds.webknossos.datastore.storage.DataCubeCache
 import com.scalableminds.webknossos.datastore.tracings.FossilDBClient
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
 class VolumeTracingBucketProvider(layer: VolumeTracingLayer)
@@ -18,7 +19,7 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer)
 
   val volumeDataStore: FossilDBClient = layer.volumeDataStore
 
-  override def load(readInstruction: DataReadInstruction, cache: DataCubeCache, timeout: FiniteDuration): Fox[Array[Byte]] = {
+  override def load(readInstruction: DataReadInstruction, cache: DataCubeCache, timeout: FiniteDuration)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     loadBucket(layer, readInstruction.bucket, readInstruction.version)
   }
 

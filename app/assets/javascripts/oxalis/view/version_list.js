@@ -105,22 +105,22 @@ class VersionList extends React.Component<Props, State> {
   previewVersion = (version: number) => previewVersion({ [this.props.tracingType]: version });
 
   getGroupedAndChunkedVersions = _.memoize(
-    (): GroupedAndChunkedVersions => {
+    (versions: Array<APIUpdateActionBatch>): GroupedAndChunkedVersions => {
       // This function first groups the versions by day, where the key is the output of the moment calendar function.
       // Then, the versions for each day are chunked into x-minute intervals,
       // so that the actions of one chunk are all from within one x-minute interval.
-      const groupedVersions = _.groupBy(this.state.versions, batch =>
+      const groupedVersions = _.groupBy(versions, batch =>
         moment
           .utc(_.max(batch.value.map(action => action.value.actionTimestamp)))
           .calendar(null, MOMENT_CALENDAR_FORMAT),
       );
 
       const CHUNK_BY_X_MINUTES = 5;
-      return _.mapValues(groupedVersions, versions => {
+      return _.mapValues(groupedVersions, versionsOfOneDay => {
         let chunkIndex = 0;
         let chunkTime = 0;
         return _.reduce(
-          versions,
+          versionsOfOneDay,
           (
             chunkedVersions: Array<Array<APIUpdateActionBatch>>,
             batch: APIUpdateActionBatch,
@@ -143,7 +143,7 @@ class VersionList extends React.Component<Props, State> {
   );
 
   render() {
-    const groupedAndChunkedVersions = this.getGroupedAndChunkedVersions();
+    const groupedAndChunkedVersions = this.getGroupedAndChunkedVersions(this.state.versions);
     const batchesAndDateStrings = _.flattenDepth(Object.entries(groupedAndChunkedVersions), 2);
 
     return (

@@ -13,7 +13,6 @@ import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actio
 import { handleGenericError } from "libs/error_handling";
 import { revertToVersion, serverCreateTracing } from "oxalis/model/sagas/update_actions";
 import { pushSaveQueueAction, setVersionNumberAction } from "oxalis/model/actions/save_actions";
-import VersionEntry from "oxalis/view/version_entry";
 import VersionEntryGroup from "oxalis/view/version_entry_group";
 import type { APIUpdateActionBatch } from "admin/api_flow_types";
 import type { SkeletonTracing, VolumeTracing } from "oxalis/store";

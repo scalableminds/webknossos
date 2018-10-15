@@ -748,7 +748,7 @@ export async function isDatasetNameValid(datasetId: APIDatasetId): Promise<?stri
     await Request.receiveJSON(
       `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/isValidNewName`,
       {
-        doNotCatch: true,
+        showErrorToast: false,
       },
     );
     return null;
@@ -875,10 +875,10 @@ export async function getTimeTrackingForUser(
 
 export async function getProjectProgressReport(
   teamId: string,
-  doNotCatch?: boolean = false,
+  showErrorToast?: boolean = true,
 ): Promise<Array<APIProjectProgressReport>> {
   const progressData = await Request.receiveJSON(`/api/teams/${teamId}/progressOverview`, {
-    doNotCatch,
+    showErrorToast,
   });
   assertResponseLimit(progressData);
   return progressData;
@@ -900,9 +900,14 @@ export async function getOrganizationNames(): Promise<Array<string>> {
   return organizations.map(org => org.name);
 }
 
-// ### BuildInfo
+// ### BuildInfo webknossos
 export function getBuildInfo(): Promise<APIBuildInfo> {
   return Request.receiveJSON("/api/buildinfo");
+}
+
+// ### BuildInfo datastore
+export function getDataStoreBuildInfo(dataStoreUrl: string): Promise<APIBuildInfo> {
+  return Request.receiveJSON(`${dataStoreUrl}/api/buildinfo`);
 }
 
 // ### Feature Selection

@@ -21,5 +21,4 @@ class Application @Inject()(tracingDataStore: TracingDataStore,
       } yield Ok("Ok")
     }
   }
-
 }

@@ -223,6 +223,7 @@ class ArbitraryController extends React.PureComponent<Props> {
       // Rotate view by 180 deg
       r: () => {
         Store.dispatch(yawFlycamAction(Math.PI));
+        window.needsRerender = true;
       },
 
       // Delete active node and recenter last node
@@ -318,6 +319,7 @@ class ArbitraryController extends React.PureComponent<Props> {
 
   start(): void {
     this.arbitraryView = new ArbitraryView();
+    window.printy = () => this.arbitraryView.getRenderedBuckets();
     this.arbitraryView.start();
 
     this.plane = new ArbitraryPlane();
@@ -325,6 +327,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     this.crosshair.setVisibility(Store.getState().userConfiguration.displayCrosshair);
 
     this.arbitraryView.addGeometry(this.plane);
+    this.arbitraryView.setPlane(this.plane);
     this.arbitraryView.addGeometry(this.crosshair);
 
     this.bindToEvents();

@@ -167,12 +167,61 @@ class ArbitraryView {
     this.needsRerender = true;
   }
 
+  renderToTexture(): Uint8Array {
+    const { renderer, scene } = SceneController;
+
+    renderer.autoClear = true;
+    let { width, height } = getInputCatcherRect(ArbitraryViewport);
+    width = Math.round(width);
+    height = Math.round(height);
+
+    const { camera } = this;
+
+    renderer.setViewport(0, 0, width, height);
+    renderer.setScissorTest(false);
+    renderer.setClearColor(0x222222, 1);
+
+    const renderTarget = new THREE.WebGLRenderTarget(width, height);
+    const buffer = new Uint8Array(width * height * 4);
+    this.plane.materialFactory.uniforms.renderBucketIndices.value = true;
+    renderer.render(scene, camera, renderTarget);
+    renderer.readRenderTargetPixels(renderTarget, 0, 0, width, height, buffer);
+    this.plane.materialFactory.uniforms.renderBucketIndices.value = false;
+
+    return buffer;
+  }
+
+  getRenderedBuckets = () => {
+    const buffer = this.renderToTexture();
+
+    const start = 0; // Math.floor(buffer.length / 4 / 2)
+    let index = start;
+
+    const usedBucketSet = new Set();
+
+    while (index < buffer.length) {
+      const [x, y, z, zoomstep] = buffer
+        .subarray(index, index + 4)
+        .map((el, idx) => (idx < 3 ? window.currentAnchorPoint[idx] + el : el));
+      index += 4;
+
+      usedBucketSet.add([x, y, z, zoomstep].join(","));
+    }
+    console.log("usedBucketSet.length", usedBucketSet.size);
+    console.log("window.lastUsedFlightBuckets.length", window.lastUsedFlightBuckets.length);
+    window.lastRenderedBuckset = usedBucketSet;
+  };
+
   addGeometry(geometry: THREE.Geometry): void {
     // Adds a new Three.js geometry to the scene.
     // This provides the public interface to the GeometryFactory.
 
     this.geometries.push(geometry);
     geometry.addToScene(this.group);
+  }
+
+  setPlane(p) {
+    this.plane = p;
   }
 
   resizeImpl = (): void => {

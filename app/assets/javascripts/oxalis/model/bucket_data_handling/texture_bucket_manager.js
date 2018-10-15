@@ -109,6 +109,7 @@ export default class TextureBucketManager {
     fallbackAnchorPoint: Vector4,
   ): void {
     this.currentAnchorPoint = anchorPoint;
+    window.currentAnchorPoint = anchorPoint;
     this.fallbackAnchorPoint = fallbackAnchorPoint;
     // Find out which buckets are not needed anymore
     const freeBucketSet = new Set(this.activeBucketToIndexMap.keys());

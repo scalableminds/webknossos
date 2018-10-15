@@ -83,6 +83,7 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
 uniform float sphericalCapRadius;
 uniform float viewMode;
 uniform float alpha;
+uniform bool renderBucketIndices;
 uniform bool highlightHoveredCellId;
 uniform vec3 bboxMin;
 uniform vec3 bboxMax;
@@ -136,13 +137,18 @@ void main() {
   float color_value  = 0.0;
 
   vec3 worldCoordUVW = getWorldCoordUVW();
-  if (isOutsideOfBoundingBox(worldCoordUVW)) {
-    gl_FragColor = vec4(0.0);
-    return;
-  }
+  // if (isOutsideOfBoundingBox(worldCoordUVW)) {
+  //   gl_FragColor = vec4(0.0);
+  //   return;
+  // }
   vec3 coords = getRelativeCoords(worldCoordUVW, zoomStep);
 
   vec3 bucketPosition = div(floor(coords), bucketWidth);
+  if (renderBucketIndices) {
+    gl_FragColor = vec4(bucketPosition, zoomStep) / 255.;
+    // gl_FragColor = vec4(0.5, 1.0, 1.0, 1.0);
+    return;
+  }
   vec3 offsetInBucket = mod(floor(coords), bucketWidth);
 
   <% if (hasSegmentation) { %>
@@ -162,7 +168,7 @@ void main() {
   <% if (isRgb) { %>
 
     float fallbackZoomStep = min(<%= colorLayerNames[0]%>_maxZoomStep, zoomStep + 1.0);
-    bool hasFallback = fallbackZoomStep > zoomStep;
+    bool hasFallback = false; // fallbackZoomStep > zoomStep;
     vec3 fallbackCoords = floor(getRelativeCoords(worldCoordUVW, fallbackZoomStep));
     vec3 data_color =
       getMaybeFilteredColorOrFallback(

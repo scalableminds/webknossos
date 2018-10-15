@@ -33,9 +33,13 @@ export async function previewVersion(versions?: Versions) {
   const { tracingType, annotationId } = Store.getState().tracing;
   await api.tracing.restart(tracingType, annotationId, ControlModeEnum.TRACE, versions);
   Store.dispatch(setAnnotationAllowUpdateAction(false));
-  if (versions != null && versions.volume != null) {
-    Model.getSegmentationLayer().cube.collectAllBuckets();
-    Model.getSegmentationLayer().layerRenderingManager.refresh();
+
+  const segmentationLayer = Model.getSegmentationLayer();
+  const shouldPreviewVolumeVersion = versions != null && versions.volume != null;
+  const shouldPreviewNewestVersion = versions == null;
+  if (segmentationLayer != null && (shouldPreviewVolumeVersion || shouldPreviewNewestVersion)) {
+    segmentationLayer.cube.collectAllBuckets();
+    segmentationLayer.layerRenderingManager.refresh();
   }
 }
 

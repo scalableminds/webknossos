@@ -41,10 +41,7 @@ class Navbar extends React.PureComponent<Props, State> {
   async componentWillMount() {
     const buildInfo = await getBuildInfo();
     this.setState({
-      version:
-        buildInfo.webknossos.ciTag !== ""
-          ? buildInfo.webknossos.ciTag
-          : buildInfo.webknossos.ciBuild,
+      version: buildInfo.webknossos.version,
     });
   }
 

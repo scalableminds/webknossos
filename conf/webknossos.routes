@@ -99,6 +99,10 @@ GET           /api/annotations/:typ/:id/download                                
 
 GET           /api/annotations/:typ/:id/loggedTime                                  controllers.AnnotationController.loggedTime(typ: String, id: String)
 
+# Meshes
+POST          /api/meshes                                                           controllers.MeshController.create
+GET           /api/meshes/:id                                                       controllers.MeshController.get(id: String)
+
 # Tasks
 POST          /api/tasks                                                            controllers.TaskController.create
 POST          /api/tasks/createFromFiles                                            controllers.TaskController.createFromFiles

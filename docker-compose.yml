@@ -177,3 +177,12 @@ services:
     volumes:
       - "./fossildb/data:/fossildb/data"
       - "./fossildb/backup:/fossildb/backup"
+
+  demo-nginx:
+    image: nginx
+    volumes:
+      - ./public/bundle:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "5000:80"
+

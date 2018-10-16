@@ -5,6 +5,7 @@ module.exports = function(env = {}) {
   var path = require("path");
   const TerserPlugin = require("terser-webpack-plugin");
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+  const HtmlWebpackPlugin = require("html-webpack-plugin");
   // const HardSourceWebpackPlugin = require("hard-source-webpack-plugin");
 
   var srcPath = path.resolve(__dirname, "app/assets/javascripts/");
@@ -30,6 +31,11 @@ module.exports = function(env = {}) {
       ReactDOM: "react-dom",
       $: "jquery",
       jQuery: "jquery",
+    }),
+
+    new HtmlWebpackPlugin({
+      title: "webKnossos",
+      template: `${srcPath}/index.html`,
     }),
   ];
 
@@ -57,7 +63,7 @@ module.exports = function(env = {}) {
       path: `${__dirname}/public/bundle`,
       filename: "[name].js",
       sourceMapFilename: "[file].map",
-      publicPath: "/assets/bundle/",
+      // publicPath: "/assets/bundle/",
     },
     module: {
       rules: [

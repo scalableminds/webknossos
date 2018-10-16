@@ -143,7 +143,7 @@ GET           /api/statistics/webknossos                                        
 GET           /api/statistics/users                                                 controllers.StatisticsController.users(interval: String, start: Option[Long], end: Option[Long], limit: Int)
 
 # Map static resources from the /public folder to the /public path
-GET           /assets/*file                                                         controllers.Assets.at(path="/public", file)
+#GET           /assets/*file                                                         controllers.Assets.at(path="/public", file)
 
 #Organizations
 GET           /api/organizations                                                    controllers.OrganizationController.listAllOrganizations

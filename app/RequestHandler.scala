@@ -15,9 +15,7 @@ class RequestHandler @Inject() (router: Router,
   override def routeRequest(request: RequestHeader): Option[Handler] = {
     if (request.uri.matches("^(/api/|/data/|/assets/).*$")) {
       super.routeRequest(request)
-    } else {
-      Some(Action {Ok(views.html.main(conf))})
-    }
+    } else None
   }
 
 }

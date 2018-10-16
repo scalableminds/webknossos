@@ -3,7 +3,7 @@ import play.sbt.routes.RoutesKeys.routesGenerator
 import sbt._
 
 ThisBuild / version := "wk"
-ThisBuild / scalaVersion := "2.11.8"
+ThisBuild / scalaVersion := "2.12.7"
 ThisBuild / scalacOptions ++= Seq(
   "-Xmax-classfile-name","100",
   "-target:jvm-1.8",

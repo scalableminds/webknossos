@@ -15,5 +15,4 @@ class Application @Inject()(implicit ec: ExecutionContext)
       Ok("Ok")
     }
   }
-
 }

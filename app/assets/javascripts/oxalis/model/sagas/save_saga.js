@@ -174,7 +174,7 @@ export function* sendRequestToServer(
         method: "POST",
         headers: { "X-Date": `${timestamp}` },
         data: compactedSaveQueue,
-        compress: false,
+        compress: true,
       },
     );
     yield* put(setVersionNumberAction(version + compactedSaveQueue.length, tracingType));

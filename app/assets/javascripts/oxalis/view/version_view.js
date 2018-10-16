@@ -74,8 +74,7 @@ class VersionView extends React.Component<Props, State> {
                 <VersionList tracingType="skeleton" tracing={this.props.tracing.skeleton} />
               </TabPane>
             ) : null}
-            {/* "TODO: Enable after volume version restore was implemented" */}
-            {this.props.tracing.volume != null && false ? (
+            {this.props.tracing.volume != null ? (
               <TabPane tab="Volume" key="volume">
                 <VersionList tracingType="volume" tracing={this.props.tracing.volume} />
               </TabPane>

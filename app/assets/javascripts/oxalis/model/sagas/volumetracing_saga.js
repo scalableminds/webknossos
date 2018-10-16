@@ -146,6 +146,9 @@ function* createVolumeLayer(planeId: OrthoView): Saga<VolumeLayer> {
 }
 
 function* labelWithIterator(iterator, contourTracingMode): Saga<void> {
+  const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
+  if (!allowUpdate) return;
+
   const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
   const segmentationLayer = yield* call([Model, Model.getSegmentationLayer]);
   const { cube } = segmentationLayer;
@@ -168,6 +171,9 @@ function* labelWithIterator(iterator, contourTracingMode): Saga<void> {
 }
 
 function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void> {
+  const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
+  if (!allowUpdate) return;
+
   const activeViewport = yield* select(state => state.viewModeData.plane.activeViewport);
   if (activeViewport === "TDView") {
     // Cannot copy labels from 3D view

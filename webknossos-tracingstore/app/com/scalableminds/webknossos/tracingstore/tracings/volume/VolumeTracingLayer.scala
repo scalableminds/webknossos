@@ -20,7 +20,7 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer)
   val volumeDataStore: FossilDBClient = layer.volumeDataStore
 
   override def load(readInstruction: DataReadInstruction, cache: DataCubeCache, timeout: FiniteDuration)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
-    loadBucket(layer, readInstruction.bucket)
+    loadBucket(layer, readInstruction.bucket, readInstruction.version)
   }
 
   override def bucketStream(resolution: Int, version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] = {

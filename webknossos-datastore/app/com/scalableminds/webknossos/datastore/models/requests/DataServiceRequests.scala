@@ -5,7 +5,7 @@ import java.nio.file.Path
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, SegmentationLayer}
 
-case class DataServiceRequestSettings(halfByte: Boolean)
+case class DataServiceRequestSettings(halfByte: Boolean, version: Option[Long] = None)
 
 object DataServiceRequestSettings {
   val default = DataServiceRequestSettings(halfByte = false)
@@ -22,7 +22,8 @@ case class DataReadInstruction(
                             baseDir: Path,
                             dataSource: DataSource,
                             dataLayer: DataLayer,
-                            bucket: BucketPosition
+                            bucket: BucketPosition,
+                            version: Option[Long] = None
                           ) {
   val cube = bucket.toCube(dataLayer.lengthOfUnderlyingCubes(bucket.resolution))
 }

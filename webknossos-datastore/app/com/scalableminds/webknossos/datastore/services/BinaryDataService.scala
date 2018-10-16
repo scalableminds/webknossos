@@ -80,7 +80,8 @@ class BinaryDataService(dataBaseDir: Path, loadTimeout: FiniteDuration, maxCache
         dataBaseDir,
         request.dataSource,
         request.dataLayer,
-        bucket)
+        bucket,
+        request.settings.version)
 
       request.dataLayer.bucketProvider.load(readInstruction, cache, loadTimeout)
     } else {

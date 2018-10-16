@@ -81,12 +81,14 @@ class VolumeTracingService @Inject()(
     val sourceTracing = find(tracingId, Some(sourceVersion))
     val dataLayer = volumeTracingLayer(tracingId, tracing)
     val bucketStream = dataLayer.volumeBucketProvider.bucketStreamWithVersion(1)
+
     bucketStream.foreach {
       case (bucketPosition, _, version) =>
         if(version > sourceVersion)
           loadBucket(dataLayer, bucketPosition, Some(sourceVersion)).futureBox.map {
             case Full(bucket) => saveBucket(dataLayer, bucketPosition, bucket, newVersion)
-            case _ => saveBucket(dataLayer, bucketPosition, Array[Byte](0), newVersion)
+            case Empty => saveBucket(dataLayer, bucketPosition, Array[Byte](0), newVersion)
+            case Failure(msg, _, chain) => Fox.failure(msg, Empty, chain)
           }
     }
     sourceTracing

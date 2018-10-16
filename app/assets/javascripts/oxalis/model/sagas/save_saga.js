@@ -418,10 +418,10 @@ export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
     }
   }
   yield* take("WK_READY");
-  const allowUpdate = yield* select(
+  const initialAllowUpdate = yield* select(
     state => state.tracing[tracingType] && state.tracing.restrictions.allowUpdate,
   );
-  if (!allowUpdate) return;
+  if (!initialAllowUpdate) return;
 
   while (true) {
     if (tracingType === "skeleton") {
@@ -429,6 +429,12 @@ export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
     } else {
       yield* take([...VolumeTracingSaveRelevantActions, ...FlycamActions]);
     }
+    // The allowUpdate setting could have changed in the meantime
+    const allowUpdate = yield* select(
+      state => state.tracing[tracingType] && state.tracing.restrictions.allowUpdate,
+    );
+    if (!allowUpdate) return;
+
     const tracing = yield* select(state => state.tracing);
     const flycam = yield* select(state => state.flycam);
     const items = compactUpdateActions(

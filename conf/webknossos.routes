@@ -101,7 +101,11 @@ GET           /api/annotations/:typ/:id/loggedTime                              
 
 # Meshes
 POST          /api/meshes                                                           controllers.MeshController.create
+PUT           /api/meshes/:id                                                       controllers.MeshController.update(id: String)
+DELETE        /api/meshes/:id                                                       controllers.MeshController.delete(id: String)
 GET           /api/meshes/:id                                                       controllers.MeshController.get(id: String)
+PUT           /api/meshes/:id/data                                                  controllers.MeshController.updateData(id: String)
+GET           /api/meshes/:id/data                                                  controllers.MeshController.getData(id: String)
 
 # Tasks
 POST          /api/tasks                                                            controllers.TaskController.create

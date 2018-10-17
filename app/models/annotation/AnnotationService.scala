@@ -20,6 +20,7 @@ import models.annotation.AnnotationType.AnnotationType
 import models.annotation.handler.SavedTracingInformationHandler
 import models.annotation.nml.NmlWriter
 import models.binary._
+import models.mesh.{MeshDAO, MeshService}
 import models.project.ProjectDAO
 import models.task.{Task, TaskDAO, TaskService, TaskTypeDAO}
 import models.team.OrganizationDAO
@@ -49,7 +50,10 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
                                   organizationDAO: OrganizationDAO,
                                   annotationRestrictionDefults: AnnotationRestrictionDefaults,
                                   nmlWriter: NmlWriter,
-                                  temporaryFileCreator: TemporaryFileCreator)
+                                  temporaryFileCreator: TemporaryFileCreator,
+                                  meshDAO: MeshDAO,
+                                  meshService: MeshService
+                                 )
                                  (implicit ec: ExecutionContext)
   extends BoxImplicits
     with FoxImplicits
@@ -459,6 +463,8 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       restrictionsJs <- AnnotationRestrictions.writeAsJson(restrictionsOpt.getOrElse(annotationRestrictionDefults.defaultsFor(annotation)), requestingUser)
       dataStore <- dataStoreDAO.findOneByName(dataSet._dataStore.trim) ?~> "datastore.notFound"
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
+      meshes <- meshDAO.findAllWithAnnotation(annotation._id)
+      meshesJs <- Fox.serialCombined(meshes)(meshService.publicWrites)
     } yield {
       Json.obj(
         "modified" -> annotation.modified,

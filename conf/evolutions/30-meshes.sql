@@ -5,9 +5,9 @@ START TRANSACTION;
 CREATE TABLE webknossos.meshes(
   _id CHAR(24) PRIMARY KEY NOT NULL DEFAULT '',
   _annotation CHAR(24) NOT NULL,
-  description TEXT,
+  description TEXT NOT NULL DEFAULT '',
   position webknossos.VECTOR3 NOT NULL,
-  data TEXT NOT NULL,
+  data TEXT,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );

@@ -5,86 +5,134 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
+import controllers.TaskParameters
 import javax.inject.Inject
-import models.annotation.{Annotation, AnnotationState, AnnotationType}
-import models.task.Task
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
+import play.api.libs.functional.syntax._
+import play.api.libs.json.Json._
+import play.api.libs.json._
 
 import scala.concurrent.ExecutionContext
-
-
-case class Mesh(
-  _id: ObjectId,
-  _annotation: ObjectId,
-  description: String,
-  position: Point3D,
-  data: Array[Byte],
-  created: Long = System.currentTimeMillis,
-  isDeleted: Boolean = false
-)
 
 case class MeshInfo(
   _id: ObjectId,
   _annotation: ObjectId,
   description: String,
   position: Point3D,
+  created: Long = System.currentTimeMillis,
+  isDeleted: Boolean = false
 )
 
-class MeshDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SQLDAO[Mesh, MeshesRow, Meshes](sqlClient) {
+case class MeshInfoParameters(
+                               annotationId: ObjectId,
+                               description: String,
+                               position: Point3D,
+                             )
+object MeshInfoParameters {
+  implicit val meshInfoParametersReads: Reads[MeshInfoParameters] =
+    ((__ \ "annotationId").read[String] (ObjectId.stringObjectIdReads("teamId")) and
+      (__ \ "description").read[String] and
+      (__ \ "position").read[Point3D])((annotationId, description, position) => MeshInfoParameters(ObjectId(annotationId), description, position))
+}
+
+
+class MeshService @Inject()(meshDAO: MeshDAO)(implicit ec: ExecutionContext) {
+  def publicWrites(meshInfo: MeshInfo): Fox[JsObject] = {
+    Fox.successful(Json.obj(
+      "_id" -> meshInfo._id.toString,
+      "annotation" -> meshInfo._annotation.toString,
+      "description" -> meshInfo.description,
+      "position" -> meshInfo.position
+    ))
+  }
+
+  def compactWrites(meshInfo: MeshInfo): Fox[JsObject] = {
+    Fox.successful(Json.obj(
+      "_id" -> meshInfo._id.toString,
+      "description" -> meshInfo.description,
+      "position" -> meshInfo.position
+    ))
+  }
+}
+
+class MeshDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SQLDAO[MeshInfo, MeshesRow, Meshes](sqlClient) {
   val collection = Meshes
 
   def idColumn(x: Meshes): Rep[String] = x._Id
 
   def isDeletedColumn(x: Meshes): Rep[Boolean] = x.isdeleted
 
-  def parse(r: MeshesRow): Fox[Mesh] =
+  def infoColumns = (columnsList diff Seq("data")).mkString(", ")
+  type InfoTuple = (String, String, String, String, java.sql.Timestamp, Boolean)
+
+  def parse(r: MeshesRow) = Fox.failure("not implemented, use parseInfo or get the data directly")
+
+  def parseInfo(r: InfoTuple): Fox[MeshInfo] =
     for {
-      position <- Point3D.fromList(parseArrayTuple(r.position).map(_.toInt)) ?~> "could not parse mesh position"
+      position <- Point3D.fromList(parseArrayTuple(r._4).map(_.toInt)) ?~> "could not parse mesh position"
     } yield {
-      Mesh(
-        ObjectId(r._Id),
-        ObjectId(r._Annotation),
-        r.description,
+      MeshInfo(
+        ObjectId(r._1), //_id
+        ObjectId(r._2), //_annotation
+        r._3,           // description
         position,
-        BaseEncoding.base64().decode(r.data),
-        r.created.getTime,
-        r.isdeleted
+        r._5.getTime,   //created
+        r._6            //isDeleted
       )
     }
 
-  def parseInfo(r: (String, String, String, String)): Fox[MeshInfo] = {
-    for {
-      position <- Point3D.fromList(parseArrayTuple(r._4).map(_.toInt)) ?~> "could not parse mesh position"
-    } yield MeshInfo(ObjectId(r._1), ObjectId(r._2), r._3, position)
-  }
-
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Mesh] =
+  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[MeshInfo] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(sql"select #${columns} from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[MeshesRow])
+      rList <- run(sql"select #${infoColumns} from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[InfoTuple])
       r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
-      parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
+      parsed <- parseInfo(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
     } yield parsed
 
-  def infoForAllWithAnnotation(_annotation: ObjectId)(implicit ctx: DBAccessContext): Fox[List[MeshInfo]] = {
+  def findAllWithAnnotation(_annotation: ObjectId)(implicit ctx: DBAccessContext): Fox[List[MeshInfo]] = {
     for {
       accessQuery <- readAccessQuery
-      resultTuples <- run(sql"select _id, _annotation, description, position from #${existingCollectionName} where _annotation = ${_annotation}"
-        .as[(String, String, String, String)])
+      resultTuples <- run(sql"select #${infoColumns} from #${existingCollectionName} where _annotation = ${_annotation}".as[InfoTuple])
       resultsParsed <- Fox.serialCombined(resultTuples.toList)(parseInfo)
     } yield resultsParsed
   }
 
-  def insertOne(m: Mesh)(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def insertOne(m: MeshInfo)(implicit ctx: DBAccessContext): Fox[Unit] = {
     for {
       _ <- run(
-        sqlu"""insert into webknossos.meshes(_id, _annotation, description, position, data, created, isDeleted)
+        sqlu"""insert into webknossos.meshes(_id, _annotation, description, position, created, isDeleted)
                    values(${m._id.id}, ${m._annotation.id}, ${m.description}, '#${writeStructTuple(m.position.toList.map(_.toString))}',
-                          ${BaseEncoding.base64().encode(m.data)}, ${new java.sql.Timestamp(m.created)}, ${m.isDeleted})
+                          ${new java.sql.Timestamp(m.created)}, ${m.isDeleted})
         """)
     } yield ()
   }
+
+  def updateOne(id: ObjectId, _annotation: ObjectId, description: String, position: Point3D)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    for {
+      _ <- assertUpdateAccess(id)
+      _ <- run(
+        sqlu"""update webknossos.meshes set _annotation = ${_annotation}, description = ${description},
+                            position = '#${writeStructTuple(position.toList.map(_.toString))}' where _id = ${id}""")
+    } yield ()
+  }
+
+  def getData(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Array[Byte]] = {
+    for {
+      accessQuery <- readAccessQuery
+      rList <- run(sql"select data from webknossos.meshes where _id = ${id} and #${accessQuery}".as[Option[String]])
+      r <- rList.headOption.flatten.toFox ?~> ("Could not find object " + id + " in " + collectionName)
+      binary = BaseEncoding.base64().decode(r)
+    } yield binary
+  }
+
+  def updateData(id: ObjectId, data: Array[Byte])(implicit ctx: DBAccessContext): Fox[Unit] = {
+    for {
+      _ <- assertUpdateAccess(id)
+      _ <- run(sqlu"update webknossos.meshes set data = ${BaseEncoding.base64().encode(data)} where _id = ${id}")
+    } yield ()
+  }
+
 }

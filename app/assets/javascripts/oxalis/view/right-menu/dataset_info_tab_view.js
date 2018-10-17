@@ -16,7 +16,7 @@ import {
   setAnnotationDescriptionAction,
 } from "oxalis/model/actions/annotation_actions";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
-import { Table, List } from "antd";
+import { Table } from "antd";
 import Markdown from "react-remarkable";
 import type { APIDataset } from "admin/api_flow_types";
 import type { OxalisState, Tracing, Task, Flycam } from "oxalis/store";

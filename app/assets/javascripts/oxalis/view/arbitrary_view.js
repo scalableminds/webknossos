@@ -192,7 +192,9 @@ class ArbitraryView {
   }
 
   getRenderedBuckets = () => {
+    console.time("renderToTexture");
     const buffer = this.renderToTexture();
+    console.timeEnd("renderToTexture");
 
     const start = 0; // Math.floor(buffer.length / 4 / 2)
     let index = start;

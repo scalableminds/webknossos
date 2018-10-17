@@ -1,4 +1,5 @@
 // @flow
+import _ from "lodash";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
   globalPositionToBucketPosition,
@@ -39,25 +40,69 @@ export default function determineBucketsForFlight(
     logZoomStep,
   );
 
+  const transformPoints = points =>
+    M4x4.transformVectorsAffine(
+      queryMatrix,
+      points.map(vec => {
+        V3.sub(vec, cameraVertex, vec);
+        V3.scale(vec, sphericalCapRadius / V3.length(vec), vec);
+        V3.add(vec, cameraVertex, vec);
+        return vec;
+      }),
+    );
+
+  const transformPoint = vec => {
+    V3.sub(vec, cameraVertex, vec);
+    V3.scale(vec, sphericalCapRadius / V3.length(vec), vec);
+    V3.add(vec, cameraVertex, vec);
+
+    return M4x4.transformPointsAffine(queryMatrix, vec);
+  };
   // This array holds the four corners and the center point of the rendered plane
-  const planePointsGlobal = M4x4.transformVectorsAffine(
-    queryMatrix,
-    [
-      [-halfWidth, -halfWidth, 0], // 0 bottom left
-      [halfWidth, -halfWidth, 0], // 1 bottom right
-      [0, 0, 0],
-      [-halfWidth, halfWidth, 0], // 2 top left
-      [halfWidth, halfWidth, 0], // 3 top right
-    ].map(vec => {
-      V3.sub(vec, cameraVertex, vec);
-      V3.scale(vec, sphericalCapRadius / V3.length(vec), vec);
-      V3.add(vec, cameraVertex, vec);
-      return vec;
-    }),
-  );
+  const planePointsGlobal = transformPoints([
+    [-halfWidth, -halfWidth, 0], // 0 bottom left
+    [halfWidth, -halfWidth, 0], // 1 bottom right
+    [0, 0, 0],
+    [-halfWidth, halfWidth, 0], // 2 top left
+    [halfWidth, halfWidth, 0], // 3 top right
+  ]);
+
+  const planeEdgePointsGlobal = transformPoints([
+    [0, -halfWidth, 0], // 0 bottom
+    [halfWidth, 0, 0], // 1 right
+    [0, 0, 0],
+    [-halfWidth, 0, 0], // 2 left
+    [0, halfWidth, 0], // 3 top
+  ]);
+
   const planePoints = planePointsGlobal.map((position: Vector3) =>
     globalPositionToBucketPosition(position, resolutions, logZoomStep),
   );
+  const planeEdgePoints = planeEdgePointsGlobal.map((position: Vector3) =>
+    globalPositionToBucketPosition(position, resolutions, logZoomStep),
+  );
+
+  let traversedBuckets = [];
+  // const tmpVec = [0, 0, 0];
+  // const bucketLookUp = [];
+  // console.time("for each bucket");
+  // for (let x = -halfWidth + 1; x <= halfWidth; x += 2) {
+  //   for (let y = -halfWidth; y <= halfWidth; y += 2) {
+  //     const z = 0;
+  //     const transformedVec = transformPoint([x, y, z]);
+  //     const bucketPos = globalPositionToBucketPosition(transformedVec, resolutions, logZoomStep);
+
+  //     let lookup = null;
+  //     lookup = bucketLookUp[x] = bucketLookUp[x] || [];
+  //     lookup = lookup[y] = lookup[y] || [];
+
+  //     if (!lookup[z]) {
+  //       lookup[z] = true;
+  //       traversedBuckets.push(bucketPos);
+  //     }
+  //   }
+  // }
+  // console.timeEnd("for each bucket");
 
   const cameraPosition = M4x4.transformVectorsAffine(queryMatrix, [cameraVertex])[0];
   const cameraBucketPosition = globalPositionToBucketPosition(
@@ -66,27 +111,27 @@ export default function determineBucketsForFlight(
     logZoomStep,
   );
 
-  const cp = cameraPosition;
-  const topLeft = V3.sub(planePointsGlobal[2], cp);
-  const bottomLeft = V3.sub(planePointsGlobal[0], cp);
-  const topRight = V3.sub(planePointsGlobal[3], cp);
-  const bottomRight = V3.sub(planePointsGlobal[1], cp);
+  // const cp = cameraPosition;
+  // const topLeft = V3.sub(planePointsGlobal[2], cp);
+  // const bottomLeft = V3.sub(planePointsGlobal[0], cp);
+  // const topRight = V3.sub(planePointsGlobal[3], cp);
+  // const bottomRight = V3.sub(planePointsGlobal[1], cp);
 
-  const left = V3.cross(topLeft, bottomLeft);
-  const right = V3.cross(bottomRight, topRight);
-  const top = V3.cross(topLeft, topRight);
-  const bottom = V3.cross(bottomRight, bottomLeft);
-  const isInFrustum = vec => {
-    // const _tmp = [0, 0, 0];
-    const a = V3.dot(V3.sub(vec, cp), left) >= 0;
-    // const b = V3.dot(vec, right) <= 0;
-    // const c = V3.dot(vec, top) <= 0;
-    // const d = V3.dot(vec, bottom) <= 0;
+  // const left = V3.cross(topLeft, bottomLeft);
+  // const right = V3.cross(bottomRight, topRight);
+  // const top = V3.cross(topLeft, topRight);
+  // const bottom = V3.cross(bottomRight, bottomLeft);
+  // const isInFrustum = vec => {
+  //   // const _tmp = [0, 0, 0];
+  //   const a = V3.dot(V3.sub(vec, cp), left) >= 0;
+  //   // const b = V3.dot(vec, right) <= 0;
+  //   // const c = V3.dot(vec, top) <= 0;
+  //   // const d = V3.dot(vec, bottom) <= 0;
 
-    // console.log("a, b, c, d");
+  //   // console.log("a, b, c, d");
 
-    return a; // && b; // && c && d;
-  };
+  //   return a; // && b; // && c && d;
+  // };
 
   console.log("cameraBucketPosition", cameraBucketPosition);
   const cameraDirection = M4x4.transformVectorsAffine(queryMatrix, [[0, 0, 1]])[0];
@@ -97,15 +142,22 @@ export default function determineBucketsForFlight(
 
   const inverseScale = V3.divide3([1, 1, 1], matrixScale);
 
-  const aggregatePerDimension = aggregateFn =>
+  const aggregatePerDimension = (aggregateFn, planePoints) =>
     [0, 1, 2].map(dim => aggregateFn(...planePoints.map(pos => pos[dim])));
 
-  const boundingBoxBuckets = {
-    cornerMin: aggregatePerDimension(Math.min),
-    cornerMax: aggregatePerDimension(Math.max),
-  };
+  const getBBox = planePoints => ({
+    cornerMin: aggregatePerDimension(Math.min, planePoints),
+    cornerMax: aggregatePerDimension(Math.max, planePoints),
+  });
 
-  let traversedBuckets = [];
+  const boundingBoxBuckets = getBBox(planePoints); // .concat(planeEdgePoints));
+  // const boundingBoxBucketsEdges = getBBox(planeEdgePoints);
+
+  console.log("boundingBoxBuckets", boundingBoxBuckets);
+  // console.log("boundingBoxBucketsEdges", boundingBoxBucketsEdges);
+
+  // todo: remove mutation
+  // boundingBoxBuckets = boundingBoxBuckets.concat(boundingBoxBucketsEdges);
 
   // const isInViewDirection = ([x, y, z]) => {
   //   // return x > cameraPosition[0] && y > cameraPosition[1] && z > cameraPosition[2];
@@ -116,7 +168,7 @@ export default function determineBucketsForFlight(
   const squaredRadius = (zoomStep * sphericalCapRadius) ** 2;
   const tolerance = 1;
   let traversedBucketCount = 0;
-  let skippedFrustumCount = 0;
+  // let skippedFrustumCount = 0;
 
   function isBucketRelevant([x, y, z]) {
     const pos = bucketPositionToGlobalAddress([x, y, z, logZoomStep], resolutions);
@@ -134,7 +186,7 @@ export default function determineBucketsForFlight(
     const closestDist = V3.scaledSquaredDist(cameraPosition, closest, inverseScale);
     const farthestDist = V3.scaledSquaredDist(cameraPosition, farthest, inverseScale);
 
-    const collisionTolerance = 1; // window.collisionTolerance != null ? window.collisionTolerance : 0.05;
+    const collisionTolerance = 0.05; // window.collisionTolerance != null ? window.collisionTolerance : 0.05;
     const doesIntersectSphere =
       (1 - collisionTolerance) * closestDist < squaredRadius &&
       (1 + collisionTolerance) * farthestDist > squaredRadius;
@@ -150,66 +202,55 @@ export default function determineBucketsForFlight(
       [nextPos[0], nextPos[1], nextPos[2]],
     ];
 
-    const intersectsSide = side => {
-      const aabbSigns = aabbPoints.map(vec => V3.dot(V3.sub(vec, cameraPosition), side) >= 0);
-      return aabbSigns.some(b => b);
-    };
+    // const intersectsSide = side => {
+    //   const aabbSigns = aabbPoints.map(vec => V3.dot(V3.sub(vec, cameraPosition), side) >= 0);
+    //   return aabbSigns.some(b => b);
+    // };
 
-    const isInFrustum = [
-      // left,
-      right,
-      // top, bottom
-    ].some(intersectsSide);
-    if (!isInFrustum) {
-      skippedFrustumCount++;
-    }
+    // const isInFrustum = [
+    //   // left,
+    //   // right,
+    //   // top, bottom
+    // ].some(intersectsSide);
+    // if (!isInFrustum) {
+    //   skippedFrustumCount++;
+    // }
 
-    return doesIntersectSphere && isInFrustum;
+    return doesIntersectSphere; // && isInFrustum;
   }
 
-  // iterate over all buckets within bounding box
-  for (
-    let x = boundingBoxBuckets.cornerMin[0] - tolerance;
-    x <= boundingBoxBuckets.cornerMax[0] + tolerance;
-    x++
-  ) {
+  const traverseBBox = () => {
+    // iterate over all buckets within bounding box
     for (
-      let y = boundingBoxBuckets.cornerMin[1] - tolerance;
-      y <= boundingBoxBuckets.cornerMax[1] + tolerance;
-      y++
+      let x = boundingBoxBuckets.cornerMin[0] - tolerance;
+      x <= boundingBoxBuckets.cornerMax[0] + tolerance;
+      x++
     ) {
       for (
-        let z = boundingBoxBuckets.cornerMin[2] - tolerance;
-        z <= boundingBoxBuckets.cornerMax[2] + tolerance;
-        z++
+        let y = boundingBoxBuckets.cornerMin[1] - tolerance;
+        y <= boundingBoxBuckets.cornerMax[1] + tolerance;
+        y++
       ) {
-        traversedBucketCount++;
-        const doesCollide = isBucketRelevant([x, y, z]); // && isInFrustum([x, y, z]);
+        for (
+          let z = boundingBoxBuckets.cornerMin[2] - tolerance;
+          z <= boundingBoxBuckets.cornerMax[2] + tolerance;
+          z++
+        ) {
+          traversedBucketCount++;
+          const vec = [x, y, z];
+          const doesCollide = isBucketRelevant(vec);
+          // && isInFrustum(vec);
+          // && isInViewDirection(vec) || window.ignoreViewDirection)
 
-        // && isInViewDirection([x, y, z]) || window.ignoreViewDirection)
-
-        if (doesCollide) {
-          // if (!) {
-          //   wrongSideCollisionCount++;
-          // }
-          traversedBuckets.push([x, y, z]);
-          if (window.lastRenderedBuckset != null) {
-            if (!window.lastRenderedBuckset.has([x, y, z, logZoomStep].join(","))) {
-              // console.log(
-              //   "selected for gpu, but not used in most recent call",
-              //   [x, y, z],
-              //   "dist: ",
-              //   closestDist,
-              //   farthestDist,
-              // );
-            }
+          if (doesCollide) {
+            traversedBuckets.push(vec);
           }
         }
       }
     }
-  }
+  };
 
-  console.log("skippedFrustumCount", skippedFrustumCount);
+  traverseBBox();
 
   traversedBuckets = traversedBuckets.map(addr => [...addr, logZoomStep]);
   function isInBBox(bucket) {
@@ -232,8 +273,35 @@ export default function determineBucketsForFlight(
     const lastRenderedBuckets = Array.from(window.lastRenderedBuckset);
     const bucketDiff = Utils.diffArrays(traversedBuckets.map(makeBucketId), lastRenderedBuckets);
     console.log("bucketDiff", bucketDiff);
-    console.log("bucketDiff", bucketDiff.onlyA);
-    console.log("bucketDiff", bucketDiff.onlyB);
+    console.log("bucketDiff.both", bucketDiff.both);
+    console.log("bucketDiff.onlyA", bucketDiff.onlyA);
+    console.log("bucketDiff.onlyB", bucketDiff.onlyB);
+
+    const printWithAngle = (msg, arr, fmin, fmax) => {
+      const centerToCamera = V3.sub(centerAddress, cameraBucketPosition);
+      const vecsWithAngles = arr.map(vec => {
+        const vecToCamera = V3.sub(vec, cameraBucketPosition);
+        return {
+          angle: Math.acos(V3.dot(V3.normalize(vecToCamera), V3.normalize(centerToCamera))),
+          vec,
+        };
+      });
+      const angles = vecsWithAngles.map(x => x.angle);
+      if (fmin != null && fmax != null) {
+        const passingAngleCount = angles.filter(angle => !(angle > fmin && angle < fmax)).length;
+        console.log(
+          `Of ${angles.length} unnecessary buckets, ${passingAngleCount} could be trimmed`,
+        );
+      }
+      const [min, max] = [_.min(angles), _.max(angles)];
+
+      console.log(msg, "min", min, "max", max, vecsWithAngles);
+      return [min, max];
+    };
+
+    const [min, max] = printWithAngle("bucketDiff.both", bucketDiff.both.map(unpackBucketId));
+    printWithAngle("bucketDiff.onlyA", bucketDiff.onlyA.map(unpackBucketId), min, max);
+    printWithAngle("bucketDiff.onlyB", bucketDiff.onlyB.map(unpackBucketId));
 
     const matchingRenderedBucketsA = bucketDiff.onlyA.map(unpackBucketId).map(address => {
       return {

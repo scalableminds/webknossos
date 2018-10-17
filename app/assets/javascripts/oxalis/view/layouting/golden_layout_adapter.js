@@ -10,7 +10,7 @@ import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Store from "oxalis/store";
 import { PortalTarget, RenderToPortal } from "./portal_utils";
 import { layoutEmitter, getLayoutConfig } from "./layout_persistence";
-import { resetDefaultLayouts } from "./default_layout_configs";
+import { resetDefaultLayouts, getGroundTruthLayoutRect } from "./default_layout_configs";
 
 type Props<KeyType> = {
   id: string,
@@ -21,28 +21,9 @@ type Props<KeyType> = {
   style: Object,
 };
 
-export const getGroundTruthLayoutRect = () => {
-  const mainContainer = document.querySelector(".ant-layout .ant-layout-has-sider");
-  if (!mainContainer) {
-    return { height: undefined, width: undefined };
-  }
-  const { offsetWidth, offsetHeight } = mainContainer;
-  // The -1s are a workaround, since otherwise scrollbars
-  // would appear from time to time
-  return { width: offsetWidth - 1, height: offsetHeight - 1 };
-};
-
-function preventUndefinedRect(rect: Object) {
-  if (rect.height === undefined || rect.width === undefined) {
-    // use fallback values
-    return { height: 500, width: 500 };
-  }
-  return rect;
-}
-
 export const getDesiredLayoutRect = () => {
   const { layoutScaleValue } = Store.getState().userConfiguration;
-  const { width, height } = preventUndefinedRect(getGroundTruthLayoutRect());
+  const { width, height } = getGroundTruthLayoutRect();
   return {
     width: width * layoutScaleValue,
     height: height * layoutScaleValue,

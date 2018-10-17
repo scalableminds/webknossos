@@ -10,8 +10,8 @@ import _ from "lodash";
 import type { ControlMode, Mode } from "oxalis/constants";
 import Constants, { ControlModeEnum } from "oxalis/constants";
 import { navbarHeight } from "navbar";
+import { headerHeight } from "./tracing_layout_view";
 import { Pane, Column, Row, Stack } from "./golden_layout_helpers";
-import { getGroundTruthLayoutRect } from "./golden_layout_adapter";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
 export const currentLayoutVersion = 6;
@@ -63,21 +63,33 @@ const SkeletonRightHandColumn = Stack(
 );
 const NonSkeletonRightHandColumn = Stack(Panes.DatasetInfoTabView, Panes.Mappings);
 
-const unmemoizedGetDefaultLayouts = () => {
-  let { height, width } = getGroundTruthLayoutRect();
-  // prevent default height and width
-  if (height === undefined || width === undefined) {
+export const getGroundTruthLayoutRect = () => {
+  const mainContainer = document.querySelector(".ant-layout .ant-layout-has-sider");
+  let width;
+  let height;
+  if (!mainContainer) {
     if (window.innerWidth) {
       width = window.innerWidth;
       height = window.innerHeight;
-      height -= Constants.HEADER_HEIGHT + navbarHeight;
+      height -= headerHeight + navbarHeight;
     } else {
       // use fallback values
       height = 500;
       width = 500;
     }
+  } else {
+    height = mainContainer.offsetHeight;
+    width = mainContainer.offsetWidth;
   }
-  const viewportWidth = Math.min(((height / 2) * 100) / width, 40);
+  // The -1s are a workaround, since otherwise scrollbars
+  // would appear from time to time
+  return { width: width - 1, height: height - 1 };
+};
+
+const unmemoizedGetDefaultLayouts = () => {
+  const layoutContainer = getGroundTruthLayoutRect();
+  layoutContainer.height -= layoutHeaderHeight * 2;
+  const viewportWidth = Math.min(((layoutContainer.height / 2) * 100) / layoutContainer.width, 40);
 
   const OrthoViewsGrid = [
     setGlContainerWidth(Column(Panes.xy, Panes.xz), viewportWidth),

@@ -158,6 +158,8 @@ class TeamRoleModalView extends React.PureComponent<TeamRoleModalProp, State> {
     return (
       <Modal
         title="Assign Teams"
+        maskClosable={false}
+        closable={false}
         visible={this.props.visible}
         onCancel={this.props.onCancel}
         footer={
@@ -167,7 +169,7 @@ class TeamRoleModalView extends React.PureComponent<TeamRoleModalProp, State> {
                 Set Teams
               </Button>
             )}
-            <Button onClick={() => this.props.onCancel()}>Cancel</Button>
+            <Button onClick={this.props.onCancel}>Cancel</Button>
           </div>
         }
       >

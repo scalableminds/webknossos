@@ -33,6 +33,7 @@ const StoreMock = {
       dataSource,
     },
     datasetConfiguration: { fourBit: _fourBit },
+    tracing: {},
   }),
   dispatch: sinon.stub(),
 };

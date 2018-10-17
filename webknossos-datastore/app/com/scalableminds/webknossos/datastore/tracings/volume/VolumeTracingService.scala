@@ -65,19 +65,21 @@ class VolumeTracingService @Inject()(
         }
       }.map(t => save(t.copy(version = updateGroup.version), Some(tracingId), updateGroup.version))
       _ <- tracingDataStore.volumeUpdates.put(tracingId, updateGroup.version, updateGroup.actions.map(_.addTimestamp(updateGroup.timestamp)).map(_.transformToCompact))
-    } yield Fox.successful()
+    } yield Fox.successful(())
   }
 
   private def revertToVolumeVersion(tracingId: String, sourceVersion: Long, newVersion: Long, tracing: VolumeTracing) = {
     val sourceTracing = find(tracingId, Some(sourceVersion))
     val dataLayer = volumeTracingLayer(tracingId, tracing)
     val bucketStream = dataLayer.volumeBucketProvider.bucketStreamWithVersion(1)
+
     bucketStream.foreach {
       case (bucketPosition, _, version) =>
         if(version > sourceVersion)
           loadBucket(dataLayer, bucketPosition, Some(sourceVersion)).futureBox.map {
             case Full(bucket) => saveBucket(dataLayer, bucketPosition, bucket, newVersion)
             case Empty => saveBucket(dataLayer, bucketPosition, Array[Byte](0), newVersion)
+            case Failure(msg, _, chain) => Fox.failure(msg, Empty, chain)
           }
     }
     sourceTracing

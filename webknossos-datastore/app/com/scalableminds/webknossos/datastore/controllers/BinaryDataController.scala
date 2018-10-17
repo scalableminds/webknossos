@@ -337,7 +337,8 @@ class BinaryDataController @Inject()(
       blackAndWhite = blackAndWhite)
     for {
       (data, indices) <- requestData(dataSource, dataLayer, request)
-      spriteSheet <- ImageCreator.spriteSheetFor(data, params) ?~> Messages("image.create.failed")
+      dataWithFallback = if (data.length == 0) new Array[Byte](params.slideHeight * params.slideWidth * params.bytesPerElement) else data
+      spriteSheet <- ImageCreator.spriteSheetFor(dataWithFallback, params) ?~> Messages("image.create.failed")
       firstSheet <- spriteSheet.pages.headOption ?~> Messages("image.page.failed")
     } yield {
       new JPEGWriter().writeToOutputStream(firstSheet.image)(_)

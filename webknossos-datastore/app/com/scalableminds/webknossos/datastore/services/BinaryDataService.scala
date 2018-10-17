@@ -86,7 +86,8 @@ class BinaryDataService @Inject()(config: DataStoreConfig) extends FoxImplicits 
         dataBaseDir,
         request.dataSource,
         request.dataLayer,
-        bucket)
+        bucket,
+        request.settings.version)
 
       request.dataLayer.bucketProvider.load(readInstruction, cache, loadTimeout)
     } else {

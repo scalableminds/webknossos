@@ -275,6 +275,18 @@ class DataCube {
     this.bucketIterator = ++this.bucketIterator % this.MAXIMUM_BUCKET_COUNT;
   }
 
+  collectAllBuckets(): void {
+    for (const bucket of this.buckets) {
+      if (bucket != null) {
+        this.collectBucket(bucket);
+        bucket.trigger("bucketCollected");
+      }
+    }
+    this.buckets = [];
+    this.bucketCount = 0;
+    this.bucketIterator = 0;
+  }
+
   collectBucket(bucket: DataBucket): void {
     const address = bucket.zoomedAddress;
     const bucketIndex = this.getBucketIndex(address);

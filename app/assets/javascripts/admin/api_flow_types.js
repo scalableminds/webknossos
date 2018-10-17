@@ -65,6 +65,11 @@ export type APIDataStore = {
   +isForeign?: boolean,
 };
 
+export type APITracingStore = {
+  +name: string,
+  +url: string,
+};
+
 export type APITeam = {
   +id: string,
   +name: string,
@@ -279,6 +284,7 @@ export type APIAnnotationTypeCompact = {
 
 type APIAnnotationTypeBase = APIAnnotationTypeCompact & {
   +dataStore: APIDataStore,
+  +tracingStore: APITracingStore,
   +restrictions: APIRestrictions,
   +settings: APISettings,
   +user?: APIUserBase,

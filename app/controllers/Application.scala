@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.FoxImplicits
 import javax.inject.Inject
 import com.typesafe.config.ConfigRenderOptions
 import models.analytics.{AnalyticsDAO, AnalyticsEntry}
-import models.binary.DataStoreHandler
+import models.binary.DataStoreRpcClient
 import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
 import play.api.libs.json.Json
@@ -23,7 +23,7 @@ class Application @Inject()(analyticsDAO: AnalyticsDAO,
 
   def buildInfo = sil.UserAwareAction.async { implicit request =>
     val token = request.identity.flatMap { user =>
-      if (user.isSuperUser) Some(DataStoreHandler.webKnossosToken) else None
+      if (user.isSuperUser) Some(DataStoreRpcClient.webKnossosToken) else None
     }
     for {
       schemaVersion <- releaseInformationDAO.getSchemaVersion.futureBox

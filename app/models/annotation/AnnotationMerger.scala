@@ -5,14 +5,14 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.annotation.AnnotationType.AnnotationType
-import models.binary.{DataSetDAO, DataSetService}
+import models.binary.DataSetDAO
 import models.user.User
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
 
 class AnnotationMerger @Inject()(dataSetDAO: DataSetDAO,
-                                 dataSetService: DataSetService
+                                 tracingStoreService: TracingStoreService
                                 )(implicit ec: ExecutionContext)
   extends FoxImplicits with LazyLogging {
 
@@ -65,9 +65,9 @@ class AnnotationMerger @Inject()(dataSetDAO: DataSetDAO,
   private def mergeTracingsOfAnnotations(annotations: List[Annotation], dataSetId: ObjectId, persistTracing: Boolean)(implicit ctx: DBAccessContext): Fox[String] = {
     for {
       dataSet <- dataSetDAO.findOne(dataSetId)
-      dataStoreHandler <- dataSetService.handlerFor(dataSet)
+      tracingStoreClient <- tracingStoreService.clientFor(dataSet)
       skeletonTracingIds <- Fox.combined(annotations.map(_.skeletonTracingId.toFox))
-      tracingReference <- dataStoreHandler.mergeSkeletonTracingsByIds(skeletonTracingIds, persistTracing) ?~> "Failed to merge skeleton tracings."
+      tracingReference <- tracingStoreClient.mergeSkeletonTracingsByIds(skeletonTracingIds, persistTracing) ?~> "Failed to merge skeleton tracings."
     } yield {
       tracingReference
     }

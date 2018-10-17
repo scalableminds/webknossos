@@ -38,11 +38,7 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
       val secured = get[Boolean]("datastore.webKnossos.secured")
       val pingIntervalMinutes = get[Int]("datastore.webKnossos.pingIntervalMinutes") minutes
     }
-    object Fossildb {
-      val address = get[String]("datastore.fossildb.address")
-      val port = get[Int]("datastore.fossildb.port")
-    }
-    val children = List(WebKnossos, Fossildb)
+    val children = List(WebKnossos)
   }
 
   val children = List(Http, Braingames, Datastore)

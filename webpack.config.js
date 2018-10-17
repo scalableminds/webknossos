@@ -9,7 +9,7 @@ module.exports = function(env = {}) {
 
   var srcPath = path.resolve(__dirname, "app/assets/javascripts/");
   var nodePath = path.join(__dirname, "node_modules/");
-  var protoPath = path.join(__dirname, "webknossos-datastore/proto/");
+  var protoPath = path.join(__dirname, "webknossos-tracingstore/proto/");
 
   fs.writeFileSync(path.join(__dirname, "target", "webpack.pid"), process.pid, "utf8");
 

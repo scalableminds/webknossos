@@ -178,10 +178,10 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
   def dataStoreFor(dataSet: DataSet): Fox[DataStore] =
     dataStoreDAO.findOneByName(dataSet._dataStore.trim)(GlobalAccessContext) ?~> "datastore.notFound"
 
-  def handlerFor(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[DataStoreHandler] =
+  def clientFor(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[DataStoreRpcClient] =
     for {
       dataStore <- dataStoreFor(dataSet)
-    } yield new DataStoreHandler(dataStore, dataSet, rpc)
+    } yield new DataStoreRpcClient(dataStore, dataSet, rpc)
 
   def lastUsedTimeFor(_dataSet: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Long] = {
     userOpt match {

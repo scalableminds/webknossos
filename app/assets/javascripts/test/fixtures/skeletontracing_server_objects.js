@@ -86,6 +86,7 @@ export const annotation: APIAnnotation = {
   dataSetName: "ROI2017_wkw",
   organization: "Connectomics Department",
   dataStore: { name: "localhost", url: "http://localhost:9000", typ: "webknossos-store" },
+  tracingStore: { name: "localhost", url: "http://localhost:9000" },
   settings: {
     allowedModes: ["orthogonal", "oblique", "flight"],
     branchPointsAllowed: true,

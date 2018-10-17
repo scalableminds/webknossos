@@ -101,6 +101,15 @@ export function formatNumberToLength(zoomLevel: number): string {
 
 function getDatasetExtentInVoxel(dataset: APIDataset) {
   const datasetBuckets = dataset.dataSource.dataLayers;
+
+  /* TODO
+  * iterate over all datalayers => create array of all boundingBoxes (map)
+  * write a union function in utils that takes an array of boudingBoxes and
+  * evaluates the min and max for each boundingBox 
+  * and then takes the min and max out of all Min and Max boundings
+  * This is the dataset extent in voxel
+  * multiply with resolution to get "real" extent
+  */
   const numbOfBuckets = datasetBuckets.length;
   const firstBoundingBox = datasetBuckets[0].boundingBox;
   const extent = {

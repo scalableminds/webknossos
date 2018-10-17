@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(28);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(30);
 COMMIT TRANSACTION;
 
 CREATE TABLE webknossos.analytics(
@@ -267,6 +267,11 @@ CREATE TABLE webknossos.tokens(
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
+
+CREATE TABLE webknossos.maintenance(
+  maintenanceExpirationTime TIMESTAMPTZ NOT NULL
+);
+INSERT INTO webknossos.maintenance(maintenanceExpirationTime) values('2000-01-01 00:00:00');
 
 
 

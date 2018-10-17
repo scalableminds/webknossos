@@ -76,7 +76,7 @@ function readStoredLayoutConfigs() {
   return getDefaultLayoutSchema();
 }
 
- Store.dispatch(setStoredLayoutsAction(readStoredLayoutConfigs()));
+Store.dispatch(setStoredLayoutsAction(readStoredLayoutConfigs()));
 
 function persistLayoutConfigs() {
   const storedLayouts = Store.getState().uiInformation.storedLayouts;

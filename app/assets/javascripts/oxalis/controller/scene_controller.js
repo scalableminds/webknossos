@@ -130,7 +130,7 @@ class SceneController {
     };
 
     this.planes[OrthoViews.PLANE_XY].setRotation(new THREE.Euler(Math.PI, 0, 0));
-    this.planes[OrthoViews.PLANE_YZ].setRotation(new THREE.Euler(Math.PI, 1 / 2 * Math.PI, 0));
+    this.planes[OrthoViews.PLANE_YZ].setRotation(new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0));
     this.planes[OrthoViews.PLANE_XZ].setRotation(new THREE.Euler(-1 / 2 * Math.PI, 0, 0));
 
     for (const plane of _.values(this.planes)) {

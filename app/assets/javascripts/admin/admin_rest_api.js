@@ -923,3 +923,13 @@ export function getOperatorData(): Promise<string> {
 export function getExistingExperienceDomains(): Promise<ExperienceDomainList> {
   return Request.receiveJSON("/api/tasks/experienceDomains");
 }
+
+export async function isInMaintenance(): Promise<boolean> {
+  const info = await Request.receiveJSON("/api/maintenance");
+  return info.isMaintenance;
+}
+
+export function setMaintenance(bool: boolean): Promise<void> {
+  return Request.triggerRequest("/api/maintenance", { method: bool ? "POST" : "DELETE" });
+}
+window.setMaintenance = setMaintenance;

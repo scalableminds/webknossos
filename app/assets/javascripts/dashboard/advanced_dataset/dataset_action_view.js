@@ -66,11 +66,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
     const volumeTracingMenu = (
       <Dropdown overlay={menu} trigger={["click"]}>
         <a href="#" title="Create volume tracing">
-          <img
-            src="/assets/images/volume.svg"
-            alt="volume icon"
-            style={centerBackgroundImageStyle}
-          />{" "}
+          <img src="/images/volume.svg" alt="volume icon" style={centerBackgroundImageStyle} />{" "}
           Start Volume Tracing
         </a>
       </Dropdown>
@@ -121,7 +117,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                   title="Create Skeleton Tracing"
                 >
                   <img
-                    src="/assets/images/skeleton.svg"
+                    src="/images/skeleton.svg"
                     alt="skeleton icon"
                     style={centerBackgroundImageStyle}
                   />{" "}

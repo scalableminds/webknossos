@@ -6,6 +6,9 @@ module.exports = function(env = {}) {
   const TerserPlugin = require("terser-webpack-plugin");
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
   const HtmlWebpackPlugin = require("html-webpack-plugin");
+  const GitRevisionPlugin = require("git-revision-webpack-plugin");
+  const gitRevisionPlugin = new GitRevisionPlugin();
+  const commitHash = JSON.stringify(gitRevisionPlugin.commithash());
   // const HardSourceWebpackPlugin = require("hard-source-webpack-plugin");
 
   var srcPath = path.resolve(__dirname, "app/assets/javascripts/");
@@ -20,8 +23,8 @@ module.exports = function(env = {}) {
     }),
     new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/),
     new MiniCssExtractPlugin({
-      filename: "[name].css",
-      chunkFilename: "[name].css",
+      filename: `[name].css?nocache=${commitHash}`,
+      chunkFilename: `[name].css?nocache=${commitHash}`,
     }),
     // new HardSourceWebpackPlugin(),
     // GoldenLayout requires these libraries to be available in
@@ -34,6 +37,7 @@ module.exports = function(env = {}) {
     }),
 
     new HtmlWebpackPlugin({
+      commitHash,
       title: "webKnossos",
       template: `${srcPath}/index.html`,
     }),
@@ -61,9 +65,9 @@ module.exports = function(env = {}) {
     mode: env.production ? "production" : "development",
     output: {
       path: `${__dirname}/public/bundle`,
-      filename: "[name].js",
-      sourceMapFilename: "[file].map",
-      // publicPath: "/assets/bundle/",
+      filename: `[name].js?nocache=${commitHash}`,
+      sourceMapFilename: `[file].map?nocache=${commitHash}`,
+      publicPath: "/bundle/",
     },
     module: {
       rules: [

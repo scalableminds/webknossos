@@ -5,6 +5,7 @@ import Maybe from "data.maybe";
 import window, { document, location } from "libs/window";
 import naturalSort from "javascript-natural-sort";
 import type { APIUser } from "admin/api_flow_types";
+import type { BoundingBoxObject } from "oxalis/store";
 
 export type Comparator<T> = (T, T) => -1 | 0 | 1;
 type UrlParams = { [key: string]: string };
@@ -127,6 +128,30 @@ export function computeArrayFromBoundingBox(bb: ?BoundingBoxType): ?Vector6 {
         bb.max[2] - bb.min[2],
       ]
     : null;
+}
+
+export function aggregateBoundingBox(boundingBoxes: Array<BoundingBoxObject>): BoundingBoxType {
+  const maxBoundings = boundingBoxes.map(
+    ({ topLeft, width, height, depth }): BoundingBoxType => {
+      const bottomRight = [topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth];
+      const min: Vector3 = [0, 0, 0];
+      const max: Vector3 = [0, 0, 0];
+      min[0] = topLeft[0] < bottomRight[0] ? topLeft[0] : bottomRight[0];
+      min[1] = topLeft[1] < bottomRight[1] ? topLeft[1] : bottomRight[1];
+      min[2] = topLeft[2] < bottomRight[2] ? topLeft[2] : bottomRight[2];
+      max[0] = topLeft[0] < bottomRight[0] ? bottomRight[0] : topLeft[0];
+      max[1] = topLeft[1] < bottomRight[1] ? bottomRight[1] : topLeft[1];
+      max[2] = topLeft[2] < bottomRight[2] ? bottomRight[2] : topLeft[2];
+      return { min, max };
+    },
+  );
+  const minX = Math.min(...maxBoundings.map(bouding => bouding.min[0]));
+  const minY = Math.min(...maxBoundings.map(bouding => bouding.min[1]));
+  const minZ = Math.min(...maxBoundings.map(bouding => bouding.min[2]));
+  const maxX = Math.max(...maxBoundings.map(bouding => bouding.max[0]));
+  const maxY = Math.max(...maxBoundings.map(bouding => bouding.max[1]));
+  const maxZ = Math.max(...maxBoundings.map(bouding => bouding.max[2]));
+  return { min: [minX, minY, minZ], max: [maxX, maxY, maxZ] };
 }
 
 export function compareBy<T>(

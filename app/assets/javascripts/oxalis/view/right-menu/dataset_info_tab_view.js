@@ -10,6 +10,7 @@ import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
 import { formatScale } from "libs/format_utils";
+import { aggregateBoundingBox } from "libs/utils";
 import {
   setAnnotationNameAction,
   setAnnotationDescriptionAction,
@@ -100,22 +101,14 @@ export function formatNumberToLength(zoomLevel: number): string {
 }
 
 function getDatasetExtentInVoxel(dataset: APIDataset) {
-  const datasetBuckets = dataset.dataSource.dataLayers;
-
-  /* TODO
-  * iterate over all datalayers => create array of all boundingBoxes (map)
-  * write a union function in utils that takes an array of boudingBoxes and
-  * evaluates the min and max for each boundingBox 
-  * and then takes the min and max out of all Min and Max boundings
-  * This is the dataset extent in voxel
-  * multiply with resolution to get "real" extent
-  */
-  const numbOfBuckets = datasetBuckets.length;
-  const firstBoundingBox = datasetBuckets[0].boundingBox;
+  const datasetLayers = dataset.dataSource.dataLayers;
+  const allBoundingBoxes = datasetLayers.map(layer => layer.boundingBox);
+  const unifiedBoudingBoxes = aggregateBoundingBox(allBoundingBoxes);
+  const { min, max } = unifiedBoudingBoxes;
   const extent = {
-    width: firstBoundingBox.width * numbOfBuckets,
-    height: firstBoundingBox.height,
-    depth: firstBoundingBox.depth,
+    width: max[0] - min[0],
+    height: max[1] - min[1],
+    depth: max[2] - min[2],
   };
   return extent;
 }
@@ -278,13 +271,16 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
         <p>Viewport Width: {formatNumberToLength(zoomLevel)}</p>
         <p>Dataset Resolution: {formatScale(this.props.dataset.dataSource.scale)}</p>
         <p>
-          Datset Extend:
-          <List
-            bordered={false}
-            split={false}
-            dataSource={datsetExtents}
-            renderItem={extentInfo => <List.Item>{extentInfo}</List.Item>}
-          />
+          <table>
+            <tr>
+              <td style={{ paddingRight: 8 }}>Dataset Extent:</td>
+              <td>{datsetExtents[0]}</td>
+            </tr>
+            <tr>
+              <td />
+              <td>{datsetExtents[1]}</td>
+            </tr>
+          </table>
         </p>
 
         {this.getTracingStatistics()}

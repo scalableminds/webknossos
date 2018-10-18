@@ -14,6 +14,7 @@ import { handleGenericError } from "libs/error_handling";
 import { revertToVersion, serverCreateTracing } from "oxalis/model/sagas/update_actions";
 import { pushSaveQueueAction, setVersionNumberAction } from "oxalis/model/actions/save_actions";
 import VersionEntryGroup from "oxalis/view/version_entry_group";
+import { chunkIntoTimeWindows } from "libs/utils";
 import type { APIUpdateActionBatch } from "admin/api_flow_types";
 import type { SkeletonTracing, VolumeTracing } from "oxalis/store";
 import type { Versions } from "oxalis/view/version_view";
@@ -94,7 +95,7 @@ class VersionList extends React.Component<Props, State> {
     return _.max(this.state.versions.map(batch => batch.version)) || 0;
   }
 
-  restoreVersion = async (version: number) => {
+  handleRestoreVersion = async (version: number) => {
     Store.dispatch(setVersionNumberAction(this.getNewestVersion(), this.props.tracingType));
     Store.dispatch(pushSaveQueueAction([revertToVersion(version)], this.props.tracingType));
     await Model.save();
@@ -102,7 +103,7 @@ class VersionList extends React.Component<Props, State> {
     Store.dispatch(setAnnotationAllowUpdateAction(true));
   };
 
-  previewVersion = (version: number) => previewVersion({ [this.props.tracingType]: version });
+  handlePreviewVersion = (version: number) => previewVersion({ [this.props.tracingType]: version });
 
   getGroupedAndChunkedVersions = _.memoize(
     (versions: Array<APIUpdateActionBatch>): GroupedAndChunkedVersions => {
@@ -115,30 +116,10 @@ class VersionList extends React.Component<Props, State> {
           .calendar(null, MOMENT_CALENDAR_FORMAT),
       );
 
-      const CHUNK_BY_X_MINUTES = 5;
-      return _.mapValues(groupedVersions, versionsOfOneDay => {
-        let chunkIndex = 0;
-        let chunkTime = 0;
-        return _.reduce(
-          versionsOfOneDay,
-          (
-            chunkedVersions: Array<Array<APIUpdateActionBatch>>,
-            batch: APIUpdateActionBatch,
-            index: number,
-          ) => {
-            const batchTime = _.max(batch.value.map(action => action.value.actionTimestamp));
-            if (index === 0) chunkTime = batchTime;
-            if (chunkTime - batchTime > CHUNK_BY_X_MINUTES * 60 * 1000) {
-              chunkIndex++;
-              chunkTime = batchTime;
-            }
-            if (chunkedVersions[chunkIndex] == null) chunkedVersions.push([]);
-            chunkedVersions[chunkIndex].push(batch);
-            return chunkedVersions;
-          },
-          [],
-        );
-      });
+      const getBatchTime = batch => _.max(batch.value.map(action => action.value.actionTimestamp));
+      return _.mapValues(groupedVersions, versionsOfOneDay =>
+        chunkIntoTimeWindows(versionsOfOneDay, getBatchTime, 5),
+      );
     },
   );
 
@@ -161,8 +142,8 @@ class VersionList extends React.Component<Props, State> {
               batches={batchesOrDateString}
               newestVersion={this.state.versions[0].version}
               activeVersion={this.props.tracing.version}
-              onRestoreVersion={this.restoreVersion}
-              onPreviewVersion={this.previewVersion}
+              onRestoreVersion={this.handleRestoreVersion}
+              onPreviewVersion={this.handlePreviewVersion}
               key={batchesOrDateString[0].version}
             />
           )

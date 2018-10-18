@@ -46,3 +46,73 @@ test("filterWithSearchQueryAND: complex case", t => {
   t.is(matchedElements.length, 1);
   t.deepEqual(matchedElements, [collection[2]]);
 });
+
+test("chunkIntoTimeWindows 1/2", async t => {
+  const chunk1 = [
+    {
+      time: 10 * 60 * 1000,
+      id: "element1",
+    },
+  ];
+  const chunk2 = [
+    {
+      time: 15 * 60 * 1000,
+      id: "element2",
+    },
+    {
+      time: 16 * 60 * 1000,
+      id: "element3",
+    },
+    {
+      time: 18 * 60 * 1000,
+      id: "element4",
+    },
+  ];
+
+  const collection = [...chunk1, ...chunk2];
+  const chunks = Utils.chunkIntoTimeWindows(collection, el => el.time, 4);
+  t.is(chunks.length, 2);
+  t.deepEqual(chunks, [chunk1, chunk2]);
+});
+
+test("chunkIntoTimeWindows 2/2", async t => {
+  const chunk1 = [
+    {
+      time: 0 * 60 * 1000,
+      id: "element1",
+    },
+  ];
+  const chunk2 = [
+    {
+      time: 10 * 60 * 1000,
+      id: "element2",
+    },
+    {
+      time: 10 * 60 * 1000,
+      id: "element3",
+    },
+    {
+      time: 18 * 60 * 1000,
+      id: "element4",
+    },
+  ];
+  const chunk3 = [
+    {
+      time: 127 * 60 * 1000,
+      id: "element5",
+    },
+    {
+      time: 134 * 60 * 1000,
+      id: "element6",
+    },
+    {
+      time: 135 * 60 * 1000,
+      id: "element7",
+    },
+  ];
+
+  const collection = [...chunk1, ...chunk2, ...chunk3];
+  const chunks = Utils.chunkIntoTimeWindows(collection, el => el.time, 9);
+  t.is(chunks.length, 3);
+  t.deepEqual(chunks, [chunk1, chunk2, chunk3]);
+});

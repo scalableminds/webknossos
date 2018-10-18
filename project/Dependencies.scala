@@ -72,13 +72,16 @@ object Dependencies {
     newrelic,
     newrelicApi,
     webknossosWrap,
-    grpc,
-    grpcServices,
-    scalapbRuntimeGrpc,
     playIterateesStreams,
     filters,
     ws,
     guice
+  )
+
+  val webknossosTracingstoreDependencies = Seq(
+    grpc,
+    grpcServices,
+    scalapbRuntimeGrpc
   )
 
   val webknossosDependencies = Seq(

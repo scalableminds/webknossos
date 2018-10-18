@@ -22,6 +22,7 @@ import type {
   APIAnnotation,
   APIAnnotationWithTask,
   APIDataStore,
+  APITracingStore,
   DatasetConfig,
   APIDatasetId,
   APIDataset,
@@ -576,8 +577,8 @@ export async function getTracingForAnnotationType(
   const tracingArrayBuffer = await doWithToken(token =>
     Request.receiveArraybuffer(
       `${
-        annotation.dataStore.url
-      }/data/tracings/${tracingType}/${tracingId}?token=${token}${possibleVersionString}`,
+        annotation.tracingStore.url
+      }/tracings/${tracingType}/${tracingId}?token=${token}${possibleVersionString}`,
       { headers: { Accept: "application/x-protobuf" } },
     ),
   );
@@ -589,13 +590,13 @@ export async function getTracingForAnnotationType(
 }
 
 export function getUpdateActionLog(
-  dataStoreUrl: string,
+  tracingStoreUrl: string,
   tracingId: string,
   tracingType: "skeleton" | "volume",
 ): Promise<Array<APIUpdateActionBatch>> {
   return doWithToken(token =>
     Request.receiveJSON(
-      `${dataStoreUrl}/data/tracings/${tracingType}/${tracingId}/updateActionLog?token=${token}`,
+      `${tracingStoreUrl}/tracings/${tracingType}/${tracingId}/updateActionLog?token=${token}`,
     ),
   );
 }
@@ -822,6 +823,12 @@ export async function getDatastores(): Promise<Array<APIDataStore>> {
   return datastores;
 }
 export const getDataStoresCached = _.memoize(getDatastores);
+
+export function getTracingstore(): Promise<APITracingStore> {
+  return Request.receiveJSON("/api/tracingstore");
+}
+
+export const getTracingStoreCached = _.memoize(getTracingstore);
 
 // ### Active User
 export function getActiveUser(options: Object = {}): Promise<APIUser> {

@@ -1,5 +1,6 @@
 // @flow
 import _ from "lodash";
+import window from "libs/window";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import type { Message } from "libs/toast";

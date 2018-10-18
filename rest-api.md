@@ -352,3 +352,25 @@ Create tasks with attached NML files
 #### Note
 
 For each attached NML file, one task is created. This request will also return status code 200 if some tasks could not be created. Failed tasks are instead encoded in the JSON response
+
+
+
+## TODO
+
+POST          /api/tasks/list
+GET           /api/tasks/:id
+DELETE        /api/tasks/:id
+PUT           /api/tasks/:id
+GET           /api/tasks/:id/annotations
+GET           /api/tasks/:id/annotations
+
+GET           /api/projects
+GET           /api/projects/assignments
+POST          /api/projects
+GET           /api/projects/:name
+DELETE        /api/projects/:name
+PUT           /api/projects/:name
+GET           /api/projects/:name/tasks
+PATCH         /api/projects/:name/incrementEachTasksInstances
+PATCH         /api/projects/:name/pause
+PATCH         /api/projects/:name/resume

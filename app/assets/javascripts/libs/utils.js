@@ -131,26 +131,21 @@ export function computeArrayFromBoundingBox(bb: ?BoundingBoxType): ?Vector6 {
 }
 
 export function aggregateBoundingBox(boundingBoxes: Array<BoundingBoxObject>): BoundingBoxType {
-  const maxBoundings = boundingBoxes.map(
-    ({ topLeft, width, height, depth }): BoundingBoxType => {
-      const bottomRight = [topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth];
-      const min: Vector3 = [0, 0, 0];
-      const max: Vector3 = [0, 0, 0];
-      min[0] = topLeft[0] < bottomRight[0] ? topLeft[0] : bottomRight[0];
-      min[1] = topLeft[1] < bottomRight[1] ? topLeft[1] : bottomRight[1];
-      min[2] = topLeft[2] < bottomRight[2] ? topLeft[2] : bottomRight[2];
-      max[0] = topLeft[0] < bottomRight[0] ? bottomRight[0] : topLeft[0];
-      max[1] = topLeft[1] < bottomRight[1] ? bottomRight[1] : topLeft[1];
-      max[2] = topLeft[2] < bottomRight[2] ? bottomRight[2] : topLeft[2];
-      return { min, max };
-    },
-  );
-  const minX = Math.min(...maxBoundings.map(bouding => bouding.min[0]));
-  const minY = Math.min(...maxBoundings.map(bouding => bouding.min[1]));
-  const minZ = Math.min(...maxBoundings.map(bouding => bouding.min[2]));
-  const maxX = Math.max(...maxBoundings.map(bouding => bouding.max[0]));
-  const maxY = Math.max(...maxBoundings.map(bouding => bouding.max[1]));
-  const maxZ = Math.max(...maxBoundings.map(bouding => bouding.max[2]));
+  const allXCoordinates = boundingBoxes
+    .map(box => box.topLeft[0])
+    .concat(boundingBoxes.map(box => box.topLeft[0] + box.width));
+  const allYCoordinates = boundingBoxes
+    .map(box => box.topLeft[1])
+    .concat(boundingBoxes.map(box => box.topLeft[1] + box.height));
+  const allZCoordinates = boundingBoxes
+    .map(box => box.topLeft[2])
+    .concat(boundingBoxes.map(box => box.topLeft[2] + box.depth));
+  const minX = Math.min(...allXCoordinates);
+  const minY = Math.min(...allYCoordinates);
+  const minZ = Math.min(...allZCoordinates);
+  const maxX = Math.max(...allXCoordinates);
+  const maxY = Math.max(...allYCoordinates);
+  const maxZ = Math.max(...allZCoordinates);
   return { min: [minX, minY, minZ], max: [maxX, maxY, maxZ] };
 }
 

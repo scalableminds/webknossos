@@ -103,8 +103,8 @@ export function formatNumberToLength(zoomLevel: number): string {
 function getDatasetExtentInVoxel(dataset: APIDataset) {
   const datasetLayers = dataset.dataSource.dataLayers;
   const allBoundingBoxes = datasetLayers.map(layer => layer.boundingBox);
-  const unifiedBoudingBoxes = aggregateBoundingBox(allBoundingBoxes);
-  const { min, max } = unifiedBoudingBoxes;
+  const unifiedBoundingBoxes = aggregateBoundingBox(allBoundingBoxes);
+  const { min, max } = unifiedBoundingBoxes;
   const extent = {
     width: max[0] - min[0],
     height: max[1] - min[1],
@@ -124,10 +124,10 @@ function getDatasetExtentInLength(dataset: APIDataset) {
   return extent;
 }
 
-function formatExtentWithLength(extent: Object) {
-  return `${formatNumberToLength(extent.width)} x ${formatNumberToLength(
+function formatExtentWithLength(extent: Object, formattingFunction: number => string) {
+  return `${formattingFunction(extent.width)} x ${formattingFunction(
     extent.height,
-  )} x ${formatNumberToLength(extent.depth)}`;
+  )} x ${formattingFunction(extent.depth)}`;
 }
 
 class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
@@ -259,10 +259,6 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
     const zoomLevel = calculateZoomLevel(this.props.flycam, this.props.dataset);
     const extentInVoxel = getDatasetExtentInVoxel(this.props.dataset);
     const extent = getDatasetExtentInLength(this.props.dataset);
-    const datsetExtents = [
-      `${extentInVoxel.width} x ${extentInVoxel.height} x ${extentInVoxel.depth}`,
-      formatExtentWithLength(extent),
-    ];
     return (
       <div className="flex-overflow info-tab-content">
         {this.getTracingName(isPublicViewMode)}
@@ -272,14 +268,16 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
         <p>Dataset Resolution: {formatScale(this.props.dataset.dataSource.scale)}</p>
         <p>
           <table>
-            <tr>
-              <td style={{ paddingRight: 8 }}>Dataset Extent:</td>
-              <td>{datsetExtents[0]}</td>
-            </tr>
-            <tr>
-              <td />
-              <td>{datsetExtents[1]}</td>
-            </tr>
+            <tbody>
+              <tr>
+                <td style={{ paddingRight: 8 }}>Dataset Extent:</td>
+                <td>{formatExtentWithLength(extentInVoxel, x => `${x}`)} Voxel³</td>
+              </tr>
+              <tr>
+                <td />
+                <td>{formatExtentWithLength(extent, formatNumberToLength)}</td>
+              </tr>
+            </tbody>
           </table>
         </p>
 

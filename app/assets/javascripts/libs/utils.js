@@ -131,22 +131,21 @@ export function computeArrayFromBoundingBox(bb: ?BoundingBoxType): ?Vector6 {
 }
 
 export function aggregateBoundingBox(boundingBoxes: Array<BoundingBoxObject>): BoundingBoxType {
-  const allXCoordinates = boundingBoxes
-    .map(box => box.topLeft[0])
-    .concat(boundingBoxes.map(box => box.topLeft[0] + box.width));
-  const allYCoordinates = boundingBoxes
-    .map(box => box.topLeft[1])
-    .concat(boundingBoxes.map(box => box.topLeft[1] + box.height));
-  const allZCoordinates = boundingBoxes
-    .map(box => box.topLeft[2])
-    .concat(boundingBoxes.map(box => box.topLeft[2] + box.depth));
-  const minX = Math.min(...allXCoordinates);
-  const minY = Math.min(...allYCoordinates);
-  const minZ = Math.min(...allZCoordinates);
-  const maxX = Math.max(...allXCoordinates);
-  const maxY = Math.max(...allYCoordinates);
-  const maxZ = Math.max(...allZCoordinates);
-  return { min: [minX, minY, minZ], max: [maxX, maxY, maxZ] };
+  const allCoordinates = [0, 1, 2].map(index =>
+    boundingBoxes.map(box => box.topLeft[index]).concat(
+      boundingBoxes.map(box => {
+        const bottomRight = [
+          box.topLeft[0] + box.width,
+          box.topLeft[1] + box.height,
+          box.topLeft[2] + box.depth,
+        ];
+        return bottomRight[index];
+      }),
+    ),
+  );
+  const min = (([0, 1, 2].map(index => Math.min(...allCoordinates[index])): any): Vector3);
+  const max = (([0, 1, 2].map(index => Math.max(...allCoordinates[index])): any): Vector3);
+  return { min, max };
 }
 
 export function compareBy<T>(

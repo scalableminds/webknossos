@@ -185,6 +185,10 @@ In order to restore the current window, a reload is necessary.`,
   "users.grant_admin_rights": _.template(
     "You are about to grant admin privileges to <%- numUsers %> user(s) giving them access to all teams, datasets and annotations. Do you want to proceed?",
   ),
+  "users.revoke_admin_rights_title": "Do you really want to revoke admin rights?",
+  "users.revoke_admin_rights": _.template(
+    "You are about to revoke admin privileges from <%- numUsers %> user(s). Do you want to proceed?",
+  ),
   "users.change_email_title": "Do you really want to change the email?",
   "users.change_email": _.template(
     "Do you really want to change the email to '<%- newEmail %>' ? The corresponding user will be logged out and unsaved changes might be lost.",

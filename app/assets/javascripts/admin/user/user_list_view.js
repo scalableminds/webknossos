@@ -170,11 +170,11 @@ class UserListView extends React.PureComponent<Props, State> {
     });
   };
 
-  grantAdminRights = async () => {
+  setAdminRightsTo = async (isAdmin:boolean) => {
     if (this.props.activeUser.isAdmin) {
       const newUserPromises = this.state.users.map(user => {
         if (this.state.selectedUserIds.includes(user.id)) {
-          const newUser = Object.assign({}, user, { isAdmin: true });
+          const newUser = Object.assign({}, user, { isAdmin });
 
           return updateUser(newUser);
         }
@@ -305,6 +305,7 @@ class UserListView extends React.PureComponent<Props, State> {
           Change Experience
         </Button>
         {this.props.activeUser.isAdmin ? (
+          <React.Fragment>
           <Button
             onClick={() =>
               Modal.confirm({
@@ -312,7 +313,7 @@ class UserListView extends React.PureComponent<Props, State> {
                 content: messages["users.grant_admin_rights"]({
                   numUsers: this.state.selectedUserIds.length,
                 }),
-                onOk: this.grantAdminRights,
+                onOk: () => this.setAdminRightsTo(true),
               })
             }
             icon="rocket"
@@ -321,6 +322,23 @@ class UserListView extends React.PureComponent<Props, State> {
           >
             Grant Admin Rights
           </Button>
+          <Button
+            onClick={() =>
+              Modal.confirm({
+                title: messages["users.revoke_admin_rights_title"],
+                content: messages["users.revoke_admin_rights"]({
+                  numUsers: this.state.selectedUserIds.length,
+                }),
+                onOk: () => this.setAdminRightsTo(false),
+              })
+            }
+            icon="rollback"
+            disabled={!hasRowsSelected}
+            style={marginRight}
+          >
+            Revoke Admin Rights
+          </Button>
+          </React.Fragment>
         ) : null}
         <InviteUsersPopover
           organizationName={this.props.activeUser.organization}

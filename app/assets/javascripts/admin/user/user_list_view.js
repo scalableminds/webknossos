@@ -170,7 +170,7 @@ class UserListView extends React.PureComponent<Props, State> {
     });
   };
 
-  setAdminRightsTo = async (isAdmin:boolean) => {
+  setAdminRightsTo = async (isAdmin: boolean) => {
     if (this.props.activeUser.isAdmin) {
       const newUserPromises = this.state.users.map(user => {
         if (this.state.selectedUserIds.includes(user.id)) {
@@ -306,38 +306,38 @@ class UserListView extends React.PureComponent<Props, State> {
         </Button>
         {this.props.activeUser.isAdmin ? (
           <React.Fragment>
-          <Button
-            onClick={() =>
-              Modal.confirm({
-                title: messages["users.grant_admin_rights_title"],
-                content: messages["users.grant_admin_rights"]({
-                  numUsers: this.state.selectedUserIds.length,
-                }),
-                onOk: () => this.setAdminRightsTo(true),
-              })
-            }
-            icon="rocket"
-            disabled={!hasRowsSelected}
-            style={marginRight}
-          >
-            Grant Admin Rights
-          </Button>
-          <Button
-            onClick={() =>
-              Modal.confirm({
-                title: messages["users.revoke_admin_rights_title"],
-                content: messages["users.revoke_admin_rights"]({
-                  numUsers: this.state.selectedUserIds.length,
-                }),
-                onOk: () => this.setAdminRightsTo(false),
-              })
-            }
-            icon="rollback"
-            disabled={!hasRowsSelected}
-            style={marginRight}
-          >
-            Revoke Admin Rights
-          </Button>
+            <Button
+              onClick={() =>
+                Modal.confirm({
+                  title: messages["users.grant_admin_rights_title"],
+                  content: messages["users.grant_admin_rights"]({
+                    numUsers: this.state.selectedUserIds.length,
+                  }),
+                  onOk: () => this.setAdminRightsTo(true),
+                })
+              }
+              icon="rocket"
+              disabled={!hasRowsSelected}
+              style={marginRight}
+            >
+              Grant Admin Rights
+            </Button>
+            <Button
+              onClick={() =>
+                Modal.confirm({
+                  title: messages["users.revoke_admin_rights_title"],
+                  content: messages["users.revoke_admin_rights"]({
+                    numUsers: this.state.selectedUserIds.length,
+                  }),
+                  onOk: () => this.setAdminRightsTo(false),
+                })
+              }
+              icon="rollback"
+              disabled={!hasRowsSelected}
+              style={marginRight}
+            >
+              Revoke Admin Rights
+            </Button>
           </React.Fragment>
         ) : null}
         <InviteUsersPopover

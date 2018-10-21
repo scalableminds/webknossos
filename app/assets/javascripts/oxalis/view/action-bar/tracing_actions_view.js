@@ -82,14 +82,12 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
     return (
       <Menu.Item
         key={layout}
+        onClick={() => onSelectLayout(layout)}
         className={
           isSelectedLayout ? "selected-layout-item bullet-point-less-li" : "bullet-point-less-li"
         }
       >
-        <span
-          onClick={() => onSelectLayout(layout)}
-          style={{ minWidth: "100%", minHeight: "auto", display: "inline-block" }}
-        >
+        <span style={{ minWidth: "100%", minHeight: "auto", display: "inline-block" }}>
           <div className="inline-with-margin">
             {layout}
             {isSelectedLayout ? (
@@ -124,12 +122,8 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
         </span>
       }
     >
-      <Menu.Item>
-        <div onClick={onResetLayout}>Reset Layout</div>
-      </Menu.Item>
-      <Menu.Item>
-        <div onClick={addNewLayout}>Add a new Layout</div>
-      </Menu.Item>
+      <Menu.Item onClick={onResetLayout}>Reset Layout</Menu.Item>
+      <Menu.Item onClick={addNewLayout}>Add a new Layout</Menu.Item>
       <Menu.Divider />
       <Menu.ItemGroup
         className="available-layout-list"

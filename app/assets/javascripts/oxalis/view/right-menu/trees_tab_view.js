@@ -187,7 +187,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
   getActionsDropdown() {
     return (
       <Menu>
-        <Menu.Item key="shuffleTreeColor"onClick={this.shuffleTreeColor}>
+        <Menu.Item key="shuffleTreeColor" onClick={this.shuffleTreeColor}>
           <div title="Change Tree Color">
             <i className="fa fa-adjust" /> Change Color
           </div>
@@ -203,7 +203,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
           </div>
         </Menu.Item>
         <Menu.Item key="importNml" onClick={this.props.showDropzoneModal}>
-          <div  title="Import NML files">
+          <div title="Import NML files">
             <Icon type="upload" /> Import NML
           </div>
         </Menu.Item>

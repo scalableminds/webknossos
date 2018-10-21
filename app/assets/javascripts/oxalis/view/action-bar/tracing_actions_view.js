@@ -280,23 +280,23 @@ class TracingActionsView extends PureComponent<Props, State> {
     if (restrictions.allowFinish) {
       elements.push(
         <Menu.Item key="finish-button" onClick={this.handleFinish}>
-            <Icon type="check-circle-o" />
-            {archiveButtonText}
+          <Icon type="check-circle-o" />
+          {archiveButtonText}
         </Menu.Item>,
       );
     }
     if (restrictions.allowDownload) {
       elements.push(
         <Menu.Item key="download-button" onClick={this.handleDownload}>
-            <Icon type="download" />
-            Download
+          <Icon type="download" />
+          Download
         </Menu.Item>,
       );
     }
     elements.push(
       <Menu.Item key="share-button" onClick={this.handleShareOpen}>
-          <Icon type="share-alt" />
-          Share
+        <Icon type="share-alt" />
+        Share
       </Menu.Item>,
     );
     modals.push(
@@ -308,8 +308,8 @@ class TracingActionsView extends PureComponent<Props, State> {
     );
     elements.push(
       <Menu.Item key="user-scripts-button" onClick={this.handleUserScriptsOpen}>
-          <Icon type="setting" />
-          Add Script
+        <Icon type="setting" />
+        Add Script
       </Menu.Item>,
     );
     modals.push(
@@ -323,8 +323,8 @@ class TracingActionsView extends PureComponent<Props, State> {
     if (isSkeletonMode && this.props.activeUser != null) {
       elements.push(
         <Menu.Item key="merge-button" onClick={this.handleMergeOpen}>
-            <Icon type="folder-open" />
-            Merge Tracing
+          <Icon type="folder-open" />
+          Merge Tracing
         </Menu.Item>,
       );
       modals.push(

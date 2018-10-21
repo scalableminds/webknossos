@@ -174,8 +174,7 @@ class TracingActionsView extends PureComponent<Props, State> {
     Store.dispatch(redoAction());
   };
 
-  handleCopyToAccount = async (event: SyntheticInputEvent<>) => {
-    event.target.blur();
+  handleCopyToAccount = async () => {
     const newAnnotation = await copyAnnotationToUserAccount(
       this.props.annotationId,
       this.props.tracingType,
@@ -183,8 +182,7 @@ class TracingActionsView extends PureComponent<Props, State> {
     location.href = `/annotations/Explorational/${newAnnotation.id}`;
   };
 
-  handleFinish = async (event: SyntheticInputEvent<>) => {
-    event.target.blur();
+  handleFinish = async () => {
     await this.handleSave();
 
     Modal.confirm({
@@ -205,8 +203,7 @@ class TracingActionsView extends PureComponent<Props, State> {
     this.setState({ isShareModalOpen: false });
   };
 
-  handleDownload = async (event: SyntheticInputEvent<>) => {
-    event.target.blur();
+  handleDownload = async () => {
     const win = window.open("about:blank", "_blank");
     win.document.body.innerHTML = messages["download.wait"];
     await this.handleSave();
@@ -218,8 +215,7 @@ class TracingActionsView extends PureComponent<Props, State> {
     win.document.body.innerHTML = messages["download.close_window"];
   };
 
-  handleFinishAndGetNextTask = async (event: SyntheticInputEvent<>) => {
-    event.target.blur();
+  handleFinishAndGetNextTask = async () => {
     api.tracing.finishAndGetNextTask();
   };
 
@@ -283,30 +279,24 @@ class TracingActionsView extends PureComponent<Props, State> {
     const modals = [];
     if (restrictions.allowFinish) {
       elements.push(
-        <Menu.Item key="finish-button">
-          <div onClick={this.handleFinish}>
+        <Menu.Item key="finish-button" onClick={this.handleFinish}>
             <Icon type="check-circle-o" />
             {archiveButtonText}
-          </div>
         </Menu.Item>,
       );
     }
     if (restrictions.allowDownload) {
       elements.push(
-        <Menu.Item key="download-button">
-          <div onClick={this.handleDownload}>
+        <Menu.Item key="download-button" onClick={this.handleDownload}>
             <Icon type="download" />
             Download
-          </div>
         </Menu.Item>,
       );
     }
     elements.push(
-      <Menu.Item key="share-button">
-        <div onClick={this.handleShareOpen}>
+      <Menu.Item key="share-button" onClick={this.handleShareOpen}>
           <Icon type="share-alt" />
           Share
-        </div>
       </Menu.Item>,
     );
     modals.push(
@@ -317,11 +307,9 @@ class TracingActionsView extends PureComponent<Props, State> {
       />,
     );
     elements.push(
-      <Menu.Item key="user-scripts-button">
-        <div onClick={this.handleUserScriptsOpen}>
+      <Menu.Item key="user-scripts-button" onClick={this.handleUserScriptsOpen}>
           <Icon type="setting" />
           Add Script
-        </div>
       </Menu.Item>,
     );
     modals.push(
@@ -334,11 +322,9 @@ class TracingActionsView extends PureComponent<Props, State> {
 
     if (isSkeletonMode && this.props.activeUser != null) {
       elements.push(
-        <Menu.Item key="merge-button">
-          <div onClick={this.handleMergeOpen}>
+        <Menu.Item key="merge-button" onClick={this.handleMergeOpen}>
             <Icon type="folder-open" />
             Merge Tracing
-          </div>
         </Menu.Item>,
       );
       modals.push(

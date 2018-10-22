@@ -8,17 +8,20 @@ The following HTTP requests may be used to interact with the backend of webKnoss
 
 All API routes expect the HTTP header `X-Auth-Token` to be set to your personal webKnossos token. You can find this token in the webKnossos menu, directly below “logout”.
 
+## Versioning
+
+TODO `/api/v1`
+
 ## Routes
 
-
-### `GET /api/buildinfo`
+### `GET /buildinfo`
 
 #### Returns
 JSON object containing information about the version of webKnossos
 
 
 ---
-### `GET /api/users`
+### `GET /users`
 
 List all users for which you have read access
 
@@ -36,14 +39,14 @@ List all users for which you have read access
 
 
 ---
-### `GET /api/user`
+### `GET /user`
 
 #### Returns
  - JSON object containing user information about yourself, including team memberships and experiences
 
 
 ---
-### `GET /api/user/tasks`
+### `GET /user/tasks`
 
 List your own task annotations
 
@@ -59,7 +62,7 @@ List your own task annotations
 
 
 ---
-### `GET /api/user/annotations`
+### `GET /user/annotations`
 
 List your own explorative annotations
 
@@ -77,7 +80,7 @@ List your own explorative annotations
 
 
 ---
-### `GET /api/users/:id`
+### `GET /users/:id`
 
 #### Expects
  - In the url: `:id` id of a user
@@ -87,7 +90,7 @@ List your own explorative annotations
 
 
 ---
-### `GET /api/users/:id/tasks`
+### `GET /users/:id/tasks`
 
 List the task annotations of a user
 
@@ -104,7 +107,7 @@ List the task annotations of a user
 
 
 ---
-### `GET /api/users/:id/annotations`
+### `GET /users/:id/annotations`
 
 List the explorative annotations of a uaser
 
@@ -122,7 +125,7 @@ List the explorative annotations of a uaser
 
 
 ---
-### `GET /api/teams`
+### `GET /teams`
 
 List all teams that you can manage
 
@@ -132,7 +135,7 @@ List all teams that you can manage
 
 
 ---
-### `GET /api/datasets`
+### `GET /datasets`
 
 List all datasets for which you have read access
 
@@ -150,7 +153,7 @@ List all datasets for which you have read access
 
 
 ---
-### `GET /api/datasets/:organizationName/:dataSetName`
+### `GET /datasets/:organizationName/:dataSetName`
 
 #### Expects
  - In the url: `:organizationName` the url-safe name of your organization, e.g. `Connectomics_Department`
@@ -162,7 +165,7 @@ List all datasets for which you have read access
 
 
 ---
-### `GET  /api/annotations/:typ/:id/info`
+### `GET  /annotations/:typ/:id/info`
 
 #### Expects
  - In the url: `:typ` – one of `Task`, `Explorational`, `CompoundTask`, `CompoundProject`, `CompoundTaskType`
@@ -181,12 +184,12 @@ The compound annotations are created as merged from the finished annotations ass
 
 
 ---
-### `GET /api/annotations/:typ/:id/download`
+### `GET /annotations/:typ/:id/download`
 
 Download an annotation as NML/ZIP
 
 #### Expects
- - In the url: `:typ` and `:id` as described above under `GET /api/annotations/:typ/:id/info`
+ - In the url: `:typ` and `:id` as described above under `GET /annotations/:typ/:id/info`
 
 #### Returns
  - As chunked file stream:
@@ -198,7 +201,7 @@ Download an annotation as NML/ZIP
      - A ZIP file containing individual NML files for all associated annotations
 
 ---
-### `POST /api/annotations/upload`
+### `POST /annotations/upload`
 
 Upload NML(s) or ZIP(s) of NML(s) to create a new explorative annotation
 
@@ -213,18 +216,18 @@ Upload NML(s) or ZIP(s) of NML(s) to create a new explorative annotation
 
 
 ---
-### `POST /api/annotations/:typ/:id/duplicate`
+### `POST /annotations/:typ/:id/duplicate`
 Duplicate an annotation (“copy to my account”)
 
 #### Expects
- - In the url: `:typ` and `:id` as described above under `GET  /api/annotations/:typ/:id/info`
+ - In the url: `:typ` and `:id` as described above under `GET  /annotations/:typ/:id/info`
 
 #### Returns
  - JSON object containing annotation information about the newly created (duplicated) annotation, including the assigned id
 
 
 ---
-### `PATCH /api/annotations/:typ/:id/edit`
+### `PATCH /annotations/:typ/:id/edit`
 
 Edit metadata of an annotation
 
@@ -242,7 +245,7 @@ Edit metadata of an annotation
 
 
 ---
-### `PATCH /api/annotations/:typ/:id/finish`
+### `PATCH /annotations/:typ/:id/finish`
 
 #### Expects
  - In the url: `:typ` – one of `Task`, `Explorational`
@@ -253,7 +256,7 @@ Edit metadata of an annotation
 
 
 ---
-### `PATCH /api/annotations/:typ/:id/reopen`
+### `PATCH /annotations/:typ/:id/reopen`
 
 #### Expects
  - In the url: `:typ` – one of `Task`, `Explorational`
@@ -264,7 +267,7 @@ Edit metadata of an annotation
 
 
 ---
-### `PUT /api/annotations/Task/:id/reset`
+### `PUT /annotations/Task/:id/reset`
 
 Reset a task annotation to its base state
 
@@ -276,19 +279,19 @@ Reset a task annotation to its base state
 
 
 ---
-### `POST /api/annotations/:typ/:id/merge/:mergedTyp/:mergedId`
+### `POST /annotations/:typ/:id/merge/:mergedTyp/:mergedId`
 
 Merge two annotations, creating a new explorative.
 
 #### Expects
- - In the url: `:typ` and `:id` as described above under `GET /api/annotations/:typ/:id/info`
- - In the url: `:mergedTyp` and `:mergedId` as described above under `GET /api/annotations/:typ/:id/info`
+ - In the url: `:typ` and `:id` as described above under `GET /annotations/:typ/:id/info`
+ - In the url: `:mergedTyp` and `:mergedId` as described above under `GET /annotations/:typ/:id/info`
 
 
 
 
 ---
-### `POST /api/tasks`
+### `POST /tasks`
 
 Create tasks without attached NML files
 
@@ -323,7 +326,7 @@ For each attached NML file, one task is created. This request will also return s
 
 
 ---
-### `POST /api/tasks/createFromFiles`
+### `POST /tasks/createFromFiles`
 
 Create tasks with attached NML files
 
@@ -355,22 +358,178 @@ For each attached NML file, one task is created. This request will also return s
 
 
 
-## TODO
 
-POST          /api/tasks/list
-GET           /api/tasks/:id
-DELETE        /api/tasks/:id
-PUT           /api/tasks/:id
-GET           /api/tasks/:id/annotations
-GET           /api/tasks/:id/annotations
+---
+### `POST /tasks/list`
 
-GET           /api/projects
-GET           /api/projects/assignments
-POST          /api/projects
-GET           /api/projects/:name
-DELETE        /api/projects/:name
-PUT           /api/projects/:name
-GET           /api/projects/:name/tasks
-PATCH         /api/projects/:name/incrementEachTasksInstances
-PATCH         /api/projects/:name/pause
-PATCH         /api/projects/:name/resume
+List tasks matching search criteria
+
+#### Expects
+ - JSON object with four optional fields:
+   - `"user"` `[STRING]` show only tasks on which the user with this id has worked
+   - `"project"` `[STRING]` show only tasks of the project with this name
+   - `"ids"` `[JSON LIST OF STRINGS]` show only tasks with these ids
+   - `"tasktype"` `[STRING]` show only tasks matching the task type with this id
+   - `"random"` `[BOOLEAN]` if true, return randomized subset of the results, rather than the first 1000 matches in the database
+
+#### Returns
+ - JSON list of objects containing task information
+ - Note that a maximum of 1000 results is returned
+
+
+---
+### `GET /tasks/:id`
+
+#### Expects
+ - In the url: `:id` id of a task
+
+#### Returns
+ - JSON object containing task information
+
+
+
+---
+### `DELETE /tasks/:id`
+
+Delete one task and all its annotations
+
+#### Expects
+ - In the url: `:id` id of a task
+
+
+
+---
+### `PUT /tasks/:id`
+
+Update the number of open instances for a task
+
+#### Expects
+ - In the url: `:id` id of a task
+ - JSON object like the one in `POST /tasks` (only `"openInstances"` is changed, though)
+
+#### Returns
+ - JSON object containing task information on the updated task
+
+
+
+---
+### `GET /tasks/:id/annotations`
+
+List annotations of a task
+
+#### Expects
+ - In the url: `:id` a task id
+
+#### Returns
+ - JSON list of objects containing annotation information on the annotations of the task
+ - Cancelled annotations are not returned
+
+
+
+---
+### `GET /projects`
+
+List all projects for which you have read access
+
+#### Returns
+
+JSON list of objects containing project information
+
+
+
+---
+### `GET /projects/assignments`
+
+List all projects for which you have read access, annotated with the number of open task instances
+
+#### Returns
+
+JSON list of objects containing project information, with additional field `numberOfOpenAssignments`
+
+
+
+
+---
+### `POST /projects`
+
+Create a new project
+
+#### Expects
+ - JSON object with the following fields:
+   - `"name"` `[STRING]`
+   - `"team"` `[STRING]` id of a team
+   - `"priority"` `[INT]`
+   - `"paused"` `[BOOLEAN]`
+   - `"expectedTime"` `[INT]` time limit
+   - `"owner"` `[STRING]` id of a user
+   - `"isBlacklistedFromReport"` `[BOOLEAN]`
+
+#### Returns
+
+JSON object containing project information about the newly created project, including the assigned id
+
+
+
+---
+### `GET /projects/:name`
+
+#### Expects
+
+#### Returns
+
+
+
+---
+### `DELETE /projects/:name`
+
+#### Expects
+
+#### Returns
+
+
+
+---
+### `PUT /projects/:name`
+
+#### Expects
+
+#### Returns
+
+
+
+---
+### `GET /projects/:name/tasks`
+
+#### Expects
+
+#### Returns
+
+
+
+---
+### `PATCH /projects/:name/incrementEachTasksInstances`
+
+#### Expects
+
+#### Returns
+
+
+
+---
+### `PATCH /projects/:name/pause`
+
+#### Expects
+
+#### Returns
+
+
+
+---
+### `PATCH /projects/:name/resume`
+
+#### Expects
+
+#### Returns
+
+
+

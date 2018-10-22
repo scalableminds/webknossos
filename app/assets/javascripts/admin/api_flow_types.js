@@ -65,6 +65,11 @@ export type APIDataStore = {
   +isForeign?: boolean,
 };
 
+export type APITracingStore = {
+  +name: string,
+  +url: string,
+};
+
 export type APITeam = {
   +id: string,
   +name: string,
@@ -279,6 +284,7 @@ export type APIAnnotationTypeCompact = {
 
 type APIAnnotationTypeBase = APIAnnotationTypeCompact & {
   +dataStore: APIDataStore,
+  +tracingStore: APITracingStore,
   +restrictions: APIRestrictions,
   +settings: APISettings,
   +user?: APIUserBase,
@@ -348,6 +354,9 @@ export type APIBuildInfo = {
     commitDate: string,
     ciTag: string,
     ciBuild: string,
+    gitTag: string,
+    version: string,
+    datastoreApiVersion: string,
   },
   "webknossos-wrap": {
     builtAtMillis: string,
@@ -357,6 +366,19 @@ export type APIBuildInfo = {
     version: string,
     sbtVersion: string,
     builtAtString: string,
+  },
+  webknossosDatastore?: {
+    name: string,
+    commitHash: string,
+    scalaVersion: string,
+    version: string,
+    sbtVersion: string,
+    commitDate: string,
+    ciTag: string,
+    ciBuild: string,
+    gitTag: string,
+    version: string,
+    datastoreApiVersion: string,
   },
 };
 

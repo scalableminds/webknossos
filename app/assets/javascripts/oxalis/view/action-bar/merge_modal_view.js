@@ -84,7 +84,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
 
   componentWillMount() {
     (async () => {
-      const projects = await Request.receiveJSON("/api/projects", { doNotCatch: true });
+      const projects = await Request.receiveJSON("/api/projects", { showErrorToast: false });
       this.setState({
         projects: projects.map(project => ({ id: project.id, label: project.name })),
       });
@@ -93,7 +93,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
 
   async merge(url: string) {
     await api.tracing.save();
-    const annotation = await Request.receiveJSON(url);
+    const annotation = await Request.receiveJSON(url, { method: "POST" });
     Toast.success(messages["tracing.merged_with_redirect"]);
     const redirectUrl = `/annotations/${annotation.typ}/${annotation.id}`;
     await Utils.sleep(1500);

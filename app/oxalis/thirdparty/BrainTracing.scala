@@ -57,9 +57,10 @@ class BrainTracing @Inject()(actorSystem: ActorSystem,
         })
         logger.trace(s"Creation of account ${user.email} returned Status: ${response.status} Body: ${response.body}")
       }
-    brainTracingRequest.onFailure{
-      case e: Exception =>
-        logger.error(s"Failed to register user '${user.email}' in brain tracing db. Exception: ${e.getMessage}")
+    brainTracingRequest.onComplete {
+      case Failure(t) =>
+        logger.error(s"Failed to register user '${user.email}' in brain tracing db. Exception: ${t.getMessage}")
+      case _ =>
     }
     result.future
   }

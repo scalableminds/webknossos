@@ -7,7 +7,13 @@ export default {
   unknown_error:
     "An unknown error occured. Please try again or check the console for more details.",
   "datastore.health": _.template(
-    "The datastore server at <%- url %> does not seem to be available. This is likely due to an update. Please check back in five minutes.",
+    "The datastore server at <%- url %> does not seem too be available. This is likely due to an update. Please check back in five minutes.",
+  ),
+  "datastore.version.too_new": _.template(
+    "The datastore server at (<%- url %>) supplies a newer API version (<%- suppliedDatastoreApiVersion %>) than this webKnossos expects (<%- expectedDatastoreApiVersion %>). Please contact your admins to upgrade this webKnossos instance",
+  ),
+  "datastore.version.too_old": _.template(
+    "The datastore server at (<%- url %>) supplies an older API version (<%- suppliedDatastoreApiVersion %>) than this webKnossos expects (<%- expectedDatastoreApiVersion %>). Please contact the admins of the remote data store to upgrade.",
   ),
   "save.failed_simultaneous_tracing": `It seems that you edited the tracing simultaneously in different windows.
 Editing should be done in a single window only.

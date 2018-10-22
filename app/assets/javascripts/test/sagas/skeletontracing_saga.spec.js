@@ -113,7 +113,7 @@ const createBranchPointAction = SkeletonTracingActions.createBranchPointAction(
 test("SkeletonTracingSaga should create a tree if there is none (saga test)", t => {
   const saga = saveTracingTypeAsync("skeleton");
   expectValueDeepEqual(t, saga.next(), take("INITIALIZE_SKELETONTRACING"));
-  saga.next({ initSkeleton: true });
+  saga.next();
   saga.next({ tracing: { trees: {} } });
   t.is(saga.next(true).value.PUT.action.type, "CREATE_TREE");
 });
@@ -121,12 +121,13 @@ test("SkeletonTracingSaga should create a tree if there is none (saga test)", t 
 test("SkeletonTracingSaga shouldn't do anything if unchanged (saga test)", t => {
   const saga = saveTracingTypeAsync("skeleton");
   expectValueDeepEqual(t, saga.next(), take("INITIALIZE_SKELETONTRACING"));
-  saga.next({ initSkeleton: true });
+  saga.next();
   saga.next(initialState.tracing);
   saga.next(false);
   saga.next();
   saga.next(true);
   saga.next();
+  saga.next(true);
   saga.next(initialState.tracing);
   // only updateTracing
   const items = execCall(t, saga.next(initialState.flycam));
@@ -138,12 +139,13 @@ test("SkeletonTracingSaga should do something if changed (saga test)", t => {
 
   const saga = saveTracingTypeAsync("skeleton");
   expectValueDeepEqual(t, saga.next(), take("INITIALIZE_SKELETONTRACING"));
-  saga.next({ initSkeleton: true });
+  saga.next();
   saga.next(initialState.tracing);
   saga.next(false);
   saga.next();
   saga.next(true);
   saga.next();
+  saga.next(true);
   saga.next(newState.tracing);
   const items = execCall(t, saga.next(newState.flycam));
   t.true(withoutUpdateTracing(items).length > 0);

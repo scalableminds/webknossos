@@ -8,10 +8,10 @@ import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.mvc.ResultBox
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
-import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
-import com.scalableminds.webknossos.datastore.tracings.ProtoGeometryImplicits
+import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
+import com.scalableminds.webknossos.tracingstore.tracings.ProtoGeometryImplicits
 import models.annotation.nml.{NmlResults, NmlService}
-import models.annotation.AnnotationService
+import models.annotation.{AnnotationService, TracingStoreService}
 import models.binary.{DataSetDAO, DataSetService}
 import models.project.ProjectDAO
 import models.task._
@@ -67,6 +67,7 @@ class TaskController @Inject() (annotationService: AnnotationService,
                                 dataSetDAO: DataSetDAO,
                                 userService: UserService,
                                 dataSetService: DataSetService,
+                                tracingStoreService: TracingStoreService,
                                 teamDAO: TeamDAO,
                                 taskDAO: TaskDAO,
                                 taskService: TaskService,
@@ -163,8 +164,8 @@ class TaskController @Inject() (annotationService: AnnotationService,
     for {
       dataSetName <- assertAllOnSameDataset
       dataSet <- dataSetDAO.findOneByNameAndOrganization(requestedTasks.head._1.dataSet, request.identity._organization) ?~> Messages("dataSet.notFound", dataSetName)
-      dataStoreHandler <- dataSetService.handlerFor(dataSet)
-      skeletonTracingIds: List[Box[String]] <- dataStoreHandler.saveSkeletonTracings(SkeletonTracings(requestedTasks.map(_._2)))
+      tracingStoreClient <- tracingStoreService.clientFor(dataSet)
+      skeletonTracingIds: List[Box[String]] <- tracingStoreClient.saveSkeletonTracings(SkeletonTracings(requestedTasks.map(_._2)))
       requestedTasksWithTracingIds = requestedTasks zip skeletonTracingIds
       taskObjects: List[Fox[Task]] = requestedTasksWithTracingIds.map(r => createTaskWithoutAnnotationBase(r._1._1, r._2))
       zipped = (requestedTasks, skeletonTracingIds, taskObjects).zipped.toList

@@ -21,6 +21,7 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
         val tickerInterval = get[Int]("braingames.binary.changeHandler.tickerInterval") minutes
       }
       val baseFolder = get[String]("braingames.binary.baseFolder")
+      val additionalFolders = get[Seq[String]]("braingames.binary.additionalFolders").toList
       val loadTimeout = get[Int]("braingames.binary.loadTimeout") seconds
       val cacheMaxSize = get[Int]("braingames.binary.cacheMaxSize")
 
@@ -37,11 +38,7 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
       val secured = get[Boolean]("datastore.webKnossos.secured")
       val pingIntervalMinutes = get[Int]("datastore.webKnossos.pingIntervalMinutes") minutes
     }
-    object Fossildb {
-      val address = get[String]("datastore.fossildb.address")
-      val port = get[Int]("datastore.fossildb.port")
-    }
-    val children = List(WebKnossos, Fossildb)
+    val children = List(WebKnossos)
   }
 
   val children = List(Http, Braingames, Datastore)

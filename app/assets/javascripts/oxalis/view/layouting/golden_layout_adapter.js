@@ -9,12 +9,12 @@ import window from "libs/window";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Store from "oxalis/store";
 import { PortalTarget, RenderToPortal } from "./portal_utils";
-import { layoutEmitter } from "./layout_persistence";
+import { layoutEmitter, getLayoutConfig } from "./layout_persistence";
 
 type Props<KeyType> = {
   id: string,
   layoutKey: KeyType,
-  layoutConfigGetter: (layoutKey: KeyType) => Object,
+  activeLayoutName: string,
   onLayoutChange?: (config: Object, layoutKey: string) => void,
   children: React.Node,
   style: Object,
@@ -83,7 +83,10 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
   }
 
   componentDidUpdate(prevProps: Props<*>) {
-    if (prevProps.layoutKey !== this.props.layoutKey) {
+    if (
+      prevProps.layoutKey !== this.props.layoutKey ||
+      prevProps.activeLayoutName !== this.props.activeLayoutName
+    ) {
       this.rebuildLayout();
     }
   }
@@ -105,15 +108,13 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
   onStateChange() {
     const { onLayoutChange } = this.props;
     if (onLayoutChange != null) {
-      onLayoutChange(this.gl.toConfig(), this.props.layoutKey);
+      onLayoutChange(this.gl.toConfig(), this.props.activeLayoutName);
     }
   }
 
   setupLayout() {
-    const gl = new GoldenLayout(
-      this.props.layoutConfigGetter(this.props.layoutKey),
-      `#${this.props.id}`,
-    );
+    const activeLayout = getLayoutConfig(this.props.layoutKey, this.props.activeLayoutName);
+    const gl = new GoldenLayout(activeLayout, `#${this.props.id}`);
     this.gl = gl;
     gl.registerComponent("PortalTarget", PortalTarget);
 
@@ -145,7 +146,6 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
         // However, this should be mitigated by currentLayoutVersion in default_layout_configs.js
         Toast.error("Layout couldn't be restored. The default layout is used instead.");
         layoutEmitter.emit("resetLayout");
-        console.error(exception);
         return;
       }
       // Rerender since the portals just became available

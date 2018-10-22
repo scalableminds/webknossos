@@ -4,7 +4,7 @@ import javax.inject.Inject
 import akka.util.Timeout
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.tracings.TracingType
+import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import models.annotation.AnnotationState.Cancelled
 import models.annotation._
 import models.binary.{DataSet, DataSetDAO, DataSetService}
@@ -32,6 +32,7 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
                                      projectDAO: ProjectDAO,
                                      timeSpanService: TimeSpanService,
                                      annotationMerger: AnnotationMerger,
+                                     tracingStoreService: TracingStoreService,
                                      provider: AnnotationInformationProvider,
                                      annotationRestrictionDefaults: AnnotationRestrictionDefaults,
                                      conf: WkConf,
@@ -88,23 +89,6 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
           }
         ))
       }
-  }
-
-  def revert(typ: String, id: String, version: Int) = sil.SecuredAction.async { implicit request =>
-    for {
-      annotation <- provider.provideAnnotation(typ, id, request.identity) ?~> "annotation.notFound"
-      restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound"
-      _ <- restrictions.allowUpdate(request.identity) ?~> Messages("notAllowed")
-      _ <- bool2Fox(annotation.isRevertPossible) ?~> Messages("annotation.revert.toOld")
-      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
-      dataStoreHandler <- dataSetService.handlerFor(dataSet)
-      skeletonTracingId <- annotation.skeletonTracingId.toFox ?~> "annotation.noSkeleton"
-      newSkeletonTracingId <- dataStoreHandler.duplicateSkeletonTracing(skeletonTracingId, Some(version.toString))
-      _ <- annotationDAO.updateSkeletonTracingId(annotation._id, newSkeletonTracingId)
-    } yield {
-      logger.info(s"REVERTED [$typ - $id, $version]")
-      JsonOk("annotation.reverted")
-    }
   }
 
   def reset(typ: String, id: String) = sil.SecuredAction.async { implicit request =>
@@ -273,9 +257,9 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
     for {
       dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
       _ <- bool2Fox(dataSet.isUsable) ?~> Messages("dataSet.notImported", dataSet.name)
-      dataStoreHandler <- dataSetService.handlerFor(dataSet)
-      newSkeletonTracingReference <- Fox.runOptional(annotation.skeletonTracingId)(id => dataStoreHandler.duplicateSkeletonTracing(id)) ?~> "Failed to duplicate skeleton tracing."
-      newVolumeTracingReference <- Fox.runOptional(annotation.volumeTracingId)(id => dataStoreHandler.duplicateVolumeTracing(id)) ?~> "Failed to duplicate volume tracing."
+      tracingStoreClient <- tracingStoreService.clientFor(dataSet)
+      newSkeletonTracingReference <- Fox.runOptional(annotation.skeletonTracingId)(id => tracingStoreClient.duplicateSkeletonTracing(id)) ?~> "Failed to duplicate skeleton tracing."
+      newVolumeTracingReference <- Fox.runOptional(annotation.volumeTracingId)(id => tracingStoreClient.duplicateVolumeTracing(id)) ?~> "Failed to duplicate volume tracing."
       clonedAnnotation <- annotationService.createFrom(
         user, dataSet, newSkeletonTracingReference, newVolumeTracingReference, AnnotationType.Explorational, None, annotation.description) ?~> Messages("annotation.create.failed")
     } yield clonedAnnotation

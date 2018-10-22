@@ -128,6 +128,11 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   onSelectTree = evt => {
+    console.log("event", evt);
+    console.log("shiftkey", evt.shiftKey); // works so awesome
+    // TODO trigger different event when shift is pressed
+    // => this event should mark/select the tree
+    // => save all selected trees in the state of this object
     const treeId = evt.target.dataset.id;
     this.props.onSetActiveTree(parseInt(treeId, 10));
   };
@@ -261,6 +266,8 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     } else {
       const tree = this.props.trees[parseInt(node.id, 10)];
       const rgbColorString = tree.color.map(c => Math.round(c * 255)).join(",");
+      // TODO add prop that saves if selected => change background color and so to indicate selection
+      // add this prop to TreeNode
       nodeProps.title = (
         <div data-id={node.id} onClick={this.onSelectTree}>
           <Checkbox

@@ -474,26 +474,32 @@ JSON object containing project information about the newly created project, incl
 ### `GET /projects/:name`
 
 #### Expects
+ - In the url: `:name` name of a project
 
 #### Returns
-
+ - JSON object containing project information about the selected project
 
 
 ---
 ### `DELETE /projects/:name`
 
-#### Expects
+Delete a project and all its tasks and annotations
 
-#### Returns
+#### Expects
+ - In the url: `:name` name of a project
 
 
 
 ---
 ### `PUT /projects/:name`
 
+Update a project
+
 #### Expects
+ - JSON object just like in `POST /projects`
 
 #### Returns
+ - JSON object containing project information about the updated project
 
 
 

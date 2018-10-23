@@ -1,7 +1,5 @@
 # webKnossos REST API
 
-_Last updated 2018-10-18_
-
 The following HTTP requests may be used to interact with the backend of webKnossos. Please keep the server load in mind and avoid sending excessive amounts of requests or huge individual ones.
 
 ## Authentication

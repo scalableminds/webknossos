@@ -275,6 +275,11 @@ CREATE TABLE webknossos.tokens(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
+CREATE TABLE webknossos.maintenance(
+  maintenanceExpirationTime TIMESTAMPTZ NOT NULL
+);
+INSERT INTO webknossos.maintenance(maintenanceExpirationTime) values('2000-01-01 00:00:00');
+
 
 
 CREATE VIEW webknossos.analytics_ AS SELECT * FROM webknossos.analytics WHERE NOT isDeleted;

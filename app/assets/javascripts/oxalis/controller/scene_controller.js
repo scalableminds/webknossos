@@ -87,7 +87,7 @@ class SceneController {
     geometry.computeVertexNormals();
 
     const meshMaterial = new THREE.MeshNormalMaterial();
-    this.scene.add(new THREE.Mesh(geometry, meshMaterial));
+    this.rootGroup.add(new THREE.Mesh(geometry, meshMaterial));
   }
 
   createMeshes(): void {

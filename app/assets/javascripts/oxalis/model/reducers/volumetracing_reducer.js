@@ -39,6 +39,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
         version: action.tracing.version,
         boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
         userBoundingBox: convertServerBoundingBoxToFrontend(action.tracing.userBoundingBox),
+        fallbackLayer: action.tracing.fallbackLayer,
       };
 
       const newState = update(state, { tracing: { volume: { $set: volumeTracing } } });

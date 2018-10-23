@@ -2,12 +2,11 @@ FROM openjdk:8-jre
 
 RUN mkdir -p /srv/webknossos-datastore \
   && groupadd -g 1000 -r webknossos \
-  && useradd -u 1000 -r -g webknossos webknossos \
-  && mkdir /srv/webknossos-datastore/tracingData
+  && useradd -u 1000 -r -g webknossos webknossos
 
 WORKDIR /srv/webknossos-datastore
 
-VOLUME /srv/webknossos-datastore/binaryData /srv/webknossos-datastore/tracingData /tmp
+VOLUME /srv/webknossos-datastore/binaryData /tmp
 
 COPY target/universal/stage .
 

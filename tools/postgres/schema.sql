@@ -119,6 +119,13 @@ CREATE TABLE webknossos.dataStores(
   isForeign BOOLEAN NOT NULL DEFAULT false
 );
 
+CREATE TABLE webknossos.tracingStores(
+  name VARCHAR(256) PRIMARY KEY NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\.]+$'),
+  url VARCHAR(512) UNIQUE NOT NULL CHECK (url ~* '^https?://[a-z0-9\.]+.*$'),
+  key VARCHAR(1024) NOT NULL,
+  isDeleted BOOLEAN NOT NULL DEFAULT false
+);
+
 CREATE TABLE webknossos.projects(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   _team CHAR(24) NOT NULL,
@@ -279,6 +286,7 @@ CREATE VIEW webknossos.analytics_ AS SELECT * FROM webknossos.analytics WHERE NO
 CREATE VIEW webknossos.annotations_ AS SELECT * FROM webknossos.annotations WHERE NOT isDeleted;
 CREATE VIEW webknossos.dataSets_ AS SELECT * FROM webknossos.dataSets WHERE NOT isDeleted;
 CREATE VIEW webknossos.dataStores_ AS SELECT * FROM webknossos.dataStores WHERE NOT isDeleted;
+CREATE VIEW webknossos.tracingStores_ AS SELECT * FROM webknossos.tracingStores WHERE NOT isDeleted;
 CREATE VIEW webknossos.projects_ AS SELECT * FROM webknossos.projects WHERE NOT isDeleted;
 CREATE VIEW webknossos.scripts_ AS SELECT * FROM webknossos.scripts WHERE NOT isDeleted;
 CREATE VIEW webknossos.taskTypes_ AS SELECT * FROM webknossos.taskTypes WHERE NOT isDeleted;

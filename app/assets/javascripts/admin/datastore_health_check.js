@@ -21,14 +21,16 @@ const memoizedThrottle = (func, wait = 0, options = {}): Function => {
 export const pingDataStoreIfAppropriate = memoizedThrottle(async (requestedUrl: string): Promise<
   *,
 > => {
-  const [datastores, isInMaintenance] = await Promise.all([
+  const [datastores, tracingstore, isInMaintenance] = await Promise.all([
     RestAPI.getDataStoresCached(),
+    RestAPI.getTracingStoreCached(),
     RestAPI.isInMaintenance(),
   ]);
+  const stores = datastores.concat(tracingstore);
   if (isInMaintenance) {
     Toast.warning(messages.planned_maintenance);
   } else {
-    const usedDataStore = datastores.find(ds => requestedUrl.indexOf(ds.url) > -1);
+    const usedDataStore = stores.find(ds => requestedUrl.indexOf(ds.url) > -1);
     if (usedDataStore != null) {
       const { url } = usedDataStore;
       const healthEndpoint = `${url}/data/health`;

@@ -73,4 +73,16 @@ object BuildInfoSettings {
     buildInfoOptions := Seq(BuildInfoOption.ToJson)
   )
 
+  lazy val webknossosTracingstoreBuildInfoSettings = Seq(
+    buildInfoKeys := Seq[BuildInfoKey](name, scalaVersion, sbtVersion,
+      "commitHash" -> commitHash,
+      "commitDate" -> commitDate,
+      "ciBuild" -> ciBuild,
+      "ciTag" -> ciTag,
+      "gitTag" -> gitTag
+    ),
+    buildInfoPackage := "webknossosTracingstore",
+    buildInfoOptions := Seq(BuildInfoOption.ToJson)
+  )
+
 }

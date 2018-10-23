@@ -98,17 +98,20 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                       )(implicit ctx: DBAccessContext): Fox[Unit] = {
     dataSetDAO.findOneByNameAndOrganizationName(dataSource.id.name, dataSource.id.team)(GlobalAccessContext).futureBox.flatMap {
       case Full(dataSet) if dataSet._dataStore == dataStore.name =>
-        dataSetDAO.updateDataSourceByName(
+        logger.info(s"[update from ${dataStore.name}]: updating dataset ${dataSource.id.team} / ${dataSource.id.name} (from datastore ${dataStore.name})")
+        dataSetDAO.updateDataSourceByNameAndOrganizationName(
           dataSource.id.name,
           dataStore.name,
           dataSource,
           dataSource.isUsable)(GlobalAccessContext).futureBox
-      case Full(_) =>
+      case Full(foundDataSet) =>
+        logger.info(s"[update from ${dataStore.name}]: found but with different datastore: ${foundDataSet._dataStore} / ${foundDataSet.name}")
         // TODO: There is a problem: The dataset name is already in use by some (potentially different) team.
         // We are not going to update that datasource.
         // this should be somehow populated to the user to inform him that he needs to rename the datasource
         Fox.failure("dataset.name.alreadyInUse").futureBox
       case _ =>
+        logger.info(s"[update from ${dataStore.name}]: creating new dataset: ${dataSource.id.team} / ${dataSource.id.name} (from datastore ${dataStore.name})")
         createDataSet(
           dataSource.id.name,
           dataStore,
@@ -118,8 +121,15 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     }
   }
 
-  def deactivateUnreportedDataSources(dataStoreName: String, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext) =
-    dataSetDAO.deactivateUnreported(dataSources.map(_.id.name), dataStoreName)
+  def deactivateUnreportedDataSources(dataStoreName: String, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext) = {
+    val dataSourcesByOrganizationName: Map[String, List[InboxDataSource]] = dataSources.groupBy(_.id.team)
+    Fox.serialCombined(dataSourcesByOrganizationName.keys.toList) { organizationName =>
+      for {
+        organization <- organizationDAO.findOneByName(organizationName)
+        _ <- dataSetDAO.deactivateUnreported(dataSourcesByOrganizationName(organizationName).map(_.id.name), organization._id, dataStoreName)
+      } yield ()
+    }
+  }
 
   def updateDataSources(dataStore: DataStore, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext) = {
     logger.info(s"[${dataStore.name}] Available datasets: " +

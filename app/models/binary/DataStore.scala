@@ -34,12 +34,14 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: Execut
 
   def validateAccess[A](name: String)(block: (DataStore) => Future[Result])
                        (implicit request: Request[A], m: MessagesProvider): Fox[Result] = {
-    request.getQueryString("key")
-      .toFox
-      .flatMap(key => dataStoreDAO.findOneByKey(key)(GlobalAccessContext)) // Check if key is valid
-      .flatMap(dataStore => block(dataStore)) // Run underlying action
-      .getOrElse(Forbidden(Messages("dataStore.notFound"))) // Default error
-    }
+    (for {
+      dataStore <- dataStoreDAO.findOneByName(name)(GlobalAccessContext)
+      key <- request.getQueryString("key").toFox
+      _ <- bool2Fox(key == dataStore.key)
+      result <- block(dataStore)
+    } yield result).getOrElse(Forbidden(Messages("dataStore.notFound")))
+  }
+
 }
 
 class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SQLDAO[DataStore, DatastoresRow, Datastores](sqlClient) {

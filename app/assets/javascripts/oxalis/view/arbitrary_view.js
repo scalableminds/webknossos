@@ -7,7 +7,7 @@ import app from "app";
 import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 import TWEEN from "tween.js";
-import Constants, { ArbitraryViewport } from "oxalis/constants";
+import Constants, { ArbitraryViewport, OrthoViews } from "oxalis/constants";
 import Store from "oxalis/store";
 import SceneController from "oxalis/controller/scene_controller";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
@@ -16,11 +16,14 @@ import window from "libs/window";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { clearCanvas, setupRenderArea } from "./plane_view";
+import type { ArbitraryPlane } from "oxalis/geometries/arbitrary_plane";
 
 class ArbitraryView {
   // Copied form backbone events (TODO: handle this better)
   trigger: Function;
   unbindChangedScaleListener: () => void;
+  cameras: OrthoViewMap<THREE.OrthographicCamera>;
+  plane: ArbitraryPlane;
 
   animate: () => void;
   setClippingDistance: (value: number) => void;
@@ -34,6 +37,8 @@ class ArbitraryView {
   camDistance: number;
 
   camera: THREE.PerspectiveCamera = null;
+  tdCamera: THREE.OrthographicCamera = null;
+
   geometries: Array<THREE.Geometry> = [];
   group: THREE.Object3D;
   cameraPosition: Array<number>;
@@ -52,6 +57,22 @@ class ArbitraryView {
     this.camera = new THREE.PerspectiveCamera(45, 1, 50, 1000);
     this.camera.matrixAutoUpdate = false;
 
+    const tdCamera = new THREE.OrthographicCamera(0, 0, 0, 0);
+    tdCamera.position.copy(new THREE.Vector3(10, 10, -10));
+    tdCamera.up = new THREE.Vector3(0, 0, -1);
+    tdCamera.matrixAutoUpdate = true;
+
+    this.tdCamera = tdCamera;
+
+    const dummyCamera = new THREE.PerspectiveCamera(45, 1, 50, 1000);
+
+    this.cameras = {
+      TDView: tdCamera,
+      PLANE_XY: dummyCamera,
+      PLANE_YZ: dummyCamera,
+      PLANE_XZ: dummyCamera,
+    };
+
     this.cameraPosition = [0, 0, this.camDistance];
 
     this.needsRerender = true;
@@ -64,6 +85,10 @@ class ArbitraryView {
         this.needsRerender = true;
       });
     });
+  }
+
+  getCameras(): OrthoViewMap<THREE.OrthographicCamera> {
+    return this.cameras;
   }
 
   start(): void {
@@ -150,11 +175,18 @@ class ArbitraryView {
 
       clearCanvas(renderer);
 
-      const { left, top, width, height } = getInputCatcherRect(ArbitraryViewport);
-      if (width > 0 && height > 0) {
-        setupRenderArea(renderer, left, top, Math.min(width, height), width, height, 0xffffff);
-        renderer.render(scene, camera);
-      }
+      const renderViewport = (viewport, _camera) => {
+        const { left, top, width, height } = getInputCatcherRect(viewport);
+        if (width > 0 && height > 0) {
+          setupRenderArea(renderer, left, top, Math.min(width, height), width, height, 0xffffff);
+          renderer.render(scene, _camera);
+        }
+      };
+
+      this.plane.meshes[1].visible = false;
+      renderViewport(ArbitraryViewport, camera);
+      this.plane.meshes[1].visible = true;
+      renderViewport(OrthoViews.TDView, this.tdCamera);
 
       this.needsRerender = false;
       window.needsRerender = false;
@@ -200,18 +232,25 @@ class ArbitraryView {
     let index = start;
 
     const usedBucketSet = new Set();
+    const usedBuckets = [];
 
     while (index < buffer.length) {
-      const [x, y, z, zoomstep] = buffer
+      const bucketAddress = buffer
         .subarray(index, index + 4)
         .map((el, idx) => (idx < 3 ? window.currentAnchorPoint[idx] + el : el));
       index += 4;
+      // const [x, y, z, zoomstep] = bucketad
 
-      usedBucketSet.add([x, y, z, zoomstep].join(","));
+      const id = bucketAddress.join(",");
+      if (!usedBucketSet.has(id)) {
+        usedBucketSet.add(id);
+        usedBuckets.push(bucketAddress);
+      }
     }
     console.log("usedBucketSet.length", usedBucketSet.size);
     console.log("window.lastUsedFlightBuckets.length", window.lastUsedFlightBuckets.length);
     window.lastRenderedBuckset = usedBucketSet;
+    window.lastRenderedBuckets = Array.from(usedBucketSet);
   };
 
   addGeometry(geometry: THREE.Geometry): void {
@@ -222,7 +261,7 @@ class ArbitraryView {
     geometry.addToScene(this.group);
   }
 
-  setPlane(p) {
+  setArbitraryPlane(p: ArbitraryPlane) {
     this.plane = p;
   }
 

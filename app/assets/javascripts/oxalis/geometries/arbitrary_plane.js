@@ -11,6 +11,7 @@ import type { Vector4 } from "oxalis/constants";
 import Store from "oxalis/store";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import SceneController from "oxalis/controller/scene_controller";
+import shaderEditor from "oxalis/model/helpers/shader_editor";
 
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
 
@@ -28,14 +29,14 @@ import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_fac
 // The result is then projected on a flat surface.
 
 class ArbitraryPlane {
-  mesh: THREE.Mesh;
+  meshes: Array<THREE.Mesh>;
   isDirty: boolean;
   stopStoreListening: () => void;
   materialFactory: PlaneMaterialFactory;
 
   constructor() {
     this.isDirty = true;
-    this.mesh = this.createMesh();
+    this.meshes = this.createMeshes();
 
     this.stopStoreListening = Store.subscribe(() => {
       this.isDirty = true;
@@ -49,47 +50,49 @@ class ArbitraryPlane {
 
   updateAnchorPoints(anchorPoint: ?Vector4, fallbackAnchorPoint: ?Vector4): void {
     if (anchorPoint) {
-      this.mesh.material.setAnchorPoint(anchorPoint);
+      this.meshes[0].material.setAnchorPoint(anchorPoint);
     }
     if (fallbackAnchorPoint) {
-      this.mesh.material.setFallbackAnchorPoint(fallbackAnchorPoint);
+      this.meshes[0].material.setFallbackAnchorPoint(fallbackAnchorPoint);
     }
   }
 
   setPosition = ({ x, y, z }: THREE.Vector3) => {
-    this.mesh.material.setGlobalPosition([x, y, z]);
+    this.meshes[0].material.setGlobalPosition([x, y, z]);
   };
 
   addToScene(scene: THREE.Scene) {
-    scene.add(this.mesh);
+    this.meshes.forEach(mesh => scene.add(mesh));
   }
 
   update() {
     if (this.isDirty) {
-      const { mesh } = this;
+      const { meshes } = this;
 
       const matrix = getZoomedMatrix(Store.getState().flycam);
-      mesh.matrix.set(
-        matrix[0],
-        matrix[4],
-        matrix[8],
-        matrix[12],
-        matrix[1],
-        matrix[5],
-        matrix[9],
-        matrix[13],
-        matrix[2],
-        matrix[6],
-        matrix[10],
-        matrix[14],
-        matrix[3],
-        matrix[7],
-        matrix[11],
-        matrix[15],
-      );
+      meshes.forEach(mesh => {
+        mesh.matrix.set(
+          matrix[0],
+          matrix[4],
+          matrix[8],
+          matrix[12],
+          matrix[1],
+          matrix[5],
+          matrix[9],
+          matrix[13],
+          matrix[2],
+          matrix[6],
+          matrix[10],
+          matrix[14],
+          matrix[3],
+          matrix[7],
+          matrix[11],
+          matrix[15],
+        );
 
-      mesh.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
-      mesh.matrixWorldNeedsUpdate = true;
+        mesh.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
+        mesh.matrixWorldNeedsUpdate = true;
+      });
 
       this.isDirty = false;
 
@@ -97,7 +100,7 @@ class ArbitraryPlane {
     }
   }
 
-  createMesh() {
+  createMeshes() {
     this.materialFactory = new PlaneMaterialFactory(OrthoViews.PLANE_XY, false, 4);
     const textureMaterial = this.materialFactory.setup().getMaterial();
 
@@ -105,12 +108,62 @@ class ArbitraryPlane {
       new THREE.PlaneGeometry(constants.VIEWPORT_WIDTH, constants.VIEWPORT_WIDTH, 1, 1),
       textureMaterial,
     );
-    plane.rotation.x = Math.PI;
 
-    plane.matrixAutoUpdate = false;
-    plane.doubleSided = true;
+    const debuggerMaterial = new THREE.ShaderMaterial({
+      uniforms: this.materialFactory.uniforms,
+      vertexShader: `
+        uniform float sphericalCapRadius;
+        varying vec3 vNormal;
+        varying float isBorder;
 
-    return plane;
+        void main() {
+          vec3 centerVertex = vec3(0.0, 0.0, -sphericalCapRadius);
+          vec3 _position = position;
+          _position += centerVertex;
+          _position = _position * (sphericalCapRadius / length(_position));
+          _position -= centerVertex;
+
+          isBorder = mod(floor(position.x * 1.0), 2.0) + mod(floor(position.y * 1.0), 2.0) > 0.0 ? 1.0 : 0.0;
+
+          gl_Position = projectionMatrix *
+                        modelViewMatrix *
+                        vec4(_position,1.0);
+          vNormal = normalize((modelViewMatrix * vec4(_position, 1.0)).xyz);
+        }
+      `,
+      fragmentShader: `
+        varying mediump vec3 vNormal;
+        varying float isBorder;
+        void main() {
+          mediump vec3 light = vec3(0.5, 0.2, 1.0);
+
+          // ensure it's normalized
+          light = normalize(light);
+
+          // calculate the dot product of
+          // the light to the vertex normal
+          mediump float dProd = max(0.0, dot(vNormal, light));
+
+          gl_FragColor = 1.0 - isBorder < 0.001 ? vec4(vec3(dProd, 1.0, 0.0), 0.9) : vec4(0.0);
+        }
+      `,
+    });
+    debuggerMaterial.transparent = true;
+
+    shaderEditor.addMaterial(99, debuggerMaterial);
+
+    const debuggerPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(constants.VIEWPORT_WIDTH, constants.VIEWPORT_WIDTH, 50, 50),
+      debuggerMaterial,
+    );
+
+    [plane, debuggerPlane].forEach(_plane => {
+      _plane.rotation.x = Math.PI;
+      _plane.matrixAutoUpdate = false;
+      _plane.material.side = THREE.DoubleSide;
+    });
+
+    return [plane, debuggerPlane];
   }
 }
 

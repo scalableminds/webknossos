@@ -5,6 +5,7 @@
 
 import * as React from "react";
 import BackboneEvents from "backbone-events-standalone";
+import { connect } from "react-redux";
 import _ from "lodash";
 import { InputKeyboard, InputMouse, InputKeyboardNoLoop } from "libs/input";
 import type { ModifierKeys } from "libs/input";
@@ -13,8 +14,27 @@ import * as Utils from "libs/utils";
 import Toast from "libs/toast";
 import type { Mode, Point2 } from "oxalis/constants";
 import Store from "oxalis/store";
-import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
+import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
+import CameraController from "oxalis/controller/camera_controller";
+import { voxelToNm, getBaseVoxel, getBaseVoxelFactors } from "oxalis/model/scaleinfo";
+import TrackballControls from "libs/trackball_controls";
 import Model from "oxalis/model";
+import * as THREE from "three";
+import constants, {
+  OrthoViews,
+  ArbitraryViewport,
+  OrthoViewValues,
+  OrthoViewValuesWithoutTDView,
+  VolumeToolEnum,
+} from "oxalis/constants";
+import {
+  setViewportAction,
+  setTDCameraAction,
+  zoomTDViewAction,
+  moveTDViewXAction,
+  moveTDViewYAction,
+  moveTDViewByVectorAction,
+} from "oxalis/model/actions/view_mode_actions";
 import {
   updateUserSettingAction,
   setFlightmodeRecordingAction,
@@ -28,12 +48,12 @@ import {
   toggleAllTreesAction,
   toggleInactiveTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
+import { threeCameraToCameraData } from "./plane_controller";
 import Crosshair from "oxalis/geometries/crosshair";
 import app from "app";
 import ArbitraryView from "oxalis/view/arbitrary_view";
-import constants, { ArbitraryViewport } from "oxalis/constants";
+
 import type { Matrix4x4 } from "libs/mjs";
 import {
   yawFlycamAction,
@@ -41,6 +61,9 @@ import {
   zoomInAction,
   zoomOutAction,
   moveFlycamAction,
+  movePlaneFlycamOrthoAction,
+  moveFlycamOrthoAction,
+  zoomByDeltaAction,
 } from "oxalis/model/actions/flycam_actions";
 import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -76,6 +99,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     keyboardNoLoop?: InputKeyboardNoLoop,
   };
   storePropertyUnsubscribers: Array<Function>;
+  controls: TrackballControls;
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
@@ -120,6 +144,40 @@ class ArbitraryController extends React.PureComponent<Props> {
           }
         },
       });
+    });
+
+    const tdView = OrthoViews.TDView;
+    const inputcatcherSelector = `#inputcatcher_${tdView}`;
+
+    setTimeout(() => {
+      console.log("attaching mouse");
+      Utils.waitForSelector(inputcatcherSelector).then(domElement => {
+        this.input.mouseControllers = {
+          [tdView]: new InputMouse(inputcatcherSelector, this.getTDViewMouseControls(), tdView),
+        };
+      });
+      this.initTrackballControls();
+    }, 2000);
+  }
+
+  initTrackballControls(): void {
+    Utils.waitForSelector("#inputcatcher_TDView").then(view => {
+      const pos = voxelToNm(this.props.scale, getPosition(this.props.flycam));
+      const tdCamera = this.arbitraryView.getCameras()[OrthoViews.TDView];
+      this.controls = new TrackballControls(tdCamera, view, new THREE.Vector3(...pos), () => {
+        // write threeJS camera into store
+        Store.dispatch(setTDCameraAction(threeCameraToCameraData(tdCamera)));
+      });
+
+      this.controls.noZoom = true;
+      this.controls.noPan = true;
+      this.controls.staticMoving = true;
+
+      this.controls.target.set(...pos);
+
+      // This is necessary, since we instantiated this.controls now. This should be removed
+      // when the workaround with requestAnimationFrame(initInputHandlers) is removed.
+      this.forceUpdate();
     });
   }
 
@@ -327,7 +385,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     this.crosshair.setVisibility(Store.getState().userConfiguration.displayCrosshair);
 
     this.arbitraryView.addGeometry(this.plane);
-    this.arbitraryView.setPlane(this.plane);
+    this.arbitraryView.setArbitraryPlane(this.plane);
     this.arbitraryView.addGeometry(this.crosshair);
 
     this.bindToEvents();
@@ -438,9 +496,178 @@ class ArbitraryController extends React.PureComponent<Props> {
     }
   }
 
+  updateControls = () => this.controls.update(true);
+
   render() {
-    return null;
+    if (!this.controls) {
+      return null;
+    }
+    return (
+      <CameraController
+        cameras={this.arbitraryView.getCameras()}
+        onCameraPositionChanged={this.updateControls}
+      />
+    );
   }
+
+  getTDViewMouseControls(): Object {
+    // todo
+    const baseControls = {
+      leftDownMove: (delta: Point2) => this.moveTDView(delta),
+      scroll: (value: number) => this.zoomTDView(Utils.clamp(-1, value, 1), true),
+      over: () => {
+        Store.dispatch(setViewportAction(OrthoViews.TDView));
+        // Fix the rotation target of the TrackballControls
+        this.setTargetAndFixPosition();
+      },
+      pinch: delta => this.zoomTDView(delta, true),
+    };
+
+    const skeletonControls =
+      // this.props.tracing.skeleton != null
+      //   ? skeletonController.getTDViewMouseControls(this.planeView) :
+      {};
+
+    return {
+      ...baseControls,
+      ...skeletonControls,
+    };
+  }
+
+  setTargetAndFixPosition(): void {
+    return;
+    // const position = getPosition(this.props.flycam);
+    // const nmPosition = voxelToNm(this.props.scale, position);
+
+    // this.controls.target.set(...nmPosition);
+    // this.controls.update();
+
+    // // The following code is a dirty hack. If someone figures out
+    // // how the trackball control's target can be set without affecting
+    // // the camera position, go ahead.
+    // // As the previous step will also move the camera, we need to
+    // // fix this by offsetting the viewport
+
+    // const invertedDiff = [];
+    // for (let i = 0; i <= 2; i++) {
+    //   invertedDiff.push(this.oldNmPos[i] - nmPosition[i]);
+    // }
+
+    // if (invertedDiff.every(el => el === 0)) return;
+
+    // this.oldNmPos = nmPosition;
+
+    // const nmVector = new THREE.Vector3(...invertedDiff);
+    // // moves camera by the nm vector
+    // const camera = this.planeView.getCameras()[OrthoViews.TDView];
+
+    // const rotation = THREE.Vector3.prototype.multiplyScalar.call(camera.rotation.clone(), -1);
+    // // reverse euler order
+    // rotation.order = rotation.order
+    //   .split("")
+    //   .reverse()
+    //   .join("");
+
+    // nmVector.applyEuler(rotation);
+
+    // Store.dispatch(moveTDViewByVectorAction(nmVector.x, nmVector.y));
+  }
+
+  movePlane = (v: Vector3, increaseSpeedWithZoom: boolean = true) => {
+    const { activeViewport } = Store.getState().viewModeData.plane;
+    Store.dispatch(movePlaneFlycamOrthoAction(v, activeViewport, increaseSpeedWithZoom));
+  };
+
+  moveX = (x: number): void => {
+    this.movePlane([x, 0, 0]);
+  };
+
+  moveY = (y: number): void => {
+    this.movePlane([0, y, 0]);
+  };
+
+  moveZ = (z: number, oneSlide: boolean): void => {
+    const { activeViewport } = Store.getState().viewModeData.plane;
+    if (activeViewport === OrthoViews.TDView) {
+      return;
+    }
+
+    if (oneSlide) {
+      const logZoomStep = getRequestLogZoomStep(Store.getState());
+      const w = Dimensions.getIndices(activeViewport)[2];
+      const zStep = getResolutions(Store.getState().dataset)[logZoomStep][w];
+
+      Store.dispatch(
+        moveFlycamOrthoAction(
+          Dimensions.transDim([0, 0, (z < 0 ? -1 : 1) * Math.max(1, zStep)], activeViewport),
+          activeViewport,
+        ),
+      );
+    } else {
+      this.movePlane([0, 0, z], false);
+    }
+  };
+
+  zoom(value: number, zoomToMouse: boolean): void {
+    const { activeViewport } = Store.getState().viewModeData.plane;
+    if (OrthoViewValuesWithoutTDView.includes(activeViewport)) {
+      this.zoomPlanes(value, zoomToMouse);
+    } else {
+      this.zoomTDView(value, zoomToMouse);
+    }
+  }
+
+  zoomPlanes(value: number, zoomToMouse: boolean): void {
+    if (zoomToMouse) {
+      this.zoomPos = this.getMousePosition();
+    }
+
+    Store.dispatch(zoomByDeltaAction(value));
+
+    if (zoomToMouse) {
+      this.finishZoom();
+    }
+  }
+
+  zoomTDView(value: number, zoomToMouse: boolean = true): void {
+    let zoomToPosition;
+    if (zoomToMouse) {
+      zoomToPosition = this.input.mouseControllers[OrthoViews.TDView].position;
+    }
+    const { width } = getInputCatcherRect(OrthoViews.TDView);
+    Store.dispatch(zoomTDViewAction(value, zoomToPosition, width));
+  }
+
+  moveTDView(delta: Point2): void {
+    const scale = getViewportScale(OrthoViews.TDView);
+    Store.dispatch(moveTDViewXAction((delta.x / scale) * -1));
+    Store.dispatch(moveTDViewYAction((delta.y / scale) * -1));
+  }
+
+  finishZoom = (): void => {
+    // Move the plane so that the mouse is at the same position as
+    // before the zoom
+    const { activeViewport } = Store.getState().viewModeData.plane;
+    if (this.isMouseOver() && activeViewport !== OrthoViews.TDView) {
+      const mousePos = this.getMousePosition();
+      const moveVector = [
+        this.zoomPos[0] - mousePos[0],
+        this.zoomPos[1] - mousePos[1],
+        this.zoomPos[2] - mousePos[2],
+      ];
+      Store.dispatch(moveFlycamOrthoAction(moveVector, activeViewport));
+    }
+  };
 }
 
-export default ArbitraryController;
+export function mapStateToProps(state: OxalisState, ownProps: OwnProps): Props {
+  return {
+    flycam: state.flycam,
+    scale: state.dataset.dataSource.scale,
+    onRender: ownProps.onRender,
+    tracing: state.tracing,
+  };
+}
+
+export { ArbitraryController as ArbitraryControllerClass };
+export default connect(mapStateToProps)(ArbitraryController);

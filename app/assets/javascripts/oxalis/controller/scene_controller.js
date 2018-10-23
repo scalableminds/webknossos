@@ -103,14 +103,14 @@ class SceneController {
     });
     this.cube.getMeshes().forEach(mesh => this.rootNode.add(mesh));
 
-    window.addBucketMesh = (position, zoomStep) => {
+    window.addBucketMesh = (position, zoomStep, optColor) => {
       // const baseVoxel = getBaseVoxel(Store.getState().dataset.dataSource.scale);
       const bucketSize = [32, 32, 32].map(e => e * 2 ** zoomStep);
-      var geo = new THREE.BoxGeometry(...bucketSize);
+      const geo = new THREE.BoxGeometry(...bucketSize);
       const geometry = new THREE.EdgesGeometry(geo); // or WireframeGeometry( geo )
 
       const material = new THREE.LineBasicMaterial({
-        color: zoomStep === 0 ? 0xff00ff : 0x00ffff,
+        color: optColor || (zoomStep === 0 ? 0xff00ff : 0x00ffff),
         linewidth: 1,
       });
       const cube = new THREE.LineSegments(geometry, material);
@@ -118,7 +118,10 @@ class SceneController {
       cube.position.y = position[1] + bucketSize[1] / 2;
       cube.position.z = position[2] + bucketSize[2] / 2;
       this.rootNode.add(cube);
+      return cube;
     };
+
+    window.removeBucketMesh = mesh => this.rootNode.remove(mesh);
 
     const pos = getPosition(Store.getState().flycam);
     // window.addBucketMesh(pos);

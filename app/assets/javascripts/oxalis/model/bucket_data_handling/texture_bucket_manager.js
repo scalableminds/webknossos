@@ -95,6 +95,7 @@ export default class TextureBucketManager {
     if (unusedIndex == null) {
       return;
     }
+    // bucket.unvisualize();
     this.activeBucketToIndexMap.delete(bucket);
     this.committedBucketSet.delete(bucket);
     this.freeIndexSet.add(unusedIndex);
@@ -174,6 +175,8 @@ export default class TextureBucketManager {
 
       const dataTextureIndex = Math.floor(_index / bucketsPerTexture);
       const indexInDataTexture = _index % bucketsPerTexture;
+
+      // bucket.visualize();
 
       this.dataTextures[dataTextureIndex].update(
         bucket.getData(),

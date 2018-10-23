@@ -631,7 +631,7 @@ class PlaneController extends React.PureComponent<Props> {
   }
 }
 
-function threeCameraToCameraData(camera: THREE.OrthographicCamera): CameraData {
+export function threeCameraToCameraData(camera: THREE.OrthographicCamera): CameraData {
   const { position, up, near, far, lookAt, left, right, top, bottom } = camera;
   const objToArr = ({ x, y, z }) => [x, y, z];
   return {

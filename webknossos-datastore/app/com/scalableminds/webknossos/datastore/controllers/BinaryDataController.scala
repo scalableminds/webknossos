@@ -28,12 +28,13 @@ import scala.concurrent.{ExecutionContext, Future}
 class BinaryDataController @Inject()(
                                       dataSourceRepository: DataSourceRepository,
                                       config: DataStoreConfig,
-                                      accessTokenService: DataStoreAccessTokenService)
+                                      accessTokenService: DataStoreAccessTokenService,
+                                      binaryDataServiceHolder: BinaryDataServiceHolder)
                                     (implicit ec: ExecutionContext,
                                      bodyParsers: PlayBodyParsers)
   extends Controller {
 
-  val binaryDataService = new BinaryDataService(Paths.get(config.Braingames.Binary.baseFolder), config.Braingames.Binary.loadTimeout, config.Braingames.Binary.cacheMaxSize)
+  val binaryDataService = binaryDataServiceHolder.binaryDataService
 
   /**
     * Handles requests for raw binary data via HTTP POST from webKnossos.

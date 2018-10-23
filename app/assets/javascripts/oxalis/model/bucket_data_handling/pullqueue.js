@@ -154,6 +154,7 @@ class PullQueue {
     this.maybeWhitenEmptyBucket(bucketData);
     if (bucket.type === "data") {
       bucket.receiveData(bucketData);
+      bucket.setVisualizationColor(0x00ff00);
       if (zoomStep === this.cube.MAX_UNSAMPLED_ZOOM_STEP) {
         const higherAddress = zoomedAddressToAnotherZoomStep(
           bucketAddress,

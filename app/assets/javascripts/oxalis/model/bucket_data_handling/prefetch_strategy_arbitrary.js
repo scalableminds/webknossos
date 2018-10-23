@@ -54,8 +54,6 @@ export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
 
   prefetch(matrix: Matrix4x4, zoomStep: number): Array<PullQueueItem> {
     const pullQueue = [];
-    // todo remove
-    return pullQueue;
 
     const matrix0 = M4x4.clone(matrix);
     this.modifyMatrixForPoly(matrix0, zoomStep);

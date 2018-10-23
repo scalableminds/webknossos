@@ -146,7 +146,7 @@ export function* prefetchForArbitraryMode(
   const zoomStep = yield* select(state => getRequestLogZoomStep(state));
   const tracingTypes = yield* select(getTracingTypes);
   const { lastMatrix, lastZoomStep } = previousProperties;
-  const { connectionInfo, pullQueue } = Model.dataLayers[layer.name];
+  const { connectionInfo, pullQueue, cube } = Model.dataLayers[layer.name];
 
   if (matrix !== lastMatrix || zoomStep !== lastZoomStep) {
     for (const strategy of prefetchStrategiesArbitrary) {
@@ -157,6 +157,13 @@ export function* prefetchForArbitraryMode(
       ) {
         pullQueue.clearNormalPriorities();
         const buckets = strategy.prefetch(matrix, zoomStep);
+        for (const item of buckets) {
+          const bucket = cube.getOrCreateBucket(item.bucket);
+
+          // if (bucket.type !== "null") {
+          //   bucket.visualize();
+          // }
+        }
         pullQueue.addAll(buckets);
         break;
       }

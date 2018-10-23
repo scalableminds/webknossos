@@ -127,7 +127,8 @@ const getColorFor: ShaderModule = {
 
       if (bucketAddress == -2.0) {
         // The bucket is out of bounds. Render black
-        return vec4(0.0, 0.0, 0.0, 0.0);
+        // todo: actually alpha = 0.0
+        return vec4(0.0, 0.0, 0.0, -1.0);
       }
 
       if (bucketAddress < 0. || isNan(bucketAddress)) {

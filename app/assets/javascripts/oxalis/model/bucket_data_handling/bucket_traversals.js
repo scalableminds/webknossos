@@ -151,7 +151,7 @@ export default function traverse(
   throw new Error("Didn't reach target voxel?");
 }
 
-function initializeTMax(
+export function initializeTMax(
   u: Vector3,
   v: Vector3,
   step: Vector3,

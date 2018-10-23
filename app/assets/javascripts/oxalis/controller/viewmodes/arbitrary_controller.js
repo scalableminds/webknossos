@@ -377,7 +377,11 @@ class ArbitraryController extends React.PureComponent<Props> {
 
   start(): void {
     this.arbitraryView = new ArbitraryView();
-    window.printy = () => this.arbitraryView.getRenderedBuckets();
+    window.printy = () => {
+      this.arbitraryView.getRenderedBuckets();
+      window.useRenderedBucketsInNextFrame = true;
+      window.redetermineBuckets();
+    };
     this.arbitraryView.start();
 
     this.plane = new ArbitraryPlane();

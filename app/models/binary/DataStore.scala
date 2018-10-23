@@ -18,6 +18,7 @@ case class DataStore(
                        name: String,
                        url: String,
                        key: String,
+                       isScratch: Boolean = false,
                        isDeleted: Boolean = false,
                        isForeign: Boolean = false
                        )
@@ -28,7 +29,8 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: Execut
     Fox.successful(Json.obj(
       "name" -> dataStore.name,
       "url" -> dataStore.url,
-      "isForeign" -> dataStore.isForeign
+      "isForeign" -> dataStore.isForeign,
+      "isScratch" -> dataStore.isScratch
     ))
   }
 
@@ -55,6 +57,7 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
       r.name,
       r.url,
       r.key,
+      r.isscratch,
       r.isdeleted,
       r.isforeign
     ))
@@ -84,8 +87,8 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
 
   def insertOne(d: DataStore): Fox[Unit] = {
     for {
-      _ <- run(sqlu"""insert into webknossos.dataStores(name, url, key, isDeleted, isForeign)
-                         values(${d.name}, ${d.url}, ${d.key}, ${d.isDeleted}, ${d.isForeign})""")
+      _ <- run(sqlu"""insert into webknossos.dataStores(name, url, key, isScratch, isDeleted, isForeign)
+                             values(${d.name}, ${d.url}, ${d.key}, ${d.isScratch}, ${d.isDeleted}, ${d.isForeign})""")
     } yield ()
   }
 

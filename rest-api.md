@@ -10,7 +10,11 @@ All API routes expect the HTTP header `X-Auth-Token` to be set to your personal 
 
 ## Versioning
 
-TODO `/api/v1`
+The API is subject to frequent changes. However, older versions will be supported for some time via prefixed routes.
+ - To access the latest version, call the routes below with only the `/api` prefix.
+ - To access a specific version, call the routes below with a prefix in the form of `/api/v1`.
+
+New versions will be documented here, detailing the changes. Note, however, that some changes are not considered to be breaking the API and will not lead to new versions. Such changes include new optional parameters as well as new fields in the responses. The same goes for error message wording.
 
 ## Routes
 
@@ -506,36 +510,51 @@ Update a project
 ---
 ### `GET /projects/:name/tasks`
 
+List all tasks of a project
+
 #### Expects
+ - In the url: `:name` name of a project
 
 #### Returns
+ - JSON list of objects containing task information
 
 
 
 ---
 ### `PATCH /projects/:name/incrementEachTasksInstances`
 
+Increment the open instances for each task of a project.
+
 #### Expects
+ - In the url: `name` `[STRING]` name of a project
+ - Optional GET parameter `delta=[INT]` number of additional instances for each task (defaults to 1)
 
 #### Returns
+ - JSON object containing project information about the updated project, with additional field `numberOfOpenAssignments`
 
 
 
 ---
 ### `PATCH /projects/:name/pause`
 
+Pause a project (no tasks will be assigned until resumed)
+
 #### Expects
+ - In the url: `:name` `[STRING]` name of a project
 
 #### Returns
+ - JSON object containing project information about the updated project
 
 
 
 ---
 ### `PATCH /projects/:name/resume`
 
+Resume a paused project
+
 #### Expects
+ - In the url: `:name` `[STRING]` name of a project
 
 #### Returns
-
-
+ - JSON object containing project information about the updated project
 

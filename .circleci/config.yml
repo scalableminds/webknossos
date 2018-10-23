@@ -99,14 +99,6 @@ jobs:
           command: DOCKER_TAG=${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} docker-compose build --pull webknossos-datastore
 
       - run:
-          name: Lint frontend code
-          command: |
-            .circleci/not-on-master.sh docker-compose run base bash -c "yarn run lint && yarn run am-i-pretty"
-      - run:
-          name: Run frontend tests
-          command: |
-            .circleci/not-on-master.sh docker-compose run base yarn test-verbose
-      - run:
           name: Run backend tests
           command: |
             .circleci/not-on-master.sh docker-compose run backend-tests

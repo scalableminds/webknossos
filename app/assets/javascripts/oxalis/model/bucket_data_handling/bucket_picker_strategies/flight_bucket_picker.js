@@ -108,56 +108,81 @@ export default function determineBucketsForFlight(
   for (let y = -halfWidth; y <= halfWidth; y += iterStep) {
     const xOffset = y % iterStep;
     for (let x = -halfWidth - xOffset; x <= halfWidth + xOffset; x += iterStep) {
-      const z = 0;
-      const transformedVec = transformPoint([x, y, z]);
-      const bucketPos = globalPositionToBucketPositionFloat(
-        transformedVec,
-        resolutions,
-        logZoomStep,
-      );
-
-      const flooredBucketPos = bucketPos.map(Math.floor);
-      maybeAddBucket(flooredBucketPos);
-      // maybeAddBucket(bucketPos.map(Math.round));
-
-      const step = cameraDirection.map(el => Math.sign(el));
-      let [tMaxX, tMaxY, tMaxZ] = initializeTMax([x, y, z], cameraDirection, step, [32, 32, 32]);
-      if (tMaxX <= tMaxY) {
-        if (tMaxX <= tMaxZ) {
-          // x
-          maybeAddBucket([
-            flooredBucketPos[0] + step[0],
-            flooredBucketPos[1],
-            flooredBucketPos[2],
-            flooredBucketPos[3],
-          ]);
-        } else {
-          // z
-          maybeAddBucket([
-            flooredBucketPos[0],
-            flooredBucketPos[1],
-            flooredBucketPos[2] + step[2],
-            flooredBucketPos[3],
-          ]);
+      for (let _z = 0; _z <= 1; _z++) {
+        const z = _z;
+        const transformedVec = transformPoint([x, y, z]);
+        if (_z === 1) {
+          V3.add(
+            transformedVec,
+            V3.scale(cameraDirection, 2 * 32 ** (logZoomStep + 1)),
+            transformedVec,
+          );
         }
-      } else if (tMaxX >= tMaxY) {
-        if (tMaxY <= tMaxZ) {
-          // y
-          maybeAddBucket([
-            flooredBucketPos[0],
-            flooredBucketPos[1] + step[1],
-            flooredBucketPos[2],
-            flooredBucketPos[3],
-          ]);
-        } else {
-          // z
-          maybeAddBucket([
-            flooredBucketPos[0],
-            flooredBucketPos[1],
-            flooredBucketPos[2] + step[2],
-            flooredBucketPos[3],
-          ]);
-        }
+        const bucketPos = globalPositionToBucketPositionFloat(
+          transformedVec,
+          resolutions,
+          logZoomStep,
+        );
+
+        const flooredBucketPos = bucketPos.map(Math.floor);
+        maybeAddBucket(flooredBucketPos);
+
+        const neighbourThreshold = 3;
+        bucketPos.forEach((pos, idx) => {
+          const newNeighbour = flooredBucketPos.slice();
+          const rest = (pos % 1) * 32;
+          if (rest < neighbourThreshold) {
+            // consider floor(pos) - 1
+            newNeighbour[idx]--;
+            maybeAddBucket(newNeighbour);
+          } else if (rest > 32 - neighbourThreshold) {
+            // consider floor(pos) + 1
+            newNeighbour[idx]++;
+            maybeAddBucket(newNeighbour);
+          }
+        });
+
+        // maybeAddBucket(bucketPos.map(Math.round));
+
+        // const step = cameraDirection.map(el => Math.sign(el));
+        // let [tMaxX, tMaxY, tMaxZ] = initializeTMax([x, y, z], cameraDirection, step, [32, 32, 32]);
+        // if (tMaxX <= tMaxY) {
+        //   if (tMaxX <= tMaxZ) {
+        //     // x
+        //     maybeAddBucket([
+        //       flooredBucketPos[0] + step[0],
+        //       flooredBucketPos[1],
+        //       flooredBucketPos[2],
+        //       flooredBucketPos[3],
+        //     ]);
+        //   } else {
+        //     // z
+        //     maybeAddBucket([
+        //       flooredBucketPos[0],
+        //       flooredBucketPos[1],
+        //       flooredBucketPos[2] + step[2],
+        //       flooredBucketPos[3],
+        //     ]);
+        //   }
+        // } else if (tMaxX >= tMaxY) {
+        //   if (tMaxY <= tMaxZ) {
+        //     // y
+        //     maybeAddBucket([
+        //       flooredBucketPos[0],
+        //       flooredBucketPos[1] + step[1],
+        //       flooredBucketPos[2],
+        //       flooredBucketPos[3],
+        //     ]);
+        //   } else {
+        //     // z
+        //     maybeAddBucket([
+        //       flooredBucketPos[0],
+        //       flooredBucketPos[1],
+        //       flooredBucketPos[2] + step[2],
+        //       flooredBucketPos[3],
+        //     ]);
+        //   }
+        // }
       }
     }
   }
@@ -485,14 +510,14 @@ export default function determineBucketsForFlight(
   //   isFallbackAvailable,
   // );
 
-  const fallbackBuckets = traverseFallbackBBox();
+  const fallbackBuckets = isFallbackAvailable ? traverseFallbackBBox() : [];
   traversedBuckets = traversedBuckets.concat(fallbackBuckets);
 
   for (const bucketAddress of traversedBuckets) {
     const bucket = cube.getOrCreateBucket(bucketAddress);
 
     if (bucket.type !== "null") {
-      const priority = V3.sub(bucketAddress, centerBucket).reduce((a, b) => a + Math.abs(b), 0);
+      const priority = 0;
       bucketQueue.queue({ bucket, priority });
     }
   }

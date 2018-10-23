@@ -67,7 +67,7 @@ export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
       const bucketY = testAddresses[i++];
       const bucketZ = testAddresses[i++];
 
-      pullQueue.push({ bucket: [bucketX, bucketY, bucketZ, zoomStep], priority: 0 });
+      pullQueue.push({ bucket: [bucketX, bucketY, bucketZ, zoomStep], priority: 1 });
     }
     return pullQueue;
   }

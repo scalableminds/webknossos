@@ -157,13 +157,13 @@ export function* prefetchForArbitraryMode(
       ) {
         pullQueue.clearNormalPriorities();
         const buckets = strategy.prefetch(matrix, zoomStep);
-        for (const item of buckets) {
-          const bucket = cube.getOrCreateBucket(item.bucket);
+        // for (const item of buckets) {
+        //   const bucket = cube.getOrCreateBucket(item.bucket);
 
-          // if (bucket.type !== "null") {
-          //   bucket.visualize();
-          // }
-        }
+        //   if (bucket.type !== "null") {
+        //     bucket.visualize();
+        //   }
+        // }
         pullQueue.addAll(buckets);
         break;
       }

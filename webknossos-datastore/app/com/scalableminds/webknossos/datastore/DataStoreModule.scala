@@ -19,5 +19,6 @@ class DataStoreModule(environment: Environment, configuration: Configuration) ex
     bind(classOf[DataSourceService]).asEagerSingleton()
     bind(classOf[DataStoreWkRpcClient]).asEagerSingleton()
     bind(classOf[BinaryDataServiceHolder]).asEagerSingleton()
+    bind(classOf[IsosurfaceService]).asEagerSingleton()
   }
 }

@@ -4,7 +4,11 @@ import java.io.{ByteArrayOutputStream, OutputStream}
 import java.nio.file.Paths
 import java.util.Base64
 
+import akka.actor.{ActorSystem, Props}
+import akka.pattern.ask
+import akka.routing.RoundRobinPool
 import akka.stream.scaladsl.StreamConverters
+import akka.util.Timeout
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.webknossos.datastore.services._
@@ -16,7 +20,7 @@ import com.scalableminds.webknossos.datastore.models.{DataRequest, ImageThumbnai
 import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import net.liftweb.common.{Empty, Failure, Full}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 import play.api.http.HttpEntity
 import play.api.i18n.{Messages, MessagesProvider}
@@ -24,12 +28,16 @@ import play.api.libs.json.Json
 import play.api.mvc.{PlayBodyParsers, ResponseHeader, Result}
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration._
 
 class BinaryDataController @Inject()(
                                       dataSourceRepository: DataSourceRepository,
                                       config: DataStoreConfig,
                                       accessTokenService: DataStoreAccessTokenService,
-                                      binaryDataServiceHolder: BinaryDataServiceHolder)
+                                      binaryDataServiceHolder: BinaryDataServiceHolder,
+                                      isosurfaceService: IsosurfaceService,
+                                      actorSystem: ActorSystem
+                                    )
                                     (implicit ec: ExecutionContext,
                                      bodyParsers: PlayBodyParsers)
   extends Controller {
@@ -295,6 +303,15 @@ class BinaryDataController @Inject()(
           } yield {
             Ok(result)
           }
+        }
+      }
+  }
+
+  def requestIsosurface(organizationName: String, dataSetName: String, dataLayerName: String, segmentId: Long) = Action.async {
+    implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+        AllowRemoteOrigin {
+          isosurfaceService.requestIsosurface(segmentId).map(msg => Ok(Json.obj("actor says" -> msg)))
         }
       }
   }

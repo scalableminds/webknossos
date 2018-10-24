@@ -9,14 +9,61 @@ import type { Matrix4x4 } from "libs/mjs";
 import { M4x4 } from "libs/mjs";
 import * as THREE from "three";
 import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
+import { getNecessaryBucketCount } from "oxalis/model/bucket_data_handling/data_rendering_logic";
+import memoizeOne from "memoize-one";
 
 // All methods in this file should use constants.PLANE_WIDTH instead of constants.VIEWPORT_WIDTH
 // as the area that is rendered is only of size PLANE_WIDTH.
 // If VIEWPORT_WIDTH, which is a little bigger, is used instead, we end up with a data texture
 // that is shrinked a little bit, which leads to the texture not being in sync with the THREEjs scene.
 
-// maximum difference between requested coordinate and actual texture position
-const MAX_ZOOM_STEP_DIFF = constants.MAX_RENDERING_TARGET_WIDTH / constants.PLANE_WIDTH;
+export function getUnzoomedBucketCountPerDim(
+  dataSetScale: Vector3,
+  forFallback: boolean = false,
+): Vector3 {
+  const baseVoxelFactors = scaleInfo.getBaseVoxelFactors(dataSetScale);
+  const necessaryVoxelsPerDim = baseVoxelFactors.map(f => f * constants.PLANE_WIDTH);
+
+  const factor = forFallback ? 2 : 1;
+  return necessaryVoxelsPerDim.map(v => Math.ceil(v / (factor * constants.BUCKET_WIDTH)));
+}
+
+function getUnzoomedBucketCountForRendering(dataSetScale: Vector3) {
+  const calculateBucketCountForOrtho = ([x, y, z]) => x * y + x * z + y * z;
+  const bucketsPerDim = getUnzoomedBucketCountPerDim(dataSetScale);
+  const fallbackBucketsPerDim = getUnzoomedBucketCountPerDim(dataSetScale, true);
+  return (
+    calculateBucketCountForOrtho(bucketsPerDim) +
+    calculateBucketCountForOrtho(fallbackBucketsPerDim)
+  );
+}
+
+// This function returns a value which indicates how much larger the rendered
+// plane can be than its original size **without** having to use the next
+// magnification. E.g., a value of two indicates that the viewport
+// can be 2 * viewport_width pixel wide while still being in zoom step 0.
+function unmemoizedCalculateMaxZoomStepDiff(dataSetScale: Vector3): number {
+  // TODO: Does sqrt make sense here?
+  const maxZoomStepDiff = Math.sqrt(
+    getNecessaryBucketCount() / getUnzoomedBucketCountForRendering(dataSetScale),
+  );
+  return maxZoomStepDiff;
+}
+
+const calculateMaxZoomStepDiff = memoizeOne(unmemoizedCalculateMaxZoomStepDiff);
+
+export function getMaxBucketCountPerDim(dataSetScale: Vector3): Vector3 {
+  const maximumPlaneExtentInNm =
+    constants.PLANE_WIDTH *
+    calculateMaxZoomStepDiff(dataSetScale) *
+    scaleInfo.getBaseVoxel(dataSetScale);
+
+  const maxBucketCountPerDim = dataSetScale.map(
+    nm => 1 + Math.ceil(maximumPlaneExtentInNm / nm / constants.BUCKET_WIDTH),
+  );
+  console.log("maxBucketCountPerDim", maxBucketCountPerDim);
+  return maxBucketCountPerDim;
+}
 
 export function getUp(flycam: Flycam): Vector3 {
   const matrix = flycam.currentMatrix;
@@ -57,8 +104,9 @@ export function getZoomedMatrix(flycam: Flycam): Matrix4x4 {
 export function getRequestLogZoomStep(state: OxalisState): number {
   const maxLogZoomStep = Math.log2(getMaxZoomStep(state.dataset));
   const min = Math.min(state.datasetConfiguration.quality, maxLogZoomStep);
+  const maxZoomStepDiff = calculateMaxZoomStepDiff(state.dataset.dataSource.scale);
   const value =
-    Math.ceil(Math.log2(state.flycam.zoomStep / MAX_ZOOM_STEP_DIFF)) +
+    Math.ceil(Math.log2(state.flycam.zoomStep / maxZoomStepDiff)) +
     state.datasetConfiguration.quality;
   return Utils.clamp(min, value, maxLogZoomStep);
 }

@@ -19,6 +19,7 @@ import { getResolutions, getByteCount } from "oxalis/model/accessors/dataset_acc
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
+import { getMaxBucketCountPerDim } from "oxalis/model/accessors/flycam_accessor";
 
 // each index of the returned Vector3 is either -1 or +1.
 function getSubBucketLocality(position: Vector3, resolution: Vector3): Vector3 {
@@ -103,9 +104,10 @@ export default class LayerRenderingManager {
 
   setupDataTextures(): void {
     const bytes = getByteCount(Store.getState().dataset, this.name);
+    const bucketsPerDim = getMaxBucketCountPerDim(Store.getState().dataset.dataSource.scale);
 
     this.textureBucketManager = new TextureBucketManager(
-      constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION,
+      bucketsPerDim,
       this.textureWidth,
       this.dataTextureCount,
       bytes,
@@ -125,7 +127,12 @@ export default class LayerRenderingManager {
 
   // Returns the new anchorPoints if they are new
   updateDataTextures(position: Vector3, logZoomStep: number): [?Vector4, ?Vector4] {
-    const unzoomedAnchorPoint = this.calculateUnzoomedAnchorPoint(position, logZoomStep);
+    const { dataset } = Store.getState();
+    const unzoomedAnchorPoint = this.calculateUnzoomedAnchorPoint(
+      position,
+      logZoomStep,
+      dataset.dataSource.scale,
+    );
 
     const isAnchorPointNew = this.yieldsNewZoomedAnchorPoint(
       unzoomedAnchorPoint,
@@ -148,10 +155,7 @@ export default class LayerRenderingManager {
       return [this.anchorPointCache.anchorPoint, this.anchorPointCache.fallbackAnchorPoint];
     }
 
-    const subBucketLocality = getSubBucketLocality(
-      position,
-      getResolutions(Store.getState().dataset)[logZoomStep],
-    );
+    const subBucketLocality = getSubBucketLocality(position, getResolutions(dataset)[logZoomStep]);
     const areas = getAreas(Store.getState());
 
     const matrix = getZoomedMatrix(Store.getState().flycam);
@@ -256,16 +260,25 @@ export default class LayerRenderingManager {
     return true;
   }
 
-  calculateUnzoomedAnchorPoint(position: Vector3, logZoomStep: number): Vector3 {
+  calculateUnzoomedAnchorPoint(
+    position: Vector3,
+    logZoomStep: number,
+    datasetScale: Vector3,
+  ): Vector3 {
     const resolution = getResolutions(Store.getState().dataset)[logZoomStep];
-    const maximumRenderedBucketsHalf =
-      ((constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION - 1) * constants.BUCKET_WIDTH) / 2;
+    const bucketsPerDim = getMaxBucketCountPerDim(datasetScale);
+    const maximumRenderedBucketsHalf = bucketsPerDim.map(
+      bucketPerDim => Math.ceil((bucketPerDim - 1) / 2) * constants.BUCKET_WIDTH,
+    );
+
+    console.log("position[2]", position[2]);
+    console.log("position[2] / 32", Math.floor(position[2] / 32));
 
     // Hit texture top-left coordinate
     const anchorPoint = [
-      Math.floor(position[0] - maximumRenderedBucketsHalf * resolution[0]),
-      Math.floor(position[1] - maximumRenderedBucketsHalf * resolution[1]),
-      Math.floor(position[2] - maximumRenderedBucketsHalf * resolution[2]),
+      Math.floor(position[0] - maximumRenderedBucketsHalf[0] * resolution[0]),
+      Math.floor(position[1] - maximumRenderedBucketsHalf[1] * resolution[1]),
+      Math.floor(position[2] - maximumRenderedBucketsHalf[2] * resolution[2]),
     ];
     return anchorPoint;
   }

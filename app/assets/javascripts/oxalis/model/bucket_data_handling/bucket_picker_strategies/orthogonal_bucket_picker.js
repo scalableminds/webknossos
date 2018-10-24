@@ -1,7 +1,7 @@
 // @flow
 import PriorityQueue from "js-priority-queue";
 import type { Vector3, Vector4, OrthoViewMap } from "oxalis/constants";
-import constants, { OrthoViewValuesWithoutTDView } from "oxalis/constants";
+import constants, { OrthoViewValuesWithoutTDView, OrthoViews } from "oxalis/constants";
 import {
   getResolutionsFactors,
   zoomedAddressToAnotherZoomStep,
@@ -11,6 +11,7 @@ import type { Area } from "oxalis/model/accessors/flycam_accessor";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import Store from "oxalis/store";
+import { getMaxBucketCountPerDim } from "oxalis/model/accessors/flycam_accessor";
 
 export default function determineBucketsForOrthogonal(
   cube: DataCube,
@@ -55,7 +56,9 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
   areas: OrthoViewMap<Area>,
   subBucketLocality: Vector3,
 ): void {
-  const resolutions = getResolutions(Store.getState().dataset);
+  const { dataset } = Store.getState();
+  const resolutions = getResolutions(dataset);
+  const datasetScale = dataset.dataSource.scale;
   const resolution = resolutions[logZoomStep];
   const previousResolution = resolutions[logZoomStep - 1];
 
@@ -85,11 +88,11 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
       logZoomStep,
     );
 
-    const renderedBucketsPerDimension = Math.ceil(
-      constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION / resolutionChangeRatio[w],
-    );
+    const bucketsPerDim = getMaxBucketCountPerDim(datasetScale);
+    const renderedBucketsPerDimension = Math.ceil(bucketsPerDim[w] / resolutionChangeRatio[w]);
+
     const topLeftBucket = zoomedAnchorPoint.slice();
-    topLeftBucket[w] += Math.floor((renderedBucketsPerDimension - 1) / 2);
+    topLeftBucket[w] += Math.ceil((renderedBucketsPerDimension - 1) / 2);
 
     const centerBucketUV = [
       scaledTopLeftVector[u] + (scaledBottomRightVector[u] - scaledTopLeftVector[u]) / 2,

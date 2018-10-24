@@ -1,6 +1,6 @@
 // @flow
 import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import type { Vector4 } from "oxalis/constants";
+import type { Vector3, Vector4 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import _ from "lodash";
 import * as THREE from "three";
@@ -44,7 +44,7 @@ export default class TextureBucketManager {
   isRefreshBufferOutOfDate: boolean = false;
 
   // This is passed as a parameter to allow for testing
-  bucketsPerDim: number;
+  bucketsPerDim: Vector3;
   currentAnchorPoint: Vector4 = [0, 0, 0, 0];
   fallbackAnchorPoint: Vector4 = [0, 0, 0, 0];
   writerQueue: Array<{ bucket: DataBucket, _index: number }> = [];
@@ -54,7 +54,7 @@ export default class TextureBucketManager {
   packingDegree: number;
 
   constructor(
-    bucketsPerDim: number,
+    bucketsPerDim: Vector3,
     textureWidth: number,
     dataTextureCount: number,
     bytes: number,
@@ -287,10 +287,13 @@ export default class TextureBucketManager {
     const y = bucketPosition[1] - anchorPoint[1];
     const z = bucketPosition[2] - anchorPoint[2];
 
+    const [sx, sy, sz] = this.bucketsPerDim;
+
+    // prettier-ignore
     return (
-      Math.pow(this.bucketsPerDim, 3) * zoomDiff +
-      Math.pow(this.bucketsPerDim, 2) * z +
-      this.bucketsPerDim * y +
+      sx * sy * sz * zoomDiff +
+      sx * sy * z +
+      sx * y +
       x
     );
   }

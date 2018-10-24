@@ -9,6 +9,10 @@ export const linearizeVec3ToIndex: ShaderModule = {
     float linearizeVec3ToIndex(vec3 position, float base) {
       return position.z * base * base + position.y * base + position.x;
     }
+
+    float linearizeVec3ToIndex(vec3 position, vec3 base) {
+      return position.z * base.x * base.y + position.y * base.x + position.x;
+    }
 `,
 };
 
@@ -114,7 +118,7 @@ const getColorFor: ShaderModule = {
 
       // If we are making a fallback lookup, the lookup area we are interested in starts at
       // bucketsPerDim**3. if isFallback is true, we use that offset. Otherwise, the offset is 0.
-      float fallbackOffset = isFallback * bucketsPerDim * bucketsPerDim * bucketsPerDim;
+      float fallbackOffset = isFallback * bucketsPerDim.x * bucketsPerDim.y * bucketsPerDim.z;
       float bucketIdxInTexture =
         bucketIdx * floatsPerLookUpEntry
         + fallbackOffset;

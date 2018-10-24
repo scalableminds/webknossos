@@ -11,6 +11,7 @@ import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bu
 import * as Utils from "libs/utils";
 import window from "libs/window";
 import Toast from "libs/toast";
+import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
 
 export const BucketStateEnum = {
   UNREQUESTED: "UNREQUESTED",

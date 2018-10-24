@@ -17,7 +17,11 @@ import {
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import { Table } from "antd";
 import Markdown from "react-remarkable";
-import type { APIDataset } from "admin/api_flow_types";
+import ButtonComponent from "oxalis/view/components/button_component";
+import { convertToHybridTracing } from "admin/admin_rest_api";
+import Model from "oxalis/model";
+import { location } from "libs/window";
+import { type APIDataset, APITracingTypeEnum } from "admin/api_flow_types";
 import type { OxalisState, Tracing, Task, Flycam } from "oxalis/store";
 
 type DatasetInfoTabStateProps = {
@@ -76,7 +80,7 @@ const shortcuts = [
 export function calculateZoomLevel(flycam: Flycam, dataset: APIDataset): number {
   const zoom = getPlaneScalingFactor(flycam);
   let width;
-  const viewMode = Store.getState().temporaryConfiguration.viewMode;
+  const { viewMode } = Store.getState().temporaryConfiguration;
   if (constants.MODES_PLANE.includes(viewMode)) {
     width = constants.PLANE_WIDTH;
   } else if (constants.MODES_ARBITRARY.includes(viewMode)) {
@@ -188,7 +192,7 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
       // For readonly tracings display the non-editable explorative tracing name
       annotationTypeLabel = <span>Explorational Tracing: {tracingName}</span>;
     } else {
-      // Or display display the editable explorative tracing name
+      // Or display the editable explorative tracing name
       annotationTypeLabel = (
         <span>
           Explorational Tracing:
@@ -221,6 +225,41 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
     );
   }
 
+  handleConvertToHybrid = async () => {
+    await Model.save();
+    await convertToHybridTracing(this.props.tracing.annotationId);
+    location.reload();
+  };
+
+  getTracingType(isPublicViewMode: boolean) {
+    if (isPublicViewMode) return null;
+
+    const isSkeleton = this.props.tracing.skeleton != null;
+    const isVolume = this.props.tracing.volume != null;
+    const isHybrid = isSkeleton && isVolume;
+    const { allowUpdate } = this.props.tracing.restrictions;
+    const isExplorational = this.props.tracing.tracingType === APITracingTypeEnum.Explorational;
+
+    if (isHybrid) {
+      return <p>Tracing Type: Hybrid</p>;
+    } else {
+      return (
+        <p>
+          Tracing Type: {isVolume ? "Volume" : "Skeleton"}
+          {allowUpdate && isExplorational ? (
+            <ButtonComponent
+              style={{ marginLeft: 10 }}
+              size="small"
+              onClick={this.handleConvertToHybrid}
+            >
+              Convert to Hybrid
+            </ButtonComponent>
+          ) : null}
+        </p>
+      );
+    }
+  }
+
   render() {
     const isPublicViewMode =
       Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
@@ -230,6 +269,7 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
     return (
       <div className="flex-overflow info-tab-content">
         {this.getTracingName(isPublicViewMode)}
+        {this.getTracingType(isPublicViewMode)}
         {this.getDatasetName(isPublicViewMode)}
 
         <p>Viewport Width: {formatZoomLevel(zoomLevel)}</p>

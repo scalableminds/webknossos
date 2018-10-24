@@ -9,7 +9,6 @@ import { Dropdown, Menu, Icon, Tooltip } from "antd";
 import type { APIMaybeUnimportedDataset } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
 import { createExplorational, triggerDatasetClearCache } from "admin/admin_rest_api";
-import features from "features";
 
 type Props = {
   dataset: APIMaybeUnimportedDataset,
@@ -128,6 +127,14 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                   Start Skeleton Tracing
                 </a>
                 {volumeTracingMenu}
+                <a
+                  href="#"
+                  onClick={() => this.createTracing(dataset, "hybrid", true)}
+                  title="Create Hybrid Tracing"
+                >
+                  <Icon type="swap" />
+                  Start Hybrid Tracing
+                </a>
               </React.Fragment>
             ) : (
               <p>
@@ -137,19 +144,6 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                 </Tooltip>
               </p>
             )}
-            {features().hybridTracings ? (
-              <a
-                href="#"
-                onClick={() => this.createTracing(dataset, "hybrid", true)}
-                title="Create Hybrid Tracing"
-              >
-                <Icon type="swap" />
-                {"Start Hybrid Tracing "}
-                <Tooltip title="Experimental" placement="topLeft">
-                  <Icon type="exclamation-circle-o" style={{ color: "orange" }} />
-                </Tooltip>
-              </a>
-            ) : null}
           </div>
         ) : null}
       </div>

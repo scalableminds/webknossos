@@ -80,6 +80,7 @@ export default class LayerRenderingManager {
   name: string;
   isSegmentation: boolean;
   needsRefresh: boolean = false;
+  currentBucketPickerTick: number = 0;
 
   constructor(
     name: string,
@@ -179,6 +180,7 @@ export default class LayerRenderingManager {
       this.lastSphericalCapRadius = sphericalCapRadius;
       this.lastIsInvisible = isInvisible;
       this.needsRefresh = false;
+      this.currentBucketPickerTick++;
 
       const bucketQueue = new PriorityQueue({
         // small priorities take precedence

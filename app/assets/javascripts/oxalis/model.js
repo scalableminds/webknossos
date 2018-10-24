@@ -13,6 +13,7 @@ import ConnectionInfo from "oxalis/model/data_connection_info";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import type { Versions } from "oxalis/view/version_view";
+import type LayerRenderingManager from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { isBusy } from "oxalis/model/accessors/save_accessor";
 import { initialize } from "./model_initialization";
@@ -86,6 +87,13 @@ export class OxalisModel {
       throw new Error(`Layer with name ${name} was not found.`);
     }
     return this.dataLayers[name].pullQueue;
+  }
+
+  getLayerRenderingManagerByName(name: string): LayerRenderingManager {
+    if (!this.dataLayers[name]) {
+      throw new Error(`Layer with name ${name} was not found.`);
+    }
+    return this.dataLayers[name].layerRenderingManager;
   }
 
   stateSaved() {

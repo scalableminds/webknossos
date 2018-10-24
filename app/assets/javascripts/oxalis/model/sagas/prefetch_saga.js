@@ -116,7 +116,6 @@ export function* prefetchForPlaneMode(layer: DataLayer, previousProperties: Obje
         strategy.inVelocityRange(layer.connectionInfo.bandwidth) &&
         strategy.inRoundTripTimeRange(layer.connectionInfo.roundTripTime)
       ) {
-        layer.pullQueue.clearNormalPriorities();
         const buckets = strategy.prefetch(
           layer.cube,
           position,
@@ -142,9 +141,11 @@ export function* prefetchForArbitraryMode(
   layer: DataLayerType,
   previousProperties: Object,
 ): Saga<void> {
+  const position = yield* select(state => getPosition(state.flycam));
   const matrix = yield* select(state => state.flycam.currentMatrix);
   const zoomStep = yield* select(state => getRequestLogZoomStep(state));
   const tracingTypes = yield* select(getTracingTypes);
+  const resolutions = yield* select(state => getResolutions(state.dataset));
   const { lastMatrix, lastZoomStep } = previousProperties;
   const { connectionInfo, pullQueue, cube } = Model.dataLayers[layer.name];
 
@@ -155,12 +156,11 @@ export function* prefetchForArbitraryMode(
         strategy.inVelocityRange(connectionInfo.bandwidth) &&
         strategy.inRoundTripTimeRange(connectionInfo.roundTripTime)
       ) {
-        pullQueue.clearNormalPriorities();
-        const buckets = strategy.prefetch(matrix, zoomStep);
+        const buckets = strategy.prefetch(matrix, zoomStep, position, resolutions);
         for (const item of buckets) {
           const bucket = cube.getOrCreateBucket(item.bucket);
 
-          if (bucket.type !== "null") {
+          if (window.visualizeBuckets != null && bucket.type !== "null") {
             bucket.visualize();
           }
         }

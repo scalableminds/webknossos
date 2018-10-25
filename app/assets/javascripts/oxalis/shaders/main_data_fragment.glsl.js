@@ -13,13 +13,13 @@ import constants, {
   VolumeToolEnum,
   volumeToolEnumToIndex,
 } from "oxalis/constants";
+import { getMaxBucketCountPerDim } from "oxalis/model/accessors/flycam_accessor";
 
 import compileShader from "./shader_module_system";
 import { convertCellIdToRGB, getBrushOverlay, getSegmentationId } from "./segmentation.glsl";
 import { inverse, round, div, isNan, transDim, isFlightMode } from "./utils.glsl";
 import { getRelativeCoords, getWorldCoordUVW, isOutsideOfBoundingBox } from "./coords.glsl";
 import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
-import { getMaxBucketCountPerDim } from "oxalis/model/accessors/flycam_accessor";
 
 type Params = {|
   colorLayerNames: string[],

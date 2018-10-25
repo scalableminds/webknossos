@@ -1,7 +1,7 @@
 // @flow
 import PriorityQueue from "js-priority-queue";
 import type { Vector3, Vector4, OrthoViewMap } from "oxalis/constants";
-import constants, { OrthoViewValuesWithoutTDView, OrthoViews } from "oxalis/constants";
+import { OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import {
   getResolutionsFactors,
   zoomedAddressToAnotherZoomStep,

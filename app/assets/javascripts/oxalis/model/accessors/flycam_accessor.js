@@ -25,7 +25,10 @@ export function getUnzoomedBucketCountPerDim(
   const necessaryVoxelsPerDim = baseVoxelFactors.map(f => f * constants.PLANE_WIDTH);
 
   const factor = forFallback ? 2 : 1;
-  return necessaryVoxelsPerDim.map(v => Math.ceil(v / (factor * constants.BUCKET_WIDTH)));
+  const unzoomedBucketCountPerDim = necessaryVoxelsPerDim.map(v =>
+    Math.ceil(v / (factor * constants.BUCKET_WIDTH)),
+  );
+  return ((unzoomedBucketCountPerDim: any): Vector3);
 }
 
 function getUnzoomedBucketCountForRendering(dataSetScale: Vector3) {
@@ -61,8 +64,8 @@ export function getMaxBucketCountPerDim(dataSetScale: Vector3): Vector3 {
   const maxBucketCountPerDim = dataSetScale.map(
     nm => 1 + Math.ceil(maximumPlaneExtentInNm / nm / constants.BUCKET_WIDTH),
   );
-  console.log("maxBucketCountPerDim", maxBucketCountPerDim);
-  return maxBucketCountPerDim;
+
+  return ((maxBucketCountPerDim: any): Vector3);
 }
 
 export function getUp(flycam: Flycam): Vector3 {

@@ -5,6 +5,7 @@ import Maybe from "data.maybe";
 import window, { document, location } from "libs/window";
 import naturalSort from "javascript-natural-sort";
 import type { APIUser } from "admin/api_flow_types";
+import type { BoundingBoxObject } from "oxalis/store";
 
 export type Comparator<T> = (T, T) => -1 | 0 | 1;
 type UrlParams = { [key: string]: string };
@@ -127,6 +128,24 @@ export function computeArrayFromBoundingBox(bb: ?BoundingBoxType): ?Vector6 {
         bb.max[2] - bb.min[2],
       ]
     : null;
+}
+
+export function aggregateBoundingBox(boundingBoxes: Array<BoundingBoxObject>): BoundingBoxType {
+  const allCoordinates = [0, 1, 2].map(index =>
+    boundingBoxes.map(box => box.topLeft[index]).concat(
+      boundingBoxes.map(box => {
+        const bottomRight = [
+          box.topLeft[0] + box.width,
+          box.topLeft[1] + box.height,
+          box.topLeft[2] + box.depth,
+        ];
+        return bottomRight[index];
+      }),
+    ),
+  );
+  const min = (([0, 1, 2].map(index => Math.min(...allCoordinates[index])): any): Vector3);
+  const max = (([0, 1, 2].map(index => Math.max(...allCoordinates[index])): any): Vector3);
+  return { min, max };
 }
 
 export function compareBy<T>(

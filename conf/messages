@@ -187,6 +187,7 @@ annotation.makeHybrid.alreadyHybrid=Could not convert annotation to hybrid annot
 
 task.create.success=Task successfully created
 task.create.failed=Failed to create Task
+task.create.limitExceeded=Cannot create more than 1000 tasks in one request.
 task.finished=Task is finished
 task.assigned=You got a new task
 task.tooManyOpenOnes=You already have too many open tasks

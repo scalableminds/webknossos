@@ -15,6 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Extended the version restore view and added a view to restore older versions of a volume tracing. Access it through the dropdown next to the Save button. [#3349](https://github.com/scalableminds/webknossos/pull/3349)
 - Added support to watch additional dataset directories, automatically creating symbolic links to the main directory [#3330](https://github.com/scalableminds/webknossos/pull/3330)
 - A User can now have multiple layouts for tracing views. [#3299](https://github.com/scalableminds/webknossos/pull/3299)
+- Added support for datasets with sparse resolutions (e.g., [[1, 1, 1], [16, 16, 16]]). [#3406](https://github.com/scalableminds/webknossos/pull/3406)
 
 ### Changed
 

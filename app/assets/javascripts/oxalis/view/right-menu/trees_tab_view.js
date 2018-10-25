@@ -187,25 +187,17 @@ class TreesTabView extends React.PureComponent<Props, State> {
   getActionsDropdown() {
     return (
       <Menu>
-        <Menu.Item key="shuffleTreeColor" onClick={this.shuffleTreeColor}>
-          <div title="Change Tree Color">
+        <Menu.Item key="shuffleTreeColor" onClick={this.shuffleTreeColor} title="Change Tree Color">
             <i className="fa fa-adjust" /> Change Color
-          </div>
         </Menu.Item>
-        <Menu.Item key="shuffleAllTreeColors" onClick={this.shuffleAllTreeColors}>
-          <div title="Shuffle All Tree Colors">
+        <Menu.Item key="shuffleAllTreeColors" onClick={this.shuffleAllTreeColors} title="Shuffle All Tree Colors">
             <i className="fa fa-random" /> Shuffle All Colors
-          </div>
         </Menu.Item>
-        <Menu.Item key="handleNmlDownload" onClick={this.handleNmlDownload}>
-          <div title="Download selected trees as NML">
+        <Menu.Item key="handleNmlDownload" onClick={this.handleNmlDownload} title="Download selected trees as NML">
             <Icon type="download" /> Download Selected Trees
-          </div>
         </Menu.Item>
-        <Menu.Item key="importNml" onClick={this.props.showDropzoneModal}>
-          <div title="Import NML files">
+        <Menu.Item key="importNml" onClick={this.props.showDropzoneModal}  title="Import NML files">
             <Icon type="upload" /> Import NML
-          </div>
         </Menu.Item>
       </Menu>
     );

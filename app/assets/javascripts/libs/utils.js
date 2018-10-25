@@ -536,3 +536,31 @@ export async function promiseAllWithErrors<T>(
     { successes: [], errors: [] },
   );
 }
+
+// This function will chunk an array of elements by time (or some other numeric value).
+// Only subsequent elements are potentially put into the same chunk.
+// The mapToTimeFn should be a function that maps from an element to a number.
+// It'll return an array of chunks.
+export function chunkIntoTimeWindows<T>(
+  elements: Array<T>,
+  mapToTimeFn: T => number,
+  chunkByXMinutes: number,
+): Array<Array<T>> {
+  let chunkIndex = 0;
+  let chunkTime = 0;
+  return _.reduce(
+    elements,
+    (chunks: Array<Array<T>>, element: T, index: number) => {
+      const elementTime = mapToTimeFn(element);
+      if (index === 0) chunkTime = elementTime;
+      if (Math.abs(chunkTime - elementTime) > chunkByXMinutes * 60 * 1000) {
+        chunkIndex++;
+        chunkTime = elementTime;
+      }
+      if (chunks[chunkIndex] == null) chunks.push([]);
+      chunks[chunkIndex].push(element);
+      return chunks;
+    },
+    [],
+  );
+}

@@ -37,8 +37,12 @@ declare module "antd" {
     static Header: React$ComponentType<P>;
     static Sider: React$ComponentType<P>;
   }
+  declare class Meta<P> extends React$Component<P> {}
+  declare class ListItem<P> extends React$Component<P> {
+    static Meta: typeof Meta;
+  }
   declare class List<P> extends React$Component<P> {
-    static Item: React$ComponentType<P> & { Meta: React$ComponentType<P> };
+    static Item: typeof ListItem;
   }
   declare class Menu<P> extends React$Component<P> {
     static Item: React$ComponentType<P>;

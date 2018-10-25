@@ -188,16 +188,24 @@ class TreesTabView extends React.PureComponent<Props, State> {
     return (
       <Menu>
         <Menu.Item key="shuffleTreeColor" onClick={this.shuffleTreeColor} title="Change Tree Color">
-            <i className="fa fa-adjust" /> Change Color
+          <i className="fa fa-adjust" /> Change Color
         </Menu.Item>
-        <Menu.Item key="shuffleAllTreeColors" onClick={this.shuffleAllTreeColors} title="Shuffle All Tree Colors">
-            <i className="fa fa-random" /> Shuffle All Colors
+        <Menu.Item
+          key="shuffleAllTreeColors"
+          onClick={this.shuffleAllTreeColors}
+          title="Shuffle All Tree Colors"
+        >
+          <i className="fa fa-random" /> Shuffle All Colors
         </Menu.Item>
-        <Menu.Item key="handleNmlDownload" onClick={this.handleNmlDownload} title="Download selected trees as NML">
-            <Icon type="download" /> Download Selected Trees
+        <Menu.Item
+          key="handleNmlDownload"
+          onClick={this.handleNmlDownload}
+          title="Download selected trees as NML"
+        >
+          <Icon type="download" /> Download Selected Trees
         </Menu.Item>
-        <Menu.Item key="importNml" onClick={this.props.showDropzoneModal}  title="Import NML files">
-            <Icon type="upload" /> Import NML
+        <Menu.Item key="importNml" onClick={this.props.showDropzoneModal} title="Import NML files">
+          <Icon type="upload" /> Import NML
         </Menu.Item>
       </Menu>
     );

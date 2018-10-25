@@ -54,6 +54,8 @@ type State = {
   expandedGroupIds: { [number]: boolean },
   groupTree: Array<TreeNode>,
   searchFocusOffset: number,
+  selectedTrees: Array<number>,
+  selectedTreeGroups: Array<number>,
 };
 
 class TreeHierarchyView extends React.PureComponent<Props, State> {
@@ -62,6 +64,11 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     groupTree: [],
     prevProps: null,
     searchFocusOffset: 0,
+    selectedTrees: [],
+    selectedTreeGroups: [],
+    // TODO debug group select => the maptrees to group function does not work correctly
+    // TODO do all actions on selected Trees if there are selected ones, else use the active tree
+    // !! And make a deselect all trees button !!!!
   };
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State) {
@@ -127,19 +134,55 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }
   };
 
+  handleTreeSelect = id => {
+    if (this.state.selectedTrees.includes(id)) {
+      this.setState(prevState => ({
+        selectedTrees: prevState.selectedTrees.filter(currentId => currentId !== id),
+      }));
+    } else {
+      this.setState(prevState => ({
+        selectedTrees: [...prevState.selectedTrees, id],
+      }));
+    }
+  };
+
+  handleTreeGroupSelect = (id: number) => {
+    const treeGroupMap = createGroupToTreesMap(this.props.trees);
+    const idsOfSelectedGroup = treeGroupMap[id].map(node => node.id);
+    console.log("selected group", id, "subtrees", idsOfSelectedGroup);
+    if (this.state.selectedTreeGroups.includes(id)) {
+      this.setState(prevState => ({
+        selectedTrees: prevState.selectedTrees.filter(
+          currentId => !idsOfSelectedGroup.includes(currentId),
+        ),
+        selectedTreeGroups: prevState.selectedTreeGroups.filter(currentId => currentId !== id),
+      }));
+    } else {
+      this.setState(prevState => ({
+        selectedTrees: _.union(prevState.selectedTrees, idsOfSelectedGroup),
+        selectedTreeGroups: [...prevState.selectedTreeGroups, id],
+      }));
+    }
+  };
+
   onSelectTree = evt => {
-    console.log("event", evt);
-    console.log("shiftkey", evt.shiftKey); // works so awesome
-    // TODO trigger different event when shift is pressed
-    // => this event should mark/select the tree
-    // => save all selected trees in the state of this object
     const treeId = evt.target.dataset.id;
-    this.props.onSetActiveTree(parseInt(treeId, 10));
+    console.log("selected", evt.target, treeId);
+    if (evt.shiftKey) {
+      this.handleTreeSelect(parseInt(treeId, 10));
+    } else {
+      this.props.onSetActiveTree(parseInt(treeId, 10));
+    }
   };
 
   onSelectGroup = evt => {
     const groupId = evt.target.dataset.id;
-    this.props.onSetActiveGroup(parseInt(groupId, 10));
+    console.log("selected group", evt.target, groupId);
+    if (evt.shiftKey) {
+      this.handleTreeGroupSelect(parseInt(groupId, 10));
+    } else {
+      this.props.onSetActiveGroup(parseInt(groupId, 10));
+    }
   };
 
   onExpand = (params: { node: TreeNode, expanded: boolean }) => {
@@ -214,6 +257,19 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }
   };
 
+  getNodeBackgroundStyle = (id, isGroup = false) => {
+    if (
+      (isGroup && !this.state.selectedTreeGroups.includes(id)) ||
+      (!isGroup && !this.state.selectedTrees.includes(id))
+    ) {
+      return null;
+    } else if (id === this.props.activeTreeId) {
+      return { backgroundColor: "rgb(64,169,255)" };
+    } else {
+      return { backgroundColor: "rgba(230,247,255, 0.75)" };
+    }
+  };
+
   renderGroupActionsDropdown = (node: TreeNode) => {
     // The root group must not be removed or renamed
     const { id, name } = node;
@@ -231,7 +287,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
     // Make sure the displayed name is not empty
     const displayableName = name.trim() || "<no name>";
-
     const nameAndDropdown = (
       <span className="ant-dropdown-link">
         <span data-id={id} onClick={this.onSelectGroup}>
@@ -242,9 +297,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         </Dropdown>
       </span>
     );
-
+    const selectedStyle = this.getNodeBackgroundStyle(id, true);
     return (
-      <div>
+      <div style={selectedStyle}>
         <Checkbox
           checked={node.isChecked}
           onChange={this.onCheck}
@@ -266,10 +321,10 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     } else {
       const tree = this.props.trees[parseInt(node.id, 10)];
       const rgbColorString = tree.color.map(c => Math.round(c * 255)).join(",");
-      // TODO add prop that saves if selected => change background color and so to indicate selection
-      // add this prop to TreeNode
+      // defining background color of current node
+      const selectedStyle = this.getNodeBackgroundStyle(node.id);
       nodeProps.title = (
-        <div data-id={node.id} onClick={this.onSelectTree}>
+        <div data-id={node.id} onClick={this.onSelectTree} style={selectedStyle}>
           <Checkbox
             checked={tree.isVisible}
             onChange={this.onCheck}

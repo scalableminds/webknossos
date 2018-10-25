@@ -360,7 +360,7 @@ declare module "lodash" {
     defer(func: Function, ...args?: Array<any>): number;
     delay(func: Function, wait: number, ...args?: Array<any>): number;
     flip(func: Function): Function;
-    memoize(func: Function, resolver?: Function): Function;
+    memoize<T>(func: T, resolver?: Function): T;
     negate(predicate: Function): Function;
     once(func: Function): Function;
     overArgs(func: Function, ...transforms: Array<Function>): Function;

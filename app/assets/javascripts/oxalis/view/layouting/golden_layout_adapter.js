@@ -36,10 +36,7 @@ const monkeypatchGLSizeGetter = gl => {
     if (value) {
       return _oldWidth.call(gl, value);
     } else {
-      let { width } = getGroundTruthLayoutRect();
-      if (width === undefined) {
-        width = 500;
-      }
+      const { width } = getGroundTruthLayoutRect();
       return width * Store.getState().userConfiguration.layoutScaleValue;
     }
   };
@@ -48,10 +45,7 @@ const monkeypatchGLSizeGetter = gl => {
     if (value) {
       return _oldHeight.call(gl, value);
     } else {
-      let { height } = getGroundTruthLayoutRect();
-      if (height === undefined) {
-        height = 500;
-      }
+      const { height } = getGroundTruthLayoutRect();
       return height * Store.getState().userConfiguration.layoutScaleValue;
     }
   };
@@ -62,11 +56,7 @@ const updateSizeForGl = gl => {
   if (!container) {
     return;
   }
-  let { width, height } = getGroundTruthLayoutRect();
-  if (width === undefined || height === undefined) {
-    width = 500;
-    height = 500;
-  }
+  const { width, height } = getGroundTruthLayoutRect();
   const layoutScale = Store.getState().userConfiguration.layoutScaleValue;
   container.style.width = `${Math.floor(width * layoutScale)}px`;
   container.style.height = `${Math.floor(height * layoutScale)}px`;

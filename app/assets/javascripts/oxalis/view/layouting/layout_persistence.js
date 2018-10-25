@@ -6,7 +6,7 @@ import Store from "oxalis/store";
 import Toast from "libs/toast";
 import getDefaultLayouts, {
   currentLayoutVersion,
-  getDefaultLayoutSchema,
+  getCurrentDefaultLayoutConfig,
   mapLayoutKeysToLanguage,
 } from "./default_layout_configs";
 import type { LayoutKeys } from "./default_layout_configs";
@@ -23,33 +23,34 @@ const localStorageKeys = {
 
 function readStoredLayoutConfigs() {
   const storedLayoutVersion = localStorage.getItem(localStorageKeys.currentLayoutVersion);
+  const defaultLayoutConfig = getCurrentDefaultLayoutConfig();
   if (!storedLayoutVersion || disableLayoutPersistance) {
-    return getDefaultLayoutSchema();
+    return defaultLayoutConfig;
   }
   const layoutString = localStorage.getItem(localStorageKeys.goldenWkLayouts);
   if (!layoutString) {
-    return getDefaultLayoutSchema();
+    return defaultLayoutConfig;
   }
   try {
     const version = JSON.parse(storedLayoutVersion);
     const layouts = JSON.parse(layoutString);
     if (currentLayoutVersion > version) {
       if (version !== 5) {
-        return getDefaultLayoutSchema();
+        return defaultLayoutConfig;
       }
       // migrate to newset schema
       const withMulipleLayoutsSchema = {
         OrthoLayoutView: {
-          "Custom Layout": layouts.OrthoLayoutView || getDefaultLayouts().OrthoLayoutView,
+          "Custom Layout": layouts.OrthoLayoutView || defaultLayoutConfig.OrthoLayoutView,
         },
         VolumeTracingView: {
-          "Custom Layout": layouts.VolumeTracingView || getDefaultLayouts().VolumeTracingView,
+          "Custom Layout": layouts.VolumeTracingView || defaultLayoutConfig.VolumeTracingView,
         },
         ArbitraryLayout: {
-          "Custom Layout": layouts.ArbitraryLayout || getDefaultLayouts().ArbitraryLayout,
+          "Custom Layout": layouts.ArbitraryLayout || defaultLayoutConfig.ArbitraryLayout,
         },
         OrthoLayout: {
-          "Custom Layout": layouts.OrthoLayout || getDefaultLayouts().OrthoLayout,
+          "Custom Layout": layouts.OrthoLayout || defaultLayoutConfig.OrthoLayout,
         },
         LastActiveLayouts: {
           OrthoLayoutView: "Custom Layout",
@@ -68,12 +69,12 @@ function readStoredLayoutConfigs() {
     ) {
       return layouts;
     }
-    return getDefaultLayoutSchema();
+    return defaultLayoutConfig;
   } catch (ex) {
     // This should only happen if someone tinkers with localStorage manually
     console.warn("Layout config could not be deserialized.");
   }
-  return getDefaultLayoutSchema();
+  return defaultLayoutConfig;
 }
 
 Store.dispatch(setStoredLayoutsAction(readStoredLayoutConfigs()));

@@ -15,8 +15,8 @@ import { Pane, Column, Row, Stack } from "./golden_layout_helpers";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
 export const currentLayoutVersion = 6;
-
 export const layoutHeaderHeight = 20;
+const dummyExtent = 500;
 
 const LayoutSettings = {
   showPopoutIcon: false,
@@ -74,8 +74,8 @@ export const getGroundTruthLayoutRect = () => {
       height -= headerHeight + navbarHeight;
     } else {
       // use fallback values
-      height = 500;
-      width = 500;
+      height = dummyExtent;
+      width = dummyExtent;
     }
   } else {
     height = mainContainer.offsetHeight;
@@ -89,7 +89,7 @@ export const getGroundTruthLayoutRect = () => {
 const unmemoizedGetDefaultLayouts = () => {
   const layoutContainer = getGroundTruthLayoutRect();
   layoutContainer.height -= layoutHeaderHeight * 2;
-  const viewportWidth = Math.min(((layoutContainer.height / 2) * 100) / layoutContainer.width, 40);
+  const viewportWidth = ((layoutContainer.height / 2) * 100) / layoutContainer.width;
 
   const OrthoViewsGrid = [
     setGlContainerWidth(Column(Panes.xy, Panes.xz), viewportWidth),
@@ -113,7 +113,7 @@ export const resetDefaultLayouts = () => {
 type ExtractReturn<Fn> = $Call<<T>(() => T) => T, Fn>;
 type Layout = $Keys<ExtractReturn<typeof unmemoizedGetDefaultLayouts>>;
 
-export const getDefaultLayoutSchema = () => {
+export const getCurrentDefaultLayoutConfig = () => {
   resetDefaultLayouts();
   const defaultLayouts = getDefaultLayouts();
   return {

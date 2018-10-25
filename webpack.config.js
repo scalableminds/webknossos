@@ -23,8 +23,8 @@ module.exports = function(env = {}) {
     }),
     new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/),
     new MiniCssExtractPlugin({
-      filename: `[name].css?nocache=${commitHash}`,
-      chunkFilename: `[name].css?nocache=${commitHash}`,
+      filename: "[name].css",
+      chunkFilename: "[name].css",
     }),
     // new HardSourceWebpackPlugin(),
     // GoldenLayout requires these libraries to be available in
@@ -37,6 +37,7 @@ module.exports = function(env = {}) {
     }),
 
     new HtmlWebpackPlugin({
+      hash: true,
       commitHash,
       title: "webKnossos",
       template: `${srcPath}/index.html`,
@@ -65,8 +66,8 @@ module.exports = function(env = {}) {
     mode: env.production ? "production" : "development",
     output: {
       path: `${__dirname}/public/bundle`,
-      filename: `[name].js?nocache=${commitHash}`,
-      sourceMapFilename: `[file].map?nocache=${commitHash}`,
+      filename: "[name].js",
+      sourceMapFilename: "[file].map",
       publicPath: "/bundle/",
     },
     module: {

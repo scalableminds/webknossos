@@ -111,10 +111,6 @@ jobs:
           command: |
             .circleci/not-on-master.sh docker-compose run base bash -c "yarn run lint && yarn run am-i-pretty"
       - run:
-          name: Run frontend tests
-          command: |
-            .circleci/not-on-master.sh docker-compose run base yarn test-verbose
-      - run:
           name: Run backend tests
           command: |
             .circleci/not-on-master.sh docker-compose run backend-tests

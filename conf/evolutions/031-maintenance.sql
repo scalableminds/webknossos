@@ -1,4 +1,4 @@
--- https://github.com/scalableminds/webknossos/pull/TODO
+-- https://github.com/scalableminds/webknossos/pull/3368
 
 
 START TRANSACTION;
@@ -10,6 +10,6 @@ CREATE TABLE webknossos.maintenance(
 INSERT INTO webknossos.maintenance(maintenanceExpirationTime) values('2000-01-01 00:00:00');
 
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 30;
+UPDATE webknossos.releaseInformation SET schemaVersion = 31;
 
 COMMIT TRANSACTION;

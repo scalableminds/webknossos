@@ -95,13 +95,13 @@ class SceneController {
     window.addBucketMesh = (position: Vector3, zoomStep: number, optColor?: string) => {
       const bucketExtent = constants.BUCKET_WIDTH * 2 ** zoomStep;
       const bucketSize = [bucketExtent, bucketExtent, bucketExtent];
-      const geo = new THREE.BoxGeometry(...bucketSize);
-      const geometry = new THREE.EdgesGeometry(geo);
+      const boxGeometry = new THREE.BoxGeometry(...bucketSize);
+      const edgesGeometry = new THREE.EdgesGeometry(boxGeometry);
       const material = new THREE.LineBasicMaterial({
         color: optColor || (zoomStep === 0 ? 0xff00ff : 0x00ffff),
         linewidth: 1,
       });
-      const cube = new THREE.LineSegments(geometry, material);
+      const cube = new THREE.LineSegments(edgesGeometry, material);
       cube.position.x = position[0] + bucketSize[0] / 2;
       cube.position.y = position[1] + bucketSize[1] / 2;
       cube.position.z = position[2] + bucketSize[2] / 2;

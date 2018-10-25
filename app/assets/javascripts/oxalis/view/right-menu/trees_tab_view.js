@@ -250,6 +250,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
             idKey="treeId"
             searchKey="name"
             maxSearchResults={10}
+            provideShortcut
           >
             <Tooltip title="Open the search via CTRL + Shift + F">
               <ButtonComponent>

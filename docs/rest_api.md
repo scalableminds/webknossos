@@ -30,7 +30,7 @@ List all users for which you have read access
 #### Expects
  - Optional GET parameter `isEditable=[BOOLEAN]`
    - If true: list only users for which you can change team memberships
-   - If false: list only users for which you can not change team memberships
+   - If false: list only users for which you cannot change team memberships
  - Optional GET parameter `isAdmin=[BOOLEAN]`
    - If true: list only admins
    - If false: list only non-admins
@@ -144,7 +144,7 @@ List all datasets for which you have read access
 #### Expects
  - Optional GET parameter `isEditable=[BOOLEAN]`
    - If true: list only datasets you can edit
-   - If false: list only datasets you can not edit
+   - If false: list only datasets you cannot edit
  - Optional GET parameter `isActive=[BOOLEAN]`
    - If true: list only datasets that are active (=imported)
    - If false: list only datasets that are inactive (=non-imported)
@@ -240,7 +240,7 @@ Edit metadata of an annotation
    - `"name"` `[STRING]` new name for the annotation
    - `"description"` `[STRING]` new description for the annotation
    - `"isPublic"` `[BOOLEAN]` whether or not the tracing should be shared publicly
-   - `"tags"` `[LIST[STRING]]` list of tags for the annotation
+   - `"tags"` `[JSON LIST OF STRINGS]` list of tags for the annotation
 
 #### Returns
  - JSON object containing annotation information about the edited annotation
@@ -324,7 +324,7 @@ Create tasks without attached NML files
 
 #### Note
 
-For each attached NML file, one task is created. This request will also return status code 200 if some tasks could not be created. Failed tasks are instead encoded in the JSON response
+This request will also return status code 200 if some tasks could not be created. Failed tasks are instead encoded in the JSON response.
 
 
 ---
@@ -348,7 +348,7 @@ Create tasks with attached NML files
        - `"width"` `[INT]`
        - `"height"` `[INT]`
        - `"depth"` `[INT]`
-  - Attached NML files
+ - Attached NML files
 
 #### Returns
 
@@ -407,7 +407,7 @@ Update the number of open instances for a task
 
 #### Expects
  - In the url: `:id` id of a task
- - JSON object like the one in `POST /tasks` (only `"openInstances"` is changed, though)
+ - JSON object like the ones in the list in `POST /tasks` (only `"openInstances"` is changed, though)
 
 #### Returns
  - JSON object containing task information on the updated task

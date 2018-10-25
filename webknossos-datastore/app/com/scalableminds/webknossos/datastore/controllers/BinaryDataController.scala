@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.controllers
 
+
 import java.io.{ByteArrayOutputStream, OutputStream}
 import java.nio.file.Paths
 import java.util.Base64
@@ -14,9 +15,9 @@ import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.models._
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId, SegmentationLayer}
-import com.scalableminds.webknossos.datastore.models.requests.{DataServiceDataRequest, DataServiceMappingRequest, DataServiceRequestSettings}
+import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceDataRequest, DataServiceMappingRequest, DataServiceRequestSettings}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection._
-import com.scalableminds.webknossos.datastore.models.{DataRequest, ImageThumbnail, WebKnossosDataRequest}
+import com.scalableminds.webknossos.datastore.models.{DataRequest, ImageThumbnail, VoxelPosition, WebKnossosDataRequest}
 import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -311,12 +312,21 @@ class BinaryDataController @Inject()(
     implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
         AllowRemoteOrigin {
-          isosurfaceService.requestIsosurface(segmentId).map(msg => Ok(Json.obj("actor says" -> msg)))
+          for {
+            (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+            segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Messages("dataLayer.mustBeSegmentation")
+            isosurface <- isosurfaceService.requestIsosurface(IsosurfaceRequest(
+              binaryDataService, dataSource, dataLayer, Cuboid(new VoxelPosition(0, 0, 0, Point3D(1, 1, 1)), 1024, 1024, 1024), segmentId)
+            )
+          } yield {
+            Ok(Json.obj("actor says" -> isosurface))
+          }
         }
       }
   }
 
   private def getDataSourceAndDataLayer(organizationName: String, dataSetName: String, dataLayerName: String)(implicit m: MessagesProvider): Fox[(DataSource, DataLayer)] = {
+    println(DataSourceId(dataSetName, organizationName))
     for {
       dataSource <- dataSourceRepository.findUsable(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages("dataSource.notFound") ~> 404
       dataLayer <- dataSource.getDataLayer(dataLayerName) ?~> Messages("dataLayer.notFound", dataLayerName) ~> 404

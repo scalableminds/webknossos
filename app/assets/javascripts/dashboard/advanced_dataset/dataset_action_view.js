@@ -42,12 +42,12 @@ class DatasetActionView extends React.PureComponent<Props, State> {
     const menu = (
       <Menu>
         <Menu.Item key="existing" onClick={() => this.createTracing(dataset, "volume", true)}>
-          <a href="#" title="Create volume tracing">
+          <a href="#" title="Create Volume Tracing">
             Use Existing Segmentation Layer
           </a>
         </Menu.Item>
         <Menu.Item key="new" onClick={() => this.createTracing(dataset, "volume", false)}>
-          <a href="#" title="Create volume tracing">
+          <a href="#" title="Create Volume Tracing">
             Use a New Segmentation Layer
           </a>
         </Menu.Item>
@@ -56,7 +56,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
 
     const volumeTracingMenu = (
       <Dropdown overlay={menu} trigger={["click"]}>
-        <a href="#" title="Create volume tracing">
+        <a href="#" title="Create Volume Tracing">
           <img
             src="/assets/images/volume.svg"
             alt="volume icon"
@@ -122,7 +122,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                 <a
                   href="#"
                   onClick={() => this.createTracing(dataset, "hybrid", true)}
-                  title="Create Hybrid Tracing"
+                  title="Create Hybrid (Skeleton + Volume) Tracing"
                 >
                   <Icon type="swap" />
                   Start Hybrid Tracing

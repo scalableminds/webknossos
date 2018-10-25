@@ -7,7 +7,7 @@ export default {
   unknown_error:
     "An unknown error occured. Please try again or check the console for more details.",
   "datastore.health": _.template(
-    "The datastore server at <%- url %> does not seem too be available. This is likely due to an update. Please check back in five minutes.",
+    "The datastore server at <%- url %> does not seem too be available. Please check back in five minutes.",
   ),
   "datastore.version.too_new": _.template(
     "The datastore server at (<%- url %>) supplies a newer API version (<%- suppliedDatastoreApiVersion %>) than this webKnossos expects (<%- expectedDatastoreApiVersion %>). Please contact your admins to upgrade this webKnossos instance",
@@ -201,4 +201,6 @@ In order to restore the current window, a reload is necessary.`,
   "mapping.unsupported_layer": "Mappings can only be enabled for segmentation layers.",
   "project.report.failed_to_refresh":
     "The project report page could not be refreshed. Please try to reload the page.",
+  planned_maintenance:
+    "WebKnossos is temporarily under maintenance. Please check back again in a few minutes.",
 };

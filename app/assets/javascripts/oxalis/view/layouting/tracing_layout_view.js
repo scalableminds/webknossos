@@ -30,7 +30,7 @@ import TDViewControls from "oxalis/view/td_view_controls";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import { GoldenLayoutAdapter } from "./golden_layout_adapter";
 import { storeLayoutConfig, setActiveLayout } from "./layout_persistence";
-import { determineLayout } from "./default_layout_configs";
+import { determineLayout, headerHeight } from "./default_layout_configs";
 
 const { Header, Sider } = Layout;
 
@@ -52,7 +52,6 @@ type State = {
   activeLayout: string,
 };
 
-export const headerHeight = 55;
 const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
 
 const GOLDEN_LAYOUT_ADAPTER_STYLE = {

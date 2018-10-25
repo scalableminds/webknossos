@@ -94,16 +94,20 @@ class TaskController @Inject() (annotationService: AnnotationService,
 
 
   def create = sil.SecuredAction.async(validateJson[List[TaskParameters]]) { implicit request =>
-    createTasks(request.body.map { params =>
-      val tracing = annotationService.createTracingBase(params.dataSet, params.boundingBox, params.editPosition, params.editRotation)
-      (params, tracing)
-    })
+    for {
+      _ <- bool2Fox(request.body.length <= 1000) ?~> "task.create.limitExceeded"
+      result <- createTasks(request.body.map { params =>
+        val tracing = annotationService.createTracingBase(params.dataSet, params.boundingBox, params.editPosition, params.editRotation)
+        (params, tracing)
+      })
+    } yield result
   }
 
   def createFromFiles = sil.SecuredAction.async { implicit request =>
     for {
       body <- request.body.asMultipartFormData ?~> "binary.payload.invalid"
       inputFiles = body.files.filter(file => file.filename.toLowerCase.endsWith(".nml") || file.filename.toLowerCase.endsWith(".zip"))
+      _ <- bool2Fox(inputFiles.length <= 1000) ?~> "task.create.limitExceeded"
       _ <- bool2Fox(inputFiles.nonEmpty) ?~> "nml.file.notFound"
       jsonString <- body.dataParts.get("formJSON").flatMap(_.headOption) ?~> "format.json.missing"
       params <- JsonHelper.parseJsonToFox[NmlTaskParameters](jsonString) ?~> "task.create.failed"
@@ -263,7 +267,6 @@ class TaskController @Inject() (annotationService: AnnotationService,
   }
 
   def listTasks = sil.SecuredAction.async(parse.json) { implicit request =>
-
     for {
       userIdOpt <- Fox.runOptional((request.body \ "user").asOpt[String])(ObjectId.parse)
       projectNameOpt = (request.body \ "project").asOpt[String]

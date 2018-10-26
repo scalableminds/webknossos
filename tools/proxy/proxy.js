@@ -5,6 +5,9 @@ const path = require("path");
 const fs = require("fs");
 const prefixLines = require("prefix-stream-lines");
 const url = require("url");
+const { promisify } = require("util");
+
+const fileStatAsync = promisify(fs.stat);
 
 const proxy = httpProxy.createProxyServer();
 const app = express();
@@ -23,21 +26,32 @@ function makeEnv(port, host) {
 }
 
 const processes = {
-  /*backend: spawn("yarn start", [], {
+  backend: spawnIfNotSpecified("noBackend", "yarn start-backend", [], {
     cwd: ROOT,
-    env: makeEnv(9000, HOST),
+    env: makeEnv(PORT + 1, HOST),
     shell: true,
-  }),*/
+  }),
+  webpackDev: spawnIfNotSpecified("noWebpackDev", "yarn start-webpackdev", [], {
+    cwd: ROOT,
+    env: makeEnv(PORT + 2, HOST),
+    shell: true,
+  }),
 };
 
+function spawnIfNotSpecified(keyword, command, args, options) {
+  if (!process.argv.includes(keyword)) return spawn(command, args, options);
+  else return null;
+}
+
 function killAll() {
-  for (const proc of Object.values(processes)) {
+  for (const proc of Object.values(processes).filter(x => x)) {
     if (proc.connected) {
       proc.kill();
     }
   }
 }
-for (const [key, proc] of Object.entries(processes)) {
+
+for (const [key, proc] of Object.entries(processes).filter(x => x[1] !== null)) {
   proc.stdout.pipe(prefixLines(`${key}: `)).pipe(process.stdout);
   proc.stderr.pipe(prefixLines(`${key}: `)).pipe(process.stderr);
   proc.on("error", err => console.error(err, err.stack));
@@ -54,23 +68,32 @@ function toBackend(req, res) {
   proxy.web(req, res, { target: `http://localhost:${PORT + 1}` });
 }
 
-function toStaticRessource(req, res) {
-  const filepath = path.join(ROOT, "public", url.parse(req.url).pathname);
+async function toStaticRessource(req, res) {
+  const { pathname } = url.parse(req.url);
+  const filepath = path.join(ROOT, "public", pathname);
+
   res.set({
     "Access-Control-Allow-Origin": "*",
   });
-  if (fs.existsSync(filepath)) res.sendFile(filepath);
-  else res.status(404).send({ message: "File not found" });
+
+  if (await isFile(filepath)) proxy.web(req, res, { target: `http://localhost:${PORT + 2}` });
+  else if (pathname.match(/^.+\..+$/))
+    proxy.web(req, res, { target: `http://localhost:${PORT + 2}` });
+  else res.sendFile(path.join(ROOT, "public", "bundle", "index.html"));
 }
 
-function toIndexHtml(req, res) {
-  res.sendFile(path.join(ROOT, "public", "bundle", "index.html"));
+async function isFile(filepath) {
+  try {
+    const stats = await fileStatAsync(filepath);
+    return !stats.isDirectory();
+  } catch (err) {
+    return false;
+  }
 }
 
-app.get(/^.+\..+$/, toStaticRessource);
 app.all("/api/*", toBackend);
 app.all("/data/*", toBackend);
-app.all("/*", toIndexHtml);
+app.all("/*", toStaticRessource);
 
 app.listen(PORT);
 console.log("PROXY", "Listening on", PORT);

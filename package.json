@@ -75,14 +75,17 @@
     "tmp": "0.0.33",
     "url-loader": "^1.0.1",
     "webpack": "^4.20.2",
-    "webpack-cli": "^3.1.0"
+    "webpack-cli": "^3.1.0",
+    "webpack-dev-server": "^3.1.10"
   },
   "optionalDependencies": {
     "gl": "scalableminds/headless-gl#4.0.5"
   },
   "scripts": {
+    "start": "node tools/proxy/proxy.js",
     "start-backend": "./sbt \"run 9001\" -jvm-debug 5005 -J-XX:MaxMetaspaceSize=2048m",
-    "start-proxy": "node tools/proxy/proxy.js",
+    "start-proxy": "node tools/proxy/proxy.js noBackend noWebpackDev",
+    "start-webpackdev": "node_modules/.bin/webpack-dev-server",
     "build": "node_modules/.bin/webpack --env.production",
     "build-watch": "node_modules/.bin/webpack -w",
     "test": "tools/test.sh test --timeout=30s",

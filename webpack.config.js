@@ -35,7 +35,6 @@ module.exports = function(env = {}) {
       $: "jquery",
       jQuery: "jquery",
     }),
-
     new HtmlWebpackPlugin({
       hash: true,
       commitHash,
@@ -144,5 +143,9 @@ module.exports = function(env = {}) {
     // See https://webpack.js.org/configuration/devtool/
     devtool: env.production ? "source-map" : "eval-source-map",
     plugins,
+    devServer: {
+      contentBase: `${__dirname}/public`,
+      port: env.PORT ? env.PORT : 9002,
+    },
   };
 };

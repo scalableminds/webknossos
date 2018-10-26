@@ -124,12 +124,13 @@ export class DataBucket {
   }
 
   getData(): Uint8Array {
-    if (this.data == null) {
+    const data = this.data;
+    if (data == null) {
       throw new Error("Bucket.getData() called, but data does not exist.");
     }
 
     this.markAsNeeded();
-    return this.data;
+    return data;
   }
 
   markAsNeeded(): void {

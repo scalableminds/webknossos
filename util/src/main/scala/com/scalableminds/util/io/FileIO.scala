@@ -63,15 +63,20 @@ object FileIO {
   }
 
   def printToFile(f: java.io.File)(op: java.io.PrintWriter => Unit): Box[Unit] = {
-    val p = new java.io.PrintWriter(f)
     try {
-      op(p)
-      Full(())
+      val p = new java.io.PrintWriter(f)
+      try {
+        op(p)
+        Full(())
+      } catch {
+        case ex: Exception =>
+          Failure(ex.getMessage)
+      } finally {
+        p.close()
+      }
     } catch {
       case ex: Exception =>
         Failure(ex.getMessage)
-    } finally {
-      p.close()
     }
   }
 

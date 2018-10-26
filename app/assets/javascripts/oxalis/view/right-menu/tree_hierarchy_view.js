@@ -40,6 +40,8 @@ type Props = {
   // eslint-disable-next-line react/no-unused-prop-types
   sortBy: string,
   trees: TreeMap,
+  selectedTrees: Array<number>,
+  selectedTreeGroups: Array<number>,
   onSetActiveTree: number => void,
   onSetActiveGroup: number => void,
   onToggleTree: number => void,
@@ -47,6 +49,8 @@ type Props = {
   onToggleTreeGroup: number => void,
   onUpdateTreeGroups: (Array<TreeGroup>) => void,
   onSetTreeGroup: (?number, number) => void,
+  handleTreeSelect: number => void,
+  handleTreeGroupSelect: number => void,
 };
 
 type State = {
@@ -54,8 +58,6 @@ type State = {
   expandedGroupIds: { [number]: boolean },
   groupTree: Array<TreeNode>,
   searchFocusOffset: number,
-  selectedTrees: Array<number>,
-  selectedTreeGroups: Array<number>,
 };
 
 class TreeHierarchyView extends React.PureComponent<Props, State> {
@@ -64,11 +66,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     groupTree: [],
     prevProps: null,
     searchFocusOffset: 0,
-    selectedTrees: [],
-    selectedTreeGroups: [],
-    // TODO debug group select => the maptrees to group function does not work correctly
-    // TODO do all actions on selected Trees if there are selected ones, else use the active tree
-    // !! And make a deselect all trees button !!!!
+    // TODO !! And make a deselect all trees button !!!!
   };
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State) {
@@ -134,61 +132,10 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }
   };
 
-  handleTreeSelect = id => {
-    if (this.state.selectedTrees.includes(id)) {
-      this.setState(prevState => ({
-        selectedTrees: prevState.selectedTrees.filter(currentId => currentId !== id),
-        // also unselect group of current tree
-        selectedTreeGroups: prevState.selectedTreeGroups.filter(
-          groupId => groupId !== this.props.trees[id].groupId,
-        ),
-      }));
-    } else {
-      this.setState((prevState, props) => {
-        let allTreesOfGroupSelected = false;
-        const newSelectedTrees = [...prevState.selectedTrees, id];
-        let treeGroupMap = [];
-        const currentGroupId = props.trees[id].groupId;
-        if (currentGroupId !== null && currentGroupId !== MISSING_GROUP_ID) {
-          treeGroupMap = createGroupToTreesMap(props.trees);
-        }
-        if (currentGroupId !== null && currentGroupId !== undefined) {
-          const idsOfSelectedGroup = treeGroupMap[currentGroupId].map(node => node.treeId);
-          allTreesOfGroupSelected = _.difference(idsOfSelectedGroup, newSelectedTrees).length === 0;
-        }
-        return {
-          selectedTrees: newSelectedTrees,
-          selectedTreeGroups:
-            allTreesOfGroupSelected && currentGroupId != null
-              ? [...prevState.selectedTreeGroups, currentGroupId]
-              : prevState.selectedTreeGroups,
-        };
-      });
-    }
-  };
-
-  handleTreeGroupSelect = (id: number) => {
-    const treeGroupMap = createGroupToTreesMap(this.props.trees);
-    const idsOfSelectedGroup = treeGroupMap[id].map(node => node.treeId);
-    if (this.state.selectedTreeGroups.includes(id)) {
-      this.setState(prevState => ({
-        selectedTrees: prevState.selectedTrees.filter(
-          currentId => !idsOfSelectedGroup.includes(currentId),
-        ),
-        selectedTreeGroups: prevState.selectedTreeGroups.filter(currentId => currentId !== id),
-      }));
-    } else {
-      this.setState(prevState => ({
-        selectedTrees: _.union(prevState.selectedTrees, idsOfSelectedGroup),
-        selectedTreeGroups: [...prevState.selectedTreeGroups, id],
-      }));
-    }
-  };
-
   onSelectTree = evt => {
     const treeId = evt.target.dataset.id;
     if (evt.altKey) {
-      this.handleTreeSelect(parseInt(treeId, 10));
+      this.props.handleTreeSelect(parseInt(treeId, 10));
     } else {
       this.props.onSetActiveTree(parseInt(treeId, 10));
     }
@@ -197,7 +144,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   onSelectGroup = evt => {
     const groupId = evt.target.dataset.id;
     if (evt.altKey) {
-      this.handleTreeGroupSelect(parseInt(groupId, 10));
+      this.props.handleTreeGroupSelect(parseInt(groupId, 10));
     } else {
       this.props.onSetActiveGroup(parseInt(groupId, 10));
     }
@@ -277,8 +224,8 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
   getNodeStyleClassForBackground = (id, isGroup = false) => {
     if (
-      (isGroup && !this.state.selectedTreeGroups.includes(id)) ||
-      (!isGroup && !this.state.selectedTrees.includes(id))
+      (isGroup && !this.props.selectedTreeGroups.includes(id)) ||
+      (!isGroup && !this.props.selectedTrees.includes(id))
     ) {
       return null;
     } else if (id === this.props.activeTreeId) {

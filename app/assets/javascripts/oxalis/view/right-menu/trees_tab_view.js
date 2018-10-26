@@ -2,7 +2,7 @@
  * list_tree_view.js
  * @flow
  */
-
+import _ from "lodash";
 import api from "oxalis/api/internal_api";
 import * as React from "react";
 import { connect } from "react-redux";
@@ -34,6 +34,10 @@ import { getBuildInfo } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import type { Dispatch } from "redux";
 import type { OxalisState, Tracing, SkeletonTracing, UserConfiguration } from "oxalis/store";
+import {
+  createGroupToTreesMap,
+  MISSING_GROUP_ID,
+} from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import SearchPopover from "./search_popover";
 
 const ButtonGroup = Button.Group;
@@ -58,6 +62,8 @@ type Props = {
 type State = {
   isUploading: boolean,
   isDownloading: boolean,
+  selectedTrees: Array<number>,
+  selectedTreeGroups: Array<number>,
 };
 
 export async function importNmls(files: Array<File>, createGroupForEachFile: boolean) {
@@ -94,6 +100,8 @@ class TreesTabView extends React.PureComponent<Props, State> {
   state = {
     isUploading: false,
     isDownloading: false,
+    selectedTrees: [],
+    selectedTreeGroups: [],
   };
 
   handleChangeTreeName = evt => {
@@ -149,6 +157,58 @@ class TreesTabView extends React.PureComponent<Props, State> {
     saveAs(blob, getNmlName(state));
   };
 
+  handleTreeSelect = id => {
+    const trees = this.props.skeletonTracing.trees
+    if (this.state.selectedTrees.includes(id)) {
+      this.setState(prevState => ({
+        selectedTrees: prevState.selectedTrees.filter(currentId => currentId !== id),
+        // also unselect group of current tree
+        selectedTreeGroups: prevState.selectedTreeGroups.filter(
+          groupId => groupId !== trees[id].groupId,
+        ),
+      }));
+    } else {
+      this.setState((prevState) => {
+        let allTreesOfGroupSelected = false;
+        const newSelectedTrees = [...prevState.selectedTrees, id];
+        let treeGroupMap = [];
+        const currentGroupId = trees[id].groupId;
+        if (currentGroupId !== null && currentGroupId !== MISSING_GROUP_ID) {
+          treeGroupMap = createGroupToTreesMap(trees);
+        }
+        if (currentGroupId !== null && currentGroupId !== undefined) {
+          const idsOfSelectedGroup = treeGroupMap[currentGroupId].map(node => node.treeId);
+          allTreesOfGroupSelected = _.difference(idsOfSelectedGroup, newSelectedTrees).length === 0;
+        }
+        return {
+          selectedTrees: newSelectedTrees,
+          selectedTreeGroups:
+            allTreesOfGroupSelected && currentGroupId != null
+              ? [...prevState.selectedTreeGroups, currentGroupId]
+              : prevState.selectedTreeGroups,
+        };
+      });
+    }
+  };
+
+  handleTreeGroupSelect = (id: number) => {
+    const treeGroupMap = createGroupToTreesMap(this.props.trees);
+    const idsOfSelectedGroup = treeGroupMap[id].map(node => node.treeId);
+    if (this.state.selectedTreeGroups.includes(id)) {
+      this.setState(prevState => ({
+        selectedTrees: prevState.selectedTrees.filter(
+          currentId => !idsOfSelectedGroup.includes(currentId),
+        ),
+        selectedTreeGroups: prevState.selectedTreeGroups.filter(currentId => currentId !== id),
+      }));
+    } else {
+      this.setState(prevState => ({
+        selectedTrees: _.union(prevState.selectedTrees, idsOfSelectedGroup),
+        selectedTreeGroups: [...prevState.selectedTreeGroups, id],
+      }));
+    }
+  };
+
   getTreesComponents() {
     if (!this.props.skeletonTracing) {
       return null;
@@ -162,6 +222,10 @@ class TreesTabView extends React.PureComponent<Props, State> {
         activeTreeId={this.props.skeletonTracing.activeTreeId}
         activeGroupId={this.props.skeletonTracing.activeGroupId}
         sortBy={orderAttribute}
+        selectedTrees={this.state.selectedTrees}
+        selectedTreeGroups={this.state.selectedTreeGroups}
+        handleTreeSelect={this.handleTreeSelect}
+        handleTreeGroupSelect={this.handleTreeGroupSelect}
       />
     );
   }

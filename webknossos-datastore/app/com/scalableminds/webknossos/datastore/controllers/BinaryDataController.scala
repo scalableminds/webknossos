@@ -326,7 +326,6 @@ class BinaryDataController @Inject()(
   }
 
   private def getDataSourceAndDataLayer(organizationName: String, dataSetName: String, dataLayerName: String)(implicit m: MessagesProvider): Fox[(DataSource, DataLayer)] = {
-    println(DataSourceId(dataSetName, organizationName))
     for {
       dataSource <- dataSourceRepository.findUsable(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages("dataSource.notFound") ~> 404
       dataLayer <- dataSource.getDataLayer(dataLayerName) ?~> Messages("dataLayer.notFound", dataLayerName) ~> 404

@@ -1,4 +1,4 @@
--- https://github.com/scalableminds/webknossos/pull/TODO
+-- https://github.com/scalableminds/webknossos/pull/3367
 
 START TRANSACTION;
 
@@ -17,6 +17,6 @@ CREATE VIEW webknossos.meshes_ AS SELECT * FROM webknossos.meshes WHERE NOT isDe
 ALTER TABLE webknossos.meshes
   ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) DEFERRABLE;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 30;
+UPDATE webknossos.releaseInformation SET schemaVersion = 32;
 
 COMMIT TRANSACTION;

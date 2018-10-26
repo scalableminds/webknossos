@@ -16,7 +16,6 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 
 case class IsosurfaceRequest(
-                              service: BinaryDataService,
                               dataSource: DataSource,
                               dataLayer: DataLayer,
                               cuboid: Cuboid,
@@ -24,28 +23,15 @@ case class IsosurfaceRequest(
                               mapping: Option[String] = None
                             )
 
-class IsosurfaceService @Inject()(
-                                   actorSystem: ActorSystem,
-                                   binaryDataServiceHolder: BinaryDataServiceHolder
-                                 )(implicit ec: ExecutionContext) extends FoxImplicits {
+class IsosurfaceActor(val binaryDataService: BinaryDataService) extends Actor {
 
-  val actor = actorSystem.actorOf(RoundRobinPool(1).props(Props[IsosurfaceActor]))
+  import context.dispatcher
 
-  def requestIsosurface(request: IsosurfaceRequest): Fox[String] = {
-    implicit val timeout = Timeout(30 seconds)
-    actor.ask(request).mapTo[Box[String]].recover {
-      case e: Exception => Failure(e.getMessage)
-    }
-  }
-}
-
-class IsosurfaceActor extends Actor {
-
-  def foo(request: IsosurfaceRequest): Fox[String] = {
+  def generateIsosurface(request: IsosurfaceRequest): Fox[String] = {
     val dataRequest = DataServiceDataRequest(request.dataSource, request.dataLayer, request.cuboid, DataServiceRequestSettings.default)
 
     for {
-      (data, _) <- request.service.handleDataRequests(List(dataRequest))
+      (data, _) <- binaryDataService.handleDataRequests(List(dataRequest))
     } yield {
       println("foo talking", data.length)
       data.length.toString
@@ -53,10 +39,25 @@ class IsosurfaceActor extends Actor {
   }
 
   def receive = {
-    case request: IsosurfaceRequest => {
-      sender ! Await.result(foo(request).futureBox , 30 seconds)
-    }
+    case request: IsosurfaceRequest =>
+      generateIsosurface(request).futureBox.map(sender ! _)
     case _ =>
-      sender ! Failure("error in actor")
+        sender ! Failure("error in actor")
+  }
+}
+
+class IsosurfaceService @Inject()(
+                                   actorSystem: ActorSystem,
+                                   binaryDataServiceHolder: BinaryDataServiceHolder
+                                 )(implicit ec: ExecutionContext) extends FoxImplicits {
+
+  val actor = actorSystem.actorOf(RoundRobinPool(1).props(Props(new IsosurfaceActor(binaryDataServiceHolder.binaryDataService))))
+
+  def requestIsosurface(request: IsosurfaceRequest): Fox[String] = {
+    implicit val timeout = Timeout(30 seconds)
+
+    actor.ask(request).mapTo[Box[String]].recover {
+      case e: Exception => Failure(e.getMessage)
+    }
   }
 }

@@ -316,7 +316,7 @@ class BinaryDataController @Inject()(
             (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
             segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Messages("dataLayer.mustBeSegmentation")
             isosurface <- isosurfaceService.requestIsosurface(IsosurfaceRequest(
-              binaryDataService, dataSource, dataLayer, Cuboid(new VoxelPosition(0, 0, 0, Point3D(1, 1, 1)), size, size, size), segmentId)
+              dataSource, dataLayer, Cuboid(new VoxelPosition(0, 0, 0, Point3D(1, 1, 1)), size, size, size), segmentId)
             )
           } yield {
             Ok(Json.obj("actor says" -> isosurface))

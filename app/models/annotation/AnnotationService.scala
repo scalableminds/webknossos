@@ -220,7 +220,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     def useAsTemplateAndInsert(annotation: Annotation) = {
       for {
         dataSetName <- dataSetDAO.getNameById(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
-        dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> ("Could not access DataSet " + dataSetName + ". Does your team have access?")
+        dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.noAccess"
         newTracingId <- tracingFromBase(annotation, dataSet) ?~> "Failed to use annotation base as template."
         newAnnotation = annotation.copy(
           _id = initializingAnnotationId,

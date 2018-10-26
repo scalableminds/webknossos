@@ -109,7 +109,7 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
       tracing <- rpc(s"${tracingStore.url}/tracings/volume/${tracingId}")
         .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
         .getWithProtoResponse[VolumeTracing](VolumeTracing)
-      data <- rpc(s"${tracingStore.url}/tracings/volume/${tracingId}/getAllData")
+      data <- rpc(s"${tracingStore.url}/tracings/volume/${tracingId}/allData")
         .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
         .getStream
     } yield {

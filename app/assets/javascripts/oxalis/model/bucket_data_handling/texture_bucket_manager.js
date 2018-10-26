@@ -182,6 +182,7 @@ export default class TextureBucketManager {
         bucketHeightInTexture,
       );
       this.committedBucketSet.add(bucket);
+
       window.needsRerender = true;
       this.isRefreshBufferOutOfDate = true;
     }

@@ -138,18 +138,38 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     if (this.state.selectedTrees.includes(id)) {
       this.setState(prevState => ({
         selectedTrees: prevState.selectedTrees.filter(currentId => currentId !== id),
+        // also unselect group of current tree
+        selectedTreeGroups: prevState.selectedTreeGroups.filter(
+          groupId => groupId !== this.props.trees[id].groupId,
+        ),
       }));
     } else {
-      this.setState(prevState => ({
-        selectedTrees: [...prevState.selectedTrees, id],
-      }));
+      this.setState((prevState, props) => {
+        let allTreesOfGroupSelected = false;
+        const newSelectedTrees = [...prevState.selectedTrees, id];
+        let treeGroupMap = [];
+        const currentGroupId = props.trees[id].groupId;
+        if (currentGroupId !== null && currentGroupId !== MISSING_GROUP_ID) {
+          treeGroupMap = createGroupToTreesMap(props.trees);
+        }
+        if (currentGroupId !== null && currentGroupId !== undefined) {
+          const idsOfSelectedGroup = treeGroupMap[currentGroupId].map(node => node.treeId);
+          allTreesOfGroupSelected = _.difference(idsOfSelectedGroup, newSelectedTrees).length === 0;
+        }
+        return {
+          selectedTrees: newSelectedTrees,
+          selectedTreeGroups:
+            allTreesOfGroupSelected && currentGroupId != null
+              ? [...prevState.selectedTreeGroups, currentGroupId]
+              : prevState.selectedTreeGroups,
+        };
+      });
     }
   };
 
   handleTreeGroupSelect = (id: number) => {
     const treeGroupMap = createGroupToTreesMap(this.props.trees);
-    const idsOfSelectedGroup = treeGroupMap[id].map(node => node.id);
-    console.log("selected group", id, "subtrees", idsOfSelectedGroup);
+    const idsOfSelectedGroup = treeGroupMap[id].map(node => node.treeId);
     if (this.state.selectedTreeGroups.includes(id)) {
       this.setState(prevState => ({
         selectedTrees: prevState.selectedTrees.filter(
@@ -167,8 +187,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
   onSelectTree = evt => {
     const treeId = evt.target.dataset.id;
-    console.log("selected", evt.target, treeId);
-    if (evt.shiftKey) {
+    if (evt.altKey) {
       this.handleTreeSelect(parseInt(treeId, 10));
     } else {
       this.props.onSetActiveTree(parseInt(treeId, 10));
@@ -177,8 +196,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
   onSelectGroup = evt => {
     const groupId = evt.target.dataset.id;
-    console.log("selected group", evt.target, groupId);
-    if (evt.shiftKey) {
+    if (evt.altKey) {
       this.handleTreeGroupSelect(parseInt(groupId, 10));
     } else {
       this.props.onSetActiveGroup(parseInt(groupId, 10));
@@ -257,16 +275,16 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }
   };
 
-  getNodeBackgroundStyle = (id, isGroup = false) => {
+  getNodeStyleClassForBackground = (id, isGroup = false) => {
     if (
       (isGroup && !this.state.selectedTreeGroups.includes(id)) ||
       (!isGroup && !this.state.selectedTrees.includes(id))
     ) {
       return null;
     } else if (id === this.props.activeTreeId) {
-      return { backgroundColor: "rgb(64,169,255)" };
+      return "selected-and-active-tree-node";
     } else {
-      return { backgroundColor: "rgba(230,247,255, 0.75)" };
+      return "selected-tree-node";
     }
   };
 
@@ -297,9 +315,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         </Dropdown>
       </span>
     );
-    const selectedStyle = this.getNodeBackgroundStyle(id, true);
+    const styleClass = this.getNodeStyleClassForBackground(id, true);
     return (
-      <div style={selectedStyle}>
+      <div className={styleClass}>
         <Checkbox
           checked={node.isChecked}
           onChange={this.onCheck}
@@ -322,9 +340,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       const tree = this.props.trees[parseInt(node.id, 10)];
       const rgbColorString = tree.color.map(c => Math.round(c * 255)).join(",");
       // defining background color of current node
-      const selectedStyle = this.getNodeBackgroundStyle(node.id);
+      const styleClass = this.getNodeStyleClassForBackground(node.id);
       nodeProps.title = (
-        <div data-id={node.id} onClick={this.onSelectTree} style={selectedStyle}>
+        <div data-id={node.id} onClick={this.onSelectTree} className={styleClass}>
           <Checkbox
             checked={tree.isVisible}
             onChange={this.onCheck}

@@ -122,8 +122,12 @@ export class DataBucket {
       throw new Error("Bucket.getData() called, but data does not exist.");
     }
 
-    this.accessed = true;
+    this.markAsNeeded();
     return this.data;
+  }
+
+  markAsNeeded(): void {
+    this.accessed = true;
   }
 
   getOrCreateData(): Uint8Array {

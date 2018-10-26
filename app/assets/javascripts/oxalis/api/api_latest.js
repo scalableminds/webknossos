@@ -719,7 +719,7 @@ class DataApi {
   }
 
   /**
-   * Downloads a cuboid of raw data from a data layer. A new window is opened for the download -
+   * Downloads a cuboid of raw data from a dataset (not tracing) layer. A new window is opened for the download -
    * if that is not the case, please check your pop-up blocker.
    *
    * @example // Download a cuboid (from (0, 0, 0) to (100, 200, 100)) of raw data from the "segmentation" layer.

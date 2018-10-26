@@ -21,19 +21,28 @@ const memoizedThrottle = (func, wait = 0, options = {}): Function => {
 export const pingDataStoreIfAppropriate = memoizedThrottle(async (requestedUrl: string): Promise<
   *,
 > => {
-  const datastores = await RestAPI.getDataStoresCached();
-  const usedDataStore = datastores.find(ds => requestedUrl.indexOf(ds.url) > -1);
-  if (usedDataStore != null) {
-    const { url } = usedDataStore;
-    const healthEndpoint = `${url}/data/health`;
-    Request.triggerRequest(healthEndpoint, {
-      doNotInvestigate: true,
-      mode: "cors",
-      timeout: 5000,
-    }).then(
-      () => checkVersionMismatch(url),
-      () => Toast.warning(messages["datastore.health"]({ url })),
-    );
+  const [datastores, tracingstore, isInMaintenance] = await Promise.all([
+    RestAPI.getDataStoresCached(),
+    RestAPI.getTracingStoreCached(),
+    RestAPI.isInMaintenance(),
+  ]);
+  const stores = datastores.concat(tracingstore);
+  if (isInMaintenance) {
+    Toast.warning(messages.planned_maintenance);
+  } else {
+    const usedDataStore = stores.find(ds => requestedUrl.indexOf(ds.url) > -1);
+    if (usedDataStore != null) {
+      const { url } = usedDataStore;
+      const healthEndpoint = `${url}/data/health`;
+      Request.triggerRequest(healthEndpoint, {
+        doNotInvestigate: true,
+        mode: "cors",
+        timeout: 5000,
+      }).then(
+        () => checkVersionMismatch(url),
+        () => Toast.warning(messages["datastore.health"]({ url })),
+      );
+    }
   }
 }, 5000);
 

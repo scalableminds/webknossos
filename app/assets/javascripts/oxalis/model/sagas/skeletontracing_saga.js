@@ -210,6 +210,19 @@ function* diffEdges(
   }
 }
 
+function updateTracingPredicate(
+  prevSkeletonTracing: SkeletonTracing,
+  skeletonTracing: SkeletonTracing,
+  prevFlycam: Flycam,
+  flycam: Flycam,
+): boolean {
+  return (
+    !_.isEqual(prevSkeletonTracing.userBoundingBox, skeletonTracing.userBoundingBox) ||
+    prevSkeletonTracing.activeNodeId !== skeletonTracing.activeNodeId ||
+    prevFlycam !== flycam
+  );
+}
+
 function updateTreePredicate(prevTree: Tree, tree: Tree): boolean {
   return (
     !_.isEqual(prevTree.branchPoints, tree.branchPoints) ||
@@ -274,6 +287,7 @@ export function cachedDiffTrees(prevTrees: TreeMap, trees: TreeMap): Array<Updat
 export function* diffSkeletonTracing(
   prevSkeletonTracing: SkeletonTracing,
   skeletonTracing: SkeletonTracing,
+  prevFlycam: Flycam,
   flycam: Flycam,
 ): Generator<UpdateAction, void, void> {
   if (prevSkeletonTracing !== skeletonTracing) {
@@ -282,10 +296,12 @@ export function* diffSkeletonTracing(
       yield updateTreeGroups(skeletonTracing.treeGroups);
     }
   }
-  yield updateSkeletonTracing(
-    skeletonTracing,
-    V3.floor(getPosition(flycam)),
-    getRotation(flycam),
-    flycam.zoomStep,
-  );
+  if (updateTracingPredicate(prevSkeletonTracing, skeletonTracing, prevFlycam, flycam)) {
+    yield updateSkeletonTracing(
+      skeletonTracing,
+      V3.floor(getPosition(flycam)),
+      getRotation(flycam),
+      flycam.zoomStep,
+    );
+  }
 }

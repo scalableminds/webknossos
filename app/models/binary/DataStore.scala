@@ -20,8 +20,7 @@ case class DataStore(
                        key: String,
                        isDeleted: Boolean = false,
                        isForeign: Boolean = false
-                       ) {
-}
+                       )
 
 class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext) extends FoxImplicits with Results {
 

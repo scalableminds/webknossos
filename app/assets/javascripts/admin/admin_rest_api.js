@@ -4,7 +4,7 @@ import Request from "libs/request";
 import Toast from "libs/toast";
 import type { Message } from "libs/toast";
 import * as Utils from "libs/utils";
-import { location } from "libs/window";
+import window, { location } from "libs/window";
 import messages from "messages";
 import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
 import type {
@@ -22,6 +22,7 @@ import type {
   APIAnnotation,
   APIAnnotationWithTask,
   APIDataStore,
+  APITracingStore,
   DatasetConfig,
   APIDatasetId,
   APIDataset,
@@ -576,8 +577,8 @@ export async function getTracingForAnnotationType(
   const tracingArrayBuffer = await doWithToken(token =>
     Request.receiveArraybuffer(
       `${
-        annotation.dataStore.url
-      }/data/tracings/${tracingType}/${tracingId}?token=${token}${possibleVersionString}`,
+        annotation.tracingStore.url
+      }/tracings/${tracingType}/${tracingId}?token=${token}${possibleVersionString}`,
       { headers: { Accept: "application/x-protobuf" } },
     ),
   );
@@ -589,15 +590,21 @@ export async function getTracingForAnnotationType(
 }
 
 export function getUpdateActionLog(
-  dataStoreUrl: string,
+  tracingStoreUrl: string,
   tracingId: string,
   tracingType: "skeleton" | "volume",
 ): Promise<Array<APIUpdateActionBatch>> {
   return doWithToken(token =>
     Request.receiveJSON(
-      `${dataStoreUrl}/data/tracings/${tracingType}/${tracingId}/updateActionLog?token=${token}`,
+      `${tracingStoreUrl}/tracings/${tracingType}/${tracingId}/updateActionLog?token=${token}`,
     ),
   );
+}
+
+export function convertToHybridTracing(annotationId: string): Promise<void> {
+  return Request.receiveJSON(`/api/annotations/Explorational/${annotationId}/makeHybrid`, {
+    method: "PATCH",
+  });
 }
 
 // ### Datasets
@@ -823,6 +830,12 @@ export async function getDatastores(): Promise<Array<APIDataStore>> {
 }
 export const getDataStoresCached = _.memoize(getDatastores);
 
+export function getTracingstore(): Promise<APITracingStore> {
+  return Request.receiveJSON("/api/tracingstore");
+}
+
+export const getTracingStoreCached = _.memoize(getTracingstore);
+
 // ### Active User
 export function getActiveUser(options: Object = {}): Promise<APIUser> {
   return Request.receiveJSON("/api/user", options);
@@ -923,3 +936,13 @@ export function getOperatorData(): Promise<string> {
 export function getExistingExperienceDomains(): Promise<ExperienceDomainList> {
   return Request.receiveJSON("/api/tasks/experienceDomains");
 }
+
+export async function isInMaintenance(): Promise<boolean> {
+  const info = await Request.receiveJSON("/api/maintenance");
+  return info.isMaintenance;
+}
+
+export function setMaintenance(bool: boolean): Promise<void> {
+  return Request.triggerRequest("/api/maintenance", { method: bool ? "POST" : "DELETE" });
+}
+window.setMaintenance = setMaintenance;

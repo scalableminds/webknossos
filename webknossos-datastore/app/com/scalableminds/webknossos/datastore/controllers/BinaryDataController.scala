@@ -308,7 +308,7 @@ class BinaryDataController @Inject()(
       }
   }
 
-  def requestIsosurface(organizationName: String, dataSetName: String, dataLayerName: String, segmentId: Long) = Action.async {
+  def requestIsosurface(organizationName: String, dataSetName: String, dataLayerName: String, segmentId: Long, size: Int) = Action.async {
     implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
         AllowRemoteOrigin {
@@ -316,7 +316,7 @@ class BinaryDataController @Inject()(
             (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
             segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Messages("dataLayer.mustBeSegmentation")
             isosurface <- isosurfaceService.requestIsosurface(IsosurfaceRequest(
-              binaryDataService, dataSource, dataLayer, Cuboid(new VoxelPosition(0, 0, 0, Point3D(1, 1, 1)), 1024, 1024, 1024), segmentId)
+              binaryDataService, dataSource, dataLayer, Cuboid(new VoxelPosition(0, 0, 0, Point3D(1, 1, 1)), size, size, size), segmentId)
             )
           } yield {
             Ok(Json.obj("actor says" -> isosurface))

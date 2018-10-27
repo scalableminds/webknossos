@@ -378,7 +378,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
                   <Icon
                     type="rollback"
                     theme="outlined"
-                    style={{ marginLeft: 32 }}
+                    style={{ marginLeft: 32, cursor: "pointer" }}
                     onClick={this.props.deselectEverthing}
                   />
                 </Tooltip>

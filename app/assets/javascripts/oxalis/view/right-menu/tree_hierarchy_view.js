@@ -4,7 +4,7 @@ import _ from "lodash";
 import * as React from "react";
 import { connect } from "react-redux";
 import update from "immutability-helper";
-import { Dropdown, Menu, Icon, Checkbox } from "antd";
+import { Dropdown, Menu, Icon, Checkbox, Tooltip } from "antd";
 import {
   setActiveTreeAction,
   setActiveGroupAction,
@@ -29,6 +29,7 @@ import {
 } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import type { TreeMap, TreeGroup } from "oxalis/store";
 import type { TreeNode } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
+import StickyMouseTooltip from "./sticky-mouse-tooltip";
 
 const CHECKBOX_STYLE = { verticalAlign: "middle" };
 
@@ -51,6 +52,7 @@ type Props = {
   onSetTreeGroup: (?number, number) => void,
   handleTreeSelect: number => void,
   handleTreeGroupSelect: number => void,
+  deselectEverthing: () => void,
 };
 
 type State = {
@@ -58,6 +60,7 @@ type State = {
   expandedGroupIds: { [number]: boolean },
   groupTree: Array<TreeNode>,
   searchFocusOffset: number,
+  mouseTooltipActive: boolean,
 };
 
 class TreeHierarchyView extends React.PureComponent<Props, State> {
@@ -66,6 +69,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     groupTree: [],
     prevProps: null,
     searchFocusOffset: 0,
+    mouseTooltipActive: false,
     // TODO !! And make a deselect all trees button !!!!
   };
 
@@ -165,11 +169,28 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     treeData: Array<TreeNode>,
   }) => {
     const { nextParentNode, node, treeData } = params;
+    /* let allTrees = [];
+    let allGroups = [];
+    if (node.type === TYPE_TREE) {
+      allTrees = [node.id];
+    } else {
+      // needs to be tested => how to get the group id
+      allGroups = [node]
+      // TODO iterate over all trees and set their group to (guess) nextParentNode.id!
+    }
+    allNodes = _.union(allTrees, this.props.selectedTrees);
+    allGroups = _.union(allGroups, this.props.selectedTreeGroups); */
     if (node.type === TYPE_TREE) {
       // A tree was dragged - update the group of the dragged tree
       this.props.onSetTreeGroup(
         nextParentNode.id === MISSING_GROUP_ID ? null : nextParentNode.id,
         parseInt(node.id, 10),
+      );
+      this.props.selectedTrees.forEach(treeId =>
+        this.props.onSetTreeGroup(
+          nextParentNode.id === MISSING_GROUP_ID ? null : nextParentNode.id,
+          parseInt(treeId, 10),
+        ),
       );
     } else {
       // A group was dragged - update the groupTree
@@ -219,6 +240,14 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       this.createGroup(groupId);
     } else if (key === "delete") {
       this.deleteGroup(groupId);
+    }
+  };
+
+  handleDraggingEvent = (params: { isDragging: boolean, draggedNode: Object }) => {
+    if (params.isDragging) {
+      this.setState({ mouseTooltipActive: true });
+    } else {
+      this.setState({ mouseTooltipActive: false });
     }
   };
 
@@ -305,6 +334,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     return nodeProps;
   };
 
+  // own react component that follows the mouseclick and displays the passed down text
+  // save state => is dragging element
+  // triggered by function onDragStateChanged of SortableTree :D
   keySearchMethod(params: {
     node: TreeNode,
     searchQuery: { activeTreeId: number, activeGroupId: number },
@@ -328,16 +360,34 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
   render() {
     const { activeTreeId, activeGroupId } = this.props;
+    const mouseToolTipText = this.state.mouseTooltipActive
+      ? `${this.props.selectedTrees.length} additional tree(s) and ${
+          this.props.selectedTreeGroups.length
+        } additional groups moving.`
+      : `${this.props.selectedTrees.length} tree(s) and ${
+          this.props.selectedTreeGroups.length
+        } groups selected.`;
     return (
       <AutoSizer className="info-tab-content">
         {({ height, width }) => (
           <div style={{ height, width }}>
             {
-              // this.renderCreateGroupModal()
+              <span style={{ color: "#1890ff" }}>
+                {mouseToolTipText}
+                <Tooltip title="Deselect everthing">
+                  <Icon
+                    type="rollback"
+                    theme="outlined"
+                    style={{ marginLeft: 32 }}
+                    onClick={this.props.deselectEverthing}
+                  />
+                </Tooltip>
+              </span>
             }
             <SortableTree
               treeData={this.state.groupTree}
               onChange={this.onChange}
+              onDragStateChanged={this.handleDraggingEvent}
               onMoveNode={this.onMoveNode}
               onVisibilityToggle={this.onExpand}
               searchMethod={this.keySearchMethod}

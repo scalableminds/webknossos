@@ -146,7 +146,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
 
   def makeAnnotationHybrid(user: User, annotation: Annotation)(implicit ctx: DBAccessContext) = {
     def createNewTracings(dataSet: DataSet, dataSource: DataSource) = annotation.tracingType match {
-      case TracingType.skeleton => createTracings(dataSet, dataSource, TracingType.volume, false).flatMap {
+      case TracingType.skeleton => createTracings(dataSet, dataSource, TracingType.volume, true).flatMap {
         case (_, Some(volumeId)) => annotationDAO.updateVolumeTracingId(annotation._id, volumeId)
         case _ => Fox.failure("unexpectedReturn")
       }

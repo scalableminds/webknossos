@@ -1,0 +1,13 @@
+-- https://github.com/scalableminds/webknossos/pull/TODO
+
+START TRANSACTION;
+
+DROP VIEW webknossos.taskTypes_;
+ALTER TABLE webknossos.taskTypes ADD COLUMN settings_recommendedConfiguration JSONB;
+
+
+CREATE VIEW webknossos.taskTypes_ AS SELECT * FROM webknossos.taskTypes WHERE NOT isDeleted;
+
+UPDATE webknossos.releaseInformation SET schemaVersion = 33;
+
+COMMIT TRANSACTION;

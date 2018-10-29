@@ -20,6 +20,8 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 - [028-add-isBlacklistedFromReport.sql](conf/evolutions/028-add-isBlacklistedFromReport.sql)
 - [029-foreign-keys-deferrable.sql](conf/evolutions/029-foreign-keys-deferrable.sql)
 - [030-tracingstore.sql](conf/evolutions/030-tracingstore.sql)
+- [031-maintenance.sql](conf/evolutions/031-maintenance.sql)
+- [032-scratch-datastores.sql](conf/evolutions/032-scratch-datastores.sql)
 
 
 ## [18.10.0](https://github.com/scalableminds/webknossos/releases/tag/18.10.0) - 2018-09-22

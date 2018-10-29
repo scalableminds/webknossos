@@ -88,20 +88,20 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
         }
       >
         <span style={{ minWidth: "100%", minHeight: "auto", display: "inline-block" }}>
-          <div className="inline-with-margin">
+          <div className="inline-with-margin full-width" onClick={() => onSelectLayout(layout)}>
             {layout}
-            {isSelectedLayout ? (
-              <Icon type="check" className="sub-menu-item-icon" theme="outlined" />
-            ) : (
-              <Tooltip placement="top" title="Remove this layout">
-                <Icon
-                  type="delete"
-                  className="clickable-icon sub-menu-item-icon"
-                  onClick={() => onDeleteLayout(layout)}
-                />
-              </Tooltip>
-            )}
           </div>
+          {isSelectedLayout ? (
+            <Icon type="check" className="sub-menu-item-icon" theme="outlined" />
+          ) : (
+            <Tooltip placement="top" title="Remove this layout">
+              <Icon
+                type="delete"
+                className="clickable-icon sub-menu-item-icon"
+                onClick={() => onDeleteLayout(layout)}
+              />
+            </Tooltip>
+          )}
         </span>
       </Menu.Item>
     );

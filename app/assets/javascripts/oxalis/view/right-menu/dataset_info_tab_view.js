@@ -16,9 +16,13 @@ import {
   setAnnotationDescriptionAction,
 } from "oxalis/model/actions/annotation_actions";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
-import { Table } from "antd";
+import { Table, Tooltip, Icon } from "antd";
 import Markdown from "react-remarkable";
-import type { APIDataset } from "admin/api_flow_types";
+import ButtonComponent from "oxalis/view/components/button_component";
+import { convertToHybridTracing } from "admin/admin_rest_api";
+import Model from "oxalis/model";
+import { location } from "libs/window";
+import { type APIDataset, APITracingTypeEnum } from "admin/api_flow_types";
 import type { OxalisState, Tracing, Task, Flycam } from "oxalis/store";
 
 type DatasetInfoTabStateProps = {
@@ -77,7 +81,7 @@ const shortcuts = [
 export function calculateZoomLevel(flycam: Flycam, dataset: APIDataset): number {
   const zoom = getPlaneScalingFactor(flycam);
   let width;
-  const viewMode = Store.getState().temporaryConfiguration.viewMode;
+  const { viewMode } = Store.getState().temporaryConfiguration;
   if (constants.MODES_PLANE.includes(viewMode)) {
     width = constants.PLANE_WIDTH;
   } else if (constants.MODES_ARBITRARY.includes(viewMode)) {
@@ -154,8 +158,8 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
     ) : null;
   }
 
-  getKeyboardShortcuts(isPublicViewMode: boolean) {
-    return isPublicViewMode ? (
+  getKeyboardShortcuts(isDatasetViewMode: boolean) {
+    return isDatasetViewMode ? (
       <Table
         dataSource={shortcuts}
         columns={shortcutColumns}
@@ -166,12 +170,12 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
     ) : null;
   }
 
-  getOrganisationLogo(isPublicViewMode: boolean) {
+  getOrganisationLogo(isDatasetViewMode: boolean) {
     if (!this.props.dataset.logoUrl) {
       return null;
     }
 
-    return isPublicViewMode ? (
+    return isDatasetViewMode ? (
       <img
         style={{ maxHeight: 250 }}
         src={this.props.dataset.logoUrl}
@@ -180,10 +184,10 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
     ) : null;
   }
 
-  getDatasetName(isPublicViewMode: boolean) {
+  getDatasetName(isDatasetViewMode: boolean) {
     const { name: datasetName, displayName, description: datasetDescription } = this.props.dataset;
 
-    if (isPublicViewMode) {
+    if (isDatasetViewMode) {
       return (
         <div>
           <p>Dataset: {displayName || datasetName}</p>
@@ -200,8 +204,8 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
     return <p>Dataset: {datasetName}</p>;
   }
 
-  getTracingName(isPublicViewMode: boolean) {
-    if (isPublicViewMode) return null;
+  getTracingName(isDatasetViewMode: boolean) {
+    if (isDatasetViewMode) return null;
 
     let annotationTypeLabel;
 
@@ -219,7 +223,7 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
       // For readonly tracings display the non-editable explorative tracing name
       annotationTypeLabel = <span>Explorational Tracing: {tracingName}</span>;
     } else {
-      // Or display display the editable explorative tracing name
+      // Or display the editable explorative tracing name
       annotationTypeLabel = (
         <span>
           Explorational Tracing:
@@ -252,8 +256,51 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
     );
   }
 
+  handleConvertToHybrid = async () => {
+    await Model.save();
+    await convertToHybridTracing(this.props.tracing.annotationId);
+    location.reload();
+  };
+
+  getTracingType(isDatasetViewMode: boolean) {
+    if (isDatasetViewMode) return null;
+
+    const isSkeleton = this.props.tracing.skeleton != null;
+    const isVolume = this.props.tracing.volume != null;
+    const isHybrid = isSkeleton && isVolume;
+    const { allowUpdate } = this.props.tracing.restrictions;
+    const isExplorational = this.props.tracing.tracingType === APITracingTypeEnum.Explorational;
+
+    if (isHybrid) {
+      return (
+        <p>
+          Tracing Type:{" "}
+          <Tooltip title="Skeleton and Volume">
+            Hybrid <Icon type="info-circle-o" />
+          </Tooltip>
+        </p>
+      );
+    } else {
+      return (
+        <p>
+          Tracing Type: {isVolume ? "Volume" : "Skeleton"}
+          {allowUpdate && isExplorational ? (
+            <ButtonComponent
+              style={{ marginLeft: 10 }}
+              size="small"
+              onClick={this.handleConvertToHybrid}
+              title="Skeleton and Volume"
+            >
+              Convert to Hybrid
+            </ButtonComponent>
+          ) : null}
+        </p>
+      );
+    }
+  }
+
   render() {
-    const isPublicViewMode =
+    const isDatasetViewMode =
       Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
 
     const zoomLevel = calculateZoomLevel(this.props.flycam, this.props.dataset);
@@ -261,8 +308,9 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
     const extent = getDatasetExtentInLength(this.props.dataset);
     return (
       <div className="flex-overflow info-tab-content">
-        {this.getTracingName(isPublicViewMode)}
-        {this.getDatasetName(isPublicViewMode)}
+        {this.getTracingName(isDatasetViewMode)}
+        {this.getTracingType(isDatasetViewMode)}
+        {this.getDatasetName(isDatasetViewMode)}
 
         <p>Viewport Width: {formatNumberToLength(zoomLevel)}</p>
         <p>Dataset Resolution: {formatScale(this.props.dataset.dataSource.scale)}</p>
@@ -282,8 +330,8 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
         </p>
 
         {this.getTracingStatistics()}
-        {this.getKeyboardShortcuts(isPublicViewMode)}
-        {this.getOrganisationLogo(isPublicViewMode)}
+        {this.getKeyboardShortcuts(isDatasetViewMode)}
+        {this.getOrganisationLogo(isDatasetViewMode)}
       </div>
     );
   }

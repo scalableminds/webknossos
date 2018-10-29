@@ -218,6 +218,16 @@ To import an STL file, use the `Import STL Mesh` option in the [toolbar](#the-to
 ![A 3D Mesh visualized in webKnossos](./images/stl_mesh.png)
 
 
+## Hybrid Annotations
+
+Hybrid annotations combine the functionality of skeleton and volume annotations.
+In this type of annotation, you can, for example, use a guiding skeleton to support volume annotation tasks.
+Alternatively, comments, that are usually only supported in skeleton annotations, could be used to label specific cells.
+
+Skeleton or Volume annotations can be converted to hybrid annotations, by clicking the `Convert to Hybrid` button in the info tab.
+This conversion cannot be reversed.
+
+
 ## Tracing UI Settings
 The settings menu allows users to fine-tune some parameters of webKnossos.
 All settings are automatically saved as part of a user's profile.

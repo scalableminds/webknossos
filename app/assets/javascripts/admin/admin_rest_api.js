@@ -601,6 +601,12 @@ export function getUpdateActionLog(
   );
 }
 
+export function convertToHybridTracing(annotationId: string): Promise<void> {
+  return Request.receiveJSON(`/api/annotations/Explorational/${annotationId}/makeHybrid`, {
+    method: "PATCH",
+  });
+}
+
 // ### Datasets
 export async function getDatasets(): Promise<Array<APIMaybeUnimportedDataset>> {
   const datasets = await Request.receiveJSON("/api/datasets");

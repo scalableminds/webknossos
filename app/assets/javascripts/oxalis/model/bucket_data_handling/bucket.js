@@ -6,11 +6,15 @@
 import _ from "lodash";
 import BackboneEvents from "backbone-events-standalone";
 import type { Vector3, Vector4 } from "oxalis/constants";
+import * as THREE from "three";
 import constants from "oxalis/constants";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
 import * as Utils from "libs/utils";
 import window from "libs/window";
 import Toast from "libs/toast";
+import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import Store from "oxalis/store";
+import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
 
 export const BucketStateEnum = {
   UNREQUESTED: "UNREQUESTED",
@@ -31,6 +35,8 @@ export class DataBucket {
   BIT_DEPTH: number;
   BUCKET_LENGTH: number;
   BYTE_OFFSET: number;
+  visualizedMesh: ?Object;
+  visualizationColor: number;
 
   state: BucketStateEnumType;
   dirty: boolean;
@@ -320,6 +326,37 @@ export class DataBucket {
           data[i * this.BYTE_OFFSET + j] = newData[i * this.BYTE_OFFSET + j];
         }
       }
+    }
+  }
+
+  // The following three methods can be used for debugging purposes.
+  // The bucket will be rendered in the 3D scene as a wireframe geometry.
+  visualize() {
+    if (this.visualizedMesh != null) {
+      return;
+    }
+    if (this.zoomedAddress[3] === 0 || this.zoomedAddress[3] === 1) {
+      const resolutions = getResolutions(Store.getState().dataset);
+      this.visualizedMesh = window.addBucketMesh(
+        bucketPositionToGlobalAddress(this.zoomedAddress, resolutions),
+        this.zoomedAddress[3],
+        this.visualizationColor,
+      );
+    }
+  }
+
+  unvisualize() {
+    if (this.visualizedMesh != null) {
+      window.removeBucketMesh(this.visualizedMesh);
+      this.visualizedMesh = null;
+    }
+  }
+
+  setVisualizationColor(colorDescriptor: string | number) {
+    const color = new THREE.Color(colorDescriptor);
+    this.visualizationColor = color;
+    if (this.visualizedMesh != null) {
+      this.visualizedMesh.material.color = color;
     }
   }
 }

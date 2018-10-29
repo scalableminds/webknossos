@@ -4,7 +4,7 @@ import Request from "libs/request";
 import Toast from "libs/toast";
 import type { Message } from "libs/toast";
 import * as Utils from "libs/utils";
-import { location } from "libs/window";
+import window, { location } from "libs/window";
 import messages from "messages";
 import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
 import type {
@@ -601,6 +601,12 @@ export function getUpdateActionLog(
   );
 }
 
+export function convertToHybridTracing(annotationId: string): Promise<void> {
+  return Request.receiveJSON(`/api/annotations/Explorational/${annotationId}/makeHybrid`, {
+    method: "PATCH",
+  });
+}
+
 // ### Datasets
 export async function getDatasets(): Promise<Array<APIMaybeUnimportedDataset>> {
   const datasets = await Request.receiveJSON("/api/datasets");
@@ -930,3 +936,13 @@ export function getOperatorData(): Promise<string> {
 export function getExistingExperienceDomains(): Promise<ExperienceDomainList> {
   return Request.receiveJSON("/api/tasks/experienceDomains");
 }
+
+export async function isInMaintenance(): Promise<boolean> {
+  const info = await Request.receiveJSON("/api/maintenance");
+  return info.isMaintenance;
+}
+
+export function setMaintenance(bool: boolean): Promise<void> {
+  return Request.triggerRequest("/api/maintenance", { method: bool ? "POST" : "DELETE" });
+}
+window.setMaintenance = setMaintenance;

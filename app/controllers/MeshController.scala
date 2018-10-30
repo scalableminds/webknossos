@@ -25,8 +25,8 @@ class MeshController @Inject()(meshDAO: MeshDAO,
   def get(id: String) = sil.UserAwareAction.async { implicit request =>
     for {
       idValidated <- ObjectId.parse(id)
-      meshInfo <- meshDAO.findOne(idValidated)
-      meshInfoJs <- meshService.publicWrites(meshInfo)
+      meshInfo <- meshDAO.findOne(idValidated) ?~> "mesh.notFound"
+      meshInfoJs <- meshService.publicWrites(meshInfo) ?~> "mesh.write.failed"
     } yield JsonOk(meshInfoJs)
   }
 
@@ -34,10 +34,9 @@ class MeshController @Inject()(meshDAO: MeshDAO,
     val params = request.body
     val _id = ObjectId.generate
     for {
-      //TODO: is the annotation id validated?
-      _ <- meshDAO.insertOne(MeshInfo(_id, params.annotationId, params.description, params.position))
-      inserted <- meshDAO.findOne(_id)
-      js <- meshService.publicWrites(inserted)
+      _ <- meshDAO.insertOne(MeshInfo(_id, params.annotationId, params.description, params.position)) ?~> "mesh.create.failed"
+      inserted <- meshDAO.findOne(_id) ?~> "mesh.notFound"
+      js <- meshService.publicWrites(inserted) ?~> "mesh.write.failed"
     } yield Ok(js)
   }
 
@@ -45,32 +44,31 @@ class MeshController @Inject()(meshDAO: MeshDAO,
     val params = request.body
     for {
       idValidated <- ObjectId.parse(id)
-      _ <- meshDAO.updateOne(idValidated, params.annotationId, params.description, params.position)
-      updated <- meshDAO.findOne(idValidated)
-      js <- meshService.publicWrites(updated)
+      _ <- meshDAO.updateOne(idValidated, params.annotationId, params.description, params.position) ?~> "mesh.update.failed"
+      updated <- meshDAO.findOne(idValidated) ?~> "mesh.notFound"
+      js <- meshService.publicWrites(updated) ?~> "mesh.write.failed"
     } yield Ok(js)
   }
 
   def getData(id: String) = sil.SecuredAction.async { implicit request =>
     for {
       idValidated <- ObjectId.parse(id)
-      data <- meshDAO.getData(idValidated)
+      data <- meshDAO.getData(idValidated) ?~> "mesh.data.get.failed"
     } yield Ok(data)
   }
 
   def updateData(id: String) = sil.SecuredAction.async(parse.raw) { implicit request =>
     for {
       idValidated <- ObjectId.parse(id)
-      byteString <- request.body.asBytes(maxLength = 1024*1024*1024) ?~> "asBytes failed"
-      array = byteString.toArray
-      _ <- meshDAO.updateData(idValidated, array)
+      byteString <- request.body.asBytes(maxLength = 1024*1024*1024) ?~> "mesh.data.read.failed"
+      _ <- meshDAO.updateData(idValidated, byteString.toArray) ?~> "mesh.data.save.failed"
     } yield Ok
   }
 
   def delete(id: String)  = sil.SecuredAction.async { implicit request =>
     for {
       idValidated <- ObjectId.parse(id)
-      _ <- meshDAO.deleteOne(idValidated)
+      _ <- meshDAO.deleteOne(idValidated) ?~> "mesh.delete.failed"
     } yield Ok
   }
 

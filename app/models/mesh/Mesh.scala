@@ -68,6 +68,11 @@ class MeshDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) ext
   def infoColumns = (columnsList diff Seq("data")).mkString(", ")
   type InfoTuple = (String, String, String, String, java.sql.Timestamp, Boolean)
 
+  override def readAccessQ(requestingUserId: ObjectId): String = s"""
+    (isPublic or _team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}') or _user = '${requestingUserId.id}'
+    or (select _organization from webknossos.teams where webknossos.teams._id = _team)
+    in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
+
   def parse(r: MeshesRow) = Fox.failure("not implemented, use parseInfo or get the data directly")
 
   def parseInfo(r: InfoTuple): Fox[MeshInfo] =

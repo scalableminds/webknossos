@@ -15,6 +15,7 @@
 * [Supported Data Formats](./data_formats.md)
 * [Keyboard Shortcuts](./keyboard_shortcuts.md)
 * [FAQ](./faq.md)
+* [Backend REST API](./rest_api.md)
 * [Code Readme](../README.md)
 * [Changelog](../CHANGELOG.md)
 * [Migration Guide](../MIGRATIONS.md)

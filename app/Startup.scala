@@ -45,12 +45,10 @@ class Startup @Inject() (actorSystem: ActorSystem,
   }
 
   ensurePostgresDatabase.onComplete { _ =>
-    if (conf.Application.insertInitialData) {
-      initialDataService.insert.futureBox.map {
-        case Full(_) => ()
-        case Failure(msg, _, _) => logger.info("No initial data inserted: " + msg)
-        case _ => logger.warn("Error while inserting initial data")
-      }
+    initialDataService.insert.futureBox.map {
+      case Full(_) => ()
+      case Failure(msg, _, _) => logger.info("No initial data inserted: " + msg)
+      case _ => logger.warn("Error while inserting initial data")
     }
   }
 

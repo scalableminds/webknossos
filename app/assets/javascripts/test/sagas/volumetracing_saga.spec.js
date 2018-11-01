@@ -69,11 +69,13 @@ const resetContourAction = VolumeTracingActions.resetContourAction();
 test("VolumeTracingSaga shouldn't do anything if unchanged (saga test)", t => {
   const saga = saveTracingTypeAsync("volume");
   expectValueDeepEqual(t, saga.next(), take("INITIALIZE_VOLUMETRACING"));
-  saga.next({ initVolume: true });
+  saga.next();
   saga.next(initialState.tracing);
+  saga.next(initialState.flycam);
   saga.next();
   saga.next(true);
   saga.next();
+  saga.next(true);
   saga.next(initialState.tracing);
   // only updateTracing
   const items = execCall(t, saga.next(initialState.flycam));
@@ -85,11 +87,13 @@ test("VolumeTracingSaga should do something if changed (saga test)", t => {
 
   const saga = saveTracingTypeAsync("volume");
   expectValueDeepEqual(t, saga.next(), take("INITIALIZE_VOLUMETRACING"));
-  saga.next({ initVolume: true });
+  saga.next();
   saga.next(initialState.tracing);
+  saga.next(initialState.flycam);
   saga.next();
   saga.next(true);
   saga.next();
+  saga.next(true);
   saga.next(newState.tracing);
   const items = execCall(t, saga.next(newState.flycam));
   t.is(withoutUpdateTracing(items).length, 0);

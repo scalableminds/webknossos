@@ -48,6 +48,7 @@ import type {
   APIDatasetId,
   APIDataset,
   APIDataLayer,
+  APITracingStore,
 } from "admin/api_flow_types";
 import { defaultLayoutSchema } from "oxalis/view/layouting/default_layout_configs";
 
@@ -140,6 +141,7 @@ export type Annotation = {|
   +tags: Array<string>,
   +description: string,
   +name: string,
+  +tracingStore: APITracingStore,
   +tracingType: TracingTypeTracing,
 |};
 
@@ -172,6 +174,7 @@ export type VolumeTracing = {|
   +contourTracingMode: ContourMode,
   +contourList: Array<Vector3>,
   +cells: VolumeCellMap,
+  +fallbackLayer?: string,
 |};
 
 export type ReadOnlyTracing = {|
@@ -385,6 +388,10 @@ const initialAnnotationInfo = {
   tags: [],
   description: "",
   name: "",
+  tracingStore: {
+    name: "localhost",
+    url: "http://localhost:9000",
+  },
   tracingType: "View",
 };
 

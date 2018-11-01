@@ -24,8 +24,6 @@ services:
       - $BINARY_DATA_PATH:/srv/webknossos-datastore/binaryData
       - ./tmp:/tmp
       - ./config/datastore-docker.conf:/srv/webknossos-datastore/conf/docker.conf
-      - /wKlive:/wKlive
-      - /tmpscratch:/tmpscratch
     environment:
       - NEW_RELIC_LICENSE_KEY
       - NEW_RELIC_APP_NAME

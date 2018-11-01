@@ -2,8 +2,6 @@
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 
-GET           /assets/*file                                                     controllers.Assets.at(path="/public", file)
-
 GET           /buildinfo                                                        controllers.Application.buildInfo
 GET           /features                                                         controllers.Application.features
 POST          /analytics/:namespace                                             controllers.Application.analytics(namespace)

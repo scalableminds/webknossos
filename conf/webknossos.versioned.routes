@@ -1,7 +1,5 @@
 # API versioning is handled here. Higher-Priority routes first
 
-GET      /assets/*file                                                  controllers.Assets.at(path="/public", file)
-
 # example: assume, the features route has changed, introducing v2. The older v1 needs to be provided in the legacyApiController
 #->      /v2/      webknossos.Routes
 

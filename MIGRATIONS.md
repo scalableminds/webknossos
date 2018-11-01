@@ -7,6 +7,8 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 ## Unreleased
 - If additional dataset directories were watched using the config key `additionalFolders`, those symlinks are no longer updated. Consider setting up additional datastores for these directories respectively.
 -
+### Postgres Evolutions:
+- [033-tasktype-recommendedConfiguration.sql](033-tasktype-recommendedConfiguration.sql)
 
 
 ## [18.11.0](https://github.com/scalableminds/webknossos/releases/tag/18.11.0) - 2018-10-29

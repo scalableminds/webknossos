@@ -6,6 +6,8 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 
 ## Unreleased
 -
+### Postgres Evolutions:
+- [033-tasktype-recommendedConfiguration.sql](033-tasktype-recommendedConfiguration.sql)
 
 
 ## [18.11.0](https://github.com/scalableminds/webknossos/releases/tag/18.11.0) - 2018-10-29

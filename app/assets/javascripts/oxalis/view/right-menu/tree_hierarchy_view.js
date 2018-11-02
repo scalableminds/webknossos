@@ -50,8 +50,8 @@ type Props = {
   onUpdateTreeGroups: (Array<TreeGroup>) => void,
   onSetTreeGroup: (?number, number) => void,
   handleTreeSelect: number => void,
-  handleTreeGroupSelect: number => void,
-  deselectEverthing: () => void,
+  handleTreeGroupSelect: (number, ?TreeNode) => void,
+  unselectEverthing: () => void,
 };
 
 type State = {
@@ -69,7 +69,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     prevProps: null,
     searchFocusOffset: 0,
     mouseTooltipActive: false,
-    // TODO !! And make a deselect all trees button !!!!
   };
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State) {
@@ -144,10 +143,29 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }
   };
 
+  findGroupInTree = (groupId: number, tree: Array<TreeNode>): ?TreeNode => {
+    for (let index = 0; index < tree.length; ++index) {
+      const currentNode = tree[index];
+      if (currentNode.type !== "GROUP") {
+        continue;
+      }
+      if (currentNode.id === groupId) {
+        return currentNode;
+      } else {
+        const foundGroup = this.findGroupInTree(groupId, currentNode.children);
+        if (foundGroup !== null) {
+          return foundGroup;
+        }
+      }
+    }
+    return null;
+  };
+
   onSelectGroup = evt => {
     const groupId = evt.target.dataset.id;
     if (evt.altKey) {
-      this.props.handleTreeGroupSelect(parseInt(groupId, 10));
+      const selectedGroup = this.findGroupInTree(groupId, this.state.groupTree);
+      this.props.handleTreeGroupSelect(parseInt(groupId, 10), selectedGroup);
     } else {
       this.props.onSetActiveGroup(parseInt(groupId, 10));
     }
@@ -162,23 +180,24 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }));
   };
 
+  setParentOfSelectedGroups(newParent: TreeGroup, currentNode: TreeGroup) {
+    const children = currentNode.children;
+    for (let index = 0; index < children.length; index++) {
+      const currentChild = children[index];
+      if (this.props.selectedTreeGroups.includes(currentChild.groupId)) {
+        newParent.children.push(currentChild);
+        currentNode.children.splice(index, 1);
+      }
+      this.setParentOfSelectedGroups(newParent, currentChild);
+    }
+  }
+
   onMoveNode = (params: {
     nextParentNode: TreeNode,
     node: TreeNode,
     treeData: Array<TreeNode>,
   }) => {
     const { nextParentNode, node, treeData } = params;
-    /* let allTrees = [];
-    let allGroups = [];
-    if (node.type === TYPE_TREE) {
-      allTrees = [node.id];
-    } else {
-      // needs to be tested => how to get the group id
-      allGroups = [node]
-      // TODO iterate over all trees and set their group to (guess) nextParentNode.id!
-    }
-    allNodes = _.union(allTrees, this.props.selectedTrees);
-    allGroups = _.union(allGroups, this.props.selectedTreeGroups); */
     if (node.type === TYPE_TREE) {
       // A tree was dragged - update the group of the dragged tree
       this.props.onSetTreeGroup(
@@ -194,8 +213,25 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     } else {
       // A group was dragged - update the groupTree
       // Exclude root group and remove trees from groupTree object
-      const newTreeGroups = removeTreesAndTransform(treeData[0].children);
-      this.props.onUpdateTreeGroups(newTreeGroups);
+      // TODO also do this when a tree was moved and the other way round
+      // TODO test this
+      const nextParentGroupNode = this.findGroupInTree(nextParentNode.id, treeData);
+      const newTreeGroups = removeTreesAndTransform(treeData);
+      if (!nextParentGroupNode) {
+        this.props.onUpdateTreeGroups(newTreeGroups);
+        throw new Error(
+          "Dragging does not work correctly. The new parent group/node does not exist.",
+        );
+      }
+      const nextParentGroup = {
+        name: nextParentGroupNode.name,
+        groupId: nextParentGroupNode.id,
+        children: removeTreesAndTransform(nextParentGroupNode.children),
+      };
+      newTreeGroups.forEach(currentNode =>
+        this.setParentOfSelectedGroups(nextParentGroup, currentNode),
+      );
+      this.props.onUpdateTreeGroups(newTreeGroups[0].children);
     }
   };
 
@@ -362,10 +398,10 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     const mouseToolTipText = this.state.mouseTooltipActive
       ? `${this.props.selectedTrees.length} additional tree(s) and ${
           this.props.selectedTreeGroups.length
-        } additional groups moving.`
+        } additional group(s) moving.`
       : `${this.props.selectedTrees.length} tree(s) and ${
           this.props.selectedTreeGroups.length
-        } groups selected.`;
+        } group(s) selected.`;
     return (
       <AutoSizer className="info-tab-content">
         {({ height, width }) => (
@@ -373,12 +409,12 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             {
               <span style={{ color: "#1890ff" }}>
                 {mouseToolTipText}
-                <Tooltip title="Deselect everthing">
+                <Tooltip title="Unselect everthing">
                   <Icon
                     type="rollback"
                     theme="outlined"
                     style={{ marginLeft: 32, cursor: "pointer" }}
-                    onClick={this.props.deselectEverthing}
+                    onClick={this.props.unselectEverthing}
                   />
                 </Tooltip>
               </span>

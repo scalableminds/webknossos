@@ -35,6 +35,7 @@ import Toast from "libs/toast";
 import type { Dispatch } from "redux";
 import type { OxalisState, Tracing, SkeletonTracing, UserConfiguration } from "oxalis/store";
 import { createGroupToTreesMap } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
+import type { TreeNode } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import SearchPopover from "./search_popover";
 
 const ButtonGroup = Button.Group;
@@ -207,25 +208,33 @@ class TreesTabView extends React.PureComponent<Props, State> {
     });
   };
 
-  handleTreeGroupSelect = (id: number) => {
-    if (!this.props.skeletonTracing) {
-      return;
-    }
-    const { trees } = this.props.skeletonTracing;
-    const treeGroupMap = createGroupToTreesMap(trees);
-    const idsOfSelectedGroup = treeGroupMap[id].map(node => node.treeId);
+  handleTreeGroupSelect = (id: number, groupTree: TreeNode) => {
     if (this.state.selectedTreeGroups.includes(id)) {
       this.setState(prevState => ({
         selectedTreeGroups: prevState.selectedTreeGroups.filter(currentId => currentId !== id),
       }));
       return;
     }
-    const alreadySubitemsSelected =
-      _.difference(
-        idsOfSelectedGroup,
-        this.state.selectedTrees.concat(this.state.selectedTreeGroups),
-      ).length !== idsOfSelectedGroup.length;
-    if (alreadySubitemsSelected) {
+    if (!this.props.skeletonTracing) {
+      return;
+    }
+    const { trees } = this.props.skeletonTracing;
+    const treeGroupMap = createGroupToTreesMap(trees);
+    let idsOfSelectedGroup = [];
+    if (treeGroupMap[id]) {
+      idsOfSelectedGroup = treeGroupMap[id].map(node => node.treeId);
+    }
+    let groupHasSubtreesSelected = false;
+    groupTree.children.forEach(currentChild => {
+      if(currentChild.type === "TREE"){
+        if(this.state.selectedTrees.includes(currentChild.id)){
+          groupHasSubtreesSelected = true;
+        }
+      } else if(this.state.selectedTreeGroups.includes(currentChild.id)){
+        groupHasSubtreesSelected =  true;
+        }
+      });
+    if (groupHasSubtreesSelected) {
       const confirmSelectOfGroup = () => {
         this.setState(prevState => ({
           selectedTrees: _.difference(prevState.selectedTrees, idsOfSelectedGroup),
@@ -240,7 +249,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     }
   };
 
-  deselectEverthing = () => {
+  unselectEverthing = () => {
     this.setState({ selectedTreeGroups: [], selectedTrees: [] });
   };
 
@@ -261,7 +270,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
         selectedTreeGroups={this.state.selectedTreeGroups}
         handleTreeSelect={this.handleTreeSelect}
         handleTreeGroupSelect={this.handleTreeGroupSelect}
-        deselectEverthing={this.deselectEverthing}
+        unselectEverthing={this.unselectEverthing}
       />
     );
   }

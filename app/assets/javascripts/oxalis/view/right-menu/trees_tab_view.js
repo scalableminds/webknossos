@@ -34,9 +34,7 @@ import { getBuildInfo } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import type { Dispatch } from "redux";
 import type { OxalisState, Tracing, SkeletonTracing, UserConfiguration } from "oxalis/store";
-import {
-  createGroupToTreesMap,
-} from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
+import { createGroupToTreesMap } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import SearchPopover from "./search_popover";
 
 const ButtonGroup = Button.Group;
@@ -156,30 +154,61 @@ class TreesTabView extends React.PureComponent<Props, State> {
     saveAs(blob, getNmlName(state));
   };
 
+  showGroupAlreadySelectedWarning = (confirmSelection: () => void) => {
+    Modal.confirm({
+      title: "Do you really want to select this tree?",
+      content:
+        "The group of this tree is already selected. Do you really want to select this tree? This will unselect the trees' group.",
+      okText: "Ok",
+      cancelText: "No",
+      autoFocusButton: "cancel",
+      iconType: "warning",
+      onCancel: () => {},
+      onOk: confirmSelection,
+    });
+  };
+
   handleTreeSelect = id => {
-    if(!this.props.skeletonTracing){
+    if (!this.props.skeletonTracing) {
       return;
     }
     const { trees } = this.props.skeletonTracing;
     if (this.state.selectedTrees.includes(id)) {
       this.setState(prevState => ({
         selectedTrees: prevState.selectedTrees.filter(currentId => currentId !== id),
-        // also unselect group of current tree
-        selectedTreeGroups: prevState.selectedTreeGroups.filter(
-          groupId => groupId !== trees[id].groupId,
-        ),
       }));
-    } else {
-      this.setState((prevState) => 
-        ( {
+    } else if (this.state.selectedTreeGroups.includes(trees[id].groupId)) {
+      const confirmSelectOfTree = () => {
+        this.setState(prevState => ({
           selectedTrees: [...prevState.selectedTrees, id],
-        })
-      );
+          selectedTreeGroups: prevState.selectedTreeGroups.filter(
+            groupId => groupId !== trees[id].groupId,
+          ),
+        }));
+      };
+      this.showGroupAlreadySelectedWarning(confirmSelectOfTree);
+    } else {
+      this.setState(prevState => ({
+        selectedTrees: [...prevState.selectedTrees, id],
+      }));
     }
   };
 
+  showSubitemAlreadySelectedWarning = (confirmSelectGroup: () => void) => {
+    Modal.confirm({
+      title: "Do you really want to select this group?",
+      content:
+        "Some of the trees or groups in this group are already selected. Do you really want to select this group? This will unselect all trees and groups that are in this group.",
+      okText: "Ok",
+      cancelText: "No",
+      iconType: "warning",
+      onCancel: () => {},
+      onOk: confirmSelectGroup,
+    });
+  };
+
   handleTreeGroupSelect = (id: number) => {
-    if(!this.props.skeletonTracing){
+    if (!this.props.skeletonTracing) {
       return;
     }
     const { trees } = this.props.skeletonTracing;
@@ -187,14 +216,25 @@ class TreesTabView extends React.PureComponent<Props, State> {
     const idsOfSelectedGroup = treeGroupMap[id].map(node => node.treeId);
     if (this.state.selectedTreeGroups.includes(id)) {
       this.setState(prevState => ({
-        selectedTrees: prevState.selectedTrees.filter(
-          currentId => !idsOfSelectedGroup.includes(currentId),
-        ),
         selectedTreeGroups: prevState.selectedTreeGroups.filter(currentId => currentId !== id),
       }));
+      return;
+    }
+    const alreadySubitemsSelected =
+      _.difference(
+        idsOfSelectedGroup,
+        this.state.selectedTrees.concat(this.state.selectedTreeGroups),
+      ).length !== idsOfSelectedGroup.length;
+    if (alreadySubitemsSelected) {
+      const confirmSelectOfGroup = () => {
+        this.setState(prevState => ({
+          selectedTrees: _.difference(prevState.selectedTrees, idsOfSelectedGroup),
+          selectedTreeGroups: [...prevState.selectedTreeGroups, id],
+        }));
+      };
+      this.showSubitemAlreadySelectedWarning(confirmSelectOfGroup);
     } else {
       this.setState(prevState => ({
-        selectedTrees: _.union(prevState.selectedTrees, idsOfSelectedGroup),
         selectedTreeGroups: [...prevState.selectedTreeGroups, id],
       }));
     }

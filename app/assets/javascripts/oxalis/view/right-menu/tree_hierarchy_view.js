@@ -29,7 +29,6 @@ import {
 } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import type { TreeMap, TreeGroup } from "oxalis/store";
 import type { TreeNode } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
-import StickyMouseTooltip from "./sticky-mouse-tooltip";
 
 const CHECKBOX_STYLE = { verticalAlign: "middle" };
 

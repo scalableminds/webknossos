@@ -24,10 +24,26 @@ class BinaryDataService(dataBaseDir: Path, loadTimeout: FiniteDuration, maxCache
 
   lazy val cache = new DataCubeCache(maxCacheSize)
 
+  def handleDataRequest(request: DataServiceDataRequest): Fox[Array[Byte]] = {
+    val bucketQueue = request.cuboid.allBucketsInCuboid
+
+    if (!request.cuboid.hasValidDimensions) {
+      Fox.failure("Invalid cuboid dimensions (must be > 0 and <= 512).")
+    } else if (request.cuboid.isSingleBucket(DataLayer.bucketLength)) {
+      bucketQueue.headOption.toFox.flatMap { bucket =>
+        handleBucketRequest(request, bucket)
+      }
+    } else {
+      Fox.serialSequence(bucketQueue.toList) { bucket =>
+        handleBucketRequest(request, bucket).map(r => bucket -> r)
+      }.map(buckets => cutOutCuboid(request, buckets.flatten))
+    }
+  }
+
   def handleDataRequests(requests: List[DataServiceDataRequest]): Fox[(Array[Byte], List[Int])] = {
     val requestsCount = requests.length
     val requestData = requests.zipWithIndex.map { case (request, index) =>
-      getDataForRequest(request).map { data =>
+      handleDataRequest(request).map { data =>
         if (request.settings.halfByte) {
           (convertToHalfByte(data), index)
         } else {
@@ -47,31 +63,6 @@ class BinaryDataService(dataBaseDir: Path, loadTimeout: FiniteDuration, maxCache
   def handleMappingRequest(request: DataServiceMappingRequest): Fox[Array[Byte]] = {
     val readInstruction = MappingReadInstruction(dataBaseDir, request.dataSource, request.mapping)
     request.dataLayer.mappingProvider.load(readInstruction)
-  }
-
-  private def getDataForRequest(request: DataServiceDataRequest): Fox[Array[Byte]] = {
-
-    def isSingleBucketRequest = {
-      val bucketLength = DataLayer.bucketLength
-      request.cuboid.width == bucketLength &&
-        request.cuboid.height == bucketLength &&
-        request.cuboid.depth == bucketLength &&
-        request.cuboid.topLeft == request.cuboid.topLeft.toBucket.topLeft
-    }
-
-    val bucketQueue = request.cuboid.allBucketsInCuboid
-
-    if (isSingleBucketRequest) {
-      bucketQueue.headOption.toFox.flatMap { bucket =>
-        handleBucketRequest(request, bucket)
-      }
-    } else {
-      Fox.serialCombined(bucketQueue.toList) { bucket =>
-        handleBucketRequest(request, bucket).map(r => bucket -> r)
-      }.map {
-        cutOutCuboid(request, _)
-      }
-    }
   }
 
   private def handleBucketRequest(request: DataServiceDataRequest, bucket: BucketPosition): Fox[Array[Byte]] = {
@@ -143,6 +134,8 @@ class BinaryDataService(dataBaseDir: Path, loadTimeout: FiniteDuration, maxCache
     }
     compressed
   }
+
+  // private def applyMapping()
 
   def clearCache(organizationName: String, dataSetName: String) = {
     def matchingPredicate(cubeKey: CachedCube) = {

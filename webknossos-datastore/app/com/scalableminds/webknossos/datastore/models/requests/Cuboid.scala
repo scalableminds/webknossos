@@ -12,6 +12,12 @@ case class Cuboid(topLeft: VoxelPosition, width: Int, height: Int, depth: Int) {
 
   val volume: Int = width * height * depth
 
+  val hasValidDimensions: Boolean = width > 0 && width <= 512 && height > 0 && height <= 512 && depth > 0 && depth <= 512
+
+  def isSingleBucket(bucketLength: Int): Boolean = {
+    width == bucketLength && height == bucketLength && depth == bucketLength && topLeft == topLeft.toBucket.topLeft
+  }
+
   /**
     * Returns all buckets that are withing the cuboid spanned by top-left and bottom-right
     */

@@ -14,6 +14,7 @@ object DataServiceRequestSettings {
 case class DataServiceDataRequest(
                                    dataSource: DataSource,
                                    dataLayer: DataLayer,
+                                   dataLayerMapping: Option[String],
                                    cuboid: Cuboid,
                                    settings: DataServiceRequestSettings
                                  )

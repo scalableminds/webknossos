@@ -41,7 +41,25 @@ case class WebKnossosDataRequest(
 }
 
 object WebKnossosDataRequest {
-  implicit val webKnossosDataRequestFormat = Json.format[WebKnossosDataRequest]
+  implicit val format = Json.format[WebKnossosDataRequest]
+}
+
+case class WebKnossosIsosurfaceRequest(
+                                        position: Point3D,
+                                        zoomStep: Int,
+                                        cubeSize: Int,
+                                        segmentId: Long,
+                                        mapping: Option[String] = None
+                                      ) {
+  def cuboid(dataLayer: DataLayer) = Cuboid(
+    new VoxelPosition(position.x, position.y, position.z, dataLayer.lookUpResolution(zoomStep)),
+    cubeSize,
+    cubeSize,
+    cubeSize)
+}
+
+object WebKnossosIsosurfaceRequest {
+  implicit val format = Json.format[WebKnossosIsosurfaceRequest]
 }
 
 object DataRequestCollection {

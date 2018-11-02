@@ -5,9 +5,9 @@ import com.scalableminds.util.geometry.{BoundingBox, GenericPosition, Point3D}
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
 class VoxelPosition(
-                      protected val globalX: Int,
-                      protected val globalY: Int,
-                      protected val globalZ: Int,
+                      val globalX: Int,
+                      val globalY: Int,
+                      val globalZ: Int,
                       val resolution: Point3D
                    ) extends GenericPosition {
 

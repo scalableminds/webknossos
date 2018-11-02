@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.controllers
 
-
 import java.io.{ByteArrayOutputStream, OutputStream}
 import java.nio.file.Paths
 import java.util.Base64
@@ -14,6 +13,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.models._
+import com.scalableminds.util.mvc.JsonResults
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId, SegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceDataRequest, DataServiceMappingRequest, DataServiceRequestSettings}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection._
@@ -308,18 +308,20 @@ class BinaryDataController @Inject()(
       }
   }
 
-  def requestIsosurface(organizationName: String, dataSetName: String, dataLayerName: String, segmentId: Long, size: Int) = Action.async {
+  /**
+    * Handles isosurface requests.
+    */
+  def requestIsosurface(organizationName: String, dataSetName: String, dataLayerName: String) = Action.async(validateJson[WebKnossosIsosurfaceRequest]) {
     implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
         AllowRemoteOrigin {
           for {
             (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
             segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Messages("dataLayer.mustBeSegmentation")
-            isosurface <- isosurfaceService.requestIsosurface(IsosurfaceRequest(
-              dataSource, dataLayer, Cuboid(new VoxelPosition(0, 0, 0, Point3D(1, 1, 1)), size, size, size), segmentId)
-            )
+            isosurfaceRequest = IsosurfaceRequest(dataSource, dataLayer, request.body.cuboid(dataLayer), request.body.segmentId, request.body.mapping)
+            vertices <- isosurfaceService.requestIsosurface(isosurfaceRequest)
           } yield {
-            Ok(Json.obj("actor says" -> isosurface))
+            Ok(Json.obj("vertices" -> vertices))
           }
         }
       }
@@ -339,7 +341,7 @@ class BinaryDataController @Inject()(
                            dataLayer: DataLayer,
                            dataRequests: DataRequestCollection
                          ): Fox[(Array[Byte], List[Int])] = {
-    val requests = dataRequests.map(r => DataServiceDataRequest(dataSource, dataLayer, r.cuboid(dataLayer), r.settings))
+    val requests = dataRequests.map(r => DataServiceDataRequest(dataSource, dataLayer, None, r.cuboid(dataLayer), r.settings))
     binaryDataService.handleDataRequests(requests)
   }
 

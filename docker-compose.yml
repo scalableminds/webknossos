@@ -20,6 +20,7 @@ services:
       # the following lines disable the integrated datastore:
       # - -Dplay.modules.enabled-="com.scalableminds.webknossos.datastore.DataStoreModule"
       # - -Ddatastore.enabled=false
+      # - -Dplay.http.router="noDS.Routes"
     volumes:
       - ./binaryData:/srv/webknossos/binaryData
     environment:

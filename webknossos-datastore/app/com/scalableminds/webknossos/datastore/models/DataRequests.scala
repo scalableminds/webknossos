@@ -27,7 +27,8 @@ case class WebKnossosDataRequest(
                                   position: Point3D,
                                   zoomStep: Int,
                                   cubeSize: Int,
-                                  fourBit: Option[Boolean]
+                                  fourBit: Option[Boolean],
+                                  version: Option[Long]
                                 ) extends AbstractDataRequest {
 
   def cuboid(dataLayer: DataLayer) = Cuboid(
@@ -36,7 +37,7 @@ case class WebKnossosDataRequest(
     cubeSize,
     cubeSize)
 
-  def settings = DataServiceRequestSettings(halfByte = fourBit.getOrElse(false))
+  def settings = DataServiceRequestSettings(halfByte = fourBit.getOrElse(false), version)
 }
 
 object WebKnossosDataRequest {

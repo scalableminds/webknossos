@@ -79,6 +79,7 @@ export default class LayerRenderingManager {
   };
   name: string;
   isSegmentation: boolean;
+  needsRefresh: boolean = false;
 
   constructor(
     name: string,
@@ -94,6 +95,10 @@ export default class LayerRenderingManager {
     this.textureWidth = textureWidth;
     this.dataTextureCount = dataTextureCount;
     this.isSegmentation = isSegmentation;
+  }
+
+  refresh() {
+    this.needsRefresh = true;
   }
 
   setupDataTextures(): void {
@@ -164,7 +169,8 @@ export default class LayerRenderingManager {
       (isArbitrary && !_.isEqual(this.lastZoomedMatrix, matrix)) ||
       viewMode !== this.lastViewMode ||
       sphericalCapRadius !== this.lastSphericalCapRadius ||
-      isInvisible !== this.lastIsInvisible
+      isInvisible !== this.lastIsInvisible ||
+      this.needsRefresh
     ) {
       this.lastSubBucketLocality = subBucketLocality;
       this.lastAreas = areas;
@@ -172,6 +178,7 @@ export default class LayerRenderingManager {
       this.lastViewMode = viewMode;
       this.lastSphericalCapRadius = sphericalCapRadius;
       this.lastIsInvisible = isInvisible;
+      this.needsRefresh = false;
 
       const bucketQueue = new PriorityQueue({
         // small priorities take precedence

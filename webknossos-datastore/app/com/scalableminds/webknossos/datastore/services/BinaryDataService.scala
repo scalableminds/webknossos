@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.nio.file.Paths
+import java.nio.file.{Path, Paths}
 
 import com.google.inject.Inject
 import com.newrelic.api.agent.NewRelic
@@ -20,13 +20,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class BinaryDataService @Inject()(config: DataStoreConfig) extends FoxImplicits with LazyLogging {
-
-  val dataBaseDir = Paths.get(config.Braingames.Binary.baseFolder)
-
-  val loadTimeout: FiniteDuration = config.Braingames.Binary.loadTimeout
-
-  val maxCacheSize: Int = config.Braingames.Binary.cacheMaxSize
+class BinaryDataService(dataBaseDir: Path, loadTimeout: FiniteDuration, maxCacheSize: Int) extends FoxImplicits with LazyLogging {
 
   lazy val cache = new DataCubeCache(maxCacheSize)
 
@@ -86,7 +80,8 @@ class BinaryDataService @Inject()(config: DataStoreConfig) extends FoxImplicits 
         dataBaseDir,
         request.dataSource,
         request.dataLayer,
-        bucket)
+        bucket,
+        request.settings.version)
 
       request.dataLayer.bucketProvider.load(readInstruction, cache, loadTimeout)
     } else {

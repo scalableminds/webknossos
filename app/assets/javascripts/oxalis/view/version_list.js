@@ -1,7 +1,8 @@
 // @flow
 import * as React from "react";
 import _ from "lodash";
-import { Spin, List } from "antd";
+import moment from "moment";
+import { List } from "antd";
 import Store from "oxalis/store";
 import { ControlModeEnum } from "oxalis/constants";
 import Model from "oxalis/model";
@@ -10,9 +11,10 @@ import { getUpdateActionLog } from "admin/admin_rest_api";
 import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_actions";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import { handleGenericError } from "libs/error_handling";
-import { revertToVersion } from "oxalis/model/sagas/update_actions";
+import { revertToVersion, serverCreateTracing } from "oxalis/model/sagas/update_actions";
 import { pushSaveQueueAction, setVersionNumberAction } from "oxalis/model/actions/save_actions";
-import VersionEntry from "oxalis/view/version_entry";
+import VersionEntryGroup from "oxalis/view/version_entry_group";
+import { chunkIntoTimeWindows } from "libs/utils";
 import type { APIUpdateActionBatch } from "admin/api_flow_types";
 import type { SkeletonTracing, VolumeTracing } from "oxalis/store";
 import type { Versions } from "oxalis/view/version_view";
@@ -27,10 +29,33 @@ type State = {
   versions: Array<APIUpdateActionBatch>,
 };
 
+// The string key is a date string
+// The value is an array of chunked APIUpdateActionBatches
+type GroupedAndChunkedVersions = { [string]: Array<Array<APIUpdateActionBatch>> };
+
+const MOMENT_CALENDAR_FORMAT = {
+  sameDay: "[Today]",
+  nextDay: "[Tomorrow]",
+  nextWeek: "dddd",
+  lastDay: "[Yesterday]",
+  lastWeek: "[Last] dddd (YYYY-MM-DD)",
+  sameElse: "YYYY-MM-DD",
+};
+
+const VERSION_LIST_PLACEHOLDER = { emptyText: "No versions created yet." };
+
 export async function previewVersion(versions?: Versions) {
   const { tracingType, annotationId } = Store.getState().tracing;
   await api.tracing.restart(tracingType, annotationId, ControlModeEnum.TRACE, versions);
   Store.dispatch(setAnnotationAllowUpdateAction(false));
+
+  const segmentationLayer = Model.getSegmentationLayer();
+  const shouldPreviewVolumeVersion = versions != null && versions.volume != null;
+  const shouldPreviewNewestVersion = versions == null;
+  if (segmentationLayer != null && (shouldPreviewVolumeVersion || shouldPreviewNewestVersion)) {
+    segmentationLayer.cube.collectAllBuckets();
+    segmentationLayer.layerRenderingManager.refresh();
+  }
 }
 
 class VersionList extends React.Component<Props, State> {
@@ -45,14 +70,19 @@ class VersionList extends React.Component<Props, State> {
   }
 
   async fetchData(tracingId: string) {
-    const { url: dataStoreUrl } = Store.getState().dataset.dataStore;
+    const { url: tracingStoreUrl } = Store.getState().tracing.tracingStore;
     this.setState({ isLoading: true });
     try {
       const updateActionLog = await getUpdateActionLog(
-        dataStoreUrl,
+        tracingStoreUrl,
         tracingId,
         this.props.tracingType,
       );
+      // Insert version 0
+      updateActionLog.push({
+        version: 0,
+        value: [serverCreateTracing(this.props.tracing.createdTimestamp)],
+      });
       this.setState({ versions: updateActionLog });
     } catch (error) {
       handleGenericError(error);
@@ -65,7 +95,7 @@ class VersionList extends React.Component<Props, State> {
     return _.max(this.state.versions.map(batch => batch.version)) || 0;
   }
 
-  restoreVersion = async (version: number) => {
+  handleRestoreVersion = async (version: number) => {
     Store.dispatch(setVersionNumberAction(this.getNewestVersion(), this.props.tracingType));
     Store.dispatch(pushSaveQueueAction([revertToVersion(version)], this.props.tracingType));
     await Model.save();
@@ -73,28 +103,52 @@ class VersionList extends React.Component<Props, State> {
     Store.dispatch(setAnnotationAllowUpdateAction(true));
   };
 
+  handlePreviewVersion = (version: number) => previewVersion({ [this.props.tracingType]: version });
+
+  getGroupedAndChunkedVersions = _.memoize(
+    (versions: Array<APIUpdateActionBatch>): GroupedAndChunkedVersions => {
+      // This function first groups the versions by day, where the key is the output of the moment calendar function.
+      // Then, the versions for each day are chunked into x-minute intervals,
+      // so that the actions of one chunk are all from within one x-minute interval.
+      const groupedVersions = _.groupBy(versions, batch =>
+        moment
+          .utc(_.max(batch.value.map(action => action.value.actionTimestamp)))
+          .calendar(null, MOMENT_CALENDAR_FORMAT),
+      );
+
+      const getBatchTime = batch => _.max(batch.value.map(action => action.value.actionTimestamp));
+      return _.mapValues(groupedVersions, versionsOfOneDay =>
+        chunkIntoTimeWindows(versionsOfOneDay, getBatchTime, 5),
+      );
+    },
+  );
+
   render() {
-    const filteredVersions = this.state.versions.filter(
-      (batch, index) =>
-        index === 0 || batch.value.length > 1 || batch.value[0].name !== "updateTracing",
-    );
+    const groupedAndChunkedVersions = this.getGroupedAndChunkedVersions(this.state.versions);
+    const batchesAndDateStrings = _.flattenDepth(Object.entries(groupedAndChunkedVersions), 2);
 
     return (
-      <Spin spinning={this.state.isLoading}>
-        <List>
-          {filteredVersions.map((batch, index) => (
-            <VersionEntry
-              actions={batch.value}
-              version={batch.version}
-              isNewest={index === 0}
-              isActive={this.props.tracing.version === batch.version}
-              onRestoreVersion={this.restoreVersion}
-              onPreviewVersion={version => previewVersion({ [this.props.tracingType]: version })}
-              key={batch.version}
+      <List
+        dataSource={batchesAndDateStrings}
+        loading={this.state.isLoading}
+        locale={VERSION_LIST_PLACEHOLDER}
+        renderItem={batchesOrDateString =>
+          _.isString(batchesOrDateString) ? (
+            <List.Item style={{ fontWeight: "bold", backgroundColor: "#f5f5f5" }}>
+              <div style={{ margin: "auto" }}>{batchesOrDateString}</div>
+            </List.Item>
+          ) : (
+            <VersionEntryGroup
+              batches={batchesOrDateString}
+              newestVersion={this.state.versions[0].version}
+              activeVersion={this.props.tracing.version}
+              onRestoreVersion={this.handleRestoreVersion}
+              onPreviewVersion={this.handlePreviewVersion}
+              key={batchesOrDateString[0].version}
             />
-          ))}
-        </List>
-      </Spin>
+          )
+        }
+      />
     );
   }
 }

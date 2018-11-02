@@ -7,7 +7,7 @@ services:
     ports:
       - "9000:9000"
     links:
-      - fossildb
+      - fossildb-persisted
       - postgres-persisted
     command:
       - -Dconfig.file=conf/application.conf
@@ -101,7 +101,7 @@ services:
       - "5005:5005"
       - "9000:9000"
     links:
-      - fossildb
+      - fossildb-dev
       - postgres-dev
     environment:
       - POSTGRES_URL=jdbc:postgresql://postgres-dev/webknossos
@@ -114,7 +114,7 @@ services:
         "run
           -Djava.net.preferIPv4Stack=true
           -Dhttp.address=0.0.0.0
-          -Dtracingstore.fossildb.address=fossildb"
+          -Dtracingstore.fossildb.address=fossildb-dev"
     stdin_open: true
 
   backend-tests:
@@ -201,6 +201,17 @@ services:
       - -c
       - skeletons,skeletonUpdates,volumes,volumeData,volumeUpdates
     user: ${USER_UID:-fossildb}:${USER_GID:-fossildb}
+
+  fossildb-persisted:
+    extends:
+      service: fossildb
     volumes:
       - "./fossildb/data:/fossildb/data"
       - "./fossildb/backup:/fossildb/backup"
+
+  fossildb-dev:
+    extends:
+      service: fossildb
+    volumes:
+      - "./fossildb-dev/data:/fossildb/data"
+      - "./fossildb-dev/backup:/fossildb/backup"

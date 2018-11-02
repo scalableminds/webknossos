@@ -8,7 +8,7 @@ services:
       - "9000:9000"
     links:
       - fossildb
-      - postgres
+      - postgres-persisted
     command:
       - -Dconfig.file=conf/application.conf
       - -Djava.net.preferIPv4Stack=true
@@ -101,7 +101,7 @@ services:
       - "5005:5005"
       - "9000:9000"
     links:
-      - fossildb-dev
+      - fossildb
       - postgres-dev
     environment:
       - POSTGRES_URL=jdbc:postgresql://postgres-dev/webknossos
@@ -114,7 +114,7 @@ services:
         "run
           -Djava.net.preferIPv4Stack=true
           -Dhttp.address=0.0.0.0
-          -Dtracingstore.fossildb.address=fossildb-dev"
+          -Dtracingstore.fossildb.address=fossildb"
     stdin_open: true
 
   backend-tests:
@@ -160,22 +160,23 @@ services:
       POSTGRES_DB: webknossos
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+
+  postgres-persisted:
+    extends:
+      service: postgres
     volumes:
       - "./pg/db:/var/lib/postgresql/data/"
 
   postgres-dev:
-    image: postgres:10-alpine
-    environment:
-      POSTGRES_DB: webknossos
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+    extends:
+      service: postgres
     ports:
       - "5432:5432"
     volumes:
       - "./pg/dev-db:/var/lib/postgresql/data/"
 
   psql:
-    extends: postgres
+    extends: postgres-persisted
     command: psql -h postgres -U postgres webknossos
     links:
       - postgres
@@ -185,7 +186,7 @@ services:
       - ./conf/evolutions/:/evolutions/
 
   drop-db:
-    extends: postgres
+    extends: postgres-persisted
     command: psql -h postgres -U postgres postgres -c "DROP DATABASE webknossos"
     links:
       - postgres
@@ -203,15 +204,3 @@ services:
     volumes:
       - "./fossildb/data:/fossildb/data"
       - "./fossildb/backup:/fossildb/backup"
-
-  fossildb-dev:
-    image: scalableminds/fossildb:master__337
-    command:
-      - fossildb
-      - -c
-      - skeletons,skeletonUpdates,volumes,volumeData,volumeUpdates
-    ports:
-      - "7155:7155"
-    volumes:
-      - "./fossildb-dev/data:/fossildb/data"
-      - "./fossildb-dev/backup:/fossildb/backup"

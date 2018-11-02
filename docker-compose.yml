@@ -10,7 +10,6 @@ services:
       - fossildb
       - postgres
     command:
-      - -Djava.io.tmpdir=disk
       - -Dconfig.file=conf/application.conf
       - -Djava.net.preferIPv4Stack=true
       - -Dhttp.address=0.0.0.0
@@ -25,6 +24,7 @@ services:
       - ./binaryData:/srv/webknossos/binaryData
     environment:
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
+    user: ${USER_UID:-1000}:${USER_GID:-1000}
 
   webknossos-datastore:
     build: webknossos-datastore
@@ -101,9 +101,9 @@ services:
       - "9000:9000"
     links:
       - fossildb-dev
-      - postgres-dev
+      - postgres
     environment:
-      - POSTGRES_URL=jdbc:postgresql://postgres-dev/webknossos
+      - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
     command:
       - bash
       - -c
@@ -159,10 +159,6 @@ services:
       POSTGRES_DB: webknossos
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-
-  postgres-dev:
-    extends:
-      service: postgres
     ports:
       - "5432:5432"
     volumes:
@@ -175,6 +171,8 @@ services:
       - postgres
     environment:
       PGPASSWORD: postgres
+    volumes:
+      - ./conf/evolutions/:/evolutions/
 
   fossildb:
     image: scalableminds/fossildb:master__337

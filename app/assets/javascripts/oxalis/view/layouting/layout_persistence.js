@@ -96,7 +96,7 @@ export function getLayoutConfig(layoutKey: LayoutKeys, activeLayoutName: string)
   if (!storedLayouts[layoutKey]) {
     return getDefaultLayouts()[layoutKey];
   }
-  const layout = getDefaultLayouts()[layoutKey][activeLayoutName];
+  const layout = storedLayouts[layoutKey][activeLayoutName];
   if (!layout) {
     return getDefaultLayouts()[layoutKey];
   }

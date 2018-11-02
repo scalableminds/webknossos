@@ -20,7 +20,7 @@ class BaseDirService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionCo
       organizationDirectoriesNested <- additionalDirs.map(dir => PathUtils.listDirectories(dir)).toSingleBox("listDirectories failed").toFox
       datasetDirectoriesNested <- organizationDirectoriesNested.flatten.map(dir => PathUtils.listDirectories(dir)).toSingleBox("listDirectories failed").toFox
       _ <- createMissingSymlinks(datasetDirectoriesNested.flatten)
-      _ <- cleanUpDanglingSymlinks()
+      // _ <- cleanUpDanglingSymlinks()
     } yield ()
   }
 

@@ -101,9 +101,9 @@ services:
       - "9000:9000"
     links:
       - fossildb-dev
-      - postgres
+      - postgres-dev
     environment:
-      - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
+      - POSTGRES_URL=jdbc:postgresql://postgres-dev/webknossos
     command:
       - bash
       - -c
@@ -159,6 +159,15 @@ services:
       POSTGRES_DB: webknossos
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+    volumes:
+      - "./pg/db:/var/lib/postgresql/data/"
+
+  postgres-dev:
+    image: postgres:10-alpine
+    environment:
+      POSTGRES_DB: webknossos
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"
     volumes:
@@ -174,19 +183,34 @@ services:
     volumes:
       - ./conf/evolutions/:/evolutions/
 
+  drop-db:
+    extends: postgres
+    command: psql -h postgres -U postgres postgres -c "DROP DATABASE webknossos"
+    links:
+      - postgres
+    environment:
+      PGPASSWORD: postgres
+
+
   fossildb:
     image: scalableminds/fossildb:master__337
     command:
       - fossildb
       - -c
-      - skeletons,skeletonUpdates,volumes,volumeData
+      - skeletons,skeletonUpdates,volumes,volumeData,volumeUpdates
     user: ${USER_UID:-fossildb}:${USER_GID:-fossildb}
-
-  fossildb-dev:
-    extends:
-      service: fossildb
-    ports:
-      - "7155:7155"
     volumes:
       - "./fossildb/data:/fossildb/data"
       - "./fossildb/backup:/fossildb/backup"
+
+  fossildb-dev:
+    image: scalableminds/fossildb:master__337
+    command:
+      - fossildb
+      - -c
+      - skeletons,skeletonUpdates,volumes,volumeData,volumeUpdates
+    ports:
+      - "7155:7155"
+    volumes:
+      - "./fossildb-dev/data:/fossildb/data"
+      - "./fossildb-dev/backup:/fossildb/backup"

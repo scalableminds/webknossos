@@ -86,6 +86,8 @@ class SceneController {
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.rootGroup);
 
+    this.scene.add(new THREE.DirectionalLight());
+
     this.setupDebuggingMethods();
   }
 
@@ -117,6 +119,21 @@ class SceneController {
     geometry.computeVertexNormals();
 
     const meshMaterial = new THREE.MeshNormalMaterial();
+    this.rootGroup.add(new THREE.Mesh(geometry, meshMaterial));
+  }
+
+  addIsosurface(isosurface): void {
+    const geometry = new THREE.BufferGeometry();
+    geometry.addAttribute(
+      "position",
+      new THREE.BufferAttribute(new Float32Array(isosurface.vertices), 3),
+    );
+
+    //    geometry.addAttribute("position", new THREE.Float32BufferAttribute(isosurface.vertices, 3));
+    // geometry.addAttribute("normal", new THREE.Float32BufferAttribute(normals, 3));
+    geometry.computeVertexNormals();
+
+    const meshMaterial = new THREE.MeshPhongMaterial();
     this.rootGroup.add(new THREE.Mesh(geometry, meshMaterial));
   }
 
@@ -160,8 +177,8 @@ class SceneController {
     };
 
     this.planes[OrthoViews.PLANE_XY].setRotation(new THREE.Euler(Math.PI, 0, 0));
-    this.planes[OrthoViews.PLANE_YZ].setRotation(new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0));
-    this.planes[OrthoViews.PLANE_XZ].setRotation(new THREE.Euler((-1 / 2) * Math.PI, 0, 0));
+    this.planes[OrthoViews.PLANE_YZ].setRotation(new THREE.Euler(Math.PI, 1 / 2 * Math.PI, 0));
+    this.planes[OrthoViews.PLANE_XZ].setRotation(new THREE.Euler(-1 / 2 * Math.PI, 0, 0));
 
     for (const plane of _.values(this.planes)) {
       plane.getMeshes().forEach(mesh => this.rootNode.add(mesh));

@@ -15,6 +15,11 @@ import { Vector3Input } from "libs/vector_input";
 import ButtonComponent from "oxalis/view/components/button_component";
 import message from "messages";
 
+import SceneController from "oxalis/controller/scene_controller";
+import { doWithToken } from "admin/admin_rest_api";
+import Request from "libs/request";
+import Model from "oxalis/model";
+
 type Props = {
   flycam: Flycam,
   viewMode: Mode,
@@ -41,6 +46,29 @@ class DatasetPositionView extends PureComponent<Props> {
     Store.dispatch(setRotationAction(rotation));
   };
 
+  loadIsosurface = async () => {
+    const position = V3.floor(getPosition(this.props.flycam));
+    const layer = Model.getSegmentationLayer();
+    const segmentId = layer.cube.getDataValue(position, null, 1);
+    const zoomStep = Math.floor(this.props.flycam.zoomStep);
+
+    const isosurface = await doWithToken(token =>
+      Request.sendJSONReceiveJSON(
+        `/data/datasets/Connectomics_Department/ROI2017_wkw/layers/segmentation/isosurface?token=${token}`,
+        {
+          data: {
+            position: [position[0] - 128, position[1] - 128, position[2] - 128],
+            cubeSize: 256,
+            zoomStep,
+            segmentId,
+          },
+        },
+      ),
+    );
+
+    SceneController.addIsosurface(isosurface);
+  };
+
   render() {
     const position = V3.floor(getPosition(this.props.flycam));
     const rotation = V3.round(getRotation(this.props.flycam));
@@ -48,6 +76,7 @@ class DatasetPositionView extends PureComponent<Props> {
 
     return (
       <div>
+        <ButtonComponent onClick={this.loadIsosurface}>load isosurface</ButtonComponent>
         <Tooltip title={message["tracing.copy_position"]} placement="bottomLeft">
           <div>
             <Input.Group compact>

@@ -19,9 +19,9 @@ object MarchingCubes {
 
     // Volume iteration
     for {
-      z <- boundingBox.topLeft.z until boundingBox.bottomRight.z - 1
-      y <- boundingBox.topLeft.y until boundingBox.bottomRight.y - 1
-      x <- boundingBox.topLeft.x until boundingBox.bottomRight.x - 1
+      z <- boundingBox.topLeft.z until boundingBox.bottomRight.z - voxDim.z by voxDim.z
+      y <- boundingBox.topLeft.y until boundingBox.bottomRight.y - voxDim.y by voxDim.y
+      x <- boundingBox.topLeft.x until boundingBox.bottomRight.x - voxDim.x by voxDim.x
     } {
       // Indices pointing to cube vertices
       //              pyz  ___________________  pxyz
@@ -38,16 +38,16 @@ object MarchingCubes {
       //              |/__________________|/
       //             p                     px
       val p = x + (dimensions.x * y) + (dimensions.x * dimensions.y * z)
-      val px = p + 1
-      val py = p + dimensions.x
-      val pxy = py + 1
-      val pz = p + dimensions.x * dimensions.y
-      val pxz = px + dimensions.x * dimensions.y
-      val pyz = py + dimensions.x * dimensions.y
-      val pxyz = pxy + dimensions.x * dimensions.y
+      val px = p + voxDim.x
+      val py = p + dimensions.x * voxDim.y
+      val pxy = py + voxDim.x
+      val pz = p + dimensions.x * dimensions.y * voxDim.z
+      val pxz = px + dimensions.x * dimensions.y * voxDim.z
+      val pyz = py + dimensions.x * dimensions.y * voxDim.z
+      val pxyz = pxy + dimensions.x * dimensions.y * voxDim.z
 
       //							  X              Y                    Z
-      val position = Array[Float](x * voxDim.x, y * voxDim.y, z * voxDim.z)
+      val position = Array[Float](x, y, z)
 
       // Voxel intensities
       val value0 = data.get(p)

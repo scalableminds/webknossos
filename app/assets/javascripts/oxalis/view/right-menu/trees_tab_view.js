@@ -224,22 +224,37 @@ class TreesTabView extends React.PureComponent<Props, State> {
     if (treeGroupMap[id]) {
       idsOfSelectedGroup = treeGroupMap[id].map(node => node.treeId);
     }
+    // TODO: check for selected parent group is missing, currently only childgroups are checked
     let groupHasSubtreesSelected = false;
-    groupTree.children.forEach(currentChild => {
-      if(currentChild.type === "TREE"){
-        if(this.state.selectedTrees.includes(currentChild.id)){
+    if (groupTree) {
+      groupTree.children.forEach(currentChild => {
+        if (currentChild.type === "TREE") {
+          if (this.state.selectedTrees.includes(currentChild.id)) {
+            groupHasSubtreesSelected = true;
+          }
+        } else if (this.state.selectedTreeGroups.includes(currentChild.id)) {
           groupHasSubtreesSelected = true;
         }
-      } else if(this.state.selectedTreeGroups.includes(currentChild.id)){
-        groupHasSubtreesSelected =  true;
-        }
       });
+    }
+    const allSubGroups = groupTree.children.filter(child => child.type === "GROUP");
+    const allSubGroupIds = allSubGroups.map(subGroup => subGroup.id);
     if (groupHasSubtreesSelected) {
       const confirmSelectOfGroup = () => {
-        this.setState(prevState => ({
-          selectedTrees: _.difference(prevState.selectedTrees, idsOfSelectedGroup),
-          selectedTreeGroups: [...prevState.selectedTreeGroups, id],
-        }));
+        this.setState(prevState => {
+          const withoutSubtreesOfSelectedGroup = _.difference(
+            prevState.selectedTrees,
+            idsOfSelectedGroup,
+          );
+          const withoutSubgroupsOfSelectedGroup = _.difference(
+            prevState.selectedTreeGroups,
+            allSubGroupIds,
+          );
+          return {
+            selectedTrees: withoutSubtreesOfSelectedGroup,
+            selectedTreeGroups: [...withoutSubgroupsOfSelectedGroup, id],
+          };
+        });
       };
       this.showSubitemAlreadySelectedWarning(confirmSelectOfGroup);
     } else {

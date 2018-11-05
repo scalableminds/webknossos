@@ -122,7 +122,7 @@ services:
     ports:
       - "5005:5005"
       - "9000:9000"
-    command: sbt -v -d "testOnly backend.*"
+    command: sbt -v "testOnly backend.*"
 
   e2e-tests:
     extends:

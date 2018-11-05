@@ -224,8 +224,12 @@ export default class LayerRenderingManager {
         this.textureBucketManager.maximumCapacity,
       );
 
+      const buckets = bucketsWithPriorities.map(({ bucket }) => bucket);
+      // This tells the bucket collection, that the buckets are necessary for rendering
+      buckets.forEach(b => b.markAsNeeded());
+
       this.textureBucketManager.setActiveBuckets(
-        bucketsWithPriorities.map(({ bucket }) => bucket),
+        buckets,
         this.anchorPointCache.anchorPoint,
         this.anchorPointCache.fallbackAnchorPoint,
       );

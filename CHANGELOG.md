@@ -23,7 +23,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Removed
 
--
+- Removed support to watch additional dataset directories, no longer automatically creating symbolic links to the main directory. [#3416](https://github.com/scalableminds/webknossos/pull/3416)
 
 
 ## [18.11.0](https://github.com/scalableminds/webknossos/releases/tag/18.11.0) - 2018-10-29

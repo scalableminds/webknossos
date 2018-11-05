@@ -13,16 +13,8 @@ import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import Store from "oxalis/store";
 import { getMaxBucketCountPerDim } from "oxalis/model/accessors/flycam_accessor";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
-import memoizeOne from "memoize-one";
-
-// By subtracting and adding 1 (extraBucket) to the bounds of y and x, we move
-// one additional bucket on each edge of the viewport to the GPU. This decreases the
-// chance of showing gray data, when moving the viewport. However, it might happen that
-// we do not have enough capacity to move these additional buckets to the GPU.
-// That's why, we are using a priority queue which orders buckets by manhattan distance to
-// the center bucket. We only consume that many items from the PQ, which we can handle on the
-// GPU.
-const extraBucket = 1;
+// import memoizeOne from "memoize-one";
+import { extraBucketPerEdge, extraBucketsPerDim } from "./orthogonal_bucket_picker_constants";
 
 function getUnzoomedBucketCountPerDim(
   dataSetScale: Vector3,
@@ -53,7 +45,7 @@ export const calculateUnzoomedBucketCount = (dataSetScale: Vector3, zoomFactor: 
   const bucketsPerDim = getUnzoomedBucketCountPerDim(dataSetScale, false, zoomFactor);
   const fallbackBucketsPerDim = getUnzoomedBucketCountPerDim(dataSetScale, true, zoomFactor);
 
-  const addExtraBuckets = vec => vec.map(el => el + 2 * extraBucket);
+  const addExtraBuckets = vec => vec.map(el => el + extraBucketsPerDim);
   const calculateAdditionalWSliceCount = ([x, y, z]) => {
     const xy = x * y - x + y;
     const xz = x * z - (2 * x + z);
@@ -158,18 +150,18 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
 
     // Always use buckets in the current w slice, but also load either the previous or the next
     // slice (depending on locality within the current bucket).
-    // Similar to `extraBucket`, the PQ takes care of cases in which the additional slice can't be
-    // loaded.
+    // Similar to `extraBucketPerEdge`, the PQ takes care of cases in which the additional slice
+    // can't be loaded.
     const wSliceOffsets = isFallback ? [0] : [0, subBucketLocality[w]];
     // fallback buckets should have lower priority
     const additionalPriorityWeight = isFallback ? 1000 : 0;
 
     // Build up priority queue
     wSliceOffsets.forEach(wSliceOffset => {
-      const extraYBucketStart = scaledTopLeftVector[v] - extraBucket;
-      const extraYBucketEnd = scaledBottomRightVector[v] + extraBucket;
-      const extraXBucketStart = scaledTopLeftVector[u] - extraBucket;
-      const extraXBucketEnd = scaledBottomRightVector[u] + extraBucket;
+      const extraYBucketStart = scaledTopLeftVector[v] - extraBucketPerEdge;
+      const extraYBucketEnd = scaledBottomRightVector[v] + extraBucketPerEdge;
+      const extraXBucketStart = scaledTopLeftVector[u] - extraBucketPerEdge;
+      const extraXBucketEnd = scaledBottomRightVector[u] + extraBucketPerEdge;
 
       for (let y = extraYBucketStart; y <= extraYBucketEnd; y++) {
         for (let x = extraXBucketStart; x <= extraXBucketEnd; x++) {

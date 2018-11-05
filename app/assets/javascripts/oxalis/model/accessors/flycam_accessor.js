@@ -11,6 +11,7 @@ import * as THREE from "three";
 import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
 import { calculateUnzoomedBucketCount } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
 import memoizeOne from "memoize-one";
+import { extraBucketsPerDim } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker_constants";
 
 // All methods in this file should use constants.PLANE_WIDTH instead of constants.VIEWPORT_WIDTH
 // as the area that is rendered is only of size PLANE_WIDTH.
@@ -45,7 +46,7 @@ export function getMaxBucketCountPerDim(dataSetScale: Vector3): Vector3 {
     scaleInfo.getBaseVoxel(dataSetScale);
 
   const maxBucketCountPerDim = dataSetScale.map(
-    nm => 1 + Math.ceil(maximumPlaneExtentInNm / nm / constants.BUCKET_WIDTH),
+    nm => extraBucketsPerDim + Math.ceil(maximumPlaneExtentInNm / nm / constants.BUCKET_WIDTH),
   );
 
   return ((maxBucketCountPerDim: any): Vector3);

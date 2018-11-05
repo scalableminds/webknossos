@@ -103,7 +103,7 @@
     "lint-fix": "node_modules/.bin/eslint --cache --fix --quiet app/assets/javascripts/ tools/",
     "flow-coverage": "node_modules/flow-coverage-report/bin/flow-coverage-report.js -i \"./app/assets/javascripts/**/*.js\" -x \"./app/assets/javascripts/test/**/*.js\" -t html -t text",
     "docs": "node_modules/.bin/documentation build app/assets/javascripts/oxalis/api/api_loader.js --github --project-name \"webKnossos Frontend API\" --format html --output public/docs/frontend-api",
-    "refresh-schema": "./tools/postgres/refresh_schema.sh; rm -f target/scala-2.12/src_managed/schema/com/scalableminds/webknossos/schema/Tables.scala",
+    "refresh-schema": "./tools/postgres/refresh_schema.sh && rm -f target/scala-2.12/src_managed/schema/com/scalableminds/webknossos/schema/Tables.scala",
     "enable-autologin": "sed -i -e 's/enableDevAutoLogin = false/enableDevAutoLogin = true/g' ./conf/application.conf",
     "disable-autologin": "sed -i -e 's/enableDevAutoLogin = true/enableDevAutoLogin = false/g' ./conf/application.conf",
     "coverage": "nyc report --reporter=text-lcov | coveralls",

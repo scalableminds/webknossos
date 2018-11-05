@@ -76,8 +76,9 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) ext
     ))
 
   override def readAccessQ(requestingUserId: ObjectId) =
-    s"""(_id in (select _user from webknossos.user_team_roles where _team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId}')))
-        or (_organization in (select _organization from webknossos.users_ where _id = '${requestingUserId}' and isAdmin))"""
+    s"""(_id in (select _user from webknossos.user_team_roles where _team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId}' and isTeamManager)))
+        or (_organization in (select _organization from webknossos.users_ where _id = '${requestingUserId}' and isAdmin))
+        or _id = '${requestingUserId}'"""
   override def deleteAccessQ(requestingUserId: ObjectId) =
     s"_organization in (select _organization from webknossos.users_ where _id = '${requestingUserId}' and isAdmin)"
 

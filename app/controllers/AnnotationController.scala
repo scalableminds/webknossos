@@ -45,8 +45,9 @@ class AnnotationController @Inject()(annotationDAO: AnnotationDAO,
   implicit val timeout = Timeout(5 seconds)
 
   def info(typ: String, id: String) = sil.UserAwareAction.async { implicit request =>
+    val notFoundMessage = if (request.identity == None) "annotation.notFound.considerLoggingIn" else "annotation.notFound"
     for {
-      annotation <- provider.provideAnnotation(typ, id, request.identity) ?~> "annotation.notFound"
+      annotation <- provider.provideAnnotation(typ, id, request.identity) ?~> notFoundMessage
       restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound"
       _ <- restrictions.allowAccess(request.identity) ?~> "notAllowed" ~> BAD_REQUEST
       js <- annotationService.publicWrites(annotation, request.identity, Some(restrictions)) ?~> "annotation.write.failed"

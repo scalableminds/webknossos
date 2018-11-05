@@ -146,7 +146,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
 
   def makeAnnotationHybrid(user: User, annotation: Annotation)(implicit ctx: DBAccessContext) = {
     def createNewTracings(dataSet: DataSet, dataSource: DataSource) = annotation.tracingType match {
-      case TracingType.skeleton => createTracings(dataSet, dataSource, TracingType.volume, false).flatMap {
+      case TracingType.skeleton => createTracings(dataSet, dataSource, TracingType.volume, true).flatMap {
         case (_, Some(volumeId)) => annotationDAO.updateVolumeTracingId(annotation._id, volumeId)
         case _ => Fox.failure("unexpectedReturn")
       }
@@ -220,7 +220,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     def useAsTemplateAndInsert(annotation: Annotation) = {
       for {
         dataSetName <- dataSetDAO.getNameById(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
-        dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> ("Could not access DataSet " + dataSetName + ". Does your team have access?")
+        dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.noAccess"
         newTracingId <- tracingFromBase(annotation, dataSet) ?~> "Failed to use annotation base as template."
         newAnnotation = annotation.copy(
           _id = initializingAnnotationId,

@@ -77,6 +77,7 @@ braintracing.exists=Great, you already have an account on braintracing.org. Plea
 dataSet=Dataset
 dataSet.file=Dataset ZIP File
 dataSet.notFound=Dataset {0} doesn’t exist
+dataSet.noAccess=Could not access DataSet {0}. Does your team have access?
 dataSet.notImported=Dataset {0} is not imported
 dataSet.name.invalid=A dataset name can only contain letters, digits and underscores
 dataSet.import.impossible.name=Import impossible. Dataset name can only consist of a-Z, 0-9, "-" and "_".
@@ -155,6 +156,7 @@ tracing.notFound=Tracing couldn’t be found
 
 annotation.create.failed=Failed to create annotation. This is likely because you are not a member of a team that has access to the dataset.
 annotation.notFound=Annotation couldn’t be found
+annotation.notFound.considerLoggingIn=Annotation couldn’t be found. If the annotation is not public, you need to log in to see it.
 annotation.invalid=Invalid annotation
 annotation.finished=Annotation is archived
 annotation.allFinished=All annotations are archived
@@ -186,6 +188,7 @@ annotation.makeHybrid.alreadyHybrid=Could not convert annotation to hybrid annot
 
 task.create.success=Task successfully created
 task.create.failed=Failed to create Task
+task.create.limitExceeded=Cannot create more than 1000 tasks in one request.
 task.finished=Task is finished
 task.assigned=You got a new task
 task.tooManyOpenOnes=You already have too many open tasks

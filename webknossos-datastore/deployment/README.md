@@ -10,7 +10,7 @@ webKnossos expects the following file structure:
 ```
 docker-compose.yml
 binaryData/ # path can be specified in config/environment
-    <Team name>/ 
+    <Team name>/
         <Dataset 1>/ # Can be converted from image stack with webknossos-cuber
             color/
                 1 # mag1
@@ -18,9 +18,6 @@ binaryData/ # path can be specified in config/environment
                 4 # mag4
                 ...
         ...
-fossildb/
-    data/
-    backup/
 config/
 tmp/
 ```

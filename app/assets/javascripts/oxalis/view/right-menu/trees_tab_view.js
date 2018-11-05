@@ -187,25 +187,25 @@ class TreesTabView extends React.PureComponent<Props, State> {
   getActionsDropdown() {
     return (
       <Menu>
-        <Menu.Item key="shuffleTreeColor">
-          <div onClick={this.shuffleTreeColor} title="Change Tree Color">
-            <i className="fa fa-adjust" /> Change Color
-          </div>
+        <Menu.Item key="shuffleTreeColor" onClick={this.shuffleTreeColor} title="Change Tree Color">
+          <i className="fa fa-adjust" /> Change Color
         </Menu.Item>
-        <Menu.Item key="shuffleAllTreeColors">
-          <div onClick={this.shuffleAllTreeColors} title="Shuffle All Tree Colors">
-            <i className="fa fa-random" /> Shuffle All Colors
-          </div>
+        <Menu.Item
+          key="shuffleAllTreeColors"
+          onClick={this.shuffleAllTreeColors}
+          title="Shuffle All Tree Colors"
+        >
+          <i className="fa fa-random" /> Shuffle All Colors
         </Menu.Item>
-        <Menu.Item key="handleNmlDownload">
-          <div onClick={this.handleNmlDownload} title="Download selected trees as NML">
-            <Icon type="download" /> Download Selected Trees
-          </div>
+        <Menu.Item
+          key="handleNmlDownload"
+          onClick={this.handleNmlDownload}
+          title="Download selected trees as NML"
+        >
+          <Icon type="download" /> Download Selected Trees
         </Menu.Item>
-        <Menu.Item key="importNml">
-          <div onClick={this.props.showDropzoneModal} title="Import NML files">
-            <Icon type="upload" /> Import NML
-          </div>
+        <Menu.Item key="importNml" onClick={this.props.showDropzoneModal} title="Import NML files">
+          <Icon type="upload" /> Import NML
         </Menu.Item>
       </Menu>
     );
@@ -250,6 +250,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
             idKey="treeId"
             searchKey="name"
             maxSearchResults={10}
+            provideShortcut
           >
             <Tooltip title="Open the search via CTRL + Shift + F">
               <ButtonComponent>

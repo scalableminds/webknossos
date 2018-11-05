@@ -5,7 +5,7 @@
 
 import _ from "lodash";
 import ConnectionInfo from "oxalis/model/data_connection_info";
-import { requestFromStore } from "oxalis/model/bucket_data_handling/wkstore_adapter";
+import { requestWithFallback } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import type { DataStoreInfo, DataLayerType } from "oxalis/store";
@@ -109,28 +109,26 @@ class PullQueue {
     const { renderMissingDataBlack } = Store.getState().datasetConfiguration;
 
     try {
-      const { buffer: responseBuffer, missingBuckets } = await requestFromStore(layerInfo, batch);
+      const bucketBuffers = await requestWithFallback(layerInfo, batch);
       this.connectionInfo.log(
         this.layerName,
         roundTripBeginTime,
         batch.length,
-        responseBuffer.length,
+        _.sum(bucketBuffers.map(buffer => (buffer != null ? buffer.length : 0))),
       );
 
       const resolutions = getResolutions(dataset);
-      let offset = 0;
+
       for (const [index, bucketAddress] of batch.entries()) {
-        const isMissing = missingBuckets.indexOf(index) > -1;
+        const bucketBuffer = bucketBuffers[index];
         const bucket = this.cube.getBucket(bucketAddress);
         if (bucket.type !== "data") {
           continue;
         }
-        if (isMissing && !renderMissingDataBlack) {
+        if (bucketBuffer == null && !renderMissingDataBlack) {
           bucket.pullFailed(true);
         } else {
-          const bucketData = isMissing
-            ? new Uint8Array(bucket.BUCKET_LENGTH)
-            : responseBuffer.subarray(offset, (offset += bucket.BUCKET_LENGTH));
+          const bucketData = bucketBuffer || new Uint8Array(bucket.BUCKET_LENGTH);
           this.handleBucket(layerInfo, bucketAddress, bucketData, resolutions);
         }
       }

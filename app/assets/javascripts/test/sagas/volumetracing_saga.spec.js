@@ -71,6 +71,7 @@ test("VolumeTracingSaga shouldn't do anything if unchanged (saga test)", t => {
   expectValueDeepEqual(t, saga.next(), take("INITIALIZE_VOLUMETRACING"));
   saga.next();
   saga.next(initialState.tracing);
+  saga.next(initialState.flycam);
   saga.next();
   saga.next(true);
   saga.next();
@@ -88,6 +89,7 @@ test("VolumeTracingSaga should do something if changed (saga test)", t => {
   expectValueDeepEqual(t, saga.next(), take("INITIALIZE_VOLUMETRACING"));
   saga.next();
   saga.next(initialState.tracing);
+  saga.next(initialState.flycam);
   saga.next();
   saga.next(true);
   saga.next();

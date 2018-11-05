@@ -14,7 +14,7 @@ services:
       - -Dconfig.file=conf/application.conf
       - -Djava.net.preferIPv4Stack=true
       - -Dhttp.address=0.0.0.0
-      - -Ddatastore.fossildb.address=fossildb
+      - -Dtracingstore.fossildb.address=fossildb
       - -Dslick.db.url=jdbc:postgresql://postgres/webknossos
       - -Dapplication.insertInitialData=false
       - -Dapplication.authentication.enableDevAutoLogin=false
@@ -41,7 +41,22 @@ services:
       - -Dhttp.port=9090
       - -Dhttp.address=0.0.0.0
       - -Dhttp.uri=http://webknossos-datastore:9090
-      - -Ddatastore.fossildb.address=fossildb
+      - -Ddatastore.oxalis.uri=webknossos:9000
+
+  webknossos-tracingstore:
+    build: webknossos-tracingstore
+    image: scalableminds/webknossos-tracingstore:${DOCKER_TAG:-master}
+    ports:
+      - "9050:9050"
+    entrypoint: bin/webknossos-tracingstore
+    command:
+      - -J-Xmx20G
+      - -J-Xms1G
+      - -Dconfig.file=conf/standalone-tracingstore.conf
+      - -Dhttp.port=9050
+      - -Dhttp.address=0.0.0.0
+      - -Dhttp.uri=http://webknossos-datastore:9050
+      - -Dtracingstore.fossildb.address=fossildb
       - -Ddatastore.oxalis.uri=webknossos:9000
     links:
       - fossildb
@@ -98,7 +113,7 @@ services:
         "run
           -Djava.net.preferIPv4Stack=true
           -Dhttp.address=0.0.0.0
-          -Ddatastore.fossildb.address=fossildb-dev"
+          -Dtracingstore.fossildb.address=fossildb-dev"
     stdin_open: true
 
   backend-tests:
@@ -107,7 +122,7 @@ services:
     ports:
       - "5005:5005"
       - "9000:9000"
-    command: sbt -v -d "testOnly backend.*"
+    command: sbt -v "testOnly backend.*"
 
   e2e-tests:
     extends:
@@ -124,7 +139,7 @@ services:
         sbt
         -v -d
         "testOnly e2e.* --
-          -Ddatastore.fossildb.address=fossildb"
+          -Dtracingstore.fossildb.address=fossildb"
     volumes:
       - ./binaryData/Connectomics department:/home/${USER_NAME:-sbt-user}/webknossos/binaryData/Organization_X
 

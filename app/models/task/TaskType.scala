@@ -2,13 +2,14 @@ package models.task
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.tracings.TracingType
+import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
 import models.annotation.AnnotationSettings
 import models.team.TeamDAO
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
+import play.api.libs.json._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
 
@@ -20,6 +21,7 @@ case class TaskType(
                          summary: String,
                          description: String,
                          settings: AnnotationSettings = AnnotationSettings.defaultFor(TracingType.skeleton),
+                         recommendedConfiguration: Option[JsValue] = None,
                          created: Long = System.currentTimeMillis(),
                          isDeleted: Boolean = false
                          ) extends FoxImplicits {
@@ -32,13 +34,16 @@ class TaskTypeService @Inject()(teamDAO: TeamDAO)(implicit ec: ExecutionContext)
                 summary: String,
                 description: String,
                 team: String,
-                settings: AnnotationSettings) = {
+                settings: AnnotationSettings,
+                recommendedConfiguration: Option[JsValue]
+              ) = {
     TaskType(
       ObjectId.generate,
       ObjectId(team),
       summary,
       description,
-      settings)
+      settings,
+      recommendedConfiguration)
   }
 
   def publicWrites(taskType: TaskType)(implicit ctx: DBAccessContext) = {
@@ -50,7 +55,8 @@ class TaskTypeService @Inject()(teamDAO: TeamDAO)(implicit ec: ExecutionContext)
       "description" -> taskType.description,
       "teamId" -> team._id.toString,
       "teamName" -> team.name,
-      "settings" -> Json.toJson(taskType.settings)
+      "settings" -> Json.toJson(taskType.settings),
+      "recommendedConfiguration" -> taskType.recommendedConfiguration
     )
   }
 }
@@ -73,6 +79,7 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         r.settingsBranchpointsallowed,
         r.settingsSomaclickingallowed
       ),
+      r.recommendedconfiguration.map(Json.parse),
       r.created.getTime,
       r.isdeleted
     ))
@@ -107,9 +114,10 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     val allowedModes = writeArrayTuple(t.settings.allowedModes)
     for {
       _ <- run(sqlu"""insert into webknossos.taskTypes(_id, _team, summary, description, settings_allowedModes, settings_preferredMode,
-                                                       settings_branchPointsAllowed, settings_somaClickingAllowed, created, isDeleted)
+                                                       settings_branchPointsAllowed, settings_somaClickingAllowed, recommendedConfiguration, created, isDeleted)
                          values(${t._id.id}, ${t._team.id}, ${t.summary}, ${t.description}, '#${sanitize(writeArrayTuple(t.settings.allowedModes))}', #${optionLiteral(t.settings.preferredMode.map(sanitize(_)))},
-                                ${t.settings.branchPointsAllowed}, ${t.settings.somaClickingAllowed}, ${new java.sql.Timestamp(t.created)}, ${t.isDeleted})""")
+                                ${t.settings.branchPointsAllowed}, ${t.settings.somaClickingAllowed}, #${optionLiteral(t.recommendedConfiguration.map(c => sanitize(Json.toJson(c).toString)))},
+                                ${new java.sql.Timestamp(t.created)}, ${t.isDeleted})""")
     } yield ()
   }
 
@@ -126,6 +134,7 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                            settings_preferredMode = #${optionLiteral(t.settings.preferredMode.map(sanitize(_)))},
                            settings_branchPointsAllowed = ${t.settings.branchPointsAllowed},
                            settings_somaClickingAllowed = ${t.settings.somaClickingAllowed},
+                           recommendedConfiguration = #${optionLiteral(t.recommendedConfiguration.map(c => sanitize(Json.toJson(c).toString)))},
                            isDeleted = ${t.isDeleted}
                           where _id = ${t._id.id}""")
     } yield ()

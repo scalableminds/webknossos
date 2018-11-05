@@ -12,6 +12,7 @@ import {
   _takeEvery,
   fork,
 } from "oxalis/model/sagas/effect-generators";
+import _ from "lodash";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import {
@@ -253,16 +254,32 @@ export function* disallowVolumeTracingWarning(): Saga<*> {
   }
 }
 
+function updateTracingPredicate(
+  prevVolumeTracing: VolumeTracing,
+  volumeTracing: VolumeTracing,
+  prevFlycam: Flycam,
+  flycam: Flycam,
+): boolean {
+  return (
+    !_.isEqual(prevVolumeTracing.userBoundingBox, volumeTracing.userBoundingBox) ||
+    prevVolumeTracing.activeCellId !== volumeTracing.activeCellId ||
+    prevVolumeTracing.maxCellId !== volumeTracing.maxCellId ||
+    prevFlycam !== flycam
+  );
+}
+
 export function* diffVolumeTracing(
   prevVolumeTracing: VolumeTracing,
   volumeTracing: VolumeTracing,
+  prevFlycam: Flycam,
   flycam: Flycam,
 ): Generator<UpdateAction, void, void> {
-  // no diffing happening here (yet) as for volume tracings there are only updateTracing actions so far
-  yield updateVolumeTracing(
-    volumeTracing,
-    V3.floor(getPosition(flycam)),
-    getRotation(flycam),
-    flycam.zoomStep,
-  );
+  if (updateTracingPredicate(prevVolumeTracing, volumeTracing, prevFlycam, flycam)) {
+    yield updateVolumeTracing(
+      volumeTracing,
+      V3.floor(getPosition(flycam)),
+      getRotation(flycam),
+      flycam.zoomStep,
+    );
+  }
 }

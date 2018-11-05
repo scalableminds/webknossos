@@ -13,6 +13,7 @@ type Props<S> = {
   idKey: $Keys<S>,
   onSelect: number => void,
   children: *,
+  provideShortcut?: boolean,
 };
 
 type State = {
@@ -35,13 +36,15 @@ export default class SearchPopover<S: Object> extends React.PureComponent<Props<
 
     return (
       <React.Fragment>
-        <Shortcut
-          supportInputElements
-          keys="ctrl + shift + f"
-          onTrigger={() => {
-            this.setState({ isVisible: true });
-          }}
-        />
+        {this.props.provideShortcut ? (
+          <Shortcut
+            supportInputElements
+            keys="ctrl + shift + f"
+            onTrigger={() => {
+              this.setState({ isVisible: true });
+            }}
+          />
+        ) : null}
         <Popover
           title="Search"
           trigger="click"

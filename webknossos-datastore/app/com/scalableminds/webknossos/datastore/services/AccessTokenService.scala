@@ -53,8 +53,10 @@ object UserAccessRequest {
     UserAccessRequest(DataSourceId("webknossos", ""), AccessResourceType.webknossos, AccessMode.administrate)
 }
 
+trait AccessTokenService {
+  val webKnossosServer: WkRpcClient
+  val cache: SyncCacheApi
 
-class AccessTokenService @Inject()(webKnossosServer: WebKnossosServer, cache: SyncCacheApi) {
 
   val AccessExpiration: FiniteDuration = 2.minutes
 
@@ -92,5 +94,6 @@ class AccessTokenService @Inject()(webKnossosServer: WebKnossosServer, cache: Sy
         Future.successful(Forbidden("Token authentication failed"))
     }
   }
-
 }
+
+class DataStoreAccessTokenService @Inject()(val webKnossosServer: DataStoreWkRpcClient, val cache: SyncCacheApi) extends AccessTokenService

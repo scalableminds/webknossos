@@ -7,12 +7,12 @@ import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
-import com.scalableminds.webknossos.datastore.SkeletonTracing._
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
+import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceLike => DataSource, SegmentationLayerLike => SegmentationLayer}
-import com.scalableminds.webknossos.datastore.tracings._
-import com.scalableminds.webknossos.datastore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults}
-import com.scalableminds.webknossos.datastore.tracings.volume.VolumeTracingDefaults
+import com.scalableminds.webknossos.tracingstore.tracings._
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.annotation.AnnotationState._
@@ -42,6 +42,8 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
                                   dataSetService: DataSetService,
                                   dataSetDAO: DataSetDAO,
                                   dataStoreService: DataStoreService,
+                                  tracingStoreService: TracingStoreService,
+                                  tracingStoreDAO: TracingStoreDAO,
                                   taskDAO: TaskDAO,
                                   userService: UserService,
                                   dataStoreDAO: DataStoreDAO,
@@ -100,19 +102,19 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
   def createTracings(dataSet: DataSet, dataSource: DataSource, tracingType: TracingType.Value, withFallback: Boolean)(implicit ctx: DBAccessContext): Fox[(Option[String], Option[String])] = tracingType match {
     case TracingType.skeleton =>
       for {
-        handler <- dataSetService.handlerFor(dataSet)
-        skeletonTracingId <- handler.saveSkeletonTracing(SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name, editPosition = dataSource.center))
+        client <- tracingStoreService.clientFor(dataSet)
+        skeletonTracingId <- client.saveSkeletonTracing(SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name, editPosition = dataSource.center))
       } yield (Some(skeletonTracingId), None)
     case TracingType.volume =>
       for {
-        handler <- dataSetService.handlerFor(dataSet)
-        volumeTracingId <- handler.saveVolumeTracing(createVolumeTracing(dataSource, withFallback))
+        client <- tracingStoreService.clientFor(dataSet)
+        volumeTracingId <- client.saveVolumeTracing(createVolumeTracing(dataSource, withFallback))
       } yield (None, Some(volumeTracingId))
     case TracingType.hybrid =>
       for {
-        handler <- dataSetService.handlerFor(dataSet)
-        skeletonTracingId <- handler.saveSkeletonTracing(SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name, editPosition = dataSource.center))
-        volumeTracingId <- handler.saveVolumeTracing(createVolumeTracing(dataSource, withFallback))
+        client <- tracingStoreService.clientFor(dataSet)
+        skeletonTracingId <- client.saveSkeletonTracing(SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name, editPosition = dataSource.center))
+        volumeTracingId <- client.saveVolumeTracing(createVolumeTracing(dataSource, withFallback))
       } yield (Some(skeletonTracingId), Some(volumeTracingId))
   }
 
@@ -144,7 +146,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
 
   def makeAnnotationHybrid(user: User, annotation: Annotation)(implicit ctx: DBAccessContext) = {
     def createNewTracings(dataSet: DataSet, dataSource: DataSource) = annotation.tracingType match {
-      case TracingType.skeleton => createTracings(dataSet, dataSource, TracingType.volume, false).flatMap {
+      case TracingType.skeleton => createTracings(dataSet, dataSource, TracingType.volume, true).flatMap {
         case (_, Some(volumeId)) => annotationDAO.updateVolumeTracingId(annotation._id, volumeId)
         case _ => Fox.failure("unexpectedReturn")
       }
@@ -207,9 +209,9 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
   def tracingFromBase(annotationBase: Annotation, dataSet: DataSet)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[String] = {
     for {
       dataSource <- bool2Fox(dataSet.isUsable) ?~> Messages("dataSet.notImported", dataSet.name)
-      dataStoreHandler <- dataSetService.handlerFor(dataSet)
+      tracingStoreClient <- tracingStoreService.clientFor(dataSet)
       skeletonTracingId <- annotationBase.skeletonTracingId.toFox
-      newTracingId <- dataStoreHandler.duplicateSkeletonTracing(skeletonTracingId)
+      newTracingId <- tracingStoreClient.duplicateSkeletonTracing(skeletonTracingId)
     } yield newTracingId
   }
 
@@ -218,7 +220,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     def useAsTemplateAndInsert(annotation: Annotation) = {
       for {
         dataSetName <- dataSetDAO.getNameById(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
-        dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> ("Could not access DataSet " + dataSetName + ". Does your team have access?")
+        dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.noAccess"
         newTracingId <- tracingFromBase(annotation, dataSet) ?~> "Failed to use annotation base as template."
         newAnnotation = annotation.copy(
           _id = initializingAnnotationId,
@@ -349,8 +351,8 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     def getTracings(dataSetId: ObjectId, tracingIds: List[String]) = {
       for {
         dataSet <- dataSetDAO.findOne(dataSetId)
-        dataStoreHandler <- dataSetService.handlerFor(dataSet)
-        tracingContainers <- Fox.serialCombined(tracingIds.grouped(1000).toList)(dataStoreHandler.getSkeletonTracings)
+        tracingStoreClient <- tracingStoreService.clientFor(dataSet)
+        tracingContainers <- Fox.serialCombined(tracingIds.grouped(1000).toList)(tracingStoreClient.getSkeletonTracings)
       } yield tracingContainers.flatMap(_.tracings)
     }
 
@@ -459,6 +461,8 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       restrictionsJs <- AnnotationRestrictions.writeAsJson(restrictionsOpt.getOrElse(annotationRestrictionDefults.defaultsFor(annotation)), requestingUser)
       dataStore <- dataStoreDAO.findOneByName(dataSet._dataStore.trim) ?~> "datastore.notFound"
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
+      tracingStore <- tracingStoreDAO.findFirst
+      tracingStoreJs <- tracingStoreService.publicWrites(tracingStore)
     } yield {
       Json.obj(
         "modified" -> annotation.modified,
@@ -475,6 +479,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         "dataSetName" -> dataSet.name,
         "organization" -> organization.name,
         "dataStore" -> dataStoreJs,
+        "tracingStore" -> tracingStoreJs,
         "isPublic" -> annotation.isPublic,
         "settings" -> settings,
         "tracingTime" -> annotation.tracingTime,

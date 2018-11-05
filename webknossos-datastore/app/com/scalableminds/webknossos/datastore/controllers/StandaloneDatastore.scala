@@ -1,13 +1,11 @@
 package com.scalableminds.webknossos.datastore.controllers
 
-import com.google.inject.Inject
-import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.tracings.skeleton.SkeletonTracingService
+import javax.inject.Inject
 import play.api.libs.json.Json
 import play.api.mvc.{Action, InjectedController}
-import play.api.mvc.Results._
 
 import scala.concurrent.ExecutionContext
+import play.api.mvc.Results._
 
 class StandaloneDatastore @Inject()(implicit ec: ExecutionContext) extends InjectedController with RemoteOriginHelpers {
 

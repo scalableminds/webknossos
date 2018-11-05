@@ -6,12 +6,15 @@
 import _ from "lodash";
 import BackboneEvents from "backbone-events-standalone";
 import type { Vector3, Vector4 } from "oxalis/constants";
+import * as THREE from "three";
 import constants from "oxalis/constants";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
 import * as Utils from "libs/utils";
 import window from "libs/window";
 import Toast from "libs/toast";
 import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
+import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import Store from "oxalis/store";
 
 export const BucketStateEnum = {
   UNREQUESTED: "UNREQUESTED",
@@ -122,12 +125,17 @@ export class DataBucket {
   }
 
   getData(): Uint8Array {
-    if (this.data == null) {
+    const data = this.data;
+    if (data == null) {
       throw new Error("Bucket.getData() called, but data does not exist.");
     }
 
+    this.markAsNeeded();
+    return data;
+  }
+
+  markAsNeeded(): void {
     this.accessed = true;
-    return this.data;
   }
 
   getOrCreateData(): Uint8Array {
@@ -175,49 +183,6 @@ export class DataBucket {
         break;
       default:
         this.unexpectedState();
-    }
-  }
-
-  setVisualizationColor(color: number) {
-    this.visualizationColor = color;
-
-    function hexToRgb(hex) {
-      while (hex.length < 6) {
-        hex = "0" + hex;
-      }
-      var result = /^([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-      return result
-        ? {
-            r: parseInt(result[1], 16) / 256,
-            g: parseInt(result[2], 16) / 256,
-            b: parseInt(result[3], 16) / 256,
-          }
-        : null;
-    }
-
-    if (this.visualizedMesh != null) {
-      this.visualizedMesh.material.color = hexToRgb(color.toString(16));
-    }
-  }
-
-  visualize() {
-    if (this.visualizedMesh != null) {
-      return;
-    }
-    if (this.zoomedAddress[3] === 0 || this.zoomedAddress[3] === 1) {
-      const resolutions = [[1, 1, 1], [2, 2, 2], [4, 4, 4], [8, 8, 8]];
-      this.visualizedMesh = window.addBucketMesh(
-        bucketPositionToGlobalAddress(this.zoomedAddress, resolutions),
-        this.zoomedAddress[3],
-        this.visualizationColor,
-      );
-    }
-  }
-
-  unvisualize() {
-    if (this.visualizedMesh != null) {
-      window.removeBucketMesh(this.visualizedMesh);
-      this.visualizedMesh = null;
     }
   }
 
@@ -372,6 +337,37 @@ export class DataBucket {
 
   setNeededAtPickerTick(tick: number) {
     this.neededAtPickerTick = tick;
+  }
+
+  // The following three methods can be used for debugging purposes.
+  // The bucket will be rendered in the 3D scene as a wireframe geometry.
+  visualize() {
+    if (this.visualizedMesh != null) {
+      return;
+    }
+    if (this.zoomedAddress[3] === 0 || this.zoomedAddress[3] === 1) {
+      const resolutions = getResolutions(Store.getState().dataset);
+      this.visualizedMesh = window.addBucketMesh(
+        bucketPositionToGlobalAddress(this.zoomedAddress, resolutions),
+        this.zoomedAddress[3],
+        this.visualizationColor,
+      );
+    }
+  }
+
+  unvisualize() {
+    if (this.visualizedMesh != null) {
+      window.removeBucketMesh(this.visualizedMesh);
+      this.visualizedMesh = null;
+    }
+  }
+
+  setVisualizationColor(colorDescriptor: string | number) {
+    const color = new THREE.Color(colorDescriptor);
+    this.visualizationColor = color;
+    if (this.visualizedMesh != null) {
+      this.visualizedMesh.material.color = color;
+    }
   }
 }
 

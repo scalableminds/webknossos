@@ -17,6 +17,6 @@ CREATE VIEW webknossos.meshes_ AS SELECT * FROM webknossos.meshes WHERE NOT isDe
 ALTER TABLE webknossos.meshes
   ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) DEFERRABLE;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 33;
+UPDATE webknossos.releaseInformation SET schemaVersion = 34;
 
 COMMIT TRANSACTION;

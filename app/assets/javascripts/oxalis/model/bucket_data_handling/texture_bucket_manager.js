@@ -98,6 +98,7 @@ export default class TextureBucketManager {
     this.activeBucketToIndexMap.delete(bucket);
     this.committedBucketSet.delete(bucket);
     this.freeIndexSet.add(unusedIndex);
+    bucket.unvisualize();
   }
 
   // Takes an array of buckets (relative to an anchorPoint) and ensures that these
@@ -182,6 +183,8 @@ export default class TextureBucketManager {
         bucketHeightInTexture,
       );
       this.committedBucketSet.add(bucket);
+      bucket.setVisualizationColor("#00ff00");
+      bucket.visualize();
 
       window.needsRerender = true;
       this.isRefreshBufferOutOfDate = true;

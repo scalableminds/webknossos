@@ -1,7 +1,7 @@
 // @flow
 import PriorityQueue from "js-priority-queue";
 import type { Vector3, Vector4, OrthoViewMap } from "oxalis/constants";
-import { OrthoViewValuesWithoutTDView } from "oxalis/constants";
+import constants, { OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import {
   getResolutionsFactors,
   zoomedAddressToAnotherZoomStep,
@@ -12,6 +12,63 @@ import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import Store from "oxalis/store";
 import { getMaxBucketCountPerDim } from "oxalis/model/accessors/flycam_accessor";
+import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
+import memoizeOne from "memoize-one";
+
+// By subtracting and adding 1 (extraBucket) to the bounds of y and x, we move
+// one additional bucket on each edge of the viewport to the GPU. This decreases the
+// chance of showing gray data, when moving the viewport. However, it might happen that
+// we do not have enough capacity to move these additional buckets to the GPU.
+// That's why, we are using a priority queue which orders buckets by manhattan distance to
+// the center bucket. We only consume that many items from the PQ, which we can handle on the
+// GPU.
+const extraBucket = 1;
+
+function getUnzoomedBucketCountPerDim(
+  dataSetScale: Vector3,
+  forFallback: boolean,
+  zoomFactor: number,
+): Vector3 {
+  const baseVoxelFactors = getBaseVoxelFactors(dataSetScale);
+  const necessaryVoxelsPerDim = baseVoxelFactors.map(f => f * constants.PLANE_WIDTH);
+
+  const factor = forFallback ? 2 : 1;
+  const unzoomedBucketCountPerDim = necessaryVoxelsPerDim.map(
+    v => 1 + Math.ceil((zoomFactor * v) / (factor * constants.BUCKET_WIDTH)),
+  );
+  return ((unzoomedBucketCountPerDim: any): Vector3);
+}
+
+export const calculateUnzoomedBucketCount = (dataSetScale: Vector3, zoomFactor: number = 1) => {
+  // This function defines how many buckets this bucket picker needs at zoom level === 1.
+  // The returned value serves as an upper bound and influences which magnification is selected
+  // for a given zoom step.
+
+  const calculateBucketCountForOrtho = ([x, y, z]) => {
+    const xy = x * y;
+    const xz = x * z - x;
+    const yz = y * z - (y + z - 1);
+    return xy + xz + yz;
+  };
+  const bucketsPerDim = getUnzoomedBucketCountPerDim(dataSetScale, false, zoomFactor);
+  const fallbackBucketsPerDim = getUnzoomedBucketCountPerDim(dataSetScale, true, zoomFactor);
+
+  const addExtraBuckets = vec => vec.map(el => el + 2 * extraBucket);
+  const calculateAdditionalWSliceCount = ([x, y, z]) => {
+    const xy = x * y - x + y;
+    const xz = x * z - (2 * x + z);
+    const yz = y * z - (2 * y + 2 * z + 1);
+    return xy + xz + yz;
+  };
+
+  // For non-fallback buckets, we load two slices per plane (see usage of subBucketLocality)
+  const normalBucketCount =
+    calculateBucketCountForOrtho(addExtraBuckets(bucketsPerDim)) +
+    calculateAdditionalWSliceCount(addExtraBuckets(bucketsPerDim));
+  const fallbackBucketCount = calculateBucketCountForOrtho(addExtraBuckets(fallbackBucketsPerDim));
+
+  return normalBucketCount + fallbackBucketCount;
+};
 
 export default function determineBucketsForOrthogonal(
   cube: DataCube,
@@ -98,15 +155,6 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
       scaledTopLeftVector[u] + (scaledBottomRightVector[u] - scaledTopLeftVector[u]) / 2,
       scaledTopLeftVector[v] + (scaledBottomRightVector[v] - scaledTopLeftVector[v]) / 2,
     ];
-
-    // By subtracting and adding 1 (extraBucket) to the bounds of y and x, we move
-    // one additional bucket on each edge of the viewport to the GPU. This decreases the
-    // chance of showing gray data, when moving the viewport. However, it might happen that
-    // we do not have enough capacity to move these additional buckets to the GPU.
-    // That's why, we are using a priority queue which orders buckets by manhattan distance to
-    // the center bucket. We only consume that many items from the PQ, which we can handle on the
-    // GPU.
-    const extraBucket = 1;
 
     // Always use buckets in the current w slice, but also load either the previous or the next
     // slice (depending on locality within the current bucket).

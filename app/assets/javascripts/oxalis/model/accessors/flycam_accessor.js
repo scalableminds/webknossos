@@ -9,7 +9,7 @@ import type { Matrix4x4 } from "libs/mjs";
 import { M4x4 } from "libs/mjs";
 import * as THREE from "three";
 import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
-import { getNecessaryBucketCount } from "oxalis/model/bucket_data_handling/data_rendering_logic";
+import { calculateUnzoomedBucketCount } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
 import memoizeOne from "memoize-one";
 
 // All methods in this file should use constants.PLANE_WIDTH instead of constants.VIEWPORT_WIDTH
@@ -17,40 +17,23 @@ import memoizeOne from "memoize-one";
 // If VIEWPORT_WIDTH, which is a little bigger, is used instead, we end up with a data texture
 // that is shrinked a little bit, which leads to the texture not being in sync with the THREEjs scene.
 
-export function getUnzoomedBucketCountPerDim(
-  dataSetScale: Vector3,
-  forFallback: boolean = false,
-): Vector3 {
-  const baseVoxelFactors = scaleInfo.getBaseVoxelFactors(dataSetScale);
-  const necessaryVoxelsPerDim = baseVoxelFactors.map(f => f * constants.PLANE_WIDTH);
-
-  const factor = forFallback ? 2 : 1;
-  const unzoomedBucketCountPerDim = necessaryVoxelsPerDim.map(v =>
-    Math.ceil(v / (factor * constants.BUCKET_WIDTH)),
-  );
-  return ((unzoomedBucketCountPerDim: any): Vector3);
-}
-
-function getUnzoomedBucketCountForRendering(dataSetScale: Vector3) {
-  const calculateBucketCountForOrtho = ([x, y, z]) => x * y + x * z + y * z;
-  const bucketsPerDim = getUnzoomedBucketCountPerDim(dataSetScale);
-  const fallbackBucketsPerDim = getUnzoomedBucketCountPerDim(dataSetScale, true);
-  return (
-    calculateBucketCountForOrtho(bucketsPerDim) +
-    calculateBucketCountForOrtho(fallbackBucketsPerDim)
-  );
-}
-
 // This function returns a value which indicates how much larger the rendered
 // plane can be than its original size **without** having to use the next
 // magnification. E.g., a value of two indicates that the viewport
 // can be 2 * viewport_width pixel wide while still being in zoom step 0.
 function unmemoizedCalculateMaxZoomStepDiff(dataSetScale: Vector3): number {
-  // TODO: Does sqrt make sense here?
-  const maxZoomStepDiff = Math.sqrt(
-    getNecessaryBucketCount() / getUnzoomedBucketCountForRendering(dataSetScale),
-  );
-  return maxZoomStepDiff;
+  let maxZoomStep = 1;
+
+  // todo derive this from the textureBucketManager.maximumCapacity
+  const maximumCapacity = constants.MINIMUM_REQUIRED_BUCKET_CAPACITY;
+  while (
+    calculateUnzoomedBucketCount(dataSetScale, maxZoomStep) < maximumCapacity &&
+    maxZoomStep < 20
+  ) {
+    maxZoomStep += 0.1;
+  }
+
+  return maxZoomStep;
 }
 
 const calculateMaxZoomStepDiff = memoizeOne(unmemoizedCalculateMaxZoomStepDiff);

@@ -46,15 +46,8 @@ export function getPackingDegree(byteCount: number) {
   return byteCount === 1 ? 4 : 1;
 }
 
-export function getNecessaryBucketCount() {
-  const bucketCountPerPlane =
-    constants.REQUIRED_NEEDED_BUCKETS_PER_DIMENSION ** 2 + // buckets in current zoomStep
-    Math.ceil(constants.REQUIRED_NEEDED_BUCKETS_PER_DIMENSION / 2) ** 2; // buckets in fallback zoomstep;
-  return 3 * bucketCountPerPlane;
-}
-
 function getNecessaryVoxelCount() {
-  return getNecessaryBucketCount() * constants.BUCKET_SIZE;
+  return constants.MINIMUM_REQUIRED_BUCKET_CAPACITY * constants.BUCKET_SIZE;
 }
 
 function getAvailableVoxelCount(textureSize: number, packingDegree: number) {
@@ -91,7 +84,7 @@ function buildTextureInformationMap<Layer>(
 ): Map<Layer, DataTextureSizeAndCount> {
   const textureInformationPerLayer = new Map();
 
-  layers.map(layer => {
+  layers.forEach(layer => {
     const sizeAndCount = calculateTextureSizeAndCountForLayer(specs, getByteCountForLayer(layer));
     textureInformationPerLayer.set(layer, sizeAndCount);
   });

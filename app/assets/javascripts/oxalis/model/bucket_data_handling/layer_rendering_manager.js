@@ -278,9 +278,6 @@ export default class LayerRenderingManager {
       bucketPerDim => Math.ceil((bucketPerDim - 1) / 2) * constants.BUCKET_WIDTH,
     );
 
-    console.log("position[2]", position[2]);
-    console.log("position[2] / 32", Math.floor(position[2] / 32));
-
     // Hit texture top-left coordinate
     const anchorPoint = [
       Math.floor(position[0] - maximumRenderedBucketsHalf[0] * resolution[0]),

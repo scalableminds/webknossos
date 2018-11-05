@@ -125,13 +125,14 @@ const Constants = {
   // The size of the gap between the 4 viewports in the orthogonal mode
   VIEWPORT_GAP_WIDTH: 20,
 
-  LOOK_UP_TEXTURE_WIDTH: 128,
-  // The following value defines how many buckets per dimension should be at least
-  // supported for client-side renderign. Based on this value and the actual scale
-  // of a dataset, we can calculate how many buckets per dimension we exactly want.
-  REQUIRED_NEEDED_BUCKETS_PER_DIMENSION: 17,
+  // We require at least 1200 buckets per data layer to fit onto the GPU.
+  // This number is used during setup to pick appropriate data texture sizes.
+  // 1200 approximately corresponds to 17 buckets per dimension for three
+  // planes + fallback buckets. See orthogonal_bucket_picker for calculation details.
+  MINIMUM_REQUIRED_BUCKET_CAPACITY: 1200,
   DISTANCE_3D: 140,
   MAX_TEXTURE_COUNT_PER_LAYER: 1,
+  LOOK_UP_TEXTURE_WIDTH: 128,
 
   TDView_MOVE_SPEED: 150,
   MIN_MOVE_VALUE: 30,

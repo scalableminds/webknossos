@@ -15,6 +15,7 @@ object Dependencies {
   val commonsEmail = "org.apache.commons" % "commons-email" % "1.3.1"
   val commonsIo = "commons-io" % "commons-io" % "2.4"
   val commonsLang = "org.apache.commons" % "commons-lang3" % "3.1"
+  val gson = "com.google.code.gson" % "gson" % "1.7.1"
   val grpc = "io.grpc" % "grpc-netty-shaded" % scalapb.compiler.Version.grpcJavaVersion
   val grpcServices = "io.grpc" % "grpc-services" % scalapb.compiler.Version.grpcJavaVersion
   val scalapbRuntime = "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion
@@ -69,6 +70,7 @@ object Dependencies {
   val webknossosDatastoreDependencies = Seq(
     akkaLogging,
     ehcache,
+    gson,
     newrelic,
     newrelicApi,
     webknossosWrap,

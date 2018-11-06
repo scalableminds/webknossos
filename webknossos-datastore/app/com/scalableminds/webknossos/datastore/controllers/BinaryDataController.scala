@@ -35,7 +35,7 @@ class BinaryDataController @Inject()(
                                       dataSourceRepository: DataSourceRepository,
                                       config: DataStoreConfig,
                                       accessTokenService: DataStoreAccessTokenService,
-                                      binaryDataServiceHolder: BinaryDataServiceHolder,
+                                      dataServicesHolder: DataServicesHolder,
                                       isosurfaceService: IsosurfaceService,
                                       actorSystem: ActorSystem
                                     )
@@ -43,7 +43,7 @@ class BinaryDataController @Inject()(
                                      bodyParsers: PlayBodyParsers)
   extends Controller {
 
-  val binaryDataService = binaryDataServiceHolder.binaryDataService
+  val binaryDataService = dataServicesHolder.binaryDataService
 
   /**
     * Handles requests for raw binary data via HTTP POST from webKnossos.
@@ -318,7 +318,7 @@ class BinaryDataController @Inject()(
           for {
             (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
             segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Messages("dataLayer.mustBeSegmentation")
-            isosurfaceRequest = IsosurfaceRequest(dataSource, dataLayer, request.body.cuboid(dataLayer), request.body.segmentId, request.body.mapping)
+            isosurfaceRequest = IsosurfaceRequest(dataSource, segmentationLayer, request.body.cuboid(dataLayer), request.body.segmentId, request.body.mapping)
             vertices <- isosurfaceService.requestIsosurface(isosurfaceRequest)
           } yield {
             Ok(Json.obj("vertices" -> vertices))

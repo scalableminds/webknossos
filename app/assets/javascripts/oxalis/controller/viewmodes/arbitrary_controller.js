@@ -11,15 +11,12 @@ import type { ModifierKeys } from "libs/input";
 import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 import Toast from "libs/toast";
-import type { Mode, Point2, Vector3 } from "oxalis/constants";
-import type { OxalisState, Flycam } from "oxalis/store";
+import type { Mode, Point2 } from "oxalis/constants";
 import Store from "oxalis/store";
 import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
-import { voxelToNm, getBaseVoxel } from "oxalis/model/scaleinfo";
-import TrackballControls from "libs/trackball_controls";
+import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import Model from "oxalis/model";
-import * as THREE from "three";
-import constants, { OrthoViews, ArbitraryViewport } from "oxalis/constants";
+import constants, { ArbitraryViewport } from "oxalis/constants";
 import {
   updateUserSettingAction,
   setFlightmodeRecordingAction,

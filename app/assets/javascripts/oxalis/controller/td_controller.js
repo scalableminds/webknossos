@@ -1,15 +1,15 @@
 // @flow
 import * as React from "react";
 import * as Utils from "libs/utils";
-import { InputKeyboard, InputMouse, InputKeyboardNoLoop } from "libs/input";
+import { InputMouse } from "libs/input";
 import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import CameraController from "oxalis/controller/camera_controller";
-import { voxelToNm, getBaseVoxel } from "oxalis/model/scaleinfo";
+import { voxelToNm } from "oxalis/model/scaleinfo";
 import TrackballControls from "libs/trackball_controls";
 import Store from "oxalis/store";
 import type { OxalisState, Flycam, CameraData, Tracing } from "oxalis/store";
 import * as THREE from "three";
-import constants, { OrthoViews, type Vector3 } from "oxalis/constants";
+import { OrthoViews, type Vector3 } from "oxalis/constants";
 import type { Point2, OrthoViewMap } from "oxalis/constants";
 import { connect } from "react-redux";
 import {

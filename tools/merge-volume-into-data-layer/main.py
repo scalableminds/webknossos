@@ -1,7 +1,10 @@
+#!/usr/bin/env python3
+
 from argparse import ArgumentParser
 import zipfile
 import shutil
 import os
+import sys
 import random
 import string
 import wkw
@@ -11,41 +14,94 @@ from operator import add
 
 def main():
     args = create_parser().parse_args()
+    confirmation_prompt(args)
+    tracing_tmpdir_path = extract_tracing_zip(args)
 
-    #tmpdir_path = tmp_filename()
-    #os.makedirs(tmpdir_path)
-#
-    #extract_zip(args.tracing_path, tmpdir_path)
-    tmpdir_path = 'tmp-67X8KZUFP0'
-
-    tracing_dataset = wkw.Dataset.open(os.path.join(tmpdir_path, '1'))
+    tracing_dataset = wkw.Dataset.open(os.path.join(tracing_tmpdir_path, '1'))
     segmentation_dataset = wkw.Dataset.open(os.path.join(args.segmentation_path))
+
+    assert(tracing_dataset.header.num_channels == segmentation_dataset.header.num_channels)
 
     tracing_bboxes = file_bboxes(tracing_dataset)
     segmentation_bboxes = file_bboxes(segmentation_dataset)
-    print(tracing_bboxes)
-    print(segmentation_bboxes)
 
-    # todo: group tracing_bboxes by matching segmentation_bbox, iterate
-    # todo: assert same byteness
+    bboxes_grouped = group_tracing_bboxes(tracing_bboxes, segmentation_bboxes)
 
-    print("reading wkw file...")
-    data = segmentation_dataset.read(segmentation_bboxes[0][0], segmentation_bboxes[0][1])
+    print("Found {} tracing files, which will affect {} segmentation files".format(len(tracing_bboxes), len(bboxes_grouped)))
 
-    print("overwriting tracing buckets in memory...")
+    segmentation_file_len_voxels = segmentation_dataset.header.block_len * segmentation_dataset.header.file_len
+
+    count = 1
+    for bbox_group_key in bboxes_grouped:
+        segmentation_bbox = bboxes_grouped[bbox_group_key][0]
+        tracing_bboxes = bboxes_grouped[bbox_group_key][1]
+
+        print("Reading segmentation file {} of {}, bounding box: {}...".format(count, len(bboxes_grouped), segmentation_bbox))
+        data = segmentation_dataset.read(segmentation_bbox[0], segmentation_bbox[1])
+
+        print("  Overwriting tracing buckets in memory...")
+        for tracing_bbox in tracing_bboxes:
+            print("    Overwriting", tracing_bbox)
+            tracing_data = tracing_dataset.read(tracing_bbox[0], tracing_bbox[1])
+            topleft = list(map(lambda x: x % segmentation_file_len_voxels, tracing_bbox[0]))
+            shape = tracing_bbox[1]
+            bottomright = list( map(add, topleft, shape) )
+            # print("      Broatcasting to 0:1 {}:{}, {}:{}, {}:{}".format(topleft[0], bottomright[0], topleft[1], bottomright[1], topleft[2], bottomright[2]))
+            data[0:1, topleft[0]:bottomright[0], topleft[1]:bottomright[1], topleft[2]:bottomright[2]] = tracing_data
+
+        print("  Writing segmentation file back to disk...")
+        segmentation_dataset.write([0, 0, 0], data)
+        count = count + 1
+    print("Done")
+
+def confirmation_prompt(args):
+    if not args.yes:
+        answer = input("Are you sure you want to modify the data in {}? This cannot be undone. To continue, type “yes”: ".format(args.segmentation_path))
+        if answer != "yes":
+            print("Aborting")
+            sys.exit(0)
+
+def extract_tracing_zip(args):
+    tracing_tmpdir_path = tmp_filename()
+    os.makedirs(tracing_tmpdir_path)
+    with zipfile.ZipFile(args.tracing_path) as outer_zip:
+        if 'data.zip' in outer_zip.namelist():
+            outfile_path = os.path.join(tracing_tmpdir_path, 'data.zip')
+            with outer_zip.open('data.zip') as data_zip, open(outfile_path, 'wb') as outfile:
+                shutil.copyfileobj(data_zip, outfile)
+                extract_data_zip(outfile_path, tracing_tmpdir_path)
+            os.remove(outfile_path)
+        else:
+            extract_data_zip(args.tracing_path)
+
+    tracing_tmpdir_path = 'tmp-67X8KZUFP0'
+    return tracing_tmpdir_path
+
+def extract_data_zip(path, tracing_tmpdir_path):
+    with zipfile.ZipFile(path) as file:
+        zipfile.ZipFile.extractall(file, path=tracing_tmpdir_path)
+
+def group_tracing_bboxes(tracing_bboxes, segmentation_bboxes):
+    grouped = {}
     for tracing_bbox in tracing_bboxes:
-        print("overwriting", tracing_bbox)
-        tracing_data = tracing_dataset.read(tracing_bbox[0], tracing_bbox[1])
-        print("tracing_data shape:", tracing_data.shape)
-        topleft = tracing_bbox[0]
-        shape = tracing_bbox[1]
-        bottomright = list( map(add, topleft, shape) )
-        print("broatcasting to 0:1 {}:{}, {}:{}, {}:{}".format(topleft[0], bottomright[0], topleft[1], bottomright[1], topleft[2], bottomright[2]))
-        data[0:1, topleft[0]:bottomright[0], topleft[1]:bottomright[1], topleft[2]:bottomright[2]] = tracing_data
+        segmentation_bbox = matching_segmentation_bbox(segmentation_bboxes, tracing_bbox)
+        str(segmentation_bbox)
+        if not str(segmentation_bbox) in grouped:
+            grouped[str(segmentation_bbox)] = (segmentation_bbox, [])
+        grouped[str(segmentation_bbox)][1].append(tracing_bbox)
+    return grouped
 
-    print("writing wkw file back to disk...")
-    segmentation_dataset.write([0, 0, 0], data)
-
+def matching_segmentation_bbox(segmentation_bboxes, tracing_bbox):
+    for segmentation_bbox in segmentation_bboxes:
+        if     (segmentation_bbox[0][0] <= tracing_bbox[0][0]
+            and segmentation_bbox[0][1] <= tracing_bbox[0][1]
+            and segmentation_bbox[0][2] <= tracing_bbox[0][2]
+            and segmentation_bbox[1][0] >= tracing_bbox[1][0]
+            and segmentation_bbox[1][1] >= tracing_bbox[1][1]
+            and segmentation_bbox[1][2] >= tracing_bbox[1][2]):
+                return segmentation_bbox
+    print("Error: tracing extends outside of segmentation data. Stopping, no data was modified.")
+    sys.exit(1)
 
 def file_bboxes(dataset):
     file_len_voxels = dataset.header.block_len * dataset.header.file_len
@@ -57,33 +113,13 @@ def file_bboxes(dataset):
         offset = [int(x) * file_len_voxels for x in file_coords]
         shape = [file_len_voxels, file_len_voxels, file_len_voxels]
         bboxes.append((offset, shape))
-
     return bboxes
 
-
-def extract_zip(path, tmpdir_path):
-    with zipfile.ZipFile(path) as outer_zip:
-        if 'data.zip' in outer_zip.namelist():
-            outfile_path = os.path.join(tmpdir_path, 'data.zip')
-            with outer_zip.open('data.zip') as data_zip, open(outfile_path, 'wb') as outfile:
-                shutil.copyfileobj(data_zip, outfile)
-                read_data_zip(outfile_path, tmpdir_path)
-            os.remove(outfile_path)
-        else:
-            read_data_zip(args.tracing_path)
-
-def read_data_zip(path, tmpdir_path):
-    with zipfile.ZipFile(path) as file:
-        zipfile.ZipFile.extractall(file, path=tmpdir_path)
-
 def create_parser():
-
     parser = ArgumentParser()
-
     parser.add_argument('tracing_path', help='Volume tracing zip file')
-
-    parser.add_argument('segmentation_path', help='Directory containing the segmentation to overwrite.')
-
+    parser.add_argument('segmentation_path', help='Directory containing the segmentation to overwrite. (Path should include zoom level)')
+    parser.add_argument('-y', '--yes', action="store_true", help='Skip the confirmation prompt')
     return parser
 
 def tmp_filename():

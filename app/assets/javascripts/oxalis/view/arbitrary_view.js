@@ -184,9 +184,13 @@ class ArbitraryView {
         }
       };
 
-      this.plane.meshes[1].visible = false;
+      if (this.plane.meshes.debuggerPlane != null) {
+        this.plane.meshes.debuggerPlane.visible = false;
+      }
       renderViewport(ArbitraryViewport, camera);
-      this.plane.meshes[1].visible = true;
+      if (this.plane.meshes.debuggerPlane != null) {
+        this.plane.meshes.debuggerPlane.visible = true;
+      }
       renderViewport(OrthoViews.TDView, this.tdCamera);
 
       this.needsRerender = false;

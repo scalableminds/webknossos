@@ -28,10 +28,15 @@ import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_fac
 // attached to bend surface.
 // The result is then projected on a flat surface.
 
-const renderDebuggerPlane = false;
+const renderDebuggerPlane = true;
+
+type ArbitraryMeshes = {|
+  mainPlane: THREE.Mesh,
+  debuggerPlane: ?THREE.Mesh,
+|};
 
 class ArbitraryPlane {
-  meshes: Array<THREE.Mesh>;
+  meshes: ArbitraryMeshes;
   isDirty: boolean;
   stopStoreListening: () => void;
   materialFactory: PlaneMaterialFactory;
@@ -52,27 +57,34 @@ class ArbitraryPlane {
 
   updateAnchorPoints(anchorPoint: ?Vector4, fallbackAnchorPoint: ?Vector4): void {
     if (anchorPoint) {
-      this.meshes[0].material.setAnchorPoint(anchorPoint);
+      this.meshes.mainPlane.material.setAnchorPoint(anchorPoint);
     }
     if (fallbackAnchorPoint) {
-      this.meshes[0].material.setFallbackAnchorPoint(fallbackAnchorPoint);
+      this.meshes.mainPlane.material.setFallbackAnchorPoint(fallbackAnchorPoint);
     }
   }
 
   setPosition = ({ x, y, z }: THREE.Vector3) => {
-    this.meshes[0].material.setGlobalPosition([x, y, z]);
+    this.meshes.mainPlane.material.setGlobalPosition([x, y, z]);
   };
 
   addToScene(scene: THREE.Scene) {
-    this.meshes.forEach(mesh => scene.add(mesh));
+    Object.keys(this.meshes).forEach(meshKey => {
+      const mesh = this.meshes[meshKey];
+      if (mesh) {
+        scene.add(mesh);
+      }
+    });
   }
 
   update() {
     if (this.isDirty) {
-      const { meshes } = this;
-
       const matrix = getZoomedMatrix(Store.getState().flycam);
-      meshes.forEach(mesh => {
+
+      const updateMesh = mesh => {
+        if (!mesh) {
+          return;
+        }
         mesh.matrix.set(
           matrix[0],
           matrix[4],
@@ -94,35 +106,41 @@ class ArbitraryPlane {
 
         mesh.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
         mesh.matrixWorldNeedsUpdate = true;
-      });
+      };
 
+      Object.keys(this.meshes)
+        .map(k => this.meshes[k])
+        .forEach(updateMesh);
       this.isDirty = false;
 
       SceneController.update(this);
     }
   }
 
-  createMeshes() {
-    this.materialFactory = new PlaneMaterialFactory(OrthoViews.PLANE_XY, false, 4);
-    const textureMaterial = this.materialFactory.setup().getMaterial();
-
-    const plane = new THREE.Mesh(
-      new THREE.PlaneGeometry(constants.VIEWPORT_WIDTH, constants.VIEWPORT_WIDTH, 1, 1),
-      textureMaterial,
-    );
-
-    const planes = [plane];
-    if (renderDebuggerPlane) {
-      const debuggerPlane = this.createDebuggerPlane();
-      planes.push(debuggerPlane);
-    }
-    planes.forEach(_plane => {
+  createMeshes(): ArbitraryMeshes {
+    const adaptPlane = _plane => {
       _plane.rotation.x = Math.PI;
       _plane.matrixAutoUpdate = false;
       _plane.material.side = THREE.DoubleSide;
-    });
+      return _plane;
+    };
 
-    return planes;
+    this.materialFactory = new PlaneMaterialFactory(OrthoViews.PLANE_XY, false, 4);
+    const textureMaterial = this.materialFactory.setup().getMaterial();
+
+    const mainPlane = adaptPlane(
+      new THREE.Mesh(
+        new THREE.PlaneGeometry(constants.VIEWPORT_WIDTH, constants.VIEWPORT_WIDTH, 1, 1),
+        textureMaterial,
+      ),
+    );
+
+    const debuggerPlane = renderDebuggerPlane ? adaptPlane(this.createDebuggerPlane()) : null;
+
+    return {
+      mainPlane,
+      debuggerPlane,
+    };
   }
 
   createDebuggerPlane() {

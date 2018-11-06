@@ -191,7 +191,7 @@ class PullQueue {
   add(item: PullQueueItem, currentBucketPickerTick?: number): void {
     const bucket = this.cube.getOrCreateBucket(item.bucket);
     if (bucket.type === "data") {
-      if (currentBucketPickerTick != null) {
+      if (currentBucketPickerTick == null) {
         const layerRenderingManager = Model.getLayerRenderingManagerByName(this.layerName);
         currentBucketPickerTick = layerRenderingManager.currentBucketPickerTick;
       }

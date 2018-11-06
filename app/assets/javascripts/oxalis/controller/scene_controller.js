@@ -18,7 +18,7 @@ import {
 import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
-import { getVoxelPerNM, getBaseVoxel } from "oxalis/model/scaleinfo";
+import { getVoxelPerNM } from "oxalis/model/scaleinfo";
 import Plane from "oxalis/geometries/plane";
 import Skeleton from "oxalis/geometries/skeleton";
 import Cube from "oxalis/geometries/cube";

@@ -8,6 +8,7 @@ import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 import TWEEN from "tween.js";
 import Constants, { ArbitraryViewport, OrthoViews } from "oxalis/constants";
+import type { OrthoViewMap } from "oxalis/constants";
 import Store from "oxalis/store";
 import SceneController from "oxalis/controller/scene_controller";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
@@ -15,8 +16,8 @@ import { getDesiredLayoutRect } from "oxalis/view/layouting/golden_layout_adapte
 import window from "libs/window";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import type ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import { clearCanvas, setupRenderArea } from "./plane_view";
-import type { ArbitraryPlane } from "oxalis/geometries/arbitrary_plane";
 
 class ArbitraryView {
   // Copied form backbone events (TODO: handle this better)

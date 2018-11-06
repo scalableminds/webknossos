@@ -28,6 +28,8 @@ import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_fac
 // attached to bend surface.
 // The result is then projected on a flat surface.
 
+const renderDebuggerPlane = false;
+
 class ArbitraryPlane {
   meshes: Array<THREE.Mesh>;
   isDirty: boolean;
@@ -109,6 +111,21 @@ class ArbitraryPlane {
       textureMaterial,
     );
 
+    const planes = [plane];
+    if (renderDebuggerPlane) {
+      const debuggerPlane = this.createDebuggerPlane();
+      planes.push(debuggerPlane);
+    }
+    planes.forEach(_plane => {
+      _plane.rotation.x = Math.PI;
+      _plane.matrixAutoUpdate = false;
+      _plane.material.side = THREE.DoubleSide;
+    });
+
+    return planes;
+  }
+
+  createDebuggerPlane() {
     const debuggerMaterial = new THREE.ShaderMaterial({
       uniforms: this.materialFactory.uniforms,
       vertexShader: `
@@ -156,14 +173,7 @@ class ArbitraryPlane {
       new THREE.PlaneGeometry(constants.VIEWPORT_WIDTH, constants.VIEWPORT_WIDTH, 50, 50),
       debuggerMaterial,
     );
-
-    [plane, debuggerPlane].forEach(_plane => {
-      _plane.rotation.x = Math.PI;
-      _plane.matrixAutoUpdate = false;
-      _plane.material.side = THREE.DoubleSide;
-    });
-
-    return [plane, debuggerPlane];
+    return debuggerPlane;
   }
 }
 

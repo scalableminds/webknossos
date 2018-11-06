@@ -27,6 +27,7 @@ import * as Utils from "libs/utils";
 import DataLayer from "oxalis/model/data_layer";
 import ConnectionInfo from "oxalis/model/data_connection_info";
 import { ControlModeEnum } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 import Toast from "libs/toast";
 import ErrorHandling from "libs/error_handling";
 import UrlManager from "oxalis/controller/url_manager";
@@ -252,7 +253,36 @@ function initializeDataset(
     dataset.dataSource.dataLayers = newDataLayers;
   });
 
+  ensureDenseLayerResolutions(dataset);
   Store.dispatch(setDatasetAction(dataset));
+}
+
+function ensureDenseLayerResolutions(dataset: APIDataset) {
+  for (const layer of dataset.dataSource.dataLayers) {
+    layer.resolutions = convertToDenseResolution(layer.resolutions);
+  }
+}
+
+function convertToDenseResolution(resolutions: Array<Vector3>) {
+  // Each resolution entry can be characterized by it's greatest resolution dimension.
+  // E.g., the resolution array [[1, 1, 1], [2, 2, 1], [4, 4, 2]] defines that
+  // a log zoomstep of 2 corresponds to the resolution [2, 2, 1] (and not [4, 4, 2]).
+  // Therefore, the largest dim for each resolution has to be unique across all resolutions.
+
+  // This function returns an array of resolutions, for which each index will
+  // hold a resolution with highest_dim === 2**index.
+
+  if (resolutions.length !== _.uniqBy(resolutions.map(_.max)).length) {
+    throw new Error("Max dimension in resolutions is not unique.");
+  }
+  const paddedResolutionCount = 1 + Math.log2(_.max(resolutions.map(v => _.max(v))));
+  const resolutionsLookUp = _.keyBy(resolutions, _.max);
+
+  return _.range(0, paddedResolutionCount).map(exp => {
+    const resPower = 2 ** exp;
+    // If the resolution does not exist, use a fallback resolution
+    return resolutionsLookUp[resPower] || [resPower, resPower, resPower];
+  });
 }
 
 function initializeSettings(initialUserSettings: Object, initialDatasetSettings: Object): void {

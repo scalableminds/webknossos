@@ -5,6 +5,7 @@ This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.md).
 
 ## Unreleased
+- If additional dataset directories were watched using the config key `additionalFolders`, those symlinks are no longer updated. Consider setting up additional datastores for these directories respectively.
 -
 ### Postgres Evolutions:
 - [033-tasktype-recommendedConfiguration.sql](033-tasktype-recommendedConfiguration.sql)

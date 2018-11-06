@@ -57,8 +57,9 @@ class DatasetPositionView extends PureComponent<Props> {
         `/data/datasets/Connectomics_Department/ROI2017_wkw/layers/segmentation/isosurface?token=${token}`,
         {
           data: {
-            position: [position[0] - 128, position[1] - 128, position[2] - 128],
             cubeSize: 256,
+            mapping: layer.activeMapping,
+            position: [position[0] - 128, position[1] - 128, position[2] - 128],
             zoomStep,
             segmentId,
           },

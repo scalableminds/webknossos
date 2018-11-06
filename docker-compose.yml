@@ -176,20 +176,20 @@ services:
       - "./pg/dev-db:/var/lib/postgresql/data/"
 
   psql:
-    extends: postgres-persisted
-    command: psql -h postgres -U postgres webknossos
+    extends: postgres
+    command: psql -h postgres-persisted -U postgres webknossos
     links:
-      - postgres
+      - postgres-persisted
     environment:
       PGPASSWORD: postgres
     volumes:
       - ./conf/evolutions/:/evolutions/
 
   drop-db:
-    extends: postgres-persisted
-    command: psql -h postgres -U postgres postgres -c "DROP DATABASE webknossos"
+    extends: postgres
+    command: psql -h postgres-persisted -U postgres postgres -c "DROP DATABASE webknossos"
     links:
-      - postgres
+      - postgres-persisted
     environment:
       PGPASSWORD: postgres
 

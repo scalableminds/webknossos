@@ -5,30 +5,21 @@
 
 import * as React from "react";
 import BackboneEvents from "backbone-events-standalone";
-import { connect } from "react-redux";
 import _ from "lodash";
 import { InputKeyboard, InputMouse, InputKeyboardNoLoop } from "libs/input";
 import type { ModifierKeys } from "libs/input";
 import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 import Toast from "libs/toast";
-import type { Mode, Point2, Vector3, ArbitraryViewMap } from "oxalis/constants";
+import type { Mode, Point2, Vector3 } from "oxalis/constants";
 import type { OxalisState, Flycam } from "oxalis/store";
 import Store from "oxalis/store";
-import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
-import CameraController from "oxalis/controller/camera_controller";
+import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import { voxelToNm, getBaseVoxel } from "oxalis/model/scaleinfo";
 import TrackballControls from "libs/trackball_controls";
 import Model from "oxalis/model";
 import * as THREE from "three";
 import constants, { OrthoViews, ArbitraryViewport } from "oxalis/constants";
-import {
-  setViewportAction,
-  setTDCameraAction,
-  zoomTDViewAction,
-  moveTDViewXAction,
-  moveTDViewYAction,
-} from "oxalis/model/actions/view_mode_actions";
 import {
   updateUserSettingAction,
   setFlightmodeRecordingAction,
@@ -64,20 +55,14 @@ import messages from "messages";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import SceneController from "oxalis/controller/scene_controller";
 import api from "oxalis/api/internal_api";
-import { threeCameraToCameraData } from "./plane_controller";
+import TDController from "oxalis/controller/td_controller";
 
 const arbitraryViewportSelector = "#inputcatcher_arbitraryViewport";
 
-type OwnProps = {|
+type Props = {|
   onRender: () => void,
   viewMode: Mode,
 |};
-
-type Props = {
-  ...OwnProps,
-  flycam: Flycam,
-  scale: Vector3,
-};
 
 class ArbitraryController extends React.PureComponent<Props> {
   // See comment in Controller class on general controller architecture.
@@ -89,13 +74,12 @@ class ArbitraryController extends React.PureComponent<Props> {
   crosshair: Crosshair;
   lastNodeMatrix: Matrix4x4;
   input: {
-    mouseControllers: ArbitraryViewMap<?InputMouse>,
+    mouseController: ?InputMouse,
     keyboard?: InputKeyboard,
     keyboardLoopDelayed?: InputKeyboard,
     keyboardNoLoop?: InputKeyboardNoLoop,
   };
   storePropertyUnsubscribers: Array<Function>;
-  controls: TrackballControls;
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
@@ -104,10 +88,7 @@ class ArbitraryController extends React.PureComponent<Props> {
   componentDidMount() {
     _.extend(this, BackboneEvents);
     this.input = {
-      mouseControllers: {
-        [ArbitraryViewport]: null,
-        [OrthoViews.TDView]: null,
-      },
+      mouseController: null,
     };
     this.storePropertyUnsubscribers = [];
     this.start();
@@ -119,7 +100,7 @@ class ArbitraryController extends React.PureComponent<Props> {
 
   initMouse(): void {
     Utils.waitForSelector(arbitraryViewportSelector).then(() => {
-      this.input.mouseControllers[ArbitraryViewport] = new InputMouse(arbitraryViewportSelector, {
+      this.input.mouseController = new InputMouse(arbitraryViewportSelector, {
         leftDownMove: (delta: Point2) => {
           if (this.props.viewMode === constants.MODE_ARBITRARY) {
             Store.dispatch(
@@ -145,38 +126,6 @@ class ArbitraryController extends React.PureComponent<Props> {
           }
         },
       });
-
-      const tdView = OrthoViews.TDView;
-      const inputcatcherSelector = `#inputcatcher_${tdView}`;
-      Utils.waitForSelector(inputcatcherSelector).then(_domElement => {
-        this.input.mouseControllers[tdView] = new InputMouse(
-          inputcatcherSelector,
-          this.getTDViewMouseControls(),
-          tdView,
-        );
-      });
-      this.initTrackballControls();
-    });
-  }
-
-  initTrackballControls(): void {
-    Utils.waitForSelector("#inputcatcher_TDView").then(view => {
-      const pos = voxelToNm(this.props.scale, getPosition(this.props.flycam));
-      const tdCamera = this.arbitraryView.getCameras()[OrthoViews.TDView];
-      this.controls = new TrackballControls(tdCamera, view, new THREE.Vector3(...pos), () => {
-        // write threeJS camera into store
-        Store.dispatch(setTDCameraAction(threeCameraToCameraData(tdCamera)));
-      });
-
-      this.controls.noZoom = true;
-      this.controls.noPan = true;
-      this.controls.staticMoving = true;
-
-      this.controls.target.set(...pos);
-
-      // This is necessary, since we instantiated this.controls now. This should be removed
-      // when the workaround with requestAnimationFrame(initInputHandlers) is removed.
-      this.forceUpdate();
     });
   }
 
@@ -398,6 +347,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     this.arbitraryView.draw();
 
     this.isStarted = true;
+    this.forceUpdate();
   }
 
   unsubscribeStoreListeners() {
@@ -426,7 +376,7 @@ class ArbitraryController extends React.PureComponent<Props> {
   };
 
   destroyInput() {
-    Utils.__guard__(this.input.mouseControllers[ArbitraryViewport], x => x.destroy());
+    Utils.__guard__(this.input.mouseController, x => x.destroy());
     Utils.__guard__(this.input.keyboard, x => x.destroy());
     Utils.__guard__(this.input.keyboardLoopDelayed, x => x.destroy());
     Utils.__guard__(this.input.keyboardNoLoop, x => x.destroy());
@@ -494,55 +444,13 @@ class ArbitraryController extends React.PureComponent<Props> {
     }
   }
 
-  updateControls = () => this.controls.update(true);
-
-  getTDViewMouseControls(): Object {
-    return {
-      leftDownMove: (delta: Point2) => this.moveTDView(delta),
-      scroll: (value: number) => this.zoomTDView(Utils.clamp(-1, value, 1), true),
-      over: () => {
-        Store.dispatch(setViewportAction(OrthoViews.TDView));
-      },
-      pinch: delta => this.zoomTDView(delta, true),
-    };
-  }
-
-  zoomTDView(value: number, zoomToMouse: boolean = true): void {
-    let zoomToPosition;
-    const mouseController = this.input.mouseControllers[OrthoViews.TDView];
-    if (zoomToMouse && mouseController) {
-      zoomToPosition = mouseController.position;
-    }
-    const { width } = getInputCatcherRect(OrthoViews.TDView);
-    Store.dispatch(zoomTDViewAction(value, zoomToPosition, width));
-  }
-
-  moveTDView(delta: Point2): void {
-    const scale = getViewportScale(OrthoViews.TDView);
-    Store.dispatch(moveTDViewXAction((delta.x / scale) * -1));
-    Store.dispatch(moveTDViewYAction((delta.y / scale) * -1));
-  }
-
   render() {
-    if (!this.controls) {
+    if (!this.arbitraryView) {
       return null;
     }
-    return (
-      <CameraController
-        cameras={this.arbitraryView.getCameras()}
-        onCameraPositionChanged={this.updateControls}
-      />
-    );
+    return <TDController cameras={this.arbitraryView.getCameras()} />;
   }
 }
 
-export function mapStateToProps(state: OxalisState, ownProps: OwnProps): Props {
-  return {
-    ...ownProps,
-    flycam: state.flycam,
-    scale: state.dataset.dataSource.scale,
-  };
-}
-
+export default ArbitraryController;
 export { ArbitraryController as ArbitraryControllerClass };
-export default connect(mapStateToProps)(ArbitraryController);

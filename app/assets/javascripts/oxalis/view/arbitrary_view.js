@@ -229,12 +229,9 @@ class ArbitraryView {
   }
 
   getRenderedBuckets = () => {
-    console.time("renderToTexture");
+    // This method can be used to determine which buckets were used during rendering
     const buffer = this.renderToTexture();
-    console.timeEnd("renderToTexture");
-
-    const start = 0; // Math.floor(buffer.length / 4 / 2)
-    let index = start;
+    let index = 0;
 
     const usedBucketSet = new Set();
     const usedBuckets = [];
@@ -244,7 +241,6 @@ class ArbitraryView {
         .subarray(index, index + 4)
         .map((el, idx) => (idx < 3 ? window.currentAnchorPoint[idx] + el : el));
       index += 4;
-      // const [x, y, z, zoomstep] = bucketad
 
       const id = bucketAddress.join(",");
       if (!usedBucketSet.has(id)) {
@@ -252,10 +248,8 @@ class ArbitraryView {
         usedBuckets.push(bucketAddress);
       }
     }
-    console.log("usedBucketSet.length", usedBucketSet.size);
-    console.log("window.lastUsedFlightBuckets.length", window.lastUsedFlightBuckets.length);
-    window.lastRenderedBuckset = usedBucketSet;
-    window.lastRenderedBuckets = Array.from(usedBucketSet);
+
+    return usedBuckets;
   };
 
   addGeometry(geometry: THREE.Geometry): void {

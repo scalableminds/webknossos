@@ -145,13 +145,9 @@ class ArbitraryController extends React.PureComponent<Props> {
           }
         },
       });
-    });
 
-    const tdView = OrthoViews.TDView;
-    const inputcatcherSelector = `#inputcatcher_${tdView}`;
-
-    setTimeout(() => {
-      console.log("attaching mouse");
+      const tdView = OrthoViews.TDView;
+      const inputcatcherSelector = `#inputcatcher_${tdView}`;
       Utils.waitForSelector(inputcatcherSelector).then(_domElement => {
         this.input.mouseControllers[tdView] = new InputMouse(
           inputcatcherSelector,
@@ -160,7 +156,7 @@ class ArbitraryController extends React.PureComponent<Props> {
         );
       });
       this.initTrackballControls();
-    }, 2000);
+    });
   }
 
   initTrackballControls(): void {
@@ -380,11 +376,6 @@ class ArbitraryController extends React.PureComponent<Props> {
 
   start(): void {
     this.arbitraryView = new ArbitraryView();
-    window.printy = () => {
-      this.arbitraryView.getRenderedBuckets();
-      window.useRenderedBucketsInNextFrame = true;
-      window.redetermineBuckets();
-    };
     this.arbitraryView.start();
 
     this.plane = new ArbitraryPlane();
@@ -506,24 +497,13 @@ class ArbitraryController extends React.PureComponent<Props> {
   updateControls = () => this.controls.update(true);
 
   getTDViewMouseControls(): Object {
-    // todo
-    const baseControls = {
+    return {
       leftDownMove: (delta: Point2) => this.moveTDView(delta),
       scroll: (value: number) => this.zoomTDView(Utils.clamp(-1, value, 1), true),
       over: () => {
         Store.dispatch(setViewportAction(OrthoViews.TDView));
       },
       pinch: delta => this.zoomTDView(delta, true),
-    };
-
-    const skeletonControls =
-      // this.props.tracing.skeleton != null
-      //   ? skeletonController.getTDViewMouseControls(this.planeView) :
-      {};
-
-    return {
-      ...baseControls,
-      ...skeletonControls,
     };
   }
 

@@ -122,9 +122,6 @@ export class OxalisModel {
 }
 
 const model = new OxalisModel();
-window.redetermineBuckets = () => {
-  model.getAllLayers().forEach(layer => layer.layerRenderingManager.refresh());
-};
 
 // export the model as a singleton
 export default model;

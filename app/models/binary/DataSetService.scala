@@ -239,12 +239,12 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     for {
       organization <- timed(organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound", "findOrga")
       teams <- timed(allowedTeamsFor(dataSet._id), "allowedTeams")
-      teamsJs <- timed(Fox.serialCombined(teams)(t => teamService.publicWrites(t)), "writeTeams")
-      logoUrl <- timed(logoUrlFor(dataSet, Some(organization)), "logoUrlFor")
-      isEditable <- timed(isEditableBy(dataSet, userOpt, requestingUserTeamMemberships), "editableBy")
+      teamsJs <- Fox.serialCombined(teams)(t => teamService.publicWrites(t))
+      logoUrl <- logoUrlFor(dataSet, Some(organization))
+      isEditable <- isEditableBy(dataSet, userOpt, requestingUserTeamMemberships)
       lastUsedByUser <- timed(lastUsedTimeFor(dataSet._id, userOpt), "lastUsedTime")
       dataStore <- timed(dataStoreFor(dataSet), "dataStoreFor")
-      dataStoreJs <- timed(dataStoreService.publicWrites(dataStore), "writeDatStore")
+      dataStoreJs <- dataStoreService.publicWrites(dataStore)
       dataSource <- timed(dataSourceFor(dataSet, Some(organization), skipResolutions), "dataSource")
     } yield {
       Json.obj("name" -> dataSet.name,

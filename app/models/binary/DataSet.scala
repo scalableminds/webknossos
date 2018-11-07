@@ -276,12 +276,13 @@ class DataSetResolutionsDAO @Inject()(sqlClient: SQLClient)(implicit ec: Executi
 
 class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO: DataSetResolutionsDAO)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
 
-  def parseRow(row: DatasetLayersRow, dataSetId: ObjectId): Fox[DataLayer] = {
+  def parseRow(row: DatasetLayersRow, dataSetId: ObjectId, skipResolutions: Boolean = false): Fox[DataLayer] = {
     val result: Fox[Fox[DataLayer]] = for {
       category <- Category.fromString(row.category).toFox ?~> "Could not parse Layer Category"
       boundingBox <- BoundingBox.fromSQL(parseArrayTuple(row.boundingbox).map(_.toInt)).toFox ?~> "Could not parse boundingbox"
       elementClass <- ElementClass.fromString(row.elementclass).toFox ?~> "Could not parse Layer ElementClass"
-      resolutions <- dataSetResolutionsDAO.findDataResolutionForLayer(dataSetId, row.name) ?~> "Could not find resolution for layer"
+      standinResolutions: Option[List[Point3D]] = if (skipResolutions) Some(List.empty) else None
+      resolutions <- Fox.fillOption(standinResolutions)(dataSetResolutionsDAO.findDataResolutionForLayer(dataSetId, row.name) ?~> "Could not find resolution for layer")
     } yield {
       (row.largestsegmentid, row.mappings) match {
         case (Some(segmentId), Some(mappings)) =>
@@ -307,10 +308,10 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
     result.flatten
   }
 
-  def findAllForDataSet(dataSetId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[DataLayer]] = {
+  def findAllForDataSet(dataSetId: ObjectId, skipResolutions: Boolean = false)(implicit ctx: DBAccessContext): Fox[List[DataLayer]] = {
     for {
       rows <- run(DatasetLayers.filter(_._Dataset === dataSetId.id).result).map(_.toList)
-      rowsParsed <- Fox.combined(rows.map(parseRow(_, dataSetId)))
+      rowsParsed <- Fox.combined(rows.map(parseRow(_, dataSetId, skipResolutions)))
     } yield {
       rowsParsed
     }

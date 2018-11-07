@@ -150,6 +150,13 @@ object Fox extends FoxImplicits {
         Fox.successful(None)}
   }
 
+  def fillOption[A](input: Option[A])(f: => Fox[A])(implicit ec: ExecutionContext): Fox[A] = {
+    input match {
+      case Some(a) => Fox.successful(a)
+      case None => f
+    }
+  }
+
   def assertTrue(fox: Fox[Boolean])(implicit ec: ExecutionContext): Fox[Unit] = {
     for {
       asBoolean <- fox

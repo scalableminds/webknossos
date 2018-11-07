@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, G
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableDataSource, InboxDataSourceLike => InboxDataSource}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
-import models.team.{OrganizationDAO, TeamDAO, TeamService}
+import models.team._
 import models.user.{User, UserService}
 import net.liftweb.common.Full
 import oxalis.security.{CompactRandomIDGenerator, URLSharing}
@@ -171,10 +171,10 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
   }
 
 
-  def dataSourceFor(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[InboxDataSource] = {
+  def dataSourceFor(dataSet: DataSet, organization: Option[Organization] = None, skipResolutions: Boolean = false)(implicit ctx: DBAccessContext): Fox[InboxDataSource] = {
     for {
-      organization <- organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound"
-      dataLayersBox <- dataSetDataLayerDAO.findAllForDataSet(dataSet._id).futureBox
+      organization <- Fox.fillOption(organization){organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound"}
+      dataLayersBox <- dataSetDataLayerDAO.findAllForDataSet(dataSet._id, skipResolutions).futureBox
       dataSourceId = DataSourceId(dataSet.name, organization.name)
     } yield {
       dataLayersBox match {
@@ -188,10 +188,10 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     }
   }
 
-  def logoUrlFor(dataSet: DataSet): Fox[String] =
+  def logoUrlFor(dataSet: DataSet, organization: Option[Organization]): Fox[String] =
     dataSet.logoUrl match {
       case Some(url) => Fox.successful(url)
-      case None => organizationDAO.findOne(dataSet._organization)(GlobalAccessContext).map(_.logoUrl)
+      case None => Fox.fillOption(organization)(organizationDAO.findOne(dataSet._organization)(GlobalAccessContext)).map(_.logoUrl)
     }
 
   def dataStoreFor(dataSet: DataSet): Fox[DataStore] =
@@ -216,34 +216,36 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     dataSetAllowedTeamsDAO.findAllForDataSet(_dataSet)(GlobalAccessContext) ?~> "allowedTeams.notFound"
 
   def allowedTeamsFor(_dataSet: ObjectId)(implicit ctx: DBAccessContext) =
-    for {
-      allowedTeamIds <- allowedTeamIdsFor(_dataSet)
-      allowedTeams <- Fox.combined(allowedTeamIds.map(teamDAO.findOne(_)(GlobalAccessContext)))
-    } yield allowedTeams
+    teamDAO.findAllForDataSet(_dataSet)(GlobalAccessContext) ?~> "allowedTeams.notFound"
 
 
-  def isEditableBy(dataSet: DataSet, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Boolean] = {
+  def isEditableBy(dataSet: DataSet,
+                   userOpt: Option[User],
+                   userTeamMemberships: Option[List[TeamMembership]] = None)(implicit ctx: DBAccessContext): Fox[Boolean] = {
     userOpt match {
       case Some(user) =>
         for {
-          isTeamManagerInOrg <- userService.isTeamManagerInOrg(user, dataSet._organization)
+          isTeamManagerInOrg <- userService.isTeamManagerInOrg(user, dataSet._organization, userTeamMemberships)
         } yield (user.isAdminOf(dataSet._organization) || isTeamManagerInOrg)
       case _ => Fox.successful(false)
     }
   }
 
-  def publicWrites(dataSet: DataSet, userOpt: Option[User]): Fox[JsObject] = {
+  def publicWrites(dataSet: DataSet, userOpt: Option[User],
+                   skipResolutions: Boolean = false,
+                   requestingUserTeamMemberships: Option[List[TeamMembership]] = None): Fox[JsObject] = {
     implicit val ctx = GlobalAccessContext
+    logger.info("")
     for {
-      teams <- allowedTeamsFor(dataSet._id)
-      teamsJs <- Fox.serialCombined(teams)(t => teamService.publicWrites(t))
-      logoUrl <- logoUrlFor(dataSet)
-      isEditable <- isEditableBy(dataSet, userOpt)
-      lastUsedByUser <- lastUsedTimeFor(dataSet._id, userOpt)
-      dataStore <- dataStoreFor(dataSet)
-      dataStoreJs <- dataStoreService.publicWrites(dataStore)
-      organization <- organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound"
-      dataSource <- dataSourceFor(dataSet)
+      organization <- timed(organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound", "findOrga")
+      teams <- timed(allowedTeamsFor(dataSet._id), "allowedTeams")
+      teamsJs <- timed(Fox.serialCombined(teams)(t => teamService.publicWrites(t)), "writeTeams")
+      logoUrl <- timed(logoUrlFor(dataSet, Some(organization)), "logoUrlFor")
+      isEditable <- timed(isEditableBy(dataSet, userOpt, requestingUserTeamMemberships), "editableBy")
+      lastUsedByUser <- timed(lastUsedTimeFor(dataSet._id, userOpt), "lastUsedTime")
+      dataStore <- timed(dataStoreFor(dataSet), "dataStoreFor")
+      dataStoreJs <- timed(dataStoreService.publicWrites(dataStore), "writeDatStore")
+      dataSource <- timed(dataSourceFor(dataSet, Some(organization), skipResolutions), "dataSource")
     } yield {
       Json.obj("name" -> dataSet.name,
         "dataSource" -> dataSource,
@@ -261,5 +263,14 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         "sortingKey" -> dataSet.sortingKey,
         "isForeign" -> dataStore.isForeign)
     }
+  }
+
+  def timed[A,B](block: => Fox[B], label: String): Fox[B] = {
+    for {
+      startTime: Long <- Fox.successful(System.nanoTime())
+      result: B <- block
+      endTime: Long <- Fox.successful(System.nanoTime())
+      _ = logger.info(s"${(endTime - startTime) / 1000} $label")
+    } yield result
   }
 }

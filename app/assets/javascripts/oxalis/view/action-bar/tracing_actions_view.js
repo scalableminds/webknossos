@@ -14,7 +14,7 @@ import messages from "messages";
 import api from "oxalis/api/internal_api";
 import { undoAction, redoAction } from "oxalis/model/actions/save_actions";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
-import { copyAnnotationToUserAccount, finishAnnotation } from "admin/admin_rest_api";
+import { copyAnnotationToUserAccount, finishAnnotation, createMesh } from "admin/admin_rest_api";
 import { location } from "libs/window";
 import type { OxalisState, RestrictionsAndSettings, Task } from "oxalis/store";
 import type { APIUser, APITracingType } from "admin/api_flow_types";
@@ -354,6 +354,16 @@ class TracingActionsView extends PureComponent<Props, State> {
 
     const onStlUpload = async info => {
       const buffer = await readFileAsArrayBuffer(info.file);
+      const { annotationId } = Store.getState().tracing;
+      createMesh(
+        "test-mesh",
+        {
+          annotationId,
+          position: [0, 0, 0],
+          description: "test",
+        },
+        buffer,
+      );
       SceneController.addSTL(buffer);
     };
 

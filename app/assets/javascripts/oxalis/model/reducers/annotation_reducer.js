@@ -1,9 +1,15 @@
 // @flow
 
 import update from "immutability-helper";
-import { updateKey, updateKey2, type StateShape1 } from "oxalis/model/helpers/deep_update";
-import type { OxalisState } from "oxalis/store";
+
 import type { Action } from "oxalis/model/actions/actions";
+import type { OxalisState } from "oxalis/store";
+import {
+  type StateShape1,
+  updateKey,
+  updateKey2,
+  updateKey3,
+} from "oxalis/model/helpers/deep_update";
 import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reducers/reducer_helpers";
 
 const updateTracing = (state: OxalisState, shape: StateShape1<"tracing">): OxalisState =>
@@ -57,6 +63,17 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
           ...maybeReadOnlyUpdater,
         },
       });
+    }
+
+    case "UPDATE_MESH_METADATA": {
+      const newMeshes = state.tracing.annotation.meshes.map(mesh => {
+        if (mesh.id === action.id) {
+          return { ...mesh };
+        } else {
+          return mesh;
+        }
+      });
+      return updateKey3(state, "tracing", "annotation", "meshes", newMeshes);
     }
 
     default:

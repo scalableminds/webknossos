@@ -33,6 +33,7 @@ const Panes = {
   AbstractTreeTabView: Pane("Tree Viewer", "AbstractTreeTabView"),
   arbitraryViewport: Pane("Arbitrary View", "arbitraryViewport"),
   Mappings: Pane("Segmentation", "MappingInfoView"),
+  Meshes: Pane("Meshes", "MeshesView"),
 };
 
 const OrthoViewsGrid = [Column(Panes.xy, Panes.xz), Column(Panes.yz, Panes.td)];
@@ -43,9 +44,10 @@ const SkeletonRightHandColumn = Stack(
   Panes.CommentTabView,
   Panes.AbstractTreeTabView,
   Panes.Mappings,
+  Panes.Meshes,
 );
 
-const NonSkeletonRightHandColumn = Stack(Panes.DatasetInfoTabView, Panes.Mappings);
+const NonSkeletonRightHandColumn = Stack(Panes.DatasetInfoTabView, Panes.Mappings, Panes.Meshes);
 
 const createLayout = (...content: Array<*>) => ({
   settings: LayoutSettings,

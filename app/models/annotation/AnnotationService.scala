@@ -490,7 +490,8 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         "settings" -> settings,
         "tracingTime" -> annotation.tracingTime,
         "tags" -> (annotation.tags ++ Set(dataSet.name, annotation.tracingType.toString)),
-        "user" -> userJson
+        "user" -> userJson,
+        "meshes" -> meshesJs
       )
     }
   }

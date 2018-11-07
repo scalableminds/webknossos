@@ -282,12 +282,22 @@ export type APIAnnotationTypeCompact = {
   +typ: APITracingType,
 };
 
+export type MeshMetaData = {
+  annotationId: string,
+  position: Vector3,
+  description: string,
+  id: string,
+  isVisible?: boolean,
+  isLoaded?: boolean,
+};
+
 type APIAnnotationTypeBase = APIAnnotationTypeCompact & {
   +dataStore: APIDataStore,
   +tracingStore: APITracingStore,
   +restrictions: APIRestrictions,
   +settings: APISettings,
   +user?: APIUserBase,
+  +meshes: Array<MeshMetaData>,
 };
 
 export type APIAnnotation = APIAnnotationTypeBase & {

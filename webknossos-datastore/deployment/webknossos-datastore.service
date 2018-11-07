@@ -8,7 +8,7 @@ Restart=always
 RestartSec=3
 WorkingDirectory=/usr/lib/webknossos-datastore
 EnvironmentFile=/usr/lib/webknossos-datastore/config/environment
-ExecStart=/usr/local/bin/docker-compose up --force-recreate --abort-on-container-exit -t 2 fossildb webknossos-datastore
+ExecStart=/usr/local/bin/docker-compose up --force-recreate --abort-on-container-exit -t 2 webknossos-datastore
 
 [Install]
 WantedBy=default.target

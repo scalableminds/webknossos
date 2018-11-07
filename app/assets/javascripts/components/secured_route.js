@@ -3,12 +3,11 @@ import { type ContextRouter, type Location, type Match, Route, withRouter } from
 import React, { type ComponentType } from "react";
 
 import LoginView from "admin/auth/login_view";
-import router from "router";
 
 type Props = {
   component?: ComponentType<*>,
   path: string,
-  render?: (router: ContextRouter) => React$Node,
+  render?: ContextRouter => React$Node,
   isAuthenticated: boolean,
   serverAuthenticationCallback?: Function,
   computedMatch: Match,

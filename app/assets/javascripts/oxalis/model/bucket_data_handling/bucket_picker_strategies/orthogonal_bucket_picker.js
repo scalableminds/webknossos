@@ -47,9 +47,9 @@ export const calculateUnzoomedBucketCount = (dataSetScale: Vector3, zoomFactor: 
 
   const addExtraBuckets = vec => vec.map(el => el + extraBucketsPerDim);
   const calculateAdditionalWSliceCount = ([x, y, z]) => {
-    const xy = x * y - x + y;
-    const xz = x * z - (2 * x + z);
-    const yz = y * z - (2 * y + 2 * z + 1);
+    const xy = x * y - (x + y - 1);
+    const xz = x * z - (2 * x + z - 2);
+    const yz = y * z - (2 * y + 2 * z - 4);
     return xy + xz + yz;
   };
 

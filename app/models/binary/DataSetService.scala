@@ -67,7 +67,10 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         _ <- dataSetDataLayerDAO.updateLayers(newId, dataSource)
         _ <- dataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(newId, List())
       } yield ()
-      case _ => Fox.failure("org.notExist")
+      case _ => {
+        logger.info(s"Ignoring reported dataset for non-existing organization $owningOrganization")
+        Fox.successful(())
+      }
     }
   }
 
@@ -134,8 +137,14 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     val dataSourcesByOrganizationName: Map[String, List[InboxDataSource]] = dataSources.groupBy(_.id.team)
     Fox.serialCombined(dataSourcesByOrganizationName.keys.toList) { organizationName =>
       for {
-        organization <- organizationDAO.findOneByName(organizationName)
-        _ <- dataSetDAO.deactivateUnreported(dataSourcesByOrganizationName(organizationName).map(_.id.name), organization._id, dataStoreName)
+        organizationBox <- organizationDAO.findOneByName(organizationName).futureBox
+        _ <- organizationBox match {
+            case Full(organization) => dataSetDAO.deactivateUnreported(dataSourcesByOrganizationName(organizationName).map(_.id.name), organization._id, dataStoreName)
+            case _ => {
+              logger.info(s"Ignoring reported dataset for non-existing organization $organizationName")
+              Fox.successful(())
+            }
+          }
       } yield ()
     }
   }

@@ -2,11 +2,13 @@
 
 // Integration tests for skeleton.js
 
-import test from "ava";
-import mockRequire from "mock-require";
 import _ from "lodash";
-import * as Utils from "libs/utils";
+
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import * as Utils from "libs/utils";
+import mockRequire from "mock-require";
+import test from "ava";
+
 import { tracing, annotation } from "../fixtures/skeletontracing_server_objects";
 
 mockRequire.stopAll();

@@ -1,11 +1,12 @@
 // @flow
-import _ from "lodash";
-import * as React from "react";
+import { Chart } from "react-google-charts";
 import { Row, Col, Spin, Table, Card } from "antd";
+import * as React from "react";
+import _ from "lodash";
 import moment from "moment";
+
 import Request from "libs/request";
 import * as Utils from "libs/utils";
-import { Chart } from "react-google-charts";
 
 const { Column } = Table;
 type TimeEntry = {

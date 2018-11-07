@@ -1,7 +1,7 @@
 // @flow
 /* eslint-disable react/jsx-no-bind, react/no-multi-comp  */
-import * as React from "react";
 import { Button, Spin } from "antd";
+import * as React from "react";
 
 const onClick = async function(event: SyntheticInputEvent<>) {
   this.setState({ isLoading: true });

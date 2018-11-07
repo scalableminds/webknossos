@@ -1,5 +1,7 @@
 // @flow
 import _ from "lodash";
+
+import { document } from "libs/window";
 import constants from "oxalis/constants";
 
 type GpuSpecs = {

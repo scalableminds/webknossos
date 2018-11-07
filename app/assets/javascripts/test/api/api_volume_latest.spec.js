@@ -1,8 +1,9 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-import test from "ava";
 import { VolumeToolEnum } from "oxalis/constants";
 import { setupOxalis } from "test/helpers/apiHelpers";
+import test from "ava";
 import window from "libs/window";
+
 import { tracing as TRACING } from "../fixtures/volumetracing_server_objects";
 
 // All the mocking is done in the helpers file, so it can be reused for both skeleton and volume API

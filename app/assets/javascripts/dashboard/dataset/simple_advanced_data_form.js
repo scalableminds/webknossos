@@ -1,8 +1,10 @@
 // @flow
-import * as React from "react";
 import { Alert, List, Input, Form, InputNumber, Col, Row, Switch, Tooltip } from "antd";
+import * as React from "react";
+
 import { Vector3Input, BoundingBoxInput } from "libs/vector_input";
 import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
+
 import {
   Hideable,
   FormItemWithInfo,

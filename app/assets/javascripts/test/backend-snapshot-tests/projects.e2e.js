@@ -1,7 +1,8 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 // @flow
-import test from "ava";
 import _ from "lodash";
+
+import type { APIProject, APIProjectUpdater } from "admin/api_flow_types";
 import {
   tokenUserA,
   tokenUserD,
@@ -10,7 +11,7 @@ import {
   writeFlowCheckingFile,
 } from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
-import type { APIProject, APIProjectUpdater } from "admin/api_flow_types";
+import test from "ava";
 
 test.before("Reset database", async () => {
   resetDatabase();

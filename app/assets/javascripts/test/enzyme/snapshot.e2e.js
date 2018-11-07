@@ -1,20 +1,21 @@
 // @flow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 // This needs to be the very first import
+import { Provider } from "react-redux";
+import { Router } from "react-router-dom";
+import React from "react";
+import createBrowserHistory from "history/createBrowserHistory";
+
 import {
   createSnapshotable,
   debugWrapper,
   waitForAllRequests,
   resetDatabase,
 } from "test/enzyme/e2e-setup";
-import { mount } from "enzyme";
-import test from "ava";
-import mockRequire from "mock-require";
-import React from "react";
-import { Provider } from "react-redux";
-import { Router } from "react-router-dom";
-import createBrowserHistory from "history/createBrowserHistory";
 import { load as loadFeatureToggles } from "features";
+import { mount } from "enzyme";
+import mockRequire from "mock-require";
+import test from "ava";
 
 // Those wrappers interfere with global.window and global.document otherwise
 mockRequire("libs/hammerjs_wrapper", {});

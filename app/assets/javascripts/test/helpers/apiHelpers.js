@@ -1,22 +1,24 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-import mockRequire from "mock-require";
 import BackboneEvents from "backbone-events-standalone";
-import sinon from "sinon";
 import _ from "lodash";
+
 import { ControlModeEnum } from "oxalis/constants";
+import mockRequire from "mock-require";
+import sinon from "sinon";
 import window from "libs/window";
+
 import {
   tracing as SKELETON_TRACING,
   annotation as SKELETON_ANNOTATION,
 } from "../fixtures/skeletontracing_server_objects";
 import {
-  tracing as VOLUME_TRACING,
-  annotation as VOLUME_ANNOTATION,
-} from "../fixtures/volumetracing_server_objects";
-import {
   tracing as TASK_TRACING,
   annotation as TASK_ANNOTATION,
 } from "../fixtures/tasktracing_server_objects";
+import {
+  tracing as VOLUME_TRACING,
+  annotation as VOLUME_ANNOTATION,
+} from "../fixtures/volumetracing_server_objects";
 import DATASET from "../fixtures/dataset_server_object";
 
 const Request = {

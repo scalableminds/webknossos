@@ -6,8 +6,8 @@
  */
 
 // @flow
-import type { ControlMode, Mode } from "oxalis/constants";
-import Constants, { ControlModeEnum } from "oxalis/constants";
+import Constants, { type ControlMode, ControlModeEnum, type Mode } from "oxalis/constants";
+
 import { Pane, Column, Row, Stack } from "./golden_layout_helpers";
 
 // Increment this number to invalidate old layoutConfigs in localStorage

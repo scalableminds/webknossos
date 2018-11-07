@@ -1,8 +1,9 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-import test from "ava";
 import _ from "lodash";
-import * as accessors from "oxalis/model/accessors/flycam_accessor";
+
 import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
+import * as accessors from "oxalis/model/accessors/flycam_accessor";
+import test from "ava";
 
 const initialState = {
   dataset: {

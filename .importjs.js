@@ -1,6 +1,10 @@
 module.exports = {
   excludes: ["./target/**", "./public/**"],
   useRelativePaths: false,
+  environments: ["browser"],
+  aliases: {
+    _: "node_modules/lodash",
+  },
   moduleNameFormatter({ moduleName, pathToCurrentFile }) {
     // trim the path prefix
     const appDirPrefix = "app/assets/javascripts/";

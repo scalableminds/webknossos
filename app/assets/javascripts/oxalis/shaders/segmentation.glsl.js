@@ -1,8 +1,8 @@
 // @flow
 import type { ShaderModule } from "./shader_module_system";
-import { hsvToRgb } from "./utils.glsl";
 import { binarySearchIndex } from "./mappings.glsl";
 import { getRgbaAtIndex } from "./texture_access.glsl";
+import { hsvToRgb } from "./utils.glsl";
 
 export const convertCellIdToRGB: ShaderModule = {
   requirements: [hsvToRgb, getRgbaAtIndex],

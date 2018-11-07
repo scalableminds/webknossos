@@ -1,14 +1,16 @@
 // @flow
-import * as React from "react";
 import { Badge, Icon, Spin, Table, Card } from "antd";
-import * as Utils from "libs/utils";
-import Loop from "components/loop";
-import { getProjectProgressReport } from "admin/admin_rest_api";
+import * as React from "react";
+
 import type { APIProjectProgressReport, APITeam } from "admin/api_flow_types";
+import { getProjectProgressReport } from "admin/admin_rest_api";
 import FormattedDate from "components/formatted_date";
-import Toast from "libs/toast";
-import messages from "messages";
+import Loop from "components/loop";
 import StackedBarChart, { colors } from "components/stacked_bar_chart";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import messages from "messages";
+
 import TeamSelectionForm from "./team_selection_form";
 
 const { Column, ColumnGroup } = Table;

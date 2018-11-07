@@ -1,7 +1,7 @@
 // @flow
-import test from "ava";
-import { renderShader } from "test/shaders/shader_test_utils";
 import { hsvToRgb } from "oxalis/shaders/utils.glsl";
+import { renderShader } from "test/shaders/shader_test_utils";
+import test from "ava";
 
 global.window = {
   addEventListener: () => {},

@@ -1,30 +1,31 @@
 // @flow
 /* eslint-disable jsx-a11y/href-no-hash */
 
-import _ from "lodash";
-import * as React from "react";
-import moment from "moment";
-import { connect } from "react-redux";
-import { Link, withRouter } from "react-router-dom";
-import { Table, Tag, Icon, Spin, Button, Input, Modal, Alert, Row, Col, Tooltip } from "antd";
-import TeamRoleModalView from "admin/user/team_role_modal_view";
-import ExperienceModalView from "admin/user/experience_modal_view";
-import { stringToColor } from "libs/format_utils";
-import * as Utils from "libs/utils";
-import { getEditableUsers, updateUser } from "admin/admin_rest_api";
-import Persistence from "libs/persistence";
+import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
-import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import messages from "messages";
-import type { APIUser, APITeamMembership, ExperienceMap } from "admin/api_flow_types";
-import type { RouterHistory } from "react-router-dom";
-import type { OxalisState } from "oxalis/store";
-import EditableTextLabel from "oxalis/view/components/editable_text_label";
-import Toast from "libs/toast";
-import { InviteUsersPopover } from "admin/onboarding";
+import { Table, Tag, Icon, Spin, Button, Input, Modal, Alert, Row, Col, Tooltip } from "antd";
+import { connect } from "react-redux";
 import Clipboard from "clipboard-js";
-import Store from "../../oxalis/store";
+import * as React from "react";
+import _ from "lodash";
+import moment from "moment";
+
+import type { APIUser, APITeamMembership, ExperienceMap } from "admin/api_flow_types";
+import { InviteUsersPopover } from "admin/onboarding";
+import type { OxalisState } from "oxalis/store";
+import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
+import { getEditableUsers, updateUser } from "admin/admin_rest_api";
+import { stringToColor } from "libs/format_utils";
+import EditableTextLabel from "oxalis/view/components/editable_text_label";
+import ExperienceModalView from "admin/user/experience_modal_view";
+import Persistence from "libs/persistence";
+import TeamRoleModalView from "admin/user/team_role_modal_view";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import messages from "messages";
+
 import { logoutUserAction } from "../../oxalis/model/actions/user_actions";
+import Store from "../../oxalis/store";
 
 const { Column } = Table;
 const { Search } = Input;

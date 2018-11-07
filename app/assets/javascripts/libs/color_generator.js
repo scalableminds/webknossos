@@ -2,8 +2,9 @@
  * color_generator.js
  * @flow
  */
-import type { Vector3 } from "oxalis/constants";
 import _ from "lodash";
+
+import type { Vector3 } from "oxalis/constants";
 import { chunk3 } from "oxalis/model/helpers/chunk";
 
 const rawRgbs = [

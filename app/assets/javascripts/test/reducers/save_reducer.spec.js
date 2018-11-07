@@ -6,9 +6,11 @@
 /* eslint-disable no-useless-computed-key */
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 
-import test from "ava";
-import mockRequire from "mock-require";
 import Maybe from "data.maybe";
+
+import mockRequire from "mock-require";
+import test from "ava";
+
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 
 mockRequire.stopAll();

@@ -1,12 +1,13 @@
 // @flow
-import * as React from "react";
 import { Popover } from "antd";
+import * as React from "react";
 import classNames from "classnames";
-import Store from "oxalis/store";
-import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";
-import { NODE_ID_REF_REGEX, POSITION_REF_REGEX } from "oxalis/constants";
+
 import { MarkdownWrapper } from "oxalis/view/components/markdown_modal";
-import type { CommentType } from "oxalis/store";
+import { NODE_ID_REF_REGEX, POSITION_REF_REGEX } from "oxalis/constants";
+import { document } from "libs/window";
+import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";
+import Store, { type CommentType } from "oxalis/store";
 
 function linkify(comment: string) {
   return (

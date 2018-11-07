@@ -1,15 +1,16 @@
 // @flow
 
-import _ from "lodash";
-import * as React from "react";
 import { Modal, Button, Tooltip, Icon, Table, InputNumber, Tag, Badge } from "antd";
-import * as Utils from "libs/utils";
-import { updateUser } from "admin/admin_rest_api";
-import { handleGenericError } from "libs/error_handling";
+import * as React from "react";
+import _ from "lodash";
+
 import type { APIUser, ExperienceDomainList } from "admin/api_flow_types";
-import Toast from "libs/toast";
-import SelectExperienceDomain from "components/select_experience_domain";
+import { handleGenericError } from "libs/error_handling";
+import { updateUser } from "admin/admin_rest_api";
 import HighlightableRow from "components/highlightable_row";
+import SelectExperienceDomain from "components/select_experience_domain";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
 
 const { Column } = Table;
 

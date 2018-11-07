@@ -1,15 +1,17 @@
 // @flow
-import _ from "lodash";
 import NanoEvents from "nanoevents";
+import _ from "lodash";
+
 import { setStoredLayoutsAction } from "oxalis/model/actions/ui_actions";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
+
 import defaultLayouts, {
+  type LayoutKeys,
   currentLayoutVersion,
   defaultLayoutSchema,
   mapLayoutKeysToLanguage,
 } from "./default_layout_configs";
-import type { LayoutKeys } from "./default_layout_configs";
 
 export const layoutEmitter = new NanoEvents();
 

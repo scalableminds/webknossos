@@ -3,34 +3,39 @@
  * @flow
  */
 
-import _ from "lodash";
-import * as React from "react";
-import Maybe from "data.maybe";
-import * as Utils from "libs/utils";
-import update from "immutability-helper";
-import Store from "oxalis/store";
-import { connect } from "react-redux";
+import { AutoSizer, List } from "react-virtualized";
+import type { Dispatch } from "redux";
 import { Input, Menu, Dropdown, Tooltip, Icon } from "antd";
-import ButtonComponent from "oxalis/view/components/button_component";
-import InputComponent from "oxalis/view/components/input_component";
+import { connect } from "react-redux";
+import Enum from "Enumjs";
+import Maybe from "data.maybe";
+import * as React from "react";
+import _ from "lodash";
+import update from "immutability-helper";
+
+import { Comment } from "oxalis/view/right-menu/comment_tab/comment";
+import { type Comparator, compareBy, localeCompareBy, zipMaybe } from "libs/utils";
 import { InputKeyboard } from "libs/input";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import { MarkdownModal } from "oxalis/view/components/markdown_modal";
 import { getActiveTree, getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import { makeSkeletonTracingGuard } from "oxalis/view/guards";
 import {
   setActiveNodeAction,
   createCommentAction,
   deleteCommentAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import ButtonComponent from "oxalis/view/components/button_component";
+import InputComponent from "oxalis/view/components/input_component";
+import Store, {
+  type CommentType,
+  type OxalisState,
+  type SkeletonTracing,
+  type Tree,
+} from "oxalis/store";
 import TreeWithComments from "oxalis/view/right-menu/comment_tab/tree_with_comments";
-import { Comment } from "oxalis/view/right-menu/comment_tab/comment";
-import { AutoSizer, List } from "react-virtualized";
-import Enum from "Enumjs";
 import messages from "messages";
-import { MarkdownModal } from "oxalis/view/components/markdown_modal";
-import type { Dispatch } from "redux";
-import type { OxalisState, SkeletonTracing, Tree, CommentType } from "oxalis/store";
-import type { Comparator } from "libs/utils";
-import { makeSkeletonTracingGuard } from "oxalis/view/guards";
+
 import SearchPopover from "../search_popover";
 
 const InputGroup = Input.Group;
@@ -51,8 +56,8 @@ type SortOptions = {
 };
 function getTreeSorter({ sortBy, isSortedAscending }: SortOptions): Comparator<Tree> {
   return sortBy === SortByEnum.ID
-    ? Utils.compareBy(treeTypeHint, tree => tree.treeId, isSortedAscending)
-    : Utils.localeCompareBy(
+    ? compareBy(treeTypeHint, tree => tree.treeId, isSortedAscending)
+    : localeCompareBy(
         treeTypeHint,
         tree => `${tree.name}_${tree.treeId}`,
         isSortedAscending,
@@ -62,8 +67,8 @@ function getTreeSorter({ sortBy, isSortedAscending }: SortOptions): Comparator<T
 
 function getCommentSorter({ sortBy, isSortedAscending }: SortOptions): Comparator<CommentType> {
   return sortBy === SortByEnum.ID
-    ? Utils.compareBy(([]: Array<CommentType>), comment => comment.nodeId, isSortedAscending)
-    : Utils.localeCompareBy(
+    ? compareBy(([]: Array<CommentType>), comment => comment.nodeId, isSortedAscending)
+    : localeCompareBy(
         commentTypeHint,
         comment => `${comment.content}_${comment.nodeId}`,
         isSortedAscending,
@@ -231,7 +236,7 @@ class CommentTabView extends React.PureComponent<Props, CommentTabState> {
   }
 
   getActiveComment(createIfNotExisting: boolean = false) {
-    return Utils.zipMaybe(
+    return zipMaybe(
       getActiveTree(this.props.skeletonTracing),
       getActiveNode(this.props.skeletonTracing),
     ).chain(([tree, activeNode]) =>

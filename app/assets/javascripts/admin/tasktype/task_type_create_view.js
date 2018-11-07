@@ -1,16 +1,16 @@
 // @flow
+import { Form, Checkbox, Input, Select, Card, Button } from "antd";
+import { type RouterHistory, withRouter } from "react-router-dom";
 import React from "react";
 import _ from "lodash";
-import { withRouter } from "react-router-dom";
-import { Form, Checkbox, Input, Select, Card, Button } from "antd";
+
+import type { APITeam } from "admin/api_flow_types";
 import {
   getEditableTeams,
   createTaskType,
   updateTaskType,
   getTaskType,
 } from "admin/admin_rest_api";
-import type { APITeam } from "admin/api_flow_types";
-import type { RouterHistory } from "react-router-dom";
 
 const FormItem = Form.Item;
 const Option = Select.Option;

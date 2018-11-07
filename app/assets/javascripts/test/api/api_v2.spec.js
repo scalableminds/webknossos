@@ -1,9 +1,9 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-import test from "ava";
-import sinon from "sinon";
+import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import { setupOxalis, KeyboardJS } from "test/helpers/apiHelpers";
 import Store from "oxalis/store";
-import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
+import sinon from "sinon";
+import test from "ava";
 
 // Most of the mocking is done in the helpers file, so it can be reused for both skeleton and volume API
 // Use API_VERSION 2

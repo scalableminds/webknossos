@@ -9,12 +9,15 @@ import {
   updateTaskType,
   getTaskType,
 } from "admin/admin_rest_api";
+import RecommendedSettingsView from "admin/tasktype/recommended_settings_view";
 import type { APITeam } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
 
 const FormItem = Form.Item;
-const Option = Select.Option;
-const TextArea = Input.TextArea;
+const { Option } = Select;
+const { TextArea } = Input;
+
+const toJSON = json => JSON.stringify(json, null, "  ");
 
 type Props = {
   taskTypeId: ?string,
@@ -43,11 +46,40 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
         branchPointsAllowed: true,
         preferredMode: null,
       },
+      recommendedConfiguration: {
+        clippingDistance: 500,
+        clippingDistanceArbitrary: 500,
+        displayCrosshair: true,
+        displayScalebars: false,
+        dynamicSpaceDirection: true,
+        keyboardDelay: 0,
+        moveValue: 500,
+        moveValue3d: 500,
+        newNodeNewTree: false,
+        highlightCommentedNodes: false,
+        overrideNodeRadius: true,
+        particleSize: 5,
+        tdViewDisplayPlanes: false,
+        fourBit: false,
+        interpolation: true,
+        quality: 2,
+        segmentationOpacity: 0,
+        highlightHoveredCellId: false,
+        zoom: 0.8,
+        renderMissingDataBlack: false,
+      },
     };
-    const taskType = this.props.taskTypeId ? await getTaskType(this.props.taskTypeId) : null;
+    const taskType = this.props.taskTypeId ? await getTaskType(this.props.taskTypeId) : {};
     // Use merge which is deep _.extend
-    const formValues = _.merge({}, defaultValues, taskType);
-    this.props.form.setFieldsValue(formValues);
+    const configurationString = taskType.recommendedConfiguration || "";
+    const formValues = _.merge({}, defaultValues, {
+      ...taskType,
+      recommendedConfiguration: JSON.parse(configurationString),
+    });
+    this.props.form.setFieldsValue({
+      ...formValues,
+      recommendedConfiguration: toJSON(formValues.recommendedConfiguration),
+    });
   }
 
   async fetchData() {
@@ -167,6 +199,10 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
                   <Option value="flight">Flight</Option>
                 </Select>,
               )}
+            </FormItem>
+
+            <FormItem hasFeedback>
+              <RecommendedSettingsView form={this.props.form} />
             </FormItem>
 
             <FormItem>

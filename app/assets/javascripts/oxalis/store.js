@@ -210,7 +210,6 @@ export type DatasetLayerConfiguration = {|
 export type DatasetConfiguration = {
   +fourBit: boolean,
   +interpolation: boolean,
-  +keyboardDelay: number,
   +layers: {
     [name: string]: DatasetLayerConfiguration,
   },

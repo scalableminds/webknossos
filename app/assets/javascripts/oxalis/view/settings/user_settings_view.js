@@ -171,7 +171,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
             />
             <NumberSliderSetting
               label="Clipping Distance"
-              max={127}
+              max={12000}
               value={this.props.userConfiguration.clippingDistanceArbitrary}
               onChange={this.onChangeUser.clippingDistanceArbitrary}
             />

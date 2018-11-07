@@ -659,12 +659,12 @@ class DataApi {
    * Returns the dataset's setting for the tracing view.
    * @param key - One of the following keys:
      - segmentationOpacity
-     - datasetName
      - fourBit
      - interpolation
-     - keyboardDelay
      - layers
      - quality
+     - highlightHoveredCellId
+     - renderMissingDataBlack
    *
    * @example
    * const segmentationOpacity = api.data.getConfiguration("segmentationOpacity");
@@ -678,7 +678,7 @@ class DataApi {
    * @param key - Same keys as for getConfiguration()
    *
    * @example
-   * api.user.setConfiguration("segmentationOpacity", 20);
+   * api.data.setConfiguration("segmentationOpacity", 20);
    */
   setConfiguration(key: $Keys<DatasetConfiguration>, value) {
     Store.dispatch(updateDatasetSettingAction(key, value));
@@ -733,7 +733,7 @@ class UserApi {
    * @param key - Same keys as for getConfiguration()
    *
    * @example
-   * api.data.setConfiguration("keyboardDelay", 20);
+   * api.user.setConfiguration("keyboardDelay", 20);
    */
   setConfiguration(key: $Keys<UserConfiguration>, value) {
     Store.dispatch(updateUserSettingAction(key, value));

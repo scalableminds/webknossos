@@ -8,4 +8,4 @@ Note: This case class is not (de)serialized to/from JSON using the build-in JSON
       Whenever this data class is changed, the parser needs to be modified accordingly.
 */
 
-case class DataLayerMapping(name: String, mapping: Map[Long, Long])
+case class DataLayerMapping[T](name: String, mapping: Map[T, T])

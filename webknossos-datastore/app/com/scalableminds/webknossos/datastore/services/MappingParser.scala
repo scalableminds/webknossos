@@ -10,9 +10,11 @@ import com.google.gson.JsonParseException
 import com.google.gson.stream.JsonReader
 
 import scala.collection.mutable
+import scala.reflect.ClassTag
 
 object MappingParser  extends LazyLogging {
-  def parse(r: Reader): Box[DataLayerMapping] = {
+
+  def parse[T](r: Reader): Box[DataLayerMapping[T]] = {
     try {
       parseImpl(r)
     } catch {
@@ -27,16 +29,16 @@ object MappingParser  extends LazyLogging {
     }
   }
 
-  def parse(p: Path): Box[DataLayerMapping] =
+  def parse[T](p: Path): Box[DataLayerMapping[T]] =
     parse(new FileReader(new File(p.toString)))
 
-  def parse(a: Array[Byte]): Box[DataLayerMapping] =
+  def parse[T](a: Array[Byte]): Box[DataLayerMapping[T]] =
     parse(new InputStreamReader(new ByteArrayInputStream(a)))
 
-  private def parseImpl(r: Reader): Box[DataLayerMapping] = {
+  private def parseImpl[T](r: Reader): Box[DataLayerMapping[T]] = {
     val jsonReader = new JsonReader(r)
     var nameOpt: Option[String] = None
-    var classesOpt: Option[Map[Long, Long]] = None
+    var classesOpt: Option[Map[T, T]] = None
 
     jsonReader.beginObject()
     while (jsonReader.hasNext) {
@@ -59,17 +61,17 @@ object MappingParser  extends LazyLogging {
     }
   }
 
-  private def parseClasses(jsonReader: JsonReader): Map[Long, Long] = {
-    val mapping = mutable.HashMap[Long, Long]()
+  private def parseClasses[T](jsonReader: JsonReader): Map[T, T] = {
+    val mapping = mutable.HashMap[T, T]()
 
     jsonReader.beginArray()
 
     while (jsonReader.hasNext()) {
       jsonReader.beginArray()
-      var firstIdOpt: Option[Long] = None
+      var firstIdOpt: Option[T] = None
 
       while (jsonReader.hasNext()) {
-        val currentId = jsonReader.nextLong()
+        val currentId = jsonReader.nextLong().asInstanceOf[T]
         firstIdOpt match {
           case Some(firstId) =>
             mapping.put(currentId, firstId)

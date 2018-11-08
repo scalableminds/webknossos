@@ -8,6 +8,8 @@ import com.scalableminds.webknossos.datastore.models.requests.{DataServiceMappin
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.reflect._
+import scala.reflect.ClassTag
 
 class MappingService(dataBaseDir: Path, maxCacheSize: Int) extends FoxImplicits with LazyLogging {
 
@@ -16,15 +18,13 @@ class MappingService(dataBaseDir: Path, maxCacheSize: Int) extends FoxImplicits 
     request.dataLayer.mappingProvider.load(readInstruction)
   }
 
-  def applyMapping(request: DataServiceMappingRequest, data: Array[Byte]): Fox[Array[Byte]] = {
+  def applyMapping[T:ClassTag](request: DataServiceMappingRequest, data: Array[T]): Fox[Array[T]] = {
+    println(classTag[T].runtimeClass.getName)
     for {
       rawMapping <- handleMappingRequest(request)
-      mapping <- MappingParser.parse(rawMapping)
+      mapping <- MappingParser.parse[T](rawMapping)
     } yield {
-      //request.dataLayer.elementClass match {
-      //}
-      // data.map(mapping.mapping.apply)
-      data
+      data.map(mapping.mapping.withDefault(identity).apply).toArray
     }
   }
 }

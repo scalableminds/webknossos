@@ -1,6 +1,8 @@
 #!/bin/bash          
 set -Eeuo pipefail
 
+scriptdir="$(dirname "$0")"
+
 # find schema version
 schema_version=`psql -A  -U postgres -h localhost --dbname="webknossos" -t -c "SELECT * FROM webknossos.releaseinformation"`
 echo "Schema version: ${schema_version}"
@@ -13,7 +15,7 @@ fi
 
 # get list of schemas to apply 
 files=""
-for entry in "../../conf/evolutions"/*
+for entry in "${scriptdir}/../../conf/evolutions"/*
 do
 	if [[ `grep -oP "\.sql" <<< $entry` ]]; then # only get the sql files
 		tmp_number=`grep -oP "[0-9]{3}" <<< $entry`

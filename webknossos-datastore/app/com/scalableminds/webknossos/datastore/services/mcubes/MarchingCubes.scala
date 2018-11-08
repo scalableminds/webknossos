@@ -12,9 +12,9 @@ object MarchingCubes {
 
   def lerp(vec1: Array[Float], vec2: Array[Float], alpha: Float): Array[Float] = Array[Float](vec1(0) + (vec2(0) - vec1(0)) * alpha, vec1(1) + (vec2(1) - vec1(1)) * alpha, vec1(2) + (vec2(2) - vec1(2)) * alpha)
 
-  def marchingCubesInt(data: IntBuffer, dimensions: Point3D, boundingBox: BoundingBox, segmentId: Int, offset: Point3D, scale: Point3D): Array[Float] = {
+  def marchingCubes[T](data: Array[T], dimensions: Point3D, boundingBox: BoundingBox, segmentId: Int, offset: Point3D, scale: Point3D): Array[Float] = {
     var vertices = mutable.ArrayBuffer[Float]()
-    val voxDim = Point3D(1, 1, 1)
+    val voxDim = Point3D(8, 8, 8)
     val vertList = Array.ofDim[Float](12, 3)
 
     // Volume iteration
@@ -50,14 +50,14 @@ object MarchingCubes {
       val position = Array[Float](x, y, z)
 
       // Voxel intensities
-      val value0 = data.get(p)
-      val value1 = data.get(px)
-      val value2 = data.get(py)
-      val value3 = data.get(pxy)
-      val value4 = data.get(pz)
-      val value5 = data.get(pxz)
-      val value6 = data.get(pyz)
-      val value7 = data.get(pxyz)
+      val value0 = data(p)
+      val value1 = data(px)
+      val value2 = data(py)
+      val value3 = data(pxy)
+      val value4 = data(pz)
+      val value5 = data(pxz)
+      val value6 = data(pyz)
+      val value7 = data(pxyz)
 
       // Voxel is active if segmentId matches
       var cubeIndex = 0

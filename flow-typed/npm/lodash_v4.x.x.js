@@ -472,6 +472,7 @@ declare module "lodash" {
     divide(dividend: number, divisor: number): number;
     floor(number: number, precision?: number): number;
     max<T>(array: ?Array<T>): T;
+    max<T>(array: [T, T, T]): T;
     maxBy<T>(array: ?Array<T>, iteratee?: Iteratee<T>): T;
     mean(array: Array<*>): number;
     meanBy<T>(array: Array<T>, iteratee?: Iteratee<T>): number;

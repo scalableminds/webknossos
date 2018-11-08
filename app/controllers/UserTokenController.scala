@@ -6,7 +6,12 @@ import javax.inject.Inject
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
-import com.scalableminds.webknossos.datastore.services.{AccessMode, AccessResourceType, UserAccessAnswer, UserAccessRequest}
+import com.scalableminds.webknossos.datastore.services.{
+  AccessMode,
+  AccessResourceType,
+  UserAccessAnswer,
+  UserAccessRequest
+}
 import models.annotation._
 import models.binary.{DataSetDAO, DataStoreRpcClient, DataStoreService}
 import models.user.{User, UserService}
@@ -25,10 +30,8 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
                                     dataStoreService: DataStoreService,
                                     tracingStoreService: TracingStoreService,
                                     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-                                    sil: Silhouette[WkEnv])
-                                   (implicit ec: ExecutionContext,
-                                    bodyParsers: PlayBodyParsers)
-  extends Controller {
+                                    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+    extends Controller {
 
   val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
@@ -46,19 +49,22 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
     }
   }
 
-  def validateAccessViaDatastore(name: String, token: String) = Action.async(validateJson[UserAccessRequest]) { implicit request =>
-    dataStoreService.validateAccess(name) { dataStore =>
-      validateUserAccess(request.body, token)
-    }
+  def validateAccessViaDatastore(name: String, token: String) = Action.async(validateJson[UserAccessRequest]) {
+    implicit request =>
+      dataStoreService.validateAccess(name) { dataStore =>
+        validateUserAccess(request.body, token)
+      }
   }
 
-  def validateAccessViaTracingstore(name: String, token: String) = Action.async(validateJson[UserAccessRequest]) { implicit request =>
-    tracingStoreService.validateAccess(name) { tracingStore =>
-      validateUserAccess(request.body, token)
-    }
+  def validateAccessViaTracingstore(name: String, token: String) = Action.async(validateJson[UserAccessRequest]) {
+    implicit request =>
+      tracingStoreService.validateAccess(name) { tracingStore =>
+        validateUserAccess(request.body, token)
+      }
   }
 
-  private def validateUserAccess(accessRequest: UserAccessRequest, token: String)(implicit ec: ExecutionContext): Fox[Result] = {
+  private def validateUserAccess(accessRequest: UserAccessRequest, token: String)(
+      implicit ec: ExecutionContext): Fox[Result] =
     if (token == DataStoreRpcClient.webKnossosToken) {
       Fox.successful(Ok(Json.toJson(UserAccessAnswer(true))))
     } else {
@@ -78,21 +84,21 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
         Ok(Json.toJson(answer))
       }
     }
-  }
 
-
-  private def handleDataSourceAccess(dataSourceId: DataSourceId, mode: AccessMode.Value, userBox: Box[User])(implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
+  private def handleDataSourceAccess(dataSourceId: DataSourceId, mode: AccessMode.Value, userBox: Box[User])(
+      implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
     //Note: reading access is ensured in findOneBySourceName, depending on the implicit DBAccessContext
 
     def tryRead: Fox[UserAccessAnswer] =
       for {
         dataSourceBox <- dataSetDAO.findOneByNameAndOrganizationName(dataSourceId.name, dataSourceId.team).futureBox
-      } yield dataSourceBox match {
-        case Full(_) => UserAccessAnswer(true)
-        case _ => UserAccessAnswer(false, Some("No read access on dataset"))
-      }
+      } yield
+        dataSourceBox match {
+          case Full(_) => UserAccessAnswer(true)
+          case _       => UserAccessAnswer(false, Some("No read access on dataset"))
+        }
 
-    def tryWrite: Fox[UserAccessAnswer] = {
+    def tryWrite: Fox[UserAccessAnswer] =
       for {
         dataset <- dataSetDAO.findOneByNameAndOrganizationName(dataSourceId.name, dataSourceId.team) ?~> "datasource.notFound"
         user <- userBox.toFox
@@ -100,9 +106,8 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
       } yield {
         UserAccessAnswer(isAllowed)
       }
-    }
 
-    def tryAdministrate: Fox[UserAccessAnswer] = {
+    def tryAdministrate: Fox[UserAccessAnswer] =
       userBox match {
         case Full(user) =>
           for {
@@ -110,17 +115,17 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
           } yield UserAccessAnswer(isAllowed)
         case _ => Fox.successful(UserAccessAnswer(false, Some("invalid access token")))
       }
-    }
 
     mode match {
-      case AccessMode.read => tryRead
-      case AccessMode.write => tryWrite
+      case AccessMode.read         => tryRead
+      case AccessMode.write        => tryWrite
       case AccessMode.administrate => tryAdministrate
-      case _ => Fox.successful(UserAccessAnswer(false, Some("invalid access token")))
+      case _                       => Fox.successful(UserAccessAnswer(false, Some("invalid access token")))
     }
   }
 
-  private def handleTracingAccess(tracingId: String, mode: AccessMode.Value, userBox: Box[User])(implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
+  private def handleTracingAccess(tracingId: String, mode: AccessMode.Value, userBox: Box[User])(
+      implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
 
     def findAnnotationForTracing(tracingId: String): Fox[Annotation] = {
       val annotationFox = annotationDAO.findOneByTracingId(tracingId)
@@ -129,22 +134,22 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
       } yield {
         annotationBox match {
           case Full(_) => annotationBox
-          case _ => annotationStore.findCachedByTracingId(tracingId)
+          case _       => annotationStore.findCachedByTracingId(tracingId)
         }
       }
     }
 
-    def checkRestrictions(restrictions: AnnotationRestrictions) = {
+    def checkRestrictions(restrictions: AnnotationRestrictions) =
       mode match {
-        case AccessMode.read => restrictions.allowAccess(userBox)
+        case AccessMode.read  => restrictions.allowAccess(userBox)
         case AccessMode.write => restrictions.allowUpdate(userBox)
-        case _ => Fox.successful(false)
+        case _                => Fox.successful(false)
       }
-    }
 
     for {
       annotation <- findAnnotationForTracing(tracingId)
-      restrictions <- annotationInformationProvider.restrictionsFor(AnnotationIdentifier(annotation.typ, annotation._id))
+      restrictions <- annotationInformationProvider.restrictionsFor(
+        AnnotationIdentifier(annotation.typ, annotation._id))
       allowed <- checkRestrictions(restrictions)
     } yield {
       if (allowed) UserAccessAnswer(true) else UserAccessAnswer(false, Some(s"No ${mode.toString} access to tracing"))

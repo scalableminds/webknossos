@@ -17,13 +17,18 @@ class UserAuthInfoRepository @Inject()(userService: UserService) extends AuthInf
       userOpt <- userService.retrieve(loginInfo)
     } yield userOpt.map(_.passwordInfo.asInstanceOf[T])
 
-  override def update[T <: AuthInfo](loginInfo: LoginInfo, authInfo: T): Future[T] = {
-    userService.changePasswordInfo(loginInfo, authInfo.asInstanceOf[PasswordInfo]).toFutureWithEmptyToFailure.map(_.asInstanceOf[T])
-  }
+  override def update[T <: AuthInfo](loginInfo: LoginInfo, authInfo: T): Future[T] =
+    userService
+      .changePasswordInfo(loginInfo, authInfo.asInstanceOf[PasswordInfo])
+      .toFutureWithEmptyToFailure
+      .map(_.asInstanceOf[T])
 
-  override def add[T <: AuthInfo](loginInfo: LoginInfo, authInfo: T): Future[T] = Future.failed(new Exception("Not Implemented"))
+  override def add[T <: AuthInfo](loginInfo: LoginInfo, authInfo: T): Future[T] =
+    Future.failed(new Exception("Not Implemented"))
 
-  override def save[T <: AuthInfo](loginInfo: LoginInfo, authInfo: T): Future[T] = Future.failed(new Exception("Not Implemented"))
+  override def save[T <: AuthInfo](loginInfo: LoginInfo, authInfo: T): Future[T] =
+    Future.failed(new Exception("Not Implemented"))
 
-  override def remove[T <: AuthInfo](loginInfo: LoginInfo)(implicit tag: ClassTag[T]): Future[Unit] = Future.failed(new Exception("Not Implemented"))
+  override def remove[T <: AuthInfo](loginInfo: LoginInfo)(implicit tag: ClassTag[T]): Future[Unit] =
+    Future.failed(new Exception("Not Implemented"))
 }

@@ -11,9 +11,9 @@ import scala.concurrent.ExecutionContext
 
 class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
                                        organizationService: OrganizationService,
-                                       conf: WkConf)
-                                      (implicit ec: ExecutionContext)
-  extends Controller with FoxImplicits {
+                                       conf: WkConf)(implicit ec: ExecutionContext)
+    extends Controller
+    with FoxImplicits {
 
   def listAllOrganizations = Action.async { implicit request =>
     for {
@@ -25,6 +25,6 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
   }
 
   def getOperatorData = Action { implicit request =>
-      Ok(Json.toJson(conf.operatorData))
+    Ok(Json.toJson(conf.operatorData))
   }
 }

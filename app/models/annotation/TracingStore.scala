@@ -16,50 +16,53 @@ import utils.{SQLClient, SQLDAO}
 import scala.concurrent.{ExecutionContext, Future}
 
 case class TracingStore(
-                         name: String,
-                         url: String,
-                         key: String,
-                         isDeleted: Boolean = false
-                       )
+    name: String,
+    url: String,
+    key: String,
+    isDeleted: Boolean = false
+)
 
-class TracingStoreService @Inject()(tracingStoreDAO: TracingStoreDAO, rpc: RPC)(implicit ec: ExecutionContext) extends FoxImplicits with Results {
+class TracingStoreService @Inject()(tracingStoreDAO: TracingStoreDAO, rpc: RPC)(implicit ec: ExecutionContext)
+    extends FoxImplicits
+    with Results {
 
-  def publicWrites(tracingStore: TracingStore): Fox[JsObject] = {
-    Fox.successful(Json.obj(
-      "name" -> tracingStore.name,
-      "url" -> tracingStore.url
-    ))
-  }
+  def publicWrites(tracingStore: TracingStore): Fox[JsObject] =
+    Fox.successful(
+      Json.obj(
+        "name" -> tracingStore.name,
+        "url" -> tracingStore.url
+      ))
 
-  def validateAccess[A](name: String)(block: (TracingStore) => Future[Result])
-                       (implicit request: Request[A], m: MessagesProvider): Fox[Result] = {
-    request.getQueryString("key")
+  def validateAccess[A](name: String)(block: (TracingStore) => Future[Result])(implicit request: Request[A],
+                                                                               m: MessagesProvider): Fox[Result] =
+    request
+      .getQueryString("key")
       .toFox
       .flatMap(key => tracingStoreDAO.findOneByKey(key)(GlobalAccessContext)) // Check if key is valid
       .flatMap(tracingStore => block(tracingStore)) // Run underlying action
       .getOrElse(Forbidden(Messages("tracingStore.notFound"))) // Default error
-  }
 
-  def clientFor(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[TracingStoreRpcClient] = {
+  def clientFor(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[TracingStoreRpcClient] =
     for {
       tracingStore <- tracingStoreDAO.findFirst ?~> "tracingStore.notFound"
     } yield new TracingStoreRpcClient(tracingStore, dataSet, rpc)
-  }
 }
 
-class TracingStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SQLDAO[TracingStore, TracingstoresRow, Tracingstores](sqlClient) {
+class TracingStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+    extends SQLDAO[TracingStore, TracingstoresRow, Tracingstores](sqlClient) {
   val collection = Tracingstores
 
   def idColumn(x: Tracingstores): Rep[String] = x.name
   def isDeletedColumn(x: Tracingstores): Rep[Boolean] = x.isdeleted
 
   def parse(r: TracingstoresRow): Fox[TracingStore] =
-    Fox.successful(TracingStore(
-      r.name,
-      r.url,
-      r.key,
-      r.isdeleted
-    ))
+    Fox.successful(
+      TracingStore(
+        r.name,
+        r.url,
+        r.key,
+        r.isdeleted
+      ))
 
   def findOneByKey(key: String)(implicit ctx: DBAccessContext): Fox[TracingStore] =
     for {
@@ -79,23 +82,21 @@ class TracingStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
       parsed
     }
 
-  def findFirst(implicit ctx: DBAccessContext): Fox[TracingStore] = {
+  def findFirst(implicit ctx: DBAccessContext): Fox[TracingStore] =
     for {
       all <- findAll
       first <- all.headOption.toFox
     } yield first
-  }
 
   def updateUrlByName(name: String, url: String)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val q = for {row <- Tracingstores if (notdel(row) && row.name === name)} yield row.url
-    for {_ <- run(q.update(url))} yield ()
+    val q = for { row <- Tracingstores if notdel(row) && row.name === name } yield row.url
+    for { _ <- run(q.update(url)) } yield ()
   }
 
-  def insertOne(t: TracingStore): Fox[Unit] = {
+  def insertOne(t: TracingStore): Fox[Unit] =
     for {
       _ <- run(sqlu"""insert into webknossos.tracingStores(name, url, key, isDeleted)
                          values(${t.name}, ${t.url}, ${t.key}, ${t.isDeleted})""")
     } yield ()
-  }
 
 }

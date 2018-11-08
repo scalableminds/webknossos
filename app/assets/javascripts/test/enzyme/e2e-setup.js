@@ -61,6 +61,7 @@ const volatileKeys = [
   "modified",
   "created",
   "createdTimestamp",
+  "tracingTime",
 ];
 
 export function replaceVolatileValues(obj: ?Object) {

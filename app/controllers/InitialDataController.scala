@@ -21,10 +21,10 @@ import utils.{ObjectId, WkConf}
 
 import scala.concurrent.ExecutionContext
 
-class InitialDataController @Inject()(initialDataService: InitialDataService,
-                                      sil: Silhouette[WkEnv])
-                                     (implicit ec: ExecutionContext)
-  extends Controller with FoxImplicits {
+class InitialDataController @Inject()(initialDataService: InitialDataService, sil: Silhouette[WkEnv])(
+    implicit ec: ExecutionContext)
+    extends Controller
+    with FoxImplicits {
 
   def triggerInsert = sil.UserAwareAction.async { implicit request =>
     for {
@@ -32,7 +32,6 @@ class InitialDataController @Inject()(initialDataService: InitialDataService,
     } yield Ok
   }
 }
-
 
 class InitialDataService @Inject()(userService: UserService,
                                    userDAO: UserDAO,
@@ -46,9 +45,9 @@ class InitialDataService @Inject()(userService: UserService,
                                    tokenDAO: TokenDAO,
                                    projectDAO: ProjectDAO,
                                    organizationDAO: OrganizationDAO,
-                                   conf: WkConf)
-                                  (implicit ec: ExecutionContext)
-  extends FoxImplicits with LazyLogging {
+                                   conf: WkConf)(implicit ec: ExecutionContext)
+    extends FoxImplicits
+    with LazyLogging {
   implicit val ctx = GlobalAccessContext
 
   val defaultUserEmail = conf.Application.Authentication.DefaultUser.email
@@ -60,7 +59,11 @@ Sampletown
 Samplecountry
 """
   val organizationTeamId = ObjectId.generate
-  val defaultOrganization = Organization(ObjectId.generate, "Connectomics_Department", additionalInformation, "/assets/images/mpi-logos.svg", "MPI for Brain Research")
+  val defaultOrganization = Organization(ObjectId.generate,
+                                         "Connectomics_Department",
+                                         additionalInformation,
+                                         "/assets/images/mpi-logos.svg",
+                                         "MPI for Brain Research")
   val organizationTeam = Team(organizationTeamId, defaultOrganization._id, defaultOrganization.name, true)
   val defaultUser = User(
     ObjectId.generate,
@@ -102,7 +105,7 @@ Samplecountry
       _ <- bool2Fox(organizations.isEmpty) ?~> "initialData.organizationsNotEmpty"
     } yield ()
 
-  def insertDefaultUser =  {
+  def insertDefaultUser =
     userService.defaultUser.futureBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
@@ -113,7 +116,6 @@ Samplecountry
           _ = logger.info("Inserted default user scmboy")
         } yield ()
     }.toFox
-  }
 
   def insertToken = {
     val expiryTime = conf.Silhouette.TokenAuthenticator.authenticatorExpiry.toMillis
@@ -133,53 +135,56 @@ Samplecountry
     }
   }
 
-  def insertOrganization = {
-    organizationDAO.findOneByName(defaultOrganization.name).futureBox.flatMap {
-      case Full(_) => Fox.successful(())
-      case _ =>
-        organizationDAO.insertOne(defaultOrganization)
-    }.toFox
-  }
+  def insertOrganization =
+    organizationDAO
+      .findOneByName(defaultOrganization.name)
+      .futureBox
+      .flatMap {
+        case Full(_) => Fox.successful(())
+        case _ =>
+          organizationDAO.insertOne(defaultOrganization)
+      }
+      .toFox
 
-  def insertTeams = {
-    teamDAO.findAll.flatMap {
-      teams =>
-        if (teams.isEmpty)
-          teamDAO.insertOne(organizationTeam)
-        else
-          Fox.successful(())
+  def insertTeams =
+    teamDAO.findAll.flatMap { teams =>
+      if (teams.isEmpty)
+        teamDAO.insertOne(organizationTeam)
+      else
+        Fox.successful(())
     }.toFox
-  }
 
-  def insertTaskType = {
-    taskTypeDAO.findAll.flatMap {
-      types =>
-        if (types.isEmpty) {
-          val taskType = TaskType(
-            ObjectId.generate,
-            organizationTeam._id,
-            "sampleTaskType",
-            "Check those cells out!"
-          )
-          for {_ <- taskTypeDAO.insertOne(taskType)} yield ()
+  def insertTaskType =
+    taskTypeDAO.findAll.flatMap { types =>
+      if (types.isEmpty) {
+        val taskType = TaskType(
+          ObjectId.generate,
+          organizationTeam._id,
+          "sampleTaskType",
+          "Check those cells out!"
+        )
+        for { _ <- taskTypeDAO.insertOne(taskType) } yield ()
+      } else Fox.successful(())
+    }.toFox
+
+  def insertProject =
+    projectDAO.findAll.flatMap { projects =>
+      if (projects.isEmpty) {
+        userService.defaultUser.flatMap { user =>
+          val project = Project(ObjectId.generate,
+                                organizationTeam._id,
+                                user._id,
+                                "sampleProject",
+                                100,
+                                false,
+                                Some(5400000),
+                                false)
+          for { _ <- projectDAO.insertOne(project) } yield ()
         }
-        else Fox.successful(())
+      } else Fox.successful(())
     }.toFox
-  }
 
-  def insertProject = {
-    projectDAO.findAll.flatMap {
-      projects =>
-        if (projects.isEmpty) {
-          userService.defaultUser.flatMap { user =>
-            val project = Project(ObjectId.generate, organizationTeam._id, user._id, "sampleProject", 100, false, Some(5400000), false)
-            for {_ <- projectDAO.insertOne(project)} yield ()
-          }
-        } else Fox.successful(())
-    }.toFox
-  }
-
-  def insertLocalDataStoreIfEnabled: Fox[Any] = {
+  def insertLocalDataStoreIfEnabled: Fox[Any] =
     if (conf.Datastore.enabled) {
       dataStoreDAO.findOneByName("localhost").futureBox.map { maybeStore =>
         if (maybeStore.isEmpty) {
@@ -188,9 +193,8 @@ Samplecountry
         }
       }
     } else Fox.successful(())
-  }
 
-  def insertLocalTracingStoreIfEnabled: Fox[Any] = {
+  def insertLocalTracingStoreIfEnabled: Fox[Any] =
     if (conf.Tracingstore.enabled) {
       tracingStoreDAO.findOneByName("localhost").futureBox.map { maybeStore =>
         if (maybeStore.isEmpty) {
@@ -199,5 +203,4 @@ Samplecountry
         }
       }
     } else Fox.successful(())
-  }
 }

@@ -5,10 +5,7 @@ module.exports = function(env = {}) {
   var path = require("path");
   const TerserPlugin = require("terser-webpack-plugin");
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
-  const HtmlWebpackPlugin = require("html-webpack-plugin");
-  const GitRevisionPlugin = require("git-revision-webpack-plugin");
-  const gitRevisionPlugin = new GitRevisionPlugin();
-  const commitHash = JSON.stringify(gitRevisionPlugin.commithash());
+
   // const HardSourceWebpackPlugin = require("hard-source-webpack-plugin");
 
   var srcPath = path.resolve(__dirname, "app/assets/javascripts/");
@@ -34,12 +31,6 @@ module.exports = function(env = {}) {
       ReactDOM: "react-dom",
       $: "jquery",
       jQuery: "jquery",
-    }),
-    new HtmlWebpackPlugin({
-      hash: true,
-      commitHash,
-      title: "webKnossos",
-      template: `${srcPath}/index.html`,
     }),
   ];
 

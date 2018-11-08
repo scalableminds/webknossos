@@ -1,28 +1,44 @@
-import java.nio.file.{Files, Paths}
+import java.nio.file.Paths
 
+import controllers.{Assets, AssetsFinder}
 import javax.inject.Inject
-import play.api.http.{DefaultHttpRequestHandler, HttpConfiguration, HttpErrorHandler, HttpFilters}
-import play.api.mvc.Results.Ok
-import play.api.mvc.{Action, Handler, InjectedController, RequestHeader}
+import play.api.Environment
+import play.api.http.{
+  DefaultHttpRequestHandler,
+  HttpConfiguration,
+  HttpErrorHandler,
+  HttpFilters
+}
+import play.api.mvc.{Handler, InjectedController, RequestHeader}
 import play.api.routing.Router
-import play.api.Play._
 import utils.WkConf
 
-class RequestHandler @Inject() (router: Router,
-                                errorHandler: HttpErrorHandler,
-                                httpConfiguration: HttpConfiguration,
-                                filters: HttpFilters,
-                                conf: WkConf)
-  extends DefaultHttpRequestHandler(router, errorHandler, httpConfiguration, filters) with InjectedController {
+class RequestHandler @Inject()(router: Router,
+                               errorHandler: HttpErrorHandler,
+                               httpConfiguration: HttpConfiguration,
+                               filters: HttpFilters,
+                               conf: WkConf,
+                               assets: Assets,
+                               af: AssetsFinder,
+                               env: Environment)
+    extends DefaultHttpRequestHandler(
+      router,
+      errorHandler,
+      httpConfiguration,
+      filters
+    )
+    with InjectedController {
 
   override def routeRequest(request: RequestHeader): Option[Handler] = {
     if (request.uri.matches("^(/api/|/data/|/tracings/).*$")) {
       super.routeRequest(request)
     } else {
-      if(Files.exists(Paths.get("/public", request.path)))
-        Some(controllers.Assets.at(path="/public", file=request.path))
+      val file =
+        Paths.get(env.rootPath + af.assetsBasePath + request.path).toFile
+      if ((file.exists && file.isFile) || request.path.matches("^.+\\..+$"))
+        Some(assets.at(path = "/public", file = request.path))
       else
-        Some(controllers.Assets.at(path="/public", file="bundle/index.html"))
+        Some(Action { Ok(views.html.main(conf)) })
     }
   }
 

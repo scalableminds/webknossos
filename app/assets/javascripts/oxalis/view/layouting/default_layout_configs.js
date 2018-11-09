@@ -63,15 +63,8 @@ const SkeletonRightHandColumn = Stack(
   Panes.Mappings,
   Panes.Meshes,
 );
-<<<<<<< HEAD
 
 const NonSkeletonRightHandColumn = Stack(Panes.DatasetInfoTabView, Panes.Mappings, Panes.Meshes);
-||||||| merged common ancestors
-
-const NonSkeletonRightHandColumn = Stack(Panes.DatasetInfoTabView, Panes.Mappings);
-=======
-const NonSkeletonRightHandColumn = Stack(Panes.DatasetInfoTabView, Panes.Mappings);
->>>>>>> master
 
 export const getGroundTruthLayoutRect = () => {
   const mainContainer = document.querySelector(".ant-layout .ant-layout-has-sider");

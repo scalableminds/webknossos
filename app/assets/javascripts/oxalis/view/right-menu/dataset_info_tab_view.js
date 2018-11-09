@@ -53,7 +53,7 @@ const shortcutColumns = [
 const shortcuts = [
   {
     key: "1",
-    keybinding: "I,I or Alt + Mousewheel",
+    keybinding: "I,O or Alt + Mousewheel",
     action: "Zoom in/out",
   },
   {

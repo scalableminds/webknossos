@@ -13,17 +13,17 @@ import utils.WkConf
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
 
-
 trait WkEnv extends Env {
   type I = User
   type A = CombinedAuthenticator
 }
 
-class WkSilhouetteEnvironment @Inject()(conf: WkConf,
-                                        tokenDAO: TokenDAO,
-                                        userService: UserService,
-                                        cookieHeaderEncoding: CookieHeaderEncoding
-                                     )(implicit val executionContext: ExecutionContext) extends Environment[WkEnv] {
+class WkSilhouetteEnvironment @Inject()(
+    conf: WkConf,
+    tokenDAO: TokenDAO,
+    userService: UserService,
+    cookieHeaderEncoding: CookieHeaderEncoding)(implicit val executionContext: ExecutionContext)
+    extends Environment[WkEnv] {
   val eventBusObject = EventBus()
 
   val cookieSettings = CookieAuthenticatorSettings(
@@ -64,7 +64,7 @@ class WkSilhouetteEnvironment @Inject()(conf: WkConf,
 
   override def authenticatorService: AuthenticatorService[CombinedAuthenticator] = combinedAuthenticatorService
 
-  override def requestProviders: Seq[RequestProvider] = Seq()
+  override def requestProviders: Seq[RequestProvider] = Seq.empty
 
   override def eventBus: EventBus = eventBusObject
 }

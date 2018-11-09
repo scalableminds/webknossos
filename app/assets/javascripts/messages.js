@@ -70,6 +70,8 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.natural_sorting": "Correctly sort numbers in text (word2 < word10). This may be slow!",
   "tracing.cant_create_node_due_to_active_group":
     "You cannot create nodes, since no tree is active.",
+  "layouting.missing_custom_layout_info":
+    "The tracing views are separated into four classes. Each of them has their own layouts. If you can't find your layout please open the tracing in the correct view mode or just add it here manually.",
   "datastore.unknown_type": "Unknown datastore type:",
   "webgl.disabled": "Couldn't initialise WebGL, please make sure WebGL is enabled.",
   "webgl.context_loss":

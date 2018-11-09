@@ -127,28 +127,17 @@ class DataSetController @Inject()(userService: UserService,
       Filter("isActive", (value: Boolean, el: DataSet) => Fox.successful(el.isUsable == value))
     ) { filter =>
       for {
-        dataSets <- timed(dataSetDAO.findAll ?~> "dataSet.list.failed", "findAll")
-        filtered <- timed(filter.applyOn(dataSets), "filter")
-        requestingUserTeamMemberships <- timed(
-          Fox.runOptional(request.identity)(user => userService.teamManagerMembershipsFor(user._id)),
-          "teamMemberships")
-        js <- timed(
-          Fox.serialCombined(filtered)(d =>
-            dataSetService.publicWrites(d, request.identity, skipResolutions = true, requestingUserTeamMemberships)),
-          "write")
+        dataSets <- dataSetDAO.findAll ?~> "dataSet.list.failed"
+        filtered <- filter.applyOn(dataSets)
+        requestingUserTeamMemberships <- Fox.runOptional(request.identity)(user =>
+          userService.teamManagerMembershipsFor(user._id))
+        js <- Fox.serialCombined(filtered)(d =>
+          dataSetService.publicWrites(d, request.identity, skipResolutions = true, requestingUserTeamMemberships))
       } yield {
         Ok(Json.toJson(js))
       }
     }
   }
-
-  def timed[A, B](block: => Fox[B], label: String): Fox[B] =
-    for {
-      startTime: Long <- Fox.successful(System.nanoTime())
-      result: B <- block
-      endTime: Long <- Fox.successful(System.nanoTime())
-      _ = logger.info(s"${(endTime - startTime) / 1000} $label")
-    } yield result
 
   def accessList(organizationName: String, dataSetName: String) = sil.SecuredAction.async { implicit request =>
     for {

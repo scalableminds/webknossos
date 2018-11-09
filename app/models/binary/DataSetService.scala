@@ -255,15 +255,15 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     implicit val ctx = GlobalAccessContext
     logger.info("")
     for {
-      organization <- timed(organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound", "findOrga")
-      teams <- timed(allowedTeamsFor(dataSet._id), "allowedTeams")
+      organization <- organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound"
+      teams <- allowedTeamsFor(dataSet._id)
       teamsJs <- Fox.serialCombined(teams)(t => teamService.publicWrites(t))
       logoUrl <- logoUrlFor(dataSet, Some(organization))
       isEditable <- isEditableBy(dataSet, userOpt, requestingUserTeamMemberships)
-      lastUsedByUser <- timed(lastUsedTimeFor(dataSet._id, userOpt), "lastUsedTime")
-      dataStore <- timed(dataStoreFor(dataSet), "dataStoreFor")
+      lastUsedByUser <- lastUsedTimeFor(dataSet._id, userOpt)
+      dataStore <- dataStoreFor(dataSet)
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
-      dataSource <- timed(dataSourceFor(dataSet, Some(organization), skipResolutions), "dataSource")
+      dataSource <- dataSourceFor(dataSet, Some(organization), skipResolutions)
     } yield {
       Json.obj(
         "name" -> dataSet.name,
@@ -285,11 +285,4 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     }
   }
 
-  def timed[A, B](block: => Fox[B], label: String): Fox[B] =
-    for {
-      startTime: Long <- Fox.successful(System.nanoTime())
-      result: B <- block
-      endTime: Long <- Fox.successful(System.nanoTime())
-      _ = logger.info(s"${(endTime - startTime) / 1000} $label")
-    } yield result
 }

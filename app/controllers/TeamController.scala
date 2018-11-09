@@ -1,6 +1,5 @@
 package controllers
 
-
 import javax.inject.Inject
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
@@ -19,9 +18,8 @@ import scala.concurrent.ExecutionContext
 class TeamController @Inject()(teamDAO: TeamDAO,
                                userTeamRolesDAO: UserTeamRolesDAO,
                                teamService: TeamService,
-                               sil: Silhouette[WkEnv])
-                              (implicit ec: ExecutionContext)
-extends Controller {
+                               sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
+    extends Controller {
 
   private def teamNameReads: Reads[String] =
     (__ \ "name").read[String]

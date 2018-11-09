@@ -4,9 +4,9 @@ import NanoEvents from "nanoevents";
 import { setStoredLayoutsAction } from "oxalis/model/actions/ui_actions";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
-import defaultLayouts, {
+import getDefaultLayouts, {
   currentLayoutVersion,
-  defaultLayoutSchema,
+  getCurrentDefaultLayoutConfig,
   mapLayoutKeysToLanguage,
 } from "./default_layout_configs";
 import type { LayoutKeys } from "./default_layout_configs";
@@ -23,33 +23,34 @@ const localStorageKeys = {
 
 function readStoredLayoutConfigs() {
   const storedLayoutVersion = localStorage.getItem(localStorageKeys.currentLayoutVersion);
+  const defaultLayoutConfig = getCurrentDefaultLayoutConfig();
   if (!storedLayoutVersion || disableLayoutPersistance) {
-    return defaultLayoutSchema;
+    return defaultLayoutConfig;
   }
   const layoutString = localStorage.getItem(localStorageKeys.goldenWkLayouts);
   if (!layoutString) {
-    return defaultLayoutSchema;
+    return defaultLayoutConfig;
   }
   try {
     const version = JSON.parse(storedLayoutVersion);
     const layouts = JSON.parse(layoutString);
     if (currentLayoutVersion > version) {
       if (version !== 5) {
-        return defaultLayoutSchema;
+        return defaultLayoutConfig;
       }
       // migrate to newset schema
       const withMulipleLayoutsSchema = {
         OrthoLayoutView: {
-          "Custom Layout": layouts.OrthoLayoutView || defaultLayouts.OrthoLayoutView,
+          "Custom Layout": layouts.OrthoLayoutView || defaultLayoutConfig.OrthoLayoutView,
         },
         VolumeTracingView: {
-          "Custom Layout": layouts.VolumeTracingView || defaultLayouts.VolumeTracingView,
+          "Custom Layout": layouts.VolumeTracingView || defaultLayoutConfig.VolumeTracingView,
         },
         ArbitraryLayout: {
-          "Custom Layout": layouts.ArbitraryLayout || defaultLayouts.ArbitraryLayout,
+          "Custom Layout": layouts.ArbitraryLayout || defaultLayoutConfig.ArbitraryLayout,
         },
         OrthoLayout: {
-          "Custom Layout": layouts.OrthoLayout || defaultLayouts.OrthoLayout,
+          "Custom Layout": layouts.OrthoLayout || defaultLayoutConfig.OrthoLayout,
         },
         LastActiveLayouts: {
           OrthoLayoutView: "Custom Layout",
@@ -68,12 +69,12 @@ function readStoredLayoutConfigs() {
     ) {
       return layouts;
     }
-    return defaultLayoutSchema;
+    return defaultLayoutConfig;
   } catch (ex) {
     // This should only happen if someone tinkers with localStorage manually
     console.warn("Layout config could not be deserialized.");
   }
-  return defaultLayoutSchema;
+  return defaultLayoutConfig;
 }
 
 Store.dispatch(setStoredLayoutsAction(readStoredLayoutConfigs()));
@@ -85,7 +86,7 @@ function persistLayoutConfigs() {
 }
 
 layoutEmitter.on("resetLayout", (layoutKey: LayoutKeys, activeLayout: string) => {
-  storeLayoutConfig(defaultLayouts[layoutKey], layoutKey, activeLayout);
+  storeLayoutConfig(getDefaultLayouts()[layoutKey], layoutKey, activeLayout);
 });
 
 const persistLayoutConfigsDebounced = _.debounce(persistLayoutConfigs, 1000);
@@ -93,14 +94,14 @@ const persistLayoutConfigsDebounced = _.debounce(persistLayoutConfigs, 1000);
 export function getLayoutConfig(layoutKey: LayoutKeys, activeLayoutName: string) {
   const storedLayouts = Store.getState().uiInformation.storedLayouts;
   if (!storedLayouts[layoutKey]) {
-    return defaultLayouts[layoutKey];
+    return getDefaultLayouts()[layoutKey];
   }
   const layout = storedLayouts[layoutKey][activeLayoutName];
   if (!layout) {
-    return defaultLayouts[layoutKey];
+    return getDefaultLayouts()[layoutKey];
   }
   // Use default dimensions and settings
-  const { dimensions, settings } = defaultLayouts[layoutKey];
+  const { dimensions, settings } = getDefaultLayouts()[layoutKey];
   return {
     ...layout,
     dimensions,

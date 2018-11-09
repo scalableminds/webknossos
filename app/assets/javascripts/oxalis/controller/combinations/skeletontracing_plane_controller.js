@@ -7,7 +7,7 @@ import * as THREE from "three";
 import _ from "lodash";
 import Store from "oxalis/store";
 import type PlaneView from "oxalis/view/plane_view";
-import SceneController from "oxalis/controller/scene_controller";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 import { OrthoViews } from "oxalis/constants";
 import {
   setActiveNodeAction,
@@ -125,6 +125,7 @@ function onClick(
     // do nothing
     return;
   }
+  const SceneController = getSceneController();
 
   // render the clicked viewport with picking enabled
   // we need a dedicated pickingScene, since we only want to render all nodes and no planes / bounding box / edges etc.

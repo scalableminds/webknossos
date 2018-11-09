@@ -18,7 +18,7 @@ import Model from "oxalis/model";
 import Store from "oxalis/store";
 import type { Tracing, CameraData, OxalisState, Flycam } from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import SceneController from "oxalis/controller/scene_controller";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 import {
   getPosition,
   getRequestLogZoomStep,
@@ -386,13 +386,13 @@ class PlaneController extends React.PureComponent<Props> {
 
   init(): void {
     const { clippingDistance } = Store.getState().userConfiguration;
-    SceneController.setClippingDistance(clippingDistance);
+    getSceneController().setClippingDistance(clippingDistance);
   }
 
   start(): void {
     this.bindToEvents();
 
-    SceneController.startPlaneMode();
+    getSceneController().startPlaneMode();
     this.planeView.start();
 
     this.initKeyboard();
@@ -417,7 +417,7 @@ class PlaneController extends React.PureComponent<Props> {
       this.controls.destroy();
     }
 
-    SceneController.stopPlaneMode();
+    getSceneController().stopPlaneMode();
     this.planeView.stop();
     this.stopListening();
 
@@ -429,7 +429,7 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   onPlaneViewRender(): void {
-    SceneController.update();
+    getSceneController().update();
     this.props.onRender();
   }
 

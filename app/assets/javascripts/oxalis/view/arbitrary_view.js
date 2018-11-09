@@ -2,19 +2,21 @@
  * arbitrary_view.js
  * @flow
  */
-import _ from "lodash";
-import app from "app";
 import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 import TWEEN from "tween.js";
+import _ from "lodash";
+
+import getSceneController from "oxalis/controller/scene_controller_provider";
+import { getDesiredLayoutRect } from "oxalis/view/layouting/golden_layout_adapter";
+import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
+import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Constants, { ArbitraryViewport } from "oxalis/constants";
 import Store from "oxalis/store";
-import SceneController from "oxalis/controller/scene_controller";
-import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
-import { getDesiredLayoutRect } from "oxalis/view/layouting/golden_layout_adapter";
+import app from "app";
 import window from "libs/window";
-import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+
 import { clearCanvas, setupRenderArea } from "./plane_view";
 
 class ArbitraryView {
@@ -72,7 +74,7 @@ class ArbitraryView {
 
       this.group = new THREE.Object3D();
       this.group.add(this.camera);
-      SceneController.rootGroup.add(this.group);
+      getSceneController().rootGroup.add(this.group);
 
       this.resizeImpl();
 
@@ -96,7 +98,7 @@ class ArbitraryView {
         this.animationRequestId = null;
       }
 
-      SceneController.rootGroup.remove(this.group);
+      getSceneController().rootGroup.remove(this.group);
 
       window.removeEventListener("resize", this.resizeThrottled);
       this.unbindChangedScaleListener();
@@ -115,7 +117,7 @@ class ArbitraryView {
       this.trigger("render");
 
       const { camera, geometries } = this;
-      const { renderer, scene } = SceneController;
+      const { renderer, scene } = getSceneController();
 
       for (const geometry of geometries) {
         if (geometry.update != null) {
@@ -178,7 +180,7 @@ class ArbitraryView {
   resizeImpl = (): void => {
     // Call this after the canvas was resized to fix the viewport
     const { width, height } = getDesiredLayoutRect();
-    SceneController.renderer.setSize(width, height);
+    getSceneController().renderer.setSize(width, height);
     this.draw();
   };
 

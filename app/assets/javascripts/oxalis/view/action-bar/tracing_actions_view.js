@@ -1,27 +1,25 @@
 // @flow
-import React, { PureComponent } from "react";
-import Model from "oxalis/model";
-import Store from "oxalis/store";
+import { Button, Dropdown, Menu, Icon, Modal, Tooltip } from "antd";
 import { connect } from "react-redux";
-import { Upload, Button, Dropdown, Menu, Icon, Modal, Tooltip } from "antd";
+import React, { PureComponent } from "react";
+
+import type { APIUser, APITracingType } from "admin/api_flow_types";
+import { AsyncButton } from "components/async_clickables";
+import { copyAnnotationToUserAccount, finishAnnotation } from "admin/admin_rest_api";
+import { location } from "libs/window";
+import { mapLayoutKeysToLanguage } from "oxalis/view/layouting/default_layout_configs";
+import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
+import { undoAction, redoAction } from "oxalis/model/actions/save_actions";
+import ButtonComponent from "oxalis/view/components/button_component";
 import Constants from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
-import ShareModalView from "oxalis/view/action-bar/share_modal_view";
-import UserScriptsModalView from "oxalis/view/action-bar/user_scripts_modal_view";
+import Model from "oxalis/model";
 import SaveButton from "oxalis/view/action-bar/save_button";
-import ButtonComponent from "oxalis/view/components/button_component";
-import messages from "messages";
+import ShareModalView from "oxalis/view/action-bar/share_modal_view";
+import Store, { type OxalisState, type RestrictionsAndSettings, type Task } from "oxalis/store";
+import UserScriptsModalView from "oxalis/view/action-bar/user_scripts_modal_view";
 import api from "oxalis/api/internal_api";
-import { undoAction, redoAction } from "oxalis/model/actions/save_actions";
-import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
-import { copyAnnotationToUserAccount, finishAnnotation, createMesh } from "admin/admin_rest_api";
-import { location } from "libs/window";
-import type { OxalisState, RestrictionsAndSettings, Task } from "oxalis/store";
-import type { APIUser, APITracingType } from "admin/api_flow_types";
-import SceneController from "oxalis/controller/scene_controller";
-import { readFileAsArrayBuffer } from "libs/read_file";
-import { AsyncButton } from "components/async_clickables";
-import { mapLayoutKeysToLanguage } from "oxalis/view/layouting/default_layout_configs";
+import messages from "messages";
 
 type StateProps = {
   tracingType: APITracingType,
@@ -350,30 +348,6 @@ class TracingActionsView extends PureComponent<Props, State> {
         addNewLayout={this.props.addNewLayout}
         key="layout"
       />,
-    );
-
-    const onStlUpload = async info => {
-      const buffer = await readFileAsArrayBuffer(info.file);
-      const { annotationId } = Store.getState().tracing;
-      createMesh(
-        "test-mesh",
-        {
-          annotationId,
-          position: [0, 0, 0],
-          description: "test",
-        },
-        buffer,
-      );
-      SceneController.addSTL(buffer);
-    };
-
-    elements.push(
-      <Menu.Item key="stl-mesh">
-        <Upload beforeUpload={() => false} onChange={onStlUpload} showUploadList={false}>
-          <Icon type="upload" />
-          Import STL Mesh
-        </Upload>
-      </Menu.Item>,
     );
 
     const menu = <Menu>{elements}</Menu>;

@@ -282,14 +282,23 @@ export type APIAnnotationTypeCompact = {
   +typ: APITracingType,
 };
 
-export type MeshMetaData = {
+export type LocalMeshMetaData = {|
+  isVisible?: boolean,
+  isLoaded?: boolean,
+  isLoading?: boolean,
+|};
+
+export type RemoteMeshMetaData = {|
   annotationId: string,
   position: Vector3,
   description: string,
   id: string,
-  isVisible?: boolean,
-  isLoaded?: boolean,
-};
+|};
+
+export type MeshMetaData = {|
+  ...LocalMeshMetaData,
+  ...RemoteMeshMetaData,
+|};
 
 type APIAnnotationTypeBase = APIAnnotationTypeCompact & {
   +dataStore: APIDataStore,

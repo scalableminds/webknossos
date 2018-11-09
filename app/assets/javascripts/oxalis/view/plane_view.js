@@ -10,7 +10,7 @@ import * as THREE from "three";
 import Store from "oxalis/store";
 import Constants, { OrthoViews, OrthoViewValues, OrthoViewColors } from "oxalis/constants";
 import type { OrthoView, OrthoViewMap } from "oxalis/constants";
-import SceneController from "oxalis/controller/scene_controller";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { getDesiredLayoutRect } from "oxalis/view/layouting/golden_layout_adapter";
@@ -59,7 +59,7 @@ class PlaneView {
     _.extend(this, BackboneEvents);
 
     this.running = false;
-    const { scene } = SceneController;
+    const { scene } = getSceneController();
 
     // Initialize main THREE.js components
     this.cameras = {};
@@ -106,6 +106,7 @@ class PlaneView {
   }
 
   renderOrthoViewToTexture(plane: OrthoView, scene: THREE.Scene): Uint8Array {
+    const SceneController = getSceneController();
     const { renderer } = SceneController;
 
     renderer.autoClear = true;
@@ -131,6 +132,7 @@ class PlaneView {
     // All 3D meshes and the trianglesplane are rendered here.
 
     TWEEN.update();
+    const SceneController = getSceneController();
 
     // skip rendering if nothing has changed
     // This prevents the GPU/CPU from constantly
@@ -186,7 +188,7 @@ class PlaneView {
 
   resize = (): void => {
     const { width, height } = getDesiredLayoutRect();
-    SceneController.renderer.setSize(width, height);
+    getSceneController().renderer.setSize(width, height);
 
     for (const plane of OrthoViewValues) {
       this.cameras[plane].aspect = 1;
@@ -203,7 +205,7 @@ class PlaneView {
     this.running = false;
 
     for (const plane of OrthoViewValues) {
-      SceneController.scene.remove(this.cameras[plane]);
+      getSceneController().scene.remove(this.cameras[plane]);
     }
     window.removeEventListener("resize", this.resizeThrottled);
     this.unbindChangedScaleListener();

@@ -39,6 +39,7 @@ import {
   type ExperienceDomainList,
   type HybridServerTracing,
   type MeshMetaData,
+  type RemoteMeshMetaData,
   type ServerSkeletonTracing,
   type ServerTracing,
   type ServerVolumeTracing,
@@ -952,7 +953,6 @@ window.setMaintenance = setMaintenance;
 type MeshMetaDataForCreation = $Diff<MeshMetaData, {| id: string |}>;
 
 export async function createMesh(
-  id: string,
   metadata: MeshMetaDataForCreation,
   data: ArrayBuffer,
 ): Promise<MeshMetaData> {
@@ -965,8 +965,7 @@ function createMeshMetaData(metadata: MeshMetaDataForCreation): Promise<MeshMeta
   return Request.sendJSONReceiveJSON("/api/meshes", { method: "POST", data: metadata });
 }
 
-export async function updateMeshMetaData(fullMetadata: MeshMetaData): Promise<void> {
-  const { isVisible, isLoaded, ...metadata } = fullMetadata;
+export async function updateMeshMetaData(metadata: RemoteMeshMetaData): Promise<void> {
   return Request.sendJSONReceiveJSON(`/api/meshes/${metadata.id}`, {
     method: "PUT",
     data: metadata,

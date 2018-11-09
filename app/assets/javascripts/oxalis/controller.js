@@ -18,7 +18,7 @@ import Toast from "libs/toast";
 import Store from "oxalis/store";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
-import SceneController from "oxalis/controller/scene_controller";
+import { initializeSceneController } from "oxalis/controller/scene_controller";
 import UrlManager from "oxalis/controller/url_manager";
 import constants, { ControlModeEnum } from "oxalis/constants";
 import ApiLoader from "oxalis/api/api_loader";
@@ -118,7 +118,7 @@ class Controller extends React.PureComponent<Props, State> {
     window.onbeforeunload = beforeUnload;
 
     UrlManager.startUrlUpdater();
-    SceneController.initialize();
+    initializeSceneController();
 
     // FPS stats
     this.stats = new Stats();

@@ -6,6 +6,9 @@ import { Button } from "antd";
 
 type ButtonComponentProp = {
   onClick?: Function,
+  faIcon?: string,
+  loading?: boolean,
+  children?: React.Node,
 };
 
 /*
@@ -28,7 +31,15 @@ class ButtonComponent extends React.PureComponent<ButtonComponentProp> {
   };
 
   render() {
-    return <Button {...this.props} onClick={this.handleClick} />;
+    const { children, ...restProps } = this.props;
+    return (
+      <Button {...restProps} onClick={this.handleClick}>
+        {this.props.faIcon != null && !this.props.loading ? (
+          <i className={`fa ${this.props.faIcon}`} />
+        ) : null}
+        {children}
+      </Button>
+    );
   }
 }
 

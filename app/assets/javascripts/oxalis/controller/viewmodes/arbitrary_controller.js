@@ -50,7 +50,7 @@ import {
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import messages from "messages";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import SceneController from "oxalis/controller/scene_controller";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 import api from "oxalis/api/internal_api";
 
 const arbitraryViewportSelector = "#inputcatcher_arbitraryViewport";
@@ -334,7 +334,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     this.init();
 
     const { clippingDistance } = Store.getState().userConfiguration;
-    SceneController.setClippingDistance(clippingDistance);
+    getSceneController().setClippingDistance(clippingDistance);
 
     this.arbitraryView.draw();
 

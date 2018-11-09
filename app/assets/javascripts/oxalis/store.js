@@ -354,6 +354,7 @@ type UiInformation = {
   +showDropzoneModal: boolean,
   +showVersionRestore: boolean,
   +storedLayouts: Object,
+  +isImportingMesh: boolean,
 };
 
 export type OxalisState = {|
@@ -542,6 +543,7 @@ export const defaultState: OxalisState = {
     showDropzoneModal: false,
     showVersionRestore: false,
     storedLayouts: defaultLayoutSchema,
+    isImportingMesh: false,
   },
 };
 

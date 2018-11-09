@@ -43,7 +43,7 @@ class MeshService @Inject()(meshDAO: MeshDAO)(implicit ec: ExecutionContext) {
   def publicWrites(meshInfo: MeshInfo): Fox[JsObject] = {
     Fox.successful(Json.obj(
       "id" -> meshInfo._id.toString,
-      "annotation" -> meshInfo._annotation.toString,
+      "annotationId" -> meshInfo._annotation.toString,
       "description" -> meshInfo.description,
       "position" -> meshInfo.position
     ))

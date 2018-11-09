@@ -26,11 +26,16 @@ function makeEnv(port, host) {
 }
 
 const processes = {
-  backend: spawnIfNotSpecified("noBackend", "./sbt \"run 9001\" -jvm-debug 5005 -J-XX:MaxMetaspaceSize=2048m", [], {
-    cwd: ROOT,
-    env: makeEnv(PORT + 1, HOST),
-    shell: true,
-  }),
+  backend: spawnIfNotSpecified(
+    "noBackend",
+    './sbt "run 9001" -jvm-debug 5005 -J-XX:MaxMetaspaceSize=2048m',
+    [],
+    {
+      cwd: ROOT,
+      env: makeEnv(PORT + 1, HOST),
+      shell: true,
+    },
+  ),
   webpackDev: spawnIfNotSpecified("noWebpackDev", "node_modules/.bin/webpack-dev-server", [], {
     cwd: ROOT,
     env: makeEnv(PORT + 2, HOST),
@@ -79,7 +84,7 @@ async function toStaticRessource(req, res) {
   if (await isFile(filepath)) proxy.web(req, res, { target: `http://localhost:${PORT + 2}` });
   else if (pathname.match(/^.+\..+$/))
     proxy.web(req, res, { target: `http://localhost:${PORT + 2}` });
-  else toBackend(req, res); //res.sendFile(path.join(ROOT, "public", "bundle", "index.html"));
+  else toBackend(req, res);
 }
 
 async function isFile(filepath) {

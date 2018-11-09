@@ -65,6 +65,9 @@ mockRequire(
   "libs/window",
   Object.assign({}, window, {
     open: sinon.spy(),
+    document: {
+      createElement: () => ({}),
+    },
   }),
 );
 
@@ -105,7 +108,10 @@ const ANNOTATION_ID = "annotationIdValue";
 
 let counter = 0;
 
-export function setupOxalis(t, mode, apiVersion) {
+// This function should always be imported at the very top since it setups
+// important mocks. The leading underscores are there to make the import
+// appear at the top when sorting the imports with importjs.
+export function __setupOxalis(t, mode, apiVersion) {
   UrlManager.initialState = { position: [1, 2, 3] };
   t.context.model = Model;
 
@@ -123,7 +129,7 @@ export function setupOxalis(t, mode, apiVersion) {
     // Right now, initializeDataset() in model_initialization mutates the dataset to add a new
     // volume layer. Since this mutation should be isolated between different tests, we have to make
     // sure that each receiveJSON call returns its own clone. Without the following "onCall" line,
-    // each setupOxalis call would overwrite the current stub to receiveJSON.
+    // each __setupOxalis call would overwrite the current stub to receiveJSON.
     .onCall(counter++)
     .returns(Promise.resolve(datasetClone));
   protoHelpers.parseProtoTracing.returns(_.cloneDeep(modelData[mode].tracing));

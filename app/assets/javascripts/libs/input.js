@@ -7,7 +7,7 @@ import _ from "lodash";
 
 import Date from "libs/date";
 import Hammer from "libs/hammerjs_wrapper";
-import KeyboardJS from "libs/keyboardjs_wrapper";
+import KeyboardJS from "libs/keyboard";
 import * as Utils from "libs/utils";
 import constants, { type Point2 } from "oxalis/constants";
 import window, { document } from "libs/window";

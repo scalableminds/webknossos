@@ -1,24 +1,25 @@
 // @flow
 import update from "immutability-helper";
 
+import { __setupOxalis, TIMESTAMP } from "test/helpers/apiHelpers";
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
 import { enforceSkeletonTracing, getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import { maximumActionCountPerBatch } from "oxalis/model/sagas/save_saga";
 import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
-import { setupOxalis, TIMESTAMP } from "test/helpers/apiHelpers";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 import generateDummyTrees from "oxalis/model/helpers/generate_dummy_trees";
 import mockRequire from "mock-require";
 import test from "ava";
 
-const { addTreesAndGroupsAction, deleteNodeAction } = mockRequire.reRequire(
-  "oxalis/model/actions/skeletontracing_actions",
-);
 const {
   createTreeMapFromTreeArray,
   generateTreeName,
 } = require("oxalis/model/reducers/skeletontracing_reducer_helpers");
+
+const { addTreesAndGroupsAction, deleteNodeAction } = mockRequire.reRequire(
+  "oxalis/model/actions/skeletontracing_actions",
+);
 const { discardSaveQueuesAction } = mockRequire.reRequire("oxalis/model/actions/save_actions");
 const UpdateActions = mockRequire.reRequire("oxalis/model/sagas/update_actions");
 
@@ -26,7 +27,7 @@ test.beforeEach(async t => {
   // Setup oxalis, this will execute model.fetch(...) and initialize the store with the tracing, etc.
   Store.dispatch(restartSagaAction());
   Store.dispatch(discardSaveQueuesAction());
-  await setupOxalis(t, "task");
+  await __setupOxalis(t, "task");
 
   // Dispatch the wkReadyAction, so the sagas are started
   Store.dispatch(wkReadyAction());

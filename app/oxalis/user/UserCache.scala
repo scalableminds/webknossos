@@ -11,11 +11,10 @@ class UserCache @Inject()(userDAO: UserDAO, conf: WkConf, cache: SyncCacheApi) {
   def cacheKeyForUser(id: ObjectId) =
     s"user.${id.toString}"
 
-  def findUser(id: ObjectId) = {
+  def findUser(id: ObjectId) =
     cache.getOrElseUpdate(cacheKeyForUser(id), conf.User.cacheTimeoutInMinutes) {
       userDAO.findOne(id)(GlobalAccessContext)
     }
-  }
 
   def store(id: ObjectId, user: Fox[User]) = {
     cache.set(cacheKeyForUser(id), user)

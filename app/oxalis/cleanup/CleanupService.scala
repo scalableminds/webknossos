@@ -20,7 +20,7 @@ class CleanUpService @Inject()(system: ActorSystem)(implicit ec: ExecutionContex
   def register[T](description: String, interval: FiniteDuration, runOnShutdown: Boolean = false)(job: => Fox[T]) =
     system.scheduler.schedule(interval, interval)(runJob(description, job, runOnShutdown))
 
-  private def runJob[T](description: String, job: => Fox[T], runOnShutdown: Boolean): Unit = {
+  private def runJob[T](description: String, job: => Fox[T], runOnShutdown: Boolean): Unit =
     if (!akkaIsShuttingDown || runOnShutdown) {
       job.futureBox.map {
         case Full(value) =>
@@ -34,5 +34,4 @@ class CleanUpService @Inject()(system: ActorSystem)(implicit ec: ExecutionContex
           logger.error(s"Exception during execution of cleanup job: $description. ${e.getMessage}", e)
       }
     }
-  }
 }

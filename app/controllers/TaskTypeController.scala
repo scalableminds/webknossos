@@ -21,16 +21,16 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
                                    taskDAO: TaskDAO,
                                    taskTypeService: TaskTypeService,
                                    userService: UserService,
-                                   sil: Silhouette[WkEnv])
-                                  (implicit ec: ExecutionContext)
-  extends Controller with FoxImplicits{
+                                   sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
+    extends Controller
+    with FoxImplicits {
 
   val taskTypePublicReads =
     ((__ \ 'summary).read[String](minLength[String](2) or maxLength[String](50)) and
       (__ \ 'description).read[String] and
-      (__ \ 'teamId).read[String] (ObjectId.stringObjectIdReads("teamId")) and
+      (__ \ 'teamId).read[String](ObjectId.stringObjectIdReads("teamId")) and
       (__ \ 'settings).read[AnnotationSettings] and
-      (__ \ 'recommendedConfiguration).readNullable[JsValue]) (taskTypeService.fromForm _)
+      (__ \ 'recommendedConfiguration).readNullable[JsValue])(taskTypeService.fromForm _)
 
   def create = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(taskTypePublicReads) { taskType =>

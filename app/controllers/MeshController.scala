@@ -13,15 +13,11 @@ import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
 
-
 class MeshController @Inject()(meshDAO: MeshDAO,
                                annotationDAO: AnnotationDAO,
                                sil: Silhouette[WkEnv],
-                               meshService: MeshService
-                              )
-                              (implicit ec: ExecutionContext,
-                               bodyParsers: PlayBodyParsers)
-  extends Controller
+                               meshService: MeshService)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+    extends Controller
     with FoxImplicits {
 
   def get(id: String) = sil.UserAwareAction.async { implicit request =>
@@ -38,7 +34,8 @@ class MeshController @Inject()(meshDAO: MeshDAO,
     val _id = ObjectId.generate
     for {
       _ <- annotationDAO.assertUpdateAccess(params.annotationId) ?~> "notAllowed"
-      _ <- meshDAO.insertOne(MeshInfo(_id, params.annotationId, params.description, params.position)) ?~> "mesh.create.failed"
+      _ <- meshDAO
+        .insertOne(MeshInfo(_id, params.annotationId, params.description, params.position)) ?~> "mesh.create.failed"
       inserted <- meshDAO.findOne(_id) ?~> "mesh.notFound"
       js <- meshService.publicWrites(inserted) ?~> "mesh.write.failed"
     } yield Ok(js)
@@ -51,7 +48,8 @@ class MeshController @Inject()(meshDAO: MeshDAO,
       meshInfo <- meshDAO.findOne(idValidated) ?~> "mesh.notFound"
       _ <- annotationDAO.assertUpdateAccess(meshInfo._annotation) ?~> "notAllowed"
       _ <- annotationDAO.assertUpdateAccess(params.annotationId) ?~> "notAllowed"
-      _ <- meshDAO.updateOne(idValidated, params.annotationId, params.description, params.position) ?~> "mesh.update.failed"
+      _ <- meshDAO
+        .updateOne(idValidated, params.annotationId, params.description, params.position) ?~> "mesh.update.failed"
       updated <- meshDAO.findOne(idValidated) ?~> "mesh.notFound"
       js <- meshService.publicWrites(updated) ?~> "mesh.write.failed"
     } yield Ok(js)
@@ -71,12 +69,12 @@ class MeshController @Inject()(meshDAO: MeshDAO,
       idValidated <- ObjectId.parse(id)
       meshInfo <- meshDAO.findOne(idValidated) ?~> "mesh.notFound"
       _ <- annotationDAO.assertUpdateAccess(meshInfo._annotation) ?~> "notAllowed"
-      byteString <- request.body.asBytes(maxLength = 1024*1024*1024) ?~> "mesh.data.read.failed"
+      byteString <- request.body.asBytes(maxLength = 1024 * 1024 * 1024) ?~> "mesh.data.read.failed"
       _ <- meshDAO.updateData(idValidated, byteString.toArray) ?~> "mesh.data.save.failed"
     } yield Ok
   }
 
-  def delete(id: String)  = sil.SecuredAction.async { implicit request =>
+  def delete(id: String) = sil.SecuredAction.async { implicit request =>
     for {
       idValidated <- ObjectId.parse(id)
       meshInfo <- meshDAO.findOne(idValidated) ?~> "mesh.notFound"

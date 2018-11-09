@@ -21,6 +21,7 @@ import type {
   APIUser,
   MeshMetaData,
 } from "admin/api_flow_types";
+<<<<<<< HEAD
 import type { Action } from "oxalis/model/actions/actions";
 import type { Matrix4x4 } from "libs/mjs";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
@@ -54,6 +55,10 @@ import googleAnalyticsMiddleware from "oxalis/model/helpers/google_analytics_mid
 import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import rootSaga from "oxalis/model/sagas/root_saga";
+||||||| merged common ancestors
+import { defaultLayoutSchema } from "oxalis/view/layouting/default_layout_configs";
+=======
+>>>>>>> master
 
 export type CommentType = {|
   +content: string,
@@ -542,8 +547,14 @@ export const defaultState: OxalisState = {
   uiInformation: {
     showDropzoneModal: false,
     showVersionRestore: false,
+<<<<<<< HEAD
     storedLayouts: defaultLayoutSchema,
     isImportingMesh: false,
+||||||| merged common ancestors
+    storedLayouts: defaultLayoutSchema,
+=======
+    storedLayouts: {},
+>>>>>>> master
   },
 };
 

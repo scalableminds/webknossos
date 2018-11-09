@@ -14,9 +14,9 @@ import scala.concurrent.ExecutionContext
 
 class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
                                     dataStoreService: DataStoreService,
-                                    sil: Silhouette[WkEnv])
-                                   (implicit ec: ExecutionContext)
-  extends Controller with FoxImplicits {
+                                    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
+    extends Controller
+    with FoxImplicits {
 
   def list = sil.UserAwareAction.async { implicit request =>
     for {

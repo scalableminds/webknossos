@@ -31,7 +31,7 @@ import TDViewControls from "oxalis/view/td_view_controls";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import { GoldenLayoutAdapter } from "./golden_layout_adapter";
 import { storeLayoutConfig, setActiveLayout } from "./layout_persistence";
-import { determineLayout } from "./default_layout_configs";
+import { determineLayout, headerHeight } from "./default_layout_configs";
 
 const { Header, Sider } = Layout;
 
@@ -123,7 +123,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
         />
 
         <Layout className="tracing-layout">
-          <Header style={{ flex: "0 1 auto", zIndex: 210, height: 55 }}>
+          <Header style={{ flex: "0 1 auto", zIndex: 210, height: headerHeight }}>
             <ButtonComponent onClick={this.handleSettingsCollapse}>
               <Icon type={this.state.isSettingsCollapsed ? "menu-unfold" : "menu-fold"} />
               <span className="hide-on-small-screen">Settings</span>

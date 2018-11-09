@@ -23,6 +23,7 @@ import {
   removeTreesAndTransform,
   callDeep,
   makeBasicGroupObject,
+  findGroup,
   MISSING_GROUP_ID,
   TYPE_TREE,
   TYPE_GROUP,
@@ -50,7 +51,7 @@ type Props = {
   onUpdateTreeGroups: (Array<TreeGroup>) => void,
   onSetTreeGroup: (?number, number) => void,
   handleTreeSelect: number => void,
-  handleTreeGroupSelect: (number, ?TreeNode) => void,
+  handleTreeGroupSelect: (number, ?TreeGroup, ?number) => void,
   unselectEverthing: () => void,
 };
 
@@ -143,31 +144,27 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }
   };
 
-  findGroupInTree = (groupId: number, tree: Array<TreeNode>): ?TreeNode => {
-    for (let index = 0; index < tree.length; ++index) {
-      const currentNode = tree[index];
-      if (currentNode.type !== "GROUP") {
-        continue;
-      }
-      if (currentNode.id === groupId) {
-        return currentNode;
-      } else {
-        const foundGroup = this.findGroupInTree(groupId, currentNode.children);
-        if (foundGroup !== null) {
-          return foundGroup;
-        }
-      }
-    }
-    return null;
+  findGroupInTree = (tree: Array<TreeNode>, groupId: number): ?TreeGroup => {
+    const onlyGroups = removeTreesAndTransform(tree);
+    return findGroup(onlyGroups, groupId);
   };
 
   onSelectGroup = evt => {
-    const groupId = evt.target.dataset.id;
+    const groupId = parseInt(evt.target.dataset.id, 10);
     if (evt.altKey) {
-      const selectedGroup = this.findGroupInTree(parseInt(groupId, 10), this.state.groupTree);
-      this.props.handleTreeGroupSelect(parseInt(groupId, 10), selectedGroup);
+      const groupTree = removeTreesAndTransform(this.state.groupTree);
+      let parentId = null;
+      let selectedGroup: ?TreeGroup = null;
+      callDeep(groupTree, groupId, (foundGroup, index, children, foundParentId) => {
+        parentId = foundParentId;
+        selectedGroup = foundGroup;
+      });
+      console.log(groupTree);
+      console.log(selectedGroup);
+      console.log(parentId);
+      this.props.handleTreeGroupSelect(groupId, selectedGroup, parentId);
     } else {
-      this.props.onSetActiveGroup(parseInt(groupId, 10));
+      this.props.onSetActiveGroup(groupId);
     }
   };
 
@@ -215,7 +212,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       // Exclude root group and remove trees from groupTree object
       // TODO also do this when a tree was moved and the other way round
       // TODO test this
-      const nextParentGroupNode = this.findGroupInTree(nextParentNode.id, treeData);
+      const nextParentGroupNode = this.findGroupInTree(treeData, nextParentNode.id);
       const newTreeGroups = removeTreesAndTransform(treeData);
       if (!nextParentGroupNode) {
         this.props.onUpdateTreeGroups(newTreeGroups);
@@ -225,8 +222,8 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       }
       const nextParentGroup = {
         name: nextParentGroupNode.name,
-        groupId: nextParentGroupNode.id,
-        children: removeTreesAndTransform(nextParentGroupNode.children),
+        groupId: nextParentGroupNode.groupId,
+        children: nextParentGroupNode.children,
       };
       newTreeGroups.forEach(currentNode =>
         this.setParentOfSelectedGroups(nextParentGroup, currentNode),

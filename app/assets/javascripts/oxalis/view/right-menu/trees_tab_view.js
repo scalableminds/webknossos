@@ -33,9 +33,14 @@ import { saveAs } from "file-saver";
 import { getBuildInfo } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import type { Dispatch } from "redux";
-import type { OxalisState, Tracing, SkeletonTracing, UserConfiguration } from "oxalis/store";
+import type {
+  OxalisState,
+  Tracing,
+  SkeletonTracing,
+  UserConfiguration,
+  TreeGroup,
+} from "oxalis/store";
 import { createGroupToTreesMap } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
-import type { TreeNode } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import SearchPopover from "./search_popover";
 
 const ButtonGroup = Button.Group;
@@ -155,6 +160,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     saveAs(blob, getNmlName(state));
   };
 
+  // TODO improve this -> one method and move to messages js
   showGroupAlreadySelectedWarning = (confirmSelection: () => void) => {
     Modal.confirm({
       title: "Do you really want to select this tree?",
@@ -208,7 +214,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     });
   };
 
-  handleTreeGroupSelect = (id: number, groupTree: TreeNode) => {
+  handleTreeGroupSelect = (id: number, groupTree: ?TreeGroup, parentId: ?number) => {
     if (this.state.selectedTreeGroups.includes(id)) {
       this.setState(prevState => ({
         selectedTreeGroups: prevState.selectedTreeGroups.filter(currentId => currentId !== id),
@@ -224,31 +230,43 @@ class TreesTabView extends React.PureComponent<Props, State> {
     if (treeGroupMap[id]) {
       idsOfSelectedGroup = treeGroupMap[id].map(node => node.treeId);
     }
+    // TODO Color of selected trees is not correct
     // TODO: check for selected parent group is missing, currently only childgroups are checked
-    let groupHasSubtreesSelected = false;
+    let groupHasSubitemsSelected = false;
+    let isParentGroupSelected = false;
+    let allSubGroupIds = [];
     if (groupTree) {
       groupTree.children.forEach(currentChild => {
-        if (currentChild.type === "TREE") {
-          if (this.state.selectedTrees.includes(currentChild.id)) {
-            groupHasSubtreesSelected = true;
-          }
-        } else if (this.state.selectedTreeGroups.includes(currentChild.id)) {
-          groupHasSubtreesSelected = true;
+        if (this.state.selectedTreeGroups.includes(currentChild.groupId)) {
+          groupHasSubitemsSelected = true;
         }
       });
+      allSubGroupIds = groupTree.children.map(subGroup => subGroup.groupId);
     }
-    const allSubGroups = groupTree.children.filter(child => child.type === "GROUP");
-    const allSubGroupIds = allSubGroups.map(subGroup => subGroup.id);
-    if (groupHasSubtreesSelected) {
+    idsOfSelectedGroup.forEach(currentId => {
+      if (this.state.selectedTrees.includes(currentId)) {
+        groupHasSubitemsSelected = true;
+      }
+    });
+    if (parentId !== null) {
+      isParentGroupSelected = this.state.selectedTreeGroups.includes(parentId);
+    }
+    if (groupHasSubitemsSelected || isParentGroupSelected) {
       const confirmSelectOfGroup = () => {
         this.setState(prevState => {
+          // removes selected subtrees
           const withoutSubtreesOfSelectedGroup = _.difference(
             prevState.selectedTrees,
             idsOfSelectedGroup,
           );
+          // removes selected Subgroups and the parent group
+          const groupsToRemove = allSubGroupIds;
+          if (parentId !== null && parentId !== undefined) {
+            groupsToRemove.push(parentId);
+          }
           const withoutSubgroupsOfSelectedGroup = _.difference(
             prevState.selectedTreeGroups,
-            allSubGroupIds,
+            groupsToRemove,
           );
           return {
             selectedTrees: withoutSubtreesOfSelectedGroup,

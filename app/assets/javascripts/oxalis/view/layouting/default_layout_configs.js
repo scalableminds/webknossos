@@ -17,6 +17,7 @@ export const currentLayoutVersion = 6;
 export const layoutHeaderHeight = 20;
 export const headerHeight = 55;
 const dummyExtent = 500;
+export const show3DViewportInArbitrary = false;
 
 const LayoutSettings = {
   showPopoutIcon: false,
@@ -100,7 +101,6 @@ const unmemoizedGetDefaultLayouts = () => {
   const OrthoLayoutView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
   const VolumeTracingView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
 
-  const show3DViewportInArbitrary = false;
   const arbitraryPanes = [Panes.arbitraryViewport, SkeletonRightHandColumn].concat(
     show3DViewportInArbitrary ? [Panes.td] : [],
   );

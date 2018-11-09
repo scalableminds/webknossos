@@ -2,21 +2,23 @@
  * arbitrary_view.js
  * @flow
  */
-import _ from "lodash";
-import app from "app";
 import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 import TWEEN from "tween.js";
-import Constants, { ArbitraryViewport, OrthoViews } from "oxalis/constants";
-import type { OrthoViewMap } from "oxalis/constants";
-import Store from "oxalis/store";
-import SceneController from "oxalis/controller/scene_controller";
-import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
+import _ from "lodash";
+
 import { getDesiredLayoutRect } from "oxalis/view/layouting/golden_layout_adapter";
-import window from "libs/window";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
+import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import { show3DViewportInArbitrary } from "oxalis/view/layouting/default_layout_configs";
 import type ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
+import Constants, { ArbitraryViewport, type OrthoViewMap, OrthoViews } from "oxalis/constants";
+import SceneController from "oxalis/controller/scene_controller";
+import Store from "oxalis/store";
+import app from "app";
+import window from "libs/window";
+
 import { clearCanvas, setupRenderArea } from "./plane_view";
 
 class ArbitraryView {
@@ -188,10 +190,13 @@ class ArbitraryView {
         this.plane.meshes.debuggerPlane.visible = false;
       }
       renderViewport(ArbitraryViewport, camera);
-      if (this.plane.meshes.debuggerPlane != null) {
-        this.plane.meshes.debuggerPlane.visible = true;
+      if (show3DViewportInArbitrary) {
+        if (this.plane.meshes.debuggerPlane != null) {
+          this.plane.meshes.debuggerPlane.visible = true;
+        }
+
+        renderViewport(OrthoViews.TDView, this.tdCamera);
       }
-      renderViewport(OrthoViews.TDView, this.tdCamera);
 
       this.needsRerender = false;
       window.needsRerender = false;

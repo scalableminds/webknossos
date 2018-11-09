@@ -137,10 +137,10 @@ void main() {
   float color_value  = 0.0;
 
   vec3 worldCoordUVW = getWorldCoordUVW();
-  // if (isOutsideOfBoundingBox(worldCoordUVW)) {
-  //   gl_FragColor = vec4(0.0);
-  //   return;
-  // }
+  if (isOutsideOfBoundingBox(worldCoordUVW)) {
+    gl_FragColor = vec4(0.0);
+    return;
+  }
   vec3 coords = getRelativeCoords(worldCoordUVW, zoomStep);
 
   vec3 bucketPosition = div(floor(coords), bucketWidth);

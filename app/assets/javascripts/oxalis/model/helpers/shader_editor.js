@@ -1,3 +1,5 @@
+import window from "libs/window";
+
 export default {
   addBucketManagers(textureBucketManager) {
     window.managers = window.managers || [];

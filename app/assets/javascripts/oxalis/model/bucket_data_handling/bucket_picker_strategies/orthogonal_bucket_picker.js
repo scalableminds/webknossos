@@ -13,7 +13,6 @@ import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import Store from "oxalis/store";
 import { getMaxBucketCountPerDim } from "oxalis/model/accessors/flycam_accessor";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
-// import memoizeOne from "memoize-one";
 import { extraBucketPerEdge, extraBucketsPerDim } from "./orthogonal_bucket_picker_constants";
 
 function getUnzoomedBucketCountPerDim(
@@ -24,9 +23,14 @@ function getUnzoomedBucketCountPerDim(
   const baseVoxelFactors = getBaseVoxelFactors(dataSetScale);
   const necessaryVoxelsPerDim = baseVoxelFactors.map(f => f * constants.PLANE_WIDTH);
 
-  const factor = forFallback ? 2 : 1;
+  const fallbackFactor = forFallback ? 0.5 : 1;
   const unzoomedBucketCountPerDim = necessaryVoxelsPerDim.map(
-    v => 1 + Math.ceil((zoomFactor * v) / (factor * constants.BUCKET_WIDTH)),
+    // As an example, even if the viewport width corresponds to exactly
+    // 16 buckets, a slight offset can mean that we need one additional bucket,
+    // from which we render only a small fraction. That's why 1 is added.
+    // Math.ceil is important since a raw viewport width ~ 15.8 bucket should also
+    // result in 17 buckets.
+    v => 1 + Math.ceil((zoomFactor * fallbackFactor * v) / constants.BUCKET_WIDTH),
   );
   return ((unzoomedBucketCountPerDim: any): Vector3);
 }
@@ -61,6 +65,9 @@ export const calculateUnzoomedBucketCount = (dataSetScale: Vector3, zoomFactor: 
 
   return normalBucketCount + fallbackBucketCount;
 };
+
+export const getAnchorPositionToCenterDistance = (bucketPerDim: number) =>
+  Math.ceil((bucketPerDim - 1) / 2);
 
 export default function determineBucketsForOrthogonal(
   cube: DataCube,
@@ -141,7 +148,7 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
     const renderedBucketsPerDimension = Math.ceil(bucketsPerDim[w] / resolutionChangeRatio[w]);
 
     const topLeftBucket = zoomedAnchorPoint.slice();
-    topLeftBucket[w] += Math.ceil((renderedBucketsPerDimension - 1) / 2);
+    topLeftBucket[w] += getAnchorPositionToCenterDistance(renderedBucketsPerDimension);
 
     const centerBucketUV = [
       scaledTopLeftVector[u] + (scaledBottomRightVector[u] - scaledTopLeftVector[u]) / 2,

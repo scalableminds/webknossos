@@ -23,13 +23,17 @@ import { extraBucketsPerDim } from "oxalis/model/bucket_data_handling/bucket_pic
 // magnification. E.g., a value of two indicates that the viewport
 // can be 2 * viewport_width pixel wide while still being in zoom step 0.
 function unmemoizedCalculateMaxZoomStepDiff(dataSetScale: Vector3): number {
+  // This is more of a theoretical limit to avoid an endless loop, in case
+  // the following while loop causes havoc for some reason. It means,
+  // that even with the best GPU specs and weirdest dataset properties,
+  // wk will at most render magnification 20 when being in zoom level 1.
+  const maximumMagnificationAtZoomLevelOne = 20;
+  const maximumCapacity = constants.MINIMUM_REQUIRED_BUCKET_CAPACITY;
   let maxZoomStep = 1;
 
-  // todo derive this from the textureBucketManager.maximumCapacity
-  const maximumCapacity = constants.MINIMUM_REQUIRED_BUCKET_CAPACITY;
   while (
     calculateUnzoomedBucketCount(dataSetScale, maxZoomStep) < maximumCapacity &&
-    maxZoomStep < 20
+    maxZoomStep < maximumMagnificationAtZoomLevelOne
   ) {
     maxZoomStep += 0.1;
   }

@@ -7,7 +7,9 @@ import TextureBucketManager from "oxalis/model/bucket_data_handling/texture_buck
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import PriorityQueue from "js-priority-queue";
 import { M4x4 } from "libs/mjs";
-import determineBucketsForOrthogonal from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
+import determineBucketsForOrthogonal, {
+  getAnchorPositionToCenterDistance,
+} from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
 import determineBucketsForOblique from "oxalis/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
 import determineBucketsForFlight from "oxalis/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
 import {
@@ -275,7 +277,7 @@ export default class LayerRenderingManager {
     const resolution = getResolutions(Store.getState().dataset)[logZoomStep];
     const bucketsPerDim = getMaxBucketCountPerDim(datasetScale);
     const maximumRenderedBucketsHalf = bucketsPerDim.map(
-      bucketPerDim => Math.ceil((bucketPerDim - 1) / 2) * constants.BUCKET_WIDTH,
+      bucketPerDim => getAnchorPositionToCenterDistance(bucketPerDim) * constants.BUCKET_WIDTH,
     );
 
     // Hit texture top-left coordinate

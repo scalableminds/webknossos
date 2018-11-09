@@ -1,6 +1,5 @@
 package models.annotation
 
-
 import java.io.File
 
 import akka.stream.scaladsl.Source
@@ -21,7 +20,8 @@ object TracingStoreRpcClient {
   lazy val webKnossosToken = DataStoreRpcClient.webKnossosToken
 }
 
-class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: RPC)(implicit ec: ExecutionContext) extends LazyLogging {
+class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: RPC)(implicit ec: ExecutionContext)
+    extends LazyLogging {
 
   def baseInfo = s"Dataset: ${dataSet.name} Tracingstore: ${tracingStore.url}"
 
@@ -36,7 +36,8 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
     logger.debug("Called to get multiple SkeletonTracings." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/skeleton/getMultiple")
       .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
-      .postJsonWithProtoResponse[List[TracingSelector], SkeletonTracings](tracingIds.map(TracingSelector(_)))(SkeletonTracings)
+      .postJsonWithProtoResponse[List[TracingSelector], SkeletonTracings](tracingIds.map(TracingSelector(_)))(
+        SkeletonTracings)
   }
 
   def saveSkeletonTracing(tracing: SkeletonTracing): Fox[String] = {

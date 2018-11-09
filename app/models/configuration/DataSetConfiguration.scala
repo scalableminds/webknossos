@@ -9,15 +9,18 @@ import play.api.libs.json._
 
 case class DataSetConfiguration(configuration: Map[String, JsValue])
 
-object DataSetConfiguration {implicit val dataSetConfigurationFormat = Json.format[DataSetConfiguration]}
-
+object DataSetConfiguration { implicit val dataSetConfigurationFormat = Json.format[DataSetConfiguration] }
 
 class DataSetConfigurationDefaults @Inject()(dataSetService: DataSetService) {
 
   def constructInitialDefault(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[DataSetConfiguration] =
     for {
       dataSource <- dataSetService.dataSourceFor(dataSet)
-    } yield constructInitialDefault(dataSource.toUsable.map(d => d.dataLayers.filter(_.category != Category.segmentation).map(_.name)).getOrElse(List()))
+    } yield
+      constructInitialDefault(
+        dataSource.toUsable
+          .map(d => d.dataLayers.filter(_.category != Category.segmentation).map(_.name))
+          .getOrElse(List()))
 
   def constructInitialDefault(layerNames: List[String]): DataSetConfiguration = {
     val layerValues = Json.toJson(layerNames.map(layerName => (layerName -> initialDefaultPerLayer)).toMap)
@@ -30,13 +33,13 @@ class DataSetConfigurationDefaults @Inject()(dataSetService: DataSetService) {
         "segmentationOpacity" -> JsNumber(20),
         "highlightHoveredCellId" -> JsBoolean(true),
         "renderMissingDataBlack" -> JsBoolean(true),
-        "layers" -> layerValues)
+        "layers" -> layerValues
+      )
     )
   }
 
-  def configurationOrDefaults(configuration: DataSetConfiguration): Map[String, JsValue] = {
+  def configurationOrDefaults(configuration: DataSetConfiguration): Map[String, JsValue] =
     constructInitialDefault(List()).configuration ++ configuration.configuration
-  }
 
   val initialDefaultPerLayer: JsObject = Json.obj(
     "brightness" -> 0,

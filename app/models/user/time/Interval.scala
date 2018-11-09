@@ -24,15 +24,13 @@ case class Month(month: Int, year: Int) extends Interval with Ordered[Month] {
 
   override def toString = f"$year%d-$month%02d"
 
-  def start = {
+  def start =
     jodaMonth.dayOfMonth().withMinimumValue().millisOfDay().withMinimumValue()
-  }
 
   def jodaMonth = new DateTime().withYear(year).withMonthOfYear(month)
 
-  def end = {
+  def end =
     jodaMonth.dayOfMonth().withMaximumValue().millisOfDay().withMaximumValue()
-  }
 }
 
 object Month {
@@ -53,15 +51,13 @@ case class Week(week: Int, year: Int) extends Interval with Ordered[Week] {
 
   override def toString = f"$year%d-W$week%02d"
 
-  def start = {
+  def start =
     jodaWeek.withDayOfWeek(DateTimeConstants.MONDAY).millisOfDay().withMinimumValue()
-  }
 
   def jodaWeek = new DateTime().withYear(year).withWeekOfWeekyear(week)
 
-  def end = {
+  def end =
     jodaWeek.dayOfWeek().withMaximumValue().millisOfDay().withMaximumValue()
-  }
 }
 
 object Week {
@@ -82,15 +78,13 @@ case class Day(day: Int, month: Int, year: Int) extends Interval with Ordered[Da
 
   override def toString = f"$year%d-$month%02d-$day%02d"
 
-  def start = {
+  def start =
     jodaDay.millisOfDay().withMinimumValue()
-  }
 
   def jodaDay = new DateTime().withDate(year, month, day)
 
-  def end = {
+  def end =
     jodaDay.millisOfDay().withMaximumValue()
-  }
 }
 
 object Day {

@@ -59,9 +59,12 @@ const createLayout = (...content: Array<*>) => ({
 const OrthoLayout = createLayout(Row(...OrthoViewsGrid, SkeletonRightHandColumn));
 const OrthoLayoutView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
 const VolumeTracingView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
-const ArbitraryLayout = createLayout(
-  Row(Panes.arbitraryViewport, SkeletonRightHandColumn, Panes.td),
+
+const show3DViewportInArbitrary = false;
+const arbitraryPanes = [Panes.arbitraryViewport, SkeletonRightHandColumn].concat(
+  show3DViewportInArbitrary ? [Panes.td] : [],
 );
+const ArbitraryLayout = createLayout(Row(...arbitraryPanes));
 
 const defaultLayouts = {
   ArbitraryLayout,

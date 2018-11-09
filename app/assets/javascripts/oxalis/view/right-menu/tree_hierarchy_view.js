@@ -329,9 +329,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       </span>
     );
     const styleClass = this.getNodeStyleClassForBackground(id, true);
-    console.log("activeId", this.props.activeTreeId);
-    console.log("name:", node.name, "style", styleClass);
-    console.log("");
     return (
       <div className={styleClass}>
         <Checkbox

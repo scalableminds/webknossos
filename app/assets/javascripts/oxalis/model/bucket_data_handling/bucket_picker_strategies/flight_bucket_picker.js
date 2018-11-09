@@ -27,14 +27,15 @@ function createDistinctBucketAdder(buckets: Array<Vector4>) {
   const bucketLookUp = [];
   const maybeAddBucket = (bucketPos: Vector4) => {
     const [x, y, z] = bucketPos;
-    let lookup = null;
-    /* eslint-disable */
-    lookup = bucketLookUp[x] = bucketLookUp[x] || [];
-    /* eslint-disable */
-    lookup = lookup[y] = lookup[y] || [];
+    /* eslint-disable-next-line */
+    bucketLookUp[x] = bucketLookUp[x] || [];
+    const lookupX = bucketLookUp[x];
+    /* eslint-disable-next-line */
+    lookupX[y] = lookupX[y] || [];
+    const lookupY = lookupX[y];
 
-    if (!lookup[z]) {
-      lookup[z] = true;
+    if (!lookupY[z]) {
+      lookupY[z] = true;
       buckets.push(bucketPos);
     }
   };
@@ -97,11 +98,11 @@ export default function determineBucketsForFlight(
         const newNeighbour: Vector4 = flooredBucketPos.slice();
         const rest = (pos % 1) * constants.BUCKET_WIDTH;
         if (rest < neighbourThreshold) {
-          // consider floor(pos) - 1
+          // Pick the previous neighbor
           newNeighbour[idx]--;
           maybeAddBucket(newNeighbour);
         } else if (rest > constants.BUCKET_WIDTH - neighbourThreshold) {
-          // consider floor(pos) + 1
+          // Pick the next neighbor
           newNeighbour[idx]++;
           maybeAddBucket(newNeighbour);
         }

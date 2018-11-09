@@ -37,6 +37,8 @@ const createPriorityQueue = () =>
   });
 
 const BATCH_SIZE = 3;
+// If ${maximumPickerTickCount} bucket picker ticks didn't select a bucket, that bucket is discarded from the pullqueue
+const maximumPickerTickCount = 5;
 
 class PullQueue {
   cube: DataCube;
@@ -81,7 +83,7 @@ class PullQueue {
         if (bucket.type === "data" && bucket.needsRequest()) {
           const isOutdated =
             bucket.neededAtPickerTick != null &&
-            currentBucketPickerTick - bucket.neededAtPickerTick > 5;
+            currentBucketPickerTick - bucket.neededAtPickerTick > maximumPickerTickCount;
           if (!isOutdated) {
             batch.push(address);
             bucket.pull();

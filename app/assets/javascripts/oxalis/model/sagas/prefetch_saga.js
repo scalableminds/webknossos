@@ -29,6 +29,9 @@ const DIRECTION_VECTOR_SMOOTHER = 0.125;
 const prefetchStrategiesArbitrary = [new PrefetchStrategyArbitrary()];
 const prefetchStrategiesPlane = [new PrefetchStrategySkeleton(), new PrefetchStrategyVolume()];
 
+// DEBUG flag for visualizing buckets which are prefetched
+const visualizePrefetchedBuckets = false;
+
 export function* watchDataRelevantChanges(): Saga<void> {
   yield* take("WK_READY");
 
@@ -157,11 +160,12 @@ export function* prefetchForArbitraryMode(
         strategy.inRoundTripTimeRange(connectionInfo.roundTripTime)
       ) {
         const buckets = strategy.prefetch(matrix, zoomStep, position, resolutions);
-        for (const item of buckets) {
-          const bucket = cube.getOrCreateBucket(item.bucket);
-
-          if (window.visualizeBuckets != null && bucket.type !== "null") {
-            bucket.visualize();
+        if (visualizePrefetchedBuckets) {
+          for (const item of buckets) {
+            const bucket = cube.getOrCreateBucket(item.bucket);
+            if (bucket.type !== "null") {
+              bucket.visualize();
+            }
           }
         }
         pullQueue.addAll(buckets);

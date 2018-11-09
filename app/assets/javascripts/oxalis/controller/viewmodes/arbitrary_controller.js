@@ -450,4 +450,3 @@ class ArbitraryController extends React.PureComponent<Props> {
 }
 
 export default ArbitraryController;
-export { ArbitraryController as ArbitraryControllerClass };

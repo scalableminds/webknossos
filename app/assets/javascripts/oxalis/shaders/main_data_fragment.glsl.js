@@ -168,7 +168,7 @@ void main() {
   <% if (isRgb) { %>
 
     float fallbackZoomStep = min(<%= colorLayerNames[0]%>_maxZoomStep, zoomStep + 1.0);
-    bool hasFallback = false; // fallbackZoomStep > zoomStep;
+    bool hasFallback = fallbackZoomStep > zoomStep;
     vec3 fallbackCoords = floor(getRelativeCoords(worldCoordUVW, fallbackZoomStep));
     vec3 data_color =
       getMaybeFilteredColorOrFallback(

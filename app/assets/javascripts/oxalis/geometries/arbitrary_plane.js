@@ -2,7 +2,7 @@
  * arbitrary_plane.js
  * @flow
  */
-
+import _ from "lodash";
 import * as THREE from "three";
 import constants, { OrthoViews } from "oxalis/constants";
 import type { Vector4 } from "oxalis/constants";
@@ -69,8 +69,7 @@ class ArbitraryPlane {
   };
 
   addToScene(scene: THREE.Scene) {
-    Object.keys(this.meshes).forEach(meshKey => {
-      const mesh = this.meshes[meshKey];
+    _.values(this.meshes).forEach(mesh => {
       if (mesh) {
         scene.add(mesh);
       }
@@ -108,9 +107,7 @@ class ArbitraryPlane {
         mesh.matrixWorldNeedsUpdate = true;
       };
 
-      Object.keys(this.meshes)
-        .map(k => this.meshes[k])
-        .forEach(updateMesh);
+      _.values(this.meshes).forEach(updateMesh);
       this.isDirty = false;
 
       SceneController.update(this);

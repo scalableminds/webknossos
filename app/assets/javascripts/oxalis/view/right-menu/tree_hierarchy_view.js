@@ -159,9 +159,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         parentId = foundParentId;
         selectedGroup = foundGroup;
       });
-      console.log(groupTree);
-      console.log(selectedGroup);
-      console.log(parentId);
       this.props.handleTreeGroupSelect(groupId, selectedGroup, parentId);
     } else {
       this.props.onSetActiveGroup(groupId);
@@ -181,9 +178,14 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     const children = currentNode.children;
     for (let index = 0; index < children.length; index++) {
       const currentChild = children[index];
-      if (this.props.selectedTreeGroups.includes(currentChild.groupId)) {
+      // only update children that are not at their desired position in the hierarchy
+      if (
+        this.props.selectedTreeGroups.includes(currentChild.groupId) &&
+        newParent !== currentNode
+      ) {
         newParent.children.push(currentChild);
         currentNode.children.splice(index, 1);
+        index--;
       }
       this.setParentOfSelectedGroups(newParent, currentChild);
     }
@@ -195,41 +197,38 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     treeData: Array<TreeNode>,
   }) => {
     const { nextParentNode, node, treeData } = params;
+    const allTreesToMove = this.props.selectedTrees;
     if (node.type === TYPE_TREE) {
-      // A tree was dragged - update the group of the dragged tree
-      this.props.onSetTreeGroup(
-        nextParentNode.id === MISSING_GROUP_ID ? null : nextParentNode.id,
-        parseInt(node.id, 10),
-      );
-      this.props.selectedTrees.forEach(treeId =>
-        this.props.onSetTreeGroup(
-          nextParentNode.id === MISSING_GROUP_ID ? null : nextParentNode.id,
-          parseInt(treeId, 10),
-        ),
-      );
+      // Add the dragged tree to the array
+      const movedTreeId = parseInt(node.id, 10);
+      if (!allTreesToMove.includes(movedTreeId)) {
+        allTreesToMove.push(movedTreeId);
+      }
     } else {
       // A group was dragged - update the groupTree
-      // Exclude root group and remove trees from groupTree object
-      // TODO also do this when a tree was moved and the other way round
-      // TODO test this
-      const nextParentGroupNode = this.findGroupInTree(treeData, nextParentNode.id);
+      // remove trees from groupTree object
       const newTreeGroups = removeTreesAndTransform(treeData);
-      if (!nextParentGroupNode) {
-        this.props.onUpdateTreeGroups(newTreeGroups);
-        throw new Error(
-          "Dragging does not work correctly. The new parent group/node does not exist.",
-        );
+      // If there are selected groups, change the group hierarchy manually
+      if (this.props.selectedTreeGroups.length > 0) {
+        const nextParentGroup = findGroup(newTreeGroups, nextParentNode.id);
+        if (!nextParentGroup) {
+          this.props.onUpdateTreeGroups(newTreeGroups);
+          throw new Error(
+            "Dragging does not work correctly. The new parent group/node does not exist.",
+          );
+        }
+        // sets the parent group of all selected groups to the found nextParentGroup
+        this.setParentOfSelectedGroups(nextParentGroup, newTreeGroups[0]);
       }
-      const nextParentGroup = {
-        name: nextParentGroupNode.name,
-        groupId: nextParentGroupNode.groupId,
-        children: nextParentGroupNode.children,
-      };
-      newTreeGroups.forEach(currentNode =>
-        this.setParentOfSelectedGroups(nextParentGroup, currentNode),
-      );
       this.props.onUpdateTreeGroups(newTreeGroups[0].children);
     }
+    // sets group of all selected trees (and the moved tree) to the new parent group
+    allTreesToMove.forEach(treeId =>
+      this.props.onSetTreeGroup(
+        nextParentNode.id === MISSING_GROUP_ID ? null : nextParentNode.id,
+        parseInt(treeId, 10),
+      ),
+    );
   };
 
   createGroup(groupId: number) {
@@ -284,16 +283,22 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   getNodeStyleClassForBackground = (id, isGroup = false) => {
-    if (
-      (isGroup && !this.props.selectedTreeGroups.includes(id)) ||
-      (!isGroup && !this.props.selectedTrees.includes(id))
-    ) {
+    if (isGroup) {
+      if (this.props.selectedTreeGroups.includes(id) && this.props.activeGroupId === id) {
+        return "selected-and-active-tree-node";
+      }
+      if (this.props.selectedTreeGroups.includes(id)) {
+        return "selected-tree-node";
+      }
       return null;
-    } else if (id === this.props.activeTreeId) {
+    }
+    if (this.props.selectedTrees.includes(id) && this.props.activeTreeId === id) {
       return "selected-and-active-tree-node";
-    } else {
+    }
+    if (this.props.selectedTrees.includes(id)) {
       return "selected-tree-node";
     }
+    return null;
   };
 
   renderGroupActionsDropdown = (node: TreeNode) => {
@@ -324,6 +329,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       </span>
     );
     const styleClass = this.getNodeStyleClassForBackground(id, true);
+    console.log("activeId", this.props.activeTreeId);
+    console.log("name:", node.name, "style", styleClass);
+    console.log("");
     return (
       <div className={styleClass}>
         <Checkbox

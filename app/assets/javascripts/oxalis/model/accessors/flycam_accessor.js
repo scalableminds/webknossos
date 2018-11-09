@@ -43,7 +43,7 @@ function unmemoizedCalculateMaxZoomStepDiff(dataSetScale: Vector3): number {
 
 const calculateMaxZoomStepDiff = memoizeOne(unmemoizedCalculateMaxZoomStepDiff);
 
-export function getMaxBucketCountPerDim(dataSetScale: Vector3): Vector3 {
+function unmemoizedGetMaxBucketCountPerDim(dataSetScale: Vector3): Vector3 {
   const maximumPlaneExtentInNm =
     constants.PLANE_WIDTH *
     calculateMaxZoomStepDiff(dataSetScale) *
@@ -55,6 +55,8 @@ export function getMaxBucketCountPerDim(dataSetScale: Vector3): Vector3 {
 
   return ((maxBucketCountPerDim: any): Vector3);
 }
+
+export const getMaxBucketCountPerDim = memoizeOne(unmemoizedGetMaxBucketCountPerDim);
 
 export function getUp(flycam: Flycam): Vector3 {
   const matrix = flycam.currentMatrix;

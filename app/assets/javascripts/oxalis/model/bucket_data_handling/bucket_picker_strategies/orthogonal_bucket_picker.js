@@ -10,7 +10,7 @@ import Dimensions from "oxalis/model/dimensions";
 import type { Area } from "oxalis/model/accessors/flycam_accessor";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
-import Store from "oxalis/store";
+import type { APIDataset } from "admin/api_flow_types";
 import { getMaxBucketCountPerDim } from "oxalis/model/accessors/flycam_accessor";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { extraBucketPerEdge, extraBucketsPerDim } from "./orthogonal_bucket_picker_constants";
@@ -70,6 +70,7 @@ export const getAnchorPositionToCenterDistance = (bucketPerDim: number) =>
   Math.ceil((bucketPerDim - 1) / 2);
 
 export default function determineBucketsForOrthogonal(
+  dataset: APIDataset,
   cube: DataCube,
   bucketQueue: PriorityQueue,
   logZoomStep: number,
@@ -81,6 +82,7 @@ export default function determineBucketsForOrthogonal(
   subBucketLocality: Vector3,
 ) {
   addNecessaryBucketsToPriorityQueueOrthogonal(
+    dataset,
     cube,
     bucketQueue,
     logZoomStep,
@@ -92,6 +94,7 @@ export default function determineBucketsForOrthogonal(
 
   if (isFallbackAvailable) {
     addNecessaryBucketsToPriorityQueueOrthogonal(
+      dataset,
       cube,
       bucketQueue,
       logZoomStep + 1,
@@ -104,6 +107,7 @@ export default function determineBucketsForOrthogonal(
 }
 
 function addNecessaryBucketsToPriorityQueueOrthogonal(
+  dataset: APIDataset,
   cube: DataCube,
   bucketQueue: PriorityQueue,
   logZoomStep: number,
@@ -112,7 +116,6 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
   areas: OrthoViewMap<Area>,
   subBucketLocality: Vector3,
 ): void {
-  const { dataset } = Store.getState();
   const resolutions = getResolutions(dataset);
   const datasetScale = dataset.dataSource.scale;
   const resolution = resolutions[logZoomStep];

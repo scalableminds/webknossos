@@ -215,6 +215,7 @@ export default class LayerRenderingManager {
           );
         } else {
           determineBucketsForOrthogonal(
+            Store.getState().dataset,
             this.cube,
             bucketQueue,
             logZoomStep,

@@ -18,9 +18,10 @@ def main():
     tracing_tmpdir_path = extract_tracing_zip(args)
 
     tracing_dataset = wkw.Dataset.open(os.path.join(tracing_tmpdir_path, '1'))
-    segmentation_dataset = wkw.Dataset.open(os.path.join(args.segmentation_path))
+    segmentation_dataset = wkw.Dataset.open(os.path.join(args.segmentation_path, '1'))
 
     assert(tracing_dataset.header.num_channels == segmentation_dataset.header.num_channels)
+    assert(tracing_dataset.header.voxel_type == segmentation_dataset.header.voxel_type)
 
     tracing_bboxes = file_bboxes(tracing_dataset)
     segmentation_bboxes = file_bboxes(segmentation_dataset)
@@ -31,12 +32,11 @@ def main():
 
     segmentation_file_len_voxels = segmentation_dataset.header.block_len * segmentation_dataset.header.file_len
 
-    count = 1
-    for bbox_group_key in bboxes_grouped:
+    for counter, bbox_group_key in enumerate(bboxes_grouped):
         segmentation_bbox = bboxes_grouped[bbox_group_key][0]
         tracing_bboxes = bboxes_grouped[bbox_group_key][1]
 
-        print("Reading segmentation file {} of {}, bounding box: {}...".format(count, len(bboxes_grouped), segmentation_bbox))
+        print("Reading segmentation file {} of {}, bounding box: {}...".format(counter+1, len(bboxes_grouped), segmentation_bbox))
         data = segmentation_dataset.read(segmentation_bbox[0], segmentation_bbox[1])
 
         print("  Overwriting tracing buckets in memory...")
@@ -46,13 +46,13 @@ def main():
             topleft = list(map(lambda x: x % segmentation_file_len_voxels, tracing_bbox[0]))
             shape = tracing_bbox[1]
             bottomright = list( map(add, topleft, shape) )
-            # print("      Broatcasting to 0:1 {}:{}, {}:{}, {}:{}".format(topleft[0], bottomright[0], topleft[1], bottomright[1], topleft[2], bottomright[2]))
             data[0:1, topleft[0]:bottomright[0], topleft[1]:bottomright[1], topleft[2]:bottomright[2]] = tracing_data
 
         print("  Writing segmentation file back to disk...")
         segmentation_dataset.write([0, 0, 0], data)
-        count = count + 1
-    print("Done")
+    print("Cleaning up temporary files...")
+    shutil.rmtree(tracing_tmpdir_path)
+    print("Done.")
 
 def confirmation_prompt(args):
     if not args.yes:
@@ -73,8 +73,6 @@ def extract_tracing_zip(args):
             os.remove(outfile_path)
         else:
             extract_data_zip(args.tracing_path)
-
-    tracing_tmpdir_path = 'tmp-67X8KZUFP0'
     return tracing_tmpdir_path
 
 def extract_data_zip(path, tracing_tmpdir_path):
@@ -85,7 +83,6 @@ def group_tracing_bboxes(tracing_bboxes, segmentation_bboxes):
     grouped = {}
     for tracing_bbox in tracing_bboxes:
         segmentation_bbox = matching_segmentation_bbox(segmentation_bboxes, tracing_bbox)
-        str(segmentation_bbox)
         if not str(segmentation_bbox) in grouped:
             grouped[str(segmentation_bbox)] = (segmentation_bbox, [])
         grouped[str(segmentation_bbox)][1].append(tracing_bbox)
@@ -118,7 +115,7 @@ def file_bboxes(dataset):
 def create_parser():
     parser = ArgumentParser()
     parser.add_argument('tracing_path', help='Volume tracing zip file')
-    parser.add_argument('segmentation_path', help='Directory containing the segmentation to overwrite. (Path should include zoom level)')
+    parser.add_argument('segmentation_path', help='Directory containing the segmentation to overwrite. (Path should not include zoom level)')
     parser.add_argument('-y', '--yes', action="store_true", help='Skip the confirmation prompt')
     return parser
 

@@ -1,17 +1,17 @@
 // @flow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 // This needs to be the very first import
-import { Provider } from "react-redux";
-import { Router } from "react-router-dom";
-import React from "react";
-import createBrowserHistory from "history/createBrowserHistory";
-
 import {
   createSnapshotable,
   debugWrapper,
   waitForAllRequests,
   resetDatabase,
 } from "test/enzyme/e2e-setup";
+import { Provider } from "react-redux";
+import { Router } from "react-router-dom";
+import React from "react";
+// Has to come after e2e-setup import
+import createBrowserHistory from "history/createBrowserHistory";
 import { load as loadFeatureToggles } from "features";
 import { mount } from "enzyme";
 import mockRequire from "mock-require";

@@ -10,10 +10,10 @@ echo "Schema version: ${schema_version}"
 # assert that the found schema version is a number
 re='^[0-9]+$'
 if ! [[ $schema_version =~ $re ]] ; then
-   echo "Error: Schema versoin is not a number" >&2; exit 1
+   echo "Error: Schema version is not a number" >&2; exit 1
 fi
 
-# get list of schemas to apply 
+# get list of evolutions to apply 
 files=""
 for entry in "${scriptdir}/../../conf/evolutions"/*
 do
@@ -26,7 +26,7 @@ do
 	fi;
 done
 
-# apply schemas
+# apply evolutions
 if [ -n "$files" ]; then
 	echo "Applying following evolutions: $files"
 	`PGPASSWORD=postgres psql -U postgres -h localhost --dbname="webknossos" -v ON_ERROR_STOP=ON -q $files`

@@ -27,10 +27,8 @@ class UserController @Inject()(userService: UserService,
                                teamMembershipService: TeamMembershipService,
                                annotationService: AnnotationService,
                                teamDAO: TeamDAO,
-                               sil: Silhouette[WkEnv])
-                              (implicit ec: ExecutionContext,
-                               bodyParsers: PlayBodyParsers)
-  extends Controller
+                               sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+    extends Controller
     with FoxImplicits {
 
   val defaultAnnotationLimit = 1000
@@ -52,7 +50,10 @@ class UserController @Inject()(userService: UserService,
 
   def annotations(isFinished: Option[Boolean], limit: Option[Int]) = sil.SecuredAction.async { implicit request =>
     for {
-      annotations <- annotationDAO.findAllFor(request.identity._id, isFinished, AnnotationType.Explorational, limit.getOrElse(defaultAnnotationLimit))
+      annotations <- annotationDAO.findAllFor(request.identity._id,
+                                              isFinished,
+                                              AnnotationType.Explorational,
+                                              limit.getOrElse(defaultAnnotationLimit))
       jsonList <- Fox.serialCombined(annotations)(a => annotationService.compactWrites(a))
     } yield {
       Ok(Json.toJson(jsonList))
@@ -61,7 +62,10 @@ class UserController @Inject()(userService: UserService,
 
   def tasks(isFinished: Option[Boolean], limit: Option[Int]) = sil.SecuredAction.async { implicit request =>
     for {
-      annotations <- annotationDAO.findAllFor(request.identity._id, isFinished, AnnotationType.Task, limit.getOrElse(defaultAnnotationLimit))
+      annotations <- annotationDAO.findAllFor(request.identity._id,
+                                              isFinished,
+                                              AnnotationType.Task,
+                                              limit.getOrElse(defaultAnnotationLimit))
       jsonList <- Fox.serialCombined(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
     } yield {
       Ok(Json.toJson(jsonList))
@@ -75,91 +79,108 @@ class UserController @Inject()(userService: UserService,
       _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed"
       loggedTimeAsMap <- timeSpanService.loggedTimeOfUser(user, TimeSpan.groupByMonth)
     } yield {
-      JsonOk(Json.obj("loggedTime" ->
-        loggedTimeAsMap.map { case (paymentInterval, duration) =>
-          Json.obj("paymentInterval" -> paymentInterval, "durationInSeconds" -> duration.toSeconds)
-        }
-      ))
+      JsonOk(
+        Json.obj("loggedTime" ->
+          loggedTimeAsMap.map {
+            case (paymentInterval, duration) =>
+              Json.obj("paymentInterval" -> paymentInterval, "durationInSeconds" -> duration.toSeconds)
+          }))
     }
   }
 
-  private def groupByAnnotationAndDay(timeSpan: TimeSpan) = {
+  private def groupByAnnotationAndDay(timeSpan: TimeSpan) =
     (timeSpan._annotation.map(_.toString).getOrElse("<none>"), TimeSpan.groupByDay(timeSpan))
-  }
 
   def usersLoggedTime = sil.SecuredAction.async(validateJson[TimeSpanRequest]) { implicit request =>
-    Fox.combined(request.body.users.map { userId =>
+    Fox
+      .combined(request.body.users.map { userId =>
+        for {
+          userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+          user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
+          _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed"
+          result <- timeSpanService.loggedTimeOfUser(user,
+                                                     groupByAnnotationAndDay,
+                                                     Some(request.body.start),
+                                                     Some(request.body.end))
+        } yield {
+          Json.obj(
+            "user" -> Json.obj(
+              "userId" -> user._id.toString,
+              "firstName" -> user.firstName,
+              "lastName" -> user.lastName,
+              "email" -> user.email
+            ),
+            "loggedTime" -> result.map {
+              case ((annotation, day), duration) =>
+                Json.obj(
+                  "annotation" -> annotation,
+                  "day" -> day,
+                  "durationInSeconds" -> duration.toSeconds
+                )
+            }
+          )
+        }
+      })
+      .map(loggedTime => Ok(Json.toJson(loggedTime)))
+  }
+
+  def userAnnotations(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = sil.SecuredAction.async {
+    implicit request =>
       for {
         userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
         user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
         _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed"
-        result <- timeSpanService.loggedTimeOfUser(user, groupByAnnotationAndDay, Some(request.body.start), Some(request.body.end))
+        annotations <- annotationDAO.findAllFor(userIdValidated,
+                                                isFinished,
+                                                AnnotationType.Explorational,
+                                                limit.getOrElse(defaultAnnotationLimit))
+        jsonList <- Fox.serialCombined(annotations)(a => annotationService.compactWrites(a))
       } yield {
-        Json.obj(
-          "user" -> Json.obj(
-            "userId" -> user._id.toString,
-            "firstName" -> user.firstName,
-            "lastName" -> user.lastName,
-            "email" -> user.email
-          ),
-          "loggedTime" -> result.map {
-            case ((annotation, day), duration) =>
-              Json.obj(
-                "annotation" -> annotation,
-                "day" -> day,
-                "durationInSeconds" -> duration.toSeconds
-              )
-          }
-        )
+        Ok(Json.toJson(jsonList))
       }
-    }).map(loggedTime => Ok(Json.toJson(loggedTime)))
   }
 
-  def userAnnotations(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = sil.SecuredAction.async { implicit request =>
-    for {
-      userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
-      user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
-      _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed"
-      annotations <- annotationDAO.findAllFor(userIdValidated, isFinished, AnnotationType.Explorational, limit.getOrElse(defaultAnnotationLimit))
-      jsonList <- Fox.serialCombined(annotations)(a => annotationService.compactWrites(a))
-    } yield {
-      Ok(Json.toJson(jsonList))
-    }
-  }
-
-  def userTasks(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = sil.SecuredAction.async { implicit request =>
-    for {
-      userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
-      user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
-      _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed"
-      annotations <- annotationDAO.findAllFor(userIdValidated, isFinished, AnnotationType.Task, limit.getOrElse(defaultAnnotationLimit))
-      jsonList <- Fox.serialCombined(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
-    } yield {
-      Ok(Json.toJson(jsonList))
-    }
+  def userTasks(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = sil.SecuredAction.async {
+    implicit request =>
+      for {
+        userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+        user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
+        _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed"
+        annotations <- annotationDAO.findAllFor(userIdValidated,
+                                                isFinished,
+                                                AnnotationType.Task,
+                                                limit.getOrElse(defaultAnnotationLimit))
+        jsonList <- Fox.serialCombined(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
+      } yield {
+        Ok(Json.toJson(jsonList))
+      }
   }
 
   def loggedTime = sil.SecuredAction.async { implicit request =>
     for {
       loggedTimeAsMap <- timeSpanService.loggedTimeOfUser(request.identity, TimeSpan.groupByMonth)
     } yield {
-      JsonOk(Json.obj("loggedTime" ->
-        loggedTimeAsMap.map { case (paymentInterval, duration) =>
-          Json.obj("paymentInterval" -> paymentInterval, "durationInSeconds" -> duration.toSeconds)
-        }
-      ))
+      JsonOk(
+        Json.obj("loggedTime" ->
+          loggedTimeAsMap.map {
+            case (paymentInterval, duration) =>
+              Json.obj("paymentInterval" -> paymentInterval, "durationInSeconds" -> duration.toSeconds)
+          }))
     }
   }
 
   def list = sil.SecuredAction.async { implicit request =>
     UsingFilters(
-      Filter("isEditable", (value: Boolean, el: User) => for {isEditable <- userService.isEditableBy(el, request.identity)} yield isEditable == value),
+      Filter("isEditable",
+             (value: Boolean, el: User) =>
+               for { isEditable <- userService.isEditableBy(el, request.identity) } yield isEditable == value),
       Filter("isAdmin", (value: Boolean, el: User) => Fox.successful(el.isAdmin == value))
     ) { filter =>
       for {
         users <- userDAO.findAll
         filtered <- filter.applyOn(users)
-        js <- Fox.serialCombined(filtered.sortBy(_.lastName.toLowerCase))(u => userService.publicWrites(u, request.identity))
+        js <- Fox.serialCombined(filtered.sortBy(_.lastName.toLowerCase))(u =>
+          userService.publicWrites(u, request.identity))
       } yield {
         Ok(Json.toJson(js))
       }
@@ -175,23 +196,23 @@ class UserController @Inject()(userService: UserService,
       (__ \ "teams").read[List[TeamMembership]](Reads.list(teamMembershipService.publicReads)) and
       (__ \ "experiences").read[Map[String, Int]]).tupled
 
-  def ensureProperTeamAdministration(user: User, teams: List[(TeamMembership, Team)])(implicit m: MessagesProvider) = {
+  def ensureProperTeamAdministration(user: User, teams: List[(TeamMembership, Team)])(implicit m: MessagesProvider) =
     Fox.combined(teams.map {
       case (TeamMembership(_, true), team) => {
         for {
-          _ <- bool2Fox(team.couldBeAdministratedBy(user)) ?~> Messages("team.admin.notPossibleBy", team.name, user.name)
-        }
-        yield ()
+          _ <- bool2Fox(team.couldBeAdministratedBy(user)) ?~> Messages("team.admin.notPossibleBy",
+                                                                        team.name,
+                                                                        user.name)
+        } yield ()
       }
       case (_, team) =>
         Fox.successful(())
     })
-  }
 
-  private def checkAdminOnlyUpdates(user: User, isActive: Boolean, isAdmin: Boolean, email: String)(issuingUser: User): Boolean = {
+  private def checkAdminOnlyUpdates(user: User, isActive: Boolean, isAdmin: Boolean, email: String)(
+      issuingUser: User): Boolean =
     if (isActive && user.isAdmin == isAdmin && user.email == email) true
     else issuingUser.isAdminOf(user)
-  }
 
   def update(userId: String) = sil.SecuredAction.async(parse.json) { implicit request =>
     val issuingUser = request.identity
@@ -202,15 +223,25 @@ class UserController @Inject()(userService: UserService,
           user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
           _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed"
           _ <- bool2Fox(checkAdminOnlyUpdates(user, isActive, isAdmin, email)(issuingUser)) ?~> "notAllowed"
-          teams <- Fox.combined(assignedMemberships.map(t => teamDAO.findOne(t.teamId)(GlobalAccessContext) ?~> Messages("team.notFound")))
+          teams <- Fox.combined(
+            assignedMemberships.map(t => teamDAO.findOne(t.teamId)(GlobalAccessContext) ?~> Messages("team.notFound")))
           oldTeamMemberships <- userService.teamMembershipsFor(user._id)
-          teamsWithoutUpdate <- Fox.filterNot(oldTeamMemberships)(t => userService.isTeamManagerOrAdminOf(issuingUser, t.teamId))
+          teamsWithoutUpdate <- Fox.filterNot(oldTeamMemberships)(t =>
+            userService.isTeamManagerOrAdminOf(issuingUser, t.teamId))
           assignedMembershipWTeams = assignedMemberships.zip(teams)
-          teamsWithUpdate <- Fox.filter(assignedMembershipWTeams)(t => userService.isTeamManagerOrAdminOf(issuingUser, t._1.teamId))
+          teamsWithUpdate <- Fox.filter(assignedMembershipWTeams)(t =>
+            userService.isTeamManagerOrAdminOf(issuingUser, t._1.teamId))
           _ <- ensureProperTeamAdministration(user, teamsWithUpdate)
           trimmedExperiences = experiences.map { case (key, value) => key.trim -> value }
           updatedTeams = teamsWithUpdate.map(_._1) ++ teamsWithoutUpdate
-          _ <- userService.update(user, firstName.trim, lastName.trim, email, isActive, isAdmin, updatedTeams, trimmedExperiences)
+          _ <- userService.update(user,
+                                  firstName.trim,
+                                  lastName.trim,
+                                  email,
+                                  isActive,
+                                  isAdmin,
+                                  updatedTeams,
+                                  trimmedExperiences)
           updatedUser <- userDAO.findOne(userIdValidated)
           updatedJs <- userService.publicWrites(updatedUser, request.identity)
         } yield {

@@ -15,15 +15,13 @@ fi
 
 # get list of evolutions to apply 
 files=""
-for entry in "${scriptdir}/../../conf/evolutions"/*
+for entry in "${scriptdir}/../../conf/evolutions"/*.sql
 do
-	if [[ `grep -oP "\.sql" <<< $entry` ]]; then # only get the sql files
-		tmp_number=`grep -oP "[0-9]{3}" <<< $entry`
-		evolution_number=$((10#$tmp_number)) # force the number to be decimal
-  		if (( evolution_number > schema_version )); then
-  			files="$files -f $entry"
-  		fi;
-	fi;
+	tmp_number=`grep -oP "[0-9]{3}" <<< $entry`
+	evolution_number=$((10#$tmp_number)) # force the number to be decimal
+  	if (( evolution_number > schema_version )); then
+  		files="$files -f $entry"
+  	fi;
 done
 
 # apply evolutions

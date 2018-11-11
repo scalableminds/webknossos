@@ -17,6 +17,7 @@ import {
   setTreeNameAction,
   createTreeAction,
   deleteTreeAsUserAction,
+  deleteMultipleTreesAsUserAction,
   shuffleTreeColorAction,
   shuffleAllTreeColorsAction,
   selectNextTreeAction,
@@ -26,6 +27,7 @@ import {
   addTreesAndGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { readFileAsText } from "libs/read_file";
+import messages from "messages";
 import Store from "oxalis/store";
 import { serializeToNml, getNmlName, parseNml } from "oxalis/model/helpers/nml_helpers";
 import * as Utils from "libs/utils";
@@ -54,6 +56,7 @@ type Props = {
   onSelectNextTreeBackward: () => void,
   onCreateTree: () => void,
   onDeleteTree: () => void,
+  onDeleteMultipleTrees: (Array<number>) => void,
   onChangeTreeName: string => void,
   annotation: Tracing,
   skeletonTracing?: SkeletonTracing,
@@ -120,6 +123,20 @@ class TreesTabView extends React.PureComponent<Props, State> {
   };
 
   deleteTree = () => {
+    // TODO add a new dispatch i guess that takes the id of the tree that should be deleted
+    const { selectedTrees } = this.state;
+    if (selectedTrees.length > 0) {
+      const deleteAllSelectedTrees = () => {
+        this.props.onDeleteMultipleTrees(selectedTrees);
+      };
+      this.showModalConfimWarning(
+        "Delete all selected trees?",
+        messages["tracing.delete_mulitple_trees"]({
+          selectedTrees,
+        }),
+        deleteAllSelectedTrees,
+      );
+    }
     this.props.onDeleteTree();
   };
 
@@ -160,20 +177,18 @@ class TreesTabView extends React.PureComponent<Props, State> {
     saveAs(blob, getNmlName(state));
   };
 
-  // TODO improve this -> one method and move to messages js
-  showGroupAlreadySelectedWarning = (confirmSelection: () => void) => {
+  showModalConfimWarning(title: string, content: string, onConfirm: () => void) {
     Modal.confirm({
-      title: "Do you really want to select this tree?",
-      content:
-        "The group of this tree is already selected. Do you really want to select this tree? This will unselect the trees' group.",
+      title,
+      content,
       okText: "Ok",
       cancelText: "No",
       autoFocusButton: "cancel",
       iconType: "warning",
       onCancel: () => {},
-      onOk: confirmSelection,
+      onOk: onConfirm,
     });
-  };
+  }
 
   handleTreeSelect = id => {
     if (!this.props.skeletonTracing) {
@@ -193,7 +208,11 @@ class TreesTabView extends React.PureComponent<Props, State> {
           ),
         }));
       };
-      this.showGroupAlreadySelectedWarning(confirmSelectOfTree);
+      this.showModalConfimWarning(
+        "Do you really want to select this tree?",
+        messages["tracing.group_already_selected"],
+        confirmSelectOfTree,
+      );
     } else {
       this.setState(prevState => ({
         selectedTrees: [...prevState.selectedTrees, id],
@@ -201,19 +220,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     }
   };
 
-  showSubitemAlreadySelectedWarning = (confirmSelectGroup: () => void) => {
-    Modal.confirm({
-      title: "Do you really want to select this group?",
-      content:
-        "Some of the trees or groups in this group are already selected. Do you really want to select this group? This will unselect all trees and groups that are in this group.",
-      okText: "Ok",
-      cancelText: "No",
-      iconType: "warning",
-      onCancel: () => {},
-      onOk: confirmSelectGroup,
-    });
-  };
-
+  // TODO add comments and shorten this
   handleTreeGroupSelect = (id: number, groupTree: ?TreeGroup, parentId: ?number) => {
     if (this.state.selectedTreeGroups.includes(id)) {
       this.setState(prevState => ({
@@ -230,8 +237,6 @@ class TreesTabView extends React.PureComponent<Props, State> {
     if (treeGroupMap[id]) {
       idsOfSelectedGroup = treeGroupMap[id].map(node => node.treeId);
     }
-    // TODO Color of selected trees is not correct
-    // TODO: check for selected parent group is missing, currently only childgroups are checked
     let groupHasSubitemsSelected = false;
     let isParentGroupSelected = false;
     let allSubGroupIds = [];
@@ -274,7 +279,11 @@ class TreesTabView extends React.PureComponent<Props, State> {
           };
         });
       };
-      this.showSubitemAlreadySelectedWarning(confirmSelectOfGroup);
+      this.showModalConfimWarning(
+        "Do you really want to select this group?",
+        messages["tracing.group_selection_warning"],
+        confirmSelectOfGroup,
+      );
     } else {
       this.setState(prevState => ({
         selectedTreeGroups: [...prevState.selectedTreeGroups, id],
@@ -474,6 +483,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   onDeleteTree() {
     dispatch(deleteTreeAsUserAction());
+  },
+  onDeleteMultipleTrees(ids) {
+    dispatch(deleteMultipleTreesAsUserAction(ids));
   },
   onChangeTreeName(name) {
     dispatch(setTreeNameAction(name));

@@ -17,7 +17,7 @@ import VolumeActionsView from "oxalis/view/action-bar/volume_actions_view";
 import AddNewLayoutModal from "oxalis/view/action-bar/add_new_layout_modal";
 import Constants, { ControlModeEnum } from "oxalis/constants";
 import type { Mode, ControlMode } from "oxalis/constants";
-import type { OxalisState, Tracing } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 import ButtonComponent from "oxalis/view/components/button_component";
 import type { LayoutKeys } from "oxalis/view/layouting/default_layout_configs";
 
@@ -32,7 +32,8 @@ const VersionRestoreWarning = (
 type StateProps = {
   viewMode: Mode,
   controlMode: ControlMode,
-  tracing: Tracing,
+  hasVolume: boolean,
+  hasSkeleton: boolean,
   showVersionRestore: boolean,
 };
 
@@ -72,8 +73,6 @@ class ActionBarView extends React.PureComponent<Props, State> {
 
   render() {
     const isTraceMode = this.props.controlMode === ControlModeEnum.TRACE;
-    const hasVolume = this.props.tracing.volume != null;
-    const hasSkeleton = this.props.tracing.skeleton != null;
     const isVolumeSupported = !Constants.MODES_ARBITRARY.includes(this.props.viewMode);
     const resetItemProps = {
       storedLayoutNamesForView: this.props.storedLayoutNamesForView,
@@ -104,8 +103,8 @@ class ActionBarView extends React.PureComponent<Props, State> {
           )}
           {this.props.showVersionRestore ? VersionRestoreWarning : null}
           <DatasetPositionView />
-          {hasVolume && isVolumeSupported ? <VolumeActionsView /> : null}
-          {hasSkeleton && isTraceMode ? <ViewModesView /> : null}
+          {this.props.hasVolume && isVolumeSupported ? <VolumeActionsView /> : null}
+          {this.props.hasSkeleton && isTraceMode ? <ViewModesView /> : null}
         </div>
         <AddNewLayoutModal
           addLayout={this.addNewLayout}
@@ -119,8 +118,9 @@ class ActionBarView extends React.PureComponent<Props, State> {
 const mapStateToProps = (state: OxalisState): StateProps => ({
   viewMode: state.temporaryConfiguration.viewMode,
   controlMode: state.temporaryConfiguration.controlMode,
-  tracing: state.tracing,
   showVersionRestore: state.uiInformation.showVersionRestore,
+  hasVolume: state.tracing.volume != null,
+  hasSkeleton: state.tracing.skeleton != null,
 });
 
 export default connect(mapStateToProps)(ActionBarView);

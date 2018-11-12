@@ -1,5 +1,7 @@
 import * as THREE from "three";
 
+import { document } from "libs/window";
+
 function UpdatableTexture(
   width,
   height,

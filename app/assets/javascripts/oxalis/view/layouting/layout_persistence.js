@@ -1,15 +1,17 @@
 // @flow
-import _ from "lodash";
 import NanoEvents from "nanoevents";
+import _ from "lodash";
+
 import { setStoredLayoutsAction } from "oxalis/model/actions/ui_actions";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
+
 import getDefaultLayouts, {
   currentLayoutVersion,
   getCurrentDefaultLayoutConfig,
   mapLayoutKeysToLanguage,
+  type LayoutKeys,
 } from "./default_layout_configs";
-import type { LayoutKeys } from "./default_layout_configs";
 
 export const layoutEmitter = new NanoEvents();
 
@@ -169,7 +171,7 @@ export function setActiveLayout(layoutKey: LayoutKeys, activeLayout: string) {
     persistLayoutConfigsDebounced();
   } else {
     throw new Error(
-      `Active layout could not be set. The given layout ${layoutKey} was not found in layouts for 
+      `Active layout could not be set. The given layout ${layoutKey} was not found in layouts for
       ${mapLayoutKeysToLanguage[layoutKey]}`,
     );
   }

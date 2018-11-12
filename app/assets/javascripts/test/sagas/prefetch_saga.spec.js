@@ -1,9 +1,10 @@
 // @flow
 
-import test from "ava";
-import mockRequire from "mock-require";
-import constants from "oxalis/constants";
 import Model from "oxalis/model";
+import constants from "oxalis/constants";
+import mockRequire from "mock-require";
+import test from "ava";
+
 import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import DATASET from "../fixtures/dataset_server_object";
 

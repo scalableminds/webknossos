@@ -1,25 +1,26 @@
 // @flow
 import _ from "lodash";
+
 import {
   MAPPING_TEXTURE_WIDTH,
   MAPPING_COLOR_TEXTURE_WIDTH,
 } from "oxalis/model/bucket_data_handling/mappings";
-import type { Vector3 } from "oxalis/constants";
 import { floatsPerLookUpEntry } from "oxalis/model/bucket_data_handling/texture_bucket_manager";
 import constants, {
-  OrthoViews,
-  OrthoViewIndices,
   ModeValuesIndices,
+  OrthoViewIndices,
+  OrthoViews,
+  type Vector3,
   VolumeToolEnum,
   volumeToolEnumToIndex,
 } from "oxalis/constants";
 import { getMaxBucketCountPerDim } from "oxalis/model/accessors/flycam_accessor";
 
-import compileShader from "./shader_module_system";
 import { convertCellIdToRGB, getBrushOverlay, getSegmentationId } from "./segmentation.glsl";
-import { inverse, round, div, isNan, transDim, isFlightMode } from "./utils.glsl";
-import { getRelativeCoords, getWorldCoordUVW, isOutsideOfBoundingBox } from "./coords.glsl";
 import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
+import { getRelativeCoords, getWorldCoordUVW, isOutsideOfBoundingBox } from "./coords.glsl";
+import { inverse, round, div, isNan, transDim, isFlightMode } from "./utils.glsl";
+import compileShader from "./shader_module_system";
 
 type Params = {|
   colorLayerNames: string[],

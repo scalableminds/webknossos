@@ -4,15 +4,21 @@
  */
 
 import _ from "lodash";
-import Drawing from "libs/drawing";
-import Dimensions from "oxalis/model/dimensions";
-import { Vector3Indicies } from "oxalis/constants";
-import Store from "oxalis/store";
+
+import {
+  type BoundingBoxType,
+  type OrthoView,
+  type Vector2,
+  type Vector3,
+  Vector3Indicies,
+} from "oxalis/constants";
+import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
-import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import type { OrthoView, Vector2, Vector3, BoundingBoxType } from "oxalis/constants";
 import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
+import Dimensions from "oxalis/model/dimensions";
+import Drawing from "libs/drawing";
+import Store from "oxalis/store";
 
 export class VoxelIterator {
   hasNext: boolean = true;

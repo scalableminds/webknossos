@@ -1,13 +1,15 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-import test from "ava";
+import _ from "lodash";
+
 import mockRequire from "mock-require";
 import sinon from "sinon";
-import _ from "lodash";
-import DATASET from "../fixtures/dataset_server_object";
+import test from "ava";
+
 import {
   tracing as TRACING,
   annotation as ANNOTATION,
 } from "../fixtures/skeletontracing_server_objects";
+import DATASET from "../fixtures/dataset_server_object";
 
 mockRequire.stopAll();
 

@@ -1,14 +1,13 @@
 // @flow
-import React from "react";
-import { Route, withRouter } from "react-router-dom";
+import { type ContextRouter, type Location, type Match, Route, withRouter } from "react-router-dom";
+import React, { type ComponentType } from "react";
+
 import LoginView from "admin/auth/login_view";
-import type { Match, Location, ContextRouter } from "react-router-dom";
-import type { ComponentType } from "react";
 
 type Props = {
   component?: ComponentType<*>,
   path: string,
-  render?: (router: ContextRouter) => React$Node,
+  render?: ContextRouter => React$Node,
   isAuthenticated: boolean,
   serverAuthenticationCallback?: Function,
   computedMatch: Match,

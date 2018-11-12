@@ -1,18 +1,23 @@
 // @flow
 import PriorityQueue from "js-priority-queue";
-import type { Vector3, Vector4, OrthoViewMap } from "oxalis/constants";
-import constants, { OrthoViewValuesWithoutTDView } from "oxalis/constants";
+
+import type { APIDataset } from "admin/api_flow_types";
+import { type Area, getMaxBucketCountPerDim } from "oxalis/model/accessors/flycam_accessor";
+import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
+import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import {
   getResolutionsFactors,
   zoomedAddressToAnotherZoomStep,
 } from "oxalis/model/helpers/position_converter";
-import Dimensions from "oxalis/model/dimensions";
-import type { Area } from "oxalis/model/accessors/flycam_accessor";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
-import type { APIDataset } from "admin/api_flow_types";
-import { getMaxBucketCountPerDim } from "oxalis/model/accessors/flycam_accessor";
-import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
+import Dimensions from "oxalis/model/dimensions";
+import constants, {
+  type OrthoViewMap,
+  OrthoViewValuesWithoutTDView,
+  type Vector3,
+  type Vector4,
+} from "oxalis/constants";
+
 import { extraBucketPerEdge, extraBucketsPerDim } from "./orthogonal_bucket_picker_constants";
 
 function getUnzoomedBucketCountPerDim(

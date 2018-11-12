@@ -1,6 +1,8 @@
 // @flow
 import { Component } from "react";
 
+import window from "libs/window";
+
 type LoopProps = {
   interval: number,
   onTick: Function,

@@ -1,8 +1,8 @@
 // @flow
 
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-import test from "ava";
 import mock from "mock-require";
+import test from "ava";
 
 global.performance = {
   now: () => Date.now(),

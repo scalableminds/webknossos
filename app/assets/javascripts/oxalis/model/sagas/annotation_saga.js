@@ -1,18 +1,16 @@
 // @flow
-import Model from "oxalis/model";
-import { take, _takeEvery, select, call } from "oxalis/model/sagas/effect-generators";
-import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { editAnnotation } from "admin/admin_rest_api";
-import type { EditableAnnotation } from "admin/admin_rest_api";
-import messages from "messages";
-import Toast from "libs/toast";
+import { type EditableAnnotation, editAnnotation } from "admin/admin_rest_api";
+import { type Saga, _takeEvery, call, select, take } from "oxalis/model/sagas/effect-generators";
 import {
   isVolumeTracingDisallowed,
   displaysDownsampledVolumeData,
   isSegmentationMissingForZoomstep,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import constants from "oxalis/constants";
+import Model from "oxalis/model";
 import Store from "oxalis/store";
+import Toast from "libs/toast";
+import constants from "oxalis/constants";
+import messages from "messages";
 
 export function* pushAnnotationUpdateAsync(): Saga<void> {
   const tracing = yield* select(state => state.tracing);

@@ -1,14 +1,14 @@
 // @flow
-import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import type { Vector3, Vector4 } from "oxalis/constants";
-import constants from "oxalis/constants";
-import _ from "lodash";
 import * as THREE from "three";
-import UpdatableTexture from "libs/UpdatableTexture";
-import window from "libs/window";
+import _ from "lodash";
+
+import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { createUpdatableTexture } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import { getRenderer } from "oxalis/controller/renderer";
 import { waitForCondition } from "libs/utils";
+import UpdatableTexture from "libs/UpdatableTexture";
+import constants, { type Vector3, type Vector4 } from "oxalis/constants";
+import window from "libs/window";
 
 // A TextureBucketManager instance is responsible for making buckets available
 // to the GPU.

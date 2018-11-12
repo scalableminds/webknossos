@@ -2,6 +2,8 @@
 import * as React from "react";
 import ReactDOM from "react-dom";
 
+import { document } from "libs/window";
+
 // The actual content of a layout pane is a portal target,
 // to which is rendered within GoldenLayoutAdapter.
 // The actual portal targets are reused to avoid that components

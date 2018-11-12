@@ -1,6 +1,6 @@
 // @flow
-import React from "react";
 import { notification, Icon, Collapse } from "antd";
+import React from "react";
 
 const Panel = Collapse.Panel;
 

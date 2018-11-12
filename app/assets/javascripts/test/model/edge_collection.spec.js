@@ -1,6 +1,7 @@
 // @flow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import test from "ava";
+
 import EdgeCollection from "../../oxalis/model/edge_collection";
 
 test("EdgeCollection should have symmetrical inMap and outMap", t => {

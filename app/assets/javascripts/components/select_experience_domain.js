@@ -1,7 +1,8 @@
 // @flow
 
-import * as React from "react";
 import { Select } from "antd";
+import * as React from "react";
+
 import type { ExperienceDomainList } from "admin/api_flow_types";
 import { getExistingExperienceDomains } from "admin/admin_rest_api";
 

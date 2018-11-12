@@ -1,25 +1,27 @@
 // @flow
 /* eslint-disable jsx-a11y/href-no-hash */
 
-import _ from "lodash";
-import React from "react";
-import { Link, withRouter } from "react-router-dom";
+import { Link, type RouterHistory, withRouter } from "react-router-dom";
+import { PropTypes } from "@scalableminds/prop-types";
 import { Table, Tag, Spin, Button, Input, Modal, Icon, Card } from "antd";
-import * as Utils from "libs/utils";
 import Clipboard from "clipboard-js";
-import Toast from "libs/toast";
-import messages from "messages";
-import TaskSearchForm from "admin/task/task_search_form";
+import React from "react";
+import _ from "lodash";
+
+import type { APITask, APITaskType } from "admin/api_flow_types";
 import { deleteTask, getTasks } from "admin/admin_rest_api";
 import { formatTuple, formatSeconds } from "libs/format_utils";
-import TaskAnnotationView from "admin/task/task_annotation_view";
-import Persistence from "libs/persistence";
-import { PropTypes } from "@scalableminds/prop-types";
-import type { APITask, APITaskType } from "admin/api_flow_types";
-import type { QueryObject, TaskFormFieldValues } from "admin/task/task_search_form";
-import type { RouterHistory } from "react-router-dom";
 import { handleGenericError } from "libs/error_handling";
 import FormattedDate from "components/formatted_date";
+import Persistence from "libs/persistence";
+import TaskAnnotationView from "admin/task/task_annotation_view";
+import TaskSearchForm, {
+  type QueryObject,
+  type TaskFormFieldValues,
+} from "admin/task/task_search_form";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import messages from "messages";
 
 const { Column } = Table;
 const { Search, TextArea } = Input;

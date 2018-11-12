@@ -3,15 +3,21 @@
  * @flow
  */
 
-import _ from "lodash";
-import app from "app";
-import * as THREE from "three";
 import BackboneEvents from "backbone-events-standalone";
-import type { Vector3, OrthoViewMap, OrthoView } from "oxalis/constants";
-import { OrthoViews, OrthoViewValuesWithoutTDView } from "oxalis/constants";
-import dimensions from "oxalis/model/dimensions";
-import Store from "oxalis/store";
+import * as THREE from "three";
+import _ from "lodash";
+
+import {
+  type OrthoView,
+  type OrthoViewMap,
+  OrthoViewValuesWithoutTDView,
+  OrthoViews,
+  type Vector3,
+} from "oxalis/constants";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+import Store from "oxalis/store";
+import app from "app";
+import dimensions from "oxalis/model/dimensions";
 
 type Properties = {
   min?: Vector3,

@@ -1,8 +1,8 @@
 // @flow
 
+import { Input } from "antd";
 import * as React from "react";
 import _ from "lodash";
-import { Input } from "antd";
 
 type InputComponentProp = {
   onChange?: Function,

@@ -1,14 +1,14 @@
 // @flow
-import React, { PureComponent } from "react";
-import { connect } from "react-redux";
-import type { VolumeTool } from "oxalis/constants";
-import type { OxalisState, VolumeTracing } from "oxalis/store";
-import { VolumeToolEnum } from "oxalis/constants";
-import Store from "oxalis/store";
-import { setToolAction, createCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { Button, Radio } from "antd";
+import { connect } from "react-redux";
+import React, { PureComponent } from "react";
+
+import { type VolumeTool, VolumeToolEnum } from "oxalis/constants";
+import { document } from "libs/window";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import { setToolAction, createCellAction } from "oxalis/model/actions/volumetracing_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
+import Store, { type OxalisState, type VolumeTracing } from "oxalis/store";
 
 // Workaround until github.com/facebook/flow/issues/1113 is fixed
 const RadioGroup = Radio.Group;

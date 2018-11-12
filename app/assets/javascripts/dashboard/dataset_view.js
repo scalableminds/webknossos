@@ -1,15 +1,15 @@
 // @flow
 
-import * as React from "react";
-import { Link, withRouter } from "react-router-dom";
-import * as Utils from "libs/utils";
+import { Link, type RouterHistory, withRouter } from "react-router-dom";
+import { PropTypes } from "@scalableminds/prop-types";
 import { Spin, Input, Button, Icon, Row, Col } from "antd";
+import * as React from "react";
+
+import type { APIUser, APIMaybeUnimportedDataset } from "admin/api_flow_types";
 import AdvancedDatasetView from "dashboard/advanced_dataset/advanced_dataset_view";
 import GalleryDatasetView from "dashboard/gallery_dataset_view";
 import Persistence from "libs/persistence";
-import { PropTypes } from "@scalableminds/prop-types";
-import type { APIUser, APIMaybeUnimportedDataset } from "admin/api_flow_types";
-import type { RouterHistory } from "react-router-dom";
+import * as Utils from "libs/utils";
 
 const { Search } = Input;
 

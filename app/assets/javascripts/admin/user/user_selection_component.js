@@ -1,10 +1,11 @@
 // @flow
 
-import _ from "lodash";
-import * as React from "react";
 import { Spin, Select } from "antd";
-import { getUsers } from "admin/admin_rest_api";
+import * as React from "react";
+import _ from "lodash";
+
 import type { APIUser } from "admin/api_flow_types";
+import { getUsers } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 
 const { Option } = Select;

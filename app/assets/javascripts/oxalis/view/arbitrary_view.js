@@ -245,7 +245,6 @@ class ArbitraryView {
 
     // const makeBucketId = ([x, y, z], logZoomStep) => [x, y, z, logZoomStep].join(",");
     // const unpackBucketId = (str): Vector4 =>
-    //   // $FlowFixMe
     //   str
     //     .split(",")
     //     .map(el => parseInt(el))

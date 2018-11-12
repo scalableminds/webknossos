@@ -2,8 +2,9 @@
  * app.js
  * @flow
  */
-import window from "libs/window";
 import BackboneEvents from "backbone-events-standalone";
+
+import window from "libs/window";
 
 class OxalisApplication {
   vent = Object.assign({}, BackboneEvents);

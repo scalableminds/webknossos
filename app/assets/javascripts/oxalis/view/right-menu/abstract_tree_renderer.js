@@ -3,11 +3,12 @@
  * @flow
  */
 
-import _ from "lodash";
 import BackboneEvents from "backbone-events-standalone";
-import messages from "messages";
-import type { Vector2 } from "oxalis/constants";
+import _ from "lodash";
+
 import type { Tree } from "oxalis/store";
+import type { Vector2 } from "oxalis/constants";
+import messages from "messages";
 
 const NODE_RADIUS = 2;
 const MAX_NODE_DISTANCE = 100;

@@ -1,18 +1,17 @@
 // @flow
-import React, { PureComponent } from "react";
-import type { OxalisState, Flycam } from "oxalis/store";
+import { Input, Tooltip, Icon } from "antd";
 import { connect } from "react-redux";
 import Clipboard from "clipboard-js";
-import type { Mode } from "oxalis/constants";
-import constants from "oxalis/constants";
-import Toast from "libs/toast";
+import React, { PureComponent } from "react";
+
 import { V3 } from "libs/mjs";
-import Store from "oxalis/store";
-import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
-import { Input, Tooltip, Icon } from "antd";
 import { Vector3Input } from "libs/vector_input";
+import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
+import Store, { type OxalisState, type Flycam } from "oxalis/store";
+import Toast from "libs/toast";
+import constants, { type Mode } from "oxalis/constants";
 import message from "messages";
 
 type Props = {

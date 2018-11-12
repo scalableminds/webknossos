@@ -1,6 +1,7 @@
 // @flow
-import window from "libs/window";
 import type { Dispatch } from "redux";
+
+import window from "libs/window";
 
 const blacklistedActionTypes = ["SET_MOUSE_POSITION", "SET_VIEWPORT"];
 

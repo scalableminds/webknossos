@@ -1,45 +1,6 @@
 // @flow
 import _ from "lodash";
-import Store from "oxalis/store";
-import type { TracingTypeTracing, TraceOrViewCommand } from "oxalis/store";
-import type { UrlManagerState } from "oxalis/controller/url_manager";
-import {
-  setDatasetAction,
-  setViewModeAction,
-  setControlModeAction,
-  initializeSettingsAction,
-} from "oxalis/model/actions/settings_actions";
-import { initializeAnnotationAction } from "oxalis/model/actions/annotation_actions";
-import {
-  setActiveNodeAction,
-  initializeSkeletonTracingAction,
-} from "oxalis/model/actions/skeletontracing_actions";
-import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
-import { initializeVolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
-import { setTaskAction } from "oxalis/model/actions/task_actions";
-import {
-  setPositionAction,
-  setZoomStepAction,
-  setRotationAction,
-} from "oxalis/model/actions/flycam_actions";
-import window from "libs/window";
-import * as Utils from "libs/utils";
-import DataLayer from "oxalis/model/data_layer";
-import ConnectionInfo from "oxalis/model/data_connection_info";
-import { ControlModeEnum } from "oxalis/constants";
-import type { Vector3 } from "oxalis/constants";
-import Toast from "libs/toast";
-import ErrorHandling from "libs/error_handling";
-import UrlManager from "oxalis/controller/url_manager";
-import {
-  getTracingForAnnotations,
-  getAnnotationInformation,
-  getDataset,
-  getSharingToken,
-  getUserConfiguration,
-  getDatasetConfiguration,
-} from "admin/admin_rest_api";
-import messages from "messages";
+
 import type {
   APIAnnotation,
   APIDatasetId,
@@ -48,6 +9,15 @@ import type {
   HybridServerTracing,
   ServerVolumeTracing,
 } from "admin/api_flow_types";
+import { ControlModeEnum, type Vector3 } from "oxalis/constants";
+import {
+  type DataTextureSizeAndCount,
+  computeDataTexturesSetup,
+  getSupportedTextureSpecs,
+  validateMinimumRequirements,
+} from "oxalis/model/bucket_data_handling/data_rendering_logic";
+import type { Versions } from "oxalis/view/version_view";
+import { convertPointToVecInBoundingBox } from "oxalis/model/reducers/reducer_helpers";
 import {
   getDatasetCenter,
   determineAllowedModes,
@@ -55,13 +25,45 @@ import {
   getSegmentationLayer,
   getColorLayers,
 } from "oxalis/model/accessors/dataset_accessor";
-import { serverTracingAsVolumeTracingMaybe } from "oxalis/model/accessors/volumetracing_accessor";
+import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
+import {
+  getTracingForAnnotations,
+  getAnnotationInformation,
+  getDataset,
+  getSharingToken,
+  getUserConfiguration,
+  getDatasetConfiguration,
+} from "admin/admin_rest_api";
+import { initializeAnnotationAction } from "oxalis/model/actions/annotation_actions";
+import { initializeVolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
 import { serverTracingAsSkeletonTracingMaybe } from "oxalis/model/accessors/skeletontracing_accessor";
-import { convertPointToVecInBoundingBox } from "oxalis/model/reducers/reducer_helpers";
+import { serverTracingAsVolumeTracingMaybe } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  setActiveNodeAction,
+  initializeSkeletonTracingAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import {
+  setDatasetAction,
+  setViewModeAction,
+  setControlModeAction,
+  initializeSettingsAction,
+} from "oxalis/model/actions/settings_actions";
+import {
+  setPositionAction,
+  setZoomStepAction,
+  setRotationAction,
+} from "oxalis/model/actions/flycam_actions";
+import { setTaskAction } from "oxalis/model/actions/task_actions";
 import { setupGlobalMappingsObject } from "oxalis/model/bucket_data_handling/mappings";
-import type { Versions } from "oxalis/view/version_view";
-import type { DataTextureSizeAndCount } from "./model/bucket_data_handling/data_rendering_logic";
-import * as DataRenderingLogic from "./model/bucket_data_handling/data_rendering_logic";
+import ConnectionInfo from "oxalis/model/data_connection_info";
+import DataLayer from "oxalis/model/data_layer";
+import ErrorHandling from "libs/error_handling";
+import Store, { type TraceOrViewCommand, type TracingTypeTracing } from "oxalis/store";
+import Toast from "libs/toast";
+import UrlManager, { type UrlManagerState } from "oxalis/controller/url_manager";
+import * as Utils from "libs/utils";
+import messages from "messages";
+import window from "libs/window";
 
 export const HANDLED_ERROR = "error_was_handled";
 
@@ -153,20 +155,15 @@ function validateSpecsForLayers(
   textureInformationPerLayer: Map<APIDataLayer, DataTextureSizeAndCount>,
   isMappingSupported: boolean,
 } {
-  const specs = DataRenderingLogic.getSupportedTextureSpecs();
-  DataRenderingLogic.validateMinimumRequirements(specs);
+  const specs = getSupportedTextureSpecs();
+  validateMinimumRequirements(specs);
 
   const hasSegmentation = _.find(layers, layer => layer.category === "segmentation") != null;
   const {
     isMappingSupported,
     textureInformationPerLayer,
     isBasicRenderingSupported,
-  } = DataRenderingLogic.computeDataTexturesSetup(
-    specs,
-    layers,
-    layer => getBitDepth(layer) >> 3,
-    hasSegmentation,
-  );
+  } = computeDataTexturesSetup(specs, layers, layer => getBitDepth(layer) >> 3, hasSegmentation);
 
   if (!isBasicRenderingSupported) {
     const message = `Not enough textures available for rendering ${layers.length} layers`;

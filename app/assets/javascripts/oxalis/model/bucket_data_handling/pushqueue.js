@@ -2,14 +2,15 @@
  * pushqueue.js
  * @flow
  */
-import AsyncTaskQueue from "libs/async_task_queue";
 import _ from "lodash";
-import Toast from "libs/toast";
-import { document } from "libs/window";
-import { sendToStore } from "oxalis/model/bucket_data_handling/wkstore_adapter";
-import type { Vector4 } from "oxalis/constants";
-import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
+
 import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
+import type { Vector4 } from "oxalis/constants";
+import { alert, document } from "libs/window";
+import { sendToStore } from "oxalis/model/bucket_data_handling/wkstore_adapter";
+import AsyncTaskQueue from "libs/async_task_queue";
+import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import Toast from "libs/toast";
 
 const BATCH_SIZE = 32;
 const DEBOUNCE_TIME = 1000;

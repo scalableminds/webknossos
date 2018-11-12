@@ -1,4 +1,4 @@
-import window from "libs/window";
+import window, { document } from "libs/window";
 
 export default {
   addBucketManagers(textureBucketManager) {

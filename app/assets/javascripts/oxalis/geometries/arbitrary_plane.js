@@ -2,18 +2,17 @@
  * arbitrary_plane.js
  * @flow
  */
-import _ from "lodash";
 import * as THREE from "three";
-import constants, { OrthoViews } from "oxalis/constants";
-import type { Vector4 } from "oxalis/constants";
+import _ from "lodash";
+
+import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
+import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
+import SceneController from "oxalis/controller/scene_controller";
 // Importing throttled_store, would result in flickering when zooming out,
 // since the plane is not updated fast enough
 import Store from "oxalis/store";
-import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
-import SceneController from "oxalis/controller/scene_controller";
+import constants, { OrthoViews, type Vector4 } from "oxalis/constants";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
-
-import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
 
 // Let's set up our trianglesplane.
 // It serves as a "canvas" where the brain images

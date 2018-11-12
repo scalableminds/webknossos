@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 ### Changed
 
 - Improved support for datasets with a large skew in scale (e.g., [600, 600, 35]). [#3398](https://github.com/scalableminds/webknossos/pull/3398)
+- Improved performance for flight mode. [#3392](https://github.com/scalableminds/webknossos/pull/3392)
 
 ### Fixed
 

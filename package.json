@@ -150,7 +150,7 @@
     "pako": "^0.2.8",
     "pretty-bytes": "^5.1.0",
     "protobufjs": "^6.8.6",
-    "react": "^16.3.0",
+    "react": "^16.5.0",
     "react-debounce-render": "^4.0.1",
     "react-dom": "^16.3.0",
     "react-dropzone": "^4.2.13",

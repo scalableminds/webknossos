@@ -1,11 +1,12 @@
 // @flow
-import _ from "lodash";
-import * as React from "react";
 import { Modal, Button, Radio, Col, Row, Checkbox } from "antd";
+import * as React from "react";
+import _ from "lodash";
 import update from "immutability-helper";
+
+import type { APIUser, APITeam, APITeamMembership } from "admin/api_flow_types";
 import { updateUser, getEditableTeams } from "admin/admin_rest_api";
 import messages from "messages";
-import type { APIUser, APITeam, APITeamMembership } from "admin/api_flow_types";
 
 const RadioButton = Radio.Button;
 const RadioGroup = Radio.Group;

@@ -1,11 +1,14 @@
 // @flow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}], no-await-in-loop: 0 */
 import urljoin from "url-join";
-import pixelmatch from "pixelmatch";
-import mergeImg from "merge-img";
+
 import type { Page } from "puppeteer";
-import { createExplorational } from "../../admin/admin_rest_api";
+import { document } from "libs/window";
+import mergeImg from "merge-img";
+import pixelmatch from "pixelmatch";
+
 import type { APIDatasetId } from "../../admin/api_flow_types";
+import { createExplorational } from "../../admin/admin_rest_api";
 
 export const DEV_AUTH_TOKEN = "secretScmBoyToken";
 

@@ -3,44 +3,33 @@
  * @flow
  */
 
-import * as React from "react";
 import { connect } from "react-redux";
-import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import BackboneEvents from "backbone-events-standalone";
-import _ from "lodash";
-import * as Utils from "libs/utils";
-import Toast from "libs/toast";
-import { document } from "libs/window";
-import { InputMouse, InputKeyboard, InputKeyboardNoLoop } from "libs/input";
+import Clipboard from "clipboard-js";
+import * as React from "react";
 import * as THREE from "three";
-import TrackballControls from "libs/trackball_controls";
-import Model from "oxalis/model";
-import Store from "oxalis/store";
-import type { Tracing, CameraData, OxalisState, Flycam } from "oxalis/store";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import SceneController from "oxalis/controller/scene_controller";
+import _ from "lodash";
+
+import { InputKeyboard, InputKeyboardNoLoop, InputMouse, type ModifierKeys } from "libs/input";
+import { document } from "libs/window";
 import {
   getPosition,
   getRequestLogZoomStep,
   getPlaneScalingFactor,
 } from "oxalis/model/accessors/flycam_accessor";
+import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
+import { getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import {
   movePlaneFlycamOrthoAction,
   moveFlycamOrthoAction,
   zoomByDeltaAction,
 } from "oxalis/model/actions/flycam_actions";
-import { voxelToNm, getBaseVoxel, getBaseVoxelFactors } from "oxalis/model/scaleinfo";
-import CameraController from "oxalis/controller/camera_controller";
-import Dimensions from "oxalis/model/dimensions";
-import PlaneView from "oxalis/view/plane_view";
-import constants, {
-  OrthoViews,
-  OrthoViewValues,
-  OrthoViewValuesWithoutTDView,
-  VolumeToolEnum,
-} from "oxalis/constants";
-import type { Point2, Vector3, OrthoView, OrthoViewMap } from "oxalis/constants";
-import type { ModifierKeys } from "libs/input";
+import {
+  setBrushSizeAction,
+  setMousePositionAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import {
   setViewportAction,
   setTDCameraAction,
@@ -49,18 +38,31 @@ import {
   moveTDViewYAction,
   moveTDViewByVectorAction,
 } from "oxalis/model/actions/view_mode_actions";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { voxelToNm, getBaseVoxel, getBaseVoxelFactors } from "oxalis/model/scaleinfo";
+import CameraController from "oxalis/controller/camera_controller";
+import Dimensions from "oxalis/model/dimensions";
+import Model from "oxalis/model";
+import PlaneView from "oxalis/view/plane_view";
+import SceneController from "oxalis/controller/scene_controller";
+import Store, { type CameraData, type Flycam, type OxalisState, type Tracing } from "oxalis/store";
+import Toast from "libs/toast";
+import TrackballControls from "libs/trackball_controls";
+import * as Utils from "libs/utils";
+import api from "oxalis/api/internal_api";
+import constants, {
+  type OrthoView,
+  type OrthoViewMap,
+  OrthoViewValues,
+  OrthoViewValuesWithoutTDView,
+  OrthoViews,
+  type Point2,
+  type Vector3,
+  VolumeToolEnum,
+} from "oxalis/constants";
 import messages from "messages";
-import {
-  setBrushSizeAction,
-  setMousePositionAction,
-} from "oxalis/model/actions/volumetracing_actions";
-import { getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import Clipboard from "clipboard-js";
-import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import * as skeletonController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import * as volumeController from "oxalis/controller/combinations/volumetracing_plane_controller";
-import api from "oxalis/api/internal_api";
 
 function ensureNonConflictingHandlers(skeletonControls: Object, volumeControls: Object): void {
   const conflictingHandlers = _.intersection(

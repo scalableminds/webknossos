@@ -1,13 +1,18 @@
 // @flow
 
 import _ from "lodash";
-import Dimensions from "oxalis/model/dimensions";
-import { OrthoViewValuesWithoutTDView } from "oxalis/constants";
-import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
-import type { PullQueueItem } from "oxalis/model/bucket_data_handling/pullqueue";
-import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import type { Vector3, OrthoView, OrthoViewMap } from "oxalis/constants";
+
 import type { Area } from "oxalis/model/accessors/flycam_accessor";
+import {
+  type OrthoView,
+  type OrthoViewMap,
+  OrthoViewValuesWithoutTDView,
+  type Vector3,
+} from "oxalis/constants";
+import type { PullQueueItem } from "oxalis/model/bucket_data_handling/pullqueue";
+import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
+import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import Dimensions from "oxalis/model/dimensions";
 
 const MAX_ZOOM_STEP_DIFF = 1;
 

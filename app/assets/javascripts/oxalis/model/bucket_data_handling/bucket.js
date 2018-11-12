@@ -3,18 +3,18 @@
  * @flow
  */
 
-import _ from "lodash";
 import BackboneEvents from "backbone-events-standalone";
-import type { Vector3, Vector4 } from "oxalis/constants";
 import * as THREE from "three";
-import constants from "oxalis/constants";
-import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
-import * as Utils from "libs/utils";
-import window from "libs/window";
-import Toast from "libs/toast";
+import _ from "lodash";
+
+import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import Store from "oxalis/store";
-import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
+import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import constants, { type Vector3, type Vector4 } from "oxalis/constants";
+import window from "libs/window";
 
 export const BucketStateEnum = {
   UNREQUESTED: "UNREQUESTED",
@@ -124,12 +124,17 @@ export class DataBucket {
   }
 
   getData(): Uint8Array {
-    if (this.data == null) {
+    const data = this.data;
+    if (data == null) {
       throw new Error("Bucket.getData() called, but data does not exist.");
     }
 
+    this.markAsNeeded();
+    return data;
+  }
+
+  markAsNeeded(): void {
     this.accessed = true;
-    return this.data;
   }
 
   getOrCreateData(): Uint8Array {

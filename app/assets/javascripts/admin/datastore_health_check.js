@@ -1,11 +1,10 @@
 // @flow
-import messages from "messages";
-// We can't import getDataStoresCached directly since this is a cyclic reference.
-// The access only works because it is lazy and wrapped by the RestAPI object
-import * as RestAPI from "admin/admin_rest_api";
-import Request from "libs/request";
-import Toast from "libs/toast";
 import _ from "lodash";
+
+import Request from "libs/request";
+import * as RestAPI from "admin/admin_rest_api";
+import Toast from "libs/toast";
+import messages from "messages";
 
 // Create a throttled function which depends on its arguments.
 // That way, each datastore is checked for health in a throttled and isolated manner

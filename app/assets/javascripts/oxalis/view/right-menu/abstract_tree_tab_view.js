@@ -2,14 +2,17 @@
  * abstract_tree_tab_view.js
  * @flow
  */
-import _ from "lodash";
-import React, { Component } from "react";
-import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";
-import AbstractTreeRenderer from "oxalis/view/right-menu/abstract_tree_renderer";
-import type { NodeListItem } from "oxalis/view/right-menu/abstract_tree_renderer";
+import { connect } from "react-redux";
+import React, { Component } from "react";
+import _ from "lodash";
+
 import type { OxalisState, SkeletonTracing } from "oxalis/store";
+import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";
+import AbstractTreeRenderer, {
+  type NodeListItem,
+} from "oxalis/view/right-menu/abstract_tree_renderer";
+import window from "libs/window";
 
 type Props = {
   dispatch: Dispatch<*>,

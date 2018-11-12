@@ -3,22 +3,22 @@
  * @flow
  */
 
-import _ from "lodash";
 import * as THREE from "three";
-import Store from "oxalis/store";
-import Request from "libs/request";
-import ErrorHandling from "libs/error_handling";
-import { doWithToken } from "admin/admin_rest_api";
-import { setMappingAction, setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
+import _ from "lodash";
+
+import type { APIMapping } from "admin/api_flow_types";
 import { createUpdatableTexture } from "oxalis/geometries/materials/abstract_plane_material_factory";
-import UpdatableTexture from "libs/UpdatableTexture";
+import { doWithToken } from "admin/admin_rest_api";
+import { getMappings, getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { getRenderer } from "oxalis/controller/renderer";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import messages from "messages";
-import { getMappings, getLayerByName } from "oxalis/model/accessors/dataset_accessor";
-import type { Mapping } from "oxalis/store";
-import type { APIMapping } from "admin/api_flow_types";
+import { setMappingAction, setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import type DataLayer from "oxalis/model/data_layer";
+import ErrorHandling from "libs/error_handling";
+import Request from "libs/request";
+import Store, { type Mapping } from "oxalis/store";
+import UpdatableTexture from "libs/UpdatableTexture";
+import messages from "messages";
 
 export const MAPPING_TEXTURE_WIDTH = 4096;
 export const MAPPING_COLOR_TEXTURE_WIDTH = 16;

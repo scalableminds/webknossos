@@ -1,8 +1,9 @@
 // @flow
-import _ from "lodash";
 import { PropTypes } from "@scalableminds/prop-types";
-import ErrorHandling from "libs/error_handling";
 import type { RouterHistory } from "react-router-dom";
+import _ from "lodash";
+
+import ErrorHandling from "libs/error_handling";
 
 class Persistence<T: Object> {
   stateProperties: { [$Keys<T>]: Function };

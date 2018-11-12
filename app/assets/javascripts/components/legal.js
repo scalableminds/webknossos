@@ -1,6 +1,8 @@
-import React from "react";
-import Markdown from "react-remarkable";
 import { Row, Col, Card } from "antd";
+import Markdown from "react-remarkable";
+import React from "react";
+
+import type { APIOrganization } from "admin/api_flow_types";
 import { getOperatorData, getOrganizations } from "admin/admin_rest_api";
 
 type Props = {};

@@ -1,6 +1,8 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 // @flow
-import test from "ava";
+import { APITracingTypeEnum } from "admin/api_flow_types";
+import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { diffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import {
   resetDatabase,
   replaceVolatileValues,
@@ -8,13 +10,12 @@ import {
   tokenUserA,
   writeFlowCheckingFile,
 } from "test/enzyme/e2e-setup";
-import * as api from "admin/admin_rest_api";
-import { APITracingTypeEnum } from "admin/api_flow_types";
 import { sendRequestWithToken, addVersionNumbers } from "oxalis/model/sagas/save_saga";
 import * as UpdateActions from "oxalis/model/sagas/update_actions";
+import * as api from "admin/admin_rest_api";
 import generateDummyTrees from "oxalis/model/helpers/generate_dummy_trees";
-import { diffTrees } from "oxalis/model/sagas/skeletontracing_saga";
-import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import test from "ava";
+
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 
 const dataSetId = { name: "confocal-multi_knossos", owningOrganization: "Organization_X" };
@@ -94,7 +95,9 @@ test.serial("editAnnotation()", async t => {
   t.is(editedAnnotation.name, newName);
   t.is(editedAnnotation.isPublic, newIsPublic);
   t.is(editedAnnotation.description, newDescription);
-  t.snapshot(editedAnnotation, { id: "annotations-editAnnotation" });
+  t.is(editedAnnotation.id, annotationId);
+  t.is(editedAnnotation.tracing.skeleton, "ae417175-f7bb-4a34-8187-d9c3b50143af");
+  t.snapshot(replaceVolatileValues(editedAnnotation), { id: "annotations-editAnnotation" });
 
   await api.editAnnotation(annotationId, APITracingTypeEnum.Explorational, {
     name,

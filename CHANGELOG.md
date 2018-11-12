@@ -7,14 +7,49 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/18.10.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/18.11.0...HEAD)
 
 ### Added
 
-- Added support for duplicate dataset names for different organizations [#3137](https://github.com/scalableminds/webknossos/pull/3137)
+-
+
+### Changed
+
+-
+
+### Fixed
+
+- Fixed a bug where the initial onboarding setup failed if automatic initial data was disabled. [#3421](https://github.com/scalableminds/webknossos/pull/3421)
+- Fixed a bug where dataset list refresh failed when datasets for non-existing organizations were reported. [#3438](https://github.com/scalableminds/webknossos/pull/3438)
+
+### Removed
+
+- Removed support to watch additional dataset directories, no longer automatically creating symbolic links to the main directory. [#3416](https://github.com/scalableminds/webknossos/pull/3416)
+
+
+## [18.11.0](https://github.com/scalableminds/webknossos/releases/tag/18.11.0) - 2018-10-29
+[Commits](https://github.com/scalableminds/webknossos/compare/18.10.0...18.11.0)
+
+### Highlights
+
+- Skeleton and volume tracings will be more unified, resulting in hybrid tracings that can contain both structures:
+  - Hybrid tracings are now enabled by default. They allow to combine the functionality of skeleton and volume annotations in one tracing. [#3399](https://github.com/scalableminds/webknossos/pull/3399)
+  - Old volume tracing versions now also can be restored. Access it through the dropdown next to the Save button. [#3349](https://github.com/scalableminds/webknossos/pull/3349)
+- The tracing view was improved:
+  - The info tab in tracing views now displays the extent of the current dataset. [#3371](https://github.com/scalableminds/webknossos/pull/3371).
+  - A User can now have multiple layouts for tracing views. [#3299](https://github.com/scalableminds/webknossos/pull/3299)
+  - More layouting improvements: [#3256](https://github.com/scalableminds/webknossos/pull/3256) [#3256](https://github.com/scalableminds/webknossos/pull/3256) [#3272](https://github.com/scalableminds/webknossos/pull/3272)
+
+### Added
+
+- Added support for duplicate dataset names for different organizations. [#3137](https://github.com/scalableminds/webknossos/pull/3137)
 - Extended the version restore view and added a view to restore older versions of a volume tracing. Access it through the dropdown next to the Save button. [#3349](https://github.com/scalableminds/webknossos/pull/3349)
-- Added support to watch additional dataset directories, automatically creating symbolic links to the main directory [#3330](https://github.com/scalableminds/webknossos/pull/3330)
+- Added support to watch additional dataset directories, automatically creating symbolic links to the main directory. [#3330](https://github.com/scalableminds/webknossos/pull/3330)
+- Added a button to the users list view that revokes admin rights from all selected users. [#3378](https://github.com/scalableminds/webknossos/pull/3378)
+- Hybrid tracings are now enabled by default. They allow to combine the functionality of skeleton and volume annotations in one tracing. [#3399](https://github.com/scalableminds/webknossos/pull/3399)
 - A User can now have multiple layouts for tracing views. [#3299](https://github.com/scalableminds/webknossos/pull/3299)
+- Added support for datasets with sparse resolutions (e.g., [[1, 1, 1], [16, 16, 16]]). [#3406](https://github.com/scalableminds/webknossos/pull/3406)
+- The info tab in tracing views now displays the extent of the current dataset. [#3371](https://github.com/scalableminds/webknossos/pull/3371).
 
 ### Changed
 
@@ -22,19 +57,19 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - The tracing layout was changed to be more compact. [#3256](https://github.com/scalableminds/webknossos/pull/3256)
 - It is no longer possible to draw outside of a viewport with the brush tool in volume tracing. [#3283](https://github.com/scalableminds/webknossos/pull/3283)
 - There is now a separate tracingstore module, the datastore is no longer responsible for saving tracings. [#3281](https://github.com/scalableminds/webknossos/pull/3281)
+- The version history view shows versions grouped by day and time now. [#3365](https://github.com/scalableminds/webknossos/pull/3365)
 - Users can now access the annotations of other users (of the same organization) given the link, even if they are non-public. [#3348](https://github.com/scalableminds/webknossos/pull/3348)
 
 ### Fixed
 
 - Fixed a layouting issue which occurred on a fresh page load when the layout was scaled to be bigger than the available space. [#3256](https://github.com/scalableminds/webknossos/pull/3256)
 - Fixed overlap in comment tab for long tree names or comments. [#3272](https://github.com/scalableminds/webknossos/pull/3272)
+- Fixed that CTRL + Shift + F opens two search popovers in the tracing view. Instead, the shortcut will only open the tree search now. [#3407](https://github.com/scalableminds/webknossos/pull/3407)
 - Fixed a bug which caused data to not be displayed correctly if adjacent data does not exist.[#3270](https://github.com/scalableminds/webknossos/pull/3270)
+- Fixed a bug which caused data to not be displayed correctly if adjacent data does not exist. [#3270](https://github.com/scalableminds/webknossos/pull/3270)
 - Fixed a bug which caused initial rendering to sometimes miss some buckets. [#3262](https://github.com/scalableminds/webknossos/pull/3262)
 - Fixed a bug which caused the save-button to never show success for volume tracings. [#3267](https://github.com/scalableminds/webknossos/pull/3267)
-
-### Removed
-
--
+- Fixed a rendering bug which caused data to turn black sometimes when moving around. [#3409](https://github.com/scalableminds/webknossos/pull/3409)
 
 
 ## [18.10.0](https://github.com/scalableminds/webknossos/releases/tag/18.10.0) - 2018-09-22

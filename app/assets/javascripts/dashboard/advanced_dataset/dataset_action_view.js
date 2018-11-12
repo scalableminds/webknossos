@@ -9,7 +9,6 @@ import { Dropdown, Menu, Icon, Tooltip } from "antd";
 import type { APIMaybeUnimportedDataset } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
 import { createExplorational, triggerDatasetClearCache } from "admin/admin_rest_api";
-import features from "features";
 
 type Props = {
   dataset: APIMaybeUnimportedDataset,
@@ -42,21 +41,13 @@ class DatasetActionView extends React.PureComponent<Props, State> {
 
     const menu = (
       <Menu>
-        <Menu.Item key="existing">
-          <a
-            href="#"
-            onClick={() => this.createTracing(dataset, "volume", true)}
-            title="Create volume tracing"
-          >
+        <Menu.Item key="existing" onClick={() => this.createTracing(dataset, "volume", true)}>
+          <a href="#" title="Create Volume Tracing">
             Use Existing Segmentation Layer
           </a>
         </Menu.Item>
-        <Menu.Item key="new">
-          <a
-            href="#"
-            onClick={() => this.createTracing(dataset, "volume", false)}
-            title="Create volume tracing"
-          >
+        <Menu.Item key="new" onClick={() => this.createTracing(dataset, "volume", false)}>
+          <a href="#" title="Create Volume Tracing">
             Use a New Segmentation Layer
           </a>
         </Menu.Item>
@@ -65,7 +56,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
 
     const volumeTracingMenu = (
       <Dropdown overlay={menu} trigger={["click"]}>
-        <a href="#" title="Create volume tracing">
+        <a href="#" title="Create Volume Tracing">
           <img
             src="/assets/images/volume.svg"
             alt="volume icon"
@@ -128,6 +119,14 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                   Start Skeleton Tracing
                 </a>
                 {volumeTracingMenu}
+                <a
+                  href="#"
+                  onClick={() => this.createTracing(dataset, "hybrid", true)}
+                  title="Create Hybrid (Skeleton + Volume) Tracing"
+                >
+                  <Icon type="swap" />
+                  Start Hybrid Tracing
+                </a>
               </React.Fragment>
             ) : (
               <p>
@@ -137,19 +136,6 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                 </Tooltip>
               </p>
             )}
-            {features().hybridTracings ? (
-              <a
-                href="#"
-                onClick={() => this.createTracing(dataset, "hybrid", true)}
-                title="Create Hybrid Tracing"
-              >
-                <Icon type="swap" />
-                {"Start Hybrid Tracing "}
-                <Tooltip title="Experimental" placement="topLeft">
-                  <Icon type="exclamation-circle-o" style={{ color: "orange" }} />
-                </Tooltip>
-              </a>
-            ) : null}
           </div>
         ) : null}
       </div>

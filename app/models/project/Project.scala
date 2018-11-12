@@ -18,19 +18,18 @@ import utils.{ObjectId, SQLClient, SQLDAO}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-
 case class Project(
-                     _id: ObjectId,
-                     _team: ObjectId,
-                     _owner: ObjectId,
-                     name: String,
-                     priority: Long,
-                     paused: Boolean,
-                     expectedTime: Option[Long],
-                     isBlacklistedFromReport: Boolean,
-                     created: Long = System.currentTimeMillis(),
-                     isDeleted: Boolean = false
-                     ) extends FoxImplicits {
+    _id: ObjectId,
+    _team: ObjectId,
+    _owner: ObjectId,
+    name: String,
+    priority: Long,
+    paused: Boolean,
+    expectedTime: Option[Long],
+    isBlacklistedFromReport: Boolean,
+    created: Long = System.currentTimeMillis(),
+    isDeleted: Boolean = false
+) extends FoxImplicits {
 
   def isDeletableBy(user: User) = user._id == _owner || user.isAdmin
 
@@ -39,6 +38,7 @@ case class Project(
 object Project {
   private val validateProjectName = Reads.pattern("^[a-zA-Z0-9_-]*$".r, "project.name.invalidChars")
 
+  // format: off
   val projectPublicReads: Reads[Project] =
     ((__ \ 'name).read[String](Reads.minLength[String](3) keepAnd validateProjectName) and
       (__ \ 'team).read[String](ObjectId.stringObjectIdReads("team")) and
@@ -49,28 +49,31 @@ object Project {
       (__ \ 'isBlacklistedFromReport).read[Boolean]) (
       (name, team, priority, paused, expectedTime, owner, isBlacklistedFromReport) =>
         Project(ObjectId.generate, ObjectId(team), ObjectId(owner), name, priority, paused getOrElse false, expectedTime, isBlacklistedFromReport))
+  // format: on
 
 }
 
-class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SQLDAO[Project, ProjectsRow, Projects](sqlClient) {
+class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+    extends SQLDAO[Project, ProjectsRow, Projects](sqlClient) {
   val collection = Projects
 
   def idColumn(x: Projects): Rep[String] = x._Id
   def isDeletedColumn(x: Projects): Rep[Boolean] = x.isdeleted
 
   def parse(r: ProjectsRow): Fox[Project] =
-    Fox.successful(Project(
-      ObjectId(r._Id),
-      ObjectId(r._Team),
-      ObjectId(r._Owner),
-      r.name,
-      r.priority,
-      r.paused,
-      r.expectedtime,
-      r.isblacklistedfromreport,
-      r.created.getTime,
-      r.isdeleted
-    ))
+    Fox.successful(
+      Project(
+        ObjectId(r._Id),
+        ObjectId(r._Team),
+        ObjectId(r._Owner),
+        r.name,
+        r.priority,
+        r.paused,
+        r.expectedtime,
+        r.isblacklistedfromreport,
+        r.created.getTime,
+        r.isdeleted
+      ))
 
   override def readAccessQ(requestingUserId: ObjectId) =
     s"""((_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')) or _owner = '${requestingUserId.id}'
@@ -82,23 +85,27 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) 
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Project] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(sql"select #${columns} from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[ProjectsRow])
+      rList <- run(
+        sql"select #${columns} from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}"
+          .as[ProjectsRow])
       r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
       parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
     } yield parsed
 
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[Project]] = {
+  override def findAll(implicit ctx: DBAccessContext): Fox[List[Project]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #${columns} from #${existingCollectionName} where #${accessQuery} order by created".as[ProjectsRow])
+      r <- run(
+        sql"select #${columns} from #${existingCollectionName} where #${accessQuery} order by created".as[ProjectsRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
-  }
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[Project] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(sql"select #${columns} from #${existingCollectionName} where name = '#${sanitize(name)}' and #${accessQuery}".as[ProjectsRow])
+      rList <- run(
+        sql"select #${columns} from #${existingCollectionName} where name = '#${sanitize(name)}' and #${accessQuery}"
+          .as[ProjectsRow])
       r <- rList.headOption.toFox
       parsed <- parse(r)
     } yield parsed
@@ -123,10 +130,11 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) 
 
   def insertOne(p: Project)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- run(sqlu"""insert into webknossos.projects(_id, _team, _owner, name, priority, paused, expectedTime, isblacklistedfromreport, created, isDeleted)
-                         values(${p._id.id}, ${p._team.id}, ${p._owner.id}, ${p.name}, ${p.priority}, ${p.paused}, ${p.expectedTime}, ${p.isBlacklistedFromReport}, ${new java.sql.Timestamp(p.created)}, ${p.isDeleted})""")
+      _ <- run(
+        sqlu"""insert into webknossos.projects(_id, _team, _owner, name, priority, paused, expectedTime, isblacklistedfromreport, created, isDeleted)
+                         values(${p._id.id}, ${p._team.id}, ${p._owner.id}, ${p.name}, ${p.priority}, ${p.paused}, ${p.expectedTime}, ${p.isBlacklistedFromReport}, ${new java.sql.Timestamp(
+          p.created)}, ${p.isDeleted})""")
     } yield ()
-
 
   def updateOne(p: Project)(implicit ctx: DBAccessContext): Fox[Unit] =
     for { //note that p.created is skipped
@@ -149,9 +157,10 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) 
 
 }
 
-
-class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userService: UserService, taskDAO: TaskDAO)(implicit ec: ExecutionContext)
-  extends LazyLogging with FoxImplicits {
+class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userService: UserService, taskDAO: TaskDAO)(
+    implicit ec: ExecutionContext)
+    extends LazyLogging
+    with FoxImplicits {
 
   def deleteOne(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[Boolean] = {
     val futureFox: Future[Fox[Boolean]] = for {
@@ -174,7 +183,10 @@ class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userSer
 
   def publicWrites(project: Project)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
-      owner <- userService.findOneById(project._owner, useCache = true)(GlobalAccessContext).flatMap(u => userService.compactWrites(u)).futureBox
+      owner <- userService
+        .findOneById(project._owner, useCache = true)(GlobalAccessContext)
+        .flatMap(u => userService.compactWrites(u))
+        .futureBox
       teamNameOpt <- teamDAO.findOne(project._team)(GlobalAccessContext).map(_.name).toFutureOption
     } yield {
       Json.obj(
@@ -190,13 +202,11 @@ class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userSer
       )
     }
 
-  def publicWritesWithStatus(project: Project, openTaskInstances: Int)(implicit ctx: DBAccessContext): Fox[JsObject] = {
+  def publicWritesWithStatus(project: Project, openTaskInstances: Int)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
       projectJson <- publicWrites(project)
     } yield {
       projectJson + ("numberOfOpenAssignments" -> JsNumber(openTaskInstances))
     }
-  }
-
 
 }

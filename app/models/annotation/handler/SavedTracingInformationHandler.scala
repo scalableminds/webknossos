@@ -14,9 +14,9 @@ import scala.concurrent.ExecutionContext
 class SavedTracingInformationHandler @Inject()(annotationDAO: AnnotationDAO,
                                                dataSetDAO: DataSetDAO,
                                                annotationRestrictionDefults: AnnotationRestrictionDefaults,
-                                               userService: UserService)
-                                              (implicit val ec: ExecutionContext)
-  extends AnnotationInformationHandler with FoxImplicits {
+                                               userService: UserService)(implicit val ec: ExecutionContext)
+    extends AnnotationInformationHandler
+    with FoxImplicits {
 
   override val cache = false
 
@@ -34,12 +34,11 @@ class SavedTracingInformationHandler @Inject()(annotationDAO: AnnotationDAO,
   def provideAnnotation(annotationId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
     annotationDAO.findOne(annotationId) ?~> "annotation.notFound"
 
-  def restrictionsFor(identifier: ObjectId)(implicit ctx: DBAccessContext) = {
+  def restrictionsFor(identifier: ObjectId)(implicit ctx: DBAccessContext) =
     for {
       annotation <- provideAnnotation(identifier, None)
     } yield {
       annotationRestrictionDefults.defaultsFor(annotation)
     }
-  }
 
 }

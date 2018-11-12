@@ -1,6 +1,6 @@
 // @flow
-import _ from "lodash";
 import * as React from "react";
+import _ from "lodash";
 
 export const colors = {
   finished: "#52c41a",

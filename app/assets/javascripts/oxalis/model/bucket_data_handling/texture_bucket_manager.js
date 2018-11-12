@@ -1,14 +1,14 @@
 // @flow
-import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import type { Vector4 } from "oxalis/constants";
-import constants from "oxalis/constants";
-import _ from "lodash";
 import * as THREE from "three";
-import UpdatableTexture from "libs/UpdatableTexture";
-import window from "libs/window";
+import _ from "lodash";
+
+import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { createUpdatableTexture } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import { getRenderer } from "oxalis/controller/renderer";
 import { waitForCondition } from "libs/utils";
+import UpdatableTexture from "libs/UpdatableTexture";
+import constants, { type Vector3, type Vector4 } from "oxalis/constants";
+import window from "libs/window";
 
 // A TextureBucketManager instance is responsible for making buckets available
 // to the GPU.
@@ -44,7 +44,7 @@ export default class TextureBucketManager {
   isRefreshBufferOutOfDate: boolean = false;
 
   // This is passed as a parameter to allow for testing
-  bucketsPerDim: number;
+  bucketsPerDim: Vector3;
   currentAnchorPoint: Vector4 = [0, 0, 0, 0];
   fallbackAnchorPoint: Vector4 = [0, 0, 0, 0];
   writerQueue: Array<{ bucket: DataBucket, _index: number }> = [];
@@ -54,7 +54,7 @@ export default class TextureBucketManager {
   packingDegree: number;
 
   constructor(
-    bucketsPerDim: number,
+    bucketsPerDim: Vector3,
     textureWidth: number,
     dataTextureCount: number,
     bytes: number,
@@ -98,6 +98,7 @@ export default class TextureBucketManager {
     this.activeBucketToIndexMap.delete(bucket);
     this.committedBucketSet.delete(bucket);
     this.freeIndexSet.add(unusedIndex);
+    // bucket.unvisualize();
   }
 
   // Takes an array of buckets (relative to an anchorPoint) and ensures that these
@@ -182,6 +183,8 @@ export default class TextureBucketManager {
         bucketHeightInTexture,
       );
       this.committedBucketSet.add(bucket);
+      // bucket.setVisualizationColor("#00ff00");
+      // bucket.visualize();
 
       window.needsRerender = true;
       this.isRefreshBufferOutOfDate = true;
@@ -288,10 +291,13 @@ export default class TextureBucketManager {
     const y = bucketPosition[1] - anchorPoint[1];
     const z = bucketPosition[2] - anchorPoint[2];
 
+    const [sx, sy, sz] = this.bucketsPerDim;
+
+    // prettier-ignore
     return (
-      Math.pow(this.bucketsPerDim, 3) * zoomDiff +
-      Math.pow(this.bucketsPerDim, 2) * z +
-      this.bucketsPerDim * y +
+      sx * sy * sz * zoomDiff +
+      sx * sy * z +
+      sx * y +
       x
     );
   }

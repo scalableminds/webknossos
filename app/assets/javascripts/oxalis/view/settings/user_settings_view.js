@@ -4,22 +4,12 @@
  * @flow
  */
 
-import _ from "lodash";
-import React, { PureComponent } from "react";
-import { connect } from "react-redux";
 import { Collapse } from "antd";
-import type { ControlMode, Vector6, Mode } from "oxalis/constants";
-import Constants, { ControlModeEnum } from "oxalis/constants";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import {
-  setActiveNodeAction,
-  setActiveTreeAction,
-  setNodeRadiusAction,
-} from "oxalis/model/actions/skeletontracing_actions";
-import {
-  setActiveCellAction,
-  setBrushSizeAction,
-} from "oxalis/model/actions/volumetracing_actions";
+import type { Dispatch } from "redux";
+import { connect } from "react-redux";
+import React, { PureComponent } from "react";
+import _ from "lodash";
+
 import {
   NumberInputSetting,
   SwitchSetting,
@@ -27,18 +17,33 @@ import {
   Vector6InputSetting,
   LogSliderSetting,
 } from "oxalis/view/settings/setting_input_views";
-import { setUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
-import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
+import type { UserConfiguration, OxalisState, Tracing } from "oxalis/store";
 import {
   enforceSkeletonTracing,
   getActiveNode,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import {
+  setActiveCellAction,
+  setBrushSizeAction,
+} from "oxalis/model/actions/volumetracing_actions";
+import {
+  setActiveNodeAction,
+  setActiveTreeAction,
+  setNodeRadiusAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import { setUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import Constants, {
+  type ControlMode,
+  ControlModeEnum,
+  type Mode,
+  type Vector6,
+} from "oxalis/constants";
 import * as Utils from "libs/utils";
-import type { UserConfiguration, OxalisState, Tracing } from "oxalis/store";
-import type { Dispatch } from "redux";
 
 const Panel = Collapse.Panel;
 

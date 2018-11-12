@@ -1,7 +1,7 @@
 // @flow
 
-import React from "react";
 import { Input, Icon } from "antd";
+import React from "react";
 
 type Props = {
   icon: string,

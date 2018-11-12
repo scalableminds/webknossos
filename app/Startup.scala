@@ -20,16 +20,15 @@ import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.sys.process._
 
-
-class Startup @Inject() (actorSystem: ActorSystem,
-                         conf: WkConf,
-                         initialDataService: InitialDataService,
-                         cleanUpService: CleanUpService,
-                         annotationDAO: AnnotationDAO,
-                         wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-                         lifecycle: ApplicationLifecycle,
-                         sqlClient: SQLClient
-                        ) extends LazyLogging {
+class Startup @Inject()(actorSystem: ActorSystem,
+                        conf: WkConf,
+                        initialDataService: InitialDataService,
+                        cleanUpService: CleanUpService,
+                        annotationDAO: AnnotationDAO,
+                        wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+                        lifecycle: ApplicationLifecycle,
+                        sqlClient: SQLClient)
+    extends LazyLogging {
 
   logger.info("Executing Startup")
   startActors(actorSystem)
@@ -46,9 +45,9 @@ class Startup @Inject() (actorSystem: ActorSystem,
 
   ensurePostgresDatabase.onComplete { _ =>
     initialDataService.insert.futureBox.map {
-      case Full(_) => ()
+      case Full(_)            => ()
       case Failure(msg, _, _) => logger.info("No initial data inserted: " + msg)
-      case _ => logger.warn("Error while inserting initial data")
+      case _                  => logger.warn("Error while inserting initial data")
     }
   }
 
@@ -62,9 +61,7 @@ class Startup @Inject() (actorSystem: ActorSystem,
   private def ensurePostgresDatabase = {
     logger.info("Running ensure_db.sh with POSTGRES_URL " + sys.env.get("POSTGRES_URL"))
 
-    val processLogger = ProcessLogger(
-      (o: String) => logger.info(o),
-      (e: String) => logger.error(e))
+    val processLogger = ProcessLogger((o: String) => logger.info(o), (e: String) => logger.error(e))
 
     // this script is copied to the stage directory in AssetCompilation
     val result = "./tools/postgres/ensure_db.sh" ! processLogger
@@ -103,9 +100,7 @@ class Startup @Inject() (actorSystem: ActorSystem,
       conf.Mail.Smtp.pass,
       conf.Mail.Subject.prefix
     )
-    actorSystem.actorOf(
-      Props(new Mailer(mailerConf)),
-      name = "mailActor")
+    actorSystem.actorOf(Props(new Mailer(mailerConf)), name = "mailActor")
   }
 
 }

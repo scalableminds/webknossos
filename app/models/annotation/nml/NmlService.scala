@@ -14,20 +14,19 @@ import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 
 import scala.concurrent.ExecutionContext
 
+class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit ec: ExecutionContext)
+    extends LazyLogging {
 
-class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit ec: ExecutionContext) extends LazyLogging {
-
-  def extractFromNml(file: File, name: String): NmlParseResult = {
+  def extractFromNml(file: File, name: String): NmlParseResult =
     extractFromNml(new FileInputStream(file), name)
-  }
 
-  def extractFromNml(inputStream: InputStream, name: String): NmlParseResult = {
+  def extractFromNml(inputStream: InputStream, name: String): NmlParseResult =
     NmlParser.parse(name, inputStream) match {
-      case Full((skeletonTracing, volumeTracingWithDataLocation, description)) => NmlParseSuccess(name, skeletonTracing, volumeTracingWithDataLocation, description)
+      case Full((skeletonTracing, volumeTracingWithDataLocation, description)) =>
+        NmlParseSuccess(name, skeletonTracing, volumeTracingWithDataLocation, description)
       case Failure(msg, _, _) => NmlParseFailure(name, msg)
-      case Empty => NmlParseEmpty(name)
+      case Empty              => NmlParseEmpty(name)
     }
-  }
 
   def extractFromZip(file: File, zipFileName: Option[String] = None): ZipParseResult = {
     val name = zipFileName getOrElse file.getName
@@ -58,8 +57,7 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
           case NmlParseSuccess(name, Some(skeletonTracing), volumeTracingOpt, description) =>
             NmlParseSuccess(name, Some(renameTrees(name, skeletonTracing)), volumeTracingOpt, description)
           case _ => r
-        }
-      )
+      })
     } else {
       parseResults
     }
@@ -81,20 +79,18 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
           case NmlParseSuccess(name, Some(skeletonTracing), volumeTracingOpt, description) =>
             NmlParseSuccess(name, Some(wrapTreesInGroup(name, skeletonTracing)), volumeTracingOpt, description)
           case _ => r
-        }
-      )
+      })
     } else {
       parseResults
     }
   }
 
-  def extractFromFiles(files: Seq[(File, String)]): ZipParseResult = {
+  def extractFromFiles(files: Seq[(File, String)]): ZipParseResult =
     files.foldLeft(NmlResults.ZipParseResult()) {
       case (acc, next) => acc.combineWith(extractFromFile(next._1, next._2))
     }
-  }
 
-  def extractFromFile(file: File, fileName: String): ZipParseResult = {
+  def extractFromFile(file: File, fileName: String): ZipParseResult =
     if (fileName.endsWith(".zip")) {
       logger.trace("Extracting from Zip file")
       extractFromZip(file, Some(fileName))
@@ -103,9 +99,9 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
       val parseResult = extractFromNml(file, fileName)
       ZipParseResult(List(parseResult), Map.empty)
     }
-  }
 
-  def splitVolumeAndSkeletonTracings(tracings: List[(Option[SkeletonTracing], Option[(VolumeTracing, String)])]): (List[SkeletonTracing], List[(VolumeTracing, String)]) = {
+  def splitVolumeAndSkeletonTracings(tracings: List[(Option[SkeletonTracing], Option[(VolumeTracing, String)])])
+    : (List[SkeletonTracing], List[(VolumeTracing, String)]) = {
     val skeletons = tracings.flatMap(_._1)
     val volumes = tracings.flatMap(_._2)
     (skeletons, volumes)

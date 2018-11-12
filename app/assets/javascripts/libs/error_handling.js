@@ -2,12 +2,13 @@
  * error_handling.js
  * @flow
  */
-import _ from "lodash";
 import AirbrakeClient from "airbrake-js";
-import Toast from "libs/toast";
-import { location } from "libs/window";
+import _ from "lodash";
+
 import type { APIUser } from "admin/api_flow_types";
+import Toast from "libs/toast";
 import messages from "messages";
+import window, { document, location } from "libs/window";
 
 type ErrorHandlingOptions = {
   throwAssertions: boolean,

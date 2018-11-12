@@ -1,8 +1,8 @@
 // @flow
 
+import { Button } from "antd";
 import * as React from "react";
 import _ from "lodash";
-import { Button } from "antd";
 
 type ButtonComponentProp = {
   onClick?: Function,

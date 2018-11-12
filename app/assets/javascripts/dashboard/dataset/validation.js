@@ -1,6 +1,7 @@
 // @flow
 
 import jsonschema from "jsonschema";
+
 import DatasourceSchema from "libs/datasource.schema.json";
 import UserSettingsSchema from "libs/user_settings.schema.json";
 

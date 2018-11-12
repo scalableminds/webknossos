@@ -1,8 +1,9 @@
 // @flow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-import test from "ava";
 import _ from "lodash";
+
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
+import test from "ava";
 
 function sort(arr) {
   return arr.sort((a, b) => a - b);

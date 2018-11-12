@@ -1,13 +1,14 @@
 // @flow
-import React from "react";
 import { Form, Icon, Input, Button, Col, Row } from "antd";
-import { withRouter, Link } from "react-router-dom";
-import messages from "messages";
-import Store from "oxalis/throttled_store";
-import { setActiveUserAction } from "oxalis/model/actions/user_actions";
+import { Link, type RouterHistory, withRouter } from "react-router-dom";
+import React from "react";
+
 import { loginUser } from "admin/admin_rest_api";
+import { setActiveUserAction } from "oxalis/model/actions/user_actions";
+import Store from "oxalis/throttled_store";
 import * as Utils from "libs/utils";
-import type { RouterHistory } from "react-router-dom";
+import messages from "messages";
+import window from "libs/window";
 
 const FormItem = Form.Item;
 

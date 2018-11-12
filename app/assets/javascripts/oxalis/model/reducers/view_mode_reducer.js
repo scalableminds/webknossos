@@ -1,11 +1,11 @@
 // @flow
 
-import update from "immutability-helper";
-import type { OxalisState, PartialCameraData } from "oxalis/store";
-import type { Action } from "oxalis/model/actions/actions";
 import * as THREE from "three";
-import { ArbitraryViewport } from "oxalis/constants";
-import type { Rect, Viewport } from "oxalis/constants";
+import update from "immutability-helper";
+
+import type { Action } from "oxalis/model/actions/actions";
+import { ArbitraryViewport, type Rect, type Viewport } from "oxalis/constants";
+import type { OxalisState, PartialCameraData } from "oxalis/store";
 import { getTDViewportSize } from "oxalis/model/accessors/view_mode_accessor";
 
 function ViewModeReducer(state: OxalisState, action: Action): OxalisState {

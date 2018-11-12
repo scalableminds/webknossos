@@ -1,10 +1,11 @@
 // @flow
 
 import update from "immutability-helper";
-import { updateKey, updateKey2, type StateShape1 } from "oxalis/model/helpers/deep_update";
-import type { OxalisState } from "oxalis/store";
+
 import type { Action } from "oxalis/model/actions/actions";
+import type { OxalisState } from "oxalis/store";
 import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reducers/reducer_helpers";
+import { updateKey, updateKey2, type StateShape1 } from "oxalis/model/helpers/deep_update";
 
 const updateTracing = (state: OxalisState, shape: StateShape1<"tracing">): OxalisState =>
   updateKey(state, "tracing", shape);

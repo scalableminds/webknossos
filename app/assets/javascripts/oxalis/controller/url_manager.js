@@ -4,16 +4,15 @@
  */
 
 import _ from "lodash";
-import * as Utils from "libs/utils";
+
 import { V3 } from "libs/mjs";
-import Store from "oxalis/store";
-import type { Vector3, Mode } from "oxalis/constants";
-import constants, { ModeValues } from "oxalis/constants";
+import { applyState } from "oxalis/model_initialization";
 import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getSkeletonTracing, getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
-import { applyState } from "oxalis/model_initialization";
-import window, { location } from "libs/window";
-import type { Tracing } from "oxalis/store";
+import Store, { type Tracing } from "oxalis/store";
+import * as Utils from "libs/utils";
+import constants, { type Mode, ModeValues, type Vector3 } from "oxalis/constants";
+import window, { document, location } from "libs/window";
 
 const MAX_UPDATE_INTERVAL = 1000;
 

@@ -1,14 +1,14 @@
 // @flow
 /* eslint-disable jsx-a11y/href-no-hash */
 
+import { Dropdown, Menu, Icon, Tooltip } from "antd";
+import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import * as React from "react";
+
+import type { APIMaybeUnimportedDataset } from "admin/api_flow_types";
+import { createExplorational, triggerDatasetClearCache } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
-import { Link, withRouter } from "react-router-dom";
-import { Dropdown, Menu, Icon, Tooltip } from "antd";
-import type { APIMaybeUnimportedDataset } from "admin/api_flow_types";
-import type { RouterHistory } from "react-router-dom";
-import { createExplorational, triggerDatasetClearCache } from "admin/admin_rest_api";
 
 type Props = {
   dataset: APIMaybeUnimportedDataset,

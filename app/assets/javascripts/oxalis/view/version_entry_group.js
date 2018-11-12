@@ -1,10 +1,11 @@
 // @flow
-import _ from "lodash";
-import * as React from "react";
 import { Avatar, List } from "antd";
+import * as React from "react";
+import _ from "lodash";
+
+import type { APIUpdateActionBatch } from "admin/api_flow_types";
 import FormattedDate from "components/formatted_date";
 import VersionEntry from "oxalis/view/version_entry";
-import type { APIUpdateActionBatch } from "admin/api_flow_types";
 
 type Props = {
   batches: Array<APIUpdateActionBatch>,

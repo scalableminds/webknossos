@@ -3,15 +3,15 @@
  * @flow
  */
 
-import _ from "lodash";
 import * as THREE from "three";
+import _ from "lodash";
+
+import { getColorLayers } from "oxalis/model/accessors/dataset_accessor";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import Store, { type DatasetLayerConfiguration } from "oxalis/store";
 import UpdatableTexture from "libs/UpdatableTexture";
 import app from "app";
-import Store from "oxalis/store";
-import type { DatasetLayerConfiguration } from "oxalis/store";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
-import { getColorLayers } from "oxalis/model/accessors/dataset_accessor";
 
 export type Uniforms = {
   [key: string]: {

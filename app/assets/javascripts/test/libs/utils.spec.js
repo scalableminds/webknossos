@@ -1,7 +1,7 @@
 // @flow
 
-import test from "ava";
 import * as Utils from "libs/utils";
+import test from "ava";
 
 test("filterWithSearchQueryOR: simple case", t => {
   const collection = [{ prop: "match" }, { prop: "a MATCH!" }, { prop: "no m_tch" }];

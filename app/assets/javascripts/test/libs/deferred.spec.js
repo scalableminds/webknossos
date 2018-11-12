@@ -1,7 +1,7 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-import test from "ava";
-import runAsync from "test/helpers/run-async";
 import Deferred from "libs/deferred";
+import runAsync from "test/helpers/run-async";
+import test from "ava";
 
 function makeGetState(promise) {
   let resolved = false;

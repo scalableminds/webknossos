@@ -1,10 +1,12 @@
 // @flow
-import * as React from "react";
 import { Spin, Table, Card } from "antd";
-import * as Utils from "libs/utils";
-import { getOpenTasksReport } from "admin/admin_rest_api";
+import * as React from "react";
+
 import type { APIOpenTasksReport } from "admin/api_flow_types";
+import { getOpenTasksReport } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
+import * as Utils from "libs/utils";
+
 import TeamSelectionForm from "./team_selection_form";
 
 const { Column } = Table;

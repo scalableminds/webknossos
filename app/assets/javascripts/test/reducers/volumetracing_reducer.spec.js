@@ -4,15 +4,16 @@
  */
 
 /* eslint-disable import/no-extraneous-dependencies */
-import test from "ava";
-import mockRequire from "mock-require";
-import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
-import update from "immutability-helper";
-import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
 import Maybe from "data.maybe";
-import { VolumeToolEnum } from "oxalis/constants";
+import update from "immutability-helper";
+
 import type { Tracing, VolumeTracing } from "oxalis/store";
+import { VolumeToolEnum } from "oxalis/constants";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
+import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
+import mockRequire from "mock-require";
+import test from "ava";
 
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
 const { defaultState } = require("oxalis/store");

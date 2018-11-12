@@ -1,17 +1,17 @@
 // @flow
 /* eslint-disable jsx-a11y/href-no-hash */
 
-import * as React from "react";
-import { connect } from "react-redux";
-import { Link, withRouter } from "react-router-dom";
-import Request from "libs/request";
-import { AsyncButton } from "components/async_clickables";
 import { Button, Modal, Tag, Icon, Card, Row, Col, List } from "antd";
+import { Link, type RouterHistory, withRouter } from "react-router-dom";
+import { PropTypes } from "@scalableminds/prop-types";
+import { connect } from "react-redux";
 import Markdown from "react-remarkable";
-import * as Utils from "libs/utils";
-import Toast from "libs/toast";
-import messages from "messages";
-import TransferTaskModal from "dashboard/transfer_task_modal";
+import * as React from "react";
+import classNames from "classnames";
+
+import type { APITaskWithAnnotation, APIUser, APIAnnotation } from "admin/api_flow_types";
+import { AsyncButton } from "components/async_clickables";
+import type { OxalisState } from "oxalis/store";
 import {
   deleteAnnotation,
   resetAnnotation,
@@ -20,14 +20,14 @@ import {
   peekNextTasks,
 } from "admin/admin_rest_api";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import Persistence from "libs/persistence";
-import { PropTypes } from "@scalableminds/prop-types";
 import { handleGenericError } from "libs/error_handling";
-import classNames from "classnames";
-import type { APITaskWithAnnotation, APIUser, APIAnnotation } from "admin/api_flow_types";
-import type { OxalisState } from "oxalis/store";
-import type { RouterHistory } from "react-router-dom";
 import FormattedDate from "components/formatted_date";
+import Persistence from "libs/persistence";
+import Request from "libs/request";
+import Toast from "libs/toast";
+import TransferTaskModal from "dashboard/transfer_task_modal";
+import * as Utils from "libs/utils";
+import messages from "messages";
 
 const typeHint: APITaskWithAnnotation[] = [];
 

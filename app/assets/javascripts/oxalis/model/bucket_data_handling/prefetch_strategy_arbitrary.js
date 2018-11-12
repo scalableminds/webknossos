@@ -1,11 +1,10 @@
 // @flow
 
-import { M4x4 } from "libs/mjs";
-import type { Matrix4x4 } from "libs/mjs";
-import type { BoundingBoxType } from "oxalis/constants";
-import PolyhedronRasterizer from "oxalis/model/bucket_data_handling/polyhedron_rasterizer";
 import { AbstractPrefetchStrategy } from "oxalis/model/bucket_data_handling/prefetch_strategy_plane";
+import type { BoundingBoxType } from "oxalis/constants";
+import { M4x4, type Matrix4x4 } from "libs/mjs";
 import type { PullQueueItem } from "oxalis/model/bucket_data_handling/pullqueue";
+import PolyhedronRasterizer from "oxalis/model/bucket_data_handling/polyhedron_rasterizer";
 
 export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
   velocityRangeStart = 0;

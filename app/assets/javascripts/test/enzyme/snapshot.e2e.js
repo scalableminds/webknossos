@@ -18,7 +18,6 @@ import mockRequire from "mock-require";
 import test from "ava";
 
 // Those wrappers interfere with global.window and global.document otherwise
-mockRequire("libs/keyboardjs_wrapper", {});
 mockRequire("libs/window", global.window);
 mockRequire("libs/datasource.schema.json", {});
 

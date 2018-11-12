@@ -60,6 +60,7 @@ export const annotation: APIAnnotation = {
         branchPointsAllowed: true,
         somaClickingAllowed: true,
       },
+      recommendedConfiguration: null,
     },
     dataSet: "ROI2017_wkw",
     neededExperience: { domain: "oxalis", value: 1 },

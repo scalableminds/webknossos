@@ -11,7 +11,7 @@ import {
   updateTaskType,
   getTaskType,
 } from "admin/admin_rest_api";
-import RecommendedSettingsView from "admin/tasktype/recommended_settings_view";
+import RecommendedConfigurationView from "admin/tasktype/recommended_configuration_view";
 
 const FormItem = Form.Item;
 const { Option } = Select;
@@ -46,7 +46,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
         branchPointsAllowed: true,
         preferredMode: null,
       },
-      recommendedConfiguration: {
+      recommendedConfiguration: toJSON({
         clippingDistance: 500,
         clippingDistanceArbitrary: 500,
         displayCrosshair: true,
@@ -62,24 +62,17 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
         tdViewDisplayPlanes: false,
         fourBit: false,
         interpolation: true,
-        quality: 2,
+        quality: 0,
         segmentationOpacity: 0,
         highlightHoveredCellId: false,
         zoom: 0.8,
         renderMissingDataBlack: false,
-      },
+      }),
     };
     const taskType = this.props.taskTypeId ? await getTaskType(this.props.taskTypeId) : {};
     // Use merge which is deep _.extend
-    const configurationString = taskType.recommendedConfiguration || "";
-    const formValues = _.merge({}, defaultValues, {
-      ...taskType,
-      recommendedConfiguration: JSON.parse(configurationString),
-    });
-    this.props.form.setFieldsValue({
-      ...formValues,
-      recommendedConfiguration: toJSON(formValues.recommendedConfiguration),
-    });
+    const formValues = _.merge({}, defaultValues, taskType);
+    this.props.form.setFieldsValue(formValues);
   }
 
   async fetchData() {
@@ -202,7 +195,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
             </FormItem>
 
             <FormItem hasFeedback>
-              <RecommendedSettingsView form={this.props.form} />
+              <RecommendedConfigurationView form={this.props.form} />
             </FormItem>
 
             <FormItem>

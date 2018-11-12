@@ -6,18 +6,25 @@ import { document } from "libs/window";
 
 type DestroyFunction = () => void;
 
-export default function renderIndependently(getComponent: DestroyFunction => React$Element<*>) {
-  const div = document.createElement("div");
-  if (!document.body) {
-    return;
-  }
-  document.body.appendChild(div);
-  function destroy() {
-    const unmountResult = ReactDOM.unmountComponentAtNode(div);
-    if (unmountResult && div.parentNode) {
-      div.parentNode.removeChild(div);
+// The returned promise gets resolved once the element is destroyed.
+export default function renderIndependently(
+  getComponent: DestroyFunction => React$Element<*>,
+): Promise<void> {
+  return new Promise(resolve => {
+    const div = document.createElement("div");
+    if (!document.body) {
+      resolve();
+      return;
     }
-  }
+    document.body.appendChild(div);
+    function destroy() {
+      const unmountResult = ReactDOM.unmountComponentAtNode(div);
+      if (unmountResult && div.parentNode) {
+        div.parentNode.removeChild(div);
+      }
+      resolve();
+    }
 
-  ReactDOM.render(getComponent(destroy), div);
+    ReactDOM.render(getComponent(destroy), div);
+  });
 }

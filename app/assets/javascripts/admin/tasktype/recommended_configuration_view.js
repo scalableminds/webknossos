@@ -13,7 +13,7 @@ const errorIcon = (
   </Tooltip>
 );
 
-export default function RecommendedSettingsView({ form }: { form: Object }) {
+export default function RecommendedConfigurationView({ form }: { form: Object }) {
   return (
     <Collapse>
       <Panel

@@ -190,6 +190,7 @@ export type APITaskType = {
   +teamId: string,
   +teamName: string,
   +settings: APISettings,
+  +recommendedConfiguration: ?string,
 };
 
 export type TaskStatus = { +open: number, +active: number, +finished: number };

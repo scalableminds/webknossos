@@ -39,6 +39,7 @@ test("createTaskType and deleteTaskType", async t => {
       branchPointsAllowed: true,
       allowedModes: ["orthogonal"],
     },
+    recommendedConfiguration: null,
   };
 
   const createdTaskType = await api.createTaskType(newTaskType);

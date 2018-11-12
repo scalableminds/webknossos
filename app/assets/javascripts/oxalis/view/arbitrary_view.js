@@ -233,8 +233,37 @@ class ArbitraryView {
     return buffer;
   }
 
-  getRenderedBuckets = () => {
-    // This method can be used to determine which buckets were used during rendering
+  getRenderedBuckets_DEBUG = () => {
+    // This method can be used to determine which buckets were used during rendering.
+    // It returns an array with bucket indices which were used by the fragment shader.
+    // Code similar to the following will render buckets wireframes in red, if there were
+    // passed to the GPU but were not used.
+    // It can be used within the orthogonal bucket picker for example.
+    // // @flow
+    // import * as Utils from "libs/utils";
+    // import type { Vector4 } from "oxalis/constants";
+
+    // const makeBucketId = ([x, y, z], logZoomStep) => [x, y, z, logZoomStep].join(",");
+    // const unpackBucketId = (str): Vector4 =>
+    //   // $FlowFixMe
+    //   str
+    //     .split(",")
+    //     .map(el => parseInt(el))
+    //     .map((el, idx) => (idx < 3 ? el : 0));
+    // function diff(traversedBuckets, lastRenderedBuckets) {
+    //     const bucketDiff = Utils.diffArrays(traversedBuckets.map(makeBucketId), lastRenderedBuckets.map(makeBucketId));
+    //
+    //     bucketDiff.onlyA.forEach(bucketAddress => {
+    //       const bucket = cube.getOrCreateBucket(unpackBucketId(bucketAddress));
+    //       if (bucket.type !== "null") bucket.setVisualizationColor(0xff0000);
+    //     });
+    //     bucketDiff.both.forEach(bucketAddress => {
+    //       const bucket = cube.getOrCreateBucket(unpackBucketId(bucketAddress));
+    //       if (bucket.type !== "null") bucket.setVisualizationColor(0x00ff00);
+    //     });
+    // }
+    // diff(traversedBuckets, getRenderedBuckets_DEBUG());
+
     const buffer = this.renderToTexture();
     let index = 0;
 

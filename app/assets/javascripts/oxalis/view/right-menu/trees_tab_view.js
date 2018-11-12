@@ -125,17 +125,20 @@ class TreesTabView extends React.PureComponent<Props, State> {
   deleteTree = () => {
     // TODO add a new dispatch i guess that takes the id of the tree that should be deleted
     const { selectedTrees } = this.state;
-    if (selectedTrees.length > 0) {
+    const numbOfSelectedTrees = selectedTrees.length;
+    if (numbOfSelectedTrees > 0) {
       const deleteAllSelectedTrees = () => {
         this.props.onDeleteMultipleTrees(selectedTrees);
       };
       this.showModalConfimWarning(
         "Delete all selected trees?",
         messages["tracing.delete_mulitple_trees"]({
-          selectedTrees,
+          countOfTrees: numbOfSelectedTrees,
         }),
         deleteAllSelectedTrees,
       );
+      this.setState({ selectedTrees: [] });
+      return;
     }
     this.props.onDeleteTree();
   };

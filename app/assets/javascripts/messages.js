@@ -60,7 +60,7 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.delete_tree_with_initial_node":
     "This tree contains the initial node. Do you really want to delete the whole tree?",
   "tracing.delete_mulitple_trees": _.template(
-    "You have <%- numberOfTrees %> selected, do you want to all those trees?",
+    "You have <%- countOfTrees %> trees selected, do you really want to all those trees?",
   ),
   "tracing.group_already_selected":
     "The group of this tree is already selected. Do you really want to select this tree? This will unselect the trees' group.",

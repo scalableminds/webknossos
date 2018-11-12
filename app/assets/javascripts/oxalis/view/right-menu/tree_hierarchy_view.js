@@ -45,6 +45,7 @@ type Props = {
   selectedTreeGroups: Array<number>,
   onSetActiveTree: number => void,
   onSetActiveGroup: number => void,
+  onDeleteGroup: number => void,
   onToggleTree: number => void,
   onToggleAllTrees: () => void,
   onToggleTreeGroup: number => void,
@@ -246,7 +247,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   }
 
   deleteGroup(groupId: number) {
-    const newTreeGroups = _.cloneDeep(this.props.treeGroups);
+    /* const newTreeGroups = _.cloneDeep(this.props.treeGroups);
     const groupToTreesMap = createGroupToTreesMap(this.props.trees);
     callDeep(newTreeGroups, groupId, (item, index, arr, parentGroupId) => {
       // Remove group and move its group children to the parent group
@@ -261,7 +262,8 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         );
       }
     });
-    this.props.onUpdateTreeGroups(newTreeGroups);
+    this.props.onUpdateTreeGroups(newTreeGroups); */
+    this.props.onDeleteGroup(groupId);
   }
 
   handleDropdownClick = (params: { item: *, key: string }) => {

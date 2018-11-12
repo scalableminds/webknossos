@@ -24,6 +24,8 @@ import {
   toggleAllTreesAction,
   toggleInactiveTreesAction,
   setActiveTreeAction,
+  setTreeGroupAction,
+  setTreeGroupsAction,
   addTreesAndGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { readFileAsText } from "libs/read_file";
@@ -42,8 +44,13 @@ import type {
   UserConfiguration,
   TreeGroup,
 } from "oxalis/store";
-import { createGroupToTreesMap } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
+import {
+  createGroupToTreesMap,
+  callDeep,
+  MISSING_GROUP_ID,
+} from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import SearchPopover from "./search_popover";
+import DeleteGroupsModalView from "./delete-groups-modal-view";
 
 const ButtonGroup = Button.Group;
 const InputGroup = Input.Group;
@@ -57,6 +64,8 @@ type Props = {
   onCreateTree: () => void,
   onDeleteTree: () => void,
   onDeleteMultipleTrees: (Array<number>) => void,
+  onSetTreeGroup: (?number, number) => void,
+  onUpdateTreeGroups: (Array<TreeGroup>) => void,
   onChangeTreeName: string => void,
   annotation: Tracing,
   skeletonTracing?: SkeletonTracing,
@@ -70,6 +79,7 @@ type State = {
   isDownloading: boolean,
   selectedTrees: Array<number>,
   selectedTreeGroups: Array<number>,
+  isDeleteGroupsModalVisible: boolean,
 };
 
 export async function importNmls(files: Array<File>, createGroupForEachFile: boolean) {
@@ -108,6 +118,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     isDownloading: false,
     selectedTrees: [],
     selectedTreeGroups: [],
+    isDeleteGroupsModalVisible: false,
   };
 
   handleChangeTreeName = evt => {
@@ -122,13 +133,55 @@ class TreesTabView extends React.PureComponent<Props, State> {
     }
   };
 
-  deleteTree = () => {
-    // TODO add a new dispatch i guess that takes the id of the tree that should be deleted
+  deleteGroups = (groupIds: Array<number>, withTrees = false) => {
+    if (!this.props.skeletonTracing) {
+      return;
+    }
+    const { treeGroups, trees } = this.props.skeletonTracing;
+    const newTreeGroups = _.cloneDeep(treeGroups);
+    const groupToTreesMap = createGroupToTreesMap(trees);
+    // Remove all selected groups
+    groupIds.forEach(groupId =>
+      callDeep(newTreeGroups, groupId, (item, index, arr, parentGroupId) => {
+        // Remove group and maybe move its group children to the parent group
+        arr.splice(index, 1);
+        if (!withTrees) {
+          arr.push(...item.children);
+        }
+        // Get all subtrees of the group and delete or update them
+        const currentTrees = groupToTreesMap[groupId] != null ? groupToTreesMap[groupId] : [];
+        if (withTrees) {
+          this.props.onDeleteMultipleTrees(currentTrees.map(tree => tree.treeId));
+        } else {
+          for (const tree of currentTrees) {
+            this.props.onSetTreeGroup(
+              parentGroupId === MISSING_GROUP_ID ? null : parentGroupId,
+              tree.treeId,
+            );
+          }
+        }
+      }),
+    );
+    // Update the store and state after removing
+    this.props.onUpdateTreeGroups(newTreeGroups);
+    this.setState({ selectedTreeGroups: [] });
+  };
+
+  deleteSelectedGroups = () => {
+    if (this.state.selectedTreeGroups.length > 0) {
+      this.setState({ isDeleteGroupsModalVisible: true });
+    }
+  };
+
+  // rename to handleDelete
+  handleDelete = () => {
+    // if there exist selected trees, ask to remove them
     const { selectedTrees } = this.state;
     const numbOfSelectedTrees = selectedTrees.length;
     if (numbOfSelectedTrees > 0) {
       const deleteAllSelectedTrees = () => {
         this.props.onDeleteMultipleTrees(selectedTrees);
+        this.setState({ selectedTrees: [] });
       };
       this.showModalConfimWarning(
         "Delete all selected trees?",
@@ -136,11 +189,11 @@ class TreesTabView extends React.PureComponent<Props, State> {
           countOfTrees: numbOfSelectedTrees,
         }),
         deleteAllSelectedTrees,
+        this.deleteSelectedGroups,
       );
-      this.setState({ selectedTrees: [] });
-      return;
+    } else {
+      this.props.onDeleteTree();
     }
-    this.props.onDeleteTree();
   };
 
   shuffleTreeColor = () => {
@@ -180,7 +233,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     saveAs(blob, getNmlName(state));
   };
 
-  showModalConfimWarning(title: string, content: string, onConfirm: () => void) {
+  showModalConfimWarning(title: string, content: string, onConfirm: () => void, next = () => {}) {
     Modal.confirm({
       title,
       content,
@@ -188,8 +241,13 @@ class TreesTabView extends React.PureComponent<Props, State> {
       cancelText: "No",
       autoFocusButton: "cancel",
       iconType: "warning",
-      onCancel: () => {},
-      onOk: onConfirm,
+      onCancel: () => {
+        next();
+      },
+      onOk: () => {
+        onConfirm();
+        next();
+      },
     });
   }
 
@@ -316,6 +374,9 @@ class TreesTabView extends React.PureComponent<Props, State> {
         handleTreeSelect={this.handleTreeSelect}
         handleTreeGroupSelect={this.handleTreeGroupSelect}
         unselectEverthing={this.unselectEverthing}
+        onDeleteGroup={(groupId: number) => {
+          this.deleteGroups([groupId]);
+        }}
       />
     );
   }
@@ -384,6 +445,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     } else if (this.state.isUploading) {
       title = "Importing NML";
     }
+    const { isDeleteGroupsModalVisible, selectedTreeGroups } = this.state;
 
     return (
       <div id="tree-list" className="info-tab-content">
@@ -414,7 +476,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
           <ButtonComponent onClick={this.props.onCreateTree} title="Create Tree">
             <i className="fa fa-plus" /> Create
           </ButtonComponent>
-          <ButtonComponent onClick={this.deleteTree} title="Delete Tree">
+          <ButtonComponent onClick={this.handleDelete} title="Delete Tree">
             <i className="fa fa-trash-o" /> Delete
           </ButtonComponent>
           <ButtonComponent onClick={this.toggleAllTrees} title="Toggle Visibility of All Trees">
@@ -454,6 +516,20 @@ class TreesTabView extends React.PureComponent<Props, State> {
         <ul style={{ flex: "1 1 auto", overflow: "auto", margin: 0, padding: 0 }}>
           {this.getTreesComponents()}
         </ul>
+        {isDeleteGroupsModalVisible ? (
+          <DeleteGroupsModalView
+            numberOfGroups={selectedTreeGroups.length}
+            onCancel={() => this.setState({ isDeleteGroupsModalVisible: false })}
+            onJustDeleteGroups={() => {
+              this.setState({ isDeleteGroupsModalVisible: false });
+              this.deleteGroups(selectedTreeGroups, false);
+            }}
+            onDeleteGroupsAndTrees={() => {
+              this.setState({ isDeleteGroupsModalVisible: false });
+              this.deleteGroups(selectedTreeGroups, true);
+            }}
+          />
+        ) : null}
       </div>
     );
   }
@@ -489,6 +565,12 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   onDeleteMultipleTrees(ids) {
     dispatch(deleteMultipleTreesAsUserAction(ids));
+  },
+  onSetTreeGroup(groupId, treeId) {
+    dispatch(setTreeGroupAction(groupId, treeId));
+  },
+  onUpdateTreeGroups(treeGroups) {
+    dispatch(setTreeGroupsAction(treeGroups));
   },
   onChangeTreeName(name) {
     dispatch(setTreeNameAction(name));

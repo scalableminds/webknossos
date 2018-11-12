@@ -1,8 +1,9 @@
 // @flow
 
-import * as React from "react";
 import { Input, Icon, Tooltip } from "antd";
 import Markdown from "react-remarkable";
+import * as React from "react";
+
 import { MarkdownModal } from "oxalis/view/components/markdown_modal";
 import Toast from "libs/toast";
 

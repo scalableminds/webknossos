@@ -4,15 +4,12 @@
  */
 
 import * as THREE from "three";
-import constants, { OrthoViews } from "oxalis/constants";
-import type { Vector4 } from "oxalis/constants";
-// Importing throttled_store, would result in flickering when zooming out,
-// since the plane is not updated fast enough
-import Store from "oxalis/store";
-import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
-import SceneController from "oxalis/controller/scene_controller";
 
+import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
+import SceneController from "oxalis/controller/scene_controller";
+import Store from "oxalis/store";
+import constants, { OrthoViews, type Vector4 } from "oxalis/constants";
 
 // Let's set up our trianglesplane.
 // It serves as a "canvas" where the brain images

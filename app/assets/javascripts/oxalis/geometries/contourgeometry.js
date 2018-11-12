@@ -3,13 +3,13 @@
  * @flow
  */
 
-import app from "app";
-import ResizableBuffer from "libs/resizable_buffer";
 import * as THREE from "three";
-import Store from "oxalis/store";
-import { VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
+
+import { ContourModeEnum, type Vector3, VolumeToolEnum } from "oxalis/constants";
 import { getVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import type { Vector3 } from "oxalis/constants";
+import ResizableBuffer from "libs/resizable_buffer";
+import Store from "oxalis/store";
+import app from "app";
 
 const COLOR_NORMAL = new THREE.Color(0x0000ff);
 const COLOR_DELETE = new THREE.Color(0xff0000);

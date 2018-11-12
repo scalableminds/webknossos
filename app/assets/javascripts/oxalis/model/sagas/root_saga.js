@@ -1,25 +1,24 @@
 // @flow
 
-import watchPushSettingsAsync from "oxalis/model/sagas/settings_saga";
-import { watchSkeletonTracingAsync } from "oxalis/model/sagas/skeletontracing_saga";
+import { type Saga, _all, _call, _cancel, fork, take } from "oxalis/model/sagas/effect-generators";
+import { alert } from "libs/window";
+import {
+  editVolumeLayerAsync,
+  disallowVolumeTracingWarning,
+  watchVolumeTracingAsync,
+} from "oxalis/model/sagas/volumetracing_saga";
 import {
   pushAnnotationAsync,
   saveTracingAsync,
   collectUndoStates,
 } from "oxalis/model/sagas/save_saga";
 import {
-  editVolumeLayerAsync,
-  disallowVolumeTracingWarning,
-  watchVolumeTracingAsync,
-} from "oxalis/model/sagas/volumetracing_saga";
-import { watchDataRelevantChanges } from "oxalis/model/sagas/prefetch_saga";
-import {
   warnAboutSegmentationOpacity,
   watchAnnotationAsync,
 } from "oxalis/model/sagas/annotation_saga";
-import { alert } from "libs/window";
-import { _all, _call, fork, take, _cancel } from "oxalis/model/sagas/effect-generators";
-import type { Saga } from "oxalis/model/sagas/effect-generators";
+import { watchDataRelevantChanges } from "oxalis/model/sagas/prefetch_saga";
+import { watchSkeletonTracingAsync } from "oxalis/model/sagas/skeletontracing_saga";
+import watchPushSettingsAsync from "oxalis/model/sagas/settings_saga";
 
 export default function* rootSaga(): Saga<void> {
   while (true) {

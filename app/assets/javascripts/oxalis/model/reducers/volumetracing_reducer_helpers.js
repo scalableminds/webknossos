@@ -6,10 +6,10 @@
  *
  */
 
-import type { OxalisState, VolumeTracing, VolumeCell } from "oxalis/store";
-import type { VolumeTool, Vector3, ContourMode } from "oxalis/constants";
-import { VolumeToolEnum } from "oxalis/constants";
 import update from "immutability-helper";
+
+import { type ContourMode, type Vector3, type VolumeTool, VolumeToolEnum } from "oxalis/constants";
+import type { OxalisState, VolumeTracing, VolumeCell } from "oxalis/store";
 import { isVolumeTracingDisallowed } from "oxalis/model/accessors/volumetracing_accessor";
 import { setDirectionReducer } from "oxalis/model/reducers/flycam_reducer";
 

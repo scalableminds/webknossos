@@ -1,15 +1,15 @@
 // @flow
-import _ from "lodash";
-import * as React from "react";
-import moment from "moment";
-import { Select, Card, Form, Row, Col, DatePicker } from "antd";
 import { Chart } from "react-google-charts";
-import Toast from "libs/toast";
-import messages from "messages";
-import { formatMilliseconds } from "libs/format_utils";
-import { getEditableUsers, getTimeTrackingForUser } from "admin/admin_rest_api";
+import { Select, Card, Form, Row, Col, DatePicker } from "antd";
+import * as React from "react";
+import _ from "lodash";
+import moment from "moment";
 
 import type { APIUser, APITimeTracking } from "admin/api_flow_types";
+import { formatMilliseconds } from "libs/format_utils";
+import { getEditableUsers, getTimeTrackingForUser } from "admin/admin_rest_api";
+import Toast from "libs/toast";
+import messages from "messages";
 
 const FormItem = Form.Item;
 const Option = Select.Option;

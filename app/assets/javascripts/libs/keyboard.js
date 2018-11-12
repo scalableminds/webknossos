@@ -1,5 +1,7 @@
 /* eslint-disable */
 
+import window from "libs/window";
+
 !(function(e) {
   if ("object" == typeof exports && "undefined" != typeof module) module.exports = e();
   else if ("function" == typeof define && define.amd) define([], e);
@@ -372,7 +374,8 @@
 
               if (!targetWindow) {
                 if (!global.addEventListener && !global.attachEvent) {
-                  throw new Error("Cannot find global functions addEventListener or attachEvent.");
+                  console.warn("Cannot find global functions addEventListener or attachEvent.");
+                  return;
                 }
                 targetWindow = global;
               }

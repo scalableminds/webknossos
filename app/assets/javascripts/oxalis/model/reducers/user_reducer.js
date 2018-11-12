@@ -2,8 +2,8 @@
 
 import update from "immutability-helper";
 
-import type { OxalisState } from "oxalis/store";
 import type { Action } from "oxalis/model/actions/actions";
+import type { OxalisState } from "oxalis/store";
 
 function UserReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {

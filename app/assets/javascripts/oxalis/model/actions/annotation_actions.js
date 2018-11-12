@@ -1,6 +1,6 @@
 // @flow
-import type { BoundingBoxType } from "oxalis/constants";
 import type { APIAnnotation } from "admin/api_flow_types";
+import type { BoundingBoxType } from "oxalis/constants";
 
 type InitializeAnnotation = {
   type: "INITIALIZE_ANNOTATION",

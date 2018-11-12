@@ -1,11 +1,12 @@
 // @flow
-import _ from "lodash";
-import type { Vector3, Vector4, Vector6, BoundingBoxType } from "oxalis/constants";
 import Maybe from "data.maybe";
-import window, { document, location } from "libs/window";
+import _ from "lodash";
 import naturalSort from "javascript-natural-sort";
+
 import type { APIUser } from "admin/api_flow_types";
 import type { BoundingBoxObject } from "oxalis/store";
+import type { Vector3, Vector4, Vector6, BoundingBoxType } from "oxalis/constants";
+import window, { document, location } from "libs/window";
 
 export type Comparator<T> = (T, T) => -1 | 0 | 1;
 type UrlParams = { [key: string]: string };

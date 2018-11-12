@@ -233,7 +233,7 @@ class ArbitraryView {
     return buffer;
   }
 
-  getRenderedBuckets_DEBUG = () => {
+  getRenderedBucketsDebug = () => {
     // This method can be used to determine which buckets were used during rendering.
     // It returns an array with bucket indices which were used by the fragment shader.
     // Code similar to the following will render buckets wireframes in red, if there were
@@ -262,7 +262,7 @@ class ArbitraryView {
     //       if (bucket.type !== "null") bucket.setVisualizationColor(0x00ff00);
     //     });
     // }
-    // diff(traversedBuckets, getRenderedBuckets_DEBUG());
+    // diff(traversedBuckets, getRenderedBucketsDebug());
 
     const buffer = this.renderToTexture();
     let index = 0;

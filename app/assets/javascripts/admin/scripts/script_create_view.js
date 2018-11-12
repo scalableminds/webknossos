@@ -1,14 +1,13 @@
 // @flow
-import React from "react";
-import { connect } from "react-redux";
-import { withRouter } from "react-router-dom";
 import { Form, Input, Select, Button, Card } from "antd";
-import { getAdminUsers, updateScript, createScript, getScript } from "admin/admin_rest_api";
-import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
+import { type RouterHistory, withRouter } from "react-router-dom";
+import { connect } from "react-redux";
+import React from "react";
 
 import type { APIUser } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
-import type { RouterHistory } from "react-router-dom";
+import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
+import { getAdminUsers, updateScript, createScript, getScript } from "admin/admin_rest_api";
 
 const FormItem = Form.Item;
 const Option = Select.Option;

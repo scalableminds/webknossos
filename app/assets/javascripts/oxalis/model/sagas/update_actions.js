@@ -1,4 +1,6 @@
 // @flow
+import type { SendBucketInfo } from "oxalis/model/bucket_data_handling/wkstore_adapter";
+import type { Vector3, BoundingBoxType } from "oxalis/constants";
 import type {
   VolumeTracing,
   BranchPoint,
@@ -8,8 +10,6 @@ import type {
   BoundingBoxObject,
   TreeGroup,
 } from "oxalis/store";
-import type { Vector3, BoundingBoxType } from "oxalis/constants";
-import type { SendBucketInfo } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reducer_helpers";
 
 export type NodeWithTreeId = { treeId: number } & Node;

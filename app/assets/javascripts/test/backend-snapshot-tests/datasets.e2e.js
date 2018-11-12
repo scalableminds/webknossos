@@ -1,7 +1,8 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 // @flow
-import test from "ava";
 import _ from "lodash";
+
+import type { APIDataset } from "admin/api_flow_types";
 import {
   tokenUserA,
   setCurrToken,
@@ -9,7 +10,7 @@ import {
   writeFlowCheckingFile,
 } from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
-import type { APIDataset } from "admin/api_flow_types";
+import test from "ava";
 
 async function getFirstDataset(): Promise<APIDataset> {
   const datasets = await api.getActiveDatasets();

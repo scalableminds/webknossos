@@ -1,22 +1,17 @@
 // @flow
 /* eslint-disable jsx-a11y/href-no-hash */
 
-import _ from "lodash";
-import * as React from "react";
-import { Link, withRouter } from "react-router-dom";
-import Store from "oxalis/store";
-import { AsyncLink } from "components/async_clickables";
-import { Spin, Input, Table, Button, Modal, Tag, Icon, Popover, Tooltip } from "antd";
-import { formatHash, stringToColor } from "libs/format_utils";
-import Toast from "libs/toast";
-import * as Utils from "libs/utils";
-import update from "immutability-helper";
-import messages from "messages";
-import EditableTextLabel from "oxalis/view/components/editable_text_label";
-import EditableTextIcon from "oxalis/view/components/editable_text_icon";
-import Persistence from "libs/persistence";
+import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
-import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
+import { Spin, Input, Table, Button, Modal, Tag, Icon, Popover, Tooltip } from "antd";
+import Markdown from "react-remarkable";
+import * as React from "react";
+import _ from "lodash";
+import update from "immutability-helper";
+
+import type { APIAnnotationTypeCompact } from "admin/api_flow_types";
+import { AnnotationContentTypes } from "oxalis/constants";
+import { AsyncLink } from "components/async_clickables";
 import {
   finishAllAnnotations,
   editAnnotation,
@@ -25,12 +20,17 @@ import {
   getCompactAnnotations,
   getCompactAnnotationsForUser,
 } from "admin/admin_rest_api";
+import { formatHash, stringToColor } from "libs/format_utils";
 import { handleGenericError } from "libs/error_handling";
+import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
+import EditableTextIcon from "oxalis/view/components/editable_text_icon";
+import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import FormattedDate from "components/formatted_date";
-import Markdown from "react-remarkable";
-import type { APIAnnotationTypeCompact } from "admin/api_flow_types";
-import type { RouterHistory } from "react-router-dom";
-import { AnnotationContentTypes } from "oxalis/constants";
+import Persistence from "libs/persistence";
+import Store from "oxalis/store";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import messages from "messages";
 
 const { Column } = Table;
 const { Search } = Input;

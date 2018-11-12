@@ -1,7 +1,7 @@
 // @flow
 /* eslint no-await-in-loop: 0 */
-import Store from "oxalis/store";
 import Deferred from "libs/deferred";
+import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 
 const listeners = [];

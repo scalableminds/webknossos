@@ -1,7 +1,7 @@
 // @flow
 import type { ShaderModule } from "./shader_module_system";
-import { greaterThanVec4 } from "./utils.glsl";
 import { getRgbaAtIndex } from "./texture_access.glsl";
+import { greaterThanVec4 } from "./utils.glsl";
 
 export const binarySearchIndex: ShaderModule = {
   requirements: [greaterThanVec4, getRgbaAtIndex],

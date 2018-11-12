@@ -1,13 +1,12 @@
 // @flow
-import React, { PureComponent } from "react";
-import constants from "oxalis/constants";
-import type { Mode } from "oxalis/constants";
 import { Menu, Radio, Icon, Dropdown } from "antd";
-import { setViewModeAction } from "oxalis/model/actions/settings_actions";
-import type { OxalisState, AllowedMode } from "oxalis/store";
-import Store from "oxalis/store";
 import { connect } from "react-redux";
+import React, { PureComponent } from "react";
+
+import { setViewModeAction } from "oxalis/model/actions/settings_actions";
+import Store, { type OxalisState, type AllowedMode } from "oxalis/store";
 import * as Utils from "libs/utils";
+import constants, { type Mode } from "oxalis/constants";
 
 type Props = {
   viewMode: Mode,

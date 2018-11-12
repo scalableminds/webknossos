@@ -1,11 +1,10 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-import test from "ava";
-
 import configureMockStore from "redux-mock-store";
 import overwriteActionMiddleware, {
   overwriteAction,
   removeOverwrite,
 } from "oxalis/model/helpers/overwrite_action_middleware";
+import test from "ava";
 
 const middlewares = [overwriteActionMiddleware];
 const mockStore = configureMockStore(middlewares);

@@ -1,5 +1,6 @@
 // @flow
 import * as React from "react";
+
 import type { Tracing } from "oxalis/store";
 
 export function makeVolumeTracingGuard(Component: any) {

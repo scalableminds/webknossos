@@ -1,22 +1,66 @@
 // @flow
-import type { Vector3, OrthoView, OrthoViewMap } from "oxalis/constants";
-import type { Flycam, OxalisState } from "oxalis/store";
-import constants, { OrthoViews } from "oxalis/constants";
-import Dimensions from "oxalis/model/dimensions";
-import * as scaleInfo from "oxalis/model/scaleinfo";
-import * as Utils from "libs/utils";
-import type { Matrix4x4 } from "libs/mjs";
-import { M4x4 } from "libs/mjs";
 import * as THREE from "three";
+import memoizeOne from "memoize-one";
+
+import type { Flycam, OxalisState } from "oxalis/store";
+import { M4x4, type Matrix4x4 } from "libs/mjs";
 import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
+import Dimensions from "oxalis/model/dimensions";
+import * as Utils from "libs/utils";
+import constants, {
+  type OrthoView,
+  type OrthoViewMap,
+  OrthoViews,
+  type Vector3,
+} from "oxalis/constants";
+import * as scaleInfo from "oxalis/model/scaleinfo";
+import { calculateUnzoomedBucketCount } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
+import { extraBucketsPerDim } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker_constants";
 
 // All methods in this file should use constants.PLANE_WIDTH instead of constants.VIEWPORT_WIDTH
 // as the area that is rendered is only of size PLANE_WIDTH.
 // If VIEWPORT_WIDTH, which is a little bigger, is used instead, we end up with a data texture
 // that is shrinked a little bit, which leads to the texture not being in sync with the THREEjs scene.
 
-// maximum difference between requested coordinate and actual texture position
-const MAX_ZOOM_STEP_DIFF = constants.MAX_RENDERING_TARGET_WIDTH / constants.PLANE_WIDTH;
+// This function returns a value which indicates how much larger the rendered
+// plane can be than its original size **without** having to use the next
+// magnification. E.g., a value of two indicates that the viewport
+// can be 2 * viewport_width pixel wide while still being in zoom step 0.
+function unmemoizedCalculateMaxZoomStepDiff(dataSetScale: Vector3): number {
+  // This is more of a theoretical limit to avoid an endless loop, in case
+  // the following while loop causes havoc for some reason. It means,
+  // that even with the best GPU specs and weirdest dataset properties,
+  // wk will at most render magnification 20 when being in zoom level 1.
+  const maximumMagnificationAtZoomLevelOne = 20;
+  const maximumCapacity = constants.MINIMUM_REQUIRED_BUCKET_CAPACITY;
+  let maxZoomStep = 1;
+
+  while (
+    calculateUnzoomedBucketCount(dataSetScale, maxZoomStep) < maximumCapacity &&
+    maxZoomStep < maximumMagnificationAtZoomLevelOne
+  ) {
+    maxZoomStep += 0.1;
+  }
+
+  return maxZoomStep;
+}
+
+const calculateMaxZoomStepDiff = memoizeOne(unmemoizedCalculateMaxZoomStepDiff);
+
+function unmemoizedGetMaxBucketCountPerDim(dataSetScale: Vector3): Vector3 {
+  const maximumPlaneExtentInNm =
+    constants.PLANE_WIDTH *
+    calculateMaxZoomStepDiff(dataSetScale) *
+    scaleInfo.getBaseVoxel(dataSetScale);
+
+  const maxBucketCountPerDim = dataSetScale.map(
+    nm => extraBucketsPerDim + Math.ceil(maximumPlaneExtentInNm / nm / constants.BUCKET_WIDTH),
+  );
+
+  return ((maxBucketCountPerDim: any): Vector3);
+}
+
+export const getMaxBucketCountPerDim = memoizeOne(unmemoizedGetMaxBucketCountPerDim);
 
 export function getUp(flycam: Flycam): Vector3 {
   const matrix = flycam.currentMatrix;
@@ -57,8 +101,9 @@ export function getZoomedMatrix(flycam: Flycam): Matrix4x4 {
 export function getRequestLogZoomStep(state: OxalisState): number {
   const maxLogZoomStep = Math.log2(getMaxZoomStep(state.dataset));
   const min = Math.min(state.datasetConfiguration.quality, maxLogZoomStep);
+  const maxZoomStepDiff = calculateMaxZoomStepDiff(state.dataset.dataSource.scale);
   const value =
-    Math.ceil(Math.log2(state.flycam.zoomStep / MAX_ZOOM_STEP_DIFF)) +
+    Math.ceil(Math.log2(state.flycam.zoomStep / maxZoomStepDiff)) +
     state.datasetConfiguration.quality;
   return Utils.clamp(min, value, maxLogZoomStep);
 }

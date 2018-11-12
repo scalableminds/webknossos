@@ -2,6 +2,8 @@
 
 import React from "react";
 
+import window from "libs/window";
+
 export default class DisableGenericDnd extends React.Component<{}> {
   componentDidMount() {
     window.addEventListener("dragover", this.preventDefault, false);

@@ -3,15 +3,14 @@
  * cube.spec.js
  * @flow
  */
-import anyTest from "ava";
-import mockRequire from "mock-require";
-import sinon from "sinon";
 import _ from "lodash";
-import runAsync from "test/helpers/run-async";
-import datasetServerObject from "test/fixtures/dataset_server_object";
-import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
 
-import type { TestInterface } from "ava";
+import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
+import anyTest, { type TestInterface } from "ava";
+import datasetServerObject from "test/fixtures/dataset_server_object";
+import mockRequire from "mock-require";
+import runAsync from "test/helpers/run-async";
+import sinon from "sinon";
 
 mockRequire.stopAll();
 

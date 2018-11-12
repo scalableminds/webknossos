@@ -1,11 +1,12 @@
 // @flow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 
-import test from "ava";
-import mockRequire from "mock-require";
-import DiffableMap from "libs/diffable_map";
 import { alert } from "libs/window";
 import { setSaveBusyAction } from "oxalis/model/actions/save_actions";
+import DiffableMap from "libs/diffable_map";
+import mockRequire from "mock-require";
+import test from "ava";
+
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 import { expectValueDeepEqual } from "../helpers/sagaHelpers";
 

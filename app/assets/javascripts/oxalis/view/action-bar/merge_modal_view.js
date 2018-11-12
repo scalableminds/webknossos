@@ -1,20 +1,20 @@
 // @flow
-import React, { PureComponent } from "react";
-import { connect } from "react-redux";
-import Toast from "libs/toast";
-import Request from "libs/request";
 import { Icon, Alert, Modal, Button, Select, Form, Spin, Checkbox, Tooltip } from "antd";
-import messages from "messages";
-import InputComponent from "oxalis/view/components/input_component";
-import api from "oxalis/api/internal_api";
-import type { OxalisState, TreeMap, TreeGroup } from "oxalis/store";
-import { getAnnotationInformation, getTracingForAnnotationType } from "admin/admin_rest_api";
+import { connect } from "react-redux";
+import React, { PureComponent } from "react";
+
+import type { APIAnnotation } from "admin/api_flow_types";
 import { addTreesAndGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
 import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import * as Utils from "libs/utils";
-import type { APIAnnotation } from "admin/api_flow_types";
-import Store from "oxalis/store";
+import { getAnnotationInformation, getTracingForAnnotationType } from "admin/admin_rest_api";
 import { location } from "libs/window";
+import InputComponent from "oxalis/view/components/input_component";
+import Request from "libs/request";
+import Store, { type OxalisState, type TreeMap, type TreeGroup } from "oxalis/store";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import api from "oxalis/api/internal_api";
+import messages from "messages";
 
 type ProjectInfo = {
   id: string,

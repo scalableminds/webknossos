@@ -1,7 +1,7 @@
 // @flow
 
-import * as React from "react";
 import { Input, Modal } from "antd";
+import * as React from "react";
 
 type Props = {
   addLayout: string => void,

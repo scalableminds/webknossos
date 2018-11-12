@@ -3,21 +3,24 @@
  * @flow
  */
 
-import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import * as THREE from "three";
+import _ from "lodash";
+
+import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
-import Store from "oxalis/store";
-import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
 import Dimensions from "oxalis/model/dimensions";
+import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
+import Store from "oxalis/store";
 import constants, {
-  OrthoViews,
-  OrthoViewValues,
+  type OrthoView,
   OrthoViewColors,
   OrthoViewCrosshairColors,
   OrthoViewGrayCrosshairColor,
+  OrthoViewValues,
+  OrthoViews,
+  type Vector3,
+  type Vector4,
 } from "oxalis/constants";
-import type { OrthoView, Vector3, Vector4 } from "oxalis/constants";
-import _ from "lodash";
 
 class Plane {
   // This class is supposed to collect all the Geometries that belong to one single plane such as

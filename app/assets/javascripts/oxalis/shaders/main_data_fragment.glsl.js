@@ -14,6 +14,7 @@ import constants, {
   VolumeToolEnum,
   volumeToolEnumToIndex,
 } from "oxalis/constants";
+import { getMaxBucketCountPerDim } from "oxalis/model/accessors/flycam_accessor";
 
 import { convertCellIdToRGB, getBrushOverlay, getSegmentationId } from "./segmentation.glsl";
 import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
@@ -104,7 +105,7 @@ varying vec4 worldCoord;
 varying vec4 modelCoord;
 varying mat4 savedModelMatrix;
 
-const float bucketsPerDim = <%= bucketsPerDim %>;
+const vec3 bucketsPerDim = <%= formatVector3AsVec3(bucketsPerDim) %>;
 const float bucketWidth = <%= bucketWidth %>;
 const float bucketSize = <%= bucketSize %>;
 const float l_texture_width = <%= l_texture_width %>;
@@ -247,7 +248,7 @@ void main() {
     OrthoViews,
     bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),
     bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),
-    bucketsPerDim: formatNumberAsGLSLFloat(constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION),
+    bucketsPerDim: getMaxBucketCountPerDim(params.datasetScale),
     l_texture_width: formatNumberAsGLSLFloat(constants.LOOK_UP_TEXTURE_WIDTH),
     mappingTextureWidth: formatNumberAsGLSLFloat(MAPPING_TEXTURE_WIDTH),
     mappingColorTextureWidth: formatNumberAsGLSLFloat(MAPPING_COLOR_TEXTURE_WIDTH),

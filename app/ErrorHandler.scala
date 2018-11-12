@@ -11,21 +11,20 @@ import play.api.routing.Router
 import scala.concurrent.Future
 
 @Singleton
-class ErrorHandler @Inject() (env: Environment,
-                              config: Configuration,
-                              sourceMapper: OptionalSourceMapper,
-                              router: Provider[Router],
-                              val messagesApi: MessagesApi)
-  extends DefaultHttpErrorHandler(env, config, sourceMapper, router)
-    with SecuredErrorHandler with I18nSupport {
+class ErrorHandler @Inject()(env: Environment,
+                             config: Configuration,
+                             sourceMapper: OptionalSourceMapper,
+                             router: Provider[Router],
+                             val messagesApi: MessagesApi)
+    extends DefaultHttpErrorHandler(env, config, sourceMapper, router)
+    with SecuredErrorHandler
+    with I18nSupport {
 
-  override def onNotAuthenticated(implicit request: RequestHeader): Future[Result] = {
+  override def onNotAuthenticated(implicit request: RequestHeader): Future[Result] =
     Future.successful(Unauthorized(Messages("user.notAuthorised")))
-  }
 
-  override def onNotAuthorized(implicit request: RequestHeader): Future[Result] = {
+  override def onNotAuthorized(implicit request: RequestHeader): Future[Result] =
     Future.successful(Forbidden(Messages("notAllowed")))
-  }
 
   override def onServerError(request: RequestHeader, ex: Throwable): Future[Result] = {
     NewRelic.noticeError(ex)

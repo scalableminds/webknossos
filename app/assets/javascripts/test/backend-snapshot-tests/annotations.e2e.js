@@ -95,7 +95,9 @@ test.serial("editAnnotation()", async t => {
   t.is(editedAnnotation.name, newName);
   t.is(editedAnnotation.isPublic, newIsPublic);
   t.is(editedAnnotation.description, newDescription);
-  t.snapshot(editedAnnotation, { id: "annotations-editAnnotation" });
+  t.is(editedAnnotation.id, annotationId);
+  t.is(editedAnnotation.tracing.skeleton, "ae417175-f7bb-4a34-8187-d9c3b50143af");
+  t.snapshot(replaceVolatileValues(editedAnnotation), { id: "annotations-editAnnotation" });
 
   await api.editAnnotation(annotationId, APITracingTypeEnum.Explorational, {
     name,

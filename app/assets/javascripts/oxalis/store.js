@@ -23,7 +23,6 @@ import type {
 import type { Action } from "oxalis/model/actions/actions";
 import type { Matrix4x4 } from "libs/mjs";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import { defaultLayoutSchema } from "oxalis/view/layouting/default_layout_configs";
 import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
 import Constants, {
   type BoundingBoxType,
@@ -538,7 +537,7 @@ export const defaultState: OxalisState = {
   uiInformation: {
     showDropzoneModal: false,
     showVersionRestore: false,
-    storedLayouts: defaultLayoutSchema,
+    storedLayouts: {},
   },
 };
 

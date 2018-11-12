@@ -30,7 +30,7 @@ import messages from "messages";
 import window, { location } from "libs/window";
 
 import { GoldenLayoutAdapter } from "./golden_layout_adapter";
-import { determineLayout } from "./default_layout_configs";
+import { determineLayout, headerHeight } from "./default_layout_configs";
 import { storeLayoutConfig, setActiveLayout } from "./layout_persistence";
 
 const { Header, Sider } = Layout;
@@ -123,7 +123,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
         />
 
         <Layout className="tracing-layout">
-          <Header style={{ flex: "0 1 auto", zIndex: 210, height: 55 }}>
+          <Header style={{ flex: "0 1 auto", zIndex: 210, height: headerHeight }}>
             <ButtonComponent onClick={this.handleSettingsCollapse}>
               <Icon type={this.state.isSettingsCollapsed ? "menu-unfold" : "menu-fold"} />
               <span className="hide-on-small-screen">Settings</span>

@@ -71,10 +71,7 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
   const layoutMissingHelpTitle = (
     <React.Fragment>
       <h5 style={{ color: "#fff" }}>Where is my layout?</h5>
-      <p>
-        {`The tracing views are separated into four classes. Each of them has their own layouts. If you
-        can't find your layout please open the tracing in the correct view mode or just add it here manually.`}
-      </p>
+      <p>{messages["layouting.missing_custom_layout_info"]}</p>
     </React.Fragment>
   );
   const customLayoutsItems = storedLayoutNamesForView.map(layout => {
@@ -82,17 +79,16 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
     return (
       <Menu.Item
         key={layout}
-        onClick={() => onSelectLayout(layout)}
         className={
           isSelectedLayout ? "selected-layout-item bullet-point-less-li" : "bullet-point-less-li"
         }
       >
-        <span style={{ minWidth: "100%", minHeight: "auto", display: "inline-block" }}>
-          <div className="inline-with-margin full-width" onClick={() => onSelectLayout(layout)}>
+        <div className="layout-dropdown-list-item-container">
+          <div className="layout-dropdown-selection-area" onClick={() => onSelectLayout(layout)}>
             {layout}
           </div>
           {isSelectedLayout ? (
-            <Icon type="check" className="sub-menu-item-icon" theme="outlined" />
+            <Icon type="check" theme="outlined" className="sub-menu-item-icon" />
           ) : (
             <Tooltip placement="top" title="Remove this layout">
               <Icon
@@ -102,7 +98,7 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
               />
             </Tooltip>
           )}
-        </span>
+        </div>
       </Menu.Item>
     );
   });
@@ -116,7 +112,7 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
             <Icon
               type="info-circle-o"
               style={{ color: "gray", marginRight: 36 }}
-              className="sub-menu-item-icon"
+              className="right-floating-icon"
             />
           </Tooltip>
         </span>

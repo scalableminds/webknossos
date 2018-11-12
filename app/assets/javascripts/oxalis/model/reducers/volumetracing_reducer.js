@@ -3,8 +3,11 @@
  * @flow
  */
 import update from "immutability-helper";
+
 import type { OxalisState, VolumeTracing } from "oxalis/store";
+import { VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
 import type { VolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
+import { convertServerBoundingBoxToFrontend } from "oxalis/model/reducers/reducer_helpers";
 import { getVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   setToolReducer,
@@ -16,8 +19,6 @@ import {
   hideBrushReducer,
   setContourTracingModeReducer,
 } from "oxalis/model/reducers/volumetracing_reducer_helpers";
-import { convertServerBoundingBoxToFrontend } from "oxalis/model/reducers/reducer_helpers";
-import { VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
 
 function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): OxalisState {
   switch (action.type) {

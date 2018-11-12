@@ -1,19 +1,18 @@
 // @flow
 
-import Store from "oxalis/store";
-import DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
-import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
-import Mappings from "oxalis/model/bucket_data_handling/mappings";
-import LayerRenderingManager from "oxalis/model/bucket_data_handling/layer_rendering_manager";
-import ConnectionInfo from "oxalis/model/data_connection_info";
-import type { DataLayerType } from "oxalis/store";
 import {
   getLayerByName,
   getLayerBoundaries,
   getBitDepth,
 } from "oxalis/model/accessors/dataset_accessor";
+import ConnectionInfo from "oxalis/model/data_connection_info";
+import DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import ErrorHandling from "libs/error_handling";
+import LayerRenderingManager from "oxalis/model/bucket_data_handling/layer_rendering_manager";
+import Mappings from "oxalis/model/bucket_data_handling/mappings";
+import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
+import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
+import Store, { type DataLayerType } from "oxalis/store";
 
 // TODO: Non-reactive
 class DataLayer {

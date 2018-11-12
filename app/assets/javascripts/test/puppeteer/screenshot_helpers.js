@@ -1,8 +1,8 @@
 // @flow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
 import fs from "fs";
+import pixelmatch from "pixelmatch";
 
 function openScreenshot(path: string, name: string): Promise<PNG> {
   return new Promise(resolve => {

@@ -3,19 +3,19 @@
  * @flow
  */
 
-import _ from "lodash";
-import ConnectionInfo from "oxalis/model/data_connection_info";
-import { requestWithFallback } from "oxalis/model/bucket_data_handling/wkstore_adapter";
-import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import type { Vector3, Vector4 } from "oxalis/constants";
-import type { DataStoreInfo, DataLayerType } from "oxalis/store";
 import PriorityQueue from "js-priority-queue";
+import _ from "lodash";
+
+import type { Vector3, Vector4 } from "oxalis/constants";
+import { getResolutions, getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import {
   getResolutionsFactors,
   zoomedAddressToAnotherZoomStep,
 } from "oxalis/model/helpers/position_converter";
-import { getResolutions, getLayerByName } from "oxalis/model/accessors/dataset_accessor";
-import Store from "oxalis/store";
+import { requestWithFallback } from "oxalis/model/bucket_data_handling/wkstore_adapter";
+import ConnectionInfo from "oxalis/model/data_connection_info";
+import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import Store, { type DataStoreInfo, type DataLayerType } from "oxalis/store";
 
 export type PullQueueItem = {
   priority: number,

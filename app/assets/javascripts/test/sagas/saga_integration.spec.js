@@ -1,31 +1,33 @@
 // @flow
-import test from "ava";
-import mockRequire from "mock-require";
-import { setupOxalis, TIMESTAMP } from "test/helpers/apiHelpers";
 import update from "immutability-helper";
-import Store from "oxalis/store";
-import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
+
+import { __setupOxalis, TIMESTAMP } from "test/helpers/apiHelpers";
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
-import { generateTreeName } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { enforceSkeletonTracing, getStats } from "oxalis/model/accessors/skeletontracing_accessor";
+import { maximumActionCountPerBatch } from "oxalis/model/sagas/save_saga";
+import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
+import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 import generateDummyTrees from "oxalis/model/helpers/generate_dummy_trees";
-import { maximumActionCountPerBatch } from "oxalis/model/sagas/save_saga";
+import mockRequire from "mock-require";
+import test from "ava";
 
-const UpdateActions = mockRequire.reRequire("oxalis/model/sagas/update_actions");
+const {
+  createTreeMapFromTreeArray,
+  generateTreeName,
+} = require("oxalis/model/reducers/skeletontracing_reducer_helpers");
+
 const { addTreesAndGroupsAction, deleteNodeAction } = mockRequire.reRequire(
   "oxalis/model/actions/skeletontracing_actions",
 );
-const { createTreeMapFromTreeArray } = mockRequire.reRequire(
-  "oxalis/model/reducers/skeletontracing_reducer_helpers",
-);
 const { discardSaveQueuesAction } = mockRequire.reRequire("oxalis/model/actions/save_actions");
+const UpdateActions = mockRequire.reRequire("oxalis/model/sagas/update_actions");
 
 test.beforeEach(async t => {
   // Setup oxalis, this will execute model.fetch(...) and initialize the store with the tracing, etc.
   Store.dispatch(restartSagaAction());
   Store.dispatch(discardSaveQueuesAction());
-  await setupOxalis(t, "task");
+  await __setupOxalis(t, "task");
 
   // Dispatch the wkReadyAction, so the sagas are started
   Store.dispatch(wkReadyAction());

@@ -1,15 +1,18 @@
 // @flow
 
-import * as React from "react";
 import GoldenLayout from "golden-layout/dist/goldenlayout";
+import * as React from "react";
 import _ from "lodash";
-import Constants from "oxalis/constants";
-import Toast from "libs/toast";
-import window from "libs/window";
+
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import Constants from "oxalis/constants";
 import Store from "oxalis/store";
+import Toast from "libs/toast";
+import window, { document } from "libs/window";
+
 import { PortalTarget, RenderToPortal } from "./portal_utils";
 import { layoutEmitter, getLayoutConfig } from "./layout_persistence";
+import { resetDefaultLayouts, getGroundTruthLayoutRect } from "./default_layout_configs";
 
 type Props<KeyType> = {
   id: string,
@@ -18,17 +21,6 @@ type Props<KeyType> = {
   onLayoutChange?: (config: Object, layoutKey: string) => void,
   children: React.Node,
   style: Object,
-};
-
-const getGroundTruthLayoutRect = () => {
-  const mainContainer = document.querySelector(".ant-layout .ant-layout-has-sider");
-  if (!mainContainer) {
-    return { width: 500, height: 500 };
-  }
-  const { offsetWidth, offsetHeight } = mainContainer;
-  // The -1s are a workaround, since otherwise scrollbars
-  // would appear from time to time
-  return { width: offsetWidth - 1, height: offsetHeight - 1 };
 };
 
 export const getDesiredLayoutRect = () => {
@@ -122,7 +114,10 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
     const updateSizeDebounced = _.debounce(updateSize, Constants.RESIZE_THROTTLE_TIME / 5);
     window.addEventListener("resize", updateSize);
     const unbindResizeListener = () => window.removeEventListener("resize", updateSize);
-    const unbindResetListener = layoutEmitter.on("resetLayout", () => this.rebuildLayout());
+    const unbindResetListener = layoutEmitter.on("resetLayout", () => {
+      resetDefaultLayouts();
+      this.rebuildLayout();
+    });
     const unbindChangedScaleListener = listenToStoreProperty(
       store => store.userConfiguration.layoutScaleValue,
       () => {

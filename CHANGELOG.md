@@ -15,12 +15,15 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Changed
 
--
+- Improved support for datasets with a large skew in scale (e.g., [600, 600, 35]). [#3398](https://github.com/scalableminds/webknossos/pull/3398)
 
 ### Fixed
 
 - Fixed a bug where the initial onboarding setup failed if automatic initial data was disabled. [#3421](https://github.com/scalableminds/webknossos/pull/3421)
 - Fixed a permission issue in the try setup
+- Fixed a bug where the guessed bounding box for datasets that do not start at (0,0,0) was too large [#3437](https://github.com/scalableminds/webknossos/pull/3437)
+- Fixed a bug where dataset list refresh failed when datasets for non-existing organizations were reported. [#3438](https://github.com/scalableminds/webknossos/pull/3438)
+- Fixed a bug where the form values when editing TaskTypes were missing [#3451](https://github.com/scalableminds/webknossos/pull/3451)
 
 ### Removed
 

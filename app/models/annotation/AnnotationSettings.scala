@@ -6,10 +6,10 @@ import play.api.data.validation.ValidationError
 import play.api.libs.json._
 
 case class AnnotationSettings(
-  allowedModes: List[String] = SKELETON_MODES,
-  preferredMode: Option[String] = None,
-  branchPointsAllowed: Boolean = true,
-  somaClickingAllowed: Boolean = true
+    allowedModes: List[String] = SKELETON_MODES,
+    preferredMode: Option[String] = None,
+    branchPointsAllowed: Boolean = true,
+    somaClickingAllowed: Boolean = true
 )
 
 object AnnotationSettings {
@@ -37,7 +37,9 @@ object AnnotationSettings {
     Json
       .reads[AnnotationSettings]
       .filter(JsonValidationError("annotation.preferedMode.invalid")) { a =>
-        a.preferredMode.forall(ALL_MODES.contains) }
+        a.preferredMode.forall(ALL_MODES.contains)
+      }
       .filter(JsonValidationError("annotation.mode.invalid")) { a =>
-        a.allowedModes.forall(ALL_MODES.contains) }
+        a.allowedModes.forall(ALL_MODES.contains)
+      }
 }

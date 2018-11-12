@@ -1,10 +1,11 @@
 // @flow
 
-import * as React from "react";
-import Store from "oxalis/store";
 import { Modal, Checkbox } from "antd";
-import messages from "messages";
+import * as React from "react";
+
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import Store from "oxalis/store";
+import messages from "messages";
 
 type Props = {
   onOk: Function,

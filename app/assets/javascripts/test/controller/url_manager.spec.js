@@ -1,6 +1,6 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-import test from "ava";
 import mockRequire from "mock-require";
+import test from "ava";
 
 mockRequire("app", {});
 

@@ -6,10 +6,11 @@
 
 /* eslint-disable no-await-in-loop */
 
-import * as Utils from "libs/utils";
-import Deferred from "libs/deferred";
 import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
+
+import Deferred from "libs/deferred";
+import * as Utils from "libs/utils";
 
 type AsyncTask = () => Promise<void>;
 

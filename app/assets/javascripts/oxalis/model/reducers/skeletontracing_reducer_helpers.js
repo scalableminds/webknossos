@@ -6,21 +6,10 @@
  *
  */
 
-import _ from "lodash";
 import Maybe from "data.maybe";
-import { getBaseVoxel } from "oxalis/model/scaleinfo";
-import ColorGenerator from "libs/color_generator";
+import _ from "lodash";
 import update from "immutability-helper";
-import * as Utils from "libs/utils";
-import Constants, { NODE_ID_REF_REGEX } from "oxalis/constants";
-import {
-  getSkeletonTracing,
-  getActiveNodeFromTree,
-  getActiveTree,
-  getActiveGroup,
-  findTreeByNodeId,
-} from "oxalis/model/accessors/skeletontracing_accessor";
-import type { Vector3 } from "oxalis/constants";
+
 import type {
   OxalisState,
   SkeletonTracing,
@@ -33,13 +22,24 @@ import type {
   TreeGroup,
   RestrictionsAndSettings,
 } from "oxalis/store";
-import DiffableMap from "libs/diffable_map";
-import EdgeCollection from "oxalis/model/edge_collection";
 import type {
   ServerSkeletonTracingTree,
   ServerNode,
   ServerBranchPoint,
 } from "admin/api_flow_types";
+import { getBaseVoxel } from "oxalis/model/scaleinfo";
+import {
+  getSkeletonTracing,
+  getActiveNodeFromTree,
+  getActiveTree,
+  getActiveGroup,
+  findTreeByNodeId,
+} from "oxalis/model/accessors/skeletontracing_accessor";
+import ColorGenerator from "libs/color_generator";
+import Constants, { NODE_ID_REF_REGEX, type Vector3 } from "oxalis/constants";
+import DiffableMap from "libs/diffable_map";
+import EdgeCollection from "oxalis/model/edge_collection";
+import * as Utils from "libs/utils";
 
 export function generateTreeName(state: OxalisState, timestamp: number, treeId: number) {
   let user = "";

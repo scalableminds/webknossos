@@ -1,6 +1,7 @@
 // @flow
-import * as React from "react";
 import { Modal, Input, Form } from "antd";
+import * as React from "react";
+
 import { createTeam } from "admin/admin_rest_api";
 
 const FormItem = Form.Item;

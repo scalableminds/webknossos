@@ -1,16 +1,20 @@
 // @flow
-import type { Vector3, OrthoView, OrthoViewMap } from "oxalis/constants";
-import type { Flycam, OxalisState } from "oxalis/store";
-import constants, { OrthoViews } from "oxalis/constants";
-import Dimensions from "oxalis/model/dimensions";
-import * as scaleInfo from "oxalis/model/scaleinfo";
-import * as Utils from "libs/utils";
-import type { Matrix4x4 } from "libs/mjs";
-import { M4x4 } from "libs/mjs";
 import * as THREE from "three";
-import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
-import { calculateUnzoomedBucketCount } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
 import memoizeOne from "memoize-one";
+
+import type { Flycam, OxalisState } from "oxalis/store";
+import { M4x4, type Matrix4x4 } from "libs/mjs";
+import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
+import Dimensions from "oxalis/model/dimensions";
+import * as Utils from "libs/utils";
+import constants, {
+  type OrthoView,
+  type OrthoViewMap,
+  OrthoViews,
+  type Vector3,
+} from "oxalis/constants";
+import * as scaleInfo from "oxalis/model/scaleinfo";
+import { calculateUnzoomedBucketCount } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
 import { extraBucketsPerDim } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker_constants";
 
 // All methods in this file should use constants.PLANE_WIDTH instead of constants.VIEWPORT_WIDTH

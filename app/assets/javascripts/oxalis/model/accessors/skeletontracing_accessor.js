@@ -1,6 +1,8 @@
 // @flow
 import Maybe from "data.maybe";
 import _ from "lodash";
+
+import type { HybridServerTracing, ServerSkeletonTracing } from "admin/api_flow_types";
 import type {
   Tracing,
   SkeletonTracing,
@@ -9,9 +11,8 @@ import type {
   BranchPoint,
   TreeGroupTypeFlat,
 } from "oxalis/store";
-import type { HybridServerTracing, ServerSkeletonTracing } from "admin/api_flow_types";
-import { mapGroups } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { findGroup } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
+import { mapGroups } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 
 export type SkeletonTracingStats = {|
   treeCount: number,

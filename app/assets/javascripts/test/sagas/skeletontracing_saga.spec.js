@@ -1,10 +1,11 @@
 /* eslint-disable import/no-extraneous-dependencies */
-import test from "ava";
-import mockRequire from "mock-require";
+import type { SaveQueueEntry } from "oxalis/store";
 import ChainReducer from "test/helpers/chainReducer";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
-import type { SaveQueueEntry } from "oxalis/store";
+import mockRequire from "mock-require";
+import test from "ava";
+
 import { createSaveQueueFromUpdateActions, withoutUpdateTracing } from "../helpers/saveHelpers";
 import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 

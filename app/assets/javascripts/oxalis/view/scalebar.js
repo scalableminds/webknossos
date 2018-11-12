@@ -1,14 +1,15 @@
 // @flow
 
-import * as React from "react";
 import { connect } from "react-redux";
-import constants, { OUTER_BORDER_ORTHO } from "oxalis/constants";
+import * as React from "react";
+
+import type { APIDataset } from "admin/api_flow_types";
 import type { OxalisState, Flycam } from "oxalis/store";
 import {
   calculateZoomLevel,
   formatNumberToLength,
 } from "oxalis/view/right-menu/dataset_info_tab_view";
-import type { APIDataset } from "admin/api_flow_types";
+import constants, { OUTER_BORDER_ORTHO } from "oxalis/constants";
 
 type Props = {|
   dataset: APIDataset,

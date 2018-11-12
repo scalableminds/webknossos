@@ -3,21 +3,22 @@
  * @flow
  */
 
-import _ from "lodash";
 import * as THREE from "three";
 import TWEEN from "tween.js";
-import * as Utils from "libs/utils";
-import Store from "oxalis/throttled_store";
+import _ from "lodash";
+
+import type { SkeletonTracing, Tree, Node } from "oxalis/store";
+import type { Vector3 } from "oxalis/constants";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
+import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
+import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import EdgeShader from "oxalis/geometries/materials/edge_shader";
 import NodeShader, {
   NodeTypes,
   COLOR_TEXTURE_WIDTH,
 } from "oxalis/geometries/materials/node_shader";
-import EdgeShader from "oxalis/geometries/materials/edge_shader";
-import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
-import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
-import type { SkeletonTracing, Tree, Node } from "oxalis/store";
-import type { Vector3 } from "oxalis/constants";
+import Store from "oxalis/throttled_store";
+import * as Utils from "libs/utils";
 
 const MAX_CAPACITY = 1000;
 

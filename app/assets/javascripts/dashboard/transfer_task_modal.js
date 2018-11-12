@@ -1,10 +1,11 @@
 // @flow
 
-import * as React from "react";
 import { Modal, Button } from "antd";
-import { transferTask } from "admin/admin_rest_api";
+import * as React from "react";
+
 import type { APIAnnotation } from "admin/api_flow_types";
 import { handleGenericError } from "libs/error_handling";
+import { transferTask } from "admin/admin_rest_api";
 import UserSelectionComponent from "admin/user/user_selection_component";
 
 type Props = {

@@ -1,6 +1,6 @@
 // @flow
-import type { Vector3 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
+import type { Vector3 } from "oxalis/constants";
 import {
   globalPositionToBucketPosition,
   getBucketExtent,

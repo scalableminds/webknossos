@@ -1,8 +1,7 @@
 // @flow
-import { isFlightMode } from "oxalis/shaders/utils.glsl";
+import { isFlightMode, getW } from "oxalis/shaders/utils.glsl";
 
 import type { ShaderModule } from "./shader_module_system";
-import { getW } from "./utils.glsl";
 
 export const getResolution: ShaderModule = {
   code: `

@@ -110,8 +110,6 @@ export default function determineBucketsForFlight(
     }
   }
 
-  const { zoomStep } = Store.getState().flycam;
-
   // This array holds the four corners and the center point of the rendered plane
   const planePointsGlobal = [
     [-halfWidth, -halfWidth, 0], // 0 bottom left

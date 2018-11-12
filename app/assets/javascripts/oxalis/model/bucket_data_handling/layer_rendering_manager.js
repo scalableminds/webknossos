@@ -7,10 +7,16 @@ import TextureBucketManager from "oxalis/model/bucket_data_handling/texture_buck
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import PriorityQueue from "js-priority-queue";
 import { M4x4 } from "libs/mjs";
-import determineBucketsForOrthogonal from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
+import determineBucketsForOrthogonal, {
+  getAnchorPositionToCenterDistance,
+} from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
 import determineBucketsForOblique from "oxalis/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
 import determineBucketsForFlight from "oxalis/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
-import { getAreas, getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getAreas,
+  getZoomedMatrix,
+  getMaxBucketCountPerDim,
+} from "oxalis/model/accessors/flycam_accessor";
 import * as THREE from "three";
 import UpdatableTexture from "libs/UpdatableTexture";
 import type { Vector3, Vector4, OrthoViewMap, Mode } from "oxalis/constants";
@@ -103,9 +109,10 @@ export default class LayerRenderingManager {
 
   setupDataTextures(): void {
     const bytes = getByteCount(Store.getState().dataset, this.name);
+    const bucketsPerDim = getMaxBucketCountPerDim(Store.getState().dataset.dataSource.scale);
 
     this.textureBucketManager = new TextureBucketManager(
-      constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION,
+      bucketsPerDim,
       this.textureWidth,
       this.dataTextureCount,
       bytes,
@@ -125,7 +132,12 @@ export default class LayerRenderingManager {
 
   // Returns the new anchorPoints if they are new
   updateDataTextures(position: Vector3, logZoomStep: number): [?Vector4, ?Vector4] {
-    const unzoomedAnchorPoint = this.calculateUnzoomedAnchorPoint(position, logZoomStep);
+    const { dataset } = Store.getState();
+    const unzoomedAnchorPoint = this.calculateUnzoomedAnchorPoint(
+      position,
+      logZoomStep,
+      dataset.dataSource.scale,
+    );
 
     const isAnchorPointNew = this.yieldsNewZoomedAnchorPoint(
       unzoomedAnchorPoint,
@@ -148,10 +160,7 @@ export default class LayerRenderingManager {
       return [this.anchorPointCache.anchorPoint, this.anchorPointCache.fallbackAnchorPoint];
     }
 
-    const subBucketLocality = getSubBucketLocality(
-      position,
-      getResolutions(Store.getState().dataset)[logZoomStep],
-    );
+    const subBucketLocality = getSubBucketLocality(position, getResolutions(dataset)[logZoomStep]);
     const areas = getAreas(Store.getState());
 
     const matrix = getZoomedMatrix(Store.getState().flycam);
@@ -206,6 +215,7 @@ export default class LayerRenderingManager {
           );
         } else {
           determineBucketsForOrthogonal(
+            Store.getState().dataset,
             this.cube,
             bucketQueue,
             logZoomStep,
@@ -260,16 +270,22 @@ export default class LayerRenderingManager {
     return true;
   }
 
-  calculateUnzoomedAnchorPoint(position: Vector3, logZoomStep: number): Vector3 {
+  calculateUnzoomedAnchorPoint(
+    position: Vector3,
+    logZoomStep: number,
+    datasetScale: Vector3,
+  ): Vector3 {
     const resolution = getResolutions(Store.getState().dataset)[logZoomStep];
-    const maximumRenderedBucketsHalf =
-      ((constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION - 1) * constants.BUCKET_WIDTH) / 2;
+    const bucketsPerDim = getMaxBucketCountPerDim(datasetScale);
+    const maximumRenderedBucketsHalf = bucketsPerDim.map(
+      bucketPerDim => getAnchorPositionToCenterDistance(bucketPerDim) * constants.BUCKET_WIDTH,
+    );
 
     // Hit texture top-left coordinate
     const anchorPoint = [
-      Math.floor(position[0] - maximumRenderedBucketsHalf * resolution[0]),
-      Math.floor(position[1] - maximumRenderedBucketsHalf * resolution[1]),
-      Math.floor(position[2] - maximumRenderedBucketsHalf * resolution[2]),
+      Math.floor(position[0] - maximumRenderedBucketsHalf[0] * resolution[0]),
+      Math.floor(position[1] - maximumRenderedBucketsHalf[1] * resolution[1]),
+      Math.floor(position[2] - maximumRenderedBucketsHalf[2] * resolution[2]),
     ];
     return anchorPoint;
   }

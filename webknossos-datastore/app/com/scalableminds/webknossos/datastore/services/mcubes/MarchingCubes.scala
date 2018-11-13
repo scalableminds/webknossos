@@ -1,7 +1,5 @@
 package com.scalableminds.webknossos.datastore.services.mcubes
 
-import java.nio.IntBuffer
-
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 
 import scala.collection.mutable

@@ -122,15 +122,9 @@ class SceneController {
     this.rootGroup.add(new THREE.Mesh(geometry, meshMaterial));
   }
 
-  addIsosurface(isosurface): void {
+  addIsosurface(vertices): void {
     const geometry = new THREE.BufferGeometry();
-    geometry.addAttribute(
-      "position",
-      new THREE.BufferAttribute(new Float32Array(isosurface.vertices), 3),
-    );
-
-    //    geometry.addAttribute("position", new THREE.Float32BufferAttribute(isosurface.vertices, 3));
-    // geometry.addAttribute("normal", new THREE.Float32BufferAttribute(normals, 3));
+    geometry.addAttribute("position", new THREE.BufferAttribute(vertices, 3));
     geometry.computeVertexNormals();
 
     const meshMaterial = new THREE.MeshPhongMaterial();

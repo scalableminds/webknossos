@@ -52,8 +52,8 @@ class DatasetPositionView extends PureComponent<Props> {
     const segmentId = layer.cube.getDataValue(position, null, 1);
     const zoomStep = Math.floor(this.props.flycam.zoomStep);
 
-    const isosurface = await doWithToken(token =>
-      Request.sendJSONReceiveJSON(
+    const responseBuffer = await doWithToken(token =>
+      Request.sendJSONReceiveArraybuffer(
         `/data/datasets/Connectomics_Department/ROI2017_wkw/layers/segmentation/isosurface?token=${token}`,
         {
           data: {
@@ -66,8 +66,8 @@ class DatasetPositionView extends PureComponent<Props> {
         },
       ),
     );
-
-    SceneController.addIsosurface(isosurface);
+    const vertices = new Float32Array(responseBuffer);
+    SceneController.addIsosurface(vertices);
   };
 
   render() {

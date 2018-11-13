@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import java.io.{ByteArrayOutputStream, OutputStream}
+import java.nio.{Buffer, ByteBuffer, ByteOrder, FloatBuffer}
 import java.nio.file.Paths
 import java.util.Base64
 
@@ -321,7 +322,9 @@ class BinaryDataController @Inject()(
             isosurfaceRequest = IsosurfaceRequest(dataSource, segmentationLayer, request.body.cuboid(dataLayer), request.body.segmentId, request.body.mapping)
             vertices <- isosurfaceService.requestIsosurface(isosurfaceRequest)
           } yield {
-            Ok(Json.obj("vertices" -> vertices))
+            val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
+            responseBuffer.asFloatBuffer().put(vertices)
+            Ok(responseBuffer.array())
           }
         }
       }

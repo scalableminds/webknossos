@@ -11,6 +11,8 @@ case class Scale(x: Float, y: Float, z: Float){
   override def toString() = {
     s"($x, $y, $z)"
   }
+
+  def toVector: Vector3D = Vector3D(x, y, z)
 }
 
 object Scale{

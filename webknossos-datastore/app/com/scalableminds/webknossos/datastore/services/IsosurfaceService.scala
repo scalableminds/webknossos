@@ -18,13 +18,13 @@ import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 
 case class IsosurfaceRequest(
-                                     dataSource: DataSource,
-                                     dataLayer: SegmentationLayer,
-                                     cuboid: Cuboid,
-                                     segmentId: Long,
-                                     voxelDimensions: Point3D,
-                                     mapping: Option[String] = None
-                                    )
+                              dataSource: DataSource,
+                              dataLayer: SegmentationLayer,
+                              cuboid: Cuboid,
+                              segmentId: Long,
+                              voxelDimensions: Point3D,
+                              mapping: Option[String] = None
+                            )
 
 class IsosurfaceActor(val dataServicesHolder: DataServicesHolder) extends Actor {
 
@@ -48,7 +48,7 @@ class IsosurfaceActor(val dataServicesHolder: DataServicesHolder) extends Actor 
 
   private def generateIsosurfaceImpl[T:ClassTag, B <: Buffer](request: IsosurfaceRequest, typedBufferFn: ByteBuffer => B, copyFn: (B, Array[T]) => Unit): Fox[Array[Float]] = {
 
-    def applyMapping[T:ClassTag](data: Array[T]): Fox[Array[T]] = {
+    def applyMapping(data: Array[T]): Fox[Array[T]] = {
       request.mapping match {
         case Some(mappingName) =>
           mappingService.applyMapping(DataServiceMappingRequest(request.dataSource, request.dataLayer, mappingName), data)
@@ -76,7 +76,7 @@ class IsosurfaceActor(val dataServicesHolder: DataServicesHolder) extends Actor 
     for {
       data <- binaryDataService.handleDataRequest(dataRequest)
       typedData = convertData(data)
-      mappedData <- applyMapping[T](typedData)
+      mappedData <- applyMapping(typedData)
       vertices = MarchingCubes.marchingCubes[T](mappedData, dimensions, boundingBox, request.segmentId.asInstanceOf[T], request.voxelDimensions, offset, scale)
     } yield {
       vertices

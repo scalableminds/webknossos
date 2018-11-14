@@ -19,12 +19,12 @@ class MappingService(dataBaseDir: Path, maxCacheSize: Int) extends FoxImplicits 
   }
 
   def applyMapping[T:ClassTag](request: DataServiceMappingRequest, data: Array[T]): Fox[Array[T]] = {
-    println(classTag[T].runtimeClass.getName)
     for {
       rawMapping <- handleMappingRequest(request)
       mapping <- MappingParser.parse[T](rawMapping)
     } yield {
-      data.map(mapping.mapping.withDefault(identity).apply).toArray
+      // data.map(mapping.mapping.withDefault(identity).apply)
+      data
     }
   }
 }

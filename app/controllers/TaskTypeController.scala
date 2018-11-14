@@ -29,7 +29,8 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
     ((__ \ 'summary).read[String](minLength[String](2) or maxLength[String](50)) and
       (__ \ 'description).read[String] and
       (__ \ 'teamId).read[String] (ObjectId.stringObjectIdReads("teamId")) and
-      (__ \ 'settings).read[AnnotationSettings]) (taskTypeService.fromForm _)
+      (__ \ 'settings).read[AnnotationSettings] and
+      (__ \ 'recommendedConfiguration).readNullable[JsValue]) (taskTypeService.fromForm _)
 
   def create = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(taskTypePublicReads) { taskType =>

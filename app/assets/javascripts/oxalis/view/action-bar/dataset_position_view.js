@@ -47,21 +47,30 @@ class DatasetPositionView extends PureComponent<Props> {
   };
 
   loadIsosurface = async () => {
+    const voxelDimensions = [2, 2, 2];
+    const cubeSize = 256;
     const position = V3.floor(getPosition(this.props.flycam));
     const layer = Model.getSegmentationLayer();
     const segmentId = layer.cube.getDataValue(position, null, 1);
     const zoomStep = Math.floor(this.props.flycam.zoomStep);
+    const offset = (cubeSize << zoomStep) / 2;
 
     const responseBuffer = await doWithToken(token =>
       Request.sendJSONReceiveArraybuffer(
         `/data/datasets/Connectomics_Department/ROI2017_wkw/layers/segmentation/isosurface?token=${token}`,
         {
           data: {
-            cubeSize: 256,
-            mapping: layer.activeMapping,
-            position: [position[0] - 128, position[1] - 128, position[2] - 128],
+            // same as with regular data requests
+            position: [position[0] - offset, position[1] - offset, position[2] - offset],
+            cubeSize,
             zoomStep,
+
+            // segment to build isosurface for
             segmentId,
+            // name of mapping to apply before building isosurface (optional)
+            mapping: layer.activeMapping,
+            // "size" of each voxel (i.e., only every nth voxel is considered in each dimension)
+            voxelDimensions,
           },
         },
       ),

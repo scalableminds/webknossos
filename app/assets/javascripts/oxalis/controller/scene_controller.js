@@ -119,7 +119,7 @@ class SceneController {
     geometry.computeVertexNormals();
 
     const meshMaterial = new THREE.MeshNormalMaterial();
-    this.rootGroup.add(new THREE.Mesh(geometry, meshMaterial));
+    this.scene.add(new THREE.Mesh(geometry, meshMaterial));
   }
 
   addIsosurface(vertices): void {
@@ -128,7 +128,7 @@ class SceneController {
     geometry.computeVertexNormals();
 
     const meshMaterial = new THREE.MeshPhongMaterial();
-    this.rootGroup.add(new THREE.Mesh(geometry, meshMaterial));
+    this.scene.add(new THREE.Mesh(geometry, meshMaterial));
   }
 
   createMeshes(): void {

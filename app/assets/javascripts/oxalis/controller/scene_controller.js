@@ -86,7 +86,7 @@ class SceneController {
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.rootGroup);
 
-    this.scene.add(new THREE.DirectionalLight());
+    this.rootGroup.add(new THREE.DirectionalLight());
 
     this.setupDebuggingMethods();
   }
@@ -123,9 +123,17 @@ class SceneController {
   }
 
   addIsosurface(vertices): void {
-    const geometry = new THREE.BufferGeometry();
+    let geometry = new THREE.BufferGeometry();
     geometry.addAttribute("position", new THREE.BufferAttribute(vertices, 3));
+
+    // convert to normal (unbuffered) geometry to merge vertices
+    geometry = new THREE.Geometry().fromBufferGeometry(geometry);
+    geometry.mergeVertices();
     geometry.computeVertexNormals();
+    geometry.computeFaceNormals();
+
+    // and back to a BufferGeometry
+    geometry = new THREE.BufferGeometry().fromGeometry(geometry);
 
     const meshMaterial = new THREE.MeshPhongMaterial();
     this.scene.add(new THREE.Mesh(geometry, meshMaterial));

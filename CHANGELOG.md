@@ -23,7 +23,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Fixed a permission issue in the try setup
 - Fixed a bug where the guessed bounding box for datasets that do not start at (0,0,0) was too large [#3437](https://github.com/scalableminds/webknossos/pull/3437)
 - Fixed a bug where dataset list refresh failed when datasets for non-existing organizations were reported. [#3438](https://github.com/scalableminds/webknossos/pull/3438)
-- Fixed a bug where the form values when editing TaskTypes were missing [#3451](https://github.com/scalableminds/webknossos/pull/3451)
+- Fixed a bug where the form values when editing TaskTypes were missing. [#3451](https://github.com/scalableminds/webknossos/pull/3451)
+- Fixed a bug which caused RGB data to not render correctly. [#3455](https://github.com/scalableminds/webknossos/pull/3455)
 
 ### Removed
 

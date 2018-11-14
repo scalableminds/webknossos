@@ -49,6 +49,7 @@ case class WebKnossosIsosurfaceRequest(
                                         zoomStep: Int,
                                         cubeSize: Int,
                                         segmentId: Long,
+                                        voxelDimensions: Point3D,
                                         mapping: Option[String] = None
                                       ) {
   def cuboid(dataLayer: DataLayer) = Cuboid(

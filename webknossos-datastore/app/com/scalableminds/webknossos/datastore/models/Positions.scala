@@ -23,6 +23,8 @@ class VoxelPosition(
   def move(dx: Int, dy: Int, dz: Int) =
     new VoxelPosition(globalX + dx, globalY + dy, globalZ + dz, resolution)
 
+  override def toString = s"($globalX, $globalY, $globalZ) / $resolution"
+
   override def equals(obj: scala.Any): Boolean = {
     obj match {
       case other: VoxelPosition =>

@@ -157,6 +157,7 @@ tracing.notFound=Tracing couldn’t be found
 
 annotation.create.failed=Failed to create annotation. This is likely because you are not a member of a team that has access to the dataset.
 annotation.notFound=Annotation couldn’t be found
+annotation.notFound.considerLoggingIn=Annotation couldn’t be found. If the annotation is not public, you need to log in to see it.
 annotation.invalid=Invalid annotation
 annotation.finished=Annotation is archived
 annotation.allFinished=All annotations are archived

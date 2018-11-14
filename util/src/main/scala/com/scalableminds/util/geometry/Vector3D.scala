@@ -40,6 +40,10 @@ case class Vector3D(x: Double = 0, y: Double = 0, z: Double = 0) {
 
   def *:(o: Double) = this.*(o)
 
+  def *(o: Vector3D) = Vector3D(x * o.x, y * o.y, z * o.z)
+
+  def /(o: Vector3D) = Vector3D(x / o.x, y / o.y, z / o.z)
+
   /**
    * Transforms this vector using a transformation matrix
    */

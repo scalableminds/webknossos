@@ -5,16 +5,16 @@ import akka.pattern.{AskTimeoutException, ask, pipe}
 import akka.routing.RoundRobinPool
 import akka.util.Timeout
 import com.google.inject.Inject
-import com.scalableminds.util.geometry.{BoundingBox, Point3D}
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.services.mcubes.MarchingCubes
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, ElementClass, SegmentationLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, ElementClass, SegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceDataRequest, DataServiceMappingRequest, DataServiceRequestSettings}
-import net.liftweb.common.{Box, Failure, Full}
+import net.liftweb.common.{Box, Failure}
 import java.nio._
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 
 case class IsosurfaceRequest(
@@ -22,6 +22,7 @@ case class IsosurfaceRequest(
                                      dataLayer: SegmentationLayer,
                                      cuboid: Cuboid,
                                      segmentId: Long,
+                                     voxelDimensions: Point3D,
                                      mapping: Option[String] = None
                                     )
 
@@ -69,14 +70,14 @@ class IsosurfaceActor(val dataServicesHolder: DataServicesHolder) extends Actor 
     val dimensions = Point3D(request.cuboid.width, request.cuboid.height, request.cuboid.depth)
     val boundingBox = BoundingBox(Point3D(0, 0, 0), request.cuboid.width, request.cuboid.height, request.cuboid.depth)
 
-    val offset = Point3D(request.cuboid.topLeft.globalX,request.cuboid.topLeft.globalY,request.cuboid.topLeft.globalZ)
-    val scale = request.cuboid.topLeft.resolution
+    val offset = Vector3D(request.cuboid.topLeft.globalX,request.cuboid.topLeft.globalY,request.cuboid.topLeft.globalZ) / Vector3D(request.cuboid.topLeft.resolution)
+    val scale = Vector3D(request.cuboid.topLeft.resolution) * request.dataSource.scale.toVector
 
     for {
       data <- binaryDataService.handleDataRequest(dataRequest)
       typedData = convertData(data)
       mappedData <- applyMapping[T](typedData)
-      vertices = MarchingCubes.marchingCubes[T](mappedData, dimensions, boundingBox, request.segmentId.toInt, offset, scale)
+      vertices = MarchingCubes.marchingCubes[T](mappedData, dimensions, boundingBox, request.segmentId.asInstanceOf[T], request.voxelDimensions, offset, scale)
     } yield {
       vertices
     }

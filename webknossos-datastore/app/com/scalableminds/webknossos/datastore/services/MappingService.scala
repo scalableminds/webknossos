@@ -18,13 +18,12 @@ class MappingService(dataBaseDir: Path, maxCacheSize: Int) extends FoxImplicits 
     request.dataLayer.mappingProvider.load(readInstruction)
   }
 
-  def applyMapping[T:ClassTag](request: DataServiceMappingRequest, data: Array[T]): Fox[Array[T]] = {
-    println(classTag[T].runtimeClass.getName)
+  def applyMapping[T:ClassTag](request: DataServiceMappingRequest, data: Array[T], fromLongFn: Long => T): Fox[Array[T]] = {
     for {
       rawMapping <- handleMappingRequest(request)
-      mapping <- MappingParser.parse[T](rawMapping)
+      mapping <- MappingParser.parse[T](rawMapping, fromLongFn)
     } yield {
-      data.map(mapping.mapping.withDefault(identity).apply).toArray
+      data.map(mapping.mapping.withDefault(identity).apply)
     }
   }
 }

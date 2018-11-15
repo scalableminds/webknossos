@@ -14,9 +14,9 @@ import scala.reflect.ClassTag
 
 object MappingParser  extends LazyLogging {
 
-  def parse[T](r: Reader): Box[DataLayerMapping[T]] = {
+  def parse[T](r: Reader, fromLongFn: Long => T): Box[DataLayerMapping[T]] = {
     try {
-      parseImpl(r)
+      parseImpl(r, fromLongFn)
     } catch {
       case e: JsonParseException =>
         logger.error(s"Parse exception while parsing mapping: ${e.getMessage}.")
@@ -29,13 +29,13 @@ object MappingParser  extends LazyLogging {
     }
   }
 
-  def parse[T](p: Path): Box[DataLayerMapping[T]] =
-    parse(new FileReader(new File(p.toString)))
+  def parse[T](p: Path, fromLongFn: Long => T): Box[DataLayerMapping[T]] =
+    parse(new FileReader(new File(p.toString)), fromLongFn)
 
-  def parse[T](a: Array[Byte]): Box[DataLayerMapping[T]] =
-    parse(new InputStreamReader(new ByteArrayInputStream(a)))
+  def parse[T](a: Array[Byte], fromLongFn: Long => T): Box[DataLayerMapping[T]] =
+    parse(new InputStreamReader(new ByteArrayInputStream(a)), fromLongFn)
 
-  private def parseImpl[T](r: Reader): Box[DataLayerMapping[T]] = {
+  private def parseImpl[T](r: Reader, fromLongFn: Long => T): Box[DataLayerMapping[T]] = {
     val jsonReader = new JsonReader(r)
     var nameOpt: Option[String] = None
     var classesOpt: Option[Map[T, T]] = None
@@ -46,7 +46,7 @@ object MappingParser  extends LazyLogging {
         case "name" =>
           nameOpt = Some(jsonReader.nextString())
         case "classes" =>
-          classesOpt = Some(parseClasses(jsonReader))
+          classesOpt = Some(parseClasses(jsonReader, fromLongFn))
         case _ =>
           jsonReader.skipValue()
       }
@@ -61,7 +61,7 @@ object MappingParser  extends LazyLogging {
     }
   }
 
-  private def parseClasses[T](jsonReader: JsonReader): Map[T, T] = {
+  private def parseClasses[T](jsonReader: JsonReader, fromLongFn: Long => T): Map[T, T] = {
     val mapping = mutable.HashMap[T, T]()
 
     jsonReader.beginArray()
@@ -71,7 +71,7 @@ object MappingParser  extends LazyLogging {
       var firstIdOpt: Option[T] = None
 
       while (jsonReader.hasNext()) {
-        val currentId = jsonReader.nextLong().asInstanceOf[T]
+        val currentId = fromLongFn(jsonReader.nextLong())
         firstIdOpt match {
           case Some(firstId) =>
             mapping.put(currentId, firstId)

@@ -320,7 +320,7 @@ class BinaryDataController @Inject()(
             (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
             segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Messages("dataLayer.mustBeSegmentation")
             isosurfaceRequest = IsosurfaceRequest(dataSource, segmentationLayer, request.body.cuboid(dataLayer), request.body.segmentId, request.body.voxelDimensions, request.body.mapping)
-            vertices <- isosurfaceService.requestIsosurface(isosurfaceRequest)
+            vertices <- isosurfaceService.requestIsosurfaceViaActor(isosurfaceRequest)
           } yield {
             val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
             responseBuffer.asFloatBuffer().put(vertices)

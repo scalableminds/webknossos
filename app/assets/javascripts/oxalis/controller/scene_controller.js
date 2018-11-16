@@ -95,7 +95,7 @@ class SceneController {
     this.scene.add(this.rootGroup);
     this.scene.add(this.isosurfacesGroup);
 
-    this.scene.add(new THREE.DirectionalLight());
+    this.rootGroup.add(new THREE.DirectionalLight());
     this.addLights();
 
     this.setupDebuggingMethods();
@@ -133,9 +133,17 @@ class SceneController {
   }
 
   addIsosurface(vertices, segmentationId): void {
-    const geometry = new THREE.BufferGeometry();
+    let geometry = new THREE.BufferGeometry();
     geometry.addAttribute("position", new THREE.BufferAttribute(vertices, 3));
+
+    // convert to normal (unbuffered) geometry to merge vertices
+    geometry = new THREE.Geometry().fromBufferGeometry(geometry);
+    geometry.mergeVertices();
     geometry.computeVertexNormals();
+    geometry.computeFaceNormals();
+
+    // and back to a BufferGeometry
+    geometry = new THREE.BufferGeometry().fromGeometry(geometry);
 
     // const [h, s, l] = convertCellIdToHSLA(segmentationId);
     // const color = new THREE.Color().setHSL(h, s, l);

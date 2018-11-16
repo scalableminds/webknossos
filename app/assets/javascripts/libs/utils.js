@@ -1,10 +1,12 @@
 // @flow
-import _ from "lodash";
-import type { Vector3, Vector4, Vector6, BoundingBoxType } from "oxalis/constants";
 import Maybe from "data.maybe";
-import window, { document, location } from "libs/window";
+import _ from "lodash";
 import naturalSort from "javascript-natural-sort";
+
 import type { APIUser } from "admin/api_flow_types";
+import type { BoundingBoxObject } from "oxalis/store";
+import type { Vector3, Vector4, Vector6, BoundingBoxType } from "oxalis/constants";
+import window, { document, location } from "libs/window";
 
 export type Comparator<T> = (T, T) => -1 | 0 | 1;
 type UrlParams = { [key: string]: string };
@@ -127,6 +129,24 @@ export function computeArrayFromBoundingBox(bb: ?BoundingBoxType): ?Vector6 {
         bb.max[2] - bb.min[2],
       ]
     : null;
+}
+
+export function aggregateBoundingBox(boundingBoxes: Array<BoundingBoxObject>): BoundingBoxType {
+  const allCoordinates = [0, 1, 2].map(index =>
+    boundingBoxes.map(box => box.topLeft[index]).concat(
+      boundingBoxes.map(box => {
+        const bottomRight = [
+          box.topLeft[0] + box.width,
+          box.topLeft[1] + box.height,
+          box.topLeft[2] + box.depth,
+        ];
+        return bottomRight[index];
+      }),
+    ),
+  );
+  const min = (([0, 1, 2].map(index => Math.min(...allCoordinates[index])): any): Vector3);
+  const max = (([0, 1, 2].map(index => Math.max(...allCoordinates[index])): any): Vector3);
+  return { min, max };
 }
 
 export function compareBy<T>(
@@ -515,5 +535,33 @@ export async function promiseAllWithErrors<T>(
       }
     },
     { successes: [], errors: [] },
+  );
+}
+
+// This function will chunk an array of elements by time (or some other numeric value).
+// Only subsequent elements are potentially put into the same chunk.
+// The mapToTimeFn should be a function that maps from an element to a number.
+// It'll return an array of chunks.
+export function chunkIntoTimeWindows<T>(
+  elements: Array<T>,
+  mapToTimeFn: T => number,
+  chunkByXMinutes: number,
+): Array<Array<T>> {
+  let chunkIndex = 0;
+  let chunkTime = 0;
+  return _.reduce(
+    elements,
+    (chunks: Array<Array<T>>, element: T, index: number) => {
+      const elementTime = mapToTimeFn(element);
+      if (index === 0) chunkTime = elementTime;
+      if (Math.abs(chunkTime - elementTime) > chunkByXMinutes * 60 * 1000) {
+        chunkIndex++;
+        chunkTime = elementTime;
+      }
+      if (chunks[chunkIndex] == null) chunks.push([]);
+      chunks[chunkIndex].push(element);
+      return chunks;
+    },
+    [],
   );
 }

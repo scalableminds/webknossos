@@ -1,6 +1,12 @@
 // @flow
-import { _all, _throttle, call, select, take } from "oxalis/model/sagas/effect-generators";
-import type { Saga } from "oxalis/model/sagas/effect-generators";
+import {
+  type Saga,
+  _all,
+  _throttle,
+  call,
+  select,
+  take,
+} from "oxalis/model/sagas/effect-generators";
 import { updateUserConfiguration, updateDatasetConfiguration } from "admin/admin_rest_api";
 
 function* pushUserSettingsAsync(): Saga<void> {

@@ -1,7 +1,8 @@
 // @flow
-import * as React from "react";
 import { Alert, Modal, Button, Row, Col } from "antd";
 import Markdown from "react-remarkable";
+import * as React from "react";
+
 import InputComponent from "oxalis/view/components/input_component";
 
 function getFirstLine(comment: string) {

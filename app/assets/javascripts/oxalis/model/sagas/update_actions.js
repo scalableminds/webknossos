@@ -1,4 +1,6 @@
 // @flow
+import type { SendBucketInfo } from "oxalis/model/bucket_data_handling/wkstore_adapter";
+import type { Vector3, BoundingBoxType } from "oxalis/constants";
 import type {
   VolumeTracing,
   BranchPoint,
@@ -8,8 +10,6 @@ import type {
   BoundingBoxObject,
   TreeGroup,
 } from "oxalis/store";
-import type { Vector3, BoundingBoxType } from "oxalis/constants";
-import type { SendBucketInfo } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reducer_helpers";
 
 export type NodeWithTreeId = { treeId: number } & Node;
@@ -140,6 +140,12 @@ export type UpdateAction =
   | RevertToVersionUpdateAction
   | UpdateTreeGroupsUpdateAction;
 
+// This update action is only created in the frontend for display purposes
+type CreateTracingUpdateAction = {|
+  name: "createTracing",
+  value: {||},
+|};
+
 type AddServerValuesFn = <T>(
   T,
 ) => {
@@ -165,7 +171,8 @@ export type ServerUpdateAction =
   | AsServerAction<UpdateBucketUpdateAction>
   | AsServerAction<ToggleTreeUpdateAction>
   | AsServerAction<RevertToVersionUpdateAction>
-  | AsServerAction<UpdateTreeGroupsUpdateAction>;
+  | AsServerAction<UpdateTreeGroupsUpdateAction>
+  | AsServerAction<CreateTracingUpdateAction>;
 
 export function createTree(tree: Tree): UpdateTreeUpdateAction {
   return {
@@ -342,5 +349,12 @@ export function revertToVersion(version: number): RevertToVersionUpdateAction {
     value: {
       sourceVersion: version,
     },
+  };
+}
+
+export function serverCreateTracing(timestamp: number) {
+  return {
+    name: "createTracing",
+    value: { actionTimestamp: timestamp },
   };
 }

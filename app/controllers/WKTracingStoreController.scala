@@ -17,9 +17,9 @@ class WKTracingStoreController @Inject()(tracingStoreService: TracingStoreServic
                                          wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                                          timeSpanService: TimeSpanService,
                                          annotationDAO: AnnotationDAO,
-                                         sil: Silhouette[WkEnv]
-                                        )(implicit ec: ExecutionContext)
-  extends Controller with FoxImplicits {
+                                         sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
+    extends Controller
+    with FoxImplicits {
 
   val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
@@ -43,19 +43,19 @@ class WKTracingStoreController @Inject()(tracingStoreService: TracingStoreServic
         userTokenOpt = (request.body \ "userToken").asOpt[String]
         _ <- statisticsOpt match {
           case Some(statistics) => annotationDAO.updateStatistics(annotation._id, statistics)(GlobalAccessContext)
-          case None => Fox.successful(())
+          case None             => Fox.successful(())
         }
         _ <- annotationDAO.updateModified(annotation._id, System.currentTimeMillis)(GlobalAccessContext)
         userBox <- bearerTokenService.userForTokenOpt(userTokenOpt)(GlobalAccessContext).futureBox
-        _ <- Fox.runOptional(userBox)(user => timeSpanService.logUserInteraction(timestamps, user, annotation)(GlobalAccessContext))
+        _ <- Fox.runOptional(userBox)(user =>
+          timeSpanService.logUserInteraction(timestamps, user, annotation)(GlobalAccessContext))
       } yield {
         Ok
       }
     }
   }
 
-  private def ensureAnnotationNotFinished(annotation: Annotation) = {
+  private def ensureAnnotationNotFinished(annotation: Annotation) =
     if (annotation.state == Finished) Fox.failure("annotation already finshed")
     else Fox.successful(())
-  }
 }

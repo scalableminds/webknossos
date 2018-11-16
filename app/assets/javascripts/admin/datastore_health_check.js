@@ -1,11 +1,10 @@
 // @flow
-import messages from "messages";
-// We can't import getDataStoresCached directly since this is a cyclic reference.
-// The access only works because it is lazy and wrapped by the RestAPI object
-import * as RestAPI from "admin/admin_rest_api";
-import Request from "libs/request";
-import Toast from "libs/toast";
 import _ from "lodash";
+
+import Request from "libs/request";
+import * as RestAPI from "admin/admin_rest_api";
+import Toast from "libs/toast";
+import messages from "messages";
 
 // Create a throttled function which depends on its arguments.
 // That way, each datastore is checked for health in a throttled and isolated manner
@@ -21,24 +20,28 @@ const memoizedThrottle = (func, wait = 0, options = {}): Function => {
 export const pingDataStoreIfAppropriate = memoizedThrottle(async (requestedUrl: string): Promise<
   *,
 > => {
-  const [datastores, tracingstore] = await Promise.all([
+  const [datastores, tracingstore, isInMaintenance] = await Promise.all([
     RestAPI.getDataStoresCached(),
     RestAPI.getTracingStoreCached(),
+    RestAPI.isInMaintenance(),
   ]);
   const stores = datastores.concat(tracingstore);
-
-  const usedDataStore = stores.find(ds => requestedUrl.indexOf(ds.url) > -1);
-  if (usedDataStore != null) {
-    const { url } = usedDataStore;
-    const healthEndpoint = `${url}/data/health`;
-    Request.triggerRequest(healthEndpoint, {
-      doNotInvestigate: true,
-      mode: "cors",
-      timeout: 5000,
-    }).then(
-      () => checkVersionMismatch(url),
-      () => Toast.warning(messages["datastore.health"]({ url })),
-    );
+  if (isInMaintenance) {
+    Toast.warning(messages.planned_maintenance);
+  } else {
+    const usedDataStore = stores.find(ds => requestedUrl.indexOf(ds.url) > -1);
+    if (usedDataStore != null) {
+      const { url } = usedDataStore;
+      const healthEndpoint = `${url}/data/health`;
+      Request.triggerRequest(healthEndpoint, {
+        doNotInvestigate: true,
+        mode: "cors",
+        timeout: 5000,
+      }).then(
+        () => checkVersionMismatch(url),
+        () => Toast.warning(messages["datastore.health"]({ url })),
+      );
+    }
   }
 }, 5000);
 

@@ -1,15 +1,15 @@
 // @flow
-import _ from "lodash";
-import React from "react";
 import { Form, Input, Button, Card, Upload, Icon, Spin, Progress, Divider } from "antd";
+import React from "react";
+import _ from "lodash";
+
+import type { APITask } from "admin/api_flow_types";
+import type { BoundingBoxObject } from "oxalis/store";
+import type { Vector3 } from "oxalis/constants";
 import { createTasks } from "admin/admin_rest_api";
 import { handleTaskCreationResponse } from "admin/task/task_create_form_view";
 import Messages from "messages";
 import Toast from "libs/toast";
-
-import type { APITask } from "admin/api_flow_types";
-import type { Vector3 } from "oxalis/constants";
-import type { BoundingBoxObject } from "oxalis/store";
 
 const FormItem = Form.Item;
 const TextArea = Input.TextArea;

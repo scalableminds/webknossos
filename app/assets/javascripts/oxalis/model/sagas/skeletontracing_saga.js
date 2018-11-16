@@ -2,64 +2,64 @@
  * skeletontracing_sagas.js
  * @flow
  */
-import _ from "lodash";
 import { Modal } from "antd";
-import * as Utils from "libs/utils";
-import Toast from "libs/toast";
-import messages from "messages";
-import Store from "oxalis/store";
+import _ from "lodash";
+
+import type { Action } from "oxalis/model/actions/actions";
 import {
-  fork,
-  put,
-  take,
+  type Saga,
   _take,
   _takeEvery,
-  select,
-  race,
   call,
+  fork,
+  put,
+  race,
+  select,
+  take,
 } from "oxalis/model/sagas/effect-generators";
-import type { Saga } from "oxalis/model/sagas/effect-generators";
+import {
+  type UpdateAction,
+  createEdge,
+  createNode,
+  createTree,
+  deleteEdge,
+  deleteNode,
+  deleteTree,
+  toggleTree,
+  updateNode,
+  updateSkeletonTracing,
+  updateTree,
+  updateTreeGroups,
+} from "oxalis/model/sagas/update_actions";
+import { V3 } from "libs/mjs";
 import {
   deleteBranchPointAction,
   setTreeNameAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import {
-  createTree,
-  deleteTree,
-  updateTree,
-  toggleTree,
-  createNode,
-  deleteNode,
-  updateNode,
-  createEdge,
-  deleteEdge,
-  updateSkeletonTracing,
-  updateTreeGroups,
-} from "oxalis/model/sagas/update_actions";
-import type { Action } from "oxalis/model/actions/actions";
-import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import { generateTreeName } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import {
   getActiveNode,
   getBranchPoints,
   enforceSkeletonTracing,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import { V3 } from "libs/mjs";
-import { generateTreeName } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import type {
-  SkeletonTracing,
-  Node,
-  Tree,
-  TreeMap,
-  NodeMap,
-  Flycam,
-  OxalisState,
-} from "oxalis/store";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import api from "oxalis/api/internal_api";
+import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
+import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import EdgeCollection, { diffEdgeCollections } from "oxalis/model/edge_collection";
-import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
+import Store, {
+  type Flycam,
+  type Node,
+  type NodeMap,
+  type OxalisState,
+  type SkeletonTracing,
+  type Tree,
+  type TreeMap,
+} from "oxalis/store";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
+import api from "oxalis/api/internal_api";
+import messages from "messages";
 
 function* centerActiveNode(action: Action): Saga<void> {
   getActiveNode(yield* select((state: OxalisState) => enforceSkeletonTracing(state.tracing))).map(
@@ -210,6 +210,19 @@ function* diffEdges(
   }
 }
 
+function updateTracingPredicate(
+  prevSkeletonTracing: SkeletonTracing,
+  skeletonTracing: SkeletonTracing,
+  prevFlycam: Flycam,
+  flycam: Flycam,
+): boolean {
+  return (
+    !_.isEqual(prevSkeletonTracing.userBoundingBox, skeletonTracing.userBoundingBox) ||
+    prevSkeletonTracing.activeNodeId !== skeletonTracing.activeNodeId ||
+    prevFlycam !== flycam
+  );
+}
+
 function updateTreePredicate(prevTree: Tree, tree: Tree): boolean {
   return (
     !_.isEqual(prevTree.branchPoints, tree.branchPoints) ||
@@ -274,6 +287,7 @@ export function cachedDiffTrees(prevTrees: TreeMap, trees: TreeMap): Array<Updat
 export function* diffSkeletonTracing(
   prevSkeletonTracing: SkeletonTracing,
   skeletonTracing: SkeletonTracing,
+  prevFlycam: Flycam,
   flycam: Flycam,
 ): Generator<UpdateAction, void, void> {
   if (prevSkeletonTracing !== skeletonTracing) {
@@ -282,10 +296,12 @@ export function* diffSkeletonTracing(
       yield updateTreeGroups(skeletonTracing.treeGroups);
     }
   }
-  yield updateSkeletonTracing(
-    skeletonTracing,
-    V3.floor(getPosition(flycam)),
-    getRotation(flycam),
-    flycam.zoomStep,
-  );
+  if (updateTracingPredicate(prevSkeletonTracing, skeletonTracing, prevFlycam, flycam)) {
+    yield updateSkeletonTracing(
+      skeletonTracing,
+      V3.floor(getPosition(flycam)),
+      getRotation(flycam),
+      flycam.zoomStep,
+    );
+  }
 }

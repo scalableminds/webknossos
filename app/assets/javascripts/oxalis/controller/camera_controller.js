@@ -3,21 +3,26 @@
  * @flow
  */
 
-import * as THREE from "three";
 import * as React from "react";
-import _ from "lodash";
-import api from "oxalis/api/internal_api";
-import constants, { OrthoViews, OrthoViewValuesWithoutTDView } from "oxalis/constants";
-import Dimensions from "oxalis/model/dimensions";
-import Store from "oxalis/store";
+import * as THREE from "three";
 import TWEEN from "tween.js";
-import type { CameraData } from "oxalis/store";
-import type { Vector3, OrthoViewMap, OrthoView } from "oxalis/constants";
-import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+import _ from "lodash";
+
 import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { setTDCameraAction } from "oxalis/model/actions/view_mode_actions";
 import { voxelToNm, getBaseVoxel } from "oxalis/model/scaleinfo";
+import Dimensions from "oxalis/model/dimensions";
+import Store, { type CameraData } from "oxalis/store";
+import api from "oxalis/api/internal_api";
+import constants, {
+  type OrthoView,
+  type OrthoViewMap,
+  OrthoViewValuesWithoutTDView,
+  OrthoViews,
+  type Vector3,
+} from "oxalis/constants";
 
 type Props = {
   cameras: OrthoViewMap<THREE.OrthographicCamera>,

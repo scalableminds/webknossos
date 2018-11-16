@@ -2,38 +2,45 @@
  * volumetracing_saga.js
  * @flow
  */
+import _ from "lodash";
+
 import {
-  call,
-  select,
-  put,
-  take,
-  _take,
-  race,
-  _takeEvery,
-  fork,
-} from "oxalis/model/sagas/effect-generators";
-import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
-import type { Saga } from "oxalis/model/sagas/effect-generators";
-import {
-  updateDirectionAction,
+  type CopySegmentationLayerAction,
   resetContourAction,
+  updateDirectionAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import type { CopySegmentationLayerAction } from "oxalis/model/actions/volumetracing_actions";
-import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
-import Dimensions from "oxalis/model/dimensions";
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import {
+  type Saga,
+  _take,
+  _takeEvery,
+  call,
+  fork,
+  put,
+  race,
+  select,
+  take,
+} from "oxalis/model/sagas/effect-generators";
+import { type UpdateAction, updateVolumeTracing } from "oxalis/model/sagas/update_actions";
+import { V3 } from "libs/mjs";
+import type { VolumeTracing, Flycam } from "oxalis/store";
 import {
   enforceVolumeTracing,
   isVolumeTracingDisallowed,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { updateVolumeTracing } from "oxalis/model/sagas/update_actions";
-import { V3 } from "libs/mjs";
-import Toast from "libs/toast";
+import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
+import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import Constants, {
+  type BoundingBoxType,
+  type ContourMode,
+  ContourModeEnum,
+  type OrthoView,
+  type VolumeTool,
+  VolumeToolEnum,
+} from "oxalis/constants";
+import Dimensions from "oxalis/model/dimensions";
 import Model from "oxalis/model";
-import Constants, { VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import type { OrthoView, VolumeTool, ContourMode, BoundingBoxType } from "oxalis/constants";
-import type { VolumeTracing, Flycam } from "oxalis/store";
+import Toast from "libs/toast";
+import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import api from "oxalis/api/internal_api";
 
 export function* watchVolumeTracingAsync(): Saga<void> {
@@ -253,16 +260,32 @@ export function* disallowVolumeTracingWarning(): Saga<*> {
   }
 }
 
+function updateTracingPredicate(
+  prevVolumeTracing: VolumeTracing,
+  volumeTracing: VolumeTracing,
+  prevFlycam: Flycam,
+  flycam: Flycam,
+): boolean {
+  return (
+    !_.isEqual(prevVolumeTracing.userBoundingBox, volumeTracing.userBoundingBox) ||
+    prevVolumeTracing.activeCellId !== volumeTracing.activeCellId ||
+    prevVolumeTracing.maxCellId !== volumeTracing.maxCellId ||
+    prevFlycam !== flycam
+  );
+}
+
 export function* diffVolumeTracing(
   prevVolumeTracing: VolumeTracing,
   volumeTracing: VolumeTracing,
+  prevFlycam: Flycam,
   flycam: Flycam,
 ): Generator<UpdateAction, void, void> {
-  // no diffing happening here (yet) as for volume tracings there are only updateTracing actions so far
-  yield updateVolumeTracing(
-    volumeTracing,
-    V3.floor(getPosition(flycam)),
-    getRotation(flycam),
-    flycam.zoomStep,
-  );
+  if (updateTracingPredicate(prevVolumeTracing, volumeTracing, prevFlycam, flycam)) {
+    yield updateVolumeTracing(
+      volumeTracing,
+      V3.floor(getPosition(flycam)),
+      getRotation(flycam),
+      flycam.zoomStep,
+    );
+  }
 }

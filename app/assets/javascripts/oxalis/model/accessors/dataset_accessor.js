@@ -1,13 +1,13 @@
 // @flow
-import _ from "lodash";
-import messages from "messages";
-import ErrorHandling from "libs/error_handling";
-import constants, { Vector3Indicies, ModeValues } from "oxalis/constants";
-import type { APIDataset } from "admin/api_flow_types";
-import type { Vector3 } from "oxalis/constants";
-import type { Settings, DataLayerType } from "oxalis/store";
 import Maybe from "data.maybe";
+import _ from "lodash";
 import memoizeOne from "memoize-one";
+
+import type { APIDataset } from "admin/api_flow_types";
+import type { Settings, DataLayerType } from "oxalis/store";
+import ErrorHandling from "libs/error_handling";
+import constants, { ModeValues, type Vector3, Vector3Indicies } from "oxalis/constants";
+import messages from "messages";
 
 export function getResolutions(dataset: APIDataset): Vector3[] {
   // Different layers can have different resolutions. At the moment,

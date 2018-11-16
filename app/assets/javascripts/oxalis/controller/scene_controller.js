@@ -3,33 +3,42 @@
  * @flow
  */
 
-import _ from "lodash";
-import app from "app";
-import * as Utils from "libs/utils";
 import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
-import parseStlBuffer from "libs/parse_stl_buffer";
+import _ from "lodash";
+
 import { V3 } from "libs/mjs";
+import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import {
   getPosition,
   getPlaneScalingFactor,
   getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
-import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
-import Model from "oxalis/model";
-import Store from "oxalis/store";
+import { getRenderer } from "oxalis/controller/renderer";
+import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { getVoxelPerNM } from "oxalis/model/scaleinfo";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
+import ContourGeometry from "oxalis/geometries/contourgeometry";
+import Cube from "oxalis/geometries/cube";
+import Dimensions from "oxalis/model/dimensions";
+import Model from "oxalis/model";
 import Plane from "oxalis/geometries/plane";
 import Skeleton from "oxalis/geometries/skeleton";
-import Cube from "oxalis/geometries/cube";
-import ContourGeometry from "oxalis/geometries/contourgeometry";
-import Dimensions from "oxalis/model/dimensions";
-import { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView } from "oxalis/constants";
-import type { Vector3, OrthoView, OrthoViewMap, BoundingBoxType } from "oxalis/constants";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import { getRenderer } from "oxalis/controller/renderer";
-import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
-import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import Store from "oxalis/store";
+import * as Utils from "libs/utils";
+import app from "app";
+import constants, {
+  type BoundingBoxType,
+  type OrthoView,
+  type OrthoViewMap,
+  OrthoViewValues,
+  OrthoViewValuesWithoutTDView,
+  OrthoViews,
+  type Vector3,
+} from "oxalis/constants";
+import parseStlBuffer from "libs/parse_stl_buffer";
+import window from "libs/window";
 
 const CUBE_COLOR = 0x999999;
 
@@ -80,6 +89,31 @@ class SceneController {
     this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.dataSource.scale));
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.rootGroup);
+
+    this.setupDebuggingMethods();
+  }
+
+  setupDebuggingMethods() {
+    // These methods are attached to window, since we would run into circular import errors
+    // otherwise.
+    window.addBucketMesh = (position: Vector3, zoomStep: number, optColor?: string) => {
+      const bucketExtent = constants.BUCKET_WIDTH * 2 ** zoomStep;
+      const bucketSize = [bucketExtent, bucketExtent, bucketExtent];
+      const boxGeometry = new THREE.BoxGeometry(...bucketSize);
+      const edgesGeometry = new THREE.EdgesGeometry(boxGeometry);
+      const material = new THREE.LineBasicMaterial({
+        color: optColor || (zoomStep === 0 ? 0xff00ff : 0x00ffff),
+        linewidth: 1,
+      });
+      const cube = new THREE.LineSegments(edgesGeometry, material);
+      cube.position.x = position[0] + bucketSize[0] / 2;
+      cube.position.y = position[1] + bucketSize[1] / 2;
+      cube.position.z = position[2] + bucketSize[2] / 2;
+      this.rootNode.add(cube);
+      return cube;
+    };
+
+    window.removeBucketMesh = (mesh: THREE.LineSegments) => this.rootNode.remove(mesh);
   }
 
   addSTL(stlBuffer: ArrayBuffer): void {

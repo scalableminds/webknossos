@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(30);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(33);
 COMMIT TRANSACTION;
 
 CREATE TABLE webknossos.analytics(
@@ -115,6 +115,7 @@ CREATE TABLE webknossos.dataStores(
   name VARCHAR(256) PRIMARY KEY NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\.]+$'),
   url VARCHAR(512) UNIQUE NOT NULL CHECK (url ~* '^https?://[a-z0-9\.]+.*$'),
   key VARCHAR(1024) NOT NULL,
+  isScratch BOOLEAN NOT NULL DEFAULT false,
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   isForeign BOOLEAN NOT NULL DEFAULT false
 );
@@ -159,6 +160,7 @@ CREATE TABLE webknossos.taskTypes(
   settings_preferredMode webknossos.TASKTYPE_MODES DEFAULT 'orthogonal',
   settings_branchPointsAllowed BOOLEAN NOT NULL,
   settings_somaClickingAllowed BOOLEAN NOT NULL,
+  recommendedConfiguration JSONB,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
@@ -274,6 +276,11 @@ CREATE TABLE webknossos.tokens(
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
+
+CREATE TABLE webknossos.maintenance(
+  maintenanceExpirationTime TIMESTAMPTZ NOT NULL
+);
+INSERT INTO webknossos.maintenance(maintenanceExpirationTime) values('2000-01-01 00:00:00');
 
 
 

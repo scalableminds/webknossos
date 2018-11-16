@@ -1,8 +1,11 @@
 // @flow
 /* eslint-disable jsx-a11y/href-no-hash */
 import { Dropdown, Menu, Icon, Modal } from "antd";
-import React from "react";
 import { connect } from "react-redux";
+import React from "react";
+
+import type { APIUser, APITask, APIAnnotation } from "admin/api_flow_types";
+import type { OxalisState } from "oxalis/store";
 import { formatSeconds } from "libs/format_utils";
 import {
   getAnnotationsForTask,
@@ -11,12 +14,10 @@ import {
   resetAnnotation,
   deleteAnnotation,
 } from "admin/admin_rest_api";
-import Toast from "libs/toast";
-import messages from "messages";
-import TransferTaskModal from "dashboard/transfer_task_modal";
-import type { APIUser, APITask, APIAnnotation } from "admin/api_flow_types";
-import type { OxalisState } from "oxalis/store";
 import FormattedDate from "components/formatted_date";
+import Toast from "libs/toast";
+import TransferTaskModal from "dashboard/transfer_task_modal";
+import messages from "messages";
 
 const { Item } = Menu;
 const { confirm } = Modal;
@@ -113,41 +114,32 @@ class TaskAnnotationView extends React.PureComponent<Props & StateProps, State> 
           <a href={`/annotations/Task/${annotation.id}`}>{label}</a>
         </Item>
 
-        <Item key={`${annotation.id}-transfer`}>
-          <span
-            onClick={() =>
-              this.setState({ currentAnnotation: annotation, isTransferModalVisible: true })
-            }
-          >
-            <Icon type="team" />Transfer
-          </span>
+        <Item
+          key={`${annotation.id}-transfer`}
+          onClick={() =>
+            this.setState({ currentAnnotation: annotation, isTransferModalVisible: true })
+          }
+        >
+          <Icon type="team" />Transfer
         </Item>
         <Item key={`${annotation.id}-download`}>
           <a href={`/api/annotations/Task/${annotation.id}/download`}>
             <Icon type="download" />Download
           </a>
         </Item>
-        <Item key={`${annotation.id}-reset`}>
-          <span onClick={() => this.resetAnnotation(annotation)}>
-            <Icon type="rollback" />Reset
-          </span>
+        <Item key={`${annotation.id}-reset`} onClick={() => this.resetAnnotation(annotation)}>
+          <Icon type="rollback" />Reset
         </Item>
-        <Item key={`${annotation.id}-delete`}>
-          <span onClick={() => this.deleteAnnotation(annotation)}>
-            <Icon type="delete" />Reset and Cancel
-          </span>
+        <Item key={`${annotation.id}-delete`} onClick={() => this.deleteAnnotation(annotation)}>
+          <Icon type="delete" />Reset and Cancel
         </Item>
         {annotation.state === "Finished" ? (
-          <Item key={`${annotation.id}-reopen`}>
-            <span onClick={() => this.reOpenAnnotation(annotation)}>
-              <Icon type="folder-open" />Reopen
-            </span>
+          <Item key={`${annotation.id}-reopen`} onClick={() => this.reOpenAnnotation(annotation)}>
+            <Icon type="folder-open" />Reopen
           </Item>
         ) : (
-          <Item key={`${annotation.id}-finish`}>
-            <span onClick={() => this.finishAnnotation(annotation)}>
-              <Icon type="check-circle-o" />Finish
-            </span>
+          <Item key={`${annotation.id}-finish`} onClick={() => this.finishAnnotation(annotation)}>
+            <Icon type="check-circle-o" />Finish
           </Item>
         )}
       </Menu>

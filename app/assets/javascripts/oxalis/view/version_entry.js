@@ -1,9 +1,9 @@
 // @flow
-import _ from "lodash";
-import * as React from "react";
 import { Avatar, Button, List } from "antd";
-import FormattedDate from "components/formatted_date";
+import * as React from "react";
+import _ from "lodash";
 import classNames from "classnames";
+
 import type {
   ServerUpdateAction,
   CreateNodeUpdateAction,
@@ -12,6 +12,7 @@ import type {
   DeleteTreeUpdateAction,
   RevertToVersionUpdateAction,
 } from "oxalis/model/sagas/update_actions";
+import FormattedDate from "components/formatted_date";
 
 type Description = { description: string, type: string };
 
@@ -47,6 +48,10 @@ const descriptionFns = {
   updateBucket: (): Description => ({
     description: "Updated the segmentation.",
     type: "picture",
+  }),
+  createTracing: (): Description => ({
+    description: "Created the tracing.",
+    type: "rocket",
   }),
 };
 
@@ -85,6 +90,16 @@ function getDescriptionForBatch(actions: Array<ServerUpdateAction>): Description
     }
   }
 
+  // If more than one createNode update actions are part of one batch, that is not a tree merge or split
+  // an NML was uploaded.
+  const createNodeUAs = groupedUpdateActions.createNode;
+  if (createNodeUAs != null && createNodeUAs.length > 1) {
+    return {
+      description: `Uploaded an NML with ${createNodeUAs.length} nodes.`,
+      type: "upload",
+    };
+  }
+
   const deleteTreeUAs = groupedUpdateActions.deleteTree;
   if (deleteTreeUAs != null) {
     return getDescriptionForSpecificBatch(deleteTreeUAs, "deleteTree");
@@ -100,7 +115,6 @@ function getDescriptionForBatch(actions: Array<ServerUpdateAction>): Description
     return getDescriptionForSpecificBatch(revertToVersionUAs, "revertToVersion");
   }
 
-  const createNodeUAs = groupedUpdateActions.createNode;
   if (createNodeUAs != null) {
     return getDescriptionForSpecificBatch(createNodeUAs, "createNode");
   }
@@ -125,6 +139,11 @@ function getDescriptionForBatch(actions: Array<ServerUpdateAction>): Description
     return getDescriptionForSpecificBatch(updateBucketUAs, "updateBucket");
   }
 
+  const createTracingUAs = groupedUpdateActions.createTracing;
+  if (createTracingUAs != null) {
+    return getDescriptionForSpecificBatch(createTracingUAs, "createTracing");
+  }
+
   // Catch-all for other update actions, currently updateNode and updateTracing.
   return {
     description: "Modified the tracing.",
@@ -137,6 +156,7 @@ type Props = {
   version: number,
   isNewest: boolean,
   isActive: boolean,
+  isIndented: boolean,
   onRestoreVersion: number => Promise<void>,
   onPreviewVersion: number => Promise<void>,
 };
@@ -146,12 +166,14 @@ export default function VersionEntry({
   version,
   isNewest,
   isActive,
+  isIndented,
   onRestoreVersion,
   onPreviewVersion,
 }: Props) {
   const lastTimestamp = _.max(actions.map(action => action.value.actionTimestamp));
   const liClassName = classNames("version-entry", {
     "active-version-entry": isActive,
+    "version-entry-indented": isIndented,
   });
   const restoreButton = (
     <Button
@@ -166,11 +188,15 @@ export default function VersionEntry({
   const { description, type } = getDescriptionForBatch(actions);
   return (
     <React.Fragment>
-      <List.Item className={liClassName} actions={isActive && !isNewest ? [restoreButton] : []}>
+      <List.Item
+        style={{ cursor: "pointer" }}
+        className={liClassName}
+        actions={isActive && !isNewest ? [restoreButton] : []}
+      >
         <List.Item.Meta
           title={
             <React.Fragment>
-              Version {version} (<FormattedDate timestamp={lastTimestamp} />)
+              Version {version} (<FormattedDate timestamp={lastTimestamp} format="HH:mm" />)
             </React.Fragment>
           }
           onClick={() => onPreviewVersion(version)}

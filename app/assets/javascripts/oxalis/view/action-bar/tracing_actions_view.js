@@ -1,27 +1,27 @@
 // @flow
-import React, { PureComponent } from "react";
-import Model from "oxalis/model";
-import Store from "oxalis/store";
-import { connect } from "react-redux";
 import { Upload, Button, Dropdown, Menu, Icon, Modal, Tooltip } from "antd";
+import { connect } from "react-redux";
+import React, { PureComponent } from "react";
+
+import type { APIUser, APITracingType } from "admin/api_flow_types";
+import { AsyncButton } from "components/async_clickables";
+import { copyAnnotationToUserAccount, finishAnnotation } from "admin/admin_rest_api";
+import { mapLayoutKeysToLanguage } from "oxalis/view/layouting/default_layout_configs";
+import { readFileAsArrayBuffer } from "libs/read_file";
+import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
+import { undoAction, redoAction } from "oxalis/model/actions/save_actions";
+import ButtonComponent from "oxalis/view/components/button_component";
 import Constants from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
-import ShareModalView from "oxalis/view/action-bar/share_modal_view";
-import UserScriptsModalView from "oxalis/view/action-bar/user_scripts_modal_view";
+import Model from "oxalis/model";
 import SaveButton from "oxalis/view/action-bar/save_button";
-import ButtonComponent from "oxalis/view/components/button_component";
-import messages from "messages";
-import api from "oxalis/api/internal_api";
-import { undoAction, redoAction } from "oxalis/model/actions/save_actions";
-import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
-import { copyAnnotationToUserAccount, finishAnnotation } from "admin/admin_rest_api";
-import { location } from "libs/window";
-import type { OxalisState, RestrictionsAndSettings, Task } from "oxalis/store";
-import type { APIUser, APITracingType } from "admin/api_flow_types";
 import SceneController from "oxalis/controller/scene_controller";
-import { readFileAsArrayBuffer } from "libs/read_file";
-import { AsyncButton } from "components/async_clickables";
-import { mapLayoutKeysToLanguage } from "oxalis/view/layouting/default_layout_configs";
+import ShareModalView from "oxalis/view/action-bar/share_modal_view";
+import Store, { type OxalisState, type RestrictionsAndSettings, type Task } from "oxalis/store";
+import UserScriptsModalView from "oxalis/view/action-bar/user_scripts_modal_view";
+import api from "oxalis/api/internal_api";
+import messages from "messages";
+import window, { location } from "libs/window";
 
 type StateProps = {
   tracingType: APITracingType,
@@ -71,10 +71,7 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
   const layoutMissingHelpTitle = (
     <React.Fragment>
       <h5 style={{ color: "#fff" }}>Where is my layout?</h5>
-      <p>
-        {`The tracing views are separated into four classes. Each of them has their own layouts. If you
-        can't find your layout please open the tracing in the correct view mode or just add it here manually.`}
-      </p>
+      <p>{messages["layouting.missing_custom_layout_info"]}</p>
     </React.Fragment>
   );
   const customLayoutsItems = storedLayoutNamesForView.map(layout => {
@@ -86,25 +83,22 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
           isSelectedLayout ? "selected-layout-item bullet-point-less-li" : "bullet-point-less-li"
         }
       >
-        <span
-          onClick={() => onSelectLayout(layout)}
-          style={{ minWidth: "100%", minHeight: "auto", display: "inline-block" }}
-        >
-          <div className="inline-with-margin">
+        <div className="layout-dropdown-list-item-container">
+          <div className="layout-dropdown-selection-area" onClick={() => onSelectLayout(layout)}>
             {layout}
-            {isSelectedLayout ? (
-              <Icon type="check" className="sub-menu-item-icon" theme="outlined" />
-            ) : (
-              <Tooltip placement="top" title="Remove this layout">
-                <Icon
-                  type="delete"
-                  className="clickable-icon sub-menu-item-icon"
-                  onClick={() => onDeleteLayout(layout)}
-                />
-              </Tooltip>
-            )}
           </div>
-        </span>
+          {isSelectedLayout ? (
+            <Icon type="check" theme="outlined" className="sub-menu-item-icon" />
+          ) : (
+            <Tooltip placement="top" title="Remove this layout">
+              <Icon
+                type="delete"
+                className="clickable-icon sub-menu-item-icon"
+                onClick={() => onDeleteLayout(layout)}
+              />
+            </Tooltip>
+          )}
+        </div>
       </Menu.Item>
     );
   });
@@ -118,18 +112,14 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
             <Icon
               type="info-circle-o"
               style={{ color: "gray", marginRight: 36 }}
-              className="sub-menu-item-icon"
+              className="right-floating-icon"
             />
           </Tooltip>
         </span>
       }
     >
-      <Menu.Item>
-        <div onClick={onResetLayout}>Reset Layout</div>
-      </Menu.Item>
-      <Menu.Item>
-        <div onClick={addNewLayout}>Add a new Layout</div>
-      </Menu.Item>
+      <Menu.Item onClick={onResetLayout}>Reset Layout</Menu.Item>
+      <Menu.Item onClick={addNewLayout}>Add a new Layout</Menu.Item>
       <Menu.Divider />
       <Menu.ItemGroup
         className="available-layout-list"
@@ -174,8 +164,7 @@ class TracingActionsView extends PureComponent<Props, State> {
     Store.dispatch(redoAction());
   };
 
-  handleCopyToAccount = async (event: SyntheticInputEvent<>) => {
-    event.target.blur();
+  handleCopyToAccount = async () => {
     const newAnnotation = await copyAnnotationToUserAccount(
       this.props.annotationId,
       this.props.tracingType,
@@ -183,8 +172,7 @@ class TracingActionsView extends PureComponent<Props, State> {
     location.href = `/annotations/Explorational/${newAnnotation.id}`;
   };
 
-  handleFinish = async (event: SyntheticInputEvent<>) => {
-    event.target.blur();
+  handleFinish = async () => {
     await this.handleSave();
 
     Modal.confirm({
@@ -205,8 +193,7 @@ class TracingActionsView extends PureComponent<Props, State> {
     this.setState({ isShareModalOpen: false });
   };
 
-  handleDownload = async (event: SyntheticInputEvent<>) => {
-    event.target.blur();
+  handleDownload = async () => {
     const win = window.open("about:blank", "_blank");
     win.document.body.innerHTML = messages["download.wait"];
     await this.handleSave();
@@ -218,8 +205,7 @@ class TracingActionsView extends PureComponent<Props, State> {
     win.document.body.innerHTML = messages["download.close_window"];
   };
 
-  handleFinishAndGetNextTask = async (event: SyntheticInputEvent<>) => {
-    event.target.blur();
+  handleFinishAndGetNextTask = async () => {
     api.tracing.finishAndGetNextTask();
   };
 
@@ -283,30 +269,24 @@ class TracingActionsView extends PureComponent<Props, State> {
     const modals = [];
     if (restrictions.allowFinish) {
       elements.push(
-        <Menu.Item key="finish-button">
-          <div onClick={this.handleFinish}>
-            <Icon type="check-circle-o" />
-            {archiveButtonText}
-          </div>
+        <Menu.Item key="finish-button" onClick={this.handleFinish}>
+          <Icon type="check-circle-o" />
+          {archiveButtonText}
         </Menu.Item>,
       );
     }
     if (restrictions.allowDownload) {
       elements.push(
-        <Menu.Item key="download-button">
-          <div onClick={this.handleDownload}>
-            <Icon type="download" />
-            Download
-          </div>
+        <Menu.Item key="download-button" onClick={this.handleDownload}>
+          <Icon type="download" />
+          Download
         </Menu.Item>,
       );
     }
     elements.push(
-      <Menu.Item key="share-button">
-        <div onClick={this.handleShareOpen}>
-          <Icon type="share-alt" />
-          Share
-        </div>
+      <Menu.Item key="share-button" onClick={this.handleShareOpen}>
+        <Icon type="share-alt" />
+        Share
       </Menu.Item>,
     );
     modals.push(
@@ -317,11 +297,9 @@ class TracingActionsView extends PureComponent<Props, State> {
       />,
     );
     elements.push(
-      <Menu.Item key="user-scripts-button">
-        <div onClick={this.handleUserScriptsOpen}>
-          <Icon type="setting" />
-          Add Script
-        </div>
+      <Menu.Item key="user-scripts-button" onClick={this.handleUserScriptsOpen}>
+        <Icon type="setting" />
+        Add Script
       </Menu.Item>,
     );
     modals.push(
@@ -334,11 +312,9 @@ class TracingActionsView extends PureComponent<Props, State> {
 
     if (isSkeletonMode && this.props.activeUser != null) {
       elements.push(
-        <Menu.Item key="merge-button">
-          <div onClick={this.handleMergeOpen}>
-            <Icon type="folder-open" />
-            Merge Tracing
-          </div>
+        <Menu.Item key="merge-button" onClick={this.handleMergeOpen}>
+          <Icon type="folder-open" />
+          Merge Tracing
         </Menu.Item>,
       );
       modals.push(

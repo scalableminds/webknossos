@@ -3,16 +3,17 @@
  * @flow
  */
 import _ from "lodash";
-import api from "oxalis/api/internal_api";
-import * as React from "react";
-import { connect } from "react-redux";
 import { Button, Dropdown, Input, Menu, Icon, Spin, Modal, Tooltip } from "antd";
-import TreeHierarchyView from "oxalis/view/right-menu/tree_hierarchy_view";
-import InputComponent from "oxalis/view/components/input_component";
-import ButtonComponent from "oxalis/view/components/button_component";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
+import type { Dispatch } from "redux";
+import { connect } from "react-redux";
+import { saveAs } from "file-saver";
+import * as React from "react";
+
 import { getActiveTree, getActiveGroup } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getBuildInfo } from "admin/admin_rest_api";
+import { readFileAsText } from "libs/read_file";
+import { serializeToNml, getNmlName, parseNml } from "oxalis/model/helpers/nml_helpers";
+import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import {
   setTreeNameAction,
   createTreeAction,
@@ -28,27 +29,26 @@ import {
   setTreeGroupsAction,
   addTreesAndGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { readFileAsText } from "libs/read_file";
 import messages from "messages";
-import Store from "oxalis/store";
-import { serializeToNml, getNmlName, parseNml } from "oxalis/model/helpers/nml_helpers";
-import * as Utils from "libs/utils";
-import { saveAs } from "file-saver";
-import { getBuildInfo } from "admin/admin_rest_api";
-import Toast from "libs/toast";
-import type { Dispatch } from "redux";
-import type {
-  OxalisState,
-  Tracing,
-  SkeletonTracing,
-  UserConfiguration,
-  TreeGroup,
-} from "oxalis/store";
 import {
   createGroupToTreesMap,
   callDeep,
   MISSING_GROUP_ID,
 } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import ButtonComponent from "oxalis/view/components/button_component";
+import InputComponent from "oxalis/view/components/input_component";
+import Store, {
+  type OxalisState,
+  type SkeletonTracing,
+  type Tracing,
+  type TreeGroup,
+  type UserConfiguration,
+} from "oxalis/store";
+import Toast from "libs/toast";
+import TreeHierarchyView from "oxalis/view/right-menu/tree_hierarchy_view";
+import * as Utils from "libs/utils";
+import api from "oxalis/api/internal_api";
 import SearchPopover from "./search_popover";
 import DeleteGroupsModalView from "./delete-groups-modal-view";
 
@@ -436,25 +436,25 @@ class TreesTabView extends React.PureComponent<Props, State> {
   getActionsDropdown() {
     return (
       <Menu>
-        <Menu.Item key="shuffleTreeColor">
-          <div onClick={this.shuffleTreeColor} title="Change Tree Color">
-            <i className="fa fa-adjust" /> Change Color
-          </div>
+        <Menu.Item key="shuffleTreeColor" onClick={this.shuffleTreeColor} title="Change Tree Color">
+          <i className="fa fa-adjust" /> Change Color
         </Menu.Item>
-        <Menu.Item key="shuffleAllTreeColors">
-          <div onClick={this.shuffleAllTreeColors} title="Shuffle All Tree Colors">
-            <i className="fa fa-random" /> Shuffle All Colors
-          </div>
+        <Menu.Item
+          key="shuffleAllTreeColors"
+          onClick={this.shuffleAllTreeColors}
+          title="Shuffle All Tree Colors"
+        >
+          <i className="fa fa-random" /> Shuffle All Colors
         </Menu.Item>
-        <Menu.Item key="handleNmlDownload">
-          <div onClick={this.handleNmlDownload} title="Download selected trees as NML">
-            <Icon type="download" /> Download Selected Trees
-          </div>
+        <Menu.Item
+          key="handleNmlDownload"
+          onClick={this.handleNmlDownload}
+          title="Download selected trees as NML"
+        >
+          <Icon type="download" /> Download Selected Trees
         </Menu.Item>
-        <Menu.Item key="importNml">
-          <div onClick={this.props.showDropzoneModal} title="Import NML files">
-            <Icon type="upload" /> Import NML
-          </div>
+        <Menu.Item key="importNml" onClick={this.props.showDropzoneModal} title="Import NML files">
+          <Icon type="upload" /> Import NML
         </Menu.Item>
       </Menu>
     );
@@ -500,6 +500,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
             idKey="treeId"
             searchKey="name"
             maxSearchResults={10}
+            provideShortcut
           >
             <Tooltip title="Open the search via CTRL + Shift + F">
               <ButtonComponent>

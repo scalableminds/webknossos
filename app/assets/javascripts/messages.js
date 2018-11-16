@@ -7,7 +7,7 @@ export default {
   unknown_error:
     "An unknown error occured. Please try again or check the console for more details.",
   "datastore.health": _.template(
-    "The datastore server at <%- url %> does not seem too be available. This is likely due to an update. Please check back in five minutes.",
+    "The datastore server at <%- url %> does not seem too be available. Please check back in five minutes.",
   ),
   "datastore.version.too_new": _.template(
     "The datastore server at (<%- url %>) supplies a newer API version (<%- suppliedDatastoreApiVersion %>) than this webKnossos expects (<%- expectedDatastoreApiVersion %>). Please contact your admins to upgrade this webKnossos instance",
@@ -77,6 +77,8 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.natural_sorting": "Correctly sort numbers in text (word2 < word10). This may be slow!",
   "tracing.cant_create_node_due_to_active_group":
     "You cannot create nodes, since no tree is active.",
+  "layouting.missing_custom_layout_info":
+    "The tracing views are separated into four classes. Each of them has their own layouts. If you can't find your layout please open the tracing in the correct view mode or just add it here manually.",
   "datastore.unknown_type": "Unknown datastore type:",
   "webgl.disabled": "Couldn't initialise WebGL, please make sure WebGL is enabled.",
   "webgl.context_loss":
@@ -192,6 +194,10 @@ In order to restore the current window, a reload is necessary.`,
   "users.grant_admin_rights": _.template(
     "You are about to grant admin privileges to <%- numUsers %> user(s) giving them access to all teams, datasets and annotations. Do you want to proceed?",
   ),
+  "users.revoke_admin_rights_title": "Do you really want to revoke admin rights?",
+  "users.revoke_admin_rights": _.template(
+    "You are about to revoke admin privileges from <%- numUsers %> user(s). Do you want to proceed?",
+  ),
   "users.change_email_title": "Do you really want to change the email?",
   "users.change_email": _.template(
     "Do you really want to change the email to '<%- newEmail %>' ? The corresponding user will be logged out and unsaved changes might be lost.",
@@ -204,4 +210,6 @@ In order to restore the current window, a reload is necessary.`,
   "mapping.unsupported_layer": "Mappings can only be enabled for segmentation layers.",
   "project.report.failed_to_refresh":
     "The project report page could not be refreshed. Please try to reload the page.",
+  planned_maintenance:
+    "WebKnossos is temporarily under maintenance. Please check back again in a few minutes.",
 };

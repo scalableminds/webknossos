@@ -1,15 +1,15 @@
 // @flow
-import update from "immutability-helper";
-import type { OxalisState } from "oxalis/store";
-import type { Action } from "oxalis/model/actions/actions";
-import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
-import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
-import { M4x4 } from "libs/mjs";
-import type { Matrix4x4 } from "libs/mjs";
-import type { Vector3 } from "oxalis/constants";
-import * as Utils from "libs/utils";
-import Dimensions from "oxalis/model/dimensions";
 import _ from "lodash";
+import update from "immutability-helper";
+
+import type { Action } from "oxalis/model/actions/actions";
+import { M4x4, type Matrix4x4 } from "libs/mjs";
+import type { OxalisState } from "oxalis/store";
+import type { Vector3 } from "oxalis/constants";
+import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
+import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
+import Dimensions from "oxalis/model/dimensions";
+import * as Utils from "libs/utils";
 
 const ZOOM_STEP_INTERVAL = 1.1;
 const ZOOM_STEP_MIN = 0.005;

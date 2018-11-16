@@ -1,24 +1,26 @@
 // @flow
 import _ from "lodash";
+
 import {
   MAPPING_TEXTURE_WIDTH,
   MAPPING_COLOR_TEXTURE_WIDTH,
 } from "oxalis/model/bucket_data_handling/mappings";
-import type { Vector3 } from "oxalis/constants";
 import { floatsPerLookUpEntry } from "oxalis/model/bucket_data_handling/texture_bucket_manager";
 import constants, {
-  OrthoViews,
-  OrthoViewIndices,
   ModeValuesIndices,
+  OrthoViewIndices,
+  OrthoViews,
+  type Vector3,
   VolumeToolEnum,
   volumeToolEnumToIndex,
 } from "oxalis/constants";
+import { getMaxBucketCountPerDim } from "oxalis/model/accessors/flycam_accessor";
 
-import compileShader from "./shader_module_system";
 import { convertCellIdToRGB, getBrushOverlay, getSegmentationId } from "./segmentation.glsl";
-import { inverse, round, div, isNan, transDim, isFlightMode } from "./utils.glsl";
-import { getRelativeCoords, getWorldCoordUVW, isOutsideOfBoundingBox } from "./coords.glsl";
 import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
+import { getRelativeCoords, getWorldCoordUVW, isOutsideOfBoundingBox } from "./coords.glsl";
+import { inverse, round, div, isNan, transDim, isFlightMode } from "./utils.glsl";
+import compileShader from "./shader_module_system";
 
 type Params = {|
   colorLayerNames: string[],
@@ -103,7 +105,7 @@ varying vec4 worldCoord;
 varying vec4 modelCoord;
 varying mat4 savedModelMatrix;
 
-const float bucketsPerDim = <%= bucketsPerDim %>;
+const vec3 bucketsPerDim = <%= formatVector3AsVec3(bucketsPerDim) %>;
 const float bucketWidth = <%= bucketWidth %>;
 const float bucketSize = <%= bucketSize %>;
 const float l_texture_width = <%= l_texture_width %>;
@@ -169,7 +171,7 @@ void main() {
         <%= colorLayerNames[0] %>_lookup_texture,
         0.0, // layerIndex
         <%= colorLayerNames[0] %>_data_texture_width,
-        <%= segmentationPackingDegree %>,
+        1.0, // RGB data cannot be packed, hence packingDegree == 1.0
         coords,
         fallbackCoords,
         hasFallback,
@@ -246,7 +248,7 @@ void main() {
     OrthoViews,
     bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),
     bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),
-    bucketsPerDim: formatNumberAsGLSLFloat(constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION),
+    bucketsPerDim: getMaxBucketCountPerDim(params.datasetScale),
     l_texture_width: formatNumberAsGLSLFloat(constants.LOOK_UP_TEXTURE_WIDTH),
     mappingTextureWidth: formatNumberAsGLSLFloat(MAPPING_TEXTURE_WIDTH),
     mappingColorTextureWidth: formatNumberAsGLSLFloat(MAPPING_COLOR_TEXTURE_WIDTH),

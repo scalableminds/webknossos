@@ -1,12 +1,13 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-import test from "ava";
 import { VolumeToolEnum } from "oxalis/constants";
-import { setupOxalis } from "test/helpers/apiHelpers";
+import { __setupOxalis } from "test/helpers/apiHelpers";
+import test from "ava";
 import window from "libs/window";
+
 import { tracing as TRACING } from "../fixtures/volumetracing_server_objects";
 
 // All the mocking is done in the helpers file, so it can be reused for both skeleton and volume API
-test.beforeEach(t => setupOxalis(t, "volume"));
+test.beforeEach(t => __setupOxalis(t, "volume"));
 
 test("getActiveCellId should get the id of the active cell", t => {
   const api = t.context.api;

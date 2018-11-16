@@ -360,7 +360,7 @@ declare module "lodash" {
     defer(func: Function, ...args?: Array<any>): number;
     delay(func: Function, wait: number, ...args?: Array<any>): number;
     flip(func: Function): Function;
-    memoize(func: Function, resolver?: Function): Function;
+    memoize<T>(func: T, resolver?: Function): T;
     negate(predicate: Function): Function;
     once(func: Function): Function;
     overArgs(func: Function, ...transforms: Array<Function>): Function;
@@ -472,6 +472,7 @@ declare module "lodash" {
     divide(dividend: number, divisor: number): number;
     floor(number: number, precision?: number): number;
     max<T>(array: ?Array<T>): T;
+    max<T>(array: [T, T, T]): T;
     maxBy<T>(array: ?Array<T>, iteratee?: Iteratee<T>): T;
     mean(array: Array<*>): number;
     meanBy<T>(array: Array<T>, iteratee?: Iteratee<T>): number;

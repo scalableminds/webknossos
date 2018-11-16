@@ -1,12 +1,12 @@
 // @flow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-import anyTest from "ava";
-import puppeteer, { type Browser } from "puppeteer";
-import path from "path";
+import anyTest, { type TestInterface } from "ava";
 import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
-import type { TestInterface } from "ava";
-import { screenshotDataset, DEV_AUTH_TOKEN } from "./dataset_rendering_helpers";
+import path from "path";
+import puppeteer, { type Browser } from "puppeteer";
+
 import { compareScreenshot } from "./screenshot_helpers";
+import { screenshotDataset, DEV_AUTH_TOKEN } from "./dataset_rendering_helpers";
 
 process.on("unhandledRejection", (err, promise) => {
   console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");

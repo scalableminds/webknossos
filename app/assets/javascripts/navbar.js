@@ -1,21 +1,19 @@
 // @flow
 /* eslint-disable react/prefer-stateless-function */
 
-import React from "react";
-import { Link, withRouter } from "react-router-dom";
 import { Layout, Menu, Icon } from "antd";
+import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
-import Request from "libs/request";
-import * as Utils from "libs/utils";
-import LoginView from "admin/auth/login_view";
+import React from "react";
+
+import type { APIUser } from "admin/api_flow_types";
 import { getBuildInfo } from "admin/admin_rest_api";
 import { logoutUserAction } from "oxalis/model/actions/user_actions";
-import Store from "oxalis/store";
+import LoginView from "admin/auth/login_view";
+import Request from "libs/request";
+import Store, { type OxalisState } from "oxalis/store";
+import * as Utils from "libs/utils";
 import features from "features";
-
-import type { OxalisState } from "oxalis/store";
-import type { APIUser } from "admin/api_flow_types";
-import type { RouterHistory } from "react-router-dom";
 
 const { SubMenu } = Menu;
 const { Header } = Layout;
@@ -32,6 +30,8 @@ type Props = {
 type State = {
   version: ?string,
 };
+
+export const navbarHeight = 48;
 
 class Navbar extends React.PureComponent<Props, State> {
   state = {
@@ -56,7 +56,7 @@ class Navbar extends React.PureComponent<Props, State> {
       position: "fixed",
       width: "100%",
       zIndex: 1000,
-      height: 48,
+      height: navbarHeight,
       display: "flex",
       alignItems: "center",
       color: "rgba(255, 255, 255, 0.67)",

@@ -3,12 +3,14 @@
  * @flow
  */
 
-import _ from "lodash";
-import Request from "libs/request";
+import { type Saga, delay } from "redux-saga";
 import Maybe from "data.maybe";
-import Date from "libs/date";
-import messages from "messages";
-import Toast from "libs/toast";
+import _ from "lodash";
+
+import { FlycamActions } from "oxalis/model/actions/flycam_actions";
+import type { Tracing, Flycam, SaveQueueEntry } from "oxalis/store";
+import { type UpdateAction, moveTreeComponent } from "oxalis/model/sagas/update_actions";
+import { VolumeTracingSaveRelevantActions } from "oxalis/model/actions/volumetracing_actions";
 import {
   _all,
   take,
@@ -19,8 +21,14 @@ import {
   put,
   select,
 } from "oxalis/model/sagas/effect-generators";
-import { delay } from "redux-saga";
-import type { Saga } from "redux-saga";
+import {
+  createTreeAction,
+  SkeletonTracingSaveRelevantActions,
+  setTracingAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
+import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
+import { doWithToken } from "admin/admin_rest_api";
 import {
   shiftSaveQueueAction,
   setSaveBusyAction,
@@ -28,21 +36,12 @@ import {
   pushSaveQueueAction,
   setVersionNumberAction,
 } from "oxalis/model/actions/save_actions";
-import {
-  createTreeAction,
-  SkeletonTracingSaveRelevantActions,
-  setTracingAction,
-} from "oxalis/model/actions/skeletontracing_actions";
-import { VolumeTracingSaveRelevantActions } from "oxalis/model/actions/volumetracing_actions";
-import { FlycamActions } from "oxalis/model/actions/flycam_actions";
-import { alert, location } from "libs/window";
-import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
-import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import type { Tracing, Flycam, SaveQueueEntry } from "oxalis/store";
-import type { RequestOptionsWithData } from "libs/request";
-import { moveTreeComponent } from "oxalis/model/sagas/update_actions";
-import { doWithToken } from "admin/admin_rest_api";
+import Date from "libs/date";
+import Request, { type RequestOptionsWithData } from "libs/request";
+import Toast from "libs/toast";
+import messages from "messages";
+import window, { alert, document, location } from "libs/window";
+
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
 
 const PUSH_THROTTLE_TIME = 30000; // 30s
@@ -361,41 +360,62 @@ export function compactUpdateActions(updateActions: Array<UpdateAction>): Array<
   );
 }
 
+function removeAllButLastUpdateTracingAction(updateActionsBatches: Array<SaveQueueEntry>) {
+  // This part of the code removes all entries from the save queue that consist only of
+  // one updateTracing update action, except for the last one
+  const updateTracingOnlyBatches = updateActionsBatches.filter(
+    batch => batch.actions.length === 1 && batch.actions[0].name === "updateTracing",
+  );
+  return _.without(updateActionsBatches, ...updateTracingOnlyBatches.slice(0, -1));
+}
+
+function removeSubsequentUpdateTreeActions(updateActionsBatches: Array<SaveQueueEntry>) {
+  const obsoleteUpdateActions = [];
+  // If two updateTree update actions for the same treeId follow one another, the first one is obsolete
+  for (let i = 0; i < updateActionsBatches.length - 1; i++) {
+    const actions1 = updateActionsBatches[i].actions;
+    const actions2 = updateActionsBatches[i + 1].actions;
+    if (
+      actions1.length === 1 &&
+      actions1[0].name === "updateTree" &&
+      actions2.length === 1 &&
+      actions2[0].name === "updateTree" &&
+      actions1[0].value.id === actions2[0].value.id
+    ) {
+      obsoleteUpdateActions.push(updateActionsBatches[i]);
+    }
+  }
+  return _.without(updateActionsBatches, ...obsoleteUpdateActions);
+}
+
 export function compactSaveQueue(
   updateActionsBatches: Array<SaveQueueEntry>,
 ): Array<SaveQueueEntry> {
+  // Remove empty batches
   const result = updateActionsBatches.filter(
     updateActionsBatch => updateActionsBatch.actions.length > 0,
   );
 
-  // This part of the code removes all entries from the save queue that consist only of
-  // an updateTracing update action, except for the last one
-  const updateTracingOnlyBatches = result.filter(
-    batch => batch.actions.length === 1 && batch.actions[0].name === "updateTracing",
-  );
-  if (updateTracingOnlyBatches.length > 1) {
-    return _.without(result, ...updateTracingOnlyBatches.slice(0, -1));
-  }
-
-  return result;
+  return removeSubsequentUpdateTreeActions(removeAllButLastUpdateTracingAction(result));
 }
 
 export function performDiffTracing(
   tracingType: "skeleton" | "volume",
   prevTracing: Tracing,
   tracing: Tracing,
+  prevFlycam: Flycam,
   flycam: Flycam,
 ): Array<UpdateAction> {
   let actions = [];
   if (tracingType === "skeleton" && tracing.skeleton != null && prevTracing.skeleton != null) {
     actions = actions.concat(
-      Array.from(diffSkeletonTracing(prevTracing.skeleton, tracing.skeleton, flycam)),
+      Array.from(diffSkeletonTracing(prevTracing.skeleton, tracing.skeleton, prevFlycam, flycam)),
     );
   }
 
   if (tracingType === "volume" && tracing.volume != null && prevTracing.volume != null) {
     actions = actions.concat(
-      Array.from(diffVolumeTracing(prevTracing.volume, tracing.volume, flycam)),
+      Array.from(diffVolumeTracing(prevTracing.volume, tracing.volume, prevFlycam, flycam)),
     );
   }
 
@@ -412,6 +432,7 @@ export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
   );
 
   let prevTracing = yield* select(state => state.tracing);
+  let prevFlycam = yield* select(state => state.flycam);
   if (tracingType === "skeleton") {
     if (yield* select(state => enforceSkeletonTracing(state.tracing).activeTreeId == null)) {
       yield* put(createTreeAction());
@@ -439,7 +460,9 @@ export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
     const flycam = yield* select(state => state.flycam);
     const items = compactUpdateActions(
       // $FlowFixMe: Should be resolved when we improve the typing of sagas in general
-      Array.from(yield* call(performDiffTracing, tracingType, prevTracing, tracing, flycam)),
+      Array.from(
+        yield* call(performDiffTracing, tracingType, prevTracing, tracing, prevFlycam, flycam),
+      ),
     );
     if (items.length > 0) {
       const updateActionChunks = _.chunk(items, maximumActionCountPerBatch);
@@ -449,5 +472,6 @@ export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
       }
     }
     prevTracing = tracing;
+    prevFlycam = flycam;
   }
 }

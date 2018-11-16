@@ -143,17 +143,19 @@ class TreesTabView extends React.PureComponent<Props, State> {
     // Remove all selected groups
     groupIds.forEach(groupId =>
       callDeep(newTreeGroups, groupId, (item, index, arr, parentGroupId) => {
-        // Remove group and maybe move its group children to the parent group
+        // Remove group
         arr.splice(index, 1);
         if (!withTrees) {
+          // move its group children to the parent group
           arr.push(...item.children);
         }
-        // Get all subtrees of the group and delete or update them
-        const currentTrees = groupToTreesMap[groupId] != null ? groupToTreesMap[groupId] : [];
+        const subtrees = groupToTreesMap[groupId] != null ? groupToTreesMap[groupId] : [];
         if (withTrees) {
-          this.props.onDeleteMultipleTrees(currentTrees.map(tree => tree.treeId));
+          // also delete all subtrees
+          this.props.onDeleteMultipleTrees(subtrees.map(tree => tree.treeId));
         } else {
-          for (const tree of currentTrees) {
+          // update all subtrees
+          for (const tree of subtrees) {
             this.props.onSetTreeGroup(
               parentGroupId === MISSING_GROUP_ID ? null : parentGroupId,
               tree.treeId,
@@ -167,13 +169,16 @@ class TreesTabView extends React.PureComponent<Props, State> {
     this.setState({ selectedTreeGroups: [] });
   };
 
+  hideDeleteGroupsModal = () => {
+    this.setState({ isDeleteGroupsModalVisible: false });
+  };
+
   deleteSelectedGroups = () => {
     if (this.state.selectedTreeGroups.length > 0) {
       this.setState({ isDeleteGroupsModalVisible: true });
     }
   };
 
-  // rename to handleDelete
   handleDelete = () => {
     // if there exist selected trees, ask to remove them
     const { selectedTrees } = this.state;
@@ -189,9 +194,11 @@ class TreesTabView extends React.PureComponent<Props, State> {
           countOfTrees: numbOfSelectedTrees,
         }),
         deleteAllSelectedTrees,
+        // if there exist selected groups, ask to remove them
         this.deleteSelectedGroups,
       );
     } else {
+      // just delete the active tree
       this.props.onDeleteTree();
     }
   };
@@ -281,8 +288,63 @@ class TreesTabView extends React.PureComponent<Props, State> {
     }
   };
 
-  // TODO add comments and shorten this
+  getAllSubtreeIdsOfGroup = (idOfGroup: number): Array<number> => {
+    if (!this.props.skeletonTracing) {
+      return [];
+    }
+    const { trees } = this.props.skeletonTracing;
+    const treeGroupMap = createGroupToTreesMap(trees);
+    let subtreeIdsOfGroup = [];
+    if (treeGroupMap[idOfGroup]) {
+      subtreeIdsOfGroup = treeGroupMap[idOfGroup].map(node => node.treeId);
+    }
+    return subtreeIdsOfGroup;
+  };
+
+  getAllSubgroupIdsOfGroup = (idOfGroup: number, groupTree: ?TreeGroup): Array<number> => {
+    let allSubGroupIds = [];
+    if (groupTree) {
+      allSubGroupIds = groupTree.children.map(subGroup => subGroup.groupId);
+    }
+    return allSubGroupIds;
+  };
+
+  // opens a modal to ask the user whether he really wants to select this group
+  // selecting will cause all subitems and the parent group to get unselected
+  openConfirmGroupSelectionModal = (
+    groupId: number,
+    subtreeIds: Array<number>,
+    subGroupIds: Array<number>,
+    parentId: ?number,
+  ) => {
+    const confirmSelectOfGroup = () => {
+      this.setState(prevState => {
+        // removes selected subtrees
+        const withoutSubtreesOfSelectedGroup = _.difference(prevState.selectedTrees, subtreeIds);
+        // removes selected Subgroups and the parent group
+        const groupsToRemove = subGroupIds;
+        if (parentId !== null && parentId !== undefined) {
+          groupsToRemove.push(parentId);
+        }
+        const withoutSubgroupsOfSelectedGroup = _.difference(
+          prevState.selectedTreeGroups,
+          groupsToRemove,
+        );
+        return {
+          selectedTrees: withoutSubtreesOfSelectedGroup,
+          selectedTreeGroups: [...withoutSubgroupsOfSelectedGroup, groupId],
+        };
+      });
+    };
+    this.showModalConfimWarning(
+      "Do you really want to select this group?",
+      messages["tracing.group_selection_warning"],
+      confirmSelectOfGroup,
+    );
+  };
+
   handleTreeGroupSelect = (id: number, groupTree: ?TreeGroup, parentId: ?number) => {
+    // if group is already selected, deselect the group
     if (this.state.selectedTreeGroups.includes(id)) {
       this.setState(prevState => ({
         selectedTreeGroups: prevState.selectedTreeGroups.filter(currentId => currentId !== id),
@@ -292,60 +354,32 @@ class TreesTabView extends React.PureComponent<Props, State> {
     if (!this.props.skeletonTracing) {
       return;
     }
-    const { trees } = this.props.skeletonTracing;
-    const treeGroupMap = createGroupToTreesMap(trees);
-    let idsOfSelectedGroup = [];
-    if (treeGroupMap[id]) {
-      idsOfSelectedGroup = treeGroupMap[id].map(node => node.treeId);
-    }
+    const subtreeIdsOfSelectedGroup = this.getAllSubtreeIdsOfGroup(id);
+    const allSubGroupIds = this.getAllSubgroupIdsOfGroup(id, groupTree);
     let groupHasSubitemsSelected = false;
-    let isParentGroupSelected = false;
-    let allSubGroupIds = [];
-    if (groupTree) {
-      groupTree.children.forEach(currentChild => {
-        if (this.state.selectedTreeGroups.includes(currentChild.groupId)) {
-          groupHasSubitemsSelected = true;
-        }
-      });
-      allSubGroupIds = groupTree.children.map(subGroup => subGroup.groupId);
-    }
-    idsOfSelectedGroup.forEach(currentId => {
+    // looks for already selected sub groups
+    allSubGroupIds.forEach(currentSubgroupId => {
+      if (this.state.selectedTreeGroups.includes(currentSubgroupId)) {
+        groupHasSubitemsSelected = true;
+      }
+    });
+    // looks for already selected sub trees
+    subtreeIdsOfSelectedGroup.forEach(currentId => {
       if (this.state.selectedTrees.includes(currentId)) {
         groupHasSubitemsSelected = true;
       }
     });
+    let isParentGroupSelected = false;
+    // checks if the parent group is already selected
     if (parentId !== null) {
       isParentGroupSelected = this.state.selectedTreeGroups.includes(parentId);
     }
     if (groupHasSubitemsSelected || isParentGroupSelected) {
-      const confirmSelectOfGroup = () => {
-        this.setState(prevState => {
-          // removes selected subtrees
-          const withoutSubtreesOfSelectedGroup = _.difference(
-            prevState.selectedTrees,
-            idsOfSelectedGroup,
-          );
-          // removes selected Subgroups and the parent group
-          const groupsToRemove = allSubGroupIds;
-          if (parentId !== null && parentId !== undefined) {
-            groupsToRemove.push(parentId);
-          }
-          const withoutSubgroupsOfSelectedGroup = _.difference(
-            prevState.selectedTreeGroups,
-            groupsToRemove,
-          );
-          return {
-            selectedTrees: withoutSubtreesOfSelectedGroup,
-            selectedTreeGroups: [...withoutSubgroupsOfSelectedGroup, id],
-          };
-        });
-      };
-      this.showModalConfimWarning(
-        "Do you really want to select this group?",
-        messages["tracing.group_selection_warning"],
-        confirmSelectOfGroup,
-      );
+      // ask the user whether he really wants to select the group
+      this.openConfirmGroupSelectionModal(id, subtreeIdsOfSelectedGroup, allSubGroupIds, parentId);
     } else {
+      // if neither the parent group nor any subitem is selected
+      // -> just select the group
       this.setState(prevState => ({
         selectedTreeGroups: [...prevState.selectedTreeGroups, id],
       }));
@@ -519,13 +553,13 @@ class TreesTabView extends React.PureComponent<Props, State> {
         {isDeleteGroupsModalVisible ? (
           <DeleteGroupsModalView
             numberOfGroups={selectedTreeGroups.length}
-            onCancel={() => this.setState({ isDeleteGroupsModalVisible: false })}
+            onCancel={this.hideDeleteGroupsModal}
             onJustDeleteGroups={() => {
-              this.setState({ isDeleteGroupsModalVisible: false });
+              this.hideDeleteGroupsModal();
               this.deleteGroups(selectedTreeGroups, false);
             }}
             onDeleteGroupsAndTrees={() => {
-              this.setState({ isDeleteGroupsModalVisible: false });
+              this.hideDeleteGroupsModal();
               this.deleteGroups(selectedTreeGroups, true);
             }}
           />

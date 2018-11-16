@@ -145,17 +145,13 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }
   };
 
-  findGroupInTree = (tree: Array<TreeNode>, groupId: number): ?TreeGroup => {
-    const onlyGroups = removeTreesAndTransform(tree);
-    return findGroup(onlyGroups, groupId);
-  };
-
   onSelectGroup = evt => {
     const groupId = parseInt(evt.target.dataset.id, 10);
     if (evt.altKey) {
       const groupTree = removeTreesAndTransform(this.state.groupTree);
       let parentId = null;
       let selectedGroup: ?TreeGroup = null;
+      // find selected group and its parent
       callDeep(groupTree, groupId, (foundGroup, index, children, foundParentId) => {
         parentId = foundParentId;
         selectedGroup = foundGroup;
@@ -175,11 +171,13 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }));
   };
 
+  // rekursivly sets the parent of all currently selected groups to the given newParent
   setParentOfSelectedGroups(newParent: TreeGroup, currentNode: TreeGroup) {
     const children = currentNode.children;
     for (let index = 0; index < children.length; index++) {
       const currentChild = children[index];
       // only update children that are not at their desired position in the hierarchy
+      // and that are selected
       if (
         this.props.selectedTreeGroups.includes(currentChild.groupId) &&
         newParent !== currentNode
@@ -205,24 +203,22 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       if (!allTreesToMove.includes(movedTreeId)) {
         allTreesToMove.push(movedTreeId);
       }
-    } else {
-      // A group was dragged - update the groupTree
-      // remove trees from groupTree object
-      const newTreeGroups = removeTreesAndTransform(treeData);
-      // If there are selected groups, change the group hierarchy manually
-      if (this.props.selectedTreeGroups.length > 0) {
-        const nextParentGroup = findGroup(newTreeGroups, nextParentNode.id);
-        if (!nextParentGroup) {
-          this.props.onUpdateTreeGroups(newTreeGroups);
-          throw new Error(
-            "Dragging does not work correctly. The new parent group/node does not exist.",
-          );
-        }
-        // sets the parent group of all selected groups to the found nextParentGroup
-        this.setParentOfSelectedGroups(nextParentGroup, newTreeGroups[0]);
-      }
-      this.props.onUpdateTreeGroups(newTreeGroups[0].children);
     }
+    const newTreeGroups = removeTreesAndTransform(treeData);
+    // If there are selected groups, change the group hierarchy manually
+    if (this.props.selectedTreeGroups.length > 0) {
+      const nextParentGroup = findGroup(newTreeGroups, nextParentNode.id);
+      if (!nextParentGroup) {
+        this.props.onUpdateTreeGroups(newTreeGroups);
+        throw new Error(
+          "Dragging does not work correctly. The new parent group/node does not exist.",
+        );
+      }
+      // sets the parent group of all selected groups to the found nextParentGroup
+      this.setParentOfSelectedGroups(nextParentGroup, newTreeGroups[0]);
+    }
+    this.props.onUpdateTreeGroups(newTreeGroups[0].children);
+
     // sets group of all selected trees (and the moved tree) to the new parent group
     allTreesToMove.forEach(treeId =>
       this.props.onSetTreeGroup(
@@ -247,22 +243,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   }
 
   deleteGroup(groupId: number) {
-    /* const newTreeGroups = _.cloneDeep(this.props.treeGroups);
-    const groupToTreesMap = createGroupToTreesMap(this.props.trees);
-    callDeep(newTreeGroups, groupId, (item, index, arr, parentGroupId) => {
-      // Remove group and move its group children to the parent group
-      arr.splice(index, 1);
-      arr.push(...item.children);
-      // Update the group of all its tree children to the parent group
-      const trees = groupToTreesMap[groupId] != null ? groupToTreesMap[groupId] : [];
-      for (const tree of trees) {
-        this.props.onSetTreeGroup(
-          parentGroupId === MISSING_GROUP_ID ? null : parentGroupId,
-          tree.treeId,
-        );
-      }
-    });
-    this.props.onUpdateTreeGroups(newTreeGroups); */
     this.props.onDeleteGroup(groupId);
   }
 
@@ -276,13 +256,13 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }
   };
 
-  handleDraggingEvent = (params: { isDragging: boolean, draggedNode: Object }) => {
+  /* handleDraggingEvent = (params: { isDragging: boolean, draggedNode: Object }) => {
     if (params.isDragging) {
       this.setState({ mouseTooltipActive: true });
     } else {
       this.setState({ mouseTooltipActive: false });
     }
-  };
+  }; */
 
   getNodeStyleClassForBackground = (id, isGroup = false) => {
     if (isGroup) {
@@ -373,9 +353,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     return nodeProps;
   };
 
-  // own react component that follows the mouseclick and displays the passed down text
-  // save state => is dragging element
-  // triggered by function onDragStateChanged of SortableTree :D
   keySearchMethod(params: {
     node: TreeNode,
     searchQuery: { activeTreeId: number, activeGroupId: number },
@@ -399,7 +376,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
   render() {
     const { activeTreeId, activeGroupId } = this.props;
-    const mouseToolTipText = this.state.mouseTooltipActive
+    const selectionInfo = this.state.mouseTooltipActive
       ? `${this.props.selectedTrees.length} additional tree(s) and ${
           this.props.selectedTreeGroups.length
         } additional group(s) moving.`
@@ -412,7 +389,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           <div style={{ height, width }}>
             {
               <span style={{ color: "#1890ff" }}>
-                {mouseToolTipText}
+                {selectionInfo}
                 <Tooltip title="Unselect everthing">
                   <Icon
                     type="rollback"
@@ -426,7 +403,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             <SortableTree
               treeData={this.state.groupTree}
               onChange={this.onChange}
-              onDragStateChanged={this.handleDraggingEvent}
               onMoveNode={this.onMoveNode}
               onVisibilityToggle={this.onExpand}
               searchMethod={this.keySearchMethod}

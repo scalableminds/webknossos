@@ -1,29 +1,31 @@
 // @flow
-import React, { PureComponent } from "react";
-import type { OxalisState, Flycam } from "oxalis/store";
+import { Input, Tooltip, Icon } from "antd";
 import { connect } from "react-redux";
 import Clipboard from "clipboard-js";
-import type { Mode } from "oxalis/constants";
-import constants from "oxalis/constants";
-import Toast from "libs/toast";
+import React, { PureComponent } from "react";
+
 import { V3 } from "libs/mjs";
-import Store from "oxalis/store";
-import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
-import { Input, Tooltip, Icon } from "antd";
 import { Vector3Input } from "libs/vector_input";
+import { doWithToken } from "admin/admin_rest_api";
+import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
+import Model from "oxalis/model";
+import Request from "libs/request";
+import SceneController from "oxalis/controller/scene_controller";
+import Store, { type OxalisState, type Flycam } from "oxalis/store";
+import Toast from "libs/toast";
+import constants, { type Mode } from "oxalis/constants";
 import message from "messages";
 
-import SceneController from "oxalis/controller/scene_controller";
-import { doWithToken } from "admin/admin_rest_api";
-import Request from "libs/request";
-import Model from "oxalis/model";
+import Loop from "../../../components/loop";
 
 type Props = {
   flycam: Flycam,
   viewMode: Mode,
 };
+
+const segmentIdCache = {};
 
 class DatasetPositionView extends PureComponent<Props> {
   copyPositionToClipboard = async () => {
@@ -52,6 +54,13 @@ class DatasetPositionView extends PureComponent<Props> {
     const position = V3.floor(getPosition(this.props.flycam));
     const layer = Model.getSegmentationLayer();
     const segmentId = layer.cube.getDataValue(position, null, 1);
+
+    if (segmentId === 0 || segmentId == null || segmentIdCache[segmentId] != null) {
+      return;
+    } else {
+      segmentIdCache[segmentId] = true;
+    }
+
     const zoomStep = Math.floor(this.props.flycam.zoomStep);
     const offset = (cubeSize << zoomStep) / 2;
 
@@ -76,7 +85,7 @@ class DatasetPositionView extends PureComponent<Props> {
       ),
     );
     const vertices = new Float32Array(responseBuffer);
-    SceneController.addIsosurface(vertices);
+    SceneController.addIsosurface(vertices, segmentId);
   };
 
   render() {
@@ -87,6 +96,7 @@ class DatasetPositionView extends PureComponent<Props> {
     return (
       <div>
         <ButtonComponent onClick={this.loadIsosurface}>load isosurface</ButtonComponent>
+        <Loop onTick={this.loadIsosurface} interval={200} />
         <Tooltip title={message["tracing.copy_position"]} placement="bottomLeft">
           <div>
             <Input.Group compact>

@@ -43,6 +43,7 @@ function* restartableSaga(): Saga<void> {
       _call(watchVolumeTracingAsync),
       _call(watchAnnotationAsync),
       _call(watchDataRelevantChanges),
+      // _call(isosurfaceSaga),
     ]);
   } catch (err) {
     console.error(err);

@@ -3,38 +3,45 @@
  * @flow
  */
 
-import _ from "lodash";
-import app from "app";
-import * as Utils from "libs/utils";
 import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
-import parseStlBuffer from "libs/parse_stl_buffer";
+import _ from "lodash";
+import TWEEN from "tween.js";
+
 import { V3 } from "libs/mjs";
+import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import {
   getPosition,
   getPlaneScalingFactor,
   getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
-import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
-import Model from "oxalis/model";
-import Store from "oxalis/store";
+import { getRenderer } from "oxalis/controller/renderer";
+import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { getVoxelPerNM } from "oxalis/model/scaleinfo";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
+import ContourGeometry from "oxalis/geometries/contourgeometry";
+import Cube from "oxalis/geometries/cube";
+import Dimensions from "oxalis/model/dimensions";
+import Model from "oxalis/model";
 import Plane from "oxalis/geometries/plane";
 import Skeleton from "oxalis/geometries/skeleton";
-import Cube from "oxalis/geometries/cube";
-import ContourGeometry from "oxalis/geometries/contourgeometry";
-import Dimensions from "oxalis/model/dimensions";
+import Store from "oxalis/store";
+import * as Utils from "libs/utils";
+import app from "app";
 import constants, {
-  OrthoViews,
+  type BoundingBoxType,
+  type OrthoView,
+  type OrthoViewMap,
   OrthoViewValues,
   OrthoViewValuesWithoutTDView,
+  OrthoViews,
+  type Vector3,
 } from "oxalis/constants";
-import type { Vector3, OrthoView, OrthoViewMap, BoundingBoxType } from "oxalis/constants";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import { getRenderer } from "oxalis/controller/renderer";
-import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
-import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import parseStlBuffer from "libs/parse_stl_buffer";
 import window from "libs/window";
+
+import { convertCellIdToHSLA } from "../view/right-menu/mapping_info_view";
 
 const CUBE_COLOR = 0x999999;
 
@@ -80,13 +87,16 @@ class SceneController {
     // scene.scale does not have an effect.
     this.rootGroup = new THREE.Object3D();
     this.rootGroup.add(this.getRootNode());
+    this.isosurfacesGroup = new THREE.Group();
 
     // The dimension(s) with the highest resolution will not be distorted
     this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.dataSource.scale));
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.rootGroup);
+    this.scene.add(this.isosurfacesGroup);
 
     this.scene.add(new THREE.DirectionalLight());
+    this.addLights();
 
     this.setupDebuggingMethods();
   }
@@ -122,13 +132,77 @@ class SceneController {
     this.scene.add(new THREE.Mesh(geometry, meshMaterial));
   }
 
-  addIsosurface(vertices): void {
+  addIsosurface(vertices, segmentationId): void {
     const geometry = new THREE.BufferGeometry();
     geometry.addAttribute("position", new THREE.BufferAttribute(vertices, 3));
     geometry.computeVertexNormals();
 
-    const meshMaterial = new THREE.MeshPhongMaterial();
-    this.scene.add(new THREE.Mesh(geometry, meshMaterial));
+    // const [h, s, l] = convertCellIdToHSLA(segmentationId);
+    // const color = new THREE.Color().setHSL(h, s, l);
+    const [gamma, beta, alpha] = [0, 0, 0];
+    const [hue] = convertCellIdToHSLA(segmentationId);
+    const color = new THREE.Color().setHSL(hue, 0.5, 0.1);
+    // .setHSL(alpha, 0.5, gamma * 0.5 + 0.1)
+    // .multiplyScalar(1 - beta * 0.2);
+
+    const meshMaterial = new THREE.MeshPhongMaterial({ color });
+    meshMaterial.side = THREE.DoubleSide;
+    meshMaterial.transparent = true;
+
+    const mesh = new THREE.Mesh(geometry, meshMaterial);
+
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+
+    const tweenAnimation = new TWEEN.Tween({ opacity: 0 });
+    tweenAnimation
+      .to({ opacity: 0.95 }, 500)
+      .onUpdate(function onUpdate() {
+        meshMaterial.opacity = this.opacity;
+      })
+      .start();
+
+    this.isosurfacesGroup.add(mesh);
+  }
+
+  addLights(): void {
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xffffff, 10);
+    hemiLight.color.setHSL(0.6, 1, 0.6);
+    hemiLight.groundColor.setHSL(0.095, 1, 0.75);
+    hemiLight.position.set(0, 0, 0);
+    const hemiLightHelper = new THREE.HemisphereLightHelper(hemiLight, 100);
+    //
+    const dirLight = new THREE.DirectionalLight(0xffffff, 8);
+    dirLight.color.setHSL(0.1, 1, 0.95);
+    dirLight.position.set(0, 0, 0);
+
+    // dirLight.castShadow = true;
+    // dirLight.shadow.mapSize.width = 2048;
+    // dirLight.shadow.mapSize.height = 2048;
+    // const d = 50;
+    // dirLight.shadow.camera.left = -d;
+    // dirLight.shadow.camera.right = d;
+    // dirLight.shadow.camera.top = d;
+    // dirLight.shadow.camera.bottom = -d;
+    // dirLight.shadow.camera.far = 3500;
+    // dirLight.shadow.bias = -0.0001;
+    const dirLightHeper = new THREE.DirectionalLightHelper(dirLight, 100);
+
+    const ambientLight = new THREE.AmbientLight(0x404040); // soft white light
+
+    this.isosurfacesGroup.add(hemiLight);
+    this.isosurfacesGroup.add(hemiLightHelper);
+    this.isosurfacesGroup.add(dirLight);
+    this.isosurfacesGroup.add(dirLightHeper);
+    this.isosurfacesGroup.add(ambientLight);
+
+    this.isosurfacesGroup.add(dirLight.target);
+
+    dirLight.target.position.set(1000, 1000, 1000);
+
+    window.hemiLight = hemiLight;
+    window.dirLight = dirLight;
+    window.ambientLight = ambientLight;
   }
 
   createMeshes(): void {
@@ -171,8 +245,8 @@ class SceneController {
     };
 
     this.planes[OrthoViews.PLANE_XY].setRotation(new THREE.Euler(Math.PI, 0, 0));
-    this.planes[OrthoViews.PLANE_YZ].setRotation(new THREE.Euler(Math.PI, 1 / 2 * Math.PI, 0));
-    this.planes[OrthoViews.PLANE_XZ].setRotation(new THREE.Euler(-1 / 2 * Math.PI, 0, 0));
+    this.planes[OrthoViews.PLANE_YZ].setRotation(new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0));
+    this.planes[OrthoViews.PLANE_XZ].setRotation(new THREE.Euler((-1 / 2) * Math.PI, 0, 0));
 
     for (const plane of _.values(this.planes)) {
       plane.getMeshes().forEach(mesh => this.rootNode.add(mesh));
@@ -204,6 +278,7 @@ class SceneController {
     this.userBoundingBox.updateForCam(id);
     Utils.__guard__(this.taskBoundingBox, x => x.updateForCam(id));
 
+    this.isosurfacesGroup.visible = id === OrthoViews.TDView;
     if (id !== OrthoViews.TDView) {
       let ind;
       for (const planeId of OrthoViewValuesWithoutTDView) {

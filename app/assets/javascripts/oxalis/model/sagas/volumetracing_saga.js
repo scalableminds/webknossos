@@ -233,7 +233,7 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
 }
 
 let segmentationModel = null;
-function* getSegmentationModel() {
+function* getSegmentationModel(): Saga<Object> {
   if (segmentationModel == null) {
     console.time("fetch model");
     segmentationModel = yield* call(
@@ -270,21 +270,43 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
   const overflowBufferSize = 92;
   const inputExtent = outputExtent + 2 * overflowBufferSize;
   const inputExtentHalf = inputExtent / 2;
-  const sliceBuffer = [];
+  const halfVec = [inputExtentHalf, inputExtentHalf, 0];
+
+  console.time("fetch cuboid");
+  const min = V3.sub(position, halfVec);
+  const max = V3.add(V3.add(position, halfVec), [0, 0, 1]);
+  const cuboidData = yield* call([api.data, api.data.getDataFor2DBoundingBox], colorLayer.name, {
+    min,
+    max,
+  });
+  // const cuboidData = yield* call([api, api.data.getDataFor2DBoundingBox], { min, max });
+  console.timeEnd("fetch cuboid");
+  console.log("cuboidData", cuboidData);
+
+  // const sliceBuffer = [];
   const [tx, ty, tz] = Dimensions.transDim(position, activeViewport);
   const z = tz;
-  for (let x = tx - inputExtentHalf; x < tx + inputExtentHalf; x++) {
-    const row = [];
-    for (let y = ty - inputExtentHalf; y < ty + inputExtentHalf; y++) {
-      const voxelAddress = Dimensions.transDim([x, y, z], activeViewport);
-      const voxelValue = colorLayer.cube.getDataValue(voxelAddress);
-      // row.push(currentCellId === activeCellId ? 1 : 0);
-      row.push([(voxelValue - 128) / 128]);
-    }
-    sliceBuffer.push(row);
+  // for (let x = tx - inputExtentHalf; x < tx + inputExtentHalf; x++) {
+  //   const row = [];
+  //   for (let y = ty - inputExtentHalf; y < ty + inputExtentHalf; y++) {
+  //     const voxelAddress = Dimensions.transDim([x, y, z], activeViewport);
+  //     const voxelValue = colorLayer.cube.getDataValue(voxelAddress);
+  //     // row.push(currentCellId === activeCellId ? 1 : 0);
+  //     row.push([(voxelValue - 128) / 128]);
+  //   }
+  //   sliceBuffer.push(row);
+  // }
+  // const tensor = tf.tensor4d([sliceBuffer]);
+  const scaledData = new Float32Array(new Uint8Array(cuboidData)).map(el => (el - 128) / 128);
+
+  if (scaledData.length !== inputExtent ** 2) {
+    console.warn("missing buckets");
+    return;
   }
 
-  const tensor = tf.tensor4d([sliceBuffer]);
+  let tensor = tf.tensor4d(scaledData, [1, inputExtent, inputExtent, 1]);
+  tensor = tf.transpose(tensor, [0, 2, 1, 3]);
+
   const model = yield* call(getSegmentationModel);
   const inferredTensor = model.predict(tensor);
 

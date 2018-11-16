@@ -3,11 +3,13 @@
  * @flow
  */
 import _ from "lodash";
+import * as tf from "@tensorflow/tfjs";
 
 import {
   type CopySegmentationLayerAction,
   resetContourAction,
   updateDirectionAction,
+  type InferSegmentationInViewportAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
   type Saga,
@@ -46,6 +48,7 @@ import api from "oxalis/api/internal_api";
 export function* watchVolumeTracingAsync(): Saga<void> {
   yield* take("WK_READY");
   yield _takeEvery("COPY_SEGMENTATION_LAYER", copySegmentationLayer);
+  yield _takeEvery("INFER_SEGMENT_IN_VIEWPORT", inferSegmentInViewport);
   yield* fork(warnOfTooLowOpacity);
 }
 
@@ -225,6 +228,74 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
         Dimensions.transDim([x, y, tz + direction * directionInverter], activeViewport),
         Dimensions.transDim([x, y, z], activeViewport),
       );
+    }
+  }
+}
+
+let segmentationModel = null;
+function* getSegmentationModel() {
+  if (segmentationModel == null) {
+    console.time("fetch model");
+    segmentationModel = yield* call(
+      [tf, tf.loadModel],
+      "http://localhost:9000/assets/bundle/seg-model.json",
+    );
+    console.timeEnd("fetch model");
+  }
+  return segmentationModel;
+}
+
+function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Saga<void> {
+  const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
+  if (!allowUpdate) return;
+
+  const activeViewport = yield* select(state => state.viewModeData.plane.activeViewport);
+  if (activeViewport === "TDView") {
+    // Cannot copy labels from 3D view
+    return;
+  }
+
+  const colorLayers = yield* call([Model, Model.getColorLayers]);
+  const colorLayer = colorLayers[0];
+  const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
+  // const zoom = yield* select(state => state.flycam.zoomStep);
+  // const baseVoxelFactors = yield* select(state =>
+  //   Dimensions.transDim(getBaseVoxelFactors(state.dataset.dataSource.scale), activeViewport),
+  // );
+  // const halfViewportWidth = Math.round((Constants.PLANE_WIDTH / 2) * zoom);
+  // const [scaledOffsetX, scaledOffsetY] = baseVoxelFactors.map(f => halfViewportWidth * f);
+  // const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
+
+  const outputExtent = 100;
+  const overflowBufferSize = 92;
+  const inputExtent = outputExtent + 2 * overflowBufferSize;
+  const inputExtentHalf = inputExtent / 2;
+  const sliceBuffer = [];
+  const [tx, ty, tz] = Dimensions.transDim(position, activeViewport);
+  const z = tz;
+  for (let x = tx - inputExtentHalf; x < tx + inputExtentHalf; x++) {
+    const row = [];
+    for (let y = ty - inputExtentHalf; y < ty + inputExtentHalf; y++) {
+      const voxelAddress = Dimensions.transDim([x, y, z], activeViewport);
+      const voxelValue = colorLayer.cube.getDataValue(voxelAddress);
+      // row.push(currentCellId === activeCellId ? 1 : 0);
+      row.push([(voxelValue - 128) / 128]);
+    }
+    sliceBuffer.push(row);
+  }
+
+  const tensor = tf.tensor4d([sliceBuffer]);
+  const model = yield* call(getSegmentationModel);
+  const inferredTensor = model.predict(tensor);
+
+  const inferredData = yield* call([inferredTensor, inferredTensor.data]);
+
+  let idx = 0;
+  for (let x = tx - outputExtent / 2; x < tx + outputExtent / 2; x++) {
+    for (let y = ty - outputExtent / 2; y < ty + outputExtent / 2; y++) {
+      const voxelAddress = Dimensions.transDim([x, y, z], activeViewport);
+      api.data.labelVoxels([voxelAddress], Math.round(inferredData[idx]));
+      idx++;
     }
   }
 }

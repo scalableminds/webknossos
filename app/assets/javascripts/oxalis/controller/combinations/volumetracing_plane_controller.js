@@ -23,6 +23,7 @@ import {
   setContourTracingMode,
   cycleToolAction,
   copySegmentationLayerAction,
+  inferSegmentationInViewportAction,
   setActiveCellAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
@@ -151,12 +152,14 @@ export function getPlaneMouseControls(planeId: OrthoView): * {
 
     leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
       if (event.shiftKey) {
-        const cellId = Model.getSegmentationLayer().cube.getDataValue(
-          calculateGlobalPos(pos),
-          null,
-          getRequestLogZoomStep(Store.getState()),
-        );
-        handleCellSelection(cellId);
+        // const cellId = Model.getSegmentationLayer().cube.getDataValue(
+        //   calculateGlobalPos(pos),
+        //   null,
+        //   getRequestLogZoomStep(Store.getState()),
+        // );
+        // handleCellSelection(cellId);
+
+        Store.dispatch(inferSegmentationInViewportAction());
       }
     },
 

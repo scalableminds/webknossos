@@ -4,6 +4,7 @@
  */
 import _ from "lodash";
 import * as tf from "@tensorflow/tfjs";
+import floodfill from "n-dimensional-flood-fill";
 
 import {
   type CopySegmentationLayerAction,
@@ -257,47 +258,90 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
 
   const colorLayers = yield* call([Model, Model.getColorLayers]);
   const colorLayer = colorLayers[0];
-  const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
-  // const zoom = yield* select(state => state.flycam.zoomStep);
-  // const baseVoxelFactors = yield* select(state =>
-  //   Dimensions.transDim(getBaseVoxelFactors(state.dataset.dataSource.scale), activeViewport),
-  // );
-  // const halfViewportWidth = Math.round((Constants.PLANE_WIDTH / 2) * zoom);
-  // const [scaledOffsetX, scaledOffsetY] = baseVoxelFactors.map(f => halfViewportWidth * f);
-  // const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
-
+  const zoom = yield* select(state => state.flycam.zoomStep);
+  const baseVoxelFactors = yield* select(state =>
+    Dimensions.transDim(getBaseVoxelFactors(state.dataset.dataSource.scale), activeViewport),
+  );
+  const baseViewportWidth = Math.round(Constants.PLANE_WIDTH * zoom);
+  const [viewportWidthX, viewportWidthY] = baseVoxelFactors.map(f => baseViewportWidth * f);
+  const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
   const outputExtent = 100;
   const overflowBufferSize = 92;
   const inputExtent = outputExtent + 2 * overflowBufferSize;
   const inputExtentHalf = inputExtent / 2;
-  const sliceBuffer = [];
-  const [tx, ty, tz] = Dimensions.transDim(position, activeViewport);
-  const z = tz;
-  for (let x = tx - inputExtentHalf; x < tx + inputExtentHalf; x++) {
-    const row = [];
-    for (let y = ty - inputExtentHalf; y < ty + inputExtentHalf; y++) {
-      const voxelAddress = Dimensions.transDim([x, y, z], activeViewport);
-      const voxelValue = colorLayer.cube.getDataValue(voxelAddress);
-      // row.push(currentCellId === activeCellId ? 1 : 0);
-      row.push([(voxelValue - 128) / 128]);
-    }
-    sliceBuffer.push(row);
-  }
+  console.log("viewport width", viewportWidthX);
 
-  const tensor = tf.tensor4d([sliceBuffer]);
+  const { brightness, contrast } = (yield* select(state => state.datasetConfiguration.layers))[
+    colorLayer.name
+  ];
+  const halfViewportWidthX = Math.round(viewportWidthX / 2);
+  const halfViewportWidthY = Math.round(viewportWidthY / 2);
+  console.time("get-data");
+  const tensorArray = [];
+  const [tx, ty, tz] = Dimensions.transDim(action.position, activeViewport);
+  for (
+    let tileX = tx - halfViewportWidthX;
+    tileX < tx + halfViewportWidthX;
+    tileX += outputExtent
+  ) {
+    for (
+      let tileY = ty - halfViewportWidthY;
+      tileY < ty + halfViewportWidthY;
+      tileY += outputExtent
+    ) {
+      const sliceBuffer = [];
+      const z = tz;
+      for (let x = 0; x < inputExtent; x++) {
+        const row = [];
+        for (let y = 0; y < inputExtent; y++) {
+          const voxelAddress = Dimensions.transDim(
+            [x + tileX - overflowBufferSize, y + tileY - overflowBufferSize, z],
+            activeViewport,
+          );
+          const voxelValue = colorLayer.cube.getDataValue(voxelAddress);
+          // row.push(currentCellId === activeCellId ? 1 : 0);
+          row.push([((voxelValue + brightness - 128) * contrast) / 128]);
+        }
+        sliceBuffer.push(row);
+      }
+      tensorArray.push(sliceBuffer);
+    }
+  }
+  console.timeEnd("get-data");
+  console.time("predict");
+  const tensor = tf.tensor4d(tensorArray);
   const model = yield* call(getSegmentationModel);
   const inferredTensor = model.predict(tensor);
 
   const inferredData = yield* call([inferredTensor, inferredTensor.data]);
-
-  let idx = 0;
-  for (let x = tx - outputExtent / 2; x < tx + outputExtent / 2; x++) {
-    for (let y = ty - outputExtent / 2; y < ty + outputExtent / 2; y++) {
-      const voxelAddress = Dimensions.transDim([x, y, z], activeViewport);
-      api.data.labelVoxels([voxelAddress], Math.round(inferredData[idx]));
-      idx++;
+  console.timeEnd("predict");
+  const getter = (x, y) => {
+    if (x < 0 && y < 0 && x >= viewportWidthX && y >= viewportWidthY) {
+      return false;
     }
+    const tileX = Math.floor(x / outputExtent);
+    const tileY = Math.floor(y / outputExtent);
+    const numTiles = Math.ceil(viewportWidthX / outputExtent);
+    const relX = x % outputExtent;
+    const relY = y % outputExtent;
+    return (
+      inferredData[(tileX * numTiles + tileY) * outputExtent ** 2 + relX * outputExtent + relY] >
+      0.9
+    );
+  };
+  console.time("flood");
+  const seed = [halfViewportWidthX, halfViewportWidthY];
+  if (!getter(...seed)) return;
+  const segmentedData = floodfill({ getter, seed }).flooded;
+  console.timeEnd("flood");
+  console.time("label");
+  for (const [xRel, yRel] of segmentedData) {
+    const x = tx - halfViewportWidthX + xRel;
+    const y = ty - halfViewportWidthY + yRel;
+    const voxelAddress = Dimensions.transDim([x, y, tz], activeViewport);
+    api.data.labelVoxels([voxelAddress], activeCellId);
   }
+  console.timeEnd("label");
 }
 
 export function* finishLayer(

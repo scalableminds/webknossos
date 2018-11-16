@@ -159,7 +159,7 @@ export function getPlaneMouseControls(planeId: OrthoView): * {
         // );
         // handleCellSelection(cellId);
 
-        Store.dispatch(inferSegmentationInViewportAction());
+        Store.dispatch(inferSegmentationInViewportAction(calculateGlobalPos(pos)));
       }
     },
 

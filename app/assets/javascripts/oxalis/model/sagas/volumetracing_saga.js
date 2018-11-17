@@ -269,7 +269,6 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
   const overflowBufferSize = 92;
   const inputExtent = outputExtent + 2 * overflowBufferSize;
   const inputExtentHalf = inputExtent / 2;
-  const halfVec = [inputExtentHalf, inputExtentHalf, 0];
 
   console.log("viewport width", viewportWidthX);
 
@@ -283,7 +282,15 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
   const tensorArray = new Float32Array(
     inputExtent ** 2 * tileCount * Math.ceil(viewportWidthY / outputExtent),
   );
-  const [tx, ty, tz] = Dimensions.transDim(action.position.map(Math.floor), activeViewport);
+  const centerPosition = Dimensions.transDim(
+    Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam))),
+    activeViewport,
+  );
+  const [tx, ty, tz] = centerPosition;
+  const clickPosition = Dimensions.transDim(
+    Dimensions.roundCoordinate(action.position),
+    activeViewport,
+  );
   const z = tz;
   // const min = V3.sub(position, halfVec);
   // const max = V3.add(V3.add(position, halfVec), [0, 0, 1]);
@@ -334,7 +341,7 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
   const inferredData = yield* call([inferredTensor, inferredTensor.data]);
   console.timeEnd("predict");
   const getter = (x, y) => {
-    if (x < 0 && y < 0 && x >= viewportWidthX && y >= viewportWidthY) {
+    if (x < 0 || y < 0 || x >= viewportWidthX || y >= viewportWidthY) {
       return false;
     }
     const tileX = Math.floor(x / outputExtent);
@@ -348,7 +355,10 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
     );
   };
   console.time("flood");
-  const seed = [halfViewportWidthX, halfViewportWidthY];
+  const seed = [
+    halfViewportWidthX + clickPosition[0] - centerPosition[0],
+    halfViewportWidthY + clickPosition[1] - centerPosition[1],
+  ];
   if (!getter(...seed)) return;
   const segmentedData = floodfill({ getter, seed }).flooded;
   console.timeEnd("flood");

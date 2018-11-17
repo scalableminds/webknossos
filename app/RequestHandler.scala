@@ -30,7 +30,7 @@ class RequestHandler @Inject()(router: Router,
     } else {
       val file =
         Paths.get(env.rootPath + af.assetsBasePath + request.path).toFile
-      if ((file.exists && file.isFile) || request.path.matches("^.+\\..+$"))
+      if (request.path.matches("^.+\\..+$") || (file.exists && file.isFile))
         Some(assets.at(path = "/public", file = request.path))
       else
         Some(Action { Ok(views.html.main(conf)) })

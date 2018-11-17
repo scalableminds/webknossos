@@ -265,7 +265,7 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
   const baseViewportWidth = Math.round(Constants.PLANE_WIDTH * zoom);
   const [viewportWidthX, viewportWidthY] = baseVoxelFactors.map(f => baseViewportWidth * f);
   const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
-  const outputExtent = 100;
+  const outputExtent = 244;
   const overflowBufferSize = 92;
   const inputExtent = outputExtent + 2 * overflowBufferSize;
   const inputExtentHalf = inputExtent / 2;
@@ -278,11 +278,12 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
   ];
   const halfViewportWidthX = Math.round(viewportWidthX / 2);
   const halfViewportWidthY = Math.round(viewportWidthY / 2);
+  const tileCount = Math.ceil(viewportWidthX / outputExtent);
   console.time("get-data");
-  const tensorBuffer = new Float32Array(
-    inputExtent ** 2 * (halfViewportWidthX / outputExtent) * (halfViewportWidthY / outputExtent),
+  const tensorArray = new Float32Array(
+    inputExtent ** 2 * tileCount * Math.ceil(viewportWidthY / outputExtent),
   );
-  const [tx, ty, tz] = Dimensions.transDim(action.position, activeViewport);
+  const [tx, ty, tz] = Dimensions.transDim(action.position.map(Math.floor), activeViewport);
   const z = tz;
   // const min = V3.sub(position, halfVec);
   // const max = V3.add(V3.add(position, halfVec), [0, 0, 1]);
@@ -301,7 +302,7 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
       const max = [
         tileX - overflowBufferSize + inputExtent,
         tileY - overflowBufferSize + inputExtent,
-        z,
+        z + 1,
       ];
 
       const cuboidData = yield* call(
@@ -313,18 +314,18 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
         },
       );
 
-      tensorBuffer.set(
-        new Float32Array(new Uint8Array(cuboidData)).map(el => (el - 128) / 128),
+      tensorArray.set(
+        new Float32Array(new Uint8Array(cuboidData)).map(
+          el => ((el + brightness - 128) * contrast) / 128,
+        ),
         inputExtent ** 2 * sliceCounter,
       );
       sliceCounter++;
     }
   }
-
-  // todo
-  // row.push([((voxelValue + brightness - 128) * contrast) / 128]);
-
-  let tensor = tf.tensor4d(tensorArray, [tensorArray.length, inputExtent, inputExtent, 1]);
+  console.timeEnd("get-data");
+  console.time("predict");
+  let tensor = tf.tensor4d(tensorArray, [tileCount ** 2, inputExtent, inputExtent, 1]);
   tensor = tf.transpose(tensor, [0, 2, 1, 3]);
 
   const model = yield* call(getSegmentationModel);

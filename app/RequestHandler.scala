@@ -40,6 +40,4 @@ class RequestHandler @Inject()(router: Router,
       else
         Some(Action { Ok(views.html.main(conf)) })
     }
-  }
-
 }

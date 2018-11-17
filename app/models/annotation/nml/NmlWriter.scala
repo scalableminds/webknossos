@@ -17,19 +17,18 @@ import play.api.libs.iteratee.Enumerator
 
 import scala.concurrent.{ExecutionContext, Future}
 
-
 case class NmlParameters(
-                          dataSetName: String,
-                          description: Option[String],
-                          scale: Option[Scale],
-                          createdTimestamp: Long,
-                          editPosition: Point3D,
-                          editRotation: Vector3D,
-                          zoomLevel: Double,
-                          activeNodeId: Option[Int],
-                          userBoundingBox: Option[BoundingBox],
-                          taskBoundingBox: Option[BoundingBox]
-                        )
+    dataSetName: String,
+    description: Option[String],
+    scale: Option[Scale],
+    createdTimestamp: Long,
+    editPosition: Point3D,
+    editRotation: Vector3D,
+    zoomLevel: Double,
+    activeNodeId: Option[Int],
+    userBoundingBox: Option[BoundingBox],
+    taskBoundingBox: Option[BoundingBox]
+)
 
 class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
   private lazy val outputService = XMLOutputFactory.newInstance()
@@ -39,9 +38,9 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
                   annotation: Option[Annotation],
                   scale: Option[Scale],
                   annotationOwner: Option[User],
-                  annotationTask: Option[Task]
-                 ): Enumerator[Array[Byte]] = Enumerator.outputStream { os =>
-    implicit val writer: IndentingXMLStreamWriter = new IndentingXMLStreamWriter(outputService.createXMLStreamWriter(os))
+                  annotationTask: Option[Task]): Enumerator[Array[Byte]] = Enumerator.outputStream { os =>
+    implicit val writer: IndentingXMLStreamWriter =
+      new IndentingXMLStreamWriter(outputService.createXMLStreamWriter(os))
 
     for {
       nml <- toNml(skeletonTracing, volumeTracing, annotation, scale, annotationOwner, annotationTask)
@@ -54,13 +53,15 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
             annotation: Option[Annotation],
             scale: Option[Scale],
             annotationOwner: Option[User],
-            annotationTask: Option[Task]
-           )(implicit writer: XMLStreamWriter): Fox[Unit] = {
+            annotationTask: Option[Task])(implicit writer: XMLStreamWriter): Fox[Unit] =
     for {
       _ <- Xml.withinElement("things") {
         for {
           _ <- Future.successful(writeMetaData(annotation, annotationOwner, annotationTask))
-          parameters <- extractTracingParameters(skeletonTracingOpt, volumeTracingOpt, annotation.map(_.description), scale).toFox
+          parameters <- extractTracingParameters(skeletonTracingOpt,
+                                                 volumeTracingOpt,
+                                                 annotation.map(_.description),
+                                                 scale).toFox
           _ = writeParameters(parameters)
           _ = skeletonTracingOpt.foreach(writeSkeletonThings)
           _ = volumeTracingOpt.foreach(writeVolumeThings)
@@ -69,13 +70,11 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
       _ = writer.writeEndDocument()
       _ = writer.close()
     } yield ()
-  }
 
   def extractTracingParameters(skeletonTracingOpt: Option[SkeletonTracing],
-                                       volumeTracingOpt: Option[VolumeTracing],
-                                       description: Option[String],
-                                       scale: Option[Scale]
-                                      ): Option[NmlParameters] = {
+                               volumeTracingOpt: Option[VolumeTracing],
+                               description: Option[String],
+                               scale: Option[Scale]): Option[NmlParameters] =
     // in hybrid case, use data from skeletonTracing (should be identical)
     skeletonTracingOpt.map { s =>
       NmlParameters(
@@ -92,7 +91,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
       )
     }.orElse {
       volumeTracingOpt.map { v: VolumeTracing =>
-      NmlParameters(
+        NmlParameters(
           v.dataSetName,
           description,
           scale,
@@ -106,9 +105,8 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         )
       }
     }
-  }
 
-  def writeParameters(parameters: NmlParameters)(implicit writer: XMLStreamWriter): Unit = {
+  def writeParameters(parameters: NmlParameters)(implicit writer: XMLStreamWriter): Unit =
     Xml.withinElementSync("parameters") {
       Xml.withinElementSync("experiment") {
         writer.writeAttribute("name", parameters.dataSetName)
@@ -166,24 +164,23 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         }
       }
     }
-  }
 
-  def writeVolumeThings(volumeTracing: VolumeTracing)(implicit writer: XMLStreamWriter): Unit = {
+  def writeVolumeThings(volumeTracing: VolumeTracing)(implicit writer: XMLStreamWriter): Unit =
     Xml.withinElementSync("volume") {
       writer.writeAttribute("id", "1")
       writer.writeAttribute("location", "data.zip")
       volumeTracing.fallbackLayer.foreach(writer.writeAttribute("fallbackLayer", _))
     }
-  }
 
   def writeSkeletonThings(skeletonTracing: SkeletonTracing)(implicit writer: XMLStreamWriter): Unit = {
     writeTreesAsXml(skeletonTracing.trees.filterNot(_.nodes.isEmpty))
-    Xml.withinElementSync("branchpoints")(writeBranchPointsAsXml(skeletonTracing.trees.flatMap(_.branchPoints).sortBy(-_.createdTimestamp)))
+    Xml.withinElementSync("branchpoints")(
+      writeBranchPointsAsXml(skeletonTracing.trees.flatMap(_.branchPoints).sortBy(-_.createdTimestamp)))
     Xml.withinElementSync("comments")(writeCommentsAsXml(skeletonTracing.trees.flatMap(_.comments)))
     Xml.withinElementSync("groups")(writeTreeGroupsAsXml(skeletonTracing.treeGroups))
   }
 
-  def writeTreesAsXml(trees: Seq[Tree])(implicit writer: XMLStreamWriter): Unit = {
+  def writeTreesAsXml(trees: Seq[Tree])(implicit writer: XMLStreamWriter): Unit =
     trees.foreach { t =>
       Xml.withinElementSync("thing") {
         writer.writeAttribute("id", t.treeId.toString)
@@ -197,9 +194,8 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         Xml.withinElementSync("edges")(writeEdgesAsXml(t.edges))
       }
     }
-  }
 
-  def writeNodesAsXml(nodes: Seq[Node])(implicit writer: XMLStreamWriter): Unit = {
+  def writeNodesAsXml(nodes: Seq[Node])(implicit writer: XMLStreamWriter): Unit =
     nodes.toSet.foreach { n: Node => //TODO 2017: once the tracings with duplicate nodes are fixed in the DB, remove the toSet workaround
       Xml.withinElementSync("node") {
         writer.writeAttribute("id", n.id.toString)
@@ -217,36 +213,32 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         writer.writeAttribute("time", n.createdTimestamp.toString)
       }
     }
-  }
 
-  def writeEdgesAsXml(edges: Seq[Edge])(implicit writer: XMLStreamWriter): Unit = {
+  def writeEdgesAsXml(edges: Seq[Edge])(implicit writer: XMLStreamWriter): Unit =
     edges.foreach { e =>
       Xml.withinElementSync("edge") {
         writer.writeAttribute("source", e.source.toString)
         writer.writeAttribute("target", e.target.toString)
       }
     }
-  }
 
-  def writeBranchPointsAsXml(branchPoints: Seq[BranchPoint])(implicit writer: XMLStreamWriter): Unit = {
+  def writeBranchPointsAsXml(branchPoints: Seq[BranchPoint])(implicit writer: XMLStreamWriter): Unit =
     branchPoints.foreach { b =>
       Xml.withinElementSync("branchpoint") {
         writer.writeAttribute("id", b.nodeId.toString)
         writer.writeAttribute("time", b.createdTimestamp.toString)
       }
     }
-  }
 
-  def writeCommentsAsXml(comments: Seq[Comment])(implicit writer: XMLStreamWriter): Unit = {
+  def writeCommentsAsXml(comments: Seq[Comment])(implicit writer: XMLStreamWriter): Unit =
     comments.foreach { c =>
       Xml.withinElementSync("comment") {
         writer.writeAttribute("node", c.nodeId.toString)
         writer.writeAttribute("content", c.content)
       }
     }
-  }
 
-  def writeTreeGroupsAsXml(treeGroups: Seq[TreeGroup])(implicit writer: XMLStreamWriter): Unit = {
+  def writeTreeGroupsAsXml(treeGroups: Seq[TreeGroup])(implicit writer: XMLStreamWriter): Unit =
     treeGroups.foreach { t =>
       Xml.withinElementSync("group") {
         writer.writeAttribute("name", t.name)
@@ -254,9 +246,9 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         writeTreeGroupsAsXml(t.children)
       }
     }
-  }
 
-  def writeMetaData(annotationOpt: Option[Annotation], userOpt: Option[User], taskOpt: Option[Task])(implicit writer: XMLStreamWriter): Unit = {
+  def writeMetaData(annotationOpt: Option[Annotation], userOpt: Option[User], taskOpt: Option[Task])(
+      implicit writer: XMLStreamWriter): Unit = {
     Xml.withinElementSync("meta") {
       writer.writeAttribute("name", "writer")
       writer.writeAttribute("content", "NmlWriter.scala")

@@ -138,7 +138,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
   onSelectTree = evt => {
     const treeId = evt.target.dataset.id;
-    if (evt.altKey) {
+    if (evt.ctrlKey) {
       this.props.handleTreeSelect(parseInt(treeId, 10));
     } else {
       this.props.onSetActiveTree(parseInt(treeId, 10));
@@ -147,7 +147,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
   onSelectGroup = evt => {
     const groupId = parseInt(evt.target.dataset.id, 10);
-    if (evt.altKey) {
+    if (evt.ctrlKey) {
       const groupTree = removeTreesAndTransform(this.state.groupTree);
       let parentId = null;
       let selectedGroup: ?TreeGroup = null;

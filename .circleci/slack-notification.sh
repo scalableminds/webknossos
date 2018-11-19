@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-if [ "${CIRCLE_BRANCH}" == "master" ] || [ "${CIRCLE_BRANCH}" == "circleci-custom-notification" ]; then
+if [ "${CIRCLE_BRANCH}" == "master" ]; then
     author=${CIRCLE_USERNAME}
     author=${author/fm3/<@florian>}
     author=${author/jstriebel/<@jonathan>}
@@ -20,8 +20,7 @@ if [ "${CIRCLE_BRANCH}" == "master" ] || [ "${CIRCLE_BRANCH}" == "circleci-custo
     buildlink="<https://circleci.com/gh/scalableminds/webknossos/${CIRCLE_BUILD_NUM}|${CIRCLE_BUILD_NUM}>"
     prlink="<https://github.com/scalableminds/webknossos/pull/${CIRCLE_PR_NUMBER:=0}|#${CIRCLE_PR_NUMBER:=0}>"
     mesg="${author} your ${CIRCLE_BRANCH} build ${buildlink} (${commitmsg} – ${prlink}) is almost finished."
-    echo $mesg
-    user="circleci-custom"
+    user="circleci-notify"
     token="${SLACK_NOTIFY_TOKEN:-}"
     res=$(curl -s \
         -X POST \

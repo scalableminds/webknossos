@@ -6,7 +6,8 @@ if [ "${CIRCLE_BRANCH}" == "master" ] || [ "${CIRCLE_BRANCH}" == "circleci-custo
     author=${author/fm3/florian}
     author=${author/jstriebel/jonathan}
     channel="webknossos-bots"
-    mesg="@${author} your ${CIRCLE_BRANCH} build ${CIRCLE_BUILD_NUM} is almost finished."
+    commitmsg=$(git log --format=%s -n 1)
+    mesg="<@${author}> your ${CIRCLE_BRANCH} build <https://circleci.com/gh/scalableminds/webknossos/${CIRCLE_BUILD_NUM}|${CIRCLE_BUILD_NUM}> (${commitmsg}) is almost finished."
     echo $mesg
     user="circleci-custom"
     token="${SLACK_NOTIFY_TOKEN:-}"

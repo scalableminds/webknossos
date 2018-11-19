@@ -262,6 +262,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
   }
 
   def switchTo(email: String) = sil.SecuredAction.async { implicit request =>
+    implicit val ctx = GlobalAccessContext
     if (request.identity.isSuperUser) {
       val loginInfo = LoginInfo(CredentialsProvider.ID, email)
       for {

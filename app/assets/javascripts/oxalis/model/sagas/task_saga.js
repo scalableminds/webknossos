@@ -5,6 +5,7 @@ import _ from "lodash";
 import type { APITaskType } from "admin/api_flow_types";
 import { type Saga, call, put, select, take } from "oxalis/model/sagas/effect-generators";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import {
   updateDatasetSettingAction,
   updateUserSettingAction,
@@ -46,17 +47,23 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
 
   const userConfiguration = yield* select(state => state.userConfiguration);
   const datasetConfiguration = yield* select(state => state.datasetConfiguration);
+  const zoomStep = yield* select(state => state.flycam.zoomStep);
 
-  const isConfigurationDifferent = _.reduce(
-    settingsObject,
-    (acc: boolean, value, key: string) =>
-      acc || (userConfiguration[key] !== value && datasetConfiguration[key] !== value),
-    false,
-  );
-
-  if (!isConfigurationDifferent) return;
+  const configurationDifference = _.find(settingsObject, (value, key: string) => {
+    if (key === "zoom" && zoomStep !== value) {
+      return true;
+    } else if (userConfiguration[key] != null && userConfiguration[key] !== value) {
+      return true;
+    } else if (datasetConfiguration[key] != null && datasetConfiguration[key] !== value) {
+      return true;
+    }
+    return false;
+  });
+  if (configurationDifference == null) return;
 
   let confirmed = false;
+  // The renderIndependently call returns a promise that is only resolved
+  // once destroy is called. yield* will wait until the returned promise is resolved.
   yield* call(renderIndependently, destroy => (
     <RecommendConfigurationModal
       config={settingsObject}
@@ -69,7 +76,9 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
 
   if (confirmed) {
     for (const key of Object.keys(settingsObject)) {
-      if (userConfiguration[key] != null) {
+      if (key === "zoom") {
+        yield* put(setZoomStepAction(settingsObject[key]));
+      } else if (userConfiguration[key] != null) {
         yield* put(updateUserSettingAction(key, settingsObject[key]));
       } else if (datasetConfiguration[key] != null) {
         yield* put(updateDatasetSettingAction(key, settingsObject[key]));

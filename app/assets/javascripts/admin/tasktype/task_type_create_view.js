@@ -27,11 +27,13 @@ type Props = {
 
 type State = {
   teams: Array<APITeam>,
+  useRecommendedConfiguration: boolean,
 };
 
 class TaskTypeCreateView extends React.PureComponent<Props, State> {
   state = {
     teams: [],
+    useRecommendedConfiguration: false,
   };
 
   componentDidMount() {
@@ -48,17 +50,20 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
       },
       recommendedConfiguration: toJSON({
         clippingDistance: 500,
-        clippingDistanceArbitrary: 500,
+        clippingDistanceArbitrary: 60,
         displayCrosshair: true,
         displayScalebars: false,
         dynamicSpaceDirection: true,
         keyboardDelay: 0,
         moveValue: 500,
-        moveValue3d: 500,
+        moveValue3d: 600,
+        mouseRotateValue: 0.001,
         newNodeNewTree: false,
         highlightCommentedNodes: false,
         overrideNodeRadius: true,
         particleSize: 5,
+        rotateValue: 0.01,
+        sphericalCapRadius: 500,
         tdViewDisplayPlanes: false,
         fourBit: false,
         interpolation: true,
@@ -69,11 +74,15 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
         renderMissingDataBlack: false,
       }),
     };
-    const taskType = this.props.taskTypeId ? await getTaskType(this.props.taskTypeId) : {};
+    const taskType = this.props.taskTypeId ? await getTaskType(this.props.taskTypeId) : null;
     // Use merge which is deep _.extend
     // eslint-disable-next-line no-unused-vars
-    const { recommendedConfiguration, ...formValues } = _.merge({}, defaultValues, taskType);
+    const formValues = _.merge({}, defaultValues, taskType);
     this.props.form.setFieldsValue(formValues);
+
+    if (taskType != null && taskType.recommendedConfiguration != null) {
+      this.setState({ useRecommendedConfiguration: true });
+    }
   }
 
   async fetchData() {
@@ -82,6 +91,9 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
 
   handleSubmit = e => {
     e.preventDefault();
+    if (!this.state.useRecommendedConfiguration) {
+      this.props.form.setFieldsValue({ recommendedConfiguration: null });
+    }
     this.props.form.validateFields(async (err, formValues) => {
       if (!err) {
         if (this.props.taskTypeId) {
@@ -92,6 +104,10 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
         this.props.history.push("/taskTypes");
       }
     });
+  };
+
+  onChangeUseRecommendedConfiguration = (useRecommendedConfiguration: boolean) => {
+    this.setState({ useRecommendedConfiguration });
   };
 
   render() {
@@ -195,8 +211,12 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
               )}
             </FormItem>
 
-            <FormItem hasFeedback>
-              <RecommendedConfigurationView form={this.props.form} />
+            <FormItem>
+              <RecommendedConfigurationView
+                form={this.props.form}
+                enabled={this.state.useRecommendedConfiguration}
+                onChangeEnabled={this.onChangeUseRecommendedConfiguration}
+              />
             </FormItem>
 
             <FormItem>

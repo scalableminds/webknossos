@@ -1,6 +1,6 @@
 // @flow
 import * as React from "react";
-import { Input, Form, Row, Col, Collapse, Tooltip, Icon } from "antd";
+import { Input, Form, Collapse, Tooltip, Icon, Checkbox } from "antd";
 import { jsonEditStyle } from "dashboard/dataset/helper_components";
 import { validateUserSettingsJSON } from "dashboard/dataset/validation";
 
@@ -13,30 +13,40 @@ const errorIcon = (
   </Tooltip>
 );
 
-export default function RecommendedConfigurationView({ form }: { form: Object }) {
+export default function RecommendedConfigurationView({
+  form,
+  enabled,
+  onChangeEnabled,
+}: {
+  form: Object,
+  enabled: boolean,
+  onChangeEnabled: boolean => void,
+}) {
   return (
-    <Collapse>
+    <Collapse
+      onChange={openedPanels => onChangeEnabled(openedPanels.length === 1)}
+      activeKey={enabled ? "config" : null}
+    >
       <Panel
+        key="config"
         header={
           <React.Fragment>
-            Recommended User Settings {form.getFieldError("recommendedConfiguration") && errorIcon}
+            <Checkbox checked={enabled} style={{ marginRight: 10 }} /> Add Recommended User Settings
+            {enabled && form.getFieldError("recommendedConfiguration") && errorIcon}
           </React.Fragment>
         }
-        forceRender
+        showArrow={false}
       >
-        <FormItem hasFeedback>
-          <Row gutter={16}>
-            <Col span={12}>
-              {form.getFieldDecorator("recommendedConfiguration", {
-                rules: [
-                  {
-                    validator: validateUserSettingsJSON,
-                  },
-                ],
-              })(<Input.TextArea spellCheck={false} rows={20} style={jsonEditStyle} />)}
-            </Col>
-            <Col span={12}>Some Description Text</Col>
-          </Row>
+        <FormItem>
+          The recommended configuration will be displayed to users when starting to trace a task
+          with this task type. The user is able to accept or decline this recommendation.
+          {form.getFieldDecorator("recommendedConfiguration", {
+            rules: [
+              {
+                validator: validateUserSettingsJSON,
+              },
+            ],
+          })(<Input.TextArea spellCheck={false} rows={20} style={jsonEditStyle} />)}
         </FormItem>
       </Panel>
     </Collapse>

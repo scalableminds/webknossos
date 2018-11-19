@@ -212,10 +212,12 @@ jobs:
               docker push scalableminds/webknossos-dev:$CIRCLE_BRANCH
             fi
             docker logout
-
       - run:
           name: Report coverage
           command: .circleci/not-on-master.sh docker-compose run base yarn coverage
+      - run:
+          name: Send Slack notification (master only)
+          command: .circleci/slack-notification.sh
 
   nightly:
     docker:

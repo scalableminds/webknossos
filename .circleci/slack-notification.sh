@@ -18,7 +18,7 @@ if [ "${CIRCLE_BRANCH}" == "master" ] || [ "${CIRCLE_BRANCH}" == "circleci-custo
     channel="webknossos-bots"
     commitmsg=$(git log --format=%s -n 1)
     buildlink="<https://circleci.com/gh/scalableminds/webknossos/${CIRCLE_BUILD_NUM}|${CIRCLE_BUILD_NUM}>"
-    prlink="<${CIRCLE_PULL_REQUEST}|PR #${CIRCLE_PR_NUMBER}>"
+    prlink="<${CIRCLE_PULL_REQUEST:-}|PR #${CIRCLE_PR_NUMBER:-}>"
     mesg="${author} your ${CIRCLE_BRANCH} build ${buildlink} (${commitmsg} ${prlink}) is almost finished."
     echo $mesg
     user="circleci-custom"

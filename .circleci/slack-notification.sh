@@ -1,11 +1,12 @@
 #!/bin/bash
 
-local channel="webknossos-bots"
-local mesg="Let’s test sending custom circleci notifications to slack. This is build ${CIRCLE_BUILD_NUM}"
-local user="circleci-custom"
+channel="webknossos-bots"
+mesg="Let’s test sending custom circleci notifications to slack. This is build ${CIRCLE_BUILD_NUM}"
+user="circleci-custom"
+token="${SLACK_NOTIFY_TOKEN:-}"
 res=$(curl -s \
     -X POST \
-    -d "token=${SLACK_TOKEN_OX:-}" \
+    -d "token=${token}" \
     -d "channel=${channel}" \
     -d "text=${mesg}" \
     -d "username=${user}" \

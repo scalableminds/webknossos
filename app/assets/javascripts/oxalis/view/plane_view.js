@@ -44,6 +44,16 @@ export const clearCanvas = (renderer: THREE.WebGLRenderer) => {
   renderer.clear();
 };
 
+const createDirLight = (position, target, intensity, parent) => {
+  const dirLight = new THREE.DirectionalLight(0xffffff, intensity);
+  dirLight.color.setHSL(0.1, 1, 0.95);
+  dirLight.position.set(...position);
+  parent.add(dirLight);
+  parent.add(dirLight.target);
+  dirLight.target.position.set(...target);
+  return dirLight;
+};
+
 class PlaneView {
   // Copied form backbone events (TODO: handle this better)
   trigger: Function;
@@ -70,6 +80,8 @@ class PlaneView {
       this.cameras[plane] = new THREE.OrthographicCamera(0, 0, 0, 0);
       scene.add(this.cameras[plane]);
     }
+
+    createDirLight([10, 10, 10], [0, 0, 10], 5, this.cameras[OrthoViews.TDView]);
 
     this.cameras[OrthoViews.PLANE_XY].position.z = -1;
     this.cameras[OrthoViews.PLANE_YZ].position.x = 1;

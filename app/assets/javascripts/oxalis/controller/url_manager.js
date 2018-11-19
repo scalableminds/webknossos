@@ -65,7 +65,8 @@ class UrlManager {
     if (stateString) {
       const stateArray = stateString.split(",").map(Number);
       if (stateArray.length >= 5) {
-        state.position = Utils.numberArrayToVector3(stateArray.slice(0, 3));
+        const positionValues = stateArray.slice(0, 3).map(value => (!isNaN(value) ? value : 0));
+        state.position = Utils.numberArrayToVector3(positionValues);
 
         const modeString = ModeValues[stateArray[3]];
         if (modeString) {

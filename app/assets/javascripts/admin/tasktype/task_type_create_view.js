@@ -46,7 +46,8 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
     };
     const taskType = this.props.taskTypeId ? await getTaskType(this.props.taskTypeId) : null;
     // Use merge which is deep _.extend
-    const formValues = _.merge({}, defaultValues, taskType);
+    // eslint-disable-next-line no-unused-vars
+    const { recommendedConfiguration, ...formValues } = _.merge({}, defaultValues, taskType);
     this.props.form.setFieldsValue(formValues);
   }
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-if [ "${CIRCLE_BRANCH}" == "master" ] || [ "${CIRCLE_BRANCH}" == "circleci-notify-linkify-pr" ] ; then
+if [ "${CIRCLE_BRANCH}" == "master" ] ; then
     author=${CIRCLE_USERNAME}
     author=${author/fm3/<@florian>}
     author=${author/jstriebel/<@jonathan>}

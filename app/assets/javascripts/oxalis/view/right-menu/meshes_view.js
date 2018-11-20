@@ -20,6 +20,47 @@ import ButtonComponent from "oxalis/view/components/button_component";
 
 const ButtonGroup = Button.Group;
 
+// This file defines the components EditMeshModal and MeshesView.
+
+class EditMeshModal extends React.PureComponent<
+  {
+    initialMesh: MeshMetaData,
+    onOk: (string, string, Vector3) => void,
+    onCancel: () => void,
+  },
+  { description: string, position: Vector3 },
+> {
+  state = {
+    description: this.props.initialMesh.description,
+    position: this.props.initialMesh.position,
+  };
+
+  render() {
+    return (
+      <Modal
+        title="Edit Mesh Meta Data"
+        visible
+        onOk={() =>
+          this.props.onOk(this.props.initialMesh.id, this.state.description, this.state.position)
+        }
+        onCancel={this.props.onCancel}
+      >
+        Description:{" "}
+        <Input
+          autoFocus
+          value={this.state.description}
+          onChange={evt => this.setState({ description: evt.target.value })}
+        />
+        Position:{" "}
+        <Vector3Input
+          value={this.state.position}
+          onChange={position => this.setState({ position })}
+        />
+      </Modal>
+    );
+  }
+}
+
 const mapStateToProps = (state: OxalisState) => ({
   meshes: state.tracing != null ? state.tracing.meshes : [],
   isImporting: state.uiInformation.isImportingMesh,
@@ -58,61 +99,11 @@ const getCheckboxStyle = isLoaded =>
         color: "#989898",
       };
 
-class EditMeshModal extends React.PureComponent<
-  {
-    initialMesh: MeshMetaData,
-    onOk: (string, string, Vector3) => void,
-    onCancel: () => void,
-  },
-  { description: string, position: Vector3 },
-> {
-  constructor() {
-    super();
-    this.state = {
-      description: "",
-      position: [0, 0, 0],
-    };
-  }
-
-  componentDidMount() {
-    const { description, position } = this.props.initialMesh;
-    this.setState({ description, position });
-  }
-
-  render() {
-    return (
-      <Modal
-        title="Edit Mesh Meta Data"
-        visible
-        onOk={() =>
-          this.props.onOk(this.props.initialMesh.id, this.state.description, this.state.position)
-        }
-        onCancel={this.props.onCancel}
-      >
-        Description:{" "}
-        <Input
-          autoFocus
-          value={this.state.description}
-          onChange={evt => this.setState({ description: evt.target.value })}
-        />
-        Position:{" "}
-        <Vector3Input
-          value={this.state.position}
-          onChange={position => this.setState({ position })}
-        />
-      </Modal>
-    );
-  }
-}
-
 // eslint-disable-next-line
 class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMetaData }> {
-  constructor() {
-    super();
-    this.state = {
-      currentlyEditedMesh: null,
-    };
-  }
+  state = {
+    currentlyEditedMesh: null,
+  };
 
   render() {
     return (
@@ -163,8 +154,16 @@ class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMeta
               </Checkbox>
               {mesh.isLoaded ? (
                 <React.Fragment>
-                  <Icon type="edit" onClick={() => this.setState({ currentlyEditedMesh: mesh })} />
-                  <Icon type="delete" onClick={() => this.props.deleteMesh(mesh.id)} />
+                  <Icon
+                    type="edit"
+                    onClick={() => this.setState({ currentlyEditedMesh: mesh })}
+                    style={{ cursor: "pointer" }}
+                  />
+                  <Icon
+                    type="delete"
+                    onClick={() => this.props.deleteMesh(mesh.id)}
+                    style={{ cursor: "pointer" }}
+                  />
                 </React.Fragment>
               ) : null}
               <Spin size="small" spinning={isLoading} />

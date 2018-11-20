@@ -46,8 +46,6 @@ const convertCellIdToHSV = (id: number, customColors: ?Array<number>) => {
 const hasSegmentation = () => Model.getSegmentationLayer() != null;
 
 class MappingInfoView extends React.Component<Props> {
-  isMounted: boolean = false;
-
   componentDidMount() {
     this.isMounted = true;
     if (!hasSegmentation()) {
@@ -67,6 +65,8 @@ class MappingInfoView extends React.Component<Props> {
     cube.off("bucketLoaded", this._forceUpdate);
     cube.off("volumeLabeled", this._forceUpdate);
   }
+
+  isMounted: boolean = false;
 
   _forceUpdate = _.throttle(() => {
     if (!this.isMounted) {

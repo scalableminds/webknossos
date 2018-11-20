@@ -325,7 +325,7 @@ export class InputMouse {
     this.targetSelector = targetSelector;
     this.domElement = document.querySelector(targetSelector);
     if (!this.domElement) {
-      throw new Error("Input couldn't be attached to the following selector", targetSelector);
+      throw new Error(`Input couldn't be attached to the following selector ${targetSelector}`);
     }
     this.id = id;
 

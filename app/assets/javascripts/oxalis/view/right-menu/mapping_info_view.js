@@ -46,7 +46,10 @@ const convertCellIdToHSV = (id: number, customColors: ?Array<number>) => {
 const hasSegmentation = () => Model.getSegmentationLayer() != null;
 
 class MappingInfoView extends React.Component<Props> {
+  isMounted: boolean = false;
+
   componentDidMount() {
+    this.isMounted = true;
     if (!hasSegmentation()) {
       return;
     }
@@ -56,6 +59,7 @@ class MappingInfoView extends React.Component<Props> {
   }
 
   componentWillUnmount() {
+    this.isMounted = false;
     if (!hasSegmentation()) {
       return;
     }
@@ -65,6 +69,9 @@ class MappingInfoView extends React.Component<Props> {
   }
 
   _forceUpdate = _.throttle(() => {
+    if (!this.isMounted) {
+      return;
+    }
     this.forceUpdate();
   }, 100);
 

@@ -119,14 +119,25 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   initMouse(): void {
-    OrthoViewValuesWithoutTDView.forEach(id => {
-      const inputcatcherSelector = `#inputcatcher_${OrthoViews[id]}`;
-      Utils.waitForSelector(inputcatcherSelector).then(() => {
-        this.input.mouseControllers[id] = new InputMouse(
-          inputcatcherSelector,
-          this.getPlaneMouseControls(id),
-          id,
-        );
+    // Workaround: We are only waiting for tdview since this
+    // introduces the necessary delay to attach the events to the
+    // newest input catchers. We should refactor the
+    // InputMouse handling so that this is not necessary anymore.
+    // See: https://github.com/scalableminds/webknossos/issues/3475
+    const tdSelector = `#inputcatcher_${OrthoViews.TDView}`;
+    Utils.waitForSelector(tdSelector).then(() => {
+      OrthoViewValuesWithoutTDView.forEach(id => {
+        const inputcatcherSelector = `#inputcatcher_${OrthoViews[id]}`;
+        Utils.waitForSelector(inputcatcherSelector).then(el => {
+          if (!document.body.contains(el)) {
+            console.error("el is not attached anymore");
+          }
+          this.input.mouseControllers[id] = new InputMouse(
+            inputcatcherSelector,
+            this.getPlaneMouseControls(id),
+            id,
+          );
+        });
       });
     });
   }

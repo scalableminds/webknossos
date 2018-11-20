@@ -324,6 +324,9 @@ export class InputMouse {
     _.extend(this, BackboneEvents);
     this.targetSelector = targetSelector;
     this.domElement = document.querySelector(targetSelector);
+    if (!this.domElement) {
+      throw new Error("Input couldn't be attached to the following selector", targetSelector);
+    }
     this.id = id;
 
     this.leftMouseButton = new InputMouseButton("left", 1, this, this.id);

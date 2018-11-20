@@ -68,8 +68,12 @@ class TDController extends React.PureComponent<Props> {
 
   componentWillUnmount() {
     this.isStarted = false;
-    this.mouseController.destroy();
-    this.controls.destroy();
+    if (this.mouseController != null) {
+      this.mouseController.destroy();
+    }
+    if (this.controls != null) {
+      this.controls.destroy();
+    }
   }
 
   initMouse(): void {

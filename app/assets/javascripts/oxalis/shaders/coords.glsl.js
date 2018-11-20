@@ -1,7 +1,6 @@
 // @flow
-import { isFlightMode, getW } from "oxalis/shaders/utils.glsl";
-
 import type { ShaderModule } from "./shader_module_system";
+import { getW } from "./utils.glsl";
 
 export const getResolution: ShaderModule = {
   code: `
@@ -45,7 +44,7 @@ export const getRelativeCoords: ShaderModule = {
 };
 
 export const getWorldCoordUVW: ShaderModule = {
-  requirements: [getW, isFlightMode],
+  requirements: [getW],
   code: `
     vec3 getWorldCoordUVW() {
       vec3 worldCoordUVW = transDim(worldCoord.xyz);

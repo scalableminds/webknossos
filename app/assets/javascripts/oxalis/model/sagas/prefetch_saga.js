@@ -27,9 +27,6 @@ const DIRECTION_VECTOR_SMOOTHER = 0.125;
 const prefetchStrategiesArbitrary = [new PrefetchStrategyArbitrary()];
 const prefetchStrategiesPlane = [new PrefetchStrategySkeleton(), new PrefetchStrategyVolume()];
 
-// DEBUG flag for visualizing buckets which are prefetched
-const visualizePrefetchedBuckets = false;
-
 export function* watchDataRelevantChanges(): Saga<void> {
   yield* take("WK_READY");
 
@@ -117,6 +114,7 @@ export function* prefetchForPlaneMode(layer: DataLayer, previousProperties: Obje
         strategy.inVelocityRange(layer.connectionInfo.bandwidth) &&
         strategy.inRoundTripTimeRange(layer.connectionInfo.roundTripTime)
       ) {
+        layer.pullQueue.clearNormalPriorities();
         const buckets = strategy.prefetch(
           layer.cube,
           position,
@@ -142,13 +140,11 @@ export function* prefetchForArbitraryMode(
   layer: DataLayerType,
   previousProperties: Object,
 ): Saga<void> {
-  const position = yield* select(state => getPosition(state.flycam));
   const matrix = yield* select(state => state.flycam.currentMatrix);
   const zoomStep = yield* select(state => getRequestLogZoomStep(state));
   const tracingTypes = yield* select(getTracingTypes);
-  const resolutions = yield* select(state => getResolutions(state.dataset));
   const { lastMatrix, lastZoomStep } = previousProperties;
-  const { connectionInfo, pullQueue, cube } = Model.dataLayers[layer.name];
+  const { connectionInfo, pullQueue } = Model.dataLayers[layer.name];
 
   if (matrix !== lastMatrix || zoomStep !== lastZoomStep) {
     for (const strategy of prefetchStrategiesArbitrary) {
@@ -157,15 +153,8 @@ export function* prefetchForArbitraryMode(
         strategy.inVelocityRange(connectionInfo.bandwidth) &&
         strategy.inRoundTripTimeRange(connectionInfo.roundTripTime)
       ) {
-        const buckets = strategy.prefetch(matrix, zoomStep, position, resolutions);
-        if (visualizePrefetchedBuckets) {
-          for (const item of buckets) {
-            const bucket = cube.getOrCreateBucket(item.bucket);
-            if (bucket.type !== "null") {
-              bucket.visualize();
-            }
-          }
-        }
+        pullQueue.clearNormalPriorities();
+        const buckets = strategy.prefetch(matrix, zoomStep);
         pullQueue.addAll(buckets);
         break;
       }

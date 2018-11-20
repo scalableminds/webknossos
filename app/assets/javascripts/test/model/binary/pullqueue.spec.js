@@ -12,9 +12,6 @@ const RequestMock = {
 mockRequire("oxalis/model/sagas/root_saga", function*() {
   yield;
 });
-mockRequire("oxalis/model", {
-  getLayerRenderingManagerByName: () => ({ currentBucketPickerTick: 0 }),
-});
 mockRequire("libs/request", RequestMock);
 const WkstoreAdapterMock = { requestWithFallback: sinon.stub() };
 mockRequire("oxalis/model/bucket_data_handling/wkstore_adapter", WkstoreAdapterMock);
@@ -69,9 +66,9 @@ test.beforeEach(t => {
   const buckets = [new DataBucket(8, [0, 0, 0, 0], null), new DataBucket(8, [1, 1, 1, 1], null)];
 
   for (const bucket of buckets) {
+    pullQueue.add({ bucket: bucket.zoomedAddress, priority: 0 });
     cube.getBucket.withArgs(bucket.zoomedAddress).returns(bucket);
     cube.getOrCreateBucket.withArgs(bucket.zoomedAddress).returns(bucket);
-    pullQueue.add({ bucket: bucket.zoomedAddress, priority: 0 });
   }
 
   t.context = { buckets, pullQueue };

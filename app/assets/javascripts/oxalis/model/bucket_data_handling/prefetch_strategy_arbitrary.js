@@ -1,10 +1,9 @@
 // @flow
 
 import { AbstractPrefetchStrategy } from "oxalis/model/bucket_data_handling/prefetch_strategy_plane";
-import type { BoundingBoxType, Vector3 } from "oxalis/constants";
-import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
+import type { BoundingBoxType } from "oxalis/constants";
+import { M4x4, type Matrix4x4 } from "libs/mjs";
 import type { PullQueueItem } from "oxalis/model/bucket_data_handling/pullqueue";
-import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import PolyhedronRasterizer from "oxalis/model/bucket_data_handling/polyhedron_rasterizer";
 
 export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
@@ -15,12 +14,12 @@ export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
   name = "ARBITRARY";
 
   prefetchPolyhedron: PolyhedronRasterizer.Master = PolyhedronRasterizer.Master.squareFrustum(
-    7,
-    7,
+    5,
+    5,
     -0.5,
-    10,
-    10,
-    20,
+    4,
+    4,
+    2,
   );
 
   getExtentObject(
@@ -52,12 +51,7 @@ export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
     matrix[14] += 1;
   }
 
-  prefetch(
-    matrix: Matrix4x4,
-    zoomStep: number,
-    position: Vector3,
-    resolutions: Array<Vector3>,
-  ): Array<PullQueueItem> {
+  prefetch(matrix: Matrix4x4, zoomStep: number): Array<PullQueueItem> {
     const pullQueue = [];
 
     const matrix0 = M4x4.clone(matrix);
@@ -72,13 +66,7 @@ export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
       const bucketY = testAddresses[i++];
       const bucketZ = testAddresses[i++];
 
-      const positionBucket = globalPositionToBucketPosition(position, resolutions, zoomStep);
-      const distanceToPosition = V3.length(V3.sub([bucketX, bucketY, bucketZ], positionBucket));
-
-      pullQueue.push({
-        bucket: [bucketX, bucketY, bucketZ, zoomStep],
-        priority: 1 + distanceToPosition,
-      });
+      pullQueue.push({ bucket: [bucketX, bucketY, bucketZ, zoomStep], priority: 0 });
     }
     return pullQueue;
   }

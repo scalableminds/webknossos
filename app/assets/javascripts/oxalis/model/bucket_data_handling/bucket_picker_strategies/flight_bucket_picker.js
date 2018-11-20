@@ -2,19 +2,45 @@
 import PriorityQueue from "js-priority-queue";
 
 import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
-import { getMatrixScale } from "oxalis/model/reducers/flycam_reducer";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import {
   globalPositionToBucketPosition,
-  bucketPositionToGlobalAddress,
+  globalPositionToBucketPositionFloat,
+  zoomedAddressToAnotherZoomStep,
 } from "oxalis/model/helpers/position_converter";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import Store from "oxalis/store";
-import * as Utils from "libs/utils";
-import constants, { type Vector3 } from "oxalis/constants";
+import constants, { type Vector3, type Vector4 } from "oxalis/constants";
 
-import { getFallbackBuckets } from "./oblique_bucket_picker";
+const aggregatePerDimension = (aggregateFn, buckets): Vector3 =>
+  // $FlowFixMe
+  [0, 1, 2].map(dim => aggregateFn(...buckets.map(pos => pos[dim])));
+
+const getBBox = buckets => ({
+  cornerMin: aggregatePerDimension(Math.min, buckets),
+  cornerMax: aggregatePerDimension(Math.max, buckets),
+});
+
+function createDistinctBucketAdder(buckets: Array<Vector4>) {
+  const bucketLookUp = [];
+  const maybeAddBucket = (bucketPos: Vector4) => {
+    const [x, y, z] = bucketPos;
+    /* eslint-disable-next-line */
+    bucketLookUp[x] = bucketLookUp[x] || [];
+    const lookupX = bucketLookUp[x];
+    /* eslint-disable-next-line */
+    lookupX[y] = lookupX[y] || [];
+    const lookupY = lookupX[y];
+
+    if (!lookupY[z]) {
+      lookupY[z] = true;
+      buckets.push(bucketPos);
+    }
+  };
+
+  return maybeAddBucket;
+}
 
 export default function determineBucketsForFlight(
   cube: DataCube,
@@ -24,124 +50,110 @@ export default function determineBucketsForFlight(
   fallbackZoomStep: number,
   isFallbackAvailable: boolean,
 ): void {
-  const queryMatrix = M4x4.scale1(1, matrix);
-
-  const enlargementFactor = 1.0;
-  const enlargedExtent = constants.VIEWPORT_WIDTH * enlargementFactor;
-  const enlargedHalfExtent = enlargedExtent / 2;
-
   const { sphericalCapRadius } = Store.getState().userConfiguration;
-  const cameraVertex = [0, 0, -sphericalCapRadius];
   const resolutions = getResolutions(Store.getState().dataset);
+  const centerPosition = getPosition(Store.getState().flycam);
+  const queryMatrix = M4x4.scale1(1, matrix);
+  const width = constants.VIEWPORT_WIDTH;
+  const halfWidth = width / 2;
+  const cameraVertex = [0, 0, -sphericalCapRadius];
 
-  // This array holds the four corners and the center point of the rendered plane
-  const planePoints = M4x4.transformVectorsAffine(
-    queryMatrix,
-    [
-      [-enlargedHalfExtent, -enlargedHalfExtent, 0],
-      [enlargedHalfExtent, -enlargedHalfExtent, 0],
-      [0, 0, 0],
-      [-enlargedHalfExtent, enlargedHalfExtent, 0],
-      [enlargedHalfExtent, enlargedHalfExtent, 0],
-    ].map(vec => {
-      V3.sub(vec, cameraVertex, vec);
-      V3.scale(vec, sphericalCapRadius / V3.length(vec), vec);
-      V3.add(vec, cameraVertex, vec);
-      return vec;
-    }),
-  ).map((position: Vector3) => globalPositionToBucketPosition(position, resolutions, logZoomStep));
-
-  const cameraPosition = M4x4.transformVectorsAffine(queryMatrix, [cameraVertex])[0];
-
-  const { scale } = Store.getState().dataset.dataSource;
-  const matrixScale = getMatrixScale(scale);
-
-  const inverseScale = V3.divide3([1, 1, 1], matrixScale);
-
-  const aggregatePerDimension = aggregateFn =>
-    [0, 1, 2].map(dim => aggregateFn(...planePoints.map(pos => pos[dim])));
-
-  const boundingBoxBuckets = {
-    cornerMin: aggregatePerDimension(Math.min),
-    cornerMax: aggregatePerDimension(Math.max),
+  const transformToSphereCap = _vec => {
+    const vec = V3.sub(_vec, cameraVertex);
+    V3.scale(vec, sphericalCapRadius / V3.length(vec), vec);
+    V3.add(vec, cameraVertex, vec);
+    return vec;
   };
+  const transformAndApplyMatrix = vec =>
+    M4x4.transformPointsAffine(queryMatrix, transformToSphereCap(vec));
 
   let traversedBuckets = [];
+  const maybeAddBucket = createDistinctBucketAdder(traversedBuckets);
 
-  const { zoomStep } = Store.getState().flycam;
-  const squaredRadius = (zoomStep * sphericalCapRadius) ** 2;
-  const tolerance = 1;
+  const cameraPosition = M4x4.transformVectorsAffine(queryMatrix, [cameraVertex])[0];
+  const cameraDirection = V3.sub(centerPosition, cameraPosition);
+  V3.scale(cameraDirection, 1 / Math.abs(V3.length(cameraDirection)), cameraDirection);
 
-  // iterate over all buckets within bounding box
-  for (
-    let x = boundingBoxBuckets.cornerMin[0] - tolerance;
-    x <= boundingBoxBuckets.cornerMax[0] + tolerance;
-    x++
-  ) {
-    for (
-      let y = boundingBoxBuckets.cornerMin[1] - tolerance;
-      y <= boundingBoxBuckets.cornerMax[1] + tolerance;
-      y++
-    ) {
-      for (
-        let z = boundingBoxBuckets.cornerMin[2] - tolerance;
-        z <= boundingBoxBuckets.cornerMax[2] + tolerance;
-        z++
-      ) {
-        const pos = bucketPositionToGlobalAddress([x, y, z, logZoomStep], resolutions);
-        const nextPos = bucketPositionToGlobalAddress(
-          [x + 1, y + 1, z + 1, logZoomStep],
-          resolutions,
-        );
+  const iterStep = 10;
+  for (let y = -halfWidth; y <= halfWidth; y += iterStep) {
+    const xOffset = y % iterStep;
+    for (let x = -halfWidth - xOffset; x <= halfWidth + xOffset; x += iterStep) {
+      const z = 0;
+      const transformedVec = transformAndApplyMatrix([x, y, z]);
 
-        const closest = [0, 1, 2].map(dim =>
-          Utils.clamp(pos[dim], cameraPosition[dim], nextPos[dim]),
-        );
+      const bucketPos = globalPositionToBucketPositionFloat(
+        transformedVec,
+        resolutions,
+        logZoomStep,
+      );
 
-        const farthest = [0, 1, 2].map(
-          dim =>
-            Math.abs(pos[dim] - cameraPosition[dim]) > Math.abs(nextPos[dim] - cameraPosition[dim])
-              ? pos[dim]
-              : nextPos[dim],
-        );
+      // $FlowFixMe
+      const flooredBucketPos: Vector4 = bucketPos.map(Math.floor);
+      maybeAddBucket(flooredBucketPos);
 
-        const closestDist = V3.scaledSquaredDist(cameraPosition, closest, inverseScale);
-        const farthestDist = V3.scaledSquaredDist(cameraPosition, farthest, inverseScale);
-
-        const collisionTolerance = 0.05;
-        const doesCollide =
-          (1 - collisionTolerance) * closestDist <= squaredRadius &&
-          (1 + collisionTolerance) * farthestDist >= squaredRadius;
-
-        if (doesCollide) {
-          traversedBuckets.push([x, y, z]);
+      const neighbourThreshold = 3;
+      bucketPos.forEach((pos, idx) => {
+        // $FlowFixMe
+        const newNeighbour: Vector4 = flooredBucketPos.slice();
+        const rest = (pos % 1) * constants.BUCKET_WIDTH;
+        if (rest < neighbourThreshold) {
+          // Pick the previous neighbor
+          newNeighbour[idx]--;
+          maybeAddBucket(newNeighbour);
+        } else if (rest > constants.BUCKET_WIDTH - neighbourThreshold) {
+          // Pick the next neighbor
+          newNeighbour[idx]++;
+          maybeAddBucket(newNeighbour);
         }
-      }
+      });
     }
   }
 
-  traversedBuckets = traversedBuckets.map(addr => [...addr, logZoomStep]);
+  // This array holds the four corners and the center point of the rendered plane
+  const planePointsGlobal = [
+    [-halfWidth, -halfWidth, 0], // 0 bottom left
+    [halfWidth, -halfWidth, 0], // 1 bottom right
+    [0, 0, 0],
+    [-halfWidth, halfWidth, 0], // 3 top left
+    [halfWidth, halfWidth, 0], // 4 top right
+  ].map(transformAndApplyMatrix);
 
-  const fallbackBuckets = getFallbackBuckets(
-    traversedBuckets,
-    resolutions,
-    fallbackZoomStep,
-    isFallbackAvailable,
+  const planeBuckets = planePointsGlobal.map((position: Vector3) =>
+    globalPositionToBucketPosition(position, resolutions, logZoomStep),
   );
 
+  const traverseFallbackBBox = boundingBoxBuckets => {
+    const tolerance = 1;
+    const fallbackBuckets = [];
+    // use all fallback buckets in bbox
+    const min = zoomedAddressToAnotherZoomStep(
+      [...boundingBoxBuckets.cornerMin, logZoomStep],
+      resolutions,
+      fallbackZoomStep,
+    );
+    const max = zoomedAddressToAnotherZoomStep(
+      [...boundingBoxBuckets.cornerMax, logZoomStep],
+      resolutions,
+      fallbackZoomStep,
+    );
+    for (let x = min[0] - tolerance; x <= max[0] + tolerance; x++) {
+      for (let y = min[1] - tolerance; y <= max[1] + tolerance; y++) {
+        for (let z = min[2] - tolerance; z <= max[2] + tolerance; z++) {
+          fallbackBuckets.push([x, y, z, fallbackZoomStep]);
+        }
+      }
+    }
+    return fallbackBuckets;
+  };
+
+  const fallbackBuckets = isFallbackAvailable ? traverseFallbackBBox(getBBox(planeBuckets)) : [];
   traversedBuckets = traversedBuckets.concat(fallbackBuckets);
-
-  const centerAddress = globalPositionToBucketPosition(
-    getPosition(Store.getState().flycam),
-    resolutions,
-    logZoomStep,
-  );
 
   for (const bucketAddress of traversedBuckets) {
     const bucket = cube.getOrCreateBucket(bucketAddress);
 
     if (bucket.type !== "null") {
-      const priority = V3.sub(bucketAddress, centerAddress).reduce((a, b) => a + Math.abs(b), 0);
+      const priority = 0;
       bucketQueue.queue({ bucket, priority });
     }
   }

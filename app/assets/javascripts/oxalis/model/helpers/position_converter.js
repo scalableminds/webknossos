@@ -24,24 +24,6 @@ export function globalPositionToBucketPosition(
   ];
 }
 
-export function globalPositionToBucketPositionFloat(
-  [x, y, z]: Vector3,
-  resolutions: Array<Vector3>,
-  resolutionIndex: number,
-): Vector4 {
-  const resolution =
-    resolutionIndex < resolutions.length
-      ? resolutions[resolutionIndex]
-      : upsampleResolution(resolutions, resolutionIndex);
-
-  return [
-    x / (constants.BUCKET_WIDTH * resolution[0]),
-    y / (constants.BUCKET_WIDTH * resolution[1]),
-    z / (constants.BUCKET_WIDTH * resolution[2]),
-    resolutionIndex,
-  ];
-}
-
 export function upsampleResolution(resolutions: Array<Vector3>, resolutionIndex: number): Vector3 {
   const lastResolutionIndex = resolutions.length - 1;
   const lastResolution = resolutions[lastResolutionIndex];

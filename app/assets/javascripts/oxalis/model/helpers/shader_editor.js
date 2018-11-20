@@ -12,15 +12,14 @@ export default {
   },
 };
 
-window._setupShaderEditor = (viewport, _shaderType) => {
+window._setupShaderEditor = viewport => {
   const outer = document.createElement("div");
   const input = document.createElement("textarea");
-  const shaderType = _shaderType || "fragmentShader";
-  input.value = window.materials[viewport][shaderType];
+  input.value = window.materials[viewport].fragmentShader;
   const button = document.createElement("button");
   const buttonContainer = document.createElement("div");
   function overrideShader() {
-    window.materials[viewport][shaderType] = input.value;
+    window.materials[viewport].fragmentShader = input.value;
     window.materials[viewport].needsUpdate = true;
     window.needsRerender = true;
   }

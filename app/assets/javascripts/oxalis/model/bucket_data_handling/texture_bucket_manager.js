@@ -24,9 +24,6 @@ import window from "libs/window";
 
 const lookUpBufferWidth = constants.LOOK_UP_TEXTURE_WIDTH;
 
-// DEBUG flag for visualizing buckets which are passed to the GPU
-const visualizeBucketsOnGPU = false;
-
 // At the moment, we only store one float f per bucket.
 // If f >= 0, f denotes the index in the data texture where the bucket is stored.
 // If f == -1, the bucket is not yet committed
@@ -98,9 +95,6 @@ export default class TextureBucketManager {
     if (unusedIndex == null) {
       return;
     }
-    if (visualizeBucketsOnGPU) {
-      bucket.unvisualize();
-    }
     this.activeBucketToIndexMap.delete(bucket);
     this.committedBucketSet.delete(bucket);
     this.freeIndexSet.add(unusedIndex);
@@ -116,7 +110,6 @@ export default class TextureBucketManager {
     fallbackAnchorPoint: Vector4,
   ): void {
     this.currentAnchorPoint = anchorPoint;
-    window.currentAnchorPoint = anchorPoint;
     this.fallbackAnchorPoint = fallbackAnchorPoint;
     // Find out which buckets are not needed anymore
     const freeBucketSet = new Set(this.activeBucketToIndexMap.keys());
@@ -181,10 +174,6 @@ export default class TextureBucketManager {
 
       const dataTextureIndex = Math.floor(_index / bucketsPerTexture);
       const indexInDataTexture = _index % bucketsPerTexture;
-
-      if (visualizeBucketsOnGPU) {
-        bucket.visualize();
-      }
 
       this.dataTextures[dataTextureIndex].update(
         bucket.getData(),

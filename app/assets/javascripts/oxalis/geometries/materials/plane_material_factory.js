@@ -155,6 +155,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         type: "v3",
         value: new THREE.Vector3(0, 0, 0),
       },
+      renderBucketIndices: {
+        type: "b",
+        value: false,
+      },
     });
 
     for (const dataLayer of Model.getAllLayers()) {

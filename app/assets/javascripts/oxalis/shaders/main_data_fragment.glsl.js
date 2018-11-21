@@ -171,7 +171,7 @@ void main() {
         <%= colorLayerNames[0] %>_lookup_texture,
         0.0, // layerIndex
         <%= colorLayerNames[0] %>_data_texture_width,
-        <%= segmentationPackingDegree %>,
+        1.0, // RGB data cannot be packed, hence packingDegree == 1.0
         coords,
         fallbackCoords,
         hasFallback,

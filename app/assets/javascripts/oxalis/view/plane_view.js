@@ -17,7 +17,6 @@ import Constants, {
   OrthoViewValues,
   OrthoViews,
 } from "oxalis/constants";
-import SceneController from "oxalis/controller/scene_controller";
 import Store from "oxalis/store";
 import app from "app";
 import getSceneController from "oxalis/controller/scene_controller_provider";

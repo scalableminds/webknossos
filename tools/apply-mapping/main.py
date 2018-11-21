@@ -45,7 +45,7 @@ def main():
             print(point)
         tracing_dataset.write(tracing_bbox[0], transformed)
 
-    pack_tracing_zip(tracing_tmpdir_path)
+    pack_tracing_zip(tracing_tmpdir_path, args.tracing_path)
     print("Done.")
 
 
@@ -58,10 +58,12 @@ def extract_tracing_zip(args):
         zipfile.ZipFile.extractall(data_zip, path=os.path.join(tracing_tmpdir_path, 'data_zip'))
     return tracing_tmpdir_path
 
-def pack_tracing_zip(tracing_tmpdir_path):
+def pack_tracing_zip(tracing_tmpdir_path, tracing_path):
     os.remove(os.path.join(tracing_tmpdir_path, 'data.zip'))
     zip_dir(os.path.join(tracing_tmpdir_path, 'data_zip'), os.path.join(tracing_tmpdir_path, 'data.zip'))
     shutil.rmtree(os.path.join(tracing_tmpdir_path, 'data_zip'))
+    zip_dir(os.path.join(tracing_tmpdir_path), "{0}_mapped{1}".format(*os.path.splitext(tracing_path)))
+    shutil.rmtree(tracing_tmpdir_path)
 
 def zip_dir(dir_path, outfile_path):
     zip_file = zipfile.ZipFile(outfile_path, 'w', zipfile.ZIP_DEFLATED)
@@ -71,27 +73,6 @@ def zip_dir(dir_path, outfile_path):
         for file in files:
             zip_file.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), dir_path))
     zip_file.close()
-
-def group_tracing_bboxes(tracing_bboxes, segmentation_bboxes):
-    grouped = {}
-    for tracing_bbox in tracing_bboxes:
-        segmentation_bbox = matching_segmentation_bbox(segmentation_bboxes, tracing_bbox)
-        if not str(segmentation_bbox) in grouped:
-            grouped[str(segmentation_bbox)] = (segmentation_bbox, [])
-        grouped[str(segmentation_bbox)][1].append(tracing_bbox)
-    return grouped
-
-def matching_segmentation_bbox(segmentation_bboxes, tracing_bbox):
-    for segmentation_bbox in segmentation_bboxes:
-        if     (segmentation_bbox[0][0] <= tracing_bbox[0][0]
-            and segmentation_bbox[0][1] <= tracing_bbox[0][1]
-            and segmentation_bbox[0][2] <= tracing_bbox[0][2]
-            and segmentation_bbox[1][0] >= tracing_bbox[1][0]
-            and segmentation_bbox[1][1] >= tracing_bbox[1][1]
-            and segmentation_bbox[1][2] >= tracing_bbox[1][2]):
-                return segmentation_bbox
-    print("Error: tracing extends outside of segmentation data. Stopping, no data was modified.")
-    sys.exit(1)
 
 def file_bboxes(dataset):
     file_len_voxels = dataset.header.block_len * dataset.header.file_len

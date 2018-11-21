@@ -9,7 +9,15 @@ import {
   updateLocalMeshMetaDataAction,
 } from "oxalis/model/actions/annotation_actions";
 import type { MeshMetaData } from "admin/api_flow_types";
-import { type Saga, _takeEvery, call, put, select } from "oxalis/model/sagas/effect-generators";
+import {
+  type Saga,
+  _all,
+  _call,
+  _takeEvery,
+  call,
+  put,
+  select,
+} from "oxalis/model/sagas/effect-generators";
 import {
   createMesh,
   deleteMesh as deleteMeshFromServer,
@@ -18,6 +26,7 @@ import {
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import getMeshBufferFromStore, { addMeshBufferToStore } from "oxalis/model/mesh_store";
 import getSceneController from "oxalis/controller/scene_controller_provider";
+import parseStlBuffer from "libs/parse_stl_buffer";
 
 function* handleDeleteMesh(action: DeleteMeshAction): Saga<void> {
   const { id } = action;
@@ -37,7 +46,8 @@ function* handleVisibilityChange(meshMetaData: MeshMetaData, isVisible: boolean)
     yield* put(updateLocalMeshMetaDataAction(id, { isLoading: true }));
     const meshBuffer = yield* call(getMeshBufferFromStore, id);
     if (meshBuffer != null) {
-      yield* call([SceneController, SceneController.addSTL], meshMetaData, meshBuffer);
+      const geometry = yield* call(parseStlBuffer, meshBuffer);
+      yield* call([SceneController, SceneController.addSTL], meshMetaData, geometry);
       yield* put(updateLocalMeshMetaDataAction(id, { isLoaded: true }));
     }
     yield* put(updateLocalMeshMetaDataAction(id, { isLoading: false }));
@@ -78,17 +88,26 @@ function* handleLocalUpdateMesh(action: UpdateLocalMeshMetaDataAction): Saga<voi
 
 function* createMeshFromBuffer(action: CreateMeshFromBufferAction): Saga<void> {
   const annotationId = yield* select(store => store.tracing.annotationId);
-  const meshMetaData = yield* call(
-    createMesh,
-    {
-      annotationId,
-      position: [0, 0, 0],
-      description: action.name,
-    },
-    action.buffer,
-  );
+  // Parse and persist STL in parallel
+  const [geometry, meshMetaData] = yield _all([
+    _call(parseStlBuffer, action.buffer),
+    _call(
+      createMesh,
+      {
+        annotationId,
+        position: [0, 0, 0],
+        description: action.name,
+      },
+      action.buffer,
+    ),
+  ]);
+
+  const SceneController = yield* call(getSceneController);
+  yield* call([SceneController, SceneController.addSTL], (meshMetaData: MeshMetaData), geometry);
   yield* put(addMeshMetaDataAction(meshMetaData));
-  addMeshBufferToStore(meshMetaData.id, action.buffer);
+  yield* put(updateLocalMeshMetaDataAction(meshMetaData.id, { isLoaded: true }));
+
+  yield* call(addMeshBufferToStore, meshMetaData.id, action.buffer);
   yield* put(updateLocalMeshMetaDataAction(meshMetaData.id, { isVisible: true }));
   yield* put(setImportingMeshStateAction(false));
 }

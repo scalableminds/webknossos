@@ -38,7 +38,6 @@ import constants, {
   OrthoViews,
   type Vector3,
 } from "oxalis/constants";
-import parseStlBuffer from "libs/parse_stl_buffer";
 import window from "libs/window";
 
 import { setSceneController } from "./scene_controller_provider";
@@ -121,9 +120,12 @@ class SceneController {
     window.removeBucketMesh = (mesh: THREE.LineSegments) => this.rootNode.remove(mesh);
   }
 
-  addSTL(meshMetaData: MeshMetaData, stlBuffer: ArrayBuffer): void {
+  addSTL(meshMetaData: MeshMetaData, geometry: THREE.Geometry): void {
     const { id, position } = meshMetaData;
-    const geometry = parseStlBuffer(stlBuffer);
+    if (this.stlMeshes[id] != null) {
+      console.warn(`Mesh with id ${id} has already been added to the scene.`);
+      return;
+    }
     geometry.computeVertexNormals();
 
     const meshMaterial = new THREE.MeshNormalMaterial();

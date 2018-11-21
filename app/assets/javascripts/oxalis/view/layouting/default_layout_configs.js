@@ -13,7 +13,7 @@ import _ from "lodash";
 import { Pane, Column, Row, Stack } from "./golden_layout_helpers";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
-export const currentLayoutVersion = 6;
+export const currentLayoutVersion = 7;
 export const layoutHeaderHeight = 20;
 export const headerHeight = 55;
 const dummyExtent = 500;

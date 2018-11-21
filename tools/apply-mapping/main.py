@@ -4,24 +4,20 @@ from argparse import ArgumentParser
 import zipfile
 import shutil
 import os
-import sys
 import random
 import string
 import wkw
 import numpy as np
 import re
 import json
-from operator import add
 
 def main():
     args = create_parser().parse_args()
+
+    mapping = read_mapping(args)
+
     tracing_tmpdir_path = extract_tracing_zip(args)
-
     tracing_dataset = wkw.Dataset.open(os.path.join(os.path.join(tracing_tmpdir_path, 'data_zip'), '1'))
-    with open(args.mapping_path) as mapping_file:
-        mapping = json.load(mapping_file)
-    print(mapping)
-
     tracing_bboxes = file_bboxes(tracing_dataset)
 
     print("Found {} tracing files".format(len(tracing_bboxes)))
@@ -33,21 +29,36 @@ def main():
         else:
             return voxel
 
+    def is_mapped(voxel):
+        return str(voxel) in mapping
+
+    changed_count = 0
+
     for counter, tracing_bbox in enumerate(tracing_bboxes):
-        print("Reading tracing file {} of {}, bounding box: {}...".format(counter+1, len(tracing_bboxes), tracing_bbox))
+        print("Processing tracing file {} of {}, bounding box: {}...".format(counter+1, len(tracing_bboxes), tracing_bbox))
         data = tracing_dataset.read(tracing_bbox[0], tracing_bbox[1])
-        print(data.shape)
-        for point in data:
-            print(point)
         transformed = np.vectorize(apply_maping_to_voxel)(data)
-        print("mapped:")
-        for point in transformed:
-            print(point)
         tracing_dataset.write(tracing_bbox[0], transformed)
+        changed_count += np.count_nonzero(np.vectorize(is_mapped)(data))
 
+    print("Changed {} Voxels".format(changed_count))
     pack_tracing_zip(tracing_tmpdir_path, args.tracing_path)
-    print("Done.")
+    print("Done")
 
+def read_mapping(args):
+    if not (args.mapping_path or args.mapping_str):
+        raise Exception("""No mapping supplied, please add a mapping string in the format '{"7":"3", "12":"3"}' or a mapping file path via -f my_mapping.json""")
+
+    if (args.mapping_path and args.mapping_str):
+        print("Warning: both mapping string and mapping file path were supplied, ignoring the file.")
+
+    if (args.mapping_str):
+        mapping = json.loads(args.mapping_str)
+    else:
+        with open(args.mapping_path) as mapping_file:
+            mapping = json.load(mapping_file)
+    print("Using mapping: ", mapping)
+    return mapping
 
 def extract_tracing_zip(args):
     tracing_tmpdir_path = tmp_filename()
@@ -62,14 +73,14 @@ def pack_tracing_zip(tracing_tmpdir_path, tracing_path):
     os.remove(os.path.join(tracing_tmpdir_path, 'data.zip'))
     zip_dir(os.path.join(tracing_tmpdir_path, 'data_zip'), os.path.join(tracing_tmpdir_path, 'data.zip'))
     shutil.rmtree(os.path.join(tracing_tmpdir_path, 'data_zip'))
-    zip_dir(os.path.join(tracing_tmpdir_path), "{0}_mapped{1}".format(*os.path.splitext(tracing_path)))
+    outfile_path = "{0}_mapped{1}".format(*os.path.splitext(tracing_path))
+    zip_dir(os.path.join(tracing_tmpdir_path), outfile_path)
+    print("Wrote", outfile_path)
     shutil.rmtree(tracing_tmpdir_path)
 
 def zip_dir(dir_path, outfile_path):
     zip_file = zipfile.ZipFile(outfile_path, 'w', zipfile.ZIP_DEFLATED)
     for root, dirs, files in os.walk(dir_path):
-        print("ROOOT:", root)
-        print("dirs:", dirs)
         for file in files:
             zip_file.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), dir_path))
     zip_file.close()
@@ -89,7 +100,8 @@ def file_bboxes(dataset):
 def create_parser():
     parser = ArgumentParser()
     parser.add_argument('tracing_path', help='Volume tracing zip file')
-    parser.add_argument('mapping_path', help='JSON file containing a direct mapping (e.g. {"7":"3", "12":"3"})')
+    parser.add_argument('-f', action='store', dest='mapping_path', help='JSON file containing a direct mapping (e.g. {"7":"3", "12":"3"})')
+    parser.add_argument('mapping_str', nargs='?')
     return parser
 
 def tmp_filename():

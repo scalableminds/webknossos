@@ -1,7 +1,8 @@
 // @flow
 import moment from "moment";
-import * as Utils from "libs/utils";
+
 import type { Vector3, Vector6 } from "oxalis/constants";
+import * as Utils from "libs/utils";
 
 const COLOR_MAP: Array<string> = [
   "#6962C5",

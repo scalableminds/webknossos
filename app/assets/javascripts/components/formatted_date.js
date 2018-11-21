@@ -1,7 +1,7 @@
 // @flow
+import { Tooltip } from "antd";
 import * as React from "react";
 import moment from "moment";
-import { Tooltip } from "antd";
 
 const defaultTimeFormat = "YYYY-MM-DD HH:mm";
 

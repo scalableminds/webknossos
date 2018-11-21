@@ -2,8 +2,8 @@
  * volumetracing_actions.js
  * @flow
  */
-import type { Vector2, Vector3, OrthoView, VolumeTool, ContourMode } from "oxalis/constants";
 import type { ServerVolumeTracing } from "admin/api_flow_types";
+import type { Vector2, Vector3, OrthoView, VolumeTool, ContourMode } from "oxalis/constants";
 
 type InitializeVolumeTracingAction = {
   type: "INITIALIZE_VOLUMETRACING",

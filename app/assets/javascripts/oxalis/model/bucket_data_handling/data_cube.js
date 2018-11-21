@@ -3,30 +3,29 @@
  * @flow
  */
 
-import _ from "lodash";
 import BackboneEvents from "backbone-events-standalone";
-import constants from "oxalis/constants";
-import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
-import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
+import _ from "lodash";
+
 import {
+  BUCKET_SIZE_P,
+  type Bucket,
   DataBucket,
-  NullBucket,
   NULL_BUCKET,
   NULL_BUCKET_OUT_OF_BB,
-  BUCKET_SIZE_P,
+  NullBucket,
 } from "oxalis/model/bucket_data_handling/bucket";
-import ArbitraryCubeAdapter from "oxalis/model/bucket_data_handling/arbitrary_cube_adapter";
-import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
-import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import Store from "oxalis/store";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
-import type { Vector3, Vector4 } from "oxalis/constants";
 import type { VoxelIterator } from "oxalis/model/volumetracing/volumelayer";
-import type { Bucket } from "oxalis/model/bucket_data_handling/bucket";
-import type { Mapping } from "oxalis/store";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import ArbitraryCubeAdapter from "oxalis/model/bucket_data_handling/arbitrary_cube_adapter";
+import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
+import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
+import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
+import Store, { type Mapping } from "oxalis/store";
+import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
+import constants, { type Vector3, type Vector4 } from "oxalis/constants";
 
 class CubeEntry {
   data: Map<number, Bucket>;

@@ -3,11 +3,12 @@
  * @flow
  */
 
+import { connect } from "react-redux";
 import * as React from "react";
 import classnames from "classnames";
-import { connect } from "react-redux";
-import { isVolumeTracingDisallowed } from "oxalis/model/accessors/volumetracing_accessor";
+
 import type { OxalisState } from "oxalis/store";
+import { isVolumeTracingDisallowed } from "oxalis/model/accessors/volumetracing_accessor";
 import Toast from "libs/toast";
 import messages from "messages";
 

@@ -7,10 +7,9 @@ services:
     ports:
       - "9000:9000"
     links:
-      - fossildb
-      - postgres
+      - fossildb-persisted
+      - postgres-persisted
     command:
-      - -Djava.io.tmpdir=disk
       - -Dconfig.file=conf/application.conf
       - -Djava.net.preferIPv4Stack=true
       - -Dhttp.address=0.0.0.0
@@ -21,10 +20,12 @@ services:
       # the following lines disable the integrated datastore:
       # - -Dplay.modules.enabled-="com.scalableminds.webknossos.datastore.DataStoreModule"
       # - -Ddatastore.enabled=false
+      # - -Dplay.http.router="noDS.Routes"
     volumes:
       - ./binaryData:/srv/webknossos/binaryData
     environment:
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
+    user: ${USER_UID:-1000}:${USER_GID:-1000}
 
   webknossos-datastore:
     build: webknossos-datastore
@@ -168,6 +169,12 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
 
+  postgres-persisted:
+    extends:
+      service: postgres
+    volumes:
+      - "./pg/db:/var/lib/postgresql/data/"
+
   postgres-dev:
     extends:
       service: postgres
@@ -178,25 +185,41 @@ services:
 
   psql:
     extends: postgres
-    command: psql -h postgres -U postgres webknossos
+    command: psql -h postgres-persisted -U postgres webknossos
     links:
-      - postgres
+      - postgres-persisted
     environment:
       PGPASSWORD: postgres
+    volumes:
+      - ./conf/evolutions/:/evolutions/
+
+  drop-db:
+    extends: postgres
+    command: psql -h postgres-persisted -U postgres postgres -c "DROP DATABASE webknossos"
+    links:
+      - postgres-persisted
+    environment:
+      PGPASSWORD: postgres
+
 
   fossildb:
     image: scalableminds/fossildb:master__337
     command:
       - fossildb
       - -c
-      - skeletons,skeletonUpdates,volumes,volumeData
+      - skeletons,skeletonUpdates,volumes,volumeData,volumeUpdates
     user: ${USER_UID:-fossildb}:${USER_GID:-fossildb}
+
+  fossildb-persisted:
+    extends:
+      service: fossildb
+    volumes:
+      - "./fossildb/data:/fossildb/data"
+      - "./fossildb/backup:/fossildb/backup"
 
   fossildb-dev:
     extends:
       service: fossildb
-    ports:
-      - "7155:7155"
     volumes:
-      - "./fossildb/data:/fossildb/data"
-      - "./fossildb/backup:/fossildb/backup"
+      - "./fossildb-dev/data:/fossildb/data"
+      - "./fossildb-dev/backup:/fossildb/backup"

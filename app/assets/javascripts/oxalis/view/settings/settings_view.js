@@ -3,10 +3,11 @@
  * @flow
  */
 
-import * as React from "react";
 import { Tabs } from "antd";
-import UserSettingsView from "oxalis/view/settings/user_settings_view";
+import * as React from "react";
+
 import DatasetSettingsView from "oxalis/view/settings/dataset_settings_view";
+import UserSettingsView from "oxalis/view/settings/user_settings_view";
 
 const TabPane = Tabs.TabPane;
 

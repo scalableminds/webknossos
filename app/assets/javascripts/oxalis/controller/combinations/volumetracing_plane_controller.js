@@ -4,14 +4,15 @@
  */
 
 import _ from "lodash";
-import Store from "oxalis/store";
-import * as Utils from "libs/utils";
-import { OrthoViews, VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
-import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
+
+import {
+  ContourModeEnum,
+  type OrthoView,
+  OrthoViews,
+  type Point2,
+  VolumeToolEnum,
+} from "oxalis/constants";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
-import Model from "oxalis/model";
-import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
-import { movePlaneFlycamOrthoAction, setPositionAction } from "oxalis/model/actions/flycam_actions";
 import {
   createCellAction,
   setToolAction,
@@ -24,12 +25,17 @@ import {
   copySegmentationLayerAction,
   setActiveCellAction,
 } from "oxalis/model/actions/volumetracing_actions";
+import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import {
   getVolumeTool,
   getContourTracingMode,
   enforceVolumeTracing,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import type { OrthoView, Point2 } from "oxalis/constants";
+import { movePlaneFlycamOrthoAction, setPositionAction } from "oxalis/model/actions/flycam_actions";
+import Model from "oxalis/model";
+import Store from "oxalis/store";
+import * as Utils from "libs/utils";
 
 const simulateTracing = async (): Promise<void> => {
   Store.dispatch(setToolAction(VolumeToolEnum.TRACE));

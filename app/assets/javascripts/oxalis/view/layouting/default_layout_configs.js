@@ -6,10 +6,10 @@
  */
 
 // @flow
-import _ from "lodash";
-import type { ControlMode, Mode } from "oxalis/constants";
-import Constants, { ControlModeEnum } from "oxalis/constants";
+import Constants, { type ControlMode, ControlModeEnum, type Mode } from "oxalis/constants";
 import { navbarHeight } from "navbar";
+import _ from "lodash";
+
 import { Pane, Column, Row, Stack } from "./golden_layout_helpers";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
@@ -17,6 +17,7 @@ export const currentLayoutVersion = 6;
 export const layoutHeaderHeight = 20;
 export const headerHeight = 55;
 const dummyExtent = 500;
+export const show3DViewportInArbitrary = false;
 
 const LayoutSettings = {
   showPopoutIcon: false,
@@ -99,7 +100,11 @@ const unmemoizedGetDefaultLayouts = () => {
   const OrthoLayout = createLayout(Row(...OrthoViewsGrid, SkeletonRightHandColumn));
   const OrthoLayoutView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
   const VolumeTracingView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
-  const ArbitraryLayout = createLayout(Row(Panes.arbitraryViewport, SkeletonRightHandColumn));
+
+  const arbitraryPanes = [Panes.arbitraryViewport, SkeletonRightHandColumn].concat(
+    show3DViewportInArbitrary ? [Panes.td] : [],
+  );
+  const ArbitraryLayout = createLayout(Row(...arbitraryPanes));
 
   return { OrthoLayout, OrthoLayoutView, VolumeTracingView, ArbitraryLayout };
 };

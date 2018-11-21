@@ -72,6 +72,7 @@
     "react/no-multi-comp": "off",
     "react/prop-types": "off",
     "react/require-default-props": "off",
+    "import/newline-after-import": "off",
     "react/sort-comp": [
       "error",
       { "order": ["type-annotations", "static-methods", "lifecycle", "everything-else", "render"] }

@@ -3,27 +3,27 @@
  * @flow
  */
 
-import _ from "lodash";
-import * as React from "react";
-import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import { Tooltip, Collapse, Row, Col, Select, Icon } from "antd";
-import Toast from "libs/toast";
-import messages from "messages";
+import { connect } from "react-redux";
+import * as React from "react";
+import _ from "lodash";
+
 import type { DatasetConfiguration, DatasetLayerConfiguration, OxalisState } from "oxalis/store";
-import {
-  updateDatasetSettingAction,
-  updateLayerSettingAction,
-} from "oxalis/model/actions/settings_actions";
 import {
   SwitchSetting,
   NumberSliderSetting,
   DropdownSetting,
   ColorSetting,
 } from "oxalis/view/settings/setting_input_views";
+import {
+  updateDatasetSettingAction,
+  updateLayerSettingAction,
+} from "oxalis/model/actions/settings_actions";
+import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import constants from "oxalis/constants";
-import type { Mode } from "oxalis/constants";
+import constants, { type Mode } from "oxalis/constants";
+import messages from "messages";
 
 const Panel = Collapse.Panel;
 const Option = Select.Option;

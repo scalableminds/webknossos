@@ -1,13 +1,15 @@
 // @flow
 
 /* eslint-disable no-eval, no-alert */
-import * as React from "react";
 import { Modal, Input, Select, Spin } from "antd";
-import Request from "libs/request";
-import { fetchGistContent } from "libs/gist";
-import messages from "messages";
+import * as React from "react";
+
 import type { Script } from "oxalis/store";
+import { alert } from "libs/window";
+import { fetchGistContent } from "libs/gist";
 import { handleGenericError } from "libs/error_handling";
+import Request from "libs/request";
+import messages from "messages";
 
 const TextArea = Input.TextArea;
 

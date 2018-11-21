@@ -8,6 +8,7 @@
 <PROJECT_ROOT>/test/db/.*
 <PROJECT_ROOT>/userBinaryData/.*
 <PROJECT_ROOT>/binaryData/.*
+.*/binaryData/.*
 <PROJECT_ROOT>/conf/.*
 <PROJECT_ROOT>/lib/.*
 <PROJECT_ROOT>/public/.*

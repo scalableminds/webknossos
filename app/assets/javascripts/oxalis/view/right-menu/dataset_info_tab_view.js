@@ -2,28 +2,28 @@
  * dataset_info_view.js
  * @flow
  */
-import React from "react";
+import { Table, Tooltip, Icon } from "antd";
 import { connect } from "react-redux";
-import { getBaseVoxel } from "oxalis/model/scaleinfo";
-import constants, { ControlModeEnum } from "oxalis/constants";
-import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
-import Store from "oxalis/store";
-import { formatScale } from "libs/format_utils";
+import Markdown from "react-remarkable";
+import React from "react";
+
+import { type APIDataset, APITracingTypeEnum } from "admin/api_flow_types";
 import { aggregateBoundingBox } from "libs/utils";
+import { convertToHybridTracing } from "admin/admin_rest_api";
+import { formatScale } from "libs/format_utils";
+import { getBaseVoxel } from "oxalis/model/scaleinfo";
+import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
+import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
+import { location } from "libs/window";
 import {
   setAnnotationNameAction,
   setAnnotationDescriptionAction,
 } from "oxalis/model/actions/annotation_actions";
-import EditableTextLabel from "oxalis/view/components/editable_text_label";
-import { Table, Tooltip, Icon } from "antd";
-import Markdown from "react-remarkable";
 import ButtonComponent from "oxalis/view/components/button_component";
-import { convertToHybridTracing } from "admin/admin_rest_api";
+import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import Model from "oxalis/model";
-import { location } from "libs/window";
-import { type APIDataset, APITracingTypeEnum } from "admin/api_flow_types";
-import type { OxalisState, Tracing, Task, Flycam } from "oxalis/store";
+import Store, { type Flycam, type OxalisState, type Task, type Tracing } from "oxalis/store";
+import constants, { ControlModeEnum } from "oxalis/constants";
 
 type DatasetInfoTabStateProps = {
   tracing: Tracing,
@@ -314,20 +314,19 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
 
         <p>Viewport Width: {formatNumberToLength(zoomLevel)}</p>
         <p>Dataset Resolution: {formatScale(this.props.dataset.dataSource.scale)}</p>
-        <p>
-          <table>
-            <tbody>
-              <tr>
-                <td style={{ paddingRight: 8 }}>Dataset Extent:</td>
-                <td>{formatExtentWithLength(extentInVoxel, x => `${x}`)} Voxel³</td>
-              </tr>
-              <tr>
-                <td />
-                <td>{formatExtentWithLength(extent, formatNumberToLength)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </p>
+
+        <table>
+          <tbody>
+            <tr>
+              <td style={{ paddingRight: 8 }}>Dataset Extent:</td>
+              <td>{formatExtentWithLength(extentInVoxel, x => `${x}`)} Voxel³</td>
+            </tr>
+            <tr>
+              <td />
+              <td>{formatExtentWithLength(extent, formatNumberToLength)}</td>
+            </tr>
+          </tbody>
+        </table>
 
         {this.getTracingStatistics()}
         {this.getKeyboardShortcuts(isDatasetViewMode)}

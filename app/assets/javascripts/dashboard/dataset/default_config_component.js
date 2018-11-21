@@ -1,8 +1,10 @@
 // @flow
 
-import * as React from "react";
 import { Icon, Input, Checkbox, Alert, Form, InputNumber, Col, Row, Tooltip } from "antd";
+import * as React from "react";
+
 import { Vector3Input } from "libs/vector_input";
+
 import { FormItemWithInfo, jsonEditStyle } from "./helper_components";
 import { validateLayerConfigurationJSON, syncValidator } from "./validation";
 

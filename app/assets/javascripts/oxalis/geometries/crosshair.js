@@ -4,8 +4,9 @@
  */
 
 import * as THREE from "three";
-import Store from "oxalis/store";
+
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
+import Store from "oxalis/store";
 
 class Crosshair {
   mesh: THREE.Mesh;

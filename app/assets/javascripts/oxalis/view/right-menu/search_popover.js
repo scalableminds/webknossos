@@ -1,7 +1,8 @@
 // @flow
-import _ from "lodash";
-import * as React from "react";
 import { AutoComplete, Popover } from "antd";
+import * as React from "react";
+import _ from "lodash";
+
 import Shortcut from "libs/shortcut_component";
 
 const { Option } = AutoComplete;

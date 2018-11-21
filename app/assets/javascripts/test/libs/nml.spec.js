@@ -1,13 +1,13 @@
 // @flow
 
-import test from "ava";
 import _ from "lodash";
-import mock from "mock-require";
-import { defaultState } from "oxalis/store";
 import update from "immutability-helper";
+
+import { type Node, defaultState } from "oxalis/store";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
-import type { Node } from "oxalis/store";
+import mock from "mock-require";
+import test from "ava";
 
 const TIMESTAMP = 123456789;
 const DateMock = {

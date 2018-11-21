@@ -3,9 +3,8 @@
  * @flow
  */
 
+import { M4x4, type Matrix4x4 } from "libs/mjs";
 import * as Utils from "libs/utils";
-import { M4x4 } from "libs/mjs";
-import type { Matrix4x4 } from "libs/mjs";
 
 // Constants
 const HEAP_SIZE = 1 << 25;

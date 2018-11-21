@@ -1,8 +1,9 @@
 // @flow
 
 import _ from "lodash";
-import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
+
 import type { Edge } from "oxalis/store";
+import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import * as Utils from "libs/utils";
 
 type EdgeMap = DiffableMap<number, Array<Edge>>;

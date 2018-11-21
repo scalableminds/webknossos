@@ -1,27 +1,27 @@
 // @flow
-import React, { PureComponent } from "react";
-import Model from "oxalis/model";
-import Store from "oxalis/store";
-import { connect } from "react-redux";
 import { Upload, Button, Dropdown, Menu, Icon, Modal, Tooltip } from "antd";
+import { connect } from "react-redux";
+import React, { PureComponent } from "react";
+
+import type { APIUser, APITracingType } from "admin/api_flow_types";
+import { AsyncButton } from "components/async_clickables";
+import { copyAnnotationToUserAccount, finishAnnotation } from "admin/admin_rest_api";
+import { mapLayoutKeysToLanguage } from "oxalis/view/layouting/default_layout_configs";
+import { readFileAsArrayBuffer } from "libs/read_file";
+import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
+import { undoAction, redoAction } from "oxalis/model/actions/save_actions";
+import ButtonComponent from "oxalis/view/components/button_component";
 import Constants from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
-import ShareModalView from "oxalis/view/action-bar/share_modal_view";
-import UserScriptsModalView from "oxalis/view/action-bar/user_scripts_modal_view";
+import Model from "oxalis/model";
 import SaveButton from "oxalis/view/action-bar/save_button";
-import ButtonComponent from "oxalis/view/components/button_component";
-import messages from "messages";
-import api from "oxalis/api/internal_api";
-import { undoAction, redoAction } from "oxalis/model/actions/save_actions";
-import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
-import { copyAnnotationToUserAccount, finishAnnotation } from "admin/admin_rest_api";
-import { location } from "libs/window";
-import type { OxalisState, RestrictionsAndSettings, Task } from "oxalis/store";
-import type { APIUser, APITracingType } from "admin/api_flow_types";
 import SceneController from "oxalis/controller/scene_controller";
-import { readFileAsArrayBuffer } from "libs/read_file";
-import { AsyncButton } from "components/async_clickables";
-import { mapLayoutKeysToLanguage } from "oxalis/view/layouting/default_layout_configs";
+import ShareModalView from "oxalis/view/action-bar/share_modal_view";
+import Store, { type OxalisState, type RestrictionsAndSettings, type Task } from "oxalis/store";
+import UserScriptsModalView from "oxalis/view/action-bar/user_scripts_modal_view";
+import api from "oxalis/api/internal_api";
+import messages from "messages";
+import window, { location } from "libs/window";
 
 type StateProps = {
   tracingType: APITracingType,
@@ -71,10 +71,7 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
   const layoutMissingHelpTitle = (
     <React.Fragment>
       <h5 style={{ color: "#fff" }}>Where is my layout?</h5>
-      <p>
-        {`The tracing views are separated into four classes. Each of them has their own layouts. If you
-        can't find your layout please open the tracing in the correct view mode or just add it here manually.`}
-      </p>
+      <p>{messages["layouting.missing_custom_layout_info"]}</p>
     </React.Fragment>
   );
   const customLayoutsItems = storedLayoutNamesForView.map(layout => {
@@ -82,17 +79,16 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
     return (
       <Menu.Item
         key={layout}
-        onClick={() => onSelectLayout(layout)}
         className={
           isSelectedLayout ? "selected-layout-item bullet-point-less-li" : "bullet-point-less-li"
         }
       >
-        <span style={{ minWidth: "100%", minHeight: "auto", display: "inline-block" }}>
-          <div className="inline-with-margin full-width" onClick={() => onSelectLayout(layout)}>
+        <div className="layout-dropdown-list-item-container">
+          <div className="layout-dropdown-selection-area" onClick={() => onSelectLayout(layout)}>
             {layout}
           </div>
           {isSelectedLayout ? (
-            <Icon type="check" className="sub-menu-item-icon" theme="outlined" />
+            <Icon type="check" theme="outlined" className="sub-menu-item-icon" />
           ) : (
             <Tooltip placement="top" title="Remove this layout">
               <Icon
@@ -102,7 +98,7 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
               />
             </Tooltip>
           )}
-        </span>
+        </div>
       </Menu.Item>
     );
   });
@@ -116,7 +112,7 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
             <Icon
               type="info-circle-o"
               style={{ color: "gray", marginRight: 36 }}
-              className="sub-menu-item-icon"
+              className="right-floating-icon"
             />
           </Tooltip>
         </span>

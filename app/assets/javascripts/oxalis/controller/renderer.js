@@ -1,6 +1,8 @@
 // @flow
 import * as THREE from "three";
 
+import { document } from "libs/window";
+
 let renderer = null;
 function getRenderer() {
   if (renderer != null) {

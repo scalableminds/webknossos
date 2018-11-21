@@ -2,6 +2,8 @@
 
 import ReactDOM from "react-dom";
 
+import { document } from "libs/window";
+
 type DestroyFunction = () => void;
 
 export default function renderIndependently(getComponent: DestroyFunction => React$Element<*>) {

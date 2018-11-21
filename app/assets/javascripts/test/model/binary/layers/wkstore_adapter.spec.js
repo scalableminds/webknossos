@@ -1,11 +1,12 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-import test from "ava";
+import Base64 from "base64-js";
 import _ from "lodash";
+
+import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
+import datasetServerObject from "test/fixtures/dataset_server_object";
 import mockRequire from "mock-require";
 import sinon from "sinon";
-import Base64 from "base64-js";
-import datasetServerObject from "test/fixtures/dataset_server_object";
-import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
+import test from "ava";
 
 mockRequire.stopAll();
 

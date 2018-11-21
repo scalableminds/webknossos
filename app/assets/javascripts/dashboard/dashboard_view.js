@@ -1,23 +1,23 @@
 // @flow
 /* eslint-disable jsx-a11y/href-no-hash */
 
-import _ from "lodash";
-import * as React from "react";
-import { connect } from "react-redux";
+import { type RouterHistory, withRouter } from "react-router-dom";
 import { Spin, Tabs } from "antd";
-import DatasetView from "dashboard/dataset_view";
-import DashboardTaskListView from "dashboard/dashboard_task_list_view";
-import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
-import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
-import Request from "libs/request";
-import { withRouter } from "react-router-dom";
+import { connect } from "react-redux";
+import * as React from "react";
+import _ from "lodash";
+
 import type { APIUser, APIMaybeUnimportedDataset } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
-import type { RouterHistory } from "react-router-dom";
-import { handleGenericError } from "libs/error_handling";
+import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import { getUser, getDatastores, triggerDatasetCheck, getDatasets } from "admin/admin_rest_api";
+import { handleGenericError } from "libs/error_handling";
 import { parseAsMaybe } from "libs/utils";
+import DashboardTaskListView from "dashboard/dashboard_task_list_view";
+import DatasetView from "dashboard/dataset_view";
+import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
+import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
+import Request from "libs/request";
 
 const TabPane = Tabs.TabPane;
 

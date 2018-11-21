@@ -1,6 +1,14 @@
 // @flow
 
-import type { Saga as _Saga, Channel, Task, Effect, Pattern } from 'redux-saga'
+import {
+  type Channel,
+  type Effect,
+  type Pattern,
+  type Task,
+  type Saga as _Saga,
+  channel,
+  effects
+} from 'redux-saga';
 import {
   all as typedAll,
   race as typedRace,
@@ -10,8 +18,9 @@ import {
   throttle as typedThrottle,
   cancel as typedCancel,
 } from 'redux-saga/effects';
-import type { OxalisState } from "oxalis/store";
+
 import type { Action } from "oxalis/model/actions/actions";
+import type { OxalisState } from "oxalis/store";
 
 declare type Context = Object;
 

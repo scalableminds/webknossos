@@ -2,15 +2,15 @@
  * input.js
  * @flow
  */
-import _ from "lodash";
 import BackboneEvents from "backbone-events-standalone";
-import constants from "oxalis/constants";
+import _ from "lodash";
+
 import Date from "libs/date";
-import { document } from "libs/window";
-import * as Utils from "libs/utils";
-import KeyboardJS from "libs/keyboardjs_wrapper";
 import Hammer from "libs/hammerjs_wrapper";
-import type { Point2 } from "oxalis/constants";
+import KeyboardJS from "libs/keyboard";
+import * as Utils from "libs/utils";
+import constants, { type Point2 } from "oxalis/constants";
+import window, { document } from "libs/window";
 
 // This is the main Input implementation.
 // Although all keys, buttons and sensor are mapped in
@@ -324,6 +324,9 @@ export class InputMouse {
     _.extend(this, BackboneEvents);
     this.targetSelector = targetSelector;
     this.domElement = document.querySelector(targetSelector);
+    if (!this.domElement) {
+      throw new Error(`Input couldn't be attached to the following selector ${targetSelector}`);
+    }
     this.id = id;
 
     this.leftMouseButton = new InputMouseButton("left", 1, this, this.id);

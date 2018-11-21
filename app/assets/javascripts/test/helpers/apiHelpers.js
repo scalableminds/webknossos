@@ -1,22 +1,24 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-import mockRequire from "mock-require";
 import BackboneEvents from "backbone-events-standalone";
-import sinon from "sinon";
 import _ from "lodash";
+
 import { ControlModeEnum } from "oxalis/constants";
+import mockRequire from "mock-require";
+import sinon from "sinon";
 import window from "libs/window";
+
 import {
   tracing as SKELETON_TRACING,
   annotation as SKELETON_ANNOTATION,
 } from "../fixtures/skeletontracing_server_objects";
 import {
-  tracing as VOLUME_TRACING,
-  annotation as VOLUME_ANNOTATION,
-} from "../fixtures/volumetracing_server_objects";
-import {
   tracing as TASK_TRACING,
   annotation as TASK_ANNOTATION,
 } from "../fixtures/tasktracing_server_objects";
+import {
+  tracing as VOLUME_TRACING,
+  annotation as VOLUME_ANNOTATION,
+} from "../fixtures/volumetracing_server_objects";
 import DATASET from "../fixtures/dataset_server_object";
 
 const Request = {
@@ -63,6 +65,9 @@ mockRequire(
   "libs/window",
   Object.assign({}, window, {
     open: sinon.spy(),
+    document: {
+      createElement: () => ({}),
+    },
   }),
 );
 
@@ -103,7 +108,10 @@ const ANNOTATION_ID = "annotationIdValue";
 
 let counter = 0;
 
-export function setupOxalis(t, mode, apiVersion) {
+// This function should always be imported at the very top since it setups
+// important mocks. The leading underscores are there to make the import
+// appear at the top when sorting the imports with importjs.
+export function __setupOxalis(t, mode, apiVersion) {
   UrlManager.initialState = { position: [1, 2, 3] };
   t.context.model = Model;
 
@@ -121,7 +129,7 @@ export function setupOxalis(t, mode, apiVersion) {
     // Right now, initializeDataset() in model_initialization mutates the dataset to add a new
     // volume layer. Since this mutation should be isolated between different tests, we have to make
     // sure that each receiveJSON call returns its own clone. Without the following "onCall" line,
-    // each setupOxalis call would overwrite the current stub to receiveJSON.
+    // each __setupOxalis call would overwrite the current stub to receiveJSON.
     .onCall(counter++)
     .returns(Promise.resolve(datasetClone));
   protoHelpers.parseProtoTracing.returns(_.cloneDeep(modelData[mode].tracing));

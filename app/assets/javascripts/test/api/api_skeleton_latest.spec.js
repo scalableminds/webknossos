@@ -1,14 +1,14 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-import test from "ava";
-import sinon from "sinon";
-import { setupOxalis, KeyboardJS } from "test/helpers/apiHelpers";
-import Store from "oxalis/store";
+import { __setupOxalis, KeyboardJS } from "test/helpers/apiHelpers";
+import { makeBasicGroupObject } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import { setTreeGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
-import { makeBasicGroupObject } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
+import Store from "oxalis/store";
+import sinon from "sinon";
+import test from "ava";
 
 // All the mocking is done in the helpers file, so it can be reused for both skeleton and volume API
-test.beforeEach(t => setupOxalis(t, "skeleton"));
+test.beforeEach(t => __setupOxalis(t, "skeleton"));
 
 test("getActiveNodeId should get the active node id", t => {
   const api = t.context.api;

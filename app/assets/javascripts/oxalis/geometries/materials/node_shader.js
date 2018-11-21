@@ -1,11 +1,12 @@
 // @flow
 
 import * as THREE from "three";
-import Store from "oxalis/store";
+
+import type { Uniforms } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
-import type { Uniforms } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import Store from "oxalis/store";
 
 export const NodeTypes = {
   INVALID: 0.0,

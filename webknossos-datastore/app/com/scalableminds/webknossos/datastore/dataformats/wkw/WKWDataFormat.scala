@@ -96,7 +96,12 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
       (yMin, yMax) = yDirs.foldRight((getIntFromFilePath(yHeadDir), 0))(minMaxValue)
       (xMin, xMax) = xFiles.foldRight((getIntFromFilePath(xFile), 0))(minMaxValue)
     } yield {
-      BoundingBox(Point3D(xMin * multiplierX, yMin * multiplierY, zMin * multiplierZ), xMax * multiplierX, yMax * multiplierY, zMax * multiplierZ)
+      BoundingBox(Point3D(xMin * multiplierX,
+                          yMin * multiplierY,
+                          zMin * multiplierZ),
+                  xMax * multiplierX - xMin * multiplierX,
+                  yMax * multiplierY - yMin * multiplierY,
+                  zMax * multiplierZ - zMin * multiplierZ)
     }
   }
 

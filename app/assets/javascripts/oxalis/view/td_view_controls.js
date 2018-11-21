@@ -1,7 +1,8 @@
 // @flow
-import * as React from "react";
-import api from "oxalis/api/internal_api";
 import { Button } from "antd";
+import * as React from "react";
+
+import api from "oxalis/api/internal_api";
 
 const ButtonGroup = Button.Group;
 

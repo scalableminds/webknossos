@@ -1,11 +1,11 @@
 # webKnossos
-Cellular-resolution connectomics is currently substantially limited by the throughput and efficiency of data analysis. 
-Current solutions require an efficient integration of automated image analysis with massive manual data annotation. 
-To scale such annotation efforts it is decisive to be able to crowd source data analysis online. 
+Cellular-resolution connectomics is currently substantially limited by the throughput and efficiency of data analysis.
+Current solutions require an efficient integration of automated image analysis with massive manual data annotation.
+To scale such annotation efforts it is decisive to be able to crowd source data analysis online.
 Here we present **webKnossos**.
 
-> Boergens, Berning, Bocklisch, Bräunlein, Drawitsch, Frohnhofen, Herold, Otto, Rzepka, Werkmeister, Werner, Wiese, Wissler and Helmstaedter  
-webKnossos: efficient online 3D data annotation for connectomics.  
+> Boergens, Berning, Bocklisch, Bräunlein, Drawitsch, Frohnhofen, Herold, Otto, Rzepka, Werkmeister, Werner, Wiese, Wissler and Helmstaedter
+webKnossos: efficient online 3D data annotation for connectomics.
 [Nature Methods (2017) DOI:10.1038/NMETH.4331.](https://www.nature.com/articles/nmeth.4331)
 
 ![webKnossos logo](https://webknossos.brain.mpg.de/assets/images/oxalis.svg)
@@ -32,15 +32,17 @@ webKnossos: efficient online 3D data annotation for connectomics.
 
 ## Development setup
 ### Docker
-This is the fastest way to try webKnossos. 
-Docker CE 17+ and Docker Compose 1.18+ is required. 
-This is only recommended for testing. 
+This is the fastest way to try webKnossos.
+Docker CE 17+ and Docker Compose 1.18+ is required.
+This is only recommended for testing.
 [For production](https://github.com/scalableminds/webknossos/wiki/Production-setup), a more elaborate setup with persistent file mounts and HTTPS reverse proxy is recommended.
 
 ```bash
-docker-compose pull webknossos
-docker-compose up webknossos
+./start-docker.sh
 ```
+
+See the [wiki](https://github.com/scalableminds/webknossos/wiki/Try-setup) for instructions on updating this try setup.
+
 
 ### Dependencies
 
@@ -124,18 +126,18 @@ See: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 ```bash
 sbt run
 ```
-Will fetch all Scala, Java and node dependencies and run the application on Port 9000. 
+Will fetch all Scala, Java and node dependencies and run the application on Port 9000.
 Make sure that the PostgreSQL service is running before you start sbt.
 
 ### Run on a remote machine
 ```bash
 sbt "run -Dhttp.uri=http://<remote address>:9000"
 ```
-Will fetch all Scala, Java and node dependencies and run the application on Port 9000. 
+Will fetch all Scala, Java and node dependencies and run the application on Port 9000.
 Make sure that the PostgreSQL service is running before you start sbt.
 
-Make sure to open port `9000` in your firewall. 
-This is only recommended for development purposes. 
+Make sure to open port `9000` in your firewall.
+This is only recommended for development purposes.
 See below for a recommended production setup.
 
 ## Production setup
@@ -173,7 +175,7 @@ Contact us at [hello@scalableminds.com](mailto:hello@scalableminds.com).
 
 ### Thanks
 * [CircleCI](https://circleci.com/gh/scalableminds/webknossos) for letting us run builds and tests on their CI
-* [Browser Stack](https://www.browserstack.com/) for letting us test WebKnossos on a variety of different devices  
+* [Browser Stack](https://www.browserstack.com/) for letting us test WebKnossos on a variety of different devices
 <a href="https://www.browserstack.com/"><img src="https://p14.zdusercontent.com/attachment/1015988/wustfygoUpQ0faC7tIiaOpJUM?token=eyJhbGciOiJkaXIiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0..TpDEVjDPeSTDWdmL0pu6Mw.pdawodFlbAuP4ZbKn5Ucpyq69pCh3bUXv_XH_yJk7CdAzi6IIi7Az6VWriflXVKOyTWtqA8JkxqPu11s9R56jC2I5JwCc1DJILtD_j9fT4rAIth-hvnST0eA_LqBdXpRYKMHtxookA-dZ9pbvHBTFb-JG2PEKl1IXZCw5GlIRgW2Oxieg9xXtFpBN7R6_Q5yRiwuviemrK0ide1ygC8HTMDgdgdbCLuhHDDeNyluU7tR9kVtV7KZDsVd2WIBId-fSyzInofDhlk196_fHwR0WQd1pN7GDVIdfRhxTTTNWTw.g0PCM6T1kBG7AtBwKZmfzQ" width=100 alt="Browserstack Logo"></a>
 
 # License

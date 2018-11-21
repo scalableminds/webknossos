@@ -3,38 +3,40 @@
  * @flow
  */
 
-import * as React from "react";
-import { connect } from "react-redux";
-import { withRouter } from "react-router-dom";
+import { type RouterHistory, withRouter } from "react-router-dom";
 import { Spin } from "antd";
-import _ from "lodash";
-import app from "app";
-import * as Utils from "libs/utils";
-import renderIndependently from "libs/render_independently";
+import { connect } from "react-redux";
 import BackboneEvents from "backbone-events-standalone";
+import * as React from "react";
 import Stats from "stats.js";
+import _ from "lodash";
+
+import { HANDLED_ERROR } from "oxalis/model_initialization";
 import { InputKeyboardNoLoop, InputKeyboard } from "libs/input";
-import Toast from "libs/toast";
-import Store from "oxalis/store";
-import PlaneController from "oxalis/controller/viewmodes/plane_controller";
-import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
-import { initializeSceneController } from "oxalis/controller/scene_controller";
-import UrlManager from "oxalis/controller/url_manager";
-import constants, { ControlModeEnum } from "oxalis/constants";
-import ApiLoader from "oxalis/api/api_loader";
-import api from "oxalis/api/internal_api";
-import { wkReadyAction } from "oxalis/model/actions/actions";
+import { fetchGistContent } from "libs/gist";
 import { saveNowAction, undoAction, redoAction } from "oxalis/model/actions/save_actions";
 import { setViewModeAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { wkReadyAction } from "oxalis/model/actions/actions";
+import ApiLoader from "oxalis/api/api_loader";
+import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
+import { initializeSceneController } from "oxalis/controller/scene_controller";
 import Model from "oxalis/model";
-import { HANDLED_ERROR } from "oxalis/model_initialization";
-import messages from "messages";
-import { fetchGistContent } from "libs/gist";
-import { document } from "libs/window";
 import NewTaskDescriptionModal from "oxalis/view/new_task_description_modal";
-import type { Mode } from "oxalis/constants";
-import type { OxalisState, TracingTypeTracing, TraceOrViewCommand } from "oxalis/store";
-import type { RouterHistory } from "react-router-dom";
+import PlaneController from "oxalis/controller/viewmodes/plane_controller";
+import Store, {
+  type OxalisState,
+  type TraceOrViewCommand,
+  type TracingTypeTracing,
+} from "oxalis/store";
+import Toast from "libs/toast";
+import UrlManager from "oxalis/controller/url_manager";
+import * as Utils from "libs/utils";
+import api from "oxalis/api/internal_api";
+import app from "app";
+import constants, { ControlModeEnum, type Mode } from "oxalis/constants";
+import messages from "messages";
+import renderIndependently from "libs/render_independently";
+import window, { document } from "libs/window";
 
 type StateProps = {
   viewMode: Mode,

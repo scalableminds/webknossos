@@ -4,8 +4,8 @@
  * save_actions.js
  * @flow
  */
-import Date from "libs/date";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import Date from "libs/date";
 
 type Tracing = "skeleton" | "volume";
 

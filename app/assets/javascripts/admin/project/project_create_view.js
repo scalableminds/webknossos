@@ -1,8 +1,12 @@
 // @flow
-import React from "react";
-import { withRouter } from "react-router-dom";
-import { connect } from "react-redux";
 import { Form, Input, Select, Button, Card, InputNumber, Checkbox } from "antd";
+import { type RouterHistory, withRouter } from "react-router-dom";
+import { connect } from "react-redux";
+import React from "react";
+
+import type { APIUser, APITeam } from "admin/api_flow_types";
+import type { OxalisState } from "oxalis/store";
+import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import {
   getUsers,
   getEditableTeams,
@@ -10,11 +14,7 @@ import {
   getProject,
   updateProject,
 } from "admin/admin_rest_api";
-import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 
-import type { APIUser, APITeam } from "admin/api_flow_types";
-import type { OxalisState } from "oxalis/store";
-import type { RouterHistory } from "react-router-dom";
 import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
 
 const FormItem = Form.Item;
@@ -26,7 +26,7 @@ type StateProps = {
 
 type Props = {
   form: Object,
-  projectName?: string,
+  projectName?: ?string,
   history: RouterHistory,
 } & StateProps;
 

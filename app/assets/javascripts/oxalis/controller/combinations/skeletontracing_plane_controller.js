@@ -5,10 +5,27 @@
 
 import * as THREE from "three";
 import _ from "lodash";
-import Store from "oxalis/store";
-import type PlaneView from "oxalis/view/plane_view";
-import getSceneController from "oxalis/controller/scene_controller_provider";
-import { OrthoViews } from "oxalis/constants";
+
+import {
+  type OrthoView,
+  type OrthoViewMap,
+  OrthoViews,
+  type Point2,
+  type Vector3,
+} from "oxalis/constants";
+import { V3 } from "libs/mjs";
+import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
+import { enforce } from "libs/utils";
+import {
+  enforceSkeletonTracing,
+  getActiveNode,
+} from "oxalis/model/accessors/skeletontracing_accessor";
+import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
+import {
+  getPosition,
+  getRotationOrtho,
+  getRequestLogZoomStep,
+} from "oxalis/model/accessors/flycam_accessor";
 import {
   setActiveNodeAction,
   deleteActiveNodeAsUserAction,
@@ -22,21 +39,10 @@ import {
   toggleInactiveTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setDirectionAction } from "oxalis/model/actions/flycam_actions";
-import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
-import { enforce } from "libs/utils";
-import {
-  getPosition,
-  getRotationOrtho,
-  getRequestLogZoomStep,
-} from "oxalis/model/accessors/flycam_accessor";
-import {
-  enforceSkeletonTracing,
-  getActiveNode,
-} from "oxalis/model/accessors/skeletontracing_accessor";
-import type { Point2, Vector3, OrthoView, OrthoViewMap } from "oxalis/constants";
+import type PlaneView from "oxalis/view/plane_view";
+import Store from "oxalis/store";
 import api from "oxalis/api/internal_api";
-import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
-import { V3 } from "libs/mjs";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 
 const OrthoViewToNumber: OrthoViewMap<number> = {
   [OrthoViews.PLANE_XY]: 0,

@@ -1,7 +1,6 @@
 // @flow
+import { type RouterHistory, withRouter } from "react-router-dom";
 import React from "react";
-import { withRouter } from "react-router-dom";
-import type { RouterHistory } from "react-router-dom";
 
 type Props = {
   redirectTo: () => Promise<string>,

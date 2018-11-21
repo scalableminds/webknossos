@@ -1,6 +1,7 @@
 // @flow
 
 import _ from "lodash";
+
 import type { Tree, TreeMap, TreeGroup } from "oxalis/store";
 
 export const MISSING_GROUP_ID = -1;

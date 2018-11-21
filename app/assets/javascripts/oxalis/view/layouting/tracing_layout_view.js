@@ -3,35 +3,36 @@
  * @flow
  */
 
-import * as React from "react";
-import OxalisController from "oxalis/controller";
-import SettingsView from "oxalis/view/settings/settings_view";
-import ActionBarView from "oxalis/view/action_bar_view";
-import TracingView from "oxalis/view/tracing_view";
-import VersionView from "oxalis/view/version_view";
 import { Layout, Icon } from "antd";
-import { location } from "libs/window";
-import { withRouter } from "react-router-dom";
-import Toast from "libs/toast";
-import messages from "messages";
-import ButtonComponent from "oxalis/view/components/button_component";
 import { connect } from "react-redux";
-import CommentTabView from "oxalis/view/right-menu/comment_tab/comment_tab_view";
+import { withRouter } from "react-router-dom";
+import * as React from "react";
+
+import { ArbitraryViewport, type Mode, OrthoViews } from "oxalis/constants";
+import type { OxalisState, TracingTypeTracing, TraceOrViewCommand } from "oxalis/store";
 import AbstractTreeTabView from "oxalis/view/right-menu/abstract_tree_tab_view";
-import TreesTabView, { importNmls } from "oxalis/view/right-menu/trees_tab_view";
-import MappingInfoView from "oxalis/view/right-menu/mapping_info_view";
-import MeshesView from "oxalis/view/right-menu/meshes_view";
+import ActionBarView from "oxalis/view/action_bar_view";
+import ButtonComponent from "oxalis/view/components/button_component";
+import CommentTabView from "oxalis/view/right-menu/comment_tab/comment_tab_view";
 import DatasetInfoTabView from "oxalis/view/right-menu/dataset_info_tab_view";
 import InputCatcher, { recalculateInputCatcherSizes } from "oxalis/view/input_catcher";
-import { ArbitraryViewport, OrthoViews } from "oxalis/constants";
-import type { OxalisState, TracingTypeTracing, TraceOrViewCommand } from "oxalis/store";
-import type { Mode } from "oxalis/constants";
-import RecordingSwitch from "oxalis/view/recording_switch";
-import TDViewControls from "oxalis/view/td_view_controls";
+import MappingInfoView from "oxalis/view/right-menu/mapping_info_view";
+import MeshesView from "oxalis/view/right-menu/meshes_view";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
+import OxalisController from "oxalis/controller";
+import RecordingSwitch from "oxalis/view/recording_switch";
+import SettingsView from "oxalis/view/settings/settings_view";
+import TDViewControls from "oxalis/view/td_view_controls";
+import Toast from "libs/toast";
+import TracingView from "oxalis/view/tracing_view";
+import TreesTabView, { importNmls } from "oxalis/view/right-menu/trees_tab_view";
+import VersionView from "oxalis/view/version_view";
+import messages from "messages";
+import window, { location } from "libs/window";
+
 import { GoldenLayoutAdapter } from "./golden_layout_adapter";
-import { storeLayoutConfig, setActiveLayout } from "./layout_persistence";
 import { determineLayout, headerHeight } from "./default_layout_configs";
+import { storeLayoutConfig, setActiveLayout } from "./layout_persistence";
 
 const { Header, Sider } = Layout;
 

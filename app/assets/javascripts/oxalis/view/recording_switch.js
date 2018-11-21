@@ -1,7 +1,8 @@
 // @flow
+import { Switch } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
-import { Switch } from "antd";
+
 import type { OxalisState } from "oxalis/store";
 import { setFlightmodeRecordingAction } from "oxalis/model/actions/settings_actions";
 

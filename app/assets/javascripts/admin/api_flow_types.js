@@ -2,11 +2,12 @@
  * api_flow_types.js
  * @flow
  */
-import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
-import type { Vector3, Vector6, Point3 } from "oxalis/constants";
+import Enum from "Enumjs";
+
 import type { BoundingBoxObject, Edge, CommentType, TreeGroup } from "oxalis/store";
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
-import Enum from "Enumjs";
+import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
+import type { Vector3, Vector6, Point3 } from "oxalis/constants";
 
 export type APIMessage = { ["info" | "warning" | "error"]: string };
 

@@ -3,28 +3,19 @@
  * @flow
  */
 
-import _ from "lodash";
 import * as THREE from "three";
-import * as Utils from "libs/utils";
-import Model from "oxalis/model";
-import Store from "oxalis/store";
-import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
-import AbstractPlaneMaterialFactory, {
-  sanitizeName,
-} from "oxalis/geometries/materials/abstract_plane_material_factory";
-import type { ShaderMaterialOptions } from "oxalis/geometries/materials/abstract_plane_material_factory";
-import type { OrthoView, Vector3 } from "oxalis/constants";
-import type { DatasetLayerConfiguration } from "oxalis/store";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import _ from "lodash";
+
 import {
-  getPlaneScalingFactor,
-  getRequestLogZoomStep,
-} from "oxalis/model/accessors/flycam_accessor";
-import { OrthoViews, OrthoViewValues, ModeValues, volumeToolEnumToIndex } from "oxalis/constants";
+  ModeValues,
+  type OrthoView,
+  OrthoViewValues,
+  OrthoViews,
+  type Vector3,
+  volumeToolEnumToIndex,
+} from "oxalis/constants";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
-import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
-import { getPackingDegree } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import {
   getColorLayers,
   getResolutions,
@@ -32,6 +23,21 @@ import {
   getByteCount,
   getBoundaries,
 } from "oxalis/model/accessors/dataset_accessor";
+import { getPackingDegree } from "oxalis/model/bucket_data_handling/data_rendering_logic";
+import {
+  getPlaneScalingFactor,
+  getRequestLogZoomStep,
+} from "oxalis/model/accessors/flycam_accessor";
+import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import AbstractPlaneMaterialFactory, {
+  type ShaderMaterialOptions,
+  sanitizeName,
+} from "oxalis/geometries/materials/abstract_plane_material_factory";
+import Model from "oxalis/model";
+import Store, { type DatasetLayerConfiguration } from "oxalis/store";
+import * as Utils from "libs/utils";
+import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
 
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
 
@@ -148,6 +154,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       bboxMax: {
         type: "v3",
         value: new THREE.Vector3(0, 0, 0),
+      },
+      renderBucketIndices: {
+        type: "b",
+        value: false,
       },
     });
 

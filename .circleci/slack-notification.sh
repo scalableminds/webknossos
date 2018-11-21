@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-if [ "${CIRCLE_BRANCH}" == "master" ]; then
+if [ "${CIRCLE_BRANCH}" == "master" ] ; then
     author=${CIRCLE_USERNAME}
     author=${author/fm3/<@florian>}
     author=${author/jstriebel/<@jonathan>}
@@ -17,9 +17,13 @@ if [ "${CIRCLE_BRANCH}" == "master" ]; then
     author=${author/valentin-pinkau/<@valentin>}
     channel="webknossos-bots"
     commitmsg=$(git log --format=%s -n 1)
+    pullregex="(.*)#([0-9]+)(.*)"
+    while [[ $commitmsg =~ $pullregex ]]
+    do
+        commitmsg="${BASH_REMATCH[1]}#<https://github.com/scalableminds/webknossos/issues/${BASH_REMATCH[2]}|${BASH_REMATCH[2]}>${BASH_REMATCH[3]}"
+    done
     buildlink="<https://circleci.com/gh/scalableminds/webknossos/${CIRCLE_BUILD_NUM}|${CIRCLE_BUILD_NUM}>"
-    prlink="<https://github.com/scalableminds/webknossos/pull/${CIRCLE_PR_NUMBER:=0}|#${CIRCLE_PR_NUMBER:=0}>"
-    mesg="${author} your ${CIRCLE_BRANCH} build ${buildlink} (${commitmsg} – ${prlink}) is almost finished."
+    mesg="${author} your ${CIRCLE_BRANCH} build ${buildlink} “${commitmsg}” is almost finished."
     user="circleci-notify"
     token="${SLACK_NOTIFY_TOKEN:-}"
     res=$(curl -s \

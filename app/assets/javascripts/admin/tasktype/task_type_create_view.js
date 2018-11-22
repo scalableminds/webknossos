@@ -11,13 +11,14 @@ import {
   updateTaskType,
   getTaskType,
 } from "admin/admin_rest_api";
-import RecommendedConfigurationView from "admin/tasktype/recommended_configuration_view";
+import { jsonStringify } from "libs/utils";
+import RecommendedConfigurationView, {
+  DEFAULT_RECOMMENDED_CONFIGURATION,
+} from "admin/tasktype/recommended_configuration_view";
 
 const FormItem = Form.Item;
 const { Option } = Select;
 const { TextArea } = Input;
-
-const toJSON = json => JSON.stringify(json, null, "  ");
 
 type Props = {
   taskTypeId: ?string,
@@ -48,39 +49,20 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
         branchPointsAllowed: true,
         preferredMode: null,
       },
-      recommendedConfiguration: toJSON({
-        clippingDistance: 500,
-        clippingDistanceArbitrary: 60,
-        displayCrosshair: true,
-        displayScalebars: false,
-        dynamicSpaceDirection: true,
-        keyboardDelay: 0,
-        moveValue: 500,
-        moveValue3d: 600,
-        mouseRotateValue: 0.001,
-        newNodeNewTree: false,
-        highlightCommentedNodes: false,
-        overrideNodeRadius: true,
-        particleSize: 5,
-        rotateValue: 0.01,
-        sphericalCapRadius: 500,
-        tdViewDisplayPlanes: false,
-        fourBit: false,
-        interpolation: true,
-        quality: 0,
-        segmentationOpacity: 0,
-        highlightHoveredCellId: false,
-        zoom: 0.8,
-        renderMissingDataBlack: false,
-      }),
+      recommendedConfiguration: jsonStringify(DEFAULT_RECOMMENDED_CONFIGURATION),
     };
     const taskType = this.props.taskTypeId ? await getTaskType(this.props.taskTypeId) : null;
     // Use merge which is deep _.extend
-    // eslint-disable-next-line no-unused-vars
     const formValues = _.merge({}, defaultValues, taskType);
+    if (formValues.recommendedConfiguration == null) {
+      // A recommended configuration of null overrides the default configuration when using _.merge
+      // If the task type has no recommended configuration, suggest the default one
+      formValues.recommendedConfiguration = defaultValues.recommendedConfiguration;
+    }
     this.props.form.setFieldsValue(formValues);
 
     if (taskType != null && taskType.recommendedConfiguration != null) {
+      // Only "activate" the recommended configuration checkbox if the existing task type contained one
       this.setState({ useRecommendedConfiguration: true });
     }
   }

@@ -89,12 +89,12 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
 }
 
 export default function* watchTasksAsync(): Saga<void> {
-  yield* take("WK_READY");
+  const wkReadyAction = yield* take("WK_READY");
 
   const task = yield* select(state => state.task);
   const { version } = getSomeTracing(yield* select(state => state.tracing));
   // Only execute these functions for tasks that are not modified yet
-  if (task != null && version <= 1) {
+  if (wkReadyAction.initialDispatch && task != null && version <= 1) {
     yield* call(maybeShowNewTaskTypeModal, task.type);
     yield* call(maybeShowRecommendedConfiguration, task.type);
   }

@@ -12,6 +12,20 @@ import type { UserAction } from "oxalis/model/actions/user_actions";
 import type { ViewModeAction } from "oxalis/model/actions/view_mode_actions";
 import type { VolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
 
+type WkReadyAction = {
+  type: "WK_READY",
+  initialDispatch: boolean,
+};
+
+export const wkReadyAction = (initialDispatch: boolean = false): WkReadyAction => ({
+  type: "WK_READY",
+  initialDispatch,
+});
+
+export const restartSagaAction = () => ({
+  type: "RESTART_SAGA",
+});
+
 export type Action =
   | SkeletonTracingAction
   | VolumeTracingAction
@@ -22,12 +36,5 @@ export type Action =
   | AnnotationActionTypes
   | FlycamAction
   | UserAction
-  | UiAction;
-
-export const wkReadyAction = () => ({
-  type: "WK_READY",
-});
-
-export const restartSagaAction = () => ({
-  type: "RESTART_SAGA",
-});
+  | UiAction
+  | WkReadyAction;

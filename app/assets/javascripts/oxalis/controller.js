@@ -130,7 +130,7 @@ class Controller extends React.PureComponent<Props, State> {
     window.webknossos = new ApiLoader(Model);
 
     app.vent.trigger("webknossos:ready");
-    Store.dispatch(wkReadyAction());
+    Store.dispatch(wkReadyAction(true));
     this.setState({ ready: true });
   }
 

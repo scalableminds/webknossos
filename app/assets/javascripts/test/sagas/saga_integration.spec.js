@@ -30,7 +30,7 @@ test.beforeEach(async t => {
   await __setupOxalis(t, "task");
 
   // Dispatch the wkReadyAction, so the sagas are started
-  Store.dispatch(wkReadyAction());
+  Store.dispatch(wkReadyAction(true));
 });
 
 test.serial(

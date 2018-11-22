@@ -3,7 +3,6 @@ package oxalis.security
 import play.api.libs.json.{Reads, Writes}
 import utils.EnumUtils
 
-
 object TokenType extends Enumeration {
   type TokenType = Value
 

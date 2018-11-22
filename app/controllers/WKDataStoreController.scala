@@ -21,9 +21,8 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
                                       dataStoreService: DataStoreService,
                                       dataStoreDAO: DataStoreDAO,
                                       organizationDAO: OrganizationDAO,
-                                      sil: Silhouette[WkEnv])
-                                     (implicit ec: ExecutionContext)
-  extends Controller
+                                      sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
+    extends Controller
     with LazyLogging {
 
   def validateDataSetUpload(name: String) = Action.async(parse.json) { implicit request =>
@@ -32,7 +31,8 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
         uploadInfo <- request.body.validate[DataSourceId].asOpt.toFox ?~> "dataStore.upload.invalid"
         organization <- organizationDAO.findOneByName(uploadInfo.team)(GlobalAccessContext) ?~> "organization.notFound"
         _ <- bool2Fox(dataSetService.isProperDataSetName(uploadInfo.name)) ?~> "dataSet.name.invalid"
-        _ <- dataSetService.assertNewDataSetName(uploadInfo.name, organization._id)(GlobalAccessContext) ?~> "dataSet.name.alreadyTaken"
+        _ <- dataSetService
+          .assertNewDataSetName(uploadInfo.name, organization._id)(GlobalAccessContext) ?~> "dataSet.name.alreadyTaken"
       } yield Ok
     }
   }

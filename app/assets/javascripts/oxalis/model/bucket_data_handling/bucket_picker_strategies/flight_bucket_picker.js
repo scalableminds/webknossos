@@ -1,19 +1,19 @@
 // @flow
+import PriorityQueue from "js-priority-queue";
+
+import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
+import { getMatrixScale } from "oxalis/model/reducers/flycam_reducer";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import {
   globalPositionToBucketPosition,
   bucketPositionToGlobalAddress,
 } from "oxalis/model/helpers/position_converter";
-import type { Vector3 } from "oxalis/constants";
-import type { Matrix4x4 } from "libs/mjs";
-import PriorityQueue from "js-priority-queue";
-import * as Utils from "libs/utils";
-import { M4x4, V3 } from "libs/mjs";
-import { getMatrixScale } from "oxalis/model/reducers/flycam_reducer";
-import constants from "oxalis/constants";
-import Store from "oxalis/store";
-import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import Store from "oxalis/store";
+import * as Utils from "libs/utils";
+import constants, { type Vector3 } from "oxalis/constants";
+
 import { getFallbackBuckets } from "./oblique_bucket_picker";
 
 export default function determineBucketsForFlight(

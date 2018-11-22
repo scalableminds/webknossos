@@ -1,15 +1,15 @@
 // @flow
-import * as React from "react";
-import { Link, withRouter } from "react-router-dom";
+import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { Spin, Layout, Button, Row, Col } from "antd";
 import { connect } from "react-redux";
-import GalleryDatasetView from "dashboard/gallery_dataset_view";
+import * as React from "react";
+
+import type { APIMaybeUnimportedDataset, APIUser } from "admin/api_flow_types";
+import type { OxalisState } from "oxalis/store";
 import { getOrganizations, getDatasets } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
+import GalleryDatasetView from "dashboard/gallery_dataset_view";
 import features from "features";
-import type { RouterHistory } from "react-router-dom";
-import type { OxalisState } from "oxalis/store";
-import type { APIMaybeUnimportedDataset, APIUser } from "admin/api_flow_types";
 
 const { Content, Footer } = Layout;
 

@@ -187,6 +187,8 @@ annotation.makeHybrid.explorationalsOnly=Could not convert annotation to hybrid 
 annotation.makeHybrid.failed=Could not convert to hybrid.
 annotation.makeHybrid.alreadyHybrid=Could not convert annotation to hybrid annotation because it is already a hybrid annotation.
 
+annotationType.notFound=Could not find the specified annotation type.
+
 task.create.success=Task successfully created
 task.create.failed=Failed to create Task
 task.create.limitExceeded=Cannot create more than 1000 tasks in one request.

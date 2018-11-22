@@ -1,9 +1,9 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-import test from "ava";
 import AsyncTaskQueue from "libs/async_task_queue";
 import Deferred from "libs/deferred";
 import * as Utils from "libs/utils";
 import sinon from "sinon";
+import test from "ava";
 
 test("AsyncTaskQueue should run a task (1/2)", async t => {
   t.plan(1);

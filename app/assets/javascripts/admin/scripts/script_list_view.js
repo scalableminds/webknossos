@@ -1,18 +1,18 @@
 // @flow
 /* eslint-disable jsx-a11y/href-no-hash */
 
-import _ from "lodash";
-import * as React from "react";
-import { Link, withRouter } from "react-router-dom";
+import { Link, type RouterHistory, withRouter } from "react-router-dom";
+import { PropTypes } from "@scalableminds/prop-types";
 import { Table, Icon, Spin, Button, Input, Modal } from "antd";
+import * as React from "react";
+import _ from "lodash";
+
+import type { APIScript, APIUser } from "admin/api_flow_types";
+import { getScripts, deleteScript } from "admin/admin_rest_api";
+import { handleGenericError } from "libs/error_handling";
+import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
 import messages from "messages";
-import { getScripts, deleteScript } from "admin/admin_rest_api";
-import Persistence from "libs/persistence";
-import { PropTypes } from "@scalableminds/prop-types";
-import type { APIScript, APIUser } from "admin/api_flow_types";
-import type { RouterHistory } from "react-router-dom";
-import { handleGenericError } from "libs/error_handling";
 
 const { Column } = Table;
 const { Search } = Input;

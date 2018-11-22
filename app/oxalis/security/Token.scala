@@ -16,7 +16,6 @@ import utils.{ObjectId, SQLClient, SQLDAO}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{FiniteDuration, MILLISECONDS}
 
-
 case class Token(_id: ObjectId,
                  value: String,
                  loginInfo: LoginInfo,
@@ -27,34 +26,36 @@ case class Token(_id: ObjectId,
                  created: Long = System.currentTimeMillis(),
                  isDeleted: Boolean = false) {
 
-  def toBearerTokenAuthenticator(implicit ec: ExecutionContext): Fox[BearerTokenAuthenticator] = {
-    Fox.successful(BearerTokenAuthenticator(
-      value,
-      loginInfo,
-      lastUsedDateTime,
-      expirationDateTime,
-      idleTimeout
-    ))
-  }
+  def toBearerTokenAuthenticator(implicit ec: ExecutionContext): Fox[BearerTokenAuthenticator] =
+    Fox.successful(
+      BearerTokenAuthenticator(
+        value,
+        loginInfo,
+        lastUsedDateTime,
+        expirationDateTime,
+        idleTimeout
+      ))
 }
 
 object Token {
-  def fromBearerTokenAuthenticator(b: BearerTokenAuthenticator, tokenType: TokenType)(implicit ec: ExecutionContext): Fox[Token] = {
-    Fox.successful(Token(
-      ObjectId.generate,
-      b.id,
-      b.loginInfo,
-      b.lastUsedDateTime,
-      b.expirationDateTime,
-      b.idleTimeout,
-      tokenType,
-      System.currentTimeMillis(),
-      false
-    ))
-  }
+  def fromBearerTokenAuthenticator(b: BearerTokenAuthenticator, tokenType: TokenType)(
+      implicit ec: ExecutionContext): Fox[Token] =
+    Fox.successful(
+      Token(
+        ObjectId.generate,
+        b.id,
+        b.loginInfo,
+        b.lastUsedDateTime,
+        b.expirationDateTime,
+        b.idleTimeout,
+        tokenType,
+        System.currentTimeMillis(),
+        false
+      ))
 }
 
-class TokenDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SQLDAO[Token, TokensRow, Tokens](sqlClient) {
+class TokenDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+    extends SQLDAO[Token, TokensRow, Tokens](sqlClient) {
   val collection = Tokens
 
   def idColumn(x: Tokens): Rep[String] = x._Id
@@ -84,22 +85,33 @@ class TokenDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) ex
       parsed <- parse(r)
     } yield parsed
 
-  def findOneByLoginInfo(providerID: String, providerKey: String, tokenType: TokenType)(implicit ctx: DBAccessContext): Fox[Token] =
+  def findOneByLoginInfo(providerID: String, providerKey: String, tokenType: TokenType)(
+      implicit ctx: DBAccessContext): Fox[Token] =
     for {
-      rOpt <- run(Tokens.filter(r => notdel(r) && r.logininfoProviderid === providerID && r.logininfoProviderkey === providerKey && r.tokentype === tokenType.toString).result.headOption)
+      rOpt <- run(Tokens
+        .filter(r =>
+          notdel(r) && r.logininfoProviderid === providerID && r.logininfoProviderkey === providerKey && r.tokentype === tokenType.toString)
+        .result
+        .headOption)
       r <- rOpt.toFox
       parsed <- parse(r)
     } yield parsed
 
-
   def insertOne(t: Token)(implicit ctx: DBAccessContext) =
     for {
-      _ <- run(sqlu"""insert into webknossos.tokens(_id, value, loginInfo_providerID, loginInfo_providerKey, lastUsedDateTime, expirationDateTime, idleTimeout, tokenType, created, isDeleted)
-                    values(${t._id.id}, ${t.value}, '#${t.loginInfo.providerID}', ${t.loginInfo.providerKey}, ${new java.sql.Timestamp(t.lastUsedDateTime.getMillis)},
-                          ${new java.sql.Timestamp(t.expirationDateTime.getMillis)}, ${t.idleTimeout.map(_.toMillis)}, '#${t.tokenType}', ${new java.sql.Timestamp(t.created)}, ${t.isDeleted})""")
+      _ <- run(
+        sqlu"""insert into webknossos.tokens(_id, value, loginInfo_providerID, loginInfo_providerKey, lastUsedDateTime, expirationDateTime, idleTimeout, tokenType, created, isDeleted)
+                    values(${t._id.id}, ${t.value}, '#${t.loginInfo.providerID}', ${t.loginInfo.providerKey}, ${new java.sql.Timestamp(
+          t.lastUsedDateTime.getMillis)},
+                          ${new java.sql.Timestamp(t.expirationDateTime.getMillis)}, ${t.idleTimeout
+          .map(_.toMillis)}, '#${t.tokenType}', ${new java.sql.Timestamp(t.created)}, ${t.isDeleted})""")
     } yield ()
 
-  def updateValues(id: ObjectId, value: String, lastUsedDateTime: DateTime, expirationDateTime: DateTime, idleTimeout: Option[FiniteDuration])(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateValues(id: ObjectId,
+                   value: String,
+                   lastUsedDateTime: DateTime,
+                   expirationDateTime: DateTime,
+                   idleTimeout: Option[FiniteDuration])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
       _ <- run(sqlu"""update webknossos.tokens
@@ -112,20 +124,21 @@ class TokenDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) ex
     } yield ()
 
   def deleteOneByValue(value: String)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val q = for {row <- collection if (notdel(row) && row.value === value)} yield isDeletedColumn(row)
-    for {_ <- run(q.update(true))} yield ()
+    val q = for { row <- collection if notdel(row) && row.value === value } yield isDeletedColumn(row)
+    for { _ <- run(q.update(true)) } yield ()
   }
 
   def deleteAllExpired(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val q = for {row <- collection if (notdel(row) && row.expirationdatetime <= new java.sql.Timestamp(System.currentTimeMillis))} yield isDeletedColumn(row)
-    for {_ <- run(q.update(true))} yield ()
+    val q = for {
+      row <- collection if notdel(row) && row.expirationdatetime <= new java.sql.Timestamp(System.currentTimeMillis)
+    } yield isDeletedColumn(row)
+    for { _ <- run(q.update(true)) } yield ()
   }
 
-  def updateEmail(oldEmail: String, newEmail: String)(implicit ctx: DBAccessContext) = {
+  def updateEmail(oldEmail: String, newEmail: String)(implicit ctx: DBAccessContext) =
     for {
       _ <- run(sqlu"""update webknossos.tokens set
         logininfo_providerkey = ${newEmail}
         where logininfo_providerkey = ${oldEmail}""")
     } yield ()
-  }
 }

@@ -3,45 +3,27 @@ version: '2.1'
 services:
   webknossos-datastore:
     image: scalableminds/webknossos-datastore:${DATASTORE_TAG}
-    entrypoint: bin/standalone-datastore
+    entrypoint: bin/webknossos-datastore
     command:
       - -J-Xmx20G
       - -J-Xms1G
       - -J-XX:+UseG1GC
       - -jvm-debug
       - "5011"
-      - -Dlogback.configurationFile=conf/logback-docker.xml
-      - -Dlogger.file=conf/logback-docker.xml
       - -Dconfig.file=conf/docker.conf
       - $DATASTORE_ARGS_1
       - $DATASTORE_ARGS_2
-    links:
-      - fossildb
     ports:
       - $DATASTORE_PORT:9090
       - $DATASTORE_DEBUG_PORT:5011
     user: $USER_UID:$USER_GID
     group_add:
       - $USER_GROUP_1
+      - $USER_GROUP_2
     volumes:
       - $BINARY_DATA_PATH:/srv/webknossos-datastore/binaryData
       - ./tmp:/tmp
-      - ./config/docker.conf:/srv/webknossos-datastore/conf/docker.conf
+      - ./config/datastore-docker.conf:/srv/webknossos-datastore/conf/docker.conf
     environment:
       - NEW_RELIC_LICENSE_KEY
       - NEW_RELIC_APP_NAME
-
-  fossildb:
-    image: scalableminds/fossildb:${FOSSILDB_TAG}
-    command:
-      - fossildb
-      - -c
-      - skeletons,skeletonUpdates,volumes,volumeData
-    ports:
-      - $FOSSILDB_PORT:7155
-    user: $USER_UID:$USER_GID
-    group_add:
-      - $USER_GROUP_1
-    volumes:
-      - "./fossildb/data:/fossildb/data"
-      - "./fossildb/backup:/fossildb/backup"

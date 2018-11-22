@@ -1,8 +1,8 @@
 // @flow
 
-import * as React from "react";
-import Markdown from "react-remarkable";
 import { Modal, Button } from "antd";
+import Markdown from "react-remarkable";
+import * as React from "react";
 
 type Props = {
   description: string,

@@ -125,14 +125,14 @@ const Constants = {
   // The size of the gap between the 4 viewports in the orthogonal mode
   VIEWPORT_GAP_WIDTH: 20,
 
-  LOOK_UP_TEXTURE_WIDTH: 128,
-  MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION: 17,
-  // Historically, this width decided at which point which zoom step was picked.
-  // There is no specific reason why this exact size has to be chosen. As long as enough buckets are sent
-  // to the GPU (MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION) this width can be increased or decreased.
-  MAX_RENDERING_TARGET_WIDTH: 512 - 32 - 1,
+  // We require at least 3 * 512 === 1536 buckets per data layer to fit onto the GPU.
+  // This number is used during setup to pick appropriate data texture sizes.
+  // Previously, a minimum of 1200 buckets was enforced. Since, this limit required at least
+  // three 4096**2 textures, a minimum of capacity of 1536 is actually reasonable.
+  MINIMUM_REQUIRED_BUCKET_CAPACITY: 3 * 512,
   DISTANCE_3D: 140,
   MAX_TEXTURE_COUNT_PER_LAYER: 1,
+  LOOK_UP_TEXTURE_WIDTH: 128,
 
   TDView_MOVE_SPEED: 150,
   MIN_MOVE_VALUE: 30,

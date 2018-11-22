@@ -2,22 +2,22 @@
  * mapping_info_view.js
  * @flow
  */
-import React from "react";
 import { Table, Tooltip, Icon } from "antd";
 import { connect } from "react-redux";
-import Cube from "oxalis/model/bucket_data_handling/data_cube";
-import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
-import Model from "oxalis/model";
+import React from "react";
+import _ from "lodash";
+import debounceRender from "react-debounce-render";
+
+import { type OrthoView, OrthoViews, type Vector2, type Vector3 } from "oxalis/constants";
+import type { OxalisState, Mapping } from "oxalis/store";
+import { SwitchSetting } from "oxalis/view/settings/setting_input_views";
+import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import { SwitchSetting } from "oxalis/view/settings/setting_input_views";
-import type { OrthoView, Vector2, Vector3 } from "oxalis/constants";
-import type { OxalisState, Mapping } from "oxalis/store";
-import { OrthoViews } from "oxalis/constants";
-import _ from "lodash";
-import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
+import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
+import Cube from "oxalis/model/bucket_data_handling/data_cube";
+import Model from "oxalis/model";
 import message from "messages";
-import debounceRender from "react-debounce-render";
 
 type Props = {
   position: Vector3,

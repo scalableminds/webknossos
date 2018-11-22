@@ -2,7 +2,7 @@ package models.task
 
 import play.api.libs.json.Json
 
-case class CompletionStatus(open: Long, active: Long, finished: Long){
+case class CompletionStatus(open: Long, active: Long, finished: Long) {
   def total = open + active + finished
 }
 

@@ -1,18 +1,21 @@
 // @flow
 
-import * as React from "react";
 import { Button, Input, Checkbox, Col, Row, Tooltip, DatePicker } from "antd";
 import Clipboard from "clipboard-js";
-import features from "features";
-import Toast from "libs/toast";
-import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
+import * as React from "react";
+
+import type { APIDataset, APIDatasetId } from "admin/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
 import {
   getDatasetSharingToken,
   getDataset,
   revokeDatasetSharingToken,
 } from "admin/admin_rest_api";
-import type { APIDataset, APIDatasetId } from "admin/api_flow_types";
+import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
+import Toast from "libs/toast";
+import features from "features";
+import window from "libs/window";
+
 import { FormItemWithInfo } from "./helper_components";
 
 type Props = {

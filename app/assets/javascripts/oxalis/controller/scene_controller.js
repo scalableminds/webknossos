@@ -3,37 +3,41 @@
  * @flow
  */
 
-import _ from "lodash";
-import app from "app";
-import * as Utils from "libs/utils";
 import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
-import parseStlBuffer from "libs/parse_stl_buffer";
+import _ from "lodash";
+
 import { V3 } from "libs/mjs";
+import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import {
   getPosition,
   getPlaneScalingFactor,
   getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
-import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
-import Model from "oxalis/model";
-import Store from "oxalis/store";
+import { getRenderer } from "oxalis/controller/renderer";
+import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { getVoxelPerNM } from "oxalis/model/scaleinfo";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
+import ContourGeometry from "oxalis/geometries/contourgeometry";
+import Cube from "oxalis/geometries/cube";
+import Dimensions from "oxalis/model/dimensions";
+import Model from "oxalis/model";
 import Plane from "oxalis/geometries/plane";
 import Skeleton from "oxalis/geometries/skeleton";
-import Cube from "oxalis/geometries/cube";
-import ContourGeometry from "oxalis/geometries/contourgeometry";
-import Dimensions from "oxalis/model/dimensions";
+import Store from "oxalis/store";
+import * as Utils from "libs/utils";
+import app from "app";
 import constants, {
-  OrthoViews,
+  type BoundingBoxType,
+  type OrthoView,
+  type OrthoViewMap,
   OrthoViewValues,
   OrthoViewValuesWithoutTDView,
+  OrthoViews,
+  type Vector3,
 } from "oxalis/constants";
-import type { Vector3, OrthoView, OrthoViewMap, BoundingBoxType } from "oxalis/constants";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import { getRenderer } from "oxalis/controller/renderer";
-import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
-import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import parseStlBuffer from "libs/parse_stl_buffer";
 import window from "libs/window";
 
 const CUBE_COLOR = 0x999999;

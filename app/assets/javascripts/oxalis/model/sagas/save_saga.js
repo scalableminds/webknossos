@@ -3,12 +3,14 @@
  * @flow
  */
 
-import _ from "lodash";
-import Request from "libs/request";
+import { type Saga, delay } from "redux-saga";
 import Maybe from "data.maybe";
-import Date from "libs/date";
-import messages from "messages";
-import Toast from "libs/toast";
+import _ from "lodash";
+
+import { FlycamActions } from "oxalis/model/actions/flycam_actions";
+import type { Tracing, Flycam, SaveQueueEntry } from "oxalis/store";
+import { type UpdateAction, moveTreeComponent } from "oxalis/model/sagas/update_actions";
+import { VolumeTracingSaveRelevantActions } from "oxalis/model/actions/volumetracing_actions";
 import {
   _all,
   take,
@@ -19,8 +21,14 @@ import {
   put,
   select,
 } from "oxalis/model/sagas/effect-generators";
-import { delay } from "redux-saga";
-import type { Saga } from "redux-saga";
+import {
+  createTreeAction,
+  SkeletonTracingSaveRelevantActions,
+  setTracingAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
+import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
+import { doWithToken } from "admin/admin_rest_api";
 import {
   shiftSaveQueueAction,
   setSaveBusyAction,
@@ -28,21 +36,12 @@ import {
   pushSaveQueueAction,
   setVersionNumberAction,
 } from "oxalis/model/actions/save_actions";
-import {
-  createTreeAction,
-  SkeletonTracingSaveRelevantActions,
-  setTracingAction,
-} from "oxalis/model/actions/skeletontracing_actions";
-import { VolumeTracingSaveRelevantActions } from "oxalis/model/actions/volumetracing_actions";
-import { FlycamActions } from "oxalis/model/actions/flycam_actions";
-import { alert, location } from "libs/window";
-import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
-import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import type { Tracing, Flycam, SaveQueueEntry } from "oxalis/store";
-import type { RequestOptionsWithData } from "libs/request";
-import { moveTreeComponent } from "oxalis/model/sagas/update_actions";
-import { doWithToken } from "admin/admin_rest_api";
+import Date from "libs/date";
+import Request, { type RequestOptionsWithData } from "libs/request";
+import Toast from "libs/toast";
+import messages from "messages";
+import window, { alert, document, location } from "libs/window";
+
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
 
 const PUSH_THROTTLE_TIME = 30000; // 30s

@@ -1,20 +1,19 @@
 // @flow
 import PriorityQueue from "js-priority-queue";
-import { M4x4, V3 } from "libs/mjs";
+import _ from "lodash";
+
+import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
+import { chunk2 } from "oxalis/model/helpers/chunk";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import {
   zoomedAddressToAnotherZoomStep,
   globalPositionToBucketPosition,
 } from "oxalis/model/helpers/position_converter";
-import type { Vector3, Vector4 } from "oxalis/constants";
-import constants from "oxalis/constants";
-import traverse from "oxalis/model/bucket_data_handling/bucket_traversals";
-import _ from "lodash";
-import type { Matrix4x4 } from "libs/mjs";
-import Store from "oxalis/store";
-import { chunk2 } from "oxalis/model/helpers/chunk";
-import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import Store from "oxalis/store";
+import constants, { type Vector3, type Vector4 } from "oxalis/constants";
+import traverse from "oxalis/model/bucket_data_handling/bucket_traversals";
 
 const hashPosition = ([x, y, z]) => 2 ** 32 * x + 2 ** 16 * y + z;
 const makeBucketsUnique = buckets => _.uniqBy(buckets, hashPosition);

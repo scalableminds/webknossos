@@ -4,9 +4,8 @@ import play.api.libs.json.{JsBoolean, JsValue, _}
 
 case class UserConfiguration(configuration: Map[String, JsValue]) {
 
-  def configurationOrDefaults = {
+  def configurationOrDefaults =
     UserConfiguration.default.configuration ++ configuration
-  }
 
 }
 
@@ -41,5 +40,6 @@ object UserConfiguration {
       "sortCommentsAsc" -> JsBoolean(true),
       "sphericalCapRadius" -> JsNumber(140),
       "layoutScaleValue" -> JsNumber(1),
-      "renderComments" -> JsBoolean(false)))
+      "renderComments" -> JsBoolean(false)
+    ))
 }

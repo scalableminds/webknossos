@@ -1,5 +1,7 @@
 // @flow
 import _ from "lodash";
+
+import { document } from "libs/window";
 import constants from "oxalis/constants";
 
 type GpuSpecs = {
@@ -47,10 +49,7 @@ export function getPackingDegree(byteCount: number) {
 }
 
 function getNecessaryVoxelCount() {
-  const bucketCountPerPlane =
-    constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION ** 2 + // buckets in current zoomStep
-    Math.ceil(constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION / 2) ** 2; // buckets in fallback zoomstep;
-  return 3 * bucketCountPerPlane * constants.BUCKET_SIZE;
+  return constants.MINIMUM_REQUIRED_BUCKET_CAPACITY * constants.BUCKET_SIZE;
 }
 
 function getAvailableVoxelCount(textureSize: number, packingDegree: number) {
@@ -87,7 +86,7 @@ function buildTextureInformationMap<Layer>(
 ): Map<Layer, DataTextureSizeAndCount> {
   const textureInformationPerLayer = new Map();
 
-  layers.map(layer => {
+  layers.forEach(layer => {
     const sizeAndCount = calculateTextureSizeAndCountForLayer(specs, getByteCountForLayer(layer));
     textureInformationPerLayer.set(layer, sizeAndCount);
   });

@@ -1,11 +1,12 @@
 // @flow
-import * as React from "react";
-import Dropzone from "react-dropzone";
-import prettyBytes from "pretty-bytes";
 import { Button, Icon, Modal, Avatar, List, Spin, Checkbox, Alert } from "antd";
-import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
-import type { OxalisState } from "oxalis/store";
 import { connect } from "react-redux";
+import Dropzone from "react-dropzone";
+import * as React from "react";
+import prettyBytes from "pretty-bytes";
+
+import type { OxalisState } from "oxalis/store";
+import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import FormattedDate from "components/formatted_date";
 
 type State = {

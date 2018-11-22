@@ -5,11 +5,12 @@
 
 import _ from "lodash";
 import update from "immutability-helper";
+
+import type { Action } from "oxalis/model/actions/actions";
+import type { OxalisState } from "oxalis/store";
+import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import Date from "libs/date";
 import * as Utils from "libs/utils";
-import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
-import type { OxalisState } from "oxalis/store";
-import type { Action } from "oxalis/model/actions/actions";
 
 function SaveReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {

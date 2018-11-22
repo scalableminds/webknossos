@@ -1,57 +1,51 @@
 // @flow
 /* eslint-disable react/no-unused-prop-types */
-import React from "react";
-import { Router, Route, Switch, Redirect } from "react-router-dom";
-import createBrowserHistory from "history/createBrowserHistory";
-import { connect } from "react-redux";
+import { type ContextRouter, Redirect, Route, Router, Switch } from "react-router-dom";
 import { Layout, Alert } from "antd";
+import { connect } from "react-redux";
 import Enum from "Enumjs";
+import React from "react";
+import createBrowserHistory from "history/createBrowserHistory";
 
-import window from "libs/window";
+import { APITracingTypeEnum, type APIUser } from "admin/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
-import { APITracingTypeEnum } from "admin/api_flow_types";
-import { getAnnotationInformation, getOrganizationForDataset } from "admin/admin_rest_api";
-import SecuredRoute from "components/secured_route";
-import AsyncRedirect from "components/redirect";
-import DisableGenericDnd from "components/disable_generic_dnd";
-import Navbar from "navbar";
 import { Imprint, Privacy } from "components/legal";
-
-import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
-import DashboardView, { urlTokenToTabKeyMap } from "dashboard/dashboard_view";
-import SpotlightView from "dashboard/spotlight_view";
-import LoginView from "admin/auth/login_view";
-import RegistrationView from "admin/auth/registration_view";
-import StartResetPasswordView from "admin/auth/start_reset_password_view";
-import FinishResetPasswordView from "admin/auth/finish_reset_password_view";
-import ChangePasswordView from "admin/auth/change_password_view";
-import AuthTokenView from "admin/auth/auth_token_view";
-import DatasetImportView from "dashboard/dataset/dataset_import_view";
-
-// admin
-import KeyboardShortcutView from "admin/help/keyboardshortcut_view";
-import DatasetAddView from "admin/dataset/dataset_add_view";
-import UserListView from "admin/user/user_list_view";
-import TeamListView from "admin/team/team_list_view";
-import TaskListView from "admin/task/task_list_view";
-import TaskTypeListView from "admin/tasktype/task_type_list_view";
-import ProjectListView from "admin/project/project_list_view";
-import StatisticView from "admin/statistic/statistic_view";
-import ProjectProgressReportView from "admin/statistic/project_progress_report_view";
-import OpenTasksReportView from "admin/statistic/open_tasks_report_view";
-import ScriptListView from "admin/scripts/script_list_view";
-import ProjectCreateView from "admin/project/project_create_view";
-import TaskCreateView from "admin/task/task_create_view";
-import TaskCreateFormView from "admin/task/task_create_form_view";
-import TaskTypeCreateView from "admin/tasktype/task_type_create_view";
-import ScriptCreateView from "admin/scripts/script_create_view";
-import TimeLineView from "admin/time/time_line_view";
-import Onboarding from "admin/onboarding";
-import * as Utils from "libs/utils";
-
 import type { OxalisState } from "oxalis/store";
-import type { APIUser } from "admin/api_flow_types";
-import type { ContextRouter } from "react-router-dom";
+import { getAnnotationInformation, getOrganizationForDataset } from "admin/admin_rest_api";
+import AsyncRedirect from "components/redirect";
+import AuthTokenView from "admin/auth/auth_token_view";
+import ChangePasswordView from "admin/auth/change_password_view";
+import DashboardView, { urlTokenToTabKeyMap } from "dashboard/dashboard_view";
+import DatasetAddView from "admin/dataset/dataset_add_view";
+import DatasetImportView from "dashboard/dataset/dataset_import_view";
+import DisableGenericDnd from "components/disable_generic_dnd";
+import FinishResetPasswordView from "admin/auth/finish_reset_password_view";
+import KeyboardShortcutView from "admin/help/keyboardshortcut_view";
+import LoginView from "admin/auth/login_view";
+import Navbar from "navbar";
+import Onboarding from "admin/onboarding";
+import OpenTasksReportView from "admin/statistic/open_tasks_report_view";
+import ProjectCreateView from "admin/project/project_create_view";
+import ProjectListView from "admin/project/project_list_view";
+import ProjectProgressReportView from "admin/statistic/project_progress_report_view";
+import RegistrationView from "admin/auth/registration_view";
+import ScriptCreateView from "admin/scripts/script_create_view";
+import ScriptListView from "admin/scripts/script_list_view";
+import SecuredRoute from "components/secured_route";
+import SpotlightView from "dashboard/spotlight_view";
+import StartResetPasswordView from "admin/auth/start_reset_password_view";
+import StatisticView from "admin/statistic/statistic_view";
+import TaskCreateFormView from "admin/task/task_create_form_view";
+import TaskCreateView from "admin/task/task_create_view";
+import TaskListView from "admin/task/task_list_view";
+import TaskTypeCreateView from "admin/tasktype/task_type_create_view";
+import TaskTypeListView from "admin/tasktype/task_type_list_view";
+import TeamListView from "admin/team/team_list_view";
+import TimeLineView from "admin/time/time_line_view";
+import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
+import UserListView from "admin/user/user_list_view";
+import * as Utils from "libs/utils";
+import window from "libs/window";
 
 const { Content } = Layout;
 

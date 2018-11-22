@@ -3,22 +3,21 @@
  * @flow
  */
 
-import * as React from "react";
 import BackboneEvents from "backbone-events-standalone";
+import * as React from "react";
 import _ from "lodash";
-import { InputKeyboard, InputMouse, InputKeyboardNoLoop } from "libs/input";
-import type { ModifierKeys } from "libs/input";
-import { V3 } from "libs/mjs";
-import * as Utils from "libs/utils";
-import Toast from "libs/toast";
-import type { Mode, Point2 } from "oxalis/constants";
-import Store from "oxalis/store";
-import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
-import Model from "oxalis/model";
+
+import { InputKeyboard, InputKeyboardNoLoop, InputMouse, type ModifierKeys } from "libs/input";
+import { type Matrix4x4, V3 } from "libs/mjs";
 import {
-  updateUserSettingAction,
-  setFlightmodeRecordingAction,
-} from "oxalis/model/actions/settings_actions";
+  enforceSkeletonTracing,
+  getActiveNode,
+  getMaxNodeId,
+} from "oxalis/model/accessors/skeletontracing_accessor";
+import { getBaseVoxel } from "oxalis/model/scaleinfo";
+import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import {
   setActiveNodeAction,
   deleteActiveNodeAsUserAction,
@@ -28,13 +27,10 @@ import {
   toggleAllTreesAction,
   toggleInactiveTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { getBaseVoxel } from "oxalis/model/scaleinfo";
-import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
-import Crosshair from "oxalis/geometries/crosshair";
-import app from "app";
-import ArbitraryView from "oxalis/view/arbitrary_view";
-import constants, { ArbitraryViewport } from "oxalis/constants";
-import type { Matrix4x4 } from "libs/mjs";
+import {
+  updateUserSettingAction,
+  setFlightmodeRecordingAction,
+} from "oxalis/model/actions/settings_actions";
 import {
   yawFlycamAction,
   pitchFlycamAction,
@@ -42,16 +38,18 @@ import {
   zoomOutAction,
   moveFlycamAction,
 } from "oxalis/model/actions/flycam_actions";
-import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
-import {
-  enforceSkeletonTracing,
-  getActiveNode,
-  getMaxNodeId,
-} from "oxalis/model/accessors/skeletontracing_accessor";
-import messages from "messages";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
+import ArbitraryView from "oxalis/view/arbitrary_view";
+import Crosshair from "oxalis/geometries/crosshair";
+import Model from "oxalis/model";
 import SceneController from "oxalis/controller/scene_controller";
+import Store from "oxalis/store";
+import Toast from "libs/toast";
+import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
+import app from "app";
+import constants, { ArbitraryViewport, type Mode, type Point2 } from "oxalis/constants";
+import messages from "messages";
 
 const arbitraryViewportSelector = "#inputcatcher_arbitraryViewport";
 

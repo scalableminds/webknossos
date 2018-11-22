@@ -11,7 +11,11 @@ COPY target/universal/stage .
 RUN addgroup --system --gid 999 webknossos \
   && adduser --system --uid 999 --ingroup webknossos webknossos \
   && mkdir disk \
-  && chown -R webknossos .
+  && chown -R webknossos . \
+  && chmod go+x bin/webknossos \
+  && chmod go+w .
+
+
 
 USER webknossos
 

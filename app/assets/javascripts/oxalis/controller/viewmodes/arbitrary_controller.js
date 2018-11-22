@@ -28,8 +28,8 @@ import {
   toggleInactiveTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
-  updateUserSettingAction,
   setFlightmodeRecordingAction,
+  updateUserSettingAction,
 } from "oxalis/model/actions/settings_actions";
 import {
   yawFlycamAction,
@@ -44,6 +44,7 @@ import Crosshair from "oxalis/geometries/crosshair";
 import Model from "oxalis/model";
 import SceneController from "oxalis/controller/scene_controller";
 import Store from "oxalis/store";
+import TDController from "oxalis/controller/td_controller";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
@@ -53,10 +54,10 @@ import messages from "messages";
 
 const arbitraryViewportSelector = "#inputcatcher_arbitraryViewport";
 
-type Props = {
+type Props = {|
   onRender: () => void,
   viewMode: Mode,
-};
+|};
 
 class ArbitraryController extends React.PureComponent<Props> {
   // See comment in Controller class on general controller architecture.
@@ -68,7 +69,7 @@ class ArbitraryController extends React.PureComponent<Props> {
   crosshair: Crosshair;
   lastNodeMatrix: Matrix4x4;
   input: {
-    mouse?: InputMouse,
+    mouseController: ?InputMouse,
     keyboard?: InputKeyboard,
     keyboardLoopDelayed?: InputKeyboard,
     keyboardNoLoop?: InputKeyboardNoLoop,
@@ -81,7 +82,9 @@ class ArbitraryController extends React.PureComponent<Props> {
 
   componentDidMount() {
     _.extend(this, BackboneEvents);
-    this.input = {};
+    this.input = {
+      mouseController: null,
+    };
     this.storePropertyUnsubscribers = [];
     this.start();
   }
@@ -92,7 +95,7 @@ class ArbitraryController extends React.PureComponent<Props> {
 
   initMouse(): void {
     Utils.waitForSelector(arbitraryViewportSelector).then(() => {
-      this.input.mouse = new InputMouse(arbitraryViewportSelector, {
+      this.input.mouseController = new InputMouse(arbitraryViewportSelector, {
         leftDownMove: (delta: Point2) => {
           if (this.props.viewMode === constants.MODE_ARBITRARY) {
             Store.dispatch(
@@ -221,6 +224,7 @@ class ArbitraryController extends React.PureComponent<Props> {
       // Rotate view by 180 deg
       r: () => {
         Store.dispatch(yawFlycamAction(Math.PI));
+        window.needsRerender = true;
       },
 
       // Delete active node and recenter last node
@@ -323,6 +327,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     this.crosshair.setVisibility(Store.getState().userConfiguration.displayCrosshair);
 
     this.arbitraryView.addGeometry(this.plane);
+    this.arbitraryView.setArbitraryPlane(this.plane);
     this.arbitraryView.addGeometry(this.crosshair);
 
     this.bindToEvents();
@@ -337,6 +342,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     this.arbitraryView.draw();
 
     this.isStarted = true;
+    this.forceUpdate();
   }
 
   unsubscribeStoreListeners() {
@@ -365,7 +371,7 @@ class ArbitraryController extends React.PureComponent<Props> {
   };
 
   destroyInput() {
-    Utils.__guard__(this.input.mouse, x => x.destroy());
+    Utils.__guard__(this.input.mouseController, x => x.destroy());
     Utils.__guard__(this.input.keyboard, x => x.destroy());
     Utils.__guard__(this.input.keyboardLoopDelayed, x => x.destroy());
     Utils.__guard__(this.input.keyboardNoLoop, x => x.destroy());
@@ -434,7 +440,10 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   render() {
-    return null;
+    if (!this.arbitraryView) {
+      return null;
+    }
+    return <TDController cameras={this.arbitraryView.getCameras()} />;
   }
 }
 

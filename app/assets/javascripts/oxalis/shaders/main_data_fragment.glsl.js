@@ -85,6 +85,7 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
 uniform float sphericalCapRadius;
 uniform float viewMode;
 uniform float alpha;
+uniform bool renderBucketIndices;
 uniform bool highlightHoveredCellId;
 uniform vec3 bboxMin;
 uniform vec3 bboxMax;
@@ -145,6 +146,11 @@ void main() {
   vec3 coords = getRelativeCoords(worldCoordUVW, zoomStep);
 
   vec3 bucketPosition = div(floor(coords), bucketWidth);
+  if (renderBucketIndices) {
+    gl_FragColor = vec4(bucketPosition, zoomStep) / 255.;
+    // gl_FragColor = vec4(0.5, 1.0, 1.0, 1.0);
+    return;
+  }
   vec3 offsetInBucket = mod(floor(coords), bucketWidth);
 
   <% if (hasSegmentation) { %>
@@ -171,7 +177,7 @@ void main() {
         <%= colorLayerNames[0] %>_lookup_texture,
         0.0, // layerIndex
         <%= colorLayerNames[0] %>_data_texture_width,
-        <%= segmentationPackingDegree %>,
+        1.0, // RGB data cannot be packed, hence packingDegree == 1.0
         coords,
         fallbackCoords,
         hasFallback,

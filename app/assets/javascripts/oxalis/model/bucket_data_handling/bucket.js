@@ -37,6 +37,7 @@ export class DataBucket {
   BYTE_OFFSET: number;
   visualizedMesh: ?Object;
   visualizationColor: number;
+  neededAtPickerTick: ?number;
 
   state: BucketStateEnumType;
   dirty: boolean;
@@ -332,6 +333,10 @@ export class DataBucket {
         }
       }
     }
+  }
+
+  setNeededAtPickerTick(tick: number) {
+    this.neededAtPickerTick = tick;
   }
 
   // The following three methods can be used for debugging purposes.

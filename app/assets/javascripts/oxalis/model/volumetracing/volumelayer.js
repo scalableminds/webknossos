@@ -52,11 +52,15 @@ export class VoxelIterator {
     this.minCoord2d = minCoord2d;
     this.get3DCoordinate = get3DCoordinate;
     this.boundingBox = boundingBox;
-    const firstCoordinate = this.get3DCoordinate(this.minCoord2d);
-    if (this.map[0][0] && this.isCoordinateInBounds(firstCoordinate)) {
-      this.next = firstCoordinate;
+    if (!this.map || !this.map[0]) {
+      this.hasNext = false;
     } else {
-      this.getNext();
+      const firstCoordinate = this.get3DCoordinate(this.minCoord2d);
+      if (this.map[0][0] && this.isCoordinateInBounds(firstCoordinate)) {
+        this.next = firstCoordinate;
+      } else {
+        this.getNext();
+      }
     }
   }
 

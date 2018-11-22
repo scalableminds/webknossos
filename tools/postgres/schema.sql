@@ -239,6 +239,7 @@ CREATE TABLE webknossos.users(
   isAdmin BOOLEAN NOT NULL DEFAULT false,
   isSuperUser BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  lastTaskTypeId CHAR(24) DEFAULT NULL,
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 

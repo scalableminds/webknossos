@@ -188,13 +188,14 @@ class UserController @Inject()(userService: UserService,
   }
 
   val userUpdateReader =
-    ((__ \ "firstName").read[String] and
-      (__ \ "lastName").read[String] and
-      (__ \ "email").read[String] and
-      (__ \ "isActive").read[Boolean] and
-      (__ \ "isAdmin").read[Boolean] and
-      (__ \ "teams").read[List[TeamMembership]](Reads.list(teamMembershipService.publicReads)) and
-      (__ \ "experiences").read[Map[String, Int]]).tupled
+    ((__ \ "firstName").readNullable[String] and
+      (__ \ "lastName").readNullable[String] and
+      (__ \ "email").readNullable[String] and
+      (__ \ "isActive").readNullable[Boolean] and
+      (__ \ "isAdmin").readNullable[Boolean] and
+      (__ \ "teams").readNullable[List[TeamMembership]](Reads.list(teamMembershipService.publicReads)) and
+      (__ \ "experiences").readNullable[Map[String, Int]] and
+      (__ \ "lastTaskTypeId").readNullable[String]).tupled
 
   def ensureProperTeamAdministration(user: User, teams: List[(TeamMembership, Team)])(implicit m: MessagesProvider) =
     Fox.combined(teams.map {
@@ -217,10 +218,20 @@ class UserController @Inject()(userService: UserService,
   def update(userId: String) = sil.SecuredAction.async(parse.json) { implicit request =>
     val issuingUser = request.identity
     withJsonBodyUsing(userUpdateReader) {
-      case (firstName, lastName, email, isActive, isAdmin, assignedMemberships, experiences) =>
+      case (firstNameOpt, lastNameOpt, emailOpt, isActiveOpt, isAdminOpt, assignedMembershipsOpt, experiencesOpt, lastTaskTypeIdOpt) =>
         for {
           userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
           user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
+          oldExperience <- userService.experiencesFor(user._id)
+          oldAssignedMemberships <- userService.teamMembershipsFor(user._id)
+          firstName = firstNameOpt.getOrElse(user.firstName)
+          lastName = lastNameOpt.getOrElse(user.lastName)
+          email = emailOpt.getOrElse(user.email)
+          isActive = isActiveOpt.getOrElse(!user.isDeactivated)
+          isAdmin = isAdminOpt.getOrElse(user.isAdmin)
+          assignedMemberships = assignedMembershipsOpt.getOrElse(oldAssignedMemberships)
+          experiences = experiencesOpt.getOrElse(oldExperience)
+          lastTaskTypeId = if(lastTaskTypeIdOpt.isEmpty) user.lastTaskTypeId.map(_.id) else lastTaskTypeIdOpt
           _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed"
           _ <- bool2Fox(checkAdminOnlyUpdates(user, isActive, isAdmin, email)(issuingUser)) ?~> "notAllowed"
           teams <- Fox.combined(
@@ -241,7 +252,8 @@ class UserController @Inject()(userService: UserService,
                                   isActive,
                                   isAdmin,
                                   updatedTeams,
-                                  trimmedExperiences)
+                                  trimmedExperiences,
+                                  lastTaskTypeId)
           updatedUser <- userDAO.findOne(userIdValidated)
           updatedJs <- userService.publicWrites(updatedUser, request.identity)
         } yield {

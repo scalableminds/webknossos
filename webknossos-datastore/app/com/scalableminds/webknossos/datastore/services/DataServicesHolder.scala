@@ -20,6 +20,6 @@ class DataServicesHolder @Inject()(config: DataStoreConfig) {
 
   val mappingService = new MappingService(
     Paths.get(config.Braingames.Binary.baseFolder),
-    config.Braingames.Binary.cacheMaxSize)
+    config.Braingames.Binary.mappingCacheMaxSize)
 
 }

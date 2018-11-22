@@ -53,6 +53,10 @@ jobs:
           name: Build frontend documentation
           command: docker-compose run base yarn run docs
       - run:
+          name: Build webknossos (webpack)
+          command: |
+            docker-compose run base yarn build
+      - run:
           name: Build webknossos (sbt)
           command: |
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
@@ -60,10 +64,6 @@ jobs:
             else
               docker-compose run compile sbt compile stage
             fi
-      - run:
-          name: Build webknossos (webpack)
-          command: |
-            docker-compose run base yarn build
       - run:
           name: Build webknossos-datastore (sbt)
           command: docker-compose run base sbt "project webknossosDatastore" compile stage

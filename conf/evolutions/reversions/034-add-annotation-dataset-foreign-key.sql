@@ -1,5 +1,3 @@
--- https://github.com/scalableminds/webknossos/pull/TODO
-
 START TRANSACTION;
 
 ALTER TABLE webknossos.annotations

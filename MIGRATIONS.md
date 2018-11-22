@@ -9,6 +9,7 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 -
 ### Postgres Evolutions:
 - [033-tasktype-recommendedConfiguration.sql](033-tasktype-recommendedConfiguration.sql)
+- [034-add-annotation-dataset-foreign-key.sql](034-add-annotation-dataset-foreign-key.sql)
 
 
 ## [18.11.0](https://github.com/scalableminds/webknossos/releases/tag/18.11.0) - 2018-10-29

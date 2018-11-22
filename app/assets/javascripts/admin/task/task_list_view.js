@@ -175,7 +175,7 @@ class TaskListView extends React.PureComponent<Props, State> {
             )}
             rowKey="id"
             pagination={{
-              defaultPageSize: 50,
+              defaultPageSize: 1,
             }}
             style={{ marginTop: 30, marginBotton: 30 }}
             expandedRowRender={task => <TaskAnnotationView task={task} />}

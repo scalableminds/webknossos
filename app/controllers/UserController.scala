@@ -31,7 +31,7 @@ class UserController @Inject()(userService: UserService,
     extends Controller
     with FoxImplicits {
 
-  val defaultAnnotationLimit = 1000
+  val defaultAnnotationLimit = 10
 
   def current = sil.SecuredAction.async { implicit request =>
     for {
@@ -48,24 +48,26 @@ class UserController @Inject()(userService: UserService,
     } yield Ok(js)
   }
 
-  def annotations(isFinished: Option[Boolean], limit: Option[Int]) = sil.SecuredAction.async { implicit request =>
+  def annotations(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int] = None) = sil.SecuredAction.async { implicit request =>
     for {
       annotations <- annotationDAO.findAllFor(request.identity._id,
                                               isFinished,
                                               AnnotationType.Explorational,
-                                              limit.getOrElse(defaultAnnotationLimit))
+                                              limit.getOrElse(defaultAnnotationLimit),
+                                              pageNumber.getOrElse(0))
       jsonList <- Fox.serialCombined(annotations)(a => annotationService.compactWrites(a))
     } yield {
       Ok(Json.toJson(jsonList))
     }
   }
 
-  def tasks(isFinished: Option[Boolean], limit: Option[Int]) = sil.SecuredAction.async { implicit request =>
+  def tasks(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int] = None) = sil.SecuredAction.async { implicit request =>
     for {
       annotations <- annotationDAO.findAllFor(request.identity._id,
                                               isFinished,
                                               AnnotationType.Task,
-                                              limit.getOrElse(defaultAnnotationLimit))
+                                              limit.getOrElse(defaultAnnotationLimit),
+                                              pageNumber.getOrElse(0))
       jsonList <- Fox.serialCombined(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
     } yield {
       Ok(Json.toJson(jsonList))
@@ -124,7 +126,7 @@ class UserController @Inject()(userService: UserService,
       .map(loggedTime => Ok(Json.toJson(loggedTime)))
   }
 
-  def userAnnotations(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = sil.SecuredAction.async {
+  def userAnnotations(userId: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int] = None) = sil.SecuredAction.async {
     implicit request =>
       for {
         userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
@@ -133,14 +135,15 @@ class UserController @Inject()(userService: UserService,
         annotations <- annotationDAO.findAllFor(userIdValidated,
                                                 isFinished,
                                                 AnnotationType.Explorational,
-                                                limit.getOrElse(defaultAnnotationLimit))
+                                                limit.getOrElse(defaultAnnotationLimit),
+                                                pageNumber.getOrElse(0))
         jsonList <- Fox.serialCombined(annotations)(a => annotationService.compactWrites(a))
       } yield {
         Ok(Json.toJson(jsonList))
       }
   }
 
-  def userTasks(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = sil.SecuredAction.async {
+  def userTasks(userId: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int] = None) = sil.SecuredAction.async {
     implicit request =>
       for {
         userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
@@ -149,7 +152,8 @@ class UserController @Inject()(userService: UserService,
         annotations <- annotationDAO.findAllFor(userIdValidated,
                                                 isFinished,
                                                 AnnotationType.Task,
-                                                limit.getOrElse(defaultAnnotationLimit))
+                                                limit.getOrElse(defaultAnnotationLimit),
+                                                pageNumber.getOrElse(0))
         jsonList <- Fox.serialCombined(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
       } yield {
         Ok(Json.toJson(jsonList))

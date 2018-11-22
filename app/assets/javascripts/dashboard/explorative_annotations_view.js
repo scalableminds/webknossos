@@ -378,7 +378,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         dataSource={filteredAndSortedTracings}
         rowKey="id"
         pagination={{
-          defaultPageSize: 50,
+          defaultPageSize: 1,
         }}
       >
         <Column

@@ -45,6 +45,8 @@ type State = {
   showFinishedTasks: boolean,
   finishedTasks: Array<APITaskWithAnnotation>,
   unfinishedTasks: Array<APITaskWithAnnotation>,
+  finishedTasksPageNumber: int,
+  unfinishedTasksPageNumber: int,
   isLoading: boolean,
   isTransferModalVisible: boolean,
   currentAnnotationId: ?string,
@@ -88,6 +90,8 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     showFinishedTasks: false,
     finishedTasks: [],
     unfinishedTasks: [],
+    finishedTasksPageNumber: 0,
+    unfinishedTasksPageNumber: 0,
     isLoading: false,
     isTransferModalVisible: false,
     currentAnnotationId: null,
@@ -131,10 +135,27 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   }
 
   async fetchData(): Promise<void> {
+    this.fetchNextPage(0)
+  }
+
+  fetchNextPage = async (incrementStep) => {
+    // this refers not to the pagination of antd but to the pagination of querying data from SQL
+    console.log("fetchNextPage")
+    console.log(this.state.finishedTasksPageNumber)
+    console.log(this.state.unfinishedTasksPageNumber)
     const isFinished = this.state.showFinishedTasks;
+    let previousTasks = [];
+    let pageNumber = 0;
+    if (isFinished) {
+      previousTasks = this.state.finishedTasks
+      pageNumber = this.state.finishedTasksPageNumber + incrementStep
+    } else {
+      previousTasks = this.state.unfinishedTasks
+      pageNumber = this.state.unfinishedTasksPageNumber +incrementStep
+    }
     const url = this.props.userId
       ? `/api/users/${this.props.userId}/tasks?isFinished=${isFinished.toString()}`
-      : `/api/user/tasks?isFinished=${isFinished.toString()}`;
+      : `/api/user/tasks?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`;
 
     try {
       this.setState({ isLoading: true });
@@ -142,7 +163,8 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
       const tasks = annotationsWithTasks.map(convertAnnotationToTaskWithAnnotationType);
 
       this.setState({
-        [isFinished ? "finishedTasks" : "unfinishedTasks"]: tasks,
+        [isFinished ? "finishedTasks" : "unfinishedTasks"]: previousTasks.concat(tasks),
+        [isFinished ? "finishedTasksPageNumber" : "unfinishedTasksPageNumber"]: pageNumber,
       });
     } catch (error) {
       handleGenericError(error);
@@ -151,9 +173,13 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     }
   }
 
+
   toggleShowFinished = () => {
-    this.setState(
-      prevState => ({ showFinishedTasks: !prevState.showFinishedTasks }),
+    this.setState(prevState => ({
+      showFinishedTasks: !prevState.showFinishedTasks,
+      finishedTasksPageNumber: 0,
+      unfinishedTasksPageNumber: 0
+    }),
       () => this.fetchData(),
     );
   };
@@ -324,6 +350,18 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     }
   }
 
+  handleLoadMoreTasks = () => {
+    this.setState(prevState => {
+      const newUnfinishedTasks = prevState.unfinishedTasks.filter(t => t.id !== task.id);
+      const newFinishedTasks = [changedTask].concat(prevState.finishedTasks);
+
+      return {
+        unfinishedTasks: newUnfinishedTasks,
+        finishedTasks: newFinishedTasks,
+      };
+    });
+  };
+
   getCurrentTasks() {
     return this.state.showFinishedTasks ? this.state.finishedTasks : this.state.unfinishedTasks;
   }
@@ -398,7 +436,8 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
       <List
         dataSource={tasks}
         pagination={{
-          defaultPageSize: 50,
+          defaultPageSize: 1,
+          pageSize: 1
         }}
         loading={this.state.isLoading}
         renderItem={TaskCard}
@@ -428,6 +467,9 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         </h3>
         <div className="clearfix" style={{ margin: "20px 0px" }} />
         {this.renderTaskList()}
+        <Link to="/" onClick={() => this.fetchNextPage(1)}>
+          Load more Tasks
+        </Link>
         <TransferTaskModal
           visible={this.state.isTransferModalVisible}
           annotationId={this.state.currentAnnotationId}

@@ -23,6 +23,7 @@ import models.annotation.AnnotationType.AnnotationType
 import models.annotation.handler.SavedTracingInformationHandler
 import models.annotation.nml.NmlWriter
 import models.binary._
+import models.mesh.{MeshDAO, MeshService}
 import models.project.ProjectDAO
 import models.task.{Task, TaskDAO, TaskService, TaskTypeDAO}
 import models.team.OrganizationDAO
@@ -54,7 +55,9 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
                                   organizationDAO: OrganizationDAO,
                                   annotationRestrictionDefults: AnnotationRestrictionDefaults,
                                   nmlWriter: NmlWriter,
-                                  temporaryFileCreator: TemporaryFileCreator)(implicit ec: ExecutionContext)
+                                  temporaryFileCreator: TemporaryFileCreator,
+                                  meshDAO: MeshDAO,
+                                  meshService: MeshService)(implicit ec: ExecutionContext)
     extends BoxImplicits
     with FoxImplicits
     with TextUtils
@@ -463,6 +466,8 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         requestingUser)
       dataStore <- dataStoreDAO.findOneByName(dataSet._dataStore.trim) ?~> "datastore.notFound"
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
+      meshes <- meshDAO.findAllWithAnnotation(annotation._id)
+      meshesJs <- Fox.serialCombined(meshes)(meshService.publicWrites)
       tracingStore <- tracingStoreDAO.findFirst
       tracingStoreJs <- tracingStoreService.publicWrites(tracingStore)
     } yield {
@@ -486,7 +491,8 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         "settings" -> settings,
         "tracingTime" -> annotation.tracingTime,
         "tags" -> (annotation.tags ++ Set(dataSet.name, annotation.tracingType.toString)),
-        "user" -> userJson
+        "user" -> userJson,
+        "meshes" -> meshesJs
       )
     }
   }

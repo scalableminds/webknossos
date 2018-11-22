@@ -137,6 +137,7 @@ export type APIUser = APIUserBase & {
   +isActive: boolean,
   +isEditable: boolean,
   +lastActivity: number,
+  +lastTaskTypeId: ?string,
   +organization: string,
 };
 
@@ -284,12 +285,31 @@ export type APIAnnotationTypeCompact = {
   +typ: APITracingType,
 };
 
+export type LocalMeshMetaData = {|
+  isVisible?: boolean,
+  isLoaded?: boolean,
+  isLoading?: boolean,
+|};
+
+export type RemoteMeshMetaData = {|
+  annotationId: string,
+  position: Vector3,
+  description: string,
+  id: string,
+|};
+
+export type MeshMetaData = {|
+  ...LocalMeshMetaData,
+  ...RemoteMeshMetaData,
+|};
+
 type APIAnnotationTypeBase = APIAnnotationTypeCompact & {
   +dataStore: APIDataStore,
   +tracingStore: APITracingStore,
   +restrictions: APIRestrictions,
   +settings: APISettings,
   +user?: APIUserBase,
+  +meshes: Array<MeshMetaData>,
 };
 
 export type APIAnnotation = APIAnnotationTypeBase & {

@@ -38,6 +38,8 @@ import {
   type DatasetConfig,
   type ExperienceDomainList,
   type HybridServerTracing,
+  type MeshMetaData,
+  type RemoteMeshMetaData,
   type ServerSkeletonTracing,
   type ServerTracing,
   type ServerVolumeTracing,
@@ -140,7 +142,7 @@ export function getUser(userId: string): Promise<APIUser> {
   return Request.receiveJSON(`/api/users/${userId}`);
 }
 
-export function updateUser(newUser: APIUser): Promise<APIUser> {
+export function updateUser(newUser: $Shape<APIUser>): Promise<APIUser> {
   return Request.sendJSONReceiveJSON(`/api/users/${newUser.id}`, {
     method: "PUT",
     data: newUser,
@@ -945,3 +947,43 @@ export function setMaintenance(bool: boolean): Promise<void> {
   return Request.triggerRequest("/api/maintenance", { method: bool ? "POST" : "DELETE" });
 }
 window.setMaintenance = setMaintenance;
+
+// ### Meshes
+
+type MeshMetaDataForCreation = $Diff<MeshMetaData, {| id: string |}>;
+
+export async function createMesh(
+  metadata: MeshMetaDataForCreation,
+  data: ArrayBuffer,
+): Promise<MeshMetaData> {
+  const mesh = await createMeshMetaData(metadata);
+  await updateMeshData(mesh.id, data);
+  return mesh;
+}
+
+function createMeshMetaData(metadata: MeshMetaDataForCreation): Promise<MeshMetaData> {
+  return Request.sendJSONReceiveJSON("/api/meshes", { method: "POST", data: metadata });
+}
+
+export async function updateMeshMetaData(metadata: RemoteMeshMetaData): Promise<void> {
+  return Request.sendJSONReceiveJSON(`/api/meshes/${metadata.id}`, {
+    method: "PUT",
+    data: metadata,
+  });
+}
+
+export async function updateMeshData(id: string, data: ArrayBuffer): Promise<void> {
+  return Request.sendJSONReceiveJSON(`/api/meshes/${id}/data`, { method: "PUT", data });
+}
+
+export function deleteMesh(id: string): Promise<void> {
+  return Request.triggerRequest(`/api/meshes/${id}`, { method: "DELETE" });
+}
+
+export function getMeshMetaData(id: string): Promise<MeshMetaData> {
+  return Request.receiveJSON(`/api/meshes/${id}`);
+}
+
+export function getMeshData(id: string): Promise<ArrayBuffer> {
+  return Request.receiveArraybuffer(`/api/meshes/${id}/data`);
+}

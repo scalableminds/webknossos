@@ -266,7 +266,7 @@ class TracingApi {
   async finishAndGetNextTask() {
     const state = Store.getState();
     const { tracingType, annotationId } = state.tracing;
-    const task = state.task;
+    const { task } = state;
 
     await Model.save();
     await finishAnnotation(annotationId, tracingType);
@@ -280,8 +280,7 @@ class TracingApi {
       const nextScript = annotation.task.script != null ? annotation.task.script.gist : null;
       const isDifferentScript = currentScript !== nextScript;
 
-      const differentTaskTypeParam = isDifferentTaskType ? "?differentTaskType" : "";
-      const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}${differentTaskTypeParam}`;
+      const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}`;
 
       // In some cases the page needs to be reloaded, in others the tracing can be hot-swapped
       if (isDifferentDataset || isDifferentTaskType || isDifferentScript) {

@@ -35,7 +35,6 @@ import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Dimensions from "oxalis/model/dimensions";
 import Model from "oxalis/model";
 import PlaneView from "oxalis/view/plane_view";
-import SceneController from "oxalis/controller/scene_controller";
 import Store, { type OxalisState, type Tracing } from "oxalis/store";
 import TDController from "oxalis/controller/td_controller";
 import Toast from "libs/toast";
@@ -50,6 +49,7 @@ import constants, {
   type Vector3,
   VolumeToolEnum,
 } from "oxalis/constants";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 import messages from "messages";
 import * as skeletonController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import * as volumeController from "oxalis/controller/combinations/volumetracing_plane_controller";
@@ -300,13 +300,13 @@ class PlaneController extends React.PureComponent<Props> {
 
   init(): void {
     const { clippingDistance } = Store.getState().userConfiguration;
-    SceneController.setClippingDistance(clippingDistance);
+    getSceneController().setClippingDistance(clippingDistance);
   }
 
   start(): void {
     this.bindToEvents();
 
-    SceneController.startPlaneMode();
+    getSceneController().startPlaneMode();
     this.planeView.start();
 
     this.initKeyboard();
@@ -320,7 +320,7 @@ class PlaneController extends React.PureComponent<Props> {
       this.destroyInput();
     }
 
-    SceneController.stopPlaneMode();
+    getSceneController().stopPlaneMode();
     this.planeView.stop();
     this.stopListening();
 
@@ -332,7 +332,7 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   onPlaneViewRender(): void {
-    SceneController.update();
+    getSceneController().update();
     this.props.onRender();
   }
 

@@ -60,7 +60,7 @@ class DataSetController @Inject()(userService: UserService,
             val defaultCenterOpt = dataSet.defaultConfiguration.flatMap(c =>
               c.configuration.get("position").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Point3D])))
             val defaultZoomOpt = dataSet.defaultConfiguration.flatMap(c =>
-              c.configuration.get("zoom").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Int])))
+              c.configuration.get("zoom").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Double])))
             dataSetService
               .clientFor(dataSet)
               .flatMap(
@@ -129,7 +129,10 @@ class DataSetController @Inject()(userService: UserService,
       for {
         dataSets <- dataSetDAO.findAll ?~> "dataSet.list.failed"
         filtered <- filter.applyOn(dataSets)
-        js <- Fox.serialCombined(filtered)(d => dataSetService.publicWrites(d, request.identity))
+        requestingUserTeamMemberships <- Fox.runOptional(request.identity)(user =>
+          userService.teamManagerMembershipsFor(user._id))
+        js <- Fox.serialCombined(filtered)(d =>
+          dataSetService.publicWrites(d, request.identity, skipResolutions = true, requestingUserTeamMemberships))
       } yield {
         Ok(Json.toJson(js))
       }

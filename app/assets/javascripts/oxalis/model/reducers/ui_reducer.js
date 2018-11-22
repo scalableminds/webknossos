@@ -1,34 +1,26 @@
 // @flow
 
-import update from "immutability-helper";
-
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState } from "oxalis/store";
+import { updateKey } from "oxalis/model/helpers/deep_update";
 
 function UiReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
     case "SET_DROPZONE_MODAL_VISIBILITY": {
-      return update(state, {
-        uiInformation: {
-          showDropzoneModal: { $set: action.visible },
-        },
-      });
+      return updateKey(state, "uiInformation", { showDropzoneModal: action.visible });
     }
 
     case "SET_VERSION_RESTORE_VISIBILITY": {
-      return update(state, {
-        uiInformation: {
-          showVersionRestore: { $set: action.active },
-        },
-      });
+      return updateKey(state, "uiInformation", { showVersionRestore: action.active });
     }
 
     case "SET_STORED_LAYOUTS": {
-      return update(state, {
-        uiInformation: {
-          storedLayouts: { $set: action.storedLayouts },
-        },
-      });
+      const { storedLayouts } = action;
+      return updateKey(state, "uiInformation", { storedLayouts });
+    }
+
+    case "SET_IMPORTING_MESH_STATE": {
+      return updateKey(state, "uiInformation", { isImportingMesh: action.isImporting });
     }
 
     default:

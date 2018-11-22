@@ -138,7 +138,7 @@ const getColorFor: ShaderModule = {
         // The downside is that data which does exist, will be rendered gray instead of black.
         // Issue to track progress: #3446
         float alpha = isFlightMode() ? -1.0 : 0.0;
-        return vec4(0.0, 0.0, 0.0, -1.0);
+        return vec4(0.0, 0.0, 0.0, alpha);
       }
 
       if (bucketAddress < 0. || isNan(bucketAddress)) {

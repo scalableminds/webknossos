@@ -3,7 +3,6 @@
 import urljoin from "url-join";
 
 import type { Page } from "puppeteer";
-import { document } from "libs/window";
 import mergeImg from "merge-img";
 import pixelmatch from "pixelmatch";
 
@@ -21,6 +20,7 @@ type Screenshot = {
 function getDefaultRequestOptions(baseUrl: string) {
   return {
     host: baseUrl,
+    doNotInvestigate: true,
     headers: {
       "X-Auth-Token": DEV_AUTH_TOKEN,
     },
@@ -38,13 +38,17 @@ export async function screenshotDataset(
 }
 
 function removeFpsMeter(page: Page) {
-  return page.evaluate(() => {
+  // The parameter to page.evaluate will be evaluated in the puppeteer browser context
+  // When supplying a js function instead of the template string, babel will mess with the code
+  // which may lead to errors (e.g.: _window is not defined)
+  // See https://github.com/GoogleChrome/puppeteer/issues/1665
+  return page.evaluate(`() => {
     const fpsMeter = document.querySelector("#stats");
     if (fpsMeter != null) {
       const { parentNode } = fpsMeter;
       if (parentNode != null) parentNode.removeChild(fpsMeter);
     }
-  });
+  }`);
 }
 
 async function waitForTracingViewLoad(page: Page) {

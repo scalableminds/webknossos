@@ -5,16 +5,9 @@
 
 import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
-<<<<<<< HEAD
-import _ from "lodash";
-
-||||||| merged common ancestors
-import parseStlBuffer from "libs/parse_stl_buffer";
-=======
-import _ from "lodash";
 import TWEEN from "tween.js";
+import _ from "lodash";
 
->>>>>>> 6c67f4b931b6491bdf593721b72e6e3a93fba381
 import { V3 } from "libs/mjs";
 import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import {

@@ -6,29 +6,16 @@ import React, { PureComponent } from "react";
 
 import { V3 } from "libs/mjs";
 import { Vector3Input } from "libs/vector_input";
-<<<<<<< HEAD
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
-import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
-||||||| merged common ancestors
-=======
 import { doWithToken } from "admin/admin_rest_api";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
->>>>>>> 6c67f4b931b6491bdf593721b72e6e3a93fba381
 import ButtonComponent from "oxalis/view/components/button_component";
-<<<<<<< HEAD
-import Store, { type OxalisState, type Flycam } from "oxalis/store";
-import Toast from "libs/toast";
-import constants, { type Mode } from "oxalis/constants";
-||||||| merged common ancestors
-=======
 import Model from "oxalis/model";
 import Request from "libs/request";
 import SceneController from "oxalis/controller/scene_controller";
 import Store, { type OxalisState, type Flycam } from "oxalis/store";
 import Toast from "libs/toast";
 import constants, { type Mode } from "oxalis/constants";
->>>>>>> 6c67f4b931b6491bdf593721b72e6e3a93fba381
 import message from "messages";
 
 import Loop from "../../../components/loop";

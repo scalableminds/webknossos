@@ -1,14 +1,14 @@
 // @flow
-import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import type { Vector4 } from "oxalis/constants";
-import constants from "oxalis/constants";
-import _ from "lodash";
 import * as THREE from "three";
-import UpdatableTexture from "libs/UpdatableTexture";
-import window from "libs/window";
+import _ from "lodash";
+
+import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { createUpdatableTexture } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import { getRenderer } from "oxalis/controller/renderer";
 import { waitForCondition } from "libs/utils";
+import UpdatableTexture from "libs/UpdatableTexture";
+import constants, { type Vector3, type Vector4 } from "oxalis/constants";
+import window from "libs/window";
 
 // A TextureBucketManager instance is responsible for making buckets available
 // to the GPU.
@@ -23,6 +23,9 @@ import { waitForCondition } from "libs/utils";
 // writing buckets to the data texture (i.e., "committing the buckets").
 
 const lookUpBufferWidth = constants.LOOK_UP_TEXTURE_WIDTH;
+
+// DEBUG flag for visualizing buckets which are passed to the GPU
+const visualizeBucketsOnGPU = false;
 
 // At the moment, we only store one float f per bucket.
 // If f >= 0, f denotes the index in the data texture where the bucket is stored.
@@ -44,7 +47,7 @@ export default class TextureBucketManager {
   isRefreshBufferOutOfDate: boolean = false;
 
   // This is passed as a parameter to allow for testing
-  bucketsPerDim: number;
+  bucketsPerDim: Vector3;
   currentAnchorPoint: Vector4 = [0, 0, 0, 0];
   fallbackAnchorPoint: Vector4 = [0, 0, 0, 0];
   writerQueue: Array<{ bucket: DataBucket, _index: number }> = [];
@@ -54,7 +57,7 @@ export default class TextureBucketManager {
   packingDegree: number;
 
   constructor(
-    bucketsPerDim: number,
+    bucketsPerDim: Vector3,
     textureWidth: number,
     dataTextureCount: number,
     bytes: number,
@@ -95,9 +98,13 @@ export default class TextureBucketManager {
     if (unusedIndex == null) {
       return;
     }
+    if (visualizeBucketsOnGPU) {
+      bucket.unvisualize();
+    }
     this.activeBucketToIndexMap.delete(bucket);
     this.committedBucketSet.delete(bucket);
     this.freeIndexSet.add(unusedIndex);
+    // bucket.unvisualize();
   }
 
   // Takes an array of buckets (relative to an anchorPoint) and ensures that these
@@ -109,6 +116,7 @@ export default class TextureBucketManager {
     fallbackAnchorPoint: Vector4,
   ): void {
     this.currentAnchorPoint = anchorPoint;
+    window.currentAnchorPoint = anchorPoint;
     this.fallbackAnchorPoint = fallbackAnchorPoint;
     // Find out which buckets are not needed anymore
     const freeBucketSet = new Set(this.activeBucketToIndexMap.keys());
@@ -174,6 +182,10 @@ export default class TextureBucketManager {
       const dataTextureIndex = Math.floor(_index / bucketsPerTexture);
       const indexInDataTexture = _index % bucketsPerTexture;
 
+      if (visualizeBucketsOnGPU) {
+        bucket.visualize();
+      }
+
       this.dataTextures[dataTextureIndex].update(
         bucket.getData(),
         0,
@@ -182,6 +194,8 @@ export default class TextureBucketManager {
         bucketHeightInTexture,
       );
       this.committedBucketSet.add(bucket);
+      // bucket.setVisualizationColor("#00ff00");
+      // bucket.visualize();
 
       window.needsRerender = true;
       this.isRefreshBufferOutOfDate = true;
@@ -288,10 +302,13 @@ export default class TextureBucketManager {
     const y = bucketPosition[1] - anchorPoint[1];
     const z = bucketPosition[2] - anchorPoint[2];
 
+    const [sx, sy, sz] = this.bucketsPerDim;
+
+    // prettier-ignore
     return (
-      Math.pow(this.bucketsPerDim, 3) * zoomDiff +
-      Math.pow(this.bucketsPerDim, 2) * z +
-      this.bucketsPerDim * y +
+      sx * sy * sz * zoomDiff +
+      sx * sy * z +
+      sx * y +
       x
     );
   }

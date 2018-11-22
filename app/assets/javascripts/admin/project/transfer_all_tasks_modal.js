@@ -1,18 +1,19 @@
 // @flow
 
-import _ from "lodash";
-import * as React from "react";
 import { Modal, Button, Table, Spin } from "antd";
+import * as React from "react";
+import _ from "lodash";
+
+import type { APIUser, APIProject, APIActiveUser } from "admin/api_flow_types";
 import {
   getUsers,
   getUsersWithActiveTasks,
   transferActiveTasksOfProject,
 } from "admin/admin_rest_api";
-import type { APIUser, APIProject, APIActiveUser } from "admin/api_flow_types";
-import Toast from "libs/toast";
-import messages from "messages";
 import { handleGenericError } from "libs/error_handling";
+import Toast from "libs/toast";
 import UserSelectionComponent from "admin/user/user_selection_component";
+import messages from "messages";
 
 type Props = {
   project: ?APIProject,

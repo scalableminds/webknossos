@@ -1,10 +1,12 @@
 // @flow
-import React from "react";
 import { connect } from "react-redux";
-import Model from "oxalis/model";
-import ButtonComponent from "oxalis/view/components/button_component";
-import { isBusy } from "oxalis/model/accessors/save_accessor";
+import React from "react";
+
 import type { OxalisState, ProgressInfo, IsBusyInfo } from "oxalis/store";
+import { isBusy } from "oxalis/model/accessors/save_accessor";
+import ButtonComponent from "oxalis/view/components/button_component";
+import Model from "oxalis/model";
+import window from "libs/window";
 
 type StateProps = {|
   progressInfo: ProgressInfo,

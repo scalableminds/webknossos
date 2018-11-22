@@ -1,12 +1,11 @@
 // @flow
 
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-import test from "ava";
-
 import {
   calculateTextureSizeAndCountForLayer,
   computeDataTexturesSetup,
 } from "oxalis/model/bucket_data_handling/data_rendering_logic";
+import test from "ava";
 
 const minSpecs = {
   supportedTextureSize: 4096,

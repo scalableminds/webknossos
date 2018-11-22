@@ -6,12 +6,18 @@
  */
 
 // @flow
-import type { ControlMode, Mode } from "oxalis/constants";
-import Constants, { ControlModeEnum } from "oxalis/constants";
+import Constants, { type ControlMode, ControlModeEnum, type Mode } from "oxalis/constants";
+import { navbarHeight } from "navbar";
+import _ from "lodash";
+
 import { Pane, Column, Row, Stack } from "./golden_layout_helpers";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
 export const currentLayoutVersion = 6;
+export const layoutHeaderHeight = 20;
+export const headerHeight = 55;
+const dummyExtent = 500;
+export const show3DViewportInArbitrary = false;
 
 const LayoutSettings = {
   showPopoutIcon: false,
@@ -35,7 +41,19 @@ const Panes = {
   Mappings: Pane("Segmentation", "MappingInfoView"),
 };
 
-const OrthoViewsGrid = [Column(Panes.xy, Panes.xz), Column(Panes.yz, Panes.td)];
+function setGlContainerWidth(container: Object, width: number) {
+  container.width = width;
+  return container;
+}
+
+const createLayout = (...content: Array<*>) => ({
+  settings: LayoutSettings,
+  dimensions: {
+    headerHeight: layoutHeaderHeight,
+    borderWidth: 1,
+  },
+  content,
+});
 
 const SkeletonRightHandColumn = Stack(
   Panes.DatasetInfoTabView,
@@ -44,52 +62,86 @@ const SkeletonRightHandColumn = Stack(
   Panes.AbstractTreeTabView,
   Panes.Mappings,
 );
-
 const NonSkeletonRightHandColumn = Stack(Panes.DatasetInfoTabView, Panes.Mappings);
 
-const createLayout = (...content: Array<*>) => ({
-  settings: LayoutSettings,
-  dimensions: {
-    headerHeight: 20,
-    borderWidth: 1,
-  },
-  content,
-});
-
-const OrthoLayout = createLayout(Row(...OrthoViewsGrid, SkeletonRightHandColumn));
-const OrthoLayoutView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
-const VolumeTracingView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
-const ArbitraryLayout = createLayout(Row(Panes.arbitraryViewport, SkeletonRightHandColumn));
-
-const defaultLayouts = {
-  ArbitraryLayout,
-  OrthoLayout,
-  OrthoLayoutView,
-  VolumeTracingView,
+export const getGroundTruthLayoutRect = () => {
+  const mainContainer = document.querySelector(".ant-layout .ant-layout-has-sider");
+  let width;
+  let height;
+  if (!mainContainer) {
+    if (window.innerWidth) {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      height -= headerHeight + navbarHeight;
+    } else {
+      // use fallback values
+      height = dummyExtent;
+      width = dummyExtent;
+    }
+  } else {
+    height = mainContainer.offsetHeight;
+    width = mainContainer.offsetWidth;
+  }
+  // The -1s are a workaround, since otherwise scrollbars
+  // would appear from time to time
+  return { width: width - 1, height: height - 1 };
 };
 
-export const defaultLayoutSchema = {
-  OrthoLayoutView: {
-    "Custom Layout": defaultLayouts.OrthoLayoutView,
-  },
-  VolumeTracingView: {
-    "Custom Layout": defaultLayouts.VolumeTracingView,
-  },
-  ArbitraryLayout: {
-    "Custom Layout": defaultLayouts.ArbitraryLayout,
-  },
-  OrthoLayout: {
-    "Custom Layout": defaultLayouts.OrthoLayout,
-  },
-  LastActiveLayouts: {
-    OrthoLayoutView: "Custom Layout",
-    VolumeTracingView: "Custom Layout",
-    ArbitraryLayout: "Custom Layout",
-    OrthoLayout: "Custom Layout",
-  },
+const unmemoizedGetDefaultLayouts = () => {
+  const layoutContainer = getGroundTruthLayoutRect();
+  layoutContainer.height -= layoutHeaderHeight * 2;
+  const viewportWidth = ((layoutContainer.height / 2) * 100) / layoutContainer.width;
+
+  const OrthoViewsGrid = [
+    setGlContainerWidth(Column(Panes.xy, Panes.xz), viewportWidth),
+    setGlContainerWidth(Column(Panes.yz, Panes.td), viewportWidth),
+  ];
+
+  const OrthoLayout = createLayout(Row(...OrthoViewsGrid, SkeletonRightHandColumn));
+  const OrthoLayoutView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
+  const VolumeTracingView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
+
+  const arbitraryPanes = [Panes.arbitraryViewport, SkeletonRightHandColumn].concat(
+    show3DViewportInArbitrary ? [Panes.td] : [],
+  );
+  const ArbitraryLayout = createLayout(Row(...arbitraryPanes));
+
+  return { OrthoLayout, OrthoLayoutView, VolumeTracingView, ArbitraryLayout };
 };
 
-type Layout = $Keys<typeof defaultLayouts>;
+const getDefaultLayouts = _.memoize(unmemoizedGetDefaultLayouts);
+
+export const resetDefaultLayouts = () => {
+  getDefaultLayouts.cache.clear();
+};
+
+type ExtractReturn<Fn> = $Call<<T>(() => T) => T, Fn>;
+type Layout = $Keys<ExtractReturn<typeof unmemoizedGetDefaultLayouts>>;
+
+export const getCurrentDefaultLayoutConfig = () => {
+  resetDefaultLayouts();
+  const defaultLayouts = getDefaultLayouts();
+  return {
+    OrthoLayoutView: {
+      "Custom Layout": defaultLayouts.OrthoLayoutView,
+    },
+    VolumeTracingView: {
+      "Custom Layout": defaultLayouts.VolumeTracingView,
+    },
+    ArbitraryLayout: {
+      "Custom Layout": defaultLayouts.ArbitraryLayout,
+    },
+    OrthoLayout: {
+      "Custom Layout": defaultLayouts.OrthoLayout,
+    },
+    LastActiveLayouts: {
+      OrthoLayoutView: "Custom Layout",
+      VolumeTracingView: "Custom Layout",
+      ArbitraryLayout: "Custom Layout",
+      OrthoLayout: "Custom Layout",
+    },
+  };
+};
 
 export function determineLayout(controlMode: ControlMode, viewMode: Mode): Layout {
   if (controlMode === ControlModeEnum.VIEW) {
@@ -115,5 +167,5 @@ export const mapLayoutKeysToLanguage = {
   OrthoLayout: "Orthogonal Mode",
 };
 
-export type LayoutKeys = $Keys<typeof defaultLayouts>;
-export default defaultLayouts;
+export type LayoutKeys = Layout;
+export default getDefaultLayouts;

@@ -19,7 +19,6 @@ import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-
 class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
                                 userService: UserService,
                                 taskDAO: TaskDAO,
@@ -29,8 +28,9 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
                                 organizationDAO: OrganizationDAO,
                                 timeSpanDAO: TimeSpanDAO,
                                 defaultMails: DefaultMails,
-                                conf: WkConf)
-                               (implicit ec: ExecutionContext) extends FoxImplicits with LazyLogging {
+                                conf: WkConf)(implicit ec: ExecutionContext)
+    extends FoxImplicits
+    with LazyLogging {
   private val MaxTracingPause =
     conf.WebKnossos.User.Time.tracingPauseInSeconds.toMillis
 
@@ -39,15 +39,12 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     logUserInteraction(Seq(timestamp), user, annotation)
   }
 
-  def logUserInteraction(timestamps: Seq[Long], user: User, annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def logUserInteraction(timestamps: Seq[Long], user: User, annotation: Annotation)(
+      implicit ctx: DBAccessContext): Fox[Unit] =
     trackTime(timestamps, user._id, annotation)
 
-  def loggedTimeOfUser[T](
-                           user: User,
-                           groupingF: TimeSpan => T,
-                           start: Option[Long] = None,
-                           end: Option[Long] = None)(implicit ctx: DBAccessContext): Fox[Map[T, Duration]] =
-
+  def loggedTimeOfUser[T](user: User, groupingF: TimeSpan => T, start: Option[Long] = None, end: Option[Long] = None)(
+      implicit ctx: DBAccessContext): Fox[Map[T, Duration]] =
     for {
       timeTrackingOpt <- timeSpanDAO.findAllByUser(user._id, start, end).futureBox
     } yield {
@@ -59,12 +56,10 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       }
     }
 
-  def loggedTimeOfAnnotation[T](
-                                 annotationId: ObjectId,
-                                 groupingF: TimeSpan => T,
-                                 start: Option[Long] = None,
-                                 end: Option[Long] = None)(implicit ctx: DBAccessContext): Fox[Map[T, Duration]] =
-
+  def loggedTimeOfAnnotation[T](annotationId: ObjectId,
+                                groupingF: TimeSpan => T,
+                                start: Option[Long] = None,
+                                end: Option[Long] = None)(implicit ctx: DBAccessContext): Fox[Map[T, Duration]] =
     for {
       timeTrackingOpt <- timeSpanDAO.findAllByAnnotation(annotationId, start, end).futureBox
     } yield {
@@ -76,7 +71,8 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       }
     }
 
-  def totalTimeOfUser[T](user: User, start: Option[Long], end: Option[Long])(implicit ctx: DBAccessContext): Fox[Duration] =
+  def totalTimeOfUser[T](user: User, start: Option[Long], end: Option[Long])(
+      implicit ctx: DBAccessContext): Fox[Duration] =
     for {
       timeTrackingOpt <- timeSpanDAO.findAllByUser(user._id, start, end).futureBox
     } yield {
@@ -88,7 +84,9 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       }
     }
 
-  def loggedTimePerInterval[T](groupingF: TimeSpan => T, start: Option[Long] = None, end: Option[Long] = None): Fox[Map[T, Duration]] =
+  def loggedTimePerInterval[T](groupingF: TimeSpan => T,
+                               start: Option[Long] = None,
+                               end: Option[Long] = None): Fox[Map[T, Duration]] =
     for {
       timeTrackingOpt <- timeSpanDAO.findAll(start, end).futureBox
     } yield {
@@ -100,11 +98,11 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       }
     }
 
-
-
   private val lastUserActivities = mutable.HashMap.empty[ObjectId, TimeSpan]
 
-  private def trackTime(timestamps: Seq[Long], _user: ObjectId, _annotation: Annotation)(implicit ctx: DBAccessContext) = {
+  @SuppressWarnings(Array("TraversableHead", "TraversableLast")) // Only functions call this which put at least one timestamp in the seq
+  private def trackTime(timestamps: Seq[Long], _user: ObjectId, _annotation: Annotation)(
+      implicit ctx: DBAccessContext) = {
     // Only if the annotation belongs to the user, we are going to log the time on the annotation
     val annotation = if (_annotation._user == _user) Some(_annotation) else None
     val start = timestamps.head
@@ -126,16 +124,19 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       updated
     }
 
-    var current = lastUserActivities.get(_user).flatMap(lastActivity => {
-      if (isNotInterrupted(start, lastActivity)) {
-        if (belongsToSameTracing(lastActivity, annotation)) {
-          Some(lastActivity)
-        } else {
-          updateTimeSpan(lastActivity, start)
-          None
-        }
-      } else None
-    }).getOrElse(createNewTimeSpan(start, _user, annotation))
+    var current = lastUserActivities
+      .get(_user)
+      .flatMap(lastActivity => {
+        if (isNotInterrupted(start, lastActivity)) {
+          if (belongsToSameTracing(lastActivity, annotation)) {
+            Some(lastActivity)
+          } else {
+            updateTimeSpan(lastActivity, start)
+            None
+          }
+        } else None
+      })
+      .getOrElse(createNewTimeSpan(start, _user, annotation))
 
     timestamps.sliding(2).foreach { pair =>
       val start = pair.head
@@ -160,9 +161,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
   private def belongsToSameTracing(last: TimeSpan, annotation: Option[Annotation]) =
     last._annotation == annotation.map(_.id)
 
-  private def logTimeToAnnotation(
-    duration: Long,
-    annotation: Option[ObjectId]): Fox[Unit] = {
+  private def logTimeToAnnotation(duration: Long, annotation: Option[ObjectId]): Fox[Unit] =
     // Log time to annotation
     annotation match {
       case Some(a: ObjectId) =>
@@ -171,9 +170,8 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
         Fox.successful(())
       // do nothing, this is not a stored annotation
     }
-  }
 
-  def signalOverTime(time: Long, annotationOpt: Option[Annotation])(implicit ctx: DBAccessContext): Fox[_] = {
+  def signalOverTime(time: Long, annotationOpt: Option[Annotation])(implicit ctx: DBAccessContext): Fox[_] =
     for {
       annotation <- annotationOpt.toFox
       user <- userService.findOneById(annotation._user, useCache = true)(GlobalAccessContext)
@@ -184,19 +182,12 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
     } yield {
       if (annotationTime >= timeLimit && annotationTime - time < timeLimit) {
-        brainTracing.Mailer ! Send(defaultMails.overLimitMail(
-          user,
-          project.name,
-          task._id.toString,
-          annotation.id,
-          organization))
+        brainTracing.Mailer ! Send(
+          defaultMails.overLimitMail(user, project.name, task._id.toString, annotation.id, organization))
       }
     }
-  }
 
-  private def logTimeToTask(
-                             duration: Long,
-                             annotation: Option[Annotation]) = {
+  private def logTimeToTask(duration: Long, annotation: Option[Annotation]) =
     annotation.flatMap(_._task) match {
       case Some(taskId) =>
         for {
@@ -206,28 +197,28 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       case _ =>
         Fox.successful(())
     }
-  }
 
   // We intentionally return a Fox[Option] here, since the calling for-comprehension expects an Option[Annotation]. In case
   // None is passed in as "annotation", we want to pass this None on as Fox.successful(None) and not break the for-comprehension
   // by returning Fox.empty.
-  private def getAnnotation(annotation: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[Option[Annotation]] = {
+  private def getAnnotation(annotation: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[Option[Annotation]] =
     annotation match {
       case Some(annotationId) =>
         annotationDAO.findOne(annotationId).map(Some(_))
       case _ =>
         Fox.successful(None)
     }
-  }
 
-  private def flushToDb(timespansToInsert: List[TimeSpan], timespansToUpdate: List[(TimeSpan, Long)])(implicit ctx: DBAccessContext) = {
+  @SuppressWarnings(Array("TryGet")) // This is okay because we check the failure case before using the try
+  private def flushToDb(timespansToInsert: List[TimeSpan], timespansToUpdate: List[(TimeSpan, Long)])(
+      implicit ctx: DBAccessContext) = {
     val updateResult = for {
       _ <- Fox.serialCombined(timespansToInsert)(t => timeSpanDAO.insertOne(t))
       _ <- Fox.serialCombined(timespansToUpdate)(t => updateTimeSpanInDb(t._1, t._2))
     } yield ()
 
     updateResult.onComplete { x =>
-      if(x.isFailure || x.get.isEmpty)
+      if (x.isFailure || x.get.isEmpty)
         logger.warn(s"Failed to save all time updates: $x")
     }
 
@@ -245,6 +236,5 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       _ <- logTimeToTask(duration, annotation) ?~> "FAILED: TimeSpanService.logTimeToTask"
     } yield {}
   }
-
 
 }

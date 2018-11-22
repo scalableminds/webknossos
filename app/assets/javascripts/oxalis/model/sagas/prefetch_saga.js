@@ -1,33 +1,34 @@
 // @flow
-import Model from "oxalis/model";
-import constants from "oxalis/constants";
-import { _throttle, select, take, call } from "oxalis/model/sagas/effect-generators";
-import type { Saga } from "oxalis/model/sagas/effect-generators";
+import { FlycamActions } from "oxalis/model/actions/flycam_actions";
+import type { OxalisState, DataLayerType } from "oxalis/store";
+import { PrefetchStrategyArbitrary } from "oxalis/model/bucket_data_handling/prefetch_strategy_arbitrary";
+import {
+  PrefetchStrategySkeleton,
+  PrefetchStrategyVolume,
+} from "oxalis/model/bucket_data_handling/prefetch_strategy_plane";
+import { type Saga, _throttle, call, select, take } from "oxalis/model/sagas/effect-generators";
 import {
   getPosition,
   getRequestLogZoomStep,
   getAreas,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
-  PrefetchStrategySkeleton,
-  PrefetchStrategyVolume,
-} from "oxalis/model/bucket_data_handling/prefetch_strategy_plane";
-import { PrefetchStrategyArbitrary } from "oxalis/model/bucket_data_handling/prefetch_strategy_arbitrary";
-import { FlycamActions } from "oxalis/model/actions/flycam_actions";
-import DataLayer from "oxalis/model/data_layer";
-import type { Vector3 } from "oxalis/constants";
-import {
   isSegmentationLayer,
   getResolutions,
   getColorLayers,
 } from "oxalis/model/accessors/dataset_accessor";
-import type { OxalisState, DataLayerType } from "oxalis/store";
+import DataLayer from "oxalis/model/data_layer";
+import Model from "oxalis/model";
+import constants, { type Vector3 } from "oxalis/constants";
 
 const PREFETCH_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
 
 const prefetchStrategiesArbitrary = [new PrefetchStrategyArbitrary()];
 const prefetchStrategiesPlane = [new PrefetchStrategySkeleton(), new PrefetchStrategyVolume()];
+
+// DEBUG flag for visualizing buckets which are prefetched
+const visualizePrefetchedBuckets = false;
 
 export function* watchDataRelevantChanges(): Saga<void> {
   yield* take("WK_READY");
@@ -116,7 +117,6 @@ export function* prefetchForPlaneMode(layer: DataLayer, previousProperties: Obje
         strategy.inVelocityRange(layer.connectionInfo.bandwidth) &&
         strategy.inRoundTripTimeRange(layer.connectionInfo.roundTripTime)
       ) {
-        layer.pullQueue.clearNormalPriorities();
         const buckets = strategy.prefetch(
           layer.cube,
           position,
@@ -142,11 +142,13 @@ export function* prefetchForArbitraryMode(
   layer: DataLayerType,
   previousProperties: Object,
 ): Saga<void> {
+  const position = yield* select(state => getPosition(state.flycam));
   const matrix = yield* select(state => state.flycam.currentMatrix);
   const zoomStep = yield* select(state => getRequestLogZoomStep(state));
   const tracingTypes = yield* select(getTracingTypes);
+  const resolutions = yield* select(state => getResolutions(state.dataset));
   const { lastMatrix, lastZoomStep } = previousProperties;
-  const { connectionInfo, pullQueue } = Model.dataLayers[layer.name];
+  const { connectionInfo, pullQueue, cube } = Model.dataLayers[layer.name];
 
   if (matrix !== lastMatrix || zoomStep !== lastZoomStep) {
     for (const strategy of prefetchStrategiesArbitrary) {
@@ -155,8 +157,15 @@ export function* prefetchForArbitraryMode(
         strategy.inVelocityRange(connectionInfo.bandwidth) &&
         strategy.inRoundTripTimeRange(connectionInfo.roundTripTime)
       ) {
-        pullQueue.clearNormalPriorities();
-        const buckets = strategy.prefetch(matrix, zoomStep);
+        const buckets = strategy.prefetch(matrix, zoomStep, position, resolutions);
+        if (visualizePrefetchedBuckets) {
+          for (const item of buckets) {
+            const bucket = cube.getOrCreateBucket(item.bucket);
+            if (bucket.type !== "null") {
+              bucket.visualize();
+            }
+          }
+        }
         pullQueue.addAll(buckets);
         break;
       }

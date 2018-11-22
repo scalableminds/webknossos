@@ -7,17 +7,17 @@ import {
   waitForAllRequests,
   resetDatabase,
 } from "test/enzyme/e2e-setup";
-import { mount } from "enzyme";
-import test from "ava";
-import mockRequire from "mock-require";
-import React from "react";
 import { Provider } from "react-redux";
 import { Router } from "react-router-dom";
+import React from "react";
+// Has to come after e2e-setup import
 import createBrowserHistory from "history/createBrowserHistory";
 import { load as loadFeatureToggles } from "features";
+import { mount } from "enzyme";
+import mockRequire from "mock-require";
+import test from "ava";
 
 // Those wrappers interfere with global.window and global.document otherwise
-mockRequire("libs/hammerjs_wrapper", {});
 mockRequire("libs/keyboardjs_wrapper", {});
 mockRequire("libs/window", global.window);
 mockRequire("libs/datasource.schema.json", {});

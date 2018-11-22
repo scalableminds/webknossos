@@ -7,11 +7,10 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import utils.ObjectId
 
-
 case class TeamMembership(teamId: ObjectId, isTeamManager: Boolean)
 
 class TeamMembershipService @Inject()(teamDAO: TeamDAO) {
-  def publicWrites(teamMembership: TeamMembership)(implicit ctx: DBAccessContext): Fox[JsObject] = {
+  def publicWrites(teamMembership: TeamMembership)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
       team <- teamDAO.findOne(teamMembership.teamId)
     } yield {
@@ -21,10 +20,8 @@ class TeamMembershipService @Inject()(teamDAO: TeamDAO) {
         "isTeamManager" -> teamMembership.isTeamManager
       )
     }
-  }
 
   def publicReads(): Reads[TeamMembership] =
     ((__ \ "id").read[String](ObjectId.stringObjectIdReads("id")) and
-      (__ \ "isTeamManager").read[Boolean]
-      ) ((id, isTeamManager) => TeamMembership(ObjectId(id), isTeamManager))
+      (__ \ "isTeamManager").read[Boolean])((id, isTeamManager) => TeamMembership(ObjectId(id), isTeamManager))
 }

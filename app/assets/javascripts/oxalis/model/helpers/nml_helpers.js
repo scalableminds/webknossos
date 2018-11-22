@@ -1,27 +1,27 @@
 // @flow
 
-import _ from "lodash";
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
-import messages from "messages";
 import Saxophone from "@scalableminds/saxophone";
-import Store from "oxalis/store";
+import _ from "lodash";
+
+import type { APIBuildInfo } from "admin/api_flow_types";
+import type { BoundingBoxType } from "oxalis/constants";
+import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reducer_helpers";
+import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import Date from "libs/date";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
-import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reducer_helpers";
-import type {
-  OxalisState,
-  SkeletonTracing,
-  Tracing,
-  NodeMap,
-  Tree,
-  TreeMap,
-  TemporaryMutableTreeMap,
-  TreeGroup,
+import Store, {
+  type NodeMap,
+  type OxalisState,
+  type SkeletonTracing,
+  type TemporaryMutableTreeMap,
+  type Tracing,
+  type Tree,
+  type TreeGroup,
+  type TreeMap,
 } from "oxalis/store";
-import type { BoundingBoxType } from "oxalis/constants";
-import type { APIBuildInfo } from "admin/api_flow_types";
-import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import messages from "messages";
 
 // NML Defaults
 const DEFAULT_COLOR = [1, 0, 0];

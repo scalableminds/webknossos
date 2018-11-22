@@ -372,7 +372,8 @@
 
               if (!targetWindow) {
                 if (!global.addEventListener && !global.attachEvent) {
-                  throw new Error("Cannot find global functions addEventListener or attachEvent.");
+                  console.warn("Cannot find global functions addEventListener or attachEvent.");
+                  return;
                 }
                 targetWindow = global;
               }

@@ -1,8 +1,9 @@
 // @flow
-import * as React from "react";
 import { Icon, Alert, Dropdown, Menu } from "antd";
 import { connect } from "react-redux";
-import Store from "oxalis/store";
+import * as React from "react";
+
+import type { LayoutKeys } from "oxalis/view/layouting/default_layout_configs";
 import {
   layoutEmitter,
   deleteLayout,
@@ -10,16 +11,14 @@ import {
   addNewLayout,
 } from "oxalis/view/layouting/layout_persistence";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import TracingActionsView, { ResetLayoutItem } from "oxalis/view/action-bar/tracing_actions_view";
+import AddNewLayoutModal from "oxalis/view/action-bar/add_new_layout_modal";
+import ButtonComponent from "oxalis/view/components/button_component";
+import Constants, { type ControlMode, ControlModeEnum, type Mode } from "oxalis/constants";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
+import Store, { type OxalisState } from "oxalis/store";
+import TracingActionsView, { ResetLayoutItem } from "oxalis/view/action-bar/tracing_actions_view";
 import ViewModesView from "oxalis/view/action-bar/view_modes_view";
 import VolumeActionsView from "oxalis/view/action-bar/volume_actions_view";
-import AddNewLayoutModal from "oxalis/view/action-bar/add_new_layout_modal";
-import Constants, { ControlModeEnum } from "oxalis/constants";
-import type { Mode, ControlMode } from "oxalis/constants";
-import type { OxalisState } from "oxalis/store";
-import ButtonComponent from "oxalis/view/components/button_component";
-import type { LayoutKeys } from "oxalis/view/layouting/default_layout_configs";
 
 const VersionRestoreWarning = (
   <Alert

@@ -1,12 +1,14 @@
 // @flow
 
-import _ from "lodash";
-import * as React from "react";
-import { connect } from "react-redux";
-import { Link, withRouter } from "react-router-dom";
+import { Link, type RouterHistory, withRouter } from "react-router-dom";
+import { PropTypes } from "@scalableminds/prop-types";
 import { Table, Icon, Spin, Button, Input, Modal } from "antd";
-import * as Utils from "libs/utils";
-import messages from "messages";
+import { connect } from "react-redux";
+import * as React from "react";
+import _ from "lodash";
+
+import type { APIProjectWithAssignments, APIUser } from "admin/api_flow_types";
+import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import {
   getProjectsWithOpenAssignments,
@@ -15,13 +17,11 @@ import {
   pauseProject,
   resumeProject,
 } from "admin/admin_rest_api";
-import TransferAllTasksModal from "admin/project/transfer_all_tasks_modal";
-import Persistence from "libs/persistence";
-import { PropTypes } from "@scalableminds/prop-types";
-import type { APIProjectWithAssignments, APIUser } from "admin/api_flow_types";
-import type { OxalisState } from "oxalis/store";
-import type { RouterHistory } from "react-router-dom";
 import { handleGenericError } from "libs/error_handling";
+import Persistence from "libs/persistence";
+import TransferAllTasksModal from "admin/project/transfer_all_tasks_modal";
+import * as Utils from "libs/utils";
+import messages from "messages";
 
 const { Column } = Table;
 const { Search } = Input;

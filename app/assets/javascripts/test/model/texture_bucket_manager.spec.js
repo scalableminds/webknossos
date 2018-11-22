@@ -1,8 +1,8 @@
 // @flow
 
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-import test from "ava";
 import mock from "mock-require";
+import test from "ava";
 
 global.performance = {
   now: () => Date.now(),
@@ -65,7 +65,7 @@ const expectBucket = (t, tbm, bucket, expectedFirstByte) => {
 };
 
 test("TextureBucketManager: basic functionality", t => {
-  const tbm = new TextureBucketManager(5, 2048, 1, 1);
+  const tbm = new TextureBucketManager([5, 5, 5], 2048, 1, 1);
 
   tbm.setupDataTextures(1);
   const activeBuckets = [
@@ -82,7 +82,7 @@ test("TextureBucketManager: basic functionality", t => {
 });
 
 test("TextureBucketManager: changing active buckets", t => {
-  const tbm = new TextureBucketManager(5, 2048, 2, 1);
+  const tbm = new TextureBucketManager([5, 5, 5], 2048, 2, 1);
 
   tbm.setupDataTextures(1);
   const activeBuckets = [

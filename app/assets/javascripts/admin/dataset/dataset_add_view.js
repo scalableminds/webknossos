@@ -1,11 +1,11 @@
 // @flow
-import React from "react";
+import { type RouterHistory, withRouter } from "react-router-dom";
 import { Tabs, Icon } from "antd";
-import DatasetUploadView from "admin/dataset/dataset_upload_view";
+import React from "react";
+
 import DatasetAddForeignView from "admin/dataset/dataset_add_foreign_view";
+import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import features from "features";
-import { withRouter } from "react-router-dom";
-import type { RouterHistory } from "react-router-dom";
 
 const { TabPane } = Tabs;
 

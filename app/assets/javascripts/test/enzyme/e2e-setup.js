@@ -1,12 +1,13 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 // @flow
-import fs from "fs";
-import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
-import { configure } from "enzyme";
-import Adapter from "enzyme-adapter-react-16";
-import shell from "shelljs";
 import _ from "lodash";
 import deepForEach from "deep-for-each";
+
+import { configure } from "enzyme";
+import Adapter from "enzyme-adapter-react-16";
+import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
+import fs from "fs";
+import shell from "shelljs";
 
 const requests = [];
 const minimumWait = 100; // ms
@@ -61,6 +62,7 @@ const volatileKeys = [
   "modified",
   "created",
   "createdTimestamp",
+  "tracingTime",
 ];
 
 export function replaceVolatileValues(obj: ?Object) {

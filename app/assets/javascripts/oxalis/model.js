@@ -2,19 +2,22 @@
  * model.js
  * @flow
  */
-import _ from "lodash";
-import Store from "oxalis/store";
-import type { TracingTypeTracing, TraceOrViewCommand } from "oxalis/store";
 import {} from "oxalis/model/actions/settings_actions";
-import { saveNowAction } from "oxalis/model/actions/save_actions";
-import * as Utils from "libs/utils";
-import DataLayer from "oxalis/model/data_layer";
-import ConnectionInfo from "oxalis/model/data_connection_info";
-import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
+
+import _ from "lodash";
+
 import type { Versions } from "oxalis/view/version_view";
 import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { isBusy } from "oxalis/model/accessors/save_accessor";
+import { saveNowAction } from "oxalis/model/actions/save_actions";
+import ConnectionInfo from "oxalis/model/data_connection_info";
+import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import DataLayer from "oxalis/model/data_layer";
+import type LayerRenderingManager from "oxalis/model/bucket_data_handling/layer_rendering_manager";
+import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
+import Store, { type TraceOrViewCommand, type TracingTypeTracing } from "oxalis/store";
+import * as Utils from "libs/utils";
+
 import { initialize } from "./model_initialization";
 
 // TODO: Non-reactive
@@ -88,6 +91,13 @@ export class OxalisModel {
     return this.dataLayers[name].pullQueue;
   }
 
+  getLayerRenderingManagerByName(name: string): LayerRenderingManager {
+    if (!this.dataLayers[name]) {
+      throw new Error(`Layer with name ${name} was not found.`);
+    }
+    return this.dataLayers[name].layerRenderingManager;
+  }
+
   stateSaved() {
     const state = Store.getState();
     const storeStateSaved =
@@ -113,5 +123,7 @@ export class OxalisModel {
   };
 }
 
+const model = new OxalisModel();
+
 // export the model as a singleton
-export default new OxalisModel();
+export default model;

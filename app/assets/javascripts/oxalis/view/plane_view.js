@@ -2,18 +2,25 @@
  * plane_view.js
  * @flow
  */
-import _ from "lodash";
-import app from "app";
 import BackboneEvents from "backbone-events-standalone";
-import TWEEN from "tween.js";
 import * as THREE from "three";
-import Store from "oxalis/store";
-import Constants, { OrthoViews, OrthoViewValues, OrthoViewColors } from "oxalis/constants";
-import type { OrthoView, OrthoViewMap } from "oxalis/constants";
-import SceneController from "oxalis/controller/scene_controller";
+import TWEEN from "tween.js";
+import _ from "lodash";
+
+import { getDesiredLayoutRect } from "oxalis/view/layouting/golden_layout_adapter";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import { getDesiredLayoutRect } from "oxalis/view/layouting/golden_layout_adapter";
+import Constants, {
+  type OrthoView,
+  OrthoViewColors,
+  type OrthoViewMap,
+  OrthoViewValues,
+  OrthoViews,
+} from "oxalis/constants";
+import SceneController from "oxalis/controller/scene_controller";
+import Store from "oxalis/store";
+import app from "app";
+import window from "libs/window";
 
 export const setupRenderArea = (
   renderer: THREE.WebGLRenderer,

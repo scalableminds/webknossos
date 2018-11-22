@@ -11,11 +11,11 @@ import slick.jdbc.PostgresProfile.api._
 
 import scala.concurrent.ExecutionContext
 
-class MaintenanceController @Inject()(sil: Silhouette[WkEnv],
-                                      maintenanceDAO: MaintenanceDAO)
-                                     (implicit ec: ExecutionContext,
-                                        bodyParsers: PlayBodyParsers)
-  extends Controller with FoxImplicits {
+class MaintenanceController @Inject()(sil: Silhouette[WkEnv], maintenanceDAO: MaintenanceDAO)(
+    implicit ec: ExecutionContext,
+    bodyParsers: PlayBodyParsers)
+    extends Controller
+    with FoxImplicits {
 
   def info = sil.UserAwareAction.async { implicit request =>
     for {
@@ -31,7 +31,6 @@ class MaintenanceController @Inject()(sil: Silhouette[WkEnv],
     } yield Ok("maintenance.init.success")
   }
 
-
   def closeMaintenance = sil.SecuredAction.async { implicit request =>
     for {
       _ <- bool2Fox(request.identity.isSuperUser)
@@ -43,16 +42,15 @@ class MaintenanceController @Inject()(sil: Silhouette[WkEnv],
 
 class MaintenanceDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
 
-  def getExpirationTime: Fox[java.sql.Timestamp] = {
+  def getExpirationTime: Fox[java.sql.Timestamp] =
     for {
       timeList <- run(sql"select maintenanceExpirationTime from webknossos.maintenance".as[java.sql.Timestamp])
       time <- timeList.headOption.toFox
     } yield time
-  }
 
-  def updateExpirationTime(newTimestamp: java.sql.Timestamp): Fox[Unit] = {
+  def updateExpirationTime(newTimestamp: java.sql.Timestamp): Fox[Unit] =
     for {
-      _ <- run(sql"update webknossos.maintenance set maintenanceExpirationTime = ${newTimestamp}".as[java.sql.Timestamp])
+      _ <- run(
+        sql"update webknossos.maintenance set maintenanceExpirationTime = ${newTimestamp}".as[java.sql.Timestamp])
     } yield ()
-  }
 }

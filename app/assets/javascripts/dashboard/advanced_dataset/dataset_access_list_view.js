@@ -1,12 +1,13 @@
 // @flow
 /* eslint-disable jsx-a11y/href-no-hash */
 
-import * as React from "react";
-import { stringToColor } from "libs/format_utils";
-import { getDatasetAccessList } from "admin/admin_rest_api";
-import type { APIDataset, APIUser } from "admin/api_flow_types";
 import { Spin, Tag } from "antd";
+import * as React from "react";
+
+import type { APIDataset, APIUser } from "admin/api_flow_types";
+import { getDatasetAccessList } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
+import { stringToColor } from "libs/format_utils";
 
 type Props = {
   dataset: APIDataset,

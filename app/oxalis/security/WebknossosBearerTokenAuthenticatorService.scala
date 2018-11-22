@@ -5,7 +5,11 @@ import com.mohiva.play.silhouette.api.exceptions.{AuthenticatorCreationException
 import com.mohiva.play.silhouette.api.services.AuthenticatorService.{CreateError, InitError}
 import com.mohiva.play.silhouette.api.util.{Clock, IDGenerator}
 import com.mohiva.play.silhouette.impl.authenticators.BearerTokenAuthenticatorService.ID
-import com.mohiva.play.silhouette.impl.authenticators.{BearerTokenAuthenticator, BearerTokenAuthenticatorService, BearerTokenAuthenticatorSettings}
+import com.mohiva.play.silhouette.impl.authenticators.{
+  BearerTokenAuthenticator,
+  BearerTokenAuthenticatorService,
+  BearerTokenAuthenticatorSettings
+}
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.{User, UserService}
@@ -22,40 +26,45 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
                                                 clock: Clock,
                                                 userService: UserService,
                                                 conf: WkConf)(implicit override val executionContext: ExecutionContext)
-                                            extends BearerTokenAuthenticatorService(settings, repository, idGenerator, clock) with FoxImplicits{
+    extends BearerTokenAuthenticatorService(settings, repository, idGenerator, clock)
+    with FoxImplicits {
 
   val resetPasswordExpiry = conf.Silhouette.TokenAuthenticator.resetPasswordExpiry.toMillis millis
   val dataStoreExpiry = conf.Silhouette.TokenAuthenticator.dataStoreExpiry.toMillis millis
 
-  def create(loginInfo: LoginInfo, tokenType: TokenType)(implicit request: RequestHeader): Future[BearerTokenAuthenticator] = {
+  def create(loginInfo: LoginInfo, tokenType: TokenType)(
+      implicit request: RequestHeader): Future[BearerTokenAuthenticator] = {
     val expiry: Duration = tokenType match {
       case TokenType.Authentication => settings.authenticatorExpiry
-      case TokenType.ResetPassword => resetPasswordExpiry
-      case TokenType.DataStore => dataStoreExpiry
-      case _ => throw new Exception("Cannot create an authenticator without a valid TokenType")
+      case TokenType.ResetPassword  => resetPasswordExpiry
+      case TokenType.DataStore      => dataStoreExpiry
+      case _                        => throw new Exception("Cannot create an authenticator without a valid TokenType")
     }
     idGenerator.generate.map { id =>
       val now = clock.now
-      BearerTokenAuthenticator(
-        id = id,
-        loginInfo = loginInfo,
-        lastUsedDateTime = now,
-        expirationDateTime = now.plus(expiry.toMillis),
-        idleTimeout = settings.authenticatorIdleTimeout)
+      BearerTokenAuthenticator(id = id,
+                               loginInfo = loginInfo,
+                               lastUsedDateTime = now,
+                               expirationDateTime = now.plus(expiry.toMillis),
+                               idleTimeout = settings.authenticatorIdleTimeout)
     }.recover {
       case e => throw new AuthenticatorCreationException(CreateError.format(ID, loginInfo), e)
     }
   }
 
-  def init(authenticator: BearerTokenAuthenticator, tokenType: TokenType, deleteOld: Boolean = true)(implicit request: RequestHeader): Future[String] = {
-    repository.add(authenticator, tokenType, deleteOld)(GlobalAccessContext).map { a =>
-      a.id
-    }.recover {
-      case e => throw new AuthenticatorInitializationException(InitError.format(ID, authenticator), e)
-    }
-  }
+  def init(authenticator: BearerTokenAuthenticator, tokenType: TokenType, deleteOld: Boolean = true)(
+      implicit request: RequestHeader): Future[String] =
+    repository
+      .add(authenticator, tokenType, deleteOld)(GlobalAccessContext)
+      .map { a =>
+        a.id
+      }
+      .recover {
+        case e => throw new AuthenticatorInitializationException(InitError.format(ID, authenticator), e)
+      }
 
-  def createAndInit(loginInfo: LoginInfo, tokenType: TokenType, deleteOld: Boolean = true)(implicit request: RequestHeader): Future[String] =
+  def createAndInit(loginInfo: LoginInfo, tokenType: TokenType, deleteOld: Boolean = true)(
+      implicit request: RequestHeader): Future[String] =
     for {
       tokenAuthenticator <- create(loginInfo, tokenType)
       tokenId <- init(tokenAuthenticator, tokenType, deleteOld)
@@ -72,7 +81,7 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
 
   def userForTokenOpt(tokenOpt: Option[String])(implicit ctx: DBAccessContext): Fox[User] = tokenOpt match {
     case Some(token) => userForToken(token)
-    case _ => Fox.empty
+    case _           => Fox.empty
   }
 
   def remove(tokenValue: String): Fox[Unit] =

@@ -1,10 +1,11 @@
 // @flow
 import * as React from "react";
-import * as Utils from "libs/utils";
+import _ from "lodash";
+
+import type { APIDataset, APIMaybeUnimportedDataset } from "admin/api_flow_types";
 import { getOrganizations } from "admin/admin_rest_api";
 import DatasetPanel from "dashboard/dataset_panel";
-import _ from "lodash";
-import type { APIDataset, APIMaybeUnimportedDataset } from "admin/api_flow_types";
+import * as Utils from "libs/utils";
 
 type State = {
   organizationNameMap: { [key: string]: string },
@@ -69,7 +70,7 @@ class GalleryDatasetView extends React.PureComponent<Props, State> {
         {groupedDatasets.map(([organization, datasets]) => (
           <DatasetPanel
             showOrganizationHeader={hasMultipleOrganizations}
-            croppedDatasetCount={hasMultipleOrganizations ? croppedDatasetCount : null}
+            croppedDatasetCount={croppedDatasetCount}
             className="dataset-panel"
             key={organization}
             organizationName={this.state.organizationNameMap[organization] || organization}

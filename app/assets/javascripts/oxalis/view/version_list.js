@@ -1,23 +1,23 @@
 // @flow
+import { List } from "antd";
 import * as React from "react";
 import _ from "lodash";
 import moment from "moment";
-import { List } from "antd";
-import Store from "oxalis/store";
+
+import type { APIUpdateActionBatch } from "admin/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
-import Model from "oxalis/model";
-import api from "oxalis/api/internal_api";
+import type { Versions } from "oxalis/view/version_view";
+import { chunkIntoTimeWindows } from "libs/utils";
 import { getUpdateActionLog } from "admin/admin_rest_api";
+import { handleGenericError } from "libs/error_handling";
+import { pushSaveQueueAction, setVersionNumberAction } from "oxalis/model/actions/save_actions";
+import { revertToVersion, serverCreateTracing } from "oxalis/model/sagas/update_actions";
 import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_actions";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
-import { handleGenericError } from "libs/error_handling";
-import { revertToVersion, serverCreateTracing } from "oxalis/model/sagas/update_actions";
-import { pushSaveQueueAction, setVersionNumberAction } from "oxalis/model/actions/save_actions";
+import Model from "oxalis/model";
+import Store, { type SkeletonTracing, type VolumeTracing } from "oxalis/store";
 import VersionEntryGroup from "oxalis/view/version_entry_group";
-import { chunkIntoTimeWindows } from "libs/utils";
-import type { APIUpdateActionBatch } from "admin/api_flow_types";
-import type { SkeletonTracing, VolumeTracing } from "oxalis/store";
-import type { Versions } from "oxalis/view/version_view";
+import api from "oxalis/api/internal_api";
 
 type Props = {
   tracingType: "skeleton" | "volume",

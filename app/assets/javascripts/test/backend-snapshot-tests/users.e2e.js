@@ -1,6 +1,5 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 // @flow
-import test from "ava";
 import {
   tokenUserA,
   setCurrToken,
@@ -8,6 +7,7 @@ import {
   writeFlowCheckingFile,
 } from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
+import test from "ava";
 
 test.before("Reset database and change token", async () => {
   resetDatabase();

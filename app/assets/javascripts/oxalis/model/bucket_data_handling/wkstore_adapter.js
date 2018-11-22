@@ -1,25 +1,23 @@
 // @flow
 
-import Request from "libs/request";
-import Store from "oxalis/store";
-import { pushSaveQueueAction } from "oxalis/model/actions/save_actions";
-import { updateBucket } from "oxalis/model/sagas/update_actions";
-import { doWithToken } from "admin/admin_rest_api";
 import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import type { Vector3, Vector4 } from "oxalis/constants";
-import type { DataLayerType } from "oxalis/store";
+import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
+import { createWorker } from "oxalis/workers/comlink_wrapper";
+import { doWithToken } from "admin/admin_rest_api";
+import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getResolutions,
   isSegmentationLayer,
   getByteCountFromLayer,
 } from "oxalis/model/accessors/dataset_accessor";
-import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
-import constants from "oxalis/constants";
-import { createWorker } from "oxalis/workers/comlink_wrapper";
-import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
-import ByteArrayToBase64Worker from "oxalis/workers/byte_array_to_base64.worker";
 import { parseAsMaybe } from "libs/utils";
-import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import { pushSaveQueueAction } from "oxalis/model/actions/save_actions";
+import { updateBucket } from "oxalis/model/sagas/update_actions";
+import ByteArrayToBase64Worker from "oxalis/workers/byte_array_to_base64.worker";
+import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
+import Request from "libs/request";
+import Store, { type DataLayerType } from "oxalis/store";
+import constants, { type Vector3, type Vector4 } from "oxalis/constants";
 
 const decodeFourBit = createWorker(DecodeFourBitWorker);
 const byteArrayToBase64 = createWorker(ByteArrayToBase64Worker);

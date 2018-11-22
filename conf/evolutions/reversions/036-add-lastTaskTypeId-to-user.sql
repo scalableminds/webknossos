@@ -6,6 +6,6 @@ ALTER TABLE webknossos.users DROP lastTaskTypeId;
 
 CREATE VIEW webknossos.users_ AS SELECT * FROM webknossos.users WHERE NOT isDeleted;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 33;
+UPDATE webknossos.releaseInformation SET schemaVersion = 35;
 
 COMMIT TRANSACTION;

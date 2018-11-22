@@ -7,18 +7,19 @@ import { createStore, applyMiddleware } from "redux";
 import createSagaMiddleware from "redux-saga";
 
 import type {
-  APIRestrictions,
   APIAllowedMode,
-  APISettings,
-  APIDataStore,
-  APITracingType,
-  APIScript,
-  APITask,
-  APIUser,
-  APIDatasetId,
-  APIDataset,
   APIDataLayer,
+  APIDataStore,
+  APIDataset,
+  APIDatasetId,
+  APIRestrictions,
+  APIScript,
+  APISettings,
+  APITask,
   APITracingStore,
+  APITracingType,
+  APIUser,
+  MeshMetaData,
 } from "admin/api_flow_types";
 import type { Action } from "oxalis/model/actions/actions";
 import type { Matrix4x4 } from "libs/mjs";
@@ -144,6 +145,7 @@ export type Annotation = {|
   +name: string,
   +tracingStore: APITracingStore,
   +tracingType: TracingTypeTracing,
+  +meshes: Array<MeshMetaData>,
 |};
 
 type TracingBase = {|
@@ -350,6 +352,7 @@ type UiInformation = {
   +showDropzoneModal: boolean,
   +showVersionRestore: boolean,
   +storedLayouts: Object,
+  +isImportingMesh: boolean,
 };
 
 export type OxalisState = {|
@@ -393,6 +396,7 @@ const initialAnnotationInfo = {
     url: "http://localhost:9000",
   },
   tracingType: "View",
+  meshes: [],
 };
 
 export const defaultState: OxalisState = {
@@ -536,6 +540,7 @@ export const defaultState: OxalisState = {
     showDropzoneModal: false,
     showVersionRestore: false,
     storedLayouts: {},
+    isImportingMesh: false,
   },
 };
 

@@ -19,9 +19,9 @@ import { setViewModeAction, updateUserSettingAction } from "oxalis/model/actions
 import { wkReadyAction } from "oxalis/model/actions/actions";
 import ApiLoader from "oxalis/api/api_loader";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
+import { initializeSceneController } from "oxalis/controller/scene_controller";
 import Model from "oxalis/model";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
-import SceneController from "oxalis/controller/scene_controller";
 import Store, {
   type OxalisState,
   type TraceOrViewCommand,
@@ -118,7 +118,7 @@ class Controller extends React.PureComponent<Props, State> {
     window.onbeforeunload = beforeUnload;
 
     UrlManager.startUrlUpdater();
-    SceneController.initialize();
+    initializeSceneController();
 
     // FPS stats
     this.stats = new Stats();

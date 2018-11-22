@@ -40,9 +40,9 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setDirectionAction } from "oxalis/model/actions/flycam_actions";
 import type PlaneView from "oxalis/view/plane_view";
-import SceneController from "oxalis/controller/scene_controller";
 import Store from "oxalis/store";
 import api from "oxalis/api/internal_api";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 
 const OrthoViewToNumber: OrthoViewMap<number> = {
   [OrthoViews.PLANE_XY]: 0,
@@ -131,6 +131,7 @@ function onClick(
     // do nothing
     return;
   }
+  const SceneController = getSceneController();
 
   // render the clicked viewport with picking enabled
   // we need a dedicated pickingScene, since we only want to render all nodes and no planes / bounding box / edges etc.

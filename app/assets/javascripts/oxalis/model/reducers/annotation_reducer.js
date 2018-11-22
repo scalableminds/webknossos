@@ -4,8 +4,8 @@ import update from "immutability-helper";
 
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState } from "oxalis/store";
+import { type StateShape1, updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
 import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reducers/reducer_helpers";
-import { updateKey, updateKey2, type StateShape1 } from "oxalis/model/helpers/deep_update";
 
 const updateTracing = (state: OxalisState, shape: StateShape1<"tracing">): OxalisState =>
   updateKey(state, "tracing", shape);
@@ -58,6 +58,30 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
           ...maybeReadOnlyUpdater,
         },
       });
+    }
+
+    case "UPDATE_LOCAL_MESH_METADATA":
+    case "UPDATE_REMOTE_MESH_METADATA": {
+      const { id, meshShape } = action;
+      const newMeshes = state.tracing.meshes.map(mesh => {
+        if (mesh.id === id) {
+          return { ...mesh, ...meshShape, id };
+        } else {
+          return mesh;
+        }
+      });
+      return updateKey(state, "tracing", { meshes: newMeshes });
+    }
+
+    case "ADD_MESH_METADATA": {
+      const newMeshes = state.tracing.meshes.concat(action.mesh);
+      return updateKey(state, "tracing", { meshes: newMeshes });
+    }
+
+    case "DELETE_MESH": {
+      const { id } = action;
+      const newMeshes = state.tracing.meshes.filter(mesh => mesh.id !== id);
+      return updateKey(state, "tracing", { meshes: newMeshes });
     }
 
     default:

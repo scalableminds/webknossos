@@ -1,8 +1,11 @@
 // @flow
 /* eslint-disable jsx-a11y/href-no-hash */
 import { Dropdown, Menu, Icon, Modal } from "antd";
-import React from "react";
 import { connect } from "react-redux";
+import React from "react";
+
+import type { APIUser, APITask, APIAnnotation } from "admin/api_flow_types";
+import type { OxalisState } from "oxalis/store";
 import { formatSeconds } from "libs/format_utils";
 import {
   getAnnotationsForTask,
@@ -11,12 +14,10 @@ import {
   resetAnnotation,
   deleteAnnotation,
 } from "admin/admin_rest_api";
-import Toast from "libs/toast";
-import messages from "messages";
-import TransferTaskModal from "dashboard/transfer_task_modal";
-import type { APIUser, APITask, APIAnnotation } from "admin/api_flow_types";
-import type { OxalisState } from "oxalis/store";
 import FormattedDate from "components/formatted_date";
+import Toast from "libs/toast";
+import TransferTaskModal from "dashboard/transfer_task_modal";
+import messages from "messages";
 
 const { Item } = Menu;
 const { confirm } = Modal;

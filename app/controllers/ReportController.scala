@@ -14,20 +14,24 @@ import utils.{ObjectId, SQLClient, SimpleSQLDAO, WkConf}
 
 import scala.concurrent.ExecutionContext
 
-
 case class OpenTasksEntry(id: String, user: String, totalAssignments: Int, assignmentsByProjects: Map[String, Int])
 object OpenTasksEntry { implicit val jsonFormat = Json.format[OpenTasksEntry] }
 
-case class ProjectProgressEntry(projectName: String, paused: Boolean, totalTasks: Int, totalInstances: Int, openInstances: Int,
-                                finishedInstances: Int, activeInstances: Int)
+case class ProjectProgressEntry(projectName: String,
+                                paused: Boolean,
+                                totalTasks: Int,
+                                totalInstances: Int,
+                                openInstances: Int,
+                                finishedInstances: Int,
+                                activeInstances: Int)
 object ProjectProgressEntry { implicit val jsonFormat = Json.format[ProjectProgressEntry] }
 
-class ReportDAO @Inject()(sqlClient: SQLClient, annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext) extends SimpleSQLDAO(sqlClient) {
+class ReportDAO @Inject()(sqlClient: SQLClient, annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext)
+    extends SimpleSQLDAO(sqlClient) {
 
-  def projectProgress(teamId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[ProjectProgressEntry]] = {
+  def projectProgress(teamId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[ProjectProgressEntry]] =
     for {
-      r <- run(
-        sql"""
+      r <- run(sql"""
           with teamMembers as (select _user from webknossos.user_team_roles ut where ut._team = ${teamId.id})
 
           ,experiences as (select ue.domain, ue.value
@@ -86,10 +90,8 @@ class ReportDAO @Inject()(sqlClient: SQLClient, annotationDAO: AnnotationDAO)(im
     } yield {
       r.toList.map(row => ProjectProgressEntry(row._1, row._2, row._3, row._4, row._5, row._6, row._7))
     }
-  }
 
-
-  def getAssignmentsByProjectsFor(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Map[String, Int]] = {
+  def getAssignmentsByProjectsFor(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Map[String, Int]] =
     for {
       r <- run(sql"""
         select p._id, p.name, t.neededExperience_domain, t.neededExperience_value, count(t._id)
@@ -111,7 +113,6 @@ class ReportDAO @Inject()(sqlClient: SQLClient, annotationDAO: AnnotationDAO)(im
       val formattedList = r.toList.map(row => (row._2 + "/" + row._3 + ": " + row._4, row._5))
       formattedList.toMap.filter(_ match { case (title: String, openTaskCount: Int) => openTaskCount > 0 })
     }
-  }
 
 }
 
@@ -120,9 +121,9 @@ class ReportController @Inject()(reportDAO: ReportDAO,
                                  userDAO: UserDAO,
                                  userService: UserService,
                                  conf: WkConf,
-                                 sil: Silhouette[WkEnv])
-                                (implicit ec: ExecutionContext)
-  extends Controller with FoxImplicits {
+                                 sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
+    extends Controller
+    with FoxImplicits {
 
   def projectProgressOverview(teamId: String) = sil.SecuredAction.async { implicit request =>
     for {
@@ -141,7 +142,8 @@ class ReportController @Inject()(reportDAO: ReportDAO,
     } yield Ok(Json.toJson(entries))
   }
 
-  private def getAllAvailableTaskCountsAndProjects(users: Seq[User])(implicit ctx: DBAccessContext): Fox[List[OpenTasksEntry]] = {
+  private def getAllAvailableTaskCountsAndProjects(users: Seq[User])(
+      implicit ctx: DBAccessContext): Fox[List[OpenTasksEntry]] = {
     val foxes = users.map { user =>
       for {
         assignmentCountsByProject <- reportDAO.getAssignmentsByProjectsFor(user._id)
@@ -151,6 +153,5 @@ class ReportController @Inject()(reportDAO: ReportDAO,
     }
     Fox.combined(foxes.toList)
   }
-
 
 }

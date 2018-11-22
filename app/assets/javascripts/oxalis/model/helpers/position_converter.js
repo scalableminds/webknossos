@@ -1,7 +1,6 @@
 // @flow
 
-import type { Vector3, Vector4 } from "oxalis/constants";
-import constants from "oxalis/constants";
+import constants, { type Vector3, type Vector4 } from "oxalis/constants";
 
 export function globalPositionToBaseBucket(pos: Vector3): Vector4 {
   return globalPositionToBucketPosition(pos, [[1, 1, 1]], 0);

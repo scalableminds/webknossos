@@ -1,6 +1,7 @@
 // @flow
 
 import jsonschema from "jsonschema";
+
 import DatasourceSchema from "libs/datasource.schema.json";
 
 const validator = new jsonschema.Validator();

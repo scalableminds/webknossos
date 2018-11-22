@@ -1,12 +1,12 @@
 // @flow
-import * as React from "react";
 import { Row, Col, Card, Popover } from "antd";
 import Markdown from "react-remarkable";
-import { formatScale } from "libs/format_utils";
+import * as React from "react";
 import _ from "lodash";
-import { getThumbnailURL, hasSegmentation } from "oxalis/model/accessors/dataset_accessor";
 
 import type { APIDataset } from "admin/api_flow_types";
+import { formatScale } from "libs/format_utils";
+import { getThumbnailURL, hasSegmentation } from "oxalis/model/accessors/dataset_accessor";
 
 const columnSpan = { xs: 24, sm: 24, md: 24, lg: 12, xl: 12, xxl: 8 };
 const thumbnailDimension = 500;

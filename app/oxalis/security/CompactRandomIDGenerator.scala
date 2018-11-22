@@ -28,6 +28,4 @@ class CompactRandomIDGenerator(sizeInBytes: Int = 16)(implicit ec: ExecutionCont
     }
   }
 
-
-
 }

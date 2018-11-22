@@ -18,52 +18,59 @@ import scala.concurrent.ExecutionContext
 class TimeController @Inject()(userService: UserService,
                                userDAO: UserDAO,
                                timeSpanDAO: TimeSpanDAO,
-                               sil: Silhouette[WkEnv])
-                              (implicit ec: ExecutionContext)
-  extends Controller with FoxImplicits {
+                               sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
+    extends Controller
+    with FoxImplicits {
 
   //all users with working hours > 0
-  def getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]) = sil.SecuredAction.async { implicit request =>
-    for {
-      users <- userDAO.findAll
-      filteredUsers <- Fox.filter(users)(user => userService.isTeamManagerOrAdminOf(request.identity, user))
-      js <- loggedTimeForUserListByMonth(filteredUsers, year, month, startDay, endDay)
-    } yield {
-      Ok(js)
+  def getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]) =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        users <- userDAO.findAll
+        filteredUsers <- Fox.filter(users)(user => userService.isTeamManagerOrAdminOf(request.identity, user))
+        js <- loggedTimeForUserListByMonth(filteredUsers, year, month, startDay, endDay)
+      } yield {
+        Ok(js)
+      }
     }
-  }
 
   //list user with working hours > 0 (only one user is also possible)
-  def getWorkingHoursOfUsers(userString: String, year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]) = sil.SecuredAction.async { implicit request =>
-    for {
-      users <- Fox.combined(userString.split(",").toList.map(email => userService.findOneByEmail(email))) ?~> "user.email.invalid"
-      _ <- Fox.combined(users.map(user => Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, user)))) ?~> "user.notAuthorised"
-      js <- loggedTimeForUserListByMonth(users, year, month, startDay, endDay)
-    } yield {
-      Ok(js)
+  def getWorkingHoursOfUsers(userString: String, year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]) =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        users <- Fox.combined(userString.split(",").toList.map(email => userService.findOneByEmail(email))) ?~> "user.email.invalid"
+        _ <- Fox.combined(users.map(user => Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, user)))) ?~> "user.notAuthorised"
+        js <- loggedTimeForUserListByMonth(users, year, month, startDay, endDay)
+      } yield {
+        Ok(js)
+      }
     }
-  }
 
-  def getWorkingHoursOfUser(userId: String, startDate: Long, endDate: Long) = sil.SecuredAction.async { implicit request =>
-    for {
-      userIdValidated <- ObjectId.parse(userId)
-      user <- userService.findOneById(userIdValidated, false) ?~> "user.notFound"
-      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, user)) ?~> "user.notAuthorised"
-      js <- loggedTimeForUserListByTimestamp(user,startDate, endDate)
-    } yield {
-      Ok(js)
-    }
+  def getWorkingHoursOfUser(userId: String, startDate: Long, endDate: Long) = sil.SecuredAction.async {
+    implicit request =>
+      for {
+        userIdValidated <- ObjectId.parse(userId)
+        user <- userService.findOneById(userIdValidated, false) ?~> "user.notFound"
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, user)) ?~> "user.notAuthorised"
+        js <- loggedTimeForUserListByTimestamp(user, startDate, endDate)
+      } yield {
+        Ok(js)
+      }
   }
 
   //helper methods
 
-  def loggedTimeForUserListByMonth(users: List[User], year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])(implicit ctx: DBAccessContext): Fox[JsValue] =  {
+  def loggedTimeForUserListByMonth(users: List[User],
+                                   year: Int,
+                                   month: Int,
+                                   startDay: Option[Int],
+                                   endDay: Option[Int])(implicit ctx: DBAccessContext): Fox[JsValue] = {
     lazy val startDate = Calendar.getInstance()
     lazy val endDate = Calendar.getInstance()
 
     val input = new SimpleDateFormat("yy")
     val output = new SimpleDateFormat("yyyy")
-    var date = input.parse(year.toString)
+    val date = input.parse(year.toString)
     val fullYear = output.format(date).toInt
 
     //set them here to first day of selected month so getActualMaximum below will use the correct month entry
@@ -82,7 +89,8 @@ class TimeController @Inject()(userService: UserService,
     Fox.combined(futureJsObjects).map(jsObjectList => Json.toJson(jsObjectList))
   }
 
-  def loggedTimeForUserListByTimestamp(user: User, startDate: Long, endDate: Long)(implicit ctx: DBAccessContext): Fox[JsValue] =  {
+  def loggedTimeForUserListByTimestamp(user: User, startDate: Long, endDate: Long)(
+      implicit ctx: DBAccessContext): Fox[JsValue] = {
     lazy val sDate = Calendar.getInstance()
     lazy val eDate = Calendar.getInstance()
 
@@ -92,15 +100,14 @@ class TimeController @Inject()(userService: UserService,
     getUserHours(user, sDate, eDate)
   }
 
-  def getUserHours(user: User, startDate: Calendar, endDate: Calendar)(implicit ctx: DBAccessContext): Fox[JsObject] = {
+  def getUserHours(user: User, startDate: Calendar, endDate: Calendar)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
       userJs <- userService.compactWrites(user)
-      timeJs <- timeSpanDAO.findAllByUserWithTask(user._id,  Some(startDate.getTimeInMillis), Some(endDate.getTimeInMillis))
+      timeJs <- timeSpanDAO.findAllByUserWithTask(user._id,
+                                                  Some(startDate.getTimeInMillis),
+                                                  Some(endDate.getTimeInMillis))
     } yield {
-      Json.obj(
-        "user" -> userJs,
-        "timelogs" -> timeJs)
+      Json.obj("user" -> userJs, "timelogs" -> timeJs)
     }
-  }
 
 }

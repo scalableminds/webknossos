@@ -1,8 +1,9 @@
 // @flow
-import test from "ava";
 import glslParser from "glsl-parser";
+
 import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
 import resolutions from "test/fixtures/resolutions";
+import test from "ava";
 
 test("Shader syntax: Ortho Mode", t => {
   const code = getMainFragmentShader({

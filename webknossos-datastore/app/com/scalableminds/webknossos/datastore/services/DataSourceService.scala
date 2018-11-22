@@ -28,7 +28,6 @@ class DataSourceService @Inject()(
                                    config: DataStoreConfig,
                                    dataSourceRepository: DataSourceRepository,
                                    val lifecycle: ApplicationLifecycle,
-                                   baseDirService: BaseDirService,
                                    @Named("webknossos-datastore") val system: ActorSystem
                                  ) extends IntervalScheduler with LazyLogging with FoxImplicits {
 
@@ -45,7 +44,6 @@ class DataSourceService @Inject()(
   def checkInbox(): Fox[Unit] = {
     logger.info(s"Scanning inbox at: $dataBaseDir")
     for {
-      _ <- baseDirService.updateSymlinks ?~> "Failed to update dataset symbolic links"
       _ <- PathUtils.listDirectories(dataBaseDir) match {
               case Full(dirs) =>
                 for {

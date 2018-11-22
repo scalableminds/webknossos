@@ -3,16 +3,17 @@
  * @flow
  */
 
-import api from "oxalis/api/internal_api";
-import * as React from "react";
-import { connect } from "react-redux";
 import { Button, Dropdown, Input, Menu, Icon, Spin, Modal, Tooltip } from "antd";
-import TreeHierarchyView from "oxalis/view/right-menu/tree_hierarchy_view";
-import InputComponent from "oxalis/view/components/input_component";
-import ButtonComponent from "oxalis/view/components/button_component";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
+import type { Dispatch } from "redux";
+import { connect } from "react-redux";
+import { saveAs } from "file-saver";
+import * as React from "react";
+
 import { getActiveTree, getActiveGroup } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getBuildInfo } from "admin/admin_rest_api";
+import { readFileAsText } from "libs/read_file";
+import { serializeToNml, getNmlName, parseNml } from "oxalis/model/helpers/nml_helpers";
+import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import {
   setTreeNameAction,
   createTreeAction,
@@ -25,15 +26,20 @@ import {
   setActiveTreeAction,
   addTreesAndGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { readFileAsText } from "libs/read_file";
-import Store from "oxalis/store";
-import { serializeToNml, getNmlName, parseNml } from "oxalis/model/helpers/nml_helpers";
-import * as Utils from "libs/utils";
-import { saveAs } from "file-saver";
-import { getBuildInfo } from "admin/admin_rest_api";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import ButtonComponent from "oxalis/view/components/button_component";
+import InputComponent from "oxalis/view/components/input_component";
+import Store, {
+  type OxalisState,
+  type SkeletonTracing,
+  type Tracing,
+  type UserConfiguration,
+} from "oxalis/store";
 import Toast from "libs/toast";
-import type { Dispatch } from "redux";
-import type { OxalisState, Tracing, SkeletonTracing, UserConfiguration } from "oxalis/store";
+import TreeHierarchyView from "oxalis/view/right-menu/tree_hierarchy_view";
+import * as Utils from "libs/utils";
+import api from "oxalis/api/internal_api";
+
 import SearchPopover from "./search_popover";
 
 const ButtonGroup = Button.Group;
@@ -250,6 +256,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
             idKey="treeId"
             searchKey="name"
             maxSearchResults={10}
+            provideShortcut
           >
             <Tooltip title="Open the search via CTRL + Shift + F">
               <ButtonComponent>

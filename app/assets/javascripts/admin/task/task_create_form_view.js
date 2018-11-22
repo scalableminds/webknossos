@@ -1,8 +1,14 @@
 // @flow
-import _ from "lodash";
-import React from "react";
-import { withRouter } from "react-router-dom";
 import { Form, Select, Button, Card, Radio, Upload, Modal, Icon, InputNumber, Spin } from "antd";
+import { type RouterHistory, withRouter } from "react-router-dom";
+import React from "react";
+import _ from "lodash";
+
+import type { APIDataset, APITaskType, APIProject, APIScript } from "admin/api_flow_types";
+import type { BoundingBoxObject } from "oxalis/store";
+import type { TaskCreationResponse } from "admin/task/task_create_bulk_view";
+import { Vector3Input, Vector6Input } from "libs/vector_input";
+import type { Vector6 } from "oxalis/constants";
 import {
   getActiveDatasets,
   getProjects,
@@ -13,15 +19,8 @@ import {
   createTaskFromNML,
   updateTask,
 } from "admin/admin_rest_api";
-import { Vector3Input, Vector6Input } from "libs/vector_input";
 import SelectExperienceDomain from "components/select_experience_domain";
 import messages from "messages";
-
-import type { APIDataset, APITaskType, APIProject, APIScript } from "admin/api_flow_types";
-import type { BoundingBoxObject } from "oxalis/store";
-import type { Vector6 } from "oxalis/constants";
-import type { TaskCreationResponse } from "admin/task/task_create_bulk_view";
-import type { RouterHistory } from "react-router-dom";
 
 const FormItem = Form.Item;
 const Option = Select.Option;

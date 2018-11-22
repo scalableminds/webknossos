@@ -1,6 +1,7 @@
 // @flow
 import * as React from "react";
 import classNames from "classnames";
+
 import type { Tree } from "oxalis/store";
 
 type Props = {

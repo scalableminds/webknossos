@@ -1,9 +1,9 @@
 // @flow
-import _ from "lodash";
-import * as React from "react";
 import { Avatar, Button, List } from "antd";
-import FormattedDate from "components/formatted_date";
+import * as React from "react";
+import _ from "lodash";
 import classNames from "classnames";
+
 import type {
   ServerUpdateAction,
   CreateNodeUpdateAction,
@@ -12,6 +12,7 @@ import type {
   DeleteTreeUpdateAction,
   RevertToVersionUpdateAction,
 } from "oxalis/model/sagas/update_actions";
+import FormattedDate from "components/formatted_date";
 
 type Description = { description: string, type: string };
 

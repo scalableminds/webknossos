@@ -13,54 +13,56 @@ import utils.{SQLClient, SQLDAO}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-
 case class DataStore(
-                       name: String,
-                       url: String,
-                       key: String,
-                       isScratch: Boolean = false,
-                       isDeleted: Boolean = false,
-                       isForeign: Boolean = false
-                       )
+    name: String,
+    url: String,
+    key: String,
+    isScratch: Boolean = false,
+    isDeleted: Boolean = false,
+    isForeign: Boolean = false
+)
 
-class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext) extends FoxImplicits with Results {
+class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext)
+    extends FoxImplicits
+    with Results {
 
-  def publicWrites(dataStore: DataStore): Fox[JsObject] = {
-    Fox.successful(Json.obj(
-      "name" -> dataStore.name,
-      "url" -> dataStore.url,
-      "isForeign" -> dataStore.isForeign,
-      "isScratch" -> dataStore.isScratch
-    ))
-  }
+  def publicWrites(dataStore: DataStore): Fox[JsObject] =
+    Fox.successful(
+      Json.obj(
+        "name" -> dataStore.name,
+        "url" -> dataStore.url,
+        "isForeign" -> dataStore.isForeign,
+        "isScratch" -> dataStore.isScratch
+      ))
 
-  def validateAccess[A](name: String)(block: (DataStore) => Future[Result])
-                       (implicit request: Request[A], m: MessagesProvider): Fox[Result] = {
+  def validateAccess[A](name: String)(block: (DataStore) => Future[Result])(implicit request: Request[A],
+                                                                            m: MessagesProvider): Fox[Result] =
     (for {
       dataStore <- dataStoreDAO.findOneByName(name)(GlobalAccessContext)
       key <- request.getQueryString("key").toFox
       _ <- bool2Fox(key == dataStore.key)
       result <- block(dataStore)
     } yield result).getOrElse(Forbidden(Messages("dataStore.notFound")))
-  }
 
 }
 
-class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SQLDAO[DataStore, DatastoresRow, Datastores](sqlClient) {
+class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+    extends SQLDAO[DataStore, DatastoresRow, Datastores](sqlClient) {
   val collection = Datastores
 
   def idColumn(x: Datastores): Rep[String] = x.name
   def isDeletedColumn(x: Datastores): Rep[Boolean] = x.isdeleted
 
   def parse(r: DatastoresRow): Fox[DataStore] =
-    Fox.successful(DataStore(
-      r.name,
-      r.url,
-      r.key,
-      r.isscratch,
-      r.isdeleted,
-      r.isforeign
-    ))
+    Fox.successful(
+      DataStore(
+        r.name,
+        r.url,
+        r.key,
+        r.isscratch,
+        r.isdeleted,
+        r.isforeign
+      ))
 
   def findOneByKey(key: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
     for {
@@ -81,15 +83,14 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
     }
 
   def updateUrlByName(name: String, url: String)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val q = for {row <- Datastores if (notdel(row) && row.name === name)} yield row.url
-    for {_ <- run(q.update(url))} yield ()
+    val q = for { row <- Datastores if notdel(row) && row.name === name } yield row.url
+    for { _ <- run(q.update(url)) } yield ()
   }
 
-  def insertOne(d: DataStore): Fox[Unit] = {
+  def insertOne(d: DataStore): Fox[Unit] =
     for {
       _ <- run(sqlu"""insert into webknossos.dataStores(name, url, key, isScratch, isDeleted, isForeign)
                              values(${d.name}, ${d.url}, ${d.key}, ${d.isScratch}, ${d.isDeleted}, ${d.isForeign})""")
     } yield ()
-  }
 
 }

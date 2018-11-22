@@ -1,9 +1,10 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-import test from "ava";
 import _ from "lodash";
+
 import mockRequire from "mock-require";
-import sinon from "sinon";
 import runAsync from "test/helpers/run-async";
+import sinon from "sinon";
+import test from "ava";
 
 const RequestMock = {
   always: (promise, func) => promise.then(func, func),

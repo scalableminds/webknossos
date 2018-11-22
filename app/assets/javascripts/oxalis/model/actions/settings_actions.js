@@ -4,6 +4,8 @@
  * settings_actions.js
  * @flow
  */
+import type { APIDataset } from "admin/api_flow_types";
+import type { Mode, ControlMode } from "oxalis/constants";
 import type {
   UserConfiguration,
   DatasetConfiguration,
@@ -11,8 +13,6 @@ import type {
   TemporaryConfiguration,
   Mapping,
 } from "oxalis/store";
-import type { APIDataset } from "admin/api_flow_types";
-import type { Mode, ControlMode } from "oxalis/constants";
 
 type UpdateUserSettingAction = {
   type: "UPDATE_USER_SETTING",

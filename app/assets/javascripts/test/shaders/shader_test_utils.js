@@ -2,12 +2,11 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 
 import * as THREE from "three";
+
 import { PNG } from "pngjs";
 import GL from "gl";
+import compileShader, { type ShaderModule } from "oxalis/shaders/shader_module_system";
 import fs from "fs";
-import compileShader from "oxalis/shaders/shader_module_system";
-
-import type { ShaderModule } from "oxalis/shaders/shader_module_system";
 
 export const dumpToPng = (gl: GL, width: number, height: number) => {
   const path = "out.png";

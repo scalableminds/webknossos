@@ -1,8 +1,6 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-import test from "ava";
-import * as FlycamActions from "oxalis/model/actions/flycam_actions";
-import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
 import { M4x4, V3 } from "libs/mjs";
+import { OrthoViews } from "oxalis/constants";
 import {
   getPosition,
   getRotation,
@@ -10,7 +8,9 @@ import {
   getLeft,
   getZoomedMatrix,
 } from "oxalis/model/accessors/flycam_accessor";
-import { OrthoViews } from "oxalis/constants";
+import * as FlycamActions from "oxalis/model/actions/flycam_actions";
+import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
+import test from "ava";
 
 function equalWithEpsilon(t, a, b, epsilon = 1e-10) {
   t.is(a.length, b.length);

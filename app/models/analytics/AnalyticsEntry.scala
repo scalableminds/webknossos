@@ -11,22 +11,24 @@ import utils.{ObjectId, SQLClient, SQLDAO}
 import scala.concurrent.ExecutionContext
 
 case class AnalyticsEntry(
-                              _id: ObjectId,
-                              _user: Option[ObjectId],
-                              namespace: String,
-                              value: JsValue,
-                              created: Long = System.currentTimeMillis(),
-                              isDeleted: Boolean = false
-                             )
+    _id: ObjectId,
+    _user: Option[ObjectId],
+    namespace: String,
+    value: JsValue,
+    created: Long = System.currentTimeMillis(),
+    isDeleted: Boolean = false
+)
 
-class AnalyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext) extends SQLDAO[AnalyticsEntry, AnalyticsRow, Analytics](sqlClient) {
+class AnalyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+    extends SQLDAO[AnalyticsEntry, AnalyticsRow, Analytics](sqlClient) {
   val collection = Analytics
 
   def idColumn(x: Analytics): Rep[String] = x._Id
   def isDeletedColumn(x: Analytics): Rep[Boolean] = x.isdeleted
 
   def parse(r: AnalyticsRow): Fox[AnalyticsEntry] =
-    Fox.successful(AnalyticsEntry(
+    Fox.successful(
+      AnalyticsEntry(
         ObjectId(r._Id),
         r._User.map(ObjectId(_)),
         r.namespace,
@@ -35,11 +37,10 @@ class AnalyticsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
         r.isdeleted
       ))
 
-  def insertOne(a: AnalyticsEntry): Fox[Unit] = {
+  def insertOne(a: AnalyticsEntry): Fox[Unit] =
     for {
       _ <- run(sqlu"""insert into webknossos.analytics(_id, _user, namespace, value, created, isDeleted)
                          values(${a._id.toString}, ${a._user.map(_.id)}, ${a.namespace}, #${sanitize(a.value.toString)},
                                 ${new java.sql.Timestamp(a.created)}, ${a.isDeleted})""")
     } yield ()
-  }
 }

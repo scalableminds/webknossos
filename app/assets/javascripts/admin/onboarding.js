@@ -1,17 +1,17 @@
 // @flow
 
-import * as React from "react";
 import { Form, Popover, Modal, Input, Button, Row, Col, Steps, Icon, Card } from "antd";
-import Toast from "libs/toast";
-import Clipboard from "clipboard-js";
 import { connect } from "react-redux";
-import type { OxalisState } from "oxalis/store";
-import type { APIUser } from "admin/api_flow_types";
-import { location } from "libs/window";
+import Clipboard from "clipboard-js";
+import * as React from "react";
 
-import RegistrationForm from "admin/auth/registration_form";
-import DatasetUploadView from "admin/dataset/dataset_upload_view";
+import type { APIUser } from "admin/api_flow_types";
+import type { OxalisState } from "oxalis/store";
+import { location } from "libs/window";
 import DatasetImportView from "dashboard/dataset/dataset_import_view";
+import DatasetUploadView from "admin/dataset/dataset_upload_view";
+import RegistrationForm from "admin/auth/registration_form";
+import Toast from "libs/toast";
 
 const Step = Steps.Step;
 const FormItem = Form.Item;

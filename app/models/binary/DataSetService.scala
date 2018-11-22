@@ -253,7 +253,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                    skipResolutions: Boolean = false,
                    requestingUserTeamMemberships: Option[List[TeamMembership]] = None): Fox[JsObject] = {
     implicit val ctx = GlobalAccessContext
-    logger.info("")
     for {
       organization <- organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound"
       teams <- allowedTeamsFor(dataSet._id)

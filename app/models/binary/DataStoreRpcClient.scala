@@ -25,7 +25,7 @@ class DataStoreRpcClient(dataStore: DataStore, dataSet: DataSet, rpc: RPC)(impli
                                 dataLayerName: String,
                                 width: Int,
                                 height: Int,
-                                zoom: Option[Int],
+                                zoom: Option[Double],
                                 center: Option[Point3D]): Fox[Array[Byte]] = {
     logger.debug(s"Thumbnail called for: $organizationName-${dataSet.name} Layer: $dataLayerName")
     rpc(s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataSet.urlEncodedName}/layers/$dataLayerName/thumbnail.json")

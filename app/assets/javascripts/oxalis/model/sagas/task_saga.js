@@ -2,29 +2,23 @@
 import React from "react";
 import _ from "lodash";
 
-import type { APITaskType } from "admin/api_flow_types";
-import { type Saga, call, put, select, take } from "oxalis/model/sagas/effect-generators";
-import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import type { APITaskType, APIUser } from "admin/api_flow_types";
+import { type Saga, call, put, select } from "oxalis/model/sagas/effect-generators";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import {
   updateDatasetSettingAction,
   updateUserSettingAction,
 } from "oxalis/model/actions/settings_actions";
+import { updateUser } from "admin/admin_rest_api";
 import NewTaskDescriptionModal from "oxalis/view/new_task_description_modal";
 import RecommendConfigurationModal from "oxalis/view/recommended_configuration_modal";
 import Toast from "libs/toast";
-import * as Utils from "libs/utils";
 import messages from "messages";
 import renderIndependently from "libs/render_independently";
 
 function* maybeShowNewTaskTypeModal(taskType: APITaskType): Saga<void> {
   // Users can aquire new tasks directly in the tracing view. Occasionally,
   // they start working on a new TaskType and need to be instructed.
-  const hasDifferentTaskType = yield* call(Utils.hasUrlParam, "differentTaskType");
-  if (!hasDifferentTaskType) {
-    return;
-  }
-
   const title = `Attention, new Task Type: ${taskType.summary}`;
   let text;
   if (taskType.description) {
@@ -89,13 +83,17 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
 }
 
 export default function* watchTasksAsync(): Saga<void> {
-  const wkReadyAction = yield* take("WK_READY");
-
   const task = yield* select(state => state.task);
-  const { version } = getSomeTracing(yield* select(state => state.tracing));
-  // Only execute these functions for tasks that are not modified yet
-  if (wkReadyAction.initialDispatch && task != null && version <= 1) {
+  const activeUser = yield* select(state => state.activeUser);
+  if (task == null || activeUser == null) return;
+
+  const { lastTaskTypeId } = activeUser;
+  const isDifferentTaskType = lastTaskTypeId == null || lastTaskTypeId !== task.type.id;
+  if (isDifferentTaskType) {
     yield* call(maybeShowNewTaskTypeModal, task.type);
     yield* call(maybeShowRecommendedConfiguration, task.type);
+
+    const updatedUser: $Shape<APIUser> = { id: activeUser.id, lastTaskTypeId: task.type.id };
+    yield* call(updateUser, updatedUser);
   }
 }

@@ -137,6 +137,7 @@ export type APIUser = APIUserBase & {
   +isActive: boolean,
   +isEditable: boolean,
   +lastActivity: number,
+  +lastTaskTypeId: ?string,
   +organization: string,
 };
 

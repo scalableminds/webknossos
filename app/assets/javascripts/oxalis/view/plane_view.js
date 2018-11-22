@@ -17,9 +17,9 @@ import Constants, {
   OrthoViewValues,
   OrthoViews,
 } from "oxalis/constants";
-import SceneController from "oxalis/controller/scene_controller";
 import Store from "oxalis/store";
 import app from "app";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 import window from "libs/window";
 
 export const setupRenderArea = (
@@ -66,7 +66,7 @@ class PlaneView {
     _.extend(this, BackboneEvents);
 
     this.running = false;
-    const { scene } = SceneController;
+    const { scene } = getSceneController();
 
     // Initialize main THREE.js components
     this.cameras = {};
@@ -113,6 +113,7 @@ class PlaneView {
   }
 
   renderOrthoViewToTexture(plane: OrthoView, scene: THREE.Scene): Uint8Array {
+    const SceneController = getSceneController();
     const { renderer } = SceneController;
 
     renderer.autoClear = true;
@@ -138,6 +139,7 @@ class PlaneView {
     // All 3D meshes and the trianglesplane are rendered here.
 
     TWEEN.update();
+    const SceneController = getSceneController();
 
     // skip rendering if nothing has changed
     // This prevents the GPU/CPU from constantly
@@ -193,7 +195,7 @@ class PlaneView {
 
   resize = (): void => {
     const { width, height } = getDesiredLayoutRect();
-    SceneController.renderer.setSize(width, height);
+    getSceneController().renderer.setSize(width, height);
 
     for (const plane of OrthoViewValues) {
       this.cameras[plane].aspect = 1;
@@ -210,7 +212,7 @@ class PlaneView {
     this.running = false;
 
     for (const plane of OrthoViewValues) {
-      SceneController.scene.remove(this.cameras[plane]);
+      getSceneController().scene.remove(this.cameras[plane]);
     }
     window.removeEventListener("resize", this.resizeThrottled);
     this.unbindChangedScaleListener();

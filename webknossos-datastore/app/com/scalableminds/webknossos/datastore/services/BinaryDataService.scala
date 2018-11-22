@@ -2,22 +2,15 @@ package com.scalableminds.webknossos.datastore.services
 
 import java.nio.file.{Path, Paths}
 
-import com.google.inject.Inject
-import com.newrelic.api.agent.NewRelic
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest, DataServiceMappingRequest, MappingReadInstruction}
 import com.scalableminds.webknossos.datastore.storage.{CachedCube, DataCubeCache}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.dataformats.BucketProvider
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Empty, Failure, Full}
-import play.api.Configuration
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class BinaryDataService(dataBaseDir: Path, loadTimeout: FiniteDuration, maxCacheSize: Int) extends FoxImplicits with LazyLogging {
@@ -59,12 +52,7 @@ class BinaryDataService(dataBaseDir: Path, loadTimeout: FiniteDuration, maxCache
       (bytesArrays.appendArrays, notFoundIndices)
     }
   }
-
-  def handleMappingRequest(request: DataServiceMappingRequest): Fox[Array[Byte]] = {
-    val readInstruction = MappingReadInstruction(dataBaseDir, request.dataSource, request.mapping)
-    request.dataLayer.mappingProvider.load(readInstruction)
-  }
-
+  
   private def handleBucketRequest(request: DataServiceDataRequest, bucket: BucketPosition): Fox[Array[Byte]] = {
     if (request.dataLayer.doesContainBucket(bucket) && request.dataLayer.containsResolution(bucket.resolution)) {
       val readInstruction = DataReadInstruction(

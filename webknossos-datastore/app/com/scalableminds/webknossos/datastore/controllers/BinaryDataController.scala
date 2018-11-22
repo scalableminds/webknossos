@@ -45,6 +45,7 @@ class BinaryDataController @Inject()(
   extends Controller {
 
   val binaryDataService = dataServicesHolder.binaryDataService
+  val mappingService = dataServicesHolder.mappingService
 
   /**
     * Handles requests for raw binary data via HTTP POST from webKnossos.
@@ -301,7 +302,7 @@ class BinaryDataController @Inject()(
             (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
             segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Messages("dataLayer.notFound")
             mappingRequest = DataServiceMappingRequest(dataSource, segmentationLayer, mappingName)
-            result <- binaryDataService.handleMappingRequest(mappingRequest)
+            result <- mappingService.handleMappingRequest(mappingRequest)
           } yield {
             Ok(result)
           }

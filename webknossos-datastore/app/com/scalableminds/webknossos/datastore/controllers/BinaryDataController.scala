@@ -230,7 +230,7 @@ class BinaryDataController @Inject()(
                                  centerX: Option[Int],
                                  centerY: Option[Int],
                                  centerZ: Option[Int],
-                                 zoom: Option[Int]) = Action.async(parse.raw) {
+                                 zoom: Option[Double]) = Action.async(parse.raw) {
     implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
         AllowRemoteOrigin {
@@ -259,7 +259,7 @@ class BinaryDataController @Inject()(
                                  centerX: Option[Int],
                                  centerY: Option[Int],
                                  centerZ: Option[Int],
-                                 zoom: Option[Int]
+                                 zoom: Option[Double]
                                ) = Action.async(parse.raw) {
     implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
@@ -352,7 +352,7 @@ class BinaryDataController @Inject()(
                                          centerX: Option[Int],
                                          centerY: Option[Int],
                                          centerZ: Option[Int],
-                                         zoom: Option[Int]
+                                         zoom: Option[Double]
                                        )(implicit m: MessagesProvider): Fox[(OutputStream) => Unit] = {
     for {
       (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)

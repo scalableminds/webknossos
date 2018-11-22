@@ -60,7 +60,7 @@ class DataSetController @Inject()(userService: UserService,
             val defaultCenterOpt = dataSet.defaultConfiguration.flatMap(c =>
               c.configuration.get("position").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Point3D])))
             val defaultZoomOpt = dataSet.defaultConfiguration.flatMap(c =>
-              c.configuration.get("zoom").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Int])))
+              c.configuration.get("zoom").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Double])))
             dataSetService
               .clientFor(dataSet)
               .flatMap(

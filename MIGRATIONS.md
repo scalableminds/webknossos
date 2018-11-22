@@ -9,6 +9,7 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 -
 ### Postgres Evolutions:
 - [033-tasktype-recommendedConfiguration.sql](033-tasktype-recommendedConfiguration.sql)
+- [034-meshes.sql](conf/evolutions/034-meshes.sql)
 
 
 ## [18.11.0](https://github.com/scalableminds/webknossos/releases/tag/18.11.0) - 2018-10-29
@@ -25,7 +26,6 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 - [030-tracingstore.sql](conf/evolutions/030-tracingstore.sql)
 - [031-maintenance.sql](conf/evolutions/031-maintenance.sql)
 - [032-scratch-datastores.sql](conf/evolutions/032-scratch-datastores.sql)
-- [033-meshes.sql](conf/evolutions/033-meshes.sql)
 
 
 ## [18.10.0](https://github.com/scalableminds/webknossos/releases/tag/18.10.0) - 2018-09-22

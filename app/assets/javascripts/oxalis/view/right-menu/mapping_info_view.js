@@ -32,7 +32,7 @@ type Props = {
 };
 
 // This function mirrors convertCellIdToRGB in the fragment shader of the rendering plane
-const convertCellIdToHSV = (id: number, customColors: ?Array<number>) => {
+export const convertCellIdToHSLA = (id: number, customColors: ?Array<number>) => {
   if (id === 0) return "white";
 
   const goldenRatio = 0.618033988749895;
@@ -40,8 +40,12 @@ const convertCellIdToHSV = (id: number, customColors: ?Array<number>) => {
   const computedColor = (lastEightBits * goldenRatio) % 1.0;
   const value = customColors != null ? customColors[lastEightBits] || 0 : computedColor;
 
-  return `hsla(${value * 360}, 100%, 50%, 0.15)`;
+  return [value, 1, 0.5, 0.15];
 };
+
+const convertHSLAToCSSString = ([h, s, l, a]) => `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
+const convertCellIdToCSS = (id, customColors) =>
+  convertHSLAToCSSString(convertCellIdToHSLA(id, customColors));
 
 const hasSegmentation = () => Model.getSegmentationLayer() != null;
 
@@ -121,10 +125,10 @@ class MappingInfoView extends React.Component<Props> {
       .map(idInfo => ({
         ...idInfo,
         unmapped: (
-          <span style={{ background: convertCellIdToHSV(idInfo.unmapped) }}>{idInfo.unmapped}</span>
+          <span style={{ background: convertCellIdToCSS(idInfo.unmapped) }}>{idInfo.unmapped}</span>
         ),
         mapped: (
-          <span style={{ background: convertCellIdToHSV(idInfo.mapped, customColors) }}>
+          <span style={{ background: convertCellIdToCSS(idInfo.mapped, customColors) }}>
             {idInfo.mapped}
           </span>
         ),

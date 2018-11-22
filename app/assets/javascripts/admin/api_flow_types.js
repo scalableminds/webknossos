@@ -2,11 +2,12 @@
  * api_flow_types.js
  * @flow
  */
-import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
-import type { Vector3, Vector6, Point3 } from "oxalis/constants";
+import Enum from "Enumjs";
+
 import type { BoundingBoxObject, Edge, CommentType, TreeGroup } from "oxalis/store";
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
-import Enum from "Enumjs";
+import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
+import type { Vector3, Vector6, Point3 } from "oxalis/constants";
 
 export type APIMessage = { ["info" | "warning" | "error"]: string };
 
@@ -282,12 +283,31 @@ export type APIAnnotationTypeCompact = {
   +typ: APITracingType,
 };
 
+export type LocalMeshMetaData = {|
+  isVisible?: boolean,
+  isLoaded?: boolean,
+  isLoading?: boolean,
+|};
+
+export type RemoteMeshMetaData = {|
+  annotationId: string,
+  position: Vector3,
+  description: string,
+  id: string,
+|};
+
+export type MeshMetaData = {|
+  ...LocalMeshMetaData,
+  ...RemoteMeshMetaData,
+|};
+
 type APIAnnotationTypeBase = APIAnnotationTypeCompact & {
   +dataStore: APIDataStore,
   +tracingStore: APITracingStore,
   +restrictions: APIRestrictions,
   +settings: APISettings,
   +user?: APIUserBase,
+  +meshes: Array<MeshMetaData>,
 };
 
 export type APIAnnotation = APIAnnotationTypeBase & {

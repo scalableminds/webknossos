@@ -6,17 +6,18 @@
  */
 
 // @flow
-import _ from "lodash";
-import type { ControlMode, Mode } from "oxalis/constants";
-import Constants, { ControlModeEnum } from "oxalis/constants";
+import Constants, { type ControlMode, ControlModeEnum, type Mode } from "oxalis/constants";
 import { navbarHeight } from "navbar";
+import _ from "lodash";
+
 import { Pane, Column, Row, Stack } from "./golden_layout_helpers";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
-export const currentLayoutVersion = 6;
+export const currentLayoutVersion = 7;
 export const layoutHeaderHeight = 20;
 export const headerHeight = 55;
 const dummyExtent = 500;
+export const show3DViewportInArbitrary = false;
 
 const LayoutSettings = {
   showPopoutIcon: false,
@@ -38,6 +39,7 @@ const Panes = {
   AbstractTreeTabView: Pane("Tree Viewer", "AbstractTreeTabView"),
   arbitraryViewport: Pane("Arbitrary View", "arbitraryViewport"),
   Mappings: Pane("Segmentation", "MappingInfoView"),
+  Meshes: Pane("Meshes", "MeshesView"),
 };
 
 function setGlContainerWidth(container: Object, width: number) {
@@ -60,8 +62,10 @@ const SkeletonRightHandColumn = Stack(
   Panes.CommentTabView,
   Panes.AbstractTreeTabView,
   Panes.Mappings,
+  Panes.Meshes,
 );
-const NonSkeletonRightHandColumn = Stack(Panes.DatasetInfoTabView, Panes.Mappings);
+
+const NonSkeletonRightHandColumn = Stack(Panes.DatasetInfoTabView, Panes.Mappings, Panes.Meshes);
 
 export const getGroundTruthLayoutRect = () => {
   const mainContainer = document.querySelector(".ant-layout .ant-layout-has-sider");
@@ -99,7 +103,11 @@ const unmemoizedGetDefaultLayouts = () => {
   const OrthoLayout = createLayout(Row(...OrthoViewsGrid, SkeletonRightHandColumn));
   const OrthoLayoutView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
   const VolumeTracingView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
-  const ArbitraryLayout = createLayout(Row(Panes.arbitraryViewport, SkeletonRightHandColumn));
+
+  const arbitraryPanes = [Panes.arbitraryViewport, SkeletonRightHandColumn].concat(
+    show3DViewportInArbitrary ? [Panes.td] : [],
+  );
+  const ArbitraryLayout = createLayout(Row(...arbitraryPanes));
 
   return { OrthoLayout, OrthoLayoutView, VolumeTracingView, ArbitraryLayout };
 };

@@ -1,14 +1,16 @@
 // @flow
-import React, { PureComponent } from "react";
-import Clipboard from "clipboard-js";
 import { Popconfirm, Alert, Divider, Radio, Modal, Input, Button, Row, Col } from "antd";
 import { connect } from "react-redux";
-import Toast from "libs/toast";
-import { setAnnotationPublicAction } from "oxalis/model/actions/annotation_actions";
-import type { OxalisState, RestrictionsAndSettings } from "oxalis/store";
+import Clipboard from "clipboard-js";
+import React, { PureComponent } from "react";
+
 import type { APIDataset } from "admin/api_flow_types";
-import { updateDataset } from "admin/admin_rest_api";
+import type { OxalisState, RestrictionsAndSettings } from "oxalis/store";
+import { setAnnotationPublicAction } from "oxalis/model/actions/annotation_actions";
 import { setDatasetAction } from "oxalis/model/actions/settings_actions";
+import { updateDataset } from "admin/admin_rest_api";
+import Toast from "libs/toast";
+import window from "libs/window";
 
 const RadioGroup = Radio.Group;
 

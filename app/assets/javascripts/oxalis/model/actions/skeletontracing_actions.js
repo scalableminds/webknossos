@@ -1,18 +1,23 @@
 // @flow
+import { Modal } from "antd";
 import React from "react";
-import Store from "oxalis/store";
+
+import type { ServerSkeletonTracing } from "admin/api_flow_types";
+import type { Vector3 } from "oxalis/constants";
 import {
   enforceSkeletonTracing,
   getActiveNode,
   getTree,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import messages from "messages";
-import { Modal } from "antd";
-import renderIndependently from "libs/render_independently";
 import RemoveTreeModal from "oxalis/view/remove_tree_modal";
-import type { Vector3 } from "oxalis/constants";
-import type { ServerSkeletonTracing } from "admin/api_flow_types";
-import type { OxalisState, SkeletonTracing, TreeMap, TreeGroup } from "oxalis/store";
+import Store, {
+  type OxalisState,
+  type SkeletonTracing,
+  type TreeGroup,
+  type TreeMap,
+} from "oxalis/store";
+import messages from "messages";
+import renderIndependently from "libs/render_independently";
 
 type InitializeSkeletonTracingAction = {
   type: "INITIALIZE_SKELETONTRACING",

@@ -3,8 +3,9 @@
  * @flow
  */
 
-import type { Vector3 } from "oxalis/constants";
 import _ from "lodash";
+
+import type { Vector3 } from "oxalis/constants";
 import { chunk3 } from "oxalis/model/helpers/chunk";
 
 const { M4x4, V2, V3 } = require("mjs")(Float32Array);

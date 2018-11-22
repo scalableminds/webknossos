@@ -1,9 +1,18 @@
 // @flow
 
+import { Button, Spin, Icon, Alert, Form, Card, Tabs, Tooltip } from "antd";
 import * as React from "react";
 import _ from "lodash";
-import { Button, Spin, Icon, Alert, Form, Card, Tabs, Tooltip } from "antd";
-import Toast from "libs/toast";
+import moment from "moment";
+
+import type {
+  APIDataset,
+  APIMessage,
+  APIDataSourceWithMessages,
+  APIDatasetId,
+} from "admin/api_flow_types";
+import type { DatasetConfiguration } from "oxalis/store";
+import { datasetCache } from "dashboard/dashboard_view";
 import {
   getDataset,
   updateDataset,
@@ -14,21 +23,14 @@ import {
   updateDatasetDatasource,
   updateDatasetTeams,
 } from "admin/admin_rest_api";
-import moment from "moment";
-import type { DatasetConfiguration } from "oxalis/store";
-import messages from "messages";
-import type {
-  APIDataset,
-  APIMessage,
-  APIDataSourceWithMessages,
-  APIDatasetId,
-} from "admin/api_flow_types";
 import { handleGenericError } from "libs/error_handling";
-import { datasetCache } from "dashboard/dashboard_view";
+import Toast from "libs/toast";
+import messages from "messages";
+
 import { Hideable, confirmAsync, hasFormError } from "./helper_components";
-import SimpleAdvancedDataForm from "./simple_advanced_data_form";
 import DefaultConfigComponent from "./default_config_component";
 import ImportGeneralComponent from "./import_general_component";
+import SimpleAdvancedDataForm from "./simple_advanced_data_form";
 
 const { TabPane } = Tabs;
 const FormItem = Form.Item;
@@ -230,13 +232,12 @@ class DatasetImportView extends React.PureComponent<Props, State> {
           }),
         );
       }
+      await updateDatasetTeams(dataset, teamIds);
 
       const dataSource = JSON.parse(formValues.dataSourceJson);
       if (this.state.dataset != null && !this.state.dataset.isForeign) {
         await updateDatasetDatasource(this.props.datasetId.name, dataset.dataStore.url, dataSource);
       }
-
-      await updateDatasetTeams(dataset, teamIds);
 
       const verb = this.props.isEditingMode ? "updated" : "imported";
       Toast.success(`Successfully ${verb} ${this.props.datasetId.name}`);

@@ -1,7 +1,6 @@
 // @flow
 
-import type { Vector3, Vector4 } from "oxalis/constants";
-import constants from "oxalis/constants";
+import constants, { type Vector3, type Vector4 } from "oxalis/constants";
 
 export function globalPositionToBaseBucket(pos: Vector3): Vector4 {
   return globalPositionToBucketPosition(pos, [[1, 1, 1]], 0);
@@ -21,6 +20,24 @@ export function globalPositionToBucketPosition(
     Math.floor(x / (constants.BUCKET_WIDTH * resolution[0])),
     Math.floor(y / (constants.BUCKET_WIDTH * resolution[1])),
     Math.floor(z / (constants.BUCKET_WIDTH * resolution[2])),
+    resolutionIndex,
+  ];
+}
+
+export function globalPositionToBucketPositionFloat(
+  [x, y, z]: Vector3,
+  resolutions: Array<Vector3>,
+  resolutionIndex: number,
+): Vector4 {
+  const resolution =
+    resolutionIndex < resolutions.length
+      ? resolutions[resolutionIndex]
+      : upsampleResolution(resolutions, resolutionIndex);
+
+  return [
+    x / (constants.BUCKET_WIDTH * resolution[0]),
+    y / (constants.BUCKET_WIDTH * resolution[1]),
+    z / (constants.BUCKET_WIDTH * resolution[2]),
     resolutionIndex,
   ];
 }

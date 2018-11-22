@@ -3,10 +3,13 @@
  * @flow
  */
 
+import Maybe from "data.maybe";
 import _ from "lodash";
 import update from "immutability-helper";
-import * as Utils from "libs/utils";
-import ColorGenerator from "libs/color_generator";
+
+import type { Action } from "oxalis/model/actions/actions";
+import type { OxalisState, SkeletonTracing } from "oxalis/store";
+import { convertServerBoundingBoxToFrontend } from "oxalis/model/reducers/reducer_helpers";
 import {
   createBranchPoint,
   deleteBranchPoint,
@@ -25,18 +28,16 @@ import {
   addTreesAndGroups,
   createTreeMapFromTreeArray,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import { convertServerBoundingBoxToFrontend } from "oxalis/model/reducers/reducer_helpers";
 import {
   getSkeletonTracing,
   findTreeByNodeId,
   getTree,
   getNodeAndTree,
 } from "oxalis/model/accessors/skeletontracing_accessor";
+import ColorGenerator from "libs/color_generator";
 import Constants from "oxalis/constants";
-import type { OxalisState, SkeletonTracing } from "oxalis/store";
-import type { Action } from "oxalis/model/actions/actions";
-import Maybe from "data.maybe";
 import Toast from "libs/toast";
+import * as Utils from "libs/utils";
 
 function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState {
   const { restrictions } = state.tracing;

@@ -1,10 +1,26 @@
 // @flow
 
-import _ from "lodash";
-import * as React from "react";
-import { connect } from "react-redux";
-import update from "immutability-helper";
+import { AutoSizer } from "react-virtualized";
 import { Dropdown, Menu, Icon, Checkbox } from "antd";
+import { connect } from "react-redux";
+import * as React from "react";
+import SortableTree from "react-sortable-tree";
+import _ from "lodash";
+import update from "immutability-helper";
+
+import {
+  MISSING_GROUP_ID,
+  TYPE_GROUP,
+  TYPE_TREE,
+  type TreeNode,
+  callDeep,
+  createGroupToTreesMap,
+  insertTreesAndTransform,
+  makeBasicGroupObject,
+  removeTreesAndTransform,
+} from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
+import type { TreeMap, TreeGroup } from "oxalis/store";
+import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import {
   setActiveTreeAction,
   setActiveGroupAction,
@@ -14,21 +30,6 @@ import {
   setTreeGroupsAction,
   setTreeGroupAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import SortableTree from "react-sortable-tree";
-import { AutoSizer } from "react-virtualized";
-import {
-  createGroupToTreesMap,
-  insertTreesAndTransform,
-  removeTreesAndTransform,
-  callDeep,
-  makeBasicGroupObject,
-  MISSING_GROUP_ID,
-  TYPE_TREE,
-  TYPE_GROUP,
-} from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
-import type { TreeMap, TreeGroup } from "oxalis/store";
-import type { TreeNode } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 
 const CHECKBOX_STYLE = { verticalAlign: "middle" };
 

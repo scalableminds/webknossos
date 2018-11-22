@@ -1,9 +1,10 @@
 // @flow
 /* eslint-disable import/prefer-default-export */
-import type { BoundingBoxType } from "oxalis/constants";
+import Maybe from "data.maybe";
+
 import type { APIAnnotation, ServerBoundingBox } from "admin/api_flow_types";
 import type { Annotation, BoundingBoxObject } from "oxalis/store";
-import Maybe from "data.maybe";
+import type { BoundingBoxType } from "oxalis/constants";
 import * as Utils from "libs/utils";
 
 export function convertServerBoundingBoxToFrontend(
@@ -49,6 +50,7 @@ export function convertServerAnnotationToFrontendAnnotation(annotation: APIAnnot
     name,
     typ: tracingType,
     tracingStore,
+    meshes,
   } = annotation;
   const restrictions = {
     ...annotation.restrictions,
@@ -63,5 +65,6 @@ export function convertServerAnnotationToFrontendAnnotation(annotation: APIAnnot
     name,
     tracingType,
     tracingStore,
+    meshes,
   };
 }

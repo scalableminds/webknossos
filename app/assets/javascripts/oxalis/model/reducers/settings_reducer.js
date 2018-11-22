@@ -4,6 +4,9 @@
  */
 
 import _ from "lodash";
+
+import type { Action } from "oxalis/model/actions/actions";
+import type { OxalisState } from "oxalis/store";
 import {
   updateKey,
   updateKey2,
@@ -11,8 +14,6 @@ import {
   type StateShape1,
   type StateShape2,
 } from "oxalis/model/helpers/deep_update";
-import type { OxalisState } from "oxalis/store";
-import type { Action } from "oxalis/model/actions/actions";
 
 //
 // Update helpers

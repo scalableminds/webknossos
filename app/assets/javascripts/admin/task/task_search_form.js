@@ -1,13 +1,13 @@
 // @flow
-import _ from "lodash";
-import React from "react";
 import { Icon, Form, Row, Dropdown, Menu, Col, Button, Input, Select } from "antd";
+import { PropTypes } from "@scalableminds/prop-types";
+import { type RouterHistory, withRouter } from "react-router-dom";
+import React from "react";
+import _ from "lodash";
+
+import type { APIUser, APIProject, APITaskType } from "admin/api_flow_types";
 import { getEditableUsers, getProjects, getTaskTypes } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
-import { PropTypes } from "@scalableminds/prop-types";
-import { withRouter } from "react-router-dom";
-import type { APIUser, APIProject, APITaskType } from "admin/api_flow_types";
-import type { RouterHistory } from "react-router-dom";
 
 const FormItem = Form.Item;
 const Option = Select.Option;

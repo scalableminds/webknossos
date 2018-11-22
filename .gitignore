@@ -26,6 +26,7 @@ binaryData
 tracingData/
 backup/
 ./data/
+fossildb-dev/
 boot/
 .idea/
 .tmp/

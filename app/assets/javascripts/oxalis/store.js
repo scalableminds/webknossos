@@ -5,51 +5,54 @@
 
 import { createStore, applyMiddleware } from "redux";
 import createSagaMiddleware from "redux-saga";
-import reduceReducers from "oxalis/model/helpers/reduce_reducers";
-import SettingsReducer from "oxalis/model/reducers/settings_reducer";
-import TaskReducer from "oxalis/model/reducers/task_reducer";
-import SaveReducer from "oxalis/model/reducers/save_reducer";
-import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
-import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
-import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
-import ViewModeReducer from "oxalis/model/reducers/view_mode_reducer";
-import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
-import UserReducer from "oxalis/model/reducers/user_reducer";
-import UiReducer from "oxalis/model/reducers/ui_reducer";
-import rootSaga from "oxalis/model/sagas/root_saga";
-import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
-import googleAnalyticsMiddleware from "oxalis/model/helpers/google_analytics_middleware";
-import Constants, { ControlModeEnum, OrthoViews } from "oxalis/constants";
+
 import type {
-  OrthoView,
-  Vector2,
-  Vector3,
-  Mode,
-  ContourMode,
-  VolumeTool,
-  ControlMode,
-  BoundingBoxType,
-  Rect,
-} from "oxalis/constants";
+  APIAllowedMode,
+  APIDataLayer,
+  APIDataStore,
+  APIDataset,
+  APIDatasetId,
+  APIRestrictions,
+  APIScript,
+  APISettings,
+  APITask,
+  APITracingStore,
+  APITracingType,
+  APIUser,
+  MeshMetaData,
+} from "admin/api_flow_types";
+import type { Action } from "oxalis/model/actions/actions";
 import type { Matrix4x4 } from "libs/mjs";
+import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
+import Constants, {
+  type BoundingBoxType,
+  type ContourMode,
+  type ControlMode,
+  ControlModeEnum,
+  type Mode,
+  type OrthoView,
+  OrthoViews,
+  type Rect,
+  type Vector2,
+  type Vector3,
+  type VolumeTool,
+} from "oxalis/constants";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import type { Action } from "oxalis/model/actions/actions";
-import type {
-  APIRestrictions,
-  APIAllowedMode,
-  APISettings,
-  APIDataStore,
-  APITracingType,
-  APIScript,
-  APITask,
-  APIUser,
-  APIDatasetId,
-  APIDataset,
-  APIDataLayer,
-  APITracingStore,
-} from "admin/api_flow_types";
+import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
+import SaveReducer from "oxalis/model/reducers/save_reducer";
+import SettingsReducer from "oxalis/model/reducers/settings_reducer";
+import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
+import TaskReducer from "oxalis/model/reducers/task_reducer";
+import UiReducer from "oxalis/model/reducers/ui_reducer";
+import UserReducer from "oxalis/model/reducers/user_reducer";
+import ViewModeReducer from "oxalis/model/reducers/view_mode_reducer";
+import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
+import googleAnalyticsMiddleware from "oxalis/model/helpers/google_analytics_middleware";
+import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
+import reduceReducers from "oxalis/model/helpers/reduce_reducers";
+import rootSaga from "oxalis/model/sagas/root_saga";
 
 export type CommentType = {|
   +content: string,
@@ -142,6 +145,7 @@ export type Annotation = {|
   +name: string,
   +tracingStore: APITracingStore,
   +tracingType: TracingTypeTracing,
+  +meshes: Array<MeshMetaData>,
 |};
 
 type TracingBase = {|
@@ -349,6 +353,7 @@ type UiInformation = {
   +showDropzoneModal: boolean,
   +showVersionRestore: boolean,
   +storedLayouts: Object,
+  +isImportingMesh: boolean,
 };
 
 export type OxalisState = {|
@@ -392,6 +397,7 @@ const initialAnnotationInfo = {
     url: "http://localhost:9000",
   },
   tracingType: "View",
+  meshes: [],
 };
 
 export const defaultState: OxalisState = {
@@ -536,6 +542,7 @@ export const defaultState: OxalisState = {
     showDropzoneModal: false,
     showVersionRestore: false,
     storedLayouts: {},
+    isImportingMesh: false,
   },
 };
 

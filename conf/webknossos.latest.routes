@@ -106,6 +106,14 @@ GET           /annotations/:typ/:id/download                                    
 
 GET           /annotations/:typ/:id/loggedTime                                  controllers.AnnotationController.loggedTime(typ: String, id: String)
 
+# Meshes
+POST          /meshes                                                           controllers.MeshController.create
+PUT           /meshes/:id                                                       controllers.MeshController.update(id: String)
+DELETE        /meshes/:id                                                       controllers.MeshController.delete(id: String)
+GET           /meshes/:id                                                       controllers.MeshController.get(id: String)
+PUT           /meshes/:id/data                                                  controllers.MeshController.updateData(id: String)
+GET           /meshes/:id/data                                                  controllers.MeshController.getData(id: String)
+
 # Tasks
 POST          /tasks                                                            controllers.TaskController.create
 POST          /tasks/createFromFiles                                            controllers.TaskController.createFromFiles

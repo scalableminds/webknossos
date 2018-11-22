@@ -1,13 +1,13 @@
 // @flow
 
-import * as React from "react";
 import { Button, Alert, Tabs } from "antd";
 import { connect } from "react-redux";
-import Store from "oxalis/store";
-import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
+import * as React from "react";
+
 import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_actions";
+import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
+import Store, { type OxalisState, type Tracing } from "oxalis/store";
 import VersionList, { previewVersion } from "oxalis/view/version_list";
-import type { OxalisState, Tracing } from "oxalis/store";
 
 const { TabPane } = Tabs;
 

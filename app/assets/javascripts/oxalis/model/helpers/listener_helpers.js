@@ -1,6 +1,5 @@
 // @flow
-import Store from "oxalis/store";
-import type { OxalisState } from "oxalis/store";
+import Store, { type OxalisState } from "oxalis/store";
 
 // Allows to listen on a certain property of the store.
 // This function should only be used for converting legacy code to redux

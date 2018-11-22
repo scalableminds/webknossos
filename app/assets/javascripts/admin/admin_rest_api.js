@@ -1,58 +1,59 @@
 // @flow
 import _ from "lodash";
-import Request from "libs/request";
-import Toast from "libs/toast";
-import type { Message } from "libs/toast";
-import * as Utils from "libs/utils";
-import window, { location } from "libs/window";
-import messages from "messages";
-import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
-import type {
-  APIUser,
-  APIScript,
-  APIScriptCreator,
-  APIScriptUpdater,
-  APITaskType,
-  APITeam,
-  APIProject,
-  APIProjectWithAssignments,
-  APIProjectCreator,
-  APIProjectUpdater,
-  APITask,
-  APIAnnotation,
-  APIAnnotationWithTask,
-  APIDataStore,
-  APITracingStore,
-  DatasetConfig,
-  APIDatasetId,
-  APIDataset,
-  APIMaybeUnimportedDataset,
-  APIDataSource,
-  APIDataSourceWithMessages,
-  APITimeInterval,
-  APIUserLoggedTime,
-  APITimeTracking,
-  APIProjectProgressReport,
-  APIOpenTasksReport,
-  APIBuildInfo,
-  APITracingType,
-  APIFeatureToggles,
-  APIOrganization,
-  ServerTracing,
-  APIActiveUser,
-  HybridServerTracing,
-  ServerSkeletonTracing,
-  ServerVolumeTracing,
-  APIAnnotationTypeCompact,
-  APIUpdateActionBatch,
-  ExperienceDomainList,
+
+import {
+  type APIActiveUser,
+  type APIAnnotation,
+  type APIAnnotationTypeCompact,
+  type APIAnnotationWithTask,
+  type APIBuildInfo,
+  type APIDataSource,
+  type APIDataSourceWithMessages,
+  type APIDataStore,
+  type APIDataset,
+  type APIDatasetId,
+  type APIFeatureToggles,
+  type APIMaybeUnimportedDataset,
+  type APIOpenTasksReport,
+  type APIOrganization,
+  type APIProject,
+  type APIProjectCreator,
+  type APIProjectProgressReport,
+  type APIProjectUpdater,
+  type APIProjectWithAssignments,
+  type APIScript,
+  type APIScriptCreator,
+  type APIScriptUpdater,
+  type APITask,
+  type APITaskType,
+  type APITeam,
+  type APITimeInterval,
+  type APITimeTracking,
+  type APITracingStore,
+  type APITracingType,
+  APITracingTypeEnum,
+  type APIUpdateActionBatch,
+  type APIUser,
+  type APIUserLoggedTime,
+  type DatasetConfig,
+  type ExperienceDomainList,
+  type HybridServerTracing,
+  type MeshMetaData,
+  type RemoteMeshMetaData,
+  type ServerSkeletonTracing,
+  type ServerTracing,
+  type ServerVolumeTracing,
 } from "admin/api_flow_types";
-import { APITracingTypeEnum } from "admin/api_flow_types";
-import type { QueryObject } from "admin/task/task_search_form";
-import type { NewTask, TaskCreationResponse } from "admin/task/task_create_bulk_view";
 import type { DatasetConfiguration } from "oxalis/store";
-import type { RequestOptions } from "libs/request";
+import type { NewTask, TaskCreationResponse } from "admin/task/task_create_bulk_view";
+import type { QueryObject } from "admin/task/task_search_form";
 import type { Versions } from "oxalis/view/version_view";
+import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
+import Request, { type RequestOptions } from "libs/request";
+import Toast, { type Message } from "libs/toast";
+import * as Utils from "libs/utils";
+import messages from "messages";
+import window, { location } from "libs/window";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -946,3 +947,43 @@ export function setMaintenance(bool: boolean): Promise<void> {
   return Request.triggerRequest("/api/maintenance", { method: bool ? "POST" : "DELETE" });
 }
 window.setMaintenance = setMaintenance;
+
+// ### Meshes
+
+type MeshMetaDataForCreation = $Diff<MeshMetaData, {| id: string |}>;
+
+export async function createMesh(
+  metadata: MeshMetaDataForCreation,
+  data: ArrayBuffer,
+): Promise<MeshMetaData> {
+  const mesh = await createMeshMetaData(metadata);
+  await updateMeshData(mesh.id, data);
+  return mesh;
+}
+
+function createMeshMetaData(metadata: MeshMetaDataForCreation): Promise<MeshMetaData> {
+  return Request.sendJSONReceiveJSON("/api/meshes", { method: "POST", data: metadata });
+}
+
+export async function updateMeshMetaData(metadata: RemoteMeshMetaData): Promise<void> {
+  return Request.sendJSONReceiveJSON(`/api/meshes/${metadata.id}`, {
+    method: "PUT",
+    data: metadata,
+  });
+}
+
+export async function updateMeshData(id: string, data: ArrayBuffer): Promise<void> {
+  return Request.sendJSONReceiveJSON(`/api/meshes/${id}/data`, { method: "PUT", data });
+}
+
+export function deleteMesh(id: string): Promise<void> {
+  return Request.triggerRequest(`/api/meshes/${id}`, { method: "DELETE" });
+}
+
+export function getMeshMetaData(id: string): Promise<MeshMetaData> {
+  return Request.receiveJSON(`/api/meshes/${id}`);
+}
+
+export function getMeshData(id: string): Promise<ArrayBuffer> {
+  return Request.receiveArraybuffer(`/api/meshes/${id}/data`);
+}

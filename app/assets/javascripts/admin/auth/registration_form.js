@@ -1,13 +1,14 @@
 // @flow
-import React from "react";
-import { Link } from "react-router-dom";
 import { Form, Input, Button, Row, Col, Icon, Select, Checkbox } from "antd";
-import messages from "messages";
-import Request from "libs/request";
-import { loginUser, getOrganizations } from "admin/admin_rest_api";
+import { Link } from "react-router-dom";
+import React from "react";
+
 import type { APIOrganization } from "admin/api_flow_types";
-import Store from "oxalis/throttled_store";
+import { loginUser, getOrganizations } from "admin/admin_rest_api";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
+import Request from "libs/request";
+import Store from "oxalis/throttled_store";
+import messages from "messages";
 
 const FormItem = Form.Item;
 const { Option } = Select;

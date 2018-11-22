@@ -9,6 +9,10 @@ export const linearizeVec3ToIndex: ShaderModule = {
     float linearizeVec3ToIndex(vec3 position, float base) {
       return position.z * base * base + position.y * base + position.x;
     }
+
+    float linearizeVec3ToIndex(vec3 position, vec3 base) {
+      return position.z * base.x * base.y + position.y * base.x + position.x;
+    }
 `,
 };
 
@@ -113,8 +117,8 @@ const getColorFor: ShaderModule = {
       float bucketIdx = linearizeVec3ToIndex(bucketPosition, bucketsPerDim);
 
       // If we are making a fallback lookup, the lookup area we are interested in starts at
-      // bucketsPerDim**3. if isFallback is true, we use that offset. Otherwise, the offset is 0.
-      float fallbackOffset = isFallback * bucketsPerDim * bucketsPerDim * bucketsPerDim;
+      // volumeOf(bucketsPerDim). If isFallback is true, we use that offset. Otherwise, the offset is 0.
+      float fallbackOffset = isFallback * bucketsPerDim.x * bucketsPerDim.y * bucketsPerDim.z;
       float bucketIdxInTexture =
         bucketIdx * floatsPerLookUpEntry
         + fallbackOffset;
@@ -127,7 +131,14 @@ const getColorFor: ShaderModule = {
 
       if (bucketAddress == -2.0) {
         // The bucket is out of bounds. Render black
-        return vec4(0.0, 0.0, 0.0, 0.0);
+        // In flight mode, it can happen that buckets were not passed to the GPU
+        // since the approximate implementation of the bucket picker missed the bucket.
+        // We simply handle this case as if the bucket was not yet loaded which means
+        // that fallback data is loaded.
+        // The downside is that data which does exist, will be rendered gray instead of black.
+        // Issue to track progress: #3446
+        float alpha = isFlightMode() ? -1.0 : 0.0;
+        return vec4(0.0, 0.0, 0.0, alpha);
       }
 
       if (bucketAddress < 0. || isNan(bucketAddress)) {

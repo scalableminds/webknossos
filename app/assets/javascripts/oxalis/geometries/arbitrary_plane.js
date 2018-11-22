@@ -2,17 +2,15 @@
  * arbitrary_plane.js
  * @flow
  */
-
 import * as THREE from "three";
-import constants, { OrthoViews } from "oxalis/constants";
-import type { Vector4 } from "oxalis/constants";
-// Importing throttled_store, would result in flickering when zooming out,
-// since the plane is not updated fast enough
-import Store from "oxalis/store";
-import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
-import SceneController from "oxalis/controller/scene_controller";
+import _ from "lodash";
 
+import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
+import Store from "oxalis/store";
+import constants, { OrthoViews, type Vector4 } from "oxalis/constants";
+import getSceneController from "oxalis/controller/scene_controller_provider";
+import shaderEditor from "oxalis/model/helpers/shader_editor";
 
 // Let's set up our trianglesplane.
 // It serves as a "canvas" where the brain images
@@ -27,15 +25,22 @@ import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_fac
 // attached to bend surface.
 // The result is then projected on a flat surface.
 
+const renderDebuggerPlane = true;
+
+type ArbitraryMeshes = {|
+  mainPlane: THREE.Mesh,
+  debuggerPlane: ?THREE.Mesh,
+|};
+
 class ArbitraryPlane {
-  mesh: THREE.Mesh;
+  meshes: ArbitraryMeshes;
   isDirty: boolean;
   stopStoreListening: () => void;
   materialFactory: PlaneMaterialFactory;
 
   constructor() {
     this.isDirty = true;
-    this.mesh = this.createMesh();
+    this.meshes = this.createMeshes();
 
     this.stopStoreListening = Store.subscribe(() => {
       this.isDirty = true;
@@ -49,68 +54,138 @@ class ArbitraryPlane {
 
   updateAnchorPoints(anchorPoint: ?Vector4, fallbackAnchorPoint: ?Vector4): void {
     if (anchorPoint) {
-      this.mesh.material.setAnchorPoint(anchorPoint);
+      this.meshes.mainPlane.material.setAnchorPoint(anchorPoint);
     }
     if (fallbackAnchorPoint) {
-      this.mesh.material.setFallbackAnchorPoint(fallbackAnchorPoint);
+      this.meshes.mainPlane.material.setFallbackAnchorPoint(fallbackAnchorPoint);
     }
   }
 
   setPosition = ({ x, y, z }: THREE.Vector3) => {
-    this.mesh.material.setGlobalPosition([x, y, z]);
+    this.meshes.mainPlane.material.setGlobalPosition([x, y, z]);
   };
 
   addToScene(scene: THREE.Scene) {
-    scene.add(this.mesh);
+    _.values(this.meshes).forEach(mesh => {
+      if (mesh) {
+        scene.add(mesh);
+      }
+    });
   }
 
   update() {
     if (this.isDirty) {
-      const { mesh } = this;
-
       const matrix = getZoomedMatrix(Store.getState().flycam);
-      mesh.matrix.set(
-        matrix[0],
-        matrix[4],
-        matrix[8],
-        matrix[12],
-        matrix[1],
-        matrix[5],
-        matrix[9],
-        matrix[13],
-        matrix[2],
-        matrix[6],
-        matrix[10],
-        matrix[14],
-        matrix[3],
-        matrix[7],
-        matrix[11],
-        matrix[15],
-      );
 
-      mesh.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
-      mesh.matrixWorldNeedsUpdate = true;
+      const updateMesh = mesh => {
+        if (!mesh) {
+          return;
+        }
+        mesh.matrix.set(
+          matrix[0],
+          matrix[4],
+          matrix[8],
+          matrix[12],
+          matrix[1],
+          matrix[5],
+          matrix[9],
+          matrix[13],
+          matrix[2],
+          matrix[6],
+          matrix[10],
+          matrix[14],
+          matrix[3],
+          matrix[7],
+          matrix[11],
+          matrix[15],
+        );
 
+        mesh.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
+        mesh.matrixWorldNeedsUpdate = true;
+      };
+
+      _.values(this.meshes).forEach(updateMesh);
       this.isDirty = false;
 
-      SceneController.update(this);
+      getSceneController().update(this);
     }
   }
 
-  createMesh() {
+  createMeshes(): ArbitraryMeshes {
+    const adaptPlane = _plane => {
+      _plane.rotation.x = Math.PI;
+      _plane.matrixAutoUpdate = false;
+      _plane.material.side = THREE.DoubleSide;
+      return _plane;
+    };
+
     this.materialFactory = new PlaneMaterialFactory(OrthoViews.PLANE_XY, false, 4);
     const textureMaterial = this.materialFactory.setup().getMaterial();
 
-    const plane = new THREE.Mesh(
-      new THREE.PlaneGeometry(constants.VIEWPORT_WIDTH, constants.VIEWPORT_WIDTH, 1, 1),
-      textureMaterial,
+    const mainPlane = adaptPlane(
+      new THREE.Mesh(
+        new THREE.PlaneGeometry(constants.VIEWPORT_WIDTH, constants.VIEWPORT_WIDTH, 1, 1),
+        textureMaterial,
+      ),
     );
-    plane.rotation.x = Math.PI;
 
-    plane.matrixAutoUpdate = false;
-    plane.doubleSided = true;
+    const debuggerPlane = renderDebuggerPlane ? adaptPlane(this.createDebuggerPlane()) : null;
 
-    return plane;
+    return {
+      mainPlane,
+      debuggerPlane,
+    };
+  }
+
+  createDebuggerPlane() {
+    const debuggerMaterial = new THREE.ShaderMaterial({
+      uniforms: this.materialFactory.uniforms,
+      vertexShader: `
+        uniform float sphericalCapRadius;
+        varying vec3 vNormal;
+        varying float isBorder;
+
+        void main() {
+          vec3 centerVertex = vec3(0.0, 0.0, -sphericalCapRadius);
+          vec3 _position = position;
+          _position += centerVertex;
+          _position = _position * (sphericalCapRadius / length(_position));
+          _position -= centerVertex;
+
+          isBorder = mod(floor(position.x * 1.0), 2.0) + mod(floor(position.y * 1.0), 2.0) > 0.0 ? 1.0 : 0.0;
+
+          gl_Position = projectionMatrix *
+                        modelViewMatrix *
+                        vec4(_position,1.0);
+          vNormal = normalize((modelViewMatrix * vec4(_position, 1.0)).xyz);
+        }
+      `,
+      fragmentShader: `
+        varying mediump vec3 vNormal;
+        varying float isBorder;
+        void main() {
+          mediump vec3 light = vec3(0.5, 0.2, 1.0);
+
+          // ensure it's normalized
+          light = normalize(light);
+
+          // calculate the dot product of
+          // the light to the vertex normal
+          mediump float dProd = max(0.0, dot(vNormal, light));
+
+          gl_FragColor = 1.0 - isBorder < 0.001 ? vec4(vec3(dProd, 1.0, 0.0), 0.9) : vec4(0.0);
+        }
+      `,
+    });
+    debuggerMaterial.transparent = true;
+
+    shaderEditor.addMaterial(99, debuggerMaterial);
+
+    const debuggerPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(constants.VIEWPORT_WIDTH, constants.VIEWPORT_WIDTH, 50, 50),
+      debuggerMaterial,
+    );
+    return debuggerPlane;
   }
 }
 

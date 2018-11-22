@@ -4,14 +4,15 @@
  */
 
 import _ from "lodash";
-import Toast from "libs/toast";
 import urljoin from "url-join";
-import { pingDataStoreIfAppropriate, pingMentionedDataStores } from "admin/datastore_health_check";
+
 import { createWorker } from "oxalis/workers/comlink_wrapper";
-import handleStatus from "libs/handle_http_status";
-import FetchBufferWorker from "oxalis/workers/fetch_buffer.worker";
-import FetchBufferWithHeadersWorker from "oxalis/workers/fetch_buffer_with_headers.worker";
+import { pingDataStoreIfAppropriate, pingMentionedDataStores } from "admin/datastore_health_check";
 import CompressWorker from "oxalis/workers/compress.worker";
+import FetchBufferWithHeadersWorker from "oxalis/workers/fetch_buffer_with_headers.worker";
+import FetchBufferWorker from "oxalis/workers/fetch_buffer.worker";
+import Toast from "libs/toast";
+import handleStatus from "libs/handle_http_status";
 
 const fetchBufferViaWorker = createWorker(FetchBufferWorker);
 const fetchBufferWithHeaders = createWorker(FetchBufferWithHeadersWorker);
@@ -55,7 +56,10 @@ class Request {
       return options;
     }
 
-    let body = _.isString(options.data) ? options.data : JSON.stringify(options.data);
+    let body =
+      _.isString(options.data) || _.isArrayBuffer(options.data)
+        ? options.data
+        : JSON.stringify(options.data);
 
     if (options.compress) {
       body = await compress(body);

@@ -1,8 +1,7 @@
 // @flow
 
 import Store from "oxalis/store";
-import type { Rect, Viewport } from "oxalis/constants";
-import constants, { ArbitraryViewport } from "oxalis/constants";
+import constants, { ArbitraryViewport, type Rect, type Viewport } from "oxalis/constants";
 
 export function getTDViewportSize(): number {
   // the viewport is always quadratic

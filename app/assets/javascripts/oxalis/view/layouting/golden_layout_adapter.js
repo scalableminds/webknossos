@@ -1,13 +1,15 @@
 // @flow
 
-import * as React from "react";
 import GoldenLayout from "golden-layout/dist/goldenlayout";
+import * as React from "react";
 import _ from "lodash";
-import Constants from "oxalis/constants";
-import Toast from "libs/toast";
-import window from "libs/window";
+
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import Constants from "oxalis/constants";
 import Store from "oxalis/store";
+import Toast from "libs/toast";
+import window, { document } from "libs/window";
+
 import { PortalTarget, RenderToPortal } from "./portal_utils";
 import { layoutEmitter, getLayoutConfig } from "./layout_persistence";
 import { resetDefaultLayouts, getGroundTruthLayoutRect } from "./default_layout_configs";

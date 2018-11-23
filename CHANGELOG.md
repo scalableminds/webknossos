@@ -11,7 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Added
 
--
+- It is possible to select trees in skeleton tracings in the hierarchy tab by using alt + left mouse. Deleting and moving trees affect all these selected trees. [#3457](https://github.com/scalableminds/webknossos/pull/3457)
 
 ### Changed
 

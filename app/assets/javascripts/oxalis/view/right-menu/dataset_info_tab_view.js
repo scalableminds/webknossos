@@ -314,20 +314,19 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
 
         <p>Viewport Width: {formatNumberToLength(zoomLevel)}</p>
         <p>Dataset Resolution: {formatScale(this.props.dataset.dataSource.scale)}</p>
-        <p>
-          <table>
-            <tbody>
-              <tr>
-                <td style={{ paddingRight: 8 }}>Dataset Extent:</td>
-                <td>{formatExtentWithLength(extentInVoxel, x => `${x}`)} Voxel³</td>
-              </tr>
-              <tr>
-                <td />
-                <td>{formatExtentWithLength(extent, formatNumberToLength)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </p>
+
+        <table>
+          <tbody>
+            <tr>
+              <td style={{ paddingRight: 8 }}>Dataset Extent:</td>
+              <td>{formatExtentWithLength(extentInVoxel, x => `${x}`)} Voxel³</td>
+            </tr>
+            <tr>
+              <td />
+              <td>{formatExtentWithLength(extent, formatNumberToLength)}</td>
+            </tr>
+          </tbody>
+        </table>
 
         {this.getTracingStatistics()}
         {this.getKeyboardShortcuts(isDatasetViewMode)}

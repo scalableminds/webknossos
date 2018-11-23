@@ -134,7 +134,7 @@ class DataSourceService @Inject()(
     for {
       _ <- validateDataSource(dataSource).toFox
       propertiesFile = dataBaseDir.resolve(dataSource.id.team).resolve(dataSource.id.name).resolve(propertiesFileName)
-      _ = JsonHelper.jsonToFile(propertiesFile, dataSource)
+      _ <- JsonHelper.jsonToFile(propertiesFile, dataSource) ?~> "Could not update datasource-properties.json"
       _ <- dataSourceRepository.updateDataSource(dataSource)
     } yield ()
   }

@@ -232,13 +232,12 @@ class DatasetImportView extends React.PureComponent<Props, State> {
           }),
         );
       }
+      await updateDatasetTeams(dataset, teamIds);
 
       const dataSource = JSON.parse(formValues.dataSourceJson);
       if (this.state.dataset != null && !this.state.dataset.isForeign) {
         await updateDatasetDatasource(this.props.datasetId.name, dataset.dataStore.url, dataSource);
       }
-
-      await updateDatasetTeams(dataset, teamIds);
 
       const verb = this.props.isEditingMode ? "updated" : "imported";
       Toast.success(`Successfully ${verb} ${this.props.datasetId.name}`);

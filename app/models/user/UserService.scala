@@ -225,7 +225,7 @@ class UserService @Inject()(conf: WkConf,
         "isEditable" -> isEditable,
         "organization" -> organization.name,
         "created" -> user.created,
-        "lastTaskTypeId" -> user.lastTaskTypeId
+        "lastTaskTypeId" -> user.lastTaskTypeId.map(_.toString)
       )
     }
   }

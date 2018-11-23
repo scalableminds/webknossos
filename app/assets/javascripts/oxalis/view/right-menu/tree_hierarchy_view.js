@@ -1,7 +1,7 @@
 // @flow
 
 import { AutoSizer } from "react-virtualized";
-import { Dropdown, Menu, Icon, Checkbox, Tooltip } from "antd";
+import { Dropdown, Menu, Icon, Checkbox } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 import SortableTree from "react-sortable-tree";
@@ -53,7 +53,6 @@ type Props = {
   onSetTreeGroup: (?number, number) => void,
   handleTreeSelect: number => void,
   handleTreeGroupSelect: (number, ?TreeGroup, ?number) => void,
-  unselectEverthing: () => void,
 };
 
 type State = {
@@ -61,7 +60,6 @@ type State = {
   expandedGroupIds: { [number]: boolean },
   groupTree: Array<TreeNode>,
   searchFocusOffset: number,
-  mouseTooltipActive: boolean,
 };
 
 class TreeHierarchyView extends React.PureComponent<Props, State> {
@@ -70,7 +68,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     groupTree: [],
     prevProps: null,
     searchFocusOffset: 0,
-    mouseTooltipActive: false,
   };
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State) {
@@ -185,6 +182,15 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         newParent.children.push(currentChild);
         currentNode.children.splice(index, 1);
         index--;
+        const indexOfNewParent = currentChild.children.indexOf(newParent);
+        if (indexOfNewParent >= 0) {
+          // when swapping selected node with new parent -> exchange parents
+          currentChild.children.splice(indexOfNewParent, 1);
+          if (!currentNode.children.includes(newParent)) {
+            // if the current node does not know the new parent yet, add it
+            currentNode.children.push(newParent);
+          }
+        }
       }
       this.setParentOfSelectedGroups(newParent, currentChild);
     }
@@ -198,11 +204,11 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     const { nextParentNode, node, treeData } = params;
     const allTreesToMove = this.props.selectedTrees;
     if (node.type === TYPE_TREE) {
-      // Add the dragged tree to the array
-      const movedTreeId = parseInt(node.id, 10);
-      if (!allTreesToMove.includes(movedTreeId)) {
-        allTreesToMove.push(movedTreeId);
-      }
+      // update the dragged tree
+      this.props.onSetTreeGroup(
+        nextParentNode.id === MISSING_GROUP_ID ? null : nextParentNode.id,
+        parseInt(node.id, 10),
+      );
     }
     const newTreeGroups = removeTreesAndTransform(treeData);
     // If there are selected groups, change the group hierarchy manually
@@ -255,14 +261,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       this.deleteGroup(groupId);
     }
   };
-
-  /* handleDraggingEvent = (params: { isDragging: boolean, draggedNode: Object }) => {
-    if (params.isDragging) {
-      this.setState({ mouseTooltipActive: true });
-    } else {
-      this.setState({ mouseTooltipActive: false });
-    }
-  }; */
 
   getNodeStyleClassForBackground = (id, isGroup = false) => {
     if (isGroup) {
@@ -376,49 +374,31 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
   render() {
     const { activeTreeId, activeGroupId } = this.props;
-    const selectionInfo = this.state.mouseTooltipActive
-      ? `${this.props.selectedTrees.length} additional tree(s) and ${
-          this.props.selectedTreeGroups.length
-        } additional group(s) moving.`
-      : `${this.props.selectedTrees.length} tree(s) and ${
-          this.props.selectedTreeGroups.length
-        } group(s) selected.`;
     return (
-      <AutoSizer className="info-tab-content">
-        {({ height, width }) => (
-          <div style={{ height, width }}>
-            {
-              <span style={{ color: "#1890ff" }}>
-                {selectionInfo}
-                <Tooltip title="Unselect everthing">
-                  <Icon
-                    type="rollback"
-                    theme="outlined"
-                    style={{ marginLeft: 32, cursor: "pointer" }}
-                    onClick={this.props.unselectEverthing}
-                  />
-                </Tooltip>
-              </span>
-            }
-            <SortableTree
-              treeData={this.state.groupTree}
-              onChange={this.onChange}
-              onMoveNode={this.onMoveNode}
-              onVisibilityToggle={this.onExpand}
-              searchMethod={this.keySearchMethod}
-              searchQuery={{ activeTreeId, activeGroupId }}
-              generateNodeProps={this.generateNodeProps}
-              canDrop={this.canDrop}
-              canDrag={this.canDrag}
-              rowHeight={24}
-              innerStyle={{ padding: 0 }}
-              scaffoldBlockPxWidth={25}
-              searchFocusOffset={this.state.searchFocusOffset}
-              reactVirtualizedListProps={{ scrollToAlignment: "auto", tabIndex: null }}
-            />
-          </div>
-        )}
-      </AutoSizer>
+      <React.Fragment>
+        <AutoSizer className="info-tab-content">
+          {({ height, width }) => (
+            <div style={{ height, width }}>
+              <SortableTree
+                treeData={this.state.groupTree}
+                onChange={this.onChange}
+                onMoveNode={this.onMoveNode}
+                onVisibilityToggle={this.onExpand}
+                searchMethod={this.keySearchMethod}
+                searchQuery={{ activeTreeId, activeGroupId }}
+                generateNodeProps={this.generateNodeProps}
+                canDrop={this.canDrop}
+                canDrag={this.canDrag}
+                rowHeight={24}
+                innerStyle={{ padding: 0 }}
+                scaffoldBlockPxWidth={25}
+                searchFocusOffset={this.state.searchFocusOffset}
+                reactVirtualizedListProps={{ scrollToAlignment: "auto", tabIndex: null }}
+              />
+            </div>
+          )}
+        </AutoSizer>
+      </React.Fragment>
     );
   }
 }

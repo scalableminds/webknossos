@@ -386,7 +386,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     }
   };
 
-  unselectEverthing = () => {
+  unselectEverything = () => {
     this.setState({ selectedTreeGroups: [], selectedTrees: [] });
   };
 
@@ -407,7 +407,6 @@ class TreesTabView extends React.PureComponent<Props, State> {
         selectedTreeGroups={this.state.selectedTreeGroups}
         handleTreeSelect={this.handleTreeSelect}
         handleTreeGroupSelect={this.handleTreeGroupSelect}
-        unselectEverthing={this.unselectEverthing}
         onDeleteGroup={(groupId: number) => {
           this.deleteGroups([groupId]);
         }}
@@ -471,6 +470,9 @@ class TreesTabView extends React.PureComponent<Props, State> {
     const activeGroupName = getActiveGroup(skeletonTracing)
       .map(activeGroup => activeGroup.name)
       .getOrElse("");
+    const selectionInfo = `${this.state.selectedTrees.length} tree(s) and ${
+      this.state.selectedTreeGroups.length
+    } group(s) selected.`;
 
     // Avoid that the title switches to the other title during the fadeout of the Modal
     let title = "";
@@ -547,7 +549,13 @@ class TreesTabView extends React.PureComponent<Props, State> {
             </ButtonComponent>
           </Dropdown>
         </InputGroup>
-
+        <div className="tree-hierarchy-header">
+          <span>{selectionInfo}</span>
+          <br />
+          <span className="clickable-text" onClick={this.unselectEverything}>
+            Click here to unselect everthing
+          </span>
+        </div>
         <ul style={{ flex: "1 1 auto", overflow: "auto", margin: 0, padding: 0 }}>
           {this.getTreesComponents()}
         </ul>

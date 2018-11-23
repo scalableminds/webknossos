@@ -217,4 +217,8 @@ V3.scaledSquaredDist = function squaredDist(a, b, scale) {
   return V3.lengthSquared(_tmpVec);
 };
 
+V3.toArray = function(vec) {
+  return [vec[0], vec[1], vec[2]];
+};
+
 export { M4x4, V2, V3 };

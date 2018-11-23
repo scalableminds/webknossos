@@ -220,6 +220,7 @@ export type DatasetConfiguration = {
   +quality: 0 | 1 | 2,
   +segmentationOpacity: number,
   +highlightHoveredCellId: boolean,
+  +renderIsosurfaces: boolean,
   +position?: Vector3,
   +zoom?: number,
   +rotation?: Vector3,
@@ -409,6 +410,7 @@ export const defaultState: OxalisState = {
     quality: 0,
     segmentationOpacity: 20,
     highlightHoveredCellId: true,
+    renderIsosurfaces: false,
     renderMissingDataBlack: true,
   },
   userConfiguration: {

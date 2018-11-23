@@ -96,8 +96,8 @@ class SceneController {
     // The dimension(s) with the highest resolution will not be distorted
     this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.dataSource.scale));
     // Add scene to the group, all Geometries are then added to group
-    this.rootGroup.add(this.isosurfacesGroup);
     this.scene.add(this.rootGroup);
+    this.scene.add(this.isosurfacesGroup);
 
     this.rootGroup.add(new THREE.DirectionalLight());
     this.addLights();

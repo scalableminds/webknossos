@@ -32,8 +32,11 @@ type Props = {
 };
 
 // This function mirrors convertCellIdToRGB in the fragment shader of the rendering plane
-export const convertCellIdToHSLA = (id: number, customColors: ?Array<number>) => {
-  if (id === 0) return "white";
+export const convertCellIdToHSLA = (id: number, customColors: ?Array<number>): Array<number> => {
+  if (id === 0) {
+    // Return white
+    return [1, 1, 1, 1];
+  }
 
   const goldenRatio = 0.618033988749895;
   const lastEightBits = id & (2 ** 8 - 1);

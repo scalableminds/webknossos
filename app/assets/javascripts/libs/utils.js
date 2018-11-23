@@ -11,6 +11,11 @@ import window, { document, location } from "libs/window";
 export type Comparator<T> = (T, T) => -1 | 0 | 1;
 type UrlParams = { [key: string]: string };
 
+export function map3<A, B>(fn: A => B, tuple: [A, A, A]): [B, B, B] {
+  const [x, y, z] = tuple;
+  return [fn(x), fn(y), fn(z)];
+}
+
 function swap(arr, a, b) {
   let tmp;
   if (arr[a] > arr[b]) {

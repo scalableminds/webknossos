@@ -19,6 +19,7 @@ import {
 import { watchDataRelevantChanges } from "oxalis/model/sagas/prefetch_saga";
 import { watchSkeletonTracingAsync } from "oxalis/model/sagas/skeletontracing_saga";
 import handleMeshChanges from "oxalis/model/sagas/handle_mesh_changes";
+import isosurfaceSaga from "oxalis/model/sagas/isosurface_saga";
 import watchPushSettingsAsync from "oxalis/model/sagas/settings_saga";
 
 export default function* rootSaga(): Saga<void> {
@@ -43,7 +44,7 @@ function* restartableSaga(): Saga<void> {
       _call(watchVolumeTracingAsync),
       _call(watchAnnotationAsync),
       _call(watchDataRelevantChanges),
-      // _call(isosurfaceSaga),
+      _call(isosurfaceSaga),
       _call(handleMeshChanges),
     ]);
   } catch (err) {

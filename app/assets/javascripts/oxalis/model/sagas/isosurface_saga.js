@@ -42,7 +42,7 @@ class ThreeDMap<T> {
   }
 }
 const isosurfacesMap: Map<number, ThreeDMap<boolean>> = new Map();
-const cubeSize = 256;
+const cubeSize = [256, 256, 256];
 
 function* ensureSuitableIsosurface(): Saga<void> {
   const renderIsosurfaces = yield* select(state => state.datasetConfiguration.renderIsosurfaces);
@@ -64,8 +64,8 @@ function* ensureSuitableIsosurface(): Saga<void> {
   const threeDMap = isosurfacesMap.get(segmentId);
 
   const zoomStep = 1;
-  const currentCube = map3(el => Math.floor(el / (cubeSize * 2 ** zoomStep)), position);
-  const cubedPostion = map3(el => el * cubeSize * 2 ** zoomStep, currentCube);
+  const currentCube = map3((el, idx) => Math.floor(el / (cubeSize[idx] * 2 ** zoomStep)), position);
+  const cubedPostion = map3((el, idx) => el * cubeSize[idx] * 2 ** zoomStep, currentCube);
   if (threeDMap.get(currentCube)) {
     return;
   }
@@ -90,8 +90,7 @@ async function loadIsosurface(
     zoomStep,
     segmentId,
     voxelDimensions,
-    // todo: change when cubeSize is an vector
-    cubeSize + voxelDimensions[0],
+    map3((el, idx) => el + cubeSize[idx], voxelDimensions),
   );
   const vertices = new Float32Array(responseBuffer);
   getSceneController().addIsosurface(vertices, segmentId);

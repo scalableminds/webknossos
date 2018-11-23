@@ -64,8 +64,9 @@ function* ensureSuitableIsosurface(): Saga<void> {
   const threeDMap = isosurfacesMap.get(segmentId);
 
   const zoomStep = 1;
-  const currentCube = map3((el, idx) => Math.floor(el / (cubeSize[idx] * 2 ** zoomStep)), position);
-  const cubedPostion = map3((el, idx) => el * cubeSize[idx] * 2 ** zoomStep, currentCube);
+  const zoomedCubeSize = map3(el => el * 2 ** zoomStep, cubeSize);
+  const currentCube = map3((el, idx) => Math.floor(el / zoomedCubeSize[idx]), position);
+  const cubedPostion = map3((el, idx) => el * zoomedCubeSize[idx], currentCube);
   if (threeDMap.get(currentCube)) {
     return;
   }
@@ -90,7 +91,7 @@ async function loadIsosurface(
     zoomStep,
     segmentId,
     voxelDimensions,
-    map3((el, idx) => el + cubeSize[idx], voxelDimensions),
+    V3.toArray(V3.add(cubeSize, voxelDimensions)),
   );
   const vertices = new Float32Array(responseBuffer);
   getSceneController().addIsosurface(vertices, segmentId);

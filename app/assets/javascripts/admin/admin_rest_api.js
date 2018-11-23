@@ -1001,7 +1001,6 @@ export function computeIsosurface(
 ): Promise<ArrayBuffer> {
   return doWithToken(token =>
     Request.sendJSONReceiveArraybuffer(
-      // todo: change dataset name
       `/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${
         layer.name
       }/isosurface?token=${token}`,

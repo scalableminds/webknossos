@@ -106,7 +106,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             onChange={_.partial(this.props.onChange, "highlightHoveredCellId")}
           />
           <SwitchSetting
-            label="Render Isosurfaces of Cells"
+            label="Render Isosurfaces (Beta)"
             value={this.props.datasetConfiguration.renderIsosurfaces}
             onChange={_.partial(this.props.onChange, "renderIsosurfaces")}
           />

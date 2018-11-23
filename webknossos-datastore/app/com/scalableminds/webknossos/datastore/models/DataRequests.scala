@@ -47,16 +47,16 @@ object WebKnossosDataRequest {
 case class WebKnossosIsosurfaceRequest(
                                         position: Point3D,
                                         zoomStep: Int,
-                                        cubeSize: Int,
+                                        cubeSize: Point3D,
                                         segmentId: Long,
                                         voxelDimensions: Point3D,
                                         mapping: Option[String] = None
                                       ) {
   def cuboid(dataLayer: DataLayer) = Cuboid(
     new VoxelPosition(position.x, position.y, position.z, dataLayer.lookUpResolution(zoomStep)),
-    cubeSize,
-    cubeSize,
-    cubeSize)
+    cubeSize.x,
+    cubeSize.y,
+    cubeSize.z)
 }
 
 object WebKnossosIsosurfaceRequest {

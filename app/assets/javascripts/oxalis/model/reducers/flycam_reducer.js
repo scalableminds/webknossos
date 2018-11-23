@@ -173,13 +173,14 @@ function FlycamReducer(state: OxalisState, action: Action): OxalisState {
     case "SET_POSITION": {
       // cannot use M4x4.clone because of immutable-seamless
       const matrix = cloneMatrix(state.flycam.currentMatrix);
-      if (action.dimensionToSkip !== 0 && !isNaN(matrix[12])) {
+      const { position } = action;
+      if (action.dimensionToSkip !== 0 && !isNaN(position[0])) {
         matrix[12] = action.position[0];
       }
-      if (action.dimensionToSkip !== 1 && !isNaN(matrix[13])) {
+      if (action.dimensionToSkip !== 1 && !isNaN(position[1])) {
         matrix[13] = action.position[1];
       }
-      if (action.dimensionToSkip !== 2 && !isNaN(matrix[14])) {
+      if (action.dimensionToSkip !== 2 && !isNaN(position[2])) {
         matrix[14] = action.position[2];
       }
       return update(state, { flycam: { currentMatrix: { $set: matrix } } });
@@ -194,11 +195,11 @@ function FlycamReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "MOVE_FLYCAM": {
-      let newMatrix = M4x4.translate(action.vector, state.flycam.currentMatrix, []);
-      if (newMatrix.includes(NaN)) {
-        // if there was a miscalculation, do not move the matrix
-        newMatrix = state.flycam.currentMatrix;
+      if (action.vector.includes(NaN)) {
+        // if the action vector is invalid, do not update
+        return state;
       }
+      const newMatrix = M4x4.translate(action.vector, state.flycam.currentMatrix, []);
       return update(state, {
         flycam: {
           currentMatrix: { $set: newMatrix },

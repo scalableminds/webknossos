@@ -15,6 +15,7 @@ import {
 import { requestWithFallback } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import ConnectionInfo from "oxalis/model/data_connection_info";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import Model from "oxalis/model";
 import Store, { type DataStoreInfo, type DataLayerType } from "oxalis/store";
 
 export type PullQueueItem = {
@@ -36,6 +37,8 @@ const createPriorityQueue = () =>
   });
 
 const BATCH_SIZE = 3;
+// If ${maximumPickerTickCount} bucket picker ticks didn't select a bucket, that bucket is discarded from the pullqueue
+const maximumPickerTickCount = 5;
 
 class PullQueue {
   cube: DataCube;
@@ -67,15 +70,26 @@ class PullQueue {
 
   pull(): Array<Promise<void>> {
     // Starting to download some buckets
+    const layerRenderingManager = Model.getLayerRenderingManagerByName(this.layerName);
+    const { currentBucketPickerTick } = layerRenderingManager;
+
     const promises = [];
     while (this.batchCount < PullQueueConstants.BATCH_LIMIT && this.priorityQueue.length > 0) {
       const batch = [];
       while (batch.length < BATCH_SIZE && this.priorityQueue.length > 0) {
         const address = this.priorityQueue.dequeue().bucket;
         const bucket = this.cube.getOrCreateBucket(address);
+
         if (bucket.type === "data" && bucket.needsRequest()) {
-          batch.push(address);
-          bucket.pull();
+          const isOutdated =
+            bucket.neededAtPickerTick != null &&
+            currentBucketPickerTick - bucket.neededAtPickerTick > maximumPickerTickCount;
+          if (!isOutdated) {
+            batch.push(address);
+            bucket.pull();
+          } else {
+            bucket.unvisualize();
+          }
         }
       }
 
@@ -152,6 +166,7 @@ class PullQueue {
     this.maybeWhitenEmptyBucket(bucketData);
     if (bucket.type === "data") {
       bucket.receiveData(bucketData);
+      bucket.setVisualizationColor(0x00ff00);
       if (zoomStep === this.cube.MAX_UNSAMPLED_ZOOM_STEP) {
         const higherAddress = zoomedAddressToAnotherZoomStep(
           bucketAddress,
@@ -175,30 +190,24 @@ class PullQueue {
     }
   }
 
-  clearNormalPriorities(): void {
-    // The following code removes all items from the priorityQueue which are not PRIORITY_HIGHEST
-
-    const newQueue = createPriorityQueue();
-    while (this.priorityQueue.length > 0) {
-      const item = this.priorityQueue.dequeue();
-      if (item.priority === PullQueueConstants.PRIORITY_HIGHEST) {
-        newQueue.queue(item);
-      } else if (item.priority > PullQueueConstants.PRIORITY_HIGHEST) {
-        // Since dequeuing is ordered, we will only receive priorities which are
-        // not PRIORITY_HIGHEST
-        break;
+  add(item: PullQueueItem, currentBucketPickerTick?: number): void {
+    const bucket = this.cube.getOrCreateBucket(item.bucket);
+    if (bucket.type === "data") {
+      if (currentBucketPickerTick == null) {
+        const layerRenderingManager = Model.getLayerRenderingManagerByName(this.layerName);
+        currentBucketPickerTick = layerRenderingManager.currentBucketPickerTick;
       }
+      bucket.setNeededAtPickerTick(currentBucketPickerTick);
     }
-    this.priorityQueue = newQueue;
-  }
 
-  add(item: PullQueueItem): void {
     this.priorityQueue.queue(item);
   }
 
   addAll(items: Array<PullQueueItem>): void {
+    const layerRenderingManager = Model.getLayerRenderingManagerByName(this.layerName);
+    const { currentBucketPickerTick } = layerRenderingManager;
     for (const item of items) {
-      this.priorityQueue.queue(item);
+      this.add(item, currentBucketPickerTick);
     }
   }
 

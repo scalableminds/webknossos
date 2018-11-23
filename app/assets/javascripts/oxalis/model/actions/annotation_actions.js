@@ -1,5 +1,10 @@
 // @flow
-import type { APIAnnotation } from "admin/api_flow_types";
+import type {
+  APIAnnotation,
+  LocalMeshMetaData,
+  MeshMetaData,
+  RemoteMeshMetaData,
+} from "admin/api_flow_types";
 import type { BoundingBoxType } from "oxalis/constants";
 
 type InitializeAnnotation = {
@@ -32,13 +37,46 @@ type SetUserBoundingBox = {
   userBoundingBox: ?BoundingBoxType,
 };
 
+export type UpdateRemoteMeshMetaDataAction = {
+  type: "UPDATE_REMOTE_MESH_METADATA",
+  id: string,
+  meshShape: $Shape<RemoteMeshMetaData>,
+};
+
+export type UpdateLocalMeshMetaDataAction = {
+  type: "UPDATE_LOCAL_MESH_METADATA",
+  id: string,
+  meshShape: $Shape<LocalMeshMetaData>,
+};
+
+export type AddMeshMetadataAction = {
+  type: "ADD_MESH_METADATA",
+  mesh: MeshMetaData,
+};
+
+export type DeleteMeshAction = {
+  type: "DELETE_MESH",
+  id: string,
+};
+
+export type CreateMeshFromBufferAction = {
+  type: "CREATE_MESH_FROM_BUFFER",
+  buffer: ArrayBuffer,
+  name: string,
+};
+
 export type AnnotationActionTypes =
   | InitializeAnnotation
   | SetAnnotationNameAction
   | SetAnnotationPubliceAction
   | SetAnnotationDescriptionAction
   | SetAnnotationAllowUpdateAction
-  | SetUserBoundingBox;
+  | UpdateRemoteMeshMetaDataAction
+  | SetUserBoundingBox
+  | AddMeshMetadataAction
+  | DeleteMeshAction
+  | CreateMeshFromBufferAction
+  | UpdateLocalMeshMetaDataAction;
 
 export const initializeAnnotationAction = (annotation: APIAnnotation): InitializeAnnotation => ({
   type: "INITIALIZE_ANNOTATION",
@@ -76,4 +114,41 @@ export const setUserBoundingBoxAction = (
 ): SetUserBoundingBox => ({
   type: "SET_USER_BOUNDING_BOX",
   userBoundingBox,
+});
+
+export const updateRemoteMeshMetaDataAction = (
+  id: string,
+  meshShape: $Shape<RemoteMeshMetaData>,
+): UpdateRemoteMeshMetaDataAction => ({
+  type: "UPDATE_REMOTE_MESH_METADATA",
+  id,
+  meshShape,
+});
+
+export const updateLocalMeshMetaDataAction = (
+  id: string,
+  meshShape: $Shape<LocalMeshMetaData>,
+): UpdateLocalMeshMetaDataAction => ({
+  type: "UPDATE_LOCAL_MESH_METADATA",
+  id,
+  meshShape,
+});
+
+export const addMeshMetaDataAction = (mesh: MeshMetaData): AddMeshMetadataAction => ({
+  type: "ADD_MESH_METADATA",
+  mesh,
+});
+
+export const deleteMeshAction = (id: string): DeleteMeshAction => ({
+  type: "DELETE_MESH",
+  id,
+});
+
+export const createMeshFromBufferAction = (
+  name: string,
+  buffer: ArrayBuffer,
+): CreateMeshFromBufferAction => ({
+  type: "CREATE_MESH_FROM_BUFFER",
+  buffer,
+  name,
 });

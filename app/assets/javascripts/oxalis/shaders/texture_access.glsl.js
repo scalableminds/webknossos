@@ -131,7 +131,14 @@ const getColorFor: ShaderModule = {
 
       if (bucketAddress == -2.0) {
         // The bucket is out of bounds. Render black
-        return vec4(0.0, 0.0, 0.0, 0.0);
+        // In flight mode, it can happen that buckets were not passed to the GPU
+        // since the approximate implementation of the bucket picker missed the bucket.
+        // We simply handle this case as if the bucket was not yet loaded which means
+        // that fallback data is loaded.
+        // The downside is that data which does exist, will be rendered gray instead of black.
+        // Issue to track progress: #3446
+        float alpha = isFlightMode() ? -1.0 : 0.0;
+        return vec4(0.0, 0.0, 0.0, alpha);
       }
 
       if (bucketAddress < 0. || isNan(bucketAddress)) {

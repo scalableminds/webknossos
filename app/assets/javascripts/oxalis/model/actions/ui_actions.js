@@ -16,9 +16,15 @@ type SetStoredLayoutsAction = {
   storedLayouts: Object,
 };
 
+type SetImportingMeshStateAction = {
+  type: "SET_IMPORTING_MESH_STATE",
+  isImporting: boolean,
+};
+
 export type UiAction =
   | SetDropzoneModalVisibilityAction
   | SetVersionRestoreVisibilityAction
+  | SetImportingMeshStateAction
   | SetStoredLayoutsAction;
 
 export const setDropzoneModalVisibilityAction = (
@@ -38,4 +44,9 @@ export const setVersionRestoreVisibilityAction = (
 export const setStoredLayoutsAction = (storedLayouts: Object): SetStoredLayoutsAction => ({
   type: "SET_STORED_LAYOUTS",
   storedLayouts,
+});
+
+export const setImportingMeshStateAction = (isImporting: boolean): SetImportingMeshStateAction => ({
+  type: "SET_IMPORTING_MESH_STATE",
+  isImporting,
 });

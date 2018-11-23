@@ -348,6 +348,7 @@ export type APIProjectProgressReport = {
   +openInstances: number,
   +activeInstances: number,
   +finishedInstances: number,
+  +priority: number,
 };
 
 export type APIOpenTasksReport = {

@@ -47,6 +47,7 @@ const hasSegmentation = () => Model.getSegmentationLayer() != null;
 
 class MappingInfoView extends React.Component<Props> {
   componentDidMount() {
+    this.isMounted = true;
     if (!hasSegmentation()) {
       return;
     }
@@ -56,6 +57,7 @@ class MappingInfoView extends React.Component<Props> {
   }
 
   componentWillUnmount() {
+    this.isMounted = false;
     if (!hasSegmentation()) {
       return;
     }
@@ -64,7 +66,12 @@ class MappingInfoView extends React.Component<Props> {
     cube.off("volumeLabeled", this._forceUpdate);
   }
 
+  isMounted: boolean = false;
+
   _forceUpdate = _.throttle(() => {
+    if (!this.isMounted) {
+      return;
+    }
     this.forceUpdate();
   }, 100);
 

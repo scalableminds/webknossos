@@ -93,21 +93,17 @@ class IsosurfaceService @Inject()(
     }
     
     val cuboid = request.cuboid
-    val voxelDimensions = request.voxelDimensions
+    val voxelDimensions = Vector3D(request.voxelDimensions.x, request.voxelDimensions.y, request.voxelDimensions.z)
 
-    val newDataRequest = DataServiceDataRequest(request.dataSource, request.dataLayer, request.mapping, cuboid, DataServiceRequestSettings.default, voxelDimensions)
+    val dataRequest = DataServiceDataRequest(request.dataSource, request.dataLayer, request.mapping, cuboid, DataServiceRequestSettings.default, request.voxelDimensions)
 
-    val newDataDimensions = Vector3I(
-      math.ceil(cuboid.width.toDouble / voxelDimensions.x.toDouble).toInt,
-      math.ceil(cuboid.height.toDouble / voxelDimensions.y.toDouble).toInt,
-      math.ceil(cuboid.depth.toDouble / voxelDimensions.z.toDouble).toInt)
+    val dataDimensions = Vector3I(
+      math.ceil(cuboid.width / voxelDimensions.x).toInt,
+      math.ceil(cuboid.height / voxelDimensions.y).toInt,
+      math.ceil(cuboid.depth / voxelDimensions.z).toInt)
+    val boundingBox = BoundingBox(Point3D(0, 0, 0), dataDimensions.x, dataDimensions.y, dataDimensions.z)
 
-    val newBoundingBox = BoundingBox(Point3D(0, 0, 0), newDataDimensions.x, newDataDimensions.y, newDataDimensions.z)
 
-    val dataRequest = DataServiceDataRequest(request.dataSource, request.dataLayer, request.mapping, cuboid, DataServiceRequestSettings.default)
-
-    val dataDimensions = Vector3I(cuboid.width, cuboid.height, cuboid.depth)
-    val boundingBox = BoundingBox(Point3D(0, 0, 0), cuboid.width, cuboid.height, cuboid.depth)
 
     val offset = Vector3D(cuboid.topLeft.globalX,cuboid.topLeft.globalY,cuboid.topLeft.globalZ) / Vector3D(cuboid.topLeft.resolution)
     val scale = Vector3D(cuboid.topLeft.resolution) * request.dataSource.scale.toVector
@@ -115,11 +111,11 @@ class IsosurfaceService @Inject()(
     val typedSegmentId = dataTypeFunctors.fromLong(request.segmentId)
 
     for {
-      data <- binaryDataService.handleDataRequest(newDataRequest)
+      data <- binaryDataService.handleDataRequest(dataRequest)
       typedData = convertData(data)
       mappedData <- applyMapping(typedData)
       mappedSegmentId <- applyMapping(Array(typedSegmentId)).map(_.head)
-      vertices = MarchingCubes.marchingCubes[T, B](mappedData, newDataDimensions, newBoundingBox, mappedSegmentId, Vector3I(1, 1, 1), voxelDimensions, offset, scale, dataTypeFunctors)
+      vertices = MarchingCubes.marchingCubes[T](mappedData, dataDimensions, boundingBox, mappedSegmentId, voxelDimensions, offset, scale)
     } yield {
       vertices
     }

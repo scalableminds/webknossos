@@ -86,9 +86,13 @@ class BinaryDataService(dataBaseDir: Path, loadTimeout: FiniteDuration, maxCache
 
     rs.reverse.foreach {
       case (bucket, data) =>
-        val xMin = math.ceil(math.max(cuboid.topLeft.x, bucket.topLeft.x).toDouble / voxelDimensions.x.toDouble).toInt * voxelDimensions.x
-        val yMin = math.ceil(math.max(cuboid.topLeft.y, bucket.topLeft.y).toDouble / voxelDimensions.y.toDouble).toInt * voxelDimensions.y
-        val zMin = math.ceil(math.max(cuboid.topLeft.z, bucket.topLeft.z).toDouble / voxelDimensions.z.toDouble).toInt * voxelDimensions.z
+        val xRemainder = cuboid.topLeft.x % voxelDimensions.x
+        val yRemainder = cuboid.topLeft.y % voxelDimensions.y
+        val zRemainder = cuboid.topLeft.z % voxelDimensions.z
+
+        val xMin = math.ceil((math.max(cuboid.topLeft.x, bucket.topLeft.x).toDouble - xRemainder) / voxelDimensions.x.toDouble).toInt * voxelDimensions.x + xRemainder
+        val yMin = math.ceil((math.max(cuboid.topLeft.y, bucket.topLeft.y).toDouble - yRemainder) / voxelDimensions.y.toDouble).toInt * voxelDimensions.y + yRemainder
+        val zMin = math.ceil((math.max(cuboid.topLeft.z, bucket.topLeft.z).toDouble - zRemainder) / voxelDimensions.z.toDouble).toInt * voxelDimensions.z + zRemainder
 
         val xMax = math.min(cuboid.bottomRight.x, bucket.topLeft.x + bucketLength)
         val yMax = math.min(cuboid.bottomRight.y, bucket.topLeft.y + bucketLength)
@@ -108,8 +112,8 @@ class BinaryDataService(dataBaseDir: Path, loadTimeout: FiniteDuration, maxCache
           val rx = (x - cuboid.topLeft.x) / voxelDimensions.x
           val ry = (y - cuboid.topLeft.y) / voxelDimensions.y
           val rz = (z - cuboid.topLeft.z) / voxelDimensions.z
-          val resultOffset = (rx + ry * resultVolume.x + rz * resultVolume.x * resultVolume.y) * bytesPerElement
 
+          val resultOffset = (rx + ry * resultVolume.x + rz * resultVolume.x * resultVolume.y) * bytesPerElement
           if (voxelDimensions.x == 1) {
             // bulk copy a row of voxels
             System.arraycopy(data, dataOffset, result, resultOffset, (xMax - x) * bytesPerElement)

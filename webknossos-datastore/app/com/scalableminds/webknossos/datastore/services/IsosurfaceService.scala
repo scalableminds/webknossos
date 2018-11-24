@@ -13,6 +13,7 @@ import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServi
 import net.liftweb.common.{Box, Failure}
 import java.nio._
 
+import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext}
 import scala.reflect.ClassTag
@@ -91,7 +92,19 @@ class IsosurfaceService @Inject()(
       dataTypeFunctors.copyDataFn(srcBuffer, dstArray)
       dstArray
     }
-    
+
+    def subVolumeContainsSegmentId[T](data: Array[T], dataDimensions: Vector3I, boundingBox: BoundingBox, segmentId: T): Boolean = {
+      for {
+        x <- boundingBox.topLeft.x until boundingBox.bottomRight.x
+        y <- boundingBox.topLeft.y until boundingBox.bottomRight.y
+        z <- boundingBox.topLeft.z until boundingBox.bottomRight.z
+      } {
+        val voxelOffset = x + y * dataDimensions.x + z * dataDimensions.x * dataDimensions.y
+        if (data(voxelOffset) == segmentId) return true
+      }
+      false
+    }
+
     val cuboid = request.cuboid
     val voxelDimensions = Vector3D(request.voxelDimensions.x, request.voxelDimensions.y, request.voxelDimensions.z)
 
@@ -101,23 +114,35 @@ class IsosurfaceService @Inject()(
       math.ceil(cuboid.width / voxelDimensions.x).toInt,
       math.ceil(cuboid.height / voxelDimensions.y).toInt,
       math.ceil(cuboid.depth / voxelDimensions.z).toInt)
-    val boundingBox = BoundingBox(Point3D(0, 0, 0), dataDimensions.x, dataDimensions.y, dataDimensions.z)
-
-
 
     val offset = Vector3D(cuboid.topLeft.globalX,cuboid.topLeft.globalY,cuboid.topLeft.globalZ) / Vector3D(cuboid.topLeft.resolution)
     val scale = Vector3D(cuboid.topLeft.resolution) * request.dataSource.scale.toVector
 
     val typedSegmentId = dataTypeFunctors.fromLong(request.segmentId)
 
+    val vertexBuffer = mutable.ArrayBuffer[Vector3D]()
+
     for {
       data <- binaryDataService.handleDataRequest(dataRequest)
       typedData = convertData(data)
       mappedData <- applyMapping(typedData)
       mappedSegmentId <- applyMapping(Array(typedSegmentId)).map(_.head)
-      vertices = MarchingCubes.marchingCubes[T](mappedData, dataDimensions, boundingBox, mappedSegmentId, voxelDimensions, offset, scale)
     } yield {
-      vertices
+      for {
+        x <- 0 until dataDimensions.x by 32
+        y <- 0 until dataDimensions.y by 32
+        z <- 0 until dataDimensions.z by 32
+      } {
+        val boundingBox = BoundingBox(
+          Point3D(x, y, z),
+          math.min(dataDimensions.x - x, 33),
+          math.min(dataDimensions.y - y, 33),
+          math.min(dataDimensions.z - z, 33))
+        if (subVolumeContainsSegmentId(mappedData, dataDimensions, boundingBox, mappedSegmentId)) {
+          MarchingCubes.marchingCubes[T](mappedData, dataDimensions, boundingBox, mappedSegmentId, voxelDimensions, offset, scale, vertexBuffer)
+        }
+      }
+      vertexBuffer.flatMap(_.toList.map(_.toFloat)).toArray
     }
   }
 }

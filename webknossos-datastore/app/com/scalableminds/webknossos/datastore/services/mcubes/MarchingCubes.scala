@@ -1,13 +1,14 @@
 package com.scalableminds.webknossos.datastore.services.mcubes
 
-import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
+import com.scalableminds.util.geometry.{BoundingBox, Vector3D, Vector3I}
+import com.scalableminds.webknossos.datastore.services.DataTypeFunctors
 
 import scala.collection.mutable
 
 object MarchingCubes {
 
-  def marchingCubes[T](data: Array[T], dataDimensions: Point3D, boundingBox: BoundingBox,
-                       segmentId: T, voxelDimensions: Point3D, offset: Vector3D, scale: Vector3D): Array[Float] = {
+  def marchingCubes[T, B](data: Array[T], dataDimensions: Vector3I, boundingBox: BoundingBox,
+                       segmentId: T, voxelDimensions: Vector3I, voxelDimensions2: Vector3I, offset: Vector3D, scale: Vector3D, dataTypeFunctors: DataTypeFunctors[T, B]): Array[Float] = {
 
     def getVoxelData(x: Int, y: Int, z: Int): T =
       data(x + (dataDimensions.x * y) + (dataDimensions.x * dataDimensions.y * z))
@@ -48,7 +49,7 @@ object MarchingCubes {
 
       val position = Vector3D(x, y, z)
       MarchingCubesTable.triangleTable(cubeIndex).foreach { edgeDelta =>
-        vertices += (position + edgeDelta * Vector3D(voxelDimensions.x, voxelDimensions.y, voxelDimensions.z) + offset) * scale
+        vertices += ((position + edgeDelta * Vector3D(voxelDimensions.x, voxelDimensions.y, voxelDimensions.z)) * Vector3D(voxelDimensions2.x, voxelDimensions2.y, voxelDimensions2.z) + offset) * scale
       }
     }
 

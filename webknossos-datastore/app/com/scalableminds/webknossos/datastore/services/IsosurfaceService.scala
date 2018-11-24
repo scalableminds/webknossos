@@ -5,7 +5,7 @@ import akka.pattern.{AskTimeoutException, ask, pipe}
 import akka.routing.RoundRobinPool
 import akka.util.Timeout
 import com.google.inject.Inject
-import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D, Vector3I}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.services.mcubes.MarchingCubes
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, ElementClass, SegmentationLayer}
@@ -22,7 +22,7 @@ case class IsosurfaceRequest(
                               dataLayer: SegmentationLayer,
                               cuboid: Cuboid,
                               segmentId: Long,
-                              voxelDimensions: Point3D,
+                              voxelDimensions: Vector3I,
                               mapping: Option[String] = None
                             )
 
@@ -91,23 +91,35 @@ class IsosurfaceService @Inject()(
       dataTypeFunctors.copyDataFn(srcBuffer, dstArray)
       dstArray
     }
+    
+    val cuboid = request.cuboid
+    val voxelDimensions = request.voxelDimensions
 
-    val dataRequest = DataServiceDataRequest(request.dataSource, request.dataLayer, request.mapping, request.cuboid, DataServiceRequestSettings.default)
+    val newDataRequest = DataServiceDataRequest(request.dataSource, request.dataLayer, request.mapping, cuboid, DataServiceRequestSettings.default, voxelDimensions)
 
-    val dimensions = Point3D(request.cuboid.width, request.cuboid.height, request.cuboid.depth)
-    val boundingBox = BoundingBox(Point3D(0, 0, 0), request.cuboid.width, request.cuboid.height, request.cuboid.depth)
+    val newDataDimensions = Vector3I(
+      math.ceil(cuboid.width.toDouble / voxelDimensions.x.toDouble).toInt,
+      math.ceil(cuboid.height.toDouble / voxelDimensions.y.toDouble).toInt,
+      math.ceil(cuboid.depth.toDouble / voxelDimensions.z.toDouble).toInt)
 
-    val offset = Vector3D(request.cuboid.topLeft.globalX,request.cuboid.topLeft.globalY,request.cuboid.topLeft.globalZ) / Vector3D(request.cuboid.topLeft.resolution)
-    val scale = Vector3D(request.cuboid.topLeft.resolution) * request.dataSource.scale.toVector
+    val newBoundingBox = BoundingBox(Point3D(0, 0, 0), newDataDimensions.x, newDataDimensions.y, newDataDimensions.z)
+
+    val dataRequest = DataServiceDataRequest(request.dataSource, request.dataLayer, request.mapping, cuboid, DataServiceRequestSettings.default)
+
+    val dataDimensions = Vector3I(cuboid.width, cuboid.height, cuboid.depth)
+    val boundingBox = BoundingBox(Point3D(0, 0, 0), cuboid.width, cuboid.height, cuboid.depth)
+
+    val offset = Vector3D(cuboid.topLeft.globalX,cuboid.topLeft.globalY,cuboid.topLeft.globalZ) / Vector3D(cuboid.topLeft.resolution)
+    val scale = Vector3D(cuboid.topLeft.resolution) * request.dataSource.scale.toVector
 
     val typedSegmentId = dataTypeFunctors.fromLong(request.segmentId)
 
     for {
-      data <- binaryDataService.handleDataRequest(dataRequest)
+      data <- binaryDataService.handleDataRequest(newDataRequest)
       typedData = convertData(data)
       mappedData <- applyMapping(typedData)
       mappedSegmentId <- applyMapping(Array(typedSegmentId)).map(_.head)
-      vertices = MarchingCubes.marchingCubes[T](mappedData, dimensions, boundingBox, mappedSegmentId, request.voxelDimensions, offset, scale)
+      vertices = MarchingCubes.marchingCubes[T, B](mappedData, newDataDimensions, newBoundingBox, mappedSegmentId, Vector3I(1, 1, 1), voxelDimensions, offset, scale, dataTypeFunctors)
     } yield {
       vertices
     }

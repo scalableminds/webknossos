@@ -8,12 +8,10 @@ import scala.collection.mutable
 object MarchingCubes {
 
   def marchingCubes[T](data: Array[T], dataDimensions: Vector3I, boundingBox: BoundingBox,
-                       segmentId: T, voxelDimensions: Vector3D, offset: Vector3D, scale: Vector3D): Array[Float] = {
+                       segmentId: T, voxelDimensions: Vector3D, offset: Vector3D, scale: Vector3D, vertexBuffer: mutable.ArrayBuffer[Vector3D]) {
 
     def getVoxelData(x: Int, y: Int, z: Int): T =
       data(x + (dataDimensions.x * y) + (dataDimensions.x * dataDimensions.y * z))
-
-    var vertices = mutable.ArrayBuffer[Vector3D]()
 
     // Volume iteration
     for {
@@ -49,10 +47,8 @@ object MarchingCubes {
 
       val position = Vector3D(x, y, z)
       MarchingCubesTable.triangleTable(cubeIndex).foreach { edgeDelta =>
-        vertices += ((position + edgeDelta) * voxelDimensions + offset) * scale
+        vertexBuffer += ((position + edgeDelta) * voxelDimensions + offset) * scale
       }
     }
-
-    vertices.flatMap(_.toList.map(_.toFloat)).toArray
   }
 }

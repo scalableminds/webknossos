@@ -144,7 +144,7 @@ export function getUser(userId: string): Promise<APIUser> {
 
 export function updateUser(newUser: $Shape<APIUser>): Promise<APIUser> {
   return Request.sendJSONReceiveJSON(`/api/users/${newUser.id}`, {
-    method: "PUT",
+    method: "PATCH",
     data: newUser,
   });
 }

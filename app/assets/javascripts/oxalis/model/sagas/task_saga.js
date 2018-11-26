@@ -3,12 +3,13 @@ import React from "react";
 import _ from "lodash";
 
 import type { APITaskType, APIUser } from "admin/api_flow_types";
-import { type Saga, call, put, select } from "oxalis/model/sagas/effect-generators";
+import { type Saga, call, put, select, take } from "oxalis/model/sagas/effect-generators";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import {
   updateDatasetSettingAction,
   updateUserSettingAction,
 } from "oxalis/model/actions/settings_actions";
+import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { updateUser } from "admin/admin_rest_api";
 import NewTaskDescriptionModal from "oxalis/view/new_task_description_modal";
 import RecommendConfigurationModal from "oxalis/view/recommended_configuration_modal";
@@ -83,6 +84,8 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
 }
 
 export default function* watchTasksAsync(): Saga<void> {
+  yield* take("WK_READY");
+
   const task = yield* select(state => state.task);
   const activeUser = yield* select(state => state.activeUser);
   if (task == null || activeUser == null) return;
@@ -94,6 +97,7 @@ export default function* watchTasksAsync(): Saga<void> {
     yield* call(maybeShowRecommendedConfiguration, task.type);
 
     const updatedUser: $Shape<APIUser> = { id: activeUser.id, lastTaskTypeId: task.type.id };
-    yield* call(updateUser, updatedUser);
+    const fullUser = yield* call(updateUser, updatedUser);
+    yield* put(setActiveUserAction(fullUser));
   }
 }

@@ -1,7 +1,12 @@
 // @flow
 
 import Store from "oxalis/store";
-import constants, { ArbitraryViewport, type Rect, type Viewport } from "oxalis/constants";
+import constants, {
+  ArbitraryViewport,
+  OUTER_CSS_BORDER,
+  type Rect,
+  type Viewport,
+} from "oxalis/constants";
 
 export function getTDViewportSize(): number {
   // the viewport is always quadratic
@@ -20,7 +25,10 @@ export function getInputCatcherRect(viewport: Viewport): Rect {
 
 export function getViewportScale(viewport: Viewport): number {
   const { width } = getInputCatcherRect(viewport);
-  return width / constants.VIEWPORT_WIDTH;
+  // For the orthogonal views the CSS border width was subtracted before, so we'll need to
+  // add it back again to get an accurate scale
+  const borderWidth = viewport === ArbitraryViewport ? 0 : OUTER_CSS_BORDER;
+  return (width + 2 * borderWidth) / constants.VIEWPORT_WIDTH;
 }
 
 export default {};

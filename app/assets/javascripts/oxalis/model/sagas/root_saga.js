@@ -20,6 +20,7 @@ import { watchDataRelevantChanges } from "oxalis/model/sagas/prefetch_saga";
 import { watchSkeletonTracingAsync } from "oxalis/model/sagas/skeletontracing_saga";
 import handleMeshChanges from "oxalis/model/sagas/handle_mesh_changes";
 import watchPushSettingsAsync from "oxalis/model/sagas/settings_saga";
+import watchIsScratchSaga from "oxalis/model/sagas/dataset_saga";
 
 export default function* rootSaga(): Saga<void> {
   while (true) {
@@ -44,6 +45,7 @@ function* restartableSaga(): Saga<void> {
       _call(watchAnnotationAsync),
       _call(watchDataRelevantChanges),
       _call(handleMeshChanges),
+      _call(watchIsScratchSaga),
     ]);
   } catch (err) {
     console.error(err);

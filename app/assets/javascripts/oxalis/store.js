@@ -467,7 +467,7 @@ export const defaultState: OxalisState = {
     dataStore: {
       name: "localhost",
       url: "http://localhost:9000",
-      typ: "webknossos-store",
+      isScratch: false,
     },
     owningOrganization: "Connectomics department",
     description: null,

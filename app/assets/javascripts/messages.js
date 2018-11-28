@@ -110,6 +110,8 @@ In order to restore the current window, a reload is necessary.`,
   "dataset.import.required.zipFile": "Please select a file to upload.",
   "dataset.import.invalid_fields": "Please check that all form fields are valid.",
   "dataset.unique_layer_names": "The layer names provided by the dataset are not unique.",
+  "dataset.is_scratch":
+    "This dataset location is meant for testing only. If you want to remove this warning import the dataset from /wKlive.",
   "annotation.finish": "Are you sure you want to permanently finish this tracing?",
   "annotation.was_finished": "Annotation was archived",
   "annotation.was_re_opened": "Annotation was reopened",

@@ -530,8 +530,7 @@ export function calculateGlobalPos(clickPos: Point2): Vector3 {
   const { activeViewport } = state.viewModeData.plane;
   const curGlobalPos = getPosition(state.flycam);
   const zoomFactor = getPlaneScalingFactor(state.flycam);
-  const actualWidth = getInputCatcherRect(activeViewport).width;
-  const viewportScale = actualWidth / constants.VIEWPORT_WIDTH;
+  const viewportScale = getViewportScale(activeViewport);
   const planeRatio = getBaseVoxelFactors(state.dataset.dataSource.scale);
 
   const center = (constants.VIEWPORT_WIDTH * viewportScale) / 2;

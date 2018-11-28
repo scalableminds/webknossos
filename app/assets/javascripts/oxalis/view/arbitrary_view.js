@@ -14,9 +14,9 @@ import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { show3DViewportInArbitrary } from "oxalis/view/layouting/default_layout_configs";
 import type ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import Constants, { ArbitraryViewport, type OrthoViewMap, OrthoViews } from "oxalis/constants";
-import SceneController from "oxalis/controller/scene_controller";
 import Store from "oxalis/store";
 import app from "app";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 import window from "libs/window";
 
 import { clearCanvas, setupRenderArea } from "./plane_view";
@@ -100,7 +100,7 @@ class ArbitraryView {
 
       this.group = new THREE.Object3D();
       this.group.add(this.camera);
-      SceneController.rootGroup.add(this.group);
+      getSceneController().rootGroup.add(this.group);
 
       this.resizeImpl();
 
@@ -124,7 +124,7 @@ class ArbitraryView {
         this.animationRequestId = null;
       }
 
-      SceneController.rootGroup.remove(this.group);
+      getSceneController().rootGroup.remove(this.group);
 
       window.removeEventListener("resize", this.resizeThrottled);
       this.unbindChangedScaleListener();
@@ -143,7 +143,7 @@ class ArbitraryView {
       this.trigger("render");
 
       const { camera, geometries } = this;
-      const { renderer, scene } = SceneController;
+      const { renderer, scene } = getSceneController();
 
       for (const geometry of geometries) {
         if (geometry.update != null) {
@@ -210,7 +210,7 @@ class ArbitraryView {
   }
 
   renderToTexture(): Uint8Array {
-    const { renderer, scene } = SceneController;
+    const { renderer, scene } = getSceneController();
 
     renderer.autoClear = true;
     let { width, height } = getInputCatcherRect(ArbitraryViewport);
@@ -300,7 +300,7 @@ class ArbitraryView {
   resizeImpl = (): void => {
     // Call this after the canvas was resized to fix the viewport
     const { width, height } = getDesiredLayoutRect();
-    SceneController.renderer.setSize(width, height);
+    getSceneController().renderer.setSize(width, height);
     this.draw();
   };
 

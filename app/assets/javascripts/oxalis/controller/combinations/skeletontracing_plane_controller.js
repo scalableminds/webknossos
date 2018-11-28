@@ -7,6 +7,7 @@ import * as THREE from "three";
 import _ from "lodash";
 
 import {
+  OUTER_CSS_BORDER,
   type OrthoView,
   type OrthoViewMap,
   OrthoViews,
@@ -40,9 +41,9 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setDirectionAction } from "oxalis/model/actions/flycam_actions";
 import type PlaneView from "oxalis/view/plane_view";
-import SceneController from "oxalis/controller/scene_controller";
 import Store from "oxalis/store";
 import api from "oxalis/api/internal_api";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 
 const OrthoViewToNumber: OrthoViewMap<number> = {
   [OrthoViews.PLANE_XY]: 0,
@@ -131,6 +132,7 @@ function onClick(
     // do nothing
     return;
   }
+  const SceneController = getSceneController();
 
   // render the clicked viewport with picking enabled
   // we need a dedicated pickingScene, since we only want to render all nodes and no planes / bounding box / edges etc.
@@ -144,7 +146,9 @@ function onClick(
 
   const buffer = planeView.renderOrthoViewToTexture(plane, pickingScene);
   // Beware of the fact that new browsers yield float numbers for the mouse position
-  const [x, y] = [Math.round(position.x), Math.round(position.y)];
+  // Subtract the CSS border as the renderer viewport is smaller than the inputcatcher
+  const borderWidth = OUTER_CSS_BORDER;
+  const [x, y] = [Math.round(position.x) - borderWidth, Math.round(position.y) - borderWidth];
   // compute the index of the pixel under the cursor,
   // while inverting along the y-axis, because OpenGL has its origin bottom-left :/
   const index = (x + (width - y) * height) * 4;

@@ -7,6 +7,7 @@ import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 import _ from "lodash";
 
+import type { MeshMetaData } from "admin/api_flow_types";
 import { V3 } from "libs/mjs";
 import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import {
@@ -37,8 +38,9 @@ import constants, {
   OrthoViews,
   type Vector3,
 } from "oxalis/constants";
-import parseStlBuffer from "libs/parse_stl_buffer";
 import window from "libs/window";
+
+import { setSceneController } from "./scene_controller_provider";
 
 const CUBE_COLOR = 0x999999;
 
@@ -56,6 +58,7 @@ class SceneController {
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
   rootGroup: THREE.Object3D;
+  stlMeshes: { [key: string]: THREE.Mesh };
 
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   // element depending on the provided flycam.
@@ -68,6 +71,7 @@ class SceneController {
       [OrthoViews.PLANE_XZ]: true,
     };
     this.planeShift = [0, 0, 0];
+    this.stlMeshes = {};
   }
 
   initialize() {
@@ -116,12 +120,35 @@ class SceneController {
     window.removeBucketMesh = (mesh: THREE.LineSegments) => this.rootNode.remove(mesh);
   }
 
-  addSTL(stlBuffer: ArrayBuffer): void {
-    const geometry = parseStlBuffer(stlBuffer);
+  addSTL(meshMetaData: MeshMetaData, geometry: THREE.Geometry): void {
+    const { id, position } = meshMetaData;
+    if (this.stlMeshes[id] != null) {
+      console.warn(`Mesh with id ${id} has already been added to the scene.`);
+      return;
+    }
     geometry.computeVertexNormals();
 
     const meshMaterial = new THREE.MeshNormalMaterial();
-    this.rootGroup.add(new THREE.Mesh(geometry, meshMaterial));
+    const mesh = new THREE.Mesh(geometry, meshMaterial);
+    this.rootGroup.add(mesh);
+    this.stlMeshes[id] = mesh;
+    this.updateMeshPostion(id, position);
+  }
+
+  removeSTL(id: string): void {
+    this.rootGroup.remove(this.stlMeshes[id]);
+  }
+
+  setMeshVisibility(id: string, visibility: boolean): void {
+    this.stlMeshes[id].visible = visibility;
+  }
+
+  updateMeshPostion(id: string, position: Vector3): void {
+    const [x, y, z] = position;
+    const mesh = this.stlMeshes[id];
+    mesh.position.x = x;
+    mesh.position.y = y;
+    mesh.position.z = z;
   }
 
   createMeshes(): void {
@@ -370,4 +397,14 @@ class SceneController {
   }
 }
 
-export default new SceneController();
+export type SceneControllerType = SceneController;
+
+export function initializeSceneController() {
+  const controller = new SceneController();
+  setSceneController(controller);
+  controller.initialize();
+}
+
+// Please use scene_controller_provider to get a reference to SceneController. This avoids
+// problems with circular dependencies.
+export default {};

@@ -56,7 +56,10 @@ class Request {
       return options;
     }
 
-    let body = _.isString(options.data) ? options.data : JSON.stringify(options.data);
+    let body =
+      _.isString(options.data) || _.isArrayBuffer(options.data)
+        ? options.data
+        : JSON.stringify(options.data);
 
     if (options.compress) {
       body = await compress(body);

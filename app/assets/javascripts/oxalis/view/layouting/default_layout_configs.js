@@ -13,7 +13,7 @@ import _ from "lodash";
 import { Pane, Column, Row, Stack } from "./golden_layout_helpers";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
-export const currentLayoutVersion = 6;
+export const currentLayoutVersion = 7;
 export const layoutHeaderHeight = 20;
 export const headerHeight = 55;
 const dummyExtent = 500;
@@ -39,6 +39,7 @@ const Panes = {
   AbstractTreeTabView: Pane("Tree Viewer", "AbstractTreeTabView"),
   arbitraryViewport: Pane("Arbitrary View", "arbitraryViewport"),
   Mappings: Pane("Segmentation", "MappingInfoView"),
+  Meshes: Pane("Meshes", "MeshesView"),
 };
 
 function setGlContainerWidth(container: Object, width: number) {
@@ -61,8 +62,10 @@ const SkeletonRightHandColumn = Stack(
   Panes.CommentTabView,
   Panes.AbstractTreeTabView,
   Panes.Mappings,
+  Panes.Meshes,
 );
-const NonSkeletonRightHandColumn = Stack(Panes.DatasetInfoTabView, Panes.Mappings);
+
+const NonSkeletonRightHandColumn = Stack(Panes.DatasetInfoTabView, Panes.Mappings, Panes.Meshes);
 
 export const getGroundTruthLayoutRect = () => {
   const mainContainer = document.querySelector(".ant-layout .ant-layout-has-sider");

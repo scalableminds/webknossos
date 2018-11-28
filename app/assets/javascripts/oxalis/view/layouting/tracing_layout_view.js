@@ -17,6 +17,7 @@ import CommentTabView from "oxalis/view/right-menu/comment_tab/comment_tab_view"
 import DatasetInfoTabView from "oxalis/view/right-menu/dataset_info_tab_view";
 import InputCatcher, { recalculateInputCatcherSizes } from "oxalis/view/input_catcher";
 import MappingInfoView from "oxalis/view/right-menu/mapping_info_view";
+import MeshesView from "oxalis/view/right-menu/meshes_view";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import OxalisController from "oxalis/controller";
 import RecordingSwitch from "oxalis/view/recording_switch";
@@ -199,6 +200,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
                 <CommentTabView key="CommentTabView" portalKey="CommentTabView" />
                 <AbstractTreeTabView key="AbstractTreeTabView" portalKey="AbstractTreeTabView" />
                 <MappingInfoView key="MappingInfoView" portalKey="MappingInfoView" />
+                <MeshesView key="MeshesView" portalKey="MeshesView" />
               </GoldenLayoutAdapter>
             </div>
             {this.props.showVersionRestore ? (

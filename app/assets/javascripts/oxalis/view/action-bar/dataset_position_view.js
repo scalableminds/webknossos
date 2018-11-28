@@ -19,6 +19,8 @@ type Props = {
   viewMode: Mode,
 };
 
+const positionIconStyle = { transform: "rotate(45deg)" };
+
 class DatasetPositionView extends PureComponent<Props> {
   copyPositionToClipboard = async () => {
     const position = V3.floor(getPosition(this.props.flycam)).join(", ");
@@ -51,7 +53,7 @@ class DatasetPositionView extends PureComponent<Props> {
           <div>
             <Input.Group compact>
               <ButtonComponent onClick={this.copyPositionToClipboard}>
-                <Icon type="pushpin" style={{ transform: "rotate(45deg)" }} />
+                <Icon type="pushpin" style={positionIconStyle} />
               </ButtonComponent>
               <Vector3Input
                 value={position}

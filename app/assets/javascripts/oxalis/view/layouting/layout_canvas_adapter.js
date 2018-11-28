@@ -1,6 +1,6 @@
 // @flow
 
-import type { Rect } from "oxalis/constants";
+import { OUTER_CSS_BORDER, type Rect } from "oxalis/constants";
 import { document } from "libs/window";
 
 export default function makeRectRelativeToCanvas(rect: Rect): Rect {
@@ -10,12 +10,12 @@ export default function makeRectRelativeToCanvas(rect: Rect): Rect {
   }
   const { left: containerX, top: containerY } = layoutContainerDOM.getBoundingClientRect();
 
-  const borderWidth = 2;
+  const borderWidth = OUTER_CSS_BORDER;
 
   // Since we want to paint inside the InputCatcher we have to subtract the border
   return {
-    left: rect.left - containerX + borderWidth + 1, // it's not entirely clear to my why the +1
-    top: rect.top - containerY + borderWidth - 1, // and -1 are necessary.
+    left: rect.left - containerX + borderWidth,
+    top: rect.top - containerY + borderWidth,
     width: rect.width - 2 * borderWidth,
     height: rect.height - 2 * borderWidth,
   };

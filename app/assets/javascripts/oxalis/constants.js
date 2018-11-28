@@ -108,10 +108,13 @@ export const NODE_ID_REF_REGEX = /#([0-9]+)/g;
 export const POSITION_REF_REGEX = /#\(([0-9]+,[0-9]+,[0-9]+)\)/g;
 
 // The plane in orthogonal mode is a little smaller than the viewport
-// as there are two borders (e.g., yellow and red) with width 2px each => 8px
-export const OUTER_BORDER_ORTHO = 4;
+// There is an outer yellow CSS border and an inner (red/green/blue) border
+// that is a result of the plane being smaller than the renderer viewport
+export const OUTER_CSS_BORDER = 2;
+const INNER_RENDERER_BORDER = 2;
+export const ORTHOGONAL_BORDER = OUTER_CSS_BORDER + INNER_RENDERER_BORDER;
 const PLANE_WIDTH = 376;
-const VIEWPORT_WIDTH = PLANE_WIDTH + OUTER_BORDER_ORTHO * 2;
+const VIEWPORT_WIDTH = PLANE_WIDTH + ORTHOGONAL_BORDER * 2;
 
 const Constants = {
   ARBITRARY_VIEW: 4,

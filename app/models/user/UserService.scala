@@ -106,7 +106,13 @@ class UserService @Inject()(conf: WkConf,
       Mailer ! Send(defaultMails.activatedMail(user.name, user.email))
     }
     for {
-      _ <- userDAO.updateValues(user._id, firstName, lastName, email, isAdmin, isDeactivated = !activated, lastTaskTypeId)
+      _ <- userDAO.updateValues(user._id,
+                                firstName,
+                                lastName,
+                                email,
+                                isAdmin,
+                                isDeactivated = !activated,
+                                lastTaskTypeId)
       _ <- userTeamRolesDAO.updateTeamMembershipsForUser(user._id, teamMemberships)
       _ <- userExperiencesDAO.updateExperiencesForUser(user._id, experiences)
       _ = userCache.invalidateUser(user._id)

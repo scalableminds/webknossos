@@ -218,7 +218,14 @@ class UserController @Inject()(userService: UserService,
   def update(userId: String) = sil.SecuredAction.async(parse.json) { implicit request =>
     val issuingUser = request.identity
     withJsonBodyUsing(userUpdateReader) {
-      case (firstNameOpt, lastNameOpt, emailOpt, isActiveOpt, isAdminOpt, assignedMembershipsOpt, experiencesOpt, lastTaskTypeIdOpt) =>
+      case (firstNameOpt,
+            lastNameOpt,
+            emailOpt,
+            isActiveOpt,
+            isAdminOpt,
+            assignedMembershipsOpt,
+            experiencesOpt,
+            lastTaskTypeIdOpt) =>
         for {
           userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
           user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
@@ -231,7 +238,7 @@ class UserController @Inject()(userService: UserService,
           isAdmin = isAdminOpt.getOrElse(user.isAdmin)
           assignedMemberships = assignedMembershipsOpt.getOrElse(oldAssignedMemberships)
           experiences = experiencesOpt.getOrElse(oldExperience)
-          lastTaskTypeId = if(lastTaskTypeIdOpt.isEmpty) user.lastTaskTypeId.map(_.id) else lastTaskTypeIdOpt
+          lastTaskTypeId = if (lastTaskTypeIdOpt.isEmpty) user.lastTaskTypeId.map(_.id) else lastTaskTypeIdOpt
           _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed"
           _ <- bool2Fox(checkAdminOnlyUpdates(user, isActive, isAdmin, email)(issuingUser)) ?~> "notAllowed"
           teams <- Fox.combined(

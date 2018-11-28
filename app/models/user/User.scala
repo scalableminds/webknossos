@@ -178,7 +178,13 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                    isDeactivated: Boolean,
                    lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext) = {
     val q = for { row <- Users if notdel(row) && idColumn(row) === userId.id } yield
-      (row.firstname, row.lastname, row.email, row.logininfoProviderkey, row.isadmin, row.isdeactivated, row.lasttasktypeid)
+      (row.firstname,
+       row.lastname,
+       row.email,
+       row.logininfoProviderkey,
+       row.isadmin,
+       row.isdeactivated,
+       row.lasttasktypeid)
     for {
       _ <- assertUpdateAccess(userId)
       _ <- run(q.update(firstName, lastName, email, email, isAdmin, isDeactivated, lastTaskTypeId))

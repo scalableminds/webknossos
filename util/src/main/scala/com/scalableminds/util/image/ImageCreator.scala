@@ -121,7 +121,8 @@ object ImageCreator extends LazyLogging {
           case 3 =>
             (0xFF << 24) | ((b(idx) & 0xFF) << 16) | ((b(idx + 1) & 0xFF) << 8) | ((b(idx + 2) & 0xFF) << 0)
           case 4 =>
-            ((b(idx + 3) & 0xFF) << 24) | ((b(idx) & 0xFF) << 16) | ((b(idx + 1) & 0xFF) << 8) | ((b(idx + 2) & 0xFF) << 0)
+            toTestRGB(b(idx))
+          //((b(idx + 3) & 0xFF) << 24) | ((b(idx) & 0xFF) << 16) | ((b(idx + 1) & 0xFF) << 8) | ((b(idx + 2) & 0xFF) << 0)
           case _ =>
             throw new Exception("Can't handle " + bytesPerElement + " bytes per element in Image creator.")
         }
@@ -130,6 +131,35 @@ object ImageCreator extends LazyLogging {
     }
     colored
   }
+
+  def hsvToRgb(hsv: Array[Double]): Int = {
+    val K = Array(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0)
+    val p = Array.ofDim[Double](3)
+    for (i <- 0 to 2) {
+      val x = hsv(0) + K(i)
+      val decimal = x.toInt
+      val fract = x - decimal
+      p(i) = Math.abs(fract * 6.0 - K(3))
+    }
+    val returnVal = Array.ofDim[Double](3)
+    for (i <- 0 to 2) {
+      val x = K(0)
+      val cl = com.scalableminds.util.tools.Math.clamp(p(i) - K(0), 0.0, 1.0)
+      val ret = x * (1 - hsv(1)) + cl * hsv(1)
+      returnVal(i) = hsv(2) * ret
+    }
+    val end = returnVal.map(x => (x * 255).toByte)
+    (0xFF << 24) | ((end(0) & 0xFF) << 16) | ((end(1) & 0xFF) << 8) | ((end(2) & 0xFF) << 0)
+  }
+
+  def toTestRGB(b: Byte) =
+    b match {
+      case 0 => (0x64 << 24) | (0x64 << 16) | (0x64 << 8) | (0x64 << 0)
+      case _ =>
+        val golden_ratio = 0.618033988749895
+        val value = ((b & 0xFF) * golden_ratio) % 1.0
+        hsvToRgb(Array(value, 1.0, 1.0, 1.0))
+    }
 
   def createBufferedImageFromBytes(b: Array[Byte],
                                    targetType: Int,

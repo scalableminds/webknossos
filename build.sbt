@@ -8,6 +8,7 @@ ThisBuild / scapegoatVersion := "1.3.8"
 ThisBuild / scalacOptions ++= Seq(
   "-Xmax-classfile-name","100",
   "-target:jvm-1.8",
+  "-verbose",
   "-feature",
   "-deprecation",
   "-language:implicitConversions",

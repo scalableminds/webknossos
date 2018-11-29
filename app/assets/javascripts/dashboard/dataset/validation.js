@@ -3,9 +3,11 @@
 import jsonschema from "jsonschema";
 
 import DatasourceSchema from "libs/datasource.schema.json";
+import UserSettingsSchema from "libs/user_settings.schema.json";
 
 const validator = new jsonschema.Validator();
 validator.addSchema(DatasourceSchema, "/");
+validator.addSchema(UserSettingsSchema, "/");
 
 const validateWithSchema = (type: string) => (rule: Object, value: string, callback: Function) => {
   try {
@@ -29,6 +31,7 @@ const validateWithSchema = (type: string) => (rule: Object, value: string, callb
 
 export const validateDatasourceJSON = validateWithSchema("types::DatasourceConfiguration");
 export const validateLayerConfigurationJSON = validateWithSchema("types::LayerUserConfiguration");
+export const validateUserSettingsJSON = validateWithSchema("types::UserSettings");
 
 export const isValidJSON = (json: string) => {
   try {

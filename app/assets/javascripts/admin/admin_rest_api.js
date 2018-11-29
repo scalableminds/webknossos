@@ -44,6 +44,7 @@ import {
   type ServerTracing,
   type ServerVolumeTracing,
 } from "admin/api_flow_types";
+import { V3 } from "libs/mjs";
 import type { DatasetConfiguration } from "oxalis/store";
 import type { NewTask, TaskCreationResponse } from "admin/task/task_create_bulk_view";
 import type { QueryObject } from "admin/task/task_search_form";
@@ -1006,8 +1007,11 @@ export function computeIsosurface(
       }/isosurface?token=${token}`,
       {
         data: {
-          position,
-          cubeSize,
+          // The back-end needs a small padding at the border of the
+          // bounding box to calculate the isosurface. This padding
+          // is added here to the position and bbox size.
+          position: V3.toArray(V3.sub(position, voxelDimensions)),
+          cubeSize: V3.toArray(V3.add(cubeSize, voxelDimensions)),
           zoomStep,
           // Segment to build isosurface for
           segmentId,

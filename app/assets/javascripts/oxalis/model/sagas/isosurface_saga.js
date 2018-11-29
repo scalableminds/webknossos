@@ -1,7 +1,7 @@
+import type { APIDataset } from "admin/api_flow_types";
+import { ControlModeEnum, type Vector3 } from "oxalis/constants";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
 import { type Saga, _takeEvery, select, take } from "oxalis/model/sagas/effect-generators";
-import { V3 } from "libs/mjs";
-import type { Vector3 } from "oxalis/constants";
 import { computeIsosurface } from "admin/admin_rest_api";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
 import { map3 } from "libs/utils";
@@ -46,13 +46,17 @@ const cubeSize = [256, 256, 256];
 
 function* ensureSuitableIsosurface(): Saga<void> {
   const renderIsosurfaces = yield* select(state => state.datasetConfiguration.renderIsosurfaces);
-  if (!renderIsosurfaces) {
+  const isControlModeSupported = yield* select(
+    state => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
+  );
+  if (!renderIsosurfaces || !isControlModeSupported) {
     return;
   }
   const dataset = yield* select(state => state.dataset);
   const layer = Model.getSegmentationLayer();
   const position = yield* select(state => getFlooredPosition(state.flycam));
-  const segmentId = layer.cube.getDataValue(position, null, 1);
+  const zoomStep = 1;
+  const segmentId = layer.cube.getMappedDataValue(position, zoomStep);
 
   if (segmentId === 0 || segmentId == null) {
     return;
@@ -63,7 +67,6 @@ function* ensureSuitableIsosurface(): Saga<void> {
   }
   const threeDMap = isosurfacesMap.get(segmentId);
 
-  const zoomStep = 1;
   const zoomedCubeSize = map3(el => el * 2 ** zoomStep, cubeSize);
   const currentCube = map3((el, idx) => Math.floor(el / zoomedCubeSize[idx]), position);
   const cubedPostion = map3((el, idx) => el * zoomedCubeSize[idx], currentCube);
@@ -87,11 +90,11 @@ async function loadIsosurface(
   const responseBuffer = await computeIsosurface(
     dataset,
     layer,
-    V3.toArray(V3.sub(position, voxelDimensions)),
+    position,
     zoomStep,
     segmentId,
     voxelDimensions,
-    V3.toArray(V3.add(cubeSize, voxelDimensions)),
+    cubeSize,
   );
   const vertices = new Float32Array(responseBuffer);
   getSceneController().addIsosurface(vertices, segmentId);

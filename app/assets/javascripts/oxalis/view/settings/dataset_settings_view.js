@@ -22,7 +22,7 @@ import {
 } from "oxalis/model/actions/settings_actions";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import constants, { type Mode } from "oxalis/constants";
+import constants, { type ControlMode, ControlModeEnum, type Mode } from "oxalis/constants";
 import messages from "messages";
 
 const Panel = Collapse.Panel;
@@ -37,6 +37,7 @@ type DatasetSettingsProps = {
     value: any,
   ) => void,
   viewMode: Mode,
+  controlMode: ControlMode,
 };
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
@@ -105,11 +106,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             value={this.props.datasetConfiguration.highlightHoveredCellId}
             onChange={_.partial(this.props.onChange, "highlightHoveredCellId")}
           />
-          <SwitchSetting
-            label="Render Isosurfaces (Beta)"
-            value={this.props.datasetConfiguration.renderIsosurfaces}
-            onChange={_.partial(this.props.onChange, "renderIsosurfaces")}
-          />
+          {this.props.controlMode === ControlModeEnum.VIEW ? (
+            <SwitchSetting
+              label="Render Isosurfaces (Beta)"
+              value={this.props.datasetConfiguration.renderIsosurfaces}
+              onChange={_.partial(this.props.onChange, "renderIsosurfaces")}
+            />
+          ) : null}
         </Panel>
         <Panel header="Quality" key="3">
           <SwitchSetting
@@ -154,6 +157,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
 const mapStateToProps = (state: OxalisState) => ({
   datasetConfiguration: state.datasetConfiguration,
   viewMode: state.temporaryConfiguration.viewMode,
+  controlMode: state.temporaryConfiguration.controlMode,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({

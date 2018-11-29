@@ -30,6 +30,7 @@ import * as Utils from "libs/utils";
 import messages from "messages";
 
 const typeHint: APITaskWithAnnotation[] = [];
+const pageLength: number = 10;
 
 type StateProps = {
   activeUser: APIUser,
@@ -135,12 +136,36 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   }
 
   async fetchData(): Promise<void> {
+    /*
+    const isFinished = this.state.showFinishedTasks;
+    const url = this.props.userId
+      ? `/api/users/${this.props.userId}/tasks?isFinished=${isFinished.toString()}`
+      : `/api/user/tasks?isFinished=${isFinished.toString()}`;
+
+    try {
+      const previousTasks = this.state.showFinishedTasks? this.state.finishedTasks : this.state.unfinishedTasks
+        this.setState({isLoading: true});
+        const annotationsWithTasks = await Request.receiveJSON(url);
+        const tasks = annotationsWithTasks.map(convertAnnotationToTaskWithAnnotationType);
+      if(previousTasks.length === 0) {
+        this.setState({
+          [isFinished ? "finishedTasks" : "unfinishedTasks"]: tasks,
+        });
+      }
+    } catch (error) {
+      handleGenericError(error);
+    } finally {
+      this.setState({ isLoading: false });
+    }
+    */
     this.fetchNextPage(0)
   }
 
   fetchNextPage = async (incrementStep) => {
     // this refers not to the pagination of antd but to the pagination of querying data from SQL
+    // incrementStep is 0 when it is called from "fetchData" and it is 1 when the intention is to load the next page
     console.log("fetchNextPage")
+    console.log(incrementStep)
     console.log(this.state.finishedTasksPageNumber)
     console.log(this.state.unfinishedTasksPageNumber)
     const isFinished = this.state.showFinishedTasks;
@@ -151,8 +176,9 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
       pageNumber = this.state.finishedTasksPageNumber + incrementStep
     } else {
       previousTasks = this.state.unfinishedTasks
-      pageNumber = this.state.unfinishedTasksPageNumber +incrementStep
+      pageNumber = this.state.unfinishedTasksPageNumber + incrementStep
     }
+    console.log("pageNumber: ", pageNumber)
     const url = this.props.userId
       ? `/api/users/${this.props.userId}/tasks?isFinished=${isFinished.toString()}`
       : `/api/user/tasks?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`;
@@ -161,11 +187,12 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
       this.setState({ isLoading: true });
       const annotationsWithTasks = await Request.receiveJSON(url);
       const tasks = annotationsWithTasks.map(convertAnnotationToTaskWithAnnotationType);
-
-      this.setState({
-        [isFinished ? "finishedTasks" : "unfinishedTasks"]: previousTasks.concat(tasks),
-        [isFinished ? "finishedTasksPageNumber" : "unfinishedTasksPageNumber"]: pageNumber,
-      });
+      if(previousTasks.length === 0 || incrementStep !== 0) {
+        this.setState({
+          [isFinished ? "finishedTasks" : "unfinishedTasks"]: previousTasks.concat(tasks),
+          [isFinished ? "finishedTasksPageNumber" : "unfinishedTasksPageNumber"]: pageNumber,
+        });
+      }
     } catch (error) {
       handleGenericError(error);
     } finally {
@@ -176,12 +203,11 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 
   toggleShowFinished = () => {
     this.setState(prevState => ({
-      showFinishedTasks: !prevState.showFinishedTasks,
-      finishedTasksPageNumber: 0,
-      unfinishedTasksPageNumber: 0
+      showFinishedTasks: !prevState.showFinishedTasks
     }),
       () => this.fetchData(),
     );
+    console.log(this.state)
   };
 
   openTransferModal(annotationId: string) {
@@ -447,6 +473,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   }
 
   render() {
+    console.log(this.state.finishedTasks.length)
     return (
       <div>
         <div className="pull-right">
@@ -467,9 +494,12 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         </h3>
         <div className="clearfix" style={{ margin: "20px 0px" }} />
         {this.renderTaskList()}
-        <Link to="/" onClick={() => this.fetchNextPage(1)}>
+        {
+          ((this.state.showFinishedTasks ? this.state.finishedTasks : this.state.unfinishedTasks).length % pageLength === 0) ? (
+        <Link style={{ textAlign: "right" }} to="/" onClick={() => this.fetchNextPage(1)}>
           Load more Tasks
         </Link>
+        ): (null)}
         <TransferTaskModal
           visible={this.state.isTransferModalVisible}
           annotationId={this.state.currentAnnotationId}

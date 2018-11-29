@@ -2,7 +2,6 @@
 import { Icon, Alert, Dropdown, Menu } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
-import classNames from "classnames";
 
 import type { LayoutKeys } from "oxalis/view/layouting/default_layout_configs";
 import {
@@ -35,7 +34,6 @@ type StateProps = {
   hasVolume: boolean,
   hasSkeleton: boolean,
   showVersionRestore: boolean,
-  isDatasetOnScratchVolume: boolean,
 };
 
 type Props = StateProps & {
@@ -86,7 +84,6 @@ class ActionBarView extends React.PureComponent<Props, State> {
         this.setState({ isNewLayoutModalVisible: true });
       },
     };
-    const divClassName = classNames("action-bar", { blink: this.props.isDatasetOnScratchVolume });
     const readonlyDropdown = (
       <Dropdown overlay={<Menu>{<ResetLayoutItem {...resetItemProps} />}</Menu>}>
         <ButtonComponent>
@@ -97,7 +94,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
 
     return (
       <React.Fragment>
-        <div className={divClassName}>
+        <div className="action-bar">
           {isTraceMode && !this.props.showVersionRestore ? (
             <TracingActionsView {...resetItemProps} />
           ) : (
@@ -123,7 +120,6 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   showVersionRestore: state.uiInformation.showVersionRestore,
   hasVolume: state.tracing.volume != null,
   hasSkeleton: state.tracing.skeleton != null,
-  isDatasetOnScratchVolume: state.dataset.dataStore.isScratch,
 });
 
 export default connect(mapStateToProps)(ActionBarView);

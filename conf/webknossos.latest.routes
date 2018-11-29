@@ -42,7 +42,7 @@ GET           /user/tasks                                                       
 GET           /user/annotations                                                 controllers.UserController.annotations(isFinished: Option[Boolean], limit: Option[Int])
 GET           /user/loggedTime                                                  controllers.UserController.loggedTime
 GET           /users/:id                                                        controllers.UserController.user(id: String)
-PUT           /users/:id                                                        controllers.UserController.update(id: String)
+PATCH         /users/:id                                                        controllers.UserController.update(id: String)
 GET           /users/:id/tasks                                                  controllers.UserController.userTasks(id: String, isFinished: Option[Boolean], limit: Option[Int])
 GET           /users/:id/loggedTime                                             controllers.UserController.userLoggedTime(id: String)
 POST          /users/loggedTime                                                 controllers.UserController.usersLoggedTime

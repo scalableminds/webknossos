@@ -31,6 +31,7 @@ case class User(
     isSuperUser: Boolean,
     isDeactivated: Boolean,
     created: Long = System.currentTimeMillis(),
+    lastTaskTypeId: Option[ObjectId] = None,
     isDeleted: Boolean = false
 ) extends DBAccessContextPayload
     with Identity
@@ -75,6 +76,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         r.issuperuser,
         r.isdeactivated,
         r.created.getTime,
+        r.lasttasktypeid.map(ObjectId(_)),
         r.isdeleted
       ))
 
@@ -173,12 +175,19 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                    lastName: String,
                    email: String,
                    isAdmin: Boolean,
-                   isDeactivated: Boolean)(implicit ctx: DBAccessContext) = {
+                   isDeactivated: Boolean,
+                   lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext) = {
     val q = for { row <- Users if notdel(row) && idColumn(row) === userId.id } yield
-      (row.firstname, row.lastname, row.email, row.logininfoProviderkey, row.isadmin, row.isdeactivated)
+      (row.firstname,
+       row.lastname,
+       row.email,
+       row.logininfoProviderkey,
+       row.isadmin,
+       row.isdeactivated,
+       row.lasttasktypeid)
     for {
       _ <- assertUpdateAccess(userId)
-      _ <- run(q.update(firstName, lastName, email, email, isAdmin, isDeactivated))
+      _ <- run(q.update(firstName, lastName, email, email, isAdmin, isDeactivated, lastTaskTypeId))
     } yield ()
   }
 }

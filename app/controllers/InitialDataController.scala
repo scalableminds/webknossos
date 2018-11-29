@@ -77,7 +77,8 @@ Samplecountry
     userService.createPasswordInfo(defaultUserPassword),
     isAdmin = true,
     isSuperUser = conf.Application.Authentication.DefaultUser.isSuperUser,
-    isDeactivated = false
+    isDeactivated = false,
+    lastTaskTypeId = None
   )
 
   def insert: Fox[Unit] =

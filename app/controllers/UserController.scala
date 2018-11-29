@@ -269,4 +269,20 @@ class UserController @Inject()(userService: UserService,
     }
   }
 
+  def updateLastTaskTypeId(id: String) = sil.SecuredAction.async(parse.json) { implicit request =>
+    val issuingUser = request.identity
+    withJsonBodyUsing((__ \ "lastTaskTypeId").readNullable[String]) {
+      case lastTaskTypeId =>
+        for {
+          userIdValidated <- ObjectId.parse(id) ?~> "user.id.invalid"
+          user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
+          isEditable <- userService.isEditableBy(user, request.identity)
+          _ <- bool2Fox(isEditable | user._id == issuingUser._id)
+          _ <- userService.updateLastTaskTypeId(user, lastTaskTypeId)
+          updatedUser <- userDAO.findOne(userIdValidated)
+          updatedJs <- userService.publicWrites(updatedUser, request.identity)
+        } yield Ok(updatedJs)
+    }
+  }
+
 }

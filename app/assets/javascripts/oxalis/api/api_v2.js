@@ -266,7 +266,7 @@ class TracingApi {
   async finishAndGetNextTask() {
     const state = Store.getState();
     const { tracingType, annotationId } = state.tracing;
-    const { task } = state;
+    const task = state.task;
 
     await Model.save();
     await finishAnnotation(annotationId, tracingType);
@@ -280,7 +280,8 @@ class TracingApi {
       const nextScript = annotation.task.script != null ? annotation.task.script.gist : null;
       const isDifferentScript = currentScript !== nextScript;
 
-      const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}`;
+      const differentTaskTypeParam = isDifferentTaskType ? "?differentTaskType" : "";
+      const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}${differentTaskTypeParam}`;
 
       // In some cases the page needs to be reloaded, in others the tracing can be hot-swapped
       if (isDifferentDataset || isDifferentTaskType || isDifferentScript) {
@@ -658,12 +659,12 @@ class DataApi {
    * Returns the dataset's setting for the tracing view.
    * @param key - One of the following keys:
      - segmentationOpacity
+     - datasetName
      - fourBit
      - interpolation
+     - keyboardDelay
      - layers
      - quality
-     - highlightHoveredCellId
-     - renderMissingDataBlack
    *
    * @example
    * const segmentationOpacity = api.data.getConfiguration("segmentationOpacity");
@@ -677,7 +678,7 @@ class DataApi {
    * @param key - Same keys as for getConfiguration()
    *
    * @example
-   * api.data.setConfiguration("segmentationOpacity", 20);
+   * api.user.setConfiguration("segmentationOpacity", 20);
    */
   setConfiguration(key: $Keys<DatasetConfiguration>, value) {
     Store.dispatch(updateDatasetSettingAction(key, value));
@@ -732,7 +733,7 @@ class UserApi {
    * @param key - Same keys as for getConfiguration()
    *
    * @example
-   * api.user.setConfiguration("keyboardDelay", 20);
+   * api.data.setConfiguration("keyboardDelay", 20);
    */
   setConfiguration(key: $Keys<UserConfiguration>, value) {
     Store.dispatch(updateUserSettingAction(key, value));

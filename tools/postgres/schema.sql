@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(36);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(35);
 COMMIT TRANSACTION;
 
 CREATE TABLE webknossos.analytics(
@@ -249,7 +249,6 @@ CREATE TABLE webknossos.users(
   isAdmin BOOLEAN NOT NULL DEFAULT false,
   isSuperUser BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  lastTaskTypeId CHAR(24) DEFAULT NULL,
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 

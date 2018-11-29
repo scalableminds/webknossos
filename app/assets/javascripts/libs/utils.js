@@ -70,10 +70,6 @@ export function parseAsMaybe(str: ?string): Maybe<any> {
   }
 }
 
-export function jsonStringify(json: Object) {
-  return JSON.stringify(json, null, "  ");
-}
-
 export function clamp(a: number, x: number, b: number): number {
   return Math.max(a, Math.min(b, x));
 }

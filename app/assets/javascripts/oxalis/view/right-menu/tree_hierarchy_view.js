@@ -14,7 +14,6 @@ import {
   type TreeNode,
   callDeep,
   createGroupToTreesMap,
-  findGroup,
   insertTreesAndTransform,
   makeBasicGroupObject,
   removeTreesAndTransform,
@@ -42,7 +41,6 @@ type Props = {
   sortBy: string,
   trees: TreeMap,
   selectedTrees: Array<number>,
-  selectedTreeGroups: Array<number>,
   onSetActiveTree: number => void,
   onSetActiveGroup: number => void,
   onDeleteGroup: number => void,
@@ -52,7 +50,6 @@ type Props = {
   onUpdateTreeGroups: (Array<TreeGroup>) => void,
   onSetTreeGroup: (?number, number) => void,
   handleTreeSelect: number => void,
-  handleTreeGroupSelect: (number, ?TreeGroup, ?number) => void,
 };
 
 type State = {
@@ -144,19 +141,8 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
   onSelectGroup = evt => {
     const groupId = parseInt(evt.target.dataset.id, 10);
-    if (evt.ctrlKey) {
-      const groupTree = removeTreesAndTransform(this.state.groupTree);
-      let parentId = null;
-      let selectedGroup: ?TreeGroup = null;
-      // find selected group and its parent
-      callDeep(groupTree, groupId, (foundGroup, index, children, foundParentId) => {
-        parentId = foundParentId;
-        selectedGroup = foundGroup;
-      });
-      this.props.handleTreeGroupSelect(groupId, selectedGroup, parentId);
-    } else {
-      this.props.onSetActiveGroup(groupId);
-    }
+
+    this.props.onSetActiveGroup(groupId);
   };
 
   onExpand = (params: { node: TreeNode, expanded: boolean }) => {
@@ -167,34 +153,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       expandedGroupIds: update(prevState.expandedGroupIds, { [node.id]: { $set: expanded } }),
     }));
   };
-
-  // recursivly sets the parent of all currently selected groups to the given newParent
-  setParentOfSelectedGroups(newParent: TreeGroup, currentNode: TreeGroup) {
-    const children = currentNode.children;
-    for (let index = 0; index < children.length; index++) {
-      const currentChild = children[index];
-      // only update children that are not at their desired position in the hierarchy
-      // and that are selected
-      if (
-        this.props.selectedTreeGroups.includes(currentChild.groupId) &&
-        newParent !== currentNode
-      ) {
-        newParent.children.push(currentChild);
-        currentNode.children.splice(index, 1);
-        index--;
-        const indexOfNewParent = currentChild.children.indexOf(newParent);
-        if (indexOfNewParent >= 0) {
-          // when swapping selected node with new parent -> exchange parents
-          currentChild.children.splice(indexOfNewParent, 1);
-          if (!currentNode.children.includes(newParent)) {
-            // if the current node does not know the new parent yet, add it
-            currentNode.children.push(newParent);
-          }
-        }
-      }
-      this.setParentOfSelectedGroups(newParent, currentChild);
-    }
-  }
 
   onMoveNode = (params: {
     nextParentNode: TreeNode,
@@ -209,29 +167,19 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         nextParentNode.id === MISSING_GROUP_ID ? null : nextParentNode.id,
         parseInt(node.id, 10),
       );
+      // sets group of all selected trees (and the moved tree) to the new parent group
+      allTreesToMove.forEach(treeId =>
+        this.props.onSetTreeGroup(
+          nextParentNode.id === MISSING_GROUP_ID ? null : nextParentNode.id,
+          parseInt(treeId, 10),
+        ),
+      );
+    } else {
+      // A group was dragged - update the groupTree
+      // Exclude root group and remove trees from groupTree object
+      const newTreeGroups = removeTreesAndTransform(treeData[0].children);
+      this.props.onUpdateTreeGroups(newTreeGroups);
     }
-    const newTreeGroups = removeTreesAndTransform(treeData);
-    // If there are selected groups, change the group hierarchy manually
-    if (this.props.selectedTreeGroups.length > 0) {
-      const nextParentGroup = findGroup(newTreeGroups, nextParentNode.id);
-      if (!nextParentGroup) {
-        this.props.onUpdateTreeGroups(newTreeGroups);
-        throw new Error(
-          "Dragging does not work correctly. The new parent group/node does not exist.",
-        );
-      }
-      // sets the parent group of all selected groups to the found nextParentGroup
-      this.setParentOfSelectedGroups(nextParentGroup, newTreeGroups[0]);
-    }
-    this.props.onUpdateTreeGroups(newTreeGroups[0].children);
-
-    // sets group of all selected trees (and the moved tree) to the new parent group
-    allTreesToMove.forEach(treeId =>
-      this.props.onSetTreeGroup(
-        nextParentNode.id === MISSING_GROUP_ID ? null : nextParentNode.id,
-        parseInt(treeId, 10),
-      ),
-    );
   };
 
   createGroup(groupId: number) {
@@ -262,17 +210,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }
   };
 
-  getNodeStyleClassForBackground = (id, isGroup = false) => {
-    if (isGroup) {
-      const isGroupSelected = this.props.selectedTreeGroups.includes(id);
-      if (isGroupSelected && this.props.activeGroupId === id) {
-        return "selected-and-active-tree-node";
-      }
-      if (isGroupSelected) {
-        return "selected-tree-node";
-      }
-      return null;
-    }
+  getNodeStyleClassForBackground = id => {
     const isTreeSelected = this.props.selectedTrees.includes(id);
     if (isTreeSelected && this.props.activeTreeId === id) {
       return "selected-and-active-tree-node";
@@ -310,9 +248,8 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         </Dropdown>
       </span>
     );
-    const styleClass = this.getNodeStyleClassForBackground(id, true);
     return (
-      <div className={styleClass}>
+      <div>
         <Checkbox
           checked={node.isChecked}
           onChange={this.onCheck}

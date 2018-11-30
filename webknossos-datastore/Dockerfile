@@ -10,7 +10,9 @@ VOLUME /srv/webknossos-datastore/binaryData /tmp
 
 COPY target/universal/stage .
 
-RUN chown -R webknossos .
+RUN chown -R webknossos . \
+  && chmod go+x bin/webknossos-datastore \
+  && chmod go+w .
 
 USER webknossos
 

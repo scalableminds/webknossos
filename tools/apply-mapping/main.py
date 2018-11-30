@@ -10,6 +10,10 @@ import wkw
 import numpy as np
 import re
 import json
+import itertools
+
+data_zip_filename = 'data.zip'
+data_zip_dirname = 'data_zip'
 
 def main():
     args = create_parser().parse_args()
@@ -17,17 +21,30 @@ def main():
     mapping = read_mapping(args)
 
     tracing_tmpdir_path = extract_tracing_zip(args)
-    tracing_dataset = wkw.Dataset.open(os.path.join(os.path.join(tracing_tmpdir_path, 'data_zip'), '1'))
+    tracing_dataset = wkw.Dataset.open(os.path.join(os.path.join(tracing_tmpdir_path, data_zip_dirname), '1'))
     tracing_bboxes = file_bboxes(tracing_dataset)
 
     print("Found {} tracing files".format(len(tracing_bboxes)))
 
-    def apply_maping_to_voxel(voxel):
+    dtype = tracing_dataset.header.voxel_type
+
+    def apply_mapping_to_voxel(voxel):
         voxel_str = str(voxel)
         if voxel_str in mapping:
-            return np.uint32(mapping[voxel_str])
+            return parse_to_dtype(mapping[voxel_str])
         else:
             return voxel
+
+    def parse_to_dtype(string):
+        if dtype == np.uint64:
+            return np.uint64(string)
+        if dtype == np.uint32:
+            return np.uint32(string)
+        if dtype == np.uint16:
+            return np.uint16(string)
+        if dtype == np.uint8:
+            return np.uint8(string)
+        raise Exception("Unsupported data type in tracing: ", dtype)
 
     def is_mapped(voxel):
         return str(voxel) in mapping
@@ -37,7 +54,7 @@ def main():
     for counter, tracing_bbox in enumerate(tracing_bboxes):
         print("Processing tracing file {} of {}, bounding box: {}...".format(counter+1, len(tracing_bboxes), tracing_bbox))
         data = tracing_dataset.read(tracing_bbox[0], tracing_bbox[1])
-        transformed = np.vectorize(apply_maping_to_voxel)(data)
+        transformed = np.vectorize(apply_mapping_to_voxel)(data)
         tracing_dataset.write(tracing_bbox[0], transformed)
         changed_count += np.count_nonzero(np.vectorize(is_mapped)(data))
 
@@ -57,22 +74,32 @@ def read_mapping(args):
     else:
         with open(args.mapping_path) as mapping_file:
             mapping = json.load(mapping_file)
-    print("Using mapping: ", mapping)
+    print_mapping_clipped(mapping)
     return mapping
+
+def print_mapping_clipped(mapping):
+    print("Using mapping: ", end='')
+    max_entries = 5
+    for k,v in list(itertools.islice(mapping.items(), max_entries)):
+        print("{}->{} ".format(k,v), sep='',end='')
+    if len(mapping) > max_entries:
+        print("... ({} more)".format(len(mapping) - max_entries))
+    else:
+        print("")
 
 def extract_tracing_zip(args):
     tracing_tmpdir_path = tmp_filename()
     os.makedirs(tracing_tmpdir_path)
     with zipfile.ZipFile(args.tracing_path) as outer_zip:
         zipfile.ZipFile.extractall(outer_zip, path=tracing_tmpdir_path)
-    with zipfile.ZipFile(os.path.join(tracing_tmpdir_path, 'data.zip')) as data_zip:
-        zipfile.ZipFile.extractall(data_zip, path=os.path.join(tracing_tmpdir_path, 'data_zip'))
+    with zipfile.ZipFile(os.path.join(tracing_tmpdir_path, data_zip_filename)) as data_zip:
+        zipfile.ZipFile.extractall(data_zip, path=os.path.join(tracing_tmpdir_path, data_zip_dirname))
     return tracing_tmpdir_path
 
 def pack_tracing_zip(tracing_tmpdir_path, tracing_path):
-    os.remove(os.path.join(tracing_tmpdir_path, 'data.zip'))
-    zip_dir(os.path.join(tracing_tmpdir_path, 'data_zip'), os.path.join(tracing_tmpdir_path, 'data.zip'))
-    shutil.rmtree(os.path.join(tracing_tmpdir_path, 'data_zip'))
+    os.remove(os.path.join(tracing_tmpdir_path, data_zip_filename))
+    zip_dir(os.path.join(tracing_tmpdir_path, data_zip_dirname), os.path.join(tracing_tmpdir_path, data_zip_filename))
+    shutil.rmtree(os.path.join(tracing_tmpdir_path, data_zip_dirname))
     outfile_path = "{0}_mapped{1}".format(*os.path.splitext(tracing_path))
     zip_dir(os.path.join(tracing_tmpdir_path), outfile_path)
     print("Wrote", outfile_path)

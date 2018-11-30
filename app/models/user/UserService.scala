@@ -182,9 +182,11 @@ class UserService @Inject()(conf: WkConf,
       teamManagerTeamIds <- teamManagerTeamIdsFor(user._id)
     } yield (teamManagerTeamIds.contains(_team) || user.isAdminOf(team._organization))) ?~> "team.admin.notAllowed"
 
-  def isTeamManagerInOrg(user: User, _organization: ObjectId): Fox[Boolean] =
+  def isTeamManagerInOrg(user: User,
+                         _organization: ObjectId,
+                         teamMemberships: Option[List[TeamMembership]] = None): Fox[Boolean] =
     for {
-      teamManagerMemberships <- teamManagerMembershipsFor(user._id)
+      teamManagerMemberships <- Fox.fillOption(teamMemberships)(teamManagerMembershipsFor(user._id))
     } yield (teamManagerMemberships.nonEmpty && _organization == user._organization)
 
   def isTeamManagerOrAdminOfOrg(user: User, _organization: ObjectId): Fox[Boolean] =

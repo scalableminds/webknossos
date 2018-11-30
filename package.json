@@ -29,8 +29,8 @@
     "coveralls": "^3.0.2",
     "css-loader": "^0.28.1",
     "documentation": "^9.0.0-alpha.0",
-    "enzyme": "^3.2.0",
-    "enzyme-adapter-react-16": "^1.1.0",
+    "enzyme": "^3.7.0",
+    "enzyme-adapter-react-16": "^1.7.0",
     "eslint": "^5.7.0",
     "eslint-config-airbnb": "^17.1.0",
     "eslint-config-prettier": "^3.1.0",
@@ -107,7 +107,8 @@
     "enable-autologin": "sed -i -e 's/enableDevAutoLogin = false/enableDevAutoLogin = true/g' ./conf/application.conf",
     "disable-autologin": "sed -i -e 's/enableDevAutoLogin = true/enableDevAutoLogin = false/g' ./conf/application.conf",
     "coverage": "nyc report --reporter=text-lcov | coveralls",
-    "postcheckout": "echo 'Deleting auto-generated flow files...' && rm -f app/assets/javascripts/test/snapshots/flow-check/*.js"
+    "postcheckout": "echo 'Deleting auto-generated flow files...' && rm -f app/assets/javascripts/test/snapshots/flow-check/*.js",
+    "apply-evolutions": "tools/postgres/apply_evolutions.sh"
   },
   "lint-staged": {
     "*.js": [
@@ -151,9 +152,9 @@
     "pako": "^0.2.8",
     "pretty-bytes": "^5.1.0",
     "protobufjs": "^6.8.6",
-    "react": "^16.3.0",
+    "react": "^16.6.1",
     "react-debounce-render": "^4.0.1",
-    "react-dom": "^16.3.0",
+    "react-dom": "^16.6.1",
     "react-dropzone": "^4.2.13",
     "react-google-charts": "^1.5.5",
     "react-redux": "^5.0.6",

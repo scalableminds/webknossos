@@ -134,11 +134,11 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   onSelectTree = evt => {
-    const treeId = evt.target.dataset.id;
+    const treeId = parseInt(evt.target.dataset.id, 10);
     if (evt.ctrlKey) {
-      this.props.handleTreeSelect(parseInt(treeId, 10));
+      this.props.handleTreeSelect(treeId);
     } else {
-      this.props.onSetActiveTree(parseInt(treeId, 10));
+      this.props.onSetActiveTree(treeId);
     }
   };
 
@@ -168,7 +168,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }));
   };
 
-  // rekursivly sets the parent of all currently selected groups to the given newParent
+  // recursivly sets the parent of all currently selected groups to the given newParent
   setParentOfSelectedGroups(newParent: TreeGroup, currentNode: TreeGroup) {
     const children = currentNode.children;
     for (let index = 0; index < children.length; index++) {
@@ -264,18 +264,20 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
   getNodeStyleClassForBackground = (id, isGroup = false) => {
     if (isGroup) {
-      if (this.props.selectedTreeGroups.includes(id) && this.props.activeGroupId === id) {
+      const isGroupSelected = this.props.selectedTreeGroups.includes(id);
+      if (isGroupSelected && this.props.activeGroupId === id) {
         return "selected-and-active-tree-node";
       }
-      if (this.props.selectedTreeGroups.includes(id)) {
+      if (isGroupSelected) {
         return "selected-tree-node";
       }
       return null;
     }
-    if (this.props.selectedTrees.includes(id) && this.props.activeTreeId === id) {
+    const isTreeSelected = this.props.selectedTrees.includes(id);
+    if (isTreeSelected && this.props.activeTreeId === id) {
       return "selected-and-active-tree-node";
     }
-    if (this.props.selectedTrees.includes(id)) {
+    if (isTreeSelected) {
       return "selected-tree-node";
     }
     return null;
@@ -375,30 +377,28 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   render() {
     const { activeTreeId, activeGroupId } = this.props;
     return (
-      <React.Fragment>
-        <AutoSizer className="info-tab-content">
-          {({ height, width }) => (
-            <div style={{ height, width }}>
-              <SortableTree
-                treeData={this.state.groupTree}
-                onChange={this.onChange}
-                onMoveNode={this.onMoveNode}
-                onVisibilityToggle={this.onExpand}
-                searchMethod={this.keySearchMethod}
-                searchQuery={{ activeTreeId, activeGroupId }}
-                generateNodeProps={this.generateNodeProps}
-                canDrop={this.canDrop}
-                canDrag={this.canDrag}
-                rowHeight={24}
-                innerStyle={{ padding: 0 }}
-                scaffoldBlockPxWidth={25}
-                searchFocusOffset={this.state.searchFocusOffset}
-                reactVirtualizedListProps={{ scrollToAlignment: "auto", tabIndex: null }}
-              />
-            </div>
-          )}
-        </AutoSizer>
-      </React.Fragment>
+      <AutoSizer className="info-tab-content">
+        {({ height, width }) => (
+          <div style={{ height, width }}>
+            <SortableTree
+              treeData={this.state.groupTree}
+              onChange={this.onChange}
+              onMoveNode={this.onMoveNode}
+              onVisibilityToggle={this.onExpand}
+              searchMethod={this.keySearchMethod}
+              searchQuery={{ activeTreeId, activeGroupId }}
+              generateNodeProps={this.generateNodeProps}
+              canDrop={this.canDrop}
+              canDrag={this.canDrag}
+              rowHeight={24}
+              innerStyle={{ padding: 0 }}
+              scaffoldBlockPxWidth={25}
+              searchFocusOffset={this.state.searchFocusOffset}
+              reactVirtualizedListProps={{ scrollToAlignment: "auto", tabIndex: null }}
+            />
+          </div>
+        )}
+      </AutoSizer>
     );
   }
 }

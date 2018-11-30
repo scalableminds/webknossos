@@ -7,11 +7,12 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ## Unreleased
+
 [Commits](https://github.com/scalableminds/webknossos/compare/18.11.0...HEAD)
 
 ### Added
 
-- It is possible to select trees in skeleton tracings in the hierarchy tab by using alt + left mouse. Deleting and moving trees affect all these selected trees. [#3457](https://github.com/scalableminds/webknossos/pull/3457)
+- Added the possibility to select multiple trees in skeleton tracings in the tree tab by using ctrl + left mouse. Deleting and moving trees will affect all selected trees. [#3457](https://github.com/scalableminds/webknossos/pull/3457)
 
 ### Changed
 
@@ -32,8 +33,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 - Removed support to watch additional dataset directories, no longer automatically creating symbolic links to the main directory. [#3416](https://github.com/scalableminds/webknossos/pull/3416)
 
-
 ## [18.11.0](https://github.com/scalableminds/webknossos/releases/tag/18.11.0) - 2018-10-29
+
 [Commits](https://github.com/scalableminds/webknossos/compare/18.10.0...18.11.0)
 
 ### Highlights
@@ -77,8 +78,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Fixed a bug which caused the save-button to never show success for volume tracings. [#3267](https://github.com/scalableminds/webknossos/pull/3267)
 - Fixed a rendering bug which caused data to turn black sometimes when moving around. [#3409](https://github.com/scalableminds/webknossos/pull/3409)
 
-
 ## [18.10.0](https://github.com/scalableminds/webknossos/releases/tag/18.10.0) - 2018-09-22
+
 [Commits](https://github.com/scalableminds/webknossos/compare/18.09.0...18.10.0)
 
 ### Highlights
@@ -98,7 +99,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Improved security by enabling http security headers. [#3084](https://github.com/scalableminds/webknossos/pull/3084)
 - Added the possibility to write markdown in the annotation description. [#3081](https://github.com/scalableminds/webknossos/pull/3081)
 - Added a view to restore any older version of a skeleton tracing. Access it through the dropdown next to the Save button. [#3194](https://github.com/scalableminds/webknossos/pull/3194)
-![version-restore-highlight](https://user-images.githubusercontent.com/1702075/45428378-6842d380-b6a1-11e8-88c2-e4ffcd762cd5.png)
+  ![version-restore-highlight](https://user-images.githubusercontent.com/1702075/45428378-6842d380-b6a1-11e8-88c2-e4ffcd762cd5.png)
 - Added customizable layouting to the tracing view. [#3070](https://github.com/scalableminds/webknossos/pull/3070)
 - Added the brush size to the settings on the left in volume tracing. The size can now also be adjusted by using only the keyboard. [#3126](https://github.com/scalableminds/webknossos/pull/3126)
 - Added a user documentation for webKnossos [#3011](https://github.com/scalableminds/webknossos/pull/3011)

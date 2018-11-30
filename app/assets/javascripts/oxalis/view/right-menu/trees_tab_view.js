@@ -553,7 +553,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
           <span>{selectionInfo}</span>
           <br />
           <span className="clickable-text" onClick={this.unselectEverything}>
-            Click here to unselect everthing
+            Click here to unselect everything
           </span>
         </div>
         <ul style={{ flex: "1 1 auto", overflow: "auto", margin: 0, padding: 0 }}>

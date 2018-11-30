@@ -448,12 +448,11 @@ export const deleteTreeAsUserAction = (treeId?: number): NoAction => {
   return noAction();
 };
 
-export const deleteMultipleTreesAsUserAction = (treeIds?: Array<number>): NoAction => {
+export const deleteMultipleTreesAsUserAction = (treeIds: Array<number>): NoAction => {
   const state = Store.getState();
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
   const allTreeIds = Object.keys(skeletonTracing.trees).map(id => parseInt(id, 10));
-  const notExistingTrees = _.difference(treeIds, allTreeIds);
-  const allExistingIds = _.difference(treeIds, notExistingTrees);
+  const allExistingIds = _.intersection(treeIds, allTreeIds);
   allExistingIds.forEach(id => {
     const tree = skeletonTracing.trees[id];
     if (state.task != null && tree.nodes.has(1)) {

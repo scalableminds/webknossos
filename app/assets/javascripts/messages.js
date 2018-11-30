@@ -60,10 +60,10 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.delete_tree_with_initial_node":
     "This tree contains the initial node. Do you really want to delete the whole tree?",
   "tracing.delete_mulitple_trees": _.template(
-    "You have <%- countOfTrees %> trees selected, do you really want to all those trees?",
+    "You have <%- countOfTrees %> trees selected, do you really want to delete all those trees?",
   ),
   "tracing.group_already_selected":
-    "The group of this tree is already selected. Do you really want to select this tree? This will unselect the trees' group.",
+    "The group of this tree is already selected. Do you really want to select this tree? This will unselect the tree's group.",
   "tracing.group_selection_warning":
     "Either some of the selected groups items are already selected or the parent group is. Do you really want to select this group? This will unselect all trees and groups that are in this group and the parent group.",
   "tracing.merged": "Merging successfully done",

@@ -1,10 +1,11 @@
 // @flow
-import { Checkbox, Col, Collapse, Form, Icon, Input, Row, Tooltip } from "antd";
+import { Checkbox, Col, Collapse, Form, Icon, Input, Row, Tooltip, Table } from "antd";
 import * as React from "react";
+import _ from "lodash";
 
 import type { DatasetConfiguration, UserConfiguration } from "oxalis/store";
 import { jsonEditStyle } from "dashboard/dataset/helper_components";
-import { jsonStringify } from "libs/utils";
+import { settings } from "messages";
 import { validateUserSettingsJSON } from "dashboard/dataset/validation";
 
 const FormItem = Form.Item;
@@ -14,21 +15,16 @@ export const DEFAULT_RECOMMENDED_CONFIGURATION: $Shape<{|
   ...UserConfiguration,
   ...DatasetConfiguration,
 |}> = {
-  clippingDistance: 500,
-  clippingDistanceArbitrary: 60,
+  clippingDistance: 80,
+  moveValue: 500,
   displayCrosshair: true,
   displayScalebars: false,
   dynamicSpaceDirection: true,
   keyboardDelay: 0,
-  moveValue: 500,
-  moveValue3d: 600,
-  mouseRotateValue: 0.001,
   newNodeNewTree: false,
   highlightCommentedNodes: false,
   overrideNodeRadius: true,
   particleSize: 5,
-  rotateValue: 0.01,
-  sphericalCapRadius: 500,
   tdViewDisplayPlanes: false,
   fourBit: false,
   interpolation: true,
@@ -37,6 +33,19 @@ export const DEFAULT_RECOMMENDED_CONFIGURATION: $Shape<{|
   highlightHoveredCellId: false,
   zoom: 0.8,
   renderMissingDataBlack: false,
+  clippingDistanceArbitrary: 60,
+  moveValue3d: 600,
+  mouseRotateValue: 0.001,
+  rotateValue: 0.01,
+  sphericalCapRadius: 500,
+};
+
+export const settingComments = {
+  clippingDistance: "orthogonal mode",
+  moveValue: "orthogonal mode",
+  quality: "0 (high), 1 (medium), 2 (low)",
+  clippingDistanceArbitrary: "flight/oblique mode",
+  moveValue3d: "flight/oblique mode",
 };
 
 const errorIcon = (
@@ -44,6 +53,25 @@ const errorIcon = (
     <Icon type="exclamation-circle" style={{ color: "#f5222d", marginLeft: 4 }} />
   </Tooltip>
 );
+
+const columns = [
+  {
+    title: "Display Name",
+    dataIndex: "name",
+  },
+  {
+    title: "Key",
+    dataIndex: "key",
+  },
+  {
+    title: "Default Value",
+    dataIndex: "value",
+  },
+  {
+    title: "Comment",
+    dataIndex: "comment",
+  },
+];
 
 export default function RecommendedConfigurationView({
   form,
@@ -70,10 +98,11 @@ export default function RecommendedConfigurationView({
         showArrow={false}
       >
         <Row gutter={32}>
-          <Col span={18}>
+          <Col span={12}>
             <FormItem>
               The recommended configuration will be displayed to users when starting to trace a task
               with this task type. The user is able to accept or decline this recommendation.
+              <br />
               <br />
               {form.getFieldDecorator("recommendedConfiguration", {
                 rules: [
@@ -90,9 +119,20 @@ export default function RecommendedConfigurationView({
               )}
             </FormItem>
           </Col>
-          <Col span={6}>
+          <Col span={12}>
             Valid settings and their default values: <br />
-            <pre>{jsonStringify(DEFAULT_RECOMMENDED_CONFIGURATION)}</pre>
+            <br />
+            <Table
+              columns={columns}
+              dataSource={_.map(DEFAULT_RECOMMENDED_CONFIGURATION, (value, key) => ({
+                name: settings[key],
+                key,
+                value: value.toString(),
+                comment: settingComments[key] || "",
+              }))}
+              size="small"
+              pagination={false}
+            />
           </Col>
         </Row>
       </Panel>

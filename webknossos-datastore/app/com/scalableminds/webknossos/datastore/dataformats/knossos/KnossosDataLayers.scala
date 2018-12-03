@@ -24,7 +24,7 @@ trait KnossosLayer extends DataLayer {
 
   lazy val boundingBox = BoundingBox.combine(sections.map(_.boundingBox))
 
-  lazy val resolutions: List[Point3D] = sections.map(_.resolutions).reduce(_ union _).map {
+  lazy val resolutions: List[Point3D] = sections.map(_.resolutions).reduce(_ union _).toSet.toList.map {
     case Left(r) => Point3D(r, r, r)
     case Right(r) => r
   }

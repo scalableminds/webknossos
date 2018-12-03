@@ -190,6 +190,15 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       _ <- run(q.update(firstName, lastName, email, email, isAdmin, isDeactivated, lastTaskTypeId))
     } yield ()
   }
+
+  def updateLastTaskTypeId(userId: ObjectId, lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext) =
+    for {
+      _ <- assertUpdateAccess(userId)
+      _ <- run(sqlu"""update webknossos.users
+               set lasttasktypeid = ${lastTaskTypeId}
+               where _id = ${userId}""")
+    } yield ()
+
 }
 
 class UserTeamRolesDAO @Inject()(userDAO: UserDAO, sqlClient: SQLClient)(implicit ec: ExecutionContext)

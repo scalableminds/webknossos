@@ -148,6 +148,12 @@ class UserService @Inject()(conf: WkConf,
       _ = userCache.invalidateUser(user._id)
     } yield ()
 
+  def updateLastTaskTypeId(user: User, lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext) =
+    userDAO.updateLastTaskTypeId(user._id, lastTaskTypeId).map { result =>
+      userCache.invalidateUser(user._id)
+      result
+    }
+
   def retrieve(loginInfo: LoginInfo): Future[Option[User]] =
     findOneByEmail(loginInfo.providerKey).futureBox.map(_.toOption)
 

@@ -105,9 +105,11 @@ function resetMatrix(matrix: Matrix4x4, dataSetScale: Vector3) {
 
 function moveReducer(state: OxalisState, vector: Vector3): OxalisState {
   const matrix = cloneMatrix(state.flycam.currentMatrix);
-  matrix[12] += vector[0];
-  matrix[13] += vector[1];
-  matrix[14] += vector[2];
+  if (!vector.includes(NaN)) {
+    matrix[12] += vector[0];
+    matrix[13] += vector[1];
+    matrix[14] += vector[2];
+  }
   return update(state, { flycam: { currentMatrix: { $set: matrix } } });
 }
 
@@ -171,13 +173,14 @@ function FlycamReducer(state: OxalisState, action: Action): OxalisState {
     case "SET_POSITION": {
       // cannot use M4x4.clone because of immutable-seamless
       const matrix = cloneMatrix(state.flycam.currentMatrix);
-      if (action.dimensionToSkip !== 0) {
+      const { position } = action;
+      if (action.dimensionToSkip !== 0 && !isNaN(position[0])) {
         matrix[12] = action.position[0];
       }
-      if (action.dimensionToSkip !== 1) {
+      if (action.dimensionToSkip !== 1 && !isNaN(position[1])) {
         matrix[13] = action.position[1];
       }
-      if (action.dimensionToSkip !== 2) {
+      if (action.dimensionToSkip !== 2 && !isNaN(position[2])) {
         matrix[14] = action.position[2];
       }
       return update(state, { flycam: { currentMatrix: { $set: matrix } } });
@@ -191,12 +194,18 @@ function FlycamReducer(state: OxalisState, action: Action): OxalisState {
       return setDirectionReducer(state, action.direction);
     }
 
-    case "MOVE_FLYCAM":
+    case "MOVE_FLYCAM": {
+      if (action.vector.includes(NaN)) {
+        // if the action vector is invalid, do not update
+        return state;
+      }
+      const newMatrix = M4x4.translate(action.vector, state.flycam.currentMatrix, []);
       return update(state, {
         flycam: {
-          currentMatrix: { $set: M4x4.translate(action.vector, state.flycam.currentMatrix, []) },
+          currentMatrix: { $set: newMatrix },
         },
       });
+    }
 
     case "MOVE_FLYCAM_ORTHO": {
       const vector = _.clone(action.vector);

@@ -321,8 +321,12 @@ class BinaryDataController @Inject()(
             (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
             segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Messages("dataLayer.mustBeSegmentation")
             isosurfaceRequest = IsosurfaceRequest(dataSource, segmentationLayer, request.body.cuboid(dataLayer), request.body.segmentId, request.body.voxelDimensions, request.body.mapping)
+            // The client expects the isosurface as a flat float-array. Three consecutive floats form a 3D point, three
+            // consecutive 3D points (i.e., nine floats) form a triangle.
+            // There are no shared vertices between triangles.
             vertices <- isosurfaceService.requestIsosurfaceViaActor(isosurfaceRequest)
           } yield {
+            // We need four bytes for each float
             val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
             responseBuffer.asFloatBuffer().put(vertices)
             Ok(responseBuffer.array())

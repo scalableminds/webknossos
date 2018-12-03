@@ -13,6 +13,8 @@ import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServi
 import net.liftweb.common.{Box, Failure}
 import java.nio._
 
+import com.scalableminds.webknossos.datastore.DataStoreConfig
+
 import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext}
@@ -45,15 +47,17 @@ class IsosurfaceActor(val service: IsosurfaceService, val timeout: FiniteDuratio
 
 class IsosurfaceService @Inject()(
                                    actorSystem: ActorSystem,
-                                   dataServicesHolder: DataServicesHolder
+                                   dataServicesHolder: DataServicesHolder,
+                                   config: DataStoreConfig,
                                  )(implicit ec: ExecutionContext) extends FoxImplicits {
 
   val binaryDataService: BinaryDataService = dataServicesHolder.binaryDataService
   val mappingService: MappingService = dataServicesHolder.mappingService
 
-  implicit val timeout: Timeout = Timeout(30 seconds)
+  implicit val timeout: Timeout = Timeout(config.Braingames.Binary.isosurfaceTimeout)
 
-  val actor = actorSystem.actorOf(RoundRobinPool(1).props(Props(new IsosurfaceActor(this, timeout.duration))))
+  val actor = actorSystem.actorOf(RoundRobinPool(config.Braingames.Binary.isosurfaceActorPoolSize).props(
+    Props(new IsosurfaceActor(this, timeout.duration))))
 
   def requestIsosurfaceViaActor(request: IsosurfaceRequest): Fox[Array[Float]] = {
     actor.ask(request).mapTo[Box[Array[Float]]].recover {
@@ -115,7 +119,7 @@ class IsosurfaceService @Inject()(
       math.ceil(cuboid.height / voxelDimensions.y).toInt,
       math.ceil(cuboid.depth / voxelDimensions.z).toInt)
 
-    val offset = Vector3D(cuboid.topLeft.globalX,cuboid.topLeft.globalY,cuboid.topLeft.globalZ) / Vector3D(cuboid.topLeft.resolution)
+    val offset = Vector3D(cuboid.topLeft.x, cuboid.topLeft.y, cuboid.topLeft.z)
     val scale = Vector3D(cuboid.topLeft.resolution) * request.dataSource.scale.toVector
 
     val typedSegmentId = dataTypeFunctors.fromLong(request.segmentId)

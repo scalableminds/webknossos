@@ -141,8 +141,6 @@ class BinaryDataService(dataBaseDir: Path, loadTimeout: FiniteDuration, maxCache
     compressed
   }
 
-  // private def applyMapping()
-
   def clearCache(organizationName: String, dataSetName: String) = {
     def matchingPredicate(cubeKey: CachedCube) = {
       cubeKey.dataSourceName == dataSetName

@@ -64,26 +64,29 @@ class UrlManager {
 
     if (stateString) {
       const stateArray = stateString.split(",").map(Number);
-      if (stateArray.length >= 5) {
-        state.position = Utils.numberArrayToVector3(stateArray.slice(0, 3));
+      const validStateArray = stateArray.map(value => (!isNaN(value) ? value : 0));
+      if (validStateArray.length >= 5) {
+        const positionValues = validStateArray.slice(0, 3);
+        state.position = Utils.numberArrayToVector3(positionValues);
 
-        const modeString = ModeValues[stateArray[3]];
+        const modeString = ModeValues[validStateArray[3]];
         if (modeString) {
           state.mode = modeString;
         } else {
           // Let's default to MODE_PLANE_TRACING
           state.mode = constants.MODE_PLANE_TRACING;
         }
-        state.zoomStep = stateArray[4];
+        // default to zoom step 1
+        state.zoomStep = validStateArray[4] !== 0 ? validStateArray[4] : 1;
 
-        if (stateArray.length >= 8) {
-          state.rotation = Utils.numberArrayToVector3(stateArray.slice(5, 8));
+        if (validStateArray.length >= 8) {
+          state.rotation = Utils.numberArrayToVector3(validStateArray.slice(5, 8));
 
-          if (stateArray[8] != null) {
-            state.activeNode = stateArray[8];
+          if (validStateArray[8] != null) {
+            state.activeNode = validStateArray[8];
           }
-        } else if (stateArray[5] != null) {
-          state.activeNode = stateArray[5];
+        } else if (validStateArray[5] != null) {
+          state.activeNode = validStateArray[5];
         }
       }
     }

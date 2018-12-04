@@ -1,43 +1,59 @@
 // @flow
-import { Checkbox, Col, Collapse, Form, Icon, Input, Row, Tooltip, Table } from "antd";
+import { Checkbox, Col, Collapse, Form, Icon, Input, Row, Tooltip, Table, Button } from "antd";
 import * as React from "react";
 import _ from "lodash";
 
 import type { DatasetConfiguration, UserConfiguration } from "oxalis/store";
 import { jsonEditStyle } from "dashboard/dataset/helper_components";
+import { jsonStringify } from "libs/utils";
 import { settings } from "messages";
 import { validateUserSettingsJSON } from "dashboard/dataset/validation";
 
 const FormItem = Form.Item;
 const { Panel } = Collapse;
 
+const recommendedConfigByCategory = {
+  orthogonal: {
+    clippingDistance: 80,
+    moveValue: 500,
+    displayScalebars: false,
+    newNodeNewTree: false,
+    tdViewDisplayPlanes: false,
+  },
+  all: {
+    dynamicSpaceDirection: true,
+    highlightCommentedNodes: false,
+    overrideNodeRadius: true,
+    particleSize: 5,
+    keyboardDelay: 0,
+    displayCrosshair: true,
+  },
+  dataset: {
+    fourBit: false,
+    interpolation: true,
+    quality: 0,
+    segmentationOpacity: 0,
+    highlightHoveredCellId: false,
+    zoom: 0.8,
+    renderMissingDataBlack: false,
+  },
+  flight: {
+    clippingDistanceArbitrary: 60,
+    moveValue3d: 600,
+    mouseRotateValue: 0.001,
+    rotateValue: 0.01,
+    sphericalCapRadius: 500,
+  },
+};
+
 export const DEFAULT_RECOMMENDED_CONFIGURATION: $Shape<{|
   ...UserConfiguration,
   ...DatasetConfiguration,
 |}> = {
-  clippingDistance: 80,
-  moveValue: 500,
-  displayCrosshair: true,
-  displayScalebars: false,
-  dynamicSpaceDirection: true,
-  keyboardDelay: 0,
-  newNodeNewTree: false,
-  highlightCommentedNodes: false,
-  overrideNodeRadius: true,
-  particleSize: 5,
-  tdViewDisplayPlanes: false,
-  fourBit: false,
-  interpolation: true,
-  quality: 0,
-  segmentationOpacity: 0,
-  highlightHoveredCellId: false,
-  zoom: 0.8,
-  renderMissingDataBlack: false,
-  clippingDistanceArbitrary: 60,
-  moveValue3d: 600,
-  mouseRotateValue: 0.001,
-  rotateValue: 0.01,
-  sphericalCapRadius: 500,
+  ...recommendedConfigByCategory.orthogonal,
+  ...recommendedConfigByCategory.all,
+  ...recommendedConfigByCategory.dataset,
+  ...recommendedConfigByCategory.flight,
 };
 
 export const settingComments = {
@@ -72,6 +88,20 @@ const columns = [
     dataIndex: "comment",
   },
 ];
+
+const removeSettings = (form, settingsKey: string) => {
+  const settingsString = form.getFieldValue("recommendedConfiguration");
+  try {
+    const settingsObject = JSON.parse(settingsString);
+    const newSettings = _.omit(
+      settingsObject,
+      Object.keys(recommendedConfigByCategory[settingsKey]),
+    );
+    form.setFieldsValue({ recommendedConfiguration: jsonStringify(newSettings) });
+  } catch (e) {
+    console.error(e);
+  }
+};
 
 export default function RecommendedConfigurationView({
   form,
@@ -118,6 +148,12 @@ export default function RecommendedConfigurationView({
                 />,
               )}
             </FormItem>
+            <Button style={{ marginRight: 10 }} onClick={() => removeSettings(form, "orthogonal")}>
+              Remove Orthogonal-only settings
+            </Button>
+            <Button onClick={() => removeSettings(form, "flight")}>
+              Remove Flight/Oblique-only settings
+            </Button>
           </Col>
           <Col span={12}>
             Valid settings and their default values: <br />

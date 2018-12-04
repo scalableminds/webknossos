@@ -149,10 +149,10 @@ export default function RecommendedConfigurationView({
               )}
             </FormItem>
             <Button style={{ marginRight: 10 }} onClick={() => removeSettings(form, "orthogonal")}>
-              Remove Orthogonal-only settings
+              Remove Orthogonal-only Settings
             </Button>
             <Button onClick={() => removeSettings(form, "flight")}>
-              Remove Flight/Oblique-only settings
+              Remove Flight/Oblique-only Settings
             </Button>
           </Col>
           <Col span={12}>

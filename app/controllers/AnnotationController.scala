@@ -14,6 +14,7 @@ import models.user.time._
 import models.user.{User, UserService}
 import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
+import models.team.OrganizationDAO
 import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
 import play.api.libs.json.{JsArray, _}
 import play.api.mvc.PlayBodyParsers
@@ -25,6 +26,7 @@ import scala.concurrent.duration._
 class AnnotationController @Inject()(
     annotationDAO: AnnotationDAO,
     taskDAO: TaskDAO,
+    organizationDAO: OrganizationDAO,
     dataSetDAO: DataSetDAO,
     dataSetService: DataSetService,
     annotationService: AnnotationService,
@@ -132,7 +134,8 @@ class AnnotationController @Inject()(
   def createExplorational(organizationName: String, dataSetName: String) =
     sil.SecuredAction.async(validateJson[CreateExplorationalParameters]) { implicit request =>
       for {
-        dataSetSQL <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> Messages(
+        organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages("organization.notFound", organizationName)
+        dataSetSQL <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
           "dataSet.notFound",
           dataSetName)
         tracingType <- TracingType.values.find(_.toString == request.body.typ).toFox

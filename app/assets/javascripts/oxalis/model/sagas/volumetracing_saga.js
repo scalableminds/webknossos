@@ -265,7 +265,6 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
   const outputExtent = 244;
   const overflowBufferSize = 92;
   const inputExtent = outputExtent + 2 * overflowBufferSize;
-  const inputExtentHalf = inputExtent / 2;
 
   console.log("viewport width", viewportWidthX);
 

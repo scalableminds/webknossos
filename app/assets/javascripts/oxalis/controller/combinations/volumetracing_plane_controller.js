@@ -152,13 +152,13 @@ export function getPlaneMouseControls(planeId: OrthoView): * {
 
     leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
       if (event.shiftKey) {
-        // const cellId = Model.getSegmentationLayer().cube.getDataValue(
-        //   calculateGlobalPos(pos),
-        //   null,
-        //   getRequestLogZoomStep(Store.getState()),
-        // );
-        // handleCellSelection(cellId);
-
+        const cellId = Model.getSegmentationLayer().cube.getDataValue(
+          calculateGlobalPos(pos),
+          null,
+          getRequestLogZoomStep(Store.getState()),
+        );
+        handleCellSelection(cellId);
+      } else if (event.ctrlKey) {
         Store.dispatch(inferSegmentationInViewportAction(calculateGlobalPos(pos)));
       }
     },

@@ -17,7 +17,7 @@ import {
   VolumeToolEnum,
 } from "oxalis/constants";
 import { InputKeyboardNoLoop } from "libs/input";
-import { type Bucket, NullBucket } from "oxalis/model/bucket_data_handling/bucket";
+import { type Bucket } from "oxalis/model/bucket_data_handling/bucket";
 import { V3 } from "libs/mjs";
 import type { Versions } from "oxalis/view/version_view";
 import {

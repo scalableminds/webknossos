@@ -120,6 +120,15 @@ class TeamDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- Fox.serialCombined(r.toList)(col => ObjectId.parse(col))
     } yield parsed
 
+  def findAllForDataSet(dataSetId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[Team]] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(sql"""select #${columnsWithPrefix("t.")} from #${existingCollectionName} t
+                     join webknossos.dataSet_allowedTeams at on t._id = at._team
+                     where at._dataSet = ${dataSetId}""".as[TeamsRow])
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
+
   def insertOne(t: Team)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       r <- run(sqlu"""insert into webknossos.teams(_id, _organization, name, created, isOrganizationTeam, isDeleted)

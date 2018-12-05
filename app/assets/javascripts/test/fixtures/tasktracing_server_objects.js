@@ -60,6 +60,7 @@ export const annotation: APIAnnotation = {
         branchPointsAllowed: true,
         somaClickingAllowed: true,
       },
+      recommendedConfiguration: null,
     },
     dataSet: "ROI2017_wkw",
     neededExperience: { domain: "oxalis", value: 1 },
@@ -99,4 +100,5 @@ export const annotation: APIAnnotation = {
       { id: "5b1e45f9a00000a000abc2c3", isTeamManager: true, name: "Connectomics department" },
     ],
   },
+  meshes: [],
 };

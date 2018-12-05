@@ -147,7 +147,7 @@ services:
       - -c
       - >
         sbt
-        -v -d
+        -v
         "testOnly e2e.* --
           -Dtracingstore.fossildb.address=fossildb"
     volumes:

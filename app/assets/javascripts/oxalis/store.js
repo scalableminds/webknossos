@@ -7,18 +7,19 @@ import { createStore, applyMiddleware } from "redux";
 import createSagaMiddleware from "redux-saga";
 
 import type {
-  APIRestrictions,
   APIAllowedMode,
-  APISettings,
-  APIDataStore,
-  APITracingType,
-  APIScript,
-  APITask,
-  APIUser,
-  APIDatasetId,
-  APIDataset,
   APIDataLayer,
+  APIDataStore,
+  APIDataset,
+  APIDatasetId,
+  APIRestrictions,
+  APIScript,
+  APISettings,
+  APITask,
   APITracingStore,
+  APITracingType,
+  APIUser,
+  MeshMetaData,
 } from "admin/api_flow_types";
 import type { Action } from "oxalis/model/actions/actions";
 import type { Matrix4x4 } from "libs/mjs";
@@ -144,6 +145,7 @@ export type Annotation = {|
   +name: string,
   +tracingStore: APITracingStore,
   +tracingType: TracingTypeTracing,
+  +meshes: Array<MeshMetaData>,
 |};
 
 type TracingBase = {|
@@ -208,10 +210,9 @@ export type DatasetLayerConfiguration = {|
   +contrast: number,
 |};
 
-export type DatasetConfiguration = {
+export type DatasetConfiguration = {|
   +fourBit: boolean,
   +interpolation: boolean,
-  +keyboardDelay: number,
   +layers: {
     [name: string]: DatasetLayerConfiguration,
   },
@@ -221,8 +222,8 @@ export type DatasetConfiguration = {
   +position?: Vector3,
   +zoom?: number,
   +rotation?: Vector3,
-  +renderMissingDataBlack: true,
-};
+  +renderMissingDataBlack: boolean,
+|};
 
 export type UserConfiguration = {|
   +clippingDistance: number,
@@ -351,6 +352,7 @@ type UiInformation = {
   +showDropzoneModal: boolean,
   +showVersionRestore: boolean,
   +storedLayouts: Object,
+  +isImportingMesh: boolean,
 };
 
 export type OxalisState = {|
@@ -394,13 +396,13 @@ const initialAnnotationInfo = {
     url: "http://localhost:9000",
   },
   tracingType: "View",
+  meshes: [],
 };
 
 export const defaultState: OxalisState = {
   datasetConfiguration: {
     fourBit: true,
     interpolation: false,
-    keyboardDelay: 342,
     layers: {},
     quality: 0,
     segmentationOpacity: 20,
@@ -538,6 +540,7 @@ export const defaultState: OxalisState = {
     showDropzoneModal: false,
     showVersionRestore: false,
     storedLayouts: {},
+    isImportingMesh: false,
   },
 };
 

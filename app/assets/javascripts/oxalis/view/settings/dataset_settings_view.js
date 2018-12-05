@@ -23,7 +23,7 @@ import {
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import constants, { type Mode } from "oxalis/constants";
-import messages from "messages";
+import messages, { settings } from "messages";
 
 const Panel = Collapse.Panel;
 const Option = Select.Option;
@@ -94,33 +94,33 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
         </Panel>
         <Panel header="Segmentation" key="2">
           <NumberSliderSetting
-            label="Segmentation Opacity"
+            label={settings.segmentationOpacity}
             min={0}
             max={100}
             value={this.props.datasetConfiguration.segmentationOpacity}
             onChange={_.partial(this.props.onChange, "segmentationOpacity")}
           />
           <SwitchSetting
-            label="Highlight Hovered Cells"
+            label={settings.highlightHoveredCellId}
             value={this.props.datasetConfiguration.highlightHoveredCellId}
             onChange={_.partial(this.props.onChange, "highlightHoveredCellId")}
           />
         </Panel>
         <Panel header="Quality" key="3">
           <SwitchSetting
-            label="4 Bit"
+            label={settings.fourBit}
             value={this.props.datasetConfiguration.fourBit}
             onChange={_.partial(this.props.onChange, "fourBit")}
           />
           {constants.MODES_ARBITRARY.includes(this.props.viewMode) ? null : (
             <SwitchSetting
-              label="Interpolation"
+              label={settings.interpolation}
               value={this.props.datasetConfiguration.interpolation}
               onChange={_.partial(this.props.onChange, "interpolation")}
             />
           )}
           <DropdownSetting
-            label="Quality"
+            label={settings.quality}
             value={this.props.datasetConfiguration.quality}
             onChange={_.partial(this.onChangeQuality, "quality")}
           >
@@ -131,7 +131,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
           <SwitchSetting
             label={
               <React.Fragment>
-                Render Missing Data Black{" "}
+                {settings.renderMissingDataBlack}{" "}
                 <Tooltip title="Upsample lower resolution data for missing higher resolution data.">
                   <Icon type="info-circle" />
                 </Tooltip>

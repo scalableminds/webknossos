@@ -31,7 +31,7 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
 
   def currentVersion(tracingId: String): Fox[Long] = tracingDataStore.skeletonUpdates.getVersion(tracingId, mayBeEmpty = Some(true)).getOrElse(0L)
 
-  def handleUpdateGroup(tracingId: String, updateActionGroup: UpdateActionGroup[SkeletonTracing]): Fox[_] =
+  def handleUpdateGroup(tracingId: String, updateActionGroup: UpdateActionGroup[SkeletonTracing], previousVersion: Long): Fox[_] =
     tracingDataStore.skeletonUpdates.put(tracingId, updateActionGroup.version, updateActionGroup.actions.map(_.addTimestamp(updateActionGroup.timestamp)))
 
   override def applyPendingUpdates(tracing: SkeletonTracing, tracingId: String, desiredVersion: Option[Long]): Fox[SkeletonTracing] = {

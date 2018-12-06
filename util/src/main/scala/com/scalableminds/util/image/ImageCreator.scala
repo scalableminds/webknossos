@@ -121,8 +121,7 @@ object ImageCreator extends LazyLogging {
           case 3 =>
             (0xFF << 24) | ((b(idx) & 0xFF) << 16) | ((b(idx + 1) & 0xFF) << 8) | ((b(idx + 2) & 0xFF) << 0)
           case 4 =>
-            toTestRGB(b(idx))
-          //((b(idx + 3) & 0xFF) << 24) | ((b(idx) & 0xFF) << 16) | ((b(idx + 1) & 0xFF) << 8) | ((b(idx + 2) & 0xFF) << 0)
+            idToRGB(b(idx))
           case _ =>
             throw new Exception("Can't handle " + bytesPerElement + " bytes per element in Image creator.")
         }
@@ -132,34 +131,35 @@ object ImageCreator extends LazyLogging {
     colored
   }
 
-  def hsvToRgb(hsv: Array[Double]): Int = {
-    val K = Array(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0)
-    val p = Array.ofDim[Double](3)
-    for (i <- 0 to 2) {
-      val x = hsv(0) + K(i)
-      val decimal = x.toInt
-      val fract = x - decimal
-      p(i) = Math.abs(fract * 6.0 - K(3))
-    }
-    val returnVal = Array.ofDim[Double](3)
-    for (i <- 0 to 2) {
-      val x = K(0)
-      val cl = com.scalableminds.util.tools.Math.clamp(p(i) - K(0), 0.0, 1.0)
-      val ret = x * (1 - hsv(1)) + cl * hsv(1)
-      returnVal(i) = hsv(2) * ret
-    }
-    val end = returnVal.map(x => (x * 255).toByte)
-    (0xFF << 24) | ((end(0) & 0xFF) << 16) | ((end(1) & 0xFF) << 8) | ((end(2) & 0xFF) << 0)
-  }
+  def idToRGB(b: Byte) = {
+    def hueToRGB(h: Double): Int = {
 
-  def toTestRGB(b: Byte) =
+      val i: Double = Math.floor(h * 6f)
+      val f: Double = h * 6f - i
+
+      val (r, g, b) = i % 6 match {
+        case 0 => (1.0, f, 0.0)
+        case 1 => (1.0 - f, 1.0, 0.0)
+        case 2 => (0.0, 1.0, f)
+        case 3 => (0.0, 1.0 - f, 1.0)
+        case 4 => (f, 0.0, 1.0)
+        case 5 => (1.0, 0.0, 1.0 - f)
+      }
+
+      val rByte = (r * 255).toByte
+      val gByte = (g * 255).toByte
+      val bByte = (b * 255).toByte
+      (0xFF << 24) | ((rByte & 0xFF) << 16) | ((gByte & 0xFF) << 8) | ((bByte & 0xFF) << 0)
+    }
+
     b match {
       case 0 => (0x64 << 24) | (0x64 << 16) | (0x64 << 8) | (0x64 << 0)
       case _ =>
         val golden_ratio = 0.618033988749895
-        val value = ((b & 0xFF) * golden_ratio) % 1.0
-        hsvToRgb(Array(value, 1.0, 1.0, 1.0))
+        val hue = ((b & 0xFF) * golden_ratio) % 1.0
+        hueToRGB(hue)
     }
+  }
 
   def createBufferedImageFromBytes(b: Array[Byte],
                                    targetType: Int,

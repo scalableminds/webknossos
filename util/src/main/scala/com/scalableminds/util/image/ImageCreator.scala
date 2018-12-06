@@ -116,8 +116,9 @@ object ImageCreator extends LazyLogging {
             val gray = b(idx)
             (0xFF << 24) | ((gray & 0xFF) << 16) | ((gray & 0xFF) << 8) | ((gray & 0xFF) << 0)
           case 2 =>
-            val gray = b(idx)
-            (b(idx + 1) << 24) | ((gray & 0xFF) << 16) | ((gray & 0xFF) << 8) | ((gray & 0xFF) << 0)
+            idToRGB(b(idx))
+          //val gray = b(idx)
+          //(b(idx + 1) << 24) | ((gray & 0xFF) << 16) | ((gray & 0xFF) << 8) | ((gray & 0xFF) << 0)
           case 3 =>
             (0xFF << 24) | ((b(idx) & 0xFF) << 16) | ((b(idx + 1) & 0xFF) << 8) | ((b(idx + 2) & 0xFF) << 0)
           case 4 =>

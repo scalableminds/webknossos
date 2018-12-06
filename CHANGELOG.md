@@ -21,7 +21,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 ### Fixed
 
 - Fixed a performance issue for large tracings with many branch points. [#3519](https://github.com/scalableminds/webknossos/pull/3519)
-
+- Fixed bug which caused buckets to disappear randomly. [#3531](https://github.com/scalableminds/webknossos/pull/3531)
 
 ### Removed
 

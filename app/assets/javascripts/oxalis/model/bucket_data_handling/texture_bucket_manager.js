@@ -104,7 +104,6 @@ export default class TextureBucketManager {
     this.activeBucketToIndexMap.delete(bucket);
     this.committedBucketSet.delete(bucket);
     this.freeIndexSet.add(unusedIndex);
-    // bucket.unvisualize();
   }
 
   // Takes an array of buckets (relative to an anchorPoint) and ensures that these

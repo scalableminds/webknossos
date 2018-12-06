@@ -242,6 +242,7 @@ export default class LayerRenderingManager {
       );
 
       const buckets = bucketsWithPriorities.map(({ bucket }) => bucket);
+      this.cube.markBucketsAsUnneeded();
       // This tells the bucket collection, that the buckets are necessary for rendering
       buckets.forEach(b => b.markAsNeeded());
 

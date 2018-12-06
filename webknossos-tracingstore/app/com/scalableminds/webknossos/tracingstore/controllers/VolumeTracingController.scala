@@ -2,10 +2,11 @@ package com.scalableminds.webknossos.tracingstore.controllers
 
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
+import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracings}
 import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
 import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessRequest}
-import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreWkRpcClient}
+import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreConfig, TracingStoreWkRpcClient}
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import play.api.i18n.Messages
@@ -19,6 +20,7 @@ import scala.concurrent.ExecutionContext
 class VolumeTracingController @Inject()(val tracingService: VolumeTracingService,
                                         val webKnossosServer: TracingStoreWkRpcClient,
                                         val accessTokenService: TracingStoreAccessTokenService,
+                                        config: TracingStoreConfig,
                                         tracingDataStore: TracingDataStore)
                                        (implicit val ec: ExecutionContext,
                                         val bodyParsers: PlayBodyParsers)
@@ -29,6 +31,8 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
   implicit def packMultiple(tracings: List[VolumeTracing]): VolumeTracings = VolumeTracings(tracings)
 
   implicit def unpackMultiple(tracings: VolumeTracings): List[VolumeTracing] = tracings.tracings.toList
+
+  override def shouldIgnoreVersions = config.Tracingstore.freezeVolumeVersions
 
   def initialData(tracingId: String) = Action.async {
     implicit request =>

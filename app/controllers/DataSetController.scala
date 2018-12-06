@@ -54,8 +54,8 @@ class DataSetController @Inject()(userService: UserService,
         val width = Math.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailHeight)
         val height = Math.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
         cache.get[Array[Byte]](s"thumbnail-$organizationName*$dataSetName*$dataLayerName-$width-$height") match {
-          /*case Some(a) =>
-            Fox.successful(a)*/
+          case Some(a) =>
+            Fox.successful(a)
           case _ => {
             val defaultCenterOpt = dataSet.defaultConfiguration.flatMap(c =>
               c.configuration.get("position").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Point3D])))

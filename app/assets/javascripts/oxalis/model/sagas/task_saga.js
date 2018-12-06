@@ -2,7 +2,7 @@
 import React from "react";
 import _ from "lodash";
 
-import type { APITaskType, APIUser } from "admin/api_flow_types";
+import type { APITaskType } from "admin/api_flow_types";
 import { type Saga, call, put, select, take } from "oxalis/model/sagas/effect-generators";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import {
@@ -10,7 +10,7 @@ import {
   updateUserSettingAction,
 } from "oxalis/model/actions/settings_actions";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
-import { updateUser } from "admin/admin_rest_api";
+import { updateLastTaskTypeIdOfUser } from "admin/admin_rest_api";
 import NewTaskDescriptionModal from "oxalis/view/new_task_description_modal";
 import RecommendConfigurationModal from "oxalis/view/recommended_configuration_modal";
 import Toast from "libs/toast";
@@ -96,8 +96,7 @@ export default function* watchTasksAsync(): Saga<void> {
     yield* call(maybeShowNewTaskTypeModal, task.type);
     yield* call(maybeShowRecommendedConfiguration, task.type);
 
-    const updatedUser: $Shape<APIUser> = { id: activeUser.id, lastTaskTypeId: task.type.id };
-    const fullUser = yield* call(updateUser, updatedUser);
+    const fullUser = yield* call(updateLastTaskTypeIdOfUser, activeUser.id, task.type.id);
     yield* put(setActiveUserAction(fullUser));
   }
 }

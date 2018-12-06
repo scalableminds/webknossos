@@ -1,10 +1,27 @@
 // @flow
 
-import { Modal, List } from "antd";
+import { Modal, Table } from "antd";
 import * as React from "react";
+import _ from "lodash";
 
 import type { DatasetConfiguration, UserConfiguration } from "oxalis/store";
-import messages from "messages";
+import { settingComments } from "admin/tasktype/recommended_configuration_view";
+import messages, { settings } from "messages";
+
+const columns = [
+  {
+    title: "Setting",
+    dataIndex: "name",
+  },
+  {
+    title: "Value",
+    dataIndex: "value",
+  },
+  {
+    title: "Comment",
+    dataIndex: "comment",
+  },
+];
 
 type Props = {
   config: $Shape<{ ...UserConfiguration, ...DatasetConfiguration }>,
@@ -41,19 +58,19 @@ export default class RecommendedConfigurationModal extends React.Component<Props
         cancelText="Decline"
         onOk={this.handleOk}
         onCancel={this.hide}
+        width={750}
       >
         {messages["task.recommended_configuration"]}
-        <List
+        <Table
           style={{ marginTop: 20, maxHeight: 500, overflow: "auto" }}
-          itemLayout="horizontal"
-          dataSource={Object.entries(this.props.config)}
+          columns={columns}
+          dataSource={_.map(this.props.config, (value, key) => ({
+            name: settings[key],
+            value: value.toString(),
+            comment: settingComments[key] || "",
+          }))}
           size="small"
-          bordered
-          renderItem={([key, value]) => (
-            <List.Item>
-              {key}: {value.toString()}
-            </List.Item>
-          )}
+          pagination={false}
         />
       </Modal>
     );

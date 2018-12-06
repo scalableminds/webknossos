@@ -247,7 +247,7 @@ test("Garbage Collection should not collect buckets with shouldCollect() == fals
   t.deepEqual(addresses, [[0, 0, 0, 0], [3, 3, 3, 0], [2, 2, 2, 0]]);
 });
 
-test("Garbage Collection should throw an exception if no bucket is collectable", t => {
+test("Garbage Collection should not throw an exception if no bucket is collectable", t => {
   const { cube } = t.context;
   cube.MAXIMUM_BUCKET_COUNT = 3;
   cube.buckets = new Array(cube.MAXIMUM_BUCKET_COUNT);
@@ -256,5 +256,6 @@ test("Garbage Collection should throw an exception if no bucket is collectable",
   cube.getOrCreateBucket([1, 1, 1, 0]).pull();
   cube.getOrCreateBucket([2, 2, 2, 0]).pull();
 
-  t.throws((): Error => cube.getOrCreateBucket([3, 3, 3, 0]));
+  cube.getOrCreateBucket([3, 3, 3, 0]);
+  t.true(true);
 });

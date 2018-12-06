@@ -149,6 +149,16 @@ export function updateUser(newUser: $Shape<APIUser>): Promise<APIUser> {
   });
 }
 
+export function updateLastTaskTypeIdOfUser(
+  userId: string,
+  lastTaskTypeId: string,
+): Promise<APIUser> {
+  return Request.sendJSONReceiveJSON(`/api/users/${userId}/taskTypeId`, {
+    method: "PUT",
+    data: { lastTaskTypeId },
+  });
+}
+
 export async function getAuthToken(): Promise<string> {
   const { token } = await Request.receiveJSON("/api/auth/token");
   return token;

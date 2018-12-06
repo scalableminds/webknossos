@@ -103,7 +103,6 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
           webKnossosServer.reportTracingUpdates(tracingId, timestamps, latestStatistics, userToken).flatMap { _ =>
             updateGroups.foldLeft(currentVersion) { (previousVersion, updateGroup) =>
               previousVersion.flatMap { version =>
-                logger.info("previousVersion: " + version)
                 if (version + 1 == updateGroup.version || freezeVersions) {
                   tracingService.handleUpdateGroup(tracingId, updateGroup, version).map(_ => if (freezeVersions) version else updateGroup.version)
                 } else {

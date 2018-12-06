@@ -126,7 +126,6 @@ class FossilDBClient(collection: String, config: TracingStoreConfig) extends Fox
 
   def put[T](key: String, version: Long, value: Array[Byte])(implicit toByteArray: T => Array[Byte]): Fox[_] = {
     try {
-      logger.info("saving at version " + version)
       val reply = blockingStub.put(PutRequest(collection, key, Some(version), ByteString.copyFrom(value)))
       if (!reply.success) throw new Exception(reply.errorMessage.getOrElse(""))
       Fox.successful(Unit)

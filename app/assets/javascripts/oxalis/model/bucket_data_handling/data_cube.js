@@ -249,6 +249,12 @@ class DataCube {
     return bucket;
   }
 
+  markBucketsAsUnneeded(): void {
+    for (let i = 0; i < this.bucketCount; i++) {
+      this.buckets[i].markAsUnneeded();
+    }
+  }
+
   addBucketToGarbageCollection(bucket: DataBucket): void {
     if (this.bucketCount >= this.MAXIMUM_BUCKET_COUNT) {
       for (let i = 0; i < 2 * this.bucketCount; i++) {
@@ -259,7 +265,9 @@ class DataCube {
       }
 
       if (!this.buckets[this.bucketIterator].shouldCollect()) {
-        throw new Error("All buckets have shouldCollect == false permanently");
+        console.error(
+          "A bucket was forcefully garbage-collected. This indicates that too many buckets are currently in RAM.",
+        );
       }
 
       this.collectBucket(this.buckets[this.bucketIterator]);

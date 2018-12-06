@@ -84,7 +84,8 @@ class UserService @Inject()(conf: WkConf,
         passwordInfo,
         isAdmin,
         isSuperUser = false,
-        isDeactivated = !isActive
+        isDeactivated = !isActive,
+        lastTaskTypeId = None
       )
       _ <- userDAO.insertOne(user)
       _ <- Fox.combined(teamMemberships.map(userTeamRolesDAO.insertTeamMembership(user._id, _)))
@@ -98,13 +99,20 @@ class UserService @Inject()(conf: WkConf,
              activated: Boolean,
              isAdmin: Boolean,
              teamMemberships: List[TeamMembership],
-             experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[User] = {
+             experiences: Map[String, Int],
+             lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext): Fox[User] = {
 
     if (user.isDeactivated && activated) {
       Mailer ! Send(defaultMails.activatedMail(user.name, user.email))
     }
     for {
-      _ <- userDAO.updateValues(user._id, firstName, lastName, email, isAdmin, isDeactivated = !activated)
+      _ <- userDAO.updateValues(user._id,
+                                firstName,
+                                lastName,
+                                email,
+                                isAdmin,
+                                isDeactivated = !activated,
+                                lastTaskTypeId)
       _ <- userTeamRolesDAO.updateTeamMembershipsForUser(user._id, teamMemberships)
       _ <- userExperiencesDAO.updateExperiencesForUser(user._id, experiences)
       _ = userCache.invalidateUser(user._id)
@@ -139,6 +147,12 @@ class UserService @Inject()(conf: WkConf,
                                                                                    configuration.configuration)
       _ = userCache.invalidateUser(user._id)
     } yield ()
+
+  def updateLastTaskTypeId(user: User, lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext) =
+    userDAO.updateLastTaskTypeId(user._id, lastTaskTypeId).map { result =>
+      userCache.invalidateUser(user._id)
+      result
+    }
 
   def retrieve(loginInfo: LoginInfo): Future[Option[User]] =
     findOneByEmail(loginInfo.providerKey).futureBox.map(_.toOption)
@@ -222,7 +236,8 @@ class UserService @Inject()(conf: WkConf,
         "isAnonymous" -> false,
         "isEditable" -> isEditable,
         "organization" -> organization.name,
-        "created" -> user.created
+        "created" -> user.created,
+        "lastTaskTypeId" -> user.lastTaskTypeId.map(_.toString)
       )
     }
   }

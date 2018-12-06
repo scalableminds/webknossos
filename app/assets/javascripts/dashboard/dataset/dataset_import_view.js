@@ -24,6 +24,7 @@ import {
   updateDatasetTeams,
 } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
+import { jsonStringify } from "libs/utils";
 import Toast from "libs/toast";
 import messages from "messages";
 
@@ -34,8 +35,6 @@ import SimpleAdvancedDataForm from "./simple_advanced_data_form";
 
 const { TabPane } = Tabs;
 const FormItem = Form.Item;
-
-const toJSON = json => JSON.stringify(json, null, "  ");
 
 type Props = {
   form: Object,
@@ -97,7 +96,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         throw new Error("No datasource received from server.");
       }
       this.props.form.setFieldsValue({
-        dataSourceJson: toJSON(dataSource),
+        dataSourceJson: jsonStringify(dataSource),
         dataset: {
           displayName: dataset.displayName || undefined,
           isPublic: dataset.isPublic || false,
@@ -325,7 +324,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       // _.merge does a deep merge which mutates newDataSource
       _.merge(newDataSource, form.getFieldValue("dataSource"));
       form.setFieldsValue({
-        dataSourceJson: toJSON(newDataSource),
+        dataSourceJson: jsonStringify(newDataSource),
       });
     } else {
       // Copy from advanced to simple: update form values

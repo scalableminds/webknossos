@@ -32,7 +32,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
 
   implicit def unpackMultiple(tracings: VolumeTracings): List[VolumeTracing] = tracings.tracings.toList
 
-  override def shouldIgnoreVersions = config.Tracingstore.freezeVolumeVersions
+  override def freezeVersions = config.Tracingstore.freezeVolumeVersions
 
   def initialData(tracingId: String) = Action.async {
     implicit request =>

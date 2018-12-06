@@ -22,7 +22,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
 
   def accessTokenService: TracingStoreAccessTokenService
 
-  def shouldIgnoreVersions = false
+  def freezeVersions = false
 
   implicit val tracingCompanion: GeneratedMessageCompanion[T] = tracingService.tracingCompanion
 
@@ -103,8 +103,9 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
           webKnossosServer.reportTracingUpdates(tracingId, timestamps, latestStatistics, userToken).flatMap { _ =>
             updateGroups.foldLeft(currentVersion) { (previousVersion, updateGroup) =>
               previousVersion.flatMap { version =>
-                if (version + 1 == updateGroup.version || shouldIgnoreVersions) {
-                  tracingService.handleUpdateGroup(tracingId, updateGroup, version).map(_ => updateGroup.version)
+                logger.info("previousVersion: " + version)
+                if (version + 1 == updateGroup.version || freezeVersions) {
+                  tracingService.handleUpdateGroup(tracingId, updateGroup, version).map(_ => if (freezeVersions) version else updateGroup.version)
                 } else {
                   Failure(s"incorrect version. expected: ${version + 1}; got: ${updateGroup.version}")
                 }

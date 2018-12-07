@@ -44,13 +44,13 @@ trait VolumeTracingBucketHelper extends WKWMortonHelper with KeyValueStoreImplic
 
   def bucketStreamWithVersion(dataLayer: VolumeTracingLayer, resolution: Int, version: Option[Long]): Iterator[(BucketPosition, Array[Byte], Long)] = {
     val key = buildKeyPrefix(dataLayer.name, resolution)
-    new VersionedBucketIterator(key, volumeDataStore, version).flatMap(item => item)
+    new VersionedBucketIterator(key, volumeDataStore, version)
   }
 }
 
 
 
-class VersionedBucketIterator(prefix: String, volumeDataStore: FossilDBClient, version: Option[Long] = None) extends Iterator[Option[(BucketPosition, Array[Byte], Long)]] with WKWMortonHelper with KeyValueStoreImplicits with FoxImplicits {
+class VersionedBucketIterator(prefix: String, volumeDataStore: FossilDBClient, version: Option[Long] = None) extends Iterator[(BucketPosition, Array[Byte], Long)] with WKWMortonHelper with KeyValueStoreImplicits with FoxImplicits  {
   val batchSize = 64
 
   var currentStartKey = prefix
@@ -70,10 +70,10 @@ class VersionedBucketIterator(prefix: String, volumeDataStore: FossilDBClient, v
     else fetchNextAndSave.hasNext
   }
 
-  override def next: Option[(BucketPosition, Array[Byte], Long)] = {
+  override def next: (BucketPosition, Array[Byte], Long) = {
     val nextRes = currentBatchIterator.next
     currentStartKey = nextRes.key
-    parseBucketKey(nextRes.key).map(key => (key._2 , nextRes.value, nextRes.version))
+    parseBucketKey(nextRes.key).map(key => (key._2 , nextRes.value, nextRes.version)).get
   }
 
   private def parseBucketKey(key: String): Option[(String, BucketPosition)] = {
@@ -96,8 +96,8 @@ class VersionedBucketIterator(prefix: String, volumeDataStore: FossilDBClient, v
 
 }
 
-class BucketIterator(prefix: String, volumeDataStore: FossilDBClient, version: Option[Long] = None) extends Iterator[(BucketPosition, Array[Byte])] {
-  val versionedBucketIterator = new VersionedBucketIterator(prefix, volumeDataStore, version).flatMap(item => item)
+class BucketIterator(prefix: String, volumeDataStore: FossilDBClient, version: Option[Long] = None) extends Iterator[(BucketPosition, Array[Byte])]{
+  val versionedBucketIterator = new VersionedBucketIterator(prefix, volumeDataStore, version)
 
   override def next: (BucketPosition, Array[Byte]) = {
     val tuple = versionedBucketIterator.next

@@ -1,5 +1,4 @@
 // @flow
-import _ from "lodash";
 import { Modal } from "antd";
 import React from "react";
 
@@ -81,6 +80,7 @@ type AddTreesAndGroupsAction = {
 };
 type DeleteTreeAction = { type: "DELETE_TREE", treeId?: number, timestamp: number };
 type SetActiveTreeAction = { type: "SET_ACTIVE_TREE", treeId: number };
+type DeselectActiveTreeAction = { type: "DESELECT_ACTIVE_TREE" };
 type SetActiveGroupAction = { type: "SET_ACTIVE_GROUP", groupId: number };
 type MergeTreesAction = { type: "MERGE_TREES", sourceNodeId: number, targetNodeId: number };
 type SetTreeNameAction = { type: "SET_TREE_NAME", name: ?string, treeId: ?number };
@@ -119,6 +119,7 @@ export type SkeletonTracingAction =
   | AddTreesAndGroupsAction
   | DeleteTreeAction
   | SetActiveTreeAction
+  | DeselectActiveTreeAction
   | MergeTreesAction
   | SetTreeNameAction
   | SelectNextTreeAction
@@ -314,6 +315,10 @@ export const setActiveTreeAction = (treeId: number): SetActiveTreeAction => ({
   treeId,
 });
 
+export const deselectActiveTreeAction = (): DeselectActiveTreeAction => ({
+  type: "DESELECT_ACTIVE_TREE",
+});
+
 export const setActiveGroupAction = (groupId: number): SetActiveGroupAction => ({
   type: "SET_ACTIVE_GROUP",
   groupId,
@@ -451,9 +456,7 @@ export const deleteTreeAsUserAction = (treeId?: number): NoAction => {
 export const deleteMultipleTreesAsUserAction = (treeIds: Array<number>): NoAction => {
   const state = Store.getState();
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
-  const allTreeIds = Object.keys(skeletonTracing.trees).map(id => parseInt(id, 10));
-  const allExistingIds = _.intersection(treeIds, allTreeIds);
-  allExistingIds.forEach(id => {
+  treeIds.forEach(id => {
     const tree = skeletonTracing.trees[id];
     if (state.task != null && tree.nodes.has(1)) {
       confirmDeletingInitialNode(id);

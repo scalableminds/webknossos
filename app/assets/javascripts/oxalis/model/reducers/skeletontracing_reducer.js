@@ -353,6 +353,17 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             .getOrElse(state);
         }
 
+        case "DESELECT_ACTIVE_TREE": {
+          return update(state, {
+            tracing: {
+              skeleton: {
+                activeNodeId: { $set: null },
+                activeTreeId: { $set: null },
+              },
+            },
+          });
+        }
+
         case "SET_ACTIVE_GROUP": {
           return update(state, {
             tracing: {

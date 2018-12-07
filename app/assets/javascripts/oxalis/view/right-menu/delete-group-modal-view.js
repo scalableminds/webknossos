@@ -1,6 +1,7 @@
 // @flow
 import * as React from "react";
 import { Modal, Button } from "antd";
+import messages from "messages";
 
 type Props = {
   onJustDeleteGroup: () => void,
@@ -16,24 +17,24 @@ export default function DeleteGroupModalView({
   return (
     <Modal
       visible
-      title="Do you really want to remove this group?"
+      title={messages["tracing.group_deletion_message"]}
       onOk={onJustDeleteGroup}
       onCancel={onCancel}
       footer={[
         <Button key="back" onClick={onCancel}>
           Cancel
         </Button>,
-        <Button key="submit-groups-only" onClick={onJustDeleteGroup}>
-          Remove group only
-        </Button>,
-        <Button key="submit-all" type="primary" onClick={onDeleteGroupAndTrees}>
+        <Button key="submit-all" onClick={onDeleteGroupAndTrees}>
           Remove group and subtrees
+        </Button>,
+        <Button key="submit-groups-only" type="primary" onClick={onJustDeleteGroup}>
+          Remove group only
         </Button>,
       ]}
     >
-      Do you really want to remove the selected group? If you want to remove just the group and keep
-      the sub trees select &ldquo;Remove group only&rdquo;. If you want to remove both select
-      &ldquo;Remove group and subtrees&rdquo;.
+      Do you really want to remove the selected group? If you want to remove both select
+      &ldquo;Remove group and subtrees&rdquo;. If you want to remove just the group and keep the sub
+      trees select &ldquo;Remove group only&rdquo;.
     </Modal>
   );
 }

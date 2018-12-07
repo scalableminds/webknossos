@@ -49,7 +49,8 @@ type Props = {
   onToggleTreeGroup: number => void,
   onUpdateTreeGroups: (Array<TreeGroup>) => void,
   onSetTreeGroup: (?number, number) => void,
-  handleTreeSelect: number => void,
+  onSelectTree: number => void,
+  deselectAllTrees: () => void,
 };
 
 type State = {
@@ -133,15 +134,16 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   onSelectTree = evt => {
     const treeId = parseInt(evt.target.dataset.id, 10);
     if (evt.ctrlKey) {
-      this.props.handleTreeSelect(treeId);
+      this.props.onSelectTree(treeId);
     } else {
+      this.props.deselectAllTrees();
       this.props.onSetActiveTree(treeId);
     }
   };
 
   onSelectGroup = evt => {
     const groupId = parseInt(evt.target.dataset.id, 10);
-
+    this.props.deselectAllTrees();
     this.props.onSetActiveGroup(groupId);
   };
 
@@ -160,14 +162,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     treeData: Array<TreeNode>,
   }) => {
     const { nextParentNode, node, treeData } = params;
-    const allTreesToMove = this.props.selectedTrees;
     if (node.type === TYPE_TREE) {
-      // update the dragged tree
-      this.props.onSetTreeGroup(
-        nextParentNode.id === MISSING_GROUP_ID ? null : nextParentNode.id,
-        parseInt(node.id, 10),
-      );
-      // sets group of all selected trees (and the moved tree) to the new parent group
+      const allTreesToMove = [...this.props.selectedTrees, node.id];
+      // Sets group of all selected + dragged trees (and the moved tree) to the new parent group
       allTreesToMove.forEach(treeId =>
         this.props.onSetTreeGroup(
           nextParentNode.id === MISSING_GROUP_ID ? null : nextParentNode.id,
@@ -212,9 +209,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
   getNodeStyleClassForBackground = id => {
     const isTreeSelected = this.props.selectedTrees.includes(id);
-    if (isTreeSelected && this.props.activeTreeId === id) {
-      return "selected-and-active-tree-node";
-    }
     if (isTreeSelected) {
       return "selected-tree-node";
     }
@@ -271,7 +265,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     } else {
       const tree = this.props.trees[parseInt(node.id, 10)];
       const rgbColorString = tree.color.map(c => Math.round(c * 255)).join(",");
-      // defining background color of current node
+      // Defining background color of current node
       const styleClass = this.getNodeStyleClassForBackground(node.id);
       nodeProps.title = (
         <div data-id={node.id} onClick={this.onSelectTree} className={styleClass}>

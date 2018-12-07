@@ -77,12 +77,14 @@ class VersionedBucketIterator(prefix: String, volumeDataStore: FossilDBClient, v
   }
 
   private def parseBucketKey(key: String): Option[(String, BucketPosition)] = {
-    val keyRx = "([0-9a-z-]+)/(\\d+)/(\\d+)-\\[\\d+,\\d+,\\d+\\]".r
+    val keyRx = "([0-9a-z-]+)/(\\d+)/-?\\d+-\\[(\\d+),(\\d+),(\\d+)\\]".r
 
     key match {
-      case keyRx(name, res, morton) =>
-        val resolution = res.toInt
-        val (x, y, z) = mortonDecode(morton.toLong)
+      case keyRx(name, resolutionStr, xStr, yStr, zStr) =>
+        val resolution = resolutionStr.toInt
+        val x = xStr.toInt
+        val y = yStr.toInt
+        val z = zStr.toInt
         val bucket = new BucketPosition(
           x * resolution * DataLayer.bucketLength,
           y * resolution * DataLayer.bucketLength,

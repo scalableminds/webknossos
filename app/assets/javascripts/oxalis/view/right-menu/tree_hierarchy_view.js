@@ -1,7 +1,7 @@
 // @flow
 
 import { AutoSizer } from "react-virtualized";
-import { Dropdown, Menu, Icon, Checkbox } from "antd";
+import { Checkbox, Dropdown, Icon, Menu, Modal } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 import SortableTree from "react-sortable-tree";
@@ -143,8 +143,24 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
   onSelectGroup = evt => {
     const groupId = parseInt(evt.target.dataset.id, 10);
-    this.props.deselectAllTrees();
-    this.props.onSetActiveGroup(groupId);
+    const numberOfSelectedTrees = this.props.selectedTrees.length;
+    const selectGroup = () => {
+      this.props.deselectAllTrees();
+      this.props.onSetActiveGroup(groupId);
+    };
+    if (numberOfSelectedTrees > 0) {
+      Modal.confirm({
+        title: "Do you really want to select this group?",
+        content: `You have ${numberOfSelectedTrees} selected Trees. Do you really want to select this group?
+        This will deselect all selected trees.`,
+        onOk() {
+          selectGroup();
+        },
+        onCancel() {},
+      });
+    } else {
+      selectGroup();
+    }
   };
 
   onExpand = (params: { node: TreeNode, expanded: boolean }) => {

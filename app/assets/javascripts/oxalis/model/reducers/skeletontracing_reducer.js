@@ -376,6 +376,16 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           });
         }
 
+        case "DESELECT_ACTIVE_GROUP": {
+          return update(state, {
+            tracing: {
+              skeleton: {
+                activeGroupId: { $set: null },
+              },
+            },
+          });
+        }
+
         case "MERGE_TREES": {
           const { sourceNodeId, targetNodeId } = action;
           return mergeTrees(skeletonTracing, sourceNodeId, targetNodeId, restrictions)

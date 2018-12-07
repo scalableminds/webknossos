@@ -26,6 +26,7 @@ import {
   toggleInactiveTreesAction,
   setActiveTreeAction,
   deselectActiveTreeAction,
+  deselectActiveGroupAction,
   setTreeGroupAction,
   setTreeGroupsAction,
   addTreesAndGroupsAction,
@@ -52,7 +53,6 @@ import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
 import SearchPopover from "./search_popover";
 import DeleteGroupModalView from "./delete-group-modal-view";
-import { select } from "redux-saga/effects";
 
 const ButtonGroup = Button.Group;
 const InputGroup = Input.Group;
@@ -74,6 +74,7 @@ type Props = {
   userConfiguration: UserConfiguration,
   onSetActiveTree: number => void,
   onDeselectActiveTree: () => void,
+  onDeselectActiveGroup: () => void,
   showDropzoneModal: () => void,
 };
 
@@ -276,18 +277,23 @@ class TreesTabView extends React.PureComponent<Props, State> {
           selectedTrees: prevState.selectedTrees.filter(currentId => currentId !== id),
         }));
       }
-    } else if (this.state.selectedTrees.length === 0 && tracing.activeTreeId != null) {
-      // If this is the first selected tree -> also select the active tree
-      this.setState({
-        selectedTrees: [id, tracing.activeTreeId],
-      });
-      // Remove the current active tree
-      this.props.onDeselectActiveTree();
     } else {
-      // Just select this tree
-      this.setState(prevState => ({
-        selectedTrees: [...prevState.selectedTrees, id],
-      }));
+      if (selectedTrees.length === 0) {
+        this.props.onDeselectActiveGroup();
+      }
+      if (selectedTrees.length === 0 && tracing.activeTreeId != null) {
+        // If this is the first selected tree -> also select the active tree
+        this.setState({
+          selectedTrees: [id, tracing.activeTreeId],
+        });
+        // Remove the current active tree
+        this.props.onDeselectActiveTree();
+      } else {
+        // Just select this tree
+        this.setState(prevState => ({
+          selectedTrees: [...prevState.selectedTrees, id],
+        }));
+      }
     }
   };
 
@@ -548,6 +554,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   onDeselectActiveTree() {
     dispatch(deselectActiveTreeAction());
+  },
+  onDeselectActiveGroup() {
+    dispatch(deselectActiveGroupAction());
   },
   showDropzoneModal() {
     dispatch(setDropzoneModalVisibilityAction(true));

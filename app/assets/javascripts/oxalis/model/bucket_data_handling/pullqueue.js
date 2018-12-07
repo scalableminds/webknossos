@@ -162,7 +162,6 @@ class PullQueue {
   ): void {
     const zoomStep = bucketAddress[3];
     const bucket = this.cube.getBucket(bucketAddress);
-    this.cube.boundingBox.removeOutsideArea(bucket, bucketAddress, bucketData);
     this.maybeWhitenEmptyBucket(bucketData);
     if (bucket.type === "data") {
       bucket.receiveData(bucketData);

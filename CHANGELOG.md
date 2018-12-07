@@ -7,12 +7,39 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ## Unreleased
-
-[Commits](https://github.com/scalableminds/webknossos/compare/18.11.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/18.12.0...HEAD)
 
 ### Added
 
 - Added the possibility to select multiple trees in skeleton tracings in the tree tab by using ctrl + left mouse. Deleting and moving trees will affect all selected trees. [#3457](https://github.com/scalableminds/webknossos/pull/3457)
+
+### Changed
+
+-
+
+### Fixed
+
+-
+
+
+### Removed
+
+-
+
+
+## [18.12.0](https://github.com/scalableminds/webknossos/releases/tag/18.12.0) - 2018-11-26
+[Commits](https://github.com/scalableminds/webknossos/compare/18.11.0...18.12.0)
+
+### Highlights
+
+- Added the possibility to add STL mesh files to tracings. [#3367](https://github.com/scalableminds/webknossos/pull/3367)
+- Improved support for datasets with a large skew in scale. [#3398](https://github.com/scalableminds/webknossos/pull/3398)
+- Improved performance for flight mode. [#3392](https://github.com/scalableminds/webknossos/pull/3392)
+- Fixed the guessed bounding box for datasets that do not start at (0,0,0). [#3437](https://github.com/scalableminds/webknossos/pull/3437)
+
+### Added
+
+- Added the possibility to add STL mesh files to tracings. [#3367](https://github.com/scalableminds/webknossos/pull/3367)
 
 ### Changed
 
@@ -22,8 +49,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 ### Fixed
 
 - Fixed a bug where the initial onboarding setup failed if automatic initial data was disabled. [#3421](https://github.com/scalableminds/webknossos/pull/3421)
-- Fixed a permission issue in the try setup
-- Fixed a bug where the guessed bounding box for datasets that do not start at (0,0,0) was too large [#3437](https://github.com/scalableminds/webknossos/pull/3437)
+- Fixed a permission issue in the try setup.
+- Fixed a bug where the guessed bounding box for datasets that do not start at (0,0,0) was too large. [#3437](https://github.com/scalableminds/webknossos/pull/3437)
 - Fixed a bug where dataset list refresh failed when datasets for non-existing organizations were reported. [#3438](https://github.com/scalableminds/webknossos/pull/3438)
 - Editing team access rights for datasets now works even if the datastore has no disk write access. [#3411](https://github.com/scalableminds/webknossos/pull/3411)
 - Fixed a bug where the form values when editing TaskTypes were missing. [#3451](https://github.com/scalableminds/webknossos/pull/3451)

@@ -7,6 +7,7 @@ import * as THREE from "three";
 import _ from "lodash";
 
 import {
+  OUTER_CSS_BORDER,
   type OrthoView,
   type OrthoViewMap,
   OrthoViews,
@@ -145,7 +146,9 @@ function onClick(
 
   const buffer = planeView.renderOrthoViewToTexture(plane, pickingScene);
   // Beware of the fact that new browsers yield float numbers for the mouse position
-  const [x, y] = [Math.round(position.x), Math.round(position.y)];
+  // Subtract the CSS border as the renderer viewport is smaller than the inputcatcher
+  const borderWidth = OUTER_CSS_BORDER;
+  const [x, y] = [Math.round(position.x) - borderWidth, Math.round(position.y) - borderWidth];
   // compute the index of the pixel under the cursor,
   // while inverting along the y-axis, because OpenGL has its origin bottom-left :/
   const index = (x + (width - y) * height) * 4;

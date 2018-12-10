@@ -36,6 +36,7 @@ class UserController @Inject()(userService: UserService,
   def current = sil.SecuredAction.async { implicit request =>
     for {
       userJs <- userService.publicWrites(request.identity, request.identity)
+      _ <- Fox.successful(throw new Exception("boom!"))
     } yield Ok(userJs)
   }
 

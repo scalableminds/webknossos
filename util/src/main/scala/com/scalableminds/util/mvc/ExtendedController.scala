@@ -77,10 +77,12 @@ class JsonResult(status: Int) extends Result(header = ResponseHeader(status), bo
 
   val isSuccess = List(OK) contains status
 
-  def createResult(content: JsObject)(implicit writeable: Writeable[JsObject]) =
+  def createResult(content: JsObject)(implicit writeable: Writeable[JsObject]) = {
+    println("create result")
     Result(
-      header = ResponseHeader(status),
-      body = HttpEntity.Strict(writeable.transform(content), writeable.contentType))
+    header = ResponseHeader(status),
+    body = HttpEntity.Strict(writeable.transform(content), writeable.contentType))
+  }
 
   def messageTypeFromStatus =
     if (isSuccess)

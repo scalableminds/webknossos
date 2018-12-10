@@ -76,7 +76,7 @@ datasetNames.map(async datasetName => {
     const { screenshot, width, height } = await screenshotDataset(
       await getNewPage(t.context.browser),
       URL,
-      { name: datasetName, owningOrganization: "Connectomics department" },
+      { name: datasetName, owningOrganization: "Connectomics_Department" },
     );
     const changedPixels = await compareScreenshot(
       screenshot,

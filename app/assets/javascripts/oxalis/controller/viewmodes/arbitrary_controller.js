@@ -59,6 +59,17 @@ type Props = {|
   viewMode: Mode,
 |};
 
+let currentEllipse = {
+  posX: 500,
+  posY: 500,
+  posZ: 500,
+  xRadius: 10,
+  yRadius: 20,
+  rotX: 0,
+  rotY: 0,
+  rotZ: 0,
+};
+
 class ArbitraryController extends React.PureComponent<Props> {
   // See comment in Controller class on general controller architecture.
   //
@@ -192,10 +203,48 @@ class ArbitraryController extends React.PureComponent<Props> {
       {
         h: () => this.changeMoveValue(25),
         g: () => this.changeMoveValue(-25),
+        "4": () => {
+          currentEllipse = { ...currentEllipse, xRadius: currentEllipse.xRadius + 1 };
+          const { posX, posY, posZ, xRadius, yRadius, rotX, rotY, rotZ } = currentEllipse;
+          getSceneController().setDiameter(posX, posY, posZ, xRadius, yRadius, rotX, rotY, rotZ);
+          window.needsRerender = true;
+        },
+        "shift + 4": () => {
+          currentEllipse = { ...currentEllipse, xRadius: currentEllipse.xRadius - 1 };
+          const { posX, posY, posZ, xRadius, yRadius, rotX, rotY, rotZ } = currentEllipse;
+          console.log("shift + 6", posX, posY, posZ, xRadius, yRadius);
+          getSceneController().setDiameter(posX, posY, posZ, xRadius, yRadius, rotX, rotY, rotZ);
+          window.needsRerender = true;
+        },
+        "5": () => {
+          currentEllipse = { ...currentEllipse, yRadius: currentEllipse.yRadius + 1 };
+          const { posX, posY, posZ, xRadius, yRadius, rotX, rotY, rotZ } = currentEllipse;
+          getSceneController().setDiameter(posX, posY, posZ, xRadius, yRadius, rotX, rotY, rotZ);
+          window.needsRerender = true;
+        },
+        "shift + 5": () => {
+          currentEllipse = { ...currentEllipse, yRadius: currentEllipse.yRadius - 1 };
+          const { posX, posY, posZ, xRadius, yRadius, rotX, rotY, rotZ } = currentEllipse;
+          console.log("shift + 5", posX, posY, posZ, xRadius, yRadius);
+          getSceneController().setDiameter(posX, posY, posZ, xRadius, yRadius, rotX, rotY, rotZ);
+          window.needsRerender = true;
+        },
+        "6": () => {
+          currentEllipse = { ...currentEllipse, rotZ: currentEllipse.rotZ + 1 };
+          const { posX, posY, posZ, xRadius, yRadius, rotX, rotY, rotZ } = currentEllipse;
+          getSceneController().setDiameter(posX, posY, posZ, xRadius, yRadius, rotX, rotY, rotZ);
+          window.needsRerender = true;
+        },
+        "shift + 6": () => {
+          currentEllipse = { ...currentEllipse, rotZ: currentEllipse.rotZ - 1 };
+          const { posX, posY, posZ, xRadius, yRadius, rotX, rotY, rotZ } = currentEllipse;
+          console.log("shift + 5", posX, posY, posZ, xRadius, yRadius);
+          getSceneController().setDiameter(posX, posY, posZ, xRadius, yRadius, rotX, rotY, rotZ);
+          window.needsRerender = true;
+        },
       },
       { delay: Store.getState().userConfiguration.keyboardDelay },
     );
-
     this.input.keyboardNoLoop = new InputKeyboardNoLoop({
       "1": () => {
         Store.dispatch(toggleAllTreesAction());

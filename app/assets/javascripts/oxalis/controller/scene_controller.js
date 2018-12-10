@@ -59,6 +59,7 @@ class SceneController {
   scene: THREE.Scene;
   rootGroup: THREE.Object3D;
   stlMeshes: { [key: string]: THREE.Mesh };
+  diameter: ?Object;
 
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   // element depending on the provided flycam.
@@ -72,6 +73,7 @@ class SceneController {
     };
     this.planeShift = [0, 0, 0];
     this.stlMeshes = {};
+    this.diameter = null;
   }
 
   initialize() {
@@ -95,6 +97,7 @@ class SceneController {
     this.scene.add(this.rootGroup);
 
     this.setupDebuggingMethods();
+    this.setDiameter(500, 500, 500, 10, 20);
   }
 
   setupDebuggingMethods() {
@@ -118,6 +121,87 @@ class SceneController {
     };
 
     window.removeBucketMesh = (mesh: THREE.LineSegments) => this.rootNode.remove(mesh);
+  }
+
+  /* addDiameter(): void {
+    const curve = new THREE.EllipseCurve(
+      0,
+      0, // ax, aY
+      10, // xRadius
+      20, // yRadius
+      0, // aStartAngle
+      2 * Math.PI, // aEndAngle
+      false, // aClockwise
+      Math.PI / 2, // aRotation
+    );
+    const curve2 = new THREE.EllipseCurve(0, 0, 10, 20, 0, 2 * Math.PI, false, 0);
+    const path = new THREE.Path(curve.getPoints(100));
+    const geometrycirc = path.createPointsGeometry(50);
+    const path2 = new THREE.Path(curve2.getPoints(100));
+    const geometrycirc2 = path2.createPointsGeometry(50);
+    const materialcirc1 = new THREE.LineBasicMaterial({
+      color: 0xff0000,
+    });
+    const materialcirc2 = new THREE.LineBasicMaterial({
+      color: 0x00ff00,
+    });
+    // to change axis -> replace the old shape with a new one
+    // rotation is handled in radian (not degrees)
+    // Create the final object to add to the scene
+    const ellipse1 = new THREE.Line(geometrycirc, materialcirc1);
+    const ellipse2 = new THREE.Line(geometrycirc2, materialcirc2);
+    console.log(ellipse1);
+    this.rootGroup.add(ellipse1);
+    this.rootGroup.add(ellipse2);
+    setting position 
+    ellipse.position.x = 500; // better put z to minus 1
+    ellipse.position.y = 500;
+    ellipse.position.z = 500; 
+    ellipse1.position.x = 450;
+    ellipse1.position.y = 450;
+    ellipse1.position.z = 499;
+    ellipse2.position.x = 510;
+    ellipse2.position.y = 510;
+    ellipse2.position.z = 499;
+    ellipse2.rotation.x = Math.PI / 2; // works -> again radian and not degrees
+    ellipse2.rotation.y = Math.PI / 2;
+    ellipse2.rotation.z = Math.PI / 2;
+  } */
+
+  setDiameter(posX, posY, posZ, xRadius, yRadius, rotX = 0, rotY = 0, rotZ = 0): void {
+    const curve = new THREE.EllipseCurve(
+      0, // posX
+      0, // posY
+      xRadius, // xRadius
+      yRadius, // yRadius
+      0, // aStartAngle
+      2 * Math.PI, // aEndAngle
+      false, // aClockwise
+      0, // aRotation
+    );
+    const path = new THREE.Path(curve.getPoints(100));
+    const geometrycirc = path.createPointsGeometry(50);
+    const materialcirc = new THREE.LineBasicMaterial({
+      color: 0xff0000,
+    });
+    // to change axis -> replace the old shape with a new one
+    // rotation is handled in radian (not degrees)
+    // Create the final object to add to the scene
+    if (this.diameter) {
+      this.rootGroup.remove(this.diameter);
+      console.log("removing diameter");
+    }
+    const ellipse = new THREE.Line(geometrycirc, materialcirc);
+    console.log("rendering:", posX, posY, posZ, xRadius, yRadius);
+    ellipse.position.x = posX;
+    ellipse.position.y = posY;
+    ellipse.position.z = posZ - 2; // needs an offset bc otherwise the ellipse wil start at this z coordinate
+    // decreasing resolves this
+    ellipse.rotation.x = (rotX / 180) * Math.PI; // works -> again radian and not degrees
+    ellipse.rotation.y = (rotY / 180) * Math.PI;
+    ellipse.rotation.z = (rotZ / 180) * Math.PI;
+    this.rootGroup.add(ellipse);
+    this.diameter = ellipse;
   }
 
   addSTL(meshMetaData: MeshMetaData, geometry: THREE.Geometry): void {

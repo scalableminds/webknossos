@@ -36,39 +36,68 @@ class UserController @Inject()(userService: UserService,
 
   val defaultAnnotationLimit = 1000
 
-  def formatLog(request: Request[AnyContent], result: Result) = {
+  def formatLog(request: Request[AnyContent], result: Result, userMail: Option[String] = None) = {
+    val emailMsg = userMail.map(m=> s" for $m").getOrElse("")
     result.body match {
       case HttpEntity.Strict(byteString, contentType) if result.header.status != 200 =>
-        logger.warn(s"Answering ${result.header.status} at ${request.uri}: ${byteString.decodeString("utf-8")}")
+        logger.warn(s"Answering ${result.header.status} at ${request.uri}$emailMsg – ${byteString.decodeString("utf-8")}")
       case _=> ()
     }
   }
 
-  def log(block: => Future[Result])(implicit request: Request[AnyContent]): Future[Result] = {
+  def logPlain(block: => Future[Result])(implicit request: Request[AnyContent]): Future[Result] = {
     for {
       result: Result <- block
       _ = formatLog(request, result)
     } yield result
   }
 
-  def log[A](block: => Result)(implicit request: Request[AnyContent]): Result = {
+  def logPlain[A](block: => Result)(implicit request: Request[AnyContent]): Result = {
     val result: Result = block
     formatLog(request, result)
     result
   }
 
-  def current = Action { implicit request: Request[AnyContent] =>
-    /*Result(
-      header = ResponseHeader(400),
-      body = HttpEntity.Strict(ByteString("Nope!"), Some("text/plain"))
-    )*/
-    log {
-      BadRequest("Bad Request!!")
+  def log(block: => Future[Result])(implicit request: UserAwareRequest[WkEnv, AnyContent]): Future[Result] = {
+    for {
+      result: Result <- block
+      _ = formatLog(request, result, request.identity.map(_.email))
+    } yield result
+  }
+
+  def log(block: => Result)(implicit request: UserAwareRequest[WkEnv, AnyContent]): Result = {
+    val result: Result = block
+    formatLog(request, result, request.identity.map(_.email))
+    result
+  }
+
+  def logSecured(block: => Future[Result])(implicit request: SecuredRequest[WkEnv, AnyContent]): Future[Result] = {
+    for {
+      result: Result <- block
+      _ = formatLog(request, result, Some(request.identity.email))
+    } yield result
+  }
+
+  def logSecured(block: => Result)(implicit request: SecuredRequest[WkEnv, AnyContent]): Result = {
+    val result: Result = block
+    formatLog(request, result, Some(request.identity.email))
+    result
+  }
+
+  implicit def securedToUserAware(request: SecuredRequest[WkEnv,AnyContent]): UserAwareRequest[WkEnv,AnyContent] = {
+    UserAwareRequest(Some(request.identity), Some(request.authenticator), request.request)
+  }
+
+  def current = sil.SecuredAction.async { implicit request =>
+    logSecured {
+      for {
+        userJs <- userService.publicWrites(request.identity, request.identity)
+      } yield Ok(userJs)
     }
   }
 
   def user(userId: String) = sil.SecuredAction.async { implicit request =>
-    log {
+    logSecured {
       for {
         userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
         user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"

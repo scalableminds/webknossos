@@ -1,5 +1,6 @@
 package controllers
 
+import akka.util.ByteString
 import javax.inject.Inject
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mvc.Filter
@@ -11,14 +12,16 @@ import models.user._
 import models.user.time._
 import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
+import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
+import play.api.http.HttpEntity
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Json._
 import play.api.libs.json._
-import play.api.mvc.PlayBodyParsers
+import play.api.mvc._
 import utils.ObjectId
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 class UserController @Inject()(userService: UserService,
                                userDAO: UserDAO,
@@ -33,20 +36,46 @@ class UserController @Inject()(userService: UserService,
 
   val defaultAnnotationLimit = 1000
 
-  def current = sil.SecuredAction.async { implicit request =>
+  def formatLog(request: Request[AnyContent], result: Result) = {
+    result.body match {
+      case HttpEntity.Strict(byteString, contentType) if result.header.status != 200 =>
+        logger.warn(s"Answering ${result.header.status} at ${request.uri}: ${byteString.decodeString("utf-8")}")
+      case _=> ()
+    }
+  }
+
+  def log(block: => Future[Result])(implicit request: Request[AnyContent]): Future[Result] = {
     for {
-      userJs <- userService.publicWrites(request.identity, request.identity)
-      _ <- Fox.successful(throw new Exception("boom!"))
-    } yield Ok(userJs)
+      result: Result <- block
+      _ = formatLog(request, result)
+    } yield result
+  }
+
+  def log[A](block: => Result)(implicit request: Request[AnyContent]): Result = {
+    val result: Result = block
+    formatLog(request, result)
+    result
+  }
+
+  def current = Action { implicit request: Request[AnyContent] =>
+    /*Result(
+      header = ResponseHeader(400),
+      body = HttpEntity.Strict(ByteString("Nope!"), Some("text/plain"))
+    )*/
+    log {
+      BadRequest("Bad Request!!")
+    }
   }
 
   def user(userId: String) = sil.SecuredAction.async { implicit request =>
-    for {
-      userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
-      user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
-      _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed"
-      js <- userService.publicWrites(user, request.identity)
-    } yield Ok(js)
+    log {
+      for {
+        userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+        user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
+        _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed"
+        js <- userService.publicWrites(user, request.identity)
+      } yield Ok(js)
+    }
   }
 
   def annotations(isFinished: Option[Boolean], limit: Option[Int]) = sil.SecuredAction.async { implicit request =>

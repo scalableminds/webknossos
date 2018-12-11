@@ -81,7 +81,7 @@ export class DataBucket {
 
     this.state = BucketStateEnum.UNREQUESTED;
     this.dirty = false;
-    this.accessed = true;
+    this.accessed = false;
     this.isPartlyOutsideBoundingBox = false;
 
     this.data = null;
@@ -91,8 +91,8 @@ export class DataBucket {
     if (this.dependentCounter > 0) {
       return false;
     }
+
     const collect = !this.accessed && !this.dirty && this.state !== BucketStateEnum.REQUESTED;
-    this.accessed = false;
     return collect;
   }
 
@@ -130,12 +130,15 @@ export class DataBucket {
       throw new Error("Bucket.getData() called, but data does not exist.");
     }
 
-    this.markAsNeeded();
     return data;
   }
 
   markAsNeeded(): void {
     this.accessed = true;
+  }
+
+  markAsUnneeded(): void {
+    this.accessed = false;
   }
 
   getOrCreateData(): Uint8Array {

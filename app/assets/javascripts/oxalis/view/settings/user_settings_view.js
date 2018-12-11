@@ -44,6 +44,7 @@ import Constants, {
   type Vector6,
 } from "oxalis/constants";
 import * as Utils from "libs/utils";
+import { settings } from "messages";
 
 const Panel = Collapse.Panel;
 
@@ -89,7 +90,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
               onChange={this.props.onChangeZoomStep}
             />
             <LogSliderSetting
-              label="Clipping Distance"
+              label={settings.clippingDistance}
               roundTo={3}
               min={1}
               max={12000}
@@ -97,12 +98,12 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
               onChange={this.onChangeUser.clippingDistance}
             />
             <SwitchSetting
-              label="Show Crosshairs"
+              label={settings.displayCrosshair}
               value={this.props.userConfiguration.displayCrosshair}
               onChange={this.onChangeUser.displayCrosshair}
             />
             <SwitchSetting
-              label="Show Scalebars"
+              label={settings.displayScalebars}
               value={this.props.userConfiguration.displayScalebars}
               onChange={this.onChangeUser.displayScalebars}
             />
@@ -112,7 +113,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
         return (
           <Panel header="Viewport Options" key="2">
             <LogSliderSetting
-              label="Zoom"
+              label={settings.zoom}
               roundTo={3}
               min={0.1}
               max={this.props.maxZoomStep}
@@ -120,12 +121,12 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
               onChange={this.props.onChangeZoomStep}
             />
             <SwitchSetting
-              label="Show Crosshairs"
+              label={settings.displayCrosshair}
               value={this.props.userConfiguration.displayCrosshair}
               onChange={this.onChangeUser.displayCrosshair}
             />
             <SwitchSetting
-              label="Show Scalebars"
+              label={settings.displayScalebars}
               value={this.props.userConfiguration.displayScalebars}
               onChange={this.onChangeUser.displayScalebars}
             />
@@ -135,7 +136,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
         return (
           <Panel header="Flight Options" key="2">
             <LogSliderSetting
-              label="Zoom"
+              label={settings.zoom}
               roundTo={3}
               min={0.001}
               max={this.props.maxZoomStep}
@@ -143,7 +144,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
               onChange={this.props.onChangeZoomStep}
             />
             <NumberSliderSetting
-              label="Mouse Rotation"
+              label={settings.mouseRotateValue}
               min={0.0001}
               max={0.02}
               step={0.001}
@@ -151,7 +152,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
               onChange={this.onChangeUser.mouseRotateValue}
             />
             <NumberSliderSetting
-              label="Keyboard Rotation"
+              label={settings.rotateValue}
               min={0.001}
               max={0.08}
               step={0.001}
@@ -159,7 +160,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
               onChange={this.onChangeUser.rotateValue}
             />
             <NumberSliderSetting
-              label="Crosshair Size"
+              label={settings.crosshairSize}
               min={0.05}
               max={0.5}
               step={0.01}
@@ -167,7 +168,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
               onChange={this.onChangeUser.crosshairSize}
             />
             <NumberSliderSetting
-              label="Sphere Radius"
+              label={settings.sphericalCapRadius}
               min={50}
               max={500}
               step={1}
@@ -175,13 +176,13 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
               onChange={this.onChangeUser.sphericalCapRadius}
             />
             <NumberSliderSetting
-              label="Clipping Distance"
+              label={settings.clippingDistanceArbitrary}
               max={127}
               value={this.props.userConfiguration.clippingDistanceArbitrary}
               onChange={this.onChangeUser.clippingDistanceArbitrary}
             />
             <SwitchSetting
-              label="Show Crosshair"
+              label={settings.displayCrosshair}
               value={this.props.userConfiguration.displayCrosshair}
               onChange={this.onChangeUser.displayCrosshair}
             />
@@ -230,8 +231,8 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
           <NumberSliderSetting
             label={
               this.props.userConfiguration.overrideNodeRadius
-                ? "Particle Size"
-                : "Min. Particle Size"
+                ? settings.particleSize
+                : `Min. ${settings.particleSize}`
             }
             min={Constants.MIN_PARTICLE_SIZE}
             max={Constants.MAX_PARTICLE_SIZE}
@@ -241,17 +242,17 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
             onChange={this.onChangeUser.particleSize}
           />
           <SwitchSetting
-            label="Override Node Radius"
+            label={settings.overrideNodeRadius}
             value={this.props.userConfiguration.overrideNodeRadius}
             onChange={this.onChangeUser.overrideNodeRadius}
           />
           <SwitchSetting
-            label="Single-node-tree mode (&quot;Soma clicking&quot;)"
+            label={settings.newNodeNewTree}
             value={this.props.userConfiguration.newNodeNewTree}
             onChange={this.onChangeUser.newNodeNewTree}
           />
           <SwitchSetting
-            label="Highlight Commented Nodes"
+            label={settings.highlightCommentedNodes}
             value={this.props.userConfiguration.highlightCommentedNodes}
             onChange={this.onChangeUser.highlightCommentedNodes}
           />
@@ -264,7 +265,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
       panels.push(
         <Panel header="Volume Options" key="3b">
           <LogSliderSetting
-            label="Brush Size"
+            label={settings.brushSize}
             roundTo={0}
             min={Constants.MIN_BRUSH_SIZE}
             max={Constants.MAX_BRUSH_SIZE}
@@ -286,7 +287,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
   render() {
     const moveValueSetting = Constants.MODES_ARBITRARY.includes(this.props.viewMode) ? (
       <NumberSliderSetting
-        label="Move Value (nm/s)"
+        label={settings.moveValue3d}
         min={30}
         max={1500}
         step={10}
@@ -295,7 +296,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
       />
     ) : (
       <NumberSliderSetting
-        label="Move Value (nm/s)"
+        label={settings.moveValue}
         min={30}
         max={14000}
         step={10}
@@ -308,7 +309,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
       <Collapse defaultActiveKey={["1", "2", "3a", "3b", "4"]}>
         <Panel header="Controls" key="1">
           <NumberSliderSetting
-            label="Keyboard delay (ms)"
+            label={settings.keyboardDelay}
             min={0}
             max={500}
             value={this.props.userConfiguration.keyboardDelay}
@@ -316,7 +317,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
           />
           {moveValueSetting}
           <SwitchSetting
-            label="d/f-Switching"
+            label={settings.dynamicSpaceDirection}
             value={this.props.userConfiguration.dynamicSpaceDirection}
             onChange={this.onChangeUser.dynamicSpaceDirection}
           />
@@ -325,7 +326,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
         {this.getSkeletonOrVolumeOptions()}
         <Panel header="Other" key="4">
           <Vector6InputSetting
-            label="Bounding Box"
+            label={settings.userBoundingBox}
             tooltipTitle="Format: minX, minY, minZ, width, height, depth"
             value={Utils.computeArrayFromBoundingBox(
               getSomeTracing(this.props.tracing).userBoundingBox,
@@ -333,7 +334,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
             onChange={this.props.onChangeBoundingBox}
           />
           <SwitchSetting
-            label="Display Planes in 3D View"
+            label={settings.tdViewDisplayPlanes}
             value={this.props.userConfiguration.tdViewDisplayPlanes}
             onChange={this.onChangeUser.tdViewDisplayPlanes}
           />

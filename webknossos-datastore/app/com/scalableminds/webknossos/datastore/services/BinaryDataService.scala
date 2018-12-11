@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.services
 
 import java.nio.file.{Path, Paths}
 
-import com.scalableminds.util.geometry.Point3D
+import com.scalableminds.util.geometry.{Point3D, Vector3I}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest, DataServiceMappingRequest, MappingReadInstruction}
@@ -23,7 +23,7 @@ class BinaryDataService(dataBaseDir: Path, loadTimeout: FiniteDuration, maxCache
 
     if (!request.cuboid.hasValidDimensions) {
       Fox.failure("Invalid cuboid dimensions (must be > 0 and <= 512).")
-    } else if (request.cuboid.isSingleBucket(DataLayer.bucketLength) && request.voxelDimensions == Point3D(1, 1, 1)) {
+    } else if (request.cuboid.isSingleBucket(DataLayer.bucketLength) && request.voxelDimensions == Vector3I(1, 1, 1)) {
       bucketQueue.headOption.toFox.flatMap { bucket =>
         handleBucketRequest(request, bucket)
       }
@@ -53,7 +53,7 @@ class BinaryDataService(dataBaseDir: Path, loadTimeout: FiniteDuration, maxCache
       (bytesArrays.appendArrays, notFoundIndices)
     }
   }
-  
+
   private def handleBucketRequest(request: DataServiceDataRequest, bucket: BucketPosition): Fox[Array[Byte]] = {
     if (request.dataLayer.doesContainBucket(bucket) && request.dataLayer.containsResolution(bucket.resolution)) {
       val readInstruction = DataReadInstruction(

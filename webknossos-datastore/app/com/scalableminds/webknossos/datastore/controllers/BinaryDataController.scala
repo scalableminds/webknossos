@@ -36,7 +36,8 @@ class BinaryDataController @Inject()(
                                       dataSourceRepository: DataSourceRepository,
                                       config: DataStoreConfig,
                                       accessTokenService: DataStoreAccessTokenService,
-                                      dataServicesHolder: DataServicesHolder,
+                                      binaryDatServiceHolder: BinaryDataServiceHolder,
+                                      mappingService: MappingService,
                                       isosurfaceService: IsosurfaceService,
                                       actorSystem: ActorSystem
                                     )
@@ -44,8 +45,7 @@ class BinaryDataController @Inject()(
                                      bodyParsers: PlayBodyParsers)
   extends Controller {
 
-  val binaryDataService = dataServicesHolder.binaryDataService
-  val mappingService = dataServicesHolder.mappingService
+  val binaryDataService = binaryDatServiceHolder.binaryDataService
 
   /**
     * Handles requests for raw binary data via HTTP POST from webKnossos.

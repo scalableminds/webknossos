@@ -47,12 +47,12 @@ class IsosurfaceActor(val service: IsosurfaceService, val timeout: FiniteDuratio
 
 class IsosurfaceService @Inject()(
                                    actorSystem: ActorSystem,
-                                   dataServicesHolder: DataServicesHolder,
+                                   dataServicesHolder: BinaryDataServiceHolder,
+                                   mappingService: MappingService,
                                    config: DataStoreConfig,
                                  )(implicit ec: ExecutionContext) extends FoxImplicits {
 
   val binaryDataService: BinaryDataService = dataServicesHolder.binaryDataService
-  val mappingService: MappingService = dataServicesHolder.mappingService
 
   implicit val timeout: Timeout = Timeout(config.Braingames.Binary.isosurfaceTimeout)
 

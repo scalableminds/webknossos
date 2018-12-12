@@ -86,11 +86,23 @@ function* loadIsosurface(
   zoomStep: number,
 ): Generator<void> {
   const voxelDimensions = [2, 2, 2];
+<<<<<<< HEAD
   const dataStoreHost = yield* select(state => state.dataset.dataStore.url);
+||||||| merged common ancestors
+=======
+  const dataStoreHost = select(state => state.dataset.dataStore.url);
+>>>>>>> f28107f435a42c27d63bd1bf337b6ac654cacdc3
 
+<<<<<<< HEAD
   const responseBuffer = yield* call(
     computeIsosurface,
     dataStoreHost,
+||||||| merged common ancestors
+  const responseBuffer = await computeIsosurface(
+=======
+  const responseBuffer = await computeIsosurface(
+    dataStoreHost,
+>>>>>>> f28107f435a42c27d63bd1bf337b6ac654cacdc3
     dataset,
     layer,
     position,

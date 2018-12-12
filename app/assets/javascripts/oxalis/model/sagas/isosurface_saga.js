@@ -1,7 +1,7 @@
 import type { APIDataset } from "admin/api_flow_types";
 import { ControlModeEnum, type Vector3 } from "oxalis/constants";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
-import { type Saga, _takeEvery, select, take } from "oxalis/model/sagas/effect-generators";
+import { type Saga, _takeEvery, select, call, take } from "oxalis/model/sagas/effect-generators";
 import { computeIsosurface } from "admin/admin_rest_api";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
 import { map3 } from "libs/utils";
@@ -75,20 +75,21 @@ function* ensureSuitableIsosurface(): Saga<void> {
   }
 
   threeDMap.set(currentCube, true);
-  loadIsosurface(dataset, layer, segmentId, cubedPostion, zoomStep);
+  yield* call(loadIsosurface, dataset, layer, segmentId, cubedPostion, zoomStep);
 }
 
-async function loadIsosurface(
+function* loadIsosurface(
   dataset: APIDataset,
   layer: DataLayer,
   segmentId: number,
   position: Vector3,
   zoomStep: number,
-) {
+): Generator<void> {
   const voxelDimensions = [2, 2, 2];
-  const dataStoreHost = select(state => state.dataset.dataStore.url);
+  const dataStoreHost = yield* select(state => state.dataset.dataStore.url);
 
-  const responseBuffer = await computeIsosurface(
+  const responseBuffer = yield* call(
+    computeIsosurface,
     dataStoreHost,
     dataset,
     layer,

@@ -5,6 +5,7 @@
 
 import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
+import TWEEN from "tween.js";
 import _ from "lodash";
 
 import type { MeshMetaData } from "admin/api_flow_types";
@@ -40,6 +41,7 @@ import constants, {
 } from "oxalis/constants";
 import window from "libs/window";
 
+import { convertCellIdToHSLA } from "../view/right-menu/mapping_info_view";
 import { setSceneController } from "./scene_controller_provider";
 
 const CUBE_COLOR = 0x999999;
@@ -59,6 +61,7 @@ class SceneController {
   scene: THREE.Scene;
   rootGroup: THREE.Object3D;
   stlMeshes: { [key: string]: THREE.Mesh };
+  isosurfacesGroup: THREE.Group;
 
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   // element depending on the provided flycam.
@@ -88,11 +91,16 @@ class SceneController {
     // scene.scale does not have an effect.
     this.rootGroup = new THREE.Object3D();
     this.rootGroup.add(this.getRootNode());
+    this.isosurfacesGroup = new THREE.Group();
 
     // The dimension(s) with the highest resolution will not be distorted
     this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.dataSource.scale));
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.rootGroup);
+    this.scene.add(this.isosurfacesGroup);
+
+    this.rootGroup.add(new THREE.DirectionalLight());
+    this.addLights();
 
     this.setupDebuggingMethods();
   }
@@ -130,9 +138,54 @@ class SceneController {
 
     const meshMaterial = new THREE.MeshNormalMaterial();
     const mesh = new THREE.Mesh(geometry, meshMaterial);
-    this.rootGroup.add(mesh);
+    this.scene.add(mesh);
     this.stlMeshes[id] = mesh;
     this.updateMeshPostion(id, position);
+  }
+
+  addIsosurface(vertices, segmentationId): void {
+    let geometry = new THREE.BufferGeometry();
+    geometry.addAttribute("position", new THREE.BufferAttribute(vertices, 3));
+
+    // convert to normal (unbuffered) geometry to merge vertices
+    geometry = new THREE.Geometry().fromBufferGeometry(geometry);
+    geometry.mergeVertices();
+    geometry.computeVertexNormals();
+    geometry.computeFaceNormals();
+
+    // and back to a BufferGeometry
+    geometry = new THREE.BufferGeometry().fromGeometry(geometry);
+
+    const [hue] = convertCellIdToHSLA(segmentationId);
+    const color = new THREE.Color().setHSL(hue, 0.5, 0.1);
+
+    const meshMaterial = new THREE.MeshLambertMaterial({ color });
+    meshMaterial.side = THREE.DoubleSide;
+    meshMaterial.transparent = true;
+
+    const mesh = new THREE.Mesh(geometry, meshMaterial);
+
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+
+    const tweenAnimation = new TWEEN.Tween({ opacity: 0 });
+    tweenAnimation
+      .to({ opacity: 0.95 }, 500)
+      .onUpdate(function onUpdate() {
+        meshMaterial.opacity = this.opacity;
+      })
+      .start();
+
+    this.isosurfacesGroup.add(mesh);
+  }
+
+  addLights(): void {
+    // At the moment, we only attach an AmbientLight for the isosurfaces group.
+    // The PlaneView attaches a directional light directly to the TD camera,
+    // so that the light moves along the cam.
+
+    const ambientLight = new THREE.AmbientLight(0x404040, 15); // soft white light
+    this.isosurfacesGroup.add(ambientLight);
   }
 
   removeSTL(id: string): void {
@@ -224,6 +277,7 @@ class SceneController {
     this.userBoundingBox.updateForCam(id);
     Utils.__guard__(this.taskBoundingBox, x => x.updateForCam(id));
 
+    this.isosurfacesGroup.visible = id === OrthoViews.TDView;
     if (id !== OrthoViews.TDView) {
       let ind;
       for (const planeId of OrthoViewValuesWithoutTDView) {

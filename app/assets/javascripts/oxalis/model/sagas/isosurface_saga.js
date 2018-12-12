@@ -86,8 +86,10 @@ async function loadIsosurface(
   zoomStep: number,
 ) {
   const voxelDimensions = [2, 2, 2];
+  const dataStoreHost = select(state => state.dataset.dataStore.url);
 
   const responseBuffer = await computeIsosurface(
+    dataStoreHost,
     dataset,
     layer,
     position,

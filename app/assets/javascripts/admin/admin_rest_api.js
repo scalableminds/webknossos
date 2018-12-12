@@ -1002,6 +1002,7 @@ export function getMeshData(id: string): Promise<ArrayBuffer> {
 }
 
 export function computeIsosurface(
+  datastoreUrl: string,
   datasetId: APIDatasetId,
   layer: DataLayer,
   position: Vector3,
@@ -1012,7 +1013,7 @@ export function computeIsosurface(
 ): Promise<ArrayBuffer> {
   return doWithToken(token =>
     Request.sendJSONReceiveArraybuffer(
-      `/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${
+      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${
         layer.name
       }/isosurface?token=${token}`,
       {

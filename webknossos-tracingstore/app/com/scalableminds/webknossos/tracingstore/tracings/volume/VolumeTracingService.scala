@@ -137,7 +137,7 @@ class VolumeTracingService @Inject()(
   def data(tracingId: String, tracing: VolumeTracing, dataRequests: DataRequestCollection): Fox[(Array[Byte], List[Int])] = {
     val dataLayer = volumeTracingLayer(tracingId, tracing)
 
-    val requests = dataRequests.map(r => DataServiceDataRequest(null, dataLayer, r.cuboid(dataLayer), r.settings))
+    val requests = dataRequests.map(r => DataServiceDataRequest(null, dataLayer, None, r.cuboid(dataLayer), r.settings))
     binaryDataService.handleDataRequests(requests)
   }
 

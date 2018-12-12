@@ -36,7 +36,8 @@ class BinaryDataController @Inject()(
                                       dataSourceRepository: DataSourceRepository,
                                       config: DataStoreConfig,
                                       accessTokenService: DataStoreAccessTokenService,
-                                      dataServicesHolder: DataServicesHolder,
+                                      binaryDatServiceHolder: BinaryDataServiceHolder,
+                                      mappingService: MappingService,
                                       isosurfaceService: IsosurfaceService,
                                       actorSystem: ActorSystem
                                     )
@@ -44,8 +45,7 @@ class BinaryDataController @Inject()(
                                      bodyParsers: PlayBodyParsers)
   extends Controller {
 
-  val binaryDataService = dataServicesHolder.binaryDataService
-  val mappingService = dataServicesHolder.mappingService
+  val binaryDataService = binaryDatServiceHolder.binaryDataService
 
   /**
     * Handles requests for raw binary data via HTTP POST from webKnossos.
@@ -321,8 +321,12 @@ class BinaryDataController @Inject()(
             (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
             segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Messages("dataLayer.mustBeSegmentation")
             isosurfaceRequest = IsosurfaceRequest(dataSource, segmentationLayer, request.body.cuboid(dataLayer), request.body.segmentId, request.body.voxelDimensions, request.body.mapping)
+            // The client expects the isosurface as a flat float-array. Three consecutive floats form a 3D point, three
+            // consecutive 3D points (i.e., nine floats) form a triangle.
+            // There are no shared vertices between triangles.
             vertices <- isosurfaceService.requestIsosurfaceViaActor(isosurfaceRequest)
           } yield {
+            // We need four bytes for each float
             val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
             responseBuffer.asFloatBuffer().put(vertices)
             Ok(responseBuffer.array())

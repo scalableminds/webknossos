@@ -2,6 +2,7 @@
  * abstract_tree_tab_view.js
  * @flow
  */
+import { Button } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React, { Component } from "react";
@@ -19,8 +20,15 @@ type Props = {
   skeletonTracing: ?SkeletonTracing,
 };
 
-class AbstractTreeView extends Component<Props> {
+type State = {
+  visible: boolean,
+};
+
+class AbstractTreeView extends Component<Props, State> {
   canvas: ?HTMLCanvasElement;
+  state = {
+    visible: false,
+  };
 
   componentDidMount() {
     window.addEventListener("resize", this.drawTree, false);
@@ -37,7 +45,7 @@ class AbstractTreeView extends Component<Props> {
 
   nodeList: Array<NodeListItem> = [];
   drawTree = _.throttle(() => {
-    if (!this.props.skeletonTracing) {
+    if (!this.props.skeletonTracing || !this.state.visible) {
       return;
     }
     const { activeTreeId, activeNodeId, trees } = this.props.skeletonTracing;
@@ -65,14 +73,30 @@ class AbstractTreeView extends Component<Props> {
 
   render() {
     return (
-      <div>
-        <canvas
-          id="abstract-tree-canvas"
-          ref={canvas => {
-            this.canvas = canvas;
-          }}
-          onClick={this.handleClick}
-        />
+      <div className="flex-center">
+        {this.state.visible ? (
+          <canvas
+            id="abstract-tree-canvas"
+            ref={canvas => {
+              this.canvas = canvas;
+            }}
+            onClick={this.handleClick}
+          />
+        ) : (
+          <React.Fragment>
+            <Button type="primary" onClick={() => this.setState({ visible: true })}>
+              Show Abstract Tree
+            </Button>
+            <span
+              style={{
+                color: "gray",
+                marginTop: 6,
+              }}
+            >
+              This may be slow for very large tracings.
+            </span>
+          </React.Fragment>
+        )}
       </div>
     );
   }

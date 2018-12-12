@@ -11,7 +11,9 @@ VOLUME /srv/webknossos-tracingstore/tracingData /tmp
 
 COPY target/universal/stage .
 
-RUN chown -R webknossos .
+RUN chown -R webknossos . \
+  && chmod go+x bin/webknossos-tracingstore \
+  && chmod go+w .
 
 USER webknossos
 

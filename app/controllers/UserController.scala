@@ -31,7 +31,7 @@ class UserController @Inject()(userService: UserService,
     extends Controller
     with FoxImplicits {
 
-  val defaultAnnotationLimit = 10
+  val defaultAnnotationLimit = 1000
 
   def current = sil.SecuredAction.async { implicit request =>
     for {

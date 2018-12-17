@@ -284,7 +284,6 @@ class SceneController {
     ellipse.material.side = THREE.DoubleSide;
 
     this.rootGroup.add(ellipse);
-    console.log("ellipse", ellipse);
     window.needsRerender = true;
   }
 

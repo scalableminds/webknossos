@@ -263,7 +263,6 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
             onChange={enabled => {
               this.onChangeUser.showDiameter(enabled);
               if (enabled) {
-                console.log("enabled");
                 getSceneController().resetDiameter();
               } else {
                 getSceneController().hideDiameter();
@@ -315,14 +314,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
         max={14000}
         step={10}
         value={this.props.userConfiguration.moveValue}
-        onChange={enabled => {
-          if (enabled) {
-            getSceneController().resetDiameter();
-          } else {
-            getSceneController().hideDiameter();
-          }
-          dispatch(updateUserSettingAction("showDiameter", enabled));
-        }}
+        onChange={this.onChangeUser.moveValue}
       />
     );
 
@@ -377,9 +369,6 @@ const mapStateToProps = (state: OxalisState) => ({
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onChangeUser(propertyName, value) {
-    dispatch(updateUserSettingAction(propertyName, value));
-  },
-  onChangeSetDiameterVisibility(propertyName, value) {
     dispatch(updateUserSettingAction(propertyName, value));
   },
   onChangeActiveNodeId(id: number) {

@@ -220,8 +220,6 @@ class UserService @Inject()(conf: WkConf,
       isEditable <- isEditableBy(user, requestingUser)
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
       teamMemberships <- teamMembershipsFor(user._id)
-
-      _ <- Fox.failure("boom!")
       teamMembershipsJs <- Fox.serialCombined(teamMemberships)(tm => teamMembershipService.publicWrites(tm))
       experiences <- experiencesFor(user._id)
     } yield {

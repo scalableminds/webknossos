@@ -59,12 +59,6 @@ type Props = {|
   viewMode: Mode,
 |};
 
-let currentEllipse = {
-  xRadius: 10,
-  yRadius: 20,
-  rotationAngle: 0,
-};
-
 class ArbitraryController extends React.PureComponent<Props> {
   // See comment in Controller class on general controller architecture.
   //
@@ -199,82 +193,22 @@ class ArbitraryController extends React.PureComponent<Props> {
         h: () => this.changeMoveValue(25),
         g: () => this.changeMoveValue(-25),
         "4": () => {
-          currentEllipse = { ...currentEllipse, xRadius: currentEllipse.xRadius + 1 };
-          const { xRadius, yRadius, rotationAngle } = currentEllipse;
-          const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
-          let currentNode = null;
-          getActiveNode(skeletonTracing).map(activeNode => {
-            currentNode = activeNode;
-          });
-          if (currentNode) {
-            getSceneController().setDiameter(currentNode.position, xRadius, yRadius, rotationAngle);
-            window.needsRerender = true;
-          }
+          getSceneController().changeXRadiusOfDiameterBy(1);
         },
         "shift + 4": () => {
-          currentEllipse = { ...currentEllipse, xRadius: currentEllipse.xRadius - 1 };
-          const { xRadius, yRadius, rotationAngle } = currentEllipse;
-          const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
-          let currentNode = null;
-          getActiveNode(skeletonTracing).map(activeNode => {
-            currentNode = activeNode;
-          });
-          if (currentNode) {
-            getSceneController().setDiameter(currentNode.position, xRadius, yRadius, rotationAngle);
-            window.needsRerender = true;
-          }
+          getSceneController().changeXRadiusOfDiameterBy(-1);
         },
         "5": () => {
-          currentEllipse = { ...currentEllipse, yRadius: currentEllipse.yRadius + 1 };
-          const { xRadius, yRadius, rotationAngle } = currentEllipse;
-          const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
-          let currentNode = null;
-          getActiveNode(skeletonTracing).map(activeNode => {
-            currentNode = activeNode;
-          });
-          if (currentNode) {
-            getSceneController().setDiameter(currentNode.position, xRadius, yRadius, rotationAngle);
-            window.needsRerender = true;
-          }
+          getSceneController().changeYRadiusOfDiameterBy(1);
         },
         "shift + 5": () => {
-          currentEllipse = { ...currentEllipse, yRadius: currentEllipse.yRadius - 1 };
-          const { xRadius, yRadius, rotationAngle } = currentEllipse;
-          const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
-          let currentNode = null;
-          getActiveNode(skeletonTracing).map(activeNode => {
-            currentNode = activeNode;
-          });
-          if (currentNode) {
-            getSceneController().setDiameter(currentNode.position, xRadius, yRadius, rotationAngle);
-            window.needsRerender = true;
-          }
+          getSceneController().changeYRadiusOfDiameterBy(-1);
         },
         "6": () => {
-          currentEllipse = { ...currentEllipse, rotationAngle: currentEllipse.rotationAngle + 1 };
-          const { xRadius, yRadius, rotationAngle } = currentEllipse;
-          const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
-          let currentNode = null;
-          getActiveNode(skeletonTracing).map(activeNode => {
-            currentNode = activeNode;
-          });
-          if (currentNode) {
-            getSceneController().setDiameter(currentNode.position, xRadius, yRadius, rotationAngle);
-            window.needsRerender = true;
-          }
+          getSceneController().changeRotationAngleOfDiameterBy(2);
         },
         "shift + 6": () => {
-          currentEllipse = { ...currentEllipse, rotationAngle: currentEllipse.rotationAngle - 1 };
-          const { xRadius, yRadius, rotationAngle } = currentEllipse;
-          const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
-          let currentNode = null;
-          getActiveNode(skeletonTracing).map(activeNode => {
-            currentNode = activeNode;
-          });
-          if (currentNode) {
-            getSceneController().setDiameter(currentNode.position, xRadius, yRadius, rotationAngle);
-            window.needsRerender = true;
-          }
+          getSceneController().changeRotationAngleOfDiameterBy(-2);
         },
       },
       { delay: Store.getState().userConfiguration.keyboardDelay },

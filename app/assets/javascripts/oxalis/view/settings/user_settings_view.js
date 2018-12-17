@@ -45,6 +45,7 @@ import Constants, {
 } from "oxalis/constants";
 import * as Utils from "libs/utils";
 import { settings } from "messages";
+import getSceneController from "../../controller/scene_controller_provider";
 
 const Panel = Collapse.Panel;
 
@@ -256,6 +257,19 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
             value={this.props.userConfiguration.highlightCommentedNodes}
             onChange={this.onChangeUser.highlightCommentedNodes}
           />
+          <SwitchSetting
+            label={settings.showDiameter}
+            value={this.props.userConfiguration.showDiameter}
+            onChange={enabled => {
+              this.onChangeUser.showDiameter(enabled);
+              if (enabled) {
+                console.log("enabled");
+                getSceneController().resetDiameter();
+              } else {
+                getSceneController().hideDiameter();
+              }
+            }}
+          />
         </Panel>,
       );
     }
@@ -301,7 +315,14 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
         max={14000}
         step={10}
         value={this.props.userConfiguration.moveValue}
-        onChange={this.onChangeUser.moveValue}
+        onChange={enabled => {
+          if (enabled) {
+            getSceneController().resetDiameter();
+          } else {
+            getSceneController().hideDiameter();
+          }
+          dispatch(updateUserSettingAction("showDiameter", enabled));
+        }}
       />
     );
 
@@ -356,6 +377,9 @@ const mapStateToProps = (state: OxalisState) => ({
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onChangeUser(propertyName, value) {
+    dispatch(updateUserSettingAction(propertyName, value));
+  },
+  onChangeSetDiameterVisibility(propertyName, value) {
     dispatch(updateUserSettingAction(propertyName, value));
   },
   onChangeActiveNodeId(id: number) {

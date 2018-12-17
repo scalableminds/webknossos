@@ -8,13 +8,18 @@ import * as THREE from "three";
 import _ from "lodash";
 
 import type { MeshMetaData } from "admin/api_flow_types";
-import { V3 } from "libs/mjs";
+import { type Matrix4x4, V3 } from "libs/mjs";
 import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import {
   getPosition,
   getPlaneScalingFactor,
   getRequestLogZoomStep,
+  getZoomedMatrix,
 } from "oxalis/model/accessors/flycam_accessor";
+import {
+  enforceSkeletonTracing,
+  getActiveNode,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import { getRenderer } from "oxalis/controller/renderer";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { getVoxelPerNM } from "oxalis/model/scaleinfo";
@@ -59,7 +64,8 @@ class SceneController {
   scene: THREE.Scene;
   rootGroup: THREE.Object3D;
   stlMeshes: { [key: string]: THREE.Mesh };
-  diameter: ?Object;
+  diameter: ?THREE.Line;
+  diameterProperties: Object;
 
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   // element depending on the provided flycam.
@@ -74,6 +80,11 @@ class SceneController {
     this.planeShift = [0, 0, 0];
     this.stlMeshes = {};
     this.diameter = null;
+    this.diameterProperties = {
+      xRadius: 10,
+      yRadius: 20,
+      rotationAngle: 0,
+    };
   }
 
   initialize() {
@@ -122,10 +133,117 @@ class SceneController {
     window.removeBucketMesh = (mesh: THREE.LineSegments) => this.rootNode.remove(mesh);
   }
 
+  getActiveNode = () => {
+    const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
+    let currentNode = null;
+    getActiveNode(skeletonTracing).map(activeNode => {
+      currentNode = activeNode;
+    });
+    return currentNode;
+  };
+
   getDiameter = () => this.diameter;
 
-  setDiameter(position: Vector3, xRadius, yRadius, rotation: number): void {
-    // TODO initialliy adjust to scale => performe update mesh from arbitray plane once
+  resetDiameter = () => {
+    this.diameterProperties = {
+      xRadius: 20,
+      yRadius: 20,
+      rotationAngle: 0,
+    };
+    this.updateDiameter();
+  };
+
+  hideDiameter = () => {
+    if (this.diameter) {
+      this.rootGroup.remove(this.diameter);
+      window.needsRerender = true;
+    }
+  };
+
+  changeXRadiusOfDiameterBy = (value: number) => {
+    this.diameterProperties = {
+      ...this.diameterProperties,
+      xRadius: this.diameterProperties.xRadius + value,
+    };
+    this.updateDiameter();
+  };
+
+  changeYRadiusOfDiameterBy = (value: number) => {
+    this.diameterProperties = {
+      ...this.diameterProperties,
+      yRadius: this.diameterProperties.yRadius + value,
+    };
+    this.updateDiameter();
+  };
+
+  changeRotationAngleOfDiameterBy = (value: number) => {
+    this.diameterProperties = {
+      ...this.diameterProperties,
+      rotationAngle: this.diameterProperties.rotationAngle + value,
+    };
+    this.updateDiameter();
+  };
+
+  updateDiameterToCameraMatrix = (matrix: Matrix4x4) => {
+    if (!matrix || !this.diameter) {
+      return;
+    }
+    const diameter = this.diameter;
+    const currentMatrix = diameter.matrix.elements;
+    const currentPosition = [currentMatrix[12], currentMatrix[13], currentMatrix[14]];
+    diameter.matrix.set(
+      matrix[0],
+      matrix[4],
+      matrix[8],
+      matrix[12],
+      matrix[1],
+      matrix[5],
+      matrix[9],
+      matrix[13],
+      matrix[2],
+      matrix[6],
+      matrix[10],
+      matrix[14],
+      matrix[3],
+      matrix[7],
+      matrix[11],
+      matrix[15],
+    );
+    diameter.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
+    const rotatedMatrix = diameter.matrix.elements;
+    diameter.matrix.set(
+      rotatedMatrix[0],
+      rotatedMatrix[4],
+      rotatedMatrix[8],
+      currentPosition[0],
+      rotatedMatrix[1],
+      rotatedMatrix[5],
+      rotatedMatrix[9],
+      currentPosition[1],
+      rotatedMatrix[2],
+      rotatedMatrix[6],
+      rotatedMatrix[10],
+      currentPosition[2],
+      rotatedMatrix[3],
+      rotatedMatrix[7],
+      rotatedMatrix[11],
+      rotatedMatrix[15],
+    );
+    diameter.matrixWorldNeedsUpdate = true;
+  };
+
+  updateDiameter(): void {
+    const showDiameter = Store.getState().userConfiguration.showDiameter;
+    if (!showDiameter) {
+      return;
+    }
+    const { xRadius, yRadius, rotationAngle } = this.diameterProperties;
+    const activeNode = this.getActiveNode();
+    if (!activeNode) {
+      return;
+    }
+
+    const position = activeNode.position;
     const curve = new THREE.EllipseCurve(
       0, // posX
       0, // posY
@@ -134,7 +252,7 @@ class SceneController {
       0, // aStartAngle
       2 * Math.PI, // aEndAngle
       false, // aClockwise
-      (rotation / 180) * Math.PI, // aRotation
+      (rotationAngle / 180) * Math.PI, // aRotation
     );
     const path = new THREE.Path(curve.getPoints(100));
     const geometrycirc = path.createPointsGeometry(50);
@@ -144,25 +262,30 @@ class SceneController {
     // to change axis -> replace the old shape with a new one
     // rotation is handled in radian (not degrees)
     // Create the final object to add to the scene
-    if (this.diameter) {
-      this.rootGroup.remove(this.diameter);
-    }
+    this.hideDiameter();
     const ellipse = new THREE.Line(geometrycirc, materialcirc);
+    this.diameter = ellipse;
     // const lookAt = [0, 0, 0]; // etUp(Store.getState().flycam);
     const transformationMartix = new THREE.Matrix4().makeTranslation(
       position[0],
       position[1],
       position[2],
     );
-    ellipse.matrix.multiply(transformationMartix); // needs an offset bc otherwise the ellipse wil start at this z coordinate
+    // transform the diameter to its correct position
+    ellipse.matrix.multiply(transformationMartix);
 
+    // adjust rotation of diameter to current camera matrix
+    const matrix = getZoomedMatrix(Store.getState().flycam);
+    this.updateDiameterToCameraMatrix(matrix);
+
+    // maybe remove line 1 and 3 (2 is a must have :) )
     ellipse.rotation.x = Math.PI;
     ellipse.matrixAutoUpdate = false;
     ellipse.material.side = THREE.DoubleSide;
 
     this.rootGroup.add(ellipse);
-    console.log("ellispe", ellipse);
-    this.diameter = ellipse;
+    console.log("ellipse", ellipse);
+    window.needsRerender = true;
   }
 
   addSTL(meshMetaData: MeshMetaData, geometry: THREE.Geometry): void {

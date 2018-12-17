@@ -3,6 +3,7 @@ import _ from "lodash";
 
 export const settings = {
   clippingDistance: "Clipping Distance",
+  showDiameter: "Enable Diameter measurement",
   displayCrosshair: "Show Crosshairs",
   displayScalebars: "Show Scalebars",
   dynamicSpaceDirection: "d/f-Switching",

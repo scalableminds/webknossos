@@ -26,6 +26,7 @@ import com.mohiva.play.silhouette.api.Silhouette
 import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.{ElementClass, SegmentationLayer}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
+import models.team.OrganizationDAO
 import play.api.http.HttpEntity
 import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
 import play.api.libs.Files.TemporaryFile
@@ -41,6 +42,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
                                        annotationDAO: AnnotationDAO,
                                        projectDAO: ProjectDAO,
                                        dataSetDAO: DataSetDAO,
+                                       organizationDAO: OrganizationDAO,
                                        dataSetService: DataSetService,
                                        userService: UserService,
                                        taskDAO: TaskDAO,
@@ -179,7 +181,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
   def downloadExplorational(annotationId: String, typ: String, issuingUser: User)(implicit ctx: DBAccessContext,
                                                                                   m: MessagesProvider) = {
 
-    def skeletonToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String) =
+    def skeletonToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String, organizationName: String) =
       for {
         tracingStoreClient <- tracingStoreService.clientFor(dataSet)
         skeletonTracingId <- annotation.skeletonTracingId.toFox
@@ -187,11 +189,11 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
         user <- userService.findOneById(annotation._user, useCache = true)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
       } yield {
-        (nmlWriter.toNmlStream(Some(tracing), None, Some(annotation), dataSet.scale, Some(user), taskOpt),
+        (nmlWriter.toNmlStream(Some(tracing), None, Some(annotation), dataSet.scale, organizationName, Some(user), taskOpt),
          name + ".nml")
       }
 
-    def volumeOrHybridToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String) =
+    def volumeOrHybridToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String, organizationName: String) =
       for {
         tracingStoreClient <- tracingStoreService.clientFor(dataSet)
         volumeTracingId <- annotation.volumeTracingId.toFox
@@ -209,6 +211,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
                                                               Some(volumeTracing),
                                                               Some(annotation),
                                                               dataSet.scale,
+                                                              organizationName,
                                                               Some(user),
                                                               taskOpt)),
               new NamedEnumeratorStream("data.zip", dataEnumerator)
@@ -218,11 +221,11 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
         }, name + ".zip")
       }
 
-    def tracingToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String) =
+    def tracingToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String, organizationName: String) =
       if (annotation.tracingType == TracingType.skeleton)
-        skeletonToDownloadStream(dataSet, annotation, name)
+        skeletonToDownloadStream(dataSet, annotation, name, organizationName)
       else
-        volumeOrHybridToDownloadStream(dataSet, annotation, name)
+        volumeOrHybridToDownloadStream(dataSet, annotation, name, organizationName)
 
     for {
       annotation <- provider.provideAnnotation(typ, annotationId, issuingUser)
@@ -230,7 +233,8 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       name <- provider.nameFor(annotation) ?~> Messages("annotation.name.impossible")
       _ <- restrictions.allowDownload(issuingUser) ?~> Messages("annotation.download.notAllowed")
       dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
-      (downloadStream, fileName) <- tracingToDownloadStream(dataSet, annotation, name)
+      organization <- organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound"
+      (downloadStream, fileName) <- tracingToDownloadStream(dataSet, annotation, name, organization.name)
     } yield {
       Ok.chunked(Source.fromPublisher(IterateeStreams.enumeratorToPublisher(downloadStream)))
         .as(if (fileName.toLowerCase.endsWith(".zip")) "application/zip" else "application/xml")

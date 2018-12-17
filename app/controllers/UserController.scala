@@ -1,6 +1,5 @@
 package controllers
 
-import akka.util.ByteString
 import javax.inject.Inject
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mvc.Filter
@@ -12,8 +11,6 @@ import models.user._
 import models.user.time._
 import oxalis.security.{UserAwareRequestLogging, WkEnv}
 import com.mohiva.play.silhouette.api.Silhouette
-import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
-import play.api.http.HttpEntity
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Json._
@@ -21,7 +18,7 @@ import play.api.libs.json._
 import play.api.mvc._
 import utils.ObjectId
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 
 class UserController @Inject()(userService: UserService,

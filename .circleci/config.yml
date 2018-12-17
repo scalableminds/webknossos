@@ -166,7 +166,7 @@ jobs:
       - run:
           name: Run webknossos-tracingstore smoke test
           command: |
-            sleep 10
+            sleep 30
             curl --fail --retry 3 --max-time 15 -v http://localhost:9050/tracings/health
       - run:
           name: Stop webknossos-tracingstore

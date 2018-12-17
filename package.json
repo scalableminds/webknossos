@@ -79,7 +79,7 @@
     "gl": "scalableminds/headless-gl#4.0.5"
   },
   "scripts": {
-    "start": "./sbt run -jvm-debug 5005 -J-XX:MaxMetaspaceSize=2048m",
+    "start": "./sbt run -jvm-debug 5005 -J-XX:MaxMetaspaceSize=2048m -J-Xmx8g",
     "build": "node_modules/.bin/webpack --env.production",
     "build-watch": "node_modules/.bin/webpack -w",
     "test": "tools/test.sh test --timeout=30s",

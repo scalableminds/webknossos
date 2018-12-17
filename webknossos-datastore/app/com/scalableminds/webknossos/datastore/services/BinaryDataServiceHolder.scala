@@ -7,7 +7,8 @@ import javax.inject.Inject
 
 /*
  * The BinaryDataService needs to be instantiated as singleton to provide a shared DataCubeCache.
- * The TracingStore one (for VolumeTracings) already is, since the surrounding VolumeTracingService is a singleton.
+ * There is, however an additional instance for volume tracings in the TracingStore
+ * The TracingStore one (for VolumeTracings) already is a singleton, since the surrounding VolumeTracingService is a singleton.
  * The DataStore one is singleton-ized via this holder.
  */
 

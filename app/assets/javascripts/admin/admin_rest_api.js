@@ -44,11 +44,14 @@ import {
   type ServerTracing,
   type ServerVolumeTracing,
 } from "admin/api_flow_types";
+import { V3 } from "libs/mjs";
 import type { DatasetConfiguration } from "oxalis/store";
 import type { NewTask, TaskCreationResponse } from "admin/task/task_create_bulk_view";
 import type { QueryObject } from "admin/task/task_search_form";
+import type { Vector3 } from "oxalis/constants";
 import type { Versions } from "oxalis/view/version_view";
 import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
+import DataLayer from "oxalis/model/data_layer";
 import Request, { type RequestOptions } from "libs/request";
 import Toast, { type Message } from "libs/toast";
 import * as Utils from "libs/utils";
@@ -996,4 +999,39 @@ export function getMeshMetaData(id: string): Promise<MeshMetaData> {
 
 export function getMeshData(id: string): Promise<ArrayBuffer> {
   return Request.receiveArraybuffer(`/api/meshes/${id}/data`);
+}
+
+export function computeIsosurface(
+  datastoreUrl: string,
+  datasetId: APIDatasetId,
+  layer: DataLayer,
+  position: Vector3,
+  zoomStep: number,
+  segmentId: number,
+  voxelDimensions: Vector3,
+  cubeSize: Vector3,
+): Promise<ArrayBuffer> {
+  return doWithToken(token =>
+    Request.sendJSONReceiveArraybuffer(
+      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${
+        layer.name
+      }/isosurface?token=${token}`,
+      {
+        data: {
+          // The back-end needs a small padding at the border of the
+          // bounding box to calculate the isosurface. This padding
+          // is added here to the position and bbox size.
+          position: V3.toArray(V3.sub(position, voxelDimensions)),
+          cubeSize: V3.toArray(V3.add(cubeSize, voxelDimensions)),
+          zoomStep,
+          // Segment to build isosurface for
+          segmentId,
+          // Name of mapping to apply before building isosurface (optional)
+          mapping: layer.activeMapping,
+          // "size" of each voxel (i.e., only every nth voxel is considered in each dimension)
+          voxelDimensions,
+        },
+      },
+    ),
+  );
 }

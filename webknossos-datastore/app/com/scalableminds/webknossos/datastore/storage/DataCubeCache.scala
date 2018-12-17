@@ -33,19 +33,13 @@ object CachedCube {
       loadInstruction.cube.z)
 }
 
-class FakeDataCubeCache extends FoxImplicits {
-
-  def withCache[T](cubeReadInstruction: DataReadInstruction)(loadF: DataReadInstruction => Fox[Cube])(f: Cube => Box[T]): Fox[T] =
-    loadF(cubeReadInstruction).flatMap(f(_).toFox)
-}
-
-class DataCubeCache(val maxEntries: Int) extends FakeDataCubeCache with LRUConcurrentCache[CachedCube, Fox[Cube]] {
+class DataCubeCache(val maxEntries: Int) extends LRUConcurrentCache[CachedCube, Fox[Cube]] with FoxImplicits {
 
   /**
     * Loads the due to x,y and z defined block into the cache array and
     * returns it.
     */
-  override def withCache[T](readInstruction: DataReadInstruction)(loadF: DataReadInstruction => Fox[Cube])(f: Cube => Box[T]): Fox[T] = {
+  def withCache[T](readInstruction: DataReadInstruction)(loadF: DataReadInstruction => Fox[Cube])(f: Cube => Box[T]): Fox[T] = {
     val cachedCubeInfo = CachedCube.from(readInstruction)
 
     def handleUncachedCube() = {

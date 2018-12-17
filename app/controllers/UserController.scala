@@ -20,7 +20,6 @@ import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
 
-
 class UserController @Inject()(userService: UserService,
                                userDAO: UserDAO,
                                annotationDAO: AnnotationDAO,
@@ -30,7 +29,6 @@ class UserController @Inject()(userService: UserService,
                                teamDAO: TeamDAO,
                                sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
-    with UserAwareRequestLogging
     with FoxImplicits {
 
   val defaultAnnotationLimit = 1000

@@ -154,16 +154,18 @@ class DataSetController @Inject()(userService: UserService,
 
   def read(organizationName: String, dataSetName: String, sharingToken: Option[String]) = sil.UserAwareAction.async {
     implicit request =>
-      val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
-      for {
-        dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(ctx) ?~> Messages(
-          "dataSet.notFound",
-          dataSetName)
-        _ <- Fox.runOptional(request.identity)(user =>
-          dataSetLastUsedTimesDAO.updateForDataSetAndUser(dataSet._id, user._id))
-        js <- dataSetService.publicWrites(dataSet, request.identity)
-      } yield {
-        Ok(Json.toJson(js))
+      log {
+        val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
+        for {
+          dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(ctx) ?~> Messages(
+            "dataSet.notFound",
+            dataSetName)
+          _ <- Fox.runOptional(request.identity)(user =>
+            dataSetLastUsedTimesDAO.updateForDataSetAndUser(dataSet._id, user._id))
+          js <- dataSetService.publicWrites(dataSet, request.identity)
+        } yield {
+          Ok(Json.toJson(js))
+        }
       }
   }
 

@@ -91,8 +91,8 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       if (organizationNames.isEmpty) Fox.successful(None)
       else {
         for {
-          organizationName <- Fox.successful(organizationNames.headOption)
-          _ <- bool2Fox(organizationNames.forall(_ == organizationName))
+          organizationName <- organizationNames.headOption.toFox
+          _ <- bool2Fox(organizationNames.forall(name => name == organizationName))
         } yield organizationName
       }
 

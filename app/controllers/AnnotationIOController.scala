@@ -87,6 +87,15 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
         _ <- bool2Fox(skeletons.forall(_.dataSetName == dataSetName))
       } yield dataSetName
 
+    def assertAllOnSameOrganization(organizationNames: List[String]) =
+      if (organizationNames.isEmpty) Fox.successful(None)
+      else {
+        for {
+          organizationName <- Fox.successful(organizationNames.headOption)
+          _ <- bool2Fox(organizationNames.forall(_ == organizationName))
+        } yield organizationName
+      }
+
     val shouldCreateGroupForEachFile: Boolean = request.body.dataParts("createGroupForEachFile")(0) == "true"
 
     val parsedFiles = request.body.files.foldLeft(NmlResults.ZipParseResult()) {
@@ -102,19 +111,21 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       else
         nmlService.addPrefixesToTreeNames(parsedFiles.parseResults)
 
-    val parseSuccess = tracingsProcessed.filter(_.succeeded)
+    val parseSuccesses = tracingsProcessed.filter(_.succeeded)
 
     if (!parsedFiles.isEmpty) {
-      val tracings = parseSuccess.flatMap(_.bothTracingOpts)
+      val tracings = parseSuccesses.flatMap(_.bothTracingOpts)
       val (skeletonTracings, volumeTracingsWithDataLocations) = nmlService.splitVolumeAndSkeletonTracings(tracings)
-      val name = nameForNmls(parseSuccess.map(_.fileName))
-      val description = descriptionForNMLs(parseSuccess.map(_.description))
+      val name = nameForNmls(parseSuccesses.map(_.fileName))
+      val description = descriptionForNMLs(parseSuccesses.map(_.description))
 
       for {
         _ <- bool2Fox(skeletonTracings.nonEmpty || volumeTracingsWithDataLocations.nonEmpty) ?~> "nml.file.noFile"
         _ <- bool2Fox(volumeTracingsWithDataLocations.isEmpty || volumeTracingsWithDataLocations.tail.isEmpty) ?~> "nml.file.multipleVolumes"
         dataSetName <- assertAllOnSameDataSet(skeletonTracings, volumeTracingsWithDataLocations.headOption.map(_._1)) ?~> "nml.file.differentDatasets"
-        organizationId <- dataSetDAO.getOrganizationForDataSet(dataSetName)
+        organizationNameOpt <- assertAllOnSameOrganization(parseSuccesses.flatMap(s => s.organizationName)) ?~> "nml.file.differentDatasets"
+        organizationIdOpt <- Fox.runOptional(organizationNameOpt) { organizationDAO.findOneByName(_).map(_._id) }
+        organizationId <- Fox.fillOption(organizationIdOpt) { dataSetDAO.getOrganizationForDataSet(dataSetName) }
         dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> "dataSet.noAccess"
         tracingStoreClient <- tracingStoreService.clientFor(dataSet)
         volumeTracingIdOpt <- Fox.runOptional(volumeTracingsWithDataLocations.headOption) { v =>
@@ -189,11 +200,20 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
         user <- userService.findOneById(annotation._user, useCache = true)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
       } yield {
-        (nmlWriter.toNmlStream(Some(tracing), None, Some(annotation), dataSet.scale, organizationName, Some(user), taskOpt),
+        (nmlWriter.toNmlStream(Some(tracing),
+                               None,
+                               Some(annotation),
+                               dataSet.scale,
+                               organizationName,
+                               Some(user),
+                               taskOpt),
          name + ".nml")
       }
 
-    def volumeOrHybridToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String, organizationName: String) =
+    def volumeOrHybridToDownloadStream(dataSet: DataSet,
+                                       annotation: Annotation,
+                                       name: String,
+                                       organizationName: String) =
       for {
         tracingStoreClient <- tracingStoreService.clientFor(dataSet)
         volumeTracingId <- annotation.volumeTracingId.toFox

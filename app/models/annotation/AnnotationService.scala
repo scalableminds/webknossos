@@ -334,8 +334,10 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     for {
       tracingsNamesAndScalesAsTuples <- getTracingsScalesAndNamesFor(annotations)
       tracingsAndNamesFlattened = flattenTupledLists(tracingsNamesAndScalesAsTuples)
-      nmlsAndNames = tracingsAndNamesFlattened.map(tuple =>
-        (nmlWriter.toNmlStream(Some(tuple._1), None, Some(tuple._4), tuple._3, tuple._7, Some(tuple._5), tuple._6), tuple._2))
+      nmlsAndNames = tracingsAndNamesFlattened.map(
+        tuple =>
+          (nmlWriter.toNmlStream(Some(tuple._1), None, Some(tuple._4), tuple._3, tuple._7, Some(tuple._5), tuple._6),
+           tuple._2))
       zip <- createZip(nmlsAndNames, zipFileName)
     } yield zip
 
@@ -344,18 +346,31 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     tupledLists.flatMap(tuple => zippedSevenLists(tuple._1, tuple._2, tuple._3, tuple._4, tuple._5, tuple._6, tuple._7))
 
   private def zippedSevenLists[A, B, C, D, E, F, G](l1: List[A],
-                                               l2: List[B],
-                                               l3: List[C],
-                                               l4: List[D],
-                                               l5: List[E],
-                                               l6: List[F],
-                                               l7: List[G]): List[(A, B, C, D, E, F, G)] =
-    (((((l1, l2, l3).zipped.toList, l4).zipped.toList, l5).zipped.toList, l6).zipped.toList, l7).zipped.toList.map { tuple: (((((A, B, C), D), E), F), G) =>
-      (tuple._1._1._1._1._1, tuple._1._1._1._1._2, tuple._1._1._1._1._3, tuple._1._1._1._2, tuple._1._1._2, tuple._1._2, tuple._2)
+                                                    l2: List[B],
+                                                    l3: List[C],
+                                                    l4: List[D],
+                                                    l5: List[E],
+                                                    l6: List[F],
+                                                    l7: List[G]): List[(A, B, C, D, E, F, G)] =
+    (((((l1, l2, l3).zipped.toList, l4).zipped.toList, l5).zipped.toList, l6).zipped.toList, l7).zipped.toList.map {
+      tuple: (((((A, B, C), D), E), F), G) =>
+        (tuple._1._1._1._1._1,
+         tuple._1._1._1._1._2,
+         tuple._1._1._1._1._3,
+         tuple._1._1._1._2,
+         tuple._1._1._2,
+         tuple._1._2,
+         tuple._2)
     }
 
-  private def getTracingsScalesAndNamesFor(annotations: List[Annotation])(implicit ctx: DBAccessContext): Fox[List[
-    (List[SkeletonTracing], List[String], List[Option[Scale]], List[Annotation], List[User], List[Option[Task]], List[String])]] = {
+  private def getTracingsScalesAndNamesFor(annotations: List[Annotation])(
+      implicit ctx: DBAccessContext): Fox[List[(List[SkeletonTracing],
+                                                List[String],
+                                                List[Option[Scale]],
+                                                List[Annotation],
+                                                List[User],
+                                                List[Option[Task]],
+                                                List[String])]] = {
 
     def getTracings(dataSetId: ObjectId, tracingIds: List[String]) =
       for {

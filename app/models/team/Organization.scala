@@ -95,14 +95,12 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
 
   def findOrganizationNameForAnnotation(annotationId: ObjectId): Fox[String] =
     for {
-      rList <- run(
-        sql"""select o.name
+      rList <- run(sql"""select o.name
               from webknossos.annotations_ a
               join webknossos.datasets_ d on a._dataSet = d._id
               join webknossos.organizations_ o on d._organization = o._id
               where a._id = ${annotationId}""".as[String])
       r <- rList.headOption.toFox
     } yield r
-
 
 }

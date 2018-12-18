@@ -17,9 +17,6 @@ import scala.util._
 class BrainTracing @Inject()(actorSystem: ActorSystem, organizationDAO: OrganizationDAO, ws: WSClient, conf: WkConf)
     extends LazyLogging
     with FoxImplicits {
-  val URL = "http://braintracing.org/"
-  val CREATE_URL = URL + "oxalis_create_user.php"
-  val LOGTIME_URL = URL + "oxalis_add_hours.php"
 
   lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
@@ -27,7 +24,7 @@ class BrainTracing @Inject()(actorSystem: ActorSystem, organizationDAO: Organiza
   def registerIfNeeded(user: User, password: String)(implicit ec: ExecutionContext): Fox[Option[String]] =
     for {
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext) ?~> "organization.notFound"
-      result <- (if (organization.name == "Connectomics_Department" && conf.Braintracing.active)
+      result <- (if (organization.name == conf.Braintracing.organizationName && conf.Braintracing.active)
                    register(user, password).toFox.map(Some(_))
                  else Fox.successful(None))
     } yield result
@@ -35,7 +32,7 @@ class BrainTracing @Inject()(actorSystem: ActorSystem, organizationDAO: Organiza
   private def register(user: User, password: String)(implicit ec: ExecutionContext): Future[String] = {
     val result = Promise[String]()
     val brainTracingRequest = ws
-      .url(CREATE_URL)
+      .url(conf.Braintracing.url + conf.Braintracing.createUserScript)
       .withAuth(conf.Braintracing.user, conf.Braintracing.password, WSAuthScheme.BASIC)
       .addQueryStringParameters("license" -> conf.Braintracing.license,
                                 "firstname" -> user.firstName,

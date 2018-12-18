@@ -93,7 +93,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
         for {
           organizationName <- organizationNames.headOption.toFox
           _ <- bool2Fox(organizationNames.forall(name => name == organizationName))
-        } yield organizationName
+        } yield Some(organizationName)
       }
 
     val shouldCreateGroupForEachFile: Boolean = request.body.dataParts("createGroupForEachFile")(0) == "true"

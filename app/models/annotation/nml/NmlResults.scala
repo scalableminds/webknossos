@@ -22,8 +22,8 @@ object NmlResults extends LazyLogging {
     def toSkeletonSuccessFox(implicit ec: ExecutionContext): Fox[NmlParseSuccess] = this match {
       case NmlParseFailure(fileName, error) =>
         Fox.failure(s"Couldn’t parse file: $fileName. $error")
-      case NmlParseSuccess(fileName, Some(skeletonTracing), _, description) =>
-        Fox.successful(NmlParseSuccess(fileName, Some(skeletonTracing), None, description))
+      case NmlParseSuccess(fileName, Some(skeletonTracing), _, description, organizationNameOpt) =>
+        Fox.successful(NmlParseSuccess(fileName, Some(skeletonTracing), None, description, organizationNameOpt))
       case _ =>
         Fox.failure("Couldn’t parse file")
     }
@@ -32,7 +32,8 @@ object NmlResults extends LazyLogging {
   case class NmlParseSuccess(fileName: String,
                              skeletonTracing: Option[SkeletonTracing],
                              volumeTracingWithDataLocation: Option[(VolumeTracing, String)],
-                             _description: String)
+                             _description: String,
+                             organizationNameOpt: Option[String])
       extends NmlParseResult {
     def succeeded = true
 

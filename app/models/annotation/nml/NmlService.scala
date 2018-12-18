@@ -22,8 +22,8 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
 
   def extractFromNml(inputStream: InputStream, name: String): NmlParseResult =
     NmlParser.parse(name, inputStream) match {
-      case Full((skeletonTracing, volumeTracingWithDataLocation, description)) =>
-        NmlParseSuccess(name, skeletonTracing, volumeTracingWithDataLocation, description)
+      case Full((skeletonTracing, volumeTracingWithDataLocation, description, organizationNameOpt)) =>
+        NmlParseSuccess(name, skeletonTracing, volumeTracingWithDataLocation, description, organizationNameOpt)
       case Failure(msg, _, _) => NmlParseFailure(name, msg)
       case Empty              => NmlParseEmpty(name)
     }

@@ -71,7 +71,7 @@ const datasetNames = [
   "dsA_2",
 ];
 
-const viewOverrides = {
+const viewOverrides: { [key: string]: string } = {
   e2006_knossos: "4736,4992,2176,0,1.0",
 };
 

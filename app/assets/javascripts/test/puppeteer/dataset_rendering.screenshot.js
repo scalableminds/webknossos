@@ -71,12 +71,17 @@ const datasetNames = [
   "dsA_2",
 ];
 
+const viewOverrides = {
+  e2006_knossos: "4736,4992,2176,0,1.0",
+};
+
 datasetNames.map(async datasetName => {
   test.serial(`it should render dataset ${datasetName} correctly`, async t => {
     const { screenshot, width, height } = await screenshotDataset(
       await getNewPage(t.context.browser),
       URL,
       { name: datasetName, owningOrganization: "Connectomics_Department" },
+      viewOverrides[datasetName],
     );
     const changedPixels = await compareScreenshot(
       screenshot,

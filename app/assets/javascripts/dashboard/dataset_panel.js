@@ -109,7 +109,7 @@ class DatasetPanel extends React.PureComponent<Props, State> {
 
   renderCard = (dataset: APIDataset) => (
     <a href={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`} title="View Dataset">
-      <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card">
+      <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card" bordered={false}>
         <ThumbnailAndDescriptionFromDataset dataset={dataset} />
       </Card>
     </a>
@@ -166,8 +166,10 @@ class DatasetPanel extends React.PureComponent<Props, State> {
 
     return (
       <div className="dataset-panel">
-        {this.props.showOrganizationHeader && <h1>{this.props.organizationName}</h1>}
-        <Row gutter={16}>
+        {this.props.showOrganizationHeader && (
+          <h1 className="organization-header">{this.props.organizationName}</h1>
+        )}
+        <Row gutter={24}>
           {maybeCroppedDatasetsGroup.map(([groupName, datasets]) => (
             <Col className="gallery-dataset-col" {...columnSpan} key={groupName}>
               {datasets.length === 1

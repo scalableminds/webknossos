@@ -29,7 +29,12 @@ const WelcomeHeader = ({ history }) => (
       backgroundImage: "url(https://webknossos.org/images/nature-cover-compressed.jpg)",
     }}
   >
-    <div style={{ backgroundColor: "rgba(88, 88, 88, 0.5)" }}>
+    <div
+      style={{
+        backgroundColor: "rgba(88, 88, 88, 0.4)",
+        backgroundImage: "linear-gradient(to bottom, #449efd7a 0%, #041a4abf 85%, #00050fc2 100%)",
+      }}
+    >
       <div
         style={{
           maxWidth: 1300,
@@ -47,15 +52,27 @@ const WelcomeHeader = ({ history }) => (
             />
           </Col>
           <Col span={16}>
-            <p style={{ fontSize: 58, textShadow: "0px 1px 6px #00000061" }}>
+            <p
+              style={{
+                fontSize: 58,
+                textShadow: "rgba(0, 0, 0, 0.38) 0px 1px 6px",
+                textAlign: "left",
+                fontWeight: 300,
+                marginLeft: 56,
+              }}
+            >
               Welcome to webKnossos
             </p>
             <p
               style={{
                 fontSize: 20,
-                textShadow: "0px 1px 6px #00000061",
-                color: "rgb(245, 245, 245)",
+                textShadow: "rgba(0, 0, 0, 0.38) 0px 1px 6px",
+                color: "rgb(243, 243, 248)",
                 padding: "40px 60px",
+                textAlign: "left",
+                lineHeight: 1.5,
+                paddingTop: 10,
+                marginTop: 0,
               }}
             >
               webKnossos is an in-browser annotation tool for 3D electron microscopic data that
@@ -145,8 +162,9 @@ class SpotlightView extends React.PureComponent<Props, State> {
   render() {
     return (
       <Layout>
-        {this.props.activeUser == null &&
-        (features().allowOrganizationCreation || !this.state.hasOrganizations) ? (
+        {true ||
+        (this.props.activeUser == null &&
+          (features().allowOrganizationCreation || !this.state.hasOrganizations)) ? (
           <WelcomeHeader history={this.props.history} />
         ) : (
           <SimpleHeader />

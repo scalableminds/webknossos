@@ -38,9 +38,9 @@ const { Search } = Input;
 const typeHint: APIAnnotationTypeCompact[] = [];
 const pageLength: number = 1000;
 
-export type TracingMode = {
+export type TracingModeState = {
   tracings: Array<APIAnnotationTypeCompact>,
-  tracingsPageNumber: number,
+  lastLoadedPage: number,
   loadedAllTracings: boolean,
 };
 
@@ -52,8 +52,8 @@ type Props = {
 
 type State = {
   shouldShowArchivedTracings: boolean,
-  archivedMode: TracingMode,
-  unarchivedMode: TracingMode,
+  archivedModeState: TracingModeState,
+  unarchivedModeState: TracingModeState,
   didAlreadyFetchMetaInfo: {
     isArchived: boolean,
     isUnarchived: boolean,
@@ -74,14 +74,14 @@ const persistence: Persistence<State> = new Persistence(
 class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   state = {
     shouldShowArchivedTracings: false,
-    archivedMode: {
+    archivedModeState: {
       tracings: [],
-      tracingsPageNumber: 0,
+      lastLoadedPage: 0,
       loadedAllTracings: false,
     },
-    unarchivedMode: {
+    unarchivedModeState: {
       tracings: [],
-      tracingsPageNumber: 0,
+      lastLoadedPage: 0,
       loadedAllTracings: false,
     },
     didAlreadyFetchMetaInfo: {
@@ -130,22 +130,33 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     }
   }
 
-  getCurrentMode = () =>
-    this.state.shouldShowArchivedTracings ? this.state.archivedMode : this.state.unarchivedMode;
+  getCurrentModeState = () =>
+    this.state.shouldShowArchivedTracings
+      ? this.state.archivedModeState
+      : this.state.unarchivedModeState;
 
-  setMode = (modeShape, updateCurrentMode: boolean = true) => {
+  setModeState = modeShape => {
     const shouldShowArchivedTracings = this.state.shouldShowArchivedTracings;
     this.setState(prevState => {
       const newSubState = {
-        ...prevState[
-          shouldShowArchivedTracings === updateCurrentMode ? "archivedMode" : "unarchivedMode"
-        ],
+        ...prevState[shouldShowArchivedTracings ? "archivedModeState" : "unarchivedModeState"],
         ...modeShape,
       };
       return {
-        [shouldShowArchivedTracings === updateCurrentMode
-          ? "archivedMode"
-          : "unarchivedMode"]: newSubState,
+        [shouldShowArchivedTracings ? "archivedModeState" : "unarchivedModeState"]: newSubState,
+      };
+    });
+  };
+
+  setOppositeModeState = modeShape => {
+    const shouldShowArchivedTracings = this.state.shouldShowArchivedTracings;
+    this.setState(prevState => {
+      const newSubState = {
+        ...prevState[shouldShowArchivedTracings ? "unarchivedModeState" : "archivedModeState"],
+        ...modeShape,
+      };
+      return {
+        [shouldShowArchivedTracings ? "unarchivedModeState" : "archivedModeState"]: newSubState,
       };
     });
   };
@@ -180,7 +191,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           }),
         );
       }
-      this.setMode({ tracings });
+      this.setModeState({ tracings });
     } catch (error) {
       handleGenericError(error);
     } finally {
@@ -188,11 +199,10 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     }
   }
 
-  fetchNextPage = async () => {
+  fetchNextPage = async pageNumber => {
     // this refers not to the pagination of antd but to the pagination of querying data from SQL
     const showArchivedTracings = this.state.shouldShowArchivedTracings;
-    const previousTracings = this.getCurrentMode().tracings;
-    const pageNumber = this.getCurrentMode().tracingsPageNumber + 1;
+    const previousTracings = this.getCurrentModeState().tracings;
 
     try {
       this.setState({ isLoading: true });
@@ -201,11 +211,10 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           ? await getCompactAnnotationsForUser(this.props.userId, showArchivedTracings, pageNumber)
           : await getCompactAnnotations(showArchivedTracings, pageNumber);
 
-      this.setMode({ loadedAllTracings: tracings.length !== pageLength });
-
-      this.setMode({
+      this.setModeState({
         tracings: previousTracings.concat(tracings),
-        tracingsPageNumber: pageNumber,
+        lastLoadedPage: pageNumber,
+        loadedAllTracings: tracings.length !== pageLength,
       });
     } catch (error) {
       handleGenericError(error);
@@ -235,11 +244,15 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     const newTracings = this.getCurrentTracings().filter(t => t.id !== tracing.id);
 
     if (type === "finish") {
-      this.setMode({ tracings: newTracings });
-      this.setMode({ tracings: [newTracing].concat(this.state.archivedMode.tracings) }, false);
+      this.setModeState({ tracings: newTracings });
+      this.setOppositeModeState({
+        tracings: [newTracing].concat(this.state.archivedModeState.tracings),
+      });
     } else {
-      this.setMode({ tracings: newTracings });
-      this.setMode({ tracings: [newTracing].concat(this.state.unarchivedMode.tracings) }, false);
+      this.setModeState({ tracings: newTracings });
+      this.setOppositeModeState({
+        tracings: [newTracing].concat(this.state.unarchivedModeState.tracings),
+      });
     }
   };
 
@@ -279,7 +292,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   getCurrentTracings(): Array<APIAnnotationTypeCompact> {
-    return this.getCurrentMode().tracings;
+    return this.getCurrentModeState().tracings;
   }
 
   handleSearch = (event: SyntheticInputEvent<>): void => {
@@ -297,7 +310,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       }
     });
 
-    this.setMode({ tracings: newTracings });
+    this.setModeState({ tracings: newTracings });
 
     editAnnotation(tracing.id, tracing.typ, { name }).then(() => {
       Toast.success(messages["annotation.was_edited"]);
@@ -316,13 +329,13 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         Toast.messages(data.messages);
 
         this.setState(prevState => ({
-          archivedMode: {
-            ...prevState.archivedMode,
-            tracings: prevState.archivedMode.tracings.concat(selectedAnnotations),
+          archivedModeState: {
+            ...prevState.archivedModeState,
+            tracings: prevState.archivedModeState.tracings.concat(selectedAnnotations),
           },
-          unarchivedMode: {
-            ...prevState.unarchivedMode,
-            tracings: _.without(prevState.unarchivedMode.tracings, ...selectedAnnotations),
+          unarchivedModeState: {
+            ...prevState.unarchivedModeState,
+            tracings: _.without(prevState.unarchivedModeState.tracings, ...selectedAnnotations),
           },
         }));
       },
@@ -356,7 +369,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     event.stopPropagation(); // prevent the onClick event
 
     this.setState(prevState => {
-      const newTracings = prevState.unarchivedMode.tracings.map(t => {
+      const newTracings = prevState.unarchivedModeState.tracings.map(t => {
         let newAnnotation = t;
 
         if (t.id === annotation.id) {
@@ -376,7 +389,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         }
         return newAnnotation;
       });
-      return { unarchivedMode: { ...prevState.unarchivedMode, tracings: newTracings } };
+      return { unarchivedModeState: { ...prevState.unarchivedModeState, tracings: newTracings } };
     });
   };
 
@@ -579,8 +592,11 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           {this.renderTable()}
         </Spin>
         <div style={{ textAlign: "right" }}>
-          {!this.getCurrentMode().loadedAllTracings ? (
-            <Link to="#" onClick={() => this.fetchNextPage()}>
+          {!this.getCurrentModeState().loadedAllTracings ? (
+            <Link
+              to="#"
+              onClick={() => this.fetchNextPage(this.getCurrentModeState().lastLoadedPage + 1)}
+            >
               Load more Annotations
             </Link>
           ) : null}

@@ -109,8 +109,11 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
       parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
     } yield parsed
 
-  def findAllFor(userId: ObjectId, isFinished: Option[Boolean], annotationType: AnnotationType, limit: Int, pageNumber: Int = 0)(
-      implicit ctx: DBAccessContext): Fox[List[Annotation]] = {
+  def findAllFor(userId: ObjectId,
+                 isFinished: Option[Boolean],
+                 annotationType: AnnotationType,
+                 limit: Int,
+                 pageNumber: Int = 0)(implicit ctx: DBAccessContext): Fox[List[Annotation]] = {
     val stateQuery = isFinished match {
       case Some(true)  => s"state = '${AnnotationState.Finished.toString}'"
       case Some(false) => s"state = '${AnnotationState.Active.toString}'"

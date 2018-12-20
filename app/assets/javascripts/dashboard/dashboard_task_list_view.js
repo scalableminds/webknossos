@@ -36,10 +36,10 @@ type StateProps = {
   activeUser: APIUser,
 };
 
-export type TaskMode = {
+export type TaskModeState = {
   tasks: Array<APITaskWithAnnotation>,
-  tasksPageNumber: number,
   loadedAllTasks: boolean,
+  lastLoadedPage: number,
 };
 
 type Props = {
@@ -53,8 +53,8 @@ type State = {
   isLoading: boolean,
   isTransferModalVisible: boolean,
   currentAnnotationId: ?string,
-  finishedMode: TaskMode,
-  unfinishedMode: TaskMode,
+  finishedModeState: TaskModeState,
+  unfinishedModeState: TaskModeState,
 };
 
 const persistence: Persistence<State> = new Persistence(
@@ -96,15 +96,15 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     isLoading: false,
     isTransferModalVisible: false,
     currentAnnotationId: null,
-    finishedMode: {
+    finishedModeState: {
       tasks: [],
-      tasksPageNumber: 0,
       loadedAllTasks: false,
+      lastLoadedPage: -1,
     },
-    unfinishedMode: {
+    unfinishedModeState: {
       tasks: [],
-      tasksPageNumber: 0,
       loadedAllTasks: false,
+      lastLoadedPage: -1,
     },
   };
 
@@ -113,7 +113,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   }
 
   componentDidMount() {
-    this.fetchData();
+    this.fetchNextPage(0);
   }
 
   componentWillUpdate(nextProps, nextState) {
@@ -122,17 +122,17 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 
   getFinishVerb = () => (this.state.showFinishedTasks ? "Unfinished" : "Finished");
 
-  getCurrentMode = () =>
-    this.state.showFinishedTasks ? this.state.finishedMode : this.state.unfinishedMode;
+  getCurrentModeState = () =>
+    this.state.showFinishedTasks ? this.state.finishedModeState : this.state.unfinishedModeState;
 
-  setCurrentMode = modeShape => {
+  setCurrentModeState = modeShape => {
     const showFinishedTasks = this.state.showFinishedTasks;
     this.setState(prevState => {
       const newSubState = {
-        ...prevState[showFinishedTasks ? "finishedMode" : "unfinishedMode"],
+        ...prevState[showFinishedTasks ? "finishedModeState" : "unfinishedModeState"],
         ...modeShape,
       };
-      return { [showFinishedTasks ? "finishedMode" : "unfinishedMode"]: newSubState };
+      return { [showFinishedTasks ? "finishedModeState" : "unfinishedModeState"]: newSubState };
     });
   };
 
@@ -147,48 +147,45 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         const changedTask = convertAnnotationToTaskWithAnnotationType(changedAnnotationWithTask);
 
         this.setState(prevState => {
-          const newUnfinishedTasks = prevState.unfinishedMode.tasks.filter(t => t.id !== task.id);
-          const newFinishedTasks = [changedTask].concat(prevState.finishedMode.tasks);
+          const newUnfinishedTasks = prevState.unfinishedModeState.tasks.filter(
+            t => t.id !== task.id,
+          );
+          const newFinishedTasks = [changedTask].concat(prevState.finishedModeState.tasks);
 
-          const newUnfinishedMode = { ...prevState.unfinishedMode };
-          newUnfinishedMode.tasks = newUnfinishedTasks;
-          const newFinishedMode = { ...prevState.finishedMode };
-          newFinishedMode.tasks = newFinishedTasks;
+          const newUnfinishedModeState = {
+            ...prevState.unfinishedModeState,
+            tasks: newUnfinishedTasks,
+          };
+          const newFinishedModeState = { ...prevState.finishedModeState, tasks: newFinishedTasks };
           return {
-            unfinishedMode: newUnfinishedMode,
-            finishedMode: newFinishedMode,
+            unfinishedModeState: newUnfinishedModeState,
+            finishedModeState: newFinishedModeState,
           };
         });
       },
     });
   }
 
-  async fetchData(): Promise<void> {
-    this.fetchNextPage(0);
-  }
-
-  fetchNextPage = async incrementStep => {
+  fetchNextPage = async pageNumber => {
     // this refers not to the pagination of antd but to the pagination of querying data from SQL
-    // incrementStep is 0 when it is called from "fetchData" and it is 1 when the intention is to load the next page
     const isFinished = this.state.showFinishedTasks;
-    const previousTasks = this.getCurrentMode().tasks;
-    const pageNumber = this.getCurrentMode().tasksPageNumber + incrementStep;
+    const previousTasks = this.getCurrentModeState().tasks;
 
     const url = this.props.userId
-      ? `/api/users/${this.props.userId}/tasks?isFinished=${isFinished.toString()}`
+      ? `/api/users/${
+          this.props.userId
+        }/tasks?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`
       : `/api/user/tasks?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`;
 
     try {
       this.setState({ isLoading: true });
       const annotationsWithTasks = await Request.receiveJSON(url);
       const tasks = annotationsWithTasks.map(convertAnnotationToTaskWithAnnotationType);
-      this.setCurrentMode({ loadedAllTasks: annotationsWithTasks.length !== pageLength });
-      if (previousTasks.length === 0 || incrementStep !== 0) {
-        this.setCurrentMode({
-          tasks: previousTasks.concat(tasks),
-          tasksPageNumber: pageNumber,
-        });
-      }
+      this.setCurrentModeState({
+        loadedAllTasks: annotationsWithTasks.length !== pageLength,
+        tasks: previousTasks.concat(tasks),
+        lastLoadedPage: pageNumber,
+      });
     } catch (error) {
       handleGenericError(error);
     } finally {
@@ -201,7 +198,9 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
       prevState => ({
         showFinishedTasks: !prevState.showFinishedTasks,
       }),
-      () => this.fetchData(),
+      () => {
+        if (this.getCurrentModeState().lastLoadedPage === -1) this.fetchNextPage(0);
+      },
     );
   };
 
@@ -295,15 +294,15 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
       okText: messages.yes,
       onOk: async () => {
         await deleteAnnotation(annotationId, annotation.typ);
-        this.setCurrentMode({
-          tasks: this.getCurrentMode().tasks.filter(t => t.annotation.id !== annotationId),
+        this.setCurrentModeState({
+          tasks: this.getCurrentModeState().tasks.filter(t => t.annotation.id !== annotationId),
         });
       },
     });
   }
 
   async confirmGetNewTask(): Promise<void> {
-    if (this.state.unfinishedMode.tasks.length === 0) {
+    if (this.state.unfinishedModeState.tasks.length === 0) {
       return this.getNewTask();
     } else {
       let modalContent = messages["task.request_new"];
@@ -327,9 +326,9 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     try {
       const newTaskAnnotation = await requestTask();
       this.setState(prevState => ({
-        unfinishedMode: {
-          ...prevState.unfinishedMode,
-          tasks: prevState.unfinishedMode.tasks.concat([
+        unfinishedModeState: {
+          ...prevState.unfinishedModeState,
+          tasks: prevState.unfinishedModeState.tasks.concat([
             convertAnnotationToTaskWithAnnotationType(newTaskAnnotation),
           ]),
         },
@@ -346,13 +345,13 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 
     const removeTransferredTask = (tasks, currentAnnotationId) =>
       tasks.filter(t => t.annotation.id !== currentAnnotationId);
-    this.setCurrentMode({
+    this.setCurrentModeState({
       tasks: removeTransferredTask(this.getCurrentTasks(), this.state.currentAnnotationId),
     });
   }
 
   getCurrentTasks() {
-    return this.getCurrentMode().tasks;
+    return this.getCurrentModeState().tasks;
   }
 
   renderPlaceholder() {
@@ -457,8 +456,11 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         <div className="clearfix" style={{ margin: "20px 0px" }} />
         {this.renderTaskList()}
         <div style={{ textAlign: "right" }}>
-          {!this.getCurrentMode().loadedAllTasks ? (
-            <Link to="#" onClick={() => this.fetchNextPage(1)}>
+          {!this.getCurrentModeState().loadedAllTasks ? (
+            <Link
+              to="#"
+              onClick={() => this.fetchNextPage(this.getCurrentModeState().lastLoadedPage + 1)}
+            >
               Load more Tasks
             </Link>
           ) : null}

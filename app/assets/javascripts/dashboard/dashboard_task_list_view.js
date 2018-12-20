@@ -425,7 +425,6 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         dataSource={tasks}
         pagination={{
           defaultPageSize: 50,
-          pageSize: 1,
         }}
         loading={this.state.isLoading}
         renderItem={TaskCard}

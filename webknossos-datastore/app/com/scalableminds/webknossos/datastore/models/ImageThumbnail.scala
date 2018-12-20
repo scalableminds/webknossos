@@ -29,9 +29,10 @@ object ImageThumbnail {
                               zoomOpt: Option[Double] = None): VoxelPosition = {
 
     // Parameters that seem to be working good enough
-    val center = if (centerX.isDefined && centerY.isDefined && centerZ.isDefined)
-                    Point3D(centerX.get, centerY.get, centerZ.get)
-                 else dataLayer.boundingBox.center
+    val center =
+      if (centerX.isDefined && centerY.isDefined && centerZ.isDefined)
+        Point3D(centerX.get, centerY.get, centerZ.get)
+      else dataLayer.boundingBox.center
     val resolutionExponent = bestResolutionExponent(dataLayer, width, height, zoomOpt)
     val resolution = dataLayer.lookUpResolution(resolutionExponent, snapToClosest = true)
     val x = Math.max(0, center.x - width * resolution.x / 2)

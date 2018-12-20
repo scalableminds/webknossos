@@ -6,9 +6,7 @@ import javax.inject.Inject
 
 import scala.concurrent.ExecutionContext
 
-class Application @Inject()(tracingDataStore: TracingDataStore)
-                           (implicit ec: ExecutionContext)
-  extends Controller {
+class Application @Inject()(tracingDataStore: TracingDataStore)(implicit ec: ExecutionContext) extends Controller {
 
   def health = Action.async { implicit request =>
     AllowRemoteOrigin {

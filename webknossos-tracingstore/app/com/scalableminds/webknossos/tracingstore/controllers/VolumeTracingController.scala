@@ -6,7 +6,11 @@ import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracings}
 import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
 import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessRequest}
-import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreConfig, TracingStoreWkRpcClient}
+import com.scalableminds.webknossos.tracingstore.{
+  TracingStoreAccessTokenService,
+  TracingStoreConfig,
+  TracingStoreWkRpcClient
+}
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import play.api.i18n.Messages
@@ -17,14 +21,13 @@ import play.api.mvc.PlayBodyParsers
 
 import scala.concurrent.ExecutionContext
 
-class VolumeTracingController @Inject()(val tracingService: VolumeTracingService,
-                                        val webKnossosServer: TracingStoreWkRpcClient,
-                                        val accessTokenService: TracingStoreAccessTokenService,
-                                        config: TracingStoreConfig,
-                                        tracingDataStore: TracingDataStore)
-                                       (implicit val ec: ExecutionContext,
-                                        val bodyParsers: PlayBodyParsers)
-  extends TracingController[VolumeTracing, VolumeTracings] {
+class VolumeTracingController @Inject()(
+    val tracingService: VolumeTracingService,
+    val webKnossosServer: TracingStoreWkRpcClient,
+    val accessTokenService: TracingStoreAccessTokenService,
+    config: TracingStoreConfig,
+    tracingDataStore: TracingDataStore)(implicit val ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
+    extends TracingController[VolumeTracing, VolumeTracings] {
 
   implicit val tracingsCompanion = VolumeTracings
 
@@ -34,21 +37,20 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
 
   override def freezeVersions = config.Tracingstore.freezeVolumeVersions
 
-  def initialData(tracingId: String) = Action.async {
-    implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.webknossos) {
-        AllowRemoteOrigin {
-          for {
-            initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
-            tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-            _ <- tracingService.initializeWithData(tracingId, tracing, initialData)
-          } yield Ok(Json.toJson(tracingId))
-        }
+  def initialData(tracingId: String) = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+      AllowRemoteOrigin {
+        for {
+          initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
+          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+          _ <- tracingService.initializeWithData(tracingId, tracing, initialData)
+        } yield Ok(Json.toJson(tracingId))
       }
+    }
   }
 
-  def allData(tracingId: String, version: Option[Long]) = Action.async {
-    implicit request => {
+  def allData(tracingId: String, version: Option[Long]) = Action.async { implicit request =>
+    {
       accessTokenService.validateAccess(UserAccessRequest.webknossos) {
         AllowRemoteOrigin {
           for {
@@ -62,12 +64,12 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
     }
   }
 
-  def data(tracingId: String) = Action.async(validateJson[List[WebKnossosDataRequest]]) {
-    implicit request => {
+  def data(tracingId: String) = Action.async(validateJson[List[WebKnossosDataRequest]]) { implicit request =>
+    {
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
         AllowRemoteOrigin {
           for {
-            tracing <- tracingService.find(tracingId) ?~>  Messages("tracing.notFound")
+            tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
             (data, indices) <- tracingService.data(tracingId, tracing, request.body)
           } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
         }
@@ -75,18 +77,15 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
     }
   }
 
+  private def getMissingBucketsHeaders(indices: List[Int]): Seq[(String, String)] =
+    List(("MISSING-BUCKETS" -> formatMissingBucketList(indices)),
+         ("Access-Control-Expose-Headers" -> "MISSING-BUCKETS"))
 
-  private def getMissingBucketsHeaders(indices: List[Int]): Seq[(String, String)] = {
-    List(("MISSING-BUCKETS" -> formatMissingBucketList(indices)), ("Access-Control-Expose-Headers" -> "MISSING-BUCKETS"))
-  }
-
-  private def formatMissingBucketList(indices: List[Int]): String = {
+  private def formatMissingBucketList(indices: List[Int]): String =
     "[" + indices.mkString(", ") + "]"
-  }
 
-
-  def duplicate(tracingId: String, version: Option[Long]) = Action.async {
-    implicit request => {
+  def duplicate(tracingId: String, version: Option[Long]) = Action.async { implicit request =>
+    {
       accessTokenService.validateAccess(UserAccessRequest.webknossos) {
         AllowRemoteOrigin {
           for {
@@ -100,16 +99,15 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
     }
   }
 
-  def updateActionLog(tracingId: String) = Action.async {
-    implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
-        AllowRemoteOrigin {
-          for {
-            updateLog <- tracingService.updateActionLog(tracingId)
-          } yield {
-            Ok(updateLog)
-          }
+  def updateActionLog(tracingId: String) = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+      AllowRemoteOrigin {
+        for {
+          updateLog <- tracingService.updateActionLog(tracingId)
+        } yield {
+          Ok(updateLog)
         }
       }
+    }
   }
 }

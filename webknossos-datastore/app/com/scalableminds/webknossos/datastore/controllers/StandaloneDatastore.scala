@@ -11,10 +11,11 @@ class StandaloneDatastore @Inject()(implicit ec: ExecutionContext) extends Injec
 
   def buildInfo = Action { implicit request =>
     AllowRemoteOrigin {
-      Ok(Json.obj(
-        "webknossosDatastore" -> webknossosDatastore.BuildInfo.toMap.mapValues(_.toString),
-        "webknossos-wrap" -> webknossoswrap.BuildInfo.toMap.mapValues(_.toString)
-      ))
+      Ok(
+        Json.obj(
+          "webknossosDatastore" -> webknossosDatastore.BuildInfo.toMap.mapValues(_.toString),
+          "webknossos-wrap" -> webknossoswrap.BuildInfo.toMap.mapValues(_.toString)
+        ))
     }
   }
 }

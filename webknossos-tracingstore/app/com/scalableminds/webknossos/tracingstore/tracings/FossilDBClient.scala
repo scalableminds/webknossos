@@ -17,7 +17,6 @@ import play.api.libs.json.{Json, Reads, Writes}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-
 trait KeyValueStoreImplicits extends BoxImplicits {
 
   implicit def stringToByteArray(s: String): Array[Byte] = s.toCharArray.map(_.toByte)
@@ -30,7 +29,8 @@ trait KeyValueStoreImplicits extends BoxImplicits {
 
   implicit def asProto[T <: GeneratedMessage](o: T): Array[Byte] = o.toByteArray
 
-  implicit def fromProto[T <: GeneratedMessage with Message[T]](a: Array[Byte])(implicit companion: GeneratedMessageCompanion[T]): Box[T] = tryo(companion.parseFrom(a))
+  implicit def fromProto[T <: GeneratedMessage with Message[T]](a: Array[Byte])(
+      implicit companion: GeneratedMessageCompanion[T]): Box[T] = tryo(companion.parseFrom(a))
 }
 
 case class KeyValuePair[T](key: String, value: T)
@@ -44,7 +44,6 @@ case class VersionedKeyValuePair[T](versionedKey: VersionedKey, value: T) {
   def version = versionedKey.version
 }
 
-
 class FossilDBClient(collection: String, config: TracingStoreConfig) extends FoxImplicits with LazyLogging {
   val address = config.Tracingstore.Fossildb.address
   val port = config.Tracingstore.Fossildb.port
@@ -52,7 +51,7 @@ class FossilDBClient(collection: String, config: TracingStoreConfig) extends Fox
   val blockingStub = FossilDBGrpc.blockingStub(channel)
   val blockingStubHealth = HealthGrpc.newBlockingStub(channel)
 
-  def checkHealth: Fox[Unit] = {
+  def checkHealth: Fox[Unit] =
     try {
       val reply: HealthCheckResponse = blockingStubHealth.check(HealthCheckRequest.getDefaultInstance())
       val replyString = reply.getStatus.toString
@@ -66,9 +65,9 @@ class FossilDBClient(collection: String, config: TracingStoreConfig) extends Fox
         Fox.failure(errorText)
       }
     }
-  }
 
-  def get[T](key: String, version: Option[Long] = None, mayBeEmpty: Option[Boolean] = None)(implicit fromByteArray: Array[Byte] => Box[T]): Fox[VersionedKeyValuePair[T]] = {
+  def get[T](key: String, version: Option[Long] = None, mayBeEmpty: Option[Boolean] = None)(
+      implicit fromByteArray: Array[Byte] => Box[T]): Fox[VersionedKeyValuePair[T]] =
     try {
       val reply: GetReply = blockingStub.get(GetRequest(collection, key, version, mayBeEmpty))
       if (!reply.success) throw new Exception(reply.errorMessage.getOrElse(""))
@@ -76,9 +75,8 @@ class FossilDBClient(collection: String, config: TracingStoreConfig) extends Fox
     } catch {
       case e: Exception => Fox.failure("Could not get from FossilDB: " + e.getMessage)
     }
-  }
 
-  def getVersion(key: String, version: Option[Long] = None, mayBeEmpty: Option[Boolean] = None): Fox[Long] = {
+  def getVersion(key: String, version: Option[Long] = None, mayBeEmpty: Option[Boolean] = None): Fox[Long] =
     try {
       val reply = blockingStub.get(GetRequest(collection, key, version, mayBeEmpty))
       if (!reply.success) throw new Exception(reply.errorMessage.getOrElse(""))
@@ -86,45 +84,57 @@ class FossilDBClient(collection: String, config: TracingStoreConfig) extends Fox
     } catch {
       case e: Exception => Fox.failure("Could not get from FossilDB: " + e.getMessage)
     }
-  }
 
-  def getMultipleKeys[T](key: String, prefix: Option[String] = None, version: Option[Long] = None, limit: Option[Int] = None)(implicit fromByteArray: Array[Byte] => Box[T]): List[VersionedKeyValuePair[T]] = {
-    def flatCombineTuples[A,B,C](keys: List[A], versions: List[B], values: List[Box[C]]) = {
-      val boxTuples: List[Box[(A,B,C)]] = (keys, versions, values).zipped.map {
-        case (k, v, Full(value)) => Full(k, v,value)
-        case _ => Empty
+  def getMultipleKeys[T](
+      key: String,
+      prefix: Option[String] = None,
+      version: Option[Long] = None,
+      limit: Option[Int] = None)(implicit fromByteArray: Array[Byte] => Box[T]): List[VersionedKeyValuePair[T]] = {
+    def flatCombineTuples[A, B, C](keys: List[A], versions: List[B], values: List[Box[C]]) = {
+      val boxTuples: List[Box[(A, B, C)]] = (keys, versions, values).zipped.map {
+        case (k, v, Full(value)) => Full(k, v, value)
+        case _                   => Empty
       }
       boxTuples.flatten
     }
 
     val reply = blockingStub.getMultipleKeys(GetMultipleKeysRequest(collection, key, prefix, version, limit))
     if (!reply.success) throw new Exception(reply.errorMessage.getOrElse(""))
-    val parsedValues: List[Box[T]] = reply.values.map{ v => fromByteArray(v.toByteArray)}.toList
-    flatCombineTuples(reply.keys.toList, reply.actualVersions.toList, parsedValues).map{t => VersionedKeyValuePair(VersionedKey(t._1, t._2), t._3)}
+    val parsedValues: List[Box[T]] = reply.values.map { v =>
+      fromByteArray(v.toByteArray)
+    }.toList
+    flatCombineTuples(reply.keys.toList, reply.actualVersions.toList, parsedValues).map { t =>
+      VersionedKeyValuePair(VersionedKey(t._1, t._2), t._3)
+    }
   }
 
-  def getMultipleVersions[T](key: String, newestVersion: Option[Long] = None, oldestVersion: Option[Long] = None)
-                            (implicit fromByteArray: Array[Byte] => Box[T]): Fox[List[T]] = {
+  def getMultipleVersions[T](key: String, newestVersion: Option[Long] = None, oldestVersion: Option[Long] = None)(
+      implicit fromByteArray: Array[Byte] => Box[T]): Fox[List[T]] =
     for {
       versionValueTuples <- getMultipleVersionsAsVersionValueTuple(key, newestVersion, oldestVersion)
     } yield versionValueTuples.map(_._2)
-  }
 
-  def getMultipleVersionsAsVersionValueTuple[T](key: String, newestVersion: Option[Long] = None, oldestVersion: Option[Long] = None)
-                                               (implicit fromByteArray: Array[Byte] => Box[T]): Fox[List[(Long,T)]] = {
+  def getMultipleVersionsAsVersionValueTuple[T](
+      key: String,
+      newestVersion: Option[Long] = None,
+      oldestVersion: Option[Long] = None)(implicit fromByteArray: Array[Byte] => Box[T]): Fox[List[(Long, T)]] =
     try {
-      val reply = blockingStub.getMultipleVersions(GetMultipleVersionsRequest(collection, key, newestVersion, oldestVersion))
+      val reply =
+        blockingStub.getMultipleVersions(GetMultipleVersionsRequest(collection, key, newestVersion, oldestVersion))
       if (!reply.success) throw new Exception(reply.errorMessage.getOrElse(""))
-      val parsedValues: List[Box[T]] = reply.values.map{v => fromByteArray(v.toByteArray)}.toList
+      val parsedValues: List[Box[T]] = reply.values.map { v =>
+        fromByteArray(v.toByteArray)
+      }.toList
       for {
-        values <- Fox.combined(parsedValues.map{box: Box[T] => box.toFox})
+        values <- Fox.combined(parsedValues.map { box: Box[T] =>
+          box.toFox
+        })
       } yield reply.versions.zip(values).toList
     } catch {
       case e: Exception => Fox.failure("could not get multiple versions from FossilDB: " + e.getMessage)
     }
-  }
 
-  def put[T](key: String, version: Long, value: Array[Byte])(implicit toByteArray: T => Array[Byte]): Fox[_] = {
+  def put[T](key: String, version: Long, value: Array[Byte])(implicit toByteArray: T => Array[Byte]): Fox[_] =
     try {
       val reply = blockingStub.put(PutRequest(collection, key, Some(version), ByteString.copyFrom(value)))
       if (!reply.success) throw new Exception(reply.errorMessage.getOrElse(""))
@@ -132,7 +142,6 @@ class FossilDBClient(collection: String, config: TracingStoreConfig) extends Fox
     } catch {
       case e: Exception => Fox.failure("could not save to FossilDB: " + e.getMessage)
     }
-  }
 
   def shutdown() = {
     channel.shutdownNow()

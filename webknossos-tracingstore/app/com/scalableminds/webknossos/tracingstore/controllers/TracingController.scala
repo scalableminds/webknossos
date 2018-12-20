@@ -4,7 +4,12 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessRequest}
 import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreWkRpcClient}
-import com.scalableminds.webknossos.tracingstore.tracings.{TracingSelector, TracingService, UpdateAction, UpdateActionGroup}
+import com.scalableminds.webknossos.tracingstore.tracings.{
+  TracingSelector,
+  TracingService,
+  UpdateAction,
+  UpdateActionGroup
+}
 import com.scalableminds.util.tools.JsonHelper.boxFormat
 import net.liftweb.common.Failure
 import play.api.i18n.Messages
@@ -14,7 +19,8 @@ import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 
 import scala.concurrent.ExecutionContext
 
-trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMessage with Message[Ts]] extends Controller {
+trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMessage with Message[Ts]]
+    extends Controller {
 
   def tracingService: TracingService[T]
 
@@ -38,20 +44,19 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
 
   implicit val bodyParsers: PlayBodyParsers
 
-  def save = Action.async(validateProto[T]) {
-    implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.webknossos) {
-        AllowRemoteOrigin {
-          val tracing = request.body
-          tracingService.save(tracing, None, 0).map { newId =>
-            Ok(Json.toJson(newId))
-          }
+  def save = Action.async(validateProto[T]) { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+      AllowRemoteOrigin {
+        val tracing = request.body
+        tracingService.save(tracing, None, 0).map { newId =>
+          Ok(Json.toJson(newId))
         }
       }
+    }
   }
 
-  def saveMultiple = Action.async(validateProto[Ts]) {
-    implicit request => {
+  def saveMultiple = Action.async(validateProto[Ts]) { implicit request =>
+    {
       accessTokenService.validateAccess(UserAccessRequest.webknossos) {
         AllowRemoteOrigin {
           val savedIds = Fox.sequence(request.body.map { tracing =>
@@ -63,8 +68,8 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
     }
   }
 
-  def get(tracingId: String, version: Option[Long]) = Action.async {
-    implicit request => {
+  def get(tracingId: String, version: Option[Long]) = Action.async { implicit request =>
+    {
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
         AllowRemoteOrigin {
           for {
@@ -77,8 +82,8 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
     }
   }
 
-  def getMultiple = Action.async(validateJson[List[TracingSelector]]) {
-    implicit request => {
+  def getMultiple = Action.async(validateJson[List[TracingSelector]]) { implicit request =>
+    {
       accessTokenService.validateAccess(UserAccessRequest.webknossos) {
         AllowRemoteOrigin {
           for {
@@ -91,8 +96,8 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
     }
   }
 
-  def update(tracingId: String) = Action.async(validateJson[List[UpdateActionGroup[T]]]) {
-    implicit request => {
+  def update(tracingId: String) = Action.async(validateJson[List[UpdateActionGroup[T]]]) { implicit request =>
+    {
       accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId)) {
         AllowRemoteOrigin {
           val updateGroups = request.body
@@ -100,17 +105,22 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
           val latestStatistics = updateGroups.flatMap(_.stats).lastOption
           val currentVersion = tracingService.currentVersion(tracingId)
           val userToken = request.getQueryString("token")
-          webKnossosServer.reportTracingUpdates(tracingId, timestamps, latestStatistics, userToken).flatMap { _ =>
-            updateGroups.foldLeft(currentVersion) { (previousVersion, updateGroup) =>
-              previousVersion.flatMap { version =>
-                if (version + 1 == updateGroup.version || freezeVersions) {
-                  tracingService.handleUpdateGroup(tracingId, updateGroup, version).map(_ => if (freezeVersions) version else updateGroup.version)
-                } else {
-                  Failure(s"incorrect version. expected: ${version + 1}; got: ${updateGroup.version}")
+          webKnossosServer
+            .reportTracingUpdates(tracingId, timestamps, latestStatistics, userToken)
+            .flatMap { _ =>
+              updateGroups.foldLeft(currentVersion) { (previousVersion, updateGroup) =>
+                previousVersion.flatMap { version =>
+                  if (version + 1 == updateGroup.version || freezeVersions) {
+                    tracingService
+                      .handleUpdateGroup(tracingId, updateGroup, version)
+                      .map(_ => if (freezeVersions) version else updateGroup.version)
+                  } else {
+                    Failure(s"incorrect version. expected: ${version + 1}; got: ${updateGroup.version}")
+                  }
                 }
               }
             }
-          }.map(_ => Ok)
+            .map(_ => Ok)
         }
       }
     }

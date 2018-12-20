@@ -28,11 +28,10 @@ import play.api.libs.json.{JsObject, Json}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class VolumeTracingService @Inject()(
-                                      tracingDataStore: TracingDataStore,
-                                      config: TracingStoreConfig,
-                                      val temporaryTracingStore: TemporaryTracingStore[VolumeTracing]
-                                    )
-  extends TracingService[VolumeTracing]
+    tracingDataStore: TracingDataStore,
+    config: TracingStoreConfig,
+    val temporaryTracingStore: TemporaryTracingStore[VolumeTracing]
+) extends TracingService[VolumeTracing]
     with VolumeTracingBucketHelper
     with WKWDataFormatHelper
     with ProtoGeometryImplicits
@@ -53,52 +52,72 @@ class VolumeTracingService @Inject()(
      actually load anything from disk, unlike its “normal” instance in the datastore (only from the volume tracing store) */
   val binaryDataService = new BinaryDataService(Paths.get(""), 10 seconds, 100)
 
-  override def currentVersion(tracingId: String): Fox[Long] = tracingDataStore.volumes.getVersion(tracingId).getOrElse(0L)
+  override def currentVersion(tracingId: String): Fox[Long] =
+    tracingDataStore.volumes.getVersion(tracingId).getOrElse(0L)
 
-  def handleUpdateGroup(tracingId: String, updateGroupVersioned: UpdateActionGroup[VolumeTracing], previousVersion: Long): Fox[_] = {
+  def handleUpdateGroup(tracingId: String,
+                        updateGroupVersioned: UpdateActionGroup[VolumeTracing],
+                        previousVersion: Long): Fox[_] =
     for {
       updateGroup <- freezeVersionIfEnabled(updateGroupVersioned, previousVersion)
-      _ <- updateGroup.actions.foldLeft(find(tracingId)) { (tracing, action) =>
-        tracing.futureBox.flatMap {
-          case Full(t) =>
-            action match {
-              case a: UpdateBucketVolumeAction =>
-                val resolution = math.pow(2, a.zoomStep).toInt
-                val bucket = new BucketPosition(a.position.x, a.position.y, a.position.z, Point3D(resolution, resolution, resolution))
-                saveBucket(volumeTracingLayer(tracingId, t), bucket, a.data, updateGroup.version).map(_ => t)
-              case a: UpdateTracingVolumeAction =>
-                Fox.successful(t.copy(activeSegmentId = Some(a.activeSegmentId), editPosition = a.editPosition, editRotation = a.editRotation, largestSegmentId = a.largestSegmentId, zoomLevel = a.zoomLevel, userBoundingBox = a.userBoundingBox))
-              case a: RevertToVersionVolumeAction => revertToVolumeVersion(tracingId, a.sourceVersion, updateGroup.version, t)
-              case _ => Fox.failure("Unknown action.")
-            }
-          case Empty =>
-            Fox.empty
-          case f: Failure =>
-            Fox.failure(f.msg)
+      _ <- updateGroup.actions
+        .foldLeft(find(tracingId)) { (tracing, action) =>
+          tracing.futureBox.flatMap {
+            case Full(t) =>
+              action match {
+                case a: UpdateBucketVolumeAction =>
+                  val resolution = math.pow(2, a.zoomStep).toInt
+                  val bucket = new BucketPosition(a.position.x,
+                                                  a.position.y,
+                                                  a.position.z,
+                                                  Point3D(resolution, resolution, resolution))
+                  saveBucket(volumeTracingLayer(tracingId, t), bucket, a.data, updateGroup.version).map(_ => t)
+                case a: UpdateTracingVolumeAction =>
+                  Fox.successful(t.copy(
+                    activeSegmentId = Some(a.activeSegmentId),
+                    editPosition = a.editPosition,
+                    editRotation = a.editRotation,
+                    largestSegmentId = a.largestSegmentId,
+                    zoomLevel = a.zoomLevel,
+                    userBoundingBox = a.userBoundingBox
+                  ))
+                case a: RevertToVersionVolumeAction =>
+                  revertToVolumeVersion(tracingId, a.sourceVersion, updateGroup.version, t)
+                case _ => Fox.failure("Unknown action.")
+              }
+            case Empty =>
+              Fox.empty
+            case f: Failure =>
+              Fox.failure(f.msg)
+          }
         }
-      }.map(t => save(t.copy(version = updateGroup.version), Some(tracingId), updateGroup.version))
-      _ <- tracingDataStore.volumeUpdates.put(tracingId, updateGroup.version, updateGroup.actions.map(_.addTimestamp(updateGroup.timestamp)).map(_.transformToCompact))
+        .map(t => save(t.copy(version = updateGroup.version), Some(tracingId), updateGroup.version))
+      _ <- tracingDataStore.volumeUpdates.put(
+        tracingId,
+        updateGroup.version,
+        updateGroup.actions.map(_.addTimestamp(updateGroup.timestamp)).map(_.transformToCompact))
     } yield Fox.successful(())
-  }
 
-  def freezeVersionIfEnabled(updateGroupVersioned: UpdateActionGroup[VolumeTracing], previousVersion: Long) = {
+  def freezeVersionIfEnabled(updateGroupVersioned: UpdateActionGroup[VolumeTracing], previousVersion: Long) =
     if (config.Tracingstore.freezeVolumeVersions)
       updateGroupVersioned.copy(version = previousVersion)
     else
       updateGroupVersioned
-  }
 
-  private def revertToVolumeVersion(tracingId: String, sourceVersion: Long, newVersion: Long, tracing: VolumeTracing) = {
+  private def revertToVolumeVersion(tracingId: String,
+                                    sourceVersion: Long,
+                                    newVersion: Long,
+                                    tracing: VolumeTracing) = {
     val sourceTracing = find(tracingId, Some(sourceVersion))
     val dataLayer = volumeTracingLayer(tracingId, tracing)
     val bucketStream = dataLayer.volumeBucketProvider.bucketStreamWithVersion(1)
 
     bucketStream.foreach {
       case (bucketPosition, _, version) =>
-        if(version > sourceVersion)
+        if (version > sourceVersion)
           loadBucket(dataLayer, bucketPosition, Some(sourceVersion)).futureBox.map {
-            case Full(bucket) => saveBucket(dataLayer, bucketPosition, bucket, newVersion)
-            case Empty => saveBucket(dataLayer, bucketPosition, Array[Byte](0), newVersion)
+            case Full(bucket)           => saveBucket(dataLayer, bucketPosition, bucket, newVersion)
+            case Empty                  => saveBucket(dataLayer, bucketPosition, Array[Byte](0), newVersion)
             case Failure(msg, _, chain) => Fox.failure(msg, Empty, chain)
           }
     }
@@ -134,7 +153,9 @@ class VolumeTracingService @Inject()(
     }
   }
 
-  def data(tracingId: String, tracing: VolumeTracing, dataRequests: DataRequestCollection): Fox[(Array[Byte], List[Int])] = {
+  def data(tracingId: String,
+           tracing: VolumeTracing,
+           dataRequests: DataRequestCollection): Fox[(Array[Byte], List[Int])] = {
     val dataLayer = volumeTracingLayer(tracingId, tracing)
 
     val requests = dataRequests.map(r => DataServiceDataRequest(null, dataLayer, None, r.cuboid(dataLayer), r.settings))
@@ -149,47 +170,55 @@ class VolumeTracingService @Inject()(
     } yield newId
   }
 
-  def duplicateData(sourceId: String, sourceTracing: VolumeTracing, destinationId: String, destinationTracing: VolumeTracing) = {
+  def duplicateData(sourceId: String,
+                    sourceTracing: VolumeTracing,
+                    destinationId: String,
+                    destinationTracing: VolumeTracing) = {
     val sourceDataLayer = volumeTracingLayer(sourceId, sourceTracing)
     val destinationDataLayer = volumeTracingLayer(destinationId, destinationTracing)
     val buckets: Iterator[(BucketPosition, Array[Byte])] = sourceDataLayer.bucketProvider.bucketStream(1)
     for {
-      _ <- Fox.combined(buckets.map { case (bucketPosition, bucketData) =>
-        saveBucket(destinationDataLayer, bucketPosition, bucketData, destinationTracing.version)
+      _ <- Fox.combined(buckets.map {
+        case (bucketPosition, bucketData) =>
+          saveBucket(destinationDataLayer, bucketPosition, bucketData, destinationTracing.version)
       }.toList)
     } yield ()
   }
 
-  private def volumeTracingLayer(tracingId: String, tracing: VolumeTracing): VolumeTracingLayer = {
+  private def volumeTracingLayer(tracingId: String, tracing: VolumeTracing): VolumeTracingLayer =
     VolumeTracingLayer(tracingId, tracing.boundingBox, tracing.elementClass, tracing.largestSegmentId)
-  }
 
-  private def volumeTracingLayerWithFallback(tracingId: String, tracing: VolumeTracing, dataSource: DataSource): SegmentationLayer = {
+  private def volumeTracingLayerWithFallback(tracingId: String,
+                                             tracing: VolumeTracing,
+                                             dataSource: DataSource): SegmentationLayer = {
     val dataLayer = volumeTracingLayer(tracingId, tracing)
-    tracing.fallbackLayer.flatMap(dataSource.getDataLayer).map {
-      case layer: SegmentationLayer if dataLayer.elementClass == layer.elementClass =>
-        new FallbackLayerAdapter(dataLayer, layer)
-      case _ =>
-        logger.error(s"Fallback layer is not a segmentation layer and thus being ignored. " +
-          s"DataSource: ${dataSource.id}. FallbackLayer: ${tracing.fallbackLayer}.")
-        dataLayer
-    }.getOrElse(dataLayer)
+    tracing.fallbackLayer
+      .flatMap(dataSource.getDataLayer)
+      .map {
+        case layer: SegmentationLayer if dataLayer.elementClass == layer.elementClass =>
+          new FallbackLayerAdapter(dataLayer, layer)
+        case _ =>
+          logger.error(
+            s"Fallback layer is not a segmentation layer and thus being ignored. " +
+              s"DataSource: ${dataSource.id}. FallbackLayer: ${tracing.fallbackLayer}.")
+          dataLayer
+      }
+      .getOrElse(dataLayer)
   }
 
-  def dataLayerForVolumeTracing(tracingId: String, dataSource: DataSource): Fox[SegmentationLayer] = {
+  def dataLayerForVolumeTracing(tracingId: String, dataSource: DataSource): Fox[SegmentationLayer] =
     find(tracingId).map(volumeTracingLayerWithFallback(tracingId, _, dataSource))
-  }
 
   def updateActionLog(tracingId: String) = {
-    def versionedTupleToJson(tuple: (Long, List[CompactVolumeUpdateAction])): JsObject = {
+    def versionedTupleToJson(tuple: (Long, List[CompactVolumeUpdateAction])): JsObject =
       Json.obj(
         "version" -> tuple._1,
         "value" -> Json.toJson(tuple._2)
       )
-    }
 
     for {
-      volumeTracings <- tracingDataStore.volumeUpdates.getMultipleVersionsAsVersionValueTuple(tracingId)(fromJson[List[CompactVolumeUpdateAction]])
+      volumeTracings <- tracingDataStore.volumeUpdates.getMultipleVersionsAsVersionValueTuple(tracingId)(
+        fromJson[List[CompactVolumeUpdateAction]])
       updateActionGroupsJs = volumeTracings.map(versionedTupleToJson)
     } yield Json.toJson(updateActionGroupsJs)
   }

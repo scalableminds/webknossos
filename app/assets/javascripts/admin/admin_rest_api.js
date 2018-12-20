@@ -774,8 +774,7 @@ export async function isDatasetNameValid(datasetId: APIDatasetId): Promise<?stri
     );
     return null;
   } catch (ex) {
-    const json = JSON.parse(await ex.text());
-    return json.messages.map(msg => Object.values(msg)[0]).join(". ");
+    return ex.messages.map(msg => Object.values(msg)[0]).join(". ");
   }
 }
 

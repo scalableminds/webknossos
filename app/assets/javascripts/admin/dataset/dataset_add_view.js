@@ -24,8 +24,8 @@ const DatasetAddView = ({ history }: Props) => (
       key="1"
     >
       <DatasetUploadView
-        onUploaded={datasetName => {
-          const url = `/datasets/${datasetName}/import`;
+        onUploaded={(organization: string, datasetName: string) => {
+          const url = `/datasets/${organization}/${datasetName}/import`;
           history.push(url);
         }}
       />

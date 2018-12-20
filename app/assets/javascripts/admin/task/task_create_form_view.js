@@ -119,7 +119,9 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
         openInstances: task.status.open,
       });
       const validFormValues = _.omitBy(defaultValues, _.isNull);
-      this.props.form.setFieldsValue(validFormValues);
+      // The task type is not needed for the form and leads to antd errors if it contains null values
+      const { type, ...neededFormValues } = validFormValues;
+      this.props.form.setFieldsValue(neededFormValues);
     }
   }
 

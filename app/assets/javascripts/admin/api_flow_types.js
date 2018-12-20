@@ -411,6 +411,7 @@ export type APIFeatureToggles = {
   +allowOrganizationCreation: boolean,
   +addForeignDataset: boolean,
   +hideNavbarLogin: boolean,
+  +freezeVolumeVersions: boolean,
 };
 
 // Tracing related datatypes

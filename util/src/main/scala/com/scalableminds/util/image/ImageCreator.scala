@@ -16,16 +16,16 @@ case class CombinedImage(pages: List[CombinedPage])
 case class CombinedPage(image: BufferedImage, info: List[ImagePartInfo], pageInfo: PageInfo)
 
 case class ImageCreatorParameters(
-                                   bytesPerElement: Int,
-                                   useHalfBytes: Boolean,
-                                   slideWidth: Int = 128,
-                                   slideHeight: Int = 128,
-                                   imagesPerRow: Int = 8,
-                                   imagesPerColumn: Int = Int.MaxValue,
-                                   imageWidth: Option[Int] = None,
-                                   imageHeight: Option[Int] = None,
-                                   blackAndWhite: Boolean
-                                 )
+    bytesPerElement: Int,
+    useHalfBytes: Boolean,
+    slideWidth: Int = 128,
+    slideHeight: Int = 128,
+    imagesPerRow: Int = 8,
+    imagesPerColumn: Int = Int.MaxValue,
+    imageWidth: Option[Int] = None,
+    imageHeight: Option[Int] = None,
+    blackAndWhite: Boolean
+)
 
 object ImageCreator extends LazyLogging {
 
@@ -39,26 +39,27 @@ object ImageCreator extends LazyLogging {
 
   def calculateSprites(data: Array[Byte], params: ImageCreatorParameters, targetType: Int): List[BufferedImage] = {
     val imageData =
-      if(params.useHalfBytes) {
+      if (params.useHalfBytes) {
         val r = new Array[Byte](data.length * 2)
-        data.zipWithIndex.foreach{
+        data.zipWithIndex.foreach {
           case (b, idx) =>
-            r(2*idx) =(b & 0xF0).toByte
-            r(2*idx + 1)=(b & 0x0F << 4).toByte
+            r(2 * idx) = (b & 0xF0).toByte
+            r(2 * idx + 1) = (b & 0x0F << 4).toByte
         }
         r
-      } else if(params.blackAndWhite) {
-        data.map(d => if(d != 0x00) 0xFF.toByte else 0x00.toByte)
+      } else if (params.blackAndWhite) {
+        data.map(d => if (d != 0x00) 0xFF.toByte else 0x00.toByte)
       } else
         data
     val slidingSize = params.slideHeight * params.slideWidth * params.bytesPerElement
-    imageData.sliding(slidingSize, slidingSize).toList.flatMap {
-      slice =>
-        createBufferedImageFromBytes(slice, targetType, params)
+    imageData.sliding(slidingSize, slidingSize).toList.flatMap { slice =>
+      createBufferedImageFromBytes(slice, targetType, params)
     }
   }
 
-  def createSpriteSheet(bufferedImages: List[BufferedImage], params: ImageCreatorParameters, targetType: Int): Option[CombinedImage] = {
+  def createSpriteSheet(bufferedImages: List[BufferedImage],
+                        params: ImageCreatorParameters,
+                        targetType: Int): Option[CombinedImage] =
     if (bufferedImages.isEmpty) {
       logger.warn("No images supplied for sprite sheet generation.")
       None
@@ -67,41 +68,41 @@ object ImageCreator extends LazyLogging {
       val subpartHeight = params.slideHeight
 
       val imagesPerPage = math.min(params.imagesPerColumn.toLong * params.imagesPerRow, Int.MaxValue).toInt
-      val pages = bufferedImages.sliding(imagesPerPage, imagesPerPage).zipWithIndex.map {
-        case (pageImages, page) =>
-          val depth = math.ceil(pageImages.size.toFloat / params.imagesPerRow).toInt
-          val imageWidth = params.imageWidth.getOrElse(subpartWidth * params.imagesPerRow)
-          val imageHeight = params.imageHeight.getOrElse(subpartHeight * depth)
+      val pages = bufferedImages
+        .sliding(imagesPerPage, imagesPerPage)
+        .zipWithIndex
+        .map {
+          case (pageImages, page) =>
+            val depth = math.ceil(pageImages.size.toFloat / params.imagesPerRow).toInt
+            val imageWidth = params.imageWidth.getOrElse(subpartWidth * params.imagesPerRow)
+            val imageHeight = params.imageHeight.getOrElse(subpartHeight * depth)
 
-          val finalImage = new BufferedImage(imageWidth, imageHeight, targetType)
+            val finalImage = new BufferedImage(imageWidth, imageHeight, targetType)
 
-          val info = pageImages.zipWithIndex.map {
-            case (image, idx) =>
-              assert(image.getWidth() == subpartWidth, "Wrong image size!")
-              assert(image.getHeight() == subpartHeight, "Wrong image size!")
-              val w = idx % params.imagesPerRow * params.slideWidth
-              val h = idx / params.imagesPerRow * params.slideHeight
-              finalImage.createGraphics().drawImage(
-                image, w, h, null)
-              ImagePartInfo(page, w, h, subpartHeight, subpartWidth)
-          }
-          CombinedPage(finalImage, info, PageInfo(page, page * imagesPerPage, pageImages.size))
-      }.toList
+            val info = pageImages.zipWithIndex.map {
+              case (image, idx) =>
+                assert(image.getWidth() == subpartWidth, "Wrong image size!")
+                assert(image.getHeight() == subpartHeight, "Wrong image size!")
+                val w = idx % params.imagesPerRow * params.slideWidth
+                val h = idx / params.imagesPerRow * params.slideHeight
+                finalImage.createGraphics().drawImage(image, w, h, null)
+                ImagePartInfo(page, w, h, subpartHeight, subpartWidth)
+            }
+            CombinedPage(finalImage, info, PageInfo(page, page * imagesPerPage, pageImages.size))
+        }
+        .toList
       Some(CombinedImage(pages))
     }
-  }
 
-  def convertToType(sourceImage: BufferedImage, targetType: Int): BufferedImage = {
+  def convertToType(sourceImage: BufferedImage, targetType: Int): BufferedImage =
     sourceImage.getType() match {
       case e if e == targetType =>
         sourceImage
       case _ =>
-        val image = new BufferedImage(sourceImage.getWidth(),
-          sourceImage.getHeight(), targetType)
+        val image = new BufferedImage(sourceImage.getWidth(), sourceImage.getHeight(), targetType)
         image.getGraphics().drawImage(sourceImage, 0, 0, null)
         image
     }
-  }
 
   def toRGBArray(b: Array[Byte], bytesPerElement: Int) = {
     val colored = new Array[Int](b.length / bytesPerElement)
@@ -129,15 +130,22 @@ object ImageCreator extends LazyLogging {
     colored
   }
 
-  def createBufferedImageFromBytes(b: Array[Byte], targetType: Int, params: ImageCreatorParameters): Option[BufferedImage] = {
+  def createBufferedImageFromBytes(b: Array[Byte],
+                                   targetType: Int,
+                                   params: ImageCreatorParameters): Option[BufferedImage] =
     try {
       val bufferedImage = new BufferedImage(params.slideWidth, params.slideHeight, targetType)
-      bufferedImage.setRGB(0, 0, params.slideWidth, params.slideHeight, toRGBArray(b, params.bytesPerElement), 0, params.slideWidth)
+      bufferedImage.setRGB(0,
+                           0,
+                           params.slideWidth,
+                           params.slideHeight,
+                           toRGBArray(b, params.bytesPerElement),
+                           0,
+                           params.slideWidth)
       Some(bufferedImage)
     } catch {
       case e: IOException =>
         logger.error("IOException while converting byte array to buffered image.", e)
         None
     }
-  }
 }

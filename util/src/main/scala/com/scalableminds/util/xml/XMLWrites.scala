@@ -9,8 +9,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 trait XMLWrites[-T] {
 
   /**
-   * Convert the object into a JsValue
-   */
+    * Convert the object into a JsValue
+    */
   def writes(o: T)(implicit writer: XMLStreamWriter): Fox[Boolean]
 }
 

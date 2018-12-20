@@ -24,7 +24,8 @@ case class ImageCreatorParameters(
     imagesPerColumn: Int = Int.MaxValue,
     imageWidth: Option[Int] = None,
     imageHeight: Option[Int] = None,
-    blackAndWhite: Boolean
+    blackAndWhite: Boolean,
+    isSegmentation: Boolean = false
 )
 
 object ImageCreator extends LazyLogging {
@@ -105,27 +106,30 @@ object ImageCreator extends LazyLogging {
         image
     }
 
-  def toRGBArray(b: Array[Byte], bytesPerElement: Int) = {
+  def toRGBArray(b: Array[Byte], bytesPerElement: Int, isSegmentation: Boolean) = {
     val colored = new Array[Int](b.length / bytesPerElement)
     var idx = 0
     val l = b.length
     while (idx + bytesPerElement <= l) {
       colored(idx / bytesPerElement) = {
-        bytesPerElement match {
-          case 1 =>
-            val gray = b(idx)
-            (0xFF << 24) | ((gray & 0xFF) << 16) | ((gray & 0xFF) << 8) | ((gray & 0xFF) << 0)
-          case 2 =>
-            idToRGB(b(idx))
-          case 3 =>
-            (0xFF << 24) | ((b(idx) & 0xFF) << 16) | ((b(idx + 1) & 0xFF) << 8) | ((b(idx + 2) & 0xFF) << 0)
-          case 4 =>
-            idToRGB(b(idx))
-          case 8 =>
-            idToRGB(b(idx))
-          case _ =>
-            throw new Exception("Can't handle " + bytesPerElement + " bytes per element in Image creator.")
-        }
+        if (isSegmentation)
+          idToRGB(b(idx))
+        else
+          bytesPerElement match {
+            case 1 =>
+              val gray = b(idx)
+              (0xFF << 24) | ((gray & 0xFF) << 16) | ((gray & 0xFF) << 8) | ((gray & 0xFF) << 0)
+            case 2 =>
+              val gray = b(idx)
+              (b(idx + 1) << 24) | ((gray & 0xFF) << 16) | ((gray & 0xFF) << 8) | ((gray & 0xFF) << 0)
+            case 3 =>
+              (0xFF << 24) | ((b(idx) & 0xFF) << 16) | ((b(idx + 1) & 0xFF) << 8) | ((b(idx + 2) & 0xFF) << 0)
+            case 4 =>
+              ((b(idx + 3) & 0xFF) << 24) | ((b(idx) & 0xFF) << 16) | ((b(idx + 1) & 0xFF) << 8) | ((b(idx + 2) & 0xFF) << 0)
+            case _ =>
+              throw new Exception(
+                "Can't handle " + bytesPerElement + " bytes per element in Image creator for a color layer.")
+          }
       }
       idx += bytesPerElement
     }
@@ -171,7 +175,7 @@ object ImageCreator extends LazyLogging {
                            0,
                            params.slideWidth,
                            params.slideHeight,
-                           toRGBArray(b, params.bytesPerElement),
+                           toRGBArray(b, params.bytesPerElement, params.isSegmentation),
                            0,
                            params.slideWidth)
       Some(bufferedImage)

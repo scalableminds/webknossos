@@ -58,6 +58,8 @@ List your own task annotations
    - if false: list only unfinished task annotations
  - Optional GET parameter `limit=[INT]`
    - return only the first x results (defaults to 1000)
+ - Optional GET parameter `pageNumber=[INT]`
+   - return the results starting at offset `limit` * `pageNumber` (defaults to 0)
 
 #### Returns
  - JSON list of objects containing annotation information about your own task annotations, also including task and task type information
@@ -74,6 +76,8 @@ List your own explorative annotations
    - if false: list only unfinished (=non-archived) explorative annotations
  - Optional GET parameter `limit=[INT]`
    - return only the first x results (defaults to 1000)
+ - Optional GET parameter `pageNumber=[INT]`
+   - return the results starting at offset `limit` * `pageNumber` (defaults to 0)
 
 #### Returns
  - JSON list of objects containing annotation information about your own explorative annotations
@@ -103,6 +107,8 @@ List the task annotations of a user
    - if false: list only unfinished task annotations
  - Optional GET parameter `limit=[INT]`
    - return only the first x results (defaults to 1000)
+ - Optional GET parameter `pageNumber=[INT]`
+   - return the results starting at offset `limit` * `pageNumber` (defaults to 0)
 
 #### Returns
  - JSON list of objects containing annotation information about the task annotations of the user, also including task and task type information
@@ -120,6 +126,8 @@ List the explorative annotations of a uaser
    - If false: list only unfinished (=non-archived) explorative annotations
  - Optional GET parameter `limit=[INT]`
    - return only the first x results (defaults to 1000)
+ - Optional GET parameter `pageNumber=[INT]`
+   - return the results starting at offset `limit` * `pageNumber` (defaults to 0)
 
 #### Returns
  - JSON list of objects containing annotation information about the explorative annotations of the user

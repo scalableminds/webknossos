@@ -132,7 +132,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         ...prevState[showFinishedTasks ? "finishedMode" : "unfinishedMode"],
         ...modeShape,
       };
-      return { [showFinishedTasks ? "finishedMode" : "unfinishedMode"]: newSubState }
+      return { [showFinishedTasks ? "finishedMode" : "unfinishedMode"]: newSubState };
     });
   };
 

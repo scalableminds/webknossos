@@ -139,13 +139,14 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       const newSubState = {
         ...prevState[
           shouldShowArchivedTracings === updateCurrentMode ? "archivedMode" : "unarchivedMode"
-          ],
+        ],
         ...modeShape,
       };
-      return {[shouldShowArchivedTracings === updateCurrentMode
+      return {
+        [shouldShowArchivedTracings === updateCurrentMode
           ? "archivedMode"
-          : "unarchivedMode"]: newSubState}
-
+          : "unarchivedMode"]: newSubState,
+      };
     });
   };
 

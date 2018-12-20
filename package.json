@@ -113,7 +113,8 @@
     "disable-autologin": "sed -i -e 's/enableDevAutoLogin = true/enableDevAutoLogin = false/g' ./conf/application.conf",
     "coverage": "nyc report --reporter=text-lcov | coveralls",
     "postcheckout": "echo 'Deleting auto-generated flow files...' && rm -f app/assets/javascripts/test/snapshots/flow-check/*.js",
-    "apply-evolutions": "tools/postgres/apply_evolutions.sh"
+    "apply-evolutions": "tools/postgres/apply_evolutions.sh",
+    "postinstall": "cd tools/proxy && yarn install"
   },
   "lint-staged": {
     "*.js": [

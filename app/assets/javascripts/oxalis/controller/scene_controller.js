@@ -48,6 +48,7 @@ import window from "libs/window";
 import { setSceneController } from "./scene_controller_provider";
 
 const CUBE_COLOR = 0x999999;
+const numbOfVerticesInEllipse = 100;
 
 class SceneController {
   skeleton: Skeleton;
@@ -81,7 +82,7 @@ class SceneController {
     this.stlMeshes = {};
     this.diameter = null;
     this.diameterProperties = {
-      xRadius: 10,
+      xRadius: 20,
       yRadius: 20,
       rotationAngle: 0,
     };
@@ -190,7 +191,11 @@ class SceneController {
     }
     const diameter = this.diameter;
     const currentMatrix = diameter.matrix.elements;
-    const currentPosition = [currentMatrix[12], currentMatrix[13], currentMatrix[14]];
+    const currentPosition = new THREE.Vector3(
+      currentMatrix[12],
+      currentMatrix[13],
+      currentMatrix[14],
+    );
     diameter.matrix.set(
       matrix[0],
       matrix[4],
@@ -210,25 +215,41 @@ class SceneController {
       matrix[15],
     );
     diameter.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
-    const rotatedMatrix = diameter.matrix.elements;
-    diameter.matrix.set(
-      rotatedMatrix[0],
-      rotatedMatrix[4],
-      rotatedMatrix[8],
-      currentPosition[0],
-      rotatedMatrix[1],
-      rotatedMatrix[5],
-      rotatedMatrix[9],
-      currentPosition[1],
-      rotatedMatrix[2],
-      rotatedMatrix[6],
-      rotatedMatrix[10],
-      currentPosition[2],
-      rotatedMatrix[3],
-      rotatedMatrix[7],
-      rotatedMatrix[11],
-      rotatedMatrix[15],
-    );
+    diameter.matrix.setPosition(currentPosition);
+
+    const pointWithXRadius = diameter.geometry.vertices[0].clone();
+    const pointWithYRadius = diameter.geometry.vertices[
+      Math.floor(numbOfVerticesInEllipse / 4)
+    ].clone();
+    pointWithXRadius.applyMatrix4(diameter.matrix);
+    pointWithYRadius.applyMatrix4(diameter.matrix);
+    // distance is not correct after multiplying (maybe because of the scale that is included into the matrix)
+    const dotGeometry1 = new THREE.Geometry();
+    const dotGeometry2 = new THREE.Geometry();
+    dotGeometry1.vertices.push(pointWithXRadius);
+    dotGeometry2.vertices.push(pointWithYRadius);
+    const dotMaterial = new THREE.PointsMaterial({
+      size: 1,
+      sizeAttenuation: false,
+      color: 0x008800,
+    });
+    const dot1 = new THREE.Points(dotGeometry1, dotMaterial);
+    const dot2 = new THREE.Points(dotGeometry2, dotMaterial);
+    this.rootGroup.add(dot1);
+    this.rootGroup.add(dot2);
+    // calulation
+    const xExtent = new THREE.Vector3().subVectors(pointWithXRadius, currentPosition);
+    const yExtent = new THREE.Vector3().subVectors(pointWithYRadius, currentPosition);
+    // multiply with dataset resolution and then take the length
+    const datasetScale = Store.getState().dataset.dataSource.scale;
+    const scaleAsVector = new THREE.Vector3(...datasetScale);
+    xExtent.multiply(scaleAsVector);
+    yExtent.multiply(scaleAsVector);
+    console.log("xRadius length", xExtent.length());
+    console.log("yRadius length", yExtent.length());
+    /* debug: having different resolutions in each direction does not affact the length of a radius calculated. 
+    Maybe this calulcation is already done by the scling of the passed camera matrix??? 
+    TODO display this information somehow to the user */
     diameter.matrixWorldNeedsUpdate = true;
   };
 
@@ -254,7 +275,7 @@ class SceneController {
       false, // aClockwise
       (rotationAngle / 180) * Math.PI, // aRotation
     );
-    const path = new THREE.Path(curve.getPoints(100));
+    const path = new THREE.Path(curve.getPoints(numbOfVerticesInEllipse));
     const geometrycirc = path.createPointsGeometry(50);
     const materialcirc = new THREE.LineBasicMaterial({
       color: 0xff0000,

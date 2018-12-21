@@ -23,7 +23,7 @@ class DefaultMails @Inject()(conf: WkConf) {
     Mail(
       from = email,
       headers = Map("Sender" -> defaultFrom),
-      subject = s"A new user (${user.name}) registered on $uri",
+      subject = s"A new user (${user.name}) registered on $uri for ${organization.displayName} (${organization.name})",
       bodyText = html.mail.registerAdminNotify(user, brainDBResult, uri).body,
       recipients = List(organization.newUserMailingList)
     )

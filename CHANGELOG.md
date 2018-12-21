@@ -12,6 +12,9 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 ### Added
 
 - Added the possibility to select multiple trees in skeleton tracings in the tree tab by using ctrl + left mouse. Deleting and moving trees will affect all selected trees. [#3457](https://github.com/scalableminds/webknossos/pull/3457)
+- Added the possibility to specify a recommended user configuration in a task type. The recommended configuration will be shown to users when they trace a task with a different task type and the configuration can be accepted or declined. [#3466](https://github.com/scalableminds/webknossos/pull/3466)
+- You can now create tracings on datasets of other organizations, provided you have access rights to the dataset (i.e. it is public). [#3533](https://github.com/scalableminds/webknossos/pull/3533)
+- Added the experimental feature to dynamically render isosurfaces for segmentation layers (can be enabled in the dataset settings when viewing a dataset). [#3533](https://github.com/scalableminds/webknossos/pull/3495)
 
 ### Changed
 
@@ -19,8 +22,9 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Fixed
 
--
-
+- Fixed a performance issue for large tracings with many branch points. [#3519](https://github.com/scalableminds/webknossos/pull/3519)
+- Fixed bug which caused buckets to disappear randomly. [#3531](https://github.com/scalableminds/webknossos/pull/3531)
+- Fixed a bug which broke the redirect after dataset upload via GUI. [#3571](https://github.com/scalableminds/webknossos/pull/3571)
 
 ### Removed
 

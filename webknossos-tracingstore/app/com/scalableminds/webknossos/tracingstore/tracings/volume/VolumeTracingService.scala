@@ -12,21 +12,24 @@ import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.services.BinaryDataService
+import com.scalableminds.webknossos.tracingstore.TracingStoreConfig
 import com.scalableminds.webknossos.wrap.WKWFile
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 
 import scala.concurrent.duration._
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.json.{Json, JsObject}
+import play.api.libs.json.{JsObject, Json}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class VolumeTracingService @Inject()(
                                       tracingDataStore: TracingDataStore,
+                                      config: TracingStoreConfig,
                                       val temporaryTracingStore: TemporaryTracingStore[VolumeTracing]
                                     )
   extends TracingService[VolumeTracing]
@@ -52,8 +55,9 @@ class VolumeTracingService @Inject()(
 
   override def currentVersion(tracingId: String): Fox[Long] = tracingDataStore.volumes.getVersion(tracingId).getOrElse(0L)
 
-  def handleUpdateGroup(tracingId: String, updateGroup: UpdateActionGroup[VolumeTracing]): Fox[_] = {
+  def handleUpdateGroup(tracingId: String, updateGroupVersioned: UpdateActionGroup[VolumeTracing], previousVersion: Long): Fox[_] = {
     for {
+      updateGroup <- freezeVersionIfEnabled(updateGroupVersioned, previousVersion)
       _ <- updateGroup.actions.foldLeft(find(tracingId)) { (tracing, action) =>
         tracing.futureBox.flatMap {
           case Full(t) =>
@@ -75,6 +79,13 @@ class VolumeTracingService @Inject()(
       }.map(t => save(t.copy(version = updateGroup.version), Some(tracingId), updateGroup.version))
       _ <- tracingDataStore.volumeUpdates.put(tracingId, updateGroup.version, updateGroup.actions.map(_.addTimestamp(updateGroup.timestamp)).map(_.transformToCompact))
     } yield Fox.successful(())
+  }
+
+  def freezeVersionIfEnabled(updateGroupVersioned: UpdateActionGroup[VolumeTracing], previousVersion: Long) = {
+    if (config.Tracingstore.freezeVolumeVersions)
+      updateGroupVersioned.copy(version = previousVersion)
+    else
+      updateGroupVersioned
   }
 
   private def revertToVolumeVersion(tracingId: String, sourceVersion: Long, newVersion: Long, tracing: VolumeTracing) = {
@@ -126,7 +137,7 @@ class VolumeTracingService @Inject()(
   def data(tracingId: String, tracing: VolumeTracing, dataRequests: DataRequestCollection): Fox[(Array[Byte], List[Int])] = {
     val dataLayer = volumeTracingLayer(tracingId, tracing)
 
-    val requests = dataRequests.map(r => DataServiceDataRequest(null, dataLayer, r.cuboid(dataLayer), r.settings))
+    val requests = dataRequests.map(r => DataServiceDataRequest(null, dataLayer, None, r.cuboid(dataLayer), r.settings))
     binaryDataService.handleDataRequests(requests)
   }
 

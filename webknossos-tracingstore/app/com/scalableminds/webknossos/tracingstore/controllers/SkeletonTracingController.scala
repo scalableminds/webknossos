@@ -25,8 +25,8 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
 
   implicit def unpackMultiple(tracings: SkeletonTracings): List[SkeletonTracing] = tracings.tracings.toList
 
-  def mergedFromContents(persist: Boolean) = Action.async(validateProto[SkeletonTracings]) {
-    implicit request => {
+  def mergedFromContents(persist: Boolean) = Action.async(validateProto[SkeletonTracings]) { implicit request =>
+    log {
       accessTokenService.validateAccess(UserAccessRequest.webknossos) {
         AllowRemoteOrigin {
           val tracings = request.body.tracings
@@ -39,8 +39,8 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
     }
   }
 
-  def mergedFromIds(persist: Boolean) = Action.async(validateJson[List[TracingSelector]]) {
-    implicit request => {
+  def mergedFromIds(persist: Boolean) = Action.async(validateJson[List[TracingSelector]]) { implicit request =>
+    log {
       accessTokenService.validateAccess(UserAccessRequest.webknossos) {
         AllowRemoteOrigin {
           for {
@@ -55,8 +55,8 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
     }
   }
 
-  def duplicate(tracingId: String, version: Option[Long]) = Action.async {
-    implicit request => {
+  def duplicate(tracingId: String, version: Option[Long]) = Action.async { implicit request =>
+    log {
       accessTokenService.validateAccess(UserAccessRequest.webknossos) {
         AllowRemoteOrigin {
           for {
@@ -70,8 +70,8 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
     }
   }
 
-  def updateActionLog(tracingId: String) = Action.async {
-    implicit request =>
+  def updateActionLog(tracingId: String) = Action.async { implicit request =>
+    log {
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
         AllowRemoteOrigin {
           for {
@@ -81,10 +81,11 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
           }
         }
       }
+    }
   }
 
-  def updateActionStatistics(tracingId: String) = Action.async {
-    implicit request =>
+  def updateActionStatistics(tracingId: String) = Action.async { implicit request =>
+    log {
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
         AllowRemoteOrigin {
           for {
@@ -94,5 +95,6 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
           }
         }
       }
+    }
   }
 }

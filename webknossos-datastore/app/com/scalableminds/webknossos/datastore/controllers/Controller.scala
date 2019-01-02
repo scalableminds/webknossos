@@ -4,6 +4,7 @@ import java.io.FileInputStream
 
 import com.google.protobuf.CodedInputStream
 import com.scalableminds.util.mvc.ExtendedController
+import com.scalableminds.util.requestlogging.RequestLogging
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessAnswer, UserAccessRequest}
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
@@ -23,6 +24,7 @@ trait Controller
     with RemoteOriginHelpers
     with ValidationHelpers
     with LazyLogging
+    with RequestLogging
 
 
 trait RemoteOriginHelpers {

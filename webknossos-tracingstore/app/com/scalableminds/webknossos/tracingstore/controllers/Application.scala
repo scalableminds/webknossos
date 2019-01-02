@@ -11,10 +11,12 @@ class Application @Inject()(tracingDataStore: TracingDataStore)
   extends Controller {
 
   def health = Action.async { implicit request =>
-    AllowRemoteOrigin {
-      for {
-        _ <- tracingDataStore.healthClient.checkHealth
-      } yield Ok("Ok")
+    log {
+      AllowRemoteOrigin {
+        for {
+          _ <- tracingDataStore.healthClient.checkHealth
+        } yield Ok("Ok")
+      }
     }
   }
 

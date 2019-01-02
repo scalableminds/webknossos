@@ -145,10 +145,8 @@ class TreesTabView extends React.PureComponent<Props, State> {
     callDeep(newTreeGroups, groupId, (item, index, parentsChildren, parentGroupId) => {
       // Remove group
       parentsChildren.splice(index, 1);
-      if (!deleteSubtrees) {
-        // Move its group children to the parent group
-        parentsChildren.push(...item.children);
-      }
+      // Move all subgroups to the parent group
+      parentsChildren.push(...item.children);
       const subtrees = groupToTreesMap[groupId] != null ? groupToTreesMap[groupId] : [];
       if (deleteSubtrees) {
         // Also delete all subtrees
@@ -278,13 +276,24 @@ class TreesTabView extends React.PureComponent<Props, State> {
         }));
       }
     } else {
+      const { activeTreeId } = tracing;
       if (selectedTrees.length === 0) {
         this.props.onDeselectActiveGroup();
+        /* If there are no selected trees and no active tree: 
+           Set selected tree to the active tree */
+        if (activeTreeId === null || activeTreeId === undefined) {
+          this.props.onSetActiveTree(id);
+          return;
+        }
       }
-      if (selectedTrees.length === 0 && tracing.activeTreeId != null) {
+      // If the active node is selected, don't go into multi selection mode
+      if (activeTreeId === id) {
+        return;
+      }
+      if (selectedTrees.length === 0 && activeTreeId != null) {
         // If this is the first selected tree -> also select the active tree
         this.setState({
-          selectedTrees: [id, tracing.activeTreeId],
+          selectedTrees: [id, activeTreeId],
         });
         // Remove the current active tree
         this.props.onDeselectActiveTree();
@@ -342,7 +351,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
 
   deleteGroupAndHideModal(groupToDelete: ?number, deleteSubtrees = false) {
     this.hideDeleteGroupsModal();
-    if (groupToDelete !== null && groupToDelete !== undefined) {
+    if (groupToDelete != null) {
       this.deleteGroup(groupToDelete, deleteSubtrees);
     }
   }

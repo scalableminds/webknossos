@@ -4,9 +4,11 @@ import memoizeOne from "memoize-one";
 
 import type { Flycam, OxalisState } from "oxalis/store";
 import { M4x4, type Matrix4x4 } from "libs/mjs";
+import { calculateUnzoomedBucketCount } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
+import { extraBucketsPerDim } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker_constants";
 import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
 import Dimensions from "oxalis/model/dimensions";
-import * as Utils from "libs/utils";
+import { clamp, map3 } from "libs/utils";
 import constants, {
   type OrthoView,
   type OrthoViewMap,
@@ -14,8 +16,6 @@ import constants, {
   type Vector3,
 } from "oxalis/constants";
 import * as scaleInfo from "oxalis/model/scaleinfo";
-import { calculateUnzoomedBucketCount } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
-import { extraBucketsPerDim } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker_constants";
 
 // All methods in this file should use constants.PLANE_WIDTH instead of constants.VIEWPORT_WIDTH
 // as the area that is rendered is only of size PLANE_WIDTH.
@@ -77,6 +77,10 @@ export function getPosition(flycam: Flycam): Vector3 {
   return [matrix[12], matrix[13], matrix[14]];
 }
 
+export function getFlooredPosition(flycam: Flycam): Vector3 {
+  return map3(x => Math.floor(x), getPosition(flycam));
+}
+
 export function getRotation(flycam: Flycam): Vector3 {
   const object = new THREE.Object3D();
   const matrix = new THREE.Matrix4().fromArray(flycam.currentMatrix).transpose();
@@ -105,7 +109,7 @@ export function getRequestLogZoomStep(state: OxalisState): number {
   const value =
     Math.ceil(Math.log2(state.flycam.zoomStep / maxZoomStepDiff)) +
     state.datasetConfiguration.quality;
-  return Utils.clamp(min, value, maxLogZoomStep);
+  return clamp(min, value, maxLogZoomStep);
 }
 
 export function getTextureScalingFactor(state: OxalisState): number {

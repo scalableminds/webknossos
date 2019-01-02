@@ -8,6 +8,7 @@ import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import Store, { type OxalisState, type Tracing } from "oxalis/store";
 import VersionList, { previewVersion } from "oxalis/view/version_list";
+import features from "features";
 
 const { TabPane } = Tabs;
 
@@ -43,6 +44,7 @@ class VersionView extends React.Component<Props, State> {
   };
 
   render() {
+    const { freezeVolumeVersions } = features();
     return (
       <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
         <div style={{ flex: "0 1 auto", padding: "0px 5px" }}>
@@ -76,7 +78,14 @@ class VersionView extends React.Component<Props, State> {
             ) : null}
             {this.props.tracing.volume != null ? (
               <TabPane tab="Volume" key="volume">
-                <VersionList tracingType="volume" tracing={this.props.tracing.volume} />
+                {freezeVolumeVersions ? (
+                  <Alert
+                    type="warning"
+                    message="Volume versioning has been disabled for this instance. Please contact an administrator."
+                  />
+                ) : (
+                  <VersionList tracingType="volume" tracing={this.props.tracing.volume} />
+                )}
               </TabPane>
             ) : null}
           </Tabs>

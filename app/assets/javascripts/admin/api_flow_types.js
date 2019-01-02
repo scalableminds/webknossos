@@ -138,6 +138,7 @@ export type APIUser = APIUserBase & {
   +isActive: boolean,
   +isEditable: boolean,
   +lastActivity: number,
+  +lastTaskTypeId: ?string,
   +organization: string,
 };
 
@@ -191,6 +192,7 @@ export type APITaskType = {
   +teamId: string,
   +teamName: string,
   +settings: APISettings,
+  +recommendedConfiguration: ?string,
 };
 
 export type TaskStatus = { +open: number, +active: number, +finished: number };
@@ -349,6 +351,7 @@ export type APIProjectProgressReport = {
   +openInstances: number,
   +activeInstances: number,
   +finishedInstances: number,
+  +priority: number,
 };
 
 export type APIOpenTasksReport = {
@@ -409,6 +412,7 @@ export type APIFeatureToggles = {
   +allowOrganizationCreation: boolean,
   +addForeignDataset: boolean,
   +hideNavbarLogin: boolean,
+  +freezeVolumeVersions: boolean,
 };
 
 // Tracing related datatypes

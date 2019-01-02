@@ -9,13 +9,13 @@ import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.team._
 import models.user._
 import models.user.time._
-import oxalis.security.WkEnv
+import oxalis.security.{UserAwareRequestLogging, WkEnv}
 import com.mohiva.play.silhouette.api.Silhouette
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Json._
 import play.api.libs.json._
-import play.api.mvc.PlayBodyParsers
+import play.api.mvc._
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -34,18 +34,22 @@ class UserController @Inject()(userService: UserService,
   val defaultAnnotationLimit = 1000
 
   def current = sil.SecuredAction.async { implicit request =>
-    for {
-      userJs <- userService.publicWrites(request.identity, request.identity)
-    } yield Ok(userJs)
+    log {
+      for {
+        userJs <- userService.publicWrites(request.identity, request.identity)
+      } yield Ok(userJs)
+    }
   }
 
   def user(userId: String) = sil.SecuredAction.async { implicit request =>
-    for {
-      userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
-      user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
-      _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed"
-      js <- userService.publicWrites(user, request.identity)
-    } yield Ok(js)
+    log {
+      for {
+        userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+        user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
+        _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed"
+        js <- userService.publicWrites(user, request.identity)
+      } yield Ok(js)
+    }
   }
 
   def annotations(isFinished: Option[Boolean], limit: Option[Int]) = sil.SecuredAction.async { implicit request =>
@@ -188,13 +192,14 @@ class UserController @Inject()(userService: UserService,
   }
 
   val userUpdateReader =
-    ((__ \ "firstName").read[String] and
-      (__ \ "lastName").read[String] and
-      (__ \ "email").read[String] and
-      (__ \ "isActive").read[Boolean] and
-      (__ \ "isAdmin").read[Boolean] and
-      (__ \ "teams").read[List[TeamMembership]](Reads.list(teamMembershipService.publicReads)) and
-      (__ \ "experiences").read[Map[String, Int]]).tupled
+    ((__ \ "firstName").readNullable[String] and
+      (__ \ "lastName").readNullable[String] and
+      (__ \ "email").readNullable[String] and
+      (__ \ "isActive").readNullable[Boolean] and
+      (__ \ "isAdmin").readNullable[Boolean] and
+      (__ \ "teams").readNullable[List[TeamMembership]](Reads.list(teamMembershipService.publicReads)) and
+      (__ \ "experiences").readNullable[Map[String, Int]] and
+      (__ \ "lastTaskTypeId").readNullable[String]).tupled
 
   def ensureProperTeamAdministration(user: User, teams: List[(TeamMembership, Team)])(implicit m: MessagesProvider) =
     Fox.combined(teams.map {
@@ -217,10 +222,27 @@ class UserController @Inject()(userService: UserService,
   def update(userId: String) = sil.SecuredAction.async(parse.json) { implicit request =>
     val issuingUser = request.identity
     withJsonBodyUsing(userUpdateReader) {
-      case (firstName, lastName, email, isActive, isAdmin, assignedMemberships, experiences) =>
+      case (firstNameOpt,
+            lastNameOpt,
+            emailOpt,
+            isActiveOpt,
+            isAdminOpt,
+            assignedMembershipsOpt,
+            experiencesOpt,
+            lastTaskTypeIdOpt) =>
         for {
           userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
           user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
+          oldExperience <- userService.experiencesFor(user._id)
+          oldAssignedMemberships <- userService.teamMembershipsFor(user._id)
+          firstName = firstNameOpt.getOrElse(user.firstName)
+          lastName = lastNameOpt.getOrElse(user.lastName)
+          email = emailOpt.getOrElse(user.email)
+          isActive = isActiveOpt.getOrElse(!user.isDeactivated)
+          isAdmin = isAdminOpt.getOrElse(user.isAdmin)
+          assignedMemberships = assignedMembershipsOpt.getOrElse(oldAssignedMemberships)
+          experiences = experiencesOpt.getOrElse(oldExperience)
+          lastTaskTypeId = if (lastTaskTypeIdOpt.isEmpty) user.lastTaskTypeId.map(_.id) else lastTaskTypeIdOpt
           _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed"
           _ <- bool2Fox(checkAdminOnlyUpdates(user, isActive, isAdmin, email)(issuingUser)) ?~> "notAllowed"
           teams <- Fox.combined(
@@ -241,12 +263,29 @@ class UserController @Inject()(userService: UserService,
                                   isActive,
                                   isAdmin,
                                   updatedTeams,
-                                  trimmedExperiences)
+                                  trimmedExperiences,
+                                  lastTaskTypeId)
           updatedUser <- userDAO.findOne(userIdValidated)
           updatedJs <- userService.publicWrites(updatedUser, request.identity)
         } yield {
           Ok(updatedJs)
         }
+    }
+  }
+
+  def updateLastTaskTypeId(id: String) = sil.SecuredAction.async(parse.json) { implicit request =>
+    val issuingUser = request.identity
+    withJsonBodyUsing((__ \ "lastTaskTypeId").readNullable[String]) {
+      case lastTaskTypeId =>
+        for {
+          userIdValidated <- ObjectId.parse(id) ?~> "user.id.invalid"
+          user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
+          isEditable <- userService.isEditableBy(user, request.identity)
+          _ <- bool2Fox(isEditable | user._id == issuingUser._id)
+          _ <- userService.updateLastTaskTypeId(user, lastTaskTypeId)
+          updatedUser <- userDAO.findOne(userIdValidated)
+          updatedJs <- userService.publicWrites(updatedUser, request.identity)
+        } yield Ok(updatedJs)
     }
   }
 

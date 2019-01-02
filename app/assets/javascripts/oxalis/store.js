@@ -210,21 +210,21 @@ export type DatasetLayerConfiguration = {|
   +contrast: number,
 |};
 
-export type DatasetConfiguration = {
+export type DatasetConfiguration = {|
   +fourBit: boolean,
   +interpolation: boolean,
-  +keyboardDelay: number,
   +layers: {
     [name: string]: DatasetLayerConfiguration,
   },
   +quality: 0 | 1 | 2,
   +segmentationOpacity: number,
   +highlightHoveredCellId: boolean,
+  +renderIsosurfaces: boolean,
   +position?: Vector3,
   +zoom?: number,
   +rotation?: Vector3,
-  +renderMissingDataBlack: true,
-};
+  +renderMissingDataBlack: boolean,
+|};
 
 export type UserConfiguration = {|
   +clippingDistance: number,
@@ -404,11 +404,11 @@ export const defaultState: OxalisState = {
   datasetConfiguration: {
     fourBit: true,
     interpolation: false,
-    keyboardDelay: 342,
     layers: {},
     quality: 0,
     segmentationOpacity: 20,
     highlightHoveredCellId: true,
+    renderIsosurfaces: false,
     renderMissingDataBlack: true,
   },
   userConfiguration: {

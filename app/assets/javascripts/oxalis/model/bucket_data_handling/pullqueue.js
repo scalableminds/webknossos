@@ -6,7 +6,6 @@
 import PriorityQueue from "js-priority-queue";
 import _ from "lodash";
 
-import type { Vector3, Vector4 } from "oxalis/constants";
 import { getResolutions, getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import {
   getResolutionsFactors,
@@ -14,6 +13,7 @@ import {
 } from "oxalis/model/helpers/position_converter";
 import { requestWithFallback } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import ConnectionInfo from "oxalis/model/data_connection_info";
+import Constants, { type Vector3, type Vector4 } from "oxalis/constants";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import Model from "oxalis/model";
 import Store, { type DataStoreInfo, type DataLayerType } from "oxalis/store";
@@ -166,7 +166,10 @@ class PullQueue {
     if (bucket.type === "data") {
       bucket.receiveData(bucketData);
       bucket.setVisualizationColor(0x00ff00);
-      if (zoomStep === this.cube.MAX_UNSAMPLED_ZOOM_STEP) {
+      if (
+        zoomStep === this.cube.MAX_UNSAMPLED_ZOOM_STEP &&
+        Constants.DOWNSAMPLED_ZOOM_STEP_COUNT === 1
+      ) {
         const higherAddress = zoomedAddressToAnotherZoomStep(
           bucketAddress,
           resolutions,

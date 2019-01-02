@@ -334,27 +334,43 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     for {
       tracingsNamesAndScalesAsTuples <- getTracingsScalesAndNamesFor(annotations)
       tracingsAndNamesFlattened = flattenTupledLists(tracingsNamesAndScalesAsTuples)
-      nmlsAndNames = tracingsAndNamesFlattened.map(tuple =>
-        (nmlWriter.toNmlStream(Some(tuple._1), None, Some(tuple._4), tuple._3, Some(tuple._5), tuple._6), tuple._2))
+      nmlsAndNames = tracingsAndNamesFlattened.map(
+        tuple =>
+          (nmlWriter.toNmlStream(Some(tuple._1), None, Some(tuple._4), tuple._3, tuple._7, Some(tuple._5), tuple._6),
+           tuple._2))
       zip <- createZip(nmlsAndNames, zipFileName)
     } yield zip
 
-  private def flattenTupledLists[A, B, C, D, E, F](
-      tupledLists: List[(List[A], List[B], List[C], List[D], List[E], List[F])]) =
-    tupledLists.flatMap(tuple => zippedSixLists(tuple._1, tuple._2, tuple._3, tuple._4, tuple._5, tuple._6))
+  private def flattenTupledLists[A, B, C, D, E, F, G](
+      tupledLists: List[(List[A], List[B], List[C], List[D], List[E], List[F], List[G])]) =
+    tupledLists.flatMap(tuple => zippedSevenLists(tuple._1, tuple._2, tuple._3, tuple._4, tuple._5, tuple._6, tuple._7))
 
-  private def zippedSixLists[A, B, C, D, E, F](l1: List[A],
-                                               l2: List[B],
-                                               l3: List[C],
-                                               l4: List[D],
-                                               l5: List[E],
-                                               l6: List[F]): List[(A, B, C, D, E, F)] =
-    ((((l1, l2, l3).zipped.toList, l4).zipped.toList, l5).zipped.toList, l6).zipped.toList.map { tuple =>
-      (tuple._1._1._1._1, tuple._1._1._1._2, tuple._1._1._1._3, tuple._1._1._2, tuple._1._2, tuple._2)
+  private def zippedSevenLists[A, B, C, D, E, F, G](l1: List[A],
+                                                    l2: List[B],
+                                                    l3: List[C],
+                                                    l4: List[D],
+                                                    l5: List[E],
+                                                    l6: List[F],
+                                                    l7: List[G]): List[(A, B, C, D, E, F, G)] =
+    (((((l1, l2, l3).zipped.toList, l4).zipped.toList, l5).zipped.toList, l6).zipped.toList, l7).zipped.toList.map {
+      tuple: (((((A, B, C), D), E), F), G) =>
+        (tuple._1._1._1._1._1,
+         tuple._1._1._1._1._2,
+         tuple._1._1._1._1._3,
+         tuple._1._1._1._2,
+         tuple._1._1._2,
+         tuple._1._2,
+         tuple._2)
     }
 
-  private def getTracingsScalesAndNamesFor(annotations: List[Annotation])(implicit ctx: DBAccessContext): Fox[List[
-    (List[SkeletonTracing], List[String], List[Option[Scale]], List[Annotation], List[User], List[Option[Task]])]] = {
+  private def getTracingsScalesAndNamesFor(annotations: List[Annotation])(
+      implicit ctx: DBAccessContext): Fox[List[(List[SkeletonTracing],
+                                                List[String],
+                                                List[Option[Scale]],
+                                                List[Annotation],
+                                                List[User],
+                                                List[Option[Task]],
+                                                List[String])]] = {
 
     def getTracings(dataSetId: ObjectId, tracingIds: List[String]) =
       for {
@@ -377,6 +393,9 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     def getNames(annotations: List[Annotation]) =
       Fox.combined(annotations.map(a => savedTracingInformationHandler.nameForAnnotation(a).toFox))
 
+    def getOrganizationNames(annotations: List[Annotation]) =
+      Fox.combined(annotations.map(a => organizationDAO.findOrganizationNameForAnnotation(a._id)))
+
     val annotationsGrouped: Map[ObjectId, List[Annotation]] = annotations.groupBy(_._dataSet)
     val tracings = annotationsGrouped.map {
       case (dataSetId, annotations) => {
@@ -386,7 +405,8 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
           users <- getUsers(annotations.map(_._user)) ?~> "user.notFound"
           taskOpts <- getTasks(annotations.map(_._task)) ?~> "task.notFound"
           names <- getNames(annotations)
-        } yield (tracings, names, annotations.map(a => scale), annotations, users, taskOpts)
+          organizationNames <- getOrganizationNames(annotations)
+        } yield (tracings, names, annotations.map(a => scale), annotations, users, taskOpts, organizationNames)
       }
     }
     Fox.combined(tracings.toList)

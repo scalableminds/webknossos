@@ -124,9 +124,16 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
         _ <- bool2Fox(volumeTracingsWithDataLocations.isEmpty || volumeTracingsWithDataLocations.tail.isEmpty) ?~> "nml.file.multipleVolumes"
         dataSetName <- assertAllOnSameDataSet(skeletonTracings, volumeTracingsWithDataLocations.headOption.map(_._1)) ?~> "nml.file.differentDatasets"
         organizationNameOpt <- assertAllOnSameOrganization(parseSuccesses.flatMap(s => s.organizationName)) ?~> "nml.file.differentDatasets"
-        organizationIdOpt <- Fox.runOptional(organizationNameOpt) { organizationDAO.findOneByName(_).map(_._id) } ?~> Messages("dataSet.noAccess", dataSetName)
-        organizationId <- Fox.fillOption(organizationIdOpt) { dataSetDAO.getOrganizationForDataSet(dataSetName) } ?~> Messages("dataSet.noAccess", dataSetName)
-        dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> Messages("dataSet.noAccess", dataSetName)
+        organizationIdOpt <- Fox
+          .runOptional(organizationNameOpt) { organizationDAO.findOneByName(_).map(_._id) } ?~> Messages(
+          "dataSet.noAccess",
+          dataSetName)
+        organizationId <- Fox
+          .fillOption(organizationIdOpt) { dataSetDAO.getOrganizationForDataSet(dataSetName) } ?~> Messages(
+          "dataSet.noAccess",
+          dataSetName)
+        dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> Messages("dataSet.noAccess",
+                                                                                                     dataSetName)
         tracingStoreClient <- tracingStoreService.clientFor(dataSet)
         volumeTracingIdOpt <- Fox.runOptional(volumeTracingsWithDataLocations.headOption) { v =>
           for {

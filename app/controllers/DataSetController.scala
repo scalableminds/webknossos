@@ -129,10 +129,12 @@ class DataSetController @Inject()(userService: UserService,
       for {
         dataSets <- dataSetDAO.findAll ?~> "dataSet.list.failed"
         filtered <- filter.applyOn(dataSets)
-        requestingUserTeamMemberships <- Fox.runOptional(request.identity)(user =>
+        requestingUserTeamManagerMemberships <- Fox.runOptional(request.identity)(user =>
           userService.teamManagerMembershipsFor(user._id))
-        js <- Fox.serialCombined(filtered)(d =>
-          dataSetService.publicWrites(d, request.identity, skipResolutions = true, requestingUserTeamMemberships))
+        js <- Fox.serialCombined(filtered)(
+          d =>
+            dataSetService
+              .publicWrites(d, request.identity, skipResolutions = true, requestingUserTeamManagerMemberships))
       } yield {
         Ok(Json.toJson(js))
       }

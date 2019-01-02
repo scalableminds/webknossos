@@ -29,7 +29,7 @@ trait RequestLogging extends AbstractRequestLogging {
       _ = logRequestFormatted(request, result)
     } yield result
 
-  def log[A](block: => Result)(implicit request: Request[_], ec: ExecutionContext): Result = {
+  def log(block: => Result)(implicit request: Request[_], ec: ExecutionContext): Result = {
     val result: Result = block
     logRequestFormatted(request, result)
     result

@@ -19,6 +19,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 case class NmlParameters(
     dataSetName: String,
+    organizationName: String,
     description: Option[String],
     scale: Option[Scale],
     createdTimestamp: Long,
@@ -37,13 +38,14 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
                   volumeTracing: Option[VolumeTracing],
                   annotation: Option[Annotation],
                   scale: Option[Scale],
+                  organizationName: String,
                   annotationOwner: Option[User],
                   annotationTask: Option[Task]): Enumerator[Array[Byte]] = Enumerator.outputStream { os =>
     implicit val writer: IndentingXMLStreamWriter =
       new IndentingXMLStreamWriter(outputService.createXMLStreamWriter(os))
 
     for {
-      nml <- toNml(skeletonTracing, volumeTracing, annotation, scale, annotationOwner, annotationTask)
+      nml <- toNml(skeletonTracing, volumeTracing, annotation, scale, organizationName, annotationOwner, annotationTask)
       _ = os.close()
     } yield nml
   }
@@ -52,6 +54,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
             volumeTracingOpt: Option[VolumeTracing],
             annotation: Option[Annotation],
             scale: Option[Scale],
+            organizationName: String,
             annotationOwner: Option[User],
             annotationTask: Option[Task])(implicit writer: XMLStreamWriter): Fox[Unit] =
     for {
@@ -61,6 +64,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
           parameters <- extractTracingParameters(skeletonTracingOpt,
                                                  volumeTracingOpt,
                                                  annotation.map(_.description),
+                                                 organizationName,
                                                  scale).toFox
           _ = writeParameters(parameters)
           _ = skeletonTracingOpt.foreach(writeSkeletonThings)
@@ -74,11 +78,13 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
   def extractTracingParameters(skeletonTracingOpt: Option[SkeletonTracing],
                                volumeTracingOpt: Option[VolumeTracing],
                                description: Option[String],
+                               organizationName: String,
                                scale: Option[Scale]): Option[NmlParameters] =
     // in hybrid case, use data from skeletonTracing (should be identical)
     skeletonTracingOpt.map { s =>
       NmlParameters(
         s.dataSetName,
+        organizationName,
         description,
         scale,
         s.createdTimestamp,
@@ -93,6 +99,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
       volumeTracingOpt.map { v: VolumeTracing =>
         NmlParameters(
           v.dataSetName,
+          organizationName,
           description,
           scale,
           v.createdTimestamp,
@@ -110,6 +117,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
     Xml.withinElementSync("parameters") {
       Xml.withinElementSync("experiment") {
         writer.writeAttribute("name", parameters.dataSetName)
+        writer.writeAttribute("organization", parameters.organizationName)
         parameters.description.foreach(writer.writeAttribute("description", _))
       }
       Xml.withinElementSync("scale") {

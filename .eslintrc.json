@@ -59,7 +59,7 @@
     "no-restricted-syntax": ["error", "ForInStatement"],
     "no-restricted-globals": "warn",
     "no-underscore-dangle": "off",
-    "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+    "no-unused-vars": ["error", { "argsIgnorePattern": "^_", "ignoreRestSiblings": true }],
     "no-use-before-define": ["error", { "functions": false, "classes": false }],
     "one-var": ["error", "never"],
     "operator-assignment": "warn",

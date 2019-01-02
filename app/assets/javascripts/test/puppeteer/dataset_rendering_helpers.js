@@ -31,10 +31,11 @@ export async function screenshotDataset(
   page: Page,
   baseUrl: string,
   datasetId: APIDatasetId,
+  optionalViewOverride: ?string,
 ): Promise<Screenshot> {
   const options = getDefaultRequestOptions(baseUrl);
   const createdExplorational = await createExplorational(datasetId, "skeleton", false, options);
-  return openTracingViewAndScreenshot(page, baseUrl, createdExplorational.id);
+  return openTracingViewAndScreenshot(page, baseUrl, createdExplorational.id, optionalViewOverride);
 }
 
 function removeFpsMeter(page: Page) {
@@ -83,8 +84,10 @@ async function openTracingViewAndScreenshot(
   page: Page,
   baseUrl: string,
   annotationId: string,
+  optionalViewOverride: ?string,
 ): Promise<Screenshot> {
-  await page.goto(urljoin(baseUrl, `/annotations/Explorational/${annotationId}`), {
+  const urlSlug = optionalViewOverride != null ? `#${optionalViewOverride}` : "";
+  await page.goto(urljoin(baseUrl, `/annotations/Explorational/${annotationId}${urlSlug}`), {
     timeout: 0,
   });
 

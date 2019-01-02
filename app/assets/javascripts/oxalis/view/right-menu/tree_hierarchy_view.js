@@ -324,7 +324,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   render() {
     const { activeTreeId, activeGroupId } = this.props;
     return (
-      <AutoSizer className="info-tab-content">
+      <AutoSizer>
         {({ height, width }) => (
           <div style={{ height, width }}>
             <SortableTree

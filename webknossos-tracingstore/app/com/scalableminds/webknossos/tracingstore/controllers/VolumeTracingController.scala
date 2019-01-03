@@ -34,8 +34,8 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
 
   override def freezeVersions = config.Tracingstore.freezeVolumeVersions
 
-  def initialData(tracingId: String) = Action.async {
-    implicit request =>
+  def initialData(tracingId: String) = Action.async { implicit request =>
+    log {
       accessTokenService.validateAccess(UserAccessRequest.webknossos) {
         AllowRemoteOrigin {
           for {
@@ -45,10 +45,11 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
           } yield Ok(Json.toJson(tracingId))
         }
       }
+    }
   }
 
-  def allData(tracingId: String, version: Option[Long]) = Action.async {
-    implicit request => {
+  def allData(tracingId: String, version: Option[Long]) = Action.async { implicit request =>
+    log {
       accessTokenService.validateAccess(UserAccessRequest.webknossos) {
         AllowRemoteOrigin {
           for {
@@ -62,8 +63,8 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
     }
   }
 
-  def data(tracingId: String) = Action.async(validateJson[List[WebKnossosDataRequest]]) {
-    implicit request => {
+  def data(tracingId: String) = Action.async(validateJson[List[WebKnossosDataRequest]]) { implicit request =>
+    log {
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
         AllowRemoteOrigin {
           for {
@@ -85,8 +86,8 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
   }
 
 
-  def duplicate(tracingId: String, version: Option[Long]) = Action.async {
-    implicit request => {
+  def duplicate(tracingId: String, version: Option[Long]) = Action.async { implicit request =>
+    log {
       accessTokenService.validateAccess(UserAccessRequest.webknossos) {
         AllowRemoteOrigin {
           for {
@@ -100,8 +101,8 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
     }
   }
 
-  def updateActionLog(tracingId: String) = Action.async {
-    implicit request =>
+  def updateActionLog(tracingId: String) = Action.async { implicit request =>
+    log {
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
         AllowRemoteOrigin {
           for {
@@ -111,5 +112,6 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
           }
         }
       }
+    }
   }
 }

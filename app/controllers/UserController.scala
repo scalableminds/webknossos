@@ -9,13 +9,13 @@ import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.team._
 import models.user._
 import models.user.time._
-import oxalis.security.WkEnv
+import oxalis.security.{UserAwareRequestLogging, WkEnv}
 import com.mohiva.play.silhouette.api.Silhouette
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Json._
 import play.api.libs.json._
-import play.api.mvc.PlayBodyParsers
+import play.api.mvc._
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -34,18 +34,22 @@ class UserController @Inject()(userService: UserService,
   val defaultAnnotationLimit = 1000
 
   def current = sil.SecuredAction.async { implicit request =>
-    for {
-      userJs <- userService.publicWrites(request.identity, request.identity)
-    } yield Ok(userJs)
+    log {
+      for {
+        userJs <- userService.publicWrites(request.identity, request.identity)
+      } yield Ok(userJs)
+    }
   }
 
   def user(userId: String) = sil.SecuredAction.async { implicit request =>
-    for {
-      userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
-      user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
-      _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed"
-      js <- userService.publicWrites(user, request.identity)
-    } yield Ok(js)
+    log {
+      for {
+        userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+        user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
+        _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed"
+        js <- userService.publicWrites(user, request.identity)
+      } yield Ok(js)
+    }
   }
 
   def annotations(isFinished: Option[Boolean], limit: Option[Int]) = sil.SecuredAction.async { implicit request =>

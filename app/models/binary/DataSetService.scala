@@ -238,12 +238,14 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
   def allowedTeamsFor(_dataSet: ObjectId)(implicit ctx: DBAccessContext) =
     teamDAO.findAllForDataSet(_dataSet)(GlobalAccessContext) ?~> "allowedTeams.notFound"
 
-  def isEditableBy(dataSet: DataSet, userOpt: Option[User], userTeamMemberships: Option[List[TeamMembership]] = None)(
-      implicit ctx: DBAccessContext): Fox[Boolean] =
+  def isEditableBy(
+      dataSet: DataSet,
+      userOpt: Option[User],
+      userTeamManagerMemberships: Option[List[TeamMembership]] = None)(implicit ctx: DBAccessContext): Fox[Boolean] =
     userOpt match {
       case Some(user) =>
         for {
-          isTeamManagerInOrg <- userService.isTeamManagerInOrg(user, dataSet._organization, userTeamMemberships)
+          isTeamManagerInOrg <- userService.isTeamManagerInOrg(user, dataSet._organization, userTeamManagerMemberships)
         } yield user.isAdminOf(dataSet._organization) || isTeamManagerInOrg
       case _ => Fox.successful(false)
     }
@@ -251,14 +253,14 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
   def publicWrites(dataSet: DataSet,
                    userOpt: Option[User],
                    skipResolutions: Boolean = false,
-                   requestingUserTeamMemberships: Option[List[TeamMembership]] = None): Fox[JsObject] = {
+                   requestingUserTeamManagerMemberships: Option[List[TeamMembership]] = None): Fox[JsObject] = {
     implicit val ctx = GlobalAccessContext
     for {
       organization <- organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound"
       teams <- allowedTeamsFor(dataSet._id)
       teamsJs <- Fox.serialCombined(teams)(t => teamService.publicWrites(t))
       logoUrl <- logoUrlFor(dataSet, Some(organization))
-      isEditable <- isEditableBy(dataSet, userOpt, requestingUserTeamMemberships)
+      isEditable <- isEditableBy(dataSet, userOpt, requestingUserTeamManagerMemberships)
       lastUsedByUser <- lastUsedTimeFor(dataSet._id, userOpt)
       dataStore <- dataStoreFor(dataSet)
       dataStoreJs <- dataStoreService.publicWrites(dataStore)

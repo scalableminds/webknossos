@@ -22,7 +22,7 @@ const SimpleHeader = () => (
 const WelcomeHeader = ({ history }) => (
   <div
     style={{
-      backgroundImage: "url(https://webknossos.org/images/nature-cover-compressed.jpg)",
+      backgroundImage: "url(/images/cover.jpg)",
     }}
   >
     <div style={{ backgroundColor: "rgba(88, 88, 88, 0.5)" }}>
@@ -37,7 +37,7 @@ const WelcomeHeader = ({ history }) => (
         <Row type="flex" align="middle" style={{ color: "white" }}>
           <Col span={4}>
             <img
-              src="https://webknossos.brain.mpg.de/images/oxalis.svg"
+              src="/images/oxalis.svg"
               alt="webKnossos Logo"
               style={{ filter: "invert(1)", width: "100%" }}
             />

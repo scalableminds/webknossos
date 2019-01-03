@@ -91,7 +91,7 @@ class DataSetController @Inject()(userService: UserService,
                                                                                                   dataLayerName)
         image <- imageFromCacheIfPossible(dataSet)
       } yield {
-        Ok(image).as("image/jpeg")
+        Ok(image).as("image/jpeg").withHeaders(CACHE_CONTROL -> "public, max-age=86400")
       }
     }
 

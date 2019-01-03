@@ -15,11 +15,7 @@ const { Content, Footer } = Layout;
 
 const SimpleHeader = () => (
   <div id="oxalis-header">
-    <img
-      src="/assets/images/oxalis.svg"
-      alt="webKnossos Logo"
-      style={{ verticalAlign: "middle" }}
-    />webKnossos
+    <img src="/images/oxalis.svg" alt="webKnossos Logo" style={{ verticalAlign: "middle" }} />webKnossos
   </div>
 );
 
@@ -41,7 +37,7 @@ const WelcomeHeader = ({ history }) => (
         <Row type="flex" align="middle" style={{ color: "white" }}>
           <Col span={4}>
             <img
-              src="https://webknossos.brain.mpg.de/assets/images/oxalis.svg"
+              src="https://webknossos.brain.mpg.de/images/oxalis.svg"
               alt="webKnossos Logo"
               style={{ filter: "invert(1)", width: "100%" }}
             />
@@ -186,21 +182,21 @@ class SpotlightView extends React.PureComponent<Props, State> {
                   <img
                     className="img-responsive"
                     alt="Max Planck Gesellschaft logo"
-                    src="assets/images/Max-Planck-Gesellschaft.svg"
+                    src="/images/Max-Planck-Gesellschaft.svg"
                   />
                 </a>
                 <a href="https://www.brain.mpg.de/connectomics">
                   <img
                     className="img-responsive"
                     alt="Max Planck Institute for Brain Research logo"
-                    src="assets/images/MPI-brain-research.svg"
+                    src="/images/MPI-brain-research.svg"
                   />
                 </a>
                 <a href="https://scalableminds.com">
                   <img
                     className="img-responsive"
                     alt="scalable minds logo"
-                    src="assets/images/scalableminds_logo.svg"
+                    src="/images/scalableminds_logo.svg"
                     style={{ filter: "contrast(0)" }}
                   />
                 </a>

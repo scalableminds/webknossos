@@ -188,6 +188,7 @@ function serializeParameters(
         serializeTag("experiment", {
           name: state.dataset.name,
           description: annotation.description,
+          organization: state.dataset.owningOrganization,
         }),
         serializeTag("scale", {
           x: state.dataset.dataSource.scale[0],

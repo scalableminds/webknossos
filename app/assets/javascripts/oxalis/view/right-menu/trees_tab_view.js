@@ -52,7 +52,7 @@ import TreeHierarchyView from "oxalis/view/right-menu/tree_hierarchy_view";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
 import SearchPopover from "./search_popover";
-import DeleteGroupModalView from "./delete-group-modal-view";
+import DeleteGroupModalView from "./delete_group_modal_view";
 
 const ButtonGroup = Button.Group;
 const InputGroup = Input.Group;
@@ -135,7 +135,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     }
   };
 
-  deleteGroup = (groupId: number, deleteSubtrees = false) => {
+  deleteGroup = (groupId: number, deleteRecursively = false) => {
     if (!this.props.skeletonTracing) {
       return;
     }
@@ -143,15 +143,12 @@ class TreesTabView extends React.PureComponent<Props, State> {
     const newTreeGroups = _.cloneDeep(treeGroups);
     const groupToTreesMap = createGroupToTreesMap(trees);
     callDeep(newTreeGroups, groupId, (item, index, parentsChildren, parentGroupId) => {
+      const subtrees = groupToTreesMap[groupId] != null ? groupToTreesMap[groupId] : [];
       // Remove group
       parentsChildren.splice(index, 1);
-      // Move all subgroups to the parent group
-      parentsChildren.push(...item.children);
-      const subtrees = groupToTreesMap[groupId] != null ? groupToTreesMap[groupId] : [];
-      if (deleteSubtrees) {
-        // Also delete all subtrees
-        this.props.onDeleteMultipleTrees(subtrees.map(tree => tree.treeId));
-      } else {
+      if (!deleteRecursively) {
+        // Move all subgroups to the parent group
+        parentsChildren.push(...item.children);
         // Update all subtrees
         for (const tree of subtrees) {
           this.props.onSetTreeGroup(
@@ -159,8 +156,20 @@ class TreesTabView extends React.PureComponent<Props, State> {
             tree.treeId,
           );
         }
+        return;
       }
+      // Removes all subtrees of the passed group recursively
+      const deleteGroupsRecursively = group => {
+        const currentSubtrees =
+          groupToTreesMap[group.groupId] != null ? groupToTreesMap[group.groupId] : [];
+        // Delete all trees of the current group
+        this.props.onDeleteMultipleTrees(currentSubtrees.map(tree => tree.treeId));
+        // Also delete the trees of all subgroups
+        group.children.forEach(subgroup => deleteGroupsRecursively(subgroup));
+      };
+      deleteGroupsRecursively(item);
     });
+
     // Update the store and state after removing
     this.props.onUpdateTreeGroups(newTreeGroups);
   };
@@ -281,7 +290,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
         this.props.onDeselectActiveGroup();
         /* If there are no selected trees and no active tree: 
            Set selected tree to the active tree */
-        if (activeTreeId === null || activeTreeId === undefined) {
+        if (activeTreeId == null) {
           this.props.onSetActiveTree(id);
           return;
         }

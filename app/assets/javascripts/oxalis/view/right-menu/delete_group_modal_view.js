@@ -25,16 +25,17 @@ export default function DeleteGroupModalView({
           Cancel
         </Button>,
         <Button key="submit-all" onClick={onDeleteGroupAndTrees}>
-          Remove group and subtrees
+          Remove group recursively
         </Button>,
         <Button key="submit-groups-only" type="primary" onClick={onJustDeleteGroup}>
           Remove group only
         </Button>,
       ]}
     >
-      Do you really want to remove the selected group? If you want to remove both select
-      &ldquo;Remove group and subtrees&rdquo;. If you want to remove just the group and keep the sub
-      trees select &ldquo;Remove group only&rdquo;.
+      Do you really want to remove the selected group? If you want to remove the group with all its
+      trees and subgroups recursively, select &quot;Remove group recursively&quot;. If you want to
+      remove just the group and keep the subtrees and subgroups select &quot;Remove group
+      only&quot;.
     </Modal>
   );
 }

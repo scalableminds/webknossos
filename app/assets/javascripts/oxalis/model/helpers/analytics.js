@@ -1,23 +1,14 @@
 // @flow
-import type { Dispatch } from "redux";
 
 import window from "libs/window";
+import Store from "oxalis/store";
 
-const blacklistedActionTypes = ["SET_MOUSE_POSITION", "SET_VIEWPORT"];
-
-export default function GoogleAnalyticsMiddleWare<A: $Subtype<{ type: $Subtype<string> }>>(): (
-  next: Dispatch<A>,
-) => Dispatch<A> {
-  return (next: Dispatch<A>) => (action: A): A => {
-    // Google Analytics
-    if (typeof window.ga !== "undefined" && window.ga !== null) {
-      if (!blacklistedActionTypes.includes(action.type)) {
-        window.ga("send", "event", "ReduxAction", action.type);
-      }
-    }
-
-    return next(action);
-  };
+export function trackAction(action: string) {
+  if (typeof window.ga !== "undefined" && window.ga !== null) {
+    const { activeUser } = Store.getState();
+    const organization = activeUser != null ? activeUser.organization : null;
+    window.ga("send", "event", "Action", action, organization);
+  }
 }
 
 export function googleAnalyticsLogClicks(evt: MouseEvent) {
@@ -34,3 +25,5 @@ export function googleAnalyticsLogClicks(evt: MouseEvent) {
     }
   }
 }
+
+export default {};

@@ -31,6 +31,7 @@ import Store from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
+import { trackAction } from "oxalis/model/helpers/analytics";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -317,6 +318,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           editAnnotation(newAnnotation.id, newAnnotation.typ, {
             tags: newAnnotation.tags,
           });
+          trackAction("Edit annotation tag");
         }
         return newAnnotation;
       });

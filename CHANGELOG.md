@@ -15,6 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - You can now create tracings on datasets of other organizations, provided you have access rights to the dataset (i.e. it is public). [#3533](https://github.com/scalableminds/webknossos/pull/3533)
 - Datasets imported through a datastore that is marked as 'scratch' will now show a construction-like header and error message to encourage moving the datasets to a permanent storage location. [#3500](https://github.com/scalableminds/webknossos/pull/3500)
 - Added the experimental feature to dynamically render isosurfaces for segmentation layers (can be enabled in the dataset settings when viewing a dataset). [#3533](https://github.com/scalableminds/webknossos/pull/3495)
+- Adds healthchecks to all Dockerfiles for automatic service healing [#3606](https://github.com/scalableminds/webknossos/pull/3606)
 
 ### Changed
 

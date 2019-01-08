@@ -29,9 +29,9 @@ function* pushDatasetSettingsAsync(): Saga<void> {
   yield* call(updateDatasetConfiguration, dataset, datasetConfiguration);
 }
 
-function trackUserSettingsAsync(action: UpdateUserSettingAction) {
+function* trackUserSettingsAsync(action: UpdateUserSettingAction): Saga<void> {
   if (action.propertyName === "newNodeNewTree") {
-    trackAction(`${action.value ? "Enabled" : "Disabled"} soma clicking`);
+    yield* call(trackAction, `${action.value ? "Enabled" : "Disabled"} soma clicking`);
   }
 }
 
@@ -41,6 +41,6 @@ export default function* watchPushSettingsAsync(): Saga<void> {
     _throttle(500, "UPDATE_USER_SETTING", pushUserSettingsAsync),
     _throttle(500, "UPDATE_DATASET_SETTING", pushDatasetSettingsAsync),
     _throttle(500, "UPDATE_LAYER_SETTING", pushDatasetSettingsAsync),
-    yield _takeEvery("UPDATE_USER_SETTING", trackUserSettingsAsync),
+    _takeEvery("UPDATE_USER_SETTING", trackUserSettingsAsync),
   ]);
 }

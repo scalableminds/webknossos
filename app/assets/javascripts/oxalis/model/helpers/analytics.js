@@ -3,11 +3,15 @@
 import window from "libs/window";
 import Store from "oxalis/store";
 
-export function trackAction(action: string) {
+function getOrganization() {
+  const { activeUser } = Store.getState();
+  return activeUser != null ? activeUser.organization : null;
+}
+
+// The void return type is needed for flow to check successfully
+export function trackAction(action: string): void {
   if (typeof window.ga !== "undefined" && window.ga !== null) {
-    const { activeUser } = Store.getState();
-    const organization = activeUser != null ? activeUser.organization : null;
-    window.ga("send", "event", "Action", action, organization);
+    window.ga("send", "event", "Action", action, getOrganization());
   }
 }
 
@@ -20,7 +24,7 @@ export function googleAnalyticsLogClicks(evt: MouseEvent) {
       // Restrict the textContent to a maximum length
       const textContent = target.textContent.trim().slice(0, 50);
       if (textContent.length > 0) {
-        window.ga("send", "event", "Click", textContent);
+        window.ga("send", "event", "Click", textContent, getOrganization());
       }
     }
   }

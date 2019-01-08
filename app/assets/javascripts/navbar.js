@@ -94,7 +94,7 @@ class Navbar extends React.PureComponent<Props, State> {
           </Menu.Item>
         ) : null}
         <Menu.Item key="frontend-api">
-          <a target="_blank" href="/assets/docs/frontend-api/index.html">
+          <a target="_blank" href="/docs/frontend-api/index.html">
             Frontend API Documentation
           </a>
         </Menu.Item>

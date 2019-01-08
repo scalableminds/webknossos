@@ -5,6 +5,7 @@ module.exports = function(env = {}) {
   var path = require("path");
   const TerserPlugin = require("terser-webpack-plugin");
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+
   // const HardSourceWebpackPlugin = require("hard-source-webpack-plugin");
 
   var srcPath = path.resolve(__dirname, "app/assets/javascripts/");
@@ -57,7 +58,7 @@ module.exports = function(env = {}) {
       path: `${__dirname}/public/bundle`,
       filename: "[name].js",
       sourceMapFilename: "[file].map",
-      publicPath: "/assets/bundle/",
+      publicPath: "/bundle/",
     },
     module: {
       rules: [
@@ -133,5 +134,9 @@ module.exports = function(env = {}) {
     // See https://webpack.js.org/configuration/devtool/
     devtool: env.production ? "source-map" : "eval-source-map",
     plugins,
+    devServer: {
+      contentBase: `${__dirname}/public`,
+      port: env.PORT ? env.PORT : 9002,
+    },
   };
 };

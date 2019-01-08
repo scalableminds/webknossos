@@ -30,6 +30,15 @@ const warnAboutDownsamplingRGB = _.once(() =>
   Toast.warning("Zooming out for RGB data is limited. Zoom further in if data is not shown."),
 );
 
+export const bucketDebuggingFlags = {
+  // DEBUG flag for visualizing buckets which are passed to the GPU
+  visualizeBucketsOnGPU: false,
+  // DEBUG flag for visualizing buckets which are prefetched
+  visualizePrefetchedBuckets: false,
+};
+// Exposing this variable allows debugging on deployed systems
+window.bucketDebuggingFlags = bucketDebuggingFlags;
+
 export class DataBucket {
   type: "data" = "data";
   BIT_DEPTH: number;

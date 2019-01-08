@@ -7,6 +7,7 @@ import {
   PrefetchStrategyVolume,
 } from "oxalis/model/bucket_data_handling/prefetch_strategy_plane";
 import { type Saga, _throttle, call, select, take } from "oxalis/model/sagas/effect-generators";
+import { bucketDebuggingFlags } from "oxalis/model/bucket_data_handling/bucket";
 import {
   getPosition,
   getRequestLogZoomStep,
@@ -26,9 +27,6 @@ const DIRECTION_VECTOR_SMOOTHER = 0.125;
 
 const prefetchStrategiesArbitrary = [new PrefetchStrategyArbitrary()];
 const prefetchStrategiesPlane = [new PrefetchStrategySkeleton(), new PrefetchStrategyVolume()];
-
-// DEBUG flag for visualizing buckets which are prefetched
-const visualizePrefetchedBuckets = false;
 
 export function* watchDataRelevantChanges(): Saga<void> {
   yield* take("WK_READY");
@@ -126,6 +124,14 @@ export function* prefetchForPlaneMode(layer: DataLayer, previousProperties: Obje
           areas,
           resolutions,
         );
+        if (bucketDebuggingFlags.visualizePrefetchedBuckets) {
+          for (const item of buckets) {
+            const bucket = layer.cube.getOrCreateBucket(item.bucket);
+            if (bucket.type !== "null") {
+              bucket.visualize();
+            }
+          }
+        }
         layer.pullQueue.addAll(buckets);
         break;
       }
@@ -158,7 +164,7 @@ export function* prefetchForArbitraryMode(
         strategy.inRoundTripTimeRange(connectionInfo.roundTripTime)
       ) {
         const buckets = strategy.prefetch(matrix, zoomStep, position, resolutions);
-        if (visualizePrefetchedBuckets) {
+        if (bucketDebuggingFlags.visualizePrefetchedBuckets) {
           for (const item of buckets) {
             const bucket = cube.getOrCreateBucket(item.bucket);
             if (bucket.type !== "null") {

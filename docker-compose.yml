@@ -241,17 +241,12 @@ services:
 
   # FossilDB
   fossildb:
-    image: scalableminds/fossildb:master__337
+    image: scalableminds/fossildb:master__386
     command:
       - fossildb
       - -c
       - skeletons,skeletonUpdates,volumes,volumeData,volumeUpdates
     user: ${USER_UID:-fossildb}:${USER_GID:-fossildb}
-    healthcheck:
-      test: ["CMD-SHELL", "fossildb health"]
-      interval: 2s
-      timeout: 5s
-      retries: 30
 
   fossildb-persisted:
     extends:

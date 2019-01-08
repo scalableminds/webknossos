@@ -69,7 +69,7 @@ const tracing = {
         comments: [{ content: "comment", nodeId: 0 }],
         color: [23, 23, 23],
         isVisible: true,
-        groupId: null,
+        groupId: 3,
       },
       "2": {
         treeId: 2,
@@ -85,7 +85,7 @@ const tracing = {
         comments: [],
         color: [30, 30, 30],
         isVisible: true,
-        groupId: 1,
+        groupId: 2,
       },
     },
     tracingType: "Explorational",
@@ -97,11 +97,6 @@ const tracing = {
           {
             groupId: 3,
             name: "Blah",
-            children: [],
-          },
-          {
-            groupId: 4,
-            name: "Blah 2",
             children: [],
           },
         ],
@@ -217,6 +212,20 @@ test("NML Serializer should only serialize visible trees", async t => {
   delete state.tracing.skeleton.trees["1"];
   t.deepEqual(Object.keys(state.tracing.skeleton.trees), Object.keys(trees));
   t.deepEqual(state.tracing.skeleton.trees, trees);
+});
+
+test("NML Serializer should only serialize groups with visible trees", async t => {
+  const state = update(initialState, {
+    tracing: {
+      skeleton: { trees: { "1": { isVisible: { $set: false } } } },
+    },
+  });
+  const serializedNml = serializeToNml(state, state.tracing, state.tracing.skeleton, buildInfo);
+  const { treeGroups } = await parseNml(serializedNml);
+
+  // Group 1 (and group 3 and 4 which are children of group 1) should not be exported as they do not contain a visible tree
+  const expectedTreeGroups = state.tracing.skeleton.treeGroups.filter(group => group.groupId !== 1);
+  t.deepEqual(expectedTreeGroups, treeGroups);
 });
 
 test("NML serializer should produce correct NMLs", t => {
@@ -473,8 +482,8 @@ test("addTreesAndGroups reducer should assign new group ids", t => {
     newState.tracing.skeleton.treeGroups[3].groupId,
     newState.tracing.skeleton.treeGroups[1].groupId,
   );
-  t.is(newState.tracing.skeleton.trees[3].groupId, null);
-  t.is(newState.tracing.skeleton.trees[4].groupId, newState.tracing.skeleton.treeGroups[2].groupId);
+  t.is(newState.tracing.skeleton.trees[3].groupId, 5);
+  t.is(newState.tracing.skeleton.trees[4].groupId, newState.tracing.skeleton.treeGroups[3].groupId);
 });
 
 test("addTreesAndGroups reducer should replace nodeId references in comments when changing nodeIds", t => {

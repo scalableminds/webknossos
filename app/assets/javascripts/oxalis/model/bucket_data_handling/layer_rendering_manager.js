@@ -8,6 +8,7 @@ import {
   type Area,
   getAreas,
   getMaxBucketCountPerDim,
+  getMaxBucketCountPerDimForAllResolutions,
   getZoomedMatrix,
 } from "oxalis/model/accessors/flycam_accessor";
 import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
@@ -114,11 +115,15 @@ export default class LayerRenderingManager {
   }
 
   setupDataTextures(): void {
-    const bytes = getByteCount(Store.getState().dataset, this.name);
-    const bucketsPerDim = getMaxBucketCountPerDim(Store.getState().dataset.dataSource.scale);
+    const { dataset } = Store.getState();
+    const bytes = getByteCount(dataset, this.name);
+    const bucketsPerDimPerResolution = getMaxBucketCountPerDimForAllResolutions(
+      dataset.dataSource.scale,
+      getResolutions(dataset),
+    );
 
     this.textureBucketManager = new TextureBucketManager(
-      bucketsPerDim,
+      bucketsPerDimPerResolution,
       this.textureWidth,
       this.dataTextureCount,
       bytes,
@@ -283,8 +288,9 @@ export default class LayerRenderingManager {
     logZoomStep: number,
     datasetScale: Vector3,
   ): Vector3 {
-    const resolution = getResolutions(Store.getState().dataset)[logZoomStep];
-    const bucketsPerDim = getMaxBucketCountPerDim(datasetScale);
+    const resolutions = getResolutions(Store.getState().dataset);
+    const resolution = resolutions[logZoomStep];
+    const bucketsPerDim = getMaxBucketCountPerDim(datasetScale, logZoomStep, resolutions);
     const maximumRenderedBucketsHalf = bucketsPerDim.map(
       bucketPerDim => getAnchorPositionToCenterDistance(bucketPerDim) * constants.BUCKET_WIDTH,
     );
@@ -295,6 +301,7 @@ export default class LayerRenderingManager {
       Math.floor(position[1] - maximumRenderedBucketsHalf[1] * resolution[1]),
       Math.floor(position[2] - maximumRenderedBucketsHalf[2] * resolution[2]),
     ];
+
     return anchorPoint;
   }
 }

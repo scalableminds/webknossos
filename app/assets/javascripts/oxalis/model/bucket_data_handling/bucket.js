@@ -8,6 +8,7 @@ import * as THREE from "three";
 import _ from "lodash";
 
 import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
+import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import Store from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
@@ -357,7 +358,8 @@ export class DataBucket {
     if (this.visualizedMesh != null) {
       return;
     }
-    if (this.zoomedAddress[3] === 0 || this.zoomedAddress[3] === 1) {
+    const zoomStep = getRequestLogZoomStep(Store.getState());
+    if (this.zoomedAddress[3] === zoomStep) {
       const resolutions = getResolutions(Store.getState().dataset);
       this.visualizedMesh = window.addBucketMesh(
         bucketPositionToGlobalAddress(this.zoomedAddress, resolutions),

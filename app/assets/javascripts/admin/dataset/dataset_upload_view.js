@@ -10,6 +10,7 @@ import { getDatastores, addDataset, isDatasetNameValid } from "admin/admin_rest_
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
+import { trackAction } from "oxalis/model/helpers/analytics";
 
 const FormItem = Form.Item;
 const { Option } = Select;
@@ -83,6 +84,7 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
         addDataset(datasetConfig).then(
           async () => {
             Toast.success(messages["dataset.upload_success"]);
+            trackAction("Upload dataset");
             await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
             this.props.onUploaded(activeUser.organization, formValues.name);
           },

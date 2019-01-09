@@ -19,7 +19,7 @@ USER webknossos
 
 HEALTHCHECK \
   --interval=1m --timeout=5s --retries=10 \
-  CMD curl --fail http://localhost:9090/tracings/health || exit 1
+  CMD curl --fail http://localhost:9050/tracings/health || exit 1
 
 EXPOSE 9050
 

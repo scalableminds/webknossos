@@ -14,7 +14,7 @@ import type {
   Mapping,
 } from "oxalis/store";
 
-type UpdateUserSettingAction = {
+export type UpdateUserSettingAction = {
   type: "UPDATE_USER_SETTING",
   propertyName: $Keys<UserConfiguration>,
   value: any,

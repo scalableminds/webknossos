@@ -58,9 +58,15 @@ type Props = StateProps;
 const browserHistory = createBrowserHistory();
 browserHistory.listen(location => {
   if (typeof window.ga !== "undefined" && window.ga !== null) {
-    // Update the tracker state first, so that subsequent pageviews AND events use the correct page
-    window.ga("set", "page", location.pathname);
-    window.ga("send", "pageview");
+    // t0 is the default tracker name
+    const lastPage = window.ga.getByName("t0").get("page");
+    const newPage = location.pathname;
+    // The listener is called repeatedly for a single page change, don't send repeated pageviews
+    if (lastPage !== newPage) {
+      // Update the tracker state first, so that subsequent pageviews AND events use the correct page
+      window.ga("set", "page", newPage);
+      window.ga("send", "pageview");
+    }
   }
 });
 

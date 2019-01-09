@@ -57,9 +57,11 @@ type Props = StateProps;
 
 const browserHistory = createBrowserHistory();
 browserHistory.listen(location => {
-  if (typeof window.ga !== "undefined" && window.ga !== null) {
+  if (typeof window.ga !== "undefined" && window.ga !== null && window.ga.getByName != null) {
     // t0 is the default tracker name
-    const lastPage = window.ga.getByName("t0").get("page");
+    const tracker = window.ga.getByName("t0");
+    if (tracker == null) return;
+    const lastPage = tracker.get("page");
     const newPage = location.pathname;
     // The listener is called repeatedly for a single page change, don't send repeated pageviews
     if (lastPage !== newPage) {

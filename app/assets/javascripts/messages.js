@@ -1,6 +1,35 @@
 // @flow
 import _ from "lodash";
 
+export const settings = {
+  clippingDistance: "Clipping Distance",
+  displayCrosshair: "Show Crosshairs",
+  displayScalebars: "Show Scalebars",
+  dynamicSpaceDirection: "d/f-Switching",
+  keyboardDelay: "Keyboard delay (ms)",
+  moveValue: "Move Value (nm/s)",
+  newNodeNewTree: "Single-node-tree mode (Soma clicking)",
+  highlightCommentedNodes: "Highlight Commented Nodes",
+  overrideNodeRadius: "Override Node Radius",
+  particleSize: "Particle Size",
+  tdViewDisplayPlanes: "Display Planes in 3D View",
+  fourBit: "4 Bit",
+  interpolation: "Interpolation",
+  quality: "Quality",
+  segmentationOpacity: "Segmentation Opacity",
+  highlightHoveredCellId: "Highlight Hovered Cells",
+  zoom: "Zoom",
+  renderMissingDataBlack: "Render Missing Data Black",
+  clippingDistanceArbitrary: "Clipping Distance",
+  moveValue3d: "Move Value (nm/s)",
+  mouseRotateValue: "Mouse Rotation",
+  rotateValue: "Keyboard Rotation",
+  sphericalCapRadius: "Sphere Radius",
+  crosshairSize: "Crosshair Size",
+  brushSize: "Brush Size",
+  userBoundingBox: "Bounding Box",
+};
+
 export default {
   yes: "Yes",
   no: "No",
@@ -90,6 +119,7 @@ In order to restore the current window, a reload is necessary.`,
   "annotation.reset_success": "Annotation was successfully reset.",
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
+  "task.recommended_configuration": "The author of this task suggests to use these settings:",
   "dataset.clear_cache_success": "The dataset was reloaded successfully",
   "dataset.upload_success": "The dataset was uploaded successfully",
   "dataset.invalid_datasource_json":
@@ -110,6 +140,8 @@ In order to restore the current window, a reload is necessary.`,
   "dataset.import.required.zipFile": "Please select a file to upload.",
   "dataset.import.invalid_fields": "Please check that all form fields are valid.",
   "dataset.unique_layer_names": "The layer names provided by the dataset are not unique.",
+  "dataset.is_scratch":
+    "This dataset location is marked as 'scratch' and meant for testing only. Please move this dataset to a permanent storage location and reimport it.",
   "annotation.finish": "Are you sure you want to permanently finish this tracing?",
   "annotation.was_finished": "Annotation was archived",
   "annotation.was_re_opened": "Annotation was reopened",

@@ -6,7 +6,7 @@ object Dependencies {
   val akkaVersion = "2.5.11"
   val log4jVersion = "2.0-beta9"
   val newrelicVersion = "3.44.1"
-  val webknossosWrapVersion = "1.1.5"
+  val webknossosWrapVersion = "1.1.6"
 
   val akkaAgent = "com.typesafe.akka" %% "akka-agent" % akkaVersion
   val akkaLogging = "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
@@ -15,6 +15,7 @@ object Dependencies {
   val commonsEmail = "org.apache.commons" % "commons-email" % "1.3.1"
   val commonsIo = "commons-io" % "commons-io" % "2.4"
   val commonsLang = "org.apache.commons" % "commons-lang3" % "3.1"
+  val gson = "com.google.code.gson" % "gson" % "1.7.1"
   val grpc = "io.grpc" % "grpc-netty-shaded" % scalapb.compiler.Version.grpcJavaVersion
   val grpcServices = "io.grpc" % "grpc-services" % scalapb.compiler.Version.grpcJavaVersion
   val scalapbRuntime = "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion
@@ -69,6 +70,7 @@ object Dependencies {
   val webknossosDatastoreDependencies = Seq(
     akkaLogging,
     ehcache,
+    gson,
     newrelic,
     newrelicApi,
     webknossosWrap,

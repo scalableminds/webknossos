@@ -82,7 +82,7 @@ function readStoredLayoutConfigs() {
 Store.dispatch(setStoredLayoutsAction(readStoredLayoutConfigs()));
 
 function persistLayoutConfigs() {
-  const storedLayouts = Store.getState().uiInformation.storedLayouts;
+  const { storedLayouts } = Store.getState().uiInformation;
   localStorage.setItem(localStorageKeys.goldenWkLayouts, JSON.stringify(storedLayouts));
   localStorage.setItem(localStorageKeys.currentLayoutVersion, JSON.stringify(currentLayoutVersion));
 }
@@ -94,7 +94,7 @@ layoutEmitter.on("resetLayout", (layoutKey: LayoutKeys, activeLayout: string) =>
 const persistLayoutConfigsDebounced = _.debounce(persistLayoutConfigs, 1000);
 
 export function getLayoutConfig(layoutKey: LayoutKeys, activeLayoutName: string) {
-  const storedLayouts = Store.getState().uiInformation.storedLayouts;
+  const { storedLayouts } = Store.getState().uiInformation;
   if (!storedLayouts[layoutKey]) {
     return getDefaultLayouts()[layoutKey];
   }

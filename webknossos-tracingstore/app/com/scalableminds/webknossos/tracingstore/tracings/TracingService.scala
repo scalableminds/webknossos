@@ -28,7 +28,7 @@ trait TracingService[T <: GeneratedMessage with Message[T]] extends KeyValueStor
 
   def currentVersion(tracingId: String): Fox[Long]
 
-  def handleUpdateGroup(tracingId: String, updateGroup: UpdateActionGroup[T]): Fox[_]
+  def handleUpdateGroup(tracingId: String, updateGroup: UpdateActionGroup[T], previousVersion: Long): Fox[_]
 
   def applyPendingUpdates(tracing: T, tracingId: String, targetVersion: Option[Long]): Fox[T] = Fox.successful(tracing)
 

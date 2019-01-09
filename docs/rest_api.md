@@ -161,6 +161,10 @@ List all datasets for which you have read access
 #### Returns
  - JSON list of objects containing dataset information
 
+#### Note
+
+The list of resolutions for each data layer is always empty in this list, for performance reasons.
+To get the actual resolutions, please use `GET /datasets/:organizationName/:dataSetName` (see below).
 
 ---
 ### `GET /datasets/:organizationName/:dataSetName`

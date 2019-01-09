@@ -2,10 +2,11 @@ package com.scalableminds.webknossos.tracingstore.controllers
 
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
+import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracings}
 import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
 import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessRequest}
-import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreWkRpcClient}
+import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreConfig, TracingStoreWkRpcClient}
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import play.api.i18n.Messages
@@ -19,6 +20,7 @@ import scala.concurrent.ExecutionContext
 class VolumeTracingController @Inject()(val tracingService: VolumeTracingService,
                                         val webKnossosServer: TracingStoreWkRpcClient,
                                         val accessTokenService: TracingStoreAccessTokenService,
+                                        config: TracingStoreConfig,
                                         tracingDataStore: TracingDataStore)
                                        (implicit val ec: ExecutionContext,
                                         val bodyParsers: PlayBodyParsers)
@@ -30,8 +32,10 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
 
   implicit def unpackMultiple(tracings: VolumeTracings): List[VolumeTracing] = tracings.tracings.toList
 
-  def initialData(tracingId: String) = Action.async {
-    implicit request =>
+  override def freezeVersions = config.Tracingstore.freezeVolumeVersions
+
+  def initialData(tracingId: String) = Action.async { implicit request =>
+    log {
       accessTokenService.validateAccess(UserAccessRequest.webknossos) {
         AllowRemoteOrigin {
           for {
@@ -41,10 +45,11 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
           } yield Ok(Json.toJson(tracingId))
         }
       }
+    }
   }
 
-  def allData(tracingId: String, version: Option[Long]) = Action.async {
-    implicit request => {
+  def allData(tracingId: String, version: Option[Long]) = Action.async { implicit request =>
+    log {
       accessTokenService.validateAccess(UserAccessRequest.webknossos) {
         AllowRemoteOrigin {
           for {
@@ -58,8 +63,8 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
     }
   }
 
-  def data(tracingId: String) = Action.async(validateJson[List[WebKnossosDataRequest]]) {
-    implicit request => {
+  def data(tracingId: String) = Action.async(validateJson[List[WebKnossosDataRequest]]) { implicit request =>
+    log {
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
         AllowRemoteOrigin {
           for {
@@ -81,8 +86,8 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
   }
 
 
-  def duplicate(tracingId: String, version: Option[Long]) = Action.async {
-    implicit request => {
+  def duplicate(tracingId: String, version: Option[Long]) = Action.async { implicit request =>
+    log {
       accessTokenService.validateAccess(UserAccessRequest.webknossos) {
         AllowRemoteOrigin {
           for {
@@ -96,8 +101,8 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
     }
   }
 
-  def updateActionLog(tracingId: String) = Action.async {
-    implicit request =>
+  def updateActionLog(tracingId: String) = Action.async { implicit request =>
+    log {
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
         AllowRemoteOrigin {
           for {
@@ -107,5 +112,6 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
           }
         }
       }
+    }
   }
 }

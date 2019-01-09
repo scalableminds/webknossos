@@ -1,22 +1,28 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import java.io.{ByteArrayOutputStream, OutputStream}
+import java.nio.{Buffer, ByteBuffer, ByteOrder, FloatBuffer}
 import java.nio.file.Paths
 import java.util.Base64
 
+import akka.actor.{ActorSystem, Props}
+import akka.pattern.ask
+import akka.routing.RoundRobinPool
 import akka.stream.scaladsl.StreamConverters
+import akka.util.Timeout
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.models._
+import com.scalableminds.util.mvc.JsonResults
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId, SegmentationLayer}
-import com.scalableminds.webknossos.datastore.models.requests.{DataServiceDataRequest, DataServiceMappingRequest, DataServiceRequestSettings}
+import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceDataRequest, DataServiceMappingRequest, DataServiceRequestSettings}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection._
-import com.scalableminds.webknossos.datastore.models.{DataRequest, ImageThumbnail, WebKnossosDataRequest}
+import com.scalableminds.webknossos.datastore.models.{DataRequest, ImageThumbnail, VoxelPosition, WebKnossosDataRequest}
 import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import net.liftweb.common.{Empty, Failure, Full}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 import play.api.http.HttpEntity
 import play.api.i18n.{Messages, MessagesProvider}
@@ -24,17 +30,22 @@ import play.api.libs.json.Json
 import play.api.mvc.{PlayBodyParsers, ResponseHeader, Result}
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration._
 
 class BinaryDataController @Inject()(
                                       dataSourceRepository: DataSourceRepository,
                                       config: DataStoreConfig,
                                       accessTokenService: DataStoreAccessTokenService,
-                                      binaryDataServiceHolder: BinaryDataServiceHolder)
+                                      binaryDatServiceHolder: BinaryDataServiceHolder,
+                                      mappingService: MappingService,
+                                      isosurfaceService: IsosurfaceService,
+                                      actorSystem: ActorSystem
+                                    )
                                     (implicit ec: ExecutionContext,
                                      bodyParsers: PlayBodyParsers)
   extends Controller {
 
-  val binaryDataService = binaryDataServiceHolder.binaryDataService
+  val binaryDataService = binaryDatServiceHolder.binaryDataService
 
   /**
     * Handles requests for raw binary data via HTTP POST from webKnossos.
@@ -230,7 +241,7 @@ class BinaryDataController @Inject()(
                                  centerX: Option[Int],
                                  centerY: Option[Int],
                                  centerZ: Option[Int],
-                                 zoom: Option[Int]) = Action.async(parse.raw) {
+                                 zoom: Option[Double]) = Action.async(parse.raw) {
     implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
         AllowRemoteOrigin {
@@ -259,7 +270,7 @@ class BinaryDataController @Inject()(
                                  centerX: Option[Int],
                                  centerY: Option[Int],
                                  centerZ: Option[Int],
-                                 zoom: Option[Int]
+                                 zoom: Option[Double]
                                ) = Action.async(parse.raw) {
     implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
@@ -291,9 +302,34 @@ class BinaryDataController @Inject()(
             (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
             segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Messages("dataLayer.notFound")
             mappingRequest = DataServiceMappingRequest(dataSource, segmentationLayer, mappingName)
-            result <- binaryDataService.handleMappingRequest(mappingRequest)
+            result <- mappingService.handleMappingRequest(mappingRequest)
           } yield {
             Ok(result)
+          }
+        }
+      }
+  }
+
+  /**
+    * Handles isosurface requests.
+    */
+  def requestIsosurface(organizationName: String, dataSetName: String, dataLayerName: String) = Action.async(validateJson[WebKnossosIsosurfaceRequest]) {
+    implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+        AllowRemoteOrigin {
+          for {
+            (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+            segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Messages("dataLayer.mustBeSegmentation")
+            isosurfaceRequest = IsosurfaceRequest(dataSource, segmentationLayer, request.body.cuboid(dataLayer), request.body.segmentId, request.body.voxelDimensions, request.body.mapping)
+            // The client expects the isosurface as a flat float-array. Three consecutive floats form a 3D point, three
+            // consecutive 3D points (i.e., nine floats) form a triangle.
+            // There are no shared vertices between triangles.
+            vertices <- isosurfaceService.requestIsosurfaceViaActor(isosurfaceRequest)
+          } yield {
+            // We need four bytes for each float
+            val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
+            responseBuffer.asFloatBuffer().put(vertices)
+            Ok(responseBuffer.array())
           }
         }
       }
@@ -313,7 +349,7 @@ class BinaryDataController @Inject()(
                            dataLayer: DataLayer,
                            dataRequests: DataRequestCollection
                          ): Fox[(Array[Byte], List[Int])] = {
-    val requests = dataRequests.map(r => DataServiceDataRequest(dataSource, dataLayer, r.cuboid(dataLayer), r.settings))
+    val requests = dataRequests.map(r => DataServiceDataRequest(dataSource, dataLayer, None, r.cuboid(dataLayer), r.settings))
     binaryDataService.handleDataRequests(requests)
   }
 
@@ -352,7 +388,7 @@ class BinaryDataController @Inject()(
                                          centerX: Option[Int],
                                          centerY: Option[Int],
                                          centerZ: Option[Int],
-                                         zoom: Option[Int]
+                                         zoom: Option[Double]
                                        )(implicit m: MessagesProvider): Fox[(OutputStream) => Unit] = {
     for {
       (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)

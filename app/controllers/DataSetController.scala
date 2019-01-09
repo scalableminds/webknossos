@@ -60,7 +60,7 @@ class DataSetController @Inject()(userService: UserService,
             val defaultCenterOpt = dataSet.defaultConfiguration.flatMap(c =>
               c.configuration.get("position").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Point3D])))
             val defaultZoomOpt = dataSet.defaultConfiguration.flatMap(c =>
-              c.configuration.get("zoom").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Int])))
+              c.configuration.get("zoom").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Double])))
             dataSetService
               .clientFor(dataSet)
               .flatMap(
@@ -91,7 +91,7 @@ class DataSetController @Inject()(userService: UserService,
                                                                                                   dataLayerName)
         image <- imageFromCacheIfPossible(dataSet)
       } yield {
-        Ok(image).as("image/jpeg")
+        Ok(image).as("image/jpeg").withHeaders(CACHE_CONTROL -> "public, max-age=86400")
       }
     }
 
@@ -129,7 +129,12 @@ class DataSetController @Inject()(userService: UserService,
       for {
         dataSets <- dataSetDAO.findAll ?~> "dataSet.list.failed"
         filtered <- filter.applyOn(dataSets)
-        js <- Fox.serialCombined(filtered)(d => dataSetService.publicWrites(d, request.identity))
+        requestingUserTeamManagerMemberships <- Fox.runOptional(request.identity)(user =>
+          userService.teamManagerMembershipsFor(user._id))
+        js <- Fox.serialCombined(filtered)(
+          d =>
+            dataSetService
+              .publicWrites(d, request.identity, skipResolutions = true, requestingUserTeamManagerMemberships))
       } yield {
         Ok(Json.toJson(js))
       }
@@ -151,16 +156,18 @@ class DataSetController @Inject()(userService: UserService,
 
   def read(organizationName: String, dataSetName: String, sharingToken: Option[String]) = sil.UserAwareAction.async {
     implicit request =>
-      val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
-      for {
-        dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(ctx) ?~> Messages(
-          "dataSet.notFound",
-          dataSetName)
-        _ <- Fox.runOptional(request.identity)(user =>
-          dataSetLastUsedTimesDAO.updateForDataSetAndUser(dataSet._id, user._id))
-        js <- dataSetService.publicWrites(dataSet, request.identity)
-      } yield {
-        Ok(Json.toJson(js))
+      log {
+        val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
+        for {
+          dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(ctx) ?~> Messages(
+            "dataSet.notFound",
+            dataSetName)
+          _ <- Fox.runOptional(request.identity)(user =>
+            dataSetLastUsedTimesDAO.updateForDataSetAndUser(dataSet._id, user._id))
+          js <- dataSetService.publicWrites(dataSet, request.identity)
+        } yield {
+          Ok(Json.toJson(js))
+        }
       }
   }
 

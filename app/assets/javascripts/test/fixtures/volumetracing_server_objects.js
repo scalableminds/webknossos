@@ -30,7 +30,11 @@ export const annotation: APIAnnotation = {
   tracing: { skeleton: null, volume: "segmentation" },
   dataSetName: "ROI2017_wkw",
   organization: "Connectomics Department",
-  dataStore: { name: "localhost", url: "http://localhost:9000", typ: "webknossos-store" },
+  dataStore: {
+    name: "localhost",
+    url: "http://localhost:9000",
+    isScratch: false,
+  },
   tracingStore: { name: "localhost", url: "http://localhost:9000" },
   settings: {
     allowedModes: ["volume"],
@@ -39,4 +43,5 @@ export const annotation: APIAnnotation = {
   },
   tags: ["ROI2017_wkw", "volume"],
   tracingTime: 0,
+  meshes: [],
 };

@@ -11,10 +11,14 @@ import {
   updateTaskType,
   getTaskType,
 } from "admin/admin_rest_api";
+import { jsonStringify } from "libs/utils";
+import RecommendedConfigurationView, {
+  DEFAULT_RECOMMENDED_CONFIGURATION,
+} from "admin/tasktype/recommended_configuration_view";
 
 const FormItem = Form.Item;
-const Option = Select.Option;
-const TextArea = Input.TextArea;
+const { Option } = Select;
+const { TextArea } = Input;
 
 type Props = {
   taskTypeId: ?string,
@@ -24,11 +28,13 @@ type Props = {
 
 type State = {
   teams: Array<APITeam>,
+  useRecommendedConfiguration: boolean,
 };
 
 class TaskTypeCreateView extends React.PureComponent<Props, State> {
   state = {
     teams: [],
+    useRecommendedConfiguration: false,
   };
 
   componentDidMount() {
@@ -43,12 +49,22 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
         branchPointsAllowed: true,
         preferredMode: null,
       },
+      recommendedConfiguration: jsonStringify(DEFAULT_RECOMMENDED_CONFIGURATION),
     };
     const taskType = this.props.taskTypeId ? await getTaskType(this.props.taskTypeId) : null;
     // Use merge which is deep _.extend
-    // eslint-disable-next-line no-unused-vars
-    const { recommendedConfiguration, ...formValues } = _.merge({}, defaultValues, taskType);
+    const formValues = _.merge({}, defaultValues, taskType);
+    if (formValues.recommendedConfiguration == null) {
+      // A recommended configuration of null overrides the default configuration when using _.merge
+      // If the task type has no recommended configuration, suggest the default one
+      formValues.recommendedConfiguration = defaultValues.recommendedConfiguration;
+    }
     this.props.form.setFieldsValue(formValues);
+
+    if (taskType != null && taskType.recommendedConfiguration != null) {
+      // Only "activate" the recommended configuration checkbox if the existing task type contained one
+      this.setState({ useRecommendedConfiguration: true });
+    }
   }
 
   async fetchData() {
@@ -57,6 +73,9 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
 
   handleSubmit = e => {
     e.preventDefault();
+    if (!this.state.useRecommendedConfiguration) {
+      this.props.form.setFieldsValue({ recommendedConfiguration: null });
+    }
     this.props.form.validateFields(async (err, formValues) => {
       if (!err) {
         if (this.props.taskTypeId) {
@@ -67,6 +86,10 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
         this.props.history.push("/taskTypes");
       }
     });
+  };
+
+  onChangeUseRecommendedConfiguration = (useRecommendedConfiguration: boolean) => {
+    this.setState({ useRecommendedConfiguration });
   };
 
   render() {
@@ -168,6 +191,14 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
                   <Option value="flight">Flight</Option>
                 </Select>,
               )}
+            </FormItem>
+
+            <FormItem>
+              <RecommendedConfigurationView
+                form={this.props.form}
+                enabled={this.state.useRecommendedConfiguration}
+                onChangeEnabled={this.onChangeUseRecommendedConfiguration}
+              />
             </FormItem>
 
             <FormItem>

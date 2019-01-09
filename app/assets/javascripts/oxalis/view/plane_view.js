@@ -17,9 +17,9 @@ import Constants, {
   OrthoViewValues,
   OrthoViews,
 } from "oxalis/constants";
-import SceneController from "oxalis/controller/scene_controller";
 import Store from "oxalis/store";
 import app from "app";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 import window from "libs/window";
 
 export const setupRenderArea = (
@@ -51,6 +51,16 @@ export const clearCanvas = (renderer: THREE.WebGLRenderer) => {
   renderer.clear();
 };
 
+const createDirLight = (position, target, intensity, parent) => {
+  const dirLight = new THREE.DirectionalLight(0xffffff, intensity);
+  dirLight.color.setHSL(0.1, 1, 0.95);
+  dirLight.position.set(...position);
+  parent.add(dirLight);
+  parent.add(dirLight.target);
+  dirLight.target.position.set(...target);
+  return dirLight;
+};
+
 class PlaneView {
   // Copied form backbone events (TODO: handle this better)
   trigger: Function;
@@ -66,7 +76,7 @@ class PlaneView {
     _.extend(this, BackboneEvents);
 
     this.running = false;
-    const { scene } = SceneController;
+    const { scene } = getSceneController();
 
     // Initialize main THREE.js components
     this.cameras = {};
@@ -77,6 +87,8 @@ class PlaneView {
       this.cameras[plane] = new THREE.OrthographicCamera(0, 0, 0, 0);
       scene.add(this.cameras[plane]);
     }
+
+    createDirLight([10, 10, 10], [0, 0, 10], 5, this.cameras[OrthoViews.TDView]);
 
     this.cameras[OrthoViews.PLANE_XY].position.z = -1;
     this.cameras[OrthoViews.PLANE_YZ].position.x = 1;
@@ -113,6 +125,7 @@ class PlaneView {
   }
 
   renderOrthoViewToTexture(plane: OrthoView, scene: THREE.Scene): Uint8Array {
+    const SceneController = getSceneController();
     const { renderer } = SceneController;
 
     renderer.autoClear = true;
@@ -138,6 +151,7 @@ class PlaneView {
     // All 3D meshes and the trianglesplane are rendered here.
 
     TWEEN.update();
+    const SceneController = getSceneController();
 
     // skip rendering if nothing has changed
     // This prevents the GPU/CPU from constantly
@@ -193,7 +207,7 @@ class PlaneView {
 
   resize = (): void => {
     const { width, height } = getDesiredLayoutRect();
-    SceneController.renderer.setSize(width, height);
+    getSceneController().renderer.setSize(width, height);
 
     for (const plane of OrthoViewValues) {
       this.cameras[plane].aspect = 1;
@@ -210,7 +224,7 @@ class PlaneView {
     this.running = false;
 
     for (const plane of OrthoViewValues) {
-      SceneController.scene.remove(this.cameras[plane]);
+      getSceneController().scene.remove(this.cameras[plane]);
     }
     window.removeEventListener("resize", this.resizeThrottled);
     this.unbindChangedScaleListener();

@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(33);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(36);
 COMMIT TRANSACTION;
 
 CREATE TABLE webknossos.analytics(
@@ -56,6 +56,16 @@ CREATE TABLE webknossos.annotations(
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   CHECK ((typ IN ('TracingBase', 'Task')) = (_task IS NOT NULL)),
   CHECK (COALESCE(skeletonTracingId,volumeTracingId) IS NOT NULL)
+);
+
+CREATE TABLE webknossos.meshes(
+  _id CHAR(24) PRIMARY KEY NOT NULL DEFAULT '',
+  _annotation CHAR(24) NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  position webknossos.VECTOR3 NOT NULL,
+  data TEXT,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TABLE webknossos.dataSets(
@@ -239,6 +249,7 @@ CREATE TABLE webknossos.users(
   isAdmin BOOLEAN NOT NULL DEFAULT false,
   isSuperUser BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  lastTaskTypeId CHAR(24) DEFAULT NULL,
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
@@ -286,6 +297,7 @@ INSERT INTO webknossos.maintenance(maintenanceExpirationTime) values('2000-01-01
 
 CREATE VIEW webknossos.analytics_ AS SELECT * FROM webknossos.analytics WHERE NOT isDeleted;
 CREATE VIEW webknossos.annotations_ AS SELECT * FROM webknossos.annotations WHERE NOT isDeleted;
+CREATE VIEW webknossos.meshes_ AS SELECT * FROM webknossos.meshes WHERE NOT isDeleted;
 CREATE VIEW webknossos.dataSets_ AS SELECT * FROM webknossos.dataSets WHERE NOT isDeleted;
 CREATE VIEW webknossos.dataStores_ AS SELECT * FROM webknossos.dataStores WHERE NOT isDeleted;
 CREATE VIEW webknossos.tracingStores_ AS SELECT * FROM webknossos.tracingStores WHERE NOT isDeleted;
@@ -329,7 +341,10 @@ ALTER TABLE webknossos.analytics
 ALTER TABLE webknossos.annotations
   ADD CONSTRAINT task_ref FOREIGN KEY(_task) REFERENCES webknossos.tasks(_id) ON DELETE SET NULL DEFERRABLE,
   ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) DEFERRABLE,
-  ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) DEFERRABLE;
+  ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) DEFERRABLE,
+  ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) DEFERRABLE;
+ALTER TABLE webknossos.meshes
+  ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) DEFERRABLE;
 ALTER TABLE webknossos.dataSets
   ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) DEFERRABLE,
   ADD CONSTRAINT dataStore_ref FOREIGN KEY(_dataStore) REFERENCES webknossos.dataStores(name) DEFERRABLE;

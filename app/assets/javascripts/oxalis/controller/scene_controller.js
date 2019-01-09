@@ -5,8 +5,10 @@
 
 import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
+import TWEEN from "tween.js";
 import _ from "lodash";
 
+import type { MeshMetaData } from "admin/api_flow_types";
 import { V3 } from "libs/mjs";
 import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import {
@@ -37,8 +39,10 @@ import constants, {
   OrthoViews,
   type Vector3,
 } from "oxalis/constants";
-import parseStlBuffer from "libs/parse_stl_buffer";
 import window from "libs/window";
+
+import { convertCellIdToHSLA } from "../view/right-menu/mapping_info_view";
+import { setSceneController } from "./scene_controller_provider";
 
 const CUBE_COLOR = 0x999999;
 
@@ -56,6 +60,8 @@ class SceneController {
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
   rootGroup: THREE.Object3D;
+  stlMeshes: { [key: string]: THREE.Mesh };
+  isosurfacesGroup: THREE.Group;
 
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   // element depending on the provided flycam.
@@ -68,6 +74,7 @@ class SceneController {
       [OrthoViews.PLANE_XZ]: true,
     };
     this.planeShift = [0, 0, 0];
+    this.stlMeshes = {};
   }
 
   initialize() {
@@ -84,11 +91,16 @@ class SceneController {
     // scene.scale does not have an effect.
     this.rootGroup = new THREE.Object3D();
     this.rootGroup.add(this.getRootNode());
+    this.isosurfacesGroup = new THREE.Group();
 
     // The dimension(s) with the highest resolution will not be distorted
     this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.dataSource.scale));
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.rootGroup);
+    this.scene.add(this.isosurfacesGroup);
+
+    this.rootGroup.add(new THREE.DirectionalLight());
+    this.addLights();
 
     this.setupDebuggingMethods();
   }
@@ -116,12 +128,80 @@ class SceneController {
     window.removeBucketMesh = (mesh: THREE.LineSegments) => this.rootNode.remove(mesh);
   }
 
-  addSTL(stlBuffer: ArrayBuffer): void {
-    const geometry = parseStlBuffer(stlBuffer);
+  addSTL(meshMetaData: MeshMetaData, geometry: THREE.Geometry): void {
+    const { id, position } = meshMetaData;
+    if (this.stlMeshes[id] != null) {
+      console.warn(`Mesh with id ${id} has already been added to the scene.`);
+      return;
+    }
     geometry.computeVertexNormals();
 
     const meshMaterial = new THREE.MeshNormalMaterial();
-    this.rootGroup.add(new THREE.Mesh(geometry, meshMaterial));
+    const mesh = new THREE.Mesh(geometry, meshMaterial);
+    this.scene.add(mesh);
+    this.stlMeshes[id] = mesh;
+    this.updateMeshPostion(id, position);
+  }
+
+  addIsosurface(vertices, segmentationId): void {
+    let geometry = new THREE.BufferGeometry();
+    geometry.addAttribute("position", new THREE.BufferAttribute(vertices, 3));
+
+    // convert to normal (unbuffered) geometry to merge vertices
+    geometry = new THREE.Geometry().fromBufferGeometry(geometry);
+    geometry.mergeVertices();
+    geometry.computeVertexNormals();
+    geometry.computeFaceNormals();
+
+    // and back to a BufferGeometry
+    geometry = new THREE.BufferGeometry().fromGeometry(geometry);
+
+    const [hue] = convertCellIdToHSLA(segmentationId);
+    const color = new THREE.Color().setHSL(hue, 0.5, 0.1);
+
+    const meshMaterial = new THREE.MeshLambertMaterial({ color });
+    meshMaterial.side = THREE.DoubleSide;
+    meshMaterial.transparent = true;
+
+    const mesh = new THREE.Mesh(geometry, meshMaterial);
+
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+
+    const tweenAnimation = new TWEEN.Tween({ opacity: 0 });
+    tweenAnimation
+      .to({ opacity: 0.95 }, 500)
+      .onUpdate(function onUpdate() {
+        meshMaterial.opacity = this.opacity;
+      })
+      .start();
+
+    this.isosurfacesGroup.add(mesh);
+  }
+
+  addLights(): void {
+    // At the moment, we only attach an AmbientLight for the isosurfaces group.
+    // The PlaneView attaches a directional light directly to the TD camera,
+    // so that the light moves along the cam.
+
+    const ambientLight = new THREE.AmbientLight(0x404040, 15); // soft white light
+    this.isosurfacesGroup.add(ambientLight);
+  }
+
+  removeSTL(id: string): void {
+    this.rootGroup.remove(this.stlMeshes[id]);
+  }
+
+  setMeshVisibility(id: string, visibility: boolean): void {
+    this.stlMeshes[id].visible = visibility;
+  }
+
+  updateMeshPostion(id: string, position: Vector3): void {
+    const [x, y, z] = position;
+    const mesh = this.stlMeshes[id];
+    mesh.position.x = x;
+    mesh.position.y = y;
+    mesh.position.z = z;
   }
 
   createMeshes(): void {
@@ -197,6 +277,7 @@ class SceneController {
     this.userBoundingBox.updateForCam(id);
     Utils.__guard__(this.taskBoundingBox, x => x.updateForCam(id));
 
+    this.isosurfacesGroup.visible = id === OrthoViews.TDView;
     if (id !== OrthoViews.TDView) {
       let ind;
       for (const planeId of OrthoViewValuesWithoutTDView) {
@@ -370,4 +451,14 @@ class SceneController {
   }
 }
 
-export default new SceneController();
+export type SceneControllerType = SceneController;
+
+export function initializeSceneController() {
+  const controller = new SceneController();
+  setSceneController(controller);
+  controller.initialize();
+}
+
+// Please use scene_controller_provider to get a reference to SceneController. This avoids
+// problems with circular dependencies.
+export default {};

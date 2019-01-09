@@ -105,6 +105,7 @@ tracingStore.list.failed=Failed to retrieve list of tracing stores.
 zip.file.notFound=No or invalid ZIP file specified
 
 dataLayer.notFound=DataLayer “{0}” not found
+dataLayer.mustBeSegmentation=DataLayer “{0}” is not a segmentation layer
 
 scale.scale=Scale
 scale.invalid=Specify dataset scale like "XX, YY, ZZ"
@@ -185,8 +186,16 @@ annotation.noSkeleton=No skeleton tracing found for this annotation
 annotation.makeHybrid.explorationalsOnly=Could not convert annotation to hybrid annotation because it is only allowed for explorational annotations.
 annotation.makeHybrid.failed=Could not convert to hybrid.
 annotation.makeHybrid.alreadyHybrid=Could not convert annotation to hybrid annotation because it is already a hybrid annotation.
-
 annotationType.notFound=Could not find the specified annotation type.
+
+mesh.notFound=Mesh couldn’t be found
+mesh.write.failed=Failed to convert mesh info to json
+mesh.create.failed=Failed to save mesh info
+mesh.update.failed=Failed to update mesh info
+mesh.data.get.failed=Failed to load mesh raw data
+mesh.data.read.failed=Failed to convert mesh raw data for saving
+mesh.data.save.failed=Failed to save mesh raw data
+mesh.delete.failed=Failed to delete mesh
 
 task.create.success=Task successfully created
 task.create.failed=Failed to create Task

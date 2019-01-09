@@ -19,10 +19,9 @@ import { setViewModeAction, updateUserSettingAction } from "oxalis/model/actions
 import { wkReadyAction } from "oxalis/model/actions/actions";
 import ApiLoader from "oxalis/api/api_loader";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
+import { initializeSceneController } from "oxalis/controller/scene_controller";
 import Model from "oxalis/model";
-import NewTaskDescriptionModal from "oxalis/view/new_task_description_modal";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
-import SceneController from "oxalis/controller/scene_controller";
 import Store, {
   type OxalisState,
   type TraceOrViewCommand,
@@ -35,7 +34,6 @@ import api from "oxalis/api/internal_api";
 import app from "app";
 import constants, { ControlModeEnum, type Mode } from "oxalis/constants";
 import messages from "messages";
-import renderIndependently from "libs/render_independently";
 import window, { document } from "libs/window";
 
 type StateProps = {
@@ -120,7 +118,7 @@ class Controller extends React.PureComponent<Props, State> {
     window.onbeforeunload = beforeUnload;
 
     UrlManager.startUrlUpdater();
-    SceneController.initialize();
+    initializeSceneController();
 
     // FPS stats
     this.stats = new Stats();
@@ -128,7 +126,6 @@ class Controller extends React.PureComponent<Props, State> {
 
     this.initKeyboard();
     this.initTaskScript();
-    this.maybeShowNewTaskTypeModal();
 
     window.webknossos = new ApiLoader(Model);
 
@@ -154,29 +151,6 @@ class Controller extends React.PureComponent<Props, State> {
         );
       }
     }
-  }
-
-  // TODO find a new home
-  maybeShowNewTaskTypeModal() {
-    // Users can aquire new tasks directly in the tracing view. Occasionally,
-    // they start working on a new TaskType and need to be instructed.
-    let text;
-    const task = Store.getState().task;
-    if (!Utils.hasUrlParam("differentTaskType") || task == null) {
-      return;
-    }
-
-    const taskType = task.type;
-    const title = `Attention, new Task Type: ${taskType.summary}`;
-    if (taskType.description) {
-      text = `${messages["task.new_description"]}:\n${taskType.description}`;
-    } else {
-      text = messages["task.no_description"];
-    }
-
-    renderIndependently(destroy => (
-      <NewTaskDescriptionModal title={title} description={text} destroy={destroy} />
-    ));
   }
 
   setLayoutScale(multiplier: number): void {

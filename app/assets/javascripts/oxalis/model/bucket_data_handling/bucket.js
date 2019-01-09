@@ -30,6 +30,15 @@ const warnAboutDownsamplingRGB = _.once(() =>
   Toast.warning("Zooming out for RGB data is limited. Zoom further in if data is not shown."),
 );
 
+export const bucketDebuggingFlags = {
+  // DEBUG flag for visualizing buckets which are passed to the GPU
+  visualizeBucketsOnGPU: false,
+  // DEBUG flag for visualizing buckets which are prefetched
+  visualizePrefetchedBuckets: false,
+};
+// Exposing this variable allows debugging on deployed systems
+window.bucketDebuggingFlags = bucketDebuggingFlags;
+
 export class DataBucket {
   type: "data" = "data";
   BIT_DEPTH: number;
@@ -81,7 +90,7 @@ export class DataBucket {
 
     this.state = BucketStateEnum.UNREQUESTED;
     this.dirty = false;
-    this.accessed = true;
+    this.accessed = false;
     this.isPartlyOutsideBoundingBox = false;
 
     this.data = null;
@@ -91,8 +100,8 @@ export class DataBucket {
     if (this.dependentCounter > 0) {
       return false;
     }
+
     const collect = !this.accessed && !this.dirty && this.state !== BucketStateEnum.REQUESTED;
-    this.accessed = false;
     return collect;
   }
 
@@ -130,12 +139,15 @@ export class DataBucket {
       throw new Error("Bucket.getData() called, but data does not exist.");
     }
 
-    this.markAsNeeded();
     return data;
   }
 
   markAsNeeded(): void {
     this.accessed = true;
+  }
+
+  markAsUnneeded(): void {
+    this.accessed = false;
   }
 
   getOrCreateData(): Uint8Array {

@@ -6,6 +6,7 @@
 import { Layout, Icon } from "antd";
 import { connect } from "react-redux";
 import { withRouter } from "react-router-dom";
+import classNames from "classnames";
 import * as React from "react";
 
 import { ArbitraryViewport, type Mode, OrthoViews } from "oxalis/constants";
@@ -17,6 +18,7 @@ import CommentTabView from "oxalis/view/right-menu/comment_tab/comment_tab_view"
 import DatasetInfoTabView from "oxalis/view/right-menu/dataset_info_tab_view";
 import InputCatcher, { recalculateInputCatcherSizes } from "oxalis/view/input_catcher";
 import MappingInfoView from "oxalis/view/right-menu/mapping_info_view";
+import MeshesView from "oxalis/view/right-menu/meshes_view";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import OxalisController from "oxalis/controller";
 import RecordingSwitch from "oxalis/view/recording_switch";
@@ -41,6 +43,7 @@ type StateProps = {
   isUpdateTracingAllowed: boolean,
   showVersionRestore: boolean,
   storedLayouts: Object,
+  isDatasetOnScratchVolume: boolean,
 };
 
 type Props = StateProps & {
@@ -113,7 +116,8 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
   render() {
     const layoutType = determineLayout(this.props.initialCommandType.type, this.props.viewMode);
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
-    const { displayScalebars } = this.props;
+    const { displayScalebars, isDatasetOnScratchVolume } = this.props;
+    const headerClassName = classNames({ construction: isDatasetOnScratchVolume });
 
     return (
       <NmlUploadZoneContainer onImport={importNmls} isAllowed={this.props.isUpdateTracingAllowed}>
@@ -123,7 +127,10 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
         />
 
         <Layout className="tracing-layout">
-          <Header style={{ flex: "0 1 auto", zIndex: 210, height: headerHeight }}>
+          <Header
+            className={headerClassName}
+            style={{ flex: "0 1 auto", zIndex: 210, height: headerHeight }}
+          >
             <ButtonComponent onClick={this.handleSettingsCollapse}>
               <Icon type={this.state.isSettingsCollapsed ? "menu-unfold" : "menu-fold"} />
               <span className="hide-on-small-screen">Settings</span>
@@ -147,7 +154,8 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
               width={350}
               style={{ zIndex: 100 }}
             >
-              <SettingsView />
+              {/* Don't render SettingsView if it's hidden to improve performance */}
+              {!this.state.isSettingsCollapsed ? <SettingsView /> : null}
             </Sider>
 
             <div id={canvasAndLayoutContainerID} style={{ position: "relative" }}>
@@ -198,6 +206,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
                 <CommentTabView key="CommentTabView" portalKey="CommentTabView" />
                 <AbstractTreeTabView key="AbstractTreeTabView" portalKey="AbstractTreeTabView" />
                 <MappingInfoView key="MappingInfoView" portalKey="MappingInfoView" />
+                <MeshesView key="MeshesView" portalKey="MeshesView" />
               </GoldenLayoutAdapter>
             </div>
             {this.props.showVersionRestore ? (
@@ -219,6 +228,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     isUpdateTracingAllowed: state.tracing.restrictions.allowUpdate,
     showVersionRestore: state.uiInformation.showVersionRestore,
     storedLayouts: state.uiInformation.storedLayouts,
+    isDatasetOnScratchVolume: state.dataset.dataStore.isScratch,
   };
 }
 

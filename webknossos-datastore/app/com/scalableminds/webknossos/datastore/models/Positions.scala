@@ -5,10 +5,10 @@ import com.scalableminds.util.geometry.{BoundingBox, GenericPosition, Point3D}
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
 class VoxelPosition(
-                      protected val globalX: Int,
-                      protected val globalY: Int,
-                      protected val globalZ: Int,
-                      val resolution: Point3D
+                     protected val globalX: Int,
+                     protected val globalY: Int,
+                     protected val globalZ: Int,
+                     val resolution: Point3D
                    ) extends GenericPosition {
 
   val x: Int = globalX / resolution.x
@@ -22,6 +22,8 @@ class VoxelPosition(
 
   def move(dx: Int, dy: Int, dz: Int) =
     new VoxelPosition(globalX + dx, globalY + dy, globalZ + dz, resolution)
+
+  override def toString = s"($globalX, $globalY, $globalZ) / $resolution"
 
   override def equals(obj: scala.Any): Boolean = {
     obj match {

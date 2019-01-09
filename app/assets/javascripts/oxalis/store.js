@@ -7,18 +7,19 @@ import { createStore, applyMiddleware } from "redux";
 import createSagaMiddleware from "redux-saga";
 
 import type {
-  APIRestrictions,
   APIAllowedMode,
-  APISettings,
-  APIDataStore,
-  APITracingType,
-  APIScript,
-  APITask,
-  APIUser,
-  APIDatasetId,
-  APIDataset,
   APIDataLayer,
+  APIDataStore,
+  APIDataset,
+  APIDatasetId,
+  APIRestrictions,
+  APIScript,
+  APISettings,
+  APITask,
   APITracingStore,
+  APITracingType,
+  APIUser,
+  MeshMetaData,
 } from "admin/api_flow_types";
 import type { Action } from "oxalis/model/actions/actions";
 import type { Matrix4x4 } from "libs/mjs";
@@ -48,7 +49,6 @@ import UiReducer from "oxalis/model/reducers/ui_reducer";
 import UserReducer from "oxalis/model/reducers/user_reducer";
 import ViewModeReducer from "oxalis/model/reducers/view_mode_reducer";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
-import googleAnalyticsMiddleware from "oxalis/model/helpers/google_analytics_middleware";
 import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import rootSaga from "oxalis/model/sagas/root_saga";
@@ -144,6 +144,7 @@ export type Annotation = {|
   +name: string,
   +tracingStore: APITracingStore,
   +tracingType: TracingTypeTracing,
+  +meshes: Array<MeshMetaData>,
 |};
 
 type TracingBase = {|
@@ -208,21 +209,21 @@ export type DatasetLayerConfiguration = {|
   +contrast: number,
 |};
 
-export type DatasetConfiguration = {
+export type DatasetConfiguration = {|
   +fourBit: boolean,
   +interpolation: boolean,
-  +keyboardDelay: number,
   +layers: {
     [name: string]: DatasetLayerConfiguration,
   },
   +quality: 0 | 1 | 2,
   +segmentationOpacity: number,
   +highlightHoveredCellId: boolean,
+  +renderIsosurfaces: boolean,
   +position?: Vector3,
   +zoom?: number,
   +rotation?: Vector3,
-  +renderMissingDataBlack: true,
-};
+  +renderMissingDataBlack: boolean,
+|};
 
 export type UserConfiguration = {|
   +clippingDistance: number,
@@ -351,6 +352,7 @@ type UiInformation = {
   +showDropzoneModal: boolean,
   +showVersionRestore: boolean,
   +storedLayouts: Object,
+  +isImportingMesh: boolean,
 };
 
 export type OxalisState = {|
@@ -394,17 +396,18 @@ const initialAnnotationInfo = {
     url: "http://localhost:9000",
   },
   tracingType: "View",
+  meshes: [],
 };
 
 export const defaultState: OxalisState = {
   datasetConfiguration: {
     fourBit: true,
     interpolation: false,
-    keyboardDelay: 342,
     layers: {},
     quality: 0,
     segmentationOpacity: 20,
     highlightHoveredCellId: true,
+    renderIsosurfaces: false,
     renderMissingDataBlack: true,
   },
   userConfiguration: {
@@ -463,7 +466,7 @@ export const defaultState: OxalisState = {
     dataStore: {
       name: "localhost",
       url: "http://localhost:9000",
-      typ: "webknossos-store",
+      isScratch: false,
     },
     owningOrganization: "Connectomics department",
     description: null,
@@ -538,6 +541,7 @@ export const defaultState: OxalisState = {
     showDropzoneModal: false,
     showVersionRestore: false,
     storedLayouts: {},
+    isImportingMesh: false,
   },
 };
 
@@ -561,7 +565,7 @@ const combinedReducers = reduceReducers(
 const store = createStore(
   combinedReducers,
   defaultState,
-  applyMiddleware(googleAnalyticsMiddleware, overwriteActionMiddleware, sagaMiddleware),
+  applyMiddleware(overwriteActionMiddleware, sagaMiddleware),
 );
 sagaMiddleware.run(rootSaga);
 

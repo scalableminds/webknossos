@@ -25,14 +25,16 @@ export const pingDataStoreIfAppropriate = memoizedThrottle(async (requestedUrl: 
     RestAPI.getTracingStoreCached(),
     RestAPI.isInMaintenance(),
   ]);
-  const stores = datastores.concat(tracingstore);
+  const stores = datastores
+    .map(datastore => ({ ...datastore, path: "data" }))
+    .concat({ ...tracingstore, path: "tracings" });
   if (isInMaintenance) {
     Toast.warning(messages.planned_maintenance);
   } else {
-    const usedDataStore = stores.find(ds => requestedUrl.indexOf(ds.url) > -1);
-    if (usedDataStore != null) {
-      const { url } = usedDataStore;
-      const healthEndpoint = `${url}/data/health`;
+    const usedStore = stores.find(ds => requestedUrl.indexOf(ds.url) > -1);
+    if (usedStore != null) {
+      const { url, path } = usedStore;
+      const healthEndpoint = `${url}/${path}/health`;
       Request.triggerRequest(healthEndpoint, {
         doNotInvestigate: true,
         mode: "cors",

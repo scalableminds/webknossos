@@ -183,4 +183,16 @@ export function getThumbnailURL(dataset: APIDataset): string {
   return "";
 }
 
+export function getSegmentationThumbnailURL(dataset: APIDataset): string {
+  const datasetName = dataset.name;
+  const organizationName = dataset.owningOrganization;
+  const segmentationLayer = getSegmentationLayer(dataset);
+  if (segmentationLayer) {
+    return `/api/datasets/${organizationName}/${datasetName}/layers/${
+      segmentationLayer.name
+    }/thumbnail`;
+  }
+  return "";
+}
+
 export default {};

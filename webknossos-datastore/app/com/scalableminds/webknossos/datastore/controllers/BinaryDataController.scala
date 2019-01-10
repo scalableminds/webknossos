@@ -401,7 +401,8 @@ class BinaryDataController @Inject()(
       request.cuboid(dataLayer).width,
       request.cuboid(dataLayer).height,
       imagesPerRow,
-      blackAndWhite = blackAndWhite isSegmentation = dataLayer.category == Category.segmentation
+      blackAndWhite = blackAndWhite,
+      isSegmentation = dataLayer.category == Category.segmentation
     )
     for {
       (data, indices) <- requestData(dataSource, dataLayer, request)

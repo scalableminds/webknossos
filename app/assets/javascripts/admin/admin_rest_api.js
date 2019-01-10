@@ -453,16 +453,20 @@ export async function getUsersWithActiveTasks(projectName: string): Promise<Arra
 // ### Annotations
 export function getCompactAnnotations(
   isFinished: boolean,
+  pageNumber: number = 0,
 ): Promise<Array<APIAnnotationTypeCompact>> {
-  return Request.receiveJSON(`/api/user/annotations?isFinished=${isFinished.toString()}`);
+  return Request.receiveJSON(
+    `/api/user/annotations?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`,
+  );
 }
 
 export function getCompactAnnotationsForUser(
   userId: string,
   isFinished: boolean,
+  pageNumber: number = 0,
 ): Promise<Array<APIAnnotationTypeCompact>> {
   return Request.receiveJSON(
-    `/api/users/${userId}/annotations?isFinished=${isFinished.toString()}`,
+    `/api/users/${userId}/annotations?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`,
   );
 }
 

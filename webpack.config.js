@@ -137,6 +137,8 @@ module.exports = function(env = {}) {
     devServer: {
       contentBase: `${__dirname}/public`,
       port: env.PORT ? env.PORT : 9002,
+      hot: false,
+      inline: false,
     },
   };
 };

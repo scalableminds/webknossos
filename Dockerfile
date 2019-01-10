@@ -15,8 +15,12 @@ RUN addgroup --system --gid 999 webknossos \
   && chmod go+x bin/webknossos \
   && chmod go+w .
 
-
+HEALTHCHECK \
+  --interval=1m --timeout=5s --retries=10 \
+  CMD curl --fail http://localhost:9000/api/buildinfo || exit 1
 
 USER webknossos
+
+EXPOSE 9000
 
 ENTRYPOINT [ "bin/webknossos" ]

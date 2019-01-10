@@ -5,6 +5,7 @@ import * as React from "react";
 import _ from "lodash";
 
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import { setStoredLayoutsAction } from "oxalis/model/actions/ui_actions";
 import Constants from "oxalis/constants";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
@@ -140,6 +141,7 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
         // This might happen when the serialized layout config is not compatible with the newest version.
         // However, this should be mitigated by currentLayoutVersion in default_layout_configs.js
         Toast.error("Layout couldn't be restored. The default layout is used instead.");
+        Store.dispatch(setStoredLayoutsAction({}));
         layoutEmitter.emit("resetLayout");
         return;
       }

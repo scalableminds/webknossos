@@ -69,10 +69,12 @@ const datasetNames = [
   "confocal-multi_knossos",
   "fluro-rgb_knossos",
   "dsA_2",
+  "2017-05-31_mSEM_scMS109_bk_100um_v01-aniso",
 ];
 
 const viewOverrides: { [key: string]: string } = {
   e2006_knossos: "4736,4992,2176,0,1.0",
+  "2017-05-31_mSEM_scMS109_bk_100um_v01-aniso": "4608,4543,386,0,4.00",
 };
 
 datasetNames.map(async datasetName => {

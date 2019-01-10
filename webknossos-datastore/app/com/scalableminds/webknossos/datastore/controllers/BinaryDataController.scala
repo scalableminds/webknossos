@@ -15,7 +15,7 @@ import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.models._
 import com.scalableminds.util.mvc.JsonResults
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId, SegmentationLayer}
+import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.{
   Cuboid,
   DataServiceDataRequest,
@@ -401,7 +401,8 @@ class BinaryDataController @Inject()(
       request.cuboid(dataLayer).width,
       request.cuboid(dataLayer).height,
       imagesPerRow,
-      blackAndWhite = blackAndWhite
+      blackAndWhite = blackAndWhite,
+      isSegmentation = dataLayer.category == Category.segmentation
     )
     for {
       (data, indices) <- requestData(dataSource, dataLayer, request)

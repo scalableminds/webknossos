@@ -29,8 +29,10 @@ import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json._
 import play.api.mvc._
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import utils.{ObjectId, WkConf}
+
+import scala.util.Success
 
 object AuthForms {
 
@@ -519,4 +521,34 @@ class Authentication @Inject()(actorSystem: ActorSystem,
     }
   }
 
+  def speedtest(token: String) = sil.UserAwareAction.async { implicit request =>
+    val r = scala.util.Random
+    //val url = "www.google.de"
+
+    for{
+      success <- (1 to 1000).foldLeft(Future.successful(true))((res, _) => {
+        val x = r.nextInt() % 1000
+        val y = r.nextInt() % 1000
+        val z = r.nextInt() % 1000
+        val url = s"http://localhost:9000/data/datasets/Connectomics_Department/ROI2017_wkw/layers/segmentation/data?token=$token&resolution=0&x=$x&y=$y&z=$z&width=8&height=6&depth=4"
+        //val url = "http://www.google.de"
+        val request = rpc(url)
+        //.addQueryString("token" -> s"$token", "resolution" -> "0", "x" -> s"$x", "y" -> s"$y", "z" -> s"$z", "width" -> "8", "height" -> "6", "depth" -> "4")
+
+        val resultFox = request.get
+
+        (for{
+          option <- resultFox.toFutureOption
+        } yield {
+          println("executing...")
+          if(option.isEmpty) Future.successful(false)
+          else res
+        }).flatten
+      })
+    } yield {
+      println("done")
+      if(success) JsonOk("Success!!!")
+      else JsonOk("Error...")
+    }
+  }
 }

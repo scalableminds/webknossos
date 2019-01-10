@@ -182,7 +182,8 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
       const annotationsWithTasks = await Request.receiveJSON(url);
       const tasks = annotationsWithTasks.map(convertAnnotationToTaskWithAnnotationType);
       this.setCurrentModeState({
-        loadedAllTasks: annotationsWithTasks.length !== pageLength,
+        loadedAllTasks:
+          annotationsWithTasks.length !== pageLength || annotationsWithTasks.length === 0,
         tasks: previousTasks.concat(tasks),
         lastLoadedPage: pageNumber,
       });

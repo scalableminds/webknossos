@@ -55,10 +55,6 @@ type State = {
   shouldShowArchivedTracings: boolean,
   archivedModeState: TracingModeState,
   unarchivedModeState: TracingModeState,
-  didAlreadyFetchMetaInfo: {
-    isArchived: boolean,
-    isUnarchived: boolean,
-  },
   searchQuery: string,
   tags: Array<string>,
   isLoading: boolean,
@@ -77,17 +73,13 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     shouldShowArchivedTracings: false,
     archivedModeState: {
       tracings: [],
-      lastLoadedPage: 0,
+      lastLoadedPage: -1,
       loadedAllTracings: false,
     },
     unarchivedModeState: {
       tracings: [],
-      lastLoadedPage: 0,
+      lastLoadedPage: -1,
       loadedAllTracings: false,
-    },
-    didAlreadyFetchMetaInfo: {
-      isArchived: false,
-      isUnarchived: false,
     },
     searchQuery: "",
     tags: [],
@@ -100,22 +92,11 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
 
   componentDidMount() {
     this.restoreSearchTags();
-    this.fetchDataMaybe();
+    this.fetchNextPage(0);
   }
 
   componentWillUpdate(nextProps, nextState) {
     persistence.persist(this.props.history, nextState);
-  }
-
-  componentDidUpdate(prevProps, prevState) {
-    if (this.state.shouldShowArchivedTracings !== prevState.shouldShowArchivedTracings) {
-      this.fetchDataMaybe();
-    }
-  }
-
-  isFetchNecessary(): boolean {
-    const accessor = this.state.shouldShowArchivedTracings ? "isArchived" : "isUnarchived";
-    return !this.state.didAlreadyFetchMetaInfo[accessor];
   }
 
   restoreSearchTags() {
@@ -162,44 +143,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     });
   };
 
-  async fetchDataMaybe(): Promise<void> {
-    if (!this.isFetchNecessary()) {
-      return;
-    }
-    // Cache shouldShowArchivedTracings, otherwise it could have another value after fetching
-    const showArchivedTracings = this.state.shouldShowArchivedTracings;
-
-    try {
-      this.setState({ isLoading: true });
-      const tracings =
-        this.props.userId != null
-          ? await getCompactAnnotationsForUser(this.props.userId, showArchivedTracings)
-          : await getCompactAnnotations(showArchivedTracings);
-      if (showArchivedTracings) {
-        this.setState(prevState =>
-          update(prevState, {
-            didAlreadyFetchMetaInfo: {
-              isArchived: { $set: true },
-            },
-          }),
-        );
-      } else {
-        this.setState(prevState =>
-          update(prevState, {
-            didAlreadyFetchMetaInfo: {
-              isUnarchived: { $set: true },
-            },
-          }),
-        );
-      }
-      this.setModeState({ tracings });
-    } catch (error) {
-      handleGenericError(error);
-    } finally {
-      this.setState({ isLoading: false });
-    }
-  }
-
   fetchNextPage = async pageNumber => {
     // this refers not to the pagination of antd but to the pagination of querying data from SQL
     const showArchivedTracings = this.state.shouldShowArchivedTracings;
@@ -215,7 +158,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       this.setModeState({
         tracings: previousTracings.concat(tracings),
         lastLoadedPage: pageNumber,
-        loadedAllTracings: tracings.length !== pageLength,
+        loadedAllTracings: tracings.length !== pageLength || tracings.length === 0,
       });
     } catch (error) {
       handleGenericError(error);
@@ -225,9 +168,14 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   toggleShowArchived = () => {
-    this.setState(prevState => ({
-      shouldShowArchivedTracings: !prevState.shouldShowArchivedTracings,
-    }));
+    this.setState(
+      prevState => ({
+        shouldShowArchivedTracings: !prevState.shouldShowArchivedTracings,
+      }),
+      () => {
+        if (this.getCurrentModeState().lastLoadedPage === -1) this.fetchNextPage(0);
+      },
+    );
   };
 
   finishOrReopenTracing = async (type: "finish" | "reopen", tracing: APIAnnotationTypeCompact) => {

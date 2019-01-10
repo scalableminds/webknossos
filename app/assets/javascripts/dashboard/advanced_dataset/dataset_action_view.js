@@ -9,6 +9,7 @@ import type { APIMaybeUnimportedDataset } from "admin/api_flow_types";
 import { createExplorational, triggerDatasetClearCache } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
+import { trackAction } from "oxalis/model/helpers/analytics";
 
 type Props = {
   dataset: APIMaybeUnimportedDataset,
@@ -25,6 +26,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
     withFallback: boolean,
   ) => {
     const annotation = await createExplorational(dataset, typ, withFallback);
+    trackAction(`Create ${typ} tracing`);
     this.props.history.push(`/annotations/${annotation.typ}/${annotation.id}`);
   };
 

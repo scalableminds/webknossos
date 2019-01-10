@@ -28,7 +28,7 @@ function makeEnv(port, host) {
 const processes = {
   backend: spawnIfNotSpecified(
     "noBackend",
-    './sbt "run 9001" -jvm-debug 5005 -J-XX:MaxMetaspaceSize=2048m -J-Xmx8g',
+    'sbt "run 9001" -jvm-debug 5005 -J-XX:MaxMetaspaceSize=2048m -J-Xmx8g',
     [],
     {
       cwd: ROOT,
@@ -41,6 +41,16 @@ const processes = {
     env: makeEnv(PORT + 2, HOST),
     shell: true,
   }),
+  fossildDB: spawnIfNotSpecified(
+    "noFossilDB",
+    `${ROOT}/fossildb/run.sh > ${ROOT}/fossildb/logs`,
+    [],
+    {
+      cwd: ROOT,
+      env: makeEnv(PORT, HOST),
+      shell: true,
+    },
+  ),
 };
 
 function spawnIfNotSpecified(keyword, command, args, options) {

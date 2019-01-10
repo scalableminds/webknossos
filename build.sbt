@@ -70,8 +70,6 @@ lazy val webknossos = (project in file("."))
     commonSettings,
     AssetCompilation.settings,
     BuildInfoSettings.webknossosBuildInfoSettings,
-    TwirlKeys.templateImports += "oxalis.view.helpers._",
-    TwirlKeys.templateImports += "oxalis.view._",
     routesGenerator := InjectedRoutesGenerator,
     libraryDependencies ++= Dependencies.webknossosDependencies,
     sourceDirectory in Assets := file("none"),

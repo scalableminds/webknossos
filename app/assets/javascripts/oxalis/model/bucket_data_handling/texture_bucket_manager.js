@@ -2,7 +2,7 @@
 import * as THREE from "three";
 import _ from "lodash";
 
-import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
+import { DataBucket, bucketDebuggingFlags } from "oxalis/model/bucket_data_handling/bucket";
 import { createUpdatableTexture } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import { getRenderer } from "oxalis/controller/renderer";
 import { waitForCondition } from "libs/utils";
@@ -23,9 +23,6 @@ import window from "libs/window";
 // writing buckets to the data texture (i.e., "committing the buckets").
 
 const lookUpBufferWidth = constants.LOOK_UP_TEXTURE_WIDTH;
-
-// DEBUG flag for visualizing buckets which are passed to the GPU
-const visualizeBucketsOnGPU = false;
 
 // At the moment, we only store one float f per bucket.
 // If f >= 0, f denotes the index in the data texture where the bucket is stored.
@@ -98,7 +95,7 @@ export default class TextureBucketManager {
     if (unusedIndex == null) {
       return;
     }
-    if (visualizeBucketsOnGPU) {
+    if (bucketDebuggingFlags.visualizeBucketsOnGPU) {
       bucket.unvisualize();
     }
     this.activeBucketToIndexMap.delete(bucket);
@@ -181,7 +178,7 @@ export default class TextureBucketManager {
       const dataTextureIndex = Math.floor(_index / bucketsPerTexture);
       const indexInDataTexture = _index % bucketsPerTexture;
 
-      if (visualizeBucketsOnGPU) {
+      if (bucketDebuggingFlags.visualizeBucketsOnGPU) {
         bucket.visualize();
       }
 

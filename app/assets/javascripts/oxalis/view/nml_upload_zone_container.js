@@ -8,6 +8,7 @@ import prettyBytes from "pretty-bytes";
 import type { OxalisState } from "oxalis/store";
 import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import FormattedDate from "components/formatted_date";
+import { trackAction } from "oxalis/model/helpers/analytics";
 
 type State = {
   files: Array<File>,
@@ -104,6 +105,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
     } else {
       this.setState({ dropzoneActive: false });
     }
+    trackAction("NML drag and drop");
     this.props.hideDropzoneModal();
   };
 

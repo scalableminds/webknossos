@@ -27,6 +27,7 @@ import {
   toggleTreeGroupReducer,
   addTreesAndGroups,
   createTreeMapFromTreeArray,
+  removeMissingGroupsFromTrees,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import {
   getSkeletonTracing,
@@ -353,6 +354,17 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             .getOrElse(state);
         }
 
+        case "DESELECT_ACTIVE_TREE": {
+          return update(state, {
+            tracing: {
+              skeleton: {
+                activeNodeId: { $set: null },
+                activeTreeId: { $set: null },
+              },
+            },
+          });
+        }
+
         case "SET_ACTIVE_GROUP": {
           return update(state, {
             tracing: {
@@ -360,6 +372,16 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                 activeNodeId: { $set: null },
                 activeTreeId: { $set: null },
                 activeGroupId: { $set: action.groupId },
+              },
+            },
+          });
+        }
+
+        case "DESELECT_ACTIVE_GROUP": {
+          return update(state, {
+            tracing: {
+              skeleton: {
+                activeGroupId: { $set: null },
               },
             },
           });
@@ -592,12 +614,15 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         }
 
         case "SET_TREE_GROUPS": {
+          const { treeGroups } = action;
+          const updatedTrees = removeMissingGroupsFromTrees(skeletonTracing, treeGroups);
           return update(state, {
             tracing: {
               skeleton: {
                 treeGroups: {
                   $set: action.treeGroups,
                 },
+                trees: { $merge: updatedTrees },
               },
             },
           });

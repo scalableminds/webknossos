@@ -88,6 +88,10 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.delete_tree": "Do you really want to delete the whole tree?",
   "tracing.delete_tree_with_initial_node":
     "This tree contains the initial node. Do you really want to delete the whole tree?",
+  "tracing.delete_mulitple_trees": _.template(
+    "You have <%- countOfTrees %> trees selected, do you really want to delete all those trees?",
+  ),
+  "tracing.group_deletion_message": "Do you want to delete the selected group?",
   "tracing.merged": "Merging successfully done",
   "tracing.merged_with_redirect":
     "Merging successfully done. You will be redirected to the new annotation.",

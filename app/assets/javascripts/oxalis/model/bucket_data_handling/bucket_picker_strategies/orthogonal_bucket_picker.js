@@ -23,15 +23,26 @@ import constants, {
 import { extraBucketPerEdge, extraBucketsPerDim } from "./orthogonal_bucket_picker_constants";
 
 /*
+  This bucket picker defines the functions calculateBucketCountPerDim and calculateTotalBucketCountForZoomLevel
+  which describe how many buckets are necessary to render data given a specific zoom factor and a specific magnification
+  index (resolution index).
+  Using these functions, the flycam accessors can determine when to use which magnification (depending on current
+  zoom level).
+  The rest of wk typically doesn't need to use these functions.
+*/
+
+/*
   This function returns the amount of buckets (per dimension) which are necessary
   to render data in the provided magnification **with a specific zoom factor**.
-  For example, the function would answer how many buckets are necessary per dimension,
+  For example, the function would calculate how many buckets are necessary per dimension,
   if we want to render data with a zoom value of 3.5 in mag2.
+  The function itself is not aware of fallback vs. non-fallback data rendering (however, the function
+  can be used to calculate bucketCounts for fallback and non-fallback scenarios).
 
   Instead of this function, try to use getMaxBucketCountPerDim where possible, as that function
   will pick the appropriate zoomFactor automatically.
 */
-export function getBucketCountPerDim(
+export function calculateBucketCountPerDim(
   dataSetScale: Vector3,
   resolutionIndex: number,
   resolutions: Array<Vector3>,
@@ -62,7 +73,7 @@ export function getBucketCountPerDim(
   The returned value serves as an upper bound and influences which magnification is selected
   for a given zoom step.
 */
-export const calculateBucketCountForZoomLevel = (
+export const calculateTotalBucketCountForZoomLevel = (
   dataSetScale: Vector3,
   resolutionIndex: number,
   resolutions: Array<Vector3>,
@@ -74,7 +85,7 @@ export const calculateBucketCountForZoomLevel = (
     const yz = y * z - (y + z - 1);
     return xy + xz + yz;
   };
-  const bucketsPerDim = getBucketCountPerDim(
+  const bucketsPerDim = calculateBucketCountPerDim(
     dataSetScale,
     resolutionIndex,
     resolutions,
@@ -83,7 +94,7 @@ export const calculateBucketCountForZoomLevel = (
 
   const fallbackBucketsPerDim =
     resolutionIndex + 1 < resolutions.length
-      ? getBucketCountPerDim(dataSetScale, resolutionIndex + 1, resolutions, zoomFactor)
+      ? calculateBucketCountPerDim(dataSetScale, resolutionIndex + 1, resolutions, zoomFactor)
       : [0, 0, 0];
 
   const calculateAdditionalWSliceCount = ([x, y, z]) => {

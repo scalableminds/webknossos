@@ -6,8 +6,8 @@ import memoizeOne from "memoize-one";
 import type { Flycam, OxalisState } from "oxalis/store";
 import { M4x4, type Matrix4x4 } from "libs/mjs";
 import {
-  calculateBucketCountForZoomLevel,
-  getBucketCountPerDim,
+  calculateTotalBucketCountForZoomLevel,
+  calculateBucketCountPerDim,
 } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
 import { clamp, map3 } from "libs/utils";
 import { getMaxZoomStep, getResolutions } from "oxalis/model/accessors/dataset_accessor";
@@ -36,7 +36,7 @@ import * as scaleInfo from "oxalis/model/scaleinfo";
 // For resolutionIndex 1, the function might return 1.5 etc.
 // These values are used to determine the appropriate magnification for a given zoom value (e.g., a zoom value of 1.4
 // would require the second magnification).
-function _calculateMaximumZoomForZoomStep(
+function _approximateMaxZoomForZoomStep(
   dataSetScale: Vector3,
   resolutionIndex: number,
   resolutions: Array<Vector3>,
@@ -50,7 +50,7 @@ function _calculateMaximumZoomForZoomStep(
   let maxZoomStep = 1;
 
   while (
-    calculateBucketCountForZoomLevel(dataSetScale, resolutionIndex, resolutions, maxZoomStep) <
+    calculateTotalBucketCountForZoomLevel(dataSetScale, resolutionIndex, resolutions, maxZoomStep) <
       maximumCapacity &&
     maxZoomStep < maximumMagnificationAtZoomLevelOne
   ) {
@@ -65,7 +65,7 @@ function _getMaximumZoomForAllResolutions(
   resolutions: Array<Vector3>,
 ): Array<number> {
   return resolutions.map((_resolution, resolutionIndex) =>
-    _calculateMaximumZoomForZoomStep(dataSetScale, resolutionIndex, resolutions),
+    _approximateMaxZoomForZoomStep(dataSetScale, resolutionIndex, resolutions),
   );
 }
 const getMaximumZoomForAllResolutions = memoizeOne(_getMaximumZoomForAllResolutions);
@@ -75,12 +75,10 @@ function _getMaxBucketCountPerDim(
   resolutionIndex: number,
   resolutions: Array<Vector3>,
 ): Vector3 {
-  const maximumZoomFactor = _calculateMaximumZoomForZoomStep(
-    dataSetScale,
-    resolutionIndex,
-    resolutions,
-  );
-  return getBucketCountPerDim(dataSetScale, resolutionIndex, resolutions, maximumZoomFactor);
+  const maximumZoomFactor = getMaximumZoomForAllResolutions(dataSetScale, resolutions)[
+    resolutionIndex
+  ];
+  return calculateBucketCountPerDim(dataSetScale, resolutionIndex, resolutions, maximumZoomFactor);
 }
 
 function _getMaxBucketCountPerDimForAllResolutions(
@@ -104,7 +102,7 @@ export function getMaxBucketCountPerDim(
   return getMaxBucketCountPerDimForAllResolutions(dataSetScale, resolutions)[resolutionIndex];
 }
 
-export function getMaxBucketCountsForFallback(
+function _getMaxBucketCountsForFallback(
   dataSetScale: Vector3,
   resolutionIndex: number,
   resolutions: Array<Vector3>,
@@ -129,6 +127,8 @@ export function getMaxBucketCountsForFallback(
   );
   return bucketsPerDim;
 }
+
+export const getMaxBucketCountsForFallback = memoizeOne(_getMaxBucketCountsForFallback);
 
 export function getUp(flycam: Flycam): Vector3 {
   const matrix = flycam.currentMatrix;

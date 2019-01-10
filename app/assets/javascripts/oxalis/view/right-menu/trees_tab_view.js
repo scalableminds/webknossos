@@ -268,7 +268,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     if (!tracing) {
       return;
     }
-    const selectedTrees = this.state.selectedTrees;
+    const { selectedTrees } = this.state;
     // If the tree was already selected
     if (selectedTrees.includes(id)) {
       // If the tree is the second last -> set remaining tree to be the atcive tree
@@ -288,7 +288,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
       const { activeTreeId } = tracing;
       if (selectedTrees.length === 0) {
         this.props.onDeselectActiveGroup();
-        /* If there are no selected trees and no active tree: 
+        /* If there are no selected trees and no active tree:
            Set selected tree to the active tree */
         if (activeTreeId == null) {
           this.props.onSetActiveTree(id);

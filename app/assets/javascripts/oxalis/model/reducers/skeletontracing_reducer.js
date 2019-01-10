@@ -27,6 +27,7 @@ import {
   toggleTreeGroupReducer,
   addTreesAndGroups,
   createTreeMapFromTreeArray,
+  removeMissingGroupsFromTrees,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import {
   getSkeletonTracing,
@@ -613,12 +614,15 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         }
 
         case "SET_TREE_GROUPS": {
+          const { treeGroups } = action;
+          const updatedTrees = removeMissingGroupsFromTrees(skeletonTracing, treeGroups);
           return update(state, {
             tracing: {
               skeleton: {
                 treeGroups: {
                   $set: action.treeGroups,
                 },
+                trees: { $merge: updatedTrees },
               },
             },
           });

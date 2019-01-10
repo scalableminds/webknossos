@@ -6,6 +6,7 @@
 import { Layout, Icon } from "antd";
 import { connect } from "react-redux";
 import { withRouter } from "react-router-dom";
+import classNames from "classnames";
 import * as React from "react";
 
 import { ArbitraryViewport, type Mode, OrthoViews } from "oxalis/constants";
@@ -42,6 +43,7 @@ type StateProps = {
   isUpdateTracingAllowed: boolean,
   showVersionRestore: boolean,
   storedLayouts: Object,
+  isDatasetOnScratchVolume: boolean,
 };
 
 type Props = StateProps & {
@@ -114,7 +116,8 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
   render() {
     const layoutType = determineLayout(this.props.initialCommandType.type, this.props.viewMode);
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
-    const { displayScalebars } = this.props;
+    const { displayScalebars, isDatasetOnScratchVolume } = this.props;
+    const headerClassName = classNames({ construction: isDatasetOnScratchVolume });
 
     return (
       <NmlUploadZoneContainer onImport={importNmls} isAllowed={this.props.isUpdateTracingAllowed}>
@@ -124,7 +127,10 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
         />
 
         <Layout className="tracing-layout">
-          <Header style={{ flex: "0 1 auto", zIndex: 210, height: headerHeight }}>
+          <Header
+            className={headerClassName}
+            style={{ flex: "0 1 auto", zIndex: 210, height: headerHeight }}
+          >
             <ButtonComponent onClick={this.handleSettingsCollapse}>
               <Icon type={this.state.isSettingsCollapsed ? "menu-unfold" : "menu-fold"} />
               <span className="hide-on-small-screen">Settings</span>
@@ -222,6 +228,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     isUpdateTracingAllowed: state.tracing.restrictions.allowUpdate,
     showVersionRestore: state.uiInformation.showVersionRestore,
     storedLayouts: state.uiInformation.storedLayouts,
+    isDatasetOnScratchVolume: state.dataset.dataStore.isScratch,
   };
 }
 

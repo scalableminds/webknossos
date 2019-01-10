@@ -117,7 +117,7 @@ export function serializeToNml(
         serializeBranchPoints(visibleTrees),
         serializeComments(visibleTrees),
         "<groups>",
-        indent(serializeTreeGroups(tracing.treeGroups)),
+        indent(serializeTreeGroups(tracing.treeGroups, visibleTrees)),
         "</groups>",
       ),
     ),
@@ -188,6 +188,7 @@ function serializeParameters(
         serializeTag("experiment", {
           name: state.dataset.name,
           description: annotation.description,
+          organization: state.dataset.owningOrganization,
         }),
         serializeTag("scale", {
           x: state.dataset.dataSource.scale[0],
@@ -297,13 +298,17 @@ function serializeComments(trees: Array<Tree>): Array<string> {
   ];
 }
 
-function serializeTreeGroups(treeGroups: Array<TreeGroup>): Array<string> {
+function serializeTreeGroups(treeGroups: Array<TreeGroup>, trees: Array<Tree>): Array<string> {
+  const deepFindTree = group =>
+    trees.find(tree => tree.groupId === group.groupId) || _.some(group.children, deepFindTree);
+  // Only serialize treeGroups that contain at least one tree at some level in their child hierarchy
+  const nonEmptyTreeGroups = treeGroups.filter(deepFindTree);
   return _.flatten(
-    treeGroups.map(treeGroup =>
+    nonEmptyTreeGroups.map(treeGroup =>
       serializeTagWithChildren(
         "group",
         { id: treeGroup.groupId, name: treeGroup.name },
-        serializeTreeGroups(treeGroup.children),
+        serializeTreeGroups(treeGroup.children, trees),
       ),
     ),
   );

@@ -53,7 +53,11 @@ jobs:
           name: Build frontend documentation
           command: docker-compose run base yarn run docs
       - run:
-          name: Build webknossos (sbt and webpack)
+          name: Build webknossos (webpack)
+          command: |
+            docker-compose run base yarn build
+      - run:
+          name: Build webknossos (sbt)
           command: |
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
               docker-compose run compile sbt clean compile stage

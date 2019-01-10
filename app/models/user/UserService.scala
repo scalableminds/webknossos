@@ -198,9 +198,9 @@ class UserService @Inject()(conf: WkConf,
 
   def isTeamManagerInOrg(user: User,
                          _organization: ObjectId,
-                         teamMemberships: Option[List[TeamMembership]] = None): Fox[Boolean] =
+                         teamManagerMemberships: Option[List[TeamMembership]] = None): Fox[Boolean] =
     for {
-      teamManagerMemberships <- Fox.fillOption(teamMemberships)(teamManagerMembershipsFor(user._id))
+      teamManagerMemberships <- Fox.fillOption(teamManagerMemberships)(teamManagerMembershipsFor(user._id))
     } yield (teamManagerMemberships.nonEmpty && _organization == user._organization)
 
   def isTeamManagerOrAdminOfOrg(user: User, _organization: ObjectId): Fox[Boolean] =

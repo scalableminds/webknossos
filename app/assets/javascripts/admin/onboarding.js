@@ -323,7 +323,7 @@ class OnboardingView extends React.PureComponent<StateProps, State> {
             <a href="https://www.youtube.com/watch?v=4DD7408avUY">Watch this demo</a> to learn more.
           </FeatureCard>
           <FeatureCard header="Scripting" icon={<Icon type="code-o" />}>
-            Use the <a href="/assets/docs/frontend-api/index.html">webKnossos API</a> to create{" "}
+            Use the <a href="/docs/frontend-api/index.html">webKnossos API</a> to create{" "}
             <a href="/scripts">scriptable workflows</a>.{" "}
             <a href="https://www.youtube.com/watch?v=u5j8Sf5YwuM">Watch this demo</a> to learn more.
           </FeatureCard>

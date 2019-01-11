@@ -1,8 +1,8 @@
 // @flow
 
-import { Button, Dropdown, Icon, Menu, Modal, Tooltip } from "antd";
+import { Button, Checkbox, Dropdown, Icon, Menu, Modal, Tooltip } from "antd";
 import { connect } from "react-redux";
-import React, { PureComponent } from "react";
+import * as React from "react";
 
 import type { APIUser, APITracingType } from "admin/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
@@ -31,13 +31,7 @@ type StateProps = {
 };
 
 type Props = StateProps & {
-  storedLayoutNamesForView: Array<string>,
-  layoutKey: string,
-  activeLayout: string,
-  onResetLayout: () => void,
-  onSelectLayout: string => void,
-  onDeleteLayout: string => void,
-  addNewLayout: () => void,
+  layoutMenu: React.Node,
 };
 
 type State = {
@@ -46,7 +40,7 @@ type State = {
   isUserScriptsModalOpen: boolean,
 };
 
-type ResetLayoutItemProps = {
+type LayoutMenuProps = {
   storedLayoutNamesForView: Array<string>,
   layoutKey: string,
   activeLayout: string,
@@ -54,9 +48,12 @@ type ResetLayoutItemProps = {
   onSelectLayout: string => void,
   onDeleteLayout: string => void,
   addNewLayout: () => void,
+  autoSaveLayouts: boolean,
+  setAutoSaveLayouts: boolean => void,
+  saveCurrentLayout: () => void,
 };
 
-export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
+export const LayoutMenu = (props: LayoutMenuProps) => {
   const {
     storedLayoutNamesForView,
     layoutKey,
@@ -65,6 +62,9 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
     onSelectLayout,
     onDeleteLayout,
     addNewLayout,
+    autoSaveLayouts,
+    setAutoSaveLayouts,
+    saveCurrentLayout,
     ...others
   } = props;
   const layoutMissingHelpTitle = (
@@ -119,6 +119,12 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
     >
       <Menu.Item onClick={onResetLayout}>Reset Layout</Menu.Item>
       <Menu.Item onClick={addNewLayout}>Add a new Layout</Menu.Item>
+      <Menu.Item>
+        <Checkbox onChange={e => setAutoSaveLayouts(e.target.checked)} checked={autoSaveLayouts}>
+          Auto-save layouts
+        </Checkbox>
+      </Menu.Item>
+      <Menu.Item onClick={saveCurrentLayout}>Save</Menu.Item>
       <Menu.Divider />
       <Menu.ItemGroup
         className="available-layout-list"
@@ -134,7 +140,7 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
   );
 };
 
-class TracingActionsView extends PureComponent<Props, State> {
+class TracingActionsView extends React.PureComponent<Props, State> {
   state = {
     isShareModalOpen: false,
     isMergeModalOpen: false,
@@ -225,10 +231,10 @@ class TracingActionsView extends PureComponent<Props, State> {
   };
 
   render() {
-    const viewMode = Store.getState().temporaryConfiguration.viewMode;
+    const { viewMode } = Store.getState().temporaryConfiguration;
     const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
     const archiveButtonText = this.props.task ? "Finish" : "Archive";
-    const restrictions = this.props.restrictions;
+    const { restrictions } = this.props;
 
     const saveButton = restrictions.allowUpdate
       ? [
@@ -334,18 +340,7 @@ class TracingActionsView extends PureComponent<Props, State> {
       );
     }
 
-    elements.push(
-      <ResetLayoutItem
-        storedLayoutNamesForView={this.props.storedLayoutNamesForView}
-        layoutKey={this.props.layoutKey}
-        activeLayout={this.props.activeLayout}
-        onResetLayout={this.props.onResetLayout}
-        onSelectLayout={this.props.onSelectLayout}
-        onDeleteLayout={this.props.onDeleteLayout}
-        addNewLayout={this.props.addNewLayout}
-        key="layout"
-      />,
-    );
+    elements.push(this.props.layoutMenu);
 
     const menu = <Menu>{elements}</Menu>;
 

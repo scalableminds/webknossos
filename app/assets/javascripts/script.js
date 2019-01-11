@@ -20,7 +20,7 @@ window.webknossos.apiReady(3).then(async api => {
 
   const treeColors = {};
   const colorMapping = {};
-  let workingOnNode = null;
+  // let workingOnNode = null;
 
   /* For each segment keep track of the number of
      nodes that were placed within. This allows us
@@ -72,6 +72,8 @@ window.webknossos.apiReady(3).then(async api => {
   function getAllNodesWithTreeId() {
     const trees = api.tracing.getAllTrees();
     const nodes = [];
+    // consider using lodash to create a deep copy and than modify
+    // this copy by adding the tree id to each node => alrighty
     Object.keys(trees).forEach(treeId => {
       const currentTree = trees[treeId];
       for (const node of currentTree.nodes.values()) {
@@ -85,7 +87,7 @@ window.webknossos.apiReady(3).then(async api => {
   const nodes = getAllNodesWithTreeId();
   const segementationLayerName = api.tracing.getVolumeTracingLayerName();
 
-  const nodeCount = nodes.length;
+  // const nodeCount = nodes.length;
   const nodeSegmentMap = {};
 
   const segmentationOpacity = api.data.getConfiguration("segmentationOpacity");
@@ -98,33 +100,34 @@ window.webknossos.apiReady(3).then(async api => {
     call(action);
 
     const pos = action.position;
-    // getVolumeTracingLayerName
     const segmentId = await api.data.getDataValue(segementationLayerName, pos);
 
     const activeTreeId = api.tracing.getActiveTreeId();
     const activeNodeId = api.tracing.getActiveNodeId();
 
+    // If there is no segment id, the node was set to close to a border between segments
     if (!segmentId) {
       Modal.info({ title: "You've set a point too close to grey. The node will be removed now." });
       api.tracing.deleteNode(activeNodeId, activeTreeId);
       return;
     }
 
-    /* set segment id */
+    // set segment id
     nodeSegmentMap[activeNodeId] = segmentId;
 
-    /* count references */
+    // count references
     increaseNodesOfSegment(segmentId);
     mapSegmentColorToTree(segmentId, activeTreeId);
 
-    /* update mapping */
+    // update mapping
     api.data.setMapping(segementationLayerName, colorMapping);
   }
   api.utils.registerOverwrite("CREATE_NODE", createNodeOverwrite);
 
   /* Overwrite the "deleteActiveNode" method in such a way
      that a segment changes back its color as soon as all
-     nodes are deleted from it. */
+     nodes are deleted from it.  
+     => also do this on tree delete if possible (later) */
   function deleteActiveNodeOverwrite(store, call, action) {
     const activeNodeId = api.tracing.getActiveNodeId();
     if (activeNodeId == null) {
@@ -177,14 +180,15 @@ window.webknossos.apiReady(3).then(async api => {
     });
   }
 
-  async function restorePink(index = 0) {
-    if (index >= nodeCount || workingOnNode > index) {
+  async function restorePink(index = 0, workingOnNode = null) {
+    const numbOfNodes = nodes.length;
+    if (index >= numbOfNodes || workingOnNode > index) {
       return;
     }
 
     if (index % 50 === 0) {
-      /* TODO: Make visible to user */
-      console.log(`Processing node ${index} of ${nodeCount}`);
+      // TODO: Make visible to user
+      console.log(`Processing node ${index} of ${numbOfNodes}`);
     }
 
     const node = nodes[index];
@@ -193,7 +197,7 @@ window.webknossos.apiReady(3).then(async api => {
 
     const [segMinVec, segMaxVec] = api.data.getBoundingBox(segementationLayerName);
 
-    /* skip nodes outside segmentation */
+    // skip nodes outside segmentation
     if (
       pos[0] < segMinVec[0] ||
       pos[1] < segMinVec[1] ||
@@ -206,37 +210,39 @@ window.webknossos.apiReady(3).then(async api => {
       return;
     }
 
-    /* set working node */
+    // set working node
     workingOnNode = index;
 
-    if (workingOnNode > index) {
+    // why ?
+    /* if (workingOnNode > index) {
       return;
-    }
+    } */
 
-    /* TODO: Make visible to user */
-    console.log(`Retrying node ${index + 1} of ${nodeCount}`);
+    // TODO: Make visible to user
+    // why here a + 1?
+    console.log(`Retrying node ${index + 1} of ${numbOfNodes}`);
 
     const segmentId = await api.data.getDataValue(segementationLayerName, pos);
-    /* this should never happen */
+    // this should never happen
     if (segmentId === null) {
       return;
     }
 
     if (segmentId > 0) {
-      /* store segment id */
+      // store segment id
       nodeSegmentMap[node.id] = segmentId;
 
-      /* add to agglomerate */
+      // add to agglomerate
       increaseNodesOfSegment(segmentId);
       mapSegmentColorToTree(segmentId, treeId);
       console.log("set", segmentId, treeId);
     }
 
-    if (index < nodeCount - 1) {
-      /* continue with next node if needed */
-      await restorePink(index + 1);
+    if (index < numbOfNodes - 1) {
+      // continue with next node if needed
+      restorePink(index + 1);
     } else {
-      workingOnNode = nodeCount;
+      workingOnNode = numbOfNodes;
       api.data.setMapping("segmentation", colorMapping);
 
       alert("Done!");
@@ -249,7 +255,7 @@ window.webknossos.apiReady(3).then(async api => {
   api.utils.registerKeyHandler("8", () => {
     shuffleColorOfCurrentTree();
   });
-
+  // todo fancify this
   alert(welcomeMessage);
-  restorePink();
+  restorePink(0);
 });

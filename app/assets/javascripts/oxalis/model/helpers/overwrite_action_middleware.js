@@ -16,6 +16,9 @@ export function overwriteAction<S, A>(
   }
 
   overwrites[actionName] = overwriteFunction;
+  return () => {
+    delete overwrites[actionName];
+  };
 }
 
 export function removeOverwrite(actionName: string) {

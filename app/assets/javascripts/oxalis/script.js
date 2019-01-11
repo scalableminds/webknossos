@@ -1,26 +1,17 @@
 import { Modal } from "antd";
+import api from "oxalis/api/internal_api";
 
-window.webknossos.apiReady(3).then(async api => {
-  const welcomeMessage = `Mr. Motta and Mr. Boergens proudly present
-    The webKnossos Merger Mode Suite (version 23.04.2017)
+const unregisterKeyHandlers = [];
+const unregisterOverwrites = [];
+let isCodeActive = false;
 
-    1. enable everthing that it is working
-    2. enable in hybrid -> fix: 
-
-
-    -> in hybrid tracing and support in skeleton tracing
-    -> enabling in segementation tab (mappings view tab)
-    [8] Shuffles segmentation color of current tree -> todo
-    [9] Toggles segment opacity -> todo
-    [right-click] Adds node and makes segment pink -> verbinden von unterschiedlichen segementen gleich anmalen
-    [delete] Removes node and restores original segment color -> todo
-
-    Please watch messages in console as data is loaded.
-    If it doesn not run to the end, please inform us.`;
-
+export function enableMergerMode() {
+  if (isCodeActive) {
+    return;
+  }
+  isCodeActive = true;
   const treeColors = {};
   const colorMapping = {};
-  // let workingOnNode = null;
 
   /* For each segment keep track of the number of
      nodes that were placed within. This allows us
@@ -85,9 +76,8 @@ window.webknossos.apiReady(3).then(async api => {
   }
 
   const nodes = getAllNodesWithTreeId();
-  const segementationLayerName = api.tracing.getVolumeTracingLayerName();
+  const segementationLayerName = api.data.getVolumeTracingLayerName();
 
-  // const nodeCount = nodes.length;
   const nodeSegmentMap = {};
 
   const segmentationOpacity = api.data.getConfiguration("segmentationOpacity");
@@ -122,7 +112,7 @@ window.webknossos.apiReady(3).then(async api => {
     // update mapping
     api.data.setMapping(segementationLayerName, colorMapping);
   }
-  api.utils.registerOverwrite("CREATE_NODE", createNodeOverwrite);
+  unregisterOverwrites.push(api.utils.registerOverwrite("CREATE_NODE", createNodeOverwrite));
 
   /* Overwrite the "deleteActiveNode" method in such a way
      that a segment changes back its color as soon as all
@@ -144,7 +134,7 @@ window.webknossos.apiReady(3).then(async api => {
     }
     call(action);
   }
-  api.utils.registerOverwrite("DELETE_NODE", deleteActiveNodeOverwrite);
+  unregisterOverwrites.push(api.utils.registerOverwrite("DELETE_NODE", deleteActiveNodeOverwrite));
 
   // changes the opacity of the segmentation layer
   function changeOpacity() {
@@ -180,9 +170,9 @@ window.webknossos.apiReady(3).then(async api => {
     });
   }
 
-  async function restorePink(index = 0, workingOnNode = null) {
+  async function mergeSegmentsOfAlreadyExistingTrees(index = 0) {
     const numbOfNodes = nodes.length;
-    if (index >= numbOfNodes || workingOnNode > index) {
+    if (index >= numbOfNodes) {
       return;
     }
 
@@ -206,17 +196,9 @@ window.webknossos.apiReady(3).then(async api => {
       pos[1] >= segMaxVec[1] ||
       pos[2] >= segMaxVec[2]
     ) {
-      restorePink(index + 1);
+      mergeSegmentsOfAlreadyExistingTrees(index + 1);
       return;
     }
-
-    // set working node
-    workingOnNode = index;
-
-    // why ?
-    /* if (workingOnNode > index) {
-      return;
-    } */
 
     // TODO: Make visible to user
     // why here a + 1?
@@ -240,22 +222,31 @@ window.webknossos.apiReady(3).then(async api => {
 
     if (index < numbOfNodes - 1) {
       // continue with next node if needed
-      restorePink(index + 1);
+      mergeSegmentsOfAlreadyExistingTrees(index + 1);
     } else {
-      workingOnNode = numbOfNodes;
       api.data.setMapping("segmentation", colorMapping);
-
-      alert("Done!");
     }
   }
 
-  api.utils.registerKeyHandler("9", () => {
-    changeOpacity();
-  });
-  api.utils.registerKeyHandler("8", () => {
-    shuffleColorOfCurrentTree();
-  });
-  // todo fancify this
-  alert(welcomeMessage);
-  restorePink(0);
-});
+  unregisterKeyHandlers.push(
+    api.utils.registerKeyHandler("9", () => {
+      changeOpacity();
+    }),
+  );
+  unregisterKeyHandlers.push(
+    api.utils.registerKeyHandler("8", () => {
+      shuffleColorOfCurrentTree();
+    }),
+  );
+  // maybe first ask the user via modal
+  mergeSegmentsOfAlreadyExistingTrees();
+}
+
+export function disableMergerMode() {
+  if (!isCodeActive) {
+    return;
+  }
+  isCodeActive = false;
+  unregisterOverwrites.forEach(unregisterFunction => unregisterFunction());
+  unregisterKeyHandlers.forEach(unregisterObject => unregisterObject.unregister());
+}

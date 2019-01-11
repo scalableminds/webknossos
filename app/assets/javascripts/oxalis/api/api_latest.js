@@ -913,6 +913,7 @@ class UtilsApi {
    *   - SHUFFLE_ALL_TREE_COLORS
    *   - CREATE_COMMENT
    *   - DELETE_COMMENT
+   * @returns {function()} - A function used to unregister the overwriteFunction
    *
    *
    * @example
@@ -926,7 +927,7 @@ class UtilsApi {
     actionName: string,
     overwriteFunction: (store: S, next: (action: A) => void, originalAction: A) => void,
   ) {
-    overwriteAction(actionName, overwriteFunction);
+    return overwriteAction(actionName, overwriteFunction);
   }
 
   /**

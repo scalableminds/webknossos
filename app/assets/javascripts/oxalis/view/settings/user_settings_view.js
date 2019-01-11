@@ -44,6 +44,7 @@ import Constants, {
   type Vector6,
 } from "oxalis/constants";
 import * as Utils from "libs/utils";
+import { enableMergerMode, disableMergerMode } from "oxalis/script";
 
 const Panel = Collapse.Panel;
 
@@ -65,8 +66,13 @@ type UserSettingsViewProps = {
   brushSize: number,
 };
 
-class UserSettingsView extends PureComponent<UserSettingsViewProps> {
+type State = {
+  isMergerModeEnabled: boolean,
+};
+
+class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
   onChangeUser: { [$Keys<UserConfiguration>]: Function };
+  state = { isMergerModeEnabled: false };
 
   componentWillMount() {
     // cache onChange handler
@@ -74,6 +80,14 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
       _.partial(this.props.onChangeUser, propertyName),
     );
   }
+
+  handleMergerModeChange = value => {
+    if (value) {
+      enableMergerMode();
+    } else {
+      disableMergerMode();
+    }
+  };
 
   getViewportOptions = () => {
     switch (this.props.viewMode) {
@@ -254,6 +268,14 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
             label="Highlight Commented Nodes"
             value={this.props.userConfiguration.highlightCommentedNodes}
             onChange={this.onChangeUser.highlightCommentedNodes}
+          />
+          <SwitchSetting
+            label="Enable Merger Mode"
+            value={this.state.isMergerModeEnabled}
+            onChange={value => {
+              this.setState({ isMergerModeEnabled: value });
+              this.handleMergerModeChange(value);
+            }}
           />
         </Panel>,
       );

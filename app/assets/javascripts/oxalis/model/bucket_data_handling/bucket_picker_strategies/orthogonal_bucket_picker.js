@@ -113,6 +113,12 @@ export const calculateTotalBucketCountForZoomLevel = (
 };
 
 export const getAnchorPositionToCenterDistance = (bucketPerDim: number) =>
+  // Example I:
+  // - bucketPerDim is 17 (because the actual plane is 16 buckets wide and we need one extra bucket to render a "half bucket" on each side)
+  // --> the bucket distance between anchorPoint and center bucket is 8
+  // Example II:
+  // - bucketPerDim is 16 (because the actual plane is 15 buckets wide...)
+  // --> the bucket distance between anchorPoint and center bucket is 8
   Math.ceil((bucketPerDim - 1) / 2);
 
 export default function determineBucketsForOrthogonal(

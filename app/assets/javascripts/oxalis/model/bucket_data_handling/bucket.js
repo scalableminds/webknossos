@@ -33,7 +33,7 @@ const warnAboutDownsamplingRGB = _.once(() =>
 
 export const bucketDebuggingFlags = {
   // DEBUG flag for visualizing buckets which are passed to the GPU
-  visualizeBucketsOnGPU: false,
+  visualizeBucketsOnGPU: true,
   // DEBUG flag for visualizing buckets which are prefetched
   visualizePrefetchedBuckets: false,
 };
@@ -359,7 +359,7 @@ export class DataBucket {
       return;
     }
     const zoomStep = getRequestLogZoomStep(Store.getState());
-    if (this.zoomedAddress[3] === zoomStep) {
+    if (true || this.zoomedAddress[3] === zoomStep) {
       const resolutions = getResolutions(Store.getState().dataset);
       this.visualizedMesh = window.addBucketMesh(
         bucketPositionToGlobalAddress(this.zoomedAddress, resolutions),

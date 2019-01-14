@@ -82,8 +82,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
       scale <- parseScaleOpt(r.scale)
       defaultConfigurationOpt <- Fox.runOptional(r.defaultconfiguration)(
         JsonHelper.parseJsonToFox[DataSetConfiguration](_))
-      details <- Fox.runOptional(r.details)(
-        JsonHelper.parseJsonToFox[JsObject](_))
+      details <- Fox.runOptional(r.details)(JsonHelper.parseJsonToFox[JsObject](_))
     } yield {
       DataSet(
         ObjectId(r._Id),
@@ -223,12 +222,14 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
     val defaultConfiguration: Option[String] = d.defaultConfiguration.map(c => Json.toJson(c.configuration).toString)
     val details: Option[String] = d.details.map(_.toString)
     for {
-      _ <- run(sqlu"""insert into webknossos.dataSets(_id, _dataStore, _organization, _publication, defaultConfiguration, description, displayName,
+      _ <- run(
+        sqlu"""insert into webknossos.dataSets(_id, _dataStore, _organization, _publication, defaultConfiguration, description, displayName,
                                                              isPublic, isUsable, name, scale, status, sharingToken, sortingKey, details, created, isDeleted)
                values(${d._id.id}, ${d._dataStore}, ${d._organization.id}, #${optionLiteral(d._publication.map(_.id))}, #${optionLiteral(
-        defaultConfiguration.map(sanitize))}, ${d.description}, ${d.displayName}, ${d.isPublic}, ${d.isUsable},
+          defaultConfiguration.map(sanitize))}, ${d.description}, ${d.displayName}, ${d.isPublic}, ${d.isUsable},
                       ${d.name}, #${optionLiteral(d.scale.map(s => writeScaleLiteral(s)))}, ${d.status
-        .take(1024)}, ${d.sharingToken}, ${new java.sql.Timestamp(d.sortingKey)}, #${optionLiteral(details.map(sanitize))}, ${new java.sql.Timestamp(d.created)}, ${d.isDeleted})
+          .take(1024)}, ${d.sharingToken}, ${new java.sql.Timestamp(d.sortingKey)}, #${optionLiteral(
+          details.map(sanitize))}, ${new java.sql.Timestamp(d.created)}, ${d.isDeleted})
             """)
     } yield ()
   }

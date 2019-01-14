@@ -7,7 +7,33 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/18.12.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/19.01.0...HEAD)
+
+### Added
+
+-
+
+### Changed
+
+-
+
+### Fixed
+
+-
+
+### Removed
+
+-
+
+## [19.01.0](https://github.com/scalableminds/webknossos/releases/tag/19.01.0) - 2019-01-14
+[Commits](https://github.com/scalableminds/webknossos/compare/18.12.0...19.01.0)
+
+### Highlights
+
+- You can now create tracings on datasets of other organizations, provided you have access rights to the dataset (i.e. it is public). [#3533](https://github.com/scalableminds/webknossos/pull/3533)
+- Added the experimental feature to dynamically render isosurfaces for segmentation layers (can be enabled in the dataset settings when viewing a dataset). [#3533](https://github.com/scalableminds/webknossos/pull/3495)
+- Added the possibility to specify a recommended user configuration in a task type. The recommended configuration will be shown to users when they trace a task with a different task type and the configuration can be accepted or declined. [#3466](https://github.com/scalableminds/webknossos/pull/3466)
+- Added the possibility to select multiple trees in skeleton tracings in the tree tab by using ctrl + left mouse. Deleting and moving trees will affect all selected trees. [#3457](https://github.com/scalableminds/webknossos/pull/3457)
 
 ### Added
 
@@ -20,20 +46,11 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Added possibility to load more tasks or explorative annotations in the dashboard. [#3505](https://github.com/scalableminds/webknossos/pull/3505)
 - Adds a second colorful thumbnail for the datasets which have a segmentation layer and this segmentation thumbnail will be shown on hover over the other thumbnail. [#3507](https://github.com/scalableminds/webknossos/pull/3507)
 
-### Changed
-
--
-
 ### Fixed
 
 - Fixed a performance issue for large tracings with many branch points. [#3519](https://github.com/scalableminds/webknossos/pull/3519)
 - Fixed bug which caused buckets to disappear randomly. [#3531](https://github.com/scalableminds/webknossos/pull/3531)
 - Fixed a bug which broke the redirect after dataset upload via GUI. [#3571](https://github.com/scalableminds/webknossos/pull/3571)
-
-### Removed
-
--
-
 
 ## [18.12.0](https://github.com/scalableminds/webknossos/releases/tag/18.12.0) - 2018-11-26
 [Commits](https://github.com/scalableminds/webknossos/compare/18.11.0...18.12.0)

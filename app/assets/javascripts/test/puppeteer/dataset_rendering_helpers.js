@@ -3,15 +3,11 @@
 import urljoin from "url-join";
 
 import type { Page } from "puppeteer";
-import {
-  getDatasetDefaultConfiguration,
-  updateDatasetConfiguration,
-} from "../../admin//admin_rest_api";
 import mergeImg from "merge-img";
 import pixelmatch from "pixelmatch";
 
 import type { APIDatasetId } from "../../admin/api_flow_types";
-import { createExplorational } from "../../admin/admin_rest_api";
+import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
 
 export const DEV_AUTH_TOKEN = "secretScmBoyToken";
 

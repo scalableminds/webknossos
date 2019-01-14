@@ -1,6 +1,5 @@
 // @flow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-import { getDatasetDefaultConfiguration } from "admin/admin_rest_api";
 import anyTest, { type TestInterface } from "ava";
 import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
 import path from "path";
@@ -8,7 +7,6 @@ import puppeteer, { type Browser } from "puppeteer";
 
 import { compareScreenshot } from "./screenshot_helpers";
 import { screenshotDataset, DEV_AUTH_TOKEN } from "./dataset_rendering_helpers";
-import { updateDatasetConfiguration } from "../../admin/admin_rest_api";
 
 process.on("unhandledRejection", (err, promise) => {
   console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");

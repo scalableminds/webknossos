@@ -117,29 +117,30 @@ export const LayoutMenu = (props: LayoutMenuProps) => {
         </span>
       }
     >
-      <Menu.Item style={{ display: "inline-block" }} onClick={addNewLayout}>
-        <Tooltip title="Add a new Layout">
-          <Icon type="plus" />
-        </Tooltip>
+      <Menu.Item
+        style={{ display: "inline-block" }}
+        onClick={addNewLayout}
+        title="Add a new Layout"
+      >
+        <Icon type="plus" />
       </Menu.Item>
-      <Menu.Item style={{ display: "inline-block" }} onClick={onResetLayout}>
-        <Tooltip title="Reset Layout">
-          <Icon type="rollback" />
-        </Tooltip>
+      <Menu.Item style={{ display: "inline-block" }} onClick={onResetLayout} title="Reset Layout">
+        <Icon type="rollback" />
       </Menu.Item>
       <Menu.Item
         style={{ display: "inline-block" }}
         onClick={() => setAutoSaveLayouts(!autoSaveLayouts)}
+        title={`${autoSaveLayouts ? "Disable" : "Enable"} auto-saving of current layout`}
       >
-        <Tooltip title={`${autoSaveLayouts ? "Disable" : "Enable"} auto-saving of current layout`}>
-          <Icon type={autoSaveLayouts ? "disconnect" : "link"} />
-        </Tooltip>
+        <Icon type={autoSaveLayouts ? "disconnect" : "link"} />
       </Menu.Item>
       {autoSaveLayouts ? null : (
-        <Menu.Item style={{ display: "inline-block" }} onClick={saveCurrentLayout}>
-          <Tooltip title="Save current layout">
-            <Icon type="save" />
-          </Tooltip>
+        <Menu.Item
+          style={{ display: "inline-block" }}
+          onClick={saveCurrentLayout}
+          title="Save current layout"
+        >
+          <Icon type="save" />
         </Menu.Item>
       )}
       <Menu.Divider />

@@ -1,6 +1,6 @@
 // @flow
 
-import { Button, Checkbox, Dropdown, Icon, Menu, Modal, Tooltip } from "antd";
+import { Button, Dropdown, Icon, Menu, Modal, Tooltip } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 
@@ -117,14 +117,31 @@ export const LayoutMenu = (props: LayoutMenuProps) => {
         </span>
       }
     >
-      <Menu.Item onClick={onResetLayout}>Reset Layout</Menu.Item>
-      <Menu.Item onClick={addNewLayout}>Add a new Layout</Menu.Item>
-      <Menu.Item>
-        <Checkbox onChange={e => setAutoSaveLayouts(e.target.checked)} checked={autoSaveLayouts}>
-          Auto-save layouts
-        </Checkbox>
+      <Menu.Item style={{ display: "inline-block" }} onClick={addNewLayout}>
+        <Tooltip title="Add a new Layout">
+          <Icon type="plus" />
+        </Tooltip>
       </Menu.Item>
-      <Menu.Item onClick={saveCurrentLayout}>Save</Menu.Item>
+      <Menu.Item style={{ display: "inline-block" }} onClick={onResetLayout}>
+        <Tooltip title="Reset Layout">
+          <Icon type="rollback" />
+        </Tooltip>
+      </Menu.Item>
+      <Menu.Item
+        style={{ display: "inline-block" }}
+        onClick={() => setAutoSaveLayouts(!autoSaveLayouts)}
+      >
+        <Tooltip title={`${autoSaveLayouts ? "Disable" : "Enable"} auto-saving of current layout`}>
+          <Icon type={autoSaveLayouts ? "disconnect" : "link"} />
+        </Tooltip>
+      </Menu.Item>
+      {autoSaveLayouts ? null : (
+        <Menu.Item style={{ display: "inline-block" }} onClick={saveCurrentLayout}>
+          <Tooltip title="Save current layout">
+            <Icon type="save" />
+          </Tooltip>
+        </Menu.Item>
+      )}
       <Menu.Divider />
       <Menu.ItemGroup
         className="available-layout-list"

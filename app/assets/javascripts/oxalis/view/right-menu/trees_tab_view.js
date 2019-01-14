@@ -2,8 +2,8 @@
  * list_tree_view.js
  * @flow
  */
-
-import { Button, Dropdown, Input, Menu, Icon, Spin, Modal, Tooltip } from "antd";
+import _ from "lodash";
+import { Alert, Button, Dropdown, Input, Menu, Icon, Spin, Modal, Tooltip } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import { saveAs } from "file-saver";
@@ -18,14 +18,25 @@ import {
   setTreeNameAction,
   createTreeAction,
   deleteTreeAsUserAction,
+  deleteMultipleTreesAsUserAction,
   shuffleTreeColorAction,
   shuffleAllTreeColorsAction,
   selectNextTreeAction,
   toggleAllTreesAction,
   toggleInactiveTreesAction,
   setActiveTreeAction,
+  deselectActiveTreeAction,
+  deselectActiveGroupAction,
+  setTreeGroupAction,
+  setTreeGroupsAction,
   addTreesAndGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import messages from "messages";
+import {
+  createGroupToTreesMap,
+  callDeep,
+  MISSING_GROUP_ID,
+} from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
 import InputComponent from "oxalis/view/components/input_component";
@@ -33,14 +44,15 @@ import Store, {
   type OxalisState,
   type SkeletonTracing,
   type Tracing,
+  type TreeGroup,
   type UserConfiguration,
 } from "oxalis/store";
 import Toast from "libs/toast";
 import TreeHierarchyView from "oxalis/view/right-menu/tree_hierarchy_view";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
-
 import SearchPopover from "./search_popover";
+import DeleteGroupModalView from "./delete_group_modal_view";
 
 const ButtonGroup = Button.Group;
 const InputGroup = Input.Group;
@@ -53,17 +65,24 @@ type Props = {
   onSelectNextTreeBackward: () => void,
   onCreateTree: () => void,
   onDeleteTree: () => void,
+  onDeleteMultipleTrees: (Array<number>) => void,
+  onSetTreeGroup: (?number, number) => void,
+  onUpdateTreeGroups: (Array<TreeGroup>) => void,
   onChangeTreeName: string => void,
   annotation: Tracing,
   skeletonTracing?: SkeletonTracing,
   userConfiguration: UserConfiguration,
   onSetActiveTree: number => void,
+  onDeselectActiveTree: () => void,
+  onDeselectActiveGroup: () => void,
   showDropzoneModal: () => void,
 };
 
 type State = {
   isUploading: boolean,
   isDownloading: boolean,
+  selectedTrees: Array<number>,
+  groupToDelete: ?number,
 };
 
 export async function importNmls(files: Array<File>, createGroupForEachFile: boolean) {
@@ -100,6 +119,8 @@ class TreesTabView extends React.PureComponent<Props, State> {
   state = {
     isUploading: false,
     isDownloading: false,
+    selectedTrees: [],
+    groupToDelete: null,
   };
 
   handleChangeTreeName = evt => {
@@ -114,8 +135,80 @@ class TreesTabView extends React.PureComponent<Props, State> {
     }
   };
 
-  deleteTree = () => {
-    this.props.onDeleteTree();
+  deleteGroup = (groupId: number, deleteRecursively = false) => {
+    if (!this.props.skeletonTracing) {
+      return;
+    }
+    const { treeGroups, trees } = this.props.skeletonTracing;
+    const newTreeGroups = _.cloneDeep(treeGroups);
+    const groupToTreesMap = createGroupToTreesMap(trees);
+    callDeep(newTreeGroups, groupId, (item, index, parentsChildren, parentGroupId) => {
+      const subtrees = groupToTreesMap[groupId] != null ? groupToTreesMap[groupId] : [];
+      // Remove group
+      parentsChildren.splice(index, 1);
+      if (!deleteRecursively) {
+        // Move all subgroups to the parent group
+        parentsChildren.push(...item.children);
+        // Update all subtrees
+        for (const tree of subtrees) {
+          this.props.onSetTreeGroup(
+            parentGroupId === MISSING_GROUP_ID ? null : parentGroupId,
+            tree.treeId,
+          );
+        }
+        return;
+      }
+      // Removes all subtrees of the passed group recursively
+      const deleteGroupsRecursively = group => {
+        const currentSubtrees =
+          groupToTreesMap[group.groupId] != null ? groupToTreesMap[group.groupId] : [];
+        // Delete all trees of the current group
+        this.props.onDeleteMultipleTrees(currentSubtrees.map(tree => tree.treeId));
+        // Also delete the trees of all subgroups
+        group.children.forEach(subgroup => deleteGroupsRecursively(subgroup));
+      };
+      deleteGroupsRecursively(item);
+    });
+
+    // Update the store and state after removing
+    this.props.onUpdateTreeGroups(newTreeGroups);
+  };
+
+  hideDeleteGroupsModal = () => {
+    this.setState({ groupToDelete: null });
+  };
+
+  showDeleteGroupModal = (id: number) => {
+    this.setState({ groupToDelete: id });
+  };
+
+  handleDelete = () => {
+    // If there exist selected trees, ask to remove them
+    const { selectedTrees } = this.state;
+    const numbOfSelectedTrees = selectedTrees.length;
+    if (numbOfSelectedTrees > 0) {
+      const deleteAllSelectedTrees = () => {
+        this.props.onDeleteMultipleTrees(selectedTrees);
+        this.setState({ selectedTrees: [] });
+      };
+      this.showModalConfimWarning(
+        "Delete all selected trees?",
+        messages["tracing.delete_mulitple_trees"]({
+          countOfTrees: numbOfSelectedTrees,
+        }),
+        deleteAllSelectedTrees,
+      );
+    } else {
+      // Just delete the active tree
+      this.props.onDeleteTree();
+    }
+    // If there is an active group, ask the user whether to delete it or not
+    if (this.props.skeletonTracing) {
+      const { activeGroupId } = this.props.skeletonTracing;
+      if (activeGroupId != null) {
+        this.showDeleteGroupModal(activeGroupId);
+      }
+    }
   };
 
   shuffleTreeColor = () => {
@@ -155,6 +248,90 @@ class TreesTabView extends React.PureComponent<Props, State> {
     saveAs(blob, getNmlName(state));
   };
 
+  showModalConfimWarning(title: string, content: string, onConfirm: () => void) {
+    Modal.confirm({
+      title,
+      content,
+      okText: "Ok",
+      cancelText: "No",
+      autoFocusButton: "cancel",
+      iconType: "warning",
+      onCancel: () => {},
+      onOk: () => {
+        onConfirm();
+      },
+    });
+  }
+
+  onSelectTree = id => {
+    const tracing = this.props.skeletonTracing;
+    if (!tracing) {
+      return;
+    }
+    const { selectedTrees } = this.state;
+    // If the tree was already selected
+    if (selectedTrees.includes(id)) {
+      // If the tree is the second last -> set remaining tree to be the atcive tree
+      if (selectedTrees.length === 2) {
+        const lastSelectedTree = selectedTrees.find(treeId => treeId !== id);
+        if (lastSelectedTree != null) {
+          this.props.onSetActiveTree(lastSelectedTree);
+        }
+        this.deselectAllTrees();
+      } else {
+        // Just deselect the tree
+        this.setState(prevState => ({
+          selectedTrees: prevState.selectedTrees.filter(currentId => currentId !== id),
+        }));
+      }
+    } else {
+      const { activeTreeId } = tracing;
+      if (selectedTrees.length === 0) {
+        this.props.onDeselectActiveGroup();
+        /* If there are no selected trees and no active tree:
+           Set selected tree to the active tree */
+        if (activeTreeId == null) {
+          this.props.onSetActiveTree(id);
+          return;
+        }
+      }
+      // If the active node is selected, don't go into multi selection mode
+      if (activeTreeId === id) {
+        return;
+      }
+      if (selectedTrees.length === 0 && activeTreeId != null) {
+        // If this is the first selected tree -> also select the active tree
+        this.setState({
+          selectedTrees: [id, activeTreeId],
+        });
+        // Remove the current active tree
+        this.props.onDeselectActiveTree();
+      } else {
+        // Just select this tree
+        this.setState(prevState => ({
+          selectedTrees: [...prevState.selectedTrees, id],
+        }));
+      }
+    }
+  };
+
+  getAllSubtreeIdsOfGroup = (groupId: number): Array<number> => {
+    if (!this.props.skeletonTracing) {
+      return [];
+    }
+    const { trees } = this.props.skeletonTracing;
+    const groupToTreesMap = createGroupToTreesMap(trees);
+    let subtreeIdsOfGroup = [];
+    if (groupToTreesMap[groupId]) {
+      subtreeIdsOfGroup = groupToTreesMap[groupId].map(node => node.treeId);
+    }
+    return subtreeIdsOfGroup;
+  };
+
+  deselectAllTrees = () => {
+    this.setState({ selectedTrees: [] });
+  };
+
   getTreesComponents() {
     if (!this.props.skeletonTracing) {
       return null;
@@ -168,6 +345,10 @@ class TreesTabView extends React.PureComponent<Props, State> {
         activeTreeId={this.props.skeletonTracing.activeTreeId}
         activeGroupId={this.props.skeletonTracing.activeGroupId}
         sortBy={orderAttribute}
+        selectedTrees={this.state.selectedTrees}
+        onSelectTree={this.onSelectTree}
+        deselectAllTrees={this.deselectAllTrees}
+        onDeleteGroup={this.showDeleteGroupModal}
       />
     );
   }
@@ -176,6 +357,13 @@ class TreesTabView extends React.PureComponent<Props, State> {
     const shouldSortTreesByName = key === "sortByName";
     this.props.onSortTree(shouldSortTreesByName);
   };
+
+  deleteGroupAndHideModal(groupToDelete: ?number, deleteSubtrees = false) {
+    this.hideDeleteGroupsModal();
+    if (groupToDelete != null) {
+      this.deleteGroup(groupToDelete, deleteSubtrees);
+    }
+  }
 
   getSettingsDropdown() {
     const activeMenuKey = this.props.userConfiguration.sortTreesByName
@@ -217,6 +405,21 @@ class TreesTabView extends React.PureComponent<Props, State> {
     );
   }
 
+  getSelectedTreesAlert = () =>
+    this.state.selectedTrees.length > 0 ? (
+      <Alert
+        type="info"
+        message={
+          <React.Fragment>
+            {this.state.selectedTrees.length} Tree(s) selected.{" "}
+            <Button type="dashed" size="small" onClick={this.deselectAllTrees}>
+              Clear Selection
+            </Button>
+          </React.Fragment>
+        }
+      />
+    ) : null;
+
   render() {
     const { skeletonTracing } = this.props;
     if (!skeletonTracing) {
@@ -236,6 +439,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     } else if (this.state.isUploading) {
       title = "Importing NML";
     }
+    const { groupToDelete } = this.state;
 
     return (
       <div id="tree-list" className="info-tab-content">
@@ -267,7 +471,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
           <ButtonComponent onClick={this.props.onCreateTree} title="Create Tree">
             <i className="fa fa-plus" /> Create
           </ButtonComponent>
-          <ButtonComponent onClick={this.deleteTree} title="Delete Tree">
+          <ButtonComponent onClick={this.handleDelete} title="Delete Tree">
             <i className="fa fa-trash-o" /> Delete
           </ButtonComponent>
           <ButtonComponent onClick={this.toggleAllTrees} title="Toggle Visibility of All Trees">
@@ -303,10 +507,21 @@ class TreesTabView extends React.PureComponent<Props, State> {
             </ButtonComponent>
           </Dropdown>
         </InputGroup>
-
         <ul style={{ flex: "1 1 auto", overflow: "auto", margin: 0, padding: 0 }}>
+          <div className="tree-hierarchy-header">{this.getSelectedTreesAlert()}</div>
           {this.getTreesComponents()}
         </ul>
+        {groupToDelete !== null ? (
+          <DeleteGroupModalView
+            onCancel={this.hideDeleteGroupsModal}
+            onJustDeleteGroup={() => {
+              this.deleteGroupAndHideModal(groupToDelete, false);
+            }}
+            onDeleteGroupAndTrees={() => {
+              this.deleteGroupAndHideModal(groupToDelete, true);
+            }}
+          />
+        ) : null}
       </div>
     );
   }
@@ -340,11 +555,26 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onDeleteTree() {
     dispatch(deleteTreeAsUserAction());
   },
+  onDeleteMultipleTrees(treeIds) {
+    dispatch(deleteMultipleTreesAsUserAction(treeIds));
+  },
+  onSetTreeGroup(groupId, treeId) {
+    dispatch(setTreeGroupAction(groupId, treeId));
+  },
+  onUpdateTreeGroups(treeGroups) {
+    dispatch(setTreeGroupsAction(treeGroups));
+  },
   onChangeTreeName(name) {
     dispatch(setTreeNameAction(name));
   },
   onSetActiveTree(treeId) {
     dispatch(setActiveTreeAction(treeId));
+  },
+  onDeselectActiveTree() {
+    dispatch(deselectActiveTreeAction());
+  },
+  onDeselectActiveGroup() {
+    dispatch(deselectActiveGroupAction());
   },
   showDropzoneModal() {
     dispatch(setDropzoneModalVisibilityAction(true));

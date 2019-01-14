@@ -128,11 +128,13 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
           organizationNameOpt <- assertAllOnSameOrganization(parseSuccesses.flatMap(s => s.organizationName)) ?~> "nml.file.differentDatasets"
           organizationIdOpt <- Fox.runOptional(organizationNameOpt) {
             organizationDAO.findOneByName(_).map(_._id)
-          }
+          } ?~> Messages("dataSet.noAccess", dataSetName)
           organizationId <- Fox.fillOption(organizationIdOpt) {
             dataSetDAO.getOrganizationForDataSet(dataSetName)
-          }
-          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> "dataSet.noAccess"
+          } ?~> Messages("dataSet.noAccess", dataSetName)
+          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> Messages(
+            "dataSet.noAccess",
+            dataSetName)
           tracingStoreClient <- tracingStoreService.clientFor(dataSet)
           volumeTracingIdOpt <- Fox.runOptional(volumeTracingsWithDataLocations.headOption) { v =>
             for {

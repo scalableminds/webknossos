@@ -13,8 +13,7 @@ import {
   getZoomedMatrix,
 } from "oxalis/model/accessors/flycam_accessor";
 import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import { M4x4, V3 } from "libs/mjs";
-import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
+import { M4x4 } from "libs/mjs";
 import { getResolutions, getByteCount } from "oxalis/model/accessors/dataset_accessor";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";

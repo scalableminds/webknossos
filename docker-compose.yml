@@ -67,9 +67,9 @@ services:
       - -Dtracingstore.fossildb.address=fossildb
       - -Ddatastore.oxalis.uri=webknossos:9000
     links:
-      - fossildb
+      - fossildb-persisted:fossildb
     depends_on:
-      fossildb:
+      fossildb-persisted:
         condition: service_healthy
 
   # Development

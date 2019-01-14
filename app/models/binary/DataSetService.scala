@@ -32,6 +32,8 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                dataSetLastUsedTimesDAO: DataSetLastUsedTimesDAO,
                                dataSetDataLayerDAO: DataSetDataLayerDAO,
                                teamDAO: TeamDAO,
+                               publicationDAO: PublicationDAO,
+                               publicationService: PublicationService,
                                dataStoreService: DataStoreService,
                                teamService: TeamService,
                                userService: UserService,
@@ -63,6 +65,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
               newId,
               dataStore.name,
               organization._id,
+              None,
               None,
               None,
               None,
@@ -265,6 +268,8 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       dataStore <- dataStoreFor(dataSet)
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
       dataSource <- dataSourceFor(dataSet, Some(organization), skipResolutions)
+      publicationOpt <- Fox.runOptional(dataSet._publication)(publicationDAO.findOne(_))
+      publicationJson <- Fox.runOptional(publicationOpt)(publicationService.publicWrites(_))
     } yield {
       Json.obj(
         "name" -> dataSet.name,
@@ -281,6 +286,8 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         "lastUsedByUser" -> lastUsedByUser,
         "logoUrl" -> logoUrl,
         "sortingKey" -> dataSet.sortingKey,
+        "details" -> dataSet.details,
+        "publication" -> publicationJson,
         "isForeign" -> dataStore.isForeign
       )
     }

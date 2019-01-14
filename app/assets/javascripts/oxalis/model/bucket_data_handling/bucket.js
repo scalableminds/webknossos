@@ -33,7 +33,7 @@ const warnAboutDownsamplingRGB = _.once(() =>
 
 export const bucketDebuggingFlags = {
   // DEBUG flag for visualizing buckets which are passed to the GPU
-  visualizeBucketsOnGPU: true,
+  visualizeBucketsOnGPU: false,
   // DEBUG flag for visualizing buckets which are prefetched
   visualizePrefetchedBuckets: false,
 };

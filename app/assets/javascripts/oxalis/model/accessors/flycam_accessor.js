@@ -175,6 +175,7 @@ export function getRequestLogZoomStep(state: OxalisState): number {
     state.dataset.dataSource.scale,
     getResolutions(state.dataset),
   );
+  const maxLogZoomStep = Math.log2(getMaxZoomStep(state.dataset));
 
   // Linearly search for the resolution index, for which the zoomFactor
   // is acceptable.
@@ -182,10 +183,11 @@ export function getRequestLogZoomStep(state: OxalisState): number {
     maximumZoomSteps,
     maximumZoomStep => state.flycam.zoomStep <= maximumZoomStep,
   );
+  if (zoomStep === -1) {
+    return maxLogZoomStep;
+  }
 
   const qualityAdaptedZoomStep = zoomStep + state.datasetConfiguration.quality;
-
-  const maxLogZoomStep = Math.log2(getMaxZoomStep(state.dataset));
   const min = Math.min(state.datasetConfiguration.quality, maxLogZoomStep);
   return clamp(min, qualityAdaptedZoomStep, maxLogZoomStep);
 }

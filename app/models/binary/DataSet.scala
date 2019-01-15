@@ -35,6 +35,7 @@ case class DataSet(
     _id: ObjectId,
     _dataStore: String,
     _organization: ObjectId,
+    _publication: Option[ObjectId],
     defaultConfiguration: Option[DataSetConfiguration] = None,
     description: Option[String] = None,
     displayName: Option[String] = None,
@@ -46,6 +47,7 @@ case class DataSet(
     status: String,
     logoUrl: Option[String],
     sortingKey: Long = System.currentTimeMillis(),
+    details: Option[JsObject] = None,
     created: Long = System.currentTimeMillis(),
     isDeleted: Boolean = false
 ) extends FoxImplicits {
@@ -80,11 +82,13 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
       scale <- parseScaleOpt(r.scale)
       defaultConfigurationOpt <- Fox.runOptional(r.defaultconfiguration)(
         JsonHelper.parseJsonToFox[DataSetConfiguration](_))
+      details <- Fox.runOptional(r.details)(JsonHelper.parseJsonToFox[JsObject](_))
     } yield {
       DataSet(
         ObjectId(r._Id),
         r._Datastore.trim,
         ObjectId(r._Organization),
+        r._Publication.map(ObjectId(_)),
         defaultConfigurationOpt,
         r.description,
         r.displayname,
@@ -96,6 +100,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
         r.status,
         r.logourl,
         r.sortingkey.getTime,
+        details,
         r.created.getTime,
         r.isdeleted
       )
@@ -215,12 +220,16 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
 
   def insertOne(d: DataSet)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val defaultConfiguration: Option[String] = d.defaultConfiguration.map(c => Json.toJson(c.configuration).toString)
+    val details: Option[String] = d.details.map(_.toString)
     for {
-      _ <- run(sqlu"""insert into webknossos.dataSets(_id, _dataStore, _organization, defaultConfiguration, description, displayName, isPublic, isUsable, name, scale, status, sharingToken, sortingKey, created, isDeleted)
-               values(${d._id.id}, ${d._dataStore}, ${d._organization.id}, #${optionLiteral(
-        defaultConfiguration.map(sanitize))}, ${d.description}, ${d.displayName}, ${d.isPublic}, ${d.isUsable},
+      _ <- run(
+        sqlu"""insert into webknossos.dataSets(_id, _dataStore, _organization, _publication, defaultConfiguration, description, displayName,
+                                                             isPublic, isUsable, name, scale, status, sharingToken, sortingKey, details, created, isDeleted)
+               values(${d._id.id}, ${d._dataStore}, ${d._organization.id}, #${optionLiteral(d._publication.map(_.id))}, #${optionLiteral(
+          defaultConfiguration.map(sanitize))}, ${d.description}, ${d.displayName}, ${d.isPublic}, ${d.isUsable},
                       ${d.name}, #${optionLiteral(d.scale.map(s => writeScaleLiteral(s)))}, ${d.status
-        .take(1024)}, ${d.sharingToken}, ${new java.sql.Timestamp(d.sortingKey)}, ${new java.sql.Timestamp(d.created)}, ${d.isDeleted})
+          .take(1024)}, ${d.sharingToken}, ${new java.sql.Timestamp(d.sortingKey)}, #${optionLiteral(
+          details.map(sanitize))}, ${new java.sql.Timestamp(d.created)}, ${d.isDeleted})
             """)
     } yield ()
   }

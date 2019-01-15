@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(36);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(37);
 COMMIT TRANSACTION;
 
 CREATE TABLE webknossos.analytics(
@@ -68,10 +68,21 @@ CREATE TABLE webknossos.meshes(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
+CREATE TABLE webknossos.publications(
+  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  publicationDate TIMESTAMPTZ,
+  imageUrl VARCHAR(2048),
+  title VARCHAR(2048),
+  details VARCHAR(4096),
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT false
+);
+
 CREATE TABLE webknossos.dataSets(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   _dataStore CHAR(256) NOT NULL,
   _organization CHAR(24) NOT NULL,
+  _publication CHAR(24),
   defaultConfiguration JSONB,
   description TEXT,
   displayName VARCHAR(256),
@@ -83,6 +94,7 @@ CREATE TABLE webknossos.dataSets(
   sharingToken CHAR(256),
   logoUrl VARCHAR(2048),
   sortingKey TIMESTAMPTZ NOT NULL,
+  details JSONB,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   UNIQUE (name, _organization)
@@ -298,6 +310,7 @@ INSERT INTO webknossos.maintenance(maintenanceExpirationTime) values('2000-01-01
 CREATE VIEW webknossos.analytics_ AS SELECT * FROM webknossos.analytics WHERE NOT isDeleted;
 CREATE VIEW webknossos.annotations_ AS SELECT * FROM webknossos.annotations WHERE NOT isDeleted;
 CREATE VIEW webknossos.meshes_ AS SELECT * FROM webknossos.meshes WHERE NOT isDeleted;
+CREATE VIEW webknossos.publications_ AS SELECT * FROM webknossos.publications WHERE NOT isDeleted;
 CREATE VIEW webknossos.dataSets_ AS SELECT * FROM webknossos.dataSets WHERE NOT isDeleted;
 CREATE VIEW webknossos.dataStores_ AS SELECT * FROM webknossos.dataStores WHERE NOT isDeleted;
 CREATE VIEW webknossos.tracingStores_ AS SELECT * FROM webknossos.tracingStores WHERE NOT isDeleted;

@@ -107,7 +107,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
                 if (version + 1 == updateGroup.version || freezeVersions) {
                   tracingService.handleUpdateGroup(tracingId, updateGroup, version).map(_ => if (freezeVersions) version else updateGroup.version)
                 } else {
-                  Failure(s"Incorrect version. Expected: ${version + 1}; Got: ${updateGroup.version}")
+                  Failure(s"Incorrect version. Expected: ${version + 1}; Got: ${updateGroup.version}") ~> CONFLICT
                 }
               }
             }

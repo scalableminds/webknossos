@@ -699,12 +699,12 @@ export function getDatasetConfiguration(datasetId: APIDatasetId): Promise<Object
 export function updateDatasetConfiguration(
   datasetId: APIDatasetId,
   datasetConfig: DatasetConfiguration,
-  optOptions: Object,
+  options?: RequestOptions = {},
 ): Object {
   return Request.sendJSONReceiveJSON(
     `/api/dataSetConfigurations/${datasetId.owningOrganization}/${datasetId.name}`,
     {
-      ...optOptions,
+      ...options,
       method: "PUT",
       data: datasetConfig,
     },

@@ -1,5 +1,6 @@
 // @flow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
+import type { DatasetConfiguration } from "oxalis/store";
 import anyTest, { type TestInterface } from "ava";
 import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
 import path from "path";
@@ -79,9 +80,17 @@ const viewOverrides: { [key: string]: string } = {
   ROI2017_wkw_fallback: "#535,536,600,0,1.18",
 };
 
-const datasetConfigOverrides: { [key: string]: string } = {
-  ROI2017_wkw_fallback:
-    '{"fourBit":false,"interpolation":true,"layers":{"color":{"color":[255,255,255],"contrast":1,"brightness":0}},"quality":0,"segmentationOpacity":0,"highlightHoveredCellId":true,"renderIsosurfaces":false,"renderMissingDataBlack":false}',
+const datasetConfigOverrides: { [key: string]: DatasetConfiguration } = {
+  ROI2017_wkw_fallback: {
+    fourBit: false,
+    interpolation: true,
+    layers: { color: { color: [255, 255, 255], contrast: 1, brightness: 0 } },
+    quality: 0,
+    segmentationOpacity: 0,
+    highlightHoveredCellId: true,
+    renderIsosurfaces: false,
+    renderMissingDataBlack: false,
+  },
 };
 
 datasetNames.map(async datasetName => {
@@ -92,7 +101,7 @@ datasetNames.map(async datasetName => {
       URL,
       datasetId,
       viewOverrides[datasetName],
-      JSON.parse(datasetConfigOverrides[datasetName]),
+      datasetConfigOverrides[datasetName],
     );
     const changedPixels = await compareScreenshot(
       screenshot,

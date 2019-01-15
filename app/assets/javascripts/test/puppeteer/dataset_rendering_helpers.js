@@ -2,6 +2,7 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}], no-await-in-loop: 0 */
 import urljoin from "url-join";
 
+import type { DatasetConfiguration } from "oxalis/store";
 import type { Page } from "puppeteer";
 import mergeImg from "merge-img";
 import pixelmatch from "pixelmatch";
@@ -32,7 +33,7 @@ export async function screenshotDataset(
   baseUrl: string,
   datasetId: APIDatasetId,
   optionalViewOverride: ?string,
-  optionalDatasetConfigOverride: ?string,
+  optionalDatasetConfigOverride: ?DatasetConfiguration,
 ): Promise<Screenshot> {
   const options = getDefaultRequestOptions(baseUrl);
   const createdExplorational = await createExplorational(datasetId, "skeleton", false, options);

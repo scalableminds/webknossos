@@ -131,6 +131,7 @@ class Skeleton {
     );
 
     const nodeMaterial = new NodeShader(this.treeColorTexture).getMaterial();
+    nodeMaterial.transparent = true;
     const edgeMaterial = new EdgeShader(this.treeColorTexture).getMaterial();
 
     // delete actual GPU buffers in case there were any

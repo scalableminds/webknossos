@@ -8,6 +8,11 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 -
 
 ### Postgres Evolutions:
+-
+
+
+## [19.01.0](https://github.com/scalableminds/webknossos/releases/tag/19.01.0) - 2019-01-14
+### Postgres Evolutions:
 - [036-add-lastTaskTypeId-to-user.sql](conf/evolutions/036-add-lastTaskTypeId-to-user.sql)
 
 

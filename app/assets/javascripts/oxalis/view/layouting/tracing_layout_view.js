@@ -7,9 +7,12 @@ import { Layout, Icon } from "antd";
 import { connect } from "react-redux";
 import { withRouter } from "react-router-dom";
 import * as React from "react";
+import classNames from "classnames";
+import type { Dispatch } from "redux";
 
 import { ArbitraryViewport, type Mode, OrthoViews } from "oxalis/constants";
 import type { OxalisState, TracingTypeTracing, TraceOrViewCommand } from "oxalis/store";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import AbstractTreeTabView from "oxalis/view/right-menu/abstract_tree_tab_view";
 import ActionBarView from "oxalis/view/action_bar_view";
 import ButtonComponent from "oxalis/view/components/button_component";
@@ -42,11 +45,14 @@ type StateProps = {
   isUpdateTracingAllowed: boolean,
   showVersionRestore: boolean,
   storedLayouts: Object,
+  isDatasetOnScratchVolume: boolean,
+  autoSaveLayouts: boolean,
 };
 
 type Props = StateProps & {
   initialTracingType: TracingTypeTracing,
   initialCommandType: TraceOrViewCommand,
+  setAutoSaveLayouts: boolean => void,
 };
 
 type State = {
@@ -65,6 +71,9 @@ const GOLDEN_LAYOUT_ADAPTER_STYLE = {
 };
 
 class TracingLayoutView extends React.PureComponent<Props, State> {
+  currentLayoutConfig: Object;
+  currentLayoutName: string;
+
   constructor(props: Props) {
     super(props);
     const layoutType = determineLayout(this.props.initialCommandType.type, this.props.viewMode);
@@ -104,8 +113,19 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
   onLayoutChange = (layoutConfig, layoutName) => {
     recalculateInputCatcherSizes();
     window.needsRerender = true;
+    this.currentLayoutConfig = layoutConfig;
+    this.currentLayoutName = layoutName;
+    if (this.props.autoSaveLayouts) {
+      this.saveCurrentLayout();
+    }
+  };
+
+  saveCurrentLayout = () => {
+    if (this.currentLayoutConfig == null || this.currentLayoutName == null) {
+      return;
+    }
     const layoutKey = determineLayout(this.props.initialCommandType.type, this.props.viewMode);
-    storeLayoutConfig(layoutConfig, layoutKey, layoutName);
+    storeLayoutConfig(this.currentLayoutConfig, layoutKey, this.currentLayoutName);
   };
 
   getLayoutNamesFromCurrentView = (layoutKey): Array<string> =>
@@ -114,7 +134,8 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
   render() {
     const layoutType = determineLayout(this.props.initialCommandType.type, this.props.viewMode);
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
-    const { displayScalebars } = this.props;
+    const { displayScalebars, isDatasetOnScratchVolume } = this.props;
+    const headerClassName = classNames({ construction: isDatasetOnScratchVolume });
 
     return (
       <NmlUploadZoneContainer onImport={importNmls} isAllowed={this.props.isUpdateTracingAllowed}>
@@ -124,18 +145,26 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
         />
 
         <Layout className="tracing-layout">
-          <Header style={{ flex: "0 1 auto", zIndex: 210, height: headerHeight }}>
+          <Header
+            className={headerClassName}
+            style={{ flex: "0 1 auto", zIndex: 210, height: headerHeight }}
+          >
             <ButtonComponent onClick={this.handleSettingsCollapse}>
               <Icon type={this.state.isSettingsCollapsed ? "menu-unfold" : "menu-fold"} />
               <span className="hide-on-small-screen">Settings</span>
             </ButtonComponent>
             <ActionBarView
-              storedLayoutNamesForView={currentLayoutNames}
-              activeLayout={this.state.activeLayout}
-              layoutKey={layoutType}
-              setCurrentLayout={layoutName => {
-                this.setState({ activeLayout: layoutName });
-                setActiveLayout(layoutType, layoutName);
+              layoutProps={{
+                storedLayoutNamesForView: currentLayoutNames,
+                activeLayout: this.state.activeLayout,
+                layoutKey: layoutType,
+                setCurrentLayout: layoutName => {
+                  this.setState({ activeLayout: layoutName });
+                  setActiveLayout(layoutType, layoutName);
+                },
+                saveCurrentLayout: this.saveCurrentLayout,
+                setAutoSaveLayouts: this.props.setAutoSaveLayouts,
+                autoSaveLayouts: this.props.autoSaveLayouts,
               }}
             />
           </Header>
@@ -215,14 +244,25 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
   }
 }
 
+const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
+  setAutoSaveLayouts(value: boolean) {
+    dispatch(updateUserSettingAction("autoSaveLayouts", value));
+  },
+});
+
 function mapStateToProps(state: OxalisState): StateProps {
   return {
     viewMode: state.temporaryConfiguration.viewMode,
     displayScalebars: state.userConfiguration.displayScalebars,
+    autoSaveLayouts: state.userConfiguration.autoSaveLayouts,
     isUpdateTracingAllowed: state.tracing.restrictions.allowUpdate,
     showVersionRestore: state.uiInformation.showVersionRestore,
     storedLayouts: state.uiInformation.storedLayouts,
+    isDatasetOnScratchVolume: state.dataset.dataStore.isScratch,
   };
 }
 
-export default connect(mapStateToProps)(withRouter(TracingLayoutView));
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps,
+)(withRouter(TracingLayoutView));

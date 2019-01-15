@@ -88,6 +88,10 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.delete_tree": "Do you really want to delete the whole tree?",
   "tracing.delete_tree_with_initial_node":
     "This tree contains the initial node. Do you really want to delete the whole tree?",
+  "tracing.delete_mulitple_trees": _.template(
+    "You have <%- countOfTrees %> trees selected, do you really want to delete all those trees?",
+  ),
+  "tracing.group_deletion_message": "Do you want to delete the selected group?",
   "tracing.merged": "Merging successfully done",
   "tracing.merged_with_redirect":
     "Merging successfully done. You will be redirected to the new annotation.",
@@ -140,6 +144,8 @@ In order to restore the current window, a reload is necessary.`,
   "dataset.import.required.zipFile": "Please select a file to upload.",
   "dataset.import.invalid_fields": "Please check that all form fields are valid.",
   "dataset.unique_layer_names": "The layer names provided by the dataset are not unique.",
+  "dataset.is_scratch":
+    "This dataset location is marked as 'scratch' and meant for testing only. Please move this dataset to a permanent storage location and reimport it.",
   "annotation.finish": "Are you sure you want to permanently finish this tracing?",
   "annotation.was_finished": "Annotation was archived",
   "annotation.was_re_opened": "Annotation was reopened",

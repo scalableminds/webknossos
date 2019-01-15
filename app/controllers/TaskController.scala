@@ -300,16 +300,18 @@ class TaskController @Inject()(annotationService: AnnotationService,
   }
 
   def request = sil.SecuredAction.async { implicit request =>
-    val user = request.identity
-    for {
-      teams <- getAllowedTeamsForNextTask(user)
-      (task, initializingAnnotationId) <- taskDAO.assignNext(user._id, teams) ?~> "task.unavailable"
-      insertedAnnotationBox <- annotationService.createAnnotationFor(user, task, initializingAnnotationId).futureBox
-      _ <- annotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
-      annotation <- insertedAnnotationBox.toFox
-      annotationJSON <- annotationService.publicWrites(annotation, Some(user))
-    } yield {
-      JsonOk(annotationJSON, Messages("task.assigned"))
+    log {
+      val user = request.identity
+      for {
+        teams <- getAllowedTeamsForNextTask(user)
+        (task, initializingAnnotationId) <- taskDAO.assignNext(user._id, teams) ?~> "task.unavailable"
+        insertedAnnotationBox <- annotationService.createAnnotationFor(user, task, initializingAnnotationId).futureBox
+        _ <- annotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
+        annotation <- insertedAnnotationBox.toFox
+        annotationJSON <- annotationService.publicWrites(annotation, Some(user))
+      } yield {
+        JsonOk(annotationJSON, Messages("task.assigned"))
+      }
     }
   }
 

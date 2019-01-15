@@ -36,15 +36,22 @@
   background-color: #e8e8e8;
   position: relative;
 
-  .dataset-thumbnail-image {
-    transition: all 0.3s ease-in-out;
-  }
-
   @media @smartphones {
     height: 55%;
     width: 100%;
     display: block;
   }
+}
+
+.dataset-thumbnail-image {
+  transition: all 0.3s ease-in-out;
+  &.segmentation {
+    opacity: 0;
+  }
+}
+
+.spotlight-item-card:hover .dataset-thumbnail-image.segmentation {
+  opacity: 0.2;
 }
 
 .dataset-description {

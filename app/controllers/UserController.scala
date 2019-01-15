@@ -9,13 +9,13 @@ import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.team._
 import models.user._
 import models.user.time._
-import oxalis.security.WkEnv
+import oxalis.security.{UserAwareRequestLogging, WkEnv}
 import com.mohiva.play.silhouette.api.Silhouette
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Json._
 import play.api.libs.json._
-import play.api.mvc.PlayBodyParsers
+import play.api.mvc._
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -34,42 +34,50 @@ class UserController @Inject()(userService: UserService,
   val defaultAnnotationLimit = 1000
 
   def current = sil.SecuredAction.async { implicit request =>
-    for {
-      userJs <- userService.publicWrites(request.identity, request.identity)
-    } yield Ok(userJs)
+    log {
+      for {
+        userJs <- userService.publicWrites(request.identity, request.identity)
+      } yield Ok(userJs)
+    }
   }
 
   def user(userId: String) = sil.SecuredAction.async { implicit request =>
-    for {
-      userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
-      user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
-      _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed"
-      js <- userService.publicWrites(user, request.identity)
-    } yield Ok(js)
-  }
-
-  def annotations(isFinished: Option[Boolean], limit: Option[Int]) = sil.SecuredAction.async { implicit request =>
-    for {
-      annotations <- annotationDAO.findAllFor(request.identity._id,
-                                              isFinished,
-                                              AnnotationType.Explorational,
-                                              limit.getOrElse(defaultAnnotationLimit))
-      jsonList <- Fox.serialCombined(annotations)(a => annotationService.compactWrites(a))
-    } yield {
-      Ok(Json.toJson(jsonList))
+    log {
+      for {
+        userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+        user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
+        _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed"
+        js <- userService.publicWrites(user, request.identity)
+      } yield Ok(js)
     }
   }
 
-  def tasks(isFinished: Option[Boolean], limit: Option[Int]) = sil.SecuredAction.async { implicit request =>
-    for {
-      annotations <- annotationDAO.findAllFor(request.identity._id,
-                                              isFinished,
-                                              AnnotationType.Task,
-                                              limit.getOrElse(defaultAnnotationLimit))
-      jsonList <- Fox.serialCombined(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
-    } yield {
-      Ok(Json.toJson(jsonList))
+  def annotations(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int] = None) =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        annotations <- annotationDAO.findAllFor(request.identity._id,
+                                                isFinished,
+                                                AnnotationType.Explorational,
+                                                limit.getOrElse(defaultAnnotationLimit),
+                                                pageNumber.getOrElse(0))
+        jsonList <- Fox.serialCombined(annotations)(a => annotationService.compactWrites(a))
+      } yield {
+        Ok(Json.toJson(jsonList))
+      }
     }
+
+  def tasks(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int] = None) = sil.SecuredAction.async {
+    implicit request =>
+      for {
+        annotations <- annotationDAO.findAllFor(request.identity._id,
+                                                isFinished,
+                                                AnnotationType.Task,
+                                                limit.getOrElse(defaultAnnotationLimit),
+                                                pageNumber.getOrElse(0))
+        jsonList <- Fox.serialCombined(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
+      } yield {
+        Ok(Json.toJson(jsonList))
+      }
   }
 
   def userLoggedTime(userId: String) = sil.SecuredAction.async { implicit request =>
@@ -124,8 +132,8 @@ class UserController @Inject()(userService: UserService,
       .map(loggedTime => Ok(Json.toJson(loggedTime)))
   }
 
-  def userAnnotations(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = sil.SecuredAction.async {
-    implicit request =>
+  def userAnnotations(userId: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int] = None) =
+    sil.SecuredAction.async { implicit request =>
       for {
         userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
         user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
@@ -133,15 +141,16 @@ class UserController @Inject()(userService: UserService,
         annotations <- annotationDAO.findAllFor(userIdValidated,
                                                 isFinished,
                                                 AnnotationType.Explorational,
-                                                limit.getOrElse(defaultAnnotationLimit))
+                                                limit.getOrElse(defaultAnnotationLimit),
+                                                pageNumber.getOrElse(0))
         jsonList <- Fox.serialCombined(annotations)(a => annotationService.compactWrites(a))
       } yield {
         Ok(Json.toJson(jsonList))
       }
-  }
+    }
 
-  def userTasks(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = sil.SecuredAction.async {
-    implicit request =>
+  def userTasks(userId: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int] = None) =
+    sil.SecuredAction.async { implicit request =>
       for {
         userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
         user <- userDAO.findOne(userIdValidated) ?~> "user.notFound"
@@ -149,12 +158,13 @@ class UserController @Inject()(userService: UserService,
         annotations <- annotationDAO.findAllFor(userIdValidated,
                                                 isFinished,
                                                 AnnotationType.Task,
-                                                limit.getOrElse(defaultAnnotationLimit))
+                                                limit.getOrElse(defaultAnnotationLimit),
+                                                pageNumber.getOrElse(0))
         jsonList <- Fox.serialCombined(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
       } yield {
         Ok(Json.toJson(jsonList))
       }
-  }
+    }
 
   def loggedTime = sil.SecuredAction.async { implicit request =>
     for {

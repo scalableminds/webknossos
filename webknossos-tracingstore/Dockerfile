@@ -17,5 +17,11 @@ RUN chown -R webknossos . \
 
 USER webknossos
 
+HEALTHCHECK \
+  --interval=1m --timeout=5s --retries=10 \
+  CMD curl --fail http://localhost:9050/tracings/health || exit 1
+
+EXPOSE 9050
+
 ENTRYPOINT ["bin/webknossos-tracingstore"]
 CMD ["-J-Xmx20G", "-J-Xms1G", "-Dconfig.file=conf/standalone-tracingstore.conf", "-Dlogger.file=conf/logback-docker.xml", "-Dlogback.configurationFile=conf/logback-docker.xml", "-Dhttp.port=9090", "-Dhttp.address=0.0.0.0"]

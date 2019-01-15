@@ -453,16 +453,20 @@ export async function getUsersWithActiveTasks(projectName: string): Promise<Arra
 // ### Annotations
 export function getCompactAnnotations(
   isFinished: boolean,
+  pageNumber: number = 0,
 ): Promise<Array<APIAnnotationTypeCompact>> {
-  return Request.receiveJSON(`/api/user/annotations?isFinished=${isFinished.toString()}`);
+  return Request.receiveJSON(
+    `/api/user/annotations?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`,
+  );
 }
 
 export function getCompactAnnotationsForUser(
   userId: string,
   isFinished: boolean,
+  pageNumber: number = 0,
 ): Promise<Array<APIAnnotationTypeCompact>> {
   return Request.receiveJSON(
-    `/api/users/${userId}/annotations?isFinished=${isFinished.toString()}`,
+    `/api/users/${userId}/annotations?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`,
   );
 }
 
@@ -699,10 +703,12 @@ export function getDatasetConfiguration(datasetId: APIDatasetId): Promise<Object
 export function updateDatasetConfiguration(
   datasetId: APIDatasetId,
   datasetConfig: DatasetConfiguration,
+  options?: RequestOptions = {},
 ): Object {
   return Request.sendJSONReceiveJSON(
     `/api/dataSetConfigurations/${datasetId.owningOrganization}/${datasetId.name}`,
     {
+      ...options,
       method: "PUT",
       data: datasetConfig,
     },
@@ -774,8 +780,7 @@ export async function isDatasetNameValid(datasetId: APIDatasetId): Promise<?stri
     );
     return null;
   } catch (ex) {
-    const json = JSON.parse(await ex.text());
-    return json.messages.map(msg => Object.values(msg)[0]).join(". ");
+    return ex.messages.map(msg => Object.values(msg)[0]).join(". ");
   }
 }
 
@@ -1002,6 +1007,7 @@ export function getMeshData(id: string): Promise<ArrayBuffer> {
 }
 
 export function computeIsosurface(
+  datastoreUrl: string,
   datasetId: APIDatasetId,
   layer: DataLayer,
   position: Vector3,
@@ -1012,7 +1018,7 @@ export function computeIsosurface(
 ): Promise<ArrayBuffer> {
   return doWithToken(token =>
     Request.sendJSONReceiveArraybuffer(
-      `/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${
+      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${
         layer.name
       }/isosurface?token=${token}`,
       {

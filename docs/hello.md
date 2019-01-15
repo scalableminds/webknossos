@@ -11,7 +11,7 @@ webKnossos is also a platform for [showcasing datasets](https://demo.webknossos.
 webKnossos: efficient online 3D data annotation for connectomics.  
 [Nature Methods (2017) DOI:10.1038/NMETH.4331.](https://www.nature.com/articles/nmeth.4331)
 
-![webKnossos logo](https://webknossos.brain.mpg.de/assets/images/oxalis.svg)
+![webKnossos logo](https://webknossos.org/images/oxalis.svg)
 
 ## Demo
 Dataset gallery: [https://demo.webknossos.org/](https://demo.webknossos.org/)  

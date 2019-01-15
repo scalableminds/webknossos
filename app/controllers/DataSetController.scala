@@ -91,7 +91,7 @@ class DataSetController @Inject()(userService: UserService,
                                                                                                   dataLayerName)
         image <- imageFromCacheIfPossible(dataSet)
       } yield {
-        Ok(image).as("image/jpeg")
+        Ok(image).as("image/jpeg").withHeaders(CACHE_CONTROL -> "public, max-age=86400")
       }
     }
 
@@ -129,10 +129,12 @@ class DataSetController @Inject()(userService: UserService,
       for {
         dataSets <- dataSetDAO.findAll ?~> "dataSet.list.failed"
         filtered <- filter.applyOn(dataSets)
-        requestingUserTeamMemberships <- Fox.runOptional(request.identity)(user =>
+        requestingUserTeamManagerMemberships <- Fox.runOptional(request.identity)(user =>
           userService.teamManagerMembershipsFor(user._id))
-        js <- Fox.serialCombined(filtered)(d =>
-          dataSetService.publicWrites(d, request.identity, skipResolutions = true, requestingUserTeamMemberships))
+        js <- Fox.serialCombined(filtered)(
+          d =>
+            dataSetService
+              .publicWrites(d, request.identity, skipResolutions = true, requestingUserTeamManagerMemberships))
       } yield {
         Ok(Json.toJson(js))
       }
@@ -154,16 +156,18 @@ class DataSetController @Inject()(userService: UserService,
 
   def read(organizationName: String, dataSetName: String, sharingToken: Option[String]) = sil.UserAwareAction.async {
     implicit request =>
-      val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
-      for {
-        dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(ctx) ?~> Messages(
-          "dataSet.notFound",
-          dataSetName)
-        _ <- Fox.runOptional(request.identity)(user =>
-          dataSetLastUsedTimesDAO.updateForDataSetAndUser(dataSet._id, user._id))
-        js <- dataSetService.publicWrites(dataSet, request.identity)
-      } yield {
-        Ok(Json.toJson(js))
+      log {
+        val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
+        for {
+          dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(ctx) ?~> Messages(
+            "dataSet.notFound",
+            dataSetName)
+          _ <- Fox.runOptional(request.identity)(user =>
+            dataSetLastUsedTimesDAO.updateForDataSetAndUser(dataSet._id, user._id))
+          js <- dataSetService.publicWrites(dataSet, request.identity)
+        } yield {
+          Ok(Json.toJson(js))
+        }
       }
   }
 

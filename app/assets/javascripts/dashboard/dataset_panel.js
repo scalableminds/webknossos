@@ -6,7 +6,11 @@ import _ from "lodash";
 
 import type { APIDataset } from "admin/api_flow_types";
 import { formatScale } from "libs/format_utils";
-import { getThumbnailURL, hasSegmentation } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getThumbnailURL,
+  hasSegmentation,
+  getSegmentationThumbnailURL,
+} from "oxalis/model/accessors/dataset_accessor";
 
 const columnSpan = { xs: 24, sm: 24, md: 24, lg: 12, xl: 12, xxl: 8 };
 const thumbnailDimension = 500;
@@ -57,10 +61,12 @@ function ThumbnailAndDescription({
   thumbnailURL,
   description,
   name,
+  segmentationThumbnailURL,
 }: {
   thumbnailURL: string,
   name: string,
   description: React.Element<*> | string,
+  segmentationThumbnailURL: ?string,
 }) {
   return (
     <React.Fragment>
@@ -74,6 +80,20 @@ function ThumbnailAndDescription({
             height: "100%",
           }}
         />
+        {segmentationThumbnailURL ? (
+          <div
+            className="dataset-thumbnail-image segmentation"
+            style={{
+              background: `url('${segmentationThumbnailURL}?w=${thumbnailDimension}&h=${thumbnailDimension}')`,
+              backgroundSize: "cover",
+              width: "100%",
+              height: "100%",
+              position: "absolute",
+              left: "0",
+              top: "0",
+            }}
+          />
+        ) : null}
       </span>
       <div className="dataset-description">
         <div className="description-flex">
@@ -91,6 +111,9 @@ function ThumbnailAndDescriptionFromDataset({ dataset }: { dataset: APIDataset }
       thumbnailURL={getThumbnailURL(dataset)}
       name={getDisplayName(dataset)}
       description={getDescription(dataset)}
+      segmentationThumbnailURL={
+        hasSegmentation(dataset) ? getSegmentationThumbnailURL(dataset) : null
+      }
     />
   );
 }
@@ -149,6 +172,9 @@ class DatasetPanel extends React.PureComponent<Props, State> {
           thumbnailURL={getThumbnailURL(datasets[0])}
           name={groupName}
           description={multiDescription}
+          segmentationThumbnailURL={
+            hasSegmentation(datasets[0]) ? getSegmentationThumbnailURL(datasets[0]) : null
+          }
         />
       </Card>
     );

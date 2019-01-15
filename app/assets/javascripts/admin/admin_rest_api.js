@@ -955,7 +955,7 @@ export function getExistingExperienceDomains(): Promise<ExperienceDomainList> {
 }
 
 export async function isInMaintenance(): Promise<boolean> {
-  const info = await Request.receiveJSON("/api/maintenance");
+  const info = await Request.receiveJSON("/api/maintenance", { doNotInvestigate: true });
   return info.isMaintenance;
 }
 

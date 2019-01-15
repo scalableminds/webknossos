@@ -305,7 +305,7 @@ export default class TextureBucketManager {
     if (z < 0) console.warn("z should be greater than 0. is currently:", z);
 
     // Even though, bucketsPerDim might be different in the fallback case,
-    // it's save to assume that the values would only be smaller (since
+    // it's safe to assume that the values would only be smaller (since
     // fallback data doesn't require more buckets than non-fallback).
     // Consequently, these values should be fine to address buckets.
     const [sx, sy, sz] = this.bucketsPerDimPerResolution[renderingZoomStep];

@@ -359,7 +359,7 @@ export class DataBucket {
       return;
     }
     const zoomStep = getRequestLogZoomStep(Store.getState());
-    if (true || this.zoomedAddress[3] === zoomStep) {
+    if (this.zoomedAddress[3] === zoomStep) {
       const resolutions = getResolutions(Store.getState().dataset);
       this.visualizedMesh = window.addBucketMesh(
         bucketPositionToGlobalAddress(this.zoomedAddress, resolutions),

@@ -453,16 +453,20 @@ export async function getUsersWithActiveTasks(projectName: string): Promise<Arra
 // ### Annotations
 export function getCompactAnnotations(
   isFinished: boolean,
+  pageNumber: number = 0,
 ): Promise<Array<APIAnnotationTypeCompact>> {
-  return Request.receiveJSON(`/api/user/annotations?isFinished=${isFinished.toString()}`);
+  return Request.receiveJSON(
+    `/api/user/annotations?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`,
+  );
 }
 
 export function getCompactAnnotationsForUser(
   userId: string,
   isFinished: boolean,
+  pageNumber: number = 0,
 ): Promise<Array<APIAnnotationTypeCompact>> {
   return Request.receiveJSON(
-    `/api/users/${userId}/annotations?isFinished=${isFinished.toString()}`,
+    `/api/users/${userId}/annotations?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`,
   );
 }
 
@@ -699,10 +703,12 @@ export function getDatasetConfiguration(datasetId: APIDatasetId): Promise<Object
 export function updateDatasetConfiguration(
   datasetId: APIDatasetId,
   datasetConfig: DatasetConfiguration,
+  options?: RequestOptions = {},
 ): Object {
   return Request.sendJSONReceiveJSON(
     `/api/dataSetConfigurations/${datasetId.owningOrganization}/${datasetId.name}`,
     {
+      ...options,
       method: "PUT",
       data: datasetConfig,
     },
@@ -951,7 +957,7 @@ export function getExistingExperienceDomains(): Promise<ExperienceDomainList> {
 }
 
 export async function isInMaintenance(): Promise<boolean> {
-  const info = await Request.receiveJSON("/api/maintenance");
+  const info = await Request.receiveJSON("/api/maintenance", { doNotInvestigate: true });
   return info.isMaintenance;
 }
 

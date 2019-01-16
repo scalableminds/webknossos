@@ -27,6 +27,7 @@ import { handleGenericError } from "libs/error_handling";
 import { jsonStringify } from "libs/utils";
 import Toast from "libs/toast";
 import messages from "messages";
+import { trackAction } from "oxalis/model/helpers/analytics";
 
 import { Hideable, confirmAsync, hasFormError } from "./helper_components";
 import DefaultConfigComponent from "./default_config_component";
@@ -241,6 +242,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       const verb = this.props.isEditingMode ? "updated" : "imported";
       Toast.success(`Successfully ${verb} ${this.props.datasetId.name}`);
       datasetCache.clear();
+      trackAction(`Dataset ${verb}`);
       this.props.onComplete();
     });
   };

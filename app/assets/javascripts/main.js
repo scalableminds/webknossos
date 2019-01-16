@@ -14,7 +14,7 @@ import ReactDOM from "react-dom";
 
 import { document } from "libs/window";
 import { getActiveUser } from "admin/admin_rest_api";
-import { googleAnalyticsLogClicks } from "oxalis/model/helpers/google_analytics_middleware";
+import { googleAnalyticsLogClicks } from "oxalis/model/helpers/analytics";
 import { load as loadFeatureToggles } from "features";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import ErrorHandling from "libs/error_handling";

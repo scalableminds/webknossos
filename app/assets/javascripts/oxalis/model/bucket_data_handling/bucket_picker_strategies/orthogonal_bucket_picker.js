@@ -2,13 +2,15 @@
 import PriorityQueue from "js-priority-queue";
 
 import type { APIDataset } from "admin/api_flow_types";
-import { type Area, getMaxBucketCountPerDim } from "oxalis/model/accessors/flycam_accessor";
+import {
+  type Area,
+  getMaxBucketCountPerDim,
+  getMaxBucketCountsForFallback,
+} from "oxalis/model/accessors/flycam_accessor";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
-import {
-  getResolutionsFactors,
-  zoomedAddressToAnotherZoomStep,
-} from "oxalis/model/helpers/position_converter";
+import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
+import { map3 } from "libs/utils";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import Dimensions from "oxalis/model/dimensions";
 import constants, {
@@ -20,41 +22,81 @@ import constants, {
 
 import { extraBucketPerEdge, extraBucketsPerDim } from "./orthogonal_bucket_picker_constants";
 
-function getUnzoomedBucketCountPerDim(
+/*
+  This bucket picker defines the functions calculateBucketCountPerDim and calculateTotalBucketCountForZoomLevel
+  which describe how many buckets are necessary to render data given a specific zoom factor and a specific magnification
+  index (resolution index).
+  Using these functions, the flycam accessors can determine when to use which magnification (depending on current
+  zoom level).
+  The rest of wk typically doesn't need to use these functions.
+*/
+
+/*
+  This function returns the amount of buckets (per dimension) which are necessary
+  to render data in the provided magnification **with a specific zoom factor**.
+  For example, the function would calculate how many buckets are necessary per dimension,
+  if we want to render data with a zoom value of 3.5 in mag2.
+  The function itself is not aware of fallback vs. non-fallback data rendering (however, the function
+  can be used to calculate bucketCounts for fallback and non-fallback scenarios).
+
+  Instead of this function, try to use getMaxBucketCountPerDim where possible, as that function
+  will pick the appropriate zoomFactor automatically.
+*/
+export function calculateBucketCountPerDim(
   dataSetScale: Vector3,
-  forFallback: boolean,
+  resolutionIndex: number,
+  resolutions: Array<Vector3>,
   zoomFactor: number,
 ): Vector3 {
-  const baseVoxelFactors = getBaseVoxelFactors(dataSetScale);
-  const necessaryVoxelsPerDim = baseVoxelFactors.map(f => f * constants.PLANE_WIDTH);
+  const addExtraBuckets = vec => map3(el => el + extraBucketsPerDim, vec);
 
-  const fallbackFactor = forFallback ? 0.5 : 1;
-  const unzoomedBucketCountPerDim = necessaryVoxelsPerDim.map(
+  const baseVoxelFactors = getBaseVoxelFactors(dataSetScale);
+  const necessaryVoxelsPerDim = map3(f => f * constants.PLANE_WIDTH, baseVoxelFactors);
+
+  const resolutionFactor = resolutions[resolutionIndex];
+  const bucketCountPerDim = map3(
     // As an example, even if the viewport width corresponds to exactly
     // 16 buckets, a slight offset can mean that we need one additional bucket,
     // from which we render only a small fraction. That's why 1 is added.
     // Math.ceil is important since a raw viewport width ~ 15.8 bucket should also
     // result in 17 buckets.
-    v => 1 + Math.ceil((zoomFactor * fallbackFactor * v) / constants.BUCKET_WIDTH),
+    (v, dim) => 1 + Math.ceil((zoomFactor * v) / (resolutionFactor[dim] * constants.BUCKET_WIDTH)),
+    necessaryVoxelsPerDim,
   );
-  return ((unzoomedBucketCountPerDim: any): Vector3);
+
+  return addExtraBuckets(bucketCountPerDim);
 }
 
-export const calculateUnzoomedBucketCount = (dataSetScale: Vector3, zoomFactor: number = 1) => {
-  // This function defines how many buckets this bucket picker needs at zoom level === 1.
-  // The returned value serves as an upper bound and influences which magnification is selected
-  // for a given zoom step.
-
+/*
+  This function calculates how many buckets this bucket picker would need when rendering data in
+  a specific magnification with a specific zoom factor.
+  The returned value serves as an upper bound and influences which magnification is selected
+  for a given zoom step.
+*/
+export const calculateTotalBucketCountForZoomLevel = (
+  dataSetScale: Vector3,
+  resolutionIndex: number,
+  resolutions: Array<Vector3>,
+  zoomFactor: number,
+) => {
   const calculateBucketCountForOrtho = ([x, y, z]) => {
     const xy = x * y;
     const xz = x * z - x;
     const yz = y * z - (y + z - 1);
     return xy + xz + yz;
   };
-  const bucketsPerDim = getUnzoomedBucketCountPerDim(dataSetScale, false, zoomFactor);
-  const fallbackBucketsPerDim = getUnzoomedBucketCountPerDim(dataSetScale, true, zoomFactor);
+  const bucketsPerDim = calculateBucketCountPerDim(
+    dataSetScale,
+    resolutionIndex,
+    resolutions,
+    zoomFactor,
+  );
 
-  const addExtraBuckets = vec => vec.map(el => el + extraBucketsPerDim);
+  const fallbackBucketsPerDim =
+    resolutionIndex + 1 < resolutions.length
+      ? calculateBucketCountPerDim(dataSetScale, resolutionIndex + 1, resolutions, zoomFactor)
+      : [0, 0, 0];
+
   const calculateAdditionalWSliceCount = ([x, y, z]) => {
     const xy = x * y - (x + y - 1);
     const xz = x * z - (2 * x + z - 2);
@@ -64,14 +106,19 @@ export const calculateUnzoomedBucketCount = (dataSetScale: Vector3, zoomFactor: 
 
   // For non-fallback buckets, we load two slices per plane (see usage of subBucketLocality)
   const normalBucketCount =
-    calculateBucketCountForOrtho(addExtraBuckets(bucketsPerDim)) +
-    calculateAdditionalWSliceCount(addExtraBuckets(bucketsPerDim));
-  const fallbackBucketCount = calculateBucketCountForOrtho(addExtraBuckets(fallbackBucketsPerDim));
+    calculateBucketCountForOrtho(bucketsPerDim) + calculateAdditionalWSliceCount(bucketsPerDim);
+  const fallbackBucketCount = calculateBucketCountForOrtho(fallbackBucketsPerDim);
 
   return normalBucketCount + fallbackBucketCount;
 };
 
 export const getAnchorPositionToCenterDistance = (bucketPerDim: number) =>
+  // Example I:
+  // - bucketPerDim is 17 (because the actual plane is 16 buckets wide and we need one extra bucket to render a "half bucket" on each side)
+  // --> the bucket distance between anchorPoint and center bucket is 8
+  // Example II:
+  // - bucketPerDim is 16 (because the actual plane is 15 buckets wide...)
+  // --> the bucket distance between anchorPoint and center bucket is 8
   Math.ceil((bucketPerDim - 1) / 2);
 
 export default function determineBucketsForOrthogonal(
@@ -123,12 +170,6 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
 ): void {
   const resolutions = getResolutions(dataset);
   const datasetScale = dataset.dataSource.scale;
-  const resolution = resolutions[logZoomStep];
-  const previousResolution = resolutions[logZoomStep - 1];
-
-  const resolutionChangeRatio = isFallback
-    ? getResolutionsFactors(resolution, previousResolution)
-    : [1, 1, 1];
 
   for (const planeId of OrthoViewValuesWithoutTDView) {
     const [u, v, w] = Dimensions.getIndices(planeId);
@@ -152,8 +193,11 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
       logZoomStep,
     );
 
-    const bucketsPerDim = getMaxBucketCountPerDim(datasetScale);
-    const renderedBucketsPerDimension = Math.ceil(bucketsPerDim[w] / resolutionChangeRatio[w]);
+    const bucketsPerDim = isFallback
+      ? getMaxBucketCountsForFallback(datasetScale, logZoomStep, resolutions)
+      : getMaxBucketCountPerDim(datasetScale, logZoomStep, resolutions);
+
+    const renderedBucketsPerDimension = bucketsPerDim[w];
 
     const topLeftBucket = zoomedAnchorPoint.slice();
     topLeftBucket[w] += getAnchorPositionToCenterDistance(renderedBucketsPerDimension);

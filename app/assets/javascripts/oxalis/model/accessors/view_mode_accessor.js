@@ -37,7 +37,7 @@ export function applyAspectRatioToWidth(aspectRatio: number, width: number): [nu
   const useWidth = ensureSmallerEdge ? aspectRatio >= 1 : aspectRatio < 1;
 
   const scaledWidth = width * (useWidth ? 1 : aspectRatio);
-  const scaledHeight = scaledWidth / (!useWidth ? aspectRatio : 1);
+  const scaledHeight = width / (!useWidth ? 1 : aspectRatio);
 
   return [scaledWidth, scaledHeight];
 }

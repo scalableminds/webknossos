@@ -113,7 +113,7 @@ export const POSITION_REF_REGEX = /#\(([0-9]+,[0-9]+,[0-9]+)\)/g;
 export const OUTER_CSS_BORDER = 2;
 const PLANE_WIDTH = 376;
 const VIEWPORT_WIDTH = PLANE_WIDTH;
-export const ensureSmallerEdge = false;
+export const ensureSmallerEdge = true;
 
 const Constants = {
   ARBITRARY_VIEW: 4,

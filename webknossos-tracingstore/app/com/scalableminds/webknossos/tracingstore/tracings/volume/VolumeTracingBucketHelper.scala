@@ -32,7 +32,7 @@ trait VolumeTracingBucketHelper extends WKWMortonHelper with KeyValueStoreImplic
     ).toFox.flatten
   }
 
-  def saveBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition, data: Array[Byte], version: Long): Fox[_] = {
+  def saveBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition, data: Array[Byte], version: Long): Fox[Unit] = {
     val key = buildBucketKey(dataLayer.name, bucket)
     volumeDataStore.put(key, version, data)
   }

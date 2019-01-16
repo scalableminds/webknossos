@@ -73,7 +73,7 @@ CREATE TABLE webknossos.publications(
   publicationDate TIMESTAMPTZ,
   imageUrl VARCHAR(2048),
   title VARCHAR(2048),
-  details VARCHAR(4096),
+  description TEXT,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );

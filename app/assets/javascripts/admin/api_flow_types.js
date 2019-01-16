@@ -80,7 +80,7 @@ export type APITeam = {
 
 type APIPublication = {
   +created: number,
-  +details: string,
+  +description: string,
   +id: string,
   +imageUrl: string,
   +publicationDate: number,

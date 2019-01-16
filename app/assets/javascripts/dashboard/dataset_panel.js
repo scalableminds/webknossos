@@ -175,7 +175,7 @@ class MultiDatasetCard extends React.PureComponent<MultiDatasetCardProps, MultiD
 
     const multiDescription = (
       <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-        <span style={{ marginBottom: 16 }}>{publication.details}</span>
+        <span style={{ marginBottom: 16 }}>{publication.description}</span>
         <div style={{ marginTop: "auto" }}>
           <span style={{ fontSize: 14, textTransform: "uppercase" }}>Published Datasets </span>
           <div className="mini-dataset-thumbnail-grid">

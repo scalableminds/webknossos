@@ -11,7 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Added
 
--
+- Added the possibility to disable that the current layout is saved automatically when changing it. Instead, the layout can be saved explicitly. [#3620](https://github.com/scalableminds/webknossos/pull/3620)
 
 ### Changed
 
@@ -19,7 +19,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Fixed
 
--
+- Fixed a rendering bug which caused data to be clipped in certain scenarios for datasets with anisotropic resolutions. [#3609](https://github.com/scalableminds/webknossos/pull/3609)
 
 ### Removed
 

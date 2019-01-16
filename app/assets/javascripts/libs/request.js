@@ -299,7 +299,7 @@ class Request {
             return Promise.reject(json);
           } catch (jsonError) {
             if (showErrorToast) Toast.error(text);
-            return Promise.reject(text);
+            return Promise.reject({"errors":[text], "status":error.status});
           }
         },
         textError => {

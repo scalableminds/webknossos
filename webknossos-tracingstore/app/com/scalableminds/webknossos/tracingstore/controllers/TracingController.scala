@@ -101,7 +101,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
           val latestStatistics = updateGroups.flatMap(_.stats).lastOption
           val currentVersion = tracingService.currentVersion(tracingId)
           val userToken = request.getQueryString("token")
-          //webKnossosServer.reportTracingUpdates(tracingId, timestamps, latestStatistics, userToken).flatMap { _ =>
+          webKnossosServer.reportTracingUpdates(tracingId, timestamps, latestStatistics, userToken).flatMap { _ =>
             updateGroups.foldLeft(currentVersion) { (previousVersion, updateGroup) =>
               previousVersion.flatMap { version =>
                 if (version + 1 == updateGroup.version || freezeVersions) {
@@ -110,7 +110,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
                   Failure(s"Incorrect version. Expected: ${version + 1}; Got: ${updateGroup.version}") ~> CONFLICT
                 }
               }
-            //}
+            }
           }.map(_ => Ok)
         }
       }

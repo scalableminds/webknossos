@@ -14,7 +14,7 @@ case class Publication(_id: ObjectId,
                        publicationDate: Option[Long],
                        imageUrl: Option[String],
                        title: Option[String],
-                       details: Option[String],
+                       description: Option[String],
                        created: Long = System.currentTimeMillis(),
                        isDeleted: Boolean = false)
 
@@ -26,7 +26,7 @@ class PublicationService @Inject()()(implicit ec: ExecutionContext) {
         "publicationDate" -> p.publicationDate,
         "imageUrl" -> p.imageUrl,
         "title" -> p.title,
-        "details" -> p.details,
+        "description" -> p.description,
         "created" -> p.created
       ))
 }
@@ -46,7 +46,7 @@ class PublicationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionConte
         r.publicationdate.map(_.getTime),
         r.imageurl,
         r.title,
-        r.details,
+        r.description,
         r.created.getTime,
         r.isdeleted
       )

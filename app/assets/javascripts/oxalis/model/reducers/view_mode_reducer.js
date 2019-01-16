@@ -120,23 +120,25 @@ function zoomTDView(
   const factor = Math.pow(0.9, value);
   const middleX = (camera.left + camera.right) / 2;
   const middleY = (camera.bottom + camera.top) / 2;
-  const size = getTDViewportSize();
+  const [width, height] = getTDViewportSize();
 
-  const baseOffset = (factor * size) / 2;
-  const baseDiff = baseOffset - size / 2;
+  const baseOffsetX = (factor * width) / 2;
+  const baseOffsetY = (factor * height) / 2;
+  const baseDiffX = baseOffsetX - width / 2;
+  const baseDiffY = baseOffsetY - height / 2;
 
   let offsetX = 0;
   let offsetY = 0;
   if (targetPosition != null) {
-    offsetX = ((targetPosition.x / curWidth) * 2 - 1) * -baseDiff;
-    offsetY = ((targetPosition.y / curHeight) * 2 - 1) * +baseDiff;
+    offsetX = ((targetPosition.x / curWidth) * 2 - 1) * -baseDiffX;
+    offsetY = ((targetPosition.y / curHeight) * 2 - 1) * +baseDiffY;
   }
 
   return setTDCameraReducer(state, {
-    left: middleX - baseOffset + offsetX,
-    right: middleX + baseOffset + offsetX,
-    top: middleY + baseOffset + offsetY,
-    bottom: middleY - baseOffset + offsetY,
+    left: middleX - baseOffsetX + offsetX,
+    right: middleX + baseOffsetX + offsetX,
+    top: middleY + baseOffsetY + offsetY,
+    bottom: middleY - baseOffsetY + offsetY,
   });
 }
 

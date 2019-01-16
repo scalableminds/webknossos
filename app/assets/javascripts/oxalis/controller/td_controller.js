@@ -120,7 +120,7 @@ class TDController extends React.PureComponent<Props> {
       over: () => {
         Store.dispatch(setViewportAction(OrthoViews.TDView));
         // Fix the rotation target of the TrackballControls
-        // this.setTargetAndFixPosition();
+        this.setTargetAndFixPosition();
       },
       pinch: delta => this.zoomTDView(delta, true),
     };

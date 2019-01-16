@@ -74,10 +74,10 @@ export const moveTDViewByVectorAction = (x: number, y: number): MoveTDViewByVect
 });
 
 export const moveTDViewXAction = (x: number): MoveTDViewByVectorAction =>
-  moveTDViewByVectorAction((x * getTDViewportSize()) / constants.VIEWPORT_WIDTH, 0);
+  moveTDViewByVectorAction((x * getTDViewportSize()[0]) / constants.VIEWPORT_WIDTH, 0);
 
 export const moveTDViewYAction = (y: number): MoveTDViewByVectorAction =>
-  moveTDViewByVectorAction(0, (-y * getTDViewportSize()) / constants.VIEWPORT_WIDTH);
+  moveTDViewByVectorAction(0, (-y * getTDViewportSize()[1]) / constants.VIEWPORT_WIDTH);
 
 export const setInputCatcherRect = (viewport: Viewport, rect: Rect): SetInputCatcherRect => ({
   type: "SET_INPUT_CATCHER_RECT",

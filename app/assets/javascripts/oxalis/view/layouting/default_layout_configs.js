@@ -91,7 +91,7 @@ export const getGroundTruthLayoutRect = () => {
 };
 
 const _getDefaultLayouts = () => {
-  const defaultViewportWidthInPercent = 35;
+  const defaultViewportWidthInPercent = 30;
 
   const OrthoViewsGrid = [
     setGlContainerWidth(Column(Panes.xy, Panes.xz), defaultViewportWidthInPercent),

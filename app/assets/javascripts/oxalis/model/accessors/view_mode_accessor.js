@@ -9,10 +9,9 @@ import constants, {
   ensureSmallerEdge,
 } from "oxalis/constants";
 
-export function getTDViewportSize(): number {
-  // the viewport is always quadratic
+export function getTDViewportSize(): [number, number] {
   const camera = Store.getState().viewModeData.plane.tdCamera;
-  return camera.right - camera.left;
+  return [camera.right - camera.left, camera.top - camera.bottom];
 }
 
 export function getInputCatcherRect(viewport: Viewport): Rect {

@@ -192,14 +192,15 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
     // Calulate the x coordinate so that the vector from the camera to the cube's middle point is
     // perpendicular to the vector going from (0, b[1], 0) to (b[0], 0, 0).
 
-    const left = -distance - padding;
-    const right = diagonal - distance + padding;
-    const width = right - left;
-    const height = width / aspectRatio;
+    const squareLeft = -distance - padding;
+    const squareRight = diagonal - distance + padding;
+    const squareTop = diagonal / 2 + padding + yOffset;
+    const squareBottom = -diagonal / 2 - padding + yOffset;
+    const squareCenterX = (squareLeft + squareRight) / 2;
+    const squareCenterY = (squareTop + squareBottom) / 2;
+    const squareWidth = Math.abs(squareLeft - squareRight);
 
-    const top = diagonal / 2 + padding + yOffset;
-    // const bottom = -diagonal / 2 - padding + yOffset;
-    const bottom = top + height;
+    const height = squareWidth / aspectRatio;
 
     to = {
       dx: b[1] / diagonal,
@@ -208,13 +209,12 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
       upX: 0,
       upY: 0,
       upZ: -1,
-      l: left,
-      r: right,
-      t: top,
-      b: bottom,
+      l: squareCenterX - squareWidth / 2,
+      r: squareCenterX + squareWidth / 2,
+      t: squareCenterY + height / 2,
+      b: squareCenterY - height / 2,
     };
   } else {
-    // TODO use height
     const ind = Dimensions.getIndices(id);
     const width = Math.max(b[ind[0]], b[ind[1]] * 1.12) * 1.1;
     const height = width / aspectRatio;

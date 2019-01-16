@@ -51,6 +51,7 @@ type LayoutMenuProps = {
   autoSaveLayouts: boolean,
   setAutoSaveLayouts: boolean => void,
   saveCurrentLayout: () => void,
+  setCurrentLayout: string => void,
 };
 
 export const LayoutMenu = (props: LayoutMenuProps) => {
@@ -65,6 +66,7 @@ export const LayoutMenu = (props: LayoutMenuProps) => {
     autoSaveLayouts,
     setAutoSaveLayouts,
     saveCurrentLayout,
+    setCurrentLayout,
     ...others
   } = props;
   const layoutMissingHelpTitle = (

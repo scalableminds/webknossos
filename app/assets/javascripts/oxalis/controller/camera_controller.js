@@ -9,6 +9,10 @@ import TWEEN from "tween.js";
 import _ from "lodash";
 
 import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getInputCatcherAspectRatio,
+  applyAspectRatioToWidth,
+} from "oxalis/model/accessors/view_mode_accessor";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { setTDCameraAction } from "oxalis/model/actions/view_mode_actions";
@@ -57,17 +61,23 @@ class CameraController extends React.PureComponent<Props> {
 
   updateCamViewport(): void {
     const state = Store.getState();
-    const clippingDistance = state.userConfiguration.clippingDistance;
+    const { clippingDistance } = state.userConfiguration;
     const scaleFactor = getBaseVoxel(state.dataset.dataSource.scale);
     const zoom = state.flycam.zoomStep;
     const halfBoundary = (constants.VIEWPORT_WIDTH / 2) * zoom;
     for (const planeId of OrthoViewValuesWithoutTDView) {
+      const [scaledWidth, scaledHeight] = applyAspectRatioToWidth(
+        getInputCatcherAspectRatio(planeId),
+        halfBoundary * scaleFactor,
+      );
+
+      this.props.cameras[planeId].left = -scaledWidth;
+      this.props.cameras[planeId].right = scaledWidth;
+
+      this.props.cameras[planeId].bottom = -scaledHeight;
+      this.props.cameras[planeId].top = scaledHeight;
+
       this.props.cameras[planeId].near = -clippingDistance;
-      const scaledBoundary = halfBoundary * scaleFactor;
-      this.props.cameras[planeId].left = -scaledBoundary;
-      this.props.cameras[planeId].bottom = -scaledBoundary;
-      this.props.cameras[planeId].right = scaledBoundary;
-      this.props.cameras[planeId].top = scaledBoundary;
       this.props.cameras[planeId].updateProjectionMatrix();
     }
   }
@@ -92,6 +102,10 @@ class CameraController extends React.PureComponent<Props> {
       ),
       listenToStoreProperty(
         storeState => storeState.flycam.zoomStep,
+        () => this.updateCamViewport(),
+      ),
+      listenToStoreProperty(
+        storeState => storeState.viewModeData.plane.inputCatcherRects,
         () => this.updateCamViewport(),
       ),
       listenToStoreProperty(
@@ -149,8 +163,11 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
   const b = voxelToNm(dataset.dataSource.scale, getBoundaries(dataset).upperBoundary);
   const pos = voxelToNm(dataset.dataSource.scale, getPosition(state.flycam));
 
+  const aspectRatio = getInputCatcherAspectRatio(OrthoViews.TDView);
+
   let to: TweenState;
   if (id === OrthoViews.TDView) {
+    // TODO use height
     const diagonal = Math.sqrt(b[0] * b[0] + b[1] * b[1]);
     const padding = 0.05 * diagonal;
 
@@ -175,6 +192,15 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
     // Calulate the x coordinate so that the vector from the camera to the cube's middle point is
     // perpendicular to the vector going from (0, b[1], 0) to (b[0], 0, 0).
 
+    const left = -distance - padding;
+    const right = diagonal - distance + padding;
+    const width = right - left;
+    const height = width / aspectRatio;
+
+    const top = diagonal / 2 + padding + yOffset;
+    // const bottom = -diagonal / 2 - padding + yOffset;
+    const bottom = top + height;
+
     to = {
       dx: b[1] / diagonal,
       dy: b[0] / diagonal,
@@ -182,14 +208,17 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
       upX: 0,
       upY: 0,
       upZ: -1,
-      l: -distance - padding,
-      r: diagonal - distance + padding,
-      t: diagonal / 2 + padding + yOffset,
-      b: -diagonal / 2 - padding + yOffset,
+      l: left,
+      r: right,
+      t: top,
+      b: bottom,
     };
   } else {
+    // TODO use height
     const ind = Dimensions.getIndices(id);
     const width = Math.max(b[ind[0]], b[ind[1]] * 1.12) * 1.1;
+    const height = width / aspectRatio;
+
     const paddingTop = width * 0.12;
     const padding = ((width / 1.1) * 0.1) / 2;
     const offsetX = pos[ind[0]] + padding + (width - b[ind[0]]) / 2;
@@ -219,11 +248,11 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
       l,
       t,
       r: l + width,
-      b: t - width,
+      b: t - height,
     };
   }
 
-  const updateCameraTDView = function(tweenState: TweenState): void {
+  const updateCameraTDView = (tweenState: TweenState) => {
     const p = voxelToNm(
       Store.getState().dataset.dataSource.scale,
       getPosition(Store.getState().flycam),
@@ -265,7 +294,7 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
       .to(to, time)
       .onUpdate(function updater() {
         // TweenJS passes the current state via the `this` object.
-        // However, for easier type checking, we pass it as an explicit
+        // However, for better type checking, we pass it as an explicit
         // parameter.
         updateCameraTDView(this);
       })

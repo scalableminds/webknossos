@@ -120,7 +120,7 @@ class TDController extends React.PureComponent<Props> {
       over: () => {
         Store.dispatch(setViewportAction(OrthoViews.TDView));
         // Fix the rotation target of the TrackballControls
-        this.setTargetAndFixPosition();
+        // this.setTargetAndFixPosition();
       },
       pinch: delta => this.zoomTDView(delta, true),
     };
@@ -181,8 +181,8 @@ class TDController extends React.PureComponent<Props> {
     if (zoomToMouse && this.mouseController) {
       zoomToPosition = this.mouseController.position;
     }
-    const { width } = getInputCatcherRect(OrthoViews.TDView);
-    Store.dispatch(zoomTDViewAction(value, zoomToPosition, width));
+    const { width, height } = getInputCatcherRect(OrthoViews.TDView);
+    Store.dispatch(zoomTDViewAction(value, zoomToPosition, width, height));
   }
 
   moveTDView(delta: Point2): void {

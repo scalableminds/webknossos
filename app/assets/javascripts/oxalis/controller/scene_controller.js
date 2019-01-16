@@ -11,6 +11,7 @@ import _ from "lodash";
 import type { MeshMetaData } from "admin/api_flow_types";
 import { V3 } from "libs/mjs";
 import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
+import { getInputCatcherAspectRatio } from "oxalis/model/accessors/view_mode_accessor";
 import {
   getPosition,
   getPlaneScalingFactor,
@@ -305,7 +306,7 @@ class SceneController {
     }
   };
 
-  update = (optPlane?: ArbitraryPlane): void => {
+  update(optPlane?: ArbitraryPlane): void {
     const gPos = getPosition(Store.getState().flycam);
     const globalPosVec = new THREE.Vector3(...gPos);
     const planeScale = getPlaneScalingFactor(Store.getState().flycam);
@@ -334,10 +335,12 @@ class SceneController {
       for (const currentPlane of _.values(this.planes)) {
         currentPlane.updateAnchorPoints(anchorPoint, fallbackAnchorPoint);
         currentPlane.setPosition(globalPosVec);
-        currentPlane.setScale(planeScale);
+
+        const aspectRatio = getInputCatcherAspectRatio(currentPlane.planeID);
+        currentPlane.setScale(planeScale, aspectRatio);
       }
     }
-  };
+  }
 
   setDisplayCrosshair(value: boolean): void {
     for (const plane of _.values(this.planes)) {

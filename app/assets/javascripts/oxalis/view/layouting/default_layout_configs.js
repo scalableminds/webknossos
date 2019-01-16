@@ -91,13 +91,11 @@ export const getGroundTruthLayoutRect = () => {
 };
 
 const _getDefaultLayouts = () => {
-  const layoutContainer = getGroundTruthLayoutRect();
-  layoutContainer.height -= layoutHeaderHeight * 2;
-  const viewportWidth = ((layoutContainer.height / 2) * 100) / layoutContainer.width;
+  const defaultViewportWidthInPercent = 35;
 
   const OrthoViewsGrid = [
-    setGlContainerWidth(Column(Panes.xy, Panes.xz), viewportWidth),
-    setGlContainerWidth(Column(Panes.yz, Panes.td), viewportWidth),
+    setGlContainerWidth(Column(Panes.xy, Panes.xz), defaultViewportWidthInPercent),
+    setGlContainerWidth(Column(Panes.yz, Panes.td), defaultViewportWidthInPercent),
   ];
 
   const OrthoLayout = createLayout(Row(...OrthoViewsGrid, SkeletonRightHandColumn));

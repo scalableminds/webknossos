@@ -25,12 +25,25 @@
   box-sizing: border-box;
   -moz-box-sizing: border-box;
   float: left;
-
   margin: 0;
-  border-color: white;
+  opacity: 0.85;
+
+  &.PLANE_XY {
+    border-color: rgb(200, 20, 20);
+  }
+  &.PLANE_YZ {
+    border-color: rgb(20, 20, 200);
+  }
+  &.PLANE_XZ {
+    border-color: rgb(20, 200, 20);
+  }
+  &.TDView {
+    border-color: white;
+  }
 
   &:hover {
-    border-color: #ff0;
+    // border-color: #ff0;
+    opacity: 1;
   }
 }
 

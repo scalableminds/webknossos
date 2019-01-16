@@ -111,10 +111,9 @@ export const POSITION_REF_REGEX = /#\(([0-9]+,[0-9]+,[0-9]+)\)/g;
 // There is an outer yellow CSS border and an inner (red/green/blue) border
 // that is a result of the plane being smaller than the renderer viewport
 export const OUTER_CSS_BORDER = 2;
-const INNER_RENDERER_BORDER = 2;
-export const ORTHOGONAL_BORDER = OUTER_CSS_BORDER + INNER_RENDERER_BORDER;
 const PLANE_WIDTH = 376;
-const VIEWPORT_WIDTH = PLANE_WIDTH + ORTHOGONAL_BORDER * 2;
+const VIEWPORT_WIDTH = PLANE_WIDTH;
+export const ensureSmallerEdge = false;
 
 const Constants = {
   ARBITRARY_VIEW: 4,
@@ -133,8 +132,6 @@ const Constants = {
   BUCKET_SIZE: 32 ** 3,
   PLANE_WIDTH,
   VIEWPORT_WIDTH,
-  // The size of the gap between the 4 viewports in the orthogonal mode
-  VIEWPORT_GAP_WIDTH: 20,
 
   // We require at least 3 * 512 === 1536 buckets per data layer to fit onto the GPU.
   // This number is used during setup to pick appropriate data texture sizes.

@@ -26,13 +26,14 @@ export const setupRenderArea = (
   renderer: THREE.WebGLRenderer,
   x: number,
   y: number,
-  fullExtent: number,
-  width: number,
-  height: number,
+  viewportWidth: number,
+  viewportHeight: number,
+  scissorWidth: number,
+  scissorHeight: number,
   color: number,
 ) => {
-  renderer.setViewport(x, y, fullExtent, fullExtent);
-  renderer.setScissor(x, y, width, height);
+  renderer.setViewport(x, y, viewportWidth, viewportHeight);
+  renderer.setScissor(x, y, scissorWidth, scissorHeight);
   renderer.setScissorTest(true);
   renderer.setClearColor(color, 1);
 };
@@ -44,6 +45,7 @@ export const clearCanvas = (renderer: THREE.WebGLRenderer) => {
     0,
     0,
     renderer.domElement.width,
+    renderer.domElement.height,
     rendererSize.width,
     rendererSize.height,
     0xffffff,
@@ -183,11 +185,17 @@ class PlaneView {
             renderer,
             left,
             top,
-            Math.min(width, height),
+            width,
+            height,
             width,
             height,
             OrthoViewColors[plane],
           );
+          if (plane === "TDView") {
+            const camera = this.cameras[plane];
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+          }
           renderer.render(scene, this.cameras[plane]);
         }
       }
@@ -210,7 +218,8 @@ class PlaneView {
     getSceneController().renderer.setSize(width, height);
 
     for (const plane of OrthoViewValues) {
-      this.cameras[plane].aspect = 1;
+      // TODO: this isnt true anymore
+      // this.cameras[plane].aspect = 1;
       this.cameras[plane].updateProjectionMatrix();
     }
     this.draw();

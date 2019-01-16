@@ -6,6 +6,7 @@ import constants, {
   OUTER_CSS_BORDER,
   type Rect,
   type Viewport,
+  ensureSmallerEdge,
 } from "oxalis/constants";
 
 export function getTDViewportSize(): number {
@@ -21,6 +22,24 @@ export function getInputCatcherRect(viewport: Viewport): Rect {
     // $FlowFixMe Flow does not understand that viewport cannot be ArbitraryViewport at this point
     return Store.getState().viewModeData.plane.inputCatcherRects[viewport];
   }
+}
+
+export function getInputCatcherAspectRatio(viewport: Viewport): number {
+  const { width, height } = getInputCatcherRect(viewport);
+  return width / height;
+}
+
+// Given a width and an aspectRatio, this function returns a [width, height] pair
+// which corresponds to the defined aspect ratio. Depending on the configured strategy
+// (ensureSmallerEdge), this function either uses the smaller or the larger edge as the
+// ground truth.
+export function applyAspectRatioToWidth(aspectRatio: number, width: number): [number, number] {
+  const useWidth = ensureSmallerEdge ? aspectRatio >= 1 : aspectRatio < 1;
+
+  const scaledWidth = width * (useWidth ? 1 : aspectRatio);
+  const scaledHeight = scaledWidth / (!useWidth ? aspectRatio : 1);
+
+  return [scaledWidth, scaledHeight];
 }
 
 export function getViewportScale(viewport: Viewport): number {

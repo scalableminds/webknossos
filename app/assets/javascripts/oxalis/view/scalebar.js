@@ -9,7 +9,7 @@ import {
   calculateZoomLevel,
   formatNumberToLength,
 } from "oxalis/view/right-menu/dataset_info_tab_view";
-import constants, { ORTHOGONAL_BORDER } from "oxalis/constants";
+import constants, { OUTER_CSS_BORDER } from "oxalis/constants";
 
 type Props = {|
   dataset: APIDataset,
@@ -27,7 +27,7 @@ function Scalebar({ flycam, dataset }: Props) {
         right: "1%",
         // The scalebar should have a width of 25% from the actual viewport (without the borders)
         width: `calc(25% - ${Math.round(
-          ((2 * ORTHOGONAL_BORDER) / constants.VIEWPORT_WIDTH) * 100,
+          ((2 * OUTER_CSS_BORDER) / constants.VIEWPORT_WIDTH) * 100,
         )}%)`,
         height: 14,
         background: "rgba(0, 0, 0, .3)",

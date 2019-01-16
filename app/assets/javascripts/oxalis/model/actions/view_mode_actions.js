@@ -25,6 +25,7 @@ type ZoomTDViewAction = {
   value: number,
   targetPosition: THREE.Vector3,
   curWidth: number,
+  curHeight: number,
 };
 
 type MoveTDViewByVectorAction = {
@@ -57,11 +58,13 @@ export const zoomTDViewAction = (
   value: number,
   targetPosition: THREE.Vector3,
   curWidth: number,
+  curHeight: number,
 ): ZoomTDViewAction => ({
   type: "ZOOM_TD_VIEW",
   value,
   targetPosition,
   curWidth,
+  curHeight,
 });
 
 export const moveTDViewByVectorAction = (x: number, y: number): MoveTDViewByVectorAction => ({

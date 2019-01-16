@@ -394,8 +394,8 @@ class PlaneController extends React.PureComponent<Props> {
 
   zoomTDView(value: number): void {
     const zoomToPosition = null;
-    const { width } = getInputCatcherRect(OrthoViews.TDView);
-    Store.dispatch(zoomTDViewAction(value, zoomToPosition, width));
+    const { width, height } = getInputCatcherRect(OrthoViews.TDView);
+    Store.dispatch(zoomTDViewAction(value, zoomToPosition, width, height));
   }
 
   finishZoom = (): void => {

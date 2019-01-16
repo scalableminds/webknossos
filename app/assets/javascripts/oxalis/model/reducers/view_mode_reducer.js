@@ -26,7 +26,13 @@ function ViewModeReducer(state: OxalisState, action: Action): OxalisState {
       return centerTDViewReducer(state);
     }
     case "ZOOM_TD_VIEW": {
-      return zoomTDView(state, action.value, action.targetPosition, action.curWidth);
+      return zoomTDView(
+        state,
+        action.value,
+        action.targetPosition,
+        action.curWidth,
+        action.curHeight,
+      );
     }
     case "MOVE_TD_VIEW_BY_VECTOR": {
       return moveTDViewByVectorReducer(state, action.x, action.y);
@@ -107,6 +113,7 @@ function zoomTDView(
   value: number,
   targetPosition: THREE.Vector3,
   curWidth: number,
+  curHeight: number,
 ): OxalisState {
   const camera = state.viewModeData.plane.tdCamera;
 
@@ -122,7 +129,7 @@ function zoomTDView(
   let offsetY = 0;
   if (targetPosition != null) {
     offsetX = ((targetPosition.x / curWidth) * 2 - 1) * -baseDiff;
-    offsetY = ((targetPosition.y / curWidth) * 2 - 1) * +baseDiff;
+    offsetY = ((targetPosition.y / curHeight) * 2 - 1) * +baseDiff;
   }
 
   return setTDCameraReducer(state, {

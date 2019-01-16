@@ -7,6 +7,7 @@ import * as THREE from "three";
 import _ from "lodash";
 
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
+import { applyAspectRatioToWidth } from "oxalis/model/accessors/view_mode_accessor";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import Dimensions from "oxalis/model/dimensions";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
@@ -29,7 +30,7 @@ class Plane {
   plane: THREE.Mesh;
   planeID: OrthoView;
   displayCrosshair: boolean;
-  scaleVector: THREE.Vector3;
+  baseScaleVector: THREE.Vector3;
   crosshair: Array<THREE.LineSegments>;
   TDViewBorders: THREE.Line;
   renderer: THREE.WebGLRenderer;
@@ -44,7 +45,7 @@ class Plane {
     // --> scaleInfo.baseVoxel
     const baseVoxelFactors = getBaseVoxelFactors(Store.getState().dataset.dataSource.scale);
     const scaleArray = Dimensions.transDim(baseVoxelFactors, this.planeID);
-    this.scaleVector = new THREE.Vector3(...scaleArray);
+    this.baseScaleVector = new THREE.Vector3(...scaleArray);
 
     this.createMeshes();
   }
@@ -129,16 +130,17 @@ class Plane {
     }
   }
 
-  setScale = (factor: number): void => {
+  setScale(factor: number, aspectRatio: number): void {
+    const [xFactor, yFactor] = applyAspectRatioToWidth(aspectRatio, factor);
     const scaleVec = new THREE.Vector3().multiplyVectors(
-      new THREE.Vector3(factor, factor, factor),
-      this.scaleVector,
+      new THREE.Vector3(xFactor, yFactor, factor),
+      this.baseScaleVector,
     );
     this.plane.scale.copy(scaleVec);
     this.TDViewBorders.scale.copy(scaleVec);
     this.crosshair[0].scale.copy(scaleVec);
     this.crosshair[1].scale.copy(scaleVec);
-  };
+  }
 
   setRotation = (rotVec: Vector3): void => {
     [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]].map(mesh =>

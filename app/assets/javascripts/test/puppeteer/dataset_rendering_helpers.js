@@ -2,12 +2,13 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}], no-await-in-loop: 0 */
 import urljoin from "url-join";
 
+import type { DatasetConfiguration } from "oxalis/store";
 import type { Page } from "puppeteer";
 import mergeImg from "merge-img";
 import pixelmatch from "pixelmatch";
 
 import type { APIDatasetId } from "../../admin/api_flow_types";
-import { createExplorational } from "../../admin/admin_rest_api";
+import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
 
 export const DEV_AUTH_TOKEN = "secretScmBoyToken";
 
@@ -32,9 +33,13 @@ export async function screenshotDataset(
   baseUrl: string,
   datasetId: APIDatasetId,
   optionalViewOverride: ?string,
+  optionalDatasetConfigOverride: ?DatasetConfiguration,
 ): Promise<Screenshot> {
   const options = getDefaultRequestOptions(baseUrl);
   const createdExplorational = await createExplorational(datasetId, "skeleton", false, options);
+  if (optionalDatasetConfigOverride != null) {
+    await updateDatasetConfiguration(datasetId, optionalDatasetConfigOverride, options);
+  }
   return openTracingViewAndScreenshot(page, baseUrl, createdExplorational.id, optionalViewOverride);
 }
 

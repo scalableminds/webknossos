@@ -90,7 +90,7 @@ export const getGroundTruthLayoutRect = () => {
   return { width: width - 1, height: height - 1 };
 };
 
-const unmemoizedGetDefaultLayouts = () => {
+const _getDefaultLayouts = () => {
   const layoutContainer = getGroundTruthLayoutRect();
   layoutContainer.height -= layoutHeaderHeight * 2;
   const viewportWidth = ((layoutContainer.height / 2) * 100) / layoutContainer.width;
@@ -112,14 +112,14 @@ const unmemoizedGetDefaultLayouts = () => {
   return { OrthoLayout, OrthoLayoutView, VolumeTracingView, ArbitraryLayout };
 };
 
-const getDefaultLayouts = _.memoize(unmemoizedGetDefaultLayouts);
+const getDefaultLayouts = _.memoize(_getDefaultLayouts);
 
 export const resetDefaultLayouts = () => {
   getDefaultLayouts.cache.clear();
 };
 
 type ExtractReturn<Fn> = $Call<<T>(() => T) => T, Fn>;
-type Layout = $Keys<ExtractReturn<typeof unmemoizedGetDefaultLayouts>>;
+type Layout = $Keys<ExtractReturn<typeof _getDefaultLayouts>>;
 
 export const getCurrentDefaultLayoutConfig = () => {
   resetDefaultLayouts();

@@ -16,7 +16,7 @@ import ButtonComponent from "oxalis/view/components/button_component";
 import Constants, { type ControlMode, ControlModeEnum, type Mode } from "oxalis/constants";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
 import Store, { type OxalisState } from "oxalis/store";
-import TracingActionsView, { ResetLayoutItem } from "oxalis/view/action-bar/tracing_actions_view";
+import TracingActionsView, { LayoutMenu } from "oxalis/view/action-bar/tracing_actions_view";
 import ViewModesView from "oxalis/view/action-bar/view_modes_view";
 import VolumeActionsView from "oxalis/view/action-bar/volume_actions_view";
 
@@ -37,10 +37,15 @@ type StateProps = {
 };
 
 type Props = StateProps & {
-  storedLayoutNamesForView: Array<string>,
-  activeLayout: string,
-  layoutKey: LayoutKeys,
-  setCurrentLayout: string => void,
+  layoutProps: {
+    storedLayoutNamesForView: Array<string>,
+    activeLayout: string,
+    layoutKey: LayoutKeys,
+    autoSaveLayouts: boolean,
+    setAutoSaveLayouts: boolean => void,
+    setCurrentLayout: string => void,
+    saveCurrentLayout: () => void,
+  },
 };
 
 type State = {
@@ -55,37 +60,45 @@ class ActionBarView extends React.PureComponent<Props, State> {
 
   handleResetLayout = () => {
     Store.dispatch(updateUserSettingAction("layoutScaleValue", 1));
-    layoutEmitter.emit("resetLayout", this.props.layoutKey, this.props.activeLayout);
+    layoutEmitter.emit(
+      "resetLayout",
+      this.props.layoutProps.layoutKey,
+      this.props.layoutProps.activeLayout,
+    );
   };
 
   handleLayoutDeleted = (layoutName: string) => {
-    deleteLayout(this.props.layoutKey, layoutName);
+    deleteLayout(this.props.layoutProps.layoutKey, layoutName);
   };
 
   addNewLayout = (layoutName: string) => {
     this.setState({ isNewLayoutModalVisible: false });
-    const configForLayout = getLayoutConfig(this.props.layoutKey, this.props.activeLayout);
-    if (addNewLayout(this.props.layoutKey, layoutName, configForLayout)) {
-      this.props.setCurrentLayout(layoutName);
+    const configForLayout = getLayoutConfig(
+      this.props.layoutProps.layoutKey,
+      this.props.layoutProps.activeLayout,
+    );
+    if (addNewLayout(this.props.layoutProps.layoutKey, layoutName, configForLayout)) {
+      this.props.layoutProps.setCurrentLayout(layoutName);
     }
   };
 
   render() {
     const isTraceMode = this.props.controlMode === ControlModeEnum.TRACE;
     const isVolumeSupported = !Constants.MODES_ARBITRARY.includes(this.props.viewMode);
-    const resetItemProps = {
-      storedLayoutNamesForView: this.props.storedLayoutNamesForView,
-      layoutKey: this.props.layoutKey,
-      activeLayout: this.props.activeLayout,
-      onResetLayout: this.handleResetLayout,
-      onSelectLayout: this.props.setCurrentLayout,
-      onDeleteLayout: this.handleLayoutDeleted,
-      addNewLayout: () => {
-        this.setState({ isNewLayoutModalVisible: true });
-      },
-    };
+    const layoutMenu = (
+      <LayoutMenu
+        {...this.props.layoutProps}
+        addNewLayout={() => {
+          this.setState({ isNewLayoutModalVisible: true });
+        }}
+        onResetLayout={this.handleResetLayout}
+        onSelectLayout={this.props.layoutProps.setCurrentLayout}
+        onDeleteLayout={this.handleLayoutDeleted}
+      />
+    );
+
     const readonlyDropdown = (
-      <Dropdown overlay={<Menu>{<ResetLayoutItem {...resetItemProps} />}</Menu>}>
+      <Dropdown overlay={<Menu>{layoutMenu}</Menu>}>
         <ButtonComponent>
           <Icon type="down" />
         </ButtonComponent>
@@ -96,7 +109,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
       <React.Fragment>
         <div className="action-bar">
           {isTraceMode && !this.props.showVersionRestore ? (
-            <TracingActionsView {...resetItemProps} />
+            <TracingActionsView layoutMenu={layoutMenu} />
           ) : (
             readonlyDropdown
           )}

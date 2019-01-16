@@ -1,10 +1,11 @@
 // @flow
-import { Row, Col, Card, Popover } from "antd";
+import { Row, Col, Card, Button } from "antd";
 import Markdown from "react-remarkable";
 import * as React from "react";
 import _ from "lodash";
+import classNames from "classnames";
 
-import type { APIDataset } from "admin/api_flow_types";
+import type { APIDataset, APIDatasetId } from "admin/api_flow_types";
 import { formatScale } from "libs/format_utils";
 import {
   getThumbnailURL,
@@ -12,19 +13,9 @@ import {
   getSegmentationThumbnailURL,
 } from "oxalis/model/accessors/dataset_accessor";
 
-const columnSpan = { xs: 24, sm: 24, md: 24, lg: 12, xl: 12, xxl: 8 };
+const columnSpan = { xs: 24, sm: 24, md: 24, lg: 24, xl: 12, xxl: 12 };
 const thumbnailDimension = 500;
-
-type Props = {
-  datasets: Array<APIDataset>,
-  organizationName: string,
-  showOrganizationHeader: boolean,
-  croppedDatasetCount: ?number,
-};
-
-type State = {
-  showLessContent: boolean,
-};
+const miniThumbnailDimension = 50;
 
 function getDisplayName(dataset: APIDataset): string {
   return dataset.displayName != null && dataset.displayName !== ""
@@ -49,141 +40,215 @@ function getDescription(dataset: APIDataset) {
     );
   }
 
-  return (
-    <div>
-      <p>Scale: {formatScale(dataset.dataSource.scale)}</p>
-      {freeTextDescription}
-    </div>
-  );
+  return <div>{freeTextDescription}</div>;
+}
+
+function getDetails(dataset: APIDataset) {
+  const { dataSource, details } = dataset;
+  return { scale: formatScale(dataSource.scale), name: dataset.name, ...details };
 }
 
 function ThumbnailAndDescription({
   thumbnailURL,
   description,
+  details,
   name,
+  datasetId,
   segmentationThumbnailURL,
 }: {
   thumbnailURL: string,
   name: string,
+  datasetId: APIDatasetId,
   description: React.Element<*> | string,
+  details: Object,
   segmentationThumbnailURL: ?string,
 }) {
   return (
     <React.Fragment>
-      <span className="dataset-thumbnail" title="Click to view dataset">
-        <div
-          className="dataset-thumbnail-image"
-          style={{
-            background: `url('${thumbnailURL}?w=${thumbnailDimension}&h=${thumbnailDimension}')`,
-            backgroundSize: "cover",
-            width: "100%",
-            height: "100%",
-          }}
-        />
-        {segmentationThumbnailURL ? (
-          <div
-            className="dataset-thumbnail-image segmentation"
-            style={{
-              background: `url('${segmentationThumbnailURL}?w=${thumbnailDimension}&h=${thumbnailDimension}')`,
-              backgroundSize: "cover",
-              width: "100%",
-              height: "100%",
-              position: "absolute",
-              left: "0",
-              top: "0",
-            }}
-          />
-        ) : null}
-      </span>
       <div className="dataset-description">
         <div className="description-flex">
-          <h3>{name}</h3>
+          <h3 style={{ fontSize: 20 }}>{name}</h3>
           <div className="dataset-description-body">{description}</div>
         </div>
       </div>
+      <span className="dataset-thumbnail">
+        <a href={`/datasets/${datasetId.owningOrganization}/${datasetId.name}/view`}>
+          <div className="dataset-click-hint">Click To View</div>
+          <div
+            className="dataset-thumbnail-image"
+            style={{
+              backgroundImage: `url('${thumbnailURL}?w=${thumbnailDimension}&h=${thumbnailDimension}')`,
+            }}
+          />
+          {segmentationThumbnailURL ? (
+            <div
+              className="dataset-thumbnail-image segmentation"
+              style={{
+                backgroundImage: `url('${segmentationThumbnailURL}?w=${thumbnailDimension}&h=${thumbnailDimension}')`,
+              }}
+            />
+          ) : null}
+          <div className="dataset-thumbnail-overlay">
+            <div
+              style={{
+                textTransform: "uppercase",
+                fontSize: 16,
+              }}
+            >
+              {details.name}
+            </div>
+            <div>
+              {details.species && (
+                <div
+                  style={{
+                    fontSize: 18,
+                    fontWeight: 700,
+                    display: "inline",
+                  }}
+                >
+                  {details.species}
+                </div>
+              )}
+              {details["brain-region"] && (
+                <div
+                  style={{
+                    display: "inline",
+                    marginLeft: 5,
+                  }}
+                >
+                  {details["brain-region"]}
+                </div>
+              )}
+            </div>
+            <div style={{ marginTop: "auto" }}>
+              {details.acquisition && (
+                <div style={{ display: "inline-block", color: "rgba(200,200,200,0.85)" }}>
+                  {details.acquisition}
+                </div>
+              )}
+              {details.scale && (
+                <span style={{ float: "right", color: "rgba(200,200,200,0.85)" }}>
+                  Scale: {details.scale}
+                </span>
+              )}
+            </div>
+          </div>
+        </a>
+      </span>
     </React.Fragment>
   );
 }
 
-function ThumbnailAndDescriptionFromDataset({ dataset }: { dataset: APIDataset }) {
+function DatasetCard({ dataset }: { dataset: APIDataset }) {
   return (
-    <ThumbnailAndDescription
-      thumbnailURL={getThumbnailURL(dataset)}
-      name={getDisplayName(dataset)}
-      description={getDescription(dataset)}
-      segmentationThumbnailURL={
-        hasSegmentation(dataset) ? getSegmentationThumbnailURL(dataset) : null
-      }
-    />
+    <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card" bordered={false}>
+      <ThumbnailAndDescription
+        thumbnailURL={getThumbnailURL(dataset)}
+        name={getDisplayName(dataset)}
+        datasetId={{ name: dataset.name, owningOrganization: dataset.owningOrganization }}
+        description={getDescription(dataset)}
+        details={getDetails(dataset)}
+        segmentationThumbnailURL={
+          hasSegmentation(dataset) ? getSegmentationThumbnailURL(dataset) : null
+        }
+      />
+    </Card>
   );
 }
 
-class DatasetPanel extends React.PureComponent<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    this.state = {
-      showLessContent: true,
-    };
+type MultiDatasetCardProps = { datasets: Array<APIDataset> };
+type MultiDatasetCardState = { selectedDataset: APIDataset, hoveredDataset: ?APIDataset };
+
+class MultiDatasetCard extends React.PureComponent<MultiDatasetCardProps, MultiDatasetCardState> {
+  state = {
+    selectedDataset: this.props.datasets[0],
+    hoveredDataset: null,
+  };
+
+  render() {
+    const { datasets } = this.props;
+    const { selectedDataset, hoveredDataset } = this.state;
+    const activeDataset = hoveredDataset || selectedDataset;
+    const { publication } = activeDataset;
+    // This method will only be called for datasets with a publication, but Flow doesn't know that
+    if (publication == null) return null;
+
+    const multiDescription = (
+      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        <span style={{ marginBottom: 16 }}>{publication.details}</span>
+        <div style={{ marginTop: "auto" }}>
+          <span style={{ fontSize: 14, textTransform: "uppercase" }}>Published Datasets </span>
+          <div className="mini-dataset-thumbnail-grid">
+            {datasets.map(dataset => (
+              <Button
+                className={classNames("mini-dataset-thumbnail", {
+                  active: dataset === activeDataset,
+                })}
+                key={dataset.name}
+                title="Click To Select"
+                style={{
+                  background: `url('${getThumbnailURL(
+                    dataset,
+                  )}?w=${miniThumbnailDimension}&h=${miniThumbnailDimension}')`,
+                  width: `${miniThumbnailDimension}px`,
+                  height: `${miniThumbnailDimension}px`,
+                }}
+                onMouseEnter={() => this.setState({ hoveredDataset: dataset })}
+                onMouseLeave={() => this.setState({ hoveredDataset: null })}
+                onClick={() => this.setState({ selectedDataset: dataset })}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+
+    return (
+      <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card" bordered={false}>
+        <ThumbnailAndDescription
+          thumbnailURL={getThumbnailURL(activeDataset)}
+          name={publication.title}
+          datasetId={{
+            name: activeDataset.name,
+            owningOrganization: activeDataset.owningOrganization,
+          }}
+          description={multiDescription}
+          details={getDetails(activeDataset)}
+          segmentationThumbnailURL={
+            hasSegmentation(activeDataset) ? getSegmentationThumbnailURL(activeDataset) : null
+          }
+        />
+      </Card>
+    );
   }
+}
+
+type DatasetPanelProps = {
+  datasets: Array<APIDataset>,
+  organizationName: string,
+  showOrganizationHeader: boolean,
+  croppedDatasetCount: ?number,
+};
+
+type DatasetPanelState = {
+  showLessContent: boolean,
+};
+
+class DatasetPanel extends React.PureComponent<DatasetPanelProps, DatasetPanelState> {
+  state = {
+    showLessContent: true,
+  };
 
   handleClick = () => {
     this.setState(prevState => ({ showLessContent: !prevState.showLessContent }));
   };
 
-  renderCard = (dataset: APIDataset) => (
-    <a href={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`} title="View Dataset">
-      <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card" bordered={false}>
-        <ThumbnailAndDescriptionFromDataset dataset={dataset} />
-      </Card>
-    </a>
-  );
-
-  renderMultiDatasetCard = (groupName: string, datasets: APIDataset[]) => {
-    const multiDescription = (
-      <div>
-        This collection consists of multiple datasets:
-        <ul>
-          {datasets.map(dataset => {
-            const popoverContent = (
-              <div className="spotlight-popover-card">
-                <ThumbnailAndDescriptionFromDataset dataset={dataset} />
-              </div>
-            );
-            return (
-              <li key={dataset.name}>
-                <Popover
-                  placement="left"
-                  content={popoverContent}
-                  trigger="hover"
-                  overlayClassName="antd-spotlight-popover-card"
-                >
-                  <a href="#">{getDisplayName(dataset)}</a>
-                </Popover>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-    );
-
-    return (
-      <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card">
-        <ThumbnailAndDescription
-          thumbnailURL={getThumbnailURL(datasets[0])}
-          name={groupName}
-          description={multiDescription}
-          segmentationThumbnailURL={
-            hasSegmentation(datasets[0]) ? getSegmentationThumbnailURL(datasets[0]) : null
-          }
-        />
-      </Card>
-    );
-  };
-
   render() {
     const groupedDatasets = _.entries(
-      // Instead of dataset.name, this could be grouped by a group tag
-      _.groupBy(this.props.datasets, dataset => dataset.name),
+      _.groupBy(
+        this.props.datasets,
+        dataset => (dataset.publication != null ? dataset.publication.id : dataset.name),
+      ),
     );
     const maybeCroppedDatasetsGroup =
       this.state.showLessContent && this.props.croppedDatasetCount != null
@@ -198,9 +263,11 @@ class DatasetPanel extends React.PureComponent<Props, State> {
         <Row gutter={24}>
           {maybeCroppedDatasetsGroup.map(([groupName, datasets]) => (
             <Col className="gallery-dataset-col" {...columnSpan} key={groupName}>
-              {datasets.length === 1
-                ? this.renderCard(datasets[0])
-                : this.renderMultiDatasetCard(groupName, datasets)}
+              {datasets[0].publication == null ? (
+                <DatasetCard dataset={datasets[0]} />
+              ) : (
+                <MultiDatasetCard datasets={datasets} />
+              )}
             </Col>
           ))}
         </Row>

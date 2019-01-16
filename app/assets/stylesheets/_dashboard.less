@@ -7,6 +7,11 @@
     padding-right: 24px;
     float: right;
   }
+
+  .organization-header {
+    font-size: 24px;
+    text-transform: uppercase;
+  }
 }
 
 .dataset-description :first-child {
@@ -22,6 +27,7 @@
 }
 
 .dataset-thumbnail {
+  left: 50%;
   height: 100%;
   width: 50%;
   display: inline-block;
@@ -37,8 +43,43 @@
 
 .dataset-thumbnail-image {
   transition: all 0.3s ease-in-out;
+  background-size: cover;
+  width: 100%;
+  height: 100%;
   &.segmentation {
     opacity: 0;
+    position: absolute;
+    left: 0;
+    top: 0;
+  }
+}
+
+.dataset-thumbnail-overlay {
+  width: 100%;
+  height: 100px;
+  bottom: 0;
+  position: absolute;
+  background-color: rgba(0, 0, 0, 0.85);
+  padding: 5px 15px;
+  color: rgba(255, 255, 255, 0.95);
+  display: flex;
+  flex-direction: column;
+}
+
+.dataset-click-hint {
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  text-align: center;
+  color: white;
+  z-index: 100;
+  line-height: 400px;
+  font-size: 20px;
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.6);
+    opacity: 1;
   }
 }
 
@@ -52,10 +93,10 @@
   bottom: 0px;
   width: 50%;
   height: 100%;
-  padding-top: 16px;
-  padding-left: 16px;
+  padding: 16px;
   overflow-y: auto;
   background-color: white;
+  z-index: 1;
   @media @smartphones {
     padding-top: 24px;
     padding-left: 24px;
@@ -85,7 +126,7 @@
 
     .dataset-description-body {
       width: 100%;
-      height: 240px;
+      height: 100%;
       overflow-y: auto;
       @media @smartphones {
         height: 243px;
@@ -134,7 +175,7 @@
 }
 
 .spotlight-item-card {
-  height: 300px;
+  height: 400px;
   width: 100%;
   position: relative;
   overflow: hidden;
@@ -158,6 +199,27 @@
   .ant-card-body {
     width: 100%;
     height: 100%;
+  }
+}
+
+.mini-dataset-thumbnail-grid {
+  display: grid;
+  grid-gap: 10px;
+  grid-template-columns: repeat(auto-fill, 50px);
+  padding: 5px;
+}
+
+.mini-dataset-thumbnail {
+  opacity: 0.5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  background-size: cover;
+
+  &:hover,
+  &.active {
+    opacity: 1;
+  }
+  &:active {
+    transform: scale(1.1);
   }
 }
 

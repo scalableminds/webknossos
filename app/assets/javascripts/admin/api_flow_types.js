@@ -78,6 +78,15 @@ export type APITeam = {
   +organization: string,
 };
 
+type APIPublication = {
+  +created: number,
+  +details: string,
+  +id: string,
+  +imageUrl: string,
+  +publicationDate: number,
+  +title: string,
+};
+
 export type APIDatasetId = {
   +owningOrganization: string,
   +name: string,
@@ -88,6 +97,7 @@ type APIDatasetBase = APIDatasetId & {
   +created: number,
   +dataStore: APIDataStore,
   +description: ?string,
+  +details: ?Object,
   +isEditable: boolean,
   +isPublic: boolean,
   +displayName: ?string,
@@ -95,6 +105,7 @@ type APIDatasetBase = APIDatasetId & {
   +lastUsedByUser: number,
   +isForeign: boolean,
   +sortingKey: number,
+  +publication: ?APIPublication,
 };
 
 export type APIMaybeUnimportedDataset = APIDatasetBase & {

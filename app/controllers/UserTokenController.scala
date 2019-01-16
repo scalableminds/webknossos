@@ -127,7 +127,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
   private def handleTracingAccess(tracingId: String, mode: AccessMode.Value, userBox: Box[User])(
       implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
 
-    def findAnnotationForTracing(tracingId: String): Fox[Annotation] = {
+    def findAnnotationForTracing(tracingId: String)(implicit ctx: DBAccessContext): Fox[Annotation] = {
       val annotationFox = annotationDAO.findOneByTracingId(tracingId)
       for {
         annotationBox <- annotationFox.futureBox
@@ -147,10 +147,10 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
       }
 
     for {
-      annotation <- findAnnotationForTracing(tracingId)
+      annotation <- findAnnotationForTracing(tracingId)(GlobalAccessContext) ?~> "annotation.notFound"
       restrictions <- annotationInformationProvider.restrictionsFor(
-        AnnotationIdentifier(annotation.typ, annotation._id))
-      allowed <- checkRestrictions(restrictions)
+        AnnotationIdentifier(annotation.typ, annotation._id))(GlobalAccessContext) ?~> "restrictions.notFound"
+      allowed <- checkRestrictions(restrictions) ?~> "restrictions.failedToCheck"
     } yield {
       if (allowed) UserAccessAnswer(true) else UserAccessAnswer(false, Some(s"No ${mode.toString} access to tracing"))
     }

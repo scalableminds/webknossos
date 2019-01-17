@@ -45,8 +45,8 @@ function _approximateMaxZoomForZoomStep(
   // This is more of a theoretical limit to avoid an endless loop, in case
   // the following while loop causes havoc for some reason. It means,
   // that even with the best GPU specs and weirdest dataset properties,
-  // wk will at most render magnification 20 when being in zoom level 1.
-  const maximumMagnificationAtZoomLevelOne = 20;
+  // wk will at most render zoom step 40 when being in zoom level 1.
+  const maximumMagnificationAtZoomLevelOne = 40;
   let maxZoomStep = 1;
 
   while (

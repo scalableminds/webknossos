@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { OrthoViews, type Rect, type Viewport } from "oxalis/constants";
+import { ArbitraryViewport, type Rect, type Viewport } from "oxalis/constants";
 import { setInputCatcherRect } from "oxalis/model/actions/view_mode_actions";
 import Scalebar from "oxalis/view/scalebar";
 import Store from "oxalis/store";
@@ -52,7 +52,7 @@ const renderedInputCatchers = new Map();
 
 export function recalculateInputCatcherSizes() {
   for (const [viewportID, inputCatcher] of renderedInputCatchers.entries()) {
-    const rect = makeInputCatcherQuadratic(inputCatcher, viewportID !== OrthoViews.TDView && false);
+    const rect = makeInputCatcherQuadratic(inputCatcher, viewportID === ArbitraryViewport);
     Store.dispatch(setInputCatcherRect(viewportID, rect));
   }
 }

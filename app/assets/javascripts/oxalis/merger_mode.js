@@ -29,7 +29,7 @@ function mapSegmentColorToTree(segId: number, treeId: number, mergerModeState: M
 function getTreeColor(treeId: number, mergerModeState: MergerModeState) {
   const { treeColors } = mergerModeState;
   let color = treeColors[treeId];
-  // generate a new color if tree was never seen before
+  // Generate a new color if tree was never seen before
   if (color === undefined) {
     color = Math.ceil(127 * Math.random());
     treeColors[treeId] = color;
@@ -38,7 +38,7 @@ function getTreeColor(treeId: number, mergerModeState: MergerModeState) {
 }
 
 function deleteColorMappingOfSegment(segId: number, mergerModeState: MergerModeState) {
-  // remove segment from color mapping
+  // Remove segment from color mapping
   delete mergerModeState.colorMapping[segId];
 }
 
@@ -102,18 +102,18 @@ async function createNodeOverwrite(store, call, action, mergerModeState: MergerM
     return;
   }
 
-  // set segment id
+  // Set segment id
   nodeSegmentMap[activeNodeId] = segmentId;
-  // count references
+  // Count references
   increaseNodesOfSegment(segmentId, mergerModeState);
   mapSegmentColorToTree(segmentId, activeTreeId, mergerModeState);
 
-  // update mapping
+  // Update mapping
   api.data.setMapping(segementationLayerName, colorMapping);
 }
 
 /* Overwrite the "deleteActiveNode" method in such a way that a segment changes back its color as soon as all
-     nodes are deleted from it. => also do this on tree delete if possible (later) */
+   nodes are deleted from it. => also do this on tree delete if possible (later) */
 function deleteActiveNodeOverwrite(store, call, action, mergerModeState: MergerModeState) {
   const activeNodeId = api.tracing.getActiveNodeId();
   if (activeNodeId == null) {
@@ -151,15 +151,15 @@ function shuffleColorOfCurrentTree(mergerModeState: MergerModeState) {
       return;
     }
     const oldColor = getTreeColor(activeTreeId, mergerModeState);
-    // reset color of active tree
+    // Reset the color of the active tree
     treeColors[activeTreeId] = undefined;
-    // applied the change of color to all segments with the same color
+    // Applies the change of the color to all connected segments
     Object.keys(colorMapping).forEach(key => {
       if (colorMapping[key] === oldColor) {
         colorMapping[key] = getTreeColor(activeTreeId, mergerModeState);
       }
     });
-    // update segmentation
+    // Update the segmentation
     api.data.setMapping(segementationLayerName, colorMapping);
   };
 
@@ -188,7 +188,7 @@ async function mergeSegmentsOfAlreadyExistingTrees(index = 0, mergerModeState: M
 
   const [segMinVec, segMaxVec] = api.data.getBoundingBox(segementationLayerName);
 
-  // skip nodes outside segmentation
+  // Skip nodes outside segmentation
   if (
     pos[0] < segMinVec[0] ||
     pos[1] < segMinVec[1] ||
@@ -202,23 +202,23 @@ async function mergeSegmentsOfAlreadyExistingTrees(index = 0, mergerModeState: M
   }
 
   const segmentId = await api.data.getDataValue(segementationLayerName, pos);
-  // this should never happen
+  // This should never happen
   if (segmentId === null) {
     return;
   }
 
   if (segmentId > 0) {
-    // store segment id
+    // Store the segment id
     nodeSegmentMap[node.id] = segmentId;
 
-    // add to agglomerate
+    // Add to agglomerate
     increaseNodesOfSegment(segmentId, mergerModeState);
     mapSegmentColorToTree(segmentId, treeId, mergerModeState);
     console.log("set", segmentId, treeId);
   }
 
   if (index < numbOfNodes - 1) {
-    // continue with next node if needed
+    // Continue with next node if needed
     mergeSegmentsOfAlreadyExistingTrees(index + 1, mergerModeState);
   } else {
     api.data.setMapping("segmentation", colorMapping);
@@ -229,6 +229,7 @@ export function enableMergerMode() {
   if (isCodeActive) {
     return;
   }
+  isCodeActive = true;
   // Create an object that store the state of the merger mode.
   const mergerModeState: MergerModeState = {
     treeColors: {},
@@ -251,7 +252,7 @@ export function enableMergerMode() {
       deleteActiveNodeOverwrite(store, next, originalAction, mergerModeState),
     ),
   );
-  // Register the addition keyHandlers
+  // Register the additional key handlers
   unregisterKeyHandlers.push(
     api.utils.registerKeyHandler("8", () => {
       shuffleColorOfCurrentTree(mergerModeState);
@@ -262,7 +263,6 @@ export function enableMergerMode() {
       changeOpacity(mergerModeState);
     }),
   );
-  // maybe first ask the user via modal
   mergeSegmentsOfAlreadyExistingTrees(0, mergerModeState);
 }
 

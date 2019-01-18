@@ -11,7 +11,7 @@ import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
 import Dimensions from "oxalis/model/dimensions";
 import * as Utils from "libs/utils";
 
-const ZOOM_STEP_INTERVAL = 1.1;
+export const ZOOM_STEP_INTERVAL = 1.1;
 const ZOOM_STEP_MIN = 0.005;
 
 function cloneMatrix(m: Matrix4x4): Matrix4x4 {

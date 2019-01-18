@@ -48,9 +48,6 @@ export default {
 Editing should be done in a single window only.
 
 In order to restore the current window, a reload is necessary.`,
-  "save.failed_client_error": `We've encountered a permanent error while trying to save.
-
-In order to restore the current window, a reload is necessary.`,
   "react.rendering_error":
     "Unfortunately, we encountered an error during rendering. We cannot guarantee that your work is persisted. Please reload the page and try again.",
   "save.leave_page_unfinished":

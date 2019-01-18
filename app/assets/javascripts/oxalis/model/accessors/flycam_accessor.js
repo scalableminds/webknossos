@@ -1,12 +1,19 @@
 // @flow
 import * as THREE from "three";
+import _ from "lodash";
 import memoizeOne from "memoize-one";
 
 import type { Flycam, OxalisState } from "oxalis/store";
+import { ZOOM_STEP_INTERVAL } from "oxalis/model/reducers/flycam_reducer";
 import { M4x4, type Matrix4x4 } from "libs/mjs";
-import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
+import {
+  calculateTotalBucketCountForZoomLevel,
+  calculateBucketCountPerDim,
+} from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
+import { clamp, map3 } from "libs/utils";
+import { getMaxZoomStep, getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import { getResolutionsFactors } from "oxalis/model/helpers/position_converter";
 import Dimensions from "oxalis/model/dimensions";
-import * as Utils from "libs/utils";
 import constants, {
   type OrthoView,
   type OrthoViewMap,
@@ -14,53 +21,121 @@ import constants, {
   type Vector3,
 } from "oxalis/constants";
 import * as scaleInfo from "oxalis/model/scaleinfo";
-import { calculateUnzoomedBucketCount } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
-import { extraBucketsPerDim } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker_constants";
 
 // All methods in this file should use constants.PLANE_WIDTH instead of constants.VIEWPORT_WIDTH
 // as the area that is rendered is only of size PLANE_WIDTH.
 // If VIEWPORT_WIDTH, which is a little bigger, is used instead, we end up with a data texture
 // that is shrinked a little bit, which leads to the texture not being in sync with the THREEjs scene.
 
-// This function returns a value which indicates how much larger the rendered
-// plane can be than its original size **without** having to use the next
-// magnification. E.g., a value of two indicates that the viewport
-// can be 2 * viewport_width pixel wide while still being in zoom step 0.
-function unmemoizedCalculateMaxZoomStepDiff(dataSetScale: Vector3): number {
-  // This is more of a theoretical limit to avoid an endless loop, in case
-  // the following while loop causes havoc for some reason. It means,
-  // that even with the best GPU specs and weirdest dataset properties,
-  // wk will at most render magnification 20 when being in zoom level 1.
-  const maximumMagnificationAtZoomLevelOne = 20;
+// This function returns the maximum zoom value in which a given magnification (resolutionIndex)
+// can be rendered without exceeding the necessary bucket capacity.
+// Similar to other functions in this module, the function name is prefixed with _ which means
+// that there is a memoized function as a counterpart (which is not prefixed with _).
+// Example:
+// The function might return 1.3 for resolutionIndex 0, which means that until a zoom value of 1.3
+// the first magnification can still be rendered.
+// For resolutionIndex 1, the function might return 1.5 etc.
+// These values are used to determine the appropriate magnification for a given zoom value (e.g., a zoom value of 1.4
+// would require the second magnification).
+function _approximateMaxZoomForZoomStep(
+  dataSetScale: Vector3,
+  resolutionIndex: number,
+  resolutions: Array<Vector3>,
+): number {
   const maximumCapacity = constants.MINIMUM_REQUIRED_BUCKET_CAPACITY;
+  // maximumIterationCount is used as an upper limit to avoid an endless loop, in case
+  // the following while loop causes havoc for some reason (e.g., because
+  // the calculated bucket size isn't strictly increasing anymore). It means,
+  // that even with the best GPU specs and biggest dataset (i.e., many magnifications),
+  // wk will at most zoom out until a zoom value of ZOOM_STEP_INTERVAL**maximumIterationCount.
+  // With the current values, this would indicate a maximum zoom value of ~ 35 000, meaning
+  // that ~ 15 different magnifications (~ log2 of 35000) are supported properly.
+  const maximumIterationCount = 100;
+  let currentIterationCount = 0;
   let maxZoomStep = 1;
 
   while (
-    calculateUnzoomedBucketCount(dataSetScale, maxZoomStep) < maximumCapacity &&
-    maxZoomStep < maximumMagnificationAtZoomLevelOne
+    calculateTotalBucketCountForZoomLevel(dataSetScale, resolutionIndex, resolutions, maxZoomStep) <
+      maximumCapacity &&
+    currentIterationCount < maximumIterationCount
   ) {
-    maxZoomStep += 0.1;
+    maxZoomStep *= ZOOM_STEP_INTERVAL;
+    currentIterationCount++;
   }
 
   return maxZoomStep;
 }
 
-const calculateMaxZoomStepDiff = memoizeOne(unmemoizedCalculateMaxZoomStepDiff);
-
-function unmemoizedGetMaxBucketCountPerDim(dataSetScale: Vector3): Vector3 {
-  const maximumPlaneExtentInNm =
-    constants.PLANE_WIDTH *
-    calculateMaxZoomStepDiff(dataSetScale) *
-    scaleInfo.getBaseVoxel(dataSetScale);
-
-  const maxBucketCountPerDim = dataSetScale.map(
-    nm => extraBucketsPerDim + Math.ceil(maximumPlaneExtentInNm / nm / constants.BUCKET_WIDTH),
+// This function is only exported for testing purposes
+export function _getMaximumZoomForAllResolutions(
+  dataSetScale: Vector3,
+  resolutions: Array<Vector3>,
+): Array<number> {
+  return resolutions.map((_resolution, resolutionIndex) =>
+    _approximateMaxZoomForZoomStep(dataSetScale, resolutionIndex, resolutions),
   );
+}
+const getMaximumZoomForAllResolutions = memoizeOne(_getMaximumZoomForAllResolutions);
 
-  return ((maxBucketCountPerDim: any): Vector3);
+function _getMaxBucketCountPerDim(
+  dataSetScale: Vector3,
+  resolutionIndex: number,
+  resolutions: Array<Vector3>,
+): Vector3 {
+  const maximumZoomFactor = getMaximumZoomForAllResolutions(dataSetScale, resolutions)[
+    resolutionIndex
+  ];
+  return calculateBucketCountPerDim(dataSetScale, resolutionIndex, resolutions, maximumZoomFactor);
 }
 
-export const getMaxBucketCountPerDim = memoizeOne(unmemoizedGetMaxBucketCountPerDim);
+function _getMaxBucketCountPerDimForAllResolutions(
+  dataSetScale: Vector3,
+  resolutions: Array<Vector3>,
+): Array<Vector3> {
+  return resolutions.map((_resolution, resolutionIndex) =>
+    _getMaxBucketCountPerDim(dataSetScale, resolutionIndex, resolutions),
+  );
+}
+
+export const getMaxBucketCountPerDimForAllResolutions = memoizeOne(
+  _getMaxBucketCountPerDimForAllResolutions,
+);
+
+export function getMaxBucketCountPerDim(
+  dataSetScale: Vector3,
+  resolutionIndex: number,
+  resolutions: Array<Vector3>,
+): Vector3 {
+  return getMaxBucketCountPerDimForAllResolutions(dataSetScale, resolutions)[resolutionIndex];
+}
+
+function _getMaxBucketCountsForFallback(
+  dataSetScale: Vector3,
+  resolutionIndex: number,
+  resolutions: Array<Vector3>,
+): Vector3 {
+  // In the fallback scenario, we determine the maxBucketCounts of the better magnification
+  // and adapt these to the fallback resolution (for isotropic magnifications, this would simply
+  // divide all counts by 2).
+  const nonFallbackResolution = resolutionIndex - 1;
+  const nonFallbackCounts = getMaxBucketCountPerDim(
+    dataSetScale,
+    nonFallbackResolution,
+    resolutions,
+  );
+
+  const resolution = resolutions[resolutionIndex];
+  const previousResolution = resolutions[nonFallbackResolution];
+  const resolutionChangeRatio = getResolutionsFactors(resolution, previousResolution);
+
+  const bucketsPerDim = map3(
+    (count, dim) => Math.ceil(count / resolutionChangeRatio[dim]),
+    nonFallbackCounts,
+  );
+  return bucketsPerDim;
+}
+
+export const getMaxBucketCountsForFallback = memoizeOne(_getMaxBucketCountsForFallback);
 
 export function getUp(flycam: Flycam): Vector3 {
   const matrix = flycam.currentMatrix;
@@ -75,6 +150,10 @@ export function getLeft(flycam: Flycam): Vector3 {
 export function getPosition(flycam: Flycam): Vector3 {
   const matrix = flycam.currentMatrix;
   return [matrix[12], matrix[13], matrix[14]];
+}
+
+export function getFlooredPosition(flycam: Flycam): Vector3 {
+  return map3(x => Math.floor(x), getPosition(flycam));
 }
 
 export function getRotation(flycam: Flycam): Vector3 {
@@ -99,13 +178,25 @@ export function getZoomedMatrix(flycam: Flycam): Matrix4x4 {
 }
 
 export function getRequestLogZoomStep(state: OxalisState): number {
+  const maximumZoomSteps = getMaximumZoomForAllResolutions(
+    state.dataset.dataSource.scale,
+    getResolutions(state.dataset),
+  );
   const maxLogZoomStep = Math.log2(getMaxZoomStep(state.dataset));
+
+  // Linearly search for the resolution index, for which the zoomFactor
+  // is acceptable.
+  const zoomStep = _.findIndex(
+    maximumZoomSteps,
+    maximumZoomStep => state.flycam.zoomStep <= maximumZoomStep,
+  );
+  if (zoomStep === -1) {
+    return maxLogZoomStep;
+  }
+
+  const qualityAdaptedZoomStep = zoomStep + state.datasetConfiguration.quality;
   const min = Math.min(state.datasetConfiguration.quality, maxLogZoomStep);
-  const maxZoomStepDiff = calculateMaxZoomStepDiff(state.dataset.dataSource.scale);
-  const value =
-    Math.ceil(Math.log2(state.flycam.zoomStep / maxZoomStepDiff)) +
-    state.datasetConfiguration.quality;
-  return Utils.clamp(min, value, maxLogZoomStep);
+  return clamp(min, qualityAdaptedZoomStep, maxLogZoomStep);
 }
 
 export function getTextureScalingFactor(state: OxalisState): number {
@@ -138,12 +229,12 @@ export function getArea(state: OxalisState, planeId: OrthoView): Area {
   const baseVoxelFactors = scaleInfo.getBaseVoxelFactors(state.dataset.dataSource.scale);
 
   const uWidthHalf = viewportWidthHalf * baseVoxelFactors[u];
-  const vWidthhalf = viewportWidthHalf * baseVoxelFactors[v];
+  const vWidthHalf = viewportWidthHalf * baseVoxelFactors[v];
 
   const left = Math.floor((position[u] - uWidthHalf) / constants.BUCKET_WIDTH);
-  const top = Math.floor((position[v] - vWidthhalf) / constants.BUCKET_WIDTH);
+  const top = Math.floor((position[v] - vWidthHalf) / constants.BUCKET_WIDTH);
   const right = Math.floor((position[u] + uWidthHalf) / constants.BUCKET_WIDTH);
-  const bottom = Math.floor((position[v] + vWidthhalf) / constants.BUCKET_WIDTH);
+  const bottom = Math.floor((position[v] + vWidthHalf) / constants.BUCKET_WIDTH);
 
   return {
     left,

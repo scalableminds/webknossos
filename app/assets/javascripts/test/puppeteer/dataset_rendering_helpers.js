@@ -2,12 +2,13 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}], no-await-in-loop: 0 */
 import urljoin from "url-join";
 
+import type { DatasetConfiguration } from "oxalis/store";
 import type { Page } from "puppeteer";
 import mergeImg from "merge-img";
 import pixelmatch from "pixelmatch";
 
 import type { APIDatasetId } from "../../admin/api_flow_types";
-import { createExplorational } from "../../admin/admin_rest_api";
+import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
 
 export const DEV_AUTH_TOKEN = "secretScmBoyToken";
 
@@ -31,10 +32,15 @@ export async function screenshotDataset(
   page: Page,
   baseUrl: string,
   datasetId: APIDatasetId,
+  optionalViewOverride: ?string,
+  optionalDatasetConfigOverride: ?DatasetConfiguration,
 ): Promise<Screenshot> {
   const options = getDefaultRequestOptions(baseUrl);
   const createdExplorational = await createExplorational(datasetId, "skeleton", false, options);
-  return openTracingViewAndScreenshot(page, baseUrl, createdExplorational.id);
+  if (optionalDatasetConfigOverride != null) {
+    await updateDatasetConfiguration(datasetId, optionalDatasetConfigOverride, options);
+  }
+  return openTracingViewAndScreenshot(page, baseUrl, createdExplorational.id, optionalViewOverride);
 }
 
 function removeFpsMeter(page: Page) {
@@ -83,8 +89,10 @@ async function openTracingViewAndScreenshot(
   page: Page,
   baseUrl: string,
   annotationId: string,
+  optionalViewOverride: ?string,
 ): Promise<Screenshot> {
-  await page.goto(urljoin(baseUrl, `/annotations/Explorational/${annotationId}`), {
+  const urlSlug = optionalViewOverride != null ? `#${optionalViewOverride}` : "";
+  await page.goto(urljoin(baseUrl, `/annotations/Explorational/${annotationId}${urlSlug}`), {
     timeout: 0,
   });
 

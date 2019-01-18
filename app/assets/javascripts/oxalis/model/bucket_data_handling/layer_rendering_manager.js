@@ -8,6 +8,8 @@ import {
   type Area,
   getAreas,
   getMaxBucketCountPerDim,
+  getMaxBucketCountPerDimForAllResolutions,
+  getMaxBucketCountsForFallback,
   getZoomedMatrix,
 } from "oxalis/model/accessors/flycam_accessor";
 import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
@@ -114,11 +116,15 @@ export default class LayerRenderingManager {
   }
 
   setupDataTextures(): void {
-    const bytes = getByteCount(Store.getState().dataset, this.name);
-    const bucketsPerDim = getMaxBucketCountPerDim(Store.getState().dataset.dataSource.scale);
+    const { dataset } = Store.getState();
+    const bytes = getByteCount(dataset, this.name);
+    const bucketsPerDimPerResolution = getMaxBucketCountPerDimForAllResolutions(
+      dataset.dataSource.scale,
+      getResolutions(dataset),
+    );
 
     this.textureBucketManager = new TextureBucketManager(
-      bucketsPerDim,
+      bucketsPerDimPerResolution,
       this.textureWidth,
       this.dataTextureCount,
       bytes,
@@ -139,22 +145,17 @@ export default class LayerRenderingManager {
   // Returns the new anchorPoints if they are new
   updateDataTextures(position: Vector3, logZoomStep: number): [?Vector4, ?Vector4] {
     const { dataset } = Store.getState();
-    const unzoomedAnchorPoint = this.calculateUnzoomedAnchorPoint(
+    const isAnchorPointNew = this.maybeUpdateAnchorPoint(
       position,
       logZoomStep,
       dataset.dataSource.scale,
-    );
-
-    const isAnchorPointNew = this.yieldsNewZoomedAnchorPoint(
-      unzoomedAnchorPoint,
-      logZoomStep,
-      "anchorPoint",
+      false,
     );
     const fallbackZoomStep = logZoomStep + 1;
     const isFallbackAvailable = fallbackZoomStep <= this.cube.MAX_ZOOM_STEP;
-    const isFallbackAnchorPointNew =
-      isFallbackAvailable &&
-      this.yieldsNewZoomedAnchorPoint(unzoomedAnchorPoint, fallbackZoomStep, "fallbackAnchorPoint");
+    const isFallbackAnchorPointNew = isFallbackAvailable
+      ? this.maybeUpdateAnchorPoint(position, fallbackZoomStep, dataset.dataSource.scale, true)
+      : false;
 
     if (logZoomStep > this.cube.MAX_ZOOM_STEP) {
       // Don't render anything if the zoomStep is too high
@@ -242,6 +243,7 @@ export default class LayerRenderingManager {
       );
 
       const buckets = bucketsWithPriorities.map(({ bucket }) => bucket);
+      this.cube.markBucketsAsUnneeded();
       // This tells the bucket collection, that the buckets are necessary for rendering
       buckets.forEach(b => b.markAsNeeded());
 
@@ -264,36 +266,36 @@ export default class LayerRenderingManager {
     return [this.anchorPointCache.anchorPoint, this.anchorPointCache.fallbackAnchorPoint];
   }
 
-  yieldsNewZoomedAnchorPoint(
-    unzoomedAnchorPoint: Vector3,
-    logZoomStep: number,
-    key: "fallbackAnchorPoint" | "anchorPoint",
-  ): boolean {
-    const zoomedAnchorPoint = this.cube.positionToZoomedAddress(unzoomedAnchorPoint, logZoomStep);
-    if (_.isEqual(zoomedAnchorPoint, this.anchorPointCache[key])) {
-      return false;
-    }
-    this.anchorPointCache[key] = zoomedAnchorPoint;
-    return true;
-  }
-
-  calculateUnzoomedAnchorPoint(
+  maybeUpdateAnchorPoint(
     position: Vector3,
     logZoomStep: number,
     datasetScale: Vector3,
-  ): Vector3 {
-    const resolution = getResolutions(Store.getState().dataset)[logZoomStep];
-    const bucketsPerDim = getMaxBucketCountPerDim(datasetScale);
-    const maximumRenderedBucketsHalf = bucketsPerDim.map(
+    isFallback: boolean,
+  ): boolean {
+    const resolutions = getResolutions(Store.getState().dataset);
+    const resolution = resolutions[logZoomStep];
+    const bucketsPerDim = isFallback
+      ? getMaxBucketCountsForFallback(datasetScale, logZoomStep, resolutions)
+      : getMaxBucketCountPerDim(datasetScale, logZoomStep, resolutions);
+
+    const maximumRenderedBucketsHalfInVoxel = bucketsPerDim.map(
       bucketPerDim => getAnchorPositionToCenterDistance(bucketPerDim) * constants.BUCKET_WIDTH,
     );
 
     // Hit texture top-left coordinate
-    const anchorPoint = [
-      Math.floor(position[0] - maximumRenderedBucketsHalf[0] * resolution[0]),
-      Math.floor(position[1] - maximumRenderedBucketsHalf[1] * resolution[1]),
-      Math.floor(position[2] - maximumRenderedBucketsHalf[2] * resolution[2]),
+    const anchorPointInVoxel = [
+      position[0] - maximumRenderedBucketsHalfInVoxel[0] * resolution[0],
+      position[1] - maximumRenderedBucketsHalfInVoxel[1] * resolution[1],
+      position[2] - maximumRenderedBucketsHalfInVoxel[2] * resolution[2],
     ];
-    return anchorPoint;
+
+    const anchorPoint = this.cube.positionToZoomedAddress(anchorPointInVoxel, logZoomStep);
+
+    const cacheKey = isFallback ? "fallbackAnchorPoint" : "anchorPoint";
+    if (_.isEqual(anchorPoint, this.anchorPointCache[cacheKey])) {
+      return false;
+    }
+    this.anchorPointCache[cacheKey] = anchorPoint;
+    return true;
   }
 }

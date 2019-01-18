@@ -38,7 +38,7 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
     const { value, label, max, min, step, onChange } = this.props;
 
     return (
-      <Row className="settings-row">
+      <Row className="settings-row" type="flex" align="middle">
         <Col span={8}>
           <label className="setting-label">{label}</label>
         </Col>
@@ -114,7 +114,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
   render() {
     const { label, roundTo, value, min, max, disabled } = this.props;
     return (
-      <Row className="settings-row">
+      <Row className="settings-row" type="flex" align="middle">
         <Col span={8}>
           <label className="setting-label">{label}</label>
         </Col>
@@ -154,7 +154,7 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
   render() {
     const { label, onChange, value } = this.props;
     return (
-      <Row className="settings-row">
+      <Row className="settings-row" type="flex" align="middle">
         <Col span={8}>
           <label className="setting-label">{label}</label>
         </Col>

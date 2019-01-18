@@ -60,6 +60,7 @@ export const annotation: APIAnnotation = {
         branchPointsAllowed: true,
         somaClickingAllowed: true,
       },
+      recommendedConfiguration: null,
     },
     dataSet: "ROI2017_wkw",
     neededExperience: { domain: "oxalis", value: 1 },
@@ -78,7 +79,11 @@ export const annotation: APIAnnotation = {
   tracing: { skeleton: "e90133de-b2db-4912-8261-8b6f84f7edab", volume: null },
   dataSetName: "ROI2017_wkw",
   organization: "Connectomics Department",
-  dataStore: { name: "localhost", url: "http://localhost:9000", typ: "webknossos-store" },
+  dataStore: {
+    name: "localhost",
+    url: "http://localhost:9000",
+    isScratch: false,
+  },
   tracingStore: { name: "localhost", url: "http://localhost:9000" },
   isPublic: false,
   settings: {

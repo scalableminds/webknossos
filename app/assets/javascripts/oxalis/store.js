@@ -49,7 +49,6 @@ import UiReducer from "oxalis/model/reducers/ui_reducer";
 import UserReducer from "oxalis/model/reducers/user_reducer";
 import ViewModeReducer from "oxalis/model/reducers/view_mode_reducer";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
-import googleAnalyticsMiddleware from "oxalis/model/helpers/google_analytics_middleware";
 import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import rootSaga from "oxalis/model/sagas/root_saga";
@@ -210,21 +209,21 @@ export type DatasetLayerConfiguration = {|
   +contrast: number,
 |};
 
-export type DatasetConfiguration = {
+export type DatasetConfiguration = {|
   +fourBit: boolean,
   +interpolation: boolean,
-  +keyboardDelay: number,
   +layers: {
     [name: string]: DatasetLayerConfiguration,
   },
   +quality: 0 | 1 | 2,
   +segmentationOpacity: number,
   +highlightHoveredCellId: boolean,
+  +renderIsosurfaces: boolean,
   +position?: Vector3,
   +zoom?: number,
   +rotation?: Vector3,
-  +renderMissingDataBlack: true,
-};
+  +renderMissingDataBlack: boolean,
+|};
 
 export type UserConfiguration = {|
   +clippingDistance: number,
@@ -249,6 +248,7 @@ export type UserConfiguration = {|
   +sphericalCapRadius: number,
   +tdViewDisplayPlanes: boolean,
   +hideTreeRemovalWarning: boolean,
+  +autoSaveLayouts: boolean,
 |};
 
 export type Mapping = { [key: number]: number };
@@ -404,11 +404,11 @@ export const defaultState: OxalisState = {
   datasetConfiguration: {
     fourBit: true,
     interpolation: false,
-    keyboardDelay: 342,
     layers: {},
     quality: 0,
     segmentationOpacity: 20,
     highlightHoveredCellId: true,
+    renderIsosurfaces: false,
     renderMissingDataBlack: true,
   },
   userConfiguration: {
@@ -434,6 +434,7 @@ export const defaultState: OxalisState = {
     sphericalCapRadius: 140,
     tdViewDisplayPlanes: true,
     hideTreeRemovalWarning: false,
+    autoSaveLayouts: true,
   },
   temporaryConfiguration: {
     viewMode: Constants.MODE_PLANE_TRACING,
@@ -467,7 +468,7 @@ export const defaultState: OxalisState = {
     dataStore: {
       name: "localhost",
       url: "http://localhost:9000",
-      typ: "webknossos-store",
+      isScratch: false,
     },
     owningOrganization: "Connectomics department",
     description: null,
@@ -566,7 +567,7 @@ const combinedReducers = reduceReducers(
 const store = createStore(
   combinedReducers,
   defaultState,
-  applyMiddleware(googleAnalyticsMiddleware, overwriteActionMiddleware, sagaMiddleware),
+  applyMiddleware(overwriteActionMiddleware, sagaMiddleware),
 );
 sagaMiddleware.run(rootSaga);
 

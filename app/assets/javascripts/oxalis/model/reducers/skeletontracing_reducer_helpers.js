@@ -798,3 +798,19 @@ export function createTreeMapFromTreeArray(trees: Array<ServerSkeletonTracingTre
     "treeId",
   );
 }
+
+export function removeMissingGroupsFromTrees(
+  skeletonTracing: SkeletonTracing,
+  treeGroups: Array<TreeGroup>,
+): TreeMap {
+  // Change the groupId of trees for groups that no longer exist
+  const groupIds = Array.from(mapGroups(treeGroups, group => group.groupId));
+  const changedTrees = {};
+  Object.keys(skeletonTracing.trees).forEach(treeId => {
+    const tree = skeletonTracing.trees[Number(treeId)];
+    if (tree.groupId != null && !groupIds.includes(tree.groupId)) {
+      changedTrees[treeId] = { ...tree, groupId: null };
+    }
+  });
+  return changedTrees;
+}

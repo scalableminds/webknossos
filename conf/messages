@@ -105,6 +105,7 @@ tracingStore.list.failed=Failed to retrieve list of tracing stores.
 zip.file.notFound=No or invalid ZIP file specified
 
 dataLayer.notFound=DataLayer “{0}” not found
+dataLayer.mustBeSegmentation=DataLayer “{0}” is not a segmentation layer
 
 scale.scale=Scale
 scale.invalid=Specify dataset scale like "XX, YY, ZZ"

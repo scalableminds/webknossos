@@ -182,14 +182,10 @@ export function* sendRequestToServer(
     yield* call(toggleErrorHighlighting, false);
   } catch (error) {
     yield* call(toggleErrorHighlighting, true);
-    if (error.status >= 400 && error.status < 500) {
+    if (error.status === 409) {
       // HTTP Code 409 'conflict' for dirty state
       window.onbeforeunload = null;
-      if (error.status === 409) {
-        yield* call(alert, messages["save.failed_simultaneous_tracing"]);
-      } else {
-        yield* call(alert, messages["save.failed_client_error"]);
-      }
+      yield* call(alert, messages["save.failed_simultaneous_tracing"]);
       location.reload();
       return;
     }

@@ -119,8 +119,8 @@ All operations and information regarding trees are organized under a tab called 
 A typical skeleton annotation consists of one or more trees.
 Trees can be nested and organized in so-called `Tree Groups`.
 Tree groups can have a name and are used to structure and label your annotation even further.
-Trees can be dragged and dropped between tree groups.
-However over existing tree groups the bring up a little menu for creating new groups, renaming, and deletion.
+Trees can be dragged and dropped between tree groups. This action can be applied to multiple trees by selecting them with Ctrl + Left Mouse. 
+Hover over existing tree groups to bring up a little menu for creating new groups and deletion. Renaming of a group can be done by selecting a group and then entering the new name into the input above the tree hierarchy structure view.
 
 ![Organize your skeleton annotation's trees to remember important structures for later reference](images/tracing_ui_trees.jpg)
 

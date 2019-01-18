@@ -22,6 +22,8 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
 
   def accessTokenService: TracingStoreAccessTokenService
 
+  def freezeVersions = false
+
   implicit val tracingCompanion: GeneratedMessageCompanion[T] = tracingService.tracingCompanion
 
   implicit val tracingsCompanion: GeneratedMessageCompanion[Ts]
@@ -36,8 +38,8 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
 
   implicit val bodyParsers: PlayBodyParsers
 
-  def save = Action.async(validateProto[T]) {
-    implicit request =>
+  def save = Action.async(validateProto[T]) { implicit request =>
+    log {
       accessTokenService.validateAccess(UserAccessRequest.webknossos) {
         AllowRemoteOrigin {
           val tracing = request.body
@@ -46,10 +48,11 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
           }
         }
       }
+    }
   }
 
-  def saveMultiple = Action.async(validateProto[Ts]) {
-    implicit request => {
+  def saveMultiple = Action.async(validateProto[Ts]) { implicit request =>
+    log {
       accessTokenService.validateAccess(UserAccessRequest.webknossos) {
         AllowRemoteOrigin {
           val savedIds = Fox.sequence(request.body.map { tracing =>
@@ -61,8 +64,8 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
     }
   }
 
-  def get(tracingId: String, version: Option[Long]) = Action.async {
-    implicit request => {
+  def get(tracingId: String, version: Option[Long]) = Action.async { implicit request =>
+     log {
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
         AllowRemoteOrigin {
           for {
@@ -75,8 +78,8 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
     }
   }
 
-  def getMultiple = Action.async(validateJson[List[TracingSelector]]) {
-    implicit request => {
+  def getMultiple = Action.async(validateJson[List[TracingSelector]]) { implicit request =>
+    log {
       accessTokenService.validateAccess(UserAccessRequest.webknossos) {
         AllowRemoteOrigin {
           for {
@@ -89,8 +92,8 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
     }
   }
 
-  def update(tracingId: String) = Action.async(validateJson[List[UpdateActionGroup[T]]]) {
-    implicit request => {
+  def update(tracingId: String) = Action.async(validateJson[List[UpdateActionGroup[T]]]) { implicit request =>
+    log {
       accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId)) {
         AllowRemoteOrigin {
           val updateGroups = request.body
@@ -101,10 +104,10 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
           webKnossosServer.reportTracingUpdates(tracingId, timestamps, latestStatistics, userToken).flatMap { _ =>
             updateGroups.foldLeft(currentVersion) { (previousVersion, updateGroup) =>
               previousVersion.flatMap { version =>
-                if (version + 1 == updateGroup.version) {
-                  tracingService.handleUpdateGroup(tracingId, updateGroup).map(_ => updateGroup.version)
+                if (version + 1 == updateGroup.version || freezeVersions) {
+                  tracingService.handleUpdateGroup(tracingId, updateGroup, version).map(_ => if (freezeVersions) version else updateGroup.version)
                 } else {
-                  Failure(s"incorrect version. expected: ${version + 1}; got: ${updateGroup.version}")
+                  Failure(s"Incorrect version. Expected: ${version + 1}; Got: ${updateGroup.version}") ~> CONFLICT
                 }
               }
             }

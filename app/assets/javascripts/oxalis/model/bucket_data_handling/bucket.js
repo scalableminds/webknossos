@@ -8,6 +8,7 @@ import * as THREE from "three";
 import _ from "lodash";
 
 import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
+import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import Store from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
@@ -29,6 +30,15 @@ export const BUCKET_SIZE_P = 5;
 const warnAboutDownsamplingRGB = _.once(() =>
   Toast.warning("Zooming out for RGB data is limited. Zoom further in if data is not shown."),
 );
+
+export const bucketDebuggingFlags = {
+  // DEBUG flag for visualizing buckets which are passed to the GPU
+  visualizeBucketsOnGPU: false,
+  // DEBUG flag for visualizing buckets which are prefetched
+  visualizePrefetchedBuckets: false,
+};
+// Exposing this variable allows debugging on deployed systems
+window.bucketDebuggingFlags = bucketDebuggingFlags;
 
 export class DataBucket {
   type: "data" = "data";
@@ -81,7 +91,7 @@ export class DataBucket {
 
     this.state = BucketStateEnum.UNREQUESTED;
     this.dirty = false;
-    this.accessed = true;
+    this.accessed = false;
     this.isPartlyOutsideBoundingBox = false;
 
     this.data = null;
@@ -91,8 +101,8 @@ export class DataBucket {
     if (this.dependentCounter > 0) {
       return false;
     }
+
     const collect = !this.accessed && !this.dirty && this.state !== BucketStateEnum.REQUESTED;
-    this.accessed = false;
     return collect;
   }
 
@@ -130,12 +140,15 @@ export class DataBucket {
       throw new Error("Bucket.getData() called, but data does not exist.");
     }
 
-    this.markAsNeeded();
     return data;
   }
 
   markAsNeeded(): void {
     this.accessed = true;
+  }
+
+  markAsUnneeded(): void {
+    this.accessed = false;
   }
 
   getOrCreateData(): Uint8Array {
@@ -345,7 +358,8 @@ export class DataBucket {
     if (this.visualizedMesh != null) {
       return;
     }
-    if (this.zoomedAddress[3] === 0 || this.zoomedAddress[3] === 1) {
+    const zoomStep = getRequestLogZoomStep(Store.getState());
+    if (this.zoomedAddress[3] === zoomStep) {
       const resolutions = getResolutions(Store.getState().dataset);
       this.visualizedMesh = window.addBucketMesh(
         bucketPositionToGlobalAddress(this.zoomedAddress, resolutions),

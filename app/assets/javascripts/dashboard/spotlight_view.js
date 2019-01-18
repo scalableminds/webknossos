@@ -1,6 +1,6 @@
 // @flow
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
-import { Spin, Layout, Button, Row, Col } from "antd";
+import { Spin, Layout, Button, Row, Col, Card } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 
@@ -12,6 +12,8 @@ import GalleryDatasetView from "dashboard/gallery_dataset_view";
 import features from "features";
 
 const { Content, Footer } = Layout;
+
+const columnSpan = { xs: 24, sm: 24, md: 24, lg: 12, xl: 12, xxl: 8 };
 
 const SimpleHeader = () => (
   <div id="oxalis-header">
@@ -148,6 +150,25 @@ class SpotlightView extends React.PureComponent<Props, State> {
           <SimpleHeader />
         )}
         <Content style={{ padding: 50 }}>
+          <div
+            style={{
+              color: "white",
+              width: "100%",
+              textAlign: "center",
+              backgroundColor: "grey",
+              padding: 8,
+              fontSize: 20,
+            }}
+          >
+            <a
+              href="https://goo.gl/forms/QICmEcQyid6gb8Kw1"
+              title="Add missing dataset"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Add missing dataset
+            </a>
+          </div>
           <Spin size="large" spinning={this.state.isLoading}>
             <div style={{ minHeight: "100px" }}>
               {this.state.datasets.length === 0 && !this.state.isLoading ? (
@@ -161,6 +182,40 @@ class SpotlightView extends React.PureComponent<Props, State> {
               )}
             </div>
           </Spin>
+          <Row gutter={16}>
+            <Col className="gallery-dataset-col" {...columnSpan}>
+              <a
+                href="https://goo.gl/forms/QICmEcQyid6gb8Kw1"
+                title="Add missing dataset"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card">
+                  <span className="dataset-thumbnail" title="Click to add missing dataset">
+                    <div
+                      className="dataset-thumbnail-image"
+                      style={{
+                        background:
+                          "url('https://image.freepik.com/freie-ikonen/pluszeichen_318-32580.jpg')",
+                        backgroundSize: "cover",
+                        width: "100%",
+                        height: "100%",
+                      }}
+                    />
+                  </span>
+                  <div className="dataset-description">
+                    <div className="description-flex">
+                      <h3>Add a missing dataset</h3>
+                      <div className="dataset-description-body">
+                        Click here to add your missing dataset. It opens a form which will contact
+                        us so we can add your dataset.
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              </a>
+            </Col>
+          </Row>
           <div id="spotlight-footnote">
             Visit <a href="https://www.webknossos.org/">webknossos.org</a> to learn more about
             webKnossos.

@@ -44,7 +44,7 @@ import Constants, {
   type Vector6,
 } from "oxalis/constants";
 import * as Utils from "libs/utils";
-import { enableMergerMode, disableMergerMode } from "oxalis/script";
+import { enableMergerMode, disableMergerMode } from "oxalis/merger_mode";
 
 const Panel = Collapse.Panel;
 

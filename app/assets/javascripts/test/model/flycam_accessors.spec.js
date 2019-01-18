@@ -2,7 +2,6 @@
 import _ from "lodash";
 
 import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
-import { _getMaximumZoomForAllResolutions } from "oxalis/model/accessors/flycam_accessor";
 import * as accessors from "oxalis/model/accessors/flycam_accessor";
 import test from "ava";
 
@@ -87,7 +86,7 @@ test.only("Flycam Accessors should calculate appropriate zoom factors for datase
     [4096, 4096, 512],
   ];
 
-  const maximumZoomPerResolution = _getMaximumZoomForAllResolutions(scale, resolutions);
+  const maximumZoomPerResolution = accessors._getMaximumZoomForAllResolutions(scale, resolutions);
 
   // If this test case should fail at some point, the following values may be updated appropriately
   // to make it pass again. However, it should be validated that zooming out works as expected for

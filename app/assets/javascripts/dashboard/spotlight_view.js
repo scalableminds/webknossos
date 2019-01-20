@@ -13,7 +13,7 @@ import features from "features";
 
 const { Content, Footer } = Layout;
 
-const columnSpan = { xs: 24, sm: 24, md: 24, lg: 12, xl: 12, xxl: 8 };
+const columnSpan = { xs: 12, sm: 12, md: 12, lg: 6, xl: 6, xxl: 4 };
 
 const SimpleHeader = () => (
   <div id="oxalis-header">
@@ -157,12 +157,15 @@ class SpotlightView extends React.PureComponent<Props, State> {
               textAlign: "center",
               backgroundColor: "grey",
               padding: 8,
+              marginBottom: 24,
               fontSize: 20,
+              borderRadius: 4,
             }}
+            title="You want to add your dataset to this set? Click here to add it. It opens a
+                form which will contact us so we can add your dataset."
           >
             <a
               href="https://goo.gl/forms/QICmEcQyid6gb8Kw1"
-              title="Add missing dataset"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -182,40 +185,28 @@ class SpotlightView extends React.PureComponent<Props, State> {
               )}
             </div>
           </Spin>
-          <Row gutter={16}>
+          <div style={{ display: "flex", justifyContent: "center" }}>
             <Col className="gallery-dataset-col" {...columnSpan}>
               <a
                 href="https://goo.gl/forms/QICmEcQyid6gb8Kw1"
-                title="Add missing dataset"
+                title="Click to add missing dataset"
                 target="_blank"
                 rel="noopener noreferrer"
               >
                 <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card">
-                  <span className="dataset-thumbnail" title="Click to add missing dataset">
-                    <div
-                      className="dataset-thumbnail-image"
-                      style={{
-                        background:
-                          "url('https://image.freepik.com/freie-ikonen/pluszeichen_318-32580.jpg')",
-                        backgroundSize: "cover",
-                        width: "100%",
-                        height: "100%",
-                      }}
-                    />
-                  </span>
-                  <div className="dataset-description">
+                  <div className="dataset-description" style={{ width: "100%" }}>
                     <div className="description-flex">
                       <h3>Add a missing dataset</h3>
                       <div className="dataset-description-body">
-                        Click here to add your missing dataset. It opens a form which will contact
-                        us so we can add your dataset.
+                        You want to add your dataset to this set? Click here to add it. It opens a
+                        form which will contact us so we can add your dataset.
                       </div>
                     </div>
                   </div>
                 </Card>
               </a>
             </Col>
-          </Row>
+          </div>
           <div id="spotlight-footnote">
             Visit <a href="https://www.webknossos.org/">webknossos.org</a> to learn more about
             webKnossos.

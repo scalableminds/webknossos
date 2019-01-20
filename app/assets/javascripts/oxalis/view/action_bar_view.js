@@ -116,7 +116,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
           {this.props.showVersionRestore ? VersionRestoreWarning : null}
           <DatasetPositionView />
           {this.props.hasVolume && isVolumeSupported ? <VolumeActionsView /> : null}
-          {this.props.hasSkeleton && isTraceMode ? <ViewModesView /> : null}
+          {!this.props.hasVolume ? <ViewModesView /> : null}
         </div>
         <AddNewLayoutModal
           addLayout={this.addNewLayout}

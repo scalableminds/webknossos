@@ -703,10 +703,12 @@ export function getDatasetConfiguration(datasetId: APIDatasetId): Promise<Object
 export function updateDatasetConfiguration(
   datasetId: APIDatasetId,
   datasetConfig: DatasetConfiguration,
+  options?: RequestOptions = {},
 ): Object {
   return Request.sendJSONReceiveJSON(
     `/api/dataSetConfigurations/${datasetId.owningOrganization}/${datasetId.name}`,
     {
+      ...options,
       method: "PUT",
       data: datasetConfig,
     },
@@ -955,7 +957,7 @@ export function getExistingExperienceDomains(): Promise<ExperienceDomainList> {
 }
 
 export async function isInMaintenance(): Promise<boolean> {
-  const info = await Request.receiveJSON("/api/maintenance");
+  const info = await Request.receiveJSON("/api/maintenance", { doNotInvestigate: true });
   return info.isMaintenance;
 }
 

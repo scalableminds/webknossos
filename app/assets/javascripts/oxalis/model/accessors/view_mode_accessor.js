@@ -34,7 +34,6 @@ export function getInputCatcherAspectRatio(viewport: Viewport): number {
 // ground truth.
 export function applyAspectRatioToWidth(aspectRatio: number, width: number): [number, number] {
   const useWidth = ensureSmallerEdge ? aspectRatio >= 1 : aspectRatio < 1;
-
   const scaledWidth = width * (useWidth ? 1 : aspectRatio);
   const scaledHeight = width / (!useWidth ? 1 : aspectRatio);
 
@@ -50,6 +49,13 @@ export function getViewportScale(viewport: Viewport): [number, number] {
   const xScale = (width + 2 * borderWidth) / constants.VIEWPORT_WIDTH;
   const yScale = (height + 2 * borderWidth) / constants.VIEWPORT_WIDTH;
   return [xScale, yScale];
+}
+
+export function getDominantViewportScale(viewport: Viewport): number {
+  const viewportScales = getViewportScale(viewport);
+
+  // This might need changing when ensureSmallerEdge is not set to true anymore
+  return Math.max(viewportScales[0], viewportScales[1]);
 }
 
 export default {};

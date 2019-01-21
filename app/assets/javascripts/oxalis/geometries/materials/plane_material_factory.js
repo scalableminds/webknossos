@@ -30,7 +30,7 @@ import {
   getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
 import { getPackingDegree } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
+import { getDominantViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import AbstractPlaneMaterialFactory, {
   type ShaderMaterialOptions,
@@ -122,8 +122,8 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         value: 0,
       },
       pixelToVoxelFactor: {
-        type: "v2",
-        value: new THREE.Vector2(1, 1),
+        type: "f",
+        value: 1,
       },
       activeCellId: {
         type: "v4",
@@ -346,15 +346,12 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        storeState =>
-          // TODO: might need getPlaneScalingFactor(storeState.flycam)
-          V2.scale(getViewportScale(this.planeID), 1 / storeState.flycam.zoomStep),
+        storeState => getDominantViewportScale(this.planeID) / storeState.flycam.zoomStep,
 
         pixelToVoxelFactor => {
           this.uniforms.pixelToVoxelFactor.value = pixelToVoxelFactor;
         },
         true,
-        Utils.isVec2Equal,
       ),
     );
 

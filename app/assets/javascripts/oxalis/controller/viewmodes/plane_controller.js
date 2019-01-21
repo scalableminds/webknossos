@@ -18,7 +18,11 @@ import {
   getPlaneScalingFactor,
 } from "oxalis/model/accessors/flycam_accessor";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
-import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
+import {
+  getDominantViewportScale,
+  getViewportScale,
+  getInputCatcherRect,
+} from "oxalis/model/accessors/view_mode_accessor";
 import { getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import {
@@ -145,10 +149,7 @@ class PlaneController extends React.PureComponent<Props> {
   getPlaneMouseControls(planeId: OrthoView): Object {
     const baseControls = {
       leftDownMove: (delta: Point2) => {
-        const viewportScales = getViewportScale(planeId);
-        // This might need changing when ensureSmallerEdge is not set to true anymore
-        const scale = Math.max(viewportScales[0], viewportScales[1]);
-
+        const scale = getDominantViewportScale(planeId);
         return this.movePlane([(delta.x * -1) / scale, (delta.y * -1) / scale, 0]);
       },
 

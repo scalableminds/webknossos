@@ -38,7 +38,7 @@ const createPriorityQueue = () =>
 
 const BATCH_SIZE = 3;
 // If ${maximumPickerTickCount} bucket picker ticks didn't select a bucket, that bucket is discarded from the pullqueue
-const maximumPickerTickCount = 5;
+const maximumPickerTickCount = 0;
 
 class PullQueue {
   cube: DataCube;
@@ -211,6 +211,10 @@ class PullQueue {
     for (const item of items) {
       this.add(item, currentBucketPickerTick);
     }
+  }
+
+  clear() {
+    this.priorityQueue.clear();
   }
 
   maybeWhitenEmptyBucket(bucketData: Uint8Array) {

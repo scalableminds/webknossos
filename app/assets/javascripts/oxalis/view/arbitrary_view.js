@@ -179,7 +179,7 @@ class ArbitraryView {
       const renderViewport = (viewport, _camera) => {
         const { left, top, width, height } = getInputCatcherRect(viewport);
         if (width > 0 && height > 0) {
-          setupRenderArea(renderer, left, top, width, height, width, height, 0xffffff);
+          setupRenderArea(renderer, left, top, width, height, 0xffffff);
           renderer.render(scene, _camera);
         }
       };

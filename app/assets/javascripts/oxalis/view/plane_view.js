@@ -28,29 +28,17 @@ export const setupRenderArea = (
   y: number,
   viewportWidth: number,
   viewportHeight: number,
-  scissorWidth: number,
-  scissorHeight: number,
   color: number,
 ) => {
   renderer.setViewport(x, y, viewportWidth, viewportHeight);
   renderer.setScissor(x, y, viewportWidth, viewportHeight);
-  // renderer.setScissor(x, y, scissorWidth, scissorHeight);
   renderer.setScissorTest(true);
   renderer.setClearColor(color, 1);
 };
 
 export const clearCanvas = (renderer: THREE.WebGLRenderer) => {
   const rendererSize = renderer.getSize();
-  setupRenderArea(
-    renderer,
-    0,
-    0,
-    renderer.domElement.width,
-    renderer.domElement.height,
-    rendererSize.width,
-    rendererSize.height,
-    0xffffff,
-  );
+  setupRenderArea(renderer, 0, 0, renderer.domElement.width, renderer.domElement.height, 0xffffff);
   renderer.clear();
 };
 
@@ -182,21 +170,7 @@ class PlaneView {
         SceneController.updateSceneForCam(plane);
         const { left, top, width, height } = viewport[plane];
         if (width > 0 && height > 0) {
-          setupRenderArea(
-            renderer,
-            left,
-            top,
-            width,
-            height,
-            width,
-            height,
-            OrthoViewColors[plane],
-          );
-          // if (plane === "TDView") {
-          //   const camera = this.cameras[plane];
-          //   camera.aspect = width / height;
-          //   camera.updateProjectionMatrix();
-          // }
+          setupRenderArea(renderer, left, top, width, height, OrthoViewColors[plane]);
           renderer.render(scene, this.cameras[plane]);
         }
       }

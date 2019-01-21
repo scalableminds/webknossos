@@ -416,7 +416,7 @@ export const defaultState: OxalisState = {
     clippingDistanceArbitrary: 64,
     crosshairSize: 0.1,
     displayCrosshair: true,
-    displayScalebars: false,
+    displayScalebars: true,
     dynamicSpaceDirection: true,
     keyboardDelay: 200,
     mouseRotateValue: 0.004,

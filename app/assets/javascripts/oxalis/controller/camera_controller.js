@@ -167,7 +167,6 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
 
   let to: TweenState;
   if (id === OrthoViews.TDView) {
-    // TODO use height
     const diagonal = Math.sqrt(b[0] * b[0] + b[1] * b[1]);
     const padding = 0.05 * diagonal;
 

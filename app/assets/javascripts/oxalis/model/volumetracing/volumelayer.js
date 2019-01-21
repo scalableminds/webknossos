@@ -219,10 +219,9 @@ class VolumeLayer {
     const { brushSize } = state.temporaryConfiguration;
     const scaledBrushSize = (brushSize / viewportScale) * zoomFactor;
 
-    const scaledRadius = Math.round(scaledBrushSize / 2);
-    const squaredRadius = scaledRadius ** 2;
-    const width = 2 * scaledRadius;
-    const height = 2 * scaledRadius;
+    const radius = Math.round(scaledBrushSize / 2);
+    const width = 2 * radius;
+    const height = 2 * radius;
 
     const map = new Array(width);
     for (let x = 0; x < width; x++) {
@@ -233,15 +232,15 @@ class VolumeLayer {
     }
     const floatingCoord2d = this.get2DCoordinate(position);
     const coord2d = [Math.floor(floatingCoord2d[0]), Math.floor(floatingCoord2d[1])];
-    const minCoord2d = [coord2d[0] - scaledRadius, coord2d[1] - scaledRadius];
+    const minCoord2d = [coord2d[0] - radius, coord2d[1] - radius];
 
     // Use the baseVoxelFactors to scale the circle, otherwise it'll become an ellipse
     const [u, v] = this.get2DCoordinate(getBaseVoxelFactors(state.dataset.dataSource.scale));
 
     for (let x = 0; x < width; x++) {
       for (let y = 0; y < width; y++) {
-        const dist = Math.sqrt(((x - scaledRadius) / u) ** 2 + ((y - scaledRadius) / v) ** 2);
-        if (dist < scaledRadius) {
+        const dist = Math.sqrt(((x - radius) / u) ** 2 + ((y - radius) / v) ** 2);
+        if (dist < radius) {
           map[x][y] = true;
         }
       }

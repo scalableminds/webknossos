@@ -13,7 +13,7 @@ import features from "features";
 
 const { Content, Footer } = Layout;
 
-const columnSpan = { xs: 12, sm: 12, md: 12, lg: 6, xl: 6, xxl: 4 };
+const columnSpan = { xs: 24, sm: 24, md: 24, lg: 12, xl: 12, xxl: 8 };
 
 const SimpleHeader = () => (
   <div id="oxalis-header">
@@ -152,10 +152,9 @@ class SpotlightView extends React.PureComponent<Props, State> {
         <Content style={{ padding: 50 }}>
           <div
             style={{
-              color: "white",
               width: "100%",
               textAlign: "center",
-              backgroundColor: "grey",
+              backgroundColor: "#a9a9a9",
               padding: 8,
               marginBottom: 24,
               fontSize: 20,
@@ -168,9 +167,47 @@ class SpotlightView extends React.PureComponent<Props, State> {
               href="https://goo.gl/forms/QICmEcQyid6gb8Kw1"
               target="_blank"
               rel="noopener noreferrer"
+              style={{ color: "white" }}
             >
               Add missing dataset
             </a>
+          </div>
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <Col className="gallery-dataset-col" {...columnSpan}>
+              <a
+                href="https://goo.gl/forms/QICmEcQyid6gb8Kw1"
+                title="Click to add missing dataset"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card">
+                  <span className="dataset-thumbnail" title="Click to add missing dataset">
+                    <div
+                      className="dataset-thumbnail-image"
+                      style={{
+                        background:
+                          "url('https://image.freepik.com/freie-ikonen/fragezeichen_318-52837.jpg')",
+                        width: "100%",
+                        height: "100%",
+                        backgroundRepeat: "no-repeat",
+                        backgroundSize: "85% 85%",
+                        backgroundPosition: "center",
+                        backgroundColor: "white",
+                      }}
+                    />
+                  </span>
+                  <div className="dataset-description" style={{ borderLeft: "5px solid #e8e8e8" }}>
+                    <div className="description-flex">
+                      <h3>Add a missing dataset</h3>
+                      <div className="dataset-description-body">
+                        You want to add your dataset to this set? Click here to add it. It opens a
+                        form which will contact us so we can add your dataset.
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              </a>
+            </Col>
           </div>
           <Spin size="large" spinning={this.state.isLoading}>
             <div style={{ minHeight: "100px" }}>
@@ -194,7 +231,22 @@ class SpotlightView extends React.PureComponent<Props, State> {
                 rel="noopener noreferrer"
               >
                 <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card">
-                  <div className="dataset-description" style={{ width: "100%" }}>
+                  <span className="dataset-thumbnail" title="Click to add missing dataset">
+                    <div
+                      className="dataset-thumbnail-image"
+                      style={{
+                        background:
+                          "url('https://image.freepik.com/freie-ikonen/fragezeichen_318-52837.jpg')",
+                        width: "100%",
+                        height: "100%",
+                        backgroundRepeat: "no-repeat",
+                        backgroundSize: "85% 85%",
+                        backgroundPosition: "center",
+                        backgroundColor: "white",
+                      }}
+                    />
+                  </span>
+                  <div className="dataset-description" style={{ borderLeft: "5px solid #e8e8e8" }}>
                     <div className="description-flex">
                       <h3>Add a missing dataset</h3>
                       <div className="dataset-description-body">

@@ -16,5 +16,11 @@ RUN chown -R webknossos . \
 
 USER webknossos
 
+HEALTHCHECK \
+  --interval=1m --timeout=5s --retries=10 \
+  CMD curl --fail http://localhost:9090/data/health || exit 1
+
+EXPOSE 9090
+
 ENTRYPOINT ["bin/webknossos-datastore"]
 CMD ["-J-Xmx20G", "-J-Xms1G", "-Dconfig.file=conf/standalone-datastore.conf", "-Dlogger.file=conf/logback-docker.xml", "-Dlogback.configurationFile=conf/logback-docker.xml", "-Dhttp.port=9090", "-Dhttp.address=0.0.0.0"]

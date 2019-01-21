@@ -1,5 +1,6 @@
 // @flow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
+import type { DatasetConfiguration } from "oxalis/store";
 import anyTest, { type TestInterface } from "ava";
 import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
 import path from "path";
@@ -69,14 +70,38 @@ const datasetNames = [
   "confocal-multi_knossos",
   "fluro-rgb_knossos",
   "dsA_2",
+  "2017-05-31_mSEM_scMS109_bk_100um_v01-aniso",
+  "ROI2017_wkw_fallback",
 ];
+
+const viewOverrides: { [key: string]: string } = {
+  e2006_knossos: "4736,4992,2176,0,1.0",
+  "2017-05-31_mSEM_scMS109_bk_100um_v01-aniso": "4608,4543,386,0,4.00",
+  ROI2017_wkw_fallback: "535,536,600,0,1.18",
+};
+
+const datasetConfigOverrides: { [key: string]: DatasetConfiguration } = {
+  ROI2017_wkw_fallback: {
+    fourBit: false,
+    interpolation: true,
+    layers: { color: { color: [255, 255, 255], contrast: 1, brightness: 0 } },
+    quality: 0,
+    segmentationOpacity: 0,
+    highlightHoveredCellId: true,
+    renderIsosurfaces: false,
+    renderMissingDataBlack: false,
+  },
+};
 
 datasetNames.map(async datasetName => {
   test.serial(`it should render dataset ${datasetName} correctly`, async t => {
+    const datasetId = { name: datasetName, owningOrganization: "Connectomics_Department" };
     const { screenshot, width, height } = await screenshotDataset(
       await getNewPage(t.context.browser),
       URL,
-      { name: datasetName, owningOrganization: "Connectomics department" },
+      datasetId,
+      viewOverrides[datasetName],
+      datasetConfigOverrides[datasetName],
     );
     const changedPixels = await compareScreenshot(
       screenshot,

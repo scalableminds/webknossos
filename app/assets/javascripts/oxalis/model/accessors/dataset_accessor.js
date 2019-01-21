@@ -9,7 +9,7 @@ import ErrorHandling from "libs/error_handling";
 import constants, { ModeValues, type Vector3, Vector3Indicies } from "oxalis/constants";
 import messages from "messages";
 
-export function getResolutions(dataset: APIDataset): Vector3[] {
+function _getResolutions(dataset: APIDataset): Vector3[] {
   // Different layers can have different resolutions. At the moment,
   // unequal resolutions will result in undefined behavior.
   // However, if resolutions are subset of each other, everything should be fine.
@@ -33,6 +33,11 @@ export function getResolutions(dataset: APIDataset): Vector3[] {
 
   return mostExtensiveResolutions.concat(extendedResolutions);
 }
+
+// _getResolutions itself is not very performance intensive, but other functions which rely
+// on the returned resolutions are. To avoid busting memoization caches (which rely on references),
+// we memoize _getResolutions, as well.
+export const getResolutions = memoizeOne(_getResolutions);
 
 function _getMaxZoomStep(maybeDataset: ?APIDataset): number {
   const minimumZoomStepCount = 1;
@@ -179,6 +184,18 @@ export function getThumbnailURL(dataset: APIDataset): string {
   const colorLayer = _.find(layers, { category: "color" });
   if (colorLayer) {
     return `/api/datasets/${organizationName}/${datasetName}/layers/${colorLayer.name}/thumbnail`;
+  }
+  return "";
+}
+
+export function getSegmentationThumbnailURL(dataset: APIDataset): string {
+  const datasetName = dataset.name;
+  const organizationName = dataset.owningOrganization;
+  const segmentationLayer = getSegmentationLayer(dataset);
+  if (segmentationLayer) {
+    return `/api/datasets/${organizationName}/${datasetName}/layers/${
+      segmentationLayer.name
+    }/thumbnail`;
   }
   return "";
 }

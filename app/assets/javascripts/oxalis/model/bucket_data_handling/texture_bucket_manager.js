@@ -2,7 +2,7 @@
 import * as THREE from "three";
 import _ from "lodash";
 
-import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
+import { DataBucket, bucketDebuggingFlags } from "oxalis/model/bucket_data_handling/bucket";
 import { createUpdatableTexture } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import { getRenderer } from "oxalis/controller/renderer";
 import { waitForCondition } from "libs/utils";
@@ -24,9 +24,6 @@ import window from "libs/window";
 
 const lookUpBufferWidth = constants.LOOK_UP_TEXTURE_WIDTH;
 
-// DEBUG flag for visualizing buckets which are passed to the GPU
-const visualizeBucketsOnGPU = false;
-
 // At the moment, we only store one float f per bucket.
 // If f >= 0, f denotes the index in the data texture where the bucket is stored.
 // If f == -1, the bucket is not yet committed
@@ -47,7 +44,7 @@ export default class TextureBucketManager {
   isRefreshBufferOutOfDate: boolean = false;
 
   // This is passed as a parameter to allow for testing
-  bucketsPerDim: Vector3;
+  bucketsPerDimPerResolution: Array<Vector3>;
   currentAnchorPoint: Vector4 = [0, 0, 0, 0];
   fallbackAnchorPoint: Vector4 = [0, 0, 0, 0];
   writerQueue: Array<{ bucket: DataBucket, _index: number }> = [];
@@ -57,7 +54,7 @@ export default class TextureBucketManager {
   packingDegree: number;
 
   constructor(
-    bucketsPerDim: Vector3,
+    bucketsPerDimPerResolution: Array<Vector3>,
     textureWidth: number,
     dataTextureCount: number,
     bytes: number,
@@ -70,7 +67,7 @@ export default class TextureBucketManager {
       (this.packingDegree * dataTextureCount * textureWidth ** 2) / constants.BUCKET_SIZE;
     // the look up buffer is bucketsPerDim**3 so that arbitrary look ups can be made
     const lookUpBufferSize = Math.pow(lookUpBufferWidth, 2) * floatsPerLookUpEntry;
-    this.bucketsPerDim = bucketsPerDim;
+    this.bucketsPerDimPerResolution = bucketsPerDimPerResolution;
     this.textureWidth = textureWidth;
     this.dataTextureCount = dataTextureCount;
 
@@ -98,7 +95,7 @@ export default class TextureBucketManager {
     if (unusedIndex == null) {
       return;
     }
-    if (visualizeBucketsOnGPU) {
+    if (bucketDebuggingFlags.visualizeBucketsOnGPU) {
       bucket.unvisualize();
     }
     this.activeBucketToIndexMap.delete(bucket);
@@ -181,7 +178,7 @@ export default class TextureBucketManager {
       const dataTextureIndex = Math.floor(_index / bucketsPerTexture);
       const indexInDataTexture = _index % bucketsPerTexture;
 
-      if (visualizeBucketsOnGPU) {
+      if (bucketDebuggingFlags.visualizeBucketsOnGPU) {
         bucket.visualize();
       }
 
@@ -292,7 +289,9 @@ export default class TextureBucketManager {
 
   _getBucketIndex(bucket: DataBucket): number {
     const bucketPosition = bucket.zoomedAddress;
-    const zoomDiff = bucketPosition[3] - this.currentAnchorPoint[3];
+    const renderingZoomStep = this.currentAnchorPoint[3];
+    const bucketZoomStep = bucketPosition[3];
+    const zoomDiff = bucketZoomStep - renderingZoomStep;
     const isFallbackBucket = zoomDiff > 0;
 
     const anchorPoint = isFallbackBucket ? this.fallbackAnchorPoint : this.currentAnchorPoint;
@@ -301,7 +300,15 @@ export default class TextureBucketManager {
     const y = bucketPosition[1] - anchorPoint[1];
     const z = bucketPosition[2] - anchorPoint[2];
 
-    const [sx, sy, sz] = this.bucketsPerDim;
+    if (x < 0) console.warn("x should be greater than 0. is currently:", x);
+    if (y < 0) console.warn("y should be greater than 0. is currently:", y);
+    if (z < 0) console.warn("z should be greater than 0. is currently:", z);
+
+    // Even though, bucketsPerDim might be different in the fallback case,
+    // it's safe to assume that the values would only be smaller (since
+    // fallback data doesn't require more buckets than non-fallback).
+    // Consequently, these values should be fine to address buckets.
+    const [sx, sy, sz] = this.bucketsPerDimPerResolution[renderingZoomStep];
 
     // prettier-ignore
     return (

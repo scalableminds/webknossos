@@ -66,6 +66,10 @@ const KeyboardShortcutView = () => {
       keybinding: "Right Click Drag (3D View)",
       action: "Rotate 3D View",
     },
+    {
+      keybinding: "Ctrl + Left Click",
+      action: "Select/Unselect a tree in the trees tab",
+    },
   ];
 
   const generalShortcuts = [
@@ -118,7 +122,7 @@ const KeyboardShortcutView = () => {
       action: "Increase/Decrease the Move Value",
     },
     {
-      keybinding: "CTRL + Shift + F",
+      keybinding: "Ctrl + Shift + F",
       action: "Open Tree Search (if Tree List is visible)",
     },
   ];

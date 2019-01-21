@@ -64,6 +64,7 @@ export type APIDataStore = {
   +name: string,
   +url: string,
   +isForeign?: boolean,
+  +isScratch: boolean,
 };
 
 export type APITracingStore = {

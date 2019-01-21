@@ -62,7 +62,7 @@ Samplecountry
   val defaultOrganization = Organization(ObjectId.generate,
                                          "Connectomics_Department",
                                          additionalInformation,
-                                         "/assets/images/mpi-logos.svg",
+                                         "/images/mpi-logos.svg",
                                          "MPI for Brain Research")
   val organizationTeam = Team(organizationTeamId, defaultOrganization._id, defaultOrganization.name, true)
   val defaultUser = User(

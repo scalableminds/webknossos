@@ -31,11 +31,19 @@ import Store from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
+import { trackAction } from "oxalis/model/helpers/analytics";
 
 const { Column } = Table;
 const { Search } = Input;
 
 const typeHint: APIAnnotationTypeCompact[] = [];
+const pageLength: number = 1000;
+
+export type TracingModeState = {
+  tracings: Array<APIAnnotationTypeCompact>,
+  lastLoadedPage: number,
+  loadedAllTracings: boolean,
+};
 
 type Props = {
   userId: ?string,
@@ -45,12 +53,8 @@ type Props = {
 
 type State = {
   shouldShowArchivedTracings: boolean,
-  archivedTracings: Array<APIAnnotationTypeCompact>,
-  unarchivedTracings: Array<APIAnnotationTypeCompact>,
-  didAlreadyFetchMetaInfo: {
-    isArchived: boolean,
-    isUnarchived: boolean,
-  },
+  archivedModeState: TracingModeState,
+  unarchivedModeState: TracingModeState,
   searchQuery: string,
   tags: Array<string>,
   isLoading: boolean,
@@ -67,11 +71,15 @@ const persistence: Persistence<State> = new Persistence(
 class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   state = {
     shouldShowArchivedTracings: false,
-    archivedTracings: [],
-    unarchivedTracings: [],
-    didAlreadyFetchMetaInfo: {
-      isArchived: false,
-      isUnarchived: false,
+    archivedModeState: {
+      tracings: [],
+      lastLoadedPage: -1,
+      loadedAllTracings: false,
+    },
+    unarchivedModeState: {
+      tracings: [],
+      lastLoadedPage: -1,
+      loadedAllTracings: false,
     },
     searchQuery: "",
     tags: [],
@@ -84,22 +92,11 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
 
   componentDidMount() {
     this.restoreSearchTags();
-    this.fetchDataMaybe();
+    this.fetchNextPage(0);
   }
 
   componentWillUpdate(nextProps, nextState) {
     persistence.persist(this.props.history, nextState);
-  }
-
-  componentDidUpdate(prevProps, prevState) {
-    if (this.state.shouldShowArchivedTracings !== prevState.shouldShowArchivedTracings) {
-      this.fetchDataMaybe();
-    }
-  }
-
-  isFetchNecessary(): boolean {
-    const accessor = this.state.shouldShowArchivedTracings ? "isArchived" : "isUnarchived";
-    return !this.state.didAlreadyFetchMetaInfo[accessor];
   }
 
   restoreSearchTags() {
@@ -115,49 +112,70 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     }
   }
 
-  async fetchDataMaybe(): Promise<void> {
-    if (!this.isFetchNecessary()) {
-      return;
-    }
-    // Cache shouldShowArchivedTracings, otherwise it could have another value after fetching
+  getCurrentModeState = () =>
+    this.state.shouldShowArchivedTracings
+      ? this.state.archivedModeState
+      : this.state.unarchivedModeState;
+
+  setModeState = modeShape => {
+    const shouldShowArchivedTracings = this.state.shouldShowArchivedTracings;
+    this.setState(prevState => {
+      const newSubState = {
+        ...prevState[shouldShowArchivedTracings ? "archivedModeState" : "unarchivedModeState"],
+        ...modeShape,
+      };
+      return {
+        [shouldShowArchivedTracings ? "archivedModeState" : "unarchivedModeState"]: newSubState,
+      };
+    });
+  };
+
+  setOppositeModeState = modeShape => {
+    const shouldShowArchivedTracings = this.state.shouldShowArchivedTracings;
+    this.setState(prevState => {
+      const newSubState = {
+        ...prevState[shouldShowArchivedTracings ? "unarchivedModeState" : "archivedModeState"],
+        ...modeShape,
+      };
+      return {
+        [shouldShowArchivedTracings ? "unarchivedModeState" : "archivedModeState"]: newSubState,
+      };
+    });
+  };
+
+  fetchNextPage = async pageNumber => {
+    // this refers not to the pagination of antd but to the pagination of querying data from SQL
     const showArchivedTracings = this.state.shouldShowArchivedTracings;
+    const previousTracings = this.getCurrentModeState().tracings;
 
     try {
       this.setState({ isLoading: true });
       const tracings =
         this.props.userId != null
-          ? await getCompactAnnotationsForUser(this.props.userId, showArchivedTracings)
-          : await getCompactAnnotations(showArchivedTracings);
-      if (showArchivedTracings) {
-        this.setState(prevState =>
-          update(prevState, {
-            archivedTracings: { $set: tracings },
-            didAlreadyFetchMetaInfo: {
-              isArchived: { $set: true },
-            },
-          }),
-        );
-      } else {
-        this.setState(prevState =>
-          update(prevState, {
-            unarchivedTracings: { $set: tracings },
-            didAlreadyFetchMetaInfo: {
-              isUnarchived: { $set: true },
-            },
-          }),
-        );
-      }
+          ? await getCompactAnnotationsForUser(this.props.userId, showArchivedTracings, pageNumber)
+          : await getCompactAnnotations(showArchivedTracings, pageNumber);
+
+      this.setModeState({
+        tracings: previousTracings.concat(tracings),
+        lastLoadedPage: pageNumber,
+        loadedAllTracings: tracings.length !== pageLength || tracings.length === 0,
+      });
     } catch (error) {
       handleGenericError(error);
     } finally {
       this.setState({ isLoading: false });
     }
-  }
+  };
 
   toggleShowArchived = () => {
-    this.setState(prevState => ({
-      shouldShowArchivedTracings: !prevState.shouldShowArchivedTracings,
-    }));
+    this.setState(
+      prevState => ({
+        shouldShowArchivedTracings: !prevState.shouldShowArchivedTracings,
+      }),
+      () => {
+        if (this.getCurrentModeState().lastLoadedPage === -1) this.fetchNextPage(0);
+      },
+    );
   };
 
   finishOrReopenTracing = async (type: "finish" | "reopen", tracing: APIAnnotationTypeCompact) => {
@@ -175,15 +193,15 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     const newTracings = this.getCurrentTracings().filter(t => t.id !== tracing.id);
 
     if (type === "finish") {
-      this.setState(prevState => ({
-        unarchivedTracings: newTracings,
-        archivedTracings: [newTracing].concat(prevState.archivedTracings),
-      }));
+      this.setModeState({ tracings: newTracings });
+      this.setOppositeModeState({
+        tracings: [newTracing].concat(this.state.archivedModeState.tracings),
+      });
     } else {
-      this.setState(prevState => ({
-        archivedTracings: newTracings,
-        unarchivedTracings: [newTracing].concat(prevState.unarchivedTracings),
-      }));
+      this.setModeState({ tracings: newTracings });
+      this.setOppositeModeState({
+        tracings: [newTracing].concat(this.state.unarchivedModeState.tracings),
+      });
     }
   };
 
@@ -223,9 +241,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   getCurrentTracings(): Array<APIAnnotationTypeCompact> {
-    return this.state.shouldShowArchivedTracings
-      ? this.state.archivedTracings
-      : this.state.unarchivedTracings;
+    return this.getCurrentModeState().tracings;
   }
 
   handleSearch = (event: SyntheticInputEvent<>): void => {
@@ -243,11 +259,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       }
     });
 
-    this.setState(prevState => ({
-      [prevState.shouldShowArchivedTracings
-        ? "archivedTracings"
-        : "unarchivedTracings"]: newTracings,
-    }));
+    this.setModeState({ tracings: newTracings });
 
     editAnnotation(tracing.id, tracing.typ, { name }).then(() => {
       Toast.success(messages["annotation.was_edited"]);
@@ -266,8 +278,14 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         Toast.messages(data.messages);
 
         this.setState(prevState => ({
-          archivedTracings: prevState.archivedTracings.concat(selectedAnnotations),
-          unarchivedTracings: _.without(prevState.unarchivedTracings, ...selectedAnnotations),
+          archivedModeState: {
+            ...prevState.archivedModeState,
+            tracings: prevState.archivedModeState.tracings.concat(selectedAnnotations),
+          },
+          unarchivedModeState: {
+            ...prevState.unarchivedModeState,
+            tracings: _.without(prevState.unarchivedModeState.tracings, ...selectedAnnotations),
+          },
         }));
       },
     });
@@ -300,7 +318,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     event.stopPropagation(); // prevent the onClick event
 
     this.setState(prevState => {
-      const newTracings = prevState.unarchivedTracings.map(t => {
+      const newTracings = prevState.unarchivedModeState.tracings.map(t => {
         let newAnnotation = t;
 
         if (t.id === annotation.id) {
@@ -317,10 +335,11 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           editAnnotation(newAnnotation.id, newAnnotation.typ, {
             tags: newAnnotation.tags,
           });
+          trackAction("Edit annotation tag");
         }
         return newAnnotation;
       });
-      return { unarchivedTracings: newTracings };
+      return { unarchivedModeState: { ...prevState.unarchivedModeState, tracings: newTracings } };
     });
   };
 
@@ -522,6 +541,16 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Spin spinning={this.state.isLoading} size="large">
           {this.renderTable()}
         </Spin>
+        <div style={{ textAlign: "right" }}>
+          {!this.getCurrentModeState().loadedAllTracings ? (
+            <Link
+              to="#"
+              onClick={() => this.fetchNextPage(this.getCurrentModeState().lastLoadedPage + 1)}
+            >
+              Load more Annotations
+            </Link>
+          ) : null}
+        </div>
       </div>
     );
   }

@@ -1,13 +1,12 @@
 // @flow
 
 import { AutoSizer } from "react-virtualized";
-import { Dropdown, Menu, Icon, Checkbox } from "antd";
+import { Checkbox, Dropdown, Icon, Menu, Modal } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 import SortableTree from "react-sortable-tree";
 import _ from "lodash";
 import update from "immutability-helper";
-
 import {
   MISSING_GROUP_ID,
   TYPE_GROUP,
@@ -41,13 +40,17 @@ type Props = {
   // eslint-disable-next-line react/no-unused-prop-types
   sortBy: string,
   trees: TreeMap,
+  selectedTrees: Array<number>,
   onSetActiveTree: number => void,
   onSetActiveGroup: number => void,
+  onDeleteGroup: number => void,
   onToggleTree: number => void,
   onToggleAllTrees: () => void,
   onToggleTreeGroup: number => void,
   onUpdateTreeGroups: (Array<TreeGroup>) => void,
   onSetTreeGroup: (?number, number) => void,
+  onSelectTree: number => void,
+  deselectAllTrees: () => void,
 };
 
 type State = {
@@ -129,13 +132,35 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   onSelectTree = evt => {
-    const treeId = evt.target.dataset.id;
-    this.props.onSetActiveTree(parseInt(treeId, 10));
+    const treeId = parseInt(evt.target.dataset.id, 10);
+    if (evt.ctrlKey) {
+      this.props.onSelectTree(treeId);
+    } else {
+      this.props.deselectAllTrees();
+      this.props.onSetActiveTree(treeId);
+    }
   };
 
   onSelectGroup = evt => {
-    const groupId = evt.target.dataset.id;
-    this.props.onSetActiveGroup(parseInt(groupId, 10));
+    const groupId = parseInt(evt.target.dataset.id, 10);
+    const numberOfSelectedTrees = this.props.selectedTrees.length;
+    const selectGroup = () => {
+      this.props.deselectAllTrees();
+      this.props.onSetActiveGroup(groupId);
+    };
+    if (numberOfSelectedTrees > 0) {
+      Modal.confirm({
+        title: "Do you really want to select this group?",
+        content: `You have ${numberOfSelectedTrees} selected Trees. Do you really want to select this group?
+        This will deselect all selected trees.`,
+        onOk() {
+          selectGroup();
+        },
+        onCancel() {},
+      });
+    } else {
+      selectGroup();
+    }
   };
 
   onExpand = (params: { node: TreeNode, expanded: boolean }) => {
@@ -154,10 +179,13 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   }) => {
     const { nextParentNode, node, treeData } = params;
     if (node.type === TYPE_TREE) {
-      // A tree was dragged - update the group of the dragged tree
-      this.props.onSetTreeGroup(
-        nextParentNode.id === MISSING_GROUP_ID ? null : nextParentNode.id,
-        parseInt(node.id, 10),
+      const allTreesToMove = [...this.props.selectedTrees, node.id];
+      // Sets group of all selected + dragged trees (and the moved tree) to the new parent group
+      allTreesToMove.forEach(treeId =>
+        this.props.onSetTreeGroup(
+          nextParentNode.id === MISSING_GROUP_ID ? null : nextParentNode.id,
+          parseInt(treeId, 10),
+        ),
       );
     } else {
       // A group was dragged - update the groupTree
@@ -182,22 +210,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   }
 
   deleteGroup(groupId: number) {
-    const newTreeGroups = _.cloneDeep(this.props.treeGroups);
-    const groupToTreesMap = createGroupToTreesMap(this.props.trees);
-    callDeep(newTreeGroups, groupId, (item, index, arr, parentGroupId) => {
-      // Remove group and move its group children to the parent group
-      arr.splice(index, 1);
-      arr.push(...item.children);
-      // Update the group of all its tree children to the parent group
-      const trees = groupToTreesMap[groupId] != null ? groupToTreesMap[groupId] : [];
-      for (const tree of trees) {
-        this.props.onSetTreeGroup(
-          parentGroupId === MISSING_GROUP_ID ? null : parentGroupId,
-          tree.treeId,
-        );
-      }
-    });
-    this.props.onUpdateTreeGroups(newTreeGroups);
+    this.props.onDeleteGroup(groupId);
   }
 
   handleDropdownClick = (params: { item: *, key: string }) => {
@@ -208,6 +221,14 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     } else if (key === "delete") {
       this.deleteGroup(groupId);
     }
+  };
+
+  getNodeStyleClassForBackground = id => {
+    const isTreeSelected = this.props.selectedTrees.includes(id);
+    if (isTreeSelected) {
+      return "selected-tree-node";
+    }
+    return null;
   };
 
   renderGroupActionsDropdown = (node: TreeNode) => {
@@ -227,7 +248,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
     // Make sure the displayed name is not empty
     const displayableName = name.trim() || "<no name>";
-
     const nameAndDropdown = (
       <span className="ant-dropdown-link">
         <span data-id={id} onClick={this.onSelectGroup}>
@@ -238,7 +258,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         </Dropdown>
       </span>
     );
-
     return (
       <div>
         <Checkbox
@@ -262,8 +281,10 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     } else {
       const tree = this.props.trees[parseInt(node.id, 10)];
       const rgbColorString = tree.color.map(c => Math.round(c * 255)).join(",");
+      // Defining background color of current node
+      const styleClass = this.getNodeStyleClassForBackground(node.id);
       nodeProps.title = (
-        <div data-id={node.id} onClick={this.onSelectTree}>
+        <div data-id={node.id} onClick={this.onSelectTree} className={styleClass}>
           <Checkbox
             checked={tree.isVisible}
             onChange={this.onCheck}
@@ -303,12 +324,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   render() {
     const { activeTreeId, activeGroupId } = this.props;
     return (
-      <AutoSizer className="info-tab-content">
+      <AutoSizer>
         {({ height, width }) => (
           <div style={{ height, width }}>
-            {
-              // this.renderCreateGroupModal()
-            }
             <SortableTree
               treeData={this.state.groupTree}
               onChange={this.onChange}

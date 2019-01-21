@@ -9,6 +9,7 @@ import type { APIMaybeUnimportedDataset } from "admin/api_flow_types";
 import { createExplorational, triggerDatasetClearCache } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
+import { trackAction } from "oxalis/model/helpers/analytics";
 
 type Props = {
   dataset: APIMaybeUnimportedDataset,
@@ -25,6 +26,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
     withFallback: boolean,
   ) => {
     const annotation = await createExplorational(dataset, typ, withFallback);
+    trackAction(`Create ${typ} tracing`);
     this.props.history.push(`/annotations/${annotation.typ}/${annotation.id}`);
   };
 
@@ -57,11 +59,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
     const volumeTracingMenu = (
       <Dropdown overlay={menu} trigger={["click"]}>
         <a href="#" title="Create Volume Tracing">
-          <img
-            src="/assets/images/volume.svg"
-            alt="volume icon"
-            style={centerBackgroundImageStyle}
-          />{" "}
+          <img src="/images/volume.svg" alt="volume icon" style={centerBackgroundImageStyle} />{" "}
           Start Volume Tracing
         </a>
       </Dropdown>
@@ -112,7 +110,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                   title="Create Skeleton Tracing"
                 >
                   <img
-                    src="/assets/images/skeleton.svg"
+                    src="/images/skeleton.svg"
                     alt="skeleton icon"
                     style={centerBackgroundImageStyle}
                   />{" "}

@@ -134,7 +134,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
   render() {
     const layoutType = determineLayout(this.props.initialCommandType.type, this.props.viewMode);
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
-    const { displayScalebars, isDatasetOnScratchVolume } = this.props;
+    const { displayScalebars, isDatasetOnScratchVolume, isUpdateTracingAllowed } = this.props;
     const headerClassName = classNames({ construction: isDatasetOnScratchVolume });
 
     return (
@@ -234,7 +234,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
             </div>
             {this.props.showVersionRestore ? (
               <Sider id="version-restore-sider" width={400}>
-                <VersionView />
+                <VersionView allowUpdate={isUpdateTracingAllowed} />
               </Sider>
             ) : null}
           </Layout>

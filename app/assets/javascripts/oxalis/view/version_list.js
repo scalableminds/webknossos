@@ -8,7 +8,7 @@ import type { APIUpdateActionBatch } from "admin/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
 import type { Versions } from "oxalis/view/version_view";
 import { chunkIntoTimeWindows } from "libs/utils";
-import { getUpdateActionLog } from "admin/admin_rest_api";
+import { getUpdateActionLog, downloadNml } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import { pushSaveQueueAction, setVersionNumberAction } from "oxalis/model/actions/save_actions";
 import { revertToVersion, serverCreateTracing } from "oxalis/model/sagas/update_actions";
@@ -22,6 +22,7 @@ import api from "oxalis/api/internal_api";
 type Props = {
   tracingType: "skeleton" | "volume",
   tracing: SkeletonTracing | VolumeTracing,
+  allowUpdate: boolean,
 };
 
 type State = {
@@ -96,11 +97,16 @@ class VersionList extends React.Component<Props, State> {
   }
 
   handleRestoreVersion = async (version: number) => {
-    Store.dispatch(setVersionNumberAction(this.getNewestVersion(), this.props.tracingType));
-    Store.dispatch(pushSaveQueueAction([revertToVersion(version)], this.props.tracingType));
-    await Model.save();
-    Store.dispatch(setVersionRestoreVisibilityAction(false));
-    Store.dispatch(setAnnotationAllowUpdateAction(true));
+    if (this.props.allowUpdate) {
+      Store.dispatch(setVersionNumberAction(this.getNewestVersion(), this.props.tracingType));
+      Store.dispatch(pushSaveQueueAction([revertToVersion(version)], this.props.tracingType));
+      await Model.save();
+      Store.dispatch(setVersionRestoreVisibilityAction(false));
+      Store.dispatch(setAnnotationAllowUpdateAction(true));
+    } else {
+      const { tracingType, annotationId } = Store.getState().tracing;
+      downloadNml(annotationId, tracingType, version);
+    }
   };
 
   handlePreviewVersion = (version: number) => previewVersion({ [this.props.tracingType]: version });
@@ -140,6 +146,7 @@ class VersionList extends React.Component<Props, State> {
           ) : (
             <VersionEntryGroup
               batches={batchesOrDateString}
+              allowUpdate={this.props.allowUpdate}
               newestVersion={this.state.versions[0].version}
               activeVersion={this.props.tracing.version}
               onRestoreVersion={this.handleRestoreVersion}

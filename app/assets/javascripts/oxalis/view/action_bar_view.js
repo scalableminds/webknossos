@@ -3,7 +3,6 @@ import { Icon, Alert, Dropdown, Menu } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 
-import type { LayoutKeys } from "oxalis/view/layouting/default_layout_configs";
 import {
   layoutEmitter,
   deleteLayout,
@@ -16,7 +15,10 @@ import ButtonComponent from "oxalis/view/components/button_component";
 import Constants, { type ControlMode, ControlModeEnum, type Mode } from "oxalis/constants";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
 import Store, { type OxalisState } from "oxalis/store";
-import TracingActionsView, { LayoutMenu } from "oxalis/view/action-bar/tracing_actions_view";
+import TracingActionsView, {
+  LayoutMenu,
+  type LayoutProps,
+} from "oxalis/view/action-bar/tracing_actions_view";
 import ViewModesView from "oxalis/view/action-bar/view_modes_view";
 import VolumeActionsView from "oxalis/view/action-bar/volume_actions_view";
 
@@ -37,15 +39,7 @@ type StateProps = {
 };
 
 type Props = StateProps & {
-  layoutProps: {
-    storedLayoutNamesForView: Array<string>,
-    activeLayout: string,
-    layoutKey: LayoutKeys,
-    autoSaveLayouts: boolean,
-    setAutoSaveLayouts: boolean => void,
-    setCurrentLayout: string => void,
-    saveCurrentLayout: () => void,
-  },
+  layoutProps: LayoutProps,
 };
 
 type State = {

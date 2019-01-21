@@ -6,7 +6,7 @@ import * as React from "react";
 
 import type { APIUser, APITracingType } from "admin/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
-import { copyAnnotationToUserAccount, finishAnnotation } from "admin/admin_rest_api";
+import { copyAnnotationToUserAccount, finishAnnotation, downloadNml } from "admin/admin_rest_api";
 import { mapLayoutKeysToLanguage } from "oxalis/view/layouting/default_layout_configs";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import { undoAction, redoAction } from "oxalis/model/actions/save_actions";
@@ -20,7 +20,8 @@ import Store, { type OxalisState, type RestrictionsAndSettings, type Task } from
 import UserScriptsModalView from "oxalis/view/action-bar/user_scripts_modal_view";
 import api from "oxalis/api/internal_api";
 import messages from "messages";
-import window, { location } from "libs/window";
+import { location } from "libs/window";
+import type { LayoutKeys } from "oxalis/view/layouting/default_layout_configs";
 
 type StateProps = {
   tracingType: APITracingType,
@@ -40,17 +41,21 @@ type State = {
   isUserScriptsModalOpen: boolean,
 };
 
-type LayoutMenuProps = {
+export type LayoutProps = {
   storedLayoutNamesForView: Array<string>,
-  layoutKey: string,
   activeLayout: string,
+  layoutKey: LayoutKeys,
+  autoSaveLayouts: boolean,
+  setAutoSaveLayouts: boolean => void,
+  setCurrentLayout: string => void,
+  saveCurrentLayout: () => void,
+};
+
+type LayoutMenuProps = LayoutProps & {
   onResetLayout: () => void,
   onSelectLayout: string => void,
   onDeleteLayout: string => void,
   addNewLayout: () => void,
-  autoSaveLayouts: boolean,
-  setAutoSaveLayouts: boolean => void,
-  saveCurrentLayout: () => void,
 };
 
 export const LayoutMenu = (props: LayoutMenuProps) => {
@@ -65,6 +70,7 @@ export const LayoutMenu = (props: LayoutMenuProps) => {
     autoSaveLayouts,
     setAutoSaveLayouts,
     saveCurrentLayout,
+    setCurrentLayout,
     ...others
   } = props;
   const layoutMissingHelpTitle = (
@@ -217,15 +223,8 @@ class TracingActionsView extends React.PureComponent<Props, State> {
   };
 
   handleDownload = async () => {
-    const win = window.open("about:blank", "_blank");
-    win.document.body.innerHTML = messages["download.wait"];
     await this.handleSave();
-
-    const downloadUrl = `/api/annotations/${this.props.tracingType}/${
-      this.props.annotationId
-    }/download`;
-    win.location.href = downloadUrl;
-    win.document.body.innerHTML = messages["download.close_window"];
+    downloadNml(this.props.annotationId, this.props.tracingType);
   };
 
   handleFinishAndGetNextTask = async () => {
@@ -349,14 +348,12 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       );
     }
 
-    if (restrictions.allowUpdate) {
-      elements.push(
-        <Menu.Item key="restore-button" onClick={this.handleRestore}>
-          <Icon type="bars" theme="outlined" />
-          Restore Older Version
-        </Menu.Item>,
-      );
-    }
+    elements.push(
+      <Menu.Item key="restore-button" onClick={this.handleRestore}>
+        <Icon type="bars" theme="outlined" />
+        Restore Older Version
+      </Menu.Item>,
+    );
 
     elements.push(this.props.layoutMenu);
 

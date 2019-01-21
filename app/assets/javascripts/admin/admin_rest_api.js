@@ -625,6 +625,20 @@ export function convertToHybridTracing(annotationId: string): Promise<void> {
   });
 }
 
+export async function downloadNml(
+  annotationId: string,
+  tracingType: APITracingType,
+  version?: number,
+) {
+  const possibleVersionString = version != null ? `?version=${version}` : "";
+  const win = window.open("about:blank", "_blank");
+  win.document.body.innerHTML = messages["download.wait"];
+
+  const downloadUrl = `/api/annotations/${tracingType}/${annotationId}/download${possibleVersionString}`;
+  win.location.href = downloadUrl;
+  win.document.body.innerHTML = messages["download.close_window"];
+}
+
 // ### Datasets
 export async function getDatasets(): Promise<Array<APIMaybeUnimportedDataset>> {
   const datasets = await Request.receiveJSON("/api/datasets");

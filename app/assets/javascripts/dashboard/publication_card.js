@@ -4,13 +4,15 @@ import Markdown from "react-remarkable";
 import * as React from "react";
 import classNames from "classnames";
 
-import type { APIDataset, APIDatasetId } from "admin/api_flow_types";
+import type { APIDataset, APIDatasetId, APIDatasetDetails } from "admin/api_flow_types";
 import { formatScale } from "libs/format_utils";
 import {
   getThumbnailURL,
   hasSegmentation,
   getSegmentationThumbnailURL,
 } from "oxalis/model/accessors/dataset_accessor";
+
+type ExtendedDatasetDetails = { ...APIDatasetDetails, name: string, scale: string };
 
 const thumbnailDimension = 500;
 const miniThumbnailDimension = 50;
@@ -21,9 +23,9 @@ function getDisplayName(dataset: APIDataset): string {
     : dataset.name;
 }
 
-function getDetails(dataset: APIDataset) {
+function getDetails(dataset: APIDataset): ExtendedDatasetDetails {
   const { dataSource, details } = dataset;
-  return { scale: formatScale(dataSource.scale), name: getDisplayName(dataset), ...details };
+  return { ...details, scale: formatScale(dataSource.scale), name: getDisplayName(dataset) };
 }
 
 function ThumbnailAndDescription({
@@ -38,7 +40,7 @@ function ThumbnailAndDescription({
   publicationName: string,
   datasetId: APIDatasetId,
   description: React.Element<*> | string,
-  datasetDetails: Object,
+  datasetDetails: ExtendedDatasetDetails,
   segmentationThumbnailURL: ?string,
 }) {
   const details = datasetDetails;
@@ -88,14 +90,14 @@ function ThumbnailAndDescription({
                   {details.species}
                 </div>
               )}
-              {details["brain-region"] && (
+              {details.brainRegion && (
                 <div
                   style={{
                     display: "inline",
                     marginLeft: 5,
                   }}
                 >
-                  {details["brain-region"]}
+                  {details.brainRegion}
                 </div>
               )}
             </div>

@@ -92,12 +92,18 @@ export type APIDatasetId = {
   +name: string,
 };
 
+export type APIDatasetDetails = {
+  +species?: string,
+  +brainRegion?: string,
+  +acquisition?: string,
+};
+
 type APIDatasetBase = APIDatasetId & {
   +allowedTeams: Array<APITeam>,
   +created: number,
   +dataStore: APIDataStore,
   +description: ?string,
-  +details: ?Object,
+  +details: ?APIDatasetDetails,
   +isEditable: boolean,
   +isPublic: boolean,
   +displayName: ?string,

@@ -20,6 +20,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 ### Fixed
 
 - Fixed a rendering bug which caused data to be clipped in certain scenarios for datasets with anisotropic resolutions. [#3609](https://github.com/scalableminds/webknossos/pull/3609)
+- Fixed a bug where saving tracings failed after they were open for >24h. [#3633](https://github.com/scalableminds/webknossos/pull/3633)
+- Fixed a bug which caused the wrong magnification to be rendered when zooming out very far. [#3609](https://github.com/scalableminds/webknossos/pull/3641/files)
 
 ### Removed
 

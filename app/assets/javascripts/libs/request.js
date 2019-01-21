@@ -299,7 +299,11 @@ class Request {
             return Promise.reject(json);
           } catch (jsonError) {
             if (showErrorToast) Toast.error(text);
-            return Promise.reject(text);
+            /* eslint-disable prefer-promise-reject-errors */
+            return Promise.reject({
+              errors: [text],
+              status: error.status != null ? error.status : -1,
+            });
           }
         },
         textError => {

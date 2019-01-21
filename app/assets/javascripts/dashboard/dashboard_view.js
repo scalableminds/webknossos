@@ -69,7 +69,7 @@ class DashboardView extends React.PureComponent<Props, State> {
 
     const lastUsedTabKey = localStorage.getItem("lastUsedDashboardTab");
     const isValid = lastUsedTabKey && validTabKeys.indexOf(lastUsedTabKey) > -1;
-    const defaultTab = this.props.isAdminView ? "tasks" : "datasets";
+    const defaultTab = this.props.isAdminView ? "tasks" : "publications";
 
     const cachedDatasets = datasetCache.get();
 

@@ -1,14 +1,20 @@
 // @flow
 import * as React from "react";
 import _ from "lodash";
+import { List } from "antd";
 
 import type { APIDataset, APIMaybeUnimportedDataset } from "admin/api_flow_types";
-import { getOrganizations } from "admin/admin_rest_api";
-import DatasetPanel from "dashboard/dataset_panel";
+import PublicationCard from "dashboard/publication_card";
 import * as Utils from "libs/utils";
 
-type State = {
-  organizationNameMap: { [key: string]: string },
+const gridValues = {
+  gutter: 24,
+  xs: 1,
+  sm: 1,
+  md: 1,
+  lg: 1,
+  xl: 2,
+  xxl: 2,
 };
 
 type Props = {
@@ -16,67 +22,40 @@ type Props = {
   searchQuery: string,
 };
 
-const croppedDatasetCount = 6;
-
-class GalleryDatasetView extends React.PureComponent<Props, State> {
-  state = {
-    organizationNameMap: {},
-  };
-
-  componentDidMount() {
-    this.fetch();
-  }
-
-  async fetch() {
-    const organizations = await getOrganizations();
-
-    this.setState({
-      organizationNameMap: _.mapValues(_.keyBy(organizations, "name"), org => org.displayName),
-    });
-  }
-
+class GalleryDatasetView extends React.PureComponent<Props> {
   render() {
     // $FlowFixMe flow doesn't check that after filtering there are only imported datasets left
     const activeDatasets: Array<APIDataset> = this.props.datasets.filter(ds => ds.isActive);
     const filteredDatasets = Utils.filterWithSearchQueryAND(
       activeDatasets,
-      ["name", "description"],
+      ["name", "description", "details"],
       this.props.searchQuery,
     );
 
-    const groupedDatasets = _.chain(filteredDatasets)
-      .groupBy("owningOrganization")
-      .entries()
-      .map(([organization, datasets]) =>
-        // Sort each group of datasets
-        [
-          organization,
-          datasets.sort(Utils.compareBy(([]: APIDataset[]), dataset => dataset.sortingKey, false)),
-        ],
-      )
-      .value()
+    const datasetsByPublication = _.chain(filteredDatasets)
+      .filter(dataset => dataset.publication != null)
+      .groupBy("publication.id")
+      .values()
       .sort(
-        // Sort groups by creation date of first dataset
+        // Sort publication groups by publication creation date
         Utils.compareBy(
-          ([]: Array<[string, Array<APIDataset>]>),
-          ([_organization, datasets]) => datasets[0].sortingKey,
+          ([]: Array<APIDataset>),
+          datasets => datasets[0].publication.publicationDate,
           false,
         ),
       );
 
-    const hasMultipleOrganizations = groupedDatasets.length > 1;
     return (
       <React.Fragment>
-        {groupedDatasets.map(([organization, datasets]) => (
-          <DatasetPanel
-            showOrganizationHeader={hasMultipleOrganizations}
-            croppedDatasetCount={croppedDatasetCount}
-            className="dataset-panel"
-            key={organization}
-            organizationName={this.state.organizationNameMap[organization] || organization}
-            datasets={datasets}
-          />
-        ))}
+        <List
+          grid={gridValues}
+          dataSource={datasetsByPublication}
+          renderItem={datasets => (
+            <List.Item key={datasets[0].publication.id}>
+              <PublicationCard className="dataset-panel" datasets={datasets} />
+            </List.Item>
+          )}
+        />
       </React.Fragment>
     );
   }

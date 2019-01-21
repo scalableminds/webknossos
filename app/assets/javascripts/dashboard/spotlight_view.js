@@ -1,6 +1,6 @@
 // @flow
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
-import { Spin, Layout, Button, Row, Col } from "antd";
+import { Spin, Layout, Button, Row, Col, Input } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 
@@ -12,6 +12,7 @@ import GalleryDatasetView from "dashboard/gallery_dataset_view";
 import features from "features";
 
 const { Content, Footer } = Layout;
+const { Search } = Input;
 
 const SimpleHeader = () => (
   <div id="oxalis-header">
@@ -130,6 +131,7 @@ type State = {
   datasets: Array<APIMaybeUnimportedDataset>,
   hasOrganizations: boolean,
   isLoading: boolean,
+  searchQuery: string,
 };
 
 class SpotlightView extends React.PureComponent<Props, State> {
@@ -137,6 +139,7 @@ class SpotlightView extends React.PureComponent<Props, State> {
     datasets: [],
     hasOrganizations: true,
     isLoading: true,
+    searchQuery: "",
   };
 
   componentDidMount() {
@@ -155,7 +158,21 @@ class SpotlightView extends React.PureComponent<Props, State> {
     }
   }
 
+  handleSearch = (event: SyntheticInputEvent<>) => {
+    this.setState({ searchQuery: event.target.value });
+  };
+
   render() {
+    const search = (
+      <Search
+        style={{ width: 200, float: "right" }}
+        placeholder="Search Dataset"
+        onPressEnter={this.handleSearch}
+        onChange={this.handleSearch}
+        value={this.state.searchQuery}
+      />
+    );
+
     return (
       <Layout>
         {this.props.activeUser == null &&
@@ -165,6 +182,9 @@ class SpotlightView extends React.PureComponent<Props, State> {
           <SimpleHeader />
         )}
         <Content style={{ padding: 50 }}>
+          <div className="pull-right">{search}</div>
+          <h3>Publications</h3>
+          <div className="clearfix" style={{ margin: "20px 0px" }} />
           <Spin size="large" spinning={this.state.isLoading}>
             <div style={{ minHeight: "100px" }}>
               {this.state.datasets.length === 0 && !this.state.isLoading ? (
@@ -174,7 +194,10 @@ class SpotlightView extends React.PureComponent<Props, State> {
                   in action.
                 </p>
               ) : (
-                <GalleryDatasetView datasets={this.state.datasets} searchQuery="" />
+                <GalleryDatasetView
+                  datasets={this.state.datasets}
+                  searchQuery={this.state.searchQuery}
+                />
               )}
             </div>
           </Spin>

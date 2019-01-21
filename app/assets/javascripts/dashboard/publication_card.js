@@ -1,8 +1,7 @@
 // @flow
-import { Row, Col, Card, Button } from "antd";
+import { Card, Button } from "antd";
 import Markdown from "react-remarkable";
 import * as React from "react";
-import _ from "lodash";
 import classNames from "classnames";
 
 import type { APIDataset, APIDatasetId } from "admin/api_flow_types";
@@ -13,7 +12,6 @@ import {
   getSegmentationThumbnailURL,
 } from "oxalis/model/accessors/dataset_accessor";
 
-const columnSpan = { xs: 24, sm: 24, md: 24, lg: 24, xl: 12, xxl: 12 };
 const thumbnailDimension = 500;
 const miniThumbnailDimension = 50;
 
@@ -23,51 +21,32 @@ function getDisplayName(dataset: APIDataset): string {
     : dataset.name;
 }
 
-function getDescription(dataset: APIDataset) {
-  let freeTextDescription = null;
-  if (dataset.description) {
-    freeTextDescription = (
-      <Markdown
-        source={dataset.description}
-        options={{ html: false, breaks: true, linkify: true }}
-      />
-    );
-  } else {
-    freeTextDescription = hasSegmentation(dataset) ? (
-      <p>Original data and segmentation</p>
-    ) : (
-      <p>Original data</p>
-    );
-  }
-
-  return <div>{freeTextDescription}</div>;
-}
-
 function getDetails(dataset: APIDataset) {
   const { dataSource, details } = dataset;
-  return { scale: formatScale(dataSource.scale), name: dataset.name, ...details };
+  return { scale: formatScale(dataSource.scale), name: getDisplayName(dataset), ...details };
 }
 
 function ThumbnailAndDescription({
   thumbnailURL,
   description,
-  details,
-  name,
+  datasetDetails,
+  publicationName,
   datasetId,
   segmentationThumbnailURL,
 }: {
   thumbnailURL: string,
-  name: string,
+  publicationName: string,
   datasetId: APIDatasetId,
   description: React.Element<*> | string,
-  details: Object,
+  datasetDetails: Object,
   segmentationThumbnailURL: ?string,
 }) {
+  const details = datasetDetails;
   return (
     <React.Fragment>
       <div className="dataset-description">
         <div className="description-flex">
-          <h3 style={{ fontSize: 20 }}>{name}</h3>
+          <h3 style={{ fontSize: 20 }}>{publicationName}</h3>
           <div className="dataset-description-body">{description}</div>
         </div>
       </div>
@@ -139,27 +118,10 @@ function ThumbnailAndDescription({
   );
 }
 
-function DatasetCard({ dataset }: { dataset: APIDataset }) {
-  return (
-    <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card" bordered={false}>
-      <ThumbnailAndDescription
-        thumbnailURL={getThumbnailURL(dataset)}
-        name={getDisplayName(dataset)}
-        datasetId={{ name: dataset.name, owningOrganization: dataset.owningOrganization }}
-        description={getDescription(dataset)}
-        details={getDetails(dataset)}
-        segmentationThumbnailURL={
-          hasSegmentation(dataset) ? getSegmentationThumbnailURL(dataset) : null
-        }
-      />
-    </Card>
-  );
-}
+type Props = { datasets: Array<APIDataset> };
+type State = { selectedDataset: APIDataset, hoveredDataset: ?APIDataset };
 
-type MultiDatasetCardProps = { datasets: Array<APIDataset> };
-type MultiDatasetCardState = { selectedDataset: APIDataset, hoveredDataset: ?APIDataset };
-
-class MultiDatasetCard extends React.PureComponent<MultiDatasetCardProps, MultiDatasetCardState> {
+class PublicationCard extends React.PureComponent<Props, State> {
   state = {
     selectedDataset: this.props.datasets[0],
     hoveredDataset: null,
@@ -173,18 +135,23 @@ class MultiDatasetCard extends React.PureComponent<MultiDatasetCardProps, MultiD
     // This method will only be called for datasets with a publication, but Flow doesn't know that
     if (publication == null) return null;
 
-    const multiDescription = (
+    const descriptionComponent = (
       <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-        <span style={{ marginBottom: 16 }}>{publication.description}</span>
+        <span style={{ marginBottom: 16 }}>
+          <Markdown
+            source={publication.description}
+            options={{ html: false, breaks: true, linkify: true }}
+          />
+        </span>
         <div style={{ marginTop: "auto" }}>
           <span style={{ fontSize: 14, textTransform: "uppercase" }}>Published Datasets </span>
           <div className="mini-dataset-thumbnail-grid">
             {datasets.map(dataset => (
               <Button
                 className={classNames("mini-dataset-thumbnail", {
-                  active: dataset === activeDataset,
+                  active: dataset.name === activeDataset.name,
                 })}
-                key={dataset.name}
+                key={`${dataset.owningOrganization}/${dataset.name}`}
                 title="Click To Select"
                 style={{
                   background: `url('${getThumbnailURL(
@@ -207,79 +174,20 @@ class MultiDatasetCard extends React.PureComponent<MultiDatasetCardProps, MultiD
       <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card" bordered={false}>
         <ThumbnailAndDescription
           thumbnailURL={getThumbnailURL(activeDataset)}
-          name={publication.title}
+          segmentationThumbnailURL={
+            hasSegmentation(activeDataset) ? getSegmentationThumbnailURL(activeDataset) : null
+          }
+          publicationName={publication.title}
           datasetId={{
             name: activeDataset.name,
             owningOrganization: activeDataset.owningOrganization,
           }}
-          description={multiDescription}
-          details={getDetails(activeDataset)}
-          segmentationThumbnailURL={
-            hasSegmentation(activeDataset) ? getSegmentationThumbnailURL(activeDataset) : null
-          }
+          description={descriptionComponent}
+          datasetDetails={getDetails(activeDataset)}
         />
       </Card>
     );
   }
 }
 
-type DatasetPanelProps = {
-  datasets: Array<APIDataset>,
-  organizationName: string,
-  showOrganizationHeader: boolean,
-  croppedDatasetCount: ?number,
-};
-
-type DatasetPanelState = {
-  showLessContent: boolean,
-};
-
-class DatasetPanel extends React.PureComponent<DatasetPanelProps, DatasetPanelState> {
-  state = {
-    showLessContent: true,
-  };
-
-  handleClick = () => {
-    this.setState(prevState => ({ showLessContent: !prevState.showLessContent }));
-  };
-
-  render() {
-    const groupedDatasets = _.entries(
-      _.groupBy(
-        this.props.datasets,
-        dataset => (dataset.publication != null ? dataset.publication.id : dataset.name),
-      ),
-    );
-    const maybeCroppedDatasetsGroup =
-      this.state.showLessContent && this.props.croppedDatasetCount != null
-        ? groupedDatasets.slice(0, this.props.croppedDatasetCount)
-        : groupedDatasets;
-
-    return (
-      <div className="dataset-panel">
-        {this.props.showOrganizationHeader && (
-          <h1 className="organization-header">{this.props.organizationName}</h1>
-        )}
-        <Row gutter={24}>
-          {maybeCroppedDatasetsGroup.map(([groupName, datasets]) => (
-            <Col className="gallery-dataset-col" {...columnSpan} key={groupName}>
-              {datasets[0].publication == null ? (
-                <DatasetCard dataset={datasets[0]} />
-              ) : (
-                <MultiDatasetCard datasets={datasets} />
-              )}
-            </Col>
-          ))}
-        </Row>
-        {this.props.croppedDatasetCount != null &&
-        groupedDatasets.length > this.props.croppedDatasetCount ? (
-          <a className="show-more-link" onClick={this.handleClick}>
-            {this.state.showLessContent ? "show more" : "show less"}
-          </a>
-        ) : null}
-      </div>
-    );
-  }
-}
-
-export default DatasetPanel;
+export default PublicationCard;

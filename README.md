@@ -174,6 +174,8 @@ Contact us at [hello@scalableminds.com](mailto:hello@scalableminds.com).
 * scalable minds - https://scalableminds.com/
 * Max Planck Institute for Brain Research – https://brain.mpg.de/
 
+webKnossos was inspired by [KNOSSOS](https://knossos.app).
+
 ### Thanks
 * [CircleCI](https://circleci.com/gh/scalableminds/webknossos) for letting us run builds and tests on their CI
 * [Browser Stack](https://www.browserstack.com/) for letting us test WebKnossos on a variety of different devices

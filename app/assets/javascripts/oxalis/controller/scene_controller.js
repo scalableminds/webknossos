@@ -224,7 +224,9 @@ class SceneController {
     pointWithXRadius.applyMatrix4(diameter.matrix);
     pointWithYRadius.applyMatrix4(diameter.matrix);
     // distance is not correct after multiplying (maybe because of the scale that is included into the matrix)
-    const dotGeometry1 = new THREE.Geometry();
+    /* Add points for debugging 
+	---------
+	const dotGeometry1 = new THREE.Geometry();
     const dotGeometry2 = new THREE.Geometry();
     dotGeometry1.vertices.push(pointWithXRadius);
     dotGeometry2.vertices.push(pointWithYRadius);
@@ -236,7 +238,8 @@ class SceneController {
     const dot1 = new THREE.Points(dotGeometry1, dotMaterial);
     const dot2 = new THREE.Points(dotGeometry2, dotMaterial);
     this.rootGroup.add(dot1);
-    this.rootGroup.add(dot2);
+	this.rootGroup.add(dot2); 
+	---------- */
     // calulation
     const xExtent = new THREE.Vector3().subVectors(pointWithXRadius, currentPosition);
     const yExtent = new THREE.Vector3().subVectors(pointWithYRadius, currentPosition);
@@ -245,11 +248,11 @@ class SceneController {
     const scaleAsVector = new THREE.Vector3(...datasetScale);
     xExtent.multiply(scaleAsVector);
     yExtent.multiply(scaleAsVector);
+    // TODO display this information somehow to the user
     console.log("xRadius length", xExtent.length());
     console.log("yRadius length", yExtent.length());
     /* debug: having different resolutions in each direction does not affact the length of a radius calculated. 
-    Maybe this calulcation is already done by the scling of the passed camera matrix??? 
-    TODO display this information somehow to the user */
+    Maybe this calulcation is already done by the sacling of the passed camera matrix??? */
     diameter.matrixWorldNeedsUpdate = true;
   };
 

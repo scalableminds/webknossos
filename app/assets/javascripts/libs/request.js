@@ -300,7 +300,10 @@ class Request {
           } catch (jsonError) {
             if (showErrorToast) Toast.error(text);
             /* eslint-disable prefer-promise-reject-errors */
-            return Promise.reject({ errors: [text], status: error.status });
+            return Promise.reject({
+              errors: [text],
+              status: error.status != null ? error.status : -1,
+            });
           }
         },
         textError => {

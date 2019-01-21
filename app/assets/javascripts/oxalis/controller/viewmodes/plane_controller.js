@@ -145,12 +145,11 @@ class PlaneController extends React.PureComponent<Props> {
   getPlaneMouseControls(planeId: OrthoView): Object {
     const baseControls = {
       leftDownMove: (delta: Point2) => {
-        const viewportScale = getViewportScale(planeId);
-        return this.movePlane([
-          (delta.x * -1) / viewportScale[0],
-          (delta.y * -1) / viewportScale[1],
-          0,
-        ]);
+        const viewportScales = getViewportScale(planeId);
+        // This might need changing when ensureSmallerEdge is not set to true anymore
+        const scale = Math.max(viewportScales[0], viewportScales[1]);
+
+        return this.movePlane([(delta.x * -1) / scale, (delta.y * -1) / scale, 0]);
       },
 
       scroll: this.scrollPlanes.bind(this),

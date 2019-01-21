@@ -48,9 +48,9 @@ export const getBrushOverlay: ShaderModule = {
       float baseVoxelSize = min(min(datasetScale.x, datasetScale.y), datasetScale.z);
       vec3 datasetScaleUVW = transDim(datasetScale) / baseVoxelSize;
 
-      float dist = length((floor(worldCoordUVW.xy) - transDim(flooredMousePos).xy) * datasetScaleUVW.xy * pixelToVoxelFactor);
+      float dist = length((floor(worldCoordUVW.xy) - transDim(flooredMousePos).xy) * datasetScaleUVW.xy);
 
-      float radius = round(brushSizeInPixel / 2.0);
+      float radius = round(brushSizeInPixel * pixelToVoxelFactor / 2.0);
       if (radius > dist) {
         brushOverlayColor = vec4(vec3(1.0), 0.5);
       }

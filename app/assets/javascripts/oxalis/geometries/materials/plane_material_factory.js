@@ -24,13 +24,14 @@ import {
   getByteCount,
   getBoundaries,
 } from "oxalis/model/accessors/dataset_accessor";
+import { getDominantViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import {
   getMaxBucketCountPerDim,
   getPlaneScalingFactor,
   getRequestLogZoomStep,
+  getZoomValue,
 } from "oxalis/model/accessors/flycam_accessor";
 import { getPackingDegree } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import { getDominantViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import AbstractPlaneMaterialFactory, {
   type ShaderMaterialOptions,
@@ -346,7 +347,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        storeState => getDominantViewportScale(this.planeID) / storeState.flycam.zoomStep,
+        storeState => getZoomValue(storeState.flycam) / getDominantViewportScale(this.planeID),
 
         pixelToVoxelFactor => {
           this.uniforms.pixelToVoxelFactor.value = pixelToVoxelFactor;

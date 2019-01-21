@@ -138,8 +138,6 @@ const Constants = {
   // Previously, a minimum of 1200 buckets was enforced. Since, this limit required at least
   // three 4096**2 textures, a minimum of capacity of 1536 is actually reasonable.
   MINIMUM_REQUIRED_BUCKET_CAPACITY: 3 * 512,
-  DISTANCE_3D: 140,
-  MAX_TEXTURE_COUNT_PER_LAYER: 1,
   LOOK_UP_TEXTURE_WIDTH: 128,
 
   TDView_MOVE_SPEED: 150,

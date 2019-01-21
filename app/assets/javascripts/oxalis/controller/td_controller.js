@@ -186,9 +186,9 @@ class TDController extends React.PureComponent<Props> {
   }
 
   moveTDView(delta: Point2): void {
-    const scale = getViewportScale(OrthoViews.TDView);
-    Store.dispatch(moveTDViewXAction((delta.x / scale) * -1));
-    Store.dispatch(moveTDViewYAction((delta.y / scale) * -1));
+    const [scaleX, scaleY] = getViewportScale(OrthoViews.TDView);
+    Store.dispatch(moveTDViewXAction((delta.x / scaleX) * -1));
+    Store.dispatch(moveTDViewYAction((delta.y / scaleY) * -1));
   }
 
   render() {

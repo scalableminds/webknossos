@@ -14,7 +14,7 @@ import {
 } from "oxalis/constants";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
-import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
+import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import Dimensions from "oxalis/model/dimensions";
 import Drawing from "libs/drawing";
@@ -213,11 +213,15 @@ class VolumeLayer {
   }
 
   getCircleVoxelIterator(position: Vector3, boundings?: ?BoundingBoxType): VoxelIterator {
-    const radius = Math.round(
-      this.pixelsToVoxels(Store.getState().temporaryConfiguration.brushSize) / 2,
-    );
-    const width = 2 * radius;
-    const height = width;
+    const state = Store.getState();
+    const zoomFactor = getZoomValue(state.flycam);
+    const viewportScale = getViewportScale(this.plane);
+    const { brushSize } = state.temporaryConfiguration;
+    const scaledBrushSize = [0, 1].map(dim => (brushSize / viewportScale[dim]) * zoomFactor);
+
+    const [scaledRadiusX, scaledRadiusY] = [0, 1].map(dim => Math.round(scaledBrushSize[dim] / 2));
+    const width = 2 * scaledRadiusX;
+    const height = 2 * scaledRadiusY;
 
     const map = new Array(width);
     for (let x = 0; x < width; x++) {
@@ -228,16 +232,17 @@ class VolumeLayer {
     }
     const floatingCoord2d = this.get2DCoordinate(position);
     const coord2d = [Math.floor(floatingCoord2d[0]), Math.floor(floatingCoord2d[1])];
-    const minCoord2d = [coord2d[0] - radius, coord2d[1] - radius];
+    const minCoord2d = [coord2d[0] - scaledRadiusX, coord2d[1] - scaledRadiusY];
 
     // Use the baseVoxelFactors to scale the circle, otherwise it'll become an ellipse
-    const [u, v] = this.get2DCoordinate(
-      getBaseVoxelFactors(Store.getState().dataset.dataSource.scale),
-    );
+    const [u, v] = this.get2DCoordinate(getBaseVoxelFactors(state.dataset.dataSource.scale));
 
     for (let x = 0; x < width; x++) {
       for (let y = 0; y < width; y++) {
-        if (Math.sqrt(((x - radius) / u) ** 2 + ((y - radius) / v) ** 2) < radius) {
+        const dist = Math.sqrt(((x - scaledRadiusX) / u) ** 2 + ((y - scaledRadiusY) / v) ** 2);
+        // todo: calculate correct radius
+        const radius = scaledRadiusY;
+        if (dist < radius) {
           map[x][y] = true;
         }
       }
@@ -322,13 +327,6 @@ class VolumeLayer {
     const cy = sumCy / 6 / area;
 
     return this.get3DCoordinate([cx, cy]);
-  }
-
-  pixelsToVoxels(pixels: number): number {
-    const state = Store.getState();
-    const zoomFactor = getPlaneScalingFactor(state.flycam);
-    const viewportScale = getViewportScale(this.plane);
-    return (pixels / viewportScale) * zoomFactor;
   }
 }
 

@@ -146,7 +146,11 @@ class PlaneController extends React.PureComponent<Props> {
     const baseControls = {
       leftDownMove: (delta: Point2) => {
         const viewportScale = getViewportScale(planeId);
-        return this.movePlane([(delta.x * -1) / viewportScale, (delta.y * -1) / viewportScale, 0]);
+        return this.movePlane([
+          (delta.x * -1) / viewportScale[0],
+          (delta.y * -1) / viewportScale[1],
+          0,
+        ]);
       },
 
       scroll: this.scrollPlanes.bind(this),
@@ -529,13 +533,13 @@ export function calculateGlobalPos(clickPos: Point2): Vector3 {
   const state = Store.getState();
   const { activeViewport } = state.viewModeData.plane;
   const curGlobalPos = getPosition(state.flycam);
-  const zoomFactor = getPlaneScalingFactor(state.flycam);
+  const zoomFactors = getPlaneScalingFactor(state.flycam, activeViewport);
   const viewportScale = getViewportScale(activeViewport);
   const planeRatio = getBaseVoxelFactors(state.dataset.dataSource.scale);
 
-  const center = (constants.VIEWPORT_WIDTH * viewportScale) / 2;
-  const diffX = ((center - clickPos.x) / viewportScale) * zoomFactor;
-  const diffY = ((center - clickPos.y) / viewportScale) * zoomFactor;
+  const center = [0, 1].map(dim => (constants.VIEWPORT_WIDTH * viewportScale[dim]) / 2);
+  const diffX = ((center[0] - clickPos.x) / viewportScale[0]) * zoomFactors[0];
+  const diffY = ((center[1] - clickPos.y) / viewportScale[1]) * zoomFactors[1];
 
   switch (activeViewport) {
     case OrthoViews.PLANE_XY:

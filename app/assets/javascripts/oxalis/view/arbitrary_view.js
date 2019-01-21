@@ -36,9 +36,7 @@ class ArbitraryView {
   isRunning: boolean = false;
   animationRequestId: ?number = null;
 
-  scaleFactor: number;
   camDistance: number;
-
   camera: THREE.PerspectiveCamera = null;
   tdCamera: THREE.OrthographicCamera = null;
 

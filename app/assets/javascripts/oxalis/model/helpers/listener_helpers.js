@@ -18,19 +18,23 @@ export function listenToStoreProperty<T>(
   select: OxalisState => T,
   onChange: (value: T) => void,
   callHandlerOnSubscribe: ?boolean = false,
+  isEqual: (T, T) => boolean = (a, b) => a === b,
 ): () => void {
   let currentValue;
 
-  function handleChange() {
+  function handleChange(isOnSubscribeCall?: boolean) {
     const nextValue = select(Store.getState());
-    if (nextValue !== currentValue) {
+    // When callHandlerOnSubscribe is used, the initial value can be 0. In that case,
+    // we do not want to invoke the caller-provided isEqual function, since this usually
+    // doesn't handle null values.
+    if ((isOnSubscribeCall && currentValue == null) || !isEqual(nextValue, currentValue)) {
       currentValue = nextValue;
       onChange(currentValue);
     }
   }
 
   if (callHandlerOnSubscribe) {
-    handleChange();
+    handleChange(true);
   }
 
   // return the unsubscribe function

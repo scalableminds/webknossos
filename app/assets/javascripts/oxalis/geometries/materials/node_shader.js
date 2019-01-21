@@ -4,7 +4,7 @@ import * as THREE from "three";
 
 import type { Uniforms } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
-import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
+import { getPlaneScalingFactor, getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Store from "oxalis/store";
 
@@ -37,7 +37,11 @@ class NodeShader {
     this.uniforms = {
       planeZoomFactor: {
         type: "f",
-        value: getPlaneScalingFactor(state.flycam),
+        // The flycam zoom is typically decomposed into an x- and y-factor
+        // which respects the aspect ratio. However, this value is merely used
+        // for selecting an appropriate node size (gl_PointSize). The resulting points
+        // will and should be square regardless of the plane's aspect ratio.
+        value: getZoomValue(state.flycam),
       },
       datasetScale: {
         type: "f",

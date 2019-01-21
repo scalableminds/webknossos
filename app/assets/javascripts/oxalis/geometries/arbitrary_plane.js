@@ -5,6 +5,7 @@
 import * as THREE from "three";
 import _ from "lodash";
 
+import { applyAspectRatioToWidth } from "oxalis/model/accessors/view_mode_accessor";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
 import Store from "oxalis/store";
@@ -25,7 +26,7 @@ import shaderEditor from "oxalis/model/helpers/shader_editor";
 // attached to bend surface.
 // The result is then projected on a flat surface.
 
-const renderDebuggerPlane = true;
+const renderDebuggerPlane = false;
 
 type ArbitraryMeshes = {|
   mainPlane: THREE.Mesh,
@@ -37,6 +38,7 @@ class ArbitraryPlane {
   isDirty: boolean;
   stopStoreListening: () => void;
   materialFactory: PlaneMaterialFactory;
+  aspectRatio: number = 1;
 
   constructor() {
     this.isDirty = true;
@@ -73,6 +75,14 @@ class ArbitraryPlane {
     });
   }
 
+  setAspectRatio(aspectRatio: number) {
+    this.aspectRatio = aspectRatio;
+    // const [xFactor, yFactor] = applyAspectRatioToWidth(1 / aspectRatio, 1);
+    // const scaleVec = new THREE.Vector3(xFactor, yFactor, 1);
+    // this.meshGroup.scale.copy(scaleVec);
+    // this.meshGroup.matrixWorldNeedsUpdate = true;
+  }
+
   update() {
     if (this.isDirty) {
       const matrix = getZoomedMatrix(Store.getState().flycam);
@@ -81,7 +91,9 @@ class ArbitraryPlane {
         if (!mesh) {
           return;
         }
-        mesh.matrix.set(
+
+        const meshMatrix = new THREE.Matrix4();
+        meshMatrix.set(
           matrix[0],
           matrix[4],
           matrix[8],
@@ -100,6 +112,14 @@ class ArbitraryPlane {
           matrix[15],
         );
 
+        mesh.matrix.identity();
+
+        const [xFactor, yFactor] = applyAspectRatioToWidth(this.aspectRatio, 1);
+        const aspectRatioMatrix = new THREE.Matrix4();
+        aspectRatioMatrix.scale(new THREE.Vector3(xFactor, yFactor, 1));
+
+        // mesh.matrix.multiply(aspectRatioMatrix);
+        mesh.matrix.multiply(meshMatrix);
         mesh.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
         mesh.matrixWorldNeedsUpdate = true;
       };

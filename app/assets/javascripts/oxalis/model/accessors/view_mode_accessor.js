@@ -41,12 +41,15 @@ export function applyAspectRatioToWidth(aspectRatio: number, width: number): [nu
   return [scaledWidth, scaledHeight];
 }
 
-export function getViewportScale(viewport: Viewport): number {
-  const { width } = getInputCatcherRect(viewport);
+// Returns the ratio between VIEWPORT_WIDTH and the actual extent of the viewport for width and height
+export function getViewportScale(viewport: Viewport): [number, number] {
+  const { width, height } = getInputCatcherRect(viewport);
   // For the orthogonal views the CSS border width was subtracted before, so we'll need to
   // add it back again to get an accurate scale
   const borderWidth = viewport === ArbitraryViewport ? 0 : OUTER_CSS_BORDER;
-  return (width + 2 * borderWidth) / constants.VIEWPORT_WIDTH;
+  const xScale = (width + 2 * borderWidth) / constants.VIEWPORT_WIDTH;
+  const yScale = (height + 2 * borderWidth) / constants.VIEWPORT_WIDTH;
+  return [xScale, yScale];
 }
 
 export default {};

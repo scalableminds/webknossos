@@ -16,6 +16,10 @@ export function map3<A, B>(fn: (A, number) => B, tuple: [A, A, A]): [B, B, B] {
   return [fn(x, 0), fn(y, 1), fn(z, 2)];
 }
 
+export function isVec2Equal(a: Vector3, b: Vector3): boolean {
+  return a[0] === b[0] && a[1] === b[1];
+}
+
 function swap(arr, a, b) {
   let tmp;
   if (arr[a] > arr[b]) {

@@ -380,7 +380,7 @@ class Skeleton {
     activeTreeId = activeTreeId == null ? -1 : activeTreeId;
 
     const nodeUniforms = this.nodes.material.uniforms;
-    nodeUniforms.planeZoomFactor.value = getPlaneScalingFactor(state.flycam);
+    nodeUniforms.planeZoomFactor.value = state.flycam.zoomStep; // todo: is this enough?
     nodeUniforms.overrideParticleSize.value = particleSize;
     nodeUniforms.overrideNodeRadius.value = overrideNodeRadius;
     nodeUniforms.activeTreeId.value = activeTreeId;

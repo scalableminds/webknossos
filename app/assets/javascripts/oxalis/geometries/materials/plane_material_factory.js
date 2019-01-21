@@ -14,6 +14,7 @@ import {
   type Vector3,
   volumeToolEnumToIndex,
 } from "oxalis/constants";
+import { V2 } from "libs/mjs";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 import {
@@ -121,8 +122,8 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         value: 0,
       },
       pixelToVoxelFactor: {
-        type: "f",
-        value: 0,
+        type: "v2",
+        value: new THREE.Vector2(1, 1),
       },
       activeCellId: {
         type: "v4",
@@ -345,11 +346,15 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        storeState => getPlaneScalingFactor(storeState.flycam) / getViewportScale(this.planeID),
+        storeState =>
+          // TODO: might need getPlaneScalingFactor(storeState.flycam)
+          V2.scale(getViewportScale(this.planeID), 1 / storeState.flycam.zoomStep),
+
         pixelToVoxelFactor => {
           this.uniforms.pixelToVoxelFactor.value = pixelToVoxelFactor;
         },
         true,
+        Utils.isVec2Equal,
       ),
     );
 

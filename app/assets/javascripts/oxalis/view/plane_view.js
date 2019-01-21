@@ -33,7 +33,8 @@ export const setupRenderArea = (
   color: number,
 ) => {
   renderer.setViewport(x, y, viewportWidth, viewportHeight);
-  renderer.setScissor(x, y, scissorWidth, scissorHeight);
+  renderer.setScissor(x, y, viewportWidth, viewportHeight);
+  // renderer.setScissor(x, y, scissorWidth, scissorHeight);
   renderer.setScissorTest(true);
   renderer.setClearColor(color, 1);
 };
@@ -191,11 +192,11 @@ class PlaneView {
             height,
             OrthoViewColors[plane],
           );
-          if (plane === "TDView") {
-            const camera = this.cameras[plane];
-            camera.aspect = width / height;
-            camera.updateProjectionMatrix();
-          }
+          // if (plane === "TDView") {
+          //   const camera = this.cameras[plane];
+          //   camera.aspect = width / height;
+          //   camera.updateProjectionMatrix();
+          // }
           renderer.render(scene, this.cameras[plane]);
         }
       }
@@ -216,12 +217,6 @@ class PlaneView {
   resize = (): void => {
     const { width, height } = getDesiredLayoutRect();
     getSceneController().renderer.setSize(width, height);
-
-    for (const plane of OrthoViewValues) {
-      // TODO: this isnt true anymore
-      // this.cameras[plane].aspect = 1;
-      this.cameras[plane].updateProjectionMatrix();
-    }
     this.draw();
   };
 

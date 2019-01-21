@@ -98,7 +98,7 @@ uniform bool useBilinearFiltering;
 uniform vec3 globalMousePosition;
 uniform bool isMouseInCanvas;
 uniform float brushSizeInPixel;
-uniform float pixelToVoxelFactor;
+uniform vec2 pixelToVoxelFactor;
 uniform float planeID;
 uniform vec3 bucketsPerDim;
 

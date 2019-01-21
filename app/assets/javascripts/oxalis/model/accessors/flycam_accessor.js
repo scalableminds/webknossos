@@ -7,6 +7,10 @@ import type { Flycam, OxalisState } from "oxalis/store";
 import { ZOOM_STEP_INTERVAL } from "oxalis/model/reducers/flycam_reducer";
 import { M4x4, type Matrix4x4 } from "libs/mjs";
 import {
+  applyAspectRatioToWidth,
+  getInputCatcherAspectRatio,
+} from "oxalis/model/accessors/view_mode_accessor";
+import {
   calculateTotalBucketCountForZoomLevel,
   calculateBucketCountPerDim,
 } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
@@ -199,12 +203,13 @@ export function getRequestLogZoomStep(state: OxalisState): number {
   return clamp(min, qualityAdaptedZoomStep, maxLogZoomStep);
 }
 
-export function getTextureScalingFactor(state: OxalisState): number {
-  return state.flycam.zoomStep / Math.pow(2, getRequestLogZoomStep(state));
+export function getZoomValue(flycam: Flycam): number {
+  return flycam.zoomStep;
 }
 
-export function getPlaneScalingFactor(flycam: Flycam): number {
-  return flycam.zoomStep;
+export function getPlaneScalingFactor(flycam: Flycam, planeID: OrthoView): [number, number] {
+  const aspectRatio = getInputCatcherAspectRatio(planeID);
+  return applyAspectRatioToWidth(aspectRatio, flycam.zoomStep);
 }
 
 export function getRotationOrtho(planeId: OrthoView): Vector3 {
@@ -225,16 +230,19 @@ export function getArea(state: OxalisState, planeId: OrthoView): Area {
   const [u, v] = Dimensions.getIndices(planeId);
 
   const position = getPosition(state.flycam);
-  const viewportWidthHalf = (getPlaneScalingFactor(state.flycam) * constants.PLANE_WIDTH) / 2;
+
+  const planeScalingFactors = getPlaneScalingFactor(state.flycam, planeId);
+  const viewportWidthHalf = (planeScalingFactors[0] * constants.PLANE_WIDTH) / 2;
+  const viewportHeightHalf = (planeScalingFactors[1] * constants.PLANE_WIDTH) / 2;
   const baseVoxelFactors = scaleInfo.getBaseVoxelFactors(state.dataset.dataSource.scale);
 
-  const uWidthHalf = viewportWidthHalf * baseVoxelFactors[u];
-  const vWidthHalf = viewportWidthHalf * baseVoxelFactors[v];
+  const uHalf = viewportWidthHalf * baseVoxelFactors[u];
+  const vHalf = viewportHeightHalf * baseVoxelFactors[v];
 
-  const left = Math.floor((position[u] - uWidthHalf) / constants.BUCKET_WIDTH);
-  const top = Math.floor((position[v] - vWidthHalf) / constants.BUCKET_WIDTH);
-  const right = Math.floor((position[u] + uWidthHalf) / constants.BUCKET_WIDTH);
-  const bottom = Math.floor((position[v] + vWidthHalf) / constants.BUCKET_WIDTH);
+  const left = Math.floor((position[u] - uHalf) / constants.BUCKET_WIDTH);
+  const top = Math.floor((position[v] - vHalf) / constants.BUCKET_WIDTH);
+  const right = Math.floor((position[u] + uHalf) / constants.BUCKET_WIDTH);
+  const bottom = Math.floor((position[v] + vHalf) / constants.BUCKET_WIDTH);
 
   return {
     left,

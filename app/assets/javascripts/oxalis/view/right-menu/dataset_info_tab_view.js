@@ -23,7 +23,7 @@ import ButtonComponent from "oxalis/view/components/button_component";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import Model from "oxalis/model";
 import Store, { type Flycam, type OxalisState, type Task, type Tracing } from "oxalis/store";
-import constants, { ControlModeEnum } from "oxalis/constants";
+import constants, { ControlModeEnum, OrthoViews } from "oxalis/constants";
 
 type DatasetInfoTabStateProps = {
   tracing: Tracing,
@@ -79,7 +79,8 @@ const shortcuts = [
 ];
 
 export function calculateZoomLevel(flycam: Flycam, dataset: APIDataset): number {
-  const zoom = getPlaneScalingFactor(flycam);
+  // todo
+  const zoom = getPlaneScalingFactor(flycam, OrthoViews.PLANE_XY)[0];
   let width;
   const { viewMode } = Store.getState().temporaryConfiguration;
   if (constants.MODES_PLANE.includes(viewMode)) {
@@ -313,7 +314,7 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
         {this.getDatasetName(isDatasetViewMode)}
 
         <p>Viewport Width: {formatNumberToLength(zoomLevel)}</p>
-        <p>Dataset Resolution: {formatScale(this.props.dataset.dataSource.scale)}</p>
+        <p>Dataset Scale: {formatScale(this.props.dataset.dataSource.scale)}</p>
 
         <table>
           <tbody>

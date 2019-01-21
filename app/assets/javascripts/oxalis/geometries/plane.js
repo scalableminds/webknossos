@@ -130,10 +130,9 @@ class Plane {
     }
   }
 
-  setScale(factor: number, aspectRatio: number): void {
-    const [xFactor, yFactor] = applyAspectRatioToWidth(aspectRatio, factor);
+  setScale(xFactor: number, yFactor: number): void {
     const scaleVec = new THREE.Vector3().multiplyVectors(
-      new THREE.Vector3(xFactor, yFactor, factor),
+      new THREE.Vector3(xFactor, yFactor, 1),
       this.baseScaleVector,
     );
     this.plane.scale.copy(scaleVec);

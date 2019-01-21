@@ -72,9 +72,9 @@ export function getPlaneMouseControls(planeId: OrthoView): * {
 
       if (tool === VolumeToolEnum.MOVE) {
         const state = Store.getState();
-        const viewportScale = getViewportScale(planeId);
+        const [viewportScaleX, viewportScaleY] = getViewportScale(planeId);
         const { activeViewport } = state.viewModeData.plane;
-        const v = [(delta.x * -1) / viewportScale, (delta.y * -1) / viewportScale, 0];
+        const v = [(delta.x * -1) / viewportScaleX, (delta.y * -1) / viewportScaleY, 0];
         Store.dispatch(movePlaneFlycamOrthoAction(v, activeViewport, true));
       }
 

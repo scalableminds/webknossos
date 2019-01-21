@@ -32,6 +32,7 @@ import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 import app from "app";
 import constants, {
+  ArbitraryViewport,
   type BoundingBoxType,
   type OrthoView,
   type OrthoViewMap,
@@ -269,7 +270,7 @@ class SceneController {
     }
   }
 
-  updateSceneForCam = (id: OrthoView): void => {
+  updateSceneForCam = (id: OrthoView, hidePlanes: boolean = false): void => {
     // This method is called for each of the four cams. Even
     // though they are all looking at the same scene, some
     // things have to be changed for each cam.
@@ -284,7 +285,7 @@ class SceneController {
       for (const planeId of OrthoViewValuesWithoutTDView) {
         if (planeId === id) {
           this.planes[planeId].setOriginalCrosshairColor();
-          this.planes[planeId].setVisible(true);
+          this.planes[planeId].setVisible(!hidePlanes);
           const pos = _.clone(getPosition(Store.getState().flycam));
           ind = Dimensions.getIndices(planeId);
           // Offset the plane so the user can see the skeletonTracing behind the plane
@@ -306,10 +307,10 @@ class SceneController {
     }
   };
 
-  update(optPlane?: ArbitraryPlane): void {
-    const gPos = getPosition(Store.getState().flycam);
+  update(optArbitraryPlane?: ArbitraryPlane): void {
+    const { flycam } = Store.getState();
+    const gPos = getPosition(flycam);
     const globalPosVec = new THREE.Vector3(...gPos);
-    const planeScale = getPlaneScalingFactor(Store.getState().flycam);
 
     // The anchor point refers to the top-left-front bucket of the bounding box
     // which covers all three rendered planes. Relative to this anchor point,
@@ -328,16 +329,17 @@ class SceneController {
       );
     }
 
-    if (optPlane) {
-      optPlane.updateAnchorPoints(anchorPoint, fallbackAnchorPoint);
-      optPlane.setPosition(globalPosVec);
+    if (optArbitraryPlane) {
+      optArbitraryPlane.updateAnchorPoints(anchorPoint, fallbackAnchorPoint);
+      optArbitraryPlane.setPosition(globalPosVec);
+      const aspectRatio = getInputCatcherAspectRatio(ArbitraryViewport);
+      optArbitraryPlane.setAspectRatio(aspectRatio);
     } else {
       for (const currentPlane of _.values(this.planes)) {
         currentPlane.updateAnchorPoints(anchorPoint, fallbackAnchorPoint);
         currentPlane.setPosition(globalPosVec);
-
-        const aspectRatio = getInputCatcherAspectRatio(currentPlane.planeID);
-        currentPlane.setScale(planeScale, aspectRatio);
+        const [scaleX, scaleY] = getPlaneScalingFactor(flycam, currentPlane.planeID);
+        currentPlane.setScale(scaleX, scaleY);
       }
     }
   }

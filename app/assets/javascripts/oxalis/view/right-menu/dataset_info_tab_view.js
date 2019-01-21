@@ -12,7 +12,7 @@ import { aggregateBoundingBox } from "libs/utils";
 import { convertToHybridTracing } from "admin/admin_rest_api";
 import { formatScale } from "libs/format_utils";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
-import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
+import { getPlaneScalingFactor, getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import { location } from "libs/window";
 import {
@@ -80,7 +80,7 @@ const shortcuts = [
 
 export function calculateZoomLevel(flycam: Flycam, dataset: APIDataset): number {
   // todo
-  const zoom = getPlaneScalingFactor(flycam, OrthoViews.PLANE_XY)[0];
+  const zoom = getZoomValue(flycam);
   let width;
   const { viewMode } = Store.getState().temporaryConfiguration;
   if (constants.MODES_PLANE.includes(viewMode)) {
@@ -304,32 +304,33 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
     const isDatasetViewMode =
       Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
 
-    const zoomLevel = calculateZoomLevel(this.props.flycam, this.props.dataset);
     const extentInVoxel = getDatasetExtentInVoxel(this.props.dataset);
     const extent = getDatasetExtentInLength(this.props.dataset);
     return (
       <div className="flex-overflow info-tab-content">
-        {this.getTracingName(isDatasetViewMode)}
-        {this.getTracingType(isDatasetViewMode)}
-        {this.getDatasetName(isDatasetViewMode)}
+        <div className="info-tab-block">
+          {this.getTracingName(isDatasetViewMode)}
+          {this.getTracingType(isDatasetViewMode)}
+          {this.getDatasetName(isDatasetViewMode)}
+        </div>
 
-        <p>Viewport Width: {formatNumberToLength(zoomLevel)}</p>
-        <p>Dataset Scale: {formatScale(this.props.dataset.dataSource.scale)}</p>
+        <div className="info-tab-block">
+          <p>Dataset Scale: {formatScale(this.props.dataset.dataSource.scale)}</p>
+          <table>
+            <tbody>
+              <tr>
+                <td style={{ paddingRight: 8 }}>Dataset Extent:</td>
+                <td>{formatExtentWithLength(extentInVoxel, x => `${x}`)} Voxel³</td>
+              </tr>
+              <tr>
+                <td />
+                <td>{formatExtentWithLength(extent, formatNumberToLength)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-        <table>
-          <tbody>
-            <tr>
-              <td style={{ paddingRight: 8 }}>Dataset Extent:</td>
-              <td>{formatExtentWithLength(extentInVoxel, x => `${x}`)} Voxel³</td>
-            </tr>
-            <tr>
-              <td />
-              <td>{formatExtentWithLength(extent, formatNumberToLength)}</td>
-            </tr>
-          </tbody>
-        </table>
-
-        {this.getTracingStatistics()}
+        <div className="info-tab-block">{this.getTracingStatistics()}</div>
         {this.getKeyboardShortcuts(isDatasetViewMode)}
         {this.getOrganisationLogo(isDatasetViewMode)}
       </div>

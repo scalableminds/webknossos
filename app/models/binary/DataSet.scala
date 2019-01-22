@@ -136,7 +136,8 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
 
   def countAllForOrganization(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[Int] =
     for {
-      rList <- run(sql"select count(_id) from #${existingCollectionName} where _organization = ${organizationId}".as[Int])
+      rList <- run(
+        sql"select count(_id) from #${existingCollectionName} where _organization = ${organizationId}".as[Int])
       r <- rList.headOption
     } yield r
 

@@ -137,7 +137,8 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   def countAllForOrganization(organizationId: ObjectId): Fox[Int] =
     for {
-      resultList <- run(sql"select count(_id) from #${existingCollectionName} where _organization = ${organizationId}".as[Int])
+      resultList <- run(
+        sql"select count(_id) from #${existingCollectionName} where _organization = ${organizationId}".as[Int])
       result <- resultList.headOption
     } yield result
 

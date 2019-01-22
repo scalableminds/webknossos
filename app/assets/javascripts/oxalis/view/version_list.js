@@ -46,8 +46,8 @@ const MOMENT_CALENDAR_FORMAT = {
 const VERSION_LIST_PLACEHOLDER = { emptyText: "No versions created yet." };
 
 export async function previewVersion(versions?: Versions) {
-  const { tracingType, annotationId } = Store.getState().tracing;
-  await api.tracing.restart(tracingType, annotationId, ControlModeEnum.TRACE, versions);
+  const { annotationType, annotationId } = Store.getState().tracing;
+  await api.tracing.restart(annotationType, annotationId, ControlModeEnum.TRACE, versions);
   Store.dispatch(setAnnotationAllowUpdateAction(false));
 
   const segmentationLayer = Model.getSegmentationLayer();
@@ -104,8 +104,8 @@ class VersionList extends React.Component<Props, State> {
       Store.dispatch(setVersionRestoreVisibilityAction(false));
       Store.dispatch(setAnnotationAllowUpdateAction(true));
     } else {
-      const { tracingType, annotationId } = Store.getState().tracing;
-      downloadNml(annotationId, tracingType, { [this.props.tracingType]: version });
+      const { annotationType, annotationId } = Store.getState().tracing;
+      downloadNml(annotationId, annotationType, { [this.props.tracingType]: version });
     }
   };
 

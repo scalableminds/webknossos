@@ -4,7 +4,7 @@ import { Button, Dropdown, Icon, Menu, Modal, Tooltip } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 
-import type { APIUser, APITracingType } from "admin/api_flow_types";
+import type { APIUser, APIAnnotationType } from "admin/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
 import { copyAnnotationToUserAccount, finishAnnotation, downloadNml } from "admin/admin_rest_api";
 import { mapLayoutKeysToLanguage } from "oxalis/view/layouting/default_layout_configs";
@@ -24,7 +24,7 @@ import { location } from "libs/window";
 import type { LayoutKeys } from "oxalis/view/layouting/default_layout_configs";
 
 type StateProps = {
-  tracingType: APITracingType,
+  annotationType: APIAnnotationType,
   annotationId: string,
   restrictions: RestrictionsAndSettings,
   task: ?Task,
@@ -196,7 +196,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
   handleCopyToAccount = async () => {
     const newAnnotation = await copyAnnotationToUserAccount(
       this.props.annotationId,
-      this.props.tracingType,
+      this.props.annotationType,
     );
     location.href = `/annotations/Explorational/${newAnnotation.id}`;
   };
@@ -207,7 +207,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     Modal.confirm({
       title: messages["annotation.finish"],
       onOk: async () => {
-        await finishAnnotation(this.props.annotationId, this.props.tracingType);
+        await finishAnnotation(this.props.annotationId, this.props.annotationType);
         // Force page refresh
         location.href = "/dashboard";
       },
@@ -224,7 +224,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
 
   handleDownload = async () => {
     await this.handleSave();
-    downloadNml(this.props.annotationId, this.props.tracingType);
+    downloadNml(this.props.annotationId, this.props.annotationType);
   };
 
   handleFinishAndGetNextTask = async () => {
@@ -378,7 +378,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
 
 function mapStateToProps(state: OxalisState): StateProps {
   return {
-    tracingType: state.tracing.tracingType,
+    annotationType: state.tracing.annotationType,
     annotationId: state.tracing.annotationId,
     restrictions: state.tracing.restrictions,
     task: state.task,

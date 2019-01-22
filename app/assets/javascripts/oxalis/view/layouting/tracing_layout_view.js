@@ -11,7 +11,7 @@ import classNames from "classnames";
 import type { Dispatch } from "redux";
 
 import { ArbitraryViewport, type Mode, OrthoViews } from "oxalis/constants";
-import type { OxalisState, TracingTypeTracing, TraceOrViewCommand } from "oxalis/store";
+import type { OxalisState, AnnotationType, TraceOrViewCommand } from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import AbstractTreeTabView from "oxalis/view/right-menu/abstract_tree_tab_view";
 import ActionBarView from "oxalis/view/action_bar_view";
@@ -50,7 +50,7 @@ type StateProps = {
 };
 
 type Props = StateProps & {
-  initialTracingType: TracingTypeTracing,
+  initialAnnotationType: AnnotationType,
   initialCommandType: TraceOrViewCommand,
   setAutoSaveLayouts: boolean => void,
 };
@@ -140,7 +140,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     return (
       <NmlUploadZoneContainer onImport={importNmls} isAllowed={this.props.isUpdateTracingAllowed}>
         <OxalisController
-          initialTracingType={this.props.initialTracingType}
+          initialAnnotationType={this.props.initialAnnotationType}
           initialCommandType={this.props.initialCommandType}
         />
 

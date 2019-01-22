@@ -119,11 +119,11 @@ class ProjectController @Inject()(projectService: ProjectService,
       Ok(js)
     }
 
-  def tasksForProject(projectName: String) = sil.SecuredAction.async { implicit request =>
+  def tasksForProject(projectName: String, limit: Option[Int] = None, pageNumber: Option[Int] = None) = sil.SecuredAction.async { implicit request =>
     for {
       project <- projectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed"
-      tasks <- taskDAO.findAllByProject(project._id)(GlobalAccessContext)
+      tasks <- taskDAO.findAllByProject(project._id, limit.getOrElse(Int.MaxValue), pageNumber.getOrElse(0))(GlobalAccessContext)
       js <- Fox.serialCombined(tasks)(task => taskService.publicWrites(task))
     } yield {
       Ok(Json.toJson(js))

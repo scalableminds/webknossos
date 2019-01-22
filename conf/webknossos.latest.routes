@@ -147,7 +147,7 @@ POST          /projects                                                         
 GET           /projects/:name                                                   controllers.ProjectController.read(name: String)
 DELETE        /projects/:name                                                   controllers.ProjectController.delete(name: String)
 PUT           /projects/:name                                                   controllers.ProjectController.update(name: String)
-GET           /projects/:name/tasks                                             controllers.ProjectController.tasksForProject(name: String)
+GET           /projects/:name/tasks                                             controllers.ProjectController.tasksForProject(name: String, limit: Option[Int], pageNumber: Option[Int])
 PATCH         /projects/:name/incrementEachTasksInstances                       controllers.ProjectController.incrementEachTasksInstances(name: String, delta: Option[Long])
 PATCH         /projects/:name/pause                                             controllers.ProjectController.pause(name: String)
 PATCH         /projects/:name/resume                                            controllers.ProjectController.resume(name: String)

@@ -628,13 +628,16 @@ export function convertToHybridTracing(annotationId: string): Promise<void> {
 export async function downloadNml(
   annotationId: string,
   tracingType: APITracingType,
-  version?: number,
+  versions?: Versions = {},
 ) {
-  const possibleVersionString = version != null ? `?version=${version}` : "";
+  const possibleVersionString = Object.entries(versions)
+    // $FlowFixMe Flow returns val as mixed here due to the use of Object.entries
+    .map(([key, val]) => `${key}Version=${val}`)
+    .join("&");
   const win = window.open("about:blank", "_blank");
   win.document.body.innerHTML = messages["download.wait"];
 
-  const downloadUrl = `/api/annotations/${tracingType}/${annotationId}/download${possibleVersionString}`;
+  const downloadUrl = `/api/annotations/${tracingType}/${annotationId}/download?${possibleVersionString}`;
   win.location.href = downloadUrl;
   win.document.body.innerHTML = messages["download.close_window"];
 }

@@ -1,11 +1,8 @@
-/**
- * plane_material_factory.js
- * @flow
- */
-
+// @flow
 import * as THREE from "three";
 import _ from "lodash";
 
+import app from "app";
 import {
   ModeValues,
   type OrthoView,
@@ -31,29 +28,59 @@ import {
 import { getPackingDegree } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import AbstractPlaneMaterialFactory, {
-  type ShaderMaterialOptions,
-  sanitizeName,
-} from "oxalis/geometries/materials/abstract_plane_material_factory";
 import Model from "oxalis/model";
 import Store, { type DatasetLayerConfiguration } from "oxalis/store";
 import * as Utils from "libs/utils";
 import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
+import shaderEditor from "oxalis/model/helpers/shader_editor";
+
+type ShaderMaterialOptions = {
+  polygonOffset?: boolean,
+  polygonOffsetFactor?: number,
+  polygonOffsetUnits?: number,
+};
+
+export type Uniforms = {
+  [key: string]: {
+    type: "b" | "f" | "i" | "t" | "v2" | "v3" | "v4" | "tv",
+    value: any,
+  },
+};
 
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
+
+function sanitizeName(name: ?string): string {
+  // Make sure name starts with a letter and contains no "-" characters
+  if (name == null) {
+    return "";
+  }
+  return `layer_${name.replace(/-/g, "_")}`;
+}
 
 function getColorLayerNames() {
   return getColorLayers(Store.getState().dataset).map(layer => sanitizeName(layer.name));
 }
 
-class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
+class PlaneMaterialFactory {
   planeID: OrthoView;
   isOrthogonal: boolean;
+  material: THREE.ShaderMaterial;
+  uniforms: Uniforms;
+  attributes: Object;
+  shaderId: number;
+  storePropertyUnsubscribers: Array<() => void> = [];
 
   constructor(planeID: OrthoView, isOrthogonal: boolean, shaderId: number) {
-    super(shaderId);
     this.planeID = planeID;
     this.isOrthogonal = isOrthogonal;
+    this.shaderId = shaderId;
+  }
+
+  setup() {
+    this.setupUniforms();
+    this.makeMaterial();
+    this.attachTextures();
+    return this;
   }
 
   stopListening() {
@@ -61,9 +88,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   }
 
   setupUniforms(): void {
-    super.setupUniforms();
-
-    this.uniforms = _.extend(this.uniforms, {
+    this.uniforms = {
       alpha: {
         type: "f",
         value: 0,
@@ -164,12 +189,32 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         type: "v3",
         value: new THREE.Vector3(0, 0, 0),
       },
-    });
+    };
 
     for (const dataLayer of Model.getAllLayers()) {
       this.uniforms[sanitizeName(`${dataLayer.name}_maxZoomStep`)] = {
         type: "f",
         value: dataLayer.cube.MAX_ZOOM_STEP,
+      };
+    }
+
+    for (const name of getColorLayerNames()) {
+      // TODO: Weight?
+      this.uniforms[`${name}_weight`] = {
+        type: "f",
+        value: 1,
+      };
+      this.uniforms[`${name}_color`] = {
+        type: "v3",
+        value: DEFAULT_COLOR,
+      };
+      this.uniforms[`${name}_brightness`] = {
+        type: "f",
+        value: 1.0,
+      };
+      this.uniforms[`${name}_contrast`] = {
+        type: "f",
+        value: 1.0,
       };
     }
   }
@@ -221,22 +266,18 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         value: mappingColorTexture,
       };
     }
-
-    // Add weight/color uniforms
-    for (const name of getColorLayerNames()) {
-      this.uniforms[`${name}_weight`] = {
-        type: "f",
-        value: 1,
-      };
-      this.uniforms[`${name}_color`] = {
-        type: "v3",
-        value: DEFAULT_COLOR,
-      };
-    }
   }
 
   makeMaterial(options?: ShaderMaterialOptions): void {
-    super.makeMaterial(options);
+    this.material = new THREE.ShaderMaterial(
+      _.extend(options, {
+        uniforms: this.uniforms,
+        vertexShader: this.getVertexShader(),
+        fragmentShader: this.getFragmentShader(),
+      }),
+    );
+
+    shaderEditor.addMaterial(this.shaderId, this.material);
 
     this.material.setGlobalPosition = ([x, y, z]) => {
       this.uniforms.globalPosition.value.set(x, y, z);
@@ -385,6 +426,24 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       ),
     );
 
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        state => state.datasetConfiguration.layers,
+        layerSettings => {
+          for (const colorLayer of getColorLayers(Store.getState().dataset)) {
+            const settings = layerSettings[colorLayer.name];
+            if (settings != null) {
+              const name = sanitizeName(colorLayer.name);
+              this.updateUniformsForLayer(settings, name);
+            }
+          }
+          // TODO: Needed?
+          app.vent.trigger("rerender");
+        },
+        true,
+      ),
+    );
+
     const hasSegmentation = Model.getSegmentationLayer() != null;
     if (hasSegmentation) {
       this.storePropertyUnsubscribers.push(
@@ -466,12 +525,17 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   }
 
   updateUniformsForLayer(settings: DatasetLayerConfiguration, name: string): void {
-    super.updateUniformsForLayer(settings, name);
+    this.uniforms[`${name}_brightness`].value = settings.brightness / 255;
+    this.uniforms[`${name}_contrast`].value = settings.contrast;
 
     if (settings.color != null) {
       const color = this.convertColor(settings.color);
       this.uniforms[`${name}_color`].value = new THREE.Vector3(...color);
     }
+  }
+
+  getMaterial(): THREE.ShaderMaterial {
+    return this.material;
   }
 
   getFragmentShader(): string {
@@ -501,6 +565,24 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     });
 
     return code;
+  }
+
+  getVertexShader(): string {
+    return `
+precision highp float;
+
+varying vec4 worldCoord;
+varying vec4 modelCoord;
+varying vec2 vUv;
+varying mat4 savedModelMatrix;
+
+void main() {
+  vUv = uv;
+  modelCoord = vec4(position, 1.0);
+  savedModelMatrix = modelMatrix;
+  worldCoord = modelMatrix * vec4(position, 1.0);
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}`;
   }
 }
 

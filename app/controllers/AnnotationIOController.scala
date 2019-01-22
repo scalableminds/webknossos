@@ -185,22 +185,26 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       )
     }
 
-  def download(typ: String, id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long]) = sil.SecuredAction.async { implicit request =>
-    logger.trace(s"Requested download for annotation: $typ/$id")
-    for {
-      identifier <- AnnotationIdentifier.parse(typ, id)
-      result <- identifier.annotationType match {
-        case AnnotationType.View             => Fox.failure("Cannot download View annotation")
-        case AnnotationType.CompoundProject  => downloadProject(id, request.identity)
-        case AnnotationType.CompoundTask     => downloadTask(id, request.identity)
-        case AnnotationType.CompoundTaskType => downloadTaskType(id, request.identity)
-        case _                               => downloadExplorational(id, typ, request.identity, skeletonVersion, volumeVersion)
-      }
-    } yield result
-  }
+  def download(typ: String, id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long]) =
+    sil.SecuredAction.async { implicit request =>
+      logger.trace(s"Requested download for annotation: $typ/$id")
+      for {
+        identifier <- AnnotationIdentifier.parse(typ, id)
+        result <- identifier.annotationType match {
+          case AnnotationType.View             => Fox.failure("Cannot download View annotation")
+          case AnnotationType.CompoundProject  => downloadProject(id, request.identity)
+          case AnnotationType.CompoundTask     => downloadTask(id, request.identity)
+          case AnnotationType.CompoundTaskType => downloadTaskType(id, request.identity)
+          case _                               => downloadExplorational(id, typ, request.identity, skeletonVersion, volumeVersion)
+        }
+      } yield result
+    }
 
-  def downloadExplorational(annotationId: String, typ: String, issuingUser: User, skeletonVersion: Option[Long], volumeVersion: Option[Long])(implicit ctx: DBAccessContext,
-                                                                                  m: MessagesProvider) = {
+  def downloadExplorational(annotationId: String,
+                            typ: String,
+                            issuingUser: User,
+                            skeletonVersion: Option[Long],
+                            volumeVersion: Option[Long])(implicit ctx: DBAccessContext, m: MessagesProvider) = {
 
     def skeletonToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String, organizationName: String) =
       for {
@@ -227,8 +231,10 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       for {
         tracingStoreClient <- tracingStoreService.clientFor(dataSet)
         volumeTracingId <- annotation.volumeTracingId.toFox
-        (volumeTracing, data: Source[ByteString, _]) <- tracingStoreClient.getVolumeTracing(volumeTracingId, volumeVersion)
-        skeletonTracingOpt <- Fox.runOptional(annotation.skeletonTracingId)(skeletonId => tracingStoreClient.getSkeletonTracing(skeletonId, skeletonVersion))
+        (volumeTracing, data: Source[ByteString, _]) <- tracingStoreClient.getVolumeTracing(volumeTracingId,
+                                                                                            volumeVersion)
+        skeletonTracingOpt <- Fox.runOptional(annotation.skeletonTracingId)(skeletonId =>
+          tracingStoreClient.getSkeletonTracing(skeletonId, skeletonVersion))
         user <- userService.findOneById(annotation._user, useCache = true)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
       } yield {

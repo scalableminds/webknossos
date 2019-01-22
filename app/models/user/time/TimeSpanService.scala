@@ -89,7 +89,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
                                end: Option[Long] = None,
                                organizationId: ObjectId): Fox[Map[T, Duration]] =
     for {
-      timeTrackingOpt <- timeSpanDAO.findAll(start, end).futureBox
+      timeTrackingOpt <- timeSpanDAO.findAll(start, end, organizationId).futureBox
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>

@@ -137,13 +137,14 @@ class TimeSpanDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def findAll(start: Option[Long], end: Option[Long]): Fox[List[TimeSpan]] =
+  def findAll(start: Option[Long], end: Option[Long], organizationId: ObjectId): Fox[List[TimeSpan]] =
     for {
-      r <- run(Timespans
-        .filter(r =>
-          notdel(r) && (r.created >= new java.sql.Timestamp(start.getOrElse(0))) && r.created <= new java.sql.Timestamp(
-            end.getOrElse(MAX_TIMESTAMP)))
-        .result)
+      r <- run(
+        sql"""select #${columnsWithPrefix("t.")} from #${existingCollectionName} t
+              join webknossos.users u on t._user = u._id
+              where t.created >= ${new java.sql.Timestamp(start.getOrElse(0))} and t.created <= ${new java.sql.Timestamp(end.getOrElse(MAX_TIMESTAMP))}
+              and u._organization = ${organizationId}
+          """.as[TimespansRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 

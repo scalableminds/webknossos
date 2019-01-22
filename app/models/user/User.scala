@@ -135,6 +135,12 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
+  def countAllForOrganization(organizationId: ObjectId): Fox[Int] =
+    for {
+      resultList <- run(sql"select count(_id) from #${existingCollectionName} where _organization = ${organizationId}".as[Int])
+      result <- resultList.headOption
+    } yield result
+
   def insertOne(u: User)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- run(

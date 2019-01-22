@@ -86,7 +86,8 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
 
   def loggedTimePerInterval[T](groupingF: TimeSpan => T,
                                start: Option[Long] = None,
-                               end: Option[Long] = None): Fox[Map[T, Duration]] =
+                               end: Option[Long] = None,
+                               organizationId: ObjectId): Fox[Map[T, Duration]] =
     for {
       timeTrackingOpt <- timeSpanDAO.findAll(start, end).futureBox
     } yield {

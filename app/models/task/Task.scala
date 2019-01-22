@@ -156,13 +156,13 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def findAllByProject(projectId: ObjectId, limit: Int, pageNumber: Int)(implicit ctx: DBAccessContext): Fox[List[Task]] =
+  def findAllByProject(projectId: ObjectId, limit: Int, pageNumber: Int)(
+      implicit ctx: DBAccessContext): Fox[List[Task]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(
         sql"""select #${columns} from #${existingCollectionName} where _project = ${projectId.id} and #${accessQuery}
-              order by _id desc limit ${limit} offset ${pageNumber * limit}"""
-          .as[TasksRow])
+              order by _id desc limit ${limit} offset ${pageNumber * limit}""".as[TasksRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 

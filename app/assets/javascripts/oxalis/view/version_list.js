@@ -105,7 +105,7 @@ class VersionList extends React.Component<Props, State> {
       Store.dispatch(setAnnotationAllowUpdateAction(true));
     } else {
       const { tracingType, annotationId } = Store.getState().tracing;
-      downloadNml(annotationId, tracingType, version);
+      downloadNml(annotationId, tracingType, { [this.props.tracingType]: version });
     }
   };
 

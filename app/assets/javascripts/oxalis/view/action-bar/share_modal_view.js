@@ -1,5 +1,5 @@
 // @flow
-import { Popconfirm, Alert, Divider, Radio, Modal, Input, Button, Row, Col } from "antd";
+import { Alert, Divider, Radio, Modal, Input, Button, Row, Col } from "antd";
 import { connect } from "react-redux";
 import Clipboard from "clipboard-js";
 import React, { PureComponent } from "react";
@@ -7,8 +7,7 @@ import React, { PureComponent } from "react";
 import type { APIDataset } from "admin/api_flow_types";
 import type { OxalisState, RestrictionsAndSettings } from "oxalis/store";
 import { setAnnotationPublicAction } from "oxalis/model/actions/annotation_actions";
-import { setDatasetAction } from "oxalis/model/actions/settings_actions";
-import { updateDataset } from "admin/admin_rest_api";
+import { getDatasetSharingToken } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import window from "libs/window";
 
@@ -19,15 +18,14 @@ type ShareModalProp = {
   isPublic: boolean,
   dataset: APIDataset,
   isVisible: boolean,
-  isCurrentUserAdmin: boolean,
   onOk: () => void,
   restrictions: RestrictionsAndSettings,
   setAnnotationPublic: Function,
-  makeDatasetPublic: APIDataset => Promise<void>,
 };
 
 type State = {
   isPublic: boolean,
+  sharingToken: string,
 };
 
 function Hint({ children, style }) {
@@ -47,17 +45,26 @@ function Hint({ children, style }) {
 
 class ShareModalView extends PureComponent<ShareModalProp, State> {
   state = {
-    isPublic: false,
+    isPublic: this.props.isPublic,
+    sharingToken: "",
   };
 
-  componentWillReceiveProps(newProps: ShareModalProp) {
-    this.setState({ isPublic: newProps.isPublic });
+  componentDidMount() {
+    this.fetch();
+  }
+
+  async fetch() {
+    const { name, owningOrganization } = this.props.dataset;
+    const datasetId = { name, owningOrganization };
+    const sharingToken = await getDatasetSharingToken(datasetId);
+    this.setState({ sharingToken });
   }
 
   getUrl() {
-    const loc = window.location;
-    const { pathname } = loc;
-    const url = `${loc.origin + pathname}${loc.hash}`;
+    const { location } = window;
+    const { pathname, origin, hash } = location;
+    const query = this.props.dataset.isPublic ? "" : `?token=${this.state.sharingToken}`;
+    const url = `${origin}${pathname}${query}${hash}`;
     return url;
   }
 
@@ -77,43 +84,13 @@ class ShareModalView extends PureComponent<ShareModalProp, State> {
   };
 
   maybeShowWarning() {
-    let message;
-    if (!this.props.restrictions.allowUpdate) {
-      message = "You don't have the permission to edit the visibility of this tracing.";
-    } else if (!this.props.dataset.isPublic) {
-      message = (
-        <span>
-          The tracing cannot be made public, since the underlying dataset is not public.{" "}
-          {this.props.isCurrentUserAdmin ? (
-            <span>
-              <Popconfirm
-                title={
-                  <div>
-                    Are you sure you want to make the dataset &ldquo;{this.props.dataset.name}&rdquo;
-                    public?<br /> It will be publicly listed when unregistered users visit
-                    webKnossos.
-                  </div>
-                }
-                onConfirm={() => this.props.makeDatasetPublic(this.props.dataset)}
-                okText="Yes"
-                cancelText="No"
-                style={{ maxWidth: 400 }}
-              >
-                <a href="#">Click here</a>
-              </Popconfirm>{" "}
-              to make the dataset public.
-            </span>
-          ) : (
-            <span>
-              Please ask an administrator to make the dataset {this.props.dataset.name} public.
-            </span>
-          )}
-        </span>
-      );
-    }
-
-    return message != null ? (
-      <Alert style={{ marginBottom: 18 }} message={message} type="warning" showIcon />
+    return !this.props.restrictions.allowUpdate ? (
+      <Alert
+        style={{ marginBottom: 18 }}
+        message="You don't have the permission to edit the visibility of this tracing."
+        type="warning"
+        showIcon
+      />
     ) : null;
   }
 
@@ -139,7 +116,7 @@ class ShareModalView extends PureComponent<ShareModalProp, State> {
           </Col>
           <Col span={18}>
             <Input.Group compact>
-              <Input style={{ width: "85%" }} value={this.getUrl()} />
+              <Input style={{ width: "85%" }} value={this.getUrl()} readOnly />
               <Button style={{ width: "15%" }} onClick={this.copyToClipboard} icon="copy">
                 Copy
               </Button>
@@ -174,11 +151,7 @@ class ShareModalView extends PureComponent<ShareModalProp, State> {
                 tracing and copy it to their accounts to edit it.
               </Hint>
 
-              <Radio
-                style={radioStyle}
-                value
-                disabled={!this.props.restrictions.allowUpdate || !this.props.dataset.isPublic}
-              >
+              <Radio style={radioStyle} value disabled={!this.props.restrictions.allowUpdate}>
                 Public
               </Radio>
               <Hint style={{ marginLeft: 24 }}>
@@ -193,20 +166,14 @@ class ShareModalView extends PureComponent<ShareModalProp, State> {
 }
 
 const mapStateToProps = (state: OxalisState) => ({
-  isPublic: state.tracing.isPublic && state.dataset.isPublic,
+  isPublic: state.tracing.isPublic,
   dataset: state.dataset,
   restrictions: state.tracing.restrictions,
-  isCurrentUserAdmin: state.activeUser != null ? state.activeUser.isAdmin : false,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   setAnnotationPublic(isPublic: boolean) {
     dispatch(setAnnotationPublicAction(isPublic));
-  },
-  async makeDatasetPublic(dataset: APIDataset) {
-    const newDataset = { ...dataset, isPublic: true };
-    await updateDataset(dataset, newDataset);
-    dispatch(setDatasetAction(newDataset));
   },
 });
 

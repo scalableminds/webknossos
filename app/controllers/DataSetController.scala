@@ -232,7 +232,7 @@ class DataSetController @Inject()(userService: UserService,
   def getSharingToken(organizationName: String, dataSetName: String) = sil.SecuredAction.async { implicit request =>
     for {
       token <- dataSetService.getSharingToken(dataSetName, request.identity._organization)
-    } yield Ok(Json.obj("sharingToken" -> token))
+    } yield Ok(Json.obj("sharingToken" -> token.trim))
   }
 
   def deleteSharingToken(organizationName: String, dataSetName: String) = sil.SecuredAction.async { implicit request =>

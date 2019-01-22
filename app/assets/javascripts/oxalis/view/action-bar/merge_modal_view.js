@@ -53,6 +53,7 @@ class ButtonWithCheckbox extends PureComponent<ButtonWithCheckboxProps, ButtonWi
   state = {
     isChecked: true,
   };
+
   render() {
     return (
       <React.Fragment>

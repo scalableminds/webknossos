@@ -312,13 +312,16 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         Share
       </Menu.Item>,
     );
-    modals.push(
-      <ShareModalView
-        key="share-modal"
-        isVisible={this.state.isShareModalOpen}
-        onOk={this.handleShareClose}
-      />,
-    );
+    // This modal fetches data for the current dataset which is wrong if it is rendered too early
+    if (this.state.isShareModalOpen) {
+      modals.push(
+        <ShareModalView
+          key="share-modal"
+          isVisible={this.state.isShareModalOpen}
+          onOk={this.handleShareClose}
+        />,
+      );
+    }
     elements.push(
       <Menu.Item key="user-scripts-button" onClick={this.handleUserScriptsOpen}>
         <Icon type="setting" />

@@ -4,14 +4,7 @@ import PriorityQueue from "js-priority-queue";
 import * as THREE from "three";
 import _ from "lodash";
 
-import {
-  type Area,
-  getAreas,
-  getMaxBucketCountPerDim,
-  getMaxBucketCountPerDimForAllResolutions,
-  getMaxBucketCountsForFallback,
-  getZoomedMatrix,
-} from "oxalis/model/accessors/flycam_accessor";
+import { type Area, getAreas, getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { M4x4 } from "libs/mjs";
 import { getResolutions, getByteCount } from "oxalis/model/accessors/dataset_accessor";
@@ -25,6 +18,7 @@ import constants, {
   type OrthoViewMap,
   type Vector3,
   type Vector4,
+  addressSpaceDimensions,
 } from "oxalis/constants";
 import determineBucketsForFlight from "oxalis/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
 import determineBucketsForOblique from "oxalis/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
@@ -118,13 +112,8 @@ export default class LayerRenderingManager {
   setupDataTextures(): void {
     const { dataset } = Store.getState();
     const bytes = getByteCount(dataset, this.name);
-    const bucketsPerDimPerResolution = getMaxBucketCountPerDimForAllResolutions(
-      dataset.dataSource.scale,
-      getResolutions(dataset),
-    );
 
     this.textureBucketManager = new TextureBucketManager(
-      bucketsPerDimPerResolution,
       this.textureWidth,
       this.dataTextureCount,
       bytes,
@@ -274,9 +263,10 @@ export default class LayerRenderingManager {
   ): boolean {
     const resolutions = getResolutions(Store.getState().dataset);
     const resolution = resolutions[logZoomStep];
-    const bucketsPerDim = isFallback
-      ? getMaxBucketCountsForFallback(datasetScale, logZoomStep, resolutions)
-      : getMaxBucketCountPerDim(datasetScale, logZoomStep, resolutions);
+    // const bucketsPerDim = isFallback
+    //   ? addressSpaceDimensions.fallback
+    //   : addressSpaceDimensions.normal;
+    const bucketsPerDim = addressSpaceDimensions.normal;
 
     const maximumRenderedBucketsHalfInVoxel = bucketsPerDim.map(
       bucketPerDim => getAnchorPositionToCenterDistance(bucketPerDim) * constants.BUCKET_WIDTH,

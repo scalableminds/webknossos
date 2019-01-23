@@ -114,11 +114,11 @@ const getColorFor: ShaderModule = {
       vec3 offsetInBucket,
       float isFallback
     ) {
-      float bucketIdx = linearizeVec3ToIndex(bucketPosition, bucketsPerDim);
+      float bucketIdx = linearizeVec3ToIndex(bucketPosition, addressSpaceDimensions);
 
       // If we are making a fallback lookup, the lookup area we are interested in starts at
-      // volumeOf(bucketsPerDim). If isFallback is true, we use that offset. Otherwise, the offset is 0.
-      float fallbackOffset = isFallback * bucketsPerDim.x * bucketsPerDim.y * bucketsPerDim.z;
+      // volumeOf(addressSpaceDimensions). If isFallback is true, we use that offset. Otherwise, the offset is 0.
+      float fallbackOffset = isFallback * addressSpaceDimensions.x * addressSpaceDimensions.y * addressSpaceDimensions.z;
       float bucketIdxInTexture =
         bucketIdx * floatsPerLookUpEntry
         + fallbackOffset;

@@ -12,6 +12,7 @@ import {
   OrthoViewValues,
   OrthoViews,
   type Vector3,
+  addressSpaceDimensions,
   volumeToolEnumToIndex,
 } from "oxalis/constants";
 import { V2 } from "libs/mjs";
@@ -26,7 +27,6 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { getDominantViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import {
-  getMaxBucketCountPerDim,
   getPlaneScalingFactor,
   getRequestLogZoomStep,
   getZoomValue,
@@ -162,9 +162,9 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         type: "b",
         value: false,
       },
-      bucketsPerDim: {
+      addressSpaceDimensions: {
         type: "v3",
-        value: new THREE.Vector3(0, 0, 0),
+        value: new THREE.Vector3(...addressSpaceDimensions.normal),
       },
     });
 
@@ -271,25 +271,6 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         storeState => getRequestLogZoomStep(storeState),
         zoomStep => {
           this.uniforms.zoomStep.value = zoomStep;
-        },
-        true,
-      ),
-    );
-
-    this.storePropertyUnsubscribers.push(
-      listenToStoreProperty(
-        storeState => getRequestLogZoomStep(storeState),
-        zoomStep => {
-          const storeState = Store.getState();
-          const { dataset } = storeState;
-          const resolutions = getResolutions(dataset);
-          const bucketsPerDim = getMaxBucketCountPerDim(
-            dataset.dataSource.scale,
-            zoomStep,
-            resolutions,
-          );
-
-          this.uniforms.bucketsPerDim.value.set(...bucketsPerDim);
         },
         true,
       ),

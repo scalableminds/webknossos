@@ -2,22 +2,23 @@
 import PriorityQueue from "js-priority-queue";
 
 import type { APIDataset } from "admin/api_flow_types";
-import {
-  type Area,
-  getMaxBucketCountPerDim,
-  getMaxBucketCountsForFallback,
-} from "oxalis/model/accessors/flycam_accessor";
+import { type Area } from "oxalis/model/accessors/flycam_accessor";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import { map2, map3 } from "libs/utils";
 import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
-import { map3 } from "libs/utils";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import Dimensions from "oxalis/model/dimensions";
 import constants, {
+  type OrthoView,
+  type OrthoViewExtents,
   type OrthoViewMap,
   OrthoViewValuesWithoutTDView,
+  OrthoViewValues,
+  type Vector2,
   type Vector3,
   type Vector4,
+  addressSpaceDimensions,
 } from "oxalis/constants";
 
 import { extraBucketPerEdge, extraBucketsPerDim } from "./orthogonal_bucket_picker_constants";
@@ -42,29 +43,52 @@ import { extraBucketPerEdge, extraBucketsPerDim } from "./orthogonal_bucket_pick
   Instead of this function, try to use getMaxBucketCountPerDim where possible, as that function
   will pick the appropriate zoomFactor automatically.
 */
-export function calculateBucketCountPerDim(
+function calculate2DBucketCount(
   dataSetScale: Vector3,
-  resolutionIndex: number,
-  resolutions: Array<Vector3>,
+  resolution: Vector3,
   zoomFactor: number,
-): Vector3 {
-  const addExtraBuckets = vec => map3(el => el + extraBucketsPerDim, vec);
+  viewportExtents: OrthoViewExtents,
+  viewportID: OrthoView,
+): Vector2 {
+  const addExtraBuckets = vec => map2(el => el + extraBucketsPerDim, vec);
 
   const baseVoxelFactors = getBaseVoxelFactors(dataSetScale);
-  const necessaryVoxelsPerDim = map3(f => f * constants.PLANE_WIDTH, baseVoxelFactors);
+  const [u, v] = Dimensions.getIndices(viewportID);
+  const [width, height] = viewportExtents[viewportID];
+  const necessaryVoxelsPerDimUV = [width * baseVoxelFactors[u], height * baseVoxelFactors[v]];
 
-  const resolutionFactor = resolutions[resolutionIndex];
-  const bucketCountPerDim = map3(
-    // As an example, even if the viewport width corresponds to exactly
-    // 16 buckets, a slight offset can mean that we need one additional bucket,
-    // from which we render only a small fraction. That's why 1 is added.
-    // Math.ceil is important since a raw viewport width ~ 15.8 bucket should also
-    // result in 17 buckets.
-    (v, dim) => 1 + Math.ceil((zoomFactor * v) / (resolutionFactor[dim] * constants.BUCKET_WIDTH)),
-    necessaryVoxelsPerDim,
-  );
+  // As an example, even if the viewport width corresponds to exactly
+  // 16 buckets, a slight offset can mean that we need one additional bucket,
+  // from which we render only a small fraction. That's why 1 is added.
+  // Math.ceil is important since a raw viewport width ~ 15.8 bucket should also
+  // result in 17 buckets.
+  const voxelsToBuckets = (v, dim) =>
+    1 + Math.ceil((zoomFactor * v) / (resolution[dim] * constants.BUCKET_WIDTH));
+
+  const bucketCountPerDim = [
+    voxelsToBuckets(necessaryVoxelsPerDimUV[0], u),
+    voxelsToBuckets(necessaryVoxelsPerDimUV[1], v),
+  ];
 
   return addExtraBuckets(bucketCountPerDim);
+}
+
+function calculateBucketCountPerViewportEdge(
+  dataSetScale: Vector3,
+  resolution: Vector3,
+  zoomFactor: number,
+  viewportExtents: OrthoViewExtents,
+): OrthoViewExtents {
+  // Curry the arguments
+  const _calculate2DBucketCount = viewport =>
+    calculate2DBucketCount(dataSetScale, resolution, zoomFactor, viewportExtents, viewport);
+
+  return {
+    PLANE_XY: _calculate2DBucketCount("PLANE_XY"),
+    PLANE_YZ: _calculate2DBucketCount("PLANE_YZ"),
+    PLANE_XZ: _calculate2DBucketCount("PLANE_XZ"),
+    TDView: [0, 0],
+  };
 }
 
 /*
@@ -78,24 +102,58 @@ export const calculateTotalBucketCountForZoomLevel = (
   resolutionIndex: number,
   resolutions: Array<Vector3>,
   zoomFactor: number,
+  viewportExtents: OrthoViewExtents,
 ) => {
-  const calculateBucketCountForOrtho = ([x, y, z]) => {
-    const xy = x * y;
-    const xz = x * z - x;
-    const yz = y * z - (y + z - 1);
+  const calculateBucketCountForOrtho = (countsPerViewport: OrthoViewExtents) => {
+    const calculateArea = (planeId: OrthoView): number => {
+      const [x, y] = countsPerViewport[planeId];
+      return x * y;
+    };
+    const calculateOverlap = (dim: number, planeIdA: OrthoView, planeIdB: OrthoView): number => {
+      const [dimA, dimB] = [
+        Dimensions.getIndices(planeIdA)[dim],
+        Dimensions.getIndices(planeIdB)[dim],
+      ];
+      // $FlowFixMe dimA and dimB will always be 0 or 1
+      const a = countsPerViewport[planeIdA][dimA];
+      // $FlowFixMe dimA and dimB will always be 0 or 1
+      const b = countsPerViewport[planeIdB][dimB];
+      return Math.min(a, b);
+    };
+
+    // When adding the area for xz, the extent for x (dim = 0) is counted twice. Subtract the
+    // surplus.
+    // Similarly, adding the area
+    const surplusX = calculateOverlap(0, "PLANE_XY", "PLANE_XZ");
+    const surplusY = calculateOverlap(1, "PLANE_XY", "PLANE_YZ");
+    const surplusZ = calculateOverlap(2, "PLANE_XZ", "PLANE_YZ");
+
+    const xy = calculateArea("PLANE_XY");
+    const xz = calculateArea("PLANE_XZ") - surplusX;
+    const yz = calculateArea("PLANE_YZ") - (surplusY + surplusZ - 1);
     return xy + xz + yz;
   };
-  const bucketsPerDim = calculateBucketCountPerDim(
+  const bucketCountPerViewportEdge = calculateBucketCountPerViewportEdge(
     dataSetScale,
-    resolutionIndex,
-    resolutions,
+    resolutions[resolutionIndex],
     zoomFactor,
+    viewportExtents,
   );
 
-  const fallbackBucketsPerDim =
+  const fallbackBucketCountPerViewportEdge =
     resolutionIndex + 1 < resolutions.length
-      ? calculateBucketCountPerDim(dataSetScale, resolutionIndex + 1, resolutions, zoomFactor)
-      : [0, 0, 0];
+      ? calculateBucketCountPerViewportEdge(
+          dataSetScale,
+          resolutions[resolutionIndex + 1],
+          zoomFactor,
+          viewportExtents,
+        )
+      : {
+          PLANE_XY: [0, 0],
+          PLANE_YZ: [0, 0],
+          PLANE_XZ: [0, 0],
+          TDView: [0, 0],
+        };
 
   const calculateAdditionalWSliceCount = ([x, y, z]) => {
     const xy = x * y - (x + y - 1);
@@ -104,10 +162,27 @@ export const calculateTotalBucketCountForZoomLevel = (
     return xy + xz + yz;
   };
 
+  const maxDims = [0, 0, 0];
+  for (const planeID of OrthoViewValuesWithoutTDView) {
+    const [u, v] = Dimensions.getIndices(planeID);
+    const [width, height] = bucketCountPerViewportEdge[planeID];
+    maxDims[u] = Math.max(width, maxDims[u]);
+    maxDims[v] = Math.max(height, maxDims[v]);
+  }
+
+  if (
+    maxDims[0] > addressSpaceDimensions.normal[0] ||
+    maxDims[1] > addressSpaceDimensions.normal[1] ||
+    maxDims[2] > addressSpaceDimensions.normal[2]
+  ) {
+    console.log("too large for address space. ", resolutionIndex, zoomFactor);
+    return 100000;
+  }
+
   // For non-fallback buckets, we load two slices per plane (see usage of subBucketLocality)
-  const normalBucketCount =
-    calculateBucketCountForOrtho(bucketsPerDim) + calculateAdditionalWSliceCount(bucketsPerDim);
-  const fallbackBucketCount = calculateBucketCountForOrtho(fallbackBucketsPerDim);
+  const normalBucketCount = 1.9 * calculateBucketCountForOrtho(bucketCountPerViewportEdge);
+  // + calculateAdditionalWSliceCount(bucketCountPerViewportEdge);
+  const fallbackBucketCount = calculateBucketCountForOrtho(fallbackBucketCountPerViewportEdge);
 
   return normalBucketCount + fallbackBucketCount;
 };
@@ -194,8 +269,8 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
     );
 
     const bucketsPerDim = isFallback
-      ? getMaxBucketCountsForFallback(datasetScale, logZoomStep, resolutions)
-      : getMaxBucketCountPerDim(datasetScale, logZoomStep, resolutions);
+      ? addressSpaceDimensions.fallback
+      : addressSpaceDimensions.normal;
 
     const renderedBucketsPerDimension = bucketsPerDim[w];
 

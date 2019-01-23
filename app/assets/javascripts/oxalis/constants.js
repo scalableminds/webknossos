@@ -39,6 +39,7 @@ export const OrthoViews = {
 };
 export type OrthoView = $Keys<typeof OrthoViews>;
 export type OrthoViewMap<T> = { [key: OrthoView]: T };
+export type OrthoViewExtents = OrthoViewMap<Vector2>;
 
 export const ArbitraryViewport = "arbitraryViewport";
 export const ArbitraryViews = {
@@ -111,9 +112,17 @@ export const POSITION_REF_REGEX = /#\(([0-9]+,[0-9]+,[0-9]+)\)/g;
 // There is an outer yellow CSS border and an inner (red/green/blue) border
 // that is a result of the plane being smaller than the renderer viewport
 export const OUTER_CSS_BORDER = 2;
-const PLANE_WIDTH = 376;
-const VIEWPORT_WIDTH = PLANE_WIDTH;
-export const ensureSmallerEdge = true;
+const VIEWPORT_WIDTH = 376;
+export const ensureSmallerEdge = false;
+
+// Using the following dimensions for the address space,
+// the look up buffer (256**2) is used at a rate of ~ 97%
+// ((32 × 32 × 50 + 16 × 16 × 50) / 256^2 = 0.976563)
+export const addressSpaceDimensions = {
+  normal: [32, 32, 50],
+  fallback: [32, 32, 50], // equal to normal
+  // fallback: [16, 16, 50],
+};
 
 const Constants = {
   ARBITRARY_VIEW: 4,
@@ -130,7 +139,6 @@ const Constants = {
 
   BUCKET_WIDTH: 32,
   BUCKET_SIZE: 32 ** 3,
-  PLANE_WIDTH,
   VIEWPORT_WIDTH,
 
   // We require at least 3 * 512 === 1536 buckets per data layer to fit onto the GPU.
@@ -138,7 +146,7 @@ const Constants = {
   // Previously, a minimum of 1200 buckets was enforced. Since, this limit required at least
   // three 4096**2 textures, a minimum of capacity of 1536 is actually reasonable.
   MINIMUM_REQUIRED_BUCKET_CAPACITY: 3 * 512,
-  LOOK_UP_TEXTURE_WIDTH: 128,
+  LOOK_UP_TEXTURE_WIDTH: 256,
 
   TDView_MOVE_SPEED: 150,
   MIN_MOVE_VALUE: 30,

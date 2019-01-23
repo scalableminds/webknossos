@@ -132,7 +132,7 @@ function* getBoundingsFromPosition(currentViewport: OrthoView): Saga<?BoundingBo
   const baseVoxelFactors = yield* select(state =>
     getBaseVoxelFactors(state.dataset.dataSource.scale),
   );
-  const halfViewportWidth = Math.round((Constants.PLANE_WIDTH / 2) * zoom);
+  const halfViewportWidth = Math.round((Constants.VIEWPORT_WIDTH / 2) * zoom);
   const relevantCoordinates = Dimensions.transDim([1, 1, 0], currentViewport);
   let halfViewportBounds = [
     halfViewportWidth * baseVoxelFactors[0] * relevantCoordinates[0],
@@ -193,7 +193,7 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
   const baseVoxelFactors = yield* select(state =>
     Dimensions.transDim(getBaseVoxelFactors(state.dataset.dataSource.scale), activeViewport),
   );
-  const halfViewportWidth = Math.round((Constants.PLANE_WIDTH / 2) * zoom);
+  const halfViewportWidth = Math.round((Constants.VIEWPORT_WIDTH / 2) * zoom);
   const [scaledOffsetX, scaledOffsetY] = baseVoxelFactors.map(f => halfViewportWidth * f);
 
   const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);

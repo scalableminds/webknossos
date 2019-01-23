@@ -12,7 +12,7 @@ import { aggregateBoundingBox } from "libs/utils";
 import { convertToHybridTracing } from "admin/admin_rest_api";
 import { formatScale } from "libs/format_utils";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
-import { getPlaneScalingFactor, getZoomValue } from "oxalis/model/accessors/flycam_accessor";
+import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import { location } from "libs/window";
 import {
@@ -83,9 +83,7 @@ export function calculateZoomLevel(flycam: Flycam, dataset: APIDataset): number 
   const zoom = getZoomValue(flycam);
   let width;
   const { viewMode } = Store.getState().temporaryConfiguration;
-  if (constants.MODES_PLANE.includes(viewMode)) {
-    width = constants.PLANE_WIDTH;
-  } else if (constants.MODES_ARBITRARY.includes(viewMode)) {
+  if (constants.MODES_PLANE.includes(viewMode) || constants.MODES_ARBITRARY.includes(viewMode)) {
     width = constants.VIEWPORT_WIDTH;
   } else {
     throw new Error(`Model mode not recognized: ${viewMode}`);

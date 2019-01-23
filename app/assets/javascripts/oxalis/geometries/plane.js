@@ -39,7 +39,7 @@ class Plane {
     this.planeID = planeID;
     this.displayCrosshair = true;
 
-    // PLANE_WIDTH means that the plane should be that many voxels wide in the
+    // VIEWPORT_WIDTH means that the plane should be that many voxels wide in the
     // dimension with the highest resolution. In all other dimensions, the plane
     // is smaller in voxels, so that it is squared in nm.
     // --> scaleInfo.baseVoxel
@@ -51,7 +51,7 @@ class Plane {
   }
 
   createMeshes(): void {
-    const pWidth = constants.PLANE_WIDTH;
+    const pWidth = constants.VIEWPORT_WIDTH;
     // create plane
     const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1);
 

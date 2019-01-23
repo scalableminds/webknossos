@@ -1,9 +1,12 @@
 // @flow
 
-import Store from "oxalis/store";
+import memoizeOne from "memoize-one";
+
+import Store, { type OxalisState } from "oxalis/store";
 import constants, {
   ArbitraryViewport,
   OUTER_CSS_BORDER,
+  type OrthoViewExtents,
   type Rect,
   type Viewport,
   ensureSmallerEdge,
@@ -23,6 +26,21 @@ export function getInputCatcherRect(viewport: Viewport): Rect {
   }
 }
 
+const _getViewportExtents = memoizeOne(rects => {
+  const getExtent = rect => [rect.width, rect.height];
+  return {
+    PLANE_XY: getExtent(rects.PLANE_XY),
+    PLANE_YZ: getExtent(rects.PLANE_YZ),
+    PLANE_XZ: getExtent(rects.PLANE_XZ),
+    TDView: getExtent(rects.TDView),
+  };
+});
+
+export function getViewportExtents(state: OxalisState): OrthoViewExtents {
+  const rects = state.viewModeData.plane.inputCatcherRects;
+  return _getViewportExtents(rects);
+}
+
 export function getInputCatcherAspectRatio(viewport: Viewport): number {
   const { width, height } = getInputCatcherRect(viewport);
   return width / height;
@@ -33,7 +51,13 @@ export function getInputCatcherAspectRatio(viewport: Viewport): number {
 // (ensureSmallerEdge), this function either uses the smaller or the larger edge as the
 // ground truth.
 export function applyAspectRatioToWidth(aspectRatio: number, width: number): [number, number] {
-  const useWidth = ensureSmallerEdge ? aspectRatio >= 1 : aspectRatio < 1;
+  // const useWidth = ensureSmallerEdge ? aspectRatio >= 1 : aspectRatio < 1;
+
+  // example I:
+  // 16 : 9 --> 1.78
+  // useWdth: false
+
+  const useWidth = false;
   const scaledWidth = width * (useWidth ? 1 : aspectRatio);
   const scaledHeight = width / (!useWidth ? 1 : aspectRatio);
 
@@ -55,7 +79,7 @@ export function getDominantViewportScale(viewport: Viewport): number {
   const viewportScales = getViewportScale(viewport);
 
   // This might need changing when ensureSmallerEdge is not set to true anymore
-  return Math.max(viewportScales[0], viewportScales[1]);
+  return Math.min(viewportScales[0], viewportScales[1]);
 }
 
 export default {};

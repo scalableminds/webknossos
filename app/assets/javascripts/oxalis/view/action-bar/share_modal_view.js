@@ -53,10 +53,19 @@ class ShareModalView extends PureComponent<ShareModalProp, State> {
     this.fetch();
   }
 
+  componentDidUpdate(prevProps) {
+    if (
+      this.props.dataset.name !== prevProps.dataset.name ||
+      this.props.dataset.owningOrganization !== prevProps.dataset.owningOrganization
+    ) {
+      this.fetch();
+    }
+  }
+
   async fetch() {
     const { name, owningOrganization } = this.props.dataset;
     const datasetId = { name, owningOrganization };
-    const sharingToken = await getDatasetSharingToken(datasetId);
+    const sharingToken = await getDatasetSharingToken(datasetId, { showErrorToast: false });
     this.setState({ sharingToken });
   }
 

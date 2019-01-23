@@ -67,3 +67,45 @@ test("Flycam Accessors should calculate the texture scaling factor (2/2)", t => 
   const texturePosition = accessors.getTextureScalingFactor(state);
   t.deepEqual(texturePosition, 0.5375);
 });
+
+test.only("Flycam Accessors should calculate appropriate zoom factors for datasets with many magnifications.", t => {
+  const scale = [4, 4, 35];
+  const resolutions = [
+    [1, 1, 1],
+    [2, 2, 1],
+    [4, 4, 1],
+    [8, 8, 1],
+    [16, 16, 2],
+    [32, 32, 4],
+    [64, 64, 8],
+    [128, 128, 16],
+    [256, 256, 32],
+    [512, 512, 64],
+    [1024, 1024, 128],
+    [2048, 2048, 256],
+    [4096, 4096, 512],
+  ];
+
+  const maximumZoomPerResolution = accessors._getMaximumZoomForAllResolutions(scale, resolutions);
+
+  // If this test case should fail at some point, the following values may be updated appropriately
+  // to make it pass again. However, it should be validated that zooming out works as expected for
+  // datasets with many magnifications (> 12). Small variations in these numbers shouldn't matter much.
+  const expectedZoomValues = [
+    1.6105100000000008,
+    3.1384283767210035,
+    5.559917313492239,
+    8.954302432552389,
+    17.449402268886445,
+    34.003948586157826,
+    66.26407607736661,
+    142.04293198443185,
+    276.80149049219943,
+    539.4077978276367,
+    1051.1531995000591,
+    2253.240236044026,
+    5313.0226118483115,
+  ];
+
+  t.deepEqual(maximumZoomPerResolution, expectedZoomValues);
+});

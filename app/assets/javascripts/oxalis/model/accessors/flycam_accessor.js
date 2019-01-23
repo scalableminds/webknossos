@@ -4,6 +4,7 @@ import _ from "lodash";
 import memoizeOne from "memoize-one";
 
 import type { Flycam, OxalisState } from "oxalis/store";
+import { ZOOM_STEP_INTERVAL } from "oxalis/model/reducers/flycam_reducer";
 import { M4x4, type Matrix4x4 } from "libs/mjs";
 import {
   calculateTotalBucketCountForZoomLevel,
@@ -42,25 +43,31 @@ function _approximateMaxZoomForZoomStep(
   resolutions: Array<Vector3>,
 ): number {
   const maximumCapacity = constants.MINIMUM_REQUIRED_BUCKET_CAPACITY;
-  // This is more of a theoretical limit to avoid an endless loop, in case
-  // the following while loop causes havoc for some reason. It means,
-  // that even with the best GPU specs and weirdest dataset properties,
-  // wk will at most render magnification 20 when being in zoom level 1.
-  const maximumMagnificationAtZoomLevelOne = 20;
+  // maximumIterationCount is used as an upper limit to avoid an endless loop, in case
+  // the following while loop causes havoc for some reason (e.g., because
+  // the calculated bucket size isn't strictly increasing anymore). It means,
+  // that even with the best GPU specs and biggest dataset (i.e., many magnifications),
+  // wk will at most zoom out until a zoom value of ZOOM_STEP_INTERVAL**maximumIterationCount.
+  // With the current values, this would indicate a maximum zoom value of ~ 35 000, meaning
+  // that ~ 15 different magnifications (~ log2 of 35000) are supported properly.
+  const maximumIterationCount = 100;
+  let currentIterationCount = 0;
   let maxZoomStep = 1;
 
   while (
     calculateTotalBucketCountForZoomLevel(dataSetScale, resolutionIndex, resolutions, maxZoomStep) <
       maximumCapacity &&
-    maxZoomStep < maximumMagnificationAtZoomLevelOne
+    currentIterationCount < maximumIterationCount
   ) {
-    maxZoomStep += 0.1;
+    maxZoomStep *= ZOOM_STEP_INTERVAL;
+    currentIterationCount++;
   }
 
   return maxZoomStep;
 }
 
-function _getMaximumZoomForAllResolutions(
+// This function is only exported for testing purposes
+export function _getMaximumZoomForAllResolutions(
   dataSetScale: Vector3,
   resolutions: Array<Vector3>,
 ): Array<number> {

@@ -4,12 +4,17 @@
  */
 
 import type { Dispatch } from "redux";
-import { Tooltip, Collapse, Row, Col, Select, Icon } from "antd";
+import { Tooltip, Collapse, Row, Col, Select, Icon, Divider, Tag } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 import _ from "lodash";
 
-import type { DatasetConfiguration, DatasetLayerConfiguration, OxalisState } from "oxalis/store";
+import type {
+  DatasetConfiguration,
+  DatasetLayerConfiguration,
+  OxalisState,
+  Dataset,
+} from "oxalis/store";
 import {
   SwitchSetting,
   NumberSliderSetting,
@@ -24,12 +29,14 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import constants, { type ControlMode, ControlModeEnum, type Mode } from "oxalis/constants";
 import messages, { settings } from "messages";
+import { isRgb } from "oxalis/model/accessors/dataset_accessor";
 
 const Panel = Collapse.Panel;
 const Option = Select.Option;
 
 type DatasetSettingsProps = {
   datasetConfiguration: DatasetConfiguration,
+  dataset: Dataset,
   onChange: (propertyName: $Keys<DatasetConfiguration>, value: any) => void,
   onChangeLayer: (
     layerName: string,
@@ -41,35 +48,52 @@ type DatasetSettingsProps = {
 };
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
-  getColorSettings = (layer: Object, layerName: string) => (
-    <div key={layerName}>
-      <Row>
-        <Col span={24}>Layer: {layerName}</Col>
-      </Row>
-      <NumberSliderSetting
-        label="Brightness"
-        min={-255}
-        max={255}
-        step={5}
-        value={layer.brightness}
-        onChange={_.partial(this.props.onChangeLayer, layerName, "brightness")}
-      />
-      <NumberSliderSetting
-        label="Contrast"
-        min={0.5}
-        max={5}
-        step={0.1}
-        value={layer.contrast}
-        onChange={_.partial(this.props.onChangeLayer, layerName, "contrast")}
-      />
-      <ColorSetting
-        label="Color"
-        value={Utils.rgbToHex(layer.color)}
-        onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
-        className="ant-btn"
-      />
-    </div>
-  );
+  getColorSettings = (
+    [layerName: string, layer: DatasetLayerConfiguration],
+    layerIndex: number,
+    isLastLayer: boolean,
+  ) => {
+    const isRGB = isRgb(this.props.dataset, layerName);
+    return (
+      <div key={layerName}>
+        <Row>
+          <Col span={24}>
+            <Tag color={isRGB && "#1890ff"}>{isRGB ? "24-bit" : "8-bit"} Layer</Tag> {layerName}
+          </Col>
+        </Row>
+        <NumberSliderSetting
+          label="Brightness"
+          min={-255}
+          max={255}
+          step={5}
+          value={layer.brightness}
+          onChange={_.partial(this.props.onChangeLayer, layerName, "brightness")}
+        />
+        <NumberSliderSetting
+          label="Contrast"
+          min={0.5}
+          max={5}
+          step={0.1}
+          value={layer.contrast}
+          onChange={_.partial(this.props.onChangeLayer, layerName, "contrast")}
+        />
+        <NumberSliderSetting
+          label="Alpha"
+          min={0}
+          max={100}
+          value={layer.alpha}
+          onChange={_.partial(this.props.onChangeLayer, layerName, "alpha")}
+        />
+        <ColorSetting
+          label="Color"
+          value={Utils.rgbToHex(layer.color)}
+          onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
+          className="ant-btn"
+        />
+        {!isLastLayer && <Divider />}
+      </div>
+    );
+  };
 
   onChangeQuality = (propertyName: $Keys<DatasetConfiguration>, value: string) => {
     this.props.onChange(propertyName, parseInt(value));
@@ -86,7 +110,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
   };
 
   render() {
-    const colorSettings = _.map(this.props.datasetConfiguration.layers, this.getColorSettings);
+    const { layers } = this.props.datasetConfiguration;
+    const colorSettings = Object.entries(layers).map((entry, index) =>
+      this.getColorSettings(entry, index, index === _.size(layers) - 1),
+    );
 
     return (
       <Collapse defaultActiveKey={["1", "2", "3", "4"]}>
@@ -158,6 +185,7 @@ const mapStateToProps = (state: OxalisState) => ({
   datasetConfiguration: state.datasetConfiguration,
   viewMode: state.temporaryConfiguration.viewMode,
   controlMode: state.temporaryConfiguration.controlMode,
+  dataset: state.dataset,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({

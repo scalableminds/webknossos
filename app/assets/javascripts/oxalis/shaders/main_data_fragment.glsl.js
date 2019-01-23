@@ -23,10 +23,10 @@ import compileShader from "./shader_module_system";
 
 type Params = {|
   colorLayerNames: string[],
+  rgbLayerLookup: { [string]: boolean },
   hasSegmentation: boolean,
   segmentationName: string,
   segmentationPackingDegree: number,
-  isRgb: boolean,
   isMappingSupported: boolean,
   dataTextureCountPerLayer: number,
   resolutions: Array<Vector3>,
@@ -59,7 +59,7 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
   uniform float <%= name %>_brightness;
   uniform float <%= name %>_contrast;
   uniform vec3 <%= name %>_color;
-  uniform float <%= name %>_weight;
+  uniform float <%= name %>_alpha;
 <% }) %>
 
 <% if (hasSegmentation) { %>
@@ -135,8 +135,6 @@ ${compileShader(
     )}
 
 void main() {
-  float color_value  = 0.0;
-
   vec3 worldCoordUVW = getWorldCoordUVW();
   if (isOutsideOfBoundingBox(worldCoordUVW)) {
     gl_FragColor = vec4(0.0);
@@ -166,17 +164,23 @@ void main() {
   <% } %>
 
   // Get Color Value(s)
-  <% if (isRgb) { %>
+  vec3 data_color = vec3(0.0);
+  vec3 color_value  = vec3(0.0);
+  float fallbackZoomStep;
+  bool hasFallback;
+  vec3 fallbackCoords;
+  <% _.each(colorLayerNames, function(name, layerIndex){ %>
 
-    float fallbackZoomStep = min(<%= colorLayerNames[0]%>_maxZoomStep, zoomStep + 1.0);
-    bool hasFallback = fallbackZoomStep > zoomStep;
-    vec3 fallbackCoords = floor(getRelativeCoords(worldCoordUVW, fallbackZoomStep));
-    vec3 data_color =
+    fallbackZoomStep = min(<%= name %>_maxZoomStep, zoomStep + 1.0);
+    hasFallback = fallbackZoomStep > zoomStep;
+    fallbackCoords = floor(getRelativeCoords(worldCoordUVW, fallbackZoomStep));
+    // Get grayscale value for <%= name %>
+    color_value =
       getMaybeFilteredColorOrFallback(
-        <%= colorLayerNames[0] %>_lookup_texture,
-        0.0, // layerIndex
-        <%= colorLayerNames[0] %>_data_texture_width,
-        1.0, // RGB data cannot be packed, hence packingDegree == 1.0
+        <%= name %>_lookup_texture,
+        <%= formatNumberAsGLSLFloat(layerIndex) %>,
+        <%= name %>_data_texture_width,
+        <%= rgbLayerLookup[name] ? "1.0" : "4.0" %>,  // RGB data cannot be packed, gray scale data is always packed into rgba channels
         coords,
         fallbackCoords,
         hasFallback,
@@ -184,39 +188,13 @@ void main() {
         fallbackGray
       ).xyz;
 
-    data_color = (data_color + <%= colorLayerNames[0] %>_brightness - 0.5) * <%= colorLayerNames[0] %>_contrast + 0.5;
-  <% } else { %>
-    vec3 data_color = vec3(0.0, 0.0, 0.0);
-    float fallbackZoomStep;
-    bool hasFallback;
-    vec3 fallbackCoords;
-    <% _.each(colorLayerNames, function(name, layerIndex){ %>
+    // Brightness / Contrast Transformation for <%= name %>
+    color_value = (color_value + <%= name %>_brightness - 0.5) * <%= name %>_contrast + 0.5;
 
-      fallbackZoomStep = min(<%= name %>_maxZoomStep, zoomStep + 1.0);
-      hasFallback = fallbackZoomStep > zoomStep;
-      fallbackCoords = floor(getRelativeCoords(worldCoordUVW, fallbackZoomStep));
-      // Get grayscale value for <%= name %>
-      color_value =
-        getMaybeFilteredColorOrFallback(
-          <%= name %>_lookup_texture,
-          <%= formatNumberAsGLSLFloat(layerIndex) %>,
-          <%= name %>_data_texture_width,
-          4.0, // gray scale data is always packed into rgba channels
-          coords,
-          fallbackCoords,
-          hasFallback,
-          false,
-          fallbackGray
-        ).x;
-
-      // Brightness / Contrast Transformation for <%= name %>
-      color_value = (color_value + <%= name %>_brightness - 0.5) * <%= name %>_contrast + 0.5;
-
-      // Multiply with color and weight for <%= name %>
-      data_color += color_value * <%= name %>_color;
-    <% }) %>
-    data_color = clamp(data_color, 0.0, 1.0);
-  <% } %>
+    // Multiply with color and alpha for <%= name %>
+    data_color += color_value * <%= name %>_alpha * <%= name %>_color;
+  <% }) %>
+  data_color = clamp(data_color, 0.0, 1.0);
 
   gl_FragColor = vec4(data_color, 1.0);
 
@@ -241,7 +219,6 @@ void main() {
   `,
   )({
     ...params,
-    colorLayerNames: params.colorLayerNames,
     layerNamesWithSegmentation: params.colorLayerNames.concat(
       params.hasSegmentation ? [params.segmentationName] : [],
     ),

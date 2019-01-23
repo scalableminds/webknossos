@@ -61,6 +61,14 @@ function getColorLayerNames() {
   return getColorLayers(Store.getState().dataset).map(layer => sanitizeName(layer.name));
 }
 
+function getRgbLayerLookup(): { [string]: boolean } {
+  const { dataset } = Store.getState();
+  const colorLayers = getColorLayers(dataset);
+  // keyBy the sanitized layer name as the lookup will happen in the shader using the sanitized layer name
+  const colorLayersObject = _.keyBy(colorLayers, layer => sanitizeName(layer.name));
+  return _.mapValues(colorLayersObject, layer => isRgb(dataset, layer.name));
+}
+
 class PlaneMaterialFactory {
   planeID: OrthoView;
   isOrthogonal: boolean;
@@ -199,8 +207,7 @@ class PlaneMaterialFactory {
     }
 
     for (const name of getColorLayerNames()) {
-      // TODO: Weight?
-      this.uniforms[`${name}_weight`] = {
+      this.uniforms[`${name}_alpha`] = {
         type: "f",
         value: 1,
       };
@@ -527,6 +534,7 @@ class PlaneMaterialFactory {
   updateUniformsForLayer(settings: DatasetLayerConfiguration, name: string): void {
     this.uniforms[`${name}_brightness`].value = settings.brightness / 255;
     this.uniforms[`${name}_contrast`].value = settings.contrast;
+    this.uniforms[`${name}_alpha`].value = settings.alpha / 100;
 
     if (settings.color != null) {
       const color = this.convertColor(settings.color);
@@ -540,6 +548,7 @@ class PlaneMaterialFactory {
 
   getFragmentShader(): string {
     const colorLayerNames = getColorLayerNames();
+    const rgbLayerLookup = getRgbLayerLookup(colorLayerNames);
     const segmentationLayer = Model.getSegmentationLayer();
     const segmentationName = sanitizeName(segmentationLayer ? segmentationLayer.name : "");
     const { dataset } = Store.getState();
@@ -553,10 +562,10 @@ class PlaneMaterialFactory {
 
     const code = getMainFragmentShader({
       colorLayerNames,
+      rgbLayerLookup,
       hasSegmentation,
       segmentationName,
       segmentationPackingDegree,
-      isRgb: Model.dataLayers.color && isRgb(dataset, Model.dataLayers.color.name),
       isMappingSupported: Model.isMappingSupported,
       dataTextureCountPerLayer: Model.maximumDataTextureCountForLayer,
       resolutions: getResolutions(dataset),

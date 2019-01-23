@@ -207,6 +207,7 @@ export type DatasetLayerConfiguration = {|
   +color: Vector3,
   +brightness: number,
   +contrast: number,
+  +alpha: number,
 |};
 
 export type DatasetConfiguration = {|

@@ -86,12 +86,14 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
         (result, layer) => {
           if (initialLayerSettings != null && initialLayerSettings[layer.name] != null) {
             result[layer.name] = initialLayerSettings[layer.name];
+            if (initialLayerSettings[layer.name].alpha == null) result[layer.name].alpha = 100;
           } else {
             // Set defaults for each layer without settings
             result[layer.name] = {
               brightness: 0,
               contrast: 1,
               color: [255, 255, 255],
+              alpha: 100,
             };
           }
         },

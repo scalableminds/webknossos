@@ -71,7 +71,7 @@ const initialState = {
       allowAccess: true,
       allowDownload: true,
     },
-    tracingType: "Explorational",
+    annotationType: "Explorational",
     name: "",
     skeleton: {
       type: "skeleton",

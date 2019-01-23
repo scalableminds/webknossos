@@ -49,7 +49,7 @@ export function generateTreeName(state: OxalisState, timestamp: number, treeId: 
   }
 
   let prefix = "Tree";
-  if (state.tracing.tracingType === "Explorational") {
+  if (state.tracing.annotationType === "Explorational") {
     // Get YYYY-MM-DD string
     const creationDate = new Date(timestamp).toJSON().slice(0, 10);
     prefix = `explorative_${creationDate}_${user}_`;

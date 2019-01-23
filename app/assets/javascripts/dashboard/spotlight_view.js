@@ -8,7 +8,7 @@ import type { APIMaybeUnimportedDataset, APIUser } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { getOrganizations, getDatasets } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
-import GalleryDatasetView from "dashboard/gallery_dataset_view";
+import PublicationView from "dashboard/publication_view";
 import features from "features";
 
 const { Content, Footer } = Layout;
@@ -194,7 +194,7 @@ class SpotlightView extends React.PureComponent<Props, State> {
                   in action.
                 </p>
               ) : (
-                <GalleryDatasetView
+                <PublicationView
                   datasets={this.state.datasets}
                   searchQuery={this.state.searchQuery}
                 />

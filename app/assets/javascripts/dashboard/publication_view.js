@@ -22,7 +22,7 @@ type Props = {
   searchQuery: string,
 };
 
-class GalleryDatasetView extends React.PureComponent<Props> {
+class PublicationView extends React.PureComponent<Props> {
   render() {
     // $FlowFixMe flow doesn't check that after filtering there are only imported datasets left
     const activeDatasets: Array<APIDataset> = this.props.datasets.filter(ds => ds.isActive);
@@ -61,4 +61,4 @@ class GalleryDatasetView extends React.PureComponent<Props> {
   }
 }
 
-export default GalleryDatasetView;
+export default PublicationView;

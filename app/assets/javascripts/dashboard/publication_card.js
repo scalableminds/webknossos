@@ -3,6 +3,7 @@ import { Card, Button } from "antd";
 import Markdown from "react-remarkable";
 import * as React from "react";
 import classNames from "classnames";
+import { Link } from "react-router-dom";
 
 import type { APIDataset, APIDatasetId, APIDatasetDetails } from "admin/api_flow_types";
 import { formatScale } from "libs/format_utils";
@@ -15,7 +16,7 @@ import {
 type ExtendedDatasetDetails = { ...APIDatasetDetails, name: string, scale: string };
 
 const thumbnailDimension = 500;
-const miniThumbnailDimension = 50;
+const miniThumbnailDimension = 75;
 
 function getDisplayName(dataset: APIDataset): string {
   return dataset.displayName != null && dataset.displayName !== ""
@@ -53,7 +54,7 @@ function ThumbnailAndDescription({
         </div>
       </div>
       <span className="dataset-thumbnail">
-        <a href={`/datasets/${datasetId.owningOrganization}/${datasetId.name}/view`}>
+        <Link to={`/datasets/${datasetId.owningOrganization}/${datasetId.name}/view`}>
           <div className="dataset-click-hint">Click To View</div>
           <div
             className="dataset-thumbnail-image"
@@ -114,28 +115,26 @@ function ThumbnailAndDescription({
               )}
             </div>
           </div>
-        </a>
+        </Link>
       </span>
     </React.Fragment>
   );
 }
 
 type Props = { datasets: Array<APIDataset> };
-type State = { selectedDataset: APIDataset, hoveredDataset: ?APIDataset };
+type State = { activeDataset: APIDataset };
 
 class PublicationCard extends React.PureComponent<Props, State> {
   state = {
-    selectedDataset: this.props.datasets[0],
-    hoveredDataset: null,
+    activeDataset: this.props.datasets[0],
   };
 
   render() {
     const { datasets } = this.props;
-    const { selectedDataset, hoveredDataset } = this.state;
-    const activeDataset = hoveredDataset || selectedDataset;
+    const { activeDataset } = this.state;
     const { publication } = activeDataset;
     // This method will only be called for datasets with a publication, but Flow doesn't know that
-    if (publication == null) return null;
+    if (publication == null) throw Error("Assertion Error: Dataset has no associated publication.");
 
     const descriptionComponent = (
       <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
@@ -147,26 +146,31 @@ class PublicationCard extends React.PureComponent<Props, State> {
         </span>
         <div style={{ marginTop: "auto" }}>
           <span style={{ fontSize: 14, textTransform: "uppercase" }}>Published Datasets </span>
-          <div className="mini-dataset-thumbnail-grid">
-            {datasets.map(dataset => (
-              <Button
-                className={classNames("mini-dataset-thumbnail", {
-                  active: dataset.name === activeDataset.name,
-                })}
-                key={`${dataset.owningOrganization}/${dataset.name}`}
-                title="Click To Select"
-                style={{
-                  background: `url('${getThumbnailURL(
-                    dataset,
-                  )}?w=${miniThumbnailDimension}&h=${miniThumbnailDimension}')`,
-                  width: `${miniThumbnailDimension}px`,
-                  height: `${miniThumbnailDimension}px`,
-                }}
-                onMouseEnter={() => this.setState({ hoveredDataset: dataset })}
-                onMouseLeave={() => this.setState({ hoveredDataset: null })}
-                onClick={() => this.setState({ selectedDataset: dataset })}
-              />
-            ))}
+          <div
+            className="mini-dataset-thumbnail-grid"
+            style={{ gridTemplateColumns: `repeat(auto-fill, ${miniThumbnailDimension}px)` }}
+          >
+            {datasets.map(dataset => {
+              const datasetIdString = `${dataset.owningOrganization}/${dataset.name}`;
+              return (
+                <Link to={`/datasets/${datasetIdString}/view`} key={datasetIdString}>
+                  <Button
+                    className={classNames("mini-dataset-thumbnail", {
+                      active: dataset.name === activeDataset.name,
+                    })}
+                    title="Click To View"
+                    style={{
+                      background: `url('${getThumbnailURL(
+                        dataset,
+                      )}?w=${miniThumbnailDimension}&h=${miniThumbnailDimension}')`,
+                      width: `${miniThumbnailDimension}px`,
+                      height: `${miniThumbnailDimension}px`,
+                    }}
+                    onMouseEnter={() => this.setState({ activeDataset: dataset })}
+                  />
+                </Link>
+              );
+            })}
           </div>
         </div>
       </div>

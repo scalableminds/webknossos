@@ -27,6 +27,7 @@ import {
   zoomByDeltaAction,
 } from "oxalis/model/actions/flycam_actions";
 import {
+  setActiveCellAction,
   setBrushSizeAction,
   setMousePositionAction,
 } from "oxalis/model/actions/volumetracing_actions";
@@ -148,7 +149,6 @@ class PlaneController extends React.PureComponent<Props> {
         const viewportScale = getViewportScale(planeId);
         return this.movePlane([(delta.x * -1) / viewportScale, (delta.y * -1) / viewportScale, 0]);
       },
-
       scroll: this.scrollPlanes.bind(this),
       over: () => {
         Store.dispatch(setViewportAction(planeId));
@@ -160,12 +160,12 @@ class PlaneController extends React.PureComponent<Props> {
     };
     // TODO: Find a nicer way to express this, while satisfying flow
     const emptyDefaultHandler = { leftClick: null };
-    const { leftClick: skeletonLeftClick, ...skeletonControls } =
+    const { leftClick: maybeSkeletonLeftClick, ...skeletonControls } =
       this.props.tracing.skeleton != null
         ? skeletonController.getPlaneMouseControls(this.planeView)
         : emptyDefaultHandler;
 
-    const { leftClick: volumeLeftClick, ...volumeControls } =
+    const { leftClick: maybeVolumeLeftClick, ...volumeControls } =
       this.props.tracing.volume != null
         ? volumeController.getPlaneMouseControls(planeId)
         : emptyDefaultHandler;
@@ -176,7 +176,15 @@ class PlaneController extends React.PureComponent<Props> {
       ...baseControls,
       ...skeletonControls,
       ...volumeControls,
-      leftClick: this.createToolDependentHandler(skeletonLeftClick, volumeLeftClick),
+      leftClick: this.createToolDependentHandler(
+        maybeSkeletonLeftClick,
+        maybeVolumeLeftClick,
+        // The left click handler of the volume controller should only be used
+        // as a fallback (i.e., in view mode). This is not equivalent to putting
+        // it into the base controls (then, hybrid mode wouldn't work, since the
+        // skeleton's leftClick handler would override the base control).
+        volumeController.leftClick,
+      ),
     };
   }
 
@@ -492,7 +500,11 @@ class PlaneController extends React.PureComponent<Props> {
     this.unsubscribeStoreListeners();
   }
 
-  createToolDependentHandler(skeletonHandler: ?Function, volumeHandler: ?Function): Function {
+  createToolDependentHandler(
+    skeletonHandler: ?Function,
+    volumeHandler: ?Function,
+    viewHandler?: ?Function,
+  ): Function {
     return (...args) => {
       if (skeletonHandler && volumeHandler) {
         // Deal with both modes
@@ -504,8 +516,14 @@ class PlaneController extends React.PureComponent<Props> {
         }
         return;
       }
-      if (skeletonHandler) skeletonHandler(...args);
-      if (volumeHandler) volumeHandler(...args);
+      if (skeletonHandler) return skeletonHandler(...args);
+      if (volumeHandler) return volumeHandler(...args);
+
+      // At this point, neither skeletonHandler nor volumeHandler is defined.
+      // Instead, use the viewHandler, if it's defined.
+      if (viewHandler != null) {
+        viewHandler(...args);
+      }
     };
   }
 

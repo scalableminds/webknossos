@@ -27,29 +27,25 @@ type Props = StateProps & {
 
 type State = {
   activeTracingType: "skeleton" | "volume",
-  originalAllowUpdate: boolean,
+  initialAllowUpdate: boolean,
 };
 
 class VersionView extends React.Component<Props, State> {
   state = {
     activeTracingType: this.props.tracing.skeleton != null ? "skeleton" : "volume",
-    originalAllowUpdate: false,
+    // Remember whether the tracing could originally be updated
+    initialAllowUpdate: this.props.allowUpdate,
   };
 
-  componentDidMount() {
-    // Remember whether the tracing could originally be updated
-    this.setState({ originalAllowUpdate: this.props.allowUpdate });
-  }
-
   componentWillUnmount() {
-    Store.dispatch(setAnnotationAllowUpdateAction(this.state.originalAllowUpdate));
+    Store.dispatch(setAnnotationAllowUpdateAction(this.state.initialAllowUpdate));
   }
 
   handleClose = async () => {
     // This will load the newest version of both skeleton and volume tracings
     await previewVersion();
     Store.dispatch(setVersionRestoreVisibilityAction(false));
-    Store.dispatch(setAnnotationAllowUpdateAction(this.state.originalAllowUpdate));
+    Store.dispatch(setAnnotationAllowUpdateAction(this.state.initialAllowUpdate));
   };
 
   onChangeTab = (activeKey: "skeleton" | "volume") => {
@@ -91,7 +87,7 @@ class VersionView extends React.Component<Props, State> {
                 <VersionList
                   tracingType="skeleton"
                   tracing={this.props.tracing.skeleton}
-                  allowUpdate={this.state.originalAllowUpdate}
+                  allowUpdate={this.state.initialAllowUpdate}
                 />
               </TabPane>
             ) : null}
@@ -106,7 +102,7 @@ class VersionView extends React.Component<Props, State> {
                   <VersionList
                     tracingType="volume"
                     tracing={this.props.tracing.volume}
-                    allowUpdate={this.state.originalAllowUpdate}
+                    allowUpdate={this.state.initialAllowUpdate}
                   />
                 )}
               </TabPane>

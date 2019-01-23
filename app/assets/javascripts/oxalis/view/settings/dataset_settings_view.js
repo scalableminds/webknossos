@@ -9,12 +9,7 @@ import { connect } from "react-redux";
 import * as React from "react";
 import _ from "lodash";
 
-import type {
-  DatasetConfiguration,
-  DatasetLayerConfiguration,
-  OxalisState,
-  Dataset,
-} from "oxalis/store";
+import type { DatasetConfiguration, DatasetLayerConfiguration, OxalisState } from "oxalis/store";
 import {
   SwitchSetting,
   NumberSliderSetting,
@@ -30,13 +25,14 @@ import * as Utils from "libs/utils";
 import constants, { type ControlMode, ControlModeEnum, type Mode } from "oxalis/constants";
 import messages, { settings } from "messages";
 import { isRgb } from "oxalis/model/accessors/dataset_accessor";
+import type { APIDataset } from "admin/api_flow_types";
 
 const Panel = Collapse.Panel;
 const Option = Select.Option;
 
 type DatasetSettingsProps = {
   datasetConfiguration: DatasetConfiguration,
-  dataset: Dataset,
+  dataset: APIDataset,
   onChange: (propertyName: $Keys<DatasetConfiguration>, value: any) => void,
   onChangeLayer: (
     layerName: string,
@@ -54,6 +50,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     isLastLayer: boolean,
   ) => {
     const isRGB = isRgb(this.props.dataset, layerName);
+    // $FlowFixMe Object.entries returns mixed for Flow
+    const { brightness, contrast, alpha, color } = layer;
     return (
       <div key={layerName}>
         <Row>
@@ -66,7 +64,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
           min={-255}
           max={255}
           step={5}
-          value={layer.brightness}
+          value={brightness}
           onChange={_.partial(this.props.onChangeLayer, layerName, "brightness")}
         />
         <NumberSliderSetting
@@ -74,19 +72,19 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
           min={0.5}
           max={5}
           step={0.1}
-          value={layer.contrast}
+          value={contrast}
           onChange={_.partial(this.props.onChangeLayer, layerName, "contrast")}
         />
         <NumberSliderSetting
           label="Alpha"
           min={0}
           max={100}
-          value={layer.alpha}
+          value={alpha}
           onChange={_.partial(this.props.onChangeLayer, layerName, "alpha")}
         />
         <ColorSetting
           label="Color"
-          value={Utils.rgbToHex(layer.color)}
+          value={Utils.rgbToHex(color)}
           onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
           className="ant-btn"
         />

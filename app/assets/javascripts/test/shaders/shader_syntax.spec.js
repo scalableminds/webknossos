@@ -8,10 +8,10 @@ import test from "ava";
 test("Shader syntax: Ortho Mode", t => {
   const code = getMainFragmentShader({
     colorLayerNames: ["color_layer_1", "color_layer_2"],
+    rgbLayerLookup: { color_layer_1: false, color_layer_2: false },
     hasSegmentation: false,
     segmentationName: "",
     segmentationPackingDegree: 1,
-    isRgb: false,
     isMappingSupported: true,
     dataTextureCountPerLayer: 3,
     resolutions,
@@ -28,10 +28,10 @@ test("Shader syntax: Ortho Mode", t => {
 test("Shader syntax: Ortho Mode + Segmentation - Mapping", t => {
   const code = getMainFragmentShader({
     colorLayerNames: ["color_layer_1", "color_layer_2"],
+    rgbLayerLookup: { color_layer_1: false, color_layer_2: false },
     hasSegmentation: true,
     segmentationName: "segmentationLayer",
     segmentationPackingDegree: 1,
-    isRgb: false,
     isMappingSupported: false,
     dataTextureCountPerLayer: 3,
     resolutions,
@@ -48,10 +48,10 @@ test("Shader syntax: Ortho Mode + Segmentation - Mapping", t => {
 test("Shader syntax: Ortho Mode + Segmentation + Mapping", t => {
   const code = getMainFragmentShader({
     colorLayerNames: ["color_layer_1", "color_layer_2"],
+    rgbLayerLookup: { color_layer_1: false, color_layer_2: false },
     hasSegmentation: true,
     segmentationName: "segmentationLayer",
     segmentationPackingDegree: 1,
-    isRgb: false,
     isMappingSupported: true,
     dataTextureCountPerLayer: 3,
     resolutions,
@@ -68,10 +68,10 @@ test("Shader syntax: Ortho Mode + Segmentation + Mapping", t => {
 test("Shader syntax: Arbitrary Mode (no segmentation available)", t => {
   const code = getMainFragmentShader({
     colorLayerNames: ["color_layer_1", "color_layer_2"],
+    rgbLayerLookup: { color_layer_1: false, color_layer_2: false },
     hasSegmentation: false,
     segmentationName: "",
     segmentationPackingDegree: 1,
-    isRgb: false,
     isMappingSupported: true,
     dataTextureCountPerLayer: 3,
     resolutions,
@@ -88,10 +88,10 @@ test("Shader syntax: Arbitrary Mode (no segmentation available)", t => {
 test("Shader syntax: Arbitrary Mode (segmentation available)", t => {
   const code = getMainFragmentShader({
     colorLayerNames: ["color_layer_1", "color_layer_2"],
+    rgbLayerLookup: { color_layer_1: false, color_layer_2: false },
     hasSegmentation: true,
     segmentationName: "segmentationLayer",
     segmentationPackingDegree: 1,
-    isRgb: false,
     isMappingSupported: true,
     dataTextureCountPerLayer: 3,
     resolutions,

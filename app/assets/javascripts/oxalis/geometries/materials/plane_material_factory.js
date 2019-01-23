@@ -548,7 +548,7 @@ class PlaneMaterialFactory {
 
   getFragmentShader(): string {
     const colorLayerNames = getColorLayerNames();
-    const rgbLayerLookup = getRgbLayerLookup(colorLayerNames);
+    const rgbLayerLookup = getRgbLayerLookup();
     const segmentationLayer = Model.getSegmentationLayer();
     const segmentationName = sanitizeName(segmentationLayer ? segmentationLayer.name : "");
     const { dataset } = Store.getState();

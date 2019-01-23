@@ -7,7 +7,7 @@ import { connect } from "react-redux";
 import Markdown from "react-remarkable";
 import React from "react";
 
-import { type APIDataset, APITracingTypeEnum } from "admin/api_flow_types";
+import { type APIDataset, APIAnnotationTypeEnum } from "admin/api_flow_types";
 import { aggregateBoundingBox } from "libs/utils";
 import { convertToHybridTracing } from "admin/admin_rest_api";
 import { formatScale } from "libs/format_utils";
@@ -209,14 +209,14 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
 
     let annotationTypeLabel;
 
-    const { tracingType, name } = this.props.tracing;
+    const { annotationType, name } = this.props.tracing;
     const tracingName = name || "<untitled>";
 
     if (this.props.task != null) {
       // In case we have a task display its id
       annotationTypeLabel = (
         <span>
-          {tracingType} : {this.props.task.id}
+          {annotationType} : {this.props.task.id}
         </span>
       );
     } else if (!this.props.tracing.restrictions.allowUpdate) {
@@ -269,7 +269,8 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
     const isVolume = this.props.tracing.volume != null;
     const isHybrid = isSkeleton && isVolume;
     const { allowUpdate } = this.props.tracing.restrictions;
-    const isExplorational = this.props.tracing.tracingType === APITracingTypeEnum.Explorational;
+    const isExplorational =
+      this.props.tracing.annotationType === APIAnnotationTypeEnum.Explorational;
 
     if (isHybrid) {
       return (

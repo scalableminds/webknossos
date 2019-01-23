@@ -39,7 +39,7 @@ import type {
   Tracing,
   SkeletonTracing,
   VolumeTracing,
-  TracingTypeTracing,
+  AnnotationType,
   Mapping,
 } from "oxalis/store";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
@@ -265,11 +265,11 @@ class TracingApi {
    */
   async finishAndGetNextTask() {
     const state = Store.getState();
-    const { tracingType, annotationId } = state.tracing;
+    const { annotationType, annotationId } = state.tracing;
     const { task } = state;
 
     await Model.save();
-    await finishAnnotation(annotationId, tracingType);
+    await finishAnnotation(annotationId, annotationType);
     try {
       const annotation = await requestTask();
 
@@ -304,7 +304,7 @@ class TracingApi {
    *
    */
   async restart(
-    newTracingType: TracingTypeTracing,
+    newAnnotationType: AnnotationType,
     newAnnotationId: string,
     newControlMode: ControlMode,
   ) {
@@ -314,7 +314,7 @@ class TracingApi {
     Store.dispatch(restartSagaAction());
     UrlManager.reset();
     await Model.fetch(
-      newTracingType,
+      newAnnotationType,
       { annotationId: newAnnotationId, type: newControlMode },
       false,
     );

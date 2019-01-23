@@ -1,13 +1,16 @@
+// @flow
 import type { APIDataset } from "admin/api_flow_types";
 import { ControlModeEnum, type Vector3 } from "oxalis/constants";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
 import { type Saga, _takeEvery, select, call, take } from "oxalis/model/sagas/effect-generators";
 import { computeIsosurface } from "admin/admin_rest_api";
+import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
 import { map3 } from "libs/utils";
 import DataLayer from "oxalis/model/data_layer";
 import Model from "oxalis/model";
 import getSceneController from "oxalis/controller/scene_controller_provider";
+import * as Utils from "libs/utils";
 
 class ThreeDMap<T> {
   map: Map<number, ?Map<number, ?Map<number, T>>>;
@@ -54,9 +57,23 @@ function* ensureSuitableIsosurface(): Saga<void> {
   }
   const dataset = yield* select(state => state.dataset);
   const layer = Model.getSegmentationLayer();
+  if (!layer) {
+    return;
+  }
   const position = yield* select(state => getFlooredPosition(state.flycam));
-  const zoomStep = 1;
-  const segmentId = layer.cube.getMappedDataValue(position, zoomStep);
+  const existentMagnifications = layer.resolutions.map(resolution => Math.max(...resolution));
+  const preferredZoomStep = 1;
+  const zoomStep = Utils.clamp(
+    Math.min(...existentMagnifications),
+    preferredZoomStep,
+    Math.max(...existentMagnifications),
+  );
+
+  const volumeTracing = yield* select(state => state.tracing.volume);
+  if (!volumeTracing) {
+    return;
+  }
+  const segmentId = getActiveCellId(volumeTracing);
 
   if (segmentId === 0 || segmentId == null) {
     return;
@@ -84,7 +101,7 @@ function* loadIsosurface(
   segmentId: number,
   position: Vector3,
   zoomStep: number,
-): Generator<void> {
+): Saga<void> {
   const voxelDimensions = [2, 2, 2];
   const dataStoreHost = yield* select(state => state.dataset.dataStore.url);
 

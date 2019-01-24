@@ -196,10 +196,7 @@ class PlaneController extends React.PureComponent<Props> {
       leftClick: this.createToolDependentHandler(
         maybeSkeletonLeftClick,
         maybeVolumeLeftClick,
-        // The left click handler of the volume controller should only be used
-        // as a fallback (i.e., in view mode). This is not equivalent to putting
-        // it into the base controls (then, hybrid mode wouldn't work, since the
-        // skeleton's leftClick handler would override the base control).
+        // The isosurfaceLeftClick handler should only be used in view mode.
         isosurfaceLeftClick,
       ),
     };

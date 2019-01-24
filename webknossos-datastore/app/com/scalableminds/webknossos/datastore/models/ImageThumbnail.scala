@@ -9,19 +9,12 @@ case class ImageThumbnail(mimeType: String, value: String)
 object ImageThumbnail {
   implicit val imageThumbnailFormat = Json.format[ImageThumbnail]
 
-  def bestResolutionExponent(dataLayer: DataLayerLike, width: Int, height: Int, zoom: Option[Double]): Int = {
-    // We want to make sure that the thumbnail only contains data, as much as possible but no black border
-    // If there is no default zoom we want to make sure there is no black border we are going to go with the second best resolution (hence the `- 1`)
-    val possibleExponents = zoom match {
-      case Some(z) => List(math.floor(math.log(z) / math.log(2)).toInt)
-      case None =>
-        List(
-          math.floor(math.log(dataLayer.boundingBox.width.toDouble / width) / math.log(2)).toInt - 1,
-          math.floor(math.log(dataLayer.boundingBox.height.toDouble / height) / math.log(2)).toInt - 1
-        )
+  def bestResolutionExponent(dataLayer: DataLayerLike, width: Int, height: Int, zoom: Option[Double]): Int =
+    // We're either using the supplied zoom value or we're using the lowest resolution
+    zoom match {
+      case Some(z) => math.max(0, math.min(math.floor(math.log(z) / math.log(2)).toInt, dataLayer.resolutions.size - 1))
+      case None    => 0
     }
-    math.max(0, ((dataLayer.resolutions.size - 1) :: possibleExponents).min)
-  }
 
   def goodThumbnailParameters(dataLayer: DataLayerLike,
                               width: Int,

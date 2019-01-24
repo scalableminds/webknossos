@@ -61,7 +61,10 @@ class ConfigurationController @Inject()(userService: UserService,
       for {
         jsConfiguration <- request.body.asOpt[JsObject] ?~> "user.configuration.dataset.invalid"
         conf = jsConfiguration.fields.toMap
-        _ <- userService.updateDataSetConfiguration(request.identity, dataSetName, DataSetConfiguration(conf))
+        _ <- userService.updateDataSetConfiguration(request.identity,
+                                                    dataSetName,
+                                                    organizationName,
+                                                    DataSetConfiguration(conf))
       } yield {
         JsonOk(Messages("user.configuration.dataset.updated"))
       }

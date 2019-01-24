@@ -375,7 +375,6 @@ class BinaryDataController @Inject()(
           AllowRemoteOrigin {
             for {
               position <- findPositionWithData(organizationName, dataSetName, dataLayerName)
-
             } yield Ok(Point3DWrites.writes(position))
           }
         }
@@ -455,8 +454,8 @@ class BinaryDataController @Inject()(
       implicit m: MessagesProvider) =
     for {
       (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
-      hasData <- checkAllPositionsForData(dataSource, dataLayer)
-    } yield hasData
+      position <- checkAllPositionsForData(dataSource, dataLayer)
+    } yield position
 
   private def checkAllPositionsForData(dataSource: DataSource, dataLayer: DataLayer) = {
     def positionIter(positions: List[Point3D]): Fox[Point3D] =
@@ -516,8 +515,7 @@ class BinaryDataController @Inject()(
 
       positionIter((1 to 5).toList, List[Point3D]())
     }
-
-    positionIter(createPositions())
+    positionIter(createPositions().distinct)
   }
 
   def clearCache(organizationName: String, dataSetName: String) = Action.async { implicit request =>

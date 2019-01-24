@@ -134,6 +134,13 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
+  def countAllForOrganization(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[Int] =
+    for {
+      rList <- run(
+        sql"select count(_id) from #${existingCollectionName} where _organization = ${organizationId}".as[Int])
+      r <- rList.headOption
+    } yield r
+
   def findOneByNameAndOrganizationName(name: String, organizationName: String)(
       implicit ctx: DBAccessContext): Fox[DataSet] =
     for {

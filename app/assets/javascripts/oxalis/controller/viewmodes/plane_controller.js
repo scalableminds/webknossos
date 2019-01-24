@@ -10,6 +10,7 @@ import * as React from "react";
 import _ from "lodash";
 
 import { InputKeyboard, InputKeyboardNoLoop, InputMouse, type ModifierKeys } from "libs/input";
+import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import { document } from "libs/window";
 import { getBaseVoxel, getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import {
@@ -27,7 +28,6 @@ import {
   zoomByDeltaAction,
 } from "oxalis/model/actions/flycam_actions";
 import {
-  setActiveCellAction,
   setBrushSizeAction,
   setMousePositionAction,
 } from "oxalis/model/actions/volumetracing_actions";
@@ -68,6 +68,23 @@ function ensureNonConflictingHandlers(skeletonControls: Object, volumeControls: 
     );
   }
 }
+
+const isosurfaceLeftClick = (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+  if (!event.shiftKey) {
+    return;
+  }
+  const segmentation = Model.getSegmentationLayer();
+  if (!segmentation) {
+    return;
+  }
+  const cellId = segmentation.cube.getMappedDataValue(
+    calculateGlobalPos(pos),
+    getRequestLogZoomStep(Store.getState()),
+  );
+  if (cellId > 0) {
+    Store.dispatch(changeActiveIsosurfaceCellAction(cellId));
+  }
+};
 
 type OwnProps = {
   onRender: () => void,
@@ -183,7 +200,7 @@ class PlaneController extends React.PureComponent<Props> {
         // as a fallback (i.e., in view mode). This is not equivalent to putting
         // it into the base controls (then, hybrid mode wouldn't work, since the
         // skeleton's leftClick handler would override the base control).
-        volumeController.leftClick,
+        isosurfaceLeftClick,
       ),
     };
   }
@@ -514,14 +531,13 @@ class PlaneController extends React.PureComponent<Props> {
         } else {
           volumeHandler(...args);
         }
-        return;
-      }
-      if (skeletonHandler) return skeletonHandler(...args);
-      if (volumeHandler) return volumeHandler(...args);
-
-      // At this point, neither skeletonHandler nor volumeHandler is defined.
-      // Instead, use the viewHandler, if it's defined.
-      if (viewHandler != null) {
+      } else if (skeletonHandler) {
+        skeletonHandler(...args);
+      } else if (volumeHandler) {
+        volumeHandler(...args);
+      } else if (viewHandler != null) {
+        // At this point, neither skeletonHandler nor volumeHandler is defined.
+        // Instead, use the viewHandler, if it's defined.
         viewHandler(...args);
       }
     };

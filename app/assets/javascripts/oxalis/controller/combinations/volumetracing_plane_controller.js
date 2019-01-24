@@ -37,22 +37,6 @@ import Model from "oxalis/model";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 
-export function leftClick(pos: Point2, plane: OrthoView, event: MouseEvent): void {
-  if (event.shiftKey) {
-    const segmentation = Model.getSegmentationLayer();
-    if (!segmentation) {
-      return;
-    }
-    const cellId = segmentation.cube.getMappedDataValue(
-      calculateGlobalPos(pos),
-      getRequestLogZoomStep(Store.getState()),
-    );
-    if (cellId > 0) {
-      Store.dispatch(setActiveCellAction(cellId));
-    }
-  }
-}
-
 const simulateTracing = async (): Promise<void> => {
   Store.dispatch(setToolAction(VolumeToolEnum.TRACE));
 
@@ -165,7 +149,21 @@ export function getPlaneMouseControls(planeId: OrthoView): * {
       }
     },
 
-    leftClick,
+    leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+      if (event.shiftKey) {
+        const segmentation = Model.getSegmentationLayer();
+        if (!segmentation) {
+          return;
+        }
+        const cellId = segmentation.cube.getMappedDataValue(
+          calculateGlobalPos(pos),
+          getRequestLogZoomStep(Store.getState()),
+        );
+        if (cellId > 0) {
+          Store.dispatch(setActiveCellAction(cellId));
+        }
+      }
+    },
 
     out: () => {
       Store.dispatch(hideBrushAction());

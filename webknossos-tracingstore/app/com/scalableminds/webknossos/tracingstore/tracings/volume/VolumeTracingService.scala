@@ -119,11 +119,20 @@ class VolumeTracingService @Inject()(
           case (header, buckets) =>
             if (header.numBlocksPerCube == 1) {
               parseWKWFilePath(fileName.toString).map { bucket =>
-                saveBucket(dataLayer, bucket, buckets.next(), tracing.version)
+                val data = buckets.next()
+                if (isAllZero(data)) {
+                  Fox.successful(())
+                } else {
+                  saveBucket(dataLayer, bucket, data, tracing.version)
+                }
               }
             }
         }
     }
+  }
+
+  private def isAllZero(data: Array[Byte]): Boolean = {
+    data.forall { byte: Byte => byte == 0 }
   }
 
   def allData(tracingId: String, tracing: VolumeTracing): Enumerator[Array[Byte]] = {

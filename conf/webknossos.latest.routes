@@ -103,7 +103,7 @@ GET           /annotations/:typ/:id/info                                        
 PATCH         /annotations/:typ/:id/makeHybrid                                  controllers.AnnotationController.makeHybrid(typ: String, id: String)
 DELETE        /annotations/:typ/:id                                             controllers.AnnotationController.cancel(typ: String, id: String)
 POST          /annotations/:typ/:id/merge/:mergedTyp/:mergedId                  controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String)
-GET           /annotations/:typ/:id/download                                    controllers.AnnotationIOController.download(typ: String, id: String)
+GET           /annotations/:typ/:id/download                                    controllers.AnnotationIOController.download(typ: String, id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long])
 
 GET           /annotations/:typ/:id/loggedTime                                  controllers.AnnotationController.loggedTime(typ: String, id: String)
 
@@ -147,7 +147,7 @@ POST          /projects                                                         
 GET           /projects/:name                                                   controllers.ProjectController.read(name: String)
 DELETE        /projects/:name                                                   controllers.ProjectController.delete(name: String)
 PUT           /projects/:name                                                   controllers.ProjectController.update(name: String)
-GET           /projects/:name/tasks                                             controllers.ProjectController.tasksForProject(name: String)
+GET           /projects/:name/tasks                                             controllers.ProjectController.tasksForProject(name: String, limit: Option[Int], pageNumber: Option[Int])
 PATCH         /projects/:name/incrementEachTasksInstances                       controllers.ProjectController.incrementEachTasksInstances(name: String, delta: Option[Long])
 PATCH         /projects/:name/pause                                             controllers.ProjectController.pause(name: String)
 PATCH         /projects/:name/resume                                            controllers.ProjectController.resume(name: String)

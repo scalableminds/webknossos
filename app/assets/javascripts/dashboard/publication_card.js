@@ -167,7 +167,16 @@ class PublicationCard extends React.PureComponent<Props, State> {
                       height: `${miniThumbnailDimension}px`,
                     }}
                     onMouseEnter={() => this.setState({ activeDataset: dataset })}
-                  />
+                  >
+                    <div
+                      className="mini-dataset-thumbnail segmentation"
+                      style={{
+                        background: `url('${getSegmentationThumbnailURL(
+                          dataset,
+                        )}?w=${miniThumbnailDimension}&h=${miniThumbnailDimension}')`,
+                      }}
+                    />
+                  </Button>
                 </Link>
               );
             })}

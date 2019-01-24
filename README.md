@@ -125,21 +125,10 @@ See: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 
 ### Run locally
 ```bash
-sbt run
+yarn start
 ```
 Will fetch all Scala, Java and node dependencies and run the application on Port 9000.
-Make sure that the PostgreSQL service is running before you start sbt.
-
-### Run on a remote machine
-```bash
-sbt "run -Dhttp.uri=http://<remote address>:9000"
-```
-Will fetch all Scala, Java and node dependencies and run the application on Port 9000.
-Make sure that the PostgreSQL service is running before you start sbt.
-
-Make sure to open port `9000` in your firewall.
-This is only recommended for development purposes.
-See below for a recommended production setup.
+Make sure that the PostgreSQL service is running before you start the application.
 
 ## Production setup
 [See wiki](https://github.com/scalableminds/webknossos/wiki/Production-setup) for recommended production setup.

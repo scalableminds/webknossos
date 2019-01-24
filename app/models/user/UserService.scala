@@ -17,6 +17,7 @@ import models.team._
 import oxalis.mail.DefaultMails
 import oxalis.security.TokenDAO
 import oxalis.user.UserCache
+import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import utils.{ObjectId, WkConf}
 
@@ -138,10 +139,15 @@ class UserService @Inject()(conf: WkConf,
       result
     }
 
-  def updateDataSetConfiguration(user: User, dataSetName: String, configuration: DataSetConfiguration)(
-      implicit ctx: DBAccessContext) =
+  def updateDataSetConfiguration(
+      user: User,
+      dataSetName: String,
+      organizationName: String,
+      configuration: DataSetConfiguration)(implicit ctx: DBAccessContext, m: MessagesProvider) =
     for {
-      dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, user._organization)
+      dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> Messages(
+        "dataSet.notFound",
+        dataSetName)
       _ <- userDataSetConfigurationDAO.updateDatasetConfigurationForUserAndDataset(user._id,
                                                                                    dataSet._id,
                                                                                    configuration.configuration)

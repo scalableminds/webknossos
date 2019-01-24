@@ -120,14 +120,14 @@ class UrlManager {
     const { tracing } = Store.getState();
 
     const hash = this.buildHash(tracing);
-    const newBaseUrl = updateTypeAndId(this.baseUrl, tracing.tracingType, tracing.annotationId);
+    const newBaseUrl = updateTypeAndId(this.baseUrl, tracing.annotationType, tracing.annotationId);
     return `${newBaseUrl}#${hash}`;
   }
 }
 
 export function updateTypeAndId(
   baseUrl: string,
-  tracingType: string,
+  annotationType: string,
   annotationId: string,
 ): string {
   // Update the baseUrl with a potentially new annotation id and or tracing type.
@@ -136,7 +136,7 @@ export function updateTypeAndId(
   // dataset viewing only
   return baseUrl.replace(
     /^(.*\/annotations)\/(.*?)\/([^/?]*)(\/?.*)$/,
-    (all, base, type, id, rest) => `${base}/${tracingType}/${annotationId}${rest}`,
+    (all, base, type, id, rest) => `${base}/${annotationType}/${annotationId}${rest}`,
   );
 }
 

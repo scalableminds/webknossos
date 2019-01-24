@@ -17,6 +17,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Changed
 
+- Annotations for non-public datasets can now be shared using the "Share" functionality without making the dataset public. [#3664](https://github.com/scalableminds/webknossos/pull/3664)
 - Statistics are now separated by organization, rather than showing the webKnossos instance’s totals. [#3663](https://github.com/scalableminds/webknossos/pull/3663)
 
 ### Fixed

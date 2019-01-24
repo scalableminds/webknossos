@@ -1,33 +1,33 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import java.io.{ByteArrayOutputStream, OutputStream}
-import java.nio.{Buffer, ByteBuffer, ByteOrder, FloatBuffer}
-import java.nio.file.Paths
+import java.nio.{ByteBuffer, ByteOrder}
 import java.util.Base64
 
-import akka.actor.{ActorSystem, Props}
-import akka.pattern.ask
-import akka.routing.RoundRobinPool
+import akka.actor.ActorSystem
 import akka.stream.scaladsl.StreamConverters
-import akka.util.Timeout
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Point3D
-import com.scalableminds.webknossos.datastore.services._
-import com.scalableminds.webknossos.datastore.models._
-import com.scalableminds.util.mvc.JsonResults
+import com.scalableminds.util.geometry.Point3D.Point3DWrites
+import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.webknossos.datastore.models.DataRequestCollection._
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.{
-  Cuboid,
   DataServiceDataRequest,
   DataServiceMappingRequest,
   DataServiceRequestSettings
 }
-import com.scalableminds.webknossos.datastore.models.DataRequestCollection._
-import com.scalableminds.webknossos.datastore.models.{DataRequest, ImageThumbnail, VoxelPosition, WebKnossosDataRequest}
-import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.DataStoreConfig
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import com.scalableminds.webknossos.datastore.models.{
+  DataRequest,
+  ImageThumbnail,
+  VoxelPosition,
+  WebKnossosDataRequest,
+  _
+}
+import com.scalableminds.webknossos.datastore.services._
+import net.liftweb.common.Full
 import net.liftweb.util.Helpers.tryo
 import play.api.http.HttpEntity
 import play.api.i18n.{Messages, MessagesProvider}
@@ -35,20 +35,19 @@ import play.api.libs.json.Json
 import play.api.mvc.{PlayBodyParsers, ResponseHeader, Result}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration._
 
 class BinaryDataController @Inject()(
     dataSourceRepository: DataSourceRepository,
     config: DataStoreConfig,
     accessTokenService: DataStoreAccessTokenService,
-    binaryDatServiceHolder: BinaryDataServiceHolder,
+    binaryDataServiceHolder: BinaryDataServiceHolder,
     mappingService: MappingService,
     isosurfaceService: IsosurfaceService,
     actorSystem: ActorSystem
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
-  val binaryDataService = binaryDatServiceHolder.binaryDataService
+  val binaryDataService = binaryDataServiceHolder.binaryDataService
 
   /**
     * Handles requests for raw binary data via HTTP POST from webKnossos.
@@ -366,6 +365,22 @@ class BinaryDataController @Inject()(
       }
     }
 
+  /**
+    * Handles requests to "find" data.
+    */
+  def findData(organizationName: String, dataSetName: String, dataLayerName: String) = Action.async {
+    implicit request =>
+      accessTokenService
+        .validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+          AllowRemoteOrigin {
+            for {
+              position <- findPositionWithData(organizationName, dataSetName, dataLayerName)
+
+            } yield Ok(Point3DWrites.writes(position))
+          }
+        }
+  }
+
   private def getDataSourceAndDataLayer(organizationName: String, dataSetName: String, dataLayerName: String)(
       implicit m: MessagesProvider): Fox[(DataSource, DataLayer)] =
     for {
@@ -435,6 +450,75 @@ class BinaryDataController @Inject()(
     } yield {
       image
     }
+
+  private def findPositionWithData(organizationName: String, dataSetName: String, dataLayerName: String)(
+      implicit m: MessagesProvider) =
+    for {
+      (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+      hasData <- checkAllPositionsForData(dataSource, dataLayer)
+    } yield hasData
+
+  private def checkAllPositionsForData(dataSource: DataSource, dataLayer: DataLayer) = {
+    def positionIter(positions: List[Point3D]): Fox[Point3D] =
+      positions match {
+        case List() => Fox.empty
+        case head :: tail =>
+          checkIfPositionHasData(head).futureBox.flatMap {
+            case Full(pos) => Fox.successful(pos)
+            case _         => positionIter(tail)
+          }
+      }
+
+    def checkIfPositionHasData(position: Point3D) = {
+      val request = DataRequest(
+        new VoxelPosition(position.x, position.y, position.z, dataLayer.lookUpResolution(0)),
+        DataLayer.bucketLength,
+        DataLayer.bucketLength,
+        DataLayer.bucketLength
+      )
+      for {
+        (data, _) <- requestData(dataSource, dataLayer, request)
+        if data.nonEmpty
+      } yield position
+    }
+
+    def createPositions() = {
+      def positionIter(remainingRuns: List[Int], currentPositions: List[Point3D]): List[Point3D] = {
+        def createPositionsFromExponent(exponent: Int) = {
+          val power = math.pow(2, exponent)
+          val spaceBetweenWidth = (dataLayer.boundingBox.width / power).toInt
+          val spaceBetweenHight = (dataLayer.boundingBox.height / power).toInt
+          val spaceBetweenDepth = (dataLayer.boundingBox.depth / power).toInt
+          val topLeft = dataLayer.boundingBox.topLeft
+
+          if (spaceBetweenWidth < DataLayer.bucketLength && spaceBetweenHight < DataLayer.bucketLength && spaceBetweenDepth < DataLayer.bucketLength) {
+            None
+          } else {
+            Some(
+              (1 to math.pow(power - 1, 3).toInt)
+                .map(i =>
+                  Point3D(topLeft.x + i * spaceBetweenWidth,
+                          topLeft.y + i * spaceBetweenHight,
+                          topLeft.z + i * spaceBetweenDepth))
+                .toList)
+          }
+        }
+
+        remainingRuns match {
+          case List() => currentPositions
+          case head :: tail =>
+            createPositionsFromExponent(head) match {
+              case Some(values) => positionIter(tail, currentPositions ::: values)
+              case None         => currentPositions
+            }
+        }
+      }
+
+      positionIter((1 to 5).toList, List[Point3D]())
+    }
+
+    positionIter(createPositions())
+  }
 
   def clearCache(organizationName: String, dataSetName: String) = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {

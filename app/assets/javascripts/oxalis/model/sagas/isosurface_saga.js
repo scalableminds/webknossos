@@ -94,6 +94,11 @@ function getNeighborPosition(
 // variable for the "active cell" in view mode. The cell can be changed via
 // shift+click (similar to the volume tracing mode).
 let currentIsosurfaceCellId = 0;
+// The calculation of an isosurface is spread across multiple requests.
+// In order to avoid, that too many chunks are computed for one user interaction,
+// we store the amount of requests in a batch per segment.
+const batchCounterPerSegment: {[key: number]: number} = {}
+const MAXIMUM_BATCH_SIZE = 30;
 
 function* changeActiveIsosurfaceCell(action: ChangeActiveIsosurfaceCellAction): Saga<void> {
   currentIsosurfaceCellId = action.cellId;
@@ -128,6 +133,8 @@ function* ensureSuitableIsosurface(): Saga<void> {
   );
 
   const clippedPosition = clipPositionToCubeBoundary(position, zoomStep);
+
+  batchCounterPerSegment[segmentId] = 0;
   yield* call(maybeLoadIsosurface, dataset, layer, segmentId, clippedPosition, zoomStep);
 }
 
@@ -143,6 +150,10 @@ function* maybeLoadIsosurface(
   if (threeDMap.get(clippedPosition)) {
     return;
   }
+  if (batchCounterPerSegment[segmentId] > MAXIMUM_BATCH_SIZE) {
+    return;
+  }
+  batchCounterPerSegment[segmentId]++;
 
   threeDMap.set(clippedPosition, true);
 

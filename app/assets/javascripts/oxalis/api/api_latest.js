@@ -48,7 +48,7 @@ import type {
   Tracing,
   SkeletonTracing,
   VolumeTracing,
-  TracingTypeTracing,
+  AnnotationType,
   Mapping,
   TreeGroupTypeFlat,
 } from "oxalis/store";
@@ -70,6 +70,7 @@ import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import messages from "messages";
 import type { ToastStyle } from "libs/toast";
 import type { Versions } from "oxalis/view/version_view";
+import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
 
 function assertExists(value: any, message: string) {
   if (value == null) {
@@ -368,11 +369,11 @@ class TracingApi {
 
     this.isFinishing = true;
     const state = Store.getState();
-    const { tracingType, annotationId } = state.tracing;
+    const { annotationType, annotationId } = state.tracing;
     const { task } = state;
 
     await Model.save();
-    await finishAnnotation(annotationId, tracingType);
+    await finishAnnotation(annotationId, annotationType);
     try {
       const annotation = await requestTask();
 
@@ -409,7 +410,7 @@ class TracingApi {
    *
    */
   async restart(
-    newTracingType: TracingTypeTracing,
+    newAnnotationType: AnnotationType,
     newAnnotationId: string,
     newControlMode: ControlMode,
     versions?: Versions,
@@ -420,7 +421,7 @@ class TracingApi {
     Store.dispatch(restartSagaAction());
     UrlManager.reset();
     await Model.fetch(
-      newTracingType,
+      newAnnotationType,
       { annotationId: newAnnotationId, type: newControlMode },
       false,
       versions,
@@ -704,7 +705,7 @@ class DataApi {
     if (bucket.isRequested()) {
       needsToAwaitBucket = true;
     } else if (bucket.needsRequest()) {
-      pullQueue.add({ bucket: bucketAddress, priority: -1 });
+      pullQueue.add({ bucket: bucketAddress, priority: PullQueueConstants.PRIORITY_HIGHEST });
       pullQueue.pull();
       needsToAwaitBucket = true;
     }

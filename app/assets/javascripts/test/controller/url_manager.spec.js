@@ -9,19 +9,19 @@ const { updateTypeAndId } = mockRequire.reRequire("oxalis/controller/url_manager
 test("UrlManager should replace tracing in url", t => {
   t.is(
     updateTypeAndId(
-      "abc/def/annotations/tracingType/annotationId",
-      "newTracingType",
+      "abc/def/annotations/annotationType/annotationId",
+      "newAnnotationType",
       "newAnnotationId",
     ),
-    "abc/def/annotations/newTracingType/newAnnotationId",
+    "abc/def/annotations/newAnnotationType/newAnnotationId",
   );
 
   t.is(
     updateTypeAndId(
-      "abc/def/annotations/tracingType/annotationId/readOnly",
-      "newTracingType",
+      "abc/def/annotations/annotationType/annotationId/readOnly",
+      "newAnnotationType",
       "newAnnotationId",
     ),
-    "abc/def/annotations/newTracingType/newAnnotationId/readOnly",
+    "abc/def/annotations/newAnnotationType/newAnnotationId/readOnly",
   );
 });

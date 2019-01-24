@@ -25,10 +25,11 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
 
   def baseInfo = s"Dataset: ${dataSet.name} Tracingstore: ${tracingStore.url}"
 
-  def getSkeletonTracing(tracingId: String): Fox[SkeletonTracing] = {
+  def getSkeletonTracing(tracingId: String, version: Option[Long]): Fox[SkeletonTracing] = {
     logger.debug("Called to get SkeletonTracing." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/skeleton/${tracingId}")
       .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
+      .addQueryStringOptional("version", version.map(_.toString))
       .getWithProtoResponse[SkeletonTracing](SkeletonTracing)
   }
 
@@ -104,14 +105,16 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
     }
   }
 
-  def getVolumeTracing(tracingId: String): Fox[(VolumeTracing, Source[ByteString, _])] = {
+  def getVolumeTracing(tracingId: String, version: Option[Long] = None): Fox[(VolumeTracing, Source[ByteString, _])] = {
     logger.debug("Called to get VolumeTracing." + baseInfo)
     for {
       tracing <- rpc(s"${tracingStore.url}/tracings/volume/${tracingId}")
         .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
+        .addQueryStringOptional("version", version.map(_.toString))
         .getWithProtoResponse[VolumeTracing](VolumeTracing)
       data <- rpc(s"${tracingStore.url}/tracings/volume/${tracingId}/allData")
         .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
+        .addQueryStringOptional("version", version.map(_.toString))
         .getStream
     } yield {
       (tracing, data)

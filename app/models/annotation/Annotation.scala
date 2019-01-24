@@ -208,6 +208,14 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
       count <- countList.headOption
     } yield count
 
+  def countAllForOrganization(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[Int] =
+    for {
+      countList <- run(
+        sql"select count(*) from (select a._id from #${existingCollectionName} a join webknossos.users_ u on a._user = u._id where u._organization = ${organizationId}) q"
+          .as[Int])
+      count <- countList.headOption
+    } yield count
+
   // update operations
 
   def insertOne(a: Annotation): Fox[Unit] =

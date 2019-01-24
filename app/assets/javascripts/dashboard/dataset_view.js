@@ -7,7 +7,7 @@ import * as React from "react";
 
 import type { APIUser, APIMaybeUnimportedDataset } from "admin/api_flow_types";
 import AdvancedDatasetView from "dashboard/advanced_dataset/advanced_dataset_view";
-import GalleryDatasetView from "dashboard/gallery_dataset_view";
+import PublicationView from "dashboard/publication_view";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
 
@@ -86,9 +86,7 @@ class DatasetView extends React.PureComponent<Props, State> {
   }
 
   renderGallery() {
-    return (
-      <GalleryDatasetView datasets={this.props.datasets} searchQuery={this.state.searchQuery} />
-    );
+    return <PublicationView datasets={this.props.datasets} searchQuery={this.state.searchQuery} />;
   }
 
   renderAdvanced() {
@@ -144,7 +142,7 @@ class DatasetView extends React.PureComponent<Props, State> {
     return (
       <div>
         {adminHeader}
-        <h3 className="TestDatasetHeadline">Datasets</h3>
+        <h3 className="TestDatasetHeadline">{isGallery ? "Publications" : "Datasets"}</h3>
         <div className="clearfix" style={{ margin: "20px 0px" }} />
         <Spin size="large" spinning={this.props.datasets.length === 0 && this.props.isLoading}>
           {content}

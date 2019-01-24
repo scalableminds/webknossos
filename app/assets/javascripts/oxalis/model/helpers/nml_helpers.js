@@ -85,7 +85,7 @@ export function getNmlName(state: OxalisState): string {
   if (tracing.name !== "") return `${tracing.name}.nml`;
 
   const datasetName = dataset.name;
-  const tracingType = task ? task.id : "explorational";
+  const annotationTypeOrTaskId = task ? task.id : "explorational";
   let userName = activeUser
     ? `${activeUser.firstName.slice(0, 1)}${activeUser.lastName}`.toLowerCase()
     : "";
@@ -93,7 +93,7 @@ export function getNmlName(state: OxalisState): string {
   userName = userName.replace(/ /g, "_");
   const shortAnnotationId = tracing.annotationId.slice(-6);
 
-  return `${datasetName}__${tracingType}__${userName}__${shortAnnotationId}.nml`;
+  return `${datasetName}__${annotationTypeOrTaskId}__${userName}__${shortAnnotationId}.nml`;
 }
 
 export function serializeToNml(

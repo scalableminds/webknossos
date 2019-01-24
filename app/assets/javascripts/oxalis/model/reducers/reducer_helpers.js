@@ -48,7 +48,7 @@ export function convertServerAnnotationToFrontendAnnotation(annotation: APIAnnot
     tags,
     description,
     name,
-    typ: tracingType,
+    typ: annotationType,
     tracingStore,
     meshes,
   } = annotation;
@@ -63,7 +63,7 @@ export function convertServerAnnotationToFrontendAnnotation(annotation: APIAnnot
     tags,
     description,
     name,
-    tracingType,
+    annotationType,
     tracingStore,
     meshes,
   };

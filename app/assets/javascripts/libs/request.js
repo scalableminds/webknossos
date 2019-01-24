@@ -21,12 +21,16 @@ const compress = createWorker(CompressWorker);
 type method = "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH";
 
 export type RequestOptions = {
-  headers?: { [key: string]: string },
-  method?: method,
-  timeout?: number,
   compress?: boolean,
-  useWebworkerForArrayBuffer?: boolean,
+  doNotInvestigate?: boolean,
   extractHeaders?: boolean,
+  headers?: { [key: string]: string },
+  host?: string,
+  method?: method,
+  params?: string | Object,
+  showErrorToast?: boolean,
+  timeout?: number,
+  useWebworkerForArrayBuffer?: boolean,
 };
 
 export type RequestOptionsWithData<T> = RequestOptions & {

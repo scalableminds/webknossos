@@ -184,6 +184,12 @@ class UserController @Inject()(userService: UserService,
       Filter("isEditable",
              (value: Boolean, el: User) =>
                for { isEditable <- userService.isEditableBy(el, request.identity) } yield isEditable == value),
+      Filter(
+        "isTeamManagerOrAdmin",
+        (value: Boolean, el: User) =>
+          for { isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(el, request.identity._organization) } yield
+            isTeamManagerOrAdmin == value
+      ),
       Filter("isAdmin", (value: Boolean, el: User) => Fox.successful(el.isAdmin == value))
     ) { filter =>
       for {

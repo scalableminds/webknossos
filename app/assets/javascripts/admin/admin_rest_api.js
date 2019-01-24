@@ -127,6 +127,13 @@ export async function getUsers(): Promise<Array<APIUser>> {
   return users;
 }
 
+export async function getTeamManagerOrAdminUsers(): Promise<Array<APIUser>> {
+  const users = await Request.receiveJSON("/api/users?isTeamManagerOrAdmin=true");
+  assertResponseLimit(users);
+
+  return users;
+}
+
 export async function getAdminUsers(): Promise<Array<APIUser>> {
   const users = await Request.receiveJSON("/api/users?isAdmin=true");
   assertResponseLimit(users);

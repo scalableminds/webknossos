@@ -103,11 +103,19 @@ export function* prefetchForPlaneMode(layer: DataLayer, previousProperties: Obje
   const zoomStep = yield* select(state => getRequestLogZoomStep(state));
   const activePlane = yield* select(state => state.viewModeData.plane.activeViewport);
   const tracingTypes = yield* select(getTracingTypes);
-  const { lastPosition, lastDirection, lastZoomStep } = previousProperties;
+  const { lastPosition, lastDirection, lastZoomStep, lastBucketPickerTick } = previousProperties;
   const direction = getTraceDirection(position, lastPosition, lastDirection);
   const resolutions = yield* select(state => getResolutions(state.dataset));
+  const layerRenderingManager = yield* call(
+    [Model, Model.getLayerRenderingManagerByName],
+    layer.name,
+  );
+  const { currentBucketPickerTick } = layerRenderingManager;
 
-  if (position !== lastPosition || zoomStep !== lastZoomStep) {
+  if (
+    currentBucketPickerTick !== lastBucketPickerTick &&
+    (position !== lastPosition || zoomStep !== lastZoomStep)
+  ) {
     const areas = yield* select(state => getAreas(state));
     for (const strategy of prefetchStrategiesPlane) {
       if (
@@ -141,6 +149,7 @@ export function* prefetchForPlaneMode(layer: DataLayer, previousProperties: Obje
     previousProperties.lastPosition = position;
     previousProperties.lastZoomStep = zoomStep;
     previousProperties.lastDirection = direction;
+    previousProperties.lastBucketPickerTick = currentBucketPickerTick;
   }
 }
 
@@ -153,10 +162,18 @@ export function* prefetchForArbitraryMode(
   const zoomStep = yield* select(state => getRequestLogZoomStep(state));
   const tracingTypes = yield* select(getTracingTypes);
   const resolutions = yield* select(state => getResolutions(state.dataset));
-  const { lastMatrix, lastZoomStep } = previousProperties;
+  const layerRenderingManager = yield* call(
+    [Model, Model.getLayerRenderingManagerByName],
+    layer.name,
+  );
+  const { currentBucketPickerTick } = layerRenderingManager;
+  const { lastMatrix, lastZoomStep, lastBucketPickerTick } = previousProperties;
   const { connectionInfo, pullQueue, cube } = Model.dataLayers[layer.name];
 
-  if (matrix !== lastMatrix || zoomStep !== lastZoomStep) {
+  if (
+    currentBucketPickerTick !== lastBucketPickerTick &&
+    (matrix !== lastMatrix || zoomStep !== lastZoomStep)
+  ) {
     for (const strategy of prefetchStrategiesArbitrary) {
       if (
         strategy.forContentType(tracingTypes) &&
@@ -181,6 +198,7 @@ export function* prefetchForArbitraryMode(
   pullQueue.pull();
   previousProperties.lastMatrix = matrix;
   previousProperties.lastZoomStep = zoomStep;
+  previousProperties.lastBucketPickerTick = currentBucketPickerTick;
 }
 
 export default {};

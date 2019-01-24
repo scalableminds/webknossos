@@ -80,7 +80,9 @@ type AddTreesAndGroupsAction = {
 };
 type DeleteTreeAction = { type: "DELETE_TREE", treeId?: number, timestamp: number };
 type SetActiveTreeAction = { type: "SET_ACTIVE_TREE", treeId: number };
+type DeselectActiveTreeAction = { type: "DESELECT_ACTIVE_TREE" };
 type SetActiveGroupAction = { type: "SET_ACTIVE_GROUP", groupId: number };
+type DeselectActiveGroupAction = { type: "DESELECT_ACTIVE_GROUP" };
 type MergeTreesAction = { type: "MERGE_TREES", sourceNodeId: number, targetNodeId: number };
 type SetTreeNameAction = { type: "SET_TREE_NAME", name: ?string, treeId: ?number };
 type SelectNextTreeAction = { type: "SELECT_NEXT_TREE", forward: ?boolean };
@@ -110,6 +112,7 @@ export type SkeletonTracingAction =
   | DeleteEdgeAction
   | SetActiveNodeAction
   | SetActiveGroupAction
+  | DeselectActiveGroupAction
   | SetNodeRadiusAction
   | CreateBranchPointAction
   | DeleteBranchPointAction
@@ -118,6 +121,7 @@ export type SkeletonTracingAction =
   | AddTreesAndGroupsAction
   | DeleteTreeAction
   | SetActiveTreeAction
+  | DeselectActiveTreeAction
   | MergeTreesAction
   | SetTreeNameAction
   | SelectNextTreeAction
@@ -313,9 +317,17 @@ export const setActiveTreeAction = (treeId: number): SetActiveTreeAction => ({
   treeId,
 });
 
+export const deselectActiveTreeAction = (): DeselectActiveTreeAction => ({
+  type: "DESELECT_ACTIVE_TREE",
+});
+
 export const setActiveGroupAction = (groupId: number): SetActiveGroupAction => ({
   type: "SET_ACTIVE_GROUP",
   groupId,
+});
+
+export const deselectActiveGroupAction = (): DeselectActiveGroupAction => ({
+  type: "DESELECT_ACTIVE_GROUP",
 });
 
 export const mergeTreesAction = (sourceNodeId: number, targetNodeId: number): MergeTreesAction => ({
@@ -418,18 +430,22 @@ export const deleteActiveNodeAsUserAction = (
   );
 };
 
+// Let the user confirm the deletion of the initial node (node with id 1) of a task
+function confirmDeletingInitialNode(id) {
+  Modal.confirm({
+    title: messages["tracing.delete_tree_with_initial_node"],
+    onOk: () => {
+      Store.dispatch(deleteTreeAction(id));
+    },
+  });
+}
+
 export const deleteTreeAsUserAction = (treeId?: number): NoAction => {
   const state = Store.getState();
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
   getTree(skeletonTracing, treeId).map(tree => {
     if (state.task != null && tree.nodes.has(1)) {
-      // Let the user confirm the deletion of the initial node (node with id 1) of a task
-      Modal.confirm({
-        title: messages["tracing.delete_tree_with_initial_node"],
-        onOk: () => {
-          Store.dispatch(deleteTreeAction(treeId));
-        },
-      });
+      confirmDeletingInitialNode(treeId);
     } else if (state.userConfiguration.hideTreeRemovalWarning) {
       Store.dispatch(deleteTreeAction(treeId));
     } else {
@@ -440,5 +456,19 @@ export const deleteTreeAsUserAction = (treeId?: number): NoAction => {
   });
   // As Modal.confirm is async, return noAction() and the modal will dispatch the real action
   // if the user confirms
+  return noAction();
+};
+
+export const deleteMultipleTreesAsUserAction = (treeIds: Array<number>): NoAction => {
+  const state = Store.getState();
+  const skeletonTracing = enforceSkeletonTracing(state.tracing);
+  treeIds.forEach(id => {
+    const tree = skeletonTracing.trees[id];
+    if (state.task != null && tree.nodes.has(1)) {
+      confirmDeletingInitialNode(id);
+    } else {
+      Store.dispatch(deleteTreeAction(id));
+    }
+  });
   return noAction();
 };

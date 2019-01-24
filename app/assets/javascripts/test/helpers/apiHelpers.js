@@ -103,7 +103,7 @@ const modelData = {
   },
 };
 
-const TRACING_TYPE = "tracingTypeValue";
+const ANNOTATION_TYPE = "annotationTypeValue";
 const ANNOTATION_ID = "annotationIdValue";
 
 let counter = 0;
@@ -120,7 +120,7 @@ export function __setupOxalis(t, mode, apiVersion) {
 
   const ANNOTATION = modelData[mode].annotation;
   Request.receiveJSON
-    .withArgs(`/api/annotations/${TRACING_TYPE}/${ANNOTATION_ID}/info`)
+    .withArgs(`/api/annotations/${ANNOTATION_TYPE}/${ANNOTATION_ID}/info`)
     .returns(Promise.resolve(_.cloneDeep(ANNOTATION)));
   const datasetClone = _.cloneDeep(DATASET);
 
@@ -139,7 +139,7 @@ export function __setupOxalis(t, mode, apiVersion) {
   Request.receiveJSON.returns(Promise.resolve({}));
 
   return Model.fetch(
-    TRACING_TYPE,
+    ANNOTATION_TYPE,
     { annotationId: ANNOTATION_ID, type: ControlModeEnum.TRACE },
     true,
   )

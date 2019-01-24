@@ -2,11 +2,11 @@
 
 import { Button, Dropdown, Icon, Menu, Modal, Tooltip } from "antd";
 import { connect } from "react-redux";
-import React, { PureComponent } from "react";
+import * as React from "react";
 
-import type { APIUser, APITracingType } from "admin/api_flow_types";
+import type { APIUser, APIAnnotationType } from "admin/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
-import { copyAnnotationToUserAccount, finishAnnotation } from "admin/admin_rest_api";
+import { copyAnnotationToUserAccount, finishAnnotation, downloadNml } from "admin/admin_rest_api";
 import { mapLayoutKeysToLanguage } from "oxalis/view/layouting/default_layout_configs";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import { undoAction, redoAction } from "oxalis/model/actions/save_actions";
@@ -20,10 +20,11 @@ import Store, { type OxalisState, type RestrictionsAndSettings, type Task } from
 import UserScriptsModalView from "oxalis/view/action-bar/user_scripts_modal_view";
 import api from "oxalis/api/internal_api";
 import messages from "messages";
-import window, { location } from "libs/window";
+import { location } from "libs/window";
+import type { LayoutKeys } from "oxalis/view/layouting/default_layout_configs";
 
 type StateProps = {
-  tracingType: APITracingType,
+  annotationType: APIAnnotationType,
   annotationId: string,
   restrictions: RestrictionsAndSettings,
   task: ?Task,
@@ -31,13 +32,7 @@ type StateProps = {
 };
 
 type Props = StateProps & {
-  storedLayoutNamesForView: Array<string>,
-  layoutKey: string,
-  activeLayout: string,
-  onResetLayout: () => void,
-  onSelectLayout: string => void,
-  onDeleteLayout: string => void,
-  addNewLayout: () => void,
+  layoutMenu: React.Node,
 };
 
 type State = {
@@ -46,17 +41,24 @@ type State = {
   isUserScriptsModalOpen: boolean,
 };
 
-type ResetLayoutItemProps = {
+export type LayoutProps = {
   storedLayoutNamesForView: Array<string>,
-  layoutKey: string,
   activeLayout: string,
+  layoutKey: LayoutKeys,
+  autoSaveLayouts: boolean,
+  setAutoSaveLayouts: boolean => void,
+  setCurrentLayout: string => void,
+  saveCurrentLayout: () => void,
+};
+
+type LayoutMenuProps = LayoutProps & {
   onResetLayout: () => void,
   onSelectLayout: string => void,
   onDeleteLayout: string => void,
   addNewLayout: () => void,
 };
 
-export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
+export const LayoutMenu = (props: LayoutMenuProps) => {
   const {
     storedLayoutNamesForView,
     layoutKey,
@@ -65,6 +67,10 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
     onSelectLayout,
     onDeleteLayout,
     addNewLayout,
+    autoSaveLayouts,
+    setAutoSaveLayouts,
+    saveCurrentLayout,
+    setCurrentLayout,
     ...others
   } = props;
   const layoutMissingHelpTitle = (
@@ -117,8 +123,32 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
         </span>
       }
     >
-      <Menu.Item onClick={onResetLayout}>Reset Layout</Menu.Item>
-      <Menu.Item onClick={addNewLayout}>Add a new Layout</Menu.Item>
+      <Menu.Item
+        style={{ display: "inline-block" }}
+        onClick={addNewLayout}
+        title="Add a new Layout"
+      >
+        <Icon type="plus" />
+      </Menu.Item>
+      <Menu.Item style={{ display: "inline-block" }} onClick={onResetLayout} title="Reset Layout">
+        <Icon type="rollback" />
+      </Menu.Item>
+      <Menu.Item
+        style={{ display: "inline-block" }}
+        onClick={() => setAutoSaveLayouts(!autoSaveLayouts)}
+        title={`${autoSaveLayouts ? "Disable" : "Enable"} auto-saving of current layout`}
+      >
+        <Icon type={autoSaveLayouts ? "disconnect" : "link"} />
+      </Menu.Item>
+      {autoSaveLayouts ? null : (
+        <Menu.Item
+          style={{ display: "inline-block" }}
+          onClick={saveCurrentLayout}
+          title="Save current layout"
+        >
+          <Icon type="save" />
+        </Menu.Item>
+      )}
       <Menu.Divider />
       <Menu.ItemGroup
         className="available-layout-list"
@@ -134,7 +164,7 @@ export const ResetLayoutItem = (props: ResetLayoutItemProps) => {
   );
 };
 
-class TracingActionsView extends PureComponent<Props, State> {
+class TracingActionsView extends React.PureComponent<Props, State> {
   state = {
     isShareModalOpen: false,
     isMergeModalOpen: false,
@@ -166,7 +196,7 @@ class TracingActionsView extends PureComponent<Props, State> {
   handleCopyToAccount = async () => {
     const newAnnotation = await copyAnnotationToUserAccount(
       this.props.annotationId,
-      this.props.tracingType,
+      this.props.annotationType,
     );
     location.href = `/annotations/Explorational/${newAnnotation.id}`;
   };
@@ -177,7 +207,7 @@ class TracingActionsView extends PureComponent<Props, State> {
     Modal.confirm({
       title: messages["annotation.finish"],
       onOk: async () => {
-        await finishAnnotation(this.props.annotationId, this.props.tracingType);
+        await finishAnnotation(this.props.annotationId, this.props.annotationType);
         // Force page refresh
         location.href = "/dashboard";
       },
@@ -193,15 +223,8 @@ class TracingActionsView extends PureComponent<Props, State> {
   };
 
   handleDownload = async () => {
-    const win = window.open("about:blank", "_blank");
-    win.document.body.innerHTML = messages["download.wait"];
     await this.handleSave();
-
-    const downloadUrl = `/api/annotations/${this.props.tracingType}/${
-      this.props.annotationId
-    }/download`;
-    win.location.href = downloadUrl;
-    win.document.body.innerHTML = messages["download.close_window"];
+    downloadNml(this.props.annotationId, this.props.annotationType);
   };
 
   handleFinishAndGetNextTask = async () => {
@@ -225,10 +248,10 @@ class TracingActionsView extends PureComponent<Props, State> {
   };
 
   render() {
-    const viewMode = Store.getState().temporaryConfiguration.viewMode;
+    const { viewMode } = Store.getState().temporaryConfiguration;
     const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
     const archiveButtonText = this.props.task ? "Finish" : "Archive";
-    const restrictions = this.props.restrictions;
+    const { restrictions } = this.props;
 
     const saveButton = restrictions.allowUpdate
       ? [
@@ -325,27 +348,14 @@ class TracingActionsView extends PureComponent<Props, State> {
       );
     }
 
-    if (restrictions.allowUpdate) {
-      elements.push(
-        <Menu.Item key="restore-button" onClick={this.handleRestore}>
-          <Icon type="bars" theme="outlined" />
-          Restore Older Version
-        </Menu.Item>,
-      );
-    }
-
     elements.push(
-      <ResetLayoutItem
-        storedLayoutNamesForView={this.props.storedLayoutNamesForView}
-        layoutKey={this.props.layoutKey}
-        activeLayout={this.props.activeLayout}
-        onResetLayout={this.props.onResetLayout}
-        onSelectLayout={this.props.onSelectLayout}
-        onDeleteLayout={this.props.onDeleteLayout}
-        addNewLayout={this.props.addNewLayout}
-        key="layout"
-      />,
+      <Menu.Item key="restore-button" onClick={this.handleRestore}>
+        <Icon type="bars" theme="outlined" />
+        Restore Older Version
+      </Menu.Item>,
     );
+
+    elements.push(this.props.layoutMenu);
 
     const menu = <Menu>{elements}</Menu>;
 
@@ -368,7 +378,7 @@ class TracingActionsView extends PureComponent<Props, State> {
 
 function mapStateToProps(state: OxalisState): StateProps {
   return {
-    tracingType: state.tracing.tracingType,
+    annotationType: state.tracing.annotationType,
     annotationId: state.tracing.annotationId,
     restrictions: state.tracing.restrictions,
     task: state.task,

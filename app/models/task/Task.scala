@@ -156,12 +156,13 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def findAllByProject(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[Task]] =
+  def findAllByProject(projectId: ObjectId, limit: Int, pageNumber: Int)(
+      implicit ctx: DBAccessContext): Fox[List[Task]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        sql"select #${columns} from #${existingCollectionName} where _project = ${projectId.id} and #${accessQuery}"
-          .as[TasksRow])
+        sql"""select #${columns} from #${existingCollectionName} where _project = ${projectId.id} and #${accessQuery}
+              order by _id desc limit ${limit} offset ${pageNumber * limit}""".as[TasksRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
@@ -235,7 +236,8 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
       taskTypeIdOpt: Option[ObjectId],
       taskIdsOpt: Option[List[ObjectId]],
       userIdOpt: Option[ObjectId],
-      randomizeOpt: Option[Boolean]
+      randomizeOpt: Option[Boolean],
+      pageNumber: Int = 0
   )(implicit ctx: DBAccessContext): Fox[List[Task]] = {
 
     /* WARNING: This code composes an sql query with #${} without sanitize(). Change with care. */
@@ -272,7 +274,8 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
                 and #${userFilter}
                 and #${accessQuery}
                 #${orderRandom}
-                limit 1000"""
+                limit 1000
+                offset #${pageNumber * 1000}"""
       r <- run(q.as[TasksRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed

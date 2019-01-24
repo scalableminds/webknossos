@@ -49,7 +49,7 @@ export function generateTreeName(state: OxalisState, timestamp: number, treeId: 
   }
 
   let prefix = "Tree";
-  if (state.tracing.tracingType === "Explorational") {
+  if (state.tracing.annotationType === "Explorational") {
     // Get YYYY-MM-DD string
     const creationDate = new Date(timestamp).toJSON().slice(0, 10);
     prefix = `explorative_${creationDate}_${user}_`;
@@ -797,4 +797,20 @@ export function createTreeMapFromTreeArray(trees: Array<ServerSkeletonTracingTre
     ),
     "treeId",
   );
+}
+
+export function removeMissingGroupsFromTrees(
+  skeletonTracing: SkeletonTracing,
+  treeGroups: Array<TreeGroup>,
+): TreeMap {
+  // Change the groupId of trees for groups that no longer exist
+  const groupIds = Array.from(mapGroups(treeGroups, group => group.groupId));
+  const changedTrees = {};
+  Object.keys(skeletonTracing.trees).forEach(treeId => {
+    const tree = skeletonTracing.trees[Number(treeId)];
+    if (tree.groupId != null && !groupIds.includes(tree.groupId)) {
+      changedTrees[treeId] = { ...tree, groupId: null };
+    }
+  });
+  return changedTrees;
 }

@@ -88,7 +88,7 @@ const tracing = {
         groupId: 2,
       },
     },
-    tracingType: "Explorational",
+    annotationType: "Explorational",
     treeGroups: [
       {
         groupId: 1,

@@ -8,7 +8,8 @@ Here we present **webKnossos**.
 webKnossos: efficient online 3D data annotation for connectomics.
 [Nature Methods (2017) DOI:10.1038/NMETH.4331.](https://www.nature.com/articles/nmeth.4331)
 
-![webKnossos logo](https://webknossos.brain.mpg.de/assets/images/oxalis.svg)
+![webKnossos logo](https://webknossos.org/images/oxalis.svg)
+
 [![CircleCI](https://circleci.com/gh/scalableminds/webknossos.svg?style=svg)](https://circleci.com/gh/scalableminds/webknossos)
 
 ## Demo
@@ -161,6 +162,8 @@ Contact us at [hello@scalableminds.com](mailto:hello@scalableminds.com).
 ## Credits
 * scalable minds - https://scalableminds.com/
 * Max Planck Institute for Brain Research – https://brain.mpg.de/
+
+webKnossos was inspired by [KNOSSOS](https://knossos.app).
 
 ### Thanks
 * [CircleCI](https://circleci.com/gh/scalableminds/webknossos) for letting us run builds and tests on their CI

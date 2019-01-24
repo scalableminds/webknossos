@@ -58,7 +58,7 @@ const initialState = {
         color: [23, 23, 23],
       },
     },
-    tracingType: "Explorational",
+    annotationType: "Explorational",
     name: "",
     activeTreeId: 1,
     activeNodeId: null,

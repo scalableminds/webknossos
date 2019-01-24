@@ -58,7 +58,7 @@ import { setupGlobalMappingsObject } from "oxalis/model/bucket_data_handling/map
 import ConnectionInfo from "oxalis/model/data_connection_info";
 import DataLayer from "oxalis/model/data_layer";
 import ErrorHandling from "libs/error_handling";
-import Store, { type TraceOrViewCommand, type TracingTypeTracing } from "oxalis/store";
+import Store, { type TraceOrViewCommand, type AnnotationType } from "oxalis/store";
 import Toast from "libs/toast";
 import UrlManager, { type UrlManagerState } from "oxalis/controller/url_manager";
 import * as Utils from "libs/utils";
@@ -72,7 +72,7 @@ type DataLayerCollection = {
 };
 
 export async function initialize(
-  tracingType: TracingTypeTracing,
+  annotationType: AnnotationType,
   initialCommandType: TraceOrViewCommand,
   initialFetch: boolean,
   versions?: Versions,
@@ -88,7 +88,7 @@ export async function initialize(
   let datasetId: APIDatasetId;
   if (initialCommandType.type === ControlModeEnum.TRACE) {
     const { annotationId } = initialCommandType;
-    annotation = await getAnnotationInformation(annotationId, tracingType);
+    annotation = await getAnnotationInformation(annotationId, annotationType);
     datasetId = { name: annotation.dataSetName, owningOrganization: annotation.organization };
 
     if (!annotation.restrictions.allowAccess) {

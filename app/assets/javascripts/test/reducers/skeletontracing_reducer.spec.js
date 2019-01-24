@@ -54,7 +54,7 @@ const initialState = {
       allowAccess: true,
       allowDownload: true,
     },
-    tracingType: "Explorational",
+    annotationType: "Explorational",
     skeleton: {
       type: "skeleton",
       trees: {

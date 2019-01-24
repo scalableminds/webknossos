@@ -97,7 +97,7 @@ let currentIsosurfaceCellId = 0;
 // The calculation of an isosurface is spread across multiple requests.
 // In order to avoid, that too many chunks are computed for one user interaction,
 // we store the amount of requests in a batch per segment.
-const batchCounterPerSegment: {[key: number]: number} = {}
+const batchCounterPerSegment: { [key: number]: number } = {};
 const MAXIMUM_BATCH_SIZE = 30;
 
 function* changeActiveIsosurfaceCell(action: ChangeActiveIsosurfaceCellAction): Saga<void> {

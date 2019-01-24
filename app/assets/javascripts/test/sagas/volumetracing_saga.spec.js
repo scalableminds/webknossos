@@ -37,7 +37,7 @@ const { defaultState } = require("oxalis/store");
 
 const volumeTracing = {
   type: "volume",
-  tracingType: "Explorational",
+  annotationType: "Explorational",
   name: "",
   activeTool: VolumeToolEnum.TRACE,
   activeCellId: 0,

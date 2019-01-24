@@ -37,7 +37,7 @@ function getVolumeTracing(tracing: Tracing): Maybe<VolumeTracing> {
 
 const initialState = update(defaultState, {
   tracing: {
-    tracingType: { $set: "Explorational" },
+    annotationType: { $set: "Explorational" },
     name: { $set: "" },
     restrictions: {
       $set: {

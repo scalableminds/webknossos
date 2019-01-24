@@ -44,11 +44,12 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
       intervalHandler.get(interval) match {
         case Some(handler) =>
           for {
-            times <- timeSpanService.loggedTimePerInterval(handler, start, end)
-            numberOfUsers <- userDAO.countAll
-            numberOfDatasets <- dataSetDAO.countAll
-            numberOfAnnotations <- annotationDAO.countAll
-            numberOfAssignments <- taskDAO.countAllOpenInstances
+            organizationId <- Fox.successful(request.identity._organization)
+            times <- timeSpanService.loggedTimePerInterval(handler, start, end, organizationId)
+            numberOfUsers <- userDAO.countAllForOrganization(organizationId)
+            numberOfDatasets <- dataSetDAO.countAllForOrganization(organizationId)
+            numberOfAnnotations <- annotationDAO.countAllForOrganization(organizationId)
+            numberOfAssignments <- taskDAO.countAllOpenInstancesForOrganization(organizationId)
           } yield {
             Ok(
               Json.obj(

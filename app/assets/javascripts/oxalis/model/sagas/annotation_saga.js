@@ -21,7 +21,7 @@ export function* pushAnnotationUpdateAsync(): Saga<void> {
     isPublic: tracing.isPublic,
     description: tracing.description,
   };
-  yield* call(editAnnotation, tracing.annotationId, tracing.tracingType, editObject);
+  yield* call(editAnnotation, tracing.annotationId, tracing.annotationType, editObject);
 }
 
 function shouldDisplaySegmentationData(): boolean {

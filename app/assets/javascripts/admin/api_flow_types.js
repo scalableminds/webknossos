@@ -191,7 +191,7 @@ export type APISettings = {|
   +somaClickingAllowed: boolean,
 |};
 
-export const APITracingTypeEnum = Enum.make({
+export const APIAnnotationTypeEnum = Enum.make({
   Explorational: "Explorational",
   Task: "Task",
   View: "View",
@@ -200,7 +200,7 @@ export const APITracingTypeEnum = Enum.make({
   CompoundTaskType: "CompoundTaskType",
 });
 
-export type APITracingType = $Keys<typeof APITracingTypeEnum>;
+export type APIAnnotationType = $Keys<typeof APIAnnotationTypeEnum>;
 
 export type APITaskType = {
   +id: string,
@@ -283,7 +283,7 @@ export type APITask = {
   +directLinks?: Array<string>,
 };
 
-export type APIAnnotationTypeCompact = {
+export type APIAnnotationCompact = {
   +tracing: {
     +skeleton: ?string,
     +volume: ?string,
@@ -300,7 +300,7 @@ export type APIAnnotationTypeCompact = {
   +stats: SkeletonTracingStats | {||},
   +tags: Array<string>,
   +tracingTime: ?number,
-  +typ: APITracingType,
+  +typ: APIAnnotationType,
 };
 
 export type LocalMeshMetaData = {|
@@ -321,7 +321,7 @@ export type MeshMetaData = {|
   ...RemoteMeshMetaData,
 |};
 
-type APIAnnotationTypeBase = APIAnnotationTypeCompact & {
+type APIAnnotationBase = APIAnnotationCompact & {
   +dataStore: APIDataStore,
   +tracingStore: APITracingStore,
   +restrictions: APIRestrictions,
@@ -330,11 +330,11 @@ type APIAnnotationTypeBase = APIAnnotationTypeCompact & {
   +meshes: Array<MeshMetaData>,
 };
 
-export type APIAnnotation = APIAnnotationTypeBase & {
+export type APIAnnotation = APIAnnotationBase & {
   +task: ?APITask,
 };
 
-export type APIAnnotationWithTask = APIAnnotationTypeBase & {
+export type APIAnnotationWithTask = APIAnnotationBase & {
   +task: APITask,
 };
 

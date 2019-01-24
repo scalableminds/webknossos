@@ -145,12 +145,6 @@ class VolumeLayer {
     return volumeTracing.contourList;
   }
 
-  finish(): void {
-    if (!this.isEmpty()) {
-      this.addContour(this.getContourList()[0]);
-    }
-  }
-
   isEmpty(): boolean {
     return this.getContourList().length === 0;
   }
@@ -256,7 +250,7 @@ class VolumeLayer {
   drawOutlineVoxels(setMap: (number, number) => void): void {
     let p1;
     let p2;
-    for (let i = 0; i < this.getContourList().length; i++) {
+    for (let i = 0; i < this.getContourList().length - 1; i++) {
       p1 = this.get2DCoordinate(this.getContourList()[i]);
       p2 = this.get2DCoordinate(this.getContourList()[(i + 1) % this.getContourList().length]);
 

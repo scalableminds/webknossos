@@ -12,7 +12,7 @@ type InitializeVolumeTracingAction = {
 type CreateCellAction = { type: "CREATE_CELL", cellId: ?number };
 type StartEditingAction = { type: "START_EDITING", position: Vector3, planeId: OrthoView };
 type AddToLayerAction = { type: "ADD_TO_LAYER", position: Vector3 };
-type FinishEditingAction = { type: "FINISH_EDITING" };
+type FinishEditingAction = { type: "FINISH_EDITING", closeContour: boolean };
 type SetActiveCellAction = { type: "SET_ACTIVE_CELL", cellId: number };
 type SetToolAction = { type: "SET_TOOL", tool: VolumeTool };
 type CycleToolAction = { type: "CYCLE_TOOL" };
@@ -73,8 +73,9 @@ export const addToLayerAction = (position: Vector3): AddToLayerAction => ({
   position,
 });
 
-export const finishEditingAction = (): FinishEditingAction => ({
+export const finishEditingAction = (closeContour: boolean): FinishEditingAction => ({
   type: "FINISH_EDITING",
+  closeContour,
 });
 
 export const setActiveCellAction = (cellId: number): SetActiveCellAction => ({

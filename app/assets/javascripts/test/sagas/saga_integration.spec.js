@@ -110,7 +110,6 @@ test.serial("Save actions should be chunked after compacting (3/3)", t => {
   t.true(skeletonSaveQueue[0].actions.length < maximumActionCountPerBatch);
   t.is(skeletonSaveQueue[0].actions[1].name, "moveTreeComponent");
   const updateActionValue = skeletonSaveQueue[0].actions[1].value;
-  // $FlowFixMe Why does flow complain?
   if (updateActionValue.nodeIds == null || !Array.isArray(updateActionValue.nodeIds)) {
     throw new Error("No node ids in save action found");
   }

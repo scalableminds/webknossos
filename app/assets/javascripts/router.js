@@ -49,9 +49,9 @@ import window from "libs/window";
 
 const { Content } = Layout;
 
-type StateProps = {
+type StateProps = {|
   activeUser: ?APIUser,
-};
+|};
 
 type Props = StateProps;
 
@@ -436,4 +436,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
 });
 
-export default connect(mapStateToProps)(ReactRouter);
+export default connect<Props, {||}, _, _, _, _>(mapStateToProps)(ReactRouter);

@@ -130,7 +130,8 @@ function* watchTracingConsistency(): Saga<void> {
   for (const tree: Tree of _.values(enforceSkeletonTracing(state.tracing).trees)) {
     const edgeCount = tree.edges.size();
     const nodeCount = tree.nodes.size();
-    // For a tree, edge_count = node_count - 1 should hold true
+    // For a tree, edge_count = node_count - 1 should hold true. For graphs, the edge count
+    // would be even higher.
     if (edgeCount < nodeCount - 1) {
       invalidTreeDetails.push({
         treeId: tree.treeId,

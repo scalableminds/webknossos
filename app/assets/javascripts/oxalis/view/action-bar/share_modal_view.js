@@ -72,7 +72,11 @@ class ShareModalView extends PureComponent<ShareModalProp, State> {
   getUrl() {
     const { location } = window;
     const { pathname, origin, hash } = location;
-    const query = this.props.dataset.isPublic ? "" : `?token=${this.state.sharingToken}`;
+    // Append a dataset token if the dataset is not public, but the annotation should be public
+    const query =
+      !this.props.dataset.isPublic && this.state.isPublic
+        ? `?token=${this.state.sharingToken}`
+        : "";
     const url = `${origin}${pathname}${query}${hash}`;
     return url;
   }
@@ -93,13 +97,16 @@ class ShareModalView extends PureComponent<ShareModalProp, State> {
   };
 
   maybeShowWarning() {
-    return !this.props.restrictions.allowUpdate ? (
-      <Alert
-        style={{ marginBottom: 18 }}
-        message="You don't have the permission to edit the visibility of this tracing."
-        type="warning"
-        showIcon
-      />
+    let message;
+    if (!this.props.restrictions.allowUpdate) {
+      message = "You don't have the permission to edit the visibility of this tracing.";
+    } else if (!this.props.dataset.isPublic && this.state.isPublic) {
+      message =
+        "The dataset of this tracing is not public. The sharing link will make the dataset accessible to everyone you share it with.";
+    }
+
+    return message != null ? (
+      <Alert style={{ marginBottom: 18 }} message={message} type="warning" showIcon />
     ) : null;
   }
 
@@ -121,7 +128,7 @@ class ShareModalView extends PureComponent<ShareModalProp, State> {
       >
         <Row>
           <Col span={6} style={{ lineHeight: "30px" }}>
-            Link to tracing
+            Sharing Link
           </Col>
           <Col span={18}>
             <Input.Group compact>

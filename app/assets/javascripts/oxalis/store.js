@@ -462,6 +462,7 @@ export const defaultState: OxalisState = {
         team: "",
       },
     },
+    details: null,
     isPublic: false,
     isActive: true,
     isEditable: true,
@@ -478,6 +479,7 @@ export const defaultState: OxalisState = {
     lastUsedByUser: 0,
     isForeign: false,
     sortingKey: 123,
+    publication: null,
   },
   tracing: {
     ...initialAnnotationInfo,

@@ -46,6 +46,7 @@ import Constants, {
 import * as Utils from "libs/utils";
 import { enableMergerMode, disableMergerMode } from "oxalis/merger_mode";
 import { settings } from "messages";
+import MergerModeModalView from "./merger_mode_modal_view";
 
 const Panel = Collapse.Panel;
 
@@ -69,11 +70,17 @@ type UserSettingsViewProps = {
 
 type State = {
   isMergerModeEnabled: boolean,
+  isMergerModeModalVisible: boolean,
+  isMergerModeModalClosable: boolean,
 };
 
 class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
   onChangeUser: { [$Keys<UserConfiguration>]: Function };
-  state = { isMergerModeEnabled: false };
+  state = {
+    isMergerModeEnabled: false,
+    isMergerModeModalVisible: false,
+    isMergerModeModalClosable: false,
+  };
 
   componentWillMount() {
     // cache onChange handler
@@ -82,10 +89,22 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
     );
   }
 
-  handleMergerModeChange = value => {
+  handleMergerModeChange = async value => {
     if (value) {
-      enableMergerMode();
+      this.setState({
+        isMergerModeEnabled: true,
+        isMergerModeModalVisible: true,
+      });
+      await enableMergerMode();
+      // The modal is only closeable after the merger mode is fully enabled
+      // and finished preprocessing
+      this.setState({ isMergerModeModalClosable: true });
     } else {
+      this.setState({
+        isMergerModeEnabled: false,
+        isMergerModeModalVisible: false,
+        isMergerModeModalClosable: false,
+      });
       disableMergerMode();
     }
   };
@@ -274,7 +293,6 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
             label="Enable Merger Mode"
             value={this.state.isMergerModeEnabled}
             onChange={value => {
-              this.setState({ isMergerModeEnabled: value });
               this.handleMergerModeChange(value);
             }}
           />
@@ -307,6 +325,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
   };
 
   render() {
+    const { isMergerModeModalVisible, isMergerModeModalClosable } = this.state;
     const moveValueSetting = Constants.MODES_ARBITRARY.includes(this.props.viewMode) ? (
       <NumberSliderSetting
         label={settings.moveValue3d}
@@ -328,40 +347,50 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
     );
 
     return (
-      <Collapse defaultActiveKey={["1", "2", "3a", "3b", "4"]}>
-        <Panel header="Controls" key="1">
-          <NumberSliderSetting
-            label={settings.keyboardDelay}
-            min={0}
-            max={500}
-            value={this.props.userConfiguration.keyboardDelay}
-            onChange={this.onChangeUser.keyboardDelay}
+      <React.Fragment>
+        <Collapse defaultActiveKey={["1", "2", "3a", "3b", "4"]}>
+          <Panel header="Controls" key="1">
+            <NumberSliderSetting
+              label={settings.keyboardDelay}
+              min={0}
+              max={500}
+              value={this.props.userConfiguration.keyboardDelay}
+              onChange={this.onChangeUser.keyboardDelay}
+            />
+            {moveValueSetting}
+            <SwitchSetting
+              label={settings.dynamicSpaceDirection}
+              value={this.props.userConfiguration.dynamicSpaceDirection}
+              onChange={this.onChangeUser.dynamicSpaceDirection}
+            />
+          </Panel>
+          {this.getViewportOptions()}
+          {this.getSkeletonOrVolumeOptions()}
+          <Panel header="Other" key="4">
+            <Vector6InputSetting
+              label={settings.userBoundingBox}
+              tooltipTitle="Format: minX, minY, minZ, width, height, depth"
+              value={Utils.computeArrayFromBoundingBox(
+                getSomeTracing(this.props.tracing).userBoundingBox,
+              )}
+              onChange={this.props.onChangeBoundingBox}
+            />
+            <SwitchSetting
+              label={settings.tdViewDisplayPlanes}
+              value={this.props.userConfiguration.tdViewDisplayPlanes}
+              onChange={this.onChangeUser.tdViewDisplayPlanes}
+            />
+          </Panel>
+        </Collapse>
+        {isMergerModeModalVisible ? (
+          <MergerModeModalView
+            isCloseable={isMergerModeModalClosable}
+            onClose={() =>
+              this.setState({ isMergerModeModalVisible: false, isMergerModeModalClosable: false })
+            }
           />
-          {moveValueSetting}
-          <SwitchSetting
-            label={settings.dynamicSpaceDirection}
-            value={this.props.userConfiguration.dynamicSpaceDirection}
-            onChange={this.onChangeUser.dynamicSpaceDirection}
-          />
-        </Panel>
-        {this.getViewportOptions()}
-        {this.getSkeletonOrVolumeOptions()}
-        <Panel header="Other" key="4">
-          <Vector6InputSetting
-            label={settings.userBoundingBox}
-            tooltipTitle="Format: minX, minY, minZ, width, height, depth"
-            value={Utils.computeArrayFromBoundingBox(
-              getSomeTracing(this.props.tracing).userBoundingBox,
-            )}
-            onChange={this.props.onChangeBoundingBox}
-          />
-          <SwitchSetting
-            label={settings.tdViewDisplayPlanes}
-            value={this.props.userConfiguration.tdViewDisplayPlanes}
-            onChange={this.onChangeUser.tdViewDisplayPlanes}
-          />
-        </Panel>
-      </Collapse>
+        ) : null}
+      </React.Fragment>
     );
   }
 }

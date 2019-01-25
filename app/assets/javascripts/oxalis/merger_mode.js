@@ -182,50 +182,38 @@ async function mergeSegmentsOfAlreadyExistingTrees(index = 0, mergerModeState: M
     console.log(`Processing node ${index} of ${numbOfNodes}`);
   }
 
-  const node = nodes[index];
-  const pos = node.position;
-  const treeId = node.treeId;
-
   const [segMinVec, segMaxVec] = api.data.getBoundingBox(segementationLayerName);
 
-  // Skip nodes outside segmentation
-  if (
-    pos[0] < segMinVec[0] ||
-    pos[1] < segMinVec[1] ||
-    pos[2] < segMinVec[2] ||
-    pos[0] >= segMaxVec[0] ||
-    pos[1] >= segMaxVec[1] ||
-    pos[2] >= segMaxVec[2]
-  ) {
-    mergeSegmentsOfAlreadyExistingTrees(index + 1, mergerModeState);
-    return;
-  }
-
-  const segmentId = await api.data.getDataValue(segementationLayerName, pos);
-  // This should never happen
-  if (segmentId === null) {
-    return;
-  }
-
-  if (segmentId > 0) {
-    // Store the segment id
-    nodeSegmentMap[node.id] = segmentId;
-
-    // Add to agglomerate
-    increaseNodesOfSegment(segmentId, mergerModeState);
-    mapSegmentColorToTree(segmentId, treeId, mergerModeState);
-    console.log("set", segmentId, treeId);
-  }
-
-  if (index < numbOfNodes - 1) {
-    // Continue with next node if needed
-    mergeSegmentsOfAlreadyExistingTrees(index + 1, mergerModeState);
-  } else {
-    api.data.setMapping("segmentation", colorMapping);
-  }
+  const setSegementationOfNode = async node => {
+    const pos = node.position;
+    const treeId = node.treeId;
+    // Skip nodes outside segmentation
+    if (
+      pos[0] < segMinVec[0] ||
+      pos[1] < segMinVec[1] ||
+      pos[2] < segMinVec[2] ||
+      pos[0] >= segMaxVec[0] ||
+      pos[1] >= segMaxVec[1] ||
+      pos[2] >= segMaxVec[2]
+    ) {
+      // The node is not in bounds of the segmentation
+      return;
+    }
+    const segmentId = await api.data.getDataValue(segementationLayerName, pos);
+    if (segmentId != null && segmentId > 0) {
+      // Store the segment id
+      nodeSegmentMap[node.id] = segmentId;
+      // Add to agglomerate
+      increaseNodesOfSegment(segmentId, mergerModeState);
+      mapSegmentColorToTree(segmentId, treeId, mergerModeState);
+    }
+  };
+  const nodesMappedPromisses = nodes.map(node => setSegementationOfNode(node));
+  await Promise.all(nodesMappedPromisses);
+  api.data.setMapping("segmentation", colorMapping);
 }
 
-export function enableMergerMode() {
+export async function enableMergerMode() {
   if (isCodeActive) {
     return;
   }
@@ -263,7 +251,8 @@ export function enableMergerMode() {
       changeOpacity(mergerModeState);
     }),
   );
-  mergeSegmentsOfAlreadyExistingTrees(0, mergerModeState);
+  // wait for preprocessing the already existing trees before returning
+  await mergeSegmentsOfAlreadyExistingTrees(0, mergerModeState);
 }
 
 export function disableMergerMode() {

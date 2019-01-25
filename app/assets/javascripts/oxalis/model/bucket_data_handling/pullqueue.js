@@ -15,7 +15,6 @@ import { requestWithFallback } from "oxalis/model/bucket_data_handling/wkstore_a
 import ConnectionInfo from "oxalis/model/data_connection_info";
 import Constants, { type Vector3, type Vector4 } from "oxalis/constants";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import Model from "oxalis/model";
 import Store, { type DataStoreInfo, type DataLayerType } from "oxalis/store";
 
 export type PullQueueItem = {
@@ -37,8 +36,6 @@ const createPriorityQueue = () =>
   });
 
 const BATCH_SIZE = 3;
-// If ${maximumPickerTickCount} bucket picker ticks didn't select a bucket, that bucket is discarded from the pullqueue
-const maximumPickerTickCount = 5;
 
 class PullQueue {
   cube: DataCube;
@@ -70,9 +67,6 @@ class PullQueue {
 
   pull(): Array<Promise<void>> {
     // Starting to download some buckets
-    const layerRenderingManager = Model.getLayerRenderingManagerByName(this.layerName);
-    const { currentBucketPickerTick } = layerRenderingManager;
-
     const promises = [];
     while (this.batchCount < PullQueueConstants.BATCH_LIMIT && this.priorityQueue.length > 0) {
       const batch = [];
@@ -81,15 +75,8 @@ class PullQueue {
         const bucket = this.cube.getOrCreateBucket(address);
 
         if (bucket.type === "data" && bucket.needsRequest()) {
-          const isOutdated =
-            bucket.neededAtPickerTick != null &&
-            currentBucketPickerTick - bucket.neededAtPickerTick > maximumPickerTickCount;
-          if (!isOutdated) {
-            batch.push(address);
-            bucket.pull();
-          } else {
-            bucket.unvisualize();
-          }
+          batch.push(address);
+          bucket.pull();
         }
       }
 
@@ -192,24 +179,28 @@ class PullQueue {
     }
   }
 
-  add(item: PullQueueItem, currentBucketPickerTick?: number): void {
-    const bucket = this.cube.getOrCreateBucket(item.bucket);
-    if (bucket.type === "data") {
-      if (currentBucketPickerTick == null) {
-        const layerRenderingManager = Model.getLayerRenderingManagerByName(this.layerName);
-        currentBucketPickerTick = layerRenderingManager.currentBucketPickerTick;
-      }
-      bucket.setNeededAtPickerTick(currentBucketPickerTick);
-    }
-
+  add(item: PullQueueItem): void {
     this.priorityQueue.queue(item);
   }
 
   addAll(items: Array<PullQueueItem>): void {
-    const layerRenderingManager = Model.getLayerRenderingManagerByName(this.layerName);
-    const { currentBucketPickerTick } = layerRenderingManager;
     for (const item of items) {
-      this.add(item, currentBucketPickerTick);
+      this.add(item);
+    }
+  }
+
+  clear() {
+    // Clear all but the highest priority
+    const highestPriorityElements = [];
+    while (
+      this.priorityQueue.length > 0 &&
+      this.priorityQueue.peek().priority === PullQueueConstants.PRIORITY_HIGHEST
+    ) {
+      highestPriorityElements.push(this.priorityQueue.dequeue());
+    }
+    this.priorityQueue.clear();
+    for (const el of highestPriorityElements) {
+      this.priorityQueue.queue(el);
     }
   }
 

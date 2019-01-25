@@ -17,7 +17,7 @@ import type {
   APISettings,
   APITask,
   APITracingStore,
-  APITracingType,
+  APIAnnotationType,
   APIUser,
   MeshMetaData,
 } from "admin/api_flow_types";
@@ -131,7 +131,7 @@ export type DataStoreInfo = APIDataStore;
 export type TreeMap = { +[number]: Tree };
 export type TemporaryMutableTreeMap = { [number]: Tree };
 
-export type TracingTypeTracing = APITracingType;
+export type AnnotationType = APIAnnotationType;
 
 export type RestrictionsAndSettings = {| ...Restrictions, ...Settings |};
 
@@ -143,7 +143,7 @@ export type Annotation = {|
   +description: string,
   +name: string,
   +tracingStore: APITracingStore,
-  +tracingType: TracingTypeTracing,
+  +annotationType: AnnotationType,
   +meshes: Array<MeshMetaData>,
 |};
 
@@ -396,7 +396,7 @@ const initialAnnotationInfo = {
     name: "localhost",
     url: "http://localhost:9000",
   },
-  tracingType: "View",
+  annotationType: "View",
   meshes: [],
 };
 
@@ -462,6 +462,7 @@ export const defaultState: OxalisState = {
         team: "",
       },
     },
+    details: null,
     isPublic: false,
     isActive: true,
     isEditable: true,
@@ -478,6 +479,7 @@ export const defaultState: OxalisState = {
     lastUsedByUser: 0,
     isForeign: false,
     sortingKey: 123,
+    publication: null,
   },
   tracing: {
     ...initialAnnotationInfo,

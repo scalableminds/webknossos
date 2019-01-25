@@ -4,7 +4,7 @@ import _ from "lodash";
 import {
   type APIActiveUser,
   type APIAnnotation,
-  type APIAnnotationTypeCompact,
+  type APIAnnotationCompact,
   type APIAnnotationWithTask,
   type APIBuildInfo,
   type APIDataSource,
@@ -30,8 +30,8 @@ import {
   type APITimeInterval,
   type APITimeTracking,
   type APITracingStore,
-  type APITracingType,
-  APITracingTypeEnum,
+  type APIAnnotationType,
+  APIAnnotationTypeEnum,
   type APIUpdateActionBatch,
   type APIUser,
   type APIUserLoggedTime,
@@ -422,7 +422,7 @@ export async function updateTask(taskId: string, task: NewTask): Promise<APITask
 }
 
 export function finishTask(annotationId: string): Promise<APIAnnotation> {
-  return finishAnnotation(annotationId, APITracingTypeEnum.Task);
+  return finishAnnotation(annotationId, APIAnnotationTypeEnum.Task);
 }
 
 export function transferTask(annotationId: string, userId: string): Promise<APIAnnotation> {
@@ -454,7 +454,7 @@ export async function getUsersWithActiveTasks(projectName: string): Promise<Arra
 export function getCompactAnnotations(
   isFinished: boolean,
   pageNumber: number = 0,
-): Promise<Array<APIAnnotationTypeCompact>> {
+): Promise<Array<APIAnnotationCompact>> {
   return Request.receiveJSON(
     `/api/user/annotations?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`,
   );
@@ -464,7 +464,7 @@ export function getCompactAnnotationsForUser(
   userId: string,
   isFinished: boolean,
   pageNumber: number = 0,
-): Promise<Array<APIAnnotationTypeCompact>> {
+): Promise<Array<APIAnnotationCompact>> {
   return Request.receiveJSON(
     `/api/users/${userId}/annotations?isFinished=${isFinished.toString()}&pageNumber=${pageNumber}`,
   );
@@ -472,7 +472,7 @@ export function getCompactAnnotationsForUser(
 
 export function reOpenAnnotation(
   annotationId: string,
-  annotationType: APITracingType,
+  annotationType: APIAnnotationType,
 ): Promise<APIAnnotation> {
   return Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/reopen`, {
     method: "PATCH",
@@ -488,7 +488,7 @@ export type EditableAnnotation = {
 
 export function editAnnotation(
   annotationId: string,
-  annotationType: APITracingType,
+  annotationType: APIAnnotationType,
   data: $Shape<EditableAnnotation>,
 ): Promise<void> {
   return Request.sendJSONReceiveJSON(`/api/annotations/${annotationType}/${annotationId}/edit`, {
@@ -499,7 +499,7 @@ export function editAnnotation(
 
 export function finishAnnotation(
   annotationId: string,
-  annotationType: APITracingType,
+  annotationType: APIAnnotationType,
 ): Promise<APIAnnotation> {
   return Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/finish`, {
     method: "PATCH",
@@ -508,7 +508,7 @@ export function finishAnnotation(
 
 export function resetAnnotation(
   annotationId: string,
-  annotationType: APITracingType,
+  annotationType: APIAnnotationType,
 ): Promise<APIAnnotation> {
   return Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/reset`, {
     method: "PUT",
@@ -517,7 +517,7 @@ export function resetAnnotation(
 
 export function deleteAnnotation(
   annotationId: string,
-  annotationType: APITracingType,
+  annotationType: APIAnnotationType,
 ): Promise<{ messages: Array<Message> }> {
   return Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}`, {
     method: "DELETE",
@@ -537,17 +537,17 @@ export function finishAllAnnotations(
 
 export function copyAnnotationToUserAccount(
   annotationId: string,
-  tracingType: APITracingType,
+  annotationType: APIAnnotationType,
 ): Promise<APIAnnotation> {
-  const url = `/api/annotations/${tracingType}/${annotationId}/duplicate`;
+  const url = `/api/annotations/${annotationType}/${annotationId}/duplicate`;
   return Request.receiveJSON(url, { method: "POST" });
 }
 
 export function getAnnotationInformation(
   annotationId: string,
-  tracingType: APITracingType,
+  annotationType: APIAnnotationType,
 ): Promise<APIAnnotation> {
-  const infoUrl = `/api/annotations/${tracingType}/${annotationId}/info`;
+  const infoUrl = `/api/annotations/${annotationType}/${annotationId}/info`;
   return Request.receiveJSON(infoUrl);
 }
 
@@ -623,6 +623,23 @@ export function convertToHybridTracing(annotationId: string): Promise<void> {
   return Request.receiveJSON(`/api/annotations/Explorational/${annotationId}/makeHybrid`, {
     method: "PATCH",
   });
+}
+
+export async function downloadNml(
+  annotationId: string,
+  annotationType: APIAnnotationType,
+  versions?: Versions = {},
+) {
+  const possibleVersionString = Object.entries(versions)
+    // $FlowFixMe Flow returns val as mixed here due to the use of Object.entries
+    .map(([key, val]) => `${key}Version=${val}`)
+    .join("&");
+  const win = window.open("about:blank", "_blank");
+  win.document.body.innerHTML = messages["download.wait"];
+
+  const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${possibleVersionString}`;
+  win.location.href = downloadUrl;
+  win.document.body.innerHTML = messages["download.close_window"];
 }
 
 // ### Datasets
@@ -819,9 +836,13 @@ export async function triggerDatasetClearCache(
   );
 }
 
-export async function getDatasetSharingToken(datasetId: APIDatasetId): Promise<string> {
+export async function getDatasetSharingToken(
+  datasetId: APIDatasetId,
+  options?: RequestOptions,
+): Promise<string> {
   const { sharingToken } = await Request.receiveJSON(
     `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/sharingToken`,
+    options,
   );
   return sharingToken;
 }
@@ -856,7 +877,7 @@ export function getTracingstore(): Promise<APITracingStore> {
 export const getTracingStoreCached = _.memoize(getTracingstore);
 
 // ### Active User
-export function getActiveUser(options: Object = {}): Promise<APIUser> {
+export function getActiveUser(options?: RequestOptions): Promise<APIUser> {
   return Request.receiveJSON("/api/user", options);
 }
 

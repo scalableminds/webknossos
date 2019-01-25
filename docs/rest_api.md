@@ -524,10 +524,16 @@ List all tasks of a project
 
 #### Expects
  - In the url: `:name` name of a project
+ - Optional GET parameter `limit=[INT]`
+   - return only the first x results (defaults to infinity)
+ - Optional GET parameter `pageNumber=[INT]`
+   - return the results starting at offset `limit` * `pageNumber` (defaults to 0)
 
 #### Returns
  - JSON list of objects containing task information
 
+#### Note
+ - For smoother backwards compatibility, the limit defaults to infinity. However, to ease server load and improve response time, we suggest using a limit of 1000
 
 
 ---

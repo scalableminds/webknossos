@@ -48,7 +48,7 @@ mockRequire("oxalis/model/bucket_data_handling/wkstore_adapter", {});
 const Model = mockRequire.reRequire("../../oxalis/model").OxalisModel;
 const { HANDLED_ERROR } = mockRequire.reRequire("../../oxalis/model_initialization");
 
-const TRACING_TYPE = "tracingTypeValue";
+const ANNOTATION_TYPE = "annotationTypeValue";
 const ANNOTATION_ID = "annotationIdValue";
 
 test.beforeEach(t => {
@@ -57,7 +57,7 @@ test.beforeEach(t => {
   model.state = { position: [1, 2, 3] };
 
   Request.receiveJSON
-    .withArgs(`/api/annotations/${TRACING_TYPE}/${ANNOTATION_ID}/info`)
+    .withArgs(`/api/annotations/${ANNOTATION_TYPE}/${ANNOTATION_ID}/info`)
     .returns(Promise.resolve(_.cloneDeep(ANNOTATION)));
   Request.receiveJSON
     .withArgs(`/api/datasets/${ANNOTATION.dataSetName}`)
@@ -95,7 +95,7 @@ test("Model Initialization: should throw a model.HANDLED_ERROR for missing data 
     .returns(Promise.resolve(_.cloneDeep(datasetObject)));
 
   return model
-    .fetch(TRACING_TYPE, ANNOTATION_ID, "VIEW", true)
+    .fetch(ANNOTATION_TYPE, ANNOTATION_ID, "VIEW", true)
     .then(() => {
       t.fail("Promise should not have been resolved.");
     })
@@ -114,7 +114,7 @@ test("Model Initialization: should throw an Error on unexpected failure", t => {
 
   return model
     .fetch(
-      TRACING_TYPE,
+      ANNOTATION_TYPE,
       { name: ANNOTATION.dataSetName, owningOrganization: "Connectomics Department", type: "VIEW" },
       true,
     )

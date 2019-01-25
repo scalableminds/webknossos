@@ -23,7 +23,7 @@ type ProjectInfo = {
 
 type StateProps = {
   annotationId: string,
-  tracingType: string,
+  annotationType: string,
 };
 
 type Props = {
@@ -53,6 +53,7 @@ class ButtonWithCheckbox extends PureComponent<ButtonWithCheckboxProps, ButtonWi
   state = {
     isChecked: true,
   };
+
   render() {
     return (
       <React.Fragment>
@@ -122,7 +123,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
       } else {
         const url =
           `/api/annotations/CompoundProject/${selectedProject}/merge/` +
-          `${this.props.tracingType}/${this.props.annotationId}`;
+          `${this.props.annotationType}/${this.props.annotationId}`;
         this.merge(url);
       }
     }
@@ -145,7 +146,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
       } else {
         const url =
           `/api/annotations/Explorational/${selectedExplorativeAnnotation}/merge/` +
-          `${this.props.tracingType}/${this.props.annotationId}`;
+          `${this.props.annotationType}/${this.props.annotationId}`;
         this.merge(url);
       }
     }
@@ -254,7 +255,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
 function mapStateToProps(state: OxalisState): StateProps {
   return {
     annotationId: state.tracing.annotationId,
-    tracingType: state.tracing.tracingType,
+    annotationType: state.tracing.annotationType,
   };
 }
 

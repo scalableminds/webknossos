@@ -12,14 +12,20 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 ### Added
 
 - Added the possibility to disable that the current layout is saved automatically when changing it. Instead, the layout can be saved explicitly. [#3620](https://github.com/scalableminds/webknossos/pull/3620)
+- Added pagination to the REST API route `GET /projects/:name/tasks` (new optional parameters `limit` and `pageNumber`). [#3659](https://github.com/scalableminds/webknossos/pull/3659)
+- Added the possibility to open the version restore view for read-only tracings. Older versions can be previewed and be downloaded as NML. [#3660](https://github.com/scalableminds/webknossos/pull/3660)
 
 ### Changed
 
--
+- The Dataset Gallery was redesigned to be a Publication Gallery instead. It will feature scientific publications together with their published datasets and information such as the species, brain region or acquisition method of such datasets. [#3653](https://github.com/scalableminds/webknossos/pull/3653)
+- Annotations for non-public datasets can now be shared using the "Share" functionality without making the dataset public. [#3664](https://github.com/scalableminds/webknossos/pull/3664)
+- Statistics are now separated by organization, rather than showing the webKnossos instance’s totals. [#3663](https://github.com/scalableminds/webknossos/pull/3663)
 
 ### Fixed
 
 - Fixed a rendering bug which caused data to be clipped in certain scenarios for datasets with anisotropic resolutions. [#3609](https://github.com/scalableminds/webknossos/pull/3609)
+- Fixed a bug where saving tracings failed after they were open for >24h. [#3633](https://github.com/scalableminds/webknossos/pull/3633)
+- Fixed a bug that resulted in slow data loading when moving quickly through a dataset. [#3656](https://github.com/scalableminds/webknossos/pull/3656)
 - Fixed a bug which caused the wrong magnification to be rendered when zooming out very far. [#3609](https://github.com/scalableminds/webknossos/pull/3641/files)
 
 ### Removed

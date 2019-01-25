@@ -86,7 +86,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
     const isTraceMode = this.props.controlMode === ControlModeEnum.TRACE;
     const isVolumeSupported = !Constants.MODES_ARBITRARY.includes(this.props.viewMode);
     const isArbitrarySupported =
-	this.props.hasSkeleton || this.props.controlMode === ControlModeEnum.VIEW;
+      this.props.hasSkeleton || this.props.controlMode === ControlModeEnum.VIEW;
     const layoutMenu = (
       <LayoutMenu
         {...this.props.layoutProps}

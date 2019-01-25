@@ -6,14 +6,14 @@
  */
 
 // @flow
-import Constants, { type Mode } from "oxalis/constants";
+import Constants, { type ControlMode, ControlModeEnum, type Mode } from "oxalis/constants";
 import { navbarHeight } from "navbar";
 import _ from "lodash";
 
 import { Pane, Column, Row, Stack } from "./golden_layout_helpers";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
-export const currentLayoutVersion = 7;
+export const currentLayoutVersion = 8;
 export const layoutHeaderHeight = 20;
 export const headerHeight = 55;
 const dummyExtent = 500;
@@ -104,12 +104,15 @@ const _getDefaultLayouts = () => {
   const OrthoLayoutView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
   const VolumeTracingView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
 
-  const arbitraryPanes = [Panes.arbitraryViewport, SkeletonRightHandColumn].concat(
+  const arbitraryPanes = [Panes.arbitraryViewport, NonSkeletonRightHandColumn].concat(
     show3DViewportInArbitrary ? [Panes.td] : [],
   );
-  const ArbitraryLayout = createLayout(Row(...arbitraryPanes));
-
-  return { OrthoLayout, OrthoLayoutView, VolumeTracingView, ArbitraryLayout };
+  const ArbitraryLayoutView = createLayout(Row(...arbitraryPanes));
+  const arbitraryPanesWithSkeleton = [Panes.arbitraryViewport, SkeletonRightHandColumn].concat(
+    SkeletonRightHandColumn,
+  );
+  const ArbitraryLayout = createLayout(Row(...arbitraryPanesWithSkeleton));
+  return { OrthoLayout, OrthoLayoutView, ArbitraryLayoutView, VolumeTracingView, ArbitraryLayout };
 };
 
 const getDefaultLayouts = _.memoize(_getDefaultLayouts);
@@ -128,6 +131,9 @@ export const getCurrentDefaultLayoutConfig = () => {
     OrthoLayoutView: {
       "Custom Layout": defaultLayouts.OrthoLayoutView,
     },
+    ArbitraryLayoutView: {
+      "Custom Layout": defaultLayouts.ArbitraryLayoutView,
+    },
     VolumeTracingView: {
       "Custom Layout": defaultLayouts.VolumeTracingView,
     },
@@ -139,6 +145,7 @@ export const getCurrentDefaultLayoutConfig = () => {
     },
     LastActiveLayouts: {
       OrthoLayoutView: "Custom Layout",
+      ArbitraryLayoutView: "Custom Layout",
       VolumeTracingView: "Custom Layout",
       ArbitraryLayout: "Custom Layout",
       OrthoLayout: "Custom Layout",
@@ -146,16 +153,20 @@ export const getCurrentDefaultLayoutConfig = () => {
   };
 };
 
-export function determineLayout(viewMode: Mode): Layout {
-  if (Constants.MODE_PLANE_TRACING === viewMode) {
-    return "OrthoLayoutView";
+export function determineLayout(controlMode: ControlMode, viewMode: Mode): Layout {
+  const isArbitraryMode = Constants.MODES_ARBITRARY.includes(viewMode);
+  if (controlMode === ControlModeEnum.VIEW) {
+    if (isArbitraryMode) {
+      return "ArbitraryLayoutView";
+    } else {
+      return "OrthoLayoutView";
+    }
   }
 
   if (!Constants.MODES_SKELETON.includes(viewMode)) {
     return "VolumeTracingView";
   }
 
-  const isArbitraryMode = Constants.MODES_ARBITRARY.includes(viewMode);
   if (isArbitraryMode) {
     return "ArbitraryLayout";
   } else {
@@ -163,8 +174,17 @@ export function determineLayout(viewMode: Mode): Layout {
   }
 }
 
+export const Layouts = {
+  OrthoLayoutView: "OrthoLayoutView",
+  ArbitraryLayoutView: "ArbitraryLayoutView",
+  VolumeTracingView: "VolumeTracingView",
+  ArbitraryLayout: "ArbitraryLayout",
+  OrthoLayout: "OrthoLayout",
+};
+
 export const mapLayoutKeysToLanguage = {
   OrthoLayoutView: "Orthogonal Mode - View Only",
+  ArbitraryLayoutView: "Arbitrary Mode - View Only",
   VolumeTracingView: "Volume Mode",
   ArbitraryLayout: "Arbitray Mode",
   OrthoLayout: "Orthogonal Mode",

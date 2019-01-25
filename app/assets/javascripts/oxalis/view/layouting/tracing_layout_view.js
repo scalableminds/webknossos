@@ -34,7 +34,7 @@ import messages from "messages";
 import window, { location } from "libs/window";
 
 import { GoldenLayoutAdapter } from "./golden_layout_adapter";
-import { determineLayout, headerHeight } from "./default_layout_configs";
+import { determineLayout, headerHeight, Layouts } from "./default_layout_configs";
 import { storeLayoutConfig, setActiveLayout } from "./layout_persistence";
 
 const { Header, Sider } = Layout;
@@ -76,7 +76,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
 
   constructor(props: Props) {
     super(props);
-    const layoutType = determineLayout(this.props.viewMode);
+    const layoutType = determineLayout(this.props.initialCommandType.type, this.props.viewMode);
     let lastActiveLayout;
     if (
       props.storedLayouts.LastActiveLayouts &&
@@ -124,7 +124,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     if (this.currentLayoutConfig == null || this.currentLayoutName == null) {
       return;
     }
-    const layoutKey = determineLayout(this.props.viewMode);
+    const layoutKey = determineLayout(this.props.initialCommandType.type, this.props.viewMode);
     storeLayoutConfig(this.currentLayoutConfig, layoutKey, this.currentLayoutName);
   };
 
@@ -132,7 +132,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     this.props.storedLayouts[layoutKey] ? Object.keys(this.props.storedLayouts[layoutKey]) : [];
 
   render() {
-    const layoutType = determineLayout(this.props.viewMode);
+    const layoutType = determineLayout(this.props.initialCommandType.type, this.props.viewMode);
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
     const { displayScalebars, isDatasetOnScratchVolume } = this.props;
     const headerClassName = classNames({ construction: isDatasetOnScratchVolume });
@@ -221,7 +221,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
                   key="arbitraryViewport"
                   portalKey="arbitraryViewport"
                 >
-                  <RecordingSwitch />
+                  {layoutType !== Layouts.ArbitraryLayoutView ? <RecordingSwitch /> : null}
                 </InputCatcher>
 
                 <DatasetInfoTabView key="DatasetInfoTabView" portalKey="DatasetInfoTabView" />

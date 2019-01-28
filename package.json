@@ -83,7 +83,6 @@
   },
   "scripts": {
     "start": "node tools/proxy/proxy.js",
-    "start-backend": "yarn build-dev && ./sbt run -jvm-debug 5005 -J-XX:MaxMetaspaceSize=2048m -J-Xmx8g",
     "build": "node_modules/.bin/webpack --env.production",
     "build-dev": "node_modules/.bin/webpack",
     "build-watch": "node_modules/.bin/webpack -w",

@@ -16,6 +16,7 @@ import {
   DropdownSetting,
   ColorSetting,
 } from "oxalis/view/settings/setting_input_views";
+import { hasSegmentation } from "oxalis/model/accessors/dataset_accessor";
 import {
   updateDatasetSettingAction,
   updateLayerSettingAction,
@@ -41,6 +42,7 @@ type DatasetSettingsProps = {
   ) => void,
   viewMode: Mode,
   controlMode: ControlMode,
+  hasSegmentation: boolean,
 };
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
@@ -107,6 +109,33 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     this.props.onChange("renderMissingDataBlack", value);
   };
 
+  getSegmentationPanel() {
+    return (
+      <Panel header="Segmentation" key="2">
+        <NumberSliderSetting
+          label={settings.segmentationOpacity}
+          min={0}
+          max={100}
+          value={this.props.datasetConfiguration.segmentationOpacity}
+          onChange={_.partial(this.props.onChange, "segmentationOpacity")}
+        />
+        <SwitchSetting
+          label={settings.highlightHoveredCellId}
+          value={this.props.datasetConfiguration.highlightHoveredCellId}
+          onChange={_.partial(this.props.onChange, "highlightHoveredCellId")}
+        />
+
+        {this.props.controlMode === ControlModeEnum.VIEW ? (
+          <SwitchSetting
+            label="Render Isosurfaces (Beta)"
+            value={this.props.datasetConfiguration.renderIsosurfaces}
+            onChange={_.partial(this.props.onChange, "renderIsosurfaces")}
+          />
+        ) : null}
+      </Panel>
+    );
+  }
+
   render() {
     const { layers } = this.props.datasetConfiguration;
     const colorSettings = Object.entries(layers).map((entry, index) =>
@@ -118,27 +147,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
         <Panel header="Colors" key="1">
           {colorSettings}
         </Panel>
-        <Panel header="Segmentation" key="2">
-          <NumberSliderSetting
-            label={settings.segmentationOpacity}
-            min={0}
-            max={100}
-            value={this.props.datasetConfiguration.segmentationOpacity}
-            onChange={_.partial(this.props.onChange, "segmentationOpacity")}
-          />
-          <SwitchSetting
-            label={settings.highlightHoveredCellId}
-            value={this.props.datasetConfiguration.highlightHoveredCellId}
-            onChange={_.partial(this.props.onChange, "highlightHoveredCellId")}
-          />
-          {this.props.controlMode === ControlModeEnum.VIEW ? (
-            <SwitchSetting
-              label="Render Isosurfaces (Beta)"
-              value={this.props.datasetConfiguration.renderIsosurfaces}
-              onChange={_.partial(this.props.onChange, "renderIsosurfaces")}
-            />
-          ) : null}
-        </Panel>
+        {this.props.hasSegmentation ? this.getSegmentationPanel() : null}
         <Panel header="Quality" key="3">
           <SwitchSetting
             label={settings.fourBit}
@@ -184,6 +193,7 @@ const mapStateToProps = (state: OxalisState) => ({
   viewMode: state.temporaryConfiguration.viewMode,
   controlMode: state.temporaryConfiguration.controlMode,
   dataset: state.dataset,
+  hasSegmentation: hasSegmentation(state.dataset),
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({

@@ -25,7 +25,7 @@ import PlaneController from "oxalis/controller/viewmodes/plane_controller";
 import Store, {
   type OxalisState,
   type TraceOrViewCommand,
-  type TracingTypeTracing,
+  type AnnotationType,
 } from "oxalis/store";
 import Toast from "libs/toast";
 import UrlManager from "oxalis/controller/url_manager";
@@ -42,7 +42,7 @@ type StateProps = {
 
 type Props = {
   history: RouterHistory,
-  initialTracingType: TracingTypeTracing,
+  initialAnnotationType: AnnotationType,
   initialCommandType: TraceOrViewCommand,
 } & StateProps;
 
@@ -84,7 +84,7 @@ class Controller extends React.PureComponent<Props, State> {
     // Preview a working tracing version if the showVersionRestore URL parameter is supplied
     const versions = Utils.hasUrlParam("showVersionRestore") ? { skeleton: 1 } : undefined;
 
-    Model.fetch(this.props.initialTracingType, this.props.initialCommandType, true, versions)
+    Model.fetch(this.props.initialAnnotationType, this.props.initialCommandType, true, versions)
       .then(() => this.modelFetchDone())
       .catch(error => {
         // Don't throw errors for errors already handled by the model.

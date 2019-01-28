@@ -17,7 +17,7 @@ import type {
   APISettings,
   APITask,
   APITracingStore,
-  APITracingType,
+  APIAnnotationType,
   APIUser,
   MeshMetaData,
 } from "admin/api_flow_types";
@@ -50,6 +50,7 @@ import UserReducer from "oxalis/model/reducers/user_reducer";
 import ViewModeReducer from "oxalis/model/reducers/view_mode_reducer";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
 import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
+import actionLoggerMiddleware from "oxalis/model/helpers/action_logger_middleware";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import rootSaga from "oxalis/model/sagas/root_saga";
 
@@ -131,7 +132,7 @@ export type DataStoreInfo = APIDataStore;
 export type TreeMap = { +[number]: Tree };
 export type TemporaryMutableTreeMap = { [number]: Tree };
 
-export type TracingTypeTracing = APITracingType;
+export type AnnotationType = APIAnnotationType;
 
 export type RestrictionsAndSettings = {| ...Restrictions, ...Settings |};
 
@@ -143,7 +144,7 @@ export type Annotation = {|
   +description: string,
   +name: string,
   +tracingStore: APITracingStore,
-  +tracingType: TracingTypeTracing,
+  +annotationType: AnnotationType,
   +meshes: Array<MeshMetaData>,
 |};
 
@@ -397,7 +398,7 @@ const initialAnnotationInfo = {
     name: "localhost",
     url: "http://localhost:9000",
   },
-  tracingType: "View",
+  annotationType: "View",
   meshes: [],
 };
 
@@ -463,6 +464,7 @@ export const defaultState: OxalisState = {
         team: "",
       },
     },
+    details: null,
     isPublic: false,
     isActive: true,
     isEditable: true,
@@ -479,6 +481,7 @@ export const defaultState: OxalisState = {
     lastUsedByUser: 0,
     isForeign: false,
     sortingKey: 123,
+    publication: null,
   },
   tracing: {
     ...initialAnnotationInfo,
@@ -568,7 +571,7 @@ const combinedReducers = reduceReducers(
 const store = createStore(
   combinedReducers,
   defaultState,
-  applyMiddleware(overwriteActionMiddleware, sagaMiddleware),
+  applyMiddleware(actionLoggerMiddleware, overwriteActionMiddleware, sagaMiddleware),
 );
 sagaMiddleware.run(rootSaga);
 

@@ -1,12 +1,14 @@
+// @flow
 import type { APIDataset } from "admin/api_flow_types";
+import type { ChangeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import { ControlModeEnum, type Vector3 } from "oxalis/constants";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
 import { type Saga, _takeEvery, select, call, take } from "oxalis/model/sagas/effect-generators";
 import { computeIsosurface } from "admin/admin_rest_api";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
-import { map3 } from "libs/utils";
 import DataLayer from "oxalis/model/data_layer";
 import Model from "oxalis/model";
+import * as Utils from "libs/utils";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 
 class ThreeDMap<T> {
@@ -18,33 +20,101 @@ class ThreeDMap<T> {
 
   get(vec: Vector3): ?T {
     const [x, y, z] = vec;
-    if (this.map[x] == null) {
+    const atX = this.map.get(x);
+    if (atX == null) {
       return null;
     }
-    if (this.map[x][y] == null) {
+    const atY = atX.get(y);
+    if (atY == null) {
       return null;
     }
-    if (this.map[x][y][z] == null) {
-      return null;
-    }
-    return this.map[x][y][z];
+    return atY.get(z);
   }
 
   set(vec: Vector3, value: T): void {
     const [x, y, z] = vec;
-    if (this.map[x] == null) {
-      this.map[x] = new Map();
+    if (this.map.get(x) == null) {
+      this.map.set(x, new Map());
     }
-    if (this.map[x][y] == null) {
-      this.map[x][y] = new Map();
+    // Flow doesn't understand that the access to X
+    // is guaranteed to be not null due to the above code.
+    // $FlowFixMe
+    if (this.map.get(x).get(y) == null) {
+      // $FlowFixMe
+      this.map.get(x).set(y, new Map());
     }
-    this.map[x][y][z] = value;
+    // $FlowFixMe
+    this.map
+      .get(x)
+      .get(y)
+      .set(z, value);
   }
 }
 const isosurfacesMap: Map<number, ThreeDMap<boolean>> = new Map();
 const cubeSize = [256, 256, 256];
 
+function getMapForSegment(segmentId: number): ThreeDMap<boolean> {
+  const maybeMap = isosurfacesMap.get(segmentId);
+  if (maybeMap == null) {
+    const newMap = new ThreeDMap();
+    isosurfacesMap.set(segmentId, newMap);
+    return newMap;
+  }
+  return maybeMap;
+}
+
+function getZoomedCubeSize(zoomStep: number): Vector3 {
+  return Utils.map3(el => el * 2 ** zoomStep, cubeSize);
+}
+
+function clipPositionToCubeBoundary(position: Vector3, zoomStep: number): Vector3 {
+  const zoomedCubeSize = getZoomedCubeSize(zoomStep);
+  const currentCube = Utils.map3((el, idx) => Math.floor(el / zoomedCubeSize[idx]), position);
+  const clippedPosition = Utils.map3((el, idx) => el * zoomedCubeSize[idx], currentCube);
+  return clippedPosition;
+}
+
+function getNeighborPosition(
+  clippedPosition: Vector3,
+  neighborId: number,
+  zoomStep: number,
+): Vector3 {
+  // front_xy, front_xz, front_yz, back_xy, back_xz, back_yz
+  const neighborLookup = [[0, 0, -1], [0, -1, 0], [-1, 0, 0], [0, 0, 1], [0, 1, 0], [1, 0, 0]];
+
+  const zoomedCubeSize = getZoomedCubeSize(zoomStep);
+  const neighborMultiplier = neighborLookup[neighborId];
+  const neighboringPosition = [
+    clippedPosition[0] + neighborMultiplier[0] * zoomedCubeSize[0],
+    clippedPosition[1] + neighborMultiplier[1] * zoomedCubeSize[1],
+    clippedPosition[2] + neighborMultiplier[2] * zoomedCubeSize[2],
+  ];
+  return neighboringPosition;
+}
+
+// Since isosurface rendering is only supported in view mode right now
+// (active cell id is only defined in volume annotations, mapping support
+// for datasets is limited in volume tracings etc.), we use another state
+// variable for the "active cell" in view mode. The cell can be changed via
+// shift+click (similar to the volume tracing mode).
+let currentIsosurfaceCellId = 0;
+// The calculation of an isosurface is spread across multiple requests.
+// In order to avoid, that too many chunks are computed for one user interaction,
+// we store the amount of requests in a batch per segment.
+const batchCounterPerSegment: { [key: number]: number } = {};
+const MAXIMUM_BATCH_SIZE = 30;
+
+function* changeActiveIsosurfaceCell(action: ChangeActiveIsosurfaceCellAction): Saga<void> {
+  currentIsosurfaceCellId = action.cellId;
+
+  yield* call(ensureSuitableIsosurface);
+}
+
 function* ensureSuitableIsosurface(): Saga<void> {
+  const segmentId = currentIsosurfaceCellId;
+  if (segmentId === 0) {
+    return;
+  }
   const renderIsosurfaces = yield* select(state => state.datasetConfiguration.renderIsosurfaces);
   const isControlModeSupported = yield* select(
     state => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
@@ -54,56 +124,71 @@ function* ensureSuitableIsosurface(): Saga<void> {
   }
   const dataset = yield* select(state => state.dataset);
   const layer = Model.getSegmentationLayer();
+  if (!layer) {
+    return;
+  }
   const position = yield* select(state => getFlooredPosition(state.flycam));
-  const zoomStep = 1;
-  const segmentId = layer.cube.getMappedDataValue(position, zoomStep);
+  const existentMagnifications = layer.resolutions.map(resolution => Math.max(...resolution));
+  const preferredZoomStep = 1;
+  const zoomStep = Utils.clamp(
+    Math.min(...existentMagnifications),
+    preferredZoomStep,
+    Math.max(...existentMagnifications),
+  );
 
-  if (segmentId === 0 || segmentId == null) {
-    return;
-  }
+  const clippedPosition = clipPositionToCubeBoundary(position, zoomStep);
 
-  if (isosurfacesMap.get(segmentId) == null) {
-    isosurfacesMap.set(segmentId, new ThreeDMap());
-  }
-  const threeDMap = isosurfacesMap.get(segmentId);
-
-  const zoomedCubeSize = map3(el => el * 2 ** zoomStep, cubeSize);
-  const currentCube = map3((el, idx) => Math.floor(el / zoomedCubeSize[idx]), position);
-  const cubedPostion = map3((el, idx) => el * zoomedCubeSize[idx], currentCube);
-  if (threeDMap.get(currentCube)) {
-    return;
-  }
-
-  threeDMap.set(currentCube, true);
-  yield* call(loadIsosurface, dataset, layer, segmentId, cubedPostion, zoomStep);
+  batchCounterPerSegment[segmentId] = 0;
+  yield* call(maybeLoadIsosurface, dataset, layer, segmentId, clippedPosition, zoomStep);
 }
 
-function* loadIsosurface(
+function* maybeLoadIsosurface(
   dataset: APIDataset,
   layer: DataLayer,
   segmentId: number,
-  position: Vector3,
+  clippedPosition: Vector3,
   zoomStep: number,
-): Generator<void> {
-  const voxelDimensions = [2, 2, 2];
+): Saga<void> {
+  const threeDMap = getMapForSegment(segmentId);
+
+  if (threeDMap.get(clippedPosition)) {
+    return;
+  }
+  if (batchCounterPerSegment[segmentId] > MAXIMUM_BATCH_SIZE) {
+    return;
+  }
+  batchCounterPerSegment[segmentId]++;
+
+  threeDMap.set(clippedPosition, true);
+
+  const voxelDimensions = [4, 4, 4];
   const dataStoreHost = yield* select(state => state.dataset.dataStore.url);
 
-  const responseBuffer = yield* call(
+  const { buffer: responseBuffer, neighbors } = yield* call(
     computeIsosurface,
     dataStoreHost,
     dataset,
     layer,
-    position,
-    zoomStep,
-    segmentId,
-    voxelDimensions,
-    cubeSize,
+    {
+      position: clippedPosition,
+      zoomStep,
+      segmentId,
+      voxelDimensions,
+      cubeSize: getZoomedCubeSize(zoomStep),
+    },
   );
+
   const vertices = new Float32Array(responseBuffer);
   getSceneController().addIsosurface(vertices, segmentId);
+
+  for (const neighbor of neighbors) {
+    const neighborPosition = getNeighborPosition(clippedPosition, neighbor, zoomStep);
+    yield* call(maybeLoadIsosurface, dataset, layer, segmentId, neighborPosition, zoomStep);
+  }
 }
 
 export default function* isosurfaceSaga(): Saga<void> {
   yield* take("WK_READY");
   yield _takeEvery(FlycamActions, ensureSuitableIsosurface);
+  yield _takeEvery("CHANGE_ACTIVE_ISOSURFACE_CELL", changeActiveIsosurfaceCell);
 }

@@ -76,12 +76,17 @@ function getCommentSorter({ sortBy, isSortedAscending }: SortOptions): Comparato
       );
 }
 
-type Props = {
-  skeletonTracing: SkeletonTracing,
+type OwnProps = {|
+  portalKey: string,
+|};
+type StateProps = {|
+  skeletonTracing: ?SkeletonTracing,
   setActiveNode: (nodeId: number) => void,
   deleteComment: () => void,
   createComment: (text: string) => void,
-};
+|};
+type Props = {| ...OwnProps, ...StateProps |};
+type PropsWithSkeleton = {| ...Props, skeletonTracing: SkeletonTracing |};
 
 type CommentTabState = {
   isSortedAscending: boolean,
@@ -91,7 +96,7 @@ type CommentTabState = {
   isMarkdownModalVisible: boolean,
 };
 
-class CommentTabView extends React.PureComponent<Props, CommentTabState> {
+class CommentTabView extends React.PureComponent<PropsWithSkeleton, CommentTabState> {
   listRef: ?List;
 
   state = {
@@ -104,7 +109,10 @@ class CommentTabView extends React.PureComponent<Props, CommentTabState> {
     isMarkdownModalVisible: false,
   };
 
-  static getDerivedStateFromProps(props: Props, state: CommentTabState): $Shape<CommentTabState> {
+  static getDerivedStateFromProps(
+    props: PropsWithSkeleton,
+    state: CommentTabState,
+  ): $Shape<CommentTabState> {
     const sortedTrees = _.values(props.skeletonTracing.trees)
       .filter(tree => tree.comments.length > 0)
       .sort(getTreeSorter(state));
@@ -437,7 +445,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect(
+export default connect<Props, OwnProps, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
 )(makeSkeletonTracingGuard(CommentTabView));

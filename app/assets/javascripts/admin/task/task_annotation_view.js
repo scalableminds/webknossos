@@ -22,13 +22,13 @@ import messages from "messages";
 const { Item } = Menu;
 const { confirm } = Modal;
 
-type Props = {
+type OwnProps = {|
   task: APITask,
-};
-
-type StateProps = {
+|};
+type StateProps = {|
   activeUser: ?APIUser,
-};
+|};
+type Props = {| ...OwnProps, ...StateProps |};
 
 type State = {
   isTransferModalVisible: boolean,
@@ -36,7 +36,7 @@ type State = {
   currentAnnotation: ?APIAnnotation,
 };
 
-class TaskAnnotationView extends React.PureComponent<Props & StateProps, State> {
+class TaskAnnotationView extends React.PureComponent<Props, State> {
   state = {
     currentAnnotation: null,
     isTransferModalVisible: false,
@@ -209,4 +209,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
 });
 
-export default connect(mapStateToProps)(TaskAnnotationView);
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(TaskAnnotationView);

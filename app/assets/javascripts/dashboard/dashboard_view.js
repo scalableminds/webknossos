@@ -23,18 +23,16 @@ const TabPane = Tabs.TabPane;
 
 const validTabKeys = ["datasets", "advanced-datasets", "tasks", "explorativeAnnotations"];
 
-type OwnProps = {
+type OwnProps = {|
   userId: ?string,
   isAdminView: boolean,
-  history: RouterHistory,
   initialTabKey: ?string,
-};
-
-type StateProps = {
+|};
+type StateProps = {|
   activeUser: APIUser,
-};
-
-type Props = OwnProps & StateProps;
+|};
+type Props = {| ...OwnProps, ...StateProps |};
+type PropsWithRouter = {| ...Props, history: RouterHistory |};
 
 type State = {
   activeTabKey: string,
@@ -63,8 +61,8 @@ export const urlTokenToTabKeyMap = {
   annotations: "explorativeAnnotations",
 };
 
-class DashboardView extends React.PureComponent<Props, State> {
-  constructor(props: Props) {
+class DashboardView extends React.PureComponent<PropsWithRouter, State> {
+  constructor(props: PropsWithRouter) {
     super(props);
 
     const lastUsedTabKey = localStorage.getItem("lastUsedDashboardTab");
@@ -235,4 +233,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
 });
 
-export default connect(mapStateToProps)(withRouter(DashboardView));
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(withRouter(DashboardView));

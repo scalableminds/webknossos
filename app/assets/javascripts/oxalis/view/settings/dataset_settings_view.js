@@ -28,7 +28,7 @@ import messages, { settings } from "messages";
 const Panel = Collapse.Panel;
 const Option = Select.Option;
 
-type DatasetSettingsProps = {
+type DatasetSettingsProps = {|
   datasetConfiguration: DatasetConfiguration,
   onChange: (propertyName: $Keys<DatasetConfiguration>, value: any) => void,
   onChangeLayer: (
@@ -38,7 +38,7 @@ type DatasetSettingsProps = {
   ) => void,
   viewMode: Mode,
   controlMode: ControlMode,
-};
+|};
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
   getColorSettings = (layer: Object, layerName: string) => (
@@ -169,7 +169,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect(
+export default connect<DatasetSettingsProps, {||}, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
 )(DatasetSettings);

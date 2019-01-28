@@ -26,14 +26,17 @@ import messages from "messages";
 const { Column } = Table;
 const { Search } = Input;
 
-type StateProps = {
-  activeUser: APIUser,
-};
-
-type Props = {
-  history: RouterHistory,
+type OwnProps = {|
   initialSearchValue?: string,
-} & StateProps;
+|};
+type StateProps = {|
+  activeUser: APIUser,
+|};
+type Props = {| ...OwnProps, ...StateProps |};
+type PropsWithRouter = {|
+  ...Props,
+  history: RouterHistory,
+|};
 
 type State = {
   isLoading: boolean,
@@ -48,7 +51,7 @@ const persistence: Persistence<State> = new Persistence(
   "projectList",
 );
 
-class ProjectListView extends React.PureComponent<Props, State> {
+class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
   state = {
     isLoading: true,
     projects: [],
@@ -330,4 +333,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
 });
 
-export default connect(mapStateToProps)(withRouter(ProjectListView));
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(withRouter(ProjectListView));

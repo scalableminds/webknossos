@@ -27,11 +27,11 @@ function swap(arr, a, b) {
 
 naturalSort.insensitive = true;
 
-function getRecursiveValues(obj: Object | Array<*> | string): Array<*> {
+function getRecursiveValues(obj: {} | Array<*> | string): Array<*> {
   return _.flattenDeep(getRecursiveValuesUnflat(obj));
 }
 
-function getRecursiveValuesUnflat(obj: Object | Array<*> | string): Array<*> {
+function getRecursiveValuesUnflat(obj: {} | Array<*> | string): Array<*> {
   if (Array.isArray(obj)) {
     return obj.map(getRecursiveValuesUnflat);
   } else if (obj instanceof Object) {
@@ -341,7 +341,7 @@ export function toNullable<T>(_maybe: Maybe<T>): ?T {
 // Supports nested properties
 export function filterWithSearchQueryOR<T: { +[string]: mixed }, P: $Keys<T>>(
   collection: Array<T>,
-  properties: Array<P | (T => Object | Array<*> | string)>,
+  properties: Array<P | (T => {} | Array<*> | string)>,
   searchQuery: string,
 ): Array<T> {
   if (searchQuery === "") {
@@ -372,7 +372,7 @@ export function filterWithSearchQueryOR<T: { +[string]: mixed }, P: $Keys<T>>(
 // Supports nested properties
 export function filterWithSearchQueryAND<T: { +[string]: mixed }, P: $Keys<T>>(
   collection: Array<T>,
-  properties: Array<P | (T => Object | Array<*> | string)>,
+  properties: Array<P | (T => {} | Array<*> | string)>,
   searchQuery: string,
 ): Array<T> {
   if (searchQuery === "") {

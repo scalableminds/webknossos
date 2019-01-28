@@ -30,17 +30,17 @@ const VersionRestoreWarning = (
   />
 );
 
-type StateProps = {
+type StateProps = {|
   viewMode: Mode,
   controlMode: ControlMode,
   hasVolume: boolean,
   hasSkeleton: boolean,
   showVersionRestore: boolean,
-};
-
-type Props = StateProps & {
+|};
+type OwnProps = {|
   layoutProps: LayoutProps,
-};
+|};
+type Props = {| ...OwnProps, ...StateProps |};
 
 type State = {
   isNewLayoutModalVisible: boolean,
@@ -129,4 +129,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   hasSkeleton: state.tracing.skeleton != null,
 });
 
-export default connect(mapStateToProps)(ActionBarView);
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(ActionBarView);

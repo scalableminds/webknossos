@@ -3,6 +3,7 @@ import { Popconfirm, Alert, Divider, Radio, Modal, Input, Button, Row, Col } fro
 import { connect } from "react-redux";
 import Clipboard from "clipboard-js";
 import React, { PureComponent } from "react";
+import type { Dispatch } from "redux";
 
 import type { APIDataset } from "admin/api_flow_types";
 import type { OxalisState, RestrictionsAndSettings } from "oxalis/store";
@@ -14,17 +15,20 @@ import window from "libs/window";
 
 const RadioGroup = Radio.Group;
 
-type ShareModalProp = {
+type OwnProps = {|
+  isVisible: boolean,
+  onOk: () => void,
+|};
+type StateProps = {|
   // eslint-disable-next-line react/no-unused-prop-types
   isPublic: boolean,
   dataset: APIDataset,
-  isVisible: boolean,
   isCurrentUserAdmin: boolean,
-  onOk: () => void,
   restrictions: RestrictionsAndSettings,
   setAnnotationPublic: Function,
   makeDatasetPublic: APIDataset => Promise<void>,
-};
+|};
+type Props = {| ...OwnProps, ...StateProps |};
 
 type State = {
   isPublic: boolean,
@@ -45,12 +49,12 @@ function Hint({ children, style }) {
   );
 }
 
-class ShareModalView extends PureComponent<ShareModalProp, State> {
+class ShareModalView extends PureComponent<Props, State> {
   state = {
     isPublic: false,
   };
 
-  componentWillReceiveProps(newProps: ShareModalProp) {
+  componentWillReceiveProps(newProps: Props) {
     this.setState({ isPublic: newProps.isPublic });
   }
 
@@ -210,7 +214,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect(
+export default connect<Props, OwnProps, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
 )(ShareModalView);

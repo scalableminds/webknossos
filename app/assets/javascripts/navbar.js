@@ -18,14 +18,14 @@ import features from "features";
 const { SubMenu } = Menu;
 const { Header } = Layout;
 
-type StateProps = {
-  activeUser: ?APIUser,
-};
-
-type Props = {
+type OwnProps = {|
   isAuthenticated: boolean,
-  history: RouterHistory,
-} & StateProps;
+|};
+type StateProps = {|
+  activeUser: ?APIUser,
+|};
+type Props = {| ...OwnProps, ...StateProps |};
+type PropsWithRouter = {| ...Props, history: RouterHistory |};
 
 type State = {
   version: ?string,
@@ -33,7 +33,7 @@ type State = {
 
 export const navbarHeight = 48;
 
-class Navbar extends React.PureComponent<Props, State> {
+class Navbar extends React.PureComponent<PropsWithRouter, State> {
   state = {
     version: null,
   };
@@ -236,4 +236,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
 });
 
-export default connect(mapStateToProps)(withRouter(Navbar));
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(withRouter(Navbar));

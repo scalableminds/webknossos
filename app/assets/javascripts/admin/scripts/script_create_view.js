@@ -12,21 +12,24 @@ import { getAdminUsers, updateScript, createScript, getScript } from "admin/admi
 const FormItem = Form.Item;
 const Option = Select.Option;
 
-type StateProps = {
+type OwnProps = {|
+  scriptId?: ?string,
+|};
+type StateProps = {|
   activeUser: APIUser,
-};
-
-type Props = {
-  scriptId: ?string,
+|};
+type Props = {| ...OwnProps, ...StateProps |};
+type PropsWithRouter = {|
   form: Object,
   history: RouterHistory,
-} & StateProps;
+  ...Props,
+|};
 
 type State = {
   users: Array<APIUser>,
 };
 
-class ScriptCreateView extends React.PureComponent<Props, State> {
+class ScriptCreateView extends React.PureComponent<PropsWithRouter, State> {
   state = {
     users: [],
   };
@@ -135,4 +138,6 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
 });
 
-export default connect(mapStateToProps)(withRouter(Form.create()(ScriptCreateView)));
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(
+  withRouter(Form.create()(ScriptCreateView)),
+);

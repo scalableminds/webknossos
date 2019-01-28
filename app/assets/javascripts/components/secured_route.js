@@ -4,7 +4,7 @@ import React, { type ComponentType } from "react";
 
 import LoginView from "admin/auth/login_view";
 
-type Props = {
+type Props = {|
   component?: ComponentType<*>,
   path: string,
   render?: ContextRouter => React$Node,
@@ -12,7 +12,8 @@ type Props = {
   serverAuthenticationCallback?: Function,
   computedMatch: Match,
   location: Location,
-};
+  exact?: boolean,
+|};
 
 type State = {
   isAdditionallyAuthenticated: boolean,
@@ -54,9 +55,10 @@ class SecuredRoute extends React.PureComponent<Props, State> {
       <Route
         {...rest}
         render={props => {
+          const { computedMatch, history, location, match, ...componentProps } = props;
           if (isCompletelyAuthenticated) {
             if (Component != null) {
-              return <Component {...props} />;
+              return <Component {...componentProps} />;
             } else if (render != null) {
               return render(props);
             } else {

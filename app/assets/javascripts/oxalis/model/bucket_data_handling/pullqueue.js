@@ -92,7 +92,7 @@ class PullQueue {
     this.batchCount++;
     const { dataset } = Store.getState();
     // Measuring the time until response arrives to select appropriate preloading strategy
-    const roundTripBeginTime = new Date();
+    const roundTripBeginTime = new Date().getTime();
     const layerInfo = getLayerByName(dataset, this.layerName);
 
     const { renderMissingDataBlack } = Store.getState().datasetConfiguration;

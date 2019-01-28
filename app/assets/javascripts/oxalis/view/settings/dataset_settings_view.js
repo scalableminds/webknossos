@@ -57,7 +57,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
       <div key={layerName}>
         <Row>
           <Col span={24}>
-            {layerName}
+            <span style={{ fontWeight: 700 }}>{layerName}</span>
             <Tag style={{ cursor: "default", marginLeft: 8 }} color={isRGB && "#1890ff"}>
               {isRGB ? "24-bit" : "8-bit"} Layer
             </Tag>

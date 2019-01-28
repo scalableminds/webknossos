@@ -7,7 +7,12 @@ import React from "react";
 import type { APIUser } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import { getAdminUsers, updateScript, createScript, getScript } from "admin/admin_rest_api";
+import {
+  getTeamManagerOrAdminUsers,
+  updateScript,
+  createScript,
+  getScript,
+} from "admin/admin_rest_api";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
@@ -37,7 +42,7 @@ class ScriptCreateView extends React.PureComponent<Props, State> {
   }
 
   async fetchData() {
-    const users = await getAdminUsers();
+    const users = await getTeamManagerOrAdminUsers();
     this.setState({ users: users.filter(user => user.isActive) });
   }
 

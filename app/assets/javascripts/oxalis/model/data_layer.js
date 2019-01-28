@@ -1,5 +1,6 @@
 // @flow
 
+import type { Vector3 } from "oxalis/constants";
 import {
   getLayerByName,
   getLayerBoundaries,
@@ -24,6 +25,7 @@ class DataLayer {
   mappings: Mappings;
   activeMapping: ?string;
   layerRenderingManager: LayerRenderingManager;
+  resolutions: Array<Vector3>;
 
   constructor(
     layerInfo: DataLayerType,
@@ -33,15 +35,16 @@ class DataLayer {
   ) {
     this.connectionInfo = connectionInfo;
     this.name = layerInfo.name;
+    this.resolutions = layerInfo.resolutions;
 
     const { dataset } = Store.getState();
     const bitDepth = getBitDepth(getLayerByName(dataset, this.name));
 
-    ErrorHandling.assert(layerInfo.resolutions.length > 0, "Resolutions for layer cannot be empty");
+    ErrorHandling.assert(this.resolutions.length > 0, "Resolutions for layer cannot be empty");
 
     this.cube = new DataCube(
       getLayerBoundaries(dataset, this.name).upperBoundary,
-      layerInfo.resolutions.length,
+      this.resolutions.length,
       bitDepth,
       layerInfo.category === "segmentation",
     );

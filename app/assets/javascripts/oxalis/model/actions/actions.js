@@ -3,6 +3,7 @@
 // @flow
 import type { AnnotationActionTypes } from "oxalis/model/actions/annotation_actions";
 import type { FlycamAction } from "oxalis/model/actions/flycam_actions";
+import type { IsosurfaceAction } from "oxalis/model/actions/segmentation_actions";
 import type { SaveAction } from "oxalis/model/actions/save_actions";
 import type { SettingAction } from "oxalis/model/actions/settings_actions";
 import type { SkeletonTracingAction } from "oxalis/model/actions/skeletontracing_actions";
@@ -22,7 +23,8 @@ export type Action =
   | AnnotationActionTypes
   | FlycamAction
   | UserAction
-  | UiAction;
+  | UiAction
+  | IsosurfaceAction;
 
 export const wkReadyAction = () => ({
   type: "WK_READY",

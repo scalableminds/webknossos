@@ -84,8 +84,8 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
   updateAnnotationState = (updatedAnnotation: APIAnnotation) => {
     this.setState(prevState => ({
       isTransferModalVisible: false,
-      annotations: prevState.annotations.map(
-        a => (a.id === updatedAnnotation.id ? updatedAnnotation : a),
+      annotations: prevState.annotations.map(a =>
+        a.id === updatedAnnotation.id ? updatedAnnotation : a,
       ),
     }));
   };
@@ -100,11 +100,13 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
     const label =
       annotation.state === "Finished" || doesAnnotationNotBelongToActiveUser ? (
         <React.Fragment>
-          <Icon type="eye-o" />View
+          <Icon type="eye-o" />
+          View
         </React.Fragment>
       ) : (
         <React.Fragment>
-          <Icon type="play-circle-o" />Trace
+          <Icon type="play-circle-o" />
+          Trace
         </React.Fragment>
       );
 
@@ -120,26 +122,32 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
             this.setState({ currentAnnotation: annotation, isTransferModalVisible: true })
           }
         >
-          <Icon type="team" />Transfer
+          <Icon type="team" />
+          Transfer
         </Item>
         <Item key={`${annotation.id}-download`}>
           <a href={`/api/annotations/Task/${annotation.id}/download`}>
-            <Icon type="download" />Download
+            <Icon type="download" />
+            Download
           </a>
         </Item>
         <Item key={`${annotation.id}-reset`} onClick={() => this.resetAnnotation(annotation)}>
-          <Icon type="rollback" />Reset
+          <Icon type="rollback" />
+          Reset
         </Item>
         <Item key={`${annotation.id}-delete`} onClick={() => this.deleteAnnotation(annotation)}>
-          <Icon type="delete" />Reset and Cancel
+          <Icon type="delete" />
+          Reset and Cancel
         </Item>
         {annotation.state === "Finished" ? (
           <Item key={`${annotation.id}-reopen`} onClick={() => this.reOpenAnnotation(annotation)}>
-            <Icon type="folder-open" />Reopen
+            <Icon type="folder-open" />
+            Reopen
           </Item>
         ) : (
           <Item key={`${annotation.id}-finish`} onClick={() => this.finishAnnotation(annotation)}>
-            <Icon type="check-circle-o" />Finish
+            <Icon type="check-circle-o" />
+            Finish
           </Item>
         )}
       </Menu>

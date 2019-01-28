@@ -93,9 +93,9 @@ class ShareModalView extends PureComponent<Props, State> {
               <Popconfirm
                 title={
                   <div>
-                    Are you sure you want to make the dataset &ldquo;{this.props.dataset.name}&rdquo;
-                    public?<br /> It will be publicly listed when unregistered users visit
-                    webKnossos.
+                    Are you sure you want to make the dataset &ldquo;{this.props.dataset.name}
+                    &rdquo; public?
+                    <br /> It will be publicly listed when unregistered users visit webKnossos.
                   </div>
                 }
                 onConfirm={() => this.props.makeDatasetPublic(this.props.dataset)}

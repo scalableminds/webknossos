@@ -211,7 +211,8 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
             <Col span={6}>{`${user.firstName} ${user.lastName} (${user.email}) `}</Col>
             <Col span={4}>
               <a href="#" onClick={() => this.activateUser(user)}>
-                <Icon type="user-add" />Activate User
+                <Icon type="user-add" />
+                Activate User
               </a>
             </Col>
           </Row>
@@ -505,19 +506,22 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
               render={(__, user: APIUser) => (
                 <span>
                   <Link to={`/users/${user.id}/details`}>
-                    <Icon type="user" />Show Tracings
+                    <Icon type="user" />
+                    Show Tracings
                   </Link>
                   <br />
                   {// eslint-disable-next-line no-nested-ternary
                   user.isActive ? (
                     this.props.activeUser.isAdmin ? (
                       <a href="#" onClick={() => this.deactivateUser(user)}>
-                        <Icon type="user-delete" />Deactivate User
+                        <Icon type="user-delete" />
+                        Deactivate User
                       </a>
                     ) : null
                   ) : (
                     <a href="#" onClick={() => this.activateUser(user)}>
-                      <Icon type="user-add" />Activate User
+                      <Icon type="user-add" />
+                      Activate User
                     </a>
                   )}
                 </span>

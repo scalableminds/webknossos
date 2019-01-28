@@ -489,7 +489,8 @@ class TreesTabView extends React.PureComponent<Props, State> {
           </ButtonComponent>
           <Dropdown overlay={this.getActionsDropdown()}>
             <ButtonComponent>
-              More<Icon type="down" />
+              More
+              <Icon type="down" />
             </ButtonComponent>
           </Dropdown>
         </ButtonGroup>

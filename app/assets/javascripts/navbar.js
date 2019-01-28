@@ -76,7 +76,8 @@ class Navbar extends React.PureComponent<PropsWithRouter, State> {
         key="sub3"
         title={
           <span>
-            <Icon type="medicine-box" />Help
+            <Icon type="medicine-box" />
+            Help
           </span>
         }
       >
@@ -132,7 +133,8 @@ class Navbar extends React.PureComponent<PropsWithRouter, State> {
           key="sub1"
           title={
             <span>
-              <Icon type="setting" />Administration
+              <Icon type="setting" />
+              Administration
             </span>
           }
         >
@@ -159,7 +161,8 @@ class Navbar extends React.PureComponent<PropsWithRouter, State> {
           key="sub2"
           title={
             <span>
-              <Icon type="line-chart" />Statistics
+              <Icon type="line-chart" />
+              Statistics
             </span>
           }
         >

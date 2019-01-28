@@ -190,7 +190,18 @@ class PullQueue {
   }
 
   clear() {
+    // Clear all but the highest priority
+    const highestPriorityElements = [];
+    while (
+      this.priorityQueue.length > 0 &&
+      this.priorityQueue.peek().priority === PullQueueConstants.PRIORITY_HIGHEST
+    ) {
+      highestPriorityElements.push(this.priorityQueue.dequeue());
+    }
     this.priorityQueue.clear();
+    for (const el of highestPriorityElements) {
+      this.priorityQueue.queue(el);
+    }
   }
 
   maybeWhitenEmptyBucket(bucketData: Uint8Array) {

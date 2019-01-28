@@ -99,13 +99,13 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                 ) : null}
               </React.Fragment>
             ) : null}
-            <a
-              href={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
+            <Link
+              to={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
               title="View Dataset"
             >
               <Icon type="eye-o" />
               View
-            </a>
+            </Link>
             {!dataset.isForeign ? (
               <React.Fragment>
                 <a

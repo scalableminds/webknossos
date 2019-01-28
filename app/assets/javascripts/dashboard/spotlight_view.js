@@ -1,6 +1,6 @@
 // @flow
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
-import { Spin, Layout, Button, Row, Col } from "antd";
+import { Spin, Layout, Button, Row, Col, Input } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 
@@ -8,10 +8,11 @@ import type { APIMaybeUnimportedDataset, APIUser } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { getOrganizations, getDatasets } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
-import GalleryDatasetView from "dashboard/gallery_dataset_view";
+import PublicationView from "dashboard/publication_view";
 import features from "features";
 
 const { Content, Footer } = Layout;
+const { Search } = Input;
 
 const SimpleHeader = () => (
   <div id="oxalis-header">
@@ -26,7 +27,12 @@ const WelcomeHeader = ({ history }) => (
       backgroundImage: "url(/images/cover.jpg)",
     }}
   >
-    <div style={{ backgroundColor: "rgba(88, 88, 88, 0.5)" }}>
+    <div
+      style={{
+        backgroundColor: "rgba(88, 88, 88, 0.4)",
+        backgroundImage: "linear-gradient(to bottom, #449efd7a 0%, #041a4abf 85%, #00050fc2 100%)",
+      }}
+    >
       <div
         style={{
           maxWidth: 1300,
@@ -44,15 +50,27 @@ const WelcomeHeader = ({ history }) => (
             />
           </Col>
           <Col span={16}>
-            <p style={{ fontSize: 58, textShadow: "0px 1px 6px #00000061" }}>
+            <p
+              style={{
+                fontSize: 58,
+                textShadow: "rgba(0, 0, 0, 0.38) 0px 1px 6px",
+                textAlign: "left",
+                fontWeight: 300,
+                marginLeft: 56,
+              }}
+            >
               Welcome to webKnossos
             </p>
             <p
               style={{
                 fontSize: 20,
-                textShadow: "0px 1px 6px #00000061",
-                color: "rgb(245, 245, 245)",
+                textShadow: "rgba(0, 0, 0, 0.38) 0px 1px 6px",
+                color: "rgb(243, 243, 248)",
                 padding: "40px 60px",
+                textAlign: "left",
+                lineHeight: 1.5,
+                paddingTop: 10,
+                marginTop: 0,
               }}
             >
               webKnossos is an in-browser annotation tool for 3D electron microscopic data that
@@ -112,6 +130,7 @@ type State = {
   datasets: Array<APIMaybeUnimportedDataset>,
   hasOrganizations: boolean,
   isLoading: boolean,
+  searchQuery: string,
 };
 
 class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
@@ -119,6 +138,7 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
     datasets: [],
     hasOrganizations: true,
     isLoading: true,
+    searchQuery: "",
   };
 
   componentDidMount() {
@@ -137,7 +157,21 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
     }
   }
 
+  handleSearch = (event: SyntheticInputEvent<>) => {
+    this.setState({ searchQuery: event.target.value });
+  };
+
   render() {
+    const search = (
+      <Search
+        style={{ width: 200, float: "right" }}
+        placeholder="Search Dataset"
+        onPressEnter={this.handleSearch}
+        onChange={this.handleSearch}
+        value={this.state.searchQuery}
+      />
+    );
+
     return (
       <Layout>
         {this.props.activeUser == null &&
@@ -147,6 +181,9 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
           <SimpleHeader />
         )}
         <Content style={{ padding: 50 }}>
+          <div className="pull-right">{search}</div>
+          <h3>Publications</h3>
+          <div className="clearfix" style={{ margin: "20px 0px" }} />
           <Spin size="large" spinning={this.state.isLoading}>
             <div style={{ minHeight: "100px" }}>
               {this.state.datasets.length === 0 && !this.state.isLoading ? (
@@ -157,7 +194,10 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
                   webKnossos in action.
                 </p>
               ) : (
-                <GalleryDatasetView datasets={this.state.datasets} searchQuery="" />
+                <PublicationView
+                  datasets={this.state.datasets}
+                  searchQuery={this.state.searchQuery}
+                />
               )}
             </div>
           </Spin>

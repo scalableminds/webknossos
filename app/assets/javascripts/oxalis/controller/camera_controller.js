@@ -9,7 +9,6 @@ import TWEEN from "tween.js";
 import _ from "lodash";
 
 import {
-  applyAspectRatioToWidth,
   getInputCatcherAspectRatio,
   getInputCatcherRect,
 } from "oxalis/model/accessors/view_mode_accessor";

@@ -9,7 +9,6 @@ import constants, {
   type OrthoViewExtents,
   type Rect,
   type Viewport,
-  ensureSmallerEdge,
 } from "oxalis/constants";
 
 export function getTDViewportSize(): [number, number] {
@@ -50,19 +49,19 @@ export function getInputCatcherAspectRatio(viewport: Viewport): number {
 // which corresponds to the defined aspect ratio. Depending on the configured strategy
 // (ensureSmallerEdge), this function either uses the smaller or the larger edge as the
 // ground truth.
-export function applyAspectRatioToWidth(aspectRatio: number, width: number): [number, number] {
-  // const useWidth = ensureSmallerEdge ? aspectRatio >= 1 : aspectRatio < 1;
+// export function applyAspectRatioToWidth(aspectRatio: number, width: number): [number, number] {
+//   // const useWidth = ensureSmallerEdge ? aspectRatio >= 1 : aspectRatio < 1;
 
-  // example I:
-  // 16 : 9 --> 1.78
-  // useWdth: false
+//   // example I:
+//   // 16 : 9 --> 1.78
+//   // useWdth: false
 
-  const useWidth = false;
-  const scaledWidth = width * (useWidth ? 1 : aspectRatio);
-  const scaledHeight = width / (!useWidth ? 1 : aspectRatio);
+//   const useWidth = false;
+//   const scaledWidth = width * (useWidth ? 1 : aspectRatio);
+//   const scaledHeight = width / (!useWidth ? 1 : aspectRatio);
 
-  return [scaledWidth, scaledHeight];
-}
+//   return [scaledWidth, scaledHeight];
+// }
 
 // Returns the ratio between VIEWPORT_WIDTH and the actual extent of the viewport for width and height
 export function getViewportScale(viewport: Viewport): [number, number] {
@@ -73,13 +72,6 @@ export function getViewportScale(viewport: Viewport): [number, number] {
   const xScale = (width + 2 * borderWidth) / constants.VIEWPORT_WIDTH;
   const yScale = (height + 2 * borderWidth) / constants.VIEWPORT_WIDTH;
   return [xScale, yScale];
-}
-
-export function getDominantViewportScale(viewport: Viewport): number {
-  const viewportScales = getViewportScale(viewport);
-
-  // This might need changing when ensureSmallerEdge is not set to true anymore
-  return Math.min(viewportScales[0], viewportScales[1]);
 }
 
 export default {};

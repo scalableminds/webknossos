@@ -13,17 +13,13 @@ import { InputKeyboard, InputKeyboardNoLoop, InputMouse, type ModifierKeys } fro
 import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import { document } from "libs/window";
 import { getBaseVoxel, getBaseVoxelFactors } from "oxalis/model/scaleinfo";
+import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import {
   getPosition,
   getRequestLogZoomStep,
   getPlaneScalingFactor,
 } from "oxalis/model/accessors/flycam_accessor";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
-import {
-  getDominantViewportScale,
-  getViewportScale,
-  getInputCatcherRect,
-} from "oxalis/model/accessors/view_mode_accessor";
 import { getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import {
@@ -166,10 +162,7 @@ class PlaneController extends React.PureComponent<Props> {
 
   getPlaneMouseControls(planeId: OrthoView): Object {
     const baseControls = {
-      leftDownMove: (delta: Point2) => {
-        const scale = getDominantViewportScale(planeId);
-        return this.movePlane([(delta.x * -1) / scale, (delta.y * -1) / scale, 0]);
-      },
+      leftDownMove: (delta: Point2) => this.movePlane([-delta.x, -delta.y, 0]),
       scroll: this.scrollPlanes.bind(this),
       over: () => {
         Store.dispatch(setViewportAction(planeId));

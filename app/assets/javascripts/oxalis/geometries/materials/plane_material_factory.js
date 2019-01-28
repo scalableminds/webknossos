@@ -25,12 +25,7 @@ import {
   getByteCount,
   getBoundaries,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getDominantViewportScale } from "oxalis/model/accessors/view_mode_accessor";
-import {
-  getPlaneScalingFactor,
-  getRequestLogZoomStep,
-  getZoomValue,
-} from "oxalis/model/accessors/flycam_accessor";
+import { getRequestLogZoomStep, getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { getPackingDegree } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import AbstractPlaneMaterialFactory, {
@@ -122,10 +117,6 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         type: "f",
         value: 0,
       },
-      pixelToVoxelFactor: {
-        type: "f",
-        value: 1,
-      },
       activeCellId: {
         type: "v4",
         value: new THREE.Vector4(0, 0, 0, 0),
@@ -165,6 +156,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       addressSpaceDimensions: {
         type: "v3",
         value: new THREE.Vector3(...addressSpaceDimensions.normal),
+      },
+      addressSpaceDimensionsFallback: {
+        type: "v3",
+        value: new THREE.Vector3(...addressSpaceDimensions.fallback),
       },
     });
 
@@ -288,9 +283,9 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        storeState => storeState.flycam.zoomStep,
-        zoomStep => {
-          this.uniforms.zoomValue.value = zoomStep;
+        storeState => getZoomValue(storeState.flycam),
+        zoomValue => {
+          this.uniforms.zoomValue.value = zoomValue;
         },
         true,
       ),
@@ -321,17 +316,6 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         storeState => storeState.temporaryConfiguration.viewMode,
         viewMode => {
           this.uniforms.viewMode.value = ModeValues.indexOf(viewMode);
-        },
-        true,
-      ),
-    );
-
-    this.storePropertyUnsubscribers.push(
-      listenToStoreProperty(
-        storeState => getZoomValue(storeState.flycam) / getDominantViewportScale(this.planeID),
-
-        pixelToVoxelFactor => {
-          this.uniforms.pixelToVoxelFactor.value = pixelToVoxelFactor;
         },
         true,
       ),

@@ -175,7 +175,8 @@ export const calculateTotalBucketCountForZoomLevel = (
     maxDims[1] > addressSpaceDimensions.normal[1] ||
     maxDims[2] > addressSpaceDimensions.normal[2]
   ) {
-    console.log("too large for address space. ", resolutionIndex, zoomFactor);
+    // Too large for address space. Avoid this zoom configuration by returning
+    // a very high bucket capacity.
     return 100000;
   }
 

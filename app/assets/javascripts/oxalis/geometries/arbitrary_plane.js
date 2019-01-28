@@ -5,7 +5,7 @@
 import * as THREE from "three";
 import _ from "lodash";
 
-import { applyAspectRatioToWidth } from "oxalis/model/accessors/view_mode_accessor";
+// import { applyAspectRatioToWidth } from "oxalis/model/accessors/view_mode_accessor";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
 import Store from "oxalis/store";
@@ -114,10 +114,9 @@ class ArbitraryPlane {
 
         mesh.matrix.identity();
 
-        const [xFactor, yFactor] = applyAspectRatioToWidth(this.aspectRatio, 1);
-        const aspectRatioMatrix = new THREE.Matrix4();
-        aspectRatioMatrix.scale(new THREE.Vector3(xFactor, yFactor, 1));
-
+        // const [xFactor, yFactor] = applyAspectRatioToWidth(this.aspectRatio, 1);
+        // const aspectRatioMatrix = new THREE.Matrix4();
+        // aspectRatioMatrix.scale(new THREE.Vector3(xFactor, yFactor, 1));
         // mesh.matrix.multiply(aspectRatioMatrix);
         mesh.matrix.multiply(meshMatrix);
         mesh.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI));

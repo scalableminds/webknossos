@@ -264,10 +264,9 @@ export default class LayerRenderingManager {
   ): boolean {
     const resolutions = getResolutions(Store.getState().dataset);
     const resolution = resolutions[logZoomStep];
-    // const bucketsPerDim = isFallback
-    //   ? addressSpaceDimensions.fallback
-    //   : addressSpaceDimensions.normal;
-    const bucketsPerDim = addressSpaceDimensions.normal;
+    const bucketsPerDim = isFallback
+      ? addressSpaceDimensions.fallback
+      : addressSpaceDimensions.normal;
 
     const maximumRenderedBucketsHalfInVoxel = bucketsPerDim.map(
       bucketPerDim => getAnchorPositionToCenterDistance(bucketPerDim) * constants.BUCKET_WIDTH,

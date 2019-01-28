@@ -6,12 +6,7 @@ import memoizeOne from "memoize-one";
 import type { Flycam, OxalisState } from "oxalis/store";
 import { M4x4, type Matrix4x4 } from "libs/mjs";
 import { ZOOM_STEP_INTERVAL } from "oxalis/model/reducers/flycam_reducer";
-import {
-  applyAspectRatioToWidth,
-  getInputCatcherAspectRatio,
-  getInputCatcherRect,
-  getViewportExtents,
-} from "oxalis/model/accessors/view_mode_accessor";
+import { getInputCatcherRect, getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
 import {
   calculateTotalBucketCountForZoomLevel,
   // calculateBucketCountPerDim,
@@ -202,10 +197,9 @@ export function getRequestLogZoomStep(state: OxalisState): number {
 
   // Linearly search for the resolution index, for which the zoomFactor
   // is acceptable.
-  const zoomStep = _.findIndex(
-    maximumZoomSteps,
-    maximumZoomStep => state.flycam.zoomStep <= maximumZoomStep,
-  );
+  const zoomStep = constants.MODES_ARBITRARY.includes(state.temporaryConfiguration.viewMode)
+    ? Math.max(0, Math.floor(Math.log2(state.flycam.zoomStep / 1.3)))
+    : _.findIndex(maximumZoomSteps, maximumZoomStep => state.flycam.zoomStep <= maximumZoomStep);
   if (zoomStep === -1) {
     return maxLogZoomStep;
   }

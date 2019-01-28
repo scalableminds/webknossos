@@ -26,7 +26,6 @@ import {
   setActiveCellAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
-import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import {
   getVolumeTool,
   getContourTracingMode,
@@ -62,7 +61,7 @@ const simulateTracing = async (): Promise<void> => {
   await simulateTracing();
 };
 
-export function getPlaneMouseControls(planeId: OrthoView): * {
+export function getPlaneMouseControls(_planeId: OrthoView): * {
   return {
     leftDownMove: (delta: Point2, pos: Point2) => {
       const { tracing } = Store.getState();
@@ -72,9 +71,8 @@ export function getPlaneMouseControls(planeId: OrthoView): * {
 
       if (tool === VolumeToolEnum.MOVE) {
         const state = Store.getState();
-        const [viewportScaleX, viewportScaleY] = getViewportScale(planeId);
         const { activeViewport } = state.viewModeData.plane;
-        const v = [(delta.x * -1) / viewportScaleX, (delta.y * -1) / viewportScaleY, 0];
+        const v = [-delta.x, -delta.y, 0];
         Store.dispatch(movePlaneFlycamOrthoAction(v, activeViewport, true));
       }
 

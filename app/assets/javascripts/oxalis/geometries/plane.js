@@ -7,7 +7,6 @@ import * as THREE from "three";
 import _ from "lodash";
 
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
-import { applyAspectRatioToWidth } from "oxalis/model/accessors/view_mode_accessor";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import Dimensions from "oxalis/model/dimensions";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";

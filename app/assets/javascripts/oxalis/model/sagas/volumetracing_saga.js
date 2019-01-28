@@ -29,6 +29,8 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import { getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
+import { map2 } from "libs/utils";
 import Constants, {
   type BoundingBoxType,
   type ContourMode,
@@ -132,14 +134,17 @@ function* getBoundingsFromPosition(currentViewport: OrthoView): Saga<?BoundingBo
   const baseVoxelFactors = yield* select(state =>
     getBaseVoxelFactors(state.dataset.dataSource.scale),
   );
-  const halfViewportWidth = Math.round((Constants.VIEWPORT_WIDTH / 2) * zoom);
-  const relevantCoordinates = Dimensions.transDim([1, 1, 0], currentViewport);
-  let halfViewportBounds = [
-    halfViewportWidth * baseVoxelFactors[0] * relevantCoordinates[0],
-    halfViewportWidth * baseVoxelFactors[1] * relevantCoordinates[1],
-    halfViewportWidth * baseVoxelFactors[2] * relevantCoordinates[2],
-  ];
-  halfViewportBounds = V3.ceil(halfViewportBounds);
+  const viewportExtentXY = yield* select(state => {
+    const extents = getViewportExtents(state)[currentViewport];
+    return map2(el => (el / 2) * zoom, extents);
+  });
+  const viewportExtentUVW = Dimensions.transDim([...viewportExtentXY, 0], currentViewport);
+
+  const halfViewportBounds = V3.ceil([
+    viewportExtentUVW[0] * baseVoxelFactors[0],
+    viewportExtentUVW[1] * baseVoxelFactors[1],
+    viewportExtentUVW[2] * baseVoxelFactors[2],
+  ]);
   return {
     min: V3.sub(position, halfViewportBounds),
     max: V3.add(position, halfViewportBounds),

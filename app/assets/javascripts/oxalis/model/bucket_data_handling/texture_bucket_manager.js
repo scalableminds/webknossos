@@ -302,12 +302,15 @@ export default class TextureBucketManager {
     // Consequently, these values should be fine to address buckets.
     // todo: use fallback here maybe?
     const [sx, sy, sz] = addressSpaceDimensions.normal;
+    const [_sx, _sy] = isFallbackBucket
+      ? addressSpaceDimensions.fallback
+      : addressSpaceDimensions.normal;
 
     // prettier-ignore
     return (
       sx * sy * sz * zoomDiff +
-      sx * sy * z +
-      sx * y +
+      _sx * _sy * z +
+      _sx * y +
       x
     );
   }

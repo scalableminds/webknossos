@@ -15,7 +15,6 @@ import {
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
-import { getDominantViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import Dimensions from "oxalis/model/dimensions";
 import Drawing from "libs/drawing";
 import Store from "oxalis/store";
@@ -215,9 +214,8 @@ class VolumeLayer {
   getCircleVoxelIterator(position: Vector3, boundings?: ?BoundingBoxType): VoxelIterator {
     const state = Store.getState();
     const zoomFactor = getZoomValue(state.flycam);
-    const viewportScale = getDominantViewportScale(this.plane);
     const { brushSize } = state.temporaryConfiguration;
-    const scaledBrushSize = (brushSize / viewportScale) * zoomFactor;
+    const scaledBrushSize = brushSize * zoomFactor;
 
     const radius = Math.round(scaledBrushSize / 2);
     const width = 2 * radius;

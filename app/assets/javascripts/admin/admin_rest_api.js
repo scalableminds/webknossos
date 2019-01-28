@@ -843,9 +843,13 @@ export async function triggerDatasetClearCache(
   );
 }
 
-export async function getDatasetSharingToken(datasetId: APIDatasetId): Promise<string> {
+export async function getDatasetSharingToken(
+  datasetId: APIDatasetId,
+  options?: RequestOptions,
+): Promise<string> {
   const { sharingToken } = await Request.receiveJSON(
     `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/sharingToken`,
+    options,
   );
   return sharingToken;
 }
@@ -880,7 +884,7 @@ export function getTracingstore(): Promise<APITracingStore> {
 export const getTracingStoreCached = _.memoize(getTracingstore);
 
 // ### Active User
-export function getActiveUser(options: Object = {}): Promise<APIUser> {
+export function getActiveUser(options?: RequestOptions): Promise<APIUser> {
   return Request.receiveJSON("/api/user", options);
 }
 

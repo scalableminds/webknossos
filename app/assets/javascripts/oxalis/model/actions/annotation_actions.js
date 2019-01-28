@@ -17,7 +17,7 @@ type SetAnnotationNameAction = {
   name: string,
 };
 
-type SetAnnotationPubliceAction = {
+type SetAnnotationPublicAction = {
   type: "SET_ANNOTATION_PUBLIC",
   isPublic: boolean,
 };
@@ -68,7 +68,7 @@ export type CreateMeshFromBufferAction = {
 export type AnnotationActionTypes =
   | InitializeAnnotation
   | SetAnnotationNameAction
-  | SetAnnotationPubliceAction
+  | SetAnnotationPublicAction
   | SetAnnotationDescriptionAction
   | SetAnnotationAllowUpdateAction
   | UpdateRemoteMeshMetaDataAction
@@ -88,7 +88,7 @@ export const setAnnotationNameAction = (name: string): SetAnnotationNameAction =
   name,
 });
 
-export const setAnnotationPublicAction = (isPublic: boolean): SetAnnotationPubliceAction => ({
+export const setAnnotationPublicAction = (isPublic: boolean): SetAnnotationPublicAction => ({
   type: "SET_ANNOTATION_PUBLIC",
   isPublic,
 });

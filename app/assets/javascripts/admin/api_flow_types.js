@@ -78,9 +78,24 @@ export type APITeam = {
   +organization: string,
 };
 
+type APIPublication = {
+  +created: number,
+  +description: string,
+  +id: string,
+  +imageUrl: string,
+  +publicationDate: number,
+  +title: string,
+};
+
 export type APIDatasetId = {
   +owningOrganization: string,
   +name: string,
+};
+
+export type APIDatasetDetails = {
+  +species?: string,
+  +brainRegion?: string,
+  +acquisition?: string,
 };
 
 type APIDatasetBase = APIDatasetId & {
@@ -88,6 +103,7 @@ type APIDatasetBase = APIDatasetId & {
   +created: number,
   +dataStore: APIDataStore,
   +description: ?string,
+  +details: ?APIDatasetDetails,
   +isEditable: boolean,
   +isPublic: boolean,
   +displayName: ?string,
@@ -95,6 +111,7 @@ type APIDatasetBase = APIDatasetId & {
   +lastUsedByUser: number,
   +isForeign: boolean,
   +sortingKey: number,
+  +publication: ?APIPublication,
 };
 
 export type APIMaybeUnimportedDataset = APIDatasetBase & {

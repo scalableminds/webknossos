@@ -70,6 +70,7 @@ import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import messages from "messages";
 import type { ToastStyle } from "libs/toast";
 import type { Versions } from "oxalis/view/version_view";
+import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
 
 function assertExists(value: any, message: string) {
   if (value == null) {
@@ -704,7 +705,7 @@ class DataApi {
     if (bucket.isRequested()) {
       needsToAwaitBucket = true;
     } else if (bucket.needsRequest()) {
-      pullQueue.add({ bucket: bucketAddress, priority: -1 });
+      pullQueue.add({ bucket: bucketAddress, priority: PullQueueConstants.PRIORITY_HIGHEST });
       pullQueue.pull();
       needsToAwaitBucket = true;
     }

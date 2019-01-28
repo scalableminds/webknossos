@@ -184,28 +184,6 @@ class SpotlightView extends React.PureComponent<Props, State> {
           <SimpleHeader />
         )}
         <Content style={{ padding: 50 }}>
-          <div
-            style={{
-              width: "100%",
-              textAlign: "center",
-              backgroundColor: "#a9a9a9",
-              padding: 8,
-              marginBottom: 24,
-              fontSize: 20,
-              borderRadius: 4,
-            }}
-            title="You want to add your dataset to this set? Click here to add it. It opens a
-                form which will contact us so we can add your dataset."
-          >
-            <a
-              href="https://goo.gl/forms/QICmEcQyid6gb8Kw1"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: "white" }}
-            >
-              Add missing dataset
-            </a>
-          </div>
           <div style={{ display: "flex", justifyContent: "center" }}>
             <Col className="gallery-dataset-col" {...columnSpan}>
               <a

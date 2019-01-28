@@ -16,7 +16,7 @@ import {
   DropdownSetting,
   ColorSetting,
 } from "oxalis/view/settings/setting_input_views";
-import { hasSegmentation } from "oxalis/model/accessors/dataset_accessor";
+import { hasSegmentation, isRgb } from "oxalis/model/accessors/dataset_accessor";
 import {
   updateDatasetSettingAction,
   updateLayerSettingAction,
@@ -25,7 +25,6 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import constants, { type ControlMode, ControlModeEnum, type Mode } from "oxalis/constants";
 import messages, { settings } from "messages";
-import { isRgb } from "oxalis/model/accessors/dataset_accessor";
 import type { APIDataset } from "admin/api_flow_types";
 
 const Panel = Collapse.Panel;
@@ -58,7 +57,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
       <div key={layerName}>
         <Row>
           <Col span={24}>
-            <Tag color={isRGB && "#1890ff"}>{isRGB ? "24-bit" : "8-bit"} Layer</Tag> {layerName}
+            {layerName}
+            <Tag style={{ cursor: "default", marginLeft: 8 }} color={isRGB && "#1890ff"}>
+              {isRGB ? "24-bit" : "8-bit"} Layer
+            </Tag>
           </Col>
         </Row>
         <NumberSliderSetting
@@ -78,7 +80,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
           onChange={_.partial(this.props.onChangeLayer, layerName, "contrast")}
         />
         <NumberSliderSetting
-          label="Alpha"
+          label="Opacity"
           min={0}
           max={100}
           value={alpha}
@@ -144,7 +146,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
 
     return (
       <Collapse defaultActiveKey={["1", "2", "3", "4"]}>
-        <Panel header="Colors" key="1">
+        <Panel header="Color Layers" key="1">
           {colorSettings}
         </Panel>
         {this.props.hasSegmentation ? this.getSegmentationPanel() : null}

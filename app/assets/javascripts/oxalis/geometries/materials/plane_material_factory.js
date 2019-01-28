@@ -61,7 +61,7 @@ function getColorLayerNames() {
   return getColorLayers(Store.getState().dataset).map(layer => sanitizeName(layer.name));
 }
 
-function getRgbLayerLookup(): { [string]: boolean } {
+function getIsRgbLayerLookup(): { [string]: boolean } {
   const { dataset } = Store.getState();
   const colorLayers = getColorLayers(dataset);
   // keyBy the sanitized layer name as the lookup will happen in the shader using the sanitized layer name
@@ -548,7 +548,7 @@ class PlaneMaterialFactory {
 
   getFragmentShader(): string {
     const colorLayerNames = getColorLayerNames();
-    const rgbLayerLookup = getRgbLayerLookup();
+    const isRgbLayerLookup = getIsRgbLayerLookup();
     const segmentationLayer = Model.getSegmentationLayer();
     const segmentationName = sanitizeName(segmentationLayer ? segmentationLayer.name : "");
     const { dataset } = Store.getState();
@@ -562,7 +562,7 @@ class PlaneMaterialFactory {
 
     const code = getMainFragmentShader({
       colorLayerNames,
-      rgbLayerLookup,
+      isRgbLayerLookup,
       hasSegmentation,
       segmentationName,
       segmentationPackingDegree,

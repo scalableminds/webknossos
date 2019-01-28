@@ -23,7 +23,7 @@ import compileShader from "./shader_module_system";
 
 type Params = {|
   colorLayerNames: string[],
-  rgbLayerLookup: { [string]: boolean },
+  isRgbLayerLookup: { [string]: boolean },
   hasSegmentation: boolean,
   segmentationName: string,
   segmentationPackingDegree: number,
@@ -119,20 +119,20 @@ const vec3 datasetScale = <%= formatVector3AsVec3(datasetScale) %>;
 const vec4 fallbackGray = vec4(0.5, 0.5, 0.5, 1.0);
 
 ${compileShader(
-      inverse,
-      div,
-      round,
-      isNan,
-      isFlightMode,
-      transDim,
-      getRelativeCoords,
-      getWorldCoordUVW,
-      isOutsideOfBoundingBox,
-      getMaybeFilteredColorOrFallback,
-      hasSegmentation ? convertCellIdToRGB : null,
-      hasSegmentation ? getBrushOverlay : null,
-      hasSegmentation ? getSegmentationId : null,
-    )}
+  inverse,
+  div,
+  round,
+  isNan,
+  isFlightMode,
+  transDim,
+  getRelativeCoords,
+  getWorldCoordUVW,
+  isOutsideOfBoundingBox,
+  getMaybeFilteredColorOrFallback,
+  hasSegmentation ? convertCellIdToRGB : null,
+  hasSegmentation ? getBrushOverlay : null,
+  hasSegmentation ? getSegmentationId : null,
+)}
 
 void main() {
   vec3 worldCoordUVW = getWorldCoordUVW();
@@ -180,7 +180,7 @@ void main() {
         <%= name %>_lookup_texture,
         <%= formatNumberAsGLSLFloat(layerIndex) %>,
         <%= name %>_data_texture_width,
-        <%= rgbLayerLookup[name] ? "1.0" : "4.0" %>,  // RGB data cannot be packed, gray scale data is always packed into rgba channels
+        <%= isRgbLayerLookup[name] ? "1.0" : "4.0" %>,  // RGB data cannot be packed, gray scale data is always packed into rgba channels
         coords,
         fallbackCoords,
         hasFallback,

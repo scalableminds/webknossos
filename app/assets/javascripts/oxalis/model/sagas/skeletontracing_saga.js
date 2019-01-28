@@ -10,6 +10,7 @@ import {
   type Saga,
   _take,
   _takeEvery,
+  _throttle,
   call,
   fork,
   put,
@@ -47,6 +48,7 @@ import { setPositionAction, setRotationAction } from "oxalis/model/actions/flyca
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import EdgeCollection, { diffEdgeCollections } from "oxalis/model/edge_collection";
+import ErrorHandling from "libs/error_handling";
 import Store, {
   type Flycam,
   type Node,
@@ -121,6 +123,34 @@ function* watchFailedNodeCreations(): Saga<void> {
   }
 }
 
+function* watchTracingConsistency(): Saga<void> {
+  const state = yield* select(_state => _state);
+  const invalidTreeDetails = [];
+
+  for (const tree: Tree of _.values(enforceSkeletonTracing(state.tracing).trees)) {
+    const edgeCount = tree.edges.size();
+    const nodeCount = tree.nodes.size();
+    // For a tree, edge_count = node_count - 1 should hold true. For graphs, the edge count
+    // would be even higher.
+    if (edgeCount < nodeCount - 1) {
+      invalidTreeDetails.push({
+        treeId: tree.treeId,
+        name: tree.name,
+        timestamp: tree.timestamp,
+        isVisible: tree.isVisible,
+        edgeCount,
+        nodeCount,
+      });
+    }
+  }
+
+  if (invalidTreeDetails.length > 0) {
+    const error = new Error("Corrupted tracing. See the action log for details.");
+    Toast.error(messages["tracing.invalid_state"]);
+    ErrorHandling.notify(error, { invalidTreeDetails });
+  }
+}
+
 export function* watchTreeNames(): Saga<void> {
   const state = yield* select(_state => _state);
 
@@ -156,6 +186,7 @@ export function* watchSkeletonTracingAsync(): Saga<void> {
     ],
     centerActiveNode,
   );
+  yield _throttle(5000, "PUSH_SAVE_QUEUE", watchTracingConsistency);
   yield* fork(watchFailedNodeCreations);
   yield* fork(watchBranchPointDeletion);
   yield* fork(watchVersionRestoreParam);

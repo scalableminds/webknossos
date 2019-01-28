@@ -106,8 +106,7 @@ export function getPlaneMouseControls(planeId: OrthoView): * {
       Store.dispatch(setContourTracingMode(ContourModeEnum.IDLE));
 
       if (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) {
-        const closeContour = tool === VolumeToolEnum.TRACE;
-        Store.dispatch(finishEditingAction(closeContour));
+        Store.dispatch(finishEditingAction());
       }
     },
 
@@ -145,8 +144,7 @@ export function getPlaneMouseControls(planeId: OrthoView): * {
       Store.dispatch(setContourTracingMode(ContourModeEnum.IDLE));
 
       if (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) {
-        const closeContour = tool === VolumeToolEnum.TRACE;
-        Store.dispatch(finishEditingAction(closeContour));
+        Store.dispatch(finishEditingAction());
         Store.dispatch(setContourTracingMode(ContourModeEnum.IDLE));
       }
     },

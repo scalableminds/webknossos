@@ -81,14 +81,6 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
           return addToLayerReducer(state, volumeTracing, action.position);
         }
 
-        case "FINISH_EDITING": {
-          if (volumeTracing.contourList.length > 0 && action.closeContour) {
-            return addToLayerReducer(state, volumeTracing, volumeTracing.contourList[0]);
-          } else {
-            return state;
-          }
-        }
-
         case "RESET_CONTOUR": {
           return resetContourReducer(state);
         }

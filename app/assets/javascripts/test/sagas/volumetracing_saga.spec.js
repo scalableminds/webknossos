@@ -65,7 +65,7 @@ const ACTIVE_CELL_ID = 5;
 const setActiveCellAction = VolumeTracingActions.setActiveCellAction(ACTIVE_CELL_ID);
 const startEditingAction = VolumeTracingActions.startEditingAction([0, 0, 0], OrthoViews.PLANE_XY);
 const addToLayerActionFn = VolumeTracingActions.addToLayerAction;
-const finishEditingAction = VolumeTracingActions.finishEditingAction(true);
+const finishEditingAction = VolumeTracingActions.finishEditingAction();
 const resetContourAction = VolumeTracingActions.resetContourAction();
 
 test("VolumeTracingSaga shouldn't do anything if unchanged (saga test)", t => {

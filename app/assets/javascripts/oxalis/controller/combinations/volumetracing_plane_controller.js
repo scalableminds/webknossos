@@ -151,12 +151,17 @@ export function getPlaneMouseControls(planeId: OrthoView): * {
 
     leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
       if (event.shiftKey) {
-        const cellId = Model.getSegmentationLayer().cube.getDataValue(
+        const segmentation = Model.getSegmentationLayer();
+        if (!segmentation) {
+          return;
+        }
+        const cellId = segmentation.cube.getMappedDataValue(
           calculateGlobalPos(pos),
-          null,
           getRequestLogZoomStep(Store.getState()),
         );
-        handleCellSelection(cellId);
+        if (cellId > 0) {
+          Store.dispatch(setActiveCellAction(cellId));
+        }
       }
     },
 
@@ -182,10 +187,4 @@ export function getKeyboardControls() {
       Store.dispatch(copySegmentationLayerAction(true));
     },
   };
-}
-
-function handleCellSelection(cellId: number) {
-  if (cellId > 0) {
-    Store.dispatch(setActiveCellAction(cellId));
-  }
 }

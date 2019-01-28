@@ -100,6 +100,8 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.natural_sorting": "Correctly sort numbers in text (word2 < word10). This may be slow!",
   "tracing.cant_create_node_due_to_active_group":
     "You cannot create nodes, since no tree is active.",
+  "tracing.invalid_state":
+    "A corruption in the current skeleton tracing was detected. Please contact your supervisor and/or the maintainers of webKnossos to get help for restoring a working version. Please include as much details as possible about your past user interactions. This will be very helpful to investigate the source of this bug.",
   "layouting.missing_custom_layout_info":
     "The tracing views are separated into four classes. Each of them has their own layouts. If you can't find your layout please open the tracing in the correct view mode or just add it here manually.",
   "datastore.unknown_type": "Unknown datastore type:",

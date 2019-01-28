@@ -78,9 +78,24 @@ export type APITeam = {
   +organization: string,
 };
 
+type APIPublication = {
+  +created: number,
+  +description: string,
+  +id: string,
+  +imageUrl: string,
+  +publicationDate: number,
+  +title: string,
+};
+
 export type APIDatasetId = {
   +owningOrganization: string,
   +name: string,
+};
+
+export type APIDatasetDetails = {
+  +species?: string,
+  +brainRegion?: string,
+  +acquisition?: string,
 };
 
 type APIDatasetBase = APIDatasetId & {
@@ -88,6 +103,7 @@ type APIDatasetBase = APIDatasetId & {
   +created: number,
   +dataStore: APIDataStore,
   +description: ?string,
+  +details: ?APIDatasetDetails,
   +isEditable: boolean,
   +isPublic: boolean,
   +displayName: ?string,
@@ -95,6 +111,7 @@ type APIDatasetBase = APIDatasetId & {
   +lastUsedByUser: number,
   +isForeign: boolean,
   +sortingKey: number,
+  +publication: ?APIPublication,
 };
 
 export type APIMaybeUnimportedDataset = APIDatasetBase & {
@@ -174,7 +191,7 @@ export type APISettings = {|
   +somaClickingAllowed: boolean,
 |};
 
-export const APITracingTypeEnum = Enum.make({
+export const APIAnnotationTypeEnum = Enum.make({
   Explorational: "Explorational",
   Task: "Task",
   View: "View",
@@ -183,7 +200,7 @@ export const APITracingTypeEnum = Enum.make({
   CompoundTaskType: "CompoundTaskType",
 });
 
-export type APITracingType = $Keys<typeof APITracingTypeEnum>;
+export type APIAnnotationType = $Keys<typeof APIAnnotationTypeEnum>;
 
 export type APITaskType = {
   +id: string,
@@ -266,7 +283,7 @@ export type APITask = {
   +directLinks?: Array<string>,
 };
 
-export type APIAnnotationTypeCompact = {
+export type APIAnnotationCompact = {
   +tracing: {
     +skeleton: ?string,
     +volume: ?string,
@@ -283,7 +300,7 @@ export type APIAnnotationTypeCompact = {
   +stats: SkeletonTracingStats | {||},
   +tags: Array<string>,
   +tracingTime: ?number,
-  +typ: APITracingType,
+  +typ: APIAnnotationType,
 };
 
 export type LocalMeshMetaData = {|
@@ -304,7 +321,7 @@ export type MeshMetaData = {|
   ...RemoteMeshMetaData,
 |};
 
-type APIAnnotationTypeBase = APIAnnotationTypeCompact & {
+type APIAnnotationBase = APIAnnotationCompact & {
   +dataStore: APIDataStore,
   +tracingStore: APITracingStore,
   +restrictions: APIRestrictions,
@@ -313,11 +330,11 @@ type APIAnnotationTypeBase = APIAnnotationTypeCompact & {
   +meshes: Array<MeshMetaData>,
 };
 
-export type APIAnnotation = APIAnnotationTypeBase & {
+export type APIAnnotation = APIAnnotationBase & {
   +task: ?APITask,
 };
 
-export type APIAnnotationWithTask = APIAnnotationTypeBase & {
+export type APIAnnotationWithTask = APIAnnotationBase & {
   +task: APITask,
 };
 

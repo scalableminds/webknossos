@@ -185,6 +185,7 @@ export default class LayerRenderingManager {
       this.lastIsInvisible = isInvisible;
       this.needsRefresh = false;
       this.currentBucketPickerTick++;
+      this.pullQueue.clear();
 
       const bucketQueue = new PriorityQueue({
         // small priorities take precedence

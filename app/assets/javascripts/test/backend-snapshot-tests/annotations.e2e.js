@@ -1,6 +1,6 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 // @flow
-import { APITracingTypeEnum } from "admin/api_flow_types";
+import { APIAnnotationTypeEnum } from "admin/api_flow_types";
 import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { diffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import {
@@ -33,7 +33,7 @@ test("getAnnotationInformation()", async t => {
   const annotationId = "570b9ff12a7c0e980056fe8f";
   const annotation = await api.getAnnotationInformation(
     annotationId,
-    APITracingTypeEnum.Explorational,
+    APIAnnotationTypeEnum.Explorational,
   );
   t.is(annotation.id, annotationId);
   writeFlowCheckingFile(annotation, "annotation", "APIAnnotation");
@@ -42,11 +42,11 @@ test("getAnnotationInformation()", async t => {
 
 test.serial("finishAnnotation() and reOpenAnnotation() for task", async t => {
   const annotationId = "78135c192faeb34c0081c05d";
-  const finishedAnnotation = await api.finishAnnotation(annotationId, APITracingTypeEnum.Task);
+  const finishedAnnotation = await api.finishAnnotation(annotationId, APIAnnotationTypeEnum.Task);
   t.is(finishedAnnotation.state, "Finished");
   t.snapshot(finishedAnnotation, { id: "annotations-finishAnnotation" });
 
-  const reopenedAnnotation = await api.reOpenAnnotation(annotationId, APITracingTypeEnum.Task);
+  const reopenedAnnotation = await api.reOpenAnnotation(annotationId, APIAnnotationTypeEnum.Task);
   t.is(reopenedAnnotation.state, "Active");
 
   t.snapshot(reopenedAnnotation, { id: "annotations-reOpenAnnotation" });
@@ -56,14 +56,14 @@ test.serial("finishAnnotation() and reOpenAnnotation() for explorational", async
   const annotationId = "68135c192faeb34c0081c05d";
   const finishedAnnotation = await api.finishAnnotation(
     annotationId,
-    APITracingTypeEnum.Explorational,
+    APIAnnotationTypeEnum.Explorational,
   );
   t.is(finishedAnnotation.state, "Finished");
   t.snapshot(finishedAnnotation, { id: "annotations-finishAnnotation-explorational" });
 
   const reopenedAnnotation = await api.reOpenAnnotation(
     annotationId,
-    APITracingTypeEnum.Explorational,
+    APIAnnotationTypeEnum.Explorational,
   );
   t.is(reopenedAnnotation.state, "Active");
 
@@ -74,7 +74,7 @@ test.serial("editAnnotation()", async t => {
   const annotationId = "68135c192faeb34c0081c05d";
   const originalAnnotation = await api.getAnnotationInformation(
     annotationId,
-    APITracingTypeEnum.Explorational,
+    APIAnnotationTypeEnum.Explorational,
   );
   const { name, isPublic, description } = originalAnnotation;
 
@@ -82,14 +82,14 @@ test.serial("editAnnotation()", async t => {
   const newIsPublic = !isPublic;
   const newDescription = "new description";
 
-  await api.editAnnotation(annotationId, APITracingTypeEnum.Explorational, {
+  await api.editAnnotation(annotationId, APIAnnotationTypeEnum.Explorational, {
     name: newName,
     isPublic: newIsPublic,
     description: newDescription,
   });
   const editedAnnotation = await api.getAnnotationInformation(
     annotationId,
-    APITracingTypeEnum.Explorational,
+    APIAnnotationTypeEnum.Explorational,
   );
 
   t.is(editedAnnotation.name, newName);
@@ -99,7 +99,7 @@ test.serial("editAnnotation()", async t => {
   t.is(editedAnnotation.tracing.skeleton, "ae417175-f7bb-4a34-8187-d9c3b50143af");
   t.snapshot(replaceVolatileValues(editedAnnotation), { id: "annotations-editAnnotation" });
 
-  await api.editAnnotation(annotationId, APITracingTypeEnum.Explorational, {
+  await api.editAnnotation(annotationId, APIAnnotationTypeEnum.Explorational, {
     name,
     isPublic,
     description,
@@ -112,7 +112,7 @@ test.serial("finishAllAnnotations()", async t => {
   await api.finishAllAnnotations(annotationIds);
 
   const finishedAnnotations = await Promise.all(
-    annotationIds.map(id => api.getAnnotationInformation(id, APITracingTypeEnum.Explorational)),
+    annotationIds.map(id => api.getAnnotationInformation(id, APIAnnotationTypeEnum.Explorational)),
   );
 
   t.is(finishedAnnotations.length, 2);
@@ -120,7 +120,7 @@ test.serial("finishAllAnnotations()", async t => {
     t.is(annotation.state, "Finished");
   });
 
-  await Promise.all(annotationIds.map(id => api.reOpenAnnotation(id, APITracingTypeEnum.Task)));
+  await Promise.all(annotationIds.map(id => api.reOpenAnnotation(id, APIAnnotationTypeEnum.Task)));
 });
 
 test.serial("createExplorational() and finishAnnotation()", async t => {
@@ -130,11 +130,11 @@ test.serial("createExplorational() and finishAnnotation()", async t => {
     id: "annotations-createExplorational",
   });
 
-  await api.finishAnnotation(createdExplorational.id, APITracingTypeEnum.Explorational);
+  await api.finishAnnotation(createdExplorational.id, APIAnnotationTypeEnum.Explorational);
 
   const finishedAnnotation = await api.getAnnotationInformation(
     createdExplorational.id,
-    APITracingTypeEnum.Explorational,
+    APIAnnotationTypeEnum.Explorational,
   );
   t.is(finishedAnnotation.state, "Finished");
 });

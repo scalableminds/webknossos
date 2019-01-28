@@ -63,8 +63,12 @@ function getMapForSegment(segmentId: number): ThreeDMap<boolean> {
   return maybeMap;
 }
 
+function getZoomedCubeSize(zoomStep: number): Vector3 {
+  return Utils.map3(el => el * 2 ** zoomStep, cubeSize);
+}
+
 function clipPositionToCubeBoundary(position: Vector3, zoomStep: number): Vector3 {
-  const zoomedCubeSize = Utils.map3(el => el * 2 ** zoomStep, cubeSize);
+  const zoomedCubeSize = getZoomedCubeSize(zoomStep);
   const currentCube = Utils.map3((el, idx) => Math.floor(el / zoomedCubeSize[idx]), position);
   const clippedPosition = Utils.map3((el, idx) => el * zoomedCubeSize[idx], currentCube);
   return clippedPosition;
@@ -78,7 +82,7 @@ function getNeighborPosition(
   // front_xy, front_xz, front_yz, back_xy, back_xz, back_yz
   const neighborLookup = [[0, 0, -1], [0, -1, 0], [-1, 0, 0], [0, 0, 1], [0, 1, 0], [1, 0, 0]];
 
-  const zoomedCubeSize = Utils.map3(el => el * 2 ** zoomStep, cubeSize);
+  const zoomedCubeSize = getZoomedCubeSize(zoomStep);
   const neighborMultiplier = neighborLookup[neighborId];
   const neighboringPosition = [
     clippedPosition[0] + neighborMultiplier[0] * zoomedCubeSize[0],
@@ -170,7 +174,7 @@ function* maybeLoadIsosurface(
       zoomStep,
       segmentId,
       voxelDimensions,
-      cubeSize,
+      cubeSize: getZoomedCubeSize(zoomStep),
     },
   );
 

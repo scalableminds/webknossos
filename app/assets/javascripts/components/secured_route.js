@@ -55,10 +55,9 @@ class SecuredRoute extends React.PureComponent<Props, State> {
       <Route
         {...rest}
         render={props => {
-          const { computedMatch, history, location, match, ...componentProps } = props;
           if (isCompletelyAuthenticated) {
             if (Component != null) {
-              return <Component {...componentProps} />;
+              return <Component />;
             } else if (render != null) {
               return render(props);
             } else {

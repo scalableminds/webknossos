@@ -235,7 +235,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/projects/create"
-                component={ProjectCreateView}
+                render={() => <ProjectCreateView />}
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
@@ -341,7 +341,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/scripts/create"
-                component={ScriptCreateView}
+                render={() => <ScriptCreateView />}
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}

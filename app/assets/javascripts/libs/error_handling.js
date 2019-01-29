@@ -107,8 +107,22 @@ class ErrorHandling {
     };
   }
 
-  notify(error: Error, optParams: Object = {}) {
+  notify(error: Error, optParams: Object = {}, escalateToSlack: boolean = false) {
     this.airbrake.notify({ error, params: { actionLog: getActionLog(), ...optParams } });
+    if (escalateToSlack) {
+      const webhookUrl =
+        "https://hooks.slack.com/services/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";
+      fetch(webhookUrl, {
+        method: "POST",
+        headers: {},
+        body: JSON.stringify({
+          text: `*Inconsistent tracing* :k:
+*Error*: \`${error.toString()}\`
+*Url*: \`${location.href}\`
+*Params*: \`${JSON.stringify(optParams)}\``,
+        }),
+      });
+    }
   }
 
   assertExtendContext(additionalContext: Object) {

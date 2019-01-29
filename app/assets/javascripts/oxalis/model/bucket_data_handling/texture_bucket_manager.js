@@ -3,7 +3,7 @@ import * as THREE from "three";
 import _ from "lodash";
 
 import { DataBucket, bucketDebuggingFlags } from "oxalis/model/bucket_data_handling/bucket";
-import { createUpdatableTexture } from "oxalis/geometries/materials/abstract_plane_material_factory";
+import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
 import { getRenderer } from "oxalis/controller/renderer";
 import { waitForCondition } from "libs/utils";
 import UpdatableTexture from "libs/UpdatableTexture";

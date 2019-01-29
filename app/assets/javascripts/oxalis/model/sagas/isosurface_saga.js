@@ -11,6 +11,7 @@ import DataLayer from "oxalis/model/data_layer";
 import Model from "oxalis/model";
 import * as Utils from "libs/utils";
 import getSceneController from "oxalis/controller/scene_controller_provider";
+import window from "libs/window";
 
 class ThreeDMap<T> {
   map: Map<number, ?Map<number, ?Map<number, T>>>;
@@ -137,7 +138,7 @@ function* ensureSuitableIsosurface(): Saga<void> {
   }
   const position = yield* select(state => getFlooredPosition(state.flycam));
   const { resolutions } = layer;
-  const preferredZoomStep = 1;
+  const preferredZoomStep = window.__isosurfaceZoomStep != null ? window.__isosurfaceZoomStep : 1;
   const zoomStep = Math.min(preferredZoomStep, resolutions.length);
 
   const clippedPosition = clipPositionToCubeBoundary(position, zoomStep, resolutions);
@@ -174,7 +175,7 @@ function* maybeLoadIsosurface(
 
   threeDMap.set(clippedPosition, true);
 
-  const voxelDimensions = [4, 4, 4];
+  const voxelDimensions = window.__isosurfaceVoxelDimensions || [4, 4, 4];
   const dataStoreHost = yield* select(state => state.dataset.dataStore.url);
 
   const { buffer: responseBuffer, neighbors } = yield* call(

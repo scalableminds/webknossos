@@ -139,7 +139,7 @@ function* ensureSuitableIsosurface(): Saga<void> {
   const position = yield* select(state => getFlooredPosition(state.flycam));
   const { resolutions } = layer;
   const preferredZoomStep = window.__isosurfaceZoomStep != null ? window.__isosurfaceZoomStep : 1;
-  const zoomStep = Math.min(preferredZoomStep, resolutions.length);
+  const zoomStep = Math.min(preferredZoomStep, resolutions.length - 1);
 
   const clippedPosition = clipPositionToCubeBoundary(position, zoomStep, resolutions);
 

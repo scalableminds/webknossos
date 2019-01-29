@@ -34,7 +34,7 @@ import messages from "messages";
 import window, { location } from "libs/window";
 
 import { GoldenLayoutAdapter } from "./golden_layout_adapter";
-import { determineLayout, headerHeight, Layouts } from "./default_layout_configs";
+import { determineLayout, headerHeight } from "./default_layout_configs";
 import { storeLayoutConfig, setActiveLayout } from "./layout_persistence";
 
 const { Header, Sider } = Layout;
@@ -134,11 +134,11 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
   render() {
     const layoutType = determineLayout(this.props.initialCommandType.type, this.props.viewMode);
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
-    const { displayScalebars, isDatasetOnScratchVolume } = this.props;
+    const { displayScalebars, isDatasetOnScratchVolume, isUpdateTracingAllowed } = this.props;
     const headerClassName = classNames({ construction: isDatasetOnScratchVolume });
 
     return (
-      <NmlUploadZoneContainer onImport={importNmls} isAllowed={this.props.isUpdateTracingAllowed}>
+      <NmlUploadZoneContainer onImport={importNmls} isAllowed={isUpdateTracingAllowed}>
         <OxalisController
           initialTracingType={this.props.initialTracingType}
           initialCommandType={this.props.initialCommandType}
@@ -221,7 +221,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
                   key="arbitraryViewport"
                   portalKey="arbitraryViewport"
                 >
-                  {layoutType !== Layouts.ArbitraryLayoutView ? <RecordingSwitch /> : null}
+                  {isUpdateTracingAllowed ? <RecordingSwitch /> : null}
                 </InputCatcher>
 
                 <DatasetInfoTabView key="DatasetInfoTabView" portalKey="DatasetInfoTabView" />

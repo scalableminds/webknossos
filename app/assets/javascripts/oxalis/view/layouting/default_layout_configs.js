@@ -104,12 +104,13 @@ const _getDefaultLayouts = () => {
   const OrthoLayoutView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
   const VolumeTracingView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
 
+  const eventual3DViewportForArbitrary = show3DViewportInArbitrary ? [Panes.td] : [];
   const arbitraryPanes = [Panes.arbitraryViewport, NonSkeletonRightHandColumn].concat(
-    show3DViewportInArbitrary ? [Panes.td] : [],
+    eventual3DViewportForArbitrary,
   );
   const ArbitraryLayoutView = createLayout(Row(...arbitraryPanes));
   const arbitraryPanesWithSkeleton = [Panes.arbitraryViewport, SkeletonRightHandColumn].concat(
-    SkeletonRightHandColumn,
+    eventual3DViewportForArbitrary,
   );
   const ArbitraryLayout = createLayout(Row(...arbitraryPanesWithSkeleton));
   return { OrthoLayout, OrthoLayoutView, ArbitraryLayoutView, VolumeTracingView, ArbitraryLayout };
@@ -173,14 +174,6 @@ export function determineLayout(controlMode: ControlMode, viewMode: Mode): Layou
     return "OrthoLayout";
   }
 }
-
-export const Layouts = {
-  OrthoLayoutView: "OrthoLayoutView",
-  ArbitraryLayoutView: "ArbitraryLayoutView",
-  VolumeTracingView: "VolumeTracingView",
-  ArbitraryLayout: "ArbitraryLayout",
-  OrthoLayout: "OrthoLayout",
-};
 
 export const mapLayoutKeysToLanguage = {
   OrthoLayoutView: "Orthogonal Mode - View Only",

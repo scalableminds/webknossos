@@ -168,7 +168,7 @@ function* maybeLoadIsosurface(
   if (threeDMap.get(clippedPosition)) {
     return;
   }
-  if (batchCounterPerSegment[segmentId] > MAXIMUM_BATCH_SIZE) {
+  if (batchCounterPerSegment[segmentId] > (window.__isosurfaceMaxBatchSize || MAXIMUM_BATCH_SIZE)) {
     return;
   }
   batchCounterPerSegment[segmentId]++;

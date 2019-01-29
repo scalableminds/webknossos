@@ -6,6 +6,7 @@ import { FlycamActions } from "oxalis/model/actions/flycam_actions";
 import { type Saga, _takeEvery, select, call, take } from "oxalis/model/sagas/effect-generators";
 import { computeIsosurface } from "admin/admin_rest_api";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
+import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
 import DataLayer from "oxalis/model/data_layer";
 import Model from "oxalis/model";
 import * as Utils from "libs/utils";
@@ -63,12 +64,18 @@ function getMapForSegment(segmentId: number): ThreeDMap<boolean> {
   return maybeMap;
 }
 
-function getZoomedCubeSize(zoomStep: number): Vector3 {
-  return Utils.map3(el => el * 2 ** zoomStep, cubeSize);
+function getZoomedCubeSize(zoomStep: number, resolutions: Array<Vector3>): Vector3 {
+  const [x, y, z] = zoomedAddressToAnotherZoomStep([...cubeSize, 0], resolutions, zoomStep);
+  // Drop the last element of the Vector4;
+  return [x, y, z];
 }
 
-function clipPositionToCubeBoundary(position: Vector3, zoomStep: number): Vector3 {
-  const zoomedCubeSize = getZoomedCubeSize(zoomStep);
+function clipPositionToCubeBoundary(
+  position: Vector3,
+  zoomStep: number,
+  resolutions: Array<Vector3>,
+): Vector3 {
+  const zoomedCubeSize = getZoomedCubeSize(zoomStep, resolutions);
   const currentCube = Utils.map3((el, idx) => Math.floor(el / zoomedCubeSize[idx]), position);
   const clippedPosition = Utils.map3((el, idx) => el * zoomedCubeSize[idx], currentCube);
   return clippedPosition;
@@ -78,11 +85,12 @@ function getNeighborPosition(
   clippedPosition: Vector3,
   neighborId: number,
   zoomStep: number,
+  resolutions: Array<Vector3>,
 ): Vector3 {
   // front_xy, front_xz, front_yz, back_xy, back_xz, back_yz
   const neighborLookup = [[0, 0, -1], [0, -1, 0], [-1, 0, 0], [0, 0, 1], [0, 1, 0], [1, 0, 0]];
 
-  const zoomedCubeSize = getZoomedCubeSize(zoomStep);
+  const zoomedCubeSize = getZoomedCubeSize(zoomStep, resolutions);
   const neighborMultiplier = neighborLookup[neighborId];
   const neighboringPosition = [
     clippedPosition[0] + neighborMultiplier[0] * zoomedCubeSize[0],
@@ -128,18 +136,22 @@ function* ensureSuitableIsosurface(): Saga<void> {
     return;
   }
   const position = yield* select(state => getFlooredPosition(state.flycam));
-  const existentMagnifications = layer.resolutions.map(resolution => Math.max(...resolution));
+  const { resolutions } = layer;
   const preferredZoomStep = 1;
-  const zoomStep = Utils.clamp(
-    Math.min(...existentMagnifications),
-    preferredZoomStep,
-    Math.max(...existentMagnifications),
-  );
+  const zoomStep = Math.min(preferredZoomStep, resolutions.length);
 
-  const clippedPosition = clipPositionToCubeBoundary(position, zoomStep);
+  const clippedPosition = clipPositionToCubeBoundary(position, zoomStep, resolutions);
 
   batchCounterPerSegment[segmentId] = 0;
-  yield* call(maybeLoadIsosurface, dataset, layer, segmentId, clippedPosition, zoomStep);
+  yield* call(
+    maybeLoadIsosurface,
+    dataset,
+    layer,
+    segmentId,
+    clippedPosition,
+    zoomStep,
+    resolutions,
+  );
 }
 
 function* maybeLoadIsosurface(
@@ -148,6 +160,7 @@ function* maybeLoadIsosurface(
   segmentId: number,
   clippedPosition: Vector3,
   zoomStep: number,
+  resolutions: Array<Vector3>,
 ): Saga<void> {
   const threeDMap = getMapForSegment(segmentId);
 
@@ -174,7 +187,7 @@ function* maybeLoadIsosurface(
       zoomStep,
       segmentId,
       voxelDimensions,
-      cubeSize: getZoomedCubeSize(zoomStep),
+      cubeSize,
     },
   );
 
@@ -182,8 +195,16 @@ function* maybeLoadIsosurface(
   getSceneController().addIsosurface(vertices, segmentId);
 
   for (const neighbor of neighbors) {
-    const neighborPosition = getNeighborPosition(clippedPosition, neighbor, zoomStep);
-    yield* call(maybeLoadIsosurface, dataset, layer, segmentId, neighborPosition, zoomStep);
+    const neighborPosition = getNeighborPosition(clippedPosition, neighbor, zoomStep, resolutions);
+    yield* call(
+      maybeLoadIsosurface,
+      dataset,
+      layer,
+      segmentId,
+      neighborPosition,
+      zoomStep,
+      resolutions,
+    );
   }
 }
 

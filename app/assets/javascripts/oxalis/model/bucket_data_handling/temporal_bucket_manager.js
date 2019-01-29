@@ -30,12 +30,7 @@ class TemporalBucketManager {
 
   addBucket(bucket: DataBucket): void {
     this.pullBucket(bucket);
-
-    if (bucket.isMissing()) {
-      this.pushBucket(bucket);
-    } else {
-      this.loadedPromises.push(this.makeLoadedPromise(bucket));
-    }
+    this.loadedPromises.push(this.makeLoadedPromise(bucket));
   }
 
   pullBucket(bucket: DataBucket): Array<Promise<void>> {
@@ -46,16 +41,13 @@ class TemporalBucketManager {
     return this.pullQueue.pull();
   }
 
-  pushBucket(bucket: DataBucket) {
-    if (bucket.dirty) {
-      this.pushQueue.insert(bucket);
-    }
-  }
-
   makeLoadedPromise(bucket: DataBucket): Promise<void> {
     const loadedPromise = new Promise((resolve, _reject) => {
       const onLoadedOrMissingHandler = () => {
-        this.pushBucket(bucket);
+        if (bucket.dirty) {
+          this.pushQueue.insert(bucket);
+        }
+
         this.loadedPromises = _.without(this.loadedPromises, loadedPromise);
         return resolve();
       };

@@ -153,7 +153,9 @@ export class DataBucket {
   getOrCreateData(): Uint8Array {
     if (this.data == null) {
       this.data = new Uint8Array(this.BUCKET_LENGTH);
-      this.temporalBucketManager.addBucket(this);
+      if (!this.isMissing()) {
+        this.temporalBucketManager.addBucket(this);
+      }
     }
 
     return this.getData();

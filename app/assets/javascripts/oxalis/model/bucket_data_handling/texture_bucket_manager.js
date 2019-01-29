@@ -7,7 +7,7 @@ import { createUpdatableTexture } from "oxalis/geometries/materials/abstract_pla
 import { getRenderer } from "oxalis/controller/renderer";
 import { waitForCondition } from "libs/utils";
 import UpdatableTexture from "libs/UpdatableTexture";
-import constants, { type Vector3, type Vector4, addressSpaceDimensions } from "oxalis/constants";
+import constants, { type Vector4, addressSpaceDimensions } from "oxalis/constants";
 import window from "libs/window";
 
 // A TextureBucketManager instance is responsible for making buckets available

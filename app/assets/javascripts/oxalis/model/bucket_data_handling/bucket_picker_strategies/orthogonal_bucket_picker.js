@@ -5,7 +5,7 @@ import type { APIDataset } from "admin/api_flow_types";
 import { type Area } from "oxalis/model/accessors/flycam_accessor";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
-import { map2, map3 } from "libs/utils";
+import { map2 } from "libs/utils";
 import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import Dimensions from "oxalis/model/dimensions";
@@ -14,7 +14,6 @@ import constants, {
   type OrthoViewExtents,
   type OrthoViewMap,
   OrthoViewValuesWithoutTDView,
-  OrthoViewValues,
   type Vector2,
   type Vector3,
   type Vector4,
@@ -62,8 +61,8 @@ function calculate2DBucketCount(
   // from which we render only a small fraction. That's why 1 is added.
   // Math.ceil is important since a raw viewport width ~ 15.8 bucket should also
   // result in 17 buckets.
-  const voxelsToBuckets = (v, dim) =>
-    1 + Math.ceil((zoomFactor * v) / (resolution[dim] * constants.BUCKET_WIDTH));
+  const voxelsToBuckets = (vx, dim) =>
+    1 + Math.ceil((zoomFactor * vx) / (resolution[dim] * constants.BUCKET_WIDTH));
 
   const bucketCountPerDim = [
     voxelsToBuckets(necessaryVoxelsPerDimUV[0], u),
@@ -245,7 +244,6 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
   subBucketLocality: Vector3,
 ): void {
   const resolutions = getResolutions(dataset);
-  const datasetScale = dataset.dataSource.scale;
 
   for (const planeId of OrthoViewValuesWithoutTDView) {
     const [u, v, w] = Dimensions.getIndices(planeId);

@@ -23,7 +23,7 @@ import ButtonComponent from "oxalis/view/components/button_component";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import Model from "oxalis/model";
 import Store, { type Flycam, type OxalisState, type Task, type Tracing } from "oxalis/store";
-import constants, { ControlModeEnum, OrthoViews } from "oxalis/constants";
+import constants, { ControlModeEnum } from "oxalis/constants";
 
 type DatasetInfoTabStateProps = {
   tracing: Tracing,

@@ -8,10 +8,7 @@ import * as THREE from "three";
 import TWEEN from "tween.js";
 import _ from "lodash";
 
-import {
-  getInputCatcherAspectRatio,
-  getInputCatcherRect,
-} from "oxalis/model/accessors/view_mode_accessor";
+import { getInputCatcherAspectRatio } from "oxalis/model/accessors/view_mode_accessor";
 import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import { getPlaneExtentInVoxel, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -20,7 +17,7 @@ import { voxelToNm, getBaseVoxel } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
 import Store, { type CameraData } from "oxalis/store";
 import api from "oxalis/api/internal_api";
-import constants, {
+import {
   type OrthoView,
   type OrthoViewMap,
   OrthoViewValuesWithoutTDView,
@@ -63,9 +60,10 @@ class CameraController extends React.PureComponent<Props> {
     const state = Store.getState();
     const { clippingDistance } = state.userConfiguration;
     const scaleFactor = getBaseVoxel(state.dataset.dataSource.scale);
-    const zoom = state.flycam.zoomStep;
     for (const planeId of OrthoViewValuesWithoutTDView) {
-      let [width, height] = getPlaneExtentInVoxel(state.flycam, planeId).map(x => x * scaleFactor);
+      const [width, height] = getPlaneExtentInVoxel(state.flycam, planeId).map(
+        x => x * scaleFactor,
+      );
 
       this.props.cameras[planeId].left = -width / 2;
       this.props.cameras[planeId].right = width / 2;

@@ -13,7 +13,7 @@ import {
 } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
 import { clamp, map3 } from "libs/utils";
 import { getMaxZoomStep, getResolutions } from "oxalis/model/accessors/dataset_accessor";
-import { getResolutionsFactors } from "oxalis/model/helpers/position_converter";
+// import { getResolutionsFactors } from "oxalis/model/helpers/position_converter";
 import Dimensions from "oxalis/model/dimensions";
 import constants, {
   type OrthoView,

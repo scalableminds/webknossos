@@ -37,7 +37,6 @@ export const setupRenderArea = (
 };
 
 export const clearCanvas = (renderer: THREE.WebGLRenderer) => {
-  const rendererSize = renderer.getSize();
   setupRenderArea(renderer, 0, 0, renderer.domElement.width, renderer.domElement.height, 0xffffff);
   renderer.clear();
 };

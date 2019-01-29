@@ -353,15 +353,15 @@ export class DataBucket {
     if (this.visualizedMesh != null) {
       return;
     }
-    // const zoomStep = getRequestLogZoomStep(Store.getState());
-    // if (this.zoomedAddress[3] === zoomStep) {
-    const resolutions = getResolutions(Store.getState().dataset);
-    this.visualizedMesh = window.addBucketMesh(
-      bucketPositionToGlobalAddress(this.zoomedAddress, resolutions),
-      this.zoomedAddress[3],
-      this.visualizationColor,
-    );
-    // }
+    const zoomStep = getRequestLogZoomStep(Store.getState());
+    if (this.zoomedAddress[3] === zoomStep) {
+      const resolutions = getResolutions(Store.getState().dataset);
+      this.visualizedMesh = window.addBucketMesh(
+        bucketPositionToGlobalAddress(this.zoomedAddress, resolutions),
+        this.zoomedAddress[3],
+        this.visualizationColor,
+      );
+    }
   }
 
   unvisualize() {

@@ -15,7 +15,6 @@ import {
   addressSpaceDimensions,
   volumeToolEnumToIndex,
 } from "oxalis/constants";
-import { V2 } from "libs/mjs";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 import {

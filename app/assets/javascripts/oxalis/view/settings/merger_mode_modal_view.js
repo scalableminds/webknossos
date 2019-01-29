@@ -8,6 +8,11 @@ type Props = {
 };
 
 export default function MergerModeModalView({ isCloseable, onClose }: Props) {
+  const getCloseButton = isDisabled => (
+    <Button type="primary" onClick={onClose} disabled={isDisabled}>
+      Close
+    </Button>
+  );
   return (
     <Modal
       visible
@@ -18,14 +23,10 @@ export default function MergerModeModalView({ isCloseable, onClose }: Props) {
         <div className="centered-children">
           {!isCloseable ? (
             <Tooltip title="At the moment, the existing trees are used to merge segments. This dialog can be closed after the initial processing has been completed.">
-              <Button type="primary" onClick={onClose} disabled>
-                Close
-              </Button>
+              {getCloseButton(true)}
             </Tooltip>
           ) : (
-            <Button type="primary" onClick={onClose}>
-              Close
-            </Button>
+            getCloseButton(false)
           )}
         </div>
       }

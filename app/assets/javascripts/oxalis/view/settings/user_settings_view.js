@@ -94,6 +94,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
       this.setState({
         isMergerModeEnabled: true,
         isMergerModeModalVisible: true,
+        isMergerModeModalClosable: false,
       });
       await enableMergerMode();
       // The modal is only closeable after the merger mode is fully enabled
@@ -385,9 +386,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
         {isMergerModeModalVisible ? (
           <MergerModeModalView
             isCloseable={isMergerModeModalClosable}
-            onClose={() =>
-              this.setState({ isMergerModeModalVisible: false, isMergerModeModalClosable: false })
-            }
+            onClose={() => this.setState({ isMergerModeModalVisible: false })}
           />
         ) : null}
       </React.Fragment>

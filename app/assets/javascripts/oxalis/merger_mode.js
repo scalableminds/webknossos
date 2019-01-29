@@ -12,7 +12,7 @@ type MergerModeState = {
   nodes: Array<NodeWithTreeId>,
   segementationLayerName: string,
   nodeSegmentMap: Object,
-  segmentationOpacity: any,
+  segmentationOpacity: number,
   segmentationOn: boolean,
 };
 
@@ -208,8 +208,8 @@ async function mergeSegmentsOfAlreadyExistingTrees(index = 0, mergerModeState: M
       mapSegmentColorToTree(segmentId, treeId, mergerModeState);
     }
   };
-  const nodesMappedPromisses = nodes.map(node => setSegementationOfNode(node));
-  await Promise.all(nodesMappedPromisses);
+  const nodesMappedPromises = nodes.map(node => setSegementationOfNode(node));
+  await Promise.all(nodesMappedPromises);
   api.data.setMapping("segmentation", colorMapping);
 }
 
@@ -226,7 +226,7 @@ export async function enableMergerMode() {
     nodes: getAllNodesWithTreeId(),
     segementationLayerName: api.data.getVolumeTracingLayerName(),
     nodeSegmentMap: {},
-    segmentationOpacity: api.data.getConfiguration("segmentationOpacity"),
+    segmentationOpacity: ((api.data.getConfiguration("segmentationOpacity"): any): number),
     segmentationOn: true,
   };
   // Register the overwrites

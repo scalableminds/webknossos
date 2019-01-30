@@ -1,3 +1,4 @@
+// @noflow
 /* eslint-disable */
 
 !(function(e) {

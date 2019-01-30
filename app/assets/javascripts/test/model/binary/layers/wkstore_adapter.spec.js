@@ -1,3 +1,4 @@
+// @noflow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import Base64 from "base64-js";
 import _ from "lodash";

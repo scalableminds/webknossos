@@ -1,3 +1,4 @@
+// @noflow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import Deferred from "libs/deferred";
 import runAsync from "test/helpers/run-async";

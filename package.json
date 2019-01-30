@@ -39,6 +39,7 @@
     "eslint-plugin-import": "^2.14.0",
     "eslint-plugin-jsx-a11y": "^6.1.2",
     "eslint-plugin-react": "^7.11.0",
+    "eslint-plugin-flow-header": "^0.2.0",
     "file-loader": "^1.1.5",
     "flow-bin": "^0.83.0",
     "flow-coverage-report": "^0.6.0",

@@ -1,3 +1,4 @@
+// @noflow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";

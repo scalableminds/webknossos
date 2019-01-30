@@ -1,3 +1,4 @@
+// @flow
 import { Row, Col, Card } from "antd";
 import Markdown from "react-remarkable";
 import React from "react";

@@ -1,3 +1,4 @@
+// @flow
 // This file is only for documentation:
 // Types which were used for creating the datasource.schema.json
 // The `flow2schema` node module has been used for conversion.

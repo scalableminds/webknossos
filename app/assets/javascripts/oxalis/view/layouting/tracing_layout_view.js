@@ -39,7 +39,11 @@ import { storeLayoutConfig, setActiveLayout } from "./layout_persistence";
 
 const { Header, Sider } = Layout;
 
-type StateProps = {
+type OwnProps = {|
+  initialAnnotationType: AnnotationType,
+  initialCommandType: TraceOrViewCommand,
+|};
+type StateProps = {|
   viewMode: Mode,
   displayScalebars: boolean,
   isUpdateTracingAllowed: boolean,
@@ -47,13 +51,11 @@ type StateProps = {
   storedLayouts: Object,
   isDatasetOnScratchVolume: boolean,
   autoSaveLayouts: boolean,
-};
-
-type Props = StateProps & {
-  initialAnnotationType: AnnotationType,
-  initialCommandType: TraceOrViewCommand,
+|};
+type DispatchProps = {|
   setAutoSaveLayouts: boolean => void,
-};
+|};
+type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
 
 type State = {
   isSettingsCollapsed: boolean,
@@ -191,9 +193,9 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
                 onLayoutChange={this.onLayoutChange}
               >
                 {/*
-                   * All possible layout panes are passed here. Depending on the actual layout,
-                   *  the components are rendered or not.
-                   */}
+                 * All possible layout panes are passed here. Depending on the actual layout,
+                 *  the components are rendered or not.
+                 */}
                 <InputCatcher
                   viewportID={OrthoViews.PLANE_XY}
                   key="xy"
@@ -262,7 +264,7 @@ function mapStateToProps(state: OxalisState): StateProps {
   };
 }
 
-export default connect(
+export default connect<Props, OwnProps, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
 )(withRouter(TracingLayoutView));

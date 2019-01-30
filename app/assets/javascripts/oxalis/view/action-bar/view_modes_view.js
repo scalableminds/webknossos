@@ -8,10 +8,10 @@ import Store, { type OxalisState, type AllowedMode } from "oxalis/store";
 import * as Utils from "libs/utils";
 import constants, { type Mode } from "oxalis/constants";
 
-type Props = {
+type Props = {|
   viewMode: Mode,
   allowedModes: Array<AllowedMode>,
-};
+|};
 
 type State = {
   arbitraryModeLabel: Mode,
@@ -91,4 +91,4 @@ function mapStateToProps(state: OxalisState): Props {
   };
 }
 
-export default connect(mapStateToProps)(ViewModesView);
+export default connect<Props, {||}, _, _, _, _>(mapStateToProps)(ViewModesView);

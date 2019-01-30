@@ -215,26 +215,31 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                 render={(__, taskType: APITaskType) => (
                   <span>
                     <Link to={`/annotations/CompoundTaskType/${taskType.id}`} title="View">
-                      <Icon type="eye-o" />View
+                      <Icon type="eye-o" />
+                      View
                     </Link>
                     <br />
                     <Link to={`/taskTypes/${taskType.id}/edit`} title="Edit taskType">
-                      <Icon type="edit" />Edit
+                      <Icon type="edit" />
+                      Edit
                     </Link>
                     <br />
                     <Link to={`/taskTypes/${taskType.id}/tasks`} title="View Tasks">
-                      <Icon type="schedule" />Tasks
+                      <Icon type="schedule" />
+                      Tasks
                     </Link>
                     <br />
                     <a
                       href={`/api/annotations/CompoundTaskType/${taskType.id}/download`}
                       title="Download all Finished Tracings"
                     >
-                      <Icon type="download" />Download
+                      <Icon type="download" />
+                      Download
                     </a>
                     <br />
                     <a href="#" onClick={_.partial(this.deleteTaskType, taskType)}>
-                      <Icon type="delete" />Delete
+                      <Icon type="delete" />
+                      Delete
                     </a>
                   </span>
                 )}

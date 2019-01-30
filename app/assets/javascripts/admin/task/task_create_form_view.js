@@ -66,7 +66,8 @@ export function handleTaskCreationResponse(responses: Array<TaskCreationResponse
           <div>
             Successful Tasks:
             <pre>
-              taskId,filename,position<br />
+              taskId,filename,position
+              <br />
               {successfulTasks}
             </pre>
           </div>

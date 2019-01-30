@@ -5,6 +5,7 @@
 import AirbrakeClient from "airbrake-js";
 import _ from "lodash";
 
+import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";
 import type { APIUser } from "admin/api_flow_types";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -98,12 +99,32 @@ class ErrorHandling {
         error = new Error(message);
       }
       console.error(error);
-      this.airbrake.notify(error);
+      this.notify(error);
+
+      Toast.error(
+        `An unknown error occurred. Please consider refreshing this page to avoid an inconsistent state. Error message: ${error.toString()}`,
+      );
     };
   }
 
-  notify(error: Error) {
-    this.airbrake.notify(error);
+  notify(error: Error, optParams: Object = {}, escalateToSlack: boolean = false) {
+    const actionLog = getActionLog();
+    this.airbrake.notify({ error, params: { ...optParams, actionLog } });
+    if (escalateToSlack) {
+      const webhookUrl =
+        "https://hooks.slack.com/services/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";
+      fetch(webhookUrl, {
+        method: "POST",
+        headers: {},
+        body: JSON.stringify({
+          text: `*Inconsistent tracing* :k:
+*Error*: \`${error.toString()}\`
+*Url*: \`${location.href}\`
+*Action Log*: \`${JSON.stringify(actionLog)}\`
+*Params*: \`${JSON.stringify(optParams)}\``,
+        }),
+      });
+    }
   }
 
   assertExtendContext(additionalContext: Object) {

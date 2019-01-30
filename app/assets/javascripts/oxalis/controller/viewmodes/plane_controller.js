@@ -10,6 +10,7 @@ import * as React from "react";
 import _ from "lodash";
 
 import { InputKeyboard, InputKeyboardNoLoop, InputMouse, type ModifierKeys } from "libs/input";
+import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import { document } from "libs/window";
 import { getBaseVoxel, getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import {
@@ -67,6 +68,23 @@ function ensureNonConflictingHandlers(skeletonControls: Object, volumeControls: 
     );
   }
 }
+
+const isosurfaceLeftClick = (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+  if (!event.shiftKey) {
+    return;
+  }
+  const segmentation = Model.getSegmentationLayer();
+  if (!segmentation) {
+    return;
+  }
+  const cellId = segmentation.cube.getMappedDataValue(
+    calculateGlobalPos(pos),
+    getRequestLogZoomStep(Store.getState()),
+  );
+  if (cellId > 0) {
+    Store.dispatch(changeActiveIsosurfaceCellAction(cellId));
+  }
+};
 
 type OwnProps = {
   onRender: () => void,
@@ -148,7 +166,6 @@ class PlaneController extends React.PureComponent<Props> {
         const viewportScale = getViewportScale(planeId);
         return this.movePlane([(delta.x * -1) / viewportScale, (delta.y * -1) / viewportScale, 0]);
       },
-
       scroll: this.scrollPlanes.bind(this),
       over: () => {
         Store.dispatch(setViewportAction(planeId));
@@ -160,12 +177,12 @@ class PlaneController extends React.PureComponent<Props> {
     };
     // TODO: Find a nicer way to express this, while satisfying flow
     const emptyDefaultHandler = { leftClick: null };
-    const { leftClick: skeletonLeftClick, ...skeletonControls } =
+    const { leftClick: maybeSkeletonLeftClick, ...skeletonControls } =
       this.props.tracing.skeleton != null
         ? skeletonController.getPlaneMouseControls(this.planeView)
         : emptyDefaultHandler;
 
-    const { leftClick: volumeLeftClick, ...volumeControls } =
+    const { leftClick: maybeVolumeLeftClick, ...volumeControls } =
       this.props.tracing.volume != null
         ? volumeController.getPlaneMouseControls(planeId)
         : emptyDefaultHandler;
@@ -176,7 +193,12 @@ class PlaneController extends React.PureComponent<Props> {
       ...baseControls,
       ...skeletonControls,
       ...volumeControls,
-      leftClick: this.createToolDependentHandler(skeletonLeftClick, volumeLeftClick),
+      leftClick: this.createToolDependentHandler(
+        maybeSkeletonLeftClick,
+        maybeVolumeLeftClick,
+        // The isosurfaceLeftClick handler should only be used in view mode.
+        isosurfaceLeftClick,
+      ),
     };
   }
 
@@ -492,7 +514,11 @@ class PlaneController extends React.PureComponent<Props> {
     this.unsubscribeStoreListeners();
   }
 
-  createToolDependentHandler(skeletonHandler: ?Function, volumeHandler: ?Function): Function {
+  createToolDependentHandler(
+    skeletonHandler: ?Function,
+    volumeHandler: ?Function,
+    viewHandler?: ?Function,
+  ): Function {
     return (...args) => {
       if (skeletonHandler && volumeHandler) {
         // Deal with both modes
@@ -502,10 +528,15 @@ class PlaneController extends React.PureComponent<Props> {
         } else {
           volumeHandler(...args);
         }
-        return;
+      } else if (skeletonHandler) {
+        skeletonHandler(...args);
+      } else if (volumeHandler) {
+        volumeHandler(...args);
+      } else if (viewHandler != null) {
+        // At this point, neither skeletonHandler nor volumeHandler is defined.
+        // Instead, use the viewHandler, if it's defined.
+        viewHandler(...args);
       }
-      if (skeletonHandler) skeletonHandler(...args);
-      if (volumeHandler) volumeHandler(...args);
     };
   }
 

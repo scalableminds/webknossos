@@ -200,6 +200,7 @@ mesh.delete.failed=Failed to delete mesh
 task.create.success=Task successfully created
 task.create.failed=Failed to create Task
 task.create.limitExceeded=Cannot create more than 1000 tasks in one request.
+task.create.needsEitherSkeletonOrVolume=Each task needs to either be skeleton or volume.
 task.finished=Task is finished
 task.assigned=You got a new task
 task.tooManyOpenOnes=You already have too many open tasks

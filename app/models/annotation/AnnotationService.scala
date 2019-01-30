@@ -250,10 +250,10 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     }
   }
 
-  def createTracingBase(dataSetName: String,
-                        boundingBox: Option[BoundingBox],
-                        startPosition: Point3D,
-                        startRotation: Vector3D) = {
+  def createSkeletonTracingBase(dataSetName: String,
+                                boundingBox: Option[BoundingBox],
+                                startPosition: Point3D,
+                                startRotation: Vector3D): SkeletonTracing = {
     val initialNode = NodeDefaults.createInstance.withId(1).withPosition(startPosition).withRotation(startRotation)
     val initialTree = Tree(
       1,
@@ -275,6 +275,14 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       activeNodeId = Some(1),
       trees = Seq(initialTree)
     )
+  }
+
+  def createVolumeTracingBase(dataSetName: String,
+                              boundingBox: Option[BoundingBox],
+                              startPosition: Point3D,
+                              startRotation: Vector3D,
+                              volumeShowFallbackLayer: Boolean): VolumeTracing = {
+
   }
 
   def abortInitializedAnnotationOnFailure(initializingAnnotationId: ObjectId, insertedAnnotationBox: Box[Annotation]) =

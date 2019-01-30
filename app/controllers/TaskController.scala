@@ -3,7 +3,6 @@ package controllers
 import java.io.File
 
 import javax.inject.Inject
-
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.mvc.ResultBox
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
@@ -21,6 +20,7 @@ import net.liftweb.common.Box
 import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
 import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
+import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import models.annotation.nml.NmlResults.NmlParseResult
 import play.api.libs.Files
 import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
@@ -41,7 +41,10 @@ case class TaskParameters(
     editPosition: Point3D,
     editRotation: Vector3D,
     creationInfo: Option[String],
-    description: Option[String]
+    description: Option[String],
+    includeSkeleton: Option[Boolean],
+    includeVolume: Option[Boolean],
+    volumeShowFallbackLayer: Option[Boolean],
 )
 
 object TaskParameters {
@@ -93,11 +96,26 @@ class TaskController @Inject()(annotationService: AnnotationService,
     for {
       _ <- bool2Fox(request.body.length <= 1000) ?~> "task.create.limitExceeded"
       result <- createTasks(request.body.map { params =>
-        val tracing = annotationService.createTracingBase(params.dataSet,
-                                                          params.boundingBox,
-                                                          params.editPosition,
-                                                          params.editRotation)
-        (params, tracing)
+        val skeletonTracingOpt: Option[SkeletonTracing] =
+          if (params.includeSkeleton.getOrElse(true)) {
+            Some(annotationService.createSkeletonTracingBase(
+              params.dataSet,
+              params.boundingBox,
+              params.editPosition,
+              params.editRotation
+            ))
+          } else None
+        val volumeTracingOpt: Option[VolumeTracing] =
+          if (params.includeVolume.getOrElse(false)) {
+            Some(annotationService.createVolumeTracingBase(
+              params.dataSet,
+              params.boundingBox,
+              params.editPosition,
+              params.editRotation,
+              params.volumeShowFallbackLayer.getOrElse(false)
+            ))
+          } else None
+        (params, skeletonTracingOpt, volumeTracingOpt)
       })
     } yield result
   }
@@ -121,7 +139,7 @@ class TaskController @Inject()(annotationService: AnnotationService,
         .parseResults
       skeletonSuccesses <- Fox.serialCombined(parseResults)(_.toSkeletonSuccessFox) ?~> "task.create.failed"
       result <- createTasks(skeletonSuccesses.map(s =>
-        (buildFullParams(params, s.skeletonTracing.get, s.fileName, s.description), s.skeletonTracing.get)))
+        (buildFullParams(params, s.skeletonTracing.get, s.fileName, s.description), s.skeletonTracing, None)))
     } yield {
       result
     }
@@ -144,12 +162,22 @@ class TaskController @Inject()(annotationService: AnnotationService,
       tracing.editPosition,
       tracing.editRotation,
       Some(fileName),
-      description
+      description,
+      None, /* task creation from file does not yet support volumes */
+      None,
+      None
     )
   }
 
-  def createTasks(requestedTasks: List[(TaskParameters, SkeletonTracing)])(
+  def createTasks(requestedTasks: List[(TaskParameters, Option[SkeletonTracing], Option[VolumeTracing])])(
       implicit request: SecuredRequest[WkEnv, _]): Fox[Result] = {
+
+    def assertEachHasEitherSkeletonOrVolume: Fox[Boolean] = {
+      bool2Fox(requestedTasks.forall {
+        tuple => tuple._2.isDefined || tuple._3.isDefined
+      })
+    }
+
     def assertAllOnSameDataset(firstDatasetName: String): Fox[String] = {
       def allOnSameDatasetIter(requestedTasksRest: List[(TaskParameters, SkeletonTracing)],
                                dataSetName: String): Boolean =
@@ -172,12 +200,14 @@ class TaskController @Inject()(annotationService: AnnotationService,
       } yield js
 
     for {
+      _ <- assertEachHasEitherSkeletonOrVolume ?~> "task.create.needsEitherSkeletonOrVolume"
       firstDatasetName <- requestedTasks.headOption.map(_._1.dataSet).toFox
       _ <- assertAllOnSameDataset(firstDatasetName)
       dataSet <- dataSetDAO.findOneByNameAndOrganization(firstDatasetName, request.identity._organization) ?~> Messages(
         "dataSet.notFound",
         firstDatasetName)
       tracingStoreClient <- tracingStoreService.clientFor(dataSet)
+      // TODO
       skeletonTracingIds: List[Box[String]] <- tracingStoreClient.saveSkeletonTracings(
         SkeletonTracings(requestedTasks.map(_._2)))
       requestedTasksWithTracingIds = requestedTasks zip skeletonTracingIds

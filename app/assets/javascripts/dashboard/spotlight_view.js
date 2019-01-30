@@ -14,7 +14,14 @@ import features from "features";
 const { Content, Footer } = Layout;
 const { Search } = Input;
 
-const columnSpan = { xs: 24, sm: 24, md: 24, lg: 12, xl: 12, xxl: 8 };
+const columnSpan = {
+  xs: 24,
+  sm: 24,
+  md: 24,
+  lg: 24,
+  xl: 12,
+  xxl: 12,
+};
 
 const SimpleHeader = () => (
   <div id="oxalis-header">
@@ -184,43 +191,6 @@ class SpotlightView extends React.PureComponent<Props, State> {
           <SimpleHeader />
         )}
         <Content style={{ padding: 50 }}>
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            <Col className="gallery-dataset-col" {...columnSpan}>
-              <a
-                href="https://goo.gl/forms/QICmEcQyid6gb8Kw1"
-                title="Click to add missing dataset"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card">
-                  <span className="dataset-thumbnail" title="Click to add missing dataset">
-                    <div
-                      className="dataset-thumbnail-image"
-                      style={{
-                        background:
-                          "url('https://image.freepik.com/freie-ikonen/fragezeichen_318-52837.jpg')",
-                        width: "100%",
-                        height: "100%",
-                        backgroundRepeat: "no-repeat",
-                        backgroundSize: "85% 85%",
-                        backgroundPosition: "center",
-                        backgroundColor: "white",
-                      }}
-                    />
-                  </span>
-                  <div className="dataset-description" style={{ borderLeft: "5px solid #e8e8e8" }}>
-                    <div className="description-flex">
-                      <h3>Add a missing dataset</h3>
-                      <div className="dataset-description-body">
-                        You want to add your dataset to this set? Click here to add it. It opens a
-                        form which will contact us so we can add your dataset.
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              </a>
-            </Col>
-          </div>
           <div className="pull-right">{search}</div>
           <h3>Publications</h3>
           <div className="clearfix" style={{ margin: "20px 0px" }} />
@@ -240,7 +210,15 @@ class SpotlightView extends React.PureComponent<Props, State> {
               )}
             </div>
           </Spin>
-          <div style={{ display: "flex", justifyContent: "center" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              paddingRight: 12,
+              paddingLeft: 12,
+              marginTop: 80,
+            }}
+          >
             <Col className="gallery-dataset-col" {...columnSpan}>
               <a
                 href="https://goo.gl/forms/QICmEcQyid6gb8Kw1"
@@ -248,31 +226,23 @@ class SpotlightView extends React.PureComponent<Props, State> {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card">
+                <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card" bordered={false}>
+                  <div className="dataset-description">
+                    <h3 style={{ fontSize: 20 }}>Add a missing dataset</h3>
+                    <div className="dataset-description-body">
+                      You want to add your dataset to this set? Click here to add it. It opens a
+                      form which will contact us so we can add your dataset.
+                    </div>
+                  </div>
                   <span className="dataset-thumbnail" title="Click to add missing dataset">
                     <div
                       className="dataset-thumbnail-image"
                       style={{
-                        background:
-                          "url('https://image.freepik.com/freie-ikonen/fragezeichen_318-52837.jpg')",
-                        width: "100%",
-                        height: "100%",
-                        backgroundRepeat: "no-repeat",
-                        backgroundSize: "85% 85%",
-                        backgroundPosition: "center",
-                        backgroundColor: "white",
+                        backgroundImage:
+                          "url('http://savoryconceptsllc.com/wp-content/uploads/2016/05/question-mark-png-5a381257a89243.6425987715136241516905-1.jpg')",
                       }}
                     />
                   </span>
-                  <div className="dataset-description" style={{ borderLeft: "5px solid #e8e8e8" }}>
-                    <div className="description-flex">
-                      <h3>Add a missing dataset</h3>
-                      <div className="dataset-description-body">
-                        You want to add your dataset to this set? Click here to add it. It opens a
-                        form which will contact us so we can add your dataset.
-                      </div>
-                    </div>
-                  </div>
                 </Card>
               </a>
             </Col>

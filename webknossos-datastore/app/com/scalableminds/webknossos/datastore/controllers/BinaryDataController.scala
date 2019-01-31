@@ -366,13 +366,11 @@ class BinaryDataController @Inject()(
     }
 
   private def getNeighborIndices(neighbors: List[Int]) =
-    List(("NEIGHBORS" -> formatNeighborList(neighbors)),
-      ("Access-Control-Expose-Headers" -> "NEIGHBORS"))
+    List(("NEIGHBORS" -> formatNeighborList(neighbors)), ("Access-Control-Expose-Headers" -> "NEIGHBORS"))
 
   private def formatNeighborList(neighbors: List[Int]): String =
     "[" + neighbors.mkString(", ") + "]"
 
-  
   def findData(organizationName: String, dataSetName: String, dataLayerName: String) = Action.async {
     implicit request =>
       accessTokenService
@@ -482,7 +480,7 @@ class BinaryDataController @Inject()(
       )
       for {
         (data, _) <- requestData(dataSource, dataLayer, request)
-        if data.nonEmpty
+        if data.nonEmpty && data.exists(_ != 0)
       } yield position
     }
 

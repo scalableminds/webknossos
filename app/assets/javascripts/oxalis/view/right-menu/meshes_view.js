@@ -3,6 +3,7 @@
 import { Button, Upload, Checkbox, Icon, Input, Modal, Spin } from "antd";
 import { connect } from "react-redux";
 import React from "react";
+import type { Dispatch } from "redux";
 
 import type { MeshMetaData, RemoteMeshMetaData } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
@@ -17,6 +18,7 @@ import {
 import { readFileAsArrayBuffer } from "libs/read_file";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
+import type { ExtractReturn } from "libs/type_helpers";
 
 const ButtonGroup = Button.Group;
 
@@ -83,13 +85,16 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
+type OwnProps = {|
+  portalKey: string,
+|};
 type StateProps = {|
   meshes: Array<MeshMetaData>,
   isImporting: boolean,
 |};
-type DispatchProps = $Call<typeof mapDispatchToProps>;
+type DispatchProps = ExtractReturn<typeof mapDispatchToProps>;
 
-type Props = { ...DispatchProps, ...StateProps };
+type Props = { ...OwnProps, ...DispatchProps, ...StateProps };
 
 const getCheckboxStyle = isLoaded =>
   isLoaded
@@ -175,7 +180,7 @@ class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMeta
   }
 }
 
-export default connect(
+export default connect<Props, OwnProps, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
 )(MeshesView);

@@ -183,6 +183,7 @@ annotation.transferee.noDataSetAccess=Cannot transfer annotation to a user who h
 annotation.timelogging.read.failed=Time
 annotation.write.failed=Could not convert annotation to json
 annotation.noSkeleton=No skeleton tracing found for this annotation
+annotation.needsEitherSkeletonOrVolume=Annotation needs at least one of skeleton or volume
 annotation.makeHybrid.explorationalsOnly=Could not convert annotation to hybrid annotation because it is only allowed for explorational annotations.
 annotation.makeHybrid.failed=Could not convert to hybrid.
 annotation.makeHybrid.alreadyHybrid=Could not convert annotation to hybrid annotation because it is already a hybrid annotation.

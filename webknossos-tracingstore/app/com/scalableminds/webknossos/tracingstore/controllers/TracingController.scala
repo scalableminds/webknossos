@@ -6,6 +6,7 @@ import com.scalableminds.webknossos.datastore.services.{AccessTokenService, User
 import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreWkRpcClient}
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingSelector, TracingService, UpdateAction, UpdateActionGroup}
 import com.scalableminds.util.tools.JsonHelper.boxFormat
+import com.scalableminds.util.tools.JsonHelper.optionFormat
 import net.liftweb.common.Failure
 import play.api.i18n.Messages
 import play.api.libs.json.{Json, Reads}
@@ -28,7 +29,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
 
   implicit val tracingsCompanion: GeneratedMessageCompanion[Ts]
 
-  implicit def unpackMultiple(tracings: Ts): List[T]
+  implicit def unpackMultiple(tracings: Ts): List[Option[T]]
 
   implicit def packMultiple(tracings: List[T]): Ts
 
@@ -55,8 +56,11 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
     log {
       accessTokenService.validateAccess(UserAccessRequest.webknossos) {
         AllowRemoteOrigin {
-          val savedIds = Fox.sequence(request.body.map { tracing =>
-            tracingService.save(tracing, None, 0, toCache = false)
+          val savedIds = Fox.sequence(request.body.map { tracingOpt: Option[T] =>
+            tracingOpt match {
+              case Some(tracing) => tracingService.save(tracing, None, 0, toCache = false).map(Some(_))
+              case _ => Fox.successful(None)
+            }
           })
           savedIds.map(id => Ok(Json.toJson(id)))
         }

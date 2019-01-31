@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
+import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessRequest}
 import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreWkRpcClient}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingSelector
@@ -21,16 +21,16 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
 
   implicit val tracingsCompanion = SkeletonTracings
 
-  implicit def packMultiple(tracings: List[SkeletonTracing]): SkeletonTracings = SkeletonTracings(tracings)
+  implicit def packMultiple(tracings: List[SkeletonTracing]): SkeletonTracings = SkeletonTracings(tracings.map(t => SkeletonTracingOpt(Some(t))))
 
-  implicit def unpackMultiple(tracings: SkeletonTracings): List[SkeletonTracing] = tracings.tracings.toList
+  implicit def unpackMultiple(tracings: SkeletonTracings): List[Option[SkeletonTracing]] = tracings.tracings.toList.map(_.tracing)
 
   def mergedFromContents(persist: Boolean) = Action.async(validateProto[SkeletonTracings]) { implicit request =>
     log {
       accessTokenService.validateAccess(UserAccessRequest.webknossos) {
         AllowRemoteOrigin {
-          val tracings = request.body.tracings
-          val mergedTracing = tracingService.merge(tracings)
+          val tracings: List[Option[SkeletonTracing]] = request.body
+          val mergedTracing = tracingService.merge(tracings.flatten)
           tracingService.save(mergedTracing, None, mergedTracing.version, toCache = !persist).map { newId =>
             Ok(Json.toJson(newId))
           }

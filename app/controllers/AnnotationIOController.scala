@@ -10,7 +10,7 @@ import javax.inject.Inject
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
+import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.{ProtoGeometryImplicits, TracingType}
 import com.typesafe.scalalogging.LazyLogging
@@ -145,7 +145,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
             } yield savedTracingId
           }
           mergedSkeletonTracingIdOpt <- Fox.runOptional(skeletonTracings.headOption) { s =>
-            tracingStoreClient.mergeSkeletonTracingsByContents(SkeletonTracings(skeletonTracings),
+            tracingStoreClient.mergeSkeletonTracingsByContents(SkeletonTracings(skeletonTracings.map(t => SkeletonTracingOpt(Some(t)))),
                                                                persistTracing = true)
           }
           annotation <- annotationService.createFrom(request.identity,

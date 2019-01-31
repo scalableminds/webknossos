@@ -5,10 +5,11 @@ import java.io.File
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
-import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracings}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingSelector
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.util.tools.JsonHelper.boxFormat
+import com.scalableminds.util.tools.JsonHelper.optionFormat
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import models.binary.{DataSet, DataStoreRpcClient}
@@ -48,11 +49,18 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
       .postProtoWithJsonResponse[SkeletonTracing, String](tracing)
   }
 
-  def saveSkeletonTracings(tracings: SkeletonTracings): Fox[List[Box[String]]] = {
+  def saveSkeletonTracings(tracings: SkeletonTracings): Fox[List[Box[Option[String]]]] = {
     logger.debug("Called to save SkeletonTracings." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/skeleton/saveMultiple")
       .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
-      .postProtoWithJsonResponse[SkeletonTracings, List[Box[String]]](tracings)
+      .postProtoWithJsonResponse[SkeletonTracings, List[Box[Option[String]]]](tracings)
+  }
+
+  def saveVolumeTracings(tracings: VolumeTracings): Fox[List[Box[Option[String]]]] = {
+    logger.debug("Called to save VolumeTracings." + baseInfo)
+    rpc(s"${tracingStore.url}/tracings/volume/saveMultiple")
+      .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
+      .postProtoWithJsonResponse[VolumeTracings, List[Box[Option[String]]]](tracings)
   }
 
   def duplicateSkeletonTracing(skeletonTracingId: String, versionString: Option[String] = None): Fox[String] = {

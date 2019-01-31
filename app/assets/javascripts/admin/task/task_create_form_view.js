@@ -163,7 +163,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
 
               response = await createTaskFromNML(formValues);
             } else {
-              response = await createTasks([formValues]);
+              response = await createTasks([{...formValues, "typ": "volume"}]);
             }
             handleTaskCreationResponse(response);
           } finally {

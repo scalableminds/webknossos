@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.controllers
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracings}
+import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
 import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessRequest}
 import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreConfig, TracingStoreWkRpcClient}
@@ -28,9 +28,9 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
 
   implicit val tracingsCompanion = VolumeTracings
 
-  implicit def packMultiple(tracings: List[VolumeTracing]): VolumeTracings = VolumeTracings(tracings)
+  implicit def packMultiple(tracings: List[VolumeTracing]): VolumeTracings = VolumeTracings(tracings.map(t => VolumeTracingOpt(Some(t))))
 
-  implicit def unpackMultiple(tracings: VolumeTracings): List[VolumeTracing] = tracings.tracings.toList
+  implicit def unpackMultiple(tracings: VolumeTracings): List[Option[VolumeTracing]] = tracings.tracings.toList.map(_.tracing)
 
   override def freezeVersions = config.Tracingstore.freezeVolumeVersions
 

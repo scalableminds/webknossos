@@ -29,6 +29,7 @@ class NodeShader {
       uniforms: this.uniforms,
       vertexShader: this.getVertexShader(),
       fragmentShader: this.getFragmentShader(),
+      transparent: true,
     });
 
     shaderEditor.addMaterial("nodeFragment", this.material);
@@ -158,12 +159,6 @@ vec3 shiftHue(vec3 color, float shiftValue) {
     return hsv2rgb(hsvColor);
 }
 
-vec3 shiftValue(vec3 color, float shiftValue) {
-  vec3 hsvColor = rgb2hsv(color);
-  hsvColor.z = fract(hsvColor.z + shiftValue);
-  return hsv2rgb(hsvColor);
-}
-
 void main() {
     vec2 treeIdToTextureCoordinate = vec2(fract(
       treeId / ${COLOR_TEXTURE_WIDTH_FIXED}),
@@ -207,7 +202,6 @@ void main() {
     // NODE COLOR FOR ACTIVE NODE
     v_isActiveNode = activeNodeId == nodeId ? 1.0 : 0.0;
     if (v_isActiveNode > 0.0) {
-      color = shiftValue(color, 0.25);
       gl_PointSize *= activeNodeScaleFactor;
     }
 
@@ -245,12 +239,15 @@ varying float v_isActiveNode;
 void main()
 {
     gl_FragColor = vec4(color, 1.0);
+
+    // Add border to nodes with comments
     vec2 centerDistance = abs(gl_PointCoord - vec2(0.5));
     bool isWithinBorder = centerDistance.x < 0.20 && centerDistance.y < 0.20;
     if (v_isHighlightedCommented > 0.0 && isWithinBorder) {
       gl_FragColor  = vec4(1.0);
     };
 
+    // Make active node round
     if (v_isActiveNode > 0.0) {
       float r = 0.0, delta = 0.0, alpha = 1.0;
       vec2 cxy = 2.0 * gl_PointCoord - 1.0;

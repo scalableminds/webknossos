@@ -6,6 +6,7 @@ export function createSaveQueueFromUpdateActions(updateActions, timestamp, stats
     timestamp,
     stats,
     actions: [].concat(ua),
+    info: "[]",
   }));
 }
 

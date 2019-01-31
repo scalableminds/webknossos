@@ -11,6 +11,7 @@ import type { OxalisState } from "oxalis/store";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import Date from "libs/date";
 import * as Utils from "libs/utils";
+import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";
 
 function SaveReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
@@ -32,6 +33,8 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
                     timestamp: Date.now(),
                     actions: items,
                     stats,
+                    // TODO: Redux Action Log context for debugging purposes. Remove this again if it is no longer needed.
+                    info: JSON.stringify(getActionLog().slice(-50)),
                   },
                 ],
               },

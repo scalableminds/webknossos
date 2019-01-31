@@ -38,7 +38,7 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
     const { value, label, max, min, step, onChange } = this.props;
 
     return (
-      <Row className="settings-row" type="flex" align="middle">
+      <Row type="flex" align="middle">
         <Col span={8}>
           <label className="setting-label">{label}</label>
         </Col>
@@ -114,7 +114,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
   render() {
     const { label, roundTo, value, min, max, disabled } = this.props;
     return (
-      <Row className="settings-row" type="flex" align="middle">
+      <Row type="flex" align="middle">
         <Col span={8}>
           <label className="setting-label">{label}</label>
         </Col>
@@ -154,7 +154,7 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
   render() {
     const { label, onChange, value } = this.props;
     return (
-      <Row className="settings-row" type="flex" align="middle">
+      <Row className="margin-bottom" type="flex" align="middle">
         <Col span={8}>
           <label className="setting-label">{label}</label>
         </Col>
@@ -186,7 +186,7 @@ export class NumberInputSetting extends React.PureComponent<NumberInputSettingPr
     const { onChange, value, label, max, min, step } = this.props;
 
     return (
-      <Row className="settings-row">
+      <Row className="margin-bottom">
         <Col span={8}>
           <label className="setting-label">{label}</label>
         </Col>
@@ -297,7 +297,7 @@ export class Vector6InputSetting extends React.PureComponent<
     const tooltipStyle = this.state.isValid ? null : { backgroundColor: "red" };
 
     return (
-      <Row className="settings-row">
+      <Row className="margin-bottom">
         <Col span={8}>
           <label className="setting-label">{this.props.label}</label>
         </Col>
@@ -336,7 +336,7 @@ export class ColorSetting extends React.PureComponent<ColorSettingPropTypes> {
 
   render() {
     return (
-      <Row className="settings-row">
+      <Row className="margin-bottom">
         <Col span={8}>
           <label className="setting-label">{this.props.label}</label>
         </Col>
@@ -363,7 +363,7 @@ export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
   render() {
     const { onChange, label, value, children } = this.props;
     return (
-      <Row className="settings-row">
+      <Row className="margin-bottom">
         <Col span={8}>
           <label className="setting-label">{label}</label>
         </Col>

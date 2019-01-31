@@ -84,7 +84,7 @@ const datasetConfigOverrides: { [key: string]: DatasetConfiguration } = {
   ROI2017_wkw_fallback: {
     fourBit: false,
     interpolation: true,
-    layers: { color: { color: [255, 255, 255], contrast: 1, brightness: 0 } },
+    layers: { color: { color: [255, 255, 255], contrast: 1, brightness: 0, alpha: 100 } },
     quality: 0,
     segmentationOpacity: 0,
     highlightHoveredCellId: true,

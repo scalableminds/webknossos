@@ -18,8 +18,8 @@ class RegistrationView extends React.PureComponent<Props> {
     if (organizationName) {
       return (
         <Card style={{ marginBottom: 24 }}>
-          You were invited to join the organization &ldquo;{organizationName}&rdquo;!<br /> In case
-          you do not know this organization, contact{" "}
+          You were invited to join the organization &ldquo;{organizationName}&rdquo;!
+          <br /> In case you do not know this organization, contact{" "}
           <a href="mailto:hello@scalableminds.com">hello@scalableminds.com</a> to get more
           information about how to get to use webKnossos.
         </Card>
@@ -28,9 +28,9 @@ class RegistrationView extends React.PureComponent<Props> {
 
     return (
       <Card style={{ marginBottom: 24 }}>
-        Not a member of the listed organizations?<br /> Contact{" "}
-        <a href="mailto:hello@scalableminds.com">hello@scalableminds.com</a> to get more information
-        about how to get to use webKnossos.
+        Not a member of the listed organizations?
+        <br /> Contact <a href="mailto:hello@scalableminds.com">hello@scalableminds.com</a> to get
+        more information about how to get to use webKnossos.
       </Card>
     );
   }

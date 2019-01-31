@@ -3,7 +3,7 @@
  * @flow
  */
 
-import { createStore, applyMiddleware } from "redux";
+import { createStore, applyMiddleware, type Dispatch } from "redux";
 import createSagaMiddleware from "redux-saga";
 
 import type {
@@ -50,6 +50,7 @@ import UserReducer from "oxalis/model/reducers/user_reducer";
 import ViewModeReducer from "oxalis/model/reducers/view_mode_reducer";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
 import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
+import actionLoggerMiddleware from "oxalis/model/helpers/action_logger_middleware";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import rootSaga from "oxalis/model/sagas/root_saga";
 
@@ -207,6 +208,7 @@ export type DatasetLayerConfiguration = {|
   +color: Vector3,
   +brightness: number,
   +contrast: number,
+  +alpha: number,
 |};
 
 export type DatasetConfiguration = {|
@@ -566,10 +568,10 @@ const combinedReducers = reduceReducers(
   UiReducer,
 );
 
-const store = createStore(
+const store = createStore<OxalisState, Action, Dispatch<*>>(
   combinedReducers,
   defaultState,
-  applyMiddleware(overwriteActionMiddleware, sagaMiddleware),
+  applyMiddleware(actionLoggerMiddleware, overwriteActionMiddleware, sagaMiddleware),
 );
 sagaMiddleware.run(rootSaga);
 

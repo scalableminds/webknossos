@@ -57,7 +57,10 @@ import DeleteGroupModalView from "./delete_group_modal_view";
 const ButtonGroup = Button.Group;
 const InputGroup = Input.Group;
 
-type Props = {
+type OwnProps = {|
+  portalKey: string,
+|};
+type StateProps = {|
   onShuffleTreeColor: number => void,
   onShuffleAllTreeColors: () => void,
   onSortTree: boolean => void,
@@ -70,13 +73,14 @@ type Props = {
   onUpdateTreeGroups: (Array<TreeGroup>) => void,
   onChangeTreeName: string => void,
   annotation: Tracing,
-  skeletonTracing?: SkeletonTracing,
+  skeletonTracing: ?SkeletonTracing,
   userConfiguration: UserConfiguration,
   onSetActiveTree: number => void,
   onDeselectActiveTree: () => void,
   onDeselectActiveGroup: () => void,
   showDropzoneModal: () => void,
-};
+|};
+type Props = {| ...OwnProps, ...StateProps |};
 
 type State = {
   isUploading: boolean,
@@ -123,7 +127,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     groupToDelete: null,
   };
 
-  handleChangeTreeName = evt => {
+  handleChangeTreeName = (evt: SyntheticInputEvent<>) => {
     if (!this.props.skeletonTracing) {
       return;
     }
@@ -135,7 +139,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     }
   };
 
-  deleteGroup = (groupId: number, deleteRecursively = false) => {
+  deleteGroup = (groupId: number, deleteRecursively: boolean = false) => {
     if (!this.props.skeletonTracing) {
       return;
     }
@@ -263,7 +267,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     });
   }
 
-  onSelectTree = id => {
+  onSelectTree = (id: number) => {
     const tracing = this.props.skeletonTracing;
     if (!tracing) {
       return;
@@ -353,12 +357,12 @@ class TreesTabView extends React.PureComponent<Props, State> {
     );
   }
 
-  handleDropdownClick = ({ key }) => {
+  handleDropdownClick = ({ key }: { key: string }) => {
     const shouldSortTreesByName = key === "sortByName";
     this.props.onSortTree(shouldSortTreesByName);
   };
 
-  deleteGroupAndHideModal(groupToDelete: ?number, deleteSubtrees = false) {
+  deleteGroupAndHideModal(groupToDelete: ?number, deleteSubtrees: boolean = false) {
     this.hideDeleteGroupsModal();
     if (groupToDelete != null) {
       this.deleteGroup(groupToDelete, deleteSubtrees);
@@ -485,7 +489,8 @@ class TreesTabView extends React.PureComponent<Props, State> {
           </ButtonComponent>
           <Dropdown overlay={this.getActionsDropdown()}>
             <ButtonComponent>
-              More<Icon type="down" />
+              More
+              <Icon type="down" />
             </ButtonComponent>
           </Dropdown>
         </ButtonGroup>
@@ -581,7 +586,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect(
+export default connect<Props, OwnProps, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
 )(TreesTabView);

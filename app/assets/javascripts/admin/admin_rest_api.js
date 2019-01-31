@@ -44,10 +44,10 @@ import {
   type ServerTracing,
   type ServerVolumeTracing,
 } from "admin/api_flow_types";
-import { V3 } from "libs/mjs";
 import type { DatasetConfiguration } from "oxalis/store";
 import type { NewTask, TaskCreationResponse } from "admin/task/task_create_bulk_view";
 import type { QueryObject } from "admin/task/task_search_form";
+import { V3 } from "libs/mjs";
 import type { Vector3 } from "oxalis/constants";
 import type { Versions } from "oxalis/view/version_view";
 import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
@@ -122,6 +122,13 @@ export async function loginUser(formValues: { email: string, password: string })
 
 export async function getUsers(): Promise<Array<APIUser>> {
   const users = await Request.receiveJSON("/api/users");
+  assertResponseLimit(users);
+
+  return users;
+}
+
+export async function getTeamManagerOrAdminUsers(): Promise<Array<APIUser>> {
+  const users = await Request.receiveJSON("/api/users?isTeamManagerOrAdmin=true");
   assertResponseLimit(users);
 
   return users;
@@ -1027,18 +1034,25 @@ export function getMeshData(id: string): Promise<ArrayBuffer> {
   return Request.receiveArraybuffer(`/api/meshes/${id}/data`);
 }
 
-export function computeIsosurface(
-  datastoreUrl: string,
-  datasetId: APIDatasetId,
-  layer: DataLayer,
+// These parameters are bundled into an object to avoid that the computeIsosurface function
+// receives too many parameters, since this doesn't play well with the saga typings.
+type IsosurfaceRequest = {
   position: Vector3,
   zoomStep: number,
   segmentId: number,
   voxelDimensions: Vector3,
   cubeSize: Vector3,
-): Promise<ArrayBuffer> {
-  return doWithToken(token =>
-    Request.sendJSONReceiveArraybuffer(
+};
+
+export function computeIsosurface(
+  datastoreUrl: string,
+  datasetId: APIDatasetId,
+  layer: DataLayer,
+  isosurfaceRequest: IsosurfaceRequest,
+): Promise<{ buffer: ArrayBuffer, neighbors: Array<number> }> {
+  const { position, zoomStep, segmentId, voxelDimensions, cubeSize } = isosurfaceRequest;
+  return doWithToken(async token => {
+    const { buffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
       `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${
         layer.name
       }/isosurface?token=${token}`,
@@ -1058,6 +1072,9 @@ export function computeIsosurface(
           voxelDimensions,
         },
       },
-    ),
-  );
+    );
+    const neighbors = Utils.parseAsMaybe(headers.neighbors).getOrElse([]);
+
+    return { buffer, neighbors };
+  });
 }

@@ -21,7 +21,7 @@ const { Option } = Select;
 const { TextArea } = Input;
 
 type Props = {
-  taskTypeId: ?string,
+  taskTypeId?: ?string,
   form: Object,
   history: RouterHistory,
 };

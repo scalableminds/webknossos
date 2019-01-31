@@ -8,7 +8,8 @@ Here we present **webKnossos**.
 webKnossos: efficient online 3D data annotation for connectomics.
 [Nature Methods (2017) DOI:10.1038/NMETH.4331.](https://www.nature.com/articles/nmeth.4331)
 
-![webKnossos logo](https://webknossos.brain.mpg.de/assets/images/oxalis.svg)
+![webKnossos logo](https://webknossos.org/images/oxalis.svg)
+
 [![CircleCI](https://circleci.com/gh/scalableminds/webknossos.svg?style=svg)](https://circleci.com/gh/scalableminds/webknossos)
 
 ## Demo
@@ -124,21 +125,10 @@ See: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 
 ### Run locally
 ```bash
-sbt run
+yarn start
 ```
 Will fetch all Scala, Java and node dependencies and run the application on Port 9000.
-Make sure that the PostgreSQL service is running before you start sbt.
-
-### Run on a remote machine
-```bash
-sbt "run -Dhttp.uri=http://<remote address>:9000"
-```
-Will fetch all Scala, Java and node dependencies and run the application on Port 9000.
-Make sure that the PostgreSQL service is running before you start sbt.
-
-Make sure to open port `9000` in your firewall.
-This is only recommended for development purposes.
-See below for a recommended production setup.
+Make sure that the PostgreSQL service is running before you start the application.
 
 ## Production setup
 [See wiki](https://github.com/scalableminds/webknossos/wiki/Production-setup) for recommended production setup.
@@ -172,6 +162,8 @@ Contact us at [hello@scalableminds.com](mailto:hello@scalableminds.com).
 ## Credits
 * scalable minds - https://scalableminds.com/
 * Max Planck Institute for Brain Research – https://brain.mpg.de/
+
+webKnossos was inspired by [KNOSSOS](https://knossos.app).
 
 ### Thanks
 * [CircleCI](https://circleci.com/gh/scalableminds/webknossos) for letting us run builds and tests on their CI

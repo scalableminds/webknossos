@@ -32,21 +32,21 @@ import messages from "messages";
 const typeHint: APITaskWithAnnotation[] = [];
 const pageLength: number = 1000;
 
-type StateProps = {
-  activeUser: APIUser,
-};
-
 export type TaskModeState = {
   tasks: Array<APITaskWithAnnotation>,
   loadedAllTasks: boolean,
   lastLoadedPage: number,
 };
 
-type Props = {
+type OwnProps = {|
   userId: ?string,
   isAdminView: boolean,
-  history: RouterHistory,
-} & StateProps;
+|};
+type StateProps = {|
+  activeUser: APIUser,
+|};
+type Props = {| ...OwnProps, ...StateProps |};
+type PropsWithRouter = {| ...Props, history: RouterHistory |};
 
 type State = {
   showFinishedTasks: boolean,
@@ -90,7 +90,7 @@ const convertAnnotationToTaskWithAnnotationType = (
   return newTask;
 };
 
-class DashboardTaskListView extends React.PureComponent<Props, State> {
+class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> {
   state = {
     showFinishedTasks: false,
     isLoading: false,
@@ -224,17 +224,20 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     // TODO use React fragments <> instead of spans / divs
     const label = this.props.isAdminView ? (
       <span>
-        <Icon type="eye-o" />View
+        <Icon type="eye-o" />
+        View
       </span>
     ) : (
       <span>
-        <Icon type="play-circle-o" />Trace
+        <Icon type="play-circle-o" />
+        Trace
       </span>
     );
 
     return task.annotation.state === "Finished" ? (
       <div>
-        <Icon type="check-circle-o" />Finished
+        <Icon type="check-circle-o" />
+        Finished
         <br />
       </div>
     ) : (
@@ -244,7 +247,8 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         {isAdmin || this.props.isAdminView ? (
           <div>
             <a href="#" onClick={() => this.openTransferModal(annotation.id)}>
-              <Icon type="team" />Transfer
+              <Icon type="team" />
+              Transfer
             </a>
             <br />
           </div>
@@ -252,22 +256,26 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         {isAdmin ? (
           <div>
             <a href={`/api/annotations/Task/${annotation.id}/download`}>
-              <Icon type="download" />Download
+              <Icon type="download" />
+              Download
             </a>
             <br />
             <a href="#" onClick={() => this.resetTask(annotation)}>
-              <Icon type="rollback" />Reset
+              <Icon type="rollback" />
+              Reset
             </a>
             <br />
             <a href="#" onClick={() => this.cancelAnnotation(annotation)}>
-              <Icon type="delete" />Reset and Cancel
+              <Icon type="delete" />
+              Reset and Cancel
             </a>
             <br />
           </div>
         ) : null}
         {this.props.isAdminView ? null : (
           <a href="#" onClick={() => this.confirmFinish(task)}>
-            <Icon type="check-circle-o" />Finish
+            <Icon type="check-circle-o" />
+            Finish
           </a>
         )}
       </div>
@@ -378,7 +386,9 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         <span style={{ marginRight: 8 }}>
           {task.type.summary} (<FormattedDate timestamp={task.created} />)
         </span>
-        {task.type.settings.allowedModes.map(mode => <Tag key={mode}>{mode}</Tag>)}
+        {task.type.settings.allowedModes.map(mode => (
+          <Tag key={mode}>{mode}</Tag>
+        ))}
       </React.Fragment>
     );
 
@@ -481,4 +491,6 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
 });
 
-export default connect(mapStateToProps)(withRouter(DashboardTaskListView));
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(
+  withRouter(DashboardTaskListView),
+);

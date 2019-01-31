@@ -3,13 +3,13 @@ import Maybe from "data.maybe";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 
-import type { APIDataset } from "admin/api_flow_types";
+import type { APIDataset, APIAllowedMode } from "admin/api_flow_types";
 import type { Settings, DataLayerType } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
 import constants, { ModeValues, type Vector3, Vector3Indicies } from "oxalis/constants";
 import messages from "messages";
 
-export function getResolutions(dataset: APIDataset): Vector3[] {
+function _getResolutions(dataset: APIDataset): Vector3[] {
   // Different layers can have different resolutions. At the moment,
   // unequal resolutions will result in undefined behavior.
   // However, if resolutions are subset of each other, everything should be fine.
@@ -33,6 +33,11 @@ export function getResolutions(dataset: APIDataset): Vector3[] {
 
   return mostExtensiveResolutions.concat(extendedResolutions);
 }
+
+// _getResolutions itself is not very performance intensive, but other functions which rely
+// on the returned resolutions are. To avoid busting memoization caches (which rely on references),
+// we memoize _getResolutions, as well.
+export const getResolutions = memoizeOne(_getResolutions);
 
 function _getMaxZoomStep(maybeDataset: ?APIDataset): number {
   const minimumZoomStepCount = 1;
@@ -119,7 +124,10 @@ export function getDatasetCenter(dataset: APIDataset): Vector3 {
   ];
 }
 
-export function determineAllowedModes(dataset: APIDataset, settings: Settings) {
+export function determineAllowedModes(
+  dataset: APIDataset,
+  settings: Settings,
+): { preferredMode: ?APIAllowedMode, allowedModes: Array<APIAllowedMode> } {
   // The order of allowedModes should be independent from the server and instead be similar to ModeValues
   let allowedModes = _.intersection(ModeValues, settings.allowedModes);
 

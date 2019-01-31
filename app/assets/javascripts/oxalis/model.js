@@ -15,7 +15,7 @@ import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import DataLayer from "oxalis/model/data_layer";
 import type LayerRenderingManager from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
-import Store, { type TraceOrViewCommand, type TracingTypeTracing } from "oxalis/store";
+import Store, { type TraceOrViewCommand, type AnnotationType } from "oxalis/store";
 import * as Utils from "libs/utils";
 
 import { initialize } from "./model_initialization";
@@ -30,13 +30,13 @@ export class OxalisModel {
   maximumDataTextureCountForLayer: number;
 
   async fetch(
-    tracingType: TracingTypeTracing,
+    annotationType: AnnotationType,
     initialCommandType: TraceOrViewCommand,
     initialFetch: boolean,
     versions?: Versions,
   ) {
     const initializationInformation = await initialize(
-      tracingType,
+      annotationType,
       initialCommandType,
       initialFetch,
       versions,

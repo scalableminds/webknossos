@@ -16,13 +16,13 @@ import constants, { type Vector3, type Vector4 } from "oxalis/constants";
 import traverse from "oxalis/model/bucket_data_handling/bucket_traversals";
 
 const hashPosition = ([x, y, z]) => 2 ** 32 * x + 2 ** 16 * y + z;
-const makeBucketsUnique = buckets => _.uniqBy(buckets, hashPosition);
+const makeBucketsUnique = (buckets: Vector3[]) => _.uniqBy(buckets, hashPosition);
 export const getFallbackBuckets = (
   buckets: Vector4[],
   resolutions: Vector3[],
   fallbackZoomStep: number,
   isFallbackAvailable: boolean,
-) =>
+): Vector4[] =>
   isFallbackAvailable
     ? _.uniqBy(
         buckets.map((bucketAddress: Vector4) =>

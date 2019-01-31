@@ -5,6 +5,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.task._
 import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
+import models.user.UserService
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
@@ -15,6 +16,7 @@ import scala.concurrent.ExecutionContext
 class ScriptController @Inject()(scriptDAO: ScriptDAO,
                                  taskDAO: TaskDAO,
                                  scriptService: ScriptService,
+                                 userService: UserService,
                                  sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
     extends Controller
     with FoxImplicits {
@@ -27,7 +29,8 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
   def create = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(scriptPublicReads) { script =>
       for {
-        _ <- bool2Fox(request.identity.isAdmin) ?~> "notAllowed"
+        isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(request.identity, request.identity._organization)
+        _ <- bool2Fox(isTeamManagerOrAdmin) ?~> "notAllowed"
         _ <- scriptDAO.insertOne(script)
         js <- scriptService.publicWrites(script) ?~> "script.write.failed"
       } yield {

@@ -14,7 +14,6 @@ import constants, {
   VolumeToolEnum,
   volumeToolEnumToIndex,
 } from "oxalis/constants";
-import { getMaxBucketCountPerDim } from "oxalis/model/accessors/flycam_accessor";
 
 import { convertCellIdToRGB, getBrushOverlay, getSegmentationId } from "./segmentation.glsl";
 import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
@@ -24,10 +23,10 @@ import compileShader from "./shader_module_system";
 
 type Params = {|
   colorLayerNames: string[],
+  isRgbLayerLookup: { [string]: boolean },
   hasSegmentation: boolean,
   segmentationName: string,
   segmentationPackingDegree: number,
-  isRgb: boolean,
   isMappingSupported: boolean,
   dataTextureCountPerLayer: number,
   resolutions: Array<Vector3>,
@@ -60,7 +59,7 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
   uniform float <%= name %>_brightness;
   uniform float <%= name %>_contrast;
   uniform vec3 <%= name %>_color;
-  uniform float <%= name %>_weight;
+  uniform float <%= name %>_alpha;
 <% }) %>
 
 <% if (hasSegmentation) { %>
@@ -101,12 +100,12 @@ uniform bool isMouseInCanvas;
 uniform float brushSizeInPixel;
 uniform float pixelToVoxelFactor;
 uniform float planeID;
+uniform vec3 bucketsPerDim;
 
 varying vec4 worldCoord;
 varying vec4 modelCoord;
 varying mat4 savedModelMatrix;
 
-const vec3 bucketsPerDim = <%= formatVector3AsVec3(bucketsPerDim) %>;
 const float bucketWidth = <%= bucketWidth %>;
 const float bucketSize = <%= bucketSize %>;
 const float l_texture_width = <%= l_texture_width %>;
@@ -120,24 +119,22 @@ const vec3 datasetScale = <%= formatVector3AsVec3(datasetScale) %>;
 const vec4 fallbackGray = vec4(0.5, 0.5, 0.5, 1.0);
 
 ${compileShader(
-      inverse,
-      div,
-      round,
-      isNan,
-      isFlightMode,
-      transDim,
-      getRelativeCoords,
-      getWorldCoordUVW,
-      isOutsideOfBoundingBox,
-      getMaybeFilteredColorOrFallback,
-      hasSegmentation ? convertCellIdToRGB : null,
-      hasSegmentation ? getBrushOverlay : null,
-      hasSegmentation ? getSegmentationId : null,
-    )}
+  inverse,
+  div,
+  round,
+  isNan,
+  isFlightMode,
+  transDim,
+  getRelativeCoords,
+  getWorldCoordUVW,
+  isOutsideOfBoundingBox,
+  getMaybeFilteredColorOrFallback,
+  hasSegmentation ? convertCellIdToRGB : null,
+  hasSegmentation ? getBrushOverlay : null,
+  hasSegmentation ? getSegmentationId : null,
+)}
 
 void main() {
-  float color_value  = 0.0;
-
   vec3 worldCoordUVW = getWorldCoordUVW();
   if (isOutsideOfBoundingBox(worldCoordUVW)) {
     gl_FragColor = vec4(0.0);
@@ -167,17 +164,23 @@ void main() {
   <% } %>
 
   // Get Color Value(s)
-  <% if (isRgb) { %>
+  vec3 data_color = vec3(0.0);
+  vec3 color_value  = vec3(0.0);
+  float fallbackZoomStep;
+  bool hasFallback;
+  vec3 fallbackCoords;
+  <% _.each(colorLayerNames, function(name, layerIndex){ %>
 
-    float fallbackZoomStep = min(<%= colorLayerNames[0]%>_maxZoomStep, zoomStep + 1.0);
-    bool hasFallback = fallbackZoomStep > zoomStep;
-    vec3 fallbackCoords = floor(getRelativeCoords(worldCoordUVW, fallbackZoomStep));
-    vec3 data_color =
+    fallbackZoomStep = min(<%= name %>_maxZoomStep, zoomStep + 1.0);
+    hasFallback = fallbackZoomStep > zoomStep;
+    fallbackCoords = floor(getRelativeCoords(worldCoordUVW, fallbackZoomStep));
+    // Get grayscale value for <%= name %>
+    color_value =
       getMaybeFilteredColorOrFallback(
-        <%= colorLayerNames[0] %>_lookup_texture,
-        0.0, // layerIndex
-        <%= colorLayerNames[0] %>_data_texture_width,
-        1.0, // RGB data cannot be packed, hence packingDegree == 1.0
+        <%= name %>_lookup_texture,
+        <%= formatNumberAsGLSLFloat(layerIndex) %>,
+        <%= name %>_data_texture_width,
+        <%= isRgbLayerLookup[name] ? "1.0" : "4.0" %>,  // RGB data cannot be packed, gray scale data is always packed into rgba channels
         coords,
         fallbackCoords,
         hasFallback,
@@ -185,39 +188,13 @@ void main() {
         fallbackGray
       ).xyz;
 
-    data_color = (data_color + <%= colorLayerNames[0] %>_brightness - 0.5) * <%= colorLayerNames[0] %>_contrast + 0.5;
-  <% } else { %>
-    vec3 data_color = vec3(0.0, 0.0, 0.0);
-    float fallbackZoomStep;
-    bool hasFallback;
-    vec3 fallbackCoords;
-    <% _.each(colorLayerNames, function(name, layerIndex){ %>
+    // Brightness / Contrast Transformation for <%= name %>
+    color_value = (color_value + <%= name %>_brightness - 0.5) * <%= name %>_contrast + 0.5;
 
-      fallbackZoomStep = min(<%= name %>_maxZoomStep, zoomStep + 1.0);
-      hasFallback = fallbackZoomStep > zoomStep;
-      fallbackCoords = floor(getRelativeCoords(worldCoordUVW, fallbackZoomStep));
-      // Get grayscale value for <%= name %>
-      color_value =
-        getMaybeFilteredColorOrFallback(
-          <%= name %>_lookup_texture,
-          <%= formatNumberAsGLSLFloat(layerIndex) %>,
-          <%= name %>_data_texture_width,
-          4.0, // gray scale data is always packed into rgba channels
-          coords,
-          fallbackCoords,
-          hasFallback,
-          false,
-          fallbackGray
-        ).x;
-
-      // Brightness / Contrast Transformation for <%= name %>
-      color_value = (color_value + <%= name %>_brightness - 0.5) * <%= name %>_contrast + 0.5;
-
-      // Multiply with color and weight for <%= name %>
-      data_color += color_value * <%= name %>_color;
-    <% }) %>
-    data_color = clamp(data_color, 0.0, 1.0);
-  <% } %>
+    // Multiply with color and alpha for <%= name %>
+    data_color += color_value * <%= name %>_alpha * <%= name %>_color;
+  <% }) %>
+  data_color = clamp(data_color, 0.0, 1.0);
 
   gl_FragColor = vec4(data_color, 1.0);
 
@@ -242,7 +219,6 @@ void main() {
   `,
   )({
     ...params,
-    colorLayerNames: params.colorLayerNames,
     layerNamesWithSegmentation: params.colorLayerNames.concat(
       params.hasSegmentation ? [params.segmentationName] : [],
     ),
@@ -254,7 +230,6 @@ void main() {
     OrthoViews,
     bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),
     bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),
-    bucketsPerDim: getMaxBucketCountPerDim(params.datasetScale),
     l_texture_width: formatNumberAsGLSLFloat(constants.LOOK_UP_TEXTURE_WIDTH),
     mappingTextureWidth: formatNumberAsGLSLFloat(MAPPING_TEXTURE_WIDTH),
     mappingColorTextureWidth: formatNumberAsGLSLFloat(MAPPING_COLOR_TEXTURE_WIDTH),

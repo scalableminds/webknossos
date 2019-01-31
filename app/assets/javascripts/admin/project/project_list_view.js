@@ -26,14 +26,17 @@ import messages from "messages";
 const { Column } = Table;
 const { Search } = Input;
 
-type StateProps = {
-  activeUser: APIUser,
-};
-
-type Props = {
-  history: RouterHistory,
+type OwnProps = {|
   initialSearchValue?: string,
-} & StateProps;
+|};
+type StateProps = {|
+  activeUser: APIUser,
+|};
+type Props = {| ...OwnProps, ...StateProps |};
+type PropsWithRouter = {|
+  ...Props,
+  history: RouterHistory,
+|};
 
 type State = {
   isLoading: boolean,
@@ -48,7 +51,7 @@ const persistence: Persistence<State> = new Persistence(
   "projectList",
 );
 
-class ProjectListView extends React.PureComponent<Props, State> {
+class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
   state = {
     isLoading: true,
     projects: [],
@@ -253,11 +256,13 @@ class ProjectListView extends React.PureComponent<Props, State> {
                       to={`/annotations/CompoundProject/${project.id}`}
                       title="View all Finished Tracings"
                     >
-                      <Icon type="eye-o" />View
+                      <Icon type="eye-o" />
+                      View
                     </Link>
                     <br />
                     <Link to={`/projects/${project.name}/edit`} title="Edit Project">
-                      <Icon type="edit" />Edit
+                      <Icon type="edit" />
+                      Edit
                     </Link>
                     <br />
                     {project.paused ? (
@@ -266,7 +271,8 @@ class ProjectListView extends React.PureComponent<Props, State> {
                           onClick={_.partial(this.pauseResumeProject, project, resumeProject)}
                           title="Resume Project"
                         >
-                          <Icon type="play-circle-o" />Resume
+                          <Icon type="play-circle-o" />
+                          Resume
                         </a>
                         <br />
                       </div>
@@ -276,36 +282,42 @@ class ProjectListView extends React.PureComponent<Props, State> {
                           onClick={_.partial(this.pauseResumeProject, project, pauseProject)}
                           title="Pause Tasks"
                         >
-                          <Icon type="pause-circle-o" />Pause
+                          <Icon type="pause-circle-o" />
+                          Pause
                         </a>
                         <br />
                       </div>
                     )}
                     <Link to={`/projects/${project.name}/tasks`} title="View Tasks">
-                      <Icon type="schedule" />Tasks
+                      <Icon type="schedule" />
+                      Tasks
                     </Link>
                     <br />
                     <a
                       onClick={_.partial(this.increaseProjectTaskInstances, project)}
                       title="Increase Task instances"
                     >
-                      <Icon type="plus-square-o" />Increase Instances
+                      <Icon type="plus-square-o" />
+                      Increase Instances
                     </a>
                     <br />
                     <a
                       href={`/api/annotations/CompoundProject/${project.id}/download`}
                       title="Download all Finished Tracings"
                     >
-                      <Icon type="download" />Download
+                      <Icon type="download" />
+                      Download
                     </a>
                     <br />
                     <a onClick={_.partial(this.showActiveUsersModal, project)}>
-                      <Icon type="team" />Show active users
+                      <Icon type="team" />
+                      Show active users
                     </a>
                     <br />
                     {project.owner.email === this.props.activeUser.email ? (
                       <a onClick={_.partial(this.deleteProject, project)}>
-                        <Icon type="delete" />Delete
+                        <Icon type="delete" />
+                        Delete
                       </a>
                     ) : null}
                   </span>
@@ -330,4 +342,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
 });
 
-export default connect(mapStateToProps)(withRouter(ProjectListView));
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(withRouter(ProjectListView));

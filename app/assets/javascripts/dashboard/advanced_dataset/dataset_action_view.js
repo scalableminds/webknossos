@@ -73,7 +73,8 @@ class DatasetActionView extends React.PureComponent<Props, State> {
               to={`/datasets/${dataset.owningOrganization}/${dataset.name}/import`}
               className="import-dataset"
             >
-              <Icon type="plus-circle-o" />Import
+              <Icon type="plus-circle-o" />
+              Import
             </Link>
 
             <div className="text-danger">{dataset.dataSource.status}</div>
@@ -87,21 +88,24 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                   to={`/datasets/${dataset.owningOrganization}/${dataset.name}/edit`}
                   title="Edit Dataset"
                 >
-                  <Icon type="edit" />Edit
+                  <Icon type="edit" />
+                  Edit
                 </Link>
                 {!dataset.isForeign ? (
                   <a href="#" onClick={() => this.clearCache(dataset)} title="Reload Dataset">
-                    <Icon type="retweet" />Reload
+                    <Icon type="retweet" />
+                    Reload
                   </a>
                 ) : null}
               </React.Fragment>
             ) : null}
-            <a
-              href={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
+            <Link
+              to={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
               title="View Dataset"
             >
-              <Icon type="eye-o" />View
-            </a>
+              <Icon type="eye-o" />
+              View
+            </Link>
             {!dataset.isForeign ? (
               <React.Fragment>
                 <a

@@ -8,6 +8,7 @@ import * as THREE from "three";
 import _ from "lodash";
 
 import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
+import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import Store from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
@@ -46,7 +47,6 @@ export class DataBucket {
   BYTE_OFFSET: number;
   visualizedMesh: ?Object;
   visualizationColor: number;
-  neededAtPickerTick: ?number;
 
   state: BucketStateEnumType;
   dirty: boolean;
@@ -153,7 +153,9 @@ export class DataBucket {
   getOrCreateData(): Uint8Array {
     if (this.data == null) {
       this.data = new Uint8Array(this.BUCKET_LENGTH);
-      this.temporalBucketManager.addBucket(this);
+      if (!this.isMissing()) {
+        this.temporalBucketManager.addBucket(this);
+      }
     }
 
     return this.getData();
@@ -347,17 +349,14 @@ export class DataBucket {
     }
   }
 
-  setNeededAtPickerTick(tick: number) {
-    this.neededAtPickerTick = tick;
-  }
-
   // The following three methods can be used for debugging purposes.
   // The bucket will be rendered in the 3D scene as a wireframe geometry.
   visualize() {
     if (this.visualizedMesh != null) {
       return;
     }
-    if (this.zoomedAddress[3] === 0 || this.zoomedAddress[3] === 1) {
+    const zoomStep = getRequestLogZoomStep(Store.getState());
+    if (this.zoomedAddress[3] === zoomStep) {
       const resolutions = getResolutions(Store.getState().dataset);
       this.visualizedMesh = window.addBucketMesh(
         bucketPositionToGlobalAddress(this.zoomedAddress, resolutions),

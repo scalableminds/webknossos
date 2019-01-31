@@ -25,7 +25,7 @@ import PlaneController from "oxalis/controller/viewmodes/plane_controller";
 import Store, {
   type OxalisState,
   type TraceOrViewCommand,
-  type TracingTypeTracing,
+  type AnnotationType,
 } from "oxalis/store";
 import Toast from "libs/toast";
 import UrlManager from "oxalis/controller/url_manager";
@@ -36,21 +36,21 @@ import constants, { ControlModeEnum, type Mode } from "oxalis/constants";
 import messages from "messages";
 import window, { document } from "libs/window";
 
-type StateProps = {
-  viewMode: Mode,
-};
-
-type Props = {
-  history: RouterHistory,
-  initialTracingType: TracingTypeTracing,
+type OwnProps = {|
+  initialAnnotationType: AnnotationType,
   initialCommandType: TraceOrViewCommand,
-} & StateProps;
+|};
+type StateProps = {|
+  viewMode: Mode,
+|};
+type Props = {| ...OwnProps, ...StateProps |};
+type PropsWithRouter = {| ...Props, history: RouterHistory |};
 
 type State = {
   ready: boolean,
 };
 
-class Controller extends React.PureComponent<Props, State> {
+class Controller extends React.PureComponent<PropsWithRouter, State> {
   keyboard: InputKeyboard;
   keyboardNoLoop: InputKeyboardNoLoop;
   stats: Stats;
@@ -84,7 +84,7 @@ class Controller extends React.PureComponent<Props, State> {
     // Preview a working tracing version if the showVersionRestore URL parameter is supplied
     const versions = Utils.hasUrlParam("showVersionRestore") ? { skeleton: 1 } : undefined;
 
-    Model.fetch(this.props.initialTracingType, this.props.initialCommandType, true, versions)
+    Model.fetch(this.props.initialAnnotationType, this.props.initialCommandType, true, versions)
       .then(() => this.modelFetchDone())
       .catch(error => {
         // Don't throw errors for errors already handled by the model.
@@ -305,4 +305,4 @@ function mapStateToProps(state: OxalisState): StateProps {
   };
 }
 
-export default connect(mapStateToProps)(withRouter(Controller));
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(withRouter(Controller));

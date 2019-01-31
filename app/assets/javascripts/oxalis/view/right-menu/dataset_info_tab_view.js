@@ -6,8 +6,9 @@ import { Table, Tooltip, Icon } from "antd";
 import { connect } from "react-redux";
 import Markdown from "react-remarkable";
 import React from "react";
+import type { Dispatch } from "redux";
 
-import { type APIDataset, APITracingTypeEnum } from "admin/api_flow_types";
+import { type APIDataset, APIAnnotationTypeEnum } from "admin/api_flow_types";
 import { aggregateBoundingBox } from "libs/utils";
 import { convertToHybridTracing } from "admin/admin_rest_api";
 import { formatScale } from "libs/format_utils";
@@ -25,17 +26,21 @@ import Model from "oxalis/model";
 import Store, { type Flycam, type OxalisState, type Task, type Tracing } from "oxalis/store";
 import constants, { ControlModeEnum } from "oxalis/constants";
 
-type DatasetInfoTabStateProps = {
+type OwnProps = {|
+  portalKey: string,
+|};
+type StateProps = {|
   tracing: Tracing,
   dataset: APIDataset,
   flycam: Flycam,
   task: ?Task,
-};
-
-type DatasetInfoTabProps = DatasetInfoTabStateProps & {
+|};
+type DispatchProps = {|
   setAnnotationName: string => void,
   setAnnotationDescription: string => void,
-};
+|};
+
+type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
 
 const shortcutColumns = [
   {
@@ -134,7 +139,7 @@ function formatExtentWithLength(extent: Object, formattingFunction: number => st
   )} x ${formattingFunction(extent.depth)}`;
 }
 
-class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
+class DatasetInfoTabView extends React.PureComponent<Props> {
   setAnnotationName = (newName: string) => {
     this.props.setAnnotationName(newName);
   };
@@ -209,14 +214,14 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
 
     let annotationTypeLabel;
 
-    const { tracingType, name } = this.props.tracing;
+    const { annotationType, name } = this.props.tracing;
     const tracingName = name || "<untitled>";
 
     if (this.props.task != null) {
       // In case we have a task display its id
       annotationTypeLabel = (
         <span>
-          {tracingType} : {this.props.task.id}
+          {annotationType} : {this.props.task.id}
         </span>
       );
     } else if (!this.props.tracing.restrictions.allowUpdate) {
@@ -269,7 +274,8 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
     const isVolume = this.props.tracing.volume != null;
     const isHybrid = isSkeleton && isVolume;
     const { allowUpdate } = this.props.tracing.restrictions;
-    const isExplorational = this.props.tracing.tracingType === APITracingTypeEnum.Explorational;
+    const isExplorational =
+      this.props.tracing.annotationType === APIAnnotationTypeEnum.Explorational;
 
     if (isHybrid) {
       return (
@@ -336,7 +342,7 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
   }
 }
 
-const mapStateToProps = (state: OxalisState): DatasetInfoTabStateProps => ({
+const mapStateToProps = (state: OxalisState): StateProps => ({
   tracing: state.tracing,
   dataset: state.dataset,
   flycam: state.flycam,
@@ -352,7 +358,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect(
+export default connect<Props, OwnProps, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
 )(DatasetInfoTabView);

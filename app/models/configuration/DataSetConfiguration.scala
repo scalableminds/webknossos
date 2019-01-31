@@ -44,7 +44,8 @@ class DataSetConfigurationDefaults @Inject()(dataSetService: DataSetService) {
   val initialDefaultPerLayer: JsObject = Json.obj(
     "brightness" -> 0,
     "contrast" -> 1,
-    "color" -> Json.arr(255, 255, 255)
+    "color" -> Json.arr(255, 255, 255),
+    "alpha" -> 100
   )
 
 }

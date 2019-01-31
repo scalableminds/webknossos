@@ -383,7 +383,8 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
         </Table>
         {multipleUsers && this.state.removedDomains.length > 0 ? (
           <div style={{ marginBottom: 24 }}>
-            These experience domains will be removed from all selected users:<br />
+            These experience domains will be removed from all selected users:
+            <br />
             {this.state.removedDomains.map((domain: string) => (
               <Tooltip
                 key={domain}

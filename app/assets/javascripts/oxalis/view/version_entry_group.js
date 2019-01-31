@@ -9,6 +9,7 @@ import VersionEntry from "oxalis/view/version_entry";
 
 type Props = {
   batches: Array<APIUpdateActionBatch>,
+  allowUpdate: boolean,
   newestVersion: number,
   activeVersion: number,
   onRestoreVersion: number => Promise<void>,
@@ -33,6 +34,7 @@ export default class VersionEntryGroup extends React.Component<Props, State> {
   render() {
     const {
       batches,
+      allowUpdate,
       newestVersion,
       activeVersion,
       onRestoreVersion,
@@ -50,10 +52,8 @@ export default class VersionEntryGroup extends React.Component<Props, State> {
         <List.Item.Meta
           title={
             <React.Fragment>
-              Versions {_.last(batches).version} to {batches[0].version} (<FormattedDate
-                timestamp={lastTimestamp}
-                format="HH:mm"
-              />)
+              Versions {_.last(batches).version} to {batches[0].version} (
+              <FormattedDate timestamp={lastTimestamp} format="HH:mm" />)
             </React.Fragment>
           }
           avatar={
@@ -74,6 +74,7 @@ export default class VersionEntryGroup extends React.Component<Props, State> {
         {this.state.expanded || !containsMultipleBatches
           ? batches.map(batch => (
               <VersionEntry
+                allowUpdate={allowUpdate}
                 isIndented={containsMultipleBatches}
                 actions={batch.value}
                 version={batch.version}

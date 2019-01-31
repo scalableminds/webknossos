@@ -2,7 +2,7 @@
 
 import * as THREE from "three";
 
-import type { Uniforms } from "oxalis/geometries/materials/abstract_plane_material_factory";
+import type { Uniforms } from "oxalis/geometries/materials/plane_material_factory";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";

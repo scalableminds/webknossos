@@ -182,14 +182,10 @@ export function* sendRequestToServer(
     yield* call(toggleErrorHighlighting, false);
   } catch (error) {
     yield* call(toggleErrorHighlighting, true);
-    if (error.status >= 400 && error.status < 500) {
+    if (error.status === 409) {
       // HTTP Code 409 'conflict' for dirty state
       window.onbeforeunload = null;
-      if (error.status === 409) {
-        yield* call(alert, messages["save.failed_simultaneous_tracing"]);
-      } else {
-        yield* call(alert, messages["save.failed_client_error"]);
-      }
+      yield* call(alert, messages["save.failed_simultaneous_tracing"]);
       location.reload();
       return;
     }
@@ -241,15 +237,13 @@ function compactMovedNodesAndEdges(updateActions: Array<UpdateAction>) {
   const movedNodesAndEdges = [];
 
   // Performance improvement: create a map of the deletedNode update actions, key is the nodeId
-  const deleteNodeActionsMap = _.keyBy(
-    updateActions,
-    ua => (ua.name === "deleteNode" ? ua.value.nodeId : -1),
+  const deleteNodeActionsMap = _.keyBy(updateActions, ua =>
+    ua.name === "deleteNode" ? ua.value.nodeId : -1,
   );
   // Performance improvement: create a map of the deletedEdge update actions, key is the cantor pairing
   // of sourceId and targetId
-  const deleteEdgeActionsMap = _.keyBy(
-    updateActions,
-    ua => (ua.name === "deleteEdge" ? cantor(ua.value.source, ua.value.target) : -1),
+  const deleteEdgeActionsMap = _.keyBy(updateActions, ua =>
+    ua.name === "deleteEdge" ? cantor(ua.value.source, ua.value.target) : -1,
   );
   for (const createUA of updateActions) {
     if (createUA.name === "createNode") {

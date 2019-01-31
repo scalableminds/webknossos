@@ -868,6 +868,19 @@ export async function getOrganizationForDataset(datasetName: string): Promise<st
   return organizationName;
 }
 
+export function findDataPositionForLayer(
+  datasetId: APIDatasetId,
+  layerName: string,
+): Promise<?Vector3> {
+  return doWithToken(token =>
+    Request.receiveJSON(
+      `/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/findData?token=${token}`,
+    ),
+  );
+}
+
 // #### Datastores
 export async function getDatastores(): Promise<Array<APIDataStore>> {
   const datastores = await Request.receiveJSON("/api/datastores");

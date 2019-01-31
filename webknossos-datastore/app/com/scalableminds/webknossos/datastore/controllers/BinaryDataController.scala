@@ -476,24 +476,32 @@ class BinaryDataController @Inject()(
     }
 
     def positionIter(remainingRuns: List[Int]): Fox[Option[Point3D]] = {
-      def createPositionsFromExponent(exponent: Int): Fox[Box[Point3D]] = {
-        val seenPositions = new mutable.HashSet[Point3D]
-        val power = math.pow(2, exponent).toInt
-        val spaceBetweenWidth = dataLayer.boundingBox.width / power
-        val spaceBetweenHeight = dataLayer.boundingBox.height / power
-        val spaceBetweenDepth = dataLayer.boundingBox.depth / power
-        val topLeft = dataLayer.boundingBox.topLeft
-
-        if (spaceBetweenWidth < DataLayer.bucketLength && spaceBetweenHeight < DataLayer.bucketLength && spaceBetweenDepth < DataLayer.bucketLength) {
-          Fox.successful(Failure(""))
-        } else { samplingStepIter(Point3D(1, 1, 1)) }
-
-        def samplingStepIter(factors: Point3D): Fox[Box[Point3D]] = {
-          def nextFactorsToCheck(oldFactors: Point3D) =
+      def createPositionsFromExponent(exponent: Int): Fox[Option[Point3D]] = {
+        def samplingStepIter(factors: Point3D,
+                             power: Int,
+                             topLeft: Point3D,
+                             spaceBetweenWidth: Int,
+                             spaceBetweenHeight: Int,
+                             spaceBetweenDepth: Int,
+                             seenPositions: mutable.HashSet[Point3D]): Fox[Option[Point3D]] = {
+          def nextFactorsToCheck(oldFactors: Point3D): Option[Point3D] =
             if (oldFactors.x < power - 1) Some(Point3D(oldFactors.x + 1, oldFactors.y, oldFactors.z))
             else if (oldFactors.y < power - 1) Some(Point3D(1, oldFactors.y + 1, oldFactors.z))
             else if (oldFactors.z < power - 1) Some(Point3D(1, 1, oldFactors.z + 1))
             else None
+
+          def nextIteration(factors: Point3D, seenPositions: mutable.HashSet[Point3D]) =
+            nextFactorsToCheck(factors) match {
+              case Some(f) =>
+                samplingStepIter(f,
+                                 power,
+                                 topLeft,
+                                 spaceBetweenWidth,
+                                 spaceBetweenHeight,
+                                 spaceBetweenDepth,
+                                 seenPositions)
+              case _ => Fox.successful(None)
+            }
 
           val pointToCheck = Point3D(topLeft.x + factors.x * spaceBetweenWidth,
                                      topLeft.y + factors.y * spaceBetweenHeight,
@@ -501,20 +509,24 @@ class BinaryDataController @Inject()(
 
           if (seenPositions.add(pointToCheck)) {
             checkIfPositionHasData(pointToCheck).futureBox.flatMap {
-              case Full(pos) => Fox.successful(Full(pos))
-              case _ =>
-                nextFactorsToCheck(factors) match {
-                  case Some(f) => samplingStepIter(f)
-                  case _       => Fox.successful(Empty)
-                }
+              //case Full(pos) => Fox.successful(Some(pos))
+              case _ => nextIteration(factors, seenPositions)
             }
-          } else {
-            nextFactorsToCheck(factors) match {
-              case Some(f) => samplingStepIter(f)
-              case _       => Fox.successful(Empty)
-            }
-          }
+          } else nextIteration(factors, seenPositions)
         }
+        val seenPositions = new mutable.HashSet[Point3D].empty
+        val power = math.pow(2, exponent).toInt
+        val spaceBetweenWidth = dataLayer.boundingBox.width / power
+        val spaceBetweenHeight = dataLayer.boundingBox.height / power
+        val spaceBetweenDepth = dataLayer.boundingBox.depth / power
+
+        samplingStepIter(Point3D(1, 1, 1),
+                         power,
+                         dataLayer.boundingBox.topLeft,
+                         spaceBetweenWidth,
+                         spaceBetweenHeight,
+                         spaceBetweenDepth,
+                         seenPositions)
       }
 
       remainingRuns match {
@@ -523,9 +535,8 @@ class BinaryDataController @Inject()(
           createPositionsFromExponent(head).futureBox.flatMap {
             case Full(value) =>
               value match {
-                case Full(pos)        => Fox.successful(Some(pos))
-                case Empty            => positionIter(tail)
-                case Failure(_, _, _) => Fox.successful(None)
+                case Some(pos) => Fox.successful(Some(pos))
+                case None      => positionIter(tail)
               }
             case _ => Fox.successful(None)
           }

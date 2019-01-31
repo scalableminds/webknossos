@@ -377,8 +377,8 @@ class BinaryDataController @Inject()(
         .validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
           AllowRemoteOrigin {
             for {
-              position <- findPositionWithData(organizationName, dataSetName, dataLayerName)
-            } yield Ok(Point3DWrites.writes(position))
+              positionOpt <- findPositionWithData(organizationName, dataSetName, dataLayerName)
+            } yield Ok(Json.obj("position" -> positionOpt))
           }
         }
   }
@@ -457,16 +457,16 @@ class BinaryDataController @Inject()(
       implicit m: MessagesProvider) =
     for {
       (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
-      position <- checkAllPositionsForData(dataSource, dataLayer)
-    } yield position
+      positionOpt <- checkAllPositionsForData(dataSource, dataLayer)
+    } yield positionOpt
 
   private def checkAllPositionsForData(dataSource: DataSource, dataLayer: DataLayer) = {
-    def positionIter(positions: List[Point3D]): Fox[Point3D] =
+    def positionIter(positions: List[Point3D]): Fox[Option[Point3D]] =
       positions match {
-        case List() => Fox.empty
+        case List() => Fox.successful(None)
         case head :: tail =>
           checkIfPositionHasData(head).futureBox.flatMap {
-            case Full(pos) => Fox.successful(pos)
+            case Full(pos) => Fox.successful(Some(pos))
             case _         => positionIter(tail)
           }
       }

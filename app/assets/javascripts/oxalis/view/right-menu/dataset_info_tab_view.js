@@ -3,10 +3,10 @@
  * @flow
  */
 import { Table, Tooltip, Icon } from "antd";
+import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import Markdown from "react-remarkable";
 import React from "react";
-import type { Dispatch } from "redux";
 
 import { type APIDataset, APIAnnotationTypeEnum } from "admin/api_flow_types";
 import { aggregateBoundingBox } from "libs/utils";

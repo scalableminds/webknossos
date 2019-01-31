@@ -3,7 +3,7 @@
  * @flow
  */
 
-import { createStore, applyMiddleware } from "redux";
+import { createStore, applyMiddleware, type Dispatch } from "redux";
 import createSagaMiddleware from "redux-saga";
 
 import type {
@@ -571,7 +571,7 @@ const combinedReducers = reduceReducers(
   UiReducer,
 );
 
-const store = createStore(
+const store = createStore<OxalisState, Action, Dispatch<*>>(
   combinedReducers,
   defaultState,
   applyMiddleware(actionLoggerMiddleware, overwriteActionMiddleware, sagaMiddleware),

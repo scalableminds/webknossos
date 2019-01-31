@@ -215,15 +215,18 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       return (
         <div>
           <Link to={`/annotations/${typ}/${id}`}>
-            <Icon type="play-circle-o" />Trace
+            <Icon type="play-circle-o" />
+            Trace
           </Link>
           <br />
           <a href={`/api/annotations/${typ}/${id}/download`}>
-            <Icon type="download" />Download
+            <Icon type="download" />
+            Download
           </a>
           <br />
           <AsyncLink href="#" onClick={() => this.finishOrReopenTracing("finish", tracing)}>
-            <Icon type="inbox" />Archive
+            <Icon type="inbox" />
+            Archive
           </AsyncLink>
           <br />
         </div>
@@ -232,7 +235,8 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       return (
         <div>
           <AsyncLink href="#" onClick={() => this.finishOrReopenTracing("reopen", tracing)}>
-            <Icon type="folder-open" />Reopen
+            <Icon type="folder-open" />
+            Reopen
           </AsyncLink>
           <br />
         </div>

@@ -7,6 +7,7 @@ import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
 import debounceRender from "react-debounce-render";
+import type { Dispatch } from "redux";
 
 import { type OrthoView, OrthoViews, type Vector2, type Vector3 } from "oxalis/constants";
 import type { OxalisState, Mapping } from "oxalis/store";
@@ -19,7 +20,10 @@ import Cube from "oxalis/model/bucket_data_handling/data_cube";
 import Model from "oxalis/model";
 import message from "messages";
 
-type Props = {
+type OwnProps = {|
+  portalKey: string,
+|};
+type StateProps = {|
   position: Vector3,
   zoomStep: number,
   mousePosition: ?Vector2,
@@ -29,7 +33,8 @@ type Props = {
   setMappingEnabled: boolean => void,
   activeViewport: OrthoView,
   activeCellId: number,
-};
+|};
+type Props = {| ...OwnProps, ...StateProps |};
 
 // This function mirrors convertCellIdToRGB in the fragment shader of the rendering plane
 export const convertCellIdToHSLA = (id: number, customColors: ?Array<number>): Array<number> => {
@@ -209,7 +214,7 @@ function mapStateToProps(state: OxalisState) {
 }
 
 const debounceTime = 100;
-export default connect(
+export default connect<Props, OwnProps, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
   null,

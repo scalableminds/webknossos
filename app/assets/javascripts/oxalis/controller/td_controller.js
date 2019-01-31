@@ -45,12 +45,11 @@ type OwnProps = {|
   planeView?: PlaneView,
   tracing?: Tracing,
 |};
-
-type Props = {
-  ...OwnProps,
+type StateProps = {|
   flycam: Flycam,
   scale: Vector3,
-};
+|};
+type Props = { ...OwnProps, ...StateProps };
 
 class TDController extends React.PureComponent<Props> {
   controls: TrackballControls;
@@ -92,7 +91,7 @@ class TDController extends React.PureComponent<Props> {
     });
   }
 
-  initTrackballControls(view): void {
+  initTrackballControls(view: HTMLElement): void {
     const pos = voxelToNm(this.props.scale, getPosition(this.props.flycam));
     const tdCamera = this.props.cameras[OrthoViews.TDView];
     this.controls = new TrackballControls(tdCamera, view, new THREE.Vector3(...pos), () => {
@@ -205,12 +204,11 @@ class TDController extends React.PureComponent<Props> {
   }
 }
 
-export function mapStateToProps(state: OxalisState, ownProps: OwnProps): Props {
+export function mapStateToProps(state: OxalisState): StateProps {
   return {
-    ...ownProps,
     flycam: state.flycam,
     scale: state.dataset.dataSource.scale,
   };
 }
 
-export default connect(mapStateToProps)(TDController);
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(TDController);

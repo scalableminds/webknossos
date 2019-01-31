@@ -15,10 +15,14 @@ import AbstractTreeRenderer, {
 } from "oxalis/view/right-menu/abstract_tree_renderer";
 import window from "libs/window";
 
-type Props = {
+type OwnProps = {|
+  portalKey: string,
+|};
+type StateProps = {|
   dispatch: Dispatch<*>,
   skeletonTracing: ?SkeletonTracing,
-};
+|};
+type Props = {| ...OwnProps, ...StateProps |};
 
 type State = {
   visible: boolean,
@@ -60,7 +64,7 @@ class AbstractTreeView extends Component<Props, State> {
     }
   }, 1000);
 
-  handleClick = event => {
+  handleClick = (event: SyntheticMouseEvent<*>) => {
     const id = AbstractTreeRenderer.getIdFromPos(
       event.nativeEvent.offsetX,
       event.nativeEvent.offsetY,
@@ -106,4 +110,4 @@ function mapStateToProps(state: OxalisState): $Shape<Props> {
   return { skeletonTracing: state.tracing.skeleton };
 }
 
-export default connect(mapStateToProps)(AbstractTreeView);
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(AbstractTreeView);

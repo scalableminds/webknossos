@@ -237,15 +237,13 @@ function compactMovedNodesAndEdges(updateActions: Array<UpdateAction>) {
   const movedNodesAndEdges = [];
 
   // Performance improvement: create a map of the deletedNode update actions, key is the nodeId
-  const deleteNodeActionsMap = _.keyBy(
-    updateActions,
-    ua => (ua.name === "deleteNode" ? ua.value.nodeId : -1),
+  const deleteNodeActionsMap = _.keyBy(updateActions, ua =>
+    ua.name === "deleteNode" ? ua.value.nodeId : -1,
   );
   // Performance improvement: create a map of the deletedEdge update actions, key is the cantor pairing
   // of sourceId and targetId
-  const deleteEdgeActionsMap = _.keyBy(
-    updateActions,
-    ua => (ua.name === "deleteEdge" ? cantor(ua.value.source, ua.value.target) : -1),
+  const deleteEdgeActionsMap = _.keyBy(updateActions, ua =>
+    ua.name === "deleteEdge" ? cantor(ua.value.source, ua.value.target) : -1,
   );
   for (const createUA of updateActions) {
     if (createUA.name === "createNode") {

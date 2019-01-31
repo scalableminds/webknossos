@@ -4,6 +4,7 @@ import { connect } from "react-redux";
 import Dropzone from "react-dropzone";
 import * as React from "react";
 import prettyBytes from "pretty-bytes";
+import type { Dispatch } from "redux";
 
 import type { OxalisState } from "oxalis/store";
 import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
@@ -17,16 +18,16 @@ type State = {
   createGroupForEachFile: boolean,
 };
 
-type StateProps = {
-  showDropzoneModal: boolean,
-  hideDropzoneModal: () => void,
-};
-
-type Props = StateProps & {
+type OwnProps = {|
   children: React.Node,
   isAllowed: boolean,
   onImport: (files: Array<File>, createGroupForEachFile: boolean) => Promise<void>,
-};
+|};
+type StateProps = {|
+  showDropzoneModal: boolean,
+  hideDropzoneModal: () => void,
+|};
+type Props = {| ...StateProps, ...OwnProps |};
 
 function OverlayDropZone({ children }) {
   const overlayStyle = {
@@ -256,7 +257,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect(
+export default connect<Props, OwnProps, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
 )(NmlUploadZoneContainer);

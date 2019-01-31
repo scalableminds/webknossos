@@ -11,13 +11,13 @@ import { setPositionAction, setRotationAction } from "oxalis/model/actions/flyca
 import ButtonComponent from "oxalis/view/components/button_component";
 import Store, { type OxalisState, type Flycam } from "oxalis/store";
 import Toast from "libs/toast";
-import constants, { type Mode } from "oxalis/constants";
+import constants, { type Mode, type Vector3 } from "oxalis/constants";
 import message from "messages";
 
-type Props = {
+type Props = {|
   flycam: Flycam,
   viewMode: Mode,
-};
+|};
 
 const positionIconStyle = { transform: "rotate(45deg)" };
 
@@ -34,11 +34,11 @@ class DatasetPositionView extends PureComponent<Props> {
     Toast.success("Rotation copied to clipboard");
   };
 
-  handleChangePosition = position => {
+  handleChangePosition = (position: Vector3) => {
     Store.dispatch(setPositionAction(position));
   };
 
-  handleChangeRotation = rotation => {
+  handleChangeRotation = (rotation: Vector3) => {
     Store.dispatch(setRotationAction(rotation));
   };
 
@@ -93,4 +93,4 @@ function mapStateToProps(state: OxalisState): Props {
   };
 }
 
-export default connect(mapStateToProps)(DatasetPositionView);
+export default connect<Props, {||}, _, _, _, _>(mapStateToProps)(DatasetPositionView);

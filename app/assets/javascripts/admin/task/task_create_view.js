@@ -12,7 +12,8 @@ const TaskCreateView = () => (
     <TabPane
       tab={
         <span>
-          <Icon type="schedule" />Create Task
+          <Icon type="schedule" />
+          Create Task
         </span>
       }
       key="1"
@@ -22,7 +23,8 @@ const TaskCreateView = () => (
     <TabPane
       tab={
         <span>
-          <Icon type="bars" />Bulk Creation
+          <Icon type="bars" />
+          Bulk Creation
         </span>
       }
       key="2"

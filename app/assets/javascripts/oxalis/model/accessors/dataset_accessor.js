@@ -3,7 +3,7 @@ import Maybe from "data.maybe";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 
-import type { APIDataset } from "admin/api_flow_types";
+import type { APIDataset, APIAllowedMode } from "admin/api_flow_types";
 import type { Settings, DataLayerType } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
 import constants, { ModeValues, type Vector3, Vector3Indicies } from "oxalis/constants";
@@ -124,7 +124,10 @@ export function getDatasetCenter(dataset: APIDataset): Vector3 {
   ];
 }
 
-export function determineAllowedModes(dataset: APIDataset, settings: Settings) {
+export function determineAllowedModes(
+  dataset: APIDataset,
+  settings: Settings,
+): { preferredMode: ?APIAllowedMode, allowedModes: Array<APIAllowedMode> } {
   // The order of allowedModes should be independent from the server and instead be similar to ModeValues
   let allowedModes = _.intersection(ModeValues, settings.allowedModes);
 

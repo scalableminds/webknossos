@@ -30,7 +30,7 @@ import type { APIDataset } from "admin/api_flow_types";
 const Panel = Collapse.Panel;
 const Option = Select.Option;
 
-type DatasetSettingsProps = {
+type DatasetSettingsProps = {|
   datasetConfiguration: DatasetConfiguration,
   dataset: APIDataset,
   onChange: (propertyName: $Keys<DatasetConfiguration>, value: any) => void,
@@ -42,16 +42,15 @@ type DatasetSettingsProps = {
   viewMode: Mode,
   controlMode: ControlMode,
   hasSegmentation: boolean,
-};
+|};
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
   getColorSettings = (
-    [layerName: string, layer: DatasetLayerConfiguration],
+    [layerName, layer]: [string, DatasetLayerConfiguration],
     layerIndex: number,
     isLastLayer: boolean,
   ) => {
     const isRGB = isRgb(this.props.dataset, layerName);
-    // $FlowFixMe Object.entries returns mixed for Flow
     const { brightness, contrast, alpha, color } = layer;
     return (
       <div key={layerName}>
@@ -141,6 +140,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
   render() {
     const { layers } = this.props.datasetConfiguration;
     const colorSettings = Object.entries(layers).map((entry, index) =>
+      // $FlowFixMe Object.entries returns mixed for Flow
       this.getColorSettings(entry, index, index === _.size(layers) - 1),
     );
 
@@ -207,7 +207,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect(
+export default connect<DatasetSettingsProps, {||}, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
 )(DatasetSettings);

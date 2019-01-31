@@ -20,22 +20,25 @@ import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
 const FormItem = Form.Item;
 const Option = Select.Option;
 
-type StateProps = {
-  activeUser: APIUser,
-};
-
-type Props = {
-  form: Object,
+type OwnProps = {|
   projectName?: ?string,
+|};
+type StateProps = {|
+  activeUser: APIUser,
+|};
+type Props = {| ...OwnProps, ...StateProps |};
+type PropsWithRouter = {|
+  ...Props,
+  form: Object,
   history: RouterHistory,
-} & StateProps;
+|};
 
 type State = {
   teams: Array<APITeam>,
   users: Array<APIUser>,
 };
 
-class ProjectCreateView extends React.PureComponent<Props, State> {
+class ProjectCreateView extends React.PureComponent<PropsWithRouter, State> {
   state = {
     teams: [],
     users: [],
@@ -190,4 +193,6 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
 });
 
-export default connect(mapStateToProps)(withRouter(Form.create()(ProjectCreateView)));
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(
+  withRouter(Form.create()(ProjectCreateView)),
+);

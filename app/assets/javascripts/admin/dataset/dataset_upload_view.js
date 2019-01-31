@@ -1,7 +1,6 @@
 // @flow
 import { Form, Input, Select, Button, Card, Spin, Upload, Icon, Col, Row } from "antd";
 import { connect } from "react-redux";
-import { withRouter } from "react-router-dom";
 import React from "react";
 
 import type { APIDataStore, APIUser, DatasetConfig } from "admin/api_flow_types";
@@ -15,22 +14,25 @@ import { trackAction } from "oxalis/model/helpers/analytics";
 const FormItem = Form.Item;
 const { Option } = Select;
 
-type StateProps = {
-  activeUser: ?APIUser,
-};
-
-type Props = StateProps & {
-  form: Object,
+type OwnProps = {|
   withoutCard?: boolean,
   onUploaded: (string, string) => void,
-};
+|};
+type StateProps = {|
+  activeUser: ?APIUser,
+|};
+type Props = {| ...OwnProps, ...StateProps |};
+type PropsWithForm = {|
+  ...Props,
+  form: Object,
+|};
 
 type State = {
   datastores: Array<APIDataStore>,
   isUploading: boolean,
 };
 
-class DatasetUploadView extends React.PureComponent<Props, State> {
+class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
   state = {
     datastores: [],
     isUploading: false,
@@ -210,4 +212,6 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
 });
 
-export default connect(mapStateToProps)(withRouter(Form.create()(DatasetUploadView)));
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(
+  Form.create()(DatasetUploadView),
+);

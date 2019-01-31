@@ -32,13 +32,11 @@ const { Search } = Input;
 
 const typeHint: APIUser[] = [];
 
-type StateProps = {
+type StateProps = {|
   activeUser: APIUser,
-};
-
-type Props = {
-  history: RouterHistory,
-} & StateProps;
+|};
+type Props = StateProps;
+type PropsWithRouter = {| ...Props, history: RouterHistory |};
 
 type State = {
   isLoading: boolean,
@@ -61,7 +59,7 @@ const persistence: Persistence<State> = new Persistence(
   "userList",
 );
 
-class UserListView extends React.PureComponent<Props, State> {
+class UserListView extends React.PureComponent<PropsWithRouter, State> {
   state = {
     isLoading: true,
     users: [],
@@ -213,7 +211,8 @@ class UserListView extends React.PureComponent<Props, State> {
             <Col span={6}>{`${user.firstName} ${user.lastName} (${user.email}) `}</Col>
             <Col span={4}>
               <a href="#" onClick={() => this.activateUser(user)}>
-                <Icon type="user-add" />Activate User
+                <Icon type="user-add" />
+                Activate User
               </a>
             </Col>
           </Row>
@@ -507,19 +506,22 @@ class UserListView extends React.PureComponent<Props, State> {
               render={(__, user: APIUser) => (
                 <span>
                   <Link to={`/users/${user.id}/details`}>
-                    <Icon type="user" />Show Tracings
+                    <Icon type="user" />
+                    Show Tracings
                   </Link>
                   <br />
                   {// eslint-disable-next-line no-nested-ternary
                   user.isActive ? (
                     this.props.activeUser.isAdmin ? (
                       <a href="#" onClick={() => this.deactivateUser(user)}>
-                        <Icon type="user-delete" />Deactivate User
+                        <Icon type="user-delete" />
+                        Deactivate User
                       </a>
                     ) : null
                   ) : (
                     <a href="#" onClick={() => this.activateUser(user)}>
-                      <Icon type="user-add" />Activate User
+                      <Icon type="user-add" />
+                      Activate User
                     </a>
                   )}
                 </span>
@@ -562,4 +564,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
 });
 
-export default connect(mapStateToProps)(withRouter(UserListView));
+export default connect<Props, {||}, _, _, _, _>(mapStateToProps)(withRouter(UserListView));

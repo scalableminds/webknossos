@@ -8,15 +8,14 @@ import ButtonComponent from "oxalis/view/components/button_component";
 import Model from "oxalis/model";
 import window from "libs/window";
 
+type OwnProps = {|
+  onClick: (SyntheticInputEvent<HTMLButtonElement>) => Promise<*>,
+|};
 type StateProps = {|
   progressInfo: ProgressInfo,
   isBusyInfo: IsBusyInfo,
 |};
-
-type Props = {
-  ...StateProps,
-  onClick: (SyntheticInputEvent<HTMLButtonElement>) => Promise<*>,
-};
+type Props = {| ...OwnProps, ...StateProps |};
 
 type State = {
   isStateSaved: boolean,
@@ -91,4 +90,4 @@ function mapStateToProps(state: OxalisState): StateProps {
   };
 }
 
-export default connect(mapStateToProps)(SaveButton);
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(SaveButton);

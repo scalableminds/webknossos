@@ -97,9 +97,9 @@ export class Privacy extends LegalBase {
                 https://demo.webknossos.org).
               </li>
               <li>
-                Persons that use webKnossos are &quot;<strong>users</strong>&quot; or &quot;<strong>
-                  you
-                </strong>&quot; (in GDPR terms &quot;<strong>data subjects</strong>&quot;).
+                Persons that use webKnossos are &quot;<strong>users</strong>&quot; or &quot;
+                <strong>you</strong>&quot; (in GDPR terms &quot;<strong>data subjects</strong>
+                &quot;).
               </li>
               <li>
                 &quot;<strong>Anonymous users</strong>&quot; are users that do not have a registered
@@ -110,7 +110,8 @@ export class Privacy extends LegalBase {
                 personal data of users.
               </li>
               <li>
-                An instance that the user uses is referred to as the &quot;<strong>service</strong>&quot;.
+                An instance that the user uses is referred to as the &quot;<strong>service</strong>
+                &quot;.
               </li>
               <li>
                 The &quot;<strong>controller</strong>&quot; is the person or legal entity that is

@@ -57,4 +57,4 @@ const mapStateToProps = (state: OxalisState): Props => ({
   dataset: state.dataset,
 });
 
-export default connect(mapStateToProps)(Scalebar);
+export default connect<Props, {||}, _, _, _, _>(mapStateToProps)(Scalebar);

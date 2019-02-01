@@ -2,6 +2,8 @@
 
 START TRANSACTION;
 
+CREATE TYPE webknossos.TASKTYPE_TRACINGTYPES AS ENUM ('skeleton', 'volume', 'hybrid');
+
 DROP VIEW webknossos.taskTypes_;
 
 ALTER TABLE webknossos.taskTypes ADD COLUMN tracingType webknossos.TASKTYPE_TRACINGTYPES NOT NULL DEFAULT 'skeleton';

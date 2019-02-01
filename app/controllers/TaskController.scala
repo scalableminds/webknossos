@@ -93,46 +93,51 @@ class TaskController @Inject()(annotationService: AnnotationService,
     for {
       _ <- bool2Fox(request.body.length <= 1000) ?~> "task.create.limitExceeded"
       skeletonBaseOpts: List[Option[SkeletonTracing]] <- createTaskSkeletonTracingBases(request.body)
-      volumeBaseOpts: List[Option[VolumeTracing]] <- createTaskVolumeTracingBases(request.body, request.identity._organization)
+      volumeBaseOpts: List[Option[VolumeTracing]] <- createTaskVolumeTracingBases(request.body,
+                                                                                  request.identity._organization)
       result <- createTasks((request.body, skeletonBaseOpts, volumeBaseOpts).zipped.toList)
     } yield result
   }
 
-  def createTaskSkeletonTracingBases(paramsList: List[TaskParameters])
-                                    (implicit ctx: DBAccessContext, m: MessagesProvider): Fox[List[Option[SkeletonTracing]]] =
+  def createTaskSkeletonTracingBases(paramsList: List[TaskParameters])(
+      implicit ctx: DBAccessContext,
+      m: MessagesProvider): Fox[List[Option[SkeletonTracing]]] =
     Fox.serialCombined(paramsList) { params =>
       for {
         taskTypeIdValidated <- ObjectId.parse(params.taskTypeId)
         taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
-        skeletonTracingOpt <-
-          if (taskType.tracingType == TracingType.skeleton || taskType.tracingType == TracingType.hybrid) {
-            Fox.successful(Some(annotationService.createSkeletonTracingBase(
-              params.dataSet,
-              params.boundingBox,
-              params.editPosition,
-              params.editRotation
-            )))
-          } else Fox.successful(None)
+        skeletonTracingOpt <- if (taskType.tracingType == TracingType.skeleton || taskType.tracingType == TracingType.hybrid) {
+          Fox.successful(
+            Some(
+              annotationService.createSkeletonTracingBase(
+                params.dataSet,
+                params.boundingBox,
+                params.editPosition,
+                params.editRotation
+              )))
+        } else Fox.successful(None)
       } yield skeletonTracingOpt
     }
 
-  def createTaskVolumeTracingBases(paramsList: List[TaskParameters], organizationId: ObjectId)
-                                  (implicit ctx: DBAccessContext, m: MessagesProvider): Fox[List[Option[VolumeTracing]]] =
+  def createTaskVolumeTracingBases(paramsList: List[TaskParameters], organizationId: ObjectId)(
+      implicit ctx: DBAccessContext,
+      m: MessagesProvider): Fox[List[Option[VolumeTracing]]] =
     Fox.serialCombined(paramsList) { params =>
       for {
         taskTypeIdValidated <- ObjectId.parse(params.taskTypeId)
         taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
-        volumeTracingOpt <-
-          if (taskType.tracingType == TracingType.volume || taskType.tracingType == TracingType.hybrid) {
-            annotationService.createVolumeTracingBase(
+        volumeTracingOpt <- if (taskType.tracingType == TracingType.volume || taskType.tracingType == TracingType.hybrid) {
+          annotationService
+            .createVolumeTracingBase(
               params.dataSet,
               organizationId,
               params.boundingBox,
               params.editPosition,
               params.editRotation,
               false
-            ).map(Some(_))
-          } else Fox.successful(None)
+            )
+            .map(Some(_))
+        } else Fox.successful(None)
       } yield volumeTracingOpt
     }
 
@@ -186,15 +191,15 @@ class TaskController @Inject()(annotationService: AnnotationService,
   def createTasks(requestedTasks: List[(TaskParameters, Option[SkeletonTracing], Option[VolumeTracing])])(
       implicit request: SecuredRequest[WkEnv, _]): Fox[Result] = {
 
-    def assertEachHasEitherSkeletonOrVolume: Fox[Boolean] = {
-      bool2Fox(requestedTasks.forall {
-        tuple => tuple._2.isDefined || tuple._3.isDefined
+    def assertEachHasEitherSkeletonOrVolume: Fox[Boolean] =
+      bool2Fox(requestedTasks.forall { tuple =>
+        tuple._2.isDefined || tuple._3.isDefined
       })
-    }
 
     def assertAllOnSameDataset(firstDatasetName: String): Fox[String] = {
-      def allOnSameDatasetIter(requestedTasksRest: List[(TaskParameters, Option[SkeletonTracing], Option[VolumeTracing])],
-                               dataSetName: String): Boolean =
+      def allOnSameDatasetIter(
+          requestedTasksRest: List[(TaskParameters, Option[SkeletonTracing], Option[VolumeTracing])],
+          dataSetName: String): Boolean =
         requestedTasksRest match {
           case List()       => true
           case head :: tail => head._1.dataSet == dataSetName && allOnSameDatasetIter(tail, dataSetName)
@@ -260,8 +265,10 @@ class TaskController @Inject()(annotationService: AnnotationService,
       case _ => Fox.successful(())
     }
 
-  private def createTaskWithoutAnnotationBase(params: TaskParameters, skeletonTracingIdBox: Box[Option[String]], volumeTracingIdBox: Box[Option[String]]) (
-      implicit request: SecuredRequest[WkEnv, _]): Fox[Task] =
+  private def createTaskWithoutAnnotationBase(
+      params: TaskParameters,
+      skeletonTracingIdBox: Box[Option[String]],
+      volumeTracingIdBox: Box[Option[String]])(implicit request: SecuredRequest[WkEnv, _]): Fox[Task] =
     for {
       skeletonIdOpt <- skeletonTracingIdBox.toFox
       volumeIdOpt <- volumeTracingIdBox.toFox

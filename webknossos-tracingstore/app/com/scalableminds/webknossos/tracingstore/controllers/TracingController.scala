@@ -15,7 +15,8 @@ import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 
 import scala.concurrent.ExecutionContext
 
-trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMessage with Message[Ts]] extends Controller {
+trait TracingController[T <: GeneratedMessage with Message[T],
+                        Ts <: GeneratedMessage with Message[Ts]] extends Controller {
 
   def tracingService: TracingService[T]
 
@@ -32,6 +33,8 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
   implicit def unpackMultiple(tracings: Ts): List[Option[T]]
 
   implicit def packMultiple(tracings: List[T]): Ts
+
+  implicit def packMultipleOpt(tracings: List[Option[T]]): Ts
 
   implicit val updateActionReads: Reads[UpdateAction[T]] = tracingService.updateActionReads
 
@@ -82,7 +85,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
     }
   }
 
-  def getMultiple = Action.async(validateJson[List[TracingSelector]]) { implicit request =>
+  def getMultiple = Action.async(validateJson[List[Option[TracingSelector]]]) { implicit request =>
     log {
       accessTokenService.validateAccess(UserAccessRequest.webknossos) {
         AllowRemoteOrigin {

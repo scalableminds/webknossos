@@ -34,12 +34,20 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
       .getWithProtoResponse[SkeletonTracing](SkeletonTracing)
   }
 
-  def getSkeletonTracings(tracingIds: List[String]): Fox[SkeletonTracings] = {
+  def getSkeletonTracings(tracingIds: List[Option[String]]): Fox[SkeletonTracings] = {
     logger.debug("Called to get multiple SkeletonTracings." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/skeleton/getMultiple")
       .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
-      .postJsonWithProtoResponse[List[TracingSelector], SkeletonTracings](tracingIds.map(TracingSelector(_)))(
-        SkeletonTracings)
+      .postJsonWithProtoResponse[List[Option[TracingSelector]], SkeletonTracings](tracingIds.map(id =>
+        id.map(TracingSelector(_))))(SkeletonTracings)
+  }
+
+  def getVolumeTracings(tracingIds: List[Option[String]]): Fox[VolumeTracings] = {
+    logger.debug("Called to get multiple VolumeTracings." + baseInfo)
+    rpc(s"${tracingStore.url}/tracings/volume/getMultiple")
+      .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
+      .postJsonWithProtoResponse[List[Option[TracingSelector]], VolumeTracings](tracingIds.map(id =>
+        id.map(TracingSelector(_))))(VolumeTracings)
   }
 
   def saveSkeletonTracing(tracing: SkeletonTracing): Fox[String] = {
@@ -78,12 +86,12 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
       .getWithJsonResponse[String]
   }
 
-  def mergeSkeletonTracingsByIds(tracingIds: List[String], persistTracing: Boolean): Fox[String] = {
+  def mergeSkeletonTracingsByIds(tracingIds: List[Option[String]], persistTracing: Boolean): Fox[String] = {
     logger.debug("Called to merge SkeletonTracings by ids." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/skeleton/mergedFromIds")
       .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
       .addQueryString("persist" -> persistTracing.toString)
-      .postWithJsonResponse[List[TracingSelector], String](tracingIds.map(TracingSelector(_)))
+      .postWithJsonResponse[List[Option[TracingSelector]], String](tracingIds.map(id => id.map(TracingSelector(_))))
   }
 
   def mergeSkeletonTracingsByContents(tracings: SkeletonTracings, persistTracing: Boolean): Fox[String] = {
@@ -127,6 +135,16 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
     } yield {
       (tracing, data)
     }
+  }
+
+  def getVolumeData(tracingId: String, version: Option[Long] = None): Fox[Source[ByteString, _]] = {
+    logger.debug("Called to get volume data." + baseInfo)
+    for {
+      data <- rpc(s"${tracingStore.url}/tracings/volume/${tracingId}/allData")
+        .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
+        .addQueryStringOptional("version", version.map(_.toString))
+        .getStream
+    } yield data
   }
 
 }

@@ -226,6 +226,8 @@ taskType.noAnnotations=We couldn’t find finished annotations for this task typ
 taskType.id.invalid=The provided task type id is invalid.
 taskType.tracingTypeImmutable=Tracing types of task types are immutable. Consider creating a new task type.
 
+tracingType.invalid=The provided tracing type is invalid.
+
 mail.welcome.subject = Welcome to ScalableMinds
 
 script.notFound=Script couldn’t be found

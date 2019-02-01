@@ -210,6 +210,7 @@ export type APITaskType = {
   +teamName: string,
   +settings: APISettings,
   +recommendedConfiguration: ?string,
+  +tracingType: "skeleton" | "volume",
 };
 
 export type TaskStatus = { +open: number, +active: number, +finished: number };

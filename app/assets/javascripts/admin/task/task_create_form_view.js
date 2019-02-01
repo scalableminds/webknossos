@@ -160,8 +160,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
               formValues.nmlFiles = formValues.nmlFiles.map(
                 wrapperFile => wrapperFile.originFileObj,
               );
-              const { typ, ...formValuesWithoutTyp } = formValues;
-              response = await createTaskFromNML(formValuesWithoutTyp);
+              response = await createTaskFromNML(formValues);
             } else {
               response = await createTasks([formValues]);
             }
@@ -345,21 +344,6 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                           </Option>
                         ))}
                       </Select>,
-                    )}
-                  </FormItem>
-
-                  <FormItem label="Tracing Type" hasFeedback>
-                    {getFieldDecorator("typ", {
-                      initialValue: "skeleton",
-                    })(
-                      <RadioGroup>
-                        <Radio value="skeleton" disabled={isEditingMode}>
-                          Skeleton
-                        </Radio>
-                        <Radio value="volume" disabled={isEditingMode}>
-                          Volume
-                        </Radio>
-                      </RadioGroup>,
                     )}
                   </FormItem>
 

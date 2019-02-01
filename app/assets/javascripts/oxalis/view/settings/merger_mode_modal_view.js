@@ -38,16 +38,18 @@ export default function MergerModeModalView({ isCloseable, onClose }: Props) {
       <br />
       Additionally available keyboard shortcuts:
       <table className="table-data-starting-at-top" style={{ marginTop: 8 }}>
-        <tr>
-          <td style={{ paddingRight: 24 }}>8</td>
-          <td>
-            Replace the color of the current active tree and its mapped segments with a new one
-          </td>
-        </tr>
-        <tr>
-          <td style={{ paddingRight: 24 }}>9</td>
-          <td>Enable / disable displaying the segmentation.</td>
-        </tr>
+        <tbody>
+          <tr>
+            <td style={{ paddingRight: 24 }}>8</td>
+            <td>
+              Replace the color of the current active tree and its mapped segments with a new one
+            </td>
+          </tr>
+          <tr>
+            <td style={{ paddingRight: 24 }}>9</td>
+            <td>Enable / disable displaying the segmentation.</td>
+          </tr>
+        </tbody>
       </table>
       {!isCloseable ? (
         <div className="centered-children">

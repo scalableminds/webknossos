@@ -49,7 +49,6 @@ export const annotation: APIAnnotation = {
     formattedHash: "9c67ec",
     projectName: "sampleProject",
     team: "Connectomics department",
-    typ: "skeleton",
     type: {
       id: "5b1e45faa000009d00abc2c6",
       summary: "sampleTaskType",
@@ -62,6 +61,7 @@ export const annotation: APIAnnotation = {
         somaClickingAllowed: true,
       },
       recommendedConfiguration: null,
+      tracingType: "skeleton",
     },
     dataSet: "ROI2017_wkw",
     neededExperience: { domain: "oxalis", value: 1 },

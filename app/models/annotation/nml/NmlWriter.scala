@@ -46,7 +46,14 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
       new IndentingXMLStreamWriter(outputService.createXMLStreamWriter(os))
 
     for {
-      nml <- toNml(skeletonTracing, volumeTracing, annotation, scale, volumeFilename, organizationName, annotationOwner, annotationTask)
+      nml <- toNml(skeletonTracing,
+                   volumeTracing,
+                   annotation,
+                   scale,
+                   volumeFilename,
+                   organizationName,
+                   annotationOwner,
+                   annotationTask)
       _ = os.close()
     } yield nml
   }
@@ -175,7 +182,8 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
       }
     }
 
-  def writeVolumeThings(volumeTracing: VolumeTracing, volumeFilename: Option[String])(implicit writer: XMLStreamWriter): Unit =
+  def writeVolumeThings(volumeTracing: VolumeTracing, volumeFilename: Option[String])(
+      implicit writer: XMLStreamWriter): Unit =
     Xml.withinElementSync("volume") {
       writer.writeAttribute("id", "1")
       writer.writeAttribute("location", volumeFilename.getOrElse("data.zip"))

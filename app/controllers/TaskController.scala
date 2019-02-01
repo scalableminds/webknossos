@@ -41,9 +41,7 @@ case class TaskParameters(
     editPosition: Point3D,
     editRotation: Vector3D,
     creationInfo: Option[String],
-    description: Option[String],
-    typ: Option[String],
-    volumeShowFallbackLayer: Option[Boolean],
+    description: Option[String]
 )
 
 object TaskParameters {
@@ -100,35 +98,43 @@ class TaskController @Inject()(annotationService: AnnotationService,
     } yield result
   }
 
-  def createTaskSkeletonTracingBases(paramsList: List[TaskParameters]): Fox[List[Option[SkeletonTracing]]] =
-    Fox.successful(paramsList.map { params =>
-      val tracingType = params.typ.flatMap(TracingType.fromString).getOrElse(TracingType.skeleton)
-      if (tracingType == TracingType.skeleton || tracingType == TracingType.hybrid) {
-          Some(annotationService.createSkeletonTracingBase(
-            params.dataSet,
-            params.boundingBox,
-            params.editPosition,
-            params.editRotation
-          ))
-      } else None
-    })
+  def createTaskSkeletonTracingBases(paramsList: List[TaskParameters])
+                                    (implicit ctx: DBAccessContext, m: MessagesProvider): Fox[List[Option[SkeletonTracing]]] =
+    Fox.serialCombined(paramsList) { params =>
+      for {
+        taskTypeIdValidated <- ObjectId.parse(params.taskTypeId)
+        taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
+        skeletonTracingOpt <-
+          if (taskType.tracingType == TracingType.skeleton || taskType.tracingType == TracingType.hybrid) {
+            Fox.successful(Some(annotationService.createSkeletonTracingBase(
+              params.dataSet,
+              params.boundingBox,
+              params.editPosition,
+              params.editRotation
+            )))
+          } else Fox.successful(None)
+      } yield skeletonTracingOpt
+    }
 
   def createTaskVolumeTracingBases(paramsList: List[TaskParameters], organizationId: ObjectId)
-                                  (implicit ctx: DBAccessContext, m: MessagesProvider): Fox[List[Option[VolumeTracing]]] = {
+                                  (implicit ctx: DBAccessContext, m: MessagesProvider): Fox[List[Option[VolumeTracing]]] =
     Fox.serialCombined(paramsList) { params =>
-      val tracingType = params.typ.flatMap(TracingType.fromString).getOrElse(TracingType.skeleton)
-      if (tracingType == TracingType.volume || tracingType == TracingType.hybrid) {
-        annotationService.createVolumeTracingBase(
-          params.dataSet,
-          organizationId,
-          params.boundingBox,
-          params.editPosition,
-          params.editRotation,
-          params.volumeShowFallbackLayer.getOrElse(false)
-        ).map(Some(_))
-      } else Fox.successful(None)
+      for {
+        taskTypeIdValidated <- ObjectId.parse(params.taskTypeId)
+        taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
+        volumeTracingOpt <-
+          if (taskType.tracingType == TracingType.volume || taskType.tracingType == TracingType.hybrid) {
+            annotationService.createVolumeTracingBase(
+              params.dataSet,
+              organizationId,
+              params.boundingBox,
+              params.editPosition,
+              params.editRotation,
+              false
+            ).map(Some(_))
+          } else Fox.successful(None)
+      } yield volumeTracingOpt
     }
-  }
 
   //Note that from-files tasks do not support volume tracings yet
   @SuppressWarnings(Array("OptionGet")) //We surpress this warning because we know each skeleton exists due to `toSkeletonSuccessFox`
@@ -173,9 +179,7 @@ class TaskController @Inject()(annotationService: AnnotationService,
       tracing.editPosition,
       tracing.editRotation,
       Some(fileName),
-      description,
-      None,
-      None
+      description
     )
   }
 
@@ -263,7 +267,6 @@ class TaskController @Inject()(annotationService: AnnotationService,
       volumeIdOpt <- volumeTracingIdBox.toFox
       _ <- bool2Fox(skeletonIdOpt.isDefined || volumeIdOpt.isDefined) ?~> "task.create.needsEitherSkeletonOrVolume"
       taskTypeIdValidated <- ObjectId.parse(params.taskTypeId)
-      taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
       project <- projectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
       _ <- validateScript(params.scriptId) ?~> "script.invalid"
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
@@ -271,7 +274,7 @@ class TaskController @Inject()(annotationService: AnnotationService,
         ObjectId.generate,
         project._id,
         params.scriptId.map(ObjectId(_)),
-        taskType._id,
+        taskTypeIdValidated,
         params.neededExperience,
         params.openInstances, //all instances are open at this time
         params.openInstances,

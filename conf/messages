@@ -224,6 +224,7 @@ taskType.deleteSuccess=Task type “{0}” successfully deleted
 taskType.deleteFailure=Task type “{0}” deletion failed
 taskType.noAnnotations=We couldn’t find finished annotations for this task type
 taskType.id.invalid=The provided task type id is invalid.
+taskType.tracingTypeImmutable=Tracing types of task types are immutable. Consider creating a new task type.
 
 mail.welcome.subject = Welcome to ScalableMinds
 

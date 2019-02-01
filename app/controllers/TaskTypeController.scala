@@ -3,6 +3,7 @@ package controllers
 import com.scalableminds.util.accesscontext.DBAccessContext
 import javax.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import models.annotation.AnnotationSettings
 import models.task._
 import models.user.UserService
@@ -12,7 +13,7 @@ import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
-import play.api.libs.json._
+import play.api.libs.json.{Reads, _}
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -30,7 +31,8 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
       (__ \ 'description).read[String] and
       (__ \ 'teamId).read[String](ObjectId.stringObjectIdReads("teamId")) and
       (__ \ 'settings).read[AnnotationSettings] and
-      (__ \ 'recommendedConfiguration).readNullable[JsValue])(taskTypeService.fromForm _)
+      (__ \ 'recommendedConfiguration).readNullable[JsValue] and
+      (__ \ 'tracingType).read[String])(taskTypeService.fromForm _)
 
   def create = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(taskTypePublicReads) { taskType =>
@@ -63,6 +65,7 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
       for {
         taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
         taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
+        _ <- bool2Fox(taskTypeFromForm.tracingType == taskType.tracingType) ?~> "taskType.tracingTypeImmutable"
         updatedTaskType = taskTypeFromForm.copy(_id = taskType._id)
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team))
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, updatedTaskType._team))

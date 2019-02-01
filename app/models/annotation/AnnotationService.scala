@@ -384,11 +384,11 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
                                                     l5: List[E],
                                                     l6: List[F],
                                                     l7: List[G]): List[(A, B, C, D, E, F, G)] =
-    (((((l1, l2, l3).zipped.toList, l4).zipped.toList, l5).zipped.toList, l6).zipped.toList, l7).zipped.toList.map {
-      tuple: (((((A, B, C), D), E), F), G) =>
-        (tuple._1._1._1._1._1,
+    ((((((l1, l2).zipped.toList, l3).zipped.toList, l4).zipped.toList, l5).zipped.toList, l6).zipped.toList, l7).zipped.toList.map {
+      tuple: ((((((A, B), C), D), E), F), G) =>
+        (tuple._1._1._1._1._1._1,
+         tuple._1._1._1._1._1._2,
          tuple._1._1._1._1._2,
-         tuple._1._1._1._1._3,
          tuple._1._1._1._2,
          tuple._1._1._2,
          tuple._1._2,

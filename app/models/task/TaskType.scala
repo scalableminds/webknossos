@@ -21,6 +21,7 @@ case class TaskType(
     description: String,
     settings: AnnotationSettings = AnnotationSettings.defaultFor(TracingType.skeleton),
     recommendedConfiguration: Option[JsValue] = None,
+    tracingType: TracingType.Value = TracingType.skeleton,
     created: Long = System.currentTimeMillis(),
     isDeleted: Boolean = false
 ) extends FoxImplicits {}
@@ -32,11 +33,12 @@ class TaskTypeService @Inject()(teamDAO: TeamDAO)(implicit ec: ExecutionContext)
       description: String,
       team: String,
       settings: AnnotationSettings,
-      recommendedConfiguration: Option[JsValue]
-  ) =
-    TaskType(ObjectId.generate, ObjectId(team), summary, description, settings, recommendedConfiguration)
+      recommendedConfiguration: Option[JsValue],
+      tracingType: String
+  ): TaskType =
+    TaskType(ObjectId.generate, ObjectId(team), summary, description, settings, recommendedConfiguration, TracingType.fromString(tracingType).get)
 
-  def publicWrites(taskType: TaskType)(implicit ctx: DBAccessContext) =
+  def publicWrites(taskType: TaskType)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
       team <- teamDAO.findOne(taskType._team)(GlobalAccessContext) ?~> "team.notFound"
     } yield
@@ -47,7 +49,8 @@ class TaskTypeService @Inject()(teamDAO: TeamDAO)(implicit ec: ExecutionContext)
         "teamId" -> team._id.toString,
         "teamName" -> team.name,
         "settings" -> Json.toJson(taskType.settings),
-        "recommendedConfiguration" -> taskType.recommendedConfiguration
+        "recommendedConfiguration" -> taskType.recommendedConfiguration,
+        "tracingType" -> taskType.tracingType
       )
 }
 
@@ -72,6 +75,7 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
           r.settingsSomaclickingallowed
         ),
         r.recommendedconfiguration.map(Json.parse),
+        TracingType.fromString(r.tracingtype).get,
         r.created.getTime,
         r.isdeleted
       ))
@@ -108,11 +112,11 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     for {
       _ <- run(
         sqlu"""insert into webknossos.taskTypes(_id, _team, summary, description, settings_allowedModes, settings_preferredMode,
-                                                       settings_branchPointsAllowed, settings_somaClickingAllowed, recommendedConfiguration, created, isDeleted)
+                                                       settings_branchPointsAllowed, settings_somaClickingAllowed, recommendedConfiguration, tracingType, created, isDeleted)
                          values(${t._id.id}, ${t._team.id}, ${t.summary}, ${t.description}, '#${sanitize(
           writeArrayTuple(t.settings.allowedModes))}', #${optionLiteral(t.settings.preferredMode.map(sanitize(_)))},
                                 ${t.settings.branchPointsAllowed}, ${t.settings.somaClickingAllowed}, #${optionLiteral(
-          t.recommendedConfiguration.map(c => sanitize(Json.toJson(c).toString)))},
+          t.recommendedConfiguration.map(c => sanitize(Json.toJson(c).toString)))}, '#${t.tracingType.toString}',
                                 ${new java.sql.Timestamp(t.created)}, ${t.isDeleted})""")
     } yield ()
   }

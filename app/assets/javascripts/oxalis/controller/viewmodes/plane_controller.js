@@ -86,13 +86,13 @@ const isosurfaceLeftClick = (pos: Point2, plane: OrthoView, event: MouseEvent) =
   }
 };
 
-type OwnProps = {
+type OwnProps = {|
   onRender: () => void,
-};
-
-type Props = OwnProps & {
+|};
+type StateProps = {|
   tracing: Tracing,
-};
+|};
+type Props = {| ...OwnProps, ...StateProps |};
 
 class PlaneController extends React.PureComponent<Props> {
   // See comment in Controller class on general controller architecture.
@@ -597,12 +597,11 @@ export function calculateGlobalPos(clickPos: Point2): Vector3 {
   return position;
 }
 
-export function mapStateToProps(state: OxalisState, ownProps: OwnProps): Props {
+export function mapStateToProps(state: OxalisState): StateProps {
   return {
-    onRender: ownProps.onRender,
     tracing: state.tracing,
   };
 }
 
 export { PlaneController as PlaneControllerClass };
-export default connect(mapStateToProps)(PlaneController);
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(PlaneController);

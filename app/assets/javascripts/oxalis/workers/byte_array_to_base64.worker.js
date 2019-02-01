@@ -7,4 +7,4 @@ function byteArrayToBase64(byteArray: Uint8Array): string {
   return Base64.fromByteArray(byteArray);
 }
 
-export default expose(byteArrayToBase64);
+export default expose<typeof byteArrayToBase64>(byteArrayToBase64);

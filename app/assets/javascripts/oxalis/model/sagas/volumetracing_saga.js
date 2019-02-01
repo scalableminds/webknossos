@@ -112,9 +112,10 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
         // if the current viewport does not match the initial viewport -> dont draw
         continue;
       }
-      if (activeTool === VolumeToolEnum.TRACE) {
+      if (activeTool === VolumeToolEnum.TRACE || activeTool === VolumeToolEnum.BRUSH) {
         currentLayer.addContour(addToLayerAction.position);
-      } else if (activeTool === VolumeToolEnum.BRUSH) {
+      }
+      if (activeTool === VolumeToolEnum.BRUSH) {
         const currentViewportBounding = yield* call(getBoundingsFromPosition, activeViewport);
         yield* call(
           labelWithIterator,
@@ -243,11 +244,10 @@ export function* finishLayer(
     return;
   }
 
-  if (activeTool === VolumeToolEnum.TRACE) {
+  if (activeTool === VolumeToolEnum.TRACE || activeTool === VolumeToolEnum.BRUSH) {
     const start = Date.now();
 
-    layer.finish();
-    yield* call(labelWithIterator, layer.getVoxelIterator(), contourTracingMode);
+    yield* call(labelWithIterator, layer.getVoxelIterator(activeTool), contourTracingMode);
 
     console.log("Labeling time:", Date.now() - start);
   }

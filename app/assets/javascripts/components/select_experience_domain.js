@@ -59,7 +59,9 @@ class SelectExperienceDomain extends React.PureComponent<Props, State> {
         onSelect={this.props.onSelect}
         onChange={this.props.onChange}
       >
-        {this.getUnusedDomains().map(domain => <Option key={domain}>{domain}</Option>)}
+        {this.getUnusedDomains().map(domain => (
+          <Option key={domain}>{domain}</Option>
+        ))}
       </Select>
     );
   }

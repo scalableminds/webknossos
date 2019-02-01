@@ -2,6 +2,7 @@
 import { Icon, Alert, Modal, Button, Select, Form, Spin, Checkbox, Tooltip } from "antd";
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
+import type { Dispatch } from "redux";
 
 import type { APIAnnotation } from "admin/api_flow_types";
 import { addTreesAndGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
@@ -21,16 +22,18 @@ type ProjectInfo = {
   label: string,
 };
 
-type StateProps = {
-  annotationId: string,
-  annotationType: string,
-};
-
-type Props = {
+type OwnProps = {|
   isVisible: boolean,
   onOk: () => void,
+|};
+type StateProps = {|
+  annotationId: string,
+  annotationType: string,
+|};
+type DispatchProps = {|
   addTreesAndGroupsAction: (TreeMap, Array<TreeGroup>) => void,
-} & StateProps;
+|};
+type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
 
 type MergeModalViewState = {
   projects: Array<ProjectInfo>,
@@ -265,7 +268,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect(
+export default connect<Props, OwnProps, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
 )(MergeModalView);

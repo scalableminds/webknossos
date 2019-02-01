@@ -32,11 +32,11 @@ function swap(arr, a, b) {
 
 naturalSort.insensitive = true;
 
-function getRecursiveValues(obj: Object | Array<*> | string): Array<*> {
+function getRecursiveValues(obj: {} | Array<*> | string): Array<*> {
   return _.flattenDeep(getRecursiveValuesUnflat(obj));
 }
 
-function getRecursiveValuesUnflat(obj: Object | Array<*> | string): Array<*> {
+function getRecursiveValuesUnflat(obj: {} | Array<*> | string): Array<*> {
   if (Array.isArray(obj)) {
     return obj.map(getRecursiveValuesUnflat);
   } else if (obj instanceof Object) {
@@ -147,16 +147,18 @@ export function computeArrayFromBoundingBox(bb: ?BoundingBoxType): ?Vector6 {
 
 export function aggregateBoundingBox(boundingBoxes: Array<BoundingBoxObject>): BoundingBoxType {
   const allCoordinates = [0, 1, 2].map(index =>
-    boundingBoxes.map(box => box.topLeft[index]).concat(
-      boundingBoxes.map(box => {
-        const bottomRight = [
-          box.topLeft[0] + box.width,
-          box.topLeft[1] + box.height,
-          box.topLeft[2] + box.depth,
-        ];
-        return bottomRight[index];
-      }),
-    ),
+    boundingBoxes
+      .map(box => box.topLeft[index])
+      .concat(
+        boundingBoxes.map(box => {
+          const bottomRight = [
+            box.topLeft[0] + box.width,
+            box.topLeft[1] + box.height,
+            box.topLeft[2] + box.depth,
+          ];
+          return bottomRight[index];
+        }),
+      ),
   );
   const min = (([0, 1, 2].map(index => Math.min(...allCoordinates[index])): any): Vector3);
   const max = (([0, 1, 2].map(index => Math.max(...allCoordinates[index])): any): Vector3);
@@ -346,7 +348,7 @@ export function toNullable<T>(_maybe: Maybe<T>): ?T {
 // Supports nested properties
 export function filterWithSearchQueryOR<T: { +[string]: mixed }, P: $Keys<T>>(
   collection: Array<T>,
-  properties: Array<P | (T => Object | Array<*> | string)>,
+  properties: Array<P | (T => {} | Array<*> | string)>,
   searchQuery: string,
 ): Array<T> {
   if (searchQuery === "") {
@@ -377,7 +379,7 @@ export function filterWithSearchQueryOR<T: { +[string]: mixed }, P: $Keys<T>>(
 // Supports nested properties
 export function filterWithSearchQueryAND<T: { +[string]: mixed }, P: $Keys<T>>(
   collection: Array<T>,
-  properties: Array<P | (T => Object | Array<*> | string)>,
+  properties: Array<P | (T => {} | Array<*> | string)>,
   searchQuery: string,
 ): Array<T> {
   if (searchQuery === "") {

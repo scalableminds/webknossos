@@ -16,8 +16,8 @@ export default function StackedBarChart({ a, b, c }: { a: number, b: number, c: 
   const minPercentage = 10;
   const barCount = 3;
   const bufferFactor = 1 - (barCount * minPercentage) / 100;
-  let renderedPercentages = percentages.map(
-    p => (p === 0 ? 0 : Math.max(minPercentage, p * bufferFactor)),
+  let renderedPercentages = percentages.map(p =>
+    p === 0 ? 0 : Math.max(minPercentage, p * bufferFactor),
   );
   const upscaleFactor = 100 / _.sum(renderedPercentages);
   renderedPercentages = renderedPercentages.map(p => p * upscaleFactor);

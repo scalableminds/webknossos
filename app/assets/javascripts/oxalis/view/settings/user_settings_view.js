@@ -381,7 +381,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect(
+export default connect<UserSettingsViewProps, {||}, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
 )(UserSettingsView);

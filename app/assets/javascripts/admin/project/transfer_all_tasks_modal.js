@@ -30,6 +30,7 @@ type State = {
 
 class TransferAllTasksModal extends React.PureComponent<Props, State> {
   state = {
+    // eslint-disable-next-line react/no-unused-state
     users: [],
     selectedUser: null,
     usersWithActiveTasks: [],
@@ -50,6 +51,7 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
         : [];
       const sortedUsers = _.sortBy(activeUsers, "lastName");
       this.setState({
+        // eslint-disable-next-line react/no-unused-state
         users: sortedUsers,
         usersWithActiveTasks,
       });

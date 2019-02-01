@@ -7,7 +7,7 @@ import * as THREE from "three";
 import _ from "lodash";
 
 import type { APIMapping } from "admin/api_flow_types";
-import { createUpdatableTexture } from "oxalis/geometries/materials/abstract_plane_material_factory";
+import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
 import { doWithToken } from "admin/admin_rest_api";
 import { getMappings, getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { getRenderer } from "oxalis/controller/renderer";

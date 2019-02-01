@@ -151,7 +151,9 @@ class SceneController {
 
     // convert to normal (unbuffered) geometry to merge vertices
     geometry = new THREE.Geometry().fromBufferGeometry(geometry);
-    geometry.mergeVertices();
+    if (window.__isosurfaceMergeVertices) {
+      geometry.mergeVertices();
+    }
     geometry.computeVertexNormals();
     geometry.computeFaceNormals();
 

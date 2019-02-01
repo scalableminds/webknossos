@@ -74,8 +74,10 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
       if (key === "zoom") {
         yield* put(setZoomStepAction(settingsObject[key]));
       } else if (userConfiguration[key] != null) {
+        // $FlowFixMe Cannot call updateUserSettingAction with key bound to propertyName because an indexer property is missing in UserConfiguration
         yield* put(updateUserSettingAction(key, settingsObject[key]));
       } else if (datasetConfiguration[key] != null) {
+        // $FlowFixMe Cannot call updateDatasetSettingAction with key bound to propertyName because an indexer property is missing in DatasetConfiguration
         yield* put(updateDatasetSettingAction(key, settingsObject[key]));
       }
     }

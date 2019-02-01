@@ -176,6 +176,23 @@ class Drawing {
     }
   }
 
+  fillCircle(
+    x: number,
+    y: number,
+    radius: number,
+    scaleX: number,
+    scaleY: number,
+    paint: (number, number) => void,
+  ) {
+    for (let posX = x - radius; posX < x + radius; posX++) {
+      for (let posY = y - radius; posY < y + radius; posY++) {
+        if (Math.sqrt(((posX - x) / scaleX) ** 2 + ((posY - y) / scaleY) ** 2) < radius) {
+          paint(posX, posY);
+        }
+      }
+    }
+  }
+
   // Source : http://twistedoakstudios.com/blog/Post3138_mouse-path-smoothing-for-jack-lumber
   smoothLine(points: Array<Vector3>, callback: Vector3 => void): Array<Vector3> {
     const smoothLength = this.smoothLength || SMOOTH_LENGTH;

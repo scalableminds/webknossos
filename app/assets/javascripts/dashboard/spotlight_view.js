@@ -210,43 +210,42 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
               )}
             </div>
           </Spin>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              paddingRight: 12,
-              paddingLeft: 12,
-              marginTop: 80,
-            }}
-          >
-            <Col className="gallery-dataset-col" {...columnSpan}>
-              <a
-                href="https://goo.gl/forms/QICmEcQyid6gb8Kw1"
-                title="Click to add missing dataset"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card" bordered={false}>
-                  <div className="dataset-description">
-                    <h3 style={{ fontSize: 20 }}>Add a missing dataset</h3>
-                    <div className="dataset-description-body">
-                      You want to add your dataset to this set? Click here to add it. It opens a
-                      form which will contact us so we can add your dataset.
+          {features().addMissingDatasetButtonEnabled ? (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                paddingRight: 12,
+                paddingLeft: 12,
+                marginTop: 80,
+              }}
+            >
+              <Col className="gallery-dataset-col" {...columnSpan}>
+                <a
+                  href="https://goo.gl/forms/QICmEcQyid6gb8Kw1"
+                  title="Click to add your missing dataset"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card" bordered={false}>
+                    <div className="dataset-description">
+                      <h3 style={{ fontSize: 31 }}>Your dataset is missing here?</h3>
+                      <div className="dataset-description-body" style={{ fontSize: 16 }}>
+                        If you want to add your own dataset to this publication library just click
+                        here. It opens a form which will contact us so we can add your dataset.
+                      </div>
                     </div>
-                  </div>
-                  <span className="dataset-thumbnail" title="Click to add missing dataset">
-                    <div
-                      className="dataset-thumbnail-image"
-                      style={{
-                        backgroundImage:
-                          "url('http://savoryconceptsllc.com/wp-content/uploads/2016/05/question-mark-png-5a381257a89243.6425987715136241516905-1.jpg')",
-                      }}
-                    />
-                  </span>
-                </Card>
-              </a>
-            </Col>
-          </div>
+                    <span className="dataset-thumbnail">
+                      <div className="dataset-click-hint" id="add-missing-dataset-text-overlay">
+                        ?
+                      </div>
+                      <div className="dataset-thumbnail-image" id="add-missing-dataset-image" />
+                    </span>
+                  </Card>
+                </a>
+              </Col>
+            </div>
+          ) : null}
           <div id="spotlight-footnote">
             Visit <a href="https://www.webknossos.org/">webknossos.org</a> to learn more about
             webKnossos.

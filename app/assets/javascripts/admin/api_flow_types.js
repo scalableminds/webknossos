@@ -430,6 +430,7 @@ export type APIFeatureToggles = {
   +addForeignDataset: boolean,
   +hideNavbarLogin: boolean,
   +freezeVolumeVersions: boolean,
+  +addMissingDatasetButtonEnabled: boolean,
 };
 
 // Tracing related datatypes

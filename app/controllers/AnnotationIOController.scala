@@ -145,8 +145,9 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
             } yield savedTracingId
           }
           mergedSkeletonTracingIdOpt <- Fox.runOptional(skeletonTracings.headOption) { s =>
-            tracingStoreClient.mergeSkeletonTracingsByContents(SkeletonTracings(skeletonTracings.map(t => SkeletonTracingOpt(Some(t)))),
-                                                               persistTracing = true)
+            tracingStoreClient.mergeSkeletonTracingsByContents(
+              SkeletonTracings(skeletonTracings.map(t => SkeletonTracingOpt(Some(t)))),
+              persistTracing = true)
           }
           annotation <- annotationService.createFrom(request.identity,
                                                      dataSet,

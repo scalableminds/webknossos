@@ -36,7 +36,13 @@ class TaskTypeService @Inject()(teamDAO: TeamDAO)(implicit ec: ExecutionContext)
       recommendedConfiguration: Option[JsValue],
       tracingType: String
   ): TaskType =
-    TaskType(ObjectId.generate, ObjectId(team), summary, description, settings, recommendedConfiguration, TracingType.fromString(tracingType).get)
+    TaskType(ObjectId.generate,
+             ObjectId(team),
+             summary,
+             description,
+             settings,
+             recommendedConfiguration,
+             TracingType.fromString(tracingType).get)
 
   def publicWrites(taskType: TaskType)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {

@@ -11,7 +11,10 @@ import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceLike => DataSource, SegmentationLayerLike => SegmentationLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataSourceLike => DataSource,
+  SegmentationLayerLike => SegmentationLayer
+}
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
@@ -80,12 +83,12 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     }).flatten
 
   private def createVolumeTracing(
-                                 dataSource: DataSource,
-                                 withFallback: Boolean,
-                                 boundingBox: Option[BoundingBox] = None,
-                                 startPosition: Option[Point3D] = None,
-                                 startRotation: Option[Vector3D] = None
-                                 ): VolumeTracing = {
+      dataSource: DataSource,
+      withFallback: Boolean,
+      boundingBox: Option[BoundingBox] = None,
+      startPosition: Option[Point3D] = None,
+      startRotation: Option[Vector3D] = None
+  ): VolumeTracing = {
     val fallbackLayer: Option[SegmentationLayer] = if (withFallback) {
       dataSource.dataLayers.flatMap {
         case layer: SegmentationLayer => Some(layer)
@@ -216,13 +219,16 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       result <- annotationDAO.countActiveAnnotationsFor(user._id, AnnotationType.Task, teamManagerTeamIds)
     } yield result
 
-  def tracingFromBase(annotationBase: Annotation, dataSet: DataSet)(implicit ctx: DBAccessContext,
-                                                                    m: MessagesProvider): Fox[(Option[String], Option[String])] =
+  def tracingFromBase(annotationBase: Annotation, dataSet: DataSet)(
+      implicit ctx: DBAccessContext,
+      m: MessagesProvider): Fox[(Option[String], Option[String])] =
     for {
       dataSource <- bool2Fox(dataSet.isUsable) ?~> Messages("dataSet.notImported", dataSet.name)
       tracingStoreClient <- tracingStoreService.clientFor(dataSet)
-      newSkeletonId: Option[String] <- Fox.runOptional(annotationBase.skeletonTracingId)(skeletonId => tracingStoreClient.duplicateSkeletonTracing(skeletonId))
-      newVolumeId: Option[String] <- Fox.runOptional(annotationBase.volumeTracingId)(volumeId => tracingStoreClient.duplicateVolumeTracing(volumeId))
+      newSkeletonId: Option[String] <- Fox.runOptional(annotationBase.skeletonTracingId)(skeletonId =>
+        tracingStoreClient.duplicateSkeletonTracing(skeletonId))
+      newVolumeId: Option[String] <- Fox.runOptional(annotationBase.volumeTracingId)(volumeId =>
+        tracingStoreClient.duplicateVolumeTracing(volumeId))
     } yield (newSkeletonId, newVolumeId)
 
   def createAnnotationFor(user: User, task: Task, initializingAnnotationId: ObjectId)(
@@ -283,27 +289,27 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     )
   }
 
-  def createVolumeTracingBase(dataSetName: String,
-                              organizationId: ObjectId,
-                              boundingBox: Option[BoundingBox],
-                              startPosition: Point3D,
-                              startRotation: Vector3D,
-                              volumeShowFallbackLayer: Boolean)(implicit ctx: DBAccessContext,
-                                                                m: MessagesProvider): Fox[VolumeTracing] = {
+  def createVolumeTracingBase(
+      dataSetName: String,
+      organizationId: ObjectId,
+      boundingBox: Option[BoundingBox],
+      startPosition: Point3D,
+      startRotation: Vector3D,
+      volumeShowFallbackLayer: Boolean)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[VolumeTracing] =
     for {
-      dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> Messages("dataset.notFound", dataSetName)
+      dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> Messages("dataset.notFound",
+                                                                                                   dataSetName)
       dataSource <- dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable)
       volumeTracing = createVolumeTracing(
         dataSource,
         withFallback = volumeShowFallbackLayer,
         boundingBox = boundingBox.flatMap { box =>
-            if (box.isEmpty) None else Some(box)
-          },
+          if (box.isEmpty) None else Some(box)
+        },
         startPosition = Some(startPosition),
         startRotation = Some(startRotation)
       )
     } yield volumeTracing
-  }
 
   def abortInitializedAnnotationOnFailure(initializingAnnotationId: ObjectId, insertedAnnotationBox: Box[Annotation]) =
     insertedAnnotationBox match {
@@ -368,53 +374,56 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       nmlsAndNames = tracingsAndNamesFlattened.map(
         tuple =>
           (nmlWriter.toNmlStream(tuple._1, tuple._2, Some(tuple._6), tuple._5, tuple._9, Some(tuple._7), tuple._8),
-           tuple._4, tuple._3))
+           tuple._4,
+           tuple._3))
       zip <- createZip(nmlsAndNames, zipFileName)
     } yield zip
 
   private def flattenTupledLists[A, B, C, D, E, F, G, H, I](
       tupledLists: List[(List[A], List[B], List[C], List[D], List[E], List[F], List[G], List[H], List[I])]) =
-    tupledLists.flatMap(tuple => zippedEightLists(tuple._1, tuple._2, tuple._3, tuple._4, tuple._5, tuple._6, tuple._7, tuple._8, tuple._9))
+    tupledLists.flatMap(tuple =>
+      zippedEightLists(tuple._1, tuple._2, tuple._3, tuple._4, tuple._5, tuple._6, tuple._7, tuple._8, tuple._9))
 
-  private def zippedEightLists[A, B, C, D, E, F, G, H, I]
-     (l1: List[A],
-      l2: List[B],
-      l3: List[C],
-      l4: List[D],
-      l5: List[E],
-      l6: List[F],
-      l7: List[G],
-      l8: List[H],
-      l9: List[I]): List[(A, B, C, D, E, F, G, H, I)] =
-    ((((((((l1,l2).zipped.toList, l3).zipped.toList, l4).zipped.toList, l5).zipped.toList, l6).zipped.toList, l7).zipped.toList, l8).zipped.toList, l9).zipped.toList.map {
-      tuple: ((((((((A, B), C), D), E), F), G), H), I) =>
-        (tuple._1._1._1._1._1._1._1._1,
-         tuple._1._1._1._1._1._1._1._2,
-         tuple._1._1._1._1._1._1._2,
-         tuple._1._1._1._1._1._2,
-         tuple._1._1._1._1._2,
-         tuple._1._1._1._2,
-         tuple._1._1._2,
-         tuple._1._2,
-         tuple._2)
+  private def zippedEightLists[A, B, C, D, E, F, G, H, I](l1: List[A],
+                                                          l2: List[B],
+                                                          l3: List[C],
+                                                          l4: List[D],
+                                                          l5: List[E],
+                                                          l6: List[F],
+                                                          l7: List[G],
+                                                          l8: List[H],
+                                                          l9: List[I]): List[(A, B, C, D, E, F, G, H, I)] =
+    ((((((((l1, l2).zipped.toList, l3).zipped.toList, l4).zipped.toList, l5).zipped.toList, l6).zipped.toList, l7).zipped.toList,
+      l8).zipped.toList,
+     l9).zipped.toList.map { tuple: ((((((((A, B), C), D), E), F), G), H), I) =>
+      (tuple._1._1._1._1._1._1._1._1,
+       tuple._1._1._1._1._1._1._1._2,
+       tuple._1._1._1._1._1._1._2,
+       tuple._1._1._1._1._1._2,
+       tuple._1._1._1._1._2,
+       tuple._1._1._1._2,
+       tuple._1._1._2,
+       tuple._1._2,
+       tuple._2)
     }
 
-  private def getTracingsScalesAndNamesFor(annotations: List[Annotation])(
-      implicit ctx: DBAccessContext): Fox[List[(List[Option[SkeletonTracing]],
-                                                List[Option[VolumeTracing]],
-                                                List[Option[Source[ByteString, _]]],
-                                                List[String],
-                                                List[Option[Scale]],
-                                                List[Annotation],
-                                                List[User],
-                                                List[Option[Task]],
-                                                List[String])]] = {
+  private def getTracingsScalesAndNamesFor(annotations: List[Annotation])(implicit ctx: DBAccessContext): Fox[
+    List[(List[Option[SkeletonTracing]],
+          List[Option[VolumeTracing]],
+          List[Option[Source[ByteString, _]]],
+          List[String],
+          List[Option[Scale]],
+          List[Annotation],
+          List[User],
+          List[Option[Task]],
+          List[String])]] = {
 
     def getSkeletonTracings(dataSetId: ObjectId, tracingIds: List[Option[String]]): Fox[List[Option[SkeletonTracing]]] =
       for {
         dataSet <- dataSetDAO.findOne(dataSetId)
         tracingStoreClient <- tracingStoreService.clientFor(dataSet)
-        tracingContainers: List[SkeletonTracings] <- Fox.serialCombined(tracingIds.grouped(1000).toList)(tracingStoreClient.getSkeletonTracings)
+        tracingContainers: List[SkeletonTracings] <- Fox.serialCombined(tracingIds.grouped(1000).toList)(
+          tracingStoreClient.getSkeletonTracings)
         tracingOpts: List[SkeletonTracingOpt] = tracingContainers.flatMap(_.tracings)
       } yield tracingOpts.map(_.tracing)
 
@@ -422,18 +431,19 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       for {
         dataSet <- dataSetDAO.findOne(dataSetId)
         tracingStoreClient <- tracingStoreService.clientFor(dataSet)
-        tracingContainers: List[VolumeTracings] <- Fox.serialCombined(tracingIds.grouped(1000).toList)(tracingStoreClient.getVolumeTracings)
+        tracingContainers: List[VolumeTracings] <- Fox.serialCombined(tracingIds.grouped(1000).toList)(
+          tracingStoreClient.getVolumeTracings)
         tracingOpts: List[VolumeTracingOpt] = tracingContainers.flatMap(_.tracings)
       } yield tracingOpts.map(_.tracing)
 
-
-    def getVolumeDataObjects(dataSetId: ObjectId, tracingIds: List[Option[String]]): Fox[List[Option[Source[ByteString, Any]]]] =
+    def getVolumeDataObjects(dataSetId: ObjectId,
+                             tracingIds: List[Option[String]]): Fox[List[Option[Source[ByteString, Any]]]] =
       for {
         dataSet <- dataSetDAO.findOne(dataSetId)
         tracingStoreClient <- tracingStoreService.clientFor(dataSet)
         tracingDataObjects: List[Option[Source[ByteString, Any]]] <- Fox.serialCombined(tracingIds) {
           case Some(tracingId) => tracingStoreClient.getVolumeData(tracingId).map(Some(_))
-          case None => Fox.successful(None)
+          case None            => Fox.successful(None)
         }
       } yield tracingDataObjects
 
@@ -456,7 +466,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
 
     val annotationsGrouped: Map[ObjectId, List[Annotation]] = annotations.groupBy(_._dataSet)
     val tracingsGrouped = annotationsGrouped.map {
-      case (dataSetId, annotations) => {
+      case (dataSetId, annotations) =>
         for {
           scale <- getDatasetScale(dataSetId)
           skeletonTracings <- getSkeletonTracings(dataSetId, annotations.map(_.skeletonTracingId))
@@ -466,13 +476,22 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
           taskOpts <- getTasks(annotations.map(_._task)) ?~> "task.notFound"
           names <- getNames(annotations)
           organizationNames <- getOrganizationNames(annotations)
-        } yield (skeletonTracings, volumeTracings, volumeDataObjects, names, annotations.map(a => scale), annotations, users, taskOpts, organizationNames)
-      }
+        } yield
+          (skeletonTracings,
+           volumeTracings,
+           volumeDataObjects,
+           names,
+           annotations.map(a => scale),
+           annotations,
+           users,
+           taskOpts,
+           organizationNames)
     }
     Fox.combined(tracingsGrouped.toList)
   }
 
-  private def createZip(nmls: List[(Enumerator[Array[Byte]], String, Option[Source[ByteString, _]])], zipFileName: String): Future[TemporaryFile] = {
+  private def createZip(nmls: List[(Enumerator[Array[Byte]], String, Option[Source[ByteString, _]])],
+                        zipFileName: String): Future[TemporaryFile] = {
     val zipped = temporaryFileCreator.create(normalize(zipFileName), ".zip")
     val zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(zipped.path.toString))))
 
@@ -509,9 +528,12 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         annotationBase <- baseForTask(task._id)
         dataSet <- dataSetDAO.findOne(annotationBase._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
         (newSkeletonIdOpt, newVolumeIdOpt) <- tracingFromBase(annotationBase, dataSet)
-        _ <- Fox.bool2Fox(newSkeletonIdOpt.isDefined || newVolumeIdOpt.isDefined) ?~> "annotation.needsEitherSkeletonOrVolume"
-        _ <- Fox.runOptional(newSkeletonIdOpt)(newSkeletonId => annotationDAO.updateSkeletonTracingId(annotation._id, newSkeletonId))
-        _ <- Fox.runOptional(newVolumeIdOpt)(newVolumeId => annotationDAO.updateVolumeTracingId(annotation._id, newVolumeId))
+        _ <- Fox
+          .bool2Fox(newSkeletonIdOpt.isDefined || newVolumeIdOpt.isDefined) ?~> "annotation.needsEitherSkeletonOrVolume"
+        _ <- Fox.runOptional(newSkeletonIdOpt)(newSkeletonId =>
+          annotationDAO.updateSkeletonTracingId(annotation._id, newSkeletonId))
+        _ <- Fox.runOptional(newVolumeIdOpt)(newVolumeId =>
+          annotationDAO.updateVolumeTracingId(annotation._id, newVolumeId))
       } yield ()
     case _ if !annotation.skeletonTracingId.isDefined =>
       Fox.failure("annotation.revert.skeletonOnly")

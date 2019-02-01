@@ -38,16 +38,16 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
     logger.debug("Called to get multiple SkeletonTracings." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/skeleton/getMultiple")
       .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
-      .postJsonWithProtoResponse[List[Option[TracingSelector]], SkeletonTracings](tracingIds.map(id => id.map(TracingSelector(_))))(
-      SkeletonTracings)
+      .postJsonWithProtoResponse[List[Option[TracingSelector]], SkeletonTracings](tracingIds.map(id =>
+        id.map(TracingSelector(_))))(SkeletonTracings)
   }
 
   def getVolumeTracings(tracingIds: List[Option[String]]): Fox[VolumeTracings] = {
     logger.debug("Called to get multiple VolumeTracings." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/volume/getMultiple")
       .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
-      .postJsonWithProtoResponse[List[Option[TracingSelector]], VolumeTracings](tracingIds.map(id => id.map(TracingSelector(_))))(
-      VolumeTracings)
+      .postJsonWithProtoResponse[List[Option[TracingSelector]], VolumeTracings](tracingIds.map(id =>
+        id.map(TracingSelector(_))))(VolumeTracings)
   }
 
   def saveSkeletonTracing(tracing: SkeletonTracing): Fox[String] = {

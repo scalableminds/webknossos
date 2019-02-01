@@ -62,7 +62,9 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def isDeletedColumn(x: Tasktypes): Rep[Boolean] = x.isdeleted
 
   def parse(r: TasktypesRow): Fox[TaskType] =
-    Some(
+    for {
+      tracingType <- TracingType.fromString(r.tracingtype) ?~> "failed to parse tracing type"
+    } yield
       TaskType(
         ObjectId(r._Id),
         ObjectId(r._Team),
@@ -75,10 +77,10 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
           r.settingsSomaclickingallowed
         ),
         r.recommendedconfiguration.map(Json.parse),
-        TracingType.fromString(r.tracingtype).get,
+        tracingType,
         r.created.getTime,
         r.isdeleted
-      ))
+      )
 
   override def readAccessQ(requestingUserId: ObjectId) =
     s"""(_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')

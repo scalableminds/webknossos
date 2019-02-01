@@ -21,12 +21,16 @@ const compress = createWorker(CompressWorker);
 type method = "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH";
 
 export type RequestOptions = {
-  headers?: { [key: string]: string },
-  method?: method,
-  timeout?: number,
   compress?: boolean,
-  useWebworkerForArrayBuffer?: boolean,
+  doNotInvestigate?: boolean,
   extractHeaders?: boolean,
+  headers?: { [key: string]: string },
+  host?: string,
+  method?: method,
+  params?: string | Object,
+  showErrorToast?: boolean,
+  timeout?: number,
+  useWebworkerForArrayBuffer?: boolean,
 };
 
 export type RequestOptionsWithData<T> = RequestOptions & {
@@ -299,7 +303,11 @@ class Request {
             return Promise.reject(json);
           } catch (jsonError) {
             if (showErrorToast) Toast.error(text);
-            return Promise.reject(text);
+            /* eslint-disable prefer-promise-reject-errors */
+            return Promise.reject({
+              errors: [text],
+              status: error.status != null ? error.status : -1,
+            });
           }
         },
         textError => {

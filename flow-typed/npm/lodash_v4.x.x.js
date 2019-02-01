@@ -295,13 +295,13 @@ declare module "lodash" {
     map<V, K, T: { +[key: K]: V }, U>(object: T, iteratee?: OMapIterator<V, T, U>): Array<U>;
     map(str: ?string, iteratee?: (char: string, index: number, str: string) => any): string;
     orderBy<T>(
-      array: ?Array<T>,
-      iteratees?: Array<Iteratee<T>> | string,
+      array: Array<T>,
+      iteratees: Array<Iteratee<T>> | string,
       orders?: Array<"asc" | "desc"> | string,
     ): Array<T>;
-    orderBy<V, T: Object>(
+    orderBy<V, T: {}>(
       object: T,
-      iteratees?: Array<OIteratee<*>> | string,
+      iteratees: Array<OIteratee<*>> | string,
       orders?: Array<"asc" | "desc"> | string,
     ): Array<V>;
     partition<T>(array: ?Array<T>, predicate?: Predicate<T>): NestedArray<T>;
@@ -585,7 +585,7 @@ declare module "lodash" {
     ): Object;
     at(object?: ?Object, ...paths: Array<string>): Array<any>;
     at(object?: ?Object, paths: Array<string>): Array<any>;
-    create<T>(prototype: T, properties?: Object): $Supertype<T>;
+    create<T>(prototype: T, properties?: Object): $Shape<T>;
     defaults(object?: ?Object, ...sources?: Array<Object>): Object;
     defaultsDeep(object?: ?Object, ...sources?: Array<Object>): Object;
     // alias for _.toPairs

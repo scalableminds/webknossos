@@ -194,9 +194,9 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       content: (
         <p>
           You did not specify any teams, for which this dataset should be visible. This means that
-          only administrators and team managers will be able to view this dataset.<br /> Please hit
-          &ldquo;Cancel&rdquo; if you would like to review the team permissions in the
-          &ldquo;General&rdquo; tab.
+          only administrators and team managers will be able to view this dataset.
+          <br /> Please hit &ldquo;Cancel&rdquo; if you would like to review the team permissions in
+          the &ldquo;General&rdquo; tab.
         </p>
       ),
     }));
@@ -271,7 +271,8 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                 {messages["dataset.invalid_datasource_json"]}
                 <br />
                 <br />
-                Status:<br />
+                Status:
+                <br />
                 {this.state.dataset.dataSource.status}
               </span>
             }
@@ -432,7 +433,8 @@ class DatasetImportView extends React.PureComponent<Props, State> {
             <FormItem>
               <Button type="primary" htmlType="submit">
                 {confirmString}
-              </Button>&nbsp;
+              </Button>
+              &nbsp;
               <Button onClick={this.props.onCancel}>Cancel</Button>
             </FormItem>
           </Spin>

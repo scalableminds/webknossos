@@ -11,7 +11,7 @@ import classNames from "classnames";
 import type { Dispatch } from "redux";
 
 import { ArbitraryViewport, type Mode, OrthoViews } from "oxalis/constants";
-import type { OxalisState, TracingTypeTracing, TraceOrViewCommand } from "oxalis/store";
+import type { OxalisState, AnnotationType, TraceOrViewCommand } from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import AbstractTreeTabView from "oxalis/view/right-menu/abstract_tree_tab_view";
 import ActionBarView from "oxalis/view/action_bar_view";
@@ -39,7 +39,11 @@ import { storeLayoutConfig, setActiveLayout } from "./layout_persistence";
 
 const { Header, Sider } = Layout;
 
-type StateProps = {
+type OwnProps = {|
+  initialAnnotationType: AnnotationType,
+  initialCommandType: TraceOrViewCommand,
+|};
+type StateProps = {|
   viewMode: Mode,
   displayScalebars: boolean,
   isUpdateTracingAllowed: boolean,
@@ -47,13 +51,11 @@ type StateProps = {
   storedLayouts: Object,
   isDatasetOnScratchVolume: boolean,
   autoSaveLayouts: boolean,
-};
-
-type Props = StateProps & {
-  initialTracingType: TracingTypeTracing,
-  initialCommandType: TraceOrViewCommand,
+|};
+type DispatchProps = {|
   setAutoSaveLayouts: boolean => void,
-};
+|};
+type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
 
 type State = {
   isSettingsCollapsed: boolean,
@@ -134,13 +136,13 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
   render() {
     const layoutType = determineLayout(this.props.initialCommandType.type, this.props.viewMode);
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
-    const { displayScalebars, isDatasetOnScratchVolume } = this.props;
+    const { displayScalebars, isDatasetOnScratchVolume, isUpdateTracingAllowed } = this.props;
     const headerClassName = classNames({ construction: isDatasetOnScratchVolume });
 
     return (
       <NmlUploadZoneContainer onImport={importNmls} isAllowed={this.props.isUpdateTracingAllowed}>
         <OxalisController
-          initialTracingType={this.props.initialTracingType}
+          initialAnnotationType={this.props.initialAnnotationType}
           initialCommandType={this.props.initialCommandType}
         />
 
@@ -191,9 +193,9 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
                 onLayoutChange={this.onLayoutChange}
               >
                 {/*
-                   * All possible layout panes are passed here. Depending on the actual layout,
-                   *  the components are rendered or not.
-                   */}
+                 * All possible layout panes are passed here. Depending on the actual layout,
+                 *  the components are rendered or not.
+                 */}
                 <InputCatcher
                   viewportID={OrthoViews.PLANE_XY}
                   key="xy"
@@ -234,7 +236,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
             </div>
             {this.props.showVersionRestore ? (
               <Sider id="version-restore-sider" width={400}>
-                <VersionView />
+                <VersionView allowUpdate={isUpdateTracingAllowed} />
               </Sider>
             ) : null}
           </Layout>
@@ -262,7 +264,7 @@ function mapStateToProps(state: OxalisState): StateProps {
   };
 }
 
-export default connect(
+export default connect<Props, OwnProps, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
 )(withRouter(TracingLayoutView));

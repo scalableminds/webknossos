@@ -11,6 +11,8 @@ import {
   type Vector2,
   type Vector3,
   Vector3Indicies,
+  VolumeToolEnum,
+  type VolumeTool,
 } from "oxalis/constants";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
@@ -145,17 +147,11 @@ class VolumeLayer {
     return volumeTracing.contourList;
   }
 
-  finish(): void {
-    if (!this.isEmpty()) {
-      this.addContour(this.getContourList()[0]);
-    }
-  }
-
   isEmpty(): boolean {
     return this.getContourList().length === 0;
   }
 
-  getVoxelIterator(): VoxelIterator {
+  getVoxelIterator(mode: VolumeTool): VoxelIterator {
     if (this.isEmpty()) {
       return VoxelIterator.finished();
     }
@@ -181,10 +177,13 @@ class VolumeLayer {
       }
     }
 
-    const setMap = function(x: number, y: number, value = true): void {
+    const setMap = (x: number, y: number, value = true) => {
       x = Math.floor(x);
       y = Math.floor(y);
-      map[x - minCoord2d[0]][y - minCoord2d[1]] = value;
+      // Leave a 1px border in order for fillOutsideArea to work
+      if (x > minCoord2d[0] && x < maxCoord2d[0] && y > minCoord2d[1] && y < maxCoord2d[1]) {
+        map[x - minCoord2d[0]][y - minCoord2d[1]] = value;
+      }
     };
 
     // The approach is to initialize the map to true, then
@@ -198,9 +197,9 @@ class VolumeLayer {
     // area if you consider narrow shapes.
     // Also, it will be very clear where to start the filling
     // algorithm.
-    this.drawOutlineVoxels((x, y) => setMap(x, y, false));
+    this.drawOutlineVoxels((x, y) => setMap(x, y, false), mode);
     this.fillOutsideArea(map, width, height);
-    this.drawOutlineVoxels(setMap);
+    this.drawOutlineVoxels(setMap, mode);
 
     const iterator = new VoxelIterator(
       map,
@@ -231,17 +230,15 @@ class VolumeLayer {
     const minCoord2d = [coord2d[0] - radius, coord2d[1] - radius];
 
     // Use the baseVoxelFactors to scale the circle, otherwise it'll become an ellipse
-    const [u, v] = this.get2DCoordinate(
+    const [scaleX, scaleY] = this.get2DCoordinate(
       getBaseVoxelFactors(Store.getState().dataset.dataSource.scale),
     );
 
-    for (let x = 0; x < width; x++) {
-      for (let y = 0; y < width; y++) {
-        if (Math.sqrt(((x - radius) / u) ** 2 + ((y - radius) / v) ** 2) < radius) {
-          map[x][y] = true;
-        }
-      }
-    }
+    const setMap = (x, y) => {
+      map[x][y] = true;
+    };
+    Drawing.fillCircle(radius, radius, radius, scaleX, scaleY, setMap);
+
     const iterator = new VoxelIterator(
       map,
       width,
@@ -253,14 +250,25 @@ class VolumeLayer {
     return iterator;
   }
 
-  drawOutlineVoxels(setMap: (number, number) => void): void {
+  drawOutlineVoxels(setMap: (number, number) => void, mode: VolumeTool): void {
+    const contourList = this.getContourList();
+    const [scaleX, scaleY] = this.get2DCoordinate(
+      getBaseVoxelFactors(Store.getState().dataset.dataSource.scale),
+    );
+    const radius = Math.round(
+      this.pixelsToVoxels(Store.getState().temporaryConfiguration.brushSize) / 2,
+    );
     let p1;
     let p2;
-    for (let i = 0; i < this.getContourList().length; i++) {
-      p1 = this.get2DCoordinate(this.getContourList()[i]);
-      p2 = this.get2DCoordinate(this.getContourList()[(i + 1) % this.getContourList().length]);
+    for (let i = 0; i < contourList.length; i++) {
+      p1 = this.get2DCoordinate(contourList[i]);
 
-      Drawing.drawLine2d(p1[0], p1[1], p2[0], p2[1], setMap);
+      if (mode === VolumeToolEnum.TRACE) {
+        p2 = this.get2DCoordinate(contourList[(i + 1) % contourList.length]);
+        Drawing.drawLine2d(p1[0], p1[1], p2[0], p2[1], setMap);
+      } else if (mode === VolumeToolEnum.BRUSH) {
+        Drawing.fillCircle(p1[0], p1[1], radius, scaleX, scaleY, setMap);
+      }
     }
   }
 

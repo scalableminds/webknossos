@@ -47,7 +47,6 @@ export class DataBucket {
   BYTE_OFFSET: number;
   visualizedMesh: ?Object;
   visualizationColor: number;
-  neededAtPickerTick: ?number;
 
   state: BucketStateEnumType;
   dirty: boolean;
@@ -154,7 +153,9 @@ export class DataBucket {
   getOrCreateData(): Uint8Array {
     if (this.data == null) {
       this.data = new Uint8Array(this.BUCKET_LENGTH);
-      this.temporalBucketManager.addBucket(this);
+      if (!this.isMissing()) {
+        this.temporalBucketManager.addBucket(this);
+      }
     }
 
     return this.getData();
@@ -346,10 +347,6 @@ export class DataBucket {
         }
       }
     }
-  }
-
-  setNeededAtPickerTick(tick: number) {
-    this.neededAtPickerTick = tick;
   }
 
   // The following three methods can be used for debugging purposes.

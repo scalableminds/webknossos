@@ -9,7 +9,7 @@ import * as React from "react";
 import _ from "lodash";
 import update from "immutability-helper";
 
-import type { APIAnnotationTypeCompact } from "admin/api_flow_types";
+import type { APIAnnotationCompact } from "admin/api_flow_types";
 import { AnnotationContentTypes } from "oxalis/constants";
 import { AsyncLink } from "components/async_clickables";
 import {
@@ -36,11 +36,11 @@ import { trackAction } from "oxalis/model/helpers/analytics";
 const { Column } = Table;
 const { Search } = Input;
 
-const typeHint: APIAnnotationTypeCompact[] = [];
+const typeHint: APIAnnotationCompact[] = [];
 const pageLength: number = 1000;
 
 export type TracingModeState = {
-  tracings: Array<APIAnnotationTypeCompact>,
+  tracings: Array<APIAnnotationCompact>,
   lastLoadedPage: number,
   loadedAllTracings: boolean,
 };
@@ -178,7 +178,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     );
   };
 
-  finishOrReopenTracing = async (type: "finish" | "reopen", tracing: APIAnnotationTypeCompact) => {
+  finishOrReopenTracing = async (type: "finish" | "reopen", tracing: APIAnnotationCompact) => {
     const newTracing =
       type === "finish"
         ? await finishAnnotation(tracing.id, tracing.typ)
@@ -205,7 +205,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     }
   };
 
-  renderActions = (tracing: APIAnnotationTypeCompact) => {
+  renderActions = (tracing: APIAnnotationCompact) => {
     if (tracing.typ !== "Explorational") {
       return null;
     }
@@ -215,15 +215,18 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       return (
         <div>
           <Link to={`/annotations/${typ}/${id}`}>
-            <Icon type="play-circle-o" />Trace
+            <Icon type="play-circle-o" />
+            Trace
           </Link>
           <br />
           <a href={`/api/annotations/${typ}/${id}/download`}>
-            <Icon type="download" />Download
+            <Icon type="download" />
+            Download
           </a>
           <br />
           <AsyncLink href="#" onClick={() => this.finishOrReopenTracing("finish", tracing)}>
-            <Icon type="inbox" />Archive
+            <Icon type="inbox" />
+            Archive
           </AsyncLink>
           <br />
         </div>
@@ -232,7 +235,8 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       return (
         <div>
           <AsyncLink href="#" onClick={() => this.finishOrReopenTracing("reopen", tracing)}>
-            <Icon type="folder-open" />Reopen
+            <Icon type="folder-open" />
+            Reopen
           </AsyncLink>
           <br />
         </div>
@@ -240,7 +244,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     }
   };
 
-  getCurrentTracings(): Array<APIAnnotationTypeCompact> {
+  getCurrentTracings(): Array<APIAnnotationCompact> {
     return this.getCurrentModeState().tracings;
   }
 
@@ -248,7 +252,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     this.setState({ searchQuery: event.target.value });
   };
 
-  renameTracing(tracing: APIAnnotationTypeCompact, name: string) {
+  renameTracing(tracing: APIAnnotationCompact, name: string) {
     const tracings = this.getCurrentTracings();
 
     const newTracings = tracings.map(currentTracing => {
@@ -310,7 +314,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   editTagFromAnnotation = (
-    annotation: APIAnnotationTypeCompact,
+    annotation: APIAnnotationCompact,
     shouldAddTag: boolean,
     tag: string,
     event: SyntheticInputEvent<>,
@@ -359,7 +363,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     );
   }
 
-  renderNameWithDescription(tracing: APIAnnotationTypeCompact) {
+  renderNameWithDescription(tracing: APIAnnotationCompact) {
     const hasDescription = tracing.description !== "";
     const markdownDescription = (
       <div style={{ maxWidth: 400 }}>
@@ -403,7 +407,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Column
           title="ID"
           dataIndex="id"
-          render={(__, tracing: APIAnnotationTypeCompact) => formatHash(tracing.id)}
+          render={(__, tracing: APIAnnotationCompact) => formatHash(tracing.id)}
           sorter={Utils.localeCompareBy(typeHint, annotation => annotation.id)}
           className="monospace-id"
         />
@@ -411,13 +415,13 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           title="Name"
           dataIndex="name"
           sorter={Utils.localeCompareBy(typeHint, annotation => annotation.name)}
-          render={(name: string, tracing: APIAnnotationTypeCompact) =>
+          render={(name: string, tracing: APIAnnotationCompact) =>
             this.renderNameWithDescription(tracing)
           }
         />
         <Column
           title="Stats"
-          render={(__, annotation: APIAnnotationTypeCompact) =>
+          render={(__, annotation: APIAnnotationCompact) =>
             // Flow doesn't recognize that stats must contain the nodeCount if the treeCount is != null
             annotation.stats.treeCount != null &&
             annotation.stats.nodeCount != null &&
@@ -446,7 +450,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           title="Tags"
           dataIndex="tags"
           width={500}
-          render={(tags: Array<string>, annotation: APIAnnotationTypeCompact) => (
+          render={(tags: Array<string>, annotation: APIAnnotationCompact) => (
             <div>
               {tags.map(tag => (
                 <Tag
@@ -481,7 +485,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           title="Actions"
           className="nowrap"
           key="action"
-          render={(__, tracing: APIAnnotationTypeCompact) => this.renderActions(tracing)}
+          render={(__, tracing: APIAnnotationCompact) => this.renderActions(tracing)}
         />
       </Table>
     );

@@ -15,9 +15,9 @@ const RadioGroup = Radio.Group;
 const RadioButton = Radio.Button;
 const ButtonGroup = Button.Group;
 
-type Props = {
+type Props = {|
   volumeTracing: VolumeTracing,
-};
+|};
 
 class VolumeActionsView extends PureComponent<Props> {
   handleSetTool = (event: { target: { value: VolumeTool } }) => {
@@ -58,4 +58,4 @@ function mapStateToProps(state: OxalisState): Props {
   };
 }
 
-export default connect(mapStateToProps)(VolumeActionsView);
+export default connect<Props, {||}, _, _, _, _>(mapStateToProps)(VolumeActionsView);

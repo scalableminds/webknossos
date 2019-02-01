@@ -17,24 +17,35 @@ export type Versions = {
   volume?: ?number,
 };
 
-type Props = {
+type StateProps = {|
   tracing: Tracing,
-};
+|};
+type OwnProps = {|
+  allowUpdate: boolean,
+|};
+type Props = {| ...StateProps, ...OwnProps |};
 
 type State = {
   activeTracingType: "skeleton" | "volume",
+  initialAllowUpdate: boolean,
 };
 
 class VersionView extends React.Component<Props, State> {
   state = {
     activeTracingType: this.props.tracing.skeleton != null ? "skeleton" : "volume",
+    // Remember whether the tracing could originally be updated
+    initialAllowUpdate: this.props.allowUpdate,
   };
+
+  componentWillUnmount() {
+    Store.dispatch(setAnnotationAllowUpdateAction(this.state.initialAllowUpdate));
+  }
 
   handleClose = async () => {
     // This will load the newest version of both skeleton and volume tracings
     await previewVersion();
     Store.dispatch(setVersionRestoreVisibilityAction(false));
-    Store.dispatch(setAnnotationAllowUpdateAction(true));
+    Store.dispatch(setAnnotationAllowUpdateAction(this.state.initialAllowUpdate));
   };
 
   onChangeTab = (activeKey: "skeleton" | "volume") => {
@@ -73,7 +84,11 @@ class VersionView extends React.Component<Props, State> {
           <Tabs onChange={this.onChangeTab} activeKey={this.state.activeTracingType}>
             {this.props.tracing.skeleton != null ? (
               <TabPane tab="Skeleton" key="skeleton">
-                <VersionList tracingType="skeleton" tracing={this.props.tracing.skeleton} />
+                <VersionList
+                  tracingType="skeleton"
+                  tracing={this.props.tracing.skeleton}
+                  allowUpdate={this.state.initialAllowUpdate}
+                />
               </TabPane>
             ) : null}
             {this.props.tracing.volume != null ? (
@@ -84,7 +99,11 @@ class VersionView extends React.Component<Props, State> {
                     message="Volume versioning has been disabled for this instance. Please contact an administrator."
                   />
                 ) : (
-                  <VersionList tracingType="volume" tracing={this.props.tracing.volume} />
+                  <VersionList
+                    tracingType="volume"
+                    tracing={this.props.tracing.volume}
+                    allowUpdate={this.state.initialAllowUpdate}
+                  />
                 )}
               </TabPane>
             ) : null}
@@ -95,10 +114,10 @@ class VersionView extends React.Component<Props, State> {
   }
 }
 
-function mapStateToProps(state: OxalisState): Props {
+function mapStateToProps(state: OxalisState): StateProps {
   return {
     tracing: state.tracing,
   };
 }
 
-export default connect(mapStateToProps)(VersionView);
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(VersionView);

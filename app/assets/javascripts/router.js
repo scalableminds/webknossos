@@ -7,7 +7,7 @@ import Enum from "Enumjs";
 import React from "react";
 import createBrowserHistory from "history/createBrowserHistory";
 
-import { APITracingTypeEnum, type APIUser } from "admin/api_flow_types";
+import { APIAnnotationTypeEnum, type APIUser } from "admin/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
 import { Imprint, Privacy } from "components/legal";
 import type { OxalisState } from "oxalis/store";
@@ -49,9 +49,9 @@ import window from "libs/window";
 
 const { Content } = Layout;
 
-type StateProps = {
+type StateProps = {|
   activeUser: ?APIUser,
-};
+|};
 
 type Props = StateProps;
 
@@ -88,12 +88,12 @@ function PageNotFoundView() {
 
 class ReactRouter extends React.Component<Props> {
   tracingView = ({ match }: ContextRouter) => {
-    const tracingType = Enum.coalesce(APITracingTypeEnum, match.params.type);
+    const annotationType = Enum.coalesce(APIAnnotationTypeEnum, match.params.type);
 
-    if (tracingType != null) {
+    if (annotationType != null) {
       return (
         <TracingLayoutView
-          initialTracingType={tracingType}
+          initialAnnotationType={annotationType}
           initialCommandType={{
             type: ControlModeEnum.TRACE,
             annotationId: match.params.id || "",
@@ -107,7 +107,7 @@ class ReactRouter extends React.Component<Props> {
 
   tracingViewMode = ({ match }: ContextRouter) => (
     <TracingLayoutView
-      initialTracingType={APITracingTypeEnum.View}
+      initialAnnotationType={APIAnnotationTypeEnum.View}
       initialCommandType={{
         type: ControlModeEnum.VIEW,
         name: match.params.datasetName || "",
@@ -235,7 +235,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/projects/create"
-                component={ProjectCreateView}
+                render={() => <ProjectCreateView />}
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
@@ -261,8 +261,8 @@ class ReactRouter extends React.Component<Props> {
                   try {
                     const annotationInformation = await getAnnotationInformation(
                       match.params.id || "",
-                      Enum.coalesce(APITracingTypeEnum, match.params.type) ||
-                        APITracingTypeEnum.Explorational,
+                      Enum.coalesce(APIAnnotationTypeEnum, match.params.type) ||
+                        APIAnnotationTypeEnum.Explorational,
                     );
                     return annotationInformation.isPublic;
                   } catch (ex) {
@@ -341,7 +341,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/scripts/create"
-                component={ScriptCreateView}
+                render={() => <ScriptCreateView />}
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
@@ -436,4 +436,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
 });
 
-export default connect(mapStateToProps)(ReactRouter);
+export default connect<Props, {||}, _, _, _, _>(mapStateToProps)(ReactRouter);

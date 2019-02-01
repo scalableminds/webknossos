@@ -59,7 +59,8 @@ class TeamSelectionComponent extends React.PureComponent<Props, State> {
     });
   };
 
-  getAllTeams = () => _.unionBy(this.state.editableTeams, this.state.allowedTeams, t => t.id);
+  getAllTeams = (): Array<APITeam> =>
+    _.unionBy(this.state.editableTeams, this.state.allowedTeams, t => t.id);
 
   render() {
     return (

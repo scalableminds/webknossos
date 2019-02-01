@@ -89,7 +89,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
     );
   }
 
-  handleMergerModeChange = async value => {
+  handleMergerModeChange = async (value: boolean) => {
     if (value) {
       this.setState({
         isMergerModeEnabled: true,

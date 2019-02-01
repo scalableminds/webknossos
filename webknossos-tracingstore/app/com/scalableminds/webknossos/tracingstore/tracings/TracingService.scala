@@ -48,9 +48,12 @@ trait TracingService[T <: GeneratedMessage with Message[T]] extends KeyValueStor
     }
   }
 
-  def findMultiple(selectors: List[TracingSelector], useCache: Boolean = true, applyUpdates: Boolean = false): Fox[List[T]] = {
+  def findMultiple(selectors: List[Option[TracingSelector]], useCache: Boolean = true, applyUpdates: Boolean = false): Fox[List[Option[T]]] = {
     Fox.combined {
-      selectors.map(selector => find(selector.tracingId, selector.version, useCache, applyUpdates))
+      selectors.map {
+        case Some(selector) => find(selector.tracingId, selector.version, useCache, applyUpdates).map(Some(_))
+        case None => Fox.successful(None)
+      }
     }
   }
 

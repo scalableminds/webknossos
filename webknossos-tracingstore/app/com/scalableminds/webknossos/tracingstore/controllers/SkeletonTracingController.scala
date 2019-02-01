@@ -3,9 +3,12 @@ package com.scalableminds.webknossos.tracingstore.controllers
 import com.google.inject.Inject
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessRequest}
+import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreWkRpcClient}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingSelector
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton._
+import com.scalableminds.util.tools.JsonHelper.boxFormat
+import com.scalableminds.util.tools.JsonHelper.optionFormat
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.PlayBodyParsers
@@ -23,6 +26,8 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
 
   implicit def packMultiple(tracings: List[SkeletonTracing]): SkeletonTracings = SkeletonTracings(tracings.map(t => SkeletonTracingOpt(Some(t))))
 
+  implicit def packMultipleOpt(tracings: List[Option[SkeletonTracing]]): SkeletonTracings = SkeletonTracings(tracings.map(t => SkeletonTracingOpt(t)))
+
   implicit def unpackMultiple(tracings: SkeletonTracings): List[Option[SkeletonTracing]] = tracings.tracings.toList.map(_.tracing)
 
   def mergedFromContents(persist: Boolean) = Action.async(validateProto[SkeletonTracings]) { implicit request =>
@@ -39,13 +44,13 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
     }
   }
 
-  def mergedFromIds(persist: Boolean) = Action.async(validateJson[List[TracingSelector]]) { implicit request =>
+  def mergedFromIds(persist: Boolean) = Action.async(validateJson[List[Option[TracingSelector]]]) { implicit request =>
     log {
       accessTokenService.validateAccess(UserAccessRequest.webknossos) {
         AllowRemoteOrigin {
           for {
             tracings <- tracingService.findMultiple(request.body, applyUpdates = true) ?~> Messages("tracing.notFound")
-            mergedTracing = tracingService.merge(tracings)
+            mergedTracing = tracingService.merge(tracings.flatten)
             newId <- tracingService.save(mergedTracing, None, mergedTracing.version, toCache = !persist)
           } yield {
             Ok(Json.toJson(newId))

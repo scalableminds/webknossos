@@ -38,6 +38,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
                   volumeTracing: Option[VolumeTracing],
                   annotation: Option[Annotation],
                   scale: Option[Scale],
+                  volumeFilename: Option[String],
                   organizationName: String,
                   annotationOwner: Option[User],
                   annotationTask: Option[Task]): Enumerator[Array[Byte]] = Enumerator.outputStream { os =>
@@ -45,7 +46,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
       new IndentingXMLStreamWriter(outputService.createXMLStreamWriter(os))
 
     for {
-      nml <- toNml(skeletonTracing, volumeTracing, annotation, scale, organizationName, annotationOwner, annotationTask)
+      nml <- toNml(skeletonTracing, volumeTracing, annotation, scale, volumeFilename, organizationName, annotationOwner, annotationTask)
       _ = os.close()
     } yield nml
   }
@@ -54,6 +55,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
             volumeTracingOpt: Option[VolumeTracing],
             annotation: Option[Annotation],
             scale: Option[Scale],
+            volumeFilename: Option[String],
             organizationName: String,
             annotationOwner: Option[User],
             annotationTask: Option[Task])(implicit writer: XMLStreamWriter): Fox[Unit] =
@@ -68,7 +70,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
                                                  scale).toFox
           _ = writeParameters(parameters)
           _ = skeletonTracingOpt.foreach(writeSkeletonThings)
-          _ = volumeTracingOpt.foreach(writeVolumeThings)
+          _ = volumeTracingOpt.foreach(writeVolumeThings(_, volumeFilename))
         } yield ()
       }
       _ = writer.writeEndDocument()
@@ -173,10 +175,10 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
       }
     }
 
-  def writeVolumeThings(volumeTracing: VolumeTracing)(implicit writer: XMLStreamWriter): Unit =
+  def writeVolumeThings(volumeTracing: VolumeTracing, volumeFilename: Option[String])(implicit writer: XMLStreamWriter): Unit =
     Xml.withinElementSync("volume") {
       writer.writeAttribute("id", "1")
-      writer.writeAttribute("location", "data.zip")
+      writer.writeAttribute("location", volumeFilename.getOrElse("data.zip"))
       volumeTracing.fallbackLayer.foreach(writer.writeAttribute("fallbackLayer", _))
     }
 

@@ -2,7 +2,9 @@ package models.annotation
 
 import java.io.{BufferedOutputStream, File, FileOutputStream}
 
-import akka.stream.scaladsl.Source
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.{Source, StreamConverters}
 import akka.util.ByteString
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
@@ -11,10 +13,7 @@ import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  DataSourceLike => DataSource,
-  SegmentationLayerLike => SegmentationLayer
-}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceLike => DataSource, SegmentationLayerLike => SegmentationLayer}
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
@@ -65,6 +64,9 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     with TextUtils
     with ProtoGeometryImplicits
     with LazyLogging {
+
+  implicit val actorSystem = ActorSystem()
+  implicit val materializer = ActorMaterializer()
 
   private def selectSuitableTeam(user: User, dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[ObjectId] =
     (for {
@@ -373,7 +375,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       tracingsAndNamesFlattened = flattenTupledLists(tracingsNamesAndScalesAsTuples)
       nmlsAndNames = tracingsAndNamesFlattened.map(
         tuple =>
-          (nmlWriter.toNmlStream(tuple._1, tuple._2, Some(tuple._6), tuple._5, tuple._9, Some(tuple._7), tuple._8),
+          (nmlWriter.toNmlStream(tuple._1, tuple._2, Some(tuple._6), tuple._5, Some(tuple._4 + "_data.zip"), tuple._9, Some(tuple._7), tuple._8),
            tuple._4,
            tuple._3))
       zip <- createZip(nmlsAndNames, zipFileName)
@@ -497,8 +499,16 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
 
     def addToZip(nmls: List[(Enumerator[Array[Byte]], String, Option[Source[ByteString, _]])]): Future[Boolean] =
       nmls match {
-        case head :: tail =>
-          zipper.withFile(head._2 + ".nml")(NamedEnumeratorStream("", head._1).writeTo).flatMap(_ => addToZip(tail))
+        case head :: tail => {
+          val dataEnumeratorOpt: Option[Enumerator[Array[Byte]]] = head._3.map(volumeData => Enumerator.fromStream(volumeData.runWith(StreamConverters.asInputStream())))
+          val writeVolumeDataResult = dataEnumeratorOpt match {
+            case Some(dataEnumerator) => zipper.withFile(head._2 + "_data.zip")(NamedEnumeratorStream("", dataEnumerator).writeTo)
+            case None => Future.successful(())
+          }
+          writeVolumeDataResult.
+            flatMap(_ => zipper.withFile(head._2 + ".nml")(NamedEnumeratorStream("", head._1).writeTo))
+            .flatMap(_ => addToZip(tail))
+        }
         case _ =>
           Future.successful(true)
       }

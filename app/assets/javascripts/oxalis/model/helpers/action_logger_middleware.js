@@ -2,6 +2,8 @@
 import _ from "lodash";
 import type { Dispatch } from "redux";
 
+import type { Action } from "oxalis/model/actions/actions";
+
 const MAX_ACTION_LOG_LENGTH = 250;
 let actionLog = [];
 const actionBlacklist = [
@@ -24,9 +26,7 @@ export function getActionLog(): Array<string> {
   return actionLog;
 }
 
-export default function actionLoggerMiddleware<A: $Subtype<{ type: $Subtype<string> }>>(): (
-  next: Dispatch<A>,
-) => Dispatch<A> {
+export default function actionLoggerMiddleware<A: Action>(): (next: Dispatch<A>) => Dispatch<A> {
   return (next: Dispatch<A>) => (action: A): A => {
     const isBlackListed = actionBlacklist.includes(action.type);
     if (!isBlackListed) {

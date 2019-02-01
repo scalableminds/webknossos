@@ -23,17 +23,17 @@ import messages from "messages";
 import { location } from "libs/window";
 import type { LayoutKeys } from "oxalis/view/layouting/default_layout_configs";
 
-type StateProps = {
+type OwnProps = {|
+  layoutMenu: React.Node,
+|};
+type StateProps = {|
   annotationType: APIAnnotationType,
   annotationId: string,
   restrictions: RestrictionsAndSettings,
   task: ?Task,
   activeUser: ?APIUser,
-};
-
-type Props = StateProps & {
-  layoutMenu: React.Node,
-};
+|};
+type Props = {| ...OwnProps, ...StateProps |};
 
 type State = {
   isShareModalOpen: boolean,
@@ -386,4 +386,4 @@ function mapStateToProps(state: OxalisState): StateProps {
   };
 }
 
-export default connect(mapStateToProps)(TracingActionsView);
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(TracingActionsView);

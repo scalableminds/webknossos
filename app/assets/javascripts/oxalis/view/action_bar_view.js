@@ -1,14 +1,17 @@
 // @flow
-import { Icon, Alert, Dropdown, Menu } from "antd";
+import { Alert, Dropdown, Icon, Menu, Tooltip } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 
+import type { APIDataset, APIUser } from "admin/api_flow_types";
+import { createExplorational } from "admin/admin_rest_api";
 import {
   layoutEmitter,
   deleteLayout,
   getLayoutConfig,
   addNewLayout,
 } from "oxalis/view/layouting/layout_persistence";
+import { trackAction } from "oxalis/model/helpers/analytics";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import AddNewLayoutModal from "oxalis/view/action-bar/add_new_layout_modal";
 import ButtonComponent from "oxalis/view/components/button_component";
@@ -30,17 +33,19 @@ const VersionRestoreWarning = (
   />
 );
 
-type StateProps = {
+type StateProps = {|
+  dataset: APIDataset,
+  activeUser: ?APIUser,
   viewMode: Mode,
   controlMode: ControlMode,
   hasVolume: boolean,
   hasSkeleton: boolean,
   showVersionRestore: boolean,
-};
-
-type Props = StateProps & {
+|};
+type OwnProps = {|
   layoutProps: LayoutProps,
-};
+|};
+type Props = {| ...OwnProps, ...StateProps |};
 
 type State = {
   isNewLayoutModalVisible: boolean,
@@ -75,6 +80,34 @@ class ActionBarView extends React.PureComponent<Props, State> {
       this.props.layoutProps.setCurrentLayout(layoutName);
     }
   };
+
+  renderStartTracingButton(): React.Node {
+    const createTracing = async () => {
+      const type = "hybrid";
+      const annotation = await createExplorational(this.props.dataset, type, true);
+      trackAction(`Create ${type} tracing (from view mode)`);
+      location.href = `${location.origin}/annotations/${annotation.typ}/${annotation.id}`;
+    };
+
+    const needsAuthentication = this.props.activeUser == null;
+    const MaybeTooltip = needsAuthentication
+      ? ({ children }) => (
+          <Tooltip title="Please log in or register to create a tracing.">{children}</Tooltip>
+        )
+      : ({ children }) => children;
+    return (
+      <MaybeTooltip>
+        <ButtonComponent
+          onClick={createTracing}
+          style={{ marginLeft: 12 }}
+          type="primary"
+          disabled={needsAuthentication}
+        >
+          Create Tracing
+        </ButtonComponent>
+      </MaybeTooltip>
+    );
+  }
 
   render() {
     const isTraceMode = this.props.controlMode === ControlModeEnum.TRACE;
@@ -111,6 +144,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
           <DatasetPositionView />
           {this.props.hasVolume && isVolumeSupported ? <VolumeActionsView /> : null}
           {this.props.hasSkeleton && isTraceMode ? <ViewModesView /> : null}
+          {isTraceMode ? null : this.renderStartTracingButton()}
         </div>
         <AddNewLayoutModal
           addLayout={this.addNewLayout}
@@ -122,6 +156,8 @@ class ActionBarView extends React.PureComponent<Props, State> {
   }
 }
 const mapStateToProps = (state: OxalisState): StateProps => ({
+  dataset: state.dataset,
+  activeUser: state.activeUser,
   viewMode: state.temporaryConfiguration.viewMode,
   controlMode: state.temporaryConfiguration.controlMode,
   showVersionRestore: state.uiInformation.showVersionRestore,
@@ -129,4 +165,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   hasSkeleton: state.tracing.skeleton != null,
 });
 
-export default connect(mapStateToProps)(ActionBarView);
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(ActionBarView);

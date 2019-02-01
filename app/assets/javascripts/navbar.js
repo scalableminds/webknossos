@@ -18,14 +18,14 @@ import features from "features";
 const { SubMenu } = Menu;
 const { Header } = Layout;
 
-type StateProps = {
-  activeUser: ?APIUser,
-};
-
-type Props = {
+type OwnProps = {|
   isAuthenticated: boolean,
-  history: RouterHistory,
-} & StateProps;
+|};
+type StateProps = {|
+  activeUser: ?APIUser,
+|};
+type Props = {| ...OwnProps, ...StateProps |};
+type PropsWithRouter = {| ...Props, history: RouterHistory |};
 
 type State = {
   version: ?string,
@@ -33,7 +33,7 @@ type State = {
 
 export const navbarHeight = 48;
 
-class Navbar extends React.PureComponent<Props, State> {
+class Navbar extends React.PureComponent<PropsWithRouter, State> {
   state = {
     version: null,
   };
@@ -76,7 +76,8 @@ class Navbar extends React.PureComponent<Props, State> {
         key="sub3"
         title={
           <span>
-            <Icon type="medicine-box" />Help
+            <Icon type="medicine-box" />
+            Help
           </span>
         }
       >
@@ -132,7 +133,8 @@ class Navbar extends React.PureComponent<Props, State> {
           key="sub1"
           title={
             <span>
-              <Icon type="setting" />Administration
+              <Icon type="setting" />
+              Administration
             </span>
           }
         >
@@ -159,7 +161,8 @@ class Navbar extends React.PureComponent<Props, State> {
           key="sub2"
           title={
             <span>
-              <Icon type="line-chart" />Statistics
+              <Icon type="line-chart" />
+              Statistics
             </span>
           }
         >
@@ -236,4 +239,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
 });
 
-export default connect(mapStateToProps)(withRouter(Navbar));
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(withRouter(Navbar));

@@ -1,6 +1,8 @@
 // @flow
 import type { Dispatch, MiddlewareAPI } from "redux";
 
+import type { Action } from "oxalis/model/actions/actions";
+
 const overwrites = {};
 
 export function overwriteAction<S, A>(
@@ -22,7 +24,7 @@ export function removeOverwrite(actionName: string) {
   delete overwrites[actionName];
 }
 
-export default function overwriteMiddleware<S, A: $Subtype<{ type: $Subtype<string> }>>(
+export default function overwriteMiddleware<S, A: Action>(
   store: MiddlewareAPI<S, A>,
 ): (next: Dispatch<A>) => Dispatch<A> {
   return (next: Dispatch<A>) => (action: A): A => {

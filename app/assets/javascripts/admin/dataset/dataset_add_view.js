@@ -18,7 +18,8 @@ const DatasetAddView = ({ history }: Props) => (
     <TabPane
       tab={
         <span>
-          <Icon type="upload" />Upload Dataset
+          <Icon type="upload" />
+          Upload Dataset
         </span>
       }
       key="1"
@@ -34,7 +35,8 @@ const DatasetAddView = ({ history }: Props) => (
       <TabPane
         tab={
           <span>
-            <Icon type="bars" />Add foreign Dataset
+            <Icon type="bars" />
+            Add foreign Dataset
           </span>
         }
         key="2"

@@ -154,11 +154,13 @@ class TimeLineView extends React.PureComponent<*, State> {
                   style={{ width: "100%" }}
                   onChange={this.handleUserChange}
                 >
-                  {this.state.users.filter(u => u.isActive).map((user: APIUser) => (
-                    <Option key={user.id} value={user.id}>
-                      {`${user.lastName}, ${user.firstName} ${user.email}`}
-                    </Option>
-                  ))}
+                  {this.state.users
+                    .filter(u => u.isActive)
+                    .map((user: APIUser) => (
+                      <Option key={user.id} value={user.id}>
+                        {`${user.lastName}, ${user.firstName} ${user.email}`}
+                      </Option>
+                    ))}
                 </Select>
               </FormItem>
               <FormItem {...formItemLayout} label="Date">

@@ -25,7 +25,8 @@ const columnSpan = {
 
 const SimpleHeader = () => (
   <div id="oxalis-header">
-    <img src="/images/oxalis.svg" alt="webKnossos Logo" style={{ verticalAlign: "middle" }} />webKnossos
+    <img src="/images/oxalis.svg" alt="webKnossos Logo" style={{ verticalAlign: "middle" }} />
+    webKnossos
   </div>
 );
 
@@ -128,13 +129,11 @@ const WelcomeHeader = ({ history }) => (
   </div>
 );
 
-type StateProps = {
+type StateProps = {|
   activeUser: ?APIUser,
-};
-
-type Props = {
-  history: RouterHistory,
-} & StateProps;
+|};
+type Props = StateProps;
+type PropsWithRouter = {| ...Props, history: RouterHistory |};
 
 type State = {
   datasets: Array<APIMaybeUnimportedDataset>,
@@ -143,7 +142,7 @@ type State = {
   searchQuery: string,
 };
 
-class SpotlightView extends React.PureComponent<Props, State> {
+class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
   state = {
     datasets: [],
     hasOrganizations: true,
@@ -198,9 +197,10 @@ class SpotlightView extends React.PureComponent<Props, State> {
             <div style={{ minHeight: "100px" }}>
               {this.state.datasets.length === 0 && !this.state.isLoading ? (
                 <p style={{ textAlign: "center" }}>
-                  There are no datasets available yet.<br />Check out{" "}
-                  <a href="https://demo.webknossos.org/">demo.webknossos.org</a> to see webKnossos
-                  in action.
+                  There are no datasets available yet.
+                  <br />
+                  Check out <a href="https://demo.webknossos.org/">demo.webknossos.org</a> to see
+                  webKnossos in action.
                 </p>
               ) : (
                 <PublicationView
@@ -296,7 +296,8 @@ class SpotlightView extends React.PureComponent<Props, State> {
               <p>
                 The webKnossos frontend was inspired by Knossos: Helmstaedter, M., K.L. Briggman,
                 and W. Denk, High-accuracy neurite reconstruction for high-throughput neuroanatomy.{" "}
-                <a href="https://dx.doi.org/10.1038/nn.2868">Nat. Neurosci. (2011) 14, 1081-1088</a>.
+                <a href="https://dx.doi.org/10.1038/nn.2868">Nat. Neurosci. (2011) 14, 1081-1088</a>
+                .
               </p>
               <p>
                 More information about webKnossos and full credits at{" "}
@@ -317,4 +318,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
 });
 
-export default connect(mapStateToProps)(withRouter(SpotlightView));
+export default connect<Props, {||}, _, _, _, _>(mapStateToProps)(withRouter(SpotlightView));

@@ -13,6 +13,8 @@ trait UpdateAction[T <: GeneratedMessage with Message[T]] {
 
   def addTimestamp(timestamp: Long): UpdateAction[T] = this
 
+  def addInfo(info: Option[String]): UpdateAction[T] = this
+
   def transformToCompact: UpdateAction[T] = this
 }
 
@@ -25,7 +27,8 @@ case class UpdateActionGroup[T <: GeneratedMessage with Message[T]](
                                                                      version: Long,
                                                                      timestamp: Long,
                                                                      actions: List[UpdateAction[T]],
-                                                                     stats: Option[JsObject])
+                                                                     stats: Option[JsObject],
+                                                                     info: Option[String])
 
 object UpdateActionGroup {
 
@@ -37,8 +40,9 @@ object UpdateActionGroup {
         timestamp <- json.validate((JsPath \ "timestamp").read[Long])
         actions <- json.validate((JsPath \ "actions").read[List[UpdateAction[T]]])
         stats <- json.validate((JsPath \ "stats").readNullable[JsObject])
+        info <- json.validate((JsPath \ "info").readNullable[String])
       } yield {
-        UpdateActionGroup[T](version, timestamp, actions, stats)
+        UpdateActionGroup[T](version, timestamp, actions, stats, info)
       }
     }
   }

@@ -31,7 +31,7 @@ export type TaskFormFieldValues = {
 type Props = {
   form: Object,
   onChange: Function,
-  initialFieldValues?: TaskFormFieldValues,
+  initialFieldValues: ?TaskFormFieldValues,
   isLoading: boolean,
   history: RouterHistory,
 };
@@ -205,11 +205,13 @@ class TaskSearchForm extends React.Component<Props, State> {
                   optionFilterProp="children"
                   style={{ width: "100%" }}
                 >
-                  {this.state.users.filter(u => u.isActive).map((user: APIUser) => (
-                    <Option key={user.id} value={user.id}>
-                      {`${user.lastName}, ${user.firstName} ${user.email}`}
-                    </Option>
-                  ))}
+                  {this.state.users
+                    .filter(u => u.isActive)
+                    .map((user: APIUser) => (
+                      <Option key={user.id} value={user.id}>
+                        {`${user.lastName}, ${user.firstName} ${user.email}`}
+                      </Option>
+                    ))}
                 </Select>,
               )}
             </FormItem>
@@ -221,7 +223,8 @@ class TaskSearchForm extends React.Component<Props, State> {
               overlay={
                 <Menu onClick={() => this.handleFormSubmit(true)}>
                   <Menu.Item key="1">
-                    <Icon type="retweet" />Show random subset
+                    <Icon type="retweet" />
+                    Show random subset
                   </Menu.Item>
                 </Menu>
               }

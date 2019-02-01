@@ -80,20 +80,20 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
         state.dataset.dataSource.dataLayers,
         layer => layer.category === "color",
       );
-      const initialLayerSettings = action.initialDatasetSettings.layers;
+      const initialLayerSettings = action.initialDatasetSettings.layers || {};
       const layerSettingsDefaults = _.transform(
         colorLayers,
         (result, layer) => {
-          if (initialLayerSettings != null && initialLayerSettings[layer.name] != null) {
-            result[layer.name] = initialLayerSettings[layer.name];
-          } else {
-            // Set defaults for each layer without settings
-            result[layer.name] = {
+          result[layer.name] = Object.assign(
+            {},
+            {
               brightness: 0,
               contrast: 1,
               color: [255, 255, 255],
-            };
-          }
+              alpha: 100,
+            },
+            initialLayerSettings[layer.name],
+          );
         },
         {},
       );

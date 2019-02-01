@@ -280,6 +280,7 @@ export type APITask = {
   +team: string,
   +tracingTime: ?number,
   +type: APITaskType,
+  +typ: "skeleton" | "volume",
   +directLinks?: Array<string>,
 };
 

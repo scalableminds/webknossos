@@ -49,6 +49,7 @@ export const annotation: APIAnnotation = {
     formattedHash: "9c67ec",
     projectName: "sampleProject",
     team: "Connectomics department",
+    typ: "skeleton",
     type: {
       id: "5b1e45faa000009d00abc2c6",
       summary: "sampleTaskType",

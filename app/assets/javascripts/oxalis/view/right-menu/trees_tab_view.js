@@ -118,7 +118,7 @@ export async function importNmls(files: Array<File>, createGroupForEachFile: boo
     const currentDatasetName = Store.getState().dataset.name;
     const doDatasetNamesDiffer = importActionsWithDatasetNames
       .map(el => el.datasetName)
-      .some(name => name != null && name !== currentDatasetName);
+      .some(name => name !== "" && name != null && name !== currentDatasetName);
     if (doDatasetNamesDiffer) {
       const shouldImport = await binaryConfirm("Are you sure?", messages["nml.different_dataset"]);
       if (!shouldImport) {

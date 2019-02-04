@@ -154,7 +154,51 @@ export function determineAllowedModes(
 }
 
 export function getBitDepth(layerInfo: DataLayerType): number {
-  return parseInt(layerInfo.elementClass.substring(4), 10);
+  switch (layerInfo.elementClass) {
+    case "uint8":
+      return 8;
+    case "uint16":
+      return 16;
+    case "uint24":
+      return 24;
+    case "uint32":
+      return 32;
+    case "uint64":
+      return 64;
+    case "float":
+      return 32;
+    case "double":
+      return 64;
+    case "int8":
+      return 8;
+    case "int16":
+      return 16;
+    case "int32":
+      return 32;
+    case "int64":
+      return 64;
+    default:
+      throw new Error("Unknown element class");
+  }
+}
+
+export function isElementClassSupported(layerInfo: DataLayerType): boolean {
+  switch (layerInfo.elementClass) {
+    case "uint8":
+    case "uint16":
+    case "uint24":
+    case "uint32":
+    case "int8":
+    case "int16":
+    case "int32":
+      return true;
+    case "float":
+    case "int64":
+    case "uint64":
+    case "double":
+    default:
+      return false;
+  }
 }
 
 export function isSegmentationLayer(dataset: APIDataset, layerName: string): boolean {

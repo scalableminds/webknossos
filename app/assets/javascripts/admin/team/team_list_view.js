@@ -159,7 +159,8 @@ class TeamListView extends React.PureComponent<Props, State> {
                 key="actions"
                 render={(__, script: APITeam) => (
                   <a href="#" onClick={_.partial(this.deleteTeam, script)}>
-                    <Icon type="delete" />Delete
+                    <Icon type="delete" />
+                    Delete
                   </a>
                 )}
               />

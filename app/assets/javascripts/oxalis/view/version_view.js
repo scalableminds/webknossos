@@ -17,13 +17,13 @@ export type Versions = {
   volume?: ?number,
 };
 
-type StateProps = {
+type StateProps = {|
   tracing: Tracing,
-};
-
-type Props = StateProps & {
+|};
+type OwnProps = {|
   allowUpdate: boolean,
-};
+|};
+type Props = {| ...StateProps, ...OwnProps |};
 
 type State = {
   activeTracingType: "skeleton" | "volume",
@@ -120,4 +120,4 @@ function mapStateToProps(state: OxalisState): StateProps {
   };
 }
 
-export default connect(mapStateToProps)(VersionView);
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(VersionView);

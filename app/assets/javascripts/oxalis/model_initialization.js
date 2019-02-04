@@ -19,11 +19,12 @@ import {
 import type { Versions } from "oxalis/view/version_view";
 import { convertPointToVecInBoundingBox } from "oxalis/model/reducers/reducer_helpers";
 import {
-  getDatasetCenter,
   determineAllowedModes,
   getBitDepth,
-  getSegmentationLayer,
   getColorLayers,
+  getDatasetCenter,
+  getSegmentationLayer,
+  isElementClassSupported,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
@@ -176,7 +177,19 @@ function validateSpecsForLayers(
     console.warn(message);
   }
 
+  maybeWarnAboutUnsupportedLayers(layers);
+
   return { isMappingSupported, textureInformationPerLayer };
+}
+
+function maybeWarnAboutUnsupportedLayers(layers: Array<APIDataLayer>): void {
+  for (const layer of layers) {
+    if (!isElementClassSupported(layer)) {
+      Toast.warning(messages["dataset.unsupported_element_class"](layer.name, layer.elementClass), {
+        sticky: true,
+      });
+    }
+  }
 }
 
 function initializeTracing(annotation: APIAnnotation, tracing: HybridServerTracing) {

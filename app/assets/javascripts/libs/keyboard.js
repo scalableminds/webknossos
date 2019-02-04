@@ -8,8 +8,8 @@
     "undefined" != typeof window
       ? (f = window)
       : "undefined" != typeof global
-        ? (f = global)
-        : "undefined" != typeof self && (f = self),
+      ? (f = global)
+      : "undefined" != typeof self && (f = self),
       (f.keyboardJS = e());
   }
 })(function() {
@@ -651,10 +651,10 @@
             typeof global !== "undefined"
               ? global
               : typeof self !== "undefined"
-                ? self
-                : typeof window !== "undefined"
-                  ? window
-                  : {},
+              ? self
+              : typeof window !== "undefined"
+              ? window
+              : {},
           ));
         },
         { "./key-combo": 2, "./locale": 4 },

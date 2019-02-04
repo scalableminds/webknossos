@@ -75,6 +75,7 @@ const initialState = {
 const INIT_ACTIONS = ["INITIALIZE_SKELETONTRACING", "INITIALIZE_VOLUMETRACING"];
 const LAST_VERSION = 2;
 const TRACINGSTORE_URL = "test.webknossos.xyz";
+const TRACING_TYPE = "skeleton";
 
 test("SaveSaga should compact multiple updateTracing update actions", t => {
   const saveQueue = createSaveQueueFromUpdateActions(
@@ -92,20 +93,20 @@ test("SaveSaga should send update actions", t => {
   const updateActions = [UpdateActions.createEdge(1, 0, 1), UpdateActions.createEdge(1, 1, 2)];
   const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
 
-  const saga = pushTracingTypeAsync("skeleton");
+  const saga = pushTracingTypeAsync(TRACING_TYPE);
   expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS[0]));
   saga.next(); // setLastSaveTimestampAction
   saga.next(); // select state
-  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false, "skeleton")));
+  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false, TRACING_TYPE)));
   expectValueDeepEqual(t, saga.next(), take("PUSH_SAVE_QUEUE"));
   saga.next(); // race
   saga.next(SaveActions.pushSaveQueueAction(updateActions));
   saga.next();
-  expectValueDeepEqual(t, saga.next(saveQueue), call(sendRequestToServer, "skeleton"));
+  expectValueDeepEqual(t, saga.next(saveQueue), call(sendRequestToServer, TRACING_TYPE));
 
   // Test that loop repeats
   saga.next(); // select state
-  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false, "skeleton")));
+  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false, TRACING_TYPE)));
   expectValueDeepEqual(t, saga.next(), take("PUSH_SAVE_QUEUE"));
 });
 
@@ -115,10 +116,10 @@ test("SaveSaga should send request to server", t => {
     TIMESTAMP,
   );
 
-  const saga = sendRequestToServer(TIMESTAMP);
+  const saga = sendRequestToServer(TRACING_TYPE);
   saga.next();
   saga.next(saveQueue);
-  saga.next({ version: LAST_VERSION, type: "skeleton", tracingId: "1234567890" });
+  saga.next({ version: LAST_VERSION, type: TRACING_TYPE, tracingId: "1234567890" });
   const saveQueueWithVersions = addVersionNumbers(saveQueue, LAST_VERSION);
   expectValueDeepEqual(
     t,
@@ -138,10 +139,10 @@ test("SaveSaga should retry update actions", t => {
     TIMESTAMP,
   );
 
-  const saga = sendRequestToServer("skeleton", TIMESTAMP);
+  const saga = sendRequestToServer(TRACING_TYPE);
   saga.next();
   saga.next(saveQueue);
-  saga.next({ version: LAST_VERSION, type: "skeleton", tracingId: "1234567890" });
+  saga.next({ version: LAST_VERSION, type: TRACING_TYPE, tracingId: "1234567890" });
   const saveQueueWithVersions = addVersionNumbers(saveQueue, LAST_VERSION);
   expectValueDeepEqual(
     t,
@@ -158,7 +159,7 @@ test("SaveSaga should retry update actions", t => {
   // wait for retry
   saga.next();
   // should retry
-  expectValueDeepEqual(t, saga.next(), call(sendRequestToServer, "skeleton"));
+  expectValueDeepEqual(t, saga.next(), call(sendRequestToServer, TRACING_TYPE));
 });
 
 test("SaveSaga should escalate on permanent client error update actions", t => {
@@ -167,10 +168,10 @@ test("SaveSaga should escalate on permanent client error update actions", t => {
     TIMESTAMP,
   );
 
-  const saga = sendRequestToServer(TIMESTAMP);
+  const saga = sendRequestToServer(TRACING_TYPE);
   saga.next();
   saga.next(saveQueue);
-  saga.next({ version: LAST_VERSION, type: "skeleton", tracingId: "1234567890" });
+  saga.next({ version: LAST_VERSION, type: TRACING_TYPE, tracingId: "1234567890" });
   const saveQueueWithVersions = addVersionNumbers(saveQueue, LAST_VERSION);
   expectValueDeepEqual(
     t,
@@ -193,14 +194,14 @@ test("SaveSaga should send update actions right away", t => {
   const updateActions = [UpdateActions.createEdge(1, 0, 1), UpdateActions.createEdge(1, 1, 2)];
   const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
 
-  const saga = pushTracingTypeAsync("skeleton");
+  const saga = pushTracingTypeAsync(TRACING_TYPE);
   expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS[0]));
   saga.next();
   saga.next(); // select state
-  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false, "skeleton")));
+  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false, TRACING_TYPE)));
   expectValueDeepEqual(t, saga.next(), take("PUSH_SAVE_QUEUE"));
   saga.next(); // race
-  saga.next(SaveActions.pushSaveQueueAction(updateActions));
+  saga.next(SaveActions.pushSaveQueueAction(updateActions, TRACING_TYPE));
   saga.next(SaveActions.saveNowAction());
   saga.next(saveQueue);
   saga.next();
@@ -215,14 +216,14 @@ test("SaveSaga should remove the correct update actions", t => {
     TIMESTAMP,
   );
 
-  const saga = sendRequestToServer();
+  const saga = sendRequestToServer(TRACING_TYPE);
   saga.next();
   saga.next(saveQueue);
-  saga.next({ version: LAST_VERSION, type: "skeleton", tracingId: "1234567890" });
+  saga.next({ version: LAST_VERSION, type: TRACING_TYPE, tracingId: "1234567890" });
   saga.next(TRACINGSTORE_URL);
-  expectValueDeepEqual(t, saga.next(), put(SaveActions.setVersionNumberAction(3)));
-  expectValueDeepEqual(t, saga.next(), put(SaveActions.setLastSaveTimestampAction()));
-  expectValueDeepEqual(t, saga.next(), put(SaveActions.shiftSaveQueueAction(2)));
+  expectValueDeepEqual(t, saga.next(), put(SaveActions.setVersionNumberAction(3, TRACING_TYPE)));
+  expectValueDeepEqual(t, saga.next(), put(SaveActions.setLastSaveTimestampAction(TRACING_TYPE)));
+  expectValueDeepEqual(t, saga.next(), put(SaveActions.shiftSaveQueueAction(2, TRACING_TYPE)));
 });
 
 test("SaveSaga should set the correct version numbers", t => {
@@ -235,14 +236,18 @@ test("SaveSaga should set the correct version numbers", t => {
     TIMESTAMP,
   );
 
-  const saga = sendRequestToServer();
+  const saga = sendRequestToServer(TRACING_TYPE);
   saga.next();
   saga.next(saveQueue);
-  saga.next({ version: LAST_VERSION, type: "skeleton", tracingId: "1234567890" });
+  saga.next({ version: LAST_VERSION, type: TRACING_TYPE, tracingId: "1234567890" });
   saga.next(TRACINGSTORE_URL);
-  expectValueDeepEqual(t, saga.next(), put(SaveActions.setVersionNumberAction(LAST_VERSION + 3)));
-  expectValueDeepEqual(t, saga.next(), put(SaveActions.setLastSaveTimestampAction()));
-  expectValueDeepEqual(t, saga.next(), put(SaveActions.shiftSaveQueueAction(3)));
+  expectValueDeepEqual(
+    t,
+    saga.next(),
+    put(SaveActions.setVersionNumberAction(LAST_VERSION + 3, TRACING_TYPE)),
+  );
+  expectValueDeepEqual(t, saga.next(), put(SaveActions.setLastSaveTimestampAction(TRACING_TYPE)));
+  expectValueDeepEqual(t, saga.next(), put(SaveActions.shiftSaveQueueAction(3, TRACING_TYPE)));
 });
 
 test("SaveSaga should set the correct version numbers if the save queue was compacted", t => {
@@ -255,15 +260,19 @@ test("SaveSaga should set the correct version numbers if the save queue was comp
     TIMESTAMP,
   );
 
-  const saga = sendRequestToServer();
+  const saga = sendRequestToServer(TRACING_TYPE);
   saga.next();
   saga.next(saveQueue);
-  saga.next({ version: LAST_VERSION, type: "skeleton", tracingId: "1234567890" });
+  saga.next({ version: LAST_VERSION, type: TRACING_TYPE, tracingId: "1234567890" });
   saga.next(TRACINGSTORE_URL);
   // two of the updateTracing update actions are removed by compactSaveQueue
-  expectValueDeepEqual(t, saga.next(), put(SaveActions.setVersionNumberAction(LAST_VERSION + 1)));
-  expectValueDeepEqual(t, saga.next(), put(SaveActions.setLastSaveTimestampAction()));
-  expectValueDeepEqual(t, saga.next(), put(SaveActions.shiftSaveQueueAction(3)));
+  expectValueDeepEqual(
+    t,
+    saga.next(),
+    put(SaveActions.setVersionNumberAction(LAST_VERSION + 1, TRACING_TYPE)),
+  );
+  expectValueDeepEqual(t, saga.next(), put(SaveActions.setLastSaveTimestampAction(TRACING_TYPE)));
+  expectValueDeepEqual(t, saga.next(), put(SaveActions.shiftSaveQueueAction(3, TRACING_TYPE)));
 });
 
 test("SaveSaga addVersionNumbers should set the correct version numbers", t => {

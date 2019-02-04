@@ -173,11 +173,17 @@ class TracingActionsView extends React.PureComponent<Props, State> {
 
   modalWrapper: ?HTMLDivElement = null;
 
-  handleSave = async (event?: SyntheticInputEvent<>) => {
+  handleSaveForce = (event?: SyntheticInputEvent<>) => this.handleSave(event, true);
+
+  handleSave = async (event?: SyntheticInputEvent<>, force?: boolean) => {
     if (event != null) {
       event.target.blur();
     }
-    await Model.save();
+    if (force) {
+      Model.forceSave();
+    } else {
+      await Model.save();
+    }
   };
 
   handleUndo = () => {
@@ -265,7 +271,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
                 </ButtonComponent>,
               ]
             : null,
-          <SaveButton key="save-button" onClick={this.handleSave} />,
+          <SaveButton key="save-button" onClick={this.handleSaveForce} />,
         ]
       : [
           <ButtonComponent key="read-only-button" type="primary" disabled>

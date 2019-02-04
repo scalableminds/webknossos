@@ -65,6 +65,7 @@ class AnnotationMerger @Inject()(dataSetDAO: DataSetDAO, tracingStoreService: Tr
     for {
       dataSet <- dataSetDAO.findOne(dataSetId)
       tracingStoreClient <- tracingStoreService.clientFor(dataSet)
+      _ <- bool2Fox(annotations.flatMap(_.volumeTracingId).isEmpty) ?~> "annotation.cantMergeVolumes"
       skeletonTracingIds = annotations.map(_.skeletonTracingId)
       tracingReference <- tracingStoreClient.mergeSkeletonTracingsByIds(skeletonTracingIds, persistTracing) ?~> "Failed to merge skeleton tracings."
     } yield {

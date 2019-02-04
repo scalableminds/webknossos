@@ -19,11 +19,12 @@ import {
 import type { Versions } from "oxalis/view/version_view";
 import { convertPointToVecInBoundingBox } from "oxalis/model/reducers/reducer_helpers";
 import {
-  getDatasetCenter,
   determineAllowedModes,
   getBitDepth,
-  getSegmentationLayer,
   getColorLayers,
+  getDatasetCenter,
+  getMostExtensiveResolutions,
+  getSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
@@ -251,12 +252,24 @@ function initializeDataset(
   });
 
   ensureDenseLayerResolutions(dataset);
+  ensureMatchingLayerResolutions(dataset);
   Store.dispatch(setDatasetAction(dataset));
 }
 
 function ensureDenseLayerResolutions(dataset: APIDataset) {
   for (const layer of dataset.dataSource.dataLayers) {
     layer.resolutions = convertToDenseResolution(layer.resolutions);
+  }
+}
+
+function ensureMatchingLayerResolutions(dataset: APIDataset): void {
+  const mostExtensiveResolutions = getMostExtensiveResolutions(dataset);
+  for (const layer of dataset.dataSource.dataLayers) {
+    for (const resolution of layer.resolutions) {
+      if (mostExtensiveResolutions.find(element => _.isEqual(resolution, element)) == null) {
+        Toast.error(messages["dataset.resolution_mismatch"], { sticky: true });
+      }
+    }
   }
 }
 

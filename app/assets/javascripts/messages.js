@@ -145,6 +145,8 @@ In order to restore the current window, a reload is necessary.`,
   "dataset.unique_layer_names": "The layer names provided by the dataset are not unique.",
   "dataset.is_scratch":
     "This dataset location is marked as 'scratch' and meant for testing only. Please move this dataset to a permanent storage location and reimport it.",
+  "dataset.resolution_mismatch":
+    "This dataset contains multiple layers which differ in their resolution. Please convert the layers to make their resolutions match. Otherwise, rendering errors cannot be avoided.",
   "annotation.finish": "Are you sure you want to permanently finish this tracing?",
   "annotation.was_finished": "Annotation was archived",
   "annotation.was_re_opened": "Annotation was reopened",

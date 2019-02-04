@@ -9,17 +9,21 @@ import ErrorHandling from "libs/error_handling";
 import constants, { ModeValues, type Vector3, Vector3Indicies } from "oxalis/constants";
 import messages from "messages";
 
+export function getMostExtensiveResolutions(dataset: APIDataset): Array<Vector3> {
+  return _.chain(dataset.dataSource.dataLayers)
+    .map(dataLayer => dataLayer.resolutions)
+    .sortBy(resolutions => resolutions.length)
+    .last()
+    .valueOf();
+}
+
 function _getResolutions(dataset: APIDataset): Vector3[] {
   // Different layers can have different resolutions. At the moment,
   // unequal resolutions will result in undefined behavior.
   // However, if resolutions are subset of each other, everything should be fine.
   // For that case, returning the longest resolutions array should suffice
 
-  const mostExtensiveResolutions = _.chain(dataset.dataSource.dataLayers)
-    .map(dataLayer => dataLayer.resolutions)
-    .sortBy(resolutions => resolutions.length)
-    .last()
-    .valueOf();
+  const mostExtensiveResolutions = getMostExtensiveResolutions(dataset);
   if (!mostExtensiveResolutions) {
     return [];
   }

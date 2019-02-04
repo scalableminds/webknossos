@@ -120,13 +120,11 @@ const WelcomeHeader = ({ history }) => (
   </div>
 );
 
-type StateProps = {
+type StateProps = {|
   activeUser: ?APIUser,
-};
-
-type Props = {
-  history: RouterHistory,
-} & StateProps;
+|};
+type Props = StateProps;
+type PropsWithRouter = {| ...Props, history: RouterHistory |};
 
 type State = {
   datasets: Array<APIMaybeUnimportedDataset>,
@@ -135,7 +133,7 @@ type State = {
   searchQuery: string,
 };
 
-class SpotlightView extends React.PureComponent<Props, State> {
+class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
   state = {
     datasets: [],
     hasOrganizations: true,
@@ -274,4 +272,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
 });
 
-export default connect(mapStateToProps)(withRouter(SpotlightView));
+export default connect<Props, {||}, _, _, _, _>(mapStateToProps)(withRouter(SpotlightView));

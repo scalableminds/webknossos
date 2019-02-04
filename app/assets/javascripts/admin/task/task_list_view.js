@@ -26,10 +26,10 @@ import messages from "messages";
 const { Column } = Table;
 const { Search, TextArea } = Input;
 
-type Props = {
+type Props = {|
   initialFieldValues?: TaskFormFieldValues,
   history: RouterHistory,
-};
+|};
 
 type State = {
   isLoading: boolean,

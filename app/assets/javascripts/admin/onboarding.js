@@ -16,9 +16,10 @@ import Toast from "libs/toast";
 const Step = Steps.Step;
 const FormItem = Form.Item;
 
-type StateProps = {
+type StateProps = {|
   activeUser: ?APIUser,
-};
+|};
+type Props = StateProps;
 
 type State = {
   currentStep: number,
@@ -26,7 +27,17 @@ type State = {
   datasetNameToImport: ?string,
 };
 
-function StepHeader({ header, subheader, icon, children }) {
+function StepHeader({
+  header,
+  subheader,
+  icon,
+  children,
+}: {
+  header: string,
+  subheader: React.Node,
+  icon: React.Node,
+  children: React.Node,
+}) {
   return (
     <div style={{}}>
       <div style={{ paddingBottom: 32, textAlign: "center" }}>
@@ -164,7 +175,7 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
   );
 });
 
-class OnboardingView extends React.PureComponent<StateProps, State> {
+class OnboardingView extends React.PureComponent<Props, State> {
   constructor() {
     super();
     this.state = {
@@ -391,4 +402,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
 });
 
-export default connect(mapStateToProps)(OnboardingView);
+export default connect<Props, {||}, _, _, _, _>(mapStateToProps)(OnboardingView);

@@ -6,6 +6,7 @@ import { connect } from "react-redux";
 import * as React from "react";
 import SortableTree from "react-sortable-tree";
 import _ from "lodash";
+import type { Dispatch } from "redux";
 import update from "immutability-helper";
 import {
   MISSING_GROUP_ID,
@@ -32,25 +33,29 @@ import {
 
 const CHECKBOX_STYLE = { verticalAlign: "middle" };
 
-type Props = {
-  activeTreeId: number,
-  activeGroupId: number,
+type OwnProps = {|
+  activeTreeId: ?number,
+  activeGroupId: ?number,
   treeGroups: Array<TreeGroup>,
   // TODO: eslint doesn't recognize, that sortBy is indeed used in the getDerivedStateFromProps function
   // eslint-disable-next-line react/no-unused-prop-types
   sortBy: string,
   trees: TreeMap,
   selectedTrees: Array<number>,
+  onSelectTree: number => void,
+  deselectAllTrees: () => void,
+  onDeleteGroup: number => void,
+|};
+
+type Props = {
+  ...OwnProps,
   onSetActiveTree: number => void,
   onSetActiveGroup: number => void,
-  onDeleteGroup: number => void,
   onToggleTree: number => void,
   onToggleAllTrees: () => void,
   onToggleTreeGroup: number => void,
   onUpdateTreeGroups: (Array<TreeGroup>) => void,
   onSetTreeGroup: (?number, number) => void,
-  onSelectTree: number => void,
-  deselectAllTrees: () => void,
 };
 
 type State = {
@@ -102,7 +107,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }
   }
 
-  async componentDidUpdate(prevProps) {
+  async componentDidUpdate(prevProps: Props) {
     // TODO: Workaround, remove after https://github.com/frontend-collective/react-sortable-tree/issues/305 is fixed
     // Also remove the searchFocusOffset from the state and hard-code it as 0
     if (
@@ -120,7 +125,8 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     this.setState({ groupTree: treeData });
   };
 
-  onCheck = evt => {
+  onCheck = (evt: SyntheticMouseEvent<*>) => {
+    // $FlowFixMe .node is unknown to flow
     const { id, type } = evt.target.node;
     if (type === TYPE_TREE) {
       this.props.onToggleTree(parseInt(id, 10));
@@ -131,7 +137,8 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }
   };
 
-  onSelectTree = evt => {
+  onSelectTree = (evt: SyntheticMouseEvent<*>) => {
+    // $FlowFixMe .dataset is unknown to flow
     const treeId = parseInt(evt.target.dataset.id, 10);
     if (evt.ctrlKey) {
       this.props.onSelectTree(treeId);
@@ -141,7 +148,8 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }
   };
 
-  onSelectGroup = evt => {
+  onSelectGroup = (evt: SyntheticMouseEvent<*>) => {
+    // $FlowFixMe .dataset is unknown to flow
     const groupId = parseInt(evt.target.dataset.id, 10);
     const numberOfSelectedTrees = this.props.selectedTrees.length;
     const selectGroup = () => {
@@ -223,7 +231,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }
   };
 
-  getNodeStyleClassForBackground = id => {
+  getNodeStyleClassForBackground = (id: number) => {
     const isTreeSelected = this.props.selectedTrees.includes(id);
     if (isTreeSelected) {
       return "selected-tree-node";
@@ -376,7 +384,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect(
+export default connect<Props, OwnProps, _, _, _, _>(
   null,
   mapDispatchToProps,
 )(TreeHierarchyView);

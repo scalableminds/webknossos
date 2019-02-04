@@ -60,9 +60,15 @@ test.serial(
       Utils.toNullable(getStats(state.tracing)),
     );
 
+    // Reset the info field which is just for debugging purposes
+    const actualSaveQueue = state.save.queue.skeleton.map(entry => {
+      const { info, ...rest } = entry;
+      return { ...rest, info: "[]" };
+    });
+
     // Once the updateTree update action is in the save queue, we're good.
     // This means the setTreeName action was dispatched, the diffing ran, and the change will be persisted.
-    t.deepEqual(expectedSaveQueue, state.save.queue.skeleton);
+    t.deepEqual(expectedSaveQueue, actualSaveQueue);
   },
 );
 
@@ -109,8 +115,10 @@ test.serial("Save actions should be chunked after compacting (3/3)", t => {
   t.is(volumeSaveQueue.length, 0);
   t.true(skeletonSaveQueue[0].actions.length < maximumActionCountPerBatch);
   t.is(skeletonSaveQueue[0].actions[1].name, "moveTreeComponent");
+  if (skeletonSaveQueue[0].actions[1].name !== "moveTreeComponent") {
+    throw new Error("Satisfy Flow.");
+  }
   const updateActionValue = skeletonSaveQueue[0].actions[1].value;
-  // $FlowFixMe Why does flow complain?
   if (updateActionValue.nodeIds == null || !Array.isArray(updateActionValue.nodeIds)) {
     throw new Error("No node ids in save action found");
   }

@@ -3,6 +3,7 @@ import { Alert, Divider, Radio, Modal, Input, Button, Row, Col } from "antd";
 import { connect } from "react-redux";
 import Clipboard from "clipboard-js";
 import React, { PureComponent } from "react";
+import type { Dispatch } from "redux";
 
 import type { APIDataset } from "admin/api_flow_types";
 import type { OxalisState, RestrictionsAndSettings } from "oxalis/store";
@@ -13,15 +14,18 @@ import window from "libs/window";
 
 const RadioGroup = Radio.Group;
 
-type ShareModalProp = {
+type OwnProps = {|
+  isVisible: boolean,
+  onOk: () => void,
+|};
+type StateProps = {|
   // eslint-disable-next-line react/no-unused-prop-types
   isPublic: boolean,
   dataset: APIDataset,
-  isVisible: boolean,
-  onOk: () => void,
   restrictions: RestrictionsAndSettings,
   setAnnotationPublic: Function,
-};
+|};
+type Props = {| ...OwnProps, ...StateProps |};
 
 type State = {
   isPublic: boolean,
@@ -43,7 +47,7 @@ function Hint({ children, style }) {
   );
 }
 
-class ShareModalView extends PureComponent<ShareModalProp, State> {
+class ShareModalView extends PureComponent<Props, State> {
   state = {
     isPublic: this.props.isPublic,
     sharingToken: "",
@@ -53,7 +57,7 @@ class ShareModalView extends PureComponent<ShareModalProp, State> {
     this.fetch();
   }
 
-  componentDidUpdate(prevProps) {
+  componentDidUpdate(prevProps: Props) {
     if (
       this.props.dataset.name !== prevProps.dataset.name ||
       this.props.dataset.owningOrganization !== prevProps.dataset.owningOrganization
@@ -193,7 +197,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect(
+export default connect<Props, OwnProps, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
 )(ShareModalView);

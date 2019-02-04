@@ -49,9 +49,9 @@ import window from "libs/window";
 
 const { Content } = Layout;
 
-type StateProps = {
+type StateProps = {|
   activeUser: ?APIUser,
-};
+|};
 
 type Props = StateProps;
 
@@ -235,7 +235,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/projects/create"
-                component={ProjectCreateView}
+                render={() => <ProjectCreateView />}
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
@@ -341,7 +341,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/scripts/create"
-                component={ScriptCreateView}
+                render={() => <ScriptCreateView />}
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
@@ -436,4 +436,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
 });
 
-export default connect(mapStateToProps)(ReactRouter);
+export default connect<Props, {||}, _, _, _, _>(mapStateToProps)(ReactRouter);

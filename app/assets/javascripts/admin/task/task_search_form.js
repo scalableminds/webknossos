@@ -31,7 +31,7 @@ export type TaskFormFieldValues = {
 type Props = {
   form: Object,
   onChange: Function,
-  initialFieldValues?: TaskFormFieldValues,
+  initialFieldValues: ?TaskFormFieldValues,
   isLoading: boolean,
   history: RouterHistory,
 };

@@ -32,21 +32,21 @@ import messages from "messages";
 const typeHint: APITaskWithAnnotation[] = [];
 const pageLength: number = 1000;
 
-type StateProps = {
-  activeUser: APIUser,
-};
-
 export type TaskModeState = {
   tasks: Array<APITaskWithAnnotation>,
   loadedAllTasks: boolean,
   lastLoadedPage: number,
 };
 
-type Props = {
+type OwnProps = {|
   userId: ?string,
   isAdminView: boolean,
-  history: RouterHistory,
-} & StateProps;
+|};
+type StateProps = {|
+  activeUser: APIUser,
+|};
+type Props = {| ...OwnProps, ...StateProps |};
+type PropsWithRouter = {| ...Props, history: RouterHistory |};
 
 type State = {
   showFinishedTasks: boolean,
@@ -90,7 +90,7 @@ const convertAnnotationToTaskWithAnnotationType = (
   return newTask;
 };
 
-class DashboardTaskListView extends React.PureComponent<Props, State> {
+class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> {
   state = {
     showFinishedTasks: false,
     isLoading: false,
@@ -491,4 +491,6 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
 });
 
-export default connect(mapStateToProps)(withRouter(DashboardTaskListView));
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(
+  withRouter(DashboardTaskListView),
+);

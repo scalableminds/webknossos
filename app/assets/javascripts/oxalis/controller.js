@@ -36,21 +36,21 @@ import constants, { ControlModeEnum, type Mode } from "oxalis/constants";
 import messages from "messages";
 import window, { document } from "libs/window";
 
-type StateProps = {
-  viewMode: Mode,
-};
-
-type Props = {
-  history: RouterHistory,
+type OwnProps = {|
   initialAnnotationType: AnnotationType,
   initialCommandType: TraceOrViewCommand,
-} & StateProps;
+|};
+type StateProps = {|
+  viewMode: Mode,
+|};
+type Props = {| ...OwnProps, ...StateProps |};
+type PropsWithRouter = {| ...Props, history: RouterHistory |};
 
 type State = {
   ready: boolean,
 };
 
-class Controller extends React.PureComponent<Props, State> {
+class Controller extends React.PureComponent<PropsWithRouter, State> {
   keyboard: InputKeyboard;
   keyboardNoLoop: InputKeyboardNoLoop;
   stats: Stats;
@@ -305,4 +305,4 @@ function mapStateToProps(state: OxalisState): StateProps {
   };
 }
 
-export default connect(mapStateToProps)(withRouter(Controller));
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(withRouter(Controller));

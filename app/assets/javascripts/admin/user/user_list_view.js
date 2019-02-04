@@ -32,13 +32,11 @@ const { Search } = Input;
 
 const typeHint: APIUser[] = [];
 
-type StateProps = {
+type StateProps = {|
   activeUser: APIUser,
-};
-
-type Props = {
-  history: RouterHistory,
-} & StateProps;
+|};
+type Props = StateProps;
+type PropsWithRouter = {| ...Props, history: RouterHistory |};
 
 type State = {
   isLoading: boolean,
@@ -61,7 +59,7 @@ const persistence: Persistence<State> = new Persistence(
   "userList",
 );
 
-class UserListView extends React.PureComponent<Props, State> {
+class UserListView extends React.PureComponent<PropsWithRouter, State> {
   state = {
     isLoading: true,
     users: [],
@@ -566,4 +564,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
 });
 
-export default connect(mapStateToProps)(withRouter(UserListView));
+export default connect<Props, {||}, _, _, _, _>(mapStateToProps)(withRouter(UserListView));

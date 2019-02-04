@@ -212,7 +212,8 @@ In order to restore the current window, a reload is necessary.`,
   "nml.edge_with_same_source_target":
     "NML contains <edge ...> with same source and target id: Edge",
   "nml.tree_not_connected": "NML contains tree that is not fully connected: Tree with id",
-  "nml.different_dataset": "Imported NML was originally for a different dataset.",
+  "nml.different_dataset":
+    "At least one NML file was originally created for a different dataset. Are you sure you want to continue with the import?",
   "merge.different_dataset":
     "The merge cannot be executed, because the underlying datasets are not the same.",
   "merge.volume_unsupported": "Merging is not supported for volume tracings.",

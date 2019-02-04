@@ -97,17 +97,16 @@ test("SaveSaga should send update actions", t => {
   expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS[0]));
   saga.next(); // setLastSaveTimestampAction
   saga.next(); // select state
-  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false, TRACING_TYPE)));
-  expectValueDeepEqual(t, saga.next(), take("PUSH_SAVE_QUEUE"));
+  expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE"));
   saga.next(); // race
   saga.next(SaveActions.pushSaveQueueAction(updateActions));
   saga.next();
   expectValueDeepEqual(t, saga.next(saveQueue), call(sendRequestToServer, TRACING_TYPE));
+  expectValueDeepEqual(t, saga.next(), put(setSaveBusyAction(false, TRACING_TYPE)));
 
   // Test that loop repeats
   saga.next(); // select state
-  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false, TRACING_TYPE)));
-  expectValueDeepEqual(t, saga.next(), take("PUSH_SAVE_QUEUE"));
+  expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE"));
 });
 
 test("SaveSaga should send request to server", t => {
@@ -159,7 +158,7 @@ test("SaveSaga should retry update actions", t => {
   // wait for retry
   saga.next();
   // should retry
-  expectValueDeepEqual(t, saga.next(), call(sendRequestToServer, TRACING_TYPE));
+  expectValueDeepEqual(t, saga.next(), call(sendRequestToServer, TRACING_TYPE, 1));
 });
 
 test("SaveSaga should escalate on permanent client error update actions", t => {
@@ -198,13 +197,12 @@ test("SaveSaga should send update actions right away", t => {
   expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS[0]));
   saga.next();
   saga.next(); // select state
-  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false, TRACING_TYPE)));
-  expectValueDeepEqual(t, saga.next(), take("PUSH_SAVE_QUEUE"));
+  expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE"));
   saga.next(); // race
-  saga.next(SaveActions.pushSaveQueueAction(updateActions, TRACING_TYPE));
-  saga.next(SaveActions.saveNowAction());
-  saga.next(saveQueue);
-  saga.next();
+  saga.next(SaveActions.saveNowAction()); // put setSaveBusyAction
+  saga.next(); // select state
+  saga.next(saveQueue); // call sendRequestToServer
+  expectValueDeepEqual(t, saga.next(), put(setSaveBusyAction(false, TRACING_TYPE)));
 });
 
 test("SaveSaga should remove the correct update actions", t => {

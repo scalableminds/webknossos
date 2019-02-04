@@ -2,13 +2,19 @@
  * list_tree_view.js
  * @flow
  */
-import _ from "lodash";
 import { Alert, Button, Dropdown, Input, Menu, Icon, Spin, Modal, Tooltip } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import { saveAs } from "file-saver";
 import * as React from "react";
+import _ from "lodash";
 
+import { binaryConfirm } from "libs/async_confirm";
+import {
+  createGroupToTreesMap,
+  callDeep,
+  MISSING_GROUP_ID,
+} from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import { getActiveTree, getActiveGroup } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getBuildInfo } from "admin/admin_rest_api";
 import { readFileAsText } from "libs/read_file";
@@ -31,12 +37,6 @@ import {
   setTreeGroupsAction,
   addTreesAndGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import messages from "messages";
-import {
-  createGroupToTreesMap,
-  callDeep,
-  MISSING_GROUP_ID,
-} from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
 import InputComponent from "oxalis/view/components/input_component";
@@ -51,8 +51,10 @@ import Toast from "libs/toast";
 import TreeHierarchyView from "oxalis/view/right-menu/tree_hierarchy_view";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
-import SearchPopover from "./search_popover";
+import messages from "messages";
+
 import DeleteGroupModalView from "./delete_group_modal_view";
+import SearchPopover from "./search_popover";
 
 const ButtonGroup = Button.Group;
 const InputGroup = Input.Group;
@@ -91,15 +93,18 @@ type State = {
 
 export async function importNmls(files: Array<File>, createGroupForEachFile: boolean) {
   try {
-    const { successes: importActions, errors } = await Utils.promiseAllWithErrors(
+    const { successes: importActionsWithDatasetNames, errors } = await Utils.promiseAllWithErrors(
       files.map(async file => {
         const nmlString = await readFileAsText(file);
         try {
-          const { trees, treeGroups } = await parseNml(
+          const { trees, treeGroups, datasetName } = await parseNml(
             nmlString,
             createGroupForEachFile ? file.name : null,
           );
-          return addTreesAndGroupsAction(trees, treeGroups);
+          return {
+            importAction: addTreesAndGroupsAction(trees, treeGroups),
+            datasetName,
+          };
         } catch (e) {
           throw new Error(`"${file.name}" could not be parsed. ${e.message}`);
         }
@@ -110,10 +115,23 @@ export async function importNmls(files: Array<File>, createGroupForEachFile: boo
       throw errors;
     }
 
+    const currentDatasetName = Store.getState().dataset.name;
+    const doDatasetNamesDiffer = importActionsWithDatasetNames
+      .map(el => el.datasetName)
+      .some(name => name !== "" && name != null && name !== currentDatasetName);
+    if (doDatasetNamesDiffer) {
+      const shouldImport = await binaryConfirm("Are you sure?", messages["nml.different_dataset"]);
+      if (!shouldImport) {
+        return;
+      }
+    }
+
     // Dispatch the actual actions as the very last step, so that
     // not a single store mutation happens if something above throws
     // an error
-    importActions.forEach(action => Store.dispatch(action));
+    importActionsWithDatasetNames
+      .map(el => el.importAction)
+      .forEach(action => Store.dispatch(action));
   } catch (e) {
     (Array.isArray(e) ? e : [e]).forEach(err => Toast.error(err.message));
   }

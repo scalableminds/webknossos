@@ -20,5 +20,6 @@ class DataStoreModule(environment: Environment, configuration: Configuration) ex
     bind(classOf[BinaryDataServiceHolder]).asEagerSingleton()
     bind(classOf[MappingService]).asEagerSingleton()
     bind(classOf[IsosurfaceService]).asEagerSingleton()
+    bind(classOf[DemoDatasetService]).asEagerSingleton()
   }
 }

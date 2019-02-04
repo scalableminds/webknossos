@@ -18,10 +18,11 @@ import {
 } from "oxalis/model/sagas/annotation_saga";
 import { watchDataRelevantChanges } from "oxalis/model/sagas/prefetch_saga";
 import { watchSkeletonTracingAsync } from "oxalis/model/sagas/skeletontracing_saga";
+import ErrorHandling from "libs/error_handling";
 import handleMeshChanges from "oxalis/model/sagas/handle_mesh_changes";
 import isosurfaceSaga from "oxalis/model/sagas/isosurface_saga";
-import watchPushSettingsAsync from "oxalis/model/sagas/settings_saga";
 import watchIsScratchSaga from "oxalis/model/sagas/dataset_saga";
+import watchPushSettingsAsync from "oxalis/model/sagas/settings_saga";
 import watchTasksAsync from "oxalis/model/sagas/task_saga";
 
 export default function* rootSaga(): Saga<void> {
@@ -53,6 +54,7 @@ function* restartableSaga(): Saga<void> {
     ]);
   } catch (err) {
     console.error(err);
+    ErrorHandling.notify(err, {}, true);
     alert(`\
 Internal error.
 Please reload the page to avoid losing data.

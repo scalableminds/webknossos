@@ -187,9 +187,10 @@ class OnboardingView extends React.PureComponent<StateProps, State> {
         header="Create Your Organization"
         subheader={
           <React.Fragment>
-            Welcome to webKnossos! This guide will help you get started.<br />Setup your
-            organization to manage users and datasets. Example names: &ldquo;University of
-            Springfield&rdquo;, &ldquo;Simpsons Lab&rdquo;, &ldquo;Neuroscience Department&rdquo;
+            Welcome to webKnossos! This guide will help you get started.
+            <br />
+            Setup your organization to manage users and datasets. Example names: &ldquo;University
+            of Springfield&rdquo;, &ldquo;Simpsons Lab&rdquo;, &ldquo;Neuroscience Department&rdquo;
           </React.Fragment>
         }
         icon={
@@ -289,7 +290,8 @@ class OnboardingView extends React.PureComponent<StateProps, State> {
         header="Congratulations!"
         subheader={
           <React.Fragment>
-            You&apos;ve completed the initial setup.<br />
+            You&apos;ve completed the initial setup.
+            <br />
             <a href="/dashboard">Start to explore and annotate your data now</a> or learn more about
             the features and concepts of webKnossos.
           </React.Fragment>

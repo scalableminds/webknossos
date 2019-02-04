@@ -238,10 +238,12 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     const menu = (
       <Menu onClick={this.handleDropdownClick}>
         <Menu.Item key="create" groupId={id}>
-          <Icon type="plus" />Create new group
+          <Icon type="plus" />
+          Create new group
         </Menu.Item>
         <Menu.Item key="delete" groupId={id} disabled={isRoot}>
-          <Icon type="delete" />Delete
+          <Icon type="delete" />
+          Delete
         </Menu.Item>
       </Menu>
     );

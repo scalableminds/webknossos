@@ -13,13 +13,16 @@ function TDViewControls() {
         3D
       </Button>
       <Button size="small" onClick={api.tracing.rotate3DViewToXY}>
-        <span className="colored-dot" />XY
+        <span className="colored-dot" />
+        XY
       </Button>
       <Button size="small" onClick={api.tracing.rotate3DViewToYZ}>
-        <span className="colored-dot" />YZ
+        <span className="colored-dot" />
+        YZ
       </Button>
       <Button size="small" onClick={api.tracing.rotate3DViewToXZ}>
-        <span className="colored-dot" />XZ
+        <span className="colored-dot" />
+        XZ
       </Button>
     </ButtonGroup>
   );

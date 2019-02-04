@@ -142,16 +142,18 @@ export function computeArrayFromBoundingBox(bb: ?BoundingBoxType): ?Vector6 {
 
 export function aggregateBoundingBox(boundingBoxes: Array<BoundingBoxObject>): BoundingBoxType {
   const allCoordinates = [0, 1, 2].map(index =>
-    boundingBoxes.map(box => box.topLeft[index]).concat(
-      boundingBoxes.map(box => {
-        const bottomRight = [
-          box.topLeft[0] + box.width,
-          box.topLeft[1] + box.height,
-          box.topLeft[2] + box.depth,
-        ];
-        return bottomRight[index];
-      }),
-    ),
+    boundingBoxes
+      .map(box => box.topLeft[index])
+      .concat(
+        boundingBoxes.map(box => {
+          const bottomRight = [
+            box.topLeft[0] + box.width,
+            box.topLeft[1] + box.height,
+            box.topLeft[2] + box.depth,
+          ];
+          return bottomRight[index];
+        }),
+      ),
   );
   const min = (([0, 1, 2].map(index => Math.min(...allCoordinates[index])): any): Vector3);
   const max = (([0, 1, 2].map(index => Math.max(...allCoordinates[index])): any): Vector3);

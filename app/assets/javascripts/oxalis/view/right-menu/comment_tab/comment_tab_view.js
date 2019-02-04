@@ -290,10 +290,8 @@ class CommentTabView extends React.PureComponent<Props, CommentTabState> {
         <Menu.Item key={SortByEnum.NAME}>by name</Menu.Item>
         <Menu.Item key={SortByEnum.ID}>by creation time</Menu.Item>
         <Menu.Item key={SortByEnum.NATURAL}>
-          by name (natural sort)<Tooltip
-            title={messages["tracing.natural_sorting"]}
-            placement="bottomLeft"
-          >
+          by name (natural sort)
+          <Tooltip title={messages["tracing.natural_sorting"]} placement="bottomLeft">
             {" "}
             <Icon type="info-circle" />
           </Tooltip>

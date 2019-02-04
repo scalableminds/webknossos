@@ -191,9 +191,9 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
                 onLayoutChange={this.onLayoutChange}
               >
                 {/*
-                   * All possible layout panes are passed here. Depending on the actual layout,
-                   *  the components are rendered or not.
-                   */}
+                 * All possible layout panes are passed here. Depending on the actual layout,
+                 *  the components are rendered or not.
+                 */}
                 <InputCatcher
                   viewportID={OrthoViews.PLANE_XY}
                   key="xy"

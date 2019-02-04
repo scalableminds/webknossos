@@ -288,12 +288,14 @@ class TaskListView extends React.PureComponent<Props, State> {
                       href={`/annotations/CompoundTask/${task.id}`}
                       title="View all Finished Tracings"
                     >
-                      <Icon type="eye-o" />View
+                      <Icon type="eye-o" />
+                      View
                     </a>
                   ) : null}
                   <br />
                   <a href={`/tasks/${task.id}/edit`} title="Edit Task">
-                    <Icon type="edit" />Edit
+                    <Icon type="edit" />
+                    Edit
                   </a>
                   <br />
                   {task.status.finished > 0 ? (
@@ -301,12 +303,14 @@ class TaskListView extends React.PureComponent<Props, State> {
                       href={`/api/annotations/CompoundTask/${task.id}/download`}
                       title="Download all Finished Tracings"
                     >
-                      <Icon type="download" />Download
+                      <Icon type="download" />
+                      Download
                     </a>
                   ) : null}
                   <br />
                   <a href="#" onClick={_.partial(this.deleteTask, task)}>
-                    <Icon type="delete" />Delete
+                    <Icon type="delete" />
+                    Delete
                   </a>
                 </span>
               )}

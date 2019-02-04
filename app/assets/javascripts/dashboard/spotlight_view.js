@@ -16,7 +16,8 @@ const { Search } = Input;
 
 const SimpleHeader = () => (
   <div id="oxalis-header">
-    <img src="/images/oxalis.svg" alt="webKnossos Logo" style={{ verticalAlign: "middle" }} />webKnossos
+    <img src="/images/oxalis.svg" alt="webKnossos Logo" style={{ verticalAlign: "middle" }} />
+    webKnossos
   </div>
 );
 
@@ -189,9 +190,10 @@ class SpotlightView extends React.PureComponent<Props, State> {
             <div style={{ minHeight: "100px" }}>
               {this.state.datasets.length === 0 && !this.state.isLoading ? (
                 <p style={{ textAlign: "center" }}>
-                  There are no datasets available yet.<br />Check out{" "}
-                  <a href="https://demo.webknossos.org/">demo.webknossos.org</a> to see webKnossos
-                  in action.
+                  There are no datasets available yet.
+                  <br />
+                  Check out <a href="https://demo.webknossos.org/">demo.webknossos.org</a> to see
+                  webKnossos in action.
                 </p>
               ) : (
                 <PublicationView
@@ -250,7 +252,8 @@ class SpotlightView extends React.PureComponent<Props, State> {
               <p>
                 The webKnossos frontend was inspired by Knossos: Helmstaedter, M., K.L. Briggman,
                 and W. Denk, High-accuracy neurite reconstruction for high-throughput neuroanatomy.{" "}
-                <a href="https://dx.doi.org/10.1038/nn.2868">Nat. Neurosci. (2011) 14, 1081-1088</a>.
+                <a href="https://dx.doi.org/10.1038/nn.2868">Nat. Neurosci. (2011) 14, 1081-1088</a>
+                .
               </p>
               <p>
                 More information about webKnossos and full credits at{" "}

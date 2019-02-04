@@ -1,5 +1,18 @@
 // @flow
-import { Form, Select, Button, Card, Radio, Upload, Modal, Icon, InputNumber, Spin } from "antd";
+import {
+  Row,
+  Col,
+  Form,
+  Select,
+  Button,
+  Card,
+  Radio,
+  Upload,
+  Modal,
+  Icon,
+  InputNumber,
+  Spin,
+} from "antd";
 import { type RouterHistory, withRouter } from "react-router-dom";
 import React from "react";
 import _ from "lodash";
@@ -182,6 +195,20 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     return e && e.fileList;
   };
 
+  isVolumeTaskType = (taskTypeId?: string): boolean => {
+    const selectedTaskTypeId = taskTypeId || this.props.form.getFieldValue("taskTypeId");
+    const selectedTaskType = this.state.taskTypes.find(
+      taskType => taskType.id === selectedTaskTypeId,
+    );
+    return selectedTaskType != null ? selectedTaskType.tracingType === "volume" : false;
+  };
+
+  onChangeTaskType = (taskTypeId: string): boolean => {
+    if (this.isVolumeTaskType(taskTypeId)) {
+      this.setState({ isNMLSpecification: false });
+    }
+  };
+
   render() {
     const { getFieldDecorator } = this.props.form;
     const isEditingMode = this.props.taskId != null;
@@ -206,6 +233,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     style={fullWidth}
                     autoFocus
                     disabled={isEditingMode}
+                    onChange={this.onChangeTaskType}
                   >
                     {this.state.taskTypes.map((taskType: APITaskType) => (
                       <Option key={taskType.id} value={taskType.id}>
@@ -216,24 +244,29 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                 )}
               </FormItem>
 
-              <FormItem label="Experience Domain" hasFeedback>
-                {getFieldDecorator("neededExperience.domain", {
-                  rules: [{ required: true }],
-                })(
-                  <SelectExperienceDomain
-                    disabled={isEditingMode}
-                    placeholder="Select an Experience Domain"
-                    notFoundContent={messages["task.domain_does_not_exist"]}
-                    width={100}
-                  />,
-                )}
-              </FormItem>
-
-              <FormItem label="Experience Value" hasFeedback>
-                {getFieldDecorator("neededExperience.value", {
-                  rules: [{ required: true }, { type: "number" }],
-                })(<InputNumber style={fullWidth} disabled={isEditingMode} />)}
-              </FormItem>
+              <Row gutter={8}>
+                <Col span={12}>
+                  <FormItem label="Experience Domain" hasFeedback>
+                    {getFieldDecorator("neededExperience.domain", {
+                      rules: [{ required: true }],
+                    })(
+                      <SelectExperienceDomain
+                        disabled={isEditingMode}
+                        placeholder="Select an Experience Domain"
+                        notFoundContent={messages["task.domain_does_not_exist"]}
+                        width={100}
+                      />,
+                    )}
+                  </FormItem>
+                </Col>
+                <Col span={12}>
+                  <FormItem label="Experience Value" hasFeedback>
+                    {getFieldDecorator("neededExperience.value", {
+                      rules: [{ required: true }, { type: "number" }],
+                    })(<InputNumber style={fullWidth} disabled={isEditingMode} />)}
+                  </FormItem>
+                </Col>
+              </Row>
 
               <FormItem label={instancesLabel} hasFeedback>
                 {getFieldDecorator("openInstances", {
@@ -295,6 +328,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                   onChange={(evt: SyntheticInputEvent<*>) =>
                     this.setState({ isNMLSpecification: evt.target.value === "nml" })
                   }
+                  disabled={this.isVolumeTaskType()}
                 >
                   <Radio value="manual" disabled={isEditingMode}>
                     Manually Specify Starting Postion

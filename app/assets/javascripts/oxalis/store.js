@@ -53,6 +53,7 @@ import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_mid
 import actionLoggerMiddleware from "oxalis/model/helpers/action_logger_middleware";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import rootSaga from "oxalis/model/sagas/root_saga";
+import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
 
 export type CommentType = {|
   +content: string,
@@ -278,6 +279,8 @@ export type SaveQueueEntry = {
   version: number,
   timestamp: number,
   actions: Array<UpdateAction>,
+  stats: ?SkeletonTracingStats,
+  info: string,
 };
 
 export type ProgressInfo = {

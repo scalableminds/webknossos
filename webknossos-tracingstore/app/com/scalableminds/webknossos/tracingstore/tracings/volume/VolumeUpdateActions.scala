@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.UpdateAction
 import play.api.libs.json._
 
-case class UpdateBucketVolumeAction(position: Point3D, cubeSize: Int, zoomStep: Int, base64Data: String, actionTimestamp: Option[Long] = None) extends VolumeUpdateAction {
+case class UpdateBucketVolumeAction(position: Point3D, cubeSize: Int, zoomStep: Int, base64Data: String, actionTimestamp: Option[Long] = None, info: Option[String] = None) extends VolumeUpdateAction {
   lazy val data: Array[Byte] = Base64.getDecoder().decode(base64Data)
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
@@ -27,7 +27,8 @@ case class UpdateTracingVolumeAction(
                                       largestSegmentId: Long,
                                       zoomLevel: Double,
                                       userBoundingBox: Option[com.scalableminds.util.geometry.BoundingBox],
-                                      actionTimestamp: Option[Long] = None
+                                      actionTimestamp: Option[Long] = None,
+                                      info: Option[String] = None
                                     ) extends VolumeUpdateAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
 
@@ -38,7 +39,7 @@ object UpdateTracingVolumeAction {
   implicit val updateTracingVolumeActionFormat = Json.format[UpdateTracingVolumeAction]
 }
 
-case class RevertToVersionVolumeAction(sourceVersion: Long, actionTimestamp: Option[Long] = None) extends VolumeUpdateAction {
+case class RevertToVersionVolumeAction(sourceVersion: Long, actionTimestamp: Option[Long] = None, info: Option[String] = None) extends VolumeUpdateAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
 
   override def transformToCompact = CompactVolumeUpdateAction("revertToVersion", actionTimestamp, Json.obj("sourceVersion" -> sourceVersion))

@@ -188,6 +188,7 @@ annotation.makeHybrid.explorationalsOnly=Could not convert annotation to hybrid 
 annotation.makeHybrid.failed=Could not convert to hybrid.
 annotation.makeHybrid.alreadyHybrid=Could not convert annotation to hybrid annotation because it is already a hybrid annotation.
 annotationType.notFound=Could not find the specified annotation type.
+annotation.cantMergeVolumes=This annotation collection contains volume tracings. Merging volume tracings is not yet supported. Please use download instead.
 
 mesh.notFound=Mesh couldn’t be found
 mesh.write.failed=Failed to convert mesh info to json
@@ -202,6 +203,7 @@ task.create.success=Task successfully created
 task.create.failed=Failed to create Task
 task.create.limitExceeded=Cannot create more than 1000 tasks in one request.
 task.create.needsEitherSkeletonOrVolume=Each task needs to either be skeleton or volume.
+task.create.fromFileVolume=Task creation with file upload is only supported for skeleton task types.
 task.finished=Task is finished
 task.assigned=You got a new task
 task.tooManyOpenOnes=You already have too many open tasks

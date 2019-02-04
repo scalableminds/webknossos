@@ -5,6 +5,13 @@ This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.md).
 
 ## Unreleased
+-
+
+### Postgres Evolutions:
+- [038-add-tasktype-tracingtype.sql](conf/evolutions/038-add-tasktype-tracingtype.sql)
+
+
+## [19.02.0](https://github.com/scalableminds/webknossos/releases/tag/19.02.0) - 2019-02-04
 - WebKnossos has a publication gallery now. There is no public interface to create publications yet, but instead those need to be inserted into the database directly.
   Publications and additional dataset properties that are displayed in the gallery as well, can be inserted as follows:
   ```

@@ -7,22 +7,22 @@ export default {
     window.managers.push(textureBucketManager);
   },
 
-  addMaterial(viewMode, material) {
+  addMaterial(identifier, material) {
     window.materials = window.materials || [];
-    window.materials[viewMode] = material;
+    window.materials[identifier] = material;
   },
 };
 
-window._setupShaderEditor = (viewport, _shaderType) => {
+window._setupShaderEditor = (identifier, _shaderType) => {
   const outer = document.createElement("div");
   const input = document.createElement("textarea");
   const shaderType = _shaderType || "fragmentShader";
-  input.value = window.materials[viewport][shaderType];
+  input.value = window.materials[identifier][shaderType];
   const button = document.createElement("button");
   const buttonContainer = document.createElement("div");
   function overrideShader() {
-    window.materials[viewport][shaderType] = input.value;
-    window.materials[viewport].needsUpdate = true;
+    window.materials[identifier][shaderType] = input.value;
+    window.materials[identifier].needsUpdate = true;
     window.needsRerender = true;
   }
   button.addEventListener("click", () => overrideShader());

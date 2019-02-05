@@ -102,7 +102,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         s.zoomLevel,
         s.activeNodeId,
         s.userBoundingBox,
-        if (annotation.exists(_._task.isDefined)) s.boundingBox else None
+        s.boundingBox
       )
     }.orElse {
       volumeTracingOpt.map { v: VolumeTracing =>

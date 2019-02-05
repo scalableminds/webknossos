@@ -26,7 +26,6 @@ type APIDataLayerBase = {|
   +boundingBox: BoundingBoxObject,
   +resolutions: Array<Vector3>,
   +elementClass: ElementClass,
-  +mappings?: Array<string>,
 |};
 
 type APIColorLayer = {|
@@ -34,10 +33,11 @@ type APIColorLayer = {|
   category: "color",
 |};
 
-type APISegmentationLayer = {|
+export type APISegmentationLayer = {|
   ...APIDataLayerBase,
   category: "segmentation",
   largestSegmentId: number,
+  +mappings?: Array<string>,
 |};
 
 export type APIDataLayer = APIColorLayer | APISegmentationLayer;

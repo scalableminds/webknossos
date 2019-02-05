@@ -665,7 +665,14 @@ class DataApi {
     if (layerName !== segmentationLayerName) {
       throw new Error(messages["mapping.unsupported_layer"]);
     }
-    Store.dispatch(setMappingAction(_.clone(mapping), options.colors, options.hideUnmappedIds));
+    Store.dispatch(
+      setMappingAction(
+        "<code provided>",
+        _.clone(mapping),
+        options.colors,
+        options.hideUnmappedIds,
+      ),
+    );
   }
 
   /**

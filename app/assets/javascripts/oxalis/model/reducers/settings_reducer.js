@@ -1,8 +1,4 @@
-/**
- * settings_reducer.js
- * @flow
- */
-
+// @flow
 import _ from "lodash";
 
 import type { Action } from "oxalis/model/actions/actions";
@@ -114,15 +110,6 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
         },
       };
     }
-
-    case "SET_DATASET": {
-      const { dataset } = action;
-      return {
-        ...state,
-        dataset,
-      };
-    }
-
     case "SET_VIEW_MODE": {
       const allowedModes = state.tracing.restrictions.allowedModes;
       if (allowedModes.includes(action.viewMode)) {
@@ -145,6 +132,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
     }
     case "SET_MAPPING": {
       return updateActiveMapping(state, {
+        mappingName: action.mappingName,
         mappingSize: action.mapping != null ? _.size(action.mapping) : 0,
         mapping: action.mapping,
         mappingColors: action.mappingColors,

@@ -1,3 +1,4 @@
+// @noflow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import { VolumeToolEnum } from "oxalis/constants";
 import { __setupOxalis } from "test/helpers/apiHelpers";

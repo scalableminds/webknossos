@@ -18,7 +18,7 @@ class DiffableMap<K: number, V> {
   existsCache: Map<K, boolean>;
   itemsPerBatch: number;
 
-  constructor(optKeyValueArray?: ?Array<[K, V]>, itemsPerBatch: number = defaultItemsPerBatch) {
+  constructor(optKeyValueArray?: ?Array<[K, V]>, itemsPerBatch?: ?number) {
     // Make the id property not enumerable so that it does not interfere with tests
     // Ava's deepEquals uses Object.getOwnProperties() to obtain all Object keys
     // Luckily "Symbols" don't count as properties
@@ -29,7 +29,7 @@ class DiffableMap<K: number, V> {
     this.chunks = [];
     this.existsCache = new Map();
     this.entryCount = 0;
-    this.itemsPerBatch = itemsPerBatch;
+    this.itemsPerBatch = itemsPerBatch != null ? itemsPerBatch : defaultItemsPerBatch;
 
     if (optKeyValueArray != null) {
       for (const [key, value] of optKeyValueArray) {

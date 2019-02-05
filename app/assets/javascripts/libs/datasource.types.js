@@ -1,3 +1,4 @@
+// @flow
 // This file is only for documentation:
 // Types which were used for creating the datasource.schema.json
 // The `flow2schema` node module has been used for conversion.
@@ -33,7 +34,18 @@ type DataLayerKnossosPartial = {
 type DataLayer = {
   name: string,
   category: "color" | "segmentation",
-  elementClass: "uint8" | "uint16" | "uint24" | "uint32" | "uint64",
+  elementClass:
+    | "uint8"
+    | "uint16"
+    | "uint24"
+    | "uint32"
+    | "uint64"
+    | "float"
+    | "double"
+    | "int8"
+    | "int16"
+    | "int32"
+    | "int64",
 } & (
   | { category: "color" }
   | {

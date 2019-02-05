@@ -101,7 +101,7 @@ CREATE TABLE webknossos.dataSets(
 );
 
 CREATE TYPE webknossos.DATASET_LAYER_CATEGORY AS ENUM ('color', 'mask', 'segmentation');
-CREATE TYPE webknossos.DATASET_LAYER_ELEMENT_CLASS AS ENUM ('uint8', 'uint16', 'uint24', 'uint32');
+CREATE TYPE webknossos.DATASET_LAYER_ELEMENT_CLASS AS ENUM ('uint8', 'uint16', 'uint24', 'uint32', 'uint64', 'float', 'double', 'int8', 'int16', 'int32', 'int64');
 CREATE TABLE webknossos.dataSet_layers(
   _dataSet CHAR(24) NOT NULL,
   name VARCHAR(256) NOT NULL,

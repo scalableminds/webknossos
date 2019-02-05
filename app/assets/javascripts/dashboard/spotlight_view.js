@@ -202,7 +202,7 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
             </div>
           </Spin>
           <div id="spotlight-footnote">
-            Visit <a href="https://www.publication.webknossos.org/">publication.webknossos.org</a>{" "}
+            Visit <a href="https://publication.webknossos.org/">publication.webknossos.org</a>{" "}
             to learn more about webKnossos.
           </div>
         </Content>

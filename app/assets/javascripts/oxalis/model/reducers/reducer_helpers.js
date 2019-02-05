@@ -44,6 +44,7 @@ export function convertBoundariesToBoundingBox(boundary: Boundary): BoundingBoxO
   };
 }
 
+// Currently unused.
 export function convertPointToVecInBoundingBox(boundingBox: ServerBoundingBox): BoundingBoxObject {
   return {
     width: boundingBox.width,

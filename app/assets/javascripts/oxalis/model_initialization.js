@@ -370,14 +370,14 @@ function setupLayerForVolumeTracing(
   //    property specifies its name, to be able to merge the two layers
   const fallbackLayerIndex = _.findIndex(layers, layer => layer.name === tracing.fallbackLayer);
   const fallbackLayer = layers[fallbackLayerIndex];
-  const boundingBox = getBoundaries(dataset);
+  const boundaries = getBoundaries(dataset);
 
   const tracingLayer = {
     name: tracing.id,
     elementClass: tracing.elementClass,
     category: "segmentation",
     largestSegmentId: tracing.largestSegmentId,
-    boundingBox: convertBoundariesToBoundingBox(boundingBox),
+    boundingBox: convertBoundariesToBoundingBox(boundaries),
     // volume tracing can only be done for the first resolution
     resolutions: [[1, 1, 1]],
     mappings: fallbackLayer != null && fallbackLayer.mappings != null ? fallbackLayer.mappings : [],

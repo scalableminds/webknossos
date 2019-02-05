@@ -185,7 +185,7 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                 render={(settings, taskType) =>
                   [
                     taskType.tracingType === "skeleton" ? (
-                      <Tag color="blue" key="tracingType">
+                      <Tag color="green" key="tracingType">
                         skeleton
                       </Tag>
                     ) : (

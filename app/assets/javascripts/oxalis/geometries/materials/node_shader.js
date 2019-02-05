@@ -247,17 +247,22 @@ void main()
       gl_FragColor  = vec4(1.0);
     };
 
-    // Make active node round
+    // Make active node round and make center a white circle
     if (v_isActiveNode > 0.0) {
-      float r = 0.0, delta = 0.0, alpha = 1.0;
+      float r = 0.0, delta = 0.0, alpha1 = 1.0, alpha2 = 1.0;
+      float innerCircleRatio = 2.0;
       vec2 cxy = 2.0 * gl_PointCoord - 1.0;
       r = dot(cxy, cxy);
       #ifdef GL_OES_standard_derivatives
         delta = fwidth(r);
-        alpha = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r);
+        alpha1 = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r);
+        alpha2 = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, innerCircleRatio * r);
       #endif
 
-      gl_FragColor = vec4(color, alpha);
+      vec4 inner = vec4(color, alpha1);
+      // Make the outer ring white
+      vec4 outer = vec4(vec3(1.0), alpha2);
+      gl_FragColor = mix(inner, outer, alpha2);
     }
 }`;
   }

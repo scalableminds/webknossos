@@ -5,9 +5,18 @@ import memoizeOne from "memoize-one";
 
 import type { APIDataset, APIAllowedMode } from "admin/api_flow_types";
 import type { Settings, DataLayerType } from "oxalis/store";
+import { map3 } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
 import constants, { ModeValues, type Vector3, Vector3Indicies } from "oxalis/constants";
 import messages from "messages";
+
+export function getMostExtensiveResolutions(dataset: APIDataset): Array<Vector3> {
+  return _.chain(dataset.dataSource.dataLayers)
+    .map(dataLayer => dataLayer.resolutions)
+    .sortBy(resolutions => resolutions.length)
+    .last()
+    .valueOf();
+}
 
 function _getResolutions(dataset: APIDataset): Vector3[] {
   // Different layers can have different resolutions. At the moment,
@@ -15,11 +24,7 @@ function _getResolutions(dataset: APIDataset): Vector3[] {
   // However, if resolutions are subset of each other, everything should be fine.
   // For that case, returning the longest resolutions array should suffice
 
-  const mostExtensiveResolutions = _.chain(dataset.dataSource.dataLayers)
-    .map(dataLayer => dataLayer.resolutions)
-    .sortBy(resolutions => resolutions.length)
-    .last()
-    .valueOf();
+  const mostExtensiveResolutions = getMostExtensiveResolutions(dataset);
   if (!mostExtensiveResolutions) {
     return [];
   }
@@ -28,7 +33,7 @@ function _getResolutions(dataset: APIDataset): Vector3[] {
 
   // We add another level of resolutions to allow zooming out even further
   const extendedResolutions = _.range(constants.DOWNSAMPLED_ZOOM_STEP_COUNT).map(idx =>
-    lastResolution.map(el => 2 ** (idx + 1) * el),
+    map3(el => 2 ** (idx + 1) * el, lastResolution),
   );
 
   return mostExtensiveResolutions.concat(extendedResolutions);

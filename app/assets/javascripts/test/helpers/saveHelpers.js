@@ -1,3 +1,4 @@
+// @noflow
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 
 export function createSaveQueueFromUpdateActions(updateActions, timestamp, stats = null) {

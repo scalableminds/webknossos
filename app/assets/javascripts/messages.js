@@ -147,6 +147,8 @@ In order to restore the current window, a reload is necessary.`,
     `The layer "${layerName}" was defined as ${elementClass}. This format is not officially supported. Please convert the layer to a supported format.`,
   "dataset.is_scratch":
     "This dataset location is marked as 'scratch' and meant for testing only. Please move this dataset to a permanent storage location and reimport it.",
+  "dataset.resolution_mismatch":
+    "This dataset contains multiple layers which differ in their resolution. Please convert the layers to make their resolutions match. Otherwise, rendering errors cannot be avoided.",
   "annotation.finish": "Are you sure you want to permanently finish this tracing?",
   "annotation.was_finished": "Annotation was archived",
   "annotation.was_re_opened": "Annotation was reopened",
@@ -214,7 +216,8 @@ In order to restore the current window, a reload is necessary.`,
   "nml.edge_with_same_source_target":
     "NML contains <edge ...> with same source and target id: Edge",
   "nml.tree_not_connected": "NML contains tree that is not fully connected: Tree with id",
-  "nml.different_dataset": "Imported NML was originally for a different dataset.",
+  "nml.different_dataset":
+    "At least one NML file was originally created for a different dataset. Are you sure you want to continue with the import?",
   "merge.different_dataset":
     "The merge cannot be executed, because the underlying datasets are not the same.",
   "merge.volume_unsupported": "Merging is not supported for volume tracings.",

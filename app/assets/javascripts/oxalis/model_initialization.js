@@ -23,6 +23,7 @@ import {
   getBitDepth,
   getColorLayers,
   getDatasetCenter,
+  getMostExtensiveResolutions,
   getSegmentationLayer,
   isElementClassSupported,
 } from "oxalis/model/accessors/dataset_accessor";
@@ -264,12 +265,24 @@ function initializeDataset(
   });
 
   ensureDenseLayerResolutions(dataset);
+  ensureMatchingLayerResolutions(dataset);
   Store.dispatch(setDatasetAction(dataset));
 }
 
 function ensureDenseLayerResolutions(dataset: APIDataset) {
   for (const layer of dataset.dataSource.dataLayers) {
     layer.resolutions = convertToDenseResolution(layer.resolutions);
+  }
+}
+
+function ensureMatchingLayerResolutions(dataset: APIDataset): void {
+  const mostExtensiveResolutions = getMostExtensiveResolutions(dataset);
+  for (const layer of dataset.dataSource.dataLayers) {
+    for (const resolution of layer.resolutions) {
+      if (mostExtensiveResolutions.find(element => _.isEqual(resolution, element)) == null) {
+        Toast.error(messages["dataset.resolution_mismatch"], { sticky: true });
+      }
+    }
   }
 }
 

@@ -11,7 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Added
 
-- Added the possibility to create volume annotation tasks. When creating a task type, select skeleton vs volume. Note that compound viewing for volume tasks is not supported yet. Same for creating volume tasks from uploaded nml/data files.
+- Added the possibility to create volume annotation tasks. When creating a task type, select whether to create `volume` or `skeleton` tasks. Note that compound viewing for volume tasks is not supported yet. Same for creating volume tasks from uploaded nml/data files. [#3712](https://github.com/scalableminds/webknossos/pull/3712)
 
 ### Changed
 

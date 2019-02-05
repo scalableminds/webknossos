@@ -42,7 +42,6 @@ export type NewTask = {
   +taskTypeId: string,
   +csvFile?: File,
   +nmlFiles?: File,
-  +typ?: "skeleton" | "volume",
 };
 
 export type TaskCreationResponse = {

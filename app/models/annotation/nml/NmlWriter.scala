@@ -72,7 +72,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
           _ <- Future.successful(writeMetaData(annotation, annotationOwner, annotationTask))
           parameters <- extractTracingParameters(skeletonTracingOpt,
                                                  volumeTracingOpt,
-                                                 annotation.map(_.description),
+                                                 annotation: Option[Annotation],
                                                  organizationName,
                                                  scale).toFox
           _ = writeParameters(parameters)
@@ -86,7 +86,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
 
   def extractTracingParameters(skeletonTracingOpt: Option[SkeletonTracing],
                                volumeTracingOpt: Option[VolumeTracing],
-                               description: Option[String],
+                               annotation: Option[Annotation],
                                organizationName: String,
                                scale: Option[Scale]): Option[NmlParameters] =
     // in hybrid case, use data from skeletonTracing (should be identical)
@@ -94,7 +94,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
       NmlParameters(
         s.dataSetName,
         organizationName,
-        description,
+        annotation.map(_.description),
         scale,
         s.createdTimestamp,
         s.editPosition,
@@ -102,22 +102,22 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         s.zoomLevel,
         s.activeNodeId,
         s.userBoundingBox,
-        s.boundingBox
+        if (annotation.exists(_._task.isDefined)) s.boundingBox else None
       )
     }.orElse {
       volumeTracingOpt.map { v: VolumeTracing =>
         NmlParameters(
           v.dataSetName,
           organizationName,
-          description,
+          annotation.map(_.description),
           scale,
           v.createdTimestamp,
           v.editPosition,
           v.editRotation,
           v.zoomLevel,
           None,
-          None,
-          None
+          v.userBoundingBox,
+          if (annotation.exists(_._task.isDefined)) Some(v.boundingBox) else None
         )
       }
     }

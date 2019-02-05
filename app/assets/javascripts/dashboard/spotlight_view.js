@@ -188,10 +188,10 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
             <div style={{ minHeight: "100px" }}>
               {this.state.datasets.length === 0 && !this.state.isLoading ? (
                 <p style={{ textAlign: "center" }}>
-                  There are no datasets available yet.
+                  There are no publications yet.
                   <br />
-                  Check out <a href="https://demo.webknossos.org/">demo.webknossos.org</a> to see
-                  webKnossos in action.
+                  Check out <a href="https://webknossos.org/">webknossos.org</a> to see webKnossos
+                  in action.
                 </p>
               ) : (
                 <PublicationView
@@ -202,8 +202,8 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
             </div>
           </Spin>
           <div id="spotlight-footnote">
-            Visit <a href="https://www.webknossos.org/">webknossos.org</a> to learn more about
-            webKnossos.
+            Visit <a href="https://www.publication.webknossos.org/">publication.webknossos.org</a>{" "}
+            to learn more about webKnossos.
           </div>
         </Content>
         <Footer style={{ backgroundColor: "#ececec" }}>
@@ -255,7 +255,7 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
               </p>
               <p>
                 More information about webKnossos and full credits at{" "}
-                <a href="https://webknossos.org">webknossos.org</a>.
+                <a href="https://publication.webknossos.org">publication.webknossos.org</a>.
               </p>
               <p>
                 <Link to="/imprint">Imprint</Link> &bull; <Link to="/privacy">Privacy</Link>

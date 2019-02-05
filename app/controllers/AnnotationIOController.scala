@@ -177,7 +177,9 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       }.headOption
     } yield {
       volumeTracing.copy(
-        boundingBox = if (volumeTracing.boundingBox.isEmpty) boundingBoxToProto(dataSource.boundingBox) else volumeTracing.boundingBox,
+        boundingBox =
+          if (volumeTracing.boundingBox.isEmpty) boundingBoxToProto(dataSource.boundingBox)
+          else volumeTracing.boundingBox,
         elementClass = fallbackLayer
           .map(layer => elementClassToProto(layer.elementClass))
           .getOrElse(elementClassToProto(VolumeTracingDefaults.elementClass)),

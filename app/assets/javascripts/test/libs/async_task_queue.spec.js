@@ -1,3 +1,4 @@
+// @noflow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import AsyncTaskQueue from "libs/async_task_queue";
 import Deferred from "libs/deferred";

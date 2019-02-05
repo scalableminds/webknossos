@@ -118,7 +118,7 @@ export class OxalisModel {
     Store.dispatch(saveNowAction());
   };
 
-  save = async () => {
+  ensureSavedState = async () => {
     // This function will only return once all state is saved
     // even if new updates are pushed to the save queue during saving
     while (!this.stateSaved()) {

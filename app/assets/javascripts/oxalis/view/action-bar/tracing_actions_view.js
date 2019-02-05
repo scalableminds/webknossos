@@ -173,17 +173,11 @@ class TracingActionsView extends React.PureComponent<Props, State> {
 
   modalWrapper: ?HTMLDivElement = null;
 
-  handleSaveForce = (event?: SyntheticInputEvent<>) => this.handleSave(event, true);
-
-  handleSave = async (event?: SyntheticInputEvent<>, force?: boolean) => {
+  handleSave = async (event?: SyntheticInputEvent<>) => {
     if (event != null) {
       event.target.blur();
     }
-    if (force) {
-      Model.forceSave();
-    } else {
-      await Model.save();
-    }
+    Model.forceSave();
   };
 
   handleUndo = () => {
@@ -191,7 +185,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
   };
 
   handleRestore = async () => {
-    await Model.save();
+    await Model.ensureSavedState();
     Store.dispatch(setVersionRestoreVisibilityAction(true));
   };
 
@@ -208,7 +202,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
   };
 
   handleFinish = async () => {
-    await this.handleSave();
+    await Model.ensureSavedState();
 
     Modal.confirm({
       title: messages["annotation.finish"],
@@ -229,7 +223,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
   };
 
   handleDownload = async () => {
-    await this.handleSave();
+    await Model.ensureSavedState();
     downloadNml(this.props.annotationId, this.props.annotationType);
   };
 
@@ -271,7 +265,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
                 </ButtonComponent>,
               ]
             : null,
-          <SaveButton key="save-button" onClick={this.handleSaveForce} />,
+          <SaveButton key="save-button" onClick={this.handleSave} />,
         ]
       : [
           <ButtonComponent key="read-only-button" type="primary" disabled>

@@ -4,7 +4,9 @@ import Maybe from "data.maybe";
 
 import type { APIAnnotation, ServerBoundingBox } from "admin/api_flow_types";
 import type { Annotation, BoundingBoxObject } from "oxalis/store";
+import type { Boundary } from "oxalis/model/accessors/dataset_accessor";
 import type { BoundingBoxType } from "oxalis/constants";
+import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 
 export function convertServerBoundingBoxToFrontend(
@@ -30,6 +32,16 @@ export function convertFrontendBoundingBoxToServer(
       depth: bb.max[2] - bb.min[2],
     }))
     .getOrElse(null);
+}
+
+export function convertBoundariesToBoundingBox(boundary: Boundary): BoundingBoxObject {
+  const [width, height, depth] = V3.sub(boundary.upperBoundary, boundary.lowerBoundary);
+  return {
+    width,
+    height,
+    depth,
+    topLeft: boundary.lowerBoundary,
+  };
 }
 
 export function convertPointToVecInBoundingBox(boundingBox: ServerBoundingBox): BoundingBoxObject {

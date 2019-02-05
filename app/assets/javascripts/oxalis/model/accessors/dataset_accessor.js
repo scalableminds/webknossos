@@ -70,7 +70,7 @@ export function getLayerByName(dataset: APIDataset, layerName: string): DataLaye
 
   const layer = dataLayers.find(l => l.name === layerName);
   if (!layer) {
-    throw new Error(`Layer "${layerName}" not found`);
+    throw new Error(`Layer "${layerName}" not founhd`);
   }
   return layer;
 }
@@ -94,7 +94,7 @@ export function getByteCount(dataset: APIDataset, layerName: string): number {
   return getByteCountFromLayer(getLayerByName(dataset, layerName));
 }
 
-type Boundary = { lowerBoundary: Vector3, upperBoundary: Vector3 };
+export type Boundary = { lowerBoundary: Vector3, upperBoundary: Vector3 };
 
 export function getLayerBoundaries(dataset: APIDataset, layerName: string): Boundary {
   const { topLeft, width, height, depth } = getLayerByName(dataset, layerName).boundingBox;

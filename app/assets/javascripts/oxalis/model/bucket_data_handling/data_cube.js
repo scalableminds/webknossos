@@ -123,7 +123,7 @@ class DataCube {
     const shouldBeRestrictedByTracingBoundingBox = () => {
       const { task } = Store.getState();
       const isVolumeTask = task != null && task.type.tracingType === "volume";
-      return isSegmentation || !isVolumeTask;
+      return !isVolumeTask;
     };
     this.boundingBox = new BoundingBox(
       shouldBeRestrictedByTracingBoundingBox()
@@ -135,7 +135,7 @@ class DataCube {
     listenToStoreProperty(
       state => getSomeTracing(state.tracing).boundingBox,
       boundingBox => {
-        if (!shouldBeRestrictedByTracingBoundingBox) {
+        if (shouldBeRestrictedByTracingBoundingBox()) {
           this.boundingBox = new BoundingBox(boundingBox, this);
           this.forgetOutOfBoundaryBuckets();
         }

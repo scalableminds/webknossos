@@ -11,7 +11,7 @@ import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor
 import Date from "libs/date";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
-import Store, {
+import {
   type NodeMap,
   type OxalisState,
   type SkeletonTracing,
@@ -428,7 +428,7 @@ function wrapInNewGroup(
 export function parseNml(
   nmlString: string,
   wrappingGroupName?: ?string,
-): Promise<{ trees: TreeMap, treeGroups: Array<TreeGroup> }> {
+): Promise<{ trees: TreeMap, treeGroups: Array<TreeGroup>, datasetName: ?string }> {
   return new Promise((resolve, reject) => {
     const parser = new Saxophone();
 
@@ -440,14 +440,13 @@ export function parseNml(
     let currentTree: ?Tree = null;
     let currentGroup: ?TreeGroup = null;
     const groupIdToParent: { [number]: ?TreeGroup } = {};
+    let datasetName = null;
     parser
       .on("tagopen", node => {
         const attr = Saxophone.parseAttrs(node.attrs);
         switch (node.name) {
           case "experiment": {
-            if (attr.name !== Store.getState().dataset.name) {
-              throw new NmlParseError(messages["nml.different_dataset"]);
-            }
+            datasetName = attr.name;
             break;
           }
           case "thing": {
@@ -619,9 +618,10 @@ export function parseNml(
           resolve({
             trees: wrappedTrees,
             treeGroups: wrappedTreeGroups,
+            datasetName,
           });
         } else {
-          resolve({ trees, treeGroups });
+          resolve({ trees, treeGroups, datasetName });
         }
       })
       .on("error", reject);

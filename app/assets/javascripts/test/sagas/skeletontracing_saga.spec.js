@@ -1,3 +1,4 @@
+// @noflow
 /* eslint-disable import/no-extraneous-dependencies */
 import type { SaveQueueEntry } from "oxalis/store";
 import ChainReducer from "test/helpers/chainReducer";

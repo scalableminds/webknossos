@@ -73,10 +73,11 @@ const WelcomeHeader = ({ history }) => (
                 marginTop: 0,
               }}
             >
-              webKnossos is an in-browser annotation tool for 3D electron microscopic data that
-              facilitates user interaction with 3D image data. Together with ever better automated
-              neuron segmentations, webKnossos can push connectomics to efficient large-scale
-              reconstructions.
+              webKnossos is an open-source tool for annotating and exploring large-scale 3D
+              datasets. Fly through your data for fast skeletonization and proof-reading. Create
+              training data from efficient volume annotations. Scale data reconstruction projects
+              with crowdsourcing workflows. Annotate collaboratively and share your data with other
+              scientists.
             </p>
 
             <div style={{ marginTop: 20 }}>
@@ -162,10 +163,14 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
   };
 
   render() {
+    const useOnboardingFlow =
+      this.props.activeUser == null &&
+      (features().allowOrganizationCreation || !this.state.hasOrganizations);
+
     const search = (
       <Search
         style={{ width: 200, float: "right" }}
-        placeholder="Search Dataset"
+        placeholder="Search Publication"
         onPressEnter={this.handleSearch}
         onChange={this.handleSearch}
         value={this.state.searchQuery}
@@ -174,12 +179,7 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
 
     return (
       <Layout>
-        {this.props.activeUser == null &&
-        (features().allowOrganizationCreation || !this.state.hasOrganizations) ? (
-          <WelcomeHeader history={this.props.history} />
-        ) : (
-          <SimpleHeader />
-        )}
+        {useOnboardingFlow ? <WelcomeHeader history={this.props.history} /> : <SimpleHeader />}
         <Content style={{ padding: 50 }}>
           <div className="pull-right">{search}</div>
           <h3>Publications</h3>
@@ -187,12 +187,16 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
           <Spin size="large" spinning={this.state.isLoading}>
             <div style={{ minHeight: "100px" }}>
               {this.state.datasets.length === 0 && !this.state.isLoading ? (
-                <p style={{ textAlign: "center" }}>
-                  There are no publications yet.
-                  <br />
-                  Check out <a href="https://webknossos.org/">webknossos.org</a> to see webKnossos
-                  in action.
-                </p>
+                <React.Fragment>
+                  <p style={{ textAlign: "center" }}>There are no publications yet.</p>
+                  <p style={{ textAlign: "center" }}>
+                    <Link to={useOnboardingFlow ? "/onboarding" : "/dashboard"}>
+                      Start importing your data
+                    </Link>{" "}
+                    or check out <a href="https://webknossos.org/">webknossos.org</a> for some
+                    published datasets.
+                  </p>
+                </React.Fragment>
               ) : (
                 <PublicationView
                   datasets={this.state.datasets}
@@ -202,8 +206,8 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
             </div>
           </Spin>
           <div id="spotlight-footnote">
-            Visit <a href="https://publication.webknossos.org/">publication.webknossos.org</a>{" "}
-            to learn more about webKnossos.
+            Visit <a href="https://publication.webknossos.org/">publication.webknossos.org</a> for
+            the original webKnossos publication website.
           </div>
         </Content>
         <Footer style={{ backgroundColor: "#ececec" }}>
@@ -254,7 +258,7 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
                 .
               </p>
               <p>
-                More information about webKnossos and full credits at{" "}
+                More information about the webKnossos publication and full credits at{" "}
                 <a href="https://publication.webknossos.org">publication.webknossos.org</a>.
               </p>
               <p>

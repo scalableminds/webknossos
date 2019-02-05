@@ -120,13 +120,25 @@ class DataCube {
       this.cubes[i] = new CubeEntry(zoomedCubeBoundary);
     }
 
-    this.boundingBox = new BoundingBox(getSomeTracing(Store.getState().tracing).boundingBox, this);
+    const shouldBeRestrictedByTracingBoundingBox = () => {
+      const { task } = Store.getState();
+      const isVolumeTask = task != null && task.type.tracingType === "volume";
+      return isSegmentation || !isVolumeTask;
+    };
+    this.boundingBox = new BoundingBox(
+      shouldBeRestrictedByTracingBoundingBox()
+        ? getSomeTracing(Store.getState().tracing).boundingBox
+        : null,
+      this,
+    );
 
     listenToStoreProperty(
       state => getSomeTracing(state.tracing).boundingBox,
       boundingBox => {
-        this.boundingBox = new BoundingBox(boundingBox, this);
-        this.forgetOutOfBoundaryBuckets();
+        if (!shouldBeRestrictedByTracingBoundingBox) {
+          this.boundingBox = new BoundingBox(boundingBox, this);
+          this.forgetOutOfBoundaryBuckets();
+        }
       },
     );
   }

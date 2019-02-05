@@ -8,6 +8,6 @@ CREATE VIEW webknossos.taskTypes_ AS SELECT * FROM webknossos.taskTypes WHERE NO
 
 DROP TYPE webknossos.TASKTYPE_TRACINGTYPES;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 37;
+UPDATE webknossos.releaseInformation SET schemaVersion = 38;
 
 COMMIT TRANSACTION;

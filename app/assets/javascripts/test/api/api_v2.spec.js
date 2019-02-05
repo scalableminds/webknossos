@@ -1,3 +1,4 @@
+// @noflow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import { __setupOxalis, KeyboardJS } from "test/helpers/apiHelpers";
 import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";

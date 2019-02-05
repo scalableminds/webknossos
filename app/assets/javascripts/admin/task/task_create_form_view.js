@@ -203,7 +203,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     return selectedTaskType != null ? selectedTaskType.tracingType === "volume" : false;
   };
 
-  onChangeTaskType = (taskTypeId: string): boolean => {
+  onChangeTaskType = (taskTypeId: string) => {
     if (this.isVolumeTaskType(taskTypeId)) {
       this.setState({ isNMLSpecification: false });
     }

@@ -22,6 +22,7 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 
 ### Postgres Evolutions:
 - [037-add-publications.sql](conf/evolutions/037-add-publications.sql)
+- [038-more-voxel-types.sql](conf/evolutions/038-more-voxel-types.sql)
 
 
 ## [19.01.0](https://github.com/scalableminds/webknossos/releases/tag/19.01.0) - 2019-01-14

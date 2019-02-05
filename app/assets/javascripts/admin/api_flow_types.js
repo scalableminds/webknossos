@@ -11,7 +11,18 @@ import type { Vector3, Vector6, Point3 } from "oxalis/constants";
 
 export type APIMessage = { ["info" | "warning" | "error"]: string };
 
-type ElementClass = "uint8" | "uint16" | "uint32";
+type ElementClass =
+  | "uint8"
+  | "uint16"
+  | "uint24"
+  | "uint32"
+  | "uint64"
+  | "float"
+  | "double"
+  | "int8"
+  | "int16"
+  | "int32"
+  | "int64";
 
 export type APIMapping = {
   +parent?: string,

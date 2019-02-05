@@ -10,6 +10,6 @@ ALTER TABLE webknossos.taskTypes ADD COLUMN tracingType webknossos.TASKTYPE_TRAC
 
 CREATE VIEW webknossos.taskTypes_ AS SELECT * FROM webknossos.taskTypes WHERE NOT isDeleted;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 38;
+UPDATE webknossos.releaseInformation SET schemaVersion = 39;
 
 COMMIT TRANSACTION;

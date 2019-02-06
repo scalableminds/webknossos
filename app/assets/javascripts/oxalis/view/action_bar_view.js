@@ -1,5 +1,5 @@
 // @flow
-import { Alert, Dropdown, Icon, Menu, Tooltip } from "antd";
+import { Alert, Dropdown, Icon, Menu } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 

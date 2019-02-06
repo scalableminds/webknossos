@@ -5,9 +5,18 @@ import memoizeOne from "memoize-one";
 
 import type { APIAllowedMode, APIDataset, APISegmentationLayer } from "admin/api_flow_types";
 import type { Settings, DataLayerType } from "oxalis/store";
+import { map3 } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
 import constants, { ModeValues, type Vector3, Vector3Indicies } from "oxalis/constants";
 import messages from "messages";
+
+export function getMostExtensiveResolutions(dataset: APIDataset): Array<Vector3> {
+  return _.chain(dataset.dataSource.dataLayers)
+    .map(dataLayer => dataLayer.resolutions)
+    .sortBy(resolutions => resolutions.length)
+    .last()
+    .valueOf();
+}
 
 function _getResolutions(dataset: APIDataset): Vector3[] {
   // Different layers can have different resolutions. At the moment,
@@ -15,11 +24,7 @@ function _getResolutions(dataset: APIDataset): Vector3[] {
   // However, if resolutions are subset of each other, everything should be fine.
   // For that case, returning the longest resolutions array should suffice
 
-  const mostExtensiveResolutions = _.chain(dataset.dataSource.dataLayers)
-    .map(dataLayer => dataLayer.resolutions)
-    .sortBy(resolutions => resolutions.length)
-    .last()
-    .valueOf();
+  const mostExtensiveResolutions = getMostExtensiveResolutions(dataset);
   if (!mostExtensiveResolutions) {
     return [];
   }
@@ -28,7 +33,7 @@ function _getResolutions(dataset: APIDataset): Vector3[] {
 
   // We add another level of resolutions to allow zooming out even further
   const extendedResolutions = _.range(constants.DOWNSAMPLED_ZOOM_STEP_COUNT).map(idx =>
-    lastResolution.map(el => 2 ** (idx + 1) * el),
+    map3(el => 2 ** (idx + 1) * el, lastResolution),
   );
 
   return mostExtensiveResolutions.concat(extendedResolutions);
@@ -89,7 +94,7 @@ export function getByteCount(dataset: APIDataset, layerName: string): number {
   return getByteCountFromLayer(getLayerByName(dataset, layerName));
 }
 
-type Boundary = { lowerBoundary: Vector3, upperBoundary: Vector3 };
+export type Boundary = { lowerBoundary: Vector3, upperBoundary: Vector3 };
 
 export function getLayerBoundaries(dataset: APIDataset, layerName: string): Boundary {
   const { topLeft, width, height, depth } = getLayerByName(dataset, layerName).boundingBox;
@@ -150,7 +155,51 @@ export function determineAllowedModes(
 }
 
 export function getBitDepth(layerInfo: DataLayerType): number {
-  return parseInt(layerInfo.elementClass.substring(4), 10);
+  switch (layerInfo.elementClass) {
+    case "uint8":
+      return 8;
+    case "uint16":
+      return 16;
+    case "uint24":
+      return 24;
+    case "uint32":
+      return 32;
+    case "uint64":
+      return 64;
+    case "float":
+      return 32;
+    case "double":
+      return 64;
+    case "int8":
+      return 8;
+    case "int16":
+      return 16;
+    case "int32":
+      return 32;
+    case "int64":
+      return 64;
+    default:
+      throw new Error("Unknown element class");
+  }
+}
+
+export function isElementClassSupported(layerInfo: DataLayerType): boolean {
+  switch (layerInfo.elementClass) {
+    case "uint8":
+    case "uint16":
+    case "uint24":
+    case "uint32":
+    case "int8":
+    case "int16":
+    case "int32":
+      return true;
+    case "float":
+    case "int64":
+    case "uint64":
+    case "double":
+    default:
+      return false;
+  }
 }
 
 export function isSegmentationLayer(dataset: APIDataset, layerName: string): boolean {

@@ -124,7 +124,7 @@ class DataSourceService @Inject()(
       Check(dataSource.dataLayers.forall(!_.boundingBox.isEmpty), "DataSource bounding box must not be empty"),
       Check(dataSource.dataLayers.forall {
         case layer: SegmentationLayer =>
-          layer.largestSegmentId > 0 && layer.largestSegmentId < ElementClass.maxValue(layer.elementClass)
+          layer.largestSegmentId > 0 && layer.largestSegmentId < ElementClass.maxSegmentIdValue(layer.elementClass)
         case _ =>
           true
       }, "Largest segment ID invalid")

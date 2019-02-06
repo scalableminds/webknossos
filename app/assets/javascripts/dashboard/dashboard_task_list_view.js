@@ -386,6 +386,8 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
         <span style={{ marginRight: 8 }}>
           {task.type.summary} (<FormattedDate timestamp={task.created} />)
         </span>
+        {task.annotation.tracing.skeleton == null ? null : <Tag color="green">skeleton</Tag>}
+        {task.annotation.tracing.volume == null ? null : <Tag color="orange">volume</Tag>}
         {task.type.settings.allowedModes.map(mode => (
           <Tag key={mode}>{mode}</Tag>
         ))}

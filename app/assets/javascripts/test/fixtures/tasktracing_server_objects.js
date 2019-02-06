@@ -61,6 +61,7 @@ export const annotation: APIAnnotation = {
         somaClickingAllowed: true,
       },
       recommendedConfiguration: null,
+      tracingType: "skeleton",
     },
     dataSet: "ROI2017_wkw",
     neededExperience: { domain: "oxalis", value: 1 },

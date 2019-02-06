@@ -15,9 +15,9 @@ export default class EdgeCollection {
   inMap: EdgeMap;
   edgeCount: number;
 
-  constructor() {
-    this.outMap = new DiffableMap();
-    this.inMap = new DiffableMap();
+  constructor(itemsPerBatch?: number) {
+    this.outMap = new DiffableMap(null, itemsPerBatch);
+    this.inMap = new DiffableMap(null, itemsPerBatch);
     this.edgeCount = 0;
   }
 

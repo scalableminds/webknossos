@@ -17,13 +17,16 @@ import {
   validateMinimumRequirements,
 } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import type { Versions } from "oxalis/view/version_view";
-import { convertPointToVecInBoundingBox } from "oxalis/model/reducers/reducer_helpers";
+import { convertBoundariesToBoundingBox } from "oxalis/model/reducers/reducer_helpers";
 import {
-  getDatasetCenter,
   determineAllowedModes,
   getBitDepth,
-  getSegmentationLayer,
+  getBoundaries,
   getColorLayers,
+  getDatasetCenter,
+  getMostExtensiveResolutions,
+  getSegmentationLayer,
+  isElementClassSupported,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
@@ -176,7 +179,19 @@ function validateSpecsForLayers(
     console.warn(message);
   }
 
+  maybeWarnAboutUnsupportedLayers(layers);
+
   return { isMappingSupported, textureInformationPerLayer };
+}
+
+function maybeWarnAboutUnsupportedLayers(layers: Array<APIDataLayer>): void {
+  for (const layer of layers) {
+    if (!isElementClassSupported(layer)) {
+      Toast.warning(messages["dataset.unsupported_element_class"](layer.name, layer.elementClass), {
+        sticky: true,
+      });
+    }
+  }
 }
 
 function initializeTracing(annotation: APIAnnotation, tracing: HybridServerTracing) {
@@ -245,18 +260,30 @@ function initializeDataset(
   });
 
   serverTracingAsVolumeTracingMaybe(tracing).map(volumeTracing => {
-    const newDataLayers = setupLayerForVolumeTracing(dataset.dataSource.dataLayers, volumeTracing);
+    const newDataLayers = setupLayerForVolumeTracing(dataset, volumeTracing);
     // $FlowFixMe We mutate the dataset here to avoid that an outdated version is used somewhere else
     dataset.dataSource.dataLayers = newDataLayers;
   });
 
   ensureDenseLayerResolutions(dataset);
+  ensureMatchingLayerResolutions(dataset);
   Store.dispatch(setDatasetAction(dataset));
 }
 
 function ensureDenseLayerResolutions(dataset: APIDataset) {
   for (const layer of dataset.dataSource.dataLayers) {
     layer.resolutions = convertToDenseResolution(layer.resolutions);
+  }
+}
+
+function ensureMatchingLayerResolutions(dataset: APIDataset): void {
+  const mostExtensiveResolutions = getMostExtensiveResolutions(dataset);
+  for (const layer of dataset.dataSource.dataLayers) {
+    for (const resolution of layer.resolutions) {
+      if (mostExtensiveResolutions.find(element => _.isEqual(resolution, element)) == null) {
+        Toast.error(messages["dataset.resolution_mismatch"], { sticky: true });
+      }
+    }
   }
 }
 
@@ -329,11 +356,11 @@ function initializeDataLayerInstances(): {
 }
 
 function setupLayerForVolumeTracing(
-  _layers: APIDataLayer[],
+  dataset: APIDataset,
   tracing: ServerVolumeTracing,
 ): Array<APIDataLayer> {
   // This method adds/merges the segmentation layers of the tracing into the dataset layers
-  let layers = _.clone(_layers);
+  let layers = _.clone(dataset.dataSource.dataLayers);
 
   // The tracing always contains the layer information for the user segmentation.
   // Two possible cases:
@@ -343,13 +370,14 @@ function setupLayerForVolumeTracing(
   //    property specifies its name, to be able to merge the two layers
   const fallbackLayerIndex = _.findIndex(layers, layer => layer.name === tracing.fallbackLayer);
   const fallbackLayer = layers[fallbackLayerIndex];
+  const boundaries = getBoundaries(dataset);
 
   const tracingLayer = {
     name: tracing.id,
     elementClass: tracing.elementClass,
     category: "segmentation",
     largestSegmentId: tracing.largestSegmentId,
-    boundingBox: convertPointToVecInBoundingBox(tracing.boundingBox),
+    boundingBox: convertBoundariesToBoundingBox(boundaries),
     // volume tracing can only be done for the first resolution
     resolutions: [[1, 1, 1]],
     mappings: fallbackLayer != null && fallbackLayer.mappings != null ? fallbackLayer.mappings : [],

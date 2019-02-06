@@ -1,3 +1,5 @@
+// @noflow
+// The typings are defined in effect-generators.js.flow.
 import * as IOEffects from "redux-saga/effects";
 
 export function* select(...args) {

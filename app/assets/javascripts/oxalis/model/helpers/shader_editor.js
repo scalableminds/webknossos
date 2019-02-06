@@ -1,3 +1,4 @@
+// @noflow
 import window, { document } from "libs/window";
 
 export default {

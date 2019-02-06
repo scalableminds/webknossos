@@ -67,7 +67,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
           parseEditRotation(parameters \ "editRotation").getOrElse(SkeletonTracingDefaults.editRotation)
         val zoomLevel = parseZoomLevel(parameters \ "zoomLevel").getOrElse(SkeletonTracingDefaults.zoomLevel)
         val userBoundingBox = parseBoundingBox(parameters \ "userBoundingBox")
-        val taskBoundingBox = parseBoundingBox(parameters \ "taskBoundingBox")
+        val taskBoundingBox: Option[BoundingBox] = parseBoundingBox(parameters \ "taskBoundingBox")
 
         logger.debug(s"Parsed NML file. Trees: ${trees.size}, Volumes: ${volumes.size}")
 
@@ -75,17 +75,20 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
           if (volumes.isEmpty) None
           else
             Some(
-              (VolumeTracing(None,
-                             BoundingBox.empty,
-                             time,
-                             dataSetName,
-                             editPosition,
-                             editRotation,
-                             ElementClass.uint32,
-                             volumes.head.fallbackLayer,
-                             0,
-                             0,
-                             zoomLevel),
+              (VolumeTracing(
+                 None,
+                 boundingBoxToProto(taskBoundingBox.getOrElse(BoundingBox.empty)),
+                 time,
+                 dataSetName,
+                 editPosition,
+                 editRotation,
+                 ElementClass.uint32,
+                 volumes.head.fallbackLayer,
+                 0,
+                 0,
+                 zoomLevel,
+                 userBoundingBox
+               ),
                volumes.head.location)
             )
 

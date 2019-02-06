@@ -24,6 +24,8 @@ import TracingActionsView, {
 } from "oxalis/view/action-bar/tracing_actions_view";
 import ViewModesView from "oxalis/view/action-bar/view_modes_view";
 import VolumeActionsView from "oxalis/view/action-bar/volume_actions_view";
+import renderIndependently from "libs/render_independently";
+import RegistrationModal from "admin/auth/registration_modal";
 
 const VersionRestoreWarning = (
   <Alert
@@ -82,30 +84,33 @@ class ActionBarView extends React.PureComponent<Props, State> {
   };
 
   renderStartTracingButton(): React.Node {
+    const needsAuthentication = this.props.activeUser == null;
+
     const createTracing = async () => {
+      if (needsAuthentication) {
+        let hasRegistered = false;
+        await renderIndependently(destroy => (
+          <RegistrationModal
+            onOk={() => {
+              hasRegistered = true;
+            }}
+            destroy={destroy}
+          />
+        ));
+        if (!hasRegistered) return;
+      }
       const type = "hybrid";
       const annotation = await createExplorational(this.props.dataset, type, true);
       trackAction(`Create ${type} tracing (from view mode)`);
-      location.href = `${location.origin}/annotations/${annotation.typ}/${annotation.id}`;
+      location.href = `${location.origin}/annotations/${annotation.typ}/${annotation.id}${
+        location.hash
+      }`;
     };
 
-    const needsAuthentication = this.props.activeUser == null;
-    const MaybeTooltip = needsAuthentication
-      ? ({ children }) => (
-          <Tooltip title="Please log in or register to create a tracing.">{children}</Tooltip>
-        )
-      : ({ children }) => children;
     return (
-      <MaybeTooltip>
-        <ButtonComponent
-          onClick={createTracing}
-          style={{ marginLeft: 12 }}
-          type="primary"
-          disabled={needsAuthentication}
-        >
-          Create Tracing
-        </ButtonComponent>
-      </MaybeTooltip>
+      <ButtonComponent onClick={createTracing} style={{ marginLeft: 12 }} type="primary">
+        Create Tracing
+      </ButtonComponent>
     );
   }
 

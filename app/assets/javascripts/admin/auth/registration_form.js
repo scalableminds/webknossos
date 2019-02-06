@@ -1,7 +1,9 @@
 // @flow
-import { Form, Input, Button, Row, Col, Icon, Select, Checkbox } from "antd";
-import { Link } from "react-router-dom";
+import { Form, Input, Button, Row, Col, Icon, Select, Checkbox, Alert } from "antd";
 import React from "react";
+// This component should not use any react-router props or components
+// as it is rendered as part of the registration_modal which is not rendered
+// in the main react component tree (but instead using renderIndependently)
 
 import type { APIOrganization } from "admin/api_flow_types";
 import { loginUser, getOrganizations } from "admin/admin_rest_api";
@@ -9,19 +11,21 @@ import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import Request from "libs/request";
 import Store from "oxalis/throttled_store";
 import messages from "messages";
+import features from "features";
 
 const FormItem = Form.Item;
 const { Option } = Select;
 
 type Props = {|
   form: Object,
-  onRegistered: () => void,
+  onRegistered: boolean => void,
   confirmLabel?: string,
   createOrganization?: boolean,
   organizationName?: ?string,
   hidePrivacyStatement?: boolean,
   tryAutoLogin?: boolean,
   onOrganizationNameNotFound?: () => void,
+  label?: string,
 |};
 
 type State = {
@@ -29,7 +33,7 @@ type State = {
   organizations: Array<APIOrganization>,
 };
 
-class RegistrationView extends React.PureComponent<Props, State> {
+class RegistrationForm extends React.PureComponent<Props, State> {
   state = {
     confirmDirty: false,
     organizations: [],
@@ -74,14 +78,15 @@ class RegistrationView extends React.PureComponent<Props, State> {
           : "/api/auth/register",
         { data: formValues },
       );
-      if (this.props.tryAutoLogin) {
+      const tryAutoLogin = this.props.tryAutoLogin || true;
+      if (tryAutoLogin) {
         const user = await loginUser({
           email: formValues.email,
           password: formValues.password.password1,
         });
         Store.dispatch(setActiveUserAction(user));
       }
-      this.props.onRegistered();
+      this.props.onRegistered(tryAutoLogin);
     });
   };
 
@@ -126,6 +131,7 @@ class RegistrationView extends React.PureComponent<Props, State> {
       );
     }
 
+    const { defaultOrganization } = features();
     return (
       <FormItem hasFeedback>
         {getFieldDecorator("organization", {
@@ -135,6 +141,7 @@ class RegistrationView extends React.PureComponent<Props, State> {
               message: messages["auth.registration_org_input"],
             },
           ],
+          initialValue: defaultOrganization !== "" ? defaultOrganization : undefined,
         })(
           <Select placeholder="Organization">
             {this.state.organizations.map(organization => (
@@ -153,6 +160,11 @@ class RegistrationView extends React.PureComponent<Props, State> {
 
     return (
       <Form onSubmit={this.handleSubmit}>
+        {this.props.label && (
+          <FormItem>
+            <Alert message={this.props.label} type="info" showIcon />
+          </FormItem>
+        )}
         {this.getOrganizationFormField()}
         <Row gutter={8}>
           <Col span={12}>
@@ -279,7 +291,10 @@ class RegistrationView extends React.PureComponent<Props, State> {
             })(
               <Checkbox>
                 I agree to storage and processing of my personal data as described in the{" "}
-                <Link to="/privacy">privacy statement</Link>.
+                <a target="_blank" href="/privacy" rel="noopener noreferrer">
+                  privacy statement
+                </a>
+                .
               </Checkbox>,
             )}
           </FormItem>
@@ -294,4 +309,4 @@ class RegistrationView extends React.PureComponent<Props, State> {
   }
 }
 
-export default Form.create()(RegistrationView);
+export default Form.create()(RegistrationForm);

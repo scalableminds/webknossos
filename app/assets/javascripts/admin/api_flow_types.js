@@ -438,6 +438,7 @@ export type APIFeatureToggles = {
   +discussionBoard: string | false,
   +discussionBoardRequiresAdmin: boolean,
   +allowOrganizationCreation: boolean,
+  +defaultOrganization: string,
   +addForeignDataset: boolean,
   +hideNavbarLogin: boolean,
   +freezeVolumeVersions: boolean,

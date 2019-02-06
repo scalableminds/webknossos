@@ -1,3 +1,4 @@
+// @noflow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import configureMockStore from "redux-mock-store";
 import overwriteActionMiddleware, {

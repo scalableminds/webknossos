@@ -1,3 +1,4 @@
+// @noflow
 export function expectValueDeepEqual(t, block, expected) {
   t.false(block.done);
   return t.deepEqual(block.value, expected);

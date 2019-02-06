@@ -70,6 +70,10 @@ message SkeletonTracing {
     repeated TreeGroup treeGroups = 11;
 }
 
+message SkeletonTracingOpt {
+    optional SkeletonTracing tracing = 1;
+}
+
 message SkeletonTracings {
-    repeated SkeletonTracing tracings = 1;
+    repeated SkeletonTracingOpt tracings = 1;
 }

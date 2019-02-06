@@ -41,6 +41,7 @@ type StateProps = {|
   hasVolume: boolean,
   hasSkeleton: boolean,
   showVersionRestore: boolean,
+  isReadOnly: boolean,
 |};
 type OwnProps = {|
   layoutProps: LayoutProps,
@@ -124,7 +125,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
       />
     );
 
-    const readonlyDropdown = (
+    const viewDropdown = (
       <Dropdown overlay={<Menu>{layoutMenu}</Menu>}>
         <ButtonComponent>
           <Icon type="down" />
@@ -138,11 +139,13 @@ class ActionBarView extends React.PureComponent<Props, State> {
           {isTraceMode && !this.props.showVersionRestore ? (
             <TracingActionsView layoutMenu={layoutMenu} />
           ) : (
-            readonlyDropdown
+            viewDropdown
           )}
           {this.props.showVersionRestore ? VersionRestoreWarning : null}
           <DatasetPositionView />
-          {this.props.hasVolume && isVolumeSupported ? <VolumeActionsView /> : null}
+          {!this.props.isReadOnly && this.props.hasVolume && isVolumeSupported ? (
+            <VolumeActionsView />
+          ) : null}
           {this.props.hasSkeleton && isTraceMode ? <ViewModesView /> : null}
           {isTraceMode ? null : this.renderStartTracingButton()}
         </div>
@@ -163,6 +166,7 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   showVersionRestore: state.uiInformation.showVersionRestore,
   hasVolume: state.tracing.volume != null,
   hasSkeleton: state.tracing.skeleton != null,
+  isReadOnly: !state.tracing.restrictions.allowUpdate,
 });
 
 export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(ActionBarView);

@@ -6,7 +6,7 @@ object Dependencies {
   val akkaVersion = "2.5.11"
   val log4jVersion = "2.0-beta9"
   val newrelicVersion = "3.44.1"
-  val webknossosWrapVersion = "1.1.6"
+  val webknossosWrapVersion = "1.1.7"
 
   val akkaAgent = "com.typesafe.akka" %% "akka-agent" % akkaVersion
   val akkaLogging = "com.typesafe.akka" %% "akka-slf4j" % akkaVersion

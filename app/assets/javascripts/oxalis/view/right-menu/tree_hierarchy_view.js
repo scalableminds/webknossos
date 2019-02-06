@@ -126,7 +126,8 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   onCheck = (evt: SyntheticMouseEvent<*>) => {
-    const { id, type } = evt.currentTarget.node;
+    // $FlowFixMe .node is unknown to flow
+    const { id, type } = evt.target.node;
     if (type === TYPE_TREE) {
       this.props.onToggleTree(parseInt(id, 10));
     } else if (id === MISSING_GROUP_ID) {
@@ -137,7 +138,8 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   onSelectTree = (evt: SyntheticMouseEvent<*>) => {
-    const treeId = parseInt(evt.currentTarget.dataset.id, 10);
+    // $FlowFixMe .dataset is unknown to flow
+    const treeId = parseInt(evt.target.dataset.id, 10);
     if (evt.ctrlKey) {
       this.props.onSelectTree(treeId);
     } else {
@@ -147,7 +149,8 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   onSelectGroup = (evt: SyntheticMouseEvent<*>) => {
-    const groupId = parseInt(evt.currentTarget.dataset.id, 10);
+    // $FlowFixMe .dataset is unknown to flow
+    const groupId = parseInt(evt.target.dataset.id, 10);
     const numberOfSelectedTrees = this.props.selectedTrees.length;
     const selectGroup = () => {
       this.props.deselectAllTrees();

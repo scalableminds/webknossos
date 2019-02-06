@@ -1,3 +1,4 @@
+// @noflow
 import * as THREE from "three";
 
 import { document } from "libs/window";

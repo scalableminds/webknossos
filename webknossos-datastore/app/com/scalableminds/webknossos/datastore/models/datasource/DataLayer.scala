@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
-import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.webknossos.datastore.dataformats.knossos.{KnossosDataLayer, KnossosSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MappingProvider}
@@ -23,11 +22,10 @@ object Category extends Enumeration {
 
   def fromElementClass(elementClass: ElementClass.Value): Category.Value = {
     elementClass match {
-      case ElementClass.uint8  => color
       case ElementClass.uint16 => segmentation
-      case ElementClass.uint24 => color
       case ElementClass.uint32 => segmentation
       case ElementClass.uint64 => segmentation
+      case _ => color
     }
   }
 
@@ -36,19 +34,41 @@ object Category extends Enumeration {
 
 object ElementClass extends Enumeration {
 
-  val uint8 = Value(1)
-  val uint16 = Value(2)
-  val uint24 = Value(3)
-  val uint32 = Value(4)
-  val uint64 = Value(8)
+  val uint8, uint16, uint24, uint32, uint64, float, double, int8, int16, int32, int64 = Value
 
   implicit val dataLayerElementClassFormat = Format(Reads.enumNameReads(ElementClass), Writes.enumNameWrites)
 
-  def bytesPerElement(elementClass: ElementClass.Value): Int = elementClass.id
+  def bytesPerElement(elementClass: ElementClass.Value): Int = elementClass match {
+    case ElementClass.uint8  => 1
+    case ElementClass.uint16 => 2
+    case ElementClass.uint24 => 3
+    case ElementClass.uint32 => 4
+    case ElementClass.uint64 => 8
+    case ElementClass.float => 4
+    case ElementClass.double => 8
+    case ElementClass.int8  => 1
+    case ElementClass.int16 => 2
+    case ElementClass.int32 => 4
+    case ElementClass.int64 => 8
+  }
 
-  def fromBytesPerElement(bytesPerElement: Int): Option[ElementClass.Value] = values.find(_.id == bytesPerElement)
+  /* ambiguous, we will always guess the unsigned integer options */
+  def guessFromBytesPerElement(bytesPerElement: Int): Option[ElementClass.Value] = bytesPerElement match {
+    case 1 => Some(ElementClass.uint8)
+    case 2 => Some(ElementClass.uint16)
+    case 3 => Some(ElementClass.uint24)
+    case 4 => Some(ElementClass.uint32)
+    case 8 => Some(ElementClass.uint64)
+    case _ => None
+  }
 
-  def maxValue(elementClass: ElementClass.Value): Long = 1L << (elementClass.id * 8L)
+  /* only used for segmentation layers, so only unsigned integers 8 16 32 64 */
+  def maxSegmentIdValue(elementClass: ElementClass.Value): Long = elementClass match {
+    case ElementClass.uint8 => 1L << 8L
+    case ElementClass.uint16 => 1L << 16L
+    case ElementClass.uint32 => 1L << 32L
+    case ElementClass.uint64 => 1L << 64L
+  }
 
   def fromString(s: String): Option[Value] = values.find(_.toString == s)
 }

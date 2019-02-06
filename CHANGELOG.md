@@ -9,6 +9,13 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 ## Unreleased
 [Commits](https://github.com/scalableminds/webknossos/compare/19.02.0...HEAD)
 
+### Added
+
+- Added the possibility to create volume annotation tasks. When creating a task type, select whether to create `volume` or `skeleton` tasks. Note that compound viewing for volume tasks is not supported yet. Same for creating volume tasks from uploaded nml/data files. [#3712](https://github.com/scalableminds/webknossos/pull/3712)
+
+### Changed
+
+
 ### Fixed
 
 - The modals for a new task description and recommended task settings are no longer shown in read-only tracings. [#3724](https://github.com/scalableminds/webknossos/pull/3724)

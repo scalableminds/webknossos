@@ -182,12 +182,24 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                 dataIndex="settings"
                 key="allowedModes"
                 width={100}
-                render={settings =>
-                  settings.allowedModes.map(mode => (
-                    <Tag key={mode} color={mode === settings.preferredMode ? "blue" : null}>
-                      {mode}
-                    </Tag>
-                  ))
+                render={(settings, taskType) =>
+                  [
+                    taskType.tracingType === "skeleton" ? (
+                      <Tag color="green" key="tracingType">
+                        skeleton
+                      </Tag>
+                    ) : (
+                      <Tag color="orange" key="tracingType">
+                        volume
+                      </Tag>
+                    ),
+                  ].concat(
+                    settings.allowedModes.map(mode => (
+                      <Tag key={mode} color={mode === settings.preferredMode ? "blue" : null}>
+                        {mode}
+                      </Tag>
+                    )),
+                  )
                 }
               />
               <Column

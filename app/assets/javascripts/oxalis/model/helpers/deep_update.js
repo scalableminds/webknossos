@@ -1,3 +1,4 @@
+// @noflow
 // Do not add a flow header to this file, typings exist in deep_update.js.flow
 // This module provides multiple methods to update deeply nested fields in StoreState.
 // In contrast to immutability-helper, flow will be able to completely type such calls.

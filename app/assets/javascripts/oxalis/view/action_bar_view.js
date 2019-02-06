@@ -24,8 +24,7 @@ import TracingActionsView, {
 } from "oxalis/view/action-bar/tracing_actions_view";
 import ViewModesView from "oxalis/view/action-bar/view_modes_view";
 import VolumeActionsView from "oxalis/view/action-bar/volume_actions_view";
-import renderIndependently from "libs/render_independently";
-import RegistrationModal from "admin/auth/registration_modal";
+import AuthenticationModal from "admin/auth/authentication_modal";
 
 const VersionRestoreWarning = (
   <Alert
@@ -51,12 +50,13 @@ type Props = {| ...OwnProps, ...StateProps |};
 
 type State = {
   isNewLayoutModalVisible: boolean,
+  isAuthenticationModalVisible: boolean,
 };
 
-// eslint-disable-next-line react/prefer-stateless-function
 class ActionBarView extends React.PureComponent<Props, State> {
   state = {
     isNewLayoutModalVisible: false,
+    isAuthenticationModalVisible: false,
   };
 
   handleResetLayout = () => {
@@ -83,32 +83,28 @@ class ActionBarView extends React.PureComponent<Props, State> {
     }
   };
 
+  createTracing = async () => {
+    const type = "hybrid";
+    const annotation = await createExplorational(this.props.dataset, type, true);
+    trackAction(`Create ${type} tracing (from view mode)`);
+    location.href = `${location.origin}/annotations/${annotation.typ}/${annotation.id}${
+      location.hash
+    }`;
+  };
+
   renderStartTracingButton(): React.Node {
     const needsAuthentication = this.props.activeUser == null;
 
-    const createTracing = async () => {
+    const handleCreateTracing = async () => {
       if (needsAuthentication) {
-        let hasRegistered = false;
-        await renderIndependently(destroy => (
-          <RegistrationModal
-            onOk={() => {
-              hasRegistered = true;
-            }}
-            destroy={destroy}
-          />
-        ));
-        if (!hasRegistered) return;
+        this.setState({ isAuthenticationModalVisible: true });
+      } else {
+        this.createTracing();
       }
-      const type = "hybrid";
-      const annotation = await createExplorational(this.props.dataset, type, true);
-      trackAction(`Create ${type} tracing (from view mode)`);
-      location.href = `${location.origin}/annotations/${annotation.typ}/${annotation.id}${
-        location.hash
-      }`;
     };
 
     return (
-      <ButtonComponent onClick={createTracing} style={{ marginLeft: 12 }} type="primary">
+      <ButtonComponent onClick={handleCreateTracing} style={{ marginLeft: 12 }} type="primary">
         Create Tracing
       </ButtonComponent>
     );
@@ -155,6 +151,14 @@ class ActionBarView extends React.PureComponent<Props, State> {
           addLayout={this.addNewLayout}
           visible={this.state.isNewLayoutModalVisible}
           onCancel={() => this.setState({ isNewLayoutModalVisible: false })}
+        />
+        <AuthenticationModal
+          onLoggedIn={() => {
+            this.setState({ isAuthenticationModalVisible: false });
+            this.createTracing();
+          }}
+          onCancel={() => this.setState({ isAuthenticationModalVisible: false })}
+          visible={this.state.isAuthenticationModalVisible}
         />
       </React.Fragment>
     );

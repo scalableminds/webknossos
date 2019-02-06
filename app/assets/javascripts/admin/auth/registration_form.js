@@ -1,9 +1,6 @@
 // @flow
-import { Form, Input, Button, Row, Col, Icon, Select, Checkbox, Alert } from "antd";
+import { Form, Input, Button, Row, Col, Icon, Select, Checkbox } from "antd";
 import React from "react";
-// This component should not use any react-router props or components
-// as it is rendered as part of the registration_modal which is not rendered
-// in the main react component tree (but instead using renderIndependently)
 
 import type { APIOrganization } from "admin/api_flow_types";
 import { loginUser, getOrganizations } from "admin/admin_rest_api";
@@ -25,7 +22,6 @@ type Props = {|
   hidePrivacyStatement?: boolean,
   tryAutoLogin?: boolean,
   onOrganizationNameNotFound?: () => void,
-  label?: string,
 |};
 
 type State = {
@@ -78,7 +74,8 @@ class RegistrationForm extends React.PureComponent<Props, State> {
           : "/api/auth/register",
         { data: formValues },
       );
-      const tryAutoLogin = this.props.tryAutoLogin || true;
+      // TODO: Check for organization autoLogin here
+      const tryAutoLogin = this.props.tryAutoLogin || false;
       if (tryAutoLogin) {
         const user = await loginUser({
           email: formValues.email,
@@ -160,11 +157,6 @@ class RegistrationForm extends React.PureComponent<Props, State> {
 
     return (
       <Form onSubmit={this.handleSubmit}>
-        {this.props.label && (
-          <FormItem>
-            <Alert message={this.props.label} type="info" showIcon />
-          </FormItem>
-        )}
         {this.getOrganizationFormField()}
         <Row gutter={8}>
           <Col span={12}>

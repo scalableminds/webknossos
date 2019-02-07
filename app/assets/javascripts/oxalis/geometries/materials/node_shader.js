@@ -7,6 +7,7 @@ import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Store from "oxalis/store";
+import shaderEditor from "oxalis/model/helpers/shader_editor";
 
 export const NodeTypes = {
   INVALID: 0.0,
@@ -28,7 +29,10 @@ class NodeShader {
       uniforms: this.uniforms,
       vertexShader: this.getVertexShader(),
       fragmentShader: this.getFragmentShader(),
+      transparent: true,
     });
+
+    shaderEditor.addMaterial("nodeFragment", this.material);
   }
 
   setupUniforms(treeColorTexture: THREE.DataTexture): void {
@@ -131,6 +135,7 @@ attribute float isCommented;
 // Since attributes are only supported in vertex shader, we pass the attribute into a
 // varying to use in the fragment shader
 varying float v_isHighlightedCommented;
+varying float v_isActiveNode;
 attribute float nodeId;
 attribute float treeId;
 
@@ -199,8 +204,8 @@ void main() {
     }
 
     // NODE COLOR FOR ACTIVE NODE
-    if (activeNodeId == nodeId) {
-      color = shiftHue(color, 0.25);
+    v_isActiveNode = activeNodeId == nodeId ? 1.0 : 0.0;
+    if (v_isActiveNode > 0.0) {
       gl_PointSize *= activeNodeScaleFactor;
     }
 
@@ -225,19 +230,39 @@ void main() {
 
   getFragmentShader(): string {
     return `
+#ifdef GL_OES_standard_derivatives
+#extension GL_OES_standard_derivatives : enable
+#endif
+
 precision highp float;
 
 varying vec3 color;
 varying float v_isHighlightedCommented;
+varying float v_isActiveNode;
 
 void main()
 {
     gl_FragColor = vec4(color, 1.0);
+
+    // Add border to nodes with comments
     vec2 centerDistance = abs(gl_PointCoord - vec2(0.5));
     bool isWithinBorder = centerDistance.x < 0.20 && centerDistance.y < 0.20;
     if (v_isHighlightedCommented > 0.0 && isWithinBorder) {
       gl_FragColor  = vec4(1.0);
     };
+
+    // Make active node round
+    if (v_isActiveNode > 0.0) {
+      float r = 0.0, delta = 0.0, alpha = 1.0;
+      vec2 cxy = 2.0 * gl_PointCoord - 1.0;
+      r = dot(cxy, cxy);
+      #ifdef GL_OES_standard_derivatives
+        delta = fwidth(r);
+        alpha = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r);
+      #endif
+
+      gl_FragColor = vec4(color, alpha);
+    }
 }`;
   }
 }

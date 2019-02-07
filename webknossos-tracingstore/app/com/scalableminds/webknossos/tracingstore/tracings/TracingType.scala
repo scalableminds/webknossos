@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
-import play.api.libs.json.{Format, Json, Reads, Writes}
+import play.api.libs.json._
 
 object TracingType extends Enumeration {
   val skeleton, volume, hybrid = Value

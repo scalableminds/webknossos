@@ -23,7 +23,7 @@ trait ProtoGeometryImplicits {
 
   implicit def boundingBoxOptFromProto(bbOpt: Option[ProtoBoundingBox]): Option[BoundingBox] = bbOpt.map(bb => BoundingBox(bb.topLeft, bb.width, bb.height, bb.depth))
 
-  implicit def elementClassToProto(ec: ElementClass.Value): ProtoElementClass = ProtoElementClass.fromValue(ec.id)
+  implicit def elementClassToProto(ec: ElementClass.Value): ProtoElementClass = ProtoElementClass.fromValue(ElementClass.bytesPerElement(ec))
 
-  implicit def elementClassFromProto(ec: ProtoElementClass): ElementClass.Value = ElementClass(ec.value)
+  implicit def elementClassFromProto(ec: ProtoElementClass): ElementClass.Value = ElementClass.guessFromBytesPerElement(ec.value).getOrElse(ElementClass.uint32)
 }

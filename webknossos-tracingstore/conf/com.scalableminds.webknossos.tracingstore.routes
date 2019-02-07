@@ -7,6 +7,7 @@ GET         /health                                              @com.scalablemi
 
 # Volume tracings
 POST        /volume/save                                        @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.save
+POST        /volume/saveMultiple                                @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.saveMultiple
 POST        /volume/:tracingId/initialData                      @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.initialData(tracingId: String)
 GET         /volume/:tracingId                                  @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.get(tracingId: String, version: Option[Long])
 POST        /volume/:tracingId/update                           @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.update(tracingId: String)
@@ -14,6 +15,7 @@ GET         /volume/:tracingId/allData                          @com.scalablemin
 POST        /volume/:tracingId/data                             @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.data(tracingId: String)
 GET         /volume/:tracingId/duplicate                        @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.duplicate(tracingId: String, version: Option[Long])
 GET         /volume/:tracingId/updateActionLog                  @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.updateActionLog(tracingId: String)
+POST        /volume/getMultiple                               @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getMultiple
 
 # Skeleton tracings
 POST        /skeleton/save                                      @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.save

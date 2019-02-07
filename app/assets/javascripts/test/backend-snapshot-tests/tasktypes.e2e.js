@@ -40,6 +40,7 @@ test("createTaskType and deleteTaskType", async t => {
       allowedModes: ["orthogonal"],
     },
     recommendedConfiguration: null,
+    tracingType: "skeleton",
   };
 
   const createdTaskType = await api.createTaskType(newTaskType);

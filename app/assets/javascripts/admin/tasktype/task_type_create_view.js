@@ -1,5 +1,5 @@
 // @flow
-import { Form, Checkbox, Input, Select, Card, Button } from "antd";
+import { Button, Card, Checkbox, Form, Input, Radio, Select } from "antd";
 import { type RouterHistory, withRouter } from "react-router-dom";
 import React from "react";
 import _ from "lodash";
@@ -15,6 +15,8 @@ import { jsonStringify } from "libs/utils";
 import RecommendedConfigurationView, {
   DEFAULT_RECOMMENDED_CONFIGURATION,
 } from "admin/tasktype/recommended_configuration_view";
+
+const RadioGroup = Radio.Group;
 
 const FormItem = Form.Item;
 const { Option } = Select;
@@ -94,10 +96,11 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
 
   render() {
     const { getFieldDecorator } = this.props.form;
-    const titlePrefix = this.props.taskTypeId ? "Update " : "Create";
+    const isEditingMode = this.props.taskTypeId != null;
+    const titlePrefix = isEditingMode ? "Update " : "Create";
 
     return (
-      <div className="container">
+      <div className="container" style={{ maxWidth: 1600, margin: "0 auto" }}>
         <Card title={<h3>{titlePrefix} Task Type</h3>}>
           <Form onSubmit={this.handleSubmit} layout="vertical">
             <FormItem label="Summary" hasFeedback>
@@ -152,6 +155,21 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
               })(<TextArea rows={10} />)}
             </FormItem>
 
+            <FormItem label="Tracing Type">
+              {getFieldDecorator("tracingType", {
+                initialValue: "skeleton",
+              })(
+                <RadioGroup>
+                  <Radio value="skeleton" disabled={isEditingMode}>
+                    Skeleton
+                  </Radio>
+                  <Radio value="volume" disabled={isEditingMode}>
+                    Volume
+                  </Radio>
+                </RadioGroup>,
+              )}
+            </FormItem>
+
             <FormItem label="Allowed Modes" hasFeedback>
               {getFieldDecorator("settings.allowedModes", {
                 rules: [{ required: true }],
@@ -170,18 +188,6 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
               )}
             </FormItem>
 
-            <FormItem label="Settings">
-              {getFieldDecorator("settings.somaClickingAllowed", {
-                valuePropName: "checked",
-              })(<Checkbox>Allow Single-node-tree mode (&quot;Soma clicking&quot;)</Checkbox>)}
-            </FormItem>
-
-            <FormItem>
-              {getFieldDecorator("settings.branchPointsAllowed", {
-                valuePropName: "checked",
-              })(<Checkbox>Allow Branchpoints</Checkbox>)}
-            </FormItem>
-
             <FormItem label="Preferred Mode" hasFeedback>
               {getFieldDecorator("settings.preferredMode")(
                 <Select allowClear optionFilterProp="children" style={{ width: "100%" }}>
@@ -192,6 +198,25 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
                 </Select>,
               )}
             </FormItem>
+
+            <div
+              style={{
+                display:
+                  this.props.form.getFieldValue("tracingType") === "skeleton" ? "block" : "none",
+              }}
+            >
+              <FormItem label="Settings">
+                {getFieldDecorator("settings.somaClickingAllowed", {
+                  valuePropName: "checked",
+                })(<Checkbox>Allow Single-node-tree mode (&quot;Soma clicking&quot;)</Checkbox>)}
+              </FormItem>
+
+              <FormItem>
+                {getFieldDecorator("settings.branchPointsAllowed", {
+                  valuePropName: "checked",
+                })(<Checkbox>Allow Branchpoints</Checkbox>)}
+              </FormItem>
+            </div>
 
             <FormItem>
               <RecommendedConfigurationView

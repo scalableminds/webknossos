@@ -244,13 +244,15 @@ class MappingInfoView extends React.Component<Props, State> {
 
         <div style={{ marginTop: 24, width: "50%", marginLeft: 16 }}>
           <div style={{ marginBottom: 6 }}>
-            <label className="setting-label">ID Mapping</label>
-            <Switch
-              onChange={this.handleSetMappingEnabled}
-              checked={this.state.shouldMappingBeEnabled}
-              style={{ float: "right" }}
-              loading={this.state.isRefreshingMappingList}
-            />
+            <label className="setting-label">
+              ID Mapping
+              <Switch
+                onChange={this.handleSetMappingEnabled}
+                checked={this.state.shouldMappingBeEnabled}
+                style={{ float: "right" }}
+                loading={this.state.isRefreshingMappingList}
+              />
+            </label>
           </div>
 
           {/*

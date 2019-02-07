@@ -1,6 +1,4 @@
 // @flow
-import _ from "lodash";
-
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState } from "oxalis/store";
 import { updateKey2 } from "oxalis/model/helpers/deep_update";

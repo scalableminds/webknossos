@@ -873,13 +873,13 @@ export async function getMappingsForDatasetLayer(
   datasetId: APIDatasetId,
   layerName: string,
 ): Promise<Array<string>> {
-  return doWithToken(token => {
-    return Request.receiveJSON(
+  return doWithToken(token =>
+    Request.receiveJSON(
       `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
         datasetId.name
       }/layers/${layerName}/mappings?token=${token}`,
-    );
-  });
+    ),
+  );
 }
 
 // #### Datastores

@@ -11,12 +11,13 @@ import messages from "messages";
 const FormItem = Form.Item;
 
 type Props = {
-  layout: "horizontal" | "inline",
+  layout: "horizontal" | "vertical" | "inline",
   form: Object,
   onLoggedIn?: () => void,
+  hideFooter?: boolean,
 };
 
-function LoginForm({ layout, form, onLoggedIn }: Props) {
+function LoginForm({ layout, form, onLoggedIn, hideFooter }: Props) {
   const { getFieldDecorator } = form;
   const resetStyle = layout === "horizontal" ? { float: "right" } : null;
   const linkStyle = layout === "inline" ? { paddingLeft: 10 } : null;
@@ -62,14 +63,16 @@ function LoginForm({ layout, form, onLoggedIn }: Props) {
           Log in
         </Button>
       </FormItem>
-      <FormItem>
-        <Link to="/auth/register" style={linkStyle}>
-          Register Now!
-        </Link>
-        <Link to="/auth/resetPassword" style={Object.assign({}, linkStyle, resetStyle)}>
-          Forgot Password
-        </Link>
-      </FormItem>
+      {hideFooter ? null : (
+        <FormItem>
+          <Link to="/auth/register" style={linkStyle}>
+            Register Now!
+          </Link>
+          <Link to="/auth/resetPassword" style={Object.assign({}, linkStyle, resetStyle)}>
+            Forgot Password
+          </Link>
+        </FormItem>
+      )}
     </Form>
   );
 }

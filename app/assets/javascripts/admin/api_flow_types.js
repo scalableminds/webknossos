@@ -395,6 +395,7 @@ export type APIOrganization = {
   +name: string,
   +additionalInformation: string,
   +displayName: string,
+  +enableAutoVerify: boolean,
 };
 
 export type APIBuildInfo = {

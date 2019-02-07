@@ -18,8 +18,12 @@ export default function AuthenticationModal({ onLoggedIn, onCancel, visible }: P
   const [step, setStep] = useState("Register");
 
   const showLogin = () => setStep("Login");
+  const showRegister = () => setStep("Register");
   const onRegistered = (isUserLoggedIn: boolean) => {
-    if (isUserLoggedIn) onLoggedIn();
+    if (isUserLoggedIn) {
+      onLoggedIn();
+      return;
+    }
     Toast.success(messages["auth.account_created"]);
     showLogin();
   };
@@ -40,7 +44,12 @@ export default function AuthenticationModal({ onLoggedIn, onCancel, visible }: P
           </a>
         </React.Fragment>
       ) : (
-        <LoginForm layout="inline" onLoggedIn={onLoggedIn} />
+        <React.Fragment>
+          <LoginForm layout="vertical" onLoggedIn={onLoggedIn} hideFooter />
+          <a href="#" onClick={showRegister}>
+            Don&apos;t have an account yet? Register here.
+          </a>
+        </React.Fragment>
       )}
     </Modal>
   );

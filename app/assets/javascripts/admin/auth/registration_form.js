@@ -74,8 +74,13 @@ class RegistrationForm extends React.PureComponent<Props, State> {
           : "/api/auth/register",
         { data: formValues },
       );
-      // TODO: Check for organization autoLogin here
-      const tryAutoLogin = this.props.tryAutoLogin || false;
+
+      const organization = this.state.organizations.find(
+        org => org.name === formValues.organization,
+      );
+      const autoVerified = organization != null ? organization.enableAutoVerify : false;
+
+      const tryAutoLogin = this.props.tryAutoLogin || autoVerified;
       if (tryAutoLogin) {
         const user = await loginUser({
           email: formValues.email,
@@ -129,6 +134,10 @@ class RegistrationForm extends React.PureComponent<Props, State> {
     }
 
     const { defaultOrganization } = features();
+    const doesDefaultOrganizationExist =
+      this.state.organizations.find(organization => organization.name === defaultOrganization) !=
+      null;
+
     return (
       <FormItem hasFeedback>
         {getFieldDecorator("organization", {
@@ -138,7 +147,7 @@ class RegistrationForm extends React.PureComponent<Props, State> {
               message: messages["auth.registration_org_input"],
             },
           ],
-          initialValue: defaultOrganization !== "" ? defaultOrganization : undefined,
+          initialValue: doesDefaultOrganizationExist ? defaultOrganization : undefined,
         })(
           <Select placeholder="Organization">
             {this.state.organizations.map(organization => (

@@ -383,12 +383,7 @@ class ReactRouter extends React.Component<Props> {
                 path="/auth/register"
                 render={({ location }: ContextRouter) => {
                   const params = Utils.getUrlParamsObjectFromString(location.search);
-                  return (
-                    <RegistrationView
-                      organizationName={params.organizationName}
-                      redirectUrl={params.redirectUrl}
-                    />
-                  );
+                  return <RegistrationView organizationName={params.organizationName} />;
                 }}
               />
 

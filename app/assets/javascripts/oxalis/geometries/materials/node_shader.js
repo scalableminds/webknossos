@@ -132,6 +132,8 @@ attribute float isCommented;
 // varying to use in the fragment shader
 varying float v_isHighlightedCommented;
 varying float v_isActiveNode;
+varying float v_innerPointSize;
+varying float v_outerPointSize;
 attribute float nodeId;
 attribute float treeId;
 
@@ -203,6 +205,9 @@ void main() {
     v_isActiveNode = activeNodeId == nodeId ? 1.0 : 0.0;
     if (v_isActiveNode > 0.0) {
       gl_PointSize *= activeNodeScaleFactor;
+      v_innerPointSize = gl_PointSize;
+      v_outerPointSize = (v_innerPointSize + 25.0) * activeNodeScaleFactor;
+      gl_PointSize = v_outerPointSize;
     }
 
     float isBranchpoint =
@@ -235,6 +240,8 @@ precision highp float;
 varying vec3 color;
 varying float v_isHighlightedCommented;
 varying float v_isActiveNode;
+varying float v_innerPointSize;
+varying float v_outerPointSize;
 
 void main()
 {
@@ -249,20 +256,21 @@ void main()
 
     // Make active node round and make center a white circle
     if (v_isActiveNode > 0.0) {
-      float r = 0.0, delta = 0.0, alpha1 = 1.0, alpha2 = 1.0;
-      float innerCircleRatio = 2.0;
+      float r = 0.0, delta = 0.0, alphaInner = 1.0, alphaOuter = 1.0;
       vec2 cxy = 2.0 * gl_PointCoord - 1.0;
       r = dot(cxy, cxy);
+
       #ifdef GL_OES_standard_derivatives
         delta = fwidth(r);
-        alpha1 = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r);
-        alpha2 = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, innerCircleRatio * r);
+        alphaOuter = 1.0 - smoothstep(0.0, delta, abs(1.0 - delta - r));
+        alphaInner = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r / (v_innerPointSize / v_outerPointSize));
+        alphaOuter = max(0.0, alphaOuter - alphaInner);
       #endif
 
-      vec4 inner = vec4(color, alpha1);
+      vec4 inner = vec4(color, alphaInner);
       // Make the outer ring white
-      vec4 outer = vec4(vec3(1.0), alpha2);
-      gl_FragColor = mix(inner, outer, alpha2);
+      vec4 outer = vec4(color, alphaOuter);
+      gl_FragColor = mix(inner, outer, alphaOuter);
     }
 }`;
   }

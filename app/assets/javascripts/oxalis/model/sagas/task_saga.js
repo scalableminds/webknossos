@@ -90,7 +90,8 @@ export default function* watchTasksAsync(): Saga<void> {
 
   const task = yield* select(state => state.task);
   const activeUser = yield* select(state => state.activeUser);
-  if (task == null || activeUser == null) return;
+  const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
+  if (task == null || activeUser == null || !allowUpdate) return;
 
   const { lastTaskTypeId } = activeUser;
   const isDifferentTaskType = lastTaskTypeId == null || lastTaskTypeId !== task.type.id;

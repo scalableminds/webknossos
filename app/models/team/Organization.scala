@@ -19,6 +19,7 @@ case class Organization(
     displayName: String,
     newUserMailingList: String = "",
     overTimeMailingList: String = "",
+    enableAutoVerify: Boolean = false,
     created: Long = System.currentTimeMillis(),
     isDeleted: Boolean = false
 )
@@ -31,6 +32,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO, teamDAO: T
         "id" -> organization._id.toString,
         "name" -> organization.name,
         "additionalInformation" -> organization.additionalInformation,
+        "enableAutoVerify" -> organization.enableAutoVerify,
         "displayName" -> organization.displayName
       ))
 
@@ -53,6 +55,7 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
                    r.displayname,
                    r.newusermailinglist,
                    r.overtimemailinglist,
+                   r.enableautoverify,
                    r.created.getTime,
                    r.isdeleted)
     )
@@ -80,8 +83,8 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
   def insertOne(o: Organization)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       r <- run(
-        sqlu"""insert into webknossos.organizations(_id, name, additionalInformation, logoUrl, displayName, newUserMailingList, overTimeMailingList, created, isDeleted)
-                  values(${o._id.id}, ${o.name}, ${o.additionalInformation}, ${o.logoUrl}, ${o.displayName}, ${o.newUserMailingList}, ${o.overTimeMailingList}, ${new java.sql.Timestamp(
+        sqlu"""insert into webknossos.organizations(_id, name, additionalInformation, logoUrl, displayName, newUserMailingList, overTimeMailingList, enableAutoVerify, created, isDeleted)
+                  values(${o._id.id}, ${o.name}, ${o.additionalInformation}, ${o.logoUrl}, ${o.displayName}, ${o.newUserMailingList}, ${o.overTimeMailingList}, ${o.enableAutoVerify}, ${new java.sql.Timestamp(
           o.created)}, ${o.isDeleted})
             """)
     } yield ()

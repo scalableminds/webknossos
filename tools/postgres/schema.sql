@@ -241,6 +241,7 @@ CREATE TABLE webknossos.organizations(
   displayName VARCHAR(1024) NOT NULL DEFAULT '',
   newUserMailingList VARCHAR(512) NOT NULL DEFAULT '',
   overTimeMailingList VARCHAR(512) NOT NULL DEFAULT '',
+  enableAutoVerify BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );

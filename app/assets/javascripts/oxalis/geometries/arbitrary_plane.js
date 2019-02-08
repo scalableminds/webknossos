@@ -5,7 +5,6 @@
 import * as THREE from "three";
 import _ from "lodash";
 
-// import { applyAspectRatioToWidth } from "oxalis/model/accessors/view_mode_accessor";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
 import Store from "oxalis/store";
@@ -38,7 +37,6 @@ class ArbitraryPlane {
   isDirty: boolean;
   stopStoreListening: () => void;
   materialFactory: PlaneMaterialFactory;
-  aspectRatio: number = 1;
 
   constructor() {
     this.isDirty = true;
@@ -73,14 +71,6 @@ class ArbitraryPlane {
         scene.add(mesh);
       }
     });
-  }
-
-  setAspectRatio(aspectRatio: number) {
-    this.aspectRatio = aspectRatio;
-    // const [xFactor, yFactor] = applyAspectRatioToWidth(1 / aspectRatio, 1);
-    // const scaleVec = new THREE.Vector3(xFactor, yFactor, 1);
-    // this.meshGroup.scale.copy(scaleVec);
-    // this.meshGroup.matrixWorldNeedsUpdate = true;
   }
 
   update() {

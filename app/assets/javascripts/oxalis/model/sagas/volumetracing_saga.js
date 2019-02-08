@@ -135,16 +135,16 @@ function* getBoundingsFromPosition(currentViewport: OrthoView): Saga<?BoundingBo
   const baseVoxelFactors = yield* select(state =>
     getBaseVoxelFactors(state.dataset.dataSource.scale),
   );
-  const viewportExtentXY = yield* select(state => {
+  const halfViewportExtentXY = yield* select(state => {
     const extents = getViewportExtents(state)[currentViewport];
     return map2(el => (el / 2) * zoom, extents);
   });
-  const viewportExtentUVW = Dimensions.transDim([...viewportExtentXY, 0], currentViewport);
+  const halfViewportExtentUVW = Dimensions.transDim([...halfViewportExtentXY, 0], currentViewport);
 
   const halfViewportBounds = V3.ceil([
-    viewportExtentUVW[0] * baseVoxelFactors[0],
-    viewportExtentUVW[1] * baseVoxelFactors[1],
-    viewportExtentUVW[2] * baseVoxelFactors[2],
+    halfViewportExtentUVW[0] * baseVoxelFactors[0],
+    halfViewportExtentUVW[1] * baseVoxelFactors[1],
+    halfViewportExtentUVW[2] * baseVoxelFactors[2],
   ]);
   return {
     min: V3.sub(position, halfViewportBounds),

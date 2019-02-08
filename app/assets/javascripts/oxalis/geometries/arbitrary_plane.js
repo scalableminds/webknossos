@@ -114,10 +114,6 @@ class ArbitraryPlane {
 
         mesh.matrix.identity();
 
-        // const [xFactor, yFactor] = applyAspectRatioToWidth(this.aspectRatio, 1);
-        // const aspectRatioMatrix = new THREE.Matrix4();
-        // aspectRatioMatrix.scale(new THREE.Vector3(xFactor, yFactor, 1));
-        // mesh.matrix.multiply(aspectRatioMatrix);
         mesh.matrix.multiply(meshMatrix);
         mesh.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
         mesh.matrixWorldNeedsUpdate = true;

@@ -154,13 +154,6 @@ export const calculateTotalBucketCountForZoomLevel = (
           TDView: [0, 0],
         };
 
-  const calculateAdditionalWSliceCount = ([x, y, z]) => {
-    const xy = x * y - (x + y - 1);
-    const xz = x * z - (2 * x + z - 2);
-    const yz = y * z - (2 * y + 2 * z - 4);
-    return xy + xz + yz;
-  };
-
   const maxDims = [0, 0, 0];
   for (const planeID of OrthoViewValuesWithoutTDView) {
     const [u, v] = Dimensions.getIndices(planeID);

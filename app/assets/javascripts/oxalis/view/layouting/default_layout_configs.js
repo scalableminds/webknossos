@@ -17,7 +17,7 @@ export const currentLayoutVersion = 7;
 export const layoutHeaderHeight = 20;
 export const headerHeight = 55;
 const dummyExtent = 500;
-export const show3DViewportInArbitrary = true;
+export const show3DViewportInArbitrary = false;
 
 const LayoutSettings = {
   showPopoutIcon: false,

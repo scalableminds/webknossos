@@ -300,7 +300,6 @@ export default class TextureBucketManager {
     // it's safe to assume that the values would only be smaller (since
     // fallback data doesn't require more buckets than non-fallback).
     // Consequently, these values should be fine to address buckets.
-    // todo: use fallback here maybe?
     const [sx, sy, sz] = addressSpaceDimensions.normal;
     const [_sx, _sy] = isFallbackBucket
       ? addressSpaceDimensions.fallback

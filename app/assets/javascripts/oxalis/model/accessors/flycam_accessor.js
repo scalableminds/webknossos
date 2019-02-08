@@ -48,7 +48,7 @@ function _approximateMaxZoomForZoomStep(
   // wk will at most zoom out until a zoom value of ZOOM_STEP_INTERVAL**maximumIterationCount.
   // With the current values, this would indicate a maximum zoom value of ~ 35 000, meaning
   // that ~ 15 different magnifications (~ log2 of 35000) are supported properly.
-  const maximumIterationCount = 100;
+  const maximumIterationCount = 120;
   let currentIterationCount = 0;
   // Since the viewports can be quite large, it can happen that even a zoom value of 1 is not feasible.
   // That's why we start the search with a smaller value than 1. We use the ZOOM_STEP_INTERVAL factor

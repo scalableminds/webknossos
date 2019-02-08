@@ -19,9 +19,9 @@ function ignoreContextMenu(event: SyntheticInputEvent<>) {
   event.preventDefault();
 }
 
-// makes the input catcher a square and returns its position within the document
-// relative to the rendering canvas
-function makeInputCatcherQuadratic(inputCatcherDOM: HTMLElement, makeQuadratic: boolean): Rect {
+// Is able to make the input catcher a square (if makeQuadratic is true)
+// and returns its position within the document relative to the rendering canvas
+function adaptInputCatcher(inputCatcherDOM: HTMLElement, makeQuadratic: boolean): Rect {
   const noneOverflowWrapper = inputCatcherDOM.closest(".gl-dont-overflow");
   if (!noneOverflowWrapper) {
     return { top: 0, left: 0, width: 0, height: 0 };
@@ -52,7 +52,7 @@ const renderedInputCatchers = new Map();
 
 export function recalculateInputCatcherSizes() {
   for (const [viewportID, inputCatcher] of renderedInputCatchers.entries()) {
-    const rect = makeInputCatcherQuadratic(inputCatcher, viewportID === ArbitraryViewport);
+    const rect = adaptInputCatcher(inputCatcher, viewportID === ArbitraryViewport);
     Store.dispatch(setInputCatcherRect(viewportID, rect));
   }
 }

@@ -11,7 +11,6 @@ import _ from "lodash";
 import type { MeshMetaData } from "admin/api_flow_types";
 import { V3 } from "libs/mjs";
 import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
-import { getInputCatcherAspectRatio } from "oxalis/model/accessors/view_mode_accessor";
 import {
   getPosition,
   getPlaneScalingFactor,
@@ -32,7 +31,6 @@ import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 import app from "app";
 import constants, {
-  ArbitraryViewport,
   type BoundingBoxType,
   type OrthoView,
   type OrthoViewMap,
@@ -334,8 +332,6 @@ class SceneController {
     if (optArbitraryPlane) {
       optArbitraryPlane.updateAnchorPoints(anchorPoint, fallbackAnchorPoint);
       optArbitraryPlane.setPosition(globalPosVec);
-      const aspectRatio = getInputCatcherAspectRatio(ArbitraryViewport);
-      optArbitraryPlane.setAspectRatio(aspectRatio);
     } else {
       for (const currentPlane of _.values(this.planes)) {
         currentPlane.updateAnchorPoints(anchorPoint, fallbackAnchorPoint);

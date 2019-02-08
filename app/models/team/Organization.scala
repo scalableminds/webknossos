@@ -48,16 +48,18 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
 
   def parse(r: OrganizationsRow): Fox[Organization] =
     Fox.successful(
-      Organization(ObjectId(r._Id),
-                   r.name,
-                   r.additionalinformation,
-                   r.logourl,
-                   r.displayname,
-                   r.newusermailinglist,
-                   r.overtimemailinglist,
-                   r.enableautoverify,
-                   r.created.getTime,
-                   r.isdeleted)
+      Organization(
+        ObjectId(r._Id),
+        r.name,
+        r.additionalinformation,
+        r.logourl,
+        r.displayname,
+        r.newusermailinglist,
+        r.overtimemailinglist,
+        r.enableautoverify,
+        r.created.getTime,
+        r.isdeleted
+      )
     )
 
   override def readAccessQ(requestingUserId: ObjectId) =

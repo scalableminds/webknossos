@@ -206,15 +206,18 @@ class MappingInfoView extends React.Component<Props, State> {
     if (this.state.didRefreshMappingList) {
       return;
     }
+    const { segmentationLayer } = this.props;
+    if (!segmentationLayer) {
+      return;
+    }
     this.setState({ isRefreshingMappingList: true });
-    const layerName = "segmentation";
     const mappings = await getMappingsForDatasetLayer(
       this.props.dataset.dataStore.url,
       this.props.dataset,
-      layerName,
+      segmentationLayer.name,
     );
-    this.props.setAvailableMappingsForLayer(layerName, mappings);
 
+    this.props.setAvailableMappingsForLayer(segmentationLayer.name, mappings);
     this.setState({ isRefreshingMappingList: false, didRefreshMappingList: true });
   }
 
@@ -237,6 +240,15 @@ class MappingInfoView extends React.Component<Props, State> {
       this.props.segmentationLayer != null && this.props.segmentationLayer.mappings != null
         ? this.props.segmentationLayer.mappings
         : [];
+
+    // Antd does not render the placeholder when a value is defined (even when it's null).
+    // That's why, we only pass the value when it's actually defined.
+    const selectValueProp =
+      this.props.mappingName != null
+        ? {
+            value: this.props.mappingName,
+          }
+        : {};
 
     return (
       <div id="volume-mapping-info" className="info-tab-content">
@@ -264,8 +276,9 @@ class MappingInfoView extends React.Component<Props, State> {
               placeholder="Select mapping"
               defaultActiveFirstOption={false}
               style={{ width: "100%" }}
-              value={this.props.mappingName}
+              {...selectValueProp}
               onChange={this.handleChangeMapping}
+              notFoundContent="No mappings found."
             >
               {availableMappings.map(mapping => (
                 <Option key={mapping} value={mapping}>

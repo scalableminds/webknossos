@@ -672,7 +672,7 @@ class DataApi {
     }
     Store.dispatch(
       setMappingAction(
-        "<code provided>",
+        "<custom mapping>",
         _.clone(mapping),
         options.colors,
         options.hideUnmappedIds,

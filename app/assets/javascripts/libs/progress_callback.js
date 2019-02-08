@@ -5,6 +5,17 @@ import { sleep } from "libs/utils";
 
 export type ProgressCallback = (isDone: boolean, progressState: string) => Promise<void>;
 
+// This function returns another function which can be called within a longer running
+// process to update the UI with progress information. Example usage:
+// const progressCallback = createProgressCallback({ pauseDelay: 100, successDelayMessage: 5000 });
+// await progressCallback(false, "Beginning work...")
+// ... long running code
+// await progressCallback(false, "First part done...")
+// ... long running code
+// await progressCallback(true, "Success!")
+//
+// The `progressCallback` should be awaited so that the UI can catch up
+// with rendering the actual feedback.
 export default function createProgressCallback(options: {
   pauseDelay: number,
   successMessageDelay: number,

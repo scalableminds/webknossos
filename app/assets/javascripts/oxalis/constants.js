@@ -123,6 +123,11 @@ export const addressSpaceDimensions = {
   fallback: [16, 16, 50],
 };
 
+export const Unicode = {
+  ThinSpace: "\u202f",
+  MultiplicationSymbol: "×",
+};
+
 const Constants = {
   ARBITRARY_VIEW: 4,
 

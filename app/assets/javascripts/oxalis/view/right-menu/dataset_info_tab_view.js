@@ -2,18 +2,17 @@
  * dataset_info_view.js
  * @flow
  */
+import type { Dispatch } from "redux";
 import { Table, Tooltip, Icon } from "antd";
 import { connect } from "react-redux";
 import Markdown from "react-remarkable";
 import React from "react";
-import type { Dispatch } from "redux";
 
 import { type APIDataset, APIAnnotationTypeEnum } from "admin/api_flow_types";
 import { aggregateBoundingBox } from "libs/utils";
 import { convertToHybridTracing } from "admin/admin_rest_api";
 import { formatScale } from "libs/format_utils";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
-import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import { location } from "libs/window";
 import {
@@ -24,7 +23,9 @@ import ButtonComponent from "oxalis/view/components/button_component";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import Model from "oxalis/model";
 import Store, { type Flycam, type OxalisState, type Task, type Tracing } from "oxalis/store";
-import constants, { ControlModeEnum } from "oxalis/constants";
+import { Unicode, ControlModeEnum } from "oxalis/constants";
+
+const { ThinSpace } = Unicode;
 
 type OwnProps = {|
   portalKey: string,
@@ -83,28 +84,21 @@ const shortcuts = [
   },
 ];
 
-export function calculateZoomLevel(flycam: Flycam, dataset: APIDataset): number {
-  // todo
-  const zoom = getZoomValue(flycam);
-  let width;
-  const { viewMode } = Store.getState().temporaryConfiguration;
-  if (constants.MODES_PLANE.includes(viewMode) || constants.MODES_ARBITRARY.includes(viewMode)) {
-    width = constants.VIEWPORT_WIDTH;
-  } else {
-    throw new Error(`Model mode not recognized: ${viewMode}`);
-  }
-  // unit is nm
-  const baseVoxel = getBaseVoxel(dataset.dataSource.scale);
-  return zoom * width * baseVoxel;
+export function convertPixelsToNm(
+  lengthInPixel: number,
+  zoomValue: number,
+  dataset: APIDataset,
+): number {
+  return lengthInPixel * zoomValue * getBaseVoxel(dataset.dataSource.scale);
 }
 
 export function formatNumberToLength(zoomLevel: number): string {
   if (zoomLevel < 1000) {
-    return `${zoomLevel.toFixed(0)} nm`;
+    return `${zoomLevel.toFixed(0)}${ThinSpace}nm`;
   } else if (zoomLevel < 1000000) {
-    return `${(zoomLevel / 1000).toFixed(1)} μm`;
+    return `${(zoomLevel / 1000).toFixed(1)}${ThinSpace}μm`;
   } else {
-    return `${(zoomLevel / 1000000).toFixed(1)} mm`;
+    return `${(zoomLevel / 1000000).toFixed(1)}${ThinSpace}mm`;
   }
 }
 
@@ -133,9 +127,9 @@ function getDatasetExtentInLength(dataset: APIDataset) {
 }
 
 function formatExtentWithLength(extent: Object, formattingFunction: number => string) {
-  return `${formattingFunction(extent.width)} x ${formattingFunction(
+  return `${formattingFunction(extent.width)}\u2009×\u2009${formattingFunction(
     extent.height,
-  )} x ${formattingFunction(extent.depth)}`;
+  )}\u2009×\u2009${formattingFunction(extent.depth)}`;
 }
 
 class DatasetInfoTabView extends React.PureComponent<Props> {

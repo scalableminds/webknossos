@@ -87,7 +87,9 @@ class InputCatcher extends React.PureComponent<Props, {}> {
           className={`inputcatcher ${viewportID}`}
           style={{ position: "relative" }}
         >
-          {this.props.displayScalebars ? <Scalebar /> : null}
+          {this.props.displayScalebars && viewportID !== "arbitraryViewport" ? (
+            <Scalebar viewportID={viewportID} />
+          ) : null}
           {this.props.children}
         </div>
       </div>

@@ -4,7 +4,11 @@ import PriorityQueue from "js-priority-queue";
 import * as THREE from "three";
 import _ from "lodash";
 
-import { type Area, getAreas, getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
+import {
+  type Area,
+  getAreasFromState,
+  getZoomedMatrix,
+} from "oxalis/model/accessors/flycam_accessor";
 import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { M4x4 } from "libs/mjs";
 import { getResolutions, getByteCount } from "oxalis/model/accessors/dataset_accessor";
@@ -43,21 +47,20 @@ function getSubBucketLocality(position: Vector3, resolution: Vector3): Vector3 {
 
 function consumeBucketsFromPriorityQueue(
   queue: PriorityQueue,
+  cube: DataCube,
   capacity: number,
 ): Array<{ priority: number, bucket: DataBucket }> {
-  // Use bucketSet to only get unique buckets from the priority queue.
-  // Don't use {bucket, priority} as set elements, as the instances will always be unique
-  const bucketSet = new Set();
   const bucketsWithPriorities = [];
   // Consume priority queue until we maxed out the capacity
   while (bucketsWithPriorities.length < capacity) {
     if (queue.length === 0) {
       break;
     }
-    const bucketWithPriority = queue.dequeue();
-    if (!bucketSet.has(bucketWithPriority.bucket)) {
-      bucketSet.add(bucketWithPriority.bucket);
-      bucketsWithPriorities.push(bucketWithPriority);
+    const { bucketAddress, priority } = queue.dequeue();
+    const bucket = cube.getOrCreateBucket(bucketAddress);
+
+    if (bucket.type !== "null") {
+      bucketsWithPriorities.push({ bucket, priority });
     }
   }
   return bucketsWithPriorities;
@@ -84,6 +87,7 @@ export default class LayerRenderingManager {
     anchorPoint: [0, 0, 0, 0],
     fallbackAnchorPoint: [0, 0, 0, 0],
   };
+
   name: string;
   isSegmentation: boolean;
   needsRefresh: boolean = false;
@@ -157,7 +161,7 @@ export default class LayerRenderingManager {
     }
 
     const subBucketLocality = getSubBucketLocality(position, getResolutions(dataset)[logZoomStep]);
-    const areas = getAreas(Store.getState());
+    const areas = getAreasFromState(Store.getState());
 
     const matrix = getZoomedMatrix(Store.getState().flycam);
 
@@ -191,44 +195,47 @@ export default class LayerRenderingManager {
         // small priorities take precedence
         comparator: (b, a) => b.priority - a.priority,
       });
+      const enqueueFunction = (bucketAddress, priority) => {
+        bucketQueue.queue({ bucketAddress, priority });
+      };
+      const abortLimit = -1;
 
       if (!isInvisible) {
-        if (viewMode === constants.MODE_ARBITRARY_PLANE) {
-          determineBucketsForOblique(
-            this.cube,
-            bucketQueue,
-            matrix,
-            logZoomStep,
-            fallbackZoomStep,
-            isFallbackAvailable,
-          );
-        } else if (viewMode === constants.MODE_ARBITRARY) {
-          determineBucketsForFlight(
-            this.cube,
-            bucketQueue,
-            matrix,
-            logZoomStep,
-            fallbackZoomStep,
-            isFallbackAvailable,
-          );
-        } else {
-          determineBucketsForOrthogonal(
-            Store.getState().dataset,
-            this.cube,
-            bucketQueue,
-            logZoomStep,
-            fallbackZoomStep,
-            isFallbackAvailable,
-            this.anchorPointCache.anchorPoint,
-            this.anchorPointCache.fallbackAnchorPoint,
-            areas,
-            subBucketLocality,
-          );
-        }
+        // if (viewMode === constants.MODE_ARBITRARY_PLANE) {
+        //   determineBucketsForOblique(
+        //     this.cube,
+        //     enqueueFunction,
+        //     matrix,
+        //     logZoomStep,
+        //     fallbackZoomStep,
+        //     isFallbackAvailable,
+        //   );
+        // } else if (viewMode === constants.MODE_ARBITRARY) {
+        //   determineBucketsForFlight(
+        //     this.cube,
+        //     enqueueFunction,
+        //     matrix,
+        //     logZoomStep,
+        //     fallbackZoomStep,
+        //     isFallbackAvailable,
+        //   );
+        // } else {
+        determineBucketsForOrthogonal(
+          getResolutions(Store.getState().dataset),
+          enqueueFunction,
+          logZoomStep,
+          this.anchorPointCache.anchorPoint,
+          this.anchorPointCache.fallbackAnchorPoint,
+          areas,
+          subBucketLocality,
+          abortLimit,
+        );
+        // }
       }
 
       const bucketsWithPriorities = consumeBucketsFromPriorityQueue(
         bucketQueue,
+        this.cube,
         this.textureBucketManager.maximumCapacity,
       );
 

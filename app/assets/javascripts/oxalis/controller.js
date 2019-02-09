@@ -274,7 +274,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
         />
       );
     }
-    const allowedModes = Store.getState().tracing.restrictions.allowedModes;
+    const { allowedModes } = Store.getState().tracing.restrictions;
     const mode = this.props.viewMode;
 
     if (!allowedModes.includes(mode)) {

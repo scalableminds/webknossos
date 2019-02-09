@@ -4,7 +4,12 @@ import * as THREE from "three";
 
 import type { PartialCameraData } from "oxalis/store";
 import { getTDViewportSize } from "oxalis/model/accessors/view_mode_accessor";
-import constants, { type OrthoView, type Rect, type Viewport } from "oxalis/constants";
+import constants, {
+  type OrthoView,
+  type Rect,
+  type Viewport,
+  type ViewportRects,
+} from "oxalis/constants";
 
 type SetViewportAction = {
   type: "SET_VIEWPORT",
@@ -38,6 +43,11 @@ type SetInputCatcherRect = {
   type: "SET_INPUT_CATCHER_RECT",
   viewport: Viewport,
   rect: Rect,
+};
+
+type SetInputCatcherRects = {
+  type: "SET_INPUT_CATCHER_RECTS",
+  viewportRects: ViewportRects,
 };
 
 export const setViewportAction = (viewport: OrthoView): SetViewportAction => ({
@@ -85,12 +95,18 @@ export const setInputCatcherRect = (viewport: Viewport, rect: Rect): SetInputCat
   rect,
 });
 
+export const setInputCatcherRects = (viewportRects: ViewportRects): SetInputCatcherRects => ({
+  type: "SET_INPUT_CATCHER_RECTS",
+  viewportRects,
+});
+
 export type ViewModeAction =
   | SetViewportAction
   | SetTDCameraAction
   | CenterTDViewAction
   | ZoomTDViewAction
   | MoveTDViewByVectorAction
-  | SetInputCatcherRect;
+  | SetInputCatcherRect
+  | SetInputCatcherRects;
 
 export default {};

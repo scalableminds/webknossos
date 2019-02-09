@@ -108,7 +108,7 @@ class ArbitraryController extends React.PureComponent<Props> {
               ),
             );
           } else if (this.props.viewMode === constants.MODE_ARBITRARY_PLANE) {
-            const [scaleX, scaleY] = getViewportScale(ArbitraryViewport);
+            const [scaleX, scaleY] = getViewportScale(Store.getState(), ArbitraryViewport);
             const fx = Store.getState().flycam.zoomStep / scaleX;
             const fy = Store.getState().flycam.zoomStep / scaleY;
             Store.dispatch(moveFlycamAction([delta.x * fx, delta.y * fy, 0]));

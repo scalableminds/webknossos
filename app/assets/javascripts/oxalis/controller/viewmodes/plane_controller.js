@@ -413,7 +413,7 @@ class PlaneController extends React.PureComponent<Props> {
 
   zoomTDView(value: number): void {
     const zoomToPosition = null;
-    const { width, height } = getInputCatcherRect(OrthoViews.TDView);
+    const { width, height } = getInputCatcherRect(Store.getState(), OrthoViews.TDView);
     Store.dispatch(zoomTDViewAction(value, zoomToPosition, width, height));
   }
 
@@ -557,8 +557,8 @@ export function calculateGlobalPos(clickPos: Point2): Vector3 {
   const state = Store.getState();
   const { activeViewport } = state.viewModeData.plane;
   const curGlobalPos = getPosition(state.flycam);
-  const zoomFactors = getPlaneScalingFactor(state.flycam, activeViewport);
-  const viewportScale = getViewportScale(activeViewport);
+  const zoomFactors = getPlaneScalingFactor(state, state.flycam, activeViewport);
+  const viewportScale = getViewportScale(state, activeViewport);
   const planeRatio = getBaseVoxelFactors(state.dataset.dataSource.scale);
 
   const center = [0, 1].map(dim => (constants.VIEWPORT_WIDTH * viewportScale[dim]) / 2);

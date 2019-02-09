@@ -119,7 +119,7 @@ class PlaneView {
     const { renderer } = SceneController;
 
     renderer.autoClear = true;
-    let { width, height } = getInputCatcherRect(plane);
+    let { width, height } = getInputCatcherRect(Store.getState(), plane);
     width = Math.round(width);
     height = Math.round(height);
 
@@ -154,11 +154,12 @@ class PlaneView {
 
       this.trigger("render");
 
+      const storeState = Store.getState();
       const viewport = {
-        [OrthoViews.PLANE_XY]: getInputCatcherRect("PLANE_XY"),
-        [OrthoViews.PLANE_YZ]: getInputCatcherRect("PLANE_YZ"),
-        [OrthoViews.PLANE_XZ]: getInputCatcherRect("PLANE_XZ"),
-        [OrthoViews.TDView]: getInputCatcherRect("TDView"),
+        [OrthoViews.PLANE_XY]: getInputCatcherRect(storeState, "PLANE_XY"),
+        [OrthoViews.PLANE_YZ]: getInputCatcherRect(storeState, "PLANE_YZ"),
+        [OrthoViews.PLANE_XZ]: getInputCatcherRect(storeState, "PLANE_XZ"),
+        [OrthoViews.TDView]: getInputCatcherRect(storeState, "TDView"),
       };
 
       renderer.autoClear = true;

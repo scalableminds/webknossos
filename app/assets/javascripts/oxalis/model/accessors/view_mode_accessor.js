@@ -16,12 +16,12 @@ export function getTDViewportSize(): [number, number] {
   return [camera.right - camera.left, camera.top - camera.bottom];
 }
 
-export function getInputCatcherRect(viewport: Viewport): Rect {
+export function getInputCatcherRect(state: OxalisState, viewport: Viewport): Rect {
   if (viewport === ArbitraryViewport) {
-    return Store.getState().viewModeData.arbitrary.inputCatcherRect;
+    return state.viewModeData.arbitrary.inputCatcherRect;
   } else {
     // $FlowFixMe Flow does not understand that viewport cannot be ArbitraryViewport at this point
-    return Store.getState().viewModeData.plane.inputCatcherRects[viewport];
+    return state.viewModeData.plane.inputCatcherRects[viewport];
   }
 }
 
@@ -35,13 +35,17 @@ const _getViewportExtents = memoizeOne(rects => {
   };
 });
 
+export function getViewportRects(state: OxalisState) {
+  return state.viewModeData.plane.inputCatcherRects;
+}
+
 export function getViewportExtents(state: OxalisState): OrthoViewExtents {
   const rects = state.viewModeData.plane.inputCatcherRects;
   return _getViewportExtents(rects);
 }
 
-export function getInputCatcherAspectRatio(viewport: Viewport): number {
-  const { width, height } = getInputCatcherRect(viewport);
+export function getInputCatcherAspectRatio(state: OxalisState, viewport: Viewport): number {
+  const { width, height } = getInputCatcherRect(state, viewport);
   return width / height;
 }
 
@@ -64,8 +68,8 @@ export function getInputCatcherAspectRatio(viewport: Viewport): number {
 // }
 
 // Returns the ratio between VIEWPORT_WIDTH and the actual extent of the viewport for width and height
-export function getViewportScale(viewport: Viewport): [number, number] {
-  const { width, height } = getInputCatcherRect(viewport);
+export function getViewportScale(state: OxalisState, viewport: Viewport): [number, number] {
+  const { width, height } = getInputCatcherRect(state, viewport);
   // For the orthogonal views the CSS border width was subtracted before, so we'll need to
   // add it back again to get an accurate scale
   const borderWidth = viewport === ArbitraryViewport ? 0 : OUTER_CSS_BORDER;

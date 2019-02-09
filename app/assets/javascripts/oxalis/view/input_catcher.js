@@ -3,7 +3,7 @@
 import * as React from "react";
 
 import { ArbitraryViewport, type Rect, type Viewport } from "oxalis/constants";
-import { setInputCatcherRect } from "oxalis/model/actions/view_mode_actions";
+import { setInputCatcherRects } from "oxalis/model/actions/view_mode_actions";
 import Scalebar from "oxalis/view/scalebar";
 import Store from "oxalis/store";
 import makeRectRelativeToCanvas from "oxalis/view/layouting/layout_canvas_adapter";
@@ -51,10 +51,12 @@ function adaptInputCatcher(inputCatcherDOM: HTMLElement, makeQuadratic: boolean)
 const renderedInputCatchers = new Map();
 
 export function recalculateInputCatcherSizes() {
+  const viewportRects = {};
   for (const [viewportID, inputCatcher] of renderedInputCatchers.entries()) {
     const rect = adaptInputCatcher(inputCatcher, viewportID === ArbitraryViewport);
-    Store.dispatch(setInputCatcherRect(viewportID, rect));
+    viewportRects[viewportID] = rect;
   }
+  Store.dispatch(setInputCatcherRects(viewportRects));
 }
 
 class InputCatcher extends React.PureComponent<Props, {}> {

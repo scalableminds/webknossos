@@ -39,7 +39,8 @@ export const OrthoViews = {
 };
 export type OrthoView = $Keys<typeof OrthoViews>;
 export type OrthoViewMap<T> = { [key: OrthoView]: T };
-export type OrthoViewExtents = OrthoViewMap<Vector2>;
+export type OrthoViewExtents = $ReadOnly<OrthoViewMap<Vector2>>;
+export type OrthoViewRects = $ReadOnly<OrthoViewMap<Rect>>;
 
 export const ArbitraryViewport = "arbitraryViewport";
 export const ArbitraryViews = {
@@ -50,6 +51,11 @@ export type ArbitraryView = $Keys<typeof ArbitraryViews>;
 export type ArbitraryViewMap<T> = { [key: ArbitraryView]: T };
 
 export type Viewport = OrthoView | typeof ArbitraryViewport;
+
+export type ViewportMap<T> = { [key: Viewport]: T };
+export type ViewportExtents = $ReadOnly<ViewportMap<Vector2>>;
+export type ViewportRects = $ReadOnly<ViewportMap<Rect>>;
+
 export const OrthoViewValues: Array<OrthoView> = Object.keys(OrthoViews);
 export const OrthoViewIndices = {
   PLANE_XY: OrthoViewValues.indexOf("PLANE_XY"),

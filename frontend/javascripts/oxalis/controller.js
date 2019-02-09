@@ -143,7 +143,9 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 
     app.vent.trigger("webknossos:ready");
     Store.dispatch(wkReadyAction());
-    this.setState({ ready: true });
+    setTimeout(() => {
+      this.setState({ ready: true });
+    }, 500);
   }
 
   async initTaskScript() {
@@ -269,21 +271,39 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   render() {
     if (!this.state.ready) {
       return (
-        <Spin
-          spinning
-          size="large"
+        <div
           style={{
-            position: "fixed",
-            top: "64px",
-            left: "0px",
-            right: "0px",
-            bottom: "0px",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 1000,
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            background: "rgba(255, 255, 255, 0.99",
+            zIndex: 300,
           }}
-        />
+        >
+          <div className="Aligner" style={{ height: "80%" }}>
+            <div className="Aligner-item Aligner-item--fixed">
+              <div style={{ width: 375 }}>
+                <img
+                  src="/images/brain.png"
+                  alt="Abstract brain"
+                  style={{
+                    width: 375,
+                    height: 299,
+                    marginLeft: "auto",
+                    marginRight: "auto",
+                    marginTop: "10%",
+                  }}
+                />
+                <div
+                  className="loader"
+                  style={{ width: "80%", marginLeft: "auto", marginRight: "auto", marginTop: 30 }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
       );
     }
     const { allowedModes } = Store.getState().tracing.restrictions;

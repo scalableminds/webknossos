@@ -193,7 +193,6 @@ export function* sendRequestToServer(
       window.onbeforeunload = null;
       yield* call(alert, messages["save.failed_simultaneous_tracing"]);
       location.reload();
-      console.log("boom");
       return;
     }
     yield* race({

@@ -9,7 +9,7 @@ import React from "react";
 import type { APIUser } from "admin/api_flow_types";
 import { getBuildInfo } from "admin/admin_rest_api";
 import { logoutUserAction } from "oxalis/model/actions/user_actions";
-import LoginView from "admin/auth/login_view";
+import LoginForm from "admin/auth/login_form";
 import Request from "libs/request";
 import Store, { type OxalisState } from "oxalis/store";
 import * as Utils from "libs/utils";
@@ -217,7 +217,7 @@ class Navbar extends React.PureComponent<PropsWithRouter, State> {
                     <Link to="/auth/token">Auth Token</Link>
                   </Menu.Item>
                   <Menu.Item key="logout">
-                    <Link to="/" onClick={this.handleLogout}>
+                    <Link to="/spotlight" onClick={this.handleLogout}>
                       Logout
                     </Link>
                   </Menu.Item>
@@ -227,7 +227,7 @@ class Navbar extends React.PureComponent<PropsWithRouter, State> {
         </Menu>
         {!(isAuthenticated || features().hideNavbarLogin) ? (
           <div style={{ flex: 1, display: "flex", justifyContent: "flex-end" }}>
-            <LoginView layout="inline" redirect={this.props.history.location.pathname} />
+            <LoginForm layout="inline" />
           </div>
         ) : null}
       </Header>

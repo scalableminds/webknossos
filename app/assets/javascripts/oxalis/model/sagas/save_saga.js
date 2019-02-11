@@ -45,7 +45,8 @@ import window, { alert, document, location } from "libs/window";
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
 
 const PUSH_THROTTLE_TIME = 30000; // 30s
-const SAVE_RETRY_WAITING_TIME = 5000;
+const SAVE_RETRY_WAITING_TIME = 2000;
+const MAX_SAVE_RETRY_WAITING_TIME = 300000; // 5m
 const UNDO_HISTORY_SIZE = 100;
 
 export const maximumActionCountPerBatch = 5000;
@@ -101,7 +102,7 @@ export function* pushTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
   yield* take(
     tracingType === "skeleton" ? "INITIALIZE_SKELETONTRACING" : "INITIALIZE_VOLUMETRACING",
   );
-  yield* put(setLastSaveTimestampAction(undefined, tracingType));
+  yield* put(setLastSaveTimestampAction(tracingType));
   while (true) {
     let saveQueue;
     // Check whether the save queue is actually empty, the PUSH_SAVE_QUEUE action
@@ -109,7 +110,6 @@ export function* pushTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
 
     saveQueue = yield* select(state => state.save.queue[tracingType]);
     if (saveQueue.length === 0) {
-      yield* put(setSaveBusyAction(false, tracingType));
       // Save queue is empty, wait for push event
       yield* take("PUSH_SAVE_QUEUE");
     }
@@ -122,6 +122,7 @@ export function* pushTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
     if (saveQueue.length > 0) {
       yield* call(sendRequestToServer, tracingType);
     }
+    yield* put(setSaveBusyAction(false, tracingType));
   }
 }
 
@@ -151,9 +152,14 @@ function sliceAppropriateBatchCount(batches: Array<SaveQueueEntry>): Array<SaveQ
   return slicedBatches;
 }
 
+function getRetryWaitTime(retryCount: number) {
+  // Exponential backoff up until MAX_SAVE_RETRY_WAITING_TIME
+  return Math.min(2 ** retryCount * SAVE_RETRY_WAITING_TIME, MAX_SAVE_RETRY_WAITING_TIME);
+}
+
 export function* sendRequestToServer(
   tracingType: "skeleton" | "volume",
-  timestamp: number = Date.now(),
+  retryCount: number = 0,
 ): Saga<void> {
   const fullSaveQueue = yield* select(state => state.save.queue[tracingType]);
   const saveQueue = sliceAppropriateBatchCount(fullSaveQueue);
@@ -171,13 +177,13 @@ export function* sendRequestToServer(
       `${tracingStoreUrl}/tracings/${type}/${tracingId}/update?token=`,
       {
         method: "POST",
-        headers: { "X-Date": `${timestamp}` },
+        headers: { "X-Date": `${Date.now()}` },
         data: compactedSaveQueue,
         compress: true,
       },
     );
     yield* put(setVersionNumberAction(version + compactedSaveQueue.length, tracingType));
-    yield* put(setLastSaveTimestampAction(undefined, tracingType));
+    yield* put(setLastSaveTimestampAction(tracingType));
     yield* put(shiftSaveQueueAction(saveQueue.length, tracingType));
     yield* call(toggleErrorHighlighting, false);
   } catch (error) {
@@ -189,8 +195,11 @@ export function* sendRequestToServer(
       location.reload();
       return;
     }
-    yield* call(delay, SAVE_RETRY_WAITING_TIME);
-    yield* call(sendRequestToServer, tracingType);
+    yield* race({
+      timeout: _call(delay, getRetryWaitTime(retryCount)),
+      forcePush: _take("SAVE_NOW"),
+    });
+    yield* call(sendRequestToServer, tracingType, retryCount + 1);
   }
 }
 

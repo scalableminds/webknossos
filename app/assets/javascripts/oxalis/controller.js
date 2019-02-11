@@ -199,13 +199,13 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
         "super + s": event => {
           event.preventDefault();
           event.stopPropagation();
-          Model.save();
+          Model.forceSave();
         },
 
         "ctrl + s": event => {
           event.preventDefault();
           event.stopPropagation();
-          Model.save();
+          Model.forceSave();
         },
 
         // Undo

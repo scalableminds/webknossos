@@ -32,7 +32,7 @@ import UrlManager from "oxalis/controller/url_manager";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
 import app from "app";
-import constants, { ControlModeEnum, type Mode } from "oxalis/constants";
+import constants, { ControlModeEnum, type ViewMode } from "oxalis/constants";
 import messages from "messages";
 import window, { document } from "libs/window";
 
@@ -41,7 +41,7 @@ type OwnProps = {|
   initialCommandType: TraceOrViewCommand,
 |};
 type StateProps = {|
-  viewMode: Mode,
+  viewMode: ViewMode,
 |};
 type Props = {| ...OwnProps, ...StateProps |};
 type PropsWithRouter = {| ...Props, history: RouterHistory |};
@@ -274,7 +274,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
         />
       );
     }
-    const allowedModes = Store.getState().tracing.restrictions.allowedModes;
+    const { allowedModes } = Store.getState().tracing.restrictions;
     const mode = this.props.viewMode;
 
     if (!allowedModes.includes(mode)) {

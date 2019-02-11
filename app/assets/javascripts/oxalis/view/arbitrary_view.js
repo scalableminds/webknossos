@@ -176,8 +176,9 @@ class ArbitraryView {
 
       clearCanvas(renderer);
 
+      const storeState = Store.getState();
       const renderViewport = (viewport, _camera) => {
-        const { left, top, width, height } = getInputCatcherRect(viewport);
+        const { left, top, width, height } = getInputCatcherRect(storeState, viewport);
         if (width > 0 && height > 0) {
           setupRenderArea(renderer, left, top, width, height, 0xffffff);
           renderer.render(scene, _camera);
@@ -211,7 +212,7 @@ class ArbitraryView {
     const { renderer, scene } = getSceneController();
 
     renderer.autoClear = true;
-    let { width, height } = getInputCatcherRect(ArbitraryViewport);
+    let { width, height } = getInputCatcherRect(Store.getState(), ArbitraryViewport);
     width = Math.round(width);
     height = Math.round(height);
 

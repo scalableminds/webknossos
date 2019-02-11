@@ -23,7 +23,7 @@ import {
 } from "oxalis/model/actions/settings_actions";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import constants, { type ControlMode, ControlModeEnum, type Mode } from "oxalis/constants";
+import constants, { type ControlMode, ControlModeEnum, type ViewMode } from "oxalis/constants";
 import messages, { settings } from "messages";
 import type { APIDataset } from "admin/api_flow_types";
 
@@ -39,7 +39,7 @@ type DatasetSettingsProps = {|
     propertyName: $Keys<DatasetLayerConfiguration>,
     value: any,
   ) => void,
-  viewMode: Mode,
+  viewMode: ViewMode,
   controlMode: ControlMode,
   hasSegmentation: boolean,
 |};

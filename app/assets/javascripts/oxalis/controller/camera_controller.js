@@ -10,7 +10,10 @@ import _ from "lodash";
 
 import { getInputCatcherAspectRatio } from "oxalis/model/accessors/view_mode_accessor";
 import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
-import { getPlaneExtentInVoxel, getPosition } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getPlaneExtentInVoxelFromStore,
+  getPosition,
+} from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { setTDCameraAction } from "oxalis/model/actions/view_mode_actions";
 import { voxelToNm, getBaseVoxel } from "oxalis/model/scaleinfo";
@@ -61,9 +64,11 @@ class CameraController extends React.PureComponent<Props> {
     const { clippingDistance } = state.userConfiguration;
     const scaleFactor = getBaseVoxel(state.dataset.dataSource.scale);
     for (const planeId of OrthoViewValuesWithoutTDView) {
-      const [width, height] = getPlaneExtentInVoxel(state.flycam, planeId).map(
-        x => x * scaleFactor,
-      );
+      const [width, height] = getPlaneExtentInVoxelFromStore(
+        state,
+        state.flycam.zoomStep,
+        planeId,
+      ).map(x => x * scaleFactor);
 
       this.props.cameras[planeId].left = -width / 2;
       this.props.cameras[planeId].right = width / 2;
@@ -157,7 +162,7 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
   const b = voxelToNm(dataset.dataSource.scale, getBoundaries(dataset).upperBoundary);
   const pos = voxelToNm(dataset.dataSource.scale, getPosition(state.flycam));
 
-  const aspectRatio = getInputCatcherAspectRatio(OrthoViews.TDView);
+  const aspectRatio = getInputCatcherAspectRatio(state, OrthoViews.TDView);
 
   let to: TweenState;
   if (id === OrthoViews.TDView) {

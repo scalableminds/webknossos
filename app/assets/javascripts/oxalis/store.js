@@ -30,7 +30,7 @@ import Constants, {
   type ContourMode,
   type ControlMode,
   ControlModeEnum,
-  type Mode,
+  type ViewMode,
   type OrthoView,
   OrthoViews,
   type Rect,
@@ -257,7 +257,7 @@ export type UserConfiguration = {|
 export type Mapping = { [key: number]: number };
 
 export type TemporaryConfiguration = {
-  +viewMode: Mode,
+  +viewMode: ViewMode,
   +flightmodeRecording: boolean,
   +controlMode: ControlMode,
   +mousePosition: ?Vector2,

@@ -140,7 +140,7 @@ function onClick(
   const pickingScene = new THREE.Scene();
   pickingScene.add(pickingNode);
 
-  let { width, height } = getInputCatcherRect(plane);
+  let { width, height } = getInputCatcherRect(Store.getState(), plane);
   width = Math.round(width);
   height = Math.round(height);
 

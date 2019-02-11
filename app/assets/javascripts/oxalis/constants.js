@@ -3,9 +3,9 @@
  * @flow
  */
 
-export const ModeValues = ["orthogonal", "flight", "oblique", "volume"]; //   MODE_PLANE_TRACING | MODE_ARBITRARY | MODE_ARBITRARY_PLANE | MODE_VOLUME
-export const ModeValuesIndices = { Orthogonal: 0, Flight: 1, Oblique: 2, Volume: 3 };
-export type Mode = "orthogonal" | "oblique" | "flight" | "volume";
+export const ViewModeValues = ["orthogonal", "flight", "oblique", "volume"]; //   MODE_PLANE_TRACING | MODE_ARBITRARY | MODE_ARBITRARY_PLANE | MODE_VOLUME
+export const ViewModeValuesIndices = { Orthogonal: 0, Flight: 1, Oblique: 2, Volume: 3 };
+export type ViewMode = "orthogonal" | "oblique" | "flight" | "volume";
 export type Vector2 = [number, number];
 export type Vector3 = [number, number, number];
 export type Vector4 = [number, number, number, number];
@@ -39,7 +39,8 @@ export const OrthoViews = {
 };
 export type OrthoView = $Keys<typeof OrthoViews>;
 export type OrthoViewMap<T> = { [key: OrthoView]: T };
-export type OrthoViewExtents = OrthoViewMap<Vector2>;
+export type OrthoViewExtents = $ReadOnly<OrthoViewMap<Vector2>>;
+export type OrthoViewRects = $ReadOnly<OrthoViewMap<Rect>>;
 
 export const ArbitraryViewport = "arbitraryViewport";
 export const ArbitraryViews = {
@@ -50,6 +51,11 @@ export type ArbitraryView = $Keys<typeof ArbitraryViews>;
 export type ArbitraryViewMap<T> = { [key: ArbitraryView]: T };
 
 export type Viewport = OrthoView | typeof ArbitraryViewport;
+
+export type ViewportMap<T> = { [key: Viewport]: T };
+export type ViewportExtents = $ReadOnly<ViewportMap<Vector2>>;
+export type ViewportRects = $ReadOnly<ViewportMap<Rect>>;
+
 export const OrthoViewValues: Array<OrthoView> = Object.keys(OrthoViews);
 export const OrthoViewIndices = {
   PLANE_XY: OrthoViewValues.indexOf("PLANE_XY"),

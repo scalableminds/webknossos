@@ -308,7 +308,8 @@ class SceneController {
   };
 
   update(optArbitraryPlane?: ArbitraryPlane): void {
-    const { flycam } = Store.getState();
+    const state = Store.getState();
+    const { flycam } = state;
     const gPos = getPosition(flycam);
     const globalPosVec = new THREE.Vector3(...gPos);
 
@@ -336,7 +337,7 @@ class SceneController {
       for (const currentPlane of _.values(this.planes)) {
         currentPlane.updateAnchorPoints(anchorPoint, fallbackAnchorPoint);
         currentPlane.setPosition(globalPosVec);
-        const [scaleX, scaleY] = getPlaneScalingFactor(flycam, currentPlane.planeID);
+        const [scaleX, scaleY] = getPlaneScalingFactor(state, flycam, currentPlane.planeID);
         currentPlane.setScale(scaleX, scaleY);
       }
     }

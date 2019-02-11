@@ -1,6 +1,5 @@
 // @flow
-import PriorityQueue from "js-priority-queue";
-
+import type { EnqueueFunction } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
@@ -9,7 +8,6 @@ import {
   globalPositionToBucketPositionFloat,
   zoomedAddressToAnotherZoomStep,
 } from "oxalis/model/helpers/position_converter";
-import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import Store from "oxalis/store";
 import constants, { type Vector3, type Vector4 } from "oxalis/constants";
 
@@ -43,12 +41,12 @@ function createDistinctBucketAdder(buckets: Array<Vector4>) {
 }
 
 export default function determineBucketsForFlight(
-  cube: DataCube,
-  bucketQueue: PriorityQueue,
+  enqueueFunction: EnqueueFunction,
   matrix: Matrix4x4,
   logZoomStep: number,
   fallbackZoomStep: number,
   isFallbackAvailable: boolean,
+  abortLimit?: number,
 ): void {
   const { sphericalCapRadius } = Store.getState().userConfiguration;
   const resolutions = getResolutions(Store.getState().dataset);
@@ -149,12 +147,13 @@ export default function determineBucketsForFlight(
   const fallbackBuckets = isFallbackAvailable ? traverseFallbackBBox(getBBox(planeBuckets)) : [];
   traversedBuckets = traversedBuckets.concat(fallbackBuckets);
 
+  let currentCount = 0;
   for (const bucketAddress of traversedBuckets) {
-    const bucket = cube.getOrCreateBucket(bucketAddress);
-
-    if (bucket.type !== "null") {
-      const priority = 0;
-      bucketQueue.queue({ bucket, priority });
+    const priority = 0;
+    enqueueFunction(bucketAddress, priority);
+    currentCount++;
+    if (abortLimit != null && currentCount > abortLimit) {
+      return;
     }
   }
 }

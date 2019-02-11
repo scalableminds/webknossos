@@ -6,7 +6,7 @@
  */
 
 // @flow
-import Constants, { type ControlMode, ControlModeEnum, type Mode } from "oxalis/constants";
+import Constants, { type ControlMode, ControlModeEnum, type ViewMode } from "oxalis/constants";
 import { navbarHeight } from "navbar";
 import _ from "lodash";
 
@@ -144,7 +144,7 @@ export const getCurrentDefaultLayoutConfig = () => {
   };
 };
 
-export function determineLayout(controlMode: ControlMode, viewMode: Mode): Layout {
+export function determineLayout(controlMode: ControlMode, viewMode: ViewMode): Layout {
   if (controlMode === ControlModeEnum.VIEW) {
     return "OrthoLayoutView";
   }

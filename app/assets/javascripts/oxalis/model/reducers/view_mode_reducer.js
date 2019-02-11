@@ -40,6 +40,15 @@ function ViewModeReducer(state: OxalisState, action: Action): OxalisState {
     case "SET_INPUT_CATCHER_RECT": {
       return setInputCatcherRect(state, action.viewport, action.rect);
     }
+    case "SET_INPUT_CATCHER_RECTS": {
+      const { viewportRects } = action;
+      let newState = state;
+      for (const viewport of Object.keys(viewportRects)) {
+        newState = setInputCatcherRect(newState, viewport, viewportRects[viewport]);
+      }
+
+      return newState;
+    }
     default:
       return state;
   }

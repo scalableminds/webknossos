@@ -262,7 +262,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
   }
 
   handleConvertToHybrid = async () => {
-    await Model.save();
+    await Model.ensureSavedState();
     await convertToHybridTracing(this.props.tracing.annotationId);
     location.reload();
   };

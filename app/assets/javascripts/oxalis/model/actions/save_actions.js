@@ -1,9 +1,5 @@
+// @flow
 /* eslint-disable import/prefer-default-export */
-
-/**
- * save_actions.js
- * @flow
- */
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import Date from "libs/date";
 
@@ -77,12 +73,9 @@ export const setSaveBusyAction = (isBusy: boolean, tracingType: Tracing): SetSav
   tracingType,
 });
 
-export const setLastSaveTimestampAction = (
-  timestamp: number = Date.now(),
-  tracingType: Tracing,
-): SetLastSaveTimestampAction => ({
+export const setLastSaveTimestampAction = (tracingType: Tracing): SetLastSaveTimestampAction => ({
   type: "SET_LAST_SAVE_TIMESTAMP",
-  timestamp,
+  timestamp: Date.now(),
   tracingType,
 });
 

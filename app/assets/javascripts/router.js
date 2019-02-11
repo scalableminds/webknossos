@@ -383,11 +383,7 @@ class ReactRouter extends React.Component<Props> {
                 path="/auth/register"
                 render={({ location }: ContextRouter) => {
                   const params = Utils.getUrlParamsObjectFromString(location.search);
-                  const organizationName =
-                    typeof params.organizationName === "string"
-                      ? decodeURI(params.organizationName)
-                      : "";
-                  return <RegistrationView organizationName={organizationName} />;
+                  return <RegistrationView organizationName={params.organizationName} />;
                 }}
               />
 
@@ -396,9 +392,7 @@ class ReactRouter extends React.Component<Props> {
                 path="/auth/finishResetPassword"
                 render={({ location }: ContextRouter) => {
                   const params = Utils.getUrlParamsObjectFromString(location.search);
-                  const resetToken =
-                    typeof params.token === "string" ? decodeURI(params.token) : "";
-                  return <FinishResetPasswordView resetToken={resetToken} />;
+                  return <FinishResetPasswordView resetToken={params.token} />;
                 }}
               />
               <Route path="/spotlight" component={SpotlightView} />

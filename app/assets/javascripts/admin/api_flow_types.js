@@ -395,6 +395,7 @@ export type APIOrganization = {
   +name: string,
   +additionalInformation: string,
   +displayName: string,
+  +enableAutoVerify: boolean,
 };
 
 export type APIBuildInfo = {
@@ -439,6 +440,7 @@ export type APIFeatureToggles = {
   +discussionBoard: string | false,
   +discussionBoardRequiresAdmin: boolean,
   +allowOrganizationCreation: boolean,
+  +defaultOrganization: string,
   +addForeignDataset: boolean,
   +hideNavbarLogin: boolean,
   +freezeVolumeVersions: boolean,

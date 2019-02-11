@@ -248,7 +248,7 @@ class TracingApi {
    * await api.tracing.save();
    */
   async save() {
-    await Model.save();
+    await Model.ensureSavedState();
   }
 
   /**
@@ -269,7 +269,7 @@ class TracingApi {
     const { annotationType, annotationId } = state.tracing;
     const { task } = state;
 
-    await Model.save();
+    await Model.ensureSavedState();
     await finishAnnotation(annotationId, annotationType);
     try {
       const annotation = await requestTask();

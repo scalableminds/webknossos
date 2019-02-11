@@ -694,7 +694,7 @@ class DataApi {
    * is omitted, "segmentation" is assumed.
    *
    */
-  async getMappingNames(layerName: string = "segmentation"): Array<Promise> {
+  async getMappingNames(layerName: string = "segmentation"): Promise<Array<string>> {
     const { dataset } = Store.getState();
     return getMappingsForDatasetLayer(dataset.dataStore.url, dataset, layerName);
   }

@@ -5,7 +5,7 @@ This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.md).
 
 ## Unreleased
--
+- The config paramters `application.authentication.enableDevAutoVerify` and `application.authentication.enableDevAutoAdmin` have been removed. To enable automatic verification for user signup, set the organization’s new `enableAutoVerify` field to `true` in the database.
 
 ### Postgres Evolutions:
 - [038-more-voxel-types.sql](conf/evolutions/038-more-voxel-types.sql)

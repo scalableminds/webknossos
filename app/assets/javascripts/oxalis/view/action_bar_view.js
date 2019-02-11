@@ -1,5 +1,5 @@
 // @flow
-import { Alert, Dropdown, Icon, Menu, Tooltip } from "antd";
+import { Alert, Dropdown, Icon, Menu } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 
@@ -24,6 +24,7 @@ import TracingActionsView, {
 } from "oxalis/view/action-bar/tracing_actions_view";
 import ViewModesView from "oxalis/view/action-bar/view_modes_view";
 import VolumeActionsView from "oxalis/view/action-bar/volume_actions_view";
+import AuthenticationModal from "admin/auth/authentication_modal";
 
 const VersionRestoreWarning = (
   <Alert
@@ -50,12 +51,13 @@ type Props = {| ...OwnProps, ...StateProps |};
 
 type State = {
   isNewLayoutModalVisible: boolean,
+  isAuthenticationModalVisible: boolean,
 };
 
-// eslint-disable-next-line react/prefer-stateless-function
 class ActionBarView extends React.PureComponent<Props, State> {
   state = {
     isNewLayoutModalVisible: false,
+    isAuthenticationModalVisible: false,
   };
 
   handleResetLayout = () => {
@@ -82,31 +84,30 @@ class ActionBarView extends React.PureComponent<Props, State> {
     }
   };
 
+  createTracing = async () => {
+    const type = "hybrid";
+    const annotation = await createExplorational(this.props.dataset, type, true);
+    trackAction(`Create ${type} tracing (from view mode)`);
+    location.href = `${location.origin}/annotations/${annotation.typ}/${annotation.id}${
+      location.hash
+    }`;
+  };
+
   renderStartTracingButton(): React.Node {
-    const createTracing = async () => {
-      const type = "hybrid";
-      const annotation = await createExplorational(this.props.dataset, type, true);
-      trackAction(`Create ${type} tracing (from view mode)`);
-      location.href = `${location.origin}/annotations/${annotation.typ}/${annotation.id}`;
+    const needsAuthentication = this.props.activeUser == null;
+
+    const handleCreateTracing = async () => {
+      if (needsAuthentication) {
+        this.setState({ isAuthenticationModalVisible: true });
+      } else {
+        this.createTracing();
+      }
     };
 
-    const needsAuthentication = this.props.activeUser == null;
-    const MaybeTooltip = needsAuthentication
-      ? ({ children }) => (
-          <Tooltip title="Please log in or register to create a tracing.">{children}</Tooltip>
-        )
-      : ({ children }) => children;
     return (
-      <MaybeTooltip>
-        <ButtonComponent
-          onClick={createTracing}
-          style={{ marginLeft: 12 }}
-          type="primary"
-          disabled={needsAuthentication}
-        >
-          Create Tracing
-        </ButtonComponent>
-      </MaybeTooltip>
+      <ButtonComponent onClick={handleCreateTracing} style={{ marginLeft: 12 }} type="primary">
+        Create Tracing
+      </ButtonComponent>
     );
   }
 
@@ -153,6 +154,14 @@ class ActionBarView extends React.PureComponent<Props, State> {
           addLayout={this.addNewLayout}
           visible={this.state.isNewLayoutModalVisible}
           onCancel={() => this.setState({ isNewLayoutModalVisible: false })}
+        />
+        <AuthenticationModal
+          onLoggedIn={() => {
+            this.setState({ isAuthenticationModalVisible: false });
+            this.createTracing();
+          }}
+          onCancel={() => this.setState({ isAuthenticationModalVisible: false })}
+          visible={this.state.isAuthenticationModalVisible}
         />
       </React.Fragment>
     );

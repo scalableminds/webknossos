@@ -46,9 +46,13 @@ class RegistrationView extends React.PureComponent<Props> {
             // That way, we ensure that the organization field is cleared.
             key={this.props.organizationName || "default registration form key"}
             organizationName={this.props.organizationName}
-            onRegistered={() => {
-              Toast.success(messages["auth.account_created"]);
-              this.props.history.push("/auth/login");
+            onRegistered={(isUserLoggedIn?: boolean) => {
+              if (isUserLoggedIn) {
+                this.props.history.goBack();
+              } else {
+                Toast.success(messages["auth.account_created"]);
+                this.props.history.push("/auth/login");
+              }
             }}
             onOrganizationNameNotFound={() => {
               Toast.error(messages["auth.invalid_organization_name"]);

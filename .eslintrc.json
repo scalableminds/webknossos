@@ -7,7 +7,7 @@
     "prettier/flowtype",
     "prettier/react"
   ],
-  "plugins": ["react", "import", "flowtype", "flow-header"],
+  "plugins": ["react", "react-hooks", "import", "flowtype", "flow-header"],
   "parserOptions": {
     "ecmaVersion": 8
   },
@@ -73,6 +73,7 @@
     "react/no-multi-comp": "off",
     "react/prop-types": "off",
     "react/require-default-props": "off",
+    "react-hooks/rules-of-hooks": "error",
     "import/newline-after-import": "off",
     "flow-header/flow-header": "error",
     "react/sort-comp": [

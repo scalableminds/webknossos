@@ -66,7 +66,7 @@ function LoginForm({ layout, form, onLoggedIn, hideFooter }: Props) {
       {hideFooter ? null : (
         <FormItem>
           <Link to="/auth/register" style={linkStyle}>
-            Register Now!
+            Register Now
           </Link>
           <Link to="/auth/resetPassword" style={Object.assign({}, linkStyle, resetStyle)}>
             Forgot Password

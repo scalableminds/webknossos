@@ -4,7 +4,6 @@ import _ from "lodash";
 import deepForEach from "deep-for-each";
 
 import { configure } from "enzyme";
-import Adapter from "enzyme-adapter-react-16";
 import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
 import fs from "fs";
 import shell from "shelljs";
@@ -155,6 +154,9 @@ import type { ${flowTypeString} } from "admin/api_flow_types";
 const a: ${fullFlowType} = ${JSON.stringify(object)}`,
   );
 }
+
+// The adapter tries to access document when importing it, so we need to import it down here
+const Adapter = require("enzyme-adapter-react-16");
 
 configure({ adapter: new Adapter() });
 

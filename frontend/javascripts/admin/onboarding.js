@@ -81,7 +81,7 @@ export class InviteUsersPopover extends React.Component<{
   children: React.Node,
 }> {
   getRegistrationHotLink(): string {
-    return `${location.origin}/auth/register?organizationName=${encodeURI(
+    return `${location.origin}/auth/register?organizationName=${encodeURIComponent(
       this.props.organizationName,
     )}`;
   }

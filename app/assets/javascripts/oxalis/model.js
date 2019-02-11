@@ -111,12 +111,23 @@ export class OxalisModel {
     return storeStateSaved && pushQueuesSaved;
   }
 
-  save = async () => {
+  forceSave = () => {
+    // In contrast to the save function, this method will trigger exactly one saveNowAction
+    // regardless of what the current save state is
+    // This will force a new save try, even if the save saga is currently waiting to retry the save request
+    Store.dispatch(saveNowAction());
+  };
+
+  ensureSavedState = async () => {
+    // This function will only return once all state is saved
+    // even if new updates are pushed to the save queue during saving
     while (!this.stateSaved()) {
       // The dispatch of the saveNowAction IN the while loop is deliberate.
       // Otherwise if an update action is pushed to the save queue during the Utils.sleep,
       // the while loop would continue running until the next save would be triggered.
-      Store.dispatch(saveNowAction());
+      if (!isBusy(Store.getState().save.isBusyInfo)) {
+        Store.dispatch(saveNowAction());
+      }
       // eslint-disable-next-line no-await-in-loop
       await Utils.sleep(500);
     }

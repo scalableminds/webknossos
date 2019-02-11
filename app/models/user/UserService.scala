@@ -64,7 +64,7 @@ class UserService @Inject()(conf: WkConf,
              firstName: String,
              lastName: String,
              isActive: Boolean,
-             teamRole: Boolean = false,
+             isOrgTeamManager: Boolean = false,
              loginInfo: LoginInfo,
              passwordInfo: PasswordInfo,
              isAdmin: Boolean = false): Fox[User] = {
@@ -72,7 +72,7 @@ class UserService @Inject()(conf: WkConf,
     for {
       organizationTeamId <- organizationDAO.findOrganizationTeamId(_organization)
       orgTeam <- teamDAO.findOne(organizationTeamId)
-      teamMemberships = List(TeamMembership(orgTeam._id, teamRole))
+      teamMemberships = List(TeamMembership(orgTeam._id, false))
       user = User(
         ObjectId.generate,
         _organization,

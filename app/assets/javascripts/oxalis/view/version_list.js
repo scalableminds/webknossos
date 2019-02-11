@@ -100,7 +100,7 @@ class VersionList extends React.Component<Props, State> {
     if (this.props.allowUpdate) {
       Store.dispatch(setVersionNumberAction(this.getNewestVersion(), this.props.tracingType));
       Store.dispatch(pushSaveQueueAction([revertToVersion(version)], this.props.tracingType));
-      await Model.save();
+      await Model.ensureSavedState();
       Store.dispatch(setVersionRestoreVisibilityAction(false));
       Store.dispatch(setAnnotationAllowUpdateAction(true));
     } else {

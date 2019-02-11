@@ -183,10 +183,12 @@ annotation.transferee.noDataSetAccess=Cannot transfer annotation to a user who h
 annotation.timelogging.read.failed=Time
 annotation.write.failed=Could not convert annotation to json
 annotation.noSkeleton=No skeleton tracing found for this annotation
+annotation.needsEitherSkeletonOrVolume=Annotation needs at least one of skeleton or volume
 annotation.makeHybrid.explorationalsOnly=Could not convert annotation to hybrid annotation because it is only allowed for explorational annotations.
 annotation.makeHybrid.failed=Could not convert to hybrid.
 annotation.makeHybrid.alreadyHybrid=Could not convert annotation to hybrid annotation because it is already a hybrid annotation.
 annotationType.notFound=Could not find the specified annotation type.
+annotation.cantMergeVolumes=This annotation collection contains volume tracings. Merging volume tracings is not yet supported. Please use download instead.
 
 mesh.notFound=Mesh couldn’t be found
 mesh.write.failed=Failed to convert mesh info to json
@@ -200,6 +202,8 @@ mesh.delete.failed=Failed to delete mesh
 task.create.success=Task successfully created
 task.create.failed=Failed to create Task
 task.create.limitExceeded=Cannot create more than 1000 tasks in one request.
+task.create.needsEitherSkeletonOrVolume=Each task needs to either be skeleton or volume.
+task.create.fromFileVolume=Task creation with file upload is only supported for skeleton task types.
 task.finished=Task is finished
 task.assigned=You got a new task
 task.tooManyOpenOnes=You already have too many open tasks
@@ -222,6 +226,9 @@ taskType.deleteSuccess=Task type “{0}” successfully deleted
 taskType.deleteFailure=Task type “{0}” deletion failed
 taskType.noAnnotations=We couldn’t find finished annotations for this task type
 taskType.id.invalid=The provided task type id is invalid.
+taskType.tracingTypeImmutable=Tracing types of task types are immutable. Consider creating a new task type.
+
+tracingType.invalid=The provided tracing type is invalid.
 
 mail.welcome.subject = Welcome to ScalableMinds
 

@@ -348,7 +348,7 @@ class TracingApi {
    * await api.tracing.save();
    */
   async save() {
-    await Model.save();
+    await Model.ensureSavedState();
   }
 
   /**
@@ -371,23 +371,28 @@ class TracingApi {
     const state = Store.getState();
     const { annotationType, annotationId } = state.tracing;
     const { task } = state;
+    if (task == null) {
+      // Satisfy flow
+      throw new Error("Cannot find task to finish.");
+    }
 
-    await Model.save();
+    await Model.ensureSavedState();
     await finishAnnotation(annotationId, annotationType);
     try {
       const annotation = await requestTask();
 
       const isDifferentDataset = state.dataset.name !== annotation.dataSetName;
-      const isDifferentTaskType = annotation.task.type.id !== Utils.__guard__(task, x => x.type.id);
+      const isDifferentTaskType = annotation.task.type.id !== task.type.id;
+      const involvesVolumeTask = state.tracing.volume != null || annotation.tracing.volume != null;
 
-      const currentScript = task != null && task.script != null ? task.script.gist : null;
+      const currentScript = task.script != null ? task.script.gist : null;
       const nextScript = annotation.task.script != null ? annotation.task.script.gist : null;
       const isDifferentScript = currentScript !== nextScript;
 
       const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}`;
 
       // In some cases the page needs to be reloaded, in others the tracing can be hot-swapped
-      if (isDifferentDataset || isDifferentTaskType || isDifferentScript) {
+      if (isDifferentDataset || isDifferentTaskType || isDifferentScript || involvesVolumeTask) {
         location.href = newTaskUrl;
       } else {
         await this.restart(annotation.typ, annotation.id, ControlModeEnum.TRACE);

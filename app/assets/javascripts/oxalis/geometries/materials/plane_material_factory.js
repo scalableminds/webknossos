@@ -4,7 +4,7 @@ import _ from "lodash";
 
 import app from "app";
 import {
-  ModeValues,
+  ViewModeValues,
   type OrthoView,
   OrthoViewValues,
   OrthoViews,
@@ -362,7 +362,7 @@ class PlaneMaterialFactory {
       listenToStoreProperty(
         storeState => storeState.temporaryConfiguration.viewMode,
         viewMode => {
-          this.uniforms.viewMode.value = ModeValues.indexOf(viewMode);
+          this.uniforms.viewMode.value = ViewModeValues.indexOf(viewMode);
         },
         true,
       ),

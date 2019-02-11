@@ -18,7 +18,7 @@ import Store from "oxalis/store";
 import TextureBucketManager from "oxalis/model/bucket_data_handling/texture_bucket_manager";
 import UpdatableTexture from "libs/UpdatableTexture";
 import constants, {
-  type Mode,
+  type ViewMode,
   type OrthoViewMap,
   type Vector3,
   type Vector4,
@@ -30,6 +30,8 @@ import determineBucketsForOrthogonal, {
   getAnchorPositionToCenterDistance,
 } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
+
+export type EnqueueFunction = (Vector4, number) => void;
 
 // each index of the returned Vector3 is either -1 or +1.
 function getSubBucketLocality(position: Vector3, resolution: Vector3): Vector3 {
@@ -46,7 +48,7 @@ function getSubBucketLocality(position: Vector3, resolution: Vector3): Vector3 {
 }
 
 function consumeBucketsFromPriorityQueue(
-  queue: PriorityQueue,
+  queue: PriorityQueue<{ bucketAddress: Vector4, priority: number }>,
   cube: DataCube,
   capacity: number,
 ): Array<{ priority: number, bucket: DataBucket }> {
@@ -73,7 +75,7 @@ export default class LayerRenderingManager {
   lastSubBucketLocality: Vector3 = [-1, -1, -1];
   lastAreas: OrthoViewMap<Area>;
   lastZoomedMatrix: M4x4;
-  lastViewMode: Mode;
+  lastViewMode: ViewMode;
   lastIsInvisible: boolean;
   textureBucketManager: TextureBucketManager;
   textureWidth: number;
@@ -198,39 +200,35 @@ export default class LayerRenderingManager {
       const enqueueFunction = (bucketAddress, priority) => {
         bucketQueue.queue({ bucketAddress, priority });
       };
-      const abortLimit = -1;
 
       if (!isInvisible) {
-        // if (viewMode === constants.MODE_ARBITRARY_PLANE) {
-        //   determineBucketsForOblique(
-        //     this.cube,
-        //     enqueueFunction,
-        //     matrix,
-        //     logZoomStep,
-        //     fallbackZoomStep,
-        //     isFallbackAvailable,
-        //   );
-        // } else if (viewMode === constants.MODE_ARBITRARY) {
-        //   determineBucketsForFlight(
-        //     this.cube,
-        //     enqueueFunction,
-        //     matrix,
-        //     logZoomStep,
-        //     fallbackZoomStep,
-        //     isFallbackAvailable,
-        //   );
-        // } else {
-        determineBucketsForOrthogonal(
-          getResolutions(Store.getState().dataset),
-          enqueueFunction,
-          logZoomStep,
-          this.anchorPointCache.anchorPoint,
-          this.anchorPointCache.fallbackAnchorPoint,
-          areas,
-          subBucketLocality,
-          abortLimit,
-        );
-        // }
+        if (viewMode === constants.MODE_ARBITRARY_PLANE) {
+          determineBucketsForOblique(
+            enqueueFunction,
+            matrix,
+            logZoomStep,
+            fallbackZoomStep,
+            isFallbackAvailable,
+          );
+        } else if (viewMode === constants.MODE_ARBITRARY) {
+          determineBucketsForFlight(
+            enqueueFunction,
+            matrix,
+            logZoomStep,
+            fallbackZoomStep,
+            isFallbackAvailable,
+          );
+        } else {
+          determineBucketsForOrthogonal(
+            getResolutions(Store.getState().dataset),
+            enqueueFunction,
+            logZoomStep,
+            this.anchorPointCache.anchorPoint,
+            this.anchorPointCache.fallbackAnchorPoint,
+            areas,
+            subBucketLocality,
+          );
+        }
       }
 
       const bucketsWithPriorities = consumeBucketsFromPriorityQueue(

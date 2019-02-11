@@ -48,7 +48,7 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
 import app from "app";
-import constants, { ArbitraryViewport, type Mode, type Point2 } from "oxalis/constants";
+import constants, { ArbitraryViewport, type ViewMode, type Point2 } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import messages from "messages";
 
@@ -56,7 +56,7 @@ const arbitraryViewportSelector = "#inputcatcher_arbitraryViewport";
 
 type Props = {|
   onRender: () => void,
-  viewMode: Mode,
+  viewMode: ViewMode,
 |};
 
 class ArbitraryController extends React.PureComponent<Props> {

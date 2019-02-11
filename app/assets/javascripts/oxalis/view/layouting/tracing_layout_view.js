@@ -10,7 +10,7 @@ import * as React from "react";
 import classNames from "classnames";
 import type { Dispatch } from "redux";
 
-import { ArbitraryViewport, type Mode, OrthoViews } from "oxalis/constants";
+import { ArbitraryViewport, type ViewMode, OrthoViews } from "oxalis/constants";
 import type { OxalisState, AnnotationType, TraceOrViewCommand } from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import AbstractTreeTabView from "oxalis/view/right-menu/abstract_tree_tab_view";
@@ -44,7 +44,7 @@ type OwnProps = {|
   initialCommandType: TraceOrViewCommand,
 |};
 type StateProps = {|
-  viewMode: Mode,
+  viewMode: ViewMode,
   displayScalebars: boolean,
   isUpdateTracingAllowed: boolean,
   showVersionRestore: boolean,

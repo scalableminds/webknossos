@@ -1,7 +1,6 @@
 // @flow
 import { type Area } from "oxalis/model/accessors/flycam_accessor";
-import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
-import Dimensions from "oxalis/model/dimensions";
+import type { EnqueueFunction } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import {
   type OrthoViewMap,
   OrthoViewValuesWithoutTDView,
@@ -9,11 +8,11 @@ import {
   type Vector4,
   addressSpaceDimensions,
 } from "oxalis/constants";
+import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
+import Dimensions from "oxalis/model/dimensions";
 import ThreeDMap from "libs/ThreeDMap";
 
 import { extraBucketPerEdge } from "./orthogonal_bucket_picker_constants";
-
-type EnqueueFunction = (Vector4, number) => void;
 
 export const getAnchorPositionToCenterDistance = (bucketPerDim: number) =>
   // Example I:
@@ -32,7 +31,7 @@ export default function determineBucketsForOrthogonal(
   fallbackAnchorPoint: Vector4,
   areas: OrthoViewMap<Area>,
   subBucketLocality: Vector3,
-  abortLimit: number,
+  abortLimit?: number,
 ) {
   addNecessaryBucketsToPriorityQueueOrthogonal(
     resolutions,
@@ -67,7 +66,7 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
   isFallback: boolean,
   areas: OrthoViewMap<Area>,
   subBucketLocality: Vector3,
-  abortLimit: number,
+  abortLimit: ?number,
 ): void {
   const uniqueBucketMap = new ThreeDMap();
   let currentCount = 0;
@@ -149,8 +148,7 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
           if (uniqueBucketMap.get(bucketVector3) == null) {
             uniqueBucketMap.set(bucketVector3, bucketAddress);
             currentCount++;
-            if (abortLimit >= 0 && currentCount >= abortLimit) {
-              // todo
+            if (abortLimit != null && currentCount > abortLimit) {
               return;
             }
             enqueueFunction(bucketAddress, priority);

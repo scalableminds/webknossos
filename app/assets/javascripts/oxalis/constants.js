@@ -3,9 +3,9 @@
  * @flow
  */
 
-export const ModeValues = ["orthogonal", "flight", "oblique", "volume"]; //   MODE_PLANE_TRACING | MODE_ARBITRARY | MODE_ARBITRARY_PLANE | MODE_VOLUME
-export const ModeValuesIndices = { Orthogonal: 0, Flight: 1, Oblique: 2, Volume: 3 };
-export type Mode = "orthogonal" | "oblique" | "flight" | "volume";
+export const ViewModeValues = ["orthogonal", "flight", "oblique", "volume"]; //   MODE_PLANE_TRACING | MODE_ARBITRARY | MODE_ARBITRARY_PLANE | MODE_VOLUME
+export const ViewModeValuesIndices = { Orthogonal: 0, Flight: 1, Oblique: 2, Volume: 3 };
+export type ViewMode = "orthogonal" | "oblique" | "flight" | "volume";
 export type Vector2 = [number, number];
 export type Vector3 = [number, number, number];
 export type Vector4 = [number, number, number, number];

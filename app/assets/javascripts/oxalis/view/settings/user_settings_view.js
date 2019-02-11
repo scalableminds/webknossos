@@ -41,7 +41,7 @@ import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Constants, {
   type ControlMode,
   ControlModeEnum,
-  type Mode,
+  type ViewMode,
   type Vector6,
 } from "oxalis/constants";
 import * as Utils from "libs/utils";
@@ -61,7 +61,7 @@ type UserSettingsViewProps = {
   onChangeRadius: (value: number) => void,
   onChangeZoomStep: (value: number) => void,
   onChangeBrushSize: (value: number) => void,
-  viewMode: Mode,
+  viewMode: ViewMode,
   controlMode: ControlMode,
   brushSize: number,
 };

@@ -97,22 +97,22 @@
     "test-e2e": "tools/postgres/prepareTestDB.sh && tools/test.sh test-e2e --timeout=60s --verbose",
     "test-screenshot": "tools/test.sh test-screenshot --timeout=5m",
     "test-help": "echo For development it is recommended to run yarn test-prepare-watch in one terminal and yarn test-watch in another. This is the fastest way to perform incremental testing. If you are only interested in running test once, use yarn test.",
-    "remove-snapshots": "rm -rf app/assets/javascripts/test/snapshots/public/test-bundle/test/backend-snapshot-tests/ && rm -rf app/assets/javascripts/test/snapshots/public/test-bundle/test/enzyme/",
-    "remove-snapshots-all": "rm -rf app/assets/javascripts/test/snapshots/",
+    "remove-snapshots": "rm -rf frontend/javascripts/test/snapshots/public/test-bundle/test/backend-snapshot-tests/ && rm -rf frontend/javascripts/test/snapshots/public/test-bundle/test/enzyme/",
+    "remove-snapshots-all": "rm -rf frontend/javascripts/test/snapshots/",
     "refresh-snapshots": "yarn remove-snapshots && docker-compose down && docker-compose up e2e-tests",
     "flow": "node_modules/.bin/flow",
     "flow-check": "node_modules/.bin/flow check",
-    "lint": "node_modules/.bin/eslint --cache --quiet app/assets/javascripts/ tools/",
-    "pretty": "node_modules/.bin/prettier --write --config .prettierrc \"app/assets/javascripts/**/*.js\" \"tools/**/*.js\"",
-    "am-i-pretty": "node_modules/.bin/prettier --list-different --config .prettierrc \"app/assets/javascripts/**/*.js\" \"tools/**/*.js\"",
-    "lint-fix": "node_modules/.bin/eslint --cache --fix --quiet app/assets/javascripts/ tools/",
-    "flow-coverage": "node_modules/flow-coverage-report/bin/flow-coverage-report.js -i \"./app/assets/javascripts/**/*.js\" -x \"./app/assets/javascripts/test/**/*.js\" -t html -t text",
-    "docs": "node_modules/.bin/documentation build app/assets/javascripts/oxalis/api/api_loader.js --github --project-name \"webKnossos Frontend API\" --format html --output public/docs/frontend-api",
+    "lint": "node_modules/.bin/eslint --cache --quiet frontend/javascripts/ tools/",
+    "pretty": "node_modules/.bin/prettier --write --config .prettierrc \"frontend/javascripts/**/*.js\" \"tools/**/*.js\"",
+    "am-i-pretty": "node_modules/.bin/prettier --list-different --config .prettierrc \"frontend/javascripts/**/*.js\" \"tools/**/*.js\"",
+    "lint-fix": "node_modules/.bin/eslint --cache --fix --quiet frontend/javascripts/ tools/",
+    "flow-coverage": "node_modules/flow-coverage-report/bin/flow-coverage-report.js -i \"./frontend/javascripts/**/*.js\" -x \"./frontend/javascripts/test/**/*.js\" -t html -t text",
+    "docs": "node_modules/.bin/documentation build frontend/javascripts/oxalis/api/api_loader.js --github --project-name \"webKnossos Frontend API\" --format html --output public/docs/frontend-api",
     "refresh-schema": "./tools/postgres/refresh_schema.sh && rm -f target/scala-2.12/src_managed/schema/com/scalableminds/webknossos/schema/Tables.scala",
     "enable-autologin": "sed -i -e 's/enableDevAutoLogin = false/enableDevAutoLogin = true/g' ./conf/application.conf",
     "disable-autologin": "sed -i -e 's/enableDevAutoLogin = true/enableDevAutoLogin = false/g' ./conf/application.conf",
     "coverage": "nyc report --reporter=text-lcov | coveralls",
-    "postcheckout": "echo 'Deleting auto-generated flow files...' && rm -f app/assets/javascripts/test/snapshots/flow-check/*.js",
+    "postcheckout": "echo 'Deleting auto-generated flow files...' && rm -f frontend/javascripts/test/snapshots/flow-check/*.js",
     "apply-evolutions": "tools/postgres/apply_evolutions.sh",
     "postinstall": "cd tools/proxy && yarn install"
   },
@@ -184,7 +184,7 @@
     "sources": [
       "./public/test-bundle/**/*.{js,jsx}"
     ],
-    "snapshotDir": "app/assets/javascripts/test/snapshots",
+    "snapshotDir": "frontend/javascripts/test/snapshots",
     "concurrency": 8
   },
   "nyc": {
@@ -192,7 +192,7 @@
     "instrument": false,
     "exclude": [
       "public/test-bundle/test/**/*.*",
-      "app/assets/javascripts/test/**/*.*"
+      "frontend/javascripts/test/**/*.*"
     ]
   }
 }

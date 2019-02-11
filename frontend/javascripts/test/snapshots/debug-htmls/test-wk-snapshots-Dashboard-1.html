@@ -1,0 +1,161 @@
+<Provider store={{...}}>
+  <Router history={{...}}>
+    <Connect(withRouter(DashboardView)) userId={{...}} isAdminView={false}>
+      <withRouter(DashboardView) userId={{...}} isAdminView={false} activeUser={{...}} dispatch={[Function]}>
+        <Route render={[Function: render]}>
+          <DashboardView userId={{...}} isAdminView={false} activeUser={{...}} dispatch={[Function]} match={{...}} location={{...}} history={{...}} staticContext={[undefined]}>
+            <Connect(NmlUploadZoneContainer) onImport={[Function]} isAllowed={true}>
+              <NmlUploadZoneContainer onImport={[Function]} isAllowed={true} showDropzoneModal={false} hideDropzoneModal={[Function: hideDropzoneModal]}>
+                <t disableClick={true} style={{...}} multiple={true} disablePreview={true} onDrop={[Function]} onDragEnter={[Function]} onDragLeave={[Function]} preventDropOnDocument={true} disabled={false} inputProps={{...}} maxSize={Infinity} minSize={0}>
+                  <div className="" style={{...}} onDrop={[Function: bound value]} onDragEnter={[Function: bound value]} onDragLeave={[Function: bound value]} onClick={[Function: bound value]} onDragStart={[Function: bound value]} onDragOver={[Function: bound value]} aria-disabled={false}>
+                    <Modal title="Import 0 NML file(s)" visible={false} onCancel={[Function: onCancel]} footer={{...}} prefixCls="ant-modal" width={520} transitionName="zoom" maskTransitionName="fade" confirmLoading={false} okType="primary">
+                      <DialogWrap title="Import 0 NML file(s)" visible={false} onCancel={[Function: onCancel]} footer={{...}} prefixCls="ant-modal" width={520} transitionName="zoom" maskTransitionName="fade" confirmLoading={false} okType="primary" mousePosition={[undefined]} onClose={[Function]} />
+                    </Modal>
+                    <div className="container">
+                      <Tabs activeKey="publications" onChange={[Function: onTabChange]} style={{...}} prefixCls="ant-tabs" hideAdd={false}>
+                        <Tabs activeKey="publications" onChange={[Function]} style={{...}} prefixCls="ant-tabs" hideAdd={false} className="ant-tabs-line" tabBarPosition="top" renderTabBar={[Function: renderTabBar]} renderTabContent={[Function: renderTabContent]} destroyInactiveTabPane={false}>
+                          <div className="ant-tabs ant-tabs-top ant-tabs-line" style={{...}}>
+                            <ScrollableInkTabBar inkBarAnimated={true} extraContent={{...}} onTabClick={[Function]} onPrevClick={[Function: onPrevClick]} onNextClick={[Function: onNextClick]} style={[undefined]} tabBarGutter={[undefined]} styles={{...}} scrollAnimated={true} prefixCls="ant-tabs" onKeyDown={[Function]} tabBarPosition="top" panels={{...}} activeKey="publications">
+                              <div role="tablist" className="ant-tabs-bar" tabIndex="0" onKeyDown={[Function]} style={[undefined]}>
+                                <div className="ant-tabs-nav-container">
+                                  <span onClick={{...}} unselectable="unselectable" className="ant-tabs-tab-prev ant-tabs-tab-btn-disabled" onTransitionEnd={[Function: bound prevTransitionEnd]}>
+                                    <span className="ant-tabs-tab-prev-icon" />
+                                  </span>
+                                  <span onClick={{...}} unselectable="unselectable" className="ant-tabs-tab-next ant-tabs-tab-btn-disabled">
+                                    <span className="ant-tabs-tab-next-icon" />
+                                  </span>
+                                  <div className="ant-tabs-nav-wrap">
+                                    <div className="ant-tabs-nav-scroll">
+                                      <div className="ant-tabs-nav ant-tabs-nav-animated">
+                                        <div style={[undefined]} className="ant-tabs-ink-bar ant-tabs-ink-bar-animated" />
+                                        <div role="tab" aria-disabled="false" aria-selected="true" onClick={[Function: bound bound onTabClick]} className="ant-tabs-tab-active ant-tabs-tab" style={{...}}>
+                                          Publications
+                                        </div>
+                                        <div role="tab" aria-disabled="false" aria-selected="false" onClick={[Function: bound bound onTabClick]} className=" ant-tabs-tab" style={{...}}>
+                                          Datasets
+                                        </div>
+                                        <div role="tab" aria-disabled="false" aria-selected="false" onClick={[Function: bound bound onTabClick]} className=" ant-tabs-tab" style={{...}}>
+                                          Tasks
+                                        </div>
+                                        <div role="tab" aria-disabled="false" aria-selected="false" onClick={[Function: bound bound onTabClick]} className=" ant-tabs-tab" style={{...}}>
+                                          Explorative Annotations
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </ScrollableInkTabBar>
+                            <TabContent animated={true} animatedWithMargin={true} prefixCls="ant-tabs" tabBarPosition="top" activeKey="publications" destroyInactiveTabPane={false} onChange={[Function]}>
+                              <div className="ant-tabs-content ant-tabs-content-animated" style={{...}}>
+                                <TabPane tab="Publications" placeholder={{...}} active={true} destroyInactiveTabPane={false} rootPrefixCls="ant-tabs">
+                                  <div style={[undefined]} role="tabpanel" aria-hidden="false" className="ant-tabs-tabpane ant-tabs-tabpane-active">
+                                    <withRouter(DatasetView) user={{...}} onCheckDatasets={[Function]} datasets={{...}} isLoading={false} dataViewType="gallery">
+                                      <Route render={[Function: render]}>
+                                        <DatasetView user={{...}} onCheckDatasets={[Function]} datasets={{...}} isLoading={false} dataViewType="gallery" match={{...}} location={{...}} history={{...}} staticContext={[undefined]}>
+                                          <div>
+                                            <div className="pull-right">
+                                              <Button icon="reload" style={{...}} onClick={[Function]} prefixCls="ant-btn" loading={false} ghost={false}>
+                                                <button style={{...}} onClick={[Function]} type="button" className="ant-btn">
+                                                  <Icon type="reload">
+                                                    <i className="anticon anticon-reload" />
+                                                  </Icon>
+                                                  <span>
+                                                    Refresh
+                                                  </span>
+                                                </button>
+                                              </Button>
+                                              <Link to="/datasets/upload" style={{...}} replace={false}>
+                                                <a style={{...}} onClick={[Function]} href="/datasets/upload">
+                                                  <Button type="primary" icon="plus" prefixCls="ant-btn" loading={false} ghost={false}>
+                                                    <button type="button" className="ant-btn ant-btn-primary" onClick={[Function]}>
+                                                      <Icon type="plus">
+                                                        <i className="anticon anticon-plus" />
+                                                      </Icon>
+                                                      <span>
+                                                        Add Dataset
+                                                      </span>
+                                                    </button>
+                                                  </Button>
+                                                </a>
+                                              </Link>
+                                              <Search style={{...}} onPressEnter={[Function]} onChange={[Function]} value="" inputPrefixCls="ant-input" prefixCls="ant-input-search" enterButton={false}>
+                                                <Input onPressEnter={[Function]} style={{...}} onChange={[Function]} value="" size={[undefined]} className="ant-input-search" prefixCls="ant-input" suffix={{...}} type="text" disabled={false}>
+                                                  <span className="ant-input-search ant-input-affix-wrapper" style={{...}}>
+                                                    <input style={{...}} onChange={[Function]} value="" size={[undefined]} className="ant-input" type="text" disabled={false} onKeyDown={[Function]} />
+                                                    <span className="ant-input-suffix">
+                                                      <Icon className="ant-input-search-icon" type="search" onClick={[Function]}>
+                                                        <i className="anticon anticon-search ant-input-search-icon" onClick={[Function]} />
+                                                      </Icon>
+                                                    </span>
+                                                  </span>
+                                                </Input>
+                                              </Search>
+                                            </div>
+                                            <h3 className="TestDatasetHeadline">
+                                              Publications
+                                            </h3>
+                                            <div className="clearfix" style={{...}} />
+                                            <Spin size="large" spinning={false} prefixCls="ant-spin" wrapperClassName="">
+                                              <Animate component="div" className="ant-spin-nested-loading" style={{...}} transitionName="fade" animation={{...}} componentProps={{...}} transitionEnter={true} transitionLeave={true} transitionAppear={false} onEnd={[Function: noop]} onEnter={[Function: noop]} onLeave={[Function: noop]} onAppear={[Function: noop]}>
+                                                <div className="ant-spin-nested-loading" style={{...}}>
+                                                  <AnimateChild animation={{...}} transitionName="fade" transitionEnter={true} transitionAppear={false} transitionLeave={true}>
+                                                    <div className="ant-spin-container">
+                                                      <PublicationView datasets={{...}} searchQuery="">
+                                                        <List grid={{...}} dataSource={{...}} locale={{...}} renderItem={[Function: renderItem]} prefixCls="ant-list" bordered={false} split={true} loading={false} pagination={false}>
+                                                          <div className="ant-list ant-list-split ant-list-grid">
+                                                            <Spin spinning={false} prefixCls="ant-spin" size="default" wrapperClassName="">
+                                                              <Animate component="div" className="ant-spin-nested-loading" style={{...}} transitionName="fade" animation={{...}} componentProps={{...}} transitionEnter={true} transitionLeave={true} transitionAppear={false} onEnd={[Function: noop]} onEnter={[Function: noop]} onLeave={[Function: noop]} onAppear={[Function: noop]}>
+                                                                <div className="ant-spin-nested-loading" style={{...}}>
+                                                                  <AnimateChild animation={{...}} transitionName="fade" transitionEnter={true} transitionAppear={false} transitionLeave={true}>
+                                                                    <div className="ant-spin-container">
+                                                                      <LocaleReceiver componentName="Table" defaultLocale={{...}}>
+                                                                        <div className="ant-list-empty-text">
+                                                                          No featured publications.
+                                                                        </div>
+                                                                      </LocaleReceiver>
+                                                                    </div>
+                                                                  </AnimateChild>
+                                                                </div>
+                                                              </Animate>
+                                                            </Spin>
+                                                          </div>
+                                                        </List>
+                                                      </PublicationView>
+                                                    </div>
+                                                  </AnimateChild>
+                                                </div>
+                                              </Animate>
+                                            </Spin>
+                                          </div>
+                                        </DatasetView>
+                                      </Route>
+                                    </withRouter(DatasetView)>
+                                  </div>
+                                </TabPane>
+                                <TabPane tab="Datasets" placeholder={{...}} active={false} destroyInactiveTabPane={false} rootPrefixCls="ant-tabs">
+                                  <div style={[undefined]} role="tabpanel" aria-hidden="true" className="ant-tabs-tabpane ant-tabs-tabpane-inactive" />
+                                </TabPane>
+                                <TabPane tab="Tasks" placeholder={{...}} active={false} destroyInactiveTabPane={false} rootPrefixCls="ant-tabs">
+                                  <div style={[undefined]} role="tabpanel" aria-hidden="true" className="ant-tabs-tabpane ant-tabs-tabpane-inactive" />
+                                </TabPane>
+                                <TabPane tab="Explorative Annotations" placeholder={{...}} active={false} destroyInactiveTabPane={false} rootPrefixCls="ant-tabs">
+                                  <div style={[undefined]} role="tabpanel" aria-hidden="true" className="ant-tabs-tabpane ant-tabs-tabpane-inactive" />
+                                </TabPane>
+                              </div>
+                            </TabContent>
+                          </div>
+                        </Tabs>
+                      </Tabs>
+                    </div>
+                    <input accept={[undefined]} disabled={false} type="file" style={{...}} multiple={true} onChange={[Function: bound value]} autoComplete="off" />
+                  </div>
+                </t>
+              </NmlUploadZoneContainer>
+            </Connect(NmlUploadZoneContainer)>
+          </DashboardView>
+        </Route>
+      </withRouter(DashboardView)>
+    </Connect(withRouter(DashboardView))>
+  </Router>
+</Provider>

@@ -20,6 +20,7 @@ import Request from "libs/request";
 import Store, { type Mapping } from "oxalis/store";
 import UpdatableTexture from "libs/UpdatableTexture";
 import messages from "messages";
+import { trackAction } from "oxalis/model/helpers/analytics";
 
 export const MAPPING_TEXTURE_WIDTH = 4096;
 export const MAPPING_COLOR_TEXTURE_WIDTH = 16;
@@ -30,12 +31,24 @@ type APIMappings = { [string]: APIMapping };
 export function setupGlobalMappingsObject(segmentationLayer: DataLayer) {
   return {
     getAll(): string[] {
+      trackAction("Deprecated mapping usage (getAll)");
+      console.warn(
+        "Using mappings.getAll() is deprecated. Please use the official front-end API function getMappingNames() instead.",
+      );
       return segmentationLayer.mappings.getMappingNames();
     },
     getActive(): ?string {
+      trackAction("Deprecated mapping usage (getActive)");
+      console.warn(
+        "Using mappings.getAll() is deprecated. Please use the official front-end API function getActiveMapping() instead.",
+      );
       return segmentationLayer.activeMapping;
     },
     activate(mapping: string) {
+      trackAction("Deprecated mapping usage (activate)");
+      console.warn(
+        "Using mappings.activate() is deprecated. Please use the official front-end API function activateMapping() instead.",
+      );
       return segmentationLayer.setActiveMapping(mapping);
     },
   };

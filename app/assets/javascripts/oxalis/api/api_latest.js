@@ -3,16 +3,44 @@
  * @flow
  */
 
+import TWEEN from "tween.js";
 import _ from "lodash";
-import { InputKeyboardNoLoop } from "libs/input";
-import Model from "oxalis/model";
-import type { OxalisModel } from "oxalis/model";
-import Store from "oxalis/store";
+
 import {
-  updateUserSettingAction,
-  updateDatasetSettingAction,
-  setMappingAction,
-} from "oxalis/model/actions/settings_actions";
+  type ControlMode,
+  ControlModeEnum,
+  OrthoViews,
+  type Vector3,
+  type VolumeTool,
+  VolumeToolEnum,
+} from "oxalis/constants";
+import { InputKeyboardNoLoop } from "libs/input";
+import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
+import type { Versions } from "oxalis/view/version_view";
+import { callDeep } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
+import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
+import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
+import {
+  doWithToken,
+  finishAnnotation,
+  getMappingsForDatasetLayer,
+  requestTask,
+} from "admin/admin_rest_api";
+import {
+  findTreeByNodeId,
+  getNodeAndTree,
+  getActiveNode,
+  getActiveTree,
+  getTree,
+  getFlatTreeGroups,
+  getTreeGroupsMap,
+} from "oxalis/model/accessors/skeletontracing_accessor";
+import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
+import { getLayerBoundaries } from "oxalis/model/accessors/dataset_accessor";
+import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
+import { rotate3DViewTo } from "oxalis/controller/camera_controller";
+import { setActiveCellAction, setToolAction } from "oxalis/model/actions/volumetracing_actions";
 import {
   setActiveNodeAction,
   createCommentAction,
@@ -26,51 +54,32 @@ import {
   setTreeGroupAction,
   setTreeGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { callDeep } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
-import {
-  findTreeByNodeId,
-  getNodeAndTree,
-  getActiveNode,
-  getActiveTree,
-  getTree,
-  getFlatTreeGroups,
-  getTreeGroupsMap,
-} from "oxalis/model/accessors/skeletontracing_accessor";
-import { getLayerBoundaries } from "oxalis/model/accessors/dataset_accessor";
-import { setActiveCellAction, setToolAction } from "oxalis/model/actions/volumetracing_actions";
-import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
-import type { Vector3, VolumeTool, ControlMode } from "oxalis/constants";
-import type {
-  Node,
-  UserConfiguration,
-  DatasetConfiguration,
-  TreeMap,
-  Tracing,
-  SkeletonTracing,
-  VolumeTracing,
-  AnnotationType,
-  Mapping,
-  TreeGroupTypeFlat,
-} from "oxalis/store";
-import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
-import Toast from "libs/toast";
-import window, { location } from "libs/window";
-import * as Utils from "libs/utils";
-import { ControlModeEnum, OrthoViews, VolumeToolEnum } from "oxalis/constants";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
-import TWEEN from "tween.js";
+import {
+  updateUserSettingAction,
+  updateDatasetSettingAction,
+  setMappingAction,
+} from "oxalis/model/actions/settings_actions";
 import { wkReadyAction, restartSagaAction } from "oxalis/model/actions/actions";
+import Model, { type OxalisModel } from "oxalis/model";
+import Store, {
+  type AnnotationType,
+  type DatasetConfiguration,
+  type Mapping,
+  type Node,
+  type SkeletonTracing,
+  type Tracing,
+  type TreeGroupTypeFlat,
+  type TreeMap,
+  type UserConfiguration,
+  type VolumeTracing,
+} from "oxalis/store";
+import Toast, { type ToastStyle } from "libs/toast";
 import UrlManager from "oxalis/controller/url_manager";
-import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
-import { rotate3DViewTo } from "oxalis/controller/camera_controller";
+import * as Utils from "libs/utils";
 import dimensions from "oxalis/model/dimensions";
-import { requestTask, finishAnnotation, doWithToken } from "admin/admin_rest_api";
-import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import messages from "messages";
-import type { ToastStyle } from "libs/toast";
-import type { Versions } from "oxalis/view/version_view";
-import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
+import window, { location } from "libs/window";
 
 function assertExists(value: any, message: string) {
   if (value == null) {
@@ -678,6 +687,32 @@ class DataApi {
         options.hideUnmappedIds,
       ),
     );
+  }
+
+  /**
+   * Gets all available mapping names for a given layer. When the layer name
+   * is omitted, "segmentation" is assumed.
+   *
+   */
+  async getMappingNames(layerName: string = "segmentation"): Array<Promise> {
+    const { dataset } = Store.getState();
+    return getMappingsForDatasetLayer(dataset.dataStore.url, dataset, layerName);
+  }
+
+  /**
+   * Gets the active mapping for the segmentation layer.
+   *
+   */
+  getActiveMapping(): ?string {
+    return this.model.getSegmentationLayer().activeMapping;
+  }
+
+  /**
+   * Sets the active mapping for the segmentation layer.
+   *
+   */
+  activateMapping(mappingName?: string): void {
+    return this.model.getSegmentationLayer().setActiveMapping(mappingName);
   }
 
   /**

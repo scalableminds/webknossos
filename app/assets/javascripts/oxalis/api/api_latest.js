@@ -348,7 +348,7 @@ class TracingApi {
    * await api.tracing.save();
    */
   async save() {
-    await Model.save();
+    await Model.ensureSavedState();
   }
 
   /**
@@ -376,7 +376,7 @@ class TracingApi {
       throw new Error("Cannot find task to finish.");
     }
 
-    await Model.save();
+    await Model.ensureSavedState();
     await finishAnnotation(annotationId, annotationType);
     try {
       const annotation = await requestTask();

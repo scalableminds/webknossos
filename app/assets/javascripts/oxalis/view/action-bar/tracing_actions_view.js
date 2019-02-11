@@ -177,7 +177,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     if (event != null) {
       event.target.blur();
     }
-    await Model.save();
+    Model.forceSave();
   };
 
   handleUndo = () => {
@@ -185,7 +185,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
   };
 
   handleRestore = async () => {
-    await Model.save();
+    await Model.ensureSavedState();
     Store.dispatch(setVersionRestoreVisibilityAction(true));
   };
 
@@ -202,7 +202,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
   };
 
   handleFinish = async () => {
-    await this.handleSave();
+    await Model.ensureSavedState();
 
     Modal.confirm({
       title: messages["annotation.finish"],
@@ -223,7 +223,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
   };
 
   handleDownload = async () => {
-    await this.handleSave();
+    await Model.ensureSavedState();
     downloadNml(this.props.annotationId, this.props.annotationType);
   };
 

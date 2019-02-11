@@ -1,8 +1,9 @@
 // @flow
-
 import * as THREE from "three";
 
+import { ModeValues, ModeValuesIndices } from "oxalis/constants";
 import type { Uniforms } from "oxalis/geometries/materials/plane_material_factory";
+import { formatNumberAsGLSLFloat } from "oxalis/shaders/main_data_fragment.glsl";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -87,6 +88,10 @@ class NodeShader {
         type: "f",
         value: state.userConfiguration.highlightCommentedNodes,
       },
+      viewMode: {
+        type: "f",
+        value: 0,
+      },
     };
 
     listenToStoreProperty(
@@ -94,6 +99,14 @@ class NodeShader {
       highlightCommentedNodes => {
         this.uniforms.highlightCommentedNodes.value = highlightCommentedNodes ? 1 : 0;
       },
+    );
+
+    listenToStoreProperty(
+      storeState => storeState.temporaryConfiguration.viewMode,
+      viewMode => {
+        this.uniforms.viewMode.value = ModeValues.indexOf(viewMode);
+      },
+      true,
     );
   }
 
@@ -121,6 +134,7 @@ uniform int overrideNodeRadius; // bool activates equaly node radius for all nod
 uniform int isPicking; // bool indicates whether we are currently rendering for node picking
 uniform int isTouch; // bool that is used during picking and indicates whether the picking was triggered by a touch event
 uniform float highlightCommentedNodes;
+uniform float viewMode;
 
 uniform sampler2D treeColors;
 
@@ -204,9 +218,11 @@ void main() {
     // NODE COLOR FOR ACTIVE NODE
     v_isActiveNode = activeNodeId == nodeId ? 1.0 : 0.0;
     if (v_isActiveNode > 0.0) {
+      bool isOrthogonalMode = viewMode == ${formatNumberAsGLSLFloat(ModeValuesIndices.Orthogonal)};
+
       gl_PointSize *= activeNodeScaleFactor;
       v_innerPointSize = gl_PointSize;
-      v_outerPointSize = (v_innerPointSize + 25.0) * activeNodeScaleFactor;
+      v_outerPointSize = isOrthogonalMode ? (v_innerPointSize + 25.0) * activeNodeScaleFactor : v_innerPointSize;
       gl_PointSize = v_outerPointSize;
     }
 

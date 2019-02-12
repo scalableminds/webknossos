@@ -12,5 +12,6 @@ rm -rf webknossos-tracingstore/target
 rm -rf webknossos-tracingstore/project/target
 rm -rf webknossos-tracingstore/project/project/target
 rm -rf node_modules
+mkdir target
 
 echo "[info] Done."

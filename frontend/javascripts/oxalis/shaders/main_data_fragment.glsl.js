@@ -34,7 +34,7 @@ type Params = {|
   isOrthogonal: boolean,
 |};
 
-function formatNumberAsGLSLFloat(aNumber: number): string {
+export function formatNumberAsGLSLFloat(aNumber: number): string {
   if (aNumber % 1 > 0) {
     // If it is already a floating point number, we can use toString
     return aNumber.toString();

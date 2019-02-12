@@ -23,6 +23,7 @@ import type {
 } from "admin/api_flow_types";
 import type { Action } from "oxalis/model/actions/actions";
 import type { Matrix4x4 } from "libs/mjs";
+import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
 import Constants, {
@@ -38,6 +39,7 @@ import Constants, {
   type Vector3,
   type VolumeTool,
 } from "oxalis/constants";
+import DatasetReducer from "oxalis/model/reducers/dataset_reducer";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
 import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
@@ -49,11 +51,10 @@ import UiReducer from "oxalis/model/reducers/ui_reducer";
 import UserReducer from "oxalis/model/reducers/user_reducer";
 import ViewModeReducer from "oxalis/model/reducers/view_mode_reducer";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
-import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
 import actionLoggerMiddleware from "oxalis/model/helpers/action_logger_middleware";
+import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import rootSaga from "oxalis/model/sagas/root_saga";
-import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
 
 export type CommentType = {|
   +content: string,
@@ -263,6 +264,7 @@ export type TemporaryConfiguration = {
   +mousePosition: ?Vector2,
   +brushSize: number,
   +activeMapping: {
+    +mappingName: ?string,
     +mapping: ?Mapping,
     +mappingColors: ?Array<number>,
     +hideUnmappedIds: boolean,
@@ -448,6 +450,7 @@ export const defaultState: OxalisState = {
     mousePosition: null,
     brushSize: 50,
     activeMapping: {
+      mappingName: null,
       mapping: null,
       mappingColors: null,
       hideUnmappedIds: false,
@@ -560,6 +563,7 @@ export type Reducer = (state: OxalisState, action: Action) => OxalisState;
 
 const combinedReducers = reduceReducers(
   SettingsReducer,
+  DatasetReducer,
   SkeletonTracingReducer,
   VolumeTracingReducer,
   TaskReducer,

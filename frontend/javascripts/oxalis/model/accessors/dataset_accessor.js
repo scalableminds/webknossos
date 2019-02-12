@@ -3,7 +3,7 @@ import Maybe from "data.maybe";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 
-import type { APIDataset, APIAllowedMode } from "admin/api_flow_types";
+import type { APIAllowedMode, APIDataset, APISegmentationLayer } from "admin/api_flow_types";
 import type { Settings, DataLayerType } from "oxalis/store";
 import { map3 } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
@@ -210,7 +210,7 @@ export function isColorLayer(dataset: APIDataset, layerName: string): boolean {
   return getLayerByName(dataset, layerName).category === "color";
 }
 
-export function getSegmentationLayer(dataset: APIDataset): ?DataLayerType {
+export function getSegmentationLayer(dataset: APIDataset): ?APISegmentationLayer {
   const segmentationLayers = dataset.dataSource.dataLayers.filter(dataLayer =>
     isSegmentationLayer(dataset, dataLayer.name),
   );
@@ -218,6 +218,9 @@ export function getSegmentationLayer(dataset: APIDataset): ?DataLayerType {
     return null;
   }
   // Currently, only one segmentationLayer at a time is supported
+  // Flow does not understand that this is a segmentation layer (since
+  // we checked via `isSegmentationLayer`).
+  // $FlowFixMe
   return segmentationLayers[0];
 }
 

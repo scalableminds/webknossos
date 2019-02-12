@@ -1,9 +1,10 @@
 // @flow
-import { Card, Button } from "antd";
+import { Card, Button, Tag } from "antd";
 import Markdown from "react-remarkable";
 import * as React from "react";
 import classNames from "classnames";
 import { Link } from "react-router-dom";
+import moment from "moment";
 
 import type { APIDataset, APIDatasetId, APIDatasetDetails } from "admin/api_flow_types";
 import { formatScale } from "libs/format_utils";
@@ -12,6 +13,7 @@ import {
   hasSegmentation,
   getSegmentationThumbnailURL,
 } from "oxalis/model/accessors/dataset_accessor";
+import { compareBy } from "libs/utils";
 
 type ExtendedDatasetDetails = { ...APIDatasetDetails, name: string, scale: string };
 
@@ -34,11 +36,13 @@ function ThumbnailAndDescription({
   description,
   datasetDetails,
   publicationName,
+  publicationDate,
   datasetId,
   segmentationThumbnailURL,
 }: {
   thumbnailURL: string,
   publicationName: string,
+  publicationDate: number,
   datasetId: APIDatasetId,
   description: React.Element<*> | string,
   datasetDetails: ExtendedDatasetDetails,
@@ -49,6 +53,10 @@ function ThumbnailAndDescription({
     <React.Fragment>
       <div className="dataset-description">
         <div className="description-flex">
+          <div>
+            <Tag>{datasetId.owningOrganization}</Tag>
+            <span style={{ float: "right" }}>{moment(publicationDate).format("MMMM Do YYYY")}</span>
+          </div>
           <h3 style={{ fontSize: 20 }}>{publicationName}</h3>
           <div className="dataset-description-body">{description}</div>
         </div>
@@ -121,6 +129,8 @@ function ThumbnailAndDescription({
   );
 }
 
+const typeHint: Array<APIDataset> = [];
+
 type Props = { datasets: Array<APIDataset> };
 type State = { activeDataset: APIDataset };
 
@@ -136,6 +146,8 @@ class PublicationCard extends React.PureComponent<Props, State> {
     // This method will only be called for datasets with a publication, but Flow doesn't know that
     if (publication == null) throw Error("Assertion Error: Dataset has no associated publication.");
 
+    const sortedDatasets = datasets.sort(compareBy(typeHint, dataset => dataset.sortingKey));
+
     const descriptionComponent = (
       <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
         <span style={{ marginBottom: 16 }}>
@@ -150,7 +162,7 @@ class PublicationCard extends React.PureComponent<Props, State> {
             className="mini-dataset-thumbnail-grid"
             style={{ gridTemplateColumns: `repeat(auto-fill, ${miniThumbnailDimension}px)` }}
           >
-            {datasets.map(dataset => {
+            {sortedDatasets.map(dataset => {
               const datasetIdString = `${dataset.owningOrganization}/${dataset.name}`;
               return (
                 <Link to={`/datasets/${datasetIdString}/view`} key={datasetIdString}>
@@ -193,6 +205,7 @@ class PublicationCard extends React.PureComponent<Props, State> {
             hasSegmentation(activeDataset) ? getSegmentationThumbnailURL(activeDataset) : null
           }
           publicationName={publication.title}
+          publicationDate={publication.publicationDate}
           datasetId={{
             name: activeDataset.name,
             owningOrganization: activeDataset.owningOrganization,

@@ -48,7 +48,6 @@ class PublicationView extends React.PureComponent<Props> {
     return (
       <React.Fragment>
         <List
-          grid={gridValues}
           dataSource={datasetsByPublication}
           locale={{ emptyText: "No featured publications." }}
           renderItem={datasets => (

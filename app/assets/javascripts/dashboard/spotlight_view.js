@@ -182,7 +182,7 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
         )}
         <Content style={{ padding: 50 }}>
           <div className="pull-right">{search}</div>
-          <h3>Publications</h3>
+          <h3>Featured Publications</h3>
           <div className="clearfix" style={{ margin: "20px 0px" }} />
           <Spin size="large" spinning={this.state.isLoading}>
             <div style={{ minHeight: "100px" }}>

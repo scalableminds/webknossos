@@ -1,7 +1,7 @@
 // @flow
 import * as THREE from "three";
 
-import { ModeValues, ModeValuesIndices } from "oxalis/constants";
+import { ViewModeValues, ViewModeValuesIndices } from "oxalis/constants";
 import type { Uniforms } from "oxalis/geometries/materials/plane_material_factory";
 import { formatNumberAsGLSLFloat } from "oxalis/shaders/main_data_fragment.glsl";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
@@ -108,7 +108,7 @@ class NodeShader {
     listenToStoreProperty(
       storeState => storeState.temporaryConfiguration.viewMode,
       viewMode => {
-        this.uniforms.viewMode.value = ModeValues.indexOf(viewMode);
+        this.uniforms.viewMode.value = ViewModeValues.indexOf(viewMode);
       },
       true,
     );
@@ -222,7 +222,9 @@ void main() {
     // NODE COLOR FOR ACTIVE NODE
     v_isActiveNode = activeNodeId == nodeId ? 1.0 : 0.0;
     if (v_isActiveNode > 0.0) {
-      bool isOrthogonalMode = viewMode == ${formatNumberAsGLSLFloat(ModeValuesIndices.Orthogonal)};
+      bool isOrthogonalMode = viewMode == ${formatNumberAsGLSLFloat(
+        ViewModeValuesIndices.Orthogonal,
+      )};
 
       gl_PointSize *= activeNodeScaleFactor;
       v_innerPointSize = gl_PointSize;

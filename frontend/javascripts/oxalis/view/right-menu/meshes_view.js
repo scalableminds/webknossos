@@ -112,7 +112,7 @@ class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMeta
 
   render() {
     return (
-      <div className="info-tab-content">
+      <div className="padded-tab-content">
         <ButtonGroup style={{ marginBottom: 12 }}>
           <Upload
             accept=".stl"

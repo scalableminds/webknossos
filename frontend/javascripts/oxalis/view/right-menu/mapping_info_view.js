@@ -2,39 +2,60 @@
  * mapping_info_view.js
  * @flow
  */
-import { Table, Tooltip, Icon } from "antd";
+import type { Dispatch } from "redux";
+import { Icon, Select, Switch, Table, Tooltip } from "antd";
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
 import debounceRender from "react-debounce-render";
-import type { Dispatch } from "redux";
 
+import createProgressCallback from "libs/progress_callback";
+import type { APIDataset, APISegmentationLayer } from "admin/api_flow_types";
 import { type OrthoView, OrthoViews, type Vector2, type Vector3 } from "oxalis/constants";
 import type { OxalisState, Mapping } from "oxalis/store";
-import { SwitchSetting } from "oxalis/view/settings/setting_input_views";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
+import { getMappingsForDatasetLayer } from "admin/admin_rest_api";
 import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { getSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import { setLayerMappingsAction } from "oxalis/model/actions/dataset_actions";
 import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import Cube from "oxalis/model/bucket_data_handling/data_cube";
 import Model from "oxalis/model";
 import message from "messages";
 
+const { Option } = Select;
+
 type OwnProps = {|
   portalKey: string,
 |};
 type StateProps = {|
+  dataset: APIDataset,
+  segmentationLayer: ?APISegmentationLayer,
   position: Vector3,
   zoomStep: number,
   mousePosition: ?Vector2,
   isMappingEnabled: boolean,
   mapping: ?Mapping,
+  mappingName: ?string,
   mappingColors: ?Array<number>,
   setMappingEnabled: boolean => void,
+  setAvailableMappingsForLayer: (string, Array<string>) => void,
   activeViewport: OrthoView,
   activeCellId: number,
 |};
 type Props = {| ...OwnProps, ...StateProps |};
+
+type State = {
+  // shouldMappingBeEnabled is the UI state which is directly connected to the
+  // toggle button. The actual mapping in the store is only activated when
+  // the user selects a mapping from the dropdown (which is only possible after
+  // using the toggle). This is why, there is this.state.shouldMappingBeEnabled and
+  // this.props.isMappingEnabled
+  shouldMappingBeEnabled: boolean,
+  isRefreshingMappingList: boolean,
+  didRefreshMappingList: boolean,
+};
 
 // This function mirrors convertCellIdToRGB in the fragment shader of the rendering plane
 export const convertCellIdToHSLA = (id: number, customColors: ?Array<number>): Array<number> => {
@@ -57,7 +78,13 @@ const convertCellIdToCSS = (id, customColors) =>
 
 const hasSegmentation = () => Model.getSegmentationLayer() != null;
 
-class MappingInfoView extends React.Component<Props> {
+class MappingInfoView extends React.Component<Props, State> {
+  state = {
+    shouldMappingBeEnabled: false,
+    isRefreshingMappingList: false,
+    didRefreshMappingList: false,
+  };
+
   componentDidMount() {
     this.isMounted = true;
     if (!hasSegmentation()) {
@@ -159,7 +186,6 @@ class MappingInfoView extends React.Component<Props> {
     const columns = [columnHelper("", "name"), ...idColumns];
     return (
       <Table
-        style={{ maxWidth: 500 }}
         size="small"
         dataSource={tableData}
         columns={columns}
@@ -169,24 +195,98 @@ class MappingInfoView extends React.Component<Props> {
     );
   }
 
+  handleChangeMapping = (mappingName: string): void => {
+    const progressCallback = createProgressCallback({ pauseDelay: 500, successMessageDelay: 2000 });
+    Model.getSegmentationLayer().setActiveMapping(mappingName, progressCallback);
+    this.handleSetMappingEnabled(true);
+  };
+
+  async refreshLayerMappings() {
+    if (this.state.didRefreshMappingList) {
+      return;
+    }
+    const { segmentationLayer } = this.props;
+    if (!segmentationLayer) {
+      return;
+    }
+    this.setState({ isRefreshingMappingList: true });
+    const mappings = await getMappingsForDatasetLayer(
+      this.props.dataset.dataStore.url,
+      this.props.dataset,
+      segmentationLayer.name,
+    );
+
+    this.props.setAvailableMappingsForLayer(segmentationLayer.name, mappings);
+    this.setState({ isRefreshingMappingList: false, didRefreshMappingList: true });
+  }
+
+  handleSetMappingEnabled = (shouldMappingBeEnabled: boolean): void => {
+    if (shouldMappingBeEnabled) {
+      this.refreshLayerMappings();
+    }
+    this.setState({ shouldMappingBeEnabled });
+    if (this.props.mappingName != null) {
+      this.props.setMappingEnabled(shouldMappingBeEnabled);
+    }
+  };
+
   render() {
     if (!hasSegmentation()) {
       return "No segmentation available";
     }
-    const hasMapping = this.props.mapping != null;
+
+    const availableMappings =
+      this.props.segmentationLayer != null && this.props.segmentationLayer.mappings != null
+        ? this.props.segmentationLayer.mappings
+        : [];
+
+    // Antd does not render the placeholder when a value is defined (even when it's null).
+    // That's why, we only pass the value when it's actually defined.
+    const selectValueProp =
+      this.props.mappingName != null
+        ? {
+            value: this.props.mappingName,
+          }
+        : {};
 
     return (
-      <div id="volume-mapping-info" className="info-tab-content">
-        {hasMapping ? (
-          <div style={{ marginBottom: 12 }}>
-            <SwitchSetting
-              value={this.props.isMappingEnabled}
-              onChange={this.props.setMappingEnabled}
-              label="Enable Mapping"
-            />
-          </div>
-        ) : null}
+      <div id="volume-mapping-info" className="padded-tab-content" style={{ maxWidth: 500 }}>
         {this.renderIdTable()}
+
+        <div style={{ marginTop: 24, width: "50%", marginLeft: 16 }}>
+          <div style={{ marginBottom: 6 }}>
+            <label className="setting-label">
+              ID Mapping
+              <Switch
+                onChange={this.handleSetMappingEnabled}
+                checked={this.state.shouldMappingBeEnabled}
+                style={{ float: "right" }}
+                loading={this.state.isRefreshingMappingList}
+              />
+            </label>
+          </div>
+
+          {/*
+            Show mapping-select even when the mapping is disabled but the UI was used before
+            (i.e., mappingName != null)
+          */}
+          {this.state.shouldMappingBeEnabled || this.props.mappingName != null ? (
+            <Select
+              placeholder="Select mapping"
+              defaultActiveFirstOption={false}
+              style={{ width: "100%" }}
+              {...selectValueProp}
+              onChange={this.handleChangeMapping}
+              notFoundContent="No mappings found."
+            >
+              {availableMappings.map(mapping => (
+                <Option key={mapping} value={mapping}>
+                  {mapping}
+                </Option>
+              ))}
+            </Select>
+          ) : null}
+        </div>
       </div>
     );
   }
@@ -196,17 +296,23 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   setMappingEnabled(isEnabled) {
     dispatch(setMappingEnabledAction(isEnabled));
   },
+  setAvailableMappingsForLayer(layerName: string, mappingNames: Array<string>): void {
+    dispatch(setLayerMappingsAction(layerName, mappingNames));
+  },
 });
 
 function mapStateToProps(state: OxalisState) {
   return {
+    dataset: state.dataset,
     position: getPosition(state.flycam),
     zoomStep: getRequestLogZoomStep(state),
     isMappingEnabled: state.temporaryConfiguration.activeMapping.isMappingEnabled,
     mapping: state.temporaryConfiguration.activeMapping.mapping,
+    mappingName: state.temporaryConfiguration.activeMapping.mappingName,
     mappingColors: state.temporaryConfiguration.activeMapping.mappingColors,
     mousePosition: state.temporaryConfiguration.mousePosition,
     activeViewport: state.viewModeData.plane.activeViewport,
+    segmentationLayer: getSegmentationLayer(state.dataset),
     activeCellId: getVolumeTracing(state.tracing)
       .map(tracing => tracing.activeCellId)
       .getOrElse(0),

@@ -7,6 +7,7 @@ import * as THREE from "three";
 import _ from "lodash";
 
 import type { APIMapping } from "admin/api_flow_types";
+import type { ProgressCallback } from "libs/progress_callback";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
 import { doWithToken } from "admin/admin_rest_api";
 import { getMappings, getLayerByName } from "oxalis/model/accessors/dataset_accessor";
@@ -19,6 +20,7 @@ import Request from "libs/request";
 import Store, { type Mapping } from "oxalis/store";
 import UpdatableTexture from "libs/UpdatableTexture";
 import messages from "messages";
+import { trackAction } from "oxalis/model/helpers/analytics";
 
 export const MAPPING_TEXTURE_WIDTH = 4096;
 export const MAPPING_COLOR_TEXTURE_WIDTH = 16;
@@ -29,16 +31,30 @@ type APIMappings = { [string]: APIMapping };
 export function setupGlobalMappingsObject(segmentationLayer: DataLayer) {
   return {
     getAll(): string[] {
+      trackAction("Deprecated mapping usage (getAll)");
+      console.warn(
+        "Using mappings.getAll() is deprecated. Please use the official front-end API function getMappingNames() instead.",
+      );
       return segmentationLayer.mappings.getMappingNames();
     },
     getActive(): ?string {
+      trackAction("Deprecated mapping usage (getActive)");
+      console.warn(
+        "Using mappings.getAll() is deprecated. Please use the official front-end API function getActiveMapping() instead.",
+      );
       return segmentationLayer.activeMapping;
     },
     activate(mapping: string) {
+      trackAction("Deprecated mapping usage (activate)");
+      console.warn(
+        "Using mappings.activate() is deprecated. Please use the official front-end API function activateMapping() instead.",
+      );
       return segmentationLayer.setActiveMapping(mapping);
     },
   };
 }
+
+const noopProgressCallback = async (_a, _b): Promise<void> => {};
 
 class Mappings {
   baseUrl: string;
@@ -46,6 +62,7 @@ class Mappings {
   mappingTexture: UpdatableTexture;
   mappingLookupTexture: UpdatableTexture;
   mappingColorTexture: UpdatableTexture;
+  progressCallback: ProgressCallback;
 
   constructor(layerName: string) {
     const { dataset } = Store.getState();
@@ -54,24 +71,30 @@ class Mappings {
     const dataStoreUrl = dataset.dataStore.url;
     this.layerName = layerName;
     this.baseUrl = `${dataStoreUrl}/data/datasets/${organizationName}/${datasetName}/layers/${layerName}/mappings/`;
+    this.progressCallback = noopProgressCallback;
   }
 
   getMappingNames(): Array<string> {
     return getMappings(Store.getState().dataset, this.layerName);
   }
 
-  async activateMapping(mappingName: ?string) {
+  async activateMapping(mappingName: ?string, _progressCallback?: ProgressCallback) {
+    this.progressCallback = _progressCallback || noopProgressCallback;
+    const progressCallback = this.progressCallback;
     if (mappingName == null) {
       Store.dispatch(setMappingAction(null));
     } else {
       const fetchedMappings = {};
+      await progressCallback(false, "Downloading mapping...");
       await this.fetchMappings(mappingName, fetchedMappings);
       const { hideUnmappedIds, colors: mappingColors } = fetchedMappings[mappingName];
       // If custom colors are specified for a mapping, assign the mapped ids specifically, so that the first equivalence
       // class will get the first color, and so on
       const assignNewIds = mappingColors != null && mappingColors.length > 0;
+      await progressCallback(false, "Building mapping structure...");
       const mappingObject = this.buildMappingObject(mappingName, fetchedMappings, assignNewIds);
-      Store.dispatch(setMappingAction(mappingObject, mappingColors, hideUnmappedIds));
+      await progressCallback(false, "Applying mapping...");
+      Store.dispatch(setMappingAction(mappingName, mappingObject, mappingColors, hideUnmappedIds));
     }
   }
 
@@ -172,7 +195,9 @@ class Mappings {
 
     listenToStoreProperty(
       state => state.temporaryConfiguration.activeMapping.mapping,
-      mapping => this.updateMappingTextures(mapping),
+      mapping => {
+        this.updateMappingTextures(mapping);
+      },
     );
 
     listenToStoreProperty(
@@ -197,10 +222,11 @@ class Mappings {
     );
   }
 
-  updateMappingTextures(mapping: ?Mapping): void {
+  async updateMappingTextures(mapping: ?Mapping): Promise<void> {
     if (mapping == null) return;
+    const progressCallback = this.progressCallback;
 
-    console.log("Create mapping texture");
+    await progressCallback(false, "Create mapping texture...");
     console.time("Time to create mapping texture");
     // $FlowFixMe Flow chooses the wrong library definition, because it doesn't seem to know that Object.keys always returns strings and throws an error
     const keys = Uint32Array.from(Object.keys(mapping), x => parseInt(x, 10));
@@ -226,6 +252,7 @@ class Mappings {
       throw new Error(messages["mapping.too_big"]);
     }
 
+    await progressCallback(false, "Copy mapping data to GPU...");
     this.mappingLookupTexture.update(
       uint8KeysPadded,
       0,
@@ -240,7 +267,7 @@ class Mappings {
       MAPPING_TEXTURE_WIDTH,
       uint8ValuesPadded.length / MAPPING_TEXTURE_WIDTH / 4,
     );
-
+    await progressCallback(true, "Mapping successfully applied.");
     Store.dispatch(setMappingEnabledAction(true));
   }
 

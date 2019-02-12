@@ -20,7 +20,7 @@ class DataSourceController @Inject()(
                                       dataSourceService: DataSourceService,
                                       webKnossosServer: DataStoreWkRpcClient,
                                       accessTokenService: DataStoreAccessTokenService,
-                                      demoDatasetService: DemoDatasetService
+                                      sampleDatasetService: SampleDataSourceService
                                     )(implicit bodyParsers: PlayBodyParsers)
   extends Controller with FoxImplicits {
 
@@ -104,13 +104,22 @@ class DataSourceController @Inject()(
     }
   }
 
-  def fetchDemoDatasource(organizationName: String) = Action.async {
+  def fetchSampleDataSource(organizationName: String, dataSetName: String) = Action.async {
     implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
         AllowRemoteOrigin {
           for {
-            _ <- demoDatasetService.initDownload(organizationName)
+            _ <- sampleDatasetService.initDownload(organizationName, dataSetName)
           } yield JsonOk(Json.obj("messages" -> "downloadInitiated"))
+        }
+      }
+  }
+
+  def listSampleDataSources(organizationName: String) = Action.async {
+    implicit request =>
+      AllowRemoteOrigin {
+        accessTokenService.validateAccessForSyncBlock(UserAccessRequest.administrateDataSources) {
+          Ok(Json.toJson(sampleDatasetService.listWithStatus(organizationName)))
         }
       }
   }

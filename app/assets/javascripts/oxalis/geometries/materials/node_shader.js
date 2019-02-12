@@ -270,7 +270,7 @@ void main()
       gl_FragColor  = vec4(1.0);
     };
 
-    // Make active node round and make center a white circle
+    // Make active node round and give it a "halo"
     if (v_isActiveNode > 0.0) {
       float r = 0.0, delta = 0.0, alphaInner = 1.0, alphaOuter = 1.0;
       vec2 cxy = 2.0 * gl_PointCoord - 1.0;
@@ -284,7 +284,6 @@ void main()
       #endif
 
       vec4 inner = vec4(color, alphaInner);
-      // Make the outer ring white
       vec4 outer = vec4(color, alphaOuter);
       gl_FragColor = mix(inner, outer, alphaOuter);
     }

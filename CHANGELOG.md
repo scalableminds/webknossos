@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 ### Changed
 
 - The active node is highlighted with a "halo ring". Additionally, the node is also rendered as a circle. In flight and oblique modes the halo is hidden. [#3731](https://github.com/scalableminds/webknossos/pull/3731)
+![node-with-halo](https://user-images.githubusercontent.com/2486553/52623767-629a2580-2ead-11e9-92b1-c68aa5655c6c.gif)
 
 ### Fixed
 

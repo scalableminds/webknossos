@@ -54,6 +54,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   keyboard: InputKeyboard;
   keyboardNoLoop: InputKeyboardNoLoop;
   stats: Stats;
+  isMounted: boolean;
 
   state = {
     ready: false,
@@ -74,6 +75,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 
   componentDidMount() {
     _.extend(this, BackboneEvents);
+    this.isMounted = true;
 
     UrlManager.initialize();
 
@@ -94,6 +96,10 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       });
   }
 
+  componentWillUnmount() {
+    this.isMounted = false;
+  }
+
   modelFetchDone() {
     const beforeUnload = (evt, action) => {
       // Only show the prompt if this is a proper beforeUnload event from the browser
@@ -102,9 +108,12 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       if (action === undefined || evt.pathname !== window.location.pathname) {
         const stateSaved = Model.stateSaved();
         if (!stateSaved && Store.getState().tracing.restrictions.allowUpdate) {
-          Store.dispatch(saveNowAction());
           window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
           window.setTimeout(() => {
+            if (!this.isMounted) {
+              return;
+            }
+            Store.dispatch(saveNowAction());
             // restore the event handler in case a user chose to stay on the page
             window.onbeforeunload = beforeUnload;
           }, 500);

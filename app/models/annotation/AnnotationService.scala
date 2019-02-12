@@ -81,7 +81,8 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         case Some(selectedTeam) => Fox.successful(selectedTeam)
         case None =>
           for {
-            _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOfOrg(user, user._organization))
+            isTeamManagerOrAdminOfOrg <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
+            _ <- bool2Fox(isTeamManagerOrAdminOfOrg || dataSet.isPublic)
             organizationTeamId <- organizationDAO.findOrganizationTeamId(user._organization)
           } yield organizationTeamId
       }

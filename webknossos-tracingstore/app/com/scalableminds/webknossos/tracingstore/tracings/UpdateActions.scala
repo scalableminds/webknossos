@@ -28,7 +28,9 @@ case class UpdateActionGroup[T <: GeneratedMessage with Message[T]](
                                                                      timestamp: Long,
                                                                      actions: List[UpdateAction[T]],
                                                                      stats: Option[JsObject],
-                                                                     info: Option[String])
+                                                                     info: Option[String],
+                                                                     id: Option[String]
+                                                                   )
 
 object UpdateActionGroup {
 
@@ -41,8 +43,9 @@ object UpdateActionGroup {
         actions <- json.validate((JsPath \ "actions").read[List[UpdateAction[T]]])
         stats <- json.validate((JsPath \ "stats").readNullable[JsObject])
         info <- json.validate((JsPath \ "info").readNullable[String])
+        id <- json.validate((JsPath \ "id").readNullable[String])
       } yield {
-        UpdateActionGroup[T](version, timestamp, actions, stats, info)
+        UpdateActionGroup[T](version, timestamp, actions, stats, info, id)
       }
     }
   }

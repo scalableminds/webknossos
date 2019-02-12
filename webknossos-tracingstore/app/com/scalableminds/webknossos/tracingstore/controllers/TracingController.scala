@@ -110,11 +110,13 @@ trait TracingController[T <: GeneratedMessage with Message[T],
           val userToken = request.getQueryString("token")
           webKnossosServer.reportTracingUpdates(tracingId, timestamps, latestStatistics, userToken).flatMap { _ =>
             updateGroups.foldLeft(currentVersion) { (previousVersion, updateGroup) =>
-              previousVersion.flatMap { version =>
-                if (version + 1 == updateGroup.version || freezeVersions) {
-                  tracingService.handleUpdateGroup(tracingId, updateGroup, version).map(_ => if (freezeVersions) version else updateGroup.version)
+              previousVersion.flatMap { prevVersion =>
+                if (prevVersion + 1 == updateGroup.version || freezeVersions) {
+                  tracingService.handleUpdateGroup(tracingId, updateGroup, prevVersion)
+                    .map(_ => saveToHandledGroupCache(tracingId, updateGroup.version, updateGroup.id))
+                    .map(_ => if (freezeVersions) prevVersion else updateGroup.version)
                 } else {
-                  Failure(s"Incorrect version. Expected: ${version + 1}; Got: ${updateGroup.version}") ~> CONFLICT
+                  Failure(s"Incorrect version. Expected: ${prevVersion + 1}; Got: ${updateGroup.version}") ~> CONFLICT
                 }
               }
             }
@@ -122,5 +124,9 @@ trait TracingController[T <: GeneratedMessage with Message[T],
         }
       }
     }
+  }
+
+  def saveToHandledGroupCache(tracingId: String, version: Long, id: Option[String]): Fox[Unit] = {
+    Fox.successful(())
   }
 }

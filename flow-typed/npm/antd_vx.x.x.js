@@ -69,7 +69,14 @@ declare module "antd" {
     static ItemGroup: typeof MenuItemGroup;
     static SubMenu: typeof MenuSubMenu;
   }
-  declare var message: Object;
+  declare export var message: {
+    success(content: string | React$Node, duration?: number, onClose?: Function): void,
+    error(content: string | React$Node, duration?: number, onClose?: Function): void,
+    info(content: string | React$Node, duration?: number, onClose?: Function): void,
+    warning(content: string | React$Node, duration?: number, onClose?: Function): void,
+    warn(content: string | React$Node, duration?: number, onClose?: Function): void,
+    loading(content: string | React$Node, duration?: number, onClose?: Function): void,
+  };
   declare export class Modal<P> extends React$Component<P> {
     static confirm: Function;
     static info: Function;

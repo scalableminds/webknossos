@@ -31,7 +31,7 @@ import TracingView from "oxalis/view/tracing_view";
 import TreesTabView, { importNmls } from "oxalis/view/right-menu/trees_tab_view";
 import VersionView from "oxalis/view/version_view";
 import messages from "messages";
-import window, { location } from "libs/window";
+import window, { document, location } from "libs/window";
 
 import { GoldenLayoutAdapter } from "./golden_layout_adapter";
 import { determineLayout, headerHeight } from "./default_layout_configs";
@@ -101,7 +101,9 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
   }
 
   componentWillUnmount() {
-    // do a complete page refresh to make sure all tracing data is garbage
+    // Replace entire document with loading message
+    document.write("Reloading webKnossos...");
+    // Do a complete page refresh to make sure all tracing data is garbage
     // collected and all events are canceled, etc.
     location.reload();
   }

@@ -81,7 +81,8 @@ const WelcomeHeader = ({ history }) => (
                   paddingLeft: "1.2em",
                 }}
               >
-                <li>Fly through your data for fast skeletonization and efficiently paint voxels</li>
+                <li>Fly through your data for fast skeletonization and proof-reading</li>
+                <li>Create 3D training data for automated segmentations efficiently</li>
                 <li>Scale data reconstruction projects with crowdsourcing workflows</li>
                 <li>Share datasets and annotations with collaborating scientists</li>
               </ul>

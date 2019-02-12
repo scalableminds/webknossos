@@ -73,7 +73,7 @@ const WelcomeHeader = ({ history }) => (
                   marginTop: 0,
                 }}
               >
-                webKnossos is an open-source tool for annotating and exploring large 3D datasets.
+                webKnossos is an open-source tool for annotating and exploring large 3D datasets
               </p>
               <ul
                 style={{
@@ -81,11 +81,9 @@ const WelcomeHeader = ({ history }) => (
                   paddingLeft: "1.2em",
                 }}
               >
-                <li>
-                  Fly through your data for fast skeletonization and efficiently paint voxels.
-                </li>
-                <li>Scale data reconstruction projects with crowdsourcing workflows.</li>
-                <li>Share datasets and annotations with collaborating scientists.</li>
+                <li>Fly through your data for fast skeletonization and efficiently paint voxels</li>
+                <li>Scale data reconstruction projects with crowdsourcing workflows</li>
+                <li>Share datasets and annotations with collaborating scientists</li>
               </ul>
             </div>
 

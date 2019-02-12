@@ -123,12 +123,6 @@ class Authentication @Inject()(actorSystem: ActorSystem,
   private lazy val ssoKey =
     conf.Application.Authentication.ssoKey
 
-  val automaticUserActivation: Boolean =
-    conf.Application.Authentication.enableDevAutoVerify
-
-  val isAdminOnRegistration: Boolean =
-    conf.Application.Authentication.enableDevAutoAdmin
-
   def normalizeName(name: String): Option[String] = {
     val replacementMap = Map(
       "ü" -> "ue",
@@ -182,11 +176,11 @@ class Authentication @Inject()(actorSystem: ActorSystem,
         val loginInfo = LoginInfo(CredentialsProvider.ID, email)
         var errors = List[String]()
         val firstName = normalizeName(signUpData.firstName).getOrElse {
-          errors ::= Messages("user.firstName.invalid");
+          errors ::= Messages("user.firstName.invalid")
           ""
         }
         val lastName = normalizeName(signUpData.lastName).getOrElse {
-          errors ::= Messages("user.lastName.invalid");
+          errors ::= Messages("user.lastName.invalid")
           ""
         }
         userService.retrieve(loginInfo).toFox.futureBox.flatMap {
@@ -205,8 +199,8 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                            email,
                                            firstName,
                                            lastName,
-                                           automaticUserActivation,
-                                           isAdminOnRegistration,
+                                           organization.enableAutoVerify,
+                                           false,
                                            loginInfo,
                                            passwordHasher.hash(signUpData.password)) ?~> "user.creation.failed"
                 brainDBResult <- brainTracing.registerIfNeeded(user, signUpData.password).toFox
@@ -449,7 +443,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                                firstName,
                                                lastName,
                                                isActive = true,
-                                               teamRole = true,
+                                               isOrgTeamManager = true,
                                                loginInfo,
                                                passwordHasher.hash(signUpData.password),
                                                isAdmin = true) ?~> "user.creation.failed"

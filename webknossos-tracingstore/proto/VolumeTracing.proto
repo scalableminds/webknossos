@@ -27,6 +27,10 @@ message VolumeTracing {
     optional BoundingBox userBoundingBox = 12;
 }
 
+message VolumeTracingOpt {
+    optional VolumeTracing tracing = 1;
+}
+
 message VolumeTracings {
-    repeated VolumeTracing tracings = 1;
+    repeated VolumeTracingOpt tracings = 1;
 }

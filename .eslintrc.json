@@ -7,7 +7,7 @@
     "prettier/flowtype",
     "prettier/react"
   ],
-  "plugins": ["react", "import", "flowtype", "flow-header"],
+  "plugins": ["react", "react-hooks", "import", "flowtype", "flow-header"],
   "parserOptions": {
     "ecmaVersion": 8
   },
@@ -43,6 +43,7 @@
     "jsx-a11y/click-events-have-key-events": "off",
     "jsx-a11y/no-static-element-interactions": "off",
     "jsx-a11y/label-has-associated-control": "off",
+    "jsx-a11y/label-has-for": "off",
     "lines-between-class-members": ["warn", "always", { "exceptAfterSingleLine": true }],
     "max-len": ["off", 100],
     "no-bitwise": "off",
@@ -73,6 +74,7 @@
     "react/no-multi-comp": "off",
     "react/prop-types": "off",
     "react/require-default-props": "off",
+    "react-hooks/rules-of-hooks": "error",
     "import/newline-after-import": "off",
     "flow-header/flow-header": "error",
     "react/sort-comp": [

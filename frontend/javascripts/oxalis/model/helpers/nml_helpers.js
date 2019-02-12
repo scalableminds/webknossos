@@ -372,10 +372,10 @@ function isTreeConnected(tree: Tree): boolean {
 
   if (tree.nodes.size() > 0) {
     // Get the first element from the nodes map
-    const nodeQueue = [Number(tree.nodes.keys().next().value)];
+    const nodesToBeVisited = new Set([Number(tree.nodes.keys().next().value)]);
     // Breadth-First search that marks all reachable nodes as visited
-    while (nodeQueue.length !== 0) {
-      const nodeId = nodeQueue.shift();
+    while (nodesToBeVisited.size > 0) {
+      const nodeId = nodesToBeVisited.values().next().value;
       visitedNodes.set(nodeId, true);
       const edges = tree.edges.getEdgesForNode(nodeId);
       // If there are no edges for a node, the tree is not connected
@@ -383,11 +383,12 @@ function isTreeConnected(tree: Tree): boolean {
 
       for (const edge of edges) {
         if (nodeId === edge.target && !visitedNodes.get(edge.source)) {
-          nodeQueue.push(edge.source);
+          nodesToBeVisited.add(edge.source);
         } else if (!visitedNodes.get(edge.target)) {
-          nodeQueue.push(edge.target);
+          nodesToBeVisited.add(edge.target);
         }
       }
+      nodesToBeVisited.delete(nodeId);
     }
   }
 

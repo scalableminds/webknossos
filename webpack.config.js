@@ -8,7 +8,7 @@ module.exports = function(env = {}) {
 
   // const HardSourceWebpackPlugin = require("hard-source-webpack-plugin");
 
-  var srcPath = path.resolve(__dirname, "app/assets/javascripts/");
+  var srcPath = path.resolve(__dirname, "frontend/javascripts/");
   var nodePath = path.join(__dirname, "node_modules/");
   var protoPath = path.join(__dirname, "webknossos-tracingstore/proto/");
 

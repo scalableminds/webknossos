@@ -1,9 +1,11 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import java.io.File
+import java.nio.file.Paths
 
 import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.services._
 import play.api.data.Form
@@ -118,6 +120,18 @@ class DataSourceController @Inject()(
           }
         }
       }
+  }
+
+  def listMappings(
+                    organizationName: String,
+                    dataSetName: String,
+                    dataLayerName: String
+                  ) = Action.async { implicit request =>
+    accessTokenService.validateAccessForSyncBlock(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+      AllowRemoteOrigin {
+        Ok(Json.toJson(dataSourceService.exploreMappings(organizationName, dataSetName, dataLayerName)))
+      }
+    }
   }
 
   def update(organizationName: String, dataSetName: String) = Action.async(validateJson[DataSource]) {

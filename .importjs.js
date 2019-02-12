@@ -7,7 +7,7 @@ module.exports = {
   },
   moduleNameFormatter({ moduleName, pathToCurrentFile }) {
     // trim the path prefix
-    const appDirPrefix = "app/assets/javascripts/";
+    const appDirPrefix = "frontend/javascripts/";
     if (moduleName.startsWith(appDirPrefix)) {
       return moduleName.slice(appDirPrefix.length);
     }

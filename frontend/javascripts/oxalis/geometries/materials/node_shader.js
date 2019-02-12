@@ -1,8 +1,9 @@
 // @flow
-
 import * as THREE from "three";
 
+import { ModeValues, ModeValuesIndices } from "oxalis/constants";
 import type { Uniforms } from "oxalis/geometries/materials/plane_material_factory";
+import { formatNumberAsGLSLFloat } from "oxalis/shaders/main_data_fragment.glsl";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -87,6 +88,10 @@ class NodeShader {
         type: "f",
         value: state.userConfiguration.highlightCommentedNodes,
       },
+      viewMode: {
+        type: "f",
+        value: 0,
+      },
     };
 
     listenToStoreProperty(
@@ -94,6 +99,14 @@ class NodeShader {
       highlightCommentedNodes => {
         this.uniforms.highlightCommentedNodes.value = highlightCommentedNodes ? 1 : 0;
       },
+    );
+
+    listenToStoreProperty(
+      storeState => storeState.temporaryConfiguration.viewMode,
+      viewMode => {
+        this.uniforms.viewMode.value = ModeValues.indexOf(viewMode);
+      },
+      true,
     );
   }
 
@@ -121,6 +134,7 @@ uniform int overrideNodeRadius; // bool activates equaly node radius for all nod
 uniform int isPicking; // bool indicates whether we are currently rendering for node picking
 uniform int isTouch; // bool that is used during picking and indicates whether the picking was triggered by a touch event
 uniform float highlightCommentedNodes;
+uniform float viewMode;
 
 uniform sampler2D treeColors;
 
@@ -132,6 +146,8 @@ attribute float isCommented;
 // varying to use in the fragment shader
 varying float v_isHighlightedCommented;
 varying float v_isActiveNode;
+varying float v_innerPointSize;
+varying float v_outerPointSize;
 attribute float nodeId;
 attribute float treeId;
 
@@ -202,7 +218,12 @@ void main() {
     // NODE COLOR FOR ACTIVE NODE
     v_isActiveNode = activeNodeId == nodeId ? 1.0 : 0.0;
     if (v_isActiveNode > 0.0) {
+      bool isOrthogonalMode = viewMode == ${formatNumberAsGLSLFloat(ModeValuesIndices.Orthogonal)};
+
       gl_PointSize *= activeNodeScaleFactor;
+      v_innerPointSize = gl_PointSize;
+      v_outerPointSize = isOrthogonalMode ? (v_innerPointSize + 25.0) * activeNodeScaleFactor : v_innerPointSize;
+      gl_PointSize = v_outerPointSize;
     }
 
     float isBranchpoint =
@@ -235,6 +256,8 @@ precision highp float;
 varying vec3 color;
 varying float v_isHighlightedCommented;
 varying float v_isActiveNode;
+varying float v_innerPointSize;
+varying float v_outerPointSize;
 
 void main()
 {
@@ -247,17 +270,22 @@ void main()
       gl_FragColor  = vec4(1.0);
     };
 
-    // Make active node round
+    // Make active node round and give it a "halo"
     if (v_isActiveNode > 0.0) {
-      float r = 0.0, delta = 0.0, alpha = 1.0;
+      float r = 0.0, delta = 0.0, alphaInner = 1.0, alphaOuter = 1.0;
       vec2 cxy = 2.0 * gl_PointCoord - 1.0;
       r = dot(cxy, cxy);
+
       #ifdef GL_OES_standard_derivatives
         delta = fwidth(r);
-        alpha = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r);
+        alphaOuter = 1.0 - smoothstep(0.0, delta, abs(1.0 - delta - r));
+        alphaInner = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r / (v_innerPointSize / v_outerPointSize));
+        alphaOuter = max(0.0, alphaOuter - alphaInner);
       #endif
 
-      gl_FragColor = vec4(color, alpha);
+      vec4 inner = vec4(color, alphaInner);
+      vec4 outer = vec4(color, alphaOuter);
+      gl_FragColor = mix(inner, outer, alphaOuter);
     }
 }`;
   }

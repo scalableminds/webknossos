@@ -149,7 +149,7 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
     e.preventDefault();
     form.validateFields((err, values) => {
       if (!err) {
-        onComplete(values.organizationName, joinExistingOrganization);
+        onComplete(values.organizationName);
       }
     });
   };
@@ -171,6 +171,7 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
               rules: [{ required: true, message: "Please enter an organization name!" }],
             })(
               <AutoComplete
+                size="large"
                 dataSource={organizations}
                 defaultActiveFirstOption={false}
                 placeholder="Your organization name"

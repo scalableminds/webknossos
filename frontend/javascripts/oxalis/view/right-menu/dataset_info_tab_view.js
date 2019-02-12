@@ -313,7 +313,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     const extentInVoxel = getDatasetExtentInVoxel(this.props.dataset);
     const extent = getDatasetExtentInLength(this.props.dataset);
     return (
-      <div className="flex-overflow info-tab-content">
+      <div className="flex-overflow padded-tab-content" style={{ maxWidth: 500 }}>
         {this.getTracingName(isDatasetViewMode)}
         {this.getTracingType(isDatasetViewMode)}
         {this.getDatasetName(isDatasetViewMode)}

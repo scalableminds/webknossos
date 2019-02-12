@@ -251,7 +251,7 @@ class MappingInfoView extends React.Component<Props, State> {
         : {};
 
     return (
-      <div id="volume-mapping-info" className="info-tab-content">
+      <div id="volume-mapping-info" className="padded-tab-content">
         {this.renderIdTable()}
 
         <div style={{ marginTop: 24, width: "50%", marginLeft: 16 }}>

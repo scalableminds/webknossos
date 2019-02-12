@@ -265,7 +265,7 @@ jobs:
             (exit $s)
 
       - store_artifacts:
-          path: app/assets/javascripts/test/screenshots
+          path: frontend/javascripts/test/screenshots
 
 workflows:
   version: 2

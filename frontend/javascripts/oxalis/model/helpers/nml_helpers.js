@@ -375,7 +375,8 @@ function isTreeConnected(tree: Tree): boolean {
     const nodesToBeVisited = new Set([Number(tree.nodes.keys().next().value)]);
     // Breadth-First search that marks all reachable nodes as visited
     while (nodesToBeVisited.size > 0) {
-      const nodeId = nodesToBeVisited.values().next().value;
+      // $FlowFixMe nodeId will be a number as we checked the size of the set first
+      const nodeId: number = nodesToBeVisited.values().next().value;
       visitedNodes.set(nodeId, true);
       const edges = tree.edges.getEdgesForNode(nodeId);
       // If there are no edges for a node, the tree is not connected

@@ -321,24 +321,18 @@ class SceneController {
     // all buckets necessary for rendering are addressed. The anchorPoint is
     // defined with bucket indices for the coordinate system of the current zoomStep.
     let anchorPoint;
-    // The fallbackAnchorPoint is similar to the anchorPoint, but refers to the
-    // coordinate system of the next zoomStep which is used for fallback rendering.
-    let fallbackAnchorPoint;
 
     const zoomStep = getRequestLogZoomStep(Store.getState());
     for (const dataLayer of Model.getAllLayers()) {
-      [anchorPoint, fallbackAnchorPoint] = dataLayer.layerRenderingManager.updateDataTextures(
-        globalPosition,
-        zoomStep,
-      );
+      anchorPoint = dataLayer.layerRenderingManager.updateDataTextures(globalPosition, zoomStep);
     }
 
     if (optArbitraryPlane) {
-      optArbitraryPlane.updateAnchorPoints(anchorPoint, fallbackAnchorPoint);
+      optArbitraryPlane.updateAnchorPoints(anchorPoint);
       optArbitraryPlane.setPosition(globalPosVec);
     } else {
       for (const currentPlane of _.values(this.planes)) {
-        currentPlane.updateAnchorPoints(anchorPoint, fallbackAnchorPoint);
+        currentPlane.updateAnchorPoints(anchorPoint);
         currentPlane.setPosition(globalPosVec);
         const [scaleX, scaleY] = getPlaneScalingFactor(state, flycam, currentPlane.planeID);
         currentPlane.setScale(scaleX, scaleY);

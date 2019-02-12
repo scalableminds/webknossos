@@ -126,7 +126,6 @@ export const ensureSmallerEdge = false;
 // ((32 × 32 × 50 + 16 × 16 × 50) / 256^2 = 0.976563)
 export const addressSpaceDimensions = {
   normal: [32, 32, 50],
-  fallback: [16, 16, 50],
 };
 
 export const Unicode = {

@@ -39,7 +39,6 @@ function calculateTotalBucketCountForZoomLevel(
   // Define dummy values
   const position = [0, 0, 0];
   const anchorPoint = [0, 0, 0, 0];
-  const fallbackAnchorPoint = [0, 0, 0, 0];
   const subBucketLocality = [1, 1, 1];
   const sphericalCapRadius = constants.DEFAULT_SPHERICAL_CAP_RADIUS;
 
@@ -78,7 +77,6 @@ function calculateTotalBucketCountForZoomLevel(
       enqueueFunction,
       logZoomStep,
       anchorPoint,
-      fallbackAnchorPoint,
       areas,
       subBucketLocality,
       abortLimit,

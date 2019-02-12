@@ -97,7 +97,7 @@ export const getRgbaAtXYIndex: ShaderModule = {
   `,
 };
 
-const getColorFor: ShaderModule = {
+export const getColorForCoords: ShaderModule = {
   requirements: [
     linearizeVec3ToIndex,
     linearizeVec3ToIndexWithMod,
@@ -105,23 +105,20 @@ const getColorFor: ShaderModule = {
     getRgbaAtXYIndex,
   ],
   code: `
-    vec4 getColorFor(
+    vec4 getColorForCoords(
       sampler2D lookUpTexture,
       float layerIndex,
       float d_texture_width,
       float packingDegree,
-      vec3 bucketPosition,
-      vec3 offsetInBucket,
-      float isFallback
+      vec3 worldPositionUVW
     ) {
-      float bucketIdx = linearizeVec3ToIndex(bucketPosition, isFallback > 0.0 ? addressSpaceDimensionsFallback : addressSpaceDimensions);
+      vec3 coords = floor(getRelativeCoords(worldPositionUVW, zoomStep));
+      vec3 bucketPosition = div(coords, bucketWidth);
+      vec3 offsetInBucket = mod(coords, bucketWidth);
 
-      // If we are making a fallback lookup, the lookup area we are interested in starts at
-      // volumeOf(addressSpaceDimensions). If isFallback is true, we use that offset. Otherwise, the offset is 0.
-      float fallbackOffset = isFallback * addressSpaceDimensions.x * addressSpaceDimensions.y * addressSpaceDimensions.z;
-      float bucketIdxInTexture =
-        bucketIdx * floatsPerLookUpEntry
-        + fallbackOffset;
+      float bucketIdx = linearizeVec3ToIndex(bucketPosition, addressSpaceDimensions);
+
+      float bucketIdxInTexture = bucketIdx * floatsPerLookUpEntry;
 
       float bucketAddress = getRgbaAtIndex(
         lookUpTexture,
@@ -190,34 +187,6 @@ const getColorFor: ShaderModule = {
       }
 
       return vec4(0.0);
-    }
-  `,
-};
-
-export const getColorForCoords: ShaderModule = {
-  requirements: [getColorFor],
-  code: `
-    vec4 getColorForCoords(
-      sampler2D lookUpTexture,
-      float layerIndex,
-      float d_texture_width,
-      float packingDegree,
-      vec3 coords,
-      float isFallback
-    ) {
-      coords = floor(coords);
-      vec3 bucketPosition = div(coords, bucketWidth);
-      vec3 offsetInBucket = mod(coords, bucketWidth);
-
-      return getColorFor(
-        lookUpTexture,
-        layerIndex,
-        d_texture_width,
-        packingDegree,
-        bucketPosition,
-        offsetInBucket,
-        isFallback
-      );
     }
   `,
 };

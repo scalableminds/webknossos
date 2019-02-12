@@ -90,7 +90,6 @@ uniform vec3 bboxMin;
 uniform vec3 bboxMax;
 uniform vec3 globalPosition;
 uniform vec3 anchorPoint;
-uniform vec3 fallbackAnchorPoint;
 uniform float zoomStep;
 uniform float zoomValue;
 uniform vec3 uvw;
@@ -100,7 +99,6 @@ uniform bool isMouseInCanvas;
 uniform float brushSizeInPixel;
 uniform float planeID;
 uniform vec3 addressSpaceDimensions;
-uniform vec3 addressSpaceDimensionsFallback;
 
 varying vec4 worldCoord;
 varying vec4 modelCoord;
@@ -145,22 +143,15 @@ void main() {
   vec3 bucketPosition = div(floor(coords), bucketWidth);
   if (renderBucketIndices) {
     gl_FragColor = vec4(bucketPosition, zoomStep) / 255.;
-    // gl_FragColor = vec4(0.5, 1.0, 1.0, 1.0);
     return;
   }
-  vec3 offsetInBucket = mod(floor(coords), bucketWidth);
 
   <% if (hasSegmentation) { %>
-    float segmentationFallbackZoomStep = min(<%= segmentationName %>_maxZoomStep, zoomStep + 1.0);
-    bool segmentationHasFallback = segmentationFallbackZoomStep > zoomStep;
-    vec3 segmentationFallbackCoords = floor(getRelativeCoords(worldCoordUVW, segmentationFallbackZoomStep));
-
-    vec4 id = getSegmentationId(coords, segmentationFallbackCoords, segmentationHasFallback);
+    // bool segmentationHasFallback = <%= segmentationName %>_maxZoomStep >= zoomStep + 1.0;
+    vec4 id = getSegmentationId(worldCoordUVW);
 
     vec3 flooredMousePosUVW = transDim(floor(globalMousePosition));
-    vec3 mousePosCoords = getRelativeCoords(flooredMousePosUVW, zoomStep);
-
-    vec4 cellIdUnderMouse = getSegmentationId(mousePosCoords, segmentationFallbackCoords, false);
+    vec4 cellIdUnderMouse = getSegmentationId(flooredMousePosUVW);
   <% } %>
 
   // Get Color Value(s)
@@ -168,12 +159,10 @@ void main() {
   vec3 color_value  = vec3(0.0);
   float fallbackZoomStep;
   bool hasFallback;
-  vec3 fallbackCoords;
   <% _.each(colorLayerNames, function(name, layerIndex){ %>
 
     fallbackZoomStep = min(<%= name %>_maxZoomStep, zoomStep + 1.0);
     hasFallback = fallbackZoomStep > zoomStep;
-    fallbackCoords = floor(getRelativeCoords(worldCoordUVW, fallbackZoomStep));
     // Get grayscale value for <%= name %>
     color_value =
       getMaybeFilteredColorOrFallback(
@@ -181,9 +170,7 @@ void main() {
         <%= formatNumberAsGLSLFloat(layerIndex) %>,
         <%= name %>_data_texture_width,
         <%= isRgbLayerLookup[name] ? "1.0" : "4.0" %>,  // RGB data cannot be packed, gray scale data is always packed into rgba channels
-        coords,
-        fallbackCoords,
-        hasFallback,
+        worldCoordUVW,
         false,
         fallbackGray
       ).xyz;

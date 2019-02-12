@@ -44,7 +44,6 @@ export default class TextureBucketManager {
   isRefreshBufferOutOfDate: boolean = false;
 
   currentAnchorPoint: Vector4 = [0, 0, 0, 0];
-  fallbackAnchorPoint: Vector4 = [0, 0, 0, 0];
   writerQueue: Array<{ bucket: DataBucket, _index: number }> = [];
   textureWidth: number;
   dataTextureCount: number;
@@ -79,7 +78,7 @@ export default class TextureBucketManager {
   }
 
   clear() {
-    this.setActiveBuckets([], [0, 0, 0, 0], [0, 0, 0, 0]);
+    this.setActiveBuckets([], [0, 0, 0, 0]);
   }
 
   freeBucket(bucket: DataBucket): void {
@@ -98,14 +97,9 @@ export default class TextureBucketManager {
   // Takes an array of buckets (relative to an anchorPoint) and ensures that these
   // are written to the dataTexture. The lookUpTexture will be updated to reflect the
   // new buckets.
-  setActiveBuckets(
-    buckets: Array<DataBucket>,
-    anchorPoint: Vector4,
-    fallbackAnchorPoint: Vector4,
-  ): void {
+  setActiveBuckets(buckets: Array<DataBucket>, anchorPoint: Vector4): void {
     this.currentAnchorPoint = anchorPoint;
     window.currentAnchorPoint = anchorPoint;
-    this.fallbackAnchorPoint = fallbackAnchorPoint;
     // Find out which buckets are not needed anymore
     const freeBucketSet = new Set(this.activeBucketToIndexMap.keys());
     for (const bucket of buckets) {
@@ -285,8 +279,11 @@ export default class TextureBucketManager {
     const bucketZoomStep = bucketPosition[3];
     const zoomDiff = bucketZoomStep - renderingZoomStep;
     const isFallbackBucket = zoomDiff > 0;
+    if (isFallbackBucket) {
+      return 0;
+    }
 
-    const anchorPoint = isFallbackBucket ? this.fallbackAnchorPoint : this.currentAnchorPoint;
+    const anchorPoint = this.currentAnchorPoint;
 
     const x = bucketPosition[0] - anchorPoint[0];
     const y = bucketPosition[1] - anchorPoint[1];
@@ -301,9 +298,7 @@ export default class TextureBucketManager {
     // fallback data doesn't require more buckets than non-fallback).
     // Consequently, these values should be fine to address buckets.
     const [sx, sy, sz] = addressSpaceDimensions.normal;
-    const [_sx, _sy] = isFallbackBucket
-      ? addressSpaceDimensions.fallback
-      : addressSpaceDimensions.normal;
+    const [_sx, _sy] = addressSpaceDimensions.normal;
 
     // prettier-ignore
     return (

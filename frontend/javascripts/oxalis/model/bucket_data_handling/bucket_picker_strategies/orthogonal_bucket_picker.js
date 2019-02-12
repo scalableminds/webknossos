@@ -28,7 +28,6 @@ export default function determineBucketsForOrthogonal(
   enqueueFunction: EnqueueFunction,
   logZoomStep: number,
   anchorPoint: Vector4,
-  fallbackAnchorPoint: Vector4,
   areas: OrthoViewMap<Area>,
   subBucketLocality: Vector3,
   abortLimit?: number,
@@ -45,6 +44,11 @@ export default function determineBucketsForOrthogonal(
   );
 
   if (logZoomStep + 1 < resolutions.length) {
+    const fallbackAnchorPoint = zoomedAddressToAnotherZoomStep(
+      anchorPoint,
+      resolutions,
+      logZoomStep + 1,
+    );
     addNecessaryBucketsToPriorityQueueOrthogonal(
       resolutions,
       enqueueFunction,
@@ -93,9 +97,7 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
       logZoomStep,
     );
 
-    const bucketsPerDim = isFallback
-      ? addressSpaceDimensions.fallback
-      : addressSpaceDimensions.normal;
+    const bucketsPerDim = addressSpaceDimensions.normal;
 
     const renderedBucketsPerDimension = bucketsPerDim[w];
 

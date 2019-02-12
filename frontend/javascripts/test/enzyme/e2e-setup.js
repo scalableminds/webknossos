@@ -134,7 +134,7 @@ function createSnapshotable(wrapper: any) {
 
 function debugWrapper(wrapper: any, name: string) {
   fs.writeFile(
-    `app/assets/javascripts/test/snapshots/debug-htmls/test-wk-snapshots-${name}.html`,
+    `frontend/javascripts/test/snapshots/debug-htmls/test-wk-snapshots-${name}.html`,
     wrapper.debug(),
     () => {},
   );
@@ -148,7 +148,7 @@ export async function writeFlowCheckingFile(
 ) {
   const fullFlowType = options.isArray ? `Array<${flowTypeString}>` : flowTypeString;
   fs.writeFileSync(
-    `app/assets/javascripts/test/snapshots/flow-check/test-flow-checking-${name}.js`,
+    `frontend/javascripts/test/snapshots/flow-check/test-flow-checking-${name}.js`,
     `// @flow
 import type { ${flowTypeString} } from "admin/api_flow_types";
 const a: ${fullFlowType} = ${JSON.stringify(object)}`,

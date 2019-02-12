@@ -13,7 +13,7 @@ process.on("unhandledRejection", (err, promise) => {
   console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");
 });
 
-const BASE_PATH = path.join(__dirname, "../../../../app/assets/javascripts/test/screenshots");
+const BASE_PATH = path.join(__dirname, "../../../../frontend/javascripts/test/screenshots");
 
 let URL = "https://master.webknossos.xyz";
 if (!process.env.URL) {

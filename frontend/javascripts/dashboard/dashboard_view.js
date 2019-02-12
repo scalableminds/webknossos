@@ -21,8 +21,6 @@ import Request from "libs/request";
 
 const TabPane = Tabs.TabPane;
 
-const validTabKeys = ["publications", "advanced-datasets", "tasks", "explorativeAnnotations"];
-
 type OwnProps = {|
   userId: ?string,
   isAdminView: boolean,
@@ -44,7 +42,7 @@ type State = {
 export const wkDatasetsCacheKey = "wk.datasets";
 export const datasetCache = {
   set(datasets: APIMaybeUnimportedDataset[]): void {
-    localStorage.setItem("wk.datasets", JSON.stringify(datasets));
+    localStorage.setItem(wkDatasetsCacheKey, JSON.stringify(datasets));
   },
   get(): APIMaybeUnimportedDataset[] {
     return parseAsMaybe(localStorage.getItem(wkDatasetsCacheKey)).getOrElse([]);
@@ -56,7 +54,7 @@ export const datasetCache = {
 
 export const urlTokenToTabKeyMap = {
   gallery: "publications",
-  datasets: "advanced-datasets",
+  datasets: "datasets",
   tasks: "tasks",
   annotations: "explorativeAnnotations",
 };
@@ -65,16 +63,20 @@ class DashboardView extends React.PureComponent<PropsWithRouter, State> {
   constructor(props: PropsWithRouter) {
     super(props);
 
+    const tabKeys = this.getTabKeys();
+    const { initialTabKey } = this.props;
     const lastUsedTabKey = localStorage.getItem("lastUsedDashboardTab");
-    const isValid = lastUsedTabKey && validTabKeys.indexOf(lastUsedTabKey) > -1;
-    const defaultTab = this.props.isAdminView ? "tasks" : "publications";
+    const defaultTabKey = this.props.isAdminView ? "tasks" : "datasets";
 
     const cachedDatasets = datasetCache.get();
 
-    const initialTabKey =
-      this.props.initialTabKey || (lastUsedTabKey && isValid ? lastUsedTabKey : defaultTab);
+    // Flow doesn't allow tabKeys[key] where key may be null, so check that first
+    const activeTabKey =
+      (initialTabKey && tabKeys[initialTabKey] && initialTabKey) ||
+      (lastUsedTabKey && tabKeys[lastUsedTabKey] && lastUsedTabKey) ||
+      defaultTabKey;
     this.state = {
-      activeTabKey: initialTabKey,
+      activeTabKey,
       user: null,
       isLoadingDatasets: false,
       datasets: cachedDatasets,
@@ -147,9 +149,21 @@ class DashboardView extends React.PureComponent<PropsWithRouter, State> {
     }
   }
 
+  getTabKeys() {
+    const { isAdminView } = this.props;
+    // const hasPublications = this.state.datasets.find(dataset => dataset.publication != null);
+
+    return {
+      publications: !isAdminView,
+      datasets: !isAdminView,
+      tasks: true,
+      explorativeAnnotations: true,
+    };
+  }
+
   getTabs(user: APIUser) {
     if (this.props.activeUser) {
-      const { isAdminView } = this.props;
+      const tabKeys = this.getTabKeys();
 
       const datasetViewProps = {
         user,
@@ -159,13 +173,13 @@ class DashboardView extends React.PureComponent<PropsWithRouter, State> {
       };
 
       return [
-        !isAdminView ? (
+        tabKeys.publications ? (
           <TabPane tab="Publications" key="publications">
             <DatasetView {...datasetViewProps} dataViewType="gallery" />
           </TabPane>
         ) : null,
-        !isAdminView ? (
-          <TabPane tab="Datasets" key="advanced-datasets">
+        tabKeys.datasets ? (
+          <TabPane tab="Datasets" key="datasets">
             <DatasetView {...datasetViewProps} dataViewType="advanced" />
           </TabPane>
         ) : null,

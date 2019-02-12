@@ -13,9 +13,14 @@ import {
   hasSegmentation,
   getSegmentationThumbnailURL,
 } from "oxalis/model/accessors/dataset_accessor";
+import {
+  formatExtentWithLength,
+  getDatasetExtentInLength,
+  formatNumberToLength,
+} from "oxalis/view/right-menu/dataset_info_tab_view";
 import { compareBy } from "libs/utils";
 
-type ExtendedDatasetDetails = { ...APIDatasetDetails, name: string, scale: string };
+type ExtendedDatasetDetails = { ...APIDatasetDetails, name: string, scale: string, extent: string };
 
 const thumbnailDimension = 500;
 const miniThumbnailDimension = 75;
@@ -28,7 +33,12 @@ function getDisplayName(dataset: APIDataset): string {
 
 function getDetails(dataset: APIDataset): ExtendedDatasetDetails {
   const { dataSource, details } = dataset;
-  return { ...details, scale: formatScale(dataSource.scale), name: getDisplayName(dataset) };
+  return {
+    ...details,
+    scale: formatScale(dataSource.scale),
+    name: getDisplayName(dataset),
+    extent: formatExtentWithLength(getDatasetExtentInLength(dataset), formatNumberToLength),
+  };
 }
 
 function ThumbnailAndDescription({
@@ -116,11 +126,11 @@ function ThumbnailAndDescription({
                   {details.acquisition}
                 </div>
               )}
-              {details.scale && (
-                <span style={{ float: "right", color: "rgba(200,200,200,0.85)" }}>
-                  Scale: {details.scale}
-                </span>
-              )}
+              <span style={{ float: "right", color: "rgba(200,200,200,0.85)" }}>
+                Scale: {details.scale}
+                <br />
+                Extent: {details.extent}
+              </span>
             </div>
           </div>
         </Link>

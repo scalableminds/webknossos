@@ -7,16 +7,6 @@ import type { APIDataset, APIMaybeUnimportedDataset } from "admin/api_flow_types
 import PublicationCard from "dashboard/publication_card";
 import * as Utils from "libs/utils";
 
-const gridValues = {
-  gutter: 24,
-  xs: 1,
-  sm: 1,
-  md: 1,
-  lg: 1,
-  xl: 2,
-  xxl: 2,
-};
-
 type Props = {
   datasets: Array<APIMaybeUnimportedDataset>,
   searchQuery: string,

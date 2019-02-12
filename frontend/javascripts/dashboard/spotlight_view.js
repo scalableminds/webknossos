@@ -36,7 +36,6 @@ const WelcomeHeader = ({ history }) => (
       <div
         style={{
           maxWidth: 1300,
-          textAlign: "center",
           margin: "auto",
           padding: "80px 0px",
         }}
@@ -54,33 +53,43 @@ const WelcomeHeader = ({ history }) => (
               style={{
                 fontSize: 58,
                 textShadow: "rgba(0, 0, 0, 0.38) 0px 1px 6px",
-                textAlign: "left",
                 fontWeight: 300,
                 marginLeft: 56,
               }}
             >
               Welcome to webKnossos
             </p>
-            <p
+            <div
               style={{
-                fontSize: 20,
+                padding: "20px 60px",
                 textShadow: "rgba(0, 0, 0, 0.38) 0px 1px 6px",
                 color: "rgb(243, 243, 248)",
-                padding: "40px 60px",
-                textAlign: "left",
-                lineHeight: 1.5,
-                paddingTop: 10,
-                marginTop: 0,
               }}
             >
-              webKnossos is an open-source tool for annotating and exploring large-scale 3D
-              datasets. Fly through your data for fast skeletonization and proof-reading. Create
-              training data from efficient volume annotations. Scale data reconstruction projects
-              with crowdsourcing workflows. Annotate collaboratively and share your data with other
-              scientists.
-            </p>
+              <p
+                style={{
+                  fontSize: 20,
+                  lineHeight: 1.5,
+                  marginTop: 0,
+                }}
+              >
+                webKnossos is an open-source tool for annotating and exploring large 3D datasets.
+              </p>
+              <ul
+                style={{
+                  fontSize: 19,
+                  paddingLeft: "1.2em",
+                }}
+              >
+                <li>
+                  Fly through your data for fast skeletonization and efficiently paint voxels.
+                </li>
+                <li>Scale data reconstruction projects with crowdsourcing workflows.</li>
+                <li>Share datasets and annotations with collaborating scientists.</li>
+              </ul>
+            </div>
 
-            <div style={{ marginTop: 20 }}>
+            <div style={{ marginTop: 20, paddingLeft: 60 }}>
               <Button
                 type="primary"
                 size="large"

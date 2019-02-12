@@ -1,5 +1,6 @@
 // @flow
 
+import type { ProgressCallback } from "libs/progress_callback";
 import type { Vector3 } from "oxalis/constants";
 import {
   getLayerByName,
@@ -69,9 +70,9 @@ class DataLayer {
     );
   }
 
-  setActiveMapping(mappingName: ?string): void {
+  setActiveMapping(mappingName: ?string, progressCallback?: ProgressCallback): void {
     this.activeMapping = mappingName;
-    this.mappings.activateMapping(mappingName);
+    this.mappings.activateMapping(mappingName, progressCallback);
   }
 }
 

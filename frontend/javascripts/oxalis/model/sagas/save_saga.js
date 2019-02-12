@@ -118,9 +118,14 @@ export function* pushTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
       forcePush: _take("SAVE_NOW"),
     });
     yield* put(setSaveBusyAction(true, tracingType));
-    saveQueue = yield* select(state => state.save.queue[tracingType]);
-    if (saveQueue.length > 0) {
-      yield* call(sendRequestToServer, tracingType);
+    while (true) {
+      // Send batches to the server until the save queue is empty
+      saveQueue = yield* select(state => state.save.queue[tracingType]);
+      if (saveQueue.length > 0) {
+        yield* call(sendRequestToServer, tracingType);
+      } else {
+        break;
+      }
     }
     yield* put(setSaveBusyAction(false, tracingType));
   }

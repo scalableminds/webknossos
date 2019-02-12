@@ -19,6 +19,7 @@ GET         /datasets/:organizationName/:dataSetName/layers/:dataLayerName/mag:r
 
 # Segmentation mappings
 GET         /datasets/:organizationName/:dataSetName/layers/:dataLayerName/mappings/:mappingName                 @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestMapping(organizationName: String, dataSetName: String, dataLayerName: String, mappingName: String)
+GET         /datasets/:organizationName/:dataSetName/layers/:dataLayerName/mappings                              @com.scalableminds.webknossos.datastore.controllers.DataSourceController.listMappings(organizationName: String, dataSetName: String, dataLayerName: String)
 
 # Isosurfaces
 POST        /datasets/:organizationName/:dataSetName/layers/:dataLayerName/isosurface                            @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestIsosurface(organizationName: String, dataSetName: String, dataLayerName: String)

@@ -101,8 +101,8 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
   }
 
   componentWillUnmount() {
-    // Clear the entire document by writing an "empty page"
-    document.write();
+    // Replace entire document with loading message
+    document.write("Reloading webKnossos...");
     // Do a complete page refresh to make sure all tracing data is garbage
     // collected and all events are canceled, etc.
     location.reload();

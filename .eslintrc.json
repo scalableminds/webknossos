@@ -43,6 +43,7 @@
     "jsx-a11y/click-events-have-key-events": "off",
     "jsx-a11y/no-static-element-interactions": "off",
     "jsx-a11y/label-has-associated-control": "off",
+    "jsx-a11y/label-has-for": "off",
     "lines-between-class-members": ["warn", "always", { "exceptAfterSingleLine": true }],
     "max-len": ["off", 100],
     "no-bitwise": "off",

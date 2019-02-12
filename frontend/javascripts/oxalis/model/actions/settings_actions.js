@@ -1,10 +1,5 @@
 /* eslint-disable import/prefer-default-export */
-
-/**
- * settings_actions.js
- * @flow
- */
-import type { APIDataset } from "admin/api_flow_types";
+// @flow
 import type { Mode, ControlMode } from "oxalis/constants";
 import type {
   UserConfiguration,
@@ -44,13 +39,14 @@ export type InitializeSettingsAction = {
   initialUserSettings: UserConfiguration,
   initialDatasetSettings: DatasetConfiguration,
 };
-type SetDatasetAction = { type: "SET_DATASET", dataset: APIDataset };
+
 type SetViewModeAction = { type: "SET_VIEW_MODE", viewMode: Mode };
 type SetFlightmodeRecordingAction = { type: "SET_FLIGHTMODE_RECORDING", value: boolean };
 type SetControlModeAction = { type: "SET_CONTROL_MODE", controlMode: ControlMode };
 type SetMappingEnabledAction = { type: "SET_MAPPING_ENABLED", isMappingEnabled: boolean };
 type SetMappingAction = {
   type: "SET_MAPPING",
+  mappingName: ?string,
   mapping: ?Mapping,
   mappingColors: ?Array<number>,
   hideUnmappedIds: ?boolean,
@@ -62,7 +58,6 @@ export type SettingAction =
   | ToggleTemporarySettingAction
   | InitializeSettingsAction
   | UpdateLayerSettingAction
-  | SetDatasetAction
   | SetViewModeAction
   | SetFlightmodeRecordingAction
   | SetControlModeAction
@@ -114,11 +109,6 @@ export const updateLayerSettingAction = (
   value,
 });
 
-export const setDatasetAction = (dataset: APIDataset): SetDatasetAction => ({
-  type: "SET_DATASET",
-  dataset,
-});
-
 export const initializeSettingsAction = (
   initialUserSettings: Object,
   initialDatasetSettings: Object,
@@ -149,11 +139,13 @@ export const setMappingEnabledAction = (isMappingEnabled: boolean): SetMappingEn
 });
 
 export const setMappingAction = (
+  mappingName: ?string,
   mapping: ?Mapping,
   mappingColors: ?Array<number>,
   hideUnmappedIds: ?boolean,
 ): SetMappingAction => ({
   type: "SET_MAPPING",
+  mappingName,
   mapping,
   mappingColors,
   hideUnmappedIds,

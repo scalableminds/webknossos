@@ -2,6 +2,7 @@
 
 // @flow
 import type { AnnotationActionTypes } from "oxalis/model/actions/annotation_actions";
+import type { DatasetAction } from "oxalis/model/actions/dataset_actions";
 import type { FlycamAction } from "oxalis/model/actions/flycam_actions";
 import type { IsosurfaceAction } from "oxalis/model/actions/segmentation_actions";
 import type { SaveAction } from "oxalis/model/actions/save_actions";
@@ -17,6 +18,7 @@ export type Action =
   | SkeletonTracingAction
   | VolumeTracingAction
   | SettingAction
+  | DatasetAction
   | TaskAction
   | SaveAction
   | ViewModeAction

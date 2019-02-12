@@ -116,7 +116,6 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
     const additionalPriorityWeight = isFallback ? 1000 : 0;
 
     // Build up priority queue
-    // todo
     // eslint-disable-next-line no-loop-func
     wSliceOffsets.forEach(wSliceOffset => {
       const extraYBucketStart = scaledTopLeftVector[v] - extraBucketPerEdge;

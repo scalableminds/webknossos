@@ -372,11 +372,10 @@ function isTreeConnected(tree: Tree): boolean {
 
   if (tree.nodes.size() > 0) {
     // Get the first element from the nodes map
-    const nodesToBeVisited = new Set([Number(tree.nodes.keys().next().value)]);
+    const nodeQueue = [Number(tree.nodes.keys().next().value)];
     // Breadth-First search that marks all reachable nodes as visited
-    while (nodesToBeVisited.size > 0) {
-      // $FlowFixMe nodeId will be a number as we checked the size of the set first
-      const nodeId: number = nodesToBeVisited.values().next().value;
+    while (nodeQueue.length !== 0) {
+      const nodeId = nodeQueue.shift();
       visitedNodes.set(nodeId, true);
       const edges = tree.edges.getEdgesForNode(nodeId);
       // If there are no edges for a node, the tree is not connected
@@ -384,12 +383,11 @@ function isTreeConnected(tree: Tree): boolean {
 
       for (const edge of edges) {
         if (nodeId === edge.target && !visitedNodes.get(edge.source)) {
-          nodesToBeVisited.add(edge.source);
+          nodeQueue.push(edge.source);
         } else if (!visitedNodes.get(edge.target)) {
-          nodesToBeVisited.add(edge.target);
+          nodeQueue.push(edge.target);
         }
       }
-      nodesToBeVisited.delete(nodeId);
     }
   }
 

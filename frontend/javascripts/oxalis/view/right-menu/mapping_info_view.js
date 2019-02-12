@@ -186,7 +186,6 @@ class MappingInfoView extends React.Component<Props, State> {
     const columns = [columnHelper("", "name"), ...idColumns];
     return (
       <Table
-        style={{ maxWidth: 500 }}
         size="small"
         dataSource={tableData}
         columns={columns}
@@ -251,7 +250,7 @@ class MappingInfoView extends React.Component<Props, State> {
         : {};
 
     return (
-      <div id="volume-mapping-info" className="padded-tab-content">
+      <div id="volume-mapping-info" className="padded-tab-content" style={{ maxWidth: 500 }}>
         {this.renderIdTable()}
 
         <div style={{ marginTop: 24, width: "50%", marginLeft: 16 }}>

@@ -835,7 +835,7 @@ export async function triggerDatasetClearCache(
 ): Promise<void> {
   await doWithToken(token =>
     Request.triggerRequest(
-      `/data/triggers/clearCache/${datasetId.owningOrganization}/${datasetId.name}?token=${token}`,
+      `/data/triggers/reload/${datasetId.owningOrganization}/${datasetId.name}?token=${token}`,
       {
         host: datastoreHost,
       },

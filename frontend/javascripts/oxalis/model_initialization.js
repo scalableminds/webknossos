@@ -45,18 +45,18 @@ import {
   setActiveNodeAction,
   initializeSkeletonTracingAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import {
-  setDatasetAction,
-  setViewModeAction,
-  setControlModeAction,
-  initializeSettingsAction,
-} from "oxalis/model/actions/settings_actions";
+import { setDatasetAction } from "oxalis/model/actions/dataset_actions";
 import {
   setPositionAction,
   setZoomStepAction,
   setRotationAction,
 } from "oxalis/model/actions/flycam_actions";
 import { setTaskAction } from "oxalis/model/actions/task_actions";
+import {
+  setViewModeAction,
+  setControlModeAction,
+  initializeSettingsAction,
+} from "oxalis/model/actions/settings_actions";
 import { setupGlobalMappingsObject } from "oxalis/model/bucket_data_handling/mappings";
 import ConnectionInfo from "oxalis/model/data_connection_info";
 import DataLayer from "oxalis/model/data_layer";

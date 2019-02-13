@@ -176,7 +176,12 @@ export function* sendRequestToServer(
   const tracingStoreUrl = yield* select(state => state.tracing.tracingStore.url);
   compactedSaveQueue = addVersionNumbers(compactedSaveQueue, version);
 
-  compactedSaveQueue = addRequestIds(compactedSaveQueue, Math.random().toString(36).substr(2, 10));
+  compactedSaveQueue = addRequestIds(
+    compactedSaveQueue,
+    Math.random()
+      .toString(36)
+      .substr(2, 10),
+  );
 
   try {
     yield* call(

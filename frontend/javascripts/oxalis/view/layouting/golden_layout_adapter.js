@@ -100,7 +100,7 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
 
   onStateChange() {
     const { onLayoutChange } = this.props;
-    if (onLayoutChange != null) {
+    if (onLayoutChange != null && this.gl.isInitialised) {
       onLayoutChange(this.gl.toConfig(), this.props.activeLayoutName);
     }
   }

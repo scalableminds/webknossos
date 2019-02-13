@@ -7,8 +7,10 @@ import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingSelector, TracingService, UpdateAction, UpdateActionGroup}
 import com.scalableminds.util.tools.JsonHelper.boxFormat
 import com.scalableminds.util.tools.JsonHelper.optionFormat
+import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import net.liftweb.common.Failure
 import play.api.i18n.Messages
+import scala.concurrent.duration._
 import play.api.libs.json.{Json, Reads}
 import play.api.mvc.PlayBodyParsers
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
@@ -25,6 +27,10 @@ trait TracingController[T <: GeneratedMessage with Message[T],
   def accessTokenService: TracingStoreAccessTokenService
 
   def freezeVersions = false
+
+  val handledGroupCacheExpiry: FiniteDuration = 5 minutes
+
+  val handledGroupCache: TemporaryStore[(String, String, Long), Unit]
 
   implicit val tracingCompanion: GeneratedMessageCompanion[T] = tracingService.tracingCompanion
 
@@ -113,10 +119,14 @@ trait TracingController[T <: GeneratedMessage with Message[T],
               previousVersion.flatMap { prevVersion =>
                 if (prevVersion + 1 == updateGroup.version || freezeVersions) {
                   tracingService.handleUpdateGroup(tracingId, updateGroup, prevVersion)
-                    .map(_ => saveToHandledGroupCache(tracingId, updateGroup.version, updateGroup.id))
+                    .map(_ => Fox.successful(saveToHandledGroupCache(tracingId, updateGroup.version, updateGroup.requestId)))
                     .map(_ => if (freezeVersions) prevVersion else updateGroup.version)
                 } else {
-                  Failure(s"Incorrect version. Expected: ${prevVersion + 1}; Got: ${updateGroup.version}") ~> CONFLICT
+                  if ( updateGroup.requestId.exists(requestId => handledGroupCache.contains((requestId, tracingId, updateGroup.version)))) {
+                    Fox.successful(if (freezeVersions) prevVersion else updateGroup.version)
+                  } else {
+                    Failure(s"Incorrect version. Expected: ${prevVersion + 1}; Got: ${updateGroup.version}") ~> CONFLICT
+                  }
                 }
               }
             }
@@ -126,7 +136,9 @@ trait TracingController[T <: GeneratedMessage with Message[T],
     }
   }
 
-  def saveToHandledGroupCache(tracingId: String, version: Long, id: Option[String]): Fox[Unit] = {
-    Fox.successful(())
+  def saveToHandledGroupCache(tracingId: String, version: Long, requestIdOpt: Option[String]): Unit = {
+    requestIdOpt.foreach { requestId =>
+      handledGroupCache.insert((requestId, tracingId, version), (), Some(handledGroupCacheExpiry))
+    }
   }
 }

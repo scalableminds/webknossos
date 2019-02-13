@@ -217,7 +217,7 @@ class Navbar extends React.PureComponent<PropsWithRouter, State> {
                     <Link to="/auth/token">Auth Token</Link>
                   </Menu.Item>
                   <Menu.Item key="logout">
-                    <Link to="/spotlight" onClick={this.handleLogout}>
+                    <Link to="/" onClick={this.handleLogout}>
                       Logout
                     </Link>
                   </Menu.Item>

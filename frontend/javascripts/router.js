@@ -46,6 +46,7 @@ import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
 import UserListView from "admin/user/user_list_view";
 import * as Utils from "libs/utils";
 import window from "libs/window";
+import features from "features";
 
 const { Content } = Layout;
 
@@ -118,6 +119,7 @@ class ReactRouter extends React.Component<Props> {
 
   render() {
     const isAuthenticated = this.props.activeUser !== null;
+    const { enableFrontpage } = features();
 
     return (
       <Router history={browserHistory}>
@@ -129,13 +131,15 @@ class ReactRouter extends React.Component<Props> {
               <Route
                 exact
                 path="/"
-                render={() =>
-                  isAuthenticated ? (
+                render={() => {
+                  if (enableFrontpage) return <SpotlightView />;
+
+                  return isAuthenticated ? (
                     <DashboardView userId={null} isAdminView={false} initialTabKey={null} />
                   ) : (
-                    <SpotlightView />
-                  )
-                }
+                    <Redirect to="/auth/login" />
+                  );
+                }}
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}

@@ -66,24 +66,15 @@ test("Dashboard", async t => {
   );
   await waitForAllRequests(dashboard);
 
+  // Datasets tab is the default
   t.is(dashboard.find(".TestDatasetHeadline").length, 1);
   debugWrapper(dashboard, "Dashboard-1");
   t.snapshot(createSnapshotable(dashboard), { id: "Dashboard-Datasets" });
 
-  dashboard
-    .find(".ant-tabs-tab")
-    .at(1)
-    .simulate("click");
-  await waitForAllRequests(dashboard);
-
-  t.is(dashboard.find(".TestAdvancedDatasetView").length, 1);
-  debugWrapper(dashboard, "Dashboard-2");
-  t.snapshot(createSnapshotable(dashboard), { id: "Dashboard-Datasets-Advanced" });
-
   // Active tasks tab
   dashboard
     .find(".ant-tabs-tab")
-    .at(2)
+    .at(1)
     .simulate("click");
   await waitForAllRequests(dashboard);
 
@@ -94,7 +85,7 @@ test("Dashboard", async t => {
   // Active explorative annotations tab
   dashboard
     .find(".ant-tabs-tab")
-    .at(3)
+    .at(2)
     .simulate("click");
   await waitForAllRequests(dashboard);
 

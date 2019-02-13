@@ -16,12 +16,14 @@ import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxData
 import play.api.mvc.PlayBodyParsers
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 class DataSourceController @Inject()(
                                       dataSourceRepository: DataSourceRepository,
                                       dataSourceService: DataSourceService,
                                       webKnossosServer: DataStoreWkRpcClient,
-                                      accessTokenService: DataStoreAccessTokenService
+                                      accessTokenService: DataStoreAccessTokenService,
+                                      binaryDataServiceHolder: BinaryDataServiceHolder
                                     )(implicit bodyParsers: PlayBodyParsers)
   extends Controller with FoxImplicits {
 
@@ -161,6 +163,19 @@ class DataSourceController @Inject()(
             BadRequest
         }
       }
+  }
+
+  def reload(organizationName: String, dataSetName: String) = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
+      AllowRemoteOrigin {
+        val count = binaryDataServiceHolder.binaryDataService.clearCache(organizationName, dataSetName)
+        logger.info(s"Reloading datasource $organizationName / $dataSetName : closed " + count + " open file handles.")
+        val reloadedDataSource = dataSourceService.dataSourceFromFolder(dataSourceService.dataBaseDir.resolve(organizationName).resolve(dataSetName), organizationName)
+        for {
+          _ <- dataSourceRepository.updateDataSource(reloadedDataSource)
+        } yield Ok(Json.toJson(reloadedDataSource))
+      }
+    }
   }
 
 }

@@ -368,7 +368,7 @@ function findTreeByNodeId(trees: TreeMap, nodeId: number): ?Tree {
 }
 
 function isTreeConnected(tree: Tree): boolean {
-  const visitedNodes = new Map();
+  const seenNodes = new Map();
 
   if (tree.nodes.size() > 0) {
     // Get the first element from the nodes map
@@ -376,23 +376,25 @@ function isTreeConnected(tree: Tree): boolean {
     // Breadth-First search that marks all reachable nodes as visited
     while (nodeQueue.length !== 0) {
       const nodeId = nodeQueue.shift();
-      visitedNodes.set(nodeId, true);
+      seenNodes.set(nodeId, true);
       const edges = tree.edges.getEdgesForNode(nodeId);
       // If there are no edges for a node, the tree is not connected
       if (edges == null) break;
 
       for (const edge of edges) {
-        if (nodeId === edge.target && !visitedNodes.get(edge.source)) {
+        if (nodeId === edge.target && !seenNodes.get(edge.source)) {
           nodeQueue.push(edge.source);
-        } else if (!visitedNodes.get(edge.target)) {
+          seenNodes.set(edge.source, true);
+        } else if (!seenNodes.get(edge.target)) {
           nodeQueue.push(edge.target);
+          seenNodes.set(edge.target, true);
         }
       }
     }
   }
 
-  // If the size of the visitedNodes map is the same as the number of nodes, the tree is connected
-  return _.size(visitedNodes) === tree.nodes.size();
+  // If the size of the seenNodes map is the same as the number of nodes, the tree is connected
+  return _.size(seenNodes) === tree.nodes.size();
 }
 
 function getEdgeHash(source: number, target: number) {

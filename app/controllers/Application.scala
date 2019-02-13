@@ -43,6 +43,7 @@ class Application @Inject()(analyticsDAO: AnalyticsDAO,
   }
 
   def features = sil.UserAwareAction { implicit request =>
+    Thread.sleep(100*1000)
     Ok(conf.raw.underlying.getConfig("features").resolve.root.render(ConfigRenderOptions.concise()))
   }
 

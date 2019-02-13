@@ -443,13 +443,4 @@ class BinaryDataController @Inject()(
       image
     }
 
-  def clearCache(organizationName: String, dataSetName: String) = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
-      AllowRemoteOrigin {
-        val count = binaryDataService.clearCache(organizationName, dataSetName)
-        Future.successful(Ok("Closed " + count + " file handles"))
-      }
-    }
-  }
-
 }

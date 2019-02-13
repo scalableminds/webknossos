@@ -163,7 +163,7 @@ class DataSourceService @Inject()(
     }
   }
 
-  private def dataSourceFromFolder(path: Path, organization: String): InboxDataSource = {
+  def dataSourceFromFolder(path: Path, organization: String): InboxDataSource = {
     val id = DataSourceId(path.getFileName.toString, organization)
     val propertiesFile = path.resolve(propertiesFileName)
 

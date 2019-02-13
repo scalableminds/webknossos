@@ -79,7 +79,7 @@ test("Dashboard", async t => {
   await waitForAllRequests(dashboard);
 
   t.is(dashboard.find(".TestTasksHeadline").length, 1);
-  debugWrapper(dashboard, "Dashboard-3");
+  debugWrapper(dashboard, "Dashboard-2");
   t.snapshot(createSnapshotable(dashboard), { id: "Dashboard-Tasks" });
 
   // Active explorative annotations tab
@@ -90,7 +90,7 @@ test("Dashboard", async t => {
   await waitForAllRequests(dashboard);
 
   t.is(dashboard.find(".TestExplorativeAnnotationsView").length, 1);
-  debugWrapper(dashboard, "Dashboard-4");
+  debugWrapper(dashboard, "Dashboard-3");
   t.snapshot(createSnapshotable(dashboard), { id: "Dashboard-Explorative-Annotations" });
 });
 

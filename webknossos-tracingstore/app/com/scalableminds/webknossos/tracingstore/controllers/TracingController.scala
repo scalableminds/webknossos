@@ -123,6 +123,7 @@ trait TracingController[T <: GeneratedMessage with Message[T],
                     .map(_ => if (freezeVersions) prevVersion else updateGroup.version)
                 } else {
                   if ( updateGroup.requestId.exists(requestId => handledGroupCache.contains((requestId, tracingId, updateGroup.version)))) {
+                    //this update group was received and successfully saved in a previous request. silently ignore this duplicate request
                     Fox.successful(if (freezeVersions) prevVersion else updateGroup.version)
                   } else {
                     Failure(s"Incorrect version. Expected: ${prevVersion + 1}; Got: ${updateGroup.version}") ~> CONFLICT

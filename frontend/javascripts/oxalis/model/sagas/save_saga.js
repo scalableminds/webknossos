@@ -176,6 +176,8 @@ export function* sendRequestToServer(
   const tracingStoreUrl = yield* select(state => state.tracing.tracingStore.url);
   compactedSaveQueue = addVersionNumbers(compactedSaveQueue, version);
 
+  compactedSaveQueue = addRequestIds(compactedSaveQueue, Math.random().toString(36).substr(2, 10));
+
   try {
     yield* call(
       sendRequestWithToken,
@@ -224,6 +226,13 @@ export function addVersionNumbers(
   lastVersion: number,
 ): Array<SaveQueueEntry> {
   return updateActionsBatches.map(batch => Object.assign({}, batch, { version: ++lastVersion }));
+}
+
+export function addRequestIds(
+  updateActionsBatches: Array<SaveQueueEntry>,
+  requestId: string,
+): Array<SaveQueueEntry> {
+  return updateActionsBatches.map(batch => Object.assign({}, batch, { requestId: requestId }));
 }
 
 function removeUnrelevantUpdateActions(updateActions: Array<UpdateAction>) {

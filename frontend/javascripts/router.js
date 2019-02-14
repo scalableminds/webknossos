@@ -382,7 +382,12 @@ class ReactRouter extends React.Component<Props> {
               />
               <Route path="/login" render={() => <Redirect to="/auth/login" />} />
               <Route path="/register" render={() => <Redirect to="/auth/register" />} />
-              <Route path="/auth/login" render={() => <LoginView layout="horizontal" />} />
+              <Route
+                path="/auth/login"
+                render={() =>
+                  isAuthenticated ? <Redirect to="/" /> : <LoginView layout="horizontal" />
+                }
+              />
               <Route
                 path="/auth/register"
                 render={({ location }: ContextRouter) => {

@@ -116,6 +116,7 @@ class TimeLineView extends React.PureComponent<*, State> {
       { id: "End", type: "date" },
     ];
 
+    const { dateRange } = this.state;
     const timeTrackingRowGrouped = []; // shows each time span grouped by annotation id
     const timeTrackingRowTotal = []; // show all times spans in a single row
 
@@ -167,7 +168,7 @@ class TimeLineView extends React.PureComponent<*, State> {
                 <RangePicker
                   allowClear={false}
                   style={{ width: "100%" }}
-                  value={this.state.dateRange}
+                  value={dateRange}
                   onChange={this.handleDateChange}
                 />
               </FormItem>
@@ -201,7 +202,14 @@ class TimeLineView extends React.PureComponent<*, State> {
               chartType="Timeline"
               columns={columns}
               rows={rows}
-              options={{ timeline: { singleColor: "#108ee9" } }}
+              options={{
+                timeline: { singleColor: "#108ee9" },
+                // Workaround for google-charts bug, see https://github.com/scalableminds/webknossos/pull/3772
+                hAxis: {
+                  minValue: dateRange[0].toDate(),
+                  maxValue: dateRange[1].toDate(),
+                },
+              }}
               graph_id="TimeLineGraph"
               chartPackages={["timeline"]}
               width="100%"

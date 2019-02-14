@@ -462,6 +462,17 @@ class BinaryDataController @Inject()(
     } yield positionOpt
 
   private def checkAllPositionsForData(dataSource: DataSource, dataLayer: DataLayer) = {
+
+    def searchPositionIter(positions: List[Point3D]): Fox[Option[Point3D]] =
+      positions match {
+        case List() => Fox.successful(None)
+        case head :: tail =>
+          checkIfPositionHasData(head).futureBox.flatMap {
+            case Full(pos) => Fox.successful(Some(pos))
+            case _         => searchPositionIter(tail)
+          }
+      }
+
     def checkIfPositionHasData(position: Point3D) = {
       val request = DataRequest(
         new VoxelPosition(position.x, position.y, position.z, dataLayer.lookUpResolution(0)),
@@ -475,75 +486,47 @@ class BinaryDataController @Inject()(
       } yield position
     }
 
-    def positionIter(remainingRuns: List[Int]): Fox[Option[Point3D]] = {
-      def createPositionsFromExponent(exponent: Int): Fox[Option[Point3D]] = {
-        def samplingStepIter(factors: Point3D,
-                             power: Int,
-                             topLeft: Point3D,
-                             spaceBetweenWidth: Int,
-                             spaceBetweenHeight: Int,
-                             spaceBetweenDepth: Int,
-                             seenPositions: mutable.HashSet[Point3D]): Fox[Option[Point3D]] = {
-          def nextFactorsToCheck(oldFactors: Point3D): Option[Point3D] =
-            if (oldFactors.x < power - 1) Some(Point3D(oldFactors.x + 1, oldFactors.y, oldFactors.z))
-            else if (oldFactors.y < power - 1) Some(Point3D(1, oldFactors.y + 1, oldFactors.z))
-            else if (oldFactors.z < power - 1) Some(Point3D(1, 1, oldFactors.z + 1))
-            else None
+    searchPositionIter(createPositions(dataLayer).distinct)
+  }
 
-          def nextIteration(factors: Point3D, seenPositions: mutable.HashSet[Point3D]) =
-            nextFactorsToCheck(factors) match {
-              case Some(f) =>
-                samplingStepIter(f,
-                                 power,
-                                 topLeft,
-                                 spaceBetweenWidth,
-                                 spaceBetweenHeight,
-                                 spaceBetweenDepth,
-                                 seenPositions)
-              case _ => Fox.successful(None)
-            }
+  private def createPositions(dataLayer: DataLayer) = {
 
-          val pointToCheck = Point3D(topLeft.x + factors.x * spaceBetweenWidth,
-                                     topLeft.y + factors.y * spaceBetweenHeight,
-                                     topLeft.z + factors.z * spaceBetweenDepth)
+    def positionCreationIter(remainingRuns: List[Int], currentPositions: List[Point3D]): List[Point3D] = {
 
-          if (seenPositions.add(pointToCheck)) {
-            checkIfPositionHasData(pointToCheck).futureBox.flatMap {
-              //case Full(pos) => Fox.successful(Some(pos))
-              case _ => nextIteration(factors, seenPositions)
-            }
-          } else nextIteration(factors, seenPositions)
-        }
-        val seenPositions = new mutable.HashSet[Point3D].empty
+      def createPositionsFromExponent(exponent: Int) = {
         val power = math.pow(2, exponent).toInt
         val spaceBetweenWidth = dataLayer.boundingBox.width / power
         val spaceBetweenHeight = dataLayer.boundingBox.height / power
         val spaceBetweenDepth = dataLayer.boundingBox.depth / power
+        val topLeft = dataLayer.boundingBox.topLeft
 
-        samplingStepIter(Point3D(1, 1, 1),
-                         power,
-                         dataLayer.boundingBox.topLeft,
-                         spaceBetweenWidth,
-                         spaceBetweenHeight,
-                         spaceBetweenDepth,
-                         seenPositions)
+        if (spaceBetweenWidth < DataLayer.bucketLength && spaceBetweenHeight < DataLayer.bucketLength && spaceBetweenDepth < DataLayer.bucketLength) {
+          None
+        } else {
+          Some(
+            (for {
+              z <- 1 until power
+              y <- 1 until power
+              x <- 1 until power
+            } yield
+              Point3D(topLeft.x + x * spaceBetweenWidth,
+                      topLeft.y + y * spaceBetweenHeight,
+                      topLeft.z + z * spaceBetweenDepth)).toList
+          )
+        }
       }
 
       remainingRuns match {
-        case List() => Fox.successful(None)
+        case List() => currentPositions
         case head :: tail =>
-          createPositionsFromExponent(head).futureBox.flatMap {
-            case Full(value) =>
-              value match {
-                case Some(pos) => Fox.successful(Some(pos))
-                case None      => positionIter(tail)
-              }
-            case _ => Fox.successful(None)
+          createPositionsFromExponent(head) match {
+            case Some(values) => positionCreationIter(tail, currentPositions ::: values)
+            case None         => currentPositions
           }
       }
     }
 
-    positionIter((1 to 5).toList)
+    positionCreationIter((1 to 5).toList, List[Point3D]())
   }
 
   def clearCache(organizationName: String, dataSetName: String) = Action.async { implicit request =>

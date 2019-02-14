@@ -204,6 +204,7 @@ class TimeLineView extends React.PureComponent<*, State> {
               rows={rows}
               options={{
                 timeline: { singleColor: "#108ee9" },
+                // Workaround for google-charts bug, see https://github.com/scalableminds/webknossos/pull/3772
                 hAxis: {
                   minValue: dateRange[0].toDate(),
                   maxValue: dateRange[1].toDate(),

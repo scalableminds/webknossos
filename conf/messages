@@ -163,6 +163,7 @@ annotation.notFound=Annotation couldn’t be found
 annotation.notFound.considerLoggingIn=Annotation couldn’t be found. If the annotation is not public, you need to log in to see it.
 annotation.invalid=Invalid annotation
 annotation.finished=Annotation is archived
+annotation.cancelled=This annotation is marked as cancelled and can’t be viewed
 annotation.allFinished=All annotations are archived
 annotation.reopened=Annotation was reopened
 annotation.saved=Annotation was saved

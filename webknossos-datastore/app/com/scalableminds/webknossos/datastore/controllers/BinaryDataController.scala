@@ -355,16 +355,23 @@ class BinaryDataController @Inject()(
             // The client expects the isosurface as a flat float-array. Three consecutive floats form a 3D point, three
             // consecutive 3D points (i.e., nine floats) form a triangle.
             // There are no shared vertices between triangles.
-            vertices <- isosurfaceService.requestIsosurfaceViaActor(isosurfaceRequest)
+            (vertices, neighbors) <- isosurfaceService.requestIsosurfaceViaActor(isosurfaceRequest)
           } yield {
             // We need four bytes for each float
             val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
             responseBuffer.asFloatBuffer().put(vertices)
-            Ok(responseBuffer.array())
+            Ok(responseBuffer.array()).withHeaders(getNeighborIndices(neighbors): _*)
           }
         }
       }
     }
+
+  private def getNeighborIndices(neighbors: List[Int]) =
+    List(("NEIGHBORS" -> formatNeighborList(neighbors)),
+      ("Access-Control-Expose-Headers" -> "NEIGHBORS"))
+
+  private def formatNeighborList(neighbors: List[Int]): String =
+    "[" + neighbors.mkString(", ") + "]"
 
   private def getDataSourceAndDataLayer(organizationName: String, dataSetName: String, dataLayerName: String)(
       implicit m: MessagesProvider): Fox[(DataSource, DataLayer)] =
@@ -435,14 +442,5 @@ class BinaryDataController @Inject()(
     } yield {
       image
     }
-
-  def clearCache(organizationName: String, dataSetName: String) = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
-      AllowRemoteOrigin {
-        val count = binaryDataService.clearCache(organizationName, dataSetName)
-        Future.successful(Ok("Closed " + count + " file handles"))
-      }
-    }
-  }
 
 }

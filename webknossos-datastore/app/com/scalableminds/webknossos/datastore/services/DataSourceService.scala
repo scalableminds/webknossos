@@ -14,6 +14,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxData
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
 import net.liftweb.util.Helpers.tryo
@@ -102,6 +103,12 @@ class DataSourceService @Inject()(
     }
   }
 
+  def exploreMappings(organizationName: String,
+                      dataSetName: String,
+                      dataLayerName: String): Set[String] =
+    MappingProvider.exploreMappings(dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName))
+
+
   private def validateDataSource(dataSource: DataSource): Box[Unit] = {
     def Check(expression: Boolean, msg: String): Option[String] = if (!expression) Some(msg) else None
 
@@ -117,7 +124,7 @@ class DataSourceService @Inject()(
       Check(dataSource.dataLayers.forall(!_.boundingBox.isEmpty), "DataSource bounding box must not be empty"),
       Check(dataSource.dataLayers.forall {
         case layer: SegmentationLayer =>
-          layer.largestSegmentId > 0 && layer.largestSegmentId < ElementClass.maxValue(layer.elementClass)
+          layer.largestSegmentId > 0 && layer.largestSegmentId < ElementClass.maxSegmentIdValue(layer.elementClass)
         case _ =>
           true
       }, "Largest segment ID invalid")
@@ -156,7 +163,7 @@ class DataSourceService @Inject()(
     }
   }
 
-  private def dataSourceFromFolder(path: Path, organization: String): InboxDataSource = {
+  def dataSourceFromFolder(path: Path, organization: String): InboxDataSource = {
     val id = DataSourceId(path.getFileName.toString, organization)
     val propertiesFile = path.resolve(propertiesFileName)
 

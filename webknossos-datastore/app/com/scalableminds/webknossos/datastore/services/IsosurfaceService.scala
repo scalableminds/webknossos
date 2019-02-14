@@ -59,13 +59,13 @@ class IsosurfaceService @Inject()(
   val actor = actorSystem.actorOf(RoundRobinPool(config.Braingames.Binary.isosurfaceActorPoolSize).props(
     Props(new IsosurfaceActor(this, timeout.duration))))
 
-  def requestIsosurfaceViaActor(request: IsosurfaceRequest): Fox[Array[Float]] = {
-    actor.ask(request).mapTo[Box[Array[Float]]].recover {
+  def requestIsosurfaceViaActor(request: IsosurfaceRequest): Fox[(Array[Float], List[Int])] = {
+    actor.ask(request).mapTo[Box[(Array[Float], List[Int])]].recover {
       case e: Exception => Failure(e.getMessage)
     }
   }
 
-  def requestIsosurface(request: IsosurfaceRequest): Fox[Array[Float]] = {
+  def requestIsosurface(request: IsosurfaceRequest): Fox[(Array[Float], List[Int])] = {
     request.dataLayer.elementClass match {
       case ElementClass.uint8 =>
         generateIsosurfaceImpl[Byte, ByteBuffer](request, DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
@@ -78,7 +78,7 @@ class IsosurfaceService @Inject()(
     }
   }
 
-  private def generateIsosurfaceImpl[T:ClassTag, B <: Buffer](request: IsosurfaceRequest, dataTypeFunctors: DataTypeFunctors[T, B]): Fox[Array[Float]] = {
+  private def generateIsosurfaceImpl[T:ClassTag, B <: Buffer](request: IsosurfaceRequest, dataTypeFunctors: DataTypeFunctors[T, B]): Fox[(Array[Float], List[Int])] = {
 
     def applyMapping(data: Array[T]): Fox[Array[T]] = {
       request.mapping match {
@@ -109,6 +109,26 @@ class IsosurfaceService @Inject()(
       false
     }
 
+    def findNeighbors[T](data: Array[T], dataDimensions: Vector3I, segmentId: T): List[Int] = {
+      val x = dataDimensions.x - 1
+      val y = dataDimensions.y - 1
+      val z = dataDimensions.z - 1
+      val front_xy = BoundingBox(Point3D(0,0,0), x, y, 1)
+      val front_xz = BoundingBox(Point3D(0,0,0), 1, y, z)
+      val front_yz = BoundingBox(Point3D(0,0,0), x, 1, z)
+      val back_xy = BoundingBox(Point3D(0,0,z), x, y, 1)
+      val back_xz = BoundingBox(Point3D(0,y,0), 1, y, z)
+      val back_yz = BoundingBox(Point3D(x,0,0), x, 1, z)
+      val surfaceBoundingBoxes = List(front_xy, front_xz, front_yz, back_xy, back_xz, back_yz)
+      surfaceBoundingBoxes.zipWithIndex.filter {
+        case (surfaceBoundingBox, index) => {
+          subVolumeContainsSegmentId(data, dataDimensions, surfaceBoundingBox, segmentId)
+        }
+      }.map {
+        case (surfaceBoundingBox, index) => index
+      }
+    }
+
     val cuboid = request.cuboid
     val voxelDimensions = Vector3D(request.voxelDimensions.x, request.voxelDimensions.y, request.voxelDimensions.z)
 
@@ -131,6 +151,7 @@ class IsosurfaceService @Inject()(
       typedData = convertData(data)
       mappedData <- applyMapping(typedData)
       mappedSegmentId <- applyMapping(Array(typedSegmentId)).map(_.head)
+      neighbors = findNeighbors(mappedData, dataDimensions, mappedSegmentId)
     } yield {
       for {
         x <- 0 until dataDimensions.x by 32
@@ -146,7 +167,7 @@ class IsosurfaceService @Inject()(
           MarchingCubes.marchingCubes[T](mappedData, dataDimensions, boundingBox, mappedSegmentId, voxelDimensions, offset, scale, vertexBuffer)
         }
       }
-      vertexBuffer.flatMap(_.toList.map(_.toFloat)).toArray
+      (vertexBuffer.flatMap(_.toList.map(_.toFloat)).toArray, neighbors)
     }
   }
 }

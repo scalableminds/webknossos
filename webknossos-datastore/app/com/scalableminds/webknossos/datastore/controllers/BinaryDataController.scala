@@ -528,14 +528,4 @@ class BinaryDataController @Inject()(
 
     positionCreationIter((1 to 5).toList, List[Point3D]())
   }
-
-  def clearCache(organizationName: String, dataSetName: String) = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
-      AllowRemoteOrigin {
-        val count = binaryDataService.clearCache(organizationName, dataSetName)
-        Future.successful(Ok("Closed " + count + " file handles"))
-      }
-    }
-  }
-
 }

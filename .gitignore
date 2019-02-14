@@ -60,10 +60,10 @@ flow-coverage/
 public/docs/frontend-api
 dev-db/
 docker-compose.override.yml
-app/assets/javascripts/test/snapshots/debug-htmls/*
-!app/assets/javascripts/test/snapshots/debug-htmls/.gitkeep
-app/assets/javascripts/test/snapshots/flow-check/*
-!app/assets/javascripts/test/snapshots/flow-check/.gitkeep
+frontend/javascripts/test/snapshots/debug-htmls/*
+!frontend/javascripts/test/snapshots/debug-htmls/.gitkeep
+frontend/javascripts/test/snapshots/flow-check/*
+!frontend/javascripts/test/snapshots/flow-check/.gitkeep
 .eslintcache
 *.sublime-project
 *.sublime-workspace

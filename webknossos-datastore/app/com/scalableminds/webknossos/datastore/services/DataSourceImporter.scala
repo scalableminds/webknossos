@@ -81,12 +81,6 @@ trait DataSourceImporter {
     }
   }
 
-  protected def exploreMappings(baseDir: Path): Set[String] = {
-    PathUtils.listFiles(
-      baseDir.resolve(MappingProvider.mappingsDir),
-      PathUtils.fileExtensionFilter(MappingProvider.mappingFileExtension)).map {
-      paths => paths.map(path => FilenameUtils.removeExtension(path.getFileName.toString))
-    }.getOrElse(Nil).toSet
-  }
+  protected def exploreMappings(baseDir: Path): Set[String] = MappingProvider.exploreMappings(baseDir)
 
 }

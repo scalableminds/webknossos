@@ -10,7 +10,7 @@ import javax.inject.Inject
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
+import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.{ProtoGeometryImplicits, TracingType}
 import com.typesafe.scalalogging.LazyLogging
@@ -145,8 +145,9 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
             } yield savedTracingId
           }
           mergedSkeletonTracingIdOpt <- Fox.runOptional(skeletonTracings.headOption) { s =>
-            tracingStoreClient.mergeSkeletonTracingsByContents(SkeletonTracings(skeletonTracings),
-                                                               persistTracing = true)
+            tracingStoreClient.mergeSkeletonTracingsByContents(
+              SkeletonTracings(skeletonTracings.map(t => SkeletonTracingOpt(Some(t)))),
+              persistTracing = true)
           }
           annotation <- annotationService.createFrom(request.identity,
                                                      dataSet,
@@ -176,7 +177,9 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       }.headOption
     } yield {
       volumeTracing.copy(
-        boundingBox = boundingBoxToProto(dataSource.boundingBox),
+        boundingBox =
+          if (volumeTracing.boundingBox.isEmpty) boundingBoxToProto(dataSource.boundingBox)
+          else volumeTracing.boundingBox,
         elementClass = fallbackLayer
           .map(layer => elementClassToProto(layer.elementClass))
           .getOrElse(elementClassToProto(VolumeTracingDefaults.elementClass)),
@@ -218,6 +221,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
                                None,
                                Some(annotation),
                                dataSet.scale,
+                               None,
                                organizationName,
                                Some(user),
                                taskOpt),
@@ -247,6 +251,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
                                                               Some(volumeTracing),
                                                               Some(annotation),
                                                               dataSet.scale,
+                                                              None,
                                                               organizationName,
                                                               Some(user),
                                                               taskOpt)),

@@ -3,13 +3,15 @@
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
 import { Spin, Input, Button, Icon, Row, Col } from "antd";
-import * as React from "react";
+import React from "react";
 
 import type { APIUser, APIMaybeUnimportedDataset } from "admin/api_flow_types";
 import AdvancedDatasetView from "dashboard/advanced_dataset/advanced_dataset_view";
 import PublicationView from "dashboard/publication_view";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
+import renderIndependently from "libs/render_independently";
+import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
 
 const { Search } = Input;
 
@@ -48,6 +50,16 @@ class DatasetView extends React.PureComponent<Props, State> {
     this.setState({ searchQuery: event.target.value });
   };
 
+  renderSampleDatasetsModal = () => {
+    renderIndependently(destroy => (
+      <SampleDatasetsModal
+        onClose={this.props.onCheckDatasets}
+        organizationName={this.props.user.organization}
+        destroy={destroy}
+      />
+    ));
+  };
+
   renderPlaceholder() {
     const isUserAdmin = Utils.isUserAdmin(this.props.user);
     const noDatasetsPlaceholder =
@@ -70,6 +82,13 @@ class DatasetView extends React.PureComponent<Props, State> {
           <a href="https://github.com/scalableminds/webknossos/wiki/Datasets">
             Learn more about supported data formats.
           </a>
+        </p>
+        <p>
+          Or add one of our{" "}
+          <a href="#" onClick={this.renderSampleDatasetsModal}>
+            sample datasets
+          </a>
+          .
         </p>
       </React.Fragment>
     );
@@ -119,6 +138,9 @@ class DatasetView extends React.PureComponent<Props, State> {
           onClick={this.props.onCheckDatasets}
         >
           Refresh
+        </Button>
+        <Button onClick={this.renderSampleDatasetsModal} style={margin}>
+          Add Sample Dataset
         </Button>
         <Link to="/datasets/upload" style={margin}>
           <Button type="primary" icon="plus">

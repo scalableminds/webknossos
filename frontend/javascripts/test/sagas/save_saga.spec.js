@@ -18,6 +18,14 @@ const DateMock = {
 };
 mockRequire("libs/date", DateMock);
 
+const RANDOM_FLOAT = 0.1616828181890917;
+const MathMock = {
+  random: () => RANDOM_FLOAT,
+  min: Math.min,
+};
+mockRequire("libs/math", MathMock);
+const REQUEST_ID = RANDOM_FLOAT.toString(36).substr(2, 10);
+
 mockRequire("oxalis/model/sagas/root_saga", function*() {
   yield;
 });
@@ -32,6 +40,7 @@ const {
   sendRequestToServer,
   toggleErrorHighlighting,
   addVersionNumbers,
+  addRequestIds,
   sendRequestWithToken,
 } = mockRequire.reRequire("oxalis/model/sagas/save_saga");
 
@@ -120,7 +129,10 @@ test("SaveSaga should send request to server", t => {
   saga.next();
   saga.next(saveQueue);
   saga.next({ version: LAST_VERSION, type: TRACING_TYPE, tracingId: "1234567890" });
-  const saveQueueWithVersions = addVersionNumbers(saveQueue, LAST_VERSION);
+  const saveQueueWithVersions = addRequestIds(
+    addVersionNumbers(saveQueue, LAST_VERSION),
+    REQUEST_ID,
+  );
   expectValueDeepEqual(
     t,
     saga.next(TRACINGSTORE_URL),
@@ -143,7 +155,10 @@ test("SaveSaga should retry update actions", t => {
   saga.next();
   saga.next(saveQueue);
   saga.next({ version: LAST_VERSION, type: TRACING_TYPE, tracingId: "1234567890" });
-  const saveQueueWithVersions = addVersionNumbers(saveQueue, LAST_VERSION);
+  const saveQueueWithVersions = addRequestIds(
+    addVersionNumbers(saveQueue, LAST_VERSION),
+    REQUEST_ID,
+  );
   expectValueDeepEqual(
     t,
     saga.next(TRACINGSTORE_URL),
@@ -172,7 +187,10 @@ test("SaveSaga should escalate on permanent client error update actions", t => {
   saga.next();
   saga.next(saveQueue);
   saga.next({ version: LAST_VERSION, type: TRACING_TYPE, tracingId: "1234567890" });
-  const saveQueueWithVersions = addVersionNumbers(saveQueue, LAST_VERSION);
+  const saveQueueWithVersions = addRequestIds(
+    addVersionNumbers(saveQueue, LAST_VERSION),
+    REQUEST_ID,
+  );
   expectValueDeepEqual(
     t,
     saga.next(TRACINGSTORE_URL),

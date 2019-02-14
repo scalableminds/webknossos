@@ -41,6 +41,7 @@ import Request, { type RequestOptionsWithData } from "libs/request";
 import Toast from "libs/toast";
 import messages from "messages";
 import window, { alert, document, location } from "libs/window";
+import Math from "libs/math";
 
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
 
@@ -237,7 +238,7 @@ export function addRequestIds(
   updateActionsBatches: Array<SaveQueueEntry>,
   requestId: string,
 ): Array<SaveQueueEntry> {
-  return updateActionsBatches.map(batch => Object.assign({}, batch, { requestId: requestId }));
+  return updateActionsBatches.map(batch => Object.assign({}, batch, { requestId }));
 }
 
 function removeUnrelevantUpdateActions(updateActions: Array<UpdateAction>) {

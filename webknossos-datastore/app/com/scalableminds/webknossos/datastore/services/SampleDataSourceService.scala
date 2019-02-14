@@ -64,7 +64,7 @@ class SampleDataSourceService @Inject()(
   }
 
   def statusFor(id: DataSourceId): String = {
-    if (runningDownloads.contains(id)) "dowloading"
+    if (runningDownloads.contains(id)) "downloading"
     else if (dataSourceRepository.find(id).isDefined) "present"
     else "available"
   }

@@ -49,29 +49,29 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
     }
   }
 
-  def validateAccessViaDatastore(name: String, token: String) = Action.async(validateJson[UserAccessRequest]) {
+  def validateAccessViaDatastore(name: String, token: Option[String]) = Action.async(validateJson[UserAccessRequest]) {
     implicit request =>
       dataStoreService.validateAccess(name) { dataStore =>
         validateUserAccess(request.body, token)
       }
   }
 
-  def validateAccessViaTracingstore(name: String, token: String) = Action.async(validateJson[UserAccessRequest]) {
-    implicit request =>
+  def validateAccessViaTracingstore(name: String, token: Option[String]) =
+    Action.async(validateJson[UserAccessRequest]) { implicit request =>
       tracingStoreService.validateAccess(name) { tracingStore =>
         validateUserAccess(request.body, token)
       }
-  }
+    }
 
-  private def validateUserAccess(accessRequest: UserAccessRequest, token: String)(
+  private def validateUserAccess(accessRequest: UserAccessRequest, token: Option[String])(
       implicit ec: ExecutionContext): Fox[Result] =
     if (token == DataStoreRpcClient.webKnossosToken) {
       Fox.successful(Ok(Json.toJson(UserAccessAnswer(true))))
     } else {
       for {
-        userBox <- bearerTokenService.userForToken(token)(GlobalAccessContext).futureBox
+        userBox <- bearerTokenService.userForTokenOpt(token)(GlobalAccessContext).futureBox
         ctxFromUserBox = DBAccessContext(userBox)
-        ctx = URLSharing.fallbackTokenAccessContext(Some(token))(ctxFromUserBox)
+        ctx = URLSharing.fallbackTokenAccessContext(token)(ctxFromUserBox)
         answer <- accessRequest.resourceType match {
           case AccessResourceType.datasource =>
             handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, userBox)(ctx)

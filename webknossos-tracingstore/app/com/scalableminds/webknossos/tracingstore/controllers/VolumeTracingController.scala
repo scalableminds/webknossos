@@ -24,7 +24,6 @@ import scala.concurrent.ExecutionContext
 class VolumeTracingController @Inject()(val tracingService: VolumeTracingService,
                                         val webKnossosServer: TracingStoreWkRpcClient,
                                         val accessTokenService: TracingStoreAccessTokenService,
-                                        val handledGroupCache: TemporaryStore[(String, String, Long), Unit],
                                         config: TracingStoreConfig,
                                         tracingDataStore: TracingDataStore)
                                        (implicit val ec: ExecutionContext,

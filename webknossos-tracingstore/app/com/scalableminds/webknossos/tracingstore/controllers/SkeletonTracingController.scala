@@ -18,8 +18,7 @@ import scala.concurrent.ExecutionContext
 
 class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingService,
                                           val webKnossosServer: TracingStoreWkRpcClient,
-                                          val accessTokenService: TracingStoreAccessTokenService,
-                                          val handledGroupCache: TemporaryStore[(String, String, Long), Unit])
+                                          val accessTokenService: TracingStoreAccessTokenService)
                                          (implicit val ec: ExecutionContext,
                                           val bodyParsers: PlayBodyParsers)
   extends TracingController[SkeletonTracing, SkeletonTracings] {

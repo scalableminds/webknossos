@@ -28,10 +28,6 @@ trait TracingController[T <: GeneratedMessage with Message[T],
 
   def freezeVersions = false
 
-  val handledGroupCacheExpiry: FiniteDuration = 5 minutes
-
-  val handledGroupCache: TemporaryStore[(String, String, Long), Unit]
-
   implicit val tracingCompanion: GeneratedMessageCompanion[T] = tracingService.tracingCompanion
 
   implicit val tracingsCompanion: GeneratedMessageCompanion[Ts]
@@ -119,15 +115,13 @@ trait TracingController[T <: GeneratedMessage with Message[T],
               previousVersion.flatMap { prevVersion =>
                 if (prevVersion + 1 == updateGroup.version || freezeVersions) {
                   tracingService.handleUpdateGroup(tracingId, updateGroup, prevVersion)
-                    .map(_ => Fox.successful(saveToHandledGroupCache(tracingId, updateGroup.version, updateGroup.requestId)))
+                    .map(_ => Fox.successful(tracingService.saveToHandledGroupCache(tracingId, updateGroup.version, updateGroup.requestId)))
                     .map(_ => if (freezeVersions) prevVersion else updateGroup.version)
                 } else {
-                  if ( updateGroup.requestId.exists(requestId => handledGroupCache.contains((requestId, tracingId, updateGroup.version)))) {
-                    println(s"CONTAINS ${updateGroup.requestId.getOrElse("NONE")}, $tracingId, ${updateGroup.version}")
+                  if ( updateGroup.requestId.exists(requestId => tracingService.handledGroupCacheContains(requestId, tracingId, updateGroup.version))) {
                     //this update group was received and successfully saved in a previous request. silently ignore this duplicate request
                     Fox.successful(if (freezeVersions) prevVersion else updateGroup.version)
                   } else {
-                    println(s"DOES NOT CONTAIN ${updateGroup.requestId.getOrElse("NONE")}, $tracingId, ${updateGroup.version}")
                     Failure(s"Incorrect version. Expected: ${prevVersion + 1}; Got: ${updateGroup.version}") ~> CONFLICT
                   }
                 }
@@ -139,10 +133,4 @@ trait TracingController[T <: GeneratedMessage with Message[T],
     }
   }
 
-  def saveToHandledGroupCache(tracingId: String, version: Long, requestIdOpt: Option[String]): Unit = {
-    requestIdOpt.foreach { requestId =>
-      println(s"INSERTING $requestId, $tracingId, $version")
-      handledGroupCache.insert((requestId, tracingId, version), (), Some(handledGroupCacheExpiry))
-    }
-  }
 }

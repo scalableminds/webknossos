@@ -1,8 +1,10 @@
 // @flow
 import moment from "moment";
 
-import type { Vector3, Vector6 } from "oxalis/constants";
+import { Unicode, type Vector3, type Vector6 } from "oxalis/constants";
 import * as Utils from "libs/utils";
+
+const { ThinSpace, MultiplicationSymbol } = Unicode;
 
 const COLOR_MAP: Array<string> = [
   "#6962C5",
@@ -40,7 +42,7 @@ export function formatTuple(tuple: ?(Array<number> | Vector3 | Vector6)) {
 export function formatScale(scaleArr: Vector3): string {
   if (scaleArr != null && scaleArr.length > 0) {
     const scaleArrRounded = scaleArr.map(value => Utils.roundTo(value, 2));
-    return `${scaleArrRounded.join(" × ")} nm³`;
+    return `${scaleArrRounded.join(ThinSpace + MultiplicationSymbol + ThinSpace)} nm³`;
   } else {
     return "";
   }

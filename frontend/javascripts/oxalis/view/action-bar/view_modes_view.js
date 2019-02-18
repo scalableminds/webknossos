@@ -6,15 +6,15 @@ import React, { PureComponent } from "react";
 import { setViewModeAction } from "oxalis/model/actions/settings_actions";
 import Store, { type OxalisState, type AllowedMode } from "oxalis/store";
 import * as Utils from "libs/utils";
-import constants, { type Mode } from "oxalis/constants";
+import constants, { type ViewMode } from "oxalis/constants";
 
 type Props = {|
-  viewMode: Mode,
+  viewMode: ViewMode,
   allowedModes: Array<AllowedMode>,
 |};
 
 type State = {
-  arbitraryModeLabel: Mode,
+  arbitraryModeLabel: ViewMode,
 };
 
 class ViewModesView extends PureComponent<Props, State> {
@@ -37,11 +37,11 @@ class ViewModesView extends PureComponent<Props, State> {
     event.target.blur();
   };
 
-  handleChange = (event: { target: { value: Mode } }) => {
+  handleChange = (event: { target: { value: ViewMode } }) => {
     Store.dispatch(setViewModeAction(event.target.value));
   };
 
-  isDisabled(mode: Mode) {
+  isDisabled(mode: ViewMode) {
     return !this.props.allowedModes.includes(mode);
   }
 

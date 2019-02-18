@@ -1,6 +1,5 @@
 /* eslint-disable import/prefer-default-export */
 // @flow
-import type { APIDataset } from "admin/api_flow_types";
 import type { ViewMode, ControlMode } from "oxalis/constants";
 import type {
   UserConfiguration,

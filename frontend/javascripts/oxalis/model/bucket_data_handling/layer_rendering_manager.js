@@ -221,6 +221,7 @@ export default class LayerRenderingManager {
             this.anchorPointCache.anchorPoint,
             areas,
             subBucketLocality,
+            // 1, todo
           );
         }
       }
@@ -232,6 +233,13 @@ export default class LayerRenderingManager {
       );
 
       const buckets = bucketsWithPriorities.map(({ bucket }) => bucket);
+      if (buckets.length === 1) {
+        const fbBucket = buckets[0].getFallbackBucket();
+        if (fbBucket.type !== "null") {
+          buckets.push(fbBucket);
+          console.log("buckets: ", buckets[0].zoomedAddress, buckets[1].zoomedAddress);
+        }
+      }
       this.cube.markBucketsAsUnneeded();
       // This tells the bucket collection, that the buckets are necessary for rendering
       buckets.forEach(b => b.markAsNeeded());

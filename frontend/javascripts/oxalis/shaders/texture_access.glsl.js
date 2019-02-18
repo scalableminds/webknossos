@@ -118,13 +118,19 @@ export const getColorForCoords: ShaderModule = {
 
       float bucketIdx = linearizeVec3ToIndex(bucketPosition, addressSpaceDimensions);
 
-      float bucketIdxInTexture = bucketIdx * floatsPerLookUpEntry;
-
-      float bucketAddress = getRgbaAtIndex(
+      vec2 bucketAddressWithZoomStep = getRgbaAtIndex(
         lookUpTexture,
         l_texture_width,
-        bucketIdxInTexture
-      ).x;
+        bucketIdx
+      ).ra;
+
+      float bucketAddress = bucketAddressWithZoomStep.x;
+      float bucketZoomStep = bucketAddressWithZoomStep.y;
+
+      float zoomStepDiff = bucketZoomStep - zoomStep;
+      // Adapt position within bucket to potential fallback position
+      // Todo: Will only work for isotropic resolutions
+      offsetInBucket = floor(offsetInBucket / pow(2.0, zoomStepDiff));
 
       if (bucketAddress == -2.0) {
         // The bucket is out of bounds. Render black

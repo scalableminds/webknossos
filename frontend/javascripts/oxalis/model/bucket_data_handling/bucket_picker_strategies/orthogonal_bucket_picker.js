@@ -43,6 +43,7 @@ export default function determineBucketsForOrthogonal(
     abortLimit,
   );
 
+  // return;
   if (logZoomStep + 1 < resolutions.length) {
     const fallbackAnchorPoint = zoomedAddressToAnotherZoomStep(
       anchorPoint,
@@ -113,9 +114,11 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
     // slice (depending on locality within the current bucket).
     // Similar to `extraBucketPerEdge`, the PQ takes care of cases in which the additional slice
     // can't be loaded.
-    const wSliceOffsets = isFallback ? [0] : [0, subBucketLocality[w]];
+    // todo: undo true
+    const wSliceOffsets = true || isFallback ? [0] : [0, subBucketLocality[w]];
     // fallback buckets should have lower priority
-    const additionalPriorityWeight = isFallback ? 1000 : 0;
+    // todo: undo false
+    const additionalPriorityWeight = false && isFallback ? 1000 : 0;
 
     // Build up priority queue
     // eslint-disable-next-line no-loop-func
@@ -138,17 +141,21 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
             x === extraXBucketStart ||
             x === extraXBucketEnd;
 
-          const priority =
-            Math.abs(x - centerBucketUV[0]) +
-            Math.abs(y - centerBucketUV[1]) +
-            Math.abs(100 * wSliceOffset) +
-            additionalPriorityWeight +
-            (isExtraBucket ? 100 : 0);
+          const priority = Math.abs(x - centerBucketUV[0]) + Math.abs(y - centerBucketUV[1]);
+          // undo comment
+          // Math.abs(100 * wSliceOffset) +
+          // additionalPriorityWeight +
+          // (isExtraBucket ? 100 : 0);
+
+          let isCenter = (abortLimit != null && abortLimit > 1) || priority <= 2;
 
           const bucketVector3 = ((bucketAddress.slice(0, 3): any): Vector3);
-          if (uniqueBucketMap.get(bucketVector3) == null) {
+          // todo: remove
+          isCenter = true;
+          if (isCenter && uniqueBucketMap.get(bucketVector3) == null) {
             uniqueBucketMap.set(bucketVector3, bucketAddress);
             currentCount++;
+
             if (abortLimit != null && currentCount > abortLimit) {
               return;
             }

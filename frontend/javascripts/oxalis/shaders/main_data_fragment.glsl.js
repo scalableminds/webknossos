@@ -107,7 +107,6 @@ varying mat4 savedModelMatrix;
 const float bucketWidth = <%= bucketWidth %>;
 const float bucketSize = <%= bucketSize %>;
 const float l_texture_width = <%= l_texture_width %>;
-const float floatsPerLookUpEntry = <%= floatsPerLookUpEntry %>;
 
 // For some reason, taking the dataset scale from the uniform results is imprecise
 // rendering of the brush circle (and issues in the arbitrary modes). That's why it
@@ -138,16 +137,15 @@ void main() {
     gl_FragColor = vec4(0.0);
     return;
   }
-  vec3 coords = getRelativeCoords(worldCoordUVW, zoomStep);
+  vec3 relativeCoords = getRelativeCoords(worldCoordUVW, zoomStep);
 
-  vec3 bucketPosition = div(floor(coords), bucketWidth);
+  vec3 bucketPosition = div(floor(relativeCoords), bucketWidth);
   if (renderBucketIndices) {
     gl_FragColor = vec4(bucketPosition, zoomStep) / 255.;
     return;
   }
 
   <% if (hasSegmentation) { %>
-    // bool segmentationHasFallback = <%= segmentationName %>_maxZoomStep >= zoomStep + 1.0;
     vec4 id = getSegmentationId(worldCoordUVW);
 
     vec3 flooredMousePosUVW = transDim(floor(globalMousePosition));
@@ -223,7 +221,6 @@ void main() {
     formatNumberAsGLSLFloat,
     formatVector3AsVec3: vector3 => `vec3(${vector3.map(formatNumberAsGLSLFloat).join(", ")})`,
     brushToolIndex: formatNumberAsGLSLFloat(volumeToolEnumToIndex(VolumeToolEnum.BRUSH)),
-    floatsPerLookUpEntry: formatNumberAsGLSLFloat(floatsPerLookUpEntry),
     OrthoViewIndices: _.mapValues(OrthoViewIndices, formatNumberAsGLSLFloat),
   });
 }

@@ -5,7 +5,11 @@ import _ from "lodash";
 import { DataBucket, bucketDebuggingFlags } from "oxalis/model/bucket_data_handling/bucket";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
 import { getRenderer } from "oxalis/controller/renderer";
+import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import { waitForCondition } from "libs/utils";
+import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
+import DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import Store from "oxalis/store";
 import UpdatableTexture from "libs/UpdatableTexture";
 import constants, { type Vector4, addressSpaceDimensions } from "oxalis/constants";
 import window from "libs/window";
@@ -28,7 +32,7 @@ const lookUpBufferWidth = constants.LOOK_UP_TEXTURE_WIDTH;
 // If f >= 0, f denotes the index in the data texture where the bucket is stored.
 // If f == -1, the bucket is not yet committed
 // If f == -2, the bucket is not supposed to be rendered. Out of bounds.
-export const floatsPerLookUpEntry = 1;
+export const floatsPerLookUpEntry = 2;
 
 export default class TextureBucketManager {
   dataTextures: Array<UpdatableTexture>;
@@ -206,7 +210,7 @@ export default class TextureBucketManager {
 
     const lookUpTexture = createUpdatableTexture(
       lookUpBufferWidth,
-      1,
+      floatsPerLookUpEntry,
       THREE.FloatType,
       getRenderer(),
     );
@@ -261,12 +265,45 @@ export default class TextureBucketManager {
     // Completely re-write the lookup buffer. This could be smarter, but it's
     // probably not worth it.
     this.lookUpBuffer.fill(-2);
-    for (const [bucket, address] of this.activeBucketToIndexMap.entries()) {
+
+    const currentZoomStep = this.currentAnchorPoint[3];
+    const resolutions = getResolutions(Store.getState().dataset);
+    for (const [bucket, reservedAddress] of this.activeBucketToIndexMap.entries()) {
+      if (bucket.zoomedAddress[3] > currentZoomStep) {
+        // only write high-res buckets (if a bucket is missing, the fallback bucket will then be written
+        // into the look up buffer)
+        continue;
+      }
       const lookUpIdx = this._getBucketIndex(bucket);
-      this.lookUpBuffer[floatsPerLookUpEntry * lookUpIdx] = this.committedBucketSet.has(bucket)
-        ? address
-        : -1;
+      const posInBuffer = floatsPerLookUpEntry * lookUpIdx;
+
+      let address = -1;
+      let bucketZoomStep = bucket.zoomedAddress[3];
+      // false &&
+      if (!window.renderFallback && this.committedBucketSet.has(bucket)) {
+        address = reservedAddress;
+      } else {
+        const zoomStep = bucket.zoomedAddress[3];
+        const hasFallback = zoomStep + 1 < resolutions.length;
+        if (hasFallback) {
+          const fallbackBucket = bucket.getFallbackBucket();
+          if (fallbackBucket.type !== "null") {
+            if (this.committedBucketSet.has(fallbackBucket)) {
+              // if (this.activeBucketToIndexMap.has(fallbackBucket)) {
+              address = this.activeBucketToIndexMap.get(fallbackBucket) || -1;
+              bucketZoomStep = zoomStep + 1;
+            }
+          }
+        }
+      }
+
+      this.lookUpBuffer[posInBuffer] = address;
+      this.lookUpBuffer[posInBuffer + 1] = bucketZoomStep;
     }
+
+    // todo: iterate over all fallback buckets which were not written into the look up buffer?
+    // ideally, this only picks up the few buckets for which the arbitrary bucket pickers
+    // didn't pick the correct high-res buckets
 
     this.lookUpTexture.update(this.lookUpBuffer, 0, 0, lookUpBufferWidth, lookUpBufferWidth);
     this.isRefreshBufferOutOfDate = false;
@@ -275,14 +312,6 @@ export default class TextureBucketManager {
 
   _getBucketIndex(bucket: DataBucket): number {
     const bucketPosition = bucket.zoomedAddress;
-    const renderingZoomStep = this.currentAnchorPoint[3];
-    const bucketZoomStep = bucketPosition[3];
-    const zoomDiff = bucketZoomStep - renderingZoomStep;
-    const isFallbackBucket = zoomDiff > 0;
-    if (isFallbackBucket) {
-      return 0;
-    }
-
     const anchorPoint = this.currentAnchorPoint;
 
     const x = bucketPosition[0] - anchorPoint[0];
@@ -293,18 +322,12 @@ export default class TextureBucketManager {
     // if (y < 0) console.warn("y should be greater than 0. is currently:", y);
     // if (z < 0) console.warn("z should be greater than 0. is currently:", z);
 
-    // Even though, addressSpaceDimensions might be different in the fallback case,
-    // it's safe to assume that the values would only be smaller (since
-    // fallback data doesn't require more buckets than non-fallback).
-    // Consequently, these values should be fine to address buckets.
-    const [sx, sy, sz] = addressSpaceDimensions.normal;
-    const [_sx, _sy] = addressSpaceDimensions.normal;
+    const [sx, sy] = addressSpaceDimensions.normal;
 
     // prettier-ignore
     return (
-      sx * sy * sz * zoomDiff +
-      _sx * _sy * z +
-      _sx * y +
+      sx * sy * z +
+      sx * y +
       x
     );
   }

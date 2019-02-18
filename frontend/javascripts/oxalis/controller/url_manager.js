@@ -11,14 +11,14 @@ import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor
 import { getSkeletonTracing, getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import Store, { type Tracing } from "oxalis/store";
 import * as Utils from "libs/utils";
-import constants, { type Mode, ModeValues, type Vector3 } from "oxalis/constants";
+import constants, { type ViewMode, ViewModeValues, type Vector3 } from "oxalis/constants";
 import window, { document, location } from "libs/window";
 
 const MAX_UPDATE_INTERVAL = 1000;
 
 export type UrlManagerState = {
   position?: Vector3,
-  mode?: Mode,
+  mode?: ViewMode,
   zoomStep?: number,
   activeNode?: number,
   rotation?: Vector3,
@@ -73,7 +73,7 @@ class UrlManager {
         const positionValues = validStateArray.slice(0, 3);
         state.position = Utils.numberArrayToVector3(positionValues);
 
-        const modeString = ModeValues[validStateArray[3]];
+        const modeString = ViewModeValues[validStateArray[3]];
         if (modeString) {
           state.mode = modeString;
         } else {
@@ -106,7 +106,7 @@ class UrlManager {
   buildHash(tracing: Tracing) {
     const position = V3.floor(getPosition(Store.getState().flycam));
     const { viewMode } = Store.getState().temporaryConfiguration;
-    const viewModeIndex = ModeValues.indexOf(viewMode);
+    const viewModeIndex = ViewModeValues.indexOf(viewMode);
     const zoomStep = Store.getState().flycam.zoomStep.toFixed(2);
     const rotation = constants.MODES_ARBITRARY.includes(viewMode)
       ? getRotation(Store.getState().flycam).map(e => e.toFixed(2))

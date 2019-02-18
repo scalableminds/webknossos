@@ -26,28 +26,18 @@ export const setupRenderArea = (
   renderer: THREE.WebGLRenderer,
   x: number,
   y: number,
-  fullExtent: number,
-  width: number,
-  height: number,
+  viewportWidth: number,
+  viewportHeight: number,
   color: number,
 ) => {
-  renderer.setViewport(x, y, fullExtent, fullExtent);
-  renderer.setScissor(x, y, width, height);
+  renderer.setViewport(x, y, viewportWidth, viewportHeight);
+  renderer.setScissor(x, y, viewportWidth, viewportHeight);
   renderer.setScissorTest(true);
   renderer.setClearColor(color, 1);
 };
 
 export const clearCanvas = (renderer: THREE.WebGLRenderer) => {
-  const rendererSize = renderer.getSize();
-  setupRenderArea(
-    renderer,
-    0,
-    0,
-    renderer.domElement.width,
-    rendererSize.width,
-    rendererSize.height,
-    0xffffff,
-  );
+  setupRenderArea(renderer, 0, 0, renderer.domElement.width, renderer.domElement.height, 0xffffff);
   renderer.clear();
 };
 
@@ -129,7 +119,7 @@ class PlaneView {
     const { renderer } = SceneController;
 
     renderer.autoClear = true;
-    let { width, height } = getInputCatcherRect(plane);
+    let { width, height } = getInputCatcherRect(Store.getState(), plane);
     width = Math.round(width);
     height = Math.round(height);
 
@@ -164,11 +154,12 @@ class PlaneView {
 
       this.trigger("render");
 
+      const storeState = Store.getState();
       const viewport = {
-        [OrthoViews.PLANE_XY]: getInputCatcherRect("PLANE_XY"),
-        [OrthoViews.PLANE_YZ]: getInputCatcherRect("PLANE_YZ"),
-        [OrthoViews.PLANE_XZ]: getInputCatcherRect("PLANE_XZ"),
-        [OrthoViews.TDView]: getInputCatcherRect("TDView"),
+        [OrthoViews.PLANE_XY]: getInputCatcherRect(storeState, "PLANE_XY"),
+        [OrthoViews.PLANE_YZ]: getInputCatcherRect(storeState, "PLANE_YZ"),
+        [OrthoViews.PLANE_XZ]: getInputCatcherRect(storeState, "PLANE_XZ"),
+        [OrthoViews.TDView]: getInputCatcherRect(storeState, "TDView"),
       };
 
       renderer.autoClear = true;
@@ -179,15 +170,7 @@ class PlaneView {
         SceneController.updateSceneForCam(plane);
         const { left, top, width, height } = viewport[plane];
         if (width > 0 && height > 0) {
-          setupRenderArea(
-            renderer,
-            left,
-            top,
-            Math.min(width, height),
-            width,
-            height,
-            OrthoViewColors[plane],
-          );
+          setupRenderArea(renderer, left, top, width, height, OrthoViewColors[plane]);
           renderer.render(scene, this.cameras[plane]);
         }
       }
@@ -208,11 +191,6 @@ class PlaneView {
   resize = (): void => {
     const { width, height } = getDesiredLayoutRect();
     getSceneController().renderer.setSize(width, height);
-
-    for (const plane of OrthoViewValues) {
-      this.cameras[plane].aspect = 1;
-      this.cameras[plane].updateProjectionMatrix();
-    }
     this.draw();
   };
 

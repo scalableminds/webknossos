@@ -7,7 +7,7 @@ import { createUpdatableTexture } from "oxalis/geometries/materials/plane_materi
 import { getRenderer } from "oxalis/controller/renderer";
 import { waitForCondition } from "libs/utils";
 import UpdatableTexture from "libs/UpdatableTexture";
-import constants, { type Vector3, type Vector4 } from "oxalis/constants";
+import constants, { type Vector4, addressSpaceDimensions } from "oxalis/constants";
 import window from "libs/window";
 
 // A TextureBucketManager instance is responsible for making buckets available
@@ -43,8 +43,6 @@ export default class TextureBucketManager {
   freeIndexSet: Set<number>;
   isRefreshBufferOutOfDate: boolean = false;
 
-  // This is passed as a parameter to allow for testing
-  bucketsPerDimPerResolution: Array<Vector3>;
   currentAnchorPoint: Vector4 = [0, 0, 0, 0];
   fallbackAnchorPoint: Vector4 = [0, 0, 0, 0];
   writerQueue: Array<{ bucket: DataBucket, _index: number }> = [];
@@ -53,21 +51,15 @@ export default class TextureBucketManager {
   maximumCapacity: number;
   packingDegree: number;
 
-  constructor(
-    bucketsPerDimPerResolution: Array<Vector3>,
-    textureWidth: number,
-    dataTextureCount: number,
-    bytes: number,
-  ) {
+  constructor(textureWidth: number, dataTextureCount: number, bytes: number) {
     // If there is one byte per voxel, we pack 4 bytes into one texel (packingDegree = 4)
     // Otherwise, we don't pack bytes together (packingDegree = 1)
     this.packingDegree = bytes === 1 ? 4 : 1;
 
     this.maximumCapacity =
       (this.packingDegree * dataTextureCount * textureWidth ** 2) / constants.BUCKET_SIZE;
-    // the look up buffer is bucketsPerDim**3 so that arbitrary look ups can be made
+    // the look up buffer is addressSpaceDimensions**3 so that arbitrary look ups can be made
     const lookUpBufferSize = Math.pow(lookUpBufferWidth, 2) * floatsPerLookUpEntry;
-    this.bucketsPerDimPerResolution = bucketsPerDimPerResolution;
     this.textureWidth = textureWidth;
     this.dataTextureCount = dataTextureCount;
 
@@ -300,21 +292,24 @@ export default class TextureBucketManager {
     const y = bucketPosition[1] - anchorPoint[1];
     const z = bucketPosition[2] - anchorPoint[2];
 
-    if (x < 0) console.warn("x should be greater than 0. is currently:", x);
-    if (y < 0) console.warn("y should be greater than 0. is currently:", y);
-    if (z < 0) console.warn("z should be greater than 0. is currently:", z);
+    // if (x < 0) console.warn("x should be greater than 0. is currently:", x);
+    // if (y < 0) console.warn("y should be greater than 0. is currently:", y);
+    // if (z < 0) console.warn("z should be greater than 0. is currently:", z);
 
-    // Even though, bucketsPerDim might be different in the fallback case,
+    // Even though, addressSpaceDimensions might be different in the fallback case,
     // it's safe to assume that the values would only be smaller (since
     // fallback data doesn't require more buckets than non-fallback).
     // Consequently, these values should be fine to address buckets.
-    const [sx, sy, sz] = this.bucketsPerDimPerResolution[renderingZoomStep];
+    const [sx, sy, sz] = addressSpaceDimensions.normal;
+    const [_sx, _sy] = isFallbackBucket
+      ? addressSpaceDimensions.fallback
+      : addressSpaceDimensions.normal;
 
     // prettier-ignore
     return (
       sx * sy * sz * zoomDiff +
-      sx * sy * z +
-      sx * y +
+      _sx * _sy * z +
+      _sx * y +
       x
     );
   }

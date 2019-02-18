@@ -7,7 +7,7 @@ import type { APIAllowedMode, APIDataset, APISegmentationLayer } from "admin/api
 import type { Settings, DataLayerType } from "oxalis/store";
 import { map3 } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
-import constants, { ModeValues, type Vector3, Vector3Indicies } from "oxalis/constants";
+import constants, { ViewModeValues, type Vector3, Vector3Indicies } from "oxalis/constants";
 import messages from "messages";
 
 export function getMostExtensiveResolutions(dataset: APIDataset): Array<Vector3> {
@@ -133,8 +133,8 @@ export function determineAllowedModes(
   dataset: APIDataset,
   settings: Settings,
 ): { preferredMode: ?APIAllowedMode, allowedModes: Array<APIAllowedMode> } {
-  // The order of allowedModes should be independent from the server and instead be similar to ModeValues
-  let allowedModes = _.intersection(ModeValues, settings.allowedModes);
+  // The order of allowedModes should be independent from the server and instead be similar to ViewModeValues
+  let allowedModes = _.intersection(ViewModeValues, settings.allowedModes);
 
   const colorLayer = _.find(dataset.dataSource.dataLayers, {
     category: "color",

@@ -23,6 +23,9 @@ export function listenToStoreProperty<T>(
 
   function handleChange() {
     const nextValue = select(Store.getState());
+    // When callHandlerOnSubscribe is used, the initial value can be 0. In that case,
+    // we do not want to invoke the caller-provided isEqual function, since this usually
+    // doesn't handle null values.
     if (nextValue !== currentValue) {
       currentValue = nextValue;
       onChange(currentValue);

@@ -1,6 +1,6 @@
 /* eslint-disable import/prefer-default-export */
 // @flow
-import type { Mode, ControlMode } from "oxalis/constants";
+import type { ViewMode, ControlMode } from "oxalis/constants";
 import type {
   UserConfiguration,
   DatasetConfiguration,
@@ -39,8 +39,7 @@ export type InitializeSettingsAction = {
   initialUserSettings: UserConfiguration,
   initialDatasetSettings: DatasetConfiguration,
 };
-
-type SetViewModeAction = { type: "SET_VIEW_MODE", viewMode: Mode };
+type SetViewModeAction = { type: "SET_VIEW_MODE", viewMode: ViewMode };
 type SetFlightmodeRecordingAction = { type: "SET_FLIGHTMODE_RECORDING", value: boolean };
 type SetControlModeAction = { type: "SET_CONTROL_MODE", controlMode: ControlMode };
 type SetMappingEnabledAction = { type: "SET_MAPPING_ENABLED", isMappingEnabled: boolean };
@@ -118,7 +117,7 @@ export const initializeSettingsAction = (
   initialDatasetSettings,
 });
 
-export const setViewModeAction = (viewMode: Mode): SetViewModeAction => ({
+export const setViewModeAction = (viewMode: ViewMode): SetViewModeAction => ({
   type: "SET_VIEW_MODE",
   viewMode,
 });

@@ -31,7 +31,7 @@ import Constants, {
   type ContourMode,
   type ControlMode,
   ControlModeEnum,
-  type Mode,
+  type ViewMode,
   type OrthoView,
   OrthoViews,
   type Rect,
@@ -258,7 +258,7 @@ export type UserConfiguration = {|
 export type Mapping = { [key: number]: number };
 
 export type TemporaryConfiguration = {
-  +viewMode: Mode,
+  +viewMode: ViewMode,
   +flightmodeRecording: boolean,
   +controlMode: ControlMode,
   +mousePosition: ?Vector2,
@@ -423,7 +423,7 @@ export const defaultState: OxalisState = {
     clippingDistanceArbitrary: 64,
     crosshairSize: 0.1,
     displayCrosshair: true,
-    displayScalebars: false,
+    displayScalebars: true,
     dynamicSpaceDirection: true,
     keyboardDelay: 200,
     mouseRotateValue: 0.004,
@@ -438,7 +438,7 @@ export const defaultState: OxalisState = {
     layoutScaleValue: 1,
     sortCommentsAsc: true,
     sortTreesByName: false,
-    sphericalCapRadius: 140,
+    sphericalCapRadius: Constants.DEFAULT_SPHERICAL_CAP_RADIUS,
     tdViewDisplayPlanes: true,
     hideTreeRemovalWarning: false,
     autoSaveLayouts: true,

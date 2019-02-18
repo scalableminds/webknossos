@@ -1,11 +1,11 @@
 // @flow
 import * as THREE from "three";
 
-import { ModeValues, ModeValuesIndices } from "oxalis/constants";
+import { ViewModeValues, ViewModeValuesIndices } from "oxalis/constants";
 import type { Uniforms } from "oxalis/geometries/materials/plane_material_factory";
 import { formatNumberAsGLSLFloat } from "oxalis/shaders/main_data_fragment.glsl";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
-import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
+import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Store from "oxalis/store";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
@@ -42,7 +42,11 @@ class NodeShader {
     this.uniforms = {
       planeZoomFactor: {
         type: "f",
-        value: getPlaneScalingFactor(state.flycam),
+        // The flycam zoom is typically decomposed into an x- and y-factor
+        // which respects the aspect ratio. However, this value is merely used
+        // for selecting an appropriate node size (gl_PointSize). The resulting points
+        // will and should be square regardless of the plane's aspect ratio.
+        value: getZoomValue(state.flycam),
       },
       datasetScale: {
         type: "f",
@@ -104,7 +108,7 @@ class NodeShader {
     listenToStoreProperty(
       storeState => storeState.temporaryConfiguration.viewMode,
       viewMode => {
-        this.uniforms.viewMode.value = ModeValues.indexOf(viewMode);
+        this.uniforms.viewMode.value = ViewModeValues.indexOf(viewMode);
       },
       true,
     );
@@ -218,7 +222,9 @@ void main() {
     // NODE COLOR FOR ACTIVE NODE
     v_isActiveNode = activeNodeId == nodeId ? 1.0 : 0.0;
     if (v_isActiveNode > 0.0) {
-      bool isOrthogonalMode = viewMode == ${formatNumberAsGLSLFloat(ModeValuesIndices.Orthogonal)};
+      bool isOrthogonalMode = viewMode == ${formatNumberAsGLSLFloat(
+        ViewModeValuesIndices.Orthogonal,
+      )};
 
       gl_PointSize *= activeNodeScaleFactor;
       v_innerPointSize = gl_PointSize;

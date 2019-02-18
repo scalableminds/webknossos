@@ -46,14 +46,18 @@ class UrlManager {
     window.history.replaceState({}, null, url);
   }
 
-  onHashChange() {
+  onHashChange = () => {
     const stateString = location.hash.slice(1);
-    if (stateString) {
+    if (stateString.includes("=")) {
+      // The hash was changed by a comment link, for example `activeNode=12`
       const [key, value] = stateString.split("=");
       // The value can either be a single number or multiple numbers delimited by a ,
-      applyState({ [key]: value.indexOf(",") > -1 ? value.split(",").map(Number) : Number(value) });
+      applyState({ [key]: value.includes(",") ? value.split(",").map(Number) : Number(value) });
+    } else {
+      // The hash was changed by the user
+      applyState(this.parseUrl());
     }
-  }
+  };
 
   parseUrl(): UrlManagerState {
     // State string format:

@@ -252,6 +252,9 @@ class SceneController {
     for (const plane of _.values(this.planes)) {
       plane.getMeshes().forEach(mesh => this.rootNode.add(mesh));
     }
+
+    // Hide all objects at first, they will be made visible later if needed
+    this.stopPlaneMode();
   }
 
   buildTaskingBoundingBox(taskBoundingBox: ?BoundingBoxType): void {

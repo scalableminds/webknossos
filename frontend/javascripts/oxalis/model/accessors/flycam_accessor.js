@@ -41,6 +41,7 @@ function calculateTotalBucketCountForZoomLevel(
   const anchorPoint = [0, 0, 0, 0];
   const fallbackAnchorPoint = [0, 0, 0, 0];
   const subBucketLocality = [1, 1, 1];
+  const sphericalCapRadius = 140;
 
   const areas = getAreas(viewportRects, position, zoomFactor, datasetScale);
   const fallbackZoomStep = logZoomStep + 1;
@@ -50,6 +51,8 @@ function calculateTotalBucketCountForZoomLevel(
 
   if (viewMode === constants.MODE_ARBITRARY_PLANE) {
     determineBucketsForOblique(
+      resolutions,
+      position,
       enqueueFunction,
       matrix,
       logZoomStep,
@@ -59,6 +62,9 @@ function calculateTotalBucketCountForZoomLevel(
     );
   } else if (viewMode === constants.MODE_ARBITRARY) {
     determineBucketsForFlight(
+      resolutions,
+      position,
+      sphericalCapRadius,
       enqueueFunction,
       matrix,
       logZoomStep,

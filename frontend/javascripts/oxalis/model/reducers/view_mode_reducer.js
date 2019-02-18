@@ -129,7 +129,7 @@ function zoomTDView(
   const factor = Math.pow(0.9, value);
   const middleX = (camera.left + camera.right) / 2;
   const middleY = (camera.bottom + camera.top) / 2;
-  const [width, height] = getTDViewportSize();
+  const [width, height] = getTDViewportSize(state);
 
   const baseOffsetX = (factor * width) / 2;
   const baseOffsetY = (factor * height) / 2;

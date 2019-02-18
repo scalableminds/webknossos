@@ -202,8 +202,11 @@ export default class LayerRenderingManager {
       };
 
       if (!isInvisible) {
+        const resolutions = getResolutions(Store.getState().dataset);
         if (viewMode === constants.MODE_ARBITRARY_PLANE) {
           determineBucketsForOblique(
+            resolutions,
+            position,
             enqueueFunction,
             matrix,
             logZoomStep,
@@ -212,6 +215,9 @@ export default class LayerRenderingManager {
           );
         } else if (viewMode === constants.MODE_ARBITRARY) {
           determineBucketsForFlight(
+            resolutions,
+            position,
+            sphericalCapRadius,
             enqueueFunction,
             matrix,
             logZoomStep,
@@ -220,7 +226,7 @@ export default class LayerRenderingManager {
           );
         } else {
           determineBucketsForOrthogonal(
-            getResolutions(Store.getState().dataset),
+            resolutions,
             enqueueFunction,
             logZoomStep,
             this.anchorPointCache.anchorPoint,

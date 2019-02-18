@@ -310,8 +310,8 @@ class SceneController {
   update(optArbitraryPlane?: ArbitraryPlane): void {
     const state = Store.getState();
     const { flycam } = state;
-    const gPos = getPosition(flycam);
-    const globalPosVec = new THREE.Vector3(...gPos);
+    const globalPosition = getPosition(flycam);
+    const globalPosVec = new THREE.Vector3(...globalPosition);
 
     // The anchor point refers to the top-left-front bucket of the bounding box
     // which covers all three rendered planes. Relative to this anchor point,
@@ -325,7 +325,7 @@ class SceneController {
     const zoomStep = getRequestLogZoomStep(Store.getState());
     for (const dataLayer of Model.getAllLayers()) {
       [anchorPoint, fallbackAnchorPoint] = dataLayer.layerRenderingManager.updateDataTextures(
-        gPos,
+        globalPosition,
         zoomStep,
       );
     }

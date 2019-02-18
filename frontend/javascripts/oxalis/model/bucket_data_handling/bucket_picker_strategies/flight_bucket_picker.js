@@ -1,14 +1,11 @@
 // @flow
 import type { EnqueueFunction } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
-import { getPosition } from "oxalis/model/accessors/flycam_accessor";
-import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import {
   globalPositionToBucketPosition,
   globalPositionToBucketPositionFloat,
   zoomedAddressToAnotherZoomStep,
 } from "oxalis/model/helpers/position_converter";
-import Store from "oxalis/store";
 import constants, { type Vector3, type Vector4 } from "oxalis/constants";
 
 const aggregatePerDimension = (aggregateFn, buckets): Vector3 =>
@@ -41,6 +38,9 @@ function createDistinctBucketAdder(buckets: Array<Vector4>) {
 }
 
 export default function determineBucketsForFlight(
+  resolutions: Array<Vector3>,
+  centerPosition: Vector3,
+  sphericalCapRadius: number,
   enqueueFunction: EnqueueFunction,
   matrix: Matrix4x4,
   logZoomStep: number,
@@ -48,9 +48,6 @@ export default function determineBucketsForFlight(
   isFallbackAvailable: boolean,
   abortLimit?: number,
 ): void {
-  const { sphericalCapRadius } = Store.getState().userConfiguration;
-  const resolutions = getResolutions(Store.getState().dataset);
-  const centerPosition = getPosition(Store.getState().flycam);
   const queryMatrix = M4x4.scale1(1, matrix);
   const width = constants.VIEWPORT_WIDTH;
   const halfWidth = width / 2;

@@ -2,7 +2,7 @@
 
 import memoizeOne from "memoize-one";
 
-import Store, { type OxalisState } from "oxalis/store";
+import { type OxalisState } from "oxalis/store";
 import constants, {
   ArbitraryViewport,
   OUTER_CSS_BORDER,
@@ -11,8 +11,8 @@ import constants, {
   type Viewport,
 } from "oxalis/constants";
 
-export function getTDViewportSize(): [number, number] {
-  const camera = Store.getState().viewModeData.plane.tdCamera;
+export function getTDViewportSize(state: OxalisState): [number, number] {
+  const camera = state.viewModeData.plane.tdCamera;
   return [camera.right - camera.left, camera.top - camera.bottom];
 }
 

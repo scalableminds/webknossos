@@ -23,7 +23,7 @@ import {
   getActiveNode,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
+import { getMaxZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   setActiveCellAction,
@@ -36,15 +36,15 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
+import { settings } from "messages";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Constants, {
   type ControlMode,
   ControlModeEnum,
-  type Mode,
+  type ViewMode,
   type Vector6,
 } from "oxalis/constants";
 import * as Utils from "libs/utils";
-import { settings } from "messages";
 
 const Panel = Collapse.Panel;
 
@@ -61,7 +61,7 @@ type UserSettingsViewProps = {
   onChangeRadius: (value: number) => void,
   onChangeZoomStep: (value: number) => void,
   onChangeBrushSize: (value: number) => void,
-  viewMode: Mode,
+  viewMode: ViewMode,
   controlMode: ControlMode,
   brushSize: number,
 };
@@ -348,7 +348,7 @@ const mapStateToProps = (state: OxalisState) => ({
   userConfiguration: state.userConfiguration,
   tracing: state.tracing,
   zoomStep: state.flycam.zoomStep,
-  maxZoomStep: getMaxZoomStep(state.dataset),
+  maxZoomStep: getMaxZoomValue(state),
   viewMode: state.temporaryConfiguration.viewMode,
   controlMode: state.temporaryConfiguration.controlMode,
   brushSize: state.temporaryConfiguration.brushSize,

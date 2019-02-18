@@ -273,7 +273,7 @@ class SceneController {
     }
   }
 
-  updateSceneForCam = (id: OrthoView): void => {
+  updateSceneForCam = (id: OrthoView, hidePlanes: boolean = false): void => {
     // This method is called for each of the four cams. Even
     // though they are all looking at the same scene, some
     // things have to be changed for each cam.
@@ -288,7 +288,7 @@ class SceneController {
       for (const planeId of OrthoViewValuesWithoutTDView) {
         if (planeId === id) {
           this.planes[planeId].setOriginalCrosshairColor();
-          this.planes[planeId].setVisible(true);
+          this.planes[planeId].setVisible(!hidePlanes);
           const pos = _.clone(getPosition(Store.getState().flycam));
           ind = Dimensions.getIndices(planeId);
           // Offset the plane so the user can see the skeletonTracing behind the plane
@@ -310,10 +310,11 @@ class SceneController {
     }
   };
 
-  update = (optPlane?: ArbitraryPlane): void => {
-    const gPos = getPosition(Store.getState().flycam);
-    const globalPosVec = new THREE.Vector3(...gPos);
-    const planeScale = getPlaneScalingFactor(Store.getState().flycam);
+  update(optArbitraryPlane?: ArbitraryPlane): void {
+    const state = Store.getState();
+    const { flycam } = state;
+    const globalPosition = getPosition(flycam);
+    const globalPosVec = new THREE.Vector3(...globalPosition);
 
     // The anchor point refers to the top-left-front bucket of the bounding box
     // which covers all three rendered planes. Relative to this anchor point,
@@ -327,22 +328,23 @@ class SceneController {
     const zoomStep = getRequestLogZoomStep(Store.getState());
     for (const dataLayer of Model.getAllLayers()) {
       [anchorPoint, fallbackAnchorPoint] = dataLayer.layerRenderingManager.updateDataTextures(
-        gPos,
+        globalPosition,
         zoomStep,
       );
     }
 
-    if (optPlane) {
-      optPlane.updateAnchorPoints(anchorPoint, fallbackAnchorPoint);
-      optPlane.setPosition(globalPosVec);
+    if (optArbitraryPlane) {
+      optArbitraryPlane.updateAnchorPoints(anchorPoint, fallbackAnchorPoint);
+      optArbitraryPlane.setPosition(globalPosVec);
     } else {
       for (const currentPlane of _.values(this.planes)) {
         currentPlane.updateAnchorPoints(anchorPoint, fallbackAnchorPoint);
         currentPlane.setPosition(globalPosVec);
-        currentPlane.setScale(planeScale);
+        const [scaleX, scaleY] = getPlaneScalingFactor(state, flycam, currentPlane.planeID);
+        currentPlane.setScale(scaleX, scaleY);
       }
     }
-  };
+  }
 
   setDisplayCrosshair(value: boolean): void {
     for (const plane of _.values(this.planes)) {

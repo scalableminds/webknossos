@@ -21,8 +21,8 @@ class SampleDataSourceService @Inject()(
   extends FoxImplicits {
 
   val availableDatasets = Map(
-    "Sample_Cremi_dsA_plus" -> "http://localhost/cremi.zip",
-    "Sample_Cremi_dsA_plus2" -> "http://localhost/cremi.zip")
+    "Sample_Cremi_dsA_plus" -> "https://florianmeinel.de/temp/cremi.zip",
+    "Sample_Cremi_dsA_plus2" -> "https://florianmeinel.de/temp/cremi.zip")
 
   var runningDownloads = new ConcurrentHashMap[DataSourceId, Unit]()
 
@@ -31,7 +31,7 @@ class SampleDataSourceService @Inject()(
     for {
       _ <- bool2Fox(availableDatasets.contains(dataSetName)) ?~> "dataSet.name.notInSamples"
       _ <- bool2Fox(!runningDownloads.contains(dataSourceId)) ?~> "dataSet.downloadAlreadyRunning"
-      _ <- bool2Fox(!dataSourceRepository.find(dataSourceId).isDefined) ?~> "dataSet.alreadyPresent"
+      _ <- bool2Fox(dataSourceRepository.find(dataSourceId).isEmpty) ?~> "dataSet.alreadyPresent"
       _ <- webknossosServer.validateDataSourceUpload(dataSourceId) ?~> "dataSet.name.alreadyTaken"
       _ = runningDownloads.put(dataSourceId, ())
       _ = download(dataSourceId)
@@ -49,7 +49,9 @@ class SampleDataSourceService @Inject()(
               stream.write(bytes.toArray)
               stream.close()
               dataSourceService.handleUpload(id, tmpfile)
-              runningDownloads.remove(id)
+                .map {_ =>
+                  runningDownloads.remove(id)
+                }
             }
           case _ => runningDownloads.remove(id)
         }
@@ -64,7 +66,7 @@ class SampleDataSourceService @Inject()(
   }
 
   def statusFor(id: DataSourceId): String = {
-    if (runningDownloads.contains(id)) "downloading"
+    if (runningDownloads.containsKey(id)) "downloading"
     else if (dataSourceRepository.find(id).isDefined) "present"
     else "available"
   }

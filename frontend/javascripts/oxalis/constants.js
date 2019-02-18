@@ -181,6 +181,8 @@ const Constants = {
 
   ZOOM_DIFF: 0.1,
 
+  DEFAULT_SPHERICAL_CAP_RADIUS: 140,
+
   // !Currently disabled!
   // We always add another (read: one) zoomstep level by downsampling buckets from the highest
   // available zoomstep. This allows to zoom out far enough while still being able to load enough

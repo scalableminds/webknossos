@@ -438,7 +438,7 @@ export const defaultState: OxalisState = {
     layoutScaleValue: 1,
     sortCommentsAsc: true,
     sortTreesByName: false,
-    sphericalCapRadius: 140,
+    sphericalCapRadius: Constants.DEFAULT_SPHERICAL_CAP_RADIUS,
     tdViewDisplayPlanes: true,
     hideTreeRemovalWarning: false,
     autoSaveLayouts: true,

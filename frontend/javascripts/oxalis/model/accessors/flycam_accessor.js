@@ -41,7 +41,7 @@ function calculateTotalBucketCountForZoomLevel(
   const anchorPoint = [0, 0, 0, 0];
   const fallbackAnchorPoint = [0, 0, 0, 0];
   const subBucketLocality = [1, 1, 1];
-  const sphericalCapRadius = 140;
+  const sphericalCapRadius = constants.DEFAULT_SPHERICAL_CAP_RADIUS;
 
   const areas = getAreas(viewportRects, position, zoomFactor, datasetScale);
   const fallbackZoomStep = logZoomStep + 1;

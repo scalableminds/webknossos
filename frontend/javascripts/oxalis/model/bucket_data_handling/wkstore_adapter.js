@@ -133,6 +133,7 @@ export async function requestFromStore(
       {
         data: bucketInfo,
         timeout: REQUEST_TIMEOUT,
+        doNotInvestigate: true,
       },
     );
     const missingBuckets = parseAsMaybe(headers["missing-buckets"]).getOrElse([]);

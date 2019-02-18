@@ -150,31 +150,32 @@ test("SaveSaga should retry update actions", t => {
     [UpdateActions.createEdge(1, 0, 1), UpdateActions.createEdge(1, 1, 2)],
     TIMESTAMP,
   );
+  const saveQueueWithVersions = addRequestIds(
+    addVersionNumbers(saveQueue, LAST_VERSION),
+    REQUEST_ID,
+  );
+  const requestWithTokenCall = call(
+    sendRequestWithToken,
+    `${TRACINGSTORE_URL}/tracings/skeleton/1234567890/update?token=`,
+    {
+      method: "POST",
+      headers: { "X-Date": `${TIMESTAMP}` },
+      data: saveQueueWithVersions,
+      compress: true,
+    },
+  );
 
   const saga = sendRequestToServer(TRACING_TYPE);
   saga.next();
   saga.next(saveQueue);
   saga.next({ version: LAST_VERSION, type: TRACING_TYPE, tracingId: "1234567890" });
-  const saveQueueWithVersions = addRequestIds(
-    addVersionNumbers(saveQueue, LAST_VERSION),
-    REQUEST_ID,
-  );
-  expectValueDeepEqual(
-    t,
-    saga.next(TRACINGSTORE_URL),
-    call(sendRequestWithToken, `${TRACINGSTORE_URL}/tracings/skeleton/1234567890/update?token=`, {
-      method: "POST",
-      headers: { "X-Date": `${TIMESTAMP}` },
-      data: saveQueueWithVersions,
-      compress: true,
-    }),
-  );
+  expectValueDeepEqual(t, saga.next(TRACINGSTORE_URL), requestWithTokenCall);
 
   expectValueDeepEqual(t, saga.throw("Timeout"), call(toggleErrorHighlighting, true));
   // wait for retry
   saga.next();
   // should retry
-  expectValueDeepEqual(t, saga.next(), call(sendRequestToServer, TRACING_TYPE, 1));
+  expectValueDeepEqual(t, saga.next(), requestWithTokenCall);
 });
 
 test("SaveSaga should escalate on permanent client error update actions", t => {

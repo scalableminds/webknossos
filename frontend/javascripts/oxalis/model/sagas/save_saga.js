@@ -163,10 +163,7 @@ function getRetryWaitTime(retryCount: number) {
   return Math.min(2 ** retryCount * SAVE_RETRY_WAITING_TIME, MAX_SAVE_RETRY_WAITING_TIME);
 }
 
-export function* sendRequestToServer(
-  tracingType: "skeleton" | "volume",
-  retryCount: number = 0,
-): Saga<void> {
+export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<void> {
   const fullSaveQueue = yield* select(state => state.save.queue[tracingType]);
   const saveQueue = sliceAppropriateBatchCount(fullSaveQueue);
 
@@ -184,35 +181,39 @@ export function* sendRequestToServer(
       .substr(2, 10),
   );
 
-  try {
-    yield* call(
-      sendRequestWithToken,
-      `${tracingStoreUrl}/tracings/${type}/${tracingId}/update?token=`,
-      {
-        method: "POST",
-        headers: { "X-Date": `${Date.now()}` },
-        data: compactedSaveQueue,
-        compress: true,
-      },
-    );
-    yield* put(setVersionNumberAction(version + compactedSaveQueue.length, tracingType));
-    yield* put(setLastSaveTimestampAction(tracingType));
-    yield* put(shiftSaveQueueAction(saveQueue.length, tracingType));
-    yield* call(toggleErrorHighlighting, false);
-  } catch (error) {
-    yield* call(toggleErrorHighlighting, true);
-    if (error.status === 409) {
-      // HTTP Code 409 'conflict' for dirty state
-      window.onbeforeunload = null;
-      yield* call(alert, messages["save.failed_simultaneous_tracing"]);
-      location.reload();
+  let retryCount = 0;
+  while (true) {
+    try {
+      yield* call(
+        sendRequestWithToken,
+        `${tracingStoreUrl}/tracings/${type}/${tracingId}/update?token=`,
+        {
+          method: "POST",
+          headers: { "X-Date": `${Date.now()}` },
+          data: compactedSaveQueue,
+          compress: true,
+        },
+      );
+      yield* put(setVersionNumberAction(version + compactedSaveQueue.length, tracingType));
+      yield* put(setLastSaveTimestampAction(tracingType));
+      yield* put(shiftSaveQueueAction(saveQueue.length, tracingType));
+      yield* call(toggleErrorHighlighting, false);
       return;
+    } catch (error) {
+      yield* call(toggleErrorHighlighting, true);
+      if (error.status === 409) {
+        // HTTP Code 409 'conflict' for dirty state
+        window.onbeforeunload = null;
+        yield* call(alert, messages["save.failed_simultaneous_tracing"]);
+        location.reload();
+        return;
+      }
+      yield* race({
+        timeout: _call(delay, getRetryWaitTime(retryCount)),
+        forcePush: _take("SAVE_NOW"),
+      });
+      retryCount++;
     }
-    yield* race({
-      timeout: _call(delay, getRetryWaitTime(retryCount)),
-      forcePush: _take("SAVE_NOW"),
-    });
-    yield* call(sendRequestToServer, tracingType, retryCount + 1);
   }
 }
 

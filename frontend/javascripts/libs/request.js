@@ -320,7 +320,9 @@ class Request {
     }
     // If doInvestigate is false or the error is not instanceof Response,
     // still add additional information to the error
-    error.url = requestedUrl;
+    if (!(error instanceof Response)) {
+      error.message += ` - Url: ${requestedUrl}`;
+    }
     return Promise.reject(error);
   };
 

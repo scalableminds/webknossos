@@ -148,7 +148,7 @@ class ProjectController @Inject()(projectService: ProjectService,
       _ <- projectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
       usersWithActiveTasks <- projectDAO.findUsersWithActiveTasks(projectName)
     } yield {
-      Ok(Json.toJson(usersWithActiveTasks.map(tuple => Json.obj("email" -> tuple._1, "activeTasks" -> tuple._2))))
+      Ok(Json.toJson(usersWithActiveTasks.map(tuple => Json.obj("email" -> tuple._1, "fistName" -> tuple._2, "lastName" -> tuple._3, "activeTasks" -> tuple._4))))
     }
   }
 

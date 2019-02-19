@@ -90,7 +90,7 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
     }));
     const columns = [
       {
-        title: "User Email",
+        title: "User",
         dataIndex: "email",
         key: "email",
       },

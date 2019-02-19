@@ -12,11 +12,6 @@ import { useInterval } from "libs/react_helpers";
 import { handleGenericError } from "libs/error_handling";
 import type { APIDataStore, APISampleDataset } from "admin/api_flow_types";
 
-type APISampleDatasetWithDatastore = {
-  ...APISampleDataset,
-  datastore: APIDataStore,
-};
-
 type Props = {
   destroy: () => void,
   onClose: () => any,
@@ -36,43 +31,51 @@ function useDatastores(): [Array<APIDataStore>] {
 }
 
 function useSampleDatasets(
-  datastores,
+  datastore,
   organizationName,
   pendingDatasets,
   setPendingDatasets,
-): [
-  Array<APISampleDatasetWithDatastore>,
-  (Array<APISampleDatasetWithDatastore>) => void,
-  () => Promise<void>,
-] {
+): [Array<APISampleDataset>, Array<string>, () => Promise<void>] {
   const [datasets, setDatasets] = useState([]);
+  const [failedDatasets, setFailedDatasets] = useState([]);
   const fetchSampleDatasets = async () => {
-    const fetchDatasetsPromises = datastores.map(async datastore => {
-      const sampleDatasets = await getSampleDatasets(datastore.url, organizationName);
-      return sampleDatasets.map(dataset => ({ ...dataset, datastore }));
-    });
-    const fetchedDatasets = _.flatten(await Promise.all(fetchDatasetsPromises));
-    setDatasets(fetchedDatasets);
+    if (datastore == null) return;
+    const sampleDatasets = await getSampleDatasets(datastore.url, organizationName);
+    setDatasets(sampleDatasets);
 
-    // Remove present datasets from the pendingDatasets queue
+    // Datasets that were pending, but are now available again, failed to download
+    setFailedDatasets(
+      failedDatasets.concat(
+        pendingDatasets.filter(pendingDataset =>
+          sampleDatasets.find(
+            dataset => dataset.name === pendingDataset && dataset.status === "available",
+          ),
+        ),
+      ),
+    );
+
+    // Remove datasets from the pendingDatasets queue
     setPendingDatasets(
       _.without(
         pendingDatasets,
-        ...datasets.filter(dataset => dataset.status === "present").map(dataset => dataset.name),
+        ...sampleDatasets
+          .filter(dataset => dataset.status !== "downloading")
+          .map(dataset => dataset.name),
       ),
     );
   };
   useEffect(() => {
     fetchSampleDatasets();
-  }, [datastores]);
-  return [datasets, setDatasets, fetchSampleDatasets];
+  }, [datastore]);
+  return [datasets, failedDatasets, fetchSampleDatasets];
 }
 
 const SampleDatasetsModal = ({ destroy, onClose, organizationName }: Props) => {
   const [pendingDatasets, setPendingDatasets] = useState([]);
   const [datastores] = useDatastores();
-  const [datasets, , fetchDatasets] = useSampleDatasets(
-    datastores,
+  const datastore = datastores[0];
+  const [datasets, failedDatasets, fetchDatasets] = useSampleDatasets(
+    datastore,
     organizationName,
     pendingDatasets,
     setPendingDatasets,
@@ -80,7 +83,7 @@ const SampleDatasetsModal = ({ destroy, onClose, organizationName }: Props) => {
 
   useInterval(fetchDatasets, pendingDatasets.length ? 1000 : null);
 
-  const handleSampleDatasetDownload = async (name: string, datastore: APIDataStore) => {
+  const handleSampleDatasetDownload = async (name: string) => {
     try {
       await triggerSampleDatasetDownload(datastore.url, organizationName, name);
       setPendingDatasets(pendingDatasets.concat(name));
@@ -93,14 +96,17 @@ const SampleDatasetsModal = ({ destroy, onClose, organizationName }: Props) => {
     destroy();
   };
 
-  const getAction = ({ status, name, datastore }) => {
+  const getAction = ({ status, name }) => {
+    if (failedDatasets.includes(name)) status = "failed";
     switch (status) {
       case "available":
-        return <Button onClick={() => handleSampleDatasetDownload(name, datastore)}>Add</Button>;
+        return <Button onClick={() => handleSampleDatasetDownload(name)}>Add</Button>;
       case "downloading":
         return <Spin />;
       case "present":
         return "Added";
+      case "failed":
+        return "Download Error";
       default:
         throw new Error(`Unknown sample dataset status: ${status}`);
     }

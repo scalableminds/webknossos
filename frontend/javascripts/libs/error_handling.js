@@ -11,6 +11,9 @@ import Toast from "libs/toast";
 import messages from "messages";
 import window, { document, location } from "libs/window";
 
+// No more than MAX_NUM_ERRORS will be reported to airbrake
+const MAX_NUM_ERRORS = 50;
+
 type ErrorHandlingOptions = {
   throwAssertions: boolean,
   sendLocalErrors: boolean,
@@ -46,6 +49,7 @@ class ErrorHandling {
   sendLocalErrors: boolean;
   commitHash: ?string;
   airbrake: AirbrakeClient;
+  numberOfErrors: number = 0;
 
   initialize(options: ErrorHandlingOptions) {
     if (options == null) {
@@ -82,6 +86,15 @@ class ErrorHandling {
         notice.context.version = this.commitHash;
       }
       return notice;
+    });
+
+    // Do not report more than MAX_NUM_ERRORS to airbrake
+    this.airbrake.addFilter(notice => {
+      this.numberOfErrors++;
+      if (this.numberOfErrors <= MAX_NUM_ERRORS) {
+        return notice;
+      }
+      return null;
     });
 
     if (!this.sendLocalErrors) {

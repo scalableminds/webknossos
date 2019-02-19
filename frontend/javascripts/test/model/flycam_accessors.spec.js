@@ -4,6 +4,7 @@ import _ from "lodash";
 
 import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
 import * as accessors from "oxalis/model/accessors/flycam_accessor";
+import constants from "oxalis/constants";
 import test from "ava";
 
 const initialState = {
@@ -87,25 +88,39 @@ test.only("Flycam Accessors should calculate appropriate zoom factors for datase
     [4096, 4096, 512],
   ];
 
-  const maximumZoomPerResolution = accessors._getMaximumZoomForAllResolutions(scale, resolutions);
+  const rect = { width: 384, height: 384, top: 0, left: 0 };
+
+  const rects = {
+    PLANE_XY: rect,
+    PLANE_YZ: rect,
+    PLANE_XZ: rect,
+    TDView: rect,
+  };
+
+  const maximumZoomPerResolution = accessors._getMaximumZoomForAllResolutions(
+    constants.MODE_PLANE_TRACING,
+    scale,
+    resolutions,
+    rects,
+  );
 
   // If this test case should fail at some point, the following values may be updated appropriately
   // to make it pass again. However, it should be validated that zooming out works as expected for
   // datasets with many magnifications (> 12). Small variations in these numbers shouldn't matter much.
   const expectedZoomValues = [
-    1.6105100000000008,
-    3.1384283767210035,
-    5.559917313492239,
-    8.954302432552389,
-    17.449402268886445,
-    34.003948586157826,
-    66.26407607736661,
-    142.04293198443185,
-    276.80149049219943,
-    539.4077978276367,
-    1051.1531995000591,
-    2253.240236044026,
-    5313.0226118483115,
+    1.3310000000000006,
+    2.5937424601000028,
+    4.594972986357223,
+    7.4002499442581735,
+    15.86309297171495,
+    30.91268053287076,
+    60.240069161242396,
+    117.39085287969576,
+    251.6377186292722,
+    490.3707252978515,
+    955.5938177273264,
+    1862.1820132595253,
+    4390.927778387033,
   ];
 
   t.deepEqual(maximumZoomPerResolution, expectedZoomValues);

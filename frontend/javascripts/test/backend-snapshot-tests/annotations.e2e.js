@@ -149,6 +149,33 @@ test("getTracingForAnnotations()", async t => {
   });
 });
 
+test("getTracingForAnnotations() for volume", async t => {
+  const createdExplorational = await api.createExplorational(dataSetId, "volume", false);
+
+  const tracing = await api.getTracingForAnnotations(createdExplorational);
+  writeFlowCheckingFile(tracing, "tracing-volume", "HybridServerTracing");
+  t.snapshot(replaceVolatileValues(tracing.volume), {
+    id: "annotations-tracing-volume",
+  });
+});
+
+test("getTracingForAnnotations() for hybrid", async t => {
+  const createdExplorational = await api.createExplorational(dataSetId, "hybrid", false);
+
+  const tracing = await api.getTracingForAnnotations(createdExplorational);
+  writeFlowCheckingFile(tracing, "tracing-hybrid", "HybridServerTracing");
+  // The volatileValues list includes "skeleton" and "volume", because of other requests, so we need to do it like this
+  t.snapshot(
+    {
+      skeleton: replaceVolatileValues(tracing.skeleton),
+      volume: replaceVolatileValues(tracing.volume),
+    },
+    {
+      id: "annotations-tracing-hybrid",
+    },
+  );
+});
+
 async function sendUpdateActions(explorational, queue) {
   const skeletonTracingId = explorational.tracing.skeleton;
   if (skeletonTracingId == null) throw new Error("No skeleton tracing present.");

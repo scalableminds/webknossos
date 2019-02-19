@@ -7,7 +7,7 @@ import {
 } from "oxalis/model/bucket_data_handling/mappings";
 import { floatsPerLookUpEntry } from "oxalis/model/bucket_data_handling/texture_bucket_manager";
 import constants, {
-  ModeValuesIndices,
+  ViewModeValuesIndices,
   OrthoViewIndices,
   OrthoViews,
   type Vector3,
@@ -98,9 +98,9 @@ uniform bool useBilinearFiltering;
 uniform vec3 globalMousePosition;
 uniform bool isMouseInCanvas;
 uniform float brushSizeInPixel;
-uniform float pixelToVoxelFactor;
 uniform float planeID;
-uniform vec3 bucketsPerDim;
+uniform vec3 addressSpaceDimensions;
+uniform vec3 addressSpaceDimensionsFallback;
 
 varying vec4 worldCoord;
 varying vec4 modelCoord;
@@ -226,7 +226,7 @@ void main() {
     // to the length of the colorLayer array
     segmentationLayerIndex: params.colorLayerNames.length,
     segmentationPackingDegree: formatNumberAsGLSLFloat(params.segmentationPackingDegree),
-    ModeValuesIndices: _.mapValues(ModeValuesIndices, formatNumberAsGLSLFloat),
+    ViewModeValuesIndices: _.mapValues(ViewModeValuesIndices, formatNumberAsGLSLFloat),
     OrthoViews,
     bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),
     bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),

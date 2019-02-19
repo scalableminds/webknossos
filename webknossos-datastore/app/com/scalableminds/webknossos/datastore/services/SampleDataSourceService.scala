@@ -21,8 +21,8 @@ class SampleDataSourceService @Inject()(
   extends FoxImplicits {
 
   val availableDatasets = Map(
-    "Sample_Cremi_dsA_plus" -> "https://florianmeinel.de/temp/cremi.zip",
-    "Sample_Cremi_dsA_plus2" -> "https://florianmeinel.de/temp/cremi.zip")
+    "Sample_Cremi_dsA_plus" -> "http://localhost/cremi.zip",
+    "Sample_Cremi_dsA_plus2" -> "http://localhost/cremi.zip")
 
   var runningDownloads = new ConcurrentHashMap[DataSourceId, Unit]()
 

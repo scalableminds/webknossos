@@ -4,11 +4,12 @@ import _ from "lodash";
 
 import app from "app";
 import {
-  ModeValues,
+  ViewModeValues,
   type OrthoView,
   OrthoViewValues,
   OrthoViews,
   type Vector3,
+  addressSpaceDimensions,
   volumeToolEnumToIndex,
 } from "oxalis/constants";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
@@ -20,13 +21,8 @@ import {
   getByteCount,
   getBoundaries,
 } from "oxalis/model/accessors/dataset_accessor";
-import {
-  getMaxBucketCountPerDim,
-  getPlaneScalingFactor,
-  getRequestLogZoomStep,
-} from "oxalis/model/accessors/flycam_accessor";
+import { getRequestLogZoomStep, getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { getPackingDegree } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Model from "oxalis/model";
 import Store, { type DatasetLayerConfiguration } from "oxalis/store";
@@ -153,10 +149,6 @@ class PlaneMaterialFactory {
         type: "f",
         value: 0,
       },
-      pixelToVoxelFactor: {
-        type: "f",
-        value: 0,
-      },
       activeCellId: {
         type: "v4",
         value: new THREE.Vector4(0, 0, 0, 0),
@@ -193,9 +185,13 @@ class PlaneMaterialFactory {
         type: "b",
         value: false,
       },
-      bucketsPerDim: {
+      addressSpaceDimensions: {
         type: "v3",
-        value: new THREE.Vector3(0, 0, 0),
+        value: new THREE.Vector3(...addressSpaceDimensions.normal),
+      },
+      addressSpaceDimensionsFallback: {
+        type: "v3",
+        value: new THREE.Vector3(...addressSpaceDimensions.fallback),
       },
     };
 
@@ -324,25 +320,6 @@ class PlaneMaterialFactory {
 
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        storeState => getRequestLogZoomStep(storeState),
-        zoomStep => {
-          const storeState = Store.getState();
-          const { dataset } = storeState;
-          const resolutions = getResolutions(dataset);
-          const bucketsPerDim = getMaxBucketCountPerDim(
-            dataset.dataSource.scale,
-            zoomStep,
-            resolutions,
-          );
-
-          this.uniforms.bucketsPerDim.value.set(...bucketsPerDim);
-        },
-        true,
-      ),
-    );
-
-    this.storePropertyUnsubscribers.push(
-      listenToStoreProperty(
         storeState => storeState.userConfiguration.sphericalCapRadius,
         sphericalCapRadius => {
           this.uniforms.sphericalCapRadius.value = sphericalCapRadius;
@@ -353,9 +330,9 @@ class PlaneMaterialFactory {
 
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        storeState => storeState.flycam.zoomStep,
-        zoomStep => {
-          this.uniforms.zoomValue.value = zoomStep;
+        storeState => getZoomValue(storeState.flycam),
+        zoomValue => {
+          this.uniforms.zoomValue.value = zoomValue;
         },
         true,
       ),
@@ -385,17 +362,7 @@ class PlaneMaterialFactory {
       listenToStoreProperty(
         storeState => storeState.temporaryConfiguration.viewMode,
         viewMode => {
-          this.uniforms.viewMode.value = ModeValues.indexOf(viewMode);
-        },
-        true,
-      ),
-    );
-
-    this.storePropertyUnsubscribers.push(
-      listenToStoreProperty(
-        storeState => getPlaneScalingFactor(storeState.flycam) / getViewportScale(this.planeID),
-        pixelToVoxelFactor => {
-          this.uniforms.pixelToVoxelFactor.value = pixelToVoxelFactor;
+          this.uniforms.viewMode.value = ViewModeValues.indexOf(viewMode);
         },
         true,
       ),

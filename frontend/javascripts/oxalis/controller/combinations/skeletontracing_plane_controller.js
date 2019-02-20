@@ -140,7 +140,7 @@ function onClick(
   const pickingScene = new THREE.Scene();
   pickingScene.add(pickingNode);
 
-  let { width, height } = getInputCatcherRect(plane);
+  let { width, height } = getInputCatcherRect(Store.getState(), plane);
   width = Math.round(width);
   height = Math.round(height);
 
@@ -150,8 +150,8 @@ function onClick(
   const borderWidth = OUTER_CSS_BORDER;
   const [x, y] = [Math.round(position.x) - borderWidth, Math.round(position.y) - borderWidth];
   // compute the index of the pixel under the cursor,
-  // while inverting along the y-axis, because OpenGL has its origin bottom-left :/
-  const index = (x + (width - y) * height) * 4;
+  // while inverting along the y-axis, because WebGL has its origin bottom-left :/
+  const index = (x + (height - y) * width) * 4;
   // the nodeId can be reconstructed by interpreting the RGB values of the pixel as a base-255 number
   const nodeId = buffer.subarray(index, index + 3).reduce((a, b) => a * 255 + b, 0);
   SceneController.skeleton.stopPicking();

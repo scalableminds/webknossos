@@ -183,6 +183,8 @@ export type APIUserLoggedTime = {
 
 export type APIActiveUser = {
   email: string,
+  firstName: string,
+  lastName: string,
   activeTasks: number,
 };
 

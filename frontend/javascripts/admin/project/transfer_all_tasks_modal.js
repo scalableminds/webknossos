@@ -94,7 +94,7 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
       {
         title: "User",
         dataIndex: "email",
-        render: (email, record) => `${record.lastName}, ${record.firstName} ${email}`,
+        render: (email, record) => `${record.lastName}, ${record.firstName} (${email})`,
         key: "email",
       },
       {

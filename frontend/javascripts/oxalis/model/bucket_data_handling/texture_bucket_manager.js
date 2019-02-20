@@ -260,8 +260,17 @@ export default class TextureBucketManager {
   }
 
   _refreshLookUpBuffer() {
-    // Completely re-write the lookup buffer. This could be smarter, but it's
-    // probably not worth it.
+    /* This method completely completely re-writes the lookup buffer. This could be smarter, but it's
+     * probably not worth it.
+     * It works as follows:
+     * - write -2 into the entire buffer as a fallback
+     * - iterate over all buckets which should be available to the GPU
+     * - only consider the buckets in the native zoomStep (=> zoomStep === 0)
+     * - if the current bucket was committed, write the address for that bucket into the look up buffer
+     * - otherwise, check whether the bucket's fallback bucket is committed so that this can be written into
+     *   the look up buffer (repeat for the next fallback if the bucket wasn't committed).
+     */
+
     this.lookUpBuffer.fill(-2);
     const maxZoomStepDiff = getMaxZoomStepDiff(
       Store.getState().datasetConfiguration.loadingStrategy,
@@ -279,12 +288,13 @@ export default class TextureBucketManager {
 
       let address = -1;
       let bucketZoomStep = bucket.zoomedAddress[3];
-      if (!window.enforcedZoomDiff && this.committedBucketSet.has(bucket)) {
+      if (!bucketDebuggingFlags.enforcedZoomDiff && this.committedBucketSet.has(bucket)) {
         address = reservedAddress;
       } else {
         let fallbackBucket = bucket.getFallbackBucket();
         let abortFallbackLoop = false;
-        const maxAllowedZoomStep = currentZoomStep + (window.enforcedZoomDiff || maxZoomStepDiff);
+        const maxAllowedZoomStep =
+          currentZoomStep + (bucketDebuggingFlags.enforcedZoomDiff || maxZoomStepDiff);
 
         while (!abortFallbackLoop) {
           if (fallbackBucket.type !== "null") {
@@ -308,10 +318,6 @@ export default class TextureBucketManager {
       this.lookUpBuffer[posInBuffer] = address;
       this.lookUpBuffer[posInBuffer + 1] = bucketZoomStep;
     }
-
-    // todo: iterate over all fallback buckets which were not written into the look up buffer?
-    // ideally, this only picks up the few buckets for which the arbitrary bucket pickers
-    // didn't pick the correct high-res buckets
 
     this.lookUpTexture.update(this.lookUpBuffer, 0, 0, lookUpBufferWidth, lookUpBufferWidth);
     this.isRefreshBufferOutOfDate = false;

@@ -40,6 +40,7 @@ export const bucketDebuggingFlags = {
   visualizeBucketsOnGPU: false,
   // DEBUG flag for visualizing buckets which are prefetched
   visualizePrefetchedBuckets: false,
+  enforcedZoomDiff: undefined,
 };
 // Exposing this variable allows debugging on deployed systems
 window.bucketDebuggingFlags = bucketDebuggingFlags;

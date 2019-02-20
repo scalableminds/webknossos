@@ -53,7 +53,6 @@ function consumeBucketsFromPriorityQueue(
   capacity: number,
 ): Array<{ priority: number, bucket: DataBucket }> {
   const bucketsWithPriorities = [];
-  const zoomStepHist = [];
   // Consume priority queue until we maxed out the capacity
   while (bucketsWithPriorities.length < capacity) {
     if (queue.length === 0) {
@@ -83,11 +82,7 @@ export default class LayerRenderingManager {
   cube: DataCube;
   pullQueue: PullQueue;
   dataTextureCount: number;
-  anchorPointCache: {
-    anchorPoint: Vector4,
-  } = {
-    anchorPoint: [0, 0, 0, 0],
-  };
+  cachedAnchorPoint: Vector4 = [0, 0, 0, 0];
 
   name: string;
   isSegmentation: boolean;
@@ -146,8 +141,8 @@ export default class LayerRenderingManager {
 
     if (logZoomStep > this.cube.MAX_ZOOM_STEP) {
       // Don't render anything if the zoomStep is too high
-      this.textureBucketManager.setActiveBuckets([], this.anchorPointCache.anchorPoint);
-      return this.anchorPointCache.anchorPoint;
+      this.textureBucketManager.setActiveBuckets([], this.cachedAnchorPoint);
+      return this.cachedAnchorPoint;
     }
 
     const subBucketLocality = getSubBucketLocality(position, getResolutions(dataset)[logZoomStep]);
@@ -216,7 +211,7 @@ export default class LayerRenderingManager {
             enqueueFunction,
             datasetConfiguration.loadingStrategy,
             logZoomStep,
-            this.anchorPointCache.anchorPoint,
+            this.cachedAnchorPoint,
             areas,
             subBucketLocality,
           );
@@ -234,7 +229,7 @@ export default class LayerRenderingManager {
       // This tells the bucket collection, that the buckets are necessary for rendering
       buckets.forEach(b => b.markAsNeeded());
 
-      this.textureBucketManager.setActiveBuckets(buckets, this.anchorPointCache.anchorPoint);
+      this.textureBucketManager.setActiveBuckets(buckets, this.cachedAnchorPoint);
 
       // In general, pull buckets which are not available but should be sent to the GPU
       const missingBuckets = bucketsWithPriorities
@@ -246,7 +241,7 @@ export default class LayerRenderingManager {
       this.pullQueue.pull();
     }
 
-    return this.anchorPointCache.anchorPoint;
+    return this.cachedAnchorPoint;
   }
 
   maybeUpdateAnchorPoint(position: Vector3, logZoomStep: number): boolean {
@@ -266,11 +261,10 @@ export default class LayerRenderingManager {
 
     const anchorPoint = this.cube.positionToZoomedAddress(anchorPointInVoxel, logZoomStep);
 
-    const cacheKey = "anchorPoint";
-    if (_.isEqual(anchorPoint, this.anchorPointCache[cacheKey])) {
+    if (_.isEqual(anchorPoint, this.cachedAnchorPoint)) {
       return false;
     }
-    this.anchorPointCache[cacheKey] = anchorPoint;
+    this.cachedAnchorPoint = anchorPoint;
     return true;
   }
 }

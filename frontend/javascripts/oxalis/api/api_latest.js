@@ -653,6 +653,9 @@ class DataApi {
     return segmentationLayer.name;
   }
 
+  /**
+   * Invalidates all downloaded buckets so that they are reloaded on the next movement.
+   */
   reloadAllBuckets(): void {
     _.forEach(this.model.dataLayers, dataLayer => dataLayer.cube.collectAllBuckets());
   }

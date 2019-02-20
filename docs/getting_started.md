@@ -21,7 +21,7 @@ git clone https://github.com/scalableminds/webknossos.git
 cd webknossos
 
 docker-compose pull webknossos
-docker-compose up webknossos
+./start-docker.sh
 ```
 
 This will start an instance of webKnossos on http://localhost:9000/.

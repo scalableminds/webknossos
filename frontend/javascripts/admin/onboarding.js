@@ -316,8 +316,8 @@ class OnboardingView extends React.PureComponent<Props, State> {
           </FeatureCard>
           <FeatureCard header="More Datasets" icon={<Icon type="cloud-upload-o" />}>
             <a href="/datasets/upload">Upload more of your datasets.</a>{" "}
-            <a href="https://docs.webknossos.org/reference/data_formats">Learn more</a> about
-            the formats and upload processes webKnossos supports.
+            <a href="https://docs.webknossos.org/reference/data_formats">Learn more</a> about the
+            formats and upload processes webKnossos supports.
           </FeatureCard>
           <FeatureCard header="User & Team Management" icon={<Icon type="team" />}>
             <InviteUsersPopover

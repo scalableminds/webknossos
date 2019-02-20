@@ -78,7 +78,7 @@ class DatasetAddForeignView extends React.PureComponent<Props> {
 
     return (
       <div className="container" style={{ paddingTop: 20 }}>
-        <Card title={<h3>Add Dataset</h3>}>
+        <Card title={<h3>Add Dataset</h3>} bordered={false}>
           <p>
             Specify the Dataset in the following format:
             <br />
@@ -112,7 +112,7 @@ class DatasetAddForeignView extends React.PureComponent<Props> {
               )}
             </FormItem>
             <FormItem>
-              <Button type="primary" htmlType="submit">
+              <Button size="large" type="primary" htmlType="submit" style={{ width: "100%" }}>
                 Add Dataset
               </Button>
             </FormItem>

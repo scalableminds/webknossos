@@ -14,16 +14,18 @@ import type { APIDataStore, APISampleDataset } from "admin/api_flow_types";
 
 type Props = {
   destroy: () => void,
-  onClose: () => any,
+  onOk?: () => any,
   organizationName: string,
 };
 
 function useDatastores(): [Array<APIDataStore>] {
   const [datastores, setDatastores] = useState([]);
+
   const fetchDatastores = async () => {
     const fetchedDatastores = await getDatastores();
     setDatastores(fetchedDatastores);
   };
+
   useEffect(() => {
     fetchDatastores();
   }, []);
@@ -38,6 +40,7 @@ function useSampleDatasets(
 ): [Array<APISampleDataset>, Array<string>, () => Promise<void>] {
   const [datasets, setDatasets] = useState([]);
   const [failedDatasets, setFailedDatasets] = useState([]);
+
   const fetchSampleDatasets = async () => {
     if (datastore == null) return;
     const sampleDatasets = await getSampleDatasets(datastore.url, organizationName);
@@ -54,7 +57,7 @@ function useSampleDatasets(
       ),
     );
 
-    // Remove datasets from the pendingDatasets queue
+    // Remove datasets which are not downloading from the pendingDatasets queue
     setPendingDatasets(
       _.without(
         pendingDatasets,
@@ -64,13 +67,15 @@ function useSampleDatasets(
       ),
     );
   };
+
   useEffect(() => {
     fetchSampleDatasets();
   }, [datastore]);
+
   return [datasets, failedDatasets, fetchSampleDatasets];
 }
 
-const SampleDatasetsModal = ({ destroy, onClose, organizationName }: Props) => {
+const SampleDatasetsModal = ({ destroy, onOk, organizationName }: Props) => {
   const [pendingDatasets, setPendingDatasets] = useState([]);
   const [datastores] = useDatastores();
   const datastore = datastores[0];
@@ -91,8 +96,11 @@ const SampleDatasetsModal = ({ destroy, onClose, organizationName }: Props) => {
       handleGenericError(error);
     }
   };
-  const handleClose = () => {
-    onClose();
+  const handleCancel = () => {
+    destroy();
+  };
+  const handleOk = () => {
+    if (onOk != null) onOk();
     destroy();
   };
 
@@ -115,10 +123,10 @@ const SampleDatasetsModal = ({ destroy, onClose, organizationName }: Props) => {
   return (
     <Modal
       title="Add a Sample Dataset"
-      onCancel={handleClose}
+      onCancel={handleCancel}
       visible
       footer={[
-        <Button key="ok" type="primary" onClick={handleClose}>
+        <Button key="ok" type="primary" onClick={handleOk}>
           Ok
         </Button>,
       ]}

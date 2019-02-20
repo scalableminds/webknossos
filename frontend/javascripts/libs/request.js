@@ -246,9 +246,9 @@ class Request {
       }
     }
 
-    if (!options.doNotInvestigate) {
-      fetchPromise = fetchPromise.catch(this.handleError.bind(this, url, options.showErrorToast));
-    }
+    fetchPromise = fetchPromise.catch(
+      this.handleError.bind(this, url, options.showErrorToast, !options.doNotInvestigate),
+    );
 
     if (options.timeout != null) {
       return Promise.race([fetchPromise, this.timeoutPromise(options.timeout)]).then(result => {
@@ -278,47 +278,52 @@ class Request {
   handleError = (
     requestedUrl: string,
     showErrorToast: boolean,
+    doInvestigate: boolean,
     error: Response | Error,
   ): Promise<void> => {
-    // Check whether this request failed due to a problematic
-    // datastore
-    pingDataStoreIfAppropriate(requestedUrl);
-    if (error instanceof Response) {
-      return error.text().then(
-        text => {
-          try {
-            const json = JSON.parse(text);
+    if (doInvestigate) {
+      // Check whether this request failed due to a problematic datastore
+      pingDataStoreIfAppropriate(requestedUrl);
+      if (error instanceof Response) {
+        return error.text().then(
+          text => {
+            try {
+              const json = JSON.parse(text);
 
-            // Propagate HTTP status code for further processing down the road
-            if (error.status != null) {
-              json.status = error.status;
+              // Propagate HTTP status code for further processing down the road
+              if (error.status != null) {
+                json.status = error.status;
+              }
+
+              if (showErrorToast) Toast.messages(json.messages);
+
+              // Check whether the error chain mentions an url which belongs
+              // to a datastore. Then, ping the datastore
+              pingMentionedDataStores(text);
+
+              return Promise.reject(json);
+            } catch (jsonError) {
+              if (showErrorToast) Toast.error(text);
+              /* eslint-disable prefer-promise-reject-errors */
+              return Promise.reject({
+                errors: [text],
+                status: error.status != null ? error.status : -1,
+              });
             }
-
-            if (showErrorToast) Toast.messages(json.messages);
-
-            // Check whether the error chain mentions an url which belongs
-            // to a datastore. Then, ping the datastore
-            pingMentionedDataStores(text);
-
-            return Promise.reject(json);
-          } catch (jsonError) {
-            if (showErrorToast) Toast.error(text);
-            /* eslint-disable prefer-promise-reject-errors */
-            return Promise.reject({
-              errors: [text],
-              status: error.status != null ? error.status : -1,
-            });
-          }
-        },
-        textError => {
-          Toast.error(textError.toString());
-          return Promise.reject(textError);
-        },
-      );
-    } else {
-      console.error(error);
-      return Promise.reject(error);
+          },
+          textError => {
+            Toast.error(textError.toString());
+            return Promise.reject(textError);
+          },
+        );
+      }
     }
+    // If doInvestigate is false or the error is not instanceof Response,
+    // still add additional information to the error
+    if (!(error instanceof Response)) {
+      error.message += ` - Url: ${requestedUrl}`;
+    }
+    return Promise.reject(error);
   };
 
   handleEmptyJsonResponse = (response: Response): Promise<{}> =>

@@ -88,9 +88,7 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
       logZoomStep,
     );
 
-    const bucketsPerDim = addressSpaceDimensions.normal;
-
-    const renderedBucketsPerDimension = bucketsPerDim[w];
+    const renderedBucketsPerDimension = addressSpaceDimensions[w];
 
     let topLeftBucket = ((nonFallbackAnchorPoint.slice(): any): Vector4);
     topLeftBucket[w] += getAnchorPositionToCenterDistance(renderedBucketsPerDimension);

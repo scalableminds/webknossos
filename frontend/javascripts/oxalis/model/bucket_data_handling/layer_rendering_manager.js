@@ -53,7 +53,6 @@ function consumeBucketsFromPriorityQueue(
   capacity: number,
 ): Array<{ priority: number, bucket: DataBucket }> {
   const bucketsWithPriorities = [];
-  const zoomStepHist = [];
   // Consume priority queue until we maxed out the capacity
   while (bucketsWithPriorities.length < capacity) {
     if (queue.length === 0) {
@@ -251,9 +250,8 @@ export default class LayerRenderingManager {
   maybeUpdateAnchorPoint(position: Vector3, logZoomStep: number): boolean {
     const resolutions = getResolutions(Store.getState().dataset);
     const resolution = resolutions[logZoomStep];
-    const bucketsPerDim = addressSpaceDimensions.normal;
 
-    const maximumRenderedBucketsHalfInVoxel = bucketsPerDim.map(
+    const maximumRenderedBucketsHalfInVoxel = addressSpaceDimensions.map(
       bucketPerDim => getAnchorPositionToCenterDistance(bucketPerDim) * constants.BUCKET_WIDTH,
     );
 

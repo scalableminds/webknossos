@@ -122,11 +122,9 @@ const VIEWPORT_WIDTH = 376;
 export const ensureSmallerEdge = false;
 
 // Using the following dimensions for the address space,
-// the look up buffer (256**2) is used at a rate of ~ 97%
-// ((32 × 32 × 50 + 16 × 16 × 50) / 256^2 = 0.976563)
-export const addressSpaceDimensions = {
-  normal: [32, 32, 50],
-};
+// the look up buffer (256**2) is used at a rate of ~ 99%
+// ((36 × 36 × 50) / 256^2 = 0.98877)
+export const addressSpaceDimensions = [36, 36, 50];
 
 export const Unicode = {
   ThinSpace: "\u202f",
@@ -144,8 +142,6 @@ const Constants = {
   MODES_ARBITRARY: ["flight", "oblique"],
   MODES_SKELETON: ["orthogonal", "flight", "oblique"],
 
-  DEFAULT_SEG_ALPHA: 20,
-
   BUCKET_WIDTH: 32,
   BUCKET_SIZE: 32 ** 3,
   VIEWPORT_WIDTH,
@@ -160,7 +156,6 @@ const Constants = {
   MAX_ZOOM_STEP_DIFF: 3,
   MAX_ZOOM_STEP_DIFF_PREFETCH: 1, // prefetch only fallback buckets for currentZoomStep + 1
 
-  TDView_MOVE_SPEED: 150,
   MIN_MOVE_VALUE: 30,
   MAX_MOVE_VALUE: 14000,
   MAX_MOVE_VALUE_SLIDER: 1500,

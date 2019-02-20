@@ -183,7 +183,7 @@ class PlaneMaterialFactory {
       },
       addressSpaceDimensions: {
         type: "v3",
-        value: new THREE.Vector3(...addressSpaceDimensions.normal),
+        value: new THREE.Vector3(...addressSpaceDimensions),
       },
     };
 

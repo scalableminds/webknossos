@@ -1,6 +1,6 @@
 // @flow
 
-import { getRelativeCoords } from "oxalis/shaders/coords.glsl";
+import { getResolutionFactors, getRelativeCoords } from "oxalis/shaders/coords.glsl";
 
 import type { ShaderModule } from "./shader_module_system";
 
@@ -106,6 +106,7 @@ export const getColorForCoords: ShaderModule = {
     getRgbaAtIndex,
     getRgbaAtXYIndex,
     getRelativeCoords,
+    getResolutionFactors,
   ],
   code: `
     vec4 getColorForCoords(
@@ -128,22 +129,25 @@ export const getColorForCoords: ShaderModule = {
       ).ra;
 
       float bucketAddress = bucketAddressWithZoomStep.x;
-      float bucketZoomStep = bucketAddressWithZoomStep.y;
+      float renderedZoomStep = bucketAddressWithZoomStep.y;
 
-      float zoomStepDiff = bucketZoomStep - zoomStep;
-      // Adapt position within bucket to potential fallback position
-      // Example Scenario (we consider only one axis; e.g., the x axis):
-      // If we are in the mag1 bucket for which x = 5, we have to look into the **second** half
-      // of the mag2 bucket for which x = 2.
-      // If we are in the mag1 bucket for which x = 4, we have to look into the **first** half
-      // of the mag2 bucket for which x = 1.
-      if (zoomStepDiff > 0.0) {
-        // Todo: Will only work for isotropic resolutions
-        float magnificationFactor = pow(2.0, zoomStepDiff);
-        vec3 subVolumeIndex = mod(relativeBucketPosition + anchorPoint, magnificationFactor);
+      if (renderedZoomStep != zoomStep) {
+        /* Adapt the position within the bucket to the potential fallback position.
+         * Example Scenario (let's consider only the x axis):
+         * If we are in the mag1 bucket for which x = 4, we have to look into the **first** half
+         * of the mag2 bucket for which x = 1.
+         * If we are in the mag1 bucket for which x = 5, we have to look into the **second** half
+         * of the mag2 bucket for which x = 2.
+         * We can determine which "half" (subVolumeIndex) is relevant by doing a modulo operation
+         * with the resolution factor.
+         */
+
+        vec3 magnificationFactors = getResolutionFactors(renderedZoomStep, zoomStep);
+        vec3 worldBucketPosition = relativeBucketPosition + anchorPoint;
+        vec3 subVolumeIndex = mod(worldBucketPosition, magnificationFactors);
         offsetInBucket = floor(
           (offsetInBucket + vec3(32.0) * subVolumeIndex)
-          / magnificationFactor
+          / magnificationFactors
         );
       }
 

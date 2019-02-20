@@ -328,7 +328,7 @@ export default class TextureBucketManager {
     // if (y < 0) console.warn("y should be greater than 0. is currently:", y);
     // if (z < 0) console.warn("z should be greater than 0. is currently:", z);
 
-    const [sx, sy] = addressSpaceDimensions.normal;
+    const [sx, sy] = addressSpaceDimensions;
 
     // prettier-ignore
     return (

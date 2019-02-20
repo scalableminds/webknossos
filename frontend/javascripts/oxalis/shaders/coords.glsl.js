@@ -20,6 +20,15 @@ export const getResolution: ShaderModule = {
   `,
 };
 
+export const getResolutionFactors: ShaderModule = {
+  requirements: [getResolution],
+  code: `
+    vec3 getResolutionFactors(float zoomStepA, float zoomStepB) {
+      return getResolution(zoomStepA) / getResolution(zoomStepB);
+    }
+  `,
+};
+
 export const getRelativeCoords: ShaderModule = {
   requirements: [getResolution],
   code: `

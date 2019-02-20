@@ -41,7 +41,7 @@ import Request, { type RequestOptionsWithData } from "libs/request";
 import Toast from "libs/toast";
 import messages from "messages";
 import window, { alert, document, location } from "libs/window";
-import Math from "libs/math";
+import { getUid } from "libs/uid_generator";
 
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
 
@@ -174,12 +174,7 @@ export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<v
   const tracingStoreUrl = yield* select(state => state.tracing.tracingStore.url);
   compactedSaveQueue = addVersionNumbers(compactedSaveQueue, version);
 
-  compactedSaveQueue = addRequestIds(
-    compactedSaveQueue,
-    Math.random()
-      .toString(36)
-      .substr(2, 10),
-  );
+  compactedSaveQueue = addRequestIds(compactedSaveQueue, getUid());
 
   let retryCount = 0;
   while (true) {

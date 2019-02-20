@@ -18,13 +18,11 @@ const DateMock = {
 };
 mockRequire("libs/date", DateMock);
 
-const RANDOM_FLOAT = 0.1616828181890917;
-const MathMock = {
-  random: () => RANDOM_FLOAT,
-  min: Math.min,
+const REQUEST_ID = "sc5na1wy1r";
+const UidMock = {
+  getUid: () => REQUEST_ID,
 };
-mockRequire("libs/math", MathMock);
-const REQUEST_ID = RANDOM_FLOAT.toString(36).substr(2, 10);
+mockRequire("libs/uid_generator", UidMock);
 
 mockRequire("oxalis/model/sagas/root_saga", function*() {
   yield;

@@ -116,10 +116,10 @@ export const getColorForCoords: ShaderModule = {
       vec3 worldPositionUVW
     ) {
       vec3 coords = floor(getRelativeCoords(worldPositionUVW, zoomStep));
-      vec3 bucketPosition = div(coords, bucketWidth);
+      vec3 relativeBucketPosition = div(coords, bucketWidth);
       vec3 offsetInBucket = mod(coords, bucketWidth);
 
-      float bucketIdx = linearizeVec3ToIndex(bucketPosition, addressSpaceDimensions);
+      float bucketIdx = linearizeVec3ToIndex(relativeBucketPosition, addressSpaceDimensions);
 
       vec2 bucketAddressWithZoomStep = getRgbaAtIndex(
         lookUpTexture,
@@ -132,14 +132,18 @@ export const getColorForCoords: ShaderModule = {
 
       float zoomStepDiff = bucketZoomStep - zoomStep;
       // Adapt position within bucket to potential fallback position
-      // Todo: Will only work for isotropic resolutions
+      // Example Scenario (we consider only one axis; e.g., the x axis):
+      // If we are in the mag1 bucket for which x = 5, we have to look into the **second** half
+      // of the mag2 bucket for which x = 2.
+      // If we are in the mag1 bucket for which x = 4, we have to look into the **first** half
+      // of the mag2 bucket for which x = 1.
       if (zoomStepDiff > 0.0) {
-        vec3 anchorPointUVW = transDim(anchorPoint);
+        // Todo: Will only work for isotropic resolutions
         float magnificationFactor = pow(2.0, zoomStepDiff);
-        vec3 isEvenBucketPosition = mod(bucketPosition + anchorPointUVW, magnificationFactor);
+        vec3 subVolumeIndex = mod(relativeBucketPosition + anchorPoint, magnificationFactor);
         offsetInBucket = floor(
-                 (offsetInBucket + vec3(32.0) * isEvenBucketPosition)
-                 / magnificationFactor
+          (offsetInBucket + vec3(32.0) * subVolumeIndex)
+          / magnificationFactor
         );
       }
 

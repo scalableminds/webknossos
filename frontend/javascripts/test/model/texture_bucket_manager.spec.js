@@ -51,8 +51,8 @@ const buildBucket = (zoomedAddress, firstByte) => {
   return bucket;
 };
 
-const setActiveBucketsAndWait = (tbm, activeBuckets, anchorPoint, fallbackAnchorPoint) => {
-  tbm.setActiveBuckets(activeBuckets, anchorPoint, fallbackAnchorPoint);
+const setActiveBucketsAndWait = (tbm, activeBuckets, anchorPoint) => {
+  tbm.setActiveBuckets(activeBuckets, anchorPoint);
   // Depending on timing, processWriterQueue has to be called n times in the slowest case
   activeBuckets.forEach(() => tbm.processWriterQueue());
   tbm._refreshLookUpBuffer();
@@ -74,7 +74,7 @@ test("TextureBucketManager: basic functionality", t => {
     buildBucket([1, 2, 1, 0], 102),
   ];
 
-  setActiveBucketsAndWait(tbm, activeBuckets, [1, 1, 1, 0], [0, 0, 0, 1]);
+  setActiveBucketsAndWait(tbm, activeBuckets, [1, 1, 1, 0]);
 
   expectBucket(t, tbm, activeBuckets[0], 100);
   expectBucket(t, tbm, activeBuckets[1], 101);
@@ -94,8 +94,8 @@ test("TextureBucketManager: changing active buckets", t => {
     buildBucket([1, 1, 0, 0], 202),
   ];
 
-  setActiveBucketsAndWait(tbm, activeBuckets.slice(0, 3), [0, 0, 0, 0], [0, 0, 0, 1]);
-  setActiveBucketsAndWait(tbm, activeBuckets.slice(3, 6), [1, 0, 0, 0], [0, 0, 0, 1]);
+  setActiveBucketsAndWait(tbm, activeBuckets.slice(0, 3), [0, 0, 0, 0]);
+  setActiveBucketsAndWait(tbm, activeBuckets.slice(3, 6), [1, 0, 0, 0]);
 
   expectBucket(t, tbm, activeBuckets[3], 200);
   expectBucket(t, tbm, activeBuckets[4], 201);

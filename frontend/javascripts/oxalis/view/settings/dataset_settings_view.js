@@ -145,14 +145,30 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     );
 
     return (
-      <Collapse defaultActiveKey={["1", "2", "3", "4"]}>
+      <Collapse bordered={false} defaultActiveKey={["1", "2", "3", "4"]}>
         <Panel header="Color Layers" key="1">
           {colorSettings}
         </Panel>
         {this.props.hasSegmentation ? this.getSegmentationPanel() : null}
-        <Panel header="Quality" key="3">
+        <Panel header="Data Rendering" key="3">
+          <DropdownSetting
+            label={settings.quality}
+            value={this.props.datasetConfiguration.quality}
+            onChange={_.partial(this.onChangeQuality, "quality")}
+          >
+            <Option value="0">high</Option>
+            <Option value="1">medium</Option>
+            <Option value="2">low</Option>
+          </DropdownSetting>
           <SwitchSetting
-            label={settings.fourBit}
+            label={
+              <React.Fragment>
+                {settings.fourBit}{" "}
+                <Tooltip title="Load each data bucket in half quality. Recommended for poor and/or capped Internet connections.">
+                  <Icon type="info-circle" />
+                </Tooltip>
+              </React.Fragment>
+            }
             value={this.props.datasetConfiguration.fourBit}
             onChange={_.partial(this.props.onChange, "fourBit")}
           />
@@ -163,15 +179,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
               onChange={_.partial(this.props.onChange, "interpolation")}
             />
           )}
-          <DropdownSetting
-            label={settings.quality}
-            value={this.props.datasetConfiguration.quality}
-            onChange={_.partial(this.onChangeQuality, "quality")}
-          >
-            <Option value="0">high</Option>
-            <Option value="1">medium</Option>
-            <Option value="2">low</Option>
-          </DropdownSetting>
           <SwitchSetting
             label={
               <React.Fragment>

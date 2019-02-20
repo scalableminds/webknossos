@@ -71,7 +71,7 @@ class UserSelectionComponent extends React.PureComponent<Props, State> {
       >
         {this.state.users.map(user => (
           <Option key={user.id} value={user.id}>
-            {`${user.lastName}, ${user.firstName} ${user.email}`}
+            {`${user.lastName}, ${user.firstName} (${user.email})`}
           </Option>
         ))}
       </Select>

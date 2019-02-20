@@ -5,9 +5,7 @@ import _ from "lodash";
 import { DataBucket, bucketDebuggingFlags } from "oxalis/model/bucket_data_handling/bucket";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
 import { getRenderer } from "oxalis/controller/renderer";
-import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import { waitForCondition } from "libs/utils";
-import Store from "oxalis/store";
 import UpdatableTexture from "libs/UpdatableTexture";
 import constants, { type Vector4, addressSpaceDimensions } from "oxalis/constants";
 import window from "libs/window";
@@ -32,7 +30,7 @@ const lookUpBufferWidth = constants.LOOK_UP_TEXTURE_WIDTH;
 // If f >= 0, f denotes the index in the data texture where the bucket is stored.
 // If f == -1, the bucket is not yet committed
 // If f == -2, the bucket is not supposed to be rendered. Out of bounds.
-export const floatsPerLookUpEntry = 2;
+const channelCountForLookupBuffer = 2;
 
 export default class TextureBucketManager {
   dataTextures: Array<UpdatableTexture>;
@@ -62,7 +60,7 @@ export default class TextureBucketManager {
     this.maximumCapacity =
       (this.packingDegree * dataTextureCount * textureWidth ** 2) / constants.BUCKET_SIZE;
     // the look up buffer is addressSpaceDimensions**3 so that arbitrary look ups can be made
-    const lookUpBufferSize = Math.pow(lookUpBufferWidth, 2) * floatsPerLookUpEntry;
+    const lookUpBufferSize = Math.pow(lookUpBufferWidth, 2) * channelCountForLookupBuffer;
     this.textureWidth = textureWidth;
     this.dataTextureCount = dataTextureCount;
 
@@ -210,7 +208,7 @@ export default class TextureBucketManager {
 
     const lookUpTexture = createUpdatableTexture(
       lookUpBufferWidth,
-      floatsPerLookUpEntry,
+      channelCountForLookupBuffer,
       THREE.FloatType,
       getRenderer(),
     );
@@ -274,7 +272,7 @@ export default class TextureBucketManager {
         continue;
       }
       const lookUpIdx = this._getBucketIndex(bucket);
-      const posInBuffer = floatsPerLookUpEntry * lookUpIdx;
+      const posInBuffer = channelCountForLookupBuffer * lookUpIdx;
 
       let address = -1;
       let bucketZoomStep = bucket.zoomedAddress[3];

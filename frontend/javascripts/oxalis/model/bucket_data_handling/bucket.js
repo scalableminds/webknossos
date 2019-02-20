@@ -44,6 +44,35 @@ export const bucketDebuggingFlags = {
 // Exposing this variable allows debugging on deployed systems
 window.bucketDebuggingFlags = bucketDebuggingFlags;
 
+export class NullBucket {
+  type: "null" = "null";
+  isOutOfBoundingBox: boolean;
+
+  constructor(isOutOfBoundingBox: boolean) {
+    this.isOutOfBoundingBox = isOutOfBoundingBox;
+  }
+
+  hasData(): boolean {
+    return false;
+  }
+
+  needsRequest(): boolean {
+    return false;
+  }
+
+  getData(): Uint8Array {
+    throw new Error("NullBucket has no data.");
+  }
+}
+
+export const NULL_BUCKET = new NullBucket(false);
+export const NULL_BUCKET_OUT_OF_BB = new NullBucket(true);
+
+// The type is used within the DataBucket class which is why
+// we have to define it here.
+// eslint-disable-next-line no-use-before-define
+export type Bucket = DataBucket | NullBucket;
+
 export class DataBucket {
   type: "data" = "data";
   BIT_DEPTH: number;
@@ -428,29 +457,3 @@ export class DataBucket {
     }
   }
 }
-
-export class NullBucket {
-  type: "null" = "null";
-  isOutOfBoundingBox: boolean;
-
-  constructor(isOutOfBoundingBox: boolean) {
-    this.isOutOfBoundingBox = isOutOfBoundingBox;
-  }
-
-  hasData(): boolean {
-    return false;
-  }
-
-  needsRequest(): boolean {
-    return false;
-  }
-
-  getData(): Uint8Array {
-    throw new Error("NullBucket has no data.");
-  }
-}
-
-export const NULL_BUCKET = new NullBucket(false);
-export const NULL_BUCKET_OUT_OF_BB = new NullBucket(true);
-
-export type Bucket = DataBucket | NullBucket;

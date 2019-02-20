@@ -5,7 +5,6 @@ import {
   MAPPING_TEXTURE_WIDTH,
   MAPPING_COLOR_TEXTURE_WIDTH,
 } from "oxalis/model/bucket_data_handling/mappings";
-import { floatsPerLookUpEntry } from "oxalis/model/bucket_data_handling/texture_bucket_manager";
 import constants, {
   ViewModeValuesIndices,
   OrthoViewIndices,

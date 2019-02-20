@@ -213,6 +213,8 @@ export type DatasetLayerConfiguration = {|
   +alpha: number,
 |};
 
+export type LoadingStrategy = "BEST_QUALITY_FIRST" | "PROGRESSIVE_QUALITY";
+
 export type DatasetConfiguration = {|
   +fourBit: boolean,
   +interpolation: boolean,
@@ -227,6 +229,7 @@ export type DatasetConfiguration = {|
   +zoom?: number,
   +rotation?: Vector3,
   +renderMissingDataBlack: boolean,
+  +loadingStrategy: LoadingStrategy,
 |};
 
 export type UserConfiguration = {|
@@ -409,10 +412,11 @@ const initialAnnotationInfo = {
 
 export const defaultState: OxalisState = {
   datasetConfiguration: {
-    fourBit: true,
+    fourBit: false,
     interpolation: false,
     layers: {},
     quality: 0,
+    loadingStrategy: "PROGRESSIVE_QUALITY",
     segmentationOpacity: 20,
     highlightHoveredCellId: true,
     renderIsosurfaces: false,

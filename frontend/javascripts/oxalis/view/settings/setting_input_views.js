@@ -114,7 +114,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
   render() {
     const { label, roundTo, value, min, max, disabled } = this.props;
     return (
-      <Row type="flex" align="middle" align="top">
+      <Row type="flex" align="top">
         <Col span={9}>
           <label className="setting-label">{label}</label>
         </Col>
@@ -154,7 +154,7 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
   render() {
     const { label, onChange, value } = this.props;
     return (
-      <Row className="margin-bottom" type="flex" align="middle" align="top">
+      <Row className="margin-bottom" type="flex" align="top">
         <Col span={9}>
           <label className="setting-label">{label}</label>
         </Col>
@@ -355,7 +355,7 @@ export class ColorSetting extends React.PureComponent<ColorSettingPropTypes> {
           >
             <input
               type="color"
-              style={{ opacity: 0, display: "block", border: "none" }}
+              style={{ opacity: 0, display: "block", border: "none", cursor: "pointer" }}
               onChange={this.onColorChange}
               value={this.props.value}
             />
@@ -368,8 +368,8 @@ export class ColorSetting extends React.PureComponent<ColorSettingPropTypes> {
 
 type DropdownSettingProps = {
   onChange: (value: number) => void,
-  label: string,
-  value: number,
+  label: React.Node | string,
+  value: number | string,
   children?: Array<React.Node>,
 };
 
@@ -391,6 +391,7 @@ export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
             value={value.toString()}
             defaultValue={value.toString()}
             size="small"
+            dropdownMatchSelectWidth={false}
           >
             {children}
           </Select>

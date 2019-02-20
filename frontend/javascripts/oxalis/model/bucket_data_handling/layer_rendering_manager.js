@@ -53,6 +53,7 @@ function consumeBucketsFromPriorityQueue(
   capacity: number,
 ): Array<{ priority: number, bucket: DataBucket }> {
   const bucketsWithPriorities = [];
+  const zoomStepHist = [];
   // Consume priority queue until we maxed out the capacity
   while (bucketsWithPriorities.length < capacity) {
     if (queue.length === 0) {
@@ -137,7 +138,8 @@ export default class LayerRenderingManager {
 
   // Returns the new anchorPoints if they are new
   updateDataTextures(position: Vector3, logZoomStep: number): ?Vector4 {
-    const { dataset } = Store.getState();
+    const state = Store.getState();
+    const { dataset, datasetConfiguration } = state;
     const isAnchorPointNew = this.maybeUpdateAnchorPoint(position, logZoomStep);
     const fallbackZoomStep = logZoomStep + 1;
     const isFallbackAvailable = fallbackZoomStep <= this.cube.MAX_ZOOM_STEP;
@@ -149,15 +151,14 @@ export default class LayerRenderingManager {
     }
 
     const subBucketLocality = getSubBucketLocality(position, getResolutions(dataset)[logZoomStep]);
-    const areas = getAreasFromState(Store.getState());
+    const areas = getAreasFromState(state);
 
-    const matrix = getZoomedMatrix(Store.getState().flycam);
+    const matrix = getZoomedMatrix(state.flycam);
 
-    const { viewMode } = Store.getState().temporaryConfiguration;
+    const { viewMode } = state.temporaryConfiguration;
     const isArbitrary = constants.MODES_ARBITRARY.includes(viewMode);
-    const { sphericalCapRadius } = Store.getState().userConfiguration;
-    const isInvisible =
-      this.isSegmentation && Store.getState().datasetConfiguration.segmentationOpacity === 0;
+    const { sphericalCapRadius } = state.userConfiguration;
+    const isInvisible = this.isSegmentation && datasetConfiguration.segmentationOpacity === 0;
     if (
       isAnchorPointNew ||
       !_.isEqual(areas, this.lastAreas) ||
@@ -187,7 +188,7 @@ export default class LayerRenderingManager {
       };
 
       if (!isInvisible) {
-        const resolutions = getResolutions(Store.getState().dataset);
+        const resolutions = getResolutions(dataset);
         if (viewMode === constants.MODE_ARBITRARY_PLANE) {
           determineBucketsForOblique(
             resolutions,
@@ -213,6 +214,7 @@ export default class LayerRenderingManager {
           determineBucketsForOrthogonal(
             resolutions,
             enqueueFunction,
+            datasetConfiguration.loadingStrategy,
             logZoomStep,
             this.anchorPointCache.anchorPoint,
             areas,

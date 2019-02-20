@@ -1,20 +1,23 @@
 // @flow
 import { type Area } from "oxalis/model/accessors/flycam_accessor";
 import type { EnqueueFunction } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
-import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
-import Dimensions from "oxalis/model/dimensions";
-import ThreeDMap from "libs/ThreeDMap";
-import constants, {
+import type { LoadingStrategy } from "oxalis/store";
+import {
   type OrthoViewMap,
   OrthoViewValuesWithoutTDView,
   type Vector3,
   type Vector4,
   addressSpaceDimensions,
 } from "oxalis/constants";
+import {
+  getMaxZoomStepDiff,
+  getPriorityWeightForZoomStepDiff,
+} from "oxalis/model/bucket_data_handling/loading_strategy_logic";
+import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
+import Dimensions from "oxalis/model/dimensions";
+import ThreeDMap from "libs/ThreeDMap";
 
 import { extraBucketPerEdge } from "./orthogonal_bucket_picker_constants";
-
-const { MAX_ZOOM_STEP_DIFF } = constants;
 
 export const getAnchorPositionToCenterDistance = (bucketPerDim: number) =>
   // Example I:
@@ -28,6 +31,7 @@ export const getAnchorPositionToCenterDistance = (bucketPerDim: number) =>
 export default function determineBucketsForOrthogonal(
   resolutions: Array<Vector3>,
   enqueueFunction: EnqueueFunction,
+  loadingStrategy: LoadingStrategy,
   logZoomStep: number,
   anchorPoint: Vector4,
   areas: OrthoViewMap<Area>,
@@ -36,10 +40,14 @@ export default function determineBucketsForOrthogonal(
 ) {
   let zoomStepDiff = 0;
 
-  while (logZoomStep + zoomStepDiff < resolutions.length && zoomStepDiff <= MAX_ZOOM_STEP_DIFF) {
+  while (
+    logZoomStep + zoomStepDiff < resolutions.length &&
+    zoomStepDiff <= getMaxZoomStepDiff(loadingStrategy)
+  ) {
     addNecessaryBucketsToPriorityQueueOrthogonal(
       resolutions,
       enqueueFunction,
+      loadingStrategy,
       logZoomStep,
       zoomStepDiff,
       anchorPoint,
@@ -54,6 +62,7 @@ export default function determineBucketsForOrthogonal(
 function addNecessaryBucketsToPriorityQueueOrthogonal(
   resolutions: Array<Vector3>,
   enqueueFunction: EnqueueFunction,
+  loadingStrategy: LoadingStrategy,
   nonFallbackLogZoomStep: number,
   zoomStepDiff: number,
   nonFallbackAnchorPoint: Vector4,
@@ -104,9 +113,10 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
     // Similar to `extraBucketPerEdge`, the PQ takes care of cases in which the additional slice
     // can't be loaded.
     const wSliceOffsets = isFallback ? [0] : [0, subBucketLocality[w]];
-    // fallback buckets should have higher priority
-    // const additionalPriorityWeight = isFallback ? 1000 : 0;
-    const additionalPriorityWeight = (MAX_ZOOM_STEP_DIFF - zoomStepDiff) * 1000;
+    const additionalPriorityWeight = getPriorityWeightForZoomStepDiff(
+      loadingStrategy,
+      zoomStepDiff,
+    );
 
     // Build up priority queue
     // eslint-disable-next-line no-loop-func

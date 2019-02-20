@@ -13,8 +13,9 @@ import constants, {
   OrthoViewValuesWithoutTDView,
   type Vector3,
 } from "oxalis/constants";
+import { getPriorityWeightForPrefetch } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 
-const { MAX_ZOOM_STEP_DIFF, MAX_ZOOM_STEP_DIFF_PREFETCH } = constants;
+const { MAX_ZOOM_STEP_DIFF_PREFETCH } = constants;
 
 export class AbstractPrefetchStrategy {
   velocityRangeStart: number = 0;
@@ -161,7 +162,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
       const height = scaledWidthHeightVector[v];
 
       const bucketPositions = this.getBucketPositions(centerBucket3, width, height);
-      const prefetchWeight = (MAX_ZOOM_STEP_DIFF + 1) * 1000;
+      const prefetchWeight = getPriorityWeightForPrefetch();
 
       for (const bucket of bucketPositions) {
         const priority =

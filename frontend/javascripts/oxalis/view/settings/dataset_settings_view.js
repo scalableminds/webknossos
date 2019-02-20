@@ -156,9 +156,24 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             value={this.props.datasetConfiguration.quality}
             onChange={_.partial(this.onChangeQuality, "quality")}
           >
-            <Option value="0">high</Option>
-            <Option value="1">medium</Option>
-            <Option value="2">low</Option>
+            <Option value="0">High</Option>
+            <Option value="1">Medium</Option>
+            <Option value="2">Low</Option>
+          </DropdownSetting>
+          <DropdownSetting
+            label={
+              <React.Fragment>
+                {settings.loadingStrategy}{" "}
+                <Tooltip title={settings.loadingStrategyDescription}>
+                  <Icon type="info-circle" />
+                </Tooltip>
+              </React.Fragment>
+            }
+            value={this.props.datasetConfiguration.loadingStrategy}
+            onChange={_.partial(this.props.onChange, "loadingStrategy")}
+          >
+            <Option value="BEST_QUALITY_FIRST">Best quality first</Option>
+            <Option value="PROGRESSIVE_QUALITY">Progressive quality</Option>
           </DropdownSetting>
           <SwitchSetting
             label={
@@ -183,7 +198,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             label={
               <React.Fragment>
                 {settings.renderMissingDataBlack}{" "}
-                <Tooltip title="Upsample lower resolution data for missing higher resolution data.">
+                <Tooltip title="If disabled, missing data will be rendered by using poorer magnifications.">
                   <Icon type="info-circle" />
                 </Tooltip>
               </React.Fragment>

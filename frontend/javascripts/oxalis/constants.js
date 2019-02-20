@@ -153,7 +153,6 @@ const Constants = {
   MINIMUM_REQUIRED_BUCKET_CAPACITY: 3 * 512,
   LOOK_UP_TEXTURE_WIDTH: 256,
 
-  MAX_ZOOM_STEP_DIFF: 3,
   MAX_ZOOM_STEP_DIFF_PREFETCH: 1, // prefetch only fallback buckets for currentZoomStep + 1
 
   MIN_MOVE_VALUE: 30,

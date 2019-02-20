@@ -4,13 +4,13 @@ import _ from "lodash";
 
 import { DataBucket, bucketDebuggingFlags } from "oxalis/model/bucket_data_handling/bucket";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
+import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { getRenderer } from "oxalis/controller/renderer";
 import { waitForCondition } from "libs/utils";
+import Store from "oxalis/store";
 import UpdatableTexture from "libs/UpdatableTexture";
 import constants, { type Vector4, addressSpaceDimensions } from "oxalis/constants";
 import window from "libs/window";
-
-const { MAX_ZOOM_STEP_DIFF } = constants;
 
 // A TextureBucketManager instance is responsible for making buckets available
 // to the GPU.
@@ -263,6 +263,9 @@ export default class TextureBucketManager {
     // Completely re-write the lookup buffer. This could be smarter, but it's
     // probably not worth it.
     this.lookUpBuffer.fill(-2);
+    const maxZoomStepDiff = getMaxZoomStepDiff(
+      Store.getState().datasetConfiguration.loadingStrategy,
+    );
 
     const currentZoomStep = this.currentAnchorPoint[3];
     for (const [bucket, reservedAddress] of this.activeBucketToIndexMap.entries()) {
@@ -281,8 +284,7 @@ export default class TextureBucketManager {
       } else {
         let fallbackBucket = bucket.getFallbackBucket();
         let abortFallbackLoop = false;
-        const maxAllowedZoomStep =
-          currentZoomStep + (window.enforcedZoomDiff || MAX_ZOOM_STEP_DIFF);
+        const maxAllowedZoomStep = currentZoomStep + (window.enforcedZoomDiff || maxZoomStepDiff);
 
         while (!abortFallbackLoop) {
           if (fallbackBucket.type !== "null") {

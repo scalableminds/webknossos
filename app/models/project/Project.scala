@@ -110,10 +110,10 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- parse(r)
     } yield parsed
 
-  def findUsersWithActiveTasks(name: String)(implicit ctx: DBAccessContext): Fox[List[(String, Int)]] =
+  def findUsersWithActiveTasks(name: String)(implicit ctx: DBAccessContext): Fox[List[(String, String, String, Int)]] =
     for {
       accessQuery <- readAccessQuery
-      rSeq <- run(sql"""select u.email, count(a._id)
+      rSeq <- run(sql"""select u.email, u.firstName, u.lastName, count(a._id)
                          from
                          webknossos.annotations_ a
                          join webknossos.tasks_ t on a._task = t._id
@@ -122,8 +122,8 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                          where p.name = ${name}
                          and a.state = '#${AnnotationState.Active.toString}'
                          and a.typ = '#${AnnotationType.Task}'
-                         group by u.email
-                     """.as[(String, Int)])
+                         group by u.email, u.firstName, u.lastName
+                     """.as[(String, String, String, Int)])
     } yield rSeq.toList
 
   // write operations

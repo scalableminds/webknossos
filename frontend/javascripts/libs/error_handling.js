@@ -106,9 +106,13 @@ class ErrorHandling {
       });
     }
 
+    // Remove airbrake's unhandledrejection handler
+    window.removeEventListener("unhandledrejection", this.airbrake.onUnhandledrejection);
     window.addEventListener("unhandledrejection", event => {
       // Create our own error for unhandled rejections here to get additional information for [Object object] errors in airbrake
-      this.notify(Error("Unhandled Rejection"), { originalError: event.reason });
+      this.notify(Error("Unhandled Rejection"), {
+        originalError: event.reason instanceof Error ? event.reason.toString() : event.reason,
+      });
     });
 
     window.onerror = (message: string, file: string, line: number, colno: number, error: Error) => {

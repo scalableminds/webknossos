@@ -231,7 +231,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                 key="owner"
                 sorter={Utils.localeCompareBy(typeHint, project => project.owner.lastName)}
                 render={owner =>
-                  owner.email ? `${owner.firstName} ${owner.lastName} (${owner.email})` : "-"
+                  owner.email ? `${owner.lastName}, ${owner.firstName} (${owner.email})` : "-"
                 }
               />
               <Column

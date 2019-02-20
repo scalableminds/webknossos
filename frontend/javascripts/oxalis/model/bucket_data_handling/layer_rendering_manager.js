@@ -53,6 +53,7 @@ function consumeBucketsFromPriorityQueue(
   capacity: number,
 ): Array<{ priority: number, bucket: DataBucket }> {
   const bucketsWithPriorities = [];
+  const zoomStepHist = [];
   // Consume priority queue until we maxed out the capacity
   while (bucketsWithPriorities.length < capacity) {
     if (queue.length === 0) {
@@ -138,11 +139,7 @@ export default class LayerRenderingManager {
   // Returns the new anchorPoints if they are new
   updateDataTextures(position: Vector3, logZoomStep: number): ?Vector4 {
     const { dataset } = Store.getState();
-    const isAnchorPointNew = this.maybeUpdateAnchorPoint(
-      position,
-      logZoomStep,
-      dataset.dataSource.scale,
-    );
+    const isAnchorPointNew = this.maybeUpdateAnchorPoint(position, logZoomStep);
     const fallbackZoomStep = logZoomStep + 1;
     const isFallbackAvailable = fallbackZoomStep <= this.cube.MAX_ZOOM_STEP;
 
@@ -221,7 +218,6 @@ export default class LayerRenderingManager {
             this.anchorPointCache.anchorPoint,
             areas,
             subBucketLocality,
-            // 1, todo
           );
         }
       }
@@ -233,13 +229,6 @@ export default class LayerRenderingManager {
       );
 
       const buckets = bucketsWithPriorities.map(({ bucket }) => bucket);
-      if (buckets.length === 1) {
-        const fbBucket = buckets[0].getFallbackBucket();
-        if (fbBucket.type !== "null") {
-          buckets.push(fbBucket);
-          console.log("buckets: ", buckets[0].zoomedAddress, buckets[1].zoomedAddress);
-        }
-      }
       this.cube.markBucketsAsUnneeded();
       // This tells the bucket collection, that the buckets are necessary for rendering
       buckets.forEach(b => b.markAsNeeded());
@@ -259,7 +248,7 @@ export default class LayerRenderingManager {
     return this.anchorPointCache.anchorPoint;
   }
 
-  maybeUpdateAnchorPoint(position: Vector3, logZoomStep: number, datasetScale: Vector3): boolean {
+  maybeUpdateAnchorPoint(position: Vector3, logZoomStep: number): boolean {
     const resolutions = getResolutions(Store.getState().dataset);
     const resolution = resolutions[logZoomStep];
     const bucketsPerDim = addressSpaceDimensions.normal;

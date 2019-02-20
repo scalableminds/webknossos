@@ -157,6 +157,9 @@ const Constants = {
   MINIMUM_REQUIRED_BUCKET_CAPACITY: 3 * 512,
   LOOK_UP_TEXTURE_WIDTH: 256,
 
+  MAX_ZOOM_STEP_DIFF: 3,
+  MAX_ZOOM_STEP_DIFF_PREFETCH: 1, // prefetch only fallback buckets for currentZoomStep + 1
+
   TDView_MOVE_SPEED: 150,
   MIN_MOVE_VALUE: 30,
   MAX_MOVE_VALUE: 14000,
@@ -177,8 +180,6 @@ const Constants = {
   // The particle size is measured in pixels - it's independent of zoom and dataset scale
   MIN_PARTICLE_SIZE: 1,
   MAX_PARTICLE_SIZE: 20,
-
-  ZOOM_DIFF: 0.1,
 
   DEFAULT_SPHERICAL_CAP_RADIUS: 140,
 

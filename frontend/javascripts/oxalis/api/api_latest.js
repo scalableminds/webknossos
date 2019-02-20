@@ -653,6 +653,10 @@ class DataApi {
     return segmentationLayer.name;
   }
 
+  reloadAllBuckets(): void {
+    _.forEach(this.model.dataLayers, dataLayer => dataLayer.cube.collectAllBuckets());
+  }
+
   /**
    * Sets a mapping for a given layer.
    *

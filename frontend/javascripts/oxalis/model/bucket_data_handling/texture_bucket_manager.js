@@ -7,12 +7,12 @@ import { createUpdatableTexture } from "oxalis/geometries/materials/plane_materi
 import { getRenderer } from "oxalis/controller/renderer";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import { waitForCondition } from "libs/utils";
-import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
-import DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import Store from "oxalis/store";
 import UpdatableTexture from "libs/UpdatableTexture";
 import constants, { type Vector4, addressSpaceDimensions } from "oxalis/constants";
 import window from "libs/window";
+
+const { MAX_ZOOM_STEP_DIFF } = constants;
 
 // A TextureBucketManager instance is responsible for making buckets available
 // to the GPU.
@@ -267,7 +267,6 @@ export default class TextureBucketManager {
     this.lookUpBuffer.fill(-2);
 
     const currentZoomStep = this.currentAnchorPoint[3];
-    const resolutions = getResolutions(Store.getState().dataset);
     for (const [bucket, reservedAddress] of this.activeBucketToIndexMap.entries()) {
       if (bucket.zoomedAddress[3] > currentZoomStep) {
         // only write high-res buckets (if a bucket is missing, the fallback bucket will then be written
@@ -279,20 +278,29 @@ export default class TextureBucketManager {
 
       let address = -1;
       let bucketZoomStep = bucket.zoomedAddress[3];
-      // false &&
-      if (!window.renderFallback && this.committedBucketSet.has(bucket)) {
+      if (!window.enforcedZoomDiff && this.committedBucketSet.has(bucket)) {
         address = reservedAddress;
       } else {
-        const zoomStep = bucket.zoomedAddress[3];
-        const hasFallback = zoomStep + 1 < resolutions.length;
-        if (hasFallback) {
-          const fallbackBucket = bucket.getFallbackBucket();
+        let fallbackBucket = bucket.getFallbackBucket();
+        let abortFallbackLoop = false;
+        const maxAllowedZoomStep =
+          currentZoomStep + (window.enforcedZoomDiff || MAX_ZOOM_STEP_DIFF);
+
+        while (!abortFallbackLoop) {
           if (fallbackBucket.type !== "null") {
-            if (this.committedBucketSet.has(fallbackBucket)) {
-              // if (this.activeBucketToIndexMap.has(fallbackBucket)) {
+            if (
+              fallbackBucket.zoomedAddress[3] <= maxAllowedZoomStep &&
+              this.committedBucketSet.has(fallbackBucket)
+            ) {
               address = this.activeBucketToIndexMap.get(fallbackBucket) || -1;
-              bucketZoomStep = zoomStep + 1;
+              bucketZoomStep = fallbackBucket.zoomedAddress[3];
+              abortFallbackLoop = true;
+            } else {
+              // Try next fallback bucket
+              fallbackBucket = fallbackBucket.getFallbackBucket();
             }
+          } else {
+            abortFallbackLoop = true;
           }
         }
       }

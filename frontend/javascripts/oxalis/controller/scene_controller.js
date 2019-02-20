@@ -336,6 +336,7 @@ class SceneController {
         currentPlane.setPosition(globalPosVec);
         const [scaleX, scaleY] = getPlaneScalingFactor(state, flycam, currentPlane.planeID);
         currentPlane.setScale(scaleX, scaleY);
+        this.displayPlane[currentPlane.planeID] = scaleX > 0 && scaleY > 0;
       }
     }
   }

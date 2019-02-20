@@ -1,5 +1,7 @@
 // @flow
 
+import { getRelativeCoords } from "oxalis/shaders/coords.glsl";
+
 import type { ShaderModule } from "./shader_module_system";
 
 export const linearizeVec3ToIndex: ShaderModule = {
@@ -103,6 +105,7 @@ export const getColorForCoords: ShaderModule = {
     linearizeVec3ToIndexWithMod,
     getRgbaAtIndex,
     getRgbaAtXYIndex,
+    getRelativeCoords,
   ],
   code: `
     vec4 getColorForCoords(
@@ -130,7 +133,15 @@ export const getColorForCoords: ShaderModule = {
       float zoomStepDiff = bucketZoomStep - zoomStep;
       // Adapt position within bucket to potential fallback position
       // Todo: Will only work for isotropic resolutions
-      offsetInBucket = floor(offsetInBucket / pow(2.0, zoomStepDiff));
+      if (zoomStepDiff > 0.0) {
+        vec3 anchorPointUVW = transDim(anchorPoint);
+        float magnificationFactor = pow(2.0, zoomStepDiff);
+        vec3 isEvenBucketPosition = mod(bucketPosition + anchorPointUVW, magnificationFactor);
+        offsetInBucket = floor(
+                 (offsetInBucket + vec3(32.0) * isEvenBucketPosition)
+                 / magnificationFactor
+        );
+      }
 
       if (bucketAddress == -2.0) {
         // The bucket is out of bounds. Render black
@@ -138,7 +149,7 @@ export const getColorForCoords: ShaderModule = {
         // since the approximate implementation of the bucket picker missed the bucket.
         // We simply handle this case as if the bucket was not yet loaded which means
         // that fallback data is loaded.
-        // The downside is that data which does exist, will be rendered gray instead of black.
+        // The downside is that data which does not exist, will be rendered gray instead of black.
         // Issue to track progress: #3446
         float alpha = isFlightMode() ? -1.0 : 0.0;
         return vec4(0.0, 0.0, 0.0, alpha);

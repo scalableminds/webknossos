@@ -13,12 +13,9 @@
 }
 
 .dataset-thumbnail {
-  left: 50%;
-  height: 100%;
-  width: 50%;
+  flex: 3;
   display: inline-block;
   background-color: #e8e8e8;
-  position: relative;
 
   @media @smartphones {
     height: 55%;
@@ -40,16 +37,67 @@
   }
 }
 
+@dataset-grid-width: 110px;
+
 .dataset-thumbnail-overlay {
-  width: 100%;
+  width: calc(100% - @dataset-grid-width - 10px);
   height: 100px;
-  bottom: 0;
   position: absolute;
-  background-color: rgba(0, 0, 0, 0.85);
+  bottom: 0;
+  right: 0;
+  margin: 10px;
+  border-radius: 3px;
+  background-color: rgba(35, 33, 33, 0.77);
   padding: 5px 15px;
   color: rgba(255, 255, 255, 0.95);
   display: flex;
   flex-direction: column;
+}
+
+.dataset-published-grid {
+  position: absolute;
+  padding: 4px;
+  height: 100%;
+  overflow-y: auto;
+  background: linear-gradient(
+    to left,
+    rgba(0, 0, 0, 0.7) 0%,
+    rgba(0, 0, 0, 0.7) 50%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  width: @dataset-grid-width;
+  z-index: 101;
+  text-align: center;
+  transform: rotateY(180deg);
+  display: flex;
+  justify-content: center;
+
+  &::-webkit-scrollbar-button {
+    display: none;
+    height: 13px;
+    border-radius: 0px;
+    background-color: #aaa;
+  }
+  &::-webkit-scrollbar-button:hover {
+    background-color: #000000;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: #ccc;
+    border-radius: 5px;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background-color: #9c9c9c;
+    border-radius: 5px;
+  }
+  &::-webkit-scrollbar-track {
+    background-color: rgba(255, 255, 255, 0);
+  }
+  &::-webkit-scrollbar-track:hover {
+    background-color: rgba(255, 255, 255, 0);
+  }
+  &::-webkit-scrollbar {
+    width: 10px;
+  }
 }
 
 .dataset-click-hint {
@@ -70,10 +118,7 @@
 }
 
 .dataset-description {
-  position: absolute;
-  display: inline-block;
-  bottom: 0px;
-  width: 50%;
+  flex: 2;
   height: 100%;
   padding: 16px;
   overflow-y: auto;
@@ -188,6 +233,8 @@
   display: grid;
   grid-gap: 10px;
   padding: 5px;
+  transform: rotateY(180deg);
+  margin-top: auto;
 }
 
 .mini-dataset-thumbnail {

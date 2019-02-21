@@ -1,10 +1,9 @@
 // @flow
-import { Card, Button, Tag } from "antd";
+import { Card, Button } from "antd";
 import Markdown from "react-remarkable";
 import * as React from "react";
 import classNames from "classnames";
 import { Link } from "react-router-dom";
-import moment from "moment";
 
 import type { APIDataset, APIDatasetId, APIDatasetDetails } from "admin/api_flow_types";
 import { formatScale } from "libs/format_utils";
@@ -35,7 +34,7 @@ function getDetails(dataset: APIDataset): ExtendedDatasetDetails {
   const { dataSource, details } = dataset;
   return {
     ...details,
-    scale: formatScale(dataSource.scale),
+    scale: formatScale(dataSource.scale, 0),
     name: getDisplayName(dataset),
     extent: formatExtentWithLength(getDatasetExtentInLength(dataset), formatNumberToLength),
   };
@@ -44,98 +43,99 @@ function getDetails(dataset: APIDataset): ExtendedDatasetDetails {
 function ThumbnailAndDescription({
   thumbnailURL,
   description,
+  publishedDatasets,
   datasetDetails,
   publicationName,
-  publicationDate,
   datasetId,
   segmentationThumbnailURL,
 }: {
   thumbnailURL: string,
   publicationName: string,
-  publicationDate: number,
   datasetId: APIDatasetId,
-  description: React.Element<*> | string,
+  description: React.Node,
+  publishedDatasets: React.Node,
   datasetDetails: ExtendedDatasetDetails,
   segmentationThumbnailURL: ?string,
 }) {
   const details = datasetDetails;
   return (
-    <React.Fragment>
+    <div style={{ display: "flex", height: "100%" }}>
       <div className="dataset-description">
         <div className="description-flex">
-          <div>
-            <Tag>{datasetId.owningOrganization}</Tag>
-            <span style={{ float: "right" }}>{moment(publicationDate).format("MMMM Do YYYY")}</span>
-          </div>
           <h3 style={{ fontSize: 20 }}>{publicationName}</h3>
           <div className="dataset-description-body">{description}</div>
         </div>
       </div>
-      <span className="dataset-thumbnail">
+      <div className="dataset-thumbnail">
         <Link to={`/datasets/${datasetId.owningOrganization}/${datasetId.name}/view`}>
-          <div className="dataset-click-hint">Click To View</div>
-          <div
-            className="dataset-thumbnail-image"
-            style={{
-              backgroundImage: `url('${thumbnailURL}?w=${thumbnailDimension}&h=${thumbnailDimension}')`,
-            }}
-          />
-          {segmentationThumbnailURL ? (
+          <div style={{ position: "relative", height: "100%" }}>
+            <div className="dataset-published-grid">{publishedDatasets}</div>
+            <div className="dataset-click-hint">Click To View</div>
             <div
-              className="dataset-thumbnail-image segmentation"
+              className="dataset-thumbnail-image"
               style={{
-                backgroundImage: `url('${segmentationThumbnailURL}?w=${thumbnailDimension}&h=${thumbnailDimension}')`,
+                backgroundImage: `url('${thumbnailURL}?w=${thumbnailDimension}&h=${thumbnailDimension}')`,
               }}
             />
-          ) : null}
-          <div className="dataset-thumbnail-overlay">
-            <div
-              style={{
-                textTransform: "uppercase",
-                fontSize: 16,
-              }}
-            >
-              {details.name}
-            </div>
-            <div>
-              {details.species && (
-                <div
-                  style={{
-                    fontSize: 18,
-                    fontWeight: 700,
-                    display: "inline",
-                  }}
-                >
-                  {details.species}
+            {segmentationThumbnailURL ? (
+              <div
+                className="dataset-thumbnail-image segmentation"
+                style={{
+                  backgroundImage: `url('${segmentationThumbnailURL}?w=${thumbnailDimension}&h=${thumbnailDimension}')`,
+                }}
+              />
+            ) : null}
+            <div className="dataset-thumbnail-overlay">
+              <div>
+                {details.species && (
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      display: "inline",
+                    }}
+                  >
+                    {details.species}
+                  </div>
+                )}
+                {details.brainRegion && (
+                  <div
+                    style={{
+                      display: "inline",
+                      marginLeft: 5,
+                    }}
+                  >
+                    {details.brainRegion}
+                  </div>
+                )}
+              </div>
+              <div
+                style={{
+                  fontSize: 18,
+                }}
+              >
+                {details.name}
+              </div>
+              <div
+                style={{
+                  marginTop: "auto",
+                  display: "flex",
+                  alignItems: "flex-end",
+                  justifyContent: "space-between",
+                  color: "rgba(200,200,200,0.85)",
+                }}
+              >
+                <div>{details.acquisition}</div>
+                <div>
+                  {details.scale}/voxel
+                  <br />
+                  {details.extent}
                 </div>
-              )}
-              {details.brainRegion && (
-                <div
-                  style={{
-                    display: "inline",
-                    marginLeft: 5,
-                  }}
-                >
-                  {details.brainRegion}
-                </div>
-              )}
-            </div>
-            <div style={{ marginTop: "auto" }}>
-              {details.acquisition && (
-                <div style={{ display: "inline-block", color: "rgba(200,200,200,0.85)" }}>
-                  {details.acquisition}
-                </div>
-              )}
-              <span style={{ float: "right", color: "rgba(200,200,200,0.85)" }}>
-                Scale: {details.scale}
-                <br />
-                Extent: {details.extent}
-              </span>
+              </div>
             </div>
           </div>
         </Link>
-      </span>
-    </React.Fragment>
+      </div>
+    </div>
   );
 }
 
@@ -166,44 +166,48 @@ class PublicationCard extends React.PureComponent<Props, State> {
             options={{ html: false, breaks: true, linkify: true }}
           />
         </span>
-        <div style={{ marginTop: "auto" }}>
-          <span style={{ fontSize: 14, textTransform: "uppercase" }}>Published Datasets </span>
-          <div
-            className="mini-dataset-thumbnail-grid"
-            style={{ gridTemplateColumns: `repeat(auto-fill, ${miniThumbnailDimension}px)` }}
-          >
-            {sortedDatasets.map(dataset => {
-              const datasetIdString = `${dataset.owningOrganization}/${dataset.name}`;
-              return (
-                <Link to={`/datasets/${datasetIdString}/view`} key={datasetIdString}>
-                  <Button
-                    className={classNames("mini-dataset-thumbnail", {
-                      active: dataset.name === activeDataset.name,
-                    })}
-                    title="Click To View"
+      </div>
+    );
+
+    const publishedDatasetsComponent = (
+      <div
+        className="mini-dataset-thumbnail-grid"
+        style={{
+          gridTemplateColumns: miniThumbnailDimension,
+        }}
+      >
+        {sortedDatasets.map(dataset => {
+          const datasetIdString = `${dataset.owningOrganization}/${dataset.name}`;
+          return (
+            <Link to={`/datasets/${datasetIdString}/view`} key={datasetIdString}>
+              <div>
+                <Button
+                  className={classNames("mini-dataset-thumbnail", {
+                    active: dataset.name === activeDataset.name,
+                  })}
+                  title="Click To View"
+                  style={{
+                    background: `url('${getThumbnailURL(
+                      dataset,
+                    )}?w=${miniThumbnailDimension}&h=${miniThumbnailDimension}')`,
+                    width: `${miniThumbnailDimension}px`,
+                    height: `${miniThumbnailDimension}px`,
+                  }}
+                  onMouseEnter={() => this.setState({ activeDataset: dataset })}
+                >
+                  <div
+                    className="mini-dataset-thumbnail segmentation"
                     style={{
-                      background: `url('${getThumbnailURL(
+                      background: `url('${getSegmentationThumbnailURL(
                         dataset,
                       )}?w=${miniThumbnailDimension}&h=${miniThumbnailDimension}')`,
-                      width: `${miniThumbnailDimension}px`,
-                      height: `${miniThumbnailDimension}px`,
                     }}
-                    onMouseEnter={() => this.setState({ activeDataset: dataset })}
-                  >
-                    <div
-                      className="mini-dataset-thumbnail segmentation"
-                      style={{
-                        background: `url('${getSegmentationThumbnailURL(
-                          dataset,
-                        )}?w=${miniThumbnailDimension}&h=${miniThumbnailDimension}')`,
-                      }}
-                    />
-                  </Button>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
+                  />
+                </Button>
+              </div>
+            </Link>
+          );
+        })}
       </div>
     );
 
@@ -215,12 +219,12 @@ class PublicationCard extends React.PureComponent<Props, State> {
             hasSegmentation(activeDataset) ? getSegmentationThumbnailURL(activeDataset) : null
           }
           publicationName={publication.title}
-          publicationDate={publication.publicationDate}
           datasetId={{
             name: activeDataset.name,
             owningOrganization: activeDataset.owningOrganization,
           }}
           description={descriptionComponent}
+          publishedDatasets={publishedDatasetsComponent}
           datasetDetails={getDetails(activeDataset)}
         />
       </Card>

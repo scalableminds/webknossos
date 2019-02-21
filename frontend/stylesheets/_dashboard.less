@@ -60,7 +60,7 @@
     rgba(0, 0, 0, 0.7) 70%,
     rgba(0, 0, 0, 0) 100%
   );
-  width: 112px;
+  width: 108px;
   height: 100%;
   z-index: 101;
 }
@@ -71,9 +71,11 @@
   margin-right: 7px;
   height: 100%;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   justify-content: center;
 
+  // These only work in chrome
   &::-webkit-scrollbar-button {
     display: block;
     height: 5px;
@@ -98,8 +100,11 @@
     background-color: rgba(255, 255, 255, 0);
   }
   &::-webkit-scrollbar {
-    width: 10px;
+    width: 8px;
   }
+
+  // This is for firefox, to avoid showing a white line next to the scrollbar
+  scrollbar-width: thin;
 }
 
 .dataset-click-hint {

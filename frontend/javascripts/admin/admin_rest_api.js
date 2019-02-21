@@ -868,17 +868,18 @@ export async function getOrganizationForDataset(datasetName: string): Promise<st
   return organizationName;
 }
 
-export function findDataPositionForLayer(
+export async function findDataPositionForLayer(
   datasetId: APIDatasetId,
   layerName: string,
 ): Promise<?Vector3> {
-  return doWithToken(token =>
+  const { position } = await doWithToken(token =>
     Request.receiveJSON(
       `/data/datasets/${datasetId.owningOrganization}/${
         datasetId.name
       }/layers/${layerName}/findData?token=${token}`,
     ),
   );
+  return position;
 }
 
 export async function getMappingsForDatasetLayer(

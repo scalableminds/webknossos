@@ -8,7 +8,6 @@ import akka.actor.ActorSystem
 import akka.stream.scaladsl.StreamConverters
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Point3D
-import com.scalableminds.util.geometry.Point3D.Point3DWrites
 import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -27,15 +26,13 @@ import com.scalableminds.webknossos.datastore.models.{
   _
 }
 import com.scalableminds.webknossos.datastore.services._
-import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 import play.api.http.HttpEntity
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.Json
 import play.api.mvc.{PlayBodyParsers, ResponseHeader, Result}
 
-import scala.collection.mutable
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 class BinaryDataController @Inject()(
     dataSourceRepository: DataSourceRepository,
@@ -44,6 +41,7 @@ class BinaryDataController @Inject()(
     binaryDataServiceHolder: BinaryDataServiceHolder,
     mappingService: MappingService,
     isosurfaceService: IsosurfaceService,
+    findDataService: FindDataService,
     actorSystem: ActorSystem
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
@@ -378,7 +376,8 @@ class BinaryDataController @Inject()(
         .validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
           AllowRemoteOrigin {
             for {
-              positionOpt <- findPositionWithData(organizationName, dataSetName, dataLayerName)
+              (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+              positionOpt <- findDataService.findPositionWithData(dataSource, dataLayer)
             } yield Ok(Json.obj("position" -> positionOpt))
           }
         }
@@ -453,79 +452,4 @@ class BinaryDataController @Inject()(
     } yield {
       image
     }
-
-  private def findPositionWithData(organizationName: String, dataSetName: String, dataLayerName: String)(
-      implicit m: MessagesProvider) =
-    for {
-      (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
-      positionOpt <- checkAllPositionsForData(dataSource, dataLayer)
-    } yield positionOpt
-
-  private def checkAllPositionsForData(dataSource: DataSource, dataLayer: DataLayer) = {
-
-    def searchPositionIter(positions: List[Point3D]): Fox[Option[Point3D]] =
-      positions match {
-        case List() => Fox.successful(None)
-        case head :: tail =>
-          checkIfPositionHasData(head).futureBox.flatMap {
-            case Full(pos) => Fox.successful(Some(pos))
-            case _         => searchPositionIter(tail)
-          }
-      }
-
-    def checkIfPositionHasData(position: Point3D) = {
-      val request = DataRequest(
-        new VoxelPosition(position.x, position.y, position.z, dataLayer.lookUpResolution(0)),
-        DataLayer.bucketLength,
-        DataLayer.bucketLength,
-        DataLayer.bucketLength
-      )
-      for {
-        (data, _) <- requestData(dataSource, dataLayer, request)
-        if data.nonEmpty && data.exists(_ != 0)
-      } yield position
-    }
-
-    searchPositionIter(createPositions(dataLayer).distinct)
-  }
-
-  private def createPositions(dataLayer: DataLayer) = {
-
-    def positionCreationIter(remainingRuns: List[Int], currentPositions: List[Point3D]): List[Point3D] = {
-
-      def createPositionsFromExponent(exponent: Int) = {
-        val power = math.pow(2, exponent).toInt
-        val spaceBetweenWidth = dataLayer.boundingBox.width / power
-        val spaceBetweenHeight = dataLayer.boundingBox.height / power
-        val spaceBetweenDepth = dataLayer.boundingBox.depth / power
-        val topLeft = dataLayer.boundingBox.topLeft
-
-        if (spaceBetweenWidth < DataLayer.bucketLength && spaceBetweenHeight < DataLayer.bucketLength && spaceBetweenDepth < DataLayer.bucketLength) {
-          None
-        } else {
-          Some(
-            (for {
-              z <- 1 until power
-              y <- 1 until power
-              x <- 1 until power
-            } yield
-              Point3D(topLeft.x + x * spaceBetweenWidth,
-                      topLeft.y + y * spaceBetweenHeight,
-                      topLeft.z + z * spaceBetweenDepth)).toList
-          )
-        }
-      }
-
-      remainingRuns match {
-        case List() => currentPositions
-        case head :: tail =>
-          createPositionsFromExponent(head) match {
-            case Some(values) => positionCreationIter(tail, currentPositions ::: values)
-            case None         => currentPositions
-          }
-      }
-    }
-
-    positionCreationIter((1 to 5).toList, List[Point3D]())
-  }
 }

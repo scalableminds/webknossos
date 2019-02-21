@@ -445,7 +445,6 @@ export type APIFeatureToggles = {
   +defaultOrganization: string,
   +addForeignDataset: boolean,
   +hideNavbarLogin: boolean,
-  +freezeVolumeVersions: boolean,
 };
 
 // Tracing related datatypes

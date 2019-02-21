@@ -49,11 +49,11 @@ class AnnotationController @Inject()(
       val notFoundMessage =
         if (request.identity.isEmpty) "annotation.notFound.considerLoggingIn" else "annotation.notFound"
       for {
-        annotation <- provider.provideAnnotation(typ, id, request.identity) ?~> notFoundMessage
+        annotation <- provider.provideAnnotation(typ, id, request.identity) ?~> notFoundMessage ~> NOT_FOUND
         _ <- bool2Fox(annotation.state != Cancelled) ?~> "annotation.cancelled"
-        restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound"
-        _ <- restrictions.allowAccess(request.identity) ?~> "notAllowed" ~> BAD_REQUEST
-        typedTyp <- AnnotationType.fromString(typ).toFox ?~> "annotationType.notFound"
+        restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
+        _ <- restrictions.allowAccess(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+        typedTyp <- AnnotationType.fromString(typ).toFox ?~> "annotationType.notFound" ~> NOT_FOUND
         js <- annotationService
           .publicWrites(annotation, request.identity, Some(restrictions)) ?~> "annotation.write.failed"
         _ <- Fox.runOptional(request.identity) { user =>
@@ -70,12 +70,12 @@ class AnnotationController @Inject()(
   def merge(typ: String, id: String, mergedTyp: String, mergedId: String) = sil.SecuredAction.async {
     implicit request =>
       for {
-        annotationA <- provider.provideAnnotation(typ, id, request.identity)
-        annotationB <- provider.provideAnnotation(mergedTyp, mergedId, request.identity)
+        annotationA <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
+        annotationB <- provider.provideAnnotation(mergedTyp, mergedId, request.identity) ~> NOT_FOUND
         mergedAnnotation <- annotationMerger
           .mergeTwo(annotationA, annotationB, true, request.identity) ?~> "annotation.merge.failed"
         restrictions = annotationRestrictionDefaults.defaultsFor(mergedAnnotation)
-        _ <- restrictions.allowAccess(request.identity) ?~> Messages("notAllowed") ~> BAD_REQUEST
+        _ <- restrictions.allowAccess(request.identity) ?~> Messages("notAllowed") ~> FORBIDDEN
         _ <- annotationDAO.insertOne(mergedAnnotation)
         js <- annotationService
           .publicWrites(mergedAnnotation, Some(request.identity), Some(restrictions)) ?~> "annotation.write.failed"
@@ -86,9 +86,9 @@ class AnnotationController @Inject()(
 
   def loggedTime(typ: String, id: String) = sil.SecuredAction.async { implicit request =>
     for {
-      annotation <- provider.provideAnnotation(typ, id, request.identity) ?~> "annotation.notFound"
-      restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound"
-      _ <- restrictions.allowAccess(request.identity) ?~> Messages("notAllowed") ~> BAD_REQUEST
+      annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
+      restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
+      _ <- restrictions.allowAccess(request.identity) ?~> "notAllowed" ~> FORBIDDEN
       loggedTimeAsMap <- timeSpanService
         .loggedTimeOfAnnotation(annotation._id, TimeSpan.groupByMonth) ?~> "annotation.timelogging.read.failed"
     } yield {
@@ -104,9 +104,9 @@ class AnnotationController @Inject()(
 
   def reset(typ: String, id: String) = sil.SecuredAction.async { implicit request =>
     for {
-      annotation <- provider.provideAnnotation(typ, id, request.identity) ?~> "annotation.notFound"
+      annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, annotation._team))
-      _ <- annotationService.resetToBase(annotation) ?~> Messages("annotation.reset.failed")
+      _ <- annotationService.resetToBase(annotation) ?~> "annotation.reset.failed"
       updated <- provider.provideAnnotation(typ, id, request.identity)
       json <- annotationService.publicWrites(updated, Some(request.identity))
     } yield {

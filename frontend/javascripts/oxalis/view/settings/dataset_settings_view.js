@@ -115,7 +115,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
   };
 
   handleFindData = async (layerName: string) => {
-    const maybePosition = await findDataPositionForLayer(this.props.dataset, layerName);
+    const maybePosition = await findDataPositionForLayer(
+      this.props.dataset.dataStore.url,
+      this.props.dataset,
+      layerName,
+    );
     if (maybePosition != null) {
       this.props.onSetPosition(maybePosition);
       Toast.success(`Jumping to position ${maybePosition.join(", ")}`);

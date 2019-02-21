@@ -57,9 +57,8 @@ class VolumeTracingService @Inject()(
 
   override def currentVersion(tracingId: String): Fox[Long] = tracingDataStore.volumes.getVersion(tracingId).getOrElse(0L)
 
-  def handleUpdateGroup(tracingId: String, updateGroupVersioned: UpdateActionGroup[VolumeTracing], previousVersion: Long): Fox[Unit] = {
+  def handleUpdateGroup(tracingId: String, updateGroup: UpdateActionGroup[VolumeTracing], previousVersion: Long): Fox[Unit] = {
     for {
-      updateGroup: UpdateActionGroup[VolumeTracing] <- freezeVersionIfEnabled(updateGroupVersioned, previousVersion)
       updatedTracing: VolumeTracing <- updateGroup.actions.foldLeft(find(tracingId)) { (tracingFox, action) =>
           tracingFox.futureBox.flatMap {
             case Full(t) =>
@@ -82,13 +81,6 @@ class VolumeTracingService @Inject()(
       _ <- save(updatedTracing.copy(version = updateGroup.version), Some(tracingId), updateGroup.version)
       _ <- tracingDataStore.volumeUpdates.put(tracingId, updateGroup.version, updateGroup.actions.map(_.addTimestamp(updateGroup.timestamp)).map(_.transformToCompact))
     } yield Fox.successful(())
-  }
-
-  def freezeVersionIfEnabled(updateGroupVersioned: UpdateActionGroup[VolumeTracing], previousVersion: Long) = {
-    if (config.Tracingstore.freezeVolumeVersions)
-      Fox.successful(updateGroupVersioned.copy(version = previousVersion))
-    else
-      Fox.successful(updateGroupVersioned)
   }
 
   private def revertToVolumeVersion(tracingId: String, sourceVersion: Long, newVersion: Long, tracing: VolumeTracing): Fox[VolumeTracing] = {

@@ -9,7 +9,7 @@ import scala.concurrent.ExecutionContext.Implicits._
 object Xml {
   def withinElement[T](name: String)(f: => Fox[T])(implicit writer: XMLStreamWriter): Fox[T] = {
     writer.writeStartElement(name)
-    f.map{ r =>
+    f.map { r =>
       writer.writeEndElement()
       r
     }
@@ -24,7 +24,6 @@ object Xml {
   def toXML[T](t: T)(implicit writer: XMLStreamWriter, w: XMLWrites[T]): Fox[Boolean] =
     w.writes(t)
 
-  def toXML[T](t: List[T])(implicit writer: XMLStreamWriter, w: XMLWrites[T]): Fox[List[Boolean]] = {
+  def toXML[T](t: List[T])(implicit writer: XMLStreamWriter, w: XMLWrites[T]): Fox[List[Boolean]] =
     Fox.serialCombined(t)(w.writes)
-  }
 }

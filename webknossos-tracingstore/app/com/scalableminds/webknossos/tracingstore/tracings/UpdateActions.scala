@@ -24,19 +24,20 @@ object UpdateAction {
 }
 
 case class UpdateActionGroup[T <: GeneratedMessage with Message[T]](
-                                                                     version: Long,
-                                                                     timestamp: Long,
-                                                                     actions: List[UpdateAction[T]],
-                                                                     stats: Option[JsObject],
-                                                                     info: Option[String],
-                                                                     requestId: Option[String]
-                                                                   )
+    version: Long,
+    timestamp: Long,
+    actions: List[UpdateAction[T]],
+    stats: Option[JsObject],
+    info: Option[String],
+    requestId: Option[String]
+)
 
 object UpdateActionGroup {
 
-  implicit def updateActionGroupReads[T <: GeneratedMessage with Message[T]](implicit fmt: Reads[UpdateAction[T]]): Reads[UpdateActionGroup[T]] = new Reads[UpdateActionGroup[T]] {
+  implicit def updateActionGroupReads[T <: GeneratedMessage with Message[T]](
+      implicit fmt: Reads[UpdateAction[T]]): Reads[UpdateActionGroup[T]] = new Reads[UpdateActionGroup[T]] {
 
-    def reads(json: JsValue): JsResult[UpdateActionGroup[T]] = {
+    def reads(json: JsValue): JsResult[UpdateActionGroup[T]] =
       for {
         version <- json.validate((JsPath \ "version").read[Long])
         timestamp <- json.validate((JsPath \ "timestamp").read[Long])
@@ -47,6 +48,5 @@ object UpdateActionGroup {
       } yield {
         UpdateActionGroup[T](version, timestamp, actions, stats, info, id)
       }
-    }
   }
 }

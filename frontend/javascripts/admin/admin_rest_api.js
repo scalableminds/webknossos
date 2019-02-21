@@ -875,6 +875,21 @@ export async function getOrganizationForDataset(datasetName: string): Promise<st
   return organizationName;
 }
 
+export async function findDataPositionForLayer(
+  datastoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+): Promise<?Vector3> {
+  const { position } = await doWithToken(token =>
+    Request.receiveJSON(
+      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/findData?token=${token}`,
+    ),
+  );
+  return position;
+}
+
 export async function getMappingsForDatasetLayer(
   datastoreUrl: string,
   datasetId: APIDatasetId,

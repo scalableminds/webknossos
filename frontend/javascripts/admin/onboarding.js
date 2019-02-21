@@ -1,9 +1,22 @@
 // @flow
 
-import { Form, Popover, Modal, Input, Button, Row, Col, Steps, Icon, Card } from "antd";
+import {
+  Form,
+  Popover,
+  Modal,
+  Input,
+  Button,
+  Row,
+  Col,
+  Steps,
+  Icon,
+  Card,
+  AutoComplete,
+} from "antd";
 import { connect } from "react-redux";
 import Clipboard from "clipboard-js";
-import * as React from "react";
+import React, { type Node, useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 
 import type { APIUser } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
@@ -12,8 +25,9 @@ import DatasetImportView from "dashboard/dataset/dataset_import_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import RegistrationForm from "admin/auth/registration_form";
 import Toast from "libs/toast";
+import { getOrganizations } from "admin/admin_rest_api";
 
-const Step = Steps.Step;
+const { Step } = Steps;
 const FormItem = Form.Item;
 
 type StateProps = {|
@@ -34,9 +48,9 @@ function StepHeader({
   children,
 }: {
   header: string,
-  subheader: React.Node,
-  icon: React.Node,
-  children: React.Node,
+  subheader: Node,
+  icon: Node,
+  children: Node,
 }) {
   return (
     <div style={{}}>
@@ -78,7 +92,7 @@ export class InviteUsersPopover extends React.Component<{
   organizationName: string,
   visible?: boolean,
   handleVisibleChange?: Function,
-  children: React.Node,
+  children: Node,
 }> {
   getRegistrationHotLink(): string {
     return `${location.origin}/auth/register?organizationName=${encodeURIComponent(
@@ -121,6 +135,15 @@ export class InviteUsersPopover extends React.Component<{
 }
 
 const OrganizationForm = Form.create()(({ form, onComplete }) => {
+  const [organizations, setOrganizations] = useState([]);
+  const fetchOrganizations = async () =>
+    setOrganizations((await getOrganizations()).map(org => org.name));
+  useEffect(() => {
+    fetchOrganizations();
+  }, []);
+
+  const joinExistingOrganization = organizations.includes(form.getFieldValue("organizationName"));
+
   const hasErrors = fieldsError => Object.keys(fieldsError).some(field => fieldsError[field]);
   const handleSubmit = e => {
     e.preventDefault();
@@ -147,27 +170,37 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
             {getFieldDecorator("organizationName", {
               rules: [{ required: true, message: "Please enter an organization name!" }],
             })(
-              <Input
+              <AutoComplete
                 size="large"
+                dataSource={organizations}
+                defaultActiveFirstOption={false}
                 placeholder="Your organization name"
-                autoFocus
-                style={{ width: "100%" }}
               />,
             )}
           </FormItem>
         </Col>
         <Col span={6}>
           <FormItem>
-            <Button
-              size="large"
-              type="primary"
-              icon="plus"
-              style={{ width: "100%" }}
-              htmlType="submit"
-              disabled={hasErrors(getFieldsError())}
-            >
-              Create
-            </Button>
+            {joinExistingOrganization ? (
+              <Link
+                to={`/auth/register?organizationName=${form.getFieldValue("organizationName")}`}
+              >
+                <Button size="large" type="primary" style={{ width: "100%" }}>
+                  Join
+                </Button>
+              </Link>
+            ) : (
+              <Button
+                size="large"
+                type="primary"
+                icon="plus"
+                style={{ width: "100%" }}
+                htmlType="submit"
+                disabled={hasErrors(getFieldsError())}
+              >
+                Create
+              </Button>
+            )}
           </FormItem>
         </Col>
       </Row>
@@ -176,14 +209,11 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
 });
 
 class OnboardingView extends React.PureComponent<Props, State> {
-  constructor() {
-    super();
-    this.state = {
-      currentStep: 0,
-      organizationName: "",
-      datasetNameToImport: null,
-    };
-  }
+  state = {
+    currentStep: 0,
+    organizationName: "",
+    datasetNameToImport: null,
+  };
 
   advanceStep = () => {
     this.setState(prevState => ({
@@ -195,7 +225,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
   renderCreateOrganization() {
     return (
       <StepHeader
-        header="Create Your Organization"
+        header="Create or Join an Organization"
         subheader={
           <React.Fragment>
             Welcome to webKnossos! This guide will help you get started.
@@ -251,7 +281,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
           <React.Fragment>
             Upload your dataset via drag and drop or by directly copying the dataset on the hosting
             server.{" "}
-            <a href="https://github.com/scalableminds/webknossos/wiki/Datasets">
+            <a href="https://docs.webknossos.org/reference/data_formats">
               Learn more about supported data formats.
             </a>
           </React.Fragment>
@@ -316,8 +346,8 @@ class OnboardingView extends React.PureComponent<Props, State> {
           </FeatureCard>
           <FeatureCard header="More Datasets" icon={<Icon type="cloud-upload-o" />}>
             <a href="/datasets/upload">Upload more of your datasets.</a>{" "}
-            <a href="https://github.com/scalableminds/webknossos/wiki/Datasets">Learn more</a> about
-            the formats and upload processes webKnossos supports.
+            <a href="https://docs.webknossos.org/reference/data_formats">Learn more</a> about the
+            formats and upload processes webKnossos supports.
           </FeatureCard>
           <FeatureCard header="User & Team Management" icon={<Icon type="team" />}>
             <InviteUsersPopover

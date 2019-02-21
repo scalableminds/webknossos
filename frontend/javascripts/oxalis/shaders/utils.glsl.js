@@ -165,7 +165,7 @@ export const getW: ShaderModule = {
 export const isFlightMode: ShaderModule = {
   code: `
     bool isFlightMode() {
-      return viewMode == <%= ModeValuesIndices.Flight %>;
+      return viewMode == <%= ViewModeValuesIndices.Flight %>;
     }
   `,
 };

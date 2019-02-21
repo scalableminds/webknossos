@@ -10,7 +10,7 @@ import _ from "lodash";
 import type { SkeletonTracing, Tree, Node } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
-import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
+import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import EdgeShader from "oxalis/geometries/materials/edge_shader";
 import NodeShader, {
@@ -380,7 +380,7 @@ class Skeleton {
     activeTreeId = activeTreeId == null ? -1 : activeTreeId;
 
     const nodeUniforms = this.nodes.material.uniforms;
-    nodeUniforms.planeZoomFactor.value = getPlaneScalingFactor(state.flycam);
+    nodeUniforms.planeZoomFactor.value = getZoomValue(state.flycam);
     nodeUniforms.overrideParticleSize.value = particleSize;
     nodeUniforms.overrideNodeRadius.value = overrideNodeRadius;
     nodeUniforms.activeTreeId.value = activeTreeId;

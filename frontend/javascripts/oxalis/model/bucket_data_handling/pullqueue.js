@@ -29,18 +29,12 @@ export const PullQueueConstants = {
   BATCH_LIMIT: 6,
 };
 
-const createPriorityQueue = () =>
-  new PriorityQueue({
-    // small priorities take precedence
-    comparator: (b, a) => b.priority - a.priority,
-  });
-
 const BATCH_SIZE = 3;
 
 class PullQueue {
   cube: DataCube;
   queue: Array<PullQueueItem>;
-  priorityQueue: PriorityQueue;
+  priorityQueue: PriorityQueue<PullQueueItem>;
   batchCount: number;
   layerName: string;
   whitenEmptyBuckets: boolean;
@@ -57,7 +51,10 @@ class PullQueue {
     this.layerName = layerName;
     this.connectionInfo = connectionInfo;
     this.datastoreInfo = datastoreInfo;
-    this.priorityQueue = createPriorityQueue();
+    this.priorityQueue = new PriorityQueue({
+      // small priorities take precedence
+      comparator: (b, a) => b.priority - a.priority,
+    });
     this.batchCount = 0;
 
     // Debug option.

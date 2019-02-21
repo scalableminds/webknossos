@@ -15,7 +15,7 @@ import { trackAction } from "oxalis/model/helpers/analytics";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import AddNewLayoutModal from "oxalis/view/action-bar/add_new_layout_modal";
 import ButtonComponent from "oxalis/view/components/button_component";
-import Constants, { type ControlMode, ControlModeEnum, type Mode } from "oxalis/constants";
+import Constants, { type ControlMode, ControlModeEnum, type ViewMode } from "oxalis/constants";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
 import Store, { type OxalisState } from "oxalis/store";
 import TracingActionsView, {
@@ -37,7 +37,7 @@ const VersionRestoreWarning = (
 type StateProps = {|
   dataset: APIDataset,
   activeUser: ?APIUser,
-  viewMode: Mode,
+  viewMode: ViewMode,
   controlMode: ControlMode,
   hasVolume: boolean,
   hasSkeleton: boolean,

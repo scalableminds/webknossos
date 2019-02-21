@@ -176,6 +176,10 @@ class Cube {
 
   setVisibility(visible: boolean) {
     this.visible = visible;
+    this.cube.visible = visible;
+    for (const planeId of OrthoViewValuesWithoutTDView) {
+      this.crossSections[planeId].visible = visible;
+    }
   }
 }
 

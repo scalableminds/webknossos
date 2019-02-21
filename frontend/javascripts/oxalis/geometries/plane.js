@@ -29,7 +29,7 @@ class Plane {
   plane: THREE.Mesh;
   planeID: OrthoView;
   displayCrosshair: boolean;
-  scaleVector: THREE.Vector3;
+  baseScaleVector: THREE.Vector3;
   crosshair: Array<THREE.LineSegments>;
   TDViewBorders: THREE.Line;
   renderer: THREE.WebGLRenderer;
@@ -38,19 +38,19 @@ class Plane {
     this.planeID = planeID;
     this.displayCrosshair = true;
 
-    // PLANE_WIDTH means that the plane should be that many voxels wide in the
+    // VIEWPORT_WIDTH means that the plane should be that many voxels wide in the
     // dimension with the highest resolution. In all other dimensions, the plane
     // is smaller in voxels, so that it is squared in nm.
     // --> scaleInfo.baseVoxel
     const baseVoxelFactors = getBaseVoxelFactors(Store.getState().dataset.dataSource.scale);
     const scaleArray = Dimensions.transDim(baseVoxelFactors, this.planeID);
-    this.scaleVector = new THREE.Vector3(...scaleArray);
+    this.baseScaleVector = new THREE.Vector3(...scaleArray);
 
     this.createMeshes();
   }
 
   createMeshes(): void {
-    const pWidth = constants.PLANE_WIDTH;
+    const pWidth = constants.VIEWPORT_WIDTH;
     // create plane
     const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1);
 
@@ -129,16 +129,16 @@ class Plane {
     }
   }
 
-  setScale = (factor: number): void => {
+  setScale(xFactor: number, yFactor: number): void {
     const scaleVec = new THREE.Vector3().multiplyVectors(
-      new THREE.Vector3(factor, factor, factor),
-      this.scaleVector,
+      new THREE.Vector3(xFactor, yFactor, 1),
+      this.baseScaleVector,
     );
     this.plane.scale.copy(scaleVec);
     this.TDViewBorders.scale.copy(scaleVec);
     this.crosshair[0].scale.copy(scaleVec);
     this.crosshair[1].scale.copy(scaleVec);
-  };
+  }
 
   setRotation = (rotVec: Vector3): void => {
     [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]].map(mesh =>

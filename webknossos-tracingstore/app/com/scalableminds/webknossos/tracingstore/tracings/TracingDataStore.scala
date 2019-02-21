@@ -7,8 +7,7 @@ import play.api.inject.ApplicationLifecycle
 
 import scala.concurrent.Future
 
-class TracingDataStore @Inject()(config: TracingStoreConfig,
-                                 lifecycle: ApplicationLifecycle) extends LazyLogging {
+class TracingDataStore @Inject()(config: TracingStoreConfig, lifecycle: ApplicationLifecycle) extends LazyLogging {
 
   val healthClient = new FossilDBClient("healthCheckOnly", config)
 

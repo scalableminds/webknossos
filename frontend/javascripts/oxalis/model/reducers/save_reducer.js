@@ -28,8 +28,9 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
               [action.tracingType]: {
                 $push: [
                   {
-                    // Placeholder, the version number will be updated before sending to the server
+                    // Placeholder, the version number and requestId will be updated before sending to the server
                     version: -1,
+                    requestId: "",
                     timestamp: Date.now(),
                     actions: items,
                     stats,

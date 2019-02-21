@@ -180,14 +180,14 @@ class TDController extends React.PureComponent<Props> {
     if (zoomToMouse && this.mouseController) {
       zoomToPosition = this.mouseController.position;
     }
-    const { width } = getInputCatcherRect(OrthoViews.TDView);
-    Store.dispatch(zoomTDViewAction(value, zoomToPosition, width));
+    const { width, height } = getInputCatcherRect(Store.getState(), OrthoViews.TDView);
+    Store.dispatch(zoomTDViewAction(value, zoomToPosition, width, height));
   }
 
   moveTDView(delta: Point2): void {
-    const scale = getViewportScale(OrthoViews.TDView);
-    Store.dispatch(moveTDViewXAction((delta.x / scale) * -1));
-    Store.dispatch(moveTDViewYAction((delta.y / scale) * -1));
+    const [scaleX, scaleY] = getViewportScale(Store.getState(), OrthoViews.TDView);
+    Store.dispatch(moveTDViewXAction((delta.x / scaleX) * -1));
+    Store.dispatch(moveTDViewYAction((delta.y / scaleY) * -1));
   }
 
   render() {

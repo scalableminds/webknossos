@@ -183,6 +183,8 @@ export type APIUserLoggedTime = {
 
 export type APIActiveUser = {
   email: string,
+  firstName: string,
+  lastName: string,
   activeTasks: number,
 };
 
@@ -443,7 +445,6 @@ export type APIFeatureToggles = {
   +defaultOrganization: string,
   +addForeignDataset: boolean,
   +hideNavbarLogin: boolean,
-  +freezeVolumeVersions: boolean,
 };
 
 // Tracing related datatypes

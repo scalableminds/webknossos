@@ -12,6 +12,7 @@ import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import com.scalableminds.util.tools.JsonHelper.boxFormat
 import com.scalableminds.util.tools.JsonHelper.optionFormat
+import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import play.api.i18n.Messages
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.streams.IterateeStreams
@@ -36,8 +37,6 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
   implicit def packMultipleOpt(tracings: List[Option[VolumeTracing]]): VolumeTracings = VolumeTracings(tracings.map(t => VolumeTracingOpt(t)))
 
   implicit def unpackMultiple(tracings: VolumeTracings): List[Option[VolumeTracing]] = tracings.tracings.toList.map(_.tracing)
-
-  override def freezeVersions = config.Tracingstore.freezeVolumeVersions
 
   def initialData(tracingId: String) = Action.async { implicit request =>
     log {

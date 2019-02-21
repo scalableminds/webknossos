@@ -11,12 +11,12 @@ import { setPositionAction, setRotationAction } from "oxalis/model/actions/flyca
 import ButtonComponent from "oxalis/view/components/button_component";
 import Store, { type OxalisState, type Flycam } from "oxalis/store";
 import Toast from "libs/toast";
-import constants, { type Mode, type Vector3 } from "oxalis/constants";
+import constants, { type ViewMode, type Vector3 } from "oxalis/constants";
 import message from "messages";
 
 type Props = {|
   flycam: Flycam,
-  viewMode: Mode,
+  viewMode: ViewMode,
 |};
 
 const positionIconStyle = { transform: "rotate(45deg)" };

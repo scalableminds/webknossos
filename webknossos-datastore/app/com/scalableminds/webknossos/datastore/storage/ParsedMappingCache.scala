@@ -12,25 +12,27 @@ import net.liftweb.common.{Box, Empty, Failure, Full}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 case class CachedMapping(
-                          organization: String,
-                          dataSourceName: String,
-                          dataLayerName: String,
-                          mappingName: String
-                        )
+    organization: String,
+    dataSourceName: String,
+    dataLayerName: String,
+    mappingName: String
+)
 
 object CachedMapping {
 
   def from(mappingRequest: DataServiceMappingRequest): CachedMapping =
-    storage.CachedMapping(
-      mappingRequest.dataSource.id.team,
-      mappingRequest.dataSource.id.name,
-      mappingRequest.dataLayer.name,
-      mappingRequest.mapping)
+    storage.CachedMapping(mappingRequest.dataSource.id.team,
+                          mappingRequest.dataSource.id.name,
+                          mappingRequest.dataLayer.name,
+                          mappingRequest.mapping)
 }
 
-class ParsedMappingCache(val maxEntries: Int) extends LRUConcurrentCache[CachedMapping, Fox[AbstractDataLayerMapping]] with FoxImplicits {
+class ParsedMappingCache(val maxEntries: Int)
+    extends LRUConcurrentCache[CachedMapping, Fox[AbstractDataLayerMapping]]
+    with FoxImplicits {
 
-  def withCache[T](mappingRequest: DataServiceMappingRequest)(loadFn: DataServiceMappingRequest => Fox[AbstractDataLayerMapping])(f: AbstractDataLayerMapping => T): Fox[T] = {
+  def withCache[T](mappingRequest: DataServiceMappingRequest)(
+      loadFn: DataServiceMappingRequest => Fox[AbstractDataLayerMapping])(f: AbstractDataLayerMapping => T): Fox[T] = {
 
     val cachedMappingInfo = CachedMapping.from(mappingRequest)
 

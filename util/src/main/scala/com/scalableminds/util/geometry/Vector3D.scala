@@ -7,8 +7,8 @@ import play.api.libs.json._
 import scala.math._
 
 /**
- * Vector in 3D space
- */
+  * Vector in 3D space
+  */
 case class Vector3D(x: Double = 0, y: Double = 0, z: Double = 0) {
 
   def normalize = {
@@ -21,20 +21,14 @@ case class Vector3D(x: Double = 0, y: Double = 0, z: Double = 0) {
 
   def neg = Vector3D(-x, -y, -z)
 
-  def -(o: Vector3D): Vector3D = {
+  def -(o: Vector3D): Vector3D =
     new Vector3D(x - o.x, y - o.y, z - o.z)
-  }
 
-  def +(o: Vector3D): Vector3D = {
+  def +(o: Vector3D): Vector3D =
     new Vector3D(x + o.x, y + o.y, z + o.z)
-  }
 
-  def x(o: Vector3D): Vector3D = {
-    new Vector3D(
-      y * o.z - z * o.y,
-      z * o.x - x * o.z,
-      x * o.y - y * o.x)
-  }
+  def x(o: Vector3D): Vector3D =
+    new Vector3D(y * o.z - z * o.y, z * o.x - x * o.z, x * o.y - y * o.x)
 
   def *(o: Double) = Vector3D(x * o, y * o, z * o)
 
@@ -47,8 +41,8 @@ case class Vector3D(x: Double = 0, y: Double = 0, z: Double = 0) {
   def /(o: Vector3D) = Vector3D(x / o.x, y / o.y, z / o.z)
 
   /**
-   * Transforms this vector using a transformation matrix
-   */
+    * Transforms this vector using a transformation matrix
+    */
   def transformAffine(matrix: Array[Float]): Vector3D = {
     // see rotation matrix and helmert-transformation for more details
     val nx = matrix(0) * x + matrix(4) * y + matrix(8) * z + matrix(12)
@@ -96,9 +90,8 @@ object Vector3D {
     else
       None
 
-  def fromList(l: List[Double]) = {
+  def fromList(l: List[Double]) =
     fromArray(l.toArray)
-  }
 
   implicit object Vector3DReads extends Format[Vector3D] {
     def reads(json: JsValue) = json match {

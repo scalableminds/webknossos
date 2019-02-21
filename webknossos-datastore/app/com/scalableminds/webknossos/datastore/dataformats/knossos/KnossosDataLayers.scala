@@ -7,9 +7,8 @@ import play.api.libs.json._
 
 case class KnossosSection(name: String, resolutions: List[Either[Int, Point3D]], boundingBox: BoundingBox) {
 
-  def doesContainCube(cube: CubePosition): Boolean = {
+  def doesContainCube(cube: CubePosition): Boolean =
     boundingBox.intersects(cube.toHighestResBoundingBox)
-  }
 }
 
 object KnossosSection extends ResolutionFormatHelper {
@@ -24,10 +23,15 @@ trait KnossosLayer extends DataLayer {
 
   lazy val boundingBox = BoundingBox.combine(sections.map(_.boundingBox))
 
-  lazy val resolutions: List[Point3D] = sections.map(_.resolutions).reduce(_ union _).map {
-    case Left(r) => Point3D(r, r, r)
-    case Right(r) => r
-  }.toSet.toList
+  lazy val resolutions: List[Point3D] = sections
+    .map(_.resolutions)
+    .reduce(_ union _)
+    .map {
+      case Left(r)  => Point3D(r, r, r)
+      case Right(r) => r
+    }
+    .toSet
+    .toList
 
   def lengthOfUnderlyingCubes(resolution: Point3D) = KnossosDataFormat.cubeLength
 
@@ -35,23 +39,24 @@ trait KnossosLayer extends DataLayer {
 }
 
 case class KnossosDataLayer(
-                              name: String,
-                              category: Category.Value,
-                              sections: List[KnossosSection],
-                              elementClass: ElementClass.Value
-                            ) extends KnossosLayer
+    name: String,
+    category: Category.Value,
+    sections: List[KnossosSection],
+    elementClass: ElementClass.Value
+) extends KnossosLayer
 
 object KnossosDataLayer {
   implicit val knossosDataLayerFormat = Json.format[KnossosDataLayer]
 }
 
 case class KnossosSegmentationLayer(
-                                     name: String,
-                                     sections: List[KnossosSection],
-                                     elementClass: ElementClass.Value,
-                                     mappings: Set[String],
-                                     largestSegmentId: Long
-                                   ) extends SegmentationLayer with KnossosLayer
+    name: String,
+    sections: List[KnossosSection],
+    elementClass: ElementClass.Value,
+    mappings: Set[String],
+    largestSegmentId: Long
+) extends SegmentationLayer
+    with KnossosLayer
 
 object KnossosSegmentationLayer {
   implicit val knossosSegmentationLayerFormat = Json.format[KnossosSegmentationLayer]

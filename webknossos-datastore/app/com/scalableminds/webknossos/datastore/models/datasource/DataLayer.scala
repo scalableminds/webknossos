@@ -20,14 +20,13 @@ object Category extends Enumeration {
 
   implicit val categoryFormat = Format(Reads.enumNameReads(Category), Writes.enumNameWrites)
 
-  def fromElementClass(elementClass: ElementClass.Value): Category.Value = {
+  def fromElementClass(elementClass: ElementClass.Value): Category.Value =
     elementClass match {
       case ElementClass.uint16 => segmentation
       case ElementClass.uint32 => segmentation
       case ElementClass.uint64 => segmentation
-      case _ => color
+      case _                   => color
     }
-  }
 
   def fromString(s: String): Option[Value] = values.find(_.toString == s)
 }
@@ -44,12 +43,12 @@ object ElementClass extends Enumeration {
     case ElementClass.uint24 => 3
     case ElementClass.uint32 => 4
     case ElementClass.uint64 => 8
-    case ElementClass.float => 4
+    case ElementClass.float  => 4
     case ElementClass.double => 8
-    case ElementClass.int8  => 1
-    case ElementClass.int16 => 2
-    case ElementClass.int32 => 4
-    case ElementClass.int64 => 8
+    case ElementClass.int8   => 1
+    case ElementClass.int16  => 2
+    case ElementClass.int32  => 4
+    case ElementClass.int64  => 8
   }
 
   /* ambiguous, we will always guess the unsigned integer options */
@@ -64,7 +63,7 @@ object ElementClass extends Enumeration {
 
   /* only used for segmentation layers, so only unsigned integers 8 16 32 64 */
   def maxSegmentIdValue(elementClass: ElementClass.Value): Long = elementClass match {
-    case ElementClass.uint8 => 1L << 8L
+    case ElementClass.uint8  => 1L << 8L
     case ElementClass.uint16 => 1L << 16L
     case ElementClass.uint32 => 1L << 32L
     case ElementClass.uint64 => 1L << 64L
@@ -97,11 +96,13 @@ object DataLayerLike {
 
   implicit object dataLayerLikeFormat extends Format[DataLayerLike] {
     override def reads(json: JsValue): JsResult[DataLayerLike] =
-      AbstractSegmentationLayer.abstractSegmentationLayerFormat.reads(json)
+      AbstractSegmentationLayer.abstractSegmentationLayerFormat
+        .reads(json)
         .orElse(AbstractDataLayer.abstractDataLayerFormat.reads(json))
 
     override def writes(layer: DataLayerLike): JsValue = layer match {
-      case layer: SegmentationLayerLike => AbstractSegmentationLayer.abstractSegmentationLayerFormat.writes(AbstractSegmentationLayer.from(layer))
+      case layer: SegmentationLayerLike =>
+        AbstractSegmentationLayer.abstractSegmentationLayerFormat.writes(AbstractSegmentationLayer.from(layer))
       case _ => AbstractDataLayer.abstractDataLayerFormat.writes(AbstractDataLayer.from(layer))
     }
   }
@@ -142,33 +143,31 @@ object DataLayer {
   val bucketLength: Int = 32
 
   implicit object dataLayerFormat extends Format[DataLayer] {
-    override def reads(json: JsValue): JsResult[DataLayer] = {
+    override def reads(json: JsValue): JsResult[DataLayer] =
       for {
         dataFormat <- json.validate((JsPath \ "dataFormat").read[DataFormat.Value])
         category <- json.validate((JsPath \ "category").read[Category.Value])
         layer <- (dataFormat, category) match {
           case (DataFormat.knossos, Category.segmentation) => json.validate[KnossosSegmentationLayer]
-          case (DataFormat.knossos, _) => json.validate[KnossosDataLayer]
-          case (DataFormat.wkw, Category.segmentation) => json.validate[WKWSegmentationLayer]
-          case (DataFormat.wkw, _) => json.validate[WKWDataLayer]
-          case _ => json.validate[WKWDataLayer]
+          case (DataFormat.knossos, _)                     => json.validate[KnossosDataLayer]
+          case (DataFormat.wkw, Category.segmentation)     => json.validate[WKWSegmentationLayer]
+          case (DataFormat.wkw, _)                         => json.validate[WKWDataLayer]
+          case _                                           => json.validate[WKWDataLayer]
         }
       } yield {
         layer
       }
-    }
 
-    override def writes(layer: DataLayer): JsValue = {
+    override def writes(layer: DataLayer): JsValue =
       (layer match {
-        case l: KnossosDataLayer => KnossosDataLayer.knossosDataLayerFormat.writes(l)
+        case l: KnossosDataLayer         => KnossosDataLayer.knossosDataLayerFormat.writes(l)
         case l: KnossosSegmentationLayer => KnossosSegmentationLayer.knossosSegmentationLayerFormat.writes(l)
-        case l: WKWDataLayer => WKWDataLayer.wkwDataLayerFormat.writes(l)
-        case l: WKWSegmentationLayer => WKWSegmentationLayer.wkwSegmentationLayerFormat.writes(l)
+        case l: WKWDataLayer             => WKWDataLayer.wkwDataLayerFormat.writes(l)
+        case l: WKWSegmentationLayer     => WKWSegmentationLayer.wkwSegmentationLayerFormat.writes(l)
       }).as[JsObject] ++ Json.obj(
         "category" -> layer.category,
         "dataFormat" -> layer.dataFormat
       )
-    }
   }
 }
 
@@ -184,37 +183,41 @@ object SegmentationLayer {
 }
 
 case class AbstractDataLayer(
-                              name: String,
-                              category: Category.Value,
-                              boundingBox: BoundingBox,
-                              resolutions: List[Point3D],
-                              elementClass: ElementClass.Value
-                            ) extends DataLayerLike
+    name: String,
+    category: Category.Value,
+    boundingBox: BoundingBox,
+    resolutions: List[Point3D],
+    elementClass: ElementClass.Value
+) extends DataLayerLike
 
 object AbstractDataLayer {
 
-  def from(layer: DataLayerLike): AbstractDataLayer = {
+  def from(layer: DataLayerLike): AbstractDataLayer =
     AbstractDataLayer(layer.name, layer.category, layer.boundingBox, layer.resolutions, layer.elementClass)
-  }
 
   implicit val abstractDataLayerFormat = Json.format[AbstractDataLayer]
 }
 
 case class AbstractSegmentationLayer(
-                                      name: String,
-                                      category: Category.Value,
-                                      boundingBox: BoundingBox,
-                                      resolutions: List[Point3D],
-                                      elementClass: ElementClass.Value,
-                                      largestSegmentId: Long,
-                                      mappings: Set[String]
-                                    ) extends SegmentationLayerLike
+    name: String,
+    category: Category.Value,
+    boundingBox: BoundingBox,
+    resolutions: List[Point3D],
+    elementClass: ElementClass.Value,
+    largestSegmentId: Long,
+    mappings: Set[String]
+) extends SegmentationLayerLike
 
 object AbstractSegmentationLayer {
 
-  def from(layer: SegmentationLayerLike): AbstractSegmentationLayer = {
-    AbstractSegmentationLayer(layer.name, layer.category, layer.boundingBox, layer.resolutions, layer.elementClass, layer.largestSegmentId, layer.mappings)
-  }
+  def from(layer: SegmentationLayerLike): AbstractSegmentationLayer =
+    AbstractSegmentationLayer(layer.name,
+                              layer.category,
+                              layer.boundingBox,
+                              layer.resolutions,
+                              layer.elementClass,
+                              layer.largestSegmentId,
+                              layer.mappings)
 
   implicit val abstractSegmentationLayerFormat = Json.format[AbstractSegmentationLayer]
 }
@@ -223,12 +226,11 @@ trait ResolutionFormatHelper {
 
   implicit object resolutionFormat extends Format[Either[Int, Point3D]] {
 
-    override def reads(json: JsValue): JsResult[Either[Int, Point3D]] = {
+    override def reads(json: JsValue): JsResult[Either[Int, Point3D]] =
       json.validate[Int].map[Either[Int, Point3D]](Left(_)).orElse(json.validate[Point3D].map(Right(_)))
-    }
 
     override def writes(resolution: Either[Int, Point3D]): JsValue = resolution match {
-      case Left(r) => JsNumber(r)
+      case Left(r)  => JsNumber(r)
       case Right(r) => Point3D.Point3DWrites.writes(r)
     }
   }

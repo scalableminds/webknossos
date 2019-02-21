@@ -11,6 +11,9 @@ import Toast from "libs/toast";
 import messages from "messages";
 import window, { document, location } from "libs/window";
 
+// No more than MAX_NUM_ERRORS will be reported to airbrake
+const MAX_NUM_ERRORS = 50;
+
 type ErrorHandlingOptions = {
   throwAssertions: boolean,
   sendLocalErrors: boolean,
@@ -46,6 +49,7 @@ class ErrorHandling {
   sendLocalErrors: boolean;
   commitHash: ?string;
   airbrake: AirbrakeClient;
+  numberOfErrors: number = 0;
 
   initialize(options: ErrorHandlingOptions) {
     if (options == null) {
@@ -84,6 +88,15 @@ class ErrorHandling {
       return notice;
     });
 
+    // Do not report more than MAX_NUM_ERRORS to airbrake
+    this.airbrake.addFilter(notice => {
+      this.numberOfErrors++;
+      if (this.numberOfErrors <= MAX_NUM_ERRORS) {
+        return notice;
+      }
+      return null;
+    });
+
     if (!this.sendLocalErrors) {
       this.airbrake.addFilter(notice => {
         if (location.hostname !== "127.0.0.1" && location.hostname !== "localhost") {
@@ -93,9 +106,13 @@ class ErrorHandling {
       });
     }
 
+    // Remove airbrake's unhandledrejection handler
+    window.removeEventListener("unhandledrejection", this.airbrake.onUnhandledrejection);
     window.addEventListener("unhandledrejection", event => {
       // Create our own error for unhandled rejections here to get additional information for [Object object] errors in airbrake
-      this.notify(Error("Unhandled Rejection"), { originalError: event.reason });
+      this.notify(Error("Unhandled Rejection"), {
+        originalError: event.reason instanceof Error ? event.reason.toString() : event.reason,
+      });
     });
 
     window.onerror = (message: string, file: string, line: number, colno: number, error: Error) => {

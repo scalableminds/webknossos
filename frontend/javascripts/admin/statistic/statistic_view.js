@@ -210,7 +210,7 @@ class StatisticView extends React.PureComponent<{}, State> {
                     title="User"
                     dataIndex="user"
                     key="user"
-                    render={user => `${user.firstName} ${user.lastName} (${user.email})`}
+                    render={user => `${user.lastName}, ${user.firstName} (${user.email})`}
                   />
                   <Column
                     title="Duration"

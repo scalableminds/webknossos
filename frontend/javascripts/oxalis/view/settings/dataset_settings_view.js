@@ -29,7 +29,7 @@ import * as Utils from "libs/utils";
 import constants, {
   type ControlMode,
   ControlModeEnum,
-  type Mode,
+  type ViewMode,
   type Vector3,
 } from "oxalis/constants";
 import messages, { settings } from "messages";
@@ -46,7 +46,7 @@ type DatasetSettingsProps = {|
     propertyName: $Keys<DatasetLayerConfiguration>,
     value: any,
   ) => void,
-  viewMode: Mode,
+  viewMode: ViewMode,
   controlMode: ControlMode,
   hasSegmentation: boolean,
   onSetPosition: Vector3 => void,

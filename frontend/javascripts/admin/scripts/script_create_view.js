@@ -120,7 +120,7 @@ class ScriptCreateView extends React.PureComponent<PropsWithRouter, State> {
                 >
                   {this.state.users.map((user: APIUser) => (
                     <Option key={user.id} value={user.id}>
-                      {`${user.lastName}, ${user.firstName} ${user.email}`}
+                      {`${user.lastName}, ${user.firstName} (${user.email})`}
                     </Option>
                   ))}
                 </Select>,

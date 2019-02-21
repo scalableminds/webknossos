@@ -990,12 +990,12 @@ export async function getOrganizationNames(): Promise<Array<string>> {
 
 // ### BuildInfo webknossos
 export function getBuildInfo(): Promise<APIBuildInfo> {
-  return Request.receiveJSON("/api/buildinfo");
+  return Request.receiveJSON("/api/buildinfo", { doNotInvestigate: true });
 }
 
 // ### BuildInfo datastore
 export function getDataStoreBuildInfo(dataStoreUrl: string): Promise<APIBuildInfo> {
-  return Request.receiveJSON(`${dataStoreUrl}/api/buildinfo`);
+  return Request.receiveJSON(`${dataStoreUrl}/api/buildinfo`, { doNotInvestigate: true });
 }
 
 // ### Feature Selection

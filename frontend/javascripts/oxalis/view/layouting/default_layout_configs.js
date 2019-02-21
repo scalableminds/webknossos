@@ -6,7 +6,7 @@
  */
 
 // @flow
-import Constants, { type ControlMode, ControlModeEnum, type Mode } from "oxalis/constants";
+import Constants, { type ControlMode, ControlModeEnum, type ViewMode } from "oxalis/constants";
 import { navbarHeight } from "navbar";
 import _ from "lodash";
 
@@ -91,13 +91,11 @@ export const getGroundTruthLayoutRect = () => {
 };
 
 const _getDefaultLayouts = () => {
-  const layoutContainer = getGroundTruthLayoutRect();
-  layoutContainer.height -= layoutHeaderHeight * 2;
-  const viewportWidth = ((layoutContainer.height / 2) * 100) / layoutContainer.width;
+  const defaultViewportWidthInPercent = 30;
 
   const OrthoViewsGrid = [
-    setGlContainerWidth(Column(Panes.xy, Panes.xz), viewportWidth),
-    setGlContainerWidth(Column(Panes.yz, Panes.td), viewportWidth),
+    setGlContainerWidth(Column(Panes.xy, Panes.xz), defaultViewportWidthInPercent),
+    setGlContainerWidth(Column(Panes.yz, Panes.td), defaultViewportWidthInPercent),
   ];
 
   const OrthoLayout = createLayout(Row(...OrthoViewsGrid, SkeletonRightHandColumn));
@@ -146,7 +144,7 @@ export const getCurrentDefaultLayoutConfig = () => {
   };
 };
 
-export function determineLayout(controlMode: ControlMode, viewMode: Mode): Layout {
+export function determineLayout(controlMode: ControlMode, viewMode: ViewMode): Layout {
   if (controlMode === ControlModeEnum.VIEW) {
     return "OrthoLayoutView";
   }

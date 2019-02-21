@@ -3,15 +3,9 @@ package models.binary
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  DataSourceId,
-  GenericDataSource,
-  DataLayerLike => DataLayer
-}
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
-  UnusableDataSource,
-  InboxDataSourceLike => InboxDataSource
-}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, GenericDataSource, DataLayerLike => DataLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableDataSource, InboxDataSourceLike => InboxDataSource}
+import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.team._
@@ -38,6 +32,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                teamService: TeamService,
                                userService: UserService,
                                dataSetAllowedTeamsDAO: DataSetAllowedTeamsDAO,
+                               val thumbnailCache: TemporaryStore[String, Array[Byte]],
                                rpc: RPC)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {

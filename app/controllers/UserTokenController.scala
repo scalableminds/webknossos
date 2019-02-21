@@ -65,7 +65,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
 
   private def validateUserAccess(accessRequest: UserAccessRequest, token: Option[String])(
       implicit ec: ExecutionContext): Fox[Result] =
-    if (token == DataStoreRpcClient.webKnossosToken) {
+    if (token.contains(DataStoreRpcClient.webKnossosToken)) {
       Fox.successful(Ok(Json.toJson(UserAccessAnswer(true))))
     } else {
       for {

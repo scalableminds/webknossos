@@ -48,12 +48,25 @@ class DataSetController @Inject()(userService: UserService,
       (__ \ 'sortingKey).readNullable[Long] and
       (__ \ 'isPublic).read[Boolean]).tupled
 
+  def removeFromThumbnailCache(organizationName: String, dataSetName: String, dataLayerName: String, w: Option[Int], h: Option[Int]) = {
+    sil.SecuredAction { implicit request =>
+      val width = Math.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailHeight)
+      val height = Math.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
+      cache.remove(thumbnailCacheKey(organizationName, dataSetName, dataLayerName, width, height))
+      Ok
+    }
+  }
+
+  private def thumbnailCacheKey(organizationName: String, dataSetName: String, dataLayerName: String, width: Int, height: Int) =
+    s"thumbnail-$organizationName*$dataSetName*$dataLayerName-$width-$height"
+
   def thumbnail(organizationName: String, dataSetName: String, dataLayerName: String, w: Option[Int], h: Option[Int]) =
     sil.UserAwareAction.async { implicit request =>
       def imageFromCacheIfPossible(dataSet: DataSet): Fox[Array[Byte]] = {
         val width = Math.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailHeight)
         val height = Math.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
-        cache.get[Array[Byte]](s"thumbnail-$organizationName*$dataSetName*$dataLayerName-$width-$height") match {
+        val cacheKey = thumbnailCacheKey(organizationName, dataSetName, dataLayerName, width, height)
+        cache.get[Array[Byte]](cacheKey) match {
           case Some(a) =>
             Fox.successful(a)
           case _ => {
@@ -73,7 +86,7 @@ class DataSetController @Inject()(userService: UserService,
               .map { result =>
                 // We don't want all images to expire at the same time. Therefore, we add some random variation
                 cache.set(
-                  s"thumbnail-$organizationName*$dataSetName*$dataLayerName-$width-$height",
+                  cacheKey,
                   result,
                   (ThumbnailCacheDuration.toSeconds + math.random * 2.hours.toSeconds) seconds
                 )

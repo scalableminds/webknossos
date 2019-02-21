@@ -69,6 +69,7 @@ GET           /datasets/:organizationName/:dataSetName/sharingToken             
 DELETE        /datasets/:organizationName/:dataSetName/sharingToken             controllers.DataSetController.deleteSharingToken(organizationName: String, dataSetName: String)
 PATCH         /datasets/:organizationName/:dataSetName/teams                    controllers.DataSetController.updateTeams(organizationName: String, dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName/layers/:layer/thumbnail  controllers.DataSetController.thumbnail(organizationName: String, dataSetName: String, layer: String, w: Option[Int], h: Option[Int])
+DELETE        /datasets/:organizationName/:dataSetName/layers/:layer/thumbnail  controllers.DataSetController.removeFromThumbnailCache(organizationName: String, dataSetName: String, layer: String, w: Option[Int], h: Option[Int])
 GET           /datasets/:organizationName/:dataSetName/isValidNewName           controllers.DataSetController.isValidNewName(organizationName: String, dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName                          controllers.DataSetController.read(organizationName: String, dataSetName: String, sharingToken: Option[String])
 

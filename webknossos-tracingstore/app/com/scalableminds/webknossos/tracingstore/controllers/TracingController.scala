@@ -26,8 +26,6 @@ trait TracingController[T <: GeneratedMessage with Message[T],
 
   def accessTokenService: TracingStoreAccessTokenService
 
-  def freezeVersions = false
-
   implicit val tracingCompanion: GeneratedMessageCompanion[T] = tracingService.tracingCompanion
 
   implicit val tracingsCompanion: GeneratedMessageCompanion[Ts]
@@ -114,14 +112,14 @@ trait TracingController[T <: GeneratedMessage with Message[T],
           webKnossosServer.reportTracingUpdates(tracingId, timestamps, latestStatistics, userToken).flatMap { _ =>
             updateGroups.foldLeft(currentVersion) { (previousVersion, updateGroup) =>
               previousVersion.flatMap { prevVersion =>
-                if (prevVersion + 1 == updateGroup.version || freezeVersions) {
+                if (prevVersion + 1 == updateGroup.version) {
                   tracingService.handleUpdateGroup(tracingId, updateGroup, prevVersion)
                     .map(_ => Fox.successful(tracingService.saveToHandledGroupCache(tracingId, updateGroup.version, updateGroup.requestId)))
-                    .map(_ => if (freezeVersions) prevVersion else updateGroup.version)
+                    .map(_ => updateGroup.version)
                 } else {
                   if ( updateGroup.requestId.exists(requestId => tracingService.handledGroupCacheContains(requestId, tracingId, updateGroup.version))) {
                     //this update group was received and successfully saved in a previous request. silently ignore this duplicate request
-                    Fox.successful(if (freezeVersions) prevVersion else updateGroup.version)
+                    Fox.successful(updateGroup.version)
                   } else {
                     Failure(s"Incorrect version. Expected: ${prevVersion + 1}; Got: ${updateGroup.version}") ~> CONFLICT
                   }

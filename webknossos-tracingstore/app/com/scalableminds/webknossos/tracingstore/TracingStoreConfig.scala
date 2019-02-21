@@ -16,7 +16,6 @@ class TracingStoreConfig @Inject()(configuration: Configuration) extends ConfigR
   object Tracingstore {
     val key = get[String]("tracingstore.key")
     val name = get[String]("tracingstore.name")
-    val freezeVolumeVersions = get[Boolean]("tracingstore.freezeVolumeVersions")
     object WebKnossos {
       val uri = get[String]("tracingstore.webKnossos.uri")
       val secured = get[Boolean]("tracingstore.webKnossos.secured")

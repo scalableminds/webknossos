@@ -18,18 +18,21 @@ import scala.concurrent.ExecutionContext
 
 class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingService,
                                           val webKnossosServer: TracingStoreWkRpcClient,
-                                          val accessTokenService: TracingStoreAccessTokenService)
-                                         (implicit val ec: ExecutionContext,
-                                          val bodyParsers: PlayBodyParsers)
-  extends TracingController[SkeletonTracing, SkeletonTracings] {
+                                          val accessTokenService: TracingStoreAccessTokenService)(
+    implicit val ec: ExecutionContext,
+    val bodyParsers: PlayBodyParsers)
+    extends TracingController[SkeletonTracing, SkeletonTracings] {
 
   implicit val tracingsCompanion = SkeletonTracings
 
-  implicit def packMultiple(tracings: List[SkeletonTracing]): SkeletonTracings = SkeletonTracings(tracings.map(t => SkeletonTracingOpt(Some(t))))
+  implicit def packMultiple(tracings: List[SkeletonTracing]): SkeletonTracings =
+    SkeletonTracings(tracings.map(t => SkeletonTracingOpt(Some(t))))
 
-  implicit def packMultipleOpt(tracings: List[Option[SkeletonTracing]]): SkeletonTracings = SkeletonTracings(tracings.map(t => SkeletonTracingOpt(t)))
+  implicit def packMultipleOpt(tracings: List[Option[SkeletonTracing]]): SkeletonTracings =
+    SkeletonTracings(tracings.map(t => SkeletonTracingOpt(t)))
 
-  implicit def unpackMultiple(tracings: SkeletonTracings): List[Option[SkeletonTracing]] = tracings.tracings.toList.map(_.tracing)
+  implicit def unpackMultiple(tracings: SkeletonTracings): List[Option[SkeletonTracing]] =
+    tracings.tracings.toList.map(_.tracing)
 
   def mergedFromContents(persist: Boolean) = Action.async(validateProto[SkeletonTracings]) { implicit request =>
     log {

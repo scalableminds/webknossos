@@ -27,11 +27,13 @@ trait WkRpcClient {
 }
 
 class DataStoreWkRpcClient @Inject()(
-                                  rpc: RPC,
-                                  config: DataStoreConfig,
-                                  val lifecycle: ApplicationLifecycle,
-                                  @Named("webknossos-datastore") val system: ActorSystem
-                                ) extends WkRpcClient with IntervalScheduler with LazyLogging {
+    rpc: RPC,
+    config: DataStoreConfig,
+    val lifecycle: ApplicationLifecycle,
+    @Named("webknossos-datastore") val system: ActorSystem
+) extends WkRpcClient
+    with IntervalScheduler
+    with LazyLogging {
 
   private val dataStoreKey: String = config.Datastore.key
   private val dataStoreName: String = config.Datastore.name
@@ -49,34 +51,27 @@ class DataStoreWkRpcClient @Inject()(
 
   def tick: Unit = reportStatus(ok = true)
 
-  def reportStatus(ok: Boolean): Fox[_] = {
+  def reportStatus(ok: Boolean): Fox[_] =
     rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/status")
       .addQueryString("key" -> dataStoreKey)
       .patch(DataStoreStatus(ok, dataStoreUrl))
-  }
 
-  def reportDataSource(dataSource: InboxDataSourceLike): Fox[_] = {
+  def reportDataSource(dataSource: InboxDataSourceLike): Fox[_] =
     rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/datasource")
       .addQueryString("key" -> dataStoreKey)
       .put(dataSource)
-  }
 
-  def reportDataSources(dataSources: List[InboxDataSourceLike]): Fox[_] = {
+  def reportDataSources(dataSources: List[InboxDataSourceLike]): Fox[_] =
     rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/datasources")
       .addQueryString("key" -> dataStoreKey)
       .put(dataSources)
-  }
 
-  def validateDataSourceUpload(id: DataSourceId): Fox[_] = {
-    rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/verifyUpload")
-      .addQueryString("key" -> dataStoreKey)
-      .post(id)
-  }
+  def validateDataSourceUpload(id: DataSourceId): Fox[_] =
+    rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/verifyUpload").addQueryString("key" -> dataStoreKey).post(id)
 
-  override def requestUserAccess(token: String, accessRequest: UserAccessRequest): Fox[UserAccessAnswer] = {
+  override def requestUserAccess(token: String, accessRequest: UserAccessRequest): Fox[UserAccessAnswer] =
     rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/validateUserAccess")
       .addQueryString("key" -> dataStoreKey)
       .addQueryString("token" -> token)
       .postWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
-  }
 }

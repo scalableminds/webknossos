@@ -13,7 +13,8 @@ import scala.concurrent.duration.FiniteDuration
 
 class FallbackBucketProvider(primary: DataLayer, fallback: DataLayer) extends BucketProvider {
 
-  override def load(readInstruction: DataReadInstruction, cache: DataCubeCache, timeout: FiniteDuration)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
+  override def load(readInstruction: DataReadInstruction, cache: DataCubeCache, timeout: FiniteDuration)(
+      implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     val primaryReadInstruction = readInstruction.copy(dataLayer = primary)
     primary.bucketProvider.load(primaryReadInstruction, cache, timeout).futureBox.flatMap {
       case Full(data) =>

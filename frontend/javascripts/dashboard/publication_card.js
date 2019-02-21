@@ -5,7 +5,7 @@ import * as React from "react";
 import classNames from "classnames";
 import { Link } from "react-router-dom";
 
-import type { APIDataset, APIDatasetId, APIDatasetDetails } from "admin/api_flow_types";
+import type { APIDataset, APIDatasetDetails } from "admin/api_flow_types";
 import { formatScale } from "libs/format_utils";
 import {
   getThumbnailURL,
@@ -40,101 +40,98 @@ function getDetails(dataset: APIDataset): ExtendedDatasetDetails {
   };
 }
 
-function ThumbnailAndDescription({
-  thumbnailURL,
-  description,
-  publishedDatasets,
-  datasetDetails,
-  publicationName,
-  datasetId,
-  segmentationThumbnailURL,
-}: {
-  thumbnailURL: string,
-  publicationName: string,
-  datasetId: APIDatasetId,
-  description: React.Node,
-  publishedDatasets: React.Node,
-  datasetDetails: ExtendedDatasetDetails,
-  segmentationThumbnailURL: ?string,
-}) {
-  const details = datasetDetails;
+function ThumbnailOverlay({ details }) {
   return (
-    <div style={{ display: "flex", height: "100%" }}>
-      <div className="dataset-description">
-        <div className="description-flex">
-          <h3 style={{ fontSize: 20 }}>{publicationName}</h3>
-          <div className="dataset-description-body">{description}</div>
+    <div className="dataset-thumbnail-overlay">
+      <div>
+        {details.species && (
+          <div
+            style={{
+              fontWeight: 700,
+              display: "inline",
+            }}
+          >
+            {details.species}
+          </div>
+        )}
+        {details.brainRegion && (
+          <div
+            style={{
+              display: "inline",
+              marginLeft: 5,
+            }}
+          >
+            {details.brainRegion}
+          </div>
+        )}
+      </div>
+      <div
+        style={{
+          fontSize: 18,
+        }}
+      >
+        {details.name}
+      </div>
+      <div
+        style={{
+          marginTop: "auto",
+          display: "flex",
+          alignItems: "flex-end",
+          justifyContent: "space-between",
+          color: "rgba(200,200,200,0.85)",
+        }}
+      >
+        <div>{details.acquisition}</div>
+        <div>
+          {details.scale}/voxel
+          <br />
+          {details.extent}
         </div>
       </div>
-      <div className="dataset-thumbnail">
-        <Link to={`/datasets/${datasetId.owningOrganization}/${datasetId.name}/view`}>
-          <div style={{ position: "relative", height: "100%" }}>
-            <div className="dataset-published-grid">{publishedDatasets}</div>
-            <div className="dataset-click-hint">Click To View</div>
-            <div
-              className="dataset-thumbnail-image"
-              style={{
-                backgroundImage: `url('${thumbnailURL}?w=${thumbnailDimension}&h=${thumbnailDimension}')`,
-              }}
-            />
-            {segmentationThumbnailURL ? (
-              <div
-                className="dataset-thumbnail-image segmentation"
+    </div>
+  );
+}
+
+function PublishedDatasetsOverlay({ datasets, activeDataset, setActiveDataset }) {
+  return (
+    <div
+      className="mini-dataset-thumbnail-grid"
+      style={{
+        gridTemplateColumns: miniThumbnailDimension,
+      }}
+    >
+      {datasets.map(dataset => {
+        const datasetIdString = `${dataset.owningOrganization}/${dataset.name}`;
+        return (
+          <Link to={`/datasets/${datasetIdString}/view`} key={datasetIdString}>
+            <div>
+              <Button
+                className={classNames("mini-dataset-thumbnail", {
+                  active: dataset.name === activeDataset.name,
+                })}
+                title="Click To View"
                 style={{
-                  backgroundImage: `url('${segmentationThumbnailURL}?w=${thumbnailDimension}&h=${thumbnailDimension}')`,
+                  background: `url('${getThumbnailURL(
+                    dataset,
+                  )}?w=${miniThumbnailDimension}&h=${miniThumbnailDimension}')`,
+                  width: `${miniThumbnailDimension}px`,
+                  height: `${miniThumbnailDimension}px`,
                 }}
-              />
-            ) : null}
-            <div className="dataset-thumbnail-overlay">
-              <div>
-                {details.species && (
-                  <div
-                    style={{
-                      fontWeight: 700,
-                      display: "inline",
-                    }}
-                  >
-                    {details.species}
-                  </div>
-                )}
-                {details.brainRegion && (
-                  <div
-                    style={{
-                      display: "inline",
-                      marginLeft: 5,
-                    }}
-                  >
-                    {details.brainRegion}
-                  </div>
-                )}
-              </div>
-              <div
-                style={{
-                  fontSize: 18,
-                }}
+                onMouseEnter={() => setActiveDataset(dataset)}
               >
-                {details.name}
-              </div>
-              <div
-                style={{
-                  marginTop: "auto",
-                  display: "flex",
-                  alignItems: "flex-end",
-                  justifyContent: "space-between",
-                  color: "rgba(200,200,200,0.85)",
-                }}
-              >
-                <div>{details.acquisition}</div>
-                <div>
-                  {details.scale}/voxel
-                  <br />
-                  {details.extent}
-                </div>
-              </div>
+                <div
+                  className="mini-dataset-thumbnail absolute segmentation"
+                  style={{
+                    background: `url('${getSegmentationThumbnailURL(
+                      dataset,
+                    )}?w=${miniThumbnailDimension}&h=${miniThumbnailDimension}')`,
+                  }}
+                />
+              </Button>
             </div>
-          </div>
-        </Link>
-      </div>
+          </Link>
+        );
+      })}
     </div>
   );
 }
@@ -158,75 +155,70 @@ class PublicationCard extends React.PureComponent<Props, State> {
 
     const sortedDatasets = datasets.sort(compareBy(typeHint, dataset => dataset.sortingKey));
 
-    const descriptionComponent = (
-      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-        <span style={{ marginBottom: 16 }}>
-          <Markdown
-            source={publication.description}
-            options={{ html: false, breaks: true, linkify: true }}
-          />
-        </span>
-      </div>
-    );
+    const setActiveDataset = dataset => this.setState({ activeDataset: dataset });
 
-    const publishedDatasetsComponent = (
-      <div
-        className="mini-dataset-thumbnail-grid"
-        style={{
-          gridTemplateColumns: miniThumbnailDimension,
-        }}
-      >
-        {sortedDatasets.map(dataset => {
-          const datasetIdString = `${dataset.owningOrganization}/${dataset.name}`;
-          return (
-            <Link to={`/datasets/${datasetIdString}/view`} key={datasetIdString}>
-              <div>
-                <Button
-                  className={classNames("mini-dataset-thumbnail", {
-                    active: dataset.name === activeDataset.name,
-                  })}
-                  title="Click To View"
-                  style={{
-                    background: `url('${getThumbnailURL(
-                      dataset,
-                    )}?w=${miniThumbnailDimension}&h=${miniThumbnailDimension}')`,
-                    width: `${miniThumbnailDimension}px`,
-                    height: `${miniThumbnailDimension}px`,
-                  }}
-                  onMouseEnter={() => this.setState({ activeDataset: dataset })}
-                >
-                  <div
-                    className="mini-dataset-thumbnail segmentation"
-                    style={{
-                      background: `url('${getSegmentationThumbnailURL(
-                        dataset,
-                      )}?w=${miniThumbnailDimension}&h=${miniThumbnailDimension}')`,
-                    }}
-                  />
-                </Button>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
-    );
+    const thumbnailURL = getThumbnailURL(activeDataset);
+    const segmentationThumbnailURL = hasSegmentation(activeDataset)
+      ? getSegmentationThumbnailURL(activeDataset)
+      : null;
+    const details = getDetails(activeDataset);
 
     return (
       <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card" bordered={false}>
-        <ThumbnailAndDescription
-          thumbnailURL={getThumbnailURL(activeDataset)}
-          segmentationThumbnailURL={
-            hasSegmentation(activeDataset) ? getSegmentationThumbnailURL(activeDataset) : null
-          }
-          publicationName={publication.title}
-          datasetId={{
-            name: activeDataset.name,
-            owningOrganization: activeDataset.owningOrganization,
-          }}
-          description={descriptionComponent}
-          publishedDatasets={publishedDatasetsComponent}
-          datasetDetails={getDetails(activeDataset)}
-        />
+        <div style={{ display: "flex", height: "100%" }}>
+          <div className="publication-description">
+            <h3>{publication.title}</h3>
+            <div className="publication-description-body">
+              <Markdown
+                source={publication.description}
+                options={{ html: false, breaks: true, linkify: true }}
+              />
+            </div>
+          </div>
+          <div className="dataset-thumbnail">
+            <div
+              style={{
+                position: "relative",
+                height: "100%",
+                display: "flex",
+                alignItems: "flex-end",
+              }}
+            >
+              <Link
+                to={`/datasets/${activeDataset.owningOrganization}/${activeDataset.name}/view`}
+                className="absolute"
+              >
+                <div className="dataset-click-hint absolute">Click To View</div>
+              </Link>
+              <div
+                className="dataset-thumbnail-image absolute"
+                style={{
+                  backgroundImage: `url('${thumbnailURL}?w=${thumbnailDimension}&h=${thumbnailDimension}')`,
+                }}
+              />
+              {segmentationThumbnailURL ? (
+                <div
+                  className="dataset-thumbnail-image absolute segmentation"
+                  style={{
+                    backgroundImage: `url('${segmentationThumbnailURL}?w=${thumbnailDimension}&h=${thumbnailDimension}')`,
+                  }}
+                />
+              ) : null}
+              <ThumbnailOverlay details={details} />
+              {sortedDatasets.length > 1 && (
+                <div className="datasets-scrollbar-spacer">
+                  <div className="dataset-published-grid">
+                    <PublishedDatasetsOverlay
+                      datasets={sortedDatasets}
+                      activeDataset={activeDataset}
+                      setActiveDataset={setActiveDataset}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </Card>
     );
   }

@@ -1,6 +1,6 @@
 @smartphones: ~"only screen and (max-width: 600px)";
 
-.dataset-description :first-child {
+.publication-description :first-child {
   margin-top: 0px;
 }
 
@@ -10,6 +10,14 @@
   @media @smartphones {
     padding-bottom: 32px;
   }
+}
+
+.absolute {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .dataset-thumbnail {
@@ -27,59 +35,53 @@
 .dataset-thumbnail-image {
   transition: transform 0.3s ease-in-out;
   background-size: cover;
-  width: 100%;
-  height: 100%;
   &.segmentation {
     opacity: 0.2;
-    position: absolute;
-    left: 0;
-    top: 0;
   }
 }
 
-@dataset-grid-width: 110px;
-
 .dataset-thumbnail-overlay {
-  width: calc(100% - @dataset-grid-width - 10px);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
   height: 100px;
-  position: absolute;
-  bottom: 0;
-  right: 0;
   margin: 10px;
   border-radius: 3px;
   background-color: rgba(35, 33, 33, 0.77);
   padding: 5px 15px;
   color: rgba(255, 255, 255, 0.95);
-  display: flex;
-  flex-direction: column;
+  z-index: 101;
+}
+
+.datasets-scrollbar-spacer {
+  background: linear-gradient(
+    to left,
+    rgba(0, 0, 0, 0.7) 0%,
+    rgba(0, 0, 0, 0.7) 70%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  width: 112px;
+  height: 100%;
+  z-index: 101;
 }
 
 .dataset-published-grid {
   position: absolute;
   padding: 4px;
+  margin-right: 7px;
   height: 100%;
   overflow-y: auto;
-  background: linear-gradient(
-    to left,
-    rgba(0, 0, 0, 0.7) 0%,
-    rgba(0, 0, 0, 0.7) 50%,
-    rgba(0, 0, 0, 0) 100%
-  );
-  width: @dataset-grid-width;
-  z-index: 101;
-  text-align: center;
-  transform: rotateY(180deg);
   display: flex;
   justify-content: center;
 
   &::-webkit-scrollbar-button {
-    display: none;
-    height: 13px;
+    display: block;
+    height: 5px;
     border-radius: 0px;
-    background-color: #aaa;
+    background-color: rgba(255, 255, 255, 0);
   }
   &::-webkit-scrollbar-button:hover {
-    background-color: #000000;
+    background-color: rgba(255, 255, 255, 0);
   }
   &::-webkit-scrollbar-thumb {
     background-color: #ccc;
@@ -102,9 +104,6 @@
 
 .dataset-click-hint {
   opacity: 0;
-  width: 100%;
-  height: 100%;
-  position: absolute;
   text-align: center;
   color: white;
   z-index: 100;
@@ -117,7 +116,9 @@
   }
 }
 
-.dataset-description {
+.publication-description {
+  display: flex;
+  flex-direction: column;
   flex: 2;
   height: 100%;
   padding: 16px;
@@ -135,37 +136,31 @@
     display: block;
   }
 
-  .description-flex {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-
-    h3 {
-      margin-bottom: 0px;
-      padding-bottom: 16px;
-      padding-right: 16px;
-      word-wrap: break-word;
-      @media @smartphones {
-        font-size: 32px;
-        padding-bottom: 24px;
-      }
+  h3 {
+    font-size: 20px;
+    margin-bottom: 0px;
+    padding-bottom: 16px;
+    padding-right: 16px;
+    word-wrap: break-word;
+    @media @smartphones {
+      font-size: 32px;
+      padding-bottom: 24px;
     }
+  }
 
-    .dataset-description-body {
-      width: 100%;
-      height: 100%;
-      overflow-y: auto;
-      @media @smartphones {
-        height: 243px;
-      }
+  .publication-description-body {
+    width: 100%;
+    overflow-y: auto;
+    @media @smartphones {
+      height: 243px;
     }
+  }
 
-    p {
-      font-size: 14px;
+  p {
+    font-size: 14px;
 
-      @media @smartphones {
-        font-size: 18px;
-      }
+    @media @smartphones {
+      font-size: 18px;
     }
   }
 }
@@ -186,10 +181,10 @@
   h3 {
     font-size: 18px;
   }
-  .dataset-description-body {
+  .publication-description-body {
     font-size: 10px;
   }
-  .dataset-description {
+  .publication-description {
     padding: 4px;
   }
 }
@@ -233,7 +228,6 @@
   display: grid;
   grid-gap: 10px;
   padding: 5px;
-  transform: rotateY(180deg);
   margin-top: auto;
 }
 
@@ -244,11 +238,6 @@
 
   &.segmentation {
     opacity: 0.2 !important;
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
   }
   &:hover,
   &.active {

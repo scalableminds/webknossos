@@ -3,12 +3,13 @@
  * @flow
  */
 
+import { Col, Collapse, Divider, Icon, Row, Select, Tag, Tooltip } from "antd";
 import type { Dispatch } from "redux";
-import { Tooltip, Collapse, Row, Col, Select, Icon, Divider, Tag } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 import _ from "lodash";
 
+import type { APIDataset } from "admin/api_flow_types";
 import type { DatasetConfiguration, DatasetLayerConfiguration, OxalisState } from "oxalis/store";
 import {
   SwitchSetting,
@@ -16,16 +17,22 @@ import {
   DropdownSetting,
   ColorSetting,
 } from "oxalis/view/settings/setting_input_views";
+import { findDataPositionForLayer } from "admin/admin_rest_api";
 import { hasSegmentation, isRgb } from "oxalis/model/accessors/dataset_accessor";
+import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import {
   updateDatasetSettingAction,
   updateLayerSettingAction,
 } from "oxalis/model/actions/settings_actions";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import constants, { type ControlMode, ControlModeEnum, type ViewMode } from "oxalis/constants";
+import constants, {
+  type ControlMode,
+  ControlModeEnum,
+  type ViewMode,
+  type Vector3,
+} from "oxalis/constants";
 import messages, { settings } from "messages";
-import type { APIDataset } from "admin/api_flow_types";
 
 const Panel = Collapse.Panel;
 const Option = Select.Option;
@@ -42,6 +49,7 @@ type DatasetSettingsProps = {|
   viewMode: ViewMode,
   controlMode: ControlMode,
   hasSegmentation: boolean,
+  onSetPosition: Vector3 => void,
 |};
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
@@ -60,6 +68,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             <Tag style={{ cursor: "default", marginLeft: 8 }} color={isRGB && "#1890ff"}>
               {isRGB ? "24-bit" : "8-bit"} Layer
             </Tag>
+            <Icon
+              type="scan"
+              onClick={() => this.handleFindData(layerName)}
+              style={{ float: "right", marginTop: 4, cursor: "pointer" }}
+              title="If you are having trouble finding your data, webKnossos can try to find a position which contains data."
+            />
           </Col>
         </Row>
         <NumberSliderSetting
@@ -98,6 +112,16 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
 
   onChangeQuality = (propertyName: $Keys<DatasetConfiguration>, value: string) => {
     this.props.onChange(propertyName, parseInt(value));
+  };
+
+  handleFindData = async (layerName: string) => {
+    const maybePosition = await findDataPositionForLayer(this.props.dataset, layerName);
+    if (maybePosition != null) {
+      this.props.onSetPosition(maybePosition);
+      Toast.success(`Jumping to position ${maybePosition.join(", ")}`);
+    } else {
+      Toast.warning(`Couldn't find data within layer "${layerName}."`);
+    }
   };
 
   onChangeRenderMissingDataBlack = (value: boolean): void => {
@@ -204,6 +228,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   onChangeLayer(layerName, propertyName, value) {
     dispatch(updateLayerSettingAction(layerName, propertyName, value));
+  },
+  onSetPosition(position) {
+    dispatch(setPositionAction(position));
   },
 });
 

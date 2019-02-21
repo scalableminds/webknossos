@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings
 import java.util.UUID
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.Reads
@@ -12,11 +13,15 @@ import scala.concurrent.duration._
 
 trait TracingService[T <: GeneratedMessage with Message[T]] extends KeyValueStoreImplicits with FoxImplicits with LazyLogging {
 
+  val handledGroupCacheExpiry: FiniteDuration = 5 minutes
+
   def tracingType: TracingType.Value
 
   def tracingStore: FossilDBClient
 
   def temporaryTracingStore: TemporaryTracingStore[T]
+
+  val handledGroupCache: TemporaryStore[(String, String, Long), Unit]
 
   implicit def tracingCompanion: GeneratedMessageCompanion[T]
 
@@ -66,4 +71,13 @@ trait TracingService[T <: GeneratedMessage with Message[T]] extends KeyValueStor
       tracingStore.put(id, version, tracing).map(_ => id)
     }
   }
+
+  def saveToHandledGroupCache(tracingId: String, version: Long, requestIdOpt: Option[String]): Unit = {
+    requestIdOpt.foreach { requestId =>
+      handledGroupCache.insert((requestId, tracingId, version), (), Some(handledGroupCacheExpiry))
+    }
+  }
+
+  def handledGroupCacheContains(requestId: String, tracingId: String, version: Long) =
+    handledGroupCache.contains(requestId, tracingId, version)
 }

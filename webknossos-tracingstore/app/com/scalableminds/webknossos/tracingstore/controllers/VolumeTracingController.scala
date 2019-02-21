@@ -37,6 +37,8 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
 
   implicit def unpackMultiple(tracings: VolumeTracings): List[Option[VolumeTracing]] = tracings.tracings.toList.map(_.tracing)
 
+  override def freezeVersions = config.Tracingstore.freezeVolumeVersions
+
   def initialData(tracingId: String) = Action.async { implicit request =>
     log {
       accessTokenService.validateAccess(UserAccessRequest.webknossos) {

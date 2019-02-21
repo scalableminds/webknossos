@@ -4,7 +4,6 @@
  */
 import type { Dispatch } from "redux";
 import { Table, Tooltip, Icon } from "antd";
-import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import Markdown from "react-remarkable";
 import React from "react";

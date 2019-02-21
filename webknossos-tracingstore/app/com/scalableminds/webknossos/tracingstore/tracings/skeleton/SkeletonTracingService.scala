@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.tracingstore.tracings.UpdateAction.SkeletonUpdateAction
 import com.scalableminds.webknossos.tracingstore.tracings._
@@ -13,7 +14,8 @@ import play.api.libs.json.{JsObject, Json, Writes}
 import scala.concurrent.ExecutionContext
 
 class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
-                                       val temporaryTracingStore: TemporaryTracingStore[SkeletonTracing])
+                                       val temporaryTracingStore: TemporaryTracingStore[SkeletonTracing],
+                                       val handledGroupCache: TemporaryStore[(String, String, Long), Unit])
                                       (implicit ec: ExecutionContext)
   extends TracingService[SkeletonTracing]
     with KeyValueStoreImplicits

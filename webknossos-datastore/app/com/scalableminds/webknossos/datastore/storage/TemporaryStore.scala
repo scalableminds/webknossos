@@ -17,6 +17,11 @@ class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
       map.get(id)
     }
 
+  def contains(id: K) =
+    map.synchronized(
+      map.contains(id)
+    )
+
   def findAll =
     map.synchronized {
       map.values.toList

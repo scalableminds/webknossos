@@ -302,7 +302,8 @@ export default class TextureBucketManager {
               fallbackBucket.zoomedAddress[3] <= maxAllowedZoomStep &&
               this.committedBucketSet.has(fallbackBucket)
             ) {
-              address = this.activeBucketToIndexMap.get(fallbackBucket) || -1;
+              address = this.activeBucketToIndexMap.get(fallbackBucket);
+              address = address != null ? address : -1;
               bucketZoomStep = fallbackBucket.zoomedAddress[3];
               abortFallbackLoop = true;
             } else {

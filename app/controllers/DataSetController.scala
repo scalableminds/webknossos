@@ -47,14 +47,17 @@ class DataSetController @Inject()(userService: UserService,
       (__ \ 'sortingKey).readNullable[Long] and
       (__ \ 'isPublic).read[Boolean]).tupled
 
-  def removeFromThumbnailCache(organizationName: String, dataSetName: String) = {
+  def removeFromThumbnailCache(organizationName: String, dataSetName: String) =
     sil.SecuredAction { implicit request =>
-      dataSetService.thumbnailCache.removeAllConditional(key => key.startsWith(s"thumbnail-$organizationName*$dataSetName"))
+      dataSetService.thumbnailCache.removeAllConditional(_.startsWith(s"thumbnail-$organizationName*$dataSetName"))
       Ok
     }
-  }
 
-  private def thumbnailCacheKey(organizationName: String, dataSetName: String, dataLayerName: String, width: Int, height: Int) =
+  private def thumbnailCacheKey(organizationName: String,
+                                dataSetName: String,
+                                dataLayerName: String,
+                                width: Int,
+                                height: Int) =
     s"thumbnail-$organizationName*$dataSetName*$dataLayerName-$width-$height"
 
   def thumbnail(organizationName: String, dataSetName: String, dataLayerName: String, w: Option[Int], h: Option[Int]) =

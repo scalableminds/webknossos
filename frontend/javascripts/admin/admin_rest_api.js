@@ -869,12 +869,13 @@ export async function getOrganizationForDataset(datasetName: string): Promise<st
 }
 
 export async function findDataPositionForLayer(
+  datastoreUrl: string,
   datasetId: APIDatasetId,
   layerName: string,
 ): Promise<?Vector3> {
   const { position } = await doWithToken(token =>
     Request.receiveJSON(
-      `/data/datasets/${datasetId.owningOrganization}/${
+      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
         datasetId.name
       }/layers/${layerName}/findData?token=${token}`,
     ),

@@ -7,8 +7,10 @@ import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingSelector, TracingService, UpdateAction, UpdateActionGroup}
 import com.scalableminds.util.tools.JsonHelper.boxFormat
 import com.scalableminds.util.tools.JsonHelper.optionFormat
+import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import net.liftweb.common.Failure
 import play.api.i18n.Messages
+import scala.concurrent.duration._
 import play.api.libs.json.{Json, Reads}
 import play.api.mvc.PlayBodyParsers
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
@@ -23,8 +25,6 @@ trait TracingController[T <: GeneratedMessage with Message[T],
   def webKnossosServer: TracingStoreWkRpcClient
 
   def accessTokenService: TracingStoreAccessTokenService
-
-  def freezeVersions = false
 
   implicit val tracingCompanion: GeneratedMessageCompanion[T] = tracingService.tracingCompanion
 
@@ -99,6 +99,7 @@ trait TracingController[T <: GeneratedMessage with Message[T],
     }
   }
 
+
   def update(tracingId: String) = Action.async(validateJson[List[UpdateActionGroup[T]]]) { implicit request =>
     log {
       accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId)) {
@@ -110,11 +111,18 @@ trait TracingController[T <: GeneratedMessage with Message[T],
           val userToken = request.getQueryString("token")
           webKnossosServer.reportTracingUpdates(tracingId, timestamps, latestStatistics, userToken).flatMap { _ =>
             updateGroups.foldLeft(currentVersion) { (previousVersion, updateGroup) =>
-              previousVersion.flatMap { version =>
-                if (version + 1 == updateGroup.version || freezeVersions) {
-                  tracingService.handleUpdateGroup(tracingId, updateGroup, version).map(_ => if (freezeVersions) version else updateGroup.version)
+              previousVersion.flatMap { prevVersion =>
+                if (prevVersion + 1 == updateGroup.version) {
+                  tracingService.handleUpdateGroup(tracingId, updateGroup, prevVersion)
+                    .map(_ => Fox.successful(tracingService.saveToHandledGroupCache(tracingId, updateGroup.version, updateGroup.requestId)))
+                    .map(_ => updateGroup.version)
                 } else {
-                  Failure(s"Incorrect version. Expected: ${version + 1}; Got: ${updateGroup.version}") ~> CONFLICT
+                  if ( updateGroup.requestId.exists(requestId => tracingService.handledGroupCacheContains(requestId, tracingId, updateGroup.version))) {
+                    //this update group was received and successfully saved in a previous request. silently ignore this duplicate request
+                    Fox.successful(updateGroup.version)
+                  } else {
+                    Failure(s"Incorrect version. Expected: ${prevVersion + 1}; Got: ${updateGroup.version}") ~> CONFLICT
+                  }
                 }
               }
             }
@@ -123,4 +131,5 @@ trait TracingController[T <: GeneratedMessage with Message[T],
       }
     }
   }
+
 }

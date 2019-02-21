@@ -283,6 +283,7 @@ export type SaveQueueEntry = {
   actions: Array<UpdateAction>,
   stats: ?SkeletonTracingStats,
   info: string,
+  requestId: string,
 };
 
 export type ProgressInfo = {

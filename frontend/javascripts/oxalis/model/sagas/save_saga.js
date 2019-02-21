@@ -41,6 +41,7 @@ import Request, { type RequestOptionsWithData } from "libs/request";
 import Toast from "libs/toast";
 import messages from "messages";
 import window, { alert, document, location } from "libs/window";
+import { getUid } from "libs/uid_generator";
 
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
 
@@ -162,10 +163,7 @@ function getRetryWaitTime(retryCount: number) {
   return Math.min(2 ** retryCount * SAVE_RETRY_WAITING_TIME, MAX_SAVE_RETRY_WAITING_TIME);
 }
 
-export function* sendRequestToServer(
-  tracingType: "skeleton" | "volume",
-  retryCount: number = 0,
-): Saga<void> {
+export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<void> {
   const fullSaveQueue = yield* select(state => state.save.queue[tracingType]);
   const saveQueue = sliceAppropriateBatchCount(fullSaveQueue);
 
@@ -176,35 +174,41 @@ export function* sendRequestToServer(
   const tracingStoreUrl = yield* select(state => state.tracing.tracingStore.url);
   compactedSaveQueue = addVersionNumbers(compactedSaveQueue, version);
 
-  try {
-    yield* call(
-      sendRequestWithToken,
-      `${tracingStoreUrl}/tracings/${type}/${tracingId}/update?token=`,
-      {
-        method: "POST",
-        headers: { "X-Date": `${Date.now()}` },
-        data: compactedSaveQueue,
-        compress: true,
-      },
-    );
-    yield* put(setVersionNumberAction(version + compactedSaveQueue.length, tracingType));
-    yield* put(setLastSaveTimestampAction(tracingType));
-    yield* put(shiftSaveQueueAction(saveQueue.length, tracingType));
-    yield* call(toggleErrorHighlighting, false);
-  } catch (error) {
-    yield* call(toggleErrorHighlighting, true);
-    if (error.status === 409) {
-      // HTTP Code 409 'conflict' for dirty state
-      window.onbeforeunload = null;
-      yield* call(alert, messages["save.failed_simultaneous_tracing"]);
-      location.reload();
+  compactedSaveQueue = addRequestIds(compactedSaveQueue, getUid());
+
+  let retryCount = 0;
+  while (true) {
+    try {
+      yield* call(
+        sendRequestWithToken,
+        `${tracingStoreUrl}/tracings/${type}/${tracingId}/update?token=`,
+        {
+          method: "POST",
+          headers: { "X-Date": `${Date.now()}` },
+          data: compactedSaveQueue,
+          compress: true,
+        },
+      );
+      yield* put(setVersionNumberAction(version + compactedSaveQueue.length, tracingType));
+      yield* put(setLastSaveTimestampAction(tracingType));
+      yield* put(shiftSaveQueueAction(saveQueue.length, tracingType));
+      yield* call(toggleErrorHighlighting, false);
       return;
+    } catch (error) {
+      yield* call(toggleErrorHighlighting, true);
+      if (error.status === 409) {
+        // HTTP Code 409 'conflict' for dirty state
+        window.onbeforeunload = null;
+        yield* call(alert, messages["save.failed_simultaneous_tracing"]);
+        location.reload();
+        return;
+      }
+      yield* race({
+        timeout: _call(delay, getRetryWaitTime(retryCount)),
+        forcePush: _take("SAVE_NOW"),
+      });
+      retryCount++;
     }
-    yield* race({
-      timeout: _call(delay, getRetryWaitTime(retryCount)),
-      forcePush: _take("SAVE_NOW"),
-    });
-    yield* call(sendRequestToServer, tracingType, retryCount + 1);
   }
 }
 
@@ -224,6 +228,13 @@ export function addVersionNumbers(
   lastVersion: number,
 ): Array<SaveQueueEntry> {
   return updateActionsBatches.map(batch => Object.assign({}, batch, { version: ++lastVersion }));
+}
+
+export function addRequestIds(
+  updateActionsBatches: Array<SaveQueueEntry>,
+  requestId: string,
+): Array<SaveQueueEntry> {
+  return updateActionsBatches.map(batch => Object.assign({}, batch, { requestId }));
 }
 
 function removeUnrelevantUpdateActions(updateActions: Array<UpdateAction>) {

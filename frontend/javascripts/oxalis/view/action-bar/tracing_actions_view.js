@@ -4,10 +4,14 @@ import { Button, Dropdown, Icon, Menu, Modal, Tooltip } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 
-import type { APIUser, APIAnnotationType } from "admin/api_flow_types";
+import type { APIAnnotationType, APIUser } from "admin/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
-import { copyAnnotationToUserAccount, finishAnnotation, downloadNml } from "admin/admin_rest_api";
-import { mapLayoutKeysToLanguage } from "oxalis/view/layouting/default_layout_configs";
+import {
+  type LayoutKeys,
+  mapLayoutKeysToLanguage,
+} from "oxalis/view/layouting/default_layout_configs";
+import { copyAnnotationToUserAccount, downloadNml, finishAnnotation } from "admin/admin_rest_api";
+import { location } from "libs/window";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import { undoAction, redoAction } from "oxalis/model/actions/save_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
@@ -20,8 +24,6 @@ import Store, { type OxalisState, type RestrictionsAndSettings, type Task } from
 import UserScriptsModalView from "oxalis/view/action-bar/user_scripts_modal_view";
 import api from "oxalis/api/internal_api";
 import messages from "messages";
-import { location } from "libs/window";
-import type { LayoutKeys } from "oxalis/view/layouting/default_layout_configs";
 
 type OwnProps = {|
   layoutMenu: React.Node,
@@ -112,7 +114,7 @@ export const LayoutMenu = (props: LayoutMenuProps) => {
       {...others}
       title={
         <span style={{ display: "inline-block", minWidth: 120 }}>
-          <Icon type="laptop" /> Layout
+          <Icon type="layout" /> Layout
           <Tooltip placement="top" title={layoutMissingHelpTitle}>
             <Icon
               type="info-circle-o"

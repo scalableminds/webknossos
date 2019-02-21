@@ -12,20 +12,24 @@ import net.liftweb.common.{Box, Failure, Full}
 
 object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
 
-  def exploreLayer(name: String, baseDir: Path, previous: Option[DataLayer])(implicit report: DataSourceImportReport[Path]): Box[DataLayer] = {
+  def exploreLayer(name: String, baseDir: Path, previous: Option[DataLayer])(
+      implicit report: DataSourceImportReport[Path]): Box[DataLayer] =
     (for {
       resolutions <- exploreResolutions(baseDir)
       (voxelType, wkwResolutions) <- extractHeaderParameters(resolutions)
       elementClass <- voxelTypeToElementClass(voxelType)
     } yield {
       val category = guessLayerCategory(name, elementClass)
-      val boundingBox = previous.map(_.boundingBox).orElse(guessBoundingBox(baseDir, wkwResolutions.headOption)).getOrElse(BoundingBox.empty)
+      val boundingBox = previous
+        .map(_.boundingBox)
+        .orElse(guessBoundingBox(baseDir, wkwResolutions.headOption))
+        .getOrElse(BoundingBox.empty)
       category match {
         case Category.segmentation =>
           val mappings = exploreMappings(baseDir)
           val largestSegmentId = previous match {
             case Some(l: SegmentationLayer) => l.largestSegmentId
-            case _ => SegmentationLayer.defaultLargestSegmentId
+            case _                          => SegmentationLayer.defaultLargestSegmentId
           }
           WKWSegmentationLayer(name, boundingBox, wkwResolutions, elementClass, mappings, largestSegmentId)
         case _ =>
@@ -34,13 +38,13 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
     }).passFailure { f =>
       report.error(layer => s"Error processing layer '$layer' - ${f.msg}")
     }
-  }
 
-  private def exploreResolutions(baseDir: Path)(implicit report: DataSourceImportReport[Path]): Box[List[(WKWHeader, Either[Int, Point3D])]] = {
+  private def exploreResolutions(baseDir: Path)(
+      implicit report: DataSourceImportReport[Path]): Box[List[(WKWHeader, Either[Int, Point3D])]] =
     PathUtils.listDirectories(baseDir, resolutionDirFilter).flatMap { resolutionDirs =>
       val resolutionHeaders = resolutionDirs.sortBy(resolutionDirSortingKey).map { resolutionDir =>
         val resolutionIntOrPoint3 = parseResolutionName(resolutionDir).get
-        WKWHeader(resolutionDir.resolve("header.wkw").toFile).map{ header =>
+        WKWHeader(resolutionDir.resolve("header.wkw").toFile).map { header =>
           (header, resolutionIntOrPoint3)
         }.passFailure { f =>
           report.error(section => s"Error processing resolution '$resolutionIntOrPoint3' - ${f.msg}")
@@ -49,21 +53,23 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
 
       resolutionHeaders.toSingleBox("Error reading resolutions")
     }
-  }
 
-  private def extractHeaderParameters(resolutions: List[(WKWHeader, Either[Int, Point3D])])(implicit report: DataSourceImportReport[Path]): Box[(VoxelType.Value, List[WKWResolution])] = {
+  private def extractHeaderParameters(resolutions: List[(WKWHeader, Either[Int, Point3D])])(
+      implicit report: DataSourceImportReport[Path]): Box[(VoxelType.Value, List[WKWResolution])] = {
     val headers = resolutions.map(_._1)
     val voxelTypes = headers.map(_.voxelType).toSet
     val bucketLengths = headers.map(_.numVoxelsPerBlockDimension).toSet
-    val wkwResolutions = resolutions.map{ resolution =>
+    val wkwResolutions = resolutions.map { resolution =>
       WKWResolution(resolution._2, resolution._1.numVoxelsPerBlockDimension * resolution._1.numBlocksPerCubeDimension)
     }
 
     if (voxelTypes.size == 1 && bucketLengths == Set(32)) {
       Full((voxelTypes.head, wkwResolutions))
     } else {
-      if (voxelTypes.size != 1) report.error(layer => s"Error processing layer '$layer' - all resolutions must have the same voxelType")
-      if (bucketLengths != Set(32)) report.error(layer => s"Error processing layer '$layer' - all resolutions must have a bucketLength of 32")
+      if (voxelTypes.size != 1)
+        report.error(layer => s"Error processing layer '$layer' - all resolutions must have the same voxelType")
+      if (bucketLengths != Set(32))
+        report.error(layer => s"Error processing layer '$layer' - all resolutions must have a bucketLength of 32")
       Failure("Error extracting parameters from header.wkw")
     }
   }
@@ -96,12 +102,12 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
       (yMin, yMax) = yDirs.foldRight((getIntFromFilePath(yHeadDir), 0))(minMaxValue)
       (xMin, xMax) = xFiles.foldRight((getIntFromFilePath(xFile), 0))(minMaxValue)
     } yield {
-      BoundingBox(Point3D(xMin * multiplierX,
-                          yMin * multiplierY,
-                          zMin * multiplierZ),
-                  xMax * multiplierX - xMin * multiplierX,
-                  yMax * multiplierY - yMin * multiplierY,
-                  zMax * multiplierZ - zMin * multiplierZ)
+      BoundingBox(
+        Point3D(xMin * multiplierX, yMin * multiplierY, zMin * multiplierZ),
+        xMax * multiplierX - xMin * multiplierX,
+        yMax * multiplierY - yMin * multiplierY,
+        zMax * multiplierZ - zMin * multiplierZ
+      )
     }
   }
 
@@ -109,11 +115,10 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
     path.getFileName.toString.matches(dimension + "\\d+.*")
   }
 
-  private def resolveHead(baseDir: Path, paths: List[Path]) = {
+  private def resolveHead(baseDir: Path, paths: List[Path]) =
     for {
       headDirPath <- paths.headOption
     } yield {
       baseDir.resolve(headDirPath.getFileName)
     }
-  }
 }

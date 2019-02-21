@@ -19,13 +19,12 @@ import play.api.mvc.Results._
 import scala.concurrent.{ExecutionContext, Future}
 
 trait Controller
-  extends InjectedController
+    extends InjectedController
     with ExtendedController
     with RemoteOriginHelpers
     with ValidationHelpers
     with LazyLogging
     with RequestLogging
-
 
 trait RemoteOriginHelpers {
 
@@ -38,7 +37,8 @@ trait RemoteOriginHelpers {
   def addHeadersToResult(result: Result)(implicit ec: ExecutionContext): Result =
     result.withHeaders("Access-Control-Allow-Origin" -> "*", "Access-Control-Max-Age" -> "600")
 
-  case class AllowRemoteOrigin[A](action: Action[A])(implicit val executionContext: ExecutionContext) extends Action[A] {
+  case class AllowRemoteOrigin[A](action: Action[A])(implicit val executionContext: ExecutionContext)
+      extends Action[A] {
 
     lazy val parser = action.parser
 
@@ -49,16 +49,21 @@ trait RemoteOriginHelpers {
 
 trait ValidationHelpers {
 
-  def validateJson[A : Reads](implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext) = bodyParsers.json.validate(
+  def validateJson[A: Reads](implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext) = bodyParsers.json.validate(
     _.validate[A].asEither.left.map(e => BadRequest(JsError.toJson(e)))
   )
 
-  def validateProto[A <: GeneratedMessage with Message[A]](implicit bodyParsers: PlayBodyParsers, companion: GeneratedMessageCompanion[A], ec: ExecutionContext) =
+  def validateProto[A <: GeneratedMessage with Message[A]](implicit bodyParsers: PlayBodyParsers,
+                                                           companion: GeneratedMessageCompanion[A],
+                                                           ec: ExecutionContext) =
     bodyParsers.raw.validate { raw =>
       if (raw.size < raw.memoryThreshold) {
-        Box(raw.asBytes()).flatMap(x => tryo(companion.parseFrom(x.toArray))).toRight[Result](BadRequest("invalid request body"))
+        Box(raw.asBytes())
+          .flatMap(x => tryo(companion.parseFrom(x.toArray)))
+          .toRight[Result](BadRequest("invalid request body"))
       } else {
-        tryo(companion.parseFrom(CodedInputStream.newInstance(new FileInputStream(raw.asFile)))).toRight[Result](BadRequest("invalid request body"))
+        tryo(companion.parseFrom(CodedInputStream.newInstance(new FileInputStream(raw.asFile))))
+          .toRight[Result](BadRequest("invalid request body"))
       }
     }
 }

@@ -10,20 +10,20 @@ abstract class Figure
 
 case class ConvexFigure(polygons: Seq[Polygon]) extends Figure {
 
-  def isInside(point: (Double, Double, Double), polygonOfPoint: Polygon = null) = {
-    !polygons.exists(polygon =>
-      polygon != polygonOfPoint &&
-        polygon.normalVector ° point - polygon.d > EPSILON)
-  }
+  def isInside(point: (Double, Double, Double), polygonOfPoint: Polygon = null) =
+    !polygons.exists(
+      polygon =>
+        polygon != polygonOfPoint &&
+          polygon.normalVector ° point - polygon.d > EPSILON)
 
   def calculateInnerPoints(): Seq[Tuple3[Int, Int, Int]] = {
     val vertices = this.polygons.flatMap(_.vertices)
 
-    val maxVector = vertices.foldLeft(vertices(0))((b, e) => Vector3D(
-      math.max(b.x, e.x), math.max(b.y, e.y), math.max(b.z, e.z)))
+    val maxVector =
+      vertices.foldLeft(vertices(0))((b, e) => Vector3D(math.max(b.x, e.x), math.max(b.y, e.y), math.max(b.z, e.z)))
 
-    val minVector = vertices.foldLeft(vertices(0))((b, e) => Vector3D(
-      math.min(b.x, e.x), math.min(b.y, e.y), math.min(b.z, e.z)))
+    val minVector =
+      vertices.foldLeft(vertices(0))((b, e) => Vector3D(math.min(b.x, e.x), math.min(b.y, e.y), math.min(b.z, e.z)))
 
     val innerPoints = ArrayBuilder.make[(Int, Int, Int)]()
     var zRangeBoundaries = ArrayBuffer[Int]()
@@ -73,7 +73,6 @@ case class ConvexFigure(polygons: Seq[Polygon]) extends Figure {
     innerPoints.result
   }
 
-  override def toString() = {
+  override def toString() =
     polygons.toString
-  }
 }

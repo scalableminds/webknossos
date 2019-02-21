@@ -18,6 +18,7 @@ object ZipIO {
     * @param stream output stream to write to
     */
   case class OpenZip(stream: ZipOutputStream) {
+
     /**
       * Add a file to the zip
       *
@@ -40,9 +41,10 @@ object ZipIO {
     `def`.setLevel(compressionLevel)
   }
 
-  def zip(sources: List[NamedStream], out: OutputStream)(implicit ec: ExecutionContext): Unit = zip(sources.toIterator, out)
+  def zip(sources: List[NamedStream], out: OutputStream)(implicit ec: ExecutionContext): Unit =
+    zip(sources.toIterator, out)
 
-  def zip(sources: Iterator[NamedStream], out: OutputStream)(implicit ec: ExecutionContext): Unit = {
+  def zip(sources: Iterator[NamedStream], out: OutputStream)(implicit ec: ExecutionContext): Unit =
     if (sources.nonEmpty) {
       val zip = startZip(out)
       zipIterator(sources, zip).onComplete { _ =>
@@ -50,20 +52,17 @@ object ZipIO {
       }
     } else
       out.close()
-  }
 
-  private def zipIterator(sources: Iterator[NamedStream], zip: OpenZip)(implicit ec: ExecutionContext): Future[Unit] = {
+  private def zipIterator(sources: Iterator[NamedStream], zip: OpenZip)(implicit ec: ExecutionContext): Future[Unit] =
     if (!sources.hasNext) {
       Future.successful(())
     } else {
       val s = sources.next
       zip.withFile(s.normalizedName)(s.writeTo).flatMap(_ => zipIterator(sources, zip))
     }
-  }
 
-  def startZip(out: OutputStream)(implicit ec: ExecutionContext) = {
+  def startZip(out: OutputStream)(implicit ec: ExecutionContext) =
     OpenZip(new ZipOutputStream(out))
-  }
 
   def gzip(source: InputStream, out: OutputStream)(implicit ec: ExecutionContext) = {
     val gout = new GZIPOutputStream(out, Deflater.BEST_COMPRESSION)
@@ -87,21 +86,21 @@ object ZipIO {
     gzipped
   }
 
-  def withUnziped[A](file: File, includeHiddenFiles: Boolean = false, truncateCommonPrefix: Boolean = false)
-                    (f: (Path, InputStream) => A)
-                    (implicit ec: ExecutionContext): Box[List[A]] = {
-    tryo(new java.util.zip.ZipFile(file)).flatMap(
-      withUnziped(_, includeHiddenFiles, truncateCommonPrefix, None)((name, is) => Full(f(name, is))))
-  }
+  def withUnziped[A](file: File, includeHiddenFiles: Boolean = false, truncateCommonPrefix: Boolean = false)(
+      f: (Path, InputStream) => A)(implicit ec: ExecutionContext): Box[List[A]] =
+    tryo(new java.util.zip.ZipFile(file))
+      .flatMap(withUnziped(_, includeHiddenFiles, truncateCommonPrefix, None)((name, is) => Full(f(name, is))))
 
-  def withUnziped[A](zip: ZipFile, includeHiddenFiles: Boolean, truncateCommonPrefix: Boolean, excludeFromPrefix: Option[List[String]])
-                    (f: (Path, InputStream) => Box[A])
-                    (implicit ec: ExecutionContext): Box[List[A]] = {
+  def withUnziped[A](zip: ZipFile,
+                     includeHiddenFiles: Boolean,
+                     truncateCommonPrefix: Boolean,
+                     excludeFromPrefix: Option[List[String]])(f: (Path, InputStream) => Box[A])(
+      implicit ec: ExecutionContext): Box[List[A]] = {
 
     def isFileHidden(e: ZipEntry): Boolean = new File(e.getName).isHidden || e.getName.startsWith("__MACOSX")
 
     def stripPathFrom(path: Path, string: String): Option[Path] = {
-      def stripPathHelper(i: Int): Option[Path] = {
+      def stripPathHelper(i: Int): Option[Path] =
         if (i >= path.getNameCount)
           None
         else if (path.subpath(i, i + 1).toString.contains(string)) //sample paths: "test/test/color_1", "segmentation"
@@ -111,7 +110,6 @@ object ZipIO {
             Some(path.subpath(0, i))
         else
           stripPathHelper(i + 1)
-      }
 
       stripPathHelper(0)
     }
@@ -125,7 +123,7 @@ object ZipIO {
       val strippedPaths = excludeFromPrefix.getOrElse(List()).flatMap(stripPathFrom(commonPrefixNotFixed, _))
       strippedPaths.headOption match {
         case Some(path) => path
-        case None => commonPrefixNotFixed
+        case None       => commonPrefixNotFixed
       }
     } else {
       Paths.get("")
@@ -163,13 +161,19 @@ object ZipIO {
     result
   }
 
-  def unzipToFolder(file: File, targetDir: Path, includeHiddenFiles: Boolean, truncateCommonPrefix: Boolean, excludeFromPrefix: Option[List[String]])
-                   (implicit ec: ExecutionContext): Box[List[Path]] = {
-    tryo(new java.util.zip.ZipFile(file)).flatMap(unzipToFolder(_, targetDir, includeHiddenFiles, truncateCommonPrefix, excludeFromPrefix))
-  }
+  def unzipToFolder(file: File,
+                    targetDir: Path,
+                    includeHiddenFiles: Boolean,
+                    truncateCommonPrefix: Boolean,
+                    excludeFromPrefix: Option[List[String]])(implicit ec: ExecutionContext): Box[List[Path]] =
+    tryo(new java.util.zip.ZipFile(file))
+      .flatMap(unzipToFolder(_, targetDir, includeHiddenFiles, truncateCommonPrefix, excludeFromPrefix))
 
-  def unzipToFolder(zip: ZipFile, targetDir: Path, includeHiddenFiles: Boolean, truncateCommonPrefix: Boolean, excludeFromPrefix: Option[List[String]])
-                   (implicit ec: ExecutionContext): Box[List[Path]] = {
+  def unzipToFolder(zip: ZipFile,
+                    targetDir: Path,
+                    includeHiddenFiles: Boolean,
+                    truncateCommonPrefix: Boolean,
+                    excludeFromPrefix: Option[List[String]])(implicit ec: ExecutionContext): Box[List[Path]] =
     withUnziped(zip, includeHiddenFiles, truncateCommonPrefix, excludeFromPrefix) { (name, in) =>
       val path = targetDir.resolve(name)
       if (path.getParent != null) {
@@ -187,5 +191,4 @@ object ZipIO {
         if (out != null) out.close()
       }
     }
-  }
 }

@@ -30,7 +30,7 @@ const lookUpBufferWidth = constants.LOOK_UP_TEXTURE_WIDTH;
 // If f >= 0, f denotes the index in the data texture where the bucket is stored.
 // If f == -1, the bucket is not yet committed
 // If f == -2, the bucket is not supposed to be rendered. Out of bounds.
-const channelCountForLookupBuffer = 2;
+export const channelCountForLookupBuffer = 2;
 
 export default class TextureBucketManager {
   dataTextures: Array<UpdatableTexture>;

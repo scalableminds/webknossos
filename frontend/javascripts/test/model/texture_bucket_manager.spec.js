@@ -1,8 +1,16 @@
 // @flow
-
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
+
+import * as THREE from "three";
 import mock from "mock-require";
 import test from "ava";
+
+const formatToChannelCount = new Map([
+  [THREE.LuminanceFormat, 1],
+  [THREE.LuminanceAlphaFormat, 2],
+  [THREE.RGBFormat, 3],
+  [THREE.RGBAFormat, 4],
+]);
 
 global.performance = {
   now: () => Date.now(),
@@ -14,6 +22,11 @@ mock(
     texture: Uint8Array;
     width: number;
     height: number;
+    channelCount: number;
+
+    constructor(_width, _height, format) {
+      this.channelCount = formatToChannelCount.get(format) || 0;
+    }
 
     update(src, x, y, _width, _height) {
       this.texture.set(src, y * this.width + x);
@@ -22,7 +35,7 @@ mock(
     setRenderer() {}
 
     setSize(width, height) {
-      this.texture = new Uint8Array(width * height);
+      this.texture = new Uint8Array(width * height * this.channelCount);
       this.width = width;
       this.height = height;
     }
@@ -37,7 +50,7 @@ const temporalBucketManagerMock = {
   addBucket: () => {},
 };
 
-const { default: TextureBucketManager } = mock.reRequire(
+const { default: TextureBucketManager, channelCountForLookupBuffer } = mock.reRequire(
   "oxalis/model/bucket_data_handling/texture_bucket_manager",
 );
 const { DataBucket } = mock.reRequire("oxalis/model/bucket_data_handling/bucket");
@@ -60,7 +73,8 @@ const setActiveBucketsAndWait = (tbm, activeBuckets, anchorPoint) => {
 
 const expectBucket = (t, tbm, bucket, expectedFirstByte) => {
   const bucketIdx = tbm._getBucketIndex(bucket);
-  const bucketLocation = tbm.getPackedBucketSize() * tbm.lookUpBuffer[bucketIdx];
+  const bucketLocation =
+    tbm.getPackedBucketSize() * tbm.lookUpBuffer[channelCountForLookupBuffer * bucketIdx];
   t.is(tbm.dataTextures[0].texture[bucketLocation], expectedFirstByte);
 };
 

@@ -13,14 +13,15 @@ import { Vector3Input } from "libs/vector_input";
 import {
   createMeshFromBufferAction,
   deleteMeshAction,
+  importIsosurfaceFromStlAction,
+  triggerIsosurfaceDownloadAction,
   updateLocalMeshMetaDataAction,
   updateRemoteMeshMetaDataAction,
 } from "oxalis/model/actions/annotation_actions";
+import { isIsosurfaceStl } from "oxalis/model/sagas/isosurface_saga";
 import { readFileAsArrayBuffer } from "libs/read_file";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
-import getSceneController from "oxalis/controller/scene_controller_provider";
-import parseStlBuffer from "libs/parse_stl_buffer";
 
 const ButtonGroup = Button.Group;
 
@@ -85,18 +86,15 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   async onStlUpload(info) {
     dispatch(setImportingMeshStateAction(true));
     const buffer = await readFileAsArrayBuffer(info.file);
-    const dataView = new DataView(buffer);
-    const isIsosurface = binaryIsosurfaceMarker.every(
-      (marker, index) => dataView.getUint8(index) === marker,
-    );
-    if (isIsosurface) {
-      const segmentationId = dataView.getUint32(3, true);
-      const geometry = await parseStlBuffer(buffer);
-      getSceneController().addIsosurfaceFromGeometry(geometry, segmentationId);
-      dispatch(setImportingMeshStateAction(false));
+
+    if (isIsosurfaceStl(buffer)) {
+      dispatch(importIsosurfaceFromStlAction(buffer));
     } else {
       dispatch(createMeshFromBufferAction(info.file.name, buffer));
     }
+  },
+  downloadIsosurface() {
+    dispatch(triggerIsosurfaceDownloadAction());
   },
 });
 
@@ -145,6 +143,9 @@ class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMeta
               Import
             </ButtonComponent>
           </Upload>
+          <ButtonComponent icon="download" onClick={this.props.downloadIsosurface}>
+            Download
+          </ButtonComponent>
         </ButtonGroup>
         {this.state.currentlyEditedMesh != null ? (
           <EditMeshModal

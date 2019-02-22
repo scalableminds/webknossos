@@ -1,21 +1,42 @@
 // @flow
+import { saveAs } from "file-saver";
+
 import type { APIDataset } from "admin/api_flow_types";
 import type { ChangeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import { ControlModeEnum, type Vector3 } from "oxalis/constants";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
-import { type Saga, _takeEvery, select, call, take } from "oxalis/model/sagas/effect-generators";
+import {
+  type Saga,
+  _takeEvery,
+  call,
+  put,
+  select,
+  take,
+} from "oxalis/model/sagas/effect-generators";
+import { binaryIsosurfaceMarker } from "oxalis/view/right-menu/meshes_view";
 import { computeIsosurface } from "admin/admin_rest_api";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
+import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
 import DataLayer from "oxalis/model/data_layer";
 import Model from "oxalis/model";
-import * as Utils from "libs/utils";
 import ThreeDMap from "libs/ThreeDMap";
+import * as Utils from "libs/utils";
+import exportToStl from "libs/stl_exporter";
 import getSceneController from "oxalis/controller/scene_controller_provider";
+import parseStlBuffer from "libs/parse_stl_buffer";
 import window from "libs/window";
 
 const isosurfacesMap: Map<number, ThreeDMap<boolean>> = new Map();
 const cubeSize = [256, 256, 256];
+
+export function isIsosurfaceStl(buffer: ArrayBuffer): boolean {
+  const dataView = new DataView(buffer);
+  const isIsosurface = binaryIsosurfaceMarker.every(
+    (marker, index) => dataView.getUint8(index) === marker,
+  );
+  return isIsosurface;
+}
 
 function getMapForSegment(segmentId: number): ThreeDMap<boolean> {
   const maybeMap = isosurfacesMap.get(segmentId);
@@ -171,8 +192,35 @@ function* maybeLoadIsosurface(
   }
 }
 
+function* downloadActiveIsosurfaceCell(): Saga<void> {
+  const sceneController = getSceneController();
+  const geometry = sceneController.getIsosurfaceGeometry(currentIsosurfaceCellId);
+
+  const stl = exportToStl(geometry);
+
+  // Encode isosurface and cell id property
+  binaryIsosurfaceMarker.forEach((marker, index) => {
+    stl.setUint8(index, marker);
+  });
+  stl.setUint32(3, currentIsosurfaceCellId, true);
+
+  const blob = new Blob([stl]);
+  yield* call(saveAs, blob, `isosurface-${currentIsosurfaceCellId}.stl`);
+}
+
+function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<void> {
+  const { buffer } = action;
+  const dataView = new DataView(buffer);
+  const segmentationId = dataView.getUint32(3, true);
+  const geometry = yield* call(parseStlBuffer, buffer);
+  getSceneController().addIsosurfaceFromGeometry(geometry, segmentationId);
+  yield* put(setImportingMeshStateAction(false));
+}
+
 export default function* isosurfaceSaga(): Saga<void> {
   yield* take("WK_READY");
   yield _takeEvery(FlycamActions, ensureSuitableIsosurface);
   yield _takeEvery("CHANGE_ACTIVE_ISOSURFACE_CELL", changeActiveIsosurfaceCell);
+  yield _takeEvery("TRIGGER_ISOSURFACE_DOWNLOAD", downloadActiveIsosurfaceCell);
+  yield _takeEvery("IMPORT_ISOSURFACE_FROM_STL", importIsosurfaceFromStl);
 }

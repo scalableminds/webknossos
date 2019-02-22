@@ -3,7 +3,6 @@
  * @flow
  */
 
-import { saveAs } from "file-saver";
 import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 import TWEEN from "tween.js";
@@ -41,7 +40,6 @@ import constants, {
   OrthoViews,
   type Vector3,
 } from "oxalis/constants";
-import exportToStl from "libs/stl_exporter";
 import window from "libs/window";
 
 import { convertCellIdToHSLA } from "../view/right-menu/mapping_info_view";
@@ -130,26 +128,17 @@ class SceneController {
 
     window.removeBucketMesh = (mesh: THREE.LineSegments) => this.rootNode.remove(mesh);
 
-    window.exportStl = () => {
-      const stl = exportToStl(this.isosurfacesGroup);
-      const cellId = 5;
-
-      binaryIsosurfaceMarker.forEach((marker, index) => {
-        stl.setUint8(index, marker);
-      });
-
-      stl.setUint32(3, cellId, true);
-
-      const blob = new Blob([stl]);
-      saveAs(blob, `isosurface-${cellId}.stl`);
-      return stl;
-    };
-
     window.clearIsosurfaces = () => {
       this.scene.remove(this.isosurfacesGroup);
       this.isosurfacesGroup = new THREE.Group();
       this.scene.add(this.isosurfacesGroup);
     };
+  }
+
+  getIsosurfaceGeometry(cellId: number): THREE.Geometry {
+    // todo: return proper subgroup wth
+
+    return this.isosurfacesGroup;
   }
 
   addSTL(meshMetaData: MeshMetaData, geometry: THREE.Geometry): void {

@@ -91,6 +91,7 @@ function* createMeshFromBuffer(action: CreateMeshFromBufferAction): Saga<void> {
   // Parse and persist STL in parallel
   const [geometry, meshMetaData] = yield _all([
     _call(parseStlBuffer, action.buffer),
+    _call(() => ({ position: [0, 0, 0], id: 3 })),
     _call(
       createMesh,
       {

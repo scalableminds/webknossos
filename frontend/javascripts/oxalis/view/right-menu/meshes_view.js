@@ -1,10 +1,11 @@
 // @flow
 
 import { Button, Upload, Checkbox, Icon, Input, Modal, Spin } from "antd";
+import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React from "react";
-import type { Dispatch } from "redux";
 
+import type { ExtractReturn } from "libs/type_helpers";
 import type { MeshMetaData, RemoteMeshMetaData } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
@@ -18,9 +19,12 @@ import {
 import { readFileAsArrayBuffer } from "libs/read_file";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
-import type { ExtractReturn } from "libs/type_helpers";
+import getSceneController from "oxalis/controller/scene_controller_provider";
+import parseStlBuffer from "libs/parse_stl_buffer";
 
 const ButtonGroup = Button.Group;
+
+export const binaryIsosurfaceMarker = [105, 115, 111];
 
 // This file defines the components EditMeshModal and MeshesView.
 
@@ -81,7 +85,18 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   async onStlUpload(info) {
     dispatch(setImportingMeshStateAction(true));
     const buffer = await readFileAsArrayBuffer(info.file);
-    dispatch(createMeshFromBufferAction(info.file.name, buffer));
+    const dataView = new DataView(buffer);
+    const isIsosurface = binaryIsosurfaceMarker.every(
+      (marker, index) => dataView.getUint8(index) === marker,
+    );
+    if (isIsosurface) {
+      const segmentationId = dataView.getUint32(3, true);
+      const geometry = await parseStlBuffer(buffer);
+      getSceneController().addIsosurfaceFromGeometry(geometry, segmentationId);
+      dispatch(setImportingMeshStateAction(false));
+    } else {
+      dispatch(createMeshFromBufferAction(info.file.name, buffer));
+    }
   },
 });
 

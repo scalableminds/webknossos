@@ -132,7 +132,7 @@ class ErrorHandling {
   notify(error: Error, optParams: Object = {}, escalateToSlack: boolean = false) {
     const actionLog = getActionLog();
     this.airbrake.notify({ error, params: { ...optParams, actionLog } });
-    if (escalateToSlack) {
+    if (false && escalateToSlack) {
       const webhookUrl =
         "https://hooks.slack.com/services/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";
       fetch(webhookUrl, {

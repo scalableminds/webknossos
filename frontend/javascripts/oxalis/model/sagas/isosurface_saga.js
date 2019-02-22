@@ -155,7 +155,7 @@ function* maybeLoadIsosurface(
   );
 
   const vertices = new Float32Array(responseBuffer);
-  getSceneController().addIsosurface(vertices, segmentId);
+  getSceneController().addIsosurfaceFromVertices(vertices, segmentId);
 
   for (const neighbor of neighbors) {
     const neighborPosition = getNeighborPosition(clippedPosition, neighbor, zoomStep, resolutions);

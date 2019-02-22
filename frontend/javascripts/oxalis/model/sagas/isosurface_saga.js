@@ -4,7 +4,7 @@ import { saveAs } from "file-saver";
 import type { APIDataset } from "admin/api_flow_types";
 import type { ChangeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import { ControlModeEnum, type Vector3 } from "oxalis/constants";
-import { FlycamActions } from "oxalis/model/actions/flycam_actions";
+import { type FlycamAction, FlycamActions } from "oxalis/model/actions/flycam_actions";
 import type { ImportIsosurfaceFromStlAction } from "oxalis/model/actions/annotation_actions";
 import {
   type Saga,
@@ -100,10 +100,13 @@ const MAXIMUM_BATCH_SIZE = 30;
 function* changeActiveIsosurfaceCell(action: ChangeActiveIsosurfaceCellAction): Saga<void> {
   currentIsosurfaceCellId = action.cellId;
 
-  yield* call(ensureSuitableIsosurface);
+  yield* call(ensureSuitableIsosurface, null, action.seedPosition);
 }
 
-function* ensureSuitableIsosurface(): Saga<void> {
+function* ensureSuitableIsosurface(
+  maybeFlycamAction: ?FlycamAction,
+  seedPosition?: Vector3,
+): Saga<void> {
   const segmentId = currentIsosurfaceCellId;
   if (segmentId === 0) {
     return;
@@ -120,7 +123,8 @@ function* ensureSuitableIsosurface(): Saga<void> {
   if (!layer) {
     return;
   }
-  const position = yield* select(state => getFlooredPosition(state.flycam));
+  const position =
+    seedPosition != null ? seedPosition : yield* select(state => getFlooredPosition(state.flycam));
   const { resolutions } = layer;
   const preferredZoomStep = window.__isosurfaceZoomStep != null ? window.__isosurfaceZoomStep : 1;
   const zoomStep = Math.min(preferredZoomStep, resolutions.length - 1);

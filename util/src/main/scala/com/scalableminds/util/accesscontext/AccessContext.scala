@@ -19,10 +19,9 @@ case object GlobalAccessContext extends DBAccessContext {
 }
 
 object DBAccessContext {
-  def apply(payload: Option[DBAccessContextPayload]) = {
+  def apply(payload: Option[DBAccessContextPayload]) =
     payload match {
       case Some(p) => AuthorizedAccessContext(p)
-      case _ => UnAuthorizedAccessContext
+      case _       => UnAuthorizedAccessContext
     }
-  }
 }

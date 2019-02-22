@@ -869,6 +869,21 @@ export async function getOrganizationForDataset(datasetName: string): Promise<st
   return organizationName;
 }
 
+export async function findDataPositionForLayer(
+  datastoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+): Promise<?Vector3> {
+  const { position } = await doWithToken(token =>
+    Request.receiveJSON(
+      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/findData?token=${token}`,
+    ),
+  );
+  return position;
+}
+
 export async function getMappingsForDatasetLayer(
   datastoreUrl: string,
   datasetId: APIDatasetId,
@@ -999,12 +1014,12 @@ export async function getOrganizationNames(): Promise<Array<string>> {
 
 // ### BuildInfo webknossos
 export function getBuildInfo(): Promise<APIBuildInfo> {
-  return Request.receiveJSON("/api/buildinfo");
+  return Request.receiveJSON("/api/buildinfo", { doNotInvestigate: true });
 }
 
 // ### BuildInfo datastore
 export function getDataStoreBuildInfo(dataStoreUrl: string): Promise<APIBuildInfo> {
-  return Request.receiveJSON(`${dataStoreUrl}/api/buildinfo`);
+  return Request.receiveJSON(`${dataStoreUrl}/api/buildinfo`, { doNotInvestigate: true });
 }
 
 // ### Feature Selection

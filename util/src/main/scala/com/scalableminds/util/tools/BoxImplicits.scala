@@ -9,12 +9,12 @@ trait BoxImplicits {
 
   implicit def box2Option[T](in: Box[T]): Option[T] = in match {
     case Full(t) => Some(t)
-    case _ => None
+    case _       => None
   }
 
   implicit def jsResult2Box[T](result: JsResult[T]): Box[T] = result match {
     case JsSuccess(value, _) => Full(value)
-    case JsError(e) => Failure(s"Invalid json: $e")
+    case JsError(e)          => Failure(s"Invalid json: $e")
   }
 }
 

@@ -7,15 +7,12 @@ object InsecureSSLSocketFactory {
   lazy val default = HttpsURLConnection.getDefaultSSLSocketFactory()
   lazy val socketFactory = {
     val trustAllCerts = Array[TrustManager](new X509TrustManager() {
-      override def checkClientTrusted(chain: Array[X509Certificate], authType: String) {
-      }
+      override def checkClientTrusted(chain: Array[X509Certificate], authType: String) {}
 
-      override def checkServerTrusted(chain: Array[X509Certificate], authType: String) {
-      }
+      override def checkServerTrusted(chain: Array[X509Certificate], authType: String) {}
 
-      override def getAcceptedIssuers(): Array[X509Certificate] = {
+      override def getAcceptedIssuers(): Array[X509Certificate] =
         return null;
-      }
     })
 
     // Install the all-trusting trust manager

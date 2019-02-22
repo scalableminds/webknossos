@@ -24,14 +24,13 @@ trait PathUtils extends LazyLogging {
   def parent(p: Path): Option[Path] =
     Option(p.getParent)
 
-  def createFile(p: Path, failIfExists: Boolean): Boolean = {
+  def createFile(p: Path, failIfExists: Boolean): Boolean =
     try {
       Files.createFile(p)
       true
     } catch {
       case e: FileAlreadyExistsException => !failIfExists
     }
-  }
 
   def isTheSame(p1: Path, p2: Path): Boolean =
     p1.toAbsolutePath.compareTo(p2.toAbsolutePath) == 0
@@ -48,7 +47,8 @@ trait PathUtils extends LazyLogging {
     else
       None
 
-  def listDirectoryEntries[A](directory: Path, maxDepth: Int, dropCount: Int, filters: (Path => Boolean)*)(f: Iterator[Path] => Box[A]): Box[A] = {
+  def listDirectoryEntries[A](directory: Path, maxDepth: Int, dropCount: Int, filters: (Path => Boolean)*)(
+      f: Iterator[Path] => Box[A]): Box[A] =
     try {
       val directoryStream = Files.walk(directory, maxDepth, FileVisitOption.FOLLOW_LINKS)
       val r = f(directoryStream.iterator().asScala.drop(dropCount).filter(d => filters.forall(_(d))))
@@ -64,11 +64,11 @@ trait PathUtils extends LazyLogging {
         logger.error(errorMsg)
         Failure(errorMsg)
       case ex: Exception =>
-        val errorMsg = s"Error: ${ex.getClass.getCanonicalName} - ${ex.getMessage}. Directory: ${directory.toAbsolutePath}"
+        val errorMsg =
+          s"Error: ${ex.getClass.getCanonicalName} - ${ex.getMessage}. Directory: ${directory.toAbsolutePath}"
         logger.error(ex.getClass.getCanonicalName)
         Failure(errorMsg)
     }
-  }
 
   def listDirectories(directory: Path, filters: (Path => Boolean)*): Box[List[Path]] =
     listDirectoryEntries(directory, 1, 1, filters :+ directoryFilter _: _*)(r => Full(r.toList))
@@ -100,7 +100,8 @@ trait PathUtils extends LazyLogging {
       Full(r)
     } catch {
       case ex: Exception =>
-        val errorMsg = s"Error: ${ex.getClass.getCanonicalName} - ${ex.getMessage}. Directory: ${directory.toAbsolutePath}"
+        val errorMsg =
+          s"Error: ${ex.getClass.getCanonicalName} - ${ex.getMessage}. Directory: ${directory.toAbsolutePath}"
         logger.error(ex.getClass.getCanonicalName)
         Failure(errorMsg)
     }

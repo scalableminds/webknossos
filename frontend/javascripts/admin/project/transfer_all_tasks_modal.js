@@ -85,13 +85,16 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
   renderTableContent() {
     const activeUsersWithKey = this.state.usersWithActiveTasks.map(activeUser => ({
       email: activeUser.email,
+      firstName: activeUser.firstName,
+      lastName: activeUser.lastName,
       activeTasks: activeUser.activeTasks,
       key: activeUser.email,
     }));
     const columns = [
       {
-        title: "User Email",
+        title: "User",
         dataIndex: "email",
+        render: (email, record) => `${record.lastName}, ${record.firstName} (${email})`,
         key: "email",
       },
       {

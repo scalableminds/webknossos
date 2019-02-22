@@ -36,10 +36,10 @@ case class NamedEnumeratorStream(name: String, enumerator: Enumerator[Array[Byte
   }
 }
 
-case class NamedFileStream(name: String, file: File) extends NamedStream{
-  def stream(): InputStream =  new FileInputStream(file)
+case class NamedFileStream(name: String, file: File) extends NamedStream {
+  def stream(): InputStream = new FileInputStream(file)
 
-  def writeTo(out: OutputStream)(implicit ec: ExecutionContext): Future[Unit] = {
+  def writeTo(out: OutputStream)(implicit ec: ExecutionContext): Future[Unit] =
     Future {
       blocking {
         val in = stream()
@@ -53,16 +53,14 @@ case class NamedFileStream(name: String, file: File) extends NamedStream{
         in.close()
       }
     }
-  }
 }
 
 object FileIO {
 
-  def printToFile(s: String)(op: java.io.PrintWriter => Unit): Box[Unit] = {
+  def printToFile(s: String)(op: java.io.PrintWriter => Unit): Box[Unit] =
     printToFile(new File(s))(op)
-  }
 
-  def printToFile(f: java.io.File)(op: java.io.PrintWriter => Unit): Box[Unit] = {
+  def printToFile(f: java.io.File)(op: java.io.PrintWriter => Unit): Box[Unit] =
     try {
       val p = new java.io.PrintWriter(f)
       try {
@@ -78,7 +76,6 @@ object FileIO {
       case ex: Exception =>
         Failure(ex.getMessage)
     }
-  }
 
   def createTempFile(data: String, fileType: String = ".tmp"): File = {
     val temp = File.createTempFile("temp", System.nanoTime().toString + fileType)
@@ -91,12 +88,11 @@ object FileIO {
     temp
   }
 
-  def readFileToByteArray(file: File): Box[Array[Byte]] = {
+  def readFileToByteArray(file: File): Box[Array[Byte]] =
     tryo {
       val is = new FileInputStream(file)
       val result = IOUtils.toByteArray(is)
       is.close()
       result
     }
-  }
 }

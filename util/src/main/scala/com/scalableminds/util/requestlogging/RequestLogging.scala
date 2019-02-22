@@ -6,15 +6,15 @@ import play.api.mvc.{Request, Result}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-
 trait AbstractRequestLogging extends LazyLogging {
 
   def logRequestFormatted(request: Request[_], result: Result, userMail: Option[String] = None) = {
     val emailMsg = userMail.map(m => s" for $m").getOrElse("")
     result.body match {
       case HttpEntity.Strict(byteString, contentType) if result.header.status != 200 =>
-        logger.warn(s"Answering ${result.header.status} at ${request.uri}$emailMsg – ${byteString.take(20000).decodeString("utf-8")}")
-      case _=> ()
+        logger.warn(
+          s"Answering ${result.header.status} at ${request.uri}$emailMsg – ${byteString.take(20000).decodeString("utf-8")}")
+      case _ => ()
     }
   }
 

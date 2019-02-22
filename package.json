@@ -105,6 +105,7 @@
     "flow-check": "node_modules/.bin/flow check",
     "lint": "node_modules/.bin/eslint --cache --quiet frontend/javascripts/ tools/",
     "pretty": "node_modules/.bin/prettier --write --config .prettierrc \"frontend/javascripts/**/*.js\" \"tools/**/*.js\"",
+    "pretty-backend": "sbt \";scalafmt; util/scalafmt; webknossosTracingstore/scalafmt; webknossosDatastore/scalafmt\"",
     "am-i-pretty": "node_modules/.bin/prettier --list-different --config .prettierrc \"frontend/javascripts/**/*.js\" \"tools/**/*.js\"",
     "lint-fix": "node_modules/.bin/eslint --cache --fix --quiet frontend/javascripts/ tools/",
     "flow-coverage": "node_modules/flow-coverage-report/bin/flow-coverage-report.js -i \"./frontend/javascripts/**/*.js\" -x \"./frontend/javascripts/test/**/*.js\" -t html -t text",

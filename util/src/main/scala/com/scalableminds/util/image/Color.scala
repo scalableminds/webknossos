@@ -23,7 +23,7 @@ object Color {
 
   implicit object ColorFormat extends Format[Color] {
 
-    def writes(c: Color) = if (c.a == 1)  Json.arr(c.r, c.g, c.b) else Json.arr(c.r, c.g, c.b, c.a)
+    def writes(c: Color) = if (c.a == 1) Json.arr(c.r, c.g, c.b) else Json.arr(c.r, c.g, c.b, c.a)
 
     def reads(json: JsValue) = json match {
       case JsArray(ts) =>

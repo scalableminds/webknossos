@@ -10,7 +10,6 @@ import _ from "lodash";
 
 import type { MeshMetaData } from "admin/api_flow_types";
 import { V3 } from "libs/mjs";
-import { binaryIsosurfaceMarker } from "oxalis/view/right-menu/meshes_view";
 import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import {
   getPosition,
@@ -61,8 +60,12 @@ class SceneController {
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
   rootGroup: THREE.Object3D;
-  stlMeshes: { [key: string]: THREE.Mesh };
-  isosurfacesGroup: THREE.Group;
+  stlMeshes: { [key: string]: THREE.Mesh } = {};
+
+  // isosurfacesRootGroup holds lights and one group per segmentation id.
+  // Each group can hold multiple meshes.
+  isosurfacesRootGroup: THREE.Group;
+  isosurfacesGroupsPerSegmentationId: { [key: number]: THREE.Group } = {};
 
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   // element depending on the provided flycam.
@@ -75,7 +78,6 @@ class SceneController {
       [OrthoViews.PLANE_XZ]: true,
     };
     this.planeShift = [0, 0, 0];
-    this.stlMeshes = {};
   }
 
   initialize() {
@@ -92,13 +94,13 @@ class SceneController {
     // scene.scale does not have an effect.
     this.rootGroup = new THREE.Object3D();
     this.rootGroup.add(this.getRootNode());
-    this.isosurfacesGroup = new THREE.Group();
+    this.isosurfacesRootGroup = new THREE.Group();
 
     // The dimension(s) with the highest resolution will not be distorted
     this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.dataSource.scale));
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.rootGroup);
-    this.scene.add(this.isosurfacesGroup);
+    this.scene.add(this.isosurfacesRootGroup);
 
     this.rootGroup.add(new THREE.DirectionalLight());
     this.addLights();
@@ -127,18 +129,10 @@ class SceneController {
     };
 
     window.removeBucketMesh = (mesh: THREE.LineSegments) => this.rootNode.remove(mesh);
-
-    window.clearIsosurfaces = () => {
-      this.scene.remove(this.isosurfacesGroup);
-      this.isosurfacesGroup = new THREE.Group();
-      this.scene.add(this.isosurfacesGroup);
-    };
   }
 
   getIsosurfaceGeometry(cellId: number): THREE.Geometry {
-    // todo: return proper subgroup wth
-
-    return this.isosurfacesGroup;
+    return this.isosurfacesGroupsPerSegmentationId[cellId];
   }
 
   addSTL(meshMetaData: MeshMetaData, geometry: THREE.Geometry): void {
@@ -195,7 +189,12 @@ class SceneController {
       })
       .start();
 
-    this.isosurfacesGroup.add(mesh);
+    if (this.isosurfacesGroupsPerSegmentationId[segmentationId] == null) {
+      const newGroup = new THREE.Group();
+      this.isosurfacesGroupsPerSegmentationId[segmentationId] = newGroup;
+      this.isosurfacesRootGroup.add(newGroup);
+    }
+    this.isosurfacesGroupsPerSegmentationId[segmentationId].add(mesh);
   }
 
   addLights(): void {
@@ -204,7 +203,7 @@ class SceneController {
     // so that the light moves along the cam.
 
     const ambientLight = new THREE.AmbientLight(0x404040, 15); // soft white light
-    this.isosurfacesGroup.add(ambientLight);
+    this.isosurfacesRootGroup.add(ambientLight);
   }
 
   removeSTL(id: string): void {
@@ -299,7 +298,7 @@ class SceneController {
     this.userBoundingBox.updateForCam(id);
     Utils.__guard__(this.taskBoundingBox, x => x.updateForCam(id));
 
-    this.isosurfacesGroup.visible = id === OrthoViews.TDView;
+    this.isosurfacesRootGroup.visible = id === OrthoViews.TDView;
     if (id !== OrthoViews.TDView) {
       let ind;
       for (const planeId of OrthoViewValuesWithoutTDView) {

@@ -5,6 +5,7 @@ import type { APIDataset } from "admin/api_flow_types";
 import type { ChangeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import { ControlModeEnum, type Vector3 } from "oxalis/constants";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
+import type { ImportIsosurfaceFromStlAction } from "oxalis/model/actions/annotation_actions";
 import {
   type Saga,
   _takeEvery,

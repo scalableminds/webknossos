@@ -13,6 +13,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 - Added the possibility to disable that the current layout is saved automatically when changing it. Instead, the layout can be saved explicitly. [#3620](https://github.com/scalableminds/webknossos/pull/3620)
 - Enabled the arbitrary modes when only viewing a dataset. [#3644](https://github.com/scalableminds/webknossos/pull/3644)
+- Added the possibility to use flight and oblique mode when viewing a dataset. [#3644](https://github.com/scalableminds/webknossos/pull/3644)
 
 ### Changed
 

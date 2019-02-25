@@ -65,6 +65,15 @@ export type CreateMeshFromBufferAction = {
   name: string,
 };
 
+export type TriggerIsosurfaceDownloadAction = {
+  type: "TRIGGER_ISOSURFACE_DOWNLOAD",
+};
+
+export type ImportIsosurfaceFromStlAction = {
+  type: "IMPORT_ISOSURFACE_FROM_STL",
+  buffer: ArrayBuffer,
+};
+
 export type AnnotationActionTypes =
   | InitializeAnnotation
   | SetAnnotationNameAction
@@ -76,7 +85,9 @@ export type AnnotationActionTypes =
   | AddMeshMetadataAction
   | DeleteMeshAction
   | CreateMeshFromBufferAction
-  | UpdateLocalMeshMetaDataAction;
+  | UpdateLocalMeshMetaDataAction
+  | TriggerIsosurfaceDownloadAction
+  | ImportIsosurfaceFromStlAction;
 
 export const initializeAnnotationAction = (annotation: APIAnnotation): InitializeAnnotation => ({
   type: "INITIALIZE_ANNOTATION",
@@ -151,4 +162,15 @@ export const createMeshFromBufferAction = (
   type: "CREATE_MESH_FROM_BUFFER",
   buffer,
   name,
+});
+
+export const triggerIsosurfaceDownloadAction = (): TriggerIsosurfaceDownloadAction => ({
+  type: "TRIGGER_ISOSURFACE_DOWNLOAD",
+});
+
+export const importIsosurfaceFromStlAction = (
+  buffer: ArrayBuffer,
+): ImportIsosurfaceFromStlAction => ({
+  type: "IMPORT_ISOSURFACE_FROM_STL",
+  buffer,
 });

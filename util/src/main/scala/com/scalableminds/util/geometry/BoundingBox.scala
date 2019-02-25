@@ -8,8 +8,8 @@ case class BoundingBox(topLeft: Point3D, width: Int, height: Int, depth: Int) {
 
   def intersects(other: BoundingBox): Boolean =
     math.max(topLeft.x, other.topLeft.x) < math.min(bottomRight.x, other.bottomRight.x) &&
-    math.max(topLeft.y, other.topLeft.y) < math.min(bottomRight.y, other.bottomRight.y) &&
-    math.max(topLeft.z, other.topLeft.z) < math.min(bottomRight.z, other.bottomRight.z)
+      math.max(topLeft.y, other.topLeft.y) < math.min(bottomRight.y, other.bottomRight.y) &&
+      math.max(topLeft.z, other.topLeft.z) < math.min(bottomRight.z, other.bottomRight.z)
 
   def combineWith(other: BoundingBox): BoundingBox = {
     val x = math.min(other.topLeft.x, topLeft.x)
@@ -46,46 +46,44 @@ object BoundingBox {
     BoundingBox(Point3D(0, 0, 0), 0, 0, 0)
 
   def toForm(b: BoundingBox): Some[String] =
-    Some("%d, %d, %d, %d, %d, %d".format(
-                                          b.topLeft.x,
-                                          b.topLeft.y,
-                                          b.topLeft.z,
-                                          b.topLeft.x + b.width,
-                                          b.topLeft.y + b.height,
-                                          b.topLeft.z + b.depth
-                                        ))
+    Some(
+      "%d, %d, %d, %d, %d, %d".format(
+        b.topLeft.x,
+        b.topLeft.y,
+        b.topLeft.z,
+        b.topLeft.x + b.width,
+        b.topLeft.y + b.height,
+        b.topLeft.z + b.depth
+      ))
 
-  def fromForm(s: String): Box[BoundingBox] = {
+  def fromForm(s: String): Box[BoundingBox] =
     s match {
       case formRx(minX, minY, minZ, maxX, maxY, maxZ) =>
         createFrom(
-                    Point3D(Integer.parseInt(minX), Integer.parseInt(minY), Integer.parseInt(minZ)),
-                    Point3D(Integer.parseInt(maxX), Integer.parseInt(maxY), Integer.parseInt(maxZ))
-                  )
+          Point3D(Integer.parseInt(minX), Integer.parseInt(minY), Integer.parseInt(minZ)),
+          Point3D(Integer.parseInt(maxX), Integer.parseInt(maxY), Integer.parseInt(maxZ))
+        )
       case _ =>
         null
     }
-  }
 
-  def combine(bbs: List[BoundingBox]): BoundingBox = {
+  def combine(bbs: List[BoundingBox]): BoundingBox =
     bbs match {
       case head :: tail =>
         tail.foldLeft(head)(_ combineWith _)
       case _ =>
         BoundingBox(Point3D(0, 0, 0), 0, 0, 0)
     }
-  }
 
-  def createFrom(bbox: List[List[Int]]): Box[BoundingBox] = {
+  def createFrom(bbox: List[List[Int]]): Box[BoundingBox] =
     if (bbox.size < 3 || bbox(0).size < 2 || bbox(1).size < 2 || bbox(2).size < 2)
       Empty
     else
-      Full(BoundingBox(
-                        Point3D(bbox(0)(0), bbox(1)(0), bbox(2)(0)),
-                        bbox(0)(1) - bbox(0)(0),
-                        bbox(1)(1) - bbox(1)(0),
-                        bbox(2)(1) - bbox(2)(0)))
-  }
+      Full(
+        BoundingBox(Point3D(bbox(0)(0), bbox(1)(0), bbox(2)(0)),
+                    bbox(0)(1) - bbox(0)(0),
+                    bbox(1)(1) - bbox(1)(0),
+                    bbox(2)(1) - bbox(2)(0)))
 
   def createFrom(topLeft: Point3D, bottomRight: Point3D): Box[BoundingBox] =
     if (topLeft <= bottomRight)

@@ -13,29 +13,29 @@ trait AbstractDataRequest {
 }
 
 case class DataRequest(
-                        position: VoxelPosition,
-                        width: Int,
-                        height: Int,
-                        depth: Int,
-                        settings: DataServiceRequestSettings = DataServiceRequestSettings.default
-                      ) extends AbstractDataRequest {
+    position: VoxelPosition,
+    width: Int,
+    height: Int,
+    depth: Int,
+    settings: DataServiceRequestSettings = DataServiceRequestSettings.default
+) extends AbstractDataRequest {
 
   def cuboid(dataLayer: DataLayer) = Cuboid(position, width, height, depth)
 }
 
 case class WebKnossosDataRequest(
-                                  position: Point3D,
-                                  zoomStep: Int,
-                                  cubeSize: Int,
-                                  fourBit: Option[Boolean],
-                                  version: Option[Long]
-                                ) extends AbstractDataRequest {
+    position: Point3D,
+    zoomStep: Int,
+    cubeSize: Int,
+    fourBit: Option[Boolean],
+    version: Option[Long]
+) extends AbstractDataRequest {
 
-  def cuboid(dataLayer: DataLayer) = Cuboid(
-    new VoxelPosition(position.x, position.y, position.z, dataLayer.lookUpResolution(zoomStep)),
-    cubeSize,
-    cubeSize,
-    cubeSize)
+  def cuboid(dataLayer: DataLayer) =
+    Cuboid(new VoxelPosition(position.x, position.y, position.z, dataLayer.lookUpResolution(zoomStep)),
+           cubeSize,
+           cubeSize,
+           cubeSize)
 
   def settings = DataServiceRequestSettings(halfByte = fourBit.getOrElse(false), version)
 }
@@ -45,18 +45,18 @@ object WebKnossosDataRequest {
 }
 
 case class WebKnossosIsosurfaceRequest(
-                                        position: Point3D,
-                                        zoomStep: Int,
-                                        cubeSize: Point3D,
-                                        segmentId: Long,
-                                        voxelDimensions: Vector3I,
-                                        mapping: Option[String] = None
-                                      ) {
-  def cuboid(dataLayer: DataLayer) = Cuboid(
-    new VoxelPosition(position.x, position.y, position.z, dataLayer.lookUpResolution(zoomStep)),
-    cubeSize.x,
-    cubeSize.y,
-    cubeSize.z)
+    position: Point3D,
+    zoomStep: Int,
+    cubeSize: Point3D,
+    segmentId: Long,
+    voxelDimensions: Vector3I,
+    mapping: Option[String] = None
+) {
+  def cuboid(dataLayer: DataLayer) =
+    Cuboid(new VoxelPosition(position.x, position.y, position.z, dataLayer.lookUpResolution(zoomStep)),
+           cubeSize.x,
+           cubeSize.y,
+           cubeSize.z)
 }
 
 object WebKnossosIsosurfaceRequest {

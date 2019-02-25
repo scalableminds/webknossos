@@ -27,9 +27,13 @@ trait DataSourceImporter {
 
   def dataFileExtension: String
 
-  protected def exploreLayer(name: String, baseDir: Path, previous: Option[DataLayer])(implicit report: DataSourceImportReport[Path]): Box[DataLayer]
+  protected def exploreLayer(name: String, baseDir: Path, previous: Option[DataLayer])(
+      implicit report: DataSourceImportReport[Path]): Box[DataLayer]
 
-  def exploreDataSource(id: DataSourceId, baseDir: Path, previous: Option[DataSource], report: DataSourceImportReport[Path]): Box[DataSource] = {
+  def exploreDataSource(id: DataSourceId,
+                        baseDir: Path,
+                        previous: Option[DataSource],
+                        report: DataSourceImportReport[Path]): Box[DataSource] =
     PathUtils.listDirectories(baseDir).map { layerDirs =>
       val layers = layerDirs.flatMap { layerDir =>
         val layerName = layerDir.getFileName.toString
@@ -38,9 +42,9 @@ trait DataSourceImporter {
       }
       GenericDataSource(id, layers, previous.map(_.scale).getOrElse(Scale.default))
     }
-  }
 
-  protected def guessLayerCategory(layerName: String, elementClass: ElementClass.Value)(implicit report: DataSourceImportReport[Path]): Category.Value = {
+  protected def guessLayerCategory(layerName: String, elementClass: ElementClass.Value)(
+      implicit report: DataSourceImportReport[Path]): Category.Value = {
     val ColorRx = ".*color.*".r
     val MaskRx = ".*mask.*".r
     val SegmentationRx = ".*segmentation.*".r
@@ -59,27 +63,25 @@ trait DataSourceImporter {
     }
   }
 
-  protected def parseResolutionName(path: Path): Option[Either[Int, Point3D]] = {
+  protected def parseResolutionName(path: Path): Option[Either[Int, Point3D]] =
     path.getFileName.toString.toIntOpt match {
       case Some(resolutionInt) => Some(Left(resolutionInt))
       case None => {
         val pattern = """(\d+)-(\d+)-(\d+)""".r
         path.getFileName.toString match {
           case pattern(x, y, z) => Some(Right(Point3D(x.toInt, y.toInt, z.toInt)))
-          case _ => None
+          case _                => None
         }
       }
     }
-  }
 
   protected def resolutionDirFilter(path: Path): Boolean = parseResolutionName(path).isDefined
 
-  protected def resolutionDirSortingKey(path: Path) = {
+  protected def resolutionDirSortingKey(path: Path) =
     parseResolutionName(path).get match {
-      case Left(int) => int
+      case Left(int)    => int
       case Right(point) => point.maxDim
     }
-  }
 
   protected def exploreMappings(baseDir: Path): Set[String] = MappingProvider.exploreMappings(baseDir)
 

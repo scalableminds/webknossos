@@ -29,11 +29,13 @@ object MappingProvider {
 
   val mappingFileExtension = "json"
 
-  def exploreMappings(layerDir: Path): Set[String] = {
-    PathUtils.listFiles(
-      layerDir.resolve(MappingProvider.mappingsDir),
-      PathUtils.fileExtensionFilter(MappingProvider.mappingFileExtension)).map {
-      paths => paths.map(path => FilenameUtils.removeExtension(path.getFileName.toString))
-    }.getOrElse(Nil).toSet
-  }
+  def exploreMappings(layerDir: Path): Set[String] =
+    PathUtils
+      .listFiles(layerDir.resolve(MappingProvider.mappingsDir),
+                 PathUtils.fileExtensionFilter(MappingProvider.mappingFileExtension))
+      .map { paths =>
+        paths.map(path => FilenameUtils.removeExtension(path.getFileName.toString))
+      }
+      .getOrElse(Nil)
+      .toSet
 }

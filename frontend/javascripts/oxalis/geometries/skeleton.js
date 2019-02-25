@@ -368,9 +368,9 @@ class Skeleton {
       edges.geometry.computeBoundingSphere();
     }
 
-    if (skeletonTracing.activeNodeId !== this.prevTracing.activeNodeId) {
-      this.startNodeHighlightAnimation();
-    }
+    // if (skeletonTracing.activeNodeId !== this.prevTracing.activeNodeId) {
+    //   this.startNodeHighlightAnimation();
+    // }
 
     // Uniforms
     const { particleSize, overrideNodeRadius } = state.userConfiguration;

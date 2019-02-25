@@ -285,7 +285,8 @@ void main()
       #ifdef GL_OES_standard_derivatives
         delta = fwidth(r);
         alphaOuter = 1.0 - smoothstep(0.0, delta, abs(1.0 - delta - r));
-        alphaInner = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r / (v_innerPointSize / v_outerPointSize));
+        float relativeInnerNodeDiameter = v_innerPointSize / v_outerPointSize;
+        alphaInner = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, 2.0 * r / relativeInnerNodeDiameter);
         alphaOuter = max(0.0, alphaOuter - alphaInner);
       #endif
 

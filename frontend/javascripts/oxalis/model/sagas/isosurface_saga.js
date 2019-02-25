@@ -14,7 +14,7 @@ import {
   select,
   take,
 } from "oxalis/model/sagas/effect-generators";
-import { binaryIsosurfaceMarker } from "oxalis/view/right-menu/meshes_view";
+import { stlIsosurfaceConstants } from "oxalis/view/right-menu/meshes_view";
 import { computeIsosurface } from "admin/admin_rest_api";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
@@ -33,7 +33,7 @@ const cubeSize = [256, 256, 256];
 
 export function isIsosurfaceStl(buffer: ArrayBuffer): boolean {
   const dataView = new DataView(buffer);
-  const isIsosurface = binaryIsosurfaceMarker.every(
+  const isIsosurface = stlIsosurfaceConstants.isosurfaceMarker.every(
     (marker, index) => dataView.getUint8(index) === marker,
   );
   return isIsosurface;
@@ -204,10 +204,11 @@ function* downloadActiveIsosurfaceCell(): Saga<void> {
   const stl = exportToStl(geometry);
 
   // Encode isosurface and cell id property
-  binaryIsosurfaceMarker.forEach((marker, index) => {
+  const { isosurfaceMarker, cellIdIndex } = stlIsosurfaceConstants;
+  isosurfaceMarker.forEach((marker, index) => {
     stl.setUint8(index, marker);
   });
-  stl.setUint32(3, currentIsosurfaceCellId, true);
+  stl.setUint32(cellIdIndex, currentIsosurfaceCellId, true);
 
   const blob = new Blob([stl]);
   yield* call(saveAs, blob, `isosurface-${currentIsosurfaceCellId}.stl`);
@@ -216,7 +217,7 @@ function* downloadActiveIsosurfaceCell(): Saga<void> {
 function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<void> {
   const { buffer } = action;
   const dataView = new DataView(buffer);
-  const segmentationId = dataView.getUint32(3, true);
+  const segmentationId = dataView.getUint32(stlIsosurfaceConstants.cellIdIndex, true);
   const geometry = yield* call(parseStlBuffer, buffer);
   getSceneController().addIsosurfaceFromGeometry(geometry, segmentationId);
   yield* put(setImportingMeshStateAction(false));

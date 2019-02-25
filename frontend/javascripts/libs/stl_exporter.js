@@ -3,6 +3,9 @@
 
 import * as THREE from "three";
 
+// Original Source: https://github.com/mrdoob/three.js/blob/master/examples/js/exporters/STLExporter.js
+// Only the `exportToStl` function was added as a wrapper.
+
 /**
  * @author kovacsv / http://kovacsv.hu/
  * @author mrdoob / http://mrdoob.com/

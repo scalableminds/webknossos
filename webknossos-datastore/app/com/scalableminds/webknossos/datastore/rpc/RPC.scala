@@ -9,8 +9,7 @@ class RPC @Inject()(ws: WSClient) {
 
   private val requestCounter: AtomicInteger = new AtomicInteger()
 
-  def apply(url: String): RPCRequest = {
+  def apply(url: String): RPCRequest =
     new RPCRequest(requestCounter.getAndIncrement(), url, ws)
-  }
 
 }

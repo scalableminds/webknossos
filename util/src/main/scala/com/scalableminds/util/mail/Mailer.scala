@@ -9,24 +9,23 @@ import org.apache.commons.mail._
 case class Send(mail: Mail)
 
 /**
- * this class providers a wrapper for sending email in Play! 2.0
- * based on the EmailNotifier trait by Aishwarya Singhal
- *
- * @author Justin Long
- *
- * make sure to include Apache Commons Mail in dependencies
- * "org.apache.commons" % "commons-mail" % "1.2"
- */
-
+  * this class providers a wrapper for sending email in Play! 2.0
+  * based on the EmailNotifier trait by Aishwarya Singhal
+  *
+  * @author Justin Long
+  *
+  * make sure to include Apache Commons Mail in dependencies
+  * "org.apache.commons" % "commons-mail" % "1.2"
+  */
 case class MailerConfig(
-                       enabled: Boolean,
-                       smtpHost: String,
-                       smtpPort: Int,
-                       smtpTls: Boolean,
-                       smtpUser: String,
-                       smtpPass: String,
-                       subjectPrefix: String
-                       )
+    enabled: Boolean,
+    smtpHost: String,
+    smtpPort: Int,
+    smtpTls: Boolean,
+    smtpUser: String,
+    smtpPass: String,
+    subjectPrefix: String
+)
 
 class Mailer(conf: MailerConfig) extends Actor {
 
@@ -36,11 +35,11 @@ class Mailer(conf: MailerConfig) extends Actor {
   }
 
   /**
-   * Sends an email based on the provided data. It also validates and ensures completeness of
-   * this object before attempting a send.
-   * @return
-   */
-  def send(mail: Mail) = {
+    * Sends an email based on the provided data. It also validates and ensures completeness of
+    * this object before attempting a send.
+    * @return
+    */
+  def send(mail: Mail) =
     if (conf.enabled && mail.recipients.exists(_.trim != "")) {
       val multiPartMail: MultiPartEmail = createEmail(mail)
 
@@ -64,14 +63,13 @@ class Mailer(conf: MailerConfig) extends Actor {
     } else {
       ""
     }
-  }
 
   /**
-   * Extracts an email address from the given string and passes to the enclosed method.
-   *
-   * @param emailAddress
-   * @param setter
-   */
+    * Extracts an email address from the given string and passes to the enclosed method.
+    *
+    * @param emailAddress
+    * @param setter
+    */
   private def setAddress(emailAddress: String)(setter: (String, String) => _) {
     if (emailAddress != null) {
       try {
@@ -88,10 +86,10 @@ class Mailer(conf: MailerConfig) extends Actor {
   }
 
   /**
-   * Creates an appropriate email object based on the content type.
-   * @return
-   */
-  private def createEmail(mail: Mail): MultiPartEmail = {
+    * Creates an appropriate email object based on the content type.
+    * @return
+    */
+  private def createEmail(mail: Mail): MultiPartEmail =
     if (mail.bodyHtml == "") {
       val email = new MultiPartEmail()
       email.setCharset(mail.charset)
@@ -105,11 +103,10 @@ class Mailer(conf: MailerConfig) extends Actor {
         email.setTextMsg(mail.bodyText)
       email
     }
-  }
 
   /**
-   * Sets a content type if none is defined.
-   */
+    * Sets a content type if none is defined.
+    */
   private def guessContentType(mail: Mail) =
     if (mail.bodyHtml != "") "text/html" else "text/plain"
 

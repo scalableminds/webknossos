@@ -102,7 +102,14 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
 
   componentWillUnmount() {
     // Replace entire document with loading message
-    document.write("Reloading webKnossos...");
+    document.body.removeChild(document.getElementById("main-container"));
+
+    const refreshMessage = document.createElement("p");
+    refreshMessage.innerHTML = "Reloading webKnossos...";
+    refreshMessage.style.position = "absolute";
+    refreshMessage.style.top = 0;
+    document.body.appendChild(refreshMessage);
+
     // Do a complete page refresh to make sure all tracing data is garbage
     // collected and all events are canceled, etc.
     location.reload();

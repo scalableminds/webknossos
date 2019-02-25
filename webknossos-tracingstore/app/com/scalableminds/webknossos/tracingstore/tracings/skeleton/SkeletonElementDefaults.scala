@@ -16,7 +16,17 @@ object SkeletonTracingDefaults extends ProtoGeometryImplicits {
   val version = 0
   val userBoundingBox = None
 
-  def createInstance = SkeletonTracing(dataSetName, trees, createdTimestamp, boundingBox, activeNodeId, editPosition, editRotation, zoomLevel, version, userBoundingBox)
+  def createInstance =
+    SkeletonTracing(dataSetName,
+                    trees,
+                    createdTimestamp,
+                    boundingBox,
+                    activeNodeId,
+                    editPosition,
+                    editRotation,
+                    zoomLevel,
+                    version,
+                    userBoundingBox)
 }
 
 object NodeDefaults extends ProtoGeometryImplicits {
@@ -30,5 +40,6 @@ object NodeDefaults extends ProtoGeometryImplicits {
   val interpolation = false
   def createdTimestamp = System.currentTimeMillis()
 
-  def createInstance = Node(id, position, rotation, radius, viewport, resolution, bitDepth, interpolation, createdTimestamp)
+  def createInstance =
+    Node(id, position, rotation, radius, viewport, resolution, bitDepth, interpolation, createdTimestamp)
 }

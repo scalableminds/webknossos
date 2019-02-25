@@ -9,6 +9,7 @@ import React from "react";
 import type { APIUser } from "admin/api_flow_types";
 import { getBuildInfo } from "admin/admin_rest_api";
 import { logoutUserAction } from "oxalis/model/actions/user_actions";
+import { trackVersion } from "oxalis/model/helpers/analytics";
 import LoginForm from "admin/auth/login_form";
 import Request from "libs/request";
 import Store, { type OxalisState } from "oxalis/store";
@@ -43,6 +44,7 @@ class Navbar extends React.PureComponent<PropsWithRouter, State> {
     this.setState({
       version: buildInfo.webknossos.version,
     });
+    trackVersion(buildInfo.webknossos.version);
   }
 
   handleLogout = async () => {

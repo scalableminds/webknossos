@@ -132,14 +132,20 @@ export const getColorForCoords: ShaderModule = {
       float renderedZoomStep = bucketAddressWithZoomStep.y;
 
       if (renderedZoomStep != zoomStep) {
-        /* Adapt the position within the bucket to the potential fallback position.
+        /* We already know which fallback bucket we have to look into. However,
+         * for 8 mag-1 buckets, there is usually one fallback bucket in mag-2.
+         * Therefore, depending on the actual mag-1 bucket, we have to look into
+         * different sub-volumes of the one fallback bucket. This is calculated as
+         * the subVolumeIndex.
+         * Then, we adapt the look up position *within* the bucket.
+         *
          * Example Scenario (let's consider only the x axis):
-         * If we are in the mag1 bucket for which x = 4, we have to look into the **first** half
-         * of the mag2 bucket for which x = 1.
-         * If we are in the mag1 bucket for which x = 5, we have to look into the **second** half
-         * of the mag2 bucket for which x = 2.
+         * If we are in the [4, _, _, 0]-bucket, we have to look into the **first** half
+         * of the [2, _, _, 1]-bucket.
+         * If we are in the [5, _, _, 0]-bucket, we have to look into the **second** half
+         * of the [2, _, _, 1]-bucket.
          * We can determine which "half" (subVolumeIndex) is relevant by doing a modulo operation
-         * with the resolution factor.
+         * with the resolution factor. A typical resolution factor is 2.
          */
 
         vec3 magnificationFactors = getResolutionFactors(renderedZoomStep, zoomStep);

@@ -50,6 +50,7 @@ class AnnotationController @Inject()(
         if (request.identity.isEmpty) "annotation.notFound.considerLoggingIn" else "annotation.notFound"
       for {
         annotation <- provider.provideAnnotation(typ, id, request.identity) ?~> notFoundMessage
+        _ <- bool2Fox(annotation.state != Cancelled) ?~> "annotation.cancelled"
         restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound"
         _ <- restrictions.allowAccess(request.identity) ?~> "notAllowed" ~> BAD_REQUEST
         typedTyp <- AnnotationType.fromString(typ).toFox ?~> "annotationType.notFound"

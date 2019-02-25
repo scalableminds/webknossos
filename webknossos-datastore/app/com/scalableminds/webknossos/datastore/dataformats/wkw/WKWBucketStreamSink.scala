@@ -20,7 +20,8 @@ class WKWBucketStreamSink(val layer: DataLayer) extends WKWDataFormatHelper {
         NamedFunctionStream(filePath, os => {
           Future.successful(WKWFile.write(os, header, Array(data).toIterator))
         })
-    } ++ Seq(NamedFunctionStream(wkwHeaderFilePath(1).toString, os =>
-      Future.successful(header.writeTo(new DataOutputStream(os), true))))
+    } ++ Seq(
+      NamedFunctionStream(wkwHeaderFilePath(1).toString,
+                          os => Future.successful(header.writeTo(new DataOutputStream(os), true))))
   }
 }

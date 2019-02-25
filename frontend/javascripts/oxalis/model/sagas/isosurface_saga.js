@@ -133,7 +133,7 @@ function* ensureSuitableIsosurface(
 
   batchCounterPerSegment[segmentId] = 0;
   yield* call(
-    maybeLoadIsosurface,
+    loadIsosurfaceWithNeighbors,
     dataset,
     layer,
     segmentId,
@@ -143,7 +143,7 @@ function* ensureSuitableIsosurface(
   );
 }
 
-function* maybeLoadIsosurface(
+function* loadIsosurfaceWithNeighbors(
   dataset: APIDataset,
   layer: DataLayer,
   segmentId: number,
@@ -151,13 +151,38 @@ function* maybeLoadIsosurface(
   zoomStep: number,
   resolutions: Array<Vector3>,
 ): Saga<void> {
+  let positionsToRequest = [clippedPosition];
+
+  while (positionsToRequest.length > 0) {
+    const position = positionsToRequest.shift();
+    const neighbors = yield* call(
+      maybeLoadIsosurface,
+      dataset,
+      layer,
+      segmentId,
+      position,
+      zoomStep,
+      resolutions,
+    );
+    positionsToRequest = positionsToRequest.concat(neighbors);
+  }
+}
+
+function* maybeLoadIsosurface(
+  dataset: APIDataset,
+  layer: DataLayer,
+  segmentId: number,
+  clippedPosition: Vector3,
+  zoomStep: number,
+  resolutions: Array<Vector3>,
+): Saga<Array<Vector3>> {
   const threeDMap = getMapForSegment(segmentId);
 
   if (threeDMap.get(clippedPosition)) {
-    return;
+    return [];
   }
   if (batchCounterPerSegment[segmentId] > (window.__isosurfaceMaxBatchSize || MAXIMUM_BATCH_SIZE)) {
-    return;
+    return [];
   }
   batchCounterPerSegment[segmentId]++;
 
@@ -183,18 +208,9 @@ function* maybeLoadIsosurface(
   const vertices = new Float32Array(responseBuffer);
   getSceneController().addIsosurfaceFromVertices(vertices, segmentId);
 
-  for (const neighbor of neighbors) {
-    const neighborPosition = getNeighborPosition(clippedPosition, neighbor, zoomStep, resolutions);
-    yield* call(
-      maybeLoadIsosurface,
-      dataset,
-      layer,
-      segmentId,
-      neighborPosition,
-      zoomStep,
-      resolutions,
-    );
-  }
+  return neighbors.map(neighbor =>
+    getNeighborPosition(clippedPosition, neighbor, zoomStep, resolutions),
+  );
 }
 
 function* downloadActiveIsosurfaceCell(): Saga<void> {

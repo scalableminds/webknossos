@@ -36,10 +36,12 @@ const warnAboutDownsamplingRGB = _.once(() =>
 );
 
 export const bucketDebuggingFlags = {
-  // DEBUG flag for visualizing buckets which are passed to the GPU
+  // For visualizing buckets which are passed to the GPU
   visualizeBucketsOnGPU: false,
-  // DEBUG flag for visualizing buckets which are prefetched
+  // For visualizing buckets which are prefetched
   visualizePrefetchedBuckets: false,
+  // For enforcing fallback rendering. enforcedZoomDiff == 2, means
+  // that buckets of currentZoomStep + 2 are rendered.
   enforcedZoomDiff: undefined,
 };
 // Exposing this variable allows debugging on deployed systems

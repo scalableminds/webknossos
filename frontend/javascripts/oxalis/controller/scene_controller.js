@@ -335,8 +335,16 @@ class SceneController {
         currentPlane.updateAnchorPoints(anchorPoint);
         currentPlane.setPosition(globalPosVec);
         const [scaleX, scaleY] = getPlaneScalingFactor(state, flycam, currentPlane.planeID);
-        currentPlane.setScale(scaleX, scaleY);
-        this.displayPlane[currentPlane.planeID] = scaleX > 0 && scaleY > 0;
+        const isVisible = scaleX > 0 && scaleY > 0;
+        if (isVisible) {
+          this.displayPlane[currentPlane.planeID] = true;
+          currentPlane.setScale(scaleX, scaleY);
+        } else {
+          this.displayPlane[currentPlane.planeID] = false;
+          // Set the scale to non-zero values, since threejs will otherwise
+          // complain about non-invertible matrices.
+          currentPlane.setScale(1, 1);
+        }
       }
     }
   }

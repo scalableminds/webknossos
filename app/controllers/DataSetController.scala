@@ -86,9 +86,10 @@ class DataSetController @Inject()(userService: UserService,
       for {
         dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> Messages(
           "dataSet.notFound",
-          dataSetName)
-        _ <- dataSetDataLayerDAO.findOneByNameForDataSet(dataLayerName, dataSet._id) ?~> Messages("dataLayer.notFound",
-                                                                                                  dataLayerName)
+          dataSetName) ~> NOT_FOUND
+        _ <- dataSetDataLayerDAO.findOneByNameForDataSet(dataLayerName, dataSet._id) ?~> Messages(
+          "dataLayer.notFound",
+          dataLayerName) ~> NOT_FOUND
         image <- imageFromCacheIfPossible(dataSet)
       } yield {
         Ok(image).as("image/jpeg").withHeaders(CACHE_CONTROL -> "public, max-age=86400")

@@ -98,7 +98,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
 
     log {
 
-      val shouldCreateGroupForEachFile: Boolean = request.body.dataParts("createGroupForEachFile")(0) == "true"
+      val shouldCreateGroupForEachFile: Boolean = request.body.dataParts("createGroupForEachFile").head == "true"
 
       val parsedFiles = request.body.files.foldLeft(NmlResults.ZipParseResult()) {
         case (acc, next) => {
@@ -128,13 +128,13 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
           organizationNameOpt <- assertAllOnSameOrganization(parseSuccesses.flatMap(s => s.organizationName)) ?~> "nml.file.differentDatasets"
           organizationIdOpt <- Fox.runOptional(organizationNameOpt) {
             organizationDAO.findOneByName(_).map(_._id)
-          } ?~> Messages("dataSet.noAccess", dataSetName)
+          } ?~> Messages("dataSet.noAccess", dataSetName) ~> FORBIDDEN
           organizationId <- Fox.fillOption(organizationIdOpt) {
             dataSetDAO.getOrganizationForDataSet(dataSetName)
-          } ?~> Messages("dataSet.noAccess", dataSetName)
+          } ?~> Messages("dataSet.noAccess", dataSetName) ~> FORBIDDEN
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> Messages(
             "dataSet.noAccess",
-            dataSetName)
+            dataSetName) ~> FORBIDDEN
           tracingStoreClient <- tracingStoreService.clientFor(dataSet)
           volumeTracingIdOpt <- Fox.runOptional(volumeTracingsWithDataLocations.headOption) { v =>
             for {
@@ -172,8 +172,8 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
     for {
       dataSource <- dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable)
       fallbackLayer = dataSource.dataLayers.flatMap {
-        case layer: SegmentationLayer if (Some(layer.name) == volumeTracing.fallbackLayer) => Some(layer)
-        case _                                                                             => None
+        case layer: SegmentationLayer if volumeTracing.fallbackLayer contains layer.name => Some(layer)
+        case _                                                                           => None
       }.headOption
     } yield {
       volumeTracing.copy(
@@ -269,12 +269,12 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
         volumeOrHybridToDownloadStream(dataSet, annotation, name, organizationName)
 
     for {
-      annotation <- provider.provideAnnotation(typ, annotationId, issuingUser)
+      annotation <- provider.provideAnnotation(typ, annotationId, issuingUser) ~> NOT_FOUND
       restrictions <- provider.restrictionsFor(typ, annotationId)
-      name <- provider.nameFor(annotation) ?~> Messages("annotation.name.impossible")
-      _ <- restrictions.allowDownload(issuingUser) ?~> Messages("annotation.download.notAllowed")
-      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
-      organization <- organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound"
+      name <- provider.nameFor(annotation) ?~> "annotation.name.impossible"
+      _ <- restrictions.allowDownload(issuingUser) ?~> "annotation.download.notAllowed" ~> FORBIDDEN
+      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound" ~> NOT_FOUND
+      organization <- organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound" ~> NOT_FOUND
       (downloadStream, fileName) <- tracingToDownloadStream(dataSet, annotation, name, organization.name)
     } yield {
       Ok.chunked(Source.fromPublisher(IterateeStreams.enumeratorToPublisher(downloadStream)))
@@ -287,8 +287,8 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
   def downloadProject(projectId: String, user: User)(implicit ctx: DBAccessContext, m: MessagesProvider) =
     for {
       projectIdValidated <- ObjectId.parse(projectId)
-      project <- projectDAO.findOne(projectIdValidated) ?~> Messages("project.notFound", projectId)
-      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, project._team))
+      project <- projectDAO.findOne(projectIdValidated) ?~> Messages("project.notFound", projectId) ~> NOT_FOUND
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, project._team)) ?~> "notAllowed" ~> FORBIDDEN
       annotations <- annotationDAO.findAllFinishedForProject(projectIdValidated)
       zip <- annotationService.zipAnnotations(annotations, project.name + "_nmls.zip")
     } yield {
@@ -304,9 +304,9 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
     }
 
     for {
-      task <- taskDAO.findOne(ObjectId(taskId)).toFox ?~> Messages("task.notFound")
-      project <- projectDAO.findOne(task._project) ?~> Messages("project.notFound")
-      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, project._team)) ?~> Messages("notAllowed")
+      task <- taskDAO.findOne(ObjectId(taskId)).toFox ?~> Messages("task.notFound") ~> NOT_FOUND
+      project <- projectDAO.findOne(task._project) ?~> Messages("project.notFound") ~> NOT_FOUND
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, project._team)) ?~> Messages("notAllowed") ~> FORBIDDEN
       zip <- createTaskZip(task)
     } yield {
       val file = new File(zip.path.toString)
@@ -327,9 +327,9 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       } yield zip
 
     for {
-      taskTypeIdValidated <- ObjectId.parse(taskTypeId)
-      tasktype <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> Messages("taskType.notFound")
-      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, tasktype._team)) ?~> Messages("notAllowed")
+      taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
+      tasktype <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, tasktype._team)) ?~> "notAllowed" ~> FORBIDDEN
       zip <- createTaskTypeZip(tasktype)
     } yield {
       val file = new File(zip.path.toString)

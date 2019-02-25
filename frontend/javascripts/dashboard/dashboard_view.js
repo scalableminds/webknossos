@@ -1,6 +1,4 @@
 // @flow
-/* eslint-disable jsx-a11y/href-no-hash */
-
 import { type RouterHistory, withRouter } from "react-router-dom";
 import { Spin, Tabs } from "antd";
 import { connect } from "react-redux";

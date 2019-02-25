@@ -1,5 +1,4 @@
 // @flow
-/* eslint-disable jsx-a11y/href-no-hash */
 
 import { Spin, Tag } from "antd";
 import * as React from "react";

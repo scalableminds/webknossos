@@ -77,12 +77,13 @@ const isosurfaceLeftClick = (pos: Point2, plane: OrthoView, event: MouseEvent) =
   if (!segmentation) {
     return;
   }
+  const position = calculateGlobalPos(pos);
   const cellId = segmentation.cube.getMappedDataValue(
-    calculateGlobalPos(pos),
+    position,
     getRequestLogZoomStep(Store.getState()),
   );
   if (cellId > 0) {
-    Store.dispatch(changeActiveIsosurfaceCellAction(cellId));
+    Store.dispatch(changeActiveIsosurfaceCellAction(cellId, position));
   }
 };
 

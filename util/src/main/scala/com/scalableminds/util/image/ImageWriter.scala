@@ -25,22 +25,21 @@ class ImageWriter(imageType: String, imageExt: String) {
       val image = new IIOImage(buffered, null, null)
       writer.write(null, image, iwp)
       writer.reset()
-    } finally{
-      if(output != null) output.close()
+    } finally {
+      if (output != null) output.close()
     }
     file
   }
 
-  def writeToOutputStream(buffered: BufferedImage)(output: OutputStream) = {
+  def writeToOutputStream(buffered: BufferedImage)(output: OutputStream) =
     try {
       writer.setOutput(ImageIO.createImageOutputStream(output))
       val image = new IIOImage(buffered, null, null)
       writer.write(null, image, iwp)
       writer.reset()
-    } finally{
-      if(output != null) output.close()
+    } finally {
+      if (output != null) output.close()
     }
-  }
 }
 
 class JPEGWriter extends ImageWriter("jpeg", ".jpg") {
@@ -71,7 +70,7 @@ class WebPWriter {
       val data = buffered.getData.getDataBuffer.asInstanceOf[DataBufferByte].getData
       output.write(webPEncode(data, buffered.getWidth, buffered.getHeight, imageQuality * 100, buffered.getType))
     } finally {
-      if(output != null) output.close()
+      if (output != null) output.close()
     }
     file
   }

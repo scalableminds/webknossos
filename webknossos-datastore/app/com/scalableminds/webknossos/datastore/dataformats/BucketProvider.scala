@@ -18,9 +18,10 @@ trait BucketProvider extends FoxImplicits with LazyLogging {
 
   def loadFromUnderlying(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[Cube] = Fox.empty
 
-  def load(readInstruction: DataReadInstruction, cache: DataCubeCache, timeout: FiniteDuration)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
+  def load(readInstruction: DataReadInstruction, cache: DataCubeCache, timeout: FiniteDuration)(
+      implicit ec: ExecutionContext): Fox[Array[Byte]] = {
 
-    def loadFromUnderlyingWithTimeout(readInstruction: DataReadInstruction): Fox[Cube] = {
+    def loadFromUnderlyingWithTimeout(readInstruction: DataReadInstruction): Fox[Cube] =
       Future {
         val t = System.currentTimeMillis
         val className = this.getClass.getName.split("\\.").last
@@ -29,11 +30,15 @@ trait BucketProvider extends FoxImplicits with LazyLogging {
         NewRelic.recordResponseTimeMetric(s"Custom/BucketProvider/$className/file-response-time", duration)
         NewRelic.incrementCounter(s"Custom/BucketProvider/$className/files-loaded")
         if (duration > 500) {
-          NewRelic.noticeError(s"loading file in $className took too long", Map(
-            "duration" -> duration.toString,
-            "dataSource" -> readInstruction.dataSource.id.name,
-            "dataLayer" -> readInstruction.dataLayer.name,
-            "cube" -> readInstruction.cube.toString).asJava)
+          NewRelic.noticeError(
+            s"loading file in $className took too long",
+            Map(
+              "duration" -> duration.toString,
+              "dataSource" -> readInstruction.dataSource.id.name,
+              "dataLayer" -> readInstruction.dataLayer.name,
+              "cube" -> readInstruction.cube.toString
+            ).asJava
+          )
         }
         result
       }.recover {
@@ -43,10 +48,11 @@ trait BucketProvider extends FoxImplicits with LazyLogging {
             s"Cube: (${readInstruction.cube.x}, ${readInstruction.cube.y}, ${readInstruction.cube.z})")
           Failure("dataStore.load.timeout")
       }
-    }
 
-    cache.withCache(readInstruction)(loadFromUnderlyingWithTimeout)(_.cutOutBucket(readInstruction.dataLayer, readInstruction.bucket))
+    cache.withCache(readInstruction)(loadFromUnderlyingWithTimeout)(
+      _.cutOutBucket(readInstruction.dataLayer, readInstruction.bucket))
   }
 
-  def bucketStream(resolution: Int, version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] = Iterator.empty
+  def bucketStream(resolution: Int, version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] =
+    Iterator.empty
 }

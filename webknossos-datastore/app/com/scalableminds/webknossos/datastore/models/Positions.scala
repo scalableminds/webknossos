@@ -5,11 +5,11 @@ import com.scalableminds.util.geometry.{BoundingBox, GenericPosition, Point3D}
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
 class VoxelPosition(
-                     protected val globalX: Int,
-                     protected val globalY: Int,
-                     protected val globalZ: Int,
-                     val resolution: Point3D
-                   ) extends GenericPosition {
+    protected val globalX: Int,
+    protected val globalY: Int,
+    protected val globalZ: Int,
+    val resolution: Point3D
+) extends GenericPosition {
 
   val x: Int = globalX / resolution.x
 
@@ -25,7 +25,7 @@ class VoxelPosition(
 
   override def toString = s"($globalX, $globalY, $globalZ) / $resolution"
 
-  override def equals(obj: scala.Any): Boolean = {
+  override def equals(obj: scala.Any): Boolean =
     obj match {
       case other: VoxelPosition =>
         other.globalX == globalX &&
@@ -35,24 +35,17 @@ class VoxelPosition(
       case _ =>
         false
     }
-  }
 
-  override def hashCode(): Int = {
-    new HashCodeBuilder(17, 31)
-      .append(globalX)
-      .append(globalY)
-      .append(globalZ)
-      .append(resolution)
-      .toHashCode
-  }
+  override def hashCode(): Int =
+    new HashCodeBuilder(17, 31).append(globalX).append(globalY).append(globalZ).append(resolution).toHashCode
 }
 
 class BucketPosition(
-                       protected val globalX: Int,
-                       protected val globalY: Int,
-                       protected val globalZ: Int,
-                       val resolution: Point3D
-                    ) extends GenericPosition {
+    protected val globalX: Int,
+    protected val globalY: Int,
+    protected val globalZ: Int,
+    val resolution: Point3D
+) extends GenericPosition {
 
   val bucketLength = DataLayer.bucketLength
 
@@ -75,29 +68,29 @@ class BucketPosition(
     new VoxelPosition(tlx, tly, tlz, resolution)
   }
 
-  def nextBucketInX: BucketPosition = {
+  def nextBucketInX: BucketPosition =
     new BucketPosition(globalX + (bucketLength * resolution.x), globalY, globalZ, resolution)
-  }
 
-  def nextBucketInY: BucketPosition = {
+  def nextBucketInY: BucketPosition =
     new BucketPosition(globalX, globalY + (bucketLength * resolution.y), globalZ, resolution)
-  }
 
-  def nextBucketInZ: BucketPosition = {
+  def nextBucketInZ: BucketPosition =
     new BucketPosition(globalX, globalY, globalZ + (bucketLength * resolution.z), resolution)
-  }
 
   def toHighestResBoundingBox: BoundingBox =
-    new BoundingBox(Point3D(globalX, globalY, globalZ), bucketLength * resolution.x, bucketLength * resolution.y, bucketLength * resolution.z)
+    new BoundingBox(Point3D(globalX, globalY, globalZ),
+                    bucketLength * resolution.x,
+                    bucketLength * resolution.y,
+                    bucketLength * resolution.z)
 }
 
 class CubePosition(
-                     protected val globalX: Int,
-                     protected val globalY: Int,
-                     protected val globalZ: Int,
-                     val resolution: Point3D,
-                     val cubeLength: Int
-                  ) extends GenericPosition {
+    protected val globalX: Int,
+    protected val globalY: Int,
+    protected val globalZ: Int,
+    val resolution: Point3D,
+    val cubeLength: Int
+) extends GenericPosition {
 
   val x: Int = globalX / cubeLength / resolution.x
 
@@ -114,9 +107,11 @@ class CubePosition(
   }
 
   def toHighestResBoundingBox: BoundingBox =
-    new BoundingBox(Point3D(globalX, globalY, globalZ), cubeLength * resolution.x, cubeLength * resolution.y, cubeLength * resolution.z)
+    new BoundingBox(Point3D(globalX, globalY, globalZ),
+                    cubeLength * resolution.x,
+                    cubeLength * resolution.y,
+                    cubeLength * resolution.z)
 
-  override def toString: String = {
+  override def toString: String =
     s"CPos($x,$y,$z,res=$resolution)"
-  }
 }

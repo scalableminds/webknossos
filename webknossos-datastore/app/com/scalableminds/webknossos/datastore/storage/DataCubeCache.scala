@@ -11,14 +11,14 @@ import net.liftweb.common.{Box, Empty, Failure, Full}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 case class CachedCube(
-                       organization: String,
-                       dataSourceName: String,
-                       dataLayerName: String,
-                       resolution: Point3D,
-                       x: Int,
-                       y: Int,
-                       z: Int
-                     )
+    organization: String,
+    dataSourceName: String,
+    dataLayerName: String,
+    resolution: Point3D,
+    x: Int,
+    y: Int,
+    z: Int
+)
 
 object CachedCube {
 
@@ -30,7 +30,8 @@ object CachedCube {
       loadInstruction.cube.resolution,
       loadInstruction.cube.x,
       loadInstruction.cube.y,
-      loadInstruction.cube.z)
+      loadInstruction.cube.z
+    )
 }
 
 class DataCubeCache(val maxEntries: Int) extends LRUConcurrentCache[CachedCube, Fox[Cube]] with FoxImplicits {
@@ -39,7 +40,8 @@ class DataCubeCache(val maxEntries: Int) extends LRUConcurrentCache[CachedCube, 
     * Loads the due to x,y and z defined block into the cache array and
     * returns it.
     */
-  def withCache[T](readInstruction: DataReadInstruction)(loadF: DataReadInstruction => Fox[Cube])(f: Cube => Box[T]): Fox[T] = {
+  def withCache[T](readInstruction: DataReadInstruction)(loadF: DataReadInstruction => Fox[Cube])(
+      f: Cube => Box[T]): Fox[T] = {
     val cachedCubeInfo = CachedCube.from(readInstruction)
 
     def handleUncachedCube() = {
@@ -81,7 +83,6 @@ class DataCubeCache(val maxEntries: Int) extends LRUConcurrentCache[CachedCube, 
     }
   }
 
-  override def onElementRemoval(key: CachedCube, value: Fox[Cube]): Unit = {
+  override def onElementRemoval(key: CachedCube, value: Fox[Cube]): Unit =
     value.map(_.scheduleForRemoval())
-  }
 }

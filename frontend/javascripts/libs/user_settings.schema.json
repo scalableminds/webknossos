@@ -28,6 +28,7 @@
         "fourBit": { "type": "boolean" },
         "interpolation": { "type": "boolean" },
         "quality": { "type": "number", "enum": [0, 1, 2] },
+        "loadingStrategy": { "enum": ["BEST_QUALITY_FIRST", "PROGRESSIVE_QUALITY"] },
         "segmentationOpacity": { "type": "number", "minimum": 0, "maximum": 100 },
         "highlightHoveredCellId": { "type": "boolean" },
         "zoom": { "type": "number", "minimum": 0.001 },

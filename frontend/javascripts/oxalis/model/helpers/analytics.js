@@ -9,7 +9,6 @@ function getOrganization() {
 }
 
 function gaGuard(...params) {
-  console.log("GA", ...params);
   if (typeof window.ga !== "undefined" && window.ga !== null) {
     window.ga(...params);
   }

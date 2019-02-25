@@ -77,14 +77,7 @@ class DatasetView extends React.PureComponent<Props, State> {
       const datasets = await getDatasets();
       datasetCache.set(datasets);
 
-      // todo: before setting datasets here, replace the LRU counts by the old ones
-      // datasets.forEach(dataset => {
-
-      // })
-
-      this.setState({
-        datasets,
-      });
+      this.setState({ datasets });
     } catch (error) {
       handleGenericError(error);
     } finally {

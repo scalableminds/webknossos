@@ -94,44 +94,48 @@ function ThumbnailOverlay({ details }) {
 
 function PublishedDatasetsOverlay({ datasets, activeDataset, setActiveDataset }) {
   return (
-    <div
-      className="mini-dataset-thumbnail-grid"
-      style={{
-        gridTemplateColumns: miniThumbnailDimension,
-      }}
-    >
-      {datasets.map(dataset => {
-        const datasetIdString = `${dataset.owningOrganization}/${dataset.name}`;
-        return (
-          <Link to={`/datasets/${datasetIdString}/view`} key={datasetIdString}>
-            <div>
-              <Button
-                className={classNames("mini-dataset-thumbnail", {
-                  active: dataset.name === activeDataset.name,
-                })}
-                title="Click To View"
-                style={{
-                  background: `url('${getThumbnailURL(
-                    dataset,
-                  )}?w=${miniThumbnailDimension}&h=${miniThumbnailDimension}')`,
-                  width: `${miniThumbnailDimension}px`,
-                  height: `${miniThumbnailDimension}px`,
-                }}
-                onMouseEnter={() => setActiveDataset(dataset)}
-              >
-                <div
-                  className="mini-dataset-thumbnail absolute segmentation"
-                  style={{
-                    background: `url('${getSegmentationThumbnailURL(
-                      dataset,
-                    )}?w=${miniThumbnailDimension}&h=${miniThumbnailDimension}')`,
-                  }}
-                />
-              </Button>
-            </div>
-          </Link>
-        );
-      })}
+    <div className="datasets-scrollbar-spacer">
+      <div className="dataset-published-grid nice-scrollbar">
+        <div
+          className="mini-dataset-thumbnail-grid"
+          style={{
+            gridTemplateColumns: miniThumbnailDimension,
+          }}
+        >
+          {datasets.map(dataset => {
+            const datasetIdString = `${dataset.owningOrganization}/${dataset.name}`;
+            return (
+              <Link to={`/datasets/${datasetIdString}/view`} key={datasetIdString}>
+                <div>
+                  <Button
+                    className={classNames("mini-dataset-thumbnail", {
+                      active: dataset.name === activeDataset.name,
+                    })}
+                    title="Click To View"
+                    style={{
+                      background: `url('${getThumbnailURL(
+                        dataset,
+                      )}?w=${miniThumbnailDimension}&h=${miniThumbnailDimension}')`,
+                      width: `${miniThumbnailDimension}px`,
+                      height: `${miniThumbnailDimension}px`,
+                    }}
+                    onMouseEnter={() => setActiveDataset(dataset)}
+                  >
+                    <div
+                      className="mini-dataset-thumbnail absolute segmentation"
+                      style={{
+                        background: `url('${getSegmentationThumbnailURL(
+                          dataset,
+                        )}?w=${miniThumbnailDimension}&h=${miniThumbnailDimension}')`,
+                      }}
+                    />
+                  </Button>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
@@ -168,7 +172,7 @@ class PublicationCard extends React.PureComponent<Props, State> {
         <div style={{ display: "flex", height: "100%" }}>
           <div className="publication-description">
             <h3>{publication.title}</h3>
-            <div className="publication-description-body">
+            <div className="publication-description-body nice-scrollbar">
               <Markdown
                 source={publication.description}
                 options={{ html: false, breaks: true, linkify: true }}
@@ -206,15 +210,11 @@ class PublicationCard extends React.PureComponent<Props, State> {
               ) : null}
               <ThumbnailOverlay details={details} />
               {sortedDatasets.length > 1 && (
-                <div className="datasets-scrollbar-spacer">
-                  <div className="dataset-published-grid">
-                    <PublishedDatasetsOverlay
-                      datasets={sortedDatasets}
-                      activeDataset={activeDataset}
-                      setActiveDataset={setActiveDataset}
-                    />
-                  </div>
-                </div>
+                <PublishedDatasetsOverlay
+                  datasets={sortedDatasets}
+                  activeDataset={activeDataset}
+                  setActiveDataset={setActiveDataset}
+                />
               )}
             </div>
           </div>

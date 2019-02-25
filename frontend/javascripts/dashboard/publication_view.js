@@ -41,7 +41,6 @@ class PublicationView extends React.PureComponent<Props> {
           dataSource={datasetsByPublication}
           locale={{ emptyText: "No featured publications." }}
           className="antd-no-border-list"
-          style={{ maxWidth: 1500, margin: "auto" }}
           renderItem={datasets => (
             <List.Item key={datasets[0].publication.id}>
               <PublicationCard className="dataset-panel" datasets={datasets} />

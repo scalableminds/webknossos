@@ -151,7 +151,7 @@ services:
     ports:
     - "5005:5005"
     - "9000:9000"
-    command: sbt -v ";scapegoat; scalafmtCheck"
+    command: sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
 
   e2e-tests:
     extends:

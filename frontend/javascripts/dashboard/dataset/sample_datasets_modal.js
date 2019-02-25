@@ -18,7 +18,7 @@ type Props = {
   organizationName: string,
 };
 
-function useDatastores(): [Array<APIDataStore>] {
+function useDatastores(): Array<APIDataStore> {
   const [datastores, setDatastores] = useState([]);
 
   const fetchDatastores = async () => {
@@ -29,23 +29,19 @@ function useDatastores(): [Array<APIDataStore>] {
   useEffect(() => {
     fetchDatastores();
   }, []);
-  return [datastores];
+  return datastores;
 }
 
 function useSampleDatasets(
-  datastore,
   organizationName,
-  pendingDatasets,
-  setPendingDatasets,
-): [Array<APISampleDataset>, Array<string>, () => Promise<void>] {
+): [Array<APISampleDataset>, Array<string>, (string) => Promise<void>] {
   const [datasets, setDatasets] = useState([]);
   const [failedDatasets, setFailedDatasets] = useState([]);
+  const [pendingDatasets, setPendingDatasets] = useState([]);
+  // Pick any datastore - This feature will almost always be used if there is only one datastore anyways
+  const datastore = useDatastores()[0];
 
-  const fetchSampleDatasets = async () => {
-    if (datastore == null) return;
-    const sampleDatasets = await getSampleDatasets(datastore.url, organizationName);
-    setDatasets(sampleDatasets);
-
+  const updateFailedDatasets = sampleDatasets => {
     // Datasets that were pending, but are now available again, failed to download
     setFailedDatasets(
       failedDatasets.concat(
@@ -56,7 +52,9 @@ function useSampleDatasets(
         ),
       ),
     );
+  };
 
+  const updatePendingDatasets = sampleDatasets => {
     // Remove datasets which are not downloading from the pendingDatasets queue
     setPendingDatasets(
       _.without(
@@ -68,25 +66,14 @@ function useSampleDatasets(
     );
   };
 
-  useEffect(() => {
-    fetchSampleDatasets();
-  }, [datastore]);
+  const fetchSampleDatasets = async () => {
+    if (datastore == null) return;
+    const sampleDatasets = await getSampleDatasets(datastore.url, organizationName);
+    setDatasets(sampleDatasets);
 
-  return [datasets, failedDatasets, fetchSampleDatasets];
-}
-
-const SampleDatasetsModal = ({ destroy, onOk, organizationName }: Props) => {
-  const [pendingDatasets, setPendingDatasets] = useState([]);
-  const [datastores] = useDatastores();
-  const datastore = datastores[0];
-  const [datasets, failedDatasets, fetchDatasets] = useSampleDatasets(
-    datastore,
-    organizationName,
-    pendingDatasets,
-    setPendingDatasets,
-  );
-
-  useInterval(fetchDatasets, pendingDatasets.length ? 1000 : null);
+    updateFailedDatasets(sampleDatasets);
+    updatePendingDatasets(sampleDatasets);
+  };
 
   const handleSampleDatasetDownload = async (name: string) => {
     try {
@@ -96,6 +83,22 @@ const SampleDatasetsModal = ({ destroy, onOk, organizationName }: Props) => {
       handleGenericError(error);
     }
   };
+
+  useEffect(() => {
+    fetchSampleDatasets();
+  }, [datastore]);
+
+  // If there are pending datasets, poll download status periodically
+  useInterval(fetchSampleDatasets, pendingDatasets.length ? 1000 : null);
+
+  return [datasets, failedDatasets, handleSampleDatasetDownload];
+}
+
+const SampleDatasetsModal = ({ destroy, onOk, organizationName }: Props) => {
+  const [datasets, failedDatasets, handleSampleDatasetDownload] = useSampleDatasets(
+    organizationName,
+  );
+
   const handleCancel = () => {
     destroy();
   };

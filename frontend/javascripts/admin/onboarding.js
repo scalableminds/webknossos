@@ -92,10 +92,10 @@ function FeatureCard({ icon, header, children }) {
 }
 
 type OptionCardProps = {
-  icon: React.Node,
+  icon: Node,
   header: string,
-  children: React.Node,
-  action: React.Node,
+  children: Node,
+  action: Node,
   height: number,
 };
 

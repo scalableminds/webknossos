@@ -152,7 +152,7 @@ export const getColorForCoords: ShaderModule = {
         vec3 worldBucketPosition = relativeBucketPosition + anchorPoint;
         vec3 subVolumeIndex = mod(worldBucketPosition, magnificationFactors);
         offsetInBucket = floor(
-          (offsetInBucket + vec3(32.0) * subVolumeIndex)
+          (offsetInBucket + vec3(bucketWidth) * subVolumeIndex)
           / magnificationFactors
         );
       }

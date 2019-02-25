@@ -105,8 +105,6 @@ export class DataBucket {
   dependentCounter: number = 0;
   // For downsampled buckets, "isDirtyDueToDependent" stores the buckets
   // due to which the current bucket is dirty and need new downsampling
-  // Remove once https://github.com/babel/babel-eslint/pull/584 is merged
-  // eslint-disable-next-line no-use-before-define
   isDirtyDueToDependent: WeakSet<Bucket> = new WeakSet();
   isDownSampled: boolean;
   _fallbackBucket: ?Bucket;

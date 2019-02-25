@@ -207,7 +207,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             label={
               <React.Fragment>
                 {settings.fourBit}{" "}
-                <Tooltip title="Load each data bucket in half quality. Recommended for poor and/or capped Internet connections.">
+                <Tooltip title="Decrease size of transferred data by half using lossy compression. Recommended for poor and/or capped Internet connections.">
                   <Icon type="info-circle" />
                 </Tooltip>
               </React.Fragment>

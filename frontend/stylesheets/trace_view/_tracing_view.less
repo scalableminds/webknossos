@@ -29,13 +29,13 @@
   opacity: 0.85;
 
   &.PLANE_XY {
-    border-color: rgb(200, 20, 20);
+    border-color: @xyRed;
   }
   &.PLANE_YZ {
-    border-color: rgb(20, 20, 200);
+    border-color: @yzBlue;
   }
   &.PLANE_XZ {
-    border-color: rgb(20, 200, 20);
+    border-color: @xzGreen;
   }
   &.TDView {
     border-color: white;
@@ -50,7 +50,7 @@
   position: relative;
 }
 #TDViewControls {
-  float: left;
+  text-align: right;
   height: 20px;
   position: absolute;
   top: 0px;
@@ -58,7 +58,8 @@
   width: 100%;
 
   .ant-btn {
-    width: 25%;
+    width: 60px;
+    line-height: 26px;
     & > .colored-dot {
       display: inline-block;
       width: 10px;
@@ -67,13 +68,13 @@
       margin-right: 5px;
     }
     &:nth-child(2) .colored-dot {
-      background-color: red;
+      background-color: @xyRed;
     }
     &:nth-child(3) .colored-dot {
-      background-color: blue;
+      background-color: @yzBlue;
     }
     &:nth-child(4) .colored-dot {
-      background-color: #0f0;
+      background-color: @xzGreen;
     }
   }
 }

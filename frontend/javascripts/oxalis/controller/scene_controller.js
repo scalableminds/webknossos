@@ -60,8 +60,12 @@ class SceneController {
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
   rootGroup: THREE.Object3D;
-  stlMeshes: { [key: string]: THREE.Mesh };
-  isosurfacesGroup: THREE.Group;
+  stlMeshes: { [key: string]: THREE.Mesh } = {};
+
+  // isosurfacesRootGroup holds lights and one group per segmentation id.
+  // Each group can hold multiple meshes.
+  isosurfacesRootGroup: THREE.Group;
+  isosurfacesGroupsPerSegmentationId: { [key: number]: THREE.Group } = {};
 
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   // element depending on the provided flycam.
@@ -74,7 +78,6 @@ class SceneController {
       [OrthoViews.PLANE_XZ]: true,
     };
     this.planeShift = [0, 0, 0];
-    this.stlMeshes = {};
   }
 
   initialize() {
@@ -91,13 +94,13 @@ class SceneController {
     // scene.scale does not have an effect.
     this.rootGroup = new THREE.Object3D();
     this.rootGroup.add(this.getRootNode());
-    this.isosurfacesGroup = new THREE.Group();
+    this.isosurfacesRootGroup = new THREE.Group();
 
     // The dimension(s) with the highest resolution will not be distorted
     this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.dataSource.scale));
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.rootGroup);
-    this.scene.add(this.isosurfacesGroup);
+    this.scene.add(this.isosurfacesRootGroup);
 
     this.rootGroup.add(new THREE.DirectionalLight());
     this.addLights();
@@ -128,6 +131,10 @@ class SceneController {
     window.removeBucketMesh = (mesh: THREE.LineSegments) => this.rootNode.remove(mesh);
   }
 
+  getIsosurfaceGeometry(cellId: number): THREE.Geometry {
+    return this.isosurfacesGroupsPerSegmentationId[cellId];
+  }
+
   addSTL(meshMetaData: MeshMetaData, geometry: THREE.Geometry): void {
     const { id, position } = meshMetaData;
     if (this.stlMeshes[id] != null) {
@@ -143,7 +150,7 @@ class SceneController {
     this.updateMeshPostion(id, position);
   }
 
-  addIsosurface(vertices, segmentationId): void {
+  addIsosurfaceFromVertices(vertices, segmentationId): void {
     let geometry = new THREE.BufferGeometry();
     geometry.addAttribute("position", new THREE.BufferAttribute(vertices, 3));
 
@@ -158,6 +165,10 @@ class SceneController {
     // and back to a BufferGeometry
     geometry = new THREE.BufferGeometry().fromGeometry(geometry);
 
+    this.addIsosurfaceFromGeometry(geometry, segmentationId);
+  }
+
+  addIsosurfaceFromGeometry(geometry, segmentationId): void {
     const [hue] = convertCellIdToHSLA(segmentationId);
     const color = new THREE.Color().setHSL(hue, 0.5, 0.1);
 
@@ -178,7 +189,12 @@ class SceneController {
       })
       .start();
 
-    this.isosurfacesGroup.add(mesh);
+    if (this.isosurfacesGroupsPerSegmentationId[segmentationId] == null) {
+      const newGroup = new THREE.Group();
+      this.isosurfacesGroupsPerSegmentationId[segmentationId] = newGroup;
+      this.isosurfacesRootGroup.add(newGroup);
+    }
+    this.isosurfacesGroupsPerSegmentationId[segmentationId].add(mesh);
   }
 
   addLights(): void {
@@ -187,7 +203,7 @@ class SceneController {
     // so that the light moves along the cam.
 
     const ambientLight = new THREE.AmbientLight(0x404040, 15); // soft white light
-    this.isosurfacesGroup.add(ambientLight);
+    this.isosurfacesRootGroup.add(ambientLight);
   }
 
   removeSTL(id: string): void {
@@ -282,7 +298,7 @@ class SceneController {
     this.userBoundingBox.updateForCam(id);
     Utils.__guard__(this.taskBoundingBox, x => x.updateForCam(id));
 
-    this.isosurfacesGroup.visible = id === OrthoViews.TDView;
+    this.isosurfacesRootGroup.visible = id === OrthoViews.TDView;
     if (id !== OrthoViews.TDView) {
       let ind;
       for (const planeId of OrthoViewValuesWithoutTDView) {

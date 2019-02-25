@@ -23,7 +23,7 @@ object DataStoreStatus {
 }
 
 trait WkRpcClient {
-  def requestUserAccess(token: String, accessRequest: UserAccessRequest): Fox[UserAccessAnswer]
+  def requestUserAccess(token: Option[String], accessRequest: UserAccessRequest): Fox[UserAccessAnswer]
 }
 
 class DataStoreWkRpcClient @Inject()(
@@ -69,9 +69,9 @@ class DataStoreWkRpcClient @Inject()(
   def validateDataSourceUpload(id: DataSourceId): Fox[_] =
     rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/verifyUpload").addQueryString("key" -> dataStoreKey).post(id)
 
-  override def requestUserAccess(token: String, accessRequest: UserAccessRequest): Fox[UserAccessAnswer] =
+  override def requestUserAccess(token: Option[String], accessRequest: UserAccessRequest): Fox[UserAccessAnswer] =
     rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/validateUserAccess")
       .addQueryString("key" -> dataStoreKey)
-      .addQueryString("token" -> token)
+      .addQueryStringOptional("token", token)
       .postWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
 }

@@ -26,7 +26,7 @@ object AccessResourceType extends Enumeration {
 }
 
 case class UserAccessRequest(resourceId: DataSourceId, resourceType: AccessResourceType.Value, mode: AccessMode.Value) {
-  def toCacheKey(token: String) = s"$token#$resourceId#$resourceType#$mode"
+  def toCacheKey(token: Option[String]) = s"$token#$resourceId#$resourceType#$mode"
 }
 
 case class UserAccessAnswer(granted: Boolean, msg: Option[String] = None)
@@ -72,15 +72,12 @@ trait AccessTokenService {
     }
 
   private def hasUserAccess[A](accessRequest: UserAccessRequest, request: Request[A])(
-      implicit ec: ExecutionContext): Fox[UserAccessAnswer] =
-    request
-      .getQueryString("token")
-      .map { token =>
-        hasUserAccess(accessRequest, token)
-      }
-      .getOrElse(Fox.successful(UserAccessAnswer(false, Some("No access token."))))
+      implicit ec: ExecutionContext): Fox[UserAccessAnswer] = {
+    val tokenOpt = request.getQueryString("token").flatMap(token => if (token.isEmpty) None else Some(token))
+    hasUserAccess(accessRequest, tokenOpt)
+  }
 
-  private def hasUserAccess(accessRequest: UserAccessRequest, token: String)(
+  private def hasUserAccess(accessRequest: UserAccessRequest, token: Option[String])(
       implicit ec: ExecutionContext): Fox[UserAccessAnswer] = {
     val key = accessRequest.toCacheKey(token)
     cache.getOrElseUpdate(key, AccessExpiration) {

@@ -10,10 +10,9 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class DataSourceRepository @Inject()(
-                                      webKnossosServer: DataStoreWkRpcClient,
-                                      @Named("webknossos-datastore") val system: ActorSystem
-                                    )
-    extends TemporaryStore[DataSourceId, InboxDataSource](system)
+    webKnossosServer: DataStoreWkRpcClient,
+    @Named("webknossos-datastore") val system: ActorSystem
+) extends TemporaryStore[DataSourceId, InboxDataSource](system)
     with FoxImplicits {
 
   def findUsable(id: DataSourceId): Option[DataSource] =

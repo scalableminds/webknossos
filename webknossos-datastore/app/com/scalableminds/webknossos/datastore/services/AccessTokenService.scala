@@ -26,11 +26,11 @@ object AccessResourceType extends Enumeration {
 }
 
 case class UserAccessRequest(resourceId: DataSourceId, resourceType: AccessResourceType.Value, mode: AccessMode.Value) {
-  def toCacheKey(token: String) = s"$token#$resourceId#$resourceType#$mode"
+  def toCacheKey(token: Option[String]) = s"$token#$resourceId#$resourceType#$mode"
 }
 
 case class UserAccessAnswer(granted: Boolean, msg: Option[String] = None)
-object UserAccessAnswer {implicit val jsonFormat = Json.format[UserAccessAnswer]}
+object UserAccessAnswer { implicit val jsonFormat = Json.format[UserAccessAnswer] }
 
 object UserAccessRequest {
   implicit val jsonFormat = Json.format[UserAccessRequest]
@@ -57,34 +57,36 @@ trait AccessTokenService {
   val webKnossosServer: WkRpcClient
   val cache: SyncCacheApi
 
-
   val AccessExpiration: FiniteDuration = 2.minutes
 
-  def validateAccessForSyncBlock[A](accessRequest: UserAccessRequest)(block: => Result)(implicit request: Request[A], ec: ExecutionContext): Fox[Result] =
+  def validateAccessForSyncBlock[A](accessRequest: UserAccessRequest)(
+      block: => Result)(implicit request: Request[A], ec: ExecutionContext): Fox[Result] =
     validateAccess(accessRequest) {
       Future.successful(block)
     }
 
-  def validateAccess[A](accessRequest: UserAccessRequest)(block: => Future[Result])(implicit request: Request[A], ec: ExecutionContext): Fox[Result] = {
+  def validateAccess[A](accessRequest: UserAccessRequest)(block: => Future[Result])(implicit request: Request[A],
+                                                                                    ec: ExecutionContext): Fox[Result] =
     hasUserAccess(accessRequest, request).flatMap { userAccessAnswer =>
       executeBlockOnPositiveAnswer(userAccessAnswer, block)
     }
+
+  private def hasUserAccess[A](accessRequest: UserAccessRequest, request: Request[A])(
+      implicit ec: ExecutionContext): Fox[UserAccessAnswer] = {
+    val tokenOpt = request.getQueryString("token").flatMap(token => if (token.isEmpty) None else Some(token))
+    hasUserAccess(accessRequest, tokenOpt)
   }
 
-  private def hasUserAccess[A](accessRequest: UserAccessRequest, request: Request[A])(implicit ec: ExecutionContext): Fox[UserAccessAnswer] = {
-    request.getQueryString("token").map { token =>
-      hasUserAccess(accessRequest, token)
-    }.getOrElse(Fox.successful(UserAccessAnswer(false, Some("No access token."))))
-  }
-
-  private def hasUserAccess(accessRequest: UserAccessRequest, token: String)(implicit ec: ExecutionContext): Fox[UserAccessAnswer] = {
+  private def hasUserAccess(accessRequest: UserAccessRequest, token: Option[String])(
+      implicit ec: ExecutionContext): Fox[UserAccessAnswer] = {
     val key = accessRequest.toCacheKey(token)
     cache.getOrElseUpdate(key, AccessExpiration) {
       webKnossosServer.requestUserAccess(token, accessRequest)
     }
   }
 
-  private def executeBlockOnPositiveAnswer[A](userAccessAnswer: UserAccessAnswer, block: => Future[Result])(implicit request: Request[A]): Future[Result] = {
+  private def executeBlockOnPositiveAnswer[A](userAccessAnswer: UserAccessAnswer, block: => Future[Result])(
+      implicit request: Request[A]): Future[Result] =
     userAccessAnswer match {
       case UserAccessAnswer(true, _) =>
         block
@@ -93,7 +95,7 @@ trait AccessTokenService {
       case _ =>
         Future.successful(Forbidden("Token authentication failed"))
     }
-  }
 }
 
-class DataStoreAccessTokenService @Inject()(val webKnossosServer: DataStoreWkRpcClient, val cache: SyncCacheApi) extends AccessTokenService
+class DataStoreAccessTokenService @Inject()(val webKnossosServer: DataStoreWkRpcClient, val cache: SyncCacheApi)
+    extends AccessTokenService

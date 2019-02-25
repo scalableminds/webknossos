@@ -8,8 +8,16 @@ import * as THREE from "three";
 import TWEEN from "tween.js";
 import _ from "lodash";
 
-import { getInputCatcherAspectRatio } from "oxalis/model/accessors/view_mode_accessor";
+import {
+  type OrthoView,
+  type OrthoViewMap,
+  type OrthoViewRects,
+  OrthoViewValuesWithoutTDView,
+  OrthoViews,
+  type Vector3,
+} from "oxalis/constants";
 import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
+import { getInputCatcherAspectRatio } from "oxalis/model/accessors/view_mode_accessor";
 import {
   getPlaneExtentInVoxelFromStore,
   getPosition,
@@ -20,13 +28,6 @@ import { voxelToNm, getBaseVoxel } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
 import Store, { type CameraData } from "oxalis/store";
 import api from "oxalis/api/internal_api";
-import {
-  type OrthoView,
-  type OrthoViewMap,
-  OrthoViewValuesWithoutTDView,
-  OrthoViews,
-  type Vector3,
-} from "oxalis/constants";
 
 type Props = {
   cameras: OrthoViewMap<THREE.OrthographicCamera>,
@@ -59,7 +60,7 @@ class CameraController extends React.PureComponent<Props> {
 
   // Non-TD-View methods
 
-  updateCamViewport(): void {
+  updateCamViewport(inputCatcherRects?: OrthoViewRects): void {
     const state = Store.getState();
     const { clippingDistance } = state.userConfiguration;
     const scaleFactor = getBaseVoxel(state.dataset.dataSource.scale);
@@ -78,6 +79,25 @@ class CameraController extends React.PureComponent<Props> {
 
       this.props.cameras[planeId].near = -clippingDistance;
       this.props.cameras[planeId].updateProjectionMatrix();
+    }
+
+    if (inputCatcherRects != null) {
+      // Update td camera's aspect ratio
+      const tdCamera = this.props.cameras[OrthoViews.TDView];
+
+      const oldMid = (tdCamera.right + tdCamera.left) / 2;
+      const oldWidth = tdCamera.right - tdCamera.left;
+      const oldHeight = tdCamera.top - tdCamera.bottom;
+
+      const oldAspectRatio = oldWidth / oldHeight;
+      const tdRect = inputCatcherRects[OrthoViews.TDView];
+      const newAspectRatio = tdRect.width / tdRect.height;
+
+      const newWidth = (oldWidth * newAspectRatio) / oldAspectRatio;
+
+      tdCamera.left = oldMid - newWidth / 2;
+      tdCamera.right = oldMid + newWidth / 2;
+      tdCamera.updateProjectionMatrix();
     }
   }
 
@@ -105,7 +125,7 @@ class CameraController extends React.PureComponent<Props> {
       ),
       listenToStoreProperty(
         storeState => storeState.viewModeData.plane.inputCatcherRects,
-        () => this.updateCamViewport(),
+        inputCatcherRects => this.updateCamViewport(inputCatcherRects),
       ),
       listenToStoreProperty(
         storeState => storeState.flycam.currentMatrix,

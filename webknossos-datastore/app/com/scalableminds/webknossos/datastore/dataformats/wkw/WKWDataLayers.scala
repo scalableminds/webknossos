@@ -27,32 +27,32 @@ trait WKWLayer extends DataLayer {
 
   def resolutions = wkwResolutions.map(_.resolutionAsPoint3D)
 
-  def lengthOfUnderlyingCubes(resolution: Point3D): Int = {
+  def lengthOfUnderlyingCubes(resolution: Point3D): Int =
     wkwResolutions.find(_.resolutionAsPoint3D == resolution).map(_.cubeLength).getOrElse(0)
-  }
 
 }
 
 case class WKWDataLayer(
-                         name: String,
-                         category: Category.Value,
-                         boundingBox: BoundingBox,
-                         wkwResolutions: List[WKWResolution],
-                         elementClass: ElementClass.Value
-                       ) extends WKWLayer
+    name: String,
+    category: Category.Value,
+    boundingBox: BoundingBox,
+    wkwResolutions: List[WKWResolution],
+    elementClass: ElementClass.Value
+) extends WKWLayer
 
 object WKWDataLayer {
   implicit val wkwDataLayerFormat = Json.format[WKWDataLayer]
 }
 
 case class WKWSegmentationLayer(
-                                 name: String,
-                                 boundingBox: BoundingBox,
-                                 wkwResolutions: List[WKWResolution],
-                                 elementClass: ElementClass.Value,
-                                 mappings: Set[String],
-                                 largestSegmentId: Long
-                               ) extends SegmentationLayer with WKWLayer
+    name: String,
+    boundingBox: BoundingBox,
+    wkwResolutions: List[WKWResolution],
+    elementClass: ElementClass.Value,
+    mappings: Set[String],
+    largestSegmentId: Long
+) extends SegmentationLayer
+    with WKWLayer
 
 object WKWSegmentationLayer {
   implicit val wkwSegmentationLayerFormat = Json.format[WKWSegmentationLayer]

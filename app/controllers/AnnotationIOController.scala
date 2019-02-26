@@ -10,7 +10,7 @@ import javax.inject.Inject
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
+import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.{ProtoGeometryImplicits, TracingType}
 import com.typesafe.scalalogging.LazyLogging
@@ -145,8 +145,9 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
             } yield savedTracingId
           }
           mergedSkeletonTracingIdOpt <- Fox.runOptional(skeletonTracings.headOption) { s =>
-            tracingStoreClient.mergeSkeletonTracingsByContents(SkeletonTracings(skeletonTracings),
-                                                               persistTracing = true)
+            tracingStoreClient.mergeSkeletonTracingsByContents(
+              SkeletonTracings(skeletonTracings.map(t => SkeletonTracingOpt(Some(t)))),
+              persistTracing = true)
           }
           annotation <- annotationService.createFrom(request.identity,
                                                      dataSet,
@@ -176,7 +177,9 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       }.headOption
     } yield {
       volumeTracing.copy(
-        boundingBox = boundingBoxToProto(dataSource.boundingBox),
+        boundingBox =
+          if (volumeTracing.boundingBox.isEmpty) boundingBoxToProto(dataSource.boundingBox)
+          else volumeTracing.boundingBox,
         elementClass = fallbackLayer
           .map(layer => elementClassToProto(layer.elementClass))
           .getOrElse(elementClassToProto(VolumeTracingDefaults.elementClass)),
@@ -185,28 +188,32 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       )
     }
 
-  def download(typ: String, id: String) = sil.SecuredAction.async { implicit request =>
-    logger.trace(s"Requested download for annotation: $typ/$id")
-    for {
-      identifier <- AnnotationIdentifier.parse(typ, id)
-      result <- identifier.annotationType match {
-        case AnnotationType.View             => Fox.failure("Cannot download View annotation")
-        case AnnotationType.CompoundProject  => downloadProject(id, request.identity)
-        case AnnotationType.CompoundTask     => downloadTask(id, request.identity)
-        case AnnotationType.CompoundTaskType => downloadTaskType(id, request.identity)
-        case _                               => downloadExplorational(id, typ, request.identity)
-      }
-    } yield result
-  }
+  def download(typ: String, id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long]) =
+    sil.SecuredAction.async { implicit request =>
+      logger.trace(s"Requested download for annotation: $typ/$id")
+      for {
+        identifier <- AnnotationIdentifier.parse(typ, id)
+        result <- identifier.annotationType match {
+          case AnnotationType.View             => Fox.failure("Cannot download View annotation")
+          case AnnotationType.CompoundProject  => downloadProject(id, request.identity)
+          case AnnotationType.CompoundTask     => downloadTask(id, request.identity)
+          case AnnotationType.CompoundTaskType => downloadTaskType(id, request.identity)
+          case _                               => downloadExplorational(id, typ, request.identity, skeletonVersion, volumeVersion)
+        }
+      } yield result
+    }
 
-  def downloadExplorational(annotationId: String, typ: String, issuingUser: User)(implicit ctx: DBAccessContext,
-                                                                                  m: MessagesProvider) = {
+  def downloadExplorational(annotationId: String,
+                            typ: String,
+                            issuingUser: User,
+                            skeletonVersion: Option[Long],
+                            volumeVersion: Option[Long])(implicit ctx: DBAccessContext, m: MessagesProvider) = {
 
     def skeletonToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String, organizationName: String) =
       for {
         tracingStoreClient <- tracingStoreService.clientFor(dataSet)
         skeletonTracingId <- annotation.skeletonTracingId.toFox
-        tracing <- tracingStoreClient.getSkeletonTracing(skeletonTracingId)
+        tracing <- tracingStoreClient.getSkeletonTracing(skeletonTracingId, skeletonVersion)
         user <- userService.findOneById(annotation._user, useCache = true)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
       } yield {
@@ -214,6 +221,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
                                None,
                                Some(annotation),
                                dataSet.scale,
+                               None,
                                organizationName,
                                Some(user),
                                taskOpt),
@@ -227,8 +235,10 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       for {
         tracingStoreClient <- tracingStoreService.clientFor(dataSet)
         volumeTracingId <- annotation.volumeTracingId.toFox
-        (volumeTracing, data: Source[ByteString, _]) <- tracingStoreClient.getVolumeTracing(volumeTracingId)
-        skeletonTracingOpt <- Fox.runOptional(annotation.skeletonTracingId)(tracingStoreClient.getSkeletonTracing)
+        (volumeTracing, data: Source[ByteString, _]) <- tracingStoreClient.getVolumeTracing(volumeTracingId,
+                                                                                            volumeVersion)
+        skeletonTracingOpt <- Fox.runOptional(annotation.skeletonTracingId)(skeletonId =>
+          tracingStoreClient.getSkeletonTracing(skeletonId, skeletonVersion))
         user <- userService.findOneById(annotation._user, useCache = true)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
       } yield {
@@ -241,6 +251,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
                                                               Some(volumeTracing),
                                                               Some(annotation),
                                                               dataSet.scale,
+                                                              None,
                                                               organizationName,
                                                               Some(user),
                                                               taskOpt)),

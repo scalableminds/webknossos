@@ -5,7 +5,29 @@ This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.md).
 
 ## Unreleased
--
+- 
+
+### Postgres Evolutions:
+- 
+
+
+## [19.03.0](https://github.com/scalableminds/webknossos/releases/tag/19.03.0) - 2019-02-25
+- The config paramters `application.authentication.enableDevAutoVerify` and `application.authentication.enableDevAutoAdmin` have been removed. To enable automatic verification for user signup, set the organization’s new `enableAutoVerify` field to `true` in the database.
+
+### Postgres Evolutions:
+- [038-more-voxel-types.sql](conf/evolutions/038-more-voxel-types.sql)
+- [039-add-tasktype-tracingtype.sql](conf/evolutions/039-add-tasktype-tracingtype.sql)
+- [040-add-auto-activate-per-orga.sql](conf/evolutions/040-add-auto-activate-per-orga.sql)
+
+
+## [19.02.0](https://github.com/scalableminds/webknossos/releases/tag/19.02.0) - 2019-02-04
+- WebKnossos has a publication gallery now. There is no public interface to create publications yet, but instead those need to be inserted into the database directly.
+  Publications and additional dataset properties that are displayed in the gallery as well, can be inserted as follows:
+  ```
+  insert into webknossos.publications(_id, publicationDate, imageUrl, title, description) values('5c3c9ec895010095014759fd', NOW(), '<LINK_TO_IMAGE>', '<TITLE>', '<DESCRIPTION>');
+
+  update webknossos.datasets set _publication = '5c3c9ec895010095014759fd', details='{"species":"<e.g. Mouse>", "brain-region":"<e.g. cortex>", "acquisition":"<e.g. Raw CLSM data>"}' where _id = '<DATASET_ID>' ;
+  ```
 
 ### Postgres Evolutions:
 - [037-add-publications.sql](conf/evolutions/037-add-publications.sql)

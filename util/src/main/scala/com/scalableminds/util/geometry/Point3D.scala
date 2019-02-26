@@ -71,14 +71,13 @@ object Point3D {
   def apply(t: (Int, Int, Int)): Point3D =
     Point3D(t._1, t._2, t._3)
 
-  def fromForm(s: String) = {
+  def fromForm(s: String) =
     s match {
       case formRx(x, y, z) =>
         Point3D(Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z))
       case _ =>
         null
     }
-  }
 
   def fromArray[T <% Int](array: Array[T]) =
     if (array.size >= 3)
@@ -86,9 +85,8 @@ object Point3D {
     else
       None
 
-  def fromList(l: List[Int]) = {
+  def fromList(l: List[Int]) =
     fromArray(l.toArray)
-  }
 
   implicit object Point3DReads extends Reads[Point3D] {
     def reads(json: JsValue) = json match {

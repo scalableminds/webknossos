@@ -16,7 +16,7 @@ if [ "${CIRCLE_BRANCH}" == "master" ] ; then
     author=${author/tmbo/<@tmbo>}
     author=${author/valentin-pinkau/<@valentin>}
     channel="webknossos-bots"
-    commitmsg=$(git log --format=%s -n 1)
+    commitmsg="$(git log --format=%s -n 1)"
     pullregex="(.*)#([0-9]+)(.*)"
     while [[ $commitmsg =~ $pullregex ]]
     do

@@ -13,6 +13,8 @@ trait UpdateAction[T <: GeneratedMessage with Message[T]] {
 
   def addTimestamp(timestamp: Long): UpdateAction[T] = this
 
+  def addInfo(info: Option[String]): UpdateAction[T] = this
+
   def transformToCompact: UpdateAction[T] = this
 }
 
@@ -22,24 +24,29 @@ object UpdateAction {
 }
 
 case class UpdateActionGroup[T <: GeneratedMessage with Message[T]](
-                                                                     version: Long,
-                                                                     timestamp: Long,
-                                                                     actions: List[UpdateAction[T]],
-                                                                     stats: Option[JsObject])
+    version: Long,
+    timestamp: Long,
+    actions: List[UpdateAction[T]],
+    stats: Option[JsObject],
+    info: Option[String],
+    requestId: Option[String]
+)
 
 object UpdateActionGroup {
 
-  implicit def updateActionGroupReads[T <: GeneratedMessage with Message[T]](implicit fmt: Reads[UpdateAction[T]]): Reads[UpdateActionGroup[T]] = new Reads[UpdateActionGroup[T]] {
+  implicit def updateActionGroupReads[T <: GeneratedMessage with Message[T]](
+      implicit fmt: Reads[UpdateAction[T]]): Reads[UpdateActionGroup[T]] = new Reads[UpdateActionGroup[T]] {
 
-    def reads(json: JsValue): JsResult[UpdateActionGroup[T]] = {
+    def reads(json: JsValue): JsResult[UpdateActionGroup[T]] =
       for {
         version <- json.validate((JsPath \ "version").read[Long])
         timestamp <- json.validate((JsPath \ "timestamp").read[Long])
         actions <- json.validate((JsPath \ "actions").read[List[UpdateAction[T]]])
         stats <- json.validate((JsPath \ "stats").readNullable[JsObject])
+        info <- json.validate((JsPath \ "info").readNullable[String])
+        id <- json.validate((JsPath \ "requestId").readNullable[String])
       } yield {
-        UpdateActionGroup[T](version, timestamp, actions, stats)
+        UpdateActionGroup[T](version, timestamp, actions, stats, info, id)
       }
-    }
   }
 }

@@ -119,16 +119,18 @@ class ProjectController @Inject()(projectService: ProjectService,
       Ok(js)
     }
 
-  def tasksForProject(projectName: String) = sil.SecuredAction.async { implicit request =>
-    for {
-      project <- projectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
-      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed"
-      tasks <- taskDAO.findAllByProject(project._id)(GlobalAccessContext)
-      js <- Fox.serialCombined(tasks)(task => taskService.publicWrites(task))
-    } yield {
-      Ok(Json.toJson(js))
+  def tasksForProject(projectName: String, limit: Option[Int] = None, pageNumber: Option[Int] = None) =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        project <- projectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed"
+        tasks <- taskDAO.findAllByProject(project._id, limit.getOrElse(Int.MaxValue), pageNumber.getOrElse(0))(
+          GlobalAccessContext)
+        js <- Fox.serialCombined(tasks)(task => taskService.publicWrites(task))
+      } yield {
+        Ok(Json.toJson(js))
+      }
     }
-  }
 
   def incrementEachTasksInstances(projectName: String, delta: Option[Long]) = sil.SecuredAction.async {
     implicit request =>
@@ -146,7 +148,8 @@ class ProjectController @Inject()(projectService: ProjectService,
       _ <- projectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
       usersWithActiveTasks <- projectDAO.findUsersWithActiveTasks(projectName)
     } yield {
-      Ok(Json.toJson(usersWithActiveTasks.map(tuple => Json.obj("email" -> tuple._1, "activeTasks" -> tuple._2))))
+      Ok(Json.toJson(usersWithActiveTasks.map(tuple =>
+        Json.obj("email" -> tuple._1, "firstName" -> tuple._2, "lastName" -> tuple._3, "activeTasks" -> tuple._4))))
     }
   }
 

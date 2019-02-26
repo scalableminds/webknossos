@@ -1,6 +1,6 @@
 // @flow
 
-import { useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 
 // From https://overreacted.io/making-setinterval-declarative-with-react-hooks/
 export function useInterval(callback: Function, delay: ?number) {
@@ -22,6 +22,24 @@ export function useInterval(callback: Function, delay: ?number) {
     }
     return undefined;
   }, [delay]);
+}
+
+export function useFetch<T>(
+  fetchFn: () => Promise<T>,
+  defaultValue: T,
+  dependencies: Array<any>,
+): T {
+  const [value, setValue] = useState(defaultValue);
+
+  const fetchValue = async () => {
+    const fetchedValue = await fetchFn();
+    setValue(fetchedValue);
+  };
+
+  useEffect(() => {
+    fetchValue();
+  }, dependencies);
+  return value;
 }
 
 export default {};

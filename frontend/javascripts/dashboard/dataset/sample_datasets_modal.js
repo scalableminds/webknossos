@@ -1,36 +1,21 @@
 // @flow
 import { Spin, Button, Modal, List } from "antd";
 import React, { useState, useEffect } from "react";
-import _ from "lodash";
 
 import {
   getSampleDatasets,
   triggerSampleDatasetDownload,
   getDatastores,
 } from "admin/admin_rest_api";
-import { useInterval } from "libs/react_helpers";
+import { useInterval, useFetch } from "libs/react_helpers";
 import { handleGenericError } from "libs/error_handling";
-import type { APIDataStore, APISampleDataset } from "admin/api_flow_types";
+import type { APISampleDataset } from "admin/api_flow_types";
 
 type Props = {
   destroy: () => void,
   onOk?: () => any,
   organizationName: string,
 };
-
-function useDatastores(): Array<APIDataStore> {
-  const [datastores, setDatastores] = useState([]);
-
-  const fetchDatastores = async () => {
-    const fetchedDatastores = await getDatastores();
-    setDatastores(fetchedDatastores);
-  };
-
-  useEffect(() => {
-    fetchDatastores();
-  }, []);
-  return datastores;
-}
 
 function useSampleDatasets(
   organizationName,
@@ -39,7 +24,7 @@ function useSampleDatasets(
   const [failedDatasets, setFailedDatasets] = useState([]);
   const [pendingDatasets, setPendingDatasets] = useState([]);
   // Pick any datastore - This feature will almost always be used if there is only one datastore anyways
-  const datastore = useDatastores()[0];
+  const datastore = useFetch(getDatastores, [], [])[0];
 
   const updateFailedDatasets = sampleDatasets => {
     // Datasets that were pending, but are now available again, failed to download
@@ -55,14 +40,10 @@ function useSampleDatasets(
   };
 
   const updatePendingDatasets = sampleDatasets => {
-    // Remove datasets which are not downloading from the pendingDatasets queue
     setPendingDatasets(
-      _.without(
-        pendingDatasets,
-        ...sampleDatasets
-          .filter(dataset => dataset.status !== "downloading")
-          .map(dataset => dataset.name),
-      ),
+      sampleDatasets
+        .filter(dataset => dataset.status === "downloading")
+        .map(dataset => dataset.name),
     );
   };
 

@@ -4,7 +4,6 @@
  */
 
 import * as THREE from "three";
-import TWEEN from "tween.js";
 import _ from "lodash";
 
 import type { SkeletonTracing, Tree, Node } from "oxalis/store";
@@ -368,10 +367,6 @@ class Skeleton {
       edges.geometry.computeBoundingSphere();
     }
 
-    // if (skeletonTracing.activeNodeId !== this.prevTracing.activeNodeId) {
-    //   this.startNodeHighlightAnimation();
-    // }
-
     // Uniforms
     const { particleSize, overrideNodeRadius } = state.userConfiguration;
     let activeNodeId = skeletonTracing.activeNodeId;
@@ -551,40 +546,6 @@ class Skeleton {
 
   getTreeRGBA(color: Vector3, isVisible: boolean) {
     return color.concat(isVisible ? 1 : 0);
-  }
-
-  /**
-   * Calculates a resizing factor for the active node's radius every time the
-   * active node id changes. In essence this animates the node's radius to grow/shrink a little.
-   */
-  async startNodeHighlightAnimation() {
-    const normal = 1.0;
-    const highlighted = 2.0;
-
-    await this.animateNodeScale(normal, highlighted);
-    await this.animateNodeScale(highlighted, normal);
-  }
-
-  /**
-   * Calculates a resizing factor for the active node's radius every time the
-   * active node id changes. In essence this animates the node's radius to grow/shrink a little.
-   */
-  animateNodeScale(from: number, to: number): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const setScaleFactor = scale => {
-        this.nodes.material.uniforms.activeNodeScaleFactor.value = scale;
-      };
-
-      const tweenAnimation = new TWEEN.Tween({ scaleFactor: from });
-      tweenAnimation
-        .to({ scaleFactor: to }, 100)
-        .onUpdate(function onUpdate() {
-          setScaleFactor(this.scaleFactor);
-        })
-        .onComplete(resolve)
-        .onStop(reject)
-        .start();
-    });
   }
 }
 

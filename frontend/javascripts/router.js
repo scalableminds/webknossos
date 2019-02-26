@@ -1,5 +1,4 @@
 // @flow
-/* eslint-disable react/no-unused-prop-types */
 import { type ContextRouter, Redirect, Route, Router, Switch } from "react-router-dom";
 import { Layout, Alert } from "antd";
 import { connect } from "react-redux";

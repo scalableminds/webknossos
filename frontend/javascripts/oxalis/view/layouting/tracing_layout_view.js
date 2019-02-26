@@ -149,7 +149,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     const headerClassName = classNames({ construction: isDatasetOnScratchVolume });
 
     return (
-      <NmlUploadZoneContainer onImport={importNmls} isAllowed={this.props.isUpdateTracingAllowed}>
+      <NmlUploadZoneContainer onImport={importNmls} isAllowed={isUpdateTracingAllowed}>
         <OxalisController
           initialAnnotationType={this.props.initialAnnotationType}
           initialCommandType={this.props.initialCommandType}
@@ -232,7 +232,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
                   key="arbitraryViewport"
                   portalKey="arbitraryViewport"
                 >
-                  <RecordingSwitch />
+                  {isUpdateTracingAllowed ? <RecordingSwitch /> : null}
                 </InputCatcher>
 
                 <DatasetInfoTabView key="DatasetInfoTabView" portalKey="DatasetInfoTabView" />

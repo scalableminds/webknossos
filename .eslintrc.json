@@ -1,6 +1,7 @@
 {
   "extends": [
     "airbnb",
+    "plugin:eslint-comments/recommended",
     "plugin:flowtype/recommended",
     "plugin:react/recommended",
     "prettier",
@@ -34,6 +35,8 @@
   "rules": {
     "array-callback-return": "warn",
     "class-methods-use-this": "off",
+    "eslint-comments/disable-enable-pair": ["error", { "allowWholeFile": true }],
+    "eslint-comments/no-unused-disable": "error",
     "flowtype/no-types-missing-file-annotation": "off",
     "import/extensions": ["warn", { "js": "never", "jsx": "always" }],
     "import/no-cycle": "off",

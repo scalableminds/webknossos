@@ -1,27 +1,21 @@
 // @flow
-/* eslint-disable jsx-a11y/href-no-hash */
-
 import { type RouterHistory, withRouter } from "react-router-dom";
 import { Spin, Tabs } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 import _ from "lodash";
 
-import type { APIUser, APIMaybeUnimportedDataset } from "admin/api_flow_types";
+import type { APIUser } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import { getUser, getDatastores, triggerDatasetCheck, getDatasets } from "admin/admin_rest_api";
-import { handleGenericError } from "libs/error_handling";
-import { parseAsMaybe } from "libs/utils";
+import { getUser } from "admin/admin_rest_api";
 import DashboardTaskListView from "dashboard/dashboard_task_list_view";
 import DatasetView from "dashboard/dataset_view";
 import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import Request from "libs/request";
 
-const TabPane = Tabs.TabPane;
-
-const validTabKeys = ["publications", "advanced-datasets", "tasks", "explorativeAnnotations"];
+const { TabPane } = Tabs;
 
 type OwnProps = {|
   userId: ?string,
@@ -37,26 +31,10 @@ type PropsWithRouter = {| ...Props, history: RouterHistory |};
 type State = {
   activeTabKey: string,
   user: ?APIUser,
-  datasets: Array<APIMaybeUnimportedDataset>,
-  isLoadingDatasets: boolean,
-};
-
-export const wkDatasetsCacheKey = "wk.datasets";
-export const datasetCache = {
-  set(datasets: APIMaybeUnimportedDataset[]): void {
-    localStorage.setItem("wk.datasets", JSON.stringify(datasets));
-  },
-  get(): APIMaybeUnimportedDataset[] {
-    return parseAsMaybe(localStorage.getItem(wkDatasetsCacheKey)).getOrElse([]);
-  },
-  clear(): void {
-    localStorage.removeItem(wkDatasetsCacheKey);
-  },
 };
 
 export const urlTokenToTabKeyMap = {
-  gallery: "publications",
-  datasets: "advanced-datasets",
+  datasets: "datasets",
   tasks: "tasks",
   annotations: "explorativeAnnotations",
 };
@@ -65,52 +43,25 @@ class DashboardView extends React.PureComponent<PropsWithRouter, State> {
   constructor(props: PropsWithRouter) {
     super(props);
 
+    const validTabKeys = this.getValidTabKeys();
+    const { initialTabKey } = this.props;
     const lastUsedTabKey = localStorage.getItem("lastUsedDashboardTab");
-    const isValid = lastUsedTabKey && validTabKeys.indexOf(lastUsedTabKey) > -1;
-    const defaultTab = this.props.isAdminView ? "tasks" : "publications";
+    const defaultTabKey = this.props.isAdminView ? "tasks" : "datasets";
 
-    const cachedDatasets = datasetCache.get();
-
-    const initialTabKey =
-      this.props.initialTabKey || (lastUsedTabKey && isValid ? lastUsedTabKey : defaultTab);
+    // Flow doesn't allow validTabKeys[key] where key may be null, so check that first
+    const activeTabKey =
+      (initialTabKey && validTabKeys[initialTabKey] && initialTabKey) ||
+      (lastUsedTabKey && validTabKeys[lastUsedTabKey] && lastUsedTabKey) ||
+      defaultTabKey;
     this.state = {
-      activeTabKey: initialTabKey,
+      activeTabKey,
       user: null,
-      isLoadingDatasets: false,
-      datasets: cachedDatasets,
     };
   }
 
   componentDidMount() {
     this.fetchUser();
-    this.fetchDatasets();
   }
-
-  componentDidCatch(error: Error) {
-    console.error(error);
-    // An unknown error was thrown. To avoid any problems with the caching of datasets,
-    // we simply clear the cache for the datasets and re-fetch.
-    this.setState({ datasets: [] });
-    datasetCache.clear();
-    this.fetchDatasets();
-  }
-
-  handleCheckDatasets = async (): Promise<void> => {
-    if (this.state.isLoadingDatasets) return;
-
-    try {
-      this.setState({ isLoadingDatasets: true });
-      const datastores = await getDatastores();
-      await Promise.all(
-        datastores.filter(ds => !ds.isForeign).map(datastore => triggerDatasetCheck(datastore.url)),
-      );
-      await this.fetchDatasets();
-    } catch (error) {
-      handleGenericError(error);
-    } finally {
-      this.setState({ isLoadingDatasets: false });
-    }
-  };
 
   async fetchUser(): Promise<void> {
     const user =
@@ -126,47 +77,24 @@ class DashboardView extends React.PureComponent<PropsWithRouter, State> {
     this.props.history.push(`/annotations/${response.annotation.typ}/${response.annotation.id}`);
   };
 
-  async fetchDatasets(): Promise<void> {
-    try {
-      this.setState({ isLoadingDatasets: true });
-      const datasets = await getDatasets();
-      datasetCache.set(datasets);
+  getValidTabKeys() {
+    const { isAdminView } = this.props;
 
-      // todo: before setting datasets here, replace the LRU counts by the old ones
-      // datasets.forEach(dataset => {
-
-      // })
-
-      this.setState({
-        datasets,
-      });
-    } catch (error) {
-      handleGenericError(error);
-    } finally {
-      this.setState({ isLoadingDatasets: false });
-    }
+    return {
+      datasets: !isAdminView,
+      tasks: true,
+      explorativeAnnotations: true,
+    };
   }
 
   getTabs(user: APIUser) {
     if (this.props.activeUser) {
-      const { isAdminView } = this.props;
-
-      const datasetViewProps = {
-        user,
-        onCheckDatasets: this.handleCheckDatasets,
-        datasets: this.state.datasets,
-        isLoading: this.state.isLoadingDatasets,
-      };
+      const validTabKeys = this.getValidTabKeys();
 
       return [
-        !isAdminView ? (
-          <TabPane tab="Publications" key="publications">
-            <DatasetView {...datasetViewProps} dataViewType="gallery" />
-          </TabPane>
-        ) : null,
-        !isAdminView ? (
-          <TabPane tab="Datasets" key="advanced-datasets">
-            <DatasetView {...datasetViewProps} dataViewType="advanced" />
+        validTabKeys.datasets ? (
+          <TabPane tab="Datasets" key="datasets">
+            <DatasetView user={user} />
           </TabPane>
         ) : null,
         <TabPane tab="Tasks" key="tasks">

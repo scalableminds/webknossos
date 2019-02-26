@@ -6,26 +6,25 @@ import { Spin, Input, Button, Icon, Row, Col } from "antd";
 import React from "react";
 
 import type { APIUser, APIMaybeUnimportedDataset } from "admin/api_flow_types";
-import AdvancedDatasetView from "dashboard/advanced_dataset/advanced_dataset_view";
-import PublicationView from "dashboard/publication_view";
+import AdvancedDatasetView from "dashboard/advanced_dataset/dataset_table";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
 import renderIndependently from "libs/render_independently";
 import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
 import { OptionCard } from "admin/onboarding";
+import { getDatastores, triggerDatasetCheck, getDatasets } from "admin/admin_rest_api";
+import { handleGenericError } from "libs/error_handling";
 
 const { Search } = Input;
 
 type Props = {
-  dataViewType: "gallery" | "advanced",
   user: APIUser,
   history: RouterHistory,
-  datasets: Array<APIMaybeUnimportedDataset>,
-  isLoading: boolean,
-  onCheckDatasets: () => Promise<void>,
 };
 
 type State = {
+  datasets: Array<APIMaybeUnimportedDataset>,
+  isLoading: boolean,
   searchQuery: string,
 };
 
@@ -34,18 +33,77 @@ const persistence: Persistence<State> = new Persistence(
   "datasetList",
 );
 
+export const wkDatasetsCacheKey = "wk.datasets";
+export const datasetCache = {
+  set(datasets: APIMaybeUnimportedDataset[]): void {
+    localStorage.setItem(wkDatasetsCacheKey, JSON.stringify(datasets));
+  },
+  get(): APIMaybeUnimportedDataset[] {
+    return Utils.parseAsMaybe(localStorage.getItem(wkDatasetsCacheKey)).getOrElse([]);
+  },
+  clear(): void {
+    localStorage.removeItem(wkDatasetsCacheKey);
+  },
+};
+
 class DatasetView extends React.PureComponent<Props, State> {
   state = {
     searchQuery: "",
+    datasets: datasetCache.get(),
+    isLoading: false,
   };
 
   componentWillMount() {
     this.setState(persistence.load(this.props.history));
   }
 
+  componentDidMount() {
+    this.fetchDatasets();
+  }
+
   componentWillUpdate(nextProps, nextState) {
     persistence.persist(this.props.history, nextState);
   }
+
+  componentDidCatch(error: Error) {
+    console.error(error);
+    // An unknown error was thrown. To avoid any problems with the caching of datasets,
+    // we simply clear the cache for the datasets and re-fetch.
+    this.setState({ datasets: [] });
+    datasetCache.clear();
+    this.fetchDatasets();
+  }
+
+  async fetchDatasets(): Promise<void> {
+    try {
+      this.setState({ isLoading: true });
+      const datasets = await getDatasets();
+      datasetCache.set(datasets);
+
+      this.setState({ datasets });
+    } catch (error) {
+      handleGenericError(error);
+    } finally {
+      this.setState({ isLoading: false });
+    }
+  }
+
+  handleCheckDatasets = async (): Promise<void> => {
+    if (this.state.isLoading) return;
+
+    try {
+      this.setState({ isLoading: true });
+      const datastores = await getDatastores();
+      await Promise.all(
+        datastores.filter(ds => !ds.isForeign).map(datastore => triggerDatasetCheck(datastore.url)),
+      );
+      await this.fetchDatasets();
+    } catch (error) {
+      handleGenericError(error);
+    } finally {
+      this.setState({ isLoading: false });
+    }
+  };
 
   handleSearch = (event: SyntheticInputEvent<>): void => {
     this.setState({ searchQuery: event.target.value });
@@ -54,7 +112,7 @@ class DatasetView extends React.PureComponent<Props, State> {
   renderSampleDatasetsModal = () => {
     renderIndependently(destroy => (
       <SampleDatasetsModal
-        onOk={this.props.onCheckDatasets}
+        onOk={this.handleCheckDatasets}
         organizationName={this.props.user.organization}
         destroy={destroy}
       />
@@ -101,7 +159,7 @@ class DatasetView extends React.PureComponent<Props, State> {
       </React.Fragment>
     );
 
-    return this.props.isLoading ? null : (
+    return this.state.isLoading ? null : (
       <Row type="flex" justify="center" style={{ padding: "20px 50px 70px" }} align="middle">
         <Col span={18}>
           <div style={{ paddingBottom: 32, textAlign: "center" }}>
@@ -112,14 +170,10 @@ class DatasetView extends React.PureComponent<Props, State> {
     );
   }
 
-  renderGallery() {
-    return <PublicationView datasets={this.props.datasets} searchQuery={this.state.searchQuery} />;
-  }
-
-  renderAdvanced() {
+  renderTable() {
     return (
       <AdvancedDatasetView
-        datasets={this.props.datasets}
+        datasets={this.state.datasets}
         searchQuery={this.state.searchQuery}
         isUserAdmin={Utils.isUserAdmin(this.props.user)}
       />
@@ -127,7 +181,6 @@ class DatasetView extends React.PureComponent<Props, State> {
   }
 
   render() {
-    const isGallery = this.props.dataViewType === "gallery";
     const margin = { marginRight: 5 };
     const search = (
       <Search
@@ -141,9 +194,9 @@ class DatasetView extends React.PureComponent<Props, State> {
     const adminHeader = Utils.isUserAdmin(this.props.user) ? (
       <div className="pull-right">
         <Button
-          icon={this.props.isLoading ? "loading" : "reload"}
+          icon={this.state.isLoading ? "loading" : "reload"}
           style={margin}
-          onClick={this.props.onCheckDatasets}
+          onClick={this.handleCheckDatasets}
         >
           Refresh
         </Button>
@@ -158,20 +211,15 @@ class DatasetView extends React.PureComponent<Props, State> {
       search
     );
 
-    const isEmpty = this.props.datasets.length === 0;
-    let content;
-    if (isEmpty) {
-      content = this.renderPlaceholder();
-    } else {
-      content = isGallery ? this.renderGallery() : this.renderAdvanced();
-    }
+    const isEmpty = this.state.datasets.length === 0;
+    const content = isEmpty ? this.renderPlaceholder() : this.renderTable();
 
     return (
       <div>
         {adminHeader}
-        <h3 className="TestDatasetHeadline">{isGallery ? "Publications" : "Datasets"}</h3>
+        <h3 className="TestDatasetHeadline">Datasets</h3>
         <div className="clearfix" style={{ margin: "20px 0px" }} />
-        <Spin size="large" spinning={this.props.datasets.length === 0 && this.props.isLoading}>
+        <Spin size="large" spinning={this.state.datasets.length === 0 && this.state.isLoading}>
           {content}
         </Spin>
       </div>

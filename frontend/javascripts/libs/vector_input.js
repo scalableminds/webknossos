@@ -1,5 +1,4 @@
 // @flow
-/* eslint-disable prefer-default-export */
 import { Input } from "antd";
 import * as React from "react";
 import _ from "lodash";

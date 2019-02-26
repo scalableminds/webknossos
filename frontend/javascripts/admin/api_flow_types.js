@@ -450,6 +450,7 @@ export type APIFeatureToggles = {
   +defaultOrganization: string,
   +addForeignDataset: boolean,
   +hideNavbarLogin: boolean,
+  +enableFrontpage: boolean,
 };
 
 // Tracing related datatypes

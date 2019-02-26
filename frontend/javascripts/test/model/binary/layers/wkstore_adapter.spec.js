@@ -206,7 +206,7 @@ test.serial("sendToStore: Request Handling should send the correct request param
   getBucketData.returns(data);
 
   const expectedSaveQueueItems = {
-    type: "PUSH_SAVE_QUEUE",
+    type: "PUSH_SAVE_QUEUE_TRANSACTION",
     items: [
       {
         name: "updateBucket",

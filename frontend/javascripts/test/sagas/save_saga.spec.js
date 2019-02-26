@@ -104,9 +104,9 @@ test("SaveSaga should send update actions", t => {
   expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS[0]));
   saga.next(); // setLastSaveTimestampAction
   saga.next(); // select state
-  expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE"));
+  expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE_TRANSACTION"));
   saga.next(); // race
-  saga.next(SaveActions.pushSaveQueueAction(updateActions));
+  saga.next(SaveActions.pushSaveQueueTransaction(updateActions));
   saga.next(); // select state
   expectValueDeepEqual(t, saga.next(saveQueue), call(sendRequestToServer, TRACING_TYPE));
   saga.next(); // select state
@@ -114,7 +114,7 @@ test("SaveSaga should send update actions", t => {
 
   // Test that loop repeats
   saga.next(); // select state
-  expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE"));
+  expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE_TRANSACTION"));
 });
 
 test("SaveSaga should send request to server", t => {
@@ -215,7 +215,7 @@ test("SaveSaga should send update actions right away", t => {
   expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS[0]));
   saga.next();
   saga.next(); // select state
-  expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE"));
+  expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE_TRANSACTION"));
   saga.next(); // race
   saga.next(SaveActions.saveNowAction()); // put setSaveBusyAction
   saga.next(); // select state

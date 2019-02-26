@@ -33,7 +33,7 @@ import {
   shiftSaveQueueAction,
   setSaveBusyAction,
   setLastSaveTimestampAction,
-  pushSaveQueueAction,
+  pushSaveQueueTransaction,
   setVersionNumberAction,
 } from "oxalis/model/actions/save_actions";
 import Date from "libs/date";
@@ -106,13 +106,13 @@ export function* pushTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
   yield* put(setLastSaveTimestampAction(tracingType));
   while (true) {
     let saveQueue;
-    // Check whether the save queue is actually empty, the PUSH_SAVE_QUEUE action
+    // Check whether the save queue is actually empty, the PUSH_SAVE_QUEUE_TRANSACTION action
     // could have been triggered during the call to sendRequestToServer
 
     saveQueue = yield* select(state => state.save.queue[tracingType]);
     if (saveQueue.length === 0) {
       // Save queue is empty, wait for push event
-      yield* take("PUSH_SAVE_QUEUE");
+      yield* take("PUSH_SAVE_QUEUE_TRANSACTION");
     }
     yield* race({
       timeout: _call(delay, PUSH_THROTTLE_TIME),
@@ -186,7 +186,8 @@ export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<v
           method: "POST",
           headers: { "X-Date": `${Date.now()}` },
           data: compactedSaveQueue,
-          compress: true,
+          // todo: undo this before merging
+          compress: false,
         },
       );
       yield* put(setVersionNumberAction(version + compactedSaveQueue.length, tracingType));
@@ -484,11 +485,7 @@ export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
       ),
     );
     if (items.length > 0) {
-      const updateActionChunks = _.chunk(items, maximumActionCountPerBatch);
-
-      for (const updateActionChunk of updateActionChunks) {
-        yield* put(pushSaveQueueAction(updateActionChunk, tracingType));
-      }
+      yield* put(pushSaveQueueTransaction(items, tracingType));
     }
     prevTracing = tracing;
     prevFlycam = flycam;

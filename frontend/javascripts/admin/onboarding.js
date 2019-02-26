@@ -109,12 +109,13 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
           width: 350,
           display: "flex",
           flexDirection: "column",
+          justifyContent: "space-around",
         }}
       >
         <div style={{ fontSize: 30 }}>{icon}</div>
         <p style={{ fontWeight: "bold" }}>{header}</p>
         <p style={{ color: "gray" }}>{children}</p>
-        <p style={{ marginTop: "auto" }}>{action}</p>
+        <p>{action}</p>
       </Card>
     </div>
   );
@@ -324,7 +325,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
             Upload your dataset via drag and drop or add one of our sample datasets.
           </React.Fragment>
         }
-        icon={<Icon type="cloud-upload" className="icon-big" />}
+        icon={<Icon type="file-add" className="icon-big" />}
       >
         {this.state.showDatasetUploadModal && (
           <Modal

@@ -48,8 +48,19 @@ object UpdateActionGroup {
         stats <- json.validate((JsPath \ "stats").readNullable[JsObject])
         info <- json.validate((JsPath \ "info").readNullable[String])
         id <- json.validate((JsPath \ "requestId").readNullable[String])
+        transactionId <- json.validate((JsPath \ "transactionId").readNullable[String])
+        transactionGroupCount <- json.validate((JsPath \ "transactionGroupCount").readNullable[Int])
+        transactionGroupIndex <- json.validate((JsPath \ "transactionGroupIndex").readNullable[Int])
       } yield {
-        UpdateActionGroup[T](version, timestamp, actions, stats, info, id)
+        UpdateActionGroup[T](version,
+                             timestamp,
+                             actions,
+                             stats,
+                             info,
+                             id,
+                             transactionId,
+                             transactionGroupCount,
+                             transactionGroupIndex)
       }
   }
 }

@@ -110,7 +110,25 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
         accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId)) {
           AllowRemoteOrigin {
             val updateGroups = request.body
-            Fox.successful(Ok)
+            for {
+              currentCommittedVersion <- tracingService.currentVersion(tracingId)
+              // if all have transactionGroupCount == 1, go old code path (report to wK only once)
+              _ = updateGroups.foreach { updateGroup =>
+                val previousVersion: Long = tracingService
+                  .currentUncommittedVersion(tracingId, updateGroup.transactionId)
+                  .getOrElse(currentCommittedVersion)
+                if (previousVersion + 1 == updateGroup.version) {
+                  if (updateGroup.transactionGroupCount
+                        .getOrElse(1) == updateGroup.transactionGroupIndex.getOrElse(0) + 1) {
+                    // Commit all with id
+                  } else {
+                    // save to uncommitted
+                  }
+                } else {
+                  Failure(s"Incorrect version. Expected: ${previousVersion + 1}; Got: ${updateGroup.version}") ~> CONFLICT
+                }
+              }
+            } yield Ok
           }
         }
       }

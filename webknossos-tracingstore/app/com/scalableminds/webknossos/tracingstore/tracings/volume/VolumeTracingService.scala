@@ -17,6 +17,7 @@ import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataR
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.services.BinaryDataService
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
+import com.scalableminds.webknossos.tracingstore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.tracingstore.TracingStoreConfig
 import com.scalableminds.webknossos.wrap.WKWFile
 import com.typesafe.scalalogging.LazyLogging
@@ -32,7 +33,8 @@ class VolumeTracingService @Inject()(
     tracingDataStore: TracingDataStore,
     config: TracingStoreConfig,
     val handledGroupCache: TemporaryStore[(String, String, Long), Unit],
-    val temporaryTracingStore: TemporaryTracingStore[VolumeTracing]
+    val temporaryTracingStore: TemporaryTracingStore[VolumeTracing],
+    val transactionBatchStore: TemporaryStore[(String, String, Long), UpdateActionGroup[VolumeTracing]]
 ) extends TracingService[VolumeTracing]
     with VolumeTracingBucketHelper
     with WKWDataFormatHelper

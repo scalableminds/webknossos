@@ -16,7 +16,9 @@ import scala.concurrent.ExecutionContext
 class SkeletonTracingService @Inject()(
     tracingDataStore: TracingDataStore,
     val temporaryTracingStore: TemporaryTracingStore[SkeletonTracing],
-    val handledGroupCache: TemporaryStore[(String, String, Long), Unit])(implicit ec: ExecutionContext)
+    val handledGroupCache: TemporaryStore[(String, String, Long), Unit],
+    val transactionBatchStore: TemporaryStore[(String, String, Long), UpdateActionGroup[SkeletonTracing]])(
+    implicit ec: ExecutionContext)
     extends TracingService[SkeletonTracing]
     with KeyValueStoreImplicits
     with ProtoGeometryImplicits

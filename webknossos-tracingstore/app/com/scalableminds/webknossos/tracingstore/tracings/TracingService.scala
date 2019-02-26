@@ -4,6 +4,8 @@ import java.util.UUID
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
+import com.scalableminds.webknossos.tracingstore.SkeletonTracing.SkeletonTracing
+import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.Reads
@@ -26,6 +28,8 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
 
   val handledGroupCache: TemporaryStore[(String, String, Long), Unit]
 
+  val transactionBatchStore: TemporaryStore[(String, String, Long), UpdateActionGroup[T]]
+
   implicit def tracingCompanion: GeneratedMessageCompanion[T]
 
   implicit val updateActionReads: Reads[UpdateAction[T]]
@@ -35,6 +39,8 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
   private val temporaryStoreTimeout = 10 minutes
 
   def currentVersion(tracingId: String): Fox[Long]
+
+  def currentUncommittedVersion(tracingId: String, transactionId: Option[String]): Option[Long] = Some(0L) //TODO
 
   def handleUpdateGroup(tracingId: String, updateGroup: UpdateActionGroup[T], previousVersion: Long): Fox[_]
 

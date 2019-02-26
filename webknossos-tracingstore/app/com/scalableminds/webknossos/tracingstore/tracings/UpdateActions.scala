@@ -29,7 +29,10 @@ case class UpdateActionGroup[T <: GeneratedMessage with Message[T]](
     actions: List[UpdateAction[T]],
     stats: Option[JsObject],
     info: Option[String],
-    requestId: Option[String]
+    requestId: Option[String],
+    transactionId: Option[String],
+    transactionGroupCount: Option[Int],
+    transactionGroupIndex: Option[Int]
 )
 
 object UpdateActionGroup {

@@ -104,6 +104,16 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
     }
   }
 
+  /*def updatePreliminary(tracingId: String) = Action.async(validateJson[List[UpdateActionGroup[T]]]) { implicit request =>
+    log {
+      accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId)) {
+        AllowRemoteOrigin {
+          val updateGroups = request.body
+          Ok
+        }
+      }
+    }*/
+
   def update(tracingId: String) = Action.async(validateJson[List[UpdateActionGroup[T]]]) { implicit request =>
     log {
       accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId)) {

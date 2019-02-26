@@ -72,10 +72,6 @@ class NodeShader {
         type: "f",
         value: NaN,
       },
-      activeNodeScaleFactor: {
-        type: "f",
-        value: 1.0,
-      },
       treeColors: {
         type: "t",
         value: treeColorTexture,
@@ -132,7 +128,6 @@ uniform float datasetScale;
 uniform float viewportScale;
 uniform float activeNodeId;
 uniform float activeTreeId;
-uniform float activeNodeScaleFactor; // used for the "new node" animation
 uniform float overrideParticleSize; // node radius for equally size nodes
 uniform int overrideNodeRadius; // bool activates equaly node radius for all nodes
 uniform int isPicking; // bool indicates whether we are currently rendering for node picking
@@ -226,9 +221,8 @@ void main() {
         ViewModeValuesIndices.Orthogonal,
       )};
 
-      gl_PointSize *= activeNodeScaleFactor;
       v_innerPointSize = gl_PointSize;
-      v_outerPointSize = isOrthogonalMode ? (v_innerPointSize + 25.0) * activeNodeScaleFactor : v_innerPointSize;
+      v_outerPointSize = isOrthogonalMode ? (v_innerPointSize + 25.0) : v_innerPointSize;
       gl_PointSize = v_outerPointSize;
     }
 

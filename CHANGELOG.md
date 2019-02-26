@@ -13,7 +13,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - 
 
 ### Changed
-- 
+- The brush size will now be remembered across page reloads. [#3827](https://github.com/scalableminds/webknossos/pull/3827)
 
 ### Fixed
 - 

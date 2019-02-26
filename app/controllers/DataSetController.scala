@@ -31,8 +31,7 @@ class DataSetController @Inject()(userService: UserService,
                                   organizationDAO: OrganizationDAO,
                                   teamDAO: TeamDAO,
                                   dataSetDAO: DataSetDAO,
-                                  sil: Silhouette[WkEnv],
-                                  cache: SyncCacheApi)(implicit ec: ExecutionContext)
+                                  sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
     extends Controller {
 
   val DefaultThumbnailWidth = 400
@@ -48,12 +47,25 @@ class DataSetController @Inject()(userService: UserService,
       (__ \ 'sortingKey).readNullable[Long] and
       (__ \ 'isPublic).read[Boolean]).tupled
 
+  def removeFromThumbnailCache(organizationName: String, dataSetName: String) =
+    sil.SecuredAction { implicit request =>
+      dataSetService.thumbnailCache.removeAllConditional(_.startsWith(s"thumbnail-$organizationName*$dataSetName"))
+      Ok
+    }
+
+  private def thumbnailCacheKey(organizationName: String,
+                                dataSetName: String,
+                                dataLayerName: String,
+                                width: Int,
+                                height: Int) =
+    s"thumbnail-$organizationName*$dataSetName*$dataLayerName-$width-$height"
+
   def thumbnail(organizationName: String, dataSetName: String, dataLayerName: String, w: Option[Int], h: Option[Int]) =
     sil.UserAwareAction.async { implicit request =>
       def imageFromCacheIfPossible(dataSet: DataSet): Fox[Array[Byte]] = {
         val width = Math.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailHeight)
         val height = Math.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
-        cache.get[Array[Byte]](s"thumbnail-$organizationName*$dataSetName*$dataLayerName-$width-$height") match {
+        dataSetService.thumbnailCache.find(s"thumbnail-$organizationName*$dataSetName*$dataLayerName-$width-$height") match {
           case Some(a) =>
             Fox.successful(a)
           case _ => {
@@ -72,10 +84,10 @@ class DataSetController @Inject()(userService: UserService,
                                             defaultCenterOpt))
               .map { result =>
                 // We don't want all images to expire at the same time. Therefore, we add some random variation
-                cache.set(
+                dataSetService.thumbnailCache.insert(
                   s"thumbnail-$organizationName*$dataSetName*$dataLayerName-$width-$height",
                   result,
-                  (ThumbnailCacheDuration.toSeconds + math.random * 2.hours.toSeconds) seconds
+                  Some((ThumbnailCacheDuration.toSeconds + math.random * 2.hours.toSeconds) seconds)
                 )
                 result
               }

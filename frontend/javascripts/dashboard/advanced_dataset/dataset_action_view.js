@@ -4,7 +4,11 @@ import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import * as React from "react";
 
 import type { APIMaybeUnimportedDataset } from "admin/api_flow_types";
-import { createExplorational, triggerDatasetClearCache } from "admin/admin_rest_api";
+import {
+  createExplorational,
+  triggerDatasetClearCache,
+  triggerDatasetClearThumbnailCache,
+} from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
 import { trackAction } from "oxalis/model/helpers/analytics";
@@ -29,7 +33,10 @@ class DatasetActionView extends React.PureComponent<Props, State> {
   };
 
   clearCache = async (dataset: APIMaybeUnimportedDataset) => {
-    await triggerDatasetClearCache(dataset.dataStore.url, dataset);
+    await Promise.all([
+      triggerDatasetClearCache(dataset.dataStore.url, dataset),
+      triggerDatasetClearThumbnailCache(dataset),
+    ]);
     Toast.success(messages["dataset.clear_cache_success"]);
   };
 

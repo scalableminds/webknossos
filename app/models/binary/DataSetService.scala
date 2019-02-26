@@ -12,6 +12,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
   UnusableDataSource,
   InboxDataSourceLike => InboxDataSource
 }
+import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.team._
@@ -38,6 +39,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                teamService: TeamService,
                                userService: UserService,
                                dataSetAllowedTeamsDAO: DataSetAllowedTeamsDAO,
+                               val thumbnailCache: TemporaryStore[String, Array[Byte]],
                                rpc: RPC)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {

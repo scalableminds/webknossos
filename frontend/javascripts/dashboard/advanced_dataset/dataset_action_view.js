@@ -1,6 +1,4 @@
 // @flow
-/* eslint-disable jsx-a11y/href-no-hash */
-
 import { Dropdown, Menu, Icon, Tooltip } from "antd";
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import * as React from "react";

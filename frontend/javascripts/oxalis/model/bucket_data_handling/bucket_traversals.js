@@ -136,7 +136,7 @@ export default function traverse(
       }
     } else {
       // tMaxX === tMaxY
-      /* eslint-disable no-lonely-if */
+      /* eslint-disable-next-line no-lonely-if */
       if (tMaxZ < tMaxX) {
         Z = visitNextZ();
       } else if (tMaxZ > tMaxX) {

@@ -45,10 +45,10 @@ class TracingStoreWkRpcClient @Inject()(
                  "tracingId" -> tracingId,
                  "userToken" -> userToken))
 
-  override def requestUserAccess(token: String, accessRequest: UserAccessRequest): Fox[UserAccessAnswer] =
+  override def requestUserAccess(token: Option[String], accessRequest: UserAccessRequest): Fox[UserAccessAnswer] =
     rpc(s"$webKnossosUrl/api/tracingstores/$tracingStoreName/validateUserAccess")
       .addQueryString("key" -> tracingStoreKey)
-      .addQueryString("token" -> token)
+      .addQueryStringOptional("token", token)
       .postWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
 }
 

@@ -5,6 +5,13 @@ This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.md).
 
 ## Unreleased
+- 
+
+### Postgres Evolutions:
+- 
+
+
+## [19.03.0](https://github.com/scalableminds/webknossos/releases/tag/19.03.0) - 2019-02-25
 - The config paramters `application.authentication.enableDevAutoVerify` and `application.authentication.enableDevAutoAdmin` have been removed. To enable automatic verification for user signup, set the organization’s new `enableAutoVerify` field to `true` in the database.
 
 ### Postgres Evolutions:

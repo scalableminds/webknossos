@@ -1,8 +1,4 @@
-/**
- * comment_tab_view.js
- * @flow
- */
-
+// @flow
 import { AutoSizer, List } from "react-virtualized";
 import type { Dispatch } from "redux";
 import { Input, Menu, Dropdown, Tooltip, Icon } from "antd";
@@ -103,8 +99,6 @@ class CommentTabView extends React.PureComponent<PropsWithSkeleton, CommentTabSt
     isSortedAscending: true,
     sortBy: SortByEnum.NAME,
     data: [],
-    // TODO: Remove once https://github.com/yannickcr/eslint-plugin-react/issues/1751 is merged
-    // eslint-disable-next-line react/no-unused-state
     collapsedTreeIds: {},
     isMarkdownModalVisible: false,
   };

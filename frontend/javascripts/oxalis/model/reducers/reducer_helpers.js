@@ -1,5 +1,4 @@
 // @flow
-/* eslint-disable import/prefer-default-export */
 import Maybe from "data.maybe";
 
 import type { APIAnnotation, ServerBoundingBox } from "admin/api_flow_types";

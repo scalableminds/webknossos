@@ -44,6 +44,13 @@ class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
       }
     }
 
+  def findAllConditional(predicate: K => Boolean) =
+    map.synchronized {
+      map.keySet.filter(predicate).flatMap { key: K =>
+        map.get(key)
+      }
+    }
+
   def insert(id: K, t: V, to: Option[FiniteDuration] = None) = {
     map.synchronized {
       map += (id -> t)

@@ -117,20 +117,25 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
           } else {
             for {
               currentCommittedVersion <- tracingService.currentVersion(tracingId)
-              _ = updateGroups.foreach { updateGroup =>
+              _ = updateGroups.foreach { updateGroup => //todo: wait for this, increment versions on right spots
                 val previousVersion: Long = tracingService
                   .currentUncommittedVersion(tracingId, updateGroup.transactionId)
                   .getOrElse(currentCommittedVersion)
                 if (previousVersion + 1 == updateGroup.version) {
                   if (updateGroup.transactionGroupCount
                         .getOrElse(1) == updateGroup.transactionGroupIndex.getOrElse(0) + 1) {
-                    // Commit all with id
+                    val updateActionGroupsToCommit =
+                      tracingService.transactionBatchStore
+                        .findAllConditional(keyTuple => keyTuple._2 == updateGroup.transactionId.get)
+                        .toList
+                        .sortBy(_.transactionGroupIndex.get) :+ updateGroup
+                    commitUpdates(tracingId, updateActionGroupsToCommit, userToken)
                   } else {
-                    // save to uncommitted
                     tracingService.transactionBatchStore.insert(
                       (tracingId, updateGroup.transactionId.get, updateGroup.transactionGroupIndex.get),
                       updateGroup,
                       Some(transactionBatchExpiry))
+                    Fox.successful(Ok)
                   }
                 } else {
                   Failure(s"Incorrect version. Expected: ${previousVersion + 1}; Got: ${updateGroup.version}") ~> CONFLICT

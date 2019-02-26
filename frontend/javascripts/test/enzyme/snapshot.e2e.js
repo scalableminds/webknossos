@@ -66,40 +66,31 @@ test("Dashboard", async t => {
   );
   await waitForAllRequests(dashboard);
 
+  // Datasets tab is the default
   t.is(dashboard.find(".TestDatasetHeadline").length, 1);
   debugWrapper(dashboard, "Dashboard-1");
   t.snapshot(createSnapshotable(dashboard), { id: "Dashboard-Datasets" });
 
+  // Active tasks tab
   dashboard
     .find(".ant-tabs-tab")
     .at(1)
     .simulate("click");
   await waitForAllRequests(dashboard);
 
-  t.is(dashboard.find(".TestAdvancedDatasetView").length, 1);
+  t.is(dashboard.find(".TestTasksHeadline").length, 1);
   debugWrapper(dashboard, "Dashboard-2");
-  t.snapshot(createSnapshotable(dashboard), { id: "Dashboard-Datasets-Advanced" });
+  t.snapshot(createSnapshotable(dashboard), { id: "Dashboard-Tasks" });
 
-  // Active tasks tab
+  // Active explorative annotations tab
   dashboard
     .find(".ant-tabs-tab")
     .at(2)
     .simulate("click");
   await waitForAllRequests(dashboard);
 
-  t.is(dashboard.find(".TestTasksHeadline").length, 1);
-  debugWrapper(dashboard, "Dashboard-3");
-  t.snapshot(createSnapshotable(dashboard), { id: "Dashboard-Tasks" });
-
-  // Active explorative annotations tab
-  dashboard
-    .find(".ant-tabs-tab")
-    .at(3)
-    .simulate("click");
-  await waitForAllRequests(dashboard);
-
   t.is(dashboard.find(".TestExplorativeAnnotationsView").length, 1);
-  debugWrapper(dashboard, "Dashboard-4");
+  debugWrapper(dashboard, "Dashboard-3");
   t.snapshot(createSnapshotable(dashboard), { id: "Dashboard-Explorative-Annotations" });
 });
 

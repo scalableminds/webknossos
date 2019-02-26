@@ -70,9 +70,9 @@ export const OrthoViewValuesWithoutTDView = [
 ];
 
 export const OrthoViewColors: OrthoViewMap<number> = {
-  [OrthoViews.PLANE_XY]: 0xff0000,
-  [OrthoViews.PLANE_YZ]: 0x0000ff,
-  [OrthoViews.PLANE_XZ]: 0x00ff00,
+  [OrthoViews.PLANE_XY]: 0xc81414, // red
+  [OrthoViews.PLANE_YZ]: 0x1414c8, // blue
+  [OrthoViews.PLANE_XZ]: 0x14c814, // green
   [OrthoViews.TDView]: 0xffffff,
 };
 

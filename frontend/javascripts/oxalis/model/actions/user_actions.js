@@ -1,5 +1,4 @@
 // @flow
-/* eslint-disable import/prefer-default-export */
 import type { APIUser } from "admin/api_flow_types";
 
 type SetActiveUser = {

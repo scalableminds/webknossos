@@ -147,7 +147,7 @@ function* watchTracingConsistency(): Saga<void> {
   if (invalidTreeDetails.length > 0) {
     const error = new Error("Corrupted tracing. See the action log for details.");
     Toast.error(messages["tracing.invalid_state"]);
-    ErrorHandling.notify(error, { invalidTreeDetails }, true);
+    ErrorHandling.notify(error, { invalidTreeDetails });
   }
 }
 

@@ -1,4 +1,3 @@
-/* eslint-disable import/prefer-default-export */
 // @flow
 import type { Vector3, OrthoView } from "oxalis/constants";
 

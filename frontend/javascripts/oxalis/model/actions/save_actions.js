@@ -1,5 +1,4 @@
 // @flow
-/* eslint-disable import/prefer-default-export */
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import Date from "libs/date";
 

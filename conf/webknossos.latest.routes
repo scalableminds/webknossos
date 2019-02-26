@@ -78,12 +78,12 @@ PUT           /datastores/:name/datasource                                      
 PUT           /datastores/:name/datasources                                     controllers.WKDataStoreController.updateAll(name: String)
 PATCH         /datastores/:name/status                                          controllers.WKDataStoreController.statusUpdate(name: String)
 POST          /datastores/:name/verifyUpload                                    controllers.WKDataStoreController.validateDataSetUpload(name: String)
-POST          /datastores/:name/validateUserAccess                              controllers.UserTokenController.validateAccessViaDatastore(name: String, token: String)
+POST          /datastores/:name/validateUserAccess                              controllers.UserTokenController.validateAccessViaDatastore(name: String, token: Option[String])
 
 # Tracingstores
 GET           /tracingstore                                                     controllers.WKTracingStoreController.listOne
 POST          /tracingstores/:name/handleTracingUpdateReport                    controllers.WKTracingStoreController.handleTracingUpdateReport(name: String)
-POST          /tracingstores/:name/validateUserAccess                           controllers.UserTokenController.validateAccessViaTracingstore(name: String, token: String)
+POST          /tracingstores/:name/validateUserAccess                           controllers.UserTokenController.validateAccessViaTracingstore(name: String, token: Option[String])
 
 # User access tokens for datastore authentification
 POST          /userToken/generate                                               controllers.UserTokenController.generateTokenForDataStore

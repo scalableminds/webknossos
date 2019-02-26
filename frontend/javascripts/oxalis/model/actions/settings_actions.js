@@ -1,4 +1,3 @@
-/* eslint-disable import/prefer-default-export */
 // @flow
 import type { ViewMode, ControlMode } from "oxalis/constants";
 import type {

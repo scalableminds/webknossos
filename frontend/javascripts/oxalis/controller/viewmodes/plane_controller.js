@@ -28,10 +28,7 @@ import {
   moveFlycamOrthoAction,
   zoomByDeltaAction,
 } from "oxalis/model/actions/flycam_actions";
-import {
-  setBrushSizeAction,
-  setMousePositionAction,
-} from "oxalis/model/actions/volumetracing_actions";
+import { setMousePositionAction } from "oxalis/model/actions/volumetracing_actions";
 import { setViewportAction, zoomTDViewAction } from "oxalis/model/actions/view_mode_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Dimensions from "oxalis/model/dimensions";
@@ -465,8 +462,8 @@ class PlaneController extends React.PureComponent<Props> {
       .map(tool => tool === VolumeToolEnum.BRUSH)
       .getOrElse(false);
     if (isBrushActive) {
-      const currentSize = Store.getState().temporaryConfiguration.brushSize;
-      Store.dispatch(setBrushSizeAction(currentSize + changeValue));
+      const currentSize = Store.getState().userConfiguration.brushSize;
+      Store.dispatch(updateUserSettingAction("brushSize", currentSize + changeValue));
     }
   }
 
@@ -485,9 +482,9 @@ class PlaneController extends React.PureComponent<Props> {
           .map(tool => tool === VolumeToolEnum.BRUSH)
           .getOrElse(false);
         if (isBrushActive) {
-          const currentSize = Store.getState().temporaryConfiguration.brushSize;
+          const currentSize = Store.getState().userConfiguration.brushSize;
           // Different browsers send different deltas, this way the behavior is comparable
-          Store.dispatch(setBrushSizeAction(currentSize + (delta > 0 ? 5 : -5)));
+          Store.dispatch(updateUserSettingAction("brushSize", currentSize + (delta > 0 ? 5 : -5)));
         } else if (this.props.tracing.skeleton) {
           // Different browsers send different deltas, this way the behavior is comparable
           api.tracing.setNodeRadius(delta > 0 ? 5 : -5);

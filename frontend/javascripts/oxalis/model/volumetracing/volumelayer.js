@@ -213,7 +213,7 @@ class VolumeLayer {
   getCircleVoxelIterator(position: Vector3, boundings?: ?BoundingBoxType): VoxelIterator {
     const state = Store.getState();
     const zoomFactor = getZoomValue(state.flycam);
-    const { brushSize } = state.temporaryConfiguration;
+    const { brushSize } = state.userConfiguration;
     const scaledBrushSize = brushSize * zoomFactor;
 
     const radius = Math.round(scaledBrushSize / 2);
@@ -259,7 +259,7 @@ class VolumeLayer {
       getBaseVoxelFactors(state.dataset.dataSource.scale),
     );
     const zoomFactor = getZoomValue(state.flycam);
-    const scaledBrushSize = state.temporaryConfiguration.brushSize * zoomFactor;
+    const scaledBrushSize = state.userConfiguration.brushSize * zoomFactor;
     const radius = Math.round(scaledBrushSize / 2);
     let p1;
     let p2;

@@ -1,6 +1,6 @@
 // @flow
 
-/* eslint-disable no-eval, no-alert */
+/* eslint-disable no-eval */
 import { Modal, Input, Select, Spin } from "antd";
 import * as React from "react";
 

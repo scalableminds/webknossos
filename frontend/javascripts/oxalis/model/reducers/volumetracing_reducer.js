@@ -89,13 +89,6 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
           return hideBrushReducer(state);
         }
 
-        case "SET_BRUSH_SIZE": {
-          const brushSize = Math.max(10, action.brushSize);
-          return update(state, {
-            temporaryConfiguration: { brushSize: { $set: brushSize } },
-          });
-        }
-
         case "SET_CONTOUR_TRACING_MODE": {
           return setContourTracingModeReducer(state, action.mode);
         }

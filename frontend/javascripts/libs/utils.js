@@ -520,13 +520,13 @@ export function waitForSelector(selector: string): Promise<*> {
 export function convertDecToBase256(num: number): Vector4 {
   const divMod = n => [Math.floor(n / 256), n % 256];
   let tmp = num;
-  // eslint-disable-next-line
+  // eslint-disable-next-line one-var
   let r, g, b, a;
 
-  [tmp, r] = divMod(tmp); // eslint-disable-line
-  [tmp, g] = divMod(tmp); // eslint-disable-line
-  [tmp, b] = divMod(tmp); // eslint-disable-line
-  [tmp, a] = divMod(tmp); // eslint-disable-line
+  [tmp, r] = divMod(tmp); // eslint-disable-line prefer-const
+  [tmp, g] = divMod(tmp); // eslint-disable-line prefer-const
+  [tmp, b] = divMod(tmp); // eslint-disable-line prefer-const
+  [tmp, a] = divMod(tmp); // eslint-disable-line prefer-const
 
   // Big endian
   return [a, b, g, r];

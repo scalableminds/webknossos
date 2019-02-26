@@ -114,9 +114,10 @@ class PlaneView {
     window.requestAnimationFrame(() => this.animate());
   }
 
-  renderOrthoViewToTexture(plane: OrthoView, scene: THREE.Scene): Uint8Array {
+  renderOrthoViewToTexture(plane: OrthoView, scene?: THREE.Scene): Uint8Array {
     const SceneController = getSceneController();
-    const { renderer } = SceneController;
+    const { renderer, scene: defaultScene } = SceneController;
+    scene = scene || defaultScene;
 
     renderer.autoClear = true;
     let { width, height } = getInputCatcherRect(Store.getState(), plane);

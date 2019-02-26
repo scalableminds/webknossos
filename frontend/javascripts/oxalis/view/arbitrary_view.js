@@ -208,7 +208,7 @@ class ArbitraryView {
     this.needsRerender = true;
   }
 
-  renderToTexture(): Uint8Array {
+  renderToTexture(renderBucketIndices?: boolean = false): Uint8Array {
     const { renderer, scene } = getSceneController();
 
     renderer.autoClear = true;
@@ -224,7 +224,7 @@ class ArbitraryView {
 
     const renderTarget = new THREE.WebGLRenderTarget(width, height);
     const buffer = new Uint8Array(width * height * 4);
-    this.plane.materialFactory.uniforms.renderBucketIndices.value = true;
+    this.plane.materialFactory.uniforms.renderBucketIndices.value = renderBucketIndices;
     renderer.render(scene, camera, renderTarget);
     renderer.readRenderTargetPixels(renderTarget, 0, 0, width, height, buffer);
     this.plane.materialFactory.uniforms.renderBucketIndices.value = false;
@@ -262,7 +262,7 @@ class ArbitraryView {
     // }
     // diff(traversedBuckets, getRenderedBucketsDebug());
 
-    const buffer = this.renderToTexture();
+    const buffer = this.renderToTexture(true);
     let index = 0;
 
     const usedBucketSet = new Set();

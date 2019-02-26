@@ -581,3 +581,31 @@ export function chunkIntoTimeWindows<T>(
     [],
   );
 }
+
+export function convertBufferToImage(
+  buffer: Uint8Array,
+  width: number,
+  height: number,
+  flipHorizontally: boolean = true,
+): Promise<Blob> {
+  return new Promise(resolve => {
+    width = Math.round(width);
+    height = Math.round(height);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = width;
+    canvas.height = height;
+
+    const imageData = ctx.createImageData(width, height);
+    imageData.data.set(buffer);
+    ctx.putImageData(imageData, 0, 0);
+
+    if (flipHorizontally) {
+      ctx.transform(1, 0, 0, -1, 0, height);
+      ctx.drawImage(canvas, 0, 0);
+    }
+
+    canvas.toBlob(blob => resolve(blob));
+  });
+}

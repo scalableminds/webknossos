@@ -1,6 +1,4 @@
 // @flow
-/* eslint-disable jsx-a11y/href-no-hash, react/prefer-stateless-function, react/no-unused-state */
-
 import { Table, Icon, Tag } from "antd";
 import * as React from "react";
 import _ from "lodash";

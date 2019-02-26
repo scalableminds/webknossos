@@ -1,11 +1,5 @@
-/**
- * save_reducer.spec.js
- * @flow
- */
-
-/* eslint-disable no-useless-computed-key */
+// @flow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-
 import Maybe from "data.maybe";
 
 import mockRequire from "mock-require";

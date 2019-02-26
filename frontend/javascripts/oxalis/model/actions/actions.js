@@ -1,5 +1,3 @@
-/* eslint-disable import/prefer-default-export */
-
 // @flow
 import type { AnnotationActionTypes } from "oxalis/model/actions/annotation_actions";
 import type { DatasetAction } from "oxalis/model/actions/dataset_actions";

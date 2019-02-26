@@ -17,6 +17,7 @@ import { getBaseVoxel, getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import {
   getPosition,
+  getFlooredPosition,
   getRequestLogZoomStep,
   getPlaneScalingFactor,
 } from "oxalis/model/accessors/flycam_accessor";
@@ -498,7 +499,7 @@ class PlaneController extends React.PureComponent<Props> {
   async downloadScreenshot() {
     const { dataset, flycam } = Store.getState();
     const datasetName = dataset.name;
-    const [x, y, z] = getPosition(flycam);
+    const [x, y, z] = getFlooredPosition(flycam);
 
     const baseName = `${datasetName}__${x}_${y}_${z}`;
 

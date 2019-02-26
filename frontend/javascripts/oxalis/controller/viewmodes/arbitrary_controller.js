@@ -16,7 +16,11 @@ import {
   getMaxNodeId,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
-import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getRotation,
+  getPosition,
+  getFlooredPosition,
+} from "oxalis/model/accessors/flycam_accessor";
 import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import {
@@ -447,7 +451,7 @@ class ArbitraryController extends React.PureComponent<Props> {
   async downloadScreenshot() {
     const { dataset, flycam } = Store.getState();
     const datasetName = dataset.name;
-    const [x, y, z] = getPosition(flycam);
+    const [x, y, z] = getFlooredPosition(flycam);
 
     const baseName = `${datasetName}__${x}_${y}_${z}`;
 

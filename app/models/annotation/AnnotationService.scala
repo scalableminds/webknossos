@@ -586,7 +586,10 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       task = annotation._task.toFox.flatMap(taskId => taskDAO.findOne(taskId))
       taskJson <- task.flatMap(t => taskService.publicWrites(t)).getOrElse(JsNull)
       user <- userService.findOneById(annotation._user, useCache = true)(GlobalAccessContext)
-      userJson <- userService.compactWrites(user)
+      isTeamManagerOrAdminOfOwner <- Fox.runOptional(requestingUser)(requester =>
+        userService.isTeamManagerOrAdminOf(requester, user))
+      userJson <- if (isTeamManagerOrAdminOfOwner.getOrElse(false)) userService.compactWrites(user).map(Some(_))
+      else Fox.successful(None)
       settings <- settingsFor(annotation)
       restrictionsJs <- AnnotationRestrictions.writeAsJson(
         restrictionsOpt.getOrElse(annotationRestrictionDefults.defaultsFor(annotation)),

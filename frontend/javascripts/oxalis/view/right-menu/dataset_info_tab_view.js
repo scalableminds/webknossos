@@ -8,7 +8,8 @@ import { connect } from "react-redux";
 import Markdown from "react-remarkable";
 import React from "react";
 
-import { type APIDataset, APIAnnotationTypeEnum } from "admin/api_flow_types";
+import { APIAnnotationTypeEnum, type APIDataset, type APIUser } from "admin/api_flow_types";
+import { Unicode, ControlModeEnum } from "oxalis/constants";
 import { aggregateBoundingBox } from "libs/utils";
 import { convertToHybridTracing } from "admin/admin_rest_api";
 import { formatScale } from "libs/format_utils";
@@ -23,7 +24,6 @@ import ButtonComponent from "oxalis/view/components/button_component";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import Model from "oxalis/model";
 import Store, { type Flycam, type OxalisState, type Task, type Tracing } from "oxalis/store";
-import { Unicode, ControlModeEnum } from "oxalis/constants";
 
 const { ThinSpace } = Unicode;
 
@@ -35,6 +35,7 @@ type StateProps = {|
   dataset: APIDataset,
   flycam: Flycam,
   task: ?Task,
+  activeUser: ?APIUser,
 |};
 type DispatchProps = {|
   setAnnotationName: string => void,
@@ -298,18 +299,40 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     }
   }
 
+  maybePrintOwner() {
+    const { activeUser } = this.props;
+    const owner = this.props.tracing.user;
+
+    if (!owner) {
+      return null;
+    }
+
+    if (!activeUser || owner.id !== activeUser.id) {
+      return (
+        <span>
+          Owner: {owner.firstName} {owner.lastName}
+        </span>
+      );
+    }
+
+    // Active user is owner
+    return null;
+  }
+
   render() {
     const isDatasetViewMode =
       Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
 
     const extentInVoxel = getDatasetExtentInVoxel(this.props.dataset);
     const extent = getDatasetExtentInLength(this.props.dataset);
+
     return (
       <div className="flex-overflow padded-tab-content">
         <div className="info-tab-block">
           {this.getTracingName(isDatasetViewMode)}
           {this.getTracingType(isDatasetViewMode)}
           {this.getDatasetName(isDatasetViewMode)}
+          {this.maybePrintOwner()}
         </div>
 
         <div className="info-tab-block">
@@ -341,6 +364,7 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   dataset: state.dataset,
   flycam: state.flycam,
   task: state.task,
+  activeUser: state.activeUser,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({

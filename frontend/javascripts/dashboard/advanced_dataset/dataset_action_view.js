@@ -35,8 +35,10 @@ class DatasetActionView extends React.PureComponent<Props, State> {
   };
 
   clearCache = async (dataset: APIMaybeUnimportedDataset) => {
-    await triggerDatasetClearCache(dataset.dataStore.url, dataset);
-    await triggerDatasetClearThumbnailCache(dataset);
+    await Promise.all([
+      triggerDatasetClearCache(dataset.dataStore.url, dataset),
+      triggerDatasetClearThumbnailCache(dataset),
+    ]);
     Toast.success(messages["dataset.clear_cache_success"]);
   };
 

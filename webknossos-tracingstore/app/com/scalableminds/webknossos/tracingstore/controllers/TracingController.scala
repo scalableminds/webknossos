@@ -104,15 +104,19 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
     }
   }
 
-  def updatePreliminary(tracingId: String) = Action.async(validateJson[List[UpdateActionGroup[T]]]) {
-    implicit request =>
-      log {
-        accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId)) {
-          AllowRemoteOrigin {
-            val updateGroups = request.body
+  val transactionBatchExpiry = 20 minutes
+
+  def update(tracingId: String) = Action.async(validateJson[List[UpdateActionGroup[T]]]) { implicit request =>
+    log {
+      accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId)) {
+        AllowRemoteOrigin {
+          val updateGroups = request.body
+          val userToken = request.getQueryString("token")
+          if (updateGroups.forall(_.transactionGroupCount.getOrElse(1) == 1)) {
+            commitUpdates(tracingId, updateGroups, userToken)
+          } else {
             for {
               currentCommittedVersion <- tracingService.currentVersion(tracingId)
-              // if all have transactionGroupCount == 1, go old code path (report to wK only once)
               _ = updateGroups.foreach { updateGroup =>
                 val previousVersion: Long = tracingService
                   .currentUncommittedVersion(tracingId, updateGroup.transactionId)
@@ -123,6 +127,10 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
                     // Commit all with id
                   } else {
                     // save to uncommitted
+                    tracingService.transactionBatchStore.insert(
+                      (tracingId, updateGroup.transactionId.get, updateGroup.transactionGroupIndex.get),
+                      updateGroup,
+                      Some(transactionBatchExpiry))
                   }
                 } else {
                   Failure(s"Incorrect version. Expected: ${previousVersion + 1}; Got: ${updateGroup.version}") ~> CONFLICT
@@ -132,45 +140,40 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
           }
         }
       }
+    }
   }
 
-  def update(tracingId: String) = Action.async(validateJson[List[UpdateActionGroup[T]]]) { implicit request =>
-    log {
-      accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId)) {
-        AllowRemoteOrigin {
-          val updateGroups = request.body
-          val timestamps = updateGroups.map(_.timestamp)
-          val latestStatistics = updateGroups.flatMap(_.stats).lastOption
-          val currentVersion = tracingService.currentVersion(tracingId)
-          val userToken = request.getQueryString("token")
-          webKnossosServer
-            .reportTracingUpdates(tracingId, timestamps, latestStatistics, userToken)
-            .flatMap { _ =>
-              updateGroups.foldLeft(currentVersion) { (previousVersion, updateGroup) =>
-                previousVersion.flatMap { prevVersion =>
-                  if (prevVersion + 1 == updateGroup.version) {
-                    tracingService
-                      .handleUpdateGroup(tracingId, updateGroup, prevVersion)
-                      .map(_ =>
-                        Fox.successful(tracingService
-                          .saveToHandledGroupCache(tracingId, updateGroup.version, updateGroup.requestId)))
-                      .map(_ => updateGroup.version)
-                  } else {
-                    if (updateGroup.requestId.exists(requestId =>
-                          tracingService.handledGroupCacheContains(requestId, tracingId, updateGroup.version))) {
-                      //this update group was received and successfully saved in a previous request. silently ignore this duplicate request
-                      Fox.successful(updateGroup.version)
-                    } else {
-                      Failure(s"Incorrect version. Expected: ${prevVersion + 1}; Got: ${updateGroup.version}") ~> CONFLICT
-                    }
-                  }
-                }
+  def commitUpdates(tracingId: String,
+                    updateGroups: List[UpdateActionGroup[T]],
+                    userToken: Option[String]): Fox[Status] = {
+    val timestamps = updateGroups.map(_.timestamp)
+    val latestStatistics = updateGroups.flatMap(_.stats).lastOption
+    val currentVersion = tracingService.currentVersion(tracingId)
+    webKnossosServer
+      .reportTracingUpdates(tracingId, timestamps, latestStatistics, userToken)
+      .flatMap { _ =>
+        updateGroups.foldLeft(currentVersion) { (previousVersion, updateGroup) =>
+          previousVersion.flatMap { prevVersion =>
+            if (prevVersion + 1 == updateGroup.version) {
+              tracingService
+                .handleUpdateGroup(tracingId, updateGroup, prevVersion)
+                .map(_ =>
+                  Fox.successful(
+                    tracingService.saveToHandledGroupCache(tracingId, updateGroup.version, updateGroup.requestId)))
+                .map(_ => updateGroup.version)
+            } else {
+              if (updateGroup.requestId.exists(requestId =>
+                    tracingService.handledGroupCacheContains(requestId, tracingId, updateGroup.version))) {
+                //this update group was received and successfully saved in a previous request. silently ignore this duplicate request
+                Fox.successful(updateGroup.version)
+              } else {
+                Failure(s"Incorrect version. Expected: ${prevVersion + 1}; Got: ${updateGroup.version}") ~> CONFLICT
               }
             }
-            .map(_ => Ok)
+          }
         }
       }
-    }
+      .map(_ => Ok)
   }
 
 }

@@ -1,6 +1,4 @@
 // @flow
-/* eslint-disable react/prefer-stateless-function */
-
 import { Layout, Menu, Icon } from "antd";
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { connect } from "react-redux";

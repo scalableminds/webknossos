@@ -1,9 +1,4 @@
-/**
- * volumetracing_reducer.spec.js
- * @flow
- */
-
-/* eslint-disable import/no-extraneous-dependencies */
+// @flow
 import Maybe from "data.maybe";
 import update from "immutability-helper";
 

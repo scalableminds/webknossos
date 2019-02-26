@@ -120,7 +120,6 @@ const getCheckboxStyle = isLoaded =>
         color: "#989898",
       };
 
-// eslint-disable-next-line
 class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMetaData }> {
   state = {
     currentlyEditedMesh: null,

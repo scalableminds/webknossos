@@ -1,5 +1,4 @@
 // @flow
-/* eslint-disable jsx-a11y/href-no-hash */
 import { Dropdown, Menu, Icon, Modal } from "antd";
 import { connect } from "react-redux";
 import React from "react";

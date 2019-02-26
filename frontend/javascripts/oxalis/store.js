@@ -8,6 +8,7 @@ import createSagaMiddleware from "redux-saga";
 
 import type {
   APIAllowedMode,
+  APIAnnotationType,
   APIDataLayer,
   APIDataStore,
   APIDataset,
@@ -17,8 +18,8 @@ import type {
   APISettings,
   APITask,
   APITracingStore,
-  APIAnnotationType,
   APIUser,
+  APIUserBase,
   MeshMetaData,
 } from "admin/api_flow_types";
 import type { Action } from "oxalis/model/actions/actions";
@@ -148,6 +149,7 @@ export type Annotation = {|
   +tracingStore: APITracingStore,
   +annotationType: AnnotationType,
   +meshes: Array<MeshMetaData>,
+  +user: ?APIUserBase,
 |};
 
 type TracingBase = {|
@@ -502,6 +504,7 @@ export const defaultState: OxalisState = {
     },
     volume: null,
     skeleton: null,
+    user: null,
   },
   save: {
     queue: {

@@ -149,19 +149,15 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
           }).flatten.futureBox
         case _ =>
           dataSetDAO.findAll(GlobalAccessContext).flatMap { datasets =>
-            if (conf.Application.insertInitialData && datasets.isEmpty)
-              createDataSet(dataSource.id.name,
-                            dataStore,
-                            dataSource.id.team,
-                            dataSource,
-                            Some(ObjectId("5c766bec6c01006c018c7459")),
-                            dataSource.isUsable).futureBox
-            else
-              createDataSet(dataSource.id.name,
-                            dataStore,
-                            dataSource.id.team,
-                            dataSource,
-                            isActive = dataSource.isUsable).futureBox
+            val publication =
+              if (conf.Application.insertInitialData && datasets.isEmpty) Some(ObjectId("5c766bec6c01006c018c7459"))
+              else None
+            createDataSet(dataSource.id.name,
+                          dataStore,
+                          dataSource.id.team,
+                          dataSource,
+                          publication,
+                          dataSource.isUsable).futureBox
           }
       }
 

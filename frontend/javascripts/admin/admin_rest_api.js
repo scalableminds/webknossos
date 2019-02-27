@@ -43,6 +43,7 @@ import {
   type ServerSkeletonTracing,
   type ServerTracing,
   type ServerVolumeTracing,
+  type wkConnectDatasetConfig,
 } from "admin/api_flow_types";
 import type { DatasetConfiguration } from "oxalis/store";
 import type { NewTask, TaskCreationResponse } from "admin/task/task_create_bulk_view";
@@ -766,11 +767,24 @@ export function getDatasetAccessList(datasetId: APIDatasetId): Promise<Array<API
   );
 }
 
-export async function addDataset(datasetConfig: DatasetConfig): Promise<void> {
-  await doWithToken(token =>
+export function addDataset(datasetConfig: DatasetConfig): Promise<void> {
+  return doWithToken(token =>
     Request.sendMultipartFormReceiveJSON(`/data/datasets?token=${token}`, {
       data: datasetConfig,
       host: datasetConfig.datastore,
+    }),
+  );
+}
+
+export function addWkConnectDataset(
+  datastoreHost: string,
+  datasetConfig: wkConnectDatasetConfig,
+): Promise<void> {
+  return doWithToken(token =>
+    Request.sendJSONReceiveJSON(`/data/datasets?token=${token}`, {
+      data: datasetConfig,
+      host: datastoreHost,
+      method: "POST",
     }),
   );
 }

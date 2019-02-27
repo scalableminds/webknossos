@@ -18,14 +18,14 @@ import Clipboard from "clipboard-js";
 import React, { type Node, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 
-import type { APIUser } from "admin/api_flow_types";
+import type { APIUser, APIDataStore } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { location } from "libs/window";
 import DatasetImportView from "dashboard/dataset/dataset_import_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import RegistrationForm from "admin/auth/registration_form";
 import Toast from "libs/toast";
-import { getOrganizations } from "admin/admin_rest_api";
+import { getOrganizations, getDatastores } from "admin/admin_rest_api";
 
 const { Step } = Steps;
 const FormItem = Form.Item;
@@ -37,6 +37,7 @@ type Props = StateProps;
 
 type State = {
   currentStep: number,
+  datastores: Array<APIDataStore>,
   organizationName: string,
   datasetNameToImport: ?string,
 };
@@ -210,10 +211,20 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
 
 class OnboardingView extends React.PureComponent<Props, State> {
   state = {
-    currentStep: 0,
+    currentStep: 2,
+    datastores: [],
     organizationName: "",
     datasetNameToImport: null,
   };
+
+  componentDidMount() {
+    this.fetchData();
+  }
+
+  async fetchData() {
+    const datastores = (await getDatastores()).filter(ds => !ds.isForeign && !ds.isConnector);
+    this.setState({ datastores });
+  }
 
   advanceStep = () => {
     this.setState(prevState => ({
@@ -290,6 +301,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
       >
         {this.state.datasetNameToImport == null ? (
           <DatasetUploadView
+            datastores={this.state.datastores}
             onUploaded={datasetName => {
               this.setState({ datasetNameToImport: datasetName });
             }}

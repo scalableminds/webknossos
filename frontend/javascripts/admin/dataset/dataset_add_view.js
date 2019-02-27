@@ -4,6 +4,7 @@ import { Tabs, Icon } from "antd";
 import React from "react";
 
 import DatasetAddForeignView from "admin/dataset/dataset_add_foreign_view";
+import DatasetAddRemoteView from "admin/dataset/dataset_add_remote_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import features from "features";
 
@@ -31,15 +32,31 @@ const DatasetAddView = ({ history }: Props) => (
         }}
       />
     </TabPane>
-    {features().addForeignDataset ? (
+    <TabPane
+      tab={
+        <span>
+          <Icon type="plus" />
+          Add Remote Dataset
+        </span>
+      }
+      key="2"
+    >
+      <DatasetAddRemoteView
+        onAdded={(organization: string, datasetName: string) => {
+          const url = `/datasets/${organization}/${datasetName}/import`;
+          history.push(url);
+        }}
+      />
+    </TabPane>
+    {features().addForeignDataset || true ? (
       <TabPane
         tab={
           <span>
             <Icon type="bars" />
-            Add foreign Dataset
+            Add Foreign Dataset
           </span>
         }
-        key="2"
+        key="3"
       >
         <DatasetAddForeignView onAdded={() => history.push("/dashboard")} />
       </TabPane>

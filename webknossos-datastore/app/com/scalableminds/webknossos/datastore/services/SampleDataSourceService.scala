@@ -13,14 +13,38 @@ import com.scalableminds.webknossos.datastore.rpc.RPC
 import net.liftweb.common.Full
 import play.api.libs.json.Json
 
+case class SampleDatasetInfo(url: String, description: String)
+
 class SampleDataSourceService @Inject()(rpc: RPC,
                                         dataSourceService: DataSourceService,
                                         webknossosServer: DataStoreWkRpcClient,
                                         dataSourceRepository: DataSourceRepository)
     extends FoxImplicits {
 
-  val availableDatasets = Map("Sample_Cremi_dsA_plus" -> "http://localhost/cremi.zip",
-                              "Sample_Cremi_dsA_plus2" -> "http://localhost/cremi.zip")
+  val availableDatasets =
+    Map(
+      "Sample_e2006_wkw" -> SampleDatasetInfo(
+        "https://static.webknossos.org/data/e2006_wkw.zip",
+        """Raw SBEM data and segmentation (sample cutout, 120MB)
+          |Connectomic reconstruction of the inner plexiform layer in the mouse retina
+          |M Helmstaedter, KL Briggman, S Turaga, V Jain, HS Seung, W Denk.
+          |Nature. 08 August 2013. https://doi.org/10.1038/nature12346""".stripMargin
+      ),
+      "Sample_FD0144_wkw" -> SampleDatasetInfo(
+        "https://static.webknossos.org/data/FD0144_wkw.zip",
+        """Raw SBEM data and segmentation (sample cutout, 316 MB)
+          |FluoEM, virtual labeling of axons in three-dimensional electron microscopy data for long-range connectomics
+          |F Drawitsch, A Karimi, KM Boergens, M Helmstaedter.
+          |eLife. 14 August 2018. https://doi.org/10.7554/eLife.38976""".stripMargin
+      ),
+      "Sample_MPRAGE_250um" -> SampleDatasetInfo(
+        "https://static.webknossos.org/data/MPRAGE_250um.zip",
+        """MRI data (250 MB)
+          |T1-weighted in vivo human whole brain MRI dataset with an ultrahigh isotropic resolution of 250 μm
+          |F Lüsebrink, A Sciarra, H Mattern, R Yakupov, O Speck
+          |Scientific Data. 14 March 2017. https://doi.org/10.1038/sdata.2017.32""".stripMargin
+      )
+    )
 
   var runningDownloads = new ConcurrentHashMap[DataSourceId, Unit]()
 
@@ -38,7 +62,7 @@ class SampleDataSourceService @Inject()(rpc: RPC,
 
   def download(id: DataSourceId): Fox[Unit] =
     for {
-      responseBox <- rpc(availableDatasets(id.name)).get.futureBox
+      responseBox <- rpc(availableDatasets(id.name).url).get.futureBox
       _ = responseBox match {
         case Full(response) => {
           val bytes: ByteString = response.bodyAsBytes
@@ -54,12 +78,15 @@ class SampleDataSourceService @Inject()(rpc: RPC,
       }
     } yield ()
 
-  case class SampleDataSourceWithStatus(name: String, status: String)
+  case class SampleDataSourceWithStatus(name: String, status: String, description: String)
   object SampleDataSourceWithStatus { implicit val format = Json.format[SampleDataSourceWithStatus] }
 
   def listWithStatus(organizationName: String): List[SampleDataSourceWithStatus] =
-    availableDatasets.keys.toList.map(dataSetName =>
-      SampleDataSourceWithStatus(dataSetName, statusFor(DataSourceId(dataSetName, organizationName))))
+    availableDatasets.keys.toList.map(
+      dataSetName =>
+        SampleDataSourceWithStatus(dataSetName,
+                                   statusFor(DataSourceId(dataSetName, organizationName)),
+                                   availableDatasets(dataSetName).description))
 
   def statusFor(id: DataSourceId): String =
     if (runningDownloads.containsKey(id)) "downloading"

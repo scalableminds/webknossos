@@ -54,24 +54,26 @@ const DatasetAddView = ({ history }: Props) => {
           }}
         />
       </TabPane>
-      <TabPane
-        tab={
-          <span>
-            <Icon type="plus" />
-            Add wk-connect Dataset
-          </span>
-        }
-        key="2"
-      >
-        <DatasetAddWkConnectView
-          datastores={datastores.wkConnect}
-          onAdded={(organization: string, datasetName: string) => {
-            const url = `/datasets/${organization}/${datasetName}/import`;
-            history.push(url);
-          }}
-        />
-      </TabPane>
-      {features().addForeignDataset ? (
+      {datastores.wkConnect.length && (
+        <TabPane
+          tab={
+            <span>
+              <Icon type="plus" />
+              Add wk-connect Dataset
+            </span>
+          }
+          key="2"
+        >
+          <DatasetAddWkConnectView
+            datastores={datastores.wkConnect}
+            onAdded={(organization: string, datasetName: string) => {
+              const url = `/datasets/${organization}/${datasetName}/import`;
+              history.push(url);
+            }}
+          />
+        </TabPane>
+      )}
+      {features().addForeignDataset && (
         <TabPane
           tab={
             <span>
@@ -83,7 +85,7 @@ const DatasetAddView = ({ history }: Props) => {
         >
           <DatasetAddForeignView onAdded={() => history.push("/dashboard")} />
         </TabPane>
-      ) : null}
+      )}
     </Tabs>
   );
 };

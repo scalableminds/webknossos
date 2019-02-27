@@ -3,13 +3,12 @@ package controllers
 import java.io.File
 
 import javax.inject.Inject
-
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.mvc.ResultBox
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
-import com.scalableminds.webknossos.tracingstore.tracings.ProtoGeometryImplicits
+import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
+import com.scalableminds.webknossos.tracingstore.tracings.{ProtoGeometryImplicits, TracingType}
 import models.annotation.nml.{NmlResults, NmlService}
 import models.annotation.{AnnotationService, TracingStoreService}
 import models.binary.{DataSetDAO, DataSetService}
@@ -21,6 +20,7 @@ import net.liftweb.common.Box
 import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
 import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
+import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import models.annotation.nml.NmlResults.NmlParseResult
 import play.api.libs.Files
 import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
@@ -82,7 +82,7 @@ class TaskController @Inject()(annotationService: AnnotationService,
 
   def read(taskId: String) = sil.SecuredAction.async { implicit request =>
     for {
-      task <- taskDAO.findOne(ObjectId(taskId)) ?~> "task.notFound"
+      task <- taskDAO.findOne(ObjectId(taskId)) ?~> "task.notFound" ~> NOT_FOUND
       js <- taskService.publicWrites(task)
     } yield {
       Ok(js)
@@ -92,16 +92,56 @@ class TaskController @Inject()(annotationService: AnnotationService,
   def create = sil.SecuredAction.async(validateJson[List[TaskParameters]]) { implicit request =>
     for {
       _ <- bool2Fox(request.body.length <= 1000) ?~> "task.create.limitExceeded"
-      result <- createTasks(request.body.map { params =>
-        val tracing = annotationService.createTracingBase(params.dataSet,
-                                                          params.boundingBox,
-                                                          params.editPosition,
-                                                          params.editRotation)
-        (params, tracing)
-      })
+      skeletonBaseOpts: List[Option[SkeletonTracing]] <- createTaskSkeletonTracingBases(request.body)
+      volumeBaseOpts: List[Option[VolumeTracing]] <- createTaskVolumeTracingBases(request.body,
+                                                                                  request.identity._organization)
+      result <- createTasks((request.body, skeletonBaseOpts, volumeBaseOpts).zipped.toList)
     } yield result
   }
 
+  def createTaskSkeletonTracingBases(paramsList: List[TaskParameters])(
+      implicit ctx: DBAccessContext,
+      m: MessagesProvider): Fox[List[Option[SkeletonTracing]]] =
+    Fox.serialCombined(paramsList) { params =>
+      for {
+        taskTypeIdValidated <- ObjectId.parse(params.taskTypeId) ?~> "taskType.id.invalid"
+        taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
+        skeletonTracingOpt <- if (taskType.tracingType == TracingType.skeleton || taskType.tracingType == TracingType.hybrid) {
+          Fox.successful(
+            Some(
+              annotationService.createSkeletonTracingBase(
+                params.dataSet,
+                params.boundingBox,
+                params.editPosition,
+                params.editRotation
+              )))
+        } else Fox.successful(None)
+      } yield skeletonTracingOpt
+    }
+
+  def createTaskVolumeTracingBases(paramsList: List[TaskParameters], organizationId: ObjectId)(
+      implicit ctx: DBAccessContext,
+      m: MessagesProvider): Fox[List[Option[VolumeTracing]]] =
+    Fox.serialCombined(paramsList) { params =>
+      for {
+        taskTypeIdValidated <- ObjectId.parse(params.taskTypeId) ?~> "taskType.id.invalid"
+        taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
+        volumeTracingOpt <- if (taskType.tracingType == TracingType.volume || taskType.tracingType == TracingType.hybrid) {
+          annotationService
+            .createVolumeTracingBase(
+              params.dataSet,
+              organizationId,
+              params.boundingBox,
+              params.editPosition,
+              params.editRotation,
+              false
+            )
+            .map(Some(_))
+        } else Fox.successful(None)
+      } yield volumeTracingOpt
+    }
+
+  //Note that from-files tasks do not support volume tracings yet
   @SuppressWarnings(Array("OptionGet")) //We surpress this warning because we know each skeleton exists due to `toSkeletonSuccessFox`
   def createFromFiles = sil.SecuredAction.async { implicit request =>
     for {
@@ -113,15 +153,17 @@ class TaskController @Inject()(annotationService: AnnotationService,
       jsonString <- body.dataParts.get("formJSON").flatMap(_.headOption) ?~> "format.json.missing"
       params <- JsonHelper.parseJsonToFox[NmlTaskParameters](jsonString) ?~> "task.create.failed"
       taskTypeIdValidated <- ObjectId.parse(params.taskTypeId) ?~> "taskType.id.invalid"
-      taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
-      project <- projectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
+      taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
+      _ <- bool2Fox(taskType.tracingType == TracingType.skeleton) ?~> "task.create.fromFileVolume"
+      project <- projectDAO
+        .findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
       parseResults: List[NmlParseResult] = nmlService
         .extractFromFiles(inputFiles.map(f => (new File(f.ref.path.toString), f.filename)))
         .parseResults
       skeletonSuccesses <- Fox.serialCombined(parseResults)(_.toSkeletonSuccessFox) ?~> "task.create.failed"
       result <- createTasks(skeletonSuccesses.map(s =>
-        (buildFullParams(params, s.skeletonTracing.get, s.fileName, s.description), s.skeletonTracing.get)))
+        (buildFullParams(params, s.skeletonTracing.get, s.fileName, s.description), s.skeletonTracing, None)))
     } yield {
       result
     }
@@ -148,11 +190,18 @@ class TaskController @Inject()(annotationService: AnnotationService,
     )
   }
 
-  def createTasks(requestedTasks: List[(TaskParameters, SkeletonTracing)])(
+  def createTasks(requestedTasks: List[(TaskParameters, Option[SkeletonTracing], Option[VolumeTracing])])(
       implicit request: SecuredRequest[WkEnv, _]): Fox[Result] = {
+
+    def assertEachHasEitherSkeletonOrVolume: Fox[Boolean] =
+      bool2Fox(requestedTasks.forall { tuple =>
+        tuple._2.isDefined || tuple._3.isDefined
+      })
+
     def assertAllOnSameDataset(firstDatasetName: String): Fox[String] = {
-      def allOnSameDatasetIter(requestedTasksRest: List[(TaskParameters, SkeletonTracing)],
-                               dataSetName: String): Boolean =
+      def allOnSameDatasetIter(
+          requestedTasksRest: List[(TaskParameters, Option[SkeletonTracing], Option[VolumeTracing])],
+          dataSetName: String): Boolean =
         requestedTasksRest match {
           case List()       => true
           case head :: tail => head._1.dataSet == dataSetName && allOnSameDatasetIter(tail, dataSetName)
@@ -172,24 +221,28 @@ class TaskController @Inject()(annotationService: AnnotationService,
       } yield js
 
     for {
+      _ <- assertEachHasEitherSkeletonOrVolume ?~> "task.create.needsEitherSkeletonOrVolume"
       firstDatasetName <- requestedTasks.headOption.map(_._1.dataSet).toFox
       _ <- assertAllOnSameDataset(firstDatasetName)
       dataSet <- dataSetDAO.findOneByNameAndOrganization(firstDatasetName, request.identity._organization) ?~> Messages(
         "dataSet.notFound",
-        firstDatasetName)
+        firstDatasetName) ~> NOT_FOUND
       tracingStoreClient <- tracingStoreService.clientFor(dataSet)
-      skeletonTracingIds: List[Box[String]] <- tracingStoreClient.saveSkeletonTracings(
-        SkeletonTracings(requestedTasks.map(_._2)))
-      requestedTasksWithTracingIds = requestedTasks zip skeletonTracingIds
+      skeletonTracingIds: List[Box[Option[String]]] <- tracingStoreClient.saveSkeletonTracings(
+        SkeletonTracings(requestedTasks.map(taskTuple => SkeletonTracingOpt(taskTuple._2))))
+      volumeTracingIds: List[Box[Option[String]]] <- tracingStoreClient.saveVolumeTracings(
+        VolumeTracings(requestedTasks.map(taskTuple => VolumeTracingOpt(taskTuple._3))))
+      requestedTasksWithTracingIds = (requestedTasks, skeletonTracingIds, volumeTracingIds).zipped.toList
       taskObjects: List[Fox[Task]] = requestedTasksWithTracingIds.map(r =>
-        createTaskWithoutAnnotationBase(r._1._1, r._2))
-      zipped = (requestedTasks, skeletonTracingIds, taskObjects).zipped.toList
+        createTaskWithoutAnnotationBase(r._1._1, r._2, r._3))
+      zipped = (requestedTasks, skeletonTracingIds.zip(volumeTracingIds), taskObjects).zipped.toList
       annotationBases = zipped.map(
         tuple =>
           annotationService.createAnnotationBase(
             taskFox = tuple._3,
             request.identity._id,
-            skeletonTracingIdBox = tuple._2,
+            skeletonTracingIdBox = tuple._2._1,
+            volumeTracingIdBox = tuple._2._2,
             dataSet._id,
             description = tuple._1._1.description
         ))
@@ -209,25 +262,28 @@ class TaskController @Inject()(annotationService: AnnotationService,
       case Some(scriptId) =>
         for {
           scriptIdValidated <- ObjectId.parse(scriptId)
-          _ <- scriptDAO.findOne(scriptIdValidated) ?~> "script.notFound"
+          _ <- scriptDAO.findOne(scriptIdValidated) ?~> "script.notFound" ~> NOT_FOUND
         } yield ()
       case _ => Fox.successful(())
     }
 
-  private def createTaskWithoutAnnotationBase(params: TaskParameters, skeletonTracingIdBox: Box[String])(
-      implicit request: SecuredRequest[WkEnv, _]): Fox[Task] =
+  private def createTaskWithoutAnnotationBase(
+      params: TaskParameters,
+      skeletonTracingIdBox: Box[Option[String]],
+      volumeTracingIdBox: Box[Option[String]])(implicit request: SecuredRequest[WkEnv, _]): Fox[Task] =
     for {
-      _ <- skeletonTracingIdBox.toFox
+      skeletonIdOpt <- skeletonTracingIdBox.toFox
+      volumeIdOpt <- volumeTracingIdBox.toFox
+      _ <- bool2Fox(skeletonIdOpt.isDefined || volumeIdOpt.isDefined) ?~> "task.create.needsEitherSkeletonOrVolume"
       taskTypeIdValidated <- ObjectId.parse(params.taskTypeId)
-      taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
-      project <- projectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
+      project <- projectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName) ~> NOT_FOUND
       _ <- validateScript(params.scriptId) ?~> "script.invalid"
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
       task = Task(
         ObjectId.generate,
         project._id,
         params.scriptId.map(ObjectId(_)),
-        taskType._id,
+        taskTypeIdValidated,
         params.neededExperience,
         params.openInstances, //all instances are open at this time
         params.openInstances,
@@ -246,9 +302,10 @@ class TaskController @Inject()(annotationService: AnnotationService,
     val params = request.body
     for {
       taskIdValidated <- ObjectId.parse(taskId) ?~> "task.id.invalid"
-      task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound"
+      task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound" ~> NOT_FOUND
       project <- projectDAO.findOne(task._project)
-      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed"
+      _ <- Fox
+        .assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed" ~> FORBIDDEN
       _ <- taskDAO.updateTotalInstances(task._id, task.totalInstances + params.openInstances - task.openInstances)
       updatedTask <- taskDAO.findOne(taskIdValidated)
       json <- taskService.publicWrites(updatedTask)
@@ -260,7 +317,7 @@ class TaskController @Inject()(annotationService: AnnotationService,
   def delete(taskId: String) = sil.SecuredAction.async { implicit request =>
     for {
       taskIdValidated <- ObjectId.parse(taskId) ?~> "task.id.invalid"
-      task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound"
+      task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound" ~> NOT_FOUND
       project <- projectDAO.findOne(task._project)
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Messages(
         "notAllowed")
@@ -273,7 +330,7 @@ class TaskController @Inject()(annotationService: AnnotationService,
   def listTasksForType(taskTypeId: String) = sil.SecuredAction.async { implicit request =>
     for {
       taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
-      tasks <- taskDAO.findAllByTaskType(taskTypeIdValidated) ?~> "taskType.notFound"
+      tasks <- taskDAO.findAllByTaskType(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
       js <- Fox.serialCombined(tasks)(taskService.publicWrites(_))
     } yield {
       Ok(Json.toJson(js))

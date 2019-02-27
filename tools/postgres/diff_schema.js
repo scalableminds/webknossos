@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @noflow
 /* eslint-disable import/no-extraneous-dependencies, prefer-template, prefer-arrow-callback */
 const program = require("commander");
 const randomstring = require("randomstring");

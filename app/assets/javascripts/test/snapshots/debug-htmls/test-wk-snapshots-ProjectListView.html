@@ -1,0 +1,588 @@
+<Provider store={{...}}>
+  <Router history={{...}}>
+    <Connect(withRouter(ProjectListView))>
+      <withRouter(ProjectListView) activeUser={{...}} dispatch={[Function]}>
+        <Route render={[Function: render]}>
+          <ProjectListView activeUser={{...}} dispatch={[Function]} match={{...}} location={{...}} history={{...}} staticContext={[undefined]}>
+            <div className="container TestProjectListView">
+              <div>
+                <div className="pull-right">
+                  <Link to="/projects/create" replace={false}>
+                    <a onClick={[Function]} href="/projects/create">
+                      <Button icon="plus" style={{...}} type="primary" prefixCls="ant-btn" loading={false} ghost={false}>
+                        <button style={{...}} type="button" className="ant-btn ant-btn-primary" onClick={[Function]}>
+                          <Icon type="plus">
+                            <i className="anticon anticon-plus" />
+                          </Icon>
+                          <span>
+                            Add Project
+                          </span>
+                        </button>
+                      </Button>
+                    </a>
+                  </Link>
+                  <Search style={{...}} onPressEnter={[Function]} onChange={[Function]} value="" inputPrefixCls="ant-input" prefixCls="ant-input-search" enterButton={false}>
+                    <Input onPressEnter={[Function]} style={{...}} onChange={[Function]} value="" size={[undefined]} className="ant-input-search" prefixCls="ant-input" suffix={{...}} type="text" disabled={false}>
+                      <span className="ant-input-search ant-input-affix-wrapper" style={{...}}>
+                        <input style={{...}} onChange={[Function]} value="" size={[undefined]} className="ant-input" type="text" disabled={false} onKeyDown={[Function]} />
+                        <span className="ant-input-suffix">
+                          <Icon className="ant-input-search-icon" type="search" onClick={[Function]}>
+                            <i className="anticon anticon-search ant-input-search-icon" onClick={[Function]} />
+                          </Icon>
+                        </span>
+                      </span>
+                    </Input>
+                  </Search>
+                </div>
+                <h3>
+                  Projects
+                </h3>
+                <div className="clearfix" style={{...}} />
+                <Spin spinning={false} size="large" prefixCls="ant-spin" wrapperClassName="">
+                  <Animate component="div" className="ant-spin-nested-loading" style={{...}} transitionName="fade" animation={{...}} componentProps={{...}} transitionEnter={true} transitionLeave={true} transitionAppear={false} onEnd={[Function: noop]} onEnter={[Function: noop]} onLeave={[Function: noop]} onAppear={[Function: noop]}>
+                    <div className="ant-spin-nested-loading" style={{...}}>
+                      <AnimateChild animation={{...}} transitionName="fade" transitionEnter={true} transitionAppear={false} transitionLeave={true}>
+                        <div>
+                          <div className="ant-spin ant-spin-lg ant-spin-spinning">
+                            <span className="ant-spin-dot ant-spin-dot-spin">
+                              <i />
+                              <i />
+                              <i />
+                              <i />
+                            </span>
+                          </div>
+                        </div>
+                      </AnimateChild>
+                      <AnimateChild animation={{...}} transitionName="fade" transitionEnter={true} transitionAppear={false} transitionLeave={true}>
+                        <div className="ant-spin-container ant-spin-blur">
+                          <Table dataSource={{...}} rowKey="id" pagination={{...}} style={{...}} locale={{...}} prefixCls="ant-table" useFixedHeader={false} className="" size="large" loading={false} bordered={false} indentSize={20} showHeader={true}>
+                            <div className="ant-table-wrapper" style={{...}}>
+                              <Spin spinning={false} className="" prefixCls="ant-spin" size="default" wrapperClassName="">
+                                <Animate component="div" className="ant-spin-nested-loading" style={{...}} transitionName="fade" animation={{...}} componentProps={{...}} transitionEnter={true} transitionLeave={true} transitionAppear={false} onEnd={[Function: noop]} onEnter={[Function: noop]} onLeave={[Function: noop]} onAppear={[Function: noop]}>
+                                  <div className="ant-spin-nested-loading" style={{...}}>
+                                    <AnimateChild animation={{...}} transitionName="fade" transitionEnter={true} transitionAppear={false} transitionLeave={true}>
+                                      <div className="ant-spin-container">
+                                        <LocaleReceiver componentName="Table" defaultLocale={{...}}>
+                                          <Table dataSource={{...}} rowKey="id" pagination={{...}} locale={{...}} useFixedHeader={false} size="large" loading={false} bordered={false} indentSize={20} onRow={[Function]} components={{...}} prefixCls="ant-table" data={{...}} columns={{...}} showHeader={true} className="ant-table-large" expandIconColumnIndex={0} expandIconAsCell={[undefined]} emptyText={{...}} rowClassName={[Function: rowClassName]} onHeaderRow={[Function: onHeaderRow]} bodyStyle={{...}} style={{...}} scroll={{...}} rowRef={[Function: rowRef]}>
+                                            <Provider store={{...}}>
+                                              <Connect(ExpandableTable) dataSource={{...}} rowKey="id" pagination={{...}} locale={{...}} useFixedHeader={false} size="large" loading={false} bordered={false} indentSize={20} onRow={[Function]} components={{...}} prefixCls="ant-table" data={{...}} columns={{...}} showHeader={true} className="ant-table-large" expandIconColumnIndex={0} expandIconAsCell={[undefined]} emptyText={{...}} rowClassName={[Function: rowClassName]} onHeaderRow={[Function: onHeaderRow]} bodyStyle={{...}} style={{...}} scroll={{...}} rowRef={[Function: rowRef]} columnManager={{...}} getRowKey={[Function]}>
+                                                <ExpandableTable dataSource={{...}} rowKey="id" pagination={{...}} locale={{...}} useFixedHeader={false} size="large" loading={false} bordered={false} indentSize={20} onRow={[Function]} components={{...}} prefixCls="ant-table" data={{...}} columns={{...}} showHeader={true} className="ant-table-large" expandIconColumnIndex={0} expandIconAsCell={false} emptyText={{...}} rowClassName={[Function: rowClassName]} onHeaderRow={[Function: onHeaderRow]} bodyStyle={{...}} style={{...}} scroll={{...}} rowRef={[Function: rowRef]} columnManager={{...}} getRowKey={[Function]} store={{...}} expandedRowClassName={[Function: expandedRowClassName]} defaultExpandAllRows={false} defaultExpandedRowKeys={{...}} childrenColumnName="children" onExpand={[Function: onExpand]} onExpandedRowsChange={[Function: onExpandedRowsChange]}>
+                                                  <div className="ant-table ant-table-large ant-table-scroll-position-left" style={{...}} id={[undefined]}>
+                                                    <div className="ant-table-content">
+                                                      <HeadTable columns={{...}} fixed={[undefined]} tableClassName="" handleBodyScrollLeft={[Function]} expander={{...}} />
+                                                      <BodyTable columns={{...}} fixed={[undefined]} tableClassName="" getRowKey={[Function]} handleWheel={[Function]} handleBodyScroll={[Function]} expander={{...}} isAnyColumnsFixed={false}>
+                                                        <div className="ant-table-body" style={{...}} onWheel={[Function]} onScroll={[Function]}>
+                                                          <Connect(BaseTable) tableClassName="" hasHead={true} hasBody={true} fixed={[undefined]} columns={{...}} expander={{...}} getRowKey={[Function]} isAnyColumnsFixed={false}>
+                                                            <BaseTable tableClassName="" hasHead={true} hasBody={true} fixed={[undefined]} columns={{...}} expander={{...}} getRowKey={[Function]} isAnyColumnsFixed={false} store={{...}}>
+                                                              <table className="" style={{...}}>
+                                                                <ColGroup columns={{...}} fixed={[undefined]}>
+                                                                  <colgroup>
+                                                                    <col style={{...}} />
+                                                                    <col style={{...}} />
+                                                                    <col style={{...}} />
+                                                                    <col style={{...}} />
+                                                                    <col style={{...}} />
+                                                                    <col style={{...}} />
+                                                                    <col style={{...}} />
+                                                                  </colgroup>
+                                                                </ColGroup>
+                                                                <TableHeader expander={{...}} columns={{...}} fixed={[undefined]}>
+                                                                  <thead className="ant-table-thead">
+                                                                    <Connect(TableHeaderRow) index={0} fixed={[undefined]} columns={{...}} rows={{...}} row={{...}} components={{...}} onHeaderRow={[Function: onHeaderRow]}>
+                                                                      <TableHeaderRow index={0} fixed={[undefined]} columns={{...}} rows={{...}} row={{...}} components={{...}} onHeaderRow={[Function: onHeaderRow]} height={{...}} store={{...}}>
+                                                                        <tr style={{...}}>
+                                                                          <th className="ant-table-column-has-filters">
+                                                                            <span>
+                                                                              Name
+                                                                              <div className="ant-table-column-sorter">
+                                                                                <span className="ant-table-column-sorter-up off" title="↑" onClick={[Function: onClick]}>
+                                                                                  <Icon type="caret-up">
+                                                                                    <i className="anticon anticon-caret-up" />
+                                                                                  </Icon>
+                                                                                </span>
+                                                                                <span className="ant-table-column-sorter-down off" title="↓" onClick={[Function: onClick]}>
+                                                                                  <Icon type="caret-down">
+                                                                                    <i className="anticon anticon-caret-down" />
+                                                                                  </Icon>
+                                                                                </span>
+                                                                              </div>
+                                                                            </span>
+                                                                          </th>
+                                                                          <th className="ant-table-column-has-filters">
+                                                                            <span>
+                                                                              Team
+                                                                              <div className="ant-table-column-sorter">
+                                                                                <span className="ant-table-column-sorter-up off" title="↑" onClick={[Function: onClick]}>
+                                                                                  <Icon type="caret-up">
+                                                                                    <i className="anticon anticon-caret-up" />
+                                                                                  </Icon>
+                                                                                </span>
+                                                                                <span className="ant-table-column-sorter-down off" title="↓" onClick={[Function: onClick]}>
+                                                                                  <Icon type="caret-down">
+                                                                                    <i className="anticon anticon-caret-down" />
+                                                                                  </Icon>
+                                                                                </span>
+                                                                              </div>
+                                                                            </span>
+                                                                          </th>
+                                                                          <th className="ant-table-column-has-filters">
+                                                                            <span>
+                                                                              Priority
+                                                                              <div className="ant-table-column-sorter">
+                                                                                <span className="ant-table-column-sorter-up off" title="↑" onClick={[Function: onClick]}>
+                                                                                  <Icon type="caret-up">
+                                                                                    <i className="anticon anticon-caret-up" />
+                                                                                  </Icon>
+                                                                                </span>
+                                                                                <span className="ant-table-column-sorter-down off" title="↓" onClick={[Function: onClick]}>
+                                                                                  <Icon type="caret-down">
+                                                                                    <i className="anticon anticon-caret-down" />
+                                                                                  </Icon>
+                                                                                </span>
+                                                                              </div>
+                                                                            </span>
+                                                                          </th>
+                                                                          <th className="ant-table-column-has-filters">
+                                                                            <span>
+                                                                              Owner
+                                                                              <div className="ant-table-column-sorter">
+                                                                                <span className="ant-table-column-sorter-up off" title="↑" onClick={[Function: onClick]}>
+                                                                                  <Icon type="caret-up">
+                                                                                    <i className="anticon anticon-caret-up" />
+                                                                                  </Icon>
+                                                                                </span>
+                                                                                <span className="ant-table-column-sorter-down off" title="↓" onClick={[Function: onClick]}>
+                                                                                  <Icon type="caret-down">
+                                                                                    <i className="anticon anticon-caret-down" />
+                                                                                  </Icon>
+                                                                                </span>
+                                                                              </div>
+                                                                            </span>
+                                                                          </th>
+                                                                          <th className="ant-table-column-has-filters">
+                                                                            <span>
+                                                                              Open Assignments
+                                                                              <div className="ant-table-column-sorter">
+                                                                                <span className="ant-table-column-sorter-up off" title="↑" onClick={[Function: onClick]}>
+                                                                                  <Icon type="caret-up">
+                                                                                    <i className="anticon anticon-caret-up" />
+                                                                                  </Icon>
+                                                                                </span>
+                                                                                <span className="ant-table-column-sorter-down off" title="↓" onClick={[Function: onClick]}>
+                                                                                  <Icon type="caret-down">
+                                                                                    <i className="anticon anticon-caret-down" />
+                                                                                  </Icon>
+                                                                                </span>
+                                                                              </div>
+                                                                            </span>
+                                                                          </th>
+                                                                          <th className="ant-table-column-has-filters">
+                                                                            <span>
+                                                                              Expected Time
+                                                                              <div className="ant-table-column-sorter">
+                                                                                <span className="ant-table-column-sorter-up off" title="↑" onClick={[Function: onClick]}>
+                                                                                  <Icon type="caret-up">
+                                                                                    <i className="anticon anticon-caret-up" />
+                                                                                  </Icon>
+                                                                                </span>
+                                                                                <span className="ant-table-column-sorter-down off" title="↓" onClick={[Function: onClick]}>
+                                                                                  <Icon type="caret-down">
+                                                                                    <i className="anticon anticon-caret-down" />
+                                                                                  </Icon>
+                                                                                </span>
+                                                                              </div>
+                                                                            </span>
+                                                                          </th>
+                                                                          <th className="">
+                                                                            <span>
+                                                                              Action
+                                                                            </span>
+                                                                          </th>
+                                                                        </tr>
+                                                                      </TableHeaderRow>
+                                                                    </Connect(TableHeaderRow)>
+                                                                  </thead>
+                                                                </TableHeader>
+                                                                <tbody className="ant-table-tbody">
+                                                                  <Connect(ExpandableRow) dataSource={{...}} rowKey="58135bfd2faeb3190181c057" pagination={{...}} locale={{...}} useFixedHeader={false} size="large" loading={false} bordered={false} indentSize={20} onRow={[Function]} components={{...}} prefixCls="ant-table-row" data={{...}} columns={{...}} showHeader={true} className="ant-table-large" expandIconColumnIndex={0} expandIconAsCell={false} emptyText={{...}} rowClassName={[Function: rowClassName]} onHeaderRow={[Function: onHeaderRow]} bodyStyle={{...}} style={{...}} scroll={{...}} rowRef={[Function: rowRef]} columnManager={{...}} getRowKey={[Function]} store={{...}} expandedRowClassName={[Function: expandedRowClassName]} defaultExpandAllRows={false} defaultExpandedRowKeys={{...}} childrenColumnName="children" onExpand={[Function: onExpand]} onExpandedRowsChange={[Function: onExpandedRowsChange]} fixed={[undefined]} index={0} record={{...}} onRowClick={[undefined]} needIndentSpaced={false} onExpandedChange={[Function]}>
+                                                                    <ExpandableRow dataSource={{...}} rowKey="58135bfd2faeb3190181c057" pagination={{...}} locale={{...}} useFixedHeader={false} size="large" loading={false} bordered={false} indentSize={20} onRow={[Function]} components={{...}} prefixCls="ant-table-row" data={{...}} columns={{...}} showHeader={true} className="ant-table-large" expandIconColumnIndex={0} expandIconAsCell={false} emptyText={{...}} rowClassName={[Function: rowClassName]} onHeaderRow={[Function: onHeaderRow]} bodyStyle={{...}} style={{...}} scroll={{...}} rowRef={[Function: rowRef]} columnManager={{...}} getRowKey={[Function]} store={{...}} expandedRowClassName={[Function: expandedRowClassName]} defaultExpandAllRows={false} defaultExpandedRowKeys={{...}} childrenColumnName="children" onExpand={[Function: onExpand]} onExpandedRowsChange={[Function: onExpandedRowsChange]} fixed={[undefined]} index={0} record={{...}} onRowClick={[undefined]} needIndentSpaced={false} onExpandedChange={[Function]} expanded={false}>
+                                                                      <Connect(TableRow) fixed={[undefined]} indent={0} className="" record={{...}} index={0} prefixCls="ant-table-row" childrenColumnName={[undefined]} columns={{...}} onRow={[Function]} onRowDoubleClick={[undefined]} onRowContextMenu={[undefined]} onRowMouseEnter={[undefined]} onRowMouseLeave={[undefined]} rowKey="58135bfd2faeb3190181c057" ancestorKeys={{...}} components={{...}} isAnyColumnsFixed={false} indentSize={20} onRowClick={[Function]} hasExpandIcon={[Function]} renderExpandIcon={[Function]} renderExpandIconCell={[Function]}>
+                                                                        <TableRow fixed={[undefined]} indent={0} className="" record={{...}} index={0} prefixCls="ant-table-row" childrenColumnName={[undefined]} columns={{...}} onRow={[Function]} onRowDoubleClick={[undefined]} onRowContextMenu={[undefined]} onRowMouseEnter={[undefined]} onRowMouseLeave={[undefined]} rowKey="58135bfd2faeb3190181c057" ancestorKeys={{...}} components={{...}} isAnyColumnsFixed={false} indentSize={20} onRowClick={[Function]} hasExpandIcon={[Function]} renderExpandIcon={[Function]} renderExpandIconCell={[Function]} visible={true} hovered={false} height={{...}} store={{...}} onHover={[Function: onHover]}>
+                                                                          <BodyRow onClick={[Function]} onDoubleClick={[Function]} onMouseEnter={[Function]} onMouseLeave={[Function]} onContextMenu={[Function]} className="ant-table-row  ant-table-row-level-0" prefixCls="ant-table" store={{...}} rowKey="58135bfd2faeb3190181c057" style={{...}}>
+                                                                            <tr onClick={[Function]} onDoubleClick={[Function]} onMouseEnter={[Function]} onMouseLeave={[Function]} onContextMenu={[Function]} className="ant-table-row  ant-table-row-level-0" style={{...}}>
+                                                                              <TableCell prefixCls="ant-table-row" record={{...}} indentSize={20} indent={0} index={0} column={{...}} expandIcon={{...}} component="td">
+                                                                                <td className="ant-table-column-has-filters" onClick={[Function]}>
+                                                                                  <span style={{...}} className="ant-table-row-indent indent-level-0" />
+                                                                                  <ExpandIcon expandable={false} prefixCls="ant-table-row" onExpand={[Function]} needIndentSpaced={false} expanded={false} record={{...}} />
+                                                                                  Test_Project
+                                                                                </td>
+                                                                              </TableCell>
+                                                                              <TableCell prefixCls="ant-table-row" record={{...}} indentSize={20} indent={0} index={0} column={{...}} expandIcon={false} component="td">
+                                                                                <td className="ant-table-column-has-filters" onClick={[Function]}>
+                                                                                  team_X1
+                                                                                </td>
+                                                                              </TableCell>
+                                                                              <TableCell prefixCls="ant-table-row" record={{...}} indentSize={20} indent={0} index={0} column={{...}} expandIcon={false} component="td">
+                                                                                <td className="ant-table-column-has-filters" onClick={[Function]}>
+                                                                                  100 
+                                                                                </td>
+                                                                              </TableCell>
+                                                                              <TableCell prefixCls="ant-table-row" record={{...}} indentSize={20} indent={0} index={0} column={{...}} expandIcon={false} component="td">
+                                                                                <td className="ant-table-column-has-filters" onClick={[Function]}>
+                                                                                  user_A BoyA (user_A@scalableminds.com)
+                                                                                </td>
+                                                                              </TableCell>
+                                                                              <TableCell prefixCls="ant-table-row" record={{...}} indentSize={20} indent={0} index={0} column={{...}} expandIcon={false} component="td">
+                                                                                <td className="ant-table-column-has-filters" onClick={[Function]}>
+                                                                                  19
+                                                                                </td>
+                                                                              </TableCell>
+                                                                              <TableCell prefixCls="ant-table-row" record={{...}} indentSize={20} indent={0} index={0} column={{...}} expandIcon={false} component="td">
+                                                                                <td className="ant-table-column-has-filters" onClick={[Function]}>
+                                                                                  90m
+                                                                                </td>
+                                                                              </TableCell>
+                                                                              <TableCell prefixCls="ant-table-row" record={{...}} indentSize={20} indent={0} index={0} column={{...}} expandIcon={false} component="td">
+                                                                                <td className="" onClick={[Function]}>
+                                                                                  <span>
+                                                                                    <Link to="/annotations/CompoundProject/58135bfd2faeb3190181c057" title="View all Finished Tracings" replace={false}>
+                                                                                      <a title="View all Finished Tracings" onClick={[Function]} href="/annotations/CompoundProject/58135bfd2faeb3190181c057">
+                                                                                        <Icon type="eye-o">
+                                                                                          <i className="anticon anticon-eye-o" />
+                                                                                        </Icon>
+                                                                                        View
+                                                                                      </a>
+                                                                                    </Link>
+                                                                                    <br />
+                                                                                    <Link to="/projects/Test_Project/edit" title="Edit Project" replace={false}>
+                                                                                      <a title="Edit Project" onClick={[Function]} href="/projects/Test_Project/edit">
+                                                                                        <Icon type="edit">
+                                                                                          <i className="anticon anticon-edit" />
+                                                                                        </Icon>
+                                                                                        Edit
+                                                                                      </a>
+                                                                                    </Link>
+                                                                                    <br />
+                                                                                    <div>
+                                                                                      <a onClick={[Function: wrapper]} title="Pause Tasks">
+                                                                                        <Icon type="pause-circle-o">
+                                                                                          <i className="anticon anticon-pause-circle-o" />
+                                                                                        </Icon>
+                                                                                        Pause
+                                                                                      </a>
+                                                                                      <br />
+                                                                                    </div>
+                                                                                    <Link to="/projects/Test_Project/tasks" title="View Tasks" replace={false}>
+                                                                                      <a title="View Tasks" onClick={[Function]} href="/projects/Test_Project/tasks">
+                                                                                        <Icon type="schedule">
+                                                                                          <i className="anticon anticon-schedule" />
+                                                                                        </Icon>
+                                                                                        Tasks
+                                                                                      </a>
+                                                                                    </Link>
+                                                                                    <br />
+                                                                                    <a onClick={[Function: wrapper]} title="Increase Task instances">
+                                                                                      <Icon type="plus-square-o">
+                                                                                        <i className="anticon anticon-plus-square-o" />
+                                                                                      </Icon>
+                                                                                      Increase Instances
+                                                                                    </a>
+                                                                                    <br />
+                                                                                    <a href="/api/annotations/CompoundProject/58135bfd2faeb3190181c057/download" title="Download all Finished Tracings">
+                                                                                      <Icon type="download">
+                                                                                        <i className="anticon anticon-download" />
+                                                                                      </Icon>
+                                                                                      Download
+                                                                                    </a>
+                                                                                    <br />
+                                                                                    <a onClick={[Function: wrapper]}>
+                                                                                      <Icon type="team">
+                                                                                        <i className="anticon anticon-team" />
+                                                                                      </Icon>
+                                                                                      Show active users
+                                                                                    </a>
+                                                                                    <br />
+                                                                                    <a onClick={[Function: wrapper]}>
+                                                                                      <Icon type="delete">
+                                                                                        <i className="anticon anticon-delete" />
+                                                                                      </Icon>
+                                                                                      Delete
+                                                                                    </a>
+                                                                                  </span>
+                                                                                </td>
+                                                                              </TableCell>
+                                                                            </tr>
+                                                                          </BodyRow>
+                                                                        </TableRow>
+                                                                      </Connect(TableRow)>
+                                                                    </ExpandableRow>
+                                                                  </Connect(ExpandableRow)>
+                                                                  <Connect(ExpandableRow) dataSource={{...}} rowKey="68135bfd2faeb3190181c058" pagination={{...}} locale={{...}} useFixedHeader={false} size="large" loading={false} bordered={false} indentSize={20} onRow={[Function]} components={{...}} prefixCls="ant-table-row" data={{...}} columns={{...}} showHeader={true} className="ant-table-large" expandIconColumnIndex={0} expandIconAsCell={false} emptyText={{...}} rowClassName={[Function: rowClassName]} onHeaderRow={[Function: onHeaderRow]} bodyStyle={{...}} style={{...}} scroll={{...}} rowRef={[Function: rowRef]} columnManager={{...}} getRowKey={[Function]} store={{...}} expandedRowClassName={[Function: expandedRowClassName]} defaultExpandAllRows={false} defaultExpandedRowKeys={{...}} childrenColumnName="children" onExpand={[Function: onExpand]} onExpandedRowsChange={[Function: onExpandedRowsChange]} fixed={[undefined]} index={1} record={{...}} onRowClick={[undefined]} needIndentSpaced={false} onExpandedChange={[Function]}>
+                                                                    <ExpandableRow dataSource={{...}} rowKey="68135bfd2faeb3190181c058" pagination={{...}} locale={{...}} useFixedHeader={false} size="large" loading={false} bordered={false} indentSize={20} onRow={[Function]} components={{...}} prefixCls="ant-table-row" data={{...}} columns={{...}} showHeader={true} className="ant-table-large" expandIconColumnIndex={0} expandIconAsCell={false} emptyText={{...}} rowClassName={[Function: rowClassName]} onHeaderRow={[Function: onHeaderRow]} bodyStyle={{...}} style={{...}} scroll={{...}} rowRef={[Function: rowRef]} columnManager={{...}} getRowKey={[Function]} store={{...}} expandedRowClassName={[Function: expandedRowClassName]} defaultExpandAllRows={false} defaultExpandedRowKeys={{...}} childrenColumnName="children" onExpand={[Function: onExpand]} onExpandedRowsChange={[Function: onExpandedRowsChange]} fixed={[undefined]} index={1} record={{...}} onRowClick={[undefined]} needIndentSpaced={false} onExpandedChange={[Function]} expanded={false}>
+                                                                      <Connect(TableRow) fixed={[undefined]} indent={0} className="" record={{...}} index={1} prefixCls="ant-table-row" childrenColumnName={[undefined]} columns={{...}} onRow={[Function]} onRowDoubleClick={[undefined]} onRowContextMenu={[undefined]} onRowMouseEnter={[undefined]} onRowMouseLeave={[undefined]} rowKey="68135bfd2faeb3190181c058" ancestorKeys={{...}} components={{...}} isAnyColumnsFixed={false} indentSize={20} onRowClick={[Function]} hasExpandIcon={[Function]} renderExpandIcon={[Function]} renderExpandIconCell={[Function]}>
+                                                                        <TableRow fixed={[undefined]} indent={0} className="" record={{...}} index={1} prefixCls="ant-table-row" childrenColumnName={[undefined]} columns={{...}} onRow={[Function]} onRowDoubleClick={[undefined]} onRowContextMenu={[undefined]} onRowMouseEnter={[undefined]} onRowMouseLeave={[undefined]} rowKey="68135bfd2faeb3190181c058" ancestorKeys={{...}} components={{...}} isAnyColumnsFixed={false} indentSize={20} onRowClick={[Function]} hasExpandIcon={[Function]} renderExpandIcon={[Function]} renderExpandIconCell={[Function]} visible={true} hovered={false} height={{...}} store={{...}} onHover={[Function: onHover]}>
+                                                                          <BodyRow onClick={[Function]} onDoubleClick={[Function]} onMouseEnter={[Function]} onMouseLeave={[Function]} onContextMenu={[Function]} className="ant-table-row  ant-table-row-level-0" prefixCls="ant-table" store={{...}} rowKey="68135bfd2faeb3190181c058" style={{...}}>
+                                                                            <tr onClick={[Function]} onDoubleClick={[Function]} onMouseEnter={[Function]} onMouseLeave={[Function]} onContextMenu={[Function]} className="ant-table-row  ant-table-row-level-0" style={{...}}>
+                                                                              <TableCell prefixCls="ant-table-row" record={{...}} indentSize={20} indent={0} index={1} column={{...}} expandIcon={{...}} component="td">
+                                                                                <td className="ant-table-column-has-filters" onClick={[Function]}>
+                                                                                  <span style={{...}} className="ant-table-row-indent indent-level-0" />
+                                                                                  <ExpandIcon expandable={false} prefixCls="ant-table-row" onExpand={[Function]} needIndentSpaced={false} expanded={false} record={{...}} />
+                                                                                  Test_Project2
+                                                                                </td>
+                                                                              </TableCell>
+                                                                              <TableCell prefixCls="ant-table-row" record={{...}} indentSize={20} indent={0} index={1} column={{...}} expandIcon={false} component="td">
+                                                                                <td className="ant-table-column-has-filters" onClick={[Function]}>
+                                                                                  team_X2
+                                                                                </td>
+                                                                              </TableCell>
+                                                                              <TableCell prefixCls="ant-table-row" record={{...}} indentSize={20} indent={0} index={1} column={{...}} expandIcon={false} component="td">
+                                                                                <td className="ant-table-column-has-filters" onClick={[Function]}>
+                                                                                  100 
+                                                                                </td>
+                                                                              </TableCell>
+                                                                              <TableCell prefixCls="ant-table-row" record={{...}} indentSize={20} indent={0} index={1} column={{...}} expandIcon={false} component="td">
+                                                                                <td className="ant-table-column-has-filters" onClick={[Function]}>
+                                                                                  user_D BoyD (user_D@scalableminds.com)
+                                                                                </td>
+                                                                              </TableCell>
+                                                                              <TableCell prefixCls="ant-table-row" record={{...}} indentSize={20} indent={0} index={1} column={{...}} expandIcon={false} component="td">
+                                                                                <td className="ant-table-column-has-filters" onClick={[Function]}>
+                                                                                  10
+                                                                                </td>
+                                                                              </TableCell>
+                                                                              <TableCell prefixCls="ant-table-row" record={{...}} indentSize={20} indent={0} index={1} column={{...}} expandIcon={false} component="td">
+                                                                                <td className="ant-table-column-has-filters" onClick={[Function]}>
+                                                                                  90m
+                                                                                </td>
+                                                                              </TableCell>
+                                                                              <TableCell prefixCls="ant-table-row" record={{...}} indentSize={20} indent={0} index={1} column={{...}} expandIcon={false} component="td">
+                                                                                <td className="" onClick={[Function]}>
+                                                                                  <span>
+                                                                                    <Link to="/annotations/CompoundProject/68135bfd2faeb3190181c058" title="View all Finished Tracings" replace={false}>
+                                                                                      <a title="View all Finished Tracings" onClick={[Function]} href="/annotations/CompoundProject/68135bfd2faeb3190181c058">
+                                                                                        <Icon type="eye-o">
+                                                                                          <i className="anticon anticon-eye-o" />
+                                                                                        </Icon>
+                                                                                        View
+                                                                                      </a>
+                                                                                    </Link>
+                                                                                    <br />
+                                                                                    <Link to="/projects/Test_Project2/edit" title="Edit Project" replace={false}>
+                                                                                      <a title="Edit Project" onClick={[Function]} href="/projects/Test_Project2/edit">
+                                                                                        <Icon type="edit">
+                                                                                          <i className="anticon anticon-edit" />
+                                                                                        </Icon>
+                                                                                        Edit
+                                                                                      </a>
+                                                                                    </Link>
+                                                                                    <br />
+                                                                                    <div>
+                                                                                      <a onClick={[Function: wrapper]} title="Pause Tasks">
+                                                                                        <Icon type="pause-circle-o">
+                                                                                          <i className="anticon anticon-pause-circle-o" />
+                                                                                        </Icon>
+                                                                                        Pause
+                                                                                      </a>
+                                                                                      <br />
+                                                                                    </div>
+                                                                                    <Link to="/projects/Test_Project2/tasks" title="View Tasks" replace={false}>
+                                                                                      <a title="View Tasks" onClick={[Function]} href="/projects/Test_Project2/tasks">
+                                                                                        <Icon type="schedule">
+                                                                                          <i className="anticon anticon-schedule" />
+                                                                                        </Icon>
+                                                                                        Tasks
+                                                                                      </a>
+                                                                                    </Link>
+                                                                                    <br />
+                                                                                    <a onClick={[Function: wrapper]} title="Increase Task instances">
+                                                                                      <Icon type="plus-square-o">
+                                                                                        <i className="anticon anticon-plus-square-o" />
+                                                                                      </Icon>
+                                                                                      Increase Instances
+                                                                                    </a>
+                                                                                    <br />
+                                                                                    <a href="/api/annotations/CompoundProject/68135bfd2faeb3190181c058/download" title="Download all Finished Tracings">
+                                                                                      <Icon type="download">
+                                                                                        <i className="anticon anticon-download" />
+                                                                                      </Icon>
+                                                                                      Download
+                                                                                    </a>
+                                                                                    <br />
+                                                                                    <a onClick={[Function: wrapper]}>
+                                                                                      <Icon type="team">
+                                                                                        <i className="anticon anticon-team" />
+                                                                                      </Icon>
+                                                                                      Show active users
+                                                                                    </a>
+                                                                                    <br />
+                                                                                  </span>
+                                                                                </td>
+                                                                              </TableCell>
+                                                                            </tr>
+                                                                          </BodyRow>
+                                                                        </TableRow>
+                                                                      </Connect(TableRow)>
+                                                                    </ExpandableRow>
+                                                                  </Connect(ExpandableRow)>
+                                                                  <Connect(ExpandableRow) dataSource={{...}} rowKey="78135bfd2faeb3190181c058" pagination={{...}} locale={{...}} useFixedHeader={false} size="large" loading={false} bordered={false} indentSize={20} onRow={[Function]} components={{...}} prefixCls="ant-table-row" data={{...}} columns={{...}} showHeader={true} className="ant-table-large" expandIconColumnIndex={0} expandIconAsCell={false} emptyText={{...}} rowClassName={[Function: rowClassName]} onHeaderRow={[Function: onHeaderRow]} bodyStyle={{...}} style={{...}} scroll={{...}} rowRef={[Function: rowRef]} columnManager={{...}} getRowKey={[Function]} store={{...}} expandedRowClassName={[Function: expandedRowClassName]} defaultExpandAllRows={false} defaultExpandedRowKeys={{...}} childrenColumnName="children" onExpand={[Function: onExpand]} onExpandedRowsChange={[Function: onExpandedRowsChange]} fixed={[undefined]} index={2} record={{...}} onRowClick={[undefined]} needIndentSpaced={false} onExpandedChange={[Function]}>
+                                                                    <ExpandableRow dataSource={{...}} rowKey="78135bfd2faeb3190181c058" pagination={{...}} locale={{...}} useFixedHeader={false} size="large" loading={false} bordered={false} indentSize={20} onRow={[Function]} components={{...}} prefixCls="ant-table-row" data={{...}} columns={{...}} showHeader={true} className="ant-table-large" expandIconColumnIndex={0} expandIconAsCell={false} emptyText={{...}} rowClassName={[Function: rowClassName]} onHeaderRow={[Function: onHeaderRow]} bodyStyle={{...}} style={{...}} scroll={{...}} rowRef={[Function: rowRef]} columnManager={{...}} getRowKey={[Function]} store={{...}} expandedRowClassName={[Function: expandedRowClassName]} defaultExpandAllRows={false} defaultExpandedRowKeys={{...}} childrenColumnName="children" onExpand={[Function: onExpand]} onExpandedRowsChange={[Function: onExpandedRowsChange]} fixed={[undefined]} index={2} record={{...}} onRowClick={[undefined]} needIndentSpaced={false} onExpandedChange={[Function]} expanded={false}>
+                                                                      <Connect(TableRow) fixed={[undefined]} indent={0} className="" record={{...}} index={2} prefixCls="ant-table-row" childrenColumnName={[undefined]} columns={{...}} onRow={[Function]} onRowDoubleClick={[undefined]} onRowContextMenu={[undefined]} onRowMouseEnter={[undefined]} onRowMouseLeave={[undefined]} rowKey="78135bfd2faeb3190181c058" ancestorKeys={{...}} components={{...}} isAnyColumnsFixed={false} indentSize={20} onRowClick={[Function]} hasExpandIcon={[Function]} renderExpandIcon={[Function]} renderExpandIconCell={[Function]}>
+                                                                        <TableRow fixed={[undefined]} indent={0} className="" record={{...}} index={2} prefixCls="ant-table-row" childrenColumnName={[undefined]} columns={{...}} onRow={[Function]} onRowDoubleClick={[undefined]} onRowContextMenu={[undefined]} onRowMouseEnter={[undefined]} onRowMouseLeave={[undefined]} rowKey="78135bfd2faeb3190181c058" ancestorKeys={{...}} components={{...}} isAnyColumnsFixed={false} indentSize={20} onRowClick={[Function]} hasExpandIcon={[Function]} renderExpandIcon={[Function]} renderExpandIconCell={[Function]} visible={true} hovered={false} height={{...}} store={{...}} onHover={[Function: onHover]}>
+                                                                          <BodyRow onClick={[Function]} onDoubleClick={[Function]} onMouseEnter={[Function]} onMouseLeave={[Function]} onContextMenu={[Function]} className="ant-table-row  ant-table-row-level-0" prefixCls="ant-table" store={{...}} rowKey="78135bfd2faeb3190181c058" style={{...}}>
+                                                                            <tr onClick={[Function]} onDoubleClick={[Function]} onMouseEnter={[Function]} onMouseLeave={[Function]} onContextMenu={[Function]} className="ant-table-row  ant-table-row-level-0" style={{...}}>
+                                                                              <TableCell prefixCls="ant-table-row" record={{...}} indentSize={20} indent={0} index={2} column={{...}} expandIcon={{...}} component="td">
+                                                                                <td className="ant-table-column-has-filters" onClick={[Function]}>
+                                                                                  <span style={{...}} className="ant-table-row-indent indent-level-0" />
+                                                                                  <ExpandIcon expandable={false} prefixCls="ant-table-row" onExpand={[Function]} needIndentSpaced={false} expanded={false} record={{...}} />
+                                                                                  Test_Project3(for_annotation_mutations)
+                                                                                </td>
+                                                                              </TableCell>
+                                                                              <TableCell prefixCls="ant-table-row" record={{...}} indentSize={20} indent={0} index={2} column={{...}} expandIcon={false} component="td">
+                                                                                <td className="ant-table-column-has-filters" onClick={[Function]}>
+                                                                                  team_X2
+                                                                                </td>
+                                                                              </TableCell>
+                                                                              <TableCell prefixCls="ant-table-row" record={{...}} indentSize={20} indent={0} index={2} column={{...}} expandIcon={false} component="td">
+                                                                                <td className="ant-table-column-has-filters" onClick={[Function]}>
+                                                                                  100 
+                                                                                </td>
+                                                                              </TableCell>
+                                                                              <TableCell prefixCls="ant-table-row" record={{...}} indentSize={20} indent={0} index={2} column={{...}} expandIcon={false} component="td">
+                                                                                <td className="ant-table-column-has-filters" onClick={[Function]}>
+                                                                                  user_D BoyD (user_D@scalableminds.com)
+                                                                                </td>
+                                                                              </TableCell>
+                                                                              <TableCell prefixCls="ant-table-row" record={{...}} indentSize={20} indent={0} index={2} column={{...}} expandIcon={false} component="td">
+                                                                                <td className="ant-table-column-has-filters" onClick={[Function]}>
+                                                                                  10
+                                                                                </td>
+                                                                              </TableCell>
+                                                                              <TableCell prefixCls="ant-table-row" record={{...}} indentSize={20} indent={0} index={2} column={{...}} expandIcon={false} component="td">
+                                                                                <td className="ant-table-column-has-filters" onClick={[Function]}>
+                                                                                  90m
+                                                                                </td>
+                                                                              </TableCell>
+                                                                              <TableCell prefixCls="ant-table-row" record={{...}} indentSize={20} indent={0} index={2} column={{...}} expandIcon={false} component="td">
+                                                                                <td className="" onClick={[Function]}>
+                                                                                  <span>
+                                                                                    <Link to="/annotations/CompoundProject/78135bfd2faeb3190181c058" title="View all Finished Tracings" replace={false}>
+                                                                                      <a title="View all Finished Tracings" onClick={[Function]} href="/annotations/CompoundProject/78135bfd2faeb3190181c058">
+                                                                                        <Icon type="eye-o">
+                                                                                          <i className="anticon anticon-eye-o" />
+                                                                                        </Icon>
+                                                                                        View
+                                                                                      </a>
+                                                                                    </Link>
+                                                                                    <br />
+                                                                                    <Link to="/projects/Test_Project3(for_annotation_mutations)/edit" title="Edit Project" replace={false}>
+                                                                                      <a title="Edit Project" onClick={[Function]} href="/projects/Test_Project3(for_annotation_mutations)/edit">
+                                                                                        <Icon type="edit">
+                                                                                          <i className="anticon anticon-edit" />
+                                                                                        </Icon>
+                                                                                        Edit
+                                                                                      </a>
+                                                                                    </Link>
+                                                                                    <br />
+                                                                                    <div>
+                                                                                      <a onClick={[Function: wrapper]} title="Pause Tasks">
+                                                                                        <Icon type="pause-circle-o">
+                                                                                          <i className="anticon anticon-pause-circle-o" />
+                                                                                        </Icon>
+                                                                                        Pause
+                                                                                      </a>
+                                                                                      <br />
+                                                                                    </div>
+                                                                                    <Link to="/projects/Test_Project3(for_annotation_mutations)/tasks" title="View Tasks" replace={false}>
+                                                                                      <a title="View Tasks" onClick={[Function]} href="/projects/Test_Project3(for_annotation_mutations)/tasks">
+                                                                                        <Icon type="schedule">
+                                                                                          <i className="anticon anticon-schedule" />
+                                                                                        </Icon>
+                                                                                        Tasks
+                                                                                      </a>
+                                                                                    </Link>
+                                                                                    <br />
+                                                                                    <a onClick={[Function: wrapper]} title="Increase Task instances">
+                                                                                      <Icon type="plus-square-o">
+                                                                                        <i className="anticon anticon-plus-square-o" />
+                                                                                      </Icon>
+                                                                                      Increase Instances
+                                                                                    </a>
+                                                                                    <br />
+                                                                                    <a href="/api/annotations/CompoundProject/78135bfd2faeb3190181c058/download" title="Download all Finished Tracings">
+                                                                                      <Icon type="download">
+                                                                                        <i className="anticon anticon-download" />
+                                                                                      </Icon>
+                                                                                      Download
+                                                                                    </a>
+                                                                                    <br />
+                                                                                    <a onClick={[Function: wrapper]}>
+                                                                                      <Icon type="team">
+                                                                                        <i className="anticon anticon-team" />
+                                                                                      </Icon>
+                                                                                      Show active users
+                                                                                    </a>
+                                                                                    <br />
+                                                                                  </span>
+                                                                                </td>
+                                                                              </TableCell>
+                                                                            </tr>
+                                                                          </BodyRow>
+                                                                        </TableRow>
+                                                                      </Connect(TableRow)>
+                                                                    </ExpandableRow>
+                                                                  </Connect(ExpandableRow)>
+                                                                </tbody>
+                                                              </table>
+                                                            </BaseTable>
+                                                          </Connect(BaseTable)>
+                                                        </div>
+                                                      </BodyTable>
+                                                    </div>
+                                                  </div>
+                                                </ExpandableTable>
+                                              </Connect(ExpandableTable)>
+                                            </Provider>
+                                          </Table>
+                                        </LocaleReceiver>
+                                        <Pagination onChange={[Function]} onShowSizeChange={[Function]} defaultPageSize={50} current={1} pageSize={50} className="ant-table-pagination" total={3} size="default" prefixCls="ant-pagination" selectPrefixCls="ant-select">
+                                          <LocaleReceiver componentName="Pagination" defaultLocale={{...}}>
+                                            <Pagination onChange={[Function]} onShowSizeChange={[Function]} defaultPageSize={50} current={1} pageSize={50} total={3} prefixCls="ant-pagination" selectPrefixCls="ant-select" className="ant-table-pagination" selectComponentClass={[Function: Select]} locale={{...}} defaultCurrent={1} hideOnSinglePage={false} showPrevNextJumpers={true} showQuickJumper={false} showSizeChanger={false} showLessItems={false} showTitle={true} style={{...}} itemRender={[Function: defaultItemRender]}>
+                                              <ul className="ant-pagination ant-table-pagination" style={{...}} unselectable="unselectable">
+                                                <li title="Previous Page" onClick={[Function]} tabIndex={{...}} onKeyPress={[Function]} className="ant-pagination-disabled ant-pagination-prev" aria-disabled={true}>
+                                                  <a className="ant-pagination-item-link" />
+                                                </li>
+                                                <Pager locale={{...}} rootPrefixCls="ant-pagination" onClick={[Function]} onKeyPress={[Function]} page={1} active={true} showTitle={true} itemRender={[Function: defaultItemRender]}>
+                                                  <li title={1} className="ant-pagination-item ant-pagination-item-1 ant-pagination-item-active" onClick={[Function: handleClick]} onKeyPress={[Function: handleKeyPress]} tabIndex="0">
+                                                    <a>
+                                                      1
+                                                    </a>
+                                                  </li>
+                                                </Pager>
+                                                <li title="Next Page" onClick={[Function]} tabIndex={{...}} onKeyPress={[Function]} className="ant-pagination-disabled ant-pagination-next" aria-disabled={true}>
+                                                  <a className="ant-pagination-item-link" />
+                                                </li>
+                                                <Options locale={{...}} rootPrefixCls="ant-pagination" selectComponentClass={[Function: Select]} selectPrefixCls="ant-select" changeSize={{...}} current={1} pageSize={50} pageSizeOptions={{...}} quickGo={{...}} goButton={false} />
+                                              </ul>
+                                            </Pagination>
+                                          </LocaleReceiver>
+                                        </Pagination>
+                                      </div>
+                                    </AnimateChild>
+                                  </div>
+                                </Animate>
+                              </Spin>
+                            </div>
+                          </Table>
+                        </div>
+                      </AnimateChild>
+                    </div>
+                  </Animate>
+                </Spin>
+              </div>
+            </div>
+          </ProjectListView>
+        </Route>
+      </withRouter(ProjectListView)>
+    </Connect(withRouter(ProjectListView))>
+  </Router>
+</Provider>

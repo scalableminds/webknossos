@@ -14,9 +14,8 @@ import javax.inject.Inject
 
 class BinaryDataServiceHolder @Inject()(config: DataStoreConfig) {
 
-  val binaryDataService = new BinaryDataService(
-    Paths.get(config.Braingames.Binary.baseFolder),
-    config.Braingames.Binary.loadTimeout,
-    config.Braingames.Binary.cacheMaxSize)
+  val binaryDataService = new BinaryDataService(Paths.get(config.Braingames.Binary.baseFolder),
+                                                config.Braingames.Binary.loadTimeout,
+                                                config.Braingames.Binary.cacheMaxSize)
 
 }

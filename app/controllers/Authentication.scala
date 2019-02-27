@@ -123,12 +123,6 @@ class Authentication @Inject()(actorSystem: ActorSystem,
   private lazy val ssoKey =
     conf.Application.Authentication.ssoKey
 
-  val automaticUserActivation: Boolean =
-    conf.Application.Authentication.enableDevAutoVerify
-
-  val isAdminOnRegistration: Boolean =
-    conf.Application.Authentication.enableDevAutoAdmin
-
   def normalizeName(name: String): Option[String] = {
     val replacementMap = Map(
       "ü" -> "ue",
@@ -182,11 +176,11 @@ class Authentication @Inject()(actorSystem: ActorSystem,
         val loginInfo = LoginInfo(CredentialsProvider.ID, email)
         var errors = List[String]()
         val firstName = normalizeName(signUpData.firstName).getOrElse {
-          errors ::= Messages("user.firstName.invalid");
+          errors ::= Messages("user.firstName.invalid")
           ""
         }
         val lastName = normalizeName(signUpData.lastName).getOrElse {
-          errors ::= Messages("user.lastName.invalid");
+          errors ::= Messages("user.lastName.invalid")
           ""
         }
         userService.retrieve(loginInfo).toFox.futureBox.flatMap {
@@ -205,8 +199,8 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                            email,
                                            firstName,
                                            lastName,
-                                           automaticUserActivation,
-                                           isAdminOnRegistration,
+                                           organization.enableAutoVerify,
+                                           false,
                                            loginInfo,
                                            passwordHasher.hash(signUpData.password)) ?~> "user.creation.failed"
                 brainDBResult <- brainTracing.registerIfNeeded(user, signUpData.password).toFox
@@ -266,7 +260,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
     if (request.identity.isSuperUser) {
       val loginInfo = LoginInfo(CredentialsProvider.ID, email)
       for {
-        _ <- userService.findOneByEmail(email) ?~> "user.notFound"
+        _ <- userService.findOneByEmail(email) ?~> "user.notFound" ~> NOT_FOUND
         _ <- combinedAuthenticatorService.discard(request.authenticator, Ok) //to logout the admin
         authenticator <- combinedAuthenticatorService.create(loginInfo)
         value <- combinedAuthenticatorService.init(authenticator)
@@ -274,7 +268,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       } yield result
     } else {
       Logger.warn(s"User tried to switch (${request.identity.email} -> $email) but is no Superuser!")
-      Future.successful(BadRequest(Messages("user.notAuthorised")))
+      Future.successful(Forbidden(Messages("user.notAuthorised")))
     }
   }
 
@@ -284,7 +278,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       email =>
         userService.retrieve(LoginInfo(CredentialsProvider.ID, email.toLowerCase)).flatMap {
-          case None => Future.successful(BadRequest(Messages("error.noUser")))
+          case None => Future.successful(NotFound(Messages("error.noUser")))
           case Some(user) => {
             for {
               token <- bearerTokenAuthenticatorService.createAndInit(user.loginInfo, TokenType.ResetPassword)
@@ -327,7 +321,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
             loginInfo =>
               userService.retrieve(loginInfo).flatMap {
                 case None =>
-                  Future.successful(BadRequest(Messages("error.noUser")))
+                  Future.successful(NotFound(Messages("error.noUser")))
                 case Some(user) =>
                   val loginInfo = LoginInfo(CredentialsProvider.ID, request.identity.email)
                   for {
@@ -426,11 +420,11 @@ class Authentication @Inject()(actorSystem: ActorSystem,
             val loginInfo = LoginInfo(CredentialsProvider.ID, email)
             var errors = List[String]()
             val firstName = normalizeName(signUpData.firstName).getOrElse {
-              errors ::= Messages("user.firstName.invalid");
+              errors ::= Messages("user.firstName.invalid")
               ""
             }
             val lastName = normalizeName(signUpData.lastName).getOrElse {
-              errors ::= Messages("user.lastName.invalid");
+              errors ::= Messages("user.lastName.invalid")
               ""
             }
             userService.retrieve(loginInfo).toFox.futureBox.flatMap {
@@ -449,7 +443,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                                firstName,
                                                lastName,
                                                isActive = true,
-                                               teamRole = true,
+                                               isOrgTeamManager = true,
                                                loginInfo,
                                                passwordHasher.hash(signUpData.password),
                                                isAdmin = true) ?~> "user.creation.failed"

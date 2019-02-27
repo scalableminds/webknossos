@@ -13,31 +13,31 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
 class VolumeTracingBucketProvider(layer: VolumeTracingLayer)
-  extends BucketProvider
+    extends BucketProvider
     with VolumeTracingBucketHelper
     with FoxImplicits {
 
   val volumeDataStore: FossilDBClient = layer.volumeDataStore
 
-  override def load(readInstruction: DataReadInstruction, cache: DataCubeCache, timeout: FiniteDuration)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
+  override def load(readInstruction: DataReadInstruction, cache: DataCubeCache, timeout: FiniteDuration)(
+      implicit ec: ExecutionContext): Fox[Array[Byte]] =
     loadBucket(layer, readInstruction.bucket, readInstruction.version)
-  }
 
-  override def bucketStream(resolution: Int, version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] = {
+  override def bucketStream(resolution: Int, version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] =
     bucketStream(layer, resolution, version)
-  }
 
-  def bucketStreamWithVersion(resolution: Int, version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte], Long)] = {
+  def bucketStreamWithVersion(resolution: Int,
+                              version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte], Long)] =
     bucketStreamWithVersion(layer, resolution, version)
-  }
 }
 
 case class VolumeTracingLayer(
-                               name: String,
-                               boundingBox: BoundingBox,
-                               elementClass: ElementClass.Value,
-                               largestSegmentId: Long
-                             )(implicit val volumeDataStore: FossilDBClient) extends SegmentationLayer {
+    name: String,
+    boundingBox: BoundingBox,
+    elementClass: ElementClass.Value,
+    largestSegmentId: Long
+)(implicit val volumeDataStore: FossilDBClient)
+    extends SegmentationLayer {
 
   def lengthOfUnderlyingCubes(resolution: Point3D): Int = DataLayer.bucketLength
 

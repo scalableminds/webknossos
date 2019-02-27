@@ -17,6 +17,11 @@ class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
       map.get(id)
     }
 
+  def contains(id: K) =
+    map.synchronized(
+      map.contains(id)
+    )
+
   def findAll =
     map.synchronized {
       map.values.toList
@@ -30,6 +35,13 @@ class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
   def removeAllExcept(l: Array[K]) =
     map.synchronized {
       map.filterKeys(l.contains)
+    }
+
+  def removeAllConditional(predicate: K => Boolean) =
+    map.synchronized {
+      map.keySet.filter(predicate).foreach { key: K =>
+        map -= key
+      }
     }
 
   def insert(id: K, t: V, to: Option[FiniteDuration] = None) = {

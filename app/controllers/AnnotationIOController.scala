@@ -6,34 +6,31 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl._
 import akka.util.ByteString
-import javax.inject.Inject
-import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
+import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.models.datasource.SegmentationLayer
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
 import com.scalableminds.webknossos.tracingstore.tracings.{ProtoGeometryImplicits, TracingType}
 import com.typesafe.scalalogging.LazyLogging
+import javax.inject.Inject
 import models.annotation.AnnotationState._
-import models.annotation.nml.{NmlResults, NmlService, NmlWriter}
 import models.annotation._
+import models.annotation.nml.{NmlResults, NmlService, NmlWriter}
 import models.binary.{DataSet, DataSetDAO, DataSetService}
 import models.project.ProjectDAO
 import models.task._
+import models.team.OrganizationDAO
 import models.user._
 import oxalis.security.WkEnv
-import com.mohiva.play.silhouette.api.Silhouette
-import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
-import com.scalableminds.webknossos.datastore.models.datasource.{ElementClass, SegmentationLayer}
-import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
-import models.team.OrganizationDAO
-import play.api.http.HttpEntity
-import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
+import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.streams.IterateeStreams
 import play.api.libs.json.Json
-import play.api.mvc.{ResponseHeader, Result}
 import utils.ObjectId
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -98,7 +95,8 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
 
     log {
 
-      val shouldCreateGroupForEachFile: Boolean = request.body.dataParts("createGroupForEachFile").head == "true"
+      val shouldCreateGroupForEachFile: Boolean =
+        request.body.dataParts("createGroupForEachFile").headOption.contains("true")
 
       val parsedFiles = request.body.files.foldLeft(NmlResults.ZipParseResult()) {
         case (acc, next) => {

@@ -19,7 +19,6 @@ type OwnProps = {|
   onOk: () => void,
 |};
 type StateProps = {|
-  // eslint-disable-next-line react/no-unused-prop-types
   isPublic: boolean,
   dataset: APIDataset,
   restrictions: RestrictionsAndSettings,

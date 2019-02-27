@@ -62,7 +62,6 @@ export function Comment({ comment, isActive, style }: CommentProps) {
   const iClassName = classNames("fa", "fa-fw", {
     "fa-angle-right": isActive,
   });
-  // eslint-disable-next-line no-unused-vars
   const { width, ...liStyle } = style;
   const isMultiLine = comment.content.indexOf("\n") !== -1;
 

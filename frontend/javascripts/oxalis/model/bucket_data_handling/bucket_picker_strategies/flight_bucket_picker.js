@@ -21,10 +21,8 @@ function createDistinctBucketAdder(buckets: Array<Vector4>) {
   const bucketLookUp = [];
   const maybeAddBucket = (bucketPos: Vector4) => {
     const [x, y, z] = bucketPos;
-    /* eslint-disable-next-line */
     bucketLookUp[x] = bucketLookUp[x] || [];
     const lookupX = bucketLookUp[x];
-    /* eslint-disable-next-line */
     lookupX[y] = lookupX[y] || [];
     const lookupY = lookupX[y];
 

@@ -1,5 +1,4 @@
 // @flow
-/* eslint-disable react/no-unused-prop-types */
 import { type ContextRouter, Redirect, Route, Router, Switch } from "react-router-dom";
 import { Layout, Alert } from "antd";
 import { connect } from "react-redux";
@@ -46,6 +45,7 @@ import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
 import UserListView from "admin/user/user_list_view";
 import * as Utils from "libs/utils";
 import window from "libs/window";
+import features from "features";
 
 const { Content } = Layout;
 
@@ -118,6 +118,7 @@ class ReactRouter extends React.Component<Props> {
 
   render() {
     const isAuthenticated = this.props.activeUser !== null;
+    const { enableFrontpage } = features();
 
     return (
       <Router history={browserHistory}>
@@ -129,13 +130,15 @@ class ReactRouter extends React.Component<Props> {
               <Route
                 exact
                 path="/"
-                render={() =>
-                  isAuthenticated ? (
+                render={() => {
+                  if (enableFrontpage) return <SpotlightView />;
+
+                  return isAuthenticated ? (
                     <DashboardView userId={null} isAdminView={false} initialTabKey={null} />
                   ) : (
-                    <SpotlightView />
-                  )
-                }
+                    <Redirect to="/auth/login" />
+                  );
+                }}
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
@@ -378,7 +381,12 @@ class ReactRouter extends React.Component<Props> {
               />
               <Route path="/login" render={() => <Redirect to="/auth/login" />} />
               <Route path="/register" render={() => <Redirect to="/auth/register" />} />
-              <Route path="/auth/login" render={() => <LoginView layout="horizontal" />} />
+              <Route
+                path="/auth/login"
+                render={() =>
+                  isAuthenticated ? <Redirect to="/" /> : <LoginView layout="horizontal" />
+                }
+              />
               <Route
                 path="/auth/register"
                 render={({ location }: ContextRouter) => {

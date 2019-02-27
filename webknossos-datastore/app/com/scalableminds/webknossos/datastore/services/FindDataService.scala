@@ -91,16 +91,16 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       remainingResolutions match {
         case List() => Fox.successful(None)
         case head :: tail =>
-          for {
+          (for {
             foundPosition <- searchPositionIter(positions, head)
           } yield
             foundPosition match {
-              case Some(position) => Some((position, head))
+              case Some(position) => Fox.successful(Some((position, head)))
               case None           => resolutionIter(positions, tail)
-            }
+            }).flatten
       }
 
-    resolutionIter(createPositions(dataLayer).distinct, dataLayer.resolutions)
+    resolutionIter(createPositions(dataLayer).distinct, dataLayer.resolutions.sortBy(_.maxDim))
   }
 
   private def createPositions(dataLayer: DataLayer) = {

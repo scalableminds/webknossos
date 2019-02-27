@@ -268,7 +268,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       } yield result
     } else {
       Logger.warn(s"User tried to switch (${request.identity.email} -> $email) but is no Superuser!")
-      Future.successful(BadRequest(Messages("user.notAuthorised"))) //NEWCODE: FORBIDDEN
+      Future.successful(Forbidden(Messages("user.notAuthorised")))
     }
   }
 

@@ -48,7 +48,7 @@ const WelcomeHeader = ({ history }) => (
               style={{ filter: "invert(1)", width: "100%" }}
             />
           </Col>
-          <Col span={16}>
+          <Col span={20}>
             <p
               style={{
                 fontSize: 58,
@@ -231,7 +231,7 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
                   <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card" bordered={false}>
                     <div style={{ display: "flex", height: "100%" }}>
                       <div className="publication-description">
-                        <h3 style={{ fontSize: 31 }}>Your dataset is missing here?</h3>
+                        <h3>Your dataset is missing here?</h3>
                         <div className="publication-description-body nice-scrollbar">
                           If you want to add your own dataset to this publication library just click
                           here. It opens a form which will contact us so we can add your dataset.

@@ -1,8 +1,4 @@
-/*
- * request.js
- * @flow
- */
-
+// @flow
 import _ from "lodash";
 import urljoin from "url-join";
 
@@ -304,7 +300,7 @@ class Request {
               return Promise.reject(json);
             } catch (jsonError) {
               if (showErrorToast) Toast.error(text);
-              /* eslint-disable prefer-promise-reject-errors */
+              /* eslint-disable-next-line prefer-promise-reject-errors */
               return Promise.reject({
                 errors: [text],
                 status: error.status != null ? error.status : -1,

@@ -5,15 +5,13 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
-import controllers.TaskParameters
 import javax.inject.Inject
+import play.api.libs.functional.syntax._
+import play.api.libs.json.Json._
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
-import play.api.libs.functional.syntax._
-import play.api.libs.json.Json._
-import play.api.libs.json._
 
 import scala.concurrent.ExecutionContext
 

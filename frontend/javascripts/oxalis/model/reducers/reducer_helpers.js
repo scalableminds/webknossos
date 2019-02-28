@@ -1,5 +1,4 @@
 // @flow
-/* eslint-disable import/prefer-default-export */
 import Maybe from "data.maybe";
 
 import type { APIAnnotation, ServerBoundingBox } from "admin/api_flow_types";
@@ -64,6 +63,7 @@ export function convertServerAnnotationToFrontendAnnotation(annotation: APIAnnot
     typ: annotationType,
     tracingStore,
     meshes,
+    user,
   } = annotation;
   const restrictions = {
     ...annotation.restrictions,
@@ -79,5 +79,6 @@ export function convertServerAnnotationToFrontendAnnotation(annotation: APIAnnot
     annotationType,
     tracingStore,
     meshes,
+    user,
   };
 }

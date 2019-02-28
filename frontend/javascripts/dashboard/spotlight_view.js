@@ -188,9 +188,9 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
     return (
       <Layout>
         {useOnboardingFlow ? <WelcomeHeader history={this.props.history} /> : <SimpleHeader />}
-        <Content style={{ padding: 50 }}>
-          <div className="pull-right">{search}</div>
-          <h3>Publications</h3>
+        <Content style={{ padding: 50, minWidth: 900, maxWidth: 1500, margin: "auto" }}>
+          <div className="pull-right">{this.state.datasets.length > 0 && search}</div>
+          <h3>Featured Publications</h3>
           <div className="clearfix" style={{ margin: "20px 0px" }} />
           <Spin size="large" spinning={this.state.isLoading}>
             <div style={{ minHeight: "100px" }}>

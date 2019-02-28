@@ -1,8 +1,4 @@
-/*
- * resizable_buffer.js
- * @flow
- */
-
+// @flow
 const GROW_MULTIPLIER = 1.3;
 
 class ResizableBuffer<T: $TypedArray> {
@@ -84,8 +80,7 @@ class ResizableBuffer<T: $TypedArray> {
   pushSubarray(subarray: Array<number>): void {
     this.ensureCapacity(this.length + subarray.length);
 
-    // eslint-disable-next-line no-unused-vars
-    const { buffer, elementLength, length } = this;
+    const { buffer, length } = this;
 
     buffer.set(subarray, length);
 
@@ -120,7 +115,7 @@ class ResizableBuffer<T: $TypedArray> {
       return null;
     }
 
-    // eslint-disable-next-line no-unused-vars, prefer-const
+    // eslint-disable-next-line prefer-const
     let { buffer, elementLength, length } = this;
 
     for (let i = elementLength - 1; i >= 0; i--) {

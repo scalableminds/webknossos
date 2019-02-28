@@ -136,8 +136,9 @@ export type APIDataset = APIDatasetBase & {
 };
 
 export type APISampleDataset = {
-  name: string,
-  status: "available" | "downloading" | "present",
+  +name: string,
+  +description: string,
+  +status: "available" | "downloading" | "present",
 };
 
 export type APIDataSourceWithMessages = {

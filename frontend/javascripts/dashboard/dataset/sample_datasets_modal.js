@@ -119,7 +119,7 @@ const SampleDatasetsModal = ({ destroy, onOk, organizationName }: Props) => {
         dataSource={datasets}
         renderItem={item => (
           <List.Item style={{ alignItems: "center" }} actions={[getAction(item)]}>
-            {item.name}
+            <List.Item.Meta title={item.name} description={item.description} />
           </List.Item>
         )}
       />

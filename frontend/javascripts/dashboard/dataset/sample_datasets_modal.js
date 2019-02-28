@@ -109,6 +109,7 @@ const SampleDatasetsModal = ({ destroy, onOk, organizationName }: Props) => {
       title="Add a Sample Dataset"
       onCancel={handleCancel}
       visible
+      width={700}
       footer={[
         <Button key="ok" type="primary" onClick={handleOk}>
           Ok
@@ -119,7 +120,11 @@ const SampleDatasetsModal = ({ destroy, onOk, organizationName }: Props) => {
         dataSource={datasets}
         renderItem={item => (
           <List.Item style={{ alignItems: "center" }} actions={[getAction(item)]}>
-            <List.Item.Meta title={item.name} description={item.description} />
+            <List.Item.Meta
+              style={{ whiteSpace: "pre-wrap" }}
+              title={item.name}
+              description={item.description}
+            />
           </List.Item>
         )}
       />

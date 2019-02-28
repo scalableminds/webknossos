@@ -35,6 +35,12 @@ function useDatastores(): { own: Array<APIDataStore>, wkConnect: Array<APIDataSt
 
 const DatasetAddView = ({ history }: Props) => {
   const datastores = useDatastores();
+
+  const handleDatasetAdded = (organization: string, datasetName: string) => {
+    const url = `/datasets/${organization}/${datasetName}/import`;
+    history.push(url);
+  };
+
   return (
     <Tabs defaultActiveKey="1" className="container">
       <TabPane
@@ -46,15 +52,9 @@ const DatasetAddView = ({ history }: Props) => {
         }
         key="1"
       >
-        <DatasetUploadView
-          datastores={datastores.own}
-          onUploaded={(organization: string, datasetName: string) => {
-            const url = `/datasets/${organization}/${datasetName}/import`;
-            history.push(url);
-          }}
-        />
+        <DatasetUploadView datastores={datastores.own} onUploaded={handleDatasetAdded} />
       </TabPane>
-      {datastores.wkConnect.length && (
+      {datastores.wkConnect.length > 0 && (
         <TabPane
           tab={
             <span>
@@ -64,13 +64,7 @@ const DatasetAddView = ({ history }: Props) => {
           }
           key="2"
         >
-          <DatasetAddWkConnectView
-            datastores={datastores.wkConnect}
-            onAdded={(organization: string, datasetName: string) => {
-              const url = `/datasets/${organization}/${datasetName}/import`;
-              history.push(url);
-            }}
-          />
+          <DatasetAddWkConnectView datastores={datastores.wkConnect} onAdded={handleDatasetAdded} />
         </TabPane>
       )}
       {features().addForeignDataset && (

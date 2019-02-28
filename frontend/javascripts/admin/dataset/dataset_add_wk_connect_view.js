@@ -41,6 +41,7 @@ class DatasetAddWkConnectView extends React.PureComponent<PropsWithForm> {
     }
 
     const jsonConfig = url.slice(delimiterIndex + 2);
+    // This will throw an error if the URL did not contain valid JSON. The error will be handled by the caller.
     const config = JSON.parse(decodeURIComponent(jsonConfig));
     config.layers.forEach(layer => {
       if (!layer.source.startsWith("precomputed://")) {
@@ -60,6 +61,7 @@ class DatasetAddWkConnectView extends React.PureComponent<PropsWithForm> {
       if (!err && activeUser != null) {
         const neuroglancerConfig = this.validateAndParseUrl(formValues.url);
         const fullLayers = _.keyBy(neuroglancerConfig.layers, "name");
+        // Remove unnecessary attributes of the layer, the precomputed source prefix needs to be removed as well
         const layers = _.mapValues(fullLayers, ({ source, type }) => ({
           type,
           source: source.replace(/^(precomputed:\/\/)/, ""),

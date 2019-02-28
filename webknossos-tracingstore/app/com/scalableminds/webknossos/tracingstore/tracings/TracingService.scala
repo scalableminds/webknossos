@@ -40,7 +40,12 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
 
   def currentVersion(tracingId: String): Fox[Long]
 
-  def currentUncommittedVersion(tracingId: String, transactionId: Option[String]): Option[Long] = Some(0L) //TODO
+  def currentUncommittedVersion(tracingId: String, transactionIdOpt: Option[String]): Option[Long] =
+    transactionIdOpt.flatMap { transactionId =>
+      val keys =
+        transactionBatchStore.keySet.filter(keyTuple => keyTuple._1 == tracingId && keyTuple._2 == transactionId)
+      if (keys.isEmpty) None else Some(keys.maxBy(keyTuple => keyTuple._3)._3)
+    }
 
   def handleUpdateGroup(tracingId: String, updateGroup: UpdateActionGroup[T], previousVersion: Long): Fox[_]
 

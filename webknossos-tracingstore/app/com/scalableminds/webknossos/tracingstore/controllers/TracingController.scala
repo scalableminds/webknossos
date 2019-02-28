@@ -113,33 +113,43 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
           val updateGroups = request.body
           val userToken = request.getQueryString("token")
           if (updateGroups.forall(_.transactionGroupCount.getOrElse(1) == 1)) {
-            commitUpdates(tracingId, updateGroups, userToken)
+            logger.debug("only single-group transactions in this request. committing all.")
+            commitUpdates(tracingId, updateGroups, userToken).map(_ => Ok)
           } else {
             for {
               currentCommittedVersion <- tracingService.currentVersion(tracingId)
-              _ = updateGroups.foreach { updateGroup => //todo: wait for this, increment versions on right spots
-                val previousVersion: Long = tracingService
-                  .currentUncommittedVersion(tracingId, updateGroup.transactionId)
-                  .getOrElse(currentCommittedVersion)
-                if (previousVersion + 1 == updateGroup.version) {
-                  if (updateGroup.transactionGroupCount
-                        .getOrElse(1) == updateGroup.transactionGroupIndex.getOrElse(0) + 1) {
-                    val updateActionGroupsToCommit =
-                      tracingService.transactionBatchStore
-                        .findAllConditional(keyTuple => keyTuple._2 == updateGroup.transactionId.get)
-                        .toList
-                        .sortBy(_.transactionGroupIndex.get) :+ updateGroup
-                    commitUpdates(tracingId, updateActionGroupsToCommit, userToken)
-                  } else {
-                    tracingService.transactionBatchStore.insert(
-                      (tracingId, updateGroup.transactionId.get, updateGroup.transactionGroupIndex.get),
-                      updateGroup,
-                      Some(transactionBatchExpiry))
-                    Fox.successful(Ok)
-                  }
-                } else {
-                  Failure(s"Incorrect version. Expected: ${previousVersion + 1}; Got: ${updateGroup.version}") ~> CONFLICT
-                }
+              newestSavedVersion: Long <- updateGroups.foldLeft(Fox.successful(currentCommittedVersion)) {
+                (currentCommittedVersionFox, updateGroup) =>
+                  for {
+                    currentCommittedVersion <- currentCommittedVersionFox
+                    _ = logger.debug(
+                      s"received group ${updateGroup.transactionId} v${updateGroup.version} (${updateGroup.transactionGroupIndex} of ${updateGroup.transactionGroupCount})")
+                    previousVersion: Long = tracingService
+                      .currentUncommittedVersion(tracingId, updateGroup.transactionId)
+                      .getOrElse(currentCommittedVersion)
+                    result <- if (previousVersion + 1 == updateGroup.version) {
+                      if (updateGroup.transactionGroupCount.getOrElse(1) == updateGroup.transactionGroupIndex.getOrElse(
+                            0) + 1) {
+                        val updateActionGroupsToCommit =
+                          tracingService.transactionBatchStore
+                            .findAllConditional(keyTuple => keyTuple._2 == updateGroup.transactionId.get)
+                            .toList
+                            .sortBy(_.version) :+ updateGroup
+                        commitUpdates(tracingId, updateActionGroupsToCommit, userToken)
+                      } else {
+                        logger.debug(
+                          s"saving version ${updateGroup.version} uncommitted (from transaction ${updateGroup.transactionId})")
+                        tracingService.transactionBatchStore.insert(
+                          (tracingId, updateGroup.transactionId.get, updateGroup.version),
+                          updateGroup,
+                          Some(transactionBatchExpiry))
+                        Fox.successful(updateGroup.version)
+                      }
+                    } else {
+                      Fox
+                        .failure(s"Incorrect version. Expected: ${previousVersion + 1}; Got: ${updateGroup.version}") ~> CONFLICT
+                    }
+                  } yield result
               }
             } yield Ok
           }
@@ -150,35 +160,33 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
 
   def commitUpdates(tracingId: String,
                     updateGroups: List[UpdateActionGroup[T]],
-                    userToken: Option[String]): Fox[Status] = {
+                    userToken: Option[String]): Fox[Long] = {
     val timestamps = updateGroups.map(_.timestamp)
     val latestStatistics = updateGroups.flatMap(_.stats).lastOption
     val currentVersion = tracingService.currentVersion(tracingId)
-    webKnossosServer
-      .reportTracingUpdates(tracingId, timestamps, latestStatistics, userToken)
-      .flatMap { _ =>
-        updateGroups.foldLeft(currentVersion) { (previousVersion, updateGroup) =>
-          previousVersion.flatMap { prevVersion =>
-            if (prevVersion + 1 == updateGroup.version) {
-              tracingService
-                .handleUpdateGroup(tracingId, updateGroup, prevVersion)
-                .map(_ =>
-                  Fox.successful(
-                    tracingService.saveToHandledGroupCache(tracingId, updateGroup.version, updateGroup.requestId)))
-                .map(_ => updateGroup.version)
+    webKnossosServer.reportTracingUpdates(tracingId, timestamps, latestStatistics, userToken).flatMap { _ =>
+      updateGroups.foldLeft(currentVersion) { (previousVersion, updateGroup) =>
+        previousVersion.flatMap { prevVersion =>
+          if (prevVersion + 1 == updateGroup.version) {
+            logger.debug(s"committing version ${updateGroup.version} (from transaction ${updateGroup.transactionId})")
+            tracingService
+              .handleUpdateGroup(tracingId, updateGroup, prevVersion)
+              .map(_ =>
+                Fox.successful(
+                  tracingService.saveToHandledGroupCache(tracingId, updateGroup.version, updateGroup.requestId)))
+              .map(_ => updateGroup.version)
+          } else {
+            if (updateGroup.requestId.exists(requestId =>
+                  tracingService.handledGroupCacheContains(requestId, tracingId, updateGroup.version))) {
+              //this update group was received and successfully saved in a previous request. silently ignore this duplicate request
+              Fox.successful(updateGroup.version)
             } else {
-              if (updateGroup.requestId.exists(requestId =>
-                    tracingService.handledGroupCacheContains(requestId, tracingId, updateGroup.version))) {
-                //this update group was received and successfully saved in a previous request. silently ignore this duplicate request
-                Fox.successful(updateGroup.version)
-              } else {
-                Failure(s"Incorrect version. Expected: ${prevVersion + 1}; Got: ${updateGroup.version}") ~> CONFLICT
-              }
+              Failure(s"Incorrect version. Expected: ${prevVersion + 1}; Got: ${updateGroup.version}") ~> CONFLICT
             }
           }
         }
       }
-      .map(_ => Ok)
+    }
   }
 
 }

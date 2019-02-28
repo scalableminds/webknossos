@@ -67,4 +67,9 @@ class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
     map.synchronized {
       map -= id
     }
+
+  def keySet =
+    map.synchronized {
+      map.keySet
+    }
 }

@@ -59,9 +59,9 @@ function increaseNodesOfSegment(segementId: number, mergerModeState: MergerModeS
    number of nodes mapped to the given segment. */
 function decreaseNodesOfSegment(segementId: number, mergerModeState: MergerModeState): number {
   const { nodesPerSegment } = mergerModeState;
-  const currentValue = nodesPerSegment.segementId;
+  const currentValue = nodesPerSegment[segementId];
   nodesPerSegment[segementId] = currentValue - 1;
-  return nodesPerSegment.segementId;
+  return nodesPerSegment[segementId];
 }
 
 function getAllNodesWithTreeId(): Array<NodeWithTreeId> {
@@ -112,20 +112,48 @@ async function createNodeOverwrite(store, call, action, mergerModeState: MergerM
   api.data.setMapping(segementationLayerName, colorMapping);
 }
 
-/* Overwrite the "deleteActiveNode" method in such a way that a segment changes back its color as soon as all
-   nodes are deleted from it. => also do this on tree delete if possible (later) */
-function deleteActiveNodeOverwrite(store, call, action, mergerModeState: MergerModeState) {
-  const activeNodeId = api.tracing.getActiveNodeId();
-  if (activeNodeId == null) {
-    return;
-  }
-
-  const segmentId = mergerModeState.nodeSegmentMap[activeNodeId];
+/* This function decreases the number of nodes associated with the segment the passed node belongs to.
+	If the count reaches 0, the segment is removed from the mapping and this function returns true. 
+	Otherwise the return value will be false. */
+function onNodeDeleted(mergerModeState: MergerModeState, nodeId: number) {
+  const segmentId = mergerModeState.nodeSegmentMap[nodeId];
   const numberOfNodesMappedToSegment = decreaseNodesOfSegment(segmentId, mergerModeState);
 
   if (numberOfNodesMappedToSegment === 0) {
     // Reset color of all segments that were mapped to this tree
     deleteColorMappingOfSegment(segmentId, mergerModeState);
+    return true;
+  }
+  return false;
+}
+
+/* Overwrite the "deleteActiveNode" method in such a way that a segment changes back its color as soon as all
+   nodes are deleted from it. */
+function deleteActiveNodeOverwrite(store, call, action, mergerModeState: MergerModeState) {
+  const activeNodeId = api.tracing.getActiveNodeId();
+  if (activeNodeId == null) {
+    return;
+  }
+  const noNodesLeftForTheSegment = onNodeDeleted(mergerModeState, activeNodeId);
+  if (noNodesLeftForTheSegment) {
+    api.data.setMapping(mergerModeState.segementationLayerName, mergerModeState.colorMapping);
+  }
+  call(action);
+}
+
+/* Overwrite the "deleteActiveTree" method in such a way that all segment changes back its color as soon as all
+   nodes are deleted from it. */
+function deleteActiveTreeOverwrite(store, call, action, mergerModeState: MergerModeState) {
+  const activeTreeId = api.tracing.getActiveTreeId();
+  if (activeTreeId == null) {
+    return;
+  }
+  const deletedTree = api.tracing.getAllTrees()[activeTreeId];
+  let didMappingChange = false;
+  for (const nodeId of deletedTree.nodes.keys()) {
+    didMappingChange = onNodeDeleted(mergerModeState, nodeId) || didMappingChange;
+  }
+  if (didMappingChange) {
     api.data.setMapping(mergerModeState.segementationLayerName, mergerModeState.colorMapping);
   }
   call(action);
@@ -175,11 +203,6 @@ async function mergeSegmentsOfAlreadyExistingTrees(index = 0, mergerModeState: M
   const numbOfNodes = nodes.length;
   if (index >= numbOfNodes) {
     return;
-  }
-
-  if (index % 50 === 0) {
-    // TODO: Make visible to user
-    console.log(`Processing node ${index} of ${numbOfNodes}`);
   }
 
   const [segMinVec, segMaxVec] = api.data.getBoundingBox(segementationLayerName);
@@ -238,6 +261,11 @@ export async function enableMergerMode() {
   unregisterOverwrites.push(
     api.utils.registerOverwrite("DELETE_NODE", (store, next, originalAction) =>
       deleteActiveNodeOverwrite(store, next, originalAction, mergerModeState),
+    ),
+  );
+  unregisterOverwrites.push(
+    api.utils.registerOverwrite("DELETE_TREE", (store, next, originalAction) =>
+      deleteActiveTreeOverwrite(store, next, originalAction, mergerModeState),
     ),
   );
   // Register the additional key handlers

@@ -227,6 +227,7 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
                   title="Click to add your missing dataset"
                   target="_blank"
                   rel="noopener noreferrer"
+                  className="not-highlighted-link"
                 >
                   <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card" bordered={false}>
                     <div style={{ display: "flex", height: "100%" }}>

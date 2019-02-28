@@ -44,6 +44,7 @@ class InitialDataService @Inject()(userService: UserService,
                                    teamDAO: TeamDAO,
                                    tokenDAO: TokenDAO,
                                    projectDAO: ProjectDAO,
+                                   publicationDAO: PublicationDAO,
                                    organizationDAO: OrganizationDAO,
                                    conf: WkConf)(implicit ec: ExecutionContext)
     extends FoxImplicits
@@ -80,6 +81,14 @@ Samplecountry
     isDeactivated = false,
     lastTaskTypeId = None
   )
+  val defaultPublication = Publication(
+    ObjectId("5c766bec6c01006c018c7459"),
+    Some(System.currentTimeMillis()),
+    Some("https://webknossos.org/images/oxalis.svg"),
+    Some("Dummy Title that is usually very long and contains highly scientific terms"),
+    Some(
+      "This is a wonderful dummy publication, it has authors, it has a link, it has a doi number, those could go here.\nLorem [ipsum](https://github.com/scalableminds/webknossos) dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.")
+  )
 
   def insert: Fox[Unit] =
     for {
@@ -93,6 +102,7 @@ Samplecountry
       _ <- insertToken
       _ <- insertTaskType
       _ <- insertProject
+      _ <- insertPublication
     } yield ()
 
   def assertInitialDataEnabled =
@@ -184,6 +194,12 @@ Samplecountry
         }
       } else Fox.successful(())
     }.toFox
+
+  def insertPublication = publicationDAO.findAll.flatMap { publications =>
+    if (publications.isEmpty) {
+      publicationDAO.insertOne(defaultPublication)
+    } else Fox.successful(())
+  }
 
   def insertLocalDataStoreIfEnabled: Fox[Any] =
     if (conf.Datastore.enabled) {

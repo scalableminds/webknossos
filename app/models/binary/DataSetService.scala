@@ -23,7 +23,7 @@ import play.api.i18n.{Messages, MessagesApi}
 import play.api.i18n.Messages.Implicits._
 import play.api.libs.json.{JsObject, Json}
 import play.api.libs.ws.WSResponse
-import utils.ObjectId
+import utils.{ObjectId, WkConf}
 
 import scala.concurrent.ExecutionContext
 
@@ -40,7 +40,8 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                userService: UserService,
                                dataSetAllowedTeamsDAO: DataSetAllowedTeamsDAO,
                                val thumbnailCache: TemporaryStore[String, Array[Byte]],
-                               rpc: RPC)(implicit ec: ExecutionContext)
+                               rpc: RPC,
+                               conf: WkConf)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
 
@@ -55,10 +56,13 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       dataStore: DataStore,
       owningOrganization: String,
       dataSource: InboxDataSource,
+      publication: Option[ObjectId] = None,
       isActive: Boolean = false
   ) = {
     implicit val ctx = GlobalAccessContext
     val newId = ObjectId.generate
+    val details =
+      Json.obj("species" -> "species name", "brainRegion" -> "brain region", "acquisition" -> "acquisition method")
     organizationDAO.findOneByName(owningOrganization).futureBox.flatMap {
       case Full(organization) =>
         for {
@@ -67,7 +71,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
               newId,
               dataStore.name,
               organization._id,
-              None,
+              publication,
               None,
               None,
               None,
@@ -77,7 +81,8 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
               dataSource.scaleOpt,
               None,
               dataSource.statusOpt.getOrElse(""),
-              None
+              None,
+              details = publication.map(_ => details)
             ))
           _ <- dataSetDataLayerDAO.updateLayers(newId, dataSource)
           _ <- dataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(newId, List())
@@ -143,7 +148,17 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
             }
           }).flatten.futureBox
         case _ =>
-          createDataSet(dataSource.id.name, dataStore, dataSource.id.team, dataSource, isActive = dataSource.isUsable).futureBox
+          dataSetDAO.findAll(GlobalAccessContext).flatMap { datasets =>
+            val publication =
+              if (conf.Application.insertInitialData && datasets.isEmpty) Some(ObjectId("5c766bec6c01006c018c7459"))
+              else None
+            createDataSet(dataSource.id.name,
+                          dataStore,
+                          dataSource.id.team,
+                          dataSource,
+                          publication,
+                          dataSource.isUsable).futureBox
+          }
       }
 
   def deactivateUnreportedDataSources(dataStoreName: String, dataSources: List[InboxDataSource])(

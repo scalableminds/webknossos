@@ -82,7 +82,7 @@ class TaskController @Inject()(annotationService: AnnotationService,
 
   def read(taskId: String) = sil.SecuredAction.async { implicit request =>
     for {
-      task <- taskDAO.findOne(ObjectId(taskId)) ?~> "task.notFound"
+      task <- taskDAO.findOne(ObjectId(taskId)) ?~> "task.notFound" ~> NOT_FOUND
       js <- taskService.publicWrites(task)
     } yield {
       Ok(js)
@@ -104,8 +104,8 @@ class TaskController @Inject()(annotationService: AnnotationService,
       m: MessagesProvider): Fox[List[Option[SkeletonTracing]]] =
     Fox.serialCombined(paramsList) { params =>
       for {
-        taskTypeIdValidated <- ObjectId.parse(params.taskTypeId)
-        taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
+        taskTypeIdValidated <- ObjectId.parse(params.taskTypeId) ?~> "taskType.id.invalid"
+        taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
         skeletonTracingOpt <- if (taskType.tracingType == TracingType.skeleton || taskType.tracingType == TracingType.hybrid) {
           Fox.successful(
             Some(
@@ -124,8 +124,8 @@ class TaskController @Inject()(annotationService: AnnotationService,
       m: MessagesProvider): Fox[List[Option[VolumeTracing]]] =
     Fox.serialCombined(paramsList) { params =>
       for {
-        taskTypeIdValidated <- ObjectId.parse(params.taskTypeId)
-        taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
+        taskTypeIdValidated <- ObjectId.parse(params.taskTypeId) ?~> "taskType.id.invalid"
+        taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
         volumeTracingOpt <- if (taskType.tracingType == TracingType.volume || taskType.tracingType == TracingType.hybrid) {
           annotationService
             .createVolumeTracingBase(
@@ -153,9 +153,10 @@ class TaskController @Inject()(annotationService: AnnotationService,
       jsonString <- body.dataParts.get("formJSON").flatMap(_.headOption) ?~> "format.json.missing"
       params <- JsonHelper.parseJsonToFox[NmlTaskParameters](jsonString) ?~> "task.create.failed"
       taskTypeIdValidated <- ObjectId.parse(params.taskTypeId) ?~> "taskType.id.invalid"
-      taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
+      taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
       _ <- bool2Fox(taskType.tracingType == TracingType.skeleton) ?~> "task.create.fromFileVolume"
-      project <- projectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
+      project <- projectDAO
+        .findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
       parseResults: List[NmlParseResult] = nmlService
         .extractFromFiles(inputFiles.map(f => (new File(f.ref.path.toString), f.filename)))
@@ -225,7 +226,7 @@ class TaskController @Inject()(annotationService: AnnotationService,
       _ <- assertAllOnSameDataset(firstDatasetName)
       dataSet <- dataSetDAO.findOneByNameAndOrganization(firstDatasetName, request.identity._organization) ?~> Messages(
         "dataSet.notFound",
-        firstDatasetName)
+        firstDatasetName) ~> NOT_FOUND
       tracingStoreClient <- tracingStoreService.clientFor(dataSet)
       skeletonTracingIds: List[Box[Option[String]]] <- tracingStoreClient.saveSkeletonTracings(
         SkeletonTracings(requestedTasks.map(taskTuple => SkeletonTracingOpt(taskTuple._2))))
@@ -261,7 +262,7 @@ class TaskController @Inject()(annotationService: AnnotationService,
       case Some(scriptId) =>
         for {
           scriptIdValidated <- ObjectId.parse(scriptId)
-          _ <- scriptDAO.findOne(scriptIdValidated) ?~> "script.notFound"
+          _ <- scriptDAO.findOne(scriptIdValidated) ?~> "script.notFound" ~> NOT_FOUND
         } yield ()
       case _ => Fox.successful(())
     }
@@ -275,7 +276,7 @@ class TaskController @Inject()(annotationService: AnnotationService,
       volumeIdOpt <- volumeTracingIdBox.toFox
       _ <- bool2Fox(skeletonIdOpt.isDefined || volumeIdOpt.isDefined) ?~> "task.create.needsEitherSkeletonOrVolume"
       taskTypeIdValidated <- ObjectId.parse(params.taskTypeId)
-      project <- projectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
+      project <- projectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName) ~> NOT_FOUND
       _ <- validateScript(params.scriptId) ?~> "script.invalid"
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
       task = Task(
@@ -301,9 +302,10 @@ class TaskController @Inject()(annotationService: AnnotationService,
     val params = request.body
     for {
       taskIdValidated <- ObjectId.parse(taskId) ?~> "task.id.invalid"
-      task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound"
+      task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound" ~> NOT_FOUND
       project <- projectDAO.findOne(task._project)
-      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed"
+      _ <- Fox
+        .assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed" ~> FORBIDDEN
       _ <- taskDAO.updateTotalInstances(task._id, task.totalInstances + params.openInstances - task.openInstances)
       updatedTask <- taskDAO.findOne(taskIdValidated)
       json <- taskService.publicWrites(updatedTask)
@@ -315,7 +317,7 @@ class TaskController @Inject()(annotationService: AnnotationService,
   def delete(taskId: String) = sil.SecuredAction.async { implicit request =>
     for {
       taskIdValidated <- ObjectId.parse(taskId) ?~> "task.id.invalid"
-      task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound"
+      task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound" ~> NOT_FOUND
       project <- projectDAO.findOne(task._project)
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Messages(
         "notAllowed")
@@ -328,7 +330,7 @@ class TaskController @Inject()(annotationService: AnnotationService,
   def listTasksForType(taskTypeId: String) = sil.SecuredAction.async { implicit request =>
     for {
       taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
-      tasks <- taskDAO.findAllByTaskType(taskTypeIdValidated) ?~> "taskType.notFound"
+      tasks <- taskDAO.findAllByTaskType(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
       js <- Fox.serialCombined(tasks)(taskService.publicWrites(_))
     } yield {
       Ok(Json.toJson(js))

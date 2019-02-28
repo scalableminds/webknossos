@@ -98,9 +98,10 @@ class DataSetController @Inject()(userService: UserService,
       for {
         dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> Messages(
           "dataSet.notFound",
-          dataSetName)
-        _ <- dataSetDataLayerDAO.findOneByNameForDataSet(dataLayerName, dataSet._id) ?~> Messages("dataLayer.notFound",
-                                                                                                  dataLayerName)
+          dataSetName) ~> NOT_FOUND
+        _ <- dataSetDataLayerDAO.findOneByNameForDataSet(dataLayerName, dataSet._id) ?~> Messages(
+          "dataLayer.notFound",
+          dataLayerName) ~> NOT_FOUND
         image <- imageFromCacheIfPossible(dataSet)
       } yield {
         Ok(image).as("image/jpeg").withHeaders(CACHE_CONTROL -> "public, max-age=86400")
@@ -110,10 +111,10 @@ class DataSetController @Inject()(userService: UserService,
   def addForeignDataStoreAndDataSet() = sil.SecuredAction.async { implicit request =>
     for {
       body <- request.body.asJson.toFox
-      url <- (body \ "url").asOpt[String] ?~> "dataSet.url.missing"
-      dataStoreName <- (body \ "dataStoreName").asOpt[String].toFox ?~> "dataSet.dataStore.missing"
-      dataSetName <- (body \ "dataSetName").asOpt[String] ?~> "dataSet.dataSet.missing"
-      _ <- bool2Fox(request.identity.isAdmin) ?~> "user.noAdmin"
+      url <- (body \ "url").asOpt[String] ?~> "dataSet.url.missing" ~> NOT_FOUND
+      dataStoreName <- (body \ "dataStoreName").asOpt[String].toFox ?~> "dataSet.dataStore.missing" ~> NOT_FOUND
+      dataSetName <- (body \ "dataSetName").asOpt[String] ?~> "dataSet.dataSet.missing" ~> NOT_FOUND
+      _ <- bool2Fox(request.identity.isAdmin) ?~> "user.noAdmin" ~> FORBIDDEN
       noDataStoreBox <- dataStoreDAO.findOneByName(dataStoreName).reverse.futureBox
       _ <- Fox.runOptional(noDataStoreBox)(_ => dataSetService.addForeignDataStore(dataStoreName, url))
       _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> "dataSet.import.impossible.name"
@@ -157,7 +158,7 @@ class DataSetController @Inject()(userService: UserService,
     for {
       dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> Messages(
         "dataSet.notFound",
-        dataSetName)
+        dataSetName) ~> NOT_FOUND
       allowedTeams <- dataSetService.allowedTeamIdsFor(dataSet._id)
       users <- userService.findByTeams(allowedTeams)
       usersJs <- Fox.serialCombined(users.distinct)(u => userService.compactWrites(u))
@@ -173,7 +174,7 @@ class DataSetController @Inject()(userService: UserService,
         for {
           dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(ctx) ?~> Messages(
             "dataSet.notFound",
-            dataSetName)
+            dataSetName) ~> NOT_FOUND
           _ <- Fox.runOptional(request.identity)(user =>
             dataSetLastUsedTimesDAO.updateForDataSetAndUser(dataSet._id, user._id))
           js <- dataSetService.publicWrites(dataSet, request.identity)
@@ -189,8 +190,8 @@ class DataSetController @Inject()(userService: UserService,
       for {
         dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(ctx) ?~> Messages(
           "dataSet.notFound",
-          dataSetName)
-        dataSource <- dataSetService.dataSourceFor(dataSet) ?~> "dataSource.notFound"
+          dataSetName) ~> NOT_FOUND
+        dataSource <- dataSetService.dataSourceFor(dataSet) ?~> "dataSource.notFound" ~> NOT_FOUND
         usableDataSource <- dataSource.toUsable.toFox ?~> "dataSet.notImported"
         datalayer <- usableDataSource.dataLayers.headOption.toFox ?~> "dataSet.noLayers"
         _ <- dataSetService
@@ -207,8 +208,9 @@ class DataSetController @Inject()(userService: UserService,
         for {
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> Messages(
             "dataSet.notFound",
-            dataSetName)
-          _ <- Fox.assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed"
+            dataSetName) ~> NOT_FOUND
+          _ <- Fox
+            .assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
           _ <- dataSetDAO.updateFields(dataSet._id,
                                        description,
                                        displayName,
@@ -228,8 +230,9 @@ class DataSetController @Inject()(userService: UserService,
         for {
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> Messages(
             "dataSet.notFound",
-            dataSetName)
-          _ <- Fox.assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed"
+            dataSetName) ~> NOT_FOUND
+          _ <- Fox
+            .assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
           teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.parse(_))
           userTeams <- teamDAO.findAllEditable
           oldAllowedTeams <- dataSetService.allowedTeamIdsFor(dataSet._id)

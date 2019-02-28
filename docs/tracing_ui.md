@@ -210,6 +210,10 @@ In the `Segmentation` tab on the right-hand side, you can see the cell IDs which
 ![Adding labels with the Brush tool](./images/volume_brush.gif)
 ![Removing labels with the Brush tool](./images/volume_delete.gif)
 
+### Merging Segments
+
+Segments from e.g. automatic segmentations can be merged with the merger mode to refine the result. The merger mode is available in skeleton and hybrid tracings. Each tree represents a merged segment and its nodes define the segments that are merged together. So each new merged segment needs its own tree. The merger mode can be enabled in the settings in the category Nodes & Trees under the option Enable Merger Mode. As soon as you enable it, all already existing trees will be used to form merged segments.
+
 ### Mesh Visualization
 With the help of external tools, such as [Amira](https://www.fei.com/software/amira-avizo/), volume data can be converted to 3D meshes. These meshes can be imported into webKnossos to view them alongside the actual data.
 

@@ -93,13 +93,13 @@ export function convertPixelsToNm(
   return lengthInPixel * zoomValue * getBaseVoxel(dataset.dataSource.scale);
 }
 
-export function formatNumberToLength(zoomLevel: number): string {
-  if (zoomLevel < 1000) {
-    return `${zoomLevel.toFixed(0)}${ThinSpace}nm`;
-  } else if (zoomLevel < 1000000) {
-    return `${(zoomLevel / 1000).toFixed(1)}${ThinSpace}μm`;
+export function formatNumberToLength(numberInNm: number): string {
+  if (numberInNm < 1000) {
+    return `${numberInNm.toFixed(0)}${ThinSpace}nm`;
+  } else if (numberInNm < 1000000) {
+    return `${(numberInNm / 1000).toFixed(1)}${ThinSpace}μm`;
   } else {
-    return `${(zoomLevel / 1000000).toFixed(1)}${ThinSpace}mm`;
+    return `${(numberInNm / 1000000).toFixed(1)}${ThinSpace}mm`;
   }
 }
 
@@ -116,9 +116,9 @@ function getDatasetExtentInVoxel(dataset: APIDataset) {
   return extent;
 }
 
-function getDatasetExtentInLength(dataset: APIDataset) {
+export function getDatasetExtentInLength(dataset: APIDataset) {
   const extentInVoxel = getDatasetExtentInVoxel(dataset);
-  const scale = dataset.dataSource.scale;
+  const { scale } = dataset.dataSource;
   const extent = {
     width: extentInVoxel.width * scale[0],
     height: extentInVoxel.height * scale[1],
@@ -127,7 +127,10 @@ function getDatasetExtentInLength(dataset: APIDataset) {
   return extent;
 }
 
-function formatExtentWithLength(extent: Object, formattingFunction: number => string) {
+export function formatExtentWithLength(
+  extent: Object,
+  formattingFunction: number => string,
+): string {
   return `${formattingFunction(extent.width)}\u2009×\u2009${formattingFunction(
     extent.height,
   )}\u2009×\u2009${formattingFunction(extent.depth)}`;

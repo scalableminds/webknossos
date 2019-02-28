@@ -8,7 +8,6 @@ import BackboneEvents from "backbone-events-standalone";
 import Clipboard from "clipboard-js";
 import * as React from "react";
 import _ from "lodash";
-import { saveAs } from "file-saver";
 
 import { InputKeyboard, InputKeyboardNoLoop, InputMouse, type ModifierKeys } from "libs/input";
 import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
@@ -17,7 +16,6 @@ import { getBaseVoxel, getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import {
   getPosition,
-  getFlooredPosition,
   getRequestLogZoomStep,
   getPlaneScalingFactor,
 } from "oxalis/model/accessors/flycam_accessor";
@@ -53,6 +51,7 @@ import getSceneController from "oxalis/controller/scene_controller_provider";
 import messages from "messages";
 import * as skeletonController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import * as volumeController from "oxalis/controller/combinations/volumetracing_plane_controller";
+import { downloadScreenshot } from "oxalis/view/rendering_utils";
 
 function ensureNonConflictingHandlers(skeletonControls: Object, volumeControls: Object): void {
   const conflictingHandlers = _.intersection(
@@ -292,7 +291,7 @@ class PlaneController extends React.PureComponent<Props> {
           Toast.warning("No cell under cursor.");
         }
       },
-      q: () => this.downloadScreenshot(),
+      q: downloadScreenshot,
     };
 
     // TODO: Find a nicer way to express this, while satisfying flow
@@ -493,23 +492,6 @@ class PlaneController extends React.PureComponent<Props> {
         break;
       }
       default: // ignore other cases
-    }
-  }
-
-  async downloadScreenshot() {
-    const { dataset, flycam } = Store.getState();
-    const datasetName = dataset.name;
-    const [x, y, z] = getFlooredPosition(flycam);
-
-    const baseName = `${datasetName}__${x}_${y}_${z}`;
-
-    for (const planeId of OrthoViewValuesWithoutTDView) {
-      const buffer = this.planeView.renderOrthoViewToTexture(planeId);
-      const { width, height } = getInputCatcherRect(Store.getState(), planeId);
-
-      // eslint-disable-next-line no-await-in-loop
-      const blob = await Utils.convertBufferToImage(buffer, width, height);
-      saveAs(blob, `${baseName}__${planeId}.png`);
     }
   }
 

@@ -1,12 +1,7 @@
-/**
- * arbitrary_controller.js
- * @flow
- */
-
+// @flow
 import BackboneEvents from "backbone-events-standalone";
 import * as React from "react";
 import _ from "lodash";
-import { saveAs } from "file-saver";
 
 import { InputKeyboard, InputKeyboardNoLoop, InputMouse, type ModifierKeys } from "libs/input";
 import { type Matrix4x4, V3 } from "libs/mjs";
@@ -16,12 +11,8 @@ import {
   getMaxNodeId,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
-import {
-  getRotation,
-  getPosition,
-  getFlooredPosition,
-} from "oxalis/model/accessors/flycam_accessor";
-import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
+import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import {
   setActiveNodeAction,
@@ -56,6 +47,7 @@ import app from "app";
 import constants, { ArbitraryViewport, type ViewMode, type Point2 } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import messages from "messages";
+import { downloadScreenshot } from "oxalis/view/rendering_utils";
 
 const arbitraryViewportSelector = "#inputcatcher_arbitraryViewport";
 
@@ -239,7 +231,7 @@ class ArbitraryController extends React.PureComponent<Props> {
         Store.dispatch(deleteActiveNodeAsUserAction(Store.getState()));
       },
 
-      q: () => this.downloadScreenshot(),
+      q: downloadScreenshot,
     });
   }
 
@@ -446,20 +438,6 @@ class ArbitraryController extends React.PureComponent<Props> {
       this.setWaypoint();
       this.lastNodeMatrix = matrix;
     }
-  }
-
-  async downloadScreenshot() {
-    const { dataset, flycam } = Store.getState();
-    const datasetName = dataset.name;
-    const [x, y, z] = getFlooredPosition(flycam);
-
-    const baseName = `${datasetName}__${x}_${y}_${z}`;
-
-    const buffer = this.arbitraryView.renderToTexture();
-    const { width, height } = getInputCatcherRect(Store.getState(), ArbitraryViewport);
-
-    const blob = await Utils.convertBufferToImage(buffer, width, height);
-    saveAs(blob, `${baseName}__${this.props.viewMode}.png`);
   }
 
   render() {

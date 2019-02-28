@@ -18,8 +18,7 @@ import Store from "oxalis/store";
 import app from "app";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import window from "libs/window";
-
-import { clearCanvas, setupRenderArea } from "./plane_view";
+import { clearCanvas, setupRenderArea, renderToTexture } from "oxalis/view/rendering_utils";
 
 class ArbitraryView {
   // Copied form backbone events (TODO: handle this better)
@@ -49,6 +48,8 @@ class ArbitraryView {
     this.setClippingDistance = this.setClippingDistanceImpl.bind(this);
     _.extend(this, BackboneEvents);
 
+    const { scene } = getSceneController();
+
     // camDistance has to be calculated such that with cam
     // angle 45°, the plane of width Constants.VIEWPORT_WIDTH fits exactly in the
     // viewport.
@@ -56,7 +57,10 @@ class ArbitraryView {
 
     // Initialize main THREE.js components
     this.camera = new THREE.PerspectiveCamera(45, 1, 50, 1000);
+    // This name can be used to retrieve the camera from the scene
+    this.camera.name = ArbitraryViewport;
     this.camera.matrixAutoUpdate = false;
+    scene.add(this.camera);
 
     const tdCamera = new THREE.OrthographicCamera(0, 0, 0, 0);
     tdCamera.position.copy(new THREE.Vector3(10, 10, -10));
@@ -208,30 +212,6 @@ class ArbitraryView {
     this.needsRerender = true;
   }
 
-  renderToTexture(renderBucketIndices?: boolean = false): Uint8Array {
-    const { renderer, scene } = getSceneController();
-
-    renderer.autoClear = true;
-    let { width, height } = getInputCatcherRect(Store.getState(), ArbitraryViewport);
-    width = Math.round(width);
-    height = Math.round(height);
-
-    const { camera } = this;
-
-    renderer.setViewport(0, 0, width, height);
-    renderer.setScissorTest(false);
-    renderer.setClearColor(0x222222, 1);
-
-    const renderTarget = new THREE.WebGLRenderTarget(width, height);
-    const buffer = new Uint8Array(width * height * 4);
-    this.plane.materialFactory.uniforms.renderBucketIndices.value = renderBucketIndices;
-    renderer.render(scene, camera, renderTarget);
-    renderer.readRenderTargetPixels(renderTarget, 0, 0, width, height, buffer);
-    this.plane.materialFactory.uniforms.renderBucketIndices.value = false;
-
-    return buffer;
-  }
-
   getRenderedBucketsDebug = () => {
     // This method can be used to determine which buckets were used during rendering.
     // It returns an array with bucket indices which were used by the fragment shader.
@@ -262,7 +242,9 @@ class ArbitraryView {
     // }
     // diff(traversedBuckets, getRenderedBucketsDebug());
 
-    const buffer = this.renderToTexture(true);
+    this.plane.materialFactory.uniforms.renderBucketIndices.value = true;
+    const buffer = renderToTexture(ArbitraryViewport);
+    this.plane.materialFactory.uniforms.renderBucketIndices.value = false;
     let index = 0;
 
     const usedBucketSet = new Set();

@@ -247,7 +247,16 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
                             alignItems: "flex-end",
                           }}
                         >
-                          <div id="add-missing-dataset-text-overlay">?</div>
+                          <div
+                            className="dataset-click-hint absolute"
+                            style={{
+                              opacity: 1,
+                              backgroundColor: "rgba(0, 0, 0, 0.4)",
+                              fontSize: 220,
+                            }}
+                          >
+                            ?
+                          </div>
                           <div
                             className="dataset-thumbnail-image absolute"
                             id="add-missing-dataset-image"

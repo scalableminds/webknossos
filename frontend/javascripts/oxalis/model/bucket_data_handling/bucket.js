@@ -7,9 +7,13 @@ import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 import _ from "lodash";
 
-import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
+import {
+  bucketPositionToGlobalAddress,
+  zoomedAddressToAnotherZoomStep,
+} from "oxalis/model/helpers/position_converter";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import Store from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
 import Toast from "libs/toast";
@@ -32,13 +36,45 @@ const warnAboutDownsamplingRGB = _.once(() =>
 );
 
 export const bucketDebuggingFlags = {
-  // DEBUG flag for visualizing buckets which are passed to the GPU
+  // For visualizing buckets which are passed to the GPU
   visualizeBucketsOnGPU: false,
-  // DEBUG flag for visualizing buckets which are prefetched
+  // For visualizing buckets which are prefetched
   visualizePrefetchedBuckets: false,
+  // For enforcing fallback rendering. enforcedZoomDiff == 2, means
+  // that buckets of currentZoomStep + 2 are rendered.
+  enforcedZoomDiff: undefined,
 };
 // Exposing this variable allows debugging on deployed systems
 window.bucketDebuggingFlags = bucketDebuggingFlags;
+
+export class NullBucket {
+  type: "null" = "null";
+  isOutOfBoundingBox: boolean;
+
+  constructor(isOutOfBoundingBox: boolean) {
+    this.isOutOfBoundingBox = isOutOfBoundingBox;
+  }
+
+  hasData(): boolean {
+    return false;
+  }
+
+  needsRequest(): boolean {
+    return false;
+  }
+
+  getData(): Uint8Array {
+    throw new Error("NullBucket has no data.");
+  }
+}
+
+export const NULL_BUCKET = new NullBucket(false);
+export const NULL_BUCKET_OUT_OF_BB = new NullBucket(true);
+
+// The type is used within the DataBucket class which is why
+// we have to define it here.
+// eslint-disable-next-line no-use-before-define
+export type Bucket = DataBucket | NullBucket;
 
 export class DataBucket {
   type: "data" = "data";
@@ -60,27 +96,28 @@ export class DataBucket {
   on: Function;
   off: Function;
   once: Function;
+  cube: DataCube;
 
   // For downsampled buckets, "dependentBucketListenerSet" stores the
   // buckets to which a listener is already attached
   // Remove once https://github.com/babel/babel-eslint/pull/584 is merged
-  // eslint-disable-next-line no-use-before-define
   dependentBucketListenerSet: WeakSet<Bucket> = new WeakSet();
   // We cannot use dependentBucketListenerSet.length for that, since WeakSets don't hold that information
   dependentCounter: number = 0;
   // For downsampled buckets, "isDirtyDueToDependent" stores the buckets
   // due to which the current bucket is dirty and need new downsampling
-  // Remove once https://github.com/babel/babel-eslint/pull/584 is merged
-  // eslint-disable-next-line no-use-before-define
   isDirtyDueToDependent: WeakSet<Bucket> = new WeakSet();
   isDownSampled: boolean;
+  _fallbackBucket: ?Bucket;
 
   constructor(
     BIT_DEPTH: number,
     zoomedAddress: Vector4,
     temporalBucketManager: TemporalBucketManager,
+    cube: DataCube,
   ) {
     _.extend(this, BackboneEvents);
+    this.cube = cube;
     this.BIT_DEPTH = BIT_DEPTH;
     this.BUCKET_LENGTH = (1 << (BUCKET_SIZE_P * 3)) * (this.BIT_DEPTH >> 3);
     this.BYTE_OFFSET = this.BIT_DEPTH >> 3;
@@ -103,6 +140,15 @@ export class DataBucket {
 
     const collect = !this.accessed && !this.dirty && this.state !== BucketStateEnum.REQUESTED;
     return collect;
+  }
+
+  destroy(): void {
+    // Since we rely on the GC to collect buckets, we
+    // can easily have references to buckets which prohibit GC.
+    // As a countermeasure, we set the data attribute to null
+    // so that at least the big memory hog is tamed (unfortunately,
+    // this doesn't help against references which point directly to this.data)
+    this.data = null;
   }
 
   needsRequest(): boolean {
@@ -136,7 +182,7 @@ export class DataBucket {
   getData(): Uint8Array {
     const data = this.data;
     if (data == null) {
-      throw new Error("Bucket.getData() called, but data does not exist.");
+      throw new Error("Bucket.getData() called, but data does not exist (anymore).");
     }
 
     return data;
@@ -212,6 +258,36 @@ export class DataBucket {
 
   unexpectedState(): void {
     throw new Error(`Unexpected state: ${this.state}`);
+  }
+
+  getFallbackBucket(): Bucket {
+    if (this._fallbackBucket != null) {
+      return this._fallbackBucket;
+    }
+    const zoomStep = this.zoomedAddress[3];
+    const fallbackZoomStep = zoomStep + 1;
+    const resolutions = getResolutions(Store.getState().dataset);
+
+    if (fallbackZoomStep >= resolutions.length) {
+      this._fallbackBucket = NULL_BUCKET;
+      return NULL_BUCKET;
+    }
+
+    const fallbackBucketAddress = zoomedAddressToAnotherZoomStep(
+      this.zoomedAddress,
+      resolutions,
+      fallbackZoomStep,
+    );
+    const fallbackBucket = this.cube.getOrCreateBucket(fallbackBucketAddress);
+
+    this._fallbackBucket = fallbackBucket;
+    if (fallbackBucket.type !== "null") {
+      fallbackBucket.once("bucketCollected", () => {
+        this._fallbackBucket = null;
+      });
+    }
+
+    return fallbackBucket;
   }
 
   downsampleFromLowerBucket(
@@ -381,29 +457,3 @@ export class DataBucket {
     }
   }
 }
-
-export class NullBucket {
-  type: "null" = "null";
-  isOutOfBoundingBox: boolean;
-
-  constructor(isOutOfBoundingBox: boolean) {
-    this.isOutOfBoundingBox = isOutOfBoundingBox;
-  }
-
-  hasData(): boolean {
-    return false;
-  }
-
-  needsRequest(): boolean {
-    return false;
-  }
-
-  getData(): Uint8Array {
-    throw new Error("NullBucket has no data.");
-  }
-}
-
-export const NULL_BUCKET = new NullBucket(false);
-export const NULL_BUCKET_OUT_OF_BB = new NullBucket(true);
-
-export type Bucket = DataBucket | NullBucket;

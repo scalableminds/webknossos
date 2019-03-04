@@ -1,6 +1,7 @@
 // @flow
 import { type Area } from "oxalis/model/accessors/flycam_accessor";
 import type { EnqueueFunction } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
+import type { LoadingStrategy } from "oxalis/store";
 import {
   type OrthoViewMap,
   OrthoViewValuesWithoutTDView,
@@ -8,6 +9,10 @@ import {
   type Vector4,
   addressSpaceDimensions,
 } from "oxalis/constants";
+import {
+  getMaxZoomStepDiff,
+  getPriorityWeightForZoomStepDiff,
+} from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
 import Dimensions from "oxalis/model/dimensions";
 import ThreeDMap from "libs/ThreeDMap";
@@ -26,48 +31,47 @@ export const getAnchorPositionToCenterDistance = (bucketPerDim: number) =>
 export default function determineBucketsForOrthogonal(
   resolutions: Array<Vector3>,
   enqueueFunction: EnqueueFunction,
+  loadingStrategy: LoadingStrategy,
   logZoomStep: number,
   anchorPoint: Vector4,
-  fallbackAnchorPoint: Vector4,
   areas: OrthoViewMap<Area>,
   subBucketLocality: Vector3,
   abortLimit?: number,
 ) {
-  addNecessaryBucketsToPriorityQueueOrthogonal(
-    resolutions,
-    enqueueFunction,
-    logZoomStep,
-    anchorPoint,
-    false,
-    areas,
-    subBucketLocality,
-    abortLimit,
-  );
+  let zoomStepDiff = 0;
 
-  if (logZoomStep + 1 < resolutions.length) {
+  while (
+    logZoomStep + zoomStepDiff < resolutions.length &&
+    zoomStepDiff <= getMaxZoomStepDiff(loadingStrategy)
+  ) {
     addNecessaryBucketsToPriorityQueueOrthogonal(
       resolutions,
       enqueueFunction,
-      logZoomStep + 1,
-      fallbackAnchorPoint,
-      true,
+      loadingStrategy,
+      logZoomStep,
+      zoomStepDiff,
+      anchorPoint,
       areas,
       subBucketLocality,
       abortLimit,
     );
+    zoomStepDiff++;
   }
 }
 
 function addNecessaryBucketsToPriorityQueueOrthogonal(
   resolutions: Array<Vector3>,
   enqueueFunction: EnqueueFunction,
-  logZoomStep: number,
-  zoomedAnchorPoint: Vector4,
-  isFallback: boolean,
+  loadingStrategy: LoadingStrategy,
+  nonFallbackLogZoomStep: number,
+  zoomStepDiff: number,
+  nonFallbackAnchorPoint: Vector4,
   areas: OrthoViewMap<Area>,
   subBucketLocality: Vector3,
   abortLimit: ?number,
 ): void {
+  const logZoomStep = nonFallbackLogZoomStep + zoomStepDiff;
+  const isFallback = zoomStepDiff > 0;
   const uniqueBucketMap = new ThreeDMap();
   let currentCount = 0;
 
@@ -93,14 +97,11 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
       logZoomStep,
     );
 
-    const bucketsPerDim = isFallback
-      ? addressSpaceDimensions.fallback
-      : addressSpaceDimensions.normal;
+    const renderedBucketsPerDimension = addressSpaceDimensions[w];
 
-    const renderedBucketsPerDimension = bucketsPerDim[w];
-
-    const topLeftBucket = zoomedAnchorPoint.slice();
+    let topLeftBucket = ((nonFallbackAnchorPoint.slice(): any): Vector4);
     topLeftBucket[w] += getAnchorPositionToCenterDistance(renderedBucketsPerDimension);
+    topLeftBucket = zoomedAddressToAnotherZoomStep(topLeftBucket, resolutions, logZoomStep);
 
     const centerBucketUV = [
       scaledTopLeftVector[u] + (scaledBottomRightVector[u] - scaledTopLeftVector[u]) / 2,
@@ -112,8 +113,10 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
     // Similar to `extraBucketPerEdge`, the PQ takes care of cases in which the additional slice
     // can't be loaded.
     const wSliceOffsets = isFallback ? [0] : [0, subBucketLocality[w]];
-    // fallback buckets should have lower priority
-    const additionalPriorityWeight = isFallback ? 1000 : 0;
+    const additionalPriorityWeight = getPriorityWeightForZoomStepDiff(
+      loadingStrategy,
+      zoomStepDiff,
+    );
 
     // Build up priority queue
     // eslint-disable-next-line no-loop-func
@@ -147,6 +150,7 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
           if (uniqueBucketMap.get(bucketVector3) == null) {
             uniqueBucketMap.set(bucketVector3, bucketAddress);
             currentCount++;
+
             if (abortLimit != null && currentCount > abortLimit) {
               return;
             }

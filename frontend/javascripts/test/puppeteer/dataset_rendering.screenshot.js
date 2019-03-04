@@ -90,6 +90,7 @@ const datasetConfigOverrides: { [key: string]: DatasetConfiguration } = {
     highlightHoveredCellId: true,
     renderIsosurfaces: false,
     renderMissingDataBlack: false,
+    loadingStrategy: "BEST_QUALITY_FIRST",
   },
 };
 

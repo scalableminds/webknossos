@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
+import com.scalableminds.webknossos.tracingstore.RedisTemporaryStore
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.tracingstore.tracings.UpdateAction.SkeletonUpdateAction
 import com.scalableminds.webknossos.tracingstore.tracings._
@@ -17,8 +18,7 @@ class SkeletonTracingService @Inject()(
     tracingDataStore: TracingDataStore,
     val temporaryTracingStore: TemporaryTracingStore[SkeletonTracing],
     val handledGroupCache: TemporaryStore[(String, String, Long), Unit],
-    val transactionBatchStore: TemporaryStore[(String, String, Long), UpdateActionGroup[SkeletonTracing]])(
-    implicit ec: ExecutionContext)
+    val uncommittedUpdatesStore: RedisTemporaryStore[UpdateActionGroup[SkeletonTracing]])(implicit ec: ExecutionContext)
     extends TracingService[SkeletonTracing]
     with KeyValueStoreImplicits
     with ProtoGeometryImplicits

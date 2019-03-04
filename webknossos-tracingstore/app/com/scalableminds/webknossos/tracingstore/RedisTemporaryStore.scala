@@ -10,7 +10,7 @@ class RedisTemporaryStore[V] @Inject()() {
 
   def find(id: String) =
     r.synchronized {
-      r.get(id)
+      r.get[V](id)
     }
 
   def removeAllConditional(pattern: String) =
@@ -28,7 +28,7 @@ class RedisTemporaryStore[V] @Inject()() {
       val keysOpt: Option[List[Option[String]]] = r.keys(pattern)
       keysOpt.map { keys: Seq[Option[String]] =>
         keys.flatMap { key: Option[String] =>
-          key.flatMap(r.get(_))
+          key.flatMap(r.get[V](_))
         }
       }.getOrElse(Seq())
     }

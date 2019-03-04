@@ -131,22 +131,20 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
                       if (updateGroup.transactionGroupCount.getOrElse(1) == updateGroup.transactionGroupIndex.getOrElse(
                             0) + 1) {
                         val updateActionGroupsToCommit =
-                          tracingService.transactionBatchStore
-                            .findAllConditional(keyTuple => keyTuple._2 == updateGroup.transactionId.get)
-                            .toList
-                            .sortBy(_.version) :+ updateGroup
+                          tracingService.getAllUncommittedFor(tracingId, updateGroup.transactionId) :+ updateGroup
                         commitUpdates(tracingId, updateActionGroupsToCommit, userToken).map(result => {
-                          tracingService.transactionBatchStore.removeAllConditional(keyTuple =>
-                            keyTuple._2 == updateGroup.transactionId.get)
+                          tracingService.removeAllUncommittedFor(tracingId, updateGroup.transactionId)
                           result
                         })
                       } else {
                         logger.debug(
                           s"saving version ${updateGroup.version} uncommitted (from transaction ${updateGroup.transactionId})")
-                        tracingService.transactionBatchStore.insert(
-                          (tracingId, updateGroup.transactionId.get, updateGroup.version),
-                          updateGroup,
-                          Some(transactionBatchExpiry))
+                        tracingService.saveUncommitted(tracingId,
+                                                       updateGroup.transactionId,
+                                                       updateGroup.transactionGroupIndex,
+                                                       updateGroup.version,
+                                                       updateGroup,
+                                                       transactionBatchExpiry)
                         tracingService.saveToHandledGroupCache(tracingId,
                                                                updateGroup.version,
                                                                updateGroup.transactionId)

@@ -4,6 +4,7 @@ import java.util.UUID
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
+import com.scalableminds.webknossos.tracingstore.RedisTemporaryStore
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
@@ -28,7 +29,7 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
 
   val handledGroupCache: TemporaryStore[(String, String, Long), Unit]
 
-  val transactionBatchStore: TemporaryStore[(String, String, Long), UpdateActionGroup[T]]
+  val uncommittedUpdatesStore: RedisTemporaryStore[UpdateActionGroup[T]]
 
   implicit def tracingCompanion: GeneratedMessageCompanion[T]
 
@@ -40,12 +41,44 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
 
   def currentVersion(tracingId: String): Fox[Long]
 
+  def transactionBatchKey(tracingId: String,
+                          transactionidOpt: Option[String],
+                          transactionGroupindexOpt: Option[Int],
+                          version: Long) =
+    s"transactionBatch___${tracingId}___${transactionidOpt}___${transactionGroupindexOpt}___$version"
+
   def currentUncommittedVersion(tracingId: String, transactionIdOpt: Option[String]): Option[Long] =
     transactionIdOpt.flatMap { transactionId =>
       val keys =
-        transactionBatchStore.keySet.filter(keyTuple => keyTuple._1 == tracingId && keyTuple._2 == transactionId)
-      if (keys.isEmpty) None else Some(keys.maxBy(keyTuple => keyTuple._3)._3)
+        uncommittedUpdatesStore.keys(s"transactionBatch___${tracingId}___${transactionIdOpt}___*")
+      if (keys.isEmpty) None else Some(keys.flatMap(versionFromTransactionBatchKey).max)
     }
+
+  private def versionFromTransactionBatchKey(key: String) = {
+    val pattern = """transactionBatch___(.*)___(.*)___(.*)___(\d+)""".r
+    pattern.findFirstMatchIn(key).map {
+      _.group(4).toLong
+    }
+  }
+
+  private def patternFor(tracingId: String, transactionIdOpt: Option[String]) =
+    s"transactionBatch___${tracingId}___${transactionIdOpt}___*"
+
+  def saveUncommitted(tracingId: String,
+                      transactionIdOpt: Option[String],
+                      transactionGroupindexOpt: Option[Int],
+                      version: Long,
+                      updateGroup: UpdateActionGroup[T],
+                      expiry: FiniteDuration): Boolean =
+    uncommittedUpdatesStore.insert(transactionBatchKey(tracingId, transactionIdOpt, transactionGroupindexOpt, version),
+                                   updateGroup,
+                                   Some(expiry))
+
+  def getAllUncommittedFor(tracingId: String, transactionId: Option[String]): List[UpdateActionGroup[T]] =
+    uncommittedUpdatesStore.findAllConditional(patternFor(tracingId, transactionId)).toList.sortBy(_.version)
+
+  def removeAllUncommittedFor(tracingId: String, transactionId: Option[String]): Seq[Long] =
+    uncommittedUpdatesStore.removeAllConditional(patternFor(tracingId, transactionId))
 
   def handleUpdateGroup(tracingId: String, updateGroup: UpdateActionGroup[T], previousVersion: Long): Fox[_]
 
@@ -95,6 +128,6 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
       handledGroupCache.insert((requestId, tracingId, version), (), Some(handledGroupCacheExpiry))
     }
 
-  def handledGroupCacheContains(requestId: String, tracingId: String, version: Long) =
+  def handledGroupCacheContains(requestId: String, tracingId: String, version: Long): Boolean =
     handledGroupCache.contains(requestId, tracingId, version)
 }

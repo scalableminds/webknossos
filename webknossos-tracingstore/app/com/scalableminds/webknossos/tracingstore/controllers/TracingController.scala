@@ -135,7 +135,11 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
                             .findAllConditional(keyTuple => keyTuple._2 == updateGroup.transactionId.get)
                             .toList
                             .sortBy(_.version) :+ updateGroup
-                        commitUpdates(tracingId, updateActionGroupsToCommit, userToken)
+                        commitUpdates(tracingId, updateActionGroupsToCommit, userToken).map(result => {
+                          tracingService.transactionBatchStore.removeAllConditional(keyTuple =>
+                            keyTuple._2 == updateGroup.transactionId.get)
+                          result
+                        })
                       } else {
                         logger.debug(
                           s"saving version ${updateGroup.version} uncommitted (from transaction ${updateGroup.transactionId})")

@@ -17,7 +17,6 @@ import constants, {
   OrthoViewCrosshairColors,
   OrthoViewGrayCrosshairColor,
   OrthoViewValues,
-  OrthoViews,
   type Vector3,
   type Vector4,
 } from "oxalis/constants";

@@ -226,7 +226,7 @@ The isosurface is computed in chunks, which is why the isosurface is likely to a
 
 Note that the generated isosurface is not persisted for the tracing.
 Consequently, refreshing the page, will "forget" all previously generated isosurfaces.
-To persist generated isosurfaces, you can use the "download" button within the "Meshes" pane.
+To persist generated isosurfaces, you can use the "Download" button within the "Meshes" pane.
 That "Download" button will persist the isosurface of the active cell as an STL file to your disk.
 Using the "Import" button in the "Meshes" pane, you can re-import isosurfaces.
 

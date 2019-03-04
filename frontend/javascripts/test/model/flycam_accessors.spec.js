@@ -1,13 +1,15 @@
-// @noflow
+// @flow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import _ from "lodash";
 
+import type { OxalisState } from "oxalis/store";
 import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
 import * as accessors from "oxalis/model/accessors/flycam_accessor";
 import constants from "oxalis/constants";
 import test from "ava";
 
-const initialState = {
+// $FlowFixMe
+const initialState: OxalisState = {
   dataset: {
     dataSource: {
       scale: [1, 1, 2],
@@ -45,29 +47,18 @@ test("Flycam Accessors should calculate the request log zoom step (1/3)", t => {
 
 test("Flycam Accessors should calculate the request log zoom step (2/3)", t => {
   const state = _.cloneDeep(initialState);
+  // $FlowFixMe
   state.datasetConfiguration.quality = 1;
   t.is(accessors.getRequestLogZoomStep(state), 1);
 });
 
 test("Flycam Accessors should calculate the request log zoom step (3/3)", t => {
   const state = _.cloneDeep(initialState);
+  // $FlowFixMe
   state.datasetConfiguration.quality = 1;
+  // $FlowFixMe
   state.flycam.zoomStep = 8;
   t.is(accessors.getRequestLogZoomStep(state), 4);
-});
-
-test("Flycam Accessors should calculate the texture scaling factor (1/2)", t => {
-  const texturePosition = accessors.getTextureScalingFactor(initialState);
-  t.deepEqual(texturePosition, 1.3);
-});
-
-test("Flycam Accessors should calculate the texture scaling factor (2/2)", t => {
-  const state = _.cloneDeep(initialState);
-  state.datasetConfiguration.quality = 1;
-  state.flycam.zoomStep = 8.6;
-
-  const texturePosition = accessors.getTextureScalingFactor(state);
-  t.deepEqual(texturePosition, 0.5375);
 });
 
 test.only("Flycam Accessors should calculate appropriate zoom factors for datasets with many magnifications.", t => {
@@ -99,6 +90,7 @@ test.only("Flycam Accessors should calculate appropriate zoom factors for datase
 
   const maximumZoomPerResolution = accessors._getMaximumZoomForAllResolutions(
     constants.MODE_PLANE_TRACING,
+    "BEST_QUALITY_FIRST",
     scale,
     resolutions,
     rects,
@@ -113,13 +105,13 @@ test.only("Flycam Accessors should calculate appropriate zoom factors for datase
     4.594972986357223,
     7.4002499442581735,
     15.86309297171495,
-    30.91268053287076,
-    60.240069161242396,
-    117.39085287969576,
-    251.6377186292722,
-    490.3707252978515,
-    955.5938177273264,
-    1862.1820132595253,
+    34.00394858615784,
+    66.26407607736664,
+    129.12993816766533,
+    276.80149049219943,
+    539.4077978276367,
+    1051.1531995000591,
+    2048.400214585478,
     4390.927778387033,
   ];
 

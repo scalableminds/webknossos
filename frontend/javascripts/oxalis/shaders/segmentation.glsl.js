@@ -63,16 +63,14 @@ export const getBrushOverlay: ShaderModule = {
 export const getSegmentationId: ShaderModule = {
   requirements: [binarySearchIndex, getRgbaAtIndex],
   code: `
-    vec4 getSegmentationId(vec3 coords, vec3 fallbackCoords, bool hasFallback) {
+    vec4 getSegmentationId(vec3 worldPositionUVW) {
       vec4 volume_color =
         getMaybeFilteredColorOrFallback(
           <%= segmentationName %>_lookup_texture,
           <%= formatNumberAsGLSLFloat(segmentationLayerIndex) %>,
           <%= segmentationName %>_data_texture_width,
           <%= segmentationPackingDegree %>,
-          coords,
-          fallbackCoords,
-          hasFallback,
+          worldPositionUVW,
           true, // Don't use bilinear filtering for volume data
           vec4(0.0, 0.0, 0.0, 0.0)
         );

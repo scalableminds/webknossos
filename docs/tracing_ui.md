@@ -244,7 +244,7 @@ Not all settings are available in every tracing mode.
 
 - `Move Value (nm/s)`:  A high value will speed up movement through the dataset, e.g. when holding down the spacebar. Vice-versa, a low value will slow down the movement allowing for more precision. This setting is especially useful in `Flight mode`.
 
-- `d/f-Switching`: ¯\\_(ツ)_/¯
+- `d/f-Switching`: If d/f switching is disabled, moving through the dataset with `f` will always go *f*orward by *increasing* the coordinate orthogonal to the current slice. Correspondingly, `d` will backwards by decreasing that coordinate. However, if d/f is enabled, the meaning of "forward" and "backward" will change depending on how you create nodes. For example, when a node is placed at z == 100 and afterwards another node is created at z == 90, z will be *decreased* when going forward.
 
 #### Viewport Options / Flight Options
 - `Zoom`: The zoom factor for viewing the dataset. A low value moves the camera really close to the data, showing many details. A high value, will you show more of the dataset but with fewer details and is great for getting an overview or moving around quickly.
@@ -287,6 +287,8 @@ For multi-layer datasets, each layer can be adjusted separately.
 - `Highlight Hovered Cells`: Toggles whether segmented cells will be highlighted in all viewports when hovering over them with the mouse cursor. Useful for identifying the highlighted cell in across all viewports.
 
 #### Quality
-- `4 Bit`: Toggles data download from the server using only 4 Bit instead of 8 Bit for each pixel. Use this to reduce the amount of necessary internet bandwidth for webKnossos. Useful for showcasing data on the go over cellular networks, e.g 3G. 
 - `Quality`: Adjusts the quality level used for data download from the server. "High" will load the original, unmodified data. "Medium" and "Low" will load a downsampled version of the data layer to reduce network traffic. Use this to reduce the amount of necessary internet bandwidth for webKnossos.
-
+- `Loading Strategy`: You can choose between two different loading strategies. When using "best quality first" it will take a bit longer until you see data, because the highest quality is loaded. Alternatively, "Progressive quality" can be chosen which will improve the quality progressively while loading. As a result, initial data will be visible faster, but it will take more time until the best quality is shown.
+- `4 Bit`: Toggles data download from the server using only 4 Bit instead of 8 Bit for each pixel. Use this to reduce the amount of necessary internet bandwidth for webKnossos. Useful for showcasing data on the go over cellular networks, e.g 3G.
+- `Interpolation`: When interpolation is enabled, bilinear filtering is applied while rendering pixels between two voxels. As a result, data may look "smoother" (or blurry when being zoomed in very far). Without interpolation, data may look more "crisp" (or pixelated when being zomed in very far).
+- `Render Missing Data Black`: If a dataset doesn't contain data at a specific position, webKnossos can either render "black" at that position or it can try to render data from another magnification.

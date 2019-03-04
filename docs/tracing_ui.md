@@ -246,7 +246,7 @@ For that reason, the import only works when opening a tracing (as opposed to jus
 
 #### Troubleshooting
 
-Note that the mesh and isosurface support in webKnossos is currently under heavy development.
+Note that the mesh and isosurface support in webKnossos is an ongoing development effort.
 The functionality is currently limited by the following:
 
 - Isosurface generation only works for segmentation layers (as opposed to volume tracings). As a result, the dataset has to be opened in view mode to enable isosurfaces.

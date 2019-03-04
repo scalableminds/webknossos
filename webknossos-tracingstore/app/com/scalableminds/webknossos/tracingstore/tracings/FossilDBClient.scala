@@ -7,9 +7,10 @@ import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.tracingstore.TracingStoreConfig
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
+import io.grpc.{Status, StatusRuntimeException}
 import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder
 import io.grpc.health.v1._
-import net.liftweb.common.{Box, Empty, Full}
+import net.liftweb.common.{Box, Empty, Full, ParamFailure}
 import net.liftweb.util.Helpers.tryo
 import play.api.Configuration
 import play.api.libs.json.{Json, Reads, Writes}
@@ -73,6 +74,9 @@ class FossilDBClient(collection: String, config: TracingStoreConfig) extends Fox
       if (!reply.success) throw new Exception(reply.errorMessage.getOrElse(""))
       fromByteArray(reply.value.toByteArray).map(VersionedKeyValuePair(VersionedKey(key, reply.actualVersion), _))
     } catch {
+      case statusRuntimeException: StatusRuntimeException =>
+        if (statusRuntimeException.getStatus == Status.UNAVAILABLE) Fox.failure("FossilDB is unavailable") ~> 500
+        else Fox.failure("Could not get from FossilDB: " + statusRuntimeException.getMessage)
       case e: Exception => Fox.failure("Could not get from FossilDB: " + e.getMessage)
     }
 

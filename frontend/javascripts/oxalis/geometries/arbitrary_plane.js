@@ -52,12 +52,9 @@ class ArbitraryPlane {
     this.materialFactory.stopListening();
   }
 
-  updateAnchorPoints(anchorPoint: ?Vector4, fallbackAnchorPoint: ?Vector4): void {
+  updateAnchorPoints(anchorPoint: ?Vector4): void {
     if (anchorPoint) {
       this.meshes.mainPlane.material.setAnchorPoint(anchorPoint);
-    }
-    if (fallbackAnchorPoint) {
-      this.meshes.mainPlane.material.setFallbackAnchorPoint(fallbackAnchorPoint);
     }
   }
 

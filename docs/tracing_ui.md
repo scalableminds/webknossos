@@ -237,7 +237,7 @@ Read more about STL imports in the following subsection.
 Apart from importing STLs which were created by webKnossos, you can also use the "Import" button within the "Meshes" tab to import arbitrary STL files.
 Such files can be created from volume data with the help of external tools, such as [Amira](https://www.fei.com/software/amira-avizo/).
 After the import, such meshes are rendered alongside the actual data in the 3D viewprt.
-For each mesh, the name, position and visibility can be adapted via the mesh tab.
+For each mesh, the name, position and visibility can be adapted via the "Meshes" tab.
 In contrast to generated isosurfaces, uploaded STLs will be persisted within the tracing.
 For that reason, the import only works when opening a tracing (as opposed to just viewing a dataset).
 

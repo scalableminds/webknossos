@@ -301,7 +301,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
     );
 
     return (
-      <Collapse defaultActiveKey={["1", "2", "3a", "3b", "4"]}>
+      <Collapse bordered={false} defaultActiveKey={["1", "2", "3a", "3b", "4"]}>
         <Panel header="Controls" key="1">
           <NumberSliderSetting
             label={settings.keyboardDelay}

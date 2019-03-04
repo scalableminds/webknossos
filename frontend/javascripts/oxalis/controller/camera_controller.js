@@ -39,13 +39,13 @@ class CameraController extends React.PureComponent<Props> {
 
   componentDidMount() {
     for (const cam of _.values(this.props.cameras)) {
-      cam.near = -1000000;
+      cam.near = 0;
       cam.far = 1000000;
     }
 
     Store.dispatch(
       setTDCameraAction({
-        near: -1000000,
+        near: 0,
         far: 1000000,
       }),
     );
@@ -278,7 +278,11 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
 
     Store.dispatch(
       setTDCameraAction({
-        position: [tweenState.dx + p[0], tweenState.dy + p[1], tweenState.dz + p[2]],
+        position: [
+          tweenState.dx + p[0] + 100000,
+          tweenState.dy + p[1] + 100000,
+          tweenState.dz + p[2] + 100000,
+        ],
         left: tweenState.l,
         right: tweenState.r,
         top: tweenState.t,

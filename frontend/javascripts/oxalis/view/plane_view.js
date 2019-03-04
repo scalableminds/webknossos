@@ -51,6 +51,19 @@ const createDirLight = (position, target, intensity, parent) => {
   return dirLight;
 };
 
+const raycaster = new THREE.Raycaster(
+  new THREE.Vector3(0, 0, 0),
+  new THREE.Vector3(0, 0, 0),
+  -1000000,
+  1000000,
+);
+const oldHit = {
+  object: null,
+  color: null,
+};
+let rayHelper = null;
+let hitPointHelper = null;
+
 class PlaneView {
   // Copied form backbone events (TODO: handle this better)
   trigger: Function;
@@ -166,6 +179,8 @@ class PlaneView {
 
       clearCanvas(renderer);
 
+      this.performHitTest();
+
       for (const plane of OrthoViewValues) {
         SceneController.updateSceneForCam(plane);
         const { left, top, width, height } = viewport[plane];
@@ -177,6 +192,71 @@ class PlaneView {
 
       this.needsRerender = false;
     }
+  }
+
+  performHitTest(): ?THREE.Vector3 {
+    const storeState = Store.getState();
+    const SceneController = getSceneController();
+    const { scene, isosurfacesRootGroup } = SceneController;
+    const tdViewport = getInputCatcherRect(storeState, "TDView");
+    const { mousePosition } = storeState.temporaryConfiguration;
+    if (mousePosition == null) {
+      return null;
+    }
+    if (storeState.viewModeData.plane.activeViewport !== OrthoViews.TDView) {
+      return null;
+    }
+    const mouse = new THREE.Vector2(
+      (mousePosition[0] / tdViewport.width) * 2 - 1,
+      ((mousePosition[1] / tdViewport.height) * 2 - 1) * -1, // y is inverted
+    );
+
+    raycaster.setFromCamera(mouse, this.cameras[OrthoViews.TDView]);
+
+    if (!rayHelper) {
+      rayHelper = new THREE.ArrowHelper(
+        raycaster.ray.direction,
+        raycaster.ray.origin,
+        100,
+        0x00ff00,
+      );
+
+      hitPointHelper = new THREE.ArrowHelper(
+        raycaster.ray.direction,
+        raycaster.ray.origin,
+        100,
+        0x0000ff,
+      );
+
+      scene.add(hitPointHelper);
+      scene.add(rayHelper);
+    } else {
+      rayHelper.setDirection(raycaster.ray.direction);
+      rayHelper.position.copy(raycaster.ray.origin);
+    }
+
+    const intersections = raycaster.intersectObjects(isosurfacesRootGroup.children, true);
+    const hitObject = intersections.length > 0 ? intersections[0].object : null;
+    if (oldHit.object != null && hitObject !== oldHit.object) {
+      oldHit.object.material.emissive.setHex(oldHit.emissive);
+      oldHit.object = null;
+    }
+    if (hitObject != null && hitObject !== oldHit.object) {
+      const oldEmissive = hitObject.material.emissive.getHex();
+      hitObject.material.emissive.setHSL(0.7, 0.5, 0.1);
+
+      oldHit.object = hitObject;
+      oldHit.emissive = oldEmissive;
+    }
+
+    if (hitObject != null) {
+      hitPointHelper.position.copy(intersections[0].point);
+      hitPointHelper.setDirection(intersections[0].face.normal);
+
+      return intersections[0].point;
+    }
+
+    return null;
   }
 
   draw(): void {

@@ -250,7 +250,7 @@ Note that the mesh and isosurface support in webKnossos is an ongoing developmen
 The functionality is currently limited by the following:
 
 - Isosurface generation only works for segmentation layers (as opposed to volume tracings). As a result, the dataset has to be opened in view mode to enable isosurfaces.
-- Isosurfaces are not persisted automatically. If you want to manually persist an isosurface, you can use the "download" button in the meshes tab.
+- Isosurfaces are not persisted automatically. If you want to manually persist an isosurface, you can use the "Download" button in the meshes tab.
 - Importing an STL which was not generated with webKnossos only works when having an annotation opened (since that mesh will be persisted).
 
 We are working on unifying the interface of meshes and isosurfaces to make the experience more intuitive.

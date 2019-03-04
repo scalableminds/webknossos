@@ -226,7 +226,7 @@ The isosurface is computed in chunks, which is why the isosurface is likely to a
 
 Note that the generated isosurface is not persisted for the tracing.
 Consequently, refreshing the page, will "forget" all previously generated isosurfaces.
-To persist generated isosurfaces, you can use the "download" button within the "Meshes" pane.
+To persist generated isosurfaces, you can use the "Download" button within the "Meshes" pane.
 That "Download" button will persist the isosurface of the active cell as an STL file to your disk.
 Using the "Import" button in the "Meshes" pane, you can re-import isosurfaces.
 
@@ -237,7 +237,7 @@ Read more about STL imports in the following subsection.
 Apart from importing STLs which were created by webKnossos, you can also use the "Import" button within the "Meshes" tab to import arbitrary STL files.
 Such files can be created from volume data with the help of external tools, such as [Amira](https://www.fei.com/software/amira-avizo/).
 After the import, meshes are rendered alongside the actual data in the 3D viewprt.
-For each mesh, the name, position and visibility can be adapted via the mesh tab.
+For each mesh, the name, position and visibility can be adapted via the "Meshes" tab.
 In contrast to generated isosurfaces, uploaded STLs will be persisted within the tracing.
 For that reason, the import only works when opening a tracing (as opposed to just viewing a dataset).
 
@@ -246,11 +246,11 @@ For that reason, the import only works when opening a tracing (as opposed to jus
 
 #### Troubleshooting
 
-Note that the mesh and isosurface support in webKnossos is currently under heavy development.
+Note that the mesh and isosurface support in webKnossos is an ongoing development effort.
 The functionality is currently limited by the following:
 
 - Isosurface generation only works for segmentation layers (as opposed to volume tracings). As a result, the dataset has to be opened in view mode to enable isosurfaces.
-- Isosurfaces are not persisted automatically. If you want to manually persist an isosurface, you can use the "download" button in the meshes tab.
+- Isosurfaces are not persisted automatically. If you want to manually persist an isosurface, you can use the "Download" button in the meshes tab.
 - Importing an STL which was not generated with webKnossos only works when having an annotation opened (since that mesh will be persisted).
 
 We are working on unifying the interface of meshes and isosurfaces to make the experience more intuitive.

@@ -143,11 +143,19 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
                           (tracingId, updateGroup.transactionId.get, updateGroup.version),
                           updateGroup,
                           Some(transactionBatchExpiry))
+                        tracingService.saveToHandledGroupCache(tracingId,
+                                                               updateGroup.version,
+                                                               updateGroup.transactionId)
                         Fox.successful(updateGroup.version)
                       }
                     } else {
-                      Fox
-                        .failure(s"Incorrect version. Expected: ${previousVersion + 1}; Got: ${updateGroup.version}") ~> CONFLICT
+                      if (updateGroup.transactionId.exists(transactionId =>
+                            tracingService.handledGroupCacheContains(transactionId, tracingId, updateGroup.version))) {
+                        //this update group was received and successfully saved in a previous request. silently ignore this duplicate request
+                        Fox.successful(updateGroup.version)
+                      } else {
+                        Fox.failure(s"Incorrect version. Expected: ${previousVersion + 1}; Got: ${updateGroup.version}") ~> CONFLICT
+                      }
                     }
                   } yield result
               }
@@ -173,15 +181,15 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
               .handleUpdateGroup(tracingId, updateGroup, prevVersion)
               .map(_ =>
                 Fox.successful(
-                  tracingService.saveToHandledGroupCache(tracingId, updateGroup.version, updateGroup.requestId)))
+                  tracingService.saveToHandledGroupCache(tracingId, updateGroup.version, updateGroup.transactionId)))
               .map(_ => updateGroup.version)
           } else {
-            if (updateGroup.requestId.exists(requestId =>
-                  tracingService.handledGroupCacheContains(requestId, tracingId, updateGroup.version))) {
+            if (updateGroup.transactionId.exists(transactionId =>
+                  tracingService.handledGroupCacheContains(transactionId, tracingId, updateGroup.version))) {
               //this update group was received and successfully saved in a previous request. silently ignore this duplicate request
               Fox.successful(updateGroup.version)
             } else {
-              Failure(s"Incorrect version. Expected: ${prevVersion + 1}; Got: ${updateGroup.version}") ~> CONFLICT
+              Fox.failure(s"Incorrect version. Expected: ${prevVersion + 1}; Got: ${updateGroup.version}") ~> CONFLICT
             }
           }
         }

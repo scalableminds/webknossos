@@ -101,7 +101,6 @@ export class DataBucket {
   // For downsampled buckets, "dependentBucketListenerSet" stores the
   // buckets to which a listener is already attached
   // Remove once https://github.com/babel/babel-eslint/pull/584 is merged
-  // eslint-disable-next-line no-use-before-define
   dependentBucketListenerSet: WeakSet<Bucket> = new WeakSet();
   // We cannot use dependentBucketListenerSet.length for that, since WeakSets don't hold that information
   dependentCounter: number = 0;

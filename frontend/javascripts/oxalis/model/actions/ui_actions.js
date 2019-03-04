@@ -1,5 +1,4 @@
 // @flow
-/* eslint-disable import/prefer-default-export */
 
 type SetDropzoneModalVisibilityAction = {
   type: "SET_DROPZONE_MODAL_VISIBILITY",

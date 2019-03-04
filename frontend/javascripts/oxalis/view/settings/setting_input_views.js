@@ -1,12 +1,4 @@
-/**
- * setting_input_views.js
- * @flow
- */
-
-/* eslint-disable react/no-multi-comp */
-/* eslint-disable react/prefer-stateless-function */
-/* eslint-disable jsx-a11y/label-has-for */
-
+// @flow
 import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Select } from "antd";
 import * as React from "react";
 

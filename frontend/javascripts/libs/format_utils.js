@@ -39,9 +39,9 @@ export function formatTuple(tuple: ?(Array<number> | Vector3 | Vector6)) {
   }
 }
 
-export function formatScale(scaleArr: Vector3): string {
+export function formatScale(scaleArr: Vector3, roundTo?: number = 2): string {
   if (scaleArr != null && scaleArr.length > 0) {
-    const scaleArrRounded = scaleArr.map(value => Utils.roundTo(value, 2));
+    const scaleArrRounded = scaleArr.map(value => Utils.roundTo(value, roundTo));
     return `${scaleArrRounded.join(ThinSpace + MultiplicationSymbol + ThinSpace)} nm³`;
   } else {
     return "";

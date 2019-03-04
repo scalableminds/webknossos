@@ -1,9 +1,4 @@
-/**
- * volumetracing_saga.spec.js
- * @flow
- */
-
-/* eslint-disable import/no-extraneous-dependencies */
+// @flow
 import { take, put, call } from "redux-saga/effects";
 import _ from "lodash";
 import update from "immutability-helper";

@@ -30,7 +30,7 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
     withJsonBodyUsing(scriptPublicReads) { script =>
       for {
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(request.identity, request.identity._organization)
-        _ <- bool2Fox(isTeamManagerOrAdmin) ?~> "notAllowed"
+        _ <- bool2Fox(isTeamManagerOrAdmin) ?~> "notAllowed" ~> FORBIDDEN
         _ <- scriptDAO.insertOne(script)
         js <- scriptService.publicWrites(script) ?~> "script.write.failed"
       } yield {
@@ -42,7 +42,7 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
   def get(scriptId: String) = sil.SecuredAction.async { implicit request =>
     for {
       scriptIdValidated <- ObjectId.parse(scriptId)
-      script <- scriptDAO.findOne(scriptIdValidated) ?~> "script.notFound"
+      script <- scriptDAO.findOne(scriptIdValidated) ?~> "script.notFound" ~> NOT_FOUND
       js <- scriptService.publicWrites(script) ?~> "script.write.failed"
     } yield {
       Ok(js)
@@ -62,8 +62,8 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
     withJsonBodyUsing(scriptPublicReads) { scriptFromForm =>
       for {
         scriptIdValidated <- ObjectId.parse(scriptId)
-        oldScript <- scriptDAO.findOne(scriptIdValidated) ?~> "script.notFound"
-        _ <- bool2Fox(oldScript._owner == request.identity._id) ?~> "script.notOwner"
+        oldScript <- scriptDAO.findOne(scriptIdValidated) ?~> "script.notFound" ~> NOT_FOUND
+        _ <- bool2Fox(oldScript._owner == request.identity._id) ?~> "script.notOwner" ~> FORBIDDEN
         updatedScript = scriptFromForm.copy(_id = oldScript._id)
         _ <- scriptDAO.updateOne(updatedScript)
         js <- scriptService.publicWrites(updatedScript) ?~> "script.write.failed"
@@ -76,8 +76,8 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
   def delete(scriptId: String) = sil.SecuredAction.async { implicit request =>
     for {
       scriptIdValidated <- ObjectId.parse(scriptId)
-      oldScript <- scriptDAO.findOne(scriptIdValidated) ?~> "script.notFound"
-      _ <- bool2Fox(oldScript._owner == request.identity._id) ?~> "script.notOwner"
+      oldScript <- scriptDAO.findOne(scriptIdValidated) ?~> "script.notFound" ~> NOT_FOUND
+      _ <- bool2Fox(oldScript._owner == request.identity._id) ?~> "script.notOwner" ~> FORBIDDEN
       _ <- scriptDAO.deleteOne(scriptIdValidated) ?~> "script.removalFailed"
       _ <- taskDAO.removeScriptFromAllTasks(scriptIdValidated) ?~> "script.removalFailed"
     } yield {

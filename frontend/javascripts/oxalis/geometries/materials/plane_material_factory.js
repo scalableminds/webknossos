@@ -433,7 +433,7 @@ class PlaneMaterialFactory {
 
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
-          storeState => storeState.temporaryConfiguration.brushSize,
+          storeState => storeState.userConfiguration.brushSize,
           brushSize => {
             this.uniforms.brushSizeInPixel.value = brushSize;
           },

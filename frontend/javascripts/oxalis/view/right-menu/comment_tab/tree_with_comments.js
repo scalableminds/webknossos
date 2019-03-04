@@ -22,7 +22,6 @@ function TreeWithComments(props: Props) {
     "fa-chevron-right": props.collapsed,
     "fa-chevron-down": !props.collapsed,
   });
-  // eslint-disable-next-line no-unused-vars
   const { width, ...liStyle } = props.style;
 
   return (

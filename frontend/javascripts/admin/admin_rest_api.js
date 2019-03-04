@@ -843,6 +843,13 @@ export async function triggerDatasetClearCache(
   );
 }
 
+export async function triggerDatasetClearThumbnailCache(datasetId: APIDatasetId): Promise<void> {
+  await Request.triggerRequest(
+    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/clearThumbnailCache`,
+    { method: "PUT" },
+  );
+}
+
 export async function getDatasetSharingToken(
   datasetId: APIDatasetId,
   options?: RequestOptions,

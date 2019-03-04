@@ -45,6 +45,9 @@ const recommendedConfigByCategory = {
     rotateValue: 0.01,
     sphericalCapRadius: 500,
   },
+  volume: {
+    brushSize: 50,
+  },
 };
 
 export const DEFAULT_RECOMMENDED_CONFIGURATION: $Shape<{|
@@ -55,6 +58,7 @@ export const DEFAULT_RECOMMENDED_CONFIGURATION: $Shape<{|
   ...recommendedConfigByCategory.all,
   ...recommendedConfigByCategory.dataset,
   ...recommendedConfigByCategory.flight,
+  ...recommendedConfigByCategory.volume,
 };
 
 export const settingComments = {
@@ -150,11 +154,14 @@ export default function RecommendedConfigurationView({
                 />,
               )}
             </FormItem>
-            <Button style={{ marginRight: 10 }} onClick={() => removeSettings(form, "orthogonal")}>
+            <Button className="button-margin" onClick={() => removeSettings(form, "orthogonal")}>
               Remove Orthogonal-only Settings
             </Button>
-            <Button onClick={() => removeSettings(form, "flight")}>
+            <Button className="button-margin" onClick={() => removeSettings(form, "flight")}>
               Remove Flight/Oblique-only Settings
+            </Button>
+            <Button className="button-margin" onClick={() => removeSettings(form, "volume")}>
+              Remove Volume-only Settings
             </Button>
           </Col>
           <Col span={12}>

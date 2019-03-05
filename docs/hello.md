@@ -30,6 +30,7 @@ Try webKnossos yourself: [https://try.webknossos.org/](https://try.webknossos.or
 * [Standalone datastore component](https://github.com/scalableminds/webknossos/tree/master/webknossos-datastore) for flexible deployments
 * [Supported dataset formats](./datasets.md): WKW (Optimized), KNOSSOS cubes
 * [Supported image formats](./data_formats.md): Grayscale, Segmentation Maps, RGB, Multi-Channel
+* [Mesh Visualization](./mesh_visualization.md)
 * [Documented frontend API for user scripts](https://demo.webknossos.org/assets/docs/frontend-api/index.html), REST API for backend access
 * Open-source development with [automated test suite](https://circleci.com/gh/scalableminds/webknossos)
 * [Docker-based deployment](https://hub.docker.com/r/scalableminds/webknossos/) for production and development

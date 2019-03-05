@@ -157,7 +157,6 @@ const Constants = {
 
   MIN_MOVE_VALUE: 30,
   MAX_MOVE_VALUE: 14000,
-  MAX_MOVE_VALUE_SLIDER: 1500,
 
   FPS: 50,
 

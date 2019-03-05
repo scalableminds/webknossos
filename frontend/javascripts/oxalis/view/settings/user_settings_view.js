@@ -283,8 +283,8 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
     const moveValueSetting = Constants.MODES_ARBITRARY.includes(this.props.viewMode) ? (
       <NumberSliderSetting
         label={settings.moveValue3d}
-        min={30}
-        max={1500}
+        min={Constants.MIN_MOVE_VALUE}
+        max={Constants.MAX_MOVE_VALUE}
         step={10}
         value={this.props.userConfiguration.moveValue3d}
         onChange={this.onChangeUser.moveValue3d}
@@ -292,8 +292,8 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
     ) : (
       <NumberSliderSetting
         label={settings.moveValue}
-        min={30}
-        max={14000}
+        min={Constants.MIN_MOVE_VALUE}
+        max={Constants.MAX_MOVE_VALUE}
         step={10}
         value={this.props.userConfiguration.moveValue}
         onChange={this.onChangeUser.moveValue}

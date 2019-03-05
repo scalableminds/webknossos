@@ -10,6 +10,8 @@ import {
   type StateShape1,
   type StateShape2,
 } from "oxalis/model/helpers/deep_update";
+import { clamp } from "libs/utils";
+import constants from "oxalis/constants";
 
 //
 // Update helpers
@@ -38,7 +40,29 @@ const updateActiveMapping = (
 function SettingsReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
     case "UPDATE_USER_SETTING": {
-      const { propertyName, value } = action;
+      const { propertyName } = action;
+      let { value } = action;
+
+      switch (propertyName) {
+        case "layoutScaleValue": {
+          value = clamp(constants.MIN_LAYOUT_SCALE, value, constants.MAX_LAYOUT_SCALE);
+          break;
+        }
+        case "brushSize": {
+          value = clamp(constants.MIN_BRUSH_SIZE, value, constants.MAX_BRUSH_SIZE);
+          break;
+        }
+        case "moveValue":
+        case "moveValue3d": {
+          value = clamp(constants.MIN_MOVE_VALUE, value, constants.MAX_MOVE_VALUE);
+          break;
+        }
+        case "particleSize": {
+          value = clamp(constants.MIN_PARTICLE_SIZE, value, constants.MAX_PARTICLE_SIZE);
+          break;
+        }
+        default: // pass
+      }
 
       return updateUserConfig(state, { [propertyName]: value });
     }

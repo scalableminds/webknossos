@@ -51,12 +51,7 @@ const createDirLight = (position, target, intensity, parent) => {
   return dirLight;
 };
 
-const raycaster = new THREE.Raycaster(
-  new THREE.Vector3(0, 0, 0),
-  new THREE.Vector3(0, 0, 0),
-  -1000000,
-  1000000,
-);
+const raycaster = new THREE.Raycaster();
 const oldHit = {
   object: null,
   color: null,

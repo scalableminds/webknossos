@@ -58,32 +58,32 @@ class DatasetAddWkConnectView extends React.PureComponent<PropsWithForm> {
     const { activeUser } = this.props;
 
     this.props.form.validateFields(async (err, formValues) => {
-      if (!err && activeUser != null) {
-        const neuroglancerConfig = this.validateAndParseUrl(formValues.url);
-        const fullLayers = _.keyBy(neuroglancerConfig.layers, "name");
-        // Remove unnecessary attributes of the layer, the precomputed source prefix needs to be removed as well
-        const layers = _.mapValues(fullLayers, ({ source, type }) => ({
-          type,
-          source: source.replace(/^(precomputed:\/\/)/, ""),
-        }));
+      if (err || activeUser == null) return;
 
-        const datasetConfig = {
-          neuroglancer: {
-            [activeUser.organization]: {
-              [formValues.name]: {
-                layers,
-              },
+      const neuroglancerConfig = this.validateAndParseUrl(formValues.url);
+      const fullLayers = _.keyBy(neuroglancerConfig.layers, "name");
+      // Remove unnecessary attributes of the layer, the precomputed source prefix needs to be removed as well
+      const layers = _.mapValues(fullLayers, ({ source, type }) => ({
+        type,
+        source: source.replace(/^(precomputed:\/\/)/, ""),
+      }));
+
+      const datasetConfig = {
+        neuroglancer: {
+          [activeUser.organization]: {
+            [formValues.name]: {
+              layers,
             },
           },
-        };
+        },
+      };
 
-        await addWkConnectDataset(formValues.datastore, datasetConfig);
+      trackAction("Add wk-connect dataset");
+      await addWkConnectDataset(formValues.datastore, datasetConfig);
 
-        Toast.success(messages["dataset.add_success"]);
-        trackAction("Add remote dataset");
-        await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
-        this.props.onAdded(activeUser.organization, formValues.name);
-      }
+      Toast.success(messages["dataset.add_success"]);
+      await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
+      this.props.onAdded(activeUser.organization, formValues.name);
     });
   };
 

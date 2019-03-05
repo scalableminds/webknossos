@@ -59,7 +59,7 @@ const DatasetAddView = ({ history }: Props) => {
           tab={
             <span>
               <Icon type="plus" />
-              Add wk-connect Dataset
+              Add Dataset via wk-connect
             </span>
           }
           key="2"

@@ -211,7 +211,7 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
 
 class OnboardingView extends React.PureComponent<Props, State> {
   state = {
-    currentStep: 2,
+    currentStep: 0,
     datastores: [],
     organizationName: "",
     datasetNameToImport: null,

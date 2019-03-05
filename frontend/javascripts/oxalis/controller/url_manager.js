@@ -107,7 +107,7 @@ class UrlManager {
     const position = V3.floor(getPosition(Store.getState().flycam));
     const { viewMode } = Store.getState().temporaryConfiguration;
     const viewModeIndex = ViewModeValues.indexOf(viewMode);
-    const zoomStep = Store.getState().flycam.zoomStep.toFixed(2);
+    const zoomStep = Store.getState().flycam.zoomStep.toFixed(3);
     const rotation = constants.MODES_ARBITRARY.includes(viewMode)
       ? getRotation(Store.getState().flycam).map(e => e.toFixed(2))
       : [];

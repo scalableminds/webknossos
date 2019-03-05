@@ -32,6 +32,7 @@ import TreesTabView, { importNmls } from "oxalis/view/right-menu/trees_tab_view"
 import VersionView from "oxalis/view/version_view";
 import messages from "messages";
 import window, { document, location } from "libs/window";
+import ErrorHandling from "libs/error_handling";
 
 import { GoldenLayoutAdapter } from "./golden_layout_adapter";
 import { determineLayout, headerHeight } from "./default_layout_configs";
@@ -96,7 +97,8 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     };
   }
 
-  componentDidCatch() {
+  componentDidCatch(error: Error) {
+    ErrorHandling.notify(error);
     Toast.error(messages["react.rendering_error"]);
   }
 

@@ -17,7 +17,6 @@ import constants, {
   OrthoViewCrosshairColors,
   OrthoViewGrayCrosshairColor,
   OrthoViewValues,
-  OrthoViews,
   type Vector3,
   type Vector4,
 } from "oxalis/constants";
@@ -150,16 +149,7 @@ class Plane {
     this.TDViewBorders.position.copy(posVec);
     this.crosshair[0].position.copy(posVec);
     this.crosshair[1].position.copy(posVec);
-
-    const offset = new THREE.Vector3(0, 0, 0);
-    if (this.planeID === OrthoViews.PLANE_XY) {
-      offset.z = 1;
-    } else if (this.planeID === OrthoViews.PLANE_YZ) {
-      offset.x = -1;
-    } else if (this.planeID === OrthoViews.PLANE_XZ) {
-      offset.y = -1;
-    }
-    this.plane.position.copy(offset.addVectors(posVec, offset));
+    this.plane.position.copy(posVec);
 
     const globalPosition = getPosition(Store.getState().flycam);
     this.plane.material.setGlobalPosition(globalPosition);

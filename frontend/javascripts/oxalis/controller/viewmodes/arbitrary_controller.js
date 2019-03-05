@@ -1,8 +1,4 @@
-/**
- * arbitrary_controller.js
- * @flow
- */
-
+// @flow
 import BackboneEvents from "backbone-events-standalone";
 import * as React from "react";
 import _ from "lodash";
@@ -51,6 +47,7 @@ import app from "app";
 import constants, { ArbitraryViewport, type ViewMode, type Point2 } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import messages from "messages";
+import { downloadScreenshot } from "oxalis/view/rendering_utils";
 
 const arbitraryViewportSelector = "#inputcatcher_arbitraryViewport";
 
@@ -233,6 +230,8 @@ class ArbitraryController extends React.PureComponent<Props> {
       "shift + space": () => {
         Store.dispatch(deleteActiveNodeAsUserAction(Store.getState()));
       },
+
+      q: downloadScreenshot,
     });
   }
 

@@ -10,16 +10,16 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/19.03.0...HEAD)
 
 ### Added
-- 
+- webKnossos now comes with a list of sample datasets that can be automatically downloaded and imported from the menu. [#3725](https://github.com/scalableminds/webknossos/pull/3725)
 
 ### Changed
 - The brush size will now be remembered across page reloads. [#3827](https://github.com/scalableminds/webknossos/pull/3827)
 
 ### Fixed
-- 
+-
 
 ### Removed
-- 
+-
 
 
 ## [19.03.0](https://github.com/scalableminds/webknossos/releases/tag/19.03.0) - 2019-02-25

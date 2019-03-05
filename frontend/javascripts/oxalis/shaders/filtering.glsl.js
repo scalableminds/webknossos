@@ -10,17 +10,16 @@ export const getBilinearColorFor: ShaderModule = {
       float layerIndex,
       float d_texture_width,
       float packingDegree,
-      vec3 coords,
-      float isFallback
+      vec3 coords
     ) {
       coords = coords + transDim(vec3(-0.5, -0.5, 0.0));
       vec2 bifilteringParams = transDim((coords - floor(coords))).xy;
       coords = floor(coords);
 
-      vec4 a = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, isFallback);
-      vec4 b = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 0, 0)), isFallback);
-      vec4 c = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(0, 1, 0)), isFallback);
-      vec4 d = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 1, 0)), isFallback);
+      vec4 a = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords);
+      vec4 b = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 0, 0)));
+      vec4 c = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(0, 1, 0)));
+      vec4 d = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 1, 0)));
       if (a.a < 0.0 || b.a < 0.0 || c.a < 0.0 || d.a < 0.0) {
         // We need to check all four colors for a negative parts, because there will be black
         // lines at the borders otherwise (black gets mixed with data)
@@ -43,22 +42,21 @@ export const getTrilinearColorFor: ShaderModule = {
       float layerIndex,
       float d_texture_width,
       float packingDegree,
-      vec3 coords,
-      float isFallback
+      vec3 coords
     ) {
       coords = coords + transDim(vec3(-0.5, -0.5, 0.0));
       vec3 bifilteringParams = transDim((coords - floor(coords))).xyz;
       coords = floor(coords);
 
-      vec4 a = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, isFallback);
-      vec4 b = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 0, 0)), isFallback);
-      vec4 c = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(0, 1, 0)), isFallback);
-      vec4 d = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 1, 0)), isFallback);
+      vec4 a = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords);
+      vec4 b = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 0, 0)));
+      vec4 c = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(0, 1, 0)));
+      vec4 d = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 1, 0)));
 
-      vec4 a2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(0, 0, 1)), isFallback);
-      vec4 b2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 0, 1)), isFallback);
-      vec4 c2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(0, 1, 1)), isFallback);
-      vec4 d2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 1, 1)), isFallback);
+      vec4 a2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(0, 0, 1)));
+      vec4 b2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 0, 1)));
+      vec4 c2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(0, 1, 1)));
+      vec4 d2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 1, 1)));
 
       if (a.a < 0.0 || b.a < 0.0 || c.a < 0.0 || d.a < 0.0 ||
         a2.a < 0.0 || b2.a < 0.0 || c2.a < 0.0 || d2.a < 0.0) {
@@ -89,19 +87,18 @@ const getMaybeFilteredColor: ShaderModule = {
       float layerIndex,
       float d_texture_width,
       float packingDegree,
-      vec3 coords,
-      bool suppressBilinearFiltering,
-      float isFallback
+      vec3 worldPositionUVW,
+      bool suppressBilinearFiltering
     ) {
       vec4 color;
       if (!suppressBilinearFiltering && useBilinearFiltering) {
         <% if (isOrthogonal) { %>
-          color = getBilinearColorFor(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, isFallback);
+          color = getBilinearColorFor(lookUpTexture, layerIndex, d_texture_width, packingDegree, worldPositionUVW);
         <% } else { %>
-          color = getTrilinearColorFor(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, isFallback);
+          color = getTrilinearColorFor(lookUpTexture, layerIndex, d_texture_width, packingDegree, worldPositionUVW);
         <% } %>
       } else {
-        color = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, isFallback);
+        color = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, worldPositionUVW);
       }
       return color;
     }
@@ -116,17 +113,12 @@ export const getMaybeFilteredColorOrFallback: ShaderModule = {
       float layerIndex,
       float d_texture_width,
       float packingDegree,
-      vec3 coords,
-      vec3 fallbackCoords,
-      bool hasFallback,
+      vec3 worldPositionUVW,
       bool suppressBilinearFiltering,
       vec4 fallbackColor
     ) {
-      vec4 color = getMaybeFilteredColor(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, suppressBilinearFiltering, 0.0);
+      vec4 color = getMaybeFilteredColor(lookUpTexture, layerIndex, d_texture_width, packingDegree, worldPositionUVW, suppressBilinearFiltering);
 
-      if (color.a < 0.0 && hasFallback) {
-        color = getMaybeFilteredColor(lookUpTexture, layerIndex, d_texture_width, packingDegree, fallbackCoords, suppressBilinearFiltering, 1.0);
-      }
       if (color.a < 0.0) {
         // Render gray for not-yet-existing data
         color = fallbackColor;

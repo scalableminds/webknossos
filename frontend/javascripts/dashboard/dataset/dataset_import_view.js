@@ -12,7 +12,7 @@ import type {
   APIDatasetId,
 } from "admin/api_flow_types";
 import type { DatasetConfiguration } from "oxalis/store";
-import { datasetCache } from "dashboard/dashboard_view";
+import { datasetCache } from "dashboard/dataset_view";
 import {
   getDataset,
   updateDataset,

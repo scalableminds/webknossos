@@ -17,9 +17,10 @@ const memoizedThrottle = (func, wait = 0, options = {}): Function => {
   };
 };
 
-export const pingDataStoreIfAppropriate = memoizedThrottle(async (requestedUrl: string): Promise<
-  *,
-> => {
+// Do not call this function directly, but call pingMentionedDataStores instead
+// which will take care of extracting the hostnames.
+// Otherwise, the memoization will not work correctly if the path and query-string are part of the URL
+const pingDataStoreIfAppropriate = memoizedThrottle(async (requestedUrl: string): Promise<*> => {
   const [datastores, tracingstore, isInMaintenance] = await Promise.all([
     RestAPI.getDataStoresCached(),
     RestAPI.getTracingStoreCached(),
@@ -93,3 +94,5 @@ const extractUrls = (str: string): Array<string> => {
 export const pingMentionedDataStores = (str: string): void => {
   extractUrls(str).map(pingDataStoreIfAppropriate);
 };
+
+export default {};

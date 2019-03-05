@@ -193,6 +193,7 @@ class SceneController {
       const newGroup = new THREE.Group();
       this.isosurfacesGroupsPerSegmentationId[segmentationId] = newGroup;
       this.isosurfacesRootGroup.add(newGroup);
+      newGroup.cellId = segmentationId;
     }
     this.isosurfacesGroupsPerSegmentationId[segmentationId].add(mesh);
   }

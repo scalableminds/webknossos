@@ -4,7 +4,13 @@ import * as React from "react";
 import * as THREE from "three";
 
 import { InputMouse } from "libs/input";
-import { type OrthoViewMap, OrthoViews, type Point2, type Vector3 } from "oxalis/constants";
+import {
+  type OrthoView,
+  type OrthoViewMap,
+  OrthoViews,
+  type Point2,
+  type Vector3,
+} from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
@@ -135,11 +141,11 @@ class TDController extends React.PureComponent<Props> {
             mouseMove: (delta: Point2, position: Point2) => {
               Store.dispatch(setMousePositionAction([position.x, position.y]));
             },
-            leftClick: () => {
+            leftClick: (_pos: Point2, _plane: OrthoView, event: MouseEvent) => {
               if (this.props.planeView == null || !event.shiftKey) {
                 return;
               }
-              const hitPosition = this.props.planeView.performHitTest();
+              const hitPosition = this.props.planeView.performIsosurfaceHitTest();
               if (!hitPosition) {
                 return;
               }

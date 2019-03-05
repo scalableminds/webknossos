@@ -265,6 +265,7 @@ export type TemporaryConfiguration = {
   +flightmodeRecording: boolean,
   +controlMode: ControlMode,
   +mousePosition: ?Vector2,
+  +hoveredIsosurfaceId: number,
   +activeMapping: {
     +mappingName: ?string,
     +mapping: ?Mapping,
@@ -452,6 +453,7 @@ export const defaultState: OxalisState = {
     flightmodeRecording: false,
     controlMode: ControlModeEnum.VIEW,
     mousePosition: null,
+    hoveredIsosurfaceId: 0,
     activeMapping: {
       mappingName: null,
       mapping: null,

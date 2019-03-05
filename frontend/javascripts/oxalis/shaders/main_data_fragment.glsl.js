@@ -101,6 +101,7 @@ uniform float brushSizeInPixel;
 uniform float planeID;
 uniform vec3 addressSpaceDimensions;
 uniform vec3 addressSpaceDimensionsFallback;
+uniform vec4 hoveredIsosurfaceId;
 
 varying vec4 worldCoord;
 varying vec4 modelCoord;
@@ -160,7 +161,11 @@ void main() {
     vec3 flooredMousePosUVW = transDim(floor(globalMousePosition));
     vec3 mousePosCoords = getRelativeCoords(flooredMousePosUVW, zoomStep);
 
-    vec4 cellIdUnderMouse = getSegmentationId(mousePosCoords, segmentationFallbackCoords, false);
+    // When hovering an isosurface in the 3D viewport, the hoveredIsosurfaceId contains
+    // the hovered cell id. Otherwise, we use the mouse position to look up the active cell id.
+    // Passing the mouse position from the 3D viewport is not an option here, since that position
+    // isn't on the orthogonal planes necessarily.
+    vec4 cellIdUnderMouse = length(hoveredIsosurfaceId) > 0.1 ? hoveredIsosurfaceId : getSegmentationId(mousePosCoords, segmentationFallbackCoords, false);
   <% } %>
 
   // Get Color Value(s)

@@ -9,7 +9,7 @@ The presentation differs corresponding to the user role.
 Normal users can start or continue annotations and work on tasks.
 [Admins and Team Managers](./users.md#access-rights-roles) also have access to dedicated administration screens and advanced dataset properties.
 
-You can view the dataset, or create a new skeleton or volume annotations from this screen.
+You can **view** the dataset, or create a new **skeleton** or **volume** annotations from this screen.
 Search for your dataset by using the search bar or by sorting any of the table columns.
 Learn more about managing datasets in the [Datasets guide](./datasets.md).
 

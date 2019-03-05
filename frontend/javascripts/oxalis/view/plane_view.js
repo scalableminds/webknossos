@@ -1,7 +1,4 @@
-/**
- * plane_view.js
- * @flow
- */
+// @flow
 import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 import TWEEN from "tween.js";
@@ -12,7 +9,6 @@ import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import Constants, {
-  type OrthoView,
   OrthoViewColors,
   type OrthoViewMap,
   OrthoViewValues,
@@ -22,25 +18,7 @@ import Store from "oxalis/store";
 import app from "app";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import window from "libs/window";
-
-export const setupRenderArea = (
-  renderer: THREE.WebGLRenderer,
-  x: number,
-  y: number,
-  viewportWidth: number,
-  viewportHeight: number,
-  color: number,
-) => {
-  renderer.setViewport(x, y, viewportWidth, viewportHeight);
-  renderer.setScissor(x, y, viewportWidth, viewportHeight);
-  renderer.setScissorTest(true);
-  renderer.setClearColor(color, 1);
-};
-
-export const clearCanvas = (renderer: THREE.WebGLRenderer) => {
-  setupRenderArea(renderer, 0, 0, renderer.domElement.width, renderer.domElement.height, 0xffffff);
-  renderer.clear();
-};
+import { clearCanvas, setupRenderArea } from "oxalis/view/rendering_utils";
 
 const createDirLight = (position, target, intensity, parent) => {
   const dirLight = new THREE.DirectionalLight(0xffffff, intensity);
@@ -79,6 +57,8 @@ class PlaneView {
       // Let's set up cameras
       // No need to set any properties, because the cameras controller will deal with that
       this.cameras[plane] = new THREE.OrthographicCamera(0, 0, 0, 0);
+      // This name can be used to retrieve the camera from the scene
+      this.cameras[plane].name = plane;
       scene.add(this.cameras[plane]);
     }
 
@@ -116,28 +96,6 @@ class PlaneView {
     this.renderFunction();
 
     window.requestAnimationFrame(() => this.animate());
-  }
-
-  renderOrthoViewToTexture(plane: OrthoView, scene: THREE.Scene): Uint8Array {
-    const SceneController = getSceneController();
-    const { renderer } = SceneController;
-
-    renderer.autoClear = true;
-    let { width, height } = getInputCatcherRect(Store.getState(), plane);
-    width = Math.round(width);
-    height = Math.round(height);
-
-    renderer.setViewport(0, 0, width, height);
-    renderer.setScissorTest(false);
-    renderer.setClearColor(0x000000, 1);
-
-    const renderTarget = new THREE.WebGLRenderTarget(width, height);
-    const buffer = new Uint8Array(width * height * 4);
-
-    SceneController.updateSceneForCam(plane);
-    renderer.render(scene, this.cameras[plane], renderTarget);
-    renderer.readRenderTargetPixels(renderTarget, 0, 0, width, height, buffer);
-    return buffer;
   }
 
   renderFunction(forceRender: boolean = false): void {

@@ -5,7 +5,6 @@ import {
   MAPPING_TEXTURE_WIDTH,
   MAPPING_COLOR_TEXTURE_WIDTH,
 } from "oxalis/model/bucket_data_handling/mappings";
-import { floatsPerLookUpEntry } from "oxalis/model/bucket_data_handling/texture_bucket_manager";
 import constants, {
   ViewModeValuesIndices,
   OrthoViewIndices,
@@ -90,7 +89,6 @@ uniform vec3 bboxMin;
 uniform vec3 bboxMax;
 uniform vec3 globalPosition;
 uniform vec3 anchorPoint;
-uniform vec3 fallbackAnchorPoint;
 uniform float zoomStep;
 uniform float zoomValue;
 uniform vec3 uvw;
@@ -100,7 +98,6 @@ uniform bool isMouseInCanvas;
 uniform float brushSizeInPixel;
 uniform float planeID;
 uniform vec3 addressSpaceDimensions;
-uniform vec3 addressSpaceDimensionsFallback;
 uniform vec4 hoveredIsosurfaceId;
 
 varying vec4 worldCoord;
@@ -110,7 +107,6 @@ varying mat4 savedModelMatrix;
 const float bucketWidth = <%= bucketWidth %>;
 const float bucketSize = <%= bucketSize %>;
 const float l_texture_width = <%= l_texture_width %>;
-const float floatsPerLookUpEntry = <%= floatsPerLookUpEntry %>;
 
 // For some reason, taking the dataset scale from the uniform results is imprecise
 // rendering of the brush circle (and issues in the arbitrary modes). That's why it
@@ -141,31 +137,24 @@ void main() {
     gl_FragColor = vec4(0.0);
     return;
   }
-  vec3 coords = getRelativeCoords(worldCoordUVW, zoomStep);
+  vec3 relativeCoords = getRelativeCoords(worldCoordUVW, zoomStep);
 
-  vec3 bucketPosition = div(floor(coords), bucketWidth);
+  vec3 bucketPosition = div(floor(relativeCoords), bucketWidth);
   if (renderBucketIndices) {
     gl_FragColor = vec4(bucketPosition, zoomStep) / 255.;
-    // gl_FragColor = vec4(0.5, 1.0, 1.0, 1.0);
     return;
   }
-  vec3 offsetInBucket = mod(floor(coords), bucketWidth);
 
   <% if (hasSegmentation) { %>
-    float segmentationFallbackZoomStep = min(<%= segmentationName %>_maxZoomStep, zoomStep + 1.0);
-    bool segmentationHasFallback = segmentationFallbackZoomStep > zoomStep;
-    vec3 segmentationFallbackCoords = floor(getRelativeCoords(worldCoordUVW, segmentationFallbackZoomStep));
-
-    vec4 id = getSegmentationId(coords, segmentationFallbackCoords, segmentationHasFallback);
+    vec4 id = getSegmentationId(worldCoordUVW);
 
     vec3 flooredMousePosUVW = transDim(floor(globalMousePosition));
-    vec3 mousePosCoords = getRelativeCoords(flooredMousePosUVW, zoomStep);
 
     // When hovering an isosurface in the 3D viewport, the hoveredIsosurfaceId contains
     // the hovered cell id. Otherwise, we use the mouse position to look up the active cell id.
     // Passing the mouse position from the 3D viewport is not an option here, since that position
     // isn't on the orthogonal planes necessarily.
-    vec4 cellIdUnderMouse = length(hoveredIsosurfaceId) > 0.1 ? hoveredIsosurfaceId : getSegmentationId(mousePosCoords, segmentationFallbackCoords, false);
+    vec4 cellIdUnderMouse = length(hoveredIsosurfaceId) > 0.1 ? hoveredIsosurfaceId : getSegmentationId(flooredMousePosUVW);
   <% } %>
 
   // Get Color Value(s)
@@ -173,12 +162,10 @@ void main() {
   vec3 color_value  = vec3(0.0);
   float fallbackZoomStep;
   bool hasFallback;
-  vec3 fallbackCoords;
   <% _.each(colorLayerNames, function(name, layerIndex){ %>
 
     fallbackZoomStep = min(<%= name %>_maxZoomStep, zoomStep + 1.0);
     hasFallback = fallbackZoomStep > zoomStep;
-    fallbackCoords = floor(getRelativeCoords(worldCoordUVW, fallbackZoomStep));
     // Get grayscale value for <%= name %>
     color_value =
       getMaybeFilteredColorOrFallback(
@@ -186,9 +173,7 @@ void main() {
         <%= formatNumberAsGLSLFloat(layerIndex) %>,
         <%= name %>_data_texture_width,
         <%= isRgbLayerLookup[name] ? "1.0" : "4.0" %>,  // RGB data cannot be packed, gray scale data is always packed into rgba channels
-        coords,
-        fallbackCoords,
-        hasFallback,
+        worldCoordUVW,
         false,
         fallbackGray
       ).xyz;
@@ -241,7 +226,6 @@ void main() {
     formatNumberAsGLSLFloat,
     formatVector3AsVec3: vector3 => `vec3(${vector3.map(formatNumberAsGLSLFloat).join(", ")})`,
     brushToolIndex: formatNumberAsGLSLFloat(volumeToolEnumToIndex(VolumeToolEnum.BRUSH)),
-    floatsPerLookUpEntry: formatNumberAsGLSLFloat(floatsPerLookUpEntry),
     OrthoViewIndices: _.mapValues(OrthoViewIndices, formatNumberAsGLSLFloat),
   });
 }

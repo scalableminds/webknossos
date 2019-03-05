@@ -1,5 +1,7 @@
 // @flow
 
+import { getResolutionFactors, getRelativeCoords } from "oxalis/shaders/coords.glsl";
+
 import type { ShaderModule } from "./shader_module_system";
 
 export const linearizeVec3ToIndex: ShaderModule = {
@@ -97,37 +99,63 @@ export const getRgbaAtXYIndex: ShaderModule = {
   `,
 };
 
-const getColorFor: ShaderModule = {
+export const getColorForCoords: ShaderModule = {
   requirements: [
     linearizeVec3ToIndex,
     linearizeVec3ToIndexWithMod,
     getRgbaAtIndex,
     getRgbaAtXYIndex,
+    getRelativeCoords,
+    getResolutionFactors,
   ],
   code: `
-    vec4 getColorFor(
+    vec4 getColorForCoords(
       sampler2D lookUpTexture,
       float layerIndex,
       float d_texture_width,
       float packingDegree,
-      vec3 bucketPosition,
-      vec3 offsetInBucket,
-      float isFallback
+      vec3 worldPositionUVW
     ) {
-      float bucketIdx = linearizeVec3ToIndex(bucketPosition, isFallback > 0.0 ? addressSpaceDimensionsFallback : addressSpaceDimensions);
+      vec3 coords = floor(getRelativeCoords(worldPositionUVW, zoomStep));
+      vec3 relativeBucketPosition = div(coords, bucketWidth);
+      vec3 offsetInBucket = mod(coords, bucketWidth);
 
-      // If we are making a fallback lookup, the lookup area we are interested in starts at
-      // volumeOf(addressSpaceDimensions). If isFallback is true, we use that offset. Otherwise, the offset is 0.
-      float fallbackOffset = isFallback * addressSpaceDimensions.x * addressSpaceDimensions.y * addressSpaceDimensions.z;
-      float bucketIdxInTexture =
-        bucketIdx * floatsPerLookUpEntry
-        + fallbackOffset;
+      float bucketIdx = linearizeVec3ToIndex(relativeBucketPosition, addressSpaceDimensions);
 
-      float bucketAddress = getRgbaAtIndex(
+      vec2 bucketAddressWithZoomStep = getRgbaAtIndex(
         lookUpTexture,
         l_texture_width,
-        bucketIdxInTexture
-      ).x;
+        bucketIdx
+      ).ra;
+
+      float bucketAddress = bucketAddressWithZoomStep.x;
+      float renderedZoomStep = bucketAddressWithZoomStep.y;
+
+      if (renderedZoomStep != zoomStep) {
+        /* We already know which fallback bucket we have to look into. However,
+         * for 8 mag-1 buckets, there is usually one fallback bucket in mag-2.
+         * Therefore, depending on the actual mag-1 bucket, we have to look into
+         * different sub-volumes of the one fallback bucket. This is calculated as
+         * the subVolumeIndex.
+         * Then, we adapt the look up position *within* the bucket.
+         *
+         * Example Scenario (let's consider only the x axis):
+         * If we are in the [4, _, _, 0]-bucket, we have to look into the **first** half
+         * of the [2, _, _, 1]-bucket.
+         * If we are in the [5, _, _, 0]-bucket, we have to look into the **second** half
+         * of the [2, _, _, 1]-bucket.
+         * We can determine which "half" (subVolumeIndex) is relevant by doing a modulo operation
+         * with the resolution factor. A typical resolution factor is 2.
+         */
+
+        vec3 magnificationFactors = getResolutionFactors(renderedZoomStep, zoomStep);
+        vec3 worldBucketPosition = relativeBucketPosition + anchorPoint;
+        vec3 subVolumeIndex = mod(worldBucketPosition, magnificationFactors);
+        offsetInBucket = floor(
+          (offsetInBucket + vec3(bucketWidth) * subVolumeIndex)
+          / magnificationFactors
+        );
+      }
 
       if (bucketAddress == -2.0) {
         // The bucket is out of bounds. Render black
@@ -135,7 +163,7 @@ const getColorFor: ShaderModule = {
         // since the approximate implementation of the bucket picker missed the bucket.
         // We simply handle this case as if the bucket was not yet loaded which means
         // that fallback data is loaded.
-        // The downside is that data which does exist, will be rendered gray instead of black.
+        // The downside is that data which does not exist, will be rendered gray instead of black.
         // Issue to track progress: #3446
         float alpha = isFlightMode() ? -1.0 : 0.0;
         return vec4(0.0, 0.0, 0.0, alpha);
@@ -190,34 +218,6 @@ const getColorFor: ShaderModule = {
       }
 
       return vec4(0.0);
-    }
-  `,
-};
-
-export const getColorForCoords: ShaderModule = {
-  requirements: [getColorFor],
-  code: `
-    vec4 getColorForCoords(
-      sampler2D lookUpTexture,
-      float layerIndex,
-      float d_texture_width,
-      float packingDegree,
-      vec3 coords,
-      float isFallback
-    ) {
-      coords = floor(coords);
-      vec3 bucketPosition = div(coords, bucketWidth);
-      vec3 offsetInBucket = mod(coords, bucketWidth);
-
-      return getColorFor(
-        lookUpTexture,
-        layerIndex,
-        d_texture_width,
-        packingDegree,
-        bucketPosition,
-        offsetInBucket,
-        isFallback
-      );
     }
   `,
 };

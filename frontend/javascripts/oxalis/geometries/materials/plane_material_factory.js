@@ -113,10 +113,6 @@ class PlaneMaterialFactory {
         type: "v4",
         value: new THREE.Vector3(0, 0, 0),
       },
-      fallbackAnchorPoint: {
-        type: "v4",
-        value: new THREE.Vector3(0, 0, 0),
-      },
       zoomStep: {
         type: "f",
         value: 1,
@@ -187,11 +183,7 @@ class PlaneMaterialFactory {
       },
       addressSpaceDimensions: {
         type: "v3",
-        value: new THREE.Vector3(...addressSpaceDimensions.normal),
-      },
-      addressSpaceDimensionsFallback: {
-        type: "v3",
-        value: new THREE.Vector3(...addressSpaceDimensions.fallback),
+        value: new THREE.Vector3(...addressSpaceDimensions),
       },
       hoveredIsosurfaceId: {
         type: "v4",
@@ -292,10 +284,6 @@ class PlaneMaterialFactory {
 
     this.material.setAnchorPoint = ([x, y, z]) => {
       this.uniforms.anchorPoint.value.set(x, y, z);
-    };
-
-    this.material.setFallbackAnchorPoint = ([x, y, z]) => {
-      this.uniforms.fallbackAnchorPoint.value.set(x, y, z);
     };
 
     this.material.setSegmentationAlpha = alpha => {

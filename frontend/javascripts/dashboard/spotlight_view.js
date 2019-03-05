@@ -129,6 +129,60 @@ const WelcomeHeader = ({ history }) => (
   </div>
 );
 
+const MissingDatasetCard = () => (
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "center",
+      marginTop: 80,
+    }}
+  >
+    <Col className="gallery-dataset-col">
+      <a
+        href="https://goo.gl/forms/QICmEcQyid6gb8Kw1"
+        title="Click to add your missing dataset"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="not-highlighted-link"
+      >
+        <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card" bordered={false}>
+          <div style={{ display: "flex", height: "100%" }}>
+            <div className="publication-description">
+              <h3>Your dataset is missing here?</h3>
+              <div className="publication-description-body nice-scrollbar">
+                If you want to add your own dataset to this publication library just click here. It
+                opens a form which will contact us so we can add your dataset.
+              </div>
+            </div>
+            <div className="dataset-thumbnail">
+              <div
+                style={{
+                  position: "relative",
+                  height: "100%",
+                  display: "flex",
+                  alignItems: "flex-end",
+                }}
+              >
+                <div
+                  className="dataset-click-hint absolute"
+                  style={{
+                    opacity: 1,
+                    backgroundColor: "rgba(0, 0, 0, 0.4)",
+                    fontSize: 220,
+                  }}
+                >
+                  ?
+                </div>
+                <div className="dataset-thumbnail-image absolute" id="add-missing-dataset-image" />
+              </div>
+            </div>
+          </div>
+        </Card>
+      </a>
+    </Col>
+  </div>
+);
+
 type StateProps = {|
   activeUser: ?APIUser,
 |};
@@ -213,62 +267,7 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
               )}
             </div>
           </Spin>
-          {features().addMissingDatasetButtonEnabled ? (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                marginTop: 80,
-              }}
-            >
-              <Col className="gallery-dataset-col">
-                <a
-                  href="https://goo.gl/forms/QICmEcQyid6gb8Kw1"
-                  title="Click to add your missing dataset"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="not-highlighted-link"
-                >
-                  <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card" bordered={false}>
-                    <div style={{ display: "flex", height: "100%" }}>
-                      <div className="publication-description">
-                        <h3>Your dataset is missing here?</h3>
-                        <div className="publication-description-body nice-scrollbar">
-                          If you want to add your own dataset to this publication library just click
-                          here. It opens a form which will contact us so we can add your dataset.
-                        </div>
-                      </div>
-                      <div className="dataset-thumbnail">
-                        <div
-                          style={{
-                            position: "relative",
-                            height: "100%",
-                            display: "flex",
-                            alignItems: "flex-end",
-                          }}
-                        >
-                          <div
-                            className="dataset-click-hint absolute"
-                            style={{
-                              opacity: 1,
-                              backgroundColor: "rgba(0, 0, 0, 0.4)",
-                              fontSize: 220,
-                            }}
-                          >
-                            ?
-                          </div>
-                          <div
-                            className="dataset-thumbnail-image absolute"
-                            id="add-missing-dataset-image"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                </a>
-              </Col>
-            </div>
-          ) : null}
+          {features().addMissingDatasetButtonEnabled ? <MissingDatasetCard /> : null}
           <div id="spotlight-footnote">
             Visit <a href="https://publication.webknossos.org/">publication.webknossos.org</a> for
             the original webKnossos publication website.

@@ -10,19 +10,20 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/19.03.0...HEAD)
 
 ### Added
-- 
+- Added a shortcut (Q) and button in the actions dropdown to screenshot the tracing views. The screenshots will contain everything that is visible in the tracing views, so feel free to disable the crosshairs in the settings or toggle the tree visibility using the (1) and (2) shortcuts before triggering the screenshot. [#3834](https://github.com/scalableminds/webknossos/pull/3834)
+- The dataset settings within the tracing view allow to select between different loading strategies now ("best quality first" and "progressive quality"). Additionally, the rendering can use different magnifications as a fallback (instead of only one magnification). [#3801](https://github.com/scalableminds/webknossos/pull/3801)
 
 ### Changed
 - 
 
 ### Fixed
-- 
+- Fixed the setting which enables to hide the planes within the 3D viewport. [#3857](https://github.com/scalableminds/webknossos/pull/3857)
 
 ### Removed
 - 
 
 
-## [19.03.0](https://github.com/scalableminds/webknossos/releases/tag/19.03.0) - 2019-02-25
+## [19.03.0](https://github.com/scalableminds/webknossos/releases/tag/19.03.0) - 2019-03-04
 [Commits](https://github.com/scalableminds/webknossos/compare/19.02.0...19.03.0)
 
 ### Highlights
@@ -42,6 +43,9 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Mappings for segmentations will be read automatically from the file system. It's not necessary to define the mappings within the `datasource-properties.json`, anymore. [#3720](https://github.com/scalableminds/webknossos/pull/3720)
 - The active node is highlighted with a "halo ring". Additionally, the node is also rendered as a circle. In flight and oblique modes the halo is hidden. [#3731](https://github.com/scalableminds/webknossos/pull/3731)
 - In the dashboard list of active tasks, the project name is now featured more prominently, as it switched places with the task type summary. [#3792](https://github.com/scalableminds/webknossos/pull/3792)
+- Isosurfaces are now loaded from the middle outwards. [#3818](https://github.com/scalableminds/webknossos/pull/3818)
+- The brush size will now be remembered across page reloads. [#3827](https://github.com/scalableminds/webknossos/pull/3827)
+- Do not show publication view if no publications are specified. [#3778](https://github.com/scalableminds/webknossos/pull/3778)
 
 ### Fixed
 - Fixed an error that occured when changing the URL hash. [#3746](https://github.com/scalableminds/webknossos/pull/3746)
@@ -71,9 +75,10 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 - Added the possibility to fade the alpha value of data layers. Also, a dataset can now contain both RGB and grayscale layers. [#3670](https://github.com/scalableminds/webknossos/pull/3670)
 - Added the possibility to disable that the current layout is saved automatically when changing it. Instead, the layout can be saved explicitly. [#3620](https://github.com/scalableminds/webknossos/pull/3620)
-- Isosurface computation can now be triggered for whole segments (shift + click on a segment in view mode). [#3655](https://github.com/scalableminds/webknossos/pull/3655)
+- Added the possibility to use flight and oblique mode when viewing a dataset. [#3644](https://github.com/scalableminds/webknossos/pull/3644)
 - Added pagination to the REST API route `GET /projects/:name/tasks` (new optional parameters `limit` and `pageNumber`). [#3659](https://github.com/scalableminds/webknossos/pull/3659)
 - Added the possibility to open the version restore view for read-only tracings. Older versions can be previewed and be downloaded as NML. [#3660](https://github.com/scalableminds/webknossos/pull/3660)
+>>>>>>> f4e956e20af7f5db60a11edb8a7cb0a0dac46a43
 
 ### Changed
 

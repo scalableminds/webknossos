@@ -8,6 +8,7 @@ import createSagaMiddleware from "redux-saga";
 
 import type {
   APIAllowedMode,
+  APIAnnotationType,
   APIDataLayer,
   APIDataStore,
   APIDataset,
@@ -17,8 +18,8 @@ import type {
   APISettings,
   APITask,
   APITracingStore,
-  APIAnnotationType,
   APIUser,
+  APIUserBase,
   MeshMetaData,
 } from "admin/api_flow_types";
 import type { Action } from "oxalis/model/actions/actions";
@@ -148,6 +149,7 @@ export type Annotation = {|
   +tracingStore: APITracingStore,
   +annotationType: AnnotationType,
   +meshes: Array<MeshMetaData>,
+  +user: ?APIUserBase,
 |};
 
 type TracingBase = {|
@@ -213,6 +215,8 @@ export type DatasetLayerConfiguration = {|
   +alpha: number,
 |};
 
+export type LoadingStrategy = "BEST_QUALITY_FIRST" | "PROGRESSIVE_QUALITY";
+
 export type DatasetConfiguration = {|
   +fourBit: boolean,
   +interpolation: boolean,
@@ -227,32 +231,34 @@ export type DatasetConfiguration = {|
   +zoom?: number,
   +rotation?: Vector3,
   +renderMissingDataBlack: boolean,
+  +loadingStrategy: LoadingStrategy,
 |};
 
 export type UserConfiguration = {|
+  +autoSaveLayouts: boolean,
+  +brushSize: number,
   +clippingDistance: number,
   +clippingDistanceArbitrary: number,
   +crosshairSize: number,
   +displayCrosshair: boolean,
   +displayScalebars: boolean,
   +dynamicSpaceDirection: boolean,
-  +keyboardDelay: number,
-  +mouseRotateValue: number,
-  +moveValue: number,
-  +moveValue3d: number,
-  +newNodeNewTree: boolean,
+  +hideTreeRemovalWarning: boolean,
   +highlightCommentedNodes: boolean,
+  +keyboardDelay: number,
+  +layoutScaleValue: number,
+  +mouseRotateValue: number,
+  +moveValue3d: number,
+  +moveValue: number,
+  +newNodeNewTree: boolean,
   +overrideNodeRadius: boolean,
   +particleSize: number,
   +radius: number,
   +rotateValue: number,
-  +layoutScaleValue: number,
   +sortCommentsAsc: boolean,
   +sortTreesByName: boolean,
   +sphericalCapRadius: number,
   +tdViewDisplayPlanes: boolean,
-  +hideTreeRemovalWarning: boolean,
-  +autoSaveLayouts: boolean,
 |};
 
 export type Mapping = { [key: number]: number };
@@ -262,7 +268,6 @@ export type TemporaryConfiguration = {
   +flightmodeRecording: boolean,
   +controlMode: ControlMode,
   +mousePosition: ?Vector2,
-  +brushSize: number,
   +activeMapping: {
     +mappingName: ?string,
     +mapping: ?Mapping,
@@ -410,46 +415,47 @@ const initialAnnotationInfo = {
 
 export const defaultState: OxalisState = {
   datasetConfiguration: {
-    fourBit: true,
+    fourBit: false,
     interpolation: false,
     layers: {},
     quality: 0,
+    loadingStrategy: "PROGRESSIVE_QUALITY",
     segmentationOpacity: 20,
     highlightHoveredCellId: true,
     renderIsosurfaces: false,
     renderMissingDataBlack: true,
   },
   userConfiguration: {
+    autoSaveLayouts: true,
+    brushSize: 50,
     clippingDistance: 50,
     clippingDistanceArbitrary: 64,
     crosshairSize: 0.1,
     displayCrosshair: true,
     displayScalebars: true,
     dynamicSpaceDirection: true,
-    keyboardDelay: 200,
-    mouseRotateValue: 0.004,
-    moveValue: 300,
-    moveValue3d: 300,
-    newNodeNewTree: false,
+    hideTreeRemovalWarning: false,
     highlightCommentedNodes: false,
+    keyboardDelay: 200,
+    layoutScaleValue: 1,
+    mouseRotateValue: 0.004,
+    moveValue3d: 300,
+    moveValue: 300,
+    newNodeNewTree: false,
     overrideNodeRadius: true,
     particleSize: 5,
     radius: 5,
     rotateValue: 0.01,
-    layoutScaleValue: 1,
     sortCommentsAsc: true,
     sortTreesByName: false,
     sphericalCapRadius: Constants.DEFAULT_SPHERICAL_CAP_RADIUS,
     tdViewDisplayPlanes: true,
-    hideTreeRemovalWarning: false,
-    autoSaveLayouts: true,
   },
   temporaryConfiguration: {
     viewMode: Constants.MODE_PLANE_TRACING,
     flightmodeRecording: false,
     controlMode: ControlModeEnum.VIEW,
     mousePosition: null,
-    brushSize: 50,
     activeMapping: {
       mappingName: null,
       mapping: null,
@@ -502,6 +508,7 @@ export const defaultState: OxalisState = {
     },
     volume: null,
     skeleton: null,
+    user: null,
   },
   save: {
     queue: {

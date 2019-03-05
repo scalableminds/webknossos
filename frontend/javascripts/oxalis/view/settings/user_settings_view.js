@@ -25,10 +25,7 @@ import {
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { getMaxZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
-import {
-  setActiveCellAction,
-  setBrushSizeAction,
-} from "oxalis/model/actions/volumetracing_actions";
+import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import {
   setActiveNodeAction,
   setActiveTreeAction,
@@ -60,10 +57,8 @@ type UserSettingsViewProps = {
   onChangeBoundingBox: (value: ?Vector6) => void,
   onChangeRadius: (value: number) => void,
   onChangeZoomStep: (value: number) => void,
-  onChangeBrushSize: (value: number) => void,
   viewMode: ViewMode,
   controlMode: ControlMode,
-  brushSize: number,
 };
 
 class UserSettingsView extends PureComponent<UserSettingsViewProps> {
@@ -270,8 +265,8 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
             min={Constants.MIN_BRUSH_SIZE}
             max={Constants.MAX_BRUSH_SIZE}
             step={5}
-            value={this.props.brushSize}
-            onChange={this.props.onChangeBrushSize}
+            value={this.props.userConfiguration.brushSize}
+            onChange={this.onChangeUser.brushSize}
           />
           <NumberInputSetting
             label="Active Cell ID"
@@ -306,7 +301,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
     );
 
     return (
-      <Collapse defaultActiveKey={["1", "2", "3a", "3b", "4"]}>
+      <Collapse bordered={false} defaultActiveKey={["1", "2", "3a", "3b", "4"]}>
         <Panel header="Controls" key="1">
           <NumberSliderSetting
             label={settings.keyboardDelay}
@@ -351,7 +346,6 @@ const mapStateToProps = (state: OxalisState) => ({
   maxZoomStep: getMaxZoomValue(state),
   viewMode: state.temporaryConfiguration.viewMode,
   controlMode: state.temporaryConfiguration.controlMode,
-  brushSize: state.temporaryConfiguration.brushSize,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
@@ -366,9 +360,6 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   onChangeActiveCellId(id: number) {
     dispatch(setActiveCellAction(id));
-  },
-  onChangeBrushSize(size: number) {
-    dispatch(setBrushSizeAction(size));
   },
   onChangeBoundingBox(boundingBox: ?Vector6) {
     dispatch(setUserBoundingBoxAction(Utils.computeBoundingBoxFromArray(boundingBox)));

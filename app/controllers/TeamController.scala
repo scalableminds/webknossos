@@ -36,7 +36,7 @@ class TeamController @Inject()(teamDAO: TeamDAO,
   def delete(id: String) = sil.SecuredAction.async { implicit request =>
     for {
       teamIdValidated <- ObjectId.parse(id)
-      team <- teamDAO.findOne(teamIdValidated) ?~> "team.notFound"
+      team <- teamDAO.findOne(teamIdValidated) ?~> "team.notFound" ~> NOT_FOUND
       _ <- teamDAO.deleteOne(teamIdValidated)
       _ <- userTeamRolesDAO.removeTeamFromAllUsers(teamIdValidated)
     } yield {
@@ -47,7 +47,7 @@ class TeamController @Inject()(teamDAO: TeamDAO,
   def create = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(teamNameReads) { teamName =>
       for {
-        _ <- bool2Fox(request.identity.isAdmin) ?~> "user.noAdmin"
+        _ <- bool2Fox(request.identity.isAdmin) ?~> "user.noAdmin" ~> FORBIDDEN
         team = Team(ObjectId.generate, request.identity._organization, teamName)
         _ <- teamDAO.insertOne(team)
         js <- teamService.publicWrites(team)

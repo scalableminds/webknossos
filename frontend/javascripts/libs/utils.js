@@ -520,13 +520,13 @@ export function waitForSelector(selector: string): Promise<*> {
 export function convertDecToBase256(num: number): Vector4 {
   const divMod = n => [Math.floor(n / 256), n % 256];
   let tmp = num;
-  // eslint-disable-next-line
+  // eslint-disable-next-line one-var
   let r, g, b, a;
 
-  [tmp, r] = divMod(tmp); // eslint-disable-line
-  [tmp, g] = divMod(tmp); // eslint-disable-line
-  [tmp, b] = divMod(tmp); // eslint-disable-line
-  [tmp, a] = divMod(tmp); // eslint-disable-line
+  [tmp, r] = divMod(tmp); // eslint-disable-line prefer-const
+  [tmp, g] = divMod(tmp); // eslint-disable-line prefer-const
+  [tmp, b] = divMod(tmp); // eslint-disable-line prefer-const
+  [tmp, a] = divMod(tmp); // eslint-disable-line prefer-const
 
   // Big endian
   return [a, b, g, r];
@@ -580,4 +580,32 @@ export function chunkIntoTimeWindows<T>(
     },
     [],
   );
+}
+
+export function convertBufferToImage(
+  buffer: Uint8Array,
+  width: number,
+  height: number,
+  flipHorizontally: boolean = true,
+): Promise<Blob> {
+  return new Promise(resolve => {
+    width = Math.round(width);
+    height = Math.round(height);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = width;
+    canvas.height = height;
+
+    const imageData = ctx.createImageData(width, height);
+    imageData.data.set(buffer);
+    ctx.putImageData(imageData, 0, 0);
+
+    if (flipHorizontally) {
+      ctx.transform(1, 0, 0, -1, 0, height);
+      ctx.drawImage(canvas, 0, 0);
+    }
+
+    canvas.toBlob(blob => resolve(blob));
+  });
 }

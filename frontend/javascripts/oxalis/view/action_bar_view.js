@@ -114,6 +114,8 @@ class ActionBarView extends React.PureComponent<Props, State> {
   render() {
     const isTraceMode = this.props.controlMode === ControlModeEnum.TRACE;
     const isVolumeSupported = !Constants.MODES_ARBITRARY.includes(this.props.viewMode);
+    const isArbitrarySupported =
+      this.props.hasSkeleton || this.props.controlMode === ControlModeEnum.VIEW;
     const layoutMenu = (
       <LayoutMenu
         {...this.props.layoutProps}
@@ -147,7 +149,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
           {!this.props.isReadOnly && this.props.hasVolume && isVolumeSupported ? (
             <VolumeActionsView />
           ) : null}
-          {this.props.hasSkeleton && isTraceMode ? <ViewModesView /> : null}
+          {isArbitrarySupported ? <ViewModesView /> : null}
           {isTraceMode ? null : this.renderStartTracingButton()}
         </div>
         <AddNewLayoutModal

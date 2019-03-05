@@ -1,8 +1,4 @@
-/**
- * skeletontracing_plane_controller.js
- * @flow
- */
-
+// @flow
 import * as THREE from "three";
 import _ from "lodash";
 
@@ -44,6 +40,7 @@ import type PlaneView from "oxalis/view/plane_view";
 import Store from "oxalis/store";
 import api from "oxalis/api/internal_api";
 import getSceneController from "oxalis/controller/scene_controller_provider";
+import { renderToTexture } from "oxalis/view/rendering_utils";
 
 const OrthoViewToNumber: OrthoViewMap<number> = {
   [OrthoViews.PLANE_XY]: 0,
@@ -139,12 +136,13 @@ function onClick(
   const pickingNode = SceneController.skeleton.startPicking(isTouch);
   const pickingScene = new THREE.Scene();
   pickingScene.add(pickingNode);
+  const camera = planeView.getCameras()[plane];
 
   let { width, height } = getInputCatcherRect(Store.getState(), plane);
   width = Math.round(width);
   height = Math.round(height);
 
-  const buffer = planeView.renderOrthoViewToTexture(plane, pickingScene);
+  const buffer = renderToTexture(plane, pickingScene, camera);
   // Beware of the fact that new browsers yield float numbers for the mouse position
   // Subtract the CSS border as the renderer viewport is smaller than the inputcatcher
   const borderWidth = OUTER_CSS_BORDER;

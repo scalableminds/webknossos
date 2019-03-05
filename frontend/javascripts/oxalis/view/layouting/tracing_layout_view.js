@@ -149,7 +149,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     const headerClassName = classNames({ construction: isDatasetOnScratchVolume });
 
     return (
-      <NmlUploadZoneContainer onImport={importNmls} isAllowed={this.props.isUpdateTracingAllowed}>
+      <NmlUploadZoneContainer onImport={importNmls} isAllowed={isUpdateTracingAllowed}>
         <OxalisController
           initialAnnotationType={this.props.initialAnnotationType}
           initialCommandType={this.props.initialCommandType}
@@ -186,7 +186,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
               collapsed={this.state.isSettingsCollapsed}
               collapsedWidth={0}
               width={350}
-              style={{ zIndex: 100 }}
+              style={{ zIndex: 100, marginRight: this.state.isSettingsCollapsed ? 0 : 8 }}
             >
               {/* Don't render SettingsView if it's hidden to improve performance */}
               {!this.state.isSettingsCollapsed ? <SettingsView /> : null}
@@ -232,7 +232,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
                   key="arbitraryViewport"
                   portalKey="arbitraryViewport"
                 >
-                  <RecordingSwitch />
+                  {isUpdateTracingAllowed ? <RecordingSwitch /> : null}
                 </InputCatcher>
 
                 <DatasetInfoTabView key="DatasetInfoTabView" portalKey="DatasetInfoTabView" />

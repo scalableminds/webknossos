@@ -54,7 +54,7 @@ function* restartableSaga(): Saga<void> {
     ]);
   } catch (err) {
     console.error(err);
-    ErrorHandling.notify(err, {}, true);
+    ErrorHandling.notify(err, {});
     alert(`\
 Internal error.
 Please reload the page to avoid losing data.

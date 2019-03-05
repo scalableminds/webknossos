@@ -17,7 +17,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - 
 
 ### Fixed
-- 
+- Fixed the setting which enables to hide the planes within the 3D viewport. [#3857](https://github.com/scalableminds/webknossos/pull/3857)
 
 ### Removed
 - 

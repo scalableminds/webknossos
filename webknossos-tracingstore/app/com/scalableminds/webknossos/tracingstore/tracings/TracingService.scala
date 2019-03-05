@@ -2,14 +2,14 @@ package com.scalableminds.webknossos.tracingstore.tracings
 
 import java.util.UUID
 
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.scalableminds.webknossos.tracingstore.RedisTemporaryStore
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
-import play.api.libs.json.Reads
+import play.api.libs.json.{Json, Reads}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -71,11 +71,16 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
                       updateGroup: UpdateActionGroup[T],
                       expiry: FiniteDuration): Boolean =
     uncommittedUpdatesStore.insert(transactionBatchKey(tracingId, transactionIdOpt, transactionGroupindexOpt, version),
-                                   updateGroup,
+                                   Json.toJson(updateGroup).toString(),
                                    Some(expiry))
 
-  def getAllUncommittedFor(tracingId: String, transactionId: Option[String]): List[UpdateActionGroup[T]] =
-    uncommittedUpdatesStore.findAllConditional(patternFor(tracingId, transactionId)).toList.sortBy(_.version)
+  def getAllUncommittedFor(tracingId: String, transactionId: Option[String]): List[UpdateActionGroup[T]] = {
+    val raw = uncommittedUpdatesStore.findAllConditional(patternFor(tracingId, transactionId))
+    raw
+      .flatMap(itemAsString => JsonHelper.jsResultToOpt(Json.parse(itemAsString).validate[UpdateActionGroup[T]]))
+      .toList
+      .sortBy(_.version)
+  }
 
   def removeAllUncommittedFor(tracingId: String, transactionId: Option[String]): Seq[Long] =
     uncommittedUpdatesStore.removeAllConditional(patternFor(tracingId, transactionId))

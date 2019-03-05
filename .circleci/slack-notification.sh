@@ -19,7 +19,7 @@ if [ "${CIRCLE_BRANCH}" == "master" ] ; then
     channel="webknossos-bots"
     commitmsg="$(git log --format=%s -n 1)"
     pullregex="(.*)#([0-9]+)(.*)"
-    while [[ $commitmsg =~ $pullregex ]]
+    while [[ "$commitmsg" =~ $pullregex ]]
     do
         commitmsg="${BASH_REMATCH[1]}#<https://github.com/scalableminds/webknossos/issues/${BASH_REMATCH[2]}|${BASH_REMATCH[2]}>${BASH_REMATCH[3]}"
     done

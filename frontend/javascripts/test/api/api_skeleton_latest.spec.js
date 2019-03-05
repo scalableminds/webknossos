@@ -4,7 +4,7 @@ import { __setupOxalis, KeyboardJS } from "test/helpers/apiHelpers";
 import { makeBasicGroupObject } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import { setTreeGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
-import constants from "oxalis/constants";
+import { userSettings } from "libs/user_settings.schema";
 import Store from "oxalis/store";
 import sinon from "sinon";
 import test from "ava";
@@ -138,7 +138,7 @@ test("User Api: setConfiguration should clamp a user configuration value if it i
   const api = t.context.api;
   const MOVE_VALUE = 10;
   api.user.setConfiguration("moveValue", MOVE_VALUE);
-  t.is(api.user.getConfiguration("moveValue"), constants.MIN_MOVE_VALUE);
+  t.is(api.user.getConfiguration("moveValue"), userSettings.moveValue.minimum);
 });
 
 test.serial.cb("Utils Api: sleep should sleep", t => {

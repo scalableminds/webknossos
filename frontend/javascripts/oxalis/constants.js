@@ -155,24 +155,7 @@ const Constants = {
 
   MAX_ZOOM_STEP_DIFF_PREFETCH: 1, // prefetch only fallback buckets for currentZoomStep + 1
 
-  MIN_MOVE_VALUE: 30,
-  MAX_MOVE_VALUE: 14000,
-
   FPS: 50,
-
-  MIN_LAYOUT_SCALE: 1,
-  MAX_LAYOUT_SCALE: 5,
-
-  MIN_BRUSH_SIZE: 5,
-  MAX_BRUSH_SIZE: 5000,
-
-  // The node radius is the actual radius of the node in nm, it's dependent on zoom and dataset scale
-  MIN_NODE_RADIUS: 1,
-  MAX_NODE_RADIUS: 5000,
-
-  // The particle size is measured in pixels - it's independent of zoom and dataset scale
-  MIN_PARTICLE_SIZE: 1,
-  MAX_PARTICLE_SIZE: 20,
 
   DEFAULT_SPHERICAL_CAP_RADIUS: 140,
 

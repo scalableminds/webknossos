@@ -38,9 +38,9 @@ function* trackUserSettingsAsync(action: UpdateUserSettingAction): Saga<void> {
 }
 
 function* showUserSettingToast(action: UpdateUserSettingAction): Saga<void> {
-  if (action.propertyName === "moveValue" || action.propertyName === "moveValue3d") {
-    // $FlowFixMe moveValue and moveValue3d are both numbers
-    const moveValue: number = yield* select(state => state.userConfiguration[action.propertyName]);
+  const { propertyName } = action;
+  if (propertyName === "moveValue" || propertyName === "moveValue3d") {
+    const moveValue = yield* select(state => state.userConfiguration[propertyName]);
     const moveValueMessage = messages["tracing.changed_move_value"] + moveValue;
     Toast.success(moveValueMessage, { key: "CHANGED_MOVE_VALUE" });
   }

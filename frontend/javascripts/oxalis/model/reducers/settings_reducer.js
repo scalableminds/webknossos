@@ -11,7 +11,7 @@ import {
   type StateShape2,
 } from "oxalis/model/helpers/deep_update";
 import { clamp } from "libs/utils";
-import constants from "oxalis/constants";
+import { userSettings } from "libs/user_settings.schema";
 
 //
 // Update helpers
@@ -43,27 +43,14 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       const { propertyName } = action;
       let { value } = action;
 
-      switch (propertyName) {
-        case "layoutScaleValue": {
-          value = clamp(constants.MIN_LAYOUT_SCALE, value, constants.MAX_LAYOUT_SCALE);
-          break;
-        }
-        case "brushSize": {
-          value = clamp(constants.MIN_BRUSH_SIZE, value, constants.MAX_BRUSH_SIZE);
-          break;
-        }
-        case "moveValue":
-        case "moveValue3d": {
-          value = clamp(constants.MIN_MOVE_VALUE, value, constants.MAX_MOVE_VALUE);
-          break;
-        }
-        case "particleSize": {
-          value = clamp(constants.MIN_PARTICLE_SIZE, value, constants.MAX_PARTICLE_SIZE);
-          break;
-        }
-        default: // pass
+      const settingSpec = userSettings[propertyName];
+      if (settingSpec != null && settingSpec.type === "number") {
+        const min = settingSpec.minimum != null ? settingSpec.minimum : -Infinity;
+        const max = settingSpec.maximum != null ? settingSpec.maximum : Infinity;
+        value = clamp(min, value, max);
       }
 
+      // $FlowFixMe Flow doesn't check that only numbers will be clamped
       return updateUserConfig(state, { [propertyName]: value });
     }
 

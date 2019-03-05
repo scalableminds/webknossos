@@ -43,7 +43,7 @@ import {
   type ServerSkeletonTracing,
   type ServerTracing,
   type ServerVolumeTracing,
-  type wkConnectDatasetConfig,
+  type WkConnectDatasetConfig,
 } from "admin/api_flow_types";
 import type { DatasetConfiguration } from "oxalis/store";
 import type { NewTask, TaskCreationResponse } from "admin/task/task_create_bulk_view";
@@ -781,7 +781,7 @@ export function addDataset(datasetConfig: DatasetConfig): Promise<void> {
 
 export function addWkConnectDataset(
   datastoreHost: string,
-  datasetConfig: wkConnectDatasetConfig,
+  datasetConfig: WkConnectDatasetConfig,
 ): Promise<void> {
   return doWithToken(token =>
     Request.sendJSONReceiveJSON(`/data/datasets?token=${token}`, {

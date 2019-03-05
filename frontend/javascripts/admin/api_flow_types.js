@@ -364,16 +364,17 @@ export type DatasetConfig = {
   +zipFile: File,
 };
 
-type wkConnectLayer = {
+type WkConnectLayer = {
+  // This is the source URL of the layer, should start with gs://, http:// or https://
   source: string,
   type: "image" | "segmentation",
 };
 
-export type wkConnectDatasetConfig = {
+export type WkConnectDatasetConfig = {
   neuroglancer: {
-    [string]: {
-      [string]: {
-        layers: { [string]: wkConnectLayer },
+    [organizationName: string]: {
+      [datasetName: string]: {
+        layers: { [layerName: string]: WkConnectLayer },
       },
     },
   },

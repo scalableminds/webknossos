@@ -24,6 +24,7 @@ import Store, { type OxalisState, type RestrictionsAndSettings, type Task } from
 import UserScriptsModalView from "oxalis/view/action-bar/user_scripts_modal_view";
 import api from "oxalis/api/internal_api";
 import messages from "messages";
+import { downloadScreenshot } from "oxalis/view/rendering_utils";
 
 type OwnProps = {|
   layoutMenu: React.Node,
@@ -319,6 +320,12 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         isVisible={this.state.isShareModalOpen}
         onOk={this.handleShareClose}
       />,
+    );
+    elements.push(
+      <Menu.Item key="screenshot-button" onClick={downloadScreenshot}>
+        <Icon type="camera" />
+        Screenshot (Q)
+      </Menu.Item>,
     );
     elements.push(
       <Menu.Item key="user-scripts-button" onClick={this.handleUserScriptsOpen}>

@@ -10,13 +10,14 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/19.03.0...HEAD)
 
 ### Added
+- Added a shortcut (Q) and button in the actions dropdown to screenshot the tracing views. The screenshots will contain everything that is visible in the tracing views, so feel free to disable the crosshairs in the settings or toggle the tree visibility using the (1) and (2) shortcuts before triggering the screenshot. [#3834](https://github.com/scalableminds/webknossos/pull/3834)
 - The dataset settings within the tracing view allow to select between different loading strategies now ("best quality first" and "progressive quality"). Additionally, the rendering can use different magnifications as a fallback (instead of only one magnification). [#3801](https://github.com/scalableminds/webknossos/pull/3801)
 
 ### Changed
 - 
 
 ### Fixed
-- 
+- Fixed the setting which enables to hide the planes within the 3D viewport. [#3857](https://github.com/scalableminds/webknossos/pull/3857)
 
 ### Removed
 - 

@@ -99,7 +99,7 @@ export function getSharingToken(): ?string {
 }
 
 let tokenPromise;
-export function doWithToken<T>(fn: (token: string) => Promise<T>): Promise<*> {
+export function doWithToken<T>(fn: (token: string) => Promise<T>, tries: number = 1): Promise<*> {
   const sharingToken = getSharingToken();
   if (sharingToken != null) {
     return fn(sharingToken);
@@ -109,7 +109,10 @@ export function doWithToken<T>(fn: (token: string) => Promise<T>): Promise<*> {
     if (error.status === 403) {
       console.warn("Token expired. Requesting new token...");
       tokenPromise = requestUserToken();
-      return doWithToken(fn);
+      // If three new tokens did not fix the 403, abort, otherwise we'll get into an endless loop here
+      if (tries < 3) {
+        return doWithToken(fn, tries + 1);
+      }
     }
     throw error;
   });

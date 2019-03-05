@@ -28,6 +28,11 @@ export const settings = {
   crosshairSize: "Crosshair Size",
   brushSize: "Brush Size",
   userBoundingBox: "Bounding Box",
+  loadingStrategy: "Loading Strategy",
+  loadingStrategyDescription: `You can choose between loading the best quality first
+    (will take longer until you see data) or alternatively,
+    improving the quality progressively (data will be loaded faster,
+    but it will take more time until the best quality is shown).`,
 };
 
 export default {

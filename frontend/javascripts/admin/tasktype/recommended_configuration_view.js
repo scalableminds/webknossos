@@ -36,6 +36,7 @@ const recommendedConfigByCategory = {
     highlightHoveredCellId: false,
     zoom: 0.8,
     renderMissingDataBlack: false,
+    loadingStrategy: "BEST_QUALITY_FIRST",
   },
   flight: {
     clippingDistanceArbitrary: 60,
@@ -66,6 +67,7 @@ export const settingComments = {
   quality: "0 (high), 1 (medium), 2 (low)",
   clippingDistanceArbitrary: "flight/oblique mode",
   moveValue3d: "flight/oblique mode",
+  loadingStrategy: "BEST_QUALITY_FIRST or PROGRESSIVE_QUALITY",
 };
 
 const errorIcon = (

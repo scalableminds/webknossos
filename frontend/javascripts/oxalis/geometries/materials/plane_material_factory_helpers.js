@@ -3,6 +3,13 @@ import * as THREE from "three";
 
 import UpdatableTexture from "libs/UpdatableTexture";
 
+export const channelCountToFormat = {
+  "1": THREE.LuminanceFormat,
+  "2": THREE.LuminanceAlphaFormat,
+  "3": THREE.RGBFormat,
+  "4": THREE.RGBAFormat,
+};
+
 // This function has to be in its own file as non-resolvable cycles are created otherwise
 export function createUpdatableTexture(
   width: number,
@@ -10,16 +17,8 @@ export function createUpdatableTexture(
   type: THREE.FloatType | THREE.UnsignedByteType | THREE.Uint32BufferAttribute,
   renderer: THREE.WebGLRenderer,
 ): UpdatableTexture {
-  let format;
-  if (channelCount === 1) {
-    format = THREE.LuminanceFormat;
-  } else if (channelCount === 2) {
-    format = THREE.LuminanceAlphaFormat;
-  } else if (channelCount === 3) {
-    format = THREE.RGBFormat;
-  } else if (channelCount === 4) {
-    format = THREE.RGBAFormat;
-  } else {
+  const format = channelCountToFormat[channelCount];
+  if (!format) {
     throw new Error(`Unhandled byte count: ${channelCount}`);
   }
 

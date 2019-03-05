@@ -4,8 +4,10 @@ import _ from "lodash";
 
 import { DataBucket, bucketDebuggingFlags } from "oxalis/model/bucket_data_handling/bucket";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
+import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { getRenderer } from "oxalis/controller/renderer";
 import { waitForCondition } from "libs/utils";
+import Store from "oxalis/store";
 import UpdatableTexture from "libs/UpdatableTexture";
 import constants, { type Vector4, addressSpaceDimensions } from "oxalis/constants";
 import window from "libs/window";
@@ -28,7 +30,7 @@ const lookUpBufferWidth = constants.LOOK_UP_TEXTURE_WIDTH;
 // If f >= 0, f denotes the index in the data texture where the bucket is stored.
 // If f == -1, the bucket is not yet committed
 // If f == -2, the bucket is not supposed to be rendered. Out of bounds.
-export const floatsPerLookUpEntry = 1;
+export const channelCountForLookupBuffer = 2;
 
 export default class TextureBucketManager {
   dataTextures: Array<UpdatableTexture>;
@@ -44,7 +46,6 @@ export default class TextureBucketManager {
   isRefreshBufferOutOfDate: boolean = false;
 
   currentAnchorPoint: Vector4 = [0, 0, 0, 0];
-  fallbackAnchorPoint: Vector4 = [0, 0, 0, 0];
   writerQueue: Array<{ bucket: DataBucket, _index: number }> = [];
   textureWidth: number;
   dataTextureCount: number;
@@ -59,7 +60,7 @@ export default class TextureBucketManager {
     this.maximumCapacity =
       (this.packingDegree * dataTextureCount * textureWidth ** 2) / constants.BUCKET_SIZE;
     // the look up buffer is addressSpaceDimensions**3 so that arbitrary look ups can be made
-    const lookUpBufferSize = Math.pow(lookUpBufferWidth, 2) * floatsPerLookUpEntry;
+    const lookUpBufferSize = Math.pow(lookUpBufferWidth, 2) * channelCountForLookupBuffer;
     this.textureWidth = textureWidth;
     this.dataTextureCount = dataTextureCount;
 
@@ -79,7 +80,7 @@ export default class TextureBucketManager {
   }
 
   clear() {
-    this.setActiveBuckets([], [0, 0, 0, 0], [0, 0, 0, 0]);
+    this.setActiveBuckets([], [0, 0, 0, 0]);
   }
 
   freeBucket(bucket: DataBucket): void {
@@ -98,14 +99,9 @@ export default class TextureBucketManager {
   // Takes an array of buckets (relative to an anchorPoint) and ensures that these
   // are written to the dataTexture. The lookUpTexture will be updated to reflect the
   // new buckets.
-  setActiveBuckets(
-    buckets: Array<DataBucket>,
-    anchorPoint: Vector4,
-    fallbackAnchorPoint: Vector4,
-  ): void {
+  setActiveBuckets(buckets: Array<DataBucket>, anchorPoint: Vector4): void {
     this.currentAnchorPoint = anchorPoint;
     window.currentAnchorPoint = anchorPoint;
-    this.fallbackAnchorPoint = fallbackAnchorPoint;
     // Find out which buckets are not needed anymore
     const freeBucketSet = new Set(this.activeBucketToIndexMap.keys());
     for (const bucket of buckets) {
@@ -212,7 +208,7 @@ export default class TextureBucketManager {
 
     const lookUpTexture = createUpdatableTexture(
       lookUpBufferWidth,
-      1,
+      channelCountForLookupBuffer,
       THREE.FloatType,
       getRenderer(),
     );
@@ -264,14 +260,64 @@ export default class TextureBucketManager {
   }
 
   _refreshLookUpBuffer() {
-    // Completely re-write the lookup buffer. This could be smarter, but it's
-    // probably not worth it.
+    /* This method completely completely re-writes the lookup buffer. This could be smarter, but it's
+     * probably not worth it.
+     * It works as follows:
+     * - write -2 into the entire buffer as a fallback
+     * - iterate over all buckets which should be available to the GPU
+     * - only consider the buckets in the native zoomStep (=> zoomStep === 0)
+     * - if the current bucket was committed, write the address for that bucket into the look up buffer
+     * - otherwise, check whether the bucket's fallback bucket is committed so that this can be written into
+     *   the look up buffer (repeat for the next fallback if the bucket wasn't committed).
+     */
+
     this.lookUpBuffer.fill(-2);
-    for (const [bucket, address] of this.activeBucketToIndexMap.entries()) {
+    const maxZoomStepDiff = getMaxZoomStepDiff(
+      Store.getState().datasetConfiguration.loadingStrategy,
+    );
+
+    const currentZoomStep = this.currentAnchorPoint[3];
+    for (const [bucket, reservedAddress] of this.activeBucketToIndexMap.entries()) {
+      if (bucket.zoomedAddress[3] > currentZoomStep) {
+        // only write high-res buckets (if a bucket is missing, the fallback bucket will then be written
+        // into the look up buffer)
+        continue;
+      }
       const lookUpIdx = this._getBucketIndex(bucket);
-      this.lookUpBuffer[floatsPerLookUpEntry * lookUpIdx] = this.committedBucketSet.has(bucket)
-        ? address
-        : -1;
+      const posInBuffer = channelCountForLookupBuffer * lookUpIdx;
+
+      let address = -1;
+      let bucketZoomStep = bucket.zoomedAddress[3];
+      if (!bucketDebuggingFlags.enforcedZoomDiff && this.committedBucketSet.has(bucket)) {
+        address = reservedAddress;
+      } else {
+        let fallbackBucket = bucket.getFallbackBucket();
+        let abortFallbackLoop = false;
+        const maxAllowedZoomStep =
+          currentZoomStep + (bucketDebuggingFlags.enforcedZoomDiff || maxZoomStepDiff);
+
+        while (!abortFallbackLoop) {
+          if (fallbackBucket.type !== "null") {
+            if (
+              fallbackBucket.zoomedAddress[3] <= maxAllowedZoomStep &&
+              this.committedBucketSet.has(fallbackBucket)
+            ) {
+              address = this.activeBucketToIndexMap.get(fallbackBucket);
+              address = address != null ? address : -1;
+              bucketZoomStep = fallbackBucket.zoomedAddress[3];
+              abortFallbackLoop = true;
+            } else {
+              // Try next fallback bucket
+              fallbackBucket = fallbackBucket.getFallbackBucket();
+            }
+          } else {
+            abortFallbackLoop = true;
+          }
+        }
+      }
+
+      this.lookUpBuffer[posInBuffer] = address;
+      this.lookUpBuffer[posInBuffer + 1] = bucketZoomStep;
     }
 
     this.lookUpTexture.update(this.lookUpBuffer, 0, 0, lookUpBufferWidth, lookUpBufferWidth);
@@ -281,12 +327,7 @@ export default class TextureBucketManager {
 
   _getBucketIndex(bucket: DataBucket): number {
     const bucketPosition = bucket.zoomedAddress;
-    const renderingZoomStep = this.currentAnchorPoint[3];
-    const bucketZoomStep = bucketPosition[3];
-    const zoomDiff = bucketZoomStep - renderingZoomStep;
-    const isFallbackBucket = zoomDiff > 0;
-
-    const anchorPoint = isFallbackBucket ? this.fallbackAnchorPoint : this.currentAnchorPoint;
+    const anchorPoint = this.currentAnchorPoint;
 
     const x = bucketPosition[0] - anchorPoint[0];
     const y = bucketPosition[1] - anchorPoint[1];
@@ -296,20 +337,12 @@ export default class TextureBucketManager {
     // if (y < 0) console.warn("y should be greater than 0. is currently:", y);
     // if (z < 0) console.warn("z should be greater than 0. is currently:", z);
 
-    // Even though, addressSpaceDimensions might be different in the fallback case,
-    // it's safe to assume that the values would only be smaller (since
-    // fallback data doesn't require more buckets than non-fallback).
-    // Consequently, these values should be fine to address buckets.
-    const [sx, sy, sz] = addressSpaceDimensions.normal;
-    const [_sx, _sy] = isFallbackBucket
-      ? addressSpaceDimensions.fallback
-      : addressSpaceDimensions.normal;
+    const [sx, sy] = addressSpaceDimensions;
 
     // prettier-ignore
     return (
-      sx * sy * sz * zoomDiff +
-      _sx * _sy * z +
-      _sx * y +
+      sx * sy * z +
+      sx * y +
       x
     );
   }

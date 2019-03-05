@@ -31,17 +31,17 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
 
     return (
       <Row type="flex" align="middle">
-        <Col span={8}>
+        <Col span={9}>
           <label className="setting-label">{label}</label>
         </Col>
         <Col span={8}>
           <Slider min={min} max={max} onChange={onChange} value={value} step={step} />
         </Col>
-        <Col span={6}>
+        <Col span={5}>
           <InputNumber
             min={min}
             max={max}
-            style={{ marginLeft: 16 }}
+            style={{ width: 80, marginLeft: 16 }}
             value={value}
             onChange={this._onChange}
             size="small"
@@ -106,8 +106,8 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
   render() {
     const { label, roundTo, value, min, max, disabled } = this.props;
     return (
-      <Row type="flex" align="middle">
-        <Col span={8}>
+      <Row type="flex" align="top">
+        <Col span={9}>
           <label className="setting-label">{label}</label>
         </Col>
         <Col span={8}>
@@ -120,11 +120,11 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
             disabled={disabled}
           />
         </Col>
-        <Col span={6}>
+        <Col span={5}>
           <InputNumber
             min={min}
             max={max}
-            style={{ marginLeft: 16 }}
+            style={{ width: 80, marginLeft: 16 }}
             value={roundTo != null ? Utils.roundTo(value, roundTo) : value}
             onChange={this.onChangeInput}
             disabled={disabled}
@@ -146,11 +146,11 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
   render() {
     const { label, onChange, value } = this.props;
     return (
-      <Row className="margin-bottom" type="flex" align="middle">
-        <Col span={8}>
+      <Row className="margin-bottom" type="flex" align="top">
+        <Col span={9}>
           <label className="setting-label">{label}</label>
         </Col>
-        <Col span={16}>
+        <Col span={15}>
           <Switch onChange={onChange} checked={value} defaultChecked={value} />
         </Col>
       </Row>
@@ -178,12 +178,13 @@ export class NumberInputSetting extends React.PureComponent<NumberInputSettingPr
     const { onChange, value, label, max, min, step } = this.props;
 
     return (
-      <Row className="margin-bottom">
-        <Col span={8}>
+      <Row className="margin-bottom" align="top">
+        <Col span={9}>
           <label className="setting-label">{label}</label>
         </Col>
-        <Col span={16}>
+        <Col span={15}>
           <InputNumber
+            style={{ width: 80 }}
             min={min}
             max={max}
             onChange={onChange}
@@ -289,7 +290,7 @@ export class Vector6InputSetting extends React.PureComponent<
     const tooltipStyle = this.state.isValid ? null : { backgroundColor: "red" };
 
     return (
-      <Row className="margin-bottom">
+      <Row className="margin-bottom" align="top">
         <Col span={8}>
           <label className="setting-label">{this.props.label}</label>
         </Col>
@@ -328,12 +329,29 @@ export class ColorSetting extends React.PureComponent<ColorSettingPropTypes> {
 
   render() {
     return (
-      <Row className="margin-bottom">
-        <Col span={8}>
+      <Row className="margin-bottom" align="top">
+        <Col span={9}>
           <label className="setting-label">{this.props.label}</label>
         </Col>
-        <Col span={16}>
-          <input type="color" onChange={this.onColorChange} value={this.props.value} />
+        <Col span={15}>
+          <div
+            id="color-picker-wrapper"
+            style={{
+              backgroundColor: this.props.value,
+              display: "block",
+              width: 16,
+              height: 16,
+              borderRadius: 3,
+              boxShadow: "0px 0px 3px #cacaca",
+            }}
+          >
+            <input
+              type="color"
+              style={{ opacity: 0, display: "block", border: "none", cursor: "pointer" }}
+              onChange={this.onColorChange}
+              value={this.props.value}
+            />
+          </div>
         </Col>
       </Row>
     );
@@ -342,8 +360,8 @@ export class ColorSetting extends React.PureComponent<ColorSettingPropTypes> {
 
 type DropdownSettingProps = {
   onChange: (value: number) => void,
-  label: string,
-  value: number,
+  label: React.Node | string,
+  value: number | string,
   children?: Array<React.Node>,
 };
 
@@ -355,7 +373,7 @@ export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
   render() {
     const { onChange, label, value, children } = this.props;
     return (
-      <Row className="margin-bottom">
+      <Row className="margin-bottom" align="top">
         <Col span={8}>
           <label className="setting-label">{label}</label>
         </Col>
@@ -365,6 +383,7 @@ export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
             value={value.toString()}
             defaultValue={value.toString()}
             size="small"
+            dropdownMatchSelectWidth={false}
           >
             {children}
           </Select>

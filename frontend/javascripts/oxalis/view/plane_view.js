@@ -52,12 +52,10 @@ const createDirLight = (position, target, intensity, parent) => {
 };
 
 const raycaster = new THREE.Raycaster();
-const oldHit = {
+const oldRaycasterHit = {
   object: null,
   color: null,
 };
-let rayHelper = null;
-let hitPointHelper = null;
 
 class PlaneView {
   // Copied form backbone events (TODO: handle this better)
@@ -208,50 +206,31 @@ class PlaneView {
 
     raycaster.setFromCamera(mouse, this.cameras[OrthoViews.TDView]);
 
-    if (!rayHelper) {
-      rayHelper = new THREE.ArrowHelper(
-        raycaster.ray.direction,
-        raycaster.ray.origin,
-        100,
-        0x00ff00,
-      );
-
-      hitPointHelper = new THREE.ArrowHelper(
-        raycaster.ray.direction,
-        raycaster.ray.origin,
-        100,
-        0x0000ff,
-      );
-
-      scene.add(hitPointHelper);
-      scene.add(rayHelper);
-    } else {
-      rayHelper.setDirection(raycaster.ray.direction);
-      rayHelper.position.copy(raycaster.ray.origin);
-    }
-
     const intersections = raycaster.intersectObjects(isosurfacesRootGroup.children, true);
     const hitObject = intersections.length > 0 ? intersections[0].object : null;
-    if (oldHit.object != null && hitObject !== oldHit.object) {
-      oldHit.object.material.emissive.setHex(oldHit.emissive);
-      oldHit.object = null;
+    if (hitObject === oldRaycasterHit.object) {
+      // Do nothing, since we are hitting the same object
+      return intersections.length > 0 ? intersections[0].point : null;
     }
-    if (hitObject != null && hitObject !== oldHit.object) {
-      const oldEmissive = hitObject.material.emissive.getHex();
-      hitObject.material.emissive.setHSL(0.7, 0.5, 0.1);
-
-      oldHit.object = hitObject;
-      oldHit.emissive = oldEmissive;
+    if (oldRaycasterHit.object != null) {
+      oldRaycasterHit.object.parent.children.forEach(meshPart => {
+        meshPart.material.emissive.setHex(oldRaycasterHit.color);
+      });
+      oldRaycasterHit.object = null;
     }
-
     if (hitObject != null) {
-      hitPointHelper.position.copy(intersections[0].point);
-      hitPointHelper.setDirection(intersections[0].face.normal);
+      const oldColor = hitObject.material.emissive.getHex();
+      hitObject.parent.children.forEach(meshPart => {
+        meshPart.material.emissive.setHSL(0.7, 0.5, 0.1);
+      });
 
+      oldRaycasterHit.object = hitObject;
+      oldRaycasterHit.color = oldColor;
       return intersections[0].point;
+    } else {
+      oldRaycasterHit.object = null;
+      return null;
     }
-
-    return null;
   }
 
   draw(): void {

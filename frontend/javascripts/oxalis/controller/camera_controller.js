@@ -183,6 +183,7 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
   const pos = voxelToNm(dataset.dataSource.scale, getPosition(state.flycam));
 
   const aspectRatio = getInputCatcherAspectRatio(state, OrthoViews.TDView);
+  const clippingOffsetFactor = 100000;
 
   let to: TweenState;
   if (id === OrthoViews.TDView) {
@@ -221,9 +222,9 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
     const height = squareWidth / aspectRatio;
 
     to = {
-      dx: b[1] / diagonal,
-      dy: b[0] / diagonal,
-      dz: -1 / 2,
+      dx: (b[1] / diagonal) * clippingOffsetFactor,
+      dy: (b[0] / diagonal) * clippingOffsetFactor,
+      dz: (-1 / 2) * clippingOffsetFactor,
       upX: 0,
       upY: 0,
       upZ: -1,
@@ -246,9 +247,9 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
     const t = offsetY;
 
     const positionOffset: OrthoViewMap<Vector3> = {
-      [OrthoViews.PLANE_XY]: [0, 0, -1],
-      [OrthoViews.PLANE_YZ]: [1, 0, 0],
-      [OrthoViews.PLANE_XZ]: [0, 1, 0],
+      [OrthoViews.PLANE_XY]: [0, 0, -clippingOffsetFactor],
+      [OrthoViews.PLANE_YZ]: [clippingOffsetFactor, 0, 0],
+      [OrthoViews.PLANE_XZ]: [0, clippingOffsetFactor, 0],
     };
     const upVector: OrthoViewMap<Vector3> = {
       [OrthoViews.PLANE_XY]: [0, -1, 0],
@@ -278,11 +279,7 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
 
     Store.dispatch(
       setTDCameraAction({
-        position: [
-          tweenState.dx + p[0] + 100000,
-          tweenState.dy + p[1] + 100000,
-          tweenState.dz + p[2] + 100000,
-        ],
+        position: [tweenState.dx + p[0], tweenState.dy + p[1], tweenState.dz + p[2]],
         left: tweenState.l,
         right: tweenState.r,
         top: tweenState.t,

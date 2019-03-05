@@ -21,7 +21,6 @@ The most common buttons are:
 - `Share`: Create a shareable link to your dataset containing the current position, rotation, zoom level etc. Use this to collaboratively work with colleagues. Read more about this feature in the [Sharing guide](./sharing.md).  
 - `Add Script`: Using the [webKnossos frontend API](https://demo.webknossos.org/assets/docs/frontend-api/index.html) users can interact with webKnossos programmatically. User scripts can be executed from here. Admins can add often used scripts to webKnossos to make them available to all users for easy access.
 - `Restore Older Version`: Opens a view that shows all previous versions of a tracing. From this view, any older version can be selected, previewed, and restored.
-- `Import STL Mesh`: 3D Meshes can be imported into the current tracing view by uploading corresponding STL files. Read more information in [Mesh Visualization](#mesh-visualization).
 
 A user can directly jump to positions within their datasets by entering them in the position input field.
 The same is true for the rotation in some tracing modes.
@@ -210,14 +209,6 @@ In the `Segmentation` tab on the right-hand side, you can see the cell IDs which
 ![Adding labels with the Brush tool](./images/volume_brush.gif)
 ![Removing labels with the Brush tool](./images/volume_delete.gif)
 
-### Mesh Visualization
-With the help of external tools, such as [Amira](https://www.fei.com/software/amira-avizo/), volume data can be converted to 3D meshes. These meshes can be imported into webKnossos to view them alongside the actual data.
-
-To import an STL file, use the `Import STL Mesh` option in the [toolbar](#the-toolbar).
-
-![A 3D Mesh visualized in webKnossos](./images/stl_mesh.png)
-
-
 ## Hybrid Annotations
 
 Hybrid annotations combine the functionality of skeleton and volume annotations.
@@ -285,6 +276,7 @@ For multi-layer datasets, each layer can be adjusted separately.
 #### Segmentation
 - `Segmentation Opacity`: Increases / Decreases the opacity of the segmentation layer. A low value will make the segmentation almost transparent letting you see the underlying data layers more clearly. A high value will make the segmentation opaque which is useful for adjusting and reviewing the exact fit of the segmentation layer. Only possible if your dataset has a segmentation layer.
 - `Highlight Hovered Cells`: Toggles whether segmented cells will be highlighted in all viewports when hovering over them with the mouse cursor. Useful for identifying the highlighted cell in across all viewports.
+- `Render Isosurfaces`: When activated, isosurfaces are rendered in the 3D viewport when clicking on a cell with Shift+Click. See [here](./mesh_visualization.md#live-isosurface-generation) for more information.
 
 #### Quality
 - `Quality`: Adjusts the quality level used for data download from the server. "High" will load the original, unmodified data. "Medium" and "Low" will load a downsampled version of the data layer to reduce network traffic. Use this to reduce the amount of necessary internet bandwidth for webKnossos.

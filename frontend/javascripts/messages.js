@@ -10,6 +10,7 @@ export const settings = {
   moveValue: "Move Value (nm/s)",
   newNodeNewTree: "Single-node-tree mode (Soma clicking)",
   highlightCommentedNodes: "Highlight Commented Nodes",
+  nodeRadius: "Node Radius",
   overrideNodeRadius: "Override Node Radius",
   particleSize: "Particle Size",
   tdViewDisplayPlanes: "Display Planes in 3D View",

@@ -389,21 +389,12 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   changeMoveValue(delta: number): void {
-    let moveValue = Store.getState().userConfiguration.moveValue3d + delta;
-    moveValue = Math.min(constants.MAX_MOVE_VALUE, moveValue);
-    moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue);
-
+    const moveValue = Store.getState().userConfiguration.moveValue3d + delta;
     Store.dispatch(updateUserSettingAction("moveValue3d", moveValue));
-
-    const moveValueMessage = messages["tracing.changed_move_value"] + moveValue;
-    Toast.success(moveValueMessage, { key: "CHANGED_MOVE_VALUE" });
   }
 
   setParticleSize(delta: number): void {
-    let particleSize = Store.getState().userConfiguration.particleSize + delta;
-    particleSize = Math.min(constants.MAX_PARTICLE_SIZE, particleSize);
-    particleSize = Math.max(constants.MIN_PARTICLE_SIZE, particleSize);
-
+    const particleSize = Store.getState().userConfiguration.particleSize + delta;
     Store.dispatch(updateUserSettingAction("particleSize", particleSize));
   }
 

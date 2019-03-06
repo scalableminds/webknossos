@@ -247,7 +247,7 @@ class DataCube {
   }
 
   createBucket(address: Vector4): Bucket {
-    const bucket = new DataBucket(this.BIT_DEPTH, address, this.temporalBucketManager);
+    const bucket = new DataBucket(this.BIT_DEPTH, address, this.temporalBucketManager, this);
     bucket.on({
       bucketLoaded: () => this.trigger("bucketLoaded", address),
     });
@@ -311,6 +311,7 @@ class DataCube {
     const bucketIndex = this.getBucketIndex(address);
     const cube = this.cubes[address[3]];
     if (bucketIndex != null && cube != null) {
+      bucket.destroy();
       cube.data.delete(bucketIndex);
     }
   }

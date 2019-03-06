@@ -51,6 +51,7 @@ import getSceneController from "oxalis/controller/scene_controller_provider";
 import messages from "messages";
 import * as skeletonController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import * as volumeController from "oxalis/controller/combinations/volumetracing_plane_controller";
+import { downloadScreenshot } from "oxalis/view/rendering_utils";
 
 function ensureNonConflictingHandlers(skeletonControls: Object, volumeControls: Object): void {
   const conflictingHandlers = _.intersection(
@@ -290,6 +291,7 @@ class PlaneController extends React.PureComponent<Props> {
           Toast.warning("No cell under cursor.");
         }
       },
+      q: downloadScreenshot,
     };
 
     // TODO: Find a nicer way to express this, while satisfying flow

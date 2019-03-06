@@ -159,25 +159,7 @@ const Constants = {
   LOOK_UP_TEXTURE_WIDTH: 256,
 
   TDView_MOVE_SPEED: 150,
-  MIN_MOVE_VALUE: 30,
-  MAX_MOVE_VALUE: 14000,
-  MAX_MOVE_VALUE_SLIDER: 1500,
-
   FPS: 50,
-
-  MIN_LAYOUT_SCALE: 1,
-  MAX_LAYOUT_SCALE: 5,
-
-  MIN_BRUSH_SIZE: 5,
-  MAX_BRUSH_SIZE: 5000,
-
-  // The node radius is the actual radius of the node in nm, it's dependent on zoom and dataset scale
-  MIN_NODE_RADIUS: 1,
-  MAX_NODE_RADIUS: 5000,
-
-  // The particle size is measured in pixels - it's independent of zoom and dataset scale
-  MIN_PARTICLE_SIZE: 1,
-  MAX_PARTICLE_SIZE: 20,
 
   ZOOM_DIFF: 0.1,
 

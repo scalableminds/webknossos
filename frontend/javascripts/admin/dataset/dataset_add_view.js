@@ -1,7 +1,7 @@
 // @flow
 import { type RouterHistory, withRouter } from "react-router-dom";
 import { Tabs, Icon } from "antd";
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { connect } from "react-redux";
 import _ from "lodash";
 

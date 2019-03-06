@@ -15,6 +15,7 @@ import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
 import features from "features";
 import { getDatastores } from "admin/admin_rest_api";
 import renderIndependently from "libs/render_independently";
+import { useFetch } from "libs/react_helpers";
 
 const { TabPane } = Tabs;
 
@@ -36,25 +37,19 @@ const renderSampleDatasetsModal = (user: APIUser, history: RouterHistory) => {
   ));
 };
 
-// TODO: Replace with useFetch once it is merged
-function useDatastores(): { own: Array<APIDataStore>, wkConnect: Array<APIDataStore> } {
-  const [datastores, setDatastores] = useState({ own: [], wkConnect: [] });
-  const fetchDatastores = async () => {
-    const fetchedDatastores = await getDatastores();
-    const categorizedDatastores = {
-      own: fetchedDatastores.filter(ds => !ds.isForeign && !ds.isConnector),
-      wkConnect: fetchedDatastores.filter(ds => ds.isConnector),
-    };
-    setDatastores(categorizedDatastores);
+const fetchCategorizedDatastores = async (): Promise<{
+  own: Array<APIDataStore>,
+  wkConnect: Array<APIDataStore>,
+}> => {
+  const fetchedDatastores = await getDatastores();
+  return {
+    own: fetchedDatastores.filter(ds => !ds.isForeign && !ds.isConnector),
+    wkConnect: fetchedDatastores.filter(ds => ds.isConnector),
   };
-  useEffect(() => {
-    fetchDatastores();
-  }, []);
-  return datastores;
-}
+};
 
 const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
-  const datastores = useDatastores();
+  const datastores = useFetch(fetchCategorizedDatastores, { own: [], wkConnect: [] }, []);
 
   const handleDatasetAdded = (organization: string, datasetName: string) => {
     const url = `/datasets/${organization}/${datasetName}/import`;

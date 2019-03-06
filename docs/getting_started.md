@@ -30,7 +30,7 @@ This will create a folder for your data at `webknossos/binaryData/<organization 
 
 {% hint style='info' %}
 For production setups, we recommend more elaborate configurations with a public domain name and HTTPS support.
-[Please contact us](mailto:hello@scalableminds.com) if you require any assistance with your production setup. 
+[Please contact us](mailto:hello@scalableminds.com) if you require any assistance with your production setup.
 {% endhint %}
 
 You may also install webKnossos without Docker.
@@ -59,8 +59,7 @@ For small datasets (max. 1GB), you can use the upload functionality provide in t
 For larger datasets, we recommend the file system upload.
 Read more about the import functionality in the [Datasets guide](./datasets.md).
 
-If you do not have a compatible dataset available, you can use [this small dataset excerpt (300 MB)](https://static.webknossos.org/data/e2006_wkw.zip) for testing purposes.
-The data was published by [Helmstaedter et al., 2011](https://www.nature.com/articles/nn.2868).
+If you do not have a compatible dataset available, you can use one of the [sample datasets](./datasets.md#sample-datasets) for testing purposes.
 
 By default, datasets are visible to all users in your organization.
 However, webKnossos includes fine-grained permissions to assign datasets to groups of users.
@@ -70,12 +69,12 @@ However, webKnossos includes fine-grained permissions to assign datasets to grou
 
 
 ## Your First Annotation
-To get started with your first annotation, navigate to the `Datasets` tab on your [dashboard](./dashboard.md). 
-Identify a dataset that your interested in and click on `Start Skeleton Tracing` to create a new skeleton annotation. 
-webKnossos will launch the main annotation screen allowing you to navigate your dataset and place markers to reconstruct skeletons. 
+To get started with your first annotation, navigate to the `Datasets` tab on your [dashboard](./dashboard.md).
+Identify a dataset that your interested in and click on `Start Skeleton Tracing` to create a new skeleton annotation.
+webKnossos will launch the main annotation screen allowing you to navigate your dataset and place markers to reconstruct skeletons.
 
-Drag the mouse while pressing the left mouse button to navigate the dataset. 
-Right-click in the data to place markers, called nodes. 
+Drag the mouse while pressing the left mouse button to navigate the dataset.
+Right-click in the data to place markers, called nodes.
 Basic movement in the dataset is done with the mouse wheel or by pressing the spacebar keyboard shortcut.
 
 Learn more about the skeleton, volume, and hybrid annotations as well as the interface in the [Tracing UI guide](./tracing_ui.md).

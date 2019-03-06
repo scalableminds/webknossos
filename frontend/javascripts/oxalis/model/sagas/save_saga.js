@@ -41,7 +41,6 @@ import Request, { type RequestOptionsWithData } from "libs/request";
 import Toast from "libs/toast";
 import messages from "messages";
 import window, { alert, document, location } from "libs/window";
-import { getUid } from "libs/uid_generator";
 
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
 

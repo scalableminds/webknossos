@@ -30,9 +30,8 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
         const oldQueue = state.save.queue[action.tracingType];
         const newQueue = oldQueue.concat(
           updateActionChunks.map((actions, transactionGroupIndex) => ({
-            // Placeholder, the version number and requestId will be updated before sending to the server
+            // Placeholder, the version number will be updated before sending to the server
             version: -1,
-            requestId: "",
             transactionId,
             transactionGroupCount,
             transactionGroupIndex,

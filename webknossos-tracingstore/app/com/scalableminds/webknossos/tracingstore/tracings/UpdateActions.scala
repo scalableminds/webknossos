@@ -29,7 +29,6 @@ case class UpdateActionGroup[T <: GeneratedMessage with Message[T]](
     actions: List[UpdateAction[T]],
     stats: Option[JsObject],
     info: Option[String],
-    requestId: Option[String],
     transactionId: Option[String],
     transactionGroupCount: Option[Int],
     transactionGroupIndex: Option[Int]
@@ -47,7 +46,6 @@ object UpdateActionGroup {
         actions <- json.validate((JsPath \ "actions").read[List[UpdateAction[T]]])
         stats <- json.validate((JsPath \ "stats").readNullable[JsObject])
         info <- json.validate((JsPath \ "info").readNullable[String])
-        id <- json.validate((JsPath \ "requestId").readNullable[String])
         transactionId <- json.validate((JsPath \ "transactionId").readNullable[String])
         transactionGroupCount <- json.validate((JsPath \ "transactionGroupCount").readNullable[Int])
         transactionGroupIndex <- json.validate((JsPath \ "transactionGroupIndex").readNullable[Int])
@@ -57,7 +55,6 @@ object UpdateActionGroup {
                              actions,
                              stats,
                              info,
-                             id,
                              transactionId,
                              transactionGroupCount,
                              transactionGroupIndex)
@@ -74,7 +71,6 @@ object UpdateActionGroup {
         "actions" -> Json.toJson(value.actions),
         "stats" -> value.stats,
         "info" -> value.info,
-        "id" -> value.requestId,
         "transactionId" -> value.transactionId,
         "transactionGroupCount" -> value.transactionGroupCount,
         "transactionGroupIndex" -> value.transactionGroupIndex

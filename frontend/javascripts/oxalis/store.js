@@ -288,7 +288,6 @@ export type SaveQueueEntry = {
   transactionGroupIndex: number,
   stats: ?SkeletonTracingStats,
   info: string,
-  requestId: string,
 };
 
 export type ProgressInfo = {

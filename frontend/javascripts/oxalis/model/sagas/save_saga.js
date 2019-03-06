@@ -174,8 +174,6 @@ export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<v
   const tracingStoreUrl = yield* select(state => state.tracing.tracingStore.url);
   compactedSaveQueue = addVersionNumbers(compactedSaveQueue, version);
 
-  compactedSaveQueue = addRequestIds(compactedSaveQueue, getUid());
-
   let retryCount = 0;
   while (true) {
     try {
@@ -229,13 +227,6 @@ export function addVersionNumbers(
   lastVersion: number,
 ): Array<SaveQueueEntry> {
   return updateActionsBatches.map(batch => Object.assign({}, batch, { version: ++lastVersion }));
-}
-
-export function addRequestIds(
-  updateActionsBatches: Array<SaveQueueEntry>,
-  requestId: string,
-): Array<SaveQueueEntry> {
-  return updateActionsBatches.map(batch => Object.assign({}, batch, { requestId }));
 }
 
 function removeUnrelevantUpdateActions(updateActions: Array<UpdateAction>) {

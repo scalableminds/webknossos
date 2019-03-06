@@ -6,7 +6,7 @@ import javax.inject.Inject
 
 import scala.concurrent.duration.FiniteDuration
 
-class RedisTemporaryStore[V] @Inject()() {
+class RedisTemporaryStore @Inject()() {
   val r = new RedisClient("localhost", 6379)
 
   def find(id: String) =
@@ -48,6 +48,11 @@ class RedisTemporaryStore[V] @Inject()() {
         .getOrElse(
           r.set(id, value)
         )
+    }
+
+  def contains(id: String) =
+    r.synchronized {
+      r.exists(id)
     }
 
   def remove(id: String) =

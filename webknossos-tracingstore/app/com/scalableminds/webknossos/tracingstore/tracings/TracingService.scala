@@ -25,9 +25,9 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
 
   def temporaryTracingStore: TemporaryTracingStore[T]
 
-  val handledGroupCache: TemporaryStore[(String, String, Long), Unit]
+  val handledGroupIdStore: RedisTemporaryStore
 
-  val uncommittedUpdatesStore: RedisTemporaryStore[UpdateActionGroup[T]]
+  val uncommittedUpdatesStore: RedisTemporaryStore
 
   implicit def tracingCompanion: GeneratedMessageCompanion[T]
 
@@ -126,11 +126,16 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
     }
   }
 
-  def saveToHandledGroupCache(tracingId: String, version: Long, requestIdOpt: Option[String]): Unit =
-    requestIdOpt.foreach { requestId =>
-      handledGroupCache.insert((requestId, tracingId, version), (), Some(handledGroupCacheExpiry))
+  def handledGroupKey(tracingId: String, transactionId: String, version: Long) =
+    s"handledGroup___${tracingId}___${transactionId}___$version"
+
+  def saveToHandledGroupIdStore(tracingId: String, transactionIdOpt: Option[String], version: Long): Unit =
+    transactionIdOpt.foreach { transactionId =>
+      handledGroupIdStore.insert(handledGroupKey(tracingId, transactionId, version),
+                                 "()",
+                                 Some(handledGroupCacheExpiry))
     }
 
-  def handledGroupCacheContains(requestId: String, tracingId: String, version: Long): Boolean =
-    handledGroupCache.contains(requestId, tracingId, version)
+  def handledGroupIdStoreContains(tracingId: String, transactionId: String, version: Long): Boolean =
+    handledGroupIdStore.contains(handledGroupKey(tracingId, transactionId, version))
 }

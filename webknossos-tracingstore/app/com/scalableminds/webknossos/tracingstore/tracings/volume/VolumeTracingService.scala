@@ -32,9 +32,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class VolumeTracingService @Inject()(
     tracingDataStore: TracingDataStore,
     config: TracingStoreConfig,
-    val handledGroupCache: TemporaryStore[(String, String, Long), Unit],
     val temporaryTracingStore: TemporaryTracingStore[VolumeTracing],
-    val uncommittedUpdatesStore: RedisTemporaryStore[UpdateActionGroup[VolumeTracing]]
+    val handledGroupIdStore: RedisTemporaryStore,
+    val uncommittedUpdatesStore: RedisTemporaryStore
 ) extends TracingService[VolumeTracing]
     with VolumeTracingBucketHelper
     with WKWDataFormatHelper

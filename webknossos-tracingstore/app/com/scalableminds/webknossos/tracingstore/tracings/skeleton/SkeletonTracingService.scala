@@ -14,11 +14,10 @@ import play.api.libs.json.{JsObject, Json, Writes}
 
 import scala.concurrent.ExecutionContext
 
-class SkeletonTracingService @Inject()(
-    tracingDataStore: TracingDataStore,
-    val temporaryTracingStore: TemporaryTracingStore[SkeletonTracing],
-    val handledGroupCache: TemporaryStore[(String, String, Long), Unit],
-    val uncommittedUpdatesStore: RedisTemporaryStore[UpdateActionGroup[SkeletonTracing]])(implicit ec: ExecutionContext)
+class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
+                                       val temporaryTracingStore: TemporaryTracingStore[SkeletonTracing],
+                                       val handledGroupIdStore: RedisTemporaryStore,
+                                       val uncommittedUpdatesStore: RedisTemporaryStore)(implicit ec: ExecutionContext)
     extends TracingService[SkeletonTracing]
     with KeyValueStoreImplicits
     with ProtoGeometryImplicits

@@ -152,6 +152,16 @@ export function _getMaximumZoomForAllResolutions(
 }
 const getMaximumZoomForAllResolutions = memoizeOne(_getMaximumZoomForAllResolutions);
 
+function getMaximumZoomForAllResolutionsFromStore(state: OxalisState): Array<number> {
+  const { viewMode } = state.temporaryConfiguration;
+  return getMaximumZoomForAllResolutions(
+    viewMode,
+    state.dataset.dataSource.scale,
+    getResolutions(state.dataset),
+    getViewportRects(state),
+  );
+}
+
 export function getUp(flycam: Flycam): Vector3 {
   const matrix = flycam.currentMatrix;
   return [matrix[4], matrix[5], matrix[6]];
@@ -193,13 +203,7 @@ export function getZoomedMatrix(flycam: Flycam): Matrix4x4 {
 }
 
 export function getRequestLogZoomStep(state: OxalisState): number {
-  const { viewMode } = state.temporaryConfiguration;
-  const maximumZoomSteps = getMaximumZoomForAllResolutions(
-    viewMode,
-    state.dataset.dataSource.scale,
-    getResolutions(state.dataset),
-    getViewportRects(state),
-  );
+  const maximumZoomSteps = getMaximumZoomForAllResolutionsFromStore(state);
   const maxLogZoomStep = Math.log2(getMaxZoomStep(state.dataset));
 
   // Linearly search for the resolution index, for which the zoomFactor
@@ -218,15 +222,22 @@ export function getRequestLogZoomStep(state: OxalisState): number {
 }
 
 export function getMaxZoomValue(state: OxalisState): number {
-  const { viewMode } = state.temporaryConfiguration;
-
-  const maximumZoomSteps = getMaximumZoomForAllResolutions(
-    viewMode,
-    state.dataset.dataSource.scale,
-    getResolutions(state.dataset),
-    getViewportRects(state),
-  );
+  const maximumZoomSteps = getMaximumZoomForAllResolutionsFromStore(state);
   return _.last(maximumZoomSteps);
+}
+
+export function getMaxZoomValueForResolution(
+  state: OxalisState,
+  targetResolution: Vector3,
+): number {
+  const maximumZoomSteps = getMaximumZoomForAllResolutionsFromStore(state);
+  const resolutions = getResolutions(state.dataset);
+
+  const targetResolutionIndex = _.findIndex(resolutions, resolution =>
+    _.isEqual(resolution, targetResolution),
+  );
+
+  return maximumZoomSteps[targetResolutionIndex];
 }
 
 export function getZoomValue(flycam: Flycam): number {

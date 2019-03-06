@@ -5,11 +5,9 @@ import java.util.UUID
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.scalableminds.webknossos.tracingstore.RedisTemporaryStore
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing.SkeletonTracing
-import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
-import play.api.libs.json.{Json, Reads}
+import play.api.libs.json._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -33,7 +31,7 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
 
   implicit def tracingCompanion: GeneratedMessageCompanion[T]
 
-  implicit val updateActionReads: Reads[UpdateAction[T]]
+  implicit val updateActionJsonFormat: Format[UpdateAction[T]]
 
   // this should be longer than maxCacheTime in webknossos/AnnotationStore
   // so that the references saved there remain valid throughout their life

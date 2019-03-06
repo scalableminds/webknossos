@@ -31,7 +31,7 @@ class SkeletonTracingService @Inject()(
 
   implicit val tracingCompanion = SkeletonTracing
 
-  implicit val updateActionReads = SkeletonUpdateAction.skeletonUpdateActionFormat
+  implicit val updateActionJsonFormat = SkeletonUpdateAction.skeletonUpdateActionFormat
 
   def currentVersion(tracingId: String): Fox[Long] =
     tracingDataStore.skeletonUpdates.getVersion(tracingId, mayBeEmpty = Some(true)).getOrElse(0L)

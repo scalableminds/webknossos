@@ -46,7 +46,7 @@ class VolumeTracingService @Inject()(
 
   implicit val tracingCompanion = VolumeTracing
 
-  implicit val updateActionReads = VolumeUpdateAction.volumeUpdateActionFormat
+  implicit val updateActionJsonFormat = VolumeUpdateAction.volumeUpdateActionFormat
 
   val tracingType = TracingType.volume
 

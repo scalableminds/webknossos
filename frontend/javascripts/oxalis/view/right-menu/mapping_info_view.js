@@ -237,7 +237,7 @@ class MappingInfoView extends React.Component<Props, State> {
     }
     const availableMappings =
       this.props.segmentationLayer != null && this.props.segmentationLayer.mappings != null
-        ? [...this.props.segmentationLayer.mappings]
+        ? this.props.segmentationLayer.mappings
         : [];
 
     // Antd does not render the placeholder when a value is defined (even when it's null).
@@ -280,6 +280,7 @@ class MappingInfoView extends React.Component<Props, State> {
               notFoundContent="No mappings found."
             >
               {availableMappings
+                .slice()
                 .sort(Utils.localeCompareBy(([]: Array<string>), mapping => mapping))
                 .map(mapping => (
                   <Option key={mapping} value={mapping}>

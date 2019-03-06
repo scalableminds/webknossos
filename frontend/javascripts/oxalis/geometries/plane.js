@@ -80,6 +80,10 @@ class Plane {
         crosshairGeometries[i],
         this.getLineBasicMaterial(OrthoViewCrosshairColors[this.planeID][i], 1),
       );
+      // Objects are rendered according to their renderOrder (lowest to highest).
+      // The default renderOrder is 0. In order for the crosshairs to be shown
+      // render them AFTER the plane has been rendered.
+      this.crosshair[i].renderOrder = 1;
     }
 
     // create borders

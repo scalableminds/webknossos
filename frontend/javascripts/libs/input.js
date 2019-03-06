@@ -28,7 +28,7 @@ const MOUSE_MOVE_DELTA_THRESHOLD = 30;
 
 export type ModifierKeys = "alt" | "shift" | "ctrl";
 type KeyboardKey = string;
-type KeyboardHandler = (event: KeyboardEvent) => void;
+type KeyboardHandler = (event: KeyboardEvent) => void | Promise<void>;
 type KeyboardLoopHandler = (number, isOriginalEvent: boolean) => void;
 type KeyboardBindingPress = [KeyboardKey, KeyboardHandler, KeyboardHandler];
 type KeyboardBindingDownUp = [KeyboardKey, KeyboardHandler, KeyboardHandler];

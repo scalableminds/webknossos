@@ -61,6 +61,7 @@ type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
 type State = {
   isSettingsCollapsed: boolean,
   activeLayout: string,
+  hasError: boolean,
 };
 
 const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
@@ -76,6 +77,12 @@ const GOLDEN_LAYOUT_ADAPTER_STYLE = {
 class TracingLayoutView extends React.PureComponent<Props, State> {
   currentLayoutConfig: Object;
   currentLayoutName: string;
+
+  static getDerivedStateFromError() {
+    // DO NOT set hasError back to false EVER as this will trigger a remount of the Controller
+    // with unforeseeable consequences
+    return { hasError: true };
+  }
 
   constructor(props: Props) {
     super(props);
@@ -94,6 +101,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     this.state = {
       isSettingsCollapsed: true,
       activeLayout: lastActiveLayout,
+      hasError: false,
     };
   }
 
@@ -145,6 +153,14 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     this.props.storedLayouts[layoutKey] ? Object.keys(this.props.storedLayouts[layoutKey]) : [];
 
   render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ marginTop: 50, textAlign: "center" }}>
+          {messages["react.rendering_error"]}
+        </div>
+      );
+    }
+
     const layoutType = determineLayout(this.props.initialCommandType.type, this.props.viewMode);
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
     const { displayScalebars, isDatasetOnScratchVolume, isUpdateTracingAllowed } = this.props;

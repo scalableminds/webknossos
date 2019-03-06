@@ -270,17 +270,22 @@ void main()
       gl_FragColor  = vec4(1.0);
     };
 
-    // Make active node round and give it a "halo"
+    // Give active node a "halo". The inner node should look exactly as a non-active node.
     if (v_isActiveNode > 0.0) {
       float r = 0.0, delta = 0.0, alphaInner = 1.0, alphaOuter = 1.0;
+
+      // cxy is between -1.0 and +1.0
       vec2 cxy = 2.0 * gl_PointCoord - 1.0;
+      // r is the length from the center of the point to the active texel
       r = dot(cxy, cxy);
+      float relativeInnerNodeRadius = 0.5 * v_innerPointSize / v_outerPointSize;
+      // Take the maximum of the distance's components to achieve an inner square
+      float maxCenterDistance = max(centerDistance.x, centerDistance.y);
 
       #ifdef GL_OES_standard_derivatives
         delta = fwidth(r);
         alphaOuter = 1.0 - smoothstep(0.0, delta, abs(1.0 - delta - r));
-        float relativeInnerNodeDiameter = v_innerPointSize / v_outerPointSize;
-        alphaInner = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, 2.0 * r / relativeInnerNodeDiameter);
+        alphaInner = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, maxCenterDistance / relativeInnerNodeRadius);
         alphaOuter = max(0.0, alphaOuter - alphaInner);
       #endif
 

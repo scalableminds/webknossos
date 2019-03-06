@@ -883,15 +883,15 @@ export async function findDataPositionForLayer(
   datastoreUrl: string,
   datasetId: APIDatasetId,
   layerName: string,
-): Promise<?Vector3> {
-  const { position } = await doWithToken(token =>
+): Promise<{ position: ?Vector3, resolution: ?Vector3 }> {
+  const { position, resolution } = await doWithToken(token =>
     Request.receiveJSON(
       `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
         datasetId.name
       }/layers/${layerName}/findData?token=${token}`,
     ),
   );
-  return position;
+  return { position, resolution };
 }
 
 export async function getMappingsForDatasetLayer(

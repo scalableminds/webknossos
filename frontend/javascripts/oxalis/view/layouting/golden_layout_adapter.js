@@ -70,6 +70,7 @@ const updateSizeForGl = gl => {
 export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
   gl: GoldenLayout;
   unbindListeners: Array<() => void>;
+  maximisedItem: null;
 
   componentDidMount() {
     this.setupLayout();
@@ -103,6 +104,11 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
     if (onLayoutChange != null && this.gl.isInitialised) {
       onLayoutChange(this.gl.toConfig(), this.props.activeLayoutName);
     }
+    if (this.gl && this.maximisedItem !== !this.gl._maximisedItem) {
+      console.log("forcing rerender");
+      this.maximisedItem = this.gl._maximisedItem;
+      this.forceUpdate();
+    }
   }
 
   setupLayout() {
@@ -126,7 +132,8 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
       },
       true,
     );
-
+    // checks whether there is a maximized component
+    this.hasMaximasedComponent = this.gl && this.gl._maximisedItem;
     gl.on("stateChanged", () => this.onStateChange());
 
     this.unbindListeners = [unbindResetListener, unbindChangedScaleListener, unbindResizeListener];
@@ -155,14 +162,24 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
       updateSize();
     }, 10);
   }
+  // this.gl.config.content[0]. usw
 
   render() {
+    let idOfMaximisedComponent = null;
+    if (this.gl && this.gl._maximisedItem) {
+      // gets the Id of the currently maximised portal
+      idOfMaximisedComponent = this.gl._maximisedItem._activeContentItem.config.props.portalId;
+    }
     const layoutContainer = (
       <div key="layoutContainer" id={this.props.id} style={this.props.style} />
     );
     const portals = React.Children.toArray(this.props.children).map(child => (
       <RenderToPortal key={child.props.portalKey} portalId={child.props.portalKey}>
-        {child}
+        {idOfMaximisedComponent === null || idOfMaximisedComponent === child.props.portalKey ? (
+          child
+        ) : (
+          <div style={{ display: "none" }}>{child}</div>
+        )}
       </RenderToPortal>
     ));
     return [layoutContainer, ...portals];

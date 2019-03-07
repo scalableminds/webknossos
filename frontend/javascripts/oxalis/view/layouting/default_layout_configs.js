@@ -22,7 +22,7 @@ export const show3DViewportInArbitrary = false;
 const LayoutSettings = {
   showPopoutIcon: false,
   showCloseIcon: false,
-  showMaximiseIcon: false,
+  showMaximiseIcon: true,
 };
 
 // While the first parameter to `Pane` is the title of the pane, the second one is an id

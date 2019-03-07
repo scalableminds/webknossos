@@ -261,3 +261,11 @@ services:
     volumes:
       - "./fossildb-dev/data:/fossildb/data"
       - "./fossildb-dev/backup:/fossildb/backup"
+
+  # Redis
+  redis:
+    image: redis:5.0.3
+    volumes:
+      - "./redis-data:/data"
+    command:
+      - redis-server

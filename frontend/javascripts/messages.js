@@ -10,6 +10,7 @@ export const settings = {
   moveValue: "Move Value (nm/s)",
   newNodeNewTree: "Single-node-tree mode (Soma clicking)",
   highlightCommentedNodes: "Highlight Commented Nodes",
+  nodeRadius: "Node Radius",
   overrideNodeRadius: "Override Node Radius",
   particleSize: "Particle Size",
   tdViewDisplayPlanes: "Display Planes in 3D View",
@@ -28,6 +29,11 @@ export const settings = {
   crosshairSize: "Crosshair Size",
   brushSize: "Brush Size",
   userBoundingBox: "Bounding Box",
+  loadingStrategy: "Loading Strategy",
+  loadingStrategyDescription: `You can choose between loading the best quality first
+    (will take longer until you see data) or alternatively,
+    improving the quality progressively (data will be loaded faster,
+    but it will take more time until the best quality is shown).`,
 };
 
 export default {

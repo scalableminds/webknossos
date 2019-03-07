@@ -3,7 +3,7 @@ import _ from "lodash";
 import urljoin from "url-join";
 
 import { createWorker } from "oxalis/workers/comlink_wrapper";
-import { pingDataStoreIfAppropriate, pingMentionedDataStores } from "admin/datastore_health_check";
+import { pingMentionedDataStores } from "admin/datastore_health_check";
 import CompressWorker from "oxalis/workers/compress.worker";
 import FetchBufferWithHeadersWorker from "oxalis/workers/fetch_buffer_with_headers.worker";
 import FetchBufferWorker from "oxalis/workers/fetch_buffer.worker";
@@ -279,7 +279,7 @@ class Request {
   ): Promise<void> => {
     if (doInvestigate) {
       // Check whether this request failed due to a problematic datastore
-      pingDataStoreIfAppropriate(requestedUrl);
+      pingMentionedDataStores(requestedUrl);
       if (error instanceof Response) {
         return error.text().then(
           text => {

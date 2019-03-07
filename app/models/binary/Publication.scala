@@ -1,10 +1,10 @@
 package models.binary
 
-import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
 import play.api.libs.json.{JsObject, Json}
+import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
 
@@ -51,4 +51,13 @@ class PublicationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionConte
         r.isdeleted
       )
     )
+
+  def insertOne(p: Publication): Fox[Unit] =
+    for {
+      _ <- run(
+        sqlu"""insert into webknossos.publications(_id, publicationDate, imageUrl, title, description, created, isDeleted)
+                         values(${p._id.id}, ${p.publicationDate
+          .map(new java.sql.Timestamp(_))}, ${p.imageUrl}, ${p.title}, ${p.description}, ${new java.sql.Timestamp(
+          p.created)}, ${p.isDeleted})""")
+    } yield ()
 }

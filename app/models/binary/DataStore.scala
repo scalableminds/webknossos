@@ -82,6 +82,12 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
       parsed
     }
 
+  override def findAll(implicit ctx: DBAccessContext): Fox[List[DataStore]] =
+    for {
+      r <- run(sql"select #${columns} from webknossos.datastores_ order by name".as[DatastoresRow])
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
+
   def updateUrlByName(name: String, url: String)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val q = for { row <- Datastores if notdel(row) && row.name === name } yield row.url
     for { _ <- run(q.update(url)) } yield ()

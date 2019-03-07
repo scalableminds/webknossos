@@ -34,7 +34,6 @@ import constants, {
   type BoundingBoxType,
   type OrthoView,
   type OrthoViewMap,
-  OrthoViewValues,
   OrthoViewValuesWithoutTDView,
   OrthoViews,
   type Vector3,
@@ -49,7 +48,7 @@ const CUBE_COLOR = 0x999999;
 class SceneController {
   skeleton: Skeleton;
   current: number;
-  displayPlane: OrthoViewMap<boolean>;
+  isPlaneVisible: OrthoViewMap<boolean>;
   planeShift: Vector3;
   cube: Cube;
   userBoundingBox: Cube;
@@ -72,7 +71,7 @@ class SceneController {
   constructor() {
     _.extend(this, BackboneEvents);
     this.current = 0;
-    this.displayPlane = {
+    this.isPlaneVisible = {
       [OrthoViews.PLANE_XY]: true,
       [OrthoViews.PLANE_YZ]: true,
       [OrthoViews.PLANE_XZ]: true,
@@ -316,12 +315,13 @@ class SceneController {
         }
       }
     } else {
+      const { tdViewDisplayPlanes } = Store.getState().userConfiguration;
       for (const planeId of OrthoViewValuesWithoutTDView) {
         const pos = getPosition(Store.getState().flycam);
         this.planes[planeId].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2]));
         this.planes[planeId].setGrayCrosshairColor();
         this.planes[planeId].setVisible(true);
-        this.planes[planeId].plane.visible = this.displayPlane[planeId];
+        this.planes[planeId].plane.visible = this.isPlaneVisible[planeId] && tdViewDisplayPlanes;
       }
     }
   };
@@ -353,10 +353,10 @@ class SceneController {
         const [scaleX, scaleY] = getPlaneScalingFactor(state, flycam, currentPlane.planeID);
         const isVisible = scaleX > 0 && scaleY > 0;
         if (isVisible) {
-          this.displayPlane[currentPlane.planeID] = true;
+          this.isPlaneVisible[currentPlane.planeID] = true;
           currentPlane.setScale(scaleX, scaleY);
         } else {
-          this.displayPlane[currentPlane.planeID] = false;
+          this.isPlaneVisible[currentPlane.planeID] = false;
           // Set the scale to non-zero values, since threejs will otherwise
           // complain about non-invertible matrices.
           currentPlane.setScale(1, 1);
@@ -386,13 +386,6 @@ class SceneController {
     }
     app.vent.trigger("rerender");
   }
-
-  setDisplayPlanes = (value: boolean): void => {
-    for (const planeId of OrthoViewValues) {
-      this.displayPlane[planeId] = value;
-    }
-    app.vent.trigger("rerender");
-  };
 
   getRootNode(): THREE.Object3D {
     return this.rootNode;
@@ -443,11 +436,6 @@ class SceneController {
     listenToStoreProperty(
       storeState => storeState.userConfiguration.displayCrosshair,
       displayCrosshair => this.setDisplayCrosshair(displayCrosshair),
-    );
-
-    listenToStoreProperty(
-      storeState => storeState.userConfiguration.tdViewDisplayPlanes,
-      tdViewDisplayPlanes => this.setDisplayPlanes(tdViewDisplayPlanes),
     );
 
     listenToStoreProperty(

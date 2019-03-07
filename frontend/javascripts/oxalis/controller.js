@@ -163,9 +163,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   }
 
   setLayoutScale(multiplier: number): void {
-    let scale = Store.getState().userConfiguration.layoutScaleValue + 0.05 * multiplier;
-    scale = Math.min(constants.MAX_LAYOUT_SCALE, scale);
-    scale = Math.max(constants.MIN_LAYOUT_SCALE, scale);
+    const scale = Store.getState().userConfiguration.layoutScaleValue + 0.05 * multiplier;
     Store.dispatch(updateUserSettingAction("layoutScaleValue", scale));
   }
 

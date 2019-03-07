@@ -3,12 +3,15 @@
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
 import { Spin, Input, Button, Icon, Row, Col } from "antd";
-import * as React from "react";
+import React from "react";
 
 import type { APIUser, APIMaybeUnimportedDataset } from "admin/api_flow_types";
 import AdvancedDatasetView from "dashboard/advanced_dataset/dataset_table";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
+import renderIndependently from "libs/render_independently";
+import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
+import { OptionCard } from "admin/onboarding";
 import { getDatastores, triggerDatasetCheck, getDatasets } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 
@@ -106,29 +109,53 @@ class DatasetView extends React.PureComponent<Props, State> {
     this.setState({ searchQuery: event.target.value });
   };
 
+  renderSampleDatasetsModal = () => {
+    renderIndependently(destroy => (
+      <SampleDatasetsModal
+        onOk={this.handleCheckDatasets}
+        organizationName={this.props.user.organization}
+        destroy={destroy}
+      />
+    ));
+  };
+
   renderPlaceholder() {
     const isUserAdmin = Utils.isUserAdmin(this.props.user);
     const noDatasetsPlaceholder =
       "There are no datasets available yet. Please ask an admin to upload a dataset or to grant you permission to add a dataset.";
     const uploadPlaceholder = (
       <React.Fragment>
-        <Icon type="cloud-upload" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />
-        <p style={{ fontSize: 24, margin: "14px 0 0" }}>Upload the first dataset.</p>
-        <p
-          style={{
-            fontSize: 14,
-            margin: "14px 0",
-            color: "gray",
-            display: "inline-block",
-            width: 500,
-          }}
-        >
-          <Link to="/datasets/upload">Upload your dataset</Link> or copy it directly onto the
-          hosting server.{" "}
-          <a href="https://github.com/scalableminds/webknossos/wiki/Datasets">
-            Learn more about supported data formats.
-          </a>
-        </p>
+        <Row type="flex" gutter={16} justify="center" align="bottom">
+          <OptionCard
+            header="Add Sample Dataset"
+            icon={<Icon type="rocket" />}
+            action={
+              <Button type="primary" onClick={this.renderSampleDatasetsModal}>
+                Add Sample Dataset
+              </Button>
+            }
+            height={350}
+          >
+            This is the easiest way to try out webKnossos. Add one of our sample datasets and start
+            exploring in less than a minute.
+          </OptionCard>
+          <OptionCard
+            header="Upload Dataset"
+            icon={<Icon type="cloud-upload-o" />}
+            action={
+              <Link to="/datasets/upload">
+                <Button>Upload your dataset</Button>
+              </Link>
+            }
+            height={250}
+          >
+            You can also copy it directly onto the hosting server.{" "}
+            <a href="https://github.com/scalableminds/webknossos/wiki/Datasets">
+              Learn more about supported data formats.
+            </a>
+          </OptionCard>
+        </Row>
+        <div style={{ marginTop: 24 }}>There are no datasets available yet.</div>
       </React.Fragment>
     );
 

@@ -222,7 +222,9 @@ void main() {
       )};
 
       v_innerPointSize = gl_PointSize;
-      v_outerPointSize = isOrthogonalMode ? (v_innerPointSize + 25.0) : v_innerPointSize;
+      v_outerPointSize = isOrthogonalMode
+        ? v_innerPointSize + 25.0
+        : v_innerPointSize * 1.5;
       gl_PointSize = v_outerPointSize;
     }
 
@@ -253,6 +255,8 @@ void main() {
 
 precision highp float;
 
+uniform float viewMode;
+
 varying vec3 color;
 varying float v_isHighlightedCommented;
 varying float v_isActiveNode;
@@ -270,17 +274,36 @@ void main()
       gl_FragColor  = vec4(1.0);
     };
 
-    // Make active node round and give it a "halo"
+    // Give active node a "halo"
     if (v_isActiveNode > 0.0) {
       float r = 0.0, delta = 0.0, alphaInner = 1.0, alphaOuter = 1.0;
+
+      bool isOrthogonalMode = viewMode == ${formatNumberAsGLSLFloat(
+        ViewModeValuesIndices.Orthogonal,
+      )};
+
+      // cxy is between -1.0 and +1.0
       vec2 cxy = 2.0 * gl_PointCoord - 1.0;
+      // r is the length from the center of the point to the active texel
       r = dot(cxy, cxy);
+      float relativeInnerNodeRadius = 0.5 * v_innerPointSize / v_outerPointSize;
 
       #ifdef GL_OES_standard_derivatives
         delta = fwidth(r);
-        alphaOuter = 1.0 - smoothstep(0.0, delta, abs(1.0 - delta - r));
-        float relativeInnerNodeDiameter = v_innerPointSize / v_outerPointSize;
-        alphaInner = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, 2.0 * r / relativeInnerNodeDiameter);
+
+        if (isOrthogonalMode) {
+          // Make the inner node a square so that it looks exactly as a non-active node. The halo
+          // will ensure that the active node is recognizable.
+          float maxCenterDistance = max(centerDistance.x, centerDistance.y);
+          alphaInner = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, maxCenterDistance / relativeInnerNodeRadius);
+          alphaOuter = 1.0 - smoothstep(0.0, delta, abs(1.0 - delta - r));
+        } else {
+          // In non-ortho mode, we do not show a halo. Therefore, make the active node round
+          // to give at least a slight clue, which node is active.
+          alphaInner = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r / relativeInnerNodeRadius);
+          alphaOuter = 0.0;
+        }
+
         alphaOuter = max(0.0, alphaOuter - alphaInner);
       #endif
 

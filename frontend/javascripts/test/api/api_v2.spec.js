@@ -121,7 +121,7 @@ test("getDataValue should get the data value for a layer, position and zoomstep"
 
 test("User Api: setConfiguration should set and get a user configuration value", t => {
   const api = t.context.api;
-  const MOVE_VALUE = 10;
+  const MOVE_VALUE = 100;
   api.user.setConfiguration("moveValue", MOVE_VALUE);
   t.is(api.user.getConfiguration("moveValue"), MOVE_VALUE);
 });

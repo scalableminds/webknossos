@@ -60,7 +60,7 @@ export const KeyboardJS = {
   unbind: _.noop,
 };
 mockRequire("libs/keyboard", KeyboardJS);
-mockRequire("libs/toast", { error: _.noop, warning: _.noop, close: _.noop });
+mockRequire("libs/toast", { error: _.noop, warning: _.noop, close: _.noop, success: _.noop });
 
 mockRequire(
   "libs/window",

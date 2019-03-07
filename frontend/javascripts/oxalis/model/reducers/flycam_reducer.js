@@ -10,9 +10,9 @@ import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { getMaxZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import Dimensions from "oxalis/model/dimensions";
 import * as Utils from "libs/utils";
+import { userSettings } from "libs/user_settings.schema";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
-const ZOOM_STEP_MIN = 0.005;
 
 function cloneMatrix(m: Matrix4x4): Matrix4x4 {
   return [
@@ -116,7 +116,7 @@ function moveReducer(state: OxalisState, vector: Vector3): OxalisState {
 export function zoomReducer(state: OxalisState, zoomStep: number): OxalisState {
   return update(state, {
     flycam: {
-      zoomStep: { $set: Utils.clamp(ZOOM_STEP_MIN, zoomStep, getMaxZoomValue(state)) },
+      zoomStep: { $set: Utils.clamp(userSettings.zoom.minimum, zoomStep, getMaxZoomValue(state)) },
     },
   });
 }

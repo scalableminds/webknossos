@@ -6,6 +6,7 @@
 ## Guides
 * [Dashboard](./dashboard.md)
 * [Tracing UI](./tracing_ui.md)
+* [Mesh Visualization](./mesh_visualization.md)
 * [Managing Datasets](./datasets.md)
 * [Managing Users and Access Rights](./users.md)
 * [Managing Tasks and Projects](./tasks.md)

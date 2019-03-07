@@ -10,7 +10,6 @@ import * as React from "react";
 import _ from "lodash";
 
 import type { APIDataset } from "admin/api_flow_types";
-import type { DatasetConfiguration, DatasetLayerConfiguration, OxalisState } from "oxalis/store";
 import {
   SwitchSetting,
   NumberSliderSetting,
@@ -18,12 +17,18 @@ import {
   ColorSetting,
 } from "oxalis/view/settings/setting_input_views";
 import { findDataPositionForLayer } from "admin/admin_rest_api";
+import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import { hasSegmentation, isRgb } from "oxalis/model/accessors/dataset_accessor";
-import { setPositionAction } from "oxalis/model/actions/flycam_actions";
+import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import {
   updateDatasetSettingAction,
   updateLayerSettingAction,
 } from "oxalis/model/actions/settings_actions";
+import Store, {
+  type DatasetConfiguration,
+  type DatasetLayerConfiguration,
+  type OxalisState,
+} from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import constants, {
@@ -50,6 +55,7 @@ type DatasetSettingsProps = {|
   controlMode: ControlMode,
   hasSegmentation: boolean,
   onSetPosition: Vector3 => void,
+  onZoomToResolution: Vector3 => number,
 |};
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
@@ -68,12 +74,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             <Tag style={{ cursor: "default", marginLeft: 8 }} color={isRGB && "#1890ff"}>
               {isRGB ? "24-bit" : "8-bit"} Layer
             </Tag>
-            <Icon
-              type="scan"
-              onClick={() => this.handleFindData(layerName)}
-              style={{ float: "right", marginTop: 4, cursor: "pointer" }}
-              title="If you are having trouble finding your data, webKnossos can try to find a position which contains data."
-            />
+            <Tooltip title="If you are having trouble finding your data, webKnossos can try to find a position which contains data.">
+              <Icon
+                type="scan"
+                onClick={() => this.handleFindData(layerName)}
+                style={{ float: "right", marginTop: 4, cursor: "pointer" }}
+              />
+            </Tooltip>
           </Col>
         </Row>
         <NumberSliderSetting
@@ -115,17 +122,21 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
   };
 
   handleFindData = async (layerName: string) => {
-    const maybePosition = await findDataPositionForLayer(
+    const { position, resolution } = await findDataPositionForLayer(
       this.props.dataset.dataStore.url,
       this.props.dataset,
       layerName,
     );
-    if (maybePosition != null) {
-      this.props.onSetPosition(maybePosition);
-      Toast.success(`Jumping to position ${maybePosition.join(", ")}`);
-    } else {
+    if (!position || !resolution) {
       Toast.warning(`Couldn't find data within layer "${layerName}."`);
+      return;
     }
+
+    this.props.onSetPosition(position);
+    const zoomValue = this.props.onZoomToResolution(resolution);
+    Toast.success(
+      `Jumping to position ${position.join(", ")} and zooming to ${zoomValue.toFixed(2)}`,
+    );
   };
 
   onChangeRenderMissingDataBlack = (value: boolean): void => {
@@ -173,14 +184,45 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     );
 
     return (
-      <Collapse defaultActiveKey={["1", "2", "3", "4"]}>
+      <Collapse bordered={false} defaultActiveKey={["1", "2", "3", "4"]}>
         <Panel header="Color Layers" key="1">
           {colorSettings}
         </Panel>
         {this.props.hasSegmentation ? this.getSegmentationPanel() : null}
-        <Panel header="Quality" key="3">
+        <Panel header="Data Rendering" key="3">
+          <DropdownSetting
+            label={settings.quality}
+            value={this.props.datasetConfiguration.quality}
+            onChange={_.partial(this.onChangeQuality, "quality")}
+          >
+            <Option value="0">High</Option>
+            <Option value="1">Medium</Option>
+            <Option value="2">Low</Option>
+          </DropdownSetting>
+          <DropdownSetting
+            label={
+              <React.Fragment>
+                {settings.loadingStrategy}{" "}
+                <Tooltip title={settings.loadingStrategyDescription}>
+                  <Icon type="info-circle" />
+                </Tooltip>
+              </React.Fragment>
+            }
+            value={this.props.datasetConfiguration.loadingStrategy}
+            onChange={_.partial(this.props.onChange, "loadingStrategy")}
+          >
+            <Option value="BEST_QUALITY_FIRST">Best quality first</Option>
+            <Option value="PROGRESSIVE_QUALITY">Progressive quality</Option>
+          </DropdownSetting>
           <SwitchSetting
-            label={settings.fourBit}
+            label={
+              <React.Fragment>
+                {settings.fourBit}{" "}
+                <Tooltip title="Decrease size of transferred data by half using lossy compression. Recommended for poor and/or capped Internet connections.">
+                  <Icon type="info-circle" />
+                </Tooltip>
+              </React.Fragment>
+            }
             value={this.props.datasetConfiguration.fourBit}
             onChange={_.partial(this.props.onChange, "fourBit")}
           />
@@ -191,20 +233,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
               onChange={_.partial(this.props.onChange, "interpolation")}
             />
           )}
-          <DropdownSetting
-            label={settings.quality}
-            value={this.props.datasetConfiguration.quality}
-            onChange={_.partial(this.onChangeQuality, "quality")}
-          >
-            <Option value="0">high</Option>
-            <Option value="1">medium</Option>
-            <Option value="2">low</Option>
-          </DropdownSetting>
           <SwitchSetting
             label={
               <React.Fragment>
                 {settings.renderMissingDataBlack}{" "}
-                <Tooltip title="Upsample lower resolution data for missing higher resolution data.">
+                <Tooltip title="If disabled, missing data will be rendered by using poorer magnifications.">
                   <Icon type="info-circle" />
                 </Tooltip>
               </React.Fragment>
@@ -235,6 +268,11 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   onSetPosition(position) {
     dispatch(setPositionAction(position));
+  },
+  onZoomToResolution(resolution) {
+    const targetZoomValue = getMaxZoomValueForResolution(Store.getState(), resolution);
+    dispatch(setZoomStepAction(targetZoomValue));
+    return targetZoomValue;
   },
 });
 

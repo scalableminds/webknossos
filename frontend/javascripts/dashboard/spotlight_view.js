@@ -304,7 +304,6 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
                     className="img-responsive"
                     alt="scalable minds logo"
                     src="/images/scalableminds_logo.svg"
-                    style={{ filter: "contrast(0)" }}
                   />
                 </a>
               </p>

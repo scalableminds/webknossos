@@ -10,6 +10,8 @@ import {
   type StateShape1,
   type StateShape2,
 } from "oxalis/model/helpers/deep_update";
+import { clamp } from "libs/utils";
+import { userSettings } from "libs/user_settings.schema";
 
 //
 // Update helpers
@@ -38,8 +40,17 @@ const updateActiveMapping = (
 function SettingsReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
     case "UPDATE_USER_SETTING": {
-      const { propertyName, value } = action;
+      const { propertyName } = action;
+      let { value } = action;
 
+      const settingSpec = userSettings[propertyName];
+      if (settingSpec != null && settingSpec.type === "number") {
+        const min = settingSpec.minimum != null ? settingSpec.minimum : -Infinity;
+        const max = settingSpec.maximum != null ? settingSpec.maximum : Infinity;
+        value = clamp(min, value, max);
+      }
+
+      // $FlowFixMe Flow doesn't check that only numbers will be clamped
       return updateUserConfig(state, { [propertyName]: value });
     }
 

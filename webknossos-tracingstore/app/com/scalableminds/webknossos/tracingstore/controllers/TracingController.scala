@@ -117,7 +117,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
           } else {
             updateGroups
               .foldLeft(tracingService.currentVersion(tracingId)) { (currentCommittedVersionFox, updateGroup) =>
-                handleUpdategroupForTransaction(tracingId, currentCommittedVersionFox, updateGroup, userToken)
+                handleUpdateGroupForTransaction(tracingId, currentCommittedVersionFox, updateGroup, userToken)
               }
               .map(_ => Ok)
           }
@@ -128,7 +128,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
 
   val transactionBatchExpiry: FiniteDuration = 20 minutes
 
-  private def handleUpdategroupForTransaction(tracingId: String,
+  private def handleUpdateGroupForTransaction(tracingId: String,
                                               previousVersionFox: Fox[Long],
                                               updateGroup: UpdateActionGroup[T],
                                               userToken: Option[String]): Fox[Long] =

@@ -16,22 +16,19 @@ import { load as loadFeatureToggles } from "features";
 import { mount } from "enzyme";
 import mockRequire from "mock-require";
 import test from "ava";
+import * as antd from "antd";
 
 // Those wrappers interfere with global.window and global.document otherwise
 mockRequire("libs/window", global.window);
 mockRequire("libs/datasource.schema.json", {});
 
-// The following components cannot be rendered by enzyme. Let's mock them
-mockRequire("antd/lib/upload", () => <div />);
-
 // Antd makes use of fancy effects, which is why the rendering output is not reliable.
 // Mock these components to avoid this issue.
-mockRequire("antd/lib/spin", props => <div className="mock-spinner">{props.children}</div>);
-mockRequire("antd/lib/button", props => (
-  <div className="mock-button" {...props}>
-    {props.children}
-  </div>
-));
+const antdMock = {
+  ...antd,
+  Spin: props => <div className="mock-spinner">{props.children}</div>,
+};
+mockRequire("antd", antdMock);
 
 const ProjectListView = mockRequire.reRequire("../../admin/project/project_list_view").default;
 const Dashboard = mockRequire.reRequire("../../dashboard/dashboard_view").default;

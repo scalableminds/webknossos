@@ -123,7 +123,7 @@ class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>,
   };
 
   render() {
-    const props = _.omit(this.props, ["onChange", "value", "changeOnlyOnBlur"]);
+    const props = _.omit(this.props, ["onChange", "value", "changeOnlyOnBlur", "allowDecimals"]);
     return (
       <Input
         onChange={this.handleChange}

@@ -27,8 +27,8 @@
     "babel-plugin-istanbul": "^5.1.0",
     "commander": "^2.17.1",
     "coveralls": "^3.0.2",
-    "css-loader": "^0.28.1",
-    "documentation": "^9.0.0-alpha.0",
+    "css-loader": "^2.1.0",
+    "documentation": "^9.3.0",
     "enzyme": "^3.7.0",
     "enzyme-adapter-react-16": "^1.9.1",
     "eslint": "^5.7.0",
@@ -53,13 +53,13 @@
     "isomorphic-fetch": "^2.2.0",
     "jsdom": "^11.5.1",
     "json-loader": "^0.5.7",
-    "less": "^3.0.1",
+    "less": "^3.9.0",
     "less-loader": "^4.1.0",
     "lint-staged": "^7.3.0",
     "merge-img": "^2.1.2",
     "mock-require": "^1.2.1",
     "node-fetch": "^2.1.2",
-    "nyc": "^12.0.2",
+    "nyc": "^13.3.0",
     "pg": "^7.4.1",
     "pixelmatch": "^4.0.2",
     "pngjs": "^3.3.3",
@@ -79,7 +79,7 @@
     "url-loader": "^1.0.1",
     "webpack": "^4.20.2",
     "webpack-cli": "^3.1.0",
-    "webpack-dev-server": "^3.1.10"
+    "webpack-dev-server": "^3.2.1"
   },
   "optionalDependencies": {
     "gl": "scalableminds/headless-gl#4.0.5"
@@ -136,6 +136,7 @@
     "classnames": "^2.2.5",
     "clipboard-js": "^0.2.0",
     "comlinkjs": "^3.0.3",
+    "cross-fetch": "^3.0.1",
     "data.maybe": "^1.2.2",
     "deep-for-each": "^2.0.3",
     "deep-freeze": "0.0.1",

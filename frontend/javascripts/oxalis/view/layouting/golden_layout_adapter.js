@@ -177,12 +177,6 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
   }
 
   render() {
-    let idOfMaximisedComponent = null;
-    if (this.gl && this.gl._maximisedItem) {
-      // gets the Id of the currently maximised portal
-      idOfMaximisedComponent = this.gl._maximisedItem._activeContentItem.config.props.portalId;
-      console.log("maximised component id", idOfMaximisedComponent);
-    }
     const layoutContainer = (
       <div key="layoutContainer" id={this.props.id} style={this.props.style} />
     );

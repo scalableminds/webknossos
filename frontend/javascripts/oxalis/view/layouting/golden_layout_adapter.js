@@ -104,9 +104,33 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
     if (onLayoutChange != null && this.gl.isInitialised) {
       onLayoutChange(this.gl.toConfig(), this.props.activeLayoutName);
     }
+    let needsRebuild = false;
+    if (this.maximisedItem !== null && !this.gl._maximisedItem) {
+      needsRebuild = true;
+    }
     if (this.gl && this.maximisedItem !== !this.gl._maximisedItem) {
-      console.log("forcing rerender");
       this.maximisedItem = this.gl._maximisedItem;
+      const allGlHeaderElemets = document.getElementsByClassName("lm_item");
+      for (const element of allGlHeaderElemets) {
+        if (this.maximisedItem) {
+          // show only the maximized item
+          if (
+            !element.classList.contains("lm_maximised") &&
+            !element.classList.contains("lm_root")
+          ) {
+            element.classList.add("hidden-gl-item");
+          }
+        } else {
+          // else show all items
+          element.classList.remove("hidden-gl-item");
+        }
+      }
+      // This is needed to let the renderer recognize the change size of the input catchers.
+      console.log("called");
+      if (needsRebuild) {
+        this.rebuildLayout();
+        console.log("rebuilding by force");
+      }
       this.forceUpdate();
     }
   }
@@ -132,8 +156,6 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
       },
       true,
     );
-    // checks whether there is a maximized component
-    this.hasMaximasedComponent = this.gl && this.gl._maximisedItem;
     gl.on("stateChanged", () => this.onStateChange());
 
     this.unbindListeners = [unbindResetListener, unbindChangedScaleListener, unbindResizeListener];
@@ -162,24 +184,20 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
       updateSize();
     }, 10);
   }
-  // this.gl.config.content[0]. usw
 
   render() {
     let idOfMaximisedComponent = null;
     if (this.gl && this.gl._maximisedItem) {
       // gets the Id of the currently maximised portal
       idOfMaximisedComponent = this.gl._maximisedItem._activeContentItem.config.props.portalId;
+      console.log("maximised component id", idOfMaximisedComponent);
     }
     const layoutContainer = (
       <div key="layoutContainer" id={this.props.id} style={this.props.style} />
     );
     const portals = React.Children.toArray(this.props.children).map(child => (
       <RenderToPortal key={child.props.portalKey} portalId={child.props.portalKey}>
-        {idOfMaximisedComponent === null || idOfMaximisedComponent === child.props.portalKey ? (
-          child
-        ) : (
-          <div style={{ display: "none" }}>{child}</div>
-        )}
+        {child}
       </RenderToPortal>
     ));
     return [layoutContainer, ...portals];

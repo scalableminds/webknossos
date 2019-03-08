@@ -104,10 +104,6 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
     if (onLayoutChange != null && this.gl.isInitialised) {
       onLayoutChange(this.gl.toConfig(), this.props.activeLayoutName);
     }
-    let needsRebuild = false;
-    if (this.maximisedItem !== null && !this.gl._maximisedItem) {
-      needsRebuild = true;
-    }
     if (this.gl && this.maximisedItem !== !this.gl._maximisedItem) {
       this.maximisedItem = this.gl._maximisedItem;
       const allGlHeaderElemets = document.getElementsByClassName("lm_item");
@@ -126,12 +122,7 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
         }
       }
       // This is needed to let the renderer recognize the change size of the input catchers.
-      console.log("called");
-      if (needsRebuild) {
-        this.rebuildLayout();
-        console.log("rebuilding by force");
-      }
-      this.forceUpdate();
+      updateSizeForGl(this.gl);
     }
   }
 

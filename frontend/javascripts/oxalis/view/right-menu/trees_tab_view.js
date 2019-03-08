@@ -55,6 +55,7 @@ import messages from "messages";
 
 import DeleteGroupModalView from "./delete_group_modal_view";
 import SearchPopover from "./search_popover";
+import AdvancedSearchPopover from "./advanced_search_popover";
 
 const ButtonGroup = Button.Group;
 const InputGroup = Input.Group;
@@ -476,7 +477,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
           <Spin />
         </Modal>
         <ButtonGroup>
-          <SearchPopover
+          <AdvancedSearchPopover
             onSelect={this.props.onSetActiveTree}
             data={skeletonTracing.trees}
             idKey="treeId"
@@ -489,7 +490,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
                 <Icon type="search" />
               </ButtonComponent>
             </Tooltip>
-          </SearchPopover>
+          </AdvancedSearchPopover>
           <ButtonComponent onClick={this.props.onCreateTree} title="Create Tree">
             <i className="fa fa-plus" /> Create
           </ButtonComponent>

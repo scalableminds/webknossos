@@ -54,7 +54,6 @@ import api from "oxalis/api/internal_api";
 import messages from "messages";
 
 import DeleteGroupModalView from "./delete_group_modal_view";
-import SearchPopover from "./search_popover";
 import AdvancedSearchPopover from "./advanced_search_popover";
 
 const ButtonGroup = Button.Group;

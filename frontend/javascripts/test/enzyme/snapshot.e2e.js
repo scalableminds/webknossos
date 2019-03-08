@@ -26,7 +26,9 @@ mockRequire("libs/datasource.schema.json", {});
 // Mock these components to avoid this issue.
 const antdMock = {
   ...antd,
-  Spin: props => <div className="mock-spinner">{props.children}</div>,
+  Spin: function Spin(props) {
+    return <div className="mock-spinner">{props.children}</div>;
+  },
 };
 mockRequire("antd", antdMock);
 

@@ -23,6 +23,7 @@ import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import Cube from "oxalis/model/bucket_data_handling/data_cube";
 import Model from "oxalis/model";
 import message from "messages";
+import * as Utils from "libs/utils";
 
 const { Option } = Select;
 
@@ -234,7 +235,6 @@ class MappingInfoView extends React.Component<Props, State> {
     if (!hasSegmentation()) {
       return "No segmentation available";
     }
-
     const availableMappings =
       this.props.segmentationLayer != null && this.props.segmentationLayer.mappings != null
         ? this.props.segmentationLayer.mappings
@@ -279,11 +279,14 @@ class MappingInfoView extends React.Component<Props, State> {
               onChange={this.handleChangeMapping}
               notFoundContent="No mappings found."
             >
-              {availableMappings.map(mapping => (
-                <Option key={mapping} value={mapping}>
-                  {mapping}
-                </Option>
-              ))}
+              {availableMappings
+                .slice()
+                .sort(Utils.localeCompareBy(([]: Array<string>), mapping => mapping))
+                .map(mapping => (
+                  <Option key={mapping} value={mapping}>
+                    {mapping}
+                  </Option>
+                ))}
             </Select>
           ) : null}
         </div>

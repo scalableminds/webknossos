@@ -468,6 +468,7 @@ export type APIFeatureToggles = {
   +defaultOrganization: string,
   +addForeignDataset: boolean,
   +hideNavbarLogin: boolean,
+  +addMissingDatasetButtonEnabled: boolean,
   +enableFrontpage: boolean,
 };
 

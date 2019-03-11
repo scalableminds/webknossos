@@ -15,6 +15,7 @@ import {
   callDeep,
   MISSING_GROUP_ID,
 } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
+import { mapGroups } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { getActiveTree, getActiveGroup } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getBuildInfo } from "admin/admin_rest_api";
 import { readFileAsText } from "libs/read_file";
@@ -33,6 +34,7 @@ import {
   setActiveTreeAction,
   deselectActiveTreeAction,
   deselectActiveGroupAction,
+  setActiveGroupAction,
   setTreeGroupAction,
   setTreeGroupsAction,
   addTreesAndGroupsAction,
@@ -341,6 +343,35 @@ class TreesTabView extends React.PureComponent<Props, State> {
     this.setState({ selectedTrees: [] });
   };
 
+  getTreeAndTreeGroupList = () => {
+    const { skeletonTracing } = this.props;
+    if (!skeletonTracing) {
+      return [];
+    }
+    const { trees, treeGroups } = skeletonTracing;
+    const reducedTreeList = _.values(trees).map(tree => ({
+      name: tree.name,
+      type: "TREE",
+      id: tree.treeId,
+    }));
+    const reducedTreeGroups = Array.from(
+      mapGroups(treeGroups, group => ({
+        name: group.name,
+        type: "GROUP",
+        id: group.groupId,
+      })),
+    );
+    return reducedTreeList.concat(reducedTreeGroups);
+  };
+
+  handleSearchSelect = selectedElement => {
+    if (selectedElement.type === "TREE") {
+      this.props.onSetActiveTree(selectedElement.id);
+    } else {
+      this.props.onSetActiveGroup(selectedElement.id);
+    }
+  };
+
   getTreesComponents() {
     if (!this.props.skeletonTracing) {
       return null;
@@ -464,9 +495,8 @@ class TreesTabView extends React.PureComponent<Props, State> {
         </Modal>
         <ButtonGroup>
           <AdvancedSearchPopover
-            onSelect={this.props.onSetActiveTree}
-            data={skeletonTracing.trees}
-            idKey="treeId"
+            onSelect={this.handleSearchSelect}
+            data={this.getTreeAndTreeGroupList()}
             searchKey="name"
             provideShortcut
           >
@@ -581,6 +611,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   onDeselectActiveTree() {
     dispatch(deselectActiveTreeAction());
+  },
+  onSetActiveGroup(groupId) {
+    dispatch(setActiveGroupAction(groupId));
   },
   onDeselectActiveGroup() {
     dispatch(deselectActiveGroupAction());

@@ -11,7 +11,6 @@ const InputGroup = Input.Group;
 type Props<S> = {
   data: { +[number]: S } | Array<S>,
   searchKey: $Keys<S>,
-  idKey: $Keys<S>,
   onSelect: number => void,
   children: *,
   provideShortcut?: boolean,
@@ -44,7 +43,7 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
     if (this.currentPosition < 0) {
       this.currentPosition = numberOfAvailableOptions + this.currentPosition;
     }
-    this.props.onSelect(_.values(this.availableOptions)[this.currentPosition][this.props.idKey]);
+    this.props.onSelect(_.values(this.availableOptions)[this.currentPosition]);
   };
 
   selectNextOption = () => {
@@ -81,7 +80,6 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
     const hasNoResults = numberOfAvailableOptions === 0;
     const hasMultipleResults = numberOfAvailableOptions > 1;
     const additionalInputStyle = hasNoResults ? { color: "red" } : {};
-
     return (
       <React.Fragment>
         {this.props.provideShortcut ? (
@@ -109,7 +107,7 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
                 <Shortcut supportInputElements keys="escape" onTrigger={this.closeSearchPopover} />
                 <InputGroup compact style={{ width: 450 }}>
                   <Input
-                    style={{ width: "calc(100% - 150px)", ...additionalInputStyle }}
+                    style={{ width: "calc(100% - 100px)", ...additionalInputStyle }}
                     value={this.state.searchQuery}
                     placeholder="Enter your search keywords"
                     onPressEnter={this.selectNextOption}
@@ -132,11 +130,6 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
                       disabled={!hasMultipleResults}
                     >
                       <Icon type="down" />
-                    </ButtonComponent>
-                  </Tooltip>
-                  <Tooltip title="Close">
-                    <ButtonComponent style={{ width: 50 }} onClick={this.closeSearchPopover}>
-                      <Icon type="close" />
                     </ButtonComponent>
                   </Tooltip>
                 </InputGroup>

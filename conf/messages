@@ -82,6 +82,7 @@ dataSet.notImported=Dataset {0} is not imported
 dataSet.name.invalid=A dataset name can only contain letters, digits and underscores
 dataSet.import.impossible.name=Import impossible. Dataset name can only consist of a-Z, 0-9, "-" and "_".
 dataSet.name.alreadyTaken=This dataset name is already in use.
+dataSet.name.notInSamples=This dataset name is not one of the available sample datasets.
 dataSet.source.notFound=The data source for the data source couldn’t be found
 dataSet.import.success=The import of the dataset was successful
 dataSet.import.failed=Failed to import the dataset
@@ -93,6 +94,8 @@ dataSet.list.failed=Failed to retrieve list of data sets.
 dataSet.url.missing=URL missing in the supplied json
 dataSet.dataStore.missing=dataStore missing in the supplied json
 dataSet.dataSet.missing=dataSet missing in the supplied json
+dataSet.downloadAlreadyRunning=Sample dataset download is already running.
+dataSet.alreadyPresent=Sample dataset is already present.
 
 dataSource.notFound=Datasource not found on datastore server
 

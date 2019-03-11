@@ -42,6 +42,29 @@ The dataset is now ready to use.
 If you uploaded the dataset along with a `datasource-properties.json` metadata file the dataset will be imported automatically without any additional manual steps.
 {% endhint %}
 
+### Sample Datasets
+
+A list of sample datasets is provided with webKnossos. Click `Add a Sample Dataset` on the upload page to access it and choose datasets to be added and imported automatically. The three sample datasets currently available are:
+
+- Sample_e2006_wkw: https://static.webknossos.org/data/e2006_wkw.zip
+Raw SBEM data and segmentation (sample cutout, 120MB).
+Connectomic reconstruction of the inner plexiform layer in the mouse retina.
+M Helmstaedter, KL Briggman, S Turaga, V Jain, HS Seung, W Denk.
+Nature. 08 August 2013. https://doi.org/10.1038/nature12346
+
+- Sample_FD0144_wkw: https://static.webknossos.org/data/FD0144_wkw.zip
+Raw SBEM data and segmentation (sample cutout, 316 MB).
+FluoEM, virtual labeling of axons in three-dimensional electron microscopy data for long-range connectomics.
+F Drawitsch, A Karimi, KM Boergens, M Helmstaedter.
+eLife. 14 August 2018. https://doi.org/10.7554/eLife.38976
+
+- Sample_MPRAGE_250um: https://static.webknossos.org/data/MPRAGE_250um.zip
+MRI data (250 MB).
+T1-weighted in vivo human whole brain MRI dataset with an ultrahigh isotropic resolution of 250 μm.
+F Lüsebrink, A Sciarra, H Mattern, R Yakupov, O Speck.
+Scientific Data. 14 March 2017. https://doi.org/10.1038/sdata.2017.32
+
+
 ## Edit Dataset
 You can edit the properties of a dataset at any time.
 In addition to the required properties that you need to fill in during import, there are more advanced properties that you can set.
@@ -81,4 +104,4 @@ Read more in the [Sharing guide](./sharing.md#dataset-sharing)
 ## Using External Datastores
 The system architecture of webKnossos allows for versatile deployment options where you can install a dedicated datastore server directly on your lab's cluster infrastructure.
 This may be useful when dealing with large datasets that should remain in your data center.
-[Please contact us](mailto:hello@scalableminds.com) if you require any assistance with your setup. 
+[Please contact us](mailto:hello@scalableminds.com) if you require any assistance with your setup.

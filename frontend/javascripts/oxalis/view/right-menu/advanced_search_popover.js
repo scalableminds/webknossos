@@ -40,14 +40,10 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
     if (lengthOfAvailableOptions === 0) {
       return;
     }
-    console.log("position1", this.currentPosition);
     this.currentPosition = (this.currentPosition + offset) % lengthOfAvailableOptions;
-    console.log("position2", this.currentPosition);
     if (this.currentPosition < 0) {
       this.currentPosition = lengthOfAvailableOptions + this.currentPosition;
     }
-    console.log("position3", this.currentPosition);
-    console.log("currentlength", lengthOfAvailableOptions);
     this.props.onSelect(_.values(this.availableOptions)[this.currentPosition][this.props.idKey]);
   };
 
@@ -62,9 +58,9 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
   onQueryChanged = (searchQuery: string) => {
     this.setState({ searchQuery });
     this.availableOptions = _.values(this.props.data).filter(
-      datum => datum[this.props.searchKey].indexOf(searchQuery) > -1,
+      datum => datum[this.props.searchKey].toLowerCase().indexOf(searchQuery.toLowerCase()) > -1,
     );
-    this.currentPosition = 1;
+    this.currentPosition = -1;
   };
 
   openSearchPopover = () => {

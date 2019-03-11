@@ -136,17 +136,11 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
       previousVersionTentative <- previousVersionFox
       _ = logger.debug(
         s"received group ${updateGroup.transactionId} v${updateGroup.version} (${updateGroup.transactionGroupIndex} of ${updateGroup.transactionGroupCount})")
-      previousVersion: Long = tracingService
-        .currentUncommittedVersion(tracingId, updateGroup.transactionId)
-        .getOrElse(previousVersionTentative)
+      currentUncommittedVersion <- tracingService.currentUncommittedVersion(tracingId, updateGroup.transactionId)
+      previousVersion: Long = currentUncommittedVersion.getOrElse(previousVersionTentative)
       result <- if (previousVersion + 1 == updateGroup.version) {
         if (updateGroup.transactionGroupCount.getOrElse(1) == updateGroup.transactionGroupIndex.getOrElse(0) + 1) {
-          val updateActionGroupsToCommit =
-            tracingService.getAllUncommittedFor(tracingId, updateGroup.transactionId) :+ updateGroup
-          commitUpdates(tracingId, updateActionGroupsToCommit, userToken).map(commitResult => {
-            tracingService.removeAllUncommittedFor(tracingId, updateGroup.transactionId)
-            commitResult
-          })
+          commitPending(tracingId, updateGroup, userToken)
         } else {
           logger.debug(
             s"saving version ${updateGroup.version} uncommitted (from transaction ${updateGroup.transactionId})")
@@ -156,13 +150,21 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
                                          updateGroup.version,
                                          updateGroup,
                                          transactionBatchExpiry)
-          tracingService.saveToHandledGroupIdStore(tracingId, updateGroup.transactionId, updateGroup.version)
-          Fox.successful(updateGroup.version)
+              .map(_ => tracingService.saveToHandledGroupIdStore(tracingId, updateGroup.transactionId, updateGroup.version))
+              .map(_ => updateGroup.version)
         }
       } else {
         failUnlessAlreadyHandled(updateGroup, tracingId, previousVersion)
       }
     } yield result
+
+  private def commitPending(tracingId: String, updateGroup: UpdateActionGroup[T], userToken: Option[String]): Fox[Long] = {
+    for {
+      previousActionGroupsToCommit <- tracingService.getAllUncommittedFor(tracingId, updateGroup.transactionId)
+      commitResult <- commitUpdates(tracingId, previousActionGroupsToCommit :+ updateGroup, userToken)
+      _ <- tracingService.removeAllUncommittedFor(tracingId, updateGroup.transactionId)
+    } yield commitResult
+  }
 
   private def commitUpdates(tracingId: String,
                             updateGroups: List[UpdateActionGroup[T]],
@@ -191,12 +193,14 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
 
   private def failUnlessAlreadyHandled(updateGroup: UpdateActionGroup[T],
                                        tracingId: String,
-                                       previousVersion: Long): Fox[Long] =
-    if (updateGroup.transactionId.exists(transactionId =>
-          tracingService.handledGroupIdStoreContains(transactionId, tracingId, updateGroup.version))) {
-      //this update group was received and successfully saved in a previous request. silently ignore this duplicate request
-      Fox.successful(updateGroup.version)
-    } else
-      Fox.failure(s"Incorrect version. Expected: ${previousVersion + 1}; Got: ${updateGroup.version}") ~> CONFLICT
-
+                                       previousVersion: Long): Fox[Long] = {
+    val errorMessage = s"Incorrect version. Expected: ${previousVersion + 1}; Got: ${updateGroup.version}"
+    updateGroup.transactionId match {
+      case Some(transactionId) =>
+        for {
+          _ <- Fox.assertTrue(tracingService.handledGroupIdStoreContains(transactionId, tracingId, updateGroup.version)) ?~> errorMessage ~> CONFLICT
+        } yield updateGroup.version
+      case None => Fox.failure(errorMessage) ~> CONFLICT
+    }
+  }
 }

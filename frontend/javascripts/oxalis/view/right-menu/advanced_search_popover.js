@@ -36,13 +36,13 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
   currentPosition: number = 0;
 
   selectNextOptionWithOffset = (offset: number) => {
-    const lengthOfAvailableOptions = _.values(this.availableOptions).length;
-    if (lengthOfAvailableOptions === 0) {
+    const numberOfAvailableOptions = _.values(this.availableOptions).length;
+    if (numberOfAvailableOptions === 0) {
       return;
     }
-    this.currentPosition = (this.currentPosition + offset) % lengthOfAvailableOptions;
+    this.currentPosition = (this.currentPosition + offset) % numberOfAvailableOptions;
     if (this.currentPosition < 0) {
-      this.currentPosition = lengthOfAvailableOptions + this.currentPosition;
+      this.currentPosition = numberOfAvailableOptions + this.currentPosition;
     }
     this.props.onSelect(_.values(this.availableOptions)[this.currentPosition][this.props.idKey]);
   };
@@ -71,62 +71,77 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
     this.setState({ isVisible: false });
   };
 
-  render = () => (
-    <React.Fragment>
-      {this.props.provideShortcut ? (
-        <Shortcut supportInputElements keys="ctrl + shift + f" onTrigger={this.openSearchPopover} />
-      ) : null}
-      <Popover
-        title="Search"
-        trigger="click"
-        placement="rightTop"
-        visible={this.state.isVisible}
-        mouseLeaveDelay={10}
-        onVisibleChange={isVisible =>
-          isVisible ? this.openSearchPopover() : this.closeSearchPopover()
-        }
-        content={
-          // Only render search components when the popover is visible
-          // This ensures that the component is completely re-mounted when
-          // the popover is opened. Thus unnecessary computations are avoided.
-          this.state.isVisible && (
-            <React.Fragment>
-              <Shortcut supportInputElements keys="escape" onTrigger={this.closeSearchPopover} />
-              <InputGroup compact style={{ width: 450 }}>
-                <Input
-                  style={
-                    _.values(this.availableOptions).length > 0
-                      ? { width: "calc(100% - 150px)" }
-                      : { width: "calc(100% - 150px)", color: "red" }
-                  }
-                  value={this.state.searchQuery}
-                  placeholder="Enter your search keywords"
-                  onPressEnter={this.selectNextOption}
-                  onChange={evt => this.onQueryChanged(evt.target.value)}
-                  autoFocus
-                />
-                <Tooltip title="Previous">
-                  <ButtonComponent style={{ width: 50 }} onClick={this.selectPreviousOption}>
-                    <Icon type="up" />
-                  </ButtonComponent>
-                </Tooltip>
-                <Tooltip title="Next">
-                  <ButtonComponent style={{ width: 50 }} onClick={this.selectNextOption}>
-                    <Icon type="down" />
-                  </ButtonComponent>
-                </Tooltip>
-                <Tooltip title="Close">
-                  <ButtonComponent style={{ width: 50 }} onClick={this.closeSearchPopover}>
-                    <Icon type="close" />
-                  </ButtonComponent>
-                </Tooltip>
-              </InputGroup>
-            </React.Fragment>
-          )
-        }
-      >
-        {this.props.children}
-      </Popover>
-    </React.Fragment>
-  );
+  render() {
+    const numberOfAvailableOptions = _.values(this.availableOptions).length;
+    const hasNoResults = numberOfAvailableOptions === 0;
+    const hasMultipleResults = numberOfAvailableOptions > 1;
+    const additionalInputStyle = hasNoResults ? { color: "red" } : {};
+
+    return (
+      <React.Fragment>
+        {this.props.provideShortcut ? (
+          <Shortcut
+            supportInputElements
+            keys="ctrl + shift + f"
+            onTrigger={this.openSearchPopover}
+          />
+        ) : null}
+        <Popover
+          title="Search"
+          trigger="click"
+          placement="rightTop"
+          visible={this.state.isVisible}
+          mouseLeaveDelay={10}
+          onVisibleChange={isVisible =>
+            isVisible ? this.openSearchPopover() : this.closeSearchPopover()
+          }
+          content={
+            // Only render search components when the popover is visible
+            // This ensures that the component is completely re-mounted when
+            // the popover is opened. Thus unnecessary computations are avoided.
+            this.state.isVisible && (
+              <React.Fragment>
+                <Shortcut supportInputElements keys="escape" onTrigger={this.closeSearchPopover} />
+                <InputGroup compact style={{ width: 450 }}>
+                  <Input
+                    style={{ width: "calc(100% - 150px)", ...additionalInputStyle }}
+                    value={this.state.searchQuery}
+                    placeholder="Enter your search keywords"
+                    onPressEnter={this.selectNextOption}
+                    onChange={evt => this.onQueryChanged(evt.target.value)}
+                    autoFocus
+                  />
+                  <Tooltip title="Previous">
+                    <ButtonComponent
+                      style={{ width: 50 }}
+                      onClick={this.selectPreviousOption}
+                      disabled={!hasMultipleResults}
+                    >
+                      <Icon type="up" />
+                    </ButtonComponent>
+                  </Tooltip>
+                  <Tooltip title="Next">
+                    <ButtonComponent
+                      style={{ width: 50 }}
+                      onClick={this.selectNextOption}
+                      disabled={!hasMultipleResults}
+                    >
+                      <Icon type="down" />
+                    </ButtonComponent>
+                  </Tooltip>
+                  <Tooltip title="Close">
+                    <ButtonComponent style={{ width: 50 }} onClick={this.closeSearchPopover}>
+                      <Icon type="close" />
+                    </ButtonComponent>
+                  </Tooltip>
+                </InputGroup>
+              </React.Fragment>
+            )
+          }
+        >
+          {this.props.children}
+        </Popover>
+      </React.Fragment>
+    );
+  }
 }

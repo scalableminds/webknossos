@@ -61,6 +61,12 @@ import AdvancedSearchPopover from "./advanced_search_popover";
 const ButtonGroup = Button.Group;
 const InputGroup = Input.Group;
 
+type TreeOrTreepGroup = {
+  name: string,
+  id: number,
+  type: string,
+};
+
 type OwnProps = {|
   portalKey: string,
 |};
@@ -81,6 +87,7 @@ type StateProps = {|
   userConfiguration: UserConfiguration,
   onSetActiveTree: number => void,
   onDeselectActiveTree: () => void,
+  onSetActiveGroup: number => void,
   onDeselectActiveGroup: () => void,
   showDropzoneModal: () => void,
 |};
@@ -343,7 +350,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     this.setState({ selectedTrees: [] });
   };
 
-  getTreeAndTreeGroupList = () => {
+  getTreeAndTreeGroupList = (): Array<TreeOrTreepGroup> => {
     const { skeletonTracing } = this.props;
     if (!skeletonTracing) {
       return [];
@@ -364,7 +371,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     return reducedTreeList.concat(reducedTreeGroups);
   };
 
-  handleSearchSelect = selectedElement => {
+  handleSearchSelect = (selectedElement: TreeOrTreepGroup) => {
     if (selectedElement.type === "TREE") {
       this.props.onSetActiveTree(selectedElement.id);
     } else {

@@ -11,7 +11,7 @@ const InputGroup = Input.Group;
 type Props<S> = {
   data: { +[number]: S } | Array<S>,
   searchKey: $Keys<S>,
-  onSelect: number => void,
+  onSelect: S => void,
   children: *,
   provideShortcut?: boolean,
 };
@@ -54,7 +54,7 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
     this.selectNextOptionWithOffset(-1);
   };
 
-  onQueryChanged = (searchQuery: string) => {
+  onSearchQueryChanged = (searchQuery: string) => {
     this.currentPosition = -1;
     this.setState({ searchQuery });
     if (searchQuery === "") {
@@ -111,7 +111,7 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
                     value={this.state.searchQuery}
                     placeholder="Enter your search keywords"
                     onPressEnter={this.selectNextOption}
-                    onChange={evt => this.onQueryChanged(evt.target.value)}
+                    onChange={evt => this.onSearchQueryChanged(evt.target.value)}
                     autoFocus
                   />
                   <Tooltip title="Previous">

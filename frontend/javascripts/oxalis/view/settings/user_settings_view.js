@@ -46,7 +46,7 @@ import { enableMergerMode, disableMergerMode } from "oxalis/merger_mode";
 import { userSettings } from "libs/user_settings.schema";
 import MergerModeModalView from "./merger_mode_modal_view";
 
-const {Panel} = Collapse;
+const { Panel } = Collapse;
 
 type UserSettingsViewProps = {
   userConfiguration: UserConfiguration,

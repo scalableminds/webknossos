@@ -48,7 +48,6 @@ import constants, {
   VolumeToolEnum,
 } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
-import messages from "messages";
 import * as skeletonController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import * as volumeController from "oxalis/controller/combinations/volumetracing_plane_controller";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
@@ -447,14 +446,8 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   changeMoveValue(delta: number): void {
-    let moveValue = Store.getState().userConfiguration.moveValue + delta;
-    moveValue = Math.min(constants.MAX_MOVE_VALUE, moveValue);
-    moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue);
-
+    const moveValue = Store.getState().userConfiguration.moveValue + delta;
     Store.dispatch(updateUserSettingAction("moveValue", moveValue));
-
-    const moveValueMessage = messages["tracing.changed_move_value"] + moveValue;
-    Toast.success(moveValueMessage, { key: "CHANGED_MOVE_VALUE" });
   }
 
   changeBrushSizeIfBrushIsActive(changeValue: number) {
@@ -462,8 +455,8 @@ class PlaneController extends React.PureComponent<Props> {
       .map(tool => tool === VolumeToolEnum.BRUSH)
       .getOrElse(false);
     if (isBrushActive) {
-      const currentSize = Store.getState().userConfiguration.brushSize;
-      Store.dispatch(updateUserSettingAction("brushSize", currentSize + changeValue));
+      const brushSize = Store.getState().userConfiguration.brushSize + changeValue;
+      Store.dispatch(updateUserSettingAction("brushSize", brushSize));
     }
   }
 
@@ -482,9 +475,9 @@ class PlaneController extends React.PureComponent<Props> {
           .map(tool => tool === VolumeToolEnum.BRUSH)
           .getOrElse(false);
         if (isBrushActive) {
-          const currentSize = Store.getState().userConfiguration.brushSize;
           // Different browsers send different deltas, this way the behavior is comparable
-          Store.dispatch(updateUserSettingAction("brushSize", currentSize + (delta > 0 ? 5 : -5)));
+          const brushSize = Store.getState().userConfiguration.brushSize + (delta > 0 ? 5 : -5);
+          Store.dispatch(updateUserSettingAction("brushSize", brushSize));
         } else if (this.props.tracing.skeleton) {
           // Different browsers send different deltas, this way the behavior is comparable
           api.tracing.setNodeRadius(delta > 0 ? 5 : -5);

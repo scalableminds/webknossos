@@ -6,9 +6,19 @@
 
 .gallery-dataset-col {
   padding-bottom: 24px;
+  width: 100%;
 
   @media @smartphones {
     padding-bottom: 32px;
+  }
+}
+
+.not-highlighted-link {
+  &:link,
+  &:visited,
+  &:hover,
+  &:active {
+    text-decoration: none !important;
   }
 }
 
@@ -133,6 +143,10 @@
       font-size: 18px;
     }
   }
+}
+
+#add-missing-dataset-image {
+  background-image: url("/images/add-missing-dataset-thumbnail.jpg");
 }
 
 .antd-spotlight-popover-card {

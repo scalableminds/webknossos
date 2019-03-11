@@ -23,13 +23,13 @@ type State = {
 };
 
 export default class AdvancedSearchPopover<S: Object> extends React.PureComponent<Props<S>, State> {
-  constructor(props: Props<S>) {
+  constructor() {
     super();
     this.state = {
       isVisible: false,
       searchQuery: "",
     };
-    this.availableOptions = props.data;
+    this.availableOptions = [];
   }
 
   availableOptions: { +[number]: S } | Array<S> = [];
@@ -56,11 +56,16 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
   };
 
   onQueryChanged = (searchQuery: string) => {
-    this.setState({ searchQuery });
-    this.availableOptions = _.values(this.props.data).filter(
-      datum => datum[this.props.searchKey].toLowerCase().indexOf(searchQuery.toLowerCase()) > -1,
-    );
     this.currentPosition = -1;
+    this.setState({ searchQuery });
+    if (searchQuery === "") {
+      this.availableOptions = [];
+    } else {
+      this.availableOptions = _.values(this.props.data).filter(
+        datum => datum[this.props.searchKey].toLowerCase().indexOf(searchQuery.toLowerCase()) > -1,
+      );
+      this.selectNextOption();
+    }
   };
 
   openSearchPopover = () => {
@@ -136,9 +141,9 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
                   </Tooltip>
                 </InputGroup>
                 {!hasNoResults ? (
-                  <span>
+                  <div style={{ paddingLeft: 4, paddingTop: 8 }}>
                     {this.currentPosition + 1} of {numberOfAvailableOptions} matches
-                  </span>
+                  </div>
                 ) : null}
               </React.Fragment>
             )

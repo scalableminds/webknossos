@@ -22,8 +22,8 @@ type State = {
   searchQuery: string,
 };
 
-export default class SearchPopover<S: Object> extends React.PureComponent<Props<S>, State<S>> {
-  constructor(props: Props) {
+export default class AdvancedSearchPopover<S: Object> extends React.PureComponent<Props<S>, State> {
+  constructor(props: Props<S>) {
     super();
     this.state = {
       isVisible: false,

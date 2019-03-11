@@ -481,7 +481,6 @@ class TreesTabView extends React.PureComponent<Props, State> {
             data={skeletonTracing.trees}
             idKey="treeId"
             searchKey="name"
-            maxSearchResults={10}
             provideShortcut
           >
             <Tooltip title="Open the search via CTRL + Shift + F">

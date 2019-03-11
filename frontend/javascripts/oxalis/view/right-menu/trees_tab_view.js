@@ -337,19 +337,6 @@ class TreesTabView extends React.PureComponent<Props, State> {
     }
   };
 
-  getAllSubtreeIdsOfGroup = (groupId: number): Array<number> => {
-    if (!this.props.skeletonTracing) {
-      return [];
-    }
-    const { trees } = this.props.skeletonTracing;
-    const groupToTreesMap = createGroupToTreesMap(trees);
-    let subtreeIdsOfGroup = [];
-    if (groupToTreesMap[groupId]) {
-      subtreeIdsOfGroup = groupToTreesMap[groupId].map(node => node.treeId);
-    }
-    return subtreeIdsOfGroup;
-  };
-
   deselectAllTrees = () => {
     this.setState({ selectedTrees: [] });
   };

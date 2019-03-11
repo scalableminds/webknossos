@@ -135,6 +135,11 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
                     </ButtonComponent>
                   </Tooltip>
                 </InputGroup>
+                {!hasNoResults ? (
+                  <span>
+                    {this.currentPosition + 1} of {numberOfAvailableOptions} matches
+                  </span>
+                ) : null}
               </React.Fragment>
             )
           }

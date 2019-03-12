@@ -8,6 +8,9 @@ export function createSaveQueueFromUpdateActions(updateActions, timestamp, stats
     stats,
     actions: [].concat(ua),
     info: "[]",
+    transactionGroupCount: 1,
+    transactionGroupIndex: 0,
+    transactionId: "dummyRequestId",
   }));
 }
 

@@ -1,4 +1,6 @@
 // @noflow
+
+import "test/sagas/skeletontracing_saga.mock.js";
 import type { SaveQueueEntry } from "oxalis/store";
 import ChainReducer from "test/helpers/chainReducer";
 import DiffableMap from "libs/diffable_map";

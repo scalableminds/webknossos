@@ -184,7 +184,7 @@ export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<v
           headers: { "X-Date": `${Date.now()}` },
           data: compactedSaveQueue,
           // todo: undo this before merging
-          compress: false,
+          compress: true,
         },
       );
       yield* put(setVersionNumberAction(version + compactedSaveQueue.length, tracingType));

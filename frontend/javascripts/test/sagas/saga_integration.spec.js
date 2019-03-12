@@ -3,6 +3,7 @@ import update from "immutability-helper";
 import mockRequire from "mock-require";
 import test from "ava";
 
+import "test/sagas/saga_integration.mock.js";
 import { __setupOxalis, TIMESTAMP } from "test/helpers/apiHelpers";
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
 import { enforceSkeletonTracing, getStats } from "oxalis/model/accessors/skeletontracing_accessor";

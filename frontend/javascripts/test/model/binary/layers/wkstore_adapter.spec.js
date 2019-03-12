@@ -3,13 +3,12 @@
 import Base64 from "base64-js";
 import _ from "lodash";
 
+import "test/model/binary/layers/wkstore_adapter.mock.js";
 import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
 import datasetServerObject from "test/fixtures/dataset_server_object";
 import mockRequire from "mock-require";
 import sinon from "sinon";
 import test from "ava";
-
-mockRequire.stopAll();
 
 const RequestMock = {
   always: (promise, func) => promise.then(func, func),
@@ -227,6 +226,7 @@ test.serial("sendToStore: Request Handling should send the correct request param
         },
       },
     ],
+    transactionId: "dummyRequestId",
     tracingType: "volume",
   };
 

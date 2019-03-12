@@ -3,6 +3,7 @@ import { take, put, call } from "redux-saga/effects";
 import _ from "lodash";
 import update from "immutability-helper";
 
+import "test/sagas/volumetracing_saga.mock.js";
 import { OrthoViews, VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
 import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";

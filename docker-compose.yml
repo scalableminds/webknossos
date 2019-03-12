@@ -22,6 +22,7 @@ services:
       - -Djava.net.preferIPv4Stack=true
       - -Dhttp.address=0.0.0.0
       - -Dtracingstore.fossildb.address=fossildb
+      - -Dtracingstore.redis.address=redis
       - -Dslick.db.url=jdbc:postgresql://postgres/webknossos
       - -Dapplication.insertInitialData=false
       - -Dapplication.authentication.enableDevAutoLogin=false
@@ -66,6 +67,7 @@ services:
       - -Dhttp.address=0.0.0.0
       - -Dhttp.uri=http://webknossos-datastore:9050
       - -Dtracingstore.fossildb.address=fossildb
+      - -Dtracingstore.redis.address=redis
       - -Ddatastore.oxalis.uri=webknossos:9000
     links:
       - fossildb-persisted:fossildb
@@ -119,6 +121,7 @@ services:
     links:
       - "fossildb-dev:fossildb"
       - "postgres-dev:postgres"
+      - redis
     depends_on:
       postgres-dev:
         condition: service_healthy
@@ -135,7 +138,8 @@ services:
         "run
           -Djava.net.preferIPv4Stack=true
           -Dhttp.address=0.0.0.0
-          -Dtracingstore.fossildb.address=fossildb"
+          -Dtracingstore.fossildb.address=fossildb
+          -Dtracingstore.redis.address=redis"
     stdin_open: true
 
   # Tests
@@ -161,6 +165,7 @@ services:
     links:
       - postgres
       - fossildb
+      - redis
     depends_on:
       postgres:
         condition: service_healthy
@@ -175,7 +180,8 @@ services:
         sbt
         -v
         "testOnly e2e.* --
-          -Dtracingstore.fossildb.address=fossildb"
+          -Dtracingstore.fossildb.address=fossildb
+          -Dtracingstore.redis.address=redis"
     volumes:
       - ./binaryData/Connectomics department:/home/${USER_NAME:-sbt-user}/webknossos/binaryData/Organization_X
 

@@ -48,6 +48,25 @@ export function formatScale(scaleArr: Vector3, roundTo?: number = 2): string {
   }
 }
 
+export function formatNumberToLength(numberInNm: number): string {
+  if (numberInNm < 1000) {
+    return `${numberInNm.toFixed(0)}${ThinSpace}nm`;
+  } else if (numberInNm < 1000000) {
+    return `${(numberInNm / 1000).toFixed(1)}${ThinSpace}μm`;
+  } else {
+    return `${(numberInNm / 1000000).toFixed(1)}${ThinSpace}mm`;
+  }
+}
+
+export function formatExtentWithLength(
+  extent: Object,
+  formattingFunction: number => string,
+): string {
+  return `${formattingFunction(extent.width)}${ThinSpace}×${ThinSpace}${formattingFunction(
+    extent.height,
+  )}${ThinSpace}×${ThinSpace}${formattingFunction(extent.depth)}`;
+}
+
 export function formatMilliseconds(durationMilliSeconds: number): string {
   return formatSeconds(durationMilliSeconds / 1000);
 }

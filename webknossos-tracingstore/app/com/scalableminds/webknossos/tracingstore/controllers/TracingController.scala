@@ -151,7 +151,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
                              updateGroup.version,
                              updateGroup,
                              transactionBatchExpiry)
-            .map(_ =>
+            .flatMap(_ =>
               tracingService.saveToHandledGroupIdStore(tracingId, updateGroup.transactionId, updateGroup.version))
             .map(_ => updateGroup.version)
         }
@@ -182,7 +182,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
             logger.debug(s"committing version ${updateGroup.version} (from transaction ${updateGroup.transactionId})")
             tracingService
               .handleUpdateGroup(tracingId, updateGroup, prevVersion)
-              .map(_ =>
+              .flatMap(_ =>
                 tracingService.saveToHandledGroupIdStore(tracingId, updateGroup.transactionId, updateGroup.version))
               .map(_ => updateGroup.version)
           } else {

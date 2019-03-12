@@ -83,7 +83,11 @@ class RedisTemporaryStore @Inject()(config: TracingStoreConfig)(implicit val ec:
         Fox.successful(f)
       }
     } catch {
-      case e: Exception => Fox.failure("Redis access exception: " + e.getMessage)
+      case e: Exception => {
+        val msg = "Redis access exception: " + e.getMessage
+        logger.error(msg)
+        Fox.failure(msg)
+      }
     }
 
 }

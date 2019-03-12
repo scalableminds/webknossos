@@ -134,7 +134,7 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
     transactionIdOpt match {
       case Some(transactionId) => {
         val key = handledGroupKey(tracingId, transactionId, version)
-        logger.info("saving to handledGroupIdStore: key")
+        logger.info(s"saving to handledGroupIdStore: $key")
         handledGroupIdStore.insert(key, "()", Some(handledGroupCacheExpiry))
       }
       case _ => {

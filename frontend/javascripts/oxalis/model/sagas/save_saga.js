@@ -48,7 +48,7 @@ import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
 const PUSH_THROTTLE_TIME = 30000; // 30s
 const SAVE_RETRY_WAITING_TIME = 2000;
 const MAX_SAVE_RETRY_WAITING_TIME = 300000; // 5m
-const UNDO_HISTORY_SIZE = 100;
+const UNDO_HISTORY_SIZE = 20;
 
 export const maximumActionCountPerBatch = 5000;
 const maximumActionCountPerSave = 15000;

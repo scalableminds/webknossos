@@ -15,6 +15,7 @@ services:
       - $DATASTORE_ARGS_2
     links:
       - fossildb
+      - redis
     ports:
       - $TRACINGSTORE_PORT:9090
       - $TRACINGSTORE_DEBUG_PORT:5011

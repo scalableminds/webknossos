@@ -11,6 +11,7 @@ services:
     links:
       - "fossildb-persisted:fossildb"
       - "postgres-persisted:postgres"
+      - "redis:redis"
     depends_on:
       postgres-persisted:
         condition: service_healthy
@@ -68,6 +69,7 @@ services:
       - -Ddatastore.oxalis.uri=webknossos:9000
     links:
       - fossildb-persisted:fossildb
+      - redis:redis
     depends_on:
       fossildb-persisted:
         condition: service_healthy

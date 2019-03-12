@@ -1,6 +1,6 @@
 // @flow
 import { Avatar, Badge, Icon, Layout, Menu, Popover } from "antd";
-import { Link, type RouterHistory, withRouter } from "react-router-dom";
+import { Link, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import React from "react";
 

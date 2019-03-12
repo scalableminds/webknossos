@@ -178,17 +178,24 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
                   autoSaveLayouts: this.props.autoSaveLayouts,
                 }}
               />
-              <Tooltip title={messages["dataset.is_scratch"]}>
-                <Alert
-                  style={{ height: 30, paddingTop: 4, backgroundColor: "#f17a27", color: "white" }}
-                  message={
-                    <span>
-                      Dataset is on tmpscratch! <Icon type="warning" theme="filled" />
-                    </span>
-                  }
-                  type="error"
-                />
-              </Tooltip>
+              {isDatasetOnScratchVolume ? (
+                <Tooltip title={messages["dataset.is_scratch"]}>
+                  <Alert
+                    style={{
+                      height: 30,
+                      paddingTop: 4,
+                      backgroundColor: "#f17a27",
+                      color: "white",
+                    }}
+                    message={
+                      <span>
+                        Dataset is on tmpscratch! <Icon type="warning" theme="filled" />
+                      </span>
+                    }
+                    type="error"
+                  />
+                </Tooltip>
+              ) : null}
             </div>
           </RenderToPortal>
           <Layout style={{ display: "flex" }}>
@@ -281,7 +288,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     isUpdateTracingAllowed: state.tracing.restrictions.allowUpdate,
     showVersionRestore: state.uiInformation.showVersionRestore,
     storedLayouts: state.uiInformation.storedLayouts,
-    isDatasetOnScratchVolume: state.dataset.dataStore.isScratch,
+    isDatasetOnScratchVolume: state.dataset.name.includes("ROI2017"),
   };
 }
 

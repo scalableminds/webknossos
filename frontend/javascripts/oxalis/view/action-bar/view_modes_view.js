@@ -1,5 +1,5 @@
 // @flow
-import { Dropdown, Icon, Menu, Radio, Select } from "antd";
+import { Select } from "antd";
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
 

@@ -127,8 +127,7 @@ class ReactRouter extends React.Component<Props> {
           <DisableGenericDnd />
           <Navbar isAuthenticated={isAuthenticated} />
           <Content>
-            <Inspector usePortal={true} />
-
+            {/*<Inspector usePortal />*/}
             <Switch>
               <Route
                 exact

@@ -132,11 +132,15 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
 
   def saveToHandledGroupIdStore(tracingId: String, transactionIdOpt: Option[String], version: Long): Fox[Unit] =
     transactionIdOpt match {
-      case Some(transactionId) =>
-        handledGroupIdStore.insert(handledGroupKey(tracingId, transactionId, version),
-                                   "()",
-                                   Some(handledGroupCacheExpiry))
-      case _ => Fox.successful(())
+      case Some(transactionId) => {
+        val key = handledGroupKey(tracingId, transactionId, version)
+        logger.info("saving to handledGroupIdStore: key")
+        handledGroupIdStore.insert(key, "()", Some(handledGroupCacheExpiry))
+      }
+      case _ => {
+        logger.info("skipping saving to handledGroupIdStore (no transactionId)")
+        Fox.successful(())
+      }
     }
 
   def handledGroupIdStoreContains(tracingId: String, transactionId: String, version: Long): Fox[Boolean] =

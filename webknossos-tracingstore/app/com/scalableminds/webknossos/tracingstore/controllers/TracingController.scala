@@ -177,7 +177,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
     val currentVersion = tracingService.currentVersion(tracingId)
     webKnossosServer.reportTracingUpdates(tracingId, timestamps, latestStatistics, userToken).flatMap { _ =>
       updateGroups.foldLeft(currentVersion) { (previousVersion, updateGroup) =>
-        previousVersion.flatMap { prevVersion =>
+        previousVersion.flatMap { prevVersion: Long =>
           if (prevVersion + 1 == updateGroup.version) {
             logger.debug(s"committing version ${updateGroup.version} (from transaction ${updateGroup.transactionId})")
             tracingService

@@ -1,5 +1,7 @@
 // @flow
 import update from "immutability-helper";
+import mockRequire from "mock-require";
+import test from "ava";
 
 import { __setupOxalis, TIMESTAMP } from "test/helpers/apiHelpers";
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
@@ -9,8 +11,6 @@ import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 import generateDummyTrees from "oxalis/model/helpers/generate_dummy_trees";
-import mockRequire from "mock-require";
-import test from "ava";
 
 const {
   createTreeMapFromTreeArray,

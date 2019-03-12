@@ -13,7 +13,7 @@ webKnossos: efficient online 3D data annotation for connectomics.
 [![CircleCI](https://circleci.com/gh/scalableminds/webknossos.svg?style=svg)](https://circleci.com/gh/scalableminds/webknossos)
 
 ## Demo
-[https://demo.webknossos.org/](https://demo.webknossos.org/)
+[https://webknossos.org/](https://webknossos.org/)
 
 ## Features
 * Exploration of large 3D image datasets

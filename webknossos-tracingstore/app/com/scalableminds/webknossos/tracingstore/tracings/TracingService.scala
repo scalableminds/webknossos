@@ -74,12 +74,12 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
                                    Json.toJson(updateGroup).toString(),
                                    Some(expiry))
 
-  def getAllUncommittedFor(tracingId: String, transactionId: Option[String]): Fox[List[UpdateActionGroup[T]]] = {
+  def getAllUncommittedFor(tracingId: String, transactionId: Option[String]): Fox[List[UpdateActionGroup[T]]] =
     for {
       raw: Seq[String] <- uncommittedUpdatesStore.findAllConditional(patternFor(tracingId, transactionId))
-      parsed: Seq[UpdateActionGroup[T]] = raw.flatMap(itemAsString => JsonHelper.jsResultToOpt(Json.parse(itemAsString).validate[UpdateActionGroup[T]]))
+      parsed: Seq[UpdateActionGroup[T]] = raw.flatMap(itemAsString =>
+        JsonHelper.jsResultToOpt(Json.parse(itemAsString).validate[UpdateActionGroup[T]]))
     } yield parsed.toList.sortBy(_.version)
-  }
 
   def removeAllUncommittedFor(tracingId: String, transactionId: Option[String]): Fox[Unit] =
     uncommittedUpdatesStore.removeAllConditional(patternFor(tracingId, transactionId))
@@ -133,9 +133,9 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
   def saveToHandledGroupIdStore(tracingId: String, transactionIdOpt: Option[String], version: Long): Fox[Unit] =
     transactionIdOpt match {
       case Some(transactionId) =>
-      handledGroupIdStore.insert(handledGroupKey(tracingId, transactionId, version),
-                                 "()",
-                                 Some(handledGroupCacheExpiry))
+        handledGroupIdStore.insert(handledGroupKey(tracingId, transactionId, version),
+                                   "()",
+                                   Some(handledGroupCacheExpiry))
       case _ => Fox.successful(())
     }
 

@@ -144,27 +144,30 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
         } else {
           logger.debug(
             s"saving version ${updateGroup.version} uncommitted (from transaction ${updateGroup.transactionId})")
-          tracingService.saveUncommitted(tracingId,
-                                         updateGroup.transactionId,
-                                         updateGroup.transactionGroupIndex,
-                                         updateGroup.version,
-                                         updateGroup,
-                                         transactionBatchExpiry)
-              .map(_ => tracingService.saveToHandledGroupIdStore(tracingId, updateGroup.transactionId, updateGroup.version))
-              .map(_ => updateGroup.version)
+          tracingService
+            .saveUncommitted(tracingId,
+                             updateGroup.transactionId,
+                             updateGroup.transactionGroupIndex,
+                             updateGroup.version,
+                             updateGroup,
+                             transactionBatchExpiry)
+            .map(_ =>
+              tracingService.saveToHandledGroupIdStore(tracingId, updateGroup.transactionId, updateGroup.version))
+            .map(_ => updateGroup.version)
         }
       } else {
         failUnlessAlreadyHandled(updateGroup, tracingId, previousVersion)
       }
     } yield result
 
-  private def commitPending(tracingId: String, updateGroup: UpdateActionGroup[T], userToken: Option[String]): Fox[Long] = {
+  private def commitPending(tracingId: String,
+                            updateGroup: UpdateActionGroup[T],
+                            userToken: Option[String]): Fox[Long] =
     for {
       previousActionGroupsToCommit <- tracingService.getAllUncommittedFor(tracingId, updateGroup.transactionId)
       commitResult <- commitUpdates(tracingId, previousActionGroupsToCommit :+ updateGroup, userToken)
       _ <- tracingService.removeAllUncommittedFor(tracingId, updateGroup.transactionId)
     } yield commitResult
-  }
 
   private def commitUpdates(tracingId: String,
                             updateGroups: List[UpdateActionGroup[T]],
@@ -179,7 +182,8 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
             logger.debug(s"committing version ${updateGroup.version} (from transaction ${updateGroup.transactionId})")
             tracingService
               .handleUpdateGroup(tracingId, updateGroup, prevVersion)
-              .map(_ => tracingService.saveToHandledGroupIdStore(tracingId, updateGroup.transactionId, updateGroup.version))
+              .map(_ =>
+                tracingService.saveToHandledGroupIdStore(tracingId, updateGroup.transactionId, updateGroup.version))
               .map(_ => updateGroup.version)
           } else {
             failUnlessAlreadyHandled(updateGroup, tracingId, prevVersion)

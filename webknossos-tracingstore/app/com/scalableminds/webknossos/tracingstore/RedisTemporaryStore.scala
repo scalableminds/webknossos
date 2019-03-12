@@ -64,7 +64,7 @@ class RedisTemporaryStore @Inject()(config: TracingStoreConfig)(implicit val ec:
       r.del(id)
     }
 
-  def checkHealth(implicit ec: ExecutionContext): Fox[Unit] = {
+  def checkHealth(implicit ec: ExecutionContext): Fox[Unit] =
     try {
       val reply = r.ping
       if (!reply.contains("PONG")) throw new Exception(reply.getOrElse("No Reply"))
@@ -76,9 +76,8 @@ class RedisTemporaryStore @Inject()(config: TracingStoreConfig)(implicit val ec:
         Fox.failure(s"Redis health check failed")
       }
     }
-  }
 
-  def withExceptionHandler[B](f: => B): Fox[B] = {
+  def withExceptionHandler[B](f: => B): Fox[B] =
     try {
       r.synchronized {
         Fox.successful(f)
@@ -86,6 +85,5 @@ class RedisTemporaryStore @Inject()(config: TracingStoreConfig)(implicit val ec:
     } catch {
       case e: Exception => Fox.failure("Redis access exception: " + e.getMessage)
     }
-  }
 
 }

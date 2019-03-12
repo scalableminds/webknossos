@@ -87,7 +87,7 @@
   },
   "scripts": {
     "start": "node tools/proxy/proxy.js",
-    "build": "node_modules/.bin/webpack --env.production",
+    "build": "node_modules/.bin/webpack --env.production --max_old_space_size=4096",
     "build-dev": "node_modules/.bin/webpack",
     "build-watch": "node_modules/.bin/webpack -w",
     "test": "tools/test.sh test --timeout=30s",

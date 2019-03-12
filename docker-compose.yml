@@ -264,7 +264,7 @@ services:
 
   # Redis
   redis:
-    image: redis:5.0.3
+    image: redis:5.0-alpine
     volumes:
       - "./redis-data:/data"
     command:

@@ -130,12 +130,6 @@ class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>,
       "allowDecimals",
     ]);
 
-    console.log(
-      "this.state.text.length * 8 + 25",
-      this.state.text,
-      this.state.text.length * 8 + 25,
-    );
-
     return (
       <Input
         onChange={this.handleChange}

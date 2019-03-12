@@ -51,3 +51,9 @@ services:
       - backup
     links:
       - fossildb
+
+  # Redis
+  redis:
+    image: redis:5.0-alpine
+    command:
+      - redis-server

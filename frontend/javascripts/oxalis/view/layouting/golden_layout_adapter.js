@@ -106,6 +106,9 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
     }
     // If the maximized item changed adjust css classes to not show hidden gl items.
     if (this.gl && this.maximizedItem !== !this.gl._maximisedItem) {
+      // Gl needs a forced updated when returning from maximized viewing
+      // mode to render stacked components correctly.
+      const needsUpdatedSize = this.gl._maximisedItem === null && this.maximizedItem != null;
       this.maximizedItem = this.gl._maximisedItem;
       const allGlHeaderElemets = document.getElementsByClassName("lm_item");
       for (const element of allGlHeaderElemets) {
@@ -122,8 +125,10 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
           element.classList.remove("hidden-gl-item");
         }
       }
-      // This is needed to let the renderer recognize the change size of the input catchers.
-      updateSizeForGl(this.gl);
+      // Force gl to update again when returning from maximized viewing mode
+      if (needsUpdatedSize) {
+        updateSizeForGl(this.gl);
+      }
     }
   }
 

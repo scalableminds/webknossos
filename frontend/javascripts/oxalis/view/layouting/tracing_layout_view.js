@@ -3,8 +3,8 @@
  * @flow
  */
 
+import { Alert, Icon, Layout, Tooltip } from "antd";
 import type { Dispatch } from "redux";
-import { Tooltip, Icon, Layout, Tag } from "antd";
 import { connect } from "react-redux";
 import { withRouter } from "react-router-dom";
 import * as React from "react";
@@ -179,9 +179,15 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
                 }}
               />
               <Tooltip title={messages["dataset.is_scratch"]}>
-                <Tag color="red" style={{ margin: "auto 0" }}>
-                  Scratch
-                </Tag>
+                <Alert
+                  style={{ height: 30, paddingTop: 4, backgroundColor: "#f17a27", color: "white" }}
+                  message={
+                    <span>
+                      Dataset is on tmpscratch! <Icon type="warning" theme="filled" />
+                    </span>
+                  }
+                  type="error"
+                />
               </Tooltip>
             </div>
           </RenderToPortal>

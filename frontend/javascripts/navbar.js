@@ -30,10 +30,17 @@ type StateProps = {|
 type Props = {| ...OwnProps, ...StateProps |};
 
 export const navbarHeight = 48;
+const subMenuOpenDelay = 0.5;
 
 function NavbarMenuItem({ children, style, ...props }) {
   return (
-    <Menu mode="horizontal" style={{ ...style, lineHeight: "48px" }} theme="dark" {...props}>
+    <Menu
+      mode="horizontal"
+      style={{ ...style, lineHeight: "48px" }}
+      theme="dark"
+      subMenuOpenDelay={subMenuOpenDelay}
+      {...props}
+    >
       {children}
     </Menu>
   );
@@ -188,7 +195,7 @@ function AnonymousAvatar() {
   return (
     <Popover placement="bottomRight" content={<LoginForm layout="horizontal" />} trigger="click">
       {/* Oh god, why -10? */}
-      <div style={{ marginTop: -10 }}>
+      <div style={{ marginTop: -10, height: 48 }}>
         <Badge dot>
           <Avatar icon="user" />
         </Badge>
@@ -275,6 +282,7 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView }) {
         defaultSelectedKeys={[history.location.pathname]}
         style={{ lineHeight: "48px" }}
         theme="dark"
+        subMenuOpenDelay={subMenuOpenDelay}
       >
         {collapseAllNavItems
           ? null

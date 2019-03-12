@@ -374,7 +374,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
           {saveButton}
           {finishAndNextTaskButton}
           {modals}
-          <Dropdown overlay={menu}>
+          <Dropdown overlay={menu} trigger={["click"]}>
             <ButtonComponent>
               <Icon type="down" />
             </ButtonComponent>

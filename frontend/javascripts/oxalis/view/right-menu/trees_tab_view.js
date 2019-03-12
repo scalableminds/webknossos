@@ -505,7 +505,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
           >
             <i className="fa fa-toggle-off" /> Toggle Inactive
           </ButtonComponent>
-          <Dropdown overlay={this.getActionsDropdown()}>
+          <Dropdown overlay={this.getActionsDropdown()} trigger={["click"]}>
             <ButtonComponent>
               More
               <Icon type="down" />
@@ -524,7 +524,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
           <ButtonComponent onClick={this.props.onSelectNextTreeForward}>
             <i className="fa fa-arrow-right" />
           </ButtonComponent>
-          <Dropdown overlay={this.getSettingsDropdown()}>
+          <Dropdown overlay={this.getSettingsDropdown()} trigger={["click"]}>
             <ButtonComponent title="Sort">
               <i className="fa fa-sort-alpha-asc" />
             </ButtonComponent>

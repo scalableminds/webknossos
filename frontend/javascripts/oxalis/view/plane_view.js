@@ -33,6 +33,8 @@ const createDirLight = (position, target, intensity, parent) => {
 const raycaster = new THREE.Raycaster();
 let oldRaycasterHit = null;
 
+const ISOSURFACE_HOVER_THROTTLING_DELAY = 150;
+
 class PlaneView {
   // Copied form backbone events (TODO: handle this better)
   trigger: Function;
@@ -40,12 +42,17 @@ class PlaneView {
   unbindChangedScaleListener: () => void;
 
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
+  throttledPerformIsosurfaceHitTest: () => ?THREE.Vector3;
 
   running: boolean;
   needsRerender: boolean;
 
   constructor() {
     _.extend(this, BackboneEvents);
+    this.throttledPerformIsosurfaceHitTest = _.throttle(
+      this.performIsosurfaceHitTest,
+      ISOSURFACE_HOVER_THROTTLING_DELAY,
+    );
 
     this.running = false;
     const { scene } = getSceneController();
@@ -128,7 +135,7 @@ class PlaneView {
 
       clearCanvas(renderer);
 
-      this.performIsosurfaceHitTest();
+      this.throttledPerformIsosurfaceHitTest();
 
       for (const plane of OrthoViewValues) {
         SceneController.updateSceneForCam(plane);
@@ -172,6 +179,8 @@ class PlaneView {
     );
 
     raycaster.setFromCamera(mouse, this.cameras[OrthoViews.TDView]);
+    // The second parameter of intersectObjects is set to true to ensure that
+    // the groups which contain the actual meshes are traversed.
     const intersections = raycaster.intersectObjects(isosurfacesRootGroup.children, true);
     const hitObject = intersections.length > 0 ? intersections[0].object : null;
 

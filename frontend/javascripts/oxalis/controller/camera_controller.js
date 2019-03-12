@@ -183,6 +183,8 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
   const pos = voxelToNm(dataset.dataSource.scale, getPosition(state.flycam));
 
   const aspectRatio = getInputCatcherAspectRatio(state, OrthoViews.TDView);
+  // This distance ensures that the 3D camera is so far "in the back" that all elements in the scene
+  // are in front of it and thus visible.
   const clippingOffsetFactor = 100000;
 
   let to: TweenState;

@@ -45,6 +45,8 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     extends FoxImplicits
     with LazyLogging {
 
+  val unreportedStatus = "No longer available on datastore."
+
   def isProperDataSetName(name: String): Boolean =
     name.matches("[A-Za-z0-9_\\-]*")
 
@@ -171,7 +173,8 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
           case Full(organization) =>
             dataSetDAO.deactivateUnreported(dataSourcesByOrganizationName(organizationName).map(_.id.name),
                                             organization._id,
-                                            dataStoreName)
+                                            dataStoreName,
+                                            unreportedStatus)
           case _ => {
             logger.info(s"Ignoring reported dataset for non-existing organization $organizationName")
             Fox.successful(())
@@ -286,7 +289,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
       dataSource <- dataSourceFor(dataSet, Some(organization), skipResolutions)
       publicationOpt <- Fox.runOptional(dataSet._publication)(publicationDAO.findOne(_))
-      publicationJson <- Fox.runOptional(publicationOpt)(publicationService.publicWrites(_))
+      publicationJson <- Fox.runOptional(publicationOpt)(publicationService.publicWrites)
     } yield {
       Json.obj(
         "name" -> dataSet.name,
@@ -305,6 +308,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         "sortingKey" -> dataSet.sortingKey,
         "details" -> dataSet.details,
         "publication" -> publicationJson,
+        "isUnreported" -> Json.toJson(dataSource.statusOpt.contains(unreportedStatus)),
         "isForeign" -> dataStore.isForeign
       )
     }

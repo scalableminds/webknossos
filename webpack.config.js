@@ -34,20 +34,20 @@ module.exports = function(env = {}) {
     }),
   ];
 
-  if (env.production) {
-    plugins.push(
-      new TerserPlugin({
-        cache: true,
-        parallel: true,
-        sourceMap: true,
-        terserOptions: {
-          // compress is bugged, see https://github.com/mishoo/UglifyJS2/issues/2842
-          // even inline: 1 causes bugs, see https://github.com/scalableminds/webknossos/pull/2713
-          compress: false,
-        },
-      }),
-    );
-  }
+  // if (env.production) {
+  //   plugins.push(
+  //     new TerserPlugin({
+  //       cache: true,
+  //       parallel: true,
+  //       sourceMap: true,
+  //       terserOptions: {
+  //         // compress is bugged, see https://github.com/mishoo/UglifyJS2/issues/2842
+  //         // even inline: 1 causes bugs, see https://github.com/scalableminds/webknossos/pull/2713
+  //         compress: false,
+  //       },
+  //     }),
+  //   );
+  // }
 
   return {
     entry: {

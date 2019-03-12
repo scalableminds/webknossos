@@ -253,7 +253,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
   render() {
     const { viewMode } = Store.getState().temporaryConfiguration;
     const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
-    const archiveButtonText = this.props.task ? "Finish" : "Archive";
+    const archiveButtonText = this.props.task ? "Finish and go to Dashboard" : "Archive";
     const { restrictions } = this.props;
 
     const saveButton = restrictions.allowUpdate
@@ -271,7 +271,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
           <SaveButton key="save-button" onClick={this.handleSave} />,
         ]
       : [
-          <ButtonComponent key="read-only-button" type="primary" disabled>
+          <ButtonComponent key="read-only-button" type="danger" disabled>
             Read only
           </ButtonComponent>,
           <AsyncButton key="copy-button" icon="file-add" onClick={this.handleCopyToAccount}>
@@ -286,7 +286,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
           icon="verticle-left"
           onClick={this.handleFinishAndGetNextTask}
         >
-          Finish and Get Next Task
+          Finish Task
         </ButtonComponent>
       ) : null;
 

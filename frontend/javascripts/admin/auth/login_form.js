@@ -64,7 +64,7 @@ function LoginForm({ layout, form, onLoggedIn, hideFooter }: Props) {
         </Button>
       </FormItem>
       {hideFooter ? null : (
-        <FormItem>
+        <FormItem style={{ marginBottom: 4 }}>
           <Link to="/auth/register" style={linkStyle}>
             Register Now
           </Link>

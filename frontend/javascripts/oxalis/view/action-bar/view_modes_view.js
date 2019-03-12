@@ -1,5 +1,5 @@
 // @flow
-import { Menu, Radio, Icon, Dropdown } from "antd";
+import { Dropdown, Icon, Menu, Radio, Select } from "antd";
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
 
@@ -8,37 +8,20 @@ import Store, { type OxalisState, type AllowedMode } from "oxalis/store";
 import * as Utils from "libs/utils";
 import constants, { type ViewMode } from "oxalis/constants";
 
+const Option = Select.Option;
+
 type Props = {|
   viewMode: ViewMode,
   allowedModes: Array<AllowedMode>,
 |};
 
-type State = {
-  arbitraryModeLabel: ViewMode,
-};
-
-class ViewModesView extends PureComponent<Props, State> {
-  constructor() {
-    super();
-    this.state = {
-      arbitraryModeLabel: constants.MODE_ARBITRARY,
-    };
-  }
-
-  componentWillReceiveProps(nextProps: Props) {
-    if (nextProps.viewMode !== constants.MODE_PLANE_TRACING) {
-      this.setState({
-        arbitraryModeLabel: nextProps.viewMode,
-      });
-    }
-  }
-
+class ViewModesView extends PureComponent<Props, {}> {
   blurElement = (event: SyntheticInputEvent<>) => {
     event.target.blur();
   };
 
-  handleChange = (event: { target: { value: ViewMode } }) => {
-    Store.dispatch(setViewModeAction(event.target.value));
+  handleChange = (mode: ViewMode) => {
+    Store.dispatch(setViewModeAction(mode));
   };
 
   isDisabled(mode: ViewMode) {
@@ -46,40 +29,25 @@ class ViewModesView extends PureComponent<Props, State> {
   }
 
   render() {
-    const arbitraryMenu = (
-      <Menu
-        selectedKeys={[this.props.viewMode]}
+    // todo ?
+    // onClick={this.blurElement}
+    return (
+      <Select
+        value={this.props.viewMode}
+        style={{ width: 120 }}
+        onChange={this.handleChange}
         onClick={({ key }) => Store.dispatch(setViewModeAction(key))}
       >
-        <Menu.Item key={constants.MODE_ARBITRARY}>Flight</Menu.Item>
-        <Menu.Item key={constants.MODE_ARBITRARY_PLANE}>Oblique</Menu.Item>
-      </Menu>
-    );
-
-    const viewMode = this.props.viewMode;
-
-    return (
-      <Radio.Group onChange={this.handleChange} value={viewMode}>
-        <Radio.Button
-          onClick={this.blurElement}
-          key={constants.MODE_PLANE_TRACING}
-          disabled={this.isDisabled(constants.MODE_PLANE_TRACING)}
-          value={constants.MODE_PLANE_TRACING}
-        >
-          {Utils.capitalize(constants.MODE_PLANE_TRACING)}
-        </Radio.Button>
-        <Dropdown key="arbitrary" overlay={arbitraryMenu}>
-          <Radio.Button
-            onClick={this.blurElement}
-            key={this.state.arbitraryModeLabel}
-            disabled={this.isDisabled(this.state.arbitraryModeLabel)}
-            value={this.state.arbitraryModeLabel}
-            style={{ paddingRight: 0 }}
-          >
-            {Utils.capitalize(this.state.arbitraryModeLabel)} <Icon type="down" />
-          </Radio.Button>
-        </Dropdown>
-      </Radio.Group>
+        {[
+          constants.MODE_PLANE_TRACING,
+          constants.MODE_ARBITRARY,
+          constants.MODE_ARBITRARY_PLANE,
+        ].map(mode => (
+          <Option key={mode} disabled={this.isDisabled(mode)} value={mode}>
+            {Utils.capitalize(mode)}
+          </Option>
+        ))}
+      </Select>
     );
   }
 }

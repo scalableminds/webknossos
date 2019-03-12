@@ -157,6 +157,11 @@ i {
   margin-right: 5px;
 }
 
+i.withoutMargin {
+  // Allow to undo the above margin-right of 5px
+  margin-right: 0 !important;
+}
+
 .ant-spin-dot,
 .ant-spin-dot i,
 .ant-avatar i {
@@ -286,4 +291,8 @@ img.img-50 {
 
   // This is for firefox, to avoid showing a white line next to the scrollbar
   scrollbar-width: thin;
+}
+
+#retoggle-mount-root > div {
+  top: 500px !important;
 }

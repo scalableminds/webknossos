@@ -48,37 +48,32 @@ class DatasetPositionView extends PureComponent<Props> {
     const isArbitraryMode = constants.MODES_ARBITRARY.includes(this.props.viewMode);
 
     return (
-      <div>
-        <Tooltip title={message["tracing.copy_position"]} placement="bottomLeft">
-          <div>
-            <Input.Group compact>
-              <ButtonComponent onClick={this.copyPositionToClipboard}>
-                <Icon type="pushpin" style={positionIconStyle} />
-              </ButtonComponent>
-              <Vector3Input
-                value={position}
-                onChange={this.handleChangePosition}
-                // The input field should be able to show at least xxxxx, yyyyy, zzzzz
-                // without scrolling
-                style={{ maxWidth: 140, textAlign: "center" }}
-              />
-            </Input.Group>
-          </div>
-        </Tooltip>
+      <div style={{ display: "flex" }}>
+        <Input.Group compact style={{ whiteSpace: "nowrap" }}>
+          <Tooltip title={message["tracing.copy_position"]} placement="bottomLeft">
+            <ButtonComponent onClick={this.copyPositionToClipboard}>
+              <Icon type="pushpin" style={positionIconStyle} />
+            </ButtonComponent>
+          </Tooltip>
+          <Vector3Input
+            value={position}
+            onChange={this.handleChangePosition}
+            autosize
+            style={{ textAlign: "center" }}
+          />
+        </Input.Group>
         {isArbitraryMode ? (
           <Tooltip title={message["tracing.copy_rotation"]} placement="bottomLeft">
-            <div style={{ marginLeft: 10 }}>
-              <Input.Group compact>
-                <ButtonComponent onClick={this.copyRotationToClipboard}>
-                  <Icon type="reload" />
-                </ButtonComponent>
-                <Vector3Input
-                  value={rotation}
-                  onChange={this.handleChangeRotation}
-                  style={{ width: 100 }}
-                />
-              </Input.Group>
-            </div>
+            <Input.Group compact style={{ whiteSpace: "nowrap", marginLeft: 10 }}>
+              <ButtonComponent onClick={this.copyRotationToClipboard}>
+                <Icon type="reload" />
+              </ButtonComponent>
+              <Vector3Input
+                value={rotation}
+                onChange={this.handleChangeRotation}
+                style={{ textAlign: "center", width: 120 }}
+              />
+            </Input.Group>
           </Tooltip>
         ) : null}
       </div>

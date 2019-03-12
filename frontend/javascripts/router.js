@@ -5,6 +5,7 @@ import { connect } from "react-redux";
 import Enum from "Enumjs";
 import React from "react";
 import createBrowserHistory from "history/createBrowserHistory";
+import { Inspector } from "retoggle";
 
 import { APIAnnotationTypeEnum, type APIUser } from "admin/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
@@ -126,6 +127,8 @@ class ReactRouter extends React.Component<Props> {
           <DisableGenericDnd />
           <Navbar isAuthenticated={isAuthenticated} />
           <Content>
+            <Inspector usePortal={true} />
+
             <Switch>
               <Route
                 exact
@@ -359,11 +362,7 @@ class ReactRouter extends React.Component<Props> {
                 component={ScriptListView}
                 exact
               />
-              <SecuredRoute
-                isAuthenticated={isAuthenticated}
-                path="/help/keyboardshortcuts"
-                component={KeyboardShortcutView}
-              />
+              <Route path="/help/keyboardshortcuts" component={KeyboardShortcutView} />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/reports/timetracking"

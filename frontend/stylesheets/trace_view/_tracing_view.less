@@ -168,3 +168,60 @@
   }
   margin-bottom: 12px;
 }
+
+#portal-navbarTracingSlot {
+  width: 100%;
+  line-height: normal;
+  // filter: invert(100%) hue-rotate(180deg);
+}
+
+// Dark mode for UI within navbar
+.ant-layout-header {
+  @dark-bg: #383d48;
+  @dark-fg: #f1f1f1;
+  @dark-border: #67687b;
+  @primary-border: #1890ff;
+  @hover-border: #40a9ff;
+
+  .ant-btn,
+  .ant-input,
+  .ant-radio-button-wrapper,
+  .ant-select-selection {
+    background-color: @dark-bg;
+    color: @dark-fg;
+    border-color: @dark-border;
+
+    &:hover {
+      border-color: @hover-border;
+    }
+  }
+
+  .ant-select-arrow {
+    color: @dark-fg;
+  }
+
+  .ant-btn-primary {
+    background-color: #2174c1;
+  }
+
+  // Radio button
+  .ant-radio-button-wrapper:first-child {
+    border-left: 1px solid @dark-border;
+  }
+
+  .ant-radio-button-wrapper-checked,
+  .ant-radio-button-wrapper-checked:first-child {
+    border-color: @primary-border;
+    color: @primary-border;
+  }
+
+  // Primary button in button group
+  .ant-btn-group .ant-btn-primary:not(:first-child):not(:last-child) {
+    border-right-color: @dark-border;
+    border-left-color: @dark-border;
+  }
+
+  .ant-btn-danger {
+    background: #ea7d09;
+  }
+}

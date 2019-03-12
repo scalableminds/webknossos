@@ -123,13 +123,28 @@ class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>,
   };
 
   render() {
-    const props = _.omit(this.props, ["onChange", "value", "changeOnlyOnBlur", "allowDecimals"]);
+    const { style, autosize, ...props } = _.omit(this.props, [
+      "onChange",
+      "value",
+      "changeOnlyOnBlur",
+      "allowDecimals",
+    ]);
+
+    console.log(
+      "this.state.text.length * 8 + 25",
+      this.state.text,
+      this.state.text.length * 8 + 25,
+    );
+
     return (
       <Input
         onChange={this.handleChange}
         onFocus={this.handleFocus}
         onBlur={this.handleBlur}
         value={this.state.text}
+        style={
+          autosize ? { ...style, width: this.getText(this.state.text).length * 8 + 25 } : style
+        }
         {...props}
       />
     );

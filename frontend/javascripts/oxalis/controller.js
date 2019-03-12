@@ -14,12 +14,13 @@ import _ from "lodash";
 import { HANDLED_ERROR } from "oxalis/model_initialization";
 import { InputKeyboardNoLoop, InputKeyboard } from "libs/input";
 import { fetchGistContent } from "libs/gist";
+import { initializeSceneController } from "oxalis/controller/scene_controller";
 import { saveNowAction, undoAction, redoAction } from "oxalis/model/actions/save_actions";
+import { setIsInAnnotationViewAction } from "oxalis/model/actions/ui_actions";
 import { setViewModeAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { wkReadyAction } from "oxalis/model/actions/actions";
 import ApiLoader from "oxalis/api/api_loader";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
-import { initializeSceneController } from "oxalis/controller/scene_controller";
 import Model from "oxalis/model";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
 import Store, {
@@ -76,6 +77,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   componentDidMount() {
     _.extend(this, BackboneEvents);
     this.isMounted = true;
+    Store.dispatch(setIsInAnnotationViewAction(true));
 
     UrlManager.initialize();
 
@@ -98,6 +100,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 
   componentWillUnmount() {
     this.isMounted = false;
+    Store.dispatch(setIsInAnnotationViewAction(false));
   }
 
   modelFetchDone() {

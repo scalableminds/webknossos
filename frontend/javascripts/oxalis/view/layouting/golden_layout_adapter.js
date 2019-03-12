@@ -148,6 +148,7 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
       },
       true,
     );
+
     gl.on("stateChanged", () => this.onStateChange());
 
     this.unbindListeners = [unbindResetListener, unbindChangedScaleListener, unbindResizeListener];

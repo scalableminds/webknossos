@@ -41,8 +41,19 @@ export function formatTuple(tuple: ?(Array<number> | Vector3 | Vector6)) {
 
 export function formatScale(scaleArr: Vector3, roundTo?: number = 2): string {
   if (scaleArr != null && scaleArr.length > 0) {
-    const scaleArrRounded = scaleArr.map(value => Utils.roundTo(value, roundTo));
-    return `${scaleArrRounded.join(ThinSpace + MultiplicationSymbol + ThinSpace)} nm³`;
+    // get smallest numebr
+    let unit = "nm³";
+    let scaleArrAdjusted = scaleArr;
+    const smallestValue = Math.min(...scaleArr);
+    if (smallestValue > 1000000) {
+      scaleArrAdjusted = scaleArr.map(value => value / 1000000);
+      unit = "mm³";
+    } else if (smallestValue > 1000) {
+      scaleArrAdjusted = scaleArr.map(value => value / 1000);
+      unit = "μm³";
+    }
+    const scaleArrRounded = scaleArrAdjusted.map(value => Utils.roundTo(value, roundTo));
+    return `${scaleArrRounded.join(ThinSpace + MultiplicationSymbol + ThinSpace)} ${unit}`;
   } else {
     return "";
   }

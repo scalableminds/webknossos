@@ -7,7 +7,7 @@ import "test/sagas/saga_integration.mock.js";
 import { __setupOxalis, TIMESTAMP } from "test/helpers/apiHelpers";
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
 import { enforceSkeletonTracing, getStats } from "oxalis/model/accessors/skeletontracing_accessor";
-import { maximumActionCountPerBatch } from "oxalis/model/sagas/save_saga";
+import { maximumActionCountPerBatch } from "oxalis/model/sagas/save_saga_constants";
 import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";

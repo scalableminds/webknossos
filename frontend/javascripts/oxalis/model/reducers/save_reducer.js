@@ -10,7 +10,7 @@ import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState } from "oxalis/store";
 import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
-import { maximumActionCountPerBatch } from "oxalis/model/sagas/save_saga";
+import { maximumActionCountPerBatch } from "oxalis/model/sagas/save_saga_constants";
 import Date from "libs/date";
 import * as Utils from "libs/utils";
 

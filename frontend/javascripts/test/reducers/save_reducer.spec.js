@@ -1,13 +1,11 @@
 // @flow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import Maybe from "data.maybe";
-
 import mockRequire from "mock-require";
 import test from "ava";
 
+import "test/reducers/save_reducer.mock";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
-
-mockRequire.stopAll();
 
 const TIMESTAMP = 1494695001688;
 const DateMock = {

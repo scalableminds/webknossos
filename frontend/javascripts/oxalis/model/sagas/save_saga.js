@@ -8,6 +8,13 @@ import Maybe from "data.maybe";
 import _ from "lodash";
 
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
+import {
+  PUSH_THROTTLE_TIME,
+  SAVE_RETRY_WAITING_TIME,
+  MAX_SAVE_RETRY_WAITING_TIME,
+  UNDO_HISTORY_SIZE,
+  maximumActionCountPerSave,
+} from "oxalis/model/sagas/save_saga_constants";
 import type { Tracing, Flycam, SaveQueueEntry } from "oxalis/store";
 import { type UpdateAction, moveTreeComponent } from "oxalis/model/sagas/update_actions";
 import { VolumeTracingSaveRelevantActions } from "oxalis/model/actions/volumetracing_actions";
@@ -43,14 +50,6 @@ import messages from "messages";
 import window, { alert, document, location } from "libs/window";
 
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
-
-const PUSH_THROTTLE_TIME = 30000; // 30s
-const SAVE_RETRY_WAITING_TIME = 2000;
-const MAX_SAVE_RETRY_WAITING_TIME = 300000; // 5m
-const UNDO_HISTORY_SIZE = 100;
-
-export const maximumActionCountPerBatch = 5000;
-const maximumActionCountPerSave = 15000;
 
 export function* collectUndoStates(): Saga<void> {
   const undoStack = [];

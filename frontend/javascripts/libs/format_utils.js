@@ -41,7 +41,6 @@ export function formatTuple(tuple: ?(Array<number> | Vector3 | Vector6)) {
 
 export function formatScale(scaleArr: Vector3, roundTo?: number = 2): string {
   if (scaleArr != null && scaleArr.length > 0) {
-    // get smallest numebr
     let unit = "nm³";
     let scaleArrAdjusted = scaleArr;
     const smallestValue = Math.min(...scaleArr);

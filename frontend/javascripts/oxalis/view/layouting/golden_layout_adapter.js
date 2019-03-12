@@ -70,7 +70,7 @@ const updateSizeForGl = gl => {
 export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
   gl: GoldenLayout;
   unbindListeners: Array<() => void>;
-  maximisedItem: null;
+  maximizedItem: null;
 
   componentDidMount() {
     this.setupLayout();
@@ -104,12 +104,13 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
     if (onLayoutChange != null && this.gl.isInitialised) {
       onLayoutChange(this.gl.toConfig(), this.props.activeLayoutName);
     }
-    if (this.gl && this.maximisedItem !== !this.gl._maximisedItem) {
-      this.maximisedItem = this.gl._maximisedItem;
+    // If the maximized item changed adjust css classes to not show hidden gl items.
+    if (this.gl && this.maximizedItem !== !this.gl._maximisedItem) {
+      this.maximizedItem = this.gl._maximisedItem;
       const allGlHeaderElemets = document.getElementsByClassName("lm_item");
       for (const element of allGlHeaderElemets) {
-        if (this.maximisedItem) {
-          // show only the maximized item
+        if (this.maximizedItem) {
+          // Show only the maximized item and do not hide the gl root component.
           if (
             !element.classList.contains("lm_maximised") &&
             !element.classList.contains("lm_root")
@@ -117,7 +118,7 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
             element.classList.add("hidden-gl-item");
           }
         } else {
-          // else show all items
+          // If there is no maximized component, remove the css class to show everything as usual.
           element.classList.remove("hidden-gl-item");
         }
       }

@@ -30,7 +30,7 @@ type StateProps = {|
 type Props = {| ...OwnProps, ...StateProps |};
 
 export const navbarHeight = 48;
-const subMenuOpenDelay = 0.5;
+const subMenuCloseDelay = 0.5;
 
 function NavbarMenuItem({ children, style, ...props }) {
   return (
@@ -38,7 +38,8 @@ function NavbarMenuItem({ children, style, ...props }) {
       mode="horizontal"
       style={{ ...style, lineHeight: "48px" }}
       theme="dark"
-      subMenuOpenDelay={subMenuOpenDelay}
+      subMenuCloseDelay={subMenuCloseDelay}
+      triggerSubMenuAction="click"
       {...props}
     >
       {children}
@@ -51,20 +52,23 @@ function UserInitials({ activeUser }) {
   const initialOf = str => str.slice(0, 1).toUpperCase();
   const [userName] = useTextKnob("First Name", firstName);
   return (
-    <Avatar style={{ backgroundColor: "rgb(82, 196, 26)", verticalAlign: "middle" }}>
+    <Avatar
+      className="hoverEffectViaOpacity"
+      style={{ backgroundColor: "rgb(82, 196, 26)", verticalAlign: "middle" }}
+    >
       {initialOf(userName) + initialOf(lastName)}
     </Avatar>
   );
 }
 
-function AdministrationSubMenu(menuProps) {
+function AdministrationSubMenu({ collapse, ...menuProps }) {
   return (
     <SubMenu
       key="adminMenu"
       title={
         <span>
-          <Icon type="setting" />
-          Administration
+          <Icon type="team" />
+          {collapse ? null : "Administration"}
         </span>
       }
       {...menuProps}
@@ -91,9 +95,18 @@ function AdministrationSubMenu(menuProps) {
   );
 }
 
-function StatisticsSubMenu(menuProps) {
+function StatisticsSubMenu({ collapse, ...menuProps }) {
   return (
-    <SubMenu key="statisticMenu" title="Statistics" {...menuProps}>
+    <SubMenu
+      key="statisticMenu"
+      title={
+        <span>
+          <Icon type="bar-chart" />
+          {collapse ? null : "Statistics"}
+        </span>
+      }
+      {...menuProps}
+    >
       <Menu.Item key="/statistics">
         <Link to="/statistics">Overview</Link>
       </Menu.Item>
@@ -110,54 +123,52 @@ function StatisticsSubMenu(menuProps) {
   );
 }
 
-function HelpSubMenu({ isAdmin, version, ...other }) {
+function HelpSubMenu({ isAdmin, version, collapse, ...other }) {
   return (
-    <NavbarMenuItem style={{ height: 48 }}>
-      <SubMenu
-        key="helpMenu"
-        style={{ width: 46 }}
-        title={
-          <span>
-            <Icon type="question-circle" />
-          </span>
-        }
-        {...other}
-      >
-        <Menu.Item key="user-documentation">
-          <a target="_blank" href="https://docs.webknossos.org" rel="noopener noreferrer">
-            User Documentation
+    <SubMenu
+      key="helpMenu"
+      title={
+        <span>
+          <Icon type="question-circle" />
+          {collapse ? null : "Help"}
+        </span>
+      }
+      {...other}
+    >
+      <Menu.Item key="user-documentation">
+        <a target="_blank" href="https://docs.webknossos.org" rel="noopener noreferrer">
+          User Documentation
+        </a>
+      </Menu.Item>
+      {(!features().discussionBoardRequiresAdmin || isAdmin) &&
+      features().discussionBoard !== false ? (
+        <Menu.Item key="discussion-board">
+          <a href={features().discussionBoard} target="_blank" rel="noopener noreferrer">
+            Community Support
           </a>
         </Menu.Item>
-        {(!features().discussionBoardRequiresAdmin || isAdmin) &&
-        features().discussionBoard !== false ? (
-          <Menu.Item key="discussion-board">
-            <a href={features().discussionBoard} target="_blank" rel="noopener noreferrer">
-              Community Support
-            </a>
-          </Menu.Item>
-        ) : null}
-        <Menu.Item key="frontend-api">
-          <a target="_blank" href="/docs/frontend-api/index.html">
-            Frontend API Documentation
-          </a>
+      ) : null}
+      <Menu.Item key="frontend-api">
+        <a target="_blank" href="/docs/frontend-api/index.html">
+          Frontend API Documentation
+        </a>
+      </Menu.Item>
+      <Menu.Item key="keyboard-shortcuts">
+        <a target="_blank" href="/help/keyboardshortcuts" rel="noopener noreferrer">
+          Keyboard Shortcuts
+        </a>
+      </Menu.Item>
+      <Menu.Item key="credits">
+        <a target="_blank" href="https://publication.webknossos.org" rel="noopener noreferrer">
+          About & Credits
+        </a>
+      </Menu.Item>
+      {version !== "" ? (
+        <Menu.Item disabled key="version">
+          Version: {version}
         </Menu.Item>
-        <Menu.Item key="keyboard-shortcuts">
-          <a target="_blank" href="/help/keyboardshortcuts" rel="noopener noreferrer">
-            Keyboard Shortcuts
-          </a>
-        </Menu.Item>
-        <Menu.Item key="credits">
-          <a target="_blank" href="https://publication.webknossos.org" rel="noopener noreferrer">
-            About & Credits
-          </a>
-        </Menu.Item>
-        {version !== "" ? (
-          <Menu.Item disabled key="version">
-            Version: {version}
-          </Menu.Item>
-        ) : null}
-      </SubMenu>
-    </NavbarMenuItem>
+      ) : null}
+    </SubMenu>
   );
 }
 
@@ -201,7 +212,7 @@ function AnonymousAvatar() {
       {/* Oh god, why -10? */}
       <div style={{ marginTop: -10, height: 48 }}>
         <Badge dot>
-          <Avatar icon="user" />
+          <Avatar className="hoverEffectViaOpacity" icon="user" />
         </Badge>
       </div>
     </Popover>
@@ -254,14 +265,14 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView }) {
       <Menu.Item key="/dashboard">
         <Link to="/dashboard">
           <Icon type="home" />
-          Dashboard
+          {collapseAllNavItems ? null : "Dashboard"}
         </Link>
       </Menu.Item>,
     );
 
     if (isAdmin) {
-      menuItems.push(<AdministrationSubMenu />);
-      menuItems.push(<StatisticsSubMenu />);
+      menuItems.push(<AdministrationSubMenu collapse={collapseAllNavItems} />);
+      menuItems.push(<StatisticsSubMenu collapse={collapseAllNavItems} />);
     }
 
     trailingNavItems.push(<LoggedInAvatar activeUser={activeUser} handleLogout={handleLogout} />);
@@ -271,36 +282,48 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView }) {
     trailingNavItems.push(<AnonymousAvatar />);
   }
 
-  trailingNavItems.unshift(<HelpSubMenu version={version} isAdmin={isAdmin} />);
+  menuItems.push(
+    <HelpSubMenu version={version} isAdmin={isAdmin} collapse={collapseAllNavItems} />,
+  );
+
+  // Don't highlight active menu items, when showing the narrow version of the navbar,
+  // since this makes the icons appear more crowded.
+  const selectedKeys = collapseAllNavItems ? [] : [history.location.pathname];
+  const separator = (
+    <div
+      style={{ height: "100%", marginLeft: 2, marginRight: 10, borderLeft: "1px #666879 solid" }}
+    />
+  );
 
   return (
-    <Header style={navbarStyle}>
+    <Header style={navbarStyle} className={collapseAllNavItems ? "collapsedNavHeader" : ""}>
       <Menu
         mode="horizontal"
-        defaultSelectedKeys={[history.location.pathname]}
+        selectedKeys={selectedKeys}
         style={{ lineHeight: "48px" }}
         theme="dark"
-        subMenuOpenDelay={subMenuOpenDelay}
+        subMenuCloseDelay={subMenuCloseDelay}
+        triggerSubMenuAction="click"
       >
-        {collapseAllNavItems
-          ? null
-          : [
-              <Menu.Item key="0">
-                <Link to="/" style={{ fontWeight: 400 }}>
-                  <span className="logo" />
-                  webKnossos
-                </Link>
-              </Menu.Item>,
-            ].concat(menuItems)}
-
-        {collapseAllNavItems ? (
-          <SubMenu key="rootMenu" style={{ paddingLeft: 0 }} title={<span className="logo" />}>
-            {menuItems}
-          </SubMenu>
-        ) : null}
+        {[
+          <Menu.Item key="0">
+            <Link to="/" style={{ fontWeight: 400 }}>
+              <span className="logo" />
+              {collapseAllNavItems ? null : "webKnossos"}
+            </Link>
+          </Menu.Item>,
+        ].concat(menuItems)}
       </Menu>
 
-      <PortalTarget portalId="navbarTracingSlot" style={{ flex: 1, display: "flex" }} />
+      {isInAnnotationView ? separator : null}
+
+      <PortalTarget
+        portalId="navbarTracingSlot"
+        style={{
+          flex: 1,
+          display: "flex",
+        }}
+      />
 
       <div style={{ display: "flex", justifyContent: "flex-end", marginRight: 12 }}>
         {trailingNavItems}

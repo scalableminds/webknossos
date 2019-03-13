@@ -286,7 +286,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
           icon="verticle-left"
           onClick={this.handleFinishAndGetNextTask}
         >
-          Finish Task
+          Finish and Get Next Task
         </ButtonComponent>
       ) : null;
 

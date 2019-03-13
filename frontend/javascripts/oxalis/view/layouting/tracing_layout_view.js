@@ -157,7 +157,11 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
         <Layout className="tracing-layout">
           <RenderToPortal portalId="navbarTracingSlot">
             <div style={{ flex: "0 1 auto", zIndex: 210, display: "flex" }}>
-              <ButtonComponent onClick={this.handleSettingsCollapse} shape="circle">
+              <ButtonComponent
+                className={this.state.isSettingsCollapsed ? "" : "highlightBorder"}
+                onClick={this.handleSettingsCollapse}
+                shape="circle"
+              >
                 <Icon
                   type="setting"
                   theme={this.state.isSettingsCollapsed ? "filled" : "outlined"}
@@ -189,7 +193,8 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
                     }}
                     message={
                       <span>
-                        Dataset is on tmpscratch! <Icon type="warning" theme="filled" />
+                        Dataset is on tmpscratch!{" "}
+                        <Icon type="warning" theme="filled" style={{ margin: "0 0 0 6px" }} />
                       </span>
                     }
                     type="error"

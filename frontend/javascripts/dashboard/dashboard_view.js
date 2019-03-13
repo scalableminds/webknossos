@@ -144,11 +144,7 @@ class DashboardView extends React.PureComponent<PropsWithRouter, State> {
       <NmlUploadZoneContainer onImport={this.uploadNmls} isAllowed>
         <div className="container">
           {userHeader}
-          <Tabs
-            activeKey={this.state.activeTabKey}
-            onChange={onTabChange}
-            style={{ marginTop: 20 }}
-          >
+          <Tabs activeKey={this.state.activeTabKey} onChange={onTabChange}>
             {this.getTabs(user)}
           </Tabs>
         </div>

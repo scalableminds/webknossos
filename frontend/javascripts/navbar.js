@@ -30,7 +30,9 @@ type StateProps = {|
 type Props = {| ...OwnProps, ...StateProps |};
 
 export const navbarHeight = 48;
-const subMenuCloseDelay = 0.5;
+
+// The user should click somewhere else to close that menu like it's done in most OS menus, anyway. 10 seconds.
+const subMenuCloseDelay = 10;
 
 function NavbarMenuItem({ children, style, ...props }) {
   return (

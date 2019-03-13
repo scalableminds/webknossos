@@ -18,7 +18,7 @@ import Clipboard from "clipboard-js";
 import React, { type Node, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 
-import type { APIUser } from "admin/api_flow_types";
+import type { APIUser, APIDataStore } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { location } from "libs/window";
 import DatasetImportView from "dashboard/dataset/dataset_import_view";
@@ -27,7 +27,7 @@ import RegistrationForm from "admin/auth/registration_form";
 import Toast from "libs/toast";
 import renderIndependently from "libs/render_independently";
 import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
-import { getOrganizations } from "admin/admin_rest_api";
+import { getOrganizations, getDatastores } from "admin/admin_rest_api";
 
 const { Step } = Steps;
 const FormItem = Form.Item;
@@ -39,6 +39,7 @@ type Props = StateProps;
 
 type State = {
   currentStep: number,
+  datastores: Array<APIDataStore>,
   organizationName: string,
   datasetNameToImport: ?string,
   showDatasetUploadModal: boolean,
@@ -244,10 +245,20 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
 class OnboardingView extends React.PureComponent<Props, State> {
   state = {
     currentStep: 0,
+    datastores: [],
     organizationName: "",
     showDatasetUploadModal: false,
     datasetNameToImport: null,
   };
+
+  componentDidMount() {
+    this.fetchData();
+  }
+
+  async fetchData() {
+    const datastores = (await getDatastores()).filter(ds => !ds.isForeign && !ds.isConnector);
+    this.setState({ datastores });
+  }
 
   advanceStep = () => {
     this.setState(prevState => ({
@@ -336,6 +347,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
             onCancel={() => this.setState({ showDatasetUploadModal: false })}
           >
             <DatasetUploadView
+              datastores={this.state.datastores}
               onUploaded={(_organization: string, datasetName: string) => {
                 this.setState({ datasetNameToImport: datasetName, showDatasetUploadModal: false });
               }}

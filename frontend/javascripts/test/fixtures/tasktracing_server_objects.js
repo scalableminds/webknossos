@@ -84,6 +84,8 @@ export const annotation: APIAnnotation = {
     name: "localhost",
     url: "http://localhost:9000",
     isScratch: false,
+    isForeign: false,
+    isConnector: false,
   },
   tracingStore: { name: "localhost", url: "http://localhost:9000" },
   isPublic: false,

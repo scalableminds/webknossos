@@ -120,7 +120,7 @@ See: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 * Install PostgreSQL from https://www.postgresql.org/download/
 * PostgreSQL version **10+ is required**
 
-##### PostgreSQL
+##### Redis
 * Install Redis from https://redis.io/download
 
 ##### node.js & yarn

@@ -193,7 +193,11 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
 
 function AnonymousAvatar() {
   return (
-    <Popover placement="bottomRight" content={<LoginForm layout="horizontal" />} trigger="click">
+    <Popover
+      placement="bottomRight"
+      content={<LoginForm layout="horizontal" style={{ maxWidth: 500 }} />}
+      trigger="click"
+    >
       {/* Oh god, why -10? */}
       <div style={{ marginTop: -10, height: 48 }}>
         <Badge dot>

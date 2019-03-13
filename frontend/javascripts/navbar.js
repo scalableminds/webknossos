@@ -63,15 +63,29 @@ function UserInitials({ activeUser }) {
   );
 }
 
+function CollapsibleMenuTitle({ title, collapse, icon }) {
+  if (collapse) {
+    return <span title={title}>{icon}</span>;
+  } else {
+    return (
+      <span>
+        {icon}
+        {title}
+      </span>
+    );
+  }
+}
+
 function AdministrationSubMenu({ collapse, ...menuProps }) {
   return (
     <SubMenu
       key="adminMenu"
       title={
-        <span>
-          <Icon type="team" />
-          {collapse ? null : "Administration"}
-        </span>
+        <CollapsibleMenuTitle
+          title="Administration"
+          icon={<Icon type="team" />}
+          collapse={collapse}
+        />
       }
       {...menuProps}
     >
@@ -102,10 +116,11 @@ function StatisticsSubMenu({ collapse, ...menuProps }) {
     <SubMenu
       key="statisticMenu"
       title={
-        <span>
-          <Icon type="bar-chart" />
-          {collapse ? null : "Statistics"}
-        </span>
+        <CollapsibleMenuTitle
+          title="Statistics"
+          icon={<Icon type="bar-chart" />}
+          collapse={collapse}
+        />
       }
       {...menuProps}
     >
@@ -130,10 +145,11 @@ function HelpSubMenu({ isAdmin, version, collapse, ...other }) {
     <SubMenu
       key="helpMenu"
       title={
-        <span>
-          <Icon type="question-circle" />
-          {collapse ? null : "Help"}
-        </span>
+        <CollapsibleMenuTitle
+          title="Help"
+          icon={<Icon type="question-circle" />}
+          collapse={collapse}
+        />
       }
       {...other}
     >
@@ -266,8 +282,11 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView }) {
     menuItems.push(
       <Menu.Item key="/dashboard">
         <Link to="/dashboard">
-          <Icon type="home" />
-          {collapseAllNavItems ? null : "Dashboard"}
+          <CollapsibleMenuTitle
+            title="Dashboard"
+            icon={<Icon type="home" />}
+            collapse={collapseAllNavItems}
+          />
         </Link>
       </Menu.Item>,
     );
@@ -310,8 +329,11 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView }) {
         {[
           <Menu.Item key="0">
             <Link to="/" style={{ fontWeight: 400 }}>
-              <span className="logo" />
-              {collapseAllNavItems ? null : "webKnossos"}
+              <CollapsibleMenuTitle
+                title="webKnossos"
+                icon={<span className="logo" />}
+                collapse={collapseAllNavItems}
+              />
             </Link>
           </Menu.Item>,
         ].concat(menuItems)}

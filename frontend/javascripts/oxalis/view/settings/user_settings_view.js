@@ -30,6 +30,7 @@ import {
   setActiveNodeAction,
   setActiveTreeAction,
   setNodeRadiusAction,
+  setMergerModeEnabledAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
@@ -73,7 +74,6 @@ type State = {
 class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
   onChangeUser: { [$Keys<UserConfiguration>]: Function };
   state = {
-    isMergerModeEnabled: false,
     isMergerModeModalVisible: false,
     isMergerModeModalClosable: false,
   };
@@ -85,10 +85,10 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
     );
   }
 
-  handleMergerModeChange = async (value: boolean) => {
-    if (value) {
+  handleMergerModeChange = async (active: boolean) => {
+    this.props.onChangeEnableMergerMode(active);
+    if (active) {
       this.setState({
-        isMergerModeEnabled: true,
         isMergerModeModalVisible: true,
         isMergerModeModalClosable: false,
       });
@@ -98,7 +98,6 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
       this.setState({ isMergerModeModalClosable: true });
     } else {
       this.setState({
-        isMergerModeEnabled: false,
         isMergerModeModalVisible: false,
         isMergerModeModalClosable: false,
       });
@@ -289,7 +288,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
           />
           <SwitchSetting
             label="Enable Merger Mode"
-            value={this.state.isMergerModeEnabled}
+            value={this.props.isMergerModeEnabled}
             onChange={value => {
               this.handleMergerModeChange(value);
             }}
@@ -398,6 +397,7 @@ const mapStateToProps = (state: OxalisState) => ({
   maxZoomStep: getMaxZoomValue(state),
   viewMode: state.temporaryConfiguration.viewMode,
   controlMode: state.temporaryConfiguration.controlMode,
+  isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
@@ -421,6 +421,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   onChangeRadius(radius: number) {
     dispatch(setNodeRadiusAction(radius));
+  },
+  onChangeEnableMergerMode(active: boolean) {
+    dispatch(setMergerModeEnabledAction(active));
   },
 });
 

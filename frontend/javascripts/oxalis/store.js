@@ -277,6 +277,7 @@ export type TemporaryConfiguration = {
     +isMappingEnabled: boolean,
     +mappingSize: number,
   },
+  +isMergerModeEnabled: boolean,
 };
 
 export type Script = APIScript;
@@ -466,6 +467,7 @@ export const defaultState: OxalisState = {
       isMappingEnabled: false,
       mappingSize: 0,
     },
+    isMergerModeEnabled: false,
   },
   task: null,
   dataset: {

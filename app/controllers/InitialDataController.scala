@@ -205,7 +205,7 @@ Samplecountry
     if (conf.Datastore.enabled) {
       dataStoreDAO.findOneByName("localhost").futureBox.map { maybeStore =>
         if (maybeStore.isEmpty) {
-          logger.info("inserting local datastore");
+          logger.info("inserting local datastore")
           dataStoreDAO.insertOne(DataStore("localhost", conf.Http.uri, conf.Datastore.key))
         }
       }
@@ -215,7 +215,7 @@ Samplecountry
     if (conf.Tracingstore.enabled) {
       tracingStoreDAO.findOneByName("localhost").futureBox.map { maybeStore =>
         if (maybeStore.isEmpty) {
-          logger.info("inserting local tracingstore");
+          logger.info("inserting local tracingstore")
           tracingStoreDAO.insertOne(TracingStore("localhost", conf.Http.uri, conf.Tracingstore.key))
         }
       }

@@ -1,2 +1,2 @@
-name,url,key,isScratch,isDeleted,isForeign
-'localhost','http://localhost:9000','something-secure',f,f,f
+name,url,key,isScratch,isDeleted,isForeign,isConnector
+'localhost','http://localhost:9000','something-secure',f,f,f,f

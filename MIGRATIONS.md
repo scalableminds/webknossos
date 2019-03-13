@@ -8,7 +8,7 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 - To ensure that the existing behavior for loading data is preserved ("best quality first" as opposed to the new "progressive quality" default) execute: `update webknossos.user_datasetconfigurations set configuration = configuration || jsonb '{"loadingStrategy":"BEST_QUALITY_FIRST"}'`. See [#3801](https://github.com/scalableminds/webknossos/pull/3801) for additional context.
 
 ### Postgres Evolutions:
-- 
+- [041-add-datastore-isconnector.sql](conf/evolutions/041-add-datastore-isconnector.sql)
 
 
 ## [19.03.0](https://github.com/scalableminds/webknossos/releases/tag/19.03.0) - 2019-03-04

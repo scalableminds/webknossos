@@ -121,6 +121,7 @@ export default class TextureBucketManager {
       this.freeBucket(freeBucket);
     }
 
+    let needsNewBucket = false;
     const freeIndexArray = Array.from(this.freeIndexSet);
     for (const nextBucket of buckets) {
       if (!this.activeBucketToIndexMap.has(nextBucket)) {
@@ -129,10 +130,15 @@ export default class TextureBucketManager {
         }
         const freeBucketIdx = freeIndexArray.shift();
         this.reserveIndexForBucket(nextBucket, freeBucketIdx);
+        needsNewBucket = true;
       }
     }
 
-    this._refreshLookUpBuffer();
+    // The lookup buffer only needs to be refreshed if some previously active buckets are no longer needed
+    // or if new buckets are needed. Otherwise we may end up in an endless loop.
+    if (freeBuckets.length > 0 || needsNewBucket) {
+      this._refreshLookUpBuffer();
+    }
   }
 
   getPackedBucketSize() {

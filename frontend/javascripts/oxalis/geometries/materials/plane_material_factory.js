@@ -185,6 +185,10 @@ class PlaneMaterialFactory {
         type: "v3",
         value: new THREE.Vector3(...addressSpaceDimensions),
       },
+      hoveredIsosurfaceId: {
+        type: "v4",
+        value: new THREE.Vector4(0, 0, 0, 0),
+      },
     };
 
     for (const dataLayer of Model.getAllLayers()) {
@@ -438,6 +442,16 @@ class PlaneMaterialFactory {
             this.uniforms.brushSizeInPixel.value = brushSize;
           },
           true,
+        ),
+      );
+
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          storeState => storeState.temporaryConfiguration.hoveredIsosurfaceId,
+          hoveredIsosurfaceId => {
+            const [a, b, g, r] = Utils.convertDecToBase256(hoveredIsosurfaceId);
+            this.uniforms.hoveredIsosurfaceId.value.set(r, g, b, a);
+          },
         ),
       );
 

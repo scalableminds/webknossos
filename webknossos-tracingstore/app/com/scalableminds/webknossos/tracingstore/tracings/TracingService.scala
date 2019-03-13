@@ -3,7 +3,6 @@ package com.scalableminds.webknossos.tracingstore.tracings
 import java.util.UUID
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
-import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.scalableminds.webknossos.tracingstore.RedisTemporaryStore
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
@@ -134,11 +133,9 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
     transactionIdOpt match {
       case Some(transactionId) => {
         val key = handledGroupKey(tracingId, transactionId, version)
-        logger.info(s"saving to handledGroupIdStore: $key")
         handledGroupIdStore.insert(key, "()", Some(handledGroupCacheExpiry))
       }
       case _ => {
-        logger.info("skipping saving to handledGroupIdStore (no transactionId)")
         Fox.successful(())
       }
     }

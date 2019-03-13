@@ -112,7 +112,6 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
           val updateGroups = request.body
           val userToken = request.getQueryString("token")
           if (updateGroups.forall(_.transactionGroupCount.getOrElse(1) == 1)) {
-            logger.debug("only single-group transactions in this request. committing all.")
             commitUpdates(tracingId, updateGroups, userToken).map(_ => Ok)
           } else {
             updateGroups
@@ -134,16 +133,12 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
                                               userToken: Option[String]): Fox[Long] =
     for {
       previousVersionTentative <- previousVersionFox
-      _ = logger.debug(
-        s"received group ${updateGroup.transactionId} v${updateGroup.version} (${updateGroup.transactionGroupIndex} of ${updateGroup.transactionGroupCount})")
       currentUncommittedVersion <- tracingService.currentUncommittedVersion(tracingId, updateGroup.transactionId)
       previousVersion: Long = currentUncommittedVersion.getOrElse(previousVersionTentative)
       result <- if (previousVersion + 1 == updateGroup.version) {
         if (updateGroup.transactionGroupCount.getOrElse(1) == updateGroup.transactionGroupIndex.getOrElse(0) + 1) {
           commitPending(tracingId, updateGroup, userToken)
         } else {
-          logger.debug(
-            s"saving version ${updateGroup.version} uncommitted (from transaction ${updateGroup.transactionId})")
           tracingService
             .saveUncommitted(tracingId,
                              updateGroup.transactionId,
@@ -165,7 +160,10 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
                             userToken: Option[String]): Fox[Long] =
     for {
       previousActionGroupsToCommit <- tracingService.getAllUncommittedFor(tracingId, updateGroup.transactionId)
+      count = previousActionGroupsToCommit.length + 1
+      _ = if (count > 1) logger.info(s"Committing $count updateActionGroups for batched transaction ${updateGroup.transactionId} of tracing $tracingId...")
       commitResult <- commitUpdates(tracingId, previousActionGroupsToCommit :+ updateGroup, userToken)
+      _ = if (count > 1) logger.info(s"Successfully Committed $count updateActionGroups for batched transaction ${updateGroup.transactionId} of tracing $tracingId. Now at version $commitResult.")
       _ <- tracingService.removeAllUncommittedFor(tracingId, updateGroup.transactionId)
     } yield commitResult
 
@@ -179,7 +177,6 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
       updateGroups.foldLeft(currentVersion) { (previousVersion, updateGroup) =>
         previousVersion.flatMap { prevVersion: Long =>
           if (prevVersion + 1 == updateGroup.version) {
-            logger.debug(s"committing version ${updateGroup.version} (from transaction ${updateGroup.transactionId})")
             tracingService
               .handleUpdateGroup(tracingId, updateGroup, prevVersion)
               .flatMap(_ =>

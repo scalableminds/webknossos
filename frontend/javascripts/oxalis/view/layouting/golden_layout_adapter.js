@@ -104,9 +104,9 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
     if (onLayoutChange != null && this.gl.isInitialised) {
       onLayoutChange(this.gl.toConfig(), this.props.activeLayoutName);
     }
-    // If the maximized item changed adjust css classes to not show hidden gl items.
+    // If the maximized item changed, adjust css classes to not show hidden gl items.
     if (this.gl && this.maximizedItem !== !this.gl._maximisedItem) {
-      // Gl needs a forced updated when returning from maximized viewing
+      // Gl needs a forced update when returning from maximized viewing
       // mode to render stacked components correctly.
       const needsUpdatedSize = this.gl._maximisedItem === null && this.maximizedItem != null;
       this.maximizedItem = this.gl._maximisedItem;

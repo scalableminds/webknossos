@@ -198,7 +198,7 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
         key="loggedMenu"
         title={<UserInitials activeUser={activeUser} />}
         style={{ padding: 0 }}
-        className="subMenuWithoutPadding"
+        className="subMenuWithoutPadding verticalCenterFlexFix"
         {...other}
       >
         <Menu.Item disabled key="userName">
@@ -228,11 +228,10 @@ function AnonymousAvatar() {
       trigger="click"
     >
       {/* Oh god, why -10? */}
-      <div style={{ marginTop: -10, height: 48 }}>
-        <Badge dot>
-          <Avatar className="hoverEffectViaOpacity" icon="user" />
-        </Badge>
-      </div>
+
+      <Badge dot>
+        <Avatar className="hoverEffectViaOpacity" icon="user" />
+      </Badge>
     </Popover>
   );
 }

@@ -108,6 +108,10 @@ label.ant-checkbox-wrapper {
   padding: 0;
 }
 
+.verticalCenterFlexFix .ant-menu-submenu-title {
+  display: flex;
+}
+
 .collapsedNavHeader {
   .ant-menu-item,
   .ant-menu-submenu-title {
@@ -117,4 +121,10 @@ label.ant-checkbox-wrapper {
   .anticon {
     margin-right: 0;
   }
+}
+
+.ant-tooltip {
+  // Make all tooltips click-through so that they don't make the underlying
+  // UI unusable
+  pointer-events: none;
 }

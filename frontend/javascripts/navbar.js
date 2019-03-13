@@ -236,17 +236,11 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView }) {
     navbarStyle.paddingTop = 4;
     navbarStyle.height = "auto";
   }
-  const [_isAuthenticated] = useBooleanKnob("Is logged in", isAuthenticated && activeUser != null);
-  const [isAdmin] = useBooleanKnob(
-    "Is Admin?",
-    activeUser != null ? Utils.isUserAdmin(activeUser) : false,
-  );
+  const _isAuthenticated = isAuthenticated && activeUser != null;
+  const isAdmin = activeUser != null ? Utils.isUserAdmin(activeUser) : false;
 
-  // const [collapseAllNavItems] = useBooleanKnob("Collapse Menu", isInAnnotationView);
   const collapseAllNavItems = isInAnnotationView;
   const [hideNavbarLogin] = useBooleanKnob("Hide Navbar Login", features().hideNavbarLogin);
-
-  console.log("collapseAllNavItems", collapseAllNavItems);
 
   const menuItems = [];
   const trailingNavItems = [];

@@ -254,7 +254,7 @@ class TracingApi {
    * api.tracing.setActiveTree(3);
    */
   setActiveTree(treeId: number) {
-    const tracing = Store.getState().tracing;
+    const { tracing } = Store.getState();
     assertSkeleton(tracing);
     Store.dispatch(setActiveTreeAction(treeId));
   }
@@ -267,7 +267,7 @@ class TracingApi {
    * api.tracing.setTreeColorIndex(3, 10);
    */
   setTreeColorIndex(treeId: ?number, colorIndex: number) {
-    const tracing = Store.getState().tracing;
+    const { tracing } = Store.getState();
     assertSkeleton(tracing);
     Store.dispatch(setTreeColorIndexAction(treeId, colorIndex));
   }
@@ -525,7 +525,7 @@ class TracingApi {
     rotation?: Vector3,
   ): void {
     // Let the user still manipulate the "third dimension" during animation
-    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
+    const { activeViewport } = Store.getState().viewModeData.plane;
     const dimensionToSkip =
       skipDimensions && activeViewport !== OrthoViews.TDView
         ? dimensions.thirdDimensionForPlane(activeViewport)
@@ -665,11 +665,12 @@ class DataApi {
    *
    * @example
    * const position = [123, 123, 123];
-   * const segmentId = await api.data.getDataValue("segmentation", position);
+   * const segmentationLayerName = "segmentation";
+   * const segmentId = await api.data.getDataValue(segmentationLayerName, position);
    * const treeId = api.tracing.getActiveTreeId();
    * const mapping = {[segmentId]: treeId}
    *
-   * api.setMapping("segmentation", mapping);
+   * api.setMapping(segmentationLayerName, mapping);
    */
   setMapping(
     layerName: string,
@@ -780,7 +781,7 @@ class DataApi {
    * api.data.downloadRawDataCuboid("segmentation", [0,0,0], [100,200,100]);
    */
   downloadRawDataCuboid(layerName: string, topLeft: Vector3, bottomRight: Vector3): Promise<void> {
-    const dataset = Store.getState().dataset;
+    const { dataset } = Store.getState();
 
     return doWithToken(token => {
       const downloadUrl =

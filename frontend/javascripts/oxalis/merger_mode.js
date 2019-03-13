@@ -10,7 +10,7 @@ type MergerModeState = {
   colorMapping: Object,
   nodesPerSegment: Object,
   nodes: Array<NodeWithTreeId>,
-  segementationLayerName: string,
+  segmentationLayerName: string,
   nodeSegmentMap: Object,
   segmentationOpacity: number,
   segmentationOn: boolean,
@@ -80,13 +80,14 @@ function getAllNodesWithTreeId(): Array<NodeWithTreeId> {
   });
   return nodes;
 }
+
 /* Here we intercept calls to the "addNode" method. This allows us to look up the segment id at the specified
    point and display it in the same color as the rest of the aggregate. */
 async function createNodeOverwrite(store, call, action, mergerModeState: MergerModeState) {
   call(action);
-  const { colorMapping, segementationLayerName, nodeSegmentMap } = mergerModeState;
+  const { colorMapping, segmentationLayerName, nodeSegmentMap } = mergerModeState;
   const pos = action.position;
-  const segmentId = await api.data.getDataValue(segementationLayerName, pos);
+  const segmentId = await api.data.getDataValue(segmentationLayerName, pos);
 
   const activeTreeId = api.tracing.getActiveTreeId();
   const activeNodeId = api.tracing.getActiveNodeId();
@@ -109,7 +110,7 @@ async function createNodeOverwrite(store, call, action, mergerModeState: MergerM
   mapSegmentColorToTree(segmentId, activeTreeId, mergerModeState);
 
   // Update mapping
-  api.data.setMapping(segementationLayerName, colorMapping);
+  api.data.setMapping(segmentationLayerName, colorMapping);
 }
 
 /* This function decreases the number of nodes associated with the segment the passed node belongs to.
@@ -136,7 +137,7 @@ function deleteActiveNodeOverwrite(store, call, action, mergerModeState: MergerM
   }
   const noNodesLeftForTheSegment = onNodeDeleted(mergerModeState, activeNodeId);
   if (noNodesLeftForTheSegment) {
-    api.data.setMapping(mergerModeState.segementationLayerName, mergerModeState.colorMapping);
+    api.data.setMapping(mergerModeState.segmentationLayerName, mergerModeState.colorMapping);
   }
   call(action);
 }
@@ -154,7 +155,7 @@ function deleteActiveTreeOverwrite(store, call, action, mergerModeState: MergerM
     didMappingChange = onNodeDeleted(mergerModeState, nodeId) || didMappingChange;
   }
   if (didMappingChange) {
-    api.data.setMapping(mergerModeState.segementationLayerName, mergerModeState.colorMapping);
+    api.data.setMapping(mergerModeState.segmentationLayerName, mergerModeState.colorMapping);
   }
   call(action);
 }
@@ -171,7 +172,7 @@ function changeOpacity(mergerModeState: MergerModeState) {
 }
 
 function shuffleColorOfCurrentTree(mergerModeState: MergerModeState) {
-  const { treeColors, colorMapping, segementationLayerName } = mergerModeState;
+  const { treeColors, colorMapping, segmentationLayerName } = mergerModeState;
   const setNewColorOfCurrentActiveTree = () => {
     const activeTreeId = api.tracing.getActiveTreeId();
     if (activeTreeId == null) {
@@ -188,7 +189,7 @@ function shuffleColorOfCurrentTree(mergerModeState: MergerModeState) {
       }
     });
     // Update the segmentation
-    api.data.setMapping(segementationLayerName, colorMapping);
+    api.data.setMapping(segmentationLayerName, colorMapping);
   };
 
   Modal.confirm({
@@ -199,17 +200,17 @@ function shuffleColorOfCurrentTree(mergerModeState: MergerModeState) {
 }
 
 async function mergeSegmentsOfAlreadyExistingTrees(index = 0, mergerModeState: MergerModeState) {
-  const { nodes, segementationLayerName, nodeSegmentMap, colorMapping } = mergerModeState;
+  const { nodes, segmentationLayerName, nodeSegmentMap, colorMapping } = mergerModeState;
   const numbOfNodes = nodes.length;
   if (index >= numbOfNodes) {
     return;
   }
 
-  const [segMinVec, segMaxVec] = api.data.getBoundingBox(segementationLayerName);
+  const [segMinVec, segMaxVec] = api.data.getBoundingBox(segmentationLayerName);
 
   const setSegementationOfNode = async node => {
     const pos = node.position;
-    const treeId = node.treeId;
+    const { treeId } = node;
     // Skip nodes outside segmentation
     if (
       pos[0] < segMinVec[0] ||
@@ -222,7 +223,7 @@ async function mergeSegmentsOfAlreadyExistingTrees(index = 0, mergerModeState: M
       // The node is not in bounds of the segmentation
       return;
     }
-    const segmentId = await api.data.getDataValue(segementationLayerName, pos);
+    const segmentId = await api.data.getDataValue(segmentationLayerName, pos);
     if (segmentId != null && segmentId > 0) {
       // Store the segment id
       nodeSegmentMap[node.id] = segmentId;
@@ -233,7 +234,7 @@ async function mergeSegmentsOfAlreadyExistingTrees(index = 0, mergerModeState: M
   };
   const nodesMappedPromises = nodes.map(node => setSegementationOfNode(node));
   await Promise.all(nodesMappedPromises);
-  api.data.setMapping("segmentation", colorMapping);
+  api.data.setMapping(segmentationLayerName, colorMapping);
 }
 
 export async function enableMergerMode() {
@@ -247,7 +248,7 @@ export async function enableMergerMode() {
     colorMapping: {},
     nodesPerSegment: {},
     nodes: getAllNodesWithTreeId(),
-    segementationLayerName: api.data.getVolumeTracingLayerName(),
+    segmentationLayerName: api.data.getVolumeTracingLayerName(),
     nodeSegmentMap: {},
     segmentationOpacity: ((api.data.getConfiguration("segmentationOpacity"): any): number),
     segmentationOn: true,

@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(40);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(41);
 COMMIT TRANSACTION;
 
 CREATE TABLE webknossos.analytics(
@@ -139,7 +139,8 @@ CREATE TABLE webknossos.dataStores(
   key VARCHAR(1024) NOT NULL,
   isScratch BOOLEAN NOT NULL DEFAULT false,
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  isForeign BOOLEAN NOT NULL DEFAULT false
+  isForeign BOOLEAN NOT NULL DEFAULT false,
+  isConnector BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TABLE webknossos.tracingStores(

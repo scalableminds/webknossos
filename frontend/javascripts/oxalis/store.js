@@ -487,6 +487,8 @@ export const defaultState: OxalisState = {
       name: "localhost",
       url: "http://localhost:9000",
       isScratch: false,
+      isForeign: false,
+      isConnector: false,
     },
     owningOrganization: "Connectomics department",
     description: null,

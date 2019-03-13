@@ -5,14 +5,17 @@ import React from "react";
 import { connect } from "react-redux";
 import _ from "lodash";
 
-import type { APIUser } from "admin/api_flow_types";
+import type { APIUser, APIDataStore } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import DatasetAddForeignView from "admin/dataset/dataset_add_foreign_view";
+import DatasetAddWkConnectView from "admin/dataset/dataset_add_wk_connect_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
 import features from "features";
+import { getDatastores } from "admin/admin_rest_api";
 import renderIndependently from "libs/render_independently";
+import { useFetch } from "libs/react_helpers";
 
 const { TabPane } = Tabs;
 
@@ -34,49 +37,80 @@ const renderSampleDatasetsModal = (user: APIUser, history: RouterHistory) => {
   ));
 };
 
-const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => (
-  <React.Fragment>
-    <Tabs defaultActiveKey="1" className="container">
-      <TabPane
-        tab={
-          <span>
-            <Icon type="upload" />
-            Upload Dataset
-          </span>
-        }
-        key="1"
-      >
-        <DatasetUploadView
-          onUploaded={(organization: string, datasetName: string) => {
-            const url = `/datasets/${organization}/${datasetName}/import`;
-            history.push(url);
-          }}
-        />
-      </TabPane>
-      {features().addForeignDataset ? (
+const fetchCategorizedDatastores = async (): Promise<{
+  own: Array<APIDataStore>,
+  wkConnect: Array<APIDataStore>,
+}> => {
+  const fetchedDatastores = await getDatastores();
+  return {
+    own: fetchedDatastores.filter(ds => !ds.isForeign && !ds.isConnector),
+    wkConnect: fetchedDatastores.filter(ds => ds.isConnector),
+  };
+};
+
+const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
+  const datastores = useFetch(fetchCategorizedDatastores, { own: [], wkConnect: [] }, []);
+
+  const handleDatasetAdded = (organization: string, datasetName: string) => {
+    const url = `/datasets/${organization}/${datasetName}/import`;
+    history.push(url);
+  };
+
+  return (
+    <React.Fragment>
+      <Tabs defaultActiveKey="1" className="container">
         <TabPane
           tab={
             <span>
-              <Icon type="bars" />
-              Add foreign Dataset
+              <Icon type="upload" />
+              Upload Dataset
             </span>
           }
-          key="2"
+          key="1"
         >
-          <DatasetAddForeignView onAdded={() => history.push("/dashboard")} />
+          <DatasetUploadView datastores={datastores.own} onUploaded={handleDatasetAdded} />
         </TabPane>
-      ) : null}
-    </Tabs>
-    <div style={{ textAlign: "center" }}>
-      <p>or</p>
-      <p>
-        <a href="#" onClick={() => renderSampleDatasetsModal(activeUser, history)}>
-          Add a Sample Dataset
-        </a>
-      </p>
-    </div>
-  </React.Fragment>
-);
+        {datastores.wkConnect.length > 0 && (
+          <TabPane
+            tab={
+              <span>
+                <Icon type="plus" />
+                Add Dataset via wk-connect
+              </span>
+            }
+            key="2"
+          >
+            <DatasetAddWkConnectView
+              datastores={datastores.wkConnect}
+              onAdded={handleDatasetAdded}
+            />
+          </TabPane>
+        )}
+        {features().addForeignDataset && (
+          <TabPane
+            tab={
+              <span>
+                <Icon type="bars" />
+                Add Foreign Dataset
+              </span>
+            }
+            key="3"
+          >
+            <DatasetAddForeignView onAdded={() => history.push("/dashboard")} />
+          </TabPane>
+        )}
+      </Tabs>
+      <div style={{ textAlign: "center" }}>
+        <p>or</p>
+        <p>
+          <a href="#" onClick={() => renderSampleDatasetsModal(activeUser, history)}>
+            Add a Sample Dataset
+          </a>
+        </p>
+      </div>
+    </React.Fragment>
+  );
+};
 
 const mapStateToProps = (state: OxalisState) => ({
   activeUser: enforceActiveUser(state.activeUser),

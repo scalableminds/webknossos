@@ -212,9 +212,8 @@ class VolumeLayer {
   getCircleVoxelIterator(position: Vector3, boundings?: ?BoundingBoxType): VoxelIterator {
     const state = Store.getState();
     const { brushSize } = state.userConfiguration;
-    const scaledBrushSize = brushSize;
 
-    const radius = Math.round(scaledBrushSize / 2);
+    const radius = Math.round(brushSize / 2);
     const width = 2 * radius;
     const height = 2 * radius;
 
@@ -256,8 +255,8 @@ class VolumeLayer {
     const [scaleX, scaleY] = this.get2DCoordinate(
       getBaseVoxelFactors(state.dataset.dataSource.scale),
     );
-    const scaledBrushSize = state.userConfiguration.brushSize;
-    const radius = Math.round(scaledBrushSize / 2);
+    const { brushSize } = state.userConfiguration;
+    const radius = Math.round(brushSize / 2);
     let p1;
     let p2;
     for (let i = 0; i < contourList.length; i++) {

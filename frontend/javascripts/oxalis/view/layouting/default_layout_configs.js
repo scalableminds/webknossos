@@ -6,9 +6,11 @@
  */
 
 // @flow
-import Constants, { type ControlMode, ControlModeEnum, type ViewMode } from "oxalis/constants";
-import { navbarHeight } from "navbar";
 import _ from "lodash";
+
+import { getIsInIframe } from "libs/utils";
+import { navbarHeight } from "navbar";
+import Constants, { type ControlMode, ControlModeEnum, type ViewMode } from "oxalis/constants";
 
 import { Pane, Column, Row, Stack } from "./golden_layout_helpers";
 
@@ -56,16 +58,18 @@ const createLayout = (...content: Array<*>) => ({
   content,
 });
 
-const SkeletonRightHandColumn = Stack(
+const SkeletonRightHandColumnItems = [
   Panes.DatasetInfoTabView,
   Panes.TreesTabView,
   Panes.CommentTabView,
   Panes.AbstractTreeTabView,
   Panes.Mappings,
   Panes.Meshes,
-);
+];
+const SkeletonRightHandColumn = Stack(...SkeletonRightHandColumnItems);
 
-const NonSkeletonRightHandColumn = Stack(Panes.DatasetInfoTabView, Panes.Mappings, Panes.Meshes);
+const NonSkeletonRightHandColumnItems = [Panes.DatasetInfoTabView, Panes.Mappings, Panes.Meshes];
+const NonSkeletonRightHandColumn = Stack(...NonSkeletonRightHandColumnItems);
 
 export const getGroundTruthLayoutRect = () => {
   const mainContainer = document.querySelector(".ant-layout .ant-layout-has-sider");
@@ -91,16 +95,33 @@ export const getGroundTruthLayoutRect = () => {
 };
 
 const _getDefaultLayouts = () => {
-  const defaultViewportWidthInPercent = 30;
+  const isInIframe = getIsInIframe();
+  const defaultViewportWidthInPercent = 33;
 
-  const OrthoViewsGrid = [
-    setGlContainerWidth(Column(Panes.xy, Panes.xz), defaultViewportWidthInPercent),
-    setGlContainerWidth(Column(Panes.yz, Panes.td), defaultViewportWidthInPercent),
-  ];
+  let OrthoViewsGrid;
+  let OrthoLayout;
+  let OrthoLayoutView;
+  let VolumeTracingView;
 
-  const OrthoLayout = createLayout(Row(...OrthoViewsGrid, SkeletonRightHandColumn));
-  const OrthoLayoutView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
-  const VolumeTracingView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
+  if (isInIframe) {
+    const getGridWithExtraTabs = tabs => [
+      Column(Panes.xy, Panes.xz),
+      Column(Panes.yz, Stack(Panes.td, ...tabs)),
+    ];
+
+    OrthoLayout = createLayout(Row(...getGridWithExtraTabs(SkeletonRightHandColumnItems)));
+    OrthoLayoutView = createLayout(Row(...getGridWithExtraTabs(NonSkeletonRightHandColumnItems)));
+    VolumeTracingView = createLayout(Row(...getGridWithExtraTabs(NonSkeletonRightHandColumnItems)));
+  } else {
+    OrthoViewsGrid = [
+      setGlContainerWidth(Column(Panes.xy, Panes.xz), defaultViewportWidthInPercent),
+      setGlContainerWidth(Column(Panes.yz, Panes.td), defaultViewportWidthInPercent),
+    ];
+
+    OrthoLayout = createLayout(Row(...OrthoViewsGrid, SkeletonRightHandColumn));
+    OrthoLayoutView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
+    VolumeTracingView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
+  }
 
   const eventual3DViewportForArbitrary = show3DViewportInArbitrary ? [Panes.td] : [];
   const arbitraryPanes = [Panes.arbitraryViewport, NonSkeletonRightHandColumn].concat(
@@ -111,6 +132,7 @@ const _getDefaultLayouts = () => {
     eventual3DViewportForArbitrary,
   );
   const ArbitraryLayout = createLayout(Row(...arbitraryPanesWithSkeleton));
+
   return { OrthoLayout, OrthoLayoutView, ArbitraryLayoutView, VolumeTracingView, ArbitraryLayout };
 };
 

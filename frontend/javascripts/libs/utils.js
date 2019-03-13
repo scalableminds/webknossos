@@ -610,7 +610,7 @@ export function convertBufferToImage(
   });
 }
 
-export function isInIframe() {
+export function getIsInIframe() {
   try {
     return window.self !== window.top;
   } catch (e) {

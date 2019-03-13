@@ -3,7 +3,7 @@ import { Alert, Button, Form, Icon, Input } from "antd";
 import { Link } from "react-router-dom";
 import React from "react";
 
-import { isInIframe } from "libs/utils";
+import { getIsInIframe } from "libs/utils";
 import { loginUser } from "admin/admin_rest_api";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import Store from "oxalis/store";
@@ -36,7 +36,7 @@ function LoginForm({ layout, form, onLoggedIn, hideFooter, style }: Props) {
     });
   };
 
-  const iframeWarning = isInIframe() ? (
+  const iframeWarning = getIsInIframe() ? (
     <Alert
       type="warning"
       message={

@@ -61,12 +61,13 @@ type UserSettingsViewProps = {
   onChangeBoundingBox: (value: ?Vector6) => void,
   onChangeRadius: (value: number) => void,
   onChangeZoomStep: (value: number) => void,
+  onChangeEnableMergerMode: (active: boolean) => void,
+  isMergerModeEnabled: boolean,
   viewMode: ViewMode,
   controlMode: ControlMode,
 };
 
 type State = {
-  isMergerModeEnabled: boolean,
   isMergerModeModalVisible: boolean,
   isMergerModeModalClosable: boolean,
 };

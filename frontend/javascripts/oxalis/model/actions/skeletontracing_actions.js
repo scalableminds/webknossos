@@ -401,7 +401,7 @@ export const setTreeGroupAction = (groupId: ?number, treeId?: number): SetTreeGr
   treeId,
 });
 
-export const setMergerModeEnabledAction = (active: boolean): SetTreeGroupAction => ({
+export const setMergerModeEnabledAction = (active: boolean): SetMergerModeEnabledAction => ({
   type: "SET_MERGER_MODE_ENABLED",
   active,
 });

@@ -7,6 +7,7 @@ import _ from "lodash";
 import { getDesiredLayoutRect } from "oxalis/view/layouting/golden_layout_adapter";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import Constants, {
   OrthoViewColors,
   type OrthoViewMap,
@@ -29,6 +30,11 @@ const createDirLight = (position, target, intensity, parent) => {
   return dirLight;
 };
 
+const raycaster = new THREE.Raycaster();
+let oldRaycasterHit = null;
+
+const ISOSURFACE_HOVER_THROTTLING_DELAY = 150;
+
 class PlaneView {
   // Copied form backbone events (TODO: handle this better)
   trigger: Function;
@@ -36,12 +42,17 @@ class PlaneView {
   unbindChangedScaleListener: () => void;
 
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
+  throttledPerformIsosurfaceHitTest: () => ?THREE.Vector3;
 
   running: boolean;
   needsRerender: boolean;
 
   constructor() {
     _.extend(this, BackboneEvents);
+    this.throttledPerformIsosurfaceHitTest = _.throttle(
+      this.performIsosurfaceHitTest,
+      ISOSURFACE_HOVER_THROTTLING_DELAY,
+    );
 
     this.running = false;
     const { scene } = getSceneController();
@@ -124,6 +135,8 @@ class PlaneView {
 
       clearCanvas(renderer);
 
+      this.throttledPerformIsosurfaceHitTest();
+
       for (const plane of OrthoViewValues) {
         SceneController.updateSceneForCam(plane);
         const { left, top, width, height } = viewport[plane];
@@ -134,6 +147,71 @@ class PlaneView {
       }
 
       this.needsRerender = false;
+    }
+  }
+
+  performIsosurfaceHitTest(): ?THREE.Vector3 {
+    const storeState = Store.getState();
+    const SceneController = getSceneController();
+    const { isosurfacesRootGroup } = SceneController;
+    const tdViewport = getInputCatcherRect(storeState, "TDView");
+    const { mousePosition, hoveredIsosurfaceId } = storeState.temporaryConfiguration;
+
+    if (mousePosition == null) {
+      return null;
+    }
+
+    // Outside of the 3D viewport, we don't do isosurface hit tests
+    if (storeState.viewModeData.plane.activeViewport !== OrthoViews.TDView) {
+      if (hoveredIsosurfaceId !== 0) {
+        // Reset hoveredIsosurfaceId if we are outside of the 3D viewport,
+        // since that id takes precedence over the shader-calculated cell id
+        // under the mouse cursor
+        Store.dispatch(updateTemporarySettingAction("hoveredIsosurfaceId", 0));
+      }
+      return null;
+    }
+
+    // Perform ray casting
+    const mouse = new THREE.Vector2(
+      (mousePosition[0] / tdViewport.width) * 2 - 1,
+      ((mousePosition[1] / tdViewport.height) * 2 - 1) * -1, // y is inverted
+    );
+
+    raycaster.setFromCamera(mouse, this.cameras[OrthoViews.TDView]);
+    // The second parameter of intersectObjects is set to true to ensure that
+    // the groups which contain the actual meshes are traversed.
+    const intersections = raycaster.intersectObjects(isosurfacesRootGroup.children, true);
+    const hitObject = intersections.length > 0 ? intersections[0].object : null;
+
+    // Check whether we are hitting the same object as before, since we can return early
+    // in this case.
+    if (hitObject === oldRaycasterHit) {
+      return intersections.length > 0 ? intersections[0].point : null;
+    }
+
+    // Undo highlighting of old hit
+    if (oldRaycasterHit != null) {
+      oldRaycasterHit.parent.children.forEach(meshPart => {
+        meshPart.material.emissive.setHex("#000000");
+      });
+      oldRaycasterHit = null;
+    }
+
+    oldRaycasterHit = hitObject;
+
+    // Highlight new hit
+    if (hitObject != null) {
+      const hoveredColor = [0.7, 0.5, 0.1];
+      hitObject.parent.children.forEach(meshPart => {
+        meshPart.material.emissive.setHSL(...hoveredColor);
+      });
+
+      Store.dispatch(updateTemporarySettingAction("hoveredIsosurfaceId", hitObject.parent.cellId));
+      return intersections[0].point;
+    } else {
+      Store.dispatch(updateTemporarySettingAction("hoveredIsosurfaceId", 0));
+      return null;
     }
   }
 

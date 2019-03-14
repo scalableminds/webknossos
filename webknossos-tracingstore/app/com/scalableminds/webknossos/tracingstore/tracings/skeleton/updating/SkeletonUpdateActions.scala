@@ -51,6 +51,7 @@ case class UpdateTreeSkeletonAction(id: Int,
                                     branchPoints: List[UpdateActionBranchPoint],
                                     comments: List[UpdateActionComment],
                                     groupId: Option[Int],
+                                    isVisible: Option[Boolean],
                                     actionTimestamp: Option[Long] = None,
                                     info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction
@@ -63,7 +64,8 @@ case class UpdateTreeSkeletonAction(id: Int,
         branchPoints = branchPoints.map(convertBranchPoint),
         comments = comments.map(convertComment),
         name = name,
-        groupId = groupId
+        groupId = groupId,
+        isVisible = isVisible
       )
 
     tracing.withTrees(mapTrees(tracing, id, treeTransform))
@@ -310,6 +312,26 @@ case class RevertToVersionAction(sourceVersion: Long, actionTimestamp: Option[Lo
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
 }
 
+case class UpdateTreeGroupVisibility(treeGroup: UpdateActionTreeGroup,
+                                     isVisible: Option[Boolean],
+                                     actionTimestamp: Option[Long] = None,
+                                     info: Option[String] = None)
+    extends UpdateAction.SkeletonUpdateAction
+    with SkeletonUpdateActionHelper {
+  override def applyOn(tracing: SkeletonTracing) = {
+    def treeTransform(tree: Tree) =
+      if (tree.groupId.contains(treeGroup.groupId))
+        tree.copy(isVisible = isVisible)
+      else tree
+
+    tracing.withTrees(mapAllTrees(tracing, treeTransform))
+  }
+
+  override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
+    this.copy(actionTimestamp = Some(timestamp))
+  override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+}
+
 object CreateTreeSkeletonAction { implicit val jsonFormat = Json.format[CreateTreeSkeletonAction] }
 object DeleteTreeSkeletonAction { implicit val jsonFormat = Json.format[DeleteTreeSkeletonAction] }
 object UpdateTreeSkeletonAction { implicit val jsonFormat = Json.format[UpdateTreeSkeletonAction] }
@@ -323,6 +345,7 @@ object UpdateNodeSkeletonAction { implicit val jsonFormat = Json.format[UpdateNo
 object UpdateTreeGroupsSkeletonAction { implicit val jsonFormat = Json.format[UpdateTreeGroupsSkeletonAction] }
 object UpdateTracingSkeletonAction { implicit val jsonFormat = Json.format[UpdateTracingSkeletonAction] }
 object RevertToVersionAction { implicit val jsonFormat = Json.format[RevertToVersionAction] }
+object UpdateTreeGroupVisibility { implicit val jsonFormat = Json.format[UpdateTreeGroupVisibility] }
 
 object SkeletonUpdateAction {
 
@@ -330,19 +353,20 @@ object SkeletonUpdateAction {
     override def reads(json: JsValue): JsResult[UpdateAction.SkeletonUpdateAction] = {
       val jsonValue = (json \ "value").as[JsObject]
       (json \ "name").as[String] match {
-        case "createTree"        => deserialize[CreateTreeSkeletonAction](jsonValue)
-        case "deleteTree"        => deserialize[DeleteTreeSkeletonAction](jsonValue)
-        case "updateTree"        => deserialize[UpdateTreeSkeletonAction](jsonValue)
-        case "mergeTree"         => deserialize[MergeTreeSkeletonAction](jsonValue)
-        case "moveTreeComponent" => deserialize[MoveTreeComponentSkeletonAction](jsonValue)
-        case "createNode"        => deserialize[CreateNodeSkeletonAction](jsonValue, shouldTransformPositions = true)
-        case "deleteNode"        => deserialize[DeleteNodeSkeletonAction](jsonValue)
-        case "updateNode"        => deserialize[UpdateNodeSkeletonAction](jsonValue, shouldTransformPositions = true)
-        case "createEdge"        => deserialize[CreateEdgeSkeletonAction](jsonValue)
-        case "deleteEdge"        => deserialize[DeleteEdgeSkeletonAction](jsonValue)
-        case "updateTreeGroups"  => deserialize[UpdateTreeGroupsSkeletonAction](jsonValue)
-        case "updateTracing"     => deserialize[UpdateTracingSkeletonAction](jsonValue)
-        case "revertToVersion"   => deserialize[RevertToVersionAction](jsonValue)
+        case "createTree"                => deserialize[CreateTreeSkeletonAction](jsonValue)
+        case "deleteTree"                => deserialize[DeleteTreeSkeletonAction](jsonValue)
+        case "updateTree"                => deserialize[UpdateTreeSkeletonAction](jsonValue)
+        case "mergeTree"                 => deserialize[MergeTreeSkeletonAction](jsonValue)
+        case "moveTreeComponent"         => deserialize[MoveTreeComponentSkeletonAction](jsonValue)
+        case "createNode"                => deserialize[CreateNodeSkeletonAction](jsonValue, shouldTransformPositions = true)
+        case "deleteNode"                => deserialize[DeleteNodeSkeletonAction](jsonValue)
+        case "updateNode"                => deserialize[UpdateNodeSkeletonAction](jsonValue, shouldTransformPositions = true)
+        case "createEdge"                => deserialize[CreateEdgeSkeletonAction](jsonValue)
+        case "deleteEdge"                => deserialize[DeleteEdgeSkeletonAction](jsonValue)
+        case "updateTreeGroups"          => deserialize[UpdateTreeGroupsSkeletonAction](jsonValue)
+        case "updateTracing"             => deserialize[UpdateTracingSkeletonAction](jsonValue)
+        case "revertToVersion"           => deserialize[RevertToVersionAction](jsonValue)
+        case "updateTreeGroupVisibility" => deserialize[UpdateTreeGroupVisibility](jsonValue)
       }
     }
 
@@ -382,6 +406,8 @@ object SkeletonUpdateAction {
         Json.obj("name" -> "updateTracing", "value" -> Json.toJson(s)(UpdateTracingSkeletonAction.jsonFormat))
       case s: RevertToVersionAction =>
         Json.obj("name" -> "revertToVersion", "value" -> Json.toJson(s)(RevertToVersionAction.jsonFormat))
+      case s: UpdateTreeGroupVisibility =>
+        Json.obj("name" -> "updateTreeGroupVisibility", "value" -> Json.toJson(s)(UpdateTreeGroupVisibility.jsonFormat))
     }
   }
 }

@@ -352,7 +352,6 @@ class TreesTabView extends React.PureComponent<Props, State> {
 
   getTreeAndTreeGroupList = memoizeOne(
     (trees, treeGroups): Array<TreeOrTreeGroup> => {
-      console.log("creating trees and trees group list");
       const reducedTreeList = _.values(trees).map(tree => ({
         name: tree.name,
         type: "TREE",

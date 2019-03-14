@@ -57,16 +57,10 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
     this.setState({ searchQuery, currentPosition: -1 });
   };
 
-  getAvailableOptionsFrom = memoizeOne(
-    (data: Array<S>, searchQuery: string, searchKey: $Keys<S>) => {
-      console.log("filtering");
-      console.log(data);
-      return searchQuery !== ""
-        ? data.filter(
-            datum => datum[searchKey].toLowerCase().indexOf(searchQuery.toLowerCase()) > -1,
-          )
-        : [];
-    },
+  getAvailableOptionsFrom = memoizeOne((data: Array<S>, searchQuery: string, searchKey: $Keys<S>) =>
+    searchQuery !== ""
+      ? data.filter(datum => datum[searchKey].toLowerCase().indexOf(searchQuery.toLowerCase()) > -1)
+      : [],
   );
 
   openSearchPopover = () => {

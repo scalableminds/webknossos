@@ -51,7 +51,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
         branchPointsAllowed: true,
         preferredMode: null,
       },
-      recommendedConfiguration: jsonStringify(DEFAULT_RECOMMENDED_CONFIGURATION),
+      recommendedConfiguration: DEFAULT_RECOMMENDED_CONFIGURATION,
     };
     const taskType = this.props.taskTypeId ? await getTaskType(this.props.taskTypeId) : null;
     // Use merge which is deep _.extend
@@ -61,6 +61,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
       // If the task type has no recommended configuration, suggest the default one
       formValues.recommendedConfiguration = defaultValues.recommendedConfiguration;
     }
+    formValues.recommendedConfiguration = jsonStringify(formValues.recommendedConfiguration);
     this.props.form.setFieldsValue(formValues);
 
     if (taskType != null && taskType.recommendedConfiguration != null) {
@@ -80,10 +81,15 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
     }
     this.props.form.validateFields(async (err, formValues) => {
       if (!err) {
+        const { recommendedConfiguration, ...rest } = formValues;
+        const newTaskType = {
+          ...rest,
+          recommendedConfiguration: JSON.parse(recommendedConfiguration),
+        };
         if (this.props.taskTypeId) {
-          await updateTaskType(this.props.taskTypeId, formValues);
+          await updateTaskType(this.props.taskTypeId, newTaskType);
         } else {
-          await createTaskType(formValues);
+          await createTaskType(newTaskType);
         }
         this.props.history.push("/taskTypes");
       }

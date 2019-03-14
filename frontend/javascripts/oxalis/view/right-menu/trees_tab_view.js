@@ -46,6 +46,7 @@ import Store, {
   type OxalisState,
   type SkeletonTracing,
   type Tracing,
+  type TreeMap,
   type TreeGroup,
   type UserConfiguration,
 } from "oxalis/store";
@@ -351,7 +352,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
   };
 
   getTreeAndTreeGroupList = memoizeOne(
-    (trees, treeGroups): Array<TreeOrTreeGroup> => {
+    (trees: TreeMap, treeGroups: Array<TreeGroup>): Array<TreeOrTreeGroup> => {
       const reducedTreeList = _.values(trees).map(tree => ({
         name: tree.name,
         type: "TREE",

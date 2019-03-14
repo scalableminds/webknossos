@@ -5,6 +5,7 @@ import memoizeOne from "memoize-one";
 import ButtonComponent from "oxalis/view/components/button_component";
 
 import Shortcut from "libs/shortcut_component";
+import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 
 const InputGroup = Input.Group;
 
@@ -88,11 +89,17 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
     return (
       <React.Fragment>
         {provideShortcut ? (
-          <Shortcut
-            supportInputElements
-            keys="ctrl + shift + f"
-            onTrigger={this.openSearchPopover}
-          />
+          <DomVisibilityObserver targetId="tree-list">
+            {isVisibleInDom =>
+              isVisibleInDom && (
+                <Shortcut
+                  supportInputElements
+                  keys="ctrl + shift + f"
+                  onTrigger={this.openSearchPopover}
+                />
+              )
+            }
+          </DomVisibilityObserver>
         ) : null}
         <Popover
           title="Search"

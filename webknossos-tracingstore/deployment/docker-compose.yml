@@ -58,3 +58,7 @@ services:
     image: redis:5.0-alpine
     command:
       - redis-server
+      - --appendonly
+      - "yes"
+    volumes:
+      - "./redis:/data"

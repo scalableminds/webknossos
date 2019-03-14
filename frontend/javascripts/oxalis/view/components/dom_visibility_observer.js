@@ -24,7 +24,14 @@ export default class DomVisibilityObserver extends React.Component<Props, State>
   };
 
   componentDidMount() {
-    this.attachObserver();
+    // Not supported in Safari as of now (see https://caniuse.com/#search=intersectionobserver)
+    if (
+      "IntersectionObserver" in window &&
+      "IntersectionObserverEntry" in window &&
+      "isIntersecting" in window.IntersectionObserverEntry.prototype
+    ) {
+      this.attachObserver();
+    }
   }
 
   componentWillUnmount() {

@@ -182,7 +182,6 @@ export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<v
           method: "POST",
           headers: { "X-Date": `${Date.now()}` },
           data: compactedSaveQueue,
-          // todo: undo this before merging
           compress: true,
         },
       );

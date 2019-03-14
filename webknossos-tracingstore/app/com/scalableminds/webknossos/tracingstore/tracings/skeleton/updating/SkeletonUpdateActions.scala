@@ -65,7 +65,7 @@ case class UpdateTreeSkeletonAction(id: Int,
         comments = comments.map(convertComment),
         name = name,
         groupId = groupId,
-        isVisible = isVisible
+        isVisible = isVisible.orElse(tree.isVisible)
       )
 
     tracing.withTrees(mapTrees(tracing, id, treeTransform))
@@ -312,16 +312,16 @@ case class RevertToVersionAction(sourceVersion: Long, actionTimestamp: Option[Lo
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
 }
 
-case class UpdateTreeGroupVisibility(treeGroup: UpdateActionTreeGroup,
-                                     isVisible: Option[Boolean],
+case class UpdateTreeGroupVisibility(treeGroupId: Option[Int],
+                                     isVisible: Boolean,
                                      actionTimestamp: Option[Long] = None,
                                      info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing) = {
     def treeTransform(tree: Tree) =
-      if (tree.groupId.contains(treeGroup.groupId))
-        tree.copy(isVisible = isVisible)
+      if (tree.groupId == treeGroupId)
+        tree.copy(isVisible = Some(isVisible))
       else tree
 
     tracing.withTrees(mapAllTrees(tracing, treeTransform))

@@ -35,21 +35,19 @@ function* maybeShowNewTaskTypeModal(taskType: APITaskType): Saga<void> {
 
 function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
   const { recommendedConfiguration } = taskType;
-  if (recommendedConfiguration == null) return;
-
-  const settingsObject = JSON.parse(recommendedConfiguration);
-  if (_.size(settingsObject) === 0) return;
+  if (recommendedConfiguration == null || _.size(recommendedConfiguration) === 0) return;
 
   const userConfiguration = yield* select(state => state.userConfiguration);
   const datasetConfiguration = yield* select(state => state.datasetConfiguration);
   const zoomStep = yield* select(state => state.flycam.zoomStep);
 
-  const configurationDifference = _.find(settingsObject, (value, key: string) => {
+  // $FlowFixMe Cannot call `_.find` because number [1] is incompatible with boolean [2] in property `brushSize` of type argument `T`.
+  const configurationDifference = _.find(recommendedConfiguration, (value, key: string) => {
     if (key === "zoom" && zoomStep !== value) {
       return true;
-    } else if (userConfiguration[key] != null && userConfiguration[key] !== value) {
+    } else if (key in userConfiguration && userConfiguration[key] !== value) {
       return true;
-    } else if (datasetConfiguration[key] != null && datasetConfiguration[key] !== value) {
+    } else if (key in datasetConfiguration && datasetConfiguration[key] !== value) {
       return true;
     }
     return false;
@@ -61,7 +59,7 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
   // once destroy is called. yield* will wait until the returned promise is resolved.
   yield* call(renderIndependently, destroy => (
     <RecommendConfigurationModal
-      config={settingsObject}
+      config={recommendedConfiguration}
       onOk={() => {
         confirmed = true;
       }}
@@ -70,15 +68,15 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
   ));
 
   if (confirmed) {
-    for (const key of Object.keys(settingsObject)) {
+    for (const key of Object.keys(recommendedConfiguration)) {
       if (key === "zoom") {
-        yield* put(setZoomStepAction(settingsObject[key]));
-      } else if (userConfiguration[key] != null) {
+        yield* put(setZoomStepAction(recommendedConfiguration[key]));
+      } else if (key in userConfiguration) {
         // $FlowFixMe Cannot call updateUserSettingAction with key bound to propertyName because an indexer property is missing in UserConfiguration
-        yield* put(updateUserSettingAction(key, settingsObject[key]));
-      } else if (datasetConfiguration[key] != null) {
+        yield* put(updateUserSettingAction(key, recommendedConfiguration[key]));
+      } else if (key in datasetConfiguration) {
         // $FlowFixMe Cannot call updateDatasetSettingAction with key bound to propertyName because an indexer property is missing in DatasetConfiguration
-        yield* put(updateDatasetSettingAction(key, settingsObject[key]));
+        yield* put(updateDatasetSettingAction(key, recommendedConfiguration[key]));
       }
     }
     Toast.success("You are using the recommended settings now.");

@@ -21,5 +21,5 @@ FROM  (SELECT REPLACE(CAST(jsonstring AS TEXT), '\n', '') AS oneLiner
        FROM   (SELECT REPLACE(CAST(recommendedconfiguration AS TEXT), '\"', '"') AS jsonString
                WHERE  CAST(recommendedconfiguration AS TEXT) LIKE '%\\%')
        AS JSON_CONVERTER )
-AS JSON_CONVERTING )
+AS JSON_CONVERTING );
 COMMIT TRANSACTION;

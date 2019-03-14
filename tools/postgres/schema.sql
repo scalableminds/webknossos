@@ -100,7 +100,7 @@ CREATE TABLE webknossos.dataSets(
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   UNIQUE (name, _organization),
-  CONSTRAINT defaultConfigurationIsJsonObject CHECK(jsonb_typeof(defaultConfiguration) = 'object')
+  CONSTRAINT defaultConfigurationIsJsonObject CHECK(jsonb_typeof(defaultConfiguration) = 'object'),
   CONSTRAINT detailsIsJsonObject CHECK(jsonb_typeof(details) = 'object')
 );
 

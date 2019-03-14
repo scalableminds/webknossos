@@ -1,4 +1,4 @@
--- https://github.com/scalableminds/webknossos/pull/X
+-- https://github.com/scalableminds/webknossos/pull/3895
 
 START TRANSACTION;
 ALTER TABLE webknossos.analytics

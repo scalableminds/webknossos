@@ -8,7 +8,7 @@ import { connect } from "react-redux";
 import { saveAs } from "file-saver";
 import * as React from "react";
 import _ from "lodash";
-
+import memoizeOne from "memoize-one";
 import { binaryConfirm } from "libs/async_confirm";
 import {
   createGroupToTreesMap,
@@ -61,7 +61,7 @@ import AdvancedSearchPopover from "./advanced_search_popover";
 const ButtonGroup = Button.Group;
 const InputGroup = Input.Group;
 
-type TreeOrTreepGroup = {
+type TreeOrTreeGroup = {
   name: string,
   id: number,
   type: string,
@@ -350,28 +350,26 @@ class TreesTabView extends React.PureComponent<Props, State> {
     this.setState({ selectedTrees: [] });
   };
 
-  getTreeAndTreeGroupList = (): Array<TreeOrTreepGroup> => {
-    const { skeletonTracing } = this.props;
-    if (!skeletonTracing) {
-      return [];
-    }
-    const { trees, treeGroups } = skeletonTracing;
-    const reducedTreeList = _.values(trees).map(tree => ({
-      name: tree.name,
-      type: "TREE",
-      id: tree.treeId,
-    }));
-    const reducedTreeGroups = Array.from(
-      mapGroups(treeGroups, group => ({
-        name: group.name,
-        type: "GROUP",
-        id: group.groupId,
-      })),
-    );
-    return reducedTreeList.concat(reducedTreeGroups);
-  };
+  getTreeAndTreeGroupList = memoizeOne(
+    (trees, treeGroups): Array<TreeOrTreeGroup> => {
+      console.log("creating trees and trees group list");
+      const reducedTreeList = _.values(trees).map(tree => ({
+        name: tree.name,
+        type: "TREE",
+        id: tree.treeId,
+      }));
+      const reducedTreeGroupList = Array.from(
+        mapGroups(treeGroups, group => ({
+          name: group.name,
+          type: "GROUP",
+          id: group.groupId,
+        })),
+      );
+      return reducedTreeList.concat(reducedTreeGroupList);
+    },
+  );
 
-  handleSearchSelect = (selectedElement: TreeOrTreepGroup) => {
+  handleSearchSelect = (selectedElement: TreeOrTreeGroup) => {
     if (selectedElement.type === "TREE") {
       this.props.onSetActiveTree(selectedElement.id);
     } else {
@@ -478,6 +476,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     const activeGroupName = getActiveGroup(skeletonTracing)
       .map(activeGroup => activeGroup.name)
       .getOrElse("");
+    const { trees, treeGroups } = skeletonTracing;
 
     // Avoid that the title switches to the other title during the fadeout of the Modal
     let title = "";
@@ -503,7 +502,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
         <ButtonGroup>
           <AdvancedSearchPopover
             onSelect={this.handleSearchSelect}
-            data={this.getTreeAndTreeGroupList()}
+            data={this.getTreeAndTreeGroupList(trees, treeGroups)}
             searchKey="name"
             provideShortcut
           >

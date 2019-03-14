@@ -1,7 +1,7 @@
 // @flow
 import { Icon, Input, Tooltip, Popover } from "antd";
 import * as React from "react";
-import _ from "lodash";
+import memoizeOne from "memoize-one";
 import ButtonComponent from "oxalis/view/components/button_component";
 
 import Shortcut from "libs/shortcut_component";
@@ -9,41 +9,40 @@ import Shortcut from "libs/shortcut_component";
 const InputGroup = Input.Group;
 
 type Props<S> = {
-  data: { +[number]: S } | Array<S>,
+  data: Array<S>,
   searchKey: $Keys<S>,
   onSelect: S => void,
-  children: *,
+  children: React.Node,
   provideShortcut?: boolean,
 };
 
 type State = {
   isVisible: boolean,
   searchQuery: string,
+  currentPosition: number,
 };
 
 export default class AdvancedSearchPopover<S: Object> extends React.PureComponent<Props<S>, State> {
-  constructor() {
-    super();
-    this.state = {
-      isVisible: false,
-      searchQuery: "",
-    };
-    this.availableOptions = [];
-  }
+  state = {
+    isVisible: false,
+    searchQuery: "",
+    currentPosition: -1,
+  };
 
-  availableOptions: { +[number]: S } | Array<S> = [];
-  currentPosition: number = 0;
+  availableOptions: Array<S> = [];
 
   selectNextOptionWithOffset = (offset: number) => {
-    const numberOfAvailableOptions = _.values(this.availableOptions).length;
+    let { currentPosition } = this.state;
+    const numberOfAvailableOptions = this.availableOptions.length;
     if (numberOfAvailableOptions === 0) {
       return;
     }
-    this.currentPosition = (this.currentPosition + offset) % numberOfAvailableOptions;
-    if (this.currentPosition < 0) {
-      this.currentPosition = numberOfAvailableOptions + this.currentPosition;
+    currentPosition = (currentPosition + offset) % numberOfAvailableOptions;
+    if (currentPosition < 0) {
+      currentPosition = numberOfAvailableOptions + currentPosition;
     }
-    this.props.onSelect(_.values(this.availableOptions)[this.currentPosition]);
+    this.setState({ currentPosition });
+    this.props.onSelect(this.availableOptions[currentPosition]);
   };
 
   selectNextOption = () => {
@@ -55,17 +54,20 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
   };
 
   onSearchQueryChanged = (searchQuery: string) => {
-    this.currentPosition = -1;
-    this.setState({ searchQuery });
-    if (searchQuery === "") {
-      this.availableOptions = [];
-    } else {
-      this.availableOptions = _.values(this.props.data).filter(
-        datum => datum[this.props.searchKey].toLowerCase().indexOf(searchQuery.toLowerCase()) > -1,
-      );
-      this.selectNextOption();
-    }
+    this.setState({ searchQuery, currentPosition: -1 });
   };
+
+  getAvailableOptionsFrom = memoizeOne(
+    (data: Array<S>, searchQuery: string, searchKey: $Keys<S>) => {
+      console.log("filtering");
+      console.log(data);
+      return searchQuery !== ""
+        ? data.filter(
+            datum => datum[searchKey].toLowerCase().indexOf(searchQuery.toLowerCase()) > -1,
+          )
+        : [];
+    },
+  );
 
   openSearchPopover = () => {
     this.setState({ isVisible: true });
@@ -76,10 +78,16 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
   };
 
   render() {
-    const numberOfAvailableOptions = _.values(this.availableOptions).length;
+    this.availableOptions = this.getAvailableOptionsFrom(
+      this.props.data,
+      this.state.searchQuery,
+      this.props.searchKey,
+    );
+    const numberOfAvailableOptions = this.availableOptions.length;
     const hasNoResults = numberOfAvailableOptions === 0;
     const hasMultipleResults = numberOfAvailableOptions > 1;
-    const additionalInputStyle = hasNoResults ? { color: "red" } : {};
+    const additionalInputStyle =
+      hasNoResults && this.state.searchQuery !== "" ? { color: "red" } : {};
     return (
       <React.Fragment>
         {this.props.provideShortcut ? (
@@ -93,8 +101,8 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
           title="Search"
           trigger="click"
           placement="rightTop"
+          overlayClassName="search-input-popover"
           visible={this.state.isVisible}
-          mouseLeaveDelay={10}
           onVisibleChange={isVisible =>
             isVisible ? this.openSearchPopover() : this.closeSearchPopover()
           }
@@ -112,6 +120,7 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
                     placeholder="Enter your search keywords"
                     onPressEnter={this.selectNextOption}
                     onChange={evt => this.onSearchQueryChanged(evt.target.value)}
+                    addonAfter={`${this.state.currentPosition + 1}/${numberOfAvailableOptions}`}
                     autoFocus
                   />
                   <Tooltip title="Previous">
@@ -133,11 +142,6 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
                     </ButtonComponent>
                   </Tooltip>
                 </InputGroup>
-                {!hasNoResults ? (
-                  <div style={{ paddingLeft: 4, paddingTop: 8 }}>
-                    {this.currentPosition + 1} of {numberOfAvailableOptions} matches
-                  </div>
-                ) : null}
               </React.Fragment>
             )
           }

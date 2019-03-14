@@ -14,4 +14,12 @@ ALTER TABLE webknossos.users
   ADD CONSTRAINT userConfigurationIsJsonObject CHECK(jsonb_typeof(userConfiguration) = 'object');
 ALTER TABLE webknossos.user_dataSetConfigurations
   ADD CONSTRAINT configurationIsJsonObject CHECK(jsonb_typeof(configuration) = 'object');
+
+UPDATE webknossos.tasktypes SET recommendedConfiguration =
+(SELECT CAST(TRIM(both '"' FROM oneLiner) AS JSON)
+FROM  (SELECT REPLACE(CAST(jsonstring AS TEXT), '\n', '') AS oneLiner
+       FROM   (SELECT REPLACE(CAST(recommendedconfiguration AS TEXT), '\"', '"') AS jsonString
+               WHERE  CAST(recommendedconfiguration AS TEXT) LIKE '%\\%')
+       AS JSON_CONVERTER )
+AS JSON_CONVERTING )
 COMMIT TRANSACTION;

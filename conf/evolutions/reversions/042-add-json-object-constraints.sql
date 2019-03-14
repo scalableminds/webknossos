@@ -12,4 +12,6 @@ ALTER TABLE webknossos.users
   DROP CONSTRAINT userConfigurationIsJsonObject;
 ALTER TABLE webknossos.user_dataSetConfigurations
   DROP CONSTRAINT configurationIsJsonObject;
+
+UPDATE webknossos.tasktypes SET recommendedConfiguration = to_json(recommendedConfiguration::text);
 COMMIT TRANSACTION;

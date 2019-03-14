@@ -2,11 +2,11 @@ package com.scalableminds.webknossos.tracingstore.tracings
 
 import java.util.UUID
 
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.storage.TemporaryStore
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.webknossos.tracingstore.RedisTemporaryStore
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
-import play.api.libs.json.Reads
+import play.api.libs.json._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -24,17 +24,64 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
 
   def temporaryTracingStore: TemporaryTracingStore[T]
 
-  val handledGroupCache: TemporaryStore[(String, String, Long), Unit]
+  val handledGroupIdStore: RedisTemporaryStore
+
+  val uncommittedUpdatesStore: RedisTemporaryStore
 
   implicit def tracingCompanion: GeneratedMessageCompanion[T]
 
-  implicit val updateActionReads: Reads[UpdateAction[T]]
+  implicit val updateActionJsonFormat: Format[UpdateAction[T]]
 
   // this should be longer than maxCacheTime in webknossos/AnnotationStore
   // so that the references saved there remain valid throughout their life
   private val temporaryStoreTimeout = 10 minutes
 
   def currentVersion(tracingId: String): Fox[Long]
+
+  def transactionBatchKey(tracingId: String,
+                          transactionidOpt: Option[String],
+                          transactionGroupindexOpt: Option[Int],
+                          version: Long) =
+    s"transactionBatch___${tracingId}___${transactionidOpt}___${transactionGroupindexOpt}___$version"
+
+  def currentUncommittedVersion(tracingId: String, transactionIdOpt: Option[String]): Fox[Option[Long]] =
+    transactionIdOpt match {
+      case Some(transactionId) =>
+        for {
+          keys <- uncommittedUpdatesStore.keys(s"transactionBatch___${tracingId}___${transactionIdOpt}___*")
+        } yield if (keys.isEmpty) None else Some(keys.flatMap(versionFromTransactionBatchKey).max)
+      case _ => Fox.successful(None)
+    }
+
+  private def versionFromTransactionBatchKey(key: String) = {
+    val pattern = """transactionBatch___(.*)___(.*)___(.*)___(\d+)""".r
+    pattern.findFirstMatchIn(key).map {
+      _.group(4).toLong
+    }
+  }
+
+  private def patternFor(tracingId: String, transactionIdOpt: Option[String]) =
+    s"transactionBatch___${tracingId}___${transactionIdOpt}___*"
+
+  def saveUncommitted(tracingId: String,
+                      transactionIdOpt: Option[String],
+                      transactionGroupindexOpt: Option[Int],
+                      version: Long,
+                      updateGroup: UpdateActionGroup[T],
+                      expiry: FiniteDuration): Fox[Unit] =
+    uncommittedUpdatesStore.insert(transactionBatchKey(tracingId, transactionIdOpt, transactionGroupindexOpt, version),
+                                   Json.toJson(updateGroup).toString(),
+                                   Some(expiry))
+
+  def getAllUncommittedFor(tracingId: String, transactionId: Option[String]): Fox[List[UpdateActionGroup[T]]] =
+    for {
+      raw: Seq[String] <- uncommittedUpdatesStore.findAllConditional(patternFor(tracingId, transactionId))
+      parsed: Seq[UpdateActionGroup[T]] = raw.flatMap(itemAsString =>
+        JsonHelper.jsResultToOpt(Json.parse(itemAsString).validate[UpdateActionGroup[T]]))
+    } yield parsed.toList.sortBy(_.version)
+
+  def removeAllUncommittedFor(tracingId: String, transactionId: Option[String]): Fox[Unit] =
+    uncommittedUpdatesStore.removeAllConditional(patternFor(tracingId, transactionId))
 
   def handleUpdateGroup(tracingId: String, updateGroup: UpdateActionGroup[T], previousVersion: Long): Fox[_]
 
@@ -79,11 +126,20 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
     }
   }
 
-  def saveToHandledGroupCache(tracingId: String, version: Long, requestIdOpt: Option[String]): Unit =
-    requestIdOpt.foreach { requestId =>
-      handledGroupCache.insert((requestId, tracingId, version), (), Some(handledGroupCacheExpiry))
+  def handledGroupKey(tracingId: String, transactionId: String, version: Long) =
+    s"handledGroup___${tracingId}___${transactionId}___$version"
+
+  def saveToHandledGroupIdStore(tracingId: String, transactionIdOpt: Option[String], version: Long): Fox[Unit] =
+    transactionIdOpt match {
+      case Some(transactionId) => {
+        val key = handledGroupKey(tracingId, transactionId, version)
+        handledGroupIdStore.insert(key, "()", Some(handledGroupCacheExpiry))
+      }
+      case _ => {
+        Fox.successful(())
+      }
     }
 
-  def handledGroupCacheContains(requestId: String, tracingId: String, version: Long) =
-    handledGroupCache.contains(requestId, tracingId, version)
+  def handledGroupIdStoreContains(tracingId: String, transactionId: String, version: Long): Fox[Boolean] =
+    handledGroupIdStore.contains(handledGroupKey(tracingId, transactionId, version))
 }

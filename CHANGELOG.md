@@ -18,10 +18,12 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - The mapping selection dropbown is now sorted alphabetically. [#3864](https://github.com/scalableminds/webknossos/pull/3864)
 
 ### Changed
+- Improved the flight mode performance for tracings with very large trees (>80.000 nodes). [#3880](https://github.com/scalableminds/webknossos/pull/3880)
 - Tweaked the highlighting of the active node. The inner node looks exactly as a non-active node and is not round, anymore. An active node is circled by a "halo". In arbitrary mode, the halo is hidden and the active node is round. [#3868](https://github.com/scalableminds/webknossos/pull/3868)
 - Brush size is independent of zoom value, now. This change simplifies volume annotations, as brush sizes can be adapted to certain structures (e.g., vesicles) and don't need to be changed when zooming. [#3868](https://github.com/scalableminds/webknossos/pull/3889)
 
 ### Fixed
+- Fixed a bug where failed large save requests lead to inconsistent tracings on the server. [#3829](https://github.com/scalableminds/webknossos/pull/3829)
 - Fixed the setting which enables to hide the planes within the 3D viewport. [#3857](https://github.com/scalableminds/webknossos/pull/3857)
 - Fixed a bug which allowed the brush size to become negative when using shortcuts. [#3861](https://github.com/scalableminds/webknossos/pull/3861)
 - Fixed interpolation along z-axis. [#3888](https://github.com/scalableminds/webknossos/pull/3888)

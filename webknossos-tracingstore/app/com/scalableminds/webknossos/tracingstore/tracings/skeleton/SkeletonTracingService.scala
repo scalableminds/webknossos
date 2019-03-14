@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
+import com.scalableminds.webknossos.tracingstore.RedisTemporaryStore
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.tracingstore.tracings.UpdateAction.SkeletonUpdateAction
 import com.scalableminds.webknossos.tracingstore.tracings._
@@ -13,10 +14,10 @@ import play.api.libs.json.{JsObject, Json, Writes}
 
 import scala.concurrent.ExecutionContext
 
-class SkeletonTracingService @Inject()(
-    tracingDataStore: TracingDataStore,
-    val temporaryTracingStore: TemporaryTracingStore[SkeletonTracing],
-    val handledGroupCache: TemporaryStore[(String, String, Long), Unit])(implicit ec: ExecutionContext)
+class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
+                                       val temporaryTracingStore: TemporaryTracingStore[SkeletonTracing],
+                                       val handledGroupIdStore: RedisTemporaryStore,
+                                       val uncommittedUpdatesStore: RedisTemporaryStore)(implicit ec: ExecutionContext)
     extends TracingService[SkeletonTracing]
     with KeyValueStoreImplicits
     with ProtoGeometryImplicits
@@ -29,7 +30,7 @@ class SkeletonTracingService @Inject()(
 
   implicit val tracingCompanion = SkeletonTracing
 
-  implicit val updateActionReads = SkeletonUpdateAction.skeletonUpdateActionFormat
+  implicit val updateActionJsonFormat = SkeletonUpdateAction.skeletonUpdateActionFormat
 
   def currentVersion(tracingId: String): Fox[Long] =
     tracingDataStore.skeletonUpdates.getVersion(tracingId, mayBeEmpty = Some(true)).getOrElse(0L)

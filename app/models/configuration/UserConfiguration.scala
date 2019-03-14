@@ -40,6 +40,7 @@ object UserConfiguration {
       "sortCommentsAsc" -> JsBoolean(true),
       "sphericalCapRadius" -> JsNumber(140),
       "layoutScaleValue" -> JsNumber(1),
-      "renderComments" -> JsBoolean(false)
+      "renderComments" -> JsBoolean(false),
+      "layouts" -> JsNull
     ))
 }

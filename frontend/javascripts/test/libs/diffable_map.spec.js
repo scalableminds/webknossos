@@ -50,9 +50,6 @@ test("DiffableMap should be clonable and mutable on clone/mutableSet", t => {
   t.is(map1.get(1), 1);
   t.false(map1.has(2));
 
-  // existsCache should not be shared
-  t.false(map1.existsCache === map2.existsCache);
-
   // Id should be the same since the internal structures look the same
   t.is(map1.getId(), map2.getId());
 

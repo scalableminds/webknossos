@@ -128,6 +128,23 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
     } yield parsed
   }
 
+  def countAllFor(userId: ObjectId, isFinished: Option[Boolean], annotationType: AnnotationType)(
+      implicit ctx: DBAccessContext) = {
+    val stateQuery = isFinished match {
+      case Some(true)  => s"state = '${AnnotationState.Finished.toString}'"
+      case Some(false) => s"state = '${AnnotationState.Active.toString}'"
+      case None        => s"state != '${AnnotationState.Cancelled.toString}'"
+    }
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(
+        sql"""select count(*) from #${existingCollectionName}
+                     where _user = ${userId.id} and typ = '#${annotationType.toString}' and #${stateQuery} and #${accessQuery}"""
+          .as[Int])
+      parsed <- r.headOption
+    } yield parsed
+  }
+
   // hint: does not use access query (because they dont support prefixes yet). use only after separate access check
   def findAllFinishedForProject(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[Annotation]] =
     for {

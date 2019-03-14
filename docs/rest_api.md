@@ -63,6 +63,7 @@ List your own task annotations
 
 #### Returns
  - JSON list of objects containing annotation information about your own task annotations, also including task and task type information
+ - total count of task annotations in the HTTP header `X-Total-Count`
 
 
 ---
@@ -81,6 +82,7 @@ List your own explorative annotations
 
 #### Returns
  - JSON list of objects containing annotation information about your own explorative annotations
+ - total count of explorative annotations in the HTTP header `X-Total-Count`
 
 
 
@@ -112,7 +114,7 @@ List the task annotations of a user
 
 #### Returns
  - JSON list of objects containing annotation information about the task annotations of the user, also including task and task type information
-
+ - total count of task annotations in the HTTP header `X-Total-Count`
 
 ---
 ### `GET /users/:id/annotations`
@@ -131,6 +133,7 @@ List the explorative annotations of a uaser
 
 #### Returns
  - JSON list of objects containing annotation information about the explorative annotations of the user
+ - total count of explorative annotations in the HTTP header `X-Total-Count`
 
 
 
@@ -531,6 +534,7 @@ List all tasks of a project
 
 #### Returns
  - JSON list of objects containing task information
+ - total count of tasks in the HTTP header `X-Total-Count`
 
 #### Note
  - For smoother backwards compatibility, the limit defaults to infinity. However, to ease server load and improve response time, we suggest using a limit of 1000

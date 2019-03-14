@@ -127,9 +127,10 @@ class ProjectController @Inject()(projectService: ProjectService,
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed" ~> FORBIDDEN
         tasks <- taskDAO.findAllByProject(project._id, limit.getOrElse(Int.MaxValue), pageNumber.getOrElse(0))(
           GlobalAccessContext)
+        taskCount <- taskDAO.countAllByProject(project._id)(GlobalAccessContext)
         js <- Fox.serialCombined(tasks)(task => taskService.publicWrites(task))
       } yield {
-        Ok(Json.toJson(js))
+        Ok(Json.toJson(js)).withHeaders("X-Total-Count" -> taskCount.toString)
       }
     }
 

@@ -60,9 +60,10 @@ class UserController @Inject()(userService: UserService,
                                                 AnnotationType.Explorational,
                                                 limit.getOrElse(defaultAnnotationLimit),
                                                 pageNumber.getOrElse(0))
+        annotationCount <- annotationDAO.countAllFor(request.identity._id, isFinished, AnnotationType.Explorational)
         jsonList <- Fox.serialCombined(annotations)(a => annotationService.compactWrites(a))
       } yield {
-        Ok(Json.toJson(jsonList))
+        Ok(Json.toJson(jsonList)).withHeaders("X-Total-Count" -> annotationCount.toString)
       }
     }
 
@@ -74,9 +75,10 @@ class UserController @Inject()(userService: UserService,
                                                 AnnotationType.Task,
                                                 limit.getOrElse(defaultAnnotationLimit),
                                                 pageNumber.getOrElse(0))
+        annotationCount <- annotationDAO.countAllFor(request.identity._id, isFinished, AnnotationType.Task)
         jsonList <- Fox.serialCombined(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
       } yield {
-        Ok(Json.toJson(jsonList))
+        Ok(Json.toJson(jsonList)).withHeaders("X-Total-Count" -> annotationCount.toString)
       }
   }
 
@@ -143,9 +145,10 @@ class UserController @Inject()(userService: UserService,
                                                 AnnotationType.Explorational,
                                                 limit.getOrElse(defaultAnnotationLimit),
                                                 pageNumber.getOrElse(0))
+        annotationCount <- annotationDAO.countAllFor(userIdValidated, isFinished, AnnotationType.Explorational)
         jsonList <- Fox.serialCombined(annotations)(a => annotationService.compactWrites(a))
       } yield {
-        Ok(Json.toJson(jsonList))
+        Ok(Json.toJson(jsonList)).withHeaders("X-Total-Count" -> annotationCount.toString)
       }
     }
 
@@ -160,9 +163,10 @@ class UserController @Inject()(userService: UserService,
                                                 AnnotationType.Task,
                                                 limit.getOrElse(defaultAnnotationLimit),
                                                 pageNumber.getOrElse(0))
+        annotationCount <- annotationDAO.countAllFor(userIdValidated, isFinished, AnnotationType.Task)
         jsonList <- Fox.serialCombined(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
       } yield {
-        Ok(Json.toJson(jsonList))
+        Ok(Json.toJson(jsonList)).withHeaders("X-Total-Count" -> annotationCount.toString)
       }
     }
 

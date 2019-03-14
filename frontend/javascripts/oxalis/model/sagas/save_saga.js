@@ -51,7 +51,6 @@ import window, { alert, document, location } from "libs/window";
 
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
 
-
 export function* collectUndoStates(): Saga<void> {
   const undoStack = [];
   const redoStack = [];

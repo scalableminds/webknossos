@@ -270,6 +270,7 @@ export default class TextureBucketManager {
   }
 
   _refreshLookUpBuffer() {
+    performance.mark("refreshLookUpBuffer-Start");
     /* This method completely completely re-writes the lookup buffer. This could be smarter, but it's
      * probably not worth it.
      * It works as follows:
@@ -282,9 +283,9 @@ export default class TextureBucketManager {
      */
 
     this.lookUpBuffer.fill(-2);
-    // const maxZoomStepDiff = getMaxZoomStepDiff(
-    //   Store.getState().datasetConfiguration.loadingStrategy,
-    // );
+    const maxZoomStepDiff = getMaxZoomStepDiff(
+      Store.getState().datasetConfiguration.loadingStrategy,
+    );
     const stats = {
       baseBucketsWritten: 0,
       fallbackBucketsWritten: 0,
@@ -301,50 +302,65 @@ export default class TextureBucketManager {
       // }
 
       let address = -1;
-      const bucketZoomStep = bucket.zoomedAddress[3];
+      let bucketZoomStep = bucket.zoomedAddress[3];
       if (!bucketDebuggingFlags.enforcedZoomDiff && this.committedBucketSet.has(bucket)) {
         address = reservedAddress;
-      } else {
-        // let fallbackBucket = bucket.getFallbackBucket();
-        // let abortFallbackLoop = false;
-        // const maxAllowedZoomStep =
-        //   currentZoomStep + (bucketDebuggingFlags.enforcedZoomDiff || maxZoomStepDiff);
-        // while (!abortFallbackLoop) {
-        //   if (fallbackBucket.type !== "null") {
-        //     if (
-        //       fallbackBucket.zoomedAddress[3] <= maxAllowedZoomStep &&
-        //       this.committedBucketSet.has(fallbackBucket)
-        //     ) {
-        //       address = this.activeBucketToIndexMap.get(fallbackBucket);
-        //       address = address != null ? address : -1;
-        //       bucketZoomStep = fallbackBucket.zoomedAddress[3];
-        //       abortFallbackLoop = true;
-        //     } else {
-        //       // Try next fallback bucket
-        //       fallbackBucket = fallbackBucket.getFallbackBucket();
-        //     }
-        //   } else {
-        //     abortFallbackLoop = true;
-        //   }
-        // }
       }
 
-      if (bucketZoomStep === currentZoomStep && address != -1) {
+      const isBaseBucket = bucketZoomStep === currentZoomStep;
+      const isFirstFallback = bucketZoomStep - 1 === currentZoomStep;
+      if (isBaseBucket) {
+        if (address === -1) {
+          let fallbackBucket = bucket.getFallbackBucket();
+          let abortFallbackLoop = false;
+          const maxAllowedZoomStep =
+            currentZoomStep + (bucketDebuggingFlags.enforcedZoomDiff || maxZoomStepDiff);
+          while (!abortFallbackLoop) {
+            if (fallbackBucket.type !== "null") {
+              if (
+                fallbackBucket.zoomedAddress[3] <= maxAllowedZoomStep &&
+                this.committedBucketSet.has(fallbackBucket)
+              ) {
+                address = this.activeBucketToIndexMap.get(fallbackBucket);
+                address = address != null ? address : -1;
+                bucketZoomStep = fallbackBucket.zoomedAddress[3];
+                abortFallbackLoop = true;
+              } else {
+                // Try next fallback bucket
+                fallbackBucket = fallbackBucket.getFallbackBucket();
+              }
+            } else {
+              abortFallbackLoop = true;
+            }
+          }
+        }
+
         const lookUpIdx = this._getBucketIndex(bucket.zoomedAddress);
         const posInBuffer = channelCountForLookupBuffer * lookUpIdx;
         this.lookUpBuffer[posInBuffer] = address;
         this.lookUpBuffer[posInBuffer + 1] = bucketZoomStep;
         stats.baseBucketsWritten++;
-      } else if (address !== -1 && bucketZoomStep - 1 === currentZoomStep) {
-        const baseBucketAddresses = this._getBaseBucketAddresses(bucket, 1);
-        for (const baseBucketAddress of baseBucketAddresses) {
-          const lookUpIdx = this._getBucketIndex(baseBucketAddress);
-          const posInBuffer = channelCountForLookupBuffer * lookUpIdx;
-          this.lookUpBuffer[posInBuffer] = address;
-          this.lookUpBuffer[posInBuffer + 1] = bucketZoomStep;
-          stats.fallbackBucketsWritten++;
+      } else if (isFirstFallback) {
+        if (address !== -1) {
+          const baseBucketAddresses = this._getBaseBucketAddresses(bucket, 1);
+          for (const baseBucketAddress of baseBucketAddresses) {
+            const lookUpIdx = this._getBucketIndex(baseBucketAddress);
+            const posInBuffer = channelCountForLookupBuffer * lookUpIdx;
+            if (this.lookUpBuffer[posInBuffer] !== -2) {
+              // Another bucket was already placed here. Skip the entire loop
+              break;
+            }
+            this.lookUpBuffer[posInBuffer] = address;
+            this.lookUpBuffer[posInBuffer + 1] = bucketZoomStep;
+            stats.fallbackBucketsWritten++;
+          }
+        } else {
+          // Don't overwrite the default -2 within the look up buffer for fallback buckets,
+          // since the effort is not worth it (only has an impact on the fallback color within the shader)
         }
       } else {
+        // Don't handle buckets with zoomStepDiff > 1, because filling the corresponding
+        // positions in the lookup buffer would take 8**zoomStepDiff iterations PER bucket.
         stats.activeBucketsSkipped++;
       }
     }
@@ -358,6 +374,12 @@ export default class TextureBucketManager {
     this.lookUpTexture.update(this.lookUpBuffer, 0, 0, lookUpBufferWidth, lookUpBufferWidth);
     this.isRefreshBufferOutOfDate = false;
     window.needsRerender = true;
+    performance.mark("refreshLookUpBuffer-End");
+    performance.measure(
+      "refreshLookUpBuffer",
+      "refreshLookUpBuffer-Start",
+      "refreshLookUpBuffer-End",
+    );
   }
 
   _getBucketIndex(bucketPosition: Vector4): number {

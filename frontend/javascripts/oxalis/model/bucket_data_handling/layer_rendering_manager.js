@@ -170,7 +170,8 @@ export default class LayerRenderingManager {
     const { viewMode } = state.temporaryConfiguration;
     const isArbitrary = constants.MODES_ARBITRARY.includes(viewMode);
     const { sphericalCapRadius } = state.userConfiguration;
-    const isInvisible = this.isSegmentation && datasetConfiguration.segmentationOpacity === 0;
+    const isInvisible =
+      this.isSegmentation && (datasetConfiguration.segmentationOpacity === 0 || isArbitrary);
     if (
       isAnchorPointNew ||
       !_.isEqual(areas, this.lastAreas) ||

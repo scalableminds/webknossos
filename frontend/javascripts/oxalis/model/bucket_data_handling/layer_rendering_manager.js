@@ -1,6 +1,5 @@
 // @flow
 
-import PriorityQueue from "js-priority-queue";
 import * as THREE from "three";
 import _ from "lodash";
 
@@ -11,8 +10,12 @@ import {
 } from "oxalis/model/accessors/flycam_accessor";
 import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { M4x4 } from "libs/mjs";
+import { createWorker } from "oxalis/workers/comlink_wrapper";
+import { getAnchorPositionToCenterDistance } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
 import { getResolutions, getByteCount } from "oxalis/model/accessors/dataset_accessor";
+import AsyncBucketPickerWorker from "oxalis/workers/async_bucket_picker.worker";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import LatestTaskExecutor from "libs/latest_task_executor";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import Store from "oxalis/store";
 import TextureBucketManager from "oxalis/model/bucket_data_handling/texture_bucket_manager";
@@ -24,11 +27,7 @@ import constants, {
   type Vector4,
   addressSpaceDimensions,
 } from "oxalis/constants";
-import { getAnchorPositionToCenterDistance } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
-
-import { createWorker } from "oxalis/workers/comlink_wrapper";
-import AsyncBucketPickerWorker from "oxalis/workers/async_bucket_picker.worker";
 
 const asyncBucketPick = createWorker(AsyncBucketPickerWorker);
 const dummyBuffer = new ArrayBuffer(0);
@@ -107,6 +106,7 @@ export default class LayerRenderingManager {
   isSegmentation: boolean;
   needsRefresh: boolean = false;
   currentBucketPickerTick: number = 0;
+  latestTaskExecutor: LatestTaskExecutor<Function> = new LatestTaskExecutor();
 
   constructor(
     name: string,
@@ -195,45 +195,54 @@ export default class LayerRenderingManager {
       let pickingPromise = Promise.resolve(dummyBuffer);
 
       if (!isInvisible) {
-        pickingPromise = asyncBucketPick(
-          viewMode,
-          getResolutions(dataset),
-          position,
-          sphericalCapRadius,
-          matrix,
-          logZoomStep,
-          datasetConfiguration.loadingStrategy,
-          this.cachedAnchorPoint,
-          areas,
-          subBucketLocality,
+        pickingPromise = this.latestTaskExecutor.schedule(() =>
+          asyncBucketPick(
+            viewMode,
+            getResolutions(dataset),
+            position,
+            sphericalCapRadius,
+            matrix,
+            logZoomStep,
+            datasetConfiguration.loadingStrategy,
+            this.cachedAnchorPoint,
+            areas,
+            subBucketLocality,
+          ),
         );
       }
 
       this.textureBucketManager.setAnchorPoint(this.cachedAnchorPoint);
 
-      pickingPromise.then(buffer => {
-        const bucketsWithPriorities = consumeBucketsFromArrayBuffer(
-          buffer,
-          this.cube,
-          this.textureBucketManager.maximumCapacity,
-        );
+      pickingPromise.then(
+        buffer => {
+          const bucketsWithPriorities = consumeBucketsFromArrayBuffer(
+            buffer,
+            this.cube,
+            this.textureBucketManager.maximumCapacity,
+          );
 
-        const buckets = bucketsWithPriorities.map(({ bucket }) => bucket);
-        this.cube.markBucketsAsUnneeded();
-        // This tells the bucket collection, that the buckets are necessary for rendering
-        buckets.forEach(b => b.markAsNeeded());
+          const buckets = bucketsWithPriorities.map(({ bucket }) => bucket);
+          this.cube.markBucketsAsUnneeded();
+          // This tells the bucket collection, that the buckets are necessary for rendering
+          buckets.forEach(b => b.markAsNeeded());
 
-        this.textureBucketManager.setActiveBuckets(buckets, this.cachedAnchorPoint);
+          this.textureBucketManager.setActiveBuckets(buckets, this.cachedAnchorPoint);
 
-        // In general, pull buckets which are not available but should be sent to the GPU
-        const missingBuckets = bucketsWithPriorities
-          .filter(({ bucket }) => !bucket.hasData())
-          .filter(({ bucket }) => bucket.zoomedAddress[3] <= this.cube.MAX_UNSAMPLED_ZOOM_STEP)
-          .map(({ bucket, priority }) => ({ bucket: bucket.zoomedAddress, priority }));
+          // In general, pull buckets which are not available but should be sent to the GPU
+          const missingBuckets = bucketsWithPriorities
+            .filter(({ bucket }) => !bucket.hasData())
+            .filter(({ bucket }) => bucket.zoomedAddress[3] <= this.cube.MAX_UNSAMPLED_ZOOM_STEP)
+            .map(({ bucket, priority }) => ({ bucket: bucket.zoomedAddress, priority }));
 
-        this.pullQueue.addAll(missingBuckets);
-        this.pullQueue.pull();
-      });
+          this.pullQueue.addAll(missingBuckets);
+          this.pullQueue.pull();
+        },
+        reason => {
+          if (reason.message !== "Skipped task") {
+            throw reason;
+          }
+        },
+      );
     }
 
     return this.cachedAnchorPoint;

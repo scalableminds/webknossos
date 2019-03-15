@@ -24,17 +24,14 @@ import constants, {
   type Vector4,
   addressSpaceDimensions,
 } from "oxalis/constants";
-import determineBucketsForFlight from "oxalis/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
-import determineBucketsForOblique from "oxalis/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
-import determineBucketsForOrthogonal, {
-  getAnchorPositionToCenterDistance,
-} from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
+import { getAnchorPositionToCenterDistance } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import AsyncBucketPickerWorker from "oxalis/workers/async_bucket_picker.worker";
 
 const asyncBucketPick = createWorker(AsyncBucketPickerWorker);
+const dummyBuffer = new ArrayBuffer(0);
 
 export type EnqueueFunction = (Vector4, number) => void;
 
@@ -52,24 +49,41 @@ function getSubBucketLocality(position: Vector3, resolution: Vector3): Vector3 {
   return position.map((pos, idx) => roundToNearestBucketBoundary(position, idx));
 }
 
-function consumeBucketsFromPriorityQueue(
-  queue: PriorityQueue<{ bucketAddress: Vector4, priority: number }>,
+function consumeBucketsFromArrayBuffer(
+  buffer: ArrayBuffer,
   cube: DataCube,
   capacity: number,
 ): Array<{ priority: number, bucket: DataBucket }> {
   const bucketsWithPriorities = [];
   // Consume priority queue until we maxed out the capacity
+  const uint32Array = new Uint32Array(buffer);
+
+  let currentElementIndex = 0;
+  const intsPerItem = 5; // [x, y, z, zoomStep, priority]
+
   while (bucketsWithPriorities.length < capacity) {
-    if (queue.length === 0) {
+    const currentBufferIndex = currentElementIndex * intsPerItem;
+    if (currentBufferIndex >= uint32Array.length) {
       break;
     }
-    const { bucketAddress, priority } = queue.dequeue();
+
+    const bucketAddress = [
+      uint32Array[currentBufferIndex],
+      uint32Array[currentBufferIndex + 1],
+      uint32Array[currentBufferIndex + 2],
+      uint32Array[currentBufferIndex + 3],
+    ];
+    const priority = uint32Array[currentBufferIndex + 4];
+
     const bucket = cube.getOrCreateBucket(bucketAddress);
 
     if (bucket.type !== "null") {
       bucketsWithPriorities.push({ bucket, priority });
     }
+
+    currentElementIndex++;
   }
+
   return bucketsWithPriorities;
 }
 
@@ -141,8 +155,6 @@ export default class LayerRenderingManager {
     const state = Store.getState();
     const { dataset, datasetConfiguration } = state;
     const isAnchorPointNew = this.maybeUpdateAnchorPoint(position, logZoomStep);
-    const fallbackZoomStep = logZoomStep + 1;
-    const isFallbackAvailable = fallbackZoomStep <= this.cube.MAX_ZOOM_STEP;
 
     if (logZoomStep > this.cube.MAX_ZOOM_STEP) {
       // Don't render anything if the zoomStep is too high
@@ -179,69 +191,28 @@ export default class LayerRenderingManager {
       this.currentBucketPickerTick++;
       this.pullQueue.clear();
 
-      const bucketQueue = new PriorityQueue({
-        // small priorities take precedence
-        comparator: (b, a) => b.priority - a.priority,
-      });
-      const enqueueFunction = (bucketAddress, priority) => {
-        bucketQueue.queue({ bucketAddress, priority });
-      };
+      let pickingPromise = Promise.resolve(dummyBuffer);
 
-      let pickingPromise = Promise.resolve(bucketQueue);
       if (!isInvisible) {
-        const resolutions = getResolutions(dataset);
-        if (viewMode === constants.MODE_ARBITRARY_PLANE) {
-          determineBucketsForOblique(
-            resolutions,
-            position,
-            enqueueFunction,
-            matrix,
-            logZoomStep,
-            fallbackZoomStep,
-            isFallbackAvailable,
-          );
-        } else if (viewMode === constants.MODE_ARBITRARY) {
-          determineBucketsForFlight(
-            resolutions,
-            position,
-            sphericalCapRadius,
-            enqueueFunction,
-            matrix,
-            logZoomStep,
-            fallbackZoomStep,
-            isFallbackAvailable,
-          );
-        } else {
-          // determineBucketsForOrthogonal(
-          //   resolutions,
-          //   enqueueFunction,
-          //   datasetConfiguration.loadingStrategy,
-          //   logZoomStep,
-          //   this.cachedAnchorPoint,
-          //   areas,
-          //   subBucketLocality,
-          // );
-          pickingPromise = asyncBucketPick(
-            resolutions,
-            datasetConfiguration.loadingStrategy,
-            logZoomStep,
-            this.cachedAnchorPoint,
-            areas,
-            subBucketLocality,
-          );
-        }
+        pickingPromise = asyncBucketPick(
+          viewMode,
+          getResolutions(dataset),
+          position,
+          sphericalCapRadius,
+          matrix,
+          logZoomStep,
+          datasetConfiguration.loadingStrategy,
+          this.cachedAnchorPoint,
+          areas,
+          subBucketLocality,
+        );
       }
 
       this.textureBucketManager.setAnchorPoint(this.cachedAnchorPoint);
 
-      pickingPromise.then(_bucketQueue => {
-        if (window.skipNextPicking) {
-          window.skipNextPicking = false;
-          return;
-        }
-        _bucketQueue.dequeue = Array.prototype.shift;
-        const bucketsWithPriorities = consumeBucketsFromPriorityQueue(
-          _bucketQueue,
+      pickingPromise.then(buffer => {
+        const bucketsWithPriorities = consumeBucketsFromArrayBuffer(
+          buffer,
           this.cube,
           this.textureBucketManager.maximumCapacity,
         );

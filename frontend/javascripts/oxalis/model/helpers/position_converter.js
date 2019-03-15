@@ -101,7 +101,7 @@ export function getBaseBucketsForFallbackBucket(
   fallbackBucketAddress: Vector4,
   zoomStepDifference: number,
   resolutions: Array<Vector3>,
-): Array<number> {
+): Array<Vector4> {
   const fallbackBucketZoomStep = fallbackBucketAddress[3];
   const betterZoomStep = fallbackBucketZoomStep - zoomStepDifference;
   const betterBucketAddress = zoomedAddressToAnotherZoomStep(

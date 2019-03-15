@@ -375,7 +375,7 @@ export default class TextureBucketManager {
     );
   }
 
-  _getBaseBucketAddresses(bucket: DataBucket, zoomStepDifference: number): Array<Vector3> {
+  _getBaseBucketAddresses(bucket: DataBucket, zoomStepDifference: number): Array<Vector4> {
     const resolutions = getResolutions(Store.getState().dataset);
     return getBaseBucketsForFallbackBucket(bucket.zoomedAddress, zoomStepDifference, resolutions);
   }

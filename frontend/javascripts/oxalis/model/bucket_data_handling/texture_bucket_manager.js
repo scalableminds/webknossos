@@ -270,7 +270,6 @@ export default class TextureBucketManager {
   }
 
   _refreshLookUpBuffer() {
-    performance.mark("refreshLookUpBuffer-Start");
     /* This method completely completely re-writes the lookup buffer. This could be smarter, but it's
      * probably not worth it.
      * It works as follows:
@@ -286,21 +285,9 @@ export default class TextureBucketManager {
     const maxZoomStepDiff = getMaxZoomStepDiff(
       Store.getState().datasetConfiguration.loadingStrategy,
     );
-    const stats = {
-      baseBucketsWritten: 0,
-      fallbackBucketsWritten: 0,
-      activeBucketsSkipped: 0,
-    };
 
     const currentZoomStep = this.currentAnchorPoint[3];
-    // const writeAllBuckets = true;
     for (const [bucket, reservedAddress] of this.activeBucketToIndexMap.entries()) {
-      // if (!writeAllBuckets && bucket.zoomedAddress[3] > currentZoomStep) {
-      //   // only write high-res buckets (if a bucket is missing, the fallback bucket will then be written
-      //   // into the look up buffer)
-      //   continue;
-      // }
-
       let address = -1;
       let bucketZoomStep = bucket.zoomedAddress[3];
       if (!bucketDebuggingFlags.enforcedZoomDiff && this.committedBucketSet.has(bucket)) {
@@ -339,7 +326,6 @@ export default class TextureBucketManager {
         const posInBuffer = channelCountForLookupBuffer * lookUpIdx;
         this.lookUpBuffer[posInBuffer] = address;
         this.lookUpBuffer[posInBuffer + 1] = bucketZoomStep;
-        stats.baseBucketsWritten++;
       } else if (isFirstFallback) {
         if (address !== -1) {
           const baseBucketAddresses = this._getBaseBucketAddresses(bucket, 1);
@@ -352,7 +338,6 @@ export default class TextureBucketManager {
             }
             this.lookUpBuffer[posInBuffer] = address;
             this.lookUpBuffer[posInBuffer + 1] = bucketZoomStep;
-            stats.fallbackBucketsWritten++;
           }
         } else {
           // Don't overwrite the default -2 within the look up buffer for fallback buckets,
@@ -361,25 +346,12 @@ export default class TextureBucketManager {
       } else {
         // Don't handle buckets with zoomStepDiff > 1, because filling the corresponding
         // positions in the lookup buffer would take 8**zoomStepDiff iterations PER bucket.
-        stats.activeBucketsSkipped++;
       }
     }
 
-    console.log(
-      "baseBucketsWritten fallbackBucketsWritten activeBucketsSkipped",
-      stats.baseBucketsWritten,
-      stats.fallbackBucketsWritten,
-      stats.activeBucketsSkipped,
-    );
     this.lookUpTexture.update(this.lookUpBuffer, 0, 0, lookUpBufferWidth, lookUpBufferWidth);
     this.isRefreshBufferOutOfDate = false;
     window.needsRerender = true;
-    performance.mark("refreshLookUpBuffer-End");
-    performance.measure(
-      "refreshLookUpBuffer",
-      "refreshLookUpBuffer-Start",
-      "refreshLookUpBuffer-End",
-    );
   }
 
   _getBucketIndex(bucketPosition: Vector4): number {

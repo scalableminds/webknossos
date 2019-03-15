@@ -31,6 +31,11 @@ import determineBucketsForOrthogonal, {
 } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 
+import { createWorker } from "oxalis/workers/comlink_wrapper";
+import AsyncBucketPickerWorker from "oxalis/workers/async_bucket_picker.worker";
+
+const asyncBucketPick = createWorker(AsyncBucketPickerWorker);
+
 export type EnqueueFunction = (Vector4, number) => void;
 
 // each index of the returned Vector3 is either -1 or +1.
@@ -182,6 +187,7 @@ export default class LayerRenderingManager {
         bucketQueue.queue({ bucketAddress, priority });
       };
 
+      let pickingPromise = Promise.resolve(bucketQueue);
       if (!isInvisible) {
         const resolutions = getResolutions(dataset);
         if (viewMode === constants.MODE_ARBITRARY_PLANE) {
@@ -206,9 +212,17 @@ export default class LayerRenderingManager {
             isFallbackAvailable,
           );
         } else {
-          determineBucketsForOrthogonal(
+          // determineBucketsForOrthogonal(
+          //   resolutions,
+          //   enqueueFunction,
+          //   datasetConfiguration.loadingStrategy,
+          //   logZoomStep,
+          //   this.cachedAnchorPoint,
+          //   areas,
+          //   subBucketLocality,
+          // );
+          pickingPromise = asyncBucketPick(
             resolutions,
-            enqueueFunction,
             datasetConfiguration.loadingStrategy,
             logZoomStep,
             this.cachedAnchorPoint,
@@ -218,27 +232,36 @@ export default class LayerRenderingManager {
         }
       }
 
-      const bucketsWithPriorities = consumeBucketsFromPriorityQueue(
-        bucketQueue,
-        this.cube,
-        this.textureBucketManager.maximumCapacity,
-      );
+      this.textureBucketManager.setAnchorPoint(this.cachedAnchorPoint);
 
-      const buckets = bucketsWithPriorities.map(({ bucket }) => bucket);
-      this.cube.markBucketsAsUnneeded();
-      // This tells the bucket collection, that the buckets are necessary for rendering
-      buckets.forEach(b => b.markAsNeeded());
+      pickingPromise.then(_bucketQueue => {
+        if (window.skipNextPicking) {
+          window.skipNextPicking = false;
+          return;
+        }
+        _bucketQueue.dequeue = Array.prototype.shift;
+        const bucketsWithPriorities = consumeBucketsFromPriorityQueue(
+          _bucketQueue,
+          this.cube,
+          this.textureBucketManager.maximumCapacity,
+        );
 
-      this.textureBucketManager.setActiveBuckets(buckets, this.cachedAnchorPoint);
+        const buckets = bucketsWithPriorities.map(({ bucket }) => bucket);
+        this.cube.markBucketsAsUnneeded();
+        // This tells the bucket collection, that the buckets are necessary for rendering
+        buckets.forEach(b => b.markAsNeeded());
 
-      // In general, pull buckets which are not available but should be sent to the GPU
-      const missingBuckets = bucketsWithPriorities
-        .filter(({ bucket }) => !bucket.hasData())
-        .filter(({ bucket }) => bucket.zoomedAddress[3] <= this.cube.MAX_UNSAMPLED_ZOOM_STEP)
-        .map(({ bucket, priority }) => ({ bucket: bucket.zoomedAddress, priority }));
+        this.textureBucketManager.setActiveBuckets(buckets, this.cachedAnchorPoint);
 
-      this.pullQueue.addAll(missingBuckets);
-      this.pullQueue.pull();
+        // In general, pull buckets which are not available but should be sent to the GPU
+        const missingBuckets = bucketsWithPriorities
+          .filter(({ bucket }) => !bucket.hasData())
+          .filter(({ bucket }) => bucket.zoomedAddress[3] <= this.cube.MAX_UNSAMPLED_ZOOM_STEP)
+          .map(({ bucket, priority }) => ({ bucket: bucket.zoomedAddress, priority }));
+
+        this.pullQueue.addAll(missingBuckets);
+        this.pullQueue.pull();
+      });
     }
 
     return this.cachedAnchorPoint;

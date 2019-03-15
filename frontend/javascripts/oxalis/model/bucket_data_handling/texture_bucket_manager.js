@@ -4,12 +4,17 @@ import _ from "lodash";
 
 import { DataBucket, bucketDebuggingFlags } from "oxalis/model/bucket_data_handling/bucket";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
+import {
+  getBaseBucketsForFallbackBucket,
+  zoomedAddressToAnotherZoomStep,
+} from "oxalis/model/helpers/position_converter";
 import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { getRenderer } from "oxalis/controller/renderer";
+import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import { waitForCondition } from "libs/utils";
 import Store from "oxalis/store";
 import UpdatableTexture from "libs/UpdatableTexture";
-import constants, { type Vector4, addressSpaceDimensions } from "oxalis/constants";
+import constants, { type Vector3, type Vector4, addressSpaceDimensions } from "oxalis/constants";
 import window from "libs/window";
 
 // A TextureBucketManager instance is responsible for making buckets available
@@ -94,6 +99,11 @@ export default class TextureBucketManager {
     this.activeBucketToIndexMap.delete(bucket);
     this.committedBucketSet.delete(bucket);
     this.freeIndexSet.add(unusedIndex);
+  }
+
+  setAnchorPoint(anchorPoint: Vector4): void {
+    this.currentAnchorPoint = anchorPoint;
+    this._refreshLookUpBuffer();
   }
 
   // Takes an array of buckets (relative to an anchorPoint) and ensures that these
@@ -272,61 +282,85 @@ export default class TextureBucketManager {
      */
 
     this.lookUpBuffer.fill(-2);
-    const maxZoomStepDiff = getMaxZoomStepDiff(
-      Store.getState().datasetConfiguration.loadingStrategy,
-    );
+    // const maxZoomStepDiff = getMaxZoomStepDiff(
+    //   Store.getState().datasetConfiguration.loadingStrategy,
+    // );
+    const stats = {
+      baseBucketsWritten: 0,
+      fallbackBucketsWritten: 0,
+      activeBucketsSkipped: 0,
+    };
 
     const currentZoomStep = this.currentAnchorPoint[3];
+    // const writeAllBuckets = true;
     for (const [bucket, reservedAddress] of this.activeBucketToIndexMap.entries()) {
-      if (bucket.zoomedAddress[3] > currentZoomStep) {
-        // only write high-res buckets (if a bucket is missing, the fallback bucket will then be written
-        // into the look up buffer)
-        continue;
-      }
-      const lookUpIdx = this._getBucketIndex(bucket);
-      const posInBuffer = channelCountForLookupBuffer * lookUpIdx;
+      // if (!writeAllBuckets && bucket.zoomedAddress[3] > currentZoomStep) {
+      //   // only write high-res buckets (if a bucket is missing, the fallback bucket will then be written
+      //   // into the look up buffer)
+      //   continue;
+      // }
 
       let address = -1;
-      let bucketZoomStep = bucket.zoomedAddress[3];
+      const bucketZoomStep = bucket.zoomedAddress[3];
       if (!bucketDebuggingFlags.enforcedZoomDiff && this.committedBucketSet.has(bucket)) {
         address = reservedAddress;
       } else {
-        let fallbackBucket = bucket.getFallbackBucket();
-        let abortFallbackLoop = false;
-        const maxAllowedZoomStep =
-          currentZoomStep + (bucketDebuggingFlags.enforcedZoomDiff || maxZoomStepDiff);
-
-        while (!abortFallbackLoop) {
-          if (fallbackBucket.type !== "null") {
-            if (
-              fallbackBucket.zoomedAddress[3] <= maxAllowedZoomStep &&
-              this.committedBucketSet.has(fallbackBucket)
-            ) {
-              address = this.activeBucketToIndexMap.get(fallbackBucket);
-              address = address != null ? address : -1;
-              bucketZoomStep = fallbackBucket.zoomedAddress[3];
-              abortFallbackLoop = true;
-            } else {
-              // Try next fallback bucket
-              fallbackBucket = fallbackBucket.getFallbackBucket();
-            }
-          } else {
-            abortFallbackLoop = true;
-          }
-        }
+        // let fallbackBucket = bucket.getFallbackBucket();
+        // let abortFallbackLoop = false;
+        // const maxAllowedZoomStep =
+        //   currentZoomStep + (bucketDebuggingFlags.enforcedZoomDiff || maxZoomStepDiff);
+        // while (!abortFallbackLoop) {
+        //   if (fallbackBucket.type !== "null") {
+        //     if (
+        //       fallbackBucket.zoomedAddress[3] <= maxAllowedZoomStep &&
+        //       this.committedBucketSet.has(fallbackBucket)
+        //     ) {
+        //       address = this.activeBucketToIndexMap.get(fallbackBucket);
+        //       address = address != null ? address : -1;
+        //       bucketZoomStep = fallbackBucket.zoomedAddress[3];
+        //       abortFallbackLoop = true;
+        //     } else {
+        //       // Try next fallback bucket
+        //       fallbackBucket = fallbackBucket.getFallbackBucket();
+        //     }
+        //   } else {
+        //     abortFallbackLoop = true;
+        //   }
+        // }
       }
 
-      this.lookUpBuffer[posInBuffer] = address;
-      this.lookUpBuffer[posInBuffer + 1] = bucketZoomStep;
+      if (bucketZoomStep === currentZoomStep && address != -1) {
+        const lookUpIdx = this._getBucketIndex(bucket.zoomedAddress);
+        const posInBuffer = channelCountForLookupBuffer * lookUpIdx;
+        this.lookUpBuffer[posInBuffer] = address;
+        this.lookUpBuffer[posInBuffer + 1] = bucketZoomStep;
+        stats.baseBucketsWritten++;
+      } else if (address !== -1 && bucketZoomStep - 1 === currentZoomStep) {
+        const baseBucketAddresses = this._getBaseBucketAddresses(bucket, 1);
+        for (const baseBucketAddress of baseBucketAddresses) {
+          const lookUpIdx = this._getBucketIndex(baseBucketAddress);
+          const posInBuffer = channelCountForLookupBuffer * lookUpIdx;
+          this.lookUpBuffer[posInBuffer] = address;
+          this.lookUpBuffer[posInBuffer + 1] = bucketZoomStep;
+          stats.fallbackBucketsWritten++;
+        }
+      } else {
+        stats.activeBucketsSkipped++;
+      }
     }
 
+    console.log(
+      "baseBucketsWritten fallbackBucketsWritten activeBucketsSkipped",
+      stats.baseBucketsWritten,
+      stats.fallbackBucketsWritten,
+      stats.activeBucketsSkipped,
+    );
     this.lookUpTexture.update(this.lookUpBuffer, 0, 0, lookUpBufferWidth, lookUpBufferWidth);
     this.isRefreshBufferOutOfDate = false;
     window.needsRerender = true;
   }
 
-  _getBucketIndex(bucket: DataBucket): number {
-    const bucketPosition = bucket.zoomedAddress;
+  _getBucketIndex(bucketPosition: Vector4): number {
     const anchorPoint = this.currentAnchorPoint;
 
     const x = bucketPosition[0] - anchorPoint[0];
@@ -345,5 +379,10 @@ export default class TextureBucketManager {
       sx * y +
       x
     );
+  }
+
+  _getBaseBucketAddresses(bucket: DataBucket, zoomStepDifference: number): Array<Vector3> {
+    const resolutions = getResolutions(Store.getState().dataset);
+    return getBaseBucketsForFallbackBucket(bucket.zoomedAddress, zoomStepDifference, resolutions);
   }
 }

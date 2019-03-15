@@ -94,3 +94,45 @@ export function zoomedAddressToAnotherZoomStep(
 export function getBucketExtent(resolutions: Vector3[], resolutionIndex: number): Vector3 {
   return bucketPositionToGlobalAddress([1, 1, 1, resolutionIndex], resolutions);
 }
+
+// This function returns all bucket addresses for which the fallback bucket
+// is the provided bucket.
+export function getBaseBucketsForFallbackBucket(
+  fallbackBucketAddress: Vector4,
+  zoomStepDifference: number,
+  resolutions: Array<Vector3>,
+): Array<number> {
+  const fallbackBucketZoomStep = fallbackBucketAddress[3];
+  const betterZoomStep = fallbackBucketZoomStep - zoomStepDifference;
+  const betterBucketAddress = zoomedAddressToAnotherZoomStep(
+    fallbackBucketAddress,
+    resolutions,
+    betterZoomStep,
+  );
+  if (zoomStepDifference > 1) {
+    // Due to the exponential complexity of calculating the "better bucket addresses",
+    // we currently only support this function if zoomStepDifference === 1
+    return [betterBucketAddress];
+  }
+
+  // resolutionFactors is a [x, y, z] tuple with x, y, z being 1 or 2 each (because
+  // zoomStepDifference === 1). In the case of isotropic resolutions, it's simply [2, 2, 2]
+  const resolutionFactors = getResolutionsFactors(
+    resolutions[fallbackBucketZoomStep],
+    resolutions[betterZoomStep],
+  );
+
+  const bucketAddresses = [];
+
+  const [baseX, baseY, baseZ] = betterBucketAddress;
+  for (let _x = 0; _x < resolutionFactors[0]; _x++) {
+    for (let _y = 0; _y < resolutionFactors[1]; _y++) {
+      for (let _z = 0; _z < resolutionFactors[2]; _z++) {
+        const newAddress = [baseX + _x, baseY + _y, baseZ + _z, betterZoomStep];
+        bucketAddresses.push(newAddress);
+      }
+    }
+  }
+
+  return bucketAddresses;
+}

@@ -1,7 +1,7 @@
-import { getBaseBucketsForFallbackBucket } from "oxalis/model/helpers/position_converter";
-
 // @flow
 import test from "ava";
+
+import { getBaseBucketsForFallbackBucket } from "oxalis/model/helpers/position_converter";
 
 test("position_converter should calculate base buckets for a given fallback bucket (isotropic)", t => {
   const bucketAddresses = getBaseBucketsForFallbackBucket([1, 2, 3, 1], 1, [

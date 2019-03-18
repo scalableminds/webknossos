@@ -4,17 +4,14 @@ import _ from "lodash";
 
 import { DataBucket, bucketDebuggingFlags } from "oxalis/model/bucket_data_handling/bucket";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
-import {
-  getBaseBucketsForFallbackBucket,
-  zoomedAddressToAnotherZoomStep,
-} from "oxalis/model/helpers/position_converter";
+import { getBaseBucketsForFallbackBucket } from "oxalis/model/helpers/position_converter";
 import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { getRenderer } from "oxalis/controller/renderer";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import { waitForCondition } from "libs/utils";
 import Store from "oxalis/store";
 import UpdatableTexture from "libs/UpdatableTexture";
-import constants, { type Vector3, type Vector4, addressSpaceDimensions } from "oxalis/constants";
+import constants, { type Vector4, addressSpaceDimensions } from "oxalis/constants";
 import window from "libs/window";
 
 // A TextureBucketManager instance is responsible for making buckets available

@@ -267,15 +267,17 @@ export default class TextureBucketManager {
   }
 
   _refreshLookUpBuffer() {
-    /* This method completely completely re-writes the lookup buffer. This could be smarter, but it's
-     * probably not worth it.
+    /* This method completely completely re-writes the lookup buffer.
      * It works as follows:
      * - write -2 into the entire buffer as a fallback
-     * - iterate over all buckets which should be available to the GPU
-     * - only consider the buckets in the native zoomStep (=> zoomStep === 0)
-     * - if the current bucket was committed, write the address for that bucket into the look up buffer
-     * - otherwise, check whether the bucket's fallback bucket is committed so that this can be written into
-     *   the look up buffer (repeat for the next fallback if the bucket wasn't committed).
+     * - iterate over all buckets
+     *   - if the current bucket is in the current zoomStep ("isBaseBucket"), either
+     *     - write the target address to the look up buffer if the bucket was committed
+     *     - otherwise: write a fallback bucket to the look up buffer
+     *   - else if the current bucket is a fallback bucket, write the address for that bucket into all
+     *     the positions of the look up buffer which map to that fallback bucket (in an isotropic case, that's 8
+     *     positions). Only do this if the bucket belongs to the first fallback layer. Otherwise, the complexity
+           would be too high, due to the exponential combinations.
      */
 
     this.lookUpBuffer.fill(-2);

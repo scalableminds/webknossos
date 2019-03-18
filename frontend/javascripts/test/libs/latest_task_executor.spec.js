@@ -3,61 +3,60 @@ import Deferred from "libs/deferred";
 import test from "ava";
 import LatestTaskExecutor from "libs/latest_task_executor";
 
-// test("LatestTaskExecutor: trivial case", async t => {
-//   const executor = new LatestTaskExecutor();
+test("LatestTaskExecutor: One task", async t => {
+  const executor = new LatestTaskExecutor();
 
-//   const deferred1 = new Deferred();
+  const deferred1 = new Deferred();
 
-//   const scheduledPromise = executor.schedule(() => deferred1.promise());
+  const scheduledPromise = executor.schedule(() => deferred1.promise());
 
-//   deferred1.resolve(true);
-//   return scheduledPromise.then(result => {
-//     t.true(result);
-//   });
-// });
+  deferred1.resolve(true);
+  return scheduledPromise.then(result => {
+    t.true(result);
+  });
+});
 
-// test("LatestTaskExecutor: two successive tasks", async t => {
-//   const executor = new LatestTaskExecutor();
+test("LatestTaskExecutor: two successive tasks", async t => {
+  const executor = new LatestTaskExecutor();
 
-//   const deferred1 = new Deferred();
-//   const deferred2 = new Deferred();
+  const deferred1 = new Deferred();
+  const deferred2 = new Deferred();
 
-//   const scheduledPromise1 = executor.schedule(() => deferred1.promise());
-//   deferred1.resolve(1);
+  const scheduledPromise1 = executor.schedule(() => deferred1.promise());
+  deferred1.resolve(1);
 
-//   const scheduledPromise2 = executor.schedule(() => deferred2.promise());
-//   deferred2.resolve(2);
+  const scheduledPromise2 = executor.schedule(() => deferred2.promise());
+  deferred2.resolve(2);
 
-//   await scheduledPromise1.then(result => {
-//     t.is(result, 1);
-//   });
-//   await scheduledPromise2.then(result => {
-//     t.is(result, 2);
-//   });
-// });
+  await scheduledPromise1.then(result => {
+    t.is(result, 1);
+  });
+  await scheduledPromise2.then(result => {
+    t.is(result, 2);
+  });
+});
 
-// test("LatestTaskExecutor: two interleaving tasks", async t => {
-//   const executor = new LatestTaskExecutor();
+test("LatestTaskExecutor: two interleaving tasks", async t => {
+  const executor = new LatestTaskExecutor();
 
-//   const deferred1 = new Deferred();
-//   const deferred2 = new Deferred();
+  const deferred1 = new Deferred();
+  const deferred2 = new Deferred();
 
-//   const scheduledPromise1 = executor.schedule(() => deferred1.promise());
-//   const scheduledPromise2 = executor.schedule(() => deferred2.promise());
+  const scheduledPromise1 = executor.schedule(() => deferred1.promise());
+  const scheduledPromise2 = executor.schedule(() => deferred2.promise());
 
-//   deferred1.resolve(1);
-//   deferred2.resolve(2);
+  deferred1.resolve(1);
+  deferred2.resolve(2);
 
-//   await scheduledPromise1.then(result => {
-//     t.is(result, 1);
-//   });
-//   await scheduledPromise2.then(result => {
-//     t.is(result, 2);
-//   });
-// });
+  await scheduledPromise1.then(result => {
+    t.is(result, 1);
+  });
+  await scheduledPromise2.then(result => {
+    t.is(result, 2);
+  });
+});
 
 test("LatestTaskExecutor: three interleaving tasks", async t => {
-  debugger;
   const executor = new LatestTaskExecutor<number>();
 
   const deferred1 = new Deferred();

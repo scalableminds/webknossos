@@ -2,6 +2,7 @@
 
 import * as THREE from "three";
 import _ from "lodash";
+import memoizeOne from "memoize-one";
 
 import {
   type Area,
@@ -29,7 +30,9 @@ import constants, {
 } from "oxalis/constants";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 
-const asyncBucketPick = createWorker(AsyncBucketPickerWorker);
+const asyncBucketPick = memoizeOne(createWorker(AsyncBucketPickerWorker), (oldArgs, newArgs) =>
+  _.isEqual(oldArgs, newArgs),
+);
 const dummyBuffer = new ArrayBuffer(0);
 
 export type EnqueueFunction = (Vector4, number) => void;
@@ -162,7 +165,8 @@ export default class LayerRenderingManager {
       return this.cachedAnchorPoint;
     }
 
-    const subBucketLocality = getSubBucketLocality(position, getResolutions(dataset)[logZoomStep]);
+    const resolutions = getResolutions(dataset);
+    const subBucketLocality = getSubBucketLocality(position, resolutions[logZoomStep]);
     const areas = getAreasFromState(state);
 
     const matrix = getZoomedMatrix(state.flycam);
@@ -198,7 +202,7 @@ export default class LayerRenderingManager {
         pickingPromise = this.latestTaskExecutor.schedule(() =>
           asyncBucketPick(
             viewMode,
-            getResolutions(dataset),
+            resolutions,
             position,
             sphericalCapRadius,
             matrix,

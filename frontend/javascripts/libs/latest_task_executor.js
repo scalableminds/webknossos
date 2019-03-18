@@ -2,17 +2,29 @@
 
 import Deferred from "libs/deferred";
 
-type Task<T> = <T>() => Promise<T>;
+type Task<T> = () => Promise<T>;
+
+/*
+ * The LatestTaskExecutor class allows to schedule tasks
+ * (see above type definition), which will be executed
+ * sequentially. However, the crux is that unstarted tasks
+ * are discarded if there is a newer task available.
+ * Existing tasks are not cancelled, which is why
+ * there can be at most two running tasks per
+ * LatestTaskExecutor instance.
+ *
+ * See the corresponding spec for examples.
+ */
 
 export default class LatestTaskExecutor<T> {
-  promiseFnQueue: Array<{ fn: Task<T>, deferred: Deferred<T, Error> }> = [];
+  taskQueue: Array<{ task: Task<T>, deferred: Deferred<T, Error> }> = [];
 
-  schedule(fn: Task<T>): Promise<T> {
+  schedule(task: Task<T>): Promise<T> {
     return new Promise(resolve => {
       const deferred = new Deferred();
-      this.promiseFnQueue.push({ fn, deferred });
+      this.taskQueue.push({ task, deferred });
 
-      if (this.promiseFnQueue.length === 1) {
+      if (this.taskQueue.length === 1) {
         this.__executeLatestPromise();
       } else {
         // The promise will be scheduled as soon as the next promise
@@ -23,25 +35,25 @@ export default class LatestTaskExecutor<T> {
   }
 
   __executeLatestPromise(): void {
-    if (this.promiseFnQueue.length === 0) {
+    if (this.taskQueue.length === 0) {
       return;
     }
 
-    const latestTask = this.promiseFnQueue.pop();
-    const { fn, deferred } = latestTask;
+    const latestTask = this.taskQueue.pop();
+    const { task, deferred } = latestTask;
 
     // Discard the remaining queue
-    this.promiseFnQueue.forEach(queueObject => {
+    this.taskQueue.forEach(queueObject => {
       // All other tasks are not executed, since
       // there already become obsolete.
       queueObject.deferred.reject(new Error("Skipped task"));
     });
-    this.promiseFnQueue = [latestTask];
+    this.taskQueue = [latestTask];
 
     // Start the latest task
-    const promise = fn();
+    const promise = task();
     promise.then(result => {
-      this.promiseFnQueue.shift();
+      this.taskQueue.shift();
       deferred.resolve(result);
       this.__executeLatestPromise();
     });

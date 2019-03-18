@@ -196,7 +196,7 @@ export default class LayerRenderingManager {
       this.currentBucketPickerTick++;
       this.pullQueue.clear();
 
-      let pickingPromise = Promise.resolve(dummyBuffer);
+      let pickingPromise: Promise<ArrayBuffer> = Promise.resolve(dummyBuffer);
 
       if (!isInvisible) {
         pickingPromise = this.latestTaskExecutor.schedule(() =>

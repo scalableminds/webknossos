@@ -5,7 +5,6 @@ import { connect } from "react-redux";
 import Enum from "Enumjs";
 import React from "react";
 import createBrowserHistory from "history/createBrowserHistory";
-import { Inspector } from "retoggle";
 
 import { APIAnnotationTypeEnum, type APIUser } from "admin/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
@@ -127,7 +126,6 @@ class ReactRouter extends React.Component<Props> {
           <DisableGenericDnd />
           <Navbar isAuthenticated={isAuthenticated} />
           <Content>
-            {/*<Inspector usePortal />*/}
             <Switch>
               <Route
                 exact

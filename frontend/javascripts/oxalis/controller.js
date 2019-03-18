@@ -4,7 +4,6 @@
  */
 
 import { type RouterHistory, withRouter } from "react-router-dom";
-import { Spin } from "antd";
 import { connect } from "react-redux";
 import BackboneEvents from "backbone-events-standalone";
 import * as React from "react";
@@ -21,6 +20,7 @@ import { setViewModeAction, updateUserSettingAction } from "oxalis/model/actions
 import { wkReadyAction } from "oxalis/model/actions/actions";
 import ApiLoader from "oxalis/api/api_loader";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
+import BrainSpinner from "components/brain_spinner";
 import Model from "oxalis/model";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
 import Store, {
@@ -268,41 +268,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 
   render() {
     if (!this.state.ready) {
-      return (
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            background: "rgb(252, 252, 252)",
-            zIndex: 300,
-          }}
-        >
-          <div className="Aligner" style={{ height: "80%" }}>
-            <div className="Aligner-item Aligner-item--fixed">
-              <div style={{ width: 375 }}>
-                <img
-                  src="/images/brain.png"
-                  alt="Abstract brain"
-                  style={{
-                    width: 375,
-                    height: 299,
-                    marginLeft: "auto",
-                    marginRight: "auto",
-                    marginTop: "10%",
-                  }}
-                />
-                <div
-                  className="loader"
-                  style={{ width: "80%", marginLeft: "auto", marginRight: "auto", marginTop: 30 }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      );
+      return <BrainSpinner />;
     }
     const { allowedModes } = Store.getState().tracing.restrictions;
     const mode = this.props.viewMode;

@@ -9,7 +9,6 @@ import { PortalTarget } from "oxalis/view/layouting/portal_utils";
 import { getBuildInfo } from "admin/admin_rest_api";
 import { logoutUserAction } from "oxalis/model/actions/user_actions";
 import { trackVersion } from "oxalis/model/helpers/analytics";
-import { useBooleanKnob, useTextKnob } from "retoggle";
 import { useFetch } from "libs/react_helpers";
 import LoginForm from "admin/auth/login_form";
 import Request from "libs/request";
@@ -52,13 +51,12 @@ function NavbarMenuItem({ children, style, ...props }) {
 function UserInitials({ activeUser }) {
   const { firstName, lastName } = activeUser;
   const initialOf = str => str.slice(0, 1).toUpperCase();
-  const [userName] = useTextKnob("First Name", firstName);
   return (
     <Avatar
       className="hoverEffectViaOpacity"
       style={{ backgroundColor: "rgb(82, 196, 26)", verticalAlign: "middle" }}
     >
-      {initialOf(userName) + initialOf(lastName)}
+      {initialOf(firstName) + initialOf(lastName)}
     </Avatar>
   );
 }
@@ -79,7 +77,7 @@ function CollapsibleMenuTitle({ title, collapse, icon }) {
 function AdministrationSubMenu({ collapse, ...menuProps }) {
   return (
     <SubMenu
-      className={"hide-on-small-screen"}
+      className={collapse ? "hide-on-small-screen" : ""}
       key="adminMenu"
       title={
         <CollapsibleMenuTitle
@@ -115,7 +113,7 @@ function AdministrationSubMenu({ collapse, ...menuProps }) {
 function StatisticsSubMenu({ collapse, ...menuProps }) {
   return (
     <SubMenu
-      className={"hide-on-small-screen"}
+      className={collapse ? "hide-on-small-screen" : ""}
       key="statisticMenu"
       title={
         <CollapsibleMenuTitle
@@ -274,14 +272,14 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView }) {
   const isAdmin = activeUser != null ? Utils.isUserAdmin(activeUser) : false;
 
   const collapseAllNavItems = isInAnnotationView;
-  const [hideNavbarLogin] = useBooleanKnob("Hide Navbar Login", features().hideNavbarLogin);
+  const { hideNavbarLogin } = features();
 
   const menuItems = [];
   const trailingNavItems = [];
 
   if (_isAuthenticated) {
     menuItems.push(
-      <Menu.Item key="/dashboard" className={"hide-on-small-screen"}>
+      <Menu.Item key="/dashboard" className={collapseAllNavItems ? "hide-on-small-screen" : ""}>
         <Link to="/dashboard">
           <CollapsibleMenuTitle
             title="Dashboard"
